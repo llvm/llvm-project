@@ -213,9 +213,6 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.cond.cleanup.loopexit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<for.cond.cleanup.loopexit>:
-; CHECK-NEXT:  No successors
-; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<scalar.ph>:
 ; CHECK-NEXT:    IR [[RESUME_1:%.+]] = phi i64
 ; CHECK-NEXT:    IR [[RESUME_2:%.+]] = phi i32
@@ -225,6 +222,9 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    IR   %indvars.iv = phi i64 [ [[RESUME_1]], %scalar.ph ], [ %indvars.iv.next, %for.body ]
 ; CHECK-NEXT:    IR   %i.0.in8 = phi i32 [ [[RESUME_2]], %scalar.ph ], [ %i.0, %for.body ]
 ; CHECK:         IR   %indvars.iv.next = add nsw i64 %indvars.iv, -1
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<for.cond.cleanup.loopexit>:
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
 ; CHECK:  LV: Loop does not require scalar epilogue
@@ -460,9 +460,6 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.cond.cleanup.loopexit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<for.cond.cleanup.loopexit>:
-; CHECK-NEXT:  No successors
-; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<scalar.ph>:
 ; CHECK-NEXT:    IR [[RESUME_1:%.+]] = phi i64
 ; CHECK-NEXT:    IR [[RESUME_2:%.+]] = phi i32
@@ -472,6 +469,9 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    IR   %indvars.iv = phi i64 [ [[RESUME_1]], %scalar.ph ], [ %indvars.iv.next, %for.body ]
 ; CHECK-NEXT:    IR   %i.0.in8 = phi i32 [ [[RESUME_2]], %scalar.ph ], [ %i.0, %for.body ]
 ; CHECK:         IR   %indvars.iv.next = add nsw i64 %indvars.iv, -1
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<for.cond.cleanup.loopexit>:
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
 ; CHECK:  LV: Loop does not require scalar epilogue

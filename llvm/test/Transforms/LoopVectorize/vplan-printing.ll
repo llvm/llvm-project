@@ -595,7 +595,7 @@ define void @debug_loc_vpinstruction(ptr nocapture %asd, ptr nocapture %bsd) !db
 ; CHECK:         IR   %cmp1 = icmp slt i32 %lsd, 100
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>:
+; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT:}
 ;
@@ -747,7 +747,7 @@ define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK:         IR   %ec = icmp eq i32 %iv.next, 1000
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>:
+; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT:   IR %lcssa = phi i32 [ %add, %loop ] (extra operand: vp<[[EXIT]]> from middle.block)
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
@@ -814,7 +814,7 @@ define void @print_fast_math_flags(i64 %n, ptr noalias %y, ptr noalias %x, ptr %
 ; CHECK:         IR   %exitcond = icmp eq i64 %iv.next, %n
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>:
+; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -882,7 +882,7 @@ define void @print_exact_flags(i64 %n, ptr noalias %x) {
 ; CHECK:         IR   %exitcond = icmp eq i64 %iv.next, %n
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>:
+; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -1047,7 +1047,7 @@ define void @print_disjoint_flags(i64 %n, ptr noalias %x) {
 ; CHECK:         IR   %exitcond = icmp eq i64 %iv.next, %n
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>:
+; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;

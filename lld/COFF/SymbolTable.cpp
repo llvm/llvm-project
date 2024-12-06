@@ -66,8 +66,9 @@ void SymbolTable::addFile(InputFile *file) {
       ctx.objFileInstances.push_back(f);
     } else if (auto *f = dyn_cast<BitcodeFile>(file)) {
       if (ltoCompilationDone) {
-        error("LTO object file " + toString(file) + " linked in after "
-              "doing LTO compilation.");
+        Err(ctx) << "LTO object file " << toString(file)
+                 << " linked in after "
+                    "doing LTO compilation.";
       }
       ctx.bitcodeFileInstances.push_back(f);
     } else if (auto *f = dyn_cast<ImportFile>(file)) {
@@ -81,13 +82,14 @@ void SymbolTable::addFile(InputFile *file) {
       (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN ||
        (ctx.config.machineInferred &&
         (ctx.config.machine == ARM64 || ctx.config.machine == AMD64)))) {
-    error(toString(file) + ": machine type arm64ec is ambiguous and cannot be "
-                           "inferred, use /machine:arm64ec or /machine:arm64x");
+    Err(ctx) << toString(file)
+             << ": machine type arm64ec is ambiguous and cannot be "
+                "inferred, use /machine:arm64ec or /machine:arm64x";
     return;
   }
   if (!compatibleMachineType(ctx, mt)) {
-    error(toString(file) + ": machine type " + machineToStr(mt) +
-          " conflicts with " + machineToStr(ctx.config.machine));
+    Err(ctx) << toString(file) << ": machine type " << machineToStr(mt)
+             << " conflicts with " << machineToStr(ctx.config.machine);
     return;
   }
   if (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN &&
@@ -100,11 +102,8 @@ void SymbolTable::addFile(InputFile *file) {
   ctx.driver.parseDirectives(file);
 }
 
-static void errorOrWarn(const Twine &s, bool forceUnresolved) {
-  if (forceUnresolved)
-    warn(s);
-  else
-    error(s);
+static COFFSyncStream errorOrWarn(COFFLinkerContext &ctx) {
+  return {ctx, ctx.config.forceUnresolved ? DiagLevel::Warn : DiagLevel::Err};
 }
 
 // Causes the file associated with a lazy symbol to be linked in.
@@ -271,11 +270,10 @@ struct UndefinedDiag {
   std::vector<File> files;
 };
 
-static void reportUndefinedSymbol(const COFFLinkerContext &ctx,
+static void reportUndefinedSymbol(COFFLinkerContext &ctx,
                                   const UndefinedDiag &undefDiag) {
-  std::string out;
-  llvm::raw_string_ostream os(out);
-  os << "undefined symbol: " << toString(ctx, *undefDiag.sym);
+  auto diag = errorOrWarn(ctx);
+  diag << "undefined symbol: " << undefDiag.sym;
 
   const size_t maxUndefReferences = 3;
   size_t numDisplayedRefs = 0, numRefs = 0;
@@ -285,13 +283,11 @@ static void reportUndefinedSymbol(const COFFLinkerContext &ctx,
 
     numRefs += totalLocations;
     numDisplayedRefs += symbolLocations.size();
-    for (const std::string &s : symbolLocations) {
-      os << s;
-    }
+    for (const std::string &s : symbolLocations)
+      diag << s;
   }
   if (numDisplayedRefs < numRefs)
-    os << "\n>>> referenced " << numRefs - numDisplayedRefs << " more times";
-  errorOrWarn(out, ctx.config.forceUnresolved);
+    diag << "\n>>> referenced " << numRefs - numDisplayedRefs << " more times";
 }
 
 void SymbolTable::loadMinGWSymbols() {
@@ -423,13 +419,12 @@ static void reportProblemSymbols(
 
   for (Symbol *b : ctx.config.gcroot) {
     if (undefs.count(b))
-      errorOrWarn("<root>: undefined symbol: " + toString(ctx, *b),
-                  ctx.config.forceUnresolved);
+      errorOrWarn(ctx) << "<root>: undefined symbol: " << b;
     if (localImports)
       if (Symbol *imp = localImports->lookup(b))
-        Warn(ctx) << "<root>: locally defined symbol imported: "
-                  << toString(ctx, *imp) << " (defined in "
-                  << toString(imp->getFile()) << ") [LNK4217]";
+        Warn(ctx) << "<root>: locally defined symbol imported: " << imp
+                  << " (defined in " << toString(imp->getFile())
+                  << ") [LNK4217]";
   }
 
   std::vector<UndefinedDiag> undefDiags;
@@ -450,9 +445,8 @@ static void reportProblemSymbols(
       }
       if (localImports)
         if (Symbol *imp = localImports->lookup(sym))
-          Warn(ctx) << file << ": locally defined symbol imported: "
-                    << toString(ctx, *imp) << " (defined in " << imp->getFile()
-                    << ") [LNK4217]";
+          Warn(ctx) << file << ": locally defined symbol imported: " << imp
+                    << " (defined in " << imp->getFile() << ") [LNK4217]";
     }
   };
 
@@ -624,7 +618,7 @@ void SymbolTable::initializeECThunks() {
     // feasible, functions are required to be COMDAT symbols with no offset.
     if (!from || !from->getChunk()->isCOMDAT() ||
         cast<DefinedRegular>(from)->getValue()) {
-      error("non COMDAT symbol '" + from->getName() + "' in hybrid map");
+      Err(ctx) << "non COMDAT symbol '" << from->getName() << "' in hybrid map";
       continue;
     }
     from->getChunk()->setEntryThunk(to);
@@ -802,24 +796,19 @@ static std::string getSourceLocation(InputFile *file, SectionChunk *sc,
 void SymbolTable::reportDuplicate(Symbol *existing, InputFile *newFile,
                                   SectionChunk *newSc,
                                   uint32_t newSectionOffset) {
-  std::string msg;
-  llvm::raw_string_ostream os(msg);
-  os << "duplicate symbol: " << toString(ctx, *existing);
+  COFFSyncStream diag(ctx, ctx.config.forceMultiple ? DiagLevel::Warn
+                                                    : DiagLevel::Err);
+  diag << "duplicate symbol: " << existing;
 
   DefinedRegular *d = dyn_cast<DefinedRegular>(existing);
   if (d && isa<ObjFile>(d->getFile())) {
-    os << getSourceLocation(d->getFile(), d->getChunk(), d->getValue(),
-                            existing->getName());
+    diag << getSourceLocation(d->getFile(), d->getChunk(), d->getValue(),
+                              existing->getName());
   } else {
-    os << getSourceLocation(existing->getFile(), nullptr, 0, "");
+    diag << getSourceLocation(existing->getFile(), nullptr, 0, "");
   }
-  os << getSourceLocation(newFile, newSc, newSectionOffset,
-                          existing->getName());
-
-  if (ctx.config.forceMultiple)
-    Warn(ctx) << msg;
-  else
-    error(msg);
+  diag << getSourceLocation(newFile, newSc, newSectionOffset,
+                            existing->getName());
 }
 
 Symbol *SymbolTable::addAbsolute(StringRef n, COFFSymbolRef sym) {

@@ -5229,7 +5229,7 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
       return;
     case Intrinsic::arm_mve_vsbc:
     case Intrinsic::arm_mve_vsbc_predicated:
-      SelectMVE_VADCSBC(N, ARM::MVE_VSBC, ARM::MVE_VSBCI, true,
+      SelectMVE_VADCSBC(N, ARM::MVE_VSBC, ARM::MVE_VSBCI, false,
                         IntNo == Intrinsic::arm_mve_vsbc_predicated);
       return;
     case Intrinsic::arm_mve_vshlc:

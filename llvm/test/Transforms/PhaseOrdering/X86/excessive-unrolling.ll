@@ -13,13 +13,13 @@ define void @test_known_trip_count() {
 ; CHECK-LABEL: @test_known_trip_count(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr @b, align 16
-; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <2 x double>, ptr getelementptr inbounds (i8, ptr @b, i64 16), align 16
+; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <2 x double>, ptr getelementptr inbounds nuw (i8, ptr @b, i64 16), align 16
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x double>, ptr @c, align 16
-; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <2 x double>, ptr getelementptr inbounds (i8, ptr @c, i64 16), align 16
+; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <2 x double>, ptr getelementptr inbounds nuw (i8, ptr @c, i64 16), align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = fadd <2 x double> [[WIDE_LOAD]], [[WIDE_LOAD4]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x double> [[WIDE_LOAD3]], [[WIDE_LOAD5]]
 ; CHECK-NEXT:    store <2 x double> [[TMP0]], ptr @a, align 16
-; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr getelementptr inbounds (i8, ptr @a, i64 16), align 16
+; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr getelementptr inbounds nuw (i8, ptr @a, i64 16), align 16
 ; CHECK-NEXT:    [[WIDE_LOAD_1:%.*]] = load <2 x double>, ptr getelementptr inbounds (i8, ptr @b, i64 32), align 16
 ; CHECK-NEXT:    [[WIDE_LOAD3_1:%.*]] = load <2 x double>, ptr getelementptr inbounds (i8, ptr @b, i64 48), align 16
 ; CHECK-NEXT:    [[WIDE_LOAD4_1:%.*]] = load <2 x double>, ptr getelementptr inbounds (i8, ptr @c, i64 32), align 16
@@ -132,10 +132,10 @@ define void @test_known_trip_count() {
 ; CHECK-NEXT:    [[TMP29:%.*]] = fadd <2 x double> [[WIDE_LOAD3_14]], [[WIDE_LOAD5_14]]
 ; CHECK-NEXT:    store <2 x double> [[TMP28]], ptr getelementptr inbounds (i8, ptr @a, i64 448), align 16
 ; CHECK-NEXT:    store <2 x double> [[TMP29]], ptr getelementptr inbounds (i8, ptr @a, i64 464), align 16
-; CHECK-NEXT:    [[TMP30:%.*]] = load double, ptr getelementptr inbounds (i8, ptr @b, i64 480), align 16
-; CHECK-NEXT:    [[TMP31:%.*]] = load double, ptr getelementptr inbounds (i8, ptr @c, i64 480), align 16
+; CHECK-NEXT:    [[TMP30:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @b, i64 480), align 16
+; CHECK-NEXT:    [[TMP31:%.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr @c, i64 480), align 16
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[TMP30]], [[TMP31]]
-; CHECK-NEXT:    store double [[ADD]], ptr getelementptr inbounds (i8, ptr @a, i64 480), align 16
+; CHECK-NEXT:    store double [[ADD]], ptr getelementptr inbounds nuw (i8, ptr @a, i64 480), align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -180,17 +180,17 @@ define void @test_runtime_trip_count(i32 %N) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [58 x double], ptr @b, i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 16
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 16
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x double>, ptr [[TMP1]], align 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [58 x double], ptr @c, i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 16
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <2 x double>, ptr [[TMP2]], align 16
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <2 x double>, ptr [[TMP3]], align 16
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[WIDE_LOAD]], [[WIDE_LOAD5]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[WIDE_LOAD4]], [[WIDE_LOAD6]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [58 x double], ptr @a, i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i64 16
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP6]], i64 16
 ; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[TMP6]], align 16
 ; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[TMP7]], align 16
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -204,12 +204,12 @@ define void @test_runtime_trip_count(i32 %N) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[INDVARS_IV_PH]], [[FOR_BODY_PREHEADER7]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [58 x double], ptr @b, i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [58 x double], ptr @b, i64 0, i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load double, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [58 x double], ptr @c, i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [58 x double], ptr @c, i64 0, i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load double, ptr [[ARRAYIDX2]], align 8
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [58 x double], ptr @a, i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [58 x double], ptr @a, i64 0, i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store double [[ADD]], ptr [[ARRAYIDX4]], align 8
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]

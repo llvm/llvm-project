@@ -7,7 +7,7 @@ define i32 @baz(i32 %y, i1 %b) {
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[LAB:%.*]], label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[P_0:%.*]] = phi ptr [ null, [[FOR_COND]] ], [ blockaddress(@baz, [[LAB]]), [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i8, ptr [[P_0]], i64 1
+; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[P_0]], i64 1
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       lab:
 ; CHECK-NEXT:    ret i32 0

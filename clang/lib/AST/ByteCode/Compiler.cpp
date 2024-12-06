@@ -6483,6 +6483,7 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
   QualType ToType = E->getType();
   std::optional<PrimType> ToT = classify(ToType);
 
+  // Bitcasting TO nullptr_t is always fine.
   if (ToType->isNullPtrType()) {
     if (!this->discard(SubExpr))
       return false;
@@ -6490,12 +6491,6 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
     return this->emitNullPtr(0, nullptr, E);
   }
 
-  if (FromType->isNullPtrType() && ToT) {
-    if (!this->discard(SubExpr))
-      return false;
-
-    return visitZeroInitializer(*ToT, ToType, E);
-  }
   assert(!ToType->isReferenceType());
 
   // Prepare storage for the result in case we discard.
