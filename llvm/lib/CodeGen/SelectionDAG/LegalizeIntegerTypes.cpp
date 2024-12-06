@@ -3327,9 +3327,7 @@ void DAGTypeLegalizer::ExpandIntRes_SETCC(SDNode *N, SDValue &Lo, SDValue &Hi) {
   // Taking the same approach as ScalarizeVecRes_SETCC
   SDValue Res = DAG.getNode(ISD::SETCC, DL, NewVT, LHS, RHS, N->getOperand(2));
 
-  ISD::NodeType ExtendCode =
-      TargetLowering::getExtendForContent(TLI.getBooleanContents(NewVT));
-  Res = DAG.getExtOrTrunc(Res, DL, N->getValueType(0), ExtendCode);
+  Res = DAG.getBoolExtOrTrunc(Res, DL, N->getValueType(0), NewVT);
   SplitInteger(Res, Lo, Hi);
 }
 
