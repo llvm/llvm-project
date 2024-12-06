@@ -1442,7 +1442,10 @@ libc_support_library(
     hdrs = glob(["src/__support/time/*.h"]),
     deps = [
         ":__support_common",
+        ":__support_error_or",
         ":hdr_time_macros",
+        ":types_clockid_t",
+        ":types_struct_timespec",
         ":types_time_t",
     ],
 )
@@ -1486,6 +1489,8 @@ libc_support_library(
         ":__support_common",
         ":__support_error_or",
         ":__support_osutil_vdso",
+        ":types_clockid_t",
+        ":types_struct_timespec",
     ],
 )
 
