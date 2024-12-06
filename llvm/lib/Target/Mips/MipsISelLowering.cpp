@@ -3871,10 +3871,10 @@ MipsTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
   return CCInfo.CheckReturn(Outs, RetCC_Mips);
 }
 
-bool MipsTargetLowering::shouldSignExtendTypeInLibCall(EVT Type,
+bool MipsTargetLowering::shouldSignExtendTypeInLibCall(Type *Ty,
                                                        bool IsSigned) const {
-  if ((ABI.IsN32() || ABI.IsN64()) && Type == MVT::i32)
-      return true;
+  if ((ABI.IsN32() || ABI.IsN64()) && Ty->isIntegerTy(32))
+    return true;
 
   return IsSigned;
 }

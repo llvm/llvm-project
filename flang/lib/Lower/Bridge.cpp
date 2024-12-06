@@ -39,6 +39,7 @@
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/EnvironmentDefaults.h"
+#include "flang/Optimizer/Builder/Runtime/Exceptions.h"
 #include "flang/Optimizer/Builder/Runtime/Main.h"
 #include "flang/Optimizer/Builder/Runtime/Ragged.h"
 #include "flang/Optimizer/Builder/Runtime/Stop.h"
@@ -5181,8 +5182,8 @@ private:
       genOpenMPSymbolProperties(*this, var);
   }
 
-  /// Where applicable, save the exception state and halting and rounding
-  /// modes at function entry and restore them at function exits.
+  /// Where applicable, save the exception state and halting, rounding, and
+  /// underflow modes at function entry, and restore them at function exits.
   void manageFPEnvironment(Fortran::lower::pft::FunctionLikeUnit &funit) {
     mlir::Location loc = toLocation();
     mlir::Location endLoc =
@@ -5224,7 +5225,7 @@ private:
       });
     }
     if (funit.mayModifyRoundingMode) {
-      // F18 Clause 17.4.5: In a procedure [...], the processor shall not
+      // F18 Clause 17.4p5: In a procedure [...], the processor shall not
       // change the rounding modes on entry, and on return shall ensure that
       // the rounding modes are the same as they were on entry.
       mlir::func::FuncOp getRounding =
@@ -5235,6 +5236,18 @@ private:
           builder->create<fir::CallOp>(loc, getRounding).getResult(0);
       bridge.fctCtx().attachCleanup([=]() {
         builder->create<fir::CallOp>(endLoc, setRounding, roundingMode);
+      });
+    }
+    if ((funit.mayModifyUnderflowMode) &&
+        (bridge.getTargetCharacteristics().hasSubnormalFlushingControl(
+            /*any=*/true))) {
+      // F18 Clause 17.5p2: In a procedure [...], the processor shall not
+      // change the underflow mode on entry, and on return shall ensure that
+      // the underflow mode is the same as it was on entry.
+      mlir::Value underflowMode =
+          fir::runtime::genGetUnderflowMode(*builder, loc);
+      bridge.fctCtx().attachCleanup([=]() {
+        fir::runtime::genSetUnderflowMode(*builder, loc, {underflowMode});
       });
     }
   }

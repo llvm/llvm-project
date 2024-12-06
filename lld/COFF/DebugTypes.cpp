@@ -241,10 +241,10 @@ void TpiSource::remapRecord(MutableArrayRef<uint8_t> rec,
           uint16_t kind =
               reinterpret_cast<const RecordPrefix *>(rec.data())->RecordKind;
           StringRef fname = file ? file->getName() : "<unknown PDB>";
-          log("failed to remap type index in record of kind 0x" +
-              utohexstr(kind) + " in " + fname + " with bad " +
-              (ref.Kind == TiRefKind::IndexRef ? "item" : "type") +
-              " index 0x" + utohexstr(ti.getIndex()));
+          Log(ctx) << "failed to remap type index in record of kind 0x"
+                   << utohexstr(kind) << " in " << fname << " with bad "
+                   << (ref.Kind == TiRefKind::IndexRef ? "item" : "type")
+                   << " index 0x" << utohexstr(ti.getIndex());
         }
         ti = TypeIndex(SimpleTypeKind::NotTranslated);
         continue;
@@ -674,8 +674,8 @@ void TpiSource::mergeTypeRecord(TypeIndex curIndex, CVType ty) {
       funcIdToType.push_back({funcId, funcType});
     } else {
       StringRef fname = file ? file->getName() : "<unknown PDB>";
-      warn("corrupt LF_[M]FUNC_ID record 0x" + utohexstr(curIndex.getIndex()) +
-           " in " + fname);
+      Warn(ctx) << "corrupt LF_[M]FUNC_ID record 0x"
+                << utohexstr(curIndex.getIndex()) << " in " << fname;
     }
   }
 }
@@ -836,7 +836,7 @@ void UseTypeServerSource::remapTpiWithGHashes(GHashState *g) {
 
 void PrecompSource::loadGHashes() {
   if (getDebugH(file)) {
-    warn("ignoring .debug$H section; pch with ghash is not implemented");
+    Warn(ctx) << "ignoring .debug$H section; pch with ghash is not implemented";
   }
 
   uint32_t ghashIdx = 0;
@@ -864,7 +864,7 @@ void PrecompSource::loadGHashes() {
 void UsePrecompSource::loadGHashes() {
   auto e = findPrecompMap(file, precompDependency);
   if (!e) {
-    warn(toString(e.takeError()));
+    Warn(ctx) << e.takeError();
     return;
   }
 
@@ -1137,9 +1137,10 @@ void TypeMerger::mergeTypesWithGHash() {
       entries.push_back(cell);
   }
   parallelSort(entries, std::less<GHashCell>());
-  log(formatv("ghash table load factor: {0:p} (size {1} / capacity {2})\n",
-              tableSize ? double(entries.size()) / tableSize : 0,
-              entries.size(), tableSize));
+  Log(ctx) << formatv(
+      "ghash table load factor: {0:p} (size {1} / capacity {2})\n",
+      tableSize ? double(entries.size()) / tableSize : 0, entries.size(),
+      tableSize);
 
   // Find out how many type and item indices there are.
   auto mid = llvm::lower_bound(entries, GHashCell(true, 0, 0));
@@ -1148,8 +1149,8 @@ void TypeMerger::mergeTypesWithGHash() {
          "midpoint is not midpoint");
   uint32_t numTypes = std::distance(entries.begin(), mid);
   uint32_t numItems = std::distance(mid, entries.end());
-  log("Tpi record count: " + Twine(numTypes));
-  log("Ipi record count: " + Twine(numItems));
+  Log(ctx) << "Tpi record count: " << Twine(numTypes);
+  Log(ctx) << "Ipi record count: " << Twine(numItems);
 
   // Make a list of the "unique" type records to merge for each tpi source. Type
   // merging will skip indices not on this list. Store the destination PDB type

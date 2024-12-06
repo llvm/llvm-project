@@ -670,3 +670,26 @@ void test13() {
 }
 
 } // namespace GH100526
+
+namespace std {
+template <typename T>
+class __set_iterator {};
+
+template<typename T>
+struct BB {
+  typedef  __set_iterator<T> iterator;
+};
+
+template <typename T>
+class set {
+public:
+  typedef typename BB<T>::iterator iterator;
+  iterator begin() const;
+};
+} // namespace std
+namespace GH118064{
+
+void test() {
+  auto y = std::set<int>{}.begin(); // expected-warning {{object backing the pointer}}
+}
+} // namespace GH118064

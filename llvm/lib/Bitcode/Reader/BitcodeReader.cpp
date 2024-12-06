@@ -5197,6 +5197,11 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
           if (Record[OpNum] & (1 << bitc::TIO_NO_SIGNED_WRAP))
             cast<TruncInst>(I)->setHasNoSignedWrap(true);
         }
+        if (isa<FPMathOperator>(I)) {
+          FastMathFlags FMF = getDecodedFastMathFlags(Record[OpNum]);
+          if (FMF.any())
+            I->setFastMathFlags(FMF);
+        }
       }
 
       InstructionList.push_back(I);

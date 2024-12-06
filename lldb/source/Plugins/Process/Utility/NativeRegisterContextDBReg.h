@@ -20,6 +20,8 @@ class NativeRegisterContextDBReg
 public:
   uint32_t NumSupportedHardwareBreakpoints() override;
 
+  uint32_t SetHardwareBreakpoint(lldb::addr_t addr, size_t size) override;
+
   bool ClearHardwareBreakpoint(uint32_t hw_idx) override;
 
   Status ClearAllHardwareBreakpoints() override;
@@ -28,6 +30,9 @@ public:
                                   lldb::addr_t trap_addr) override;
 
   uint32_t NumSupportedHardwareWatchpoints() override;
+
+  uint32_t SetHardwareWatchpoint(lldb::addr_t addr, size_t size,
+                                 uint32_t watch_flags) override;
 
   bool ClearHardwareWatchpoint(uint32_t hw_index) override;
 
@@ -63,7 +68,16 @@ protected:
   bool WatchpointIsEnabled(uint32_t wp_index);
   bool BreakpointIsEnabled(uint32_t bp_index);
 
+  // Default hardware breakpoint length size is 4.
+  // Default hardware breakpoint target address must 4-byte alignment.
+  virtual bool ValidateBreakpoint(size_t size, lldb::addr_t addr) {
+    return (size == 4) && !(addr & 0x3);
+  }
+  virtual bool ValidateWatchpoint(size_t size, lldb::addr_t &addr) = 0;
+  virtual uint32_t MakeControlValue(size_t size,
+                                    uint32_t *watch_flags = NULL) = 0;
   virtual uint32_t GetWatchpointSize(uint32_t wp_index) = 0;
+
   virtual Status ReadHardwareDebugInfo() = 0;
   virtual Status WriteHardwareDebugRegs(DREGType hwbType) = 0;
   virtual lldb::addr_t FixWatchpointHitAddress(lldb::addr_t hit_addr) {

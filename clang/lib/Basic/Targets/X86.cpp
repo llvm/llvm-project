@@ -1162,6 +1162,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("pconfig", true)
       .Case("pku", true)
       .Case("popcnt", true)
+      .Case("prefer-256-bit", true)
       .Case("prefetchi", true)
       .Case("prfchw", true)
       .Case("ptwrite", true)

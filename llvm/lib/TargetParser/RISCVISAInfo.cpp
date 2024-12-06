@@ -741,6 +741,8 @@ Error RISCVISAInfo::checkDependency() {
   bool HasVector = Exts.count("zve32x") != 0;
   bool HasZvl = MinVLen != 0;
   bool HasZcmt = Exts.count("zcmt") != 0;
+  static constexpr StringLiteral XqciExts[] = {
+      {"xqcia"}, {"xqcicsr"}, {"xqcisls"}};
 
   if (HasI && HasE)
     return getIncompatibleError("i", "e");
@@ -771,9 +773,9 @@ Error RISCVISAInfo::checkDependency() {
       return getIncompatibleError("xwchc", "zcb");
   }
 
-  if (Exts.count("xqcicsr") != 0 && (XLen != 32)) {
-    return getError("'xqcicsr' is only supported for 'rv32'");
-  }
+  for (auto Ext : XqciExts)
+    if (Exts.count(Ext.str()) && (XLen != 32))
+      return getError("'" + Twine(Ext) + "'" + " is only supported for 'rv32'");
 
   return Error::success();
 }

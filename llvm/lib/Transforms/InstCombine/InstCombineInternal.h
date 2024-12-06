@@ -652,10 +652,10 @@ public:
   /// folded operation.
   void PHIArgMergedDebugLoc(Instruction *Inst, PHINode &PN);
 
-  Instruction *foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
-                           ICmpInst::Predicate Cond, Instruction &I);
-  Instruction *foldSelectICmp(ICmpInst::Predicate Pred, SelectInst *SI,
-                              Value *RHS, const ICmpInst &I);
+  Instruction *foldGEPICmp(GEPOperator *GEPLHS, Value *RHS, CmpPredicate Cond,
+                           Instruction &I);
+  Instruction *foldSelectICmp(CmpPredicate Pred, SelectInst *SI, Value *RHS,
+                              const ICmpInst &I);
   bool foldAllocaCmp(AllocaInst *Alloca);
   Instruction *foldCmpLoadFromIndexedGlobal(LoadInst *LI,
                                             GetElementPtrInst *GEP,
@@ -663,8 +663,7 @@ public:
                                             ConstantInt *AndCst = nullptr);
   Instruction *foldFCmpIntToFPConst(FCmpInst &I, Instruction *LHSI,
                                     Constant *RHSC);
-  Instruction *foldICmpAddOpConst(Value *X, const APInt &C,
-                                  ICmpInst::Predicate Pred);
+  Instruction *foldICmpAddOpConst(Value *X, const APInt &C, CmpPredicate Pred);
   Instruction *foldICmpWithCastOp(ICmpInst &ICmp);
   Instruction *foldICmpWithZextOrSext(ICmpInst &ICmp);
 
@@ -678,7 +677,7 @@ public:
                                                    const APInt &C);
   Instruction *foldICmpBinOp(ICmpInst &Cmp, const SimplifyQuery &SQ);
   Instruction *foldICmpWithMinMax(Instruction &I, MinMaxIntrinsic *MinMax,
-                                  Value *Z, ICmpInst::Predicate Pred);
+                                  Value *Z, CmpPredicate Pred);
   Instruction *foldICmpEquality(ICmpInst &Cmp);
   Instruction *foldIRemByPowerOfTwoToBitTest(ICmpInst &I);
   Instruction *foldSignBitTest(ICmpInst &I);
@@ -736,8 +735,8 @@ public:
                                                const APInt &C);
   Instruction *foldICmpBitCast(ICmpInst &Cmp);
   Instruction *foldICmpWithTrunc(ICmpInst &Cmp);
-  Instruction *foldICmpCommutative(ICmpInst::Predicate Pred, Value *Op0,
-                                   Value *Op1, ICmpInst &CxtI);
+  Instruction *foldICmpCommutative(CmpPredicate Pred, Value *Op0, Value *Op1,
+                                   ICmpInst &CxtI);
 
   // Helpers of visitSelectInst().
   Instruction *foldSelectOfBools(SelectInst &SI);

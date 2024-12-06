@@ -26265,6 +26265,9 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       }
       if (!NewOp)
         NewOp = DAG.getNode(IntrData->Opc0, dl, VT, Src1, Src2, Src3);
+      if (IntrData->Opc0 == X86ISD::VFMADDCSH ||
+          IntrData->Opc0 == X86ISD::VFCMADDCSH)
+        return getScalarMaskingNode(NewOp, Mask, PassThru, Subtarget, DAG);
       return getVectorMaskingNode(NewOp, Mask, PassThru, Subtarget, DAG);
     }
     case IFMA_OP:
@@ -41401,6 +41404,7 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
         N->isOnlyUserOf(N.getOperand(0).getNode())) {
       SDValue N0 = peekThroughOneUseBitcasts(N.getOperand(0));
       unsigned SrcOpcode = N0.getOpcode();
+      EVT OpVT = N0.getValueType();
       if (TLI.isBinOp(SrcOpcode) && IsSafeToMoveShuffle(N0, SrcOpcode)) {
         SDValue Op00 = peekThroughOneUseBitcasts(N0.getOperand(0));
         SDValue Op01 = peekThroughOneUseBitcasts(N0.getOperand(1));
@@ -41418,12 +41422,22 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
             LHS = DAG.getNode(Opc, DL, ShuffleVT, Op00);
             RHS = DAG.getNode(Opc, DL, ShuffleVT, Op01);
           }
-          EVT OpVT = N0.getValueType();
           return DAG.getBitcast(ShuffleVT,
                                 DAG.getNode(SrcOpcode, DL, OpVT,
                                             DAG.getBitcast(OpVT, LHS),
                                             DAG.getBitcast(OpVT, RHS)));
         }
+      }
+      if (SrcOpcode == ISD::SINT_TO_FP && IsSafeToMoveShuffle(N0, SrcOpcode) &&
+          OpVT.getScalarSizeInBits() ==
+              N0.getOperand(0).getScalarValueSizeInBits()) {
+        SDValue Op00 = DAG.getBitcast(ShuffleVT, N0.getOperand(0));
+        SDValue Res =
+            N.getNumOperands() == 2
+                ? DAG.getNode(Opc, DL, ShuffleVT, Op00, N.getOperand(1))
+                : DAG.getNode(Opc, DL, ShuffleVT, Op00);
+        Res = DAG.getBitcast(N0.getOperand(0).getValueType(), Res);
+        return DAG.getBitcast(ShuffleVT, DAG.getNode(SrcOpcode, DL, OpVT, Res));
       }
     }
     break;
@@ -58359,10 +58373,16 @@ static SDValue combineScalarToVector(SDNode *N, SelectionDAG &DAG,
                                   DAG.getZExtOrTrunc(ZeroExt, DL, MVT::i32))));
   }
 
-  // Combine (v2i64 (scalar_to_vector (i64 (bitconvert (mmx))))) to MOVQ2DQ.
-  if (VT == MVT::v2i64 && Src.getOpcode() == ISD::BITCAST &&
-      Src.getOperand(0).getValueType() == MVT::x86mmx)
-    return DAG.getNode(X86ISD::MOVQ2DQ, DL, VT, Src.getOperand(0));
+  if (VT == MVT::v2i64 && Src.getOpcode() == ISD::BITCAST) {
+    SDValue SrcOp = Src.getOperand(0);
+    // Combine (v2i64 (scalar_to_vector (i64 (bitcast (double))))) to MOVQ.
+    if (SrcOp.getValueType() == MVT::f64)
+      return DAG.getBitcast(
+          VT, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2f64, SrcOp));
+    // Combine (v2i64 (scalar_to_vector (i64 (bitcast (mmx))))) to MOVQ2DQ.
+    if (SrcOp.getValueType() == MVT::x86mmx)
+      return DAG.getNode(X86ISD::MOVQ2DQ, DL, VT, SrcOp);
+  }
 
   // See if we're broadcasting the scalar value, in which case just reuse that.
   // Ensure the same SDValue from the SDNode use is being used.
