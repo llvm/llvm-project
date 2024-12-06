@@ -7439,7 +7439,7 @@ bool BoUpSLP::areAltOperandsProfitable(const InstructionsState &S,
                            Opcode0, Opcode1, OpcodeMask))
     return true;
   SmallVector<ValueList> Operands;
-  for (unsigned I : seq<unsigned>(0, S.getMainOp()->getNumOperands())) {
+  for (unsigned I : seq<unsigned>(S.getMainOp()->getNumOperands())) {
     Operands.emplace_back();
     // Prepare the operand vector.
     for (Value *V : VL) {
@@ -8212,7 +8212,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     SmallVector<SmallVector<std::pair<Value *, Value *>>> Candidates;
     auto *I1 = cast<Instruction>(VL.front());
     auto *I2 = cast<Instruction>(VL.back());
-    for (int Op = 0, E = S.getMainOp()->getNumOperands(); Op < E; ++Op)
+    for (int Op : seq<int>(S.getMainOp()->getNumOperands()))
       Candidates.emplace_back().emplace_back(I1->getOperand(Op),
                                              I2->getOperand(Op));
     if (static_cast<unsigned>(count_if(
@@ -8225,7 +8225,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     if (IsCommutative) {
       // Check permuted operands.
       Candidates.clear();
-      for (int Op = 0, E = S.getMainOp()->getNumOperands(); Op < E; ++Op)
+      for (int Op : seq<int>(S.getMainOp()->getNumOperands()))
         Candidates.emplace_back().emplace_back(I1->getOperand(Op),
                                                I2->getOperand((Op + 1) % E));
       if (any_of(
@@ -18983,7 +18983,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   if (!S.getOpcode())
     return false;
 
-  Instruction *I0 = cast<Instruction>(S.getOpValue());
+  auto *I0 = cast<Instruction>(S.getOpValue());
   // Make sure invalid types (including vector type) are rejected before
   // determining vectorization factor for scalar instructions.
   for (Value *V : VL) {
