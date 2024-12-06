@@ -362,6 +362,8 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
     return "pauthtest";
   case LLVM:
     return "llvm";
+  case CheriPureCap:
+    return "purecap";
   }
 
   llvm_unreachable("Invalid EnvironmentType!");
@@ -743,6 +745,7 @@ static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
       .StartsWith("ohos", Triple::OpenHOS)
       .StartsWith("pauthtest", Triple::PAuthTest)
       .StartsWith("llvm", Triple::LLVM)
+      .StartsWith("purecap", Triple::CheriPureCap)
       .Default(Triple::UnknownEnvironment);
 }
 

@@ -270,6 +270,8 @@ public:
     MuslX32,
     LLVM,
 
+    CheriPureCap,
+
     MSVC,
     Itanium,
     Cygnus,

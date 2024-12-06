@@ -1347,6 +1347,12 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::LLVM, T.getEnvironment());
 
+  T = Triple("riscv64-unknown-linux-purecap");
+  EXPECT_EQ(Triple::riscv64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::CheriPureCap, T.getEnvironment());
+
   T = Triple("huh");
   EXPECT_EQ(Triple::UnknownArch, T.getArch());
 }
