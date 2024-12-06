@@ -4824,12 +4824,46 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlide1(const SDLoc &DL, MVT VT,
   return convertFromScalableVector(VT, Vec, DAG, Subtarget);
 }
 
+// Given a vector a, b, c, d return a vector Factor times longer
+// with Factor-1 undef's between elements. Ex:
+//   a, undef, b, undef, c, undef, d, undef (Factor=2, Index=0)
+//   undef, a, undef, b, undef, c, undef, d (Factor=2, Index=1)
+static SDValue getWideningSpread(SDValue V, unsigned Factor, unsigned Index,
+                                 const SDLoc &DL, SelectionDAG &DAG) {
+
+  MVT VT = V.getSimpleValueType();
+  unsigned EltBits = VT.getScalarSizeInBits();
+  ElementCount EC = VT.getVectorElementCount();
+  V = DAG.getBitcast(VT.changeTypeToInteger(), V);
+
+  MVT WideVT = MVT::getVectorVT(MVT::getIntegerVT(EltBits * Factor), EC);
+
+  SDValue Result = DAG.getNode(ISD::ZERO_EXTEND, DL, WideVT, V);
+  // TODO: On rv32, the constant becomes a splat_vector_parts which does not
+  // allow the SHL to fold away if Index is 0.
+  if (Index != 0)
+    Result = DAG.getNode(ISD::SHL, DL, WideVT, Result,
+                         DAG.getConstant(EltBits * Index, DL, WideVT));
+  // Make sure to use original element type
+  MVT ResultVT = MVT::getVectorVT(VT.getVectorElementType(),
+                                  EC.multiplyCoefficientBy(Factor));
+  return DAG.getBitcast(ResultVT, Result);
+}
+
 // Given two input vectors of <[vscale x ]n x ty>, use vwaddu.vv and vwmaccu.vx
 // to create an interleaved vector of <[vscale x] n*2 x ty>.
 // This requires that the size of ty is less than the subtarget's maximum ELEN.
 static SDValue getWideningInterleave(SDValue EvenV, SDValue OddV,
                                      const SDLoc &DL, SelectionDAG &DAG,
                                      const RISCVSubtarget &Subtarget) {
+
+  // FIXME: Not only does this optimize the code, it fixes some correctness
+  // issues because MIR does not have freeze.
+  if (EvenV.isUndef())
+    return getWideningSpread(OddV, 2, 1, DL, DAG);
+  if (OddV.isUndef())
+    return getWideningSpread(EvenV, 2, 0, DL, DAG);
+
   MVT VecVT = EvenV.getSimpleValueType();
   MVT VecContainerVT = VecVT; // <vscale x n x ty>
   // Convert fixed vectors to scalable if needed
@@ -4861,29 +4895,14 @@ static SDValue getWideningInterleave(SDValue EvenV, SDValue OddV,
   SDValue Passthru = DAG.getUNDEF(WideContainerVT);
 
   SDValue Interleaved;
-  if (OddV.isUndef()) {
-    // If OddV is undef, this is a zero extend.
-    // FIXME: Not only does this optimize the code, it fixes some correctness
-    // issues because MIR does not have freeze.
-    Interleaved =
-        DAG.getNode(RISCVISD::VZEXT_VL, DL, WideContainerVT, EvenV, Mask, VL);
-  } else if (Subtarget.hasStdExtZvbb()) {
+  if (Subtarget.hasStdExtZvbb()) {
     // Interleaved = (OddV << VecVT.getScalarSizeInBits()) + EvenV.
     SDValue OffsetVec =
         DAG.getConstant(VecVT.getScalarSizeInBits(), DL, VecContainerVT);
     Interleaved = DAG.getNode(RISCVISD::VWSLL_VL, DL, WideContainerVT, OddV,
                               OffsetVec, Passthru, Mask, VL);
-    if (!EvenV.isUndef())
-      Interleaved = DAG.getNode(RISCVISD::VWADDU_W_VL, DL, WideContainerVT,
-                                Interleaved, EvenV, Passthru, Mask, VL);
-  } else if (EvenV.isUndef()) {
-    Interleaved =
-        DAG.getNode(RISCVISD::VZEXT_VL, DL, WideContainerVT, OddV, Mask, VL);
-
-    SDValue OffsetVec =
-        DAG.getConstant(VecVT.getScalarSizeInBits(), DL, WideContainerVT);
-    Interleaved = DAG.getNode(RISCVISD::SHL_VL, DL, WideContainerVT,
-                              Interleaved, OffsetVec, Passthru, Mask, VL);
+    Interleaved = DAG.getNode(RISCVISD::VWADDU_W_VL, DL, WideContainerVT,
+                              Interleaved, EvenV, Passthru, Mask, VL);
   } else {
     // FIXME: We should freeze the odd vector here. We already handled the case
     // of provably undef/poison above.

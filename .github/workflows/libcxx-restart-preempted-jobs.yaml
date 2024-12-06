@@ -133,14 +133,14 @@ jobs:
 
   restart-test:
     if: github.repository_owner == 'llvm' && (github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'cancelled') && github.event.actor.login == 'ldionne' # TESTING ONLY
-    name: "Restart Job"
+    name: "Restart Job (test)"
     permissions:
       statuses: read
       checks: write
       actions: write
     runs-on: ubuntu-latest
     steps:
-      - name: "Restart Job"
+      - name: "Restart Job (test)"
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea #v7.0.1
         with:
           script: |

@@ -2654,6 +2654,9 @@ void Writer::prepareLoadConfig() {
     if (ctx.config.guardCF != GuardCFLevel::Off)
       Warn(ctx)
           << "Control Flow Guard is enabled but '_load_config_used' is missing";
+    if (ctx.config.dependentLoadFlags)
+      Warn(ctx) << "_load_config_used not found, /dependentloadflag will have "
+                   "no effect";
     return;
   }
 
