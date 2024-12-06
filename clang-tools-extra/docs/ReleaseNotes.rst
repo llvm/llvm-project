@@ -184,7 +184,8 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/return-const-ref-from-parameter>` check to
   diagnose potential dangling references when returning a ``const &`` parameter
   by using the conditional operator ``cond ? var1 : var2`` and no longer giving
-  false positives for functions which contain lambda.
+  false positives for functions which contain lambda and ignore parameters
+  with ``[[clang::lifetimebound]]`` attribute.
   
 - Improved :doc:`bugprone-sizeof-expression
   <clang-tidy/checks/bugprone/sizeof-expression>` check to find suspicious
@@ -248,7 +249,8 @@ Changes in existing checks
   <clang-tidy/checks/misc/use-internal-linkage>` check to insert ``static``
   keyword before type qualifiers such as ``const`` and ``volatile`` and fix
   false positives for function declaration without body and fix false positives
-  for global scoped overloaded ``operator new`` and ``operator delete``.
+  for C++20 export declarations and fix false positives for global scoped
+  overloaded ``operator new`` and ``operator delete``.
 
 - Improved :doc:`modernize-avoid-c-arrays
   <clang-tidy/checks/modernize/avoid-c-arrays>` check to suggest using 

@@ -480,7 +480,7 @@ define void @even_load_static_tc(ptr noalias nocapture readonly %A, ptr noalias 
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC]], 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nsw <vscale x 4 x i32> [[TMP5]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP7:%.*]] = and i64 [[INDEX]], 9223372036854775804
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i32, ptr [[B:%.*]], i64 [[TMP7]]
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[TMP6]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -498,7 +498,7 @@ define void @even_load_static_tc(ptr noalias nocapture readonly %A, ptr noalias 
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i32 [[LOAD]], 1
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[LSHR]]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[LSHR]]
 ; CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INDVARS_IV]], 1022
@@ -566,7 +566,7 @@ define void @even_load_dynamic_tc(ptr noalias nocapture readonly %A, ptr noalias
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC]], 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = shl nsw <vscale x 4 x i32> [[TMP13]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP15:%.*]] = and i64 [[INDEX]], 9223372036854775804
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[TMP15]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw i32, ptr [[B:%.*]], i64 [[TMP15]]
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[TMP14]], ptr [[TMP16]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -584,7 +584,7 @@ define void @even_load_dynamic_tc(ptr noalias nocapture readonly %A, ptr noalias
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i32 [[LOAD]], 1
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[LSHR]]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[LSHR]]
 ; CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INDVARS_IV_NEXT]], [[N]]

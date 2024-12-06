@@ -108,6 +108,16 @@ void buildOpName(Register Target, const StringRef &Name,
   }
 }
 
+void buildOpName(Register Target, const StringRef &Name, MachineInstr &I,
+                 const SPIRVInstrInfo &TII) {
+  if (!Name.empty()) {
+    auto MIB =
+        BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpName))
+            .addUse(Target);
+    addStringImm(Name, MIB);
+  }
+}
+
 static void finishBuildOpDecorate(MachineInstrBuilder &MIB,
                                   const std::vector<uint32_t> &DecArgs,
                                   StringRef StrImm) {
@@ -207,8 +217,12 @@ addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
                : SPIRV::StorageClass::CrossWorkgroup;
   case 7:
     return SPIRV::StorageClass::Input;
+  case 8:
+    return SPIRV::StorageClass::Output;
   case 9:
     return SPIRV::StorageClass::CodeSectionINTEL;
+  case 10:
+    return SPIRV::StorageClass::Private;
   default:
     report_fatal_error("Unknown address space");
   }
@@ -433,25 +447,31 @@ Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx) {
   TypeName.consume_front("atomic_");
   if (TypeName.consume_front("void"))
     return Type::getVoidTy(Ctx);
-  else if (TypeName.consume_front("bool"))
+  else if (TypeName.consume_front("bool") || TypeName.consume_front("_Bool"))
     return Type::getIntNTy(Ctx, 1);
   else if (TypeName.consume_front("char") ||
+           TypeName.consume_front("signed char") ||
            TypeName.consume_front("unsigned char") ||
            TypeName.consume_front("uchar"))
     return Type::getInt8Ty(Ctx);
   else if (TypeName.consume_front("short") ||
+           TypeName.consume_front("signed short") ||
            TypeName.consume_front("unsigned short") ||
            TypeName.consume_front("ushort"))
     return Type::getInt16Ty(Ctx);
   else if (TypeName.consume_front("int") ||
+           TypeName.consume_front("signed int") ||
            TypeName.consume_front("unsigned int") ||
            TypeName.consume_front("uint"))
     return Type::getInt32Ty(Ctx);
   else if (TypeName.consume_front("long") ||
+           TypeName.consume_front("signed long") ||
            TypeName.consume_front("unsigned long") ||
            TypeName.consume_front("ulong"))
     return Type::getInt64Ty(Ctx);
-  else if (TypeName.consume_front("half"))
+  else if (TypeName.consume_front("half") ||
+           TypeName.consume_front("_Float16") ||
+           TypeName.consume_front("__fp16"))
     return Type::getHalfTy(Ctx);
   else if (TypeName.consume_front("float"))
     return Type::getFloatTy(Ctx);
@@ -566,8 +586,9 @@ size_t PartialOrderingVisitor::visit(BasicBlock *BB, size_t Unused) {
 
     if (!CanBeVisited(BB)) {
       ToVisit.push(BB);
-      assert(QueueIndex < ToVisit.size() &&
-             "No valid candidate in the queue. Is the graph reducible?");
+      if (QueueIndex >= ToVisit.size())
+        llvm::report_fatal_error(
+            "No valid candidate in the queue. Is the graph reducible?");
       QueueIndex++;
       continue;
     }

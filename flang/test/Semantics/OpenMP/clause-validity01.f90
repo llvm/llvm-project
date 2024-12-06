@@ -241,7 +241,7 @@ use omp_lib
   enddo
   !$omp end parallel do simd
 
-  !ERROR: Unmatched directive name modifier TARGET on the IF clause
+  !ERROR: TARGET is not a constituent of the PARALLEL DO directive
   !$omp parallel do if(target:a>1.)
   do i = 1, N
   enddo
@@ -376,7 +376,7 @@ use omp_lib
      a = 3.14
   enddo
 
-  !ERROR: The parameter of the ALIGNED clause must be a constant positive integer expression
+  !ERROR: The alignment value should be a constant positive integer
   !$omp simd aligned(cpt:-2)
   do i = 1, N
      a = 3.14
@@ -532,7 +532,7 @@ use omp_lib
   a = 1.
   !$omp end task
 
-  !ERROR: Unmatched directive name modifier TASKLOOP on the IF clause
+  !ERROR: TASKLOOP is not a constituent of the TASK directive
   !$omp task private(a) if(taskloop:a.eq.1)
   a = 1.
   !$omp end task
@@ -572,7 +572,7 @@ use omp_lib
 
   allocate(allc)
   !ERROR: The parameter of the SIMDLEN clause must be a constant positive integer expression
-  !ERROR: The parameter of the ALIGNED clause must be a constant positive integer expression
+  !ERROR: The alignment value should be a constant positive integer
   !$omp taskloop simd simdlen(-1) aligned(allc:-2)
   do i = 1, N
      allc = 3.14

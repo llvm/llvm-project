@@ -197,3 +197,9 @@ int const &overload_params_difference3(int p1, int const &a, int p2) { return a;
 int const &overload_params_difference3(int p1, long &&a, int p2);
 
 } // namespace overload
+
+namespace gh117696 {
+namespace use_lifetime_bound_attr {
+int const &f(int const &a [[clang::lifetimebound]]) { return a; }
+} // namespace use_lifetime_bound_attr
+} // namespace gh117696

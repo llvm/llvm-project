@@ -11,13 +11,11 @@ void SingleOnly() {
 
   int i;
 
-  // expected-warning@+3{{OpenACC clause 'copy' not yet implemented}}
   // expected-error@+2{{OpenACC 'default' clause cannot appear more than once on a 'kernels loop' directive}}
   // expected-note@+1{{previous clause is here}}
   #pragma acc kernels loop self default(present) present(i) default(none) copy(i)
   for(int i = 5; i < 10;++i);
 
-  // expected-warning@+3{{OpenACC clause 'copy' not yet implemented}}
   // expected-error@+2{{OpenACC 'default' clause cannot appear more than once on a 'parallel loop' directive}}
   // expected-note@+1{{previous clause is here}}
   #pragma acc parallel loop self default(present) private(i) default(none) copy(i)

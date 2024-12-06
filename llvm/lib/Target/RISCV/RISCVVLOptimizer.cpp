@@ -660,7 +660,7 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   // If we're not using VLMAX, then we need to be careful whether we are using
   // TA/TU when there is a non-undef Passthru. But when we are using VLMAX, it
   // does not matter whether we are using TA/TU with a non-undef Passthru, since
-  // there are no tail elements to be perserved.
+  // there are no tail elements to be preserved.
   unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
   const MachineOperand &VLOp = MI.getOperand(VLOpNum);
   if (VLOp.isReg() || VLOp.getImm() != RISCV::VLMaxSentinel) {
@@ -693,7 +693,7 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   // lower lanes using data from higher lanes. There may be other complex
   // semantics not mentioned here that make it hard to determine whether
   // the VL can be optimized. As a result, a white-list of supported
-  // instructions is used. Over time, more instructions cam be supported
+  // instructions is used. Over time, more instructions can be supported
   // upon careful examination of their semantics under the logic in this
   // optimization.
   // TODO: Use a better approach than a white-list, such as adding

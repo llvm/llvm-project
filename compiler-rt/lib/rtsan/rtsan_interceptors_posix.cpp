@@ -707,6 +707,17 @@ INTERCEPTOR(int, shutdown, int socket, int how) {
   return REAL(shutdown)(socket, how);
 }
 
+#if SANITIZER_INTERCEPT_ACCEPT4
+INTERCEPTOR(int, accept4, int socket, struct sockaddr *address,
+            socklen_t *address_len, int flags) {
+  __rtsan_notify_intercepted_call("accept4");
+  return REAL(accept4)(socket, address, address_len, flags);
+}
+#define RTSAN_MAYBE_INTERCEPT_ACCEPT4 INTERCEPT_FUNCTION(accept4)
+#else
+#define RTSAN_MAYBE_INTERCEPT_ACCEPT4
+#endif
+
 // I/O Multiplexing
 
 INTERCEPTOR(int, poll, struct pollfd *fds, nfds_t nfds, int timeout) {
@@ -815,6 +826,59 @@ INTERCEPTOR(int, mkfifo, const char *pathname, mode_t mode) {
   return REAL(mkfifo)(pathname, mode);
 }
 
+INTERCEPTOR(pid_t, fork, void) {
+  __rtsan_notify_intercepted_call("fork");
+  return REAL(fork)();
+}
+
+INTERCEPTOR(int, execve, const char *filename, char *const argv[],
+            char *const envp[]) {
+  __rtsan_notify_intercepted_call("execve");
+  return REAL(execve)(filename, argv, envp);
+}
+
+// TODO: the `wait` family of functions is an oddity. In testing, if you
+// intercept them, Darwin seemingly ignores them, and linux never returns from
+// the test. Revisit this in the future, but hopefully intercepting fork/exec is
+// enough to dissuade usage of wait by proxy.
+
+#if SANITIZER_APPLE
+#define INT_TYPE_SYSCALL int
+#else
+#define INT_TYPE_SYSCALL long
+#endif
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+INTERCEPTOR(INT_TYPE_SYSCALL, syscall, INT_TYPE_SYSCALL number, ...) {
+  __rtsan_notify_intercepted_call("syscall");
+
+  va_list args;
+  va_start(args, number);
+
+  // the goal is to pick something large enough to hold all syscall args
+  // see fcntl for more discussion and why we always pull all 6 args
+  using arg_type = unsigned long;
+  arg_type arg1 = va_arg(args, arg_type);
+  arg_type arg2 = va_arg(args, arg_type);
+  arg_type arg3 = va_arg(args, arg_type);
+  arg_type arg4 = va_arg(args, arg_type);
+  arg_type arg5 = va_arg(args, arg_type);
+  arg_type arg6 = va_arg(args, arg_type);
+
+  // these are various examples of things that COULD be passed
+  static_assert(sizeof(arg_type) >= sizeof(off_t));
+  static_assert(sizeof(arg_type) >= sizeof(struct flock *));
+  static_assert(sizeof(arg_type) >= sizeof(const char *));
+  static_assert(sizeof(arg_type) >= sizeof(int));
+  static_assert(sizeof(arg_type) >= sizeof(unsigned long));
+
+  va_end(args);
+
+  return REAL(syscall)(number, arg1, arg2, arg3, arg4, arg5, arg6);
+}
+#pragma clang diagnostic pop
+
 // Preinit
 void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(calloc);
@@ -903,6 +967,7 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(sendto);
   INTERCEPT_FUNCTION(shutdown);
   INTERCEPT_FUNCTION(socket);
+  RTSAN_MAYBE_INTERCEPT_ACCEPT4;
 
   RTSAN_MAYBE_INTERCEPT_SELECT;
   INTERCEPT_FUNCTION(pselect);
@@ -918,6 +983,11 @@ void __rtsan::InitializeInterceptors() {
 
   INTERCEPT_FUNCTION(pipe);
   INTERCEPT_FUNCTION(mkfifo);
+
+  INTERCEPT_FUNCTION(fork);
+  INTERCEPT_FUNCTION(execve);
+
+  INTERCEPT_FUNCTION(syscall);
 }
 
 #endif // SANITIZER_POSIX

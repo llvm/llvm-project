@@ -760,7 +760,7 @@ def Vector_FMAOp :
   let summary = "vector fused multiply-add";
   let description = [{
     Multiply-add expressions operate on n-D vectors and compute a fused
-    pointwise multiply-and-accumulate: `$result = `$lhs * $rhs + $acc`.
+    pointwise multiply-and-accumulate: `$result = $lhs * $rhs + $acc`.
     All operands and result have the same vector type. The semantics
     of the operation correspond to those of the `llvm.fma`
     [intrinsic](https://llvm.org/docs/LangRef.html#int-fma). In the

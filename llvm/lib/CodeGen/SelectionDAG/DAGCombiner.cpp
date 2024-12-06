@@ -1220,8 +1220,11 @@ SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
 
     if (DAG.isConstantIntBuildVectorOrConstantInt(N1)) {
       // Reassociate: (op (op x, c1), c2) -> (op x, (op c1, c2))
-      if (SDValue OpNode = DAG.FoldConstantArithmetic(Opc, DL, VT, {N01, N1}))
+      if (SDValue OpNode = DAG.FoldConstantArithmetic(Opc, DL, VT, {N01, N1})) {
+        NewFlags.setDisjoint(Flags.hasDisjoint() &&
+                             N0->getFlags().hasDisjoint());
         return DAG.getNode(Opc, DL, VT, N00, OpNode, NewFlags);
+      }
       return SDValue();
     }
     if (TLI.isReassocProfitable(DAG, N0, N1)) {
@@ -15495,12 +15498,14 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
       unsigned BuildVecNumElts =  BuildVect.getNumOperands();
       unsigned TruncVecNumElts = VT.getVectorNumElements();
       unsigned TruncEltOffset = BuildVecNumElts / TruncVecNumElts;
+      unsigned FirstElt = isLE ? 0 : (TruncEltOffset - 1);
 
       assert((BuildVecNumElts % TruncVecNumElts) == 0 &&
              "Invalid number of elements");
 
       SmallVector<SDValue, 8> Opnds;
-      for (unsigned i = 0, e = BuildVecNumElts; i != e; i += TruncEltOffset)
+      for (unsigned i = FirstElt, e = BuildVecNumElts; i < e;
+           i += TruncEltOffset)
         Opnds.push_back(BuildVect.getOperand(i));
 
       return DAG.getBuildVector(VT, DL, Opnds);
@@ -18758,9 +18763,13 @@ SDValue DAGCombiner::rebuildSetCC(SDValue N) {
       EVT SetCCVT = N.getValueType();
       if (LegalTypes)
         SetCCVT = getSetCCResultType(SetCCVT);
-      // Replace the uses of XOR with SETCC
-      return DAG.getSetCC(SDLoc(N), SetCCVT, Op0, Op1,
-                          Equal ? ISD::SETEQ : ISD::SETNE);
+      // Replace the uses of XOR with SETCC. Note, avoid this transformation if
+      // it would introduce illegal operations post-legalization as this can
+      // result in infinite looping between converting xor->setcc here, and
+      // expanding setcc->xor in LegalizeSetCCCondCode if requested.
+      const ISD::CondCode CC = Equal ? ISD::SETEQ : ISD::SETNE;
+      if (!LegalOperations || TLI.isCondCodeLegal(CC, Op0.getSimpleValueType()))
+        return DAG.getSetCC(SDLoc(N), SetCCVT, Op0, Op1, CC);
     }
   }
 

@@ -1556,15 +1556,6 @@ def Arith_CmpFOp : Arith_CompareOp<"cmpf",
     static arith::CmpFPredicate getPredicateByName(StringRef name);
   }];
 
-  let builders = [
-    OpBuilder<(ins "::mlir::arith::CmpFPredicateAttr":$predicate,
-                   "Value":$lhs, "Value":$rhs), [{
-      build($_builder, $_state, predicate, lhs, rhs,
-          mlir::arith::FastMathFlagsAttr::get($_builder.getContext(),
-              mlir::arith::FastMathFlags::none));
-    }]>
-  ];
-
   let hasFolder = 1;
   let hasCanonicalizer = 1;
   let assemblyFormat = [{ $predicate `,` $lhs `,` $rhs (`fastmath` `` $fastmath^)?
