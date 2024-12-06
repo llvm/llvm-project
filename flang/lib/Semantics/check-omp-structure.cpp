@@ -4550,7 +4550,7 @@ void OmpStructureChecker::CheckIfContiguous(const parser::OmpObject &object) {
     const parser::Name *name{GetObjectName(object)};
     assert(name && "Expecting name component");
     context_.Say(name->source,
-        "Reference to %s must be a contiguous object"_err_en_US,
+        "Reference to '%s' must be a contiguous object"_err_en_US,
         name->ToString());
   }
 }
