@@ -13,6 +13,7 @@
 #include "bolt/Passes/IdenticalCodeFolding.h"
 #include "bolt/Core/HashUtilities.h"
 #include "bolt/Core/ParallelUtilities.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ThreadPool.h"
@@ -353,16 +354,29 @@ typedef std::unordered_map<BinaryFunction *, std::vector<BinaryFunction *>,
 
 namespace llvm {
 namespace bolt {
-
+/// Scans symbol table and creates a bit vector of memory addresses of vtables.
+static void processSymbolTable(const BinaryContext &BC,
+                               llvm::BitVector &BitVector) {
+  for (auto [Address, Data] : BC.getBinaryData()) {
+    // Filter out all symbols that are not vtables.
+    if (!Data->getName().starts_with("_ZTV"))
+      continue;
+    for (uint64_t I = Address / 8, End = I + (Data->getSize() / 8); I < End;
+         ++I)
+      BitVector.set(I);
+  }
+}
 Error IdenticalCodeFolding::processDataRelocations(
     BinaryContext &BC, const SectionRef &SecRefRelData,
-    const bool HasAddressTaken) {
+    const llvm::BitVector &BitVector, const bool HasAddressTaken) {
   for (const RelocationRef &Rel : SecRefRelData.relocations()) {
     symbol_iterator SymbolIter = Rel.getSymbol();
     const ObjectFile *OwningObj = Rel.getObject();
     assert(SymbolIter != OwningObj->symbol_end() &&
            "relocation Symbol expected");
     const SymbolRef &Symbol = *SymbolIter;
+    if (BitVector.test(Rel.getOffset() / 8))
+      continue;
     const uint64_t SymbolAddress = cantFail(Symbol.getAddress());
     const ELFObjectFileBase *ELFObj = dyn_cast<ELFObjectFileBase>(OwningObj);
     if (!ELFObj)
@@ -378,6 +392,11 @@ Error IdenticalCodeFolding::processDataRelocations(
 }
 
 Error IdenticalCodeFolding::markFunctionsUnsafeToFold(BinaryContext &BC) {
+  if (!BC.isX86())
+    BC.outs() << "BOLT-WARNING: Safe ICF is only supported for x86\n";
+  constexpr uint64_t NumBits = (((uint64_t)1) << 32) / 8;
+  llvm::BitVector BitVector(NumBits);
+  processSymbolTable(BC, BitVector);
   for (const auto &Sec : BC.sections()) {
     if (!Sec.hasSectionRef() || !Sec.isRela())
       continue;
@@ -395,8 +414,8 @@ Error IdenticalCodeFolding::markFunctionsUnsafeToFold(BinaryContext &BC) {
     if (!RelocatedSecRef.isData() || SkipRelocs)
       continue;
 
-    Error ErrorStatus =
-        processDataRelocations(BC, SecRef, true /* HasAddressTaken */);
+    Error ErrorStatus = processDataRelocations(BC, SecRef, BitVector,
+                                               /* HasAddressTaken */ true);
     if (ErrorStatus)
       return ErrorStatus;
   }
@@ -404,8 +423,8 @@ Error IdenticalCodeFolding::markFunctionsUnsafeToFold(BinaryContext &BC) {
       BC.getUniqueSectionByName(".rela.init_array");
   if (SecRelDataIA) {
     const SectionRef SecRefRelData = SecRelDataIA->getSectionRef();
-    Error ErrorStatus =
-        processDataRelocations(BC, SecRefRelData, true /* HasAddressTaken */);
+    Error ErrorStatus = processDataRelocations(BC, SecRefRelData, BitVector,
+                                               /* !HasAddressTaken */ false);
     if (ErrorStatus)
       return ErrorStatus;
   }
@@ -413,8 +432,8 @@ Error IdenticalCodeFolding::markFunctionsUnsafeToFold(BinaryContext &BC) {
       BC.getUniqueSectionByName(".rela.fini_array");
   if (SecRelDataFIA) {
     const SectionRef SecRefRelData = SecRelDataFIA->getSectionRef();
-    Error ErrorStatus =
-        processDataRelocations(BC, SecRefRelData, false /* !HasAddressTaken */);
+    Error ErrorStatus = processDataRelocations(BC, SecRefRelData, BitVector,
+                                               /* !HasAddressTaken */ false);
     if (ErrorStatus)
       return ErrorStatus;
   }

@@ -52,6 +52,7 @@ private:
   /// references.
   Error processDataRelocations(BinaryContext &BC,
                                const SectionRef &SecRefRelData,
+                               const llvm::BitVector &BitVector,
                                const bool HasAddressTaken);
 };
 

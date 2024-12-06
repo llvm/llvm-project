@@ -12,11 +12,9 @@
 # ICFCHECK-NEXT: folding _ZN8Derived3D0Ev into _ZN8Derived2D0Ev
 
 # SAFEICFCHECK:      skipping function _ZNK8Derived24funcEii
-# SAFEICFCHECK-NEXT: skipping function _ZN8Derived2D0Ev
 # SAFEICFCHECK-NEXT: skipping function _ZNK8Derived34funcEii
-# SAFEICFCHECK-NEXT: skipping function _ZN4BaseD2Ev
-# SAFEICFCHECK-NEXT: skipping function _ZN8Derived3D0Ev
 # SAFEICFCHECK-NEXT: ICF iteration 1
+# SAFEICFCHECK-NEXT: folding _ZN8Derived3D0Ev into _ZN8Derived2D0Ev
 # SAFEICFCHECK-NEXT: ===---------
 
 
