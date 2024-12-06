@@ -8212,7 +8212,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     if (IsCommutative) {
       // Check permuted operands.
       Candidates.clear();
-      for (int Op : seq<int>(S.getMainOp()->getNumOperands()))
+      for (int Op = 0, E = S.getMainOp()->getNumOperands(); Op < E; ++Op)
         Candidates.emplace_back().emplace_back(I1->getOperand(Op),
                                                I2->getOperand((Op + 1) % E));
       if (any_of(
