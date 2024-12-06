@@ -82,7 +82,7 @@ INITIALIZE_PASS_BEGIN(LiveDebugVariablesWrapperLegacy, DEBUG_TYPE,
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_END(LiveDebugVariablesWrapperLegacy, DEBUG_TYPE,
-                    "Debug Variable Analysis", false, false)
+                    "Debug Variable Analysis", false, true)
 
 void LiveDebugVariablesWrapperLegacy::getAnalysisUsage(
     AnalysisUsage &AU) const {
