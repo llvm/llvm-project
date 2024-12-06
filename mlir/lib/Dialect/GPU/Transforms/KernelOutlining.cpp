@@ -411,19 +411,20 @@ private:
     auto *context = getOperation().getContext();
     OpBuilder builder(context);
     std::string kernelModuleName;
+    gpu::GPUModuleOp kernelModule = nullptr;
     if (gpuLaunchOp.getKernelModule()) {
       kernelModuleName =
           gpuLaunchOp.getKernelModule()->getRootReference().str();
+      if (auto existingModule =
+              parentSymbolTable.lookup<gpu::GPUModuleOp>(kernelModuleName)) {
+        kernelModule = existingModule;
+      }
     } else {
       kernelModuleName = kernelFunc.getName();
     }
 
-    gpu::GPUModuleOp kernelModule;
     // Check if the module already exists in the symbol table
-    if (auto existingModule =
-            parentSymbolTable.lookup<gpu::GPUModuleOp>(kernelModuleName)) {
-      kernelModule = existingModule;
-    } else {
+    if (!kernelModule) {
       // If not found, create a new GPU module
       kernelModule = builder.create<gpu::GPUModuleOp>(kernelFunc.getLoc(),
                                                       kernelModuleName);
