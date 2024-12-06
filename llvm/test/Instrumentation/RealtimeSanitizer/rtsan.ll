@@ -18,6 +18,10 @@ define noundef i32 @main() #2 {
 
 attributes #0 = { mustprogress noinline sanitize_realtime optnone ssp uwtable(sync) }
 
+; RealtimeSanitizer pass should insert call to initialize the runtime
+; CHECK: @llvm.used = appending global [1 x ptr] [ptr @rtsan.module_ctor]
+; CHECK: @llvm.global_ctors = {{.*}}@rtsan.module_ctor
+
 ; RealtimeSanitizer pass should insert __rtsan_realtime_enter right after function definition
 ; CHECK-LABEL: @violation()
 ; CHECK-NEXT: call{{.*}}@__rtsan_realtime_enter
@@ -26,6 +30,5 @@ attributes #0 = { mustprogress noinline sanitize_realtime optnone ssp uwtable(sy
 ; CHECK: call{{.*}}@__rtsan_realtime_exit
 ; CHECK-NEXT: ret{{.*}}void
 
-; RealtimeSanitizer pass should insert call to initialize the runtime
-; CHECK: define internal void @rtsan.module_ctor()
-; CHECK: call void @__rtsan_ensure_initialized()
+; CHECK-LABEL: define internal void @rtsan.module_ctor()
+; CHECK-NEXT: call void @__rtsan_ensure_initialized()
