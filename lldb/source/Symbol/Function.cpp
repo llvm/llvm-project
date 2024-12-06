@@ -287,6 +287,12 @@ Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
     m_flags.Set(flagsFunctionCanThrow);
 
   assert(comp_unit != nullptr);
+  lldb::addr_t base_file_addr = m_range.GetBaseAddress().GetFileAddress();
+  for (const AddressRange &range : ranges)
+    m_block.AddRange(
+        Block::Range(range.GetBaseAddress().GetFileAddress() - base_file_addr,
+                     range.GetByteSize()));
+  m_block.FinalizeRanges();
 }
 
 Function::~Function() = default;
@@ -431,13 +437,16 @@ void Function::GetDescription(Stream *s, lldb::DescriptionLevel level,
     llvm::interleaveComma(decl_context, *s, [&](auto &ctx) { ctx.Dump(*s); });
     *s << "}";
   }
-  *s << ", range" << (m_ranges.size() > 1 ? "s" : "") << " = ";
+  *s << ", range" << (m_block.GetNumRanges() > 1 ? "s" : "") << " = ";
   Address::DumpStyle fallback_style =
       level == eDescriptionLevelVerbose
           ? Address::DumpStyleModuleWithFileAddress
           : Address::DumpStyleFileAddress;
-  for (const AddressRange &range : m_ranges)
+  for (unsigned idx = 0; idx < m_block.GetNumRanges(); ++idx) {
+    AddressRange range;
+    m_block.GetRangeAtIndex(idx, range);
     range.Dump(s, target, Address::DumpStyleLoadAddress, fallback_style);
+  }
 }
 
 void Function::Dump(Stream *s, bool show_context) const {
