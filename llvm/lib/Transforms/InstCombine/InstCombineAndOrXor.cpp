@@ -703,7 +703,7 @@ Value *InstCombinerImpl::simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1,
     Input = Cmp1Op0;
     RangeEnd = Cmp1Op1;
   } else if (match(Cmp1Op1, m_SExtOrSelf(m_Specific(Input)))) {
-    // For the upper range compare we have: icmp n, (sext x)
+    // For the upper range compare we have: icmp n, x
     Input = Cmp1Op1;
     RangeEnd = Cmp1Op0;
     Pred1 = ICmpInst::getSwappedPredicate(Pred1);
