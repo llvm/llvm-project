@@ -3372,7 +3372,15 @@ void MicrosoftCXXNameMangler::mangleType(const MemberPointerType *T,
 
 void MicrosoftCXXNameMangler::mangleType(const TemplateTypeParmType *T,
                                          Qualifiers, SourceRange Range) {
-  Error(Range.getBegin(), "template type parameter type") << Range;
+  Out << '?';
+
+  llvm::SmallString<64> Name;
+  Name += "<TTPT_";
+  Name += llvm::utostr(T->getDepth());
+  Name += "_";
+  Name += llvm::utostr(T->getIndex());
+  Name += ">";
+  mangleSourceName(Name);
 }
 
 void MicrosoftCXXNameMangler::mangleType(const SubstTemplateTypeParmPackType *T,
