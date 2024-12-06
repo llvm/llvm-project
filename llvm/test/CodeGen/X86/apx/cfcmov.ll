@@ -126,11 +126,41 @@ define void @cfcmov64mr(ptr %p, i64 %0) {
 ; CHECK-NEXT:    cmpq (%rdi), %rsi
 ; CHECK-NEXT:    cfcmovgq %rsi, (%rdi)
 ; CHECK-NEXT:    retq
-  %2 = load i64, ptr %p, align 2
+  %2 = load i64, ptr %p, align 8
   %3 = icmp sgt i64 %0, %2
   %4 = select i1 %3, i64 %0, i64 %2
-  store i64 %4, ptr %p, align 2
+  store i64 %4, ptr %p, align 8
+  ret void
+}
+
+define void @volatileload(ptr %p, i32 %0) {
+; CHECK-LABEL: volatileload:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl (%rdi), %eax
+; CHECK-NEXT:    cmpl %eax, %esi
+; CHECK-NEXT:    cmovbl %esi, %eax
+; CHECK-NEXT:    movl %eax, (%rdi)
+; CHECK-NEXT:    retq
+  %2 = load volatile i32, ptr %p, align 4
+  %3 = call i32 @llvm.umin.i32(i32 %0, i32 %2)
+  store i32 %3, ptr %p, align 4
+  ret void
+}
+
+define void @atomicstore(ptr %p, i64 %0) {
+; CHECK-LABEL: atomicstore:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq (%rdi), %rax
+; CHECK-NEXT:    cmpq %rax, %rsi
+; CHECK-NEXT:    cmovaq %rsi, %rax
+; CHECK-NEXT:    movq %rax, (%rdi)
+; CHECK-NEXT:    retq
+  %2 = load i64, ptr %p, align 8
+  %3 = icmp ugt i64 %0, %2
+  %4 = select i1 %3, i64 %0, i64 %2
+  store atomic i64 %4, ptr %p unordered, align 8
   ret void
 }
 
 declare i32 @llvm.smax.i32(i32, i32)
+declare i32 @llvm.umin.i32(i32, i32)
