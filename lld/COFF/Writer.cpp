@@ -1256,12 +1256,12 @@ void Writer::createImportTables() {
       ctx.config.dllOrder[dll] = ctx.config.dllOrder.size();
 
     if (file->impSym && !isa<DefinedImportData>(file->impSym))
-      Fatal(ctx) << toString(ctx, *file->impSym) << " was replaced";
+      Fatal(ctx) << file->impSym << " was replaced";
     DefinedImportData *impSym = cast_or_null<DefinedImportData>(file->impSym);
     if (ctx.config.delayLoads.count(StringRef(file->dllName).lower())) {
       if (!file->thunkSym)
         Fatal(ctx) << "cannot delay-load " << toString(file)
-                   << " due to import of data: " << toString(ctx, *impSym);
+                   << " due to import of data: " << impSym;
       delayIdata.add(impSym);
     } else {
       idata.add(impSym);
@@ -1280,7 +1280,7 @@ void Writer::appendImportThunks() {
 
     if (file->thunkSym) {
       if (!isa<DefinedImportThunk>(file->thunkSym))
-        Fatal(ctx) << toString(ctx, *file->thunkSym) << " was replaced";
+        Fatal(ctx) << file->thunkSym << " was replaced";
       auto *chunk = cast<DefinedImportThunk>(file->thunkSym)->getChunk();
       if (chunk->live)
         textSec->addChunk(chunk);
@@ -1288,7 +1288,7 @@ void Writer::appendImportThunks() {
 
     if (file->auxThunkSym) {
       if (!isa<DefinedImportThunk>(file->auxThunkSym))
-        Fatal(ctx) << toString(ctx, *file->auxThunkSym) << " was replaced";
+        Fatal(ctx) << file->auxThunkSym << " was replaced";
       auto *chunk = cast<DefinedImportThunk>(file->auxThunkSym)->getChunk();
       if (chunk->live)
         textSec->addChunk(chunk);
@@ -1334,7 +1334,7 @@ void Writer::createExportTable() {
   // Warn on exported deleting destructor.
   for (auto e : ctx.config.exports)
     if (e.sym && e.sym->getName().starts_with("??_G"))
-      Warn(ctx) << "export of deleting dtor: " << toString(ctx, *e.sym);
+      Warn(ctx) << "export of deleting dtor: " << e.sym;
 }
 
 void Writer::removeUnusedSections() {

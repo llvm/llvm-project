@@ -621,7 +621,7 @@ void ObjFile::handleComdatSelection(
   // seems better though.
   // (This behavior matches ModuleLinker::getComdatResult().)
   if (selection != leaderSelection) {
-    Log(ctx) << "conflicting comdat type for " << toString(ctx, *leader) << ": "
+    Log(ctx) << "conflicting comdat type for " << leader << ": "
              << (int)leaderSelection << " in " << leader->getFile() << " and "
              << (int)selection << " in " << this;
     ctx.symtab.reportDuplicate(leader, this);
