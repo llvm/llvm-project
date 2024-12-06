@@ -1,3 +1,4 @@
+; REQUIRES: x86_64-linux
 ; RUN: split-file %s %t
 ; RUN: llvm-profdata merge %t/memprof-in.yaml -o %t/memprof-out.indexed
 ; RUN: llvm-profdata show --memory %t/memprof-out.indexed > %t/memprof-out.yaml
