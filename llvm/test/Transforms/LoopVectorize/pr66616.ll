@@ -46,7 +46,7 @@ define void @pr66616(ptr %ptr) {
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i32 [[ADD3_LCSSA]], [[DOTCAST]]
 ; CHECK-NEXT:    [[IND_END5:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[N_VEC]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY7:%.*]]
-; CHECK:       vector.body5:
+; CHECK:       vector.body7:
 ; CHECK-NEXT:    [[INDEX8:%.*]] = phi i64 [ 0, [[VECTOR_PH3]] ], [ [[INDEX_NEXT9:%.*]], [[VECTOR_BODY7]] ]
 ; CHECK-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX8]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT9]], [[N_VEC]]
