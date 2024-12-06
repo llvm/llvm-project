@@ -1141,7 +1141,7 @@ define void @reduction_reset(i32 %N, ptr %arrayA, ptr %arrayB) {
 ; CHECK:       .lr.ph:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[DOTLR_PH_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[DOTLR_PH]] ]
 ; CHECK-NEXT:    [[DOT017:%.*]] = phi i32 [ 100, [[DOTLR_PH_PREHEADER]] ], [ [[CSEL:%.*]], [[DOTLR_PH]] ]
-; CHECK-NEXT:    [[C6:%.*]] = getelementptr inbounds i32, ptr [[ARRAYA]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[C6:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYA]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[C7:%.*]] = load i32, ptr [[C6]], align 4
 ; CHECK-NEXT:    [[C8:%.*]] = icmp sgt i32 [[C7]], 0
 ; CHECK-NEXT:    [[C9:%.*]] = add nsw i32 [[C7]], [[DOT017]]

@@ -103,7 +103,7 @@ def print_tbl_dir(name):
   * - {name}
     - Implemented
     - C23 Standard Section
-    - POSIX.1-2017 Standard Section"""
+    - POSIX.1-2024 Standard Section"""
     )
 
 
@@ -161,7 +161,7 @@ def print_macros_rst(header: Header, macros: Dict):
 
 
 def print_impl_status_rst(header: Header, api: Dict):
-    print(".. include:: check.rst\n")
+    print(".. include:: ../check.rst\n")
 
     print("=" * len(header.name))
     print(header.name)
