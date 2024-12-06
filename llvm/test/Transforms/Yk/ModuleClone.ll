@@ -17,6 +17,12 @@ declare dso_local void @yk_mt_shutdown(ptr noundef)
 
 define dso_local i32 @func_inc_with_address_taken(i32 %x) {
 entry:
+  %call = call i32 @inc(i32 %x)
+  ret i32 %call
+}
+
+define dso_local i32 @inc(i32 %x) {
+entry:
   %0 = add i32 %x, 1
   ret i32 %0
 }
@@ -60,6 +66,20 @@ entry:
 ; CHECK: declare dso_local void @yk_location_drop(i64)
 ; CHECK: declare dso_local void @yk_mt_shutdown(ptr noundef)
 
+; Check that func_inc_with_address_taken is present in its original form
+; CHECK-LABEL: define dso_local i32 @func_inc_with_address_taken(i32 %x)
+; CHECK-NEXT: entry:
+; CHECK-NEXT: call void @__yk_trace_basicblock({{.*}})
+; CHECK-NEXT: %call = call i32 @inc(i32 %x)
+; CHECK-NEXT: ret i32 %call
+
+; Check original function: inc
+; CHECK-LABEL: define dso_local i32 @inc(i32 %x)
+; CHECK-NEXT: entry:
+; CHECK-NEXT: call void @__yk_trace_basicblock({{.*}})
+; CHECK-NEXT: %0 = add i32 %x, 1
+; CHECK-NEXT: ret i32 %0
+
 ; Check original function: my_func
 ; CHECK-LABEL: define dso_local i32 @my_func(i32 %x)
 ; CHECK-NEXT: entry:
@@ -78,26 +98,27 @@ entry:
 ; CHECK-NEXT: %0 = call i32 @my_func(i32 10)
 ; CHECK-NEXT: %1 = load i32, ptr @my_global
 ; CHECK-NEXT: %2 = call i32 (ptr, ...) @printf
-
-; Check that func_inc_with_address_taken is present in its original form
-; CHECK-LABEL: define dso_local i32 @func_inc_with_address_taken(i32 %x)
-; CHECK-NEXT: entry:
-; CHECK-NEXT: call void @__yk_trace_basicblock({{.*}})
-; CHECK-NEXT: %0 = add i32 %x, 1
-; CHECK-NEXT: ret i32 %0
+; CHECK-NEXT: ret i32 0
 
 ; ======================================================================
 ; Functions whose addresses are taken should not be cloned
 ; ======================================================================
-; Functions with their addresses taken should not be cloned. 
+; Functions with their addresses taken should not be cloned.
 ; `func_inc_with_address_taken` is used by pointer and thus remains unaltered.
-; CHECK-NOT: define dso_local i32 @__yk_clone_func_inc_with_address_taken
+; CHECK-NOT: define dso_local i32 @__yk_opt_func_inc_with_address_taken
 
 ; ======================================================================
 ; Cloned functions - should have no trace calls
 ; ======================================================================
-; Check cloned function: __yk_clone_my_func
-; CHECK-LABEL: define dso_local i32 @__yk_clone_my_func(i32 %x)
+; Check cloned function: __yk_opt_inc
+; CHECK-LABEL: define dso_local i32 @__yk_opt_inc(i32 %x)
+; CHECK-NEXT: entry:
+; CHECK-NOT: call void @yk_trace_basicblock({{.*}})
+; CHECK-NEXT: %0 = add i32 %x, 1
+; CHECK-NEXT: ret i32 %0
+
+; Check cloned function: __yk_opt_my_func
+; CHECK-LABEL: define dso_local i32 @__yk_opt_my_func(i32 %x)
 ; CHECK-NEXT: entry:
 ; CHECK-NOT: call void @__yk_trace_basicblock({{.*}})
 ; CHECK-NEXT: %0 = add i32 %x, 1
@@ -107,10 +128,10 @@ entry:
 ; CHECK-NEXT: %2 = call i32 %1(i32 42)
 ; CHECK-NEXT: ret i32 %2
 
-; Check cloned function: __yk_clone_main
-; CHECK-LABEL: define dso_local i32 @__yk_clone_main()
+; Check cloned function: __yk_opt_main
+; CHECK-LABEL: define dso_local i32 @__yk_opt_main()
 ; CHECK-NEXT: entry:
 ; CHECK-NOT: call void @__yk_trace_basicblock({{.*}})
-; CHECK-NEXT: %0 = call i32 @__yk_clone_my_func(i32 10)
+; CHECK-NEXT: %0 = call i32 @__yk_opt_my_func(i32 10)
 ; CHECK-NEXT: %1 = load i32, ptr @my_global
 ; CHECK-NEXT: %2 = call i32 (ptr, ...) @printf

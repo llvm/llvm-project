@@ -134,9 +134,13 @@ public:
           DS_Warning));
       return false;
     }
-    assert(ControlPointCalls.size() == controlPointCount &&
-           "Unexpected number of control point calls");
 
+    if (ControlPointCalls.size() != controlPointCount) {
+      Context.emitError("Unexpected number of control point calls: " +
+                        Twine(ControlPointCalls.size()) +
+                        " expected: " + Twine(controlPointCount));
+      return false;
+    }
     unsigned CPStackMapID = 0;
     Function *NF = nullptr;
 

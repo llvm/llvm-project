@@ -1,7 +1,8 @@
 //===- ModuleClone.cpp - Yk Module Cloning Pass ---------------------------===//
 //
-// This pass duplicates functions within the module, producing both the original
-// and new versions of functions. the process is as follows:
+// This pass duplicates functions within the module, producing both the
+// original (unoptimised) and cloned (optimised) versions of these
+// functions. The process is as follows:
 //
 // - **Cloning Criteria:**
 //   - Functions **without** their address taken are cloned. This results in two
@@ -11,18 +12,12 @@
 //     and are not cloned.
 //
 // - **Cloned Function Naming:**
-//   - The cloned functions are renamed by adding the prefix `__yk_clone_` to
+//   - The cloned functions are renamed by adding the prefix `__yk_opt_` to
 //     their original names. This distinguishes them from the original
 //     functions.
 //
-// - **Clone Process:**
-//   - 1. The original module is cloned, creating two copies of the module.
-//   - 2. The functions in the cloned module that satisfy the cloning criteria
-//     are renamed.
-//   - 3. The cloned module is linked back into the original module.
-//
 // - **Optimisation Intent:**
-//   - The **cloned functions** (those with the `__yk_clone_` prefix) are
+//   - The **cloned functions** (those with the `__yk_opt_` prefix) are
 //     intended to be the **optimised versions** of the functions.
 //   - The **original functions** remain **unoptimised**.
 //
@@ -58,39 +53,96 @@ struct YkModuleClone : public ModulePass {
   YkModuleClone() : ModulePass(ID) {
     initializeYkModuleClonePass(*PassRegistry::getPassRegistry());
   }
-  void updateClonedFunctions(Module &M) {
+
+  /**
+   * @brief Clones eligible functions within the given module.
+   *
+   * This function iterates over all functions in the provided LLVM module `M`
+   * and clones those that meet the following criteria:
+   *
+   * - The function does **not** have external linkage and is **not** a
+   * declaration.
+   * - The function's address is **not** taken.
+   *
+   * @param M The LLVM module containing the functions to be cloned.
+   * @return A map where the keys are the original function names and the
+   *         values are pointers to the cloned `Function` objects. Returns
+   *         a map if cloning succeeds, or `nullopt` if cloning fails.
+   */
+  std::optional<std::map<std::string, Function *>>
+  cloneFunctionsInModule(Module &M) {
+    LLVMContext &Context = M.getContext();
+    std::map<std::string, Function *> ClonedFuncs;
     for (llvm::Function &F : M) {
+      // Skip external declarations.
       if (F.hasExternalLinkage() && F.isDeclaration()) {
         continue;
       }
-      // Skip functions that are address taken
-      if (!F.hasAddressTaken()) {
-        F.setName(Twine(YK_CLONE_PREFIX) + F.getName());
+      // Skip already cloned functions or functions with address taken.
+      if (F.hasAddressTaken() || F.getName().startswith(YK_CLONE_PREFIX)) {
+        continue;
+      }
+      ValueToValueMapTy VMap;
+      Function *ClonedFunc = CloneFunction(&F, VMap);
+      if (ClonedFunc == nullptr) {
+        Context.emitError("Failed to clone function: " + F.getName());
+        return std::nullopt;
+      }
+      // Copy arguments
+      auto DestArgIt = ClonedFunc->arg_begin();
+      for (const Argument &OrigArg : F.args()) {
+        DestArgIt->setName(OrigArg.getName());
+        VMap[&OrigArg] = &*DestArgIt++;
+      }
+      // Rename function
+      auto originalName = F.getName().str();
+      auto cloneName = Twine(YK_CLONE_PREFIX) + originalName;
+      ClonedFunc->setName(cloneName);
+      ClonedFuncs[originalName] = ClonedFunc;
+    }
+    return ClonedFuncs;
+  }
+
+  /**
+   * @brief Updates call instructions in cloned functions to reference
+   * other cloned functions.
+   *
+   * @param M The LLVM module containing the functions.
+   * @param ClonedFuncs A map of cloned function names to functions.
+   */
+  void
+  updateClonedFunctionCalls(Module &M,
+                            std::map<std::string, Function *> &ClonedFuncs) {
+    for (auto &Entry : ClonedFuncs) {
+      Function *ClonedFunc = Entry.second;
+      for (BasicBlock &BB : *ClonedFunc) {
+        for (Instruction &I : BB) {
+          if (auto *Call = dyn_cast<CallInst>(&I)) {
+            Function *CalledFunc = Call->getCalledFunction();
+            if (CalledFunc && !CalledFunc->isIntrinsic()) {
+              std::string CalledName = CalledFunc->getName().str();
+              auto It = ClonedFuncs.find(CalledName);
+              if (It != ClonedFuncs.end()) {
+                Call->setCalledFunction(It->second);
+              }
+            }
+          }
+        }
       }
     }
   }
 
   bool runOnModule(Module &M) override {
-    std::unique_ptr<Module> Cloned = CloneModule(M);
-    if (!Cloned) {
-      llvm::report_fatal_error("Error cloning the module");
+    LLVMContext &Context = M.getContext();
+    auto clonedFunctions = cloneFunctionsInModule(M);
+    if (!clonedFunctions) {
+      Context.emitError("Failed to clone functions in module");
       return false;
     }
-    updateClonedFunctions(*Cloned);
-
-    // The `OverrideFromSrc` flag instructs the linker to prioritise
-    // definitions from the source module (the second argument) when
-    // conflicts arise. This means that if two global variables, functions,
-    // or constants have the same name in both the original and cloned modules,
-    // the version from the cloned module will overwrite the original.
-    if (Linker::linkModules(M, std::move(Cloned),
-                            Linker::Flags::OverrideFromSrc)) {
-      llvm::report_fatal_error("Error linking the modules");
-      return false;
-    }
+    updateClonedFunctionCalls(M, *clonedFunctions);
 
     if (verifyModule(M, &errs())) {
-      errs() << "Module verification failed!";
+      Context.emitError("Module verification failed!");
       return false;
     }
 
