@@ -111,14 +111,15 @@ endif()
 get_fq_target_name(atomic_test fq_atomic_test)
 if (LIBC_TARGET_ARCHITECTURE STREQUAL "riscv")
   if (TARGET ${fq_atomic_test}.__unit__)
-    message(STATUS "adding atomic library to ${fq_atomic_test}.__unit__")
-    target_link_libraries(${fq_atomic_test}.__unit__ PUBLIC atomic)
+    message(STATUS "adding atomic library to ${fq_atomic_test}.__unit__.__build__")
+    target_link_libraries(${fq_atomic_test}.__unit__.__build__ PRIVATE atomic)
   endif()
   if (TARGET ${fq_atomic_test}.__hermetic__)
-    message(STATUS "adding atomic library to ${fq_atomic_test}.__hermetic__")
-    target_link_libraries(${fq_atomic_test}.__unit__ PUBLIC atomic)
+    message(STATUS "adding atomic library to ${fq_atomic_test}.__hermetic____build__")
+    target_link_libraries(${fq_atomic_test}.__hermetic__.__build__ PRIVATE atomic)
   endif()
 endif()
+
 
 add_libc_test(
   stringstream_test
