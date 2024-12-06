@@ -3044,7 +3044,7 @@ void OmpStructureChecker::CheckReductionObjects(
         if (!std::holds_alternative<parser::Name>(base.u)) {
           auto source{GetObjectSource(object)};
           context_.Say(source ? *source : GetContext().clauseSource,
-              "The base expression of an array element in %s clause must be an identifier"_err_en_US,
+              "The base expression of an array element or section in %s clause must be an identifier"_err_en_US,
               parser::ToUpperCaseLetters(getClauseName(clauseId).str()));
         }
       }
@@ -4013,11 +4013,13 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Copyin &x) {
 void OmpStructureChecker::CheckStructureComponent(
     const parser::OmpObjectList &objects, llvm::omp::Clause clauseId) {
   auto CheckComponent{[&](const parser::Designator &designator) {
-    if (auto *desg{std::get_if<parser::DataRef>(&designator.u)}) {
-      if (auto *comp{parser::Unwrap<parser::StructureComponent>(*desg)}) {
-        context_.Say(comp->component.source,
-            "A variable that is part of another variable cannot appear on the %s clause"_err_en_US,
-            parser::ToUpperCaseLetters(getClauseName(clauseId).str()));
+    if (auto *dataRef{std::get_if<parser::DataRef>(&designator.u)}) {
+      if (!IsDataRefTypeParamInquiry(dataRef)) {
+        if (auto *comp{parser::Unwrap<parser::StructureComponent>(*dataRef)}) {
+          context_.Say(comp->component.source,
+              "A variable that is part of another variable cannot appear on the %s clause"_err_en_US,
+              parser::ToUpperCaseLetters(getClauseName(clauseId).str()));
+        }
       }
     }
   }};
