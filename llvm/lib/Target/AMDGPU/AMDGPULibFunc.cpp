@@ -969,7 +969,7 @@ static Type* getIntrinsicParamType(
   return T;
 }
 
-FunctionType *AMDGPUMangledLibFunc::getFunctionType(Module &M) const {
+FunctionType *AMDGPUMangledLibFunc::getFunctionType(const Module &M) const {
   LLVMContext& C = M.getContext();
   std::vector<Type*> Args;
   ParamIterator I(Leads, manglingRules[FuncId]);
@@ -997,9 +997,39 @@ std::string AMDGPUMangledLibFunc::getName() const {
   return std::string(OS.str());
 }
 
-bool AMDGPULibFunc::isCompatibleSignature(const FunctionType *FuncTy) const {
-  // TODO: Validate types make sense
-  return !FuncTy->isVarArg() && FuncTy->getNumParams() == getNumArgs();
+bool AMDGPULibFunc::isCompatibleSignature(const Module &M,
+                                          const FunctionType *CallTy) const {
+  const FunctionType *FuncTy = getFunctionType(M);
+
+  // FIXME: UnmangledFuncInfo does not have any type information other than the
+  // number of arguments.
+  if (!FuncTy)
+    return getNumArgs() == CallTy->getNumParams();
+
+  // Normally the types should exactly match.
+  if (FuncTy == CallTy)
+    return true;
+
+  const unsigned NumParams = FuncTy->getNumParams();
+  if (NumParams != CallTy->getNumParams())
+    return false;
+
+  for (unsigned I = 0; I != NumParams; ++I) {
+    Type *FuncArgTy = FuncTy->getParamType(I);
+    Type *CallArgTy = CallTy->getParamType(I);
+    if (FuncArgTy == CallArgTy)
+      continue;
+
+    // Some cases permit implicit splatting a scalar value to a vector argument.
+    auto *FuncVecTy = dyn_cast<VectorType>(FuncArgTy);
+    if (FuncVecTy && FuncVecTy->getElementType() == CallArgTy &&
+        allowsImplicitVectorSplat(I))
+      continue;
+
+    return false;
+  }
+
+  return true;
 }
 
 Function *AMDGPULibFunc::getFunction(Module *M, const AMDGPULibFunc &fInfo) {
@@ -1012,7 +1042,7 @@ Function *AMDGPULibFunc::getFunction(Module *M, const AMDGPULibFunc &fInfo) {
   if (F->hasFnAttribute(Attribute::NoBuiltin))
     return nullptr;
 
-  if (!fInfo.isCompatibleSignature(F->getFunctionType()))
+  if (!fInfo.isCompatibleSignature(*M, F->getFunctionType()))
     return nullptr;
 
   return F;
@@ -1028,7 +1058,7 @@ FunctionCallee AMDGPULibFunc::getOrInsertFunction(Module *M,
     if (F->hasFnAttribute(Attribute::NoBuiltin))
       return nullptr;
     if (!F->isDeclaration() &&
-        fInfo.isCompatibleSignature(F->getFunctionType()))
+        fInfo.isCompatibleSignature(*M, F->getFunctionType()))
       return F;
   }
 
