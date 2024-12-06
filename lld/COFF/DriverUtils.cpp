@@ -179,11 +179,11 @@ void LinkerDriver::parseMerge(StringRef s) {
 void LinkerDriver::parsePDBPageSize(StringRef s) {
   int v;
   if (s.getAsInteger(0, v)) {
-    error("/pdbpagesize: invalid argument: " + s);
+    Err(ctx) << "/pdbpagesize: invalid argument: " << s;
     return;
   }
   if (v != 4096 && v != 8192 && v != 16384 && v != 32768) {
-    error("/pdbpagesize: invalid argument: " + s);
+    Err(ctx) << "/pdbpagesize: invalid argument: " << s;
     return;
   }
 
@@ -234,12 +234,12 @@ void LinkerDriver::parseSection(StringRef s) {
 void LinkerDriver::parseAligncomm(StringRef s) {
   auto [name, align] = s.split(',');
   if (name.empty() || align.empty()) {
-    error("/aligncomm: invalid argument: " + s);
+    Err(ctx) << "/aligncomm: invalid argument: " << s;
     return;
   }
   int v;
   if (align.getAsInteger(0, v)) {
-    error("/aligncomm: invalid argument: " + s);
+    Err(ctx) << "/aligncomm: invalid argument: " << s;
     return;
   }
   ctx.config.alignComm[std::string(name)] =
@@ -252,7 +252,7 @@ void LinkerDriver::parseFunctionPadMin(llvm::opt::Arg *a) {
   if (!arg.empty()) {
     // Optional padding in bytes is given.
     if (arg.getAsInteger(0, ctx.config.functionPadMin))
-      error("/functionpadmin: invalid argument: " + arg);
+      Err(ctx) << "/functionpadmin: invalid argument: " << arg;
     return;
   }
   // No optional argument given.
@@ -263,7 +263,7 @@ void LinkerDriver::parseFunctionPadMin(llvm::opt::Arg *a) {
   } else if (ctx.config.machine == AMD64) {
     ctx.config.functionPadMin = 6;
   } else {
-    error("/functionpadmin: invalid argument for this machine: " + arg);
+    Err(ctx) << "/functionpadmin: invalid argument for this machine: " << arg;
   }
 }
 
@@ -272,12 +272,12 @@ void LinkerDriver::parseDependentLoadFlags(llvm::opt::Arg *a) {
   StringRef arg = a->getNumValues() ? a->getValue() : "";
   if (!arg.empty()) {
     if (arg.getAsInteger(0, ctx.config.dependentLoadFlags))
-      error("/dependentloadflag: invalid argument: " + arg);
+      Err(ctx) << "/dependentloadflag: invalid argument: " << arg;
     return;
   }
   // MSVC linker reports error "no argument specified", although MSDN describes
   // argument as optional.
-  error("/dependentloadflag: no argument specified");
+  Err(ctx) << "/dependentloadflag: no argument specified";
 }
 
 // Parses a string in the form of "EMBED[,=<integer>]|NO".
@@ -334,12 +334,12 @@ void LinkerDriver::parseSwaprun(StringRef arg) {
     else if (swaprun.equals_insensitive("net"))
       ctx.config.swaprunNet = true;
     else if (swaprun.empty())
-      error("/swaprun: missing argument");
+      Err(ctx) << "/swaprun: missing argument";
     else
-      error("/swaprun: invalid argument: " + swaprun);
+      Err(ctx) << "/swaprun: invalid argument: " << swaprun;
     // To catch trailing commas, e.g. `/spawrun:cd,`
     if (newArg.empty() && arg.ends_with(","))
-      error("/swaprun: missing argument");
+      Err(ctx) << "/swaprun: missing argument";
     arg = newArg;
   } while (!arg.empty());
 }
@@ -614,7 +614,7 @@ Export LinkerDriver::parseExport(StringRef arg) {
       if (!rest.empty() && !rest.contains(','))
         e.exportAs = rest;
       else
-        error("invalid EXPORTAS value: " + rest);
+        Err(ctx) << "invalid EXPORTAS value: " << rest;
       break;
     }
     if (tok.starts_with("@")) {
@@ -824,7 +824,7 @@ MemoryBufferRef LinkerDriver::convertResToCOFF(ArrayRef<MemoryBufferRef> mbs,
     if (ctx.config.forceMultipleRes)
       Warn(ctx) << dupeDiag;
     else
-      error(dupeDiag);
+      Err(ctx) << dupeDiag;
 
   Expected<std::unique_ptr<MemoryBuffer>> e =
       llvm::object::writeWindowsResourceCOFF(ctx.config.machine, parser,
@@ -875,7 +875,7 @@ static void handleColorDiagnostics(COFFLinkerContext &ctx,
     else if (s == "never")
       ctx.e.errs().enable_colors(false);
     else if (s != "auto")
-      error("unknown option: --color-diagnostics=" + s);
+      Err(ctx) << "unknown option: --color-diagnostics=" << s;
   }
 }
 
