@@ -2403,14 +2403,13 @@ public:
     }
 
     /// Go through the instructions in VL and append their operands.
-    void appendOperandsOfVL(ArrayRef<Value *> VL) {
+    void appendOperandsOfVL(ArrayRef<Value *> VL, Instruction *VL0) {
       assert(!VL.empty() && "Bad VL");
       assert((empty() || VL.size() == getNumLanes()) &&
              "Expected same number of lanes");
       // IntrinsicInst::isCommutative returns true if swapping the first "two"
       // arguments to the intrinsic produces the same result.
       constexpr unsigned IntrinsicNumOperands = 2;
-      auto *VL0 = cast<Instruction>(*find_if(VL, IsaPred<Instruction>));
       unsigned NumOperands = VL0->getNumOperands();
       ArgSize = isa<IntrinsicInst>(VL0) ? IntrinsicNumOperands : NumOperands;
       OpsVec.resize(NumOperands);
@@ -2542,14 +2541,18 @@ public:
 
   public:
     /// Initialize with all the operands of the instruction vector \p RootVL.
-    VLOperands(ArrayRef<Value *> RootVL, const BoUpSLP &R)
+    VLOperands(ArrayRef<Value *> RootVL, const BoUpSLP &R, Instruction *VL0)
         : TLI(*R.TLI), DL(*R.DL), SE(*R.SE), R(R),
-          L(R.LI->getLoopFor(
-              (cast<Instruction>(*find_if(RootVL, IsaPred<Instruction>))
-                   ->getParent()))) {
+          L(R.LI->getLoopFor((VL0->getParent()))) {
       // Append all the operands of RootVL.
-      appendOperandsOfVL(RootVL);
+      appendOperandsOfVL(RootVL, VL0);
     }
+
+    /// Initialize with all the operands of the instruction vector \p RootVL.
+    VLOperands(ArrayRef<Value *> RootVL, const BoUpSLP &R)
+        : VLOperands(
+              RootVL, R,
+              cast<Instruction>(*find_if(RootVL, IsaPred<Instruction>))) {}
 
     /// \Returns a value vector with the operands across all lanes for the
     /// opearnd at \p OpIdx.
@@ -3340,10 +3343,10 @@ private:
 
     /// Set this bundle's operand from Scalars.
     void setOperand(const BoUpSLP &R, bool RequireReorder = false) {
-      VLOperands Ops(Scalars, R);
+      auto *I0 = cast<Instruction>(*find_if(Scalars, IsaPred<Instruction>));
+      VLOperands Ops(Scalars, R, I0);
       if (RequireReorder)
         Ops.reorder();
-      auto *I0 = cast<Instruction>(*find_if(Scalars, IsaPred<Instruction>));
       for (unsigned I : seq<unsigned>(I0->getNumOperands()))
         setOperand(I, Ops.getVL(I));
     }
