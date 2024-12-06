@@ -64,13 +64,14 @@ SimplexBase::SimplexBase(unsigned nVar, bool mustUseBigM,
                          const llvm::SmallBitVector &isSymbol)
     : SimplexBase(nVar, mustUseBigM) {
   assert(isSymbol.size() == nVar && "invalid bitmask!");
-  // Invariant: nSymbol is the number of symbols that have been marked
-  // already and these occupy the columns
-  // [getNumFixedCols(), getNumFixedCols() + nSymbol).
-  for (unsigned symbolIdx : isSymbol.set_bits()) {
-    var[symbolIdx].isSymbol = true;
-    swapColumns(var[symbolIdx].pos, getNumFixedCols() + nSymbol);
-    ++nSymbol;
+  // Iterate through all the variables. Move symbols to the left and non-symbols
+  // to the right while preserving relative ordering.
+  for (unsigned i = 0; i < nVar; ++i) {
+    if (isSymbol[i]) {
+      var[i].isSymbol = true;
+      swapColumns(var[i].pos, getNumFixedCols() + nSymbol);
+      nSymbol++;
+    }
   }
 }
 

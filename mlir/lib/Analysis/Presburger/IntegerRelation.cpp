@@ -229,25 +229,17 @@ PresburgerRelation IntegerRelation::computeReprWithOnlyDivLocals() const {
   // SymbolicLexOpt requires these to form a contiguous range.
   //
   // Take a copy so we can perform mutations.
-  IntegerRelation copy = *this;
   std::vector<MaybeLocalRepr> reprs(getNumLocalVars());
-  copy.getLocalReprs(&reprs);
+  this->getLocalReprs(&reprs);
 
-  // Iterate through all the locals. The last `numNonDivLocals` are the locals
-  // that have been scanned already and do not have division representations.
   unsigned numNonDivLocals = 0;
-  unsigned offset = copy.getVarKindOffset(VarKind::Local);
-  for (unsigned i = 0, e = copy.getNumLocalVars(); i < e - numNonDivLocals;) {
-    if (!reprs[i]) {
-      // Whenever we come across a local that does not have a division
-      // representation, we swap it to the `numNonDivLocals`-th last position
-      // and increment `numNonDivLocal`s. `reprs` also needs to be swapped.
-      copy.swapVar(offset + i, offset + e - numNonDivLocals - 1);
-      std::swap(reprs[i], reprs[e - numNonDivLocals - 1]);
-      ++numNonDivLocals;
+  llvm::SmallBitVector isSymbol(getNumVars(), true);
+  unsigned offset = getVarKindOffset(VarKind::Local);
+  for (unsigned i = 0, e = getNumLocalVars(); i < e; ++i) {
+    if (reprs[i])
       continue;
-    }
-    ++i;
+    isSymbol[offset + i] = false;
+    ++numNonDivLocals;
   }
 
   // If there are no non-div locals, we're done.
@@ -266,9 +258,10 @@ PresburgerRelation IntegerRelation::computeReprWithOnlyDivLocals() const {
   // and the returned set of assignments to the "symbols" that makes the lexmin
   // unbounded.
   SymbolicLexOpt lexminResult =
-      SymbolicLexSimplex(copy, /*symbolOffset*/ 0,
+      SymbolicLexSimplex(*this,
                          IntegerPolyhedron(PresburgerSpace::getSetSpace(
-                             /*numDims=*/copy.getNumVars() - numNonDivLocals)))
+                             /*numDims=*/getNumVars() - numNonDivLocals)),
+                         isSymbol)
           .computeSymbolicIntegerLexMin();
   PresburgerRelation result =
       lexminResult.lexopt.getDomain().unionSet(lexminResult.unboundedDomain);
