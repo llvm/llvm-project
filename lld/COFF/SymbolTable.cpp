@@ -66,8 +66,9 @@ void SymbolTable::addFile(InputFile *file) {
       ctx.objFileInstances.push_back(f);
     } else if (auto *f = dyn_cast<BitcodeFile>(file)) {
       if (ltoCompilationDone) {
-        error("LTO object file " + toString(file) + " linked in after "
-              "doing LTO compilation.");
+        Err(ctx) << "LTO object file " << toString(file)
+                 << " linked in after "
+                    "doing LTO compilation.";
       }
       ctx.bitcodeFileInstances.push_back(f);
     } else if (auto *f = dyn_cast<ImportFile>(file)) {
@@ -81,13 +82,14 @@ void SymbolTable::addFile(InputFile *file) {
       (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN ||
        (ctx.config.machineInferred &&
         (ctx.config.machine == ARM64 || ctx.config.machine == AMD64)))) {
-    error(toString(file) + ": machine type arm64ec is ambiguous and cannot be "
-                           "inferred, use /machine:arm64ec or /machine:arm64x");
+    Err(ctx) << toString(file)
+             << ": machine type arm64ec is ambiguous and cannot be "
+                "inferred, use /machine:arm64ec or /machine:arm64x";
     return;
   }
   if (!compatibleMachineType(ctx, mt)) {
-    error(toString(file) + ": machine type " + machineToStr(mt) +
-          " conflicts with " + machineToStr(ctx.config.machine));
+    Err(ctx) << toString(file) << ": machine type " << machineToStr(mt)
+             << " conflicts with " << machineToStr(ctx.config.machine);
     return;
   }
   if (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN &&
@@ -624,7 +626,7 @@ void SymbolTable::initializeECThunks() {
     // feasible, functions are required to be COMDAT symbols with no offset.
     if (!from || !from->getChunk()->isCOMDAT() ||
         cast<DefinedRegular>(from)->getValue()) {
-      error("non COMDAT symbol '" + from->getName() + "' in hybrid map");
+      Err(ctx) << "non COMDAT symbol '" << from->getName() << "' in hybrid map";
       continue;
     }
     from->getChunk()->setEntryThunk(to);
@@ -819,7 +821,7 @@ void SymbolTable::reportDuplicate(Symbol *existing, InputFile *newFile,
   if (ctx.config.forceMultiple)
     Warn(ctx) << msg;
   else
-    error(msg);
+    Err(ctx) << msg;
 }
 
 Symbol *SymbolTable::addAbsolute(StringRef n, COFFSymbolRef sym) {
