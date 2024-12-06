@@ -12762,9 +12762,9 @@ def err_acc_gang_dim_value
     : Error<"argument to 'gang' clause dimension must be %select{a constant "
             "expression|1, 2, or 3: evaluated to %1}0">;
 def err_acc_num_arg_conflict
-    : Error<"'num' argument to '%0' clause not allowed on a '%1' "
-            "construct%select{| associated with a '%3' construct}2 that has a "
-            "'%4' clause">;
+    : Error<"'%0' argument to '%1' clause not allowed on a '%2' "
+            "construct%select{| associated with a '%4' construct}3 that has a "
+            "'%5' clause">;
 def err_acc_num_arg_conflict_reverse
     : Error<"'%0' clause not allowed on a 'kernels loop' construct that "
             "has a '%1' clause with a%select{n| 'num'}2 argument">;
