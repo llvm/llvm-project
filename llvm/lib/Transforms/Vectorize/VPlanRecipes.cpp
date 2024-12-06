@@ -629,7 +629,10 @@ Value *VPInstruction::generate(VPTransformState &State) {
         State.CFG
             .VPBB2IRBB[cast<VPBasicBlock>(getParent()->getSinglePredecessor())];
     NewPhi->addIncoming(IncomingFromVPlanPred, VPlanPred);
-    for (auto *OtherPred : predecessors(Builder.GetInsertBlock())) {
+    // TODO: Predecessors are temporarily reversed to reduce test changes.
+    // Remove it and update remaining tests after functional change landed.
+    for (auto *OtherPred :
+         reverse(to_vector(predecessors(Builder.GetInsertBlock())))) {
       assert(OtherPred != VPlanPred &&
              "VPlan predecessors should not be connected yet");
       NewPhi->addIncoming(IncomingFromOtherPreds, OtherPred);

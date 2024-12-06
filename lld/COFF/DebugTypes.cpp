@@ -231,7 +231,7 @@ void TpiSource::remapRecord(MutableArrayRef<uint8_t> rec,
   for (const TiReference &ref : typeRefs) {
     unsigned byteSize = ref.Count * sizeof(TypeIndex);
     if (contents.size() < ref.Offset + byteSize)
-      fatal("symbol record too short");
+      Fatal(ctx) << "symbol record too short";
 
     MutableArrayRef<TypeIndex> indices(
         reinterpret_cast<TypeIndex *>(contents.data() + ref.Offset), ref.Count);
@@ -320,8 +320,8 @@ Error TpiSource::mergeDebugT(TypeMerger *m) {
   std::optional<PCHMergerInfo> pchInfo;
   if (auto err = mergeTypeAndIdRecords(m->idTable, m->typeTable,
                                        indexMapStorage, types, pchInfo))
-    fatal("codeview::mergeTypeAndIdRecords failed: " +
-          toString(std::move(err)));
+    Fatal(ctx) << "codeview::mergeTypeAndIdRecords failed: "
+               << toString(std::move(err));
   if (pchInfo) {
     file->pchSignature = pchInfo->PCHSignature;
     endPrecompIdx = pchInfo->EndPrecompIndex;
@@ -364,26 +364,30 @@ Error TypeServerSource::mergeDebugT(TypeMerger *m) {
   pdb::PDBFile &pdbFile = pdbInputFile->session->getPDBFile();
   Expected<pdb::TpiStream &> expectedTpi = pdbFile.getPDBTpiStream();
   if (auto e = expectedTpi.takeError())
-    fatal("Type server does not have TPI stream: " + toString(std::move(e)));
+    Fatal(ctx) << "Type server does not have TPI stream: "
+               << toString(std::move(e));
   pdb::TpiStream *maybeIpi = nullptr;
   if (pdbFile.hasPDBIpiStream()) {
     Expected<pdb::TpiStream &> expectedIpi = pdbFile.getPDBIpiStream();
     if (auto e = expectedIpi.takeError())
-      fatal("Error getting type server IPI stream: " + toString(std::move(e)));
+      Fatal(ctx) << "Error getting type server IPI stream: "
+                 << toString(std::move(e));
     maybeIpi = &*expectedIpi;
   }
 
   // Merge TPI first, because the IPI stream will reference type indices.
   if (auto err = mergeTypeRecords(m->typeTable, indexMapStorage,
                                   expectedTpi->typeArray()))
-    fatal("codeview::mergeTypeRecords failed: " + toString(std::move(err)));
+    Fatal(ctx) << "codeview::mergeTypeRecords failed: "
+               << toString(std::move(err));
   tpiMap = indexMapStorage;
 
   // Merge IPI.
   if (maybeIpi) {
     if (auto err = mergeIdRecords(m->idTable, tpiMap, ipiSrc->indexMapStorage,
                                   maybeIpi->typeArray()))
-      fatal("codeview::mergeIdRecords failed: " + toString(std::move(err)));
+      Fatal(ctx) << "codeview::mergeIdRecords failed: "
+                 << toString(std::move(err));
     ipiMap = ipiSrc->indexMapStorage;
   }
 
@@ -572,8 +576,10 @@ void PrecompSource::registerMapping() {
   if (file->pchSignature && *file->pchSignature) {
     auto it = ctx.precompSourceMappings.emplace(*file->pchSignature, this);
     if (!it.second)
-      fatal("a PCH object with the same signature has already been provided (" +
-            toString(it.first->second->file) + " and " + toString(file) + ")");
+      Fatal(ctx)
+          << "a PCH object with the same signature has already been provided ("
+          << toString(it.first->second->file) << " and " << toString(file)
+          << ")";
     registered = true;
   }
 }
@@ -756,7 +762,8 @@ void TypeServerSource::loadGHashes() {
   // Hash TPI stream.
   Expected<pdb::TpiStream &> expectedTpi = pdbFile.getPDBTpiStream();
   if (auto e = expectedTpi.takeError())
-    fatal("Type server does not have TPI stream: " + toString(std::move(e)));
+    Fatal(ctx) << "Type server does not have TPI stream: "
+               << toString(std::move(e));
   assignGHashesFromVector(
       GloballyHashedType::hashTypes(expectedTpi->typeArray()));
   isItemIndex.resize(ghashes.size());
@@ -766,7 +773,7 @@ void TypeServerSource::loadGHashes() {
     return;
   Expected<pdb::TpiStream &> expectedIpi = pdbFile.getPDBIpiStream();
   if (auto e = expectedIpi.takeError())
-    fatal("error retrieving IPI stream: " + toString(std::move(e)));
+    Fatal(ctx) << "error retrieving IPI stream: " << toString(std::move(e));
   ipiSrc->assignGHashesFromVector(
       GloballyHashedType::hashIds(expectedIpi->typeArray(), ghashes));
 
@@ -1149,8 +1156,8 @@ void TypeMerger::mergeTypesWithGHash() {
          "midpoint is not midpoint");
   uint32_t numTypes = std::distance(entries.begin(), mid);
   uint32_t numItems = std::distance(mid, entries.end());
-  Log(ctx) << "Tpi record count: " << Twine(numTypes);
-  Log(ctx) << "Ipi record count: " << Twine(numItems);
+  Log(ctx) << "Tpi record count: " << numTypes;
+  Log(ctx) << "Ipi record count: " << numItems;
 
   // Make a list of the "unique" type records to merge for each tpi source. Type
   // merging will skip indices not on this list. Store the destination PDB type

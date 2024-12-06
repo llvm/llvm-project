@@ -254,9 +254,13 @@ static bool readPointerToBuffer(const Context &Ctx, const Pointer &FromPtr,
         }
 
         assert(P.isInitialized());
-        // nullptr_t is a PT_Ptr for us, but it's still not std::is_pointer_v.
-        if (T == PT_Ptr)
-          assert(false && "Implement casting to pointer types");
+        if (T == PT_Ptr) {
+          assert(P.getType()->isNullPtrType());
+          // Clang treats nullptr_t has having NO bits in its value
+          // representation. So, we accept it here and leave its bits
+          // uninitialized.
+          return true;
+        }
 
         auto Buff =
             std::make_unique<std::byte[]>(ObjectReprChars.getQuantity());
