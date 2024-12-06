@@ -92,8 +92,9 @@ public:
   virtual void emitARM64WinCFISaveAnyRegQPX(unsigned Reg, int Offset) {}
 
   /// Build attributes implementation
-  virtual void emitSubsection(unsigned Vendor, unsigned IsMandatory,
-                              unsigned ParameterType) {}
+  virtual void emitSubsection(unsigned Vendor,
+                              ARMBuildAttrs::SubsectionMandatory IsMandatory,
+                              ARMBuildAttrs::SubsectionType ParameterType) {}
   virtual void emitAttribute(unsigned Vendor, unsigned Tag, unsigned Value,
                              bool Override) {}
 
@@ -110,8 +111,9 @@ private:
   SmallVector<MCELFStreamer::AttributeSubSection, 64> AttributeSubSections;
 
   /// Build attributes implementation
-  void emitSubsection(unsigned Vendor, unsigned IsMandatory,
-                      unsigned ParameterType) override;
+  void emitSubsection(unsigned Vendor,
+                      ARMBuildAttrs::SubsectionMandatory IsMandatory,
+                      ARMBuildAttrs::SubsectionType ParameterType) override;
   void emitAttribute(unsigned Vendor, unsigned Tag, unsigned Value,
                      bool Override) override;
 

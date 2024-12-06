@@ -6,13 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 
 using namespace llvm;
 
-namespace {
-const TagNameItem ARMAttributeTags[] = {
+static const TagNameItem tagData[] = {
     {ARMBuildAttrs::File, "Tag_File"},
     {ARMBuildAttrs::Section, "Tag_Section"},
     {ARMBuildAttrs::Symbol, "Tag_Symbol"},
@@ -69,56 +67,7 @@ const TagNameItem ARMAttributeTags[] = {
     {ARMBuildAttrs::ABI_align_preserved, "Tag_ABI_align8_preserved"},
 };
 
-const TagNameItem AVAttributeTags[] = {
-    {ARMBuildAttrs::AV_cpp_exceptions, "Tag_AV_cpp_exceptions"},
-    {ARMBuildAttrs::AV_eba, "Tag_AV_eba"},
-};
-
-template <typename T, size_t N> int FromString(T (&Table)[N], StringRef Tag) {
-  bool HasTagPrefix = Tag.starts_with("Tag_");
-  for (unsigned TI = 0; TI < N; ++TI)
-    if (Table[TI].tagName.drop_front(HasTagPrefix ? 0 : 4) == Tag)
-      return Table[TI].attr;
-  return -1;
+constexpr TagNameMap ARMAttributeTags{tagData};
+const TagNameMap &llvm::ARMBuildAttrs::getARMAttributeTags() {
+  return ARMAttributeTags;
 }
-
-template <typename T, size_t N, typename A>
-StringRef AsString(T (&Table)[N], A Attr, bool HasTagPrefix) {
-  for (unsigned TI = 0; TI < N; ++TI)
-    if (Table[TI].attr == Attr)
-      return Table[TI].tagName.drop_front(HasTagPrefix ? 0 : 4);
-  return StringRef();
-}
-} // namespace
-
-namespace llvm {
-namespace ARMBuildAttrs {
-StringRef AttrTypeAsString(StringRef Vendor, unsigned Attr, bool HasTagPrefix) {
-  if (Vendor.equals_insensitive("aeabi") || Vendor.equals_insensitive("eabi"))
-    return AsString(ARMAttributeTags, static_cast<AttrType>(Attr),
-                    HasTagPrefix);
-  else if (Vendor.equals_insensitive("arm"))
-    return AsString(AVAttributeTags, static_cast<AVAttr>(Attr), HasTagPrefix);
-  return StringRef();
-}
-
-StringRef AttrTypeAsString(AttrType Attr, bool HasTagPrefix) {
-  return AsString(ARMAttributeTags, static_cast<AttrType>(Attr), HasTagPrefix);
-}
-
-StringRef AttrTypeAsString(AVAttr Attr, bool HasTagPrefix) {
-  return AsString(AVAttributeTags, static_cast<AVAttr>(Attr), HasTagPrefix);
-}
-
-int AttrTypeFromString(StringRef Vendor, StringRef Tag) {
-  if (Vendor.equals_insensitive("aeabi") || Vendor.equals_insensitive("eabi"))
-    return FromString(ARMAttributeTags, Tag);
-  else if (Vendor.equals_insensitive("arm"))
-    return FromString(AVAttributeTags, Tag);
-  return -1;
-}
-
-static constexpr TagNameMap tagNameMap(ARMAttributeTags);
-const TagNameMap &getARMAttributeTags() { return tagNameMap; }
-} // namespace ARMBuildAttrs
-} // namespace llvm

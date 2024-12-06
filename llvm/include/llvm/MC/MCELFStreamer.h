@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/Support/ARMBuildAttributes.h"
 
 namespace llvm {
 
@@ -113,10 +114,8 @@ public:
     // [<uint32: subsection-length> NTBS: vendor-name <bytes: vendor-data>]*
     StringRef Vendor;
     // <uint8: optional> <uint8: parameter type> <attribute>*
-    unsigned IsMandatory; // SubsectionMandatory::REQUIRED (0),
-                          // SubsectionMandatory::OPTIONAL (1)
-    unsigned
-        ParameterType; // SubsectionType::ULEB128 (0), SubsectionType::NTBS (1)
+    ARMBuildAttrs::SubsectionMandatory IsMandatory;
+    ARMBuildAttrs::SubsectionType ParameterType;
     SmallVector<AttributeItem, 64> Content;
   };
 
@@ -139,7 +138,8 @@ public:
   emitAttributesSection(MCSection *&AttributeSection, const Twine &Section,
                         unsigned Type,
                         SmallVector<AttributeSubSection, 64> &SubSectionVec) {
-    createAttributesSection(AttributeSection, Section, Type, SubSectionVec);
+    createAArch64AttributesSection(AttributeSection, Section, Type,
+                                   SubSectionVec);
   }
 
 private:
@@ -149,10 +149,9 @@ private:
   void createAttributesSection(StringRef Vendor, const Twine &Section,
                                unsigned Type, MCSection *&AttributeSection,
                                SmallVector<AttributeItem, 64> &AttrsVec);
-  void
-  createAttributesSection(MCSection *&AttributeSection, const Twine &Section,
-                          unsigned Type,
-                          SmallVector<AttributeSubSection, 64> &SubSectionVec);
+  void createAArch64AttributesSection(
+      MCSection *&AttributeSection, const Twine &Section, unsigned Type,
+      SmallVector<AttributeSubSection, 64> &SubSectionVec);
 
   // GNU attributes that will get emitted at the end of the asm file.
   SmallVector<AttributeItem, 64> GNUAttributes;

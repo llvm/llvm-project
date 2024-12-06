@@ -465,11 +465,13 @@ void AArch64AsmPrinter::emitAttributes(unsigned Flags,
   PAuthABIVersion = (PAuthABIVersion == uint64_t(-1)) ? 0 : PAuthABIVersion;
 
   if (PAuthABIPlatform || PAuthABIVersion) {
-    TS->emitSubsection(ARMBuildAttrs::AEBI_PAUTHABI, 0, 0);
-    TS->emitAttribute(ARMBuildAttrs::AEBI_PAUTHABI,
+    TS->emitSubsection(ARMBuildAttrs::AEABI_PAUTHABI,
+                       ARMBuildAttrs::SubsectionMandatory::OPTIONAL,
+                       ARMBuildAttrs::SubsectionType::ULEB128);
+    TS->emitAttribute(ARMBuildAttrs::AEABI_PAUTHABI,
                       ARMBuildAttrs::Tag_PAuth_Platform, PAuthABIPlatform,
                       false);
-    TS->emitAttribute(ARMBuildAttrs::AEBI_PAUTHABI,
+    TS->emitAttribute(ARMBuildAttrs::AEABI_PAUTHABI,
                       ARMBuildAttrs::Tag_PAuth_Schema, PAuthABIVersion, false);
   }
 
@@ -478,12 +480,14 @@ void AArch64AsmPrinter::emitAttributes(unsigned Flags,
   unsigned GCSValue = (Flags & ARMBuildAttrs::Feature_GCS_Flag) ? 1 : 0;
 
   if (BTIValue || PACValue || GCSValue) {
-    TS->emitSubsection(ARMBuildAttrs::AEBI_FEATURE_AND_BITS, 1, 0);
-    TS->emitAttribute(ARMBuildAttrs::AEBI_FEATURE_AND_BITS,
+    TS->emitSubsection(ARMBuildAttrs::AEABI_FEATURE_AND_BITS,
+                       ARMBuildAttrs::SubsectionMandatory::REQUIRED,
+                       ARMBuildAttrs::SubsectionType::ULEB128);
+    TS->emitAttribute(ARMBuildAttrs::AEABI_FEATURE_AND_BITS,
                       ARMBuildAttrs::Tag_Feature_BTI, BTIValue, false);
-    TS->emitAttribute(ARMBuildAttrs::AEBI_FEATURE_AND_BITS,
+    TS->emitAttribute(ARMBuildAttrs::AEABI_FEATURE_AND_BITS,
                       ARMBuildAttrs::Tag_Feature_PAC, PACValue, false);
-    TS->emitAttribute(ARMBuildAttrs::AEBI_FEATURE_AND_BITS,
+    TS->emitAttribute(ARMBuildAttrs::AEABI_FEATURE_AND_BITS,
                       ARMBuildAttrs::Tag_Feature_GCS, GCSValue, false);
   }
 }

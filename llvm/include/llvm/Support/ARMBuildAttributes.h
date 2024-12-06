@@ -28,16 +28,16 @@ namespace ARMBuildAttrs {
 const TagNameMap &getARMAttributeTags();
 
 /// AArch64 build attributes vendors (=subsection name)
-enum Vendor : unsigned { AEBI_FEATURE_AND_BITS = 0, AEBI_PAUTHABI = 1 };
+enum Vendor : unsigned { AEABI_FEATURE_AND_BITS = 0, AEABI_PAUTHABI = 1 };
 
 inline StringRef vendorToStr(unsigned Vendor) {
   switch (Vendor) {
   default:
     llvm_unreachable("unknown AArch64 vendor name");
     return "";
-  case AEBI_FEATURE_AND_BITS:
+  case AEABI_FEATURE_AND_BITS:
     return "aeabi-feature-and-bits";
-  case AEBI_PAUTHABI:
+  case AEABI_PAUTHABI:
     return "aeabi-pauthabi";
   }
 }
@@ -126,17 +126,6 @@ enum AttrType : unsigned {
   T2EE_use = 66,             // deprecated (ABI r2.09)
   MPextension_use_old = 70   // recoded to MPextension_use (ABI r2.08)
 };
-
-enum AVAttr { AV_cpp_exceptions = 6, AV_eba = 16 };
-
-StringRef AttrTypeAsString(StringRef Vendor, unsigned Attr,
-                           bool HasTagPrefix = true);
-StringRef AttrTypeAsString(AttrType Attr, bool HasTagPrefix = true);
-StringRef AttrTypeAsString(AVAttr Attr, bool HasTagPrefix = true);
-int AttrTypeFromString(StringRef Vendor, StringRef Tag);
-
-// Magic numbers for .ARM.attributes
-enum AttrMagic { Format_Version = 0x41 };
 
 // Legal Values for CPU_arch, (=6), uleb128
 enum CPUArch {

@@ -160,7 +160,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
     default:
       llvm_unreachable("unknown AArch64 build attributes subsection name");
 
-    case ARMBuildAttrs::AEBI_FEATURE_AND_BITS:
+    case ARMBuildAttrs::AEABI_FEATURE_AND_BITS:
       switch (Tag) {
       default:
         llvm_unreachable("unknown tag for the feature-and-bits subsection");
@@ -176,7 +176,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
       }
       break;
 
-    case ARMBuildAttrs::AEBI_PAUTHABI:
+    case ARMBuildAttrs::AEABI_PAUTHABI:
       switch (Tag) {
       default:
         llvm_unreachable("unknown tag for the feature-and-bits subsection");
@@ -192,8 +192,9 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
     OS << "\n";
   }
 
-  void emitSubsection(unsigned SubsectionName, unsigned Optional,
-                      unsigned ParameterType) override {
+  void emitSubsection(unsigned SubsectionName,
+                      ARMBuildAttrs::SubsectionMandatory Optional,
+                      ARMBuildAttrs::SubsectionType ParameterType) override {
     // The AArch64 build attributes assembly subsection header format:
     // ".aeabi_subsection name, optional, parameter type"
     // optional: required (0) optional (1)
@@ -211,7 +212,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
     default:
       llvm_unreachable("unknown AArch64 build attributes subsection name");
 
-    case ARMBuildAttrs::AEBI_FEATURE_AND_BITS:
+    case ARMBuildAttrs::AEABI_FEATURE_AND_BITS:
       assert(Optional == 1 && "subsection .aeabi-feature-and-bits should be "
                               "marked as optional and not as mandatory");
       assert(ParameterType == 0 && "subsection .aeabi-feature-and-bits should "
@@ -220,7 +221,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
          << OptionalStr << ", " << ParameterStr;
       break;
 
-    case ARMBuildAttrs::AEBI_PAUTHABI:
+    case ARMBuildAttrs::AEABI_PAUTHABI:
       assert(Optional == 0 && "subsection .aeabi-pauthabi should be marked as "
                               "mandatory and not as optional");
       assert(ParameterType == 0 && "subsection .aeabi-pauthabi should be "
@@ -379,9 +380,9 @@ AArch64ELFStreamer &AArch64TargetELFStreamer::getStreamer() {
   return static_cast<AArch64ELFStreamer &>(Streamer);
 }
 
-void AArch64TargetELFStreamer::emitSubsection(unsigned Vendor,
-                                              unsigned IsMandatory,
-                                              unsigned ParameterType) {
+void AArch64TargetELFStreamer::emitSubsection(
+    unsigned Vendor, ARMBuildAttrs::SubsectionMandatory IsMandatory,
+    ARMBuildAttrs::SubsectionType ParameterType) {
   StringRef VendorAsStr = ARMBuildAttrs::vendorToStr(Vendor);
 
   // If exists, return.

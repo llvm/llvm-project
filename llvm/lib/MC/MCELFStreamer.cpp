@@ -786,7 +786,7 @@ void MCELFStreamer::createAttributesSection(
   AttrsVec.clear();
 }
 
-void MCELFStreamer::createAttributesSection(
+void MCELFStreamer::createAArch64AttributesSection(
     MCSection *&AttributeSection, const Twine &Section, unsigned Type,
     SmallVector<AttributeSubSection, 64> &SubSectionVec) {
   // <format-version: 'A'>
