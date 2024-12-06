@@ -66,7 +66,7 @@ GCFunctionAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
 }
 
 INITIALIZE_PASS(GCModuleInfo, "collector-metadata",
-                "Create Garbage Collector Module Metadata", false, false)
+                "Create Garbage Collector Module Metadata", false, true)
 
 // -----------------------------------------------------------------------------
 

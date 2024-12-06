@@ -4971,14 +4971,14 @@ SDValue ARMTargetLowering::getVFPCmp(SDValue LHS, SDValue RHS,
                                      SelectionDAG &DAG, const SDLoc &dl,
                                      bool Signaling) const {
   assert(Subtarget->hasFP64() || RHS.getValueType() != MVT::f64);
-  SDValue Cmp;
+  SDValue Flags;
   if (!isFloatingPointZero(RHS))
-    Cmp = DAG.getNode(Signaling ? ARMISD::CMPFPE : ARMISD::CMPFP,
-                      dl, MVT::Glue, LHS, RHS);
+    Flags = DAG.getNode(Signaling ? ARMISD::CMPFPE : ARMISD::CMPFP, dl, FlagsVT,
+                        LHS, RHS);
   else
-    Cmp = DAG.getNode(Signaling ? ARMISD::CMPFPEw0 : ARMISD::CMPFPw0,
-                      dl, MVT::Glue, LHS);
-  return DAG.getNode(ARMISD::FMSTAT, dl, MVT::Glue, Cmp);
+    Flags = DAG.getNode(Signaling ? ARMISD::CMPFPEw0 : ARMISD::CMPFPw0, dl,
+                        FlagsVT, LHS);
+  return DAG.getNode(ARMISD::FMSTAT, dl, MVT::Glue, Flags);
 }
 
 /// duplicateCmp - Glue values can have only one use, so this function
@@ -4991,15 +4991,11 @@ ARMTargetLowering::duplicateCmp(SDValue Cmp, SelectionDAG &DAG) const {
     return DAG.getNode(Opc, DL, MVT::Glue, Cmp.getOperand(0),Cmp.getOperand(1));
 
   assert(Opc == ARMISD::FMSTAT && "unexpected comparison operation");
-  Cmp = Cmp.getOperand(0);
-  Opc = Cmp.getOpcode();
-  if (Opc == ARMISD::CMPFP)
-    Cmp = DAG.getNode(Opc, DL, MVT::Glue, Cmp.getOperand(0),Cmp.getOperand(1));
-  else {
-    assert(Opc == ARMISD::CMPFPw0 && "unexpected operand of FMSTAT");
-    Cmp = DAG.getNode(Opc, DL, MVT::Glue, Cmp.getOperand(0));
-  }
-  return DAG.getNode(ARMISD::FMSTAT, DL, MVT::Glue, Cmp);
+  SDValue Flags = Cmp.getOperand(0);
+  assert((Flags.getOpcode() == ARMISD::CMPFP ||
+          Flags.getOpcode() == ARMISD::CMPFPw0) &&
+         "unexpected operand of FMSTAT");
+  return DAG.getNode(ARMISD::FMSTAT, DL, MVT::Glue, Flags);
 }
 
 // This function returns three things: the arithmetic computation itself

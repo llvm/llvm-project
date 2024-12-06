@@ -76,7 +76,7 @@ func.func @scf_while_non_equiv_yield(%arg0: tensor<5xi1>,
 
 func.func @to_tensor_op_unsupported(%m: memref<?xf32>, %idx: index) -> (f32) {
   // expected-error @+1 {{to_tensor ops without `restrict` are not supported by One-Shot Analysis}}
-  %0 = bufferization.to_tensor %m : memref<?xf32>
+  %0 = bufferization.to_tensor %m : memref<?xf32> to tensor<?xf32>
 
   %1 = tensor.extract %0[%idx] : tensor<?xf32>
   return %1 : f32

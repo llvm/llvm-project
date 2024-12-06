@@ -117,7 +117,7 @@ public:
     assert(!isMemDepNodeCandidate(I) && "Expected Non-Mem instruction, ");
   }
   DGNode(const DGNode &Other) = delete;
-  virtual ~DGNode() = default;
+  virtual ~DGNode();
   /// \Returns the number of unscheduled successors.
   unsigned getNumUnscheduledSuccs() const { return UnscheduledSuccs; }
   void decrUnscheduledSuccs() {
@@ -292,6 +292,7 @@ private:
 
   Context *Ctx = nullptr;
   std::optional<Context::CallbackID> CreateInstrCB;
+  std::optional<Context::CallbackID> EraseInstrCB;
 
   std::unique_ptr<BatchAAResults> BatchAA;
 
@@ -328,11 +329,23 @@ private:
   /// chain.
   void createNewNodes(const Interval<Instruction> &NewInterval);
 
+  /// Helper for `notify*Instr()`. \Returns the first MemDGNode that comes
+  /// before \p N, including or excluding \p N based on \p IncludingN, or
+  /// nullptr if not found.
+  MemDGNode *getMemDGNodeBefore(DGNode *N, bool IncludingN) const;
+  /// Helper for `notifyMoveInstr()`. \Returns the first MemDGNode that comes
+  /// after \p N, including or excluding \p N based on \p IncludingN, or nullptr
+  /// if not found.
+  MemDGNode *getMemDGNodeAfter(DGNode *N, bool IncludingN) const;
+
   /// Called by the callbacks when a new instruction \p I has been created.
-  void notifyCreateInstr(Instruction *I) {
-    getOrCreateNode(I);
-    // TODO: Update the dependencies for the new node.
-    // TODO: Update the MemDGNode chain to include the new node if needed.
+  void notifyCreateInstr(Instruction *I);
+  /// Called by the callbacks when instruction \p I is about to get
+  /// deleted.
+  void notifyEraseInstr(Instruction *I) {
+    InstrToNodeMap.erase(I);
+    // TODO: Update the dependencies.
+    // TODO: Update the MemDGNode chain to remove the node if needed.
   }
 
 public:
@@ -341,10 +354,14 @@ public:
       : Ctx(&Ctx), BatchAA(std::make_unique<BatchAAResults>(AA)) {
     CreateInstrCB = Ctx.registerCreateInstrCallback(
         [this](Instruction *I) { notifyCreateInstr(I); });
+    EraseInstrCB = Ctx.registerEraseInstrCallback(
+        [this](Instruction *I) { notifyEraseInstr(I); });
   }
   ~DependencyGraph() {
     if (CreateInstrCB)
       Ctx->unregisterCreateInstrCallback(*CreateInstrCB);
+    if (EraseInstrCB)
+      Ctx->unregisterEraseInstrCallback(*EraseInstrCB);
   }
 
   DGNode *getNode(Instruction *I) const {

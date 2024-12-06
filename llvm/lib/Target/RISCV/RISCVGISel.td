@@ -76,10 +76,10 @@ def gi_trailing_zero : GICustomOperandRenderer<"renderTrailingZeros">,
 // should add a LowLevelTypeByHwMode, and use that to define our XLenLLT instead
 // here.
 def GIShiftMaskXLen :
-    GIComplexOperandMatcher<s32, "selectShiftMask">,
+    GIComplexOperandMatcher<s32, "selectShiftMaskXLen">,
     GIComplexPatternEquiv<shiftMaskXLen>;
 def GIShiftMask32 :
-    GIComplexOperandMatcher<s32, "selectShiftMask">,
+    GIComplexOperandMatcher<s64, "selectShiftMask32">,
     GIComplexPatternEquiv<shiftMask32>;
 
 def gi_sh1add_op : GIComplexOperandMatcher<s32, "selectSHXADDOp<1>">,
@@ -173,6 +173,22 @@ def : StPat<store, SD, GPR, PtrVT>;
 // legal and regbank select may not constrain registers to FP.
 def : LdPat<load, LH, i16>;
 def : StPat<store, SH, GPR, i16>;
+
+def : LdPat<extloadi8, LBU, i16>; // Prefer unsigned due to no c.lb in Zcb.
+def : StPat<truncstorei8, SB, GPR, i16>;
+
+let Predicates = [HasAtomicLdSt] in {
+  def : LdPat<atomic_load_8,  LB, i16>;
+  def : LdPat<atomic_load_16, LH, i16>;
+
+  def : StPat<atomic_store_8,  SB, GPR, i16>;
+  def : StPat<atomic_store_16, SH, GPR, i16>;
+}
+
+let Predicates = [HasAtomicLdSt, IsRV64] in {
+  def : LdPat<atomic_load_32, LW, i32>;
+  def : StPat<atomic_store_32, SW, GPR, i32>;
+}
 
 //===----------------------------------------------------------------------===//
 // RV64 i32 patterns not used by SelectionDAG

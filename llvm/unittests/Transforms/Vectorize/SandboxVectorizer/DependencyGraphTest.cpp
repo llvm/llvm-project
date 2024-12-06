@@ -814,19 +814,72 @@ define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %arg) {
   auto *BB = &*F->begin();
   auto It = BB->begin();
   auto *S1 = cast<sandboxir::StoreInst>(&*It++);
-  [[maybe_unused]] auto *S2 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S2 = cast<sandboxir::StoreInst>(&*It++);
   auto *S3 = cast<sandboxir::StoreInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
   // Check new instruction callback.
   sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
-  DAG.extend({S1, S3});
+  DAG.extend({S1, Ret});
   auto *Arg = F->getArg(3);
   auto *Ptr = S1->getPointerOperand();
-  sandboxir::StoreInst *NewS =
-      sandboxir::StoreInst::create(Arg, Ptr, Align(8), S3->getIterator(),
-                                   /*IsVolatile=*/true, Ctx);
-  auto *NewSN = DAG.getNode(NewS);
-  EXPECT_TRUE(NewSN != nullptr);
+  {
+    sandboxir::StoreInst *NewS =
+        sandboxir::StoreInst::create(Arg, Ptr, Align(8), S3->getIterator(),
+                                     /*IsVolatile=*/true, Ctx);
+    auto *NewSN = DAG.getNode(NewS);
+    EXPECT_TRUE(NewSN != nullptr);
+
+    // Check the MemDGNode chain.
+    auto *S2MemN = cast<sandboxir::MemDGNode>(DAG.getNode(S2));
+    auto *NewMemSN = cast<sandboxir::MemDGNode>(NewSN);
+    auto *S3MemN = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
+    EXPECT_EQ(S2MemN->getNextNode(), NewMemSN);
+    EXPECT_EQ(NewMemSN->getPrevNode(), S2MemN);
+    EXPECT_EQ(NewMemSN->getNextNode(), S3MemN);
+    EXPECT_EQ(S3MemN->getPrevNode(), NewMemSN);
+  }
+
+  {
+    // Also check if new node is at the end of the BB, after Ret.
+    sandboxir::StoreInst *NewS =
+        sandboxir::StoreInst::create(Arg, Ptr, Align(8), BB->end(),
+                                     /*IsVolatile=*/true, Ctx);
+    // Check the MemDGNode chain.
+    auto *S3MemN = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
+    auto *NewMemSN = cast<sandboxir::MemDGNode>(DAG.getNode(NewS));
+    EXPECT_EQ(S3MemN->getNextNode(), NewMemSN);
+    EXPECT_EQ(NewMemSN->getPrevNode(), S3MemN);
+    EXPECT_EQ(NewMemSN->getNextNode(), nullptr);
+  }
+
+  // TODO: Check the dependencies to/from NewSN after they land.
+}
+
+TEST_F(DependencyGraphTest, EraseInstrCallback) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %arg) {
+  store i8 %v1, ptr %ptr
+  store i8 %v2, ptr %ptr
+  store i8 %v3, ptr %ptr
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S2 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S3 = cast<sandboxir::StoreInst>(&*It++);
+
+  // Check erase instruction callback.
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  DAG.extend({S1, S3});
+  S2->eraseFromParent();
+  auto *DeletedN = DAG.getNodeOrNull(S2);
+  EXPECT_TRUE(DeletedN == nullptr);
   // TODO: Check the dependencies to/from NewSN after they land.
   // TODO: Check the MemDGNode chain.
 }

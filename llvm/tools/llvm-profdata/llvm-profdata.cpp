@@ -333,8 +333,7 @@ cl::opt<memprof::IndexedVersion> MemProfVersionRequested(
     "memprof-version", cl::Hidden, cl::sub(MergeSubcommand),
     cl::desc("Specify the version of the memprof format to use"),
     cl::init(memprof::Version3),
-    cl::values(clEnumValN(memprof::Version1, "1", "version 1"),
-               clEnumValN(memprof::Version2, "2", "version 2"),
+    cl::values(clEnumValN(memprof::Version2, "2", "version 2"),
                clEnumValN(memprof::Version3, "3", "version 3")));
 
 cl::opt<bool> MemProfFullSchema(
@@ -375,7 +374,7 @@ cl::opt<unsigned long long> OverlapValueCutoff(
     cl::desc(
         "Function level overlap information for every function (with calling "
         "context for csspgo) in test "
-        "profile with max count value greater then the parameter value"),
+        "profile with max count value greater than the parameter value"),
     cl::sub(OverlapSubcommand));
 
 // Options specific to show subcommand.
@@ -720,33 +719,7 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
                               Filename);
     };
 
-    // Add the frame mappings into the writer context.
-    const auto &IdToFrame = Reader->getFrameMapping();
-    for (const auto &I : IdToFrame) {
-      bool Succeeded = WC->Writer.addMemProfFrame(
-          /*Id=*/I.first, /*Frame=*/I.getSecond(), MemProfError);
-      // If we weren't able to add the frame mappings then it doesn't make sense
-      // to try to add the records from this profile.
-      if (!Succeeded)
-        return;
-    }
-
-    // Add the call stacks into the writer context.
-    const auto &CSIdToCallStacks = Reader->getCallStacks();
-    for (const auto &I : CSIdToCallStacks) {
-      bool Succeeded = WC->Writer.addMemProfCallStack(
-          /*Id=*/I.first, /*Frame=*/I.getSecond(), MemProfError);
-      // If we weren't able to add the call stacks then it doesn't make sense
-      // to try to add the records from this profile.
-      if (!Succeeded)
-        return;
-    }
-
-    const auto &FunctionProfileData = Reader->getProfileData();
-    // Add the memprof records into the writer context.
-    for (const auto &[GUID, Record] : FunctionProfileData) {
-      WC->Writer.addMemProfRecord(GUID, Record);
-    }
+    WC->Writer.addMemProfData(Reader->takeMemProfData(), MemProfError);
     return;
   }
 
@@ -2994,8 +2967,10 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   std::unique_ptr<ProfileSummary> PS(Builder.getSummary());
   bool IsIR = Reader->isIRLevelProfile();
   OS << "Instrumentation level: " << (IsIR ? "IR" : "Front-end");
-  if (IsIR)
+  if (IsIR) {
     OS << "  entry_first = " << Reader->instrEntryBBEnabled();
+    OS << "  instrument_loop_entries = " << Reader->instrLoopEntriesEnabled();
+  }
   OS << "\n";
   if (ShowAllFunctions || !FuncNameFilter.empty())
     OS << "Functions shown: " << ShownFunctions << "\n";

@@ -190,7 +190,9 @@ public:
       return make_error<InstrProfError>(instrprof_error::unsupported_version);
     }
     if (testIncompatible(InstrProfKind::FunctionEntryOnly,
-                         InstrProfKind::FunctionEntryInstrumentation)) {
+                         InstrProfKind::FunctionEntryInstrumentation) ||
+        testIncompatible(InstrProfKind::FunctionEntryOnly,
+                         InstrProfKind::LoopEntriesInstrumentation)) {
       return make_error<InstrProfError>(
           instrprof_error::unsupported_version,
           "cannot merge FunctionEntryOnly profiles and BB profiles together");
@@ -234,6 +236,9 @@ private:
   // back patching.
   uint64_t writeHeader(const IndexedInstrProf::Header &header,
                        const bool WritePrevVersion, ProfOStream &OS);
+
+  // Writes binary IDs.
+  Error writeBinaryIds(ProfOStream &OS);
 
   // Writes compressed vtable names to profiles.
   Error writeVTableNames(ProfOStream &OS);

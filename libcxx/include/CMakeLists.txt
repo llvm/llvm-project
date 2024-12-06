@@ -205,7 +205,6 @@ set(files
   __assert
   __atomic/aliases.h
   __atomic/atomic.h
-  __atomic/atomic_base.h
   __atomic/atomic_flag.h
   __atomic/atomic_init.h
   __atomic/atomic_lock_free.h
@@ -762,6 +761,7 @@ set(files
   __type_traits/decay.h
   __type_traits/dependent_type.h
   __type_traits/desugars_to.h
+  __type_traits/detected_or.h
   __type_traits/disjunction.h
   __type_traits/enable_if.h
   __type_traits/extent.h

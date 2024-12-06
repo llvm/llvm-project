@@ -3183,7 +3183,8 @@ void TreePattern::dump() const { print(errs()); }
 CodeGenDAGPatterns::CodeGenDAGPatterns(const RecordKeeper &R,
                                        PatternRewriterFn PatternRewriter)
     : Records(R), Target(R), Intrinsics(R),
-      LegalVTS(Target.getLegalValueTypes()), PatternRewriter(PatternRewriter) {
+      LegalVTS(Target.getLegalValueTypes()),
+      PatternRewriter(std::move(PatternRewriter)) {
   ParseNodeInfo();
   ParseNodeTransforms();
   ParseComplexPatterns();

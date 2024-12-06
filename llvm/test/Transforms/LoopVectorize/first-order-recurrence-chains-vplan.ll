@@ -48,8 +48,8 @@ define void @test_chained_first_order_recurrences_1(ptr %ptr) {
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
-; CHECK-NEXT:    IR   %for.1 = phi i16 [ 22, %entry ], [ %for.1.next, %loop ] (extra operand: vp<[[RESUME_1_P]]>)
-; CHECK-NEXT:    IR   %for.2 = phi i16 [ 33, %entry ], [ %for.1, %loop ] (extra operand: vp<[[RESUME_2_P]]>.1)
+; CHECK-NEXT:    IR   %for.1 = phi i16 [ 22, %entry ], [ %for.1.next, %loop ] (extra operand: vp<[[RESUME_1_P]]> from scalar.ph)
+; CHECK-NEXT:    IR   %for.2 = phi i16 [ 33, %entry ], [ %for.1, %loop ] (extra operand: vp<[[RESUME_2_P]]>.1 from scalar.ph)
 ; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK:         IR   %exitcond.not = icmp eq i64 %iv.next, 1000
 ; CHECK-NEXT:  No successors
@@ -125,9 +125,9 @@ define void @test_chained_first_order_recurrences_3(ptr %ptr) {
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
-; CHECK-NEXT:    IR   %for.1 = phi i16 [ 22, %entry ], [ %for.1.next, %loop ] (extra operand: vp<[[RESUME_1_P]]>)
-; CHECK-NEXT:    IR   %for.2 = phi i16 [ 33, %entry ], [ %for.1, %loop ] (extra operand: vp<[[RESUME_2_P]]>.1)
-; CHECK-NEXT:    IR   %for.3 = phi i16 [ 33, %entry ], [ %for.2, %loop ] (extra operand: vp<[[RESUME_3_P]]>.2)
+; CHECK-NEXT:    IR   %for.1 = phi i16 [ 22, %entry ], [ %for.1.next, %loop ] (extra operand: vp<[[RESUME_1_P]]> from scalar.ph)
+; CHECK-NEXT:    IR   %for.2 = phi i16 [ 33, %entry ], [ %for.1, %loop ] (extra operand: vp<[[RESUME_2_P]]>.1 from scalar.ph)
+; CHECK-NEXT:    IR   %for.3 = phi i16 [ 33, %entry ], [ %for.2, %loop ] (extra operand: vp<[[RESUME_3_P]]>.2 from scalar.ph)
 ; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK:         IR   %exitcond.not = icmp eq i64 %iv.next, 1000
 ; CHECK-NEXT: No successors
@@ -205,8 +205,8 @@ define i32 @test_chained_first_order_recurrences_4(ptr %base, i64 %x) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop>:
 ; CHECK-NEXT:   IR   %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
-; CHECK-NEXT:   IR   %for.x = phi i64 [ %for.x.next, %loop ], [ 0, %entry ] (extra operand: vp<[[RESUME_X]]>)
-; CHECK-NEXT:   IR   %for.y = phi i32 [ %for.x.prev, %loop ], [ 0, %entry ] (extra operand: vp<[[RESUME_Y]]>.1)
+; CHECK-NEXT:   IR   %for.x = phi i64 [ %for.x.next, %loop ], [ 0, %entry ] (extra operand: vp<[[RESUME_X]]> from scalar.ph)
+; CHECK-NEXT:   IR   %for.y = phi i32 [ %for.x.prev, %loop ], [ 0, %entry ] (extra operand: vp<[[RESUME_Y]]>.1 from scalar.ph)
 ; CHECK:     No successors
 ; CHECK-NEXT: }
 ;
@@ -279,8 +279,8 @@ define i32 @test_chained_first_order_recurrences_5_hoist_to_load(ptr %base) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop>:
 ; CHECK-NEXT:   IR   %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
-; CHECK-NEXT:   IR   %for.x = phi i64 [ %for.x.next, %loop ], [ 0, %entry ] (extra operand: vp<[[RESUME_X]]>)
-; CHECK-NEXT:   IR   %for.y = phi i32 [ %for.x.prev, %loop ], [ 0, %entry ] (extra operand: vp<[[RESUME_Y]]>.1)
+; CHECK-NEXT:   IR   %for.x = phi i64 [ %for.x.next, %loop ], [ 0, %entry ] (extra operand: vp<[[RESUME_X]]> from scalar.ph)
+; CHECK-NEXT:   IR   %for.y = phi i32 [ %for.x.prev, %loop ], [ 0, %entry ] (extra operand: vp<[[RESUME_Y]]>.1 from scalar.ph)
 ; CHECK:     No successors
 ; CHECK-NEXT: }
 ;

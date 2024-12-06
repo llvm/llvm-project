@@ -1441,11 +1441,7 @@ define i1 @ne_optimized_highbits_cmp_todo_overlapping(i32 %x, i32 %y) {
 
 define i1 @and_trunc_i1(i8 %a1, i8 %a2) {
 ; CHECK-LABEL: @and_trunc_i1(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[A1:%.*]], [[A2:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[XOR]], 2
-; CHECK-NEXT:    [[LOBIT:%.*]] = trunc i8 [[XOR]] to i1
-; CHECK-NEXT:    [[LOBIT_INV:%.*]] = xor i1 [[LOBIT]], true
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[LOBIT_INV]]
+; CHECK-NEXT:    [[AND:%.*]] = icmp eq i8 [[A1:%.*]], [[A2:%.*]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %xor = xor i8 %a1, %a2
@@ -1494,10 +1490,7 @@ define i1 @and_trunc_i1_wrong_operands(i8 %a1, i8 %a2, i8 %a3) {
 
 define i1 @or_trunc_i1(i64 %a1, i64 %a2) {
 ; CHECK-LABEL: @or_trunc_i1(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[A2:%.*]], [[A1:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[XOR]], 1
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[XOR]] to i1
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP]], [[TRUNC]]
+; CHECK-NEXT:    [[OR:%.*]] = icmp ne i64 [[A2:%.*]], [[A1:%.*]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %xor = xor i64 %a2, %a1
@@ -1537,4 +1530,29 @@ define i1 @or_trunc_i1_wrong_operands(i64 %a1, i64 %a2, i64 %a3) {
   %trunc = trunc i64 %xor2 to i1
   %or = or i1 %cmp, %trunc
   ret i1 %or
+}
+
+define i1 @jv_identical(i64 %arg1, i64 %arg2) {
+; CHECK-LABEL: @jv_identical(
+; CHECK-NEXT:    [[ARG1_TRUNC:%.*]] = trunc i64 [[ARG1:%.*]] to i8
+; CHECK-NEXT:    [[ARG2_TRUNC:%.*]] = trunc i64 [[ARG2:%.*]] to i8
+; CHECK-NEXT:    [[EQ1:%.*]] = icmp eq i8 [[ARG1_TRUNC]], [[ARG2_TRUNC]]
+; CHECK-NEXT:    [[DOTUNSHIFTED:%.*]] = xor i64 [[ARG2]], [[ARG1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[DOTUNSHIFTED]], 65536
+; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[EQ1]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[AND2]]
+;
+  %arg1.trunc = trunc i64 %arg1 to i8
+  %arg1.shift = lshr i64 %arg1, 16
+  %arg1.shift.trunc = trunc i64 %arg1.shift to i16
+  %arg2.trunc = trunc i64 %arg2 to i8
+  %arg2.shift = lshr i64 %arg2, 16
+  %arg2.shift.trunc = trunc i64 %arg2.shift to i16
+  %eq1 = icmp eq i8 %arg1.trunc, %arg2.trunc
+  %eq2 = icmp eq i16 %arg1.shift.trunc, %arg2.shift.trunc
+  %and1 = and i1 %eq1, %eq2
+  %xor = xor i64 %arg2, %arg1
+  %cmp = icmp ult i64 %xor, 4294967296
+  %and2 = and i1 %cmp, %and1
+  ret i1 %and2
 }

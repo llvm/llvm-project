@@ -202,6 +202,7 @@ def _HASH_HASH_HASH : Flag<["-"], "###">,
     HelpText<"Print (but do not run) the commands to run for this compilation">;
 def appcontainer: F<"appcontainer">, HelpText<"Set the appcontainer flag in the executable">;
 defm delayload: Eq<"delayload", "DLL to load only on demand">;
+defm dependent_load_flag: EEq<"dependent-load-flag", "Override default LibraryLoad flags">;
 defm mllvm: EqNoHelp<"mllvm">;
 defm pdb: Eq<"pdb", "Output PDB debug info file, chosen implicitly if the argument is empty">;
 defm Xlink : Eq<"Xlink", "Pass <arg> to the COFF linker">, MetaVarName<"<arg>">;
@@ -212,7 +213,7 @@ defm guard_longjmp : B<"guard-longjmp",
   "Do not enable Control Flow Guard long jump hardening">;
 defm error_limit:
   EqLong<"error-limit", "Maximum number of errors to emit before stopping (0 = no limit)">;
-def build_id: J<"build-id=">, HelpText<"Generate build ID note (pass none to disable)">, 
+def build_id: J<"build-id=">, HelpText<"Generate build ID note (pass none to disable)">,
   MetaVarName<"<arg>">;
 def : F<"build-id">, Alias<build_id>, HelpText<"Alias for --build-id=">;
 def functionpadmin: J<"functionpadmin=">, HelpText<"Prepares an image for hotpatching">,
