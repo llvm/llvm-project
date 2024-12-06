@@ -32,3 +32,20 @@ TEST(LlvmLibcAtomicTest, CompareExchangeStrong) {
   ASSERT_FALSE(aint.compare_exchange_strong(desired, 100));
   ASSERT_EQ(aint.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED), 100);
 }
+
+struct TrivialData {
+  int a;
+  int b;
+};
+
+TEST(LlvmLibcAtomicTest, TrivialCompositeData) {
+  LIBC_NAMESPACE::cpp::Atomic<TrivialData> data({1, 2});
+  ASSERT_EQ(data.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED).a, 1);
+  ASSERT_EQ(data.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED).b, 2);
+
+  auto old = data.exchange({3, 4});
+  ASSERT_EQ(data.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED).a, 3);
+  ASSERT_EQ(data.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED).b, 4);
+  ASSERT_EQ(old.a, 1);
+  ASSERT_EQ(old.b, 2);
+}
