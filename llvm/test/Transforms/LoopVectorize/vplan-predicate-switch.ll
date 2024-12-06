@@ -90,6 +90,9 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[MIDDLE_CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>:
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<scalar.ph>:
 ; CHECK-NEXT:   EMIT vp<[[RESUME:%.+]]> = resume-phi ir<%ind.end>, ir<%start>
 ; CHECK-NEXT: Successor(s): ir-bb<loop.header>
@@ -97,9 +100,6 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT: ir-bb<loop.header>:
 ; CHECK-NEXT:   IR   %ptr.iv = phi ptr [ %start, %scalar.ph ], [ %ptr.iv.next, %loop.latch ] (extra operand: vp<[[RESUME]]> from ir-bb<scalar.ph>)
 ; CHECK-NEXT:   IR   %l = load i8, ptr %ptr.iv, align 1
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
