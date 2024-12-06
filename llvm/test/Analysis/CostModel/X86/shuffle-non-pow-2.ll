@@ -22,7 +22,7 @@ define <12 x i64> @foo(<12 x i64> noundef %src) {
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <12 x i64> %shuffle
 ;
 ; AVX-LABEL: 'foo'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %shuffle = shufflevector <12 x i64> %src, <12 x i64> poison, <12 x i32> <i32 0, i32 3, i32 6, i32 9, i32 1, i32 4, i32 7, i32 10, i32 2, i32 5, i32 8, i32 11>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %shuffle = shufflevector <12 x i64> %src, <12 x i64> poison, <12 x i32> <i32 0, i32 3, i32 6, i32 9, i32 1, i32 4, i32 7, i32 10, i32 2, i32 5, i32 8, i32 11>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <12 x i64> %shuffle
 ;
 entry:

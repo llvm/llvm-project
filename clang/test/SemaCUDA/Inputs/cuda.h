@@ -11,6 +11,7 @@
 #define __host__ __attribute__((host))
 #define __shared__ __attribute__((shared))
 #define __managed__ __attribute__((managed))
+#define __grid_constant__ __attribute__((grid_constant))
 #define __launch_bounds__(...) __attribute__((launch_bounds(__VA_ARGS__)))
 
 struct dim3 {

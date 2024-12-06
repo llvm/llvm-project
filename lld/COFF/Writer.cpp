@@ -79,6 +79,11 @@ static_assert(sizeof(dosProgram) % 8 == 0,
 
 static const int dosStubSize = sizeof(dos_header) + sizeof(dosProgram);
 static_assert(dosStubSize % 8 == 0, "DOSStub size must be multiple of 8");
+static const uint32_t coffHeaderOffset = dosStubSize + sizeof(PEMagic);
+static const uint32_t peHeaderOffset =
+    coffHeaderOffset + sizeof(coff_file_header);
+static const uint32_t dataDirOffset64 =
+    peHeaderOffset + sizeof(pe32plus_header);
 
 static const int numberOfDataDirectory = 16;
 
@@ -205,7 +210,7 @@ struct ChunkRange {
 class Writer {
 public:
   Writer(COFFLinkerContext &c)
-      : buffer(errorHandler().outputBuffer), delayIdata(c), edata(c), ctx(c) {}
+      : buffer(c.e.outputBuffer), delayIdata(c), edata(c), ctx(c) {}
   void run();
 
 private:
@@ -272,12 +277,12 @@ private:
   OutputSection *findSection(StringRef name);
   void addBaserels();
   void addBaserelBlocks(std::vector<Baserel> &v);
+  void createDynamicRelocs();
 
   uint32_t getSizeOfInitializedData();
 
   void prepareLoadConfig();
   template <typename T> void prepareLoadConfig(T *loadConfig);
-  template <typename T> void checkLoadConfigGuardData(const T *loadConfig);
 
   std::unique_ptr<FileOutputBuffer> &buffer;
   std::map<PartialSectionKey, PartialSection *> partialSections;
@@ -671,8 +676,9 @@ void Writer::finalizeAddresses() {
     }
     if (rangesOk) {
       if (pass > 0)
-        log("Added " + Twine(numChunks - origNumChunks) + " thunks with " +
-            "margin " + Twine(margin) + " in " + Twine(pass) + " passes");
+        Log(ctx) << "Added " << Twine(numChunks - origNumChunks)
+                 << " thunks with " << "margin " << Twine(margin) << " in "
+                 << Twine(pass) << " passes";
       return;
     }
 
@@ -754,6 +760,8 @@ void Writer::run() {
     llvm::TimeTraceScope timeScope("Write PE");
     ScopedTimer t1(ctx.codeLayoutTimer);
 
+    if (ctx.config.machine == ARM64X)
+      ctx.dynamicRelocs = make<DynamicRelocsChunk>();
     createImportTables();
     createSections();
     appendImportThunks();
@@ -764,6 +772,7 @@ void Writer::run() {
     mergeSections();
     sortECChunks();
     appendECImportTables();
+    createDynamicRelocs();
     removeUnusedSections();
     finalizeAddresses();
     removeEmptySections();
@@ -1117,7 +1126,7 @@ void Writer::createSections() {
       // special case for all architectures.
       outChars = data | r;
 
-      log("Processing section " + pSec->name + " -> " + name);
+      Log(ctx) << "Processing section " << pSec->name << " -> " << name;
 
       sortCRTSectionChunks(pSec->chunks);
     }
@@ -1217,8 +1226,7 @@ void Writer::createMiscChunks() {
     createSEHTable();
 
   // Create /guard:cf tables if requested.
-  if (config->guardCF != GuardCFLevel::Off)
-    createGuardCFTables();
+  createGuardCFTables();
 
   if (isArm64EC(config->machine))
     createECChunks();
@@ -1314,7 +1322,7 @@ void Writer::createExportTable() {
     // Allow using a custom built export table from input object files, instead
     // of having the linker synthesize the tables.
     if (ctx.config.hadExplicitExports)
-      warn("literal .edata sections override exports");
+      Warn(ctx) << "literal .edata sections override exports";
   } else if (!ctx.config.exports.empty()) {
     for (Chunk *c : edata.chunks)
       edataSec->addChunk(c);
@@ -1326,7 +1334,7 @@ void Writer::createExportTable() {
   // Warn on exported deleting destructor.
   for (auto e : ctx.config.exports)
     if (e.sym && e.sym->getName().starts_with("??_G"))
-      warn("export of deleting dtor: " + toString(ctx, *e.sym));
+      Warn(ctx) << "export of deleting dtor: " << toString(ctx, *e.sym);
 }
 
 void Writer::removeUnusedSections() {
@@ -1458,9 +1466,10 @@ void Writer::createSymbolAndStringTable() {
     if ((sec->header.Characteristics & IMAGE_SCN_MEM_DISCARDABLE) == 0)
       continue;
     if (ctx.config.warnLongSectionNames) {
-      warn("section name " + sec->name +
-           " is longer than 8 characters and will use a non-standard string "
-           "table");
+      Warn(ctx)
+          << "section name " << sec->name
+          << " is longer than 8 characters and will use a non-standard string "
+             "table";
     }
     sec->setStringTableOff(addEntryToStringTable(sec->name));
   }
@@ -1597,8 +1606,14 @@ void Writer::assignAddresses() {
 
   for (OutputSection *sec : ctx.outputSections) {
     llvm::TimeTraceScope timeScope("Section: ", sec->name);
-    if (sec == relocSec)
+    if (sec == relocSec) {
+      sec->chunks.clear();
       addBaserels();
+      if (ctx.dynamicRelocs) {
+        ctx.dynamicRelocs->finalize();
+        relocSec->addChunk(ctx.dynamicRelocs);
+      }
+    }
     uint64_t rawSize = 0, virtualSize = 0;
     sec->header.VirtualAddress = rva;
 
@@ -1673,6 +1688,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   buf += sizeof(PEMagic);
 
   // Write COFF header
+  assert(coffHeaderOffset == buf - buffer->getBufferStart());
   auto *coff = reinterpret_cast<coff_file_header *>(buf);
   buf += sizeof(*coff);
   switch (config->machine) {
@@ -1705,6 +1721,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
       sizeof(PEHeaderTy) + sizeof(data_directory) * numberOfDataDirectory;
 
   // Write PE header
+  assert(peHeaderOffset == buf - buffer->getBufferStart());
   auto *pe = reinterpret_cast<PEHeaderTy *>(buf);
   buf += sizeof(*pe);
   pe->Magic = config->is64() ? PE32Header::PE32_PLUS : PE32Header::PE32;
@@ -1770,6 +1787,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   pe->SizeOfInitializedData = getSizeOfInitializedData();
 
   // Write data directory
+  assert(!ctx.config.is64() ||
+         dataDirOffset64 == buf - buffer->getBufferStart());
   auto *dir = reinterpret_cast<data_directory *>(buf);
   buf += sizeof(*dir) * numberOfDataDirectory;
   if (edataStart) {
@@ -1799,9 +1818,12 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
                                 exceptionTable.last->getSize() -
                                 exceptionTable.first->getRVA();
   }
-  if (relocSec->getVirtualSize()) {
+  size_t relocSize = relocSec->getVirtualSize();
+  if (ctx.dynamicRelocs)
+    relocSize -= ctx.dynamicRelocs->getSize();
+  if (relocSize) {
     dir[BASE_RELOCATION_TABLE].RelativeVirtualAddress = relocSec->getRVA();
-    dir[BASE_RELOCATION_TABLE].Size = relocSec->getVirtualSize();
+    dir[BASE_RELOCATION_TABLE].Size = relocSize;
   }
   if (Symbol *sym = ctx.symtab.findUnderscore("_tls_used")) {
     if (Defined *b = dyn_cast<Defined>(sym)) {
@@ -1979,6 +2001,20 @@ void Writer::markSymbolsWithRelocations(ObjFile *file,
 void Writer::createGuardCFTables() {
   Configuration *config = &ctx.config;
 
+  if (config->guardCF == GuardCFLevel::Off) {
+    // MSVC marks the entire image as instrumented if any input object was built
+    // with /guard:cf.
+    for (ObjFile *file : ctx.objFileInstances) {
+      if (file->hasGuardCF()) {
+        Symbol *flagSym = ctx.symtab.findUnderscore("__guard_flags");
+        cast<DefinedAbsolute>(flagSym)->setVA(
+            uint32_t(GuardFlags::CF_INSTRUMENTED));
+        break;
+      }
+    }
+    return;
+  }
+
   SymbolRVASet addressTakenSyms;
   SymbolRVASet giatsRVASet;
   std::vector<Symbol *> giatsSymbols;
@@ -2073,8 +2109,8 @@ void Writer::getSymbolsFromSections(ObjFile *file,
     // Validate that the contents look like symbol table indices.
     ArrayRef<uint8_t> data = c->getContents();
     if (data.size() % 4 != 0) {
-      warn("ignoring " + c->getSectionName() +
-           " symbol table index section in object " + toString(file));
+      Warn(ctx) << "ignoring " << c->getSectionName()
+                << " symbol table index section in object " << file;
       continue;
     }
 
@@ -2085,8 +2121,8 @@ void Writer::getSymbolsFromSections(ObjFile *file,
     ArrayRef<Symbol *> objSymbols = file->getSymbols();
     for (uint32_t symIndex : symIndices) {
       if (symIndex >= objSymbols.size()) {
-        warn("ignoring invalid symbol table index in section " +
-             c->getSectionName() + " in object " + toString(file));
+        Warn(ctx) << "ignoring invalid symbol table index in section "
+                  << c->getSectionName() << " in object " << file;
         continue;
       }
       if (Symbol *s = objSymbols[symIndex]) {
@@ -2208,7 +2244,8 @@ void Writer::createRuntimePseudoRelocs() {
   }
 
   if (!rels.empty()) {
-    log("Writing " + Twine(rels.size()) + " runtime pseudo relocations");
+    Log(ctx) << "Writing " << Twine(rels.size())
+             << " runtime pseudo relocations";
     const char *symbolName = "_pei386_runtime_relocator";
     Symbol *relocator = ctx.symtab.findUnderscore(symbolName);
     if (!relocator)
@@ -2448,7 +2485,7 @@ void Writer::sortExceptionTables() {
     break;
   default:
     if (pdata.first)
-      lld::errs() << "warning: don't know how to handle .pdata.\n";
+      ctx.e.errs() << "warning: don't know how to handle .pdata\n";
     break;
   }
 }
@@ -2483,8 +2520,8 @@ void Writer::sortCRTSectionChunks(std::vector<Chunk *> &chunks) {
   if (ctx.config.verbose) {
     for (auto &c : chunks) {
       auto sc = dyn_cast<SectionChunk>(c);
-      log("  " + sc->file->mb.getBufferIdentifier().str() +
-          ", SectionID: " + Twine(sc->getSectionNumber()));
+      Log(ctx) << "  " << sc->file->mb.getBufferIdentifier().str()
+               << ", SectionID: " << Twine(sc->getSectionNumber());
     }
   }
 }
@@ -2508,7 +2545,6 @@ uint32_t Writer::getSizeOfInitializedData() {
 void Writer::addBaserels() {
   if (!ctx.config.relocatable)
     return;
-  relocSec->chunks.clear();
   std::vector<Baserel> v;
   for (OutputSection *sec : ctx.outputSections) {
     if (sec->header.Characteristics & IMAGE_SCN_MEM_DISCARDABLE)
@@ -2540,6 +2576,29 @@ void Writer::addBaserelBlocks(std::vector<Baserel> &v) {
   if (i == j)
     return;
   relocSec->addChunk(make<BaserelChunk>(page, &v[i], &v[0] + j));
+}
+
+void Writer::createDynamicRelocs() {
+  if (!ctx.dynamicRelocs)
+    return;
+
+  // Adjust the Machine field in the COFF header to AMD64.
+  ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint16_t),
+                         coffHeaderOffset + offsetof(coff_file_header, Machine),
+                         AMD64);
+
+  // Clear the load config directory.
+  // FIXME: Use the hybrid load config value instead.
+  ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+                         dataDirOffset64 +
+                             LOAD_CONFIG_TABLE * sizeof(data_directory) +
+                             offsetof(data_directory, RelativeVirtualAddress),
+                         0);
+  ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+                         dataDirOffset64 +
+                             LOAD_CONFIG_TABLE * sizeof(data_directory) +
+                             offsetof(data_directory, Size),
+                         0);
 }
 
 PartialSection *Writer::createPartialSection(StringRef name,
@@ -2593,7 +2652,11 @@ void Writer::prepareLoadConfig() {
   auto *b = cast_if_present<DefinedRegular>(sym);
   if (!b) {
     if (ctx.config.guardCF != GuardCFLevel::Off)
-      warn("Control Flow Guard is enabled but '_load_config_used' is missing");
+      Warn(ctx)
+          << "Control Flow Guard is enabled but '_load_config_used' is missing";
+    if (ctx.config.dependentLoadFlags)
+      Warn(ctx) << "_load_config_used not found, /dependentloadflag will have "
+                   "no effect";
     return;
   }
 
@@ -2603,13 +2666,13 @@ void Writer::prepareLoadConfig() {
   uint8_t *symBuf = secBuf + (b->getRVA() - sec->getRVA());
   uint32_t expectedAlign = ctx.config.is64() ? 8 : 4;
   if (b->getChunk()->getAlignment() < expectedAlign)
-    warn("'_load_config_used' is misaligned (expected alignment to be " +
-         Twine(expectedAlign) + " bytes, got " +
-         Twine(b->getChunk()->getAlignment()) + " instead)");
+    Warn(ctx) << "'_load_config_used' is misaligned (expected alignment to be "
+              << expectedAlign << " bytes, got "
+              << b->getChunk()->getAlignment() << " instead)";
   else if (!isAligned(Align(expectedAlign), b->getRVA()))
-    warn("'_load_config_used' is misaligned (RVA is 0x" +
-         Twine::utohexstr(b->getRVA()) + " not aligned to " +
-         Twine(expectedAlign) + " bytes)");
+    Warn(ctx) << "'_load_config_used' is misaligned (RVA is 0x"
+              << Twine::utohexstr(b->getRVA()) << " not aligned to "
+              << expectedAlign << " bytes)";
 
   if (ctx.config.is64())
     prepareLoadConfig(reinterpret_cast<coff_load_configuration64 *>(symBuf));
@@ -2618,14 +2681,6 @@ void Writer::prepareLoadConfig() {
 }
 
 template <typename T> void Writer::prepareLoadConfig(T *loadConfig) {
-  if (ctx.config.dependentLoadFlags)
-    loadConfig->DependentLoadFlags = ctx.config.dependentLoadFlags;
-
-  checkLoadConfigGuardData(loadConfig);
-}
-
-template <typename T>
-void Writer::checkLoadConfigGuardData(const T *loadConfig) {
   size_t loadConfigSize = loadConfig->Size;
 
 #define RETURN_IF_NOT_CONTAINS(field)                                          \
@@ -2646,6 +2701,23 @@ void Writer::checkLoadConfigGuardData(const T *loadConfig) {
   if (auto *s = dyn_cast<DefinedAbsolute>(ctx.symtab.findUnderscore(sym)))     \
     if (loadConfig->field != s->getVA())                                       \
       warn(#field " not set correctly in '_load_config_used'");
+
+  if (ctx.config.dependentLoadFlags) {
+    RETURN_IF_NOT_CONTAINS(DependentLoadFlags)
+    loadConfig->DependentLoadFlags = ctx.config.dependentLoadFlags;
+  }
+
+  if (ctx.dynamicRelocs) {
+    IF_CONTAINS(DynamicValueRelocTableSection) {
+      loadConfig->DynamicValueRelocTableSection = relocSec->sectionIndex;
+      loadConfig->DynamicValueRelocTableOffset =
+          ctx.dynamicRelocs->getRVA() - relocSec->getRVA();
+    }
+    else {
+      warn("'_load_config_used' structure too small to include dynamic "
+           "relocations");
+    }
+  }
 
   if (ctx.config.guardCF == GuardCFLevel::Off)
     return;

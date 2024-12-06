@@ -13,7 +13,7 @@
 #pragma clang diagnostic ignored "-Wc99-extensions"
 #endif
 
-#include "flang/Common/Fortran.h"
+#include "flang/Common/Fortran-consts.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/entry-names.h"
 

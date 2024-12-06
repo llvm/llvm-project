@@ -569,7 +569,8 @@ void PDBLinker::writeSymbolRecord(SectionChunk *debugChunk,
   // Re-map all the type index references.
   TpiSource *source = debugChunk->file->debugTypesObj;
   if (!source->remapTypesInSymbolRecord(recordBytes)) {
-    log("ignoring unknown symbol record with kind 0x" + utohexstr(sym.kind()));
+    Log(ctx) << "ignoring unknown symbol record with kind 0x"
+             << utohexstr(sym.kind());
     replaceWithSkipRecord(recordBytes);
   }
 
@@ -1006,11 +1007,10 @@ static void warnUnusable(InputFile *f, Error e, bool shouldWarn) {
     consumeError(std::move(e));
     return;
   }
-  auto msg = "Cannot use debug info for '" + toString(f) + "' [LNK4099]";
+  auto diag = Warn(f->ctx);
+  diag << "Cannot use debug info for '" << f << "' [LNK4099]";
   if (e)
-    warn(msg + "\n>>> failed to load reference " + toString(std::move(e)));
-  else
-    warn(msg);
+    diag << "\n>>> failed to load reference " << std::move(e);
 }
 
 // Allocate memory for a .debug$S / .debug$F section and relocate it.
@@ -1317,7 +1317,7 @@ void PDBLinker::printStats() {
     printLargeInputTypeRecs("IPI", tMerger.ipiCounts, tMerger.getIDTable());
   }
 
-  message(buffer);
+  Msg(ctx) << buffer;
 }
 
 void PDBLinker::addNatvisFiles() {
@@ -1365,6 +1365,10 @@ static codeview::CPUType toCodeViewMachine(COFF::MachineTypes machine) {
     return codeview::CPUType::ARM7;
   case COFF::IMAGE_FILE_MACHINE_ARM64:
     return codeview::CPUType::ARM64;
+  case COFF::IMAGE_FILE_MACHINE_ARM64EC:
+    return codeview::CPUType::ARM64EC;
+  case COFF::IMAGE_FILE_MACHINE_ARM64X:
+    return codeview::CPUType::ARM64X;
   case COFF::IMAGE_FILE_MACHINE_ARMNT:
     return codeview::CPUType::ARMNT;
   case COFF::IMAGE_FILE_MACHINE_I386:
@@ -1431,7 +1435,13 @@ void PDBLinker::addCommonLinkerModuleSymbols(
   ObjNameSym ons(SymbolRecordKind::ObjNameSym);
   EnvBlockSym ebs(SymbolRecordKind::EnvBlockSym);
   Compile3Sym cs(SymbolRecordKind::Compile3Sym);
-  fillLinkerVerRecord(cs, ctx.config.machine);
+
+  MachineTypes machine = ctx.config.machine;
+  // MSVC uses the ARM64X machine type for ARM64EC targets in the common linker
+  // module record.
+  if (isArm64EC(machine))
+    machine = ARM64X;
+  fillLinkerVerRecord(cs, machine);
 
   ons.Name = "* Linker *";
   ons.Signature = 0;

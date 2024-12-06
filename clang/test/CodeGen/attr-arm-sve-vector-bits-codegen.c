@@ -40,7 +40,7 @@ fixed_int32_t global_vec;
 // CHECK-NEXT:    [[CASTFIXEDSVE3:%.*]] = call <16 x i32> @llvm.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> [[TMP10]], i64 0)
 // CHECK-NEXT:    store <16 x i32> [[CASTFIXEDSVE3]], ptr [[RETVAL]], align 16
 // CHECK-NEXT:    [[TMP11:%.*]] = load <16 x i32>, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[CASTSCALABLESVE4:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> undef, <16 x i32> [[TMP11]], i64 0)
+// CHECK-NEXT:    [[CASTSCALABLESVE4:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> poison, <16 x i32> [[TMP11]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[CASTSCALABLESVE4]]
 //
 fixed_int32_t foo(svbool_t pred, svint32_t vec) {
@@ -57,7 +57,7 @@ fixed_int32_t foo(svbool_t pred, svint32_t vec) {
 // CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr [[TMP0]], align 16
 // CHECK-NEXT:    store <16 x i32> [[TMP1]], ptr [[RETVAL]], align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i32>, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[CASTSCALABLESVE:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> undef, <16 x i32> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[CASTSCALABLESVE:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> poison, <16 x i32> [[TMP2]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[CASTSCALABLESVE]]
 //
 fixed_int32_t test_ptr_to_global() {
@@ -78,7 +78,7 @@ fixed_int32_t test_ptr_to_global() {
 // CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr [[ARRAYIDX]], align 16
 // CHECK-NEXT:    store <16 x i32> [[TMP1]], ptr [[RETVAL]], align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i32>, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[CASTSCALABLESVE:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> undef, <16 x i32> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[CASTSCALABLESVE:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> poison, <16 x i32> [[TMP2]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[CASTSCALABLESVE]]
 //
 fixed_int32_t array_arg(fixed_int32_t arr[]) {
@@ -96,7 +96,7 @@ fixed_int32_t array_arg(fixed_int32_t arr[]) {
 // CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[TMP0]], align 2
 // CHECK-NEXT:    store <8 x i8> [[TMP1]], ptr [[RETVAL]], align 2
 // CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr [[RETVAL]], align 2
-// CHECK-NEXT:    [[CASTFIXEDSVE:%.*]] = call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v8i8(<vscale x 2 x i8> undef, <8 x i8> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[CASTFIXEDSVE:%.*]] = call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v8i8(<vscale x 2 x i8> poison, <8 x i8> [[TMP2]], i64 0)
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <vscale x 2 x i8> [[CASTFIXEDSVE]] to <vscale x 16 x i1>
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP3]]
 //
@@ -139,7 +139,7 @@ fixed_bool_t address_of_array_idx() {
 // CHECK-NEXT:    [[CASTFIXEDSVE3:%.*]] = call <16 x i32> @llvm.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> [[TMP11]], i64 0)
 // CHECK-NEXT:    store <16 x i32> [[CASTFIXEDSVE3]], ptr [[RETVAL]], align 16
 // CHECK-NEXT:    [[TMP12:%.*]] = load <16 x i32>, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[CASTSCALABLESVE4:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> undef, <16 x i32> [[TMP12]], i64 0)
+// CHECK-NEXT:    [[CASTSCALABLESVE4:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> poison, <16 x i32> [[TMP12]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[CASTSCALABLESVE4]]
 //
 fixed_int32_t test_cast(svbool_t pred, svint32_t vec) {

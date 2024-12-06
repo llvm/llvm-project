@@ -11,16 +11,16 @@ target triple = "amdgcn-amd-amdhsa"
 define void @tail_call_uniform_vgpr_value_convergence_tokens() #0 {
   ; CHECK-LABEL: name: tail_call_uniform_vgpr_value_convergence_tokens
   ; CHECK: bb.0 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr4_sgpr5, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $sgpr6_sgpr7, $vgpr31
+  ; CHECK-NEXT:   liveins: $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr31
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr31
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr15
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr14
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr13
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr12
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr10_sgpr11
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr15
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr14
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr13
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr12
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sgpr_64 = COPY $sgpr10_sgpr11
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[CONVERGENCECTRL_ENTRY:%[0-9]+]]:sreg_64 = CONVERGENCECTRL_ENTRY
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
@@ -35,13 +35,13 @@ define void @tail_call_uniform_vgpr_value_convergence_tokens() #0 {
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 killed [[COPY12]], implicit $exec, implicit [[CONVERGENCECTRL_ENTRY]]
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:ccr_sgpr_64 = REG_SEQUENCE killed [[V_READFIRSTLANE_B32_1]], %subreg.sub0, killed [[V_READFIRSTLANE_B32_]], %subreg.sub1
   ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[COPY8]]
-  ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[COPY1]]
-  ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[COPY7]]
-  ; CHECK-NEXT:   $sgpr10_sgpr11 = COPY [[COPY6]]
-  ; CHECK-NEXT:   $sgpr12 = COPY [[COPY5]]
-  ; CHECK-NEXT:   $sgpr13 = COPY [[COPY4]]
-  ; CHECK-NEXT:   $sgpr14 = COPY [[COPY3]]
-  ; CHECK-NEXT:   $sgpr15 = COPY [[COPY2]]
+  ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[COPY7]]
+  ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[COPY6]]
+  ; CHECK-NEXT:   $sgpr10_sgpr11 = COPY [[COPY5]]
+  ; CHECK-NEXT:   $sgpr12 = COPY [[COPY4]]
+  ; CHECK-NEXT:   $sgpr13 = COPY [[COPY3]]
+  ; CHECK-NEXT:   $sgpr14 = COPY [[COPY2]]
+  ; CHECK-NEXT:   $sgpr15 = COPY [[COPY1]]
   ; CHECK-NEXT:   $vgpr31 = COPY [[COPY]]
   ; CHECK-NEXT:   CONVERGENCECTRL_GLUE [[CONVERGENCECTRL_ENTRY]]
   ; CHECK-NEXT:   SI_TCRETURN killed [[REG_SEQUENCE]], 0, 0, csr_amdgpu, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31, implicit [[CONVERGENCECTRL_ENTRY]]
