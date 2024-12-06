@@ -737,7 +737,7 @@ bool GCNMaxMemoryClauseSchedStrategy::tryCandidate(SchedCandidate &Cand,
       return TryCand.Reason != NoCand;
 
     // Fall through to original instruction order.
-    if ((Zone->isTop() == (TryCand.SU->NodeNum < Cand.SU->NodeNum))) {
+    if (Zone->isTop() == (TryCand.SU->NodeNum < Cand.SU->NodeNum)) {
       assert(TryCand.SU->NodeNum != Cand.SU->NodeNum);
       TryCand.Reason = NodeOrder;
       return true;
@@ -1530,10 +1530,7 @@ bool ILPInitialScheduleStage::shouldRevertScheduling(unsigned WavesAfter) {
 
 bool MemoryClauseInitialScheduleStage::shouldRevertScheduling(
     unsigned WavesAfter) {
-  if (mayCauseSpilling(WavesAfter))
-    return true;
-
-  return false;
+  return mayCauseSpilling(WavesAfter);
 }
 
 bool GCNSchedStage::mayCauseSpilling(unsigned WavesAfter) {
