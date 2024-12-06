@@ -477,7 +477,7 @@ public:
   ///
   /// \param[in] unit The CU
   ///
-  /// \returns If successful, returns a parsed XcodeSDK object.
+  /// \returns A parsed XcodeSDK object if successful, an Error otherwise. 
   virtual llvm::Expected<XcodeSDK> GetSDKPathFromDebugInfo(CompileUnit &unit) {
     return llvm::createStringError(
         llvm::formatv("{0} not implemented for '{1}' platform.",
