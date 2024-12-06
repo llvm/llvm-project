@@ -2576,6 +2576,19 @@ bool Type::isSveVLSBuiltinType() const {
   return false;
 }
 
+bool Type::isNeonVectorBuiltinType() const {
+  if (const BuiltinType *BT = getAs<BuiltinType>()) {
+    switch (BT->getKind()) {
+    case BuiltinType::MFloat8x8:
+    case BuiltinType::MFloat8x16:
+      return true;
+    default:
+      return false;
+    }
+  }
+  return false;
+}
+
 QualType Type::getSizelessVectorEltType(const ASTContext &Ctx) const {
   assert(isSizelessVectorType() && "Must be sizeless vector type");
   // Currently supports SVE and RVV

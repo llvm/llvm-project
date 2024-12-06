@@ -2404,6 +2404,10 @@ public:
   /// SVE vector or predicate, excluding tuple types such as svint32x4_t.
   bool isSveVLSBuiltinType() const;
 
+  /// Determines if this is a *builtin* NEON vector type, a type not built with
+  /// `neon_vector_type`
+  bool isNeonVectorBuiltinType() const;
+
   /// Returns the representative type for the element of an SVE builtin type.
   /// This is used to represent fixed-length SVE vectors created with the
   /// 'arm_sve_vector_bits' type attribute as VectorType.

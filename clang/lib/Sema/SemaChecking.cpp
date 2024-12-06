@@ -5130,24 +5130,32 @@ ExprResult Sema::BuiltinShuffleVector(CallExpr *TheCall) {
     QualType LHSType = TheCall->getArg(0)->getType();
     QualType RHSType = TheCall->getArg(1)->getType();
 
-    if (!LHSType->isVectorType() || !RHSType->isVectorType())
+    if (!LHSType->isVectorType() && !LHSType->isNeonVectorBuiltinType())
       return ExprError(
-          Diag(TheCall->getBeginLoc(), diag::err_vec_builtin_non_vector)
-          << TheCall->getDirectCallee() << /*isMorethantwoArgs*/ false
+          Diag(TheCall->getBeginLoc(), diag::err_builtin_non_vector_type)
+          << "first" << TheCall->getDirectCallee()
+          << /*isMorethantwoArgs*/ false
           << SourceRange(TheCall->getArg(0)->getBeginLoc(),
                          TheCall->getArg(1)->getEndLoc()));
 
-    numElements = LHSType->castAs<VectorType>()->getNumElements();
+    if (auto *Ty = LHSType->getAs<BuiltinType>()) {
+      assert(Ty->getKind() == BuiltinType::MFloat8x8 ||
+             Ty->getKind() == BuiltinType::MFloat8x16);
+      numElements = Ty->getKind() == BuiltinType::MFloat8x8 ? 8 : 16;
+    } else {
+      numElements = LHSType->castAs<VectorType>()->getNumElements();
+    }
+
     unsigned numResElements = TheCall->getNumArgs() - 2;
 
     // Check to see if we have a call with 2 vector arguments, the unary shuffle
     // with mask.  If so, verify that RHS is an integer vector type with the
     // same number of elts as lhs.
     if (TheCall->getNumArgs() == 2) {
-      if (!RHSType->hasIntegerRepresentation() ||
+      if (!RHSType->isVectorType() || !RHSType->hasIntegerRepresentation() ||
           RHSType->castAs<VectorType>()->getNumElements() != numElements)
         return ExprError(Diag(TheCall->getBeginLoc(),
-                              diag::err_vec_builtin_incompatible_vector)
+                              diag::err_shufflevector_incompatible_index_vector)
                          << TheCall->getDirectCallee()
                          << /*isMorethantwoArgs*/ false
                          << SourceRange(TheCall->getArg(1)->getBeginLoc(),
@@ -5160,6 +5168,25 @@ ExprResult Sema::BuiltinShuffleVector(CallExpr *TheCall) {
                        << SourceRange(TheCall->getArg(0)->getBeginLoc(),
                                       TheCall->getArg(1)->getEndLoc()));
     } else if (numElements != numResElements) {
+      if (auto *Ty = LHSType->getAs<BuiltinType>()) {
+        assert(Ty->getKind() == BuiltinType::MFloat8x8 ||
+               Ty->getKind() == BuiltinType::MFloat8x16);
+        switch (numResElements) {
+        case 8:
+          resType = Context.MFloat8x8Ty;
+          break;
+        case 16:
+          resType = Context.MFloat8x16Ty;
+          break;
+        default:
+          return ExprError(Diag(TheCall->getBeginLoc(),
+                                diag::err_shufflevector_unsupported_result_vector_type)
+                           << TheCall->getDirectCallee()
+                           << /*isMorethantwoArgs*/ false
+                           << SourceRange(TheCall->getArg(0)->getBeginLoc(),
+                                          TheCall->getArg(1)->getEndLoc()));
+        }
+      }
       QualType eltType = LHSType->castAs<VectorType>()->getElementType();
       resType =
           Context.getVectorType(eltType, numResElements, VectorKind::Generic);

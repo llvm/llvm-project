@@ -10564,6 +10564,9 @@ def err_vec_builtin_incompatible_vector : Error<
 def err_vsx_builtin_nonconstant_argument : Error<
   "argument %0 to %1 must be a 2-bit unsigned literal (i.e. 0, 1, 2 or 3)">;
 
+def err_shufflevector_incompatible_index_vector : Error<
+  "second argument for __builtin_shufflevector must be integer vector "
+  "with length equal to the length of the first argument">;
 def err_shufflevector_nonconstant_argument : Error<
   "index for __builtin_shufflevector must be a constant integer">;
 def err_shufflevector_argument_too_large : Error<
@@ -10571,6 +10574,8 @@ def err_shufflevector_argument_too_large : Error<
   "of vector elements">;
 def err_shufflevector_minus_one_is_undefined_behavior_constexpr : Error<
   "index for __builtin_shufflevector not within the bounds of the input vectors; index of -1 found at position %0 is not permitted in a constexpr context">;
+def err_shufflevector_unsupported_result_vector_type : Error<
+  "unsupported vector type for the result">;
 
 def err_convertvector_non_vector : Error<
   "first argument to __builtin_convertvector must be a vector">;
