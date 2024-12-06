@@ -303,7 +303,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(
     return false;
 
   const SCEV *MaxBECount =
-      SE.getPredicatedSymbolicMaxBackedgeTakenCount(L, *Predicates);
+      SE.getPredicatedConstantMaxBackedgeTakenCount(L, *Predicates);
   if (isa<SCEVCouldNotCompute>(MaxBECount))
     return false;
 
@@ -316,11 +316,6 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   // Try to get the access size.
   const SCEV *PtrDiff = SE.getMinusSCEV(AccessEnd, AccessStart);
   APInt MaxPtrDiff = SE.getUnsignedRangeMax(PtrDiff);
-
-  // If the (max) pointer difference is > 32 bits then it's unlikely to be
-  // dereferenceable.
-  if (MaxPtrDiff.getActiveBits() > 32)
-    return false;
 
   Value *Base = nullptr;
   APInt AccessSize;
