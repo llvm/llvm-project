@@ -52,7 +52,7 @@ func.func @simple_unpack_dynamic_tile(%input: tensor<1x1x?x2xf32>, %output: tens
 
 /// Same as example above, but with 1 dynamic tile size and a trasnpose
 
-/// FIXME: This is Currently broken:
+/// FIXME: This is currently broken:
 ///   * 'tensor.empty' op incorrect number of dynamic sizes, has 0, expected 1
 
 //func.func @simple_unpack_dynamic_tile_transpose(%input: tensor<1x1x2x?xf32>, %output: tensor<5x1xf32>, %tile_dim_0: index) -> tensor<5x1xf32> {

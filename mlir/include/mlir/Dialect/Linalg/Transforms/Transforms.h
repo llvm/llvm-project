@@ -1581,7 +1581,6 @@ struct DecomposeOuterUnitDimsPackOpPattern
 ///   // Extract a slice matching the specified output size
 ///   %result = tensor.extract_slice %transposed[0, 0] [5, 1] [1, 1]
 ///     : tensor<8x2xf32> to tensor<5x1xf32>
-///
 /// ```
 struct DecomposeOuterUnitDimsUnPackOpPattern
     : public OpRewritePattern<tensor::UnPackOp> {
