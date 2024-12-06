@@ -172,7 +172,7 @@ void LinkerDriver::parseMerge(StringRef s) {
   if (!inserted) {
     StringRef existing = pair.first->second;
     if (existing != to)
-      warn(s + ": already merged into " + existing);
+      Warn(ctx) << s << ": already merged into " << existing;
   }
 }
 
@@ -741,12 +741,12 @@ void LinkerDriver::fixupExports() {
       continue;
     }
     if (existing->source == e.source) {
-      warn(Twine("duplicate ") + exportSourceName(existing->source) +
-           " option: " + e.name);
+      Warn(ctx) << "duplicate " << exportSourceName(existing->source)
+                << " option: " << e.name;
     } else {
-      warn("duplicate export: " + e.name +
-           Twine(" first seen in " + exportSourceName(existing->source) +
-                 Twine(", now in " + exportSourceName(e.source))));
+      Warn(ctx) << "duplicate export: " << e.name << " first seen in "
+                << exportSourceName(existing->source) << ", now in "
+                << exportSourceName(e.source);
     }
   }
   ctx.config.exports = std::move(v);
@@ -822,7 +822,7 @@ MemoryBufferRef LinkerDriver::convertResToCOFF(ArrayRef<MemoryBufferRef> mbs,
 
   for (const auto &dupeDiag : duplicates)
     if (ctx.config.forceMultipleRes)
-      warn(dupeDiag);
+      Warn(ctx) << dupeDiag;
     else
       error(dupeDiag);
 
@@ -922,7 +922,7 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
     std::string msg = "Command line:";
     for (const char *s : expandedArgv)
       msg += " " + std::string(s);
-    message(msg);
+    Msg(ctx) << msg;
   }
 
   // Save the command line after response file expansion so we can write it to
@@ -945,14 +945,15 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
   for (opt::Arg *arg : args.filtered(OPT_UNKNOWN)) {
     std::string nearest;
     if (ctx.optTable.findNearest(arg->getAsString(args), nearest) > 1)
-      warn("ignoring unknown argument '" + arg->getAsString(args) + "'");
+      Warn(ctx) << "ignoring unknown argument '" << arg->getAsString(args)
+                << "'";
     else
-      warn("ignoring unknown argument '" + arg->getAsString(args) +
-           "', did you mean '" + nearest + "'");
+      Warn(ctx) << "ignoring unknown argument '" << arg->getAsString(args)
+                << "', did you mean '" << nearest << "'";
   }
 
   if (args.hasArg(OPT_lib))
-    warn("ignoring /lib since it's not the first argument");
+    Warn(ctx) << "ignoring /lib since it's not the first argument";
 
   return args;
 }
@@ -994,7 +995,7 @@ ParsedDirectives ArgParser::parseDirectives(StringRef s) {
   if (missingCount)
     fatal(Twine(result.args.getArgString(missingIndex)) + ": missing argument");
   for (auto *arg : result.args.filtered(OPT_UNKNOWN))
-    warn("ignoring unknown argument: " + arg->getAsString(result.args));
+    Warn(ctx) << "ignoring unknown argument: " << arg->getAsString(result.args);
   return result;
 }
 

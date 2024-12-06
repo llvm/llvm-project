@@ -50,7 +50,6 @@ add_clang_library(clangStaticAnalyzerCheckers
   GCDAntipatternChecker.cpp
   GenericTaintChecker.cpp
   GTestChecker.cpp
-  IdenticalExprChecker.cpp
   InnerPointerChecker.cpp
   InvalidatedIteratorChecker.cpp
   cert/InvalidPtrChecker.cpp

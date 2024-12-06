@@ -14,14 +14,11 @@
 namespace lldb_private {
 
 class NativeRegisterContextDBReg_loongarch : public NativeRegisterContextDBReg {
-public:
-  uint32_t SetHardwareBreakpoint(lldb::addr_t addr, size_t size) override;
-
-  uint32_t SetHardwareWatchpoint(lldb::addr_t addr, size_t size,
-                                 uint32_t watch_flags) override;
-
-private:
   uint32_t GetWatchpointSize(uint32_t wp_index) override;
+
+  bool ValidateWatchpoint(size_t size, lldb::addr_t &addr) override;
+
+  uint32_t MakeControlValue(size_t size, uint32_t *watch_flags = NULL) override;
 };
 
 } // namespace lldb_private

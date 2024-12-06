@@ -33,6 +33,7 @@ class AssociateOp;
 class ElementalOp;
 class ElementalOpInterface;
 class ElementalAddrOp;
+class EvaluateInMemoryOp;
 class YieldElementOp;
 
 /// Is this a Fortran variable for which the defining op carrying the Fortran
@@ -397,6 +398,24 @@ mlir::Value inlineElementalOp(
     hlfir::ElementalOpInterface elemental, mlir::ValueRange oneBasedIndices,
     mlir::IRMapping &mapper,
     const std::function<bool(hlfir::ElementalOp)> &mustRecursivelyInline);
+
+/// Create a new temporary with the shape and parameters of the provided
+/// hlfir.eval_in_mem operation and clone the body of the hlfir.eval_in_mem
+/// operating on this new temporary.  returns the temporary and whether the
+/// temporary is heap or stack allocated.
+std::pair<hlfir::Entity, bool>
+computeEvaluateOpInNewTemp(mlir::Location, fir::FirOpBuilder &,
+                           hlfir::EvaluateInMemoryOp evalInMem,
+                           mlir::Value shape, mlir::ValueRange typeParams);
+
+// Clone the body of the hlfir.eval_in_mem operating on this the provided
+// storage.  The provided storage must be a contiguous "raw" memory reference
+// (not a fir.box) big enough to hold the value computed by hlfir.eval_in_mem.
+// No runtime check is inserted by this utility to enforce that. It is also
+// usually invalid to provide some storage that is already addressed directly
+// or indirectly inside the hlfir.eval_in_mem body.
+void computeEvaluateOpIn(mlir::Location, fir::FirOpBuilder &,
+                         hlfir::EvaluateInMemoryOp, mlir::Value storage);
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 convertToValue(mlir::Location loc, fir::FirOpBuilder &builder,

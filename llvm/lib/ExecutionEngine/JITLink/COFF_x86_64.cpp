@@ -256,7 +256,7 @@ private:
     Error Err = Error::success();
     Ctx.lookup(Symbols,
                createLookupContinuation([&](Expected<AsyncLookupResult> LR) {
-                 ErrorAsOutParameter EAO(&Err);
+                 ErrorAsOutParameter _(Err);
                  if (!LR) {
                    Err = LR.takeError();
                    return;

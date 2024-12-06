@@ -2074,6 +2074,9 @@ public:
                   },
         x.u);
   }
+  void Unparse(const OmpDirectiveNameModifier &x) {
+    Word(llvm::omp::getOpenMPDirectiveName(x.v));
+  }
   void Unparse(const OmpIteratorSpecifier &x) {
     Walk(std::get<TypeDeclarationStmt>(x.t));
     Put(" = ");
@@ -2090,9 +2093,8 @@ public:
     Put(")");
   }
   void Unparse(const OmpLastprivateClause &x) {
-    Walk(
-        std::get<std::optional<OmpLastprivateClause::LastprivateModifier>>(x.t),
-        ":");
+    using Modifier = OmpLastprivateClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<OmpObjectList>(x.t));
   }
   void Unparse(const OmpMapClause &x) {
@@ -2107,17 +2109,19 @@ public:
     Walk(",", std::get<std::optional<ScalarIntExpr>>(x.t));
   }
   void Unparse(const OmpDeviceClause &x) {
-    Walk(std::get<std::optional<OmpDeviceClause::DeviceModifier>>(x.t), ":");
+    using Modifier = OmpDeviceClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<ScalarIntExpr>(x.t));
   }
   void Unparse(const OmpAffinityClause &x) {
-    Walk(std::get<std::optional<OmpIterator>>(x.t), ":");
+    using Modifier = OmpAffinityClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<OmpObjectList>(x.t));
   }
   void Unparse(const OmpAlignedClause &x) {
+    using Modifier = OmpAlignedClause::Modifier;
     Walk(std::get<OmpObjectList>(x.t));
-    Put(",");
-    Walk(std::get<std::optional<ScalarIntConstantExpr>>(x.t));
+    Walk(": ", std::get<std::optional<std::list<Modifier>>>(x.t));
   }
   void Unparse(const OmpFromClause &x) {
     using Modifier = OmpFromClause::Modifier;
@@ -2125,7 +2129,8 @@ public:
     Walk(std::get<OmpObjectList>(x.t));
   }
   void Unparse(const OmpIfClause &x) {
-    Walk(std::get<std::optional<OmpIfClause::DirectiveNameModifier>>(x.t), ":");
+    using Modifier = OmpIfClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<ScalarLogicalExpr>(x.t));
   }
   void Unparse(const OmpLinearClause::WithoutModifier &x) {
@@ -2148,32 +2153,18 @@ public:
     Walk(std::get<OmpObjectList>(x.t));
   }
   void Unparse(const OmpAllocateClause &x) {
-    Walk(
-        std::get<std::optional<OmpAllocateClause::AllocateModifier>>(x.t), ":");
+    using Modifier = OmpAllocateClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<OmpObjectList>(x.t));
   }
-  void Unparse(const OmpAllocateClause::AllocateModifier &x) {
-    common::visit(
-        common::visitors{
-            [&](const OmpAllocateClause::AllocateModifier::Allocator &y) {
-              Walk(y);
-            },
-            [&](const OmpAllocateClause::AllocateModifier::ComplexModifier &y) {
-              Word("ALLOCATOR(");
-              Walk(std::get<OmpAllocateClause::AllocateModifier::Allocator>(
-                  y.t));
-              Put(")");
-              Put(",");
-              Walk(std::get<OmpAllocateClause::AllocateModifier::Align>(y.t));
-            },
-            [&](const OmpAllocateClause::AllocateModifier::Align &y) {
-              Walk(y);
-            },
-        },
-        x.u);
-  }
-  void Unparse(const OmpAllocateClause::AllocateModifier::Align &x) {
+  void Unparse(const OmpAlignModifier &x) {
     Word("ALIGN(");
+    Walk(x.v);
+    Put(")");
+  }
+  void Unparse(const OmpAllocatorSimpleModifier &x) { Walk(x.v); }
+  void Unparse(const OmpAllocatorComplexModifier &x) {
+    Word("ALLOCATOR(");
     Walk(x.v);
     Put(")");
   }
@@ -2183,13 +2174,13 @@ public:
     Walk(std::get<OmpOrderClause::Ordering>(x.t));
   }
   void Unparse(const OmpGrainsizeClause &x) {
-    Walk(std::get<std::optional<OmpGrainsizeClause::Prescriptiveness>>(x.t),
-        ":");
+    using Modifier = OmpGrainsizeClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<ScalarIntExpr>(x.t));
   }
   void Unparse(const OmpNumTasksClause &x) {
-    Walk(
-        std::get<std::optional<OmpNumTasksClause::Prescriptiveness>>(x.t), ":");
+    using Modifier = OmpNumTasksClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<ScalarIntExpr>(x.t));
   }
   void Unparse(const OmpDoacross::Sink &x) {
@@ -2198,8 +2189,8 @@ public:
   }
   void Unparse(const OmpDoacross::Source &) { Word("SOURCE"); }
   void Unparse(const OmpDependClause::TaskDep &x) {
-    Walk(std::get<OmpTaskDependenceType>(x.t));
-    Put(":");
+    using Modifier = OmpDependClause::TaskDep::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<OmpObjectList>(x.t));
   }
   void Unparse(const OmpDefaultmapClause &x) {
@@ -2450,6 +2441,16 @@ public:
     BeginOpenMP();
     Word("!$OMP END ATOMIC\n");
     EndOpenMP();
+  }
+  void Unparse(const OmpAtomicCompare &x) {
+    BeginOpenMP();
+    Word("!$OMP ATOMIC");
+    Walk(std::get<0>(x.t));
+    Word(" COMPARE");
+    Walk(std::get<2>(x.t));
+    Put("\n");
+    EndOpenMP();
+    Walk(std::get<OmpAtomicCompareIfStmt>(x.t));
   }
   void Unparse(const OmpAtomicRead &x) {
     BeginOpenMP();
@@ -2834,29 +2835,26 @@ public:
   WALK_NESTED_ENUM(InquireSpec::LogVar, Kind)
   WALK_NESTED_ENUM(ProcedureStmt, Kind) // R1506
   WALK_NESTED_ENUM(UseStmt, ModuleNature) // R1410
-  WALK_NESTED_ENUM(OmpBindClause, Type) // OMP bind
-  WALK_NESTED_ENUM(OmpProcBindClause, Type) // OMP PROC_BIND
-  WALK_NESTED_ENUM(OmpDefaultClause, Type) // OMP DEFAULT
-  WALK_NESTED_ENUM(OmpDefaultmapClause, ImplicitBehavior) // OMP DEFAULTMAP
+  WALK_NESTED_ENUM(OmpBindClause, Binding) // OMP bind
+  WALK_NESTED_ENUM(OmpProcBindClause, AffinityPolicy) // OMP proc_bind
+  WALK_NESTED_ENUM(OmpDefaultClause, DataSharingAttribute) // OMP default
+  WALK_NESTED_ENUM(OmpDefaultmapClause, ImplicitBehavior) // OMP defaultmap
   WALK_NESTED_ENUM(OmpVariableCategory, Value) // OMP variable-category
-  WALK_NESTED_ENUM(
-      OmpLastprivateClause, LastprivateModifier) // OMP lastprivate-modifier
+  WALK_NESTED_ENUM(OmpLastprivateModifier, Value) // OMP lastprivate-modifier
   WALK_NESTED_ENUM(OmpChunkModifier, Value) // OMP chunk-modifier
   WALK_NESTED_ENUM(OmpLinearModifier, Value) // OMP linear-modifier
   WALK_NESTED_ENUM(OmpOrderingModifier, Value) // OMP ordering-modifier
   WALK_NESTED_ENUM(OmpTaskDependenceType, Value) // OMP task-dependence-type
   WALK_NESTED_ENUM(OmpScheduleClause, Kind) // OMP schedule-kind
-  WALK_NESTED_ENUM(OmpDeviceClause, DeviceModifier) // OMP device modifier
-  WALK_NESTED_ENUM(OmpDeviceTypeClause, Type) // OMP DEVICE_TYPE
+  WALK_NESTED_ENUM(OmpDeviceModifier, Value) // OMP device modifier
+  WALK_NESTED_ENUM(
+      OmpDeviceTypeClause, DeviceTypeDescription) // OMP device_type
   WALK_NESTED_ENUM(OmpReductionModifier, Value) // OMP reduction-modifier
   WALK_NESTED_ENUM(OmpExpectation, Value) // OMP motion-expectation
-  WALK_NESTED_ENUM(OmpIfClause, DirectiveNameModifier) // OMP directive-modifier
   WALK_NESTED_ENUM(OmpCancelType, Type) // OMP cancel-type
   WALK_NESTED_ENUM(OmpOrderClause, Ordering) // OMP ordering
   WALK_NESTED_ENUM(OmpOrderModifier, Value) // OMP order-modifier
-  WALK_NESTED_ENUM(
-      OmpGrainsizeClause, Prescriptiveness) // OMP grainsize-modifier
-  WALK_NESTED_ENUM(OmpNumTasksClause, Prescriptiveness) // OMP numtasks-modifier
+  WALK_NESTED_ENUM(OmpPrescriptiveness, Value) // OMP prescriptiveness
   WALK_NESTED_ENUM(OmpMapType, Value) // OMP map-type
   WALK_NESTED_ENUM(OmpMapTypeModifier, Value) // OMP map-type-modifier
 #undef WALK_NESTED_ENUM

@@ -909,8 +909,9 @@ getDstSelForwardingOperand(const MachineInstr &MI, const GCNSubtarget &ST) {
 
   // There are three different types of instructions
   // which produce forwarded dest: 1. SDWA with dst_sel != DWORD, 2. VOP3
-  // which write hi bits (e.g. op_sel[3] == 1), and 3. CVR_SR_FP8_F32 and
-  // CVT_SR_BF8_F32 with op_sel[3:2]
+  // which write hi bits (e.g. op_sel[3] == 1), and 3. FP8DstSelInst
+  // (instructions with dest byte sel, e.g. CVT_SR_BF8_F32) and
+  // op_sel[3:2]
   // != 0
   if (SIInstrInfo::isSDWA(MI)) {
     // Type 1: SDWA with dst_sel != DWORD
@@ -918,8 +919,8 @@ getDstSelForwardingOperand(const MachineInstr &MI, const GCNSubtarget &ST) {
       if (DstSel->getImm() == AMDGPU::SDWA::DWORD)
         return nullptr;
   } else {
-    // Type 2 && Type 3: (VOP3 which write the hi bits) || (CVT_SR_FP8_F32 and
-    // CVT_SR_BF8_F32 with op_sel[3:2] != 0)
+    // Type 2 && Type 3: (VOP3 which write the hi bits) || (FP8DstSelInst
+    // with op_sel[3:2] != 0)
     if (!AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::op_sel) ||
         !(TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)->getImm() &
               SISrcMods::DST_OP_SEL ||
@@ -983,7 +984,7 @@ int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) {
     WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForDef);
   }
 
-  if (ST.hasDstSelForwardingHazard()) {
+  if (ST.hasDstSelForwardingHazard() || ST.hasCvtScaleForwardingHazard()) {
     const int Shift16DefWaitstates = 1;
 
     auto IsShift16BitDefFn = [this, VALU](const MachineInstr &ProducerMI) {
@@ -1094,7 +1095,8 @@ int GCNHazardRecognizer::checkInlineAsmHazards(MachineInstr *IA) {
   // problematic thus far.
 
   // see checkVALUHazards()
-  if (!ST.has12DWordStoreHazard() && !ST.hasDstSelForwardingHazard())
+  if (!ST.has12DWordStoreHazard() && !ST.hasDstSelForwardingHazard() &&
+      !ST.hasCvtScaleForwardingHazard())
     return 0;
 
   const MachineRegisterInfo &MRI = MF.getRegInfo();

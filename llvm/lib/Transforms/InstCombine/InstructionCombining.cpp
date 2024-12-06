@@ -1753,9 +1753,9 @@ static Value *simplifyInstructionWithPHI(Instruction &I, PHINode *PN,
   if (TerminatorBI && TerminatorBI->isConditional() &&
       TerminatorBI->getSuccessor(0) != TerminatorBI->getSuccessor(1) && ICmp) {
     bool LHSIsTrue = TerminatorBI->getSuccessor(0) == PN->getParent();
-    std::optional<bool> ImpliedCond =
-        isImpliedCondition(TerminatorBI->getCondition(), ICmp->getPredicate(),
-                           Ops[0], Ops[1], DL, LHSIsTrue);
+    std::optional<bool> ImpliedCond = isImpliedCondition(
+        TerminatorBI->getCondition(), ICmp->getCmpPredicate(), Ops[0], Ops[1],
+        DL, LHSIsTrue);
     if (ImpliedCond)
       return ConstantInt::getBool(I.getType(), ImpliedCond.value());
   }

@@ -53,3 +53,16 @@ foreach (file IN LISTS files)
 endforeach ()
 
 add_custom_target(clang-format-check-format DEPENDS ${check_format_depends})
+
+set(style_options_depends ${CLANG_SOURCE_DIR}/docs/ClangFormatStyleOptions.rst)
+set(docs_tools_dir ${CLANG_SOURCE_DIR}/docs/tools)
+add_custom_command(OUTPUT ${style_options_depends}
+  COMMAND ${Python3_EXECUTABLE} dump_format_style.py
+  WORKING_DIRECTORY ${docs_tools_dir}
+  DEPENDS ${CLANG_SOURCE_DIR}/include/clang/Format/Format.h
+          ${CLANG_SOURCE_DIR}/include/clang/Tooling/Inclusions/IncludeStyle.h
+          ${docs_tools_dir}/plurals.txt
+          ${docs_tools_dir}/dump_format_style.py
+  )
+add_custom_target(clang-format-style-options DEPENDS ${style_options_depends})
+add_dependencies(clangFormat clang-format-style-options)
