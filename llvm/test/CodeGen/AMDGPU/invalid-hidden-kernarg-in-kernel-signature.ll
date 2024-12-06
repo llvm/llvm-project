@@ -1,5 +1,7 @@
-; RUN: not llc -global-isel=1 -mtriple=amdgcn--amdhsa -mcpu=gfx940 < %s 2>&1 | FileCheck -check-prefix=ERROR %s
-; RUN: not llc -global-isel=0 -mtriple=amdgcn--amdhsa -mcpu=gfx940 < %s 2>&1 | FileCheck -check-prefix=ERROR %s
+; RUN: not llc -global-isel=1 -mtriple=amdgcn--amdhsa -mcpu=gfx942 < %s 2>&1 | FileCheck -check-prefix=ERROR %s
+; RUN: not llc -global-isel=0 -mtriple=amdgcn--amdhsa -mcpu=gfx942 < %s 2>&1 | FileCheck -check-prefix=ERROR %s
+; RUN: not llc -global-isel=1 -amdgpu-ir-lower-kernel-arguments=0 -mtriple=amdgcn--amdhsa -mcpu=gfx942 < %s 2>&1 | FileCheck -check-prefix=ERROR %s
+; RUN: not llc -global-isel=0 -amdgpu-ir-lower-kernel-arguments=0 -mtriple=amdgcn--amdhsa -mcpu=gfx942 < %s 2>&1 | FileCheck -check-prefix=ERROR %s
 
 define amdgpu_kernel void @no_free_sgprs_block_count_x_no_preload_diag(ptr addrspace(1) inreg %out, i512 inreg, i32 inreg "amdgpu-hidden-argument" %_hidden_block_count_x) #0 {
 ; ERROR: error: <unknown>:0:0: in function no_free_sgprs_block_count_x_no_preload_diag void (ptr addrspace(1), i512, i32): hidden argument in kernel signature was not preloaded

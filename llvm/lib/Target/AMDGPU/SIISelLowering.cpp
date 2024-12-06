@@ -3024,9 +3024,8 @@ SDValue SITargetLowering::LowerFormalArguments(
         }
       } else {
         // Hidden arguments that are in the kernel signature must be preloaded
-        // to user SGPRs, or loaded via the implicit_arg ptr. Print a diagnostic
-        // error if a hidden argument is in the argument list and is not
-        // preloaded.
+        // to user SGPRs. Print a diagnostic error if a hidden argument is in
+        // the argument list and is not preloaded.
         if (Arg.isOrigArg()) {
           Argument *OrigArg = Fn.getArg(Arg.getOrigArgIndex());
           if (OrigArg->hasAttribute("amdgpu-hidden-argument")) {
