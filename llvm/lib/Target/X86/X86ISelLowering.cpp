@@ -17318,6 +17318,13 @@ static SDValue lowerV32I16Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                               Zeroable, Subtarget, DAG))
     return PSHUFB;
 
+  // Try to simplify this by merging 128-bit lanes to enable a lane-based
+  // shuffle.
+  if (!V2.isUndef())
+    if (SDValue Result = lowerShuffleAsLanePermuteAndRepeatedMask(
+            DL, MVT::v32i16, V1, V2, Mask, Subtarget, DAG))
+      return Result;
+
   return lowerShuffleWithPERMV(DL, MVT::v32i16, Mask, V1, V2, Subtarget, DAG);
 }
 
@@ -39835,6 +39842,10 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   bool AllowBWIVPERMV3 =
       (Depth >= (VariableCrossLaneShuffleDepth + 2) || HasVariableMask);
 
+  // If root was a VPERMV3 node, always allow a variable shuffle.
+  if (Root.getOpcode() == X86ISD::VPERMV3)
+    AllowVariableCrossLaneMask = AllowVariablePerLaneMask = true;
+
   bool MaskContainsZeros = isAnyZero(Mask);
 
   if (is128BitLaneCrossingShuffleMask(MaskVT, Mask)) {
@@ -56844,6 +56855,23 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
         TLI.isTypeLegal(Op1.getOperand(0).getValueType())) {
       SDValue SExt = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Op1.getOperand(0));
       return DAG.getNode(ISD::SUB, DL, VT, Op0, SExt);
+    }
+  }
+
+  // Peephole for 512-bit VPDPBSSD on non-VLX targets.
+  // TODO: Should this be part of matchPMADDWD/matchPMADDWD_2?
+  if (Subtarget.hasVNNI() && VT == MVT::v16i32) {
+    using namespace SDPatternMatch;
+    SDValue Accum, Lo0, Lo1, Hi0, Hi1;
+    if (sd_match(N, m_Add(m_Value(Accum),
+                          m_Node(ISD::CONCAT_VECTORS,
+                                 m_BinOp(X86ISD::VPMADDWD, m_Value(Lo0),
+                                         m_Value(Lo1)),
+                                 m_BinOp(X86ISD::VPMADDWD, m_Value(Hi0),
+                                         m_Value(Hi1)))))) {
+      return DAG.getNode(X86ISD::VPDPWSSD, DL, VT, Accum,
+                         concatSubVectors(Lo0, Hi0, DAG, DL),
+                         concatSubVectors(Lo1, Hi1, DAG, DL));
     }
   }
 
