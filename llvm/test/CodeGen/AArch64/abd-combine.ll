@@ -5,15 +5,10 @@
 ; CHECK-GI:  warning: Instruction selection used fallback path for recursive
 
 define <8 x i16> @abdu_base(<8 x i16> %src1, <8 x i16> %src2) {
-; CHECK-SD-LABEL: abdu_base:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    uabd v0.8h, v0.8h, v1.8h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: abdu_base:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    uabd v0.8h, v0.8h, v0.8h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: abdu_base:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uabd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
   %zextsrc1 = zext <8 x i16> %src1 to <8 x i32>
   %zextsrc2 = zext <8 x i16> %src2 to <8 x i32>
   %sub = sub <8 x i32> %zextsrc1, %zextsrc2
@@ -135,8 +130,9 @@ define <8 x i16> @abdu_const_bothhigh() {
 ;
 ; CHECK-GI-LABEL: abdu_const_bothhigh:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni v0.8h, #1
-; CHECK-GI-NEXT:    uabd v0.8h, v0.8h, v0.8h
+; CHECK-GI-NEXT:    movi v0.2d, #0xffffffffffffffff
+; CHECK-GI-NEXT:    mvni v1.8h, #1
+; CHECK-GI-NEXT:    uabd v0.8h, v1.8h, v0.8h
 ; CHECK-GI-NEXT:    ret
   %zextsrc1 = zext <8 x i16> <i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534> to <8 x i32>
   %zextsrc2 = zext <8 x i16> <i16 65535, i16 65535, i16 65535, i16 65535, i16 65535, i16 65535, i16 65535, i16 65535> to <8 x i32>
@@ -472,15 +468,10 @@ define <8 x i16> @abdu_i_reassoc(<8 x i16> %src1) {
 
 
 define <8 x i16> @abds_base(<8 x i16> %src1, <8 x i16> %src2) {
-; CHECK-SD-LABEL: abds_base:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sabd v0.8h, v0.8h, v1.8h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: abds_base:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    sabd v0.8h, v0.8h, v0.8h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: abds_base:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sabd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
   %zextsrc1 = sext <8 x i16> %src1 to <8 x i32>
   %zextsrc2 = sext <8 x i16> %src2 to <8 x i32>
   %sub = sub <8 x i32> %zextsrc1, %zextsrc2
@@ -602,8 +593,9 @@ define <8 x i16> @abds_const_bothhigh() {
 ;
 ; CHECK-GI-LABEL: abds_const_bothhigh:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni v0.8h, #1
-; CHECK-GI-NEXT:    sabd v0.8h, v0.8h, v0.8h
+; CHECK-GI-NEXT:    movi v0.2d, #0xffffffffffffffff
+; CHECK-GI-NEXT:    mvni v1.8h, #1
+; CHECK-GI-NEXT:    sabd v0.8h, v1.8h, v0.8h
 ; CHECK-GI-NEXT:    ret
   %zextsrc1 = sext <8 x i16> <i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534> to <8 x i32>
   %zextsrc2 = sext <8 x i16> <i16 65535, i16 65535, i16 65535, i16 65535, i16 65535, i16 65535, i16 65535, i16 65535> to <8 x i32>

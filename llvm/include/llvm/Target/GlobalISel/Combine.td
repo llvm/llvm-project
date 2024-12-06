@@ -1913,6 +1913,7 @@ def overflow_combines: GICombineGroup<[
   match_subo_no_overflow
 ]>;
 
+// trunc(abs(sext(x) - sext(y))) -> abds(x, y)
 def trunc_abds : GICombineRule<
   (defs root:$root),
   (match (G_SEXT $lhs, $x),
@@ -1923,6 +1924,7 @@ def trunc_abds : GICombineRule<
          [{ return Helper.matchTruncAbds(*${trunc}); }]),
   (apply (G_ABDS $root, $x, $y))>;
 
+// trunc(abs(zext(x) - zext(y))) -> abdu(x, y)
 def trunc_abdu : GICombineRule<
   (defs root:$root),
   (match (G_ZEXT $lhs, $x),
