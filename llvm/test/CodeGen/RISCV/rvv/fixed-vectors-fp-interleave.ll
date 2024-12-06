@@ -38,8 +38,8 @@ define <4 x float> @interleave_v2f32(<2 x float> %x, <2 x float> %y) {
 define <4 x double> @interleave_v2f64(<2 x double> %x, <2 x double> %y) {
 ; V128-LABEL: interleave_v2f64:
 ; V128:       # %bb.0:
-; V128-NEXT:    vmv1r.v v12, v9
 ; V128-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; V128-NEXT:    vmv1r.v v12, v9
 ; V128-NEXT:    vid.v v9
 ; V128-NEXT:    vmv.v.i v0, 10
 ; V128-NEXT:    vsrl.vi v14, v9, 1
