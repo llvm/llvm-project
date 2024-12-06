@@ -947,6 +947,7 @@ namespace llvm {
     void selectShuffle(SDNode *N);
     void selectRor(SDNode *N);
     void selectVAlign(SDNode *N);
+    void selectUintToFp(SDNode *N);
 
     static SmallVector<uint32_t, 8> getPerfectCompletions(ShuffleMask SM,
                                                           unsigned Width);
@@ -1147,6 +1148,36 @@ bool HvxSelector::selectVectorConstants(SDNode *N) {
     select(L);
 
   return !Nodes.empty();
+}
+
+// UNIT_TO_FP handler for vector type v32i32 --> v32f32
+// V1 = 0
+// V2.uw=vavg(V0.uw, V1.uw) ---> V2 = V0 >> 1
+// V3.w = vsub(V0.w, V2.w)  ----> V3 = V0 - V2
+// V4.sf=(V2).w ----> convert V2 to float V4
+// V5.sf=(V3).w ----> convert V3 to float V5
+// V6.sf=vadd(V4.sf, V5.sf) ----> vadd(V4, V5)
+void HvxSelector::selectUintToFp(SDNode *N) {
+
+  if (!(N->getValueType(0) == MVT::v32f32) ||
+      !(N->getOperand(0).getValueType() == MVT::v32i32)) {
+    ISel.SelectCode(N);
+    return;
+  }
+
+  const SDLoc &dl(N);
+  SDNode *ConstZero = DAG.getMachineNode(Hexagon::V6_vd0, dl, MVT::v32i32);
+  SDNode *Vavg = DAG.getMachineNode(Hexagon::V6_vavguw, dl, MVT::v32i32,
+                                    N->getOperand(0), SDValue(ConstZero, 0));
+  SDNode *Vsubw = DAG.getMachineNode(Hexagon::V6_vsubw, dl, MVT::v32i32,
+                                     N->getOperand(0), SDValue(Vavg, 0));
+  SDNode *FirstConv = DAG.getMachineNode(Hexagon::V6_vconv_sf_w, dl,
+                                         MVT::v32f32, SDValue(Vavg, 0));
+  SDNode *SecConv = DAG.getMachineNode(Hexagon::V6_vconv_sf_w, dl, MVT::v32f32,
+                                       SDValue(Vsubw, 0));
+  SDNode *Vadd = DAG.getMachineNode(Hexagon::V6_vadd_sf_sf, dl, MVT::v32f32,
+                                    SDValue(FirstConv, 0), SDValue(SecConv, 0));
+  ISel.ReplaceNode(N, Vadd);
 }
 
 void HvxSelector::materialize(const ResultStack &Results) {
@@ -2872,6 +2903,10 @@ void HexagonDAGToDAGISel::SelectHvxRor(SDNode *N) {
 
 void HexagonDAGToDAGISel::SelectHvxVAlign(SDNode *N) {
   HvxSelector(*this, *CurDAG).selectVAlign(N);
+}
+
+void HexagonDAGToDAGISel::SelectHvxUIntToFp(SDNode *N) {
+  HvxSelector(*this, *CurDAG).selectUintToFp(N);
 }
 
 void HexagonDAGToDAGISel::SelectV65GatherPred(SDNode *N) {
