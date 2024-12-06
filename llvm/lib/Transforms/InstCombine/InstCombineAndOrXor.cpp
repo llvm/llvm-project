@@ -698,20 +698,10 @@ Value *InstCombinerImpl::simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1,
   Value *Cmp1Op0 = Cmp1->getOperand(0);
   Value *Cmp1Op1 = Cmp1->getOperand(1);
   Value *RangeEnd;
-  if (Cmp1Op0 == Input) {
-    // For the upper range compare we have: icmp x, n
-    RangeEnd = Cmp1Op1;
-  } else if (isa<SExtInst>(Cmp1Op0) &&
-             cast<SExtInst>(Cmp1Op0)->getOperand(0) == Input) {
-    // For the upper range compare we have: icmp (sext x), n
+  if (match(Cmp1Op0, m_SExtOrSelf(m_Specific(Input)))) {
     Input = Cmp1Op0;
     RangeEnd = Cmp1Op1;
-  } else if (Cmp1Op1 == Input) {
-    // For the upper range compare we have: icmp n, x
-    Pred1 = ICmpInst::getSwappedPredicate(Pred1);
-    RangeEnd = Cmp1Op0;
-  } else if (isa<SExtInst>(Cmp1Op1) &&
-             cast<SExtInst>(Cmp1Op1)->getOperand(0) == Input) {
+  } else if (match(Cmp1Op1, m_SExtOrSelf(m_Specific(Input)))) {
     // For the upper range compare we have: icmp n, (sext x)
     Pred1 = ICmpInst::getSwappedPredicate(Pred1);
     Input = Cmp1Op1;
