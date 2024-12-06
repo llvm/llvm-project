@@ -767,7 +767,7 @@ YAMLMemProfReader::create(const Twine &Path) {
 
 Expected<std::unique_ptr<YAMLMemProfReader>>
 YAMLMemProfReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
-  std::unique_ptr<YAMLMemProfReader> Reader(new YAMLMemProfReader());
+  auto Reader = std::make_unique<YAMLMemProfReader>();
   Reader->parse(Buffer->getBuffer());
   return std::move(Reader);
 }

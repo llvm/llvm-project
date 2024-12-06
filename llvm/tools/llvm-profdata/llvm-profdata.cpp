@@ -3271,22 +3271,16 @@ static int showMemProfProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   if (SFormat == ShowFormat::Json)
     exitWithError("JSON output is not supported for MemProf");
 
-  // Load the file to check the magic bytes.
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> BufferOrError =
-      llvm::MemoryBuffer::getFile(Filename);
-  if (auto EC = BufferOrError.getError())
-    exitWithError("Error opening profile file '" + Filename + "'");
-  auto Buffer = std::move(BufferOrError.get());
-
   // Show the raw profile in YAML.
-  if (memprof::RawMemProfReader::hasFormat(*Buffer)) {
+  if (memprof::RawMemProfReader::hasFormat(Filename)) {
     auto ReaderOr = llvm::memprof::RawMemProfReader::create(
         Filename, ProfiledBinary, /*KeepNames=*/true);
-    if (Error E = ReaderOr.takeError())
+    if (Error E = ReaderOr.takeError()) {
       // Since the error can be related to the profile or the binary we do not
       // pass whence. Instead additional context is provided where necessary in
       // the error message.
       exitWithError(std::move(E), /*Whence*/ "");
+    }
 
     std::unique_ptr<llvm::memprof::RawMemProfReader> Reader(
         ReaderOr.get().release());
