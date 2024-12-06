@@ -8,18 +8,23 @@
 !2 = !{!"omnipotent char", !3, i64 0}
 !3 = !{!"Simple C/C++ TBAA"}
 ;.
-; CHECK: @[[LLVM_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [1 x ptr] [ptr @tysan.module_ctor], section "llvm.metadata"
-; CHECK: @[[LLVM_GLOBAL_CTORS:[a-zA-Z0-9_$"\\.-]+]] = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @tysan.module_ctor, ptr null }]
+; CHECK: @llvm.used = appending global [1 x ptr] [ptr @tysan.module_ctor], section "llvm.metadata"
+; CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @tysan.module_ctor, ptr null }]
 ;.
 ; CHECK-LABEL: @tysan.module_ctor(
 ; CHECK-NEXT:    call void @__tysan_init()
+; CHECK-NEXT:    call void @__tysan_set_globals_types()
+; CHECK-NEXT:    ret void
+;
+;
+; CHECK-LABEL: @__tysan_set_globals_types(
 ; CHECK-NEXT:    ret void
 ;
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind }
 ;.
-; CHECK: [[META0:![0-9]+]] = distinct !{ptr undef, !1}
-; CHECK: [[META1:![0-9]+]] = !{!"any pointer", !2, i64 0}
-; CHECK: [[META2:![0-9]+]] = !{!"omnipotent char", !3, i64 0}
-; CHECK: [[META3:![0-9]+]] = !{!"Simple C/C++ TBAA"}
+; CHECK: [[META0:![0-9]+]] = distinct !{ptr undef, [[META1:![0-9]+]]}
+; CHECK: [[META1]] = !{!"any pointer", [[META2:![0-9]+]], i64 0}
+; CHECK: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
+; CHECK: [[META3]] = !{!"Simple C/C++ TBAA"}
 ;.
