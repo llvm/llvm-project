@@ -4,5 +4,5 @@
 
 void f(int (&array1)[2], int (&array2)[2]) {
   if (array1 == array2) { } // not-cxx20-warning {{comparison between two arrays compare their addresses}} cxx20-warning {{comparison between two arrays is deprecated}}
-                            // cxx26-error@-1 {{comparison between two arrays compare their addresses not their contents}}
+                            // cxx26-error@-1 {{comparison between two arrays is ll-formed in C++26}}
 }

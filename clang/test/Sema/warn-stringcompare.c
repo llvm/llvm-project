@@ -16,15 +16,15 @@ void test(const char *d) {
   if (NULL == "/")
     return;
   if ("/" != DELIM) // expected-warning {{result of comparison against a string literal is unspecified (use an explicit string comparison function instead)}}
-    return;         // cxx-warning@-1 {{comparison between two arrays}} cxx26-error@-1 {{comparison between two arrays compare their addresses not their contents}}
+    return;         // cxx-warning@-1 {{comparison between two arrays}} cxx26-error@-1 {{comparison between two arrays is ll-formed in C++26}}
   if (DELIM == "/") // expected-warning {{result of comparison against a string literal is unspecified (use an explicit string comparison function instead)}}
-    return;         // cxx-warning@-1 {{comparison between two arrays}} cxx26-error@-1 {{comparison between two arrays compare their addresses not their contents}}
+    return;         // cxx-warning@-1 {{comparison between two arrays}} cxx26-error@-1 {{comparison between two arrays is ll-formed in C++26}}
   if (DELIM != NULL)
     return;
   if (NULL == DELIM)
     return;
   if (DOT != DELIM) // expected-warning {{result of comparison against a string literal is unspecified (use an explicit string comparison function instead)}}
-    return;         // cxx-warning@-1 {{comparison between two arrays}} cxx26-error@-1 {{comparison between two arrays compare their addresses not their contents}}
+    return;         // cxx-warning@-1 {{comparison between two arrays}} cxx26-error@-1 {{comparison between two arrays is ll-formed in C++26}}
   if (DELIM == DOT) // expected-warning {{result of comparison against a string literal is unspecified (use an explicit string comparison function instead)}}
-    return;         // cxx-warning@-1 {{comparison between two arrays}} cxx26-error@-1 {{comparison between two arrays compare their addresses not their contents}}
+    return;         // cxx-warning@-1 {{comparison between two arrays}} cxx26-error@-1 {{comparison between two arrays is ll-formed in C++26}}
 }
