@@ -144,7 +144,7 @@ define ptr @test4(i32 %value, ptr %buffer) {
 ; CHECK:       loop.body:
 ; CHECK-NEXT:    [[BUFFER_PN:%.*]] = phi ptr [ [[BUFFER:%.*]], [[LOOP_HEADER]] ], [ [[LOOPPTR:%.*]], [[LOOP_BODY]] ]
 ; CHECK-NEXT:    [[NEWVAL:%.*]] = phi i32 [ [[VALUE]], [[LOOP_HEADER]] ], [ [[SHR:%.*]], [[LOOP_BODY]] ]
-; CHECK-NEXT:    [[LOOPPTR]] = getelementptr inbounds i8, ptr [[BUFFER_PN]], i64 1
+; CHECK-NEXT:    [[LOOPPTR]] = getelementptr inbounds nuw i8, ptr [[BUFFER_PN]], i64 1
 ; CHECK-NEXT:    [[SHR]] = lshr i32 [[NEWVAL]], 7
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[NEWVAL]], 16383
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOP_BODY]], label [[LOOP_EXIT:%.*]]
@@ -152,7 +152,7 @@ define ptr @test4(i32 %value, ptr %buffer) {
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi ptr [ [[LOOPPTR]], [[LOOP_EXIT]] ], [ [[BUFFER]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[INCPTR3:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 2
+; CHECK-NEXT:    [[INCPTR3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 2
 ; CHECK-NEXT:    ret ptr [[INCPTR3]]
 ;
 entry:
@@ -203,10 +203,10 @@ define void @test5(ptr %idx, ptr %in) #0 {
 ; CHECK-NEXT:    [[LNOT:%.*]] = icmp eq i8 [[AND]], 0
 ; CHECK-NEXT:    br i1 [[LNOT]], label [[WHILE_BODY]], label [[WHILE_COND_33:%.*]]
 ; CHECK:       while.body:
-; CHECK-NEXT:    [[INCDEC_PTR32]] = getelementptr inbounds i8, ptr [[PTR]], i64 1
+; CHECK-NEXT:    [[INCDEC_PTR32]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 1
 ; CHECK-NEXT:    br label [[WHILE_COND]]
 ; CHECK:       while.cond.33:
-; CHECK-NEXT:    [[INCDEC_PTR34:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 1
+; CHECK-NEXT:    [[INCDEC_PTR34:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 1
 ; CHECK-NEXT:    br label [[WHILE_COND_57:%.*]]
 ; CHECK:       while.cond.57:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[INCDEC_PTR34]], align 1
