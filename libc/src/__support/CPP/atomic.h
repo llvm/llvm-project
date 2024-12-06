@@ -214,11 +214,12 @@ public:
 };
 
 // Issue a thread fence with the given memory ordering.
-LIBC_INLINE void atomic_thread_fence([[maybe_unused]] MemoryOrder mem_ord) {
-// The NVPTX backend currently does not support atomic thread fences so we use a
-// full system fence instead.
-#ifdef LIBC_TARGET_ARCH_IS_NVPTX
-  __nvvm_membar_sys();
+LIBC_INLINE void atomic_thread_fence(
+    MemoryOrder mem_ord,
+    [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
+#if __has_builtin(__scoped_atomic_thread_fence)
+  __scoped_atomic_thread_fence(static_cast<int>(mem_ord),
+                               static_cast<int>(mem_scope));
 #else
   __atomic_thread_fence(static_cast<int>(mem_ord));
 #endif
