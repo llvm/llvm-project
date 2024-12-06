@@ -698,6 +698,14 @@ struct RemoveEmptyShapeOperandsPattern : public OpRewritePattern<OpTy> {
     auto newOperands = llvm::filter_to_vector<8>(op->getOperands(),
                                                  isPotentiallyNonEmptyShape);
 
+    // Replace the op with empty shape constant if all operants are reduced to
+    // be empty.
+    if (newOperands.empty()) {
+      rewriter.replaceOpWithNewOp<ConstShapeOp>(
+          op, op->getResultTypes().front(), rewriter.getIndexTensorAttr({}));
+      return success();
+    }
+
     // Reduce op to equivalent without empty shape operands.
     if (newOperands.size() < op.getNumOperands()) {
       rewriter.replaceOpWithNewOp<OpTy>(op, op->getResultTypes(), newOperands,
