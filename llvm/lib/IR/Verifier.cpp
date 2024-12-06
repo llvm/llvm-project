@@ -1623,11 +1623,11 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
 
       auto True = [](const Metadata *) { return true; };
       auto False = [](const Metadata *) { return false; };
-      bool IsTypeCorrect =
-          DISubprogram::visitRetainedNode<bool>(Op, True, True, True, False);
+      bool IsTypeCorrect = DISubprogram::visitRetainedNode<bool>(
+          Op, True, True, True, True, False);
       CheckDI(IsTypeCorrect,
-              "invalid retained nodes, expected DILocalVariable, DILabel or "
-              "DIImportedEntity",
+              "invalid retained nodes, expected DILocalVariable, DILabel, "
+              "DIImportedEntity or DIType",
               &N, Node, Op);
 
       auto *RetainedNode = cast<DINode>(Op);

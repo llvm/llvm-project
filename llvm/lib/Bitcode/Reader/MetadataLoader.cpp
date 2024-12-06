@@ -116,6 +116,8 @@ public:
         RefsUpperBound(std::min((size_t)std::numeric_limits<unsigned>::max(),
                                 RefsUpperBound)) {}
 
+  using const_iterator = SmallVector<TrackingMDRef, 1>::const_iterator;
+
   // vector compatibility methods
   unsigned size() const { return MetadataPtrs.size(); }
   void resize(unsigned N) { MetadataPtrs.resize(N); }
@@ -124,6 +126,8 @@ public:
   Metadata *back() const { return MetadataPtrs.back(); }
   void pop_back() { MetadataPtrs.pop_back(); }
   bool empty() const { return MetadataPtrs.empty(); }
+  const_iterator begin() { return MetadataPtrs.begin(); }
+  const_iterator end() { return MetadataPtrs.end(); }
 
   Metadata *operator[](unsigned i) const { return MetadataPtrs[i]; }
 
@@ -538,6 +542,8 @@ class MetadataLoader::MetadataLoaderImpl {
 
   /// Move local imports from DICompileUnit's 'imports' field to
   /// DISubprogram's retainedNodes.
+  /// Move function-local enums from DICompileUnit's enums
+  /// to DISubprogram's retainedNodes.
   void upgradeCULocals() {
     if (NamedMDNode *CUNodes = TheModule.getNamedMetadata("llvm.dbg.cu")) {
       for (MDNode *N : CUNodes->operands()) {
@@ -545,48 +551,62 @@ class MetadataLoader::MetadataLoaderImpl {
         if (!CU)
           continue;
 
-        if (CU->getRawImportedEntities()) {
-          // Collect a set of imported entities to be moved.
-          SetVector<Metadata *> EntitiesToRemove;
+        SetVector<Metadata *> MetadataToRemove;
+        // Collect imported entities to be moved.
+        if (CU->getRawImportedEntities())
           for (Metadata *Op : CU->getImportedEntities()->operands()) {
             auto *IE = cast<DIImportedEntity>(Op);
-            if (isa_and_nonnull<DILocalScope>(IE->getScope())) {
-              EntitiesToRemove.insert(IE);
-            }
+            if (isa_and_nonnull<DILocalScope>(IE->getScope()))
+              MetadataToRemove.insert(IE);
+          }
+        // Collect enums to be moved.
+        if (CU->getRawEnumTypes())
+          for (Metadata *Op : CU->getEnumTypes()->operands()) {
+            auto *Enum = cast<DICompositeType>(Op);
+            if (isa_and_nonnull<DILocalScope>(Enum->getScope()))
+              MetadataToRemove.insert(Enum);
           }
 
-          if (!EntitiesToRemove.empty()) {
-            // Make a new list of CU's 'imports'.
-            SmallVector<Metadata *> NewImports;
-            for (Metadata *Op : CU->getImportedEntities()->operands()) {
-              if (!EntitiesToRemove.contains(cast<DIImportedEntity>(Op))) {
+        if (!MetadataToRemove.empty()) {
+          // Make a new list of CU's 'imports'.
+          SmallVector<Metadata *> NewImports;
+          if (CU->getRawImportedEntities())
+            for (Metadata *Op : CU->getImportedEntities()->operands())
+              if (!MetadataToRemove.contains(Op))
                 NewImports.push_back(Op);
-              }
-            }
 
-            // Find DISubprogram corresponding to each entity.
-            std::map<DISubprogram *, SmallVector<Metadata *>> SPToEntities;
-            for (auto *I : EntitiesToRemove) {
-              auto *Entity = cast<DIImportedEntity>(I);
-              if (auto *SP = findEnclosingSubprogram(
-                      cast<DILocalScope>(Entity->getScope()))) {
-                SPToEntities[SP].push_back(Entity);
-              }
-            }
+          // Make a new list of CU's 'enums'.
+          SmallVector<Metadata *> NewEnums;
+          if (CU->getRawEnumTypes())
+            for (Metadata *Op : CU->getEnumTypes()->operands())
+              if (!MetadataToRemove.contains(Op))
+                NewEnums.push_back(Op);
 
-            // Update DISubprograms' retainedNodes.
-            for (auto I = SPToEntities.begin(); I != SPToEntities.end(); ++I) {
-              auto *SP = I->first;
-              auto RetainedNodes = SP->getRetainedNodes();
-              SmallVector<Metadata *> MDs(RetainedNodes.begin(),
-                                          RetainedNodes.end());
-              MDs.append(I->second);
-              SP->replaceRetainedNodes(MDNode::get(Context, MDs));
-            }
-
-            // Remove entities with local scope from CU.
-            CU->replaceImportedEntities(MDTuple::get(Context, NewImports));
+          // Find DISubprogram corresponding to each entity.
+          std::map<DISubprogram *, SmallVector<Metadata *>> SPToEntities;
+          for (auto *I : MetadataToRemove) {
+            DILocalScope *Scope =
+                DISubprogram::getRetainedNodeScope(cast<DINode>(I));
+            if (auto *SP = findEnclosingSubprogram(Scope))
+              SPToEntities[SP].push_back(I);
           }
+
+          // Update DISubprograms' retainedNodes.
+          for (auto I = SPToEntities.begin(); I != SPToEntities.end(); ++I) {
+            auto *SP = I->first;
+            auto RetainedNodes = SP->getRetainedNodes();
+            SmallVector<Metadata *> MDs(RetainedNodes.begin(),
+                                        RetainedNodes.end());
+            MDs.append(I->second);
+            SP->replaceRetainedNodes(MDNode::get(Context, MDs));
+          }
+
+          // Remove entities with local scope from CU.
+          if (CU->getRawImportedEntities())
+            CU->replaceImportedEntities(MDTuple::get(Context, NewImports));
+          // Remove enums with local scope from CU.
+          if (CU->getRawEnumTypes())
+            CU->replaceEnumTypes(MDTuple::get(Context, NewEnums));
         }
       }
     }
@@ -708,6 +728,29 @@ class MetadataLoader::MetadataLoaderImpl {
     upgradeCUVariables();
     if (ModuleLevel)
       upgradeCULocals();
+  }
+
+  void cloneLocalTypes() {
+    for (Metadata *M : MetadataList) {
+      if (auto *SP = dyn_cast_or_null<DISubprogram>(M)) {
+        auto RetainedNodes = SP->getRetainedNodes();
+        SmallVector<Metadata *> MDs(RetainedNodes.begin(), RetainedNodes.end());
+        bool HasChanged = false;
+        for (auto &N : MDs)
+          if (auto *T = dyn_cast<DIType>(N))
+            if (auto *LS = dyn_cast_or_null<DILocalScope>(T->getScope()))
+              if (auto *Parent = findEnclosingSubprogram(LS))
+                if (Parent != SP) {
+                  HasChanged = true;
+                  auto NewT = T->clone();
+                  NewT->replaceOperandWith(1, SP);
+                  N = MDNode::replaceWithUniqued(std::move(NewT));
+                }
+
+        if (HasChanged)
+          SP->replaceRetainedNodes(MDNode::get(Context, MDs));
+      }
+    }
   }
 
   void callMDTypeCallback(Metadata **Val, unsigned TypeID);
@@ -1086,6 +1129,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
       // placeholders, that we flush here.
       resolveForwardRefsAndPlaceholders(Placeholders);
       upgradeDebugInfo(ModuleLevel);
+      cloneLocalTypes();
       // Return at the beginning of the block, since it is easy to skip it
       // entirely from there.
       Stream.ReadBlockEnd(); // Pop the abbrev block context.
@@ -1117,6 +1161,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
     case BitstreamEntry::EndBlock:
       resolveForwardRefsAndPlaceholders(Placeholders);
       upgradeDebugInfo(ModuleLevel);
+      cloneLocalTypes();
       return Error::success();
     case BitstreamEntry::Record:
       // The interesting case.

@@ -88,9 +88,22 @@ createIdentityMDPredicate(const Function &F, CloneFunctionChangeType Changes) {
   };
 
   return [=](const Metadata *MD) {
-    // Avoid cloning types, compile units, and (other) subprograms.
-    if (isa<DICompileUnit>(MD) || isa<DIType>(MD))
+    // Avoid cloning compile units.
+    if (isa<DICompileUnit>(MD))
       return true;
+
+    // Clone no types but local
+    if (auto *Type = dyn_cast<DIType>(MD)) {
+      if (SPClonedWithinModule == nullptr)
+        return true;
+
+      auto *LScope = dyn_cast_or_null<DILocalScope>(Type->getScope());
+      if (!LScope)
+        return true;
+
+      if (ShouldKeep(LScope->getSubprogram()))
+        return true;
+    }
 
     if (auto *SP = dyn_cast<DISubprogram>(MD))
       return ShouldKeep(SP);

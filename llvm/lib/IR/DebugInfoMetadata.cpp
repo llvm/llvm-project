@@ -1445,15 +1445,28 @@ bool DISubprogram::describes(const Function *F) const {
   return F->getSubprogram() == this;
 }
 
+template <typename ScopeT, typename NodeT>
+static ScopeT getRawRetainedNodeScopeInternal(NodeT *N) {
+  auto getScope = [](auto *N) { return N->getScope(); };
+
+  return DISubprogram::visitRetainedNode<ScopeT>(
+      N, getScope, getScope, getScope, getScope,
+      [](auto *N) { return nullptr; });
+}
+
 const DIScope *DISubprogram::getRawRetainedNodeScope(const MDNode *N) {
-  return visitRetainedNode<DIScope *>(
-      N, [](const DILocalVariable *LV) { return LV->getScope(); },
-      [](const DILabel *L) { return L->getScope(); },
-      [](const DIImportedEntity *IE) { return IE->getScope(); },
-      [](const Metadata *N) { return nullptr; });
+  return getRawRetainedNodeScopeInternal<const DIScope *>(N);
+}
+
+DIScope *DISubprogram::getRawRetainedNodeScope(MDNode *N) {
+  return getRawRetainedNodeScopeInternal<DIScope *>(N);
 }
 
 const DILocalScope *DISubprogram::getRetainedNodeScope(const MDNode *N) {
+  return cast<DILocalScope>(getRawRetainedNodeScope(N));
+}
+
+DILocalScope *DISubprogram::getRetainedNodeScope(MDNode *N) {
   return cast<DILocalScope>(getRawRetainedNodeScope(N));
 }
 
