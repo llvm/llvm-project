@@ -4188,10 +4188,17 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
     llvm_unreachable("NEON::BI__builtin_neon_vaddv_s8 NYI");
   }
   case NEON::BI__builtin_neon_vaddv_u16:
-    llvm_unreachable("NEON::BI__builtin_neon_vaddv_u16 NYI");
+    usgn = true;
     [[fallthrough]];
   case NEON::BI__builtin_neon_vaddv_s16: {
-    llvm_unreachable("NEON::BI__builtin_neon_vaddv_s16 NYI");
+    cir::IntType eltTy = usgn ? UInt16Ty : SInt16Ty;
+    cir::VectorType vTy = cir::VectorType::get(builder.getContext(), eltTy, 4);
+    Ops.push_back(emitScalarExpr(E->getArg(0)));
+    // This is to add across the vector elements, so wider result type needed.
+    Ops[0] = emitNeonCall(builder, {vTy}, Ops,
+                          usgn ? "aarch64.neon.uaddv" : "aarch64.neon.saddv",
+                          SInt32Ty, getLoc(E->getExprLoc()));
+    return builder.createIntCast(Ops[0], eltTy);
   }
   case NEON::BI__builtin_neon_vaddvq_u8:
     llvm_unreachable("NEON::BI__builtin_neon_vaddvq_u8 NYI");
