@@ -102,11 +102,8 @@ void SymbolTable::addFile(InputFile *file) {
   ctx.driver.parseDirectives(file);
 }
 
-static void errorOrWarn(const Twine &s, bool forceUnresolved) {
-  if (forceUnresolved)
-    warn(s);
-  else
-    error(s);
+static COFFSyncStream errorOrWarn(COFFLinkerContext &ctx) {
+  return {ctx, ctx.config.forceUnresolved ? DiagLevel::Warn : DiagLevel::Err};
 }
 
 // Causes the file associated with a lazy symbol to be linked in.
@@ -273,7 +270,7 @@ struct UndefinedDiag {
   std::vector<File> files;
 };
 
-static void reportUndefinedSymbol(const COFFLinkerContext &ctx,
+static void reportUndefinedSymbol(COFFLinkerContext &ctx,
                                   const UndefinedDiag &undefDiag) {
   std::string out;
   llvm::raw_string_ostream os(out);
@@ -293,7 +290,7 @@ static void reportUndefinedSymbol(const COFFLinkerContext &ctx,
   }
   if (numDisplayedRefs < numRefs)
     os << "\n>>> referenced " << numRefs - numDisplayedRefs << " more times";
-  errorOrWarn(out, ctx.config.forceUnresolved);
+  errorOrWarn(ctx) << out;
 }
 
 void SymbolTable::loadMinGWSymbols() {
@@ -425,8 +422,7 @@ static void reportProblemSymbols(
 
   for (Symbol *b : ctx.config.gcroot) {
     if (undefs.count(b))
-      errorOrWarn("<root>: undefined symbol: " + toString(ctx, *b),
-                  ctx.config.forceUnresolved);
+      errorOrWarn(ctx) << "<root>: undefined symbol: " << toString(ctx, *b);
     if (localImports)
       if (Symbol *imp = localImports->lookup(b))
         Warn(ctx) << "<root>: locally defined symbol imported: "
