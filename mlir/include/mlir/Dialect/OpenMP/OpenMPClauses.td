@@ -353,7 +353,7 @@ class OpenMP_ExclusiveClauseSkip<
 
   let extraClassDeclaration = [{
     bool hasExclusiveVars() {
-      return getExclusiveVars().size()>0;
+      return !getExclusiveVars().empty();
     }
   }];
 
@@ -363,6 +363,9 @@ class OpenMP_ExclusiveClauseSkip<
     is specified, the input phase excludes the preceding structured block 
     sequence and instead includes the following structured block sequence, 
     while the scan phase includes the preceding structured block sequence.
+
+    The `exclusive_vars` is a variadic list of operands that specifies the
+    scan-reduction accumulator symbols.
   }];
 }
 
@@ -497,7 +500,7 @@ class OpenMP_InclusiveClauseSkip<
 
   let extraClassDeclaration = [{
     bool hasInclusiveVars() {
-      return getInclusiveVars().size()>0;
+      return !getInclusiveVars().empty();
     }
   }];
 
@@ -506,6 +509,9 @@ class OpenMP_InclusiveClauseSkip<
     structured block into two structured block sequences. If it is specified,
     the input phase includes the preceding structured block sequence and the
     scan phase includes the following structured block sequence.
+
+    The `inclusive_vars` is a variadic list of operands that specifies the
+    scan-reduction accumulator symbols.
   }];
 }
 
@@ -612,7 +618,6 @@ class OpenMP_InReductionClauseSkip<
   ];
 
   let arguments = (ins
-    OptionalAttr<ReductionModifierAttr>:$in_reduction_mod,
     Variadic<OpenMP_PointerLikeType>:$in_reduction_vars,
     OptionalAttr<DenseBoolArrayAttr>:$in_reduction_byref,
     OptionalAttr<SymbolRefArrayAttr>:$in_reduction_syms
@@ -1300,7 +1305,6 @@ class OpenMP_TaskReductionClauseSkip<
   ];
 
   let arguments = (ins
-    OptionalAttr<ReductionModifierAttr>:$task_reduction_mod,
     Variadic<OpenMP_PointerLikeType>:$task_reduction_vars,
     OptionalAttr<DenseBoolArrayAttr>:$task_reduction_byref,
     OptionalAttr<SymbolRefArrayAttr>:$task_reduction_syms

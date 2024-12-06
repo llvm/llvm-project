@@ -702,7 +702,7 @@ def TaskOp
 
   let assemblyFormat = clausesAssemblyFormat # [{
     custom<InReductionPrivateRegion>(
-        $region, $in_reduction_mod, $in_reduction_vars, type($in_reduction_vars),
+        $region, $in_reduction_vars, type($in_reduction_vars),
         $in_reduction_byref, $in_reduction_syms, $private_vars,
         type($private_vars), $private_syms) attr-dict
   }];
@@ -780,7 +780,7 @@ def TaskloopOp : OpenMP_Op<"taskloop", traits = [
 
   let assemblyFormat = clausesAssemblyFormat # [{
     custom<InReductionPrivateReductionRegion>(
-        $region, $in_reduction_mod, $in_reduction_vars, type($in_reduction_vars),
+        $region, $in_reduction_vars, type($in_reduction_vars),
         $in_reduction_byref, $in_reduction_syms, $private_vars,
         type($private_vars), $private_syms, $reduction_mod, $reduction_vars,
         type($reduction_vars), $reduction_byref, $reduction_syms) attr-dict
@@ -827,7 +827,7 @@ def TaskgroupOp : OpenMP_Op<"taskgroup", traits = [
 
   let assemblyFormat = clausesAssemblyFormat # [{
     custom<TaskReductionRegion>(
-        $region, $task_reduction_mod, $task_reduction_vars, type($task_reduction_vars),
+        $region, $task_reduction_vars, type($task_reduction_vars),
         $task_reduction_byref, $task_reduction_syms) attr-dict
   }];
 
@@ -1289,7 +1289,7 @@ def TargetOp : OpenMP_Op<"target", traits = [
 
   let assemblyFormat = clausesAssemblyFormat # [{
     custom<HostEvalInReductionMapPrivateRegion>(
-        $region, $host_eval_vars, type($host_eval_vars), $in_reduction_mod, $in_reduction_vars,
+        $region, $host_eval_vars, type($host_eval_vars), $in_reduction_vars,
         type($in_reduction_vars), $in_reduction_byref, $in_reduction_syms,
         $map_vars, type($map_vars), $private_vars, type($private_vars),
         $private_syms, $private_maps) attr-dict
@@ -1707,15 +1707,15 @@ def CancellationPointOp : OpenMP_Op<"cancellation_point", clauses = [
 }
 
 def ScanOp : OpenMP_Op<"scan", [
-    AttrSizedOperandSegments, RecipeInterface, IsolatedFromAbove
+    AttrSizedOperandSegments
   ], clauses = [
-  OpenMP_InclusiveClause, OpenMP_ExclusiveClause]> {
+    OpenMP_InclusiveClause, OpenMP_ExclusiveClause]> {
   let summary = "scan directive";
   let description = [{
-    The scan directive allows to specify scan reduction. Scan directive
-    should be enclosed with in a parent directive along with which, a
-    reduction clause with `InScan` modifier must be specified. Scan directive
-    allows to separate code blocks to input phase and scan phase in the region
+    The scan directive allows to specify scan reductions. It should be
+    enclosed within a parent directive along with which a reduction clause
+    with `inscan` modifier must be specified. The scan directive allows to
+    split code blocks into input phase and scan phase in the region
     enclosed by the parent.
   }] # clausesDescription;
 

@@ -196,7 +196,7 @@ def ReductionModifier : OpenMP_I32EnumAttr<
     ]>;
 
 def ReductionModifierAttr : OpenMP_EnumAttr<ReductionModifier,
-                                                  "reduction_modifier"> {
+                                            "reduction_modifier"> {
   let assemblyFormat = "`(` $value `)`";
 }
 
