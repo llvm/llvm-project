@@ -684,15 +684,15 @@ protected:
   /// for cleaning the checks, if vectorization turns out unprofitable.
   GeneratedRTChecks &RTChecks;
 
-  /// The additional bypass block which conditionally skips over the epilogue
-  /// loop after executing the main loop. Needed to resume inductions and
-  /// reductions during epilogue vectorization.
-  BasicBlock *AdditionalBypassBlock = nullptr;
-
   /// Mapping of induction phis to their additional bypass values. They
   /// need to be added as operands to phi nodes in the scalar loop preheader
   /// after the epilogue skeleton has been created.
   DenseMap<PHINode *, Value *> Induction2AdditionalBypassValue;
+
+  /// The additional bypass block which conditionally skips over the epilogue
+  /// loop after executing the main loop. Needed to resume inductions and
+  /// reductions during epilogue vectorization.
+  BasicBlock *AdditionalBypassBlock = nullptr;
 
   VPlan &Plan;
 };
