@@ -375,10 +375,10 @@ to interoperate.
 
 The single parameter is a pointer to a five word buffer in which the calling
 context is saved. The format and contents of the buffer are target-specific.
-On certain targets, the front end places the frame pointer in the first word
-and the stack pointer in the third word, while the target implementation of
-this intrinsic fills in the remaining words.  On other targets, saving the
-calling context to the buffer is left completely to the target implementation. 
+On certain targets (ARM, PowerPC, VE, X86), the front end places the 
+frame pointer in the first word and the stack pointer in the third word, 
+while the target implementation of this intrinsic fills in the remaining 
+words.  On other targets (SystemZ), saving the calling context to the buffer is left completely to the target implementation. 
 
 .. _llvm.eh.sjlj.longjmp:
 
