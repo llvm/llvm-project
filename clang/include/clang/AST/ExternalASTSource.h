@@ -157,11 +157,6 @@ public:
     return false;
   }
 
-  virtual bool FindExternalVisibleMethodsByName(const DeclContext *DC,
-                                                DeclarationName Name) {
-    return false;
-  }
-
   /// Load all the external specializations for the Decl \param D if \param
   /// OnlyPartial is false. Otherwise, load all the external **partial**
   /// specializations for the \param D.
