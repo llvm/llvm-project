@@ -247,8 +247,6 @@ public:
     return RegNo < 4 ? 6 + RegNo : -1;
   }
 
-  bool hasSjLjLowering() const override { return true; }
-
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
     return std::make_pair(256, 256);
   }
