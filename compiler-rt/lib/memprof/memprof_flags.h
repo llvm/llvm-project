@@ -22,8 +22,8 @@
 // prior one:
 //  1) by setting MEMPROF_DEFAULT_OPTIONS during the compilation of the MemProf
 //     runtime
-//  2) by setting the LLVM flag -memprof-default-options during the compilation
-//     of your binary
+//  2) by setting the LLVM flag -memprof-runtime-default-options during the
+//     compilation of your binary
 //  3) by overriding the user-specified function __memprof_default_options()
 //  4) by setting the environment variable MEMPROF_OPTIONS during runtime
 

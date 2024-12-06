@@ -1,5 +1,5 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux -passes='function(memprof),memprof-module' -S | FileCheck %s --check-prefixes=CHECK,EMPTY
-; RUN: opt < %s -mtriple=x86_64-unknown-linux -passes='function(memprof),memprof-module' -S -memprof-default-options="verbose=1" | FileCheck %s --check-prefixes=CHECK,VERBOSE
+; RUN: opt < %s -mtriple=x86_64-unknown-linux -passes='function(memprof),memprof-module' -S -memprof-runtime-default-options="verbose=1" | FileCheck %s --check-prefixes=CHECK,VERBOSE
 
 define i32 @main() {
 entry:

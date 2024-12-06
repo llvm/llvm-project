@@ -47,8 +47,8 @@ void SANITIZER_CDECL __memprof_print_accumulated_stats(void);
 
 /// User-provided default option settings.
 ///
-/// You can set these options via the -memprof-default-options LLVM flag or
-/// you can provide your own implementation of this function. See
+/// You can set these options via the -memprof-runtime-default-options LLVM flag
+/// or you can provide your own implementation of this function. See
 /// memprof_flags.h for more info.
 ///
 /// \returns Default options string.

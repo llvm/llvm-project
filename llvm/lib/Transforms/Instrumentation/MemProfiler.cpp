@@ -167,9 +167,9 @@ static cl::opt<bool>
                             cl::Hidden, cl::init(false));
 
 static cl::opt<std::string>
-    MemprofDefaultOptions("memprof-default-options",
-                          cl::desc("The default memprof options"), cl::Hidden,
-                          cl::init(""));
+    MemprofRuntimeDefaultOptions("memprof-runtime-default-options",
+                                 cl::desc("The default memprof options"),
+                                 cl::Hidden, cl::init(""));
 
 extern cl::opt<bool> MemProfReportHintedSizes;
 
@@ -554,7 +554,7 @@ void createMemprofHistogramFlagVar(Module &M) {
 
 void createMemprofDefaultOptionsVar(Module &M) {
   Constant *OptionsConst = ConstantDataArray::getString(
-      M.getContext(), MemprofDefaultOptions, /*AddNull=*/true);
+      M.getContext(), MemprofRuntimeDefaultOptions, /*AddNull=*/true);
   GlobalVariable *OptionsVar =
       new GlobalVariable(M, OptionsConst->getType(), /*isConstant=*/true,
                          GlobalValue::WeakAnyLinkage, OptionsConst,
