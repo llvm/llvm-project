@@ -743,22 +743,22 @@ HeapProfileRecords:
 - GUID: 0xdeadbeef12345678
   AllocSites:
   - Callstack:
-    - {Function: 0x100, LineOffset: 11, Column: 10, Inline: true}
-    - {Function: 0x200, LineOffset: 22, Column: 20, Inline: false}
+    - {Function: 0x100, LineOffset: 11, Column: 10, IsInlineFrame: true}
+    - {Function: 0x200, LineOffset: 22, Column: 20, IsInlineFrame: false}
     MemInfoBlock:
       AllocCount: 777
       TotalSize: 888
   - Callstack:
-    - {Function: 0x300, LineOffset: 33, Column: 30, Inline: false}
-    - {Function: 0x400, LineOffset: 44, Column: 40, Inline: true}
+    - {Function: 0x300, LineOffset: 33, Column: 30, IsInlineFrame: false}
+    - {Function: 0x400, LineOffset: 44, Column: 40, IsInlineFrame: true}
     MemInfoBlock:
       AllocCount: 666
       TotalSize: 555
   CallSites:
-  - - {Function: 0x500, LineOffset: 55, Column: 50, Inline: true}
-    - {Function: 0x600, LineOffset: 66, Column: 60, Inline: false}
-  - - {Function: 0x700, LineOffset: 77, Column: 70, Inline: true}
-    - {Function: 0x800, LineOffset: 88, Column: 80, Inline: false}
+  - - {Function: 0x500, LineOffset: 55, Column: 50, IsInlineFrame: true}
+    - {Function: 0x600, LineOffset: 66, Column: 60, IsInlineFrame: false}
+  - - {Function: 0x700, LineOffset: 77, Column: 70, IsInlineFrame: true}
+    - {Function: 0x800, LineOffset: 88, Column: 80, IsInlineFrame: false}
 )YAML";
 
   llvm::memprof::YAMLMemProfReader YAMLReader;
@@ -821,7 +821,7 @@ TEST(MemProf, YAMLWriterFrame) {
 
   std::string Out = serializeInYAML(F);
   EXPECT_EQ(Out, R"YAML(---
-{ Function: 11, LineOffset: 22, Column: 33, Inline: true }
+{ Function: 11, LineOffset: 22, Column: 33, IsInlineFrame: true }
 ...
 )YAML");
 }

@@ -1159,7 +1159,7 @@ template <> struct MappingTraits<memprof::Frame> {
     Io.mapRequired("Function", F.Function);
     Io.mapRequired("LineOffset", F.LineOffset);
     Io.mapRequired("Column", F.Column);
-    Io.mapRequired("Inline", F.IsInlineFrame);
+    Io.mapRequired("IsInlineFrame", F.IsInlineFrame);
 
     // Assert that the definition of Frame matches what we expect.  The
     // structured bindings below detect changes to the number of fields.
