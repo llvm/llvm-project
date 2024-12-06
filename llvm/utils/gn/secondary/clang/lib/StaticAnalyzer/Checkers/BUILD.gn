@@ -138,6 +138,7 @@ static_library("Checkers") {
     "VforkChecker.cpp",
     "VirtualCallChecker.cpp",
     "WebKit/ASTUtils.cpp",
+    "WebKit/MemoryUnsafeCastChecker.cpp",
     "WebKit/PtrTypesSemantics.cpp",
     "WebKit/RawPtrRefCallArgsChecker.cpp",
     "WebKit/RawPtrRefLocalVarsChecker.cpp",

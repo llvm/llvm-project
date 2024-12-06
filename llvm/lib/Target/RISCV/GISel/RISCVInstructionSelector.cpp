@@ -83,7 +83,14 @@ private:
   bool selectMergeValues(MachineInstr &MI, MachineIRBuilder &MIB) const;
   bool selectUnmergeValues(MachineInstr &MI, MachineIRBuilder &MIB) const;
 
-  ComplexRendererFns selectShiftMask(MachineOperand &Root) const;
+  ComplexRendererFns selectShiftMask(MachineOperand &Root,
+                                     unsigned ShiftWidth) const;
+  ComplexRendererFns selectShiftMaskXLen(MachineOperand &Root) const {
+    return selectShiftMask(Root, STI.getXLen());
+  }
+  ComplexRendererFns selectShiftMask32(MachineOperand &Root) const {
+    return selectShiftMask(Root, 32);
+  }
   ComplexRendererFns selectAddrRegImm(MachineOperand &Root) const;
 
   ComplexRendererFns selectSExtBits(MachineOperand &Root, unsigned Bits) const;
@@ -172,22 +179,18 @@ RISCVInstructionSelector::RISCVInstructionSelector(
 }
 
 InstructionSelector::ComplexRendererFns
-RISCVInstructionSelector::selectShiftMask(MachineOperand &Root) const {
+RISCVInstructionSelector::selectShiftMask(MachineOperand &Root,
+                                          unsigned ShiftWidth) const {
   if (!Root.isReg())
     return std::nullopt;
 
   using namespace llvm::MIPatternMatch;
 
-  Register RootReg = Root.getReg();
-  Register ShAmtReg = RootReg;
-  const LLT ShiftLLT = MRI->getType(RootReg);
-  unsigned ShiftWidth = ShiftLLT.getSizeInBits();
-  assert(isPowerOf2_32(ShiftWidth) && "Unexpected max shift amount!");
+  Register ShAmtReg = Root.getReg();
   // Peek through zext.
   Register ZExtSrcReg;
-  if (mi_match(ShAmtReg, *MRI, m_GZExt(m_Reg(ZExtSrcReg)))) {
+  if (mi_match(ShAmtReg, *MRI, m_GZExt(m_Reg(ZExtSrcReg))))
     ShAmtReg = ZExtSrcReg;
-  }
 
   APInt AndMask;
   Register AndSrcReg;

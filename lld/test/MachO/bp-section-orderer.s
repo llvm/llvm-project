@@ -9,8 +9,11 @@
 
 # STARTUP: Ordered 3 sections using balanced partitioning
 
-# RUN: %lld -arch arm64 -lSystem -e _main -o - %t/a.o --irpgo-profile-sort=%t/a.profdata -order_file %t/a.orderfile | llvm-nm --numeric-sort --format=just-symbols - | FileCheck %s --check-prefix=ORDERFILE
+# Check that orderfiles take precedence over BP
+# RUN: %lld -arch arm64 -lSystem -e _main -o - %t/a.o -order_file %t/a.orderfile --irpgo-profile-sort=%t/a.profdata  | llvm-nm --numeric-sort --format=just-symbols - | FileCheck %s --check-prefix=ORDERFILE
+# RUN: %lld -arch arm64 -lSystem -e _main -o - %t/a.o -order_file %t/a.orderfile --compression-sort=both | llvm-nm --numeric-sort --format=just-symbols - | FileCheck %s --check-prefix=ORDERFILE
 
+# Functions
 # ORDERFILE: A
 # ORDERFILE: F
 # ORDERFILE: E
@@ -18,10 +21,15 @@
 # ORDERFILE-DAG: _main
 # ORDERFILE-DAG: _B
 # ORDERFILE-DAG: l_C
+
+# Data
+# ORDERFILE: s3
+# ORDERFILE: r3
+# ORDERFILE: r2
 # ORDERFILE-DAG: s1
 # ORDERFILE-DAG: s2
 # ORDERFILE-DAG: r1
-# ORDERFILE-DAG: r2
+# ORDERFILE-DAG: r4
 
 # RUN: %lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --verbose-bp-section-orderer --compression-sort=function 2>&1 | FileCheck %s --check-prefix=COMPRESSION-FUNC
 # RUN: %lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --verbose-bp-section-orderer --compression-sort=data 2>&1 | FileCheck %s --check-prefix=COMPRESSION-DATA
@@ -29,8 +37,8 @@
 # RUN: %lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --verbose-bp-section-orderer --compression-sort=both --irpgo-profile-sort=%t/a.profdata 2>&1 | FileCheck %s --check-prefix=COMPRESSION-BOTH
 
 # COMPRESSION-FUNC: Ordered 7 sections using balanced partitioning
-# COMPRESSION-DATA: Ordered 4 sections using balanced partitioning
-# COMPRESSION-BOTH: Ordered 11 sections using balanced partitioning
+# COMPRESSION-DATA: Ordered 7 sections using balanced partitioning
+# COMPRESSION-BOTH: Ordered 14 sections using balanced partitioning
 
 #--- a.s
 .text
@@ -66,10 +74,16 @@ s1:
   .ascii "hello world"
 s2:
   .ascii "i am a string"
+s3:
+  .ascii "this is s3"
 r1:
   .quad s1
 r2:
   .quad r1
+r3:
+  .quad r2
+r4:
+  .quad s2
 
 .subsections_via_symbols
 
@@ -121,3 +135,6 @@ A
 F
 E
 D
+s3
+r3
+r2
