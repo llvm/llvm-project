@@ -1029,6 +1029,18 @@ struct IndexedMemProfData {
     Frames.try_emplace(Id, F);
     return Id;
   }
+
+  CallStackId addCallStack(ArrayRef<FrameId> CS) {
+    CallStackId CSId = hashCallStack(CS);
+    CallStacks.try_emplace(CSId, CS);
+    return CSId;
+  }
+
+  CallStackId addCallStack(SmallVector<FrameId> &&CS) {
+    CallStackId CSId = hashCallStack(CS);
+    CallStacks.try_emplace(CSId, std::move(CS));
+    return CSId;
+  }
 };
 
 struct FrameStat {
