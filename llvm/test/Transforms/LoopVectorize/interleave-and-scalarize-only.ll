@@ -112,9 +112,6 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; DBG-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; DBG-EMPTY:
-; DBG-NEXT: ir-bb<exit>:
-; DBG-NEXT: No successors
-; DBG-EMPTY:
 ; DBG-NEXT: scalar.ph:
 ; DBG-NEXT: Successor(s): ir-bb<loop.header>
 ; DBG-EMPTY:
@@ -122,6 +119,9 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-NEXT:   IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
 ; DBG-NEXT:   IR   %d = phi i1 [ false, %entry ], [ %d.next, %loop.latch ]
 ; DBG-NEXT:   IR   %d.next = xor i1 %d, true
+; DBG-NEXT: No successors
+; DBG-EMPTY:
+; DBG-NEXT: ir-bb<exit>:
 ; DBG-NEXT: No successors
 ; DBG-NEXT: }
 
@@ -218,9 +218,6 @@ exit:
 ; DBG-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; DBG-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; DBG-EMPTY:
-; DBG-NEXT: ir-bb<exit>:
-; DBG-NEXT: No successors
-; DBG-EMPTY:
 ; DBG-NEXT: scalar.ph:
 ; DBG-NEXT:  EMIT vp<[[RESUME_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<0>
 ; DBG-NEXT: Successor(s): ir-bb<loop>
@@ -229,6 +226,9 @@ exit:
 ; DBG-NEXT:   IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; DBG-NEXT:   IR   %for = phi i32 [ 0, %entry ], [ %iv.trunc, %loop ] (extra operand: vp<[[RESUME_P]]> from scalar.ph)
 ; DBG:        IR   %ec = icmp slt i32 %iv.next.trunc, %n
+; DBG-NEXT: No successors
+; DBG-EMPTY:
+; DBG-NEXT: ir-bb<exit>:
 ; DBG-NEXT: No successors
 ; DBG-NEXT: }
 
