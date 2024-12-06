@@ -421,6 +421,7 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
       continue;
     MachineFunction *MF = MMI->getMachineFunction(*F);
     assert(MF);
+
     for (MachineBasicBlock &MBB : *MF)
       for (MachineInstr &MI : MBB) {
         if (MAI.getSkipEmission(&MI))
@@ -1320,6 +1321,13 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::SubgroupImageBlockIOINTEL);
     }
     break;
+  case SPIRV::OpSubgroupImageMediaBlockReadINTEL:
+  case SPIRV::OpSubgroupImageMediaBlockWriteINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_media_block_io)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_media_block_io);
+      Reqs.addCapability(SPIRV::Capability::SubgroupImageMediaBlockIOINTEL);
+    }
+    break;
   case SPIRV::OpAssumeTrueKHR:
   case SPIRV::OpExpectKHR:
     if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume)) {
@@ -1428,6 +1436,138 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addExtension(SPIRV::Extension::SPV_INTEL_split_barrier);
       Reqs.addCapability(SPIRV::Capability::SplitBarrierINTEL);
     }
+    break;
+  case SPIRV::OpCooperativeMatrixMulAddKHR: {
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_cooperative_matrix))
+      report_fatal_error("Cooperative matrix instructions require the "
+                         "following SPIR-V extension: "
+                         "SPV_KHR_cooperative_matrix",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_cooperative_matrix);
+    Reqs.addCapability(SPIRV::Capability::CooperativeMatrixKHR);
+    constexpr unsigned MulAddMaxSize = 6;
+    if (MI.getNumOperands() != MulAddMaxSize)
+      break;
+    const int64_t CoopOperands = MI.getOperand(MulAddMaxSize - 1).getImm();
+    if (CoopOperands &
+        SPIRV::CooperativeMatrixOperands::MatrixAAndBTF32ComponentsINTEL) {
+      if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_joint_matrix))
+        report_fatal_error("MatrixAAndBTF32ComponentsINTEL type interpretation "
+                           "require the following SPIR-V extension: "
+                           "SPV_INTEL_joint_matrix",
+                           false);
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_joint_matrix);
+      Reqs.addCapability(
+          SPIRV::Capability::CooperativeMatrixTF32ComponentTypeINTEL);
+    }
+    if (CoopOperands & SPIRV::CooperativeMatrixOperands::
+                           MatrixAAndBBFloat16ComponentsINTEL ||
+        CoopOperands &
+            SPIRV::CooperativeMatrixOperands::MatrixCBFloat16ComponentsINTEL ||
+        CoopOperands & SPIRV::CooperativeMatrixOperands::
+                           MatrixResultBFloat16ComponentsINTEL) {
+      if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_joint_matrix))
+        report_fatal_error("***BF16ComponentsINTEL type interpretations "
+                           "require the following SPIR-V extension: "
+                           "SPV_INTEL_joint_matrix",
+                           false);
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_joint_matrix);
+      Reqs.addCapability(
+          SPIRV::Capability::CooperativeMatrixBFloat16ComponentTypeINTEL);
+    }
+    break;
+  }
+  case SPIRV::OpCooperativeMatrixLoadKHR:
+  case SPIRV::OpCooperativeMatrixStoreKHR:
+  case SPIRV::OpCooperativeMatrixLoadCheckedINTEL:
+  case SPIRV::OpCooperativeMatrixStoreCheckedINTEL:
+  case SPIRV::OpCooperativeMatrixPrefetchINTEL: {
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_cooperative_matrix))
+      report_fatal_error("Cooperative matrix instructions require the "
+                         "following SPIR-V extension: "
+                         "SPV_KHR_cooperative_matrix",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_cooperative_matrix);
+    Reqs.addCapability(SPIRV::Capability::CooperativeMatrixKHR);
+
+    // Check Layout operand in case if it's not a standard one and add the
+    // appropriate capability.
+    std::unordered_map<unsigned, unsigned> LayoutToInstMap = {
+        {SPIRV::OpCooperativeMatrixLoadKHR, 3},
+        {SPIRV::OpCooperativeMatrixStoreKHR, 2},
+        {SPIRV::OpCooperativeMatrixLoadCheckedINTEL, 5},
+        {SPIRV::OpCooperativeMatrixStoreCheckedINTEL, 4},
+        {SPIRV::OpCooperativeMatrixPrefetchINTEL, 4}};
+
+    const auto OpCode = MI.getOpcode();
+    const unsigned LayoutNum = LayoutToInstMap[OpCode];
+    Register RegLayout = MI.getOperand(LayoutNum).getReg();
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    MachineInstr *MILayout = MRI.getUniqueVRegDef(RegLayout);
+    if (MILayout->getOpcode() == SPIRV::OpConstantI) {
+      const unsigned LayoutVal = MILayout->getOperand(2).getImm();
+      if (LayoutVal ==
+          static_cast<unsigned>(SPIRV::CooperativeMatrixLayout::PackedINTEL)) {
+        if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_joint_matrix))
+          report_fatal_error("PackedINTEL layout require the following SPIR-V "
+                             "extension: SPV_INTEL_joint_matrix",
+                             false);
+        Reqs.addExtension(SPIRV::Extension::SPV_INTEL_joint_matrix);
+        Reqs.addCapability(SPIRV::Capability::PackedCooperativeMatrixINTEL);
+      }
+    }
+
+    // Nothing to do.
+    if (OpCode == SPIRV::OpCooperativeMatrixLoadKHR ||
+        OpCode == SPIRV::OpCooperativeMatrixStoreKHR)
+      break;
+
+    std::string InstName;
+    switch (OpCode) {
+    case SPIRV::OpCooperativeMatrixPrefetchINTEL:
+      InstName = "OpCooperativeMatrixPrefetchINTEL";
+      break;
+    case SPIRV::OpCooperativeMatrixLoadCheckedINTEL:
+      InstName = "OpCooperativeMatrixLoadCheckedINTEL";
+      break;
+    case SPIRV::OpCooperativeMatrixStoreCheckedINTEL:
+      InstName = "OpCooperativeMatrixStoreCheckedINTEL";
+      break;
+    }
+
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_joint_matrix)) {
+      const std::string ErrorMsg =
+          InstName + " instruction requires the "
+                     "following SPIR-V extension: SPV_INTEL_joint_matrix";
+      report_fatal_error(ErrorMsg.c_str(), false);
+    }
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_joint_matrix);
+    if (OpCode == SPIRV::OpCooperativeMatrixPrefetchINTEL) {
+      Reqs.addCapability(SPIRV::Capability::CooperativeMatrixPrefetchINTEL);
+      break;
+    }
+    Reqs.addCapability(
+        SPIRV::Capability::CooperativeMatrixCheckedInstructionsINTEL);
+    break;
+  }
+  case SPIRV::OpCooperativeMatrixConstructCheckedINTEL:
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_joint_matrix))
+      report_fatal_error("OpCooperativeMatrixConstructCheckedINTEL "
+                         "instructions require the following SPIR-V extension: "
+                         "SPV_INTEL_joint_matrix",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_joint_matrix);
+    Reqs.addCapability(
+        SPIRV::Capability::CooperativeMatrixCheckedInstructionsINTEL);
+    break;
+  case SPIRV::OpCooperativeMatrixGetElementCoordINTEL:
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_joint_matrix))
+      report_fatal_error("OpCooperativeMatrixGetElementCoordINTEL requires the "
+                         "following SPIR-V extension: SPV_INTEL_joint_matrix",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_joint_matrix);
+    Reqs.addCapability(
+        SPIRV::Capability::CooperativeMatrixInvocationInstructionsINTEL);
     break;
   case SPIRV::OpKill: {
     Reqs.addCapability(SPIRV::Capability::Shader);
@@ -1541,11 +1681,14 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
           SPIRV::OperandCategory::ExecutionModeOperand,
           SPIRV::ExecutionMode::VecTypeHint, ST);
 
-    if (F.hasOptNone() &&
-        ST.canUseExtension(SPIRV::Extension::SPV_INTEL_optnone)) {
-      // Output OpCapability OptNoneINTEL.
-      MAI.Reqs.addExtension(SPIRV::Extension::SPV_INTEL_optnone);
-      MAI.Reqs.addCapability(SPIRV::Capability::OptNoneINTEL);
+    if (F.hasOptNone()) {
+      if (ST.canUseExtension(SPIRV::Extension::SPV_EXT_optnone)) {
+        MAI.Reqs.addExtension(SPIRV::Extension::SPV_EXT_optnone);
+        MAI.Reqs.addCapability(SPIRV::Capability::OptNoneEXT);
+      } else if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_optnone)) {
+        MAI.Reqs.addExtension(SPIRV::Extension::SPV_INTEL_optnone);
+        MAI.Reqs.addCapability(SPIRV::Capability::OptNoneINTEL);
+      }
     }
   }
 }
@@ -1606,6 +1749,27 @@ static void addDecorations(const Module &M, const SPIRVInstrInfo &TII,
   }
 }
 
+static void addMBBNames(const Module &M, const SPIRVInstrInfo &TII,
+                        MachineModuleInfo *MMI, const SPIRVSubtarget &ST,
+                        SPIRV::ModuleAnalysisInfo &MAI) {
+  for (auto F = M.begin(), E = M.end(); F != E; ++F) {
+    MachineFunction *MF = MMI->getMachineFunction(*F);
+    if (!MF)
+      continue;
+    MachineRegisterInfo &MRI = MF->getRegInfo();
+    for (auto &MBB : *MF) {
+      if (!MBB.hasName() || MBB.empty())
+        continue;
+      // Emit basic block names.
+      Register Reg = MRI.createGenericVirtualRegister(LLT::scalar(64));
+      MRI.setRegClass(Reg, &SPIRV::IDRegClass);
+      buildOpName(Reg, MBB.getName(), *std::prev(MBB.end()), TII);
+      Register GlobalReg = MAI.getOrCreateMBBRegister(MBB);
+      MAI.setRegisterAlias(MF, Reg, GlobalReg);
+    }
+  }
+}
+
 struct SPIRV::ModuleAnalysisInfo SPIRVModuleAnalysis::MAI;
 
 void SPIRVModuleAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -1624,6 +1788,7 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
 
   setBaseInfo(M);
 
+  addMBBNames(M, *TII, MMI, *ST, MAI);
   addDecorations(M, *TII, MMI, *ST, MAI);
 
   collectReqs(M, MAI, MMI, *ST);

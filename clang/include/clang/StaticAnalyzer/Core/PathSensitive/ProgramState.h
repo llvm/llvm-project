@@ -487,6 +487,7 @@ private:
   friend void ProgramStateRetain(const ProgramState *state);
   friend void ProgramStateRelease(const ProgramState *state);
 
+  SVal desugarReference(SVal Val) const;
   SVal wrapSymbolicRegion(SVal Base) const;
 };
 

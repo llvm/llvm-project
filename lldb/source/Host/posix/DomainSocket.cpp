@@ -175,3 +175,17 @@ std::string DomainSocket::GetRemoteConnectionURI() const {
       "{0}://{1}",
       GetNameOffset() == 0 ? "unix-connect" : "unix-abstract-connect", name);
 }
+
+std::vector<std::string> DomainSocket::GetListeningConnectionURI() const {
+  if (m_socket == kInvalidSocketValue)
+    return {};
+
+  struct sockaddr_un addr;
+  bzero(&addr, sizeof(struct sockaddr_un));
+  addr.sun_family = AF_UNIX;
+  socklen_t addr_len = sizeof(struct sockaddr_un);
+  if (::getsockname(m_socket, (struct sockaddr *)&addr, &addr_len) != 0)
+    return {};
+
+  return {llvm::formatv("unix-connect://{0}", addr.sun_path)};
+}

@@ -1202,6 +1202,8 @@ let SubtargetPredicate = HasGFX950Insts in {
   def : DSLoadTrPat <DS_READ_B64_TR_B8,  v2i32, int_amdgcn_ds_read_tr8_b64>;
   def : DSLoadTrPat <DS_READ_B96_TR_B6,  v3i32, int_amdgcn_ds_read_tr6_b96>;
   def : DSLoadTrPat <DS_READ_B64_TR_B16, v4i16, int_amdgcn_ds_read_tr16_b64>;
+  def : DSLoadTrPat <DS_READ_B64_TR_B16, v4f16, int_amdgcn_ds_read_tr16_b64>;
+  def : DSLoadTrPat <DS_READ_B64_TR_B16, v4bf16, int_amdgcn_ds_read_tr16_b64>;
 }
 
 //===----------------------------------------------------------------------===//

@@ -760,7 +760,7 @@ def Vector_FMAOp :
   let summary = "vector fused multiply-add";
   let description = [{
     Multiply-add expressions operate on n-D vectors and compute a fused
-    pointwise multiply-and-accumulate: `$result = `$lhs * $rhs + $acc`.
+    pointwise multiply-and-accumulate: `$result = $lhs * $rhs + $acc`.
     All operands and result have the same vector type. The semantics
     of the operation correspond to those of the `llvm.fma`
     [intrinsic](https://llvm.org/docs/LangRef.html#int-fma). In the
@@ -2086,7 +2086,7 @@ def Vector_ExpandLoadOp :
   Vector_Op<"expandload">,
     Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
-               VectorOfNonZeroRankOf<[I1]>:$mask,
+               FixedVectorOfNonZeroRankOf<[I1]>:$mask,
                AnyVectorOfNonZeroRank:$pass_thru)>,
     Results<(outs AnyVectorOfNonZeroRank:$result)> {
 
@@ -2118,6 +2118,8 @@ def Vector_ExpandLoadOp :
     hardware ISA support for an expand. The semantics of the operation closely
     correspond to those of the `llvm.masked.expandload`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-expandload-intrinsics).
+
+    Note, at the moment this Op is only available for fixed-width vectors.
 
     Examples:
 
@@ -2153,7 +2155,7 @@ def Vector_CompressStoreOp :
   Vector_Op<"compressstore">,
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
-               VectorOfNonZeroRankOf<[I1]>:$mask,
+               FixedVectorOfNonZeroRankOf<[I1]>:$mask,
                AnyVectorOfNonZeroRank:$valueToStore)> {
 
   let summary = "writes elements selectively from a vector as defined by a mask";
@@ -2184,6 +2186,8 @@ def Vector_CompressStoreOp :
     hardware ISA support for a compress. The semantics of the operation closely
     correspond to those of the `llvm.masked.compressstore`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-compressstore-intrinsics).
+
+    Note, at the moment this Op is only available for fixed-width vectors.
 
     Examples:
 

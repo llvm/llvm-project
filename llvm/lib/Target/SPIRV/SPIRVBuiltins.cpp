@@ -91,6 +91,7 @@ struct IntelSubgroupsBuiltin {
   uint32_t Opcode;
   bool IsBlock;
   bool IsWrite;
+  bool IsMedia;
 };
 
 #define GET_IntelSubgroupsBuiltins_DECL
@@ -215,6 +216,8 @@ std::string lookupBuiltinNameHelper(StringRef DemangledCall) {
   // - "__spirv_ReadClockKHR"
   // - "__spirv_SubgroupBlockReadINTEL"
   // - "__spirv_SubgroupImageBlockReadINTEL"
+  // - "__spirv_SubgroupImageMediaBlockReadINTEL"
+  // - "__spirv_SubgroupImageMediaBlockWriteINTEL"
   // - "__spirv_Convert"
   // - "__spirv_UConvert"
   // - "__spirv_SConvert"
@@ -225,7 +228,9 @@ std::string lookupBuiltinNameHelper(StringRef DemangledCall) {
   static const std::regex SpvWithR(
       "(__spirv_(ImageSampleExplicitLod|ImageRead|ImageQuerySizeLod|UDotKHR|"
       "SDotKHR|SUDotKHR|SDotAccSatKHR|UDotAccSatKHR|SUDotAccSatKHR|"
-      "ReadClockKHR|SubgroupBlockReadINTEL|SubgroupImageBlockReadINTEL|Convert|"
+      "ReadClockKHR|SubgroupBlockReadINTEL|SubgroupImageBlockReadINTEL|"
+      "SubgroupImageMediaBlockReadINTEL|SubgroupImageMediaBlockWriteINTEL|"
+      "Convert|"
       "UConvert|SConvert|FConvert|SatConvert).*)_R.*");
   std::smatch Match;
   if (std::regex_match(BuiltinName, Match, SpvWithR) && Match.size() > 2)
@@ -469,12 +474,8 @@ static Register buildLoadInst(SPIRVType *BaseType, Register PtrRegister,
                               MachineIRBuilder &MIRBuilder,
                               SPIRVGlobalRegistry *GR, LLT LowLevelType,
                               Register DestinationReg = Register(0)) {
-  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
-  if (!DestinationReg.isValid()) {
-    DestinationReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
-    MRI->setType(DestinationReg, LLT::scalar(64));
-    GR->assignSPIRVTypeToVReg(BaseType, DestinationReg, MIRBuilder.getMF());
-  }
+  if (!DestinationReg.isValid())
+    DestinationReg = createVirtualRegister(BaseType, GR, MIRBuilder);
   // TODO: consider using correct address space and alignment (p0 is canonical
   // type for selection though).
   MachinePointerInfo PtrInfo = MachinePointerInfo();
@@ -1196,19 +1197,28 @@ static bool generateIntelSubgroupsInst(const SPIRV::IncomingCall *Call,
   const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
   MachineFunction &MF = MIRBuilder.getMF();
   const auto *ST = static_cast<const SPIRVSubtarget *>(&MF.getSubtarget());
-  if (!ST->canUseExtension(SPIRV::Extension::SPV_INTEL_subgroups)) {
+  const SPIRV::IntelSubgroupsBuiltin *IntelSubgroups =
+      SPIRV::lookupIntelSubgroupsBuiltin(Builtin->Name);
+
+  if (IntelSubgroups->IsMedia &&
+      !ST->canUseExtension(SPIRV::Extension::SPV_INTEL_media_block_io)) {
+    std::string DiagMsg = std::string(Builtin->Name) +
+                          ": the builtin requires the following SPIR-V "
+                          "extension: SPV_INTEL_media_block_io";
+    report_fatal_error(DiagMsg.c_str(), false);
+  } else if (!IntelSubgroups->IsMedia &&
+             !ST->canUseExtension(SPIRV::Extension::SPV_INTEL_subgroups)) {
     std::string DiagMsg = std::string(Builtin->Name) +
                           ": the builtin requires the following SPIR-V "
                           "extension: SPV_INTEL_subgroups";
     report_fatal_error(DiagMsg.c_str(), false);
   }
-  const SPIRV::IntelSubgroupsBuiltin *IntelSubgroups =
-      SPIRV::lookupIntelSubgroupsBuiltin(Builtin->Name);
 
   uint32_t OpCode = IntelSubgroups->Opcode;
   if (Call->isSpirvOp()) {
     bool IsSet = OpCode != SPIRV::OpSubgroupBlockWriteINTEL &&
-                 OpCode != SPIRV::OpSubgroupImageBlockWriteINTEL;
+                 OpCode != SPIRV::OpSubgroupImageBlockWriteINTEL &&
+                 OpCode != SPIRV::OpSubgroupImageMediaBlockWriteINTEL;
     return buildOpFromWrapper(MIRBuilder, OpCode, Call,
                               IsSet ? GR->getSPIRVTypeID(Call->ReturnType)
                                     : Register(0));
@@ -1959,15 +1969,49 @@ static bool generateCoopMatrInst(const SPIRV::IncomingCall *Call,
   const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
   unsigned Opcode =
       SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
-  bool IsSet = Opcode != SPIRV::OpCooperativeMatrixStoreKHR;
+  bool IsSet = Opcode != SPIRV::OpCooperativeMatrixStoreKHR &&
+               Opcode != SPIRV::OpCooperativeMatrixStoreCheckedINTEL &&
+               Opcode != SPIRV::OpCooperativeMatrixPrefetchINTEL;
   unsigned ArgSz = Call->Arguments.size();
   unsigned LiteralIdx = 0;
-  if (Opcode == SPIRV::OpCooperativeMatrixLoadKHR && ArgSz > 3)
-    LiteralIdx = 3;
-  else if (Opcode == SPIRV::OpCooperativeMatrixStoreKHR && ArgSz > 4)
-    LiteralIdx = 4;
+  switch (Opcode) {
+  // Memory operand is optional and is literal.
+  case SPIRV::OpCooperativeMatrixLoadKHR:
+    LiteralIdx = ArgSz > 3 ? 3 : 0;
+    break;
+  case SPIRV::OpCooperativeMatrixStoreKHR:
+    LiteralIdx = ArgSz > 4 ? 4 : 0;
+    break;
+  case SPIRV::OpCooperativeMatrixLoadCheckedINTEL:
+    LiteralIdx = ArgSz > 7 ? 7 : 0;
+    break;
+  case SPIRV::OpCooperativeMatrixStoreCheckedINTEL:
+    LiteralIdx = ArgSz > 8 ? 8 : 0;
+    break;
+  // Cooperative Matrix Operands operand is optional and is literal.
+  case SPIRV::OpCooperativeMatrixMulAddKHR:
+    LiteralIdx = ArgSz > 3 ? 3 : 0;
+    break;
+  };
+
   SmallVector<uint32_t, 1> ImmArgs;
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  if (Opcode == SPIRV::OpCooperativeMatrixPrefetchINTEL) {
+    const uint32_t CacheLevel = getConstFromIntrinsic(Call->Arguments[3], MRI);
+    auto MIB = MIRBuilder.buildInstr(SPIRV::OpCooperativeMatrixPrefetchINTEL)
+                   .addUse(Call->Arguments[0])  // pointer
+                   .addUse(Call->Arguments[1])  // rows
+                   .addUse(Call->Arguments[2])  // columns
+                   .addImm(CacheLevel)          // cache level
+                   .addUse(Call->Arguments[4]); // memory layout
+    if (ArgSz > 5)
+      MIB.addUse(Call->Arguments[5]); // stride
+    if (ArgSz > 6) {
+      const uint32_t MemOp = getConstFromIntrinsic(Call->Arguments[6], MRI);
+      MIB.addImm(MemOp); // memory operand
+    }
+    return true;
+  }
   if (LiteralIdx > 0)
     ImmArgs.push_back(getConstFromIntrinsic(Call->Arguments[LiteralIdx], MRI));
   Register TypeReg = GR->getSPIRVTypeID(Call->ReturnType);
@@ -2151,7 +2195,7 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
     const SPIRVType *PointerSizeTy = GR->getOrCreateSPIRVPointerType(
         Int32Ty, MIRBuilder, SPIRV::StorageClass::Function);
     for (unsigned I = 0; I < LocalSizeNum; ++I) {
-      Register Reg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
+      Register Reg = MRI->createVirtualRegister(&SPIRV::pIDRegClass);
       MRI->setType(Reg, LLType);
       GR->assignSPIRVTypeToVReg(PointerSizeTy, Reg, MIRBuilder.getMF());
       auto GEPInst = MIRBuilder.buildIntrinsic(
@@ -2539,23 +2583,11 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
                                  SPIRVGlobalRegistry *GR) {
   LLVM_DEBUG(dbgs() << "Lowering builtin call: " << DemangledCall << "\n");
 
-  // SPIR-V type and return register.
-  Register ReturnRegister = OrigRet;
-  SPIRVType *ReturnType = nullptr;
-  if (OrigRetTy && !OrigRetTy->isVoidTy()) {
-    ReturnType = GR->assignTypeToVReg(OrigRetTy, ReturnRegister, MIRBuilder);
-    if (!MIRBuilder.getMRI()->getRegClassOrNull(ReturnRegister))
-      MIRBuilder.getMRI()->setRegClass(ReturnRegister,
-                                       GR->getRegClass(ReturnType));
-  } else if (OrigRetTy && OrigRetTy->isVoidTy()) {
-    ReturnRegister = MIRBuilder.getMRI()->createVirtualRegister(&IDRegClass);
-    MIRBuilder.getMRI()->setType(ReturnRegister, LLT::scalar(64));
-    ReturnType = GR->assignTypeToVReg(OrigRetTy, ReturnRegister, MIRBuilder);
-  }
-
   // Lookup the builtin in the TableGen records.
+  SPIRVType *SpvType = GR->getSPIRVTypeForVReg(OrigRet);
+  assert(SpvType && "Inconsistent return register: expected valid type info");
   std::unique_ptr<const IncomingCall> Call =
-      lookupBuiltin(DemangledCall, Set, ReturnRegister, ReturnType, Args);
+      lookupBuiltin(DemangledCall, Set, OrigRet, SpvType, Args);
 
   if (!Call) {
     LLVM_DEBUG(dbgs() << "Builtin record was not found!\n");
@@ -2632,16 +2664,7 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
   return false;
 }
 
-Type *parseBuiltinCallArgumentBaseType(const StringRef DemangledCall,
-                                       unsigned ArgIdx, LLVMContext &Ctx) {
-  SmallVector<StringRef, 10> BuiltinArgsTypeStrs;
-  StringRef BuiltinArgs =
-      DemangledCall.slice(DemangledCall.find('(') + 1, DemangledCall.find(')'));
-  BuiltinArgs.split(BuiltinArgsTypeStrs, ',', -1, false);
-  if (ArgIdx >= BuiltinArgsTypeStrs.size())
-    return nullptr;
-  StringRef TypeStr = BuiltinArgsTypeStrs[ArgIdx].trim();
-
+Type *parseBuiltinCallArgumentType(StringRef TypeStr, LLVMContext &Ctx) {
   // Parse strings representing OpenCL builtin types.
   if (hasBuiltinTypePrefix(TypeStr)) {
     // OpenCL builtin types in demangled call strings have the following format:
@@ -2683,6 +2706,29 @@ Type *parseBuiltinCallArgumentBaseType(const StringRef DemangledCall,
         BaseType->isVoidTy() ? Type::getInt8Ty(Ctx) : BaseType, VecElts, false);
 
   return BaseType;
+}
+
+bool parseBuiltinTypeStr(SmallVector<StringRef, 10> &BuiltinArgsTypeStrs,
+                         const StringRef DemangledCall, LLVMContext &Ctx) {
+  auto Pos1 = DemangledCall.find('(');
+  if (Pos1 == StringRef::npos)
+    return false;
+  auto Pos2 = DemangledCall.find(')');
+  if (Pos2 == StringRef::npos || Pos1 > Pos2)
+    return false;
+  DemangledCall.slice(Pos1 + 1, Pos2)
+      .split(BuiltinArgsTypeStrs, ',', -1, false);
+  return true;
+}
+
+Type *parseBuiltinCallArgumentBaseType(const StringRef DemangledCall,
+                                       unsigned ArgIdx, LLVMContext &Ctx) {
+  SmallVector<StringRef, 10> BuiltinArgsTypeStrs;
+  parseBuiltinTypeStr(BuiltinArgsTypeStrs, DemangledCall, Ctx);
+  if (ArgIdx >= BuiltinArgsTypeStrs.size())
+    return nullptr;
+  StringRef TypeStr = BuiltinArgsTypeStrs[ArgIdx].trim();
+  return parseBuiltinCallArgumentType(TypeStr, Ctx);
 }
 
 struct BuiltinType {

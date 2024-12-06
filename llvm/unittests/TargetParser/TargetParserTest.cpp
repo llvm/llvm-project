@@ -404,6 +404,14 @@ INSTANTIATE_TEST_SUITE_P(
                 ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_CRC |
                 ARM::AEK_RAS | ARM::AEK_FP16 | ARM::AEK_DOTPROD,
             "8.2-A"),
+        ARMCPUTestParams<uint64_t>("cortex-a510", "armv9-a", "neon-fp-armv8",
+                                   ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
+                                       ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
+                                       ARM::AEK_DSP | ARM::AEK_CRC |
+                                       ARM::AEK_RAS | ARM::AEK_DOTPROD |
+                                       ARM::AEK_FP16FML | ARM::AEK_BF16 |
+                                       ARM::AEK_I8MM | ARM::AEK_SB,
+                                   "9-A"),
         ARMCPUTestParams<uint64_t>("cortex-a710", "armv9-a", "neon-fp-armv8",
                                    ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
                                        ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
@@ -521,7 +529,7 @@ INSTANTIATE_TEST_SUITE_P(
                                    "7-S")),
     ARMCPUTestParams<uint64_t>::PrintToStringParamName);
 
-static constexpr unsigned NumARMCPUArchs = 93;
+static constexpr unsigned NumARMCPUArchs = 94;
 
 TEST(TargetParserTest, testARMCPUArchList) {
   SmallVector<StringRef, NumARMCPUArchs> List;

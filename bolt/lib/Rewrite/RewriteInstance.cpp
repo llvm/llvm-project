@@ -356,7 +356,8 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
 
   Relocation::Arch = TheTriple.getArch();
   auto BCOrErr = BinaryContext::createBinaryContext(
-      TheTriple, File->getFileName(), Features.get(), IsPIC,
+      TheTriple, std::make_shared<orc::SymbolStringPool>(), File->getFileName(),
+      Features.get(), IsPIC,
       DWARFContext::create(*File, DWARFContext::ProcessDebugRelocations::Ignore,
                            nullptr, opts::DWPPathName,
                            WithColor::defaultErrorHandler,

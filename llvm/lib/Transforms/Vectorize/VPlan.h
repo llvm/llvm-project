@@ -2239,6 +2239,45 @@ public:
 #endif
 };
 
+/// Recipe to generate a scalar PHI. Used to generate code for recipes that
+/// produce scalar header phis, including VPCanonicalIVPHIRecipe and
+/// VPEVLBasedIVPHIRecipe.
+class VPScalarPHIRecipe : public VPHeaderPHIRecipe {
+  std::string Name;
+
+public:
+  VPScalarPHIRecipe(VPValue *Start, VPValue *BackedgeValue, DebugLoc DL,
+                    StringRef Name)
+      : VPHeaderPHIRecipe(VPDef::VPScalarPHISC, nullptr, Start, DL),
+        Name(Name.str()) {
+    addOperand(BackedgeValue);
+  }
+
+  ~VPScalarPHIRecipe() override = default;
+
+  VPScalarPHIRecipe *clone() override {
+    llvm_unreachable("cloning not implemented yet");
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPScalarPHISC)
+
+  /// Generate the phi/select nodes.
+  void execute(VPTransformState &State) override;
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
 /// A recipe for handling phis that are widened in the vector loop.
 /// In the VPlan native path, all incoming VPValues & VPBasicBlock pairs are
 /// managed in the recipe directly.
@@ -3134,8 +3173,10 @@ public:
     return D->getVPDefID() == VPDef::VPCanonicalIVPHISC;
   }
 
-  /// Generate the canonical scalar induction phi of the vector loop.
-  void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override {
+    llvm_unreachable(
+        "cannot execute this recipe, should be replaced by VPScalarPHIRecipe");
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3231,9 +3272,10 @@ public:
     return D->getVPDefID() == VPDef::VPEVLBasedIVPHISC;
   }
 
-  /// Generate phi for handling IV based on EVL over iterations correctly.
-  /// TODO: investigate if it can share the code with VPCanonicalIVPHIRecipe.
-  void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override {
+    llvm_unreachable(
+        "cannot execute this recipe, should be replaced by VPScalarPHIRecipe");
+  }
 
   /// Return the cost of this VPEVLBasedIVPHIRecipe.
   InstructionCost computeCost(ElementCount VF,

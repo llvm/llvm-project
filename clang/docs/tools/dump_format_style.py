@@ -20,7 +20,7 @@ DOC_FILE = os.path.join(CLANG_DIR, "docs/ClangFormatStyleOptions.rst")
 PLURALS_FILE = os.path.join(os.path.dirname(__file__), "plurals.txt")
 
 plurals: Set[str] = set()
-with open(PLURALS_FILE, "a+") as f:
+with open(PLURALS_FILE) as f:
     f.seek(0)
     plurals = set(f.read().splitlines())
 
@@ -487,5 +487,6 @@ with open(DOC_FILE, encoding="utf-8") as f:
 
 contents = substitute(contents, "FORMAT_STYLE_OPTIONS", options_text)
 
-with open(DOC_FILE, "wb") as output:
+output_file_path = sys.argv[1] if len(sys.argv) == 2 else DOC_FILE
+with open(output_file_path, "wb") as output:
     output.write(contents.encode())

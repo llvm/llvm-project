@@ -80,17 +80,17 @@ struct GenericTarget : public CodeGenSpecifics {
                                 mlir::TypeRange{ptrTy, idxTy});
   }
 
-  Marshalling boxcharArgumentType(mlir::Type eleTy, bool sret) const override {
+  Marshalling boxcharArgumentType(mlir::Type eleTy) const override {
     CodeGenSpecifics::Marshalling marshal;
     auto idxTy = mlir::IntegerType::get(eleTy.getContext(), S::defaultWidth);
     auto ptrTy = fir::ReferenceType::get(eleTy);
     marshal.emplace_back(ptrTy, AT{});
-    // Return value arguments are grouped as a pair. Others are passed in a
-    // split format with all pointers first (in the declared position) and all
-    // LEN arguments appended after all of the dummy arguments.
+    // Characters are passed in a split format with all pointers first (in the
+    // declared position) and all LEN arguments appended after all of the dummy
+    // arguments.
     // NB: Other conventions/ABIs can/should be supported via options.
     marshal.emplace_back(idxTy, AT{/*alignment=*/0, /*byval=*/false,
-                                   /*sret=*/sret, /*append=*/!sret});
+                                   /*sret=*/false, /*append=*/true});
     return marshal;
   }
 
