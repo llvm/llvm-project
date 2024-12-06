@@ -108,6 +108,7 @@ struct MissingFeatures {
   static bool setObjCGCLValueClass() { return false; }
   static bool objCLifetime() { return false; }
   static bool objCIvarDecls() { return false; }
+  static bool objCRuntime() { return false; }
 
   // Debug info
   static bool generateDebugInfo() { return false; }
@@ -327,6 +328,49 @@ struct MissingFeatures {
   static bool undef() { return false; }
   static bool noFPClass() { return false; }
   static bool llvmIntrinsicElementTypeSupport() { return false; }
+
+  //-- Missing parts of the CIRGenModule::Release skeleton.
+  static bool emitModuleInitializers() { return false; }
+  static bool emittedDeferredDecls() { return false; }
+  static bool emitVTablesOpportunistically() { return false; }
+  static bool applyGlobalValReplacements() { return false; }
+  static bool emitMultiVersionFunctions() { return false; }
+  static bool incrementalExtensions() { return false; }
+  static bool emitCXXModuleInitFunc() { return false; }
+  static bool emitCXXGlobalCleanUpFunc() { return false; }
+  static bool registerGlobalDtorsWithAtExit() { return false; }
+  static bool emitCXXThreadLocalInitFunc() { return false; }
+  static bool pgoReader() { return false; }
+  static bool emitCtorList() { return false; }
+  static bool emitStaticExternCAliases() { return false; }
+  static bool checkAliases() { return false; }
+  static bool emitDeferredUnusedCoverageMappings() { return false; }
+  static bool cirGenPGO() { return false; }
+  static bool coverageMapping() { return false; }
+  static bool emitAtAvailableLinkGuard() { return false; }
+  static bool emitLLVMUsed() { return false; }
+  static bool sanStats() { return false; }
+  static bool linkerOptionsMetadata() { return false; }
+  static bool emitModuleLinkOptions() { return false; }
+  static bool elfDependentLibraries() { return false; }
+  static bool dwarfVersion() { return false; }
+  static bool wcharWidth() { return false; }
+  static bool enumWidth() { return false; }
+  static bool setPICLevel() { return false; }
+  static bool setPIELevel() { return false; }
+  static bool codeModel() { return false; }
+  static bool largeDataThreshold() { return false; }
+  static bool directAccessExternalData() { return false; }
+  static bool setUwtable() { return false; }
+  static bool setFramePointer() { return false; }
+  static bool simplifyPersonality() { return false; }
+  static bool emitVersionIdentMetadata() { return false; }
+  static bool emitTargetGlobals() { return false; }
+  static bool emitTargetMetadata() { return false; }
+  static bool emitBackendOptionsMetadata() { return false; }
+  static bool embedObject() { return false; }
+  static bool setVisibilityFromDLLStorageClass() { return false; }
+  static bool mustTailCallUndefinedGlobals() { return false; }
 
   //-- Other missing features
 

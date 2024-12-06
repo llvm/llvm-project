@@ -2968,49 +2968,243 @@ CIRGenModule::GetAddrOfGlobal(GlobalDecl GD, ForDefinition_t IsForDefinition) {
 }
 
 void CIRGenModule::Release() {
+  assert(!MissingFeatures::emitModuleInitializers());
   emitDeferred(getCodeGenOpts().ClangIRBuildDeferredThreshold);
-  // TODO: emitVTablesOpportunistically();
-  // TODO: applyGlobalValReplacements();
+  assert(!MissingFeatures::emittedDeferredDecls());
+  assert(!MissingFeatures::emitVTablesOpportunistically());
+  assert(!MissingFeatures::applyGlobalValReplacements());
   applyReplacements();
-  // TODO: checkAliases();
-  // TODO: emitMultiVersionFunctions();
+  assert(!MissingFeatures::emitMultiVersionFunctions());
+
+  assert(!MissingFeatures::incrementalExtensions());
+
+  assert(!MissingFeatures::emitCXXModuleInitFunc());
   emitCXXGlobalInitFunc();
-  // TODO: emitCXXGlobalCleanUpFunc();
-  // TODO: registerGlobalDtorsWithAtExit();
-  // TODO: emitCXXThreadLocalInitFunc();
-  // TODO: ObjCRuntime
+  assert(!MissingFeatures::emitCXXGlobalCleanUpFunc());
+  assert(!MissingFeatures::registerGlobalDtorsWithAtExit());
+  assert(!MissingFeatures::emitCXXThreadLocalInitFunc());
+  assert(!MissingFeatures::objCRuntime());
   if (astCtx.getLangOpts().CUDA) {
     llvm_unreachable("NYI");
   }
-  // TODO: OpenMPRuntime
-  // TODO: PGOReader
-  // TODO: emitCtorList(GlobalCtors);
-  // TODO: builtCtorList(GlobalDtors);
+  assert(!MissingFeatures::openMPRuntime());
+  assert(!MissingFeatures::pgoReader());
+  assert(!MissingFeatures::emitCtorList()); // GlobalCtors, GlobalDtors
   emitGlobalAnnotations();
-  // TODO: emitDeferredUnusedCoverageMappings();
-  // TODO: CIRGenPGO
-  // TODO: CoverageMapping
+  assert(!MissingFeatures::emitStaticExternCAliases());
+  assert(!MissingFeatures::checkAliases());
+  assert(!MissingFeatures::emitDeferredUnusedCoverageMappings());
+  assert(!MissingFeatures::cirGenPGO()); // setValueProfilingFlag,
+                                         // setProfileVersion
+  assert(!MissingFeatures::coverageMapping());
   if (getCodeGenOpts().SanitizeCfiCrossDso) {
     llvm_unreachable("NYI");
   }
-  // TODO: emitAtAvailableLinkGuard();
-  if (astCtx.getTargetInfo().getTriple().isWasm() &&
-      !astCtx.getTargetInfo().getTriple().isOSEmscripten()) {
+  if (langOpts.Sanitize.has(SanitizerKind::KCFI))
+    llvm_unreachable("NYI");
+  assert(!MissingFeatures::emitAtAvailableLinkGuard());
+  if (astCtx.getTargetInfo().getTriple().isWasm())
+    llvm_unreachable("NYI");
+
+  if (getTriple().isAMDGPU() ||
+      (getTriple().isSPIRV() && getTriple().getVendor() == llvm::Triple::AMD)) {
     llvm_unreachable("NYI");
   }
 
-  // Emit reference of __amdgpu_device_library_preserve_asan_functions to
-  // preserve ASAN functions in bitcode libraries.
-  if (getLangOpts().Sanitize.has(SanitizerKind::Address)) {
+  // Emit a global array containing all external kernels or device variables
+  // used by host functions and mark it as used for CUDA/HIP. This is necessary
+  // to get kernels or device variables in archives linked in even if these
+  // kernels or device variables are only used in host functions.
+  if (!astCtx.CUDAExternalDeviceDeclODRUsedByHost.empty()) {
+    llvm_unreachable("NYI");
+  }
+  if (langOpts.HIP && !getLangOpts().OffloadingNewDriver) {
+    llvm_unreachable("NYI");
+  }
+  assert(!MissingFeatures::emitLLVMUsed());
+  assert(!MissingFeatures::sanStats());
+
+  if (codeGenOpts.Autolink && (astCtx.getLangOpts().Modules ||
+                               !MissingFeatures::linkerOptionsMetadata())) {
+    assert(!MissingFeatures::emitModuleLinkOptions());
+  }
+
+  // On ELF we pass the dependent library specifiers directly to the linker
+  // without manipulating them. This is in contrast to other platforms where
+  // they are mapped to a specific linker option by the compiler. This
+  // difference is a result of the greater variety of ELF linkers and the fact
+  // that ELF linkers tend to handle libraries in a more complicated fashion
+  // than on other platforms. This forces us to defer handling the dependent
+  // libs to the linker.
+  //
+  // CUDA/HIP device and host libraries are different. Currently there is no
+  // way to differentiate dependent libraries for host or device. Existing
+  // usage of #pragma comment(lib, *) is intended for host libraries on
+  // Windows. Therefore emit llvm.dependent-libraries only for host.
+  assert(!MissingFeatures::elfDependentLibraries());
+
+  assert(!MissingFeatures::dwarfVersion());
+
+  if (codeGenOpts.Dwarf64)
+    llvm_unreachable("NYI");
+
+  if (astCtx.getLangOpts().SemanticInterposition)
+    // Require various optimization to respect semantic interposition.
+    llvm_unreachable("NYI");
+
+  if (codeGenOpts.EmitCodeView) {
+    // Indicate that we want CodeView in the metadata.
+    llvm_unreachable("NYI");
+  }
+  if (codeGenOpts.CodeViewGHash) {
+    llvm_unreachable("NYI");
+  }
+  if (codeGenOpts.ControlFlowGuard) {
+    // Function ID tables and checks for Control Flow Guard (cfguard=2).
+    llvm_unreachable("NYI");
+  } else if (codeGenOpts.ControlFlowGuardNoChecks) {
+    // Function ID tables for Control Flow Guard (cfguard=1).
+    llvm_unreachable("NYI");
+  }
+  if (codeGenOpts.EHContGuard) {
+    // Function ID tables for EH Continuation Guard.
+    llvm_unreachable("NYI");
+  }
+  if (astCtx.getLangOpts().Kernel) {
+    // Note if we are compiling with /kernel.
+    llvm_unreachable("NYI");
+  }
+  if (codeGenOpts.OptimizationLevel > 0 && codeGenOpts.StrictVTablePointers) {
+    // We don't support LTO with 2 with different StrictVTablePointers
+    // FIXME: we could support it by stripping all the information introduced
+    // by StrictVTablePointers.
+    llvm_unreachable("NYI");
+  }
+  if (getModuleDebugInfo())
+    // We support a single version in the linked module. The LLVM
+    // parser will drop debug info with a different version number
+    // (and warn about it, too).
+    llvm_unreachable("NYI");
+
+  // We need to record the widths of enums and wchar_t, so that we can generate
+  // the correct build attributes in the ARM backend. wchar_size is also used by
+  // TargetLibraryInfo.
+  assert(!MissingFeatures::wcharWidth());
+
+  if (getTriple().isOSzOS()) {
     llvm_unreachable("NYI");
   }
 
-  // TODO: emitLLVMUsed();
-  // TODO: SanStats
-
-  if (getCodeGenOpts().Autolink) {
-    // TODO: emitModuleLinkOptions
+  llvm::Triple t = astCtx.getTargetInfo().getTriple();
+  if (t.isARM() || t.isThumb()) {
+    // The minimum width of an enum in bytes
+    assert(!MissingFeatures::enumWidth());
   }
+
+  if (t.isRISCV()) {
+    llvm_unreachable("NYI");
+  }
+
+  if (codeGenOpts.SanitizeCfiCrossDso) {
+    // Indicate that we want cross-DSO control flow integrity checks.
+    llvm_unreachable("NYI");
+  }
+
+  if (codeGenOpts.WholeProgramVTables) {
+    // Indicate whether VFE was enabled for this module, so that the
+    // vcall_visibility metadata added under whole program vtables is handled
+    // appropriately in the optimizer.
+    llvm_unreachable("NYI");
+  }
+
+  if (langOpts.Sanitize.has(SanitizerKind::CFIICall)) {
+    llvm_unreachable("NYI");
+  }
+
+  if (codeGenOpts.SanitizeCfiICallNormalizeIntegers) {
+    llvm_unreachable("NYI");
+  }
+
+  if (langOpts.Sanitize.has(SanitizerKind::KCFI)) {
+    llvm_unreachable("NYI");
+  }
+
+  if (codeGenOpts.CFProtectionReturn &&
+      target.checkCFProtectionReturnSupported(getDiags())) {
+    // Indicate that we want to instrument return control flow protection.
+    llvm_unreachable("NYI");
+  }
+
+  if (codeGenOpts.CFProtectionBranch &&
+      target.checkCFProtectionBranchSupported(getDiags())) {
+    // Indicate that we want to instrument branch control flow protection.
+    llvm_unreachable("NYI");
+  }
+
+  if (codeGenOpts.FunctionReturnThunks)
+    llvm_unreachable("NYI");
+
+  if (codeGenOpts.IndirectBranchCSPrefix)
+    llvm_unreachable("NYI");
+
+  // Add module metadata for return address signing (ignoring
+  // non-leaf/all) and stack tagging. These are actually turned on by function
+  // attributes, but we use module metadata to emit build attributes. This is
+  // needed for LTO, where the function attributes are inside bitcode
+  // serialised into a global variable by the time build attributes are
+  // emitted, so we can't access them. LTO objects could be compiled with
+  // different flags therefore module flags are set to "Min" behavior to achieve
+  // the same end result of the normal build where e.g BTI is off if any object
+  // doesn't support it.
+  if (astCtx.getTargetInfo().hasFeature("ptrauth") &&
+      langOpts.getSignReturnAddressScope() !=
+          LangOptions::SignReturnAddressScopeKind::None)
+    llvm_unreachable("NYI");
+  if (langOpts.Sanitize.has(SanitizerKind::MemtagStack))
+    llvm_unreachable("NYI");
+
+  if (t.isARM() || t.isThumb() || t.isAArch64()) {
+    if (langOpts.BranchTargetEnforcement)
+      llvm_unreachable("NYI");
+    if (langOpts.BranchProtectionPAuthLR)
+      llvm_unreachable("NYI");
+    if (langOpts.GuardedControlStack)
+      llvm_unreachable("NYI");
+    if (langOpts.hasSignReturnAddress())
+      llvm_unreachable("NYI");
+    if (langOpts.isSignReturnAddressScopeAll())
+      llvm_unreachable("NYI");
+    if (!langOpts.isSignReturnAddressWithAKey())
+      llvm_unreachable("NYI");
+
+    if (langOpts.PointerAuthELFGOT)
+      llvm_unreachable("NYI");
+
+    if (getTriple().isOSLinux()) {
+      assert(getTriple().isOSBinFormatELF());
+      assert(!MissingFeatures::ptrAuth());
+    }
+  }
+
+  if (codeGenOpts.StackClashProtector)
+    llvm_unreachable("NYI");
+
+  if (codeGenOpts.StackProbeSize && codeGenOpts.StackProbeSize != 4096)
+    llvm_unreachable("NYI");
+
+  if (!codeGenOpts.MemoryProfileOutput.empty()) {
+    llvm_unreachable("NYI");
+  }
+
+  if (langOpts.CUDAIsDevice && getTriple().isNVPTX()) {
+    llvm_unreachable("NYI");
+  }
+
+  if (langOpts.EHAsynch)
+    llvm_unreachable("NYI");
+
+  // Indicate whether this Module was compiled with -fopenmp
+  assert(!MissingFeatures::openMP());
 
   // Emit OpenCL specific module metadata: OpenCL/SPIR version.
   if (langOpts.CUDAIsDevice && getTriple().isSPIRV())
@@ -3022,7 +3216,114 @@ void CIRGenModule::Release() {
       llvm_unreachable("SPIR target NYI");
   }
 
-  // TODO: FINISH THE REST OF THIS
+  // HLSL related end of code gen work items.
+  if (langOpts.HLSL)
+    llvm_unreachable("NYI");
+
+  if (uint32_t picLevel = astCtx.getLangOpts().PICLevel) {
+    assert(picLevel < 3 && "Invalid PIC Level");
+    assert(!MissingFeatures::setPICLevel());
+    if (astCtx.getLangOpts().PIE)
+      assert(!MissingFeatures::setPIELevel());
+  }
+
+  if (getCodeGenOpts().CodeModel.size() > 0) {
+    unsigned cm = llvm::StringSwitch<unsigned>(getCodeGenOpts().CodeModel)
+                      .Case("tiny", llvm::CodeModel::Tiny)
+                      .Case("small", llvm::CodeModel::Small)
+                      .Case("kernel", llvm::CodeModel::Kernel)
+                      .Case("medium", llvm::CodeModel::Medium)
+                      .Case("large", llvm::CodeModel::Large)
+                      .Default(~0u);
+    if (cm != ~0u) {
+      llvm::CodeModel::Model codeModel =
+          static_cast<llvm::CodeModel::Model>(cm);
+      (void)codeModel;
+      assert(!MissingFeatures::codeModel());
+
+      if ((cm == llvm::CodeModel::Medium || cm == llvm::CodeModel::Large) &&
+          astCtx.getTargetInfo().getTriple().getArch() ==
+              llvm::Triple::x86_64) {
+        assert(!MissingFeatures::largeDataThreshold());
+      }
+    }
+  }
+
+  if (codeGenOpts.NoPLT)
+    llvm_unreachable("NYI");
+  assert(!MissingFeatures::directAccessExternalData());
+  if (codeGenOpts.UnwindTables)
+    assert(!MissingFeatures::setUwtable());
+
+  switch (codeGenOpts.getFramePointer()) {
+  case CodeGenOptions::FramePointerKind::None:
+    // 0 ("none") is the default.
+    break;
+  case CodeGenOptions::FramePointerKind::Reserved:
+    assert(!MissingFeatures::setFramePointer());
+    break;
+  case CodeGenOptions::FramePointerKind::NonLeaf:
+    assert(!MissingFeatures::setFramePointer());
+    break;
+  case CodeGenOptions::FramePointerKind::All:
+    assert(!MissingFeatures::setFramePointer());
+    break;
+  }
+
+  assert(!MissingFeatures::simplifyPersonality());
+
+  if (getCodeGenOpts().EmitDeclMetadata)
+    llvm_unreachable("NYI");
+
+  if (getCodeGenOpts().CoverageNotesFile.size() ||
+      getCodeGenOpts().CoverageDataFile.size())
+    llvm_unreachable("NYI");
+
+  if (getModuleDebugInfo())
+    llvm_unreachable("NYI");
+
+  assert(!MissingFeatures::emitVersionIdentMetadata());
+
+  if (!getCodeGenOpts().RecordCommandLine.empty())
+    llvm_unreachable("NYI");
+
+  if (!getCodeGenOpts().StackProtectorGuard.empty())
+    llvm_unreachable("NYI");
+  if (!getCodeGenOpts().StackProtectorGuardReg.empty())
+    llvm_unreachable("NYI");
+  if (!getCodeGenOpts().StackProtectorGuardSymbol.empty())
+    llvm_unreachable("NYI");
+  if (getCodeGenOpts().StackProtectorGuardOffset != INT_MAX)
+    llvm_unreachable("NYI");
+  if (getCodeGenOpts().StackAlignment)
+    llvm_unreachable("NYI");
+  if (getCodeGenOpts().SkipRaxSetup)
+    llvm_unreachable("NYI");
+  if (getLangOpts().RegCall4)
+    llvm_unreachable("NYI");
+
+  if (getASTContext().getTargetInfo().getMaxTLSAlign())
+    llvm_unreachable("NYI");
+
+  assert(!MissingFeatures::emitTargetGlobals());
+
+  assert(!MissingFeatures::emitTargetMetadata());
+
+  assert(!MissingFeatures::emitBackendOptionsMetadata());
+
+  // If there is device offloading code embed it in the host now.
+  assert(!MissingFeatures::embedObject());
+
+  // Set visibility from DLL storage class
+  // We do this at the end of LLVM IR generation; after any operation
+  // that might affect the DLL storage class or the visibility, and
+  // before anything that might act on these.
+  assert(!MissingFeatures::setVisibilityFromDLLStorageClass());
+
+  // Check the tail call symbols are truly undefined.
+  if (getTriple().isPPC() && !MissingFeatures::mustTailCallUndefinedGlobals()) {
+    llvm_unreachable("NYI");
+  }
 }
 
 namespace {
