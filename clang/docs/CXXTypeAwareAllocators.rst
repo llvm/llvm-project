@@ -11,12 +11,25 @@ Introduction
 Clang includes an experimental implementation of P2719 "Type-aware allocation
 and deallocation functions".
 
-
-This is a feature that extends the semantics of `new`, `new[]`, `delete` and
-`delete[]` operators to expose the type being allocated to the operator. This
+This is a feature that extends the semantics of ``new``, ``new[]``, ``delete`` and
+``delete[]`` operators to expose the type being allocated to the operator. This
 can be used to customize allocation of types without needing to modify the
 type declaration, or via template definitions fully generic type aware
 allocators.
+
+A major use case of this feature is to support hardened or secure allocators
+by supporting anything from simple type property based hardening through to
+complete type isolating allocators and beyond, and as such there are no
+restrictions on the types or locations that it can be used - anywhere
+an allocation or deallocation operator can be declared today can be extended
+or replaced with an equivalent type aware declaration.
+
+Beyond security this feature also allows developers to make rules around
+how types may be allocated more explicit by controlling the use and
+availability of ``new`` and ``delete`` for types without needing to directly
+modify the type. This can be useful where allocation is expected to be
+performed through specific interfaces, or explicitly via global ``new`` and
+``delete`` operators.
 
 P2719 introduces a type-identity tag as valid parameter type for all allocation
 operators. This tag is a default initialized value of type 
@@ -24,7 +37,13 @@ operators. This tag is a default initialized value of type
 Unlike the other placement arguments this tag is passed as the first parameter
 to the operator.
 
-The most basic use case is as follows
+Usage
+=====
+
+Type aware allocation is currently disabled by default, to enable it use the
+``-fexperimental-cxx-type-aware-allocators`` argument to clang.
+
+The most basic usage is as follows
 
 .. code-block:: c++
 
@@ -94,13 +113,46 @@ the best/most constrained match.
 Notes
 =====
 
+Class Scoped Operators
+----------------------
+
+Class scoped type aware allocation and deallocation operators are permitted,
+and should be preferred over global operators with subtyping constraints where
+possible, as even with a subtyping constraint it is possible to get
+:ref:`mismatching constraints<cxxtypeawareallocators-mismatching-constraint>` or
+:ref:`alternate TUs <cxxtypeawareallocators-declarations-across-libraries-and-TUs>`
+that result in mismatched operators being selected.
+
+The only restriction is that P2719 does not by default permit type aware
+destroying delete. This is due to the semantic complexity that comes from the
+type being provided being the static type of the object, not the dynamic type
+as the primary use case for which destroying delete exists is when a developer
+is avoiding dynamic dispatch.
+
+Subclassing and polymorphism
+----------------------------
+
+While a type aware operator new will always receive the exact type being
+allocated, deletion is limited to awareness of the dynamic type of an object.
+If deletion is performed via a virtual call, the type-identity tag passed to
+the type aware ``operator delete`` will be the dynamic type of the object.
+
+Absent virtual dispatch the type-identity tag provided to operator delete is
+subject to the same limitations of object deletion and destruction of
+non-type-aware deletion and destruction, where method selection and dispatch
+is based solely on the static type of the object at the call site. As such
+the received type-identity tag will reflect the static type at the call site,
+not the dynamic type of the object being deleted.
+
 Unconstrained Global Operators
 ------------------------------
 
-Declaring an unconstrained type aware global operator `new` or `delete` (or
-`[]` variants) creates numerous hazards, similar to, but different from, those
+Declaring an unconstrained type aware global operator ``new`` or ``delete`` (or
+``[]`` variants) creates numerous hazards, similar to, but different from, those
 created by attempting to replace the non-type aware global operators. For that
 reason unconstrained operators are strongly discouraged.
+
+.. _cxxtypeawareallocators-mismatching-constraint:
 
 Mismatching Constraints
 -----------------------
@@ -111,8 +163,10 @@ limits the risk of having mismatching operators selected due to differing
 constraints resulting in changes to prioritization when determining the most
 viable candidate.
 
-Declarations Across Libraries
------------------------------
+.. _cxxtypeawareallocators-declarations-across-libraries-and-TUs:
+
+Declarations Across Libraries and TUs
+-------------------------------------
 
 Declaring a typed allocator for a type in a separate TU or library creates
 similar hazards as different libraries and TUs may see (or select) different
@@ -147,18 +201,16 @@ Type aware allocators support the implicit alignment and size (for delete)
 parameters, and allow any other explicit placement parameters supported in
 non-type aware operators.
 
+Constant Evaluation
+-------------------
 
-Class Scoped Operators
-----------------------
-
-
-
-Consteval
----------
-
-
-
-
+As currently specified type aware allocation functions are not considered when
+new or delete is performed in a constant evaluation context. This eases the use
+of dynamic allocation of types with type aware allocation functions within
+constant contexts. Unfortunately this does not resolve the problem of
+class-scoped new and delete in constant contexts, as the existence of such
+declarations precludes lookup in the global scope and as a result class-scoped
+operators still prevents the use of a type in a constant context.
 
 Publication
 ===========
