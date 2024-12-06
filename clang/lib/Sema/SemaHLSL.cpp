@@ -2823,7 +2823,7 @@ bool SemaHLSL::CanPerformSplat(Expr *Src, QualType DestTy) {
   llvm::SmallVector<QualType> DestTypes;
   BuildFlattenedTypeList(DestTy, DestTypes);
 
-  for(unsigned i = 0; i < DestTypes.size(); i ++) {
+  for (unsigned i = 0; i < DestTypes.size(); i++) {
     if (!CanPerformScalarCast(SrcTy, DestTypes[i]))
       return false;
   }

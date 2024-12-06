@@ -2807,9 +2807,10 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
       SrcTy = VecTy->getElementType();
     }
     assert(SrcTy->isScalarType() && "Invalid HLSL splat cast.");
-    Value *Cast = EmitScalarConversion(V, SrcTy,
-				       DestVecTy->getElementType(), Loc);
-    return Builder.CreateVectorSplat(DestVecTy->getNumElements(), Cast, "splat");
+    Value *Cast =
+        EmitScalarConversion(V, SrcTy, DestVecTy->getElementType(), Loc);
+    return Builder.CreateVectorSplat(DestVecTy->getNumElements(), Cast,
+                                     "splat");
   }
   case CK_HLSLElementwiseCast: {
     RValue RV = CGF.EmitAnyExpr(E);
