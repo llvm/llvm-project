@@ -1077,34 +1077,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitVectorClause(
     }
   }
 
-  // OpenACC 3.3 2.9.2: When the parent compute construct is a kernels
-  // construct, the gang clause behaves as follows. ... The region of a loop
-  // with a gang clause may not contain another loop with a gang clause unless
-  // within a nested compute region.
-  if (SemaRef.LoopGangClauseOnKernelLoc.isValid()) {
-    // This handles the 'inner loop' diagnostic, but we cannot set that we're on
-    // one of these until we get to the end of the construct.
-    SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_clause_in_clause_region)
-        << OpenACCClauseKind::Vector << OpenACCClauseKind::Gang
-        << /*skip kernels construct info*/ 0;
-    SemaRef.Diag(SemaRef.LoopGangClauseOnKernelLoc,
-                 diag::note_acc_previous_clause_here);
-    return nullptr;
-  }
-
-  // OpenACC 3.3 2.9.3: The region of a loop with a 'worker' clause may not
-  // contain a loop with a gang or worker clause unless within a nested compute
-  // region.
-  if (SemaRef.LoopWorkerClauseLoc.isValid()) {
-    // This handles the 'inner loop' diagnostic, but we cannot set that we're on
-    // one of these until we get to the end of the construct.
-    SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_clause_in_clause_region)
-        << OpenACCClauseKind::Vector << OpenACCClauseKind::Worker
-        << /*skip kernels construct info*/ 0;
-    SemaRef.Diag(SemaRef.LoopWorkerClauseLoc,
-                 diag::note_acc_previous_clause_here);
-    return nullptr;
-  }
   // OpenACC 3.3 2.9.4: The region of a loop with a 'vector' clause may not
   // contain a loop with a gang, worker, or vector clause unless within a nested
   // compute region.
