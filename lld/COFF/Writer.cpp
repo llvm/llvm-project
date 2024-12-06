@@ -676,14 +676,14 @@ void Writer::finalizeAddresses() {
     }
     if (rangesOk) {
       if (pass > 0)
-        Log(ctx) << "Added " << Twine(numChunks - origNumChunks)
-                 << " thunks with " << "margin " << Twine(margin) << " in "
-                 << Twine(pass) << " passes";
+        Log(ctx) << "Added " << (numChunks - origNumChunks) << " thunks with "
+                 << "margin " << margin << " in " << pass << " passes";
       return;
     }
 
     if (pass >= 10)
-      fatal("adding thunks hasn't converged after " + Twine(pass) + " passes");
+      Fatal(ctx) << "adding thunks hasn't converged after " << pass
+                 << " passes";
 
     if (pass > 0) {
       // If the previous pass didn't work out, reset everything back to the
@@ -782,8 +782,8 @@ void Writer::run() {
     createSymbolAndStringTable();
 
     if (fileSize > UINT32_MAX)
-      fatal("image size (" + Twine(fileSize) + ") " +
-            "exceeds maximum allowable size (" + Twine(UINT32_MAX) + ")");
+      Fatal(ctx) << "image size (" << fileSize << ") "
+                 << "exceeds maximum allowable size (" << UINT32_MAX << ")";
 
     openFile(ctx.config.outputFile);
     if (ctx.config.is64()) {
@@ -818,8 +818,8 @@ void Writer::run() {
   llvm::TimeTraceScope timeScope("Commit PE to disk");
   ScopedTimer t2(ctx.outputCommitTimer);
   if (auto e = buffer->commit())
-    fatal("failed to write output '" + buffer->getPath() +
-          "': " + toString(std::move(e)));
+    Fatal(ctx) << "failed to write output '" << buffer->getPath()
+               << "': " << toString(std::move(e));
 }
 
 static StringRef getOutputSectionName(StringRef name) {
@@ -1256,12 +1256,12 @@ void Writer::createImportTables() {
       ctx.config.dllOrder[dll] = ctx.config.dllOrder.size();
 
     if (file->impSym && !isa<DefinedImportData>(file->impSym))
-      fatal(toString(ctx, *file->impSym) + " was replaced");
+      Fatal(ctx) << file->impSym << " was replaced";
     DefinedImportData *impSym = cast_or_null<DefinedImportData>(file->impSym);
     if (ctx.config.delayLoads.count(StringRef(file->dllName).lower())) {
       if (!file->thunkSym)
-        fatal("cannot delay-load " + toString(file) +
-              " due to import of data: " + toString(ctx, *impSym));
+        Fatal(ctx) << "cannot delay-load " << toString(file)
+                   << " due to import of data: " << impSym;
       delayIdata.add(impSym);
     } else {
       idata.add(impSym);
@@ -1280,7 +1280,7 @@ void Writer::appendImportThunks() {
 
     if (file->thunkSym) {
       if (!isa<DefinedImportThunk>(file->thunkSym))
-        fatal(toString(ctx, *file->thunkSym) + " was replaced");
+        Fatal(ctx) << file->thunkSym << " was replaced";
       auto *chunk = cast<DefinedImportThunk>(file->thunkSym)->getChunk();
       if (chunk->live)
         textSec->addChunk(chunk);
@@ -1288,7 +1288,7 @@ void Writer::appendImportThunks() {
 
     if (file->auxThunkSym) {
       if (!isa<DefinedImportThunk>(file->auxThunkSym))
-        fatal(toString(ctx, *file->auxThunkSym) + " was replaced");
+        Fatal(ctx) << file->auxThunkSym << " was replaced";
       auto *chunk = cast<DefinedImportThunk>(file->auxThunkSym)->getChunk();
       if (chunk->live)
         textSec->addChunk(chunk);
@@ -1334,7 +1334,7 @@ void Writer::createExportTable() {
   // Warn on exported deleting destructor.
   for (auto e : ctx.config.exports)
     if (e.sym && e.sym->getName().starts_with("??_G"))
-      Warn(ctx) << "export of deleting dtor: " << toString(ctx, *e.sym);
+      Warn(ctx) << "export of deleting dtor: " << e.sym;
 }
 
 void Writer::removeUnusedSections() {
@@ -1548,7 +1548,7 @@ void Writer::mergeSections() {
     StringSet<> names;
     while (true) {
       if (!names.insert(toName).second)
-        fatal("/merge: cycle found for section '" + p.first + "'");
+        Fatal(ctx) << "/merge: cycle found for section '" << p.first << "'";
       auto i = ctx.config.merge.find(toName);
       if (i == ctx.config.merge.end())
         break;
@@ -1644,7 +1644,7 @@ void Writer::assignAddresses() {
         rawSize = alignTo(virtualSize, config->fileAlign);
     }
     if (virtualSize > UINT32_MAX)
-      error("section larger than 4 GiB: " + sec->name);
+      Err(ctx) << "section larger than 4 GiB: " << sec->name;
     sec->header.VirtualSize = virtualSize;
     sec->header.SizeOfRawData = rawSize;
     if (rawSize != 0)
@@ -1843,13 +1843,13 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
       assert(b->getRVA() >= sc->getRVA());
       uint64_t offsetInChunk = b->getRVA() - sc->getRVA();
       if (!sc->hasData || offsetInChunk + 4 > sc->getSize())
-        fatal("_load_config_used is malformed");
+        Fatal(ctx) << "_load_config_used is malformed";
 
       ArrayRef<uint8_t> secContents = sc->getContents();
       uint32_t loadConfigSize =
           *reinterpret_cast<const ulittle32_t *>(&secContents[offsetInChunk]);
       if (offsetInChunk + loadConfigSize > sc->getSize())
-        fatal("_load_config_used is too large");
+        Fatal(ctx) << "_load_config_used is too large";
       dir[LOAD_CONFIG_TABLE].RelativeVirtualAddress = b->getRVA();
       dir[LOAD_CONFIG_TABLE].Size = loadConfigSize;
     }
@@ -1896,7 +1896,8 @@ void Writer::createSEHTable() {
   SymbolRVASet handlers;
   for (ObjFile *file : ctx.objFileInstances) {
     if (!file->hasSafeSEH())
-      error("/safeseh: " + file->getName() + " is not compatible with SEH");
+      Err(ctx) << "/safeseh: " << file->getName()
+               << " is not compatible with SEH";
     markSymbolsForRVATable(file, file->getSXDataChunks(), handlers);
   }
 
@@ -2238,20 +2239,20 @@ void Writer::createRuntimePseudoRelocs() {
     // Not writing any pseudo relocs; if some were needed, error out and
     // indicate what required them.
     for (const RuntimePseudoReloc &rpr : rels)
-      error("automatic dllimport of " + rpr.sym->getName() + " in " +
-            toString(rpr.target->file) + " requires pseudo relocations");
+      Err(ctx) << "automatic dllimport of " << rpr.sym->getName() << " in "
+               << toString(rpr.target->file) << " requires pseudo relocations";
     return;
   }
 
   if (!rels.empty()) {
-    Log(ctx) << "Writing " << Twine(rels.size())
-             << " runtime pseudo relocations";
+    Log(ctx) << "Writing " << rels.size() << " runtime pseudo relocations";
     const char *symbolName = "_pei386_runtime_relocator";
     Symbol *relocator = ctx.symtab.findUnderscore(symbolName);
     if (!relocator)
-      error("output image has runtime pseudo relocations, but the function " +
-            Twine(symbolName) +
-            " is missing; it is needed for fixing the relocations at runtime");
+      Err(ctx)
+          << "output image has runtime pseudo relocations, but the function "
+          << symbolName
+          << " is missing; it is needed for fixing the relocations at runtime";
   }
 
   PseudoRelocTableChunk *table = make<PseudoRelocTableChunk>(rels);
@@ -2451,8 +2452,8 @@ void Writer::sortExceptionTable(ChunkRange &exceptionTable) {
   uint8_t *begin = bufAddr(exceptionTable.first);
   uint8_t *end = bufAddr(exceptionTable.last) + exceptionTable.last->getSize();
   if ((end - begin) % sizeof(T) != 0) {
-    fatal("unexpected .pdata size: " + Twine(end - begin) +
-          " is not a multiple of " + Twine(sizeof(T)));
+    Fatal(ctx) << "unexpected .pdata size: " << (end - begin)
+               << " is not a multiple of " << sizeof(T);
   }
 
   parallelSort(MutableArrayRef<T>(reinterpret_cast<T *>(begin),
@@ -2521,7 +2522,7 @@ void Writer::sortCRTSectionChunks(std::vector<Chunk *> &chunks) {
     for (auto &c : chunks) {
       auto sc = dyn_cast<SectionChunk>(c);
       Log(ctx) << "  " << sc->file->mb.getBufferIdentifier().str()
-               << ", SectionID: " << Twine(sc->getSectionNumber());
+               << ", SectionID: " << sc->getSectionNumber();
     }
   }
 }
@@ -2634,7 +2635,7 @@ void Writer::fixTlsAlignment() {
                                : sizeof(object::coff_tls_directory32);
 
   if (tlsOffset + directorySize > sec->getRawSize())
-    fatal("_tls_used sym is malformed");
+    Fatal(ctx) << "_tls_used sym is malformed";
 
   if (ctx.config.is64()) {
     object::coff_tls_directory64 *tlsDir =

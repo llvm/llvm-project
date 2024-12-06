@@ -76,10 +76,10 @@ def gi_trailing_zero : GICustomOperandRenderer<"renderTrailingZeros">,
 // should add a LowLevelTypeByHwMode, and use that to define our XLenLLT instead
 // here.
 def GIShiftMaskXLen :
-    GIComplexOperandMatcher<s32, "selectShiftMask">,
+    GIComplexOperandMatcher<s32, "selectShiftMaskXLen">,
     GIComplexPatternEquiv<shiftMaskXLen>;
 def GIShiftMask32 :
-    GIComplexOperandMatcher<s32, "selectShiftMask">,
+    GIComplexOperandMatcher<s64, "selectShiftMask32">,
     GIComplexPatternEquiv<shiftMask32>;
 
 def gi_sh1add_op : GIComplexOperandMatcher<s32, "selectSHXADDOp<1>">,

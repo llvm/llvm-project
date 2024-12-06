@@ -1847,15 +1847,16 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
   Value *X;
   Instruction *Op = dyn_cast<Instruction>(FPT.getOperand(0));
   if (Op && Op->hasOneUse()) {
-    // FIXME: The FMF should propagate from the fptrunc, not the source op.
     IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-    if (isa<FPMathOperator>(Op))
-      Builder.setFastMathFlags(Op->getFastMathFlags());
+    FastMathFlags FMF = FPT.getFastMathFlags();
+    if (auto *FPMO = dyn_cast<FPMathOperator>(Op))
+      FMF &= FPMO->getFastMathFlags();
+    Builder.setFastMathFlags(FMF);
 
     if (match(Op, m_FNeg(m_Value(X)))) {
       Value *InnerTrunc = Builder.CreateFPTrunc(X, Ty);
-
-      return UnaryOperator::CreateFNegFMF(InnerTrunc, Op);
+      Value *Neg = Builder.CreateFNeg(InnerTrunc);
+      return replaceInstUsesWith(FPT, Neg);
     }
 
     // If we are truncating a select that has an extended operand, we can

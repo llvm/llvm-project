@@ -70,7 +70,7 @@ checkMachineImpl(const object::ELFObjectFile<ELFT> &ELFObj, uint16_t EMachine) {
     if (Header.e_ident[EI_ABIVERSION] != ELFABIVERSION_AMDGPU_HSA_V4 &&
         Header.e_ident[EI_ABIVERSION] != ELFABIVERSION_AMDGPU_HSA_V5 &&
         Header.e_ident[EI_ABIVERSION] != ELFABIVERSION_AMDGPU_HSA_V6)
-      return createError("Invalid AMD ABI version, must be version above 4");
+      return createError("Invalid AMD ABI version, must be version 4 or above");
     if ((Header.e_flags & EF_AMDGPU_MACH) < EF_AMDGPU_MACH_AMDGCN_GFX700 ||
         (Header.e_flags & EF_AMDGPU_MACH) > EF_AMDGPU_MACH_AMDGCN_GFX1201)
       return createError("Unsupported AMDGPU architecture");
