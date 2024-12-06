@@ -3837,8 +3837,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // the second argument is guranteed to be a constant integer.
   void handleRoundPdPsIntrinsic(IntrinsicInst &I) {
     assert(I.getArgOperand(0)->getType() == I.getType());
-    unsigned NumArgOperands = I.arg_size();
-    assert(NumArgOperands == 2);
+    assert(I.arg_size() == 2);
     assert(isa<ConstantInt>(I.getArgOperand(1)));
 
     IRBuilder<> IRB(&I);
