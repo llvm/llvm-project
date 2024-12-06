@@ -56847,6 +56847,23 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // Peephole for 512-bit VPDPBSSD on non-VLX targets.
+  // TODO: Should this be part of matchPMADDWD/matchPMADDWD_2?
+  if (Subtarget.hasVNNI() && VT == MVT::v16i32) {
+    using namespace SDPatternMatch;
+    SDValue Accum, Lo0, Lo1, Hi0, Hi1;
+    if (sd_match(N, m_Add(m_Value(Accum),
+                          m_Node(ISD::CONCAT_VECTORS,
+                                 m_BinOp(X86ISD::VPMADDWD, m_Value(Lo0),
+                                         m_Value(Lo1)),
+                                 m_BinOp(X86ISD::VPMADDWD, m_Value(Hi0),
+                                         m_Value(Hi1)))))) {
+      return DAG.getNode(X86ISD::VPDPWSSD, DL, VT, Accum,
+                         concatSubVectors(Lo0, Hi0, DAG, DL),
+                         concatSubVectors(Lo1, Hi1, DAG, DL));
+    }
+  }
+
   // Fold ADD(ADC(Y,0,W),X) -> ADC(X,Y,W)
   if (Op0.getOpcode() == X86ISD::ADC && Op0->hasOneUse() &&
       X86::isZeroNode(Op0.getOperand(1))) {
