@@ -674,8 +674,8 @@ void TpiSource::mergeTypeRecord(TypeIndex curIndex, CVType ty) {
       funcIdToType.push_back({funcId, funcType});
     } else {
       StringRef fname = file ? file->getName() : "<unknown PDB>";
-      warn("corrupt LF_[M]FUNC_ID record 0x" + utohexstr(curIndex.getIndex()) +
-           " in " + fname);
+      Warn(ctx) << "corrupt LF_[M]FUNC_ID record 0x"
+                << utohexstr(curIndex.getIndex()) << " in " << fname;
     }
   }
 }
@@ -836,7 +836,7 @@ void UseTypeServerSource::remapTpiWithGHashes(GHashState *g) {
 
 void PrecompSource::loadGHashes() {
   if (getDebugH(file)) {
-    warn("ignoring .debug$H section; pch with ghash is not implemented");
+    Warn(ctx) << "ignoring .debug$H section; pch with ghash is not implemented";
   }
 
   uint32_t ghashIdx = 0;
@@ -864,7 +864,7 @@ void PrecompSource::loadGHashes() {
 void UsePrecompSource::loadGHashes() {
   auto e = findPrecompMap(file, precompDependency);
   if (!e) {
-    warn(toString(e.takeError()));
+    Warn(ctx) << e.takeError();
     return;
   }
 
