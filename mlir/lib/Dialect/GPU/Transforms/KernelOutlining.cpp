@@ -411,14 +411,12 @@ private:
     auto *context = getOperation().getContext();
     OpBuilder builder(context);
     std::string kernelModuleName;
-    gpu::GPUModuleOp kernelModule = nullptr;
+    gpu::GPUModuleOp kernelModule;
     if (gpuLaunchOp.getKernelModule()) {
       kernelModuleName =
           gpuLaunchOp.getKernelModule()->getRootReference().str();
-      if (auto existingModule =
-              parentSymbolTable.lookup<gpu::GPUModuleOp>(kernelModuleName)) {
-        kernelModule = existingModule;
-      }
+      kernelModule =
+          parentSymbolTable.lookup<gpu::GPUModuleOp>(kernelModuleName);
     } else {
       kernelModuleName = kernelFunc.getName();
     }
