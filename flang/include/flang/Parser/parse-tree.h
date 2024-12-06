@@ -3915,7 +3915,7 @@ struct OmpDeviceTypeClause {
   WRAPPER_CLASS_BOILERPLATE(OmpDeviceTypeClause, DeviceTypeDescription);
 };
 
-// OMP 5.2 15.8.3 extened-atomic, fail-clause ->
+// OMP 5.2 15.8.3 extended-atomic, fail-clause ->
 //    FAIL(memory-order)
 struct OmpFailClause {
   WRAPPER_CLASS_BOILERPLATE(

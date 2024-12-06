@@ -2485,8 +2485,8 @@ void OmpStructureChecker::CheckAtomicCaptureConstruct(
 void OmpStructureChecker::CheckAtomicMemoryOrderClause(
     const parser::OmpAtomicClauseList *leftHandClauseList,
     const parser::OmpAtomicClauseList *rightHandClauseList) {
-  int numMemoryOrderClause = 0;
-  int numFailClause = 0;
+  int numMemoryOrderClause{0};
+  int numFailClause{0};
   auto checkForValidMemoryOrderClause =
       [&](const parser::OmpAtomicClauseList *clauseList) {
         for (const auto &clause : clauseList->v) {
