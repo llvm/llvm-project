@@ -947,19 +947,19 @@ SDValue XtensaTargetLowering::LowerVASTART(SDValue Op,
   // Store pointer to arguments given on stack (va_stk)
   SDValue StackPtr = DAG.getNode(ISD::SUB, DL, PtrVT, StackOffsetFI,
                                  DAG.getConstant(32, DL, PtrVT));
+
   SDValue StoreStackPtr =
       DAG.getStore(Chain, DL, StackPtr, Addr, MachinePointerInfo(SV));
 
   uint64_t NextOffset = FrameOffset;
-  SDValue NextPtr = DAG.getNode(ISD::ADD, DL, PtrVT, Addr,
-                                DAG.getConstant(NextOffset, DL, PtrVT));
+  SDValue NextPtr =
+      DAG.getObjectPtrOffset(DL, Addr, TypeSize::getFixed(NextOffset));
 
   // Store pointer to arguments given on registers (va_reg)
   SDValue StoreRegPtr = DAG.getStore(StoreStackPtr, DL, FrameIndex, NextPtr,
                                      MachinePointerInfo(SV, NextOffset));
   NextOffset += FrameOffset;
-  NextPtr = DAG.getNode(ISD::ADD, DL, PtrVT, Addr,
-                        DAG.getConstant(NextOffset, DL, PtrVT));
+  NextPtr = DAG.getObjectPtrOffset(DL, Addr, TypeSize::getFixed(NextOffset));
 
   // Store third word : position in bytes of the first VA argument (va_ndx)
   return DAG.getStore(StoreRegPtr, DL, VAIndex, NextPtr,
@@ -997,15 +997,15 @@ SDValue XtensaTargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
   InChain = VAStack.getValue(1);
 
   // va_reg
-  SDValue VARegPtr = DAG.getNode(ISD::ADD, DL, PtrVT, VAListPtr,
-                                 DAG.getConstant(4, DL, MVT::i32));
+  SDValue VARegPtr =
+      DAG.getObjectPtrOffset(DL, VAListPtr, TypeSize::getFixed(4));
   SDValue VAReg =
       DAG.getLoad(MVT::i32, DL, InChain, VARegPtr, MachinePointerInfo());
   InChain = VAReg.getValue(1);
 
   // va_ndx
-  SDValue VarArgIndexPtr = DAG.getNode(ISD::ADD, DL, PtrVT, VARegPtr,
-                                       DAG.getConstant(4, DL, MVT::i32));
+  SDValue VarArgIndexPtr =
+      DAG.getObjectPtrOffset(DL, VARegPtr, TypeSize::getFixed(4));
   SDValue VAIndex =
       DAG.getLoad(MVT::i32, DL, InChain, VarArgIndexPtr, MachinePointerInfo());
   InChain = VAIndex.getValue(1);
