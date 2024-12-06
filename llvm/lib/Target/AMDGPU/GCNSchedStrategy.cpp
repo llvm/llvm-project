@@ -960,10 +960,11 @@ bool PreRARematStage::initGCNSchedStage() {
   // if there is another pass after this pass.
   assert(!S.hasNextStage());
 
-  std::vector<RematInstruction> RematInstructions;
+  SmallVector<RematInstruction> RematInstructions;
   if (!canIncreaseOccupancy(RematInstructions))
     return false;
-  sinkTriviallyRematInsts(RematInstructions, ST, TII);
+  sinkTriviallyRematInsts(RematInstructions, ST,
+                          static_cast<const SIInstrInfo *>(TII));
 
   LLVM_DEBUG(
       dbgs() << "Retrying function scheduling with improved occupancy of "
@@ -1473,7 +1474,7 @@ void GCNSchedStage::revertScheduling() {
 #define RA_DEBUG(X) LLVM_DEBUG(dbgs() << "[PreRARemat] "; X;)
 
 bool PreRARematStage::canIncreaseOccupancy(
-    std::vector<RematInstruction> &RematInstructions) {
+    SmallVectorImpl<RematInstruction> &RematInstructions) {
   const SIRegisterInfo *SRI = static_cast<const SIRegisterInfo *>(DAG.TRI);
 
   RA_DEBUG(dbgs() << "Collecting rematerializable instructions\n");
@@ -1510,7 +1511,7 @@ bool PreRARematStage::canIncreaseOccupancy(
     if (NumRegs >= RPExcess) {
       OptRegions.erase(I);
       LLVM_DEBUG(dbgs() << "sinking increases occupancy in region " << I
-                        << "\n");
+                        << '\n');
     } else {
       RPExcess -= NumRegs;
       LLVM_DEBUG(dbgs() << "sinking reduces excess pressure in region " << I
@@ -1526,34 +1527,27 @@ bool PreRARematStage::canIncreaseOccupancy(
   for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
     auto Region = DAG.Regions[I];
     for (auto MI = Region.first; MI != Region.second; ++MI) {
-      // We only support instructions with at least one register (but
-      // non-subregister) operand.
+      // The instruction must be trivially rematerializable.
       MachineInstr &DefMI = *MI;
-      if (DefMI.isBundle() || !DefMI.getNumOperands() ||
-          !DefMI.getOperand(0).isReg() || DefMI.getOperand(0).getSubReg())
-        continue;
-
-      // We only support rematerializing virtual VGPRs with one definition and
-      // one use.
-      Register Reg = DefMI.getOperand(0).getReg();
-      if (!Reg.isVirtual() || !DAG.LIS->hasInterval(Reg) ||
-          !SRI->isVGPRClass(DAG.MRI.getRegClass(Reg)) ||
-          !DAG.MRI.hasOneDef(Reg) || !DAG.MRI.hasOneNonDBGUse(Reg))
-        continue;
-
-      // The instruction must be trivially rematerializable and have no virtual
-      // register use.
       if (!isTriviallyReMaterializable(DefMI))
         continue;
 
-      // We only care to rematerialize the instruction if its single use is in a
-      // different block.
-      MachineInstr *UseMI = &*DAG.MRI.use_instr_nodbg_begin(Reg);
-      if (DefMI.getParent() == UseMI->getParent())
+      // We only support rematerializing virtual VGPRs with one definition.
+      Register Reg = DefMI.getOperand(0).getReg();
+      if (!Reg.isVirtual() || !DAG.LIS->hasInterval(Reg) ||
+          !SRI->isVGPRClass(DAG.MRI.getRegClass(Reg)) ||
+          !DAG.MRI.hasOneDef(Reg))
         continue;
 
-      RA_DEBUG(dbgs() << "In region " << I << ", instruction " << DefMI
-                      << " is rematerializable with single use " << *UseMI);
+      // We only care to rematerialize the instruction if has a single non-debug
+      // user in a different block.
+      MachineInstr *UseMI = DAG.MRI.getOneNonDBGUser(Reg);
+      if (!UseMI || DefMI.getParent() == UseMI->getParent())
+        continue;
+
+      RA_DEBUG(dbgs() << "In region " << I << ", rematerializable instruction "
+                      << DefMI);
+      RA_DEBUG(dbgs() << "with single use " << *UseMI);
       auto &Remat = RematInstructions.emplace_back(&DefMI, I, UseMI);
 
       bool RematUseful = false;
@@ -1564,7 +1558,8 @@ bool PreRARematStage::canIncreaseOccupancy(
         // instruction and the end of the region.
         RA_DEBUG(dbgs() << "  Instruction's defining region is optimizable: ");
         RematUseful = true;
-        auto RegMask = DAG.RegionLiveOuts.getLiveRegsForRegionIdx(I)[Reg];
+        LaneBitmask RegMask =
+            DAG.RegionLiveOuts.getLiveRegsForRegionIdx(I)[Reg];
         if (ReduceRPInRegion(It, I, RegMask))
           return true;
       }
@@ -1610,15 +1605,15 @@ bool PreRARematStage::canIncreaseOccupancy(
 
 void PreRARematStage::sinkTriviallyRematInsts(
     ArrayRef<RematInstruction> RematInstructions, const GCNSubtarget &ST,
-    const TargetInstrInfo *TII) {
+    const SIInstrInfo *TII) {
   // Collect regions whose live-ins or register pressure will change due to
   // rematerialization, and map those whose maximum RP we need to fully
   // recompute at the end to true.
   SmallDenseMap<unsigned, bool> ImpactedRegions;
   // Maps rematerialized instuctions to the one they were rematerialized from.
   DenseMap<MachineInstr *, MachineInstr *> InsertedMIToOldDef;
-  LiveIntervals *LIS = DAG.LIS;
 
+  // Rematerialize all instructions.
   for (const RematInstruction &Remat : RematInstructions) {
     MachineInstr *DefMI = Remat.RematMI;
     MachineBasicBlock::iterator InsertPos(Remat.UseMI);
@@ -1631,9 +1626,8 @@ void PreRARematStage::sinkTriviallyRematInsts(
     TII->reMaterialize(*InsertPos->getParent(), InsertPos, Reg,
                        DefMI->getOperand(0).getSubReg(), *DefMI, *DAG.TRI);
     MachineInstr *NewMI = &*std::prev(InsertPos);
-    LIS->InsertMachineInstrInMaps(*NewMI);
-    LIS->removeInterval(Reg);
-    LIS->createAndComputeVirtRegInterval(Reg);
+    NewMI->getOperand(0).setSubReg(DefMI->getOperand(0).getSubReg());
+    DAG.LIS->InsertMachineInstrInMaps(*NewMI);
     InsertedMIToOldDef[NewMI] = DefMI;
 
     // Update region boundaries in scheduling region we sinked from since we
@@ -1654,7 +1648,8 @@ void PreRARematStage::sinkTriviallyRematInsts(
       // contains the single use. In live-through regions, maximum register
       // pressure decreases predictably so we can directly update it. In the
       // using region, maximum register pressure may or may not decrease, so we
-      // will mark it for re-computation after all materializations.
+      // will mark it for re-computation after all materializations have taken
+      // place.
       RegionLiveIns.erase(Reg);
       if (Remat.UseMI->getParent() != DAG.Regions[I].first->getParent()) {
         // Register is live-through and not used in this block.
@@ -1671,6 +1666,20 @@ void PreRARematStage::sinkTriviallyRematInsts(
     ImpactedRegions[Remat.DefRegion] = true;
   }
 
+  // Clean up the IR; remove rematerialized instructions from state.
+  for (auto &[NewMI, OldMI] : InsertedMIToOldDef) {
+    // Remove rematerialized instruction from BBLiveInMap since we are sinking
+    // it from its MBB.
+    DAG.BBLiveInMap.erase(OldMI);
+
+    // Remove the rematerialized instruction and update live intervals.
+    Register Reg = NewMI->getOperand(0).getReg();
+    DAG.LIS->RemoveMachineInstrFromMaps(*OldMI);
+    OldMI->eraseFromParent();
+    DAG.LIS->removeInterval(Reg);
+    DAG.LIS->createAndComputeVirtRegInterval(Reg);
+  }
+
   // All regions impacted by at least one rematerialization must be rescheduled.
   BitVector NewRescheduleRegions(DAG.Regions.size());
   for (auto &[I, RecomputeRP] : ImpactedRegions) {
@@ -1680,7 +1689,7 @@ void PreRARematStage::sinkTriviallyRematInsts(
     // Recompute maximum RP in regions in which at least one instruction was
     // rematerialized from or to.
     if (RecomputeRP) {
-      GCNDownwardRPTracker RPT(*LIS);
+      GCNDownwardRPTracker RPT(*DAG.LIS);
       auto *NonDbgMI = &*skipDebugInstructionsForward(DAG.Regions[I].first,
                                                       DAG.Regions[I].second);
       RPT.reset(*NonDbgMI, &DAG.LiveIns[I]);
@@ -1689,20 +1698,6 @@ void PreRARematStage::sinkTriviallyRematInsts(
     }
   }
   DAG.RescheduleRegions = NewRescheduleRegions;
-
-  // Clean up the IR; remove rematerialized instructions from state.
-  for (auto &[NewMI, OldMI] : InsertedMIToOldDef) {
-    // Remove rematerialized instruction from BBLiveInMap since we are sinking
-    // it from its MBB.
-    DAG.BBLiveInMap.erase(OldMI);
-
-    // Remove the rematerialized instruction and update LIS.
-    Register Reg = NewMI->getOperand(0).getReg();
-    LIS->RemoveMachineInstrFromMaps(*OldMI);
-    OldMI->eraseFromParent();
-    LIS->removeInterval(Reg);
-    LIS->createAndComputeVirtRegInterval(Reg);
-  }
 
   if (GCNTrackers)
     DAG.RegionLiveOuts.buildLiveRegMap();
@@ -1716,6 +1711,11 @@ bool PreRARematStage::isTriviallyReMaterializable(const MachineInstr &MI) {
   if (!DAG.TII->isTriviallyReMaterializable(MI))
     return false;
 
+  // Even though TargetInstrInfo::isReallyTriviallyReMaterializable already
+  // ensures that the instruction has no virtual register uses,
+  // SIInstrInfo::isReallyTriviallyReMaterializable may consider an instruction
+  // rematerializable and return before calling its parent's method, so we need
+  // to double-check here.
   for (const MachineOperand &MO : MI.all_uses())
     if (MO.getReg().isVirtual())
       return false;

@@ -434,35 +434,35 @@ private:
   struct RematInstruction {
     /// Trivially rematerializable instruction.
     MachineInstr *RematMI;
-    /// Region containing the rematerializable instruction.
-    unsigned DefRegion;
     /// Single use of the rematerializable instruction's defined register,
     /// located in a different block.
     MachineInstr *UseMI;
     /// Set of regions in which the rematerializable instruction's defined
     /// register is a live-in.
     SmallDenseSet<unsigned, 4> LiveInRegions;
+    /// Region containing the rematerializable instruction.
+    unsigned DefRegion;
 
     RematInstruction(MachineInstr *RematMI, unsigned DefRegion,
                      MachineInstr *UseMI)
-        : RematMI(RematMI), DefRegion(DefRegion), UseMI(UseMI) {}
+        : RematMI(RematMI), UseMI(UseMI), DefRegion(DefRegion) {}
   };
 
   /// Determines whether we can increase function occupancy by 1 through
   /// rematerialization. If we can, returns true and fill \p RematInstructions
   /// with a list of rematerializable instructions whose sinking would result in
   /// increased occupancy; returns false otherwise.
-  bool canIncreaseOccupancy(std::vector<RematInstruction> &RematInstructions);
+  bool
+  canIncreaseOccupancy(SmallVectorImpl<RematInstruction> &RematInstructions);
 
-  /// Whether the MI is trivially rematerializable and does not have any
-  /// virtual register use.
+  /// Whether the MI is trivially rematerializable and does not have any virtual
+  /// register use.
   bool isTriviallyReMaterializable(const MachineInstr &MI);
 
   /// Sinks all instructions in \p RematInstructions to increase function
   /// occupancy. Modified regions are tagged for rescheduling.
   void sinkTriviallyRematInsts(ArrayRef<RematInstruction> RematInstructions,
-                               const GCNSubtarget &ST,
-                               const TargetInstrInfo *TII);
+                               const GCNSubtarget &ST, const SIInstrInfo *TII);
 
 public:
   bool initGCNSchedStage() override;
