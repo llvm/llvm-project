@@ -477,9 +477,6 @@ public:
   TEST_CONSTEXPR_CXX20 pointer allocate(size_type n) { return handle_->template allocate<T>(n); }
   TEST_CONSTEXPR_CXX20 void deallocate(pointer p, size_type n) { handle_->template deallocate<T>(p, n); }
   TEST_CONSTEXPR size_type max_size() const { return N; }
-
-  // In C++11, constexpr non-static member functions are implicitly const, but this is no longer the case since C++14.
-  TEST_CONSTEXPR_CXX14 BuffT* getHandle() { return handle_.get(); }
   TEST_CONSTEXPR const BuffT* getHandle() const { return handle_.get(); }
 };
 
