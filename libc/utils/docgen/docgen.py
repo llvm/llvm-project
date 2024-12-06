@@ -92,7 +92,7 @@ def load_api(header: Header) -> Dict:
     return json.loads(api)
 
 
-def print_tbl_dir():
+def print_tbl_dir(name):
     print(
         f"""
 .. list-table::
@@ -100,10 +100,10 @@ def print_tbl_dir():
   :align: center
   :header-rows: 1
 
-  * - Function
+  * - {name}
     - Implemented
     - C23 Standard Section
-    - POSIX.1-2017 Standard Section"""
+    - POSIX.1-2024 Standard Section"""
     )
 
 
@@ -112,7 +112,7 @@ def print_functions_rst(header: Header, functions: Dict):
     print(tbl_hdr)
     print("=" * len(tbl_hdr))
 
-    print_tbl_dir()
+    print_tbl_dir("Function")
 
     for name in sorted(functions.keys()):
         print(f"  * - {name}")
@@ -138,7 +138,7 @@ def print_macros_rst(header: Header, macros: Dict):
     print(tbl_hdr)
     print("=" * len(tbl_hdr))
 
-    print_tbl_dir()
+    print_tbl_dir("Macro")
 
     for name in sorted(macros.keys()):
         print(f"  * - {name}")
