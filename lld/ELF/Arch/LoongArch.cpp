@@ -428,7 +428,7 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_SUB_ULEB128:
     // The LoongArch add/sub relocs behave like the RISCV counterparts; reuse
     // the RelExpr to avoid code duplication.
-    return R_RISCV_ADD;
+    return RE_RISCV_ADD;
   case R_LARCH_32_PCREL:
   case R_LARCH_64_PCREL:
   case R_LARCH_PCREL20_S2:
@@ -444,17 +444,17 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_TLS_IE_PC_HI20:
   case R_LARCH_TLS_IE64_PC_LO20:
   case R_LARCH_TLS_IE64_PC_HI12:
-    return R_LOONGARCH_GOT_PAGE_PC;
+    return RE_LOONGARCH_GOT_PAGE_PC;
   case R_LARCH_GOT_PC_LO12:
   case R_LARCH_TLS_IE_PC_LO12:
-    return R_LOONGARCH_GOT;
+    return RE_LOONGARCH_GOT;
   case R_LARCH_TLS_LD_PC_HI20:
   case R_LARCH_TLS_GD_PC_HI20:
-    return R_LOONGARCH_TLSGD_PAGE_PC;
+    return RE_LOONGARCH_TLSGD_PAGE_PC;
   case R_LARCH_PCALA_HI20:
-    // Why not R_LOONGARCH_PAGE_PC, majority of references don't go through PLT
-    // anyway so why waste time checking only to get everything relaxed back to
-    // it?
+    // Why not RE_LOONGARCH_PAGE_PC, majority of references don't go through
+    // PLT anyway so why waste time checking only to get everything relaxed back
+    // to it?
     //
     // This is again due to the R_LARCH_PCALA_LO12 on JIRL case, where we want
     // both the HI20 and LO12 to potentially refer to the PLT. But in reality
@@ -474,12 +474,12 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
     //
     // So, unfortunately we have to again workaround this quirk the same way as
     // BFD: assuming every R_LARCH_PCALA_HI20 is potentially PLT-needing, only
-    // relaxing back to R_LOONGARCH_PAGE_PC if it's known not so at a later
+    // relaxing back to RE_LOONGARCH_PAGE_PC if it's known not so at a later
     // stage.
-    return R_LOONGARCH_PLT_PAGE_PC;
+    return RE_LOONGARCH_PLT_PAGE_PC;
   case R_LARCH_PCALA64_LO20:
   case R_LARCH_PCALA64_HI12:
-    return R_LOONGARCH_PAGE_PC;
+    return RE_LOONGARCH_PAGE_PC;
   case R_LARCH_GOT_HI20:
   case R_LARCH_GOT_LO12:
   case R_LARCH_GOT64_LO20:
@@ -501,7 +501,7 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_TLS_DESC_PC_HI20:
   case R_LARCH_TLS_DESC64_PC_LO20:
   case R_LARCH_TLS_DESC64_PC_HI12:
-    return R_LOONGARCH_TLSDESC_PAGE_PC;
+    return RE_LOONGARCH_TLSDESC_PAGE_PC;
   case R_LARCH_TLS_DESC_PC_LO12:
   case R_LARCH_TLS_DESC_LD:
   case R_LARCH_TLS_DESC_HI20:
