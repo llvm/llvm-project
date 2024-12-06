@@ -87,13 +87,13 @@ private:
 
   bool instrumentWithShadowUpdate(IRBuilder<> &IRB, const MDNode *TBAAMD,
                                   Value *Ptr, uint64_t AccessSize, bool IsRead,
-                                  bool IsWrite, Value *&ShadowBase,
-                                  Value *&AppMemMask, bool ForceSetType,
+                                  bool IsWrite, Value *ShadowBase,
+                                  Value *AppMemMask, bool ForceSetType,
                                   bool SanitizeFunction,
                                   TypeDescriptorsMapTy &TypeDescriptors,
                                   const DataLayout &DL);
   bool instrumentMemoryAccess(Instruction *I, MemoryLocation &MLoc,
-                              Value *&ShadowBase, Value *&AppMemMask,
+                              Value *ShadowBase, Value *AppMemMask,
                               bool SanitizeFunction,
                               TypeDescriptorsMapTy &TypeDescriptors,
                               const DataLayout &DL);
@@ -170,7 +170,8 @@ void TypeSanitizer::instrumentGlobals(Module &M) {
   ReturnInst::Create(M.getContext(), BB);
 
   const DataLayout &DL = M.getDataLayout();
-  Value *ShadowBase = nullptr, *AppMemMask = nullptr;
+  Value *ShadowBase = getShadowBase(*TysanGlobalsSetTypeFunction);
+  Value *AppMemMask = getAppMemMask(*TysanGlobalsSetTypeFunction);
   TypeDescriptorsMapTy TypeDescriptors;
   TypeNameMapTy TypeNames;
 
@@ -551,7 +552,8 @@ bool TypeSanitizer::run(Function &F, const TargetLibraryInfo &TLI) {
 
   const DataLayout &DL = F.getParent()->getDataLayout();
   bool SanitizeFunction = F.hasFnAttribute(Attribute::SanitizeType);
-  Value *ShadowBase = nullptr, *AppMemMask = nullptr;
+  Value *ShadowBase = MemoryAccesses.empty() ? nullptr : getShadowBase(F);
+  Value *AppMemMask = MemoryAccesses.empty() ? nullptr : getAppMemMask(F);
   for (auto &MA : MemoryAccesses)
     Res |= instrumentMemoryAccess(MA.first, MA.second, ShadowBase, AppMemMask,
                                   SanitizeFunction, TypeDescriptors, DL);
@@ -575,14 +577,9 @@ static Value *ConvertToShadowDataInt(IRBuilder<> &IRB, Value *Ptr,
 
 bool TypeSanitizer::instrumentWithShadowUpdate(
     IRBuilder<> &IRB, const MDNode *TBAAMD, Value *Ptr, uint64_t AccessSize,
-    bool IsRead, bool IsWrite, Value *&ShadowBase, Value *&AppMemMask,
+    bool IsRead, bool IsWrite, Value *ShadowBase, Value *AppMemMask,
     bool ForceSetType, bool SanitizeFunction,
     TypeDescriptorsMapTy &TypeDescriptors, const DataLayout &DL) {
-  if (!ShadowBase)
-    ShadowBase = getShadowBase(*IRB.GetInsertBlock()->getParent());
-  if (!AppMemMask)
-    AppMemMask = getAppMemMask(*IRB.GetInsertBlock()->getParent());
-
   Constant *TDGV;
   if (TBAAMD)
     TDGV = TypeDescriptors[TBAAMD];
@@ -716,9 +713,9 @@ bool TypeSanitizer::instrumentWithShadowUpdate(
 }
 
 bool TypeSanitizer::instrumentMemoryAccess(
-    Instruction *I, MemoryLocation &MLoc, Value *&ShadowBase,
-    Value *&AppMemMask, bool SanitizeFunction,
-    TypeDescriptorsMapTy &TypeDescriptors, const DataLayout &DL) {
+    Instruction *I, MemoryLocation &MLoc, Value *ShadowBase, Value *AppMemMask,
+    bool SanitizeFunction, TypeDescriptorsMapTy &TypeDescriptors,
+    const DataLayout &DL) {
   IRBuilder<> IRB(I);
   assert(MLoc.Size.isPrecise());
   if (instrumentWithShadowUpdate(
