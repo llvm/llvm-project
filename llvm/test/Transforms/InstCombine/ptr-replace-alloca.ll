@@ -45,10 +45,10 @@ define i8 @volatile_load_keep_alloca(i1 %cond) {
 ; CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) noundef align 4 dereferenceable(32) [[ALLOCA]], ptr noundef nonnull align 16 dereferenceable(32) @g1, i64 32, i1 false)
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[VAL_IF:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[ALLOCA]], i64 1
+; CHECK-NEXT:    [[VAL_IF:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[ALLOCA]], i64 1
 ; CHECK-NEXT:    br label [[SINK:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[VAL_ELSE:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[ALLOCA]], i64 2
+; CHECK-NEXT:    [[VAL_ELSE:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[ALLOCA]], i64 2
 ; CHECK-NEXT:    br label [[SINK]]
 ; CHECK:       sink:
 ; CHECK-NEXT:    [[PTR:%.*]] = phi ptr addrspace(1) [ [[VAL_IF]], [[IF]] ], [ [[VAL_ELSE]], [[ELSE]] ]
@@ -81,10 +81,10 @@ define i8 @no_memcpy_keep_alloca(i1 %cond) {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 4, addrspace(1)
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[VAL_IF:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[ALLOCA]], i64 1
+; CHECK-NEXT:    [[VAL_IF:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[ALLOCA]], i64 1
 ; CHECK-NEXT:    br label [[SINK:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[VAL_ELSE:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[ALLOCA]], i64 2
+; CHECK-NEXT:    [[VAL_ELSE:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[ALLOCA]], i64 2
 ; CHECK-NEXT:    br label [[SINK]]
 ; CHECK:       sink:
 ; CHECK-NEXT:    [[PTR:%.*]] = phi ptr addrspace(1) [ [[VAL_IF]], [[IF]] ], [ [[VAL_ELSE]], [[ELSE]] ]
@@ -259,7 +259,7 @@ define i32 @addrspace_diff_keep_alloca_extra_gep(i1 %cond, ptr %x) {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr noundef nonnull align 1 dereferenceable(32) [[A]], ptr addrspace(1) noundef align 16 dereferenceable(32) @g2, i64 32, i1 false)
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 4
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[GEP]], [[IF]] ], [ [[X:%.*]], [[ENTRY:%.*]] ]
@@ -430,7 +430,7 @@ entry:
 define i8 @select_diff_addrspace_remove_alloca_asan(i1 %cond, ptr %p) sanitize_address {
 ; CHECK-LABEL: @select_diff_addrspace_remove_alloca_asan(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP2:%.*]] = select i1 [[COND:%.*]], ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @g2, i64 4), ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @g2, i64 6)
+; CHECK-NEXT:    [[GEP2:%.*]] = select i1 [[COND:%.*]], ptr addrspace(1) getelementptr inbounds nuw (i8, ptr addrspace(1) @g2, i64 4), ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @g2, i64 6)
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(1) [[GEP2]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
@@ -466,8 +466,8 @@ define i8 @call_readonly_keep_alloca2() {
 ; CHECK-LABEL: @call_readonly_keep_alloca2(
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 1, addrspace(1)
 ; CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) noundef align 1 dereferenceable(16) [[ALLOCA]], ptr noundef nonnull align 16 dereferenceable(16) @g1, i64 16, i1 false)
-; CHECK-NEXT:    [[A1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[ALLOCA]], i64 16
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) noundef align 1 dereferenceable(16) [[A1]], ptr addrspace(1) noundef align 16 dereferenceable(16) @g2, i64 16, i1 false)
+; CHECK-NEXT:    [[A1:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[ALLOCA]], i64 16
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) noundef nonnull align 1 dereferenceable(16) [[A1]], ptr addrspace(1) noundef align 16 dereferenceable(16) @g2, i64 16, i1 false)
 ; CHECK-NEXT:    [[P:%.*]] = addrspacecast ptr addrspace(1) [[ALLOCA]] to ptr
 ; CHECK-NEXT:    [[V:%.*]] = call i8 @readonly_callee(ptr [[P]])
 ; CHECK-NEXT:    ret i8 [[V]]
