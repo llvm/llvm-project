@@ -15,6 +15,7 @@
 #include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/Dialect.h"
+#include "llvm/TableGen/Error.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Record.h"
@@ -136,12 +137,18 @@ static bool emitPythonEnums(const RecordKeeper &records, raw_ostream &os) {
   os << fileHeader;
   for (const Record *it :
        records.getAllDerivedDefinitionsIfDefined("EnumAttrInfo")) {
+    if (llvm::SrcMgr.FindBufferContainingLoc(it->getLoc()[0]) !=
+        llvm::SrcMgr.getMainFileID())
+      continue;
     EnumAttr enumAttr(*it);
     emitEnumClass(enumAttr, os);
     emitAttributeBuilder(enumAttr, os);
   }
   for (const Record *it :
        records.getAllDerivedDefinitionsIfDefined("EnumAttr")) {
+    if (llvm::SrcMgr.FindBufferContainingLoc(it->getLoc()[0]) !=
+        llvm::SrcMgr.getMainFileID())
+      continue;
     AttrOrTypeDef attr(&*it);
     if (!attr.getMnemonic()) {
       llvm::errs() << "enum case " << attr

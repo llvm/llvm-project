@@ -38,18 +38,6 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 class GPU_Op<string mnemonic, list<Trait> traits = []> :
     Op<GPU_Dialect, mnemonic, traits>;
 
-def GPU_Dimension : I32EnumAttr<"Dimension",
-    "a dimension, either 'x', 'y', or 'z'",
-    [
-      I32EnumAttrCase<"x", 0>,
-      I32EnumAttrCase<"y", 1>,
-      I32EnumAttrCase<"z", 2>
-    ]>{
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::gpu";
-}
-def GPU_DimensionAttr : EnumAttr<GPU_Dialect, GPU_Dimension, "dim">;
-
 class GPU_IndexOp<string mnemonic, list<Trait> traits = []> :
     GPU_Op<mnemonic, !listconcat(traits, [
         Pure,
@@ -1104,50 +1092,7 @@ def GPU_YieldOp : GPU_Op<"yield", [Pure, ReturnLike, Terminator]>,
   let assemblyFormat = "attr-dict ($values^ `:` type($values))?";
 }
 
-// These mirror the reduction combining kinds from the vector dialect.
-def GPU_AllReduceOpAdd : I32EnumAttrCase<"ADD", 0, "add">;
-def GPU_AllReduceOpMul : I32EnumAttrCase<"MUL", 1, "mul">;
-def GPU_AllReduceOpMinUI : I32EnumAttrCase<"MINUI", 2, "minui">;
-def GPU_AllReduceOpMinSI : I32EnumAttrCase<"MINSI", 3, "minsi">;
-// Follows the `arith.minnumf` semantics.
-def GPU_AllReduceOpMinnumF : I32EnumAttrCase<"MINNUMF", 4, "minnumf">;
-def GPU_AllReduceOpMaxUI : I32EnumAttrCase<"MAXUI", 5, "maxui">;
-def GPU_AllReduceOpMaxSI : I32EnumAttrCase<"MAXSI", 6, "maxsi">;
-// Follows the `arith.maxnumf` semantics.
-def GPU_AllReduceOpMaxnumF : I32EnumAttrCase<"MAXNUMF", 7, "maxnumf">;
-def GPU_AllReduceOpAnd : I32EnumAttrCase<"AND", 8, "and">;
-def GPU_AllReduceOpOr  : I32EnumAttrCase<"OR",  9, "or">;
-def GPU_AllReduceOpXor : I32EnumAttrCase<"XOR", 10, "xor">;
-// Follows the `arith.minimumf` semantics.
-def GPU_AllReduceOpMinimumF : I32EnumAttrCase<"MINIMUMF", 11, "minimumf">;
-// Follows the `arith.maximumf` semantics.
-def GPU_AllReduceOpMaximumF : I32EnumAttrCase<"MAXIMUMF", 12, "maximumf">;
-
-def GPU_AllReduceOperation : I32EnumAttr<"AllReduceOperation",
-    "built-in reduction operations supported by gpu.allreduce.",
-    [
-      GPU_AllReduceOpAdd,
-      GPU_AllReduceOpMul,
-      GPU_AllReduceOpMinUI,
-      GPU_AllReduceOpMinSI,
-      GPU_AllReduceOpMinnumF,
-      GPU_AllReduceOpMaxUI,
-      GPU_AllReduceOpMaxSI,
-      GPU_AllReduceOpMaxnumF,
-      GPU_AllReduceOpAnd,
-      GPU_AllReduceOpOr,
-      GPU_AllReduceOpXor,
-      GPU_AllReduceOpMinimumF,
-      GPU_AllReduceOpMaximumF
-    ]>{
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::gpu";
-}
-
 def AnyIntegerOrFloat : AnyTypeOf<[AnySignlessInteger, AnyFloat], "Integer or Float">;
-
-def GPU_AllReduceOperationAttr : EnumAttr<GPU_Dialect, GPU_AllReduceOperation,
-                                          "all_reduce_op">;
 
 def GPU_AllReduceOp : GPU_Op<"all_reduce",
     [SameOperandsAndResultType, IsolatedFromAbove]> {
@@ -1275,22 +1220,6 @@ def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]
   let hasFolder = 1;
   let hasVerifier = 1;
 }
-
-def GPU_ShuffleOpXor  : I32EnumAttrCase<"XOR",  0, "xor">;
-def GPU_ShuffleOpDown : I32EnumAttrCase<"DOWN", 1, "down">;
-def GPU_ShuffleOpUp   : I32EnumAttrCase<"UP",   2, "up">;
-def GPU_ShuffleOpIdx  : I32EnumAttrCase<"IDX",  3, "idx">;
-
-def GPU_ShuffleMode : I32EnumAttr<"ShuffleMode",
-    "Indexing modes supported by gpu.shuffle.",
-    [
-      GPU_ShuffleOpXor, GPU_ShuffleOpUp, GPU_ShuffleOpDown, GPU_ShuffleOpIdx,
-    ]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::gpu";
-}
-def GPU_ShuffleModeAttr : EnumAttr<GPU_Dialect, GPU_ShuffleMode,
-                                   "shuffle_mode">;
 
 def GPU_ShuffleOp : GPU_Op<
     "shuffle", [Pure, AllTypesMatch<["value", "shuffleResult"]>]>,
@@ -1914,44 +1843,6 @@ def GPU_SubgroupMmaConstantMatrixOp : GPU_Op<"subgroup_mma_constant_matrix",
   }];
 }
 
-def GPU_ElementwiseOpAddF  : I32EnumAttrCase<"ADDF", 0, "addf">;
-def GPU_ElementwiseOpMulF  : I32EnumAttrCase<"MULF", 1, "mulf">;
-def GPU_ElementwiseOpSUBF  : I32EnumAttrCase<"SUBF", 2, "subf">;
-def GPU_ElementwiseOpMaxF : I32EnumAttrCase<"MAXF", 3, "maxf">;
-def GPU_ElementwiseOpMinF : I32EnumAttrCase<"MINF", 4, "minf">;
-def GPU_ElementwiseOpDivF : I32EnumAttrCase<"DIVF", 5, "divf">;
-def GPU_ElementwiseOpAddI  : I32EnumAttrCase<"ADDI", 6, "addi">;
-def GPU_ElementwiseOpMulI  : I32EnumAttrCase<"MULI", 7, "muli">;
-def GPU_ElementwiseOpSUBI  : I32EnumAttrCase<"SUBI", 8, "subi">;
-def GPU_ElementwiseOpDivS : I32EnumAttrCase<"DIVS", 9, "divs">;
-def GPU_ElementwiseOpDivU : I32EnumAttrCase<"DIVU", 10, "divu">;
-def GPU_ElementwiseOpNEGF : I32EnumAttrCase<"NEGATEF", 11, "negatef">;
-def GPU_ElementwiseOpNEGS : I32EnumAttrCase<"NEGATES", 12, "negates">;
-def GPU_ElementwiseOpEXTF : I32EnumAttrCase<"EXTF", 13, "extf">;
-
-def MMAElementWise : I32EnumAttr<"MMAElementwiseOp",
-  "elementwise operation to apply to mma matrix", [
-    GPU_ElementwiseOpAddF,
-    GPU_ElementwiseOpMulF,
-    GPU_ElementwiseOpSUBF,
-    GPU_ElementwiseOpMaxF,
-    GPU_ElementwiseOpMinF,
-    GPU_ElementwiseOpDivF,
-    GPU_ElementwiseOpAddI,
-    GPU_ElementwiseOpMulI,
-    GPU_ElementwiseOpSUBI,
-    GPU_ElementwiseOpDivS,
-    GPU_ElementwiseOpDivU,
-    GPU_ElementwiseOpNEGF,
-    GPU_ElementwiseOpNEGS,
-    GPU_ElementwiseOpEXTF
-  ]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::gpu";
-}
-def MMAElementWiseAttr : EnumAttr<GPU_Dialect, MMAElementWise,
-                                  "mma_element_wise">;
-
 def GPU_SubgroupMmaElementwiseOp : GPU_Op<"subgroup_mma_elementwise",
     [Pure,
      AllTypesMatch<["args"]>]>{
@@ -2262,22 +2153,6 @@ def GPU_CreateBsrOp : GPU_Op<"create_bsr", [GPU_AsyncOpInterface]> {
   }];
 }
 
-def GPU_Prune2To4SpMatFlag : I32EnumAttr<"Prune2To4SpMatFlag",
-  "pruning strategy for 2:4 sparse matrix",
-  [
-    I32EnumAttrCase<"NONE", 0>,
-    I32EnumAttrCase<"PRUNE_ONLY", 1>,
-    I32EnumAttrCase<"PRUNE_AND_CHECK", 2>,
-  ]> {
-    let genSpecializedAttr = 0;
-    let cppNamespace = GPU_Dialect.cppNamespace;
-}
-
-def GPU_Prune2To4SpMatFlagAttr : EnumAttr<GPU_Dialect, GPU_Prune2To4SpMatFlag,
-                                   "prune_2to4_spmat_flag">{
-  let defaultValue = "Prune2To4SpMatFlag::PRUNE_AND_CHECK";
-}
-
 
 def GPU_Create2To4SpMatOp : GPU_Op<"create_2to4_spmat", [GPU_AsyncOpInterface]> {
   let summary = "Create sparse matrix with 2:4 sparsity operation";
@@ -2338,31 +2213,6 @@ def GPU_DestroySpMatOp : GPU_Op<"destroy_sp_mat", [GPU_AsyncOpInterface]> {
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies) $spmat attr-dict
   }];
-}
-
-// To avoid coupling this dialect with cusparse.h specifics, we hardcoded magic
-// literals in this enum. Note that this should be kept in sync with
-// cusparseOperation_t in cusparse.h:
-// typedef enum {
-// CUSPARSE_OPERATION_NON_TRANSPOSE       = 0,
-// CUSPARSE_OPERATION_TRANSPOSE           = 1,
-// CUSPARSE_OPERATION_CONJUGATE_TRANSPOSE = 2
-// } cusparseOperation_t;
-// TODO: find a proper way to keep them in sync?
-def GPU_TransposeMode : I32EnumAttr<"TransposeMode",
-    "transpose mode of sparse matrix supported by sparse tensor ops",
-    [
-      I32EnumAttrCase<"NON_TRANSPOSE", 0>,
-      I32EnumAttrCase<"TRANSPOSE", 1>,
-      I32EnumAttrCase<"CONJUGATE_TRANSPOSE", 2>,
-    ]> {
-      let genSpecializedAttr = 0;
-      let cppNamespace = GPU_Dialect.cppNamespace;
-}
-
-def GPU_TransposeModeAttr : EnumAttr<GPU_Dialect, GPU_TransposeMode,
-                                   "mat_transpose_mode">{
-  let defaultValue = "TransposeMode::NON_TRANSPOSE";
 }
 
 def GPU_SpMVBufferSizeOp : GPU_Op<"spmv_buffer_size", [GPU_AsyncOpInterface]> {
@@ -2676,20 +2526,6 @@ def GPU_SDDMMOp : GPU_Op<"sddmm", [GPU_AsyncOpInterface]> {
     $dnmatA (`{` $modeA^ `}`)? `,` $dnmatB (`{` $modeB^ `}`)? `,` $spmatC `,` $buffer attr-dict `:` type($buffer) `into` $computeType
   }];
 }
-
-def GPU_SpGEMMWorkEstimationOrComputeKind : I32EnumAttr<"SpGEMMWorkEstimationOrComputeKind",
-    "choose whether spgemm_work_estimation_or_compute does work estimation or compute",
-    [
-      I32EnumAttrCase<"WORK_ESTIMATION", 0>,
-      I32EnumAttrCase<"COMPUTE", 1>,
-    ]> {
-      let genSpecializedAttr = 0;
-      let cppNamespace = GPU_Dialect.cppNamespace;
-}
-
-def GPU_SpGEMMWorkEstimationOrComputeKindAttr : EnumAttr<GPU_Dialect,
-    GPU_SpGEMMWorkEstimationOrComputeKind,
-    "spgemm_work_estimation_or_compute_kind"> {}
 
 def GPU_SpGEMMCreateDescrOp : GPU_Op<"spgemm_create_descr", [GPU_AsyncOpInterface]> {
   let summary = "SpGEMM Create Descr operation";

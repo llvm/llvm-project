@@ -60,7 +60,7 @@ declare_mlir_python_sources(MLIRPythonCAPI.HeaderSources
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
-  TD_FILE dialects/AffineOps.td
+  TD_FILE "${CMAKE_CURRENT_SOURCE_DIR}/include/mlir/dialects/Affine/IR/AffineOps.td"
   SOURCES
     dialects/affine.py
   DIALECT_NAME affine
@@ -320,7 +320,7 @@ declare_mlir_dialect_python_bindings(
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
-  TD_FILE dialects/NVGPUOps.td
+  TD_FILE "${CMAKE_CURRENT_SOURCE_DIR}/include/mlir/dialects/NVGPU/NVGPUOps.td"
   SOURCES
     dialects/nvgpu.py
   DIALECT_NAME nvgpu
