@@ -40,7 +40,7 @@ void ConstantInitFuture::installInGlobal(llvm::GlobalVariable *GV) {
   if (auto *C = dyn_cast<llvm::Constant *>(Data)) {
     GV->setInitializer(C);
   } else {
-    auto &builder = *Data.get<ConstantInitBuilderBase*>();
+    auto &builder = *cast<ConstantInitBuilderBase *>(Data);
     assert(builder.Buffer.size() == 1);
     builder.setGlobalInitializer(GV, builder.Buffer[0]);
     builder.Buffer.clear();
