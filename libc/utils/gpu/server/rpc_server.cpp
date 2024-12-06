@@ -70,13 +70,13 @@ template <bool packed, uint32_t num_lanes>
 static void handle_printf(rpc::Server::Port &port, TempStorage &temp_storage) {
   FILE *files[num_lanes] = {nullptr};
   // Get the appropriate output stream to use.
-  if (port.get_opcode() == RPC_PRINTF_TO_STREAM ||
-      port.get_opcode() == RPC_PRINTF_TO_STREAM_PACKED)
+  if (port.get_opcode() == LIBC_PRINTF_TO_STREAM ||
+      port.get_opcode() == LIBC_PRINTF_TO_STREAM_PACKED)
     port.recv([&](rpc::Buffer *buffer, uint32_t id) {
       files[id] = reinterpret_cast<FILE *>(buffer->data[0]);
     });
-  else if (port.get_opcode() == RPC_PRINTF_TO_STDOUT ||
-           port.get_opcode() == RPC_PRINTF_TO_STDOUT_PACKED)
+  else if (port.get_opcode() == LIBC_PRINTF_TO_STDOUT ||
+           port.get_opcode() == LIBC_PRINTF_TO_STDOUT_PACKED)
     std::fill(files, files + num_lanes, stdout);
   else
     std::fill(files, files + num_lanes, stderr);
@@ -230,18 +230,18 @@ rpc::Status handle_port_impl(rpc::Server::Port &port) {
   TempStorage temp_storage;
 
   switch (port.get_opcode()) {
-  case RPC_WRITE_TO_STREAM:
-  case RPC_WRITE_TO_STDERR:
-  case RPC_WRITE_TO_STDOUT:
-  case RPC_WRITE_TO_STDOUT_NEWLINE: {
+  case LIBC_WRITE_TO_STREAM:
+  case LIBC_WRITE_TO_STDERR:
+  case LIBC_WRITE_TO_STDOUT:
+  case LIBC_WRITE_TO_STDOUT_NEWLINE: {
     uint64_t sizes[num_lanes] = {0};
     void *strs[num_lanes] = {nullptr};
     FILE *files[num_lanes] = {nullptr};
-    if (port.get_opcode() == RPC_WRITE_TO_STREAM) {
+    if (port.get_opcode() == LIBC_WRITE_TO_STREAM) {
       port.recv([&](rpc::Buffer *buffer, uint32_t id) {
         files[id] = reinterpret_cast<FILE *>(buffer->data[0]);
       });
-    } else if (port.get_opcode() == RPC_WRITE_TO_STDERR) {
+    } else if (port.get_opcode() == LIBC_WRITE_TO_STDERR) {
       std::fill(files, files + num_lanes, stderr);
     } else {
       std::fill(files, files + num_lanes, stdout);
@@ -252,14 +252,14 @@ rpc::Status handle_port_impl(rpc::Server::Port &port) {
     port.send([&](rpc::Buffer *buffer, uint32_t id) {
       flockfile(files[id]);
       buffer->data[0] = fwrite_unlocked(strs[id], 1, sizes[id], files[id]);
-      if (port.get_opcode() == RPC_WRITE_TO_STDOUT_NEWLINE &&
+      if (port.get_opcode() == LIBC_WRITE_TO_STDOUT_NEWLINE &&
           buffer->data[0] == sizes[id])
         buffer->data[0] += fwrite_unlocked("\n", 1, 1, files[id]);
       funlockfile(files[id]);
     });
     break;
   }
-  case RPC_READ_FROM_STREAM: {
+  case LIBC_READ_FROM_STREAM: {
     uint64_t sizes[num_lanes] = {0};
     void *data[num_lanes] = {nullptr};
     port.recv([&](rpc::Buffer *buffer, uint32_t id) {
@@ -273,7 +273,7 @@ rpc::Status handle_port_impl(rpc::Server::Port &port) {
     });
     break;
   }
-  case RPC_READ_FGETS: {
+  case LIBC_READ_FGETS: {
     uint64_t sizes[num_lanes] = {0};
     void *data[num_lanes] = {nullptr};
     port.recv([&](rpc::Buffer *buffer, uint32_t id) {
@@ -285,7 +285,7 @@ rpc::Status handle_port_impl(rpc::Server::Port &port) {
     port.send_n(data, sizes);
     break;
   }
-  case RPC_OPEN_FILE: {
+  case LIBC_OPEN_FILE: {
     uint64_t sizes[num_lanes] = {0};
     void *paths[num_lanes] = {nullptr};
     port.recv_n(paths, sizes,
@@ -297,14 +297,14 @@ rpc::Status handle_port_impl(rpc::Server::Port &port) {
     });
     break;
   }
-  case RPC_CLOSE_FILE: {
+  case LIBC_CLOSE_FILE: {
     port.recv_and_send([&](rpc::Buffer *buffer, uint32_t id) {
       FILE *file = reinterpret_cast<FILE *>(buffer->data[0]);
       buffer->data[0] = fclose(file);
     });
     break;
   }
-  case RPC_EXIT: {
+  case LIBC_EXIT: {
     // Send a response to the client to signal that we are ready to exit.
     port.recv_and_send([](rpc::Buffer *, uint32_t) {});
     port.recv([](rpc::Buffer *buffer, uint32_t) {
@@ -314,14 +314,14 @@ rpc::Status handle_port_impl(rpc::Server::Port &port) {
     });
     break;
   }
-  case RPC_ABORT: {
+  case LIBC_ABORT: {
     // Send a response to the client to signal that we are ready to abort.
     port.recv_and_send([](rpc::Buffer *, uint32_t) {});
     port.recv([](rpc::Buffer *, uint32_t) {});
     abort();
     break;
   }
-  case RPC_HOST_CALL: {
+  case LIBC_HOST_CALL: {
     uint64_t sizes[num_lanes] = {0};
     unsigned long long results[num_lanes] = {0};
     void *args[num_lanes] = {nullptr};
@@ -337,25 +337,25 @@ rpc::Status handle_port_impl(rpc::Server::Port &port) {
     });
     break;
   }
-  case RPC_FEOF: {
+  case LIBC_FEOF: {
     port.recv_and_send([](rpc::Buffer *buffer, uint32_t) {
       buffer->data[0] = feof(to_stream(buffer->data[0]));
     });
     break;
   }
-  case RPC_FERROR: {
+  case LIBC_FERROR: {
     port.recv_and_send([](rpc::Buffer *buffer, uint32_t) {
       buffer->data[0] = ferror(to_stream(buffer->data[0]));
     });
     break;
   }
-  case RPC_CLEARERR: {
+  case LIBC_CLEARERR: {
     port.recv_and_send([](rpc::Buffer *buffer, uint32_t) {
       clearerr(to_stream(buffer->data[0]));
     });
     break;
   }
-  case RPC_FSEEK: {
+  case LIBC_FSEEK: {
     port.recv_and_send([](rpc::Buffer *buffer, uint32_t) {
       buffer->data[0] =
           fseek(to_stream(buffer->data[0]), static_cast<long>(buffer->data[1]),
@@ -363,38 +363,38 @@ rpc::Status handle_port_impl(rpc::Server::Port &port) {
     });
     break;
   }
-  case RPC_FTELL: {
+  case LIBC_FTELL: {
     port.recv_and_send([](rpc::Buffer *buffer, uint32_t) {
       buffer->data[0] = ftell(to_stream(buffer->data[0]));
     });
     break;
   }
-  case RPC_FFLUSH: {
+  case LIBC_FFLUSH: {
     port.recv_and_send([](rpc::Buffer *buffer, uint32_t) {
       buffer->data[0] = fflush(to_stream(buffer->data[0]));
     });
     break;
   }
-  case RPC_UNGETC: {
+  case LIBC_UNGETC: {
     port.recv_and_send([](rpc::Buffer *buffer, uint32_t) {
       buffer->data[0] =
           ungetc(static_cast<int>(buffer->data[0]), to_stream(buffer->data[1]));
     });
     break;
   }
-  case RPC_PRINTF_TO_STREAM_PACKED:
-  case RPC_PRINTF_TO_STDOUT_PACKED:
-  case RPC_PRINTF_TO_STDERR_PACKED: {
+  case LIBC_PRINTF_TO_STREAM_PACKED:
+  case LIBC_PRINTF_TO_STDOUT_PACKED:
+  case LIBC_PRINTF_TO_STDERR_PACKED: {
     handle_printf<true, num_lanes>(port, temp_storage);
     break;
   }
-  case RPC_PRINTF_TO_STREAM:
-  case RPC_PRINTF_TO_STDOUT:
-  case RPC_PRINTF_TO_STDERR: {
+  case LIBC_PRINTF_TO_STREAM:
+  case LIBC_PRINTF_TO_STDOUT:
+  case LIBC_PRINTF_TO_STDERR: {
     handle_printf<false, num_lanes>(port, temp_storage);
     break;
   }
-  case RPC_REMOVE: {
+  case LIBC_REMOVE: {
     uint64_t sizes[num_lanes] = {0};
     void *args[num_lanes] = {nullptr};
     port.recv_n(args, sizes,
@@ -405,7 +405,7 @@ rpc::Status handle_port_impl(rpc::Server::Port &port) {
     });
     break;
   }
-  case RPC_RENAME: {
+  case LIBC_RENAME: {
     uint64_t oldsizes[num_lanes] = {0};
     uint64_t newsizes[num_lanes] = {0};
     void *oldpath[num_lanes] = {nullptr};
@@ -421,7 +421,7 @@ rpc::Status handle_port_impl(rpc::Server::Port &port) {
     });
     break;
   }
-  case RPC_SYSTEM: {
+  case LIBC_SYSTEM: {
     uint64_t sizes[num_lanes] = {0};
     void *args[num_lanes] = {nullptr};
     port.recv_n(args, sizes,
@@ -432,7 +432,7 @@ rpc::Status handle_port_impl(rpc::Server::Port &port) {
     });
     break;
   }
-  case RPC_NOOP: {
+  case LIBC_NOOP: {
     port.recv([](rpc::Buffer *, uint32_t) {});
     break;
   }

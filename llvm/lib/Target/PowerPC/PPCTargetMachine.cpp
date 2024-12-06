@@ -99,11 +99,6 @@ static cl::opt<bool>
                   cl::desc("Expand eligible cr-logical binary ops to branches"),
                   cl::init(true), cl::Hidden);
 
-static cl::opt<bool> MergeStringPool(
-    "ppc-merge-string-pool",
-    cl::desc("Merge all of the strings in a module into one pool"),
-    cl::init(true), cl::Hidden);
-
 static cl::opt<bool> EnablePPCGenScalarMASSEntries(
     "enable-ppc-gen-scalar-mass", cl::init(false),
     cl::desc("Enable lowering math functions to their corresponding MASS "

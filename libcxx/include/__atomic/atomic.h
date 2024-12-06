@@ -16,7 +16,6 @@
 #include <__atomic/memory_order.h>
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
-#include <__functional/operations.h>
 #include <__memory/addressof.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_floating_point.h>
@@ -376,7 +375,8 @@ private:
     auto __builtin_op = [](auto __a, auto __builtin_operand, auto __order) {
       return std::__cxx_atomic_fetch_add(__a, __builtin_operand, __order);
     };
-    return __rmw_op(std::forward<_This>(__self), __operand, __m, std::plus<>{}, __builtin_op);
+    auto __plus = [](auto __a, auto __b) { return __a + __b; };
+    return __rmw_op(std::forward<_This>(__self), __operand, __m, __plus, __builtin_op);
   }
 
   template <class _This>
@@ -384,7 +384,8 @@ private:
     auto __builtin_op = [](auto __a, auto __builtin_operand, auto __order) {
       return std::__cxx_atomic_fetch_sub(__a, __builtin_operand, __order);
     };
-    return __rmw_op(std::forward<_This>(__self), __operand, __m, std::minus<>{}, __builtin_op);
+    auto __minus = [](auto __a, auto __b) { return __a - __b; };
+    return __rmw_op(std::forward<_This>(__self), __operand, __m, __minus, __builtin_op);
   }
 
 public:

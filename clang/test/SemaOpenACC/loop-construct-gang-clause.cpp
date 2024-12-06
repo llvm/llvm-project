@@ -287,6 +287,13 @@ void Kernels() {
 #pragma acc kernels
 #pragma acc loop gang(num:1)
   for(int j = 0; j < 5; ++j) {
+#pragma acc loop worker(1) vector(1)
+    for(int i = 0; i < 5; ++i);
+  }
+
+#pragma acc kernels
+#pragma acc loop gang(num:1)
+  for(int j = 0; j < 5; ++j) {
     // allowed, intervening compute construct
 #pragma acc serial
 #pragma acc loop gang(static:1)

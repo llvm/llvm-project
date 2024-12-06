@@ -2937,6 +2937,8 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/Orc/Shared/*.h",
+    ] + [
+        "include/llvm/ExecutionEngine/Orc/SymbolStringPool.h",
     ]),
     copts = llvm_copts,
     deps = [

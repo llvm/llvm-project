@@ -430,8 +430,8 @@ TEST(MemProf, BaseMemProfReader) {
            /*Column=*/5, /*IsInlineFrame=*/true);
   Frame F2(/*Hash=*/IndexedMemProfRecord::getGUID("bar"), /*LineOffset=*/10,
            /*Column=*/2, /*IsInlineFrame=*/false);
-  MemProfData.Frames.insert({F1.hash(), F1});
-  MemProfData.Frames.insert({F2.hash(), F2});
+  MemProfData.addFrame(F1);
+  MemProfData.addFrame(F2);
 
   llvm::SmallVector<FrameId> CallStack{F1.hash(), F2.hash()};
   CallStackId CSId = hashCallStack(CallStack);
@@ -466,8 +466,8 @@ TEST(MemProf, BaseMemProfReaderWithCSIdMap) {
            /*Column=*/5, /*IsInlineFrame=*/true);
   Frame F2(/*Hash=*/IndexedMemProfRecord::getGUID("bar"), /*LineOffset=*/10,
            /*Column=*/2, /*IsInlineFrame=*/false);
-  MemProfData.Frames.insert({F1.hash(), F1});
-  MemProfData.Frames.insert({F2.hash(), F2});
+  MemProfData.addFrame(F1);
+  MemProfData.addFrame(F2);
 
   llvm::SmallVector<FrameId> CallStack = {F1.hash(), F2.hash()};
   CallStackId CSId = hashCallStack(CallStack);
@@ -806,5 +806,41 @@ HeapProfileRecords:
   EXPECT_EQ(Record.AllocSites[1].Info.getTotalSize(), 555U);
   EXPECT_THAT(Record.CallSiteIds,
               ElementsAre(hashCallStack(CS3), hashCallStack(CS4)));
+}
+
+template <typename T> std::string serializeInYAML(T &Val) {
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  llvm::yaml::Output Yout(OS);
+  Yout << Val;
+  return Out;
+}
+
+TEST(MemProf, YAMLWriterFrame) {
+  Frame F(11, 22, 33, true);
+
+  std::string Out = serializeInYAML(F);
+  EXPECT_EQ(Out, R"YAML(---
+{ Function: 11, LineOffset: 22, Column: 33, Inline: true }
+...
+)YAML");
+}
+
+TEST(MemProf, YAMLWriterMIB) {
+  MemInfoBlock MIB;
+  MIB.AllocCount = 111;
+  MIB.TotalSize = 222;
+  MIB.TotalLifetime = 333;
+  MIB.TotalLifetimeAccessDensity = 444;
+  PortableMemInfoBlock PMIB(MIB, llvm::memprof::getHotColdSchema());
+
+  std::string Out = serializeInYAML(PMIB);
+  EXPECT_EQ(Out, R"YAML(---
+AllocCount:      111
+TotalSize:       222
+TotalLifetime:   333
+TotalLifetimeAccessDensity: 444
+...
+)YAML");
 }
 } // namespace

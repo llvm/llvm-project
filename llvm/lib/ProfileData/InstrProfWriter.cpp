@@ -877,6 +877,9 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   if (static_cast<bool>(ProfileKind &
                         InstrProfKind::FunctionEntryInstrumentation))
     Header.Version |= VARIANT_MASK_INSTR_ENTRY;
+  if (static_cast<bool>(ProfileKind &
+                        InstrProfKind::LoopEntriesInstrumentation))
+    Header.Version |= VARIANT_MASK_INSTR_LOOP_ENTRIES;
   if (static_cast<bool>(ProfileKind & InstrProfKind::SingleByteCoverage))
     Header.Version |= VARIANT_MASK_BYTE_COVERAGE;
   if (static_cast<bool>(ProfileKind & InstrProfKind::FunctionEntryOnly))
@@ -1120,6 +1123,10 @@ Error InstrProfWriter::writeText(raw_fd_ostream &OS) {
   if (static_cast<bool>(ProfileKind &
                         InstrProfKind::FunctionEntryInstrumentation))
     OS << "# Always instrument the function entry block\n:entry_first\n";
+  if (static_cast<bool>(ProfileKind &
+                        InstrProfKind::LoopEntriesInstrumentation))
+    OS << "# Always instrument the loop entry "
+          "blocks\n:instrument_loop_entries\n";
   if (static_cast<bool>(ProfileKind & InstrProfKind::SingleByteCoverage))
     OS << "# Instrument block coverage\n:single_byte_coverage\n";
   InstrProfSymtab Symtab;

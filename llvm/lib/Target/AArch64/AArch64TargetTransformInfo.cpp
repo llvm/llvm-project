@@ -3259,7 +3259,7 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
       auto RegWidth =
           getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
               .getFixedValue();
-      return (Idx == 0 || (Idx * EltSz) % RegWidth == 0);
+      return Idx == 0 || (RegWidth != 0 && (Idx * EltSz) % RegWidth == 0);
     };
 
     // Check if the type constraints on input vector type and result scalar type
@@ -3363,7 +3363,7 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(const Instruction &I,
 
 InstructionCost AArch64TTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind) {
+    TTI::TargetCostKind CostKind, ArrayRef<Value *> VL) {
   if (isa<ScalableVectorType>(Ty))
     return InstructionCost::getInvalid();
   if (Ty->getElementType()->isFloatingPointTy())
@@ -4797,14 +4797,20 @@ AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
 }
 
 bool AArch64TTIImpl::shouldTreatInstructionLikeSelect(const Instruction *I) {
-  // For the binary operators (e.g. or) we need to be more careful than
-  // selects, here we only transform them if they are already at a natural
-  // break point in the code - the end of a block with an unconditional
-  // terminator.
-  if (EnableOrLikeSelectOpt && I->getOpcode() == Instruction::Or &&
-      isa<BranchInst>(I->getNextNode()) &&
-      cast<BranchInst>(I->getNextNode())->isUnconditional())
-    return true;
+  if (EnableOrLikeSelectOpt) {
+    // For the binary operators (e.g. or) we need to be more careful than
+    // selects, here we only transform them if they are already at a natural
+    // break point in the code - the end of a block with an unconditional
+    // terminator.
+    if (I->getOpcode() == Instruction::Or &&
+        isa<BranchInst>(I->getNextNode()) &&
+        cast<BranchInst>(I->getNextNode())->isUnconditional())
+      return true;
+
+    if (I->getOpcode() == Instruction::Add ||
+        I->getOpcode() == Instruction::Sub)
+      return true;
+  }
   return BaseT::shouldTreatInstructionLikeSelect(I);
 }
 

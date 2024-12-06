@@ -367,49 +367,6 @@ void elf::parseFiles(Ctx &ctx,
 }
 
 // Concatenates arguments to construct a string representing an error location.
-static std::string createFileLineMsg(StringRef path, unsigned line) {
-  std::string filename = std::string(path::filename(path));
-  std::string lineno = ":" + std::to_string(line);
-  if (filename == path)
-    return filename + lineno;
-  return filename + lineno + " (" + path.str() + lineno + ")";
-}
-
-template <class ELFT>
-static std::string getSrcMsgAux(ObjFile<ELFT> &file, const Symbol &sym,
-                                const InputSectionBase &sec, uint64_t offset) {
-  // In DWARF, functions and variables are stored to different places.
-  // First, look up a function for a given offset.
-  if (std::optional<DILineInfo> info = file.getDILineInfo(&sec, offset))
-    return createFileLineMsg(info->FileName, info->Line);
-
-  // If it failed, look up again as a variable.
-  if (std::optional<std::pair<std::string, unsigned>> fileLine =
-          file.getVariableLoc(sym.getName()))
-    return createFileLineMsg(fileLine->first, fileLine->second);
-
-  // File.sourceFile contains STT_FILE symbol, and that is a last resort.
-  return std::string(file.sourceFile);
-}
-
-std::string InputFile::getSrcMsg(const Symbol &sym, const InputSectionBase &sec,
-                                 uint64_t offset) {
-  if (kind() != ObjKind)
-    return "";
-  switch (ekind) {
-  default:
-    llvm_unreachable("Invalid kind");
-  case ELF32LEKind:
-    return getSrcMsgAux(cast<ObjFile<ELF32LE>>(*this), sym, sec, offset);
-  case ELF32BEKind:
-    return getSrcMsgAux(cast<ObjFile<ELF32BE>>(*this), sym, sec, offset);
-  case ELF64LEKind:
-    return getSrcMsgAux(cast<ObjFile<ELF64LE>>(*this), sym, sec, offset);
-  case ELF64BEKind:
-    return getSrcMsgAux(cast<ObjFile<ELF64BE>>(*this), sym, sec, offset);
-  }
-}
-
 StringRef InputFile::getNameForScript() const {
   if (archiveName.empty())
     return getName();
@@ -480,49 +437,40 @@ static void handleSectionGroup(ArrayRef<InputSectionBase *> sections,
     prev->nextInSectionGroup = head;
 }
 
-template <class ELFT> DWARFCache *ObjFile<ELFT>::getDwarf() {
+template <class ELFT> void ObjFile<ELFT>::initDwarf() {
+  dwarf = std::make_unique<DWARFCache>(std::make_unique<DWARFContext>(
+      std::make_unique<LLDDwarfObj<ELFT>>(this), "",
+      [&](Error err) { Warn(ctx) << getName() + ": " << std::move(err); },
+      [&](Error warning) {
+        Warn(ctx) << getName() << ": " << std::move(warning);
+      }));
+}
+
+DWARFCache *ELFFileBase::getDwarf() {
+  assert(fileKind == ObjKind);
   llvm::call_once(initDwarf, [this]() {
-    dwarf = std::make_unique<DWARFCache>(std::make_unique<DWARFContext>(
-        std::make_unique<LLDDwarfObj<ELFT>>(this), "",
-        [&](Error err) { Warn(ctx) << getName() + ": " << std::move(err); },
-        [&](Error warning) {
-          Warn(ctx) << getName() << ": " << std::move(warning);
-        }));
-  });
-
-  return dwarf.get();
-}
-
-// Returns the pair of file name and line number describing location of data
-// object (variable, array, etc) definition.
-template <class ELFT>
-std::optional<std::pair<std::string, unsigned>>
-ObjFile<ELFT>::getVariableLoc(StringRef name) {
-  return getDwarf()->getVariableLoc(name);
-}
-
-// Returns source line information for a given offset
-// using DWARF debug info.
-template <class ELFT>
-std::optional<DILineInfo>
-ObjFile<ELFT>::getDILineInfo(const InputSectionBase *s, uint64_t offset) {
-  // Detect SectionIndex for specified section.
-  uint64_t sectionIndex = object::SectionedAddress::UndefSection;
-  ArrayRef<InputSectionBase *> sections = s->file->getSections();
-  for (uint64_t curIndex = 0; curIndex < sections.size(); ++curIndex) {
-    if (s == sections[curIndex]) {
-      sectionIndex = curIndex;
-      break;
+    switch (ekind) {
+    default:
+      llvm_unreachable("");
+    case ELF32LEKind:
+      return cast<ObjFile<ELF32LE>>(this)->initDwarf();
+    case ELF32BEKind:
+      return cast<ObjFile<ELF32BE>>(this)->initDwarf();
+    case ELF64LEKind:
+      return cast<ObjFile<ELF64LE>>(this)->initDwarf();
+    case ELF64BEKind:
+      return cast<ObjFile<ELF64BE>>(this)->initDwarf();
     }
-  }
-
-  return getDwarf()->getDILineInfo(offset, sectionIndex);
+  });
+  return dwarf.get();
 }
 
 ELFFileBase::ELFFileBase(Ctx &ctx, Kind k, ELFKind ekind, MemoryBufferRef mb)
     : InputFile(ctx, k, mb) {
   this->ekind = ekind;
 }
+
+ELFFileBase::~ELFFileBase() {}
 
 template <typename Elf_Shdr>
 static const Elf_Shdr *findSection(ArrayRef<Elf_Shdr> sections, uint32_t type) {
@@ -608,12 +556,45 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   sections.resize(size);
   for (size_t i = 0; i != size; ++i) {
     const Elf_Shdr &sec = objSections[i];
+    if (LLVM_LIKELY(sec.sh_type == SHT_PROGBITS))
+      continue;
+    if (LLVM_LIKELY(sec.sh_type == SHT_GROUP)) {
+      StringRef signature = getShtGroupSignature(objSections, sec);
+      ArrayRef<Elf_Word> entries =
+          CHECK2(obj.template getSectionContentsAsArray<Elf_Word>(sec), this);
+      if (entries.empty())
+        Fatal(ctx) << this << ": empty SHT_GROUP";
+
+      Elf_Word flag = entries[0];
+      if (flag && flag != GRP_COMDAT)
+        Fatal(ctx) << this << ": unsupported SHT_GROUP format";
+
+      bool keepGroup = !flag || ignoreComdats ||
+                       ctx.symtab->comdatGroups
+                           .try_emplace(CachedHashStringRef(signature), this)
+                           .second;
+      if (keepGroup) {
+        if (!ctx.arg.resolveGroups)
+          sections[i] = createInputSection(
+              i, sec, check(obj.getSectionName(sec, shstrtab)));
+      } else {
+        // Otherwise, discard group members.
+        for (uint32_t secIndex : entries.slice(1)) {
+          if (secIndex >= size)
+            Fatal(ctx) << this
+                       << ": invalid section index in group: " << secIndex;
+          sections[secIndex] = &InputSection::discarded;
+        }
+      }
+      continue;
+    }
+
     if (sec.sh_type == SHT_LLVM_DEPENDENT_LIBRARIES && !ctx.arg.relocatable) {
       StringRef name = check(obj.getSectionName(sec, shstrtab));
       ArrayRef<char> data = CHECK2(
           this->getObj().template getSectionContentsAsArray<char>(sec), this);
       if (!data.empty() && data.back() != '\0') {
-        ErrAlways(ctx)
+        Err(ctx)
             << this
             << ": corrupted dependent libraries section (unterminated string): "
             << name;
@@ -624,74 +605,48 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
           d += s.size() + 1;
         }
       }
-      this->sections[i] = &InputSection::discarded;
+      sections[i] = &InputSection::discarded;
       continue;
     }
 
-    if (sec.sh_type == SHT_ARM_ATTRIBUTES && ctx.arg.emachine == EM_ARM) {
-      ARMAttributeParser attributes;
-      ArrayRef<uint8_t> contents =
-          check(this->getObj().getSectionContents(sec));
-      StringRef name = check(obj.getSectionName(sec, shstrtab));
-      this->sections[i] = &InputSection::discarded;
-      if (Error e = attributes.parse(contents, ekind == ELF32LEKind
-                                                   ? llvm::endianness::little
-                                                   : llvm::endianness::big)) {
-        InputSection isec(*this, sec, name);
-        Warn(ctx) << &isec << ": " << std::move(e);
-      } else {
-        updateSupportedARMFeatures(ctx, attributes);
-        updateARMVFPArgs(ctx, attributes, this);
+    switch (ctx.arg.emachine) {
+    case EM_ARM:
+      if (sec.sh_type == SHT_ARM_ATTRIBUTES) {
+        ARMAttributeParser attributes;
+        ArrayRef<uint8_t> contents =
+            check(this->getObj().getSectionContents(sec));
+        StringRef name = check(obj.getSectionName(sec, shstrtab));
+        sections[i] = &InputSection::discarded;
+        if (Error e = attributes.parse(contents, ekind == ELF32LEKind
+                                                     ? llvm::endianness::little
+                                                     : llvm::endianness::big)) {
+          InputSection isec(*this, sec, name);
+          Warn(ctx) << &isec << ": " << std::move(e);
+        } else {
+          updateSupportedARMFeatures(ctx, attributes);
+          updateARMVFPArgs(ctx, attributes, this);
 
-        // FIXME: Retain the first attribute section we see. The eglibc ARM
-        // dynamic loaders require the presence of an attribute section for
-        // dlopen to work. In a full implementation we would merge all attribute
-        // sections.
-        if (ctx.in.attributes == nullptr) {
-          ctx.in.attributes = std::make_unique<InputSection>(*this, sec, name);
-          this->sections[i] = ctx.in.attributes.get();
+          // FIXME: Retain the first attribute section we see. The eglibc ARM
+          // dynamic loaders require the presence of an attribute section for
+          // dlopen to work. In a full implementation we would merge all
+          // attribute sections.
+          if (ctx.in.attributes == nullptr) {
+            ctx.in.attributes =
+                std::make_unique<InputSection>(*this, sec, name);
+            sections[i] = ctx.in.attributes.get();
+          }
         }
       }
-    }
-
-    // Producing a static binary with MTE globals is not currently supported,
-    // remove all SHT_AARCH64_MEMTAG_GLOBALS_STATIC sections as they're unused
-    // medatada, and we don't want them to end up in the output file for static
-    // executables.
-    if (sec.sh_type == SHT_AARCH64_MEMTAG_GLOBALS_STATIC &&
-        !canHaveMemtagGlobals(ctx)) {
-      this->sections[i] = &InputSection::discarded;
-      continue;
-    }
-
-    if (sec.sh_type != SHT_GROUP)
-      continue;
-    StringRef signature = getShtGroupSignature(objSections, sec);
-    ArrayRef<Elf_Word> entries =
-        CHECK2(obj.template getSectionContentsAsArray<Elf_Word>(sec), this);
-    if (entries.empty())
-      Fatal(ctx) << this << ": empty SHT_GROUP";
-
-    Elf_Word flag = entries[0];
-    if (flag && flag != GRP_COMDAT)
-      Fatal(ctx) << this << ": unsupported SHT_GROUP format";
-
-    bool keepGroup = (flag & GRP_COMDAT) == 0 || ignoreComdats ||
-                     ctx.symtab->comdatGroups
-                         .try_emplace(CachedHashStringRef(signature), this)
-                         .second;
-    if (keepGroup) {
-      if (!ctx.arg.resolveGroups)
-        this->sections[i] = createInputSection(
-            i, sec, check(obj.getSectionName(sec, shstrtab)));
-      continue;
-    }
-
-    // Otherwise, discard group members.
-    for (uint32_t secIndex : entries.slice(1)) {
-      if (secIndex >= size)
-        Fatal(ctx) << this << ": invalid section index in group: " << secIndex;
-      this->sections[secIndex] = &InputSection::discarded;
+      break;
+    case EM_AARCH64:
+      // Producing a static binary with MTE globals is not currently supported,
+      // remove all SHT_AARCH64_MEMTAG_GLOBALS_STATIC sections as they're unused
+      // medatada, and we don't want them to end up in the output file for
+      // static executables.
+      if (sec.sh_type == SHT_AARCH64_MEMTAG_GLOBALS_STATIC &&
+          !canHaveMemtagGlobals(ctx))
+        sections[i] = &InputSection::discarded;
+      break;
     }
   }
 
@@ -1264,14 +1219,17 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
 
     // Handle non-COMMON defined symbol below. !sym.file allows a symbol
     // assignment to redefine a symbol without an error.
-    if (!sym.file || !sym.isDefined() || secIdx == SHN_UNDEF ||
-        secIdx == SHN_COMMON)
+    if (!sym.file || !sym.isDefined() || secIdx == SHN_UNDEF)
       continue;
+    if (LLVM_UNLIKELY(secIdx >= SHN_LORESERVE)) {
+      if (secIdx == SHN_COMMON)
+        continue;
+      if (secIdx == SHN_XINDEX)
+        secIdx = check(getExtendedSymbolTableIndex<ELFT>(eSym, i, shndxTable));
+      else
+        secIdx = 0;
+    }
 
-    if (LLVM_UNLIKELY(secIdx == SHN_XINDEX))
-      secIdx = check(getExtendedSymbolTableIndex<ELFT>(eSym, i, shndxTable));
-    else if (secIdx >= SHN_LORESERVE)
-      secIdx = 0;
     if (LLVM_UNLIKELY(secIdx >= sections.size()))
       Fatal(ctx) << this << ": invalid section index: " << secIdx;
     InputSectionBase *sec = sections[secIdx];

@@ -29,6 +29,60 @@ uint32_t NativeRegisterContextDBReg::NumSupportedHardwareBreakpoints() {
   return m_max_hbp_supported;
 }
 
+uint32_t NativeRegisterContextDBReg::SetHardwareBreakpoint(lldb::addr_t addr,
+                                                           size_t size) {
+  Log *log = GetLog(LLDBLog::Breakpoints);
+  LLDB_LOG(log, "addr: {0:x}, size: {1:x}", addr, size);
+
+  // Read hardware breakpoint and watchpoint information.
+  Status error = ReadHardwareDebugInfo();
+  if (error.Fail()) {
+    LLDB_LOG(log,
+             "unable to set breakpoint: failed to read debug registers: {0}");
+    return LLDB_INVALID_INDEX32;
+  }
+
+  uint32_t control_value = 0, bp_index = 0;
+
+  // Check hardware breakpoint size and address.
+  if (!ValidateBreakpoint(size, addr))
+    return LLDB_INVALID_INDEX32;
+
+  // Setup control value
+  control_value = MakeControlValue(size);
+
+  // Iterate over stored breakpoints and find a free bp_index
+  bp_index = LLDB_INVALID_INDEX32;
+  for (uint32_t i = 0; i < m_max_hbp_supported; i++) {
+    if (!BreakpointIsEnabled(i))
+      bp_index = i; // Mark last free slot
+    else if (m_hbp_regs[i].address == addr)
+      return LLDB_INVALID_INDEX32; // We do not support duplicate breakpoints.
+  }
+
+  if (bp_index == LLDB_INVALID_INDEX32)
+    return LLDB_INVALID_INDEX32;
+
+  // Update breakpoint in local cache
+  m_hbp_regs[bp_index].real_addr = addr;
+  m_hbp_regs[bp_index].address = addr;
+  m_hbp_regs[bp_index].control = control_value;
+
+  // PTRACE call to set corresponding hardware breakpoint register.
+  error = WriteHardwareDebugRegs(eDREGTypeBREAK);
+
+  if (error.Fail()) {
+    m_hbp_regs[bp_index].address = 0;
+    m_hbp_regs[bp_index].control &= ~m_hw_dbg_enable_bit;
+
+    LLDB_LOG(log,
+             "unable to set breakpoint: failed to write debug registers: {0}");
+    return LLDB_INVALID_INDEX32;
+  }
+
+  return bp_index;
+}
+
 bool NativeRegisterContextDBReg::ClearHardwareBreakpoint(uint32_t hw_idx) {
   Log *log = GetLog(LLDBLog::Breakpoints);
   LLDB_LOG(log, "hw_idx: {0}", hw_idx);
@@ -136,6 +190,81 @@ uint32_t NativeRegisterContextDBReg::NumSupportedHardwareWatchpoints() {
   }
 
   return m_max_hwp_supported;
+}
+
+uint32_t NativeRegisterContextDBReg::SetHardwareWatchpoint(
+    lldb::addr_t addr, size_t size, uint32_t watch_flags) {
+  Log *log = GetLog(LLDBLog::Watchpoints);
+  LLDB_LOG(log, "addr: {0:x}, size: {1:x} watch_flags: {2:x}", addr, size,
+           watch_flags);
+
+  // Read hardware breakpoint and watchpoint information.
+  Status error = ReadHardwareDebugInfo();
+  if (error.Fail()) {
+    LLDB_LOG(log,
+             "unable to set watchpoint: failed to read debug registers: {0}");
+    return LLDB_INVALID_INDEX32;
+  }
+
+  uint32_t control_value = 0, wp_index = 0;
+  lldb::addr_t real_addr = addr;
+
+  // Check hardware watchpoint size and address.
+  if (!ValidateWatchpoint(size, addr))
+    return LLDB_INVALID_INDEX32;
+
+  // lldb::eWatchpointKindRead | lldb::eWatchpointKindWrite = 3
+  if (watch_flags > 3)
+    return LLDB_INVALID_INDEX32;
+  // Encoding watch_flags
+  auto EncodingWatchFlags = [&]() {
+    switch (watch_flags & 0x3) {
+    case lldb::eWatchpointKindWrite:
+      watch_flags = 2;
+      break;
+    case lldb::eWatchpointKindRead:
+      watch_flags = 1;
+      break;
+    case (lldb::eWatchpointKindRead | lldb::eWatchpointKindWrite):
+      break;
+    }
+  };
+  EncodingWatchFlags();
+
+  // Setup control value
+  control_value = MakeControlValue(size, &watch_flags);
+
+  // Iterate over stored watchpoints and find a free wp_index
+  wp_index = LLDB_INVALID_INDEX32;
+  for (uint32_t i = 0; i < m_max_hwp_supported; i++) {
+    if (!WatchpointIsEnabled(i))
+      wp_index = i; // Mark last free slot
+    else if (m_hwp_regs[i].address == addr) {
+      return LLDB_INVALID_INDEX32; // We do not support duplicate watchpoints.
+    }
+  }
+
+  if (wp_index == LLDB_INVALID_INDEX32)
+    return LLDB_INVALID_INDEX32;
+
+  // Update watchpoint in local cache
+  m_hwp_regs[wp_index].real_addr = real_addr;
+  m_hwp_regs[wp_index].address = addr;
+  m_hwp_regs[wp_index].control = control_value;
+
+  // PTRACE call to set corresponding watchpoint register.
+  error = WriteHardwareDebugRegs(eDREGTypeWATCH);
+
+  if (error.Fail()) {
+    m_hwp_regs[wp_index].address = 0;
+    m_hwp_regs[wp_index].control &= ~m_hw_dbg_enable_bit;
+
+    LLDB_LOG(log,
+             "unable to set watchpoint: failed to write debug registers: {0}");
+    return LLDB_INVALID_INDEX32;
+  }
+
+  return wp_index;
 }
 
 bool NativeRegisterContextDBReg::ClearHardwareWatchpoint(uint32_t wp_index) {

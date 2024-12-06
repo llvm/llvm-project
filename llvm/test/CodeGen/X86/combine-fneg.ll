@@ -205,4 +205,85 @@ define <4 x float> @fneg(<4 x float> %Q) nounwind {
   ret <4 x float> %tmp
 }
 
+; TODO: store(fneg(load())) - convert scalar to integer
+define void @fneg_int_rmw_f32(ptr %ptr) {
+; X86-SSE-LABEL: fneg_int_rmw_f32:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movss %xmm0, (%eax)
+; X86-SSE-NEXT:    retl
+;
+; X64-SSE-LABEL: fneg_int_rmw_f32:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-SSE-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE-NEXT:    movss %xmm0, (%rdi)
+; X64-SSE-NEXT:    retq
+  %1 = load float, ptr %ptr
+  %2 = fneg float %1
+  store float %2, ptr %ptr
+  ret void
+}
 
+define void @fneg_int_f64(ptr %src, ptr %dst) {
+; X86-SSE1-LABEL: fneg_int_f64:
+; X86-SSE1:       # %bb.0:
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE1-NEXT:    fldl (%ecx)
+; X86-SSE1-NEXT:    fchs
+; X86-SSE1-NEXT:    fstpl (%eax)
+; X86-SSE1-NEXT:    retl
+;
+; X86-SSE2-LABEL: fneg_int_f64:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE2-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    movlps %xmm0, (%eax)
+; X86-SSE2-NEXT:    retl
+;
+; X64-SSE1-LABEL: fneg_int_f64:
+; X64-SSE1:       # %bb.0:
+; X64-SSE1-NEXT:    fldl (%rdi)
+; X64-SSE1-NEXT:    fchs
+; X64-SSE1-NEXT:    fstpl (%rsi)
+; X64-SSE1-NEXT:    retq
+;
+; X64-SSE2-LABEL: fneg_int_f64:
+; X64-SSE2:       # %bb.0:
+; X64-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-SSE2-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE2-NEXT:    movlps %xmm0, (%rsi)
+; X64-SSE2-NEXT:    retq
+  %1 = load double, ptr %src
+  %2 = fneg double %1
+  store double %2, ptr %dst
+  ret void
+}
+
+; don't convert vector to scalar
+define void @fneg_int_v4f32(ptr %src, ptr %dst) {
+; X86-SSE-LABEL: fneg_int_v4f32:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-NEXT:    movaps (%ecx), %xmm0
+; X86-SSE-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movaps %xmm0, (%eax)
+; X86-SSE-NEXT:    retl
+;
+; X64-SSE-LABEL: fneg_int_v4f32:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    movaps (%rdi), %xmm0
+; X64-SSE-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE-NEXT:    movaps %xmm0, (%rsi)
+; X64-SSE-NEXT:    retq
+  %1 = load <4 x float>, ptr %src
+  %2 = fneg <4 x float> %1
+  store <4 x float> %2, ptr %dst
+  ret void
+}

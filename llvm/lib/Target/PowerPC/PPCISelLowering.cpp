@@ -18828,7 +18828,7 @@ SDValue PPCTargetLowering::lowerToLibCall(const char *LibCallName, SDValue Op,
   Type *RetTy = RetVT.getTypeForEVT(*DAG.getContext());
   SDValue Callee =
       DAG.getExternalSymbol(LibCallName, TLI.getPointerTy(DAG.getDataLayout()));
-  bool SignExtend = TLI.shouldSignExtendTypeInLibCall(RetVT, false);
+  bool SignExtend = TLI.shouldSignExtendTypeInLibCall(RetTy, false);
   TargetLowering::ArgListTy Args;
   TargetLowering::ArgListEntry Entry;
   for (const SDValue &N : Op->op_values()) {
@@ -18836,7 +18836,7 @@ SDValue PPCTargetLowering::lowerToLibCall(const char *LibCallName, SDValue Op,
     Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
     Entry.Node = N;
     Entry.Ty = ArgTy;
-    Entry.IsSExt = TLI.shouldSignExtendTypeInLibCall(ArgVT, SignExtend);
+    Entry.IsSExt = TLI.shouldSignExtendTypeInLibCall(ArgTy, SignExtend);
     Entry.IsZExt = !Entry.IsSExt;
     Args.push_back(Entry);
   }

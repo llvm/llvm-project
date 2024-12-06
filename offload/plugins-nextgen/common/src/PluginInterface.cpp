@@ -2179,11 +2179,3 @@ int32_t GenericPluginTy::get_function(__tgt_device_binary Binary,
   *KernelPtr = &Kernel;
   return OFFLOAD_SUCCESS;
 }
-
-bool llvm::omp::target::plugin::libomptargetSupportsRPC() {
-#ifdef LIBOMPTARGET_RPC_SUPPORT
-  return true;
-#else
-  return false;
-#endif
-}

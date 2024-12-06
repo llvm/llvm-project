@@ -12,6 +12,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  timespec_get
+  SRCS
+    timespec_get.cpp
+  HDRS
+    ../timespec_get.h
+  DEPENDS
+    libc.hdr.time_macros
+    libc.hdr.types.struct_timespec
+    libc.src.__support.time.linux.clock_gettime
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   clock
   SRCS
     clock.cpp
