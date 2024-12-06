@@ -747,7 +747,16 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
                               Filename);
     };
 
-    WC->Writer.addMemProfData(Reader->takeMemProfData(), MemProfError);
+    auto MemProfData = Reader->takeMemProfData();
+
+    // Check for the empty input in case the YAML file is invalid.
+    if (MemProfData.Records.empty()) {
+      WC->Errors.emplace_back(
+          make_error<StringError>("The profile is empty.", std::error_code()),
+          Filename);
+    }
+
+    WC->Writer.addMemProfData(std::move(MemProfData), MemProfError);
     return;
   }
 
