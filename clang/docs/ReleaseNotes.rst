@@ -429,7 +429,7 @@ New Compiler Flags
   on versions older than C++20.
 
 - The ``-Warray-compare-cxx26`` warning has been added to warn about array comparison
-  starting from C++26, this warn is error by default.
+  starting from C++26, this warning is enabled as an error by default.
 
 Deprecated Compiler Flags
 -------------------------
