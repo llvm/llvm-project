@@ -573,10 +573,13 @@ set(aarch64_SOURCES
 )
 
 if (COMPILER_RT_HAS_AARCH64_SME)
-  if (NOT COMPILER_RT_DISABLE_AARCH64_FMV AND COMPILER_RT_HAS_FNO_BUILTIN_FLAG AND (COMPILER_RT_HAS_AUXV OR COMPILER_RT_BAREMETAL_BUILD))
-    list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-libc-mem-routines.S aarch64/sme-abi-init.c aarch64/sme-libc-routines.c)
+  if (NOT COMPILER_RT_DISABLE_AARCH64_FMV AND COMPILER_RT_HAS_FNO_BUILTIN_FLAG)
+    list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-libc-mem-routines.S aarch64/sme-abi-assert.c aarch64/sme-libc-routines.c)
     message(STATUS "AArch64 SME ABI routines enabled")
     set_source_files_properties(aarch64/sme-libc-routines.c PROPERTIES COMPILE_FLAGS "-fno-builtin")
+    if(COMPILER_RT_BAREMETAL_BUILD)
+      set(COMPILER_RT_BAREMETAL_AARCH64_SME TRUE)
+    endif()
   else()
     if(COMPILER_RT_DISABLE_AARCH64_FMV)
       message(WARNING "AArch64 SME ABI routines require function multiversioning support.")
@@ -843,6 +846,8 @@ else ()
   if(COMPILER_RT_DISABLE_AARCH64_FMV)
     list(APPEND BUILTIN_DEFS DISABLE_AARCH64_FMV)
   endif()
+
+  append_list_if(COMPILER_RT_BAREMETAL_AARCH64_SME -DENABLE_BAREMETAL_AARCH64_SME_FMV_FEATURES BUILTIN_CFLAGS)
 
   append_list_if(COMPILER_RT_HAS_ASM_LSE HAS_ASM_LSE BUILTIN_DEFS)
 
