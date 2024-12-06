@@ -243,6 +243,15 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   if (!canWidenLoad(Load, TTI))
     return false;
 
+  auto MaxCommonDivisor = [](int n) {
+    if (n % 4 == 0)
+      return 4;
+    if (n % 2 == 0)
+      return 2;
+    else
+      return 1;
+  };
+
   Type *ScalarTy = Scalar->getType();
   uint64_t ScalarSize = ScalarTy->getPrimitiveSizeInBits();
   unsigned MinVectorSize = TTI.getMinVectorRegisterBitWidth();
@@ -257,6 +266,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   unsigned MinVecNumElts = MinVectorSize / ScalarSize;
   auto *MinVecTy = VectorType::get(ScalarTy, MinVecNumElts, false);
   unsigned OffsetEltIndex = 0;
+  unsigned VectorRange = 0;
+  bool NeedCast = false;
   Align Alignment = Load->getAlign();
   if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1), *DL, Load, &AC,
                                    &DT)) {
@@ -273,15 +284,27 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
     if (Offset.isNegative())
       return false;
 
-    // The offset must be a multiple of the scalar element to shuffle cleanly
-    // in the element's size.
+    // If Offset is multiple of a Scalar element, it can be shuffled to the
+    // element's size; otherwise, Offset and Scalar must be shuffled to the
+    // appropriate element size for both.
     uint64_t ScalarSizeInBytes = ScalarSize / 8;
-    if (Offset.urem(ScalarSizeInBytes) != 0)
-      return false;
+    if (auto UnalignedBytes = Offset.urem(ScalarSizeInBytes);
+        UnalignedBytes != 0) {
+      uint64_t OldScalarSizeInBytes = ScalarSizeInBytes;
+      // Assign the greatest common divisor between UnalignedBytes and Offset to
+      // ScalarSizeInBytes
+      ScalarSizeInBytes = MaxCommonDivisor(UnalignedBytes);
+      ScalarSize = ScalarSizeInBytes * 8;
+      VectorRange = OldScalarSizeInBytes / ScalarSizeInBytes;
+      MinVecNumElts = MinVectorSize / ScalarSize;
+      ScalarTy = Type::getIntNTy(I.getContext(), ScalarSize);
+      MinVecTy = VectorType::get(ScalarTy, MinVecNumElts, false);
+      NeedCast = true;
+    }
 
-    // If we load MinVecNumElts, will our target element still be loaded?
     OffsetEltIndex = Offset.udiv(ScalarSizeInBytes).getZExtValue();
-    if (OffsetEltIndex >= MinVecNumElts)
+    // If we load MinVecNumElts, will our target element still be loaded?
+    if (OffsetEltIndex + VectorRange >= MinVecNumElts)
       return false;
 
     if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1), *DL, Load, &AC,
@@ -299,11 +322,14 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   Alignment = std::max(SrcPtr->getPointerAlignment(*DL), Alignment);
   Type *LoadTy = Load->getType();
   unsigned AS = Load->getPointerAddressSpace();
+  auto VecTy = cast<InsertElementInst>(&I)->getType();
+
   InstructionCost OldCost =
       TTI.getMemoryOpCost(Instruction::Load, LoadTy, Alignment, AS, CostKind);
-  APInt DemandedElts = APInt::getOneBitSet(MinVecNumElts, 0);
+  APInt DemandedElts =
+      APInt::getOneBitSet(VecTy->getElementCount().getFixedValue(), 0);
   OldCost +=
-      TTI.getScalarizationOverhead(MinVecTy, DemandedElts,
+      TTI.getScalarizationOverhead(VecTy, DemandedElts,
                                    /* Insert */ true, HasExtract, CostKind);
 
   // New pattern: load VecPtr
@@ -316,14 +342,28 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // We assume this operation has no cost in codegen if there was no offset.
   // Note that we could use freeze to avoid poison problems, but then we might
   // still need a shuffle to change the vector size.
-  auto *Ty = cast<FixedVectorType>(I.getType());
-  unsigned OutputNumElts = Ty->getNumElements();
-  SmallVector<int, 16> Mask(OutputNumElts, PoisonMaskElem);
-  assert(OffsetEltIndex < MinVecNumElts && "Address offset too big");
-  Mask[0] = OffsetEltIndex;
+  SmallVector<int> Mask;
+  assert(OffsetEltIndex + VectorRange < MinVecNumElts &&
+         "Address offset too big");
+  if (!NeedCast) {
+    auto *Ty = cast<FixedVectorType>(I.getType());
+    unsigned OutputNumElts = Ty->getNumElements();
+    Mask.assign(OutputNumElts, PoisonMaskElem);
+    Mask[0] = OffsetEltIndex;
+  } else {
+    Mask.assign(MinVecNumElts, PoisonMaskElem);
+    for (unsigned InsertPos = 0; InsertPos < VectorRange; InsertPos++)
+      Mask[InsertPos] = OffsetEltIndex++;
+  }
+
   if (OffsetEltIndex)
     NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, Ty, MinVecTy, Mask,
                                   CostKind);
+
+  if (NeedCast)
+    NewCost += TTI.getCastInstrCost(Instruction::BitCast, I.getType(), MinVecTy,
+                                    TargetTransformInfo::CastContextHint::None,
+                                    CostKind);
 
   // We can aggressively convert to the vector form because the backend can
   // invert this transform if it does not result in a performance win.
@@ -333,12 +373,16 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // It is safe and potentially profitable to load a vector directly:
   // inselt undef, load Scalar, 0 --> load VecPtr
   IRBuilder<> Builder(Load);
+  Value *Result;
   Value *CastedPtr =
       Builder.CreatePointerBitCastOrAddrSpaceCast(SrcPtr, Builder.getPtrTy(AS));
-  Value *VecLd = Builder.CreateAlignedLoad(MinVecTy, CastedPtr, Alignment);
-  VecLd = Builder.CreateShuffleVector(VecLd, Mask);
+  Result = Builder.CreateAlignedLoad(MinVecTy, CastedPtr, Alignment);
+  Result = Builder.CreateShuffleVector(Result, Mask);
 
-  replaceValue(I, *VecLd);
+  if (NeedCast)
+    Result = Builder.CreateBitOrPointerCast(Result, I.getType());
+
+  replaceValue(I, *Result);
   ++NumVecLoad;
   return true;
 }
