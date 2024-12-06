@@ -9,13 +9,13 @@
 #ifndef _LIBCPP___TUPLE_TUPLE_LIKE_EXT_H
 #define _LIBCPP___TUPLE_TUPLE_LIKE_EXT_H
 
-#include <__config>
-#include <__fwd/array.h>
-#include <__fwd/pair.h>
-#include <__fwd/tuple.h>
-#include <__tuple/tuple_types.h>
-#include <__type_traits/integral_constant.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__fwd/array.h>
+#include <__cxx03/__fwd/pair.h>
+#include <__cxx03/__fwd/tuple.h>
+#include <__cxx03/__tuple/tuple_types.h>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

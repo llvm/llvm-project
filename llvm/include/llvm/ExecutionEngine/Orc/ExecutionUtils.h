@@ -315,7 +315,7 @@ public:
 
   /// Returns a list of filenames of dynamic libraries that this archive has
   /// imported. This class does not load these libraries by itself. User is
-  /// responsible for making sure these libraries are avaliable to the JITDylib.
+  /// responsible for making sure these libraries are available to the JITDylib.
   const std::set<std::string> &getImportedDynamicLibraries() const {
     return ImportedDynamicLibraries;
   }

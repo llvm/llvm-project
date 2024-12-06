@@ -10,24 +10,24 @@
 #ifndef _LIBCPP___FORMAT_FORMAT_CONTEXT_H
 #define _LIBCPP___FORMAT_FORMAT_CONTEXT_H
 
-#include <__concepts/same_as.h>
-#include <__config>
-#include <__format/buffer.h>
-#include <__format/format_arg.h>
-#include <__format/format_arg_store.h>
-#include <__format/format_args.h>
-#include <__format/format_error.h>
-#include <__fwd/format.h>
-#include <__iterator/back_insert_iterator.h>
-#include <__iterator/concepts.h>
-#include <__memory/addressof.h>
-#include <__utility/move.h>
-#include <__variant/monostate.h>
-#include <cstddef>
+#include <__cxx03/__concepts/same_as.h>
+#include <__cxx03/__config>
+#include <__cxx03/__format/buffer.h>
+#include <__cxx03/__format/format_arg.h>
+#include <__cxx03/__format/format_arg_store.h>
+#include <__cxx03/__format/format_args.h>
+#include <__cxx03/__format/format_error.h>
+#include <__cxx03/__fwd/format.h>
+#include <__cxx03/__iterator/back_insert_iterator.h>
+#include <__cxx03/__iterator/concepts.h>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/__variant/monostate.h>
+#include <__cxx03/cstddef>
 
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
-#  include <__locale>
-#  include <optional>
+#  include <__cxx03/__locale>
+#  include <__cxx03/optional>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -35,7 +35,7 @@
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

@@ -27,6 +27,12 @@ static llvm::raw_ostream &warning(Stream &strm) {
          << "warning: ";
 }
 
+static llvm::raw_ostream &note(Stream &strm) {
+  return llvm::WithColor(strm.AsRawOstream(), llvm::HighlightColor::Note,
+                         llvm::ColorMode::Enable)
+         << "note: ";
+}
+
 static void DumpStringToStreamWithNewline(Stream &strm, const std::string &s) {
   bool add_newline = false;
   if (!s.empty()) {
@@ -74,6 +80,18 @@ void CommandReturnObject::AppendMessageWithFormat(const char *format, ...) {
   GetOutputStream() << sstrm.GetString();
 }
 
+void CommandReturnObject::AppendNoteWithFormat(const char *format, ...) {
+  if (!format)
+    return;
+  va_list args;
+  va_start(args, format);
+  StreamString sstrm;
+  sstrm.PrintfVarArg(format, args);
+  va_end(args);
+
+  note(GetOutputStream()) << sstrm.GetString();
+}
+
 void CommandReturnObject::AppendWarningWithFormat(const char *format, ...) {
   if (!format)
     return;
@@ -90,6 +108,12 @@ void CommandReturnObject::AppendMessage(llvm::StringRef in_string) {
   if (in_string.empty())
     return;
   GetOutputStream() << in_string.rtrim() << '\n';
+}
+
+void CommandReturnObject::AppendNote(llvm::StringRef in_string) {
+  if (in_string.empty())
+    return;
+  note(GetOutputStream()) << in_string.rtrim() << '\n';
 }
 
 void CommandReturnObject::AppendWarning(llvm::StringRef in_string) {

@@ -16,7 +16,6 @@
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/SectionKind.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cassert>

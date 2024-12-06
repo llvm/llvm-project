@@ -4049,21 +4049,14 @@ bool RecursiveASTVisitor<Derived>::VisitOpenACCClauseList(
 
   for (const auto *C : Clauses)
     TRY_TO(VisitOpenACCClause(C));
-//    if (const auto *WithCond = dyn_cast<OopenACCClauseWithCondition>(C);
-//        WithCond && WIthCond->hasConditionExpr()) {
-//      TRY_TO(TraverseStmt(WithCond->getConditionExpr());
-//    } else if (const auto *
-//  }
-//  OpenACCClauseWithCondition::getConditionExpr/hasConditionExpr
-//OpenACCClauseWithExprs::children (might be null?)
-  // TODO OpenACC: When we have Clauses with expressions, we should visit them
-  // here.
   return true;
 }
 
 DEF_TRAVERSE_STMT(OpenACCComputeConstruct,
                   { TRY_TO(TraverseOpenACCAssociatedStmtConstruct(S)); })
 DEF_TRAVERSE_STMT(OpenACCLoopConstruct,
+                  { TRY_TO(TraverseOpenACCAssociatedStmtConstruct(S)); })
+DEF_TRAVERSE_STMT(OpenACCCombinedConstruct,
                   { TRY_TO(TraverseOpenACCAssociatedStmtConstruct(S)); })
 
 // Traverse HLSL: Out argument expression

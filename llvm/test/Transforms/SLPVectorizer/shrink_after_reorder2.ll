@@ -9,14 +9,14 @@ define void @foo(ptr %this, ptr %p, i32 %add7) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 poison, i32 undef>, i32 [[ADD7:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = sdiv <2 x i32> [[TMP0]], <i32 2, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = sdiv <2 x i32> [[TMP0]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
 ; CHECK-NEXT:    switch i32 undef, label [[SW_EPILOG:%.*]] [
 ; CHECK-NEXT:      i32 0, label [[SW_BB:%.*]]
 ; CHECK-NEXT:      i32 2, label [[SW_BB]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
-; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i32> [[TMP1]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i32> [[TMP1]], splat (i32 -1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i32>, ptr [[THIS:%.*]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i32> [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    br label [[SW_EPILOG]]

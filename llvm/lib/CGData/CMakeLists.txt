@@ -4,6 +4,8 @@ add_llvm_component_library(LLVMCGData
   CodeGenDataWriter.cpp
   OutlinedHashTree.cpp
   OutlinedHashTreeRecord.cpp
+  StableFunctionMap.cpp
+  StableFunctionMapRecord.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CGData

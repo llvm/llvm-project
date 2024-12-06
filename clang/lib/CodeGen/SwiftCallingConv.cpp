@@ -15,7 +15,6 @@
 #include "CodeGenModule.h"
 #include "TargetInfo.h"
 #include "clang/Basic/TargetInfo.h"
-#include <optional>
 
 using namespace clang;
 using namespace CodeGen;

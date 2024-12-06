@@ -53,6 +53,19 @@ struct RISCVTuneInfo {
 
   // Tail duplication threshold at -O3.
   unsigned TailDupAggressiveThreshold;
+
+  unsigned MaxStoresPerMemsetOptSize;
+  unsigned MaxStoresPerMemset;
+
+  unsigned MaxGluedStoresPerMemcpy;
+  unsigned MaxStoresPerMemcpyOptSize;
+  unsigned MaxStoresPerMemcpy;
+
+  unsigned MaxStoresPerMemmoveOptSize;
+  unsigned MaxStoresPerMemmove;
+
+  unsigned MaxLoadsPerMemcmpOptSize;
+  unsigned MaxLoadsPerMemcmp;
 };
 
 #define GET_RISCVTuneInfoTable_DECL
@@ -238,6 +251,27 @@ public:
     return hasVInstructions() ? MaxInterleaveFactor : 1;
   }
 
+  bool hasOptimizedSegmentLoadStore(unsigned NF) const {
+    switch (NF) {
+    case 2:
+      return hasOptimizedNF2SegmentLoadStore();
+    case 3:
+      return hasOptimizedNF3SegmentLoadStore();
+    case 4:
+      return hasOptimizedNF4SegmentLoadStore();
+    case 5:
+      return hasOptimizedNF5SegmentLoadStore();
+    case 6:
+      return hasOptimizedNF6SegmentLoadStore();
+    case 7:
+      return hasOptimizedNF7SegmentLoadStore();
+    case 8:
+      return hasOptimizedNF8SegmentLoadStore();
+    default:
+      llvm_unreachable("Unexpected NF");
+    }
+  }
+
   // Returns VLEN divided by DLEN. Where DLEN is the datapath width of the
   // vector hardware implementation which may be less than VLEN.
   unsigned getDLenFactor() const {
@@ -280,9 +314,6 @@ public:
 
   bool enableSubRegLiveness() const override;
 
-  void getPostRAMutations(std::vector<std::unique_ptr<ScheduleDAGMutation>>
-                              &Mutations) const override;
-
   bool useAA() const override;
 
   unsigned getCacheLineSize() const override {
@@ -306,6 +337,33 @@ public:
   unsigned getTailDupAggressiveThreshold() const {
     return TuneInfo->TailDupAggressiveThreshold;
   }
+
+  unsigned getMaxStoresPerMemset(bool OptSize) const {
+    return OptSize ? TuneInfo->MaxStoresPerMemsetOptSize
+                   : TuneInfo->MaxStoresPerMemset;
+  }
+
+  unsigned getMaxGluedStoresPerMemcpy() const {
+    return TuneInfo->MaxGluedStoresPerMemcpy;
+  }
+
+  unsigned getMaxStoresPerMemcpy(bool OptSize) const {
+    return OptSize ? TuneInfo->MaxStoresPerMemcpyOptSize
+                   : TuneInfo->MaxStoresPerMemcpy;
+  }
+
+  unsigned getMaxStoresPerMemmove(bool OptSize) const {
+    return OptSize ? TuneInfo->MaxStoresPerMemmoveOptSize
+                   : TuneInfo->MaxStoresPerMemmove;
+  }
+
+  unsigned getMaxLoadsPerMemcmp(bool OptSize) const {
+    return OptSize ? TuneInfo->MaxLoadsPerMemcmpOptSize
+                   : TuneInfo->MaxLoadsPerMemcmp;
+  }
+
+  void overrideSchedPolicy(MachineSchedPolicy &Policy,
+                           unsigned NumRegionInstrs) const override;
 };
 } // End llvm namespace
 

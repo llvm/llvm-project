@@ -44,6 +44,18 @@ enum NodeType : unsigned {
   SELECT_CC,
   BR_CC,
 
+  /// Turn a pair of `i<xlen>`s into an even-odd register pair (`untyped`).
+  /// - Output: `untyped` even-odd register pair
+  /// - Input 0: `i<xlen>` low-order bits, for even register.
+  /// - Input 1: `i<xlen>` high-order bits, for odd register.
+  BuildGPRPair,
+
+  /// Turn an even-odd register pair (`untyped`) into a pair of `i<xlen>`s.
+  /// - Output 0: `i<xlen>` low-order bits, from even register.
+  /// - Output 1: `i<xlen>` high-order bits, from odd register.
+  /// - Input: `untyped` even-odd register pair
+  SplitGPRPair,
+
   /// Turns a pair of `i32`s into an `f64`. Needed for rv32d/ilp32.
   /// - Output: `f64`.
   /// - Input 0: low-order bits (31-0) (as `i32`), for even register.
@@ -307,8 +319,6 @@ enum NodeType : unsigned {
   FCOPYSIGN_VL, // Has a passthru operand
   VFCVT_RTZ_X_F_VL,
   VFCVT_RTZ_XU_F_VL,
-  VFCVT_X_F_VL,
-  VFCVT_XU_F_VL,
   VFROUND_NOEXCEPT_VL,
   VFCVT_RM_X_F_VL,  // Has a rounding mode operand.
   VFCVT_RM_XU_F_VL, // Has a rounding mode operand.
@@ -358,10 +368,6 @@ enum NodeType : unsigned {
   VWMACC_VL,
   VWMACCU_VL,
   VWMACCSU_VL,
-
-  // Narrowing logical shift right.
-  // Operands are (source, shift, passthru, mask, vl)
-  VNSRL_VL,
 
   // Vector compare producing a mask. Fourth operand is input mask. Fifth
   // operand is VL.
@@ -549,6 +555,11 @@ public:
   MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
                                     EVT VT) const override;
 
+  /// Return the number of registers for a given MVT, for inline assembly
+  unsigned
+  getNumRegisters(LLVMContext &Context, EVT VT,
+                  std::optional<MVT> RegisterVT = std::nullopt) const override;
+
   /// Return the number of registers for a given MVT, ensuring vectors are
   /// treated as a series of gpr sized integers.
   unsigned getNumRegistersForCallingConv(LLVMContext &Context,
@@ -735,7 +746,7 @@ public:
   getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
 
   bool shouldExtendTypeInLibCall(EVT Type) const override;
-  bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const override;
+  bool shouldSignExtendTypeInLibCall(Type *Ty, bool IsSigned) const override;
 
   /// Returns the register with the specified architectural or ABI name. This
   /// method is necessary to lower the llvm.read_register.* and
@@ -1053,6 +1064,9 @@ private:
 
   SDValue emitFlushICache(SelectionDAG &DAG, SDValue InChain, SDValue Start,
                           SDValue End, SDValue Flags, SDLoc DL) const;
+
+  std::pair<const TargetRegisterClass *, uint8_t>
+  findRepresentativeClass(const TargetRegisterInfo *TRI, MVT VT) const override;
 };
 
 namespace RISCVVIntrinsicsTable {

@@ -89,7 +89,6 @@
 #include "AMDGPUTargetMachine.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -358,7 +357,6 @@ void AMDGPUSwLowerLDS::buildSwLDSGlobal(Function *Func) {
   GlobalValue::SanitizerMetadata MD;
   MD.NoAddress = true;
   LDSParams.SwLDS->setSanitizerMetadata(MD);
-  return;
 }
 
 void AMDGPUSwLowerLDS::buildSwDynLDSGlobal(Function *Func) {
@@ -377,7 +375,6 @@ void AMDGPUSwLowerLDS::buildSwDynLDSGlobal(Function *Func) {
   GlobalValue::SanitizerMetadata MD;
   MD.NoAddress = true;
   LDSParams.SwDynLDS->setSanitizerMetadata(MD);
-  return;
 }
 
 void AMDGPUSwLowerLDS::populateSwLDSAttributeAndMetadata(Function *Func) {
@@ -496,7 +493,6 @@ void AMDGPUSwLowerLDS::populateSwMetadataGlobal(Function *Func) {
   GlobalValue::SanitizerMetadata MD;
   MD.NoAddress = true;
   LDSParams.SwLDSMetadata->setSanitizerMetadata(MD);
-  return;
 }
 
 void AMDGPUSwLowerLDS::populateLDSToReplacementIndicesMap(Function *Func) {
@@ -522,7 +518,6 @@ void AMDGPUSwLowerLDS::populateLDSToReplacementIndicesMap(Function *Func) {
   PopulateIndices(LDSParams.IndirectAccess.StaticLDSGlobals, Idx);
   PopulateIndices(LDSParams.DirectAccess.DynamicLDSGlobals, Idx);
   PopulateIndices(LDSParams.IndirectAccess.DynamicLDSGlobals, Idx);
-  return;
 }
 
 static void replacesUsesOfGlobalInFunction(Function *Func, GlobalVariable *GV,
@@ -1118,7 +1113,6 @@ void AMDGPUSwLowerLDS::initAsanInfo() {
                                   false, &Offset, &Scale, &OrShadowOffset);
   AsanInfo.Scale = Scale;
   AsanInfo.Offset = Offset;
-  return;
 }
 
 bool AMDGPUSwLowerLDS::run() {

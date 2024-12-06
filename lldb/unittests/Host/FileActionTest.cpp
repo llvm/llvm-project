@@ -34,7 +34,9 @@ TEST(FileActionTest, OpenReadWrite) {
 TEST(FileActionTest, OpenReadOnly) {
   FileAction Action;
   Action.Open(49, FileSpec("/tmp_1"), /*read*/ true, /*write*/ false);
+#ifndef _WIN32
   EXPECT_TRUE(Action.GetActionArgument() & (O_NOCTTY | O_RDONLY));
+#endif
   EXPECT_FALSE(Action.GetActionArgument() & O_WRONLY);
 }
 

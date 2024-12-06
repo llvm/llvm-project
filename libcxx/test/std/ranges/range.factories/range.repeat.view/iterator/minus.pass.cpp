@@ -11,10 +11,10 @@
 // friend constexpr iterator operator-(iterator i, difference_type n);
 // friend constexpr difference_type operator-(const iterator& x, const iterator& y);
 
-#include <ranges>
 #include <cassert>
-#include <cstdint>
 #include <concepts>
+#include <cstddef>
+#include <ranges>
 
 constexpr bool test() {
   // <iterator> - difference_type
