@@ -1072,11 +1072,11 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
     if (!isTriviallyVectorizable(BaseID) && BaseMappings.empty())
       return InstructionsState::invalid();
   }
-<<<<<<< HEAD
+  bool AnyPoison = InstCnt != VL.size();
   // Currently, this is only used for binary ops.
   // TODO: support all instructions
   SmallVector<InterchangeableInstruction> InterchangeableOpcode =
-      getInterchangeableInstruction(cast<Instruction>(VL[BaseIndex]));
+      getInterchangeableInstruction(cast<Instruction>(V));
   SmallVector<InterchangeableInstruction> AlternateInterchangeableOpcode;
   auto UpdateInterchangeableOpcode =
       [](SmallVector<InterchangeableInstruction> &LHS,
@@ -1089,9 +1089,6 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
         LHS.swap(NewInterchangeableOpcode);
         return true;
       };
-=======
-  bool AnyPoison = InstCnt != VL.size();
->>>>>>> upstream/main
   for (int Cnt = 0, E = VL.size(); Cnt < E; Cnt++) {
     auto *I = dyn_cast<Instruction>(VL[Cnt]);
     if (!I)
@@ -1123,7 +1120,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
                       }),
             ThisInterchangeableOpcode.end());
         if (InterchangeableOpcode.empty() || ThisInterchangeableOpcode.empty())
-          return InstructionsState(VL[BaseIndex], nullptr, nullptr);
+          return InstructionsState::invalid();
         AlternateInterchangeableOpcode.swap(ThisInterchangeableOpcode);
         continue;
       }
@@ -1230,7 +1227,6 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
     return InstructionsState::invalid();
   }
 
-<<<<<<< HEAD
   if (IsBinOp) {
     auto FindOp = [&](ArrayRef<InterchangeableInstruction> CandidateOp) {
       for (Value *V : VL)
@@ -1244,12 +1240,9 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
     Instruction *AltOp = AlternateInterchangeableOpcode.empty()
                              ? MainOp
                              : FindOp(AlternateInterchangeableOpcode);
-    return InstructionsState(VL[BaseIndex], MainOp, AltOp);
+    return InstructionsState(MainOp, AltOp);
   }
-  return InstructionsState(VL[BaseIndex], cast<Instruction>(VL[BaseIndex]),
-=======
   return InstructionsState(cast<Instruction>(V),
->>>>>>> upstream/main
                            cast<Instruction>(VL[AltIndex]));
 }
 
@@ -2593,11 +2586,18 @@ public:
       InstructionsState S = getSameOpcode(VL, TLI);
       for (unsigned OpIdx : seq<unsigned>(NumOperands))
         OpsVec[OpIdx].resize(NumLanes);
-<<<<<<< HEAD
-      for (auto [I, V] : enumerate(VL)) {
-        assert(isa<Instruction>(V) && "Expected instruction");
+      for (auto [Lane, V] : enumerate(VL)) {
+        assert((isa<Instruction>(V) || isa<PoisonValue>(V)) &&
+               "Expected instruction or poison value");
+        if (isa<PoisonValue>(V)) {
+          for (unsigned OpIdx : seq<unsigned>(NumOperands))
+            OpsVec[OpIdx][Lane] = {
+                PoisonValue::get(VL0->getOperand(OpIdx)->getType()), true,
+                false};
+          continue;
+        }
         auto [SelectedOp, Ops] = getInterchangeableInstruction(
-            cast<Instruction>(V), S.MainOp, S.AltOp);
+            cast<Instruction>(V), S.getMainOp(), S.getAltOp());
         // Our tree has just 3 nodes: the root and two operands.
         // It is therefore trivial to get the APO. We only need to check the
         // opcode of V and whether the operand at OpIdx is the LHS or RHS
@@ -2610,30 +2610,8 @@ public:
         // tell the inverse operations by checking commutativity.
         bool IsInverseOperation = !isCommutative(cast<Instruction>(SelectedOp));
         for (unsigned OpIdx : seq<unsigned>(NumOperands)) {
-=======
-        for (unsigned Lane = 0; Lane != NumLanes; ++Lane) {
-          assert((isa<Instruction>(VL[Lane]) || isa<PoisonValue>(VL[Lane])) &&
-                 "Expected instruction or poison value");
-          // Our tree has just 3 nodes: the root and two operands.
-          // It is therefore trivial to get the APO. We only need to check the
-          // opcode of VL[Lane] and whether the operand at OpIdx is the LHS or
-          // RHS operand. The LHS operand of both add and sub is never attached
-          // to an inversese operation in the linearized form, therefore its APO
-          // is false. The RHS is true only if VL[Lane] is an inverse operation.
-
-          // Since operand reordering is performed on groups of commutative
-          // operations or alternating sequences (e.g., +, -), we can safely
-          // tell the inverse operations by checking commutativity.
-          if (isa<PoisonValue>(VL[Lane])) {
-            OpsVec[OpIdx][Lane] = {
-                PoisonValue::get(VL0->getOperand(OpIdx)->getType()), true,
-                false};
-            continue;
-          }
-          bool IsInverseOperation = !isCommutative(cast<Instruction>(VL[Lane]));
->>>>>>> upstream/main
           bool APO = (OpIdx == 0) ? false : IsInverseOperation;
-          OpsVec[OpIdx][I] = {Ops[OpIdx], APO, false};
+          OpsVec[OpIdx][Lane] = {Ops[OpIdx], APO, false};
         }
       }
     }
@@ -3534,24 +3512,6 @@ private:
       copy(OpVL, Operands[OpIdx].begin());
     }
 
-<<<<<<< HEAD
-    /// Set the operands of this bundle in their original order.
-    void setOperandsInOrder() {
-      assert(Operands.empty() && "Already initialized?");
-      auto *I0 = cast<Instruction>(Scalars[0]);
-      Operands.resize(I0->getNumOperands());
-      unsigned NumLanes = Scalars.size();
-      unsigned NumOperands = I0->getNumOperands();
-      for (unsigned OpIdx : seq<unsigned>(NumOperands))
-        Operands[OpIdx].resize(NumLanes);
-      for (auto [I, V] : enumerate(Scalars)) {
-        auto [SelectedOp, Ops] =
-            getInterchangeableInstruction(cast<Instruction>(V), MainOp, AltOp);
-        assert(Ops.size() == NumOperands && "Expected same number of operands");
-        for (auto [J, Op] : enumerate(Ops))
-          Operands[J][I] = Op;
-      }
-=======
     /// Set this bundle's operand from Scalars.
     void setOperand(const BoUpSLP &R, bool RequireReorder = false) {
       VLOperands Ops(Scalars, MainOp, R);
@@ -3559,7 +3519,6 @@ private:
         Ops.reorder();
       for (unsigned I : seq<unsigned>(MainOp->getNumOperands()))
         setOperand(I, Ops.getVL(I));
->>>>>>> upstream/main
     }
 
     /// Reorders operands of the node to the given mask \p Mask.
