@@ -10,6 +10,7 @@
 #include "../terminator.h"
 #include "flang/Runtime/CUDA/allocator.h"
 #include "flang/Runtime/CUDA/common.h"
+#include "flang/Runtime/descriptor.h"
 
 #include "cuda_runtime.h"
 
