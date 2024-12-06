@@ -508,3 +508,24 @@ func.func @launch_cluster() {
 // CHECK-NEXT: "some_op"(%[[CID]], %[[BID]], %[[BDIM]]) : (index, index, index) -> ()
 // CHECK-NEXT: = memref.load %[[KERNEL_ARG1]][%[[TID]]] : memref<?xf32, 1>
 
+// -----
+// This test tests the two optional attributes kernelModule and kernelFunc for gpu.launch
+// CHECK-LABEL: func.func @testKernelAttributes()
+// CHECK: gpu.launch_func  @test_module::@test_kernel_func blocks in (%[[GRID_X:.*]], %[[GRID_Y:.*]], %[[GRID_Z:.*]]) threads in (%[[BLOCK_X:.*]], %[[BLOCK_Y:.*]], %[[BLOCK_Z:.*]])
+// CHECK: gpu.module @test_module
+// CHECK: gpu.func @test_kernel_func()
+func.func @testKernelAttributes() {
+  %gDimX = arith.constant 8 : index
+  %gDimY = arith.constant 12 : index
+  %gDimZ = arith.constant 16 : index
+  %bDimX = arith.constant 32 : index
+  %bDimY = arith.constant 16 : index
+  %bDimZ = arith.constant 8 : index
+
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %gDimX, %grid_y = %gDimY, %grid_z = %gDimZ)
+             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ) {
+    "some_op"(%bx, %tx) : (index, index) -> ()
+    gpu.terminator
+  } {kernelModule = @test_module, kernelFunc = @test_kernel_func}
+  return
+}
