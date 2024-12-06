@@ -11,6 +11,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
@@ -18,6 +19,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/LogicalResult.h"
 
 using namespace mlir;
 using namespace acc;
@@ -188,6 +190,43 @@ static LogicalResult checkWaitAndAsyncConflict(Op op) {
       return op.emitError("wait attribute cannot appear with waitOperands");
   }
   return success();
+}
+
+static ParseResult parsevarPtrTypes(mlir::OpAsmParser &parser,
+                                    mlir::Type &varPtrRawType,
+                                    mlir::TypeAttr &varTypeAttr) {
+  if (failed(parser.parseType(varPtrRawType))) {
+    return failure();
+  }
+
+  // If there is no comma, it means that the varType is implied from the
+  // element type of varPtr.
+  if (succeeded(parser.parseOptionalComma())) {
+    mlir::Type varType;
+    if (failed(parser.parseType(varType)))
+      return failure();
+    varTypeAttr = mlir::TypeAttr::get(varType);
+  } else {
+    varTypeAttr = mlir::TypeAttr::get(
+        mlir::cast<mlir::acc::PointerLikeType>(varPtrRawType).getElementType());
+  }
+
+  return success();
+}
+
+static void printvarPtrTypes(mlir::OpAsmPrinter &p, mlir::Operation *op,
+                             mlir::Type varPtrType,
+                             mlir::TypeAttr varTypeAttr) {
+  p.printType(varPtrType);
+  mlir::Type varType = varTypeAttr.getValue();
+
+  // Avoid printing the varType if it is already captured as the element type
+  // of varPtr's type.
+  if (mlir::cast<mlir::acc::PointerLikeType>(varPtrType).getElementType() !=
+      varType) {
+    p << ", ";
+    p.printType(varType);
+  }
 }
 
 //===----------------------------------------------------------------------===//

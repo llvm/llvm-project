@@ -2,7 +2,7 @@
 
 func.func @testenterdataop(%a: memref<f32>) -> () {
   %ifCond = arith.constant true
-  %0 = acc.create varPtr(%a : memref<f32>) -> memref<f32>
+  %0 = acc.create varPtr(%a : memref<f32>, f32) -> memref<f32>
   acc.enter_data if(%ifCond) dataOperands(%0 : memref<f32>)
   return
 }
@@ -13,7 +13,7 @@ func.func @testenterdataop(%a: memref<f32>) -> () {
 
 func.func @testenterdataop(%a: memref<f32>) -> () {
   %ifCond = arith.constant false
-  %0 = acc.create varPtr(%a : memref<f32>) -> memref<f32>
+  %0 = acc.create varPtr(%a : memref<f32>, f32) -> memref<f32>
   acc.enter_data if(%ifCond) dataOperands(%0 : memref<f32>)
   return
 }
@@ -25,7 +25,7 @@ func.func @testenterdataop(%a: memref<f32>) -> () {
 
 func.func @testexitdataop(%a: memref<f32>) -> () {
   %ifCond = arith.constant true
-  %0 = acc.getdeviceptr varPtr(%a : memref<f32>) -> memref<f32>
+  %0 = acc.getdeviceptr varPtr(%a : memref<f32>, f32) -> memref<f32>
   acc.exit_data if(%ifCond) dataOperands(%0 : memref<f32>)
   acc.delete accPtr(%0 : memref<f32>)
   return
@@ -37,7 +37,7 @@ func.func @testexitdataop(%a: memref<f32>) -> () {
 
 func.func @testexitdataop(%a: memref<f32>) -> () {
   %ifCond = arith.constant false
-  %0 = acc.getdeviceptr varPtr(%a : memref<f32>) -> memref<f32>
+  %0 = acc.getdeviceptr varPtr(%a : memref<f32>, f32) -> memref<f32>
   acc.exit_data if(%ifCond) dataOperands(%0 : memref<f32>)
   acc.delete accPtr(%0 : memref<f32>)
   return
@@ -49,8 +49,8 @@ func.func @testexitdataop(%a: memref<f32>) -> () {
 // -----
 
 func.func @testupdateop(%a: memref<f32>) -> () {
-  %0 = acc.getdeviceptr varPtr(%a : memref<f32>) -> memref<f32>
-  acc.update_host accPtr(%0 : memref<f32>) to varPtr(%a : memref<f32>)
+  %0 = acc.getdeviceptr varPtr(%a : memref<f32>, f32) -> memref<f32>
+  acc.update_host accPtr(%0 : memref<f32>) to varPtr(%a : memref<f32>, f32)
   %ifCond = arith.constant true
   acc.update if(%ifCond) dataOperands(%0: memref<f32>)
   return
@@ -61,8 +61,8 @@ func.func @testupdateop(%a: memref<f32>) -> () {
 // -----
 
 func.func @testupdateop(%a: memref<f32>) -> () {
-  %0 = acc.getdeviceptr varPtr(%a : memref<f32>) -> memref<f32>
-  acc.update_host accPtr(%0 : memref<f32>) to varPtr(%a : memref<f32>)
+  %0 = acc.getdeviceptr varPtr(%a : memref<f32>, f32) -> memref<f32>
+  acc.update_host accPtr(%0 : memref<f32>) to varPtr(%a : memref<f32>, f32)
   %ifCond = arith.constant false
   acc.update if(%ifCond) dataOperands(%0: memref<f32>)
   return
@@ -74,7 +74,7 @@ func.func @testupdateop(%a: memref<f32>) -> () {
 // -----
 
 func.func @testenterdataop(%a: memref<f32>, %ifCond: i1) -> () {
-  %0 = acc.create varPtr(%a : memref<f32>) -> memref<f32>
+  %0 = acc.create varPtr(%a : memref<f32>, f32) -> memref<f32>
   acc.enter_data if(%ifCond) dataOperands(%0 : memref<f32>)
   return
 }
@@ -85,7 +85,7 @@ func.func @testenterdataop(%a: memref<f32>, %ifCond: i1) -> () {
 // -----
 
 func.func @testexitdataop(%a: memref<f32>, %ifCond: i1) -> () {
-  %0 = acc.getdeviceptr varPtr(%a : memref<f32>) -> memref<f32>
+  %0 = acc.getdeviceptr varPtr(%a : memref<f32>, f32) -> memref<f32>
   acc.exit_data if(%ifCond) dataOperands(%0 : memref<f32>)
   acc.delete accPtr(%0 : memref<f32>)
   return
@@ -97,8 +97,8 @@ func.func @testexitdataop(%a: memref<f32>, %ifCond: i1) -> () {
 // -----
 
 func.func @testupdateop(%a: memref<f32>, %ifCond: i1) -> () {
-  %0 = acc.getdeviceptr varPtr(%a : memref<f32>) -> memref<f32>
-  acc.update_host accPtr(%0 : memref<f32>) to varPtr(%a : memref<f32>)
+  %0 = acc.getdeviceptr varPtr(%a : memref<f32>, f32) -> memref<f32>
+  acc.update_host accPtr(%0 : memref<f32>) to varPtr(%a : memref<f32>, f32)
   acc.update if(%ifCond) dataOperands(%0: memref<f32>)
   return
 }
@@ -109,7 +109,7 @@ func.func @testupdateop(%a: memref<f32>, %ifCond: i1) -> () {
 // -----
 
 func.func @testhostdataop(%a: memref<f32>, %ifCond: i1) -> () {
-  %0 = acc.use_device varPtr(%a : memref<f32>) -> memref<f32>
+  %0 = acc.use_device varPtr(%a : memref<f32>, f32) -> memref<f32>
   %1 = arith.constant 1 : i32
   %2 = arith.constant 10 : i32
   %false = arith.constant false
@@ -135,7 +135,7 @@ func.func @testhostdataop(%a: memref<f32>, %ifCond: i1) -> () {
 // -----
 
 func.func @testhostdataop(%a: memref<f32>, %ifCond: i1) -> () {
-  %0 = acc.use_device varPtr(%a : memref<f32>) -> memref<f32>
+  %0 = acc.use_device varPtr(%a : memref<f32>, f32) -> memref<f32>
   %true = arith.constant true
   acc.host_data dataOperands(%0 : memref<f32>) if(%true) {
   }

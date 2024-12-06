@@ -128,7 +128,7 @@ acc.update
 
 %cst = arith.constant 1 : index
 %value = memref.alloc() : memref<f32>
-%0 = acc.update_device varPtr(%value : memref<f32>) -> memref<f32>
+%0 = acc.update_device varPtr(%value : memref<f32>, f32) -> memref<f32>
 // expected-error@+1 {{async attribute cannot appear with asyncOperand}}
 acc.update async(%cst: index) dataOperands(%0 : memref<f32>) attributes {async = [#acc.device_type<none>]} 
 
@@ -136,7 +136,7 @@ acc.update async(%cst: index) dataOperands(%0 : memref<f32>) attributes {async =
 
 %cst = arith.constant 1 : index
 %value = memref.alloc() : memref<f32>
-%0 = acc.update_device varPtr(%value : memref<f32>) -> memref<f32>
+%0 = acc.update_device varPtr(%value : memref<f32>, f32) -> memref<f32>
 // expected-error@+1 {{wait attribute cannot appear with waitOperands}}
 acc.update wait({%cst: index}) dataOperands(%0: memref<f32>) attributes {waitOnly = [#acc.device_type<none>]} 
 
@@ -209,7 +209,7 @@ acc.exit_data attributes {async}
 
 %cst = arith.constant 1 : index
 %value = memref.alloc() : memref<f32>
-%0 = acc.getdeviceptr varPtr(%value : memref<f32>) -> memref<f32>
+%0 = acc.getdeviceptr varPtr(%value : memref<f32>, f32) -> memref<f32>
 // expected-error@+1 {{async attribute cannot appear with asyncOperand}}
 acc.exit_data async(%cst: index) dataOperands(%0 : memref<f32>) attributes {async}
 acc.delete accPtr(%0 : memref<f32>)
@@ -218,7 +218,7 @@ acc.delete accPtr(%0 : memref<f32>)
 
 %cst = arith.constant 1 : index
 %value = memref.alloc() : memref<f32>
-%0 = acc.getdeviceptr varPtr(%value : memref<f32>) -> memref<f32>
+%0 = acc.getdeviceptr varPtr(%value : memref<f32>, f32) -> memref<f32>
 // expected-error@+1 {{wait_devnum cannot appear without waitOperands}}
 acc.exit_data wait_devnum(%cst: index) dataOperands(%0 : memref<f32>)
 acc.delete accPtr(%0 : memref<f32>)
@@ -232,7 +232,7 @@ acc.enter_data attributes {async}
 
 %cst = arith.constant 1 : index
 %value = memref.alloc() : memref<f32>
-%0 = acc.create varPtr(%value : memref<f32>) -> memref<f32>
+%0 = acc.create varPtr(%value : memref<f32>, f32) -> memref<f32>
 // expected-error@+1 {{async attribute cannot appear with asyncOperand}}
 acc.enter_data async(%cst: index) dataOperands(%0 : memref<f32>) attributes {async}
 
@@ -240,7 +240,7 @@ acc.enter_data async(%cst: index) dataOperands(%0 : memref<f32>) attributes {asy
 
 %cst = arith.constant 1 : index
 %value = memref.alloc() : memref<f32>
-%0 = acc.create varPtr(%value : memref<f32>) -> memref<f32>
+%0 = acc.create varPtr(%value : memref<f32>, f32) -> memref<f32>
 // expected-error@+1 {{wait attribute cannot appear with waitOperands}}
 acc.enter_data wait(%cst: index) dataOperands(%0 : memref<f32>) attributes {wait}
 
@@ -248,7 +248,7 @@ acc.enter_data wait(%cst: index) dataOperands(%0 : memref<f32>) attributes {wait
 
 %cst = arith.constant 1 : index
 %value = memref.alloc() : memref<f32>
-%0 = acc.create varPtr(%value : memref<f32>) -> memref<f32>
+%0 = acc.create varPtr(%value : memref<f32>, f32) -> memref<f32>
 // expected-error@+1 {{wait_devnum cannot appear without waitOperands}}
 acc.enter_data wait_devnum(%cst: index) dataOperands(%0 : memref<f32>)
 
