@@ -5,21 +5,23 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-; CHECK: @[[LLVM_GLOBAL_CTORS:[a-zA-Z0-9_$"\\.-]+]] = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @tysan.module_ctor, ptr null }]
-; CHECK: @[[__TYSAN_V1_SIMPLE_20C_2B_2B_20TBAA:[a-zA-Z0-9_$"\\.-]+]] = linkonce_odr constant { i64, i64, [16 x i8] } { i64 2, i64 0, [16 x i8] c"Simple C++ TBAA\00" }, comdat
-; CHECK: @[[__TYSAN_V1_OMNIPOTENT_20CHAR:[a-zA-Z0-9_$"\\.-]+]] = linkonce_odr constant { i64, i64, ptr, i64, [16 x i8] } { i64 2, i64 1, ptr @__tysan_v1_Simple_20C_2b_2b_20TBAA, i64 0, [16 x i8] c"omnipotent char\00" }, comdat
-; CHECK: @[[__TYSAN_V1_INT:[a-zA-Z0-9_$"\\.-]+]] = linkonce_odr constant { i64, i64, ptr, i64, [4 x i8] } { i64 2, i64 1, ptr @__tysan_v1_omnipotent_20char, i64 0, [4 x i8] c"int\00" }, comdat
-; CHECK: @[[__TYSAN_V1___ZTSN12__GLOBAL____N__11ZE:[a-zA-Z0-9_$"\\.-]+]] = internal constant { i64, i64, ptr, i64, [23 x i8] } { i64 2, i64 1, ptr @__tysan_v1_int, i64 24, [23 x i8] c"_ZTSN12_GLOBAL__N_11zE\00" }
-; CHECK: @[[__TYSAN_V1___ZTSN12__GLOBAL____N__11ZE_O_24:[a-zA-Z0-9_$"\\.-]+]] = internal constant { i64, ptr, ptr, i64 } { i64 1, ptr @__tysan_v1___ZTSN12__GLOBAL____N__11zE, ptr @__tysan_v1_int, i64 24 }
-; CHECK: @[[__TYSAN_V1___ZTS1YIN12__GLOBAL____N__11ZEE:[a-zA-Z0-9_$"\\.-]+]] = internal constant { i64, i64, ptr, i64, [27 x i8] } { i64 2, i64 1, ptr @__tysan_v1_int, i64 24, [27 x i8] c"_ZTS1yIN12_GLOBAL__N_11zEE\00" }
-; CHECK: @[[__TYSAN_V1___ZTS1YIN12__GLOBAL____N__11ZEE_O_24:[a-zA-Z0-9_$"\\.-]+]] = internal constant { i64, ptr, ptr, i64 } { i64 1, ptr @__tysan_v1___ZTS1yIN12__GLOBAL____N__11zEE, ptr @__tysan_v1_int, i64 24 }
-; CHECK: @[[__TYSAN_SHADOW_MEMORY_ADDRESS:[a-zA-Z0-9_$"\\.-]+]] = external global i64
-; CHECK: @[[__TYSAN_APP_MEMORY_MASK:[a-zA-Z0-9_$"\\.-]+]] = external global i64
-; CHECK: @[[__TYSAN_V1_____ANONYMOUS__027D9E575C5D34CB5D60D6A1D6276F95:[a-zA-Z0-9_$"\\.-]+]] = linkonce_odr constant { i64, i64, ptr, i64, [1 x i8] } { i64 2, i64 1, ptr @__tysan_v1_int, i64 24, [1 x i8] zeroinitializer }, comdat
-; CHECK: @[[__TYSAN_V1_____ANONYMOUS__027D9E575C5D34CB5D60D6A1D6276F95_O_24:[a-zA-Z0-9_$"\\.-]+]] = linkonce_odr constant { i64, ptr, ptr, i64 } { i64 1, ptr @__tysan_v1_____anonymous__027d9e575c5d34cb5d60d6a1d6276f95, ptr @__tysan_v1_int, i64 24 }, comdat
-; CHECK: @[[LLVM_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [6 x ptr] [ptr @tysan.module_ctor, ptr @__tysan_v1_Simple_20C_2b_2b_20TBAA, ptr @__tysan_v1_omnipotent_20char, ptr @__tysan_v1_int, ptr @__tysan_v1_____anonymous__027d9e575c5d34cb5d60d6a1d6276f95, ptr @__tysan_v1_____anonymous__027d9e575c5d34cb5d60d6a1d6276f95_o_24], section "llvm.metadata"
 
 
+;.
+; CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @tysan.module_ctor, ptr null }]
+; CHECK: @__tysan_v1_Simple_20C_2b_2b_20TBAA = linkonce_odr constant { i64, i64, [16 x i8] } { i64 2, i64 0, [16 x i8] c"Simple C++ TBAA\00" }, comdat
+; CHECK: @__tysan_v1_omnipotent_20char = linkonce_odr constant { i64, i64, ptr, i64, [16 x i8] } { i64 2, i64 1, ptr @__tysan_v1_Simple_20C_2b_2b_20TBAA, i64 0, [16 x i8] c"omnipotent char\00" }, comdat
+; CHECK: @__tysan_v1_int = linkonce_odr constant { i64, i64, ptr, i64, [4 x i8] } { i64 2, i64 1, ptr @__tysan_v1_omnipotent_20char, i64 0, [4 x i8] c"int\00" }, comdat
+; CHECK: @__tysan_v1___ZTSN12__GLOBAL____N__11zE = internal constant { i64, i64, ptr, i64, [23 x i8] } { i64 2, i64 1, ptr @__tysan_v1_int, i64 24, [23 x i8] c"_ZTSN12_GLOBAL__N_11zE\00" }
+; CHECK: @__tysan_v1___ZTSN12__GLOBAL____N__11zE_o_24 = internal constant { i64, ptr, ptr, i64 } { i64 1, ptr @__tysan_v1___ZTSN12__GLOBAL____N__11zE, ptr @__tysan_v1_int, i64 24 }
+; CHECK: @__tysan_v1___ZTS1yIN12__GLOBAL____N__11zEE = internal constant { i64, i64, ptr, i64, [27 x i8] } { i64 2, i64 1, ptr @__tysan_v1_int, i64 24, [27 x i8] c"_ZTS1yIN12_GLOBAL__N_11zEE\00" }
+; CHECK: @__tysan_v1___ZTS1yIN12__GLOBAL____N__11zEE_o_24 = internal constant { i64, ptr, ptr, i64 } { i64 1, ptr @__tysan_v1___ZTS1yIN12__GLOBAL____N__11zEE, ptr @__tysan_v1_int, i64 24 }
+; CHECK: @__tysan_shadow_memory_address = external global i64
+; CHECK: @__tysan_app_memory_mask = external global i64
+; CHECK: @__tysan_v1_____anonymous__027d9e575c5d34cb5d60d6a1d6276f95 = linkonce_odr constant { i64, i64, ptr, i64, [1 x i8] } { i64 2, i64 1, ptr @__tysan_v1_int, i64 24, [1 x i8] zeroinitializer }, comdat
+; CHECK: @__tysan_v1_____anonymous__027d9e575c5d34cb5d60d6a1d6276f95_o_24 = linkonce_odr constant { i64, ptr, ptr, i64 } { i64 1, ptr @__tysan_v1_____anonymous__027d9e575c5d34cb5d60d6a1d6276f95, ptr @__tysan_v1_int, i64 24 }, comdat
+; CHECK: @llvm.used = appending global [6 x ptr] [ptr @tysan.module_ctor, ptr @__tysan_v1_Simple_20C_2b_2b_20TBAA, ptr @__tysan_v1_omnipotent_20char, ptr @__tysan_v1_int, ptr @__tysan_v1_____anonymous__027d9e575c5d34cb5d60d6a1d6276f95, ptr @__tysan_v1_____anonymous__027d9e575c5d34cb5d60d6a1d6276f95_o_24], section "llvm.metadata"
+;.
 define void @test_anon_ns(ptr %a, ptr %b) sanitize_type {
 ; CHECK-LABEL: @test_anon_ns(
 ; CHECK-NEXT:  entry:
@@ -281,3 +283,18 @@ entry:
 !10 = !{!9, !2, i64 24}
 !11 = !{!"", !2, i64 24}
 !12 = !{!11, !2, i64 24}
+;.
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { sanitize_type }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nounwind }
+;.
+; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 100000}
+; CHECK: [[TBAA1]] = !{[[META2:![0-9]+]], [[META3:![0-9]+]], i64 24}
+; CHECK: [[META2]] = !{!"_ZTSN12_GLOBAL__N_11zE", [[META3]], i64 24}
+; CHECK: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
+; CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+; CHECK: [[META5]] = !{!"Simple C++ TBAA"}
+; CHECK: [[TBAA6]] = !{[[META7:![0-9]+]], [[META3]], i64 24}
+; CHECK: [[META7]] = !{!"_ZTS1yIN12_GLOBAL__N_11zEE", [[META3]], i64 24}
+; CHECK: [[TBAA8]] = !{[[META9:![0-9]+]], [[META3]], i64 24}
+; CHECK: [[META9]] = !{!"", [[META3]], i64 24}
+;.
