@@ -557,7 +557,7 @@ while.end.i:
 define i1 @recursiveGEP_withPtrSub3(ptr %val1) {
 ; CHECK-LABEL: @recursiveGEP_withPtrSub3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TEST_VAL1:%.*]] = getelementptr inbounds i8, ptr [[VAL1:%.*]], i64 7
+; CHECK-NEXT:    [[TEST_VAL1:%.*]] = getelementptr inbounds nuw i8, ptr [[VAL1:%.*]], i64 7
 ; CHECK-NEXT:    br label [[WHILE_COND_I:%.*]]
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[TEST_VAL1]], [[ENTRY:%.*]] ]
@@ -659,7 +659,7 @@ while.end.i:
 define i1 @recursiveGEP_withPtrSub1_notKnownNonEqual3(ptr %val1) {
 ; CHECK-LABEL: @recursiveGEP_withPtrSub1_notKnownNonEqual3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TEST_VAL1:%.*]] = getelementptr inbounds i8, ptr [[VAL1:%.*]], i64 5
+; CHECK-NEXT:    [[TEST_VAL1:%.*]] = getelementptr inbounds nuw i8, ptr [[VAL1:%.*]], i64 5
 ; CHECK-NEXT:    br label [[WHILE_COND_I:%.*]]
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[TEST_VAL1]], [[ENTRY:%.*]] ]
@@ -792,7 +792,7 @@ while.end.i:
 define i1 @recursiveGEP_withPtrSub_noninboundStepAndB(ptr %val1) {
 ; CHECK-LABEL: @recursiveGEP_withPtrSub_noninboundStepAndB(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TEST:%.*]] = getelementptr inbounds i8, ptr [[VAL1:%.*]], i64 2
+; CHECK-NEXT:    [[TEST:%.*]] = getelementptr inbounds nuw i8, ptr [[VAL1:%.*]], i64 2
 ; CHECK-NEXT:    br label [[WHILE_COND_I:%.*]]
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[TEST]], [[ENTRY:%.*]] ]
