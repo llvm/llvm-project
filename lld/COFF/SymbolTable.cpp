@@ -272,9 +272,8 @@ struct UndefinedDiag {
 
 static void reportUndefinedSymbol(COFFLinkerContext &ctx,
                                   const UndefinedDiag &undefDiag) {
-  std::string out;
-  llvm::raw_string_ostream os(out);
-  os << "undefined symbol: " << toString(ctx, *undefDiag.sym);
+  auto diag = errorOrWarn(ctx);
+  diag << "undefined symbol: " << undefDiag.sym;
 
   const size_t maxUndefReferences = 3;
   size_t numDisplayedRefs = 0, numRefs = 0;
@@ -284,13 +283,11 @@ static void reportUndefinedSymbol(COFFLinkerContext &ctx,
 
     numRefs += totalLocations;
     numDisplayedRefs += symbolLocations.size();
-    for (const std::string &s : symbolLocations) {
-      os << s;
-    }
+    for (const std::string &s : symbolLocations)
+      diag << s;
   }
   if (numDisplayedRefs < numRefs)
-    os << "\n>>> referenced " << numRefs - numDisplayedRefs << " more times";
-  errorOrWarn(ctx) << out;
+    diag << "\n>>> referenced " << numRefs - numDisplayedRefs << " more times";
 }
 
 void SymbolTable::loadMinGWSymbols() {
@@ -422,12 +419,12 @@ static void reportProblemSymbols(
 
   for (Symbol *b : ctx.config.gcroot) {
     if (undefs.count(b))
-      errorOrWarn(ctx) << "<root>: undefined symbol: " << toString(ctx, *b);
+      errorOrWarn(ctx) << "<root>: undefined symbol: " << b;
     if (localImports)
       if (Symbol *imp = localImports->lookup(b))
-        Warn(ctx) << "<root>: locally defined symbol imported: "
-                  << toString(ctx, *imp) << " (defined in "
-                  << toString(imp->getFile()) << ") [LNK4217]";
+        Warn(ctx) << "<root>: locally defined symbol imported: " << imp
+                  << " (defined in " << toString(imp->getFile())
+                  << ") [LNK4217]";
   }
 
   std::vector<UndefinedDiag> undefDiags;
@@ -448,9 +445,8 @@ static void reportProblemSymbols(
       }
       if (localImports)
         if (Symbol *imp = localImports->lookup(sym))
-          Warn(ctx) << file << ": locally defined symbol imported: "
-                    << toString(ctx, *imp) << " (defined in " << imp->getFile()
-                    << ") [LNK4217]";
+          Warn(ctx) << file << ": locally defined symbol imported: " << imp
+                    << " (defined in " << imp->getFile() << ") [LNK4217]";
     }
   };
 
@@ -800,24 +796,19 @@ static std::string getSourceLocation(InputFile *file, SectionChunk *sc,
 void SymbolTable::reportDuplicate(Symbol *existing, InputFile *newFile,
                                   SectionChunk *newSc,
                                   uint32_t newSectionOffset) {
-  std::string msg;
-  llvm::raw_string_ostream os(msg);
-  os << "duplicate symbol: " << toString(ctx, *existing);
+  COFFSyncStream diag(ctx, ctx.config.forceMultiple ? DiagLevel::Warn
+                                                    : DiagLevel::Err);
+  diag << "duplicate symbol: " << existing;
 
   DefinedRegular *d = dyn_cast<DefinedRegular>(existing);
   if (d && isa<ObjFile>(d->getFile())) {
-    os << getSourceLocation(d->getFile(), d->getChunk(), d->getValue(),
-                            existing->getName());
+    diag << getSourceLocation(d->getFile(), d->getChunk(), d->getValue(),
+                              existing->getName());
   } else {
-    os << getSourceLocation(existing->getFile(), nullptr, 0, "");
+    diag << getSourceLocation(existing->getFile(), nullptr, 0, "");
   }
-  os << getSourceLocation(newFile, newSc, newSectionOffset,
-                          existing->getName());
-
-  if (ctx.config.forceMultiple)
-    Warn(ctx) << msg;
-  else
-    Err(ctx) << msg;
+  diag << getSourceLocation(newFile, newSc, newSectionOffset,
+                            existing->getName());
 }
 
 Symbol *SymbolTable::addAbsolute(StringRef n, COFFSymbolRef sym) {
