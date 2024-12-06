@@ -726,9 +726,8 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
   using ::llvm::memprof::YAMLMemProfReader;
   if (YAMLMemProfReader::hasFormat(Input.Filename)) {
     auto ReaderOrErr = YAMLMemProfReader::create(Input.Filename);
-    if (!ReaderOrErr) {
+    if (!ReaderOrErr)
       exitWithError(ReaderOrErr.takeError(), Input.Filename);
-    }
     std::unique_ptr<YAMLMemProfReader> Reader = std::move(ReaderOrErr.get());
     // Check if the profile types can be merged, e.g. clang frontend profiles
     // should not be merged with memprof profiles.
@@ -736,7 +735,7 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
       consumeError(std::move(E));
       WC->Errors.emplace_back(
           make_error<StringError>(
-              "Cannot merge MemProf profile with Clang generated profile.",
+              "Cannot merge MemProf profile with incompatible profile.",
               std::error_code()),
           Filename);
       return;
@@ -3303,19 +3302,7 @@ static int showMemProfProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
     exitWithError(std::move(E), Filename);
 
   auto Reader = std::move(ReaderOrErr.get());
-
-  // Build pairs of GUID and MemProfRecord.
-  memprof::AllMemProfData Data;
-  for (const uint64_t Key : Reader->getMemProfRecordKeys()) {
-    auto Record = Reader->getMemProfRecord(Key);
-    if (Record.takeError())
-      continue;
-    memprof::GUIDMemProfRecordPair Pair;
-    Pair.GUID = Key;
-    Pair.Record = std::move(*Record);
-    Data.HeapProfileRecords.push_back(std::move(Pair));
-  }
-
+  memprof::AllMemProfData Data = Reader->getAllMemProfData();
   yaml::Output Yout(OS);
   Yout << Data;
 

@@ -1664,12 +1664,19 @@ IndexedMemProfReader::getMemProfCallerCalleePairs() const {
   return Pairs;
 }
 
-SmallVector<uint64_t, 0> IndexedMemProfReader::getMemProfRecordKeys() const {
-  SmallVector<uint64_t, 0> Keys;
-  Keys.reserve(MemProfRecordTable->getNumEntries());
-  for (uint64_t Key : MemProfRecordTable->keys())
-    Keys.push_back(Key);
-  return Keys;
+memprof::AllMemProfData IndexedMemProfReader::getAllMemProfData() const {
+  memprof::AllMemProfData AllMemProfData;
+  AllMemProfData.HeapProfileRecords.reserve(MemProfRecordTable->getNumEntries());
+  for (uint64_t Key : MemProfRecordTable->keys()) {
+    auto Record = getMemProfRecord(Key);
+    if (Record.takeError())
+      continue;
+    memprof::GUIDMemProfRecordPair Pair;
+    Pair.GUID = Key;
+    Pair.Record = std::move(*Record);
+    AllMemProfData.HeapProfileRecords.push_back(std::move(Pair));
+  }
+  return AllMemProfData;
 }
 
 Error IndexedInstrProfReader::getFunctionCounts(StringRef FuncName,

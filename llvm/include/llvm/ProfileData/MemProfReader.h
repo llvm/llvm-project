@@ -214,16 +214,14 @@ class YAMLMemProfReader final : public MemProfReader {
 public:
   YAMLMemProfReader() = default;
 
-  // Return true if the \p DataBuffer starts with magic bytes indicating it is
-  // a raw binary memprof profile.
+  // Return true if the \p DataBuffer starts "---" indicating it is a YAML file.
   static bool hasFormat(const MemoryBuffer &DataBuffer);
   // Return true if the file at \p Path starts with magic bytes indicating it is
   // a raw binary memprof profile.
   static bool hasFormat(const StringRef Path);
 
-  // Create a RawMemProfReader after sanity checking the contents of the file at
-  // \p Path or the \p Buffer. The binary from which the profile has been
-  // collected is specified via a path in \p ProfiledBinary.
+  // Create a YAMLMemProfReader after sanity checking the contents of the file at
+  // \p Path or the \p Buffer.
   static Expected<std::unique_ptr<YAMLMemProfReader>> create(const Twine &Path);
   static Expected<std::unique_ptr<YAMLMemProfReader>>
   create(std::unique_ptr<MemoryBuffer> Buffer);
