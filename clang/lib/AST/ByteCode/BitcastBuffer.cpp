@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "BitcastBuffer.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -58,6 +59,56 @@ BitcastBuffer::copyBits(Bits BitOffset, Bits BitWidth, Bits FullBitWidth,
   }
 
   return Out;
+}
+
+bool BitcastBuffer::allInitialized() const {
+  Bits Sum;
+  for (BitRange BR : InitializedBits)
+    Sum += BR.size();
+
+  return Sum == FinalBitSize;
+}
+
+void BitcastBuffer::markInitialized(Bits Offset, Bits Length) {
+  if (Length.isZero())
+    return;
+
+  BitRange Element(Offset, Offset + Length - Bits(1));
+  if (InitializedBits.empty()) {
+    InitializedBits.push_back(Element);
+    return;
+  }
+
+  assert(InitializedBits.size() >= 1);
+  // Common case of just appending.
+  Bits End = InitializedBits.back().End;
+  if (End <= Offset) {
+    // Merge this range with the last one.
+    // In the best-case scenario, this means we only ever have
+    // one single bit range covering all bits.
+    if (End == (Offset - Bits(1))) {
+      InitializedBits.back().End = Element.End;
+      return;
+    }
+
+    // Otherwise, we can simply append.
+    InitializedBits.push_back(Element);
+  } else {
+    // Insert sorted.
+    auto It = std::upper_bound(InitializedBits.begin(), InitializedBits.end(),
+                               Element);
+    InitializedBits.insert(It, Element);
+  }
+
+#ifndef NDEBUG
+  // Ensure ranges are sorted and non-overlapping.
+  assert(llvm::is_sorted(InitializedBits));
+  for (unsigned I = 1; I != InitializedBits.size(); ++I) {
+    [[maybe_unused]] auto Prev = InitializedBits[I - 1];
+    [[maybe_unused]] auto Cur = InitializedBits[I];
+    assert(Prev.End.N < Cur.Start.N);
+  }
+#endif
 }
 
 #if 0
