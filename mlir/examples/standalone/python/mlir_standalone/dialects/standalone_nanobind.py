@@ -3,4 +3,4 @@
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 from ._standalone_ops_gen import *
-from .._mlir_libs._standaloneDialects.standalone import *
+from .._mlir_libs._standaloneDialectsNanobind.standalone import *
