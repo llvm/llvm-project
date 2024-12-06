@@ -1833,6 +1833,9 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
       continue;
     }
 
+    if (!OneUse)
+      return nullptr;
+
     if (SeenNonSimplifiedInVal)
       return nullptr; // More than one non-simplified value.
     SeenNonSimplifiedInVal = true;
