@@ -405,9 +405,16 @@ mlir::Value HlfirCShiftLowering::lowerImpl(
     mlir::Type stmtResultType) {
   auto operands = getOperandVector(loweredActuals, argLowering);
   assert(operands.size() == 3);
-  // If DIM is not present, drop the last element which is a null Value.
-  if (!operands[2])
+  mlir::Value dim = operands[2];
+  if (!dim) {
+    // If DIM is not present, drop the last element which is a null Value.
     operands.truncate(2);
+  } else {
+    // If DIM is present, then dereference it if it is a ref.
+    dim = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{dim});
+    operands[2] = dim;
+  }
+
   mlir::Type resultType = computeResultType(operands[0], stmtResultType);
   return createOp<hlfir::CShiftOp>(resultType, operands);
 }
