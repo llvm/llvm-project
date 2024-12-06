@@ -2804,6 +2804,32 @@ bool SemaHLSL::ContainsBitField(QualType BaseTy) {
   return false;
 }
 
+// Can perform an HLSL splat cast if the Dest is an aggregate and the
+// Src is a scalar or a vector of length 1
+// Or if Dest is a vector and Src is a vector of length 1
+bool SemaHLSL::CanPerformSplat(Expr *Src, QualType DestTy) {
+
+  QualType SrcTy = Src->getType();
+  if (SrcTy->isScalarType() && DestTy->isVectorType())
+    return false;
+
+  const VectorType *SrcVecTy = SrcTy->getAs<VectorType>();
+  if (!(SrcTy->isScalarType() || (SrcVecTy && SrcVecTy->getNumElements() == 1)))
+    return false;
+
+  if (SrcVecTy)
+    SrcTy = SrcVecTy->getElementType();
+
+  llvm::SmallVector<QualType> DestTypes;
+  BuildFlattenedTypeList(DestTy, DestTypes);
+
+  for(unsigned i = 0; i < DestTypes.size(); i ++) {
+    if (!CanPerformScalarCast(SrcTy, DestTypes[i]))
+      return false;
+  }
+  return true;
+}
+
 // Can we perform an HLSL Elementwise cast?
 // TODO: update this code when matrices are added; see issue #88060
 bool SemaHLSL::CanPerformElementwiseCast(Expr *Src, QualType DestTy) {

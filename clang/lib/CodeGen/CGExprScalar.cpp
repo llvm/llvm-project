@@ -2795,6 +2795,22 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     llvm::Value *Zero = llvm::Constant::getNullValue(CGF.SizeTy);
     return Builder.CreateExtractElement(Vec, Zero, "cast.vtrunc");
   }
+  case CK_HLSLSplatCast: {
+    assert(DestTy->isVectorType() && "Destination type must be a vector.");
+    auto *DestVecTy = DestTy->getAs<VectorType>();
+    QualType SrcTy = E->getType();
+    SourceLocation Loc = CE->getExprLoc();
+    Value *V = Visit(const_cast<Expr *>(E));
+    if (auto *VecTy = SrcTy->getAs<VectorType>()) {
+      assert(VecTy->getNumElements() == 1 && "Invalid HLSL splat cast.");
+      V = CGF.Builder.CreateExtractElement(V, (uint64_t)0, "vec.load");
+      SrcTy = VecTy->getElementType();
+    }
+    assert(SrcTy->isScalarType() && "Invalid HLSL splat cast.");
+    Value *Cast = EmitScalarConversion(V, SrcTy,
+				       DestVecTy->getElementType(), Loc);
+    return Builder.CreateVectorSplat(DestVecTy->getNumElements(), Cast, "splat");
+  }
   case CK_HLSLElementwiseCast: {
     RValue RV = CGF.EmitAnyExpr(E);
     SourceLocation Loc = CE->getExprLoc();

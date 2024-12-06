@@ -2776,9 +2776,16 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
   CheckedConversionKind CCK = FunctionalStyle
                                   ? CheckedConversionKind::FunctionalCast
                                   : CheckedConversionKind::CStyleCast;
+
   // This case should not trigger on regular vector splat
-  // vector cast, vector truncation, or special hlsl splat cases
   QualType SrcTy = SrcExpr.get()->getType();
+  if (Self.getLangOpts().HLSL &&
+      Self.HLSL().CanPerformSplat(SrcExpr.get(), DestType)) {
+    Kind = CK_HLSLSplatCast;
+    return;
+  }
+
+  // This case should not trigger on regular vector cast, vector truncation
   if (Self.getLangOpts().HLSL &&
       Self.HLSL().CanPerformElementwiseCast(SrcExpr.get(), DestType)) {
     if (SrcTy->isConstantArrayType())

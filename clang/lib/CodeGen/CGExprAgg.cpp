@@ -491,6 +491,33 @@ static bool isTrivialFiller(Expr *E) {
   return false;
 }
 
+static void EmitHLSLSplatCast(CodeGenFunction &CGF, Address DestVal,
+			      QualType DestTy, llvm::Value *SrcVal,
+			      QualType SrcTy, SourceLocation Loc) {
+  // Flatten our destination
+  SmallVector<QualType> DestTypes; // Flattened type
+  SmallVector<llvm::Value *, 4> IdxList;
+  SmallVector<std::pair<Address, llvm::Value *>, 16> StoreGEPList;
+  // ^^ Flattened accesses to DestVal we want to store into
+  CGF.FlattenAccessAndType(DestVal, DestTy, IdxList, StoreGEPList,
+		       DestTypes);
+
+  if (const VectorType *VT = SrcTy->getAs<VectorType>()) {
+    assert(VT->getNumElements() == 1 && "Invalid HLSL splat cast.");
+
+    SrcTy = VT->getElementType();
+    SrcVal = CGF.Builder.CreateExtractElement(SrcVal, (uint64_t)0,
+					      "vec.load");
+  }
+  assert(SrcTy->isScalarType() && "Invalid HLSL splat cast.");
+  for(unsigned i = 0; i < StoreGEPList.size(); i ++) {
+    llvm::Value *Cast = CGF.EmitScalarConversion(SrcVal, SrcTy,
+						 DestTypes[i],
+						 Loc);
+    CGF.PerformStore(StoreGEPList[i], Cast);
+  }
+}
+
 // emit a flat cast where the RHS is a scalar, including vector
 static void EmitHLSLScalarFlatCast(CodeGenFunction &CGF, Address DestVal,
                                    QualType DestTy, llvm::Value *SrcVal,
@@ -963,6 +990,21 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
   case CK_HLSLArrayRValue:
     Visit(E->getSubExpr());
     break;
+  case CK_HLSLSplatCast: {
+    Expr *Src = E->getSubExpr();
+    QualType SrcTy = Src->getType();
+    RValue RV = CGF.EmitAnyExpr(Src);
+    QualType DestTy = E->getType();
+    Address DestVal = Dest.getAddress();
+    SourceLocation Loc = E->getExprLoc();
+    
+    if (RV.isScalar()) {
+      llvm::Value *SrcVal = RV.getScalarVal();
+      EmitHLSLSplatCast(CGF, DestVal, DestTy, SrcVal, SrcTy, Loc);
+      break;
+    }
+    llvm_unreachable("RHS of HLSL splat cast must be a scalar or vector.");
+  }
   case CK_HLSLElementwiseCast: {
     Expr *Src = E->getSubExpr();
     QualType SrcTy = Src->getType();
