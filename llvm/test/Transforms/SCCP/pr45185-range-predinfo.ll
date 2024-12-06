@@ -8,9 +8,9 @@ define void @spam(ptr %arg) {
 ; CHECK-SAME: ptr [[ARG:%.*]]) {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    call void @blam(i32 0, ptr nonnull [[ARG]])
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [4 x [24 x float]], ptr [[ARG]], i64 0, i64 1, i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [4 x [24 x float]], ptr [[ARG]], i64 0, i64 1, i64 0
 ; CHECK-NEXT:    call void @blam(i32 1, ptr nonnull [[TMP1]])
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x [24 x float]], ptr [[ARG]], i64 0, i64 2, i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [4 x [24 x float]], ptr [[ARG]], i64 0, i64 2, i64 0
 ; CHECK-NEXT:    call void @blam(i32 2, ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    ret void
 ;

@@ -4515,7 +4515,13 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
         ToolChain::getOpenMPTriple(Arg->getValue(0)) == TC->getTriple()) {
       Arg->claim();
       unsigned Index = Args.getBaseArgs().MakeIndex(Arg->getValue(1));
+      unsigned Prev = Index;
       ExtractedArg = getOpts().ParseOneArg(Args, Index);
+      if (!ExtractedArg || Index > Prev + 1) {
+        TC->getDriver().Diag(diag::err_drv_invalid_Xopenmp_target_with_args)
+            << Arg->getAsString(Args);
+        continue;
+      }
       Arg = ExtractedArg.get();
     }
 
