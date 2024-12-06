@@ -377,29 +377,6 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     if (NumVGPR != 0)
       F->addFnAttr("amdgpu-num-vgpr", llvm::utostr(NumVGPR));
   }
-
-  if (const auto *Attr = FD->getAttr<AMDGPUMaxNumWorkGroupsAttr>()) {
-    uint32_t X = Attr->getMaxNumWorkGroupsX()
-                     ->EvaluateKnownConstInt(M.getContext())
-                     .getExtValue();
-    // Y and Z dimensions default to 1 if not specified
-    uint32_t Y = Attr->getMaxNumWorkGroupsY()
-                     ? Attr->getMaxNumWorkGroupsY()
-                           ->EvaluateKnownConstInt(M.getContext())
-                           .getExtValue()
-                     : 1;
-    uint32_t Z = Attr->getMaxNumWorkGroupsZ()
-                     ? Attr->getMaxNumWorkGroupsZ()
-                           ->EvaluateKnownConstInt(M.getContext())
-                           .getExtValue()
-                     : 1;
-
-    llvm::SmallString<32> AttrVal;
-    llvm::raw_svector_ostream OS(AttrVal);
-    OS << X << ',' << Y << ',' << Z;
-
-    F->addFnAttr("amdgpu-max-num-workgroups", AttrVal.str());
-  }
 }
 
 /// Emits control constants used to change per-architecture behaviour in the
@@ -450,9 +427,40 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
   if (!F)
     return;
 
+  // TODO: Use AttrBuilder
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
-  if (FD)
+  const AMDGPUMaxNumWorkGroupsAttr *MaxNumWorkGroupsAttr = nullptr;
+  if (FD) {
     setFunctionDeclAttributes(FD, F, M);
+    MaxNumWorkGroupsAttr = FD->getAttr<AMDGPUMaxNumWorkGroupsAttr>();
+  }
+
+  if (MaxNumWorkGroupsAttr) {
+    const auto *Attr = MaxNumWorkGroupsAttr;
+    uint32_t X = Attr->getMaxNumWorkGroupsX()
+                     ->EvaluateKnownConstInt(M.getContext())
+                     .getExtValue();
+    // Y and Z dimensions default to 1 if not specified
+    uint32_t Y = Attr->getMaxNumWorkGroupsY()
+                     ? Attr->getMaxNumWorkGroupsY()
+                           ->EvaluateKnownConstInt(M.getContext())
+                           .getExtValue()
+                     : 1;
+    uint32_t Z = Attr->getMaxNumWorkGroupsZ()
+                     ? Attr->getMaxNumWorkGroupsZ()
+                           ->EvaluateKnownConstInt(M.getContext())
+                           .getExtValue()
+                     : 1;
+
+    llvm::SmallString<32> AttrVal;
+    llvm::raw_svector_ostream OS(AttrVal);
+    OS << X << ',' << Y << ',' << Z;
+
+    F->addFnAttr("amdgpu-max-num-workgroups", AttrVal.str());
+  } else if (M.getLangOpts().gridSizeIsOneDimension()) {
+    // If the language only has 1D dispatches, disable Y/Z by default.
+    F->addFnAttr("amdgpu-max-num-workgroups", "4294967295,1,1");
+  }
 
   if (!getABIInfo().getCodeGenOpts().EmitIEEENaNCompliantInsts)
     F->addFnAttr("amdgpu-ieee", "false");
