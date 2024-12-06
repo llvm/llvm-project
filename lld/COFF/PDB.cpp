@@ -1725,14 +1725,13 @@ void PDBLinker::commit(codeview::GUID *guid) {
   // the user can see the output of /time and /summary, which is very helpful
   // when trying to figure out why a PDB file is too large.
   if (Error e = builder.commit(ctx.config.pdbPath, guid)) {
-    e = handleErrors(std::move(e),
-        [](const llvm::msf::MSFError &me) {
-          error(me.message());
-          if (me.isPageOverflow())
-            error("try setting a larger /pdbpagesize");
-        });
+    e = handleErrors(std::move(e), [&](const llvm::msf::MSFError &me) {
+      Err(ctx) << me.message();
+      if (me.isPageOverflow())
+        Err(ctx) << "try setting a larger /pdbpagesize";
+    });
     checkError(std::move(e));
-    error("failed to write PDB file " + Twine(ctx.config.pdbPath));
+    Err(ctx) << "failed to write PDB file " << Twine(ctx.config.pdbPath);
   }
 }
 
