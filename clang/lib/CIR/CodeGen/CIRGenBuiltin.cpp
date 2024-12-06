@@ -1110,7 +1110,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     if (E->getArg(0)->HasSideEffects(getContext()))
       return RValue::get(nullptr);
 
-    mlir::Value argValue = emitScalarExpr(E->getArg(0));
+    mlir::Value argValue = emitCheckedArgForAssume(E->getArg(0));
     builder.create<cir::AssumeOp>(getLoc(E->getExprLoc()), argValue);
     return RValue::get(nullptr);
   }
@@ -2475,6 +2475,15 @@ mlir::Value CIRGenFunction::emitCheckedArgForBuiltin(const Expr *E,
     return value;
 
   assert(!cir::MissingFeatures::sanitizerBuiltin());
+  llvm_unreachable("NYI");
+}
+
+mlir::Value CIRGenFunction::emitCheckedArgForAssume(const Expr *E) {
+  mlir::Value argValue = evaluateExprAsBool(E);
+  if (!SanOpts.has(SanitizerKind::Builtin))
+    return argValue;
+
+  assert(!MissingFeatures::sanitizerBuiltin());
   llvm_unreachable("NYI");
 }
 

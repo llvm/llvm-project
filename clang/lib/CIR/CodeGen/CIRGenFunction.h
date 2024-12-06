@@ -1782,6 +1782,10 @@ public:
   /// enabled, a runtime check specified by \p Kind is also emitted.
   mlir::Value emitCheckedArgForBuiltin(const Expr *E, BuiltinCheckKind Kind);
 
+  /// Emits an argument for a call to a `__builtin_assume`. If the builtin
+  /// sanitizer is enabled, a runtime check is also emitted.
+  mlir::Value emitCheckedArgForAssume(const Expr *E);
+
   /// returns true if aggregate type has a volatile member.
   /// TODO(cir): this could be a common AST helper between LLVM / CIR.
   bool hasVolatileMember(QualType T) {

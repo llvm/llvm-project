@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++23 -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck %s --check-prefix=CIR --input-file=%t.cir
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++23 -fclangir -emit-llvm %s -o %t.ll
 // RUN: FileCheck %s --check-prefix=LLVM --input-file=%t.ll
 
 int test_assume(int x) {
@@ -16,6 +16,22 @@ int test_assume(int x) {
 //      CIR: }
 
 //      LLVM: @_Z11test_assumei
+//      LLVM: %[[#cond:]] = trunc i8 %{{.+}} to i1
+// LLVM-NEXT: call void @llvm.assume(i1 %[[#cond]])
+
+int test_assume_attr(int x) {
+  [[assume(x > 0)]];
+  return x;
+}
+
+//      CIR: cir.func @_Z16test_assume_attri
+//      CIR:   %[[#x:]] = cir.load %{{.+}} : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   %[[#zero:]] = cir.const #cir.int<0> : !s32i
+// CIR-NEXT:   %[[#cond:]] = cir.cmp(gt, %[[#x]], %[[#zero]]) : !s32i, !cir.bool
+// CIR-NEXT:   cir.assume %[[#cond]] : !cir.bool
+//      CIR: }
+
+//      LLVM: @_Z16test_assume_attri
 //      LLVM: %[[#cond:]] = trunc i8 %{{.+}} to i1
 // LLVM-NEXT: call void @llvm.assume(i1 %[[#cond]])
 

@@ -346,6 +346,16 @@ CIRGenFunction::emitAttributedStmt(const AttributedStmt &S) {
     case attr::AlwaysInline:
     case attr::MustTail:
       llvm_unreachable("NIY attributes");
+    case attr::CXXAssume: {
+      const Expr *assumption = cast<CXXAssumeAttr>(A)->getAssumption();
+      if (getLangOpts().CXXAssumptions && builder.getInsertionBlock() &&
+          !assumption->HasSideEffects(getContext())) {
+        mlir::Value assumptionValue = emitCheckedArgForAssume(assumption);
+        builder.create<cir::AssumeOp>(getLoc(S.getSourceRange()),
+                                      assumptionValue);
+      }
+      break;
+    }
     default:
       break;
     }
