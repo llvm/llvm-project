@@ -608,7 +608,6 @@ func.func @testKernelFuncOnly() {
   return
 }
 
-
 // -----
 // This test tests gpu.launch when optional attributes kernelModule and kernelFunc are not specified.
 // CHECK-LABEL: func.func @testNoAttributes()
