@@ -1384,6 +1384,7 @@ void tools::addAsNeededOption(const ToolChain &TC,
 
 void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
                                      const llvm::opt::ArgList &Args,
+                                     const SanitizerArgs &SanArgs,
                                      ArgStringList &CmdArgs) {
   // Force linking against the system libraries sanitizers depends on
   // (see PR15823 why this is necessary).
@@ -1410,18 +1411,18 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
   // libresolv.a, even if exists, is an empty archive to satisfy POSIX -lresolv
   // requirement.
   if (TC.getTriple().isOSLinux() && !TC.getTriple().isAndroid() &&
-      !TC.getTriple().isMusl() && TC.getSanitizerArgs(Args).needsMsanRt())
+      !TC.getTriple().isMusl() && SanArgs.needsMsanRt())
     CmdArgs.push_back("-lresolv");
 }
 
 static void
 collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
+                         const SanitizerArgs &SanArgs,
                          SmallVectorImpl<StringRef> &SharedRuntimes,
                          SmallVectorImpl<StringRef> &StaticRuntimes,
                          SmallVectorImpl<StringRef> &NonWholeStaticRuntimes,
                          SmallVectorImpl<StringRef> &HelperStaticRuntimes,
                          SmallVectorImpl<StringRef> &RequiredSymbols) {
-  const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
   // Collect shared runtimes.
   if (SanArgs.needsSharedRt()) {
     if (SanArgs.needsAsanRt()) {
@@ -1555,12 +1556,12 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
 // Should be called before we add system libraries (C++ ABI, libstdc++/libc++,
 // C runtime, etc). Returns true if sanitizer system deps need to be linked in.
 bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
+                                 const SanitizerArgs &SanArgs,
                                  ArgStringList &CmdArgs) {
-  const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
   SmallVector<StringRef, 4> SharedRuntimes, StaticRuntimes,
       NonWholeStaticRuntimes, HelperStaticRuntimes, RequiredSymbols;
   if (SanArgs.linkRuntimes()) {
-    collectSanitizerRuntimes(TC, Args, SharedRuntimes, StaticRuntimes,
+    collectSanitizerRuntimes(TC, Args, SanArgs, SharedRuntimes, StaticRuntimes,
                              NonWholeStaticRuntimes, HelperStaticRuntimes,
                              RequiredSymbols);
   }
