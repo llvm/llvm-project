@@ -108,6 +108,18 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   )
 endif()
 
+get_fq_target_name(atomic_test fq_atomic_test)
+if (LIBC_TARGET_ARCHITECTURE STREQUAL "riscv")
+  if (TARGET ${fq_atomic_test}.__unit__)
+    message(STATUS "adding atomic library to ${fq_atomic_test}.__unit__")
+    target_link_libraries(${fq_atomic_test}.__unit__ PUBLIC atomic)
+  endif()
+  if (TARGET ${fq_atomic_test}.__hermetic__)
+    message(STATUS "adding atomic library to ${fq_atomic_test}.__hermetic__")
+    target_link_libraries(${fq_atomic_test}.__unit__ PUBLIC atomic)
+  endif()
+endif()
+
 add_libc_test(
   stringstream_test
   SUITE
