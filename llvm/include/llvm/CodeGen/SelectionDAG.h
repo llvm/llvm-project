@@ -44,6 +44,7 @@
 #include <cstdint>
 #include <functional>
 #include <map>
+#include <set>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -246,6 +247,9 @@ class SelectionDAG {
   ProfileSummaryInfo *PSI = nullptr;
   BlockFrequencyInfo *BFI = nullptr;
   MachineModuleInfo *MMI = nullptr;
+
+  /// Extended EVTs used for single value VTLists.
+  std::set<EVT, EVT::compareRawBits> EVTs;
 
   /// List of non-single value types.
   FoldingSet<SDVTListNode> VTListMap;

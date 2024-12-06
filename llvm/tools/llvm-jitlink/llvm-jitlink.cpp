@@ -365,7 +365,7 @@ static raw_ostream &
 operator<<(raw_ostream &OS, const Session::SymbolInfoMap &SIM) {
   OS << "Symbols:\n";
   for (auto &SKV : SIM)
-    OS << "  \"" << SKV.first() << "\" " << SKV.second << "\n";
+    OS << "  \"" << SKV.first << "\" " << SKV.second << "\n";
   return OS;
 }
 
@@ -416,8 +416,8 @@ static Error applyHarnessPromotions(Session &S, LinkGraph &G) {
       continue;
 
     if (Sym->getLinkage() == Linkage::Weak) {
-      if (!S.CanonicalWeakDefs.count(Sym->getName()) ||
-          S.CanonicalWeakDefs[Sym->getName()] != G.getName()) {
+      if (!S.CanonicalWeakDefs.count(*Sym->getName()) ||
+          S.CanonicalWeakDefs[*Sym->getName()] != G.getName()) {
         LLVM_DEBUG({
           dbgs() << "  Externalizing weak symbol " << Sym->getName() << "\n";
         });
@@ -426,18 +426,18 @@ static Error applyHarnessPromotions(Session &S, LinkGraph &G) {
         LLVM_DEBUG({
           dbgs() << "  Making weak symbol " << Sym->getName() << " strong\n";
         });
-        if (S.HarnessExternals.count(Sym->getName()))
+        if (S.HarnessExternals.count(*Sym->getName()))
           Sym->setScope(Scope::Default);
         else
           Sym->setScope(Scope::Hidden);
         Sym->setLinkage(Linkage::Strong);
       }
-    } else if (S.HarnessExternals.count(Sym->getName())) {
+    } else if (S.HarnessExternals.count(*Sym->getName())) {
       LLVM_DEBUG(dbgs() << "  Promoting " << Sym->getName() << "\n");
       Sym->setScope(Scope::Default);
       Sym->setLive(true);
       continue;
-    } else if (S.HarnessDefinitions.count(Sym->getName())) {
+    } else if (S.HarnessDefinitions.count(*Sym->getName())) {
       LLVM_DEBUG(dbgs() << "  Externalizing " << Sym->getName() << "\n");
       DefinitionsToRemove.push_back(Sym);
     }
@@ -1306,9 +1306,9 @@ Error Session::FileInfo::registerGOTEntry(
   auto TS = GetSymbolTarget(G, Sym.getBlock());
   if (!TS)
     return TS.takeError();
-  GOTEntryInfos[TS->getName()] = {Sym.getSymbolContent(),
-                                  Sym.getAddress().getValue(),
-                                  Sym.getTargetFlags()};
+  GOTEntryInfos[*TS->getName()] = {Sym.getSymbolContent(),
+                                   Sym.getAddress().getValue(),
+                                   Sym.getTargetFlags()};
   return Error::success();
 }
 
@@ -1322,7 +1322,7 @@ Error Session::FileInfo::registerStubEntry(
   if (!TS)
     return TS.takeError();
 
-  SmallVectorImpl<MemoryRegionInfo> &Entry = StubInfos[TS->getName()];
+  SmallVectorImpl<MemoryRegionInfo> &Entry = StubInfos[*TS->getName()];
   Entry.insert(Entry.begin(),
                {Sym.getSymbolContent(), Sym.getAddress().getValue(),
                 Sym.getTargetFlags()});
@@ -1340,7 +1340,7 @@ Error Session::FileInfo::registerMultiStubEntry(
   if (!Target)
     return Target.takeError();
 
-  SmallVectorImpl<MemoryRegionInfo> &Entry = StubInfos[Target->getName()];
+  SmallVectorImpl<MemoryRegionInfo> &Entry = StubInfos[*Target->getName()];
   Entry.emplace_back(Sym.getSymbolContent(), Sym.getAddress().getValue(),
                      Sym.getTargetFlags());
 
@@ -1485,15 +1485,16 @@ Session::findGOTEntryInfo(StringRef FileName, StringRef TargetName) {
   return GOTInfoItr->second;
 }
 
-bool Session::isSymbolRegistered(StringRef SymbolName) {
+bool Session::isSymbolRegistered(const orc::SymbolStringPtr &SymbolName) {
   return SymbolInfos.count(SymbolName);
 }
 
 Expected<Session::MemoryRegionInfo &>
-Session::findSymbolInfo(StringRef SymbolName, Twine ErrorMsgStem) {
+Session::findSymbolInfo(const orc::SymbolStringPtr &SymbolName,
+                        Twine ErrorMsgStem) {
   auto SymInfoItr = SymbolInfos.find(SymbolName);
   if (SymInfoItr == SymbolInfos.end())
-    return make_error<StringError>(ErrorMsgStem + ": symbol " + SymbolName +
+    return make_error<StringError>(ErrorMsgStem + ": symbol " + *SymbolName +
                                        " not found",
                                    inconvertibleErrorCode());
   return SymInfoItr->second;
@@ -1719,12 +1720,13 @@ static Error addAbsoluteSymbols(Session &S,
                                          AbsDefStmt + "\"",
                                      inconvertibleErrorCode());
     ExecutorSymbolDef AbsDef(ExecutorAddr(Addr), JITSymbolFlags::Exported);
-    if (auto Err = JD.define(absoluteSymbols({{S.ES.intern(Name), AbsDef}})))
+    auto InternedName = S.ES.intern(Name);
+    if (auto Err = JD.define(absoluteSymbols({{InternedName, AbsDef}})))
       return Err;
 
     // Register the absolute symbol with the session symbol infos.
-    S.SymbolInfos[Name] = {ArrayRef<char>(), Addr,
-                           AbsDef.getFlags().getTargetFlags()};
+    S.SymbolInfos[InternedName] = {ArrayRef<char>(), Addr,
+                                   AbsDef.getFlags().getTargetFlags()};
   }
 
   return Error::success();
@@ -2330,11 +2332,13 @@ static Error runChecks(Session &S, Triple TT, SubtargetFeatures Features) {
   LLVM_DEBUG(dbgs() << "Running checks...\n");
 
   auto IsSymbolValid = [&S](StringRef Symbol) {
-    return S.isSymbolRegistered(Symbol);
+    auto InternedSymbol = S.ES.getSymbolStringPool()->intern(Symbol);
+    return S.isSymbolRegistered(InternedSymbol);
   };
 
   auto GetSymbolInfo = [&S](StringRef Symbol) {
-    return S.findSymbolInfo(Symbol, "Can not get symbol info");
+    auto InternedSymbol = S.ES.getSymbolStringPool()->intern(Symbol);
+    return S.findSymbolInfo(InternedSymbol, "Can not get symbol info");
   };
 
   auto GetSectionInfo = [&S](StringRef FileName, StringRef SectionName) {

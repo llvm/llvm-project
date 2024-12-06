@@ -23,7 +23,7 @@ fir.global linkonce @_QQclX6995815537abaf90e86ce166af128f3a constant : !fir.char
 // CHECK: %[[GLOBAL:.*]] = fir.address_of(@_QQcl[[SYMBOL:.*]]) : !fir.ref<!fir.char<1,32>>
 // CHECK: %[[CONV:.*]] = fir.convert %[[GLOBAL]] : (!fir.ref<!fir.char<1,32>>) -> !fir.ref<i8>
 // CHECK: fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %[[CONV]], %{{.*}}) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
-// CHECK: fir.global linkonce @_QQcl[[SYMBOL]] {data_attr = #cuf.cuda<constant>} constant : !fir.char<1,32>
+// CHECK: fir.global linkonce @_QQcl[[SYMBOL]] constant : !fir.char<1,32>
 
 // CHECK-LABEL: gpu.module @cuda_device_mod
 // CHECK: fir.global linkonce @_QQclX6995815537abaf90e86ce166af128f3a
@@ -99,10 +99,11 @@ fir.global linkonce @_QQclX5465737420504153534544 constant : !fir.char<1,11> {
   fir.has_value %0 : !fir.char<1,11>
 }
 
-// CHECK: fir.global linkonce @_QQclX5465737420504153534544 {data_attr = #cuf.cuda<constant>} constant : !fir.char<1,11>
+// Checking that a constant fir.global that is only used in host code is not copied over to the device
+// CHECK: fir.global linkonce @_QQclX5465737420504153534544 constant : !fir.char<1,11>
 
 // CHECK-LABEL: gpu.module @cuda_device_mod
-// CHECK: fir.global linkonce @_QQclX5465737420504153534544 {data_attr = #cuf.cuda<constant>} constant
+// CHECK-NOT: fir.global linkonce @_QQclX5465737420504153534544
 
 // -----
 
@@ -140,7 +141,8 @@ fir.global linkonce @_QQclX5465737420504153534544 constant : !fir.char<1,11> {
 }
 func.func private @_FortranAioEndIoStatement(!fir.ref<i8>) -> i32 attributes {fir.io, fir.runtime}
 
-// CHECK: fir.global linkonce @_QQclX5465737420504153534544 {data_attr = #cuf.cuda<constant>} constant : !fir.char<1,11>
+// Checking that a constant fir.global that is used in device code is copied over to the device
+// CHECK: fir.global linkonce @_QQclX5465737420504153534544 constant : !fir.char<1,11>
 
 // CHECK-LABEL: gpu.module @cuda_device_mod 
-// CHECK: fir.global linkonce @_QQclX5465737420504153534544 {data_attr = #cuf.cuda<constant>} constant
+// CHECK: fir.global linkonce @_QQclX5465737420504153534544 constant

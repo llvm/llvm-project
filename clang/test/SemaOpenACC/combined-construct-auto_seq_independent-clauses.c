@@ -46,7 +46,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented}}
 #pragma acc parallel loop auto if_present
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented}}
 #pragma acc parallel loop auto worker
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'vector' not yet implemented}}
@@ -166,7 +165,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented}}
 #pragma acc parallel loop if_present auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented}}
 #pragma acc parallel loop worker auto
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'vector' not yet implemented}}
@@ -287,7 +285,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented}}
 #pragma acc parallel loop independent if_present
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented}}
 #pragma acc parallel loop independent worker
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'vector' not yet implemented}}
@@ -407,7 +404,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented}}
 #pragma acc parallel loop if_present independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented}}
 #pragma acc parallel loop worker independent
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'vector' not yet implemented}}
@@ -650,9 +646,8 @@ void uses() {
   // expected-note@+1{{previous clause is here}}
 #pragma acc parallel loop gang seq
   for(unsigned i = 0; i < 5; ++i);
-  // TODOexpected-error@+2{{OpenACC clause 'seq' may not appear on the same construct as a 'worker' clause on a 'parallel loop' construct}}
-  // TODOexpected-note@+1{{previous clause is here}}
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented}}
+  // expected-error@+2{{OpenACC clause 'seq' may not appear on the same construct as a 'worker' clause on a 'parallel loop' construct}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc parallel loop worker seq
   for(unsigned i = 0; i < 5; ++i);
   // TODOexpected-error@+2{{OpenACC clause 'seq' may not appear on the same construct as a 'vector' clause on a 'parallel loop' construct}}
