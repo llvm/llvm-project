@@ -344,8 +344,13 @@ void DataSharingProcessor::collectSymbols(
   // Collect all symbols referenced in the evaluation being processed,
   // that matches 'flag'.
   llvm::SetVector<const semantics::Symbol *> allSymbols;
+  bool collectSymbols = true;
+  for (const omp::Clause &clause : clauses) {
+    if (clause.id == llvm::omp::Clause::OMPC_in_reduction)
+      collectSymbols = false;
+  }
   converter.collectSymbolSet(eval, allSymbols, flag,
-                             /*collectSymbols=*/true,
+                             /*collectSymbols=*/collectSymbols,
                              /*collectHostAssociatedSymbols=*/true);
 
   llvm::SetVector<const semantics::Symbol *> symbolsInNestedRegions;

@@ -24,6 +24,7 @@
 #include "flang/Parser/tools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/Support/CommandLine.h"
+#include <type_traits>
 
 static llvm::cl::opt<bool> forceByrefReduction(
     "force-byref-reduction",
@@ -33,6 +34,32 @@ static llvm::cl::opt<bool> forceByrefReduction(
 namespace Fortran {
 namespace lower {
 namespace omp {
+
+// explicit template declarations
+template void ReductionProcessor::addDeclareReduction<omp::clause::Reduction>(
+    mlir::Location currentLocation, lower::AbstractConverter &converter,
+    const omp::clause::Reduction &reduction,
+    llvm::SmallVectorImpl<mlir::Value> &reductionVars,
+    llvm::SmallVectorImpl<bool> &reduceVarByRef,
+    llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols);
+
+template void
+ReductionProcessor::addDeclareReduction<omp::clause::TaskReduction>(
+    mlir::Location currentLocation, lower::AbstractConverter &converter,
+    const omp::clause::TaskReduction &reduction,
+    llvm::SmallVectorImpl<mlir::Value> &reductionVars,
+    llvm::SmallVectorImpl<bool> &reduceVarByRef,
+    llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols);
+
+template void ReductionProcessor::addDeclareReduction<omp::clause::InReduction>(
+    mlir::Location currentLocation, lower::AbstractConverter &converter,
+    const omp::clause::InReduction &reduction,
+    llvm::SmallVectorImpl<mlir::Value> &reductionVars,
+    llvm::SmallVectorImpl<bool> &reduceVarByRef,
+    llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols);
 
 ReductionProcessor::ReductionIdentifier ReductionProcessor::getReductionType(
     const omp::clause::ProcedureDesignator &pd) {
@@ -716,22 +743,22 @@ static bool doReductionByRef(mlir::Value reductionVar) {
   return false;
 }
 
+template <class T>
 void ReductionProcessor::addDeclareReduction(
     mlir::Location currentLocation, lower::AbstractConverter &converter,
-    const omp::clause::Reduction &reduction,
-    llvm::SmallVectorImpl<mlir::Value> &reductionVars,
+    const T &reduction, llvm::SmallVectorImpl<mlir::Value> &reductionVars,
     llvm::SmallVectorImpl<bool> &reduceVarByRef,
     llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
     llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-
-  if (std::get<std::optional<omp::clause::Reduction::ReductionModifier>>(
-          reduction.t))
-    TODO(currentLocation, "Reduction modifiers are not supported");
+  if constexpr (std::is_same<T, omp::clause::Reduction>::value) {
+    if (std::get<std::optional<typename T::ReductionModifier>>(reduction.t))
+      TODO(currentLocation, "Reduction modifiers are not supported");
+  }
 
   mlir::omp::DeclareReductionOp decl;
   const auto &redOperatorList{
-      std::get<omp::clause::Reduction::ReductionIdentifiers>(reduction.t)};
+      std::get<typename T::ReductionIdentifiers>(reduction.t)};
   assert(redOperatorList.size() == 1 && "Expecting single operator");
   const auto &redOperator = redOperatorList.front();
   const auto &objectList{std::get<omp::ObjectList>(reduction.t)};
