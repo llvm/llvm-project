@@ -11,6 +11,7 @@
 #include "flang-rt/descriptor.h"
 #include "../flang_rt/terminator.h"
 #include "flang/Runtime/CUDA/common.h"
+#include "flang/Runtime/descriptor.h"
 
 #include "cuda_runtime.h"
 
