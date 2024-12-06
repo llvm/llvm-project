@@ -800,8 +800,9 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
     // in subsequent passes.
     auto *T = V->getType();
     if (T->isAggregateType()) {
-      uint64_t Size = DL.getTypeStoreSize(T);
       IRBuilder<> Builder(SI);
+      Value *Size =
+          Builder.CreateTypeSize(Builder.getInt64Ty(), DL.getTypeStoreSize(T));
       auto *M = Builder.CreateMemSet(SI->getPointerOperand(), ByteVal, Size,
                                      SI->getAlign());
       M->copyMetadata(*SI, LLVMContext::MD_DIAssignID);
