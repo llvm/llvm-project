@@ -29,8 +29,7 @@ The ``benchmarks`` directory
 ----------------------------
 
 The ``benchmarks`` directory contains LLVM-libc's benchmarking utilities. These
-are mostly used for the memory functions. This also includes the automemcpy
-subdirectory for automatic generation of optimized memory functions.
+are mostly used for the memory functions.
 
 The ``config`` directory
 ------------------------
