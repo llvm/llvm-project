@@ -17318,6 +17318,13 @@ static SDValue lowerV32I16Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                               Zeroable, Subtarget, DAG))
     return PSHUFB;
 
+  // Try to simplify this by merging 128-bit lanes to enable a lane-based
+  // shuffle.
+  if (!V2.isUndef())
+    if (SDValue Result = lowerShuffleAsLanePermuteAndRepeatedMask(
+            DL, MVT::v32i16, V1, V2, Mask, Subtarget, DAG))
+      return Result;
+
   return lowerShuffleWithPERMV(DL, MVT::v32i16, Mask, V1, V2, Subtarget, DAG);
 }
 
