@@ -72,8 +72,8 @@ LLVM_LIBC_FUNCTION(int, clock_getres, (clockid_t id, struct timespec *res)) {
       libc_errno = EINVAL;
       return -1;
     }
-    DWORD64 tv_sec = time_adjustment / HNS_PER_SEC;
-    DWORD64 tv_nsec = (time_adjustment % HNS_PER_SEC) * 100ULL;
+    DWORD64 tv_sec = time_increment / HNS_PER_SEC;
+    DWORD64 tv_nsec = (time_increment % HNS_PER_SEC) * 100ULL;
     if (LIBC_UNLIKELY(tv_sec > SEC_LIMIT)) {
       libc_errno = EOVERFLOW;
       return -1;
@@ -94,8 +94,8 @@ LLVM_LIBC_FUNCTION(int, clock_getres, (clockid_t id, struct timespec *res)) {
     }
     DWORD hns_per_sec = static_cast<DWORD>(HNS_PER_SEC);
     DWORD sec_limit = static_cast<DWORD>(SEC_LIMIT);
-    DWORD tv_sec = time_adjustment / hns_per_sec;
-    DWORD tv_nsec = (time_adjustment % hns_per_sec) * 100UL;
+    DWORD tv_sec = time_increment / hns_per_sec;
+    DWORD tv_nsec = (time_increment % hns_per_sec) * 100UL;
     if (LIBC_UNLIKELY(tv_sec > sec_limit)) {
       libc_errno = EOVERFLOW;
       return -1;
