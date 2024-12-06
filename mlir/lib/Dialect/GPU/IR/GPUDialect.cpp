@@ -2075,7 +2075,8 @@ struct SimplifyDimOfAllocOp : public OpRewritePattern<memref::DimOp> {
       return failure();
 
     auto memrefType = llvm::dyn_cast<MemRefType>(dimOp.getSource().getType());
-    if (!memrefType || !memrefType.isDynamicDim(index.value()))
+    if (!memrefType || index.value() >= memrefType.getRank() ||
+        !memrefType.isDynamicDim(index.value()))
       return failure();
 
     auto alloc = dimOp.getSource().getDefiningOp<AllocOp>();
