@@ -387,7 +387,7 @@ Non-comprehensive list of changes in this release
 
 - The new builtin ``__builtin_counted_by_ref`` was added. In contexts where the
   programmer needs access to the ``counted_by`` attribute's field, but it's not
-  available --- e.g. in macros. For instace, it can be used to automatically
+  available --- e.g. in macros. For instance, it can be used to automatically
   set the counter during allocation in the Linux kernel:
 
   .. code-block:: c
@@ -452,7 +452,7 @@ Modified Compiler Flags
   libraries remains unchanged.
 
 - The ``-Wnontrivial-memcall`` warning has been added to warn about
-  passing non-trivially-copyable destrination parameter to ``memcpy``,
+  passing non-trivially-copyable destination parameter to ``memcpy``,
   ``memset`` and similar functions for which it is a documented undefined
   behavior. It is implied by ``-Wnontrivial-memaccess``
 
@@ -641,6 +641,20 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses dangling references for C++20's parenthesized aggregate initialization (#101957).
 
+- Fixed a bug where Clang would not emit ``-Wunused-private-field`` warnings when an unrelated class 
+  defined a defaulted comparison operator (#GH116270).
+
+  .. code-block:: c++
+
+    class A {
+    private:
+      int a; // warning: private field 'a' is not used, no diagnostic previously
+    };
+
+    class C {
+      bool operator==(const C&) = default;
+    };
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -663,6 +677,9 @@ Bug Fixes in This Version
 - Fixed a crash when GNU statement expression contains invalid statement (#GH113468).
 - Fixed a failed assertion when using ``__attribute__((noderef))`` on an
   ``_Atomic``-qualified type (#GH116124).
+- No longer return ``false`` for ``noexcept`` expressions involving a
+  ``delete`` which resolves to a destroying delete but the type of the object
+  being deleted has a potentially throwing destructor (#GH118660).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -687,7 +704,7 @@ Bug Fixes to C++ Support
 - Fixed a failed assertion when checking invalid delete operator declaration. (#GH96191)
 - Fix a crash when checking destructor reference with an invalid initializer. (#GH97230)
 - Clang now correctly parses potentially declarative nested-name-specifiers in pointer-to-member declarators.
-- Fix a crash when checking the initialzier of an object that was initialized
+- Fix a crash when checking the initializer of an object that was initialized
   with a string literal. (#GH82167)
 - Fix a crash when matching template template parameters with templates which have
   parameters of different class type. (#GH101394)
@@ -731,7 +748,7 @@ Bug Fixes to C++ Support
 - Fix a crash when using ``source_location`` in the trailing return type of a lambda expression. (#GH67134)
 - A follow-up fix was added for (#GH61460), as the previous fix was not entirely correct. (#GH86361), (#GH112352)
 - Fixed a crash in the typo correction of an invalid CTAD guide. (#GH107887)
-- Fixed a crash when clang tries to subtitute parameter pack while retaining the parameter
+- Fixed a crash when clang tries to substitute parameter pack while retaining the parameter
   pack. (#GH63819), (#GH107560)
 - Fix a crash when a static assert declaration has an invalid close location. (#GH108687)
 - Avoided a redundant friend declaration instantiation under a certain ``consteval`` context. (#GH107175)
@@ -1052,7 +1069,7 @@ Moved checkers
   ``bugprone-branch-clone``.
 
 - The checker ``alpha.security.MallocOverflow`` was deleted because it was
-  badly implemented and its agressive logic produced too many false positives.
+  badly implemented and its aggressive logic produced too many false positives.
   To detect too large arguments passed to malloc, consider using the checker
   ``alpha.taint.TaintedAlloc``.
 
