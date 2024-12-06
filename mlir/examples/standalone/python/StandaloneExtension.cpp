@@ -1,7 +1,4 @@
-//===- StandaloneExtensionPybind11.cpp - Extension module -----------------===//
-//
-// This is the pybind11 version of the example module. There is also a nanobind
-// example in StandaloneExtensionNanobind.cpp.
+//===- StandaloneExtension.cpp - Extension module -------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,7 +11,7 @@
 
 using namespace mlir::python::adaptors;
 
-PYBIND11_MODULE(_standaloneDialectsPybind11, m) {
+PYBIND11_MODULE(_standaloneDialects, m) {
   //===--------------------------------------------------------------------===//
   // standalone dialect
   //===--------------------------------------------------------------------===//
