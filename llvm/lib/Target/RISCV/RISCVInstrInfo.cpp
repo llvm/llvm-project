@@ -390,7 +390,7 @@ void RISCVInstrInfo::copyPhysRegVector(
   auto FindRegWithEncoding = [TRI](const TargetRegisterClass &RegClass,
                                    uint16_t Encoding) {
     MCRegister Reg = RISCV::V0 + Encoding;
-    if (RegClass.hasSuperClassEq(&RISCV::VRRegClass))
+    if (RISCVRI::getLMul(RegClass.TSFlags) == RISCVII::LMUL_1)
       return Reg;
     return TRI->getMatchingSuperReg(Reg, RISCV::sub_vrm1_0, &RegClass);
   };
