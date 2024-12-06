@@ -1833,7 +1833,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
       continue;
     }
 
-    if (!OneUse)
+    if (!OneUse && !IdenticalUsers)
       return nullptr;
 
     if (SeenNonSimplifiedInVal)

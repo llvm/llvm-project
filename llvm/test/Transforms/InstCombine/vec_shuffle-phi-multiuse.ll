@@ -48,7 +48,7 @@ define void @deinterleave_interleave(ptr %p_begin, ptr %p_end, ptr %out) {
 ; CHECK-NEXT:    [[LOWS_F:%.*]] = uitofp nneg <4 x i8> [[LOWS]] to <4 x float>
 ; CHECK-NEXT:    [[SUM_LOWS]] = fadd <4 x float> [[ACC]], [[LOWS_F]]
 ; CHECK-NEXT:    [[SUM_HIGHS]] = fadd <4 x float> [[ODDS]], [[HIGHS_F]]
-; CHECK-NEXT:    [[P_INC]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; CHECK-NEXT:    [[P_INC]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P_INC]], [[P_END]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
