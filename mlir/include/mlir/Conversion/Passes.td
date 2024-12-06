@@ -1435,4 +1435,16 @@ def ConvertVectorToXeGPU : Pass<"convert-vector-to-xegpu"> {
   ];
 }
 
+//===----------------------------------------------------------------------===//
+// LLVMToControlFlow
+//===----------------------------------------------------------------------===//
+
+def ConvertLLVMToControlFlow : Pass<"convert-llvm-to-control-flow"> {
+  let summary = "Convert LLVM dialect to the control flow dialect";
+  let dependentDialects = [
+    "cf::ControlFlowDialect",
+    "LLVM::LLVMDialect"
+  ];
+}
+
 #endif // MLIR_CONVERSION_PASSES
