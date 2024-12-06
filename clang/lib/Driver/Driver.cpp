@@ -1240,6 +1240,19 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   CLOptions = std::make_unique<InputArgList>(
       ParseArgStrings(ArgList.slice(1), /*UseDriverMode=*/true, ContainsError));
 
+  // We want to determine the triple early so that we load the correct config.
+  if (IsCLMode()) {
+    // clang-cl targets MSVC-style Win32.
+    llvm::Triple T(TargetTriple);
+    T.setOS(llvm::Triple::Win32);
+    T.setVendor(llvm::Triple::PC);
+    T.setEnvironment(llvm::Triple::MSVC);
+    T.setObjectFormat(llvm::Triple::COFF);
+    if (CLOptions->hasArg(options::OPT__SLASH_arm64EC))
+      T.setArch(llvm::Triple::aarch64, llvm::Triple::AArch64SubArch_arm64ec);
+    TargetTriple = T.str();
+  }
+
   // Try parsing configuration file.
   if (!ContainsError)
     ContainsError = loadConfigFiles();
@@ -1272,6 +1285,16 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
       if (!ContainsError)
         for (auto *Opt : *CLModePassThroughOptions)
           appendOneArg(Args, Opt);
+    }
+
+    // The config file may have changed the architecture so apply it.
+    if (HasConfigFile && Args.hasArg(options::OPT__SLASH_arm64EC)) {
+      llvm::Triple T(TargetTriple);
+      if (T.getArch() != llvm::Triple::aarch64 ||
+          T.getSubArch() != llvm::Triple::AArch64SubArch_arm64ec) {
+        T.setArch(llvm::Triple::aarch64, llvm::Triple::AArch64SubArch_arm64ec);
+        TargetTriple = T.str();
+      }
     }
   }
 
@@ -1323,17 +1346,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
 
   // FIXME: TargetTriple is used by the target-prefixed calls to as/ld
   // and getToolChain is const.
-  if (IsCLMode()) {
-    // clang-cl targets MSVC-style Win32.
-    llvm::Triple T(TargetTriple);
-    T.setOS(llvm::Triple::Win32);
-    T.setVendor(llvm::Triple::PC);
-    T.setEnvironment(llvm::Triple::MSVC);
-    T.setObjectFormat(llvm::Triple::COFF);
-    if (Args.hasArg(options::OPT__SLASH_arm64EC))
-      T.setArch(llvm::Triple::aarch64, llvm::Triple::AArch64SubArch_arm64ec);
-    TargetTriple = T.str();
-  } else if (IsDXCMode()) {
+  if (IsDXCMode()) {
     // Build TargetTriple from target_profile option for clang-dxc.
     if (const Arg *A = Args.getLastArg(options::OPT_target_profile)) {
       StringRef TargetProfile = A->getValue();
