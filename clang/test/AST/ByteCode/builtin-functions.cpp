@@ -7,6 +7,14 @@
 // RUN: %clang_cc1 -triple avr -std=c++20 -Wno-string-plus-int -fexperimental-new-constant-interpreter %s -verify=expected,both
 // RUN: %clang_cc1 -triple avr -std=c++20 -Wno-string-plus-int -verify=ref,both %s -Wno-constant-evaluated
 
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#define LITTLE_END 1
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#define LITTLE_END 0
+#else
+#error "huh?"
+#endif
+
 extern "C" {
   typedef decltype(sizeof(int)) size_t;
   extern size_t wcslen(const wchar_t *p);
@@ -1140,6 +1148,10 @@ namespace ElementwisePopcount {
   static_assert(__builtin_elementwise_popcount(0L) == 0);
   static_assert(__builtin_elementwise_popcount(0xF0F0L) == 8);
   static_assert(__builtin_elementwise_popcount(~0LL) == 8 * sizeof(long long));
+
+#if __INT_WIDTH__ == 32
+  static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_popcount((vector4char){1, 2, 3, 4})) == (LITTLE_END ? 0x01020101 : 0x01010201));
+#endif
 }
 
 namespace BuiltinMemcpy {
