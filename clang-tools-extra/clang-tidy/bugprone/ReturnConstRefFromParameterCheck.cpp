@@ -41,11 +41,12 @@ void ReturnConstRefFromParameterCheck::registerMatchers(MatchFinder *Finder) {
                        qualType(hasCanonicalType(equalsBoundNode("type"))))))
           .bind("func");
 
-  Finder->addMatcher(returnStmt(hasReturnValue(DRef), hasAncestor(Func)), this);
   Finder->addMatcher(
-      returnStmt(hasReturnValue(ignoringParens(conditionalOperator(
-          eachOf(hasTrueExpression(DRef), hasFalseExpression(DRef)),
-          hasAncestor(Func))))),
+      returnStmt(
+          hasReturnValue(anyOf(
+              DRef, ignoringParens(conditionalOperator(eachOf(
+                        hasTrueExpression(DRef), hasFalseExpression(DRef)))))),
+          hasAncestor(Func)),
       this);
 }
 
