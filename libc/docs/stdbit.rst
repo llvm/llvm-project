@@ -15,7 +15,7 @@ Macros
   * - Macro
     - Implemented
     - C23 Standard Section
-    - POSIX.1-2017 Standard Section
+    - POSIX.1-2024 Standard Section
   * - __STDC_ENDIAN_BIG__
     - |check|
     - 7.18.2.2
@@ -100,7 +100,7 @@ Functions
   * - Function
     - Implemented
     - C23 Standard Section
-    - POSIX.1-2017 Standard Section
+    - POSIX.1-2024 Standard Section
   * - stdc_bit_ceil_uc
     - |check|
     - 7.18.16
