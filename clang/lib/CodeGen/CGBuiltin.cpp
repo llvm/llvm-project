@@ -4621,6 +4621,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     if (getTarget().getTriple().getArch() == llvm::Triple::systemz) {
       // On this target, the back end fills in the context buffer completely.
+      // It doesn't really matter if the frontend stores to the buffer before
+      // calling setjmp, the back-end is going to overwrite them anyway.
       Function *F = CGM.getIntrinsic(Intrinsic::eh_sjlj_setjmp);
       return RValue::get(Builder.CreateCall(F, Buf.emitRawPointer(*this)));
     }
