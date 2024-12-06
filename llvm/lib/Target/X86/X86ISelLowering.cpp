@@ -2927,6 +2927,24 @@ static X86::CondCode TranslateIntegerX86CC(ISD::CondCode SetCCOpcode) {
   }
 }
 
+static X86::CondCode getInvertedX86CC(X86::CondCode CC) {
+  switch (CC) {
+    // clang-format off
+  default: llvm_unreachable("Invalid integer condition!");
+  case X86::COND_E  : return X86::COND_NE;
+  case X86::COND_G  : return X86::COND_LE;
+  case X86::COND_GE : return X86::COND_L;
+  case X86::COND_L  : return X86::COND_GE;
+  case X86::COND_LE : return X86::COND_G;
+  case X86::COND_NE : return X86::COND_E;
+  case X86::COND_B  : return X86::COND_AE;
+  case X86::COND_A  : return X86::COND_BE;
+  case X86::COND_BE : return X86::COND_A;
+  case X86::COND_AE : return X86::COND_B;
+    // clang-format on
+  }
+}
+
 /// Do a one-to-one translation of a ISD::CondCode to the X86-specific
 /// condition code, returning the condition code and the LHS/RHS of the
 /// comparison to make.
@@ -52784,6 +52802,42 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
           St->getOriginalAlign(), St->getMemOperand()->getFlags(),
           St->getAAInfo());
     }
+  }
+
+  // Convert store(cmov(load(x), y), x) to cstore(y, x).
+  if ((VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64) &&
+      Subtarget.hasCF() && St->isSimple()) {
+    SDValue Cmov;
+    if (StoredVal.getOpcode() == X86ISD::CMOV)
+      Cmov = StoredVal;
+    else if (StoredVal.getOpcode() == ISD::TRUNCATE &&
+             StoredVal.getOperand(0).getOpcode() == X86ISD::CMOV)
+      Cmov = StoredVal.getOperand(0);
+    else
+      return SDValue();
+
+    auto *Ld = dyn_cast<LoadSDNode>(St->getChain());
+    if (!Ld || !Ld->isSimple() || Ld->getBasePtr() != St->getBasePtr())
+      return SDValue();
+
+    bool InvertCC = false;
+    SDValue V = SDValue(Ld, 0);
+    if (V == Cmov.getOperand(1))
+      InvertCC = true;
+    else if (V != Cmov.getOperand(0))
+      return SDValue();
+
+    SDVTList Tys = DAG.getVTList(MVT::Other);
+    SDValue CC = Cmov.getOperand(2);
+    SDValue Src = DAG.getAnyExtOrTrunc(Cmov.getOperand(!InvertCC), dl, VT);
+    if (InvertCC)
+      CC = DAG.getTargetConstant(
+          getInvertedX86CC((X86::CondCode)Cmov.getConstantOperandVal(2)), dl,
+          MVT::i8);
+    SDValue Ops[] = {St->getChain(), Src, St->getBasePtr(), CC,
+                     Cmov.getOperand(3)};
+    return DAG.getMemIntrinsicNode(X86ISD::CSTORE, dl, Tys, Ops, VT,
+                                   St->getMemOperand());
   }
 
   // Turn load->store of MMX types into GPR load/stores.  This avoids clobbering
