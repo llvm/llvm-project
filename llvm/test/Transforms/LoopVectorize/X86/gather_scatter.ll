@@ -639,8 +639,6 @@ define void @test_gather_not_profitable_pr48429(i32 %d, ptr readonly noalias %pt
 ; AVX512:       vector.ph:
 ; AVX512-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 16
 ; AVX512-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; AVX512-NEXT:    [[TMP36:%.*]] = mul i64 [[N_VEC]], 4
-; AVX512-NEXT:    [[IND_END1:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[TMP36]]
 ; AVX512-NEXT:    [[TMP13:%.*]] = mul i64 [[N_VEC]], 64
 ; AVX512-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[DEST]], i64 [[TMP13]]
 ; AVX512-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -675,7 +673,6 @@ define void @test_gather_not_profitable_pr48429(i32 %d, ptr readonly noalias %pt
 ; AVX512-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 8
 ; AVX512-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
 ; AVX512:       vec.epilog.ph:
-; AVX512-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi ptr [ [[IND_END1]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[PTR]], [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; AVX512-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[DEST]], [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; AVX512-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; AVX512-NEXT:    [[N_MOD_VF9:%.*]] = urem i64 [[TMP3]], 8
