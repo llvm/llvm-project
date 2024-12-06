@@ -16,8 +16,14 @@ namespace fir {
 void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm,
                                           PassConstructor ctor) {
   addNestedPassToOps<mlir::func::FuncOp, mlir::omp::DeclareReductionOp,
-                     mlir::omp::PrivateClauseOp, fir::GlobalOp,
-                     mlir::gpu::GPUModuleOp>(pm, ctor);
+                     mlir::omp::PrivateClauseOp, fir::GlobalOp>(pm, ctor);
+}
+
+template <typename NestOpTy>
+void addNestedPassToNest(mlir::PassManager &pm, PassConstructor ctor) {
+  mlir::OpPassManager &nestPM = pm.nest<NestOpTy>();
+  nestPM.addNestedPass<mlir::func::FuncOp>(ctor());
+  nestPM.addNestedPass<mlir::gpu::GPUFuncOp>(ctor());
 }
 
 void addNestedPassToAllTopLevelOperationsConditionally(
@@ -266,6 +272,7 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
                                          llvm::StringRef inputFilename) {
   fir::addBoxedProcedurePass(pm);
   addNestedPassToAllTopLevelOperations(pm, fir::createAbstractResultOpt);
+  addNestedPassToNest<mlir::gpu::GPUModuleOp>(pm, fir::createAbstractResultOpt);
   fir::addCodeGenRewritePass(
       pm, (config.DebugInfo != llvm::codegenoptions::NoDebugInfo));
   fir::addExternalNameConversionPass(pm, config.Underscoring);
