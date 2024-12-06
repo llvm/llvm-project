@@ -3113,6 +3113,15 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     }
   }
 
+  // nusw + nneg -> nuw
+  if (GEP.hasNoUnsignedSignedWrap() && !GEP.hasNoUnsignedWrap() &&
+      all_of(GEP.indices(), [&](Value *Idx) {
+        return isKnownNonNegative(Idx, SQ.getWithInstruction(&GEP));
+      })) {
+    GEP.setNoWrapFlags(GEP.getNoWrapFlags() | GEPNoWrapFlags::noUnsignedWrap());
+    return &GEP;
+  }
+
   if (Instruction *R = foldSelectGEP(GEP, Builder))
     return R;
 

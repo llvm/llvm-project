@@ -51,7 +51,7 @@ define void @widen_ptr_phi_unrolled(ptr noalias nocapture %a, ptr noalias nocapt
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[DOTIDX:%.*]] = shl nuw nsw i64 [[TMP16]], 4
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP15]], i64 [[DOTIDX]]
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP15]], i64 [[DOTIDX]]
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[TMP13]], ptr [[TMP15]], align 4
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[TMP14]], ptr [[TMP17]], align 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = add nsw <vscale x 4 x i32> [[TMP10]], splat (i32 1)
@@ -59,7 +59,7 @@ define void @widen_ptr_phi_unrolled(ptr noalias nocapture %a, ptr noalias nocapt
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[DOTIDX5:%.*]] = shl nuw nsw i64 [[TMP21]], 4
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[TMP20]], i64 [[DOTIDX5]]
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP20]], i64 [[DOTIDX5]]
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[TMP18]], ptr [[TMP20]], align 4
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[TMP19]], ptr [[TMP22]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
