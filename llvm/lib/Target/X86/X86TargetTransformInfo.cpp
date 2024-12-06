@@ -5147,7 +5147,7 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   // Type legalization can't handle structs
   if (TLI->getValueType(DL, Src, true) == MVT::Other)
     return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                  CostKind);
+                                  CostKind, OpInfo, I);
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Src);
@@ -5159,7 +5159,7 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   // Add a cost for constant load to vector.
   if (Opcode == Instruction::Store && OpInfo.isConstant())
     Cost += getMemoryOpCost(Instruction::Load, Src, DL.getABITypeAlign(Src),
-                            /*AddressSpace=*/0, CostKind);
+                            /*AddressSpace=*/0, CostKind, OpInfo);
 
   // Handle the simple case of non-vectors.
   // NOTE: this assumes that legalization never creates vector from scalars!
@@ -5189,7 +5189,7 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   if (XMMBits % EltTyBits != 0)
     // Vector size must be a multiple of the element size. I.e. no padding.
     return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                  CostKind);
+                                  CostKind, OpInfo, I);
   const int NumEltPerXMM = XMMBits / EltTyBits;
 
   auto *XMMVecTy = FixedVectorType::get(EltTy, NumEltPerXMM);
@@ -5200,7 +5200,7 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     if ((8 * CurrOpSizeBytes) % EltTyBits != 0)
       // Vector size must be a multiple of the element size. I.e. no padding.
       return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                    CostKind);
+                                    CostKind, OpInfo, I);
     int CurrNumEltPerOp = (8 * CurrOpSizeBytes) / EltTyBits;
 
     assert(CurrOpSizeBytes > 0 && CurrNumEltPerOp > 0 && "How'd we get here?");
@@ -5237,6 +5237,23 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
           CurrOpSizeBytes != 1)
         break; // Try smalled vector size.
 
+      // This isn't exactly right. We're using slow unaligned 32-byte accesses
+      // as a proxy for a double-pumped AVX memory interface such as on
+      // Sandybridge.
+      // Sub-32-bit loads/stores will be slower either with PINSR*/PEXTR* or
+      // will be scalarized.
+      if (CurrOpSizeBytes == 32 && ST->isUnalignedMem32Slow())
+        Cost += 2;
+      else if (CurrOpSizeBytes < 4)
+        Cost += 2;
+      else
+        Cost += 1;
+
+      // If we're loading a uniform value, then we don't need to split the load,
+      // loading just a single (widest) vector can be reused by all splits.
+      if (IsLoad && OpInfo.isUniform())
+        return Cost;
+
       bool Is0thSubVec = (NumEltDone() % LT.second.getVectorNumElements()) == 0;
 
       // If we have fully processed the previous reg, we need to replenish it.
@@ -5264,18 +5281,6 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
         Cost += getScalarizationOverhead(CoalescedVecTy, DemandedElts, IsLoad,
                                          !IsLoad, CostKind);
       }
-
-      // This isn't exactly right. We're using slow unaligned 32-byte accesses
-      // as a proxy for a double-pumped AVX memory interface such as on
-      // Sandybridge.
-      // Sub-32-bit loads/stores will be slower either with PINSR*/PEXTR* or
-      // will be scalarized.
-      if (CurrOpSizeBytes == 32 && ST->isUnalignedMem32Slow())
-        Cost += 2;
-      else if (CurrOpSizeBytes < 4)
-        Cost += 2;
-      else
-        Cost += 1;
 
       SubVecEltsLeft -= CurrNumEltPerOp;
       NumEltRemaining -= CurrNumEltPerOp;

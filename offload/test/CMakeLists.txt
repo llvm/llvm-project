@@ -28,6 +28,11 @@ if(CUDAToolkit_FOUND)
   get_filename_component(CUDA_LIBDIR "${CUDA_cudart_static_LIBRARY}" DIRECTORY)
 endif()
 
+set(OMP_DEPEND)
+if(TARGET omp)
+  set(OMP_DEPEND omp)
+endif()
+
 string(REGEX MATCHALL "([^\ ]+\ |[^\ ]+$)" SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS}")
 foreach(CURRENT_TARGET IN LISTS SYSTEM_TARGETS)
   string(STRIP "${CURRENT_TARGET}" CURRENT_TARGET)
@@ -35,7 +40,7 @@ foreach(CURRENT_TARGET IN LISTS SYSTEM_TARGETS)
   add_offload_testsuite(check-libomptarget-${CURRENT_TARGET}
     "Running libomptarget tests"
     ${CMAKE_CURRENT_BINARY_DIR}/${CURRENT_TARGET}
-    DEPENDS omptarget omp ${LIBOMPTARGET_TESTED_PLUGINS}
+    DEPENDS omptarget ${OMP_DEPEND} ${LIBOMPTARGET_TESTED_PLUGINS}
     ARGS ${LIBOMPTARGET_LIT_ARG_LIST})
   list(APPEND LIBOMPTARGET_LIT_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CURRENT_TARGET})
 
@@ -49,12 +54,12 @@ add_offload_testsuite(check-libomptarget
   "Running libomptarget tests"
   ${LIBOMPTARGET_LIT_TESTSUITES}
   EXCLUDE_FROM_CHECK_ALL
-  DEPENDS omptarget omp ${LIBOMPTARGET_TESTED_PLUGINS}
+  DEPENDS llvm-offload-device-info omptarget ${OMP_DEPEND} ${LIBOMPTARGET_TESTED_PLUGINS}
   ARGS ${LIBOMPTARGET_LIT_ARG_LIST})
 
 add_offload_testsuite(check-offload
   "Running libomptarget tests"
   ${LIBOMPTARGET_LIT_TESTSUITES}
   EXCLUDE_FROM_CHECK_ALL
-  DEPENDS omptarget omp ${LIBOMPTARGET_TESTED_PLUGINS}
+  DEPENDS llvm-offload-device-info omptarget ${OMP_DEPEND} ${LIBOMPTARGET_TESTED_PLUGINS}
   ARGS ${LIBOMPTARGET_LIT_ARG_LIST})

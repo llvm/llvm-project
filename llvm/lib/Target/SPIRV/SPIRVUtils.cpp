@@ -580,8 +580,9 @@ size_t PartialOrderingVisitor::visit(BasicBlock *BB, size_t Unused) {
 
     if (!CanBeVisited(BB)) {
       ToVisit.push(BB);
-      assert(QueueIndex < ToVisit.size() &&
-             "No valid candidate in the queue. Is the graph reducible?");
+      if (QueueIndex >= ToVisit.size())
+        llvm::report_fatal_error(
+            "No valid candidate in the queue. Is the graph reducible?");
       QueueIndex++;
       continue;
     }

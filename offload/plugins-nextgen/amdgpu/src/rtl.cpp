@@ -207,7 +207,7 @@ Expected<std::string> getTargetTripleAndFeatures(hsa_agent_t Agent) {
     llvm::StringRef TripleTarget(ISAName.begin(), Length);
     if (TripleTarget.consume_front("amdgcn-amd-amdhsa"))
       Target = TripleTarget.ltrim('-').rtrim('\0').str();
-    return HSA_STATUS_SUCCESS;
+    return HSA_STATUS_INFO_BREAK;
   });
   if (Err)
     return Err;

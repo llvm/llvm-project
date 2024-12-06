@@ -27,6 +27,7 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/STLExtras.h"
@@ -720,6 +721,11 @@ public:
 
       convertSignature(fn);
     }
+
+    for (auto gpuMod : mod.getOps<mlir::gpu::GPUModuleOp>())
+      for (auto fn : gpuMod.getOps<mlir::func::FuncOp>())
+        convertSignature(fn);
+
     return mlir::success();
   }
 

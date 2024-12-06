@@ -1471,13 +1471,13 @@ libc_support_library(
     }),
     deps = [
         ":__support_time",
-        ":__support_time_linux_clock_gettime",
+        ":__support_time_clock_gettime",
     ],
 )
 
 libc_support_library(
-    name = "__support_time_linux_clock_gettime",
-    hdrs = ["src/__support/time/linux/clock_gettime.h"],
+    name = "__support_time_clock_gettime",
+    hdrs = ["src/__support/time/clock_gettime.h"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
