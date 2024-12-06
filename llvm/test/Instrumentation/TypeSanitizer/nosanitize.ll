@@ -6,13 +6,13 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ;.
-; CHECK: @[[LLVM_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [1 x ptr] [ptr @tysan.module_ctor], section "llvm.metadata"
-; CHECK: @[[LLVM_GLOBAL_CTORS:[a-zA-Z0-9_$"\\.-]+]] = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @tysan.module_ctor, ptr null }]
+; CHECK: @llvm.used = appending global [1 x ptr] [ptr @tysan.module_ctor], section "llvm.metadata"
+; CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @tysan.module_ctor, ptr null }]
 ;.
 define i32 @test_load(ptr %a) sanitize_type {
 ; CHECK-LABEL: @test_load(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A:%.*]], align 4, !tbaa [[TBAA0:![0-9]+]], !nosanitize !4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A:%.*]], align 4, !tbaa [[TBAA0:![0-9]+]], !nosanitize [[META4:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
@@ -31,9 +31,9 @@ entry:
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { sanitize_type }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nounwind }
 ;.
-; CHECK: [[TBAA0]] = !{!1, !1, i64 0}
-; CHECK: [[META1:![0-9]+]] = !{!"int", !2, i64 0}
-; CHECK: [[META2:![0-9]+]] = !{!"omnipotent char", !3, i64 0}
-; CHECK: [[META3:![0-9]+]] = !{!"Simple C++ TBAA"}
-; CHECK: [[META4:![0-9]+]] = !{}
+; CHECK: [[TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
+; CHECK: [[META1]] = !{!"int", [[META2:![0-9]+]], i64 0}
+; CHECK: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
+; CHECK: [[META3]] = !{!"Simple C++ TBAA"}
+; CHECK: [[META4]] = !{}
 ;.

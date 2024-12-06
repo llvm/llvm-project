@@ -4,15 +4,29 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-;.
-; CHECK: @[[LLVM_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [1 x ptr] [ptr @tysan.module_ctor], section "llvm.metadata"
-; CHECK: @[[LLVM_GLOBAL_CTORS:[a-zA-Z0-9_$"\\.-]+]] = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @tysan.module_ctor, ptr null }]
-; CHECK: @[[__TYSAN_SHADOW_MEMORY_ADDRESS:[a-zA-Z0-9_$"\\.-]+]] = external global i64
-; CHECK: @[[__TYSAN_APP_MEMORY_MASK:[a-zA-Z0-9_$"\\.-]+]] = external global i64
-;.
 
 %struct.s20 = type { i32, i32, [24 x i8] }
 define void @byval_test(ptr byval(%struct.s20) align 32 %x) sanitize_type {
+entry:
+  ret void
+; NOTE: Ideally, we'd get the type from the caller's copy of the data (instead
+; of setting it all to unknown).
+}
+
+%struct = type { ptr, ptr }
+
+define ptr @test_insert_point(ptr byval(%struct) %v) {
+entry:
+  %name = getelementptr inbounds %struct, ptr %v, i64 0, i32 1
+  %0 = load ptr, ptr %name, align 8
+  ret ptr %0
+}
+;.
+; CHECK: @llvm.used = appending global [1 x ptr] [ptr @tysan.module_ctor], section "llvm.metadata"
+; CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @tysan.module_ctor, ptr null }]
+; CHECK: @__tysan_shadow_memory_address = external global i64
+; CHECK: @__tysan_app_memory_mask = external global i64
+;.
 ; CHECK-LABEL: @byval_test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[APP_MEM_MASK:%.*]] = load i64, ptr @__tysan_app_memory_mask, align 8
@@ -25,15 +39,7 @@ define void @byval_test(ptr byval(%struct.s20) align 32 %x) sanitize_type {
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP4]], i8 0, i64 256, i1 false)
 ; CHECK-NEXT:    ret void
 ;
-entry:
-  ret void
-; NOTE: Ideally, we'd get the type from the caller's copy of the data (instead
-; of setting it all to unknown).
-}
-
-%struct = type { ptr, ptr }
-
-define ptr @test_insert_point(ptr byval(%struct) %v) {
+;
 ; CHECK-LABEL: @test_insert_point(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[APP_MEM_MASK:%.*]] = load i64, ptr @__tysan_app_memory_mask, align 8
@@ -81,8 +87,15 @@ define ptr @test_insert_point(ptr byval(%struct) %v) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[NAME]], align 8
 ; CHECK-NEXT:    ret ptr [[TMP6]]
 ;
-entry:
-  %name = getelementptr inbounds %struct, ptr %v, i64 0, i32 1
-  %0 = load ptr, ptr %name, align 8
-  ret ptr %0
-}
+;
+; CHECK-LABEL: @tysan.module_ctor(
+; CHECK-NEXT:    call void @__tysan_init()
+; CHECK-NEXT:    ret void
+;
+;.
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { sanitize_type }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nounwind }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+;.
+; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 100000}
+;.

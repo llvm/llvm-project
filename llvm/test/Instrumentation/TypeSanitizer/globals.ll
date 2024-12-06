@@ -6,23 +6,34 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 @global1 = global i32 0, align 4
 @global2 = global i32 0, align 4
 
-; CHECK: @[[GLOBAL1:[a-zA-Z0-9_$"\\.-]+]] = global i32 0, align 4
-; CHECK: @[[GLOBAL2:[a-zA-Z0-9_$"\\.-]+]] = global i32 0, align 4
-; CHECK: @[[__TYSAN_V1_SIMPLE_20C_2B_2B_20TBAA:[a-zA-Z0-9_$"\\.-]+]] = linkonce_odr constant { i64, i64, [16 x i8] } { i64 2, i64 0, [16 x i8] c"Simple C++ TBAA\00" }, comdat
-; CHECK: @[[__TYSAN_V1_OMNIPOTENT_20CHAR:[a-zA-Z0-9_$"\\.-]+]] = linkonce_odr constant { i64, i64, ptr, i64, [16 x i8] } { i64 2, i64 1, ptr @__tysan_v1_Simple_20C_2b_2b_20TBAA, i64 0, [16 x i8] c"omnipotent char\00" }, comdat
-; CHECK: @[[__TYSAN_V1_INT:[a-zA-Z0-9_$"\\.-]+]] = linkonce_odr constant { i64, i64, ptr, i64, [4 x i8] } { i64 2, i64 1, ptr @__tysan_v1_omnipotent_20char, i64 0, [4 x i8] c"int\00" }, comdat
-; CHECK: @[[LLVM_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [4 x ptr] [ptr @tysan.module_ctor, ptr @__tysan_v1_Simple_20C_2b_2b_20TBAA, ptr @__tysan_v1_omnipotent_20char, ptr @__tysan_v1_int], section "llvm.metadata"
-; CHECK: @[[__TYSAN_SHADOW_MEMORY_ADDRESS:[a-zA-Z0-9_$"\\.-]+]] = external global i64
-; CHECK: @[[__TYSAN_APP_MEMORY_MASK:[a-zA-Z0-9_$"\\.-]+]] = external global i64
-; CHECK: @[[LLVM_GLOBAL_CTORS:[a-zA-Z0-9_$"\\.-]+]] = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @tysan.module_ctor, ptr null }]
+
+
+
+!llvm.tysan.globals = !{!13, !14}
+
+!0 = !{!"Simple C++ TBAA"}
+!1 = !{!"omnipotent char", !0, i64 0}
+!2 = !{!"int", !1, i64 0}
+!13 = !{ptr @global1, !2}
+!14 = !{ptr @global1, !2}
 ;.
-; CHECK-LABEL: define internal void @tysan.module_ctor(
+; CHECK: @global1 = global i32 0, align 4
+; CHECK: @global2 = global i32 0, align 4
+; CHECK: @__tysan_v1_Simple_20C_2b_2b_20TBAA = linkonce_odr constant { i64, i64, [16 x i8] } { i64 2, i64 0, [16 x i8] c"Simple C++ TBAA\00" }, comdat
+; CHECK: @__tysan_v1_omnipotent_20char = linkonce_odr constant { i64, i64, ptr, i64, [16 x i8] } { i64 2, i64 1, ptr @__tysan_v1_Simple_20C_2b_2b_20TBAA, i64 0, [16 x i8] c"omnipotent char\00" }, comdat
+; CHECK: @__tysan_v1_int = linkonce_odr constant { i64, i64, ptr, i64, [4 x i8] } { i64 2, i64 1, ptr @__tysan_v1_omnipotent_20char, i64 0, [4 x i8] c"int\00" }, comdat
+; CHECK: @llvm.used = appending global [4 x ptr] [ptr @tysan.module_ctor, ptr @__tysan_v1_Simple_20C_2b_2b_20TBAA, ptr @__tysan_v1_omnipotent_20char, ptr @__tysan_v1_int], section "llvm.metadata"
+; CHECK: @__tysan_shadow_memory_address = external global i64
+; CHECK: @__tysan_app_memory_mask = external global i64
+; CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @tysan.module_ctor, ptr null }]
+;.
+; CHECK-LABEL: @tysan.module_ctor(
 ; CHECK-NEXT:    call void @__tysan_init()
 ; CHECK-NEXT:    call void @__tysan_set_globals_types()
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define internal void @__tysan_set_globals_types(
+; CHECK-LABEL: @__tysan_set_globals_types(
 ; CHECK-NEXT:    [[APP_MEM_MASK:%.*]] = load i64, ptr @__tysan_app_memory_mask, align 8
 ; CHECK-NEXT:    [[SHADOW_BASE:%.*]] = load i64, ptr @__tysan_shadow_memory_address, align 8
 ; CHECK-NEXT:    [[APP_PTR_MASKED:%.*]] = and i64 ptrtoint (ptr @global1 to i64), [[APP_MEM_MASK]]
@@ -54,13 +65,12 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK-NEXT:    [[SHADOW_BYTE_3_PTR10:%.*]] = inttoptr i64 [[SHADOW_BYTE_3_OFFSET9]] to ptr
 ; CHECK-NEXT:    store ptr inttoptr (i64 -3 to ptr), ptr [[SHADOW_BYTE_3_PTR10]], align 8
 ; CHECK-NEXT:    ret void
-
-
-
-!llvm.tysan.globals = !{!13, !14}
-
-!0 = !{!"Simple C++ TBAA"}
-!1 = !{!"omnipotent char", !0, i64 0}
-!2 = !{!"int", !1, i64 0}
-!13 = !{ptr @global1, !2}
-!14 = !{ptr @global1, !2}
+;
+;.
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind }
+;.
+; CHECK: [[META0:![0-9]+]] = !{ptr @global1, [[META1:![0-9]+]]}
+; CHECK: [[META1]] = !{!"int", [[META2:![0-9]+]], i64 0}
+; CHECK: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
+; CHECK: [[META3]] = !{!"Simple C++ TBAA"}
+;.
