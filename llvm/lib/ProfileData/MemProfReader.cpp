@@ -584,9 +584,7 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
           GuidToSymbolName.insert({Guid, CanonicalName.str()});
         }
 
-        const FrameId Hash = F.hash();
-        MemProfData.Frames.insert({Hash, F});
-        SymbolizedFrame[VAddr].push_back(Hash);
+        SymbolizedFrame[VAddr].push_back(MemProfData.addFrame(F));
       }
     }
 
@@ -769,11 +767,8 @@ void YAMLMemProfReader::parse(StringRef YAMLData) {
   auto AddCallStack = [&](ArrayRef<Frame> CallStack) -> CallStackId {
     SmallVector<FrameId> IndexedCallStack;
     IndexedCallStack.reserve(CallStack.size());
-    for (const Frame &F : CallStack) {
-      FrameId Id = F.hash();
-      MemProfData.Frames.try_emplace(Id, F);
-      IndexedCallStack.push_back(Id);
-    }
+    for (const Frame &F : CallStack)
+      IndexedCallStack.push_back(MemProfData.addFrame(F));
     CallStackId CSId = hashCallStack(IndexedCallStack);
     MemProfData.CallStacks.try_emplace(CSId, std::move(IndexedCallStack));
     return CSId;
