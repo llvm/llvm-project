@@ -205,32 +205,32 @@ static bool isAbsoluteValue(const Symbol &sym) {
 // Returns true if Expr refers a PLT entry.
 static bool needsPlt(RelExpr expr) {
   return oneof<R_PLT, R_PLT_PC, R_PLT_GOTREL, R_PLT_GOTPLT, R_GOTPLT_GOTREL,
-               R_GOTPLT_PC, R_LOONGARCH_PLT_PAGE_PC, R_PPC32_PLTREL,
-               R_PPC64_CALL_PLT>(expr);
+               R_GOTPLT_PC, RE_LOONGARCH_PLT_PAGE_PC, RE_PPC32_PLTREL,
+               RE_PPC64_CALL_PLT>(expr);
 }
 
 bool lld::elf::needsGot(RelExpr expr) {
-  return oneof<R_GOT, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOT_OFF,
-               R_MIPS_GOT_OFF32, R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTPLT,
-               R_AARCH64_GOT_PAGE, R_LOONGARCH_GOT, R_LOONGARCH_GOT_PAGE_PC>(
+  return oneof<R_GOT, R_GOT_OFF, RE_MIPS_GOT_LOCAL_PAGE, RE_MIPS_GOT_OFF,
+               RE_MIPS_GOT_OFF32, RE_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTPLT,
+               RE_AARCH64_GOT_PAGE, RE_LOONGARCH_GOT, RE_LOONGARCH_GOT_PAGE_PC>(
       expr);
 }
 
 // True if this expression is of the form Sym - X, where X is a position in the
 // file (PC, or GOT for example).
 static bool isRelExpr(RelExpr expr) {
-  return oneof<R_PC, R_GOTREL, R_GOTPLTREL, R_ARM_PCA, R_MIPS_GOTREL,
-               R_PPC64_CALL, R_PPC64_RELAX_TOC, R_AARCH64_PAGE_PC,
-               R_RELAX_GOT_PC, R_RISCV_PC_INDIRECT, R_PPC64_RELAX_GOT_PC,
-               R_LOONGARCH_PAGE_PC>(expr);
+  return oneof<R_PC, R_GOTREL, R_GOTPLTREL, RE_ARM_PCA, RE_MIPS_GOTREL,
+               RE_PPC64_CALL, RE_PPC64_RELAX_TOC, RE_AARCH64_PAGE_PC,
+               R_RELAX_GOT_PC, RE_RISCV_PC_INDIRECT, RE_PPC64_RELAX_GOT_PC,
+               RE_LOONGARCH_PAGE_PC>(expr);
 }
 
 static RelExpr toPlt(RelExpr expr) {
   switch (expr) {
-  case R_LOONGARCH_PAGE_PC:
-    return R_LOONGARCH_PLT_PAGE_PC;
-  case R_PPC64_CALL:
-    return R_PPC64_CALL_PLT;
+  case RE_LOONGARCH_PAGE_PC:
+    return RE_LOONGARCH_PLT_PAGE_PC;
+  case RE_PPC64_CALL:
+    return RE_PPC64_CALL_PLT;
   case R_PC:
     return R_PLT_PC;
   case R_ABS:
@@ -247,12 +247,12 @@ static RelExpr fromPlt(RelExpr expr) {
   // reference to the symbol itself.
   switch (expr) {
   case R_PLT_PC:
-  case R_PPC32_PLTREL:
+  case RE_PPC32_PLTREL:
     return R_PC;
-  case R_LOONGARCH_PLT_PAGE_PC:
-    return R_LOONGARCH_PAGE_PC;
-  case R_PPC64_CALL_PLT:
-    return R_PPC64_CALL;
+  case RE_LOONGARCH_PLT_PAGE_PC:
+    return RE_LOONGARCH_PAGE_PC;
+  case RE_PPC64_CALL_PLT:
+    return RE_PPC64_CALL;
   case R_PLT:
     return R_ABS;
   case R_PLT_GOTPLT:
@@ -495,7 +495,7 @@ private:
 template <class ELFT, class RelTy>
 int64_t RelocationScanner::computeMipsAddend(const RelTy &rel, RelExpr expr,
                                              bool isLocal) const {
-  if (expr == R_MIPS_GOTREL && isLocal)
+  if (expr == RE_MIPS_GOTREL && isLocal)
     return sec->getFile<ELFT>()->mipsGp0;
 
   // The ABI says that the paired relocation is used only for REL.
@@ -969,13 +969,14 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
                                                  const Symbol &sym,
                                                  uint64_t relOff) const {
   // These expressions always compute a constant
-  if (oneof<R_GOTPLT, R_GOT_OFF, R_RELAX_HINT, R_MIPS_GOT_LOCAL_PAGE,
-            R_MIPS_GOTREL, R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC,
-            R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC, R_GOTPLTONLY_PC,
-            R_PLT_PC, R_PLT_GOTREL, R_PLT_GOTPLT, R_GOTPLT_GOTREL, R_GOTPLT_PC,
-            R_PPC32_PLTREL, R_PPC64_CALL_PLT, R_PPC64_RELAX_TOC, R_RISCV_ADD,
-            R_AARCH64_GOT_PAGE, R_LOONGARCH_PLT_PAGE_PC, R_LOONGARCH_GOT,
-            R_LOONGARCH_GOT_PAGE_PC>(e))
+  if (oneof<R_GOTPLT, R_GOT_OFF, R_RELAX_HINT, RE_MIPS_GOT_LOCAL_PAGE,
+            RE_MIPS_GOTREL, RE_MIPS_GOT_OFF, RE_MIPS_GOT_OFF32,
+            RE_MIPS_GOT_GP_PC, RE_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC,
+            R_GOTPLTONLY_PC, R_PLT_PC, R_PLT_GOTREL, R_PLT_GOTPLT,
+            R_GOTPLT_GOTREL, R_GOTPLT_PC, RE_PPC32_PLTREL, RE_PPC64_CALL_PLT,
+            RE_PPC64_RELAX_TOC, RE_RISCV_ADD, RE_AARCH64_GOT_PAGE,
+            RE_LOONGARCH_PLT_PAGE_PC, RE_LOONGARCH_GOT,
+            RE_LOONGARCH_GOT_PAGE_PC>(e))
     return true;
 
   // These never do, except if the entire file is position dependent or if
@@ -984,13 +985,13 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
     return ctx.target->usesOnlyLowPageBits(type) || !ctx.arg.isPic;
 
   // R_AARCH64_AUTH_ABS64 requires a dynamic relocation.
-  if (sym.isPreemptible || e == R_AARCH64_AUTH)
+  if (sym.isPreemptible || e == RE_AARCH64_AUTH)
     return false;
   if (!ctx.arg.isPic)
     return true;
 
   // Constant when referencing a non-preemptible symbol.
-  if (e == R_SIZE || e == R_RISCV_LEB128)
+  if (e == R_SIZE || e == RE_RISCV_LEB128)
     return true;
 
   // For the target and the relocation, we want to know if they are
@@ -1047,7 +1048,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
     if (expr != R_GOT_PC) {
       // The 0x8000 bit of r_addend of R_PPC_PLTREL24 is used to choose call
       // stub type. It should be ignored if optimized to R_PC.
-      if (ctx.arg.emachine == EM_PPC && expr == R_PPC32_PLTREL)
+      if (ctx.arg.emachine == EM_PPC && expr == RE_PPC32_PLTREL)
         addend &= ~0x8000;
       // R_HEX_GD_PLT_B22_PCREL (call a@GDPLT) is transformed into
       // call __tls_get_addr even if the symbol is non-preemptible.
@@ -1087,7 +1088,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
       // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
       ctx.in.mipsGot->addEntry(*sec->file, sym, addend, expr);
     } else if (!sym.isTls() || ctx.arg.emachine != EM_LOONGARCH) {
-      // Many LoongArch TLS relocs reuse the R_LOONGARCH_GOT type, in which
+      // Many LoongArch TLS relocs reuse the RE_LOONGARCH_GOT type, in which
       // case the NEEDS_GOT flag shouldn't get set.
       sym.setFlags(NEEDS_GOT);
     }
@@ -1128,7 +1129,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
                     (isa<EhInputSection>(sec) && ctx.arg.emachine != EM_MIPS));
   if (canWrite) {
     RelType rel = ctx.target->getDynRel(type);
-    if (oneof<R_GOT, R_LOONGARCH_GOT>(expr) ||
+    if (oneof<R_GOT, RE_LOONGARCH_GOT>(expr) ||
         (rel == ctx.target->symbolicRel && !sym.isPreemptible)) {
       addRelativeReloc<true>(ctx, *sec, offset, sym, addend, expr, type);
       return;
@@ -1267,12 +1268,12 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
 static unsigned handleMipsTlsRelocation(Ctx &ctx, RelType type, Symbol &sym,
                                         InputSectionBase &c, uint64_t offset,
                                         int64_t addend, RelExpr expr) {
-  if (expr == R_MIPS_TLSLD) {
+  if (expr == RE_MIPS_TLSLD) {
     ctx.in.mipsGot->addTlsIndex(*c.file);
     c.addReloc({expr, type, offset, addend, &sym});
     return 1;
   }
-  if (expr == R_MIPS_TLSGD) {
+  if (expr == RE_MIPS_TLSGD) {
     ctx.in.mipsGot->addDynTlsEntry(*c.file, sym);
     c.addReloc({expr, type, offset, addend, &sym});
     return 1;
@@ -1307,7 +1308,7 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
   // LoongArch does not yet implement transition from TLSDESC to LE/IE, so
   // generate TLSDESC dynamic relocation for the dynamic linker to handle.
   if (ctx.arg.emachine == EM_LOONGARCH &&
-      oneof<R_LOONGARCH_TLSDESC_PAGE_PC, R_TLSDESC, R_TLSDESC_PC,
+      oneof<RE_LOONGARCH_TLSDESC_PAGE_PC, R_TLSDESC, R_TLSDESC_PC,
             R_TLSDESC_CALL>(expr)) {
     if (expr != R_TLSDESC_CALL) {
       sym.setFlags(NEEDS_TLSDESC);
@@ -1318,7 +1319,7 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
 
   bool isRISCV = ctx.arg.emachine == EM_RISCV;
 
-  if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
+  if (oneof<RE_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
             R_TLSDESC_GOTPLT>(expr) &&
       ctx.arg.shared) {
     // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} reference a label. Do not
@@ -1387,9 +1388,9 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
     return 1;
   }
 
-  if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
+  if (oneof<RE_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
             R_TLSDESC_GOTPLT, R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC,
-            R_LOONGARCH_TLSGD_PAGE_PC>(expr)) {
+            RE_LOONGARCH_TLSGD_PAGE_PC>(expr)) {
     if (!execOptimize) {
       sym.setFlags(NEEDS_TLSGD);
       sec->addReloc({expr, type, offset, addend, &sym});
@@ -1413,8 +1414,8 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
     return ctx.target->getTlsGdRelaxSkip(type);
   }
 
-  if (oneof<R_GOT, R_GOTPLT, R_GOT_PC, R_AARCH64_GOT_PAGE_PC,
-            R_LOONGARCH_GOT_PAGE_PC, R_GOT_OFF, R_TLSIE_HINT>(expr)) {
+  if (oneof<R_GOT, R_GOTPLT, R_GOT_PC, RE_AARCH64_GOT_PAGE_PC,
+            RE_LOONGARCH_GOT_PAGE_PC, R_GOT_OFF, R_TLSIE_HINT>(expr)) {
     ctx.hasTlsIe.store(true, std::memory_order_relaxed);
     // Initial-Exec relocs can be optimized to Local-Exec if the symbol is
     // locally defined.  This is not supported on SystemZ.
@@ -1524,8 +1525,8 @@ void RelocationScanner::scanOne(typename Relocs<RelTy>::const_iterator &i) {
   if (oneof<R_GOTPLTONLY_PC, R_GOTPLTREL, R_GOTPLT, R_PLT_GOTPLT,
             R_TLSDESC_GOTPLT, R_TLSGD_GOTPLT>(expr)) {
     ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
-  } else if (oneof<R_GOTONLY_PC, R_GOTREL, R_PPC32_PLTREL, R_PPC64_TOCBASE,
-                   R_PPC64_RELAX_TOC>(expr)) {
+  } else if (oneof<R_GOTONLY_PC, R_GOTREL, RE_PPC32_PLTREL, RE_PPC64_TOCBASE,
+                   RE_PPC64_RELAX_TOC>(expr)) {
     ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
   }
 
