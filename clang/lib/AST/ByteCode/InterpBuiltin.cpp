@@ -243,7 +243,7 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
   unsigned ID = Func->getBuiltinID();
   const Pointer &StrPtr = getParam<Pointer>(Frame, 0);
 
-  if (ID == Builtin::BIstrlen || ID == Builtin::BIwcslen)
+  if (ID == Builtin::BIstrlen)
     diagnoseNonConstexprBuiltin(S, OpPC, ID);
 
   if (!CheckArray(S, OpPC, StrPtr))
@@ -1859,8 +1859,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     break;
   case Builtin::BI__builtin_strlen:
   case Builtin::BIstrlen:
-  case Builtin::BI__builtin_wcslen:
-  case Builtin::BIwcslen:
     if (!interp__builtin_strlen(S, OpPC, Frame, F, Call))
       return false;
     break;
