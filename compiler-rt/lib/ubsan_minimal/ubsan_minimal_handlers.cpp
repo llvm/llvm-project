@@ -97,8 +97,9 @@ constexpr unsigned kAddrBuf = SANITIZER_WORDSIZE / 4;
 #define MSG_BUF_LEN(msg) (sizeof(MSG_TMPL(msg)) + kAddrBuf + 1)
 
 #define HANDLER_RECOVER(name, msg)                               \
-  INTERFACE void __ubsan_handle_##name##_minimal() {             \
-    uintptr_t caller = GET_CALLER_PC();                  \
+  SANITIZER_INTERFACE_WEAK_DEF(                                  \
+    void, __ubsan_handle_##name##_minimal, void) {               \
+    uintptr_t caller = GET_CALLER_PC();                          \
     if (!report_this_error(caller)) return;                      \
     char msg_buf[MSG_BUF_LEN(msg)] = MSG_TMPL(msg);              \
     decorate_msg(MSG_TMPL_END(msg_buf, msg), caller);            \
