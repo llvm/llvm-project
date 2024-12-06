@@ -708,7 +708,7 @@ public:
 
   /// Return true if the dispatch size for an offload language only uses one
   /// dimension.
-  bool gridSizeIsOneDimension() const { return CUDA || HIP || OpenMP; }
+  bool gridSizeIsOneDimension() const { return CUDA || HIP; }
 
   /// Return the OpenCL C or C++ version as a VersionTuple.
   VersionTuple getOpenCLVersionTuple() const;
