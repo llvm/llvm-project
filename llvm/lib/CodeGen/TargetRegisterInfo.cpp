@@ -710,9 +710,8 @@ unsigned TargetRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
   // Avoid returning zero, RegisterClassInfo::getRegPressureSetLimit(Idx)
   // assumes this returns non-zero value.
   if (NAllocatableRegs == 0) {
-    LLVM_DEBUG({
-      dbgs() << "All registers of " << getRegClassName(RC) << " are reserved!";
-    });
+    LLVM_DEBUG(dbgs() << "All registers of " << getRegClassName(RC)
+                      << " are reserved!\n";);
     return RegPressureSetLimit;
   }
   return RegPressureSetLimit - getRegClassWeight(RC).RegWeight * NReserved;
