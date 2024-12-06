@@ -53,6 +53,7 @@ public:
     return Back;
   }
   bool empty() const { return List.empty(); }
+  void clear() { List = {}; }
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
@@ -68,9 +69,22 @@ public:
 private:
   ContainerTy Nodes;
 
+  /// Called by the DGNode destructor to avoid accessing freed memory.
+  void eraseFromBundle(DGNode *N) { Nodes.erase(find(Nodes, N)); }
+  friend DGNode::~DGNode(); // For eraseFromBundle().
+
 public:
   SchedBundle() = default;
-  SchedBundle(ContainerTy &&Nodes) : Nodes(std::move(Nodes)) {}
+  SchedBundle(ContainerTy &&Nodes) : Nodes(std::move(Nodes)) {
+    for (auto *N : this->Nodes)
+      N->setSchedBundle(*this);
+  }
+  ~SchedBundle() {
+    for (auto *N : this->Nodes)
+      N->clearSchedBundle();
+  }
+  bool empty() const { return Nodes.empty(); }
+  DGNode *back() const { return Nodes.back(); }
   using iterator = ContainerTy::iterator;
   using const_iterator = ContainerTy::const_iterator;
   iterator begin() { return Nodes.begin(); }
@@ -94,23 +108,38 @@ class Scheduler {
   ReadyListContainer ReadyList;
   DependencyGraph DAG;
   std::optional<BasicBlock::iterator> ScheduleTopItOpt;
-  SmallVector<std::unique_ptr<SchedBundle>> Bndls;
+  // TODO: This is wasting memory in exchange for fast removal using a raw ptr.
+  DenseMap<SchedBundle *, std::unique_ptr<SchedBundle>> Bndls;
 
   /// \Returns a scheduling bundle containing \p Instrs.
   SchedBundle *createBundle(ArrayRef<Instruction *> Instrs);
+  void eraseBundle(SchedBundle *SB);
   /// Schedule nodes until we can schedule \p Instrs back-to-back.
   bool tryScheduleUntil(ArrayRef<Instruction *> Instrs);
   /// Schedules all nodes in \p Bndl, marks them as scheduled, updates the
   /// UnscheduledSuccs counter of all dependency predecessors, and adds any of
   /// them that become ready to the ready list.
   void scheduleAndUpdateReadyList(SchedBundle &Bndl);
-
+  /// The scheduling state of the instructions in the bundle.
+  enum class BndlSchedState {
+    NoneScheduled, ///> No instruction in the bundle was previously scheduled.
+    PartiallyOrDifferentlyScheduled, ///> Only some of the instrs in the bundle
+                                     /// were previously scheduled, or all of
+                                     /// them were but not in the same
+                                     /// SchedBundle.
+    FullyScheduled, ///> All instrs in the bundle were previously scheduled and
+                    /// were in the same SchedBundle.
+  };
+  /// \Returns whether none/some/all of \p Instrs have been scheduled.
+  BndlSchedState getBndlSchedState(ArrayRef<Instruction *> Instrs) const;
+  /// Destroy the top-most part of the schedule that includes \p Instrs.
+  void trimSchedule(ArrayRef<Instruction *> Instrs);
   /// Disable copies.
   Scheduler(const Scheduler &) = delete;
   Scheduler &operator=(const Scheduler &) = delete;
 
 public:
-  Scheduler(AAResults &AA) : DAG(AA) {}
+  Scheduler(AAResults &AA, Context &Ctx) : DAG(AA, Ctx) {}
   ~Scheduler() {}
 
   bool trySchedule(ArrayRef<Instruction *> Instrs);

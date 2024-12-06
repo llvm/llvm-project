@@ -669,7 +669,7 @@ static unsigned isM1OrSmaller(MVT VT) {
 
 InstructionCost RISCVTTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind) {
+    TTI::TargetCostKind CostKind, ArrayRef<Value *> VL) {
   if (isa<ScalableVectorType>(Ty))
     return InstructionCost::getInvalid();
 
@@ -716,28 +716,6 @@ RISCVTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
   return getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind);
 }
 
-static bool hasOptimizedSegmentLoadStore(unsigned NF,
-                                         const RISCVSubtarget *ST) {
-  switch (NF) {
-  case 2:
-    return ST->hasOptimizedNF2SegmentLoadStore();
-  case 3:
-    return ST->hasOptimizedNF3SegmentLoadStore();
-  case 4:
-    return ST->hasOptimizedNF4SegmentLoadStore();
-  case 5:
-    return ST->hasOptimizedNF5SegmentLoadStore();
-  case 6:
-    return ST->hasOptimizedNF6SegmentLoadStore();
-  case 7:
-    return ST->hasOptimizedNF7SegmentLoadStore();
-  case 8:
-    return ST->hasOptimizedNF8SegmentLoadStore();
-  default:
-    llvm_unreachable("Unexpected NF");
-  }
-}
-
 InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
@@ -761,7 +739,7 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
 
         // Some processors optimize segment loads/stores as one wide memory op +
         // Factor * LMUL shuffle ops.
-        if (hasOptimizedSegmentLoadStore(Factor, ST)) {
+        if (ST->hasOptimizedSegmentLoadStore(Factor)) {
           InstructionCost Cost =
               getMemoryOpCost(Opcode, VTy, Alignment, AddressSpace, CostKind);
           MVT SubVecVT = getTLI()->getValueType(DL, SubVecTy).getSimpleVT();
@@ -947,6 +925,14 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::ctpop, MVT::i16, 19},
     {Intrinsic::ctpop, MVT::i32, 20},
     {Intrinsic::ctpop, MVT::i64, 21},
+    {Intrinsic::ctlz, MVT::i8, 19},
+    {Intrinsic::ctlz, MVT::i16, 28},
+    {Intrinsic::ctlz, MVT::i32, 31},
+    {Intrinsic::ctlz, MVT::i64, 35},
+    {Intrinsic::cttz, MVT::i8, 16},
+    {Intrinsic::cttz, MVT::i16, 23},
+    {Intrinsic::cttz, MVT::i32, 24},
+    {Intrinsic::cttz, MVT::i64, 25},
     {Intrinsic::vp_ctpop, MVT::i8, 12},
     {Intrinsic::vp_ctpop, MVT::i16, 19},
     {Intrinsic::vp_ctpop, MVT::i32, 20},
@@ -1027,18 +1013,65 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::sadd_sat:
   case Intrinsic::ssub_sat:
   case Intrinsic::uadd_sat:
-  case Intrinsic::usub_sat:
+  case Intrinsic::usub_sat: {
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (ST->hasVInstructions() && LT.second.isVector()) {
+      unsigned Op;
+      switch (ICA.getID()) {
+      case Intrinsic::sadd_sat:
+        Op = RISCV::VSADD_VV;
+        break;
+      case Intrinsic::ssub_sat:
+        Op = RISCV::VSSUBU_VV;
+        break;
+      case Intrinsic::uadd_sat:
+        Op = RISCV::VSADDU_VV;
+        break;
+      case Intrinsic::usub_sat:
+        Op = RISCV::VSSUBU_VV;
+        break;
+      }
+      return LT.first * getRISCVInstructionCost(Op, LT.second, CostKind);
+    }
+    break;
+  }
   case Intrinsic::fabs:
   case Intrinsic::sqrt: {
     auto LT = getTypeLegalizationCost(RetTy);
-    if (ST->hasVInstructions() && LT.second.isVector())
-      return LT.first;
+    // TODO: add f16/bf16, bf16 with zvfbfmin && f16 with zvfhmin
+    if (ST->hasVInstructions() && LT.second.isVector()) {
+      unsigned Op;
+      switch (ICA.getID()) {
+      case Intrinsic::fabs:
+        Op = RISCV::VFSGNJX_VV;
+        break;
+      case Intrinsic::sqrt:
+        Op = RISCV::VFSQRT_V;
+        break;
+      }
+      return LT.first * getRISCVInstructionCost(Op, LT.second, CostKind);
+    }
     break;
   }
+  case Intrinsic::cttz:
+  case Intrinsic::ctlz:
   case Intrinsic::ctpop: {
     auto LT = getTypeLegalizationCost(RetTy);
-    if (ST->hasVInstructions() && ST->hasStdExtZvbb() && LT.second.isVector())
-      return LT.first;
+    if (ST->hasVInstructions() && ST->hasStdExtZvbb() && LT.second.isVector()) {
+      unsigned Op;
+      switch (ICA.getID()) {
+      case Intrinsic::cttz:
+        Op = RISCV::VCTZ_V;
+        break;
+      case Intrinsic::ctlz:
+        Op = RISCV::VCLZ_V;
+        break;
+      case Intrinsic::ctpop:
+        Op = RISCV::VCPOP_V;
+        break;
+      }
+      return LT.first * getRISCVInstructionCost(Op, LT.second, CostKind);
+    }
     break;
   }
   case Intrinsic::abs: {
@@ -1046,7 +1079,9 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (ST->hasVInstructions() && LT.second.isVector()) {
       // vrsub.vi v10, v8, 0
       // vmax.vv v8, v8, v10
-      return LT.first * 2;
+      return LT.first *
+             getRISCVInstructionCost({RISCV::VRSUB_VI, RISCV::VMAX_VV},
+                                     LT.second, CostKind);
     }
     break;
   }
@@ -1126,81 +1161,12 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return Cost * LT.first;
     break;
   }
-  // vp integer arithmetic ops.
-  case Intrinsic::vp_add:
-  case Intrinsic::vp_and:
-  case Intrinsic::vp_ashr:
-  case Intrinsic::vp_lshr:
-  case Intrinsic::vp_mul:
-  case Intrinsic::vp_or:
-  case Intrinsic::vp_sdiv:
-  case Intrinsic::vp_shl:
-  case Intrinsic::vp_srem:
-  case Intrinsic::vp_sub:
-  case Intrinsic::vp_udiv:
-  case Intrinsic::vp_urem:
-  case Intrinsic::vp_xor:
-  // vp float arithmetic ops.
-  case Intrinsic::vp_fadd:
-  case Intrinsic::vp_fsub:
-  case Intrinsic::vp_fmul:
-  case Intrinsic::vp_fdiv:
-  case Intrinsic::vp_frem: {
+  case Intrinsic::vp_fneg: {
     std::optional<unsigned> FOp =
         VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
     assert(FOp.has_value());
     return getArithmeticInstrCost(*FOp, ICA.getReturnType(), CostKind);
     break;
-  }
-  // vp int cast ops.
-  case Intrinsic::vp_trunc:
-  case Intrinsic::vp_zext:
-  case Intrinsic::vp_sext:
-  // vp float cast ops.
-  case Intrinsic::vp_fptoui:
-  case Intrinsic::vp_fptosi:
-  case Intrinsic::vp_uitofp:
-  case Intrinsic::vp_sitofp:
-  case Intrinsic::vp_fptrunc:
-  case Intrinsic::vp_fpext: {
-    std::optional<unsigned> FOp =
-        VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
-    assert(FOp.has_value() && !ICA.getArgTypes().empty());
-    return getCastInstrCost(*FOp, RetTy, ICA.getArgTypes()[0],
-                            TTI::CastContextHint::None, CostKind);
-    break;
-  }
-
-  // vp compare
-  case Intrinsic::vp_icmp:
-  case Intrinsic::vp_fcmp: {
-    Intrinsic::ID IID = ICA.getID();
-    std::optional<unsigned> FOp = VPIntrinsic::getFunctionalOpcodeForVP(IID);
-    // We can only handle vp_cmp intrinsics with underlying instructions.
-    if (!ICA.getInst())
-      break;
-
-    assert(FOp);
-    auto *UI = cast<VPCmpIntrinsic>(ICA.getInst());
-    return getCmpSelInstrCost(*FOp, ICA.getArgTypes()[0], ICA.getReturnType(),
-                              UI->getPredicate(), CostKind);
-  }
-  // vp load/store
-  case Intrinsic::vp_load:
-  case Intrinsic::vp_store: {
-    if (!ICA.getInst())
-      break;
-    Intrinsic::ID IID = ICA.getID();
-    std::optional<unsigned> FOp = VPIntrinsic::getFunctionalOpcodeForVP(IID);
-    assert(FOp.has_value());
-    auto *UI = cast<VPIntrinsic>(ICA.getInst());
-    if (ICA.getID() == Intrinsic::vp_load)
-      return getMemoryOpCost(
-          *FOp, ICA.getReturnType(), UI->getPointerAlignment(),
-          UI->getOperand(0)->getType()->getPointerAddressSpace(), CostKind);
-    return getMemoryOpCost(
-        *FOp, ICA.getArgTypes()[0], UI->getPointerAlignment(),
-        UI->getOperand(1)->getType()->getPointerAddressSpace(), CostKind);
   }
   case Intrinsic::vp_select: {
     Intrinsic::ID IID = ICA.getID();
@@ -1213,6 +1179,16 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     return getCmpSelInstrCost(Instruction::Select, ICA.getReturnType(),
                               ICA.getArgTypes()[0], CmpInst::BAD_ICMP_PREDICATE,
                               CostKind);
+  case Intrinsic::experimental_vp_splat: {
+    auto LT = getTypeLegalizationCost(RetTy);
+    // TODO: Lower i1 experimental_vp_splat
+    if (!ST->hasVInstructions() || LT.second.getScalarType() == MVT::i1)
+      return InstructionCost::getInvalid();
+    return LT.first * getRISCVInstructionCost(LT.second.isFloatingPoint()
+                                                  ? RISCV::VFMV_V_F
+                                                  : RISCV::VMV_V_X,
+                                              LT.second, CostKind);
+  }
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {
@@ -1500,7 +1476,7 @@ RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
     return ExtraCost + getRISCVInstructionCost(Opcodes, LT.second, CostKind);
   }
 
-  // IR Reduction is composed by two vmv and one rvv reduction instruction.
+  // IR Reduction is composed by one rvv reduction instruction and vmv
   unsigned SplitOp;
   SmallVector<unsigned, 3> Opcodes;
   switch (IID) {
@@ -1508,27 +1484,27 @@ RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
     llvm_unreachable("Unsupported intrinsic");
   case Intrinsic::smax:
     SplitOp = RISCV::VMAX_VV;
-    Opcodes = {RISCV::VMV_S_X, RISCV::VREDMAX_VS, RISCV::VMV_X_S};
+    Opcodes = {RISCV::VREDMAX_VS, RISCV::VMV_X_S};
     break;
   case Intrinsic::smin:
     SplitOp = RISCV::VMIN_VV;
-    Opcodes = {RISCV::VMV_S_X, RISCV::VREDMIN_VS, RISCV::VMV_X_S};
+    Opcodes = {RISCV::VREDMIN_VS, RISCV::VMV_X_S};
     break;
   case Intrinsic::umax:
     SplitOp = RISCV::VMAXU_VV;
-    Opcodes = {RISCV::VMV_S_X, RISCV::VREDMAXU_VS, RISCV::VMV_X_S};
+    Opcodes = {RISCV::VREDMAXU_VS, RISCV::VMV_X_S};
     break;
   case Intrinsic::umin:
     SplitOp = RISCV::VMINU_VV;
-    Opcodes = {RISCV::VMV_S_X, RISCV::VREDMINU_VS, RISCV::VMV_X_S};
+    Opcodes = {RISCV::VREDMINU_VS, RISCV::VMV_X_S};
     break;
   case Intrinsic::maxnum:
     SplitOp = RISCV::VFMAX_VV;
-    Opcodes = {RISCV::VFMV_S_F, RISCV::VFREDMAX_VS, RISCV::VFMV_F_S};
+    Opcodes = {RISCV::VFREDMAX_VS, RISCV::VFMV_F_S};
     break;
   case Intrinsic::minnum:
     SplitOp = RISCV::VFMIN_VV;
-    Opcodes = {RISCV::VFMV_S_F, RISCV::VFREDMIN_VS, RISCV::VFMV_F_S};
+    Opcodes = {RISCV::VFREDMIN_VS, RISCV::VFMV_F_S};
     break;
   }
   // Add a cost for data larger than LMUL8
@@ -1558,35 +1534,48 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
     return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
-  SmallVector<unsigned, 3> Opcodes;
   Type *ElementTy = Ty->getElementType();
   if (ElementTy->isIntegerTy(1)) {
     if (ISD == ISD::AND) {
       // Example sequences:
       //   vsetvli a0, zero, e8, mf8, ta, ma
+      //   vmand.mm v8, v9, v8 ; needed every time type is split
       //   vmnot.m v8, v0
       //   vcpop.m a0, v8
       //   seqz a0, a0
-      Opcodes = {RISCV::VMNAND_MM, RISCV::VCPOP_M};
-      return (LT.first - 1) +
-             getRISCVInstructionCost(Opcodes, LT.second, CostKind) +
+      return LT.first * getRISCVInstructionCost(RISCV::VMNAND_MM, LT.second,
+                                                CostKind) +
+             getRISCVInstructionCost(RISCV::VCPOP_M, LT.second, CostKind) +
              getCmpSelInstrCost(Instruction::ICmp, ElementTy, ElementTy,
                                 CmpInst::ICMP_EQ, CostKind);
+    } else if (ISD == ISD::XOR) {
+      // Example sequences:
+      //   vsetvli a0, zero, e8, mf8, ta, ma
+      //   vmxor.mm v8, v0, v8 ; needed every time type is split
+      //   vcpop.m a0, v8
+      //   andi a0, a0, 1
+      return (LT.first - 1) *
+                 getRISCVInstructionCost(RISCV::VMXOR_MM, LT.second, CostKind) +
+             getRISCVInstructionCost(RISCV::VCPOP_M, LT.second, CostKind) + 1;
     } else {
       // Example sequences:
       //   vsetvli a0, zero, e8, mf8, ta, ma
+      //   vmxor.mm v8, v9, v8 ; needed every time type is split
       //   vcpop.m a0, v0
       //   snez a0, a0
-      Opcodes = {RISCV::VCPOP_M};
-      return (LT.first - 1) +
-             getRISCVInstructionCost(Opcodes, LT.second, CostKind) +
+      return (LT.first - 1) *
+                 getRISCVInstructionCost(RISCV::VMXOR_MM, LT.second, CostKind) +
+             getRISCVInstructionCost(RISCV::VCPOP_M, LT.second, CostKind) +
              getCmpSelInstrCost(Instruction::ICmp, ElementTy, ElementTy,
                                 CmpInst::ICMP_NE, CostKind);
     }
   }
 
-  // IR Reduction is composed by two vmv and one rvv reduction instruction.
+  // IR Reduction of or/and is composed by one vmv and one rvv reduction
+  // instruction, and others is composed by two vmv and one rvv reduction
+  // instruction
   unsigned SplitOp;
+  SmallVector<unsigned, 3> Opcodes;
   switch (ISD) {
   case ISD::ADD:
     SplitOp = RISCV::VADD_VV;
@@ -1594,7 +1583,7 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
     break;
   case ISD::OR:
     SplitOp = RISCV::VOR_VV;
-    Opcodes = {RISCV::VMV_S_X, RISCV::VREDOR_VS, RISCV::VMV_X_S};
+    Opcodes = {RISCV::VREDOR_VS, RISCV::VMV_X_S};
     break;
   case ISD::XOR:
     SplitOp = RISCV::VXOR_VV;
@@ -1602,7 +1591,7 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
     break;
   case ISD::AND:
     SplitOp = RISCV::VAND_VV;
-    Opcodes = {RISCV::VMV_S_X, RISCV::VREDAND_VS, RISCV::VMV_X_S};
+    Opcodes = {RISCV::VREDAND_VS, RISCV::VMV_X_S};
     break;
   case ISD::FADD:
     // We can't promote f16/bf16 fadd reductions.
@@ -1646,6 +1635,14 @@ InstructionCost RISCVTTIImpl::getExtendedReductionCost(
                                            FMF, CostKind);
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
+
+  if (IsUnsigned && Opcode == Instruction::Add &&
+      LT.second.isFixedLengthVector() && LT.second.getScalarType() == MVT::i1) {
+    // Represent vector_reduce_add(ZExt(<n x i1>)) as
+    // ZExtOrTrunc(ctpop(bitcast <n x i1> to in)).
+    return LT.first *
+           getRISCVInstructionCost(RISCV::VCPOP_M, LT.second, CostKind);
+  }
 
   if (ResTy->getScalarSizeInBits() != 2 * LT.second.getScalarSizeInBits())
     return BaseT::getExtendedReductionCost(Opcode, IsUnsigned, ResTy, ValTy,
@@ -2256,7 +2253,6 @@ void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   UP.Runtime = true;
   UP.UnrollRemainder = true;
   UP.UnrollAndJam = true;
-  UP.UnrollAndJamInnerLoopThreshold = 60;
 
   // Force unrolling small loops can be very useful because of the branch
   // taken cost of the backedge.
@@ -2347,20 +2343,6 @@ bool RISCVTTIImpl::isLegalMaskedCompressStore(Type *DataTy, Align Alignment) {
   return true;
 }
 
-bool RISCVTTIImpl::areInlineCompatible(const Function *Caller,
-                                       const Function *Callee) const {
-  const TargetMachine &TM = getTLI()->getTargetMachine();
-
-  const FeatureBitset &CallerBits =
-      TM.getSubtargetImpl(*Caller)->getFeatureBits();
-  const FeatureBitset &CalleeBits =
-      TM.getSubtargetImpl(*Callee)->getFeatureBits();
-
-  // Inline a callee if its target-features are a subset of the callers
-  // target-features.
-  return (CallerBits & CalleeBits) == CalleeBits;
-}
-
 /// See if \p I should be considered for address type promotion. We check if \p
 /// I is a sext with right type and used in memory accesses. If it used in a
 /// "complex" getelementptr, we allow it to be promoted without finding other
@@ -2448,6 +2430,7 @@ bool RISCVTTIImpl::canSplatOperand(Instruction *I, int Operand) const {
   case Intrinsic::vp_ssub_sat:
   case Intrinsic::usub_sat:
   case Intrinsic::vp_usub_sat:
+  case Intrinsic::vp_select:
     return Operand == 1;
     // These intrinsics are commutative.
   case Intrinsic::vp_add:
@@ -2529,4 +2512,23 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
     Ops.push_back(&OpIdx.value());
   }
   return true;
+}
+
+RISCVTTIImpl::TTI::MemCmpExpansionOptions
+RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
+  TTI::MemCmpExpansionOptions Options;
+  // TODO: Enable expansion when unaligned access is not supported after we fix
+  // issues in ExpandMemcmp.
+  if (!(ST->enableUnalignedScalarMem() &&
+        (ST->hasStdExtZbb() || ST->hasStdExtZbkb() || IsZeroCmp)))
+    return Options;
+
+  Options.AllowOverlappingLoads = true;
+  Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
+  Options.NumLoadsPerBlock = Options.MaxNumLoads;
+  if (ST->is64Bit())
+    Options.LoadSizes = {8, 4, 2, 1};
+  else
+    Options.LoadSizes = {4, 2, 1};
+  return Options;
 }

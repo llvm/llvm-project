@@ -13,6 +13,7 @@
 #include <__compare/compare_three_way.h>
 #include <__compare/ordering.h>
 #include <__config>
+#include <__cstddef/nullptr_t.h>
 #include <__cstddef/ptrdiff_t.h>
 #include <__exception/exception.h>
 #include <__functional/binary_function.h>
@@ -29,6 +30,7 @@
 #include <__memory/compressed_pair.h>
 #include <__memory/construct_at.h>
 #include <__memory/pointer_traits.h>
+#include <__memory/shared_count.h>
 #include <__memory/uninitialized_algorithms.h>
 #include <__memory/unique_ptr.h>
 #include <__type_traits/add_lvalue_reference.h>
@@ -69,55 +71,6 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// NOTE: Relaxed and acq/rel atomics (for increment and decrement respectively)
-// should be sufficient for thread safety.
-// See https://llvm.org/PR22803
-#if (defined(__clang__) && __has_builtin(__atomic_add_fetch) && defined(__ATOMIC_RELAXED) &&                           \
-     defined(__ATOMIC_ACQ_REL)) ||                                                                                     \
-    defined(_LIBCPP_COMPILER_GCC)
-#  define _LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT 1
-#else
-#  define _LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT 0
-#endif
-
-template <class _ValueType>
-inline _LIBCPP_HIDE_FROM_ABI _ValueType __libcpp_relaxed_load(_ValueType const* __value) {
-#if !defined(_LIBCPP_HAS_NO_THREADS) && defined(__ATOMIC_RELAXED) &&                                                   \
-    (__has_builtin(__atomic_load_n) || defined(_LIBCPP_COMPILER_GCC))
-  return __atomic_load_n(__value, __ATOMIC_RELAXED);
-#else
-  return *__value;
-#endif
-}
-
-template <class _ValueType>
-inline _LIBCPP_HIDE_FROM_ABI _ValueType __libcpp_acquire_load(_ValueType const* __value) {
-#if !defined(_LIBCPP_HAS_NO_THREADS) && defined(__ATOMIC_ACQUIRE) &&                                                   \
-    (__has_builtin(__atomic_load_n) || defined(_LIBCPP_COMPILER_GCC))
-  return __atomic_load_n(__value, __ATOMIC_ACQUIRE);
-#else
-  return *__value;
-#endif
-}
-
-template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _Tp __libcpp_atomic_refcount_increment(_Tp& __t) _NOEXCEPT {
-#if _LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT && !defined(_LIBCPP_HAS_NO_THREADS)
-  return __atomic_add_fetch(&__t, 1, __ATOMIC_RELAXED);
-#else
-  return __t += 1;
-#endif
-}
-
-template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _Tp __libcpp_atomic_refcount_decrement(_Tp& __t) _NOEXCEPT {
-#if _LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT && !defined(_LIBCPP_HAS_NO_THREADS)
-  return __atomic_add_fetch(&__t, -1, __ATOMIC_ACQ_REL);
-#else
-  return __t -= 1;
-#endif
-}
-
 class _LIBCPP_EXPORTED_FROM_ABI bad_weak_ptr : public std::exception {
 public:
   _LIBCPP_HIDE_FROM_ABI bad_weak_ptr() _NOEXCEPT                               = default;
@@ -137,70 +90,6 @@ public:
 
 template <class _Tp>
 class _LIBCPP_TEMPLATE_VIS weak_ptr;
-
-class _LIBCPP_EXPORTED_FROM_ABI __shared_count {
-  __shared_count(const __shared_count&);
-  __shared_count& operator=(const __shared_count&);
-
-protected:
-  long __shared_owners_;
-  virtual ~__shared_count();
-
-private:
-  virtual void __on_zero_shared() _NOEXCEPT = 0;
-
-public:
-  _LIBCPP_HIDE_FROM_ABI explicit __shared_count(long __refs = 0) _NOEXCEPT : __shared_owners_(__refs) {}
-
-#if defined(_LIBCPP_SHARED_PTR_DEFINE_LEGACY_INLINE_FUNCTIONS)
-  void __add_shared() noexcept;
-  bool __release_shared() noexcept;
-#else
-  _LIBCPP_HIDE_FROM_ABI void __add_shared() _NOEXCEPT { __libcpp_atomic_refcount_increment(__shared_owners_); }
-  _LIBCPP_HIDE_FROM_ABI bool __release_shared() _NOEXCEPT {
-    if (__libcpp_atomic_refcount_decrement(__shared_owners_) == -1) {
-      __on_zero_shared();
-      return true;
-    }
-    return false;
-  }
-#endif
-  _LIBCPP_HIDE_FROM_ABI long use_count() const _NOEXCEPT { return __libcpp_relaxed_load(&__shared_owners_) + 1; }
-};
-
-class _LIBCPP_EXPORTED_FROM_ABI __shared_weak_count : private __shared_count {
-  long __shared_weak_owners_;
-
-public:
-  _LIBCPP_HIDE_FROM_ABI explicit __shared_weak_count(long __refs = 0) _NOEXCEPT
-      : __shared_count(__refs),
-        __shared_weak_owners_(__refs) {}
-
-protected:
-  ~__shared_weak_count() override;
-
-public:
-#if defined(_LIBCPP_SHARED_PTR_DEFINE_LEGACY_INLINE_FUNCTIONS)
-  void __add_shared() noexcept;
-  void __add_weak() noexcept;
-  void __release_shared() noexcept;
-#else
-  _LIBCPP_HIDE_FROM_ABI void __add_shared() _NOEXCEPT { __shared_count::__add_shared(); }
-  _LIBCPP_HIDE_FROM_ABI void __add_weak() _NOEXCEPT { __libcpp_atomic_refcount_increment(__shared_weak_owners_); }
-  _LIBCPP_HIDE_FROM_ABI void __release_shared() _NOEXCEPT {
-    if (__shared_count::__release_shared())
-      __release_weak();
-  }
-#endif
-  void __release_weak() _NOEXCEPT;
-  _LIBCPP_HIDE_FROM_ABI long use_count() const _NOEXCEPT { return __shared_count::use_count(); }
-  __shared_weak_count* lock() _NOEXCEPT;
-
-  virtual const void* __get_deleter(const type_info&) const _NOEXCEPT;
-
-private:
-  virtual void __on_zero_shared_weak() _NOEXCEPT = 0;
-};
 
 template <class _Tp, class _Dp, class _Alloc>
 class __shared_ptr_pointer : public __shared_weak_count {
@@ -1583,7 +1472,7 @@ template <class _CharT, class _Traits, class _Yp>
 inline _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, shared_ptr<_Yp> const& __p);
 
-#if !defined(_LIBCPP_HAS_NO_THREADS)
+#if _LIBCPP_HAS_THREADS
 
 class _LIBCPP_EXPORTED_FROM_ABI __sp_mut {
   void* __lx_;
@@ -1685,7 +1574,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool atomic_compare_exchange_weak_explicit(
   return std::atomic_compare_exchange_weak(__p, __v, __w);
 }
 
-#endif // !defined(_LIBCPP_HAS_NO_THREADS)
+#endif // _LIBCPP_HAS_THREADS
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -28,6 +28,18 @@
 #include <functional>
 
 using namespace llvm;
+
+inline unsigned typeToAddressSpace(const Type *Ty) {
+  if (auto PType = dyn_cast<TypedPointerType>(Ty))
+    return PType->getAddressSpace();
+  if (auto PType = dyn_cast<PointerType>(Ty))
+    return PType->getAddressSpace();
+  if (auto *ExtTy = dyn_cast<TargetExtType>(Ty);
+      ExtTy && isTypedPointerWrapper(ExtTy))
+    return ExtTy->getIntParameter(0);
+  report_fatal_error("Unable to convert LLVM type to SPIRVType", true);
+}
+
 SPIRVGlobalRegistry::SPIRVGlobalRegistry(unsigned PointerSize)
     : PointerSize(PointerSize), Bound(0) {}
 
@@ -69,7 +81,7 @@ SPIRVType *SPIRVGlobalRegistry::assignTypeToVReg(
 
 void SPIRVGlobalRegistry::assignSPIRVTypeToVReg(SPIRVType *SpirvType,
                                                 Register VReg,
-                                                MachineFunction &MF) {
+                                                const MachineFunction &MF) {
   VRegToTypeMap[&MF][VReg] = SpirvType;
 }
 
@@ -313,8 +325,8 @@ Register SPIRVGlobalRegistry::getOrCreateConstInt(uint64_t Val, MachineInstr &I,
 
 Register SPIRVGlobalRegistry::buildConstantInt(uint64_t Val,
                                                MachineIRBuilder &MIRBuilder,
-                                               SPIRVType *SpvType,
-                                               bool EmitIR) {
+                                               SPIRVType *SpvType, bool EmitIR,
+                                               bool ZeroAsNull) {
   assert(SpvType);
   auto &MF = MIRBuilder.getMF();
   const IntegerType *LLVMIntTy =
@@ -336,7 +348,7 @@ Register SPIRVGlobalRegistry::buildConstantInt(uint64_t Val,
     } else {
       Register SpvTypeReg = getSPIRVTypeID(SpvType);
       MachineInstrBuilder MIB;
-      if (Val) {
+      if (Val || !ZeroAsNull) {
         MIB = MIRBuilder.buildInstr(SPIRV::OpConstantI)
                   .addDef(Res)
                   .addUse(SpvTypeReg);
@@ -424,7 +436,7 @@ Register SPIRVGlobalRegistry::getOrCreateCompositeOrNull(
     LLT LLTy = LLT::scalar(64);
     Register SpvVecConst =
         CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
-    CurMF->getRegInfo().setRegClass(SpvVecConst, &SPIRV::iIDRegClass);
+    CurMF->getRegInfo().setRegClass(SpvVecConst, getRegClass(SpvType));
     assignSPIRVTypeToVReg(SpvType, SpvVecConst, *CurMF);
     DT.add(CA, CurMF, SpvVecConst);
     MachineInstrBuilder MIB;
@@ -570,15 +582,15 @@ Register
 SPIRVGlobalRegistry::getOrCreateConstNullPtr(MachineIRBuilder &MIRBuilder,
                                              SPIRVType *SpvType) {
   const Type *LLVMTy = getTypeForSPIRVType(SpvType);
-  const TypedPointerType *LLVMPtrTy = cast<TypedPointerType>(LLVMTy);
+  unsigned AddressSpace = typeToAddressSpace(LLVMTy);
   // Find a constant in DT or build a new one.
-  Constant *CP = ConstantPointerNull::get(PointerType::get(
-      LLVMPtrTy->getElementType(), LLVMPtrTy->getAddressSpace()));
+  Constant *CP = ConstantPointerNull::get(
+      PointerType::get(::getPointeeType(LLVMTy), AddressSpace));
   Register Res = DT.find(CP, CurMF);
   if (!Res.isValid()) {
-    LLT LLTy = LLT::pointer(LLVMPtrTy->getAddressSpace(), PointerSize);
+    LLT LLTy = LLT::pointer(AddressSpace, PointerSize);
     Res = CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
-    CurMF->getRegInfo().setRegClass(Res, &SPIRV::iIDRegClass);
+    CurMF->getRegInfo().setRegClass(Res, &SPIRV::pIDRegClass);
     assignSPIRVTypeToVReg(SpvType, Res, *CurMF);
     MIRBuilder.buildInstr(SPIRV::OpConstantNull)
         .addDef(Res)
@@ -978,18 +990,11 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
     }
     return getOpTypeFunction(RetTy, ParamTypes, MIRBuilder);
   }
-  unsigned AddrSpace = 0xFFFF;
-  if (auto PType = dyn_cast<TypedPointerType>(Ty))
-    AddrSpace = PType->getAddressSpace();
-  else if (auto PType = dyn_cast<PointerType>(Ty))
-    AddrSpace = PType->getAddressSpace();
-  else
-    report_fatal_error("Unable to convert LLVM type to SPIRVType", true);
 
+  unsigned AddrSpace = typeToAddressSpace(Ty);
   SPIRVType *SpvElementType = nullptr;
-  if (auto PType = dyn_cast<TypedPointerType>(Ty))
-    SpvElementType = getOrCreateSPIRVType(PType->getElementType(), MIRBuilder,
-                                          AccQual, EmitIR);
+  if (Type *ElemTy = ::getPointeeType(Ty))
+    SpvElementType = getOrCreateSPIRVType(ElemTy, MIRBuilder, AccQual, EmitIR);
   else
     SpvElementType = getOrCreateSPIRVIntegerType(8, MIRBuilder);
 
@@ -1029,7 +1034,11 @@ SPIRVType *SPIRVGlobalRegistry::restOfCreateSPIRVType(
   // will be added later. For special types it is already added to DT.
   if (SpirvType->getOpcode() != SPIRV::OpTypeForwardPointer && !Reg.isValid() &&
       !isSpecialOpaqueType(Ty)) {
-    if (!isPointerTy(Ty))
+    if (auto *ExtTy = dyn_cast<TargetExtType>(Ty);
+        ExtTy && isTypedPointerWrapper(ExtTy))
+      DT.add(ExtTy->getTypeParameter(0), ExtTy->getIntParameter(0),
+             &MIRBuilder.getMF(), getSPIRVTypeID(SpirvType));
+    else if (!isPointerTy(Ty))
       DT.add(Ty, &MIRBuilder.getMF(), getSPIRVTypeID(SpirvType));
     else if (isTypedPointerTy(Ty))
       DT.add(cast<TypedPointerType>(Ty)->getElementType(),
@@ -1056,11 +1065,20 @@ SPIRVGlobalRegistry::getSPIRVTypeForVReg(Register VReg,
   return nullptr;
 }
 
+SPIRVType *SPIRVGlobalRegistry::getResultType(Register VReg) {
+  MachineInstr *Instr = getVRegDef(CurMF->getRegInfo(), VReg);
+  return getSPIRVTypeForVReg(Instr->getOperand(1).getReg());
+}
+
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVType(
     const Type *Ty, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccessQual, bool EmitIR) {
   Register Reg;
-  if (!isPointerTy(Ty)) {
+  if (auto *ExtTy = dyn_cast<TargetExtType>(Ty);
+      ExtTy && isTypedPointerWrapper(ExtTy)) {
+    Reg = DT.find(ExtTy->getTypeParameter(0), ExtTy->getIntParameter(0),
+                  &MIRBuilder.getMF());
+  } else if (!isPointerTy(Ty)) {
     Ty = adjustIntTypeByWidth(Ty);
     Reg = DT.find(Ty, &MIRBuilder.getMF());
   } else if (isTypedPointerTy(Ty)) {
@@ -1124,6 +1142,24 @@ SPIRVGlobalRegistry::getScalarOrVectorComponentCount(SPIRVType *Type) const {
   return Type->getOpcode() == SPIRV::OpTypeVector
              ? static_cast<unsigned>(Type->getOperand(2).getImm())
              : 1;
+}
+
+SPIRVType *
+SPIRVGlobalRegistry::getScalarOrVectorComponentType(Register VReg) const {
+  return getScalarOrVectorComponentType(getSPIRVTypeForVReg(VReg));
+}
+
+SPIRVType *
+SPIRVGlobalRegistry::getScalarOrVectorComponentType(SPIRVType *Type) const {
+  if (!Type)
+    return nullptr;
+  Register ScalarReg = Type->getOpcode() == SPIRV::OpTypeVector
+                           ? Type->getOperand(1).getReg()
+                           : Type->getOperand(0).getReg();
+  SPIRVType *ScalarType = getSPIRVTypeForVReg(ScalarReg);
+  assert(isScalarOrVectorOfType(Type->getOperand(0).getReg(),
+                                ScalarType->getOpcode()));
+  return ScalarType;
 }
 
 unsigned

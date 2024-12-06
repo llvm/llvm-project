@@ -71,9 +71,21 @@ def OMPC_AtomicDefaultMemOrder : Clause<"atomic_default_mem_order"> {
   let clangClass = "OMPAtomicDefaultMemOrderClause";
   let flangClass = "OmpAtomicDefaultMemOrderClause";
 }
+
+def OMP_BIND_parallel : ClauseVal<"parallel",1,1> {}
+def OMP_BIND_teams : ClauseVal<"teams",2,1> {}
+def OMP_BIND_thread : ClauseVal<"thread",3,1> { let isDefault = true; }
 def OMPC_Bind : Clause<"bind"> {
   let clangClass = "OMPBindClause";
+  let flangClass = "OmpBindClause";
+  let enumClauseValue = "BindKind";
+  let allowedClauseValues = [
+    OMP_BIND_parallel,
+    OMP_BIND_teams,
+    OMP_BIND_thread
+  ];
 }
+
 def OMP_CANCELLATION_CONSTRUCT_Parallel : ClauseVal<"parallel", 1, 1> {}
 def OMP_CANCELLATION_CONSTRUCT_Loop : ClauseVal<"loop", 2, 1> {}
 def OMP_CANCELLATION_CONSTRUCT_Sections : ClauseVal<"sections", 3, 1> {}
@@ -151,6 +163,7 @@ def OMPC_DistSchedule : Clause<"dist_schedule"> {
 }
 def OMPC_Doacross : Clause<"doacross"> {
   let clangClass = "OMPDoacrossClause";
+  let flangClass = "OmpDoacrossClause";
 }
 def OMPC_DynamicAllocators : Clause<"dynamic_allocators"> {
   let clangClass = "OMPDynamicAllocatorsClause";
@@ -160,6 +173,7 @@ def OMPC_Enter : Clause<"enter"> {
 }
 def OMPC_Exclusive : Clause<"exclusive"> {
   let clangClass = "OMPExclusiveClause";
+  let flangClass = "OmpObjectList";
 }
 def OMPC_Fail : Clause<"fail"> {
   let clangClass = "OMPFailClause";
@@ -217,6 +231,7 @@ def OMPC_Inbranch : Clause<"inbranch"> {
 }
 def OMPC_Inclusive : Clause<"inclusive"> {
   let clangClass = "OMPInclusiveClause";
+  let flangClass = "OmpObjectList";
 }
 def OMPC_Indirect : Clause<"indirect"> {
 }
@@ -612,8 +627,8 @@ def OMP_Critical : Directive<"critical"> {
   let category = CA_Executable;
 }
 def OMP_DeclareMapper : Directive<"declare mapper"> {
-  let allowedClauses = [
-    VersionedClause<OMPC_Map>,
+  let requiredClauses = [
+    VersionedClause<OMPC_Map, 45>,
   ];
   let association = AS_None;
   let category = CA_Declarative;
@@ -754,6 +769,7 @@ def OMP_Flush : Directive<"flush"> {
     // OMPKinds.def.
     VersionedClause<OMPC_Flush>,
     VersionedClause<OMPC_Release, 50>,
+    VersionedClause<OMPC_SeqCst, 51>,
   ];
   let association = AS_None;
   let category = CA_Executable;
@@ -890,8 +906,8 @@ def OMP_Reverse : Directive<"reverse"> {
 }
 def OMP_Scan : Directive<"scan"> {
   let allowedClauses = [
-    VersionedClause<OMPC_Exclusive, 50>,
-    VersionedClause<OMPC_Inclusive, 50>,
+    VersionedClause<OMPC_Exclusive>,
+    VersionedClause<OMPC_Inclusive>,
   ];
   let association = AS_Separating;
   let category = CA_Subsidiary;

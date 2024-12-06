@@ -39,9 +39,16 @@ ELF Improvements
 Breaking changes
 ----------------
 
+* Removed support for the (deprecated) `R_RISCV_RVC_LUI` relocation. This
+  was a binutils-internal relocation used during relaxation, and was not
+  emitted by compilers/assemblers.
+
 COFF Improvements
 -----------------
 * ``/includeglob`` has been implemented to match the behavior of ``--undefined-glob`` available for ELF.
+* ``/lldsavetemps`` allows saving select intermediate LTO compilation results (e.g. resolution, preopt, promote, internalize, import, opt, precodegen, prelink, combinedindex).
+* ``/machine:arm64ec`` support completed, enabling the linking of ARM64EC images.
+* COFF weak anti-dependency alias symbols are now supported.
 
 MinGW Improvements
 ------------------

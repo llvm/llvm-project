@@ -22,19 +22,16 @@ namespace orc {
 /// runtime.
 class RedirectionManager {
 public:
-  /// Symbol name to symbol definition map.
-  using SymbolAddrMap = DenseMap<SymbolStringPtr, ExecutorSymbolDef>;
-
   virtual ~RedirectionManager() = default;
   /// Change the redirection destination of given symbols to new destination
   /// symbols.
-  virtual Error redirect(JITDylib &JD, const SymbolAddrMap &NewDests) = 0;
+  virtual Error redirect(JITDylib &JD, const SymbolMap &NewDests) = 0;
 
   /// Change the redirection destination of given symbol to new destination
   /// symbol.
   Error redirect(JITDylib &JD, SymbolStringPtr Symbol,
                  ExecutorSymbolDef NewDest) {
-    return redirect(JD, {{Symbol, NewDest}});
+    return redirect(JD, {{std::move(Symbol), NewDest}});
   }
 
 private:
@@ -53,7 +50,7 @@ public:
   /// desitnation symbol address.
   Error createRedirectableSymbol(ResourceTrackerSP RT, SymbolStringPtr Symbol,
                                  ExecutorSymbolDef InitialDest) {
-    return createRedirectableSymbols(RT, {{Symbol, InitialDest}});
+    return createRedirectableSymbols(RT, {{std::move(Symbol), InitialDest}});
   }
 
   /// Emit redirectable symbol

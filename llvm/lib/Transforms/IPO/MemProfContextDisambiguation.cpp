@@ -132,6 +132,11 @@ cl::opt<bool> EnableMemProfContextDisambiguation(
 cl::opt<bool> SupportsHotColdNew(
     "supports-hot-cold-new", cl::init(false), cl::Hidden,
     cl::desc("Linking with hot/cold operator new interfaces"));
+
+cl::opt<bool> MemProfRequireDefinitionForPromotion(
+    "memprof-require-definition-for-promotion", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Require target function definition when promoting indirect calls"));
 } // namespace llvm
 
 extern cl::opt<bool> MemProfReportHintedSizes;
@@ -242,6 +247,10 @@ public:
     // recursion.
     bool Recursive = false;
 
+    // This will be formed by ORing together the AllocationType enum values
+    // for contexts including this node.
+    uint8_t AllocTypes = 0;
+
     // The corresponding allocation or interior call. This is the primary call
     // for which we have created this node.
     CallInfo Call;
@@ -250,7 +259,7 @@ public:
     // through cloning. I.e. located in the same function and have the same
     // (possibly pruned) stack ids. They will be updated the same way as the
     // primary call when assigning to function clones.
-    std::vector<CallInfo> MatchingCalls;
+    SmallVector<CallInfo, 0> MatchingCalls;
 
     // For alloc nodes this is a unique id assigned when constructed, and for
     // callsite stack nodes it is the original stack id when the node is
@@ -260,10 +269,6 @@ public:
     // nodes in the dot graph. Therefore we don't bother to assign a value for
     // clones.
     uint64_t OrigStackOrAllocId = 0;
-
-    // This will be formed by ORing together the AllocationType enum values
-    // for contexts including this node.
-    uint8_t AllocTypes = 0;
 
     // Edges to all callees in the profiled call stacks.
     // TODO: Should this be a map (from Callee node) for more efficient lookup?
@@ -473,7 +478,8 @@ protected:
   void addStackNodesForMIB(ContextNode *AllocNode,
                            CallStack<NodeT, IteratorT> &StackContext,
                            CallStack<NodeT, IteratorT> &CallsiteContext,
-                           AllocationType AllocType, uint64_t TotalSize);
+                           AllocationType AllocType,
+                           ArrayRef<ContextTotalSize> ContextSizeInfo);
 
   /// Matches all callsite metadata (or summary) to the nodes created for
   /// allocation memprof MIB metadata, synthesizing new nodes to reflect any
@@ -703,9 +709,10 @@ private:
   /// Map from each context ID to the AllocationType assigned to that context.
   DenseMap<uint32_t, AllocationType> ContextIdToAllocationType;
 
-  /// Map from each contextID to the profiled aggregate allocation size,
+  /// Map from each contextID to the profiled full contexts and their total
+  /// sizes (there may be more than one due to context trimming),
   /// optionally populated when requested (via MemProfReportHintedSizes).
-  DenseMap<uint32_t, uint64_t> ContextIdToTotalSize;
+  DenseMap<uint32_t, std::vector<ContextTotalSize>> ContextIdToContextSizeInfos;
 
   /// Identifies the context node created for a stack id when adding the MIB
   /// contexts to the graph. This is used to locate the context nodes when
@@ -1201,8 +1208,7 @@ template <class NodeT, class IteratorT>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::addStackNodesForMIB(
     ContextNode *AllocNode, CallStack<NodeT, IteratorT> &StackContext,
     CallStack<NodeT, IteratorT> &CallsiteContext, AllocationType AllocType,
-    uint64_t TotalSize) {
-  assert(!MemProfReportHintedSizes || TotalSize > 0);
+    ArrayRef<ContextTotalSize> ContextSizeInfo) {
   // Treating the hot alloc type as NotCold before the disambiguation for "hot"
   // is done.
   if (AllocType == AllocationType::Hot)
@@ -1211,8 +1217,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::addStackNodesForMIB(
   ContextIdToAllocationType[++LastContextId] = AllocType;
 
   if (MemProfReportHintedSizes) {
-    assert(TotalSize);
-    ContextIdToTotalSize[LastContextId] = TotalSize;
+    assert(!ContextSizeInfo.empty());
+    auto &Entry = ContextIdToContextSizeInfos[LastContextId];
+    Entry.insert(Entry.begin(), ContextSizeInfo.begin(), ContextSizeInfo.end());
   }
 
   // Update alloc type and context ids for this MIB.
@@ -1257,10 +1264,6 @@ CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::duplicateContextIds(
     assert(ContextIdToAllocationType.count(OldId));
     // The new context has the same allocation type as original.
     ContextIdToAllocationType[LastContextId] = ContextIdToAllocationType[OldId];
-    // For now set this to 0 so we don't duplicate sizes. Not clear how to divvy
-    // up the size. Assume that if we are able to duplicate context ids that we
-    // will be able to disambiguate all copies.
-    ContextIdToTotalSize[LastContextId] = 0;
   }
   return NewContextIds;
 }
@@ -1959,12 +1962,28 @@ ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
           // Add all of the MIBs and their stack nodes.
           for (auto &MDOp : MemProfMD->operands()) {
             auto *MIBMD = cast<const MDNode>(MDOp);
+            std::vector<ContextTotalSize> ContextSizeInfo;
+            // Collect the context size information if it exists.
+            if (MIBMD->getNumOperands() > 2) {
+              for (unsigned I = 2; I < MIBMD->getNumOperands(); I++) {
+                MDNode *ContextSizePair =
+                    dyn_cast<MDNode>(MIBMD->getOperand(I));
+                assert(ContextSizePair->getNumOperands() == 2);
+                uint64_t FullStackId = mdconst::dyn_extract<ConstantInt>(
+                                           ContextSizePair->getOperand(0))
+                                           ->getZExtValue();
+                uint64_t TotalSize = mdconst::dyn_extract<ConstantInt>(
+                                         ContextSizePair->getOperand(1))
+                                         ->getZExtValue();
+                ContextSizeInfo.push_back({FullStackId, TotalSize});
+              }
+            }
             MDNode *StackNode = getMIBStackNode(MIBMD);
             assert(StackNode);
             CallStack<MDNode, MDNode::op_iterator> StackContext(StackNode);
             addStackNodesForMIB<MDNode, MDNode::op_iterator>(
                 AllocNode, StackContext, CallsiteContext,
-                getMIBAllocType(MIBMD), getMIBTotalSize(MIBMD));
+                getMIBAllocType(MIBMD), ContextSizeInfo);
           }
           assert(AllocNode->AllocTypes != (uint8_t)AllocationType::None);
           // Memprof and callsite metadata on memory allocations no longer
@@ -2040,17 +2059,19 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
               EmptyContext;
           unsigned I = 0;
           assert(!MemProfReportHintedSizes ||
-                 AN.TotalSizes.size() == AN.MIBs.size());
+                 AN.ContextSizeInfos.size() == AN.MIBs.size());
           // Now add all of the MIBs and their stack nodes.
           for (auto &MIB : AN.MIBs) {
             CallStack<MIBInfo, SmallVector<unsigned>::const_iterator>
                 StackContext(&MIB);
-            uint64_t TotalSize = 0;
-            if (MemProfReportHintedSizes)
-              TotalSize = AN.TotalSizes[I];
+            std::vector<ContextTotalSize> ContextSizeInfo;
+            if (MemProfReportHintedSizes) {
+              for (auto [FullStackId, TotalSize] : AN.ContextSizeInfos[I])
+                ContextSizeInfo.push_back({FullStackId, TotalSize});
+            }
             addStackNodesForMIB<MIBInfo, SmallVector<unsigned>::const_iterator>(
                 AllocNode, StackContext, EmptyContext, MIB.AllocType,
-                TotalSize);
+                ContextSizeInfo);
             I++;
           }
           assert(AllocNode->AllocTypes != (uint8_t)AllocationType::None);
@@ -2822,13 +2843,18 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
     std::vector<uint32_t> SortedIds(ContextIds.begin(), ContextIds.end());
     std::sort(SortedIds.begin(), SortedIds.end());
     for (auto Id : SortedIds) {
-      auto SizeI = ContextIdToTotalSize.find(Id);
-      assert(SizeI != ContextIdToTotalSize.end());
       auto TypeI = ContextIdToAllocationType.find(Id);
       assert(TypeI != ContextIdToAllocationType.end());
-      OS << getAllocTypeString((uint8_t)TypeI->second) << " context " << Id
-         << " with total size " << SizeI->second << " is "
-         << getAllocTypeString(Node->AllocTypes) << " after cloning\n";
+      auto CSI = ContextIdToContextSizeInfos.find(Id);
+      if (CSI != ContextIdToContextSizeInfos.end()) {
+        for (auto &Info : CSI->second) {
+          OS << "MemProf hinting: "
+             << getAllocTypeString((uint8_t)TypeI->second)
+             << " full allocation context " << Info.FullStackId
+             << " with total size " << Info.TotalSize << " is "
+             << getAllocTypeString(Node->AllocTypes) << " after cloning\n";
+        }
+      }
     }
   }
 }
@@ -4143,7 +4169,17 @@ bool MemProfContextDisambiguation::initializeIndirectCallPromotionInfo(
     Module &M) {
   ICallAnalysis = std::make_unique<ICallPromotionAnalysis>();
   Symtab = std::make_unique<InstrProfSymtab>();
-  if (Error E = Symtab->create(M, /*InLTO=*/true)) {
+  // Don't add canonical names, to avoid multiple functions to the symtab
+  // when they both have the same root name with "." suffixes stripped.
+  // If we pick the wrong one then this could lead to incorrect ICP and calling
+  // a memprof clone that we don't actually create (resulting in linker unsats).
+  // What this means is that the GUID of the function (or its PGOFuncName
+  // metadata) *must* match that in the VP metadata to allow promotion.
+  // In practice this should not be a limitation, since local functions should
+  // have PGOFuncName metadata and global function names shouldn't need any
+  // special handling (they should not get the ".llvm.*" suffix that the
+  // canonicalization handling is attempting to strip).
+  if (Error E = Symtab->create(M, /*InLTO=*/true, /*AddCanonical=*/false)) {
     std::string SymtabFailure = toString(std::move(E));
     M.getContext().emitError("Failed to create symtab: " + SymtabFailure);
     return false;
@@ -4592,7 +4628,13 @@ void MemProfContextDisambiguation::performICP(
       // target (or version of the code), and we need to be conservative
       // (similar to what is done in the ICP pass).
       Function *TargetFunction = Symtab->getFunction(Candidate.Value);
-      if (TargetFunction == nullptr || TargetFunction->isDeclaration()) {
+      if (TargetFunction == nullptr ||
+          // Any ThinLTO global dead symbol removal should have already
+          // occurred, so it should be safe to promote when the target is a
+          // declaration.
+          // TODO: Remove internal option once more fully tested.
+          (MemProfRequireDefinitionForPromotion &&
+           TargetFunction->isDeclaration())) {
         ORE.emit([&]() {
           return OptimizationRemarkMissed(DEBUG_TYPE, "UnableToFindTarget", CB)
                  << "Memprof cannot promote indirect call: target with md5sum "

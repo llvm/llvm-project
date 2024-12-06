@@ -6,6 +6,11 @@
 ---
 name: csr_sgpr_spill
 tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: false
+  scratchRSrcReg: '$sgpr0_sgpr1_sgpr2_sgpr3'
+  stackPtrOffsetReg: '$sgpr32'
+  hasSpilledSGPRs: true
 body: |
   bb.0:
     S_NOP 0

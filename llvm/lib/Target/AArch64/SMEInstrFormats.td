@@ -1429,8 +1429,6 @@ class sve2_int_perm_revd<string asm>
   let Inst{4-0}   = Zd;
 
   let Constraints = "$Zd = $_Zd";
-  let DestructiveInstType = DestructiveUnary;
-  let ElementSize = ZPR128.ElementSize;
 }
 
 multiclass sve2_int_perm_revd<string asm, SDPatternOperator op> {
@@ -2414,7 +2412,7 @@ multiclass sme2p1_fp_cvt_vector_vg2_single<string mnemonic, bit l> {
 
 // SME2 multi-vec FP8 up convert two registers
 multiclass sme2p1_fp8_cvt_vector_vg2_single<string mnemonic, bits<2> opc, bit L> {
-  def _NAME : sme2_cvt_unpk_vector_vg2<opc, 0b110, L, ZZ_h_mul_r, ZPR8, mnemonic>{
+  def NAME : sme2_cvt_unpk_vector_vg2<opc, 0b110, L, ZZ_h_mul_r, ZPR8, mnemonic>{
     let Uses = [FPMR, FPCR];
   }
 }

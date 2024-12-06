@@ -103,6 +103,7 @@ define <2 x i64> @vslide1up_2xi64(<2 x i64> %v, i64 %b) {
 ; RV32-NEXT:    vslideup.vi v9, v8, 1
 ; RV32-NEXT:    vmv.v.v v8, v9
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vslide1up_2xi64:
@@ -129,6 +130,7 @@ define <4 x i64> @vslide1up_4xi64(<4 x i64> %v, i64 %b) {
 ; RV32-NEXT:    vslideup.vi v10, v8, 1
 ; RV32-NEXT:    vmv.v.v v8, v10
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vslide1up_4xi64:
@@ -413,8 +415,8 @@ define <4 x i8> @vslide1up_4xi8_neg_incorrect_insert3(<4 x i8> %v, i8 %b) {
 define <2 x i8> @vslide1up_4xi8_neg_length_changing(<4 x i8> %v, i8 %b) {
 ; CHECK-LABEL: vslide1up_4xi8_neg_length_changing:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, tu, ma
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetivli zero, 4, e8, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1

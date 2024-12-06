@@ -8,6 +8,7 @@
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Legality.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -30,15 +31,20 @@ struct LegalityTest : public testing::Test {
   std::unique_ptr<AssumptionCache> AC;
   std::unique_ptr<LoopInfo> LI;
   std::unique_ptr<ScalarEvolution> SE;
+  std::unique_ptr<BasicAAResult> BAA;
+  std::unique_ptr<AAResults> AA;
 
-  ScalarEvolution &getSE(llvm::Function &LLVMF) {
+  void getAnalyses(llvm::Function &LLVMF) {
     DT = std::make_unique<DominatorTree>(LLVMF);
     TLII = std::make_unique<TargetLibraryInfoImpl>();
     TLI = std::make_unique<TargetLibraryInfo>(*TLII);
     AC = std::make_unique<AssumptionCache>(LLVMF);
     LI = std::make_unique<LoopInfo>(*DT);
     SE = std::make_unique<ScalarEvolution>(LLVMF, *TLI, *AC, *DT, *LI);
-    return *SE;
+    BAA = std::make_unique<BasicAAResult>(LLVMF.getParent()->getDataLayout(),
+                                          LLVMF, *TLI, *AC, DT.get());
+    AA = std::make_unique<AAResults>(*TLI);
+    AA->addAAResult(*BAA);
   }
 
   void parseIR(LLVMContext &C, const char *IR) {
@@ -49,7 +55,7 @@ struct LegalityTest : public testing::Test {
   }
 };
 
-TEST_F(LegalityTest, Legality) {
+TEST_F(LegalityTest, LegalitySkipSchedule) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg, float %farg0, float %farg1, i64 %v0, i64 %v1, i32 %v2) {
   %gep0 = getelementptr float, ptr %ptr, i32 0
@@ -76,7 +82,7 @@ define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg, float 
 }
 )IR");
   llvm::Function *LLVMF = &*M->getFunction("foo");
-  auto &SE = getSE(*LLVMF);
+  getAnalyses(*LLVMF);
   const auto &DL = M->getDataLayout();
 
   sandboxir::Context Ctx(C);
@@ -104,80 +110,136 @@ define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg, float 
   auto *CmpSLT = cast<sandboxir::CmpInst>(&*It++);
   auto *CmpSGT = cast<sandboxir::CmpInst>(&*It++);
 
-  sandboxir::LegalityAnalysis Legality(SE, DL);
-  const auto &Result = Legality.canVectorize({St0, St1});
+  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx);
+  const auto &Result =
+      Legality.canVectorize({St0, St1}, /*SkipScheduling=*/true);
   EXPECT_TRUE(isa<sandboxir::Widen>(Result));
 
   {
     // Check NotInstructions
-    auto &Result = Legality.canVectorize({F, St0});
+    auto &Result = Legality.canVectorize({F, St0}, /*SkipScheduling=*/true);
     EXPECT_TRUE(isa<sandboxir::Pack>(Result));
     EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
               sandboxir::ResultReason::NotInstructions);
   }
   {
     // Check DiffOpcodes
-    const auto &Result = Legality.canVectorize({St0, Ld0});
+    const auto &Result =
+        Legality.canVectorize({St0, Ld0}, /*SkipScheduling=*/true);
     EXPECT_TRUE(isa<sandboxir::Pack>(Result));
     EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
               sandboxir::ResultReason::DiffOpcodes);
   }
   {
     // Check DiffTypes
-    EXPECT_TRUE(isa<sandboxir::Widen>(Legality.canVectorize({St0, StVec2})));
-    EXPECT_TRUE(isa<sandboxir::Widen>(Legality.canVectorize({StVec2, StVec3})));
+    EXPECT_TRUE(isa<sandboxir::Widen>(
+        Legality.canVectorize({St0, StVec2}, /*SkipScheduling=*/true)));
+    EXPECT_TRUE(isa<sandboxir::Widen>(
+        Legality.canVectorize({StVec2, StVec3}, /*SkipScheduling=*/true)));
 
-    const auto &Result = Legality.canVectorize({St0, StI8});
+    const auto &Result =
+        Legality.canVectorize({St0, StI8}, /*SkipScheduling=*/true);
     EXPECT_TRUE(isa<sandboxir::Pack>(Result));
     EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
               sandboxir::ResultReason::DiffTypes);
   }
   {
     // Check DiffMathFlags
-    const auto &Result = Legality.canVectorize({FAdd0, FAdd1});
+    const auto &Result =
+        Legality.canVectorize({FAdd0, FAdd1}, /*SkipScheduling=*/true);
     EXPECT_TRUE(isa<sandboxir::Pack>(Result));
     EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
               sandboxir::ResultReason::DiffMathFlags);
   }
   {
     // Check DiffWrapFlags
-    const auto &Result = Legality.canVectorize({Trunc0, Trunc1});
+    const auto &Result =
+        Legality.canVectorize({Trunc0, Trunc1}, /*SkipScheduling=*/true);
     EXPECT_TRUE(isa<sandboxir::Pack>(Result));
     EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
               sandboxir::ResultReason::DiffWrapFlags);
   }
   {
     // Check DiffTypes for unary operands that have a different type.
-    const auto &Result = Legality.canVectorize({Trunc64to8, Trunc32to8});
+    const auto &Result = Legality.canVectorize({Trunc64to8, Trunc32to8},
+                                               /*SkipScheduling=*/true);
     EXPECT_TRUE(isa<sandboxir::Pack>(Result));
     EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
               sandboxir::ResultReason::DiffTypes);
   }
   {
     // Check DiffOpcodes for CMPs with different predicates.
-    const auto &Result = Legality.canVectorize({CmpSLT, CmpSGT});
+    const auto &Result =
+        Legality.canVectorize({CmpSLT, CmpSGT}, /*SkipScheduling=*/true);
     EXPECT_TRUE(isa<sandboxir::Pack>(Result));
     EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
               sandboxir::ResultReason::DiffOpcodes);
   }
   {
     // Check NotConsecutive Ld0,Ld0b
-    const auto &Result = Legality.canVectorize({Ld0, Ld0b});
+    const auto &Result =
+        Legality.canVectorize({Ld0, Ld0b}, /*SkipScheduling=*/true);
     EXPECT_TRUE(isa<sandboxir::Pack>(Result));
     EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
               sandboxir::ResultReason::NotConsecutive);
   }
   {
     // Check NotConsecutive Ld0,Ld3
-    const auto &Result = Legality.canVectorize({Ld0, Ld3});
+    const auto &Result =
+        Legality.canVectorize({Ld0, Ld3}, /*SkipScheduling=*/true);
     EXPECT_TRUE(isa<sandboxir::Pack>(Result));
     EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
               sandboxir::ResultReason::NotConsecutive);
   }
   {
     // Check Widen Ld0,Ld1
-    const auto &Result = Legality.canVectorize({Ld0, Ld1});
+    const auto &Result =
+        Legality.canVectorize({Ld0, Ld1}, /*SkipScheduling=*/true);
     EXPECT_TRUE(isa<sandboxir::Widen>(Result));
+  }
+}
+
+TEST_F(LegalityTest, LegalitySchedule) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr) {
+  %gep0 = getelementptr float, ptr %ptr, i32 0
+  %gep1 = getelementptr float, ptr %ptr, i32 1
+  %ld0 = load float, ptr %gep0
+  store float %ld0, ptr %gep1
+  %ld1 = load float, ptr %gep1
+  store float %ld0, ptr %gep0
+  store float %ld1, ptr %gep1
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  getAnalyses(*LLVMF);
+  const auto &DL = M->getDataLayout();
+
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  [[maybe_unused]] auto *Gep0 = cast<sandboxir::GetElementPtrInst>(&*It++);
+  [[maybe_unused]] auto *Gep1 = cast<sandboxir::GetElementPtrInst>(&*It++);
+  auto *Ld0 = cast<sandboxir::LoadInst>(&*It++);
+  [[maybe_unused]] auto *ConflictingSt = cast<sandboxir::StoreInst>(&*It++);
+  auto *Ld1 = cast<sandboxir::LoadInst>(&*It++);
+  auto *St0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *St1 = cast<sandboxir::StoreInst>(&*It++);
+
+  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx);
+  {
+    // Can vectorize St0,St1.
+    const auto &Result = Legality.canVectorize({St0, St1});
+    EXPECT_TRUE(isa<sandboxir::Widen>(Result));
+  }
+  {
+    // Can't vectorize Ld0,Ld1 because of conflicting store.
+    auto &Result = Legality.canVectorize({Ld0, Ld1});
+    EXPECT_TRUE(isa<sandboxir::Pack>(Result));
+    EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
+              sandboxir::ResultReason::CantSchedule);
   }
 }
 
@@ -189,7 +251,7 @@ define void @foo() {
 }
 )IR");
   llvm::Function *LLVMF = &*M->getFunction("foo");
-  auto &SE = getSE(*LLVMF);
+  getAnalyses(*LLVMF);
   const auto &DL = M->getDataLayout();
 
   auto Matches = [](const sandboxir::LegalityResult &Result,
@@ -200,7 +262,8 @@ define void @foo() {
     return Buff == ExpectedStr;
   };
 
-  sandboxir::LegalityAnalysis Legality(SE, DL);
+  sandboxir::Context Ctx(C);
+  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx);
   EXPECT_TRUE(
       Matches(Legality.createLegalityResult<sandboxir::Widen>(), "Widen"));
   EXPECT_TRUE(Matches(Legality.createLegalityResult<sandboxir::Pack>(

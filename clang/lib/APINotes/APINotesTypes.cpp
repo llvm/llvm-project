@@ -85,8 +85,16 @@ LLVM_DUMP_METHOD void FunctionInfo::dump(llvm::raw_ostream &OS) const {
 
 LLVM_DUMP_METHOD void ObjCMethodInfo::dump(llvm::raw_ostream &OS) {
   static_cast<FunctionInfo &>(*this).dump(OS);
+  if (Self)
+    Self->dump(OS);
   OS << (DesignatedInit ? "[DesignatedInit] " : "")
      << (RequiredInit ? "[RequiredInit] " : "") << '\n';
+}
+
+LLVM_DUMP_METHOD void CXXMethodInfo::dump(llvm::raw_ostream &OS) {
+  static_cast<FunctionInfo &>(*this).dump(OS);
+  if (This)
+    This->dump(OS);
 }
 
 LLVM_DUMP_METHOD void TagInfo::dump(llvm::raw_ostream &OS) {
@@ -96,6 +104,10 @@ LLVM_DUMP_METHOD void TagInfo::dump(llvm::raw_ostream &OS) {
   if (EnumExtensibility)
     OS << "Enum Extensibility: " << static_cast<long>(*EnumExtensibility)
        << ' ';
+  if (SwiftCopyableSpecified)
+    OS << (SwiftCopyable ? "[SwiftCopyable] " : "[~SwiftCopyable]");
+  if (SwiftEscapableSpecified)
+    OS << (SwiftEscapable ? "[SwiftEscapable] " : "[~SwiftEscapable]");
   OS << '\n';
 }
 

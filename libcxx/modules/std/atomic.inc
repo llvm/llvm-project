@@ -73,7 +73,7 @@ export namespace std {
   using std::atomic_ullong _LIBCPP_USING_IF_EXISTS;
   using std::atomic_ulong _LIBCPP_USING_IF_EXISTS;
   using std::atomic_ushort _LIBCPP_USING_IF_EXISTS;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
   using std::atomic_wchar_t _LIBCPP_USING_IF_EXISTS;
 #endif
 

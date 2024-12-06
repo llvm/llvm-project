@@ -25,7 +25,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if defined(_LIBCPP_HAS_GCC_ATOMIC_IMP)
+#if _LIBCPP_HAS_GCC_ATOMIC_IMP
 
 // [atomics.types.generic]p1 guarantees _Tp is trivially copyable. Because
 // the default operator= in an object is not volatile, a byte-by-byte copy
@@ -260,7 +260,7 @@ __cxx_atomic_fetch_xor(__cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_o
 
 #  define __cxx_atomic_is_lock_free(__s) __atomic_is_lock_free(__s, 0)
 
-#elif defined(_LIBCPP_HAS_C_ATOMIC_IMP)
+#elif _LIBCPP_HAS_C_ATOMIC_IMP
 
 template <typename _Tp>
 struct __cxx_atomic_base_impl {

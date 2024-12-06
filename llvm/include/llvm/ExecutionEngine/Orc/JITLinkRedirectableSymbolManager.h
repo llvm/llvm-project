@@ -40,9 +40,9 @@ public:
   }
 
   void emitRedirectableSymbols(std::unique_ptr<MaterializationResponsibility> R,
-                               SymbolAddrMap InitialDests) override;
+                               SymbolMap InitialDests) override;
 
-  Error redirect(JITDylib &JD, const SymbolAddrMap &NewDests) override;
+  Error redirect(JITDylib &JD, const SymbolMap &NewDests) override;
 
 private:
   JITLinkRedirectableSymbolManager(

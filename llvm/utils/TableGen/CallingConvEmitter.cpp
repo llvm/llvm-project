@@ -163,9 +163,9 @@ void CallingConvEmitter::emitAction(const Record *Action, indent Indent,
         O << Indent << "if (MCRegister Reg = State.AllocateReg(" << Name
           << ")) {\n";
         if (SwiftAction)
-          AssignedSwiftRegsMap[CurrentAction].insert(Name);
+          AssignedSwiftRegsMap[CurrentAction].insert(std::move(Name));
         else
-          AssignedRegsMap[CurrentAction].insert(Name);
+          AssignedRegsMap[CurrentAction].insert(std::move(Name));
       } else {
         O << Indent << "static const MCPhysReg RegList" << ++Counter
           << "[] = {\n";

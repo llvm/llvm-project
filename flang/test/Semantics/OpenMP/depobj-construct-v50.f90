@@ -2,7 +2,7 @@
 
 subroutine f00
   integer :: obj
-!ERROR: A DEPEND clause on a DEPOBJ construct must not have SOURCE, SINK or DEPOBJ as dependence-type
+!ERROR: A DEPEND clause on a DEPOBJ construct must not have SINK, SOURCE or DEPOBJ as dependence type
   !$omp depobj(obj) depend(source)
 end
 
@@ -23,6 +23,6 @@ end
 subroutine f03
   integer :: obj, jbo
 !ERROR: The DESTROY clause must refer to the same object as the DEPOBJ construct
-!PORTABILITY: The object parameter in DESTROY clause in DEPOPJ construct was introduced in OpenMP v5.2
+!WARNING: The object parameter in DESTROY clause on DEPOPJ construct is not allowed in OpenMP v5.0, try -fopenmp-version=52
   !$omp depobj(obj) destroy(jbo)
 end
