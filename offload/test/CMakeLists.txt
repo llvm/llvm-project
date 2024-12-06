@@ -37,6 +37,20 @@ string(REGEX MATCHALL "([^\ ]+\ |[^\ ]+$)" SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM
 foreach(CURRENT_TARGET IN LISTS SYSTEM_TARGETS)
   string(STRIP "${CURRENT_TARGET}" CURRENT_TARGET)
 
+  if(CURRENT_TARGET MATCHES "^amdgcn" AND
+     NOT "${LIBOMPTARGET_AMDGPU_DETECTED_ARCH_LIST}"
+         IN_LIST LIBOMPTARGET_EXPANDED_DEVICE_ARCHITECTURES)
+    message(WARNING "Detected AMDGPU arch ${LIBOMPTARGET_AMDGPU_DETECTED_ARCH_LIST} "
+                    "not in built arch list, ${CURRENT_TARGET} tests will be skipped")
+    continue()
+  elseif(CURRENT_TARGET MATCHES "^nvptx" AND
+     NOT "${LIBOMPTARGET_DEP_CUDA_ARCH}"
+         IN_LIST LIBOMPTARGET_EXPANDED_DEVICE_ARCHITECTURES)
+    message(WARNING "Detected NVPTX arch ${LIBOMPTARGET_DEP_CUDA_ARCH} "
+                    "not in built arch list, ${CURRENT_TARGET} tests will be skipped")
+    continue()
+  endif()
+
   add_offload_testsuite(check-libomptarget-${CURRENT_TARGET}
     "Running libomptarget tests"
     ${CMAKE_CURRENT_BINARY_DIR}/${CURRENT_TARGET}
