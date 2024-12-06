@@ -281,6 +281,26 @@ Expected<LineEntry> LineTable::lookup(DataExtractor &Data, uint64_t BaseAddr, ui
                            Addr);
 }
 
+Expected<LineEntry> LineTable::lookup(uint64_t Addr) const {
+  std::size_t Left = 0, Right = Lines.size();
+  while (Right - Left > 1) {
+    const auto Mid = (Left + Right) / 2;
+    if (Lines[Mid].Addr <= Addr) {
+      Left = Mid;
+    } else {
+      Right = Mid;
+    }
+  }
+
+  if (Left < Lines.size() && Lines[Left].Addr <= Addr) {
+    return Lines[Left];
+  }
+
+  return createStringError(std::errc::invalid_argument,
+                           "address 0x%" PRIx64 " is not in the line table",
+                           Addr);
+}
+
 raw_ostream &llvm::gsym::operator<<(raw_ostream &OS, const LineTable &LT) {
   for (const auto &LineEntry : LT)
     OS << LineEntry << '\n';
