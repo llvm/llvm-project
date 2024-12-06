@@ -48,8 +48,18 @@ static void process(cir::FuncOp func) {
 
   mlir::Operation *insertPoint = &*entryBlock.begin();
 
-  for (auto alloca : allocas)
+  for (auto alloca : allocas) {
     alloca->moveBefore(insertPoint);
+    if (alloca.getConstant()) {
+      // Hoisted alloca may come from the body of a loop, in which case the
+      // stack slot is re-used by multiple objects alive in different iterations
+      // of the loop. In theory, each of these objects are still constant within
+      // their lifetimes, but currently we're not emitting metadata to further
+      // describe this. So for now let's behave conservatively and remove the
+      // const flag on nested allocas when hoisting them.
+      alloca.setConstant(false);
+    }
+  }
 }
 
 void HoistAllocasPass::runOnOperation() {

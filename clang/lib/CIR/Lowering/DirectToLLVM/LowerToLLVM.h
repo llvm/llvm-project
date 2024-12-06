@@ -301,8 +301,13 @@ public:
 };
 
 class CIRToLLVMLoadOpLowering : public mlir::OpConversionPattern<cir::LoadOp> {
+  cir::LowerModule *lowerMod;
+
 public:
-  using mlir::OpConversionPattern<cir::LoadOp>::OpConversionPattern;
+  CIRToLLVMLoadOpLowering(const mlir::TypeConverter &typeConverter,
+                          mlir::MLIRContext *context,
+                          cir::LowerModule *lowerModule)
+      : OpConversionPattern(typeConverter, context), lowerMod(lowerModule) {}
 
   mlir::LogicalResult
   matchAndRewrite(cir::LoadOp op, OpAdaptor,
@@ -311,8 +316,13 @@ public:
 
 class CIRToLLVMStoreOpLowering
     : public mlir::OpConversionPattern<cir::StoreOp> {
+  cir::LowerModule *lowerMod;
+
 public:
-  using mlir::OpConversionPattern<cir::StoreOp>::OpConversionPattern;
+  CIRToLLVMStoreOpLowering(const mlir::TypeConverter &typeConverter,
+                           mlir::MLIRContext *context,
+                           cir::LowerModule *lowerModule)
+      : OpConversionPattern(typeConverter, context), lowerMod(lowerModule) {}
 
   mlir::LogicalResult
   matchAndRewrite(cir::StoreOp op, OpAdaptor,
