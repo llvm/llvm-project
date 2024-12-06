@@ -1,0 +1,34 @@
+
+#ifndef _SIM_MAP
+#define _SIM_MAP
+
+#pragma clang system_header
+#include "sim_stl_pair"
+
+namespace std {
+
+template <typename Key, typename Value>
+class map {
+  public:
+    using value_type = pair<Key, Value>;
+    map();
+    map(initializer_list<pair<Key, Value>> initList);
+    value_type& operator[](const Key& key);
+    value_type& operator[](Key&& key);
+    class iterator {
+    public:
+      iterator(Key *key): ptr(key) {}
+      iterator& operator++() { ++ptr; return *this; }
+      bool operator!=(const iterator &other) const { return ptr != other.ptr; }
+      const Key &operator*() const { return *ptr; }
+    private:
+      Key *ptr;
+    };
+    Key *val;
+    iterator begin() const { return iterator(val); }
+    iterator end() const { return iterator(val + 1); }
+};
+
+} // namespace std
+
+#endif // _SIM_MAP

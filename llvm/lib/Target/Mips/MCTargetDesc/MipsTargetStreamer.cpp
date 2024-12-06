@@ -19,6 +19,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -804,8 +805,8 @@ MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
   ELFObjectWriter &W = getStreamer().getWriter();
 
   // It's possible that MCObjectFileInfo isn't fully initialized at this point
-  // due to an initialization order problem where LLVMTargetMachine creates the
-  // target streamer before TargetLoweringObjectFile calls
+  // due to an initialization order problem where CodeGenTargetMachineImpl
+  // creates the target streamer before TargetLoweringObjectFile calls
   // InitializeMCObjectFileInfo. There doesn't seem to be a single place that
   // covers all cases so this statement covers most cases and direct object
   // emission must call setPic() once MCObjectFileInfo has been initialized. The

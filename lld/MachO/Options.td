@@ -126,10 +126,16 @@ def no_call_graph_profile_sort : Flag<["--"], "no-call-graph-profile-sort">,
 def print_symbol_order_eq: Joined<["--"], "print-symbol-order=">,
     HelpText<"Print a symbol order specified by --call-graph-profile-sort into the specified file">,
     Group<grp_lld>;
-def irpgo_profile_sort: Joined<["--"], "irpgo-profile-sort=">,
-    MetaVarName<"<profile>">,
+def irpgo_profile_sort: Separate<["--"], "irpgo-profile-sort">, Group<grp_lld>;
+def irpgo_profile_sort_eq: Joined<["--"], "irpgo-profile-sort=">,
+    Alias<!cast<Separate>(irpgo_profile_sort)>, MetaVarName<"<profile>">,
     HelpText<"Read the IRPGO profile at <profile> to order sections to improve startup time">,
     Group<grp_lld>;
+def compression_sort_startup_functions: Flag<["--"], "compression-sort-startup-functions">,
+    HelpText<"Order startup functions to improve compressed size in addition to startup time">,
+    Group<grp_lld>;
+def no_compression_sort_startup_functions: Flag<["--"], "no-compression-sort-startup-functions">,
+    HelpText<"Do not order startup function for compression">, Group<grp_lld>;
 def compression_sort: Joined<["--"], "compression-sort=">,
     MetaVarName<"[none,function,data,both]">,
     HelpText<"Order sections to improve compressed size">, Group<grp_lld>;
@@ -156,6 +162,16 @@ def no_objc_category_merging : Flag<["-"], "no_objc_category_merging">,
     Group<grp_lld>;
 def lto_debug_pass_manager: Flag<["--"], "lto-debug-pass-manager">,
     HelpText<"Debug new pass manager">, Group<grp_lld>;
+def lto_newpm_passes: Joined<["--"], "lto-newpm-passes=">,
+    HelpText<"Passes to run during LTO">, Group<grp_lld>;
+def load_pass_plugins : Separate<["--"], "load-pass-plugin">, Group<grp_lld>;
+def load_pass_plugins_eq : Joined<["--"], "load-pass-plugin=">,
+    Alias<!cast<Separate>(load_pass_plugins)>,
+    HelpText<"Load passes from plugin library">, Group<grp_lld>;
+def codegen_data_generate_path : Separate<["--"], "codegen-data-generate-path">, Group<grp_lld>;
+def codegen_data_generate_path_eq : Joined<["--"], "codegen-data-generate-path=">,
+    Alias<!cast<Separate>(codegen_data_generate_path)>, MetaVarName<"<cgdata>">,
+    HelpText<"Write the CG data to the specified path <cgdata>.">, Group<grp_lld>;
 def cs_profile_generate: Flag<["--"], "cs-profile-generate">,
     HelpText<"Perform context sensitive PGO instrumentation">, Group<grp_lld>;
 def cs_profile_path: Joined<["--"], "cs-profile-path=">,
@@ -860,13 +876,11 @@ def sub_umbrella : Separate<["-"], "sub_umbrella">,
     Group<grp_rare>;
 def allowable_client : Separate<["-"], "allowable_client">,
     MetaVarName<"<name>">,
-    HelpText<"Specify <name> of a dylib or framework that is allowed to link to this dylib">,
-    Flags<[HelpHidden]>,
+    HelpText<"Specify <name> of a dylib, framework, or executable that is allowed to link to this dylib">,
     Group<grp_rare>;
 def client_name : Separate<["-"], "client_name">,
     MetaVarName<"<name>">,
-    HelpText<"Specifies a <name> this client should match with the -allowable_client <name> in a dependent dylib">,
-    Flags<[HelpHidden]>,
+    HelpText<"Specifies a <name> this client should match with the -allowable_client <name> in an explicitly linked dylib">,
     Group<grp_rare>;
 def umbrella : Separate<["-"], "umbrella">,
     MetaVarName<"<name>">,

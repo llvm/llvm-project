@@ -97,11 +97,12 @@ public:
 };
 } // namespace
 
-static void printHelp(const char *argv0) {
+static void printHelp(CommonLinkerContext &ctx, const char *argv0) {
+  auto &outs = ctx.e.outs();
   MinGWOptTable().printHelp(
-      lld::outs(), (std::string(argv0) + " [options] file...").c_str(), "lld",
-      false /*ShowHidden*/, true /*ShowAllAliases*/);
-  lld::outs() << "\n";
+      outs, (std::string(argv0) + " [options] file...").c_str(), "lld",
+      /*ShowHidden=*/false, /*ShowAllAliases=*/true);
+  outs << '\n';
 }
 
 static cl::TokenizerCallback getQuotingStyle() {
@@ -189,7 +190,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     return false;
 
   if (args.hasArg(OPT_help)) {
-    printHelp(argsArr[0]);
+    printHelp(*ctx, argsArr[0]);
     return true;
   }
 
@@ -329,6 +330,14 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       add("-build-id");
   }
 
+  if (auto *a = args.getLastArg(OPT_functionpadmin)) {
+    StringRef v = a->getValue();
+    if (v.empty())
+      add("-functionpadmin");
+    else
+      add("-functionpadmin:" + v);
+  }
+
   if (args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false))
     add("-WX");
   else
@@ -398,6 +407,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
                    OPT_no_allow_multiple_definition, false))
     add("-force:multiple");
 
+  if (auto *a = args.getLastArg(OPT_dependent_load_flag))
+    add("-dependentloadflag:" + StringRef(a->getValue()));
+
   if (auto *a = args.getLastArg(OPT_icf)) {
     StringRef s = a->getValue();
     if (s == "all")
@@ -447,6 +459,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     else
       add("-errorlimit:" + s);
   }
+
+  if (auto *a = args.getLastArg(OPT_rpath))
+    warn("parameter " + a->getSpelling() + " has no effect on PE/COFF targets");
 
   for (auto *a : args.filtered(OPT_mllvm))
     add("-mllvm:" + StringRef(a->getValue()));
@@ -511,6 +526,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   for (auto *a : args.filtered(OPT_require_defined))
     add("-include:" + StringRef(a->getValue()));
+  for (auto *a : args.filtered(OPT_undefined_glob))
+    add("-includeglob:" + StringRef(a->getValue()));
   for (auto *a : args.filtered(OPT_undefined))
     add("-includeoptional:" + StringRef(a->getValue()));
   for (auto *a : args.filtered(OPT_delayload))
@@ -558,7 +575,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     return false;
 
   if (args.hasArg(OPT_verbose) || args.hasArg(OPT__HASH_HASH_HASH))
-    lld::errs() << llvm::join(linkArgs, " ") << "\n";
+    ctx->e.errs() << llvm::join(linkArgs, " ") << "\n";
 
   if (args.hasArg(OPT__HASH_HASH_HASH))
     return true;

@@ -30,7 +30,7 @@ llvm::DenseMap<const lld::macho::InputSection *, size_t>
 runBalancedPartitioning(size_t &highestAvailablePriority,
                         llvm::StringRef profilePath,
                         bool forFunctionCompression, bool forDataCompression,
-                        bool verbose);
+                        bool compressionSortStartupFunctions, bool verbose);
 
 } // namespace lld::macho
 

@@ -306,3 +306,15 @@ func.func @test_vector_insert_scalable(%arg0: vector<2x8x[4]xf32>, %arg1: vector
   // ALL: return %[[RES]] : vector<2x8x[4]xf32>
   return %0 : vector<2x8x[4]xf32>
 }
+
+// -----
+
+// ALL-LABEL: test_vector_extract_scalar
+func.func @test_vector_extract_scalar() {
+  %cst = arith.constant dense<[1, 2, 3, 4]> : vector<4xi32>
+  // ALL-NOT: vector.shuffle
+  // ALL:     vector.extract
+  // ALL-NOT: vector.shuffle
+  %0 = vector.extract %cst[0] : i32 from vector<4xi32>
+  return
+}

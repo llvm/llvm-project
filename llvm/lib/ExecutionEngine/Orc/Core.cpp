@@ -14,6 +14,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <condition_variable>
 #include <future>
@@ -274,47 +275,6 @@ void AsynchronousSymbolQuery::detach() {
   for (auto &[JD, Syms] : QueryRegistrations)
     JD->detachQueryHelper(*this, Syms);
   QueryRegistrations.clear();
-}
-
-AbsoluteSymbolsMaterializationUnit::AbsoluteSymbolsMaterializationUnit(
-    SymbolMap Symbols)
-    : MaterializationUnit(extractFlags(Symbols)), Symbols(std::move(Symbols)) {}
-
-StringRef AbsoluteSymbolsMaterializationUnit::getName() const {
-  return "<Absolute Symbols>";
-}
-
-void AbsoluteSymbolsMaterializationUnit::materialize(
-    std::unique_ptr<MaterializationResponsibility> R) {
-  // Even though these are just absolute symbols we need to check for failure
-  // to resolve/emit: the tracker for these symbols may have been removed while
-  // the materialization was in flight (e.g. due to a failure in some action
-  // triggered by the queries attached to the resolution/emission of these
-  // symbols).
-  if (auto Err = R->notifyResolved(Symbols)) {
-    R->getExecutionSession().reportError(std::move(Err));
-    R->failMaterialization();
-    return;
-  }
-  if (auto Err = R->notifyEmitted({})) {
-    R->getExecutionSession().reportError(std::move(Err));
-    R->failMaterialization();
-    return;
-  }
-}
-
-void AbsoluteSymbolsMaterializationUnit::discard(const JITDylib &JD,
-                                                 const SymbolStringPtr &Name) {
-  assert(Symbols.count(Name) && "Symbol is not part of this MU");
-  Symbols.erase(Name);
-}
-
-MaterializationUnit::Interface
-AbsoluteSymbolsMaterializationUnit::extractFlags(const SymbolMap &Symbols) {
-  SymbolFlagsMap Flags;
-  for (const auto &[Name, Def] : Symbols)
-    Flags[Name] = Def.getFlags();
-  return MaterializationUnit::Interface(std::move(Flags), nullptr);
 }
 
 ReExportsMaterializationUnit::ReExportsMaterializationUnit(
@@ -933,7 +893,8 @@ Error JITDylib::resolve(MaterializationResponsibility &MR,
             SymbolsInErrorState.insert(KV.first);
           else {
             if (SymI->second.getFlags() & JITSymbolFlags::Common) {
-              auto WeakOrCommon = JITSymbolFlags::Weak | JITSymbolFlags::Common;
+              [[maybe_unused]] auto WeakOrCommon =
+                  JITSymbolFlags::Weak | JITSymbolFlags::Common;
               assert((KV.second.getFlags() & WeakOrCommon) &&
                      "Common symbols must be resolved as common or weak");
               assert((KV.second.getFlags() & ~WeakOrCommon) ==
@@ -978,7 +939,6 @@ Error JITDylib::resolve(MaterializationResponsibility &MR,
           auto &MI = MII->second;
           for (auto &Q : MI.takeQueriesMeeting(SymbolState::Resolved)) {
             Q->notifySymbolMetRequiredState(Name, ResolvedSym);
-            Q->removeQueryDependence(*this, Name);
             if (Q->isComplete())
               CompletedQueries.insert(std::move(Q));
           }
@@ -1247,9 +1207,8 @@ void JITDylib::MaterializingInfo::removeQuery(
       PendingQueries, [&Q](const std::shared_ptr<AsynchronousSymbolQuery> &V) {
         return V.get() == &Q;
       });
-  assert(I != PendingQueries.end() &&
-         "Query is not attached to this MaterializingInfo");
-  PendingQueries.erase(I);
+  if (I != PendingQueries.end())
+    PendingQueries.erase(I);
 }
 
 JITDylib::AsynchronousSymbolQueryList
@@ -1849,7 +1808,7 @@ ExecutionSession::lookup(const JITDylibSearchOrder &SearchOrder,
     if (R)
       PromisedResult.set_value(std::move(*R));
     else {
-      ErrorAsOutParameter _(&ResolutionError);
+      ErrorAsOutParameter _(ResolutionError);
       ResolutionError = R.takeError();
       PromisedResult.set_value(SymbolMap());
     }
@@ -1860,7 +1819,7 @@ ExecutionSession::lookup(const JITDylibSearchOrder &SearchOrder,
   Error ResolutionError = Error::success();
 
   auto NotifyComplete = [&](Expected<SymbolMap> R) {
-    ErrorAsOutParameter _(&ResolutionError);
+    ErrorAsOutParameter _(ResolutionError);
     if (R)
       Result = std::move(*R);
     else
@@ -1918,31 +1877,39 @@ ExecutionSession::lookup(ArrayRef<JITDylib *> SearchOrder, StringRef Name,
 Error ExecutionSession::registerJITDispatchHandlers(
     JITDylib &JD, JITDispatchHandlerAssociationMap WFs) {
 
-  auto TagAddrs = lookup({{&JD, JITDylibLookupFlags::MatchAllSymbols}},
-                         SymbolLookupSet::fromMapKeys(
-                             WFs, SymbolLookupFlags::WeaklyReferencedSymbol));
-  if (!TagAddrs)
-    return TagAddrs.takeError();
+  auto TagSyms = lookup({{&JD, JITDylibLookupFlags::MatchAllSymbols}},
+                        SymbolLookupSet::fromMapKeys(
+                            WFs, SymbolLookupFlags::WeaklyReferencedSymbol));
+  if (!TagSyms)
+    return TagSyms.takeError();
 
   // Associate tag addresses with implementations.
   std::lock_guard<std::mutex> Lock(JITDispatchHandlersMutex);
-  for (auto &KV : *TagAddrs) {
-    auto TagAddr = KV.second.getAddress();
+
+  // Check that no tags are being overwritten.
+  for (auto &[TagName, TagSym] : *TagSyms) {
+    auto TagAddr = TagSym.getAddress();
     if (JITDispatchHandlers.count(TagAddr))
-      return make_error<StringError>("Tag " + formatv("{0:x16}", TagAddr) +
-                                         " (for " + *KV.first +
+      return make_error<StringError>("Tag " + formatv("{0:x}", TagAddr) +
+                                         " (for " + *TagName +
                                          ") already registered",
                                      inconvertibleErrorCode());
-    auto I = WFs.find(KV.first);
+  }
+
+  // At this point we're guaranteed to succeed. Install the handlers.
+  for (auto &[TagName, TagSym] : *TagSyms) {
+    auto TagAddr = TagSym.getAddress();
+    auto I = WFs.find(TagName);
     assert(I != WFs.end() && I->second &&
            "JITDispatchHandler implementation missing");
-    JITDispatchHandlers[KV.second.getAddress()] =
+    JITDispatchHandlers[TagAddr] =
         std::make_shared<JITDispatchHandlerFunction>(std::move(I->second));
     LLVM_DEBUG({
-      dbgs() << "Associated function tag \"" << *KV.first << "\" ("
-             << formatv("{0:x}", KV.second.getAddress()) << ") with handler\n";
+      dbgs() << "Associated function tag \"" << *TagName << "\" ("
+             << formatv("{0:x}", TagAddr) << ") with handler\n";
     });
   }
+
   return Error::success();
 }
 
@@ -2647,6 +2614,12 @@ void ExecutionSession::OL_completeLookup(
               LLVM_DEBUG(dbgs()
                          << "matched, symbol already in required state\n");
               Q->notifySymbolMetRequiredState(Name, SymI->second.getSymbol());
+
+              // If this symbol is in anything other than the Ready state then
+              // we need to track the dependence.
+              if (SymI->second.getState() != SymbolState::Ready)
+                Q->addQueryDependence(JD, Name);
+
               return true;
             }
 
@@ -3197,7 +3170,6 @@ void ExecutionSession::IL_makeEDUEmitted(
       Q->notifySymbolMetRequiredState(SymbolStringPtr(Sym), Entry.getSymbol());
       if (Q->isComplete())
         Queries.insert(Q);
-      Q->removeQueryDependence(JD, SymbolStringPtr(Sym));
     }
   }
 
@@ -3340,7 +3312,7 @@ ExecutionSession::IL_emit(MaterializationResponsibility &MR,
           continue;
         }
 
-        // If we get here thene Dep is Emitted. We need to look up its defining
+        // If we get here then Dep is Emitted. We need to look up its defining
         // EDU and add this EDU to the defining EDU's list of users (this means
         // creating an EDUInfos entry if the defining EDU doesn't have one
         // already).
@@ -3349,8 +3321,6 @@ ExecutionSession::IL_emit(MaterializationResponsibility &MR,
         auto &DepMI = DepJD->MaterializingInfos[SymbolStringPtr(Dep)];
         assert(DepMI.DefiningEDU &&
                "Emitted symbol does not have a defining EDU");
-        assert(!DepMI.DefiningEDU->Dependencies.empty() &&
-               "Emitted symbol has empty dependencies (should be ready)");
         assert(DepMI.DependantEDUs.empty() &&
                "Already-emitted symbol has dependant EDUs?");
         auto &DepEDUInfo = EDUInfos[DepMI.DefiningEDU.get()];
@@ -3606,6 +3576,21 @@ ExecutionSession::IL_failSymbols(JITDylib &JD,
       assert(MI.DefiningEDU->Symbols.count(NonOwningSymbolStringPtr(Name)) &&
              "Symbol does not appear in its DefiningEDU");
       MI.DefiningEDU->Symbols.erase(NonOwningSymbolStringPtr(Name));
+
+      // Remove this EDU from the dependants lists of its dependencies.
+      for (auto &[DepJD, DepSyms] : MI.DefiningEDU->Dependencies) {
+        for (auto DepSym : DepSyms) {
+          assert(DepJD->Symbols.count(SymbolStringPtr(DepSym)) &&
+                 "DepSym not in DepJD");
+          assert(DepJD->MaterializingInfos.count(SymbolStringPtr(DepSym)) &&
+                 "DepSym has not MaterializingInfo");
+          auto &SymMI = DepJD->MaterializingInfos[SymbolStringPtr(DepSym)];
+          assert(SymMI.DependantEDUs.count(MI.DefiningEDU.get()) &&
+                 "DefiningEDU missing from DependantEDUs list of dependency");
+          SymMI.DependantEDUs.erase(MI.DefiningEDU.get());
+        }
+      }
+
       MI.DefiningEDU = nullptr;
     } else {
       // Otherwise if there are any EDUs waiting on this symbol then move

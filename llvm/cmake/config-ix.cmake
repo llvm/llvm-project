@@ -40,11 +40,27 @@ if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
           list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_FILE_OFFSET_BITS=64")
 endif()
 
+# Newer POSIX functions aren't available without the appropriate defines.
+# Usually those are set by the use of -std=gnuXX, but one can also use the
+# newer functions with -std=c(++)XX, i.e. without the GNU language extensions.
+# Keep this at the top to make sure we don't add _GNU_SOURCE dependent checks
+# before adding it.
+check_symbol_exists(__GLIBC__ stdio.h LLVM_USING_GLIBC)
+if(LLVM_USING_GLIBC)
+  add_compile_definitions(_GNU_SOURCE)
+  list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_GNU_SOURCE")
+
+  # enable 64bit off_t on 32bit systems using glibc
+  if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+    add_compile_definitions(_FILE_OFFSET_BITS=64)
+    list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_FILE_OFFSET_BITS=64")
+  endif()
+endif()
+
 # include checks
 check_include_file(dlfcn.h HAVE_DLFCN_H)
 check_include_file(errno.h HAVE_ERRNO_H)
 check_include_file(fcntl.h HAVE_FCNTL_H)
-check_include_file(link.h HAVE_LINK_H)
 check_include_file(malloc/malloc.h HAVE_MALLOC_MALLOC_H)
 if( NOT PURE_WINDOWS )
   check_include_file(pthread.h HAVE_PTHREAD_H)
@@ -52,11 +68,9 @@ endif()
 check_include_file(signal.h HAVE_SIGNAL_H)
 check_include_file(sys/ioctl.h HAVE_SYS_IOCTL_H)
 check_include_file(sys/mman.h HAVE_SYS_MMAN_H)
-check_include_file(sys/param.h HAVE_SYS_PARAM_H)
 check_include_file(sys/resource.h HAVE_SYS_RESOURCE_H)
 check_include_file(sys/stat.h HAVE_SYS_STAT_H)
 check_include_file(sys/time.h HAVE_SYS_TIME_H)
-check_include_file(sys/types.h HAVE_SYS_TYPES_H)
 check_include_file(sysexits.h HAVE_SYSEXITS_H)
 check_include_file(termios.h HAVE_TERMIOS_H)
 check_include_file(unistd.h HAVE_UNISTD_H)
@@ -339,17 +353,6 @@ else()
       "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC)
 endif()
 
-check_symbol_exists(__GLIBC__ stdio.h LLVM_USING_GLIBC)
-if( LLVM_USING_GLIBC )
-  add_compile_definitions(_GNU_SOURCE)
-  list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_GNU_SOURCE")
-# enable 64bit off_t on 32bit systems using glibc
-  if (CMAKE_SIZEOF_VOID_P EQUAL 4)
-    add_compile_definitions(_FILE_OFFSET_BITS=64)
-    list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_FILE_OFFSET_BITS=64")
-  endif()
-endif()
-
 # This check requires _GNU_SOURCE.
 if (NOT PURE_WINDOWS)
   if (LLVM_PTHREAD_LIB)
@@ -357,6 +360,8 @@ if (NOT PURE_WINDOWS)
   endif()
   check_symbol_exists(pthread_getname_np pthread.h HAVE_PTHREAD_GETNAME_NP)
   check_symbol_exists(pthread_setname_np pthread.h HAVE_PTHREAD_SETNAME_NP)
+  check_symbol_exists(pthread_get_name_np "pthread.h;pthread_np.h" HAVE_PTHREAD_GET_NAME_NP)
+  check_symbol_exists(pthread_set_name_np "pthread.h;pthread_np.h" HAVE_PTHREAD_SET_NAME_NP)
   if (LLVM_PTHREAD_LIB)
     list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES ${LLVM_PTHREAD_LIB})
   endif()

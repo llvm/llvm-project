@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   AsmParser
   BitWriter
   Core
+  ProfileData
   Support
   TransformUtils
   Passes
@@ -18,7 +19,6 @@ add_llvm_unittest(UtilsTests
   CodeLayoutTest.cpp
   CodeMoverUtilsTest.cpp
   DebugifyTest.cpp
-  DXILResourceTest.cpp
   FunctionComparatorTest.cpp
   IntegerDivisionTest.cpp
   LocalTest.cpp

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUTargetStreamer.h"
+#include "AMDGPUMCExpr.h"
 #include "AMDGPUMCKernelDescriptor.h"
 #include "AMDGPUPTNote.h"
 #include "Utils/AMDGPUBaseInfo.h"
@@ -19,9 +20,8 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCELFStreamer.h"
-#include "llvm/MC/MCObjectWriter.h"
-#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
@@ -96,6 +96,7 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX940:  AK = GK_GFX940;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX941:  AK = GK_GFX941;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX942:  AK = GK_GFX942;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX950:  AK = GK_GFX950;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1010: AK = GK_GFX1010; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1011: AK = GK_GFX1011; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1012: AK = GK_GFX1012; break;
@@ -114,9 +115,11 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1150: AK = GK_GFX1150; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151: AK = GK_GFX1151; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1152: AK = GK_GFX1152; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1153: AK = GK_GFX1153; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200: AK = GK_GFX1200; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201: AK = GK_GFX1201; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC:     AK = GK_GFX9_GENERIC; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC:   AK = GK_GFX9_4_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC:  AK = GK_GFX10_1_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC:  AK = GK_GFX10_3_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC:    AK = GK_GFX11_GENERIC; break;
@@ -180,6 +183,7 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX940:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX940;
   case GK_GFX941:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX941;
   case GK_GFX942:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX942;
+  case GK_GFX950:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX950;
   case GK_GFX1010: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1010;
   case GK_GFX1011: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1011;
   case GK_GFX1012: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1012;
@@ -198,9 +202,11 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX1150: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1150;
   case GK_GFX1151: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151;
   case GK_GFX1152: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1152;
+  case GK_GFX1153: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1153;
   case GK_GFX1200: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200;
   case GK_GFX1201: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201;
   case GK_GFX9_GENERIC:     return ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC;
+  case GK_GFX9_4_GENERIC:   return ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC;
   case GK_GFX10_1_GENERIC:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC;
   case GK_GFX10_3_GENERIC:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC;
   case GK_GFX11_GENERIC:    return ELF::EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC;
@@ -244,8 +250,13 @@ void AMDGPUTargetAsmStreamer::EmitDirectiveAMDHSACodeObjectVersion(
 }
 
 void AMDGPUTargetAsmStreamer::EmitAMDKernelCodeT(AMDGPUMCKernelCodeT &Header) {
+  auto FoldAndPrint = [&](const MCExpr *Expr, raw_ostream &OS,
+                          const MCAsmInfo *MAI) {
+    printAMDGPUMCExpr(foldAMDGPUMCExpr(Expr, getContext()), OS, MAI);
+  };
+
   OS << "\t.amd_kernel_code_t\n";
-  Header.EmitKernelCodeT(OS, getContext());
+  Header.EmitKernelCodeT(OS, getContext(), FoldAndPrint);
   OS << "\t.end_amd_kernel_code_t\n";
 }
 
@@ -263,6 +274,47 @@ void AMDGPUTargetAsmStreamer::emitAMDGPULDS(MCSymbol *Symbol, unsigned Size,
                                             Align Alignment) {
   OS << "\t.amdgpu_lds " << Symbol->getName() << ", " << Size << ", "
      << Alignment.value() << '\n';
+}
+
+void AMDGPUTargetAsmStreamer::EmitMCResourceInfo(
+    const MCSymbol *NumVGPR, const MCSymbol *NumAGPR,
+    const MCSymbol *NumExplicitSGPR, const MCSymbol *PrivateSegmentSize,
+    const MCSymbol *UsesVCC, const MCSymbol *UsesFlatScratch,
+    const MCSymbol *HasDynamicallySizedStack, const MCSymbol *HasRecursion,
+    const MCSymbol *HasIndirectCall) {
+#define PRINT_RES_INFO(ARG)                                                    \
+  OS << "\t.set ";                                                             \
+  ARG->print(OS, getContext().getAsmInfo());                                   \
+  OS << ", ";                                                                  \
+  ARG->getVariableValue()->print(OS, getContext().getAsmInfo());               \
+  Streamer.addBlankLine();
+
+  PRINT_RES_INFO(NumVGPR);
+  PRINT_RES_INFO(NumAGPR);
+  PRINT_RES_INFO(NumExplicitSGPR);
+  PRINT_RES_INFO(PrivateSegmentSize);
+  PRINT_RES_INFO(UsesVCC);
+  PRINT_RES_INFO(UsesFlatScratch);
+  PRINT_RES_INFO(HasDynamicallySizedStack);
+  PRINT_RES_INFO(HasRecursion);
+  PRINT_RES_INFO(HasIndirectCall);
+#undef PRINT_RES_INFO
+}
+
+void AMDGPUTargetAsmStreamer::EmitMCResourceMaximums(const MCSymbol *MaxVGPR,
+                                                     const MCSymbol *MaxAGPR,
+                                                     const MCSymbol *MaxSGPR) {
+#define PRINT_RES_INFO(ARG)                                                    \
+  OS << "\t.set ";                                                             \
+  ARG->print(OS, getContext().getAsmInfo());                                   \
+  OS << ", ";                                                                  \
+  ARG->getVariableValue()->print(OS, getContext().getAsmInfo());               \
+  Streamer.addBlankLine();
+
+  PRINT_RES_INFO(MaxVGPR);
+  PRINT_RES_INFO(MaxAGPR);
+  PRINT_RES_INFO(MaxSGPR);
+#undef PRINT_RES_INFO
 }
 
 bool AMDGPUTargetAsmStreamer::EmitISAVersion() {
@@ -329,24 +381,17 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
 
   auto PrintField = [&](const MCExpr *Expr, uint32_t Shift, uint32_t Mask,
                         StringRef Directive) {
-    int64_t IVal;
     OS << "\t\t" << Directive << ' ';
-    const MCExpr *pgm_rsrc1_bits =
+    const MCExpr *ShiftedAndMaskedExpr =
         MCKernelDescriptor::bits_get(Expr, Shift, Mask, getContext());
-    if (pgm_rsrc1_bits->evaluateAsAbsolute(IVal))
-      OS << static_cast<uint64_t>(IVal);
-    else
-      pgm_rsrc1_bits->print(OS, MAI);
+    const MCExpr *New = foldAMDGPUMCExpr(ShiftedAndMaskedExpr, getContext());
+    printAMDGPUMCExpr(New, OS, MAI);
     OS << '\n';
   };
 
   auto EmitMCExpr = [&](const MCExpr *Value) {
-    int64_t evaluatableValue;
-    if (Value->evaluateAsAbsolute(evaluatableValue)) {
-      OS << static_cast<uint64_t>(evaluatableValue);
-    } else {
-      Value->print(OS, MAI);
-    }
+    const MCExpr *NewExpr = foldAMDGPUMCExpr(Value, getContext());
+    printAMDGPUMCExpr(NewExpr, OS, MAI);
   };
 
   OS << "\t\t.amdhsa_group_segment_fixed_size ";
@@ -462,7 +507,8 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     accum_bits = MCBinaryExpr::createMul(
         accum_bits, MCConstantExpr::create(4, getContext()), getContext());
     OS << "\t\t.amdhsa_accum_offset ";
-    EmitMCExpr(accum_bits);
+    const MCExpr *New = foldAMDGPUMCExpr(accum_bits, getContext());
+    printAMDGPUMCExpr(New, OS, MAI);
     OS << '\n';
   }
 
@@ -777,6 +823,9 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsV6() {
     switch (parseArchAMDGCN(STI.getCPU())) {
     case AMDGPU::GK_GFX9_GENERIC:
       Version = GenericVersion::GFX9;
+      break;
+    case AMDGPU::GK_GFX9_4_GENERIC:
+      Version = GenericVersion::GFX9_4;
       break;
     case AMDGPU::GK_GFX10_1_GENERIC:
       Version = GenericVersion::GFX10_1;

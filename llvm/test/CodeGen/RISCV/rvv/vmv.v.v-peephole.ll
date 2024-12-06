@@ -49,8 +49,8 @@ define <vscale x 4 x i32> @vadd_same_passthru(<vscale x 4 x i32> %passthru, <vsc
 define <vscale x 4 x i32> @unfoldable_diff_avl_unknown(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl1, iXLen %vl2) {
 ; CHECK-LABEL: unfoldable_diff_avl_unknown:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmv2r.v v14, v8
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
+; CHECK-NEXT:    vmv2r.v v14, v8
 ; CHECK-NEXT:    vadd.vv v14, v10, v12
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
 ; CHECK-NEXT:    vmv.v.v v8, v14
@@ -179,4 +179,30 @@ define <vscale x 2 x i32> @unfoldable_vredsum(<vscale x 2 x i32> %passthru, <vsc
   %a = call <vscale x 2 x i32> @llvm.riscv.vredsum.nxv2i32.nxv4i32(<vscale x 2 x i32> poison, <vscale x 4 x i32> %x, <vscale x 2 x i32> %y, iXLen -1)
   %b = call <vscale x 2 x i32> @llvm.riscv.vmv.v.v.nxv2i32(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %a, iXLen 1)
   ret <vscale x 2 x i32> %b
+}
+
+define <vscale x 2 x i32> @unfoldable_mismatched_sew(<vscale x 2 x i32> %passthru, <vscale x 1 x i64> %x, <vscale x 1 x i64> %y, iXLen %avl) {
+; CHECK-LABEL: unfoldable_mismatched_sew:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    vadd.vv v9, v9, v10
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
+; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    ret
+  %a = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %x, <vscale x 1 x i64> %y, iXLen %avl)
+  %a.bitcast = bitcast <vscale x 1 x i64> %a to <vscale x 2 x i32>
+  %b = call <vscale x 2 x i32> @llvm.riscv.vmv.v.v.nxv2i32(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %a.bitcast, iXLen %avl)
+  ret <vscale x 2 x i32> %b
+}
+
+
+define <vscale x 1 x i64> @undef_passthru(<vscale x 1 x i64> %passthru, <vscale x 1 x i64> %x, <vscale x 1 x i64> %y, iXLen %avl) {
+; CHECK-LABEL: undef_passthru:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    vadd.vv v8, v9, v10
+; CHECK-NEXT:    ret
+  %a = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64(<vscale x 1 x i64> %passthru, <vscale x 1 x i64> %x, <vscale x 1 x i64> %y, iXLen %avl)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vmv.v.v.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %a, iXLen %avl)
+  ret <vscale x 1 x i64> %b
 }

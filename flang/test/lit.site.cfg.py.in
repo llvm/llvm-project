@@ -31,6 +31,7 @@ if "openmp" in "@LLVM_ENABLE_RUNTIMES@".lower().split(";"):
 else:
     config.openmp_module_dir = None
 config.flang_runtime_f128_math_lib = "@FLANG_RUNTIME_F128_MATH_LIB@"
+config.have_ldbl_mant_dig_113 = "@HAVE_LDBL_MANT_DIG_113@"
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)

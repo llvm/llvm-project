@@ -85,7 +85,7 @@ public:
   std::optional<TraversalKind> getCheckTraversalKind() const override;
 
 private:
-  ReplacerMap Replaces;
+  std::vector<llvm::IntrusiveRefCntPtr<Replacer>> Replacers;
   std::optional<ReverseIteratorDescriptor> ReverseDescriptor;
   IncludeInserter Inserter;
 };

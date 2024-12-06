@@ -16,7 +16,7 @@ define void @test_pr59090(ptr %l_out, ptr noalias %b) #0 {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[INDEX]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = add <8 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <8 x i64> [[VEC_IV]], <i64 10000, i64 10000, i64 10000, i64 10000, i64 10000, i64 10000, i64 10000, i64 10000>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <8 x i64> [[VEC_IV]], splat (i64 10000)
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP0]], 6
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[B:%.*]], align 1, !llvm.access.group [[ACC_GRP0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x i1> [[TMP1]], i32 0
@@ -67,13 +67,11 @@ define void @test_pr59090(ptr %l_out, ptr noalias %b) #0 {
 ; CHECK-NEXT:    store i8 [[TMP3]], ptr [[B]], align 1, !llvm.access.group [[ACC_GRP0]]
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE14]]
 ; CHECK:       pred.store.continue14:
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[TMP2]], 2
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[L_OUT:%.*]], i64 [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP13]], i32 -2
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[L_OUT:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[INTERLEAVED_MASK:%.*]] = shufflevector <8 x i1> [[TMP1]], <8 x i1> poison, <48 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
 ; CHECK-NEXT:    [[TMP15:%.*]] = and <48 x i1> [[INTERLEAVED_MASK]], <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false>
-; CHECK-NEXT:    call void @llvm.masked.store.v48i8.p0(<48 x i8> <i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 poison>, ptr [[TMP14]], i32 1, <48 x i1> [[TMP15]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
+; CHECK-NEXT:    call void @llvm.masked.store.v48i8.p0(<48 x i8> <i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 poison>, ptr [[TMP13]], i32 1, <48 x i1> [[TMP15]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10008
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP1:![0-9]+]]
 ; CHECK:       middle.block:
@@ -93,7 +91,7 @@ define void @test_pr59090(ptr %l_out, ptr noalias %b) #0 {
 ; CHECK-NEXT:    store i8 0, ptr [[ARRAYIDX97]], align 1, !llvm.access.group [[ACC_GRP0]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV]], 10000
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

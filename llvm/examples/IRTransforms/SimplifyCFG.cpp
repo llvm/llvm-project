@@ -158,7 +158,7 @@ static bool eliminateCondBranches_v1(Function &F) {
     // Replace the conditional branch with an unconditional one, by creating
     // a new unconditional branch to the selected successor and removing the
     // conditional one.
-    BranchInst::Create(BI->getSuccessor(CI->isZero()), BI);
+    BranchInst::Create(BI->getSuccessor(CI->isZero()), BI->getIterator());
     BI->eraseFromParent();
     Changed = true;
   }
@@ -195,7 +195,7 @@ static bool eliminateCondBranches_v2(Function &F, DominatorTree &DT) {
     // a new unconditional branch to the selected successor and removing the
     // conditional one.
     BranchInst *NewBranch =
-        BranchInst::Create(BI->getSuccessor(CI->isZero()), BI);
+        BranchInst::Create(BI->getSuccessor(CI->isZero()), BI->getIterator());
     BI->eraseFromParent();
 
     // Delete the edge between BB and RemovedSucc in the DominatorTree, iff
@@ -242,7 +242,8 @@ static bool eliminateCondBranches_v3(Function &F, DominatorTree &DT) {
     // a new unconditional branch to the selected successor and removing the
     // conditional one.
 
-    BranchInst *NewBranch = BranchInst::Create(TakenSucc, BB.getTerminator());
+    BranchInst *NewBranch =
+        BranchInst::Create(TakenSucc, BB.getTerminator()->getIterator());
     BB.getTerminator()->eraseFromParent();
 
     // Delete the edge between BB and RemovedSucc in the DominatorTree, iff

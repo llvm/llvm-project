@@ -74,7 +74,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK:  %[[VAL11:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[ARG0]], i32 0, i32 0
 // box access:
 // CHECK:  %[[VAL12:.*]] = load ptr, ptr %[[VAL11]], align 8, !tbaa ![[BOX_ACCESS_TAG]]
-// CHECK:  %[[VAL15:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %14, ptr %[[VAL12]], 0
+// CHECK:  %[[VAL15:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %{{.*}}, ptr %[[VAL12]], 0
 // CHECK:  store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[VAL15]], ptr %{{.*}}, align 8, !tbaa ![[BOX_ACCESS_TAG]]
 // CHECK:  %[[VAL16:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %{{.*}}, i32 0, i32 7, i64 0, i32 0
 // box access:

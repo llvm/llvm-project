@@ -21,6 +21,7 @@ namespace llvm {
 
 class MachineBasicBlock;
 class MachineFunction;
+class MachineModuleInfo;
 class Module;
 template <typename T> class SmallVectorImpl;
 
@@ -30,6 +31,7 @@ class PrintMIRPreparePass : public PassInfoMixin<PrintMIRPreparePass> {
 public:
   PrintMIRPreparePass(raw_ostream &OS = errs()) : OS(OS) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
 };
 
 class PrintMIRPass : public PassInfoMixin<PrintMIRPass> {
@@ -39,6 +41,7 @@ public:
   PrintMIRPass(raw_ostream &OS = errs()) : OS(OS) {}
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
 };
 
 /// Print LLVM IR using the MIR serialization format to the given output stream.

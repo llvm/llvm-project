@@ -449,9 +449,6 @@ SampleProfileLoaderBaseImpl<BT>::getInstWeightImpl(const InstructionT &Inst) {
   return R;
 }
 
-// Here use error_code to represent: 1) The dangling probe. 2) Ignore the weight
-// of non-probe instruction. So if all instructions of the BB give error_code,
-// tell the inference algorithm to infer the BB weight.
 template <typename BT>
 ErrorOr<uint64_t>
 SampleProfileLoaderBaseImpl<BT>::getProbeWeight(const InstructionT &Inst) {
@@ -464,17 +461,13 @@ SampleProfileLoaderBaseImpl<BT>::getProbeWeight(const InstructionT &Inst) {
     return std::error_code();
 
   const FunctionSamples *FS = findFunctionSamples(Inst);
-  // If none of the instruction has FunctionSample, we choose to return zero
-  // value sample to indicate the BB is cold. This could happen when the
-  // instruction is from inlinee and no profile data is found.
-  // FIXME: This should not be affected by the source drift issue as 1) if the
-  // newly added function is top-level inliner, it won't match the CFG checksum
-  // in the function profile or 2) if it's the inlinee, the inlinee should have
-  // a profile, otherwise it wouldn't be inlined. For non-probe based profile,
-  // we can improve it by adding a switch for profile-sample-block-accurate for
-  // block level counts in the future.
-  if (!FS)
-    return 0;
+  if (!FS) {
+    // If we can't find the function samples for a probe, it could be due to the
+    // probe is later optimized away or the inlining context is mismatced. We
+    // treat it as unknown, leaving it to profile inference instead of forcing a
+    // zero count.
+    return std::error_code();
+  }
 
   auto R = FS->findSamplesAt(Probe->Id, Probe->Discriminator);
   if (R) {
@@ -866,9 +859,9 @@ bool SampleProfileLoaderBaseImpl<BT>::propagateThroughEdges(
         LLVM_DEBUG(dbgs() << "Set self-referential edge weight to: ";
                    printEdgeWeight(dbgs(), SelfReferentialEdge));
       }
-      if (UpdateBlockCount && !VisitedBlocks.count(EC) && TotalWeight > 0) {
+      if (UpdateBlockCount && TotalWeight > 0 &&
+          VisitedBlocks.insert(EC).second) {
         BlockWeights[EC] = TotalWeight;
-        VisitedBlocks.insert(EC);
         Changed = true;
       }
     }

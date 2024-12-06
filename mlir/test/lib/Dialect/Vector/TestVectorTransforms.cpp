@@ -96,15 +96,14 @@ private:
           return std::nullopt;
         dstVec = vecType;
       }
-      return SmallVector<int64_t>(dstVec.getShape().begin(),
-                                  dstVec.getShape().end());
+      return SmallVector<int64_t>(dstVec.getShape());
     }
     if (auto writeOp = dyn_cast<vector::TransferWriteOp>(op)) {
       auto insert = writeOp.getVector().getDefiningOp<InsertStridedSliceOp>();
       if (!insert)
         return std::nullopt;
       ArrayRef<int64_t> shape = insert.getSourceVectorType().getShape();
-      return SmallVector<int64_t>(shape.begin(), shape.end());
+      return SmallVector<int64_t>(shape);
     }
     return std::nullopt;
   }
@@ -364,7 +363,7 @@ struct TestVectorTransferCollapseInnerMostContiguousDims
   }
 
   StringRef getDescription() const final {
-    return "Test lowering patterns that reducedes the rank of the vector "
+    return "Test lowering patterns that reduces the rank of the vector "
            "transfer memory and vector operands.";
   }
 
@@ -375,27 +374,27 @@ struct TestVectorTransferCollapseInnerMostContiguousDims
   }
 };
 
-struct TestSinkVectorBroadcast
-    : public PassWrapper<TestSinkVectorBroadcast, OperationPass<func::FuncOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestSinkVectorBroadcast)
+struct TestVectorSinkPatterns
+    : public PassWrapper<TestVectorSinkPatterns, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorSinkPatterns)
 
-  TestSinkVectorBroadcast() = default;
-  TestSinkVectorBroadcast(const TestSinkVectorBroadcast &pass) = default;
+  TestVectorSinkPatterns() = default;
+  TestVectorSinkPatterns(const TestVectorSinkPatterns &pass) = default;
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect, affine::AffineDialect>();
   }
 
-  StringRef getArgument() const final { return "test-sink-vector-broadcast"; }
+  StringRef getArgument() const final { return "test-vector-sink-patterns"; }
 
   StringRef getDescription() const final {
-    return "Test lowering patterns that eliminate redundant brodacast "
-           "operations.";
+    return "Test lowering patterns that eliminate redundant broadcast "
+           "and transpose operations.";
   }
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
-    populateSinkVectorBroadcastPatterns(patterns);
+    populateSinkVectorOpsPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
@@ -520,7 +519,7 @@ struct TestVectorScanLowering
 /// Allocate shared memory for a single warp to test lowering of
 /// WarpExecuteOnLane0Op.
 static Value allocateGlobalSharedMemory(Location loc, OpBuilder &builder,
-                                        WarpExecuteOnLane0Op warpOp,
+                                        gpu::WarpExecuteOnLane0Op warpOp,
                                         Type type) {
   static constexpr int64_t kSharedMemorySpace = 3;
   // Compute type of shared memory buffer.
@@ -584,8 +583,9 @@ struct TestVectorDistribution
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorDistribution)
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<scf::SCFDialect, memref::MemRefDialect, gpu::GPUDialect,
-                    affine::AffineDialect>();
+    registry
+        .insert<vector::VectorDialect, scf::SCFDialect, memref::MemRefDialect,
+                gpu::GPUDialect, affine::AffineDialect>();
   }
 
   StringRef getArgument() const final { return "test-vector-warp-distribute"; }
@@ -617,13 +617,13 @@ struct TestVectorDistribution
 
   Option<bool> propagateDistribution{
       *this, "propagate-distribution",
-      llvm::cl::desc("Test distribution propgation"), llvm::cl::init(false)};
+      llvm::cl::desc("Test distribution propagation"), llvm::cl::init(false)};
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
 
     getOperation().walk([&](Operation *op) {
-      if (auto warpOp = dyn_cast<WarpExecuteOnLane0Op>(op)) {
+      if (auto warpOp = dyn_cast<gpu::WarpExecuteOnLane0Op>(op)) {
         if (hoistUniform) {
           moveScalarUniformCode(warpOp);
         }
@@ -678,7 +678,7 @@ struct TestVectorDistribution
     WarpExecuteOnLane0LoweringOptions options;
     options.warpAllocationFn = allocateGlobalSharedMemory;
     options.warpSyncronizationFn = [](Location loc, OpBuilder &builder,
-                                      WarpExecuteOnLane0Op warpOp) {
+                                      gpu::WarpExecuteOnLane0Op warpOp) {
       builder.create<gpu::BarrierOp>(loc);
     };
     // Test on one pattern in isolation.
@@ -874,6 +874,33 @@ struct TestVectorLinearize final
       return signalPassFailure();
   }
 };
+
+struct TestEliminateVectorMasks
+    : public PassWrapper<TestEliminateVectorMasks,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestEliminateVectorMasks)
+
+  TestEliminateVectorMasks() = default;
+  TestEliminateVectorMasks(const TestEliminateVectorMasks &pass)
+      : PassWrapper(pass) {}
+
+  Option<unsigned> vscaleMin{
+      *this, "vscale-min", llvm::cl::desc("Minimum possible value of vscale."),
+      llvm::cl::init(1)};
+  Option<unsigned> vscaleMax{
+      *this, "vscale-max", llvm::cl::desc("Maximum possible value of vscale."),
+      llvm::cl::init(16)};
+
+  StringRef getArgument() const final { return "test-eliminate-vector-masks"; }
+  StringRef getDescription() const final {
+    return "Test eliminating vector masks";
+  }
+  void runOnOperation() override {
+    IRRewriter rewriter(&getContext());
+    eliminateVectorMasks(rewriter, getOperation(),
+                         VscaleRange{vscaleMin, vscaleMax});
+  }
+};
 } // namespace
 
 namespace mlir {
@@ -893,7 +920,7 @@ void registerTestVectorLowerings() {
 
   PassRegistration<TestVectorTransferCollapseInnerMostContiguousDims>();
 
-  PassRegistration<TestSinkVectorBroadcast>();
+  PassRegistration<TestVectorSinkPatterns>();
 
   PassRegistration<TestVectorReduceToContractPatternsPatterns>();
 
@@ -920,6 +947,8 @@ void registerTestVectorLowerings() {
   PassRegistration<TestVectorEmulateMaskedLoadStore>();
 
   PassRegistration<TestVectorLinearize>();
+
+  PassRegistration<TestEliminateVectorMasks>();
 }
 } // namespace test
 } // namespace mlir

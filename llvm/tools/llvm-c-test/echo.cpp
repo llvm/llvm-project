@@ -153,8 +153,6 @@ struct TypeCloner {
         return LLVMMetadataTypeInContext(Ctx);
       case LLVMX86_AMXTypeKind:
         return LLVMX86AMXTypeInContext(Ctx);
-      case LLVMX86_MMXTypeKind:
-        return LLVMX86MMXTypeInContext(Ctx);
       case LLVMTokenTypeKind:
         return LLVMTokenTypeInContext(Ctx);
       case LLVMTargetExtTypeKind: {
@@ -522,6 +520,7 @@ struct FunCloner {
     check_value_kind(Src, LLVMInstructionValueKind);
     if (!LLVMIsAInstruction(Src))
       report_fatal_error("Expected an instruction");
+    LLVMContextRef Ctx = LLVMGetTypeContext(LLVMTypeOf(Src));
 
     size_t NameLen;
     const char *Name = LLVMGetValueName2(Src, &NameLen);
@@ -756,7 +755,8 @@ struct FunCloner {
         LLVMSetAlignment(Dst, LLVMGetAlignment(Src));
         LLVMSetOrdering(Dst, LLVMGetOrdering(Src));
         LLVMSetVolatile(Dst, LLVMGetVolatile(Src));
-        LLVMSetAtomicSingleThread(Dst, LLVMIsAtomicSingleThread(Src));
+        if (LLVMIsAtomic(Src))
+          LLVMSetAtomicSyncScopeID(Dst, LLVMGetAtomicSyncScopeID(Src));
         break;
       }
       case LLVMStore: {
@@ -766,7 +766,8 @@ struct FunCloner {
         LLVMSetAlignment(Dst, LLVMGetAlignment(Src));
         LLVMSetOrdering(Dst, LLVMGetOrdering(Src));
         LLVMSetVolatile(Dst, LLVMGetVolatile(Src));
-        LLVMSetAtomicSingleThread(Dst, LLVMIsAtomicSingleThread(Src));
+        if (LLVMIsAtomic(Src))
+          LLVMSetAtomicSyncScopeID(Dst, LLVMGetAtomicSyncScopeID(Src));
         break;
       }
       case LLVMGetElementPtr: {
@@ -787,8 +788,8 @@ struct FunCloner {
         LLVMValueRef Val = CloneValue(LLVMGetOperand(Src, 1));
         LLVMAtomicRMWBinOp BinOp = LLVMGetAtomicRMWBinOp(Src);
         LLVMAtomicOrdering Ord = LLVMGetOrdering(Src);
-        LLVMBool SingleThread = LLVMIsAtomicSingleThread(Src);
-        Dst = LLVMBuildAtomicRMW(Builder, BinOp, Ptr, Val, Ord, SingleThread);
+        Dst = LLVMBuildAtomicRMWSyncScope(Builder, BinOp, Ptr, Val, Ord,
+                                          LLVMGetAtomicSyncScopeID(Src));
         LLVMSetAlignment(Dst, LLVMGetAlignment(Src));
         LLVMSetVolatile(Dst, LLVMGetVolatile(Src));
         LLVMSetValueName2(Dst, Name, NameLen);
@@ -800,10 +801,8 @@ struct FunCloner {
         LLVMValueRef New = CloneValue(LLVMGetOperand(Src, 2));
         LLVMAtomicOrdering Succ = LLVMGetCmpXchgSuccessOrdering(Src);
         LLVMAtomicOrdering Fail = LLVMGetCmpXchgFailureOrdering(Src);
-        LLVMBool SingleThread = LLVMIsAtomicSingleThread(Src);
-
-        Dst = LLVMBuildAtomicCmpXchg(Builder, Ptr, Cmp, New, Succ, Fail,
-                                     SingleThread);
+        Dst = LLVMBuildAtomicCmpXchgSyncScope(
+            Builder, Ptr, Cmp, New, Succ, Fail, LLVMGetAtomicSyncScopeID(Src));
         LLVMSetAlignment(Dst, LLVMGetAlignment(Src));
         LLVMSetVolatile(Dst, LLVMGetVolatile(Src));
         LLVMSetWeak(Dst, LLVMGetWeak(Src));
@@ -994,8 +993,8 @@ struct FunCloner {
       }
       case LLVMFence: {
         LLVMAtomicOrdering Ordering = LLVMGetOrdering(Src);
-        LLVMBool IsSingleThreaded = LLVMIsAtomicSingleThread(Src);
-        Dst = LLVMBuildFence(Builder, Ordering, IsSingleThreaded, Name);
+        Dst = LLVMBuildFenceSyncScope(Builder, Ordering,
+                                      LLVMGetAtomicSyncScopeID(Src), Name);
         break;
       }
       case LLVMZExt: {
@@ -1061,7 +1060,6 @@ struct FunCloner {
     if (LLVMCanValueUseFastMathFlags(Src))
       LLVMSetFastMathFlags(Dst, LLVMGetFastMathFlags(Src));
 
-    auto Ctx = LLVMGetModuleContext(M);
     size_t NumMetadataEntries;
     auto *AllMetadata =
         LLVMInstructionGetAllMetadataOtherThanDebugLoc(Src,
@@ -1611,12 +1609,12 @@ NamedMDClone:
 int llvm_echo(void) {
   LLVMEnablePrettyStackTrace();
 
-  LLVMModuleRef Src = llvm_load_module(false, true);
+  LLVMContextRef Ctx = LLVMContextCreate();
+  LLVMModuleRef Src = llvm_load_module(Ctx, false, true);
   size_t SourceFileLen;
   const char *SourceFileName = LLVMGetSourceFileName(Src, &SourceFileLen);
   size_t ModuleIdentLen;
   const char *ModuleName = LLVMGetModuleIdentifier(Src, &ModuleIdentLen);
-  LLVMContextRef Ctx = LLVMContextCreate();
   LLVMModuleRef M = LLVMModuleCreateWithNameInContext(ModuleName, Ctx);
 
   LLVMSetSourceFileName(M, SourceFileName, SourceFileLen);

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -transform-interpreter -split-input-file -verify-diagnostics -allow-unregistered-dialect --cse | FileCheck %s
+// RUN: mlir-opt %s -transform-interpreter -split-input-file -verify-diagnostics -allow-unregistered-dialect --cse --mlir-print-local-scope | FileCheck %s
 
 func.func @coalesce_inner() {
   %c0 = arith.constant 0 : index
@@ -33,19 +33,15 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// CHECK-DAG: #[[MAP:.+]] = affine_map<() -> (64)>
-// CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0)[s0] -> (d0 * s0)>
-// CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0)[s0] -> (d0 mod s0)>
-// CHECK-DAG: #[[MAP3:.+]] = affine_map<(d0)[s0] -> (d0 floordiv s0)>
 func.func @coalesce_outer(%arg1: memref<64x64xf32, 1>, %arg2: memref<64x64xf32, 1>, %arg3: memref<64x64xf32, 1>) attributes {} {
-  // CHECK: %[[T0:.+]] = affine.apply #[[MAP]]()
-  // CHECK: %[[UB:.+]] = affine.apply #[[MAP1]](%[[T0]])[%[[T0]]]
+  // CHECK: %[[T0:.+]] = affine.apply affine_map<() -> (64)>()
+  // CHECK: %[[UB:.+]] = affine.apply affine_map<(d0)[s0] -> (d0 * s0)>(%[[T0]])[%[[T0]]]
   // CHECK: affine.for %[[IV1:.+]] = 0 to %[[UB:.+]] {
   // CHECK-NOT: affine.for %[[IV2:.+]]
   affine.for %arg4 = 0 to 64 {
     affine.for %arg5 = 0 to 64 {
-      // CHECK: %[[IDX0:.+]] = affine.apply #[[MAP2]](%[[IV1]])[%{{.+}}]
-      // CHECK: %[[IDX1:.+]] = affine.apply #[[MAP3]](%[[IV1]])[%{{.+}}]
+      // CHECK: %[[IDX0:.+]] = affine.apply affine_map<(d0)[s0] -> (d0 mod s0)>(%[[IV1]])[%{{.+}}]
+      // CHECK: %[[IDX1:.+]] = affine.apply affine_map<(d0)[s0] -> (d0 floordiv s0)>(%[[IV1]])[%{{.+}}]
       // CHECK-NEXT: %{{.+}} = affine.load %{{.+}}[%[[IDX1]], %[[IDX0]]] : memref<64x64xf32, 1>
       %0 = affine.load %arg1[%arg4, %arg5] : memref<64x64xf32, 1>
       %1 = affine.load %arg2[%arg4, %arg5] : memref<64x64xf32, 1>
@@ -76,9 +72,8 @@ func.func @coalesce_and_unroll(%arg1: memref<64x64xf32, 1>, %arg2: memref<64x64x
   scf.for %arg4 = %c0 to %c64 step %c1 {
     // CHECK-NOT: scf.for
     scf.for %arg5 = %c0 to %c64 step %c1 {
-      // CHECK: %[[IDX0:.+]] = arith.remsi %[[IV1]]
-      // CHECK: %[[IDX1:.+]] = arith.divsi %[[IV1]]
-      // CHECK-NEXT: %{{.+}} = memref.load %{{.+}}[%[[IDX1]], %[[IDX0]]] : memref<64x64xf32, 1>
+      // CHECK: %[[IDX:.+]]:2 = affine.delinearize_index
+      // CHECK-NEXT: %{{.+}} = memref.load %{{.+}}[%[[IDX]]#0, %[[IDX]]#1] : memref<64x64xf32, 1>
       %0 = memref.load %arg1[%arg4, %arg5] : memref<64x64xf32, 1>
       %1 = memref.load %arg2[%arg4, %arg5] : memref<64x64xf32, 1>
       %2 = arith.addf %0, %1 : f32
@@ -138,27 +133,22 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME:     %[[LB2:[a-zA-Z0-9_]+]]: index
 // CHECK-SAME:     %[[UB2:[a-zA-Z0-9_]+]]: index
 // CHECK-SAME:     %[[STEP2:[a-zA-Z0-9_]+]]: index
-//      CHECK:   %[[NEWUB0_DIFF:.+]] = arith.subi %[[UB0]], %[[LB0]]
-//  CHECK-DAG:   %[[NEWUB0:.+]] = arith.ceildivsi %[[NEWUB0_DIFF]], %[[STEP0]]
-//  CHECK-DAG:   %[[C0:.+]] = arith.constant 0
-//  CHECK-DAG:   %[[C1:.+]] = arith.constant 1
-//      CHECK:   %[[NEWUB1_DIFF:.+]] = arith.subi %[[UB1]], %[[LB1]]
-//  CHECK-DAG:   %[[NEWUB1:.+]] = arith.ceildivsi %[[NEWUB1_DIFF]], %[[STEP1]]
-//      CHECK:   %[[NEWUB2_DIFF:.+]] = arith.subi %[[UB2]], %[[LB2]]
-//  CHECK-DAG:   %[[NEWUB2:.+]] = arith.ceildivsi %[[NEWUB2_DIFF]], %[[STEP2]]
-//      CHECK:   %[[PROD1:.+]] = arith.muli %[[NEWUB0]], %[[NEWUB1]]
-//      CHECK:   %[[NEWUB:.+]] = arith.muli %[[PROD1]], %[[NEWUB2]]
+//      CHECK:   %[[NITERS0:.+]] = affine.apply
+// CHECK-SAME:       affine_map<()[s0, s1, s2] -> ((-s0 + s1) ceildiv s2)>()[%[[LB0]], %[[UB0]], %[[STEP0]]]
+//      CHECK:   %[[C0:.+]] = arith.constant 0 : index
+//      CHECK:   %[[C1:.+]] = arith.constant 1 : index
+//      CHECK:   %[[NITERS1:.+]] = affine.apply
+// CHECK-SAME:       affine_map<()[s0, s1, s2] -> ((-s0 + s1) ceildiv s2)>()[%[[LB1]], %[[UB1]], %[[STEP1]]]
+//      CHECK:   %[[NITERS2:.+]] = affine.apply
+// CHECK-SAME:        affine_map<()[s0, s1, s2] -> ((-s0 + s1) ceildiv s2)>()[%[[LB2]], %[[UB2]], %[[STEP2]]]
+//      CHECK:   %[[NEWUB:.+]] = affine.apply affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8] ->
+// CHECK-SAME:       ((((-s0 + s1) ceildiv s2) * ((-s3 + s4) ceildiv s5)) * ((-s6 + s7) ceildiv s8))
+// CHECK-SAME:       [%[[LB0]], %[[UB0]], %[[STEP0]], %[[LB1]], %[[UB1]], %[[STEP1]], %[[LB2]], %[[UB2]], %[[STEP2]]]
 //      CHECK:   %[[RESULT:.+]] = scf.for %[[IV:[a-zA-Z0-9]+]] = %[[C0]] to %[[NEWUB]] step %[[C1]] iter_args(%[[ITER_ARG:.+]] = %[[ARG0]])
-//      CHECK:     %[[IV2:.+]] = arith.remsi %[[IV]], %[[NEWUB2]]
-//      CHECK:     %[[PREVIOUS:.+]] = arith.divsi %[[IV]], %[[NEWUB2]]
-//      CHECK:     %[[IV1:.+]] = arith.remsi %[[PREVIOUS]], %[[NEWUB1]]
-//      CHECK:     %[[IV0:.+]] = arith.divsi %[[PREVIOUS]], %[[NEWUB1]]
-//      CHECK:     %[[K_STEP:.+]] = arith.muli %[[IV2]], %[[STEP2]]
-//      CHECK:     %[[K:.+]] = arith.addi %[[K_STEP]], %[[LB2]]
-//      CHECK:     %[[J_STEP:.+]] = arith.muli %[[IV1]], %[[STEP1]]
-//      CHECK:     %[[J:.+]] = arith.addi %[[J_STEP]], %[[LB1]]
-//      CHECK:     %[[I_STEP:.+]] = arith.muli %[[IV0]], %[[STEP0]]
-//      CHECK:     %[[I:.+]] = arith.addi %[[I_STEP]], %[[LB0]]
+//      CHECK:     %[[DELINEARIZE:.+]]:3 = affine.delinearize_index %[[IV]] into (%[[NITERS0]], %[[NITERS1]], %[[NITERS2]])
+//  CHECK-DAG:     %[[K:.+]] = affine.apply affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>(%[[DELINEARIZE]]#2)[%[[LB2]], %[[STEP2]]]
+//  CHECK-DAG:     %[[J:.+]] = affine.apply affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>(%[[DELINEARIZE]]#1)[%[[LB1]], %[[STEP1]]]
+//  CHECK-DAG:     %[[I:.+]] = affine.apply affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>(%[[DELINEARIZE]]#0)[%[[LB0]], %[[STEP0]]]
 //      CHECK:     %[[USE:.+]] = "use"(%[[ITER_ARG]], %[[I]], %[[J]], %[[K]])
 //      CHECK:     scf.yield %[[USE]]
 //      CHECK:   return %[[RESULT]]
@@ -201,8 +191,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME:     %[[UB2:[a-zA-Z0-9_]+]]: index
 // CHECK-SAME:     %[[STEP2:[a-zA-Z0-9_]+]]: index
 //      CHECK:   scf.for
-//      CHECK:     arith.remsi
-//      CHECK:     arith.divsi
+//      CHECK:     affine.delinearize_index
 //      CHECK:     scf.for %{{[a-zA-Z0-9]+}} = %[[LB2]] to %[[UB2]] step %[[STEP2]]
 //  CHECK-NOT:       scf.for
 //      CHECK:   transform.named_sequence
@@ -245,8 +234,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME:     %[[UB2:[a-zA-Z0-9_]+]]: index
 // CHECK-SAME:     %[[STEP2:[a-zA-Z0-9_]+]]: index
 //      CHECK:   scf.for
-//      CHECK:     arith.remsi
-//      CHECK:     arith.divsi
+//      CHECK:     affine.delinearize_index
 //      CHECK:     scf.for %{{[a-zA-Z0-9]+}} = %[[LB2]] to %[[UB2]] step %[[STEP2]]
 //  CHECK-NOT:       scf.for
 //      CHECK:   transform.named_sequence
@@ -289,13 +277,9 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME:     %[[UB2:[a-zA-Z0-9_]+]]: index
 // CHECK-SAME:     %[[STEP2:[a-zA-Z0-9_]+]]: index
 //      CHECK:   scf.for %{{[a-zA-Z0-9]+}} = %[[LB0]] to %[[UB0]] step %[[STEP0]]
-//      CHECK:     arith.subi
-//      CHECK:     arith.ceildivsi
-//      CHECK:     arith.subi
-//      CHECK:     arith.ceildivsi
+//  CHECK-NOT:     affine.delinearize_index
 //      CHECK:     scf.for
-//      CHECK:       arith.remsi
-//      CHECK:       arith.divsi
+//      CHECK:       affine.delinearize_index
 //  CHECK-NOT:       scf.for
 //      CHECK:   transform.named_sequence
 
@@ -329,6 +313,9 @@ module attributes {transform.with_named_sequence} {
     %0 = transform.structured.match ops{["scf.for"]} attributes {coalesce} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1 = transform.cast %0 : !transform.any_op to !transform.op<"scf.for">
     %2 = transform.loop.coalesce %1 : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">)
+    transform.apply_patterns to %2 {
+      transform.apply_patterns.canonicalization
+    } : !transform.op<"scf.for">
     transform.yield
   }
 }
@@ -337,11 +324,10 @@ module attributes {transform.with_named_sequence} {
 //  CHECK-SAME:     %[[ARG2:.+]]: index)
 //   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
 //   CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
-//       CHECK:   %[[UB:.+]] = arith.muli %[[ARG1]], %[[ARG2]]
+//       CHECK:   %[[UB:.+]] = affine.apply affine_map<()[s0, s1] -> (s0 * s1)>()[%[[ARG1]], %[[ARG2]]]
 //       CHECK:   scf.for %[[IV:.+]] = %[[C0]] to %[[UB]] step %[[C1]]
-//       CHECK:     %[[IV1:.+]] = arith.remsi %[[IV]], %[[ARG2]]
-//       CHECK:     %[[IV2:.+]] = arith.divsi %[[IV]], %[[ARG2]]
-//       CHECK:     "some_use"(%{{[a-zA-Z0-9]+}}, %[[C0]], %[[C0]], %[[IV2]], %[[C0]], %[[IV1]])
+//       CHECK:     %[[DELINEARIZE:.+]]:2 = affine.delinearize_index %[[IV]] into (%[[ARG1]], %[[ARG2]])
+//       CHECK:     "some_use"(%{{[a-zA-Z0-9]+}}, %[[C0]], %[[C0]], %[[DELINEARIZE]]#0, %[[C0]], %[[DELINEARIZE]]#1)
 
 // -----
 
@@ -367,6 +353,9 @@ module attributes {transform.with_named_sequence} {
     %0 = transform.structured.match ops{["scf.for"]} attributes {coalesce} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1 = transform.cast %0 : !transform.any_op to !transform.op<"scf.for">
     %2 = transform.loop.coalesce %1 : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">)
+    transform.apply_patterns to %2 {
+      transform.apply_patterns.canonicalization
+    } : !transform.op<"scf.for">
     transform.yield
   }
 }

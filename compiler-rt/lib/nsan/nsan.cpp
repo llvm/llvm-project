@@ -25,10 +25,16 @@
 //          on the runtime configuration. The middle part indicates the type of
 //          the application value, the suffix (f,d,l) indicates the type of the
 //          shadow, and depends on the instrumentation configuration.
-//        * __nsan_fcmp_fail_* emits a warning for an fcmp instruction whose
+//        * __nsan_fcmp_fail_* emits a warning for a fcmp instruction whose
 //          corresponding shadow fcmp result differs.
 //
 //===----------------------------------------------------------------------===//
+
+#include "nsan.h"
+#include "nsan_flags.h"
+#include "nsan_stats.h"
+#include "nsan_suppressions.h"
+#include "nsan_thread.h"
 
 #include <assert.h>
 #include <math.h>
@@ -43,11 +49,6 @@
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
 
-#include "nsan/nsan.h"
-#include "nsan/nsan_flags.h"
-#include "nsan/nsan_stats.h"
-#include "nsan/nsan_suppressions.h"
-
 using namespace __sanitizer;
 using namespace __nsan;
 
@@ -55,20 +56,20 @@ constexpr int kMaxVectorWidth = 8;
 
 // When copying application memory, we also copy its shadow and shadow type.
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
-__nsan_copy_values(const u8 *daddr, const u8 *saddr, uptr size) {
-  internal_memmove((void *)GetShadowTypeAddrFor(daddr),
-                   GetShadowTypeAddrFor(saddr), size);
-  internal_memmove((void *)GetShadowAddrFor(daddr), GetShadowAddrFor(saddr),
+__nsan_copy_values(const void *daddr, const void *saddr, uptr size) {
+  internal_memmove(GetShadowTypeAddrFor(daddr), GetShadowTypeAddrFor(saddr),
+                   size);
+  internal_memmove(GetShadowAddrFor(daddr), GetShadowAddrFor(saddr),
                    size * kShadowScale);
 }
 
 #define NSAN_COPY_VALUES_N(N)                                                  \
   extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_copy_##N(               \
       const u8 *daddr, const u8 *saddr) {                                      \
-    __builtin_memmove((void *)GetShadowTypeAddrFor(daddr),                     \
+    __builtin_memmove(GetShadowTypeAddrFor(daddr),                             \
                       GetShadowTypeAddrFor(saddr), N);                         \
-    __builtin_memmove((void *)GetShadowAddrFor(daddr),                         \
-                      GetShadowAddrFor(saddr), N * kShadowScale);              \
+    __builtin_memmove(GetShadowAddrFor(daddr), GetShadowAddrFor(saddr),        \
+                      N *kShadowScale);                                        \
   }
 
 NSAN_COPY_VALUES_N(4)
@@ -76,14 +77,14 @@ NSAN_COPY_VALUES_N(8)
 NSAN_COPY_VALUES_N(16)
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
-__nsan_set_value_unknown(const u8 *addr, uptr size) {
-  internal_memset((void *)GetShadowTypeAddrFor(addr), 0, size);
+__nsan_set_value_unknown(const void *addr, uptr size) {
+  internal_memset(GetShadowTypeAddrFor(addr), 0, size);
 }
 
 #define NSAN_SET_VALUE_UNKNOWN_N(N)                                            \
   extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_set_value_unknown_##N(  \
       const u8 *daddr) {                                                       \
-    __builtin_memset((void *)GetShadowTypeAddrFor(daddr), 0, N);               \
+    __builtin_memset(GetShadowTypeAddrFor(daddr), 0, N);                       \
   }
 
 NSAN_SET_VALUE_UNKNOWN_N(4)
@@ -199,7 +200,14 @@ void __sanitizer::BufferedStackTrace::UnwindImpl(uptr pc, uptr bp,
                                                  bool request_fast,
                                                  u32 max_depth) {
   using namespace __nsan;
-  return Unwind(max_depth, pc, bp, context, 0, 0, false);
+  NsanThread *t = GetCurrentThread();
+  if (!t || !StackTrace::WillUseFastUnwind(request_fast))
+    return Unwind(max_depth, pc, bp, context, t ? t->stack_top() : 0,
+                  t ? t->stack_bottom() : 0, false);
+  if (StackTrace::WillUseFastUnwind(request_fast))
+    Unwind(max_depth, pc, bp, nullptr, t->stack_top(), t->stack_bottom(), true);
+  else
+    Unwind(max_depth, pc, 0, context, 0, 0, false);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_print_accumulated_stats() {
@@ -306,14 +314,14 @@ __nsan_get_shadow_ptr_for_longdouble_load(const u8 *load_addr, uptr n) {
 // opaque.
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE u8 *
 __nsan_internal_get_raw_shadow_ptr(const u8 *addr) {
-  return GetShadowAddrFor(const_cast<u8 *>(addr));
+  return GetShadowAddrFor(addr);
 }
 
 // Returns the raw shadow type pointer. The returned pointer should be
 // considered opaque.
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE u8 *
 __nsan_internal_get_raw_shadow_type_ptr(const u8 *addr) {
-  return reinterpret_cast<u8 *>(GetShadowTypeAddrFor(const_cast<u8 *>(addr)));
+  return reinterpret_cast<u8 *>(GetShadowTypeAddrFor(addr));
 }
 
 static ValueType getValueType(u8 c) { return static_cast<ValueType>(c & 0x3); }
@@ -408,21 +416,21 @@ __nsan_dump_shadow_mem(const u8 *addr, size_t size_bytes, size_t bytes_per_line,
   }
 }
 
-alignas(16) SANITIZER_INTERFACE_ATTRIBUTE
+alignas(64) SANITIZER_INTERFACE_ATTRIBUTE
     thread_local uptr __nsan_shadow_ret_tag = 0;
 
-alignas(16) SANITIZER_INTERFACE_ATTRIBUTE
+alignas(64) SANITIZER_INTERFACE_ATTRIBUTE
     thread_local char __nsan_shadow_ret_ptr[kMaxVectorWidth *
                                             sizeof(__float128)];
 
-alignas(16) SANITIZER_INTERFACE_ATTRIBUTE
+alignas(64) SANITIZER_INTERFACE_ATTRIBUTE
     thread_local uptr __nsan_shadow_args_tag = 0;
 
 // Maximum number of args. This should be enough for anyone (tm). An alternate
 // scheme is to have the generated code create an alloca and make
 // __nsan_shadow_args_ptr point ot the alloca.
 constexpr const int kMaxNumArgs = 128;
-alignas(16) SANITIZER_INTERFACE_ATTRIBUTE
+alignas(64) SANITIZER_INTERFACE_ATTRIBUTE
     thread_local char __nsan_shadow_args_ptr[kMaxVectorWidth * kMaxNumArgs *
                                              sizeof(__float128)];
 
@@ -443,6 +451,32 @@ int32_t checkFT(const FT value, ShadowFT Shadow, CheckTypeT CheckType,
   using InternalFT = LargestFT<FT, ShadowFT>;
   const InternalFT check_value = value;
   const InternalFT check_shadow = Shadow;
+
+  // We only check for NaNs in the value, not the shadow.
+  if (flags().check_nan && isnan(value)) {
+    GET_CALLER_PC_BP;
+    BufferedStackTrace stack;
+    stack.Unwind(pc, bp, nullptr, false);
+    if (GetSuppressionForStack(&stack, CheckKind::Consistency)) {
+      // FIXME: optionally print.
+      return flags().resume_after_suppression ? kResumeFromValue
+                                              : kContinueWithShadow;
+    }
+    Decorator D;
+    Printf("%s", D.Warning());
+    Printf("WARNING: NumericalStabilitySanitizer: NaN detected\n");
+    Printf("%s", D.Default());
+    stack.Print();
+    if (flags().halt_on_error) {
+      if (common_flags()->abort_on_error)
+        Printf("ABORTING\n");
+      else
+        Printf("Exiting\n");
+      Die();
+    }
+    // Performing other tests for NaN values is meaningless when dealing with numbers.
+    return kResumeFromValue;
+  }
 
   // See this article for an interesting discussion of how to compare floats:
   // https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
@@ -470,7 +504,7 @@ int32_t checkFT(const FT value, ShadowFT Shadow, CheckTypeT CheckType,
 
   if (!flags().disable_warnings) {
     GET_CALLER_PC_BP;
-    BufferedStackTrace stack;
+    UNINITIALIZED BufferedStackTrace stack;
     stack.Unwind(pc, bp, nullptr, false);
     if (GetSuppressionForStack(&stack, CheckKind::Consistency)) {
       // FIXME: optionally print.
@@ -637,7 +671,7 @@ void fCmpFailFT(const FT Lhs, const FT Rhs, ShadowFT LhsShadow,
   }
 
   GET_CALLER_PC_BP;
-  BufferedStackTrace stack;
+  UNINITIALIZED BufferedStackTrace stack;
   stack.Unwind(pc, bp, nullptr, false);
 
   if (GetSuppressionForStack(&stack, CheckKind::Fcmp)) {
@@ -648,7 +682,7 @@ void fCmpFailFT(const FT Lhs, const FT Rhs, ShadowFT LhsShadow,
   if (flags().enable_warning_stats)
     nsan_stats->AddWarning(CheckTypeT::kFcmp, pc, bp, 0.0);
 
-  if (flags().disable_warnings)
+  if (flags().disable_warnings || !flags().check_cmp)
     return;
 
   // FIXME: ideally we would print the shadow value as FP128. Right now because
@@ -806,6 +840,7 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_init() {
   if (nsan_initialized)
     return;
   nsan_init_is_running = true;
+  SanitizerToolName = "NumericalStabilitySanitizer";
 
   InitializeFlags();
   InitializeSuppressions();
@@ -813,10 +848,16 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_init() {
 
   DisableCoreDumperIfNecessary();
 
-  if (!MmapFixedNoReserve(TypesAddr(), UnusedAddr() - TypesAddr()))
+  if (!MmapFixedNoReserve(TypesAddr(), AllocatorAddr() - TypesAddr()))
     Die();
 
   InitializeInterceptors();
+  NsanTSDInit(NsanTSDDtor);
+  NsanAllocatorInit();
+
+  NsanThread *main_thread = NsanThread::Create(nullptr, nullptr);
+  SetCurrentThread(main_thread);
+  main_thread->Init();
 
   InitializeStats();
   if (flags().print_stats_on_exit)

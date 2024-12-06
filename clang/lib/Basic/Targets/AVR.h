@@ -29,6 +29,8 @@ public:
     TLSSupported = false;
     PointerWidth = 16;
     PointerAlign = 8;
+    ShortWidth = 16;
+    ShortAlign = 8;
     IntWidth = 16;
     IntAlign = 8;
     LongWidth = 32;
@@ -61,9 +63,9 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override {
-    return std::nullopt;
-  }
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override { return {}; }
+
+  bool allowsLargerPreferedTypeAlignment() const override { return false; }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::VoidPtrBuiltinVaList;
@@ -80,7 +82,7 @@ public:
   }
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return std::nullopt;
+    return {};
   }
 
   ArrayRef<TargetInfo::AddlRegName> getGCCAddlRegNames() const override {

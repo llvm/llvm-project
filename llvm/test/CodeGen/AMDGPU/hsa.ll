@@ -5,10 +5,10 @@
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo -mattr=-flat-for-global | FileCheck --check-prefix=HSA-VI %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri -filetype=obj | llvm-readobj -S --sd --syms - | FileCheck --check-prefix=ELF %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri | llvm-mc -filetype=obj -triple amdgcn--amdhsa -mcpu=kaveri --amdhsa-code-object-version=4 | llvm-readobj -S --sd --syms - | FileCheck %s --check-prefix=ELF
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 | FileCheck --check-prefix=GFX10 --check-prefix=GFX10-W32 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 | FileCheck --check-prefix=GFX10 --check-prefix=GFX10-W64 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 | FileCheck --check-prefix=GFX10 --check-prefix=GFX10-W32 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 | FileCheck --check-prefix=GFX10 --check-prefix=GFX10-W64 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+wavefrontsize32 | FileCheck --check-prefix=GFX10 --check-prefix=GFX10-W32 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+wavefrontsize64 | FileCheck --check-prefix=GFX10 --check-prefix=GFX10-W64 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1100 -mattr=+wavefrontsize32 | FileCheck --check-prefix=GFX10 --check-prefix=GFX10-W32 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1100 -mattr=+wavefrontsize64 | FileCheck --check-prefix=GFX10 --check-prefix=GFX10-W64 %s
 
 ; The SHT_NOTE section contains the output from the .hsa_code_object_*
 ; directives.

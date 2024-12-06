@@ -13,6 +13,8 @@
 #include "bolt/Profile/DataAggregator.h"
 #include "bolt/Profile/ProfileReaderBase.h"
 #include "bolt/Rewrite/RewriteInstance.h"
+#include "bolt/Utils/CommandLineOpts.h"
+#include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -21,8 +23,12 @@
 #define DEBUG_TYPE "bolt-prof"
 
 namespace opts {
-extern llvm::cl::opt<bool> ProfileUseDFS;
-extern llvm::cl::opt<bool> ProfileUsePseudoProbes;
+using namespace llvm;
+extern cl::opt<bool> ProfileUseDFS;
+cl::opt<bool> ProfileWritePseudoProbes(
+    "profile-write-pseudo-probes",
+    cl::desc("Use pseudo probes in profile generation"), cl::Hidden,
+    cl::cat(BoltOptCategory));
 } // namespace opts
 
 namespace llvm {
@@ -53,13 +59,164 @@ const BinaryFunction *YAMLProfileWriter::setCSIDestination(
   return nullptr;
 }
 
+std::vector<YAMLProfileWriter::InlineTreeNode>
+YAMLProfileWriter::collectInlineTree(
+    const MCPseudoProbeDecoder &Decoder,
+    const MCDecodedPseudoProbeInlineTree &Root) {
+  auto getHash = [&](const MCDecodedPseudoProbeInlineTree &Node) {
+    return Decoder.getFuncDescForGUID(Node.Guid)->FuncHash;
+  };
+  std::vector<InlineTreeNode> InlineTree(
+      {InlineTreeNode{&Root, Root.Guid, getHash(Root), 0, 0}});
+  uint32_t ParentId = 0;
+  while (ParentId != InlineTree.size()) {
+    const MCDecodedPseudoProbeInlineTree *Cur = InlineTree[ParentId].InlineTree;
+    for (const MCDecodedPseudoProbeInlineTree &Child : Cur->getChildren())
+      InlineTree.emplace_back(
+          InlineTreeNode{&Child, Child.Guid, getHash(Child), ParentId,
+                         std::get<1>(Child.getInlineSite())});
+    ++ParentId;
+  }
+
+  return InlineTree;
+}
+
+std::tuple<yaml::bolt::ProfilePseudoProbeDesc,
+           YAMLProfileWriter::InlineTreeDesc>
+YAMLProfileWriter::convertPseudoProbeDesc(const MCPseudoProbeDecoder &Decoder) {
+  yaml::bolt::ProfilePseudoProbeDesc Desc;
+  InlineTreeDesc InlineTree;
+
+  for (const MCDecodedPseudoProbeInlineTree &TopLev :
+       Decoder.getDummyInlineRoot().getChildren())
+    InlineTree.TopLevelGUIDToInlineTree[TopLev.Guid] = &TopLev;
+
+  for (const auto &FuncDesc : Decoder.getGUID2FuncDescMap())
+    ++InlineTree.HashIdxMap[FuncDesc.FuncHash];
+
+  InlineTree.GUIDIdxMap.reserve(Decoder.getGUID2FuncDescMap().size());
+  for (const auto &Node : Decoder.getInlineTreeVec())
+    ++InlineTree.GUIDIdxMap[Node.Guid];
+
+  std::vector<std::pair<uint32_t, uint64_t>> GUIDFreqVec;
+  GUIDFreqVec.reserve(InlineTree.GUIDIdxMap.size());
+  for (const auto [GUID, Cnt] : InlineTree.GUIDIdxMap)
+    GUIDFreqVec.emplace_back(Cnt, GUID);
+  llvm::sort(GUIDFreqVec);
+
+  std::vector<std::pair<uint32_t, uint64_t>> HashFreqVec;
+  HashFreqVec.reserve(InlineTree.HashIdxMap.size());
+  for (const auto [Hash, Cnt] : InlineTree.HashIdxMap)
+    HashFreqVec.emplace_back(Cnt, Hash);
+  llvm::sort(HashFreqVec);
+
+  uint32_t Index = 0;
+  Desc.Hash.reserve(HashFreqVec.size());
+  for (uint64_t Hash : llvm::make_second_range(llvm::reverse(HashFreqVec))) {
+    Desc.Hash.emplace_back(Hash);
+    InlineTree.HashIdxMap[Hash] = Index++;
+  }
+
+  Index = 0;
+  Desc.GUID.reserve(GUIDFreqVec.size());
+  for (uint64_t GUID : llvm::make_second_range(llvm::reverse(GUIDFreqVec))) {
+    Desc.GUID.emplace_back(GUID);
+    InlineTree.GUIDIdxMap[GUID] = Index++;
+    uint64_t Hash = Decoder.getFuncDescForGUID(GUID)->FuncHash;
+    Desc.GUIDHashIdx.emplace_back(InlineTree.HashIdxMap[Hash]);
+  }
+
+  return {Desc, InlineTree};
+}
+
+std::vector<yaml::bolt::PseudoProbeInfo>
+YAMLProfileWriter::convertNodeProbes(NodeIdToProbes &NodeProbes) {
+  struct BlockProbeInfoHasher {
+    size_t operator()(const yaml::bolt::PseudoProbeInfo &BPI) const {
+      auto HashCombine = [](auto &Range) {
+        return llvm::hash_combine_range(Range.begin(), Range.end());
+      };
+      return llvm::hash_combine(HashCombine(BPI.BlockProbes),
+                                HashCombine(BPI.CallProbes),
+                                HashCombine(BPI.IndCallProbes));
+    }
+  };
+
+  // Check identical BlockProbeInfo structs and merge them
+  std::unordered_map<yaml::bolt::PseudoProbeInfo, std::vector<uint32_t>,
+                     BlockProbeInfoHasher>
+      BPIToNodes;
+  for (auto &[NodeId, Probes] : NodeProbes) {
+    yaml::bolt::PseudoProbeInfo BPI;
+    BPI.BlockProbes = std::vector(Probes[0].begin(), Probes[0].end());
+    BPI.IndCallProbes = std::vector(Probes[1].begin(), Probes[1].end());
+    BPI.CallProbes = std::vector(Probes[2].begin(), Probes[2].end());
+    BPIToNodes[BPI].push_back(NodeId);
+  }
+
+  auto handleMask = [](const auto &Ids, auto &Vec, auto &Mask) {
+    for (auto Id : Ids)
+      if (Id > 64)
+        Vec.emplace_back(Id);
+      else
+        Mask |= 1ull << (Id - 1);
+  };
+
+  // Add to YAML with merged nodes/block mask optimizations
+  std::vector<yaml::bolt::PseudoProbeInfo> YamlProbes;
+  YamlProbes.reserve(BPIToNodes.size());
+  for (const auto &[BPI, Nodes] : BPIToNodes) {
+    auto &YamlBPI = YamlProbes.emplace_back(yaml::bolt::PseudoProbeInfo());
+    YamlBPI.CallProbes = BPI.CallProbes;
+    YamlBPI.IndCallProbes = BPI.IndCallProbes;
+    if (Nodes.size() == 1)
+      YamlBPI.InlineTreeIndex = Nodes.front();
+    else
+      YamlBPI.InlineTreeNodes = Nodes;
+    handleMask(BPI.BlockProbes, YamlBPI.BlockProbes, YamlBPI.BlockMask);
+  }
+  return YamlProbes;
+}
+
+std::tuple<std::vector<yaml::bolt::InlineTreeNode>,
+           YAMLProfileWriter::InlineTreeMapTy>
+YAMLProfileWriter::convertBFInlineTree(const MCPseudoProbeDecoder &Decoder,
+                                       const InlineTreeDesc &InlineTree,
+                                       uint64_t GUID) {
+  DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t> InlineTreeNodeId;
+  std::vector<yaml::bolt::InlineTreeNode> YamlInlineTree;
+  auto It = InlineTree.TopLevelGUIDToInlineTree.find(GUID);
+  if (It == InlineTree.TopLevelGUIDToInlineTree.end())
+    return {YamlInlineTree, InlineTreeNodeId};
+  const MCDecodedPseudoProbeInlineTree *Root = It->second;
+  assert(Root && "Malformed TopLevelGUIDToInlineTree");
+  uint32_t Index = 0;
+  uint32_t PrevParent = 0;
+  uint32_t PrevGUIDIdx = 0;
+  for (const auto &Node : collectInlineTree(Decoder, *Root)) {
+    InlineTreeNodeId[Node.InlineTree] = Index++;
+    auto GUIDIdxIt = InlineTree.GUIDIdxMap.find(Node.GUID);
+    assert(GUIDIdxIt != InlineTree.GUIDIdxMap.end() && "Malformed GUIDIdxMap");
+    uint32_t GUIDIdx = GUIDIdxIt->second;
+    if (GUIDIdx == PrevGUIDIdx)
+      GUIDIdx = UINT32_MAX;
+    else
+      PrevGUIDIdx = GUIDIdx;
+    YamlInlineTree.emplace_back(yaml::bolt::InlineTreeNode{
+        Node.ParentId - PrevParent, Node.InlineSite, GUIDIdx, 0, 0});
+    PrevParent = Node.ParentId;
+  }
+  return {YamlInlineTree, InlineTreeNodeId};
+}
+
 yaml::bolt::BinaryFunctionProfile
 YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
+                           const InlineTreeDesc &InlineTree,
                            const BoltAddressTranslation *BAT) {
   yaml::bolt::BinaryFunctionProfile YamlBF;
   const BinaryContext &BC = BF.getBinaryContext();
   const MCPseudoProbeDecoder *PseudoProbeDecoder =
-      opts::ProfileUsePseudoProbes ? BC.getPseudoProbeDecoder() : nullptr;
+      opts::ProfileWritePseudoProbes ? BC.getPseudoProbeDecoder() : nullptr;
 
   const uint16_t LBRProfile = BF.getProfileFlags() & BinaryFunction::PF_LBR;
 
@@ -72,12 +229,10 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
   YamlBF.Hash = BF.getHash();
   YamlBF.NumBasicBlocks = BF.size();
   YamlBF.ExecCount = BF.getKnownExecutionCount();
-  if (PseudoProbeDecoder) {
-    if ((YamlBF.GUID = BF.getGUID())) {
-      const MCPseudoProbeFuncDesc *FuncDesc =
-          PseudoProbeDecoder->getFuncDescForGUID(YamlBF.GUID);
-      YamlBF.PseudoProbeDescHash = FuncDesc->FuncHash;
-    }
+  DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t> InlineTreeNodeId;
+  if (PseudoProbeDecoder && BF.getGUID()) {
+    std::tie(YamlBF.InlineTree, InlineTreeNodeId) =
+        convertBFInlineTree(*PseudoProbeDecoder, InlineTree, BF.getGUID());
   }
 
   BinaryFunction::BasicBlockOrderType Order;
@@ -193,13 +348,10 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
       const uint64_t FuncAddr = BF.getAddress();
       const std::pair<uint64_t, uint64_t> &BlockRange =
           BB->getInputAddressRange();
-      const auto &BlockProbes =
-          llvm::make_range(ProbeMap.lower_bound(FuncAddr + BlockRange.first),
-                           ProbeMap.lower_bound(FuncAddr + BlockRange.second));
-      for (const auto &[_, Probes] : BlockProbes)
-        for (const MCDecodedPseudoProbe &Probe : Probes)
-          YamlBB.PseudoProbes.emplace_back(yaml::bolt::PseudoProbeInfo{
-              Probe.getGuid(), Probe.getIndex(), Probe.getType()});
+      const std::pair<uint64_t, uint64_t> BlockAddrRange = {
+          FuncAddr + BlockRange.first, FuncAddr + BlockRange.second};
+      auto Probes = ProbeMap.find(BlockAddrRange.first, BlockAddrRange.second);
+      YamlBB.PseudoProbes = writeBlockProbes(Probes, InlineTreeNodeId);
     }
 
     YamlBF.Blocks.emplace_back(YamlBB);
@@ -254,6 +406,12 @@ std::error_code YAMLProfileWriter::writeProfile(const RewriteInstance &RI) {
   }
   BP.Header.Flags = ProfileFlags;
 
+  // Add probe inline tree nodes.
+  InlineTreeDesc InlineTree;
+  if (const MCPseudoProbeDecoder *Decoder =
+          opts::ProfileWritePseudoProbes ? BC.getPseudoProbeDecoder() : nullptr)
+    std::tie(BP.PseudoProbeDesc, InlineTree) = convertPseudoProbeDesc(*Decoder);
+
   // Add all function objects.
   for (const auto &BFI : Functions) {
     const BinaryFunction &BF = BFI.second;
@@ -261,7 +419,7 @@ std::error_code YAMLProfileWriter::writeProfile(const RewriteInstance &RI) {
       if (!BF.hasValidProfile() && !RI.getProfileReader()->isTrustedSource())
         continue;
 
-      BP.Functions.emplace_back(convert(BF, opts::ProfileUseDFS));
+      BP.Functions.emplace_back(convert(BF, opts::ProfileUseDFS, InlineTree));
     }
   }
 

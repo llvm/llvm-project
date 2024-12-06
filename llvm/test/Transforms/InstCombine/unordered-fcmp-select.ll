@@ -115,7 +115,7 @@ define float @select_max_ugt_2_use_cmp(float %a, float %b) {
 ; CHECK-LABEL: @select_max_ugt_2_use_cmp(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp reassoc ugt float [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    call void @foo(i1 [[CMP]])
-; CHECK-NEXT:    [[SEL:%.*]] = select fast i1 [[CMP]], float [[A]], float [[B]]
+; CHECK-NEXT:    [[SEL:%.*]] = call reassoc ninf nsz arcp contract afn float @llvm.maxnum.f32(float [[A]], float [[B]])
 ; CHECK-NEXT:    ret float [[SEL]]
 ;
   %cmp = fcmp reassoc ugt float %a, %b

@@ -654,7 +654,9 @@ define i8 @test_int_x86_avx512_mask_fpclass_pd_512(<8 x double> %x0) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_fpclass_pd_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfpclasspd $2, %zmm0, %k1 # encoding: [0x62,0xf3,0xfd,0x48,0x66,0xc8,0x02]
+; CHECK-NEXT:    # k1 = isPositiveZero(zmm0)
 ; CHECK-NEXT:    vfpclasspd $4, %zmm0, %k0 {%k1} # encoding: [0x62,0xf3,0xfd,0x49,0x66,0xc0,0x04]
+; CHECK-NEXT:    # k0 {%k1} = isNegativeZero(zmm0)
 ; CHECK-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
@@ -669,7 +671,9 @@ define i16@test_int_x86_avx512_mask_fpclass_ps_512(<16 x float> %x0) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_fpclass_ps_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfpclassps $2, %zmm0, %k1 # encoding: [0x62,0xf3,0x7d,0x48,0x66,0xc8,0x02]
+; CHECK-NEXT:    # k1 = isPositiveZero(zmm0)
 ; CHECK-NEXT:    vfpclassps $4, %zmm0, %k0 {%k1} # encoding: [0x62,0xf3,0x7d,0x49,0x66,0xc0,0x04]
+; CHECK-NEXT:    # k0 {%k1} = isNegativeZero(zmm0)
 ; CHECK-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]

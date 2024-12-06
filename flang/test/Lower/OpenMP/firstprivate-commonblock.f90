@@ -14,7 +14,7 @@
 !CHECK: %[[val_5:.*]] = fir.coordinate_of %[[val_4]], %[[val_c4]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
 !CHECK: %[[val_6:.*]] = fir.convert %[[val_5]] : (!fir.ref<i8>) -> !fir.ref<f32>
 !CHECK: %[[VAL_6_DECL:.*]]:2 = hlfir.declare %[[val_6]] {uniq_name = "_QFfirstprivate_commonEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-!CHECK: omp.parallel private(@{{.*}} %{{.*}}#0 -> %[[val_7:.*]] : {{.*}}, @{{.*}} %{{.*}}#0 -> %[[val_9:.*]] : {{.*}}) {
+!CHECK: omp.parallel private(@{{.*}} %{{.*}}#0 -> %[[val_7:.*]], @{{.*}} %{{.*}}#0 -> %[[val_9:.*]] : {{.*}}) {
 !CHECK: %[[VAL_7_DECL:.*]]:2 = hlfir.declare %[[val_7]] {uniq_name = "_QFfirstprivate_commonEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 !CHECK: %[[VAL_9_DECL:.*]]:2 = hlfir.declare %[[val_9]] {uniq_name = "_QFfirstprivate_commonEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 !CHECK: omp.terminator

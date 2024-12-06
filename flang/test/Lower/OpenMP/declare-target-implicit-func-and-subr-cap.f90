@@ -1,7 +1,7 @@
-!RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
-!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s  --check-prefix=DEVICE
-!RUN: bbc -emit-hlfir -fopenmp %s -o - | FileCheck %s
-!RUN: bbc -emit-hlfir -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefix=DEVICE
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -fopenmp-is-target-device %s -o - | FileCheck %s  --check-prefix=DEVICE
+!RUN: bbc -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
+!RUN: bbc -emit-hlfir -fopenmp -fopenmp-version=50 -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefix=DEVICE
 
 ! CHECK-LABEL: func.func @_QPimplicitly_captured
 ! CHECK-SAME: {{.*}}attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>{{.*}}}
@@ -131,7 +131,7 @@ end function target_function_test_host
 !! -----
 
 ! DEVICE-LABEL: func.func @_QPimplicitly_captured_with_dev_type_recursive
-! DEVICE-SAME: {{.*}}attributes {fir.func_recursive, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>{{.*}}}
+! DEVICE-SAME: {{.*}}attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>{{.*}}}
 recursive function implicitly_captured_with_dev_type_recursive(increment) result(k)
 !$omp declare target to(implicitly_captured_with_dev_type_recursive) device_type(host)
    integer :: increment, k
@@ -200,7 +200,7 @@ program mb
 end program
 
 ! DEVICE-LABEL: func.func @_QPimplicitly_captured_recursive
-! DEVICE-SAME: {{.*}}attributes {fir.func_recursive, omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to)>{{.*}}}
+! DEVICE-SAME: {{.*}}attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to)>{{.*}}}
 recursive subroutine implicitly_captured_recursive(increment)
    integer :: increment
    if (increment == 10) then

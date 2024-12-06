@@ -59,7 +59,7 @@ public:
   using RT = bool;
 
   ArrayBaseFinder(llvm::ArrayRef<Fortran::lower::FrontEndSymbol> syms)
-      : controlVars(syms.begin(), syms.end()) {}
+      : controlVars(syms) {}
 
   template <typename T>
   void operator()(const T &x) {

@@ -203,9 +203,26 @@ def HasStdExtM : Predicate<"Subtarget->hasStdExtM()">,
 
 // Atomic Extensions
 
+def FeatureStdExtZaamo
+    : RISCVExtension<"zaamo", 1, 0,
+                     "'Zaamo' (Atomic Memory Operations)">;
+def HasStdExtZaamo
+    : Predicate<"Subtarget->hasStdExtZaamo()">,
+      AssemblerPredicate<(any_of FeatureStdExtZaamo),
+                         "'Zaamo' (Atomic Memory Operations)">;
+
+def FeatureStdExtZalrsc
+    : RISCVExtension<"zalrsc", 1, 0,
+                     "'Zalrsc' (Load-Reserved/Store-Conditional)">;
+def HasStdExtZalrsc
+    : Predicate<"Subtarget->hasStdExtZalrsc()">,
+      AssemblerPredicate<(any_of FeatureStdExtZalrsc),
+                         "'Zalrsc' (Load-Reserved/Store-Conditional)">;
+
 def FeatureStdExtA
     : RISCVExtension<"a", 2, 1,
-                     "'A' (Atomic Instructions)">,
+                     "'A' (Atomic Instructions)",
+                     [FeatureStdExtZaamo, FeatureStdExtZalrsc]>,
       RISCVExtensionBitmask<0, 0>;
 def HasStdExtA : Predicate<"Subtarget->hasStdExtA()">,
                  AssemblerPredicate<(all_of FeatureStdExtA),
@@ -226,25 +243,18 @@ def FeatureStdExtZa64rs : RISCVExtension<"za64rs", 1, 0,
 def FeatureStdExtZa128rs : RISCVExtension<"za128rs", 1, 0,
                                           "'Za128rs' (Reservation Set Size of at Most 128 Bytes)">;
 
-def FeatureStdExtZaamo
-    : RISCVExtension<"zaamo", 1, 0,
-                     "'Zaamo' (Atomic Memory Operations)">;
-def HasStdExtAOrZaamo
-    : Predicate<"Subtarget->hasStdExtA() || Subtarget->hasStdExtZaamo()">,
-      AssemblerPredicate<(any_of FeatureStdExtA, FeatureStdExtZaamo),
-                         "'A' (Atomic Instructions) or "
-                         "'Zaamo' (Atomic Memory Operations)">;
-
 def FeatureStdExtZabha
     : RISCVExtension<"zabha", 1, 0,
-                     "'Zabha' (Byte and Halfword Atomic Memory Operations)">;
+                     "'Zabha' (Byte and Halfword Atomic Memory Operations)",
+                     [FeatureStdExtZaamo]>;
 def HasStdExtZabha : Predicate<"Subtarget->hasStdExtZabha()">,
                      AssemblerPredicate<(all_of FeatureStdExtZabha),
                          "'Zabha' (Byte and Halfword Atomic Memory Operations)">;
 
 def FeatureStdExtZacas
-    : RISCVExperimentalExtension<"zacas", 1, 0,
-                                 "'Zacas' (Atomic Compare-And-Swap Instructions)">,
+    : RISCVExtension<"zacas", 1, 0,
+                     "'Zacas' (Atomic Compare-And-Swap Instructions)",
+                     [FeatureStdExtZaamo]>,
       RISCVExtensionBitmask<0, 26>;
 def HasStdExtZacas : Predicate<"Subtarget->hasStdExtZacas()">,
                      AssemblerPredicate<(all_of FeatureStdExtZacas),
@@ -257,15 +267,6 @@ def FeatureStdExtZalasr
 def HasStdExtZalasr : Predicate<"Subtarget->hasStdExtZalasr()">,
                       AssemblerPredicate<(all_of FeatureStdExtZalasr),
                           "'Zalasr' (Load-Acquire and Store-Release Instructions)">;
-
-def FeatureStdExtZalrsc
-    : RISCVExtension<"zalrsc", 1, 0,
-                     "'Zalrsc' (Load-Reserved/Store-Conditional)">;
-def HasStdExtAOrZalrsc
-    : Predicate<"Subtarget->hasStdExtA() || Subtarget->hasStdExtZalrsc()">,
-      AssemblerPredicate<(any_of FeatureStdExtA, FeatureStdExtZalrsc),
-                         "'A' (Atomic Instructions) or "
-                         "'Zalrsc' (Load-Reserved/Store-Conditional)">;
 
 def FeatureStdExtZama16b
     : RISCVExtension<"zama16b", 1, 0,
@@ -348,6 +349,11 @@ def FeatureStdExtZfinx
 def HasStdExtZfinx : Predicate<"Subtarget->hasStdExtZfinx()">,
                      AssemblerPredicate<(all_of FeatureStdExtZfinx),
                                         "'Zfinx' (Float in Integer)">;
+def HasStdExtFOrZfinx : Predicate<"Subtarget->hasStdExtFOrZfinx()">,
+                        AssemblerPredicate<(any_of FeatureStdExtF,
+                                                   FeatureStdExtZfinx),
+                            "'F' (Single-Precision Floating-Point) or "
+                            "'Zfinx' (Float in Integer)">;
 
 def FeatureStdExtZdinx
     : RISCVExtension<"zdinx", 1, 0,
@@ -508,9 +514,6 @@ def FeatureStdExtB
     : RISCVExtension<"b", 1, 0,
                      "'B' (the collection of the Zba, Zbb, Zbs extensions)",
                      [FeatureStdExtZba, FeatureStdExtZbb, FeatureStdExtZbs]>;
-def HasStdExtB : Predicate<"Subtarget->hasStdExtB()">,
-                           AssemblerPredicate<(all_of FeatureStdExtB),
-                           "'B' (the collection of the Zba, Zbb, Zbs extensions)">;
 
 def FeatureStdExtZbkb
     : RISCVExtension<"zbkb", 1, 0,
@@ -519,6 +522,8 @@ def FeatureStdExtZbkb
 def HasStdExtZbkb : Predicate<"Subtarget->hasStdExtZbkb()">,
                     AssemblerPredicate<(all_of FeatureStdExtZbkb),
                         "'Zbkb' (Bitmanip instructions for Cryptography)">;
+def NoStdExtZbkb : Predicate<"!Subtarget->hasStdExtZbkb()">,
+                   AssemblerPredicate<(all_of (not FeatureStdExtZbkb))>;
 
 def FeatureStdExtZbkx
     : RISCVExtension<"zbkx", 1, 0,
@@ -731,7 +736,8 @@ def HasStdExtZfhOrZvfh
 
 def FeatureStdExtZvkb
     : RISCVExtension<"zvkb", 1, 0,
-                     "'Zvkb' (Vector Bit-manipulation used in Cryptography)">,
+                     "'Zvkb' (Vector Bit-manipulation used in Cryptography)",
+                     [FeatureStdExtZve32x]>,
       RISCVExtensionBitmask<0, 52>;
 def HasStdExtZvkb : Predicate<"Subtarget->hasStdExtZvkb()">,
                     AssemblerPredicate<(all_of FeatureStdExtZvkb),
@@ -748,23 +754,43 @@ def HasStdExtZvbb : Predicate<"Subtarget->hasStdExtZvbb()">,
 
 def FeatureStdExtZvbc
     : RISCVExtension<"zvbc", 1, 0,
-                     "'Zvbc' (Vector Carryless Multiplication)">,
+                     "'Zvbc' (Vector Carryless Multiplication)",
+                     [FeatureStdExtZve64x]>,
       RISCVExtensionBitmask<0, 49>;
 def HasStdExtZvbc : Predicate<"Subtarget->hasStdExtZvbc()">,
                     AssemblerPredicate<(all_of FeatureStdExtZvbc),
                         "'Zvbc' (Vector Carryless Multiplication)">;
 
+def FeatureStdExtZvbc32e
+    : RISCVExperimentalExtension<"zvbc32e", 0, 7,
+                                 "'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements)",
+                                 [FeatureStdExtZve32x]>;
+
+def HasStdExtZvbcOrZvbc32e : Predicate<"Subtarget->hasStdExtZvbc() || Subtarget->hasStdExtZvbc32e()">,
+                             AssemblerPredicate<(any_of FeatureStdExtZvbc, FeatureStdExtZvbc32e),
+                             "'Zvbc' or 'Zvbc32e' (Vector Carryless Multiplication)">;
+
 def FeatureStdExtZvkg
     : RISCVExtension<"zvkg", 1, 0,
-                     "'Zvkg' (Vector GCM instructions for Cryptography)">,
+                     "'Zvkg' (Vector GCM instructions for Cryptography)",
+                     [FeatureStdExtZve32x]>,
       RISCVExtensionBitmask<0, 53>;
 def HasStdExtZvkg : Predicate<"Subtarget->hasStdExtZvkg()">,
                     AssemblerPredicate<(all_of FeatureStdExtZvkg),
                         "'Zvkg' (Vector GCM instructions for Cryptography)">;
 
+def FeatureStdExtZvkgs
+    : RISCVExperimentalExtension<"zvkgs", 0, 7,
+                                 "'Zvkgs' (Vector-Scalar GCM instructions for Cryptography)",
+                                 [FeatureStdExtZvkg]>;
+def HasStdExtZvkgs : Predicate<"Subtarget->hasStdExtZvkgs()">,
+                     AssemblerPredicate<(all_of FeatureStdExtZvkgs),
+                        "'Zvkgs' (Vector-Scalar GCM instructions for Cryptography)">;
+
 def FeatureStdExtZvkned
     : RISCVExtension<"zvkned", 1, 0,
-                     "'Zvkned' (Vector AES Encryption & Decryption (Single Round))">,
+                     "'Zvkned' (Vector AES Encryption & Decryption (Single Round))",
+                     [FeatureStdExtZve32x]>,
       RISCVExtensionBitmask<0, 54>;
 def HasStdExtZvkned : Predicate<"Subtarget->hasStdExtZvkned()">,
                       AssemblerPredicate<(all_of FeatureStdExtZvkned),
@@ -772,7 +798,8 @@ def HasStdExtZvkned : Predicate<"Subtarget->hasStdExtZvkned()">,
 
 def FeatureStdExtZvknha
     : RISCVExtension<"zvknha", 1, 0,
-                     "'Zvknha' (Vector SHA-2 (SHA-256 only))">,
+                     "'Zvknha' (Vector SHA-2 (SHA-256 only))",
+                     [FeatureStdExtZve32x]>,
       RISCVExtensionBitmask<0, 55>;
 def HasStdExtZvknha : Predicate<"Subtarget->hasStdExtZvknha()">,
                       AssemblerPredicate<(all_of FeatureStdExtZvknha),
@@ -793,7 +820,8 @@ def HasStdExtZvknhaOrZvknhb : Predicate<"Subtarget->hasStdExtZvknha() || Subtarg
 
 def FeatureStdExtZvksed
     : RISCVExtension<"zvksed", 1, 0,
-                     "'Zvksed' (SM4 Block Cipher Instructions)">,
+                     "'Zvksed' (SM4 Block Cipher Instructions)",
+                     [FeatureStdExtZve32x]>,
       RISCVExtensionBitmask<0, 57>;
 def HasStdExtZvksed : Predicate<"Subtarget->hasStdExtZvksed()">,
                       AssemblerPredicate<(all_of FeatureStdExtZvksed),
@@ -801,7 +829,8 @@ def HasStdExtZvksed : Predicate<"Subtarget->hasStdExtZvksed()">,
 
 def FeatureStdExtZvksh
     : RISCVExtension<"zvksh", 1, 0,
-                     "'Zvksh' (SM3 Hash Function Instructions)">,
+                     "'Zvksh' (SM3 Hash Function Instructions)",
+                     [FeatureStdExtZve32x]>,
       RISCVExtensionBitmask<0, 58>;
 def HasStdExtZvksh : Predicate<"Subtarget->hasStdExtZvksh()">,
                      AssemblerPredicate<(all_of FeatureStdExtZvksh),
@@ -870,7 +899,7 @@ def HasVInstructionsF16Minimal : Predicate<"Subtarget->hasVInstructionsF16Minima
                          "'Zvfhmin' (Vector Half-Precision Floating-Point Minimal) or "
                          "'Zvfh' (Vector Half-Precision Floating-Point)">;
 
-def HasVInstructionsBF16 : Predicate<"Subtarget->hasVInstructionsBF16()">;
+def HasVInstructionsBF16Minimal : Predicate<"Subtarget->hasVInstructionsBF16Minimal()">;
 def HasVInstructionsF16 : Predicate<"Subtarget->hasVInstructionsF16()">;
 def HasVInstructionsF64 : Predicate<"Subtarget->hasVInstructionsF64()">;
 
@@ -910,9 +939,23 @@ def FeatureStdExtSscsrind
     : RISCVExtension<"sscsrind", 1, 0,
                      "'Sscsrind' (Indirect CSR Access Supervisor Level)">;
 
+def FeatureStdExtSmdbltrp
+    : RISCVExtension<"smdbltrp", 1, 0,
+                     "'Smdbltrp' (Double Trap Machine Level)">;
+def FeatureStdExtSsdbltrp
+    : RISCVExtension<"ssdbltrp", 1, 0,
+                     "'Ssdbltrp' (Double Trap Supervisor Level)">;
+
 def FeatureStdExtSmepmp
     : RISCVExtension<"smepmp", 1, 0,
                      "'Smepmp' (Enhanced Physical Memory Protection)">;
+
+def FeatureStdExtSmrnmi
+    : RISCVExtension<"smrnmi", 1, 0,
+                     "'Smrnmi' (Resumable Non-Maskable Interrupts)">;
+def HasStdExtSmrnmi : Predicate<"Subtarget->hasStdExtSmrnmi()">,
+                       AssemblerPredicate<(all_of FeatureStdExtSmrnmi),
+                           "'Smrnmi' (Resumable Non-Maskable Interrupts)">; 
 
 def FeatureStdExtSmcdeleg
     : RISCVExtension<"smcdeleg", 1, 0,
@@ -953,9 +996,9 @@ def FeatureStdExtSstc
     : RISCVExtension<"sstc", 1, 0,
                      "'Sstc' (Supervisor-mode timer interrupts)">;
 
-def FeaturesStdExtSsqosid
-    : RISCVExperimentalExtension<"ssqosid", 1, 0,
-                                 "'Ssqosid' (Quality-of-Service (QoS) Identifiers)">;
+def FeatureStdExtSsqosid
+    : RISCVExtension<"ssqosid", 1, 0,
+                     "'Ssqosid' (Quality-of-Service (QoS) Identifiers)">;
 
 def FeatureStdExtShtvala
     : RISCVExtension<"shtvala", 1, 0,
@@ -1005,39 +1048,67 @@ def FeatureStdExtSvpbmt
     : RISCVExtension<"svpbmt", 1, 0,
                      "'Svpbmt' (Page-Based Memory Types)">;
 
+def FeatureStdExtSvvptc
+    : RISCVExtension<"svvptc", 1, 0,
+                     "'svvptc' (Obviating Memory-Management Instructions after Marking PTEs Valid)">;
+
+def FeatureStdExtSha
+    : RISCVExtension<"sha", 1, 0,
+                     "'Sha' (Augmented Hypervisor)",
+                     [FeatureStdExtH, FeatureStdExtSsstateen, FeatureStdExtShcounterenw,
+                      FeatureStdExtShvstvala, FeatureStdExtShtvala, FeatureStdExtShvstvecd,
+                      FeatureStdExtShvsatpa, FeatureStdExtShgatpa]>;
+
+def FeatureStdExtSvukte
+    : RISCVExperimentalExtension<"svukte", 0, 3,
+                                 "'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses)">;
+
 // Pointer Masking extensions
 
 // A supervisor-level extension that provides pointer masking for the next lower
 // privilege mode (U-mode), and for VS- and VU-modes if the H extension is
 // present.
 def FeatureStdExtSsnpm
-    : RISCVExperimentalExtension<"ssnpm", 1, 0,
-                                 "'Ssnpm' (Supervisor-level Pointer Masking for next lower privilege mode)">;
+    : RISCVExtension<"ssnpm", 1, 0,
+                     "'Ssnpm' (Supervisor-level Pointer Masking for next lower privilege mode)">;
 
 // A machine-level extension that provides pointer masking for the next lower
 // privilege mode (S/HS if S-mode is implemented, or U-mode otherwise).
 def FeatureStdExtSmnpm
-    : RISCVExperimentalExtension<"smnpm", 1, 0,
-                                 "'Smnpm' (Machine-level Pointer Masking for next lower privilege mode)">;
+    : RISCVExtension<"smnpm", 1, 0,
+                     "'Smnpm' (Machine-level Pointer Masking for next lower privilege mode)">;
 
 // A machine-level extension that provides pointer masking for M-mode.
 def FeatureStdExtSmmpm
-    : RISCVExperimentalExtension<"smmpm", 1, 0,
-                                 "'Smmpm' (Machine-level Pointer Masking for M-mode)">;
+    : RISCVExtension<"smmpm", 1, 0,
+                     "'Smmpm' (Machine-level Pointer Masking for M-mode)">;
 
 // An extension that indicates that there is pointer-masking support available
 // in supervisor mode, with some facility provided in the supervisor execution
 // environment to control pointer masking.
 def FeatureStdExtSspm
-    : RISCVExperimentalExtension<"sspm", 1, 0,
-                                 "'Sspm' (Indicates Supervisor-mode Pointer Masking)">;
+    : RISCVExtension<"sspm", 1, 0,
+                     "'Sspm' (Indicates Supervisor-mode Pointer Masking)">;
 
 // An extension that indicates that there is pointer-masking support available
 // in user mode, with some facility provided in the application execution
 // environment to control pointer masking.
 def FeatureStdExtSupm
-    : RISCVExperimentalExtension<"supm", 1, 0,
-                                 "'Supm' (Indicates User-mode Pointer Masking)">;
+    : RISCVExtension<"supm", 1, 0,
+                     "'Supm' (Indicates User-mode Pointer Masking)">;
+
+def FeatureStdExtSmctr
+    : RISCVExperimentalExtension<"smctr", 1, 0,
+                                 "'Smctr' (Control Transfer Records Machine Level)",
+                                 [FeatureStdExtSscsrind]>;
+def FeatureStdExtSsctr
+    : RISCVExperimentalExtension<"ssctr" ,1, 0,
+                                 "'Ssctr' (Control Transfer Records Supervisor Level)",
+                                 [FeatureStdExtSscsrind]>;
+def HasStdExtSmctrOrSsctr : Predicate<"Subtarget->hasStdExtSmctrOrSsctr()">,
+                            AssemblerPredicate<(any_of FeatureStdExtSmctr, FeatureStdExtSsctr),
+                               "'Smctr' (Control Transfer Records Machine Level) or "
+                               "'Ssctr' (Control Transfer Records Supervisor Level)">;
 
 //===----------------------------------------------------------------------===//
 // Vendor extensions
@@ -1270,6 +1341,32 @@ def HasVendorXwchc
       AssemblerPredicate<(all_of FeatureVendorXwchc),
                          "'Xwchc' (WCH/QingKe additional compressed opcodes)">;
 
+// Qualcomm Extension(s)
+
+def FeatureVendorXqcicsr
+    : RISCVExperimentalExtension<"xqcicsr", 0, 2,
+                                 "'Xqcicsr' (Qualcomm uC CSR Extension)">;
+def HasVendorXqcicsr
+    : Predicate<"Subtarget->hasVendorXqcicsr()">,
+      AssemblerPredicate<(all_of FeatureVendorXqcicsr),
+                         "'Xqcicsr' (Qualcomm uC CSR Extension)">;
+
+def FeatureVendorXqcisls
+    : RISCVExperimentalExtension<"xqcisls", 0, 2,
+                                 "'Xqcisls' (Qualcomm uC Scaled Load Store Extension)">;
+def HasVendorXqcisls
+    : Predicate<"Subtarget->hasVendorXqcisls()">,
+      AssemblerPredicate<(all_of FeatureVendorXqcisls),
+                         "'Xqcisls' (Qualcomm uC Scaled Load Store Extension)">;
+
+def FeatureVendorXqcia
+    : RISCVExperimentalExtension<"xqcia", 0, 2,
+                                 "'Xqcia' (Qualcomm uC Arithmetic Extension)">;
+def HasVendorXqcia
+    : Predicate<"Subtarget->hasVendorXqcia()">,
+      AssemblerPredicate<(all_of FeatureVendorXqcia),
+                         "'Xqcia' (Qualcomm uC Arithmetic Extension)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//
@@ -1317,10 +1414,14 @@ def FeatureUnalignedVectorMem
                       "true", "Has reasonably performant unaligned vector "
                       "loads and stores">;
 
-def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
+def TunePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
     "UsePostRAScheduler", "true", "Schedule again after register allocation">;
 
-def FeaturePredictableSelectIsExpensive
+def TuneDisableLatencySchedHeuristic
+    : SubtargetFeature<"disable-latency-sched-heuristic", "DisableLatencySchedHeuristic", "true",
+                       "Disable latency scheduling heuristic">;
+
+def TunePredictableSelectIsExpensive
     : SubtargetFeature<"predictable-select-expensive", "PredictableSelectIsExpensive", "true",
                        "Prefer likely predicted branches over selects">;
 
@@ -1328,6 +1429,13 @@ def TuneOptimizedZeroStrideLoad
    : SubtargetFeature<"optimized-zero-stride-load", "HasOptimizedZeroStrideLoad",
                       "true", "Optimized (perform fewer memory operations)"
                       "zero-stride vector load">;
+
+foreach nf = {2-8} in
+  def TuneOptimizedNF#nf#SegmentLoadStore :
+      SubtargetFeature<"optimized-nf"#nf#"-segment-load-store",
+                       "HasOptimizedNF"#nf#"SegmentLoadStore",
+                       "true", "vlseg"#nf#"eN.v and vsseg"#nf#"eN.v are"
+                       "implemented as a wide memory op and shuffle">;
 
 def Experimental
    : SubtargetFeature<"experimental", "HasExperimental",
@@ -1370,12 +1478,13 @@ def HasConditionalMoveFusion : Predicate<"Subtarget->hasConditionalMoveFusion()"
 def NoConditionalMoveFusion  : Predicate<"!Subtarget->hasConditionalMoveFusion()">;
 
 def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
-                                   "SiFive 7-Series processors",
-                                   [TuneNoDefaultUnroll,
-                                    TuneShortForwardBranchOpt]>;
+                                   "SiFive 7-Series processors">;
 
 def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
                                          "Ventana Veyron-Series processors">;
+
+def TuneVXRMPipelineFlush : SubtargetFeature<"vxrm-pipeline-flush", "HasVXRMPipelineFlush",
+                                             "true", "VXRM writes causes pipeline flush">;
 
 // Assume that lock-free native-width atomics are available, even if the target
 // and operating system combination would not usually provide them. The user
@@ -1392,8 +1501,3 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "AllowTaggedGlobals",
     "true", "Use an instruction sequence for taking the address of a global "
     "that allows a memory tag in the upper address bits">;
-
-def FeatureForcedSWShadowStack : SubtargetFeature<
-    "forced-sw-shadow-stack", "HasForcedSWShadowStack", "true",
-    "Implement shadow stack with software.">;
-def HasForcedSWShadowStack : Predicate<"Subtarget->hasForcedSWShadowStack()">;

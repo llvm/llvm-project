@@ -1412,6 +1412,12 @@ unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
     unsigned AttrSize, AttributesInfo &Info) {
   uint64_t Value;
 
+  // We don't emit any skeleton CUs with dsymutil. So avoid emitting
+  // a redundant DW_AT_GNU_dwo_id on the non-skeleton CU.
+  if (AttrSpec.Attr == dwarf::DW_AT_GNU_dwo_id ||
+      AttrSpec.Attr == dwarf::DW_AT_dwo_id)
+    return 0;
+
   // Check for the offset to the macro table. If offset is incorrect then we
   // need to remove the attribute.
   if (AttrSpec.Attr == dwarf::DW_AT_macro_info) {
@@ -1831,10 +1837,8 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
     Unit.addNamespaceAccelerator(Die, AttrInfo.Name);
   } else if (Tag == dwarf::DW_TAG_imported_declaration && AttrInfo.Name) {
     Unit.addNamespaceAccelerator(Die, AttrInfo.Name);
-  } else if (isTypeTag(Tag) && !AttrInfo.IsDeclaration &&
-             getDIENames(InputDIE, AttrInfo, DebugStrPool) && AttrInfo.Name &&
-             AttrInfo.Name.getString()[0]) {
-    uint32_t Hash = hashFullyQualifiedName(InputDIE, Unit, File);
+  } else if (isTypeTag(Tag) && !AttrInfo.IsDeclaration) {
+    bool Success = getDIENames(InputDIE, AttrInfo, DebugStrPool);
     uint64_t RuntimeLang =
         dwarf::toUnsigned(InputDIE.find(dwarf::DW_AT_APPLE_runtime_class))
             .value_or(0);
@@ -1843,8 +1847,21 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
          RuntimeLang == dwarf::DW_LANG_ObjC_plus_plus) &&
         dwarf::toUnsigned(InputDIE.find(dwarf::DW_AT_APPLE_objc_complete_type))
             .value_or(0);
-    Unit.addTypeAccelerator(Die, AttrInfo.Name, ObjCClassIsImplementation,
-                            Hash);
+    if (Success && AttrInfo.Name && !AttrInfo.Name.getString().empty()) {
+      uint32_t Hash = hashFullyQualifiedName(InputDIE, Unit, File);
+      Unit.addTypeAccelerator(Die, AttrInfo.Name, ObjCClassIsImplementation,
+                              Hash);
+    }
+
+    // For Swift, mangled names are put into DW_AT_linkage_name.
+    if (Success && AttrInfo.MangledName &&
+        RuntimeLang == dwarf::DW_LANG_Swift &&
+        !AttrInfo.MangledName.getString().empty() &&
+        AttrInfo.MangledName != AttrInfo.Name) {
+      auto Hash = djbHash(AttrInfo.MangledName.getString().data());
+      Unit.addTypeAccelerator(Die, AttrInfo.MangledName,
+                              ObjCClassIsImplementation, Hash);
+    }
   }
 
   // Determine whether there are any children that we want to keep.

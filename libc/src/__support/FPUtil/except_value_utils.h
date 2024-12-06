@@ -11,10 +11,13 @@
 
 #include "FEnvImpl.h"
 #include "FPBits.h"
+#include "cast.h"
 #include "rounding_mode.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/macros/properties/cpu_features.h"
+#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -112,6 +115,21 @@ template <typename T> LIBC_INLINE T round_result_slightly_up(T value_rn) {
   tmp += FPBits<T>::min_normal().get_val();
   return tmp;
 }
+
+#if defined(LIBC_TYPES_HAS_FLOAT16) &&                                         \
+    !defined(LIBC_TARGET_CPU_HAS_FAST_FLOAT16_OPS)
+template <> LIBC_INLINE float16 round_result_slightly_down(float16 value_rn) {
+  volatile float tmp = value_rn;
+  tmp -= FPBits<float16>::min_normal().get_val();
+  return cast<float16>(tmp);
+}
+
+template <> LIBC_INLINE float16 round_result_slightly_up(float16 value_rn) {
+  volatile float tmp = value_rn;
+  tmp += FPBits<float16>::min_normal().get_val();
+  return cast<float16>(tmp);
+}
+#endif
 
 } // namespace fputil
 

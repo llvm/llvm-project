@@ -14,6 +14,7 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -31,6 +32,36 @@ using namespace mlir;
 
 namespace fir {
 namespace {
+
+// Helper to only build the symbol table if needed because its build time is
+// linear on the number of symbols in the module.
+struct LazySymbolTable {
+  LazySymbolTable(mlir::Operation *op)
+      : module{op->getParentOfType<mlir::ModuleOp>()} {}
+  void build() {
+    if (table)
+      return;
+    table = std::make_unique<mlir::SymbolTable>(module);
+  }
+
+  template <typename T>
+  T lookup(llvm::StringRef name) {
+    build();
+    return table->lookup<T>(name);
+  }
+
+private:
+  std::unique_ptr<mlir::SymbolTable> table;
+  mlir::ModuleOp module;
+};
+
+bool hasScalarDerivedResult(mlir::FunctionType funTy) {
+  // C_PTR/C_FUNPTR are results to void* in this pass, do not consider
+  // them as normal derived types.
+  return funTy.getNumResults() == 1 &&
+         mlir::isa<fir::RecordType>(funTy.getResult(0)) &&
+         !fir::isa_builtin_cptr_type(funTy.getResult(0));
+}
 
 static mlir::Type getResultArgumentType(mlir::Type resultType,
                                         bool shouldBoxResult) {
@@ -154,17 +185,14 @@ public:
         newOperands.emplace_back(arg);
       unsigned passArgShift = newOperands.size();
       newOperands.append(op.getOperands().begin() + 1, op.getOperands().end());
-
-      fir::DispatchOp newDispatchOp;
+      mlir::IntegerAttr passArgPos;
       if (op.getPassArgPos())
-        newOp = rewriter.create<fir::DispatchOp>(
-            loc, newResultTypes, rewriter.getStringAttr(op.getMethod()),
-            op.getOperands()[0], newOperands,
-            rewriter.getI32IntegerAttr(*op.getPassArgPos() + passArgShift));
-      else
-        newOp = rewriter.create<fir::DispatchOp>(
-            loc, newResultTypes, rewriter.getStringAttr(op.getMethod()),
-            op.getOperands()[0], newOperands, nullptr);
+        passArgPos =
+            rewriter.getI32IntegerAttr(*op.getPassArgPos() + passArgShift);
+      newOp = rewriter.create<fir::DispatchOp>(
+          loc, newResultTypes, rewriter.getStringAttr(op.getMethod()),
+          op.getOperands()[0], newOperands, passArgPos,
+          op.getProcedureAttrsAttr());
     }
 
     if (isResultBuiltinCPtr) {
@@ -193,7 +221,15 @@ public:
   llvm::LogicalResult
   matchAndRewrite(fir::SaveResultOp op,
                   mlir::PatternRewriter &rewriter) const override {
-    rewriter.eraseOp(op);
+    mlir::Operation *call = op.getValue().getDefiningOp();
+    mlir::Type type = op.getValue().getType();
+    if (mlir::isa<fir::RecordType>(type) && call && fir::hasBindcAttr(call) &&
+        !fir::isa_builtin_cptr_type(type)) {
+      rewriter.replaceOpWithNewOp<fir::StoreOp>(op, op.getValue(),
+                                                op.getMemref());
+    } else {
+      rewriter.eraseOp(op);
+    }
     return mlir::success();
   }
 };
@@ -296,13 +332,20 @@ public:
   using fir::impl::AbstractResultOptBase<
       AbstractResultOpt>::AbstractResultOptBase;
 
-  void runOnSpecificOperation(mlir::func::FuncOp func, bool shouldBoxResult,
-                              mlir::RewritePatternSet &patterns,
-                              mlir::ConversionTarget &target) {
+  template <typename OpTy>
+  void runOnFunctionLikeOperation(OpTy func, bool shouldBoxResult,
+                                  mlir::RewritePatternSet &patterns,
+                                  mlir::ConversionTarget &target) {
     auto loc = func.getLoc();
     auto *context = &getContext();
     // Convert function type itself if it has an abstract result.
     auto funcTy = mlir::cast<mlir::FunctionType>(func.getFunctionType());
+    // Scalar derived result of BIND(C) function must be returned according
+    // to the C struct return ABI which is target dependent and implemented in
+    // the target-rewrite pass.
+    if (hasScalarDerivedResult(funcTy) &&
+        fir::hasBindcAttr(func.getOperation()))
+      return;
     if (hasAbstractResult(funcTy)) {
       if (fir::isa_builtin_cptr_type(funcTy.getResult(0))) {
         func.setType(getCPtrFunctionType(funcTy));
@@ -341,6 +384,18 @@ public:
         func.setAllArgAttrs(allArgs);
       }
     }
+  }
+
+  void runOnSpecificOperation(mlir::func::FuncOp func, bool shouldBoxResult,
+                              mlir::RewritePatternSet &patterns,
+                              mlir::ConversionTarget &target) {
+    runOnFunctionLikeOperation(func, shouldBoxResult, patterns, target);
+  }
+
+  void runOnSpecificOperation(mlir::gpu::GPUFuncOp func, bool shouldBoxResult,
+                              mlir::RewritePatternSet &patterns,
+                              mlir::ConversionTarget &target) {
+    runOnFunctionLikeOperation(func, shouldBoxResult, patterns, target);
   }
 
   inline static bool containsFunctionTypeWithAbstractResult(mlir::Type type) {
@@ -398,6 +453,8 @@ public:
       return;
     }
 
+    LazySymbolTable symbolTable(op);
+
     mlir::RewritePatternSet patterns(context);
     mlir::ConversionTarget target = *context;
     const bool shouldBoxResult = this->passResultAsBox.getValue();
@@ -405,6 +462,14 @@ public:
     mlir::TypeSwitch<mlir::Operation *, void>(op)
         .Case<mlir::func::FuncOp, fir::GlobalOp>([&](auto op) {
           runOnSpecificOperation(op, shouldBoxResult, patterns, target);
+        })
+        .Case<mlir::gpu::GPUModuleOp>([&](auto op) {
+          auto gpuMod = mlir::dyn_cast<mlir::gpu::GPUModuleOp>(*op);
+          for (auto funcOp : gpuMod.template getOps<mlir::func::FuncOp>())
+            runOnSpecificOperation(funcOp, shouldBoxResult, patterns, target);
+          for (auto gpuFuncOp : gpuMod.template getOps<mlir::gpu::GPUFuncOp>())
+            runOnSpecificOperation(gpuFuncOp, shouldBoxResult, patterns,
+                                   target);
         });
 
     // Convert the calls and, if needed,  the ReturnOp in the function body.
@@ -412,14 +477,29 @@ public:
                            mlir::func::FuncDialect>();
     target.addIllegalOp<fir::SaveResultOp>();
     target.addDynamicallyLegalOp<fir::CallOp>([](fir::CallOp call) {
-      return !hasAbstractResult(call.getFunctionType());
+      mlir::FunctionType funTy = call.getFunctionType();
+      if (hasScalarDerivedResult(funTy) &&
+          fir::hasBindcAttr(call.getOperation()))
+        return true;
+      return !hasAbstractResult(funTy);
     });
-    target.addDynamicallyLegalOp<fir::AddrOfOp>([](fir::AddrOfOp addrOf) {
-      if (auto funTy = mlir::dyn_cast<mlir::FunctionType>(addrOf.getType()))
+    target.addDynamicallyLegalOp<fir::AddrOfOp>([&symbolTable](
+                                                    fir::AddrOfOp addrOf) {
+      if (auto funTy = mlir::dyn_cast<mlir::FunctionType>(addrOf.getType())) {
+        if (hasScalarDerivedResult(funTy)) {
+          auto func = symbolTable.lookup<mlir::func::FuncOp>(
+              addrOf.getSymbol().getRootReference().getValue());
+          return func && fir::hasBindcAttr(func.getOperation());
+        }
         return !hasAbstractResult(funTy);
+      }
       return true;
     });
     target.addDynamicallyLegalOp<fir::DispatchOp>([](fir::DispatchOp dispatch) {
+      mlir::FunctionType funTy = dispatch.getFunctionType();
+      if (hasScalarDerivedResult(funTy) &&
+          fir::hasBindcAttr(dispatch.getOperation()))
+        return true;
       return !hasAbstractResult(dispatch.getFunctionType());
     });
 

@@ -50,6 +50,22 @@ struct RISCVTuneInfo {
   unsigned MaxPrefetchIterationsAhead;
 
   unsigned MinimumJumpTableEntries;
+
+  // Tail duplication threshold at -O3.
+  unsigned TailDupAggressiveThreshold;
+
+  unsigned MaxStoresPerMemsetOptSize;
+  unsigned MaxStoresPerMemset;
+
+  unsigned MaxGluedStoresPerMemcpy;
+  unsigned MaxStoresPerMemcpyOptSize;
+  unsigned MaxStoresPerMemcpy;
+
+  unsigned MaxStoresPerMemmoveOptSize;
+  unsigned MaxStoresPerMemmove;
+
+  unsigned MaxLoadsPerMemcmpOptSize;
+  unsigned MaxLoadsPerMemcmp;
 };
 
 #define GET_RISCVTuneInfoTable_DECL
@@ -215,7 +231,7 @@ public:
            TargetABI == RISCVABI::ABI_ILP32 ||
            TargetABI == RISCVABI::ABI_ILP32E;
   }
-  bool isRegisterReservedByUser(Register i) const {
+  bool isRegisterReservedByUser(Register i) const override {
     assert(i < RISCV::NUM_TARGET_REGS && "Register out of range");
     return UserReservedRegister[i];
   }
@@ -225,7 +241,7 @@ public:
   bool hasVInstructionsI64() const { return HasStdExtZve64x; }
   bool hasVInstructionsF16Minimal() const { return HasStdExtZvfhmin; }
   bool hasVInstructionsF16() const { return HasStdExtZvfh; }
-  bool hasVInstructionsBF16() const { return HasStdExtZvfbfmin; }
+  bool hasVInstructionsBF16Minimal() const { return HasStdExtZvfbfmin; }
   bool hasVInstructionsF32() const { return HasStdExtZve32f; }
   bool hasVInstructionsF64() const { return HasStdExtZve64d; }
   // F16 and F64 both require F32.
@@ -233,6 +249,27 @@ public:
   bool hasVInstructionsFullMultiply() const { return HasStdExtV; }
   unsigned getMaxInterleaveFactor() const {
     return hasVInstructions() ? MaxInterleaveFactor : 1;
+  }
+
+  bool hasOptimizedSegmentLoadStore(unsigned NF) const {
+    switch (NF) {
+    case 2:
+      return hasOptimizedNF2SegmentLoadStore();
+    case 3:
+      return hasOptimizedNF3SegmentLoadStore();
+    case 4:
+      return hasOptimizedNF4SegmentLoadStore();
+    case 5:
+      return hasOptimizedNF5SegmentLoadStore();
+    case 6:
+      return hasOptimizedNF6SegmentLoadStore();
+    case 7:
+      return hasOptimizedNF7SegmentLoadStore();
+    case 8:
+      return hasOptimizedNF8SegmentLoadStore();
+    default:
+      llvm_unreachable("Unexpected NF");
+    }
   }
 
   // Returns VLEN divided by DLEN. Where DLEN is the datapath width of the
@@ -277,9 +314,6 @@ public:
 
   bool enableSubRegLiveness() const override;
 
-  void getPostRAMutations(std::vector<std::unique_ptr<ScheduleDAGMutation>>
-                              &Mutations) const override;
-
   bool useAA() const override;
 
   unsigned getCacheLineSize() const override {
@@ -300,7 +334,36 @@ public:
 
   unsigned getMinimumJumpTableEntries() const;
 
-  bool supportsInitUndef() const override { return hasVInstructions(); }
+  unsigned getTailDupAggressiveThreshold() const {
+    return TuneInfo->TailDupAggressiveThreshold;
+  }
+
+  unsigned getMaxStoresPerMemset(bool OptSize) const {
+    return OptSize ? TuneInfo->MaxStoresPerMemsetOptSize
+                   : TuneInfo->MaxStoresPerMemset;
+  }
+
+  unsigned getMaxGluedStoresPerMemcpy() const {
+    return TuneInfo->MaxGluedStoresPerMemcpy;
+  }
+
+  unsigned getMaxStoresPerMemcpy(bool OptSize) const {
+    return OptSize ? TuneInfo->MaxStoresPerMemcpyOptSize
+                   : TuneInfo->MaxStoresPerMemcpy;
+  }
+
+  unsigned getMaxStoresPerMemmove(bool OptSize) const {
+    return OptSize ? TuneInfo->MaxStoresPerMemmoveOptSize
+                   : TuneInfo->MaxStoresPerMemmove;
+  }
+
+  unsigned getMaxLoadsPerMemcmp(bool OptSize) const {
+    return OptSize ? TuneInfo->MaxLoadsPerMemcmpOptSize
+                   : TuneInfo->MaxLoadsPerMemcmp;
+  }
+
+  void overrideSchedPolicy(MachineSchedPolicy &Policy,
+                           unsigned NumRegionInstrs) const override;
 };
 } // End llvm namespace
 

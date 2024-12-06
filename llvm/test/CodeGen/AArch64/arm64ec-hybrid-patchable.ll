@@ -238,8 +238,12 @@ define dso_local void @caller() nounwind {
 ; CHECK-NEXT:      .symidx exp
 ; CHECK-NEXT:      .word   0
 ; CHECK-NEXT:      .section        .drectve,"yni"
-; CHECK-NEXT:      .ascii  " /EXPORT:\"#exp$hp_target,EXPORTAS,exp$hp_target\""
+; CHECK-NEXT:      .ascii  " /EXPORT:exp"
 
+; CHECK-NEXT:      .def    "EXP+#func";
+; CHECK-NEXT:      .scl    2;
+; CHECK-NEXT:      .type   32;
+; CHECK-NEXT:      .endef
 ; CHECK-NEXT:      .def    func;
 ; CHECK-NEXT:      .scl    2;
 ; CHECK-NEXT:      .type   32;
@@ -252,6 +256,10 @@ define dso_local void @caller() nounwind {
 ; CHECK-NEXT:      .type   32;
 ; CHECK-NEXT:      .endef
 ; CHECK-NEXT:  .set "#func", "#func$hybpatch_thunk"{{$}}
+; CHECK-NEXT:      .def    "EXP+#has_varargs";
+; CHECK-NEXT:      .scl    2;
+; CHECK-NEXT:      .type   32;
+; CHECK-NEXT:      .endef
 ; CHECK-NEXT:      .def    has_varargs;
 ; CHECK-NEXT:      .scl    2;
 ; CHECK-NEXT:      .type   32;
@@ -264,6 +272,10 @@ define dso_local void @caller() nounwind {
 ; CHECK-NEXT:      .type   32;
 ; CHECK-NEXT:      .endef
 ; CHECK-NEXT:  .set "#has_varargs", "#has_varargs$hybpatch_thunk"
+; CHECK-NEXT:      .def    "EXP+#has_sret";
+; CHECK-NEXT:      .scl    2;
+; CHECK-NEXT:      .type   32;
+; CHECK-NEXT:      .endef
 ; CHECK-NEXT:      .def    has_sret;
 ; CHECK-NEXT:      .scl    2;
 ; CHECK-NEXT:      .type   32;
@@ -276,6 +288,10 @@ define dso_local void @caller() nounwind {
 ; CHECK-NEXT:      .type   32;
 ; CHECK-NEXT:      .endef
 ; CHECK-NEXT:  .set "#has_sret", "#has_sret$hybpatch_thunk"
+; CHECK-NEXT:      .def    "EXP+#exp";
+; CHECK-NEXT:      .scl    2;
+; CHECK-NEXT:      .type   32;
+; CHECK-NEXT:      .endef
 ; CHECK-NEXT:      .def    exp;
 ; CHECK-NEXT:      .scl    2;
 ; CHECK-NEXT:      .type   32;
@@ -295,18 +311,18 @@ define dso_local void @caller() nounwind {
 ; SYM:      [78](sec 20)(fl 0x00)(ty  20)(scl   2) (nx 0) 0x00000000 #exp$hybpatch_thunk
 ; SYM:      [110](sec  0)(fl 0x00)(ty   0)(scl  69) (nx 1) 0x00000000 func
 ; SYM-NEXT: AUX indx 112 srch 3
-; SYM-NEXT: [112](sec  0)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 EXP+#func
+; SYM-NEXT: [112](sec  0)(fl 0x00)(ty  20)(scl   2) (nx 0) 0x00000000 EXP+#func
 ; SYM:      [116](sec  0)(fl 0x00)(ty   0)(scl  69) (nx 1) 0x00000000 #func
 ; SYM-NEXT: AUX indx 53 srch 3
 ; SYM:      [122](sec  0)(fl 0x00)(ty   0)(scl  69) (nx 1) 0x00000000 has_varargs
 ; SYM-NEXT: AUX indx 124 srch 3
-; SYM-NEXT: [124](sec  0)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 EXP+#has_varargs
+; SYM-NEXT: [124](sec  0)(fl 0x00)(ty  20)(scl   2) (nx 0) 0x00000000 EXP+#has_varargs
 ; SYM-NEXT: [125](sec  0)(fl 0x00)(ty   0)(scl  69) (nx 1) 0x00000000 has_sret
 ; SYM-NEXT: AUX indx 127 srch 3
-; SYM-NEXT: [127](sec  0)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 EXP+#has_sret
+; SYM-NEXT: [127](sec  0)(fl 0x00)(ty  20)(scl   2) (nx 0) 0x00000000 EXP+#has_sret
 ; SYM-NEXT: [128](sec  0)(fl 0x00)(ty   0)(scl  69) (nx 1) 0x00000000 exp
 ; SYM-NEXT: AUX indx 130 srch 3
-; SYM-NEXT: [130](sec  0)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 EXP+#exp
+; SYM-NEXT: [130](sec  0)(fl 0x00)(ty  20)(scl   2) (nx 0) 0x00000000 EXP+#exp
 ; SYM-NEXT: [131](sec  0)(fl 0x00)(ty   0)(scl  69) (nx 1) 0x00000000 #has_varargs
 ; SYM-NEXT: AUX indx 58 srch 3
 ; SYM-NEXT: [133](sec  0)(fl 0x00)(ty   0)(scl  69) (nx 1) 0x00000000 #has_sret

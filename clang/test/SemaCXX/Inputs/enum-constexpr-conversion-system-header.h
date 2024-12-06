@@ -10,7 +10,8 @@ enum SystemEnum
 void testValueInRangeOfEnumerationValuesInSystemHeader()
 {
     constexpr SystemEnum x1 = static_cast<SystemEnum>(123);
-    // expected-error@-1 {{integer value 123 is outside the valid range of values [0, 1] for the enumeration type 'SystemEnum'}}
+    // expected-error@-1 {{constexpr variable 'x1' must be initialized by a constant expression}}
+    // expected-note@-2 {{integer value 123 is outside the valid range of values [0, 1] for the enumeration type 'SystemEnum'}}
 
     const SystemEnum x2 = static_cast<SystemEnum>(123);  // ok, not a constant expression context
 }

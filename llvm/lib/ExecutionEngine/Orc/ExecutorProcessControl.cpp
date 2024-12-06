@@ -12,7 +12,6 @@
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Process.h"
 #include "llvm/TargetParser/Host.h"
 
@@ -20,6 +19,8 @@
 
 namespace llvm {
 namespace orc {
+
+DylibManager::~DylibManager() = default;
 
 ExecutorProcessControl::MemoryAccess::~MemoryAccess() = default;
 
@@ -41,6 +42,7 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
   this->PageSize = PageSize;
   this->MemMgr = OwnedMemMgr.get();
   this->MemAccess = this;
+  this->DylibMgr = this;
   this->JDI = {ExecutorAddr::fromPtr(jitDispatchViaWrapperFunctionManager),
                ExecutorAddr::fromPtr(this)};
   if (this->TargetTriple.isOSBinFormatMachO())
@@ -86,7 +88,7 @@ SelfExecutorProcessControl::loadDylib(const char *DylibPath) {
 
 void SelfExecutorProcessControl::lookupSymbolsAsync(
     ArrayRef<LookupRequest> Request,
-    ExecutorProcessControl::SymbolLookupCompleteFn Complete) {
+    DylibManager::SymbolLookupCompleteFn Complete) {
   std::vector<tpctypes::LookupResult> R;
 
   for (auto &Elem : Request) {

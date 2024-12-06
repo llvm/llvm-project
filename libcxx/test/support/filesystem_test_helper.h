@@ -146,7 +146,7 @@ namespace utils {
         struct ::stat tmp;
         return ::stat(path.c_str(), &tmp) == 0;
     }
-} // end namespace utils
+} // namespace utils
 
 struct scoped_test_env
 {
@@ -530,7 +530,7 @@ inline bool ErrorIs(const std::error_code& ec, std::errc First, ErrcT... Rest) {
 // available in single-threaded mode.
 template <class Dur> void SleepFor(Dur dur) {
     using namespace std::chrono;
-#if defined(_LIBCPP_HAS_NO_MONOTONIC_CLOCK)
+#if !_LIBCPP_HAS_MONOTONIC_CLOCK
     using Clock = system_clock;
 #else
     using Clock = steady_clock;

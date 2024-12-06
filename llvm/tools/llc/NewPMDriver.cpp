@@ -18,8 +18,10 @@
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MIRPrinter.h"
+#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/MachineVerifier.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
@@ -29,7 +31,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
-#include "llvm/Passes/CodeGenPassBuilder.h" // TODO: Include pass headers properly.
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/CommandLine.h"
@@ -44,10 +45,6 @@
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/Cloning.h"
-
-namespace llvm {
-extern cl::opt<bool> PrintPipelinePasses;
-} // namespace llvm
 
 using namespace llvm;
 
@@ -92,7 +89,7 @@ int llvm::compileModuleWithNewPM(
     StringRef Arg0, std::unique_ptr<Module> M, std::unique_ptr<MIRParser> MIR,
     std::unique_ptr<TargetMachine> Target, std::unique_ptr<ToolOutputFile> Out,
     std::unique_ptr<ToolOutputFile> DwoOut, LLVMContext &Context,
-    const TargetLibraryInfoImpl &TLII, bool NoVerify, StringRef PassPipeline,
+    const TargetLibraryInfoImpl &TLII, VerifierKind VK, StringRef PassPipeline,
     CodeGenFileType FileType) {
 
   if (!PassPipeline.empty() && TargetPassConfig::hasLimitedCodeGenPipeline()) {
@@ -102,21 +99,20 @@ int llvm::compileModuleWithNewPM(
     return 1;
   }
 
-  LLVMTargetMachine &LLVMTM = static_cast<LLVMTargetMachine &>(*Target);
-
   raw_pwrite_stream *OS = &Out->os();
 
   // Fetch options from TargetPassConfig
   CGPassBuilderOption Opt = getCGPassBuilderOption();
-  Opt.DisableVerify = NoVerify;
+  Opt.DisableVerify = VK != VerifierKind::InputOutput;
   Opt.DebugPM = DebugPM;
   Opt.RegAlloc = RegAlloc;
 
-  MachineModuleInfo MMI(&LLVMTM);
+  MachineModuleInfo MMI(Target.get());
 
   PassInstrumentationCallbacks PIC;
-  StandardInstrumentations SI(Context, Opt.DebugPM, !NoVerify);
-  registerCodeGenCallback(PIC, LLVMTM);
+  StandardInstrumentations SI(Context, Opt.DebugPM,
+                              VK == VerifierKind::EachPass);
+  registerCodeGenCallback(PIC, *Target);
 
   MachineFunctionAnalysisManager MFAM;
   LoopAnalysisManager LAM;
@@ -151,6 +147,8 @@ int llvm::compileModuleWithNewPM(
     ExitOnErr(PB.parsePassPipeline(MPM, PassPipeline));
     MPM.addPass(PrintMIRPreparePass(*OS));
     MachineFunctionPassManager MFPM;
+    if (VK == VerifierKind::InputOutput)
+      MFPM.addPass(MachineVerifierPass());
     MFPM.addPass(PrintMIRPass(*OS));
     FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
     MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
@@ -158,7 +156,7 @@ int llvm::compileModuleWithNewPM(
     if (MIR->parseMachineFunctions(*M, MAM))
       return 1;
   } else {
-    ExitOnErr(LLVMTM.buildCodeGenPipeline(
+    ExitOnErr(Target->buildCodeGenPipeline(
         MPM, *OS, DwoOut ? &DwoOut->os() : nullptr, FileType, Opt, &PIC));
   }
 

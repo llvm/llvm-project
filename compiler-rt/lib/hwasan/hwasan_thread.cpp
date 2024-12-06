@@ -218,6 +218,11 @@ void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs) {
   __hwasan::hwasanThreadArgRetval().GetAllPtrsLocked(ptrs);
 }
 
-void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads) {}
+void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads) {
+  // TODO: implement.
+}
+void PrintThreads() {
+  // TODO: implement.
+}
 
 }  // namespace __lsan

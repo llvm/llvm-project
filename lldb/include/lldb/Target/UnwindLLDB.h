@@ -38,7 +38,10 @@ public:
 protected:
   friend class lldb_private::RegisterContextUnwind;
 
-  struct RegisterLocation {
+  /// An UnwindPlan::Row::AbstractRegisterLocation, combined with the register
+  /// context and memory for a specific stop point, is used to create a
+  /// ConcreteRegisterLocation.
+  struct ConcreteRegisterLocation {
     enum RegisterLocationTypes {
       eRegisterNotSaved = 0, // register was not preserved by callee.  If
                              // volatile reg, is unavailable
@@ -90,7 +93,8 @@ protected:
   // Iterate over the RegisterContextUnwind's in our m_frames vector, look for
   // the first one that has a saved location for this reg.
   bool SearchForSavedLocationForRegister(
-      uint32_t lldb_regnum, lldb_private::UnwindLLDB::RegisterLocation &regloc,
+      uint32_t lldb_regnum,
+      lldb_private::UnwindLLDB::ConcreteRegisterLocation &regloc,
       uint32_t starting_frame_num, bool pc_register);
 
   /// Provide the list of user-specified trap handler functions

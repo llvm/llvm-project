@@ -792,6 +792,16 @@ inline cstfp_pred_ty<is_non_zero_fp> m_NonZeroFP() {
   return cstfp_pred_ty<is_non_zero_fp>();
 }
 
+struct is_non_zero_not_denormal_fp {
+  bool isValue(const APFloat &C) { return !C.isDenormal() && C.isNonZero(); }
+};
+
+/// Match a floating-point non-zero that is not a denormal.
+/// For vectors, this includes constants with undefined elements.
+inline cstfp_pred_ty<is_non_zero_not_denormal_fp> m_NonZeroNotDenormalFP() {
+  return cstfp_pred_ty<is_non_zero_not_denormal_fp>();
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 template <typename Class> struct bind_ty {
@@ -1616,7 +1626,8 @@ m_FCmp(const LHS &L, const RHS &R) {
 
 // Same as CmpClass, but instead of saving Pred as out output variable, match a
 // specific input pred for equality.
-template <typename LHS_t, typename RHS_t, typename Class, typename PredicateTy>
+template <typename LHS_t, typename RHS_t, typename Class, typename PredicateTy,
+          bool Commutable = false>
 struct SpecificCmpClass_match {
   const PredicateTy Predicate;
   LHS_t L;
@@ -1626,9 +1637,17 @@ struct SpecificCmpClass_match {
       : Predicate(Pred), L(LHS), R(RHS) {}
 
   template <typename OpTy> bool match(OpTy *V) {
-    if (auto *I = dyn_cast<Class>(V))
-      return I->getPredicate() == Predicate && L.match(I->getOperand(0)) &&
-             R.match(I->getOperand(1));
+    if (auto *I = dyn_cast<Class>(V)) {
+      if (I->getPredicate() == Predicate && L.match(I->getOperand(0)) &&
+          R.match(I->getOperand(1)))
+        return true;
+      if constexpr (Commutable) {
+        if (I->getPredicate() == Class::getSwappedPredicate(Predicate) &&
+            L.match(I->getOperand(1)) && R.match(I->getOperand(0)))
+          return true;
+      }
+    }
+
     return false;
   }
 };
@@ -1644,6 +1663,13 @@ template <typename LHS, typename RHS>
 inline SpecificCmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate>
 m_SpecificICmp(ICmpInst::Predicate MatchPred, const LHS &L, const RHS &R) {
   return SpecificCmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate>(
+      MatchPred, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline SpecificCmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate, true>
+m_c_SpecificICmp(ICmpInst::Predicate MatchPred, const LHS &L, const RHS &R) {
+  return SpecificCmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate, true>(
       MatchPred, L, R);
 }
 
@@ -1690,7 +1716,8 @@ template <typename T0, typename T1, unsigned Opcode> struct TwoOps_match {
 };
 
 /// Matches instructions with Opcode and three operands.
-template <typename T0, typename T1, typename T2, unsigned Opcode>
+template <typename T0, typename T1, typename T2, unsigned Opcode,
+          bool CommutableOp2Op3 = false>
 struct ThreeOps_match {
   T0 Op1;
   T1 Op2;
@@ -1702,8 +1729,12 @@ struct ThreeOps_match {
   template <typename OpTy> bool match(OpTy *V) {
     if (V->getValueID() == Value::InstructionVal + Opcode) {
       auto *I = cast<Instruction>(V);
-      return Op1.match(I->getOperand(0)) && Op2.match(I->getOperand(1)) &&
-             Op3.match(I->getOperand(2));
+      if (!Op1.match(I->getOperand(0)))
+        return false;
+      if (Op2.match(I->getOperand(1)) && Op3.match(I->getOperand(2)))
+        return true;
+      return CommutableOp2Op3 && Op2.match(I->getOperand(2)) &&
+             Op3.match(I->getOperand(1));
     }
     return false;
   }
@@ -1753,6 +1784,14 @@ inline ThreeOps_match<Cond, constantint_match<L>, constantint_match<R>,
                       Instruction::Select>
 m_SelectCst(const Cond &C) {
   return m_Select(C, m_ConstantInt<L>(), m_ConstantInt<R>());
+}
+
+/// Match Select(C, LHS, RHS) or Select(C, RHS, LHS)
+template <typename LHS, typename RHS>
+inline ThreeOps_match<decltype(m_Value()), LHS, RHS, Instruction::Select, true>
+m_c_Select(const LHS &L, const RHS &R) {
+  return ThreeOps_match<decltype(m_Value()), LHS, RHS, Instruction::Select,
+                        true>(m_Value(), L, R);
 }
 
 /// Matches FreezeInst.
@@ -2371,6 +2410,32 @@ m_UnordFMin(const LHS &L, const RHS &R) {
   return MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>(L, R);
 }
 
+/// Match an 'ordered' or 'unordered' floating point maximum function.
+/// Floating point has one special value 'NaN'. Therefore, there is no total
+/// order. However, if we can ignore the 'NaN' value (for example, because of a
+/// 'no-nans-float-math' flag) a combination of a fcmp and select has 'maximum'
+/// semantics.
+template <typename LHS, typename RHS>
+inline match_combine_or<MaxMin_match<FCmpInst, LHS, RHS, ofmax_pred_ty>,
+                        MaxMin_match<FCmpInst, LHS, RHS, ufmax_pred_ty>>
+m_OrdOrUnordFMax(const LHS &L, const RHS &R) {
+  return m_CombineOr(MaxMin_match<FCmpInst, LHS, RHS, ofmax_pred_ty>(L, R),
+                     MaxMin_match<FCmpInst, LHS, RHS, ufmax_pred_ty>(L, R));
+}
+
+/// Match an 'ordered' or 'unordered' floating point minimum function.
+/// Floating point has one special value 'NaN'. Therefore, there is no total
+/// order. However, if we can ignore the 'NaN' value (for example, because of a
+/// 'no-nans-float-math' flag) a combination of a fcmp and select has 'minimum'
+/// semantics.
+template <typename LHS, typename RHS>
+inline match_combine_or<MaxMin_match<FCmpInst, LHS, RHS, ofmin_pred_ty>,
+                        MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>>
+m_OrdOrUnordFMin(const LHS &L, const RHS &R) {
+  return m_CombineOr(MaxMin_match<FCmpInst, LHS, RHS, ofmin_pred_ty>(L, R),
+                     MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>(L, R));
+}
+
 /// Matches a 'Not' as 'xor V, -1' or 'xor -1, V'.
 /// NOTE: we first match the 'Not' (by matching '-1'),
 /// and only then match the inner matcher!
@@ -2922,6 +2987,17 @@ struct VScaleVal_match {
 
 inline VScaleVal_match m_VScale() {
   return VScaleVal_match();
+}
+
+template <typename Opnd0, typename Opnd1>
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty
+m_Interleave2(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_Intrinsic<Intrinsic::vector_interleave2>(Op0, Op1);
+}
+
+template <typename Opnd>
+inline typename m_Intrinsic_Ty<Opnd>::Ty m_Deinterleave2(const Opnd &Op) {
+  return m_Intrinsic<Intrinsic::vector_deinterleave2>(Op);
 }
 
 template <typename LHS, typename RHS, unsigned Opcode, bool Commutable = false>

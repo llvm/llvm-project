@@ -149,8 +149,8 @@ struct CUDAKernelTy : public GenericKernelTy {
   }
 
   /// Launch the CUDA kernel function.
-  Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
-                   uint64_t NumBlocks, KernelArgsTy &KernelArgs,
+  Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads[3],
+                   uint32_t NumBlocks[3], KernelArgsTy &KernelArgs,
                    KernelLaunchParamsTy LaunchParams,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
 
@@ -496,9 +496,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
   /// We want to set up the RPC server for host services to the GPU if it is
   /// availible.
-  bool shouldSetupRPCServer() const override {
-    return libomptargetSupportsRPC();
-  }
+  bool shouldSetupRPCServer() const override { return true; }
 
   /// The RPC interface should have enough space for all availible parallelism.
   uint64_t requestedRPCPortCount() const override {
@@ -705,7 +703,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
       return Plugin::error("Wrong device Page size");
 
     // Ceil to page size.
-    Size = roundUp(Size, Granularity);
+    Size = utils::roundUp(Size, Granularity);
 
     // Create a handler of our allocation
     CUmemGenericAllocationHandle AHandle;
@@ -1230,10 +1228,10 @@ private:
     AsyncInfoWrapperTy AsyncInfoWrapper(*this, nullptr);
 
     KernelArgsTy KernelArgs = {};
-    if (auto Err =
-            CUDAKernel.launchImpl(*this, /*NumThread=*/1u,
-                                  /*NumBlocks=*/1ul, KernelArgs,
-                                  KernelLaunchParamsTy{}, AsyncInfoWrapper))
+    uint32_t NumBlocksAndThreads[3] = {1u, 1u, 1u};
+    if (auto Err = CUDAKernel.launchImpl(
+            *this, NumBlocksAndThreads, NumBlocksAndThreads, KernelArgs,
+            KernelLaunchParamsTy{}, AsyncInfoWrapper))
       return Err;
 
     Error Err = Plugin::success();
@@ -1276,7 +1274,7 @@ private:
 };
 
 Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
-                               uint32_t NumThreads, uint64_t NumBlocks,
+                               uint32_t NumThreads[3], uint32_t NumBlocks[3],
                                KernelArgsTy &KernelArgs,
                                KernelLaunchParamsTy LaunchParams,
                                AsyncInfoWrapperTy &AsyncInfoWrapper) const {
@@ -1294,9 +1292,8 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                     reinterpret_cast<void *>(&LaunchParams.Size),
                     CU_LAUNCH_PARAM_END};
 
-  CUresult Res = cuLaunchKernel(Func, NumBlocks, /*gridDimY=*/1,
-                                /*gridDimZ=*/1, NumThreads,
-                                /*blockDimY=*/1, /*blockDimZ=*/1,
+  CUresult Res = cuLaunchKernel(Func, NumBlocks[0], NumBlocks[1], NumBlocks[2],
+                                NumThreads[0], NumThreads[1], NumThreads[2],
                                 MaxDynCGroupMem, Stream, nullptr, Config);
   return Plugin::check(Res, "Error in cuLaunchKernel for '%s': %s", getName());
 }

@@ -117,7 +117,7 @@ void M68kTargetInfo::getTargetDefines(const LangOptions &Opts,
 
 ArrayRef<Builtin::Info> M68kTargetInfo::getTargetBuiltins() const {
   // FIXME: Implement.
-  return std::nullopt;
+  return {};
 }
 
 bool M68kTargetInfo::hasFeature(StringRef Feature) const {

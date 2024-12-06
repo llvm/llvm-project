@@ -27,7 +27,7 @@ define i64 @atomic_shl2_xor_64_gpr_val(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; CHECK-NEXT:    shlq %cl, %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rcx
@@ -51,7 +51,7 @@ define i64 @atomic_shl1_neq_xor_64_gpr_val(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    movl $1, %edx
 ; CHECK-NEXT:    shlq %cl, %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB2_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rsi
@@ -159,7 +159,7 @@ define i64 @atomic_blsi_xor_64_gpr_val(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    negq %rcx
 ; CHECK-NEXT:    andq %rsi, %rcx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB7_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rdx
@@ -184,7 +184,7 @@ define i64 @atomic_shl1_xor_64_gpr_valz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    movl $1, %edx
 ; CHECK-NEXT:    shlq %cl, %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB8_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rsi
@@ -214,7 +214,7 @@ define i64 @atomic_shl2_xor_64_gpr_valz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; CHECK-NEXT:    shlq %cl, %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB9_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rcx
@@ -243,7 +243,7 @@ define i64 @atomic_shl1_neq_xor_64_gpr_valz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    movl $1, %edx
 ; CHECK-NEXT:    shlq %cl, %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB10_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rsi
@@ -276,7 +276,7 @@ define i64 @atomic_shl1_small_mask_xor_64_gpr_valz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    movl $1, %edx
 ; CHECK-NEXT:    shlq %cl, %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB11_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rsi
@@ -306,7 +306,7 @@ define i64 @atomic_shl1_mask0_xor_64_gpr_valz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    movl $1, %edx
 ; CHECK-NEXT:    shlq %cl, %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB12_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rsi
@@ -336,7 +336,7 @@ define i64 @atomic_shl1_mask1_xor_64_gpr_valz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    movl $1, %edx
 ; CHECK-NEXT:    shlq %cl, %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB13_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rsi
@@ -367,7 +367,7 @@ define i64 @atomic_shl1_mask01_xor_64_gpr_valz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    movl $1, %edx
 ; CHECK-NEXT:    shlq %cl, %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB14_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rsi
@@ -397,7 +397,7 @@ define i64 @atomic_blsi_xor_64_gpr_valz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    negq %rdx
 ; CHECK-NEXT:    andq %rsi, %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB15_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rcx
@@ -427,7 +427,7 @@ define i64 @atomic_shl1_xor_64_gpr_valnz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    movl $1, %edx
 ; CHECK-NEXT:    shlq %cl, %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB16_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rsi
@@ -456,7 +456,7 @@ define i64 @atomic_shl2_xor_64_gpr_valnz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; CHECK-NEXT:    shlq %cl, %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB17_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rcx
@@ -485,7 +485,7 @@ define i64 @atomic_shl1_neq_xor_64_gpr_valnz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    movl $1, %edx
 ; CHECK-NEXT:    shlq %cl, %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB18_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rsi
@@ -517,7 +517,7 @@ define i64 @atomic_shl1_small_mask_xor_64_gpr_valnz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    movl $1, %edx
 ; CHECK-NEXT:    shlq %cl, %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB19_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rsi
@@ -546,7 +546,7 @@ define i64 @atomic_shl1_mask0_xor_64_gpr_valnz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    movl $1, %edx
 ; CHECK-NEXT:    shlq %cl, %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB20_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rsi
@@ -575,7 +575,7 @@ define i64 @atomic_shl1_mask1_xor_64_gpr_valnz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    movl $1, %edx
 ; CHECK-NEXT:    shlq %cl, %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB21_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rsi
@@ -605,7 +605,7 @@ define i64 @atomic_shl1_mask01_xor_64_gpr_valnz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    movl $1, %edx
 ; CHECK-NEXT:    shlq %cl, %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB22_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rsi
@@ -634,7 +634,7 @@ define i64 @atomic_blsi_xor_64_gpr_valnz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    negq %rdx
 ; CHECK-NEXT:    andq %rsi, %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB23_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rcx
@@ -686,7 +686,7 @@ define i64 @atomic_shl2_and_64_gpr_val(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    movq %rdx, %rcx
 ; CHECK-NEXT:    notq %rcx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB25_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rsi
@@ -711,7 +711,7 @@ define i64 @atomic_shl1_neq_and_64_gpr_val(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    movq $-2, %rdx
 ; CHECK-NEXT:    rolq %cl, %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB26_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rsi
@@ -826,7 +826,7 @@ define i64 @atomic_blsi_and_64_gpr_val(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    movq %rcx, %rdx
 ; CHECK-NEXT:    notq %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB31_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rsi
@@ -853,7 +853,7 @@ define i64 @atomic_shl1_and_64_gpr_valnz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    movq $-2, %rdx
 ; CHECK-NEXT:    rolq %cl, %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB32_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rsi
@@ -885,7 +885,7 @@ define i64 @atomic_shl2_and_64_gpr_valnz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    movq %rdx, %rcx
 ; CHECK-NEXT:    notq %rcx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB33_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rsi
@@ -915,7 +915,7 @@ define i64 @atomic_shl1_neq_and_64_gpr_valnz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    movq $-2, %rdx
 ; CHECK-NEXT:    rolq %cl, %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB34_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rsi
@@ -948,7 +948,7 @@ define i64 @atomic_shl1_small_mask_and_64_gpr_valnz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    movq $-2, %rdx
 ; CHECK-NEXT:    rolq %cl, %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB35_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rsi
@@ -978,7 +978,7 @@ define i64 @atomic_shl1_mask0_and_64_gpr_valnz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    movq $-2, %rdx
 ; CHECK-NEXT:    rolq %cl, %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB36_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rsi
@@ -1008,7 +1008,7 @@ define i64 @atomic_shl1_mask1_and_64_gpr_valnz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    movq $-2, %rdx
 ; CHECK-NEXT:    rolq %cl, %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB37_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rsi
@@ -1041,7 +1041,7 @@ define i64 @atomic_shl1_mask01_and_64_gpr_valnz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; CHECK-NEXT:    rolq %cl, %rsi
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB38_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rcx
@@ -1073,7 +1073,7 @@ define i64 @atomic_blsi_and_64_gpr_valnz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    movq %rdx, %rcx
 ; CHECK-NEXT:    notq %rcx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB39_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rsi
@@ -1137,7 +1137,7 @@ define i64 @atomic_shl2_and_64_gpr_brnz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    movq %rdx, %rsi
 ; CHECK-NEXT:    notq %rsi
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB41_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %r8
@@ -1178,7 +1178,7 @@ define i64 @atomic_shl1_neq_and_64_gpr_brnz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    movq $-2, %rdx
 ; CHECK-NEXT:    rolq %cl, %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB42_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rsi
@@ -1354,7 +1354,7 @@ define i64 @atomic_blsi_and_64_gpr_brnz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    movq %rcx, %rdx
 ; CHECK-NEXT:    notq %rdx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB47_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %r8
@@ -1420,7 +1420,7 @@ define i64 @atomic_shl1_neq_xor_64_const_br(ptr %v) nounwind {
 ; CHECK-LABEL: atomic_shl1_neq_xor_64_const_br:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB49_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rcx
@@ -1483,7 +1483,7 @@ define i64 @atomic_shl1_neq_xor_64_const_brz(ptr %v) nounwind {
 ; CHECK-LABEL: atomic_shl1_neq_xor_64_const_brz:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB51_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rcx
@@ -1546,7 +1546,7 @@ define i64 @atomic_shl1_neq_xor_64_const_brnz(ptr %v) nounwind {
 ; CHECK-LABEL: atomic_shl1_neq_xor_64_const_brnz:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB53_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rcx
@@ -1583,7 +1583,7 @@ define i64 @atomic_and_with_not_arg(ptr %v, i64 %c) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq $-1, %rcx
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB54_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, %rdx

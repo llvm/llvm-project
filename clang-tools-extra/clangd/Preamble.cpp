@@ -613,8 +613,9 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
         for (const auto &L : ASTListeners)
           L->sawDiagnostic(D, Diag);
       });
+  auto VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> PreambleDiagsEngine =
-      CompilerInstance::createDiagnostics(&CI.getDiagnosticOpts(),
+      CompilerInstance::createDiagnostics(*VFS, &CI.getDiagnosticOpts(),
                                           &PreambleDiagnostics,
                                           /*ShouldOwnClient=*/false);
   const Config &Cfg = Config::current();
@@ -651,7 +652,6 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
         for (const auto &L : ASTListeners)
           L->beforeExecute(CI);
       });
-  auto VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
   llvm::SmallString<32> AbsFileName(FileName);
   VFS->makeAbsolute(AbsFileName);
   auto StatCache = std::make_shared<PreambleFileStatusCache>(AbsFileName);
@@ -913,7 +913,6 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
   PP.PatchedMarks = std::move(ModifiedScan->Marks);
   PP.PatchedMacros = std::move(ModifiedScan->Macros);
   dlog("Created preamble patch: {0}", Patch.str());
-  Patch.flush();
   return PP;
 }
 

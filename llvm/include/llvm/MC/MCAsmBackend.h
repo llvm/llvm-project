@@ -50,8 +50,10 @@ public:
 
   const llvm::endianness Endian;
 
-  /// Fixup kind used for linker relaxation. Currently only used by RISC-V.
+  /// Fixup kind used for linker relaxation. Currently only used by RISC-V
+  /// and LoongArch.
   const unsigned RelaxFixupKind;
+  bool allowLinkerRelaxation() const { return RelaxFixupKind != MaxFixupKind; }
 
   /// Return true if this target might automatically pad instructions and thus
   /// need to emit padding enable/disable directives around sensative code.
@@ -217,9 +219,8 @@ public:
   virtual bool writeNopData(raw_ostream &OS, uint64_t Count,
                             const MCSubtargetInfo *STI) const = 0;
 
-  // Return true if fragment offsets have been adjusted and an extra layout
-  // iteration is needed.
-  virtual bool finishLayout(const MCAssembler &Asm) const { return false; }
+  /// Give backend an opportunity to finish layout after relaxation
+  virtual void finishLayout(MCAssembler const &Asm) const {}
 
   /// Handle any target-specific assembler flags. By default, do nothing.
   virtual void handleAssemblerFlag(MCAssemblerFlag Flag) {}
