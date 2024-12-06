@@ -559,6 +559,10 @@ defm wrap : Eq<"wrap", "Redirect symbol references to __wrap_symbol and "
                        "__real_symbol references to symbol">,
             MetaVarName<"<symbol>">;
 
+defm why_live : EEq<"why-live", "Report a chain of references to <symbol-glob> that keeps it from "
+                                "being garbage collected">,
+                MetaVarName<"<symbol-glob>">;
+
 def z: JoinedOrSeparate<["-"], "z">, MetaVarName<"<option>">,
   HelpText<"Linker option extensions">;
 
