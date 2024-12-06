@@ -60,10 +60,10 @@ private:
     for (auto *Sym : G.defined_symbols()) {
       if (!Sym->hasName())
         continue;
-      auto I = SymsToRename.find(Sym->getName());
+      auto I = SymsToRename.find(*Sym->getName());
       if (I == SymsToRename.end())
         continue;
-      Sym->setName(G.allocateName(*I->second));
+      Sym->setName(G.intern(G.allocateName(*I->second)));
     }
 
     return Error::success();
