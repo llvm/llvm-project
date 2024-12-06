@@ -927,15 +927,6 @@ LazyValueInfoImpl::solveBlockValueBinaryOpImpl(
   Value *LHS = I->getOperand(0);
   Value *RHS = I->getOperand(1);
 
-  auto GetValueFromCondition =
-      [&](Value *V, Value *Cond,
-          bool CondIsTrue) -> std::optional<ConstantRange> {
-    std::optional<ValueLatticeElement> OptVal = getBlockValue(V, BB, I);
-    if (!OptVal)
-      return std::nullopt;
-    return OptVal->asConstantRange(V->getType());
-  };
-
   auto ThreadBinOpOverSelect =
       [&](Value *X, const ConstantRange &CRX, SelectInst *Y,
           bool XIsLHS) -> std::optional<ValueLatticeElement> {
