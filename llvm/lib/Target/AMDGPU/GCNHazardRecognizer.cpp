@@ -920,6 +920,7 @@ getDstSelForwardingOperand(const MachineInstr &MI, const GCNSubtarget &ST) {
         return TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
   }
 
+  AMDGPU::FPType IsFP4OrFP8ConvOpc = AMDGPU::getFPDstSelType(Opcode);
   if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::op_sel)) {
     // Type 2: VOP3 which write the hi bits
     if (TII->getNamedImmOperand(MI, AMDGPU::OpName::src0_modifiers) &
@@ -927,7 +928,7 @@ getDstSelForwardingOperand(const MachineInstr &MI, const GCNSubtarget &ST) {
       return TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
 
     // Type 3: FP8DstSelInst with op_sel[3:2] != 0)
-    if (AMDGPU::isFP8DstSelInst(Opcode) &&
+    if (IsFP4OrFP8ConvOpc == AMDGPU::FPType::FP8 &&
         (TII->getNamedImmOperand(MI, AMDGPU::OpName::src2_modifiers) &
          SISrcMods::OP_SEL_0))
       return TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
@@ -935,7 +936,7 @@ getDstSelForwardingOperand(const MachineInstr &MI, const GCNSubtarget &ST) {
 
   // Special case: nop is required for all the opsel values for fp4 sr variant
   // cvt scale instructions
-  if (AMDGPU::isFP4DstSelInst(Opcode))
+  if (IsFP4OrFP8ConvOpc == AMDGPU::FPType::FP4)
     return TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
 
   return nullptr;
