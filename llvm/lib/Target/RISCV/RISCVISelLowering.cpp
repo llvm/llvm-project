@@ -4828,7 +4828,7 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlide1(const SDLoc &DL, MVT VT,
 // across the result.  Factor is the spread amount, and Index is the
 // offset applied.  (on success, Index < Factor)  This is the inverse
 // of a deinterleave with the same Factor and Index.  This is analogous
-// to a interleave, except that all but one lane is undef.
+// to an interleave, except that all but one lane is undef.
 static bool isSpreadMask(ArrayRef<int> Mask, unsigned Factor, unsigned &Index) {
   SmallVector<bool> LaneIsUndef(Factor, true);
   for (unsigned i = 0; i < Mask.size(); i++)
