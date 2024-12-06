@@ -8737,49 +8737,13 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       if (CI && any_of(VL, [](Value *V) {
             return !isa<PoisonValue>(V) && !cast<CmpInst>(V)->isCommutative();
           })) {
-        auto *MainCI = cast<CmpInst>(S.MainOp);
-        auto *AltCI = cast<CmpInst>(S.AltOp);
+        auto *MainCI = cast<CmpInst>(S.getMainOp());
+        auto *AltCI = cast<CmpInst>(S.getAltOp());
         CmpInst::Predicate MainP = MainCI->getPredicate();
         CmpInst::Predicate AltP = AltCI->getPredicate();
         assert(MainP != AltP &&
                "Expected different main/alternate predicates.");
         ValueList Left, Right;
-<<<<<<< HEAD
-        if (!CI || all_of(VL, [](Value *V) {
-              return isa<PoisonValue>(V) || cast<CmpInst>(V)->isCommutative();
-            })) {
-          reorderInputsAccordingToOpcode(VL, Left, Right, *this);
-        } else {
-          auto *MainCI = cast<CmpInst>(S.getMainOp());
-          auto *AltCI = cast<CmpInst>(S.getAltOp());
-          CmpInst::Predicate MainP = MainCI->getPredicate();
-          CmpInst::Predicate AltP = AltCI->getPredicate();
-          assert(MainP != AltP &&
-                 "Expected different main/alternate predicates.");
-          // Collect operands - commute if it uses the swapped predicate or
-          // alternate operation.
-          for (Value *V : VL) {
-            if (isa<PoisonValue>(V)) {
-              Left.push_back(
-                  PoisonValue::get(MainCI->getOperand(0)->getType()));
-              Right.push_back(
-                  PoisonValue::get(MainCI->getOperand(1)->getType()));
-              continue;
-            }
-            auto *Cmp = cast<CmpInst>(V);
-            Value *LHS = Cmp->getOperand(0);
-            Value *RHS = Cmp->getOperand(1);
-
-            if (isAlternateInstruction(Cmp, MainCI, AltCI, *TLI)) {
-              if (AltP == CmpInst::getSwappedPredicate(Cmp->getPredicate()))
-                std::swap(LHS, RHS);
-            } else {
-              if (MainP == CmpInst::getSwappedPredicate(Cmp->getPredicate()))
-                std::swap(LHS, RHS);
-            }
-            Left.push_back(LHS);
-            Right.push_back(RHS);
-=======
         // Collect operands - commute if it uses the swapped predicate or
         // alternate operation.
         for (Value *V : VL) {
@@ -8787,7 +8751,6 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
             Left.push_back(PoisonValue::get(MainCI->getOperand(0)->getType()));
             Right.push_back(PoisonValue::get(MainCI->getOperand(1)->getType()));
             continue;
->>>>>>> upstream/main
           }
           auto *Cmp = cast<CmpInst>(V);
           Value *LHS = Cmp->getOperand(0);
