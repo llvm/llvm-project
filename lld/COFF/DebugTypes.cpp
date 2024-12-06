@@ -1149,8 +1149,8 @@ void TypeMerger::mergeTypesWithGHash() {
          "midpoint is not midpoint");
   uint32_t numTypes = std::distance(entries.begin(), mid);
   uint32_t numItems = std::distance(mid, entries.end());
-  Log(ctx) << "Tpi record count: " << Twine(numTypes);
-  Log(ctx) << "Ipi record count: " << Twine(numItems);
+  Log(ctx) << "Tpi record count: " << numTypes;
+  Log(ctx) << "Ipi record count: " << numItems;
 
   // Make a list of the "unique" type records to merge for each tpi source. Type
   // merging will skip indices not on this list. Store the destination PDB type
