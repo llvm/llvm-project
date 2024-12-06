@@ -1359,7 +1359,7 @@ llvm::LogicalResult hlfir::CShiftOp::verify() {
   mlir::Value shift = getShift();
   mlir::Type shiftTy = hlfir::getFortranElementOrSequenceType(shift.getType());
 
-  if (eleTy != resultEleTy)
+  if (eleTy != resultEleTy) {
     if (mlir::isa<fir::CharacterType>(eleTy) &&
         mlir::isa<fir::CharacterType>(resultEleTy)) {
       auto eleCharTy = mlir::cast<fir::CharacterType>(eleTy);
@@ -1375,6 +1375,7 @@ llvm::LogicalResult hlfir::CShiftOp::verify() {
       return emitOpError(
           "input and output arrays should have the same element type");
     }
+  }
 
   if (arrayRank != resultRank)
     return emitOpError("input and output arrays should have the same rank");
