@@ -1222,7 +1222,8 @@ public:
   bool ResolveFileAddress(lldb::addr_t load_addr, Address &so_addr);
 
   bool ResolveLoadAddress(lldb::addr_t load_addr, Address &so_addr,
-                          uint32_t stop_id = SectionLoadHistory::eStopIDNow);
+                          uint32_t stop_id = SectionLoadHistory::eStopIDNow,
+                          bool allow_section_end = false);
 
   bool SetSectionLoadAddress(const lldb::SectionSP &section,
                              lldb::addr_t load_addr,

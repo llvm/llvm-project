@@ -1045,7 +1045,9 @@ AddressClass Address::GetAddressClass() const {
 
 bool Address::SetLoadAddress(lldb::addr_t load_addr, Target *target,
                              bool allow_section_end) {
-  if (target && target->ResolveLoadAddress(load_addr, *this, allow_section_end))
+  if (target && target->ResolveLoadAddress(load_addr, *this,
+                                           SectionLoadHistory::eStopIDNow,
+                                           allow_section_end))
     return true;
   m_section_wp.reset();
   m_offset = load_addr;
