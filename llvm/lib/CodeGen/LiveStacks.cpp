@@ -25,7 +25,7 @@ INITIALIZE_PASS_BEGIN(LiveStacksWrapperLegacy, DEBUG_TYPE,
                       "Live Stack Slot Analysis", false, false)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_END(LiveStacksWrapperLegacy, DEBUG_TYPE,
-                    "Live Stack Slot Analysis", false, false)
+                    "Live Stack Slot Analysis", false, true)
 
 char &llvm::LiveStacksID = LiveStacksWrapperLegacy::ID;
 
