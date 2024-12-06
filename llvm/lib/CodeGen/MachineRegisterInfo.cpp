@@ -431,7 +431,7 @@ bool MachineRegisterInfo::hasOneNonDBGUser(Register RegNo) const {
   return hasSingleElement(use_nodbg_instructions(RegNo));
 }
 
-MachineInstr* MachineRegisterInfo::getOneNonDBGUser(Register RegNo) const {
+MachineInstr *MachineRegisterInfo::getOneNonDBGUser(Register RegNo) const {
   auto RegNoDbgUsers = use_nodbg_instructions(RegNo);
   return hasSingleElement(RegNoDbgUsers) ? &*RegNoDbgUsers.begin() : nullptr;
 }

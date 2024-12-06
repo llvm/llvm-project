@@ -594,8 +594,8 @@ public:
   bool hasOneNonDBGUser(Register RegNo) const;
 
   /// If the register has a single non-Debug instruction using the specified
-  /// register, returns it; otherwise returns nullptr. 
-  MachineInstr* getOneNonDBGUser(Register RegNo) const;
+  /// register, returns it; otherwise returns nullptr.
+  MachineInstr *getOneNonDBGUser(Register RegNo) const;
 
   /// hasAtMostUses - Return true if the given register has at most \p MaxUsers
   /// non-debug user instructions.
