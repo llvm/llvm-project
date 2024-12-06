@@ -1,8 +1,8 @@
-===============
-StdIO Functions
-===============
+=======
+stdio.h
+=======
 
-.. include:: check.rst
+.. include:: ../check.rst
 
 ---------------
 Source location
