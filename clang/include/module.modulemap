@@ -111,6 +111,7 @@ module Clang_Diagnostics {
   module All { header "clang/Basic/AllDiagnostics.h" export * }
   module Analysis { textual header "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def" }
   module AST { header "clang/AST/ASTDiagnostic.h" export * }
+  module Comment { header "clang/AST/CommentDiagnostic.h" export * }
   module Driver { header "clang/Driver/DriverDiagnostic.h" export * }
   module Frontend { header "clang/Frontend/FrontendDiagnostic.h" export * }
   module Lex { header "clang/Lex/LexDiagnostic.h" export * }
