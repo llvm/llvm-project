@@ -6823,7 +6823,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
             ScalarOps.push_back(getUNDEF(OpVT));
             continue;
           }
-          APInt Val = cast<ConstantSDNode>(Op)->getAPIntValue();
+          const APInt &Val = cast<ConstantSDNode>(Op)->getAPIntValue();
           ScalarOps.push_back(SignExtendInReg(Val, OpVT));
         }
         return getBuildVector(VT, DL, ScalarOps);
