@@ -48,8 +48,9 @@ void UncheckedOptionalAccessCheck::onStartOfTranslationUnit() {
 void UncheckedOptionalAccessCheck::check(
     const MatchFinder::MatchResult &Result) {
   // The googletest assertion macros are not currently recognized, so we have
-  // many false positives in tests. So, do not check functions in a test TU.
-  if (is_test_tu_ ||
+  // many false positives in tests. So, do not check functions in a test TU
+  // if the option ignore_test_tus_ is set.
+  if ((ignore_test_tus_ && is_test_tu_) ||
       Result.SourceManager->getDiagnostics().hasUncompilableErrorOccurred())
     return;
 
@@ -59,7 +60,8 @@ void UncheckedOptionalAccessCheck::check(
   if (Result.Context->Idents.get("ASSERT_TRUE").hasMacroDefinition() &&
       Result.Context->Idents.get("GTEST_TEST").hasMacroDefinition()) {
     is_test_tu_ = true;
-    return;
+    if (ignore_test_tus_)
+      return;
   }
 
   const auto *FuncDecl = Result.Nodes.getNodeAs<FunctionDecl>(FuncID);
