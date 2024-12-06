@@ -1196,13 +1196,13 @@ define i64 @test_ints_stack(i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6
 ; ASM32PWR4-NEXT:    add 3, 3, 10
 ; ASM32PWR4-NEXT:    srawi 5, 11, 31
 ; ASM32PWR4-NEXT:    srawi 8, 3, 31
-; ASM32PWR4-NEXT:    lwz 4, 64(1)
+; ASM32PWR4-NEXT:    lhz 4, 66(1)
 ; ASM32PWR4-NEXT:    lwz 7, 56(1)
 ; ASM32PWR4-NEXT:    stw 31, -4(1) # 4-byte Folded Spill
 ; ASM32PWR4-NEXT:    srawi 31, 12, 31
 ; ASM32PWR4-NEXT:    addc 3, 3, 6
 ; ASM32PWR4-NEXT:    adde 7, 8, 7
-; ASM32PWR4-NEXT:    lwz 6, 68(1)
+; ASM32PWR4-NEXT:    lbz 6, 71(1)
 ; ASM32PWR4-NEXT:    srawi 8, 4, 31
 ; ASM32PWR4-NEXT:    addc 3, 3, 4
 ; ASM32PWR4-NEXT:    adde 7, 7, 8
@@ -1216,7 +1216,7 @@ define i64 @test_ints_stack(i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6
 ; ASM32PWR4-NEXT:    lwz 7, 80(1)
 ; ASM32PWR4-NEXT:    adde 4, 4, 31
 ; ASM32PWR4-NEXT:    addc 3, 3, 0
-; ASM32PWR4-NEXT:    lwz 6, 88(1)
+; ASM32PWR4-NEXT:    lbz 6, 91(1)
 ; ASM32PWR4-NEXT:    adde 4, 4, 7
 ; ASM32PWR4-NEXT:    addc 3, 3, 6
 ; ASM32PWR4-NEXT:    lwz 31, -4(1) # 4-byte Folded Reload
@@ -1228,29 +1228,29 @@ define i64 @test_ints_stack(i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6
 ; ASM64PWR4-LABEL: test_ints_stack:
 ; ASM64PWR4:       # %bb.0: # %entry
 ; ASM64PWR4-NEXT:    add 3, 3, 4
-; ASM64PWR4-NEXT:    ld 4, 112(1)
+; ASM64PWR4-NEXT:    std 2, -8(1) # 8-byte Folded Spill
 ; ASM64PWR4-NEXT:    add 3, 3, 5
 ; ASM64PWR4-NEXT:    add 3, 3, 6
 ; ASM64PWR4-NEXT:    add 3, 3, 7
-; ASM64PWR4-NEXT:    lwa 12, 124(1)
+; ASM64PWR4-NEXT:    ld 4, 112(1)
 ; ASM64PWR4-NEXT:    add 3, 3, 8
 ; ASM64PWR4-NEXT:    add 3, 3, 9
+; ASM64PWR4-NEXT:    lhz 5, 126(1)
 ; ASM64PWR4-NEXT:    add 3, 3, 10
 ; ASM64PWR4-NEXT:    extsw 3, 3
-; ASM64PWR4-NEXT:    lwz 5, 132(1)
 ; ASM64PWR4-NEXT:    add 3, 3, 4
-; ASM64PWR4-NEXT:    add 3, 3, 12
-; ASM64PWR4-NEXT:    std 2, -8(1) # 8-byte Folded Spill
+; ASM64PWR4-NEXT:    lbz 2, 135(1)
 ; ASM64PWR4-NEXT:    add 3, 3, 5
-; ASM64PWR4-NEXT:    lwz 2, 140(1)
-; ASM64PWR4-NEXT:    lwa 11, 148(1)
+; ASM64PWR4-NEXT:    lwz 0, 140(1)
 ; ASM64PWR4-NEXT:    add 3, 3, 2
+; ASM64PWR4-NEXT:    lwa 11, 148(1)
+; ASM64PWR4-NEXT:    add 3, 3, 0
 ; ASM64PWR4-NEXT:    add 3, 3, 11
 ; ASM64PWR4-NEXT:    ld 4, 152(1)
-; ASM64PWR4-NEXT:    lwz 0, 164(1)
+; ASM64PWR4-NEXT:    lbz 12, 167(1)
 ; ASM64PWR4-NEXT:    add 3, 3, 4
 ; ASM64PWR4-NEXT:    lwa 5, 172(1)
-; ASM64PWR4-NEXT:    add 3, 3, 0
+; ASM64PWR4-NEXT:    add 3, 3, 12
 ; ASM64PWR4-NEXT:    add 3, 3, 5
 ; ASM64PWR4-NEXT:    ld 2, -8(1) # 8-byte Folded Reload
 ; ASM64PWR4-NEXT:    blr
@@ -1720,11 +1720,11 @@ entry:
 define i32 @mix_callee(double %d1, double %d2, double %d3, double %d4, i8 zeroext %c1, i16 signext %s1, i64 %ll1, i32 %i1, i32 %i2, i32 %i3) {
 ; ASM32PWR4-LABEL: mix_callee:
 ; ASM32PWR4:       # %bb.0: # %entry
-; ASM32PWR4-NEXT:    lwz 4, 60(1)
+; ASM32PWR4-NEXT:    lhz 4, 62(1)
 ; ASM32PWR4-NEXT:    lis 8, 17200
 ; ASM32PWR4-NEXT:    fadd 1, 1, 2
 ; ASM32PWR4-NEXT:    fadd 1, 1, 3
-; ASM32PWR4-NEXT:    lwz 5, 56(1)
+; ASM32PWR4-NEXT:    lbz 5, 59(1)
 ; ASM32PWR4-NEXT:    lwz 3, 68(1)
 ; ASM32PWR4-NEXT:    add 4, 5, 4
 ; ASM32PWR4-NEXT:    lwz 5, L..C34(2) # %const.0

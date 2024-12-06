@@ -7244,6 +7244,8 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
     MVT LocVT = VA.getLocVT();
     MVT ValVT = VA.getValVT();
     ISD::ArgFlagsTy Flags = Ins[VA.getValNo()].Flags;
+
+    EVT ArgVT = Ins[VA.getValNo()].ArgVT;
     // For compatibility with the AIX XL compiler, the float args in the
     // parameter save area are initialized even if the argument is available
     // in register.  The caller is required to initialize both the register
@@ -7291,7 +7293,17 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
       SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
       SDValue ArgValue =
           DAG.getLoad(ValVT, dl, Chain, FIN, MachinePointerInfo());
-      InVals.push_back(ArgValue);
+
+      // While the ABI specifies the the higher bits of the load should be
+      // zeroed out this is not always the case. For safety this code will zero
+      // extend the loaded value if the size of the argument type is smaller
+      // then the load.
+      if (!ArgVT.isVector() && !ValVT.isVector() &&
+          ArgVT.getScalarSizeInBits() < ValVT.getScalarSizeInBits()) {
+        SDValue ArgValueExt = DAG.getZeroExtendInReg(ArgValue, dl, ArgVT);
+        InVals.push_back(ArgValueExt);
+      } else
+        InVals.push_back(ArgValue);
     };
 
     // Vector arguments to VaArg functions are passed both on the stack, and
