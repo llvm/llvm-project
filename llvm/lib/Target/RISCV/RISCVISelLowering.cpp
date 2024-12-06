@@ -21933,10 +21933,10 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
     Value *Mask = Builder.getAllOnesMask(DataVTy->getElementCount());
     Value *VL = Builder.getInt32(VTy->getNumElements());
 
-    CallInst *CI =
-        Builder.CreateIntrinsic(Intrinsic::experimental_vp_strided_store,
-                                {Data->getType(), BasePtr->getType(), Stride->getType()},
-                                {Data, BasePtr, Stride, Mask, VL});
+    CallInst *CI = Builder.CreateIntrinsic(
+        Intrinsic::experimental_vp_strided_store,
+        {Data->getType(), BasePtr->getType(), Stride->getType()},
+        {Data, BasePtr, Stride, Mask, VL});
     CI->addParamAttr(
         1, Attribute::getWithAlignment(CI->getContext(), SI->getAlign()));
 
