@@ -52662,7 +52662,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   }
 
   // Convert scalar fabs/fneg load-store to integer equivalents.
-  if ((VT == MVT::f32 || VT == MVT::f64) &&
+  if ((VT == MVT::f16 || VT == MVT::bf16 || VT == MVT::f32 || VT == MVT::f64) &&
       (StoredVal.getOpcode() == ISD::FABS ||
        StoredVal.getOpcode() == ISD::FNEG) &&
       ISD::isNormalLoad(StoredVal.getOperand(0).getNode()) &&
