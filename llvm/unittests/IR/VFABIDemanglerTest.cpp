@@ -753,6 +753,73 @@ TEST_F(VFABIParserTest, ParseVoidReturnTypeSVE) {
   EXPECT_EQ(VectorName, "vector_foo");
 }
 
+TEST_F(VFABIParserTest, ParseWideStructReturnTypeSVE) {
+  EXPECT_TRUE(
+      invokeParser("_ZGVsMxv_foo(vector_foo)", "{double, double}(float)"));
+  EXPECT_EQ(ISA, VFISAKind::SVE);
+  EXPECT_TRUE(isMasked());
+  FunctionType *FTy = FunctionType::get(
+      StructType::get(
+          VectorType::get(Type::getDoubleTy(Ctx), ElementCount::getScalable(2)),
+          VectorType::get(Type::getDoubleTy(Ctx),
+                          ElementCount::getScalable(2))),
+      {
+          VectorType::get(Type::getFloatTy(Ctx), ElementCount::getScalable(2)),
+          VectorType::get(Type::getInt1Ty(Ctx), ElementCount::getScalable(2)),
+      },
+      false);
+  EXPECT_EQ(getFunctionType(), FTy);
+  EXPECT_EQ(Parameters.size(), 2U);
+  EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::GlobalPredicate}));
+  EXPECT_EQ(VF, ElementCount::getScalable(2));
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
+}
+
+TEST_F(VFABIParserTest, ParseWideStructMixedReturnTypeSVE) {
+  EXPECT_TRUE(invokeParser("_ZGVsMxv_foo(vector_foo)", "{float, i64}(float)"));
+  EXPECT_EQ(ISA, VFISAKind::SVE);
+  EXPECT_TRUE(isMasked());
+  FunctionType *FTy = FunctionType::get(
+      StructType::get(
+          VectorType::get(Type::getFloatTy(Ctx), ElementCount::getScalable(2)),
+          VectorType::get(Type::getInt64Ty(Ctx), ElementCount::getScalable(2))),
+      {
+          VectorType::get(Type::getFloatTy(Ctx), ElementCount::getScalable(2)),
+          VectorType::get(Type::getInt1Ty(Ctx), ElementCount::getScalable(2)),
+      },
+      false);
+  EXPECT_EQ(getFunctionType(), FTy);
+  EXPECT_EQ(Parameters.size(), 2U);
+  EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::GlobalPredicate}));
+  EXPECT_EQ(VF, ElementCount::getScalable(2));
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
+}
+
+TEST_F(VFABIParserTest, ParseWideStructReturnTypeNEON) {
+  EXPECT_TRUE(
+      invokeParser("_ZGVnN2v_foo(vector_foo)", "{float, float}(float)"));
+  EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
+  EXPECT_FALSE(isMasked());
+  FunctionType *FTy = FunctionType::get(
+      StructType::get(
+          VectorType::get(Type::getFloatTy(Ctx), ElementCount::getFixed(2)),
+          VectorType::get(Type::getFloatTy(Ctx), ElementCount::getFixed(2))),
+      {
+          VectorType::get(Type::getFloatTy(Ctx), ElementCount::getFixed(2)),
+      },
+      false);
+  EXPECT_EQ(getFunctionType(), FTy);
+  EXPECT_EQ(Parameters.size(), 1U);
+  EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(VF, ElementCount::getFixed(2));
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
+}
+
 // Make sure we reject unsupported parameter types.
 TEST_F(VFABIParserTest, ParseUnsupportedElementTypeSVE) {
   EXPECT_FALSE(invokeParser("_ZGVsMxv_foo(vector_foo)", "void(i128)"));
