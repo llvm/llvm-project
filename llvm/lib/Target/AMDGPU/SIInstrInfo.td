@@ -3250,22 +3250,13 @@ def isMFMA_F8F6F4Table : GenericTable {
   let PrimaryKeyName = "isMFMA_F8F6F4" ;
 }
 
-def FP8DstByteSelTable : GenericTable {
+def FP4FP8DstByteSelTable : GenericTable {
   let FilterClass = "VOP3_Pseudo";
-  let CppTypeName = "FP8DstByteSelInfo";
-  let Fields = ["Opcode", "HasFP8DstByteSel"];
+  let CppTypeName = "FP4FP8DstByteSelInfo";
+  let Fields = ["Opcode", "HasFP8DstByteSel", "HasFP4DstByteSel"];
 
   let PrimaryKey = ["Opcode"];
-  let PrimaryKeyName = "getFP8DstByteSelHelper";
-}
-
-def FP4DstByteSelTable : GenericTable {
-  let FilterClass = "VOP3_Pseudo";
-  let CppTypeName = "FP4DstByteSelInfo";
-  let Fields = ["Opcode", "HasFP4DstByteSel"];
-
-  let PrimaryKey = ["Opcode"];
-  let PrimaryKeyName = "getFP4DstByteSelHelper";
+  let PrimaryKeyName = "getFP4FP8DstByteSelHelper";
 }
 
 def VOPDComponentTable : GenericTable {

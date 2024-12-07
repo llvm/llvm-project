@@ -378,23 +378,17 @@ struct VOPTrue16Info {
   bool IsTrue16;
 };
 
-#define GET_FP8DstByteSelTable_DECL
-#define GET_FP8DstByteSelTable_IMPL
-#define GET_FP4DstByteSelTable_DECL
-#define GET_FP4DstByteSelTable_IMPL
+#define GET_FP4FP8DstByteSelTable_DECL
+#define GET_FP4FP8DstByteSelTable_IMPL
 
 struct DPMACCInstructionInfo {
   uint16_t Opcode;
   bool IsDPMACCInstruction;
 };
 
-struct FP8DstByteSelInfo {
+struct FP4FP8DstByteSelInfo {
   uint16_t Opcode;
   bool HasFP8DstByteSel;
-};
-
-struct FP4DstByteSelInfo {
-  uint16_t Opcode;
   bool HasFP4DstByteSel;
 };
 
@@ -665,15 +659,13 @@ bool isTrue16Inst(unsigned Opc) {
 }
 
 FPType getFPDstSelType(unsigned Opc) {
-  const FP8DstByteSelInfo *Info8 = getFP8DstByteSelHelper(Opc);
-  if (Info8 && Info8->HasFP8DstByteSel)
+  const FP4FP8DstByteSelInfo *Info = getFP4FP8DstByteSelHelper(Opc);
+  if (Info && Info->HasFP8DstByteSel)
     return FPType::FP8;
-
-  const FP4DstByteSelInfo *Info4 = getFP4DstByteSelHelper(Opc);
-  if (Info4 && Info4->HasFP4DstByteSel)
+  else if (Info && Info->HasFP4DstByteSel)
     return FPType::FP4;
-
-  return FPType::None;
+  else
+    return FPType::None;
 }
 
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {
