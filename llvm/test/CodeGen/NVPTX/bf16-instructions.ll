@@ -938,119 +938,33 @@ define <8 x float> @test_extload_bf16x8(ptr addrspace(3) noundef %arg) #0 {
 }
 
 define i16 @test_fptosi_i16(bfloat %a) {
-; SM70-LABEL: test_fptosi_i16(
-; SM70:       {
-; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<4>;
-; SM70-NEXT:    .reg .f32 %f<2>;
-; SM70-EMPTY:
-; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u16 %r1, [test_fptosi_i16_param_0];
-; SM70-NEXT:    shl.b32 %r2, %r1, 16;
-; SM70-NEXT:    mov.b32 %f1, %r2;
-; SM70-NEXT:    cvt.rzi.s16.f32 %rs1, %f1;
-; SM70-NEXT:    cvt.u32.u16 %r3, %rs1;
-; SM70-NEXT:    st.param.b32 [func_retval0+0], %r3;
-; SM70-NEXT:    ret;
-;
-; SM80-LABEL: test_fptosi_i16(
-; SM80:       {
-; SM80-NEXT:    .reg .b16 %rs<3>;
-; SM80-NEXT:    .reg .b32 %r<2>;
-; SM80-NEXT:    .reg .f32 %f<2>;
-; SM80-EMPTY:
-; SM80-NEXT:  // %bb.0:
-; SM80-NEXT:    ld.param.b16 %rs1, [test_fptosi_i16_param_0];
-; SM80-NEXT:    cvt.f32.bf16 %f1, %rs1;
-; SM80-NEXT:    cvt.rzi.s16.f32 %rs2, %f1;
-; SM80-NEXT:    cvt.u32.u16 %r1, %rs2;
-; SM80-NEXT:    st.param.b32 [func_retval0+0], %r1;
-; SM80-NEXT:    ret;
-;
-; SM80-FTZ-LABEL: test_fptosi_i16(
-; SM80-FTZ:       {
-; SM80-FTZ-NEXT:    .reg .b16 %rs<3>;
-; SM80-FTZ-NEXT:    .reg .b32 %r<2>;
-; SM80-FTZ-NEXT:    .reg .f32 %f<2>;
-; SM80-FTZ-EMPTY:
-; SM80-FTZ-NEXT:  // %bb.0:
-; SM80-FTZ-NEXT:    ld.param.b16 %rs1, [test_fptosi_i16_param_0];
-; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %f1, %rs1;
-; SM80-FTZ-NEXT:    cvt.rzi.ftz.s16.f32 %rs2, %f1;
-; SM80-FTZ-NEXT:    cvt.u32.u16 %r1, %rs2;
-; SM80-FTZ-NEXT:    st.param.b32 [func_retval0+0], %r1;
-; SM80-FTZ-NEXT:    ret;
-;
-; SM90-LABEL: test_fptosi_i16(
-; SM90:       {
-; SM90-NEXT:    .reg .b16 %rs<3>;
-; SM90-NEXT:    .reg .b32 %r<2>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b16 %rs1, [test_fptosi_i16_param_0];
-; SM90-NEXT:    cvt.rzi.s16.bf16 %rs2, %rs1;
-; SM90-NEXT:    cvt.u32.u16 %r1, %rs2;
-; SM90-NEXT:    st.param.b32 [func_retval0+0], %r1;
-; SM90-NEXT:    ret;
+; CHECK-LABEL: test_fptosi_i16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [test_fptosi_i16_param_0];
+; CHECK-NEXT:    cvt.rzi.s16.bf16 %rs2, %rs1;
+; CHECK-NEXT:    cvt.u32.u16 %r1, %rs2;
+; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r1;
+; CHECK-NEXT:    ret;
   %r = fptosi bfloat %a to i16
   ret i16 %r
 }
 
 define i16 @test_fptoui_i16(bfloat %a) {
-; SM70-LABEL: test_fptoui_i16(
-; SM70:       {
-; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<4>;
-; SM70-NEXT:    .reg .f32 %f<2>;
-; SM70-EMPTY:
-; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u16 %r1, [test_fptoui_i16_param_0];
-; SM70-NEXT:    shl.b32 %r2, %r1, 16;
-; SM70-NEXT:    mov.b32 %f1, %r2;
-; SM70-NEXT:    cvt.rzi.u16.f32 %rs1, %f1;
-; SM70-NEXT:    cvt.u32.u16 %r3, %rs1;
-; SM70-NEXT:    st.param.b32 [func_retval0+0], %r3;
-; SM70-NEXT:    ret;
-;
-; SM80-LABEL: test_fptoui_i16(
-; SM80:       {
-; SM80-NEXT:    .reg .b16 %rs<3>;
-; SM80-NEXT:    .reg .b32 %r<2>;
-; SM80-NEXT:    .reg .f32 %f<2>;
-; SM80-EMPTY:
-; SM80-NEXT:  // %bb.0:
-; SM80-NEXT:    ld.param.b16 %rs1, [test_fptoui_i16_param_0];
-; SM80-NEXT:    cvt.f32.bf16 %f1, %rs1;
-; SM80-NEXT:    cvt.rzi.u16.f32 %rs2, %f1;
-; SM80-NEXT:    cvt.u32.u16 %r1, %rs2;
-; SM80-NEXT:    st.param.b32 [func_retval0+0], %r1;
-; SM80-NEXT:    ret;
-;
-; SM80-FTZ-LABEL: test_fptoui_i16(
-; SM80-FTZ:       {
-; SM80-FTZ-NEXT:    .reg .b16 %rs<3>;
-; SM80-FTZ-NEXT:    .reg .b32 %r<2>;
-; SM80-FTZ-NEXT:    .reg .f32 %f<2>;
-; SM80-FTZ-EMPTY:
-; SM80-FTZ-NEXT:  // %bb.0:
-; SM80-FTZ-NEXT:    ld.param.b16 %rs1, [test_fptoui_i16_param_0];
-; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %f1, %rs1;
-; SM80-FTZ-NEXT:    cvt.rzi.ftz.u16.f32 %rs2, %f1;
-; SM80-FTZ-NEXT:    cvt.u32.u16 %r1, %rs2;
-; SM80-FTZ-NEXT:    st.param.b32 [func_retval0+0], %r1;
-; SM80-FTZ-NEXT:    ret;
-;
-; SM90-LABEL: test_fptoui_i16(
-; SM90:       {
-; SM90-NEXT:    .reg .b16 %rs<3>;
-; SM90-NEXT:    .reg .b32 %r<2>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b16 %rs1, [test_fptoui_i16_param_0];
-; SM90-NEXT:    cvt.rzi.u16.bf16 %rs2, %rs1;
-; SM90-NEXT:    cvt.u32.u16 %r1, %rs2;
-; SM90-NEXT:    st.param.b32 [func_retval0+0], %r1;
-; SM90-NEXT:    ret;
+; CHECK-LABEL: test_fptoui_i16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [test_fptoui_i16_param_0];
+; CHECK-NEXT:    cvt.rzi.u16.bf16 %rs2, %rs1;
+; CHECK-NEXT:    cvt.u32.u16 %r1, %rs2;
+; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r1;
+; CHECK-NEXT:    ret;
   %r = fptoui bfloat %a to i16
   ret i16 %r
 }
