@@ -705,11 +705,6 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   }
 
-  // EH_SjLj_Setup is a dummy terminator instruction of size 0.
-  // It is used to handle the clobber register for builtin setjmp.
-  case SystemZ::EH_SjLj_Setup:
-    return;
-
   default:
     Lower.lower(MI, LoweredMI);
     break;
