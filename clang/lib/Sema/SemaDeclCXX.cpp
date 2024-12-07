@@ -11926,12 +11926,8 @@ bool Sema::isStdInitializerList(QualType Ty, QualType *Element) {
     CXXRecordDecl *TemplateClass = Template->getTemplatedDecl();
     if (TemplateClass->getIdentifier() !=
             &PP.getIdentifierTable().get("initializer_list") ||
-        !(getStdNamespace()->InEnclosingNamespaceSetOf(
-            TemplateClass->getDeclContext()) ||
-        // if decl context is an export from module we need to check the parent
-        (TemplateClass->getDeclContext()->getDeclKind() == Decl::Kind::Export &&
-            getStdNamespace()->InEnclosingNamespaceSetOf(
-                TemplateClass->getDeclContext()->getParent()))))
+        !getStdNamespace()->InEnclosingNamespaceSetOf(
+            TemplateClass->getNonTransparentDeclContext()))
       return false;
     // This is a template called std::initializer_list, but is it the right
     // template?

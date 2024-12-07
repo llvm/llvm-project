@@ -796,6 +796,8 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure caused by mangled names with invalid identifiers. (#GH112205)
 - Fixed an incorrect lambda scope of generic lambdas that caused Clang to crash when computing potential lambda
   captures at the end of a full expression. (#GH115931)
+- Fixed recognition of ``std::initializer_list`` when it's surrounded with ``extern "C++"`` and exported
+  out of a module. (#GH118218)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
