@@ -265,7 +265,7 @@ Changes to the X86 Backend
 
 * Supported ``-mcpu=diamondrapids``
 
-* Supported emitting relocation types for X86_64 target:
+* Supported emitting relocation types for x86-64 target:
   * `R_X86_64_CODE_4_GOTPCRELX`
   * `R_X86_64_CODE_4_GOTTPOFF`
   * `R_X86_64_CODE_4_GOTPC32_TLSDESC`
