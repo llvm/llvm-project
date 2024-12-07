@@ -4002,8 +4002,9 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
                          InVals, /*IsThisReturn=*/false, SDValue());
 }
 
-// This is identical to the default implementation in ExpandDYNAMIC_STACKALLOC,
-// except for applying the wave size scale to the increment amount.
+// This is similar to the default implementation in ExpandDYNAMIC_STACKALLOC,
+// except for stack growth direction(default: downwards, AMDGPU: upwards) and
+// applying the wave size scale to the increment amount.
 SDValue SITargetLowering::lowerDYNAMIC_STACKALLOCImpl(SDValue Op,
                                                       SelectionDAG &DAG) const {
   const MachineFunction &MF = DAG.getMachineFunction();
@@ -4023,10 +4024,20 @@ SDValue SITargetLowering::lowerDYNAMIC_STACKALLOCImpl(SDValue Op,
   Chain = DAG.getCALLSEQ_START(Chain, 0, 0, dl);
 
   SDValue Size = Tmp2.getOperand(1);
-  SDValue SP = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
-  Chain = SP.getValue(1);
+  SDValue SPOld = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
+  Chain = SPOld.getValue(1);
   MaybeAlign Alignment = cast<ConstantSDNode>(Tmp3)->getMaybeAlignValue();
   const TargetFrameLowering *TFL = Subtarget->getFrameLowering();
+  Align StackAlign = TFL->getStackAlign();
+  if (Alignment && *Alignment > StackAlign) {
+    SDValue ScaledAlignment = DAG.getSignedConstant(
+        (uint64_t)Alignment->value() << Subtarget->getWavefrontSizeLog2(), dl,
+        VT);
+    SDValue StackAlignMask = DAG.getNode(ISD::SUB, dl, VT, ScaledAlignment,
+                                         DAG.getConstant(1, dl, VT));
+    Tmp1 = DAG.getNode(ISD::ADD, dl, VT, SPOld, StackAlignMask);
+    Tmp1 = DAG.getNode(ISD::AND, dl, VT, Tmp1, ScaledAlignment);
+  }
   unsigned Opc =
       TFL->getStackGrowthDirection() == TargetFrameLowering::StackGrowsUp
           ? ISD::ADD
@@ -4036,20 +4047,12 @@ SDValue SITargetLowering::lowerDYNAMIC_STACKALLOCImpl(SDValue Op,
       ISD::SHL, dl, VT, Size,
       DAG.getConstant(Subtarget->getWavefrontSizeLog2(), dl, MVT::i32));
 
-  Align StackAlign = TFL->getStackAlign();
-  Tmp1 = DAG.getNode(Opc, dl, VT, SP, ScaledSize); // Value
-  if (Alignment && *Alignment > StackAlign) {
-    Tmp1 = DAG.getNode(
-        ISD::AND, dl, VT, Tmp1,
-        DAG.getSignedConstant(-(uint64_t)Alignment->value()
-                                  << Subtarget->getWavefrontSizeLog2(),
-                              dl, VT));
-  }
+  Tmp1 = DAG.getNode(Opc, dl, VT, SPOld, ScaledSize); // Value
 
   Chain = DAG.getCopyToReg(Chain, dl, SPReg, Tmp1); // Output chain
   Tmp2 = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), dl);
 
-  return DAG.getMergeValues({Tmp1, Tmp2}, dl);
+  return DAG.getMergeValues({SPOld, Tmp2}, dl);
 }
 
 SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
