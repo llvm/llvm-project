@@ -3130,8 +3130,8 @@ bool Type::isStdByteType() const {
   return false;
 }
 
-const TemplateDecl *Type::getSpecializedTemplateDecl() const {
-  const Type *DesugaredType = getUnqualifiedDesugaredType();
+static const TemplateDecl *getSpecializedTemplateType(const Type *T) {
+  const Type *DesugaredType = T->getUnqualifiedDesugaredType();
   if (const auto *Specialization =
           DesugaredType->getAs<TemplateSpecializationType>())
     return Specialization->getTemplateName().getAsTemplateDecl();
@@ -3143,15 +3143,11 @@ const TemplateDecl *Type::getSpecializedTemplateDecl() const {
 }
 
 bool Type::isTypeIdentitySpecialization() const {
-  const TemplateDecl *SpecializedDecl = getSpecializedTemplateDecl();
-  if (!SpecializedDecl)
+  const TemplateDecl *STDecl = getSpecializedTemplateType(this);
+  if (!STDecl)
     return false;
-  IdentifierInfo *II = SpecializedDecl->getIdentifier();
-  if (!II)
-    return false;
-  if (!SpecializedDecl->isInStdNamespace())
-    return false;
-  return II->isStr("type_identity");
+  IdentifierInfo *II = STDecl->getIdentifier();
+  return II && STDecl->isInStdNamespace() && II->isStr("type_identity");
 }
 
 bool Type::isSpecifierType() const {

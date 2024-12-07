@@ -1595,12 +1595,12 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   SmallVector<Expr *, 3> NewArgs;
   auto BuildTypeIdentityArg = [PromiseType](Sema &S,
                                             SourceLocation Loc) -> Expr * {
-    std::optional<QualType> SpecializedTypeIdentity =
+    QualType SpecializedTypeIdentity =
         S.instantiateSpecializedTypeIdentity(PromiseType);
-    if (!SpecializedTypeIdentity)
+    if (SpecializedTypeIdentity.isNull())
       return nullptr;
     TypeSourceInfo *SpecializedTypeInfo =
-        S.Context.getTrivialTypeSourceInfo(*SpecializedTypeIdentity, Loc);
+        S.Context.getTrivialTypeSourceInfo(SpecializedTypeIdentity, Loc);
     ExprResult TypeIdentity =
         S.BuildCXXTypeConstructExpr(SpecializedTypeInfo, Loc, {}, Loc, false);
     if (TypeIdentity.isInvalid())
@@ -1649,7 +1649,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   //   used, the size of the block is passed as the corresponding argument.
   const auto *OpDeleteType =
       OpDeleteQualType.getTypePtr()->castAs<FunctionProtoType>();
-  if (S.isTypeAwareOperatorNewOrDelete(OperatorDelete)) {
+  if (OperatorDelete->isTypeAwareOperatorNewOrDelete()) {
     Expr *TypeIdentity = BuildTypeIdentityArg(S, Loc);
     if (!TypeIdentity)
       return false;

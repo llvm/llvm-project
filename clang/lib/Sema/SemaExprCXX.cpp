@@ -1755,7 +1755,7 @@ static bool isNonPlacementDeallocationFunction(Sema &S, FunctionDecl *FD) {
 
   unsigned UsualParams = 1;
   if (isTypeAwareAllocation(S.allocationModeInCurrentContext()) &&
-      UsualParams < FD->getNumParams() && S.isTypeAwareOperatorNewOrDelete(FD))
+      UsualParams < FD->getNumParams() && FD->isTypeAwareOperatorNewOrDelete())
     ++UsualParams;
 
   if (S.getLangOpts().SizedDeallocation && UsualParams < FD->getNumParams() &&
@@ -1788,23 +1788,23 @@ namespace {
         auto *FTD = dyn_cast<FunctionTemplateDecl>(Found->getUnderlyingDecl());
         if (!FTD)
           return;
-        std::optional<FunctionDecl *> InstantiatedDecl =
+        FunctionDecl *InstantiatedDecl =
             S.instantiateTypeAwareUsualDelete(FTD, AllocType);
         if (!InstantiatedDecl)
           return;
-        FD = *InstantiatedDecl;
+        FD = InstantiatedDecl;
       }
       unsigned NumBaseParams = 1;
       if (isTypeAwareAllocation(S.allocationModeInCurrentContext()) &&
-          S.isTypeAwareOperatorNewOrDelete(FD)) {
+          FD->isTypeAwareOperatorNewOrDelete()) {
         QualType TypeIdentityTag = FD->getParamDecl(0)->getType();
-        std::optional<QualType> ExpectedTypeIdentityTag =
+        QualType ExpectedTypeIdentityTag =
             S.instantiateSpecializedTypeIdentity(AllocType);
-        if (!ExpectedTypeIdentityTag) {
+        if (ExpectedTypeIdentityTag.isNull()) {
           FD = nullptr;
           return;
         }
-        if (!S.Context.hasSameType(TypeIdentityTag, *ExpectedTypeIdentityTag)) {
+        if (!S.Context.hasSameType(TypeIdentityTag, ExpectedTypeIdentityTag)) {
           FD = nullptr;
           return;
         }
@@ -1917,7 +1917,7 @@ static bool CheckDeleteOperator(Sema &S, SourceLocation StartLoc,
                                 SourceRange Range, bool Diagnose,
                                 CXXRecordDecl *NamingClass, DeclAccessPair Decl,
                                 FunctionDecl *Operator) {
-  if (S.isTypeAwareOperatorNewOrDelete(Operator)) {
+  if (Operator->isTypeAwareOperatorNewOrDelete()) {
     QualType SelectedTypeIdentityParameter =
         Operator->getParamDecl(0)->getType();
     if (S.RequireCompleteType(StartLoc, SelectedTypeIdentityParameter,
@@ -2839,13 +2839,14 @@ static void LookupGlobalDeallocationFunctions(Sema &S, SourceLocation Loc,
                                               DeclarationName Name,
                                               QualType DeallocType) {
   S.LookupQualifiedName(FoundDelete, S.Context.getTranslationUnitDecl());
-  if (Mode == DeallocLookupMode::OptionallyTyped) {
+  if (Mode != DeallocLookupMode::OptionallyTyped) {
+    // We're going to remove either the typed or the non-typed
     bool RemoveTypedDecl = Mode == DeallocLookupMode::Untyped;
     LookupResult::Filter Filter = FoundDelete.makeFilter();
     while (Filter.hasNext()) {
       NamedDecl *Decl = Filter.next()->getUnderlyingDecl();
       bool DeclIsTypeAware = S.isTypeAwareOperatorNewOrDelete(Decl);
-      if (DeclIsTypeAware && RemoveTypedDecl)
+      if (DeclIsTypeAware == RemoveTypedDecl)
         Filter.erase();
     }
     Filter.done();
@@ -2859,6 +2860,10 @@ static bool resolveAllocationOverload(
   Operator = nullptr;
   if (isTypeAwareAllocation(IAP.PassTypeIdentity)) {
     assert(Args[0]->getType()->isTypeIdentitySpecialization());
+    // The internal overload resolution work mutates the argument list
+    // in accordance with the spec. We may want to change that in future,
+    // but for now we deal with this by making a copy of the non-type-identity
+    // arguments.
     SmallVector<Expr *> UntypedParameters;
     UntypedParameters.reserve(Args.size() - 1);
     UntypedParameters.append(Args.begin() + 1, Args.end());
@@ -2869,11 +2874,12 @@ static bool resolveAllocationOverload(
       return true;
     if (Operator)
       return false;
-    // There's no type aware allocator
+
+    // If we got to this point we could not find a matching typed operator
+    // so we update the IAP flags, and revert to our stored copy of the
+    // type-identity-less argument list.
     IAP.PassTypeIdentity = TypeAwareAllocationMode::No;
-    // Restore alignment requirements
     IAP.PassAlignment = InitialAlignmentMode;
-    // Finally prepare the type free parameter list
     Args = UntypedParameters;
   }
   assert(!Args[0]->getType()->isTypeIdentitySpecialization());
@@ -2921,9 +2927,10 @@ bool Sema::FindAllocationFunctions(
   // expr on the stack
   QualType TypeIdentity = Context.getSizeType();
   if (isTypeAwareAllocation(IAP.PassTypeIdentity)) {
-    if (std::optional<QualType> SpecializedTypeIdentity =
-            instantiateSpecializedTypeIdentity(AllocType)) {
-      TypeIdentity = *SpecializedTypeIdentity;
+    QualType SpecializedTypeIdentity =
+        instantiateSpecializedTypeIdentity(AllocType);
+    if (!SpecializedTypeIdentity.isNull()) {
+      TypeIdentity = SpecializedTypeIdentity;
       if (RequireCompleteType(StartLoc, TypeIdentity,
                               diag::err_incomplete_type))
         return true;
@@ -3174,12 +3181,12 @@ bool Sema::FindAllocationFunctions(
   //   deallocation function will be called.
   if (Matches.size() == 1) {
     OperatorDelete = Matches[0].second;
-    if (isTypeAwareOperatorNewOrDelete(OperatorDelete) !=
+    if (OperatorDelete->isTypeAwareOperatorNewOrDelete() !=
         (isTypeAwareAllocation(IAP.PassTypeIdentity))) {
       Diag(StartLoc, diag::warn_mismatching_type_aware_cleanup_deallocator);
-      int NewDiagIndex = isTypeAwareOperatorNewOrDelete(OperatorNew) ? 0 : 1;
+      int NewDiagIndex = OperatorNew->isTypeAwareOperatorNewOrDelete() ? 0 : 1;
       int DeleteDiagIndex =
-          isTypeAwareOperatorNewOrDelete(OperatorDelete) ? 0 : 1;
+          OperatorDelete->isTypeAwareOperatorNewOrDelete() ? 0 : 1;
       Diag(OperatorNew->getLocation(), diag::note_type_aware_operator_declared)
           << NewDiagIndex << OperatorNew;
       Diag(OperatorDelete->getLocation(),
@@ -4096,7 +4103,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
     // delete that we are going to call (non-virtually); converting to void*
     // is trivial and left to AST consumers to handle.
     unsigned PointeeIndex = 0;
-    if (isTypeAwareOperatorNewOrDelete(OperatorDelete)) {
+    if (OperatorDelete->isTypeAwareOperatorNewOrDelete()) {
       QualType TypeIdentity = OperatorDelete->getParamDecl(0)->getType();
       if (RequireCompleteType(StartLoc, TypeIdentity,
                               diag::err_incomplete_type))

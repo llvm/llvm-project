@@ -2633,7 +2633,6 @@ public:
   bool isTypedefNameType() const;               // typedef or alias template
 
   bool isTypeIdentitySpecialization() const; // std::type_identity<X> for any X
-  bool isDestroyingDeleteT() const;          // std::destroying_delete_t
 
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
   bool is##Id##Type() const;
@@ -2698,8 +2697,6 @@ public:
   TypeDependence getDependence() const {
     return static_cast<TypeDependence>(TypeBits.Dependence);
   }
-
-  const TemplateDecl *getSpecializedTemplateDecl() const;
 
   /// Whether this type is an error type.
   bool containsErrors() const {

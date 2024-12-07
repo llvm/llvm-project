@@ -33,7 +33,7 @@ performed through specific interfaces, or explicitly via global ``new`` and
 
 P2719 introduces a type-identity tag as valid parameter type for all allocation
 operators. This tag is a default initialized value of type 
-`std::type_identity<T>` where T is the type being allocated or deallocated.
+``std::type_identity<T>`` where T is the type being allocated or deallocated.
 Unlike the other placement arguments this tag is passed as the first parameter
 to the operator.
 
@@ -67,12 +67,12 @@ by using templates. In addition to adding the type-identity tag, P2719 allows
 the tag parameter to be a dependent specialization of `std::type_identity`,
 updates the overload resolution rules to support full template deduction and
 constraint semantics, and updates the definition of usual deallocation functions
-to include `operator delete` definitions that are templatized on the
+to include ``operator delete`` definitions that are templatized on the
 type-identity tag.
 
 This allows arbitrarily constrained definitions of the operators that resolve
 as would be expected for any other template function resolution, e.g (only
-showing `operator new` for brevity)
+showing ``operator new`` for brevity)
 
 .. code-block:: c++
 
@@ -132,7 +132,7 @@ is avoiding dynamic dispatch.
 Subclassing and polymorphism
 ----------------------------
 
-While a type aware operator new will always receive the exact type being
+While a type aware ``operator new`` will always receive the exact type being
 allocated, deletion is limited to awareness of the dynamic type of an object.
 If deletion is performed via a virtual call, the type-identity tag passed to
 the type aware ``operator delete`` will be the dynamic type of the object.

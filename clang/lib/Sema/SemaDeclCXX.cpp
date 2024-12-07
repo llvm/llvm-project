@@ -10872,7 +10872,7 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
       // first parameter, perform that conversion now.
       if (OperatorDelete->isDestroyingOperatorDelete()) {
         unsigned PointerParam = 0;
-        if (isTypeAwareOperatorNewOrDelete(OperatorDelete))
+        if (OperatorDelete->isTypeAwareOperatorNewOrDelete())
           ++PointerParam;
         QualType ParamType =
             OperatorDelete->getParamDecl(PointerParam)->getType();
@@ -16127,72 +16127,53 @@ bool Sema::CompleteConstructorCall(CXXConstructorDecl *Constructor,
   return Invalid;
 }
 
-bool Sema::isTypeIdentitySpecialization(QualType Type) const {
-  const ClassTemplateDecl *TypeIdentity = getStdTypeIdentity();
-  if (!TypeIdentity)
-    return false;
-  const TemplateDecl *SpecializedDecl = Type->getSpecializedTemplateDecl();
-  return TypeIdentity == SpecializedDecl;
-}
-
-bool Sema::isTypeAwareOperatorNewOrDelete(const FunctionDecl *FnDecl) const {
-  // Type aware operators
-  if (FnDecl->getNumParams() < 2)
-    return false;
-  const ParmVarDecl *ParamDecl = FnDecl->getParamDecl(0);
-  return isTypeIdentitySpecialization(ParamDecl->getType());
-}
-
-bool Sema::isTypeAwareOperatorNewOrDelete(
-    const FunctionTemplateDecl *FTD) const {
-  return isTypeAwareOperatorNewOrDelete(FTD->getTemplatedDecl());
-}
-
 bool Sema::isTypeAwareOperatorNewOrDelete(const NamedDecl *ND) const {
+  const FunctionDecl *FnDecl = nullptr;
   if (auto *FTD = dyn_cast<FunctionTemplateDecl>(ND))
-    return isTypeAwareOperatorNewOrDelete(FTD->getTemplatedDecl());
-  if (auto *FnDecl = dyn_cast<FunctionDecl>(ND))
-    return isTypeAwareOperatorNewOrDelete(FnDecl);
-  return false;
+    FnDecl = FTD->getTemplatedDecl();
+  else if (auto *FD = dyn_cast<FunctionDecl>(ND))
+    FnDecl = FD;
+
+  return FnDecl->isTypeAwareOperatorNewOrDelete();
 }
 
-std::optional<FunctionDecl *>
+FunctionDecl *
 Sema::instantiateTypeAwareUsualDelete(FunctionTemplateDecl *FnTemplateDecl,
                                       QualType DeallocType) {
   if (!isTypeAwareAllocation(allocationModeInCurrentContext()))
-    return std::nullopt;
+    return nullptr;
 
   TemplateParameterList *TemplateParameters =
       FnTemplateDecl->getTemplateParameters();
   if (TemplateParameters->hasParameterPack())
-    return std::nullopt;
+    return nullptr;
 
   FunctionDecl *FnDecl = FnTemplateDecl->getTemplatedDecl();
-  if (!isTypeAwareOperatorNewOrDelete(FnDecl))
-    return std::nullopt;
+  if (!FnDecl->isTypeAwareOperatorNewOrDelete())
+    return nullptr;
 
   if (FnDecl->isVariadic())
-    return std::nullopt;
+    return nullptr;
 
   unsigned NumParams = FnDecl->getNumParams();
   if (NumParams < 2)
-    return std::nullopt;
+    return nullptr;
 
   for (size_t Idx = 1; Idx < NumParams; ++Idx) {
     // A type aware allocation is only usual if the only dependent parameter is
     // the first parameter.
     const ParmVarDecl *ParamDecl = FnDecl->getParamDecl(Idx);
     if (ParamDecl->getType()->isDependentType())
-      return std::nullopt;
+      return nullptr;
   }
 
-  std::optional<QualType> SpecializedTypeIdentity =
+  QualType SpecializedTypeIdentity =
       instantiateSpecializedTypeIdentity(DeallocType);
-  if (!SpecializedTypeIdentity)
-    return std::nullopt;
+  if (SpecializedTypeIdentity.isNull())
+    return nullptr;
   SmallVector<QualType, 4> ArgTypes;
   ArgTypes.reserve(NumParams);
-  ArgTypes.push_back(*SpecializedTypeIdentity);
+  ArgTypes.push_back(SpecializedTypeIdentity);
   ArgTypes.push_back(FnDecl->getParamDecl(1)->getType());
   unsigned UsualParamsIdx = 2;
   if (UsualParamsIdx < NumParams && FnDecl->isDestroyingOperatorDelete()) {
@@ -16218,7 +16199,7 @@ Sema::instantiateTypeAwareUsualDelete(FunctionTemplateDecl *FnTemplateDecl,
   }
 
   if (UsualParamsIdx != NumParams)
-    return std::nullopt;
+    return nullptr;
 
   FunctionProtoType::ExtProtoInfo EPI;
   QualType ExpectedFunctionType =
@@ -16228,16 +16209,15 @@ Sema::instantiateTypeAwareUsualDelete(FunctionTemplateDecl *FnTemplateDecl,
   FunctionDecl *Result;
   if (DeduceTemplateArguments(FnTemplateDecl, nullptr, ExpectedFunctionType,
                               Result, Info) != TemplateDeductionResult::Success)
-    return std::nullopt;
+    return nullptr;
   return Result;
 }
 
-std::optional<QualType>
-Sema::instantiateSpecializedTypeIdentity(QualType Subject) {
+QualType Sema::instantiateSpecializedTypeIdentity(QualType Subject) {
   assert(clang::isTypeAwareAllocation(allocationModeInCurrentContext()));
   ClassTemplateDecl *TypeIdentity = getStdTypeIdentity();
   if (!TypeIdentity)
-    return std::nullopt;
+    return QualType();
 
   auto TN = TemplateName(TypeIdentity);
   TemplateArgumentListInfo Arguments;
@@ -16245,7 +16225,7 @@ Sema::instantiateSpecializedTypeIdentity(QualType Subject) {
       TemplateArgument(Subject), QualType(), SourceLocation()));
   QualType Result = CheckTemplateIdType(TN, SourceLocation(), Arguments);
   if (Result.isNull())
-    return std::nullopt;
+    return QualType();
   return Result;
 }
 

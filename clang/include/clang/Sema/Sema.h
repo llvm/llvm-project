@@ -4786,14 +4786,10 @@ public:
   EnumDecl *getStdAlignValT() const;
   const ClassTemplateDecl *getStdTypeIdentity() const;
   ClassTemplateDecl *getStdTypeIdentity();
-  std::optional<QualType> instantiateSpecializedTypeIdentity(QualType Subject);
-  bool isTypeIdentitySpecialization(QualType Type) const;
-  bool isTypeAwareOperatorNewOrDelete(const FunctionDecl *FnDecl) const;
-  bool isTypeAwareOperatorNewOrDelete(const FunctionTemplateDecl *FnDecl) const;
   bool isTypeAwareOperatorNewOrDelete(const NamedDecl *FnDecl) const;
-  std::optional<FunctionDecl *>
-  instantiateTypeAwareUsualDelete(FunctionTemplateDecl *FnDecl,
-                                  QualType AllocType);
+  QualType instantiateSpecializedTypeIdentity(QualType Subject);
+  FunctionDecl *instantiateTypeAwareUsualDelete(FunctionTemplateDecl *FnDecl,
+                                                QualType AllocType);
 
   ValueDecl *tryLookupUnambiguousFieldDecl(RecordDecl *ClassDecl,
                                            const IdentifierInfo *MemberOrBase);
