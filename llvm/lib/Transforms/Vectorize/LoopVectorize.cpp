@@ -2999,7 +2999,7 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
                    getOrCreateVectorTripCount(nullptr), LoopMiddleBlock, State);
   }
 
-  if (!isa<VPRegionBlock>(State.Plan->getEntry()->getSingleSuccessor()))
+  if (!State.Plan->getVectorLoopRegion())
     return;
 
   for (Instruction *PI : PredicatedInstructions)

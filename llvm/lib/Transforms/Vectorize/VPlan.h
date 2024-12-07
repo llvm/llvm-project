@@ -3592,8 +3592,6 @@ public:
 protected:
   /// Execute the recipes in the IR basic block \p BB.
   void executeRecipes(VPTransformState *State, BasicBlock *BB);
-  void connectToPredecessors(BasicBlock *NewBB,
-                             VPTransformState::CFGState &CFG);
 
   /// Connect the VPBBs predecessors' in the VPlan CFG to the IR basic block
   /// generated for this VPBB.
