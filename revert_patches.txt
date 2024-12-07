@@ -27,3 +27,7 @@ ld.lld: error: undefined symbol: llvm::omp::target::ompt::enableDeviceTracing(in
 b877a533a6d1 (HEAD -> amd-staging) Revert "Reland #118503: [Offload] Introduce offload-tblgen and initial new API implementation (#118614)"
 Ron and JP
 ---
+revert :  work post merge OMPT
+92376c3ff545 [Offload][OMPX] Add the runtime support for multi-dim grid
+Ron and Dhruva
+---
