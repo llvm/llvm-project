@@ -520,14 +520,10 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
 
   // TODO: Align down to dword alignment and extract bits for extending loads.
   for (auto &Arg : F.args()) {
-    // Hidden arguments that are in the kernel signature must be preloaded to
-    // user SGPRs. Print a diagnostic error if a hidden argument is in the
-    // argument list and is not preloaded.
+    // TODO: Add support for kernarg preload.
     if (Arg.hasAttribute("amdgpu-hidden-argument")) {
-      DiagnosticInfoUnsupported NonPreloadHiddenArg(
-          *Arg.getParent(),
-          "hidden argument in kernel signature was not preloaded");
-      F.getContext().diagnose(NonPreloadHiddenArg);
+      LLVM_DEBUG(dbgs() << "Preloading hidden arguments is not supported\n");
+      return false;
     }
 
     const bool IsByRef = Arg.hasByRefAttr();
