@@ -213,11 +213,11 @@ def Tensor_DimOp : Tensor_Op<"dim", [
 
     // Return the dynamic dimension of %A.
     %c1 = arith.constant 1 : index
-    %y = tensor.dim %A, %c1 : memref<4x?xf32>
+    %y = tensor.dim %A, %c1 : tensor<4x?xf32>
 
     // Equivalent generic form:
-    %x = "tensor.dim"(%A, %c0) : (memref<4x?xf32>, index) -> index
-    %y = "tensor.dim"(%A, %c1) : (memref<4x?xf32>, index) -> index
+    %x = "tensor.dim"(%A, %c0) : (tensor<4x?xf32>, index) -> index
+    %y = "tensor.dim"(%A, %c1) : (tensor<4x?xf32>, index) -> index
     ```
   }];
 
