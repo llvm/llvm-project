@@ -396,10 +396,8 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
 
             return false;
           }
-          llvm::errs() << "Not all initialized\n";
           return true;
         }
-        llvm::errs() << "All initialized.\n";
 
         auto Memory = Buffer.copyBits(BitOffset, BitWidth, FullBitWidth,
                                       TargetEndianness);
