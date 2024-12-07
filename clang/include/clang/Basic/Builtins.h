@@ -106,7 +106,7 @@ template <size_t N> struct Storage {
   // expand `.def` and `.inc` files with X-macros to construct both the string
   // table and the `Info` structs in the arguments to this function.
   static constexpr Storage<N> Make(const char *Strings,
-                             std::array<Info, N> Infos) {
+                                   std::array<Info, N> Infos) {
     // Translate lengths to offsets.
     int Offset = 0;
     for (auto &I : Infos) {
@@ -134,8 +134,8 @@ template <size_t N> struct Storage {
 // turn into actual tokens that would disrupt string literal concatenation.
 #ifdef __clang__
 #define CLANG_BUILTIN_DETAIL_STR_TABLE(S)                                      \
-  _Pragma("clang diagnostic push")                                               \
-      _Pragma("clang diagnostic ignored \"-Woverlength-strings\"")               \
+  _Pragma("clang diagnostic push")                                             \
+      _Pragma("clang diagnostic ignored \"-Woverlength-strings\"")             \
           S _Pragma("clang diagnostic pop")
 #else
 #define CLANG_BUILTIN_DETAIL_STR_TABLE(S) S
