@@ -24,16 +24,13 @@ void DomConditionCache::registerBranch(BranchInst *BI) {
   SmallVector<std::pair<Value *, DomConditionFlag>, 16> Affected;
   findAffectedValues(BI->getCondition(), Affected);
   for (auto [V, Flags] : Affected) {
-    auto &AV = AffectedValues[V];
-    bool Exist = false;
-    for (auto &[OtherBI, OtherFlags] : AV) {
-      if (OtherBI == BI) {
-        OtherFlags |= Flags;
-        Exist = true;
-        break;
-      }
+    uint32_t Underlying = to_underlying(Flags);
+    while (Underlying) {
+      uint32_t LSB = Underlying & -Underlying;
+      auto &AV = AffectedValues[countr_zero(LSB)][V];
+      if (llvm::none_of(AV, [&](BranchInst *Elem) { return Elem == BI; }))
+        AV.push_back(BI);
+      Underlying -= LSB;
     }
-    if (!Exist)
-      AV.push_back({BI, Flags});
   }
 }

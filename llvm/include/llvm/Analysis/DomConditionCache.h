@@ -34,6 +34,7 @@ enum class DomConditionFlag : uint8_t {
   KnownFPClass = 1 << 1,
   PowerOfTwo = 1 << 2,
   ICmp = 1 << 3,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/ICmp),
 };
 
 LLVM_DECLARE_ENUM_AS_BITMASK(
@@ -43,23 +44,26 @@ LLVM_DECLARE_ENUM_AS_BITMASK(
 class DomConditionCache {
 private:
   /// A map of values about which a branch might be providing information.
-  using AffectedValuesMap =
-      DenseMap<Value *,
-               SmallVector<std::pair<BranchInst *, DomConditionFlag>, 1>>;
-  AffectedValuesMap AffectedValues;
+  using AffectedValuesMap = DenseMap<Value *, SmallVector<BranchInst *, 1>>;
+  AffectedValuesMap AffectedValues[BitWidth<DomConditionFlag>];
 
 public:
   /// Add a branch condition to the cache.
   void registerBranch(BranchInst *BI);
 
   /// Remove a value from the cache, e.g. because it will be erased.
-  void removeValue(Value *V) { AffectedValues.erase(V); }
+  void removeValue(Value *V) {
+    for (auto &Table : AffectedValues)
+      Table.erase(V);
+  }
 
   /// Access the list of branches which affect this value.
-  ArrayRef<std::pair<BranchInst *, DomConditionFlag>>
-  conditionsFor(const Value *V) const {
-    auto AVI = AffectedValues.find_as(const_cast<Value *>(V));
-    if (AVI == AffectedValues.end())
+  ArrayRef<BranchInst *> conditionsFor(const Value *V,
+                                       DomConditionFlag Filter) const {
+    assert(has_single_bit(to_underlying(Filter)));
+    auto &Values = AffectedValues[countr_zero(to_underlying(Filter))];
+    auto AVI = Values.find_as(const_cast<Value *>(V));
+    if (AVI == Values.end())
       return {};
 
     return AVI->second;

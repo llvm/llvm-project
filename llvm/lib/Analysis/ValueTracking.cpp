@@ -790,9 +790,7 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
 
   if (Q.DC && Q.DT) {
     // Handle dominating conditions.
-    for (auto [BI, Flag] : Q.DC->conditionsFor(V)) {
-      if (!any(Flag & DomConditionFlag::KnownBits))
-        continue;
+    for (BranchInst *BI : Q.DC->conditionsFor(V, DomConditionFlag::KnownBits)) {
       BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
       if (Q.DT->dominates(Edge0, Q.CxtI->getParent()))
         computeKnownBitsFromCond(V, BI->getCondition(), Known, Depth, Q,
@@ -2301,9 +2299,8 @@ bool llvm::isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
 
   // Handle dominating conditions.
   if (Q.DC && Q.CxtI && Q.DT) {
-    for (auto [BI, Flag] : Q.DC->conditionsFor(V)) {
-      if (!any(Flag & DomConditionFlag::PowerOfTwo))
-        continue;
+    for (BranchInst *BI :
+         Q.DC->conditionsFor(V, DomConditionFlag::PowerOfTwo)) {
       Value *Cond = BI->getCondition();
 
       BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
@@ -4934,9 +4931,8 @@ static KnownFPClass computeKnownFPClassFromContext(const Value *V,
 
   if (Q.DC && Q.DT) {
     // Handle dominating conditions.
-    for (auto [BI, Flag] : Q.DC->conditionsFor(V)) {
-      if (!any(Flag & DomConditionFlag::KnownFPClass))
-        continue;
+    for (BranchInst *BI :
+         Q.DC->conditionsFor(V, DomConditionFlag::KnownFPClass)) {
       Value *Cond = BI->getCondition();
 
       BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
