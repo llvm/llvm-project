@@ -132,11 +132,11 @@ template <size_t N> struct Storage {
 //
 // This relies on a subtle aspect of `_Pragma`: that the *diagnostic* ones don't
 // turn into actual tokens that would disrupt string literal concatenation.
-#ifdef __GNUC__
+#ifdef __clang__
 #define CLANG_BUILTIN_DETAIL_STR_TABLE(S)                                      \
-  _Pragma("GCC diagnostic push")                                               \
-      _Pragma("GCC diagnostic ignored \"-Woverlength-strings\"")               \
-          S _Pragma("GCC diagnostic pop")
+  _Pragma("clang diagnostic push")                                               \
+      _Pragma("clang diagnostic ignored \"-Woverlength-strings\"")               \
+          S _Pragma("clang diagnostic pop")
 #else
 #define CLANG_BUILTIN_DETAIL_STR_TABLE(S) S
 #endif
