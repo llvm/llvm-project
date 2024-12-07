@@ -462,36 +462,13 @@ def interpret(bytecode: bytearray, control: list, data: list, tracing: bool = Fa
     return data[-1]
 
 
-################################################################################
-# Tests.
-################################################################################
-
-import unittest
-
-
-class TestCompiler(unittest.TestCase):
-    def test(self):
-        self.assertEqual(compile("1u dup").hex(), "200101")
-        self.assertEqual(compile('"1u dup"').hex(), "2206317520647570")
-        self.assertEqual(compile("16 < { dup } if").hex(), "21105210010111")
-        self.assertEqual(compile('{ { " } " } }').hex(), "100710052203207d20")
-
-        def roundtrip(asm):
-            self.assertEqual(disassemble(compile(asm))[0], asm)
-
-        roundtrip("1u dup")
-        roundtrip('1u dup "1u dup"')
-        roundtrip("16 < { dup } if")
-        roundtrip('{ { " } " } }')
-
-        self.assertEqual(interpret(compile("1 1 +"), [], []), 2)
-        self.assertEqual(interpret(compile("2 1 1 + *"), [], []), 4)
-        self.assertEqual(
-            interpret(compile('2 1 > { "yes" } { "no" } ifelse'), [], []), "yes"
-        )
-
-
 if __name__ == "__main__":
+    # Work around the fact that one of the local files is called
+    # types.py, which breaks some versions of python.
+    import os, sys
+
+    path = os.path.abspath(os.path.dirname(__file__))
+    sys.path.remove(path)
     import argparse
 
     parser = argparse.ArgumentParser(
@@ -506,15 +483,42 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--disassemble", type=str, help="disassemble bytecode")
     parser.add_argument("-t", "--test", action="store_true", help="run unit tests")
     args = parser.parse_args()
-
-    if args.test:
-        import sys
-
-        sys.argv.pop()
-        unittest.main()
-
     if args.compile:
         print(compile(str(args.compile)).hex())
 
     if args.disassemble:
         print(disassemble(bytearray.fromhex(str(args.disassemble))))
+
+    ############################################################################
+    # Tests.
+    ############################################################################
+    if args.test:
+        import unittest
+
+        class TestCompiler(unittest.TestCase):
+            def test(self):
+                self.assertEqual(compile("1u dup").hex(), "200101")
+                self.assertEqual(compile('"1u dup"').hex(), "2206317520647570")
+                self.assertEqual(compile("16 < { dup } if").hex(), "21105210010111")
+                self.assertEqual(compile('{ { " } " } }').hex(), "100710052203207d20")
+
+                def roundtrip(asm):
+                    self.assertEqual(disassemble(compile(asm))[0], asm)
+
+                roundtrip("1u dup")
+                roundtrip('1u dup "1u dup"')
+                roundtrip("16 < { dup } if")
+                roundtrip('{ { " } " } }')
+
+                self.assertEqual(interpret(compile("1 1 +"), [], []), 2)
+                self.assertEqual(interpret(compile("2 1 1 + *"), [], []), 4)
+                self.assertEqual(
+                    interpret(compile('2 1 > { "yes" } { "no" } ifelse'), [], []), "yes"
+                )
+
+                import sys
+
+                sys.argv.pop()
+                path = os.path.dirname(__file__)
+                sys.path.remove
+                unittest.main()
