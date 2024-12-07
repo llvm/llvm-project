@@ -150,11 +150,11 @@ llvm::Expected<std::string> parsePath(llvm::StringRef Path) {
   if (path::is_absolute(Path, path::Style::posix)) {
     return std::string(Path);
   }
-  if (path::is_absolute(Path, path::Style::windows)) {
-    std::string Converted = path::convert_to_slash(Path, path::Style::windows);
-    if (Converted.front() != '/')
-      Converted = "/" + Converted;
-    return Converted;
+  llvm::StringRef Root = path::root_name(Path, path::Style::windows);
+  if (!Root.empty()) {
+    std::string Converted = "/";
+    return Converted.append(Root)
+          .append(path::convert_to_slash(Path.substr(Root.size()), path::Style::windows));
   }
   return error("Path not absolute: {0}", Path);
 }
