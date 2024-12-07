@@ -1,0 +1,6 @@
+// Test that the orc-remote-executor tool errors out as expected when called
+// with no arguments.
+//
+// RUN: not %orc_rt_executor 2>&1 | FileCheck %s
+
+// CHECK: usage: orc-rt-executor [help] [<mode>] <program arguments>...
