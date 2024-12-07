@@ -620,17 +620,17 @@ bool ItaniumParamParser::parseItaniumParam(StringRef& param,
   // parse type
   char const TC = param.front();
   if (isDigit(TC)) {
-    res.ArgType = StringSwitch<AMDGPULibFunc::EType>
-      (eatLengthPrefixedName(param))
-      .Case("ocl_image1darray" , AMDGPULibFunc::IMG1DA)
-      .Case("ocl_image1dbuffer", AMDGPULibFunc::IMG1DB)
-      .Case("ocl_image2darray" , AMDGPULibFunc::IMG2DA)
-      .Case("ocl_image1d"      , AMDGPULibFunc::IMG1D)
-      .Case("ocl_image2d"      , AMDGPULibFunc::IMG2D)
-      .Case("ocl_image3d"      , AMDGPULibFunc::IMG3D)
-      .Case("ocl_event"        , AMDGPULibFunc::DUMMY)
-      .Case("ocl_sampler"      , AMDGPULibFunc::DUMMY)
-      .Default(AMDGPULibFunc::DUMMY);
+    res.ArgType =
+        StringSwitch<AMDGPULibFunc::EType>(eatLengthPrefixedName(param))
+            .StartsWith("ocl_image1d_array", AMDGPULibFunc::IMG1DA)
+            .StartsWith("ocl_image1d_buffer", AMDGPULibFunc::IMG1DB)
+            .StartsWith("ocl_image2d_array", AMDGPULibFunc::IMG2DA)
+            .StartsWith("ocl_image1d", AMDGPULibFunc::IMG1D)
+            .StartsWith("ocl_image2d", AMDGPULibFunc::IMG2D)
+            .StartsWith("ocl_image3d", AMDGPULibFunc::IMG3D)
+            .Case("ocl_event", AMDGPULibFunc::DUMMY)
+            .Case("ocl_sampler", AMDGPULibFunc::DUMMY)
+            .Default(AMDGPULibFunc::DUMMY);
   } else {
     drop_front(param);
     switch (TC) {
