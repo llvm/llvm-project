@@ -1376,6 +1376,8 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
                                                    0. Interleave DS and MFMA instructions for small GEMM kernels.
                                                    1. Interleave DS and MFMA instructions for single wave small GEMM kernels.
+                                                   2. Interleave TRANS and MFMA instructions, as well as their VALU and DS predecessors, for attention kernels.
+                                                   3. Interleave TRANS and MFMA instructions, with no predecessor interleaving, for attention kernels.
 
                                                    Only one iglp_opt intrinsic may be used in a scheduling region. The iglp_opt intrinsic
                                                    cannot be combined with sched_barrier or sched_group_barrier.

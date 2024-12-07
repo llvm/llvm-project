@@ -4282,8 +4282,8 @@ let Predicates = [HasSVE2p2orSME2p2] in {
   defm BFCVT_ZPzZ_StoH  : sve_fp_z2op_p_zd_bfcvt<"bfcvt", int_aarch64_sve_fcvt_bf16f32_v2>;
 
   // Floating-point convert to integer, zeroing predicate
-  defm FCVTZS_ZPzZ : sve_fp_z2op_p_zd_d<0b0, "fcvtzs">;
-  defm FCVTZU_ZPzZ : sve_fp_z2op_p_zd_d<0b1, "fcvtzu">;
+  defm FCVTZS_ZPzZ : sve_fp_z2op_p_zd_d<0b0, "fcvtzs", "int_aarch64_sve_fcvtzs", AArch64fcvtzs_mt>;
+  defm FCVTZU_ZPzZ : sve_fp_z2op_p_zd_d<0b1, "fcvtzu", "int_aarch64_sve_fcvtzu", AArch64fcvtzu_mt>;
   // Integer convert to floating-point, zeroing predicate
   defm SCVTF_ZPzZ  : sve_fp_z2op_p_zd_c<0b0, "scvtf">;
   defm UCVTF_ZPzZ  : sve_fp_z2op_p_zd_c<0b1, "ucvtf">;

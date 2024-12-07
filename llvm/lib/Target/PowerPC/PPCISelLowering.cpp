@@ -200,8 +200,11 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   // On P10, the default lowering generates better code using the
   // setbc instruction.
-  if (!Subtarget.hasP10Vector())
+  if (!Subtarget.hasP10Vector()) {
     setOperationAction(ISD::SSUBO, MVT::i32, Custom);
+    if (isPPC64)
+      setOperationAction(ISD::SSUBO, MVT::i64, Custom);
+  }
 
   // Match BITREVERSE to customized fast code sequence in the td file.
   setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
@@ -2703,7 +2706,7 @@ bool llvm::isIntS34Immediate(SDNode *N, int64_t &Imm) {
   if (!isa<ConstantSDNode>(N))
     return false;
 
-  Imm = (int64_t)N->getAsZExtVal();
+  Imm = (int64_t)cast<ConstantSDNode>(N)->getSExtValue();
   return isInt<34>(Imm);
 }
 bool llvm::isIntS34Immediate(SDValue Op, int64_t &Imm) {
@@ -2925,7 +2928,7 @@ bool PPCTargetLowering::SelectAddressRegImm34(SDValue N, SDValue &Disp,
   if (N.getOpcode() == ISD::ADD) {
     if (!isIntS34Immediate(N.getOperand(1), Imm))
       return false;
-    Disp = DAG.getTargetConstant(Imm, dl, N.getValueType());
+    Disp = DAG.getSignedTargetConstant(Imm, dl, N.getValueType());
     if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(N.getOperand(0)))
       Base = DAG.getTargetFrameIndex(FI->getIndex(), N.getValueType());
     else
@@ -2946,12 +2949,12 @@ bool PPCTargetLowering::SelectAddressRegImm34(SDValue N, SDValue &Disp,
       Base = DAG.getTargetFrameIndex(FI->getIndex(), N.getValueType());
     else
       Base = N.getOperand(0);
-    Disp = DAG.getTargetConstant(Imm, dl, N.getValueType());
+    Disp = DAG.getSignedTargetConstant(Imm, dl, N.getValueType());
     return true;
   }
 
   if (isIntS34Immediate(N, Imm)) { // If the address is a 34-bit const.
-    Disp = DAG.getTargetConstant(Imm, dl, N.getValueType());
+    Disp = DAG.getSignedTargetConstant(Imm, dl, N.getValueType());
     Base = DAG.getRegister(PPC::ZERO8, N.getValueType());
     return true;
   }
@@ -12051,16 +12054,19 @@ SDValue PPCTargetLowering::LowerSSUBO(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
+  EVT VT = Op.getNode()->getValueType(0);
 
-  SDValue Sub = DAG.getNode(ISD::SUB, dl, MVT::i32, LHS, RHS);
+  SDValue Sub = DAG.getNode(ISD::SUB, dl, VT, LHS, RHS);
 
-  SDValue Xor1 = DAG.getNode(ISD::XOR, dl, MVT::i32, RHS, LHS);
-  SDValue Xor2 = DAG.getNode(ISD::XOR, dl, MVT::i32, Sub, LHS);
+  SDValue Xor1 = DAG.getNode(ISD::XOR, dl, VT, RHS, LHS);
+  SDValue Xor2 = DAG.getNode(ISD::XOR, dl, VT, Sub, LHS);
 
-  SDValue And = DAG.getNode(ISD::AND, dl, MVT::i32, Xor1, Xor2);
+  SDValue And = DAG.getNode(ISD::AND, dl, VT, Xor1, Xor2);
 
-  SDValue Overflow = DAG.getNode(ISD::SRL, dl, MVT::i32, And,
-                                 DAG.getConstant(31, dl, MVT::i32));
+  SDValue Overflow =
+      DAG.getNode(ISD::SRL, dl, VT, And,
+                  DAG.getConstant(VT.getSizeInBits() - 1, dl, MVT::i32));
+
   SDValue OverflowTrunc =
       DAG.getNode(ISD::TRUNCATE, dl, Op.getNode()->getValueType(1), Overflow);
 

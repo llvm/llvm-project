@@ -686,7 +686,7 @@ define i32 @test28() nounwind  {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ORIENTATIONS:%.*]] = alloca [1 x [1 x %struct.x]], align 8
 ; CHECK-NEXT:    [[T3:%.*]] = call i32 @puts(ptr noundef nonnull dereferenceable(1) @.str) #[[ATTR0]]
-; CHECK-NEXT:    [[T45:%.*]] = getelementptr inbounds i8, ptr [[ORIENTATIONS]], i64 1
+; CHECK-NEXT:    [[T45:%.*]] = getelementptr inbounds nuw i8, ptr [[ORIENTATIONS]], i64 1
 ; CHECK-NEXT:    br label [[BB10:%.*]]
 ; CHECK:       bb10:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[BB10]] ]
@@ -796,9 +796,9 @@ define ptr @test32(ptr %v) {
 ; CHECK-LABEL: @test32(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [4 x ptr], align 16
 ; CHECK-NEXT:    store ptr null, ptr [[A]], align 8
-; CHECK-NEXT:    [[D:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 8
+; CHECK-NEXT:    [[D:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
 ; CHECK-NEXT:    store ptr [[V:%.*]], ptr [[D]], align 8
-; CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 16
+; CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
 ; CHECK-NEXT:    [[G:%.*]] = load ptr, ptr [[F]], align 8
 ; CHECK-NEXT:    ret ptr [[G]]
 ;
@@ -935,7 +935,7 @@ declare void @pr10322_f3(ptr)
 define void @pr10322_f1(ptr %foo) {
 ; CHECK-LABEL: @pr10322_f1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i8, ptr [[FOO:%.*]], i64 16
+; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw i8, ptr [[FOO:%.*]], i64 16
 ; CHECK-NEXT:    call void @pr10322_f2(ptr nonnull [[ARRAYIDX8]]) #[[ATTR0]]
 ; CHECK-NEXT:    call void @pr10322_f3(ptr nonnull [[ARRAYIDX8]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
@@ -975,7 +975,7 @@ declare void @three_gep_h(ptr)
 
 define void @test39(ptr %arg, i8 %arg1) nounwind {
 ; CHECK-LABEL: @test39(
-; CHECK-NEXT:    [[T:%.*]] = getelementptr inbounds i8, ptr [[ARG:%.*]], i64 16
+; CHECK-NEXT:    [[T:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG:%.*]], i64 16
 ; CHECK-NEXT:    [[T2:%.*]] = load ptr, ptr [[T]], align 8
 ; CHECK-NEXT:    [[T4:%.*]] = getelementptr inbounds i8, ptr [[T2]], i64 -8
 ; CHECK-NEXT:    store i8 [[ARG1:%.*]], ptr [[T4]], align 8
@@ -1517,7 +1517,7 @@ define ptr @const_gep_0xi8_global() {
 define ptr @const_gep_chain(ptr %p, i64 %a) {
 ; CHECK-LABEL: @const_gep_chain(
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[A:%.*]]
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 6
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds nuw i8, ptr [[P1]], i64 6
 ; CHECK-NEXT:    ret ptr [[P4]]
 ;
   %p1 = getelementptr inbounds i8, ptr %p, i64 %a

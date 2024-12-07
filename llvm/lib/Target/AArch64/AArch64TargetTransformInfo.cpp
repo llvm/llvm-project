@@ -5170,26 +5170,45 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     return false;
   }
   case Instruction::Mul: {
+    auto ShouldSinkSplatForIndexedVariant = [](Value *V) {
+      auto *Ty = cast<VectorType>(V->getType());
+      // For SVE the lane-indexing is within 128-bits, so we can't fold splats.
+      if (Ty->isScalableTy())
+        return false;
+
+      // Indexed variants of Mul exist for i16 and i32 element types only.
+      return Ty->getScalarSizeInBits() == 16 || Ty->getScalarSizeInBits() == 32;
+    };
+
     int NumZExts = 0, NumSExts = 0;
     for (auto &Op : I->operands()) {
       // Make sure we are not already sinking this operand
       if (any_of(Ops, [&](Use *U) { return U->get() == Op; }))
         continue;
 
-      if (match(&Op, m_SExt(m_Value()))) {
-        NumSExts++;
-        continue;
-      } else if (match(&Op, m_ZExt(m_Value()))) {
-        NumZExts++;
+      if (match(&Op, m_ZExtOrSExt(m_Value()))) {
+        auto *Ext = cast<Instruction>(Op);
+        auto *ExtOp = Ext->getOperand(0);
+        if (isSplatShuffle(ExtOp) && ShouldSinkSplatForIndexedVariant(ExtOp))
+          Ops.push_back(&Ext->getOperandUse(0));
+        Ops.push_back(&Op);
+
+        if (isa<SExtInst>(Ext))
+          NumSExts++;
+        else
+          NumZExts++;
+
         continue;
       }
 
       ShuffleVectorInst *Shuffle = dyn_cast<ShuffleVectorInst>(Op);
+      if (!Shuffle)
+        continue;
 
       // If the Shuffle is a splat and the operand is a zext/sext, sinking the
       // operand and the s/zext can help create indexed s/umull. This is
       // especially useful to prevent i64 mul being scalarized.
-      if (Shuffle && isSplatShuffle(Shuffle) &&
+      if (isSplatShuffle(Shuffle) &&
           match(Shuffle->getOperand(0), m_ZExtOrSExt(m_Value()))) {
         Ops.push_back(&Shuffle->getOperandUse(0));
         Ops.push_back(&Op);
@@ -5199,9 +5218,6 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
           NumZExts++;
         continue;
       }
-
-      if (!Shuffle)
-        continue;
 
       Value *ShuffleOperand = Shuffle->getOperand(0);
       InsertElementInst *Insert = dyn_cast<InsertElementInst>(ShuffleOperand);
@@ -5234,12 +5250,26 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
         NumZExts++;
       }
 
+      Ops.push_back(&Insert->getOperandUse(1));
       Ops.push_back(&Shuffle->getOperandUse(0));
       Ops.push_back(&Op);
     }
 
-    // Is it profitable to sink if we found two of the same type of extends.
-    return !Ops.empty() && (NumSExts == 2 || NumZExts == 2);
+    // It is profitable to sink if we found two of the same type of extends.
+    if (!Ops.empty() && (NumSExts == 2 || NumZExts == 2))
+      return true;
+
+    // Otherwise, see if we should sink splats for indexed variants.
+    if (!ShouldSinkSplatForIndexedVariant(I))
+      return false;
+
+    Ops.clear();
+    if (isSplatShuffle(I->getOperand(0)))
+      Ops.push_back(&I->getOperandUse(0));
+    if (isSplatShuffle(I->getOperand(1)))
+      Ops.push_back(&I->getOperandUse(1));
+
+    return !Ops.empty();
   }
   case Instruction::FMul: {
     // For SVE the lane-indexing is within 128-bits, so we can't fold splats.
