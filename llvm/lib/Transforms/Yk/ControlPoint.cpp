@@ -134,13 +134,13 @@ public:
           DS_Warning));
       return false;
     }
+
     if (ControlPointCalls.size() != controlPointCount) {
-      Context.emitError("Unexpected number of control point calls: expected " +
-                        std::to_string(controlPointCount) + ", but found " +
-                        std::to_string(ControlPointCalls.size()) + ".");
+      Context.emitError("Unexpected number of control point calls: " +
+                        Twine(ControlPointCalls.size()) +
+                        " expected: " + Twine(controlPointCount));
       return false;
     }
-
     unsigned CPStackMapID = 0;
     Function *NF = nullptr;
 
