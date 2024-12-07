@@ -70,9 +70,10 @@ public:
                   CFPT(121.121 - zero * 1.0i));
     EXPECT_CFP_EQ(func(CFPT(0.0 - 0.0i)), CFPT(0.0 + 0.0i));
     EXPECT_CFP_EQ(func(CFPT(0.0 + 0.0i)), CFPT(0.0 - 0.0i));
-    // This test passes because the conjugate of -0.0 - 0.0i is -0.0 + 0.0i
-    // but -0.0 + 0.0i is actually CMPLX(-0.0, 0.0) + CMPLX(0.0, 0.0) = 0.0 +
-    // 0.0i so to represent -0.0 + 0.0i, we just write -0.0
+    // This test passes because the conjugate of -0.0 - 0.0i is CMPLX(-0.0, 0.0)
+    // which cannot be represented as -0.0 + 0.0i because -0.0 + 0.0i is actually
+    // CMPLX(-0.0, 0.0) + CMPLX(0.0, 0.0) = 0.0 + 0.0i so to represent 
+    // CMPLX(-0.0, 0.0), we use -0.0
     EXPECT_CFP_EQ(func(CFPT(-0.0 - 0.0i)), CFPT(-0.0));
     // This test passes because -0.0 + 0.0i is actually
     // CMPLX(-0.0, 0.0) + CMPLX(0.0, 0.0) = CMPLX(-0.0 + 0.0, 0.0) = 0.0 + 0.0i
