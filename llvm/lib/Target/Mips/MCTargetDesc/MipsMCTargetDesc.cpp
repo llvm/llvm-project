@@ -143,10 +143,13 @@ public:
     switch (Info->get(Inst.getOpcode()).operands()[NumOps - 1].OperandType) {
     case MCOI::OPERAND_UNKNOWN:
     case MCOI::OPERAND_IMMEDIATE: {
+      const MCOperand& Op = Inst.getOperand(NumOps - 1);
+      if (!Op.isImm())
+        return false;
       // j, jal, jalx, jals
       // Absolute branch within the current 256 MB-aligned region
       uint64_t Region = Addr & ~uint64_t(0xfffffff);
-      Target = Region + Inst.getOperand(NumOps - 1).getImm();
+      Target = Region + Op.getImm();
       return true;
     }
     case MCOI::OPERAND_PCREL:
