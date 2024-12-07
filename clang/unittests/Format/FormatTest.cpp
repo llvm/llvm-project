@@ -11154,6 +11154,26 @@ TEST_F(FormatTest, BreakBeforeTemplateClose) {
                "};",
                Style);
 
+  // test from issue #80049
+  verifyFormat(
+      "void foo() {\n"
+      "  using type = std::remove_cv_t<\n"
+      "      add_common_cv_reference<\n"
+      "          std::common_type_t<std::decay_t<T0>, std::decay_t<T1>>,\n"
+      "          T0,\n"
+      "          T1\n"
+      "      >\n"
+      "  >;\n"
+      "}\n",
+      "void foo() {\n"
+      "  using type = std::remove_cv_t<\n"
+      "      add_common_cv_reference<\n"
+      "          std::common_type_t<std::decay_t<T0>, std::decay_t<T1>>,\n"
+      "          T0,\n"
+      "          T1>>;\n"
+      "}\n",
+      Style);
+
   // now test that it handles the cases when the column limit forces wrapping
   Style.ColumnLimit = 40;
   // when the column limit allows it, the template should be combined back into

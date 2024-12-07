@@ -406,8 +406,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   }
   if (CurrentState.BreakBeforeClosingParen && Current.is(tok::r_paren))
     return true;
-  if (CurrentState.BreakBeforeClosingAngle &&
-      Current.ClosesTemplateDeclaration && Style.BreakBeforeTemplateClose) {
+  if (CurrentState.BreakBeforeClosingAngle && Current.is(TT_TemplateCloser) &&
+      Style.BreakBeforeTemplateClose) {
     return true;
   }
   if (Style.Language == FormatStyle::LK_ObjC &&
@@ -1377,7 +1377,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       State.Stack.size() > 1) {
     return State.Stack[State.Stack.size() - 2].LastSpace;
   }
-  if (Current.ClosesTemplateDeclaration && Style.BreakBeforeTemplateClose &&
+  if (Current.is(TT_TemplateCloser) && Style.BreakBeforeTemplateClose &&
       State.Stack.size() > 1) {
     return State.Stack[State.Stack.size() - 2].LastSpace;
   }
