@@ -287,6 +287,7 @@ static bool readPointerToBuffer(const Context &Ctx, const Pointer &FromPtr,
         }
 
         Buffer.pushData(Buff.get(), BitOffset, BitWidth, TargetEndianness);
+        Buffer.markInitialized(BitOffset, BitWidth);
         return true;
       });
 }

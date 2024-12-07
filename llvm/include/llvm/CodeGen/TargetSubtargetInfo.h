@@ -349,6 +349,8 @@ public:
     // Conservatively assume such instructions exist by default.
     return true;
   }
+
+  virtual bool isRegisterReservedByUser(Register R) const { return false; }
 };
 } // end namespace llvm
 

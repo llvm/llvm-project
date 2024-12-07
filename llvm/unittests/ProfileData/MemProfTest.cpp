@@ -434,8 +434,7 @@ TEST(MemProf, BaseMemProfReader) {
   MemProfData.addFrame(F2);
 
   llvm::SmallVector<FrameId> CallStack{F1.hash(), F2.hash()};
-  CallStackId CSId = hashCallStack(CallStack);
-  MemProfData.CallStacks.try_emplace(CSId, CallStack);
+  CallStackId CSId = MemProfData.addCallStack(std::move(CallStack));
 
   IndexedMemProfRecord FakeRecord;
   MemInfoBlock Block;
@@ -470,8 +469,7 @@ TEST(MemProf, BaseMemProfReaderWithCSIdMap) {
   MemProfData.addFrame(F2);
 
   llvm::SmallVector<FrameId> CallStack = {F1.hash(), F2.hash()};
-  CallStackId CSId = hashCallStack(CallStack);
-  MemProfData.CallStacks.insert({CSId, CallStack});
+  MemProfData.addCallStack(CallStack);
 
   IndexedMemProfRecord FakeRecord;
   MemInfoBlock Block;
@@ -743,22 +741,22 @@ HeapProfileRecords:
 - GUID: 0xdeadbeef12345678
   AllocSites:
   - Callstack:
-    - {Function: 0x100, LineOffset: 11, Column: 10, Inline: true}
-    - {Function: 0x200, LineOffset: 22, Column: 20, Inline: false}
+    - {Function: 0x100, LineOffset: 11, Column: 10, IsInlineFrame: true}
+    - {Function: 0x200, LineOffset: 22, Column: 20, IsInlineFrame: false}
     MemInfoBlock:
       AllocCount: 777
       TotalSize: 888
   - Callstack:
-    - {Function: 0x300, LineOffset: 33, Column: 30, Inline: false}
-    - {Function: 0x400, LineOffset: 44, Column: 40, Inline: true}
+    - {Function: 0x300, LineOffset: 33, Column: 30, IsInlineFrame: false}
+    - {Function: 0x400, LineOffset: 44, Column: 40, IsInlineFrame: true}
     MemInfoBlock:
       AllocCount: 666
       TotalSize: 555
   CallSites:
-  - - {Function: 0x500, LineOffset: 55, Column: 50, Inline: true}
-    - {Function: 0x600, LineOffset: 66, Column: 60, Inline: false}
-  - - {Function: 0x700, LineOffset: 77, Column: 70, Inline: true}
-    - {Function: 0x800, LineOffset: 88, Column: 80, Inline: false}
+  - - {Function: 0x500, LineOffset: 55, Column: 50, IsInlineFrame: true}
+    - {Function: 0x600, LineOffset: 66, Column: 60, IsInlineFrame: false}
+  - - {Function: 0x700, LineOffset: 77, Column: 70, IsInlineFrame: true}
+    - {Function: 0x800, LineOffset: 88, Column: 80, IsInlineFrame: false}
 )YAML";
 
   llvm::memprof::YAMLMemProfReader YAMLReader;
@@ -806,5 +804,41 @@ HeapProfileRecords:
   EXPECT_EQ(Record.AllocSites[1].Info.getTotalSize(), 555U);
   EXPECT_THAT(Record.CallSiteIds,
               ElementsAre(hashCallStack(CS3), hashCallStack(CS4)));
+}
+
+template <typename T> std::string serializeInYAML(T &Val) {
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  llvm::yaml::Output Yout(OS);
+  Yout << Val;
+  return Out;
+}
+
+TEST(MemProf, YAMLWriterFrame) {
+  Frame F(11, 22, 33, true);
+
+  std::string Out = serializeInYAML(F);
+  EXPECT_EQ(Out, R"YAML(---
+{ Function: 11, LineOffset: 22, Column: 33, IsInlineFrame: true }
+...
+)YAML");
+}
+
+TEST(MemProf, YAMLWriterMIB) {
+  MemInfoBlock MIB;
+  MIB.AllocCount = 111;
+  MIB.TotalSize = 222;
+  MIB.TotalLifetime = 333;
+  MIB.TotalLifetimeAccessDensity = 444;
+  PortableMemInfoBlock PMIB(MIB, llvm::memprof::getHotColdSchema());
+
+  std::string Out = serializeInYAML(PMIB);
+  EXPECT_EQ(Out, R"YAML(---
+AllocCount:      111
+TotalSize:       222
+TotalLifetime:   333
+TotalLifetimeAccessDensity: 444
+...
+)YAML");
 }
 } // namespace
