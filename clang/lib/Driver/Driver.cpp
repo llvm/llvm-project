@@ -1042,34 +1042,59 @@ bool Driver::readConfigFile(StringRef FileName,
   }
 
   // Try reading the given file.
-  SmallVector<const char *, 32> NewCfgArgs;
-  if (llvm::Error Err = ExpCtx.readConfigFile(FileName, NewCfgArgs)) {
+  SmallVector<const char *, 32> NewCfgFileArgs;
+  if (llvm::Error Err = ExpCtx.readConfigFile(FileName, NewCfgFileArgs)) {
     Diag(diag::err_drv_cannot_read_config_file)
         << FileName << toString(std::move(Err));
     return true;
   }
 
+  // Populate head and tail lists. The tail list is used only when linking.
+  SmallVector<const char *, 32> NewCfgHeadArgs, NewCfgTailArgs;
+  for (const char *Opt : NewCfgFileArgs) {
+    // An $-prefixed option should go to the tail list.
+    if (Opt[0] == '$' && Opt[1])
+      NewCfgTailArgs.push_back(Opt + 1);
+    else
+      NewCfgHeadArgs.push_back(Opt);
+  }
+
   // Read options from config file.
   llvm::SmallString<128> CfgFileName(FileName);
   llvm::sys::path::native(CfgFileName);
-  bool ContainErrors;
-  auto NewOptions = std::make_unique<InputArgList>(
-      ParseArgStrings(NewCfgArgs, /*UseDriverMode=*/true, ContainErrors));
+  bool ContainErrors = false;
+  auto NewHeadOptions = std::make_unique<InputArgList>(
+      ParseArgStrings(NewCfgHeadArgs, /*UseDriverMode=*/true, ContainErrors));
+  if (ContainErrors)
+    return true;
+  auto NewTailOptions = std::make_unique<InputArgList>(
+      ParseArgStrings(NewCfgTailArgs, /*UseDriverMode=*/true, ContainErrors));
   if (ContainErrors)
     return true;
 
   // Claim all arguments that come from a configuration file so that the driver
   // does not warn on any that is unused.
-  for (Arg *A : *NewOptions)
+  for (Arg *A : *NewHeadOptions)
+    A->claim();
+  for (Arg *A : *NewTailOptions)
     A->claim();
 
-  if (!CfgOptions)
-    CfgOptions = std::move(NewOptions);
+  if (!CfgOptionsHead)
+    CfgOptionsHead = std::move(NewHeadOptions);
   else {
     // If this is a subsequent config file, append options to the previous one.
-    for (auto *Opt : *NewOptions)
-      appendOneArg(*CfgOptions, Opt);
+    for (auto *Opt : *NewHeadOptions)
+      appendOneArg(*CfgOptionsHead, Opt);
   }
+
+  if (!CfgOptionsTail)
+    CfgOptionsTail = std::move(NewTailOptions);
+  else {
+    // If this is a subsequent config file, append options to the previous one.
+    for (auto *Opt : *NewTailOptions)
+      appendOneArg(*CfgOptionsTail, Opt);
+  }
+
   ConfigFiles.push_back(std::string(CfgFileName));
   return false;
 }
@@ -1098,20 +1123,6 @@ bool Driver::loadConfigFiles() {
         UserConfigDir.clear();
       else
         UserConfigDir = static_cast<std::string>(CfgDir);
-    }
-  }
-
-  // First try to find config file specified in command line.
-  if (CLOptions) {
-    std::vector<std::string> ConfigFiles =
-        CLOptions->getAllArgValues(options::OPT_config);
-    if (ConfigFiles.size() > 1) {
-      if (!llvm::all_of(ConfigFiles, [ConfigFiles](const std::string &s) {
-            return s == ConfigFiles[0];
-          })) {
-        Diag(diag::err_drv_duplicate_config);
-        return true;
-      }
     }
   }
   // Prepare list of directories where config file is searched for.
@@ -1259,13 +1270,14 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   // Try parsing configuration file.
   if (!ContainsError)
     ContainsError = loadConfigFiles();
-  bool HasConfigFile = !ContainsError && (CfgOptions.get() != nullptr);
+  bool HasConfigFileHead = !ContainsError && CfgOptionsHead;
+  bool HasConfigFileTail = !ContainsError && CfgOptionsTail;
 
   // All arguments, from both config file and command line.
-  InputArgList Args = std::move(HasConfigFile ? std::move(*CfgOptions)
-                                              : std::move(*CLOptions));
+  InputArgList Args =
+      HasConfigFileHead ? std::move(*CfgOptionsHead) : std::move(*CLOptions);
 
-  if (HasConfigFile)
+  if (HasConfigFileHead)
     for (auto *Opt : *CLOptions)
       if (!Opt->getOption().matches(options::OPT_config))
         appendOneArg(Args, Opt);
@@ -1563,6 +1575,15 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   // Construct the list of inputs.
   InputList Inputs;
   BuildInputs(C->getDefaultToolChain(), *TranslatedArgs, Inputs);
+  if (HasConfigFileTail && Inputs.size()) {
+    Arg *FinalPhaseArg;
+    if (getFinalPhase(*TranslatedArgs, &FinalPhaseArg) == phases::Link) {
+      DerivedArgList TranslatedLinkerIns(*CfgOptionsTail);
+      for (Arg *A : *CfgOptionsTail)
+        TranslatedLinkerIns.append(A);
+      BuildInputs(C->getDefaultToolChain(), TranslatedLinkerIns, Inputs);
+    }
+  }
 
   // Populate the tool chains for the offloading devices, if any.
   CreateOffloadingDeviceToolChains(*C, Inputs);
