@@ -190,8 +190,9 @@ Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst, hsa_agent_t DstAgent,
 #endif
 }
 
-Error getTargetTripleAndFeatures(hsa_agent_t Agent,
-                                 SmallVector<std::string> &Targets) {
+Expected<StringRef>
+getTargetTripleAndFeatures(hsa_agent_t Agent, SmallVector<StringRef> &Targets) {
+  StringRef SpecificTarget;
   auto Err = hsa_utils::iterateAgentISAs(Agent, [&](hsa_isa_t ISA) {
     uint32_t Length;
     hsa_status_t Status;
@@ -206,15 +207,18 @@ Error getTargetTripleAndFeatures(hsa_agent_t Agent,
 
     llvm::StringRef TripleTarget(ISAName.begin(), Length);
     if (TripleTarget.consume_front("amdgcn-amd-amdhsa")) {
-      auto Target = TripleTarget.ltrim('-').rtrim('\0').str();
-      if (Target.find("generic") != std::string::npos)
-        Targets.push_back(Target);
-      else
-        Targets[0] = Target;
+      auto Target = TripleTarget.ltrim('-').rtrim('\0');
+      Targets.push_back(Target);
+      if (!Target.ends_with("generic"))
+        SpecificTarget = Target; // Expect one (and only one) to be found
     }
     return HSA_STATUS_SUCCESS;
   });
-  return Err;
+  if (Err)
+    return Err;
+  if (SpecificTarget.empty())
+    return Plugin::error("Specific Target ISA not found");
+  return SpecificTarget;
 }
 } // namespace hsa_utils
 
@@ -1991,11 +1995,13 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return Err;
 
     // Detect if XNACK is enabled
-    SmallVector<std::string> Targets;
-    Targets.push_back("");
-    if (auto Err = hsa_utils::getTargetTripleAndFeatures(Agent, Targets))
-      return Err;
-    if (Targets[0].find("xnack+") != std::string::npos)
+    SmallVector<StringRef> Targets;
+    auto TargeTripleAndFeaturesOrError =
+        hsa_utils::getTargetTripleAndFeatures(Agent, Targets);
+    if (!TargeTripleAndFeaturesOrError)
+      return TargeTripleAndFeaturesOrError.takeError();
+    if (static_cast<StringRef>(*TargeTripleAndFeaturesOrError)
+            .contains("xnack+"))
       IsXnackEnabled = true;
 
     // detect if device is an APU.
@@ -3209,15 +3215,15 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     if (!Processor)
       return false;
 
-    SmallVector<std::string> Targets;
-    Targets.push_back("");
-    if (auto Err = hsa_utils::getTargetTripleAndFeatures(
-            getKernelAgent(DeviceId), Targets))
-      return Err;
+    SmallVector<StringRef> Targets;
+    auto TargetTripleAndFeaturesOrError = hsa_utils::getTargetTripleAndFeatures(
+        getKernelAgent(DeviceId), Targets);
+    if (!TargetTripleAndFeaturesOrError)
+      return TargetTripleAndFeaturesOrError.takeError();
     for (auto &Target : Targets)
       if (offloading::amdgpu::isImageCompatibleWithEnv(
               Processor ? *Processor : "", ElfOrErr->getPlatformFlags(),
-              Target))
+              Target.str()))
         return true;
     return false;
   }
