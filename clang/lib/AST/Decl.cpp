@@ -3357,11 +3357,9 @@ bool FunctionDecl::isReservedGlobalPlacementOperator() const {
     return false;
 
   const auto *proto = getType()->castAs<FunctionProtoType>();
-  if (proto->getNumParams() < 2)
+  if (proto->getNumParams() != 2 || proto->isVariadic())
     return false;
   if (proto->getParamType(0)->isTypeIdentitySpecialization())
-    return false;
-  if (proto->getNumParams() != 2 || proto->isVariadic())
     return false;
 
   const ASTContext &Context =
@@ -3393,7 +3391,8 @@ bool FunctionDecl::isConstEvalSafeOrReplaceableGlobalAllocationFunction(
   bool IsTypeAware = isTypeAwareOperatorNewOrDelete();
   unsigned MaxParamCount = IsTypeAware + 4;
   const auto *FPT = getType()->castAs<FunctionProtoType>();
-  if (FPT->getNumParams() == 0 || FPT->getNumParams() > MaxParamCount || FPT->isVariadic())
+  if (FPT->getNumParams() == 0 || FPT->getNumParams() > MaxParamCount ||
+      FPT->isVariadic())
     return false;
 
   unsigned MinimumParamCount = IsTypeAware + 1;

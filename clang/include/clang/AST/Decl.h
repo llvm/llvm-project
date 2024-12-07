@@ -2525,7 +2525,8 @@ public:
       bool *IsNothrow = nullptr) const {
     if (isTypeAwareOperatorNewOrDelete())
       return false;
-    return isConstEvalSafeOrReplaceableGlobalAllocationFunction(AlignmentParam, IsNothrow);
+    return isConstEvalSafeOrReplaceableGlobalAllocationFunction(AlignmentParam,
+                                                                IsNothrow);
   }
 
   /// Determines whether this function is one of the replaceable global

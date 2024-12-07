@@ -1754,8 +1754,8 @@ static bool isNonPlacementDeallocationFunction(Sema &S, FunctionDecl *FD) {
     return false;
 
   unsigned UsualParams = 1;
-  if (S.getLangOpts().TypeAwareAllocators &&
-      UsualParams < FD->getNumParams() && FD->isTypeAwareOperatorNewOrDelete())
+  if (S.getLangOpts().TypeAwareAllocators && UsualParams < FD->getNumParams() &&
+      FD->isTypeAwareOperatorNewOrDelete())
     ++UsualParams;
 
   if (S.getLangOpts().SizedDeallocation && UsualParams < FD->getNumParams() &&
@@ -3513,10 +3513,9 @@ FunctionDecl *Sema::FindUsualDeallocationFunction(
   DeclareGlobalNewDelete();
 
   LookupResult FoundDelete(*this, Name, StartLoc, LookupOrdinaryName);
-  DeallocLookupMode LookupMode =
-      getLangOpts().TypeAwareAllocators
-          ? DeallocLookupMode::OptionallyTyped
-          : DeallocLookupMode::Untyped;
+  DeallocLookupMode LookupMode = getLangOpts().TypeAwareAllocators
+                                     ? DeallocLookupMode::OptionallyTyped
+                                     : DeallocLookupMode::Untyped;
   LookupGlobalDeallocationFunctions(*this, StartLoc, FoundDelete, LookupMode,
                                     Name, DeallocType);
 
@@ -3545,9 +3544,8 @@ FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
   FunctionDecl *OperatorDelete = nullptr;
   QualType DeallocType = Context.getRecordType(RD);
   ImplicitDeallocationParameters IDP = {
-    typeAwareAllocationModeFromBool(getLangOpts().TypeAwareAllocators),
-                                        AlignedAllocationMode::No,
-                                        SizedDeallocationMode::No};
+      typeAwareAllocationModeFromBool(getLangOpts().TypeAwareAllocators),
+      AlignedAllocationMode::No, SizedDeallocationMode::No};
 
   if (FindDeallocationFunction(Loc, RD, Name, OperatorDelete, DeallocType, IDP))
     return nullptr;
@@ -4019,9 +4017,8 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
 
     if (PointeeRD) {
       ImplicitDeallocationParameters IDP = {
-        typeAwareAllocationModeFromBool(getLangOpts().TypeAwareAllocators),
-                                            AlignedAllocationMode::No,
-                                            SizedDeallocationMode::No};
+          typeAwareAllocationModeFromBool(getLangOpts().TypeAwareAllocators),
+          AlignedAllocationMode::No, SizedDeallocationMode::No};
       if (!UseGlobal &&
           FindDeallocationFunction(StartLoc, PointeeRD, DeleteName,
                                    OperatorDelete, Pointee, IDP))

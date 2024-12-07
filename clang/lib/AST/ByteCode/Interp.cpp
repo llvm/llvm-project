@@ -1063,7 +1063,8 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
       if (const FunctionDecl *VirtualDelete =
               getVirtualOperatorDelete(AllocType);
           VirtualDelete &&
-          !VirtualDelete->isConstEvalSafeOrReplaceableGlobalAllocationFunction()) {
+          !VirtualDelete
+               ->isConstEvalSafeOrReplaceableGlobalAllocationFunction()) {
         S.FFDiag(S.Current->getSource(OpPC),
                  diag::note_constexpr_new_non_replaceable)
             << isa<CXXMethodDecl>(VirtualDelete) << VirtualDelete;
@@ -1498,14 +1499,16 @@ bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E) {
                !OperatorNew->isReservedGlobalPlacementOperator()) {
       S.FFDiag(Loc, diag::note_constexpr_new_placement)
           << /*Unsupported*/ 0 << E->getSourceRange();
-    } else if (!OperatorNew->isConstEvalSafeOrReplaceableGlobalAllocationFunction()) {
+    } else if (!OperatorNew
+                    ->isConstEvalSafeOrReplaceableGlobalAllocationFunction()) {
       S.FFDiag(Loc, diag::note_constexpr_new_non_replaceable)
           << isa<CXXMethodDecl>(OperatorNew) << OperatorNew;
     }
   } else {
     const auto *DeleteExpr = cast<CXXDeleteExpr>(E);
     const FunctionDecl *OperatorDelete = DeleteExpr->getOperatorDelete();
-    if (!OperatorDelete->isConstEvalSafeOrReplaceableGlobalAllocationFunction()) {
+    if (!OperatorDelete
+             ->isConstEvalSafeOrReplaceableGlobalAllocationFunction()) {
       S.FFDiag(Loc, diag::note_constexpr_new_non_replaceable)
           << isa<CXXMethodDecl>(OperatorDelete) << OperatorDelete;
     }
