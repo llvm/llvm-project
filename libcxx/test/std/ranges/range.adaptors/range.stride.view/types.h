@@ -236,7 +236,7 @@ template <std::input_iterator Iter, std::sentinel_for<Iter> Sent = sentinel_wrap
 using CopyableView = MaybeCopyableAlwaysMoveableView<Iter, Sent>;
 static_assert(std::copyable<CopyableView<cpp17_input_iterator<int*>>>);
 
-template <std::input_iterator Iter, std::sentinel_for<Iter> Sent = sentinel_wrapper<Iter>>
+template <class Iter, std::sentinel_for<Iter> Sent = sentinel_wrapper<Iter>>
 using MoveOnlyView = MaybeCopyableAlwaysMoveableView<Iter, Sent, false>;
 static_assert(!std::copyable<MoveOnlyView<cpp17_input_iterator<int*>>>);
 
