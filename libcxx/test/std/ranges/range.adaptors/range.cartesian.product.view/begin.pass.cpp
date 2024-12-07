@@ -100,7 +100,8 @@ constexpr bool test() {
   return true;
 }
 
-int main() {
+int main(int, char**) {
   test();
   static_assert(test());
+  return 0;
 }
