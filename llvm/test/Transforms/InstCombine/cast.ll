@@ -223,7 +223,7 @@ define <2 x i1> @test19vec(<2 x i32> %X) {
 
 define <3 x i1> @test19vec2(<3 x i1> %X) {
 ; ALL-LABEL: @test19vec2(
-; ALL-NEXT:    [[CMPEQ:%.*]] = xor <3 x i1> [[X:%.*]], <i1 true, i1 true, i1 true>
+; ALL-NEXT:    [[CMPEQ:%.*]] = xor <3 x i1> [[X:%.*]], splat (i1 true)
 ; ALL-NEXT:    ret <3 x i1> [[CMPEQ]]
 ;
   %sext = sext <3 x i1> %X to <3 x i32>
@@ -347,8 +347,8 @@ define i1 @test31(i64 %A) {
 define <2 x i1> @test31vec(<2 x i64> %A) {
 ; ALL-LABEL: @test31vec(
 ; ALL-NEXT:    [[B:%.*]] = trunc <2 x i64> [[A:%.*]] to <2 x i32>
-; ALL-NEXT:    [[C:%.*]] = and <2 x i32> [[B]], <i32 42, i32 42>
-; ALL-NEXT:    [[D:%.*]] = icmp eq <2 x i32> [[C]], <i32 10, i32 10>
+; ALL-NEXT:    [[C:%.*]] = and <2 x i32> [[B]], splat (i32 42)
+; ALL-NEXT:    [[D:%.*]] = icmp eq <2 x i32> [[C]], splat (i32 10)
 ; ALL-NEXT:    ret <2 x i1> [[D]]
 ;
   %B = trunc <2 x i64> %A to <2 x i32>
@@ -362,8 +362,8 @@ define <2 x i1> @test31vec(<2 x i64> %A) {
 
 define <2 x i1> @test32vec(<2 x i8> %A) {
 ; ALL-LABEL: @test32vec(
-; ALL-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[A:%.*]], <i8 42, i8 42>
-; ALL-NEXT:    [[D:%.*]] = icmp eq <2 x i8> [[TMP1]], <i8 10, i8 10>
+; ALL-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[A:%.*]], splat (i8 42)
+; ALL-NEXT:    [[D:%.*]] = icmp eq <2 x i8> [[TMP1]], splat (i8 10)
 ; ALL-NEXT:    ret <2 x i1> [[D]]
 ;
   %B = zext <2 x i8> %A to <2 x i16>
@@ -417,7 +417,7 @@ define i1 @test36(i32 %a) {
 
 define <2 x i1> @test36vec(<2 x i32> %a) {
 ; ALL-LABEL: @test36vec(
-; ALL-NEXT:    [[D:%.*]] = icmp sgt <2 x i32> [[A:%.*]], <i32 -1, i32 -1>
+; ALL-NEXT:    [[D:%.*]] = icmp sgt <2 x i32> [[A:%.*]], splat (i32 -1)
 ; ALL-NEXT:    ret <2 x i1> [[D]]
 ;
   %b = lshr <2 x i32> %a, <i32 31, i32 31>
@@ -480,8 +480,8 @@ define i16 @test40(i16 %a) {
 
 define <2 x i16> @test40vec(<2 x i16> %a) {
 ; ALL-LABEL: @test40vec(
-; ALL-NEXT:    [[T21:%.*]] = lshr <2 x i16> [[A:%.*]], <i16 9, i16 9>
-; ALL-NEXT:    [[T5:%.*]] = shl <2 x i16> [[A]], <i16 8, i16 8>
+; ALL-NEXT:    [[T21:%.*]] = lshr <2 x i16> [[A:%.*]], splat (i16 9)
+; ALL-NEXT:    [[T5:%.*]] = shl <2 x i16> [[A]], splat (i16 8)
 ; ALL-NEXT:    [[T32:%.*]] = or disjoint <2 x i16> [[T21]], [[T5]]
 ; ALL-NEXT:    ret <2 x i16> [[T32]]
 ;
@@ -615,8 +615,8 @@ define i64 @test46(i64 %A) {
 define <2 x i64> @test46vec(<2 x i64> %A) {
 ; ALL-LABEL: @test46vec(
 ; ALL-NEXT:    [[B:%.*]] = trunc <2 x i64> [[A:%.*]] to <2 x i32>
-; ALL-NEXT:    [[C:%.*]] = shl <2 x i32> [[B]], <i32 8, i32 8>
-; ALL-NEXT:    [[D:%.*]] = and <2 x i32> [[C]], <i32 10752, i32 10752>
+; ALL-NEXT:    [[C:%.*]] = shl <2 x i32> [[B]], splat (i32 8)
+; ALL-NEXT:    [[D:%.*]] = and <2 x i32> [[C]], splat (i32 10752)
 ; ALL-NEXT:    [[E:%.*]] = zext nneg <2 x i32> [[D]] to <2 x i64>
 ; ALL-NEXT:    ret <2 x i64> [[E]]
 ;
@@ -773,7 +773,7 @@ define i64 @test56(i16 %A) {
 define <2 x i64> @test56vec(<2 x i16> %A) {
 ; ALL-LABEL: @test56vec(
 ; ALL-NEXT:    [[P353:%.*]] = sext <2 x i16> [[A:%.*]] to <2 x i32>
-; ALL-NEXT:    [[P354:%.*]] = lshr <2 x i32> [[P353]], <i32 5, i32 5>
+; ALL-NEXT:    [[P354:%.*]] = lshr <2 x i32> [[P353]], splat (i32 5)
 ; ALL-NEXT:    [[P355:%.*]] = zext nneg <2 x i32> [[P354]] to <2 x i64>
 ; ALL-NEXT:    ret <2 x i64> [[P355]]
 ;
@@ -798,7 +798,7 @@ define i64 @test57(i64 %A) {
 define <2 x i64> @test57vec(<2 x i64> %A) {
 ; ALL-LABEL: @test57vec(
 ; ALL-NEXT:    [[B:%.*]] = trunc <2 x i64> [[A:%.*]] to <2 x i32>
-; ALL-NEXT:    [[C:%.*]] = lshr <2 x i32> [[B]], <i32 8, i32 8>
+; ALL-NEXT:    [[C:%.*]] = lshr <2 x i32> [[B]], splat (i32 8)
 ; ALL-NEXT:    [[E:%.*]] = zext nneg <2 x i32> [[C]] to <2 x i64>
 ; ALL-NEXT:    ret <2 x i64> [[E]]
 ;
@@ -1506,7 +1506,7 @@ define i8 @trunc_lshr_sext_exact(i8 %A) {
 
 define <2 x i8> @trunc_lshr_sext_uniform(<2 x i8> %A) {
 ; ALL-LABEL: @trunc_lshr_sext_uniform(
-; ALL-NEXT:    [[D:%.*]] = ashr <2 x i8> [[A:%.*]], <i8 6, i8 6>
+; ALL-NEXT:    [[D:%.*]] = ashr <2 x i8> [[A:%.*]], splat (i8 6)
 ; ALL-NEXT:    ret <2 x i8> [[D]]
 ;
   %B = sext <2 x i8> %A to <2 x i32>
@@ -1552,7 +1552,7 @@ define <2 x i8> @trunc_lshr_sext_uses1(<2 x i8> %A) {
 ; ALL-LABEL: @trunc_lshr_sext_uses1(
 ; ALL-NEXT:    [[B:%.*]] = sext <2 x i8> [[A:%.*]] to <2 x i32>
 ; ALL-NEXT:    call void @use_v2i32(<2 x i32> [[B]])
-; ALL-NEXT:    [[D:%.*]] = ashr <2 x i8> [[A]], <i8 6, i8 6>
+; ALL-NEXT:    [[D:%.*]] = ashr <2 x i8> [[A]], splat (i8 6)
 ; ALL-NEXT:    ret <2 x i8> [[D]]
 ;
   %B = sext <2 x i8> %A to <2 x i32>
@@ -1581,9 +1581,9 @@ define <2 x i8> @trunc_lshr_sext_uses3(<2 x i8> %A) {
 ; ALL-LABEL: @trunc_lshr_sext_uses3(
 ; ALL-NEXT:    [[B:%.*]] = sext <2 x i8> [[A:%.*]] to <2 x i32>
 ; ALL-NEXT:    call void @use_v2i32(<2 x i32> [[B]])
-; ALL-NEXT:    [[C:%.*]] = lshr <2 x i32> [[B]], <i32 6, i32 6>
+; ALL-NEXT:    [[C:%.*]] = lshr <2 x i32> [[B]], splat (i32 6)
 ; ALL-NEXT:    call void @use_v2i32(<2 x i32> [[C]])
-; ALL-NEXT:    [[D:%.*]] = ashr <2 x i8> [[A]], <i8 6, i8 6>
+; ALL-NEXT:    [[D:%.*]] = ashr <2 x i8> [[A]], splat (i8 6)
 ; ALL-NEXT:    ret <2 x i8> [[D]]
 ;
   %B = sext <2 x i8 >%A to <2 x i32>
@@ -1596,7 +1596,7 @@ define <2 x i8> @trunc_lshr_sext_uses3(<2 x i8> %A) {
 
 define <2 x i8> @trunc_lshr_overshift_sext(<2 x i8> %A) {
 ; ALL-LABEL: @trunc_lshr_overshift_sext(
-; ALL-NEXT:    [[D:%.*]] = ashr <2 x i8> [[A:%.*]], <i8 7, i8 7>
+; ALL-NEXT:    [[D:%.*]] = ashr <2 x i8> [[A:%.*]], splat (i8 7)
 ; ALL-NEXT:    ret <2 x i8> [[D]]
 ;
   %B = sext <2 x i8> %A to <2 x i32>
@@ -1622,9 +1622,9 @@ define i8 @trunc_lshr_overshift_sext_uses1(i8 %A) {
 define <2 x i8> @trunc_lshr_overshift_sext_uses2(<2 x i8> %A) {
 ; ALL-LABEL: @trunc_lshr_overshift_sext_uses2(
 ; ALL-NEXT:    [[B:%.*]] = sext <2 x i8> [[A:%.*]] to <2 x i32>
-; ALL-NEXT:    [[C:%.*]] = lshr <2 x i32> [[B]], <i32 8, i32 8>
+; ALL-NEXT:    [[C:%.*]] = lshr <2 x i32> [[B]], splat (i32 8)
 ; ALL-NEXT:    call void @use_v2i32(<2 x i32> [[C]])
-; ALL-NEXT:    [[D:%.*]] = ashr <2 x i8> [[A]], <i8 7, i8 7>
+; ALL-NEXT:    [[D:%.*]] = ashr <2 x i8> [[A]], splat (i8 7)
 ; ALL-NEXT:    ret <2 x i8> [[D]]
 ;
   %B = sext <2 x i8> %A to <2 x i32>
@@ -1679,7 +1679,7 @@ define <2 x i8> @trunc_lshr_sext_wide_input_uses1(<2 x i16> %A) {
 ; ALL-LABEL: @trunc_lshr_sext_wide_input_uses1(
 ; ALL-NEXT:    [[B:%.*]] = sext <2 x i16> [[A:%.*]] to <2 x i32>
 ; ALL-NEXT:    call void @use_v2i32(<2 x i32> [[B]])
-; ALL-NEXT:    [[TMP1:%.*]] = ashr <2 x i16> [[A]], <i16 9, i16 9>
+; ALL-NEXT:    [[TMP1:%.*]] = ashr <2 x i16> [[A]], splat (i16 9)
 ; ALL-NEXT:    [[D:%.*]] = trunc nsw <2 x i16> [[TMP1]] to <2 x i8>
 ; ALL-NEXT:    ret <2 x i8> [[D]]
 ;
@@ -1709,7 +1709,7 @@ define <2 x i8> @trunc_lshr_sext_wide_input_uses3(<2 x i16> %A) {
 ; ALL-LABEL: @trunc_lshr_sext_wide_input_uses3(
 ; ALL-NEXT:    [[B:%.*]] = sext <2 x i16> [[A:%.*]] to <2 x i32>
 ; ALL-NEXT:    call void @use_v2i32(<2 x i32> [[B]])
-; ALL-NEXT:    [[C:%.*]] = lshr <2 x i32> [[B]], <i32 9, i32 9>
+; ALL-NEXT:    [[C:%.*]] = lshr <2 x i32> [[B]], splat (i32 9)
 ; ALL-NEXT:    call void @use_v2i32(<2 x i32> [[C]])
 ; ALL-NEXT:    [[D:%.*]] = trunc <2 x i32> [[C]] to <2 x i8>
 ; ALL-NEXT:    ret <2 x i8> [[D]]
@@ -1724,7 +1724,7 @@ define <2 x i8> @trunc_lshr_sext_wide_input_uses3(<2 x i16> %A) {
 
 define <2 x i8> @trunc_lshr_overshift_wide_input_sext(<2 x i16> %A) {
 ; ALL-LABEL: @trunc_lshr_overshift_wide_input_sext(
-; ALL-NEXT:    [[TMP1:%.*]] = ashr <2 x i16> [[A:%.*]], <i16 15, i16 15>
+; ALL-NEXT:    [[TMP1:%.*]] = ashr <2 x i16> [[A:%.*]], splat (i16 15)
 ; ALL-NEXT:    [[D:%.*]] = trunc nsw <2 x i16> [[TMP1]] to <2 x i8>
 ; ALL-NEXT:    ret <2 x i8> [[D]]
 ;
@@ -1751,7 +1751,7 @@ define i8 @trunc_lshr_overshift_sext_wide_input_uses1(i16 %A) {
 
 define <2 x i8> @trunc_lshr_overshift_sext_wide_input_uses2(<2 x i16> %A) {
 ; ALL-LABEL: @trunc_lshr_overshift_sext_wide_input_uses2(
-; ALL-NEXT:    [[TMP1:%.*]] = ashr <2 x i16> [[A:%.*]], <i16 15, i16 15>
+; ALL-NEXT:    [[TMP1:%.*]] = ashr <2 x i16> [[A:%.*]], splat (i16 15)
 ; ALL-NEXT:    [[C:%.*]] = zext <2 x i16> [[TMP1]] to <2 x i32>
 ; ALL-NEXT:    call void @use_v2i32(<2 x i32> [[C]])
 ; ALL-NEXT:    [[D:%.*]] = trunc nsw <2 x i16> [[TMP1]] to <2 x i8>
@@ -1797,7 +1797,7 @@ define <2 x i16> @trunc_lshr_sext_narrow_input_uses1(<2 x i8> %A) {
 ; ALL-LABEL: @trunc_lshr_sext_narrow_input_uses1(
 ; ALL-NEXT:    [[B:%.*]] = sext <2 x i8> [[A:%.*]] to <2 x i32>
 ; ALL-NEXT:    call void @use_v2i32(<2 x i32> [[B]])
-; ALL-NEXT:    [[TMP1:%.*]] = ashr <2 x i8> [[A]], <i8 6, i8 6>
+; ALL-NEXT:    [[TMP1:%.*]] = ashr <2 x i8> [[A]], splat (i8 6)
 ; ALL-NEXT:    [[D:%.*]] = sext <2 x i8> [[TMP1]] to <2 x i16>
 ; ALL-NEXT:    ret <2 x i16> [[D]]
 ;
@@ -1827,7 +1827,7 @@ define <2 x i16> @trunc_lshr_sext_narrow_input_uses3(<2 x i8> %A) {
 ; ALL-LABEL: @trunc_lshr_sext_narrow_input_uses3(
 ; ALL-NEXT:    [[B:%.*]] = sext <2 x i8> [[A:%.*]] to <2 x i32>
 ; ALL-NEXT:    call void @use_v2i32(<2 x i32> [[B]])
-; ALL-NEXT:    [[C:%.*]] = lshr <2 x i32> [[B]], <i32 6, i32 6>
+; ALL-NEXT:    [[C:%.*]] = lshr <2 x i32> [[B]], splat (i32 6)
 ; ALL-NEXT:    call void @use_v2i32(<2 x i32> [[C]])
 ; ALL-NEXT:    [[D:%.*]] = trunc <2 x i32> [[C]] to <2 x i16>
 ; ALL-NEXT:    ret <2 x i16> [[D]]
@@ -1842,7 +1842,7 @@ define <2 x i16> @trunc_lshr_sext_narrow_input_uses3(<2 x i8> %A) {
 
 define <2 x i16> @trunc_lshr_overshift_narrow_input_sext(<2 x i8> %A) {
 ; ALL-LABEL: @trunc_lshr_overshift_narrow_input_sext(
-; ALL-NEXT:    [[TMP1:%.*]] = ashr <2 x i8> [[A:%.*]], <i8 7, i8 7>
+; ALL-NEXT:    [[TMP1:%.*]] = ashr <2 x i8> [[A:%.*]], splat (i8 7)
 ; ALL-NEXT:    [[D:%.*]] = sext <2 x i8> [[TMP1]] to <2 x i16>
 ; ALL-NEXT:    ret <2 x i16> [[D]]
 ;
@@ -1870,7 +1870,7 @@ define i16 @trunc_lshr_overshift_sext_narrow_input_uses1(i8 %A) {
 define <2 x i16> @trunc_lshr_overshift_sext_narrow_input_uses2(<2 x i8> %A) {
 ; ALL-LABEL: @trunc_lshr_overshift_sext_narrow_input_uses2(
 ; ALL-NEXT:    [[B:%.*]] = sext <2 x i8> [[A:%.*]] to <2 x i32>
-; ALL-NEXT:    [[C:%.*]] = lshr <2 x i32> [[B]], <i32 8, i32 8>
+; ALL-NEXT:    [[C:%.*]] = lshr <2 x i32> [[B]], splat (i32 8)
 ; ALL-NEXT:    call void @use_v2i32(<2 x i32> [[C]])
 ; ALL-NEXT:    [[D:%.*]] = trunc <2 x i32> [[C]] to <2 x i16>
 ; ALL-NEXT:    ret <2 x i16> [[D]]
@@ -1902,7 +1902,7 @@ define i16 @trunc_lshr_overshift_sext_narrow_input_uses3(i8 %A) {
 define <2 x i8> @trunc_lshr_overshift2_sext(<2 x i8> %A) {
 ; ALL-LABEL: @trunc_lshr_overshift2_sext(
 ; ALL-NEXT:    [[B:%.*]] = sext <2 x i8> [[A:%.*]] to <2 x i32>
-; ALL-NEXT:    [[C:%.*]] = lshr <2 x i32> [[B]], <i32 25, i32 25>
+; ALL-NEXT:    [[C:%.*]] = lshr <2 x i32> [[B]], splat (i32 25)
 ; ALL-NEXT:    [[D:%.*]] = trunc nuw nsw <2 x i32> [[C]] to <2 x i8>
 ; ALL-NEXT:    ret <2 x i8> [[D]]
 ;
@@ -1930,7 +1930,7 @@ define i8 @trunc_lshr_overshift2_sext_uses1(i8 %A) {
 define <2 x i8> @trunc_lshr_overshift2_sext_uses2(<2 x i8> %A) {
 ; ALL-LABEL: @trunc_lshr_overshift2_sext_uses2(
 ; ALL-NEXT:    [[B:%.*]] = sext <2 x i8> [[A:%.*]] to <2 x i32>
-; ALL-NEXT:    [[C:%.*]] = lshr <2 x i32> [[B]], <i32 25, i32 25>
+; ALL-NEXT:    [[C:%.*]] = lshr <2 x i32> [[B]], splat (i32 25)
 ; ALL-NEXT:    call void @use_v2i32(<2 x i32> [[C]])
 ; ALL-NEXT:    [[D:%.*]] = trunc nuw nsw <2 x i32> [[C]] to <2 x i8>
 ; ALL-NEXT:    ret <2 x i8> [[D]]
@@ -1983,7 +1983,7 @@ define i8 @trunc_lshr_zext_exact(i8 %A) {
 
 define <2 x i8> @trunc_lshr_zext_uniform(<2 x i8> %A) {
 ; ALL-LABEL: @trunc_lshr_zext_uniform(
-; ALL-NEXT:    [[TMP1:%.*]] = lshr <2 x i8> [[A:%.*]], <i8 6, i8 6>
+; ALL-NEXT:    [[TMP1:%.*]] = lshr <2 x i8> [[A:%.*]], splat (i8 6)
 ; ALL-NEXT:    ret <2 x i8> [[TMP1]]
 ;
   %B = zext <2 x i8> %A to <2 x i32>
@@ -2029,7 +2029,7 @@ define <2 x i8> @trunc_lshr_zext_uses1(<2 x i8> %A) {
 ; ALL-LABEL: @trunc_lshr_zext_uses1(
 ; ALL-NEXT:    [[B:%.*]] = zext <2 x i8> [[A:%.*]] to <2 x i32>
 ; ALL-NEXT:    call void @use_v2i32(<2 x i32> [[B]])
-; ALL-NEXT:    [[C:%.*]] = lshr <2 x i8> [[A]], <i8 6, i8 6>
+; ALL-NEXT:    [[C:%.*]] = lshr <2 x i8> [[A]], splat (i8 6)
 ; ALL-NEXT:    ret <2 x i8> [[C]]
 ;
   %B = zext <2 x i8> %A to <2 x i32>

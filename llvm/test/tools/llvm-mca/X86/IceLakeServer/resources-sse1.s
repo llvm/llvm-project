@@ -298,7 +298,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  2      10    1.00    *                   rsqrtps	(%rax), %xmm2
 # CHECK-NEXT:  1      4     1.00                        rsqrtss	%xmm0, %xmm2
 # CHECK-NEXT:  2      9     1.00    *                   rsqrtss	(%rax), %xmm2
-# CHECK-NEXT:  2      2     0.50    *      *      U     sfence
+# CHECK-NEXT:  2      1     0.50    *      *      U     sfence
 # CHECK-NEXT:  1      1     0.50                        shufps	$1, %xmm0, %xmm2
 # CHECK-NEXT:  2      7     0.50    *                   shufps	$1, (%rax), %xmm2
 # CHECK-NEXT:  1      12    3.00                        sqrtps	%xmm0, %xmm2

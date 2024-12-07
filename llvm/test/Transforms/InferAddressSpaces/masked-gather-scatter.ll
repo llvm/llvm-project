@@ -6,7 +6,7 @@ define <4 x i32> @masked_gather_inferas(ptr addrspace(1) %out, <4 x i64> %index)
 ; CHECK-SAME: (ptr addrspace(1) [[OUT:%.*]], <4 x i64> [[INDEX:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT]], <4 x i64> [[INDEX]]
-; CHECK-NEXT:    [[VALUE:%.*]] = tail call <4 x i32> @llvm.masked.gather.v4i32.v4p1(<4 x ptr addrspace(1)> [[PTRS]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
+; CHECK-NEXT:    [[VALUE:%.*]] = tail call <4 x i32> @llvm.masked.gather.v4i32.v4p1(<4 x ptr addrspace(1)> [[PTRS]], i32 4, <4 x i1> splat (i1 true), <4 x i32> poison)
 ; CHECK-NEXT:    ret <4 x i32> [[VALUE]]
 ;
 entry:
@@ -21,7 +21,7 @@ define void @masked_scatter_inferas(ptr addrspace(1) %out, <4 x i64> %index, <4 
 ; CHECK-SAME: (ptr addrspace(1) [[OUT:%.*]], <4 x i64> [[INDEX:%.*]], <4 x i32> [[VALUE:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT]], <4 x i64> [[INDEX]]
-; CHECK-NEXT:    tail call void @llvm.masked.scatter.v4i32.v4p1(<4 x i32> [[VALUE]], <4 x ptr addrspace(1)> [[PTRS]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    tail call void @llvm.masked.scatter.v4i32.v4p1(<4 x i32> [[VALUE]], <4 x ptr addrspace(1)> [[PTRS]], i32 4, <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    ret void
 ;
 entry:

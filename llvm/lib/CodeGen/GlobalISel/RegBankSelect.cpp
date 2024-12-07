@@ -69,8 +69,8 @@ INITIALIZE_PASS_END(RegBankSelect, DEBUG_TYPE,
                     "Assign register bank of generic virtual registers", false,
                     false)
 
-RegBankSelect::RegBankSelect(char &PassID, Mode RunningMode)
-    : MachineFunctionPass(PassID), OptMode(RunningMode) {
+RegBankSelect::RegBankSelect(Mode RunningMode)
+    : MachineFunctionPass(ID), OptMode(RunningMode) {
   if (RegBankSelectMode.getNumOccurrences() != 0) {
     OptMode = RegBankSelectMode;
     if (RegBankSelectMode != RunningMode)

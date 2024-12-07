@@ -175,10 +175,13 @@ static void buildOpBitcast(SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
   MachineRegisterInfo *MRI = MIB.getMRI();
   if (!MRI->getRegClassOrNull(ResVReg))
     MRI->setRegClass(ResVReg, GR->getRegClass(ResType));
-  MIB.buildInstr(SPIRV::OpBitcast)
-      .addDef(ResVReg)
-      .addUse(GR->getSPIRVTypeID(ResType))
-      .addUse(OpReg);
+  if (ResType == OpType)
+    MIB.buildInstr(TargetOpcode::COPY).addDef(ResVReg).addUse(OpReg);
+  else
+    MIB.buildInstr(SPIRV::OpBitcast)
+        .addDef(ResVReg)
+        .addUse(GR->getSPIRVTypeID(ResType))
+        .addUse(OpReg);
 }
 
 // We do instruction selections early instead of calling MIB.buildBitcast()
@@ -829,7 +832,7 @@ static void insertSpirvDecorations(MachineFunction &MF, MachineIRBuilder MIB) {
     for (MachineInstr &MI : MBB) {
       if (!isSpvIntrinsic(MI, Intrinsic::spv_assign_decoration))
         continue;
-      MIB.setInsertPt(*MI.getParent(), MI);
+      MIB.setInsertPt(*MI.getParent(), MI.getNextNode());
       buildOpSpirvDecorations(MI.getOperand(1).getReg(), MIB,
                               MI.getOperand(2).getMetadata());
       ToErase.push_back(&MI);

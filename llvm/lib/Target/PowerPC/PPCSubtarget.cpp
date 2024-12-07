@@ -21,14 +21,13 @@
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineScheduler.h"
-#include "llvm/IR/Attributes.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/PPCTargetParser.h"
 #include <cstdlib>
 
 using namespace llvm;
@@ -79,13 +78,10 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   // Determine default and user specified characteristics
   std::string CPUName = std::string(CPU);
   if (CPUName.empty() || CPU == "generic") {
-    // If cross-compiling with -march=ppc64le without -mcpu
-    if (TargetTriple.getArch() == Triple::ppc64le)
-      CPUName = "ppc64le";
-    else if (TargetTriple.getSubArch() == Triple::PPCSubArch_spe)
+    if (TargetTriple.getSubArch() == Triple::PPCSubArch_spe)
       CPUName = "e500";
     else
-      CPUName = "generic";
+      CPUName = std::string(PPC::getNormalizedPPCTargetCPU(TargetTriple));
   }
 
   // Determine the CPU to schedule for.

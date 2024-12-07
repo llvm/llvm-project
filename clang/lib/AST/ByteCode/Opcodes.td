@@ -281,7 +281,7 @@ def ZeroIntAPS : Opcode {
 // [] -> [Pointer]
 def Null : Opcode {
   let Types = [PtrTypeClass];
-  let Args = [ArgDesc];
+  let Args = [ArgUint64, ArgDesc];
   let HasGroup = 1;
 }
 
@@ -847,3 +847,5 @@ def BitCast : Opcode {
   let Args = [ArgBool, ArgUint32, ArgFltSemantics];
   let HasGroup = 1;
 }
+
+def BitCastPtr : Opcode;

@@ -43,7 +43,7 @@ define i64 @test_flat_atomicrmw_sub_0_i64_agent(ptr %ptr) {
 ; ALL:       [[ATOMICRMW_PRIVATE]]:
 ; ALL-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
 ; ALL-NEXT:    [[LOADED_PRIVATE:%.*]] = load i64, ptr addrspace(5) [[TMP1]], align 8
-; ALL-NEXT:    [[NEW:%.*]] = sub i64 [[LOADED_PRIVATE]], 0
+; ALL-NEXT:    [[NEW:%.*]] = add i64 [[LOADED_PRIVATE]], 0
 ; ALL-NEXT:    store i64 [[NEW]], ptr addrspace(5) [[TMP1]], align 8
 ; ALL-NEXT:    br label %[[ATOMICRMW_PHI:.*]]
 ; ALL:       [[ATOMICRMW_GLOBAL]]:
@@ -67,7 +67,7 @@ define i64 @test_flat_atomicrmw_or_0_i64_agent(ptr %ptr) {
 ; ALL:       [[ATOMICRMW_PRIVATE]]:
 ; ALL-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
 ; ALL-NEXT:    [[LOADED_PRIVATE:%.*]] = load i64, ptr addrspace(5) [[TMP1]], align 8
-; ALL-NEXT:    [[NEW:%.*]] = or i64 [[LOADED_PRIVATE]], 0
+; ALL-NEXT:    [[NEW:%.*]] = add i64 [[LOADED_PRIVATE]], 0
 ; ALL-NEXT:    store i64 [[NEW]], ptr addrspace(5) [[TMP1]], align 8
 ; ALL-NEXT:    br label %[[ATOMICRMW_PHI:.*]]
 ; ALL:       [[ATOMICRMW_GLOBAL]]:
@@ -91,7 +91,7 @@ define i64 @test_flat_atomicrmw_xor_0_i64_agent(ptr %ptr) {
 ; ALL:       [[ATOMICRMW_PRIVATE]]:
 ; ALL-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
 ; ALL-NEXT:    [[LOADED_PRIVATE:%.*]] = load i64, ptr addrspace(5) [[TMP1]], align 8
-; ALL-NEXT:    [[NEW:%.*]] = xor i64 [[LOADED_PRIVATE]], 0
+; ALL-NEXT:    [[NEW:%.*]] = add i64 [[LOADED_PRIVATE]], 0
 ; ALL-NEXT:    store i64 [[NEW]], ptr addrspace(5) [[TMP1]], align 8
 ; ALL-NEXT:    br label %[[ATOMICRMW_PHI:.*]]
 ; ALL:       [[ATOMICRMW_GLOBAL]]:

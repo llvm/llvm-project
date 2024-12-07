@@ -2677,7 +2677,7 @@ define <3 x i32> @masked_load_zext_v3i32(ptr %load_ptr, <3 x i1> %pm) {
 ; CHECK-NEXT:    and z0.d, z0.d, z1.d
 ; CHECK-NEXT:    lsl z0.h, z0.h, #15
 ; CHECK-NEXT:    asr z0.h, z0.h, #15
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
@@ -2750,7 +2750,7 @@ define <3 x i32> @masked_load_sext_v3i32(ptr %load_ptr, <3 x i1> %pm) {
 ; CHECK-NEXT:    and z0.d, z0.d, z1.d
 ; CHECK-NEXT:    lsl z0.h, z0.h, #15
 ; CHECK-NEXT:    asr z0.h, z0.h, #15
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
 ; CHECK-NEXT:    ld1sh { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0

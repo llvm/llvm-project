@@ -529,8 +529,7 @@ define void @PR47558_multiple_use_load(ptr nocapture nonnull %resultptr, ptr noc
 ; CHECK-NEXT:    [[T3:%.*]] = fmul <2 x float> [[OP]], [[T2]]
 ; CHECK-NEXT:    [[T4:%.*]] = extractelement <2 x float> [[T3]], i32 0
 ; CHECK-NEXT:    [[RESULT0:%.*]] = insertelement <2 x float> undef, float [[T4]], i32 0
-; CHECK-NEXT:    [[T5:%.*]] = extractelement <2 x float> [[T3]], i32 1
-; CHECK-NEXT:    [[RESULT1:%.*]] = insertelement <2 x float> [[RESULT0]], float [[T5]], i32 1
+; CHECK-NEXT:    [[RESULT1:%.*]] = shufflevector <2 x float> [[RESULT0]], <2 x float> [[T3]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    store <2 x float> [[RESULT1]], ptr [[RESULTPTR:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;

@@ -8,17 +8,17 @@ define float @reduce_fadd(ptr %f) {
 ; CHECK-LABEL: reduce_fadd:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    srli a1, a2, 1
-; CHECK-NEXT:    vsetvli a3, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v8, zero
+; CHECK-NEXT:    srli a1, a2, 1
 ; CHECK-NEXT:    slli a2, a2, 1
 ; CHECK-NEXT:    li a3, 1024
 ; CHECK-NEXT:  .LBB0_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vl2re32.v v10, (a0)
+; CHECK-NEXT:    sub a3, a3, a1
 ; CHECK-NEXT:    vsetvli a4, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfredosum.vs v8, v10, v8
-; CHECK-NEXT:    sub a3, a3, a1
 ; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    bnez a3, .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %exit

@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <type_traits>
@@ -41,6 +40,7 @@
 #include "llvm/Support/Path.h"
 
 #define DEBUG_TYPE "memprof"
+
 namespace llvm {
 namespace memprof {
 namespace {
@@ -229,28 +229,6 @@ std::string getBuildIdString(const SegmentEntry &Entry) {
 }
 } // namespace
 
-MemProfReader::MemProfReader(
-    llvm::DenseMap<FrameId, Frame> FrameIdMap,
-    llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> ProfData)
-    : IdToFrame(std::move(FrameIdMap)),
-      FunctionProfileData(std::move(ProfData)) {
-  // Populate CSId in each IndexedAllocationInfo and IndexedMemProfRecord
-  // while storing CallStack in CSIdToCallStack.
-  for (auto &KV : FunctionProfileData) {
-    IndexedMemProfRecord &Record = KV.second;
-    for (auto &AS : Record.AllocSites) {
-      CallStackId CSId = hashCallStack(AS.CallStack);
-      AS.CSId = CSId;
-      CSIdToCallStack.insert({CSId, AS.CallStack});
-    }
-    for (auto &CS : Record.CallSites) {
-      CallStackId CSId = hashCallStack(CS);
-      Record.CallSiteIds.push_back(CSId);
-      CSIdToCallStack.insert({CSId, CS});
-    }
-  }
-}
-
 Expected<std::unique_ptr<RawMemProfReader>>
 RawMemProfReader::create(const Twine &Path, const StringRef ProfiledBinary,
                          bool KeepName) {
@@ -327,7 +305,7 @@ bool RawMemProfReader::hasFormat(const MemoryBuffer &Buffer) {
 
 void RawMemProfReader::printYAML(raw_ostream &OS) {
   uint64_t NumAllocFunctions = 0, NumMibInfo = 0;
-  for (const auto &KV : FunctionProfileData) {
+  for (const auto &KV : MemProfData.Records) {
     const size_t NumAllocSites = KV.second.AllocSites.size();
     if (NumAllocSites > 0) {
       NumAllocFunctions++;
@@ -522,15 +500,14 @@ Error RawMemProfReader::mapRawProfileToRecords() {
       Callstack.append(Frames.begin(), Frames.end());
     }
 
-    CallStackId CSId = hashCallStack(Callstack);
-    CSIdToCallStack.insert({CSId, Callstack});
+    CallStackId CSId = MemProfData.addCallStack(Callstack);
 
     // We attach the memprof record to each function bottom-up including the
     // first non-inline frame.
     for (size_t I = 0; /*Break out using the condition below*/; I++) {
       const Frame &F = idToFrame(Callstack[I]);
-      IndexedMemProfRecord &Record = FunctionProfileData[F.Function];
-      Record.AllocSites.emplace_back(Callstack, CSId, MIB);
+      IndexedMemProfRecord &Record = MemProfData.Records[F.Function];
+      Record.AllocSites.emplace_back(CSId, MIB);
 
       if (!F.IsInlineFrame)
         break;
@@ -541,16 +518,10 @@ Error RawMemProfReader::mapRawProfileToRecords() {
   for (const auto &[Id, Locs] : PerFunctionCallSites) {
     // Some functions may have only callsite data and no allocation data. Here
     // we insert a new entry for callsite data if we need to.
-    IndexedMemProfRecord &Record = FunctionProfileData[Id];
-    for (LocationPtr Loc : Locs) {
-      CallStackId CSId = hashCallStack(*Loc);
-      CSIdToCallStack.insert({CSId, *Loc});
-      Record.CallSites.push_back(*Loc);
-      Record.CallSiteIds.push_back(CSId);
-    }
+    IndexedMemProfRecord &Record = MemProfData.Records[Id];
+    for (LocationPtr Loc : Locs)
+      Record.CallSiteIds.push_back(MemProfData.addCallStack(*Loc));
   }
-
-  verifyFunctionProfileData(FunctionProfileData);
 
   return Error::success();
 }
@@ -609,9 +580,7 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
           GuidToSymbolName.insert({Guid, CanonicalName.str()});
         }
 
-        const FrameId Hash = F.hash();
-        IdToFrame.insert({Hash, F});
-        SymbolizedFrame[VAddr].push_back(Hash);
+        SymbolizedFrame[VAddr].push_back(MemProfData.addFrame(F));
       }
     }
 
@@ -780,6 +749,42 @@ Error RawMemProfReader::readNextRecord(
     return F;
   };
   return MemProfReader::readNextRecord(GuidRecord, IdToFrameCallback);
+}
+
+void YAMLMemProfReader::parse(StringRef YAMLData) {
+  memprof::AllMemProfData Doc;
+  yaml::Input Yin(YAMLData);
+
+  Yin >> Doc;
+  if (Yin.error())
+    return;
+
+  // Add a call stack to MemProfData.CallStacks and return its CallStackId.
+  auto AddCallStack = [&](ArrayRef<Frame> CallStack) -> CallStackId {
+    SmallVector<FrameId> IndexedCallStack;
+    IndexedCallStack.reserve(CallStack.size());
+    for (const Frame &F : CallStack)
+      IndexedCallStack.push_back(MemProfData.addFrame(F));
+    return MemProfData.addCallStack(std::move(IndexedCallStack));
+  };
+
+  for (const auto &[GUID, Record] : Doc.HeapProfileRecords) {
+    IndexedMemProfRecord IndexedRecord;
+
+    // Convert AllocationInfo to IndexedAllocationInfo.
+    for (const AllocationInfo &AI : Record.AllocSites) {
+      CallStackId CSId = AddCallStack(AI.CallStack);
+      IndexedRecord.AllocSites.emplace_back(CSId, AI.Info);
+    }
+
+    // Populate CallSiteIds.
+    for (const auto &CallSite : Record.CallSites) {
+      CallStackId CSId = AddCallStack(CallSite);
+      IndexedRecord.CallSiteIds.push_back(CSId);
+    }
+
+    MemProfData.Records.try_emplace(GUID, std::move(IndexedRecord));
+  }
 }
 } // namespace memprof
 } // namespace llvm

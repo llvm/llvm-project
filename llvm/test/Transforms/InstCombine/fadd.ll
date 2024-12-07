@@ -478,7 +478,7 @@ define float @fadd_fmul_common_op(float %x) {
 
 define <2 x float> @fadd_fmul_common_op_vec(<2 x float> %x) {
 ; CHECK-LABEL: @fadd_fmul_common_op_vec(
-; CHECK-NEXT:    [[A:%.*]] = fmul reassoc nsz <2 x float> [[X:%.*]], <float 4.300000e+01, float 4.300000e+01>
+; CHECK-NEXT:    [[A:%.*]] = fmul reassoc nsz <2 x float> [[X:%.*]], splat (float 4.300000e+01)
 ; CHECK-NEXT:    ret <2 x float> [[A]]
 ;
   %m = fmul reassoc nsz <2 x float> %x, <float 42.0, float 42.0>
