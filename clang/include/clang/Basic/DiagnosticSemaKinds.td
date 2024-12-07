@@ -10275,7 +10275,7 @@ def warn_array_comparison : Warning<
   InGroup<DiagGroup<"array-compare">>;
 
 def warn_array_comparison_cxx26 : Warning<
-  "comparison between two arrays is ll-formed in C++26; "
+  "comparison between two arrays is ill-formed in C++26; "
   "to compare array addresses, use unary '+' to decay operands to pointers">,
   InGroup<DiagGroup<"array-compare-cxx26">>, DefaultError;
 
