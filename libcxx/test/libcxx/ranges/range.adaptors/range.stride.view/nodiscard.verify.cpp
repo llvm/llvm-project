@@ -8,22 +8,64 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// Test that std::ranges::stride_view::base() is marked nodiscard.
+// Test that
+// std::view::stride()
+// std::ranges::stride_view::base()
+// std::ranges::stride_view::begin()
+// std::ranges::stride_view::end()
+// std::ranges::stride_view::size()
+// std::ranges::stride_view::stride()
+// are all marked nodiscard.
 
 #include <ranges>
-#include <vector>
 
 #include "../../../../std/ranges/range.adaptors/range.stride.view/types.h"
 
-void test() {
+void test_base_nodiscard() {
   const std::vector<int> intv = {1, 2, 3};
-  auto copyable_view          = CopyableView<std::vector<int>::const_iterator>(intv.begin(), intv.end());
-  static_assert(std::copy_constructible<decltype(copyable_view)>);
+  auto sv = std::ranges::stride_view(intv, 3);
 
-  const auto svc = std::ranges::stride_view<decltype(copyable_view)>(copyable_view, 2);
-  auto svm       = std::ranges::stride_view<decltype(copyable_view)>(copyable_view, 2);
+  sv.base(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::move(sv).base(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+}
 
-  svc.base(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+void test_begin_nodiscard() {
+  const auto const_sv = std::views::stride(SimpleCommonConstView{}, 2);
+  auto unsimple_sv    = std::views::stride(UnsimpleConstView{}, 2);
 
-  std::move(svm).base(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  const_sv.begin();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  unsimple_sv.begin(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+}
+
+
+void test_views_stride_nodiscard() {
+  const int range[] = {1, 2, 3};
+
+  std::views::stride( // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+      range,
+      2);
+}
+
+void test_end_nodiscard() {
+  const int range[] = {1, 2, 3};
+
+  const auto const_sv = std::views::stride(range, 2);
+  auto unsimple_sv    = std::views::stride(UnsimpleConstView{}, 2);
+
+  const_sv.end();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  unsimple_sv.end(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+}
+
+void test_size_nodiscard() {
+  auto sv             = std::views::stride(SimpleNoConstSizedCommonView(), 2);
+  const auto const_sv = std::views::stride(SimpleCommonConstView(), 2);
+
+  sv.size();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  const_sv.size(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+}
+
+void test_stride_nodiscard() {
+  const int range[] = {1, 2, 3};
+  auto const_sv = std::views::stride(range, 2);
+  const_sv.stride(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }
