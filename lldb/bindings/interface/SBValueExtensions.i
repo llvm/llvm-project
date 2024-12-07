@@ -38,7 +38,7 @@ STRING_EXTENSION_OUTSIDE(SBValue)
                 def __getitem__(self, key):
                     if isinstance(key, str):
                         return self.valobj.GetChildMemberWithName(key)
-                    raise TypeError("invalid subscript key")
+                    raise TypeError("member key must be a string")
 
             return member_access(self)
 
