@@ -52820,6 +52820,44 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // Convert store(cmov(load(p), x, CC), p) to cstore(x, p, CC)
+  //         store(cmov(x, load(p), CC), p) to cstore(x, p, InvertCC)
+  if ((VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64) &&
+      Subtarget.hasCF() && St->isSimple()) {
+    SDValue Cmov;
+    if (StoredVal.getOpcode() == X86ISD::CMOV)
+      Cmov = StoredVal;
+    else if (StoredVal.getOpcode() == ISD::TRUNCATE &&
+             StoredVal.getOperand(0).getOpcode() == X86ISD::CMOV)
+      Cmov = StoredVal.getOperand(0);
+    else
+      return SDValue();
+
+    auto *Ld = dyn_cast<LoadSDNode>(St->getChain());
+    if (!Ld || !Ld->isSimple() || Ld->getBasePtr() != St->getBasePtr())
+      return SDValue();
+
+    bool InvertCC = false;
+    SDValue V = SDValue(Ld, 0);
+    if (V == Cmov.getOperand(1))
+      InvertCC = true;
+    else if (V != Cmov.getOperand(0))
+      return SDValue();
+
+    SDVTList Tys = DAG.getVTList(MVT::Other);
+    SDValue CC = Cmov.getOperand(2);
+    SDValue Src = DAG.getAnyExtOrTrunc(Cmov.getOperand(!InvertCC), dl, VT);
+    if (InvertCC)
+      CC = DAG.getTargetConstant(
+          GetOppositeBranchCondition(
+              (X86::CondCode)Cmov.getConstantOperandVal(2)),
+          dl, MVT::i8);
+    SDValue Ops[] = {St->getChain(), Src, St->getBasePtr(), CC,
+                     Cmov.getOperand(3)};
+    return DAG.getMemIntrinsicNode(X86ISD::CSTORE, dl, Tys, Ops, VT,
+                                   St->getMemOperand());
+  }
+
   // Turn load->store of MMX types into GPR load/stores.  This avoids clobbering
   // the FP state in cases where an emms may be missing.
   // A preferable solution to the general problem is to figure out the right
