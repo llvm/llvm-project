@@ -96,7 +96,7 @@ func.func @to_memref_not_read_only(%idx : index, %f: f32) -> f32 {
   // Some op may write into the result of to_memref later.
   // CHECK: bufferization.to_memref
   // CHECK-SAME: {__inplace_operands_attr__ = ["false"]}
-  %m = bufferization.to_memref %t : memref<5xf32>
+  %m = bufferization.to_memref %t : tensor<5xf32> to memref<5xf32>
   %2 = tensor.extract %t[%idx] : tensor<5xf32>
   return %2 : f32
 }
@@ -112,7 +112,7 @@ func.func @to_memref_read_only(%idx : index, %f: f32) -> f32 {
   // Some op may write into the result of to_memref later.
   // CHECK: bufferization.to_memref
   // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
-  %m = bufferization.to_memref %t {read_only} : memref<5xf32>
+  %m = bufferization.to_memref %t {read_only} : tensor<5xf32> to memref<5xf32>
   %2 = tensor.extract %t[%idx] : tensor<5xf32>
   return %2 : f32
 }

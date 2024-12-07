@@ -4235,7 +4235,7 @@ static DenseMap<CallStackId, LinearCallStackId> writeMemoryProfileRadixTree(
   CallStackRadixTreeBuilder<LinearFrameId> Builder;
   // We don't need a MemProfFrameIndexes map as we have already converted the
   // full stack id hash to a linear offset into the StackIds array.
-  Builder.build(std::move(CallStacks), /*MemProfFrameIndexes=*/std::nullopt,
+  Builder.build(std::move(CallStacks), /*MemProfFrameIndexes=*/nullptr,
                 FrameHistogram);
   Stream.EmitRecord(bitc::FS_CONTEXT_RADIX_TREE_ARRAY, Builder.getRadixArray(),
                     RadixAbbrev);
@@ -4900,7 +4900,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
       NameVals.push_back(*ValueId);
       assert(ModuleIdMap.count(VS->modulePath()));
       NameVals.push_back(ModuleIdMap[VS->modulePath()]);
-      NameVals.push_back(getEncodedGVSummaryFlags(VS->flags()));
+      NameVals.push_back(
+          getEncodedGVSummaryFlags(VS->flags(), shouldImportValueAsDecl(VS)));
       NameVals.push_back(getEncodedGVarFlags(VS->varflags()));
       for (auto &RI : VS->refs()) {
         auto RefValueId = getValueId(RI.getGUID());

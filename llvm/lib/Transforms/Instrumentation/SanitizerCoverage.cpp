@@ -158,8 +158,8 @@ static cl::opt<bool>
 
 static cl::opt<bool> ClGatedCallbacks(
     "sanitizer-coverage-gated-trace-callbacks",
-    cl::desc("Gate the invocation of the tracing callbacks on a global "
-             "variable. Currently only supported for trace-pc-guard."),
+    cl::desc("Gate the invocation of the tracing callbacks on a global variable"
+             ". Currently only supported for trace-pc-guard and trace-cmp."),
     cl::Hidden, cl::init(false));
 
 namespace {
@@ -234,7 +234,8 @@ private:
   void instrumentFunction(Function &F);
   void InjectCoverageForIndirectCalls(Function &F,
                                       ArrayRef<Instruction *> IndirCalls);
-  void InjectTraceForCmp(Function &F, ArrayRef<Instruction *> CmpTraceTargets);
+  void InjectTraceForCmp(Function &F, ArrayRef<Instruction *> CmpTraceTargets,
+                         Value *&FunctionGateCmp);
   void InjectTraceForDiv(Function &F,
                          ArrayRef<BinaryOperator *> DivTraceTargets);
   void InjectTraceForGep(Function &F,
@@ -242,9 +243,10 @@ private:
   void InjectTraceForLoadsAndStores(Function &F, ArrayRef<LoadInst *> Loads,
                                     ArrayRef<StoreInst *> Stores);
   void InjectTraceForSwitch(Function &F,
-                            ArrayRef<Instruction *> SwitchTraceTargets);
+                            ArrayRef<Instruction *> SwitchTraceTargets,
+                            Value *&FunctionGateCmp);
   bool InjectCoverage(Function &F, ArrayRef<BasicBlock *> AllBlocks,
-                      bool IsLeafFunc);
+                      Value *&FunctionGateCmp, bool IsLeafFunc);
   GlobalVariable *CreateFunctionLocalArrayInSection(size_t NumElements,
                                                     Function &F, Type *Ty,
                                                     const char *Section);
@@ -494,9 +496,9 @@ bool ModuleSanitizerCoverage::instrumentModule() {
     SanCovLowestStack->setInitializer(Constant::getAllOnesValue(IntptrTy));
 
   if (Options.GatedCallbacks) {
-    if (!Options.TracePCGuard) {
+    if (!Options.TracePCGuard && !Options.TraceCmp) {
       C->emitError(StringRef("'") + ClGatedCallbacks.ArgStr +
-                   "' is only supported with trace-pc-guard");
+                   "' is only supported with trace-pc-guard or trace-cmp");
       return true;
     }
 
@@ -725,10 +727,11 @@ void ModuleSanitizerCoverage::instrumentFunction(Function &F) {
   if (Options.CollectControlFlow)
     createFunctionControlFlow(F);
 
-  InjectCoverage(F, BlocksToInstrument, IsLeafFunc);
+  Value *FunctionGateCmp = nullptr;
+  InjectCoverage(F, BlocksToInstrument, FunctionGateCmp, IsLeafFunc);
   InjectCoverageForIndirectCalls(F, IndirCalls);
-  InjectTraceForCmp(F, CmpTraceTargets);
-  InjectTraceForSwitch(F, SwitchTraceTargets);
+  InjectTraceForCmp(F, CmpTraceTargets, FunctionGateCmp);
+  InjectTraceForSwitch(F, SwitchTraceTargets, FunctionGateCmp);
   InjectTraceForDiv(F, DivTraceTargets);
   InjectTraceForGep(F, GepTraceTargets);
   InjectTraceForLoadsAndStores(F, Loads, Stores);
@@ -837,10 +840,10 @@ Instruction *ModuleSanitizerCoverage::CreateGateBranch(Function &F,
 
 bool ModuleSanitizerCoverage::InjectCoverage(Function &F,
                                              ArrayRef<BasicBlock *> AllBlocks,
+                                             Value *&FunctionGateCmp,
                                              bool IsLeafFunc) {
   if (AllBlocks.empty()) return false;
   CreateFunctionLocalArrays(F, AllBlocks);
-  Value *FunctionGateCmp = nullptr;
   for (size_t i = 0, N = AllBlocks.size(); i < N; i++)
     InjectCoverageAtBlock(F, *AllBlocks[i], i, FunctionGateCmp, IsLeafFunc);
   return true;
@@ -874,7 +877,8 @@ void ModuleSanitizerCoverage::InjectCoverageForIndirectCalls(
 //      {NumCases, ValueSizeInBits, Case0Value, Case1Value, Case2Value, ... })
 
 void ModuleSanitizerCoverage::InjectTraceForSwitch(
-    Function &, ArrayRef<Instruction *> SwitchTraceTargets) {
+    Function &F, ArrayRef<Instruction *> SwitchTraceTargets,
+    Value *&FunctionGateCmp) {
   for (auto *I : SwitchTraceTargets) {
     if (SwitchInst *SI = dyn_cast<SwitchInst>(I)) {
       InstrumentationIRBuilder IRB(I);
@@ -905,7 +909,13 @@ void ModuleSanitizerCoverage::InjectTraceForSwitch(
           *CurModule, ArrayOfInt64Ty, false, GlobalVariable::InternalLinkage,
           ConstantArray::get(ArrayOfInt64Ty, Initializers),
           "__sancov_gen_cov_switch_values");
-      IRB.CreateCall(SanCovTraceSwitchFunction, {Cond, GV});
+      if (Options.GatedCallbacks) {
+        auto GateBranch = CreateGateBranch(F, FunctionGateCmp, I);
+        IRBuilder<> GateIRB(GateBranch);
+        GateIRB.CreateCall(SanCovTraceSwitchFunction, {Cond, GV});
+      } else {
+        IRB.CreateCall(SanCovTraceSwitchFunction, {Cond, GV});
+      }
     }
   }
 }
@@ -969,7 +979,8 @@ void ModuleSanitizerCoverage::InjectTraceForLoadsAndStores(
 }
 
 void ModuleSanitizerCoverage::InjectTraceForCmp(
-    Function &, ArrayRef<Instruction *> CmpTraceTargets) {
+    Function &F, ArrayRef<Instruction *> CmpTraceTargets,
+    Value *&FunctionGateCmp) {
   for (auto *I : CmpTraceTargets) {
     if (ICmpInst *ICMP = dyn_cast<ICmpInst>(I)) {
       InstrumentationIRBuilder IRB(ICMP);
@@ -997,8 +1008,15 @@ void ModuleSanitizerCoverage::InjectTraceForCmp(
       }
 
       auto Ty = Type::getIntNTy(*C, TypeSize);
-      IRB.CreateCall(CallbackFunc, {IRB.CreateIntCast(A0, Ty, true),
-              IRB.CreateIntCast(A1, Ty, true)});
+      if (Options.GatedCallbacks) {
+        auto GateBranch = CreateGateBranch(F, FunctionGateCmp, I);
+        IRBuilder<> GateIRB(GateBranch);
+        GateIRB.CreateCall(CallbackFunc, {GateIRB.CreateIntCast(A0, Ty, true),
+                                          GateIRB.CreateIntCast(A1, Ty, true)});
+      } else {
+        IRB.CreateCall(CallbackFunc, {IRB.CreateIntCast(A0, Ty, true),
+                                      IRB.CreateIntCast(A1, Ty, true)});
+      }
     }
   }
 }

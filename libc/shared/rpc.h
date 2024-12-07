@@ -42,6 +42,13 @@ namespace rpc {
 #define __scoped_atomic_thread_fence(ord, scp) __atomic_thread_fence(ord)
 #endif
 
+/// Generic codes that can be used whem implementing the server.
+enum Status {
+  SUCCESS = 0x0,
+  ERROR = 0x1000,
+  UNHANDLED_OPCODE = 0x1001,
+};
+
 /// A fixed size channel used to communicate between the RPC client and server.
 struct Buffer {
   uint64_t data[8];
@@ -78,11 +85,11 @@ template <bool Invert> struct Process {
   RPC_INLINE Process &operator=(Process &&) = default;
   RPC_INLINE ~Process() = default;
 
-  uint32_t port_count = 0;
-  uint32_t *inbox = nullptr;
-  uint32_t *outbox = nullptr;
-  Header *header = nullptr;
-  Buffer *packet = nullptr;
+  const uint32_t port_count = 0;
+  const uint32_t *const inbox = nullptr;
+  uint32_t *const outbox = nullptr;
+  Header *const header = nullptr;
+  Buffer *const packet = nullptr;
 
   static constexpr uint64_t NUM_BITS_IN_WORD = sizeof(uint32_t) * 8;
   uint32_t lock[MAX_PORT_COUNT / NUM_BITS_IN_WORD] = {0};

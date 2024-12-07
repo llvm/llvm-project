@@ -127,6 +127,12 @@ getDistanceFromCounterToValueProf(const __llvm_profile_header *const Header) {
          PaddingBytesAfterVNamesSize;
 }
 
+// Add offset to pointer without assuming that the addition does not overflow.
+// This allows performing bounds checks by checking the result of the addition.
+static const char *ptr_add_with_overflow(const char *p, size_t offset) {
+  return (const char *)((uintptr_t)p + offset);
+}
+
 COMPILER_RT_VISIBILITY
 int __llvm_profile_merge_from_buffer(const char *ProfileData,
                                      uint64_t ProfileSize) {
@@ -154,9 +160,10 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
   SrcCountersStart = (char *)SrcDataEnd;
   SrcCountersEnd = SrcCountersStart +
                    Header->NumCounters * __llvm_profile_counter_entry_size();
-  SrcBitmapStart = SrcCountersEnd + __llvm_profile_get_num_padding_bytes(
-                                        SrcCountersEnd - SrcCountersStart);
-  SrcNameStart = SrcBitmapStart + Header->NumBitmapBytes;
+  SrcBitmapStart = ptr_add_with_overflow(
+      SrcCountersEnd,
+      __llvm_profile_get_num_padding_bytes(SrcCountersEnd - SrcCountersStart));
+  SrcNameStart = ptr_add_with_overflow(SrcBitmapStart, Header->NumBitmapBytes);
   SrcValueProfDataStart =
       SrcNameStart + getDistanceFromCounterToValueProf(Header);
   if (SrcNameStart < SrcCountersStart || SrcNameStart < SrcBitmapStart)
@@ -200,8 +207,8 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
     // CountersDelta computes the offset into the in-buffer counter section.
     //
     // On WIN64, CountersDelta is truncated as well, so no need for signext.
-    char *SrcCounters =
-        SrcCountersStart + ((uintptr_t)SrcData->CounterPtr - CountersDelta);
+    const char *SrcCounters = ptr_add_with_overflow(
+        SrcCountersStart, (uintptr_t)SrcData->CounterPtr - CountersDelta);
     // CountersDelta needs to be decreased as we advance to the next data
     // record.
     CountersDelta -= sizeof(*SrcData);
@@ -220,8 +227,8 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
       }
     }
 
-    const char *SrcBitmap =
-        SrcBitmapStart + ((uintptr_t)SrcData->BitmapPtr - BitmapDelta);
+    const char *SrcBitmap = ptr_add_with_overflow(
+        SrcBitmapStart, (uintptr_t)SrcData->BitmapPtr - BitmapDelta);
     // BitmapDelta also needs to be decreased as we advance to the next data
     // record.
     BitmapDelta -= sizeof(*SrcData);

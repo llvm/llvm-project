@@ -844,11 +844,15 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
     ctx.sym.globalOffsetTable->section = sec;
   }
 
-  // .rela_iplt_{start,end} mark the start and the end of .rel[a].dyn.
-  if (ctx.sym.relaIpltStart && ctx.mainPart->relaDyn->isNeeded()) {
-    ctx.sym.relaIpltStart->section = ctx.mainPart->relaDyn.get();
-    ctx.sym.relaIpltEnd->section = ctx.mainPart->relaDyn.get();
-    ctx.sym.relaIpltEnd->value = ctx.mainPart->relaDyn->getSize();
+  // .rela_iplt_{start,end} mark the start and the end of the section containing
+  // IRELATIVE relocations.
+  if (ctx.sym.relaIpltStart) {
+    auto &dyn = getIRelativeSection(ctx);
+    if (dyn.isNeeded()) {
+      ctx.sym.relaIpltStart->section = &dyn;
+      ctx.sym.relaIpltEnd->section = &dyn;
+      ctx.sym.relaIpltEnd->value = dyn.getSize();
+    }
   }
 
   PhdrEntry *last = nullptr;
@@ -1572,8 +1576,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       if (osec->addr % osec->addralign != 0)
         Warn(ctx) << "address (0x" << Twine::utohexstr(osec->addr)
                   << ") of section " << osec->name
-                  << " is not a multiple of alignment ("
-                  << Twine(osec->addralign) << ")";
+                  << " is not a multiple of alignment (" << osec->addralign
+                  << ")";
     }
 
   // Sizes are no longer allowed to grow, so all allowable spills have been
@@ -2672,8 +2676,9 @@ template <class ELFT> void Writer<ELFT>::checkSections() {
   for (OutputSection *os : ctx.outputSections)
     if ((os->addr + os->size < os->addr) ||
         (!ELFT::Is64Bits && os->addr + os->size > uint64_t(UINT32_MAX) + 1))
-      Err(ctx) << "section " << os->name << " at 0x" << utohexstr(os->addr)
-               << " of size 0x" << utohexstr(os->size)
+      Err(ctx) << "section " << os->name << " at 0x"
+               << utohexstr(os->addr, true) << " of size 0x"
+               << utohexstr(os->size, true)
                << " exceeds available address space";
 
   // Check for overlapping file offsets. In this case we need to skip any
@@ -2794,7 +2799,7 @@ template <class ELFT> void Writer<ELFT>::openFile() {
   if (fileSize != size_t(fileSize) || maxSize < fileSize) {
     std::string msg;
     raw_string_ostream s(msg);
-    s << "output file too large: " << Twine(fileSize) << " bytes\n"
+    s << "output file too large: " << fileSize << " bytes\n"
       << "section sizes:\n";
     for (OutputSection *os : ctx.outputSections)
       s << os->name << ' ' << os->size << "\n";

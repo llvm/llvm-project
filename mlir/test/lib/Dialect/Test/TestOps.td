@@ -1886,6 +1886,11 @@ def LegalOpC : TEST_Op<"legal_op_c">,
   Arguments<(ins I32)>, Results<(outs I32)>;
 def LegalOpD : TEST_Op<"legal_op_d">, Arguments<(ins AnyType)>;
 
+def DuplicateBlockArgsOp : TEST_Op<"duplicate_block_args", [SingleBlock]> {
+  let arguments = (ins UnitAttr:$is_legal);
+  let regions = (region SizedRegion<1>:$body);
+}
+
 // Check that the conversion infrastructure can properly undo the creation of
 // operations where an operation was created before its parent, in this case,
 // in the parent's builder.
@@ -2781,7 +2786,7 @@ def TestGraphLoopOp : TEST_Op<"graph_loop",
 //===----------------------------------------------------------------------===//
 // Test InferIntRangeInterface
 //===----------------------------------------------------------------------===//
-def InferIntRangeType : AnyTypeOf<[AnyInteger, Index, VectorOf<[AnyInteger, Index]>]>;
+def InferIntRangeType : AnyTypeOf<[AnyInteger, Index, VectorOfNonZeroRankOf<[AnyInteger, Index]>]>;
 
 def TestWithBoundsOp : TEST_Op<"with_bounds",
                           [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
@@ -3045,6 +3050,15 @@ def TestOpUsingPropertyInCustomAndOther
     IntArrayProperty<"int64_t">:$prop,
     IntProperty<"int64_t">:$other
   );
+}
+
+def TestOpWithVariadicSegmentProperties : TEST_Op<"variadic_segment_prop",
+    [AttrSizedOperandSegments, AttrSizedResultSegments]> {
+  let arguments = (ins Variadic<I64>:$a1, Variadic<I64>:$a2);
+  let results = (outs Variadic<I64>:$b1, Variadic<I64>:$b2);
+  let assemblyFormat = [{
+    $a1 `:` $a2 `:` type($b1) `:` type($b2) prop-dict attr-dict `end`
+  }];
 }
 
 def TestOpUsingPropertyRefInCustom : TEST_Op<"using_property_ref_in_custom"> {

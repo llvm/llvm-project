@@ -18,7 +18,7 @@ def junit_from_xml(xml):
 
 class TestReports(unittest.TestCase):
     def test_title_only(self):
-        self.assertEqual(_generate_report("Foo", []), ("", None))
+        self.assertEqual(_generate_report("Foo", []), ("", "success"))
 
     def test_no_tests_in_testsuite(self):
         self.assertEqual(
@@ -336,7 +336,7 @@ def _generate_report(title, junit_objects, size_limit=1024 * 1024, list_failures
                     )
 
     if not tests_run:
-        return ("", style)
+        return ("", None)
 
     style = "error" if tests_failed else "success"
     report = [f"# {title}", ""]

@@ -10,8 +10,8 @@
 #define LLVM_LIBC_SRC___SUPPORT_RPC_RPC_CLIENT_H
 
 #include "shared/rpc.h"
+#include "shared/rpc_opcodes.h"
 
-#include "include/llvm-libc-types/rpc_opcodes_t.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/config.h"
 
@@ -29,7 +29,7 @@ static_assert(cpp::is_trivially_copyable<Client>::value &&
               "The client is not trivially copyable from the server");
 
 /// The libc client instance used to communicate with the server.
-extern Client client;
+[[gnu::visibility("protected")]] extern Client client asm("__llvm_rpc_client");
 
 } // namespace rpc
 } // namespace LIBC_NAMESPACE_DECL

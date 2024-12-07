@@ -980,8 +980,14 @@ Sema::VarArgKind Sema::isValidVarArgType(const QualType &Ty) {
   if (Ty->isObjCObjectType())
     return VAK_Invalid;
 
+  if (getLangOpts().HLSL && Ty->getAs<HLSLAttributedResourceType>())
+    return VAK_Valid;
+
   if (getLangOpts().MSVCCompat)
     return VAK_MSVCUndefined;
+
+  if (getLangOpts().HLSL && Ty->getAs<HLSLAttributedResourceType>())
+    return VAK_Valid;
 
   // FIXME: In C++11, these cases are conditionally-supported, meaning we're
   // permitted to reject them. We should consider doing so.
@@ -4894,6 +4900,8 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
     return ExprError();
   }
 
+  CheckInvalidBuiltinCountedByRef(base, ArraySubscriptKind);
+
   // Handle any non-overload placeholder types in the base and index
   // expressions.  We can't handle overloads here because the other
   // operand might be an overloadable type, in which case the overload
@@ -6485,6 +6493,12 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
 
   if (CheckArgsForPlaceholders(ArgExprs))
     return ExprError();
+
+  // The result of __builtin_counted_by_ref cannot be used as a function
+  // argument. It allows leaking and modification of bounds safety information.
+  for (const Expr *Arg : ArgExprs)
+    if (CheckInvalidBuiltinCountedByRef(Arg, FunctionArgKind))
+      return ExprError();
 
   if (getLangOpts().CPlusPlus) {
     // If this is a pseudo-destructor expression, build the call immediately.
@@ -9196,38 +9210,6 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
   LHSType = Context.getCanonicalType(LHSType).getUnqualifiedType();
   RHSType = Context.getCanonicalType(RHSType).getUnqualifiedType();
 
-  // __builtin_counted_by_ref cannot be assigned to a variable, used in
-  // function call, or in a return.
-  auto FindBuiltinCountedByRefExpr = [&](Expr *E) -> CallExpr * {
-    struct BuiltinCountedByRefVisitor : DynamicRecursiveASTVisitor {
-      CallExpr *TheCall = nullptr;
-      bool VisitCallExpr(CallExpr *CE) override {
-        if (CE->getBuiltinCallee() == Builtin::BI__builtin_counted_by_ref) {
-          TheCall = CE;
-          return false;
-        }
-        return true;
-      }
-      bool
-      VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *UE) override {
-        // A UnaryExprOrTypeTraitExpr---e.g. sizeof, __alignof, etc.---isn't
-        // the same as a CallExpr, so if we find a __builtin_counted_by_ref()
-        // call in one, ignore it.
-        return false;
-      }
-    } V;
-    V.TraverseStmt(E);
-    return V.TheCall;
-  };
-  static llvm::SmallPtrSet<CallExpr *, 4> Diagnosed;
-  if (auto *CE = FindBuiltinCountedByRefExpr(RHS.get());
-      CE && !Diagnosed.count(CE)) {
-    Diagnosed.insert(CE);
-    Diag(CE->getExprLoc(),
-         diag::err_builtin_counted_by_ref_cannot_leak_reference)
-        << CE->getSourceRange();
-  }
-
   // Common case: no conversion required.
   if (LHSType == RHSType) {
     Kind = CK_NoOp;
@@ -11851,14 +11833,21 @@ static void diagnoseTautologicalComparison(Sema &S, SourceLocation Loc,
     AlwaysEqual, // std::strong_ordering::equal from operator<=>
   };
 
+  // C++1a [array.comp]:
+  //   Equality and relational comparisons ([expr.eq], [expr.rel]) between two
+  //   operands of array type.
   // C++2a [depr.array.comp]:
   //   Equality and relational comparisons ([expr.eq], [expr.rel]) between two
   //   operands of array type are deprecated.
-  if (S.getLangOpts().CPlusPlus20 && LHSStripped->getType()->isArrayType() &&
+  if (S.getLangOpts().CPlusPlus && LHSStripped->getType()->isArrayType() &&
       RHSStripped->getType()->isArrayType()) {
-    S.Diag(Loc, diag::warn_depr_array_comparison)
-        << LHS->getSourceRange() << RHS->getSourceRange()
-        << LHSStripped->getType() << RHSStripped->getType();
+    auto IsDeprArrayComparionIgnored =
+        S.getDiagnostics().isIgnored(diag::warn_depr_array_comparison, Loc);
+    auto DiagID = !S.getLangOpts().CPlusPlus20 || IsDeprArrayComparionIgnored
+                      ? diag::warn_array_comparison
+                      : diag::warn_depr_array_comparison;
+    S.Diag(Loc, DiagID) << LHS->getSourceRange() << RHS->getSourceRange()
+                        << LHSStripped->getType() << RHSStripped->getType();
     // Carry on to produce the tautological comparison warning, if this
     // expression is potentially-evaluated, we can resolve the array to a
     // non-weak declaration, and so on.
@@ -13778,42 +13767,6 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
     ConvTy = CheckAssignmentConstraints(Loc, LHSType, RHSType);
   }
 
-  // __builtin_counted_by_ref can't be used in a binary expression or array
-  // subscript on the LHS.
-  int DiagOption = -1;
-  auto FindInvalidUseOfBoundsSafetyCounter = [&](Expr *E) -> CallExpr * {
-    struct BuiltinCountedByRefVisitor : DynamicRecursiveASTVisitor {
-      CallExpr *CE = nullptr;
-      bool InvalidUse = false;
-      int Option = -1;
-
-      bool VisitCallExpr(CallExpr *E) override {
-        if (E->getBuiltinCallee() == Builtin::BI__builtin_counted_by_ref) {
-          CE = E;
-          return false;
-        }
-        return true;
-      }
-
-      bool VisitArraySubscriptExpr(ArraySubscriptExpr *E) override {
-        InvalidUse = true;
-        Option = 0; // report 'array expression' in diagnostic.
-        return true;
-      }
-      bool VisitBinaryOperator(BinaryOperator *E) override {
-        InvalidUse = true;
-        Option = 1; // report 'binary expression' in diagnostic.
-        return true;
-      }
-    } V;
-    V.TraverseStmt(E);
-    DiagOption = V.Option;
-    return V.InvalidUse ? V.CE : nullptr;
-  };
-  if (auto *CE = FindInvalidUseOfBoundsSafetyCounter(LHSExpr))
-    Diag(CE->getExprLoc(), diag::err_builtin_counted_by_ref_invalid_lhs_use)
-        << DiagOption << CE->getSourceRange();
-
   if (DiagnoseAssignmentResult(ConvTy, Loc, LHSType, RHSType, RHS.get(),
                                AssignmentAction::Assigning))
     return QualType();
@@ -15273,6 +15226,12 @@ ExprResult Sema::ActOnBinOp(Scope *S, SourceLocation TokLoc,
   // type precision.
   if (Kind == tok::TokenKind::slash)
     DetectPrecisionLossInComplexDivision(*this, TokLoc, LHSExpr);
+
+  BuiltinCountedByRefKind K =
+      BinaryOperator::isAssignmentOp(Opc) ? AssignmentKind : BinaryExprKind;
+
+  CheckInvalidBuiltinCountedByRef(LHSExpr, K);
+  CheckInvalidBuiltinCountedByRef(RHSExpr, K);
 
   return BuildBinOp(S, TokLoc, Opc, LHSExpr, RHSExpr);
 }
@@ -18479,7 +18438,11 @@ static bool isVariableAlreadyCapturedInScopeInfo(CapturingScopeInfo *CSI,
     // are mutable in the sense that user can change their value - they are
     // private instances of the captured declarations.
     const Capture &Cap = CSI->getCapture(Var);
-    if (Cap.isCopyCapture() &&
+    // C++ [expr.prim.lambda]p10:
+    //   The type of such a data member is [...] an lvalue reference to the
+    //   referenced function type if the entity is a reference to a function.
+    //   [...]
+    if (Cap.isCopyCapture() && !DeclRefType->isFunctionType() &&
         !(isa<LambdaScopeInfo>(CSI) &&
           !cast<LambdaScopeInfo>(CSI)->lambdaCaptureShouldBeConst()) &&
         !(isa<CapturedRegionScopeInfo>(CSI) &&
@@ -18789,7 +18752,12 @@ static bool captureInLambda(LambdaScopeInfo *LSI, ValueDecl *Var,
     //   parameter-declaration-clause is not followed by mutable.
     DeclRefType = CaptureType.getNonReferenceType();
     bool Const = LSI->lambdaCaptureShouldBeConst();
-    if (Const && !CaptureType->isReferenceType())
+    // C++ [expr.prim.lambda]p10:
+    //   The type of such a data member is [...] an lvalue reference to the
+    //   referenced function type if the entity is a reference to a function.
+    //   [...]
+    if (Const && !CaptureType->isReferenceType() &&
+        !DeclRefType->isFunctionType())
       DeclRefType.addConst();
   }
 

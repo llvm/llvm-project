@@ -876,8 +876,7 @@ def sub_umbrella : Separate<["-"], "sub_umbrella">,
     Group<grp_rare>;
 def allowable_client : Separate<["-"], "allowable_client">,
     MetaVarName<"<name>">,
-    HelpText<"Specify <name> of a dylib or framework that is allowed to link to this dylib">,
-    Flags<[HelpHidden]>,
+    HelpText<"Specify <name> of a dylib, framework, or executable that is allowed to link to this dylib">,
     Group<grp_rare>;
 def client_name : Separate<["-"], "client_name">,
     MetaVarName<"<name>">,
