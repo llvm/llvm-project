@@ -162,5 +162,22 @@ define void @atomicstore(ptr %p, i64 %0) {
   ret void
 }
 
+define void @loadstorediffptr(ptr %p, i32 %0) {
+; CHECK-LABEL: loadstorediffptr:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl (%rdi), %eax
+; CHECK-NEXT:    cmpl %eax, %esi
+; CHECK-NEXT:    cmovbel %eax, %esi
+; CHECK-NEXT:    movl %esi, 4(%rdi)
+; CHECK-NEXT:    retq
+  %2 = getelementptr [2 x i32], ptr %p, i32 0, i32 0
+  %3 = load i32, ptr %2, align 4
+  %4 = icmp ule i32 %0, %3
+  %5 = select i1 %4, i32 %3, i32 %0
+  %6 = getelementptr [2 x i32], ptr %p, i32 0, i32 1
+  store i32 %5, ptr %6, align 4
+  ret void
+}
+
 declare i32 @llvm.smax.i32(i32, i32)
 declare i32 @llvm.umin.i32(i32, i32)
