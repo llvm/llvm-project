@@ -3088,6 +3088,26 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
       defaultValuedAttrStartIndex = i;
     }
   }
+
+  // Check if parameters besides default valued one are enough to distinguish
+  // between builders with wrapped and unwrapped arguments.
+  bool hasBuilderAmbiguity = true;
+  for (const auto &arg : op.getArgs()) {
+    auto *namedAttr = dyn_cast<NamedAttribute *>(arg);
+    if (!namedAttr)
+      continue;
+    Attribute attr = namedAttr->attr;
+    if (attr.hasDefaultValue() || attr.isDerivedAttr())
+      continue;
+
+    if (attrParamKind != AttrParamKind::WrappedAttr ||
+        !canUseUnwrappedRawValue(attr))
+      continue;
+
+    hasBuilderAmbiguity = false;
+    break;
+  }
+
   // Avoid generating build methods that are ambiguous due to default values by
   // requiring at least one attribute.
   if (defaultValuedAttrStartIndex < op.getNumArgs()) {
@@ -3098,9 +3118,9 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
         cast<NamedAttribute *>(op.getArg(defaultValuedAttrStartIndex));
     Attribute attr = namedAttr->attr;
     if ((attrParamKind == AttrParamKind::WrappedAttr &&
-         canUseUnwrappedRawValue(attr)) ||
+         canUseUnwrappedRawValue(attr) && hasBuilderAmbiguity) ||
         (attrParamKind == AttrParamKind::UnwrappedValue &&
-         !canUseUnwrappedRawValue(attr))) {
+         !canUseUnwrappedRawValue(attr) && hasBuilderAmbiguity)) {
       ++defaultValuedAttrStartIndex;
       defaultValuedAttrLikeStartIndex = defaultValuedAttrStartIndex;
     }

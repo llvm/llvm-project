@@ -10,17 +10,10 @@
 #define FORTRAN_RUNTIME_ALLOCATOR_REGISTRY_H_
 
 #include "flang/Common/api-attrs.h"
+#include "flang/Runtime/allocator-registry-consts.h"
 #include <cstdint>
 #include <cstdlib>
 #include <vector>
-
-static constexpr unsigned kDefaultAllocator = 0;
-
-// Allocator used for CUF
-static constexpr unsigned kPinnedAllocatorPos = 1;
-static constexpr unsigned kDeviceAllocatorPos = 2;
-static constexpr unsigned kManagedAllocatorPos = 3;
-static constexpr unsigned kUnifiedAllocatorPos = 4;
 
 #define MAX_ALLOCATOR 7 // 3 bits are reserved in the descriptor.
 
