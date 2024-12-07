@@ -17,8 +17,7 @@ template <typename T> struct Complex {
   T imag;
 };
 
-template <typename T, typename U>
-T conjugate(T c) {
+template <typename T, typename U> T conjugate(T c) {
   Complex<U> c_c = cpp::bit_cast<Complex<U>>(c);
   c_c.imag = -c_c.imag;
   return cpp::bit_cast<T>(c_c);
