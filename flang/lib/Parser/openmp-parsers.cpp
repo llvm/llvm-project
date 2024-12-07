@@ -99,6 +99,26 @@ constexpr ModifierList<Clause, Separator> modifierList(Separator sep) {
   return ModifierList<Clause, Separator>(sep);
 }
 
+// Parse the input as any modifier from ClauseTy, but only succeed if
+// the result was the SpecificTy. It requires that SpecificTy is one
+// of the alternatives in ClauseTy::Modifier.
+// The reason to have this is that ClauseTy::Modifier has "source",
+// while specific modifiers don't. This class allows to parse a specific
+// modifier together with obtaining its location.
+template <typename SpecificTy, typename ClauseTy>
+struct SpecificModifierParser {
+  using resultType = typename ClauseTy::Modifier;
+  std::optional<resultType> Parse(ParseState &state) const {
+    Parser<resultType> p;
+    if (auto result{attempt(Parser<resultType>{}).Parse(state)}) {
+      if (std::holds_alternative<SpecificTy>(result->u)) {
+        return result;
+      }
+    }
+    return std::nullopt;
+  }
+};
+
 // OpenMP Clauses
 
 // [5.0] 2.1.6 iterator-specifier -> type-declaration-stmt = subscript-triple |
@@ -232,6 +252,11 @@ TYPE_PARSER(construct<OmpReductionModifier>(
     "TASK" >> pure(OmpReductionModifier::Value::Task) ||
     "DEFAULT" >> pure(OmpReductionModifier::Value::Default)))
 
+TYPE_PARSER(construct<OmpStepComplexModifier>( //
+    "STEP" >> parenthesized(scalarIntExpr)))
+
+TYPE_PARSER(construct<OmpStepSimpleModifier>(scalarIntExpr))
+
 TYPE_PARSER(construct<OmpTaskDependenceType>(
     "DEPOBJ" >> pure(OmpTaskDependenceType::Value::Depobj) ||
     "IN"_id >> pure(OmpTaskDependenceType::Value::In) ||
@@ -284,6 +309,11 @@ TYPE_PARSER(sourced(construct<OmpIfClause::Modifier>(OmpDirectiveNameParser{})))
 
 TYPE_PARSER(sourced(construct<OmpLastprivateClause::Modifier>(
     Parser<OmpLastprivateModifier>{})))
+
+TYPE_PARSER(sourced(
+    construct<OmpLinearClause::Modifier>(Parser<OmpLinearModifier>{}) ||
+    construct<OmpLinearClause::Modifier>(Parser<OmpStepComplexModifier>{}) ||
+    construct<OmpLinearClause::Modifier>(Parser<OmpStepSimpleModifier>{})))
 
 TYPE_PARSER(sourced(construct<OmpMapClause::Modifier>(
     sourced(construct<OmpMapClause::Modifier>(Parser<OmpMapTypeModifier>{}) ||
@@ -460,13 +490,33 @@ TYPE_PARSER(construct<OmpToClause>(
     applyFunction<OmpToClause>(makeMobClause<false>,
         modifierList<OmpToClause>(maybe(","_tok)), Parser<OmpObjectList>{})))
 
-TYPE_CONTEXT_PARSER("Omp LINEAR clause"_en_US,
-    construct<OmpLinearClause>(
-        construct<OmpLinearClause>(construct<OmpLinearClause::WithModifier>(
-            Parser<OmpLinearModifier>{}, parenthesized(nonemptyList(name)),
-            maybe(":" >> scalarIntConstantExpr))) ||
-        construct<OmpLinearClause>(construct<OmpLinearClause::WithoutModifier>(
-            nonemptyList(name), maybe(":" >> scalarIntConstantExpr)))))
+OmpLinearClause makeLinearFromOldSyntax(OmpLinearClause::Modifier &&lm,
+    OmpObjectList &&objs, std::optional<OmpLinearClause::Modifier> &&ssm) {
+  std::list<OmpLinearClause::Modifier> mods;
+  mods.emplace_back(std::move(lm));
+  if (ssm) {
+    mods.emplace_back(std::move(*ssm));
+  }
+  return OmpLinearClause{std::move(objs),
+      mods.empty() ? decltype(mods){} : std::move(mods),
+      /*PostModified=*/false};
+}
+
+TYPE_PARSER(
+    // Parse the "modifier(x)" first, because syntacticaly it will match
+    // an array element (i.e. a list item).
+    // LINEAR(linear-modifier(list) [: step-simple-modifier])
+    construct<OmpLinearClause>( //
+        applyFunction(makeLinearFromOldSyntax,
+            SpecificModifierParser<OmpLinearModifier, OmpLinearClause>{},
+            parenthesized(Parser<OmpObjectList>{}),
+            maybe(":"_tok >> SpecificModifierParser<OmpStepSimpleModifier,
+                                 OmpLinearClause>{}))) ||
+    // LINEAR(list [: modifiers])
+    construct<OmpLinearClause>( //
+        Parser<OmpObjectList>{},
+        maybe(":"_tok >> nonemptyList(Parser<OmpLinearClause::Modifier>{})),
+        /*PostModified=*/pure(true)))
 
 // OpenMPv5.2 12.5.2 detach-clause -> DETACH (event-handle)
 TYPE_PARSER(construct<OmpDetachClause>(Parser<OmpObject>{}))

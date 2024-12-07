@@ -414,14 +414,14 @@ void OmpStructureChecker::CheckMultListItems() {
 
   // Linear clause
   for (auto [_, clause] : FindClauses(llvm::omp::Clause::OMPC_linear)) {
-    const auto &linearClause{std::get<parser::OmpClause::Linear>(clause->u)};
+    auto &linearClause{std::get<parser::OmpClause::Linear>(clause->u)};
     std::list<parser::Name> nameList;
-    common::visit(
-        [&](const auto &u) {
-          std::copy(
-              u.names.begin(), u.names.end(), std::back_inserter(nameList));
-        },
-        linearClause.v.u);
+    SymbolSourceMap symbols;
+    GetSymbolsInObjectList(
+        std::get<parser::OmpObjectList>(linearClause.v.t), symbols);
+    llvm::transform(symbols, std::back_inserter(nameList), [&](auto &&pair) {
+      return parser::Name{pair.second, const_cast<Symbol *>(pair.first)};
+    });
     CheckMultipleOccurrence(listVars, nameList, clause->source, "LINEAR");
   }
 }
@@ -958,28 +958,13 @@ void OmpStructureChecker::CheckDistLinear(
   const auto &beginLoopDir{std::get<parser::OmpBeginLoopDirective>(x.t)};
   const auto &clauses{std::get<parser::OmpClauseList>(beginLoopDir.t)};
 
-  semantics::UnorderedSymbolSet indexVars;
+  SymbolSourceMap indexVars;
 
   // Collect symbols of all the variables from linear clauses
-  for (const auto &clause : clauses.v) {
-    if (const auto *linearClause{
-            std::get_if<parser::OmpClause::Linear>(&clause.u)}) {
-
-      std::list<parser::Name> values;
-      // Get the variant type
-      if (std::holds_alternative<parser::OmpLinearClause::WithModifier>(
-              linearClause->v.u)) {
-        const auto &withM{
-            std::get<parser::OmpLinearClause::WithModifier>(linearClause->v.u)};
-        values = withM.names;
-      } else {
-        const auto &withOutM{std::get<parser::OmpLinearClause::WithoutModifier>(
-            linearClause->v.u)};
-        values = withOutM.names;
-      }
-      for (auto const &v : values) {
-        indexVars.insert(*(v.symbol));
-      }
+  for (auto &clause : clauses.v) {
+    if (auto *linearClause{std::get_if<parser::OmpClause::Linear>(&clause.u)}) {
+      auto &objects{std::get<parser::OmpObjectList>(linearClause->v.t)};
+      GetSymbolsInObjectList(objects, indexVars);
     }
   }
 
@@ -999,8 +984,8 @@ void OmpStructureChecker::CheckDistLinear(
         if (loop->IsDoNormal()) {
           const parser::Name &itrVal{GetLoopIndex(loop)};
           if (itrVal.symbol) {
-            // Remove the symbol from the collcted set
-            indexVars.erase(*(itrVal.symbol));
+            // Remove the symbol from the collected set
+            indexVars.erase(&itrVal.symbol->GetUltimate());
           }
           collapseVal--;
           if (collapseVal == 0) {
@@ -1016,12 +1001,10 @@ void OmpStructureChecker::CheckDistLinear(
     }
 
     // Show error for the remaining variables
-    for (auto var : indexVars) {
-      const Symbol &root{GetAssociationRoot(var)};
-      context_.Say(parser::FindSourceLocation(x),
-          "Variable '%s' not allowed in `LINEAR` clause, only loop iterator "
-          "can be specified in `LINEAR` clause of a construct combined with "
-          "`DISTRIBUTE`"_err_en_US,
+    for (auto &[symbol, source] : indexVars) {
+      const Symbol &root{GetAssociationRoot(*symbol)};
+      context_.Say(source,
+          "Variable '%s' not allowed in LINEAR clause, only loop iterator can be specified in LINEAR clause of a construct combined with DISTRIBUTE"_err_en_US,
           root.name());
     }
   }
@@ -3619,17 +3602,63 @@ void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_linear);
+  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Directive dir{GetContext().directive};
+  parser::CharBlock clauseSource{GetContext().clauseSource};
+  const parser::OmpLinearModifier *linearMod{nullptr};
 
-  parser::CharBlock source{GetContext().clauseSource};
-  // 2.7 Loop Construct Restriction
-  if ((llvm::omp::allDoSet | llvm::omp::allSimdSet)
-          .test(GetContext().directive)) {
-    if (std::holds_alternative<parser::OmpLinearClause::WithModifier>(x.v.u)) {
+  SymbolSourceMap symbols;
+  auto &objects{std::get<parser::OmpObjectList>(x.v.t)};
+  GetSymbolsInObjectList(objects, symbols);
+
+  auto CheckIntegerNoRef{[&](const Symbol *symbol, parser::CharBlock source) {
+    if (!symbol->GetType()->IsNumeric(TypeCategory::Integer)) {
+      auto &desc{OmpGetDescriptor<parser::OmpLinearModifier>()};
       context_.Say(source,
-          "A modifier may not be specified in a LINEAR clause "
-          "on the %s directive"_err_en_US,
-          ContextDirectiveAsFortran());
-      return;
+          "The list item '%s' specified without the REF '%s' must be of INTEGER type"_err_en_US,
+          symbol->name(), desc.name.str());
+    }
+  }};
+
+  if (OmpVerifyModifiers(x.v, llvm::omp::OMPC_linear, clauseSource, context_)) {
+    auto &modifiers{OmpGetModifiers(x.v)};
+    linearMod = OmpGetUniqueModifier<parser::OmpLinearModifier>(modifiers);
+    if (linearMod) {
+      // 2.7 Loop Construct Restriction
+      if ((llvm::omp::allDoSet | llvm::omp::allSimdSet).test(dir)) {
+        context_.Say(clauseSource,
+            "A modifier may not be specified in a LINEAR clause on the %s directive"_err_en_US,
+            ContextDirectiveAsFortran());
+        return;
+      }
+
+      auto &desc{OmpGetDescriptor<parser::OmpLinearModifier>()};
+      for (auto &[symbol, source] : symbols) {
+        if (linearMod->v != parser::OmpLinearModifier::Value::Ref) {
+          CheckIntegerNoRef(symbol, source);
+        } else {
+          if (!IsAllocatable(*symbol) && !IsAssumedShape(*symbol) &&
+              !IsPolymorphic(*symbol)) {
+            context_.Say(source,
+                "The list item `%s` specified with the REF '%s' must be polymorphic variable, assumed-shape array, or a variable with the `ALLOCATABLE` attribute"_err_en_US,
+                symbol->name(), desc.name.str());
+          }
+        }
+        if (linearMod->v == parser::OmpLinearModifier::Value::Ref ||
+            linearMod->v == parser::OmpLinearModifier::Value::Uval) {
+          if (!IsDummy(*symbol) || IsValue(*symbol)) {
+            context_.Say(source,
+                "If the `%s` is REF or UVAL, the list item '%s' must be a dummy argument without the VALUE attribute"_err_en_US,
+                desc.name.str(), symbol->name());
+          }
+        }
+      } // for (symbol, source)
+
+      if (version >= 52 && !std::get</*PostModified=*/bool>(x.v.t)) {
+        context_.Say(OmpGetModifierSource(modifiers, linearMod),
+            "The 'modifier(<list>)' syntax is deprecated in %s, use '<list> : modifier' instead"_warn_en_US,
+            ThisVersion(version));
+      }
     }
   }
 
@@ -3642,73 +3671,28 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
     }
   }
 
-  auto checkForValidLinearClause_01 = [&](const parser::Name &name,
-                                          bool is_ref) {
-    std::string listItemName{name.ToString()};
-    if (!is_ref && !name.symbol->GetType()->IsNumeric(TypeCategory::Integer)) {
-      context_.Say(source,
-          "The list item `%s` specified with other than linear-modifier `REF` must be of type INTEGER"_err_en_US,
-          listItemName);
+  // OpenMP 5.2: Linear clause Restrictions
+  for (auto &[symbol, source] : symbols) {
+    if (!linearMod) {
+      // Already checked this with the modifier present.
+      CheckIntegerNoRef(symbol, source);
     }
-    if (GetContext().directive == llvm::omp::Directive::OMPD_declare_simd &&
-        !IsDummy(*name.symbol)) {
+    if (dir == llvm::omp::Directive::OMPD_declare_simd && !IsDummy(*symbol)) {
       context_.Say(source,
           "The list item `%s` must be a dummy argument"_err_en_US,
-          listItemName);
+          symbol->name());
     }
-    if (IsPointer(*name.symbol) ||
-        name.symbol->test(Symbol::Flag::CrayPointer)) {
+    if (IsPointer(*symbol) || symbol->test(Symbol::Flag::CrayPointer)) {
       context_.Say(source,
           "The list item `%s` in a LINEAR clause must not be Cray Pointer or a variable with POINTER attribute"_err_en_US,
-          listItemName);
+          symbol->name());
     }
-    if (FindCommonBlockContaining(*name.symbol)) {
+    if (FindCommonBlockContaining(*symbol)) {
       context_.Say(source,
           "'%s' is a common block name and must not appear in an LINEAR clause"_err_en_US,
-          listItemName);
+          symbol->name());
     }
-  };
-
-  auto checkForValidLinearClause_02 = [&](const parser::Name &name,
-                                          const parser::OmpLinearModifier::Value
-                                              &modifierValue) {
-    std::string listItemName{name.ToString()};
-    checkForValidLinearClause_01(
-        name, (modifierValue == parser::OmpLinearModifier::Value::Ref));
-    if (modifierValue != parser::OmpLinearModifier::Value::Val &&
-        IsDummy(*name.symbol) && IsValue(*name.symbol)) {
-      context_.Say(source,
-          "The list item `%s` specified with the linear-modifier `REF` or `UVAL` must be a dummy argument without `VALUE` attribute"_err_en_US,
-          listItemName);
-    }
-    if (modifierValue == parser::OmpLinearModifier::Value::Ref &&
-        !(IsAllocatable(*name.symbol) || IsAssumedShape(*name.symbol) ||
-            IsPolymorphic(*name.symbol))) {
-      context_.Say(source,
-          "The list item `%s` specified with the linear-modifier `REF` must be polymorphic variable, assumed-shape array, or a variable with the `ALLOCATABLE` attribute"_err_en_US,
-          listItemName);
-    }
-  };
-
-  // OpenMP 5.2: Linear clause Restrictions
-  common::visit(
-      common::visitors{
-          [&](const parser::OmpLinearClause::WithoutModifier &withoutModifier) {
-            for (const auto &name : withoutModifier.names) {
-              if (name.symbol) {
-                checkForValidLinearClause_01(name, false);
-              }
-            }
-          },
-          [&](const parser::OmpLinearClause::WithModifier &withModifier) {
-            for (const auto &name : withModifier.names) {
-              if (name.symbol) {
-                checkForValidLinearClause_02(name, withModifier.modifier.v);
-              }
-            }
-          },
-      },
-      x.v.u);
+  }
 }
 
 void OmpStructureChecker::CheckAllowedMapTypes(

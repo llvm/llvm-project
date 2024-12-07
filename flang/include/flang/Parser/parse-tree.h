@@ -3698,6 +3698,22 @@ struct OmpReductionModifier {
   WRAPPER_CLASS_BOILERPLATE(OmpReductionModifier, Value);
 };
 
+// Ref: [5.2:117-120]
+//
+// step-complex-modifier ->
+//    STEP(integer-expression)                      // since 5.2
+struct OmpStepComplexModifier {
+  WRAPPER_CLASS_BOILERPLATE(OmpStepComplexModifier, ScalarIntExpr);
+};
+
+// Ref: [4.5:207-210], [5.0:290-293], [5.1:323-325], [5.2:117-120]
+//
+// step-simple-modifier ->
+//    integer-expresion                             // since 4.5
+struct OmpStepSimpleModifier {
+  WRAPPER_CLASS_BOILERPLATE(OmpStepSimpleModifier, ScalarIntExpr);
+};
+
 // Ref: [4.5:169-170], [5.0:254-256], [5.1:287-289], [5.2:321]
 //
 // task-dependence-type -> // "dependence-type" in 5.1 and before
@@ -3925,7 +3941,7 @@ struct OmpDeviceTypeClause {
 struct OmpFromClause {
   TUPLE_CLASS_BOILERPLATE(OmpFromClause);
   MODIFIER_BOILERPLATE(OmpExpectation, OmpIterator, OmpMapper);
-  std::tuple<MODIFIERS(), OmpObjectList, bool> t;
+  std::tuple<MODIFIERS(), OmpObjectList, /*CommaSeparated=*/bool> t;
 };
 
 // Ref: [4.5:87-91], [5.0:140-146], [5.1:166-171], [5.2:269]
@@ -3969,28 +3985,20 @@ struct OmpLastprivateClause {
   std::tuple<MODIFIERS(), OmpObjectList> t;
 };
 
-// 2.15.3.7 linear-clause -> LINEAR (linear-list[ : linear-step])
-//          linear-list -> list | linear-modifier(list)
+// Ref: [4.5:207-210], [5.0:290-293], [5.1:323-325], [5.2:117-120]
+//
+// linear-clause ->
+//    LINEAR(list [: step-simple-modifier]) |       // since 4.5
+//    LINEAR(linear-modifier(list)
+//        [: step-simple-modifier]) |               // since 4.5, until 5.2[*]
+//    LINEAR(list [: linear-modifier,
+//        step-complex-modifier])                   // since 5.2
+// [*] Still allowed in 5.2 when on DECLARE SIMD, but deprecated.
 struct OmpLinearClause {
-  UNION_CLASS_BOILERPLATE(OmpLinearClause);
-  struct WithModifier {
-    BOILERPLATE(WithModifier);
-    WithModifier(OmpLinearModifier &&m, std::list<Name> &&n,
-        std::optional<ScalarIntConstantExpr> &&s)
-        : modifier(std::move(m)), names(std::move(n)), step(std::move(s)) {}
-    OmpLinearModifier modifier;
-    std::list<Name> names;
-    std::optional<ScalarIntConstantExpr> step;
-  };
-  struct WithoutModifier {
-    BOILERPLATE(WithoutModifier);
-    WithoutModifier(
-        std::list<Name> &&n, std::optional<ScalarIntConstantExpr> &&s)
-        : names(std::move(n)), step(std::move(s)) {}
-    std::list<Name> names;
-    std::optional<ScalarIntConstantExpr> step;
-  };
-  std::variant<WithModifier, WithoutModifier> u;
+  TUPLE_CLASS_BOILERPLATE(OmpLinearClause);
+  MODIFIER_BOILERPLATE(
+      OmpLinearModifier, OmpStepSimpleModifier, OmpStepComplexModifier);
+  std::tuple<OmpObjectList, MODIFIERS(), /*PostModified=*/bool> t;
 };
 
 // Ref: [4.5:216-219], [5.0:315-324], [5.1:347-355], [5.2:150-158]
@@ -4005,7 +4013,7 @@ struct OmpLinearClause {
 struct OmpMapClause {
   TUPLE_CLASS_BOILERPLATE(OmpMapClause);
   MODIFIER_BOILERPLATE(OmpMapTypeModifier, OmpMapper, OmpIterator, OmpMapType);
-  std::tuple<MODIFIERS(), OmpObjectList, bool> t;
+  std::tuple<MODIFIERS(), OmpObjectList, /*CommaSeparated=*/bool> t;
 };
 
 // Ref: [4.5:87-91], [5.0:140-146], [5.1:166-171], [5.2:270]
@@ -4083,7 +4091,7 @@ struct OmpScheduleClause {
 struct OmpToClause {
   TUPLE_CLASS_BOILERPLATE(OmpToClause);
   MODIFIER_BOILERPLATE(OmpExpectation, OmpIterator, OmpMapper);
-  std::tuple<MODIFIERS(), OmpObjectList, bool> t;
+  std::tuple<MODIFIERS(), OmpObjectList, /*CommaSeparated=*/bool> t;
 };
 
 // Ref: [5.0:254-255], [5.1:287-288], [5.2:321-322]

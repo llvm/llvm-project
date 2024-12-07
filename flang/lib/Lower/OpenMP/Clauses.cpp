@@ -895,8 +895,6 @@ Lastprivate make(const parser::OmpClause::Lastprivate &inp,
 Linear make(const parser::OmpClause::Linear &inp,
             semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpLinearClause
-  using wrapped = parser::OmpLinearClause;
-
   CLAUSET_ENUM_CONVERT( //
       convert, parser::OmpLinearModifier::Value, Linear::LinearModifier,
       // clang-format off
@@ -906,26 +904,23 @@ Linear make(const parser::OmpClause::Linear &inp,
       // clang-format on
   );
 
-  using Tuple = decltype(Linear::t);
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 =
+      semantics::OmpGetUniqueModifier<parser::OmpStepComplexModifier>(mods);
+  auto *m1 =
+      semantics::OmpGetUniqueModifier<parser::OmpStepSimpleModifier>(mods);
+  assert((!m0 || !m1) && "Simple and complex modifiers both present");
 
-  return Linear{Fortran::common::visit(
-      common::visitors{
-          [&](const wrapped::WithModifier &s) -> Tuple {
-            return {
-                /*StepSimpleModifier=*/std::nullopt,
-                /*StepComplexModifier=*/maybeApply(makeExprFn(semaCtx), s.step),
-                /*LinearModifier=*/convert(s.modifier.v),
-                /*List=*/makeList(s.names, makeObjectFn(semaCtx))};
-          },
-          [&](const wrapped::WithoutModifier &s) -> Tuple {
-            return {
-                /*StepSimpleModifier=*/maybeApply(makeExprFn(semaCtx), s.step),
-                /*StepComplexModifier=*/std::nullopt,
-                /*LinearModifier=*/std::nullopt,
-                /*List=*/makeList(s.names, makeObjectFn(semaCtx))};
-          },
-      },
-      inp.v.u)};
+  auto *m2 = semantics::OmpGetUniqueModifier<parser::OmpLinearModifier>(mods);
+  auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
+
+  auto &&maybeStep = m0   ? maybeApplyToV(makeExprFn(semaCtx), m0)
+                     : m1 ? maybeApplyToV(makeExprFn(semaCtx), m1)
+                          : std::optional<Linear::StepComplexModifier>{};
+
+  return Linear{{/*StepComplexModifier=*/std::move(maybeStep),
+                 /*LinearModifier=*/maybeApplyToV(convert, m2),
+                 /*List=*/makeObjects(t1, semaCtx)}};
 }
 
 Link make(const parser::OmpClause::Link &inp,
