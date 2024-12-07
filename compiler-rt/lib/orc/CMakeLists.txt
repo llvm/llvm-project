@@ -51,6 +51,7 @@ if (APPLE)
   set(ORC_ASM_SOURCES
     macho_tlv.x86-64.S
     macho_tlv.arm64.S
+    sysv_reentry.arm64.S
     )
 
   set(ORC_IMPL_HEADERS
@@ -61,6 +62,7 @@ if (APPLE)
   set(ORC_SOURCES
     ${ORC_COMMON_SOURCES}
     macho_platform.cpp
+    sysv_resolve.cpp
     )
 
   add_compiler_rt_object_libraries(RTOrc
