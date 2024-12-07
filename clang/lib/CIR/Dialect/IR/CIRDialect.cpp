@@ -3866,29 +3866,6 @@ LogicalResult cir::CatchParamOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// StdInitializerListOp Definitions
-//===----------------------------------------------------------------------===//
-
-LogicalResult cir::StdInitializerListOp::verify() {
-  auto resultType = mlir::cast<cir::StructType>(
-      mlir::cast<cir::PointerType>(getInitList().getType()).getPointee());
-  if (resultType.getMembers().size() != 2)
-    return emitOpError(
-        "std::initializer_list must be '!cir.struct' with two fields");
-  auto memberPtr = mlir::dyn_cast<cir::PointerType>(resultType.getMembers()[0]);
-  if (memberPtr == nullptr)
-    return emitOpError("first member type of std::initializer_list must be "
-                       "'!cir.ptr', but provided ")
-           << resultType.getMembers()[0];
-  auto expectedType = memberPtr.getPointee();
-  for (const mlir::Value &arg : getArgs())
-    if (expectedType != arg.getType())
-      return emitOpError("arg type must be ")
-             << expectedType << ", but provided " << arg.getType();
-  return mlir::success();
-}
-
-//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 

@@ -12,19 +12,15 @@
 #include "mlir/IR/Region.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/CharUnits.h"
-#include "clang/AST/Decl.h"
 #include "clang/AST/Mangle.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
-#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
-#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/Interfaces/ASTAttrInterfaces.h"
 #include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -89,7 +85,6 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   void lowerToMemCpy(StoreOp op);
   void lowerArrayDtor(ArrayDtor op);
   void lowerArrayCtor(ArrayCtor op);
-  void lowerStdInitializerListOp(StdInitializerListOp op);
 
   /// Collect annotations of global values in the module
   void addGlobalAnnotations(mlir::Operation *op, mlir::ArrayAttr annotations);
@@ -1125,79 +1120,6 @@ void LoweringPreparePass::lowerIterEndOp(IterEndOp op) {
   op.erase();
 }
 
-/// lowering construction of std::initializer_list.
-/// 1. alloca array for arg list.
-/// 2. copy arg list to array.
-/// 3. construct std::initializer_list from array.
-void LoweringPreparePass::lowerStdInitializerListOp(StdInitializerListOp op) {
-  auto loc = op.getLoc();
-  cir::CIRDataLayout dataLayout(theModule);
-  auto args = op.getArgs();
-
-  auto stdInitializerListType = mlir::cast<cir::StructType>(
-      mlir::cast<cir::PointerType>(op.getInitList().getType()).getPointee());
-  clang::RecordDecl::field_range stdInitializerListFields =
-      stdInitializerListType.getAst().getRawDecl()->fields();
-
-  mlir::Type elementType =
-      mlir::cast<cir::PointerType>(stdInitializerListType.getMembers()[0])
-          .getPointee();
-  auto tempArrayType =
-      cir::ArrayType::get(&getContext(), elementType, args.size());
-
-  CIRBaseBuilderTy builder(getContext());
-  builder.setInsertionPointAfter(op);
-
-  IntegerAttr alignment = builder.getI64IntegerAttr(
-      dataLayout.getPrefTypeAlign(tempArrayType).value());
-  assert(!cir::MissingFeatures::addressSpace());
-  mlir::Value arrayPtr = builder.createAlloca(
-      loc, cir::PointerType::get(tempArrayType), tempArrayType, "", alignment);
-  mlir::Value arrayStartPtr =
-      builder.createCast(cir::CastKind::array_to_ptrdecay, arrayPtr,
-                         cir::PointerType::get(elementType));
-  for (unsigned i = 0; i < args.size(); i++) {
-    if (i == 0) {
-      builder.createStore(loc, args[i], arrayStartPtr);
-    } else {
-      mlir::Value offset = builder.getUnsignedInt(loc, i, 64);
-      mlir::Value dest = builder.create<cir::PtrStrideOp>(
-          loc, arrayStartPtr.getType(), arrayStartPtr, offset);
-      builder.createStore(loc, args[i], dest);
-    }
-  }
-
-  // FIXME(cir): better handling according to different field type. [ptr ptr],
-  // [ptr size], [size ptr].
-
-  clang::RecordDecl::field_iterator it = stdInitializerListFields.begin();
-  const clang::RecordDecl::field_iterator startField = it;
-  const unsigned startIdx = 0U;
-  const clang::RecordDecl::field_iterator endOrSizeField = ++it;
-  const unsigned endOrSizeIdx = 1U;
-  assert(llvm::range_size(stdInitializerListFields) == 2U);
-
-  mlir::Value startMemberPtr = builder.createGetMemberOp(
-      loc, op.getInitList(), startField->getName().data(), startIdx);
-  builder.createStore(loc, arrayStartPtr, startMemberPtr);
-
-  mlir::Value size = builder.getUnsignedInt(loc, args.size(), 64);
-  if (endOrSizeField->getType()->isPointerType()) {
-    mlir::Value arrayEndPtr = builder.create<cir::PtrStrideOp>(
-        loc, arrayStartPtr.getType(), arrayStartPtr, size);
-    mlir::Value endMemberPtr = builder.createGetMemberOp(
-        loc, op.getInitList(), endOrSizeField->getName().data(), endOrSizeIdx);
-    builder.createStore(loc, arrayEndPtr, endMemberPtr);
-  } else {
-    assert(endOrSizeField->getType()->isIntegerType());
-    mlir::Value sizeMemberPtr = builder.createGetMemberOp(
-        loc, op.getInitList(), endOrSizeField->getName().data(), endOrSizeIdx);
-    builder.createStore(loc, size, sizeMemberPtr);
-  }
-
-  op.erase();
-}
-
 void LoweringPreparePass::addGlobalAnnotations(mlir::Operation *op,
                                                mlir::ArrayAttr annotations) {
   auto globalValue = cast<mlir::SymbolOpInterface>(op);
@@ -1258,8 +1180,6 @@ void LoweringPreparePass::runOnOp(Operation *op) {
     }
     if (std::optional<mlir::ArrayAttr> annotations = fnOp.getAnnotations())
       addGlobalAnnotations(fnOp, annotations.value());
-  } else if (auto stdInitializerListOp = dyn_cast<StdInitializerListOp>(op)) {
-    lowerStdInitializerListOp(stdInitializerListOp);
   }
 }
 
@@ -1275,8 +1195,7 @@ void LoweringPreparePass::runOnOperation() {
   op->walk([&](Operation *op) {
     if (isa<UnaryOp, BinOp, CastOp, ComplexBinOp, CmpThreeWayOp, VAArgOp,
             GlobalOp, DynamicCastOp, StdFindOp, IterEndOp, IterBeginOp,
-            ArrayCtor, ArrayDtor, cir::FuncOp, StoreOp, StdInitializerListOp>(
-            op))
+            ArrayCtor, ArrayDtor, cir::FuncOp, StoreOp>(op))
       opsToTransform.push_back(op);
   });
 
