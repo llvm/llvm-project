@@ -7859,12 +7859,10 @@ EpilogueVectorizerMainLoop::createEpilogueVectorizedLoopSkeleton(
   SmallPtrSet<PHINode *, 4> WideIVs;
   for (VPRecipeBase &H :
        EPI.EpiloguePlan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
-    if (!isa<VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe>(&H))
-      continue;
     if (auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&H))
       WideIVs.insert(WideIV->getPHINode());
-    else
-      WideIVs.insert(cast<PHINode>(H.getVPSingleValue()->getUnderlyingValue()));
+    else if (auto *PtrIV = dyn_cast<VPWidenPointerInductionRecipe>(&H))
+      WideIVs.insert(cast<PHINode>(PtrIV->getUnderlyingValue()));
   }
   createInductionResumeVPValues(ExpandedSCEVs, nullptr, &WideIVs);
 
