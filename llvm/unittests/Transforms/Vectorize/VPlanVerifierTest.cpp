@@ -227,7 +227,6 @@ TEST(VPVerifierTest, BlockOutsideRegionWithParent) {
 
   VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB2, "R1");
   VPBlockUtils::connectBlocks(VPBB1, R1);
-  VPBB1->setParent(R1);
 
   auto TC = std::make_unique<VPValue>();
   LLVMContext C;
@@ -235,6 +234,7 @@ TEST(VPVerifierTest, BlockOutsideRegionWithParent) {
   VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
   VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
   VPlan Plan(VPPH, &*TC, VPBB1, ScalarHeaderVPBB);
+  VPBB1->setParent(R1);
 
 #if GTEST_HAS_STREAM_REDIRECTION
   ::testing::internal::CaptureStderr();

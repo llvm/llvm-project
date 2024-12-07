@@ -622,6 +622,7 @@ public:
   void clearSuccessors() { Successors.clear(); }
 
   /// Swap successors of the block. The block must have exactly 2 successors.
+  // TODO: This should be part of introducing conditional branch recipes rather than being independent.
   void swapSuccessors() {
     assert(Successors.size() == 2 && "must have 2 successors to swap");
     std::swap(Successors[0], Successors[1]);
@@ -3766,6 +3767,7 @@ class VPlan {
   /// VPBasicBlock corresponding to the original preheader. Used to place
   /// VPExpandSCEV recipes for expressions used during skeleton creation and the
   /// rest of VPlan execution.
+  /// When this VPlan is used for the epilogue vector loop, the entry will be replaced by a new entry block created during skeleton creation.
   VPBasicBlock *Entry;
 
   /// VPIRBasicBlock wrapping the header of the original scalar loop.
@@ -3846,14 +3848,8 @@ public:
   /// Create initial VPlan, having an "entry" VPBasicBlock (wrapping
   /// original scalar pre-header) which contains SCEV expansions that need
   /// to happen before the CFG is modified (when executing a VPlan for the
-  /// epilogue vector loop, the original entry needs to be replaced by the new
-  /// entry for the epilogue vector loop); a VPBasicBlock for the vector
-  /// pre-header, followed by a region for the vector loop, followed by the
-  /// middle VPBasicBlock. If a check is needed to guard executing the scalar
-  /// epilogue loop, it will be added to the middle block, together with
-  /// VPBasicBlocks for the scalar preheader and exit blocks.
-  /// \p InductionTy is the type of the canonical induction and used for related
-  /// values, like the trip count expression.
+  /// epilogue vector loop, the original entry needs to be replaced by a new
+  /// one); a VPBasicBlock for the vector pre-header, followed by a region for the vector loop, followed by the middle VPBasicBlock. If a check is needed to guard executing the scalar epilogue loop, it will be added to the middle block, together with VPBasicBlocks for the scalar preheader and exit blocks. \p InductionTy is the type of the canonical induction and used for related values, like the trip count expression.
   static VPlanPtr createInitialVPlan(Type *InductionTy,
                                      PredicatedScalarEvolution &PSE,
                                      bool RequiresScalarEpilogueCheck,
