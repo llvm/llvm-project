@@ -463,6 +463,12 @@ def interpret(bytecode: bytearray, control: list, data: list, tracing: bool = Fa
 
 
 if __name__ == "__main__":
+    # Work around the fact that one of the local files is called
+    # types.py, which breaks some versions of python.
+    import os, sys
+
+    path = os.path.abspath(os.path.dirname(__file__))
+    sys.path.remove(path)
     import argparse
 
     parser = argparse.ArgumentParser(
@@ -487,12 +493,6 @@ if __name__ == "__main__":
     # Tests.
     ############################################################################
     if args.test:
-        # Work around the fact that one of the local files is calles
-        # types.py, which breaks some versions of python.
-        import os, sys
-
-        path = os.path.abspath(os.path.dirname(__file__))
-        sys.path.remove(path)
         import unittest
 
         class TestCompiler(unittest.TestCase):
