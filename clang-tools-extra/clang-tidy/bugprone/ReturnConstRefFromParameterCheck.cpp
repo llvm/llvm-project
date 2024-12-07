@@ -31,22 +31,20 @@ void ReturnConstRefFromParameterCheck::registerMatchers(MatchFinder *Finder) {
                              qualType(lValueReferenceType(pointee(
                                           qualType(isConstQualified()))))
                                  .bind("type"))),
-                         hasDeclContext(functionDecl().bind("owner")),
+                         hasDeclContext(functionDecl(
+                             equalsBoundNode("func"),
+                             hasReturnTypeLoc(loc(qualType(
+                                 hasCanonicalType(equalsBoundNode("type"))))))),
                          unless(hasLifetimeBoundAttr()))
                  .bind("param")))
           .bind("dref"));
-  const auto Func =
-      functionDecl(equalsBoundNode("owner"),
-                   hasReturnTypeLoc(loc(
-                       qualType(hasCanonicalType(equalsBoundNode("type"))))))
-          .bind("func");
 
   Finder->addMatcher(
       returnStmt(
+          hasAncestor(functionDecl().bind("func")),
           hasReturnValue(anyOf(
               DRef, ignoringParens(conditionalOperator(eachOf(
-                        hasTrueExpression(DRef), hasFalseExpression(DRef)))))),
-          hasAncestor(Func)),
+                        hasTrueExpression(DRef), hasFalseExpression(DRef))))))),
       this);
 }
 
