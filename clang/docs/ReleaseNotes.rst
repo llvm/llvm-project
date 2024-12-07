@@ -428,6 +428,9 @@ New Compiler Flags
 - The ``-Warray-compare`` warning has been added to warn about array comparison
   on versions older than C++20.
 
+- The ``-Warray-compare-cxx26`` warning has been added to warn about array comparison
+  starting from C++26, this warning is enabled as an error by default.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -677,6 +680,9 @@ Bug Fixes in This Version
 - Fixed a crash when GNU statement expression contains invalid statement (#GH113468).
 - Fixed a failed assertion when using ``__attribute__((noderef))`` on an
   ``_Atomic``-qualified type (#GH116124).
+- No longer return ``false`` for ``noexcept`` expressions involving a
+  ``delete`` which resolves to a destroying delete but the type of the object
+  being deleted has a potentially throwing destructor (#GH118660).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -793,7 +799,6 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure caused by mangled names with invalid identifiers. (#GH112205)
 - Fixed an incorrect lambda scope of generic lambdas that caused Clang to crash when computing potential lambda
   captures at the end of a full expression. (#GH115931)
-- Clang no longer rejects deleting a pointer of incomplete enumeration type. (#GH99278)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

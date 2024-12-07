@@ -10,7 +10,7 @@
 #define FORTRAN_RUNTIME_CUDA_ALLOCATOR_H_
 
 #include "common.h"
-#include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/entry-names.h"
 
 namespace Fortran::runtime::cuda {

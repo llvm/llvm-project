@@ -689,13 +689,32 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
   if (!isa<GetElementPtrInst>(RHS))
     RHS = RHS->stripPointerCasts();
 
+  auto CanFold = [Cond](GEPNoWrapFlags NW) {
+    if (ICmpInst::isEquality(Cond))
+      return true;
+
+    // Unsigned predicates can be folded if the GEPs have *any* nowrap flags.
+    assert(ICmpInst::isUnsigned(Cond));
+    return NW != GEPNoWrapFlags::none();
+  };
+
+  auto NewICmp = [Cond](GEPNoWrapFlags NW, Value *Op1, Value *Op2) {
+    if (!NW.hasNoUnsignedWrap()) {
+      // Convert signed to unsigned comparison.
+      return new ICmpInst(ICmpInst::getSignedPredicate(Cond), Op1, Op2);
+    }
+
+    auto *I = new ICmpInst(Cond, Op1, Op2);
+    I->setSameSign(NW.hasNoUnsignedSignedWrap());
+    return I;
+  };
+
   Value *PtrBase = GEPLHS->getOperand(0);
-  if (PtrBase == RHS &&
-      (GEPLHS->hasNoUnsignedSignedWrap() || ICmpInst::isEquality(Cond))) {
+  if (PtrBase == RHS && CanFold(GEPLHS->getNoWrapFlags())) {
     // ((gep Ptr, OFFSET) cmp Ptr)   ---> (OFFSET cmp 0).
     Value *Offset = EmitGEPOffset(GEPLHS);
-    return new ICmpInst(ICmpInst::getSignedPredicate(Cond), Offset,
-                        Constant::getNullValue(Offset->getType()));
+    return NewICmp(GEPLHS->getNoWrapFlags(), Offset,
+                   Constant::getNullValue(Offset->getType()));
   }
 
   if (GEPLHS->isInBounds() && ICmpInst::isEquality(Cond) &&
@@ -813,19 +832,18 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
         return replaceInstUsesWith(I, // No comparison is needed here.
           ConstantInt::get(I.getType(), ICmpInst::isTrueWhenEqual(Cond)));
 
-      else if (NumDifferences == 1 && NW.hasNoUnsignedSignedWrap()) {
+      else if (NumDifferences == 1 && CanFold(NW)) {
         Value *LHSV = GEPLHS->getOperand(DiffOperand);
         Value *RHSV = GEPRHS->getOperand(DiffOperand);
-        // Make sure we do a signed comparison here.
-        return new ICmpInst(ICmpInst::getSignedPredicate(Cond), LHSV, RHSV);
+        return NewICmp(NW, LHSV, RHSV);
       }
     }
 
-    if (NW.hasNoUnsignedSignedWrap() || CmpInst::isEquality(Cond)) {
+    if (CanFold(NW)) {
       // ((gep Ptr, OFFSET1) cmp (gep Ptr, OFFSET2)  --->  (OFFSET1 cmp OFFSET2)
       Value *L = EmitGEPOffset(GEPLHS, /*RewriteGEP=*/true);
       Value *R = EmitGEPOffset(GEPRHS, /*RewriteGEP=*/true);
-      return new ICmpInst(ICmpInst::getSignedPredicate(Cond), L, R);
+      return NewICmp(NW, L, R);
     }
   }
 
