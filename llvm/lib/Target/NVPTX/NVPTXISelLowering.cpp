@@ -2702,21 +2702,6 @@ SDValue NVPTXTargetLowering::LowerINT_TO_FP(SDValue Op,
   return Op;
 }
 
-SDValue NVPTXTargetLowering::LowerFP_TO_INT(SDValue Op,
-                                            SelectionDAG &DAG) const {
-  assert(STI.getSmVersion() < 90 || STI.getPTXVersion() < 78);
-
-  if (Op.getOperand(0).getValueType() == MVT::bf16) {
-    SDLoc Loc(Op);
-    return DAG.getNode(
-        Op.getOpcode(), Loc, Op.getValueType(),
-        DAG.getNode(ISD::FP_EXTEND, Loc, MVT::f32, Op.getOperand(0)));
-  }
-
-  // Everything else is considered legal.
-  return Op;
-}
-
 SDValue NVPTXTargetLowering::LowerFP_ROUND(SDValue Op,
                                            SelectionDAG &DAG) const {
   EVT NarrowVT = Op.getValueType();
@@ -2842,9 +2827,6 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
     return LowerINT_TO_FP(Op, DAG);
-  case ISD::FP_TO_SINT:
-  case ISD::FP_TO_UINT:
-    return LowerFP_TO_INT(Op, DAG);
   case ISD::FP_ROUND:
     return LowerFP_ROUND(Op, DAG);
   case ISD::FP_EXTEND:
