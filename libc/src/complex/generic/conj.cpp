@@ -14,8 +14,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(_Complex double, conj, (_Complex double x)) {
-  Complex<double> x_c = cpp::bit_cast<Complex<double>>(x);
-  return (x_c.real - x_c.imag * 1.0i);
+  return conjugate<_Complex double, double>(x);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

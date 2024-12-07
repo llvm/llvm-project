@@ -42,6 +42,10 @@ public:
     EXPECT_FP_EQ(func(CFPT(-0.0 + 0.0i)), 0.0);
     EXPECT_FP_EQ(func(CFPT(0.0 - 0.0i)), -0.0);
     EXPECT_FP_EQ(func(CFPT(-0.0 - 0.0i)), -0.0);
+    EXPECT_FP_EQ(func(CFPT(0.0)), 0.0);
+    EXPECT_FP_EQ(func(CFPT(-0.0)), 0.0);
+    EXPECT_FP_EQ(func(CFPT(0.0i)), 0.0);
+    EXPECT_FP_EQ(func(CFPT(-0.0i)), -0.0);
   }
 
   void testRoundedNumbers(CImagFunc func) {

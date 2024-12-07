@@ -16,8 +16,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(cfloat16, conjf16, (cfloat16 x)) {
-  Complex<float16> x_c = cpp::bit_cast<Complex<float16>>(x);
-  return (x_c.real - x_c.imag * (cfloat16)1.0i);
+  return conjugate<cfloat16, float16>(x);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
