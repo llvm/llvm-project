@@ -15,6 +15,8 @@ define void @f1() {
 ; CHECK-NEXT:  bb1:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i16 0 to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [2 x ptr], ptr @b, i16 0, i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr ptr, ptr [[TMP1]], i32 0

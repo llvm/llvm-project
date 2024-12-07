@@ -14,6 +14,8 @@ define void @test_scalar_iv_steps_used_by_replicate_and_first_lane_only_vpinst(p
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw i64 0, 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i64 0, 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul nsw i64 0, 4
@@ -23,11 +25,11 @@ define void @test_scalar_iv_steps_used_by_replicate_and_first_lane_only_vpinst(p
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[SRC_1]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[SRC_1]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP8]], align 1
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[TMP12]], i64 0
+; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP8]], align 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP8]], align 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i8, ptr [[TMP8]], align 1
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[TMP12]], i64 0
-; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq <4 x i8> [[TMP19]], zeroinitializer
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr [8 x i32], ptr @src, i64 0, i64 4
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i32, ptr [[TMP22]], i32 0
@@ -60,8 +62,6 @@ define void @test_scalar_iv_steps_used_by_replicate_and_first_lane_only_vpinst(p
 ; CHECK-NEXT:    store i32 [[TMP31]], ptr [[DST]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
 ; CHECK:       [[PRED_STORE_CONTINUE6]]:
-; CHECK-NEXT:    br label %[[THEN_0:.*]]
-; CHECK:       [[THEN_0]]:
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]

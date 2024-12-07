@@ -486,7 +486,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
   };
 
   // 1. Create an IR basic block.
-  if (this == getPlan()->getVectorPreheader() ||
+  if (this == getPlan()->getEntry() ||
       (Replica && this == getParent()->getEntry()) ||
       IsReplicateRegion(getSingleHierarchicalPredecessor())) {
     // Reuse the previous basic block if the current VPBB is either
@@ -1078,30 +1078,14 @@ void VPlan::execute(VPTransformState *State) {
         continue;
       }
 
-      // For  canonical IV, first-order recurrences and in-order reduction phis,
-      // only a single part is generated, which provides the last part from the
-      // previous iteration. For non-ordered reductions all UF parts are
-      // generated.
       auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
-      auto *RedPhiR = dyn_cast<VPReductionPHIRecipe>(PhiR);
-      bool NeedsScalar =
-          isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(PhiR) ||
-          (RedPhiR && RedPhiR->isInLoop());
+      bool NeedsScalar = isa<VPScalarPHIRecipe>(PhiR) ||
+                         (isa<VPReductionPHIRecipe>(PhiR) &&
+                          cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
       Value *Phi = State->get(PhiR, NeedsScalar);
       Value *Val = State->get(PhiR->getBackedgeValue(), NeedsScalar);
       cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
     }
-/*<<<<<<< HEAD*/
-/*=======*/
-
-    /*auto *PhiR = cast<VPHeaderPHIRecipe>(&R);*/
-    /*bool NeedsScalar = isa<VPScalarPHIRecipe>(PhiR) ||*/
-                       /*(isa<VPReductionPHIRecipe>(PhiR) &&*/
-                        /*cast<VPReductionPHIRecipe>(PhiR)->isInLoop());*/
-    /*Value *Phi = State->get(PhiR, NeedsScalar);*/
-    /*Value *Val = State->get(PhiR->getBackedgeValue(), NeedsScalar);*/
-    /*cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);*/
-/*>>>>>>> origin/main*/
   }
   State->CFG.DTU.flush();
   assert(State->CFG.DTU.getDomTree().verify(

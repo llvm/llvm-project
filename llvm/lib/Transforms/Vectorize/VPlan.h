@@ -3872,7 +3872,10 @@ public:
 
   /// Returns the preheader of the vector loop region.
   VPBasicBlock *getVectorPreheader() {
-    return dyn_cast<VPBasicBlock>(getVectorLoopRegion()->getSinglePredecessor());
+    auto *LoopRegion = getVectorLoopRegion();
+    if (!LoopRegion)
+      return nullptr;
+    return dyn_cast<VPBasicBlock>(LoopRegion->getSinglePredecessor());
   }
 
   /// Returns the VPRegionBlock of the vector loop.
@@ -3880,7 +3883,7 @@ public:
     return dyn_cast<VPRegionBlock>(getEntry()->getSingleSuccessor());
   }
   const VPRegionBlock *getVectorLoopRegion() const {
-    return cast<VPRegionBlock>(getEntry()->getSingleSuccessor());
+    return dyn_cast<VPRegionBlock>(getEntry()->getSingleSuccessor());
   }
 
   /// Returns the 'middle' block of the plan, that is the block that selects

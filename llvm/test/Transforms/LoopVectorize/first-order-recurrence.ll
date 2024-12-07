@@ -3705,6 +3705,8 @@ define i32 @recurence_uniform_load(ptr %src, ptr noalias %dst) {
 ; UNROLL-NO-IC-NEXT:  entry:
 ; UNROLL-NO-IC-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; UNROLL-NO-IC:       vector.ph:
+; UNROLL-NO-IC-NEXT:    br label [[VECTOR_BODY:%.*]]
+; UNROLL-NO-IC:       vector.body:
 ; UNROLL-NO-IC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC:%.*]], align 4
 ; UNROLL-NO-IC-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; UNROLL-NO-IC:       middle.block:
@@ -3727,6 +3729,8 @@ define i32 @recurence_uniform_load(ptr %src, ptr noalias %dst) {
 ; UNROLL-NO-VF-NEXT:  entry:
 ; UNROLL-NO-VF-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; UNROLL-NO-VF:       vector.ph:
+; UNROLL-NO-VF-NEXT:    br label [[VECTOR_BODY:%.*]]
+; UNROLL-NO-VF:       vector.body:
 ; UNROLL-NO-VF-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC:%.*]], align 4
 ; UNROLL-NO-VF-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; UNROLL-NO-VF:       middle.block:
@@ -3749,6 +3753,8 @@ define i32 @recurence_uniform_load(ptr %src, ptr noalias %dst) {
 ; SINK-AFTER-NEXT:  entry:
 ; SINK-AFTER-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; SINK-AFTER:       vector.ph:
+; SINK-AFTER-NEXT:    br label [[VECTOR_BODY:%.*]]
+; SINK-AFTER:       vector.body:
 ; SINK-AFTER-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC:%.*]], align 4
 ; SINK-AFTER-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; SINK-AFTER:       middle.block:

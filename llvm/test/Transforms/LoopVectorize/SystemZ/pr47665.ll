@@ -17,6 +17,8 @@ define void @test(ptr %p, i40 %a) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult <16 x i1> zeroinitializer, [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = or <16 x i1> [[TMP6]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt <16 x i1> [[TMP7]], zeroinitializer
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
 ; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <16 x i1> [[TMP8]], i32 0
@@ -113,8 +115,6 @@ define void @test(ptr %p, i40 %a) {
 ; CHECK-NEXT:    store i1 [[TMP38]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE30]]
 ; CHECK:       pred.store.continue30:
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE32:%.*]]
-; CHECK:       for.body.0:
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
