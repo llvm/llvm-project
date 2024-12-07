@@ -9715,7 +9715,8 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD,
     QualType DeallocType = Context.getRecordType(RD);
     DeclarationName Name =
       Context.DeclarationNames.getCXXOperatorName(OO_Delete);
-    ImplicitDeallocationParameters IDP = {allocationModeInCurrentContext(),
+    ImplicitDeallocationParameters IDP = {
+      typeAwareAllocationModeFromBool(getLangOpts().TypeAwareAllocators),
                                           AlignedAllocationMode::No,
                                           SizedDeallocationMode::No};
     if (FindDeallocationFunction(MD->getLocation(), MD->getParent(), Name,
@@ -16140,7 +16141,7 @@ bool Sema::isTypeAwareOperatorNewOrDelete(const NamedDecl *ND) const {
 FunctionDecl *
 Sema::instantiateTypeAwareUsualDelete(FunctionTemplateDecl *FnTemplateDecl,
                                       QualType DeallocType) {
-  if (!isTypeAwareAllocation(allocationModeInCurrentContext()))
+  if (!getLangOpts().TypeAwareAllocators)
     return nullptr;
 
   TemplateParameterList *TemplateParameters =
@@ -16214,7 +16215,7 @@ Sema::instantiateTypeAwareUsualDelete(FunctionTemplateDecl *FnTemplateDecl,
 }
 
 QualType Sema::instantiateSpecializedTypeIdentity(QualType Subject) {
-  assert(clang::isTypeAwareAllocation(allocationModeInCurrentContext()));
+  assert(getLangOpts().TypeAwareAllocators);
   ClassTemplateDecl *TypeIdentity = getStdTypeIdentity();
   if (!TypeIdentity)
     return QualType();

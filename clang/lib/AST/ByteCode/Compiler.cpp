@@ -3304,7 +3304,7 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
       // Always invalid.
       return this->emitInvalid(E);
     }
-  } else if (!OperatorNew->isReplaceableGlobalAllocationFunction())
+  } else if (!OperatorNew->isConstEvalSafeOrReplaceableGlobalAllocationFunction())
     return this->emitInvalidNewDeleteExpr(E, E);
 
   const Descriptor *Desc;
@@ -3402,7 +3402,7 @@ bool Compiler<Emitter>::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
 
   const FunctionDecl *OperatorDelete = E->getOperatorDelete();
 
-  if (!OperatorDelete->isReplaceableGlobalAllocationFunction())
+  if (!OperatorDelete->isConstEvalSafeOrReplaceableGlobalAllocationFunction())
     return this->emitInvalidNewDeleteExpr(E, E);
 
   // Arg must be an lvalue.
@@ -4559,7 +4559,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
 
   const FunctionDecl *FuncDecl = E->getDirectCallee();
   // Calls to replaceable operator new/operator delete.
-  if (FuncDecl && FuncDecl->isReplaceableGlobalAllocationFunction()) {
+  if (FuncDecl && FuncDecl->isConstEvalSafeOrReplaceableGlobalAllocationFunction()) {
     if (FuncDecl->getDeclName().getCXXOverloadedOperator() == OO_New ||
         FuncDecl->getDeclName().getCXXOverloadedOperator() == OO_Array_New) {
       return VisitBuiltinCallExpr(E, Builtin::BI__builtin_operator_new);

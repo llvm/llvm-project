@@ -3373,7 +3373,7 @@ bool FunctionDecl::isReservedGlobalPlacementOperator() const {
   return (proto->getParamType(1).getCanonicalType() == Context.VoidPtrTy);
 }
 
-bool FunctionDecl::isReplaceableGlobalAllocationFunction(
+bool FunctionDecl::isConstEvalSafeOrReplaceableGlobalAllocationFunction(
     std::optional<unsigned> *AlignmentParam, bool *IsNothrow) const {
   if (getDeclName().getNameKind() != DeclarationName::CXXOperatorName)
     return false;
@@ -3390,16 +3390,19 @@ bool FunctionDecl::isReplaceableGlobalAllocationFunction(
   if (!getDeclContext()->getRedeclContext()->isTranslationUnit())
     return false;
 
+  bool IsTypeAware = isTypeAwareOperatorNewOrDelete();
+  unsigned MaxParamCount = IsTypeAware + 4;
   const auto *FPT = getType()->castAs<FunctionProtoType>();
-  if (FPT->getNumParams() == 0 || FPT->getNumParams() > 4 || FPT->isVariadic())
+  if (FPT->getNumParams() == 0 || FPT->getNumParams() > MaxParamCount || FPT->isVariadic())
     return false;
 
+  unsigned MinimumParamCount = IsTypeAware + 1;
   // If this is a single-parameter function, it must be a replaceable global
   // allocation or deallocation function.
-  if (FPT->getNumParams() == 1)
+  if (FPT->getNumParams() == MinimumParamCount)
     return true;
 
-  unsigned Params = 1;
+  unsigned Params = MinimumParamCount;
   QualType Ty = FPT->getParamType(Params);
   const ASTContext &Ctx = getASTContext();
 

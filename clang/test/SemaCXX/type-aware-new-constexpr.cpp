@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++23 -fexperimental-cxx-type-aware-allocators -fexceptions
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++23 -fexperimental-cxx-type-aware-allocators -fexceptions -fexperimental-new-constant-interpreter
 
 namespace std {
   template <class T> struct type_identity {};
@@ -60,6 +61,10 @@ constexpr int constexpr_vs_inclass_operators() {
   S3 *s;
   if consteval {
     s = ::new S3();
+    // expected-error@-1 {{call to deleted function 'operator new'}}
+    // expected-note@#1 {{candidate function not viable: no known conversion from 'type_identity<S3>' to 'type_identity<S1>' for 1st argument}}
+    // expected-note@#3 {{candidate function not viable: no known conversion from 'type_identity<S3>' to 'type_identity<S2>' for 1st argument}}
+    // expected-note@#7 {{candidate function [with T = S3] has been explicitly deleted}}
   } else {
     s = new S3();
     // expected-error@-1 {{call to deleted function 'operator new'}}
@@ -68,6 +73,8 @@ constexpr int constexpr_vs_inclass_operators() {
   auto result = s->i;
   if consteval {
     ::delete s;
+    // expected-error@-1 {{attempt to use a deleted function}}
+    // expected-note@#8 {{'operator delete<S3>' has been explicitly marked deleted here}}
   } else {
     delete s;
     // expected-error@-1 {{attempt to use a deleted function}}
@@ -75,3 +82,39 @@ constexpr int constexpr_vs_inclass_operators() {
   }
   return result;
 };
+
+// Test a variety of valid constant evaluation paths
+struct S4 {
+  int i = 1;
+  constexpr S4() __attribute__((noinline)) {}
+};
+
+void* operator new(std::type_identity<S4>, size_t sz);
+void operator delete(std::type_identity<S4>, void *);
+
+constexpr int do_dynamic_alloc(int n) {
+  S4* s = new S4;
+  int result = n * s->i;
+  delete s;
+  return result;
+}
+
+template <int N> struct Tag {
+};
+
+static constexpr int force_do_dynamic_alloc = do_dynamic_alloc(5);
+
+constexpr int test_consteval_calling_constexpr(int i) {
+  if consteval {
+    return do_dynamic_alloc(2 * i);
+  }
+  return do_dynamic_alloc(3 * i);
+}
+
+int test_consteval(int n, Tag<test_consteval_calling_constexpr(2)>, Tag<do_dynamic_alloc(3)>) {
+  static const int t1 = test_consteval_calling_constexpr(4);
+  static const int t2 = do_dynamic_alloc(5);
+  int t3 = test_consteval_calling_constexpr(6);
+  int t4 = do_dynamic_alloc(7);
+  return t1 * t2 * t3 * t4;
+}

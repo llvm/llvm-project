@@ -2146,12 +2146,6 @@ public:
            isConstantEvaluatedOverride;
   }
 
-  TypeAwareAllocationMode allocationModeInCurrentContext() const {
-    if (getLangOpts().TypeAwareAllocators && !isConstantEvaluatedContext())
-      return TypeAwareAllocationMode::Yes;
-    return TypeAwareAllocationMode::No;
-  }
-
   SourceLocation getLocationOfStringLiteralByte(const StringLiteral *SL,
                                                 unsigned ByteNo) const;
 

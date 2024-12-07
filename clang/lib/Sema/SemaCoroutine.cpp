@@ -1111,7 +1111,7 @@ static bool findDeleteForPromise(Sema &S, SourceLocation Loc, QualType PromiseTy
   // scope of the promise type. If nothing is found, a search is performed in
   // the global scope.
   ImplicitDeallocationParameters IDP = {
-      S.allocationModeInCurrentContext(),
+      typeAwareAllocationModeFromBool(S.getLangOpts().TypeAwareAllocators),
       alignedAllocationModeFromBool(Overaligned), SizedDeallocationMode::Yes};
   if (S.FindDeallocationFunction(Loc, PointeeRD, DeleteName, OperatorDelete,
                                  PromiseType, IDP, /*Diagnose*/ true))
@@ -1422,7 +1422,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   // Helper function to indicate whether the last lookup found the aligned
   // allocation function.
   ImplicitAllocationParameters IAP = {
-      S.allocationModeInCurrentContext(),
+      typeAwareAllocationModeFromBool(S.getLangOpts().TypeAwareAllocators),
       alignedAllocationModeFromBool(S.getLangOpts().CoroAlignedAllocation)};
   auto LookupAllocationFunction =
       [&](Sema::AllocationFunctionScope NewScope = Sema::AFS_Both,
@@ -1437,9 +1437,10 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
         if (NewScope == Sema::AFS_Both)
           NewScope = PromiseContainsNew ? Sema::AFS_Class : Sema::AFS_Global;
 
-        IAP = {S.allocationModeInCurrentContext(),
-               alignedAllocationModeFromBool(
-                   !ForceNonAligned && S.getLangOpts().CoroAlignedAllocation)};
+        bool ShouldUseAlignedAlloc = !ForceNonAligned && S.getLangOpts().CoroAlignedAllocation;
+        IAP = {
+          typeAwareAllocationModeFromBool(S.getLangOpts().TypeAwareAllocators),
+               alignedAllocationModeFromBool(ShouldUseAlignedAlloc)};
 
         FunctionDecl *UnusedResult = nullptr;
 
