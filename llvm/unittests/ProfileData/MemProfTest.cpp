@@ -36,6 +36,7 @@ using ::llvm::memprof::Frame;
 using ::llvm::memprof::FrameId;
 using ::llvm::memprof::hashCallStack;
 using ::llvm::memprof::IndexedAllocationInfo;
+using ::llvm::memprof::IndexedMemProfData;
 using ::llvm::memprof::IndexedMemProfRecord;
 using ::llvm::memprof::MemInfoBlock;
 using ::llvm::memprof::MemProfReader;
@@ -221,31 +222,28 @@ TEST(MemProf, FillsValue) {
   EXPECT_THAT(Bar.AllocSites[0].CallStack[3],
               FrameContains("abc", 5U, 30U, false));
 
-  ASSERT_THAT(Bar.CallSites, SizeIs(1));
-  ASSERT_THAT(Bar.CallSites[0], SizeIs(2));
-  EXPECT_THAT(Bar.CallSites[0][0], FrameContains("foo", 5U, 30U, true));
-  EXPECT_THAT(Bar.CallSites[0][1], FrameContains("bar", 51U, 20U, false));
+  EXPECT_THAT(Bar.CallSites,
+              ElementsAre(ElementsAre(FrameContains("foo", 5U, 30U, true),
+                                      FrameContains("bar", 51U, 20U, false))));
 
   // Check the memprof record for xyz.
   const llvm::GlobalValue::GUID XyzId = IndexedMemProfRecord::getGUID("xyz");
   ASSERT_TRUE(Records.contains(XyzId));
   const MemProfRecord &Xyz = Records[XyzId];
-  ASSERT_THAT(Xyz.CallSites, SizeIs(1));
-  ASSERT_THAT(Xyz.CallSites[0], SizeIs(2));
   // Expect the entire frame even though in practice we only need the first
   // entry here.
-  EXPECT_THAT(Xyz.CallSites[0][0], FrameContains("xyz", 5U, 30U, true));
-  EXPECT_THAT(Xyz.CallSites[0][1], FrameContains("abc", 5U, 30U, false));
+  EXPECT_THAT(Xyz.CallSites,
+              ElementsAre(ElementsAre(FrameContains("xyz", 5U, 30U, true),
+                                      FrameContains("abc", 5U, 30U, false))));
 
   // Check the memprof record for abc.
   const llvm::GlobalValue::GUID AbcId = IndexedMemProfRecord::getGUID("abc");
   ASSERT_TRUE(Records.contains(AbcId));
   const MemProfRecord &Abc = Records[AbcId];
   EXPECT_TRUE(Abc.AllocSites.empty());
-  ASSERT_THAT(Abc.CallSites, SizeIs(1));
-  ASSERT_THAT(Abc.CallSites[0], SizeIs(2));
-  EXPECT_THAT(Abc.CallSites[0][0], FrameContains("xyz", 5U, 30U, true));
-  EXPECT_THAT(Abc.CallSites[0][1], FrameContains("abc", 5U, 30U, false));
+  EXPECT_THAT(Abc.CallSites,
+              ElementsAre(ElementsAre(FrameContains("xyz", 5U, 30U, true),
+                                      FrameContains("abc", 5U, 30U, false))));
 }
 
 TEST(MemProf, PortableWrapper) {
@@ -419,9 +417,8 @@ TEST(MemProf, SymbolizationFilter) {
 
   ASSERT_THAT(Records, SizeIs(1));
   ASSERT_THAT(Records[0].AllocSites, SizeIs(1));
-  ASSERT_THAT(Records[0].AllocSites[0].CallStack, SizeIs(1));
-  EXPECT_THAT(Records[0].AllocSites[0].CallStack[0],
-              FrameContains("foo", 5U, 30U, false));
+  EXPECT_THAT(Records[0].AllocSites[0].CallStack,
+              ElementsAre(FrameContains("foo", 5U, 30U, false)));
 }
 
 TEST(MemProf, BaseMemProfReader) {
@@ -452,11 +449,9 @@ TEST(MemProf, BaseMemProfReader) {
 
   ASSERT_THAT(Records, SizeIs(1));
   ASSERT_THAT(Records[0].AllocSites, SizeIs(1));
-  ASSERT_THAT(Records[0].AllocSites[0].CallStack, SizeIs(2));
-  EXPECT_THAT(Records[0].AllocSites[0].CallStack[0],
-              FrameContains("foo", 20U, 5U, true));
-  EXPECT_THAT(Records[0].AllocSites[0].CallStack[1],
-              FrameContains("bar", 10U, 2U, false));
+  EXPECT_THAT(Records[0].AllocSites[0].CallStack,
+              ElementsAre(FrameContains("foo", 20U, 5U, true),
+                          FrameContains("bar", 10U, 2U, false)));
 }
 
 TEST(MemProf, BaseMemProfReaderWithCSIdMap) {
@@ -489,36 +484,33 @@ TEST(MemProf, BaseMemProfReaderWithCSIdMap) {
 
   ASSERT_THAT(Records, SizeIs(1));
   ASSERT_THAT(Records[0].AllocSites, SizeIs(1));
-  ASSERT_THAT(Records[0].AllocSites[0].CallStack, SizeIs(2));
-  EXPECT_THAT(Records[0].AllocSites[0].CallStack[0],
-              FrameContains("foo", 20U, 5U, true));
-  EXPECT_THAT(Records[0].AllocSites[0].CallStack[1],
-              FrameContains("bar", 10U, 2U, false));
+  EXPECT_THAT(Records[0].AllocSites[0].CallStack,
+              ElementsAre(FrameContains("foo", 20U, 5U, true),
+                          FrameContains("bar", 10U, 2U, false)));
 }
 
 TEST(MemProf, IndexedMemProfRecordToMemProfRecord) {
   // Verify that MemProfRecord can be constructed from IndexedMemProfRecord with
   // CallStackIds only.
 
-  llvm::DenseMap<FrameId, Frame> FrameIdMap;
+  IndexedMemProfData MemProfData;
   Frame F1(1, 0, 0, false);
   Frame F2(2, 0, 0, false);
   Frame F3(3, 0, 0, false);
   Frame F4(4, 0, 0, false);
-  FrameIdMap.insert({F1.hash(), F1});
-  FrameIdMap.insert({F2.hash(), F2});
-  FrameIdMap.insert({F3.hash(), F3});
-  FrameIdMap.insert({F4.hash(), F4});
+  MemProfData.addFrame(F1);
+  MemProfData.addFrame(F2);
+  MemProfData.addFrame(F3);
+  MemProfData.addFrame(F4);
 
-  llvm::DenseMap<CallStackId, llvm::SmallVector<FrameId>> CallStackIdMap;
   llvm::SmallVector<FrameId> CS1 = {F1.hash(), F2.hash()};
   llvm::SmallVector<FrameId> CS2 = {F1.hash(), F3.hash()};
   llvm::SmallVector<FrameId> CS3 = {F2.hash(), F3.hash()};
   llvm::SmallVector<FrameId> CS4 = {F2.hash(), F4.hash()};
-  CallStackIdMap.insert({hashCallStack(CS1), CS1});
-  CallStackIdMap.insert({hashCallStack(CS2), CS2});
-  CallStackIdMap.insert({hashCallStack(CS3), CS3});
-  CallStackIdMap.insert({hashCallStack(CS4), CS4});
+  MemProfData.addCallStack(CS1);
+  MemProfData.addCallStack(CS2);
+  MemProfData.addCallStack(CS3);
+  MemProfData.addCallStack(CS4);
 
   IndexedMemProfRecord IndexedRecord;
   IndexedAllocationInfo AI;
@@ -529,9 +521,10 @@ TEST(MemProf, IndexedMemProfRecordToMemProfRecord) {
   IndexedRecord.CallSiteIds.push_back(hashCallStack(CS3));
   IndexedRecord.CallSiteIds.push_back(hashCallStack(CS4));
 
-  llvm::memprof::FrameIdConverter<decltype(FrameIdMap)> FrameIdConv(FrameIdMap);
-  llvm::memprof::CallStackIdConverter<decltype(CallStackIdMap)> CSIdConv(
-      CallStackIdMap, FrameIdConv);
+  llvm::memprof::FrameIdConverter<decltype(MemProfData.Frames)> FrameIdConv(
+      MemProfData.Frames);
+  llvm::memprof::CallStackIdConverter<decltype(MemProfData.CallStacks)>
+      CSIdConv(MemProfData.CallStacks, FrameIdConv);
 
   MemProfRecord Record = IndexedRecord.toMemProfRecord(CSIdConv);
 

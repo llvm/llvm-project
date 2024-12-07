@@ -437,7 +437,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      SCALAR-PHI vp<[[CAN_IV:%.+]]> = phi ir<0>, vp<[[CAN_IV_NEXT:.+]]>
+; CHECK-NEXT:      SCALAR-PHI vp<[[CAN_IV:%.+]]> = phi ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
 ; CHECK-NEXT:      vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
 ; CHECK-NEXT:      vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[DEV_IV]]>, ir<-1>
 ; CHECK-NEXT:      CLONE ir<%i.0> = add nsw vp<[[STEPS]]>, ir<-1>
@@ -464,13 +464,13 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<scalar.ph>:
-; CHECK-NEXT:    EMIT vp<[[RESUME_1:%.+]]> = resume-phi ir<%ind.end>, ir<%0>
-; CHECK-NEXT:    EMIT vp<[[RESUME_2:%.+]]>.1 = resume-phi ir<%ind.end3>, ir<%n>
+; CHECK-NEXT:    EMIT vp<[[RESUME1:%.+]]> = resume-phi ir<%ind.end>, ir<%0>
+; CHECK-NEXT:    EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi ir<%ind.end3>, ir<%n>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
-; CHECK-NEXT:    IR   %indvars.iv = phi i64 [ %0, %scalar.ph ], [ %indvars.iv.next, %for.body ] (extra operand: vp<[[RESUME_1]]> from ir-bb<scalar.ph>)
-; CHECK-NEXT:    IR   %i.0.in8 = phi i32 [ %n, %scalar.ph ], [ %i.0, %for.body ] (extra operand: vp<[[RESUME_2]]>.1 from ir-bb<scalar.ph>)
+; CHECK-NEXT:    IR   %indvars.iv = phi i64 [ %0, %scalar.ph ], [ %indvars.iv.next, %for.body ] (extra operand: vp<[[RESUME1]]> from ir-bb<scalar.ph>)
+; CHECK-NEXT:    IR   %i.0.in8 = phi i32 [ %n, %scalar.ph ], [ %i.0, %for.body ] (extra operand: vp<[[RESUME2]]>.1 from ir-bb<scalar.ph>)
 ; CHECK:         IR   %indvars.iv.next = add nsw i64 %indvars.iv, -1
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }

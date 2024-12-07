@@ -3,8 +3,8 @@
 
 define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK:      VPlan 'Final VPlan for VF={2},UF={1}' {
-; CHECK-NEXT: Live-in ir<2> = VF * UF
-; CHECK-NEXT: Live-in ir<%n.vec> = vector-trip-count
+; CHECK-NEXT: Live-in ir<[[VFxUF:.+]]> = VF * UF
+; CHECK-NEXT: Live-in ir<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
@@ -79,14 +79,14 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:   Successor(s): default.2
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   default.2:
-; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, ir<2>
-; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, ir<%n.vec>
+; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, ir<[[VFxUF]]>
+; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, ir<[[VTC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): ir-bb<middle.block>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<middle.block>:
-; CHECK-NEXT:   EMIT vp<[[MIDDLE_CMP:%.+]]> = icmp eq vp<[[TC]]>, ir<%n.vec>
+; CHECK-NEXT:   EMIT vp<[[MIDDLE_CMP:%.+]]> = icmp eq vp<[[TC]]>, ir<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[MIDDLE_CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:
