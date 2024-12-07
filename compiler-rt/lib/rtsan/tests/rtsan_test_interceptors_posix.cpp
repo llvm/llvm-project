@@ -391,6 +391,26 @@ TEST_F(RtsanOpenedFileTest, IoctlBehavesWithOutputArg) {
   EXPECT_THAT(arg, Ge(0));
 }
 
+TEST_F(RtsanOpenedFileTest, FdopenDiesWhenRealtime) {
+  auto Func = [&]() {
+    FILE *f = fdopen(GetOpenFd(), "w");
+    EXPECT_THAT(f, Ne(nullptr));
+  };
+
+  ExpectRealtimeDeath(Func, "fdopen");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, FreopenDiesWhenRealtime) {
+  auto Func = [&]() {
+    FILE *newfile = freopen(GetTemporaryFilePath(), "w", GetOpenFile());
+    EXPECT_THAT(newfile, Ne(nullptr));
+  };
+
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("freopen"));
+  ExpectNonRealtimeSurvival(Func);
+}
+
 TEST(TestRtsanInterceptors, IoctlBehavesWithOutputPointer) {
   // These initial checks just see if we CAN run these tests.
   // If we can't (can't open a socket, or can't find an interface, just
