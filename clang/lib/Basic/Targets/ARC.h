@@ -40,8 +40,8 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  auto getTargetBuiltinStorage() const
-      -> std::pair<const char *, ArrayRef<Builtin::Info>> override {
+  std::pair<const char *, ArrayRef<Builtin::Info>>
+  getTargetBuiltinStorage() const override {
     return {nullptr, {}};
   }
 

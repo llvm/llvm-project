@@ -105,8 +105,8 @@ template <size_t N> struct Storage {
   // table that should be used. This arrangement is designed to make it easy to
   // expand `.def` and `.inc` files with X-macros to construct both the string
   // table and the `Info` structs in the arguments to this function.
-  static constexpr auto Make(const char *Strings,
-                             std::array<Info, N> Infos) -> Storage<N> {
+  static constexpr Storage<N> Make(const char *Strings,
+                             std::array<Info, N> Infos) {
     // Translate lengths to offsets.
     int Offset = 0;
     for (auto &I : Infos) {
@@ -419,8 +419,7 @@ public:
   }
 
 private:
-  auto getStrTableAndInfo(unsigned ID) const
-      -> std::pair<const char *, const Info &>;
+  std::pair<const char *, const Info &> getStrTableAndInfo(unsigned ID) const;
 
   const Info &getInfo(unsigned ID) const {
     return getStrTableAndInfo(ID).second;

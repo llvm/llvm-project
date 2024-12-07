@@ -42,8 +42,8 @@ static constexpr auto BuiltinStorage =
 #include "clang/Basic/Builtins.inc"
         });
 
-auto Builtin::Context::getStrTableAndInfo(unsigned ID) const
-    -> std::pair<const char *, const Info &> {
+std::pair<const char *, const Builtin::Info &>
+Builtin::Context::getStrTableAndInfo(unsigned ID) const {
   if (ID < Builtin::FirstTSBuiltin)
     return {BuiltinStorage.StringTable, BuiltinStorage.Infos[ID]};
   assert(

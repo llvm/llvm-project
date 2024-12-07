@@ -701,8 +701,8 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 }
 
-auto AArch64TargetInfo::getTargetBuiltinStorage() const
-    -> std::pair<const char *, ArrayRef<Builtin::Info>> {
+std::pair<const char *, ArrayRef<Builtin::Info>>
+AArch64TargetInfo::getTargetBuiltinStorage() const {
   return {BuiltinStorage.StringTable, BuiltinStorage.Infos};
 }
 
