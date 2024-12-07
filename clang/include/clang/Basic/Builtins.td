@@ -1450,7 +1450,7 @@ def ElementwiseFma : Builtin {
 
 def ElementwiseAddSat : Builtin {
   let Spellings = ["__builtin_elementwise_add_sat"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 

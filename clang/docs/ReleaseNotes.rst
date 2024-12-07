@@ -414,6 +414,7 @@ Non-comprehensive list of changes in this release
 - ``__builtin_reduce_or`` and ``__builtin_reduce_xor`` functions can now be used in constant expressions.
 - ``__builtin_elementwise_popcount`` function can now be used in constant expressions.
 - ``__builtin_elementwise_bitreverse`` function can now be used in constant expressions.
+- ``__builtin_elementwise_add_sat`` function can now be used in constant expressions.
 
 New Compiler Flags
 ------------------
