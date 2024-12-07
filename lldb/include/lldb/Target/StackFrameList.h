@@ -104,15 +104,20 @@ protected:
   /// Realizes frames up to (and including) end_idx (which can be greater than
   /// the actual number of frames.)
   /// Returns true if the function was interrupted, false otherwise.
-  /// Must be called with a shared_locked mutex.  This might unlock the
-  /// shared side if it needs to fetch more frames, but will reacquire the
-  /// shared lock on the way out.
+  /// Must be called with a shared_locked mutex locked.
   bool GetFramesUpTo(uint32_t end_idx, InterruptionControl allow_interrupt,
                      std::shared_lock<std::shared_mutex> &guard);
 
-  /// Does not hold the StackFrameList mutex.  Same comment as GetFramesUpTo.
-  void GetOnlyConcreteFramesUpTo(uint32_t end_idx, Unwind &unwinder,
-                                 std::shared_lock<std::shared_mutex> &guard);
+  /// These two Fetch frames APIs must be called with the stack mutex shared
+  /// lock acquired.  They are the only places where we acquire the writer
+  /// end of the stack list mutex to add frames, but they will always exit with
+  /// the shared side reacquired.
+  /// Returns true if fetching frames was interrupted, false otherwise
+  bool FetchFramesUpTo(uint32_t end_idx, InterruptionControl allow_interrupt,
+                       std::shared_lock<std::shared_mutex> &guard);
+
+  void FetchOnlyConcreteFramesUpTo(uint32_t end_idx,
+                                   std::shared_lock<std::shared_mutex> &guard);
 
   // This gets called without the StackFrameList lock held, callers should
   // hold the lock.
