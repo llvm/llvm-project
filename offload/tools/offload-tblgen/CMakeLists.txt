@@ -7,6 +7,8 @@
 ##===----------------------------------------------------------------------===##
 include(TableGen)
 
+set(LLVM_LINK_COMPONENTS Support)
+
 add_tablegen(offload-tblgen OFFLOAD
   EXPORT OFFLOAD
   APIGen.cpp

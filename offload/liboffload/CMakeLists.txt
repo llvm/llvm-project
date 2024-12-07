@@ -1,8 +1,14 @@
 add_subdirectory(API)
 
-add_llvm_library(LLVMOffload SHARED
-                src/OffloadLib.cpp
-                src/OffloadImpl.cpp)
+add_llvm_library(
+  LLVMOffload SHARED
+  src/OffloadLib.cpp
+  src/OffloadImpl.cpp
+
+  LINK_COMPONENTS
+  FrontendOpenMP
+  Support
+  )
 
 foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)
     target_link_libraries(LLVMOffload PRIVATE omptarget.rtl.${plugin})
