@@ -10,13 +10,13 @@
 
 // std::ranges::cartesian_product_view::size
 
+#include <array>
 #include <cassert>
-#include <ranges>
 #include <initializer_list>
+#include <ranges>
 
 constexpr bool test() {
-  { // testing: constexpr auto size() const
-    // example taken from: https://en.cppreference.com/w/cpp/ranges/cartesian_product_view/size
+  { // example taken from: https://en.cppreference.com/w/cpp/ranges/cartesian_product_view/size
     constexpr static auto w = {1};
     constexpr static auto x = {2, 3};
     constexpr static auto y = {4, 5, 6};
@@ -31,6 +31,22 @@ constexpr bool test() {
 
     assert(v.size() == 42);
     assert(v.size() == w.size() * x.size() * y.size() * z.size());
+  }
+
+  { // empty range
+    std::ranges::empty_view<int> e;
+    auto v = std::ranges::cartesian_product_view(e);
+    assert(v.size() == 0);
+  }
+
+  { // 1..3 range(s)
+    constexpr size_t N0 = 3, N1 = 7, N2 = 42;
+    std::array<int, N0> a0;
+    std::array<int, N1> a1;
+    std::array<int, N2> a2;
+    assert(std::ranges::cartesian_product_view(a0).size() == N0);
+    assert(std::ranges::cartesian_product_view(a0, a1).size() == N0 * N1);
+    assert(std::ranges::cartesian_product_view(a0, a1, a2).size() == N0 * N1 * N2);
   }
 
   return true;
