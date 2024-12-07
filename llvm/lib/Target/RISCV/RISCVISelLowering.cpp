@@ -20076,8 +20076,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // reserved, if so report an error. Do the same for the return address if this
   // is not a tailcall.
   validateCCReservedRegs(RegsToPass, MF);
-  if (!IsTailCall &&
-      MF.getSubtarget<RISCVSubtarget>().isRegisterReservedByUser(RISCV::X1))
+  if (!IsTailCall && MF.getSubtarget().isRegisterReservedByUser(RISCV::X1))
     MF.getFunction().getContext().diagnose(DiagnosticInfoUnsupported{
         MF.getFunction(),
         "Return address register required, but has been reserved."});
@@ -21907,6 +21906,7 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
                                                 ShuffleVectorInst *SVI,
                                                 unsigned Factor) const {
   IRBuilder<> Builder(SI);
+  auto Mask = SVI->getShuffleMask();
   auto *ShuffleVTy = cast<FixedVectorType>(SVI->getType());
   // Given SVI : <n*factor x ty>, then VTy : <n x ty>
   auto *VTy = FixedVectorType::get(ShuffleVTy->getElementType(),
@@ -21918,11 +21918,35 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
 
   auto *XLenTy = Type::getIntNTy(SI->getContext(), Subtarget.getXLen());
 
+  unsigned Index;
+  // If the segment store only has one active lane (i.e. the interleave is
+  // just a spread shuffle), we can use a strided store instead.  This will
+  // be equally fast, and create less vector register pressure.
+  if (!Subtarget.hasOptimizedSegmentLoadStore(Factor) &&
+      isSpreadMask(Mask, Factor, Index)) {
+    unsigned ScalarSizeInBytes = ShuffleVTy->getScalarSizeInBits() / 8;
+    Value *Data = SVI->getOperand(0);
+    auto *DataVTy = cast<FixedVectorType>(Data->getType());
+    Value *Stride = ConstantInt::get(XLenTy, Factor * ScalarSizeInBytes);
+    Value *Offset = ConstantInt::get(XLenTy, Index * ScalarSizeInBytes);
+    Value *BasePtr = Builder.CreatePtrAdd(SI->getPointerOperand(), Offset);
+    Value *Mask = Builder.getAllOnesMask(DataVTy->getElementCount());
+    Value *VL = Builder.getInt32(VTy->getNumElements());
+
+    CallInst *CI = Builder.CreateIntrinsic(
+        Intrinsic::experimental_vp_strided_store,
+        {Data->getType(), BasePtr->getType(), Stride->getType()},
+        {Data, BasePtr, Stride, Mask, VL});
+    CI->addParamAttr(
+        1, Attribute::getWithAlignment(CI->getContext(), SI->getAlign()));
+
+    return true;
+  }
+
   Function *VssegNFunc = Intrinsic::getOrInsertDeclaration(
       SI->getModule(), FixedVssegIntrIds[Factor - 2],
       {VTy, SI->getPointerOperandType(), XLenTy});
 
-  auto Mask = SVI->getShuffleMask();
   SmallVector<Value *, 10> Ops;
 
   for (unsigned i = 0; i < Factor; i++) {
