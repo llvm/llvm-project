@@ -670,6 +670,9 @@ public:
   /// Indicates if the binary is Linux kernel.
   bool IsLinuxKernel{false};
 
+  /// Linux kernel version (major, minor, reversion)
+  std::tuple<unsigned, unsigned, unsigned> LinuxKernelVersion;
+
   /// Indicates if relocations are available for usage.
   bool HasRelocations{false};
 

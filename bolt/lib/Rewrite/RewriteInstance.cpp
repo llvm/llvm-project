@@ -61,6 +61,7 @@
 #include <fstream>
 #include <memory>
 #include <optional>
+#include <regex>
 #include <system_error>
 
 #undef  DEBUG_TYPE
@@ -1030,6 +1031,25 @@ void RewriteInstance::discoverFileObjects() {
       continue;
     }
 
+    if (BC->IsLinuxKernel && SymName == "linux_banner") {
+      const StringRef SectionContents =
+          cantFail(Section->getContents(), "can not get section contents");
+      const std::string S =
+          SectionContents
+              .substr(SymbolAddress - Section->getAddress(), SymbolSize)
+              .str();
+
+      const std::regex Re(R"---(Linux version ((\d+)\.(\d+)(\.(\d+))?))---");
+      std::smatch Match;
+      if (std::regex_search(S, Match, Re)) {
+        unsigned Major = std::stoi(Match[2].str());
+        unsigned Minor = std::stoi(Match[3].str());
+        unsigned Rev = Match.size() > 5 ? std::stoi(Match[5].str()) : 0;
+        BC->LinuxKernelVersion = std::make_tuple(Major, Minor, Rev);
+        BC->outs() << "BOLT-INFO: Linux kernel version is " << Match[1].str();
+      }
+    }
+
     if (!Section->isText()) {
       assert(SymbolType != SymbolRef::ST_Function &&
              "unexpected function inside non-code section");
@@ -1204,6 +1224,9 @@ void RewriteInstance::discoverFileObjects() {
     registerName(SymbolSize);
     PreviousFunction = BF;
   }
+
+  if (BC->IsLinuxKernel && !std::get<0>(BC->LinuxKernelVersion))
+    BC->errs() << "BOLT-WARNING: Linux kernel version is unknown\n";
 
   // Read dynamic relocation first as their presence affects the way we process
   // static relocations. E.g. we will ignore a static relocation at an address
