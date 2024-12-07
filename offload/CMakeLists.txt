@@ -370,8 +370,8 @@ set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_INTDIR}" CACHE STRING
   "Path to folder where intermediate libraries will be output")
 
 # Build offloading plugins and device RTLs if they are available.
-add_subdirectory(plugins-nextgen)
 add_subdirectory(DeviceRTL)
+add_subdirectory(plugins-nextgen)
 add_subdirectory(tools)
 
 # Build target agnostic offloading library.

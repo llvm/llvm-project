@@ -20,7 +20,10 @@ endif()
 # Configure testing for the AMDGPU plugin. We will build tests if we could a
 # functional AMD GPU on the system, or if manually specifies by the user.
 option(LIBOMPTARGET_FORCE_AMDGPU_TESTS "Build AMDGPU libomptarget tests" OFF)
-if (LIBOMPTARGET_FOUND_AMDGPU_GPU OR LIBOMPTARGET_FORCE_AMDGPU_TESTS)
+if ((LIBOMPTARGET_FOUND_AMDGPU_GPU
+     AND "${LIBOMPTARGET_AMDGPU_DETECTED_ARCH_LIST}"
+         IN_LIST LIBOMPTARGET_EXPANDED_DEVICE_ARCHITECTURES)
+    OR LIBOMPTARGET_FORCE_AMDGPU_TESTS)
   # Report to the parent scope that we are building a plugin for amdgpu
   set(LIBOMPTARGET_SYSTEM_TARGETS
       "${LIBOMPTARGET_SYSTEM_TARGETS} amdgcn-amd-amdhsa" PARENT_SCOPE)

@@ -16,7 +16,10 @@ endif()
 # Configure testing for the CUDA plugin. We will build tests if we could a
 # functional NVIDIA GPU on the system, or if manually specifies by the user.
 option(LIBOMPTARGET_FORCE_NVIDIA_TESTS "Build NVIDIA libomptarget tests" OFF)
-if (LIBOMPTARGET_FOUND_NVIDIA_GPU OR LIBOMPTARGET_FORCE_NVIDIA_TESTS)
+if ((LIBOMPTARGET_FOUND_NVIDIA_GPU
+     AND "${LIBOMPTARGET_DEP_CUDA_ARCH}"
+         IN_LIST LIBOMPTARGET_EXPANDED_DEVICE_ARCHITECTURES)
+    OR LIBOMPTARGET_FORCE_NVIDIA_TESTS)
   message(STATUS "Enable tests using CUDA plugin")
   set(LIBOMPTARGET_SYSTEM_TARGETS
       "${LIBOMPTARGET_SYSTEM_TARGETS} nvptx64-nvidia-cuda nvptx64-nvidia-cuda-LTO" PARENT_SCOPE)
