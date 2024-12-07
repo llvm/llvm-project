@@ -52,6 +52,21 @@ struct YkBasicBlockTracer : public ModulePass {
         builder.SetInsertPoint(&*BB.getFirstInsertionPt());
 
         if (F.getName().startswith(YK_CLONE_PREFIX)) {
+          // #0  core::sync::atomic::AtomicUsize::fetch_sub (self=0xfffffffffffffff0) at /home/pd/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/sync/atomic.rs:2720
+          // #1  alloc::sync::{impl#37}::drop<lock_api::mutex::Mutex<parking_lot::raw_mutex::RawMutex, ykrt::location::HotLocation>, alloc::alloc::Global> (self=0x7fffffffd2d0) at /home/pd/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/sync.rs:2529
+          // #2  0x00007ffff79fa5bb in core::ptr::drop_in_place<alloc::sync::Arc<lock_api::mutex::Mutex<parking_lot::raw_mutex::RawMutex, ykrt::location::HotLocation>, alloc::alloc::Global>> () at /home/pd/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ptr/mod.rs:521
+          // #3  0x00007ffff79372de in core::mem::drop<alloc::sync::Arc<lock_api::mutex::Mutex<parking_lot::raw_mutex::RawMutex, ykrt::location::HotLocation>, alloc::alloc::Global>> (_x=...) at /home/pd/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/mem/mod.rs:942
+          // #4  0x00007ffff7a06870 in ykrt::location::{impl#2}::drop (self=0x7fffffffd328) at ykrt/src/location.rs:211
+          // #5  0x00007ffff792078b in core::ptr::drop_in_place<ykrt::location::Location> () at /home/pd/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ptr/mod.rs:521
+          // #6  0x00007ffff79207ad in core::mem::drop<ykrt::location::Location> (_x=...) at /home/pd/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/mem/mod.rs:942
+          // #7  0x00007ffff79201c5 in ykcapi::yk_location_drop (loc=...) at ykcapi/src/lib.rs:155
+          // #8  0x0000000000202b66 in main () at /home/pd/yk-fork/tests/c/simple3.c:36
+          // #9  0x00007ffff704624a in __libc_start_call_main (main=main@entry=0x202790 <main>, argc=argc@entry=1, argv=0x7fffffffde98, argv@entry=0x7fffffffdea8) at ../sysdeps/nptl/libc_start_call_main.h:58
+          // #10 0x00007ffff7046305 in __libc_start_main_impl (main=0x202790 <main>, argc=1, argv=0x7fffffffdea8, init=<optimized out>, fini=<optimized out>, rtld_fini=<optimized out>, stack_end=0x7fffffffde88) at ../csu/libc-start.c:360
+          // #11 0x0000000000202661 in _start ()
+          // if (F.getName().startswith(YK_CLONE_PREFIX)) {
+          //   continue;
+          // }
           builder.CreateCall(DummyTraceFunc, {builder.getInt32(FunctionIndex),
                                               builder.getInt32(BlockIndex)});
         } else {
