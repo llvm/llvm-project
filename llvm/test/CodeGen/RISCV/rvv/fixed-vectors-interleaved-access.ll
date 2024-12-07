@@ -1285,17 +1285,55 @@ define void @load_factor4_one_active_storeback_full(ptr %ptr) {
   ret void
 }
 
-; TODO: This should be a strided store
-define void @store_factor4_one_active_storeback(ptr %ptr, <4 x i32> %v) {
-; CHECK-LABEL: store_factor4_one_active_storeback:
+define void @store_factor4_one_active(ptr %ptr, <4 x i32> %v) {
+; CHECK-LABEL: store_factor4_one_active:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vslideup.vi v9, v8, 1
-; CHECK-NEXT:    vmv.v.v v10, v9
-; CHECK-NEXT:    vmv.v.v v11, v9
-; CHECK-NEXT:    vsseg4e32.v v8, (a0)
+; CHECK-NEXT:    vsse32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
   %v0 = shufflevector <4 x i32> %v, <4 x i32> poison, <16 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 3,  i32 undef, i32 undef, i32 undef>
+  store <16 x i32> %v0, ptr %ptr
+  ret void
+}
+
+define void @store_factor4_one_active_idx1(ptr %ptr, <4 x i32> %v) {
+; CHECK-LABEL: store_factor4_one_active_idx1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a1, 16
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vsse32.v v8, (a0), a1
+; CHECK-NEXT:    ret
+  %v0 = shufflevector <4 x i32> %v, <4 x i32> poison, <16 x i32> <i32 undef, i32 0, i32 undef, i32 undef, i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 3,  i32 undef, i32 undef>
+  store <16 x i32> %v0, ptr %ptr
+  ret void
+}
+
+define void @store_factor4_one_active_fullwidth(ptr %ptr, <16 x i32> %v) {
+; CHECK-LABEL: store_factor4_one_active_fullwidth:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 16
+; CHECK-NEXT:    vsetivli zero, 4, e32, m4, ta, ma
+; CHECK-NEXT:    vsse32.v v8, (a0), a1
+; CHECK-NEXT:    ret
+  %v0 = shufflevector <16 x i32> %v, <16 x i32> poison, <16 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 3,  i32 undef, i32 undef, i32 undef>
+  store <16 x i32> %v0, ptr %ptr
+  ret void
+}
+
+; TODO: This could be a vslidedown followed by a strided store
+define void @store_factor4_one_active_slidedown(ptr %ptr, <4 x i32> %v) {
+; CHECK-LABEL: store_factor4_one_active_slidedown:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v9, v8, 1
+; CHECK-NEXT:    vslideup.vi v10, v8, 1
+; CHECK-NEXT:    vmv.v.v v11, v10
+; CHECK-NEXT:    vmv.v.v v12, v10
+; CHECK-NEXT:    vsseg4e32.v v9, (a0)
+; CHECK-NEXT:    ret
+  %v0 = shufflevector <4 x i32> %v, <4 x i32> poison, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 3, i32 undef, i32 undef, i32 undef, i32 4,  i32 undef, i32 undef, i32 undef>
   store <16 x i32> %v0, ptr %ptr
   ret void
 }
