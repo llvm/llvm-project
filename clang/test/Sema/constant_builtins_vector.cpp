@@ -828,7 +828,7 @@ static_assert(__builtin_elementwise_add_sat(1U, 2U) == 3U);
 static_assert(__builtin_elementwise_add_sat(~(1 << 31), 42) == ~(1 << 31));
 static_assert(__builtin_elementwise_add_sat((1 << 31), -42) == (1 << 31));
 static_assert(__builtin_elementwise_add_sat(~0U, 1U) == ~0U);
-static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_add_sat((vector4char){1, 2, 3, 4}, (vector4char){4, 3, 2, 1})) == (LITTLE_END ? 0x05050505 : 0x05050505));
+static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_add_sat((vector4char){1, 2, 3, 4}, (vector4char){1, 2, 3, 4})) == (LITTLE_END ? 0x08060402 : 0x02040608));
 static_assert(__builtin_bit_cast(unsigned long long, __builtin_elementwise_add_sat((vector4short){(short)0x8000, (short)0x8001, (short)0x8002, (short)0x8003}, (vector4short){-7, -8, -9, -10}) == (LITTLE_END ? 0x8000800080008000 : 0x8000800080008000)));
 
 static_assert(__builtin_elementwise_sub_sat(1, 2) == -1);
@@ -836,5 +836,5 @@ static_assert(__builtin_elementwise_sub_sat(2U, 1U) == 1U);
 static_assert(__builtin_elementwise_sub_sat(~(1 << 31), -42) == ~(1 << 31));
 static_assert(__builtin_elementwise_sub_sat((1 << 31), 42) == (1 << 31));
 static_assert(__builtin_elementwise_sub_sat(0U, 1U) == 0U);
-static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_sub_sat((vector4char){5, 4, 3, 2}, (vector4char){4, 3, 2, 1})) == (LITTLE_END ? 0x01010101 : 0x01010101));
+static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_sub_sat((vector4char){5, 4, 3, 2}, (vector4char){1, 1, 1, 1})) == (LITTLE_END ? 0x01020304 : 0x04030201));
 static_assert(__builtin_bit_cast(unsigned long long, __builtin_elementwise_sub_sat((vector4short){(short)0x8000, (short)0x8001, (short)0x8002, (short)0x8003}, (vector4short){7, 8, 9, 10}) == (LITTLE_END ? 0x8000800080008000 : 0x8000800080008000)));
