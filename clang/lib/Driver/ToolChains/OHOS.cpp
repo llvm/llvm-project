@@ -344,11 +344,11 @@ std::string OHOS::getCompilerRT(const ArgList &Args, StringRef Component,
   llvm::sys::path::append(Path, "lib", getMultiarchTriple(getTriple()),
                           SelectedMultilib.gccSuffix(), CRTBasename);
   if (getVFS().exists(Path))
-      return std::string(Path);
+    return std::string(Path);
 
   std::string NewPath = ToolChain::getCompilerRT(Args, Component, Type);
   if (getVFS().exists(NewPath))
-      return NewPath;
+    return NewPath;
 
   return std::string(Path);
 }
