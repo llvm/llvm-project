@@ -5363,6 +5363,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
             // non-dependent one (RecordType).
             ClsType = Context.getElaboratedType(ElaboratedTypeKeyword::None,
                                                 NNSPrefix, ClsType);
+          } else {
+            // The only other type we should get here is TemplateTypeParmType.
+            assert(isa<TemplateTypeParmType>(NNSType));
           }
           break;
         }
