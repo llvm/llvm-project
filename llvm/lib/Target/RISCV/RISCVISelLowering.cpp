@@ -3496,21 +3496,30 @@ static SDValue matchSplatAsGather(SDValue SplatVal, MVT VT, const SDLoc &DL,
   if (SplatVal.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
     return SDValue();
   SDValue Vec = SplatVal.getOperand(0);
-  // Only perform this optimization on vectors of the same size for simplicity.
-  // Don't perform this optimization for i1 vectors.
+  // Don't perform this optimization for i1 vectors, or if the element types are
+  // different
   // FIXME: Support i1 vectors, maybe by promoting to i8?
-  if (Vec.getValueType() != VT || VT.getVectorElementType() == MVT::i1)
+  MVT EltTy = VT.getVectorElementType();
+  if (EltTy == MVT::i1 ||
+      EltTy != Vec.getSimpleValueType().getVectorElementType())
     return SDValue();
   SDValue Idx = SplatVal.getOperand(1);
   // The index must be a legal type.
   if (Idx.getValueType() != Subtarget.getXLenVT())
     return SDValue();
 
+  // Check that Index lies within VT
+  // TODO: Can we check if the Index is constant and known in-bounds?
+  if (!TypeSize::isKnownLE(Vec.getValueSizeInBits(), VT.getSizeInBits()))
+    return SDValue();
+
   MVT ContainerVT = VT;
-  if (VT.isFixedLengthVector()) {
+  if (VT.isFixedLengthVector())
     ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
-    Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
-  }
+
+  Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT,
+                    DAG.getUNDEF(ContainerVT), Vec,
+                    DAG.getVectorIdxConstant(0, DL));
 
   auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
@@ -3522,7 +3531,6 @@ static SDValue matchSplatAsGather(SDValue SplatVal, MVT VT, const SDLoc &DL,
 
   return convertFromScalableVector(VT, Gather, DAG, Subtarget);
 }
-
 
 /// Try and optimize BUILD_VECTORs with "dominant values" - these are values
 /// which constitute a large proportion of the elements. In such cases we can
