@@ -41,6 +41,12 @@ jobs:
 
     - name: Run sccache-cache
       uses: mozilla-actions/sccache-action@v0.0.6
+    
+    - name: Prepare dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake ninja-build libmpfr-dev libgmp-dev libmpc-dev
 
     - name: Set reusable strings
       id: strings
