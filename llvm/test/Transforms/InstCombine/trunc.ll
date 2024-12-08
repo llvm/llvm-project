@@ -1129,8 +1129,7 @@ define i1 @trunc_nuw_i1_non_zero(i8 %1) {
 ; CHECK-LABEL: @trunc_nuw_i1_non_zero(
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP0:%.*]], 0
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
-; CHECK-NEXT:    [[RET:%.*]] = trunc nuw i8 [[TMP0]] to i1
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    ret i1 true
 ;
   %3 = icmp ne i8 %1, 0
   tail call void @llvm.assume(i1 %3)
@@ -1177,8 +1176,7 @@ define i1 @trunc_nsw_i1_non_zero(i8 %1) {
 ; CHECK-LABEL: @trunc_nsw_i1_non_zero(
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP0:%.*]], 0
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
-; CHECK-NEXT:    [[RET:%.*]] = trunc nsw i8 [[TMP0]] to i1
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    ret i1 true
 ;
   %3 = icmp ne i8 %1, 0
   tail call void @llvm.assume(i1 %3)
