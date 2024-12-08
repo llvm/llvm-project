@@ -22,6 +22,8 @@
 
 #include <initializer_list>
 
+namespace llvm {
+namespace memprof {
 namespace {
 
 using ::llvm::DIGlobal;
@@ -37,7 +39,6 @@ using ::testing::Pair;
 using ::testing::Return;
 using ::testing::SizeIs;
 using ::testing::UnorderedElementsAre;
-using namespace ::llvm::memprof;
 
 class MockSymbolizer : public SymbolizableModule {
 public:
@@ -318,7 +319,7 @@ TEST(MemProf, RecordSerializationRoundTripVersion2HotColdSchema) {
 
   // Verify that Schema has propagated all the way to the Info field in each
   // IndexedAllocationInfo.
-  ASSERT_THAT(Record.AllocSites, ::SizeIs(2));
+  ASSERT_THAT(Record.AllocSites, SizeIs(2));
   EXPECT_EQ(Record.AllocSites[0].Info.getSchema(), SchemaBitSet);
   EXPECT_EQ(Record.AllocSites[1].Info.getSchema(), SchemaBitSet);
 
@@ -332,7 +333,7 @@ TEST(MemProf, RecordSerializationRoundTripVersion2HotColdSchema) {
   // Verify that Schema comes back correctly after deserialization. Technically,
   // the comparison between Record and GotRecord below includes the comparison
   // of their Schemas, but we'll verify the Schemas on our own.
-  ASSERT_THAT(GotRecord.AllocSites, ::SizeIs(2));
+  ASSERT_THAT(GotRecord.AllocSites, SizeIs(2));
   EXPECT_EQ(GotRecord.AllocSites[0].Info.getSchema(), SchemaBitSet);
   EXPECT_EQ(GotRecord.AllocSites[1].Info.getSchema(), SchemaBitSet);
 
@@ -795,3 +796,5 @@ TotalLifetimeAccessDensity: 444
 )YAML");
 }
 } // namespace
+} // namespace memprof
+} // namespace llvm
