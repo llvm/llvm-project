@@ -278,44 +278,49 @@ static bool readPointerToBuffer(const Context &Ctx, const Pointer &FromPtr,
           if (llvm::sys::IsBigEndianHost)
             swapBytes(Buff.get(), NumBits.roundToBytes());
 
+          Buffer.markInitialized(BitOffset, NumBits);
         } else {
           BITCAST_TYPE_SWITCH(T, { P.deref<T>().bitcastToMemory(Buff.get()); });
 
           if (llvm::sys::IsBigEndianHost)
             swapBytes(Buff.get(), FullBitWidth.roundToBytes());
+          Buffer.markInitialized(BitOffset, BitWidth);
         }
 
         Buffer.pushData(Buff.get(), BitOffset, BitWidth, TargetEndianness);
-        Buffer.markInitialized(BitOffset, BitWidth);
         return true;
       });
 }
 
 bool clang::interp::DoBitCast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                              std::byte *Buff, size_t BuffSize,
+                              std::byte *Buff, Bits BitWidth, Bits FullBitWidth,
                               bool &HasIndeterminateBits) {
   assert(Ptr.isLive());
   assert(Ptr.isBlockPointer());
   assert(Buff);
+  assert(BitWidth <= FullBitWidth);
+  assert(FullBitWidth.isFullByte());
+  assert(BitWidth.isFullByte());
 
-  Bits BitSize = Bytes(BuffSize).toBits();
-  BitcastBuffer Buffer(BitSize);
+  BitcastBuffer Buffer(FullBitWidth);
+  size_t BuffSize = FullBitWidth.roundToBytes();
   if (!CheckBitcastType(S, OpPC, Ptr.getType(), /*IsToType=*/false))
     return false;
 
   bool Success = readPointerToBuffer(S.getContext(), Ptr, Buffer,
                                      /*ReturnOnUninit=*/false);
-  HasIndeterminateBits = !Buffer.allInitialized();
+  HasIndeterminateBits = !Buffer.rangeInitialized(Bits::zero(), BitWidth);
 
   const ASTContext &ASTCtx = S.getASTContext();
   Endian TargetEndianness =
       ASTCtx.getTargetInfo().isLittleEndian() ? Endian::Little : Endian::Big;
-  auto B = Buffer.copyBits(Bits::zero(), BitSize, BitSize, TargetEndianness);
+  auto B =
+      Buffer.copyBits(Bits::zero(), BitWidth, FullBitWidth, TargetEndianness);
 
   std::memcpy(Buff, B.get(), BuffSize);
 
   if (llvm::sys::IsBigEndianHost)
-    swapBytes(Buff, BuffSize);
+    swapBytes(Buff, BitWidth.roundToBytes());
 
   return Success;
 }
