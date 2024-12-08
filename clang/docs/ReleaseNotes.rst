@@ -411,7 +411,8 @@ Non-comprehensive list of changes in this release
 - The following builtins can now be used in constant expressions: ``__builtin_reduce_add``,
   ``__builtin_reduce_mul``, ``__builtin_reduce_and``, ``__builtin_reduce_or``,
   ``__builtin_reduce_xor``, ``__builtin_elementwise_popcount``,
-  ``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``.
+  ``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
+  ``__builtin_elementwise_sub_sat``.
 
 New Compiler Flags
 ------------------
