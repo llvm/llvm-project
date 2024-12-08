@@ -1890,7 +1890,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
       if (sym->includeInDynsym(ctx)) {
         ctx.partitions[sym->partition - 1].dynSymTab->addSymbol(sym);
-        if (auto *file = dyn_cast_or_null<SharedFile>(sym->file))
+        if (auto *file = dyn_cast<SharedFile>(sym->file))
           if (file->isNeeded && !sym->isUndefined())
             addVerneed(ctx, *sym);
       }
