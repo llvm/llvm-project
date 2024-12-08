@@ -534,19 +534,10 @@ TEST(MemProf, IndexedMemProfRecordToMemProfRecord) {
 
   // Verify the contents of Record.
   ASSERT_THAT(Record.AllocSites, SizeIs(2));
-  ASSERT_THAT(Record.AllocSites[0].CallStack, SizeIs(2));
-  EXPECT_EQ(Record.AllocSites[0].CallStack[0].hash(), F1.hash());
-  EXPECT_EQ(Record.AllocSites[0].CallStack[1].hash(), F2.hash());
-  ASSERT_THAT(Record.AllocSites[1].CallStack, SizeIs(2));
-  EXPECT_EQ(Record.AllocSites[1].CallStack[0].hash(), F1.hash());
-  EXPECT_EQ(Record.AllocSites[1].CallStack[1].hash(), F3.hash());
-  ASSERT_THAT(Record.CallSites, SizeIs(2));
-  ASSERT_THAT(Record.CallSites[0], SizeIs(2));
-  EXPECT_EQ(Record.CallSites[0][0].hash(), F2.hash());
-  EXPECT_EQ(Record.CallSites[0][1].hash(), F3.hash());
-  ASSERT_THAT(Record.CallSites[1], SizeIs(2));
-  EXPECT_EQ(Record.CallSites[1][0].hash(), F2.hash());
-  EXPECT_EQ(Record.CallSites[1][1].hash(), F4.hash());
+  EXPECT_THAT(Record.AllocSites[0].CallStack, ElementsAre(F1, F2));
+  EXPECT_THAT(Record.AllocSites[1].CallStack, ElementsAre(F1, F3));
+  EXPECT_THAT(Record.CallSites,
+              ElementsAre(ElementsAre(F2, F3), ElementsAre(F2, F4)));
 }
 
 // Populate those fields returned by getHotColdSchema.
