@@ -68,7 +68,7 @@ define void @test1_neg(ptr %a, ptr readnone %a_end, ptr %b.i64) {
 ; CHECK-NEXT:    [[I1:%.*]] = load float, ptr [[A]], align 4
 ; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[I1]], 4.200000e+01
 ; CHECK-NEXT:    store float [[MUL_I]], ptr [[A_ADDR_03]], align 4
-; CHECK-NEXT:    [[ADD]] = getelementptr inbounds i8, ptr [[A]], i64 4
+; CHECK-NEXT:    [[ADD]] = getelementptr inbounds nuw i8, ptr [[A]], i64 4
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[A_ADDR_03]], i64 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[INCDEC_PTR]], [[A_END]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]]
