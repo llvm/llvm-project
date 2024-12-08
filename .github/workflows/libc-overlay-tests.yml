@@ -50,6 +50,7 @@ jobs:
     - name: Prepare dependencies (Windows)
       if: matrix.os == 'windows-latest'
       run: |
+        Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe
         winget install --silent --exact --force LLVM.LLVM
         winget install --silent --exact --force Ninja-build.Ninja
         echo "C:\\Program Files\\LLVM\\bin" >> $GITHUB_PATH
