@@ -1098,7 +1098,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
       // Many LoongArch TLS relocs reuse the RE_LOONGARCH_GOT type, in which
       // case the NEEDS_GOT flag shouldn't get set.
       if (expr == RE_AARCH64_AUTH_GOT || expr == RE_AARCH64_AUTH_GOT_PAGE_PC ||
-          expr == RE_AARCH64_AUTH_GOT_PAGE_PC)
+          expr == RE_AARCH64_AUTH_GOT_PC)
         sym.setFlags(NEEDS_GOT | NEEDS_GOT_AUTH);
       else
         sym.setFlags(NEEDS_GOT | NEEDS_GOT_NONAUTH);
