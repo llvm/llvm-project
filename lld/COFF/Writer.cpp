@@ -277,7 +277,6 @@ private:
 
   void prepareLoadConfig();
   template <typename T> void prepareLoadConfig(T *loadConfig);
-  template <typename T> void checkLoadConfigGuardData(const T *loadConfig);
 
   std::unique_ptr<FileOutputBuffer> &buffer;
   std::map<PartialSectionKey, PartialSection *> partialSections;
@@ -2633,14 +2632,6 @@ void Writer::prepareLoadConfig() {
 }
 
 template <typename T> void Writer::prepareLoadConfig(T *loadConfig) {
-  if (ctx.config.dependentLoadFlags)
-    loadConfig->DependentLoadFlags = ctx.config.dependentLoadFlags;
-
-  checkLoadConfigGuardData(loadConfig);
-}
-
-template <typename T>
-void Writer::checkLoadConfigGuardData(const T *loadConfig) {
   size_t loadConfigSize = loadConfig->Size;
 
 #define RETURN_IF_NOT_CONTAINS(field)                                          \
@@ -2661,6 +2652,11 @@ void Writer::checkLoadConfigGuardData(const T *loadConfig) {
   if (auto *s = dyn_cast<DefinedAbsolute>(ctx.symtab.findUnderscore(sym)))     \
     if (loadConfig->field != s->getVA())                                       \
       warn(#field " not set correctly in '_load_config_used'");
+
+  if (ctx.config.dependentLoadFlags) {
+    RETURN_IF_NOT_CONTAINS(DependentLoadFlags)
+    loadConfig->DependentLoadFlags = ctx.config.dependentLoadFlags;
+  }
 
   if (ctx.config.guardCF == GuardCFLevel::Off)
     return;
