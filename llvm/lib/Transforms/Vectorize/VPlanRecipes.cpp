@@ -57,6 +57,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
     case Instruction::Or:
     case Instruction::ICmp:
     case Instruction::Select:
+    case VPInstruction::AnyOf:
     case VPInstruction::Not:
     case VPInstruction::CalculateTripCountMinusVF:
     case VPInstruction::CanonicalIVIncrementForPart:
