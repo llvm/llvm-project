@@ -17,22 +17,22 @@ jobs:
       # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations.
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ ubuntu-24.04, windows-2022, macos-14 ]
         compiler: [
           { c_compiler: gcc, cpp_compiler: g++ },
           { c_compiler: clang, cpp_compiler: clang++ },
           { c_compiler: clang-cl, cpp_compiler: clang-cl }
         ]
         exclude:
-          - os: windows-latest
+          - os: windows-2022
             compiler: { c_compiler: gcc, cpp_compiler: g++ }
-          - os: windows-latest
+          - os: windows-2022
             compiler: { c_compiler: clang, cpp_compiler: clang++ }
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             compiler: { c_compiler: clang-cl, cpp_compiler: clang-cl }
-          - os: macos-latest
+          - os: macos-14
             compiler: { c_compiler: clang-cl, cpp_compiler: clang-cl }
-          - os: macos-latest
+          - os: macos-14
             compiler: { c_compiler: gcc, cpp_compiler: g++ }
 
     steps:
@@ -42,29 +42,15 @@ jobs:
       uses: mozilla-actions/sccache-action@v0.0.6
     
     - name: Prepare dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu-latest'
+      if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake ninja-build libmpfr-dev libgmp-dev libmpc-dev
+        sudo apt-get install -y cmake libmpfr-dev libgmp-dev libmpc-dev
     
     - name: Prepare dependencies (Windows)
-      if: matrix.os == 'windows-latest'
+      if: runner.os == 'Windows'
       run: |
-        $progressPreference = 'silentlyContinue'
-        Write-Host "Installing WinGet PowerShell module from PSGallery..."
-        Install-PackageProvider -Name NuGet -Force | Out-Null
-        Install-Module -Name Microsoft.WinGet.Client -Force -Repository PSGallery | Out-Null
-        Write-Host "Using Repair-WinGetPackageManager cmdlet to bootstrap WinGet..."
-        Repair-WinGetPackageManager
-        Write-Host "Done."
-        winget install --silent --exact --force LLVM.LLVM
-        winget install --silent --exact --force Ninja-build.Ninja
         echo "C:\\Program Files\\LLVM\\bin" >> $GITHUB_PATH
-
-    - name: Prepare dependencies (macOS)
-      if: matrix.os == 'macos-latest'
-      run: |
-        brew install ninja
 
     - name: Set reusable strings
       id: strings
@@ -81,7 +67,6 @@ jobs:
         -DCMAKE_C_COMPILER_LAUNCHER=sccache
         -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
         -DLLVM_ENABLE_RUNTIMES=libc
-        -G Ninja
         -S ${{ github.workspace }}/runtimes
 
     - name: Build
