@@ -36,7 +36,7 @@ jobs:
     - name: Setup ccache
       uses: hendrikmuhs/ccache-action@v1
       with:
-        max-size: 256M
+        max-size: 1G
         key: libc_overlay_build_${{ matrix.os }}_${{ matrix.compiler.c_compiler }}
         variant: sccache
     
