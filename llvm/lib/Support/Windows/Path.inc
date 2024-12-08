@@ -1372,32 +1372,6 @@ std::error_code closeFile(file_t &F) {
   return std::error_code();
 }
 
-std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
-  // Convert to utf-16.
-  SmallVector<wchar_t, 128> Path16;
-  std::error_code EC = widenPath(path, Path16);
-  if (EC && !IgnoreErrors)
-    return EC;
-
-  // SHFileOperation() accepts a list of paths, and so must be double null-
-  // terminated to indicate the end of the list.  The buffer is already null
-  // terminated, but since that null character is not considered part of the
-  // vector's size, pushing another one will just consume that byte.  So we
-  // need to push 2 null terminators.
-  Path16.push_back(0);
-  Path16.push_back(0);
-
-  SHFILEOPSTRUCTW shfos = {};
-  shfos.wFunc = FO_DELETE;
-  shfos.pFrom = Path16.data();
-  shfos.fFlags = FOF_NO_UI;
-
-  int result = ::SHFileOperationW(&shfos);
-  if (result != 0 && !IgnoreErrors)
-    return mapWindowsError(result);
-  return std::error_code();
-}
-
 static void expandTildeExpr(SmallVectorImpl<char> &Path) {
   // Path does not begin with a tilde expression.
   if (Path.empty() || Path[0] != '~')
