@@ -242,6 +242,7 @@ public:
   StringRef sourceFile;
   uint32_t andFeatures = 0;
   bool hasCommonSyms = false;
+  bool hasVersionSyms = false;
   ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
 };
 
