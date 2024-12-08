@@ -24,7 +24,7 @@ jobs:
               c_compiler: clang
               cpp_compiler: clang++
             cmake_config: -GNinja
-          - os: windows-latest
+          - os: windows-2022
             compiler:
               c_compiler: clang-cl
               cpp_compiler: clang-cl
