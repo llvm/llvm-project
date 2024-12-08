@@ -46,7 +46,7 @@ class TargetRegisterClass {
 public:
   using iterator = const MCPhysReg *;
   using const_iterator = const MCPhysReg *;
-  using sc_iterator = const TargetRegisterClass* const *;
+  using sc_iterator = const unsigned *;
 
   // Instance variables filled by tablegen, do not use!
   const MCRegisterClass *MC;
@@ -184,9 +184,7 @@ public:
 
   /// Return true if this TargetRegisterClass is a subset
   /// class of at least one other TargetRegisterClass.
-  bool isASubClass() const {
-    return SuperClasses[0] != nullptr;
-  }
+  bool isASubClass() const { return SuperClasses[0] != ~0U; }
 
   /// Returns the preferred order for allocating registers from this register
   /// class in MF. The raw order comes directly from the .td file and may

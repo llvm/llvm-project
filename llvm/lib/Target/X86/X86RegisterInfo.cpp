@@ -172,7 +172,8 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
       if (getRegSizeInBits(*Super) == getRegSizeInBits(*RC))
         return Super;
     }
-    Super = *I++;
+    Super = (*I != ~0U) ? getRegClass(*I) : nullptr;
+    ++I;
   } while (Super);
   return RC;
 }

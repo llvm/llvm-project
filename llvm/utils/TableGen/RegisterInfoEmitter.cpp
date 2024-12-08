@@ -1286,8 +1286,8 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
     }
     OS << "};\n";
 
-    OS << "\nstatic const TargetRegisterClass *const "
-       << "NullRegClasses[] = { nullptr };\n\n";
+    OS << "\nstatic const unsigned "
+       << "NullRegClasses[] = { ~0U };\n\n";
 
     // Emit register class bit mask tables. The first bit mask emitted for a
     // register class, RC, is the set of sub-classes, including RC itself.
@@ -1348,11 +1348,10 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
       if (Supers.empty())
         continue;
 
-      OS << "static const TargetRegisterClass *const " << RC.getName()
-         << "Superclasses[] = {\n";
+      OS << "static unsigned const " << RC.getName() << "Superclasses[] = {\n";
       for (const auto *Super : Supers)
-        OS << "  &" << Super->getQualifiedName() << "RegClass,\n";
-      OS << "  nullptr\n};\n\n";
+        OS << "  " << Super->getQualifiedIdName() << ",\n";
+      OS << "  ~0U\n};\n\n";
     }
 
     // Emit methods.

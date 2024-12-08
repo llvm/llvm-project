@@ -262,30 +262,30 @@ bool ARMBaseRegisterInfo::isInlineAsmReadOnlyReg(const MachineFunction &MF,
 const TargetRegisterClass *
 ARMBaseRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
                                                const MachineFunction &MF) const {
-  const TargetRegisterClass *Super = RC;
+  unsigned SuperID = RC->getID();
   TargetRegisterClass::sc_iterator I = RC->getSuperClasses();
   do {
-    switch (Super->getID()) {
+    switch (SuperID) {
     case ARM::GPRRegClassID:
     case ARM::SPRRegClassID:
     case ARM::DPRRegClassID:
     case ARM::GPRPairRegClassID:
-      return Super;
+      return getRegClass(SuperID);
     case ARM::QPRRegClassID:
     case ARM::QQPRRegClassID:
     case ARM::QQQQPRRegClassID:
       if (MF.getSubtarget<ARMSubtarget>().hasNEON())
-        return Super;
+        return getRegClass(SuperID);
       break;
     case ARM::MQPRRegClassID:
     case ARM::MQQPRRegClassID:
     case ARM::MQQQQPRRegClassID:
       if (MF.getSubtarget<ARMSubtarget>().hasMVEIntegerOps())
-        return Super;
+        return getRegClass(SuperID);
       break;
     }
-    Super = *I++;
-  } while (Super);
+    SuperID = *I++;
+  } while (SuperID != ~0U);
   return RC;
 }
 
