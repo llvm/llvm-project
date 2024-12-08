@@ -196,7 +196,10 @@ A **partial** list of flags RealtimeSanitizer respects:
      - ``""``
      - path
      - If set to a valid suppressions file, will suppress issue reporting. See details in `Disabling and Suppressing`_.
-
+   * - ``verify_interceptors``
+     - ``true``
+     - boolean
+     - If true, verifies interceptors are working at initialization. The program will abort with error ``==ERROR: Interceptors are not working. This may be because RealtimeSanitizer is loaded too late (e.g. via dlopen)`` if an issue is detected.
 
 Some issues with flags can be debugged using the ``verbosity=$NUM`` flag:
 
