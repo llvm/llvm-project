@@ -622,7 +622,7 @@ bool Intrinsic::isTargetIntrinsic(Intrinsic::ID IID) {
 /// and all entries must start with "llvm.".  If NameTable contains an exact
 /// match for Name or a prefix of Name followed by a dot, its index in
 /// NameTable is returned. Otherwise, -1 is returned.
-static int lookupLLVMIntrinsicByName(ArrayRef<int> NameOffsetTable,
+static int lookupLLVMIntrinsicByName(ArrayRef<unsigned> NameOffsetTable,
                                      StringRef Name, StringRef Target = "") {
   assert(Name.starts_with("llvm.") && "Unexpected intrinsic prefix");
   assert(Name.drop_front(5).starts_with(Target) && "Unexpected target");
@@ -638,9 +638,9 @@ static int lookupLLVMIntrinsicByName(ArrayRef<int> NameOffsetTable,
   if (!Target.empty())
     CmpEnd += 1 + Target.size(); // skip the .target component.
 
-  const int *Low = NameOffsetTable.begin();
-  const int *High = NameOffsetTable.end();
-  const int *LastLow = Low;
+  const unsigned *Low = NameOffsetTable.begin();
+  const unsigned *High = NameOffsetTable.end();
+  const unsigned *LastLow = Low;
   while (CmpEnd < Name.size() && High - Low > 0) {
     size_t CmpStart = CmpEnd;
     CmpEnd = Name.find('.', CmpStart + 1);
@@ -684,7 +684,8 @@ static int lookupLLVMIntrinsicByName(ArrayRef<int> NameOffsetTable,
 ///
 /// Returns the relevant slice of \c IntrinsicNameOffsetTable and the target
 /// name.
-static std::pair<ArrayRef<int>, StringRef> findTargetSubtable(StringRef Name) {
+static std::pair<ArrayRef<unsigned>, StringRef>
+findTargetSubtable(StringRef Name) {
   assert(Name.starts_with("llvm."));
 
   ArrayRef<IntrinsicTargetInfo> Targets(TargetInfos);
