@@ -103,7 +103,7 @@ def check_manual_requests(
         data = res_data["data"]
         for issue in data["search"]["nodes"]:
             users.extend([user[1:] for user in re.findall("@[^ ,\n]+", issue["body"])])
-            if issue['author']:
+            if issue["author"]:
                 users.append(issue["author"]["login"])
         has_next_page = data["search"]["pageInfo"]["hasNextPage"]
         if has_next_page:
