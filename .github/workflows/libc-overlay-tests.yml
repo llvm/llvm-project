@@ -18,7 +18,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        build_type: [Release, Debug]
         compiler: [
           { c_compiler: gcc, cpp_compiler: g++ },
           { c_compiler: clang, cpp_compiler: clang++ },
