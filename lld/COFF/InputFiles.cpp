@@ -187,7 +187,7 @@ struct ECMapEntry {
 void ObjFile::initializeECThunks() {
   for (SectionChunk *chunk : hybmpChunks) {
     if (chunk->getContents().size() % sizeof(ECMapEntry)) {
-      error("Invalid .hybmp chunk size " + Twine(chunk->getContents().size()));
+      Err(ctx) << "Invalid .hybmp chunk size " << chunk->getContents().size();
       continue;
     }
 
@@ -363,9 +363,9 @@ void ObjFile::readAssociativeDefinition(COFFSymbolRef sym,
     const coff_section *parentSec = getSection(parentIndex);
     if (Expected<StringRef> e = coffObj->getSectionName(parentSec))
       parentName = *e;
-    error(toString(this) + ": associative comdat " + name + " (sec " +
-          Twine(sectionNumber) + ") has invalid reference to section " +
-          parentName + " (sec " + Twine(parentIndex) + ")");
+    Err(ctx) << toString(this) << ": associative comdat " << name << " (sec "
+             << sectionNumber << ") has invalid reference to section "
+             << parentName << " (sec " << parentIndex << ")";
   };
 
   if (parent == pendingComdat) {
@@ -1325,12 +1325,12 @@ void DLLFile::parse() {
     bin.release();
     coffObj.reset(obj);
   } else {
-    error(toString(this) + " is not a COFF file");
+    Err(ctx) << toString(this) << " is not a COFF file";
     return;
   }
 
   if (!coffObj->getPE32Header() && !coffObj->getPE32PlusHeader()) {
-    error(toString(this) + " is not a PE-COFF executable");
+    Err(ctx) << toString(this) << " is not a PE-COFF executable";
     return;
   }
 

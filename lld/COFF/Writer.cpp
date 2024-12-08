@@ -1644,7 +1644,7 @@ void Writer::assignAddresses() {
         rawSize = alignTo(virtualSize, config->fileAlign);
     }
     if (virtualSize > UINT32_MAX)
-      error("section larger than 4 GiB: " + sec->name);
+      Err(ctx) << "section larger than 4 GiB: " << sec->name;
     sec->header.VirtualSize = virtualSize;
     sec->header.SizeOfRawData = rawSize;
     if (rawSize != 0)
@@ -1896,7 +1896,8 @@ void Writer::createSEHTable() {
   SymbolRVASet handlers;
   for (ObjFile *file : ctx.objFileInstances) {
     if (!file->hasSafeSEH())
-      error("/safeseh: " + file->getName() + " is not compatible with SEH");
+      Err(ctx) << "/safeseh: " << file->getName()
+               << " is not compatible with SEH";
     markSymbolsForRVATable(file, file->getSXDataChunks(), handlers);
   }
 
@@ -2238,8 +2239,8 @@ void Writer::createRuntimePseudoRelocs() {
     // Not writing any pseudo relocs; if some were needed, error out and
     // indicate what required them.
     for (const RuntimePseudoReloc &rpr : rels)
-      error("automatic dllimport of " + rpr.sym->getName() + " in " +
-            toString(rpr.target->file) + " requires pseudo relocations");
+      Err(ctx) << "automatic dllimport of " << rpr.sym->getName() << " in "
+               << toString(rpr.target->file) << " requires pseudo relocations";
     return;
   }
 
@@ -2249,9 +2250,10 @@ void Writer::createRuntimePseudoRelocs() {
     const char *symbolName = "_pei386_runtime_relocator";
     Symbol *relocator = ctx.symtab.findUnderscore(symbolName);
     if (!relocator)
-      error("output image has runtime pseudo relocations, but the function " +
-            Twine(symbolName) +
-            " is missing; it is needed for fixing the relocations at runtime");
+      Err(ctx)
+          << "output image has runtime pseudo relocations, but the function "
+          << symbolName
+          << " is missing; it is needed for fixing the relocations at runtime";
   }
 
   PseudoRelocTableChunk *table = make<PseudoRelocTableChunk>(rels);
