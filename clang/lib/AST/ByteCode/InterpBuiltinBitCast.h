@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_AST_INTERP_BUILITN_BIT_CAST_H
 #define LLVM_CLANG_AST_INTERP_BUILITN_BIT_CAST_H
 
+#include "BitcastBuffer.h"
 #include <cstddef>
 
 namespace clang {
@@ -18,7 +19,8 @@ class InterpState;
 class CodePtr;
 
 bool DoBitCast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-               std::byte *Buff, size_t BuffSize, bool &HasIndeterminateBits);
+               std::byte *Buff, Bits BitWidth, Bits FullBitWidth,
+               bool &HasIndeterminateBits);
 bool DoBitCastPtr(InterpState &S, CodePtr OpPC, const Pointer &FromPtr,
                   Pointer &ToPtr);
 bool DoBitCastPtr(InterpState &S, CodePtr OpPC, const Pointer &FromPtr,
