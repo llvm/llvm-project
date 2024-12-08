@@ -1,0 +1,66 @@
+# This workflow is for pre-commit testing of the LLVM-libc project.
+name: LLVM-libc Pre-commit Overlay Tests
+
+on:
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'libc/**'
+      - '.github/workflows/libc-overlay-tests.yml'
+
+jobs:
+  build:
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        build_type: [Release, Debug]
+        compiler: [
+          { c_compiler: gcc, cpp_compiler: g++ },
+          { c_compiler: clang, cpp_compiler: clang++ },
+          { c_compiler: clang-cl, cpp_compiler: clang-cl }
+        ]
+        exclude:
+          - os: windows-latest
+            compiler: { c_compiler: gcc, cpp_compiler: g++ }
+          - os: ubuntu-latest
+            compiler: { c_compiler: clang-cl, cpp_compiler: clang-cl }
+          - os: macos-latest
+            compiler: { c_compiler: clang-cl, cpp_compiler: clang-cl }
+          - os: macos-latest
+            compiler: { c_compiler: gcc, cpp_compiler: g++ }
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Run sccache-cache
+      uses: mozilla-actions/sccache-action@v0.0.6
+
+    - name: Set reusable strings
+      id: strings
+      shell: bash
+      run: |
+        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+
+    - name: Configure CMake
+      run: >
+        cmake -B ${{ steps.strings.outputs.build-output-dir }}
+        -DCMAKE_CXX_COMPILER=${{ matrix.compiler.cpp_compiler }}
+        -DCMAKE_C_COMPILER=${{ matrix.compiler.c_compiler }}
+        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -DCMAKE_C_COMPILER_LAUNCHER=sccache
+        -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+        -DLLVM_ENABLE_RUNTIMES=libc
+        -G Ninja
+        -S ${{ github.workspace }}/runtimes
+
+    - name: Build
+      run: cmake --build ${{ steps.strings.outputs.build-output-dir }}
+
+    - name: Test
+      working-directory: ${{ steps.strings.outputs.build-output-dir }}
+      run: ninja check-libc
