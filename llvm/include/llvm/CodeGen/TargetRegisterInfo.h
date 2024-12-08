@@ -42,11 +42,27 @@ class VirtRegMap;
 class LiveIntervals;
 class LiveInterval;
 
+/// TargetSuperClassIterator enumerates all super-registers of RegClass.
+class TargetSuperClassIterator
+    : public iterator_adaptor_base<TargetSuperClassIterator, const unsigned *> {
+public:
+  /// Constructs an end iterator.
+  TargetSuperClassIterator() = default;
+
+  TargetSuperClassIterator(const unsigned *V) { I = V; }
+
+  const unsigned &operator*() const { return *I; }
+
+  using iterator_adaptor_base::operator++;
+
+  /// Returns true if this iterator is not yet at the end.
+  bool isValid() const { return I && *I != ~0U; }
+};
+
 class TargetRegisterClass {
 public:
   using iterator = const MCPhysReg *;
   using const_iterator = const MCPhysReg *;
-  using sc_iterator = const unsigned *;
 
   // Instance variables filled by tablegen, do not use!
   const MCRegisterClass *MC;
@@ -67,7 +83,7 @@ public:
   /// Whether a combination of subregisters can cover every register in the
   /// class. See also the CoveredBySubRegs description in Target.td.
   const bool CoveredBySubRegs;
-  const sc_iterator SuperClasses;
+  const unsigned *SuperClasses;
   ArrayRef<MCPhysReg> (*OrderFunc)(const MachineFunction&);
 
   /// Return the register class ID number.
@@ -178,8 +194,8 @@ public:
   /// Returns a NULL-terminated list of super-classes.  The
   /// classes are ordered by ID which is also a topological ordering from large
   /// to small classes.  The list does NOT include the current class.
-  sc_iterator getSuperClasses() const {
-    return SuperClasses;
+  iterator_range<TargetSuperClassIterator> superclasses() const {
+    return make_range({SuperClasses}, TargetSuperClassIterator());
   }
 
   /// Return true if this TargetRegisterClass is a subset

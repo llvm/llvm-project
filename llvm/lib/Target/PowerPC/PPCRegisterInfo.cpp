@@ -692,22 +692,23 @@ PPCRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
         InflateGPRC++;
     }
 
-    for (const unsigned *I = RC->getSuperClasses(); *I != ~0U; ++I) {
-      if (getRegSizeInBits(*getRegClass(*I)) != getRegSizeInBits(*RC))
+    for (unsigned SuperID : RC->superclasses()) {
+      if (getRegSizeInBits(*getRegClass(SuperID)) != getRegSizeInBits(*RC))
         continue;
 
-      switch (*I) {
+      switch (SuperID) {
       case PPC::VSSRCRegClassID:
-        return Subtarget.hasP8Vector() ? getRegClass(*I) : DefaultSuperclass;
+        return Subtarget.hasP8Vector() ? getRegClass(SuperID)
+                                       : DefaultSuperclass;
       case PPC::VSFRCRegClassID:
       case PPC::VSRCRegClassID:
-        return getRegClass(*I);
+        return getRegClass(SuperID);
       case PPC::VSRpRCRegClassID:
-        return Subtarget.pairedVectorMemops() ? getRegClass(*I)
+        return Subtarget.pairedVectorMemops() ? getRegClass(SuperID)
                                               : DefaultSuperclass;
       case PPC::ACCRCRegClassID:
       case PPC::UACCRCRegClassID:
-        return Subtarget.hasMMA() ? getRegClass(*I) : DefaultSuperclass;
+        return Subtarget.hasMMA() ? getRegClass(SuperID) : DefaultSuperclass;
       }
     }
   }
