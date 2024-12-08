@@ -35,8 +35,12 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Run sccache-cache
-      uses: mozilla-actions/sccache-action@v0.0.6
+    - name: Setup ccache
+      uses: hendrikmuhs/ccache-action@v1
+      with:
+      max-size: 256M
+      key: ${{ github.job }}-${{ matrix.os }}-${{ matrix.compiler.c_compiler }}
+      variant: sccache
     
     - name: Prepare dependencies (Ubuntu)
       if: runner.os == 'Linux'
@@ -65,7 +69,7 @@ jobs:
         cmake -B ${{ steps.strings.outputs.build-output-dir }}
         -DCMAKE_CXX_COMPILER=${{ matrix.compiler.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.compiler.c_compiler }}
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        -DCMAKE_BUILD_TYPE=MinSizeRel
         -DCMAKE_C_COMPILER_LAUNCHER=sccache
         -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
         -DCMAKE_POLICY_DEFAULT_CMP0141=NEW
@@ -79,7 +83,7 @@ jobs:
         cmake 
         --build ${{ steps.strings.outputs.build-output-dir }} 
         --parallel 
-        --config RelWithDebInfo 
+        --config MinSizeRel 
         --target libc
 
     - name: Test
