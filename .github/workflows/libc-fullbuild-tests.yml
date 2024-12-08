@@ -10,8 +10,6 @@ on:
 
 jobs:
   build:
-    env:
-      SCCACHE_GHA_ENABLED: "true"
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
