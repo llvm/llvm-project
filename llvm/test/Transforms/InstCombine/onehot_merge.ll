@@ -1143,3 +1143,315 @@ define i1 @foo1_and_signbit_lshr_without_shifting_signbit_not_pwr2_logical(i32 %
   %or = select i1 %t2, i1 true, i1 %t4
   ret i1 %or
 }
+
+define i1 @trunc_or_icmp_consts(i8 %k) {
+; CHECK-LABEL: @trunc_or_icmp_consts(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[K:%.*]] to i1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC]], true
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[K]], 8
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[AND]], 0
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[ICMP]], [[NOT]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %trunc = trunc i8 %k to i1
+  %not = xor i1 %trunc, true
+  %and = and i8 %k, 8
+  %icmp = icmp eq i8 %and, 0
+  %ret = or i1 %not, %icmp
+  ret i1 %ret
+}
+
+define i1 @icmp_or_trunc_consts(i8 %k) {
+; CHECK-LABEL: @icmp_or_trunc_consts(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[K:%.*]] to i1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC]], true
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[K]], 8
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[AND]], 0
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[ICMP]], [[NOT]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %trunc = trunc i8 %k to i1
+  %not = xor i1 %trunc, true
+  %and = and i8 %k, 8
+  %icmp = icmp eq i8 %and, 0
+  %ret = or i1 %icmp, %not
+  ret i1 %ret
+}
+
+define i1 @trunc_or_icmp(i8 %k, i8 %c1) {
+; CHECK-LABEL: @trunc_or_icmp(
+; CHECK-NEXT:    [[T:%.*]] = shl nuw i8 1, [[C1:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = and i8 [[T]], [[K:%.*]]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[T1]], 0
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[K]] to i1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC]], true
+; CHECK-NEXT:    [[RET:%.*]] = or i1 [[ICMP]], [[NOT]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %t = shl i8 1, %c1
+  %t1 = and i8 %t, %k
+  %icmp = icmp eq i8 %t1, 0
+  %trunc = trunc i8 %k to i1
+  %not = xor i1 %trunc, true
+  %ret = or i1 %icmp, %not
+  ret i1 %ret
+}
+
+define i1 @trunc_logical_or_icmp(i8 %k, i8 %c1) {
+; CHECK-LABEL: @trunc_logical_or_icmp(
+; CHECK-NEXT:    [[T:%.*]] = shl nuw i8 1, [[C1:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = and i8 [[T]], [[K:%.*]]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[T1]], 0
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[K]] to i1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC]], true
+; CHECK-NEXT:    [[RET:%.*]] = or i1 [[ICMP]], [[NOT]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %t = shl i8 1, %c1
+  %t1 = and i8 %t, %k
+  %icmp = icmp eq i8 %t1, 0
+  %trunc = trunc i8 %k to i1
+  %not = xor i1 %trunc, true
+  %ret = select i1 %icmp, i1 true, i1 %not
+  ret i1 %ret
+}
+
+define i1 @icmp_logical_or_trunc(i8 %k, i8 %c1) {
+; CHECK-LABEL: @icmp_logical_or_trunc(
+; CHECK-NEXT:    [[T:%.*]] = shl nuw i8 1, [[C1:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = and i8 [[T]], [[K:%.*]]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[T1]], 0
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[K]] to i1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC]], true
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[NOT]], i1 true, i1 [[ICMP]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %t = shl i8 1, %c1
+  %t1 = and i8 %t, %k
+  %icmp = icmp eq i8 %t1, 0
+  %trunc = trunc i8 %k to i1
+  %not = xor i1 %trunc, true
+  %ret = select i1 %not, i1 true, i1 %icmp
+  ret i1 %ret
+}
+
+define <2 x i1> @trunc_or_icmp_vec(<2 x i8> %k, <2 x i8> %c1) {
+; CHECK-LABEL: @trunc_or_icmp_vec(
+; CHECK-NEXT:    [[T:%.*]] = shl nuw <2 x i8> splat (i8 1), [[C1:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = and <2 x i8> [[T]], [[K:%.*]]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq <2 x i8> [[T1]], zeroinitializer
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <2 x i8> [[K]] to <2 x i1>
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[TRUNC]], splat (i1 true)
+; CHECK-NEXT:    [[RET:%.*]] = or <2 x i1> [[ICMP]], [[NOT]]
+; CHECK-NEXT:    ret <2 x i1> [[RET]]
+;
+  %t = shl <2 x i8> <i8 1, i8 1>, %c1
+  %t1 = and <2 x i8> %t, %k
+  %icmp = icmp eq <2 x i8> %t1, zeroinitializer
+  %trunc = trunc <2 x i8> %k to <2 x i1>
+  %not = xor <2 x i1> %trunc, <i1 true, i1 true>
+  %ret = or <2 x i1> %icmp, %not
+  ret <2 x i1> %ret
+}
+
+define i1 @neg_trunc_or_icmp_not_pow2(i8 %k, i8 %c1) {
+; CHECK-LABEL: @neg_trunc_or_icmp_not_pow2(
+; CHECK-NEXT:    [[T1:%.*]] = and i8 [[C1:%.*]], [[K:%.*]]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[T1]], 0
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[K]] to i1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC]], true
+; CHECK-NEXT:    [[RET:%.*]] = or i1 [[ICMP]], [[NOT]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %t1 = and i8 %c1, %k
+  %icmp = icmp eq i8 %t1, 0
+  %trunc = trunc i8 %k to i1
+  %not = xor i1 %trunc, true
+  %ret = or i1 %icmp, %not
+  ret i1 %ret
+}
+
+define i1 @neg_trunc_or_icmp_not_trunc(i8 %k, i8 %c1) {
+; CHECK-LABEL: @neg_trunc_or_icmp_not_trunc(
+; CHECK-NEXT:    [[T:%.*]] = shl nuw i8 1, [[C1:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = and i8 [[T]], [[K:%.*]]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[T1]], 0
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[K]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = or i1 [[ICMP]], [[TRUNC]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %t = shl i8 1, %c1
+  %t1 = and i8 %t, %k
+  %icmp = icmp eq i8 %t1, 0
+  %trunc = trunc i8 %k to i1
+  %ret = or i1 %icmp, %trunc
+  ret i1 %ret
+}
+
+define i1 @neg_trunc_or_icmp_ne(i8 %k, i8 %c1) {
+; CHECK-LABEL: @neg_trunc_or_icmp_ne(
+; CHECK-NEXT:    [[T:%.*]] = shl nuw i8 1, [[C1:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = and i8 [[T]], [[K:%.*]]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i8 [[T1]], 0
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[K]] to i1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC]], true
+; CHECK-NEXT:    [[RET:%.*]] = or i1 [[ICMP]], [[NOT]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %t = shl i8 1, %c1
+  %t1 = and i8 %t, %k
+  %icmp = icmp ne i8 %t1, 0
+  %trunc = trunc i8 %k to i1
+  %not = xor i1 %trunc, true
+  %ret = or i1 %icmp, %not
+  ret i1 %ret
+}
+
+define i1 @trunc_and_icmp_consts(i8 %k) {
+; CHECK-LABEL: @trunc_and_icmp_consts(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[K:%.*]] to i1
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[K]], 8
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    [[RET:%.*]] = and i1 [[ICMP]], [[TRUNC]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %trunc = trunc i8 %k to i1
+  %and = and i8 %k, 8
+  %icmp = icmp ne i8 %and, 0
+  %ret = and i1 %trunc, %icmp
+  ret i1 %ret
+}
+
+define i1 @icmp_and_trunc_consts(i8 %k) {
+; CHECK-LABEL: @icmp_and_trunc_consts(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[K:%.*]] to i1
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[K]], 8
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    [[RET:%.*]] = and i1 [[ICMP]], [[TRUNC]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %trunc = trunc i8 %k to i1
+  %and = and i8 %k, 8
+  %icmp = icmp ne i8 %and, 0
+  %ret = and i1 %icmp, %trunc
+  ret i1 %ret
+}
+
+define i1 @trunc_and_icmp(i8 %k, i8 %c1) {
+; CHECK-LABEL: @trunc_and_icmp(
+; CHECK-NEXT:    [[T:%.*]] = shl nuw i8 1, [[C1:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = and i8 [[T]], [[K:%.*]]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i8 [[T1]], 0
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[K]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = and i1 [[ICMP]], [[TRUNC]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %t = shl i8 1, %c1
+  %t1 = and i8 %t, %k
+  %icmp = icmp ne i8 %t1, 0
+  %trunc = trunc i8 %k to i1
+  %ret = and i1 %icmp, %trunc
+  ret i1 %ret
+}
+
+define i1 @trunc_logical_and_icmp(i8 %k, i8 %c1) {
+; CHECK-LABEL: @trunc_logical_and_icmp(
+; CHECK-NEXT:    [[T:%.*]] = shl nuw i8 1, [[C1:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = and i8 [[T]], [[K:%.*]]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i8 [[T1]], 0
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[K]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = and i1 [[ICMP]], [[TRUNC]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %t = shl i8 1, %c1
+  %t1 = and i8 %t, %k
+  %icmp = icmp ne i8 %t1, 0
+  %trunc = trunc i8 %k to i1
+  %ret = select i1 %icmp, i1 %trunc, i1 false
+  ret i1 %ret
+}
+
+define i1 @icmp_logical_and_trunc(i8 %k, i8 %c1) {
+; CHECK-LABEL: @icmp_logical_and_trunc(
+; CHECK-NEXT:    [[T:%.*]] = shl nuw i8 1, [[C1:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = and i8 [[T]], [[K:%.*]]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i8 [[T1]], 0
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[K]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TRUNC]], i1 [[ICMP]], i1 false
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %t = shl i8 1, %c1
+  %t1 = and i8 %t, %k
+  %icmp = icmp ne i8 %t1, 0
+  %trunc = trunc i8 %k to i1
+  %ret = select i1 %trunc, i1 %icmp, i1 false
+  ret i1 %ret
+}
+
+define <2 x i1> @trunc_and_icmp_vec(<2 x i8> %k, <2 x i8> %c1) {
+; CHECK-LABEL: @trunc_and_icmp_vec(
+; CHECK-NEXT:    [[T:%.*]] = shl nuw <2 x i8> splat (i8 1), [[C1:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = and <2 x i8> [[T]], [[K:%.*]]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne <2 x i8> [[T1]], zeroinitializer
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <2 x i8> [[K]] to <2 x i1>
+; CHECK-NEXT:    [[RET:%.*]] = and <2 x i1> [[ICMP]], [[TRUNC]]
+; CHECK-NEXT:    ret <2 x i1> [[RET]]
+;
+  %t = shl <2 x i8> <i8 1, i8 1>, %c1
+  %t1 = and <2 x i8> %t, %k
+  %icmp = icmp ne <2 x i8> %t1, zeroinitializer
+  %trunc = trunc <2 x i8> %k to <2 x i1>
+  %ret = and <2 x i1> %icmp, %trunc
+  ret <2 x i1> %ret
+}
+
+define i1 @trunc_and_icmp_not_pow2(i8 %k, i8 %c1) {
+; CHECK-LABEL: @trunc_and_icmp_not_pow2(
+; CHECK-NEXT:    [[T1:%.*]] = and i8 [[C1:%.*]], [[K:%.*]]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i8 [[T1]], 0
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[K]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = and i1 [[ICMP]], [[TRUNC]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %t1 = and i8 %c1, %k
+  %icmp = icmp ne i8 %t1, 0
+  %trunc = trunc i8 %k to i1
+  %ret = and i1 %icmp, %trunc
+  ret i1 %ret
+}
+
+define i1 @trunc_and_icmp_not_trunc(i8 %k, i8 %c1) {
+; CHECK-LABEL: @trunc_and_icmp_not_trunc(
+; CHECK-NEXT:    [[T:%.*]] = shl nuw i8 1, [[C1:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = and i8 [[T]], [[K:%.*]]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i8 [[T1]], 0
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[K]] to i1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC]], true
+; CHECK-NEXT:    [[RET:%.*]] = and i1 [[ICMP]], [[NOT]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %t = shl i8 1, %c1
+  %t1 = and i8 %t, %k
+  %icmp = icmp ne i8 %t1, 0
+  %trunc = trunc i8 %k to i1
+  %not = xor i1 %trunc, true
+  %ret = and i1 %icmp, %not
+  ret i1 %ret
+}
+
+define i1 @trunc_and_icmp_eq(i8 %k, i8 %c1) {
+; CHECK-LABEL: @trunc_and_icmp_eq(
+; CHECK-NEXT:    [[T:%.*]] = shl nuw i8 1, [[C1:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = and i8 [[T]], [[K:%.*]]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[T1]], 0
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[K]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = and i1 [[ICMP]], [[TRUNC]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %t = shl i8 1, %c1
+  %t1 = and i8 %t, %k
+  %icmp = icmp eq i8 %t1, 0
+  %trunc = trunc i8 %k to i1
+  %ret = and i1 %icmp, %trunc
+  ret i1 %ret
+}
