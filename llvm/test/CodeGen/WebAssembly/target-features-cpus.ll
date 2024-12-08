@@ -1,5 +1,6 @@
 ; RUN: llc < %s -mcpu=mvp | FileCheck %s --check-prefixes MVP
 ; RUN: llc < %s -mcpu=generic | FileCheck %s --check-prefixes GENERIC
+; RUN: llc < %s -mcpu=lime1 | FileCheck %s --check-prefixes LIME1
 ; RUN: llc < %s | FileCheck %s --check-prefixes GENERIC
 ; RUN: llc < %s -mcpu=bleeding-edge | FileCheck %s --check-prefixes BLEEDING-EDGE
 
@@ -38,6 +39,32 @@ target triple = "wasm32-unknown-unknown"
 ; GENERIC-NEXT: .int8  43
 ; GENERIC-NEXT: .int8  8
 ; GENERIC-NEXT: .ascii  "sign-ext"
+
+; lime1: +bulk-memory-opt, +call-indirect-overlong, +extended-const, +multivalue,
+;        +mutable-globals, +nontrapping-fptoint, +sign-ext
+; LIME1-LABEL: .custom_section.target_features,"",@
+; LIME1-NEXT: .int8  7
+; LIME1-NEXT: .int8  43
+; LIME1-NEXT: .int8  15
+; LIME1-NEXT: .ascii  "bulk-memory-opt"
+; LIME1-NEXT: .int8  43
+; LIME1-NEXT: .int8  22
+; LIME1-NEXT: .ascii  "call-indirect-overlong"
+; LIME1-NEXT: .int8  43
+; LIME1-NEXT: .int8  14
+; LIME1-NEXT: .ascii  "extended-const"
+; LIME1-NEXT: .int8  43
+; LIME1-NEXT: .int8  10
+; LIME1-NEXT: .ascii  "multivalue"
+; LIME1-NEXT: .int8  43
+; LIME1-NEXT: .int8  15
+; LIME1-NEXT: .ascii  "mutable-globals"
+; LIME1-NEXT: .int8  43
+; LIME1-NEXT: .int8  19
+; LIME1-NEXT: .ascii  "nontrapping-fptoint"
+; LIME1-NEXT: .int8  43
+; LIME1-NEXT: .int8  8
+; LIME1-NEXT: .ascii  "sign-ext"
 
 ; bleeding-edge: +atomics, +bulk-memory, +bulk-memory-opt,
 ;                +call-indirect-overlong, +exception-handling,
