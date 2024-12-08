@@ -513,7 +513,7 @@ int64_t RelocationScanner::computeMipsAddend(const RelTy &rel, RelExpr expr,
 // Custom error message if Sym is defined in a discarded section.
 template <class ELFT>
 static void maybeReportDiscarded(Ctx &ctx, ELFSyncStream &msg, Undefined &sym) {
-  auto *file = dyn_cast_or_null<ObjFile<ELFT>>(sym.file);
+  auto *file = dyn_cast<ObjFile<ELFT>>(sym.file);
   if (!file || !sym.discardedSecIdx)
     return;
   ArrayRef<typename ELFT::Shdr> objSections =
@@ -569,11 +569,11 @@ static const Symbol *getAlternativeSpelling(Ctx &ctx, const Undefined &sym,
                                             std::string &pre_hint,
                                             std::string &post_hint) {
   DenseMap<StringRef, const Symbol *> map;
-  if (sym.file && sym.file->kind() == InputFile::ObjKind) {
+  if (sym.file->kind() == InputFile::ObjKind) {
     auto *file = cast<ELFFileBase>(sym.file);
     // If sym is a symbol defined in a discarded section, maybeReportDiscarded()
     // will give an error. Don't suggest an alternative spelling.
-    if (file && sym.discardedSecIdx != 0 &&
+    if (sym.discardedSecIdx != 0 &&
         file->getSections()[sym.discardedSecIdx] == &InputSection::discarded)
       return nullptr;
 
@@ -743,9 +743,8 @@ static void reportUndefinedSymbol(Ctx &ctx, const UndefinedDiag &undef,
     std::string pre_hint = ": ", post_hint;
     if (const Symbol *corrected =
             getAlternativeSpelling(ctx, sym, pre_hint, post_hint)) {
-      msg << "\n>>> did you mean" << pre_hint << corrected << post_hint;
-      if (corrected->file)
-        msg << "\n>>> defined in: " << corrected->file;
+      msg << "\n>>> did you mean" << pre_hint << corrected << post_hint
+          << "\n>>> defined in: " << corrected->file;
     }
   }
 
