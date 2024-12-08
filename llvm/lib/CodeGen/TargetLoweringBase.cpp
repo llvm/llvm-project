@@ -1659,13 +1659,12 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
                          AttributeList attr,
                          SmallVectorImpl<ISD::OutputArg> &Outs,
                          const TargetLowering &TLI, const DataLayout &DL) {
-  SmallVector<EVT, 4> ValueVTs;
-  ComputeValueVTs(TLI, DL, ReturnType, ValueVTs);
-  unsigned NumValues = ValueVTs.size();
-  if (NumValues == 0) return;
+  SmallVector<Type *, 4> ValueTys;
+  ComputeValueTypes(TLI, DL, ReturnType, ValueTys);
+  if (ValueTys.size() == 0) return;
 
-  for (unsigned j = 0, f = NumValues; j != f; ++j) {
-    EVT VT = ValueVTs[j];
+  for (Type *Ty : ValueTys) {
+    EVT VT = TLI.getValueType(DL, Ty);
     ISD::NodeType ExtendKind = ISD::ANY_EXTEND;
 
     if (attr.hasRetAttr(Attribute::SExt))
@@ -1685,6 +1684,11 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
     ISD::ArgFlagsTy Flags = ISD::ArgFlagsTy();
     if (attr.hasRetAttr(Attribute::InReg))
       Flags.setInReg();
+
+    if (auto *PtrTy = dyn_cast<PointerType>(Ty)) {
+      Flags.setPointer();
+      Flags.setPointerAddrSpace(PtrTy->getAddressSpace());
+    }
 
     // Propagate extension type if any
     if (attr.hasRetAttr(Attribute::SExt))

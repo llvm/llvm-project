@@ -994,8 +994,8 @@ bool FastISel::lowerCallTo(const CallInst *CI, MCSymbol *Symbol,
 bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
   // Handle the incoming return values from the call.
   CLI.clearIns();
-  SmallVector<EVT, 4> RetTys;
-  ComputeValueVTs(TLI, DL, CLI.RetTy, RetTys);
+  SmallVector<Type *, 4> RetTys;
+  ComputeValueTypes(TLI, DL, CLI.RetTy, RetTys);
 
   SmallVector<ISD::OutputArg, 4> Outs;
   GetReturnInfo(CLI.CallConv, CLI.RetTy, getReturnAttrs(CLI), Outs, TLI, DL);
@@ -1007,7 +1007,8 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
   if (!CanLowerReturn)
     return false;
 
-  for (EVT VT : RetTys) {
+  for (Type *RetTy : RetTys) {
+    EVT VT = TLI.getValueType(DL, RetTy);
     MVT RegisterVT = TLI.getRegisterType(CLI.RetTy->getContext(), VT);
     unsigned NumRegs = TLI.getNumRegisters(CLI.RetTy->getContext(), VT);
     for (unsigned i = 0; i != NumRegs; ++i) {
@@ -1015,6 +1016,10 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
       MyFlags.VT = RegisterVT;
       MyFlags.ArgVT = VT;
       MyFlags.Used = CLI.IsReturnValueUsed;
+      if (auto *PtrTy = dyn_cast<PointerType>(RetTy)) {
+        MyFlags.Flags.setPointer();
+        MyFlags.Flags.setPointerAddrSpace(PtrTy->getAddressSpace());
+      }
       if (CLI.RetSExt)
         MyFlags.Flags.setSExt();
       if (CLI.RetZExt)
