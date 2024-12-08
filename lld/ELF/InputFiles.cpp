@@ -1742,8 +1742,11 @@ static void createBitcodeSymbol(Ctx &ctx, Symbol *&sym,
   } else {
     Defined newSym(ctx, &f, StringRef(), binding, visibility, type, 0, 0,
                    nullptr);
-    if (objSym.canBeOmittedFromSymbolTable())
-      newSym.exportDynamic = false;
+    // The definition can be omitted if all bitcode definitions satisfy
+    // `canBeOmittedFromSymbolTable()` and isUsedInRegularObj is false.
+    // The latter condition is tested in Symbol::includeInDynsym.
+    sym->ltoCanOmit = objSym.canBeOmittedFromSymbolTable() &&
+                      (!sym->isDefined() || sym->ltoCanOmit);
     sym->resolve(ctx, newSym);
   }
 }
