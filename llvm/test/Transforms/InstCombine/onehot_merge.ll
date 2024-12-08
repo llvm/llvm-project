@@ -1146,11 +1146,8 @@ define i1 @foo1_and_signbit_lshr_without_shifting_signbit_not_pwr2_logical(i32 %
 
 define i1 @trunc_or_icmp_consts(i8 %k) {
 ; CHECK-LABEL: @trunc_or_icmp_consts(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[K:%.*]] to i1
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC]], true
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[K]], 8
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[AND]], 0
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[ICMP]], [[NOT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[K:%.*]], 9
+; CHECK-NEXT:    [[OR:%.*]] = icmp ne i8 [[TMP1]], 9
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %trunc = trunc i8 %k to i1
@@ -1163,11 +1160,8 @@ define i1 @trunc_or_icmp_consts(i8 %k) {
 
 define i1 @icmp_or_trunc_consts(i8 %k) {
 ; CHECK-LABEL: @icmp_or_trunc_consts(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[K:%.*]] to i1
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC]], true
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[K]], 8
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[AND]], 0
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[ICMP]], [[NOT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[K:%.*]], 9
+; CHECK-NEXT:    [[OR:%.*]] = icmp ne i8 [[TMP1]], 9
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %trunc = trunc i8 %k to i1
@@ -1181,11 +1175,9 @@ define i1 @icmp_or_trunc_consts(i8 %k) {
 define i1 @trunc_or_icmp(i8 %k, i8 %c1) {
 ; CHECK-LABEL: @trunc_or_icmp(
 ; CHECK-NEXT:    [[T:%.*]] = shl nuw i8 1, [[C1:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = and i8 [[T]], [[K:%.*]]
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[T1]], 0
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[K]] to i1
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC]], true
-; CHECK-NEXT:    [[RET:%.*]] = or i1 [[ICMP]], [[NOT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[T]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[K:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %t = shl i8 1, %c1
@@ -1200,11 +1192,9 @@ define i1 @trunc_or_icmp(i8 %k, i8 %c1) {
 define i1 @trunc_logical_or_icmp(i8 %k, i8 %c1) {
 ; CHECK-LABEL: @trunc_logical_or_icmp(
 ; CHECK-NEXT:    [[T:%.*]] = shl nuw i8 1, [[C1:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = and i8 [[T]], [[K:%.*]]
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[T1]], 0
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[K]] to i1
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC]], true
-; CHECK-NEXT:    [[RET:%.*]] = or i1 [[ICMP]], [[NOT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[T]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[K:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %t = shl i8 1, %c1
@@ -1219,11 +1209,10 @@ define i1 @trunc_logical_or_icmp(i8 %k, i8 %c1) {
 define i1 @icmp_logical_or_trunc(i8 %k, i8 %c1) {
 ; CHECK-LABEL: @icmp_logical_or_trunc(
 ; CHECK-NEXT:    [[T:%.*]] = shl nuw i8 1, [[C1:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = and i8 [[T]], [[K:%.*]]
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[T1]], 0
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[K]] to i1
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC]], true
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[NOT]], i1 true, i1 [[ICMP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i8 [[T]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = and i8 [[K:%.*]], [[TMP2]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %t = shl i8 1, %c1
@@ -1238,11 +1227,9 @@ define i1 @icmp_logical_or_trunc(i8 %k, i8 %c1) {
 define <2 x i1> @trunc_or_icmp_vec(<2 x i8> %k, <2 x i8> %c1) {
 ; CHECK-LABEL: @trunc_or_icmp_vec(
 ; CHECK-NEXT:    [[T:%.*]] = shl nuw <2 x i8> splat (i8 1), [[C1:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = and <2 x i8> [[T]], [[K:%.*]]
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq <2 x i8> [[T1]], zeroinitializer
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <2 x i8> [[K]] to <2 x i1>
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[TRUNC]], splat (i1 true)
-; CHECK-NEXT:    [[RET:%.*]] = or <2 x i1> [[ICMP]], [[NOT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i8> [[T]], splat (i8 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i8> [[K:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne <2 x i8> [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
   %t = shl <2 x i8> <i8 1, i8 1>, %c1
@@ -1309,10 +1296,8 @@ define i1 @neg_trunc_or_icmp_ne(i8 %k, i8 %c1) {
 
 define i1 @trunc_and_icmp_consts(i8 %k) {
 ; CHECK-LABEL: @trunc_and_icmp_consts(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[K:%.*]] to i1
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[K]], 8
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i8 [[AND]], 0
-; CHECK-NEXT:    [[RET:%.*]] = and i1 [[ICMP]], [[TRUNC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[K:%.*]], 9
+; CHECK-NEXT:    [[RET:%.*]] = icmp eq i8 [[TMP1]], 9
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %trunc = trunc i8 %k to i1
@@ -1324,10 +1309,8 @@ define i1 @trunc_and_icmp_consts(i8 %k) {
 
 define i1 @icmp_and_trunc_consts(i8 %k) {
 ; CHECK-LABEL: @icmp_and_trunc_consts(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[K:%.*]] to i1
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[K]], 8
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i8 [[AND]], 0
-; CHECK-NEXT:    [[RET:%.*]] = and i1 [[ICMP]], [[TRUNC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[K:%.*]], 9
+; CHECK-NEXT:    [[RET:%.*]] = icmp eq i8 [[TMP1]], 9
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %trunc = trunc i8 %k to i1
@@ -1340,10 +1323,9 @@ define i1 @icmp_and_trunc_consts(i8 %k) {
 define i1 @trunc_and_icmp(i8 %k, i8 %c1) {
 ; CHECK-LABEL: @trunc_and_icmp(
 ; CHECK-NEXT:    [[T:%.*]] = shl nuw i8 1, [[C1:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = and i8 [[T]], [[K:%.*]]
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i8 [[T1]], 0
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[K]] to i1
-; CHECK-NEXT:    [[RET:%.*]] = and i1 [[ICMP]], [[TRUNC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[T]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[K:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp eq i8 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %t = shl i8 1, %c1
@@ -1357,10 +1339,9 @@ define i1 @trunc_and_icmp(i8 %k, i8 %c1) {
 define i1 @trunc_logical_and_icmp(i8 %k, i8 %c1) {
 ; CHECK-LABEL: @trunc_logical_and_icmp(
 ; CHECK-NEXT:    [[T:%.*]] = shl nuw i8 1, [[C1:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = and i8 [[T]], [[K:%.*]]
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i8 [[T1]], 0
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[K]] to i1
-; CHECK-NEXT:    [[RET:%.*]] = and i1 [[ICMP]], [[TRUNC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[T]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[K:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp eq i8 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %t = shl i8 1, %c1
@@ -1374,10 +1355,10 @@ define i1 @trunc_logical_and_icmp(i8 %k, i8 %c1) {
 define i1 @icmp_logical_and_trunc(i8 %k, i8 %c1) {
 ; CHECK-LABEL: @icmp_logical_and_trunc(
 ; CHECK-NEXT:    [[T:%.*]] = shl nuw i8 1, [[C1:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = and i8 [[T]], [[K:%.*]]
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i8 [[T1]], 0
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[K]] to i1
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TRUNC]], i1 [[ICMP]], i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i8 [[T]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = and i8 [[K:%.*]], [[TMP2]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp eq i8 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %t = shl i8 1, %c1
@@ -1391,10 +1372,9 @@ define i1 @icmp_logical_and_trunc(i8 %k, i8 %c1) {
 define <2 x i1> @trunc_and_icmp_vec(<2 x i8> %k, <2 x i8> %c1) {
 ; CHECK-LABEL: @trunc_and_icmp_vec(
 ; CHECK-NEXT:    [[T:%.*]] = shl nuw <2 x i8> splat (i8 1), [[C1:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = and <2 x i8> [[T]], [[K:%.*]]
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne <2 x i8> [[T1]], zeroinitializer
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <2 x i8> [[K]] to <2 x i1>
-; CHECK-NEXT:    [[RET:%.*]] = and <2 x i1> [[ICMP]], [[TRUNC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i8> [[T]], splat (i8 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i8> [[K:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp eq <2 x i8> [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
   %t = shl <2 x i8> <i8 1, i8 1>, %c1

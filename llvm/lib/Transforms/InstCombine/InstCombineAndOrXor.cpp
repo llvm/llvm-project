@@ -805,6 +805,40 @@ Value *InstCombinerImpl::foldAndOrOfICmpsOfAndWithPow2(ICmpInst *LHS,
   return nullptr;
 }
 
+// Fold not(trunc X to i1) | iszero(X & Pow2)
+//  -> (X & (1 | Pow2)) != (1 | Pow2)
+// Fold (trunc X to i1) & !iszero(X & Pow2))
+//  -> (X & (1 | Pow2)) == (1 | Pow2)
+static Value *foldTruncAndOrICmpOfAndWithPow2(InstCombiner::BuilderTy &Builder,
+                                              Value *LHS, Value *RHS,
+                                              bool IsAnd, bool IsLogical,
+                                              const SimplifyQuery &Q) {
+  CmpInst::Predicate Pred = IsAnd ? CmpInst::ICMP_NE : CmpInst::ICMP_EQ;
+
+  if (isa<ICmpInst>(LHS))
+    std::swap(LHS, RHS);
+
+  Value *X, *Pow2;
+
+  if ((IsAnd ? match(LHS, m_Trunc(m_Value(X)))
+             : match(LHS, m_Not(m_Trunc(m_Value(X))))) &&
+      match(RHS, m_SpecificICmp(Pred, m_c_And(m_Specific(X), m_Value(Pow2)),
+                                m_ZeroInt())) &&
+      isKnownToBeAPowerOfTwo(Pow2, Q.DL, /*OrZero=*/false, /*Depth=*/0, Q.AC,
+                             Q.CxtI, Q.DT)) {
+    // If this is a logical and/or, then we must prevent propagation of a
+    // poison value from the RHS by inserting freeze.
+    if (IsLogical)
+      Pow2 = Builder.CreateFreeze(Pow2);
+    Value *Mask = Builder.CreateOr(ConstantInt::get(Pow2->getType(), 1), Pow2);
+    Value *Masked = Builder.CreateAnd(X, Mask);
+    auto NewPred = IsAnd ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE;
+    return Builder.CreateICmp(NewPred, Masked, Mask);
+  }
+
+  return nullptr;
+}
+
 /// General pattern:
 ///   X & Y
 ///
@@ -3540,6 +3574,10 @@ Value *InstCombinerImpl::foldBooleanAndOr(Value *LHS, Value *RHS,
         return Res;
 
   if (Value *Res = foldEqOfParts(LHS, RHS, IsAnd))
+    return Res;
+  const SimplifyQuery Q = SQ.getWithInstruction(&I);
+  if (Value *Res = foldTruncAndOrICmpOfAndWithPow2(Builder, LHS, RHS, IsAnd,
+                                                   IsLogical, Q))
     return Res;
 
   return nullptr;
