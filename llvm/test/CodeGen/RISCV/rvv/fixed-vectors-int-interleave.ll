@@ -51,8 +51,8 @@ define <4 x i32> @interleave_v2i32(<2 x i32> %x, <2 x i32> %y) {
 define <4 x i64> @interleave_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; V128-LABEL: interleave_v2i64:
 ; V128:       # %bb.0:
-; V128-NEXT:    vmv1r.v v12, v9
 ; V128-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; V128-NEXT:    vmv1r.v v12, v9
 ; V128-NEXT:    vid.v v9
 ; V128-NEXT:    vmv.v.i v0, 10
 ; V128-NEXT:    vsrl.vi v14, v9, 1
