@@ -535,7 +535,7 @@ INTERCEPTOR(char*, strncat, char *to, const char *from, usize size) {
   AsanInitFromRtl();
   if (flags()->replace_str) {
     uptr from_length = MaybeRealStrnlen(from, size);
-    uptr copy_length = Min(size, from_length + 1);
+    uptr copy_length = Min<uptr>(size, from_length + 1);
     ASAN_READ_RANGE(ctx, from, copy_length);
     uptr to_length = internal_strlen(to);
     ASAN_READ_STRING_OF_LEN(ctx, to, to_length, to_length);
@@ -622,7 +622,7 @@ INTERCEPTOR(char*, strncpy, char *to, const char *from, usize size) {
   ASAN_INTERCEPTOR_ENTER(ctx, strncpy);
   AsanInitFromRtl();
   if (flags()->replace_str) {
-    uptr from_size = Min(size, MaybeRealStrnlen(from, size) + 1);
+    uptr from_size = Min<uptr>(size, MaybeRealStrnlen(from, size) + 1);
     CHECK_RANGES_OVERLAP("strncpy", to, from_size, from, from_size);
     ASAN_READ_RANGE(ctx, from, from_size);
     ASAN_WRITE_RANGE(ctx, to, size);
