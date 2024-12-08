@@ -7,8 +7,8 @@ void set(int x);
 // We will only make decision in the `overflow` function.
 // NOINL-COUNT-1: remark: Allowed check:
 
-// FIXME: We will make decision on every inline.
-// INLINE-COUNT-1: remark: Allowed check:
+// We will make decision on every inline.
+// INLINE-COUNT-5: remark: Allowed check:
 
 static void overflow() {
   set(get() + get());
