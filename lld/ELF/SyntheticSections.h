@@ -112,6 +112,7 @@ public:
 
   void addConstant(const Relocation &r);
   void addEntry(const Symbol &sym);
+  void addAuthEntry(const Symbol &sym);
   bool addTlsDescEntry(const Symbol &sym);
   bool addDynTlsEntry(const Symbol &sym);
   bool addTlsIndex();

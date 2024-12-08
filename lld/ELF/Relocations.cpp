@@ -913,6 +913,7 @@ void elf::addGotEntry(Ctx &ctx, Symbol &sym) {
 
 static void addGotAuthEntry(Ctx &ctx, Symbol &sym) {
   ctx.in.got->addEntry(sym);
+  ctx.in.got->addAuthEntry(sym);
   uint64_t off = sym.getGotOffset(ctx);
 
   // If preemptible, emit a GLOB_DAT relocation.
@@ -1095,18 +1096,10 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
     } else if (!sym.isTls() || ctx.arg.emachine != EM_LOONGARCH) {
       // Many LoongArch TLS relocs reuse the RE_LOONGARCH_GOT type, in which
       // case the NEEDS_GOT flag shouldn't get set.
-      bool needsGotAuth =
-          (expr == RE_AARCH64_AUTH_GOT || expr == RE_AARCH64_AUTH_GOT_PAGE_PC);
-      uint16_t flags = sym.flags.load(std::memory_order_relaxed);
-      if (!(flags & NEEDS_GOT)) {
-        sym.setFlags(needsGotAuth ? (NEEDS_GOT | NEEDS_GOT_AUTH) : NEEDS_GOT);
-      } else if (needsGotAuth != static_cast<bool>(flags & NEEDS_GOT_AUTH)) {
-        auto diag = Err(ctx);
-        diag << "both AUTH and non-AUTH GOT entries for '" << sym.getName()
-             << "' requested, but only one type of GOT entry per symbol is "
-                "supported";
-        printLocation(diag, *sec, sym, offset);
-      }
+      if (expr == RE_AARCH64_AUTH_GOT || expr == RE_AARCH64_AUTH_GOT_PAGE_PC)
+        sym.setFlags(NEEDS_GOT | NEEDS_GOT_AUTH);
+      else
+        sym.setFlags(NEEDS_GOT | NEEDS_GOT_NONAUTH);
     }
   } else if (needsPlt(expr)) {
     sym.setFlags(NEEDS_PLT);
@@ -1807,6 +1800,12 @@ void elf::postScanRelocations(Ctx &ctx) {
     sym.allocateAux(ctx);
 
     if (flags & NEEDS_GOT) {
+      if ((flags & NEEDS_GOT_AUTH) && (flags & NEEDS_GOT_NONAUTH)) {
+        auto diag = Err(ctx);
+        diag << "both AUTH and non-AUTH GOT entries for '" << sym.getName()
+             << "' requested, but only one type of GOT entry per symbol is "
+                "supported";
+      }
       if (flags & NEEDS_GOT_AUTH)
         addGotAuthEntry(ctx, sym);
       else
