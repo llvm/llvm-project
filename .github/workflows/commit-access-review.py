@@ -91,7 +91,7 @@ def check_manual_requests(
         """
     formatted_start_date = start_date.strftime("%Y-%m-%dT%H:%M:%S")
     variables = {
-      "query": f"type:issue created:>{formatted_start_date} org:llvm repo:llvm-project label:infra:commit-access,infra:commit-access-request"
+        "query": f"type:issue created:>{formatted_start_date} org:llvm repo:llvm-project label:infra:commit-access,infra:commit-access-request"
     }
 
     has_next_page = True
@@ -104,7 +104,7 @@ def check_manual_requests(
         for issue in data["search"]["nodes"]:
             users.extend([user[1:] for user in re.findall("@[^ ,\n]+", issue["body"])])
             if issue['author']:
-                users.append(issue['author']['login'])
+                users.append(issue["author"]["login"])
         has_next_page = data["search"]["pageInfo"]["hasNextPage"]
         if has_next_page:
             variables["after"] = data["search"]["pageInfo"]["endCursor"]
