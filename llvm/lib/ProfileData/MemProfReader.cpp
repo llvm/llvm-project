@@ -45,7 +45,7 @@ namespace llvm {
 namespace memprof {
 namespace {
 template <class T = uint64_t> inline T alignedRead(const char *Ptr) {
-  static_assert(std::is_pod<T>::value, "Not a pod type.");
+  static_assert(std::is_integral_v<T>, "Not an integral type");
   assert(reinterpret_cast<size_t>(Ptr) % sizeof(T) == 0 && "Unaligned Read");
   return *reinterpret_cast<const T *>(Ptr);
 }
@@ -749,6 +749,36 @@ Error RawMemProfReader::readNextRecord(
     return F;
   };
   return MemProfReader::readNextRecord(GuidRecord, IdToFrameCallback);
+}
+
+Expected<std::unique_ptr<YAMLMemProfReader>>
+YAMLMemProfReader::create(const Twine &Path) {
+  auto BufferOr = MemoryBuffer::getFileOrSTDIN(Path);
+  if (std::error_code EC = BufferOr.getError())
+    return report(errorCodeToError(EC), Path.getSingleStringRef());
+
+  std::unique_ptr<MemoryBuffer> Buffer(BufferOr.get().release());
+  return create(std::move(Buffer));
+}
+
+Expected<std::unique_ptr<YAMLMemProfReader>>
+YAMLMemProfReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
+  auto Reader = std::make_unique<YAMLMemProfReader>();
+  Reader->parse(Buffer->getBuffer());
+  return std::move(Reader);
+}
+
+bool YAMLMemProfReader::hasFormat(const StringRef Path) {
+  auto BufferOr = MemoryBuffer::getFileOrSTDIN(Path);
+  if (!BufferOr)
+    return false;
+
+  std::unique_ptr<MemoryBuffer> Buffer(BufferOr.get().release());
+  return hasFormat(*Buffer);
+}
+
+bool YAMLMemProfReader::hasFormat(const MemoryBuffer &Buffer) {
+  return Buffer.getBuffer().starts_with("---");
 }
 
 void YAMLMemProfReader::parse(StringRef YAMLData) {

@@ -11843,7 +11843,9 @@ static void diagnoseTautologicalComparison(Sema &S, SourceLocation Loc,
       RHSStripped->getType()->isArrayType()) {
     auto IsDeprArrayComparionIgnored =
         S.getDiagnostics().isIgnored(diag::warn_depr_array_comparison, Loc);
-    auto DiagID = !S.getLangOpts().CPlusPlus20 || IsDeprArrayComparionIgnored
+    auto DiagID = S.getLangOpts().CPlusPlus26
+                      ? diag::warn_array_comparison_cxx26
+                  : !S.getLangOpts().CPlusPlus20 || IsDeprArrayComparionIgnored
                       ? diag::warn_array_comparison
                       : diag::warn_depr_array_comparison;
     S.Diag(Loc, DiagID) << LHS->getSourceRange() << RHS->getSourceRange()
