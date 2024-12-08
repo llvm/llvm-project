@@ -30,5 +30,6 @@ AMDGPU_ATTRIBUTE(WORKITEM_ID_Z, "amdgpu-no-workitem-id-z")
 AMDGPU_ATTRIBUTE(LDS_KERNEL_ID, "amdgpu-no-lds-kernel-id")
 AMDGPU_ATTRIBUTE(DEFAULT_QUEUE, "amdgpu-no-default-queue")
 AMDGPU_ATTRIBUTE(COMPLETION_ACTION, "amdgpu-no-completion-action")
+AMDGPU_ATTRIBUTE(FLAT_SCRATCH_INIT, "amdgpu-no-flat-scratch-init")
 
 #undef AMDGPU_ATTRIBUTE
