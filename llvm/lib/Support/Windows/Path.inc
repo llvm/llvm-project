@@ -19,6 +19,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/WindowsError.h"
 #include <fcntl.h>
+#include <filesystem>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -1370,6 +1371,13 @@ std::error_code closeFile(file_t &F) {
   if (!::CloseHandle(TmpF))
     return mapWindowsError(::GetLastError());
   return std::error_code();
+}
+
+std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
+  const std::filesystem::path Path(path.str());
+  std::error_code EC;
+  std::filesystem::remove_all(Path, EC);
+  return IgnoreErrors ? std::error_code() : EC;
 }
 
 static void expandTildeExpr(SmallVectorImpl<char> &Path) {

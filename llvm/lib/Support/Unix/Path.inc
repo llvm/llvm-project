@@ -1272,6 +1272,46 @@ std::error_code closeFile(file_t &F) {
   return Process::SafelyCloseFileDescriptor(TmpF);
 }
 
+template <typename T>
+static std::error_code remove_directories_impl(const T &Entry,
+                                               bool IgnoreErrors) {
+  std::error_code EC;
+  directory_iterator Begin(Entry, EC, false);
+  directory_iterator End;
+  while (Begin != End) {
+    auto &Item = *Begin;
+    ErrorOr<basic_file_status> st = Item.status();
+    if (st) {
+      if (is_directory(*st)) {
+        EC = remove_directories_impl(Item, IgnoreErrors);
+        if (EC && !IgnoreErrors)
+          return EC;
+      }
+
+      EC = fs::remove(Item.path(), true);
+      if (EC && !IgnoreErrors)
+        return EC;
+    } else if (!IgnoreErrors) {
+      return st.getError();
+    }
+
+    Begin.increment(EC);
+    if (EC && !IgnoreErrors)
+      return EC;
+  }
+  return std::error_code();
+}
+
+std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
+  auto EC = remove_directories_impl(path, IgnoreErrors);
+  if (EC && !IgnoreErrors)
+    return EC;
+  EC = fs::remove(path, true);
+  if (EC && !IgnoreErrors)
+    return EC;
+  return std::error_code();
+}
+
 std::error_code real_path(const Twine &path, SmallVectorImpl<char> &dest,
                           bool expand_tilde) {
   dest.clear();
