@@ -1328,39 +1328,19 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
     return 1;
   }
 
-  auto errBothAuthAndNonAuth = [this, &sym, offset]() {
-    auto diag = Err(ctx);
-    diag << "both AUTH and non-AUTH TLSDESC entries for '" << sym.getName()
-         << "' requested, but only one type of TLSDESC entry per symbol is "
-            "supported";
-    printLocation(diag, *sec, sym, offset);
-  };
-
   // Do not optimize signed TLSDESC (as described in pauthabielf64 to LE/IE).
   // https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#general-restrictions
   // > PAUTHELF64 only supports the descriptor based TLS (TLSDESC).
   if (oneof<RE_AARCH64_AUTH_TLSDESC_PAGE, RE_AARCH64_AUTH_TLSDESC>(expr)) {
-    assert(ctx.arg.emachine == EM_AARCH64);
-    uint16_t flags = sym.flags.load(std::memory_order_relaxed);
-    if (!(flags & NEEDS_TLSDESC)) {
-      sym.setFlags(NEEDS_TLSDESC | NEEDS_TLSDESC_AUTH);
-    } else if (!(flags & NEEDS_TLSDESC_AUTH)) {
-      errBothAuthAndNonAuth();
-      return 1;
-    }
+    sym.setFlags(NEEDS_TLSDESC | NEEDS_TLSDESC_AUTH);
     sec->addReloc({expr, type, offset, addend, &sym});
     return 1;
   }
 
-  if (sym.hasFlag(NEEDS_TLSDESC_AUTH)) {
-    assert(ctx.arg.emachine == EM_AARCH64);
-    // TLSDESC_CALL hint relocation probably should not be emitted by compiler
-    // with signed TLSDESC enabled since it does not give any value, but leave a
-    // check against that just in case someone uses it.
-    if (expr != R_TLSDESC_CALL)
-      errBothAuthAndNonAuth();
-    return 1;
-  }
+  // TLSDESC_CALL hint relocation should not be emitted by compiler with signed
+  // TLSDESC enabled.
+  if (expr == R_TLSDESC_CALL)
+    sym.setFlags(NEEDS_TLSDESC_NONAUTH);
 
   bool isRISCV = ctx.arg.emachine == EM_RISCV;
 
@@ -1371,7 +1351,7 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
     // set NEEDS_TLSDESC on the label.
     if (expr != R_TLSDESC_CALL) {
       if (!isRISCV || type == R_RISCV_TLSDESC_HI20)
-        sym.setFlags(NEEDS_TLSDESC);
+        sym.setFlags(NEEDS_TLSDESC | NEEDS_TLSDESC_NONAUTH);
       sec->addReloc({expr, type, offset, addend, &sym});
     }
     return 1;
@@ -1881,10 +1861,17 @@ void elf::postScanRelocations(Ctx &ctx) {
     GotSection *got = ctx.in.got.get();
 
     if (flags & NEEDS_TLSDESC) {
+      if ((flags & NEEDS_TLSDESC_AUTH) && (flags & NEEDS_TLSDESC_NONAUTH)) {
+        auto diag = Err(ctx);
+        diag << "both AUTH and non-AUTH TLSDESC entries for '" << sym.getName()
+             << "' requested, but only one type of TLSDESC entry per symbol is "
+                "supported";
+        return;
+      }
       got->addTlsDescEntry(sym);
       RelType tlsDescRel = ctx.target->tlsDescRel;
       if (flags & NEEDS_TLSDESC_AUTH) {
-        assert(ctx.arg.emachine == EM_AARCH64);
+        got->addTlsDescAuthEntry();
         tlsDescRel = ELF::R_AARCH64_AUTH_TLSDESC;
       }
       ctx.mainPart->relaDyn->addAddendOnlyRelocIfNonPreemptible(
