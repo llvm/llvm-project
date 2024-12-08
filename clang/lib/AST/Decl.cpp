@@ -3880,13 +3880,7 @@ FunctionTypeLoc FunctionDecl::getFunctionTypeLoc() const {
   if (!TSI)
     return FunctionTypeLoc();
 
-  TypeLoc TL = TSI->getTypeLoc().IgnoreParens();
-
-  // ignore function type attributes
-  while (auto ATL = TL.getAs<AttributedTypeLoc>())
-    TL = ATL.getModifiedLoc();
-
-  return TL.getAs<FunctionTypeLoc>();
+  return TSI->getTypeLoc().getAsAdjusted<FunctionTypeLoc>();
 }
 
 SourceRange FunctionDecl::getReturnTypeSourceRange() const {

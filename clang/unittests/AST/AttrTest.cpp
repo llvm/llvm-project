@@ -86,6 +86,9 @@ TEST(Attr, AnnotateType) {
     struct S { int mem; };
     int [[clang::annotate_type("int")]]
     S::* [[clang::annotate_type("ptr_to_mem")]] ptr_to_member = &S::mem;
+
+    // Function Type Attributes
+    __attribute__((noreturn)) int f_noreturn();
   )cpp");
 
   {
@@ -153,6 +156,42 @@ TEST(Attr, AnnotateType) {
     EXPECT_EQ(IntTL.getType(), AST->getASTContext().IntTy);
   }
 
+  {
+    const FunctionDecl *Func = getFunctionNode(AST.get(), "f_noreturn");
+    const FunctionTypeLoc FTL = Func->getFunctionTypeLoc();
+    const FunctionType *FT = FTL.getTypePtr();
+
+    EXPECT_TRUE(FT->getExtInfo().getNoReturn());
+  }
+
+  // The following test verifies getFunctionTypeLoc returns a type
+  // which takes into account the attribute (instead of only the nake
+  // type).
+  //
+  // This is hard to do with C/C++ because it seems using a function
+  // type attribute with a C/C++ -function declaration only results
+  // with either:
+  //
+  // 1. It does NOT produce any AttributedType (for example it only
+  //   sets one flag of the FunctionType's ExtInfo, ie NoReturn).
+  // 2. It produces an AttributedType with modified type and
+  //   equivalent type that are equal (for example, that's what
+  //   happens with Calling Convention attributes).
+  //
+  // Fortunately, ObjC has one specific function type attribute that
+  // creates an AttributedType with different modified type and
+  // equivalent type.
+  auto AST_ObjC = buildASTFromCodeWithArgs(R"objc(
+    __attribute__((ns_returns_retained)) id f();
+  )objc", {"-fobjc-arc",}, "input.mm");
+  {
+    const FunctionDecl *f = getFunctionNode(AST_ObjC.get(), "f");
+    const FunctionTypeLoc FTL = f->getFunctionTypeLoc();
+
+    const FunctionType *FT = FTL.getTypePtr();
+    EXPECT_TRUE(FT->getExtInfo().getProducesResult());
+  }
+
   // Test type annotation on an `__auto_type` type in C mode.
   AST = buildASTFromCodeWithArgs(R"c(
     __auto_type [[clang::annotate_type("auto")]] auto_var = 1;
@@ -166,6 +205,7 @@ TEST(Attr, AnnotateType) {
     AutoTypeLoc AutoTL;
     AssertAnnotatedAs(Var->getTypeSourceInfo()->getTypeLoc(), "auto", AutoTL);
   }
+
 }
 
 TEST(Attr, RegularKeywordAttribute) {
