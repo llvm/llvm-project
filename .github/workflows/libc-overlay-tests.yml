@@ -18,6 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # TODO: add linux gcc when it is fixed
           - os: ubuntu-24.04
             compiler:
               c_compiler: clang
