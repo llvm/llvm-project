@@ -28,9 +28,9 @@ jobs:
     - name: Setup ccache
       uses: hendrikmuhs/ccache-action@v1
       with:
-      max-size: 256M
-      key: ${{ github.job }}-${{ matrix.c_compiler }}
-      variant: sccache
+        max-size: 256M
+        key: ${{ github.job }}-${{ matrix.c_compiler }}
+        variant: sccache
     
     - name: Prepare dependencies (Ubuntu)
       run: |
