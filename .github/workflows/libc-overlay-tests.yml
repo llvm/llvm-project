@@ -17,24 +17,23 @@ jobs:
       # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations.
       fail-fast: false
       matrix:
-        os: [ ubuntu-24.04, windows-2022, macos-14 ]
-        compiler: [
-          { c_compiler: gcc, cpp_compiler: g++ },
-          { c_compiler: clang, cpp_compiler: clang++ },
-          { c_compiler: clang-cl, cpp_compiler: clang-cl }
-        ]
-        exclude:
-          - os: windows-2022
-            compiler: { c_compiler: gcc, cpp_compiler: g++ }
-          - os: windows-2022
-            compiler: { c_compiler: clang, cpp_compiler: clang++ }
-          - os: ubuntu-24.04
-            compiler: { c_compiler: clang-cl, cpp_compiler: clang-cl }
+        include:
+          - os: ubuntu-20.04
+            compiler:
+              c_compiler: clang
+              cpp_compiler: clang++
+            cmake_config:
+          - os: windows-latest
+            compiler:
+              c_compiler: clang-cl
+              cpp_compiler: clang-cl
+            cmake_config: -TClangCL
           - os: macos-14
-            compiler: { c_compiler: clang-cl, cpp_compiler: clang-cl }
-          - os: macos-14
-            compiler: { c_compiler: gcc, cpp_compiler: g++ }
-
+            compiler:
+              c_compiler: clang
+              cpp_compiler: clang++
+            cmake_config:
+    
     steps:
     - uses: actions/checkout@v4
 
@@ -45,12 +44,7 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake libmpfr-dev libgmp-dev libmpc-dev
-    
-    - name: Prepare dependencies (Windows)
-      if: runner.os == 'Windows'
-      run: |
-        echo "C:\\Program Files\\LLVM\\bin" >> $GITHUB_PATH
+        sudo apt-get install -y libmpfr-dev libgmp-dev libmpc-dev
 
     - name: Set reusable strings
       id: strings
@@ -67,6 +61,7 @@ jobs:
         -DCMAKE_C_COMPILER_LAUNCHER=sccache
         -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
         -DLLVM_ENABLE_RUNTIMES=libc
+        ${{ matrix.cmake_config }}
         -S ${{ github.workspace }}/runtimes
 
     - name: Build
