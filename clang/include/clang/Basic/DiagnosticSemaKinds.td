@@ -9733,7 +9733,7 @@ def err_unsupported_type_aware_allocator : Error<
 def warn_type_aware_cleanup_deallocator_context_mismatch : Warning<
   "type aware %0 requires matching %1 in %2">,
   InGroup<StrictTypeAwareAllocators>, DefaultError;
-def err_type_aware_operator_found : Note<
+def note_type_aware_operator_found : Note<
   "type aware %0 found in %1">;
 def warn_mismatching_type_aware_cleanup_deallocator : Warning<
   "mismatched type aware allocation operators for constructor cleanup">,
@@ -12044,6 +12044,9 @@ def warn_always_inline_coroutine : Warning<
 def err_coroutine_unusable_new : Error<
   "'operator new' provided by %0 is not usable with the function signature of %1"
 >;
+def note_coroutine_unusable_type_aware_allocators : Note<
+  "type aware %0 will not be used for coroutine allocation"
+>;
 def err_coroutine_unfound_nothrow_new : Error <
   "unable to find %select{'::operator new(size_t, nothrow_t)'|"
   "'::operator new(size_t, align_val_t, nothrow_t)'}1 for %0"
@@ -12063,6 +12066,9 @@ def err_coroutine_return_type : Error<
   "function returns a type %0 marked with [[clang::coro_return_type]] but is neither a coroutine nor a coroutine wrapper; "
   "non-coroutines should be marked with [[clang::coro_wrapper]] to allow returning coroutine return type"
 >;
+def warn_coroutine_type_aware_allocator_ignored : Warning <
+  "type aware %0 will not be used for coroutine allocation">,
+  InGroup<CoroTypeAwareAllocationFunction>;
 } // end of coroutines issue category
 
 let CategoryName = "Documentation Issue" in {

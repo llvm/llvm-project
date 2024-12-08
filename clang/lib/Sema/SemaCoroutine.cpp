@@ -1095,12 +1095,40 @@ static TypeSourceInfo *getTypeSourceInfoForStdAlignValT(Sema &S,
   return S.Context.getTrivialTypeSourceInfo(StdAlignValDecl);
 }
 
+// When searching for custom allocators on the PromiseType we want to
+// warn that we will ignore type aware allocators.
+static bool DiagnoseTypeAwareAllocatorsIfNecessary(Sema &S, SourceLocation Loc,
+                                                   unsigned DiagnosticID,
+                                                   DeclarationName Name,
+                                                   QualType PromiseType) {
+  if (!S.getLangOpts().TypeAwareAllocators)
+    return false;
+  if (!PromiseType->isRecordType())
+    return false;
+  LookupResult R(S, Name, Loc, Sema::LookupOrdinaryName);
+  S.LookupQualifiedName(R, PromiseType->getAsCXXRecordDecl());
+  bool HaveIssuedWarning = false;
+  for (auto Decl : R) {
+    if (S.isTypeAwareOperatorNewOrDelete(Decl)) {
+      if (!HaveIssuedWarning) {
+        S.Diag(Loc, DiagnosticID) << Name;
+        HaveIssuedWarning = true;
+      }
+      S.Diag(Decl->getLocation(), diag::note_type_aware_operator_declared)
+          << 0 << Decl;
+    }
+  }
+  return HaveIssuedWarning;
+}
+
 // Find an appropriate delete for the promise.
 static bool findDeleteForPromise(Sema &S, SourceLocation Loc, QualType PromiseType,
                                  FunctionDecl *&OperatorDelete) {
   DeclarationName DeleteName =
       S.Context.DeclarationNames.getCXXOperatorName(OO_Delete);
-
+  DiagnoseTypeAwareAllocatorsIfNecessary(
+      S, Loc, diag::warn_coroutine_type_aware_allocator_ignored, DeleteName,
+      PromiseType);
   auto *PointeeRD = PromiseType->getAsCXXRecordDecl();
   assert(PointeeRD && "PromiseType must be a CxxRecordDecl type");
 
@@ -1111,7 +1139,7 @@ static bool findDeleteForPromise(Sema &S, SourceLocation Loc, QualType PromiseTy
   // scope of the promise type. If nothing is found, a search is performed in
   // the global scope.
   ImplicitDeallocationParameters IDP = {
-      typeAwareAllocationModeFromBool(S.getLangOpts().TypeAwareAllocators),
+      S.Context.VoidTy, TypeAwareAllocationMode::No,
       alignedAllocationModeFromBool(Overaligned), SizedDeallocationMode::Yes};
   if (S.FindDeallocationFunction(Loc, PointeeRD, DeleteName, OperatorDelete,
                                  PromiseType, IDP, /*Diagnose*/ true))
@@ -1407,10 +1435,10 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
 
   FunctionDecl *OperatorNew = nullptr;
   SmallVector<Expr *, 1> PlacementArgs;
+  DeclarationName NewName =
+      S.getASTContext().DeclarationNames.getCXXOperatorName(OO_New);
 
-  const bool PromiseContainsNew = [this, &PromiseType]() -> bool {
-    DeclarationName NewName =
-        S.getASTContext().DeclarationNames.getCXXOperatorName(OO_New);
+  const bool PromiseContainsNew = [this, &PromiseType, NewName]() -> bool {
     LookupResult R(S, NewName, Loc, Sema::LookupOrdinaryName);
 
     if (PromiseType->isRecordType())
@@ -1422,36 +1450,36 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   // Helper function to indicate whether the last lookup found the aligned
   // allocation function.
   ImplicitAllocationParameters IAP = {
-      typeAwareAllocationModeFromBool(S.getLangOpts().TypeAwareAllocators),
+      S.Context.VoidTy, TypeAwareAllocationMode::No,
       alignedAllocationModeFromBool(S.getLangOpts().CoroAlignedAllocation)};
-  auto LookupAllocationFunction = [&](Sema::AllocationFunctionScope NewScope =
-                                          Sema::AFS_Both,
-                                      bool WithoutPlacementArgs = false,
-                                      bool ForceNonAligned = false) {
-    // [dcl.fct.def.coroutine]p9
-    //   The allocation function's name is looked up by searching for it in
-    //   the
-    // scope of the promise type.
-    // - If any declarations are found, ...
-    // - If no declarations are found in the scope of the promise type, a
-    //   search is performed in the global scope.
-    if (NewScope == Sema::AFS_Both)
-      NewScope = PromiseContainsNew ? Sema::AFS_Class : Sema::AFS_Global;
+  auto LookupAllocationFunction =
+      [&](Sema::AllocationFunctionScope NewScope = Sema::AFS_Both,
+          bool WithoutPlacementArgs = false, bool ForceNonAligned = false) {
+        // [dcl.fct.def.coroutine]p9
+        //   The allocation function's name is looked up by searching for it in
+        //   the
+        // scope of the promise type.
+        // - If any declarations are found, ...
+        // - If no declarations are found in the scope of the promise type, a
+        //   search is performed in the global scope.
+        if (NewScope == Sema::AFS_Both)
+          NewScope = PromiseContainsNew ? Sema::AFS_Class : Sema::AFS_Global;
 
-    bool ShouldUseAlignedAlloc =
-        !ForceNonAligned && S.getLangOpts().CoroAlignedAllocation;
-    IAP = {typeAwareAllocationModeFromBool(S.getLangOpts().TypeAwareAllocators),
-           alignedAllocationModeFromBool(ShouldUseAlignedAlloc)};
+        bool ShouldUseAlignedAlloc =
+            !ForceNonAligned && S.getLangOpts().CoroAlignedAllocation;
+        IAP = {S.Context.VoidTy, TypeAwareAllocationMode::No,
+               alignedAllocationModeFromBool(ShouldUseAlignedAlloc)};
 
-    FunctionDecl *UnusedResult = nullptr;
+        FunctionDecl *UnusedResult = nullptr;
 
-    S.FindAllocationFunctions(Loc, SourceRange(), NewScope,
-                              /*DeleteScope*/ Sema::AFS_Both, PromiseType,
-                              /*isArray*/ false, IAP,
-                              WithoutPlacementArgs ? MultiExprArg{}
-                                                   : PlacementArgs,
-                              OperatorNew, UnusedResult, /*Diagnose*/ false);
-  };
+        S.FindAllocationFunctions(
+            Loc, SourceRange(), NewScope,
+            /*DeleteScope*/ Sema::AFS_Both, PromiseType,
+            /*isArray*/ false, IAP,
+            WithoutPlacementArgs ? MultiExprArg{} : PlacementArgs, OperatorNew,
+            UnusedResult, /*Diagnose*/ false);
+        assert(!OperatorNew || !OperatorNew->isTypeAwareOperatorNewOrDelete());
+      };
 
   // We don't expect to call to global operator new with (size, p0, …, pn).
   // So if we choose to lookup the allocation function in global scope, we
@@ -1537,14 +1565,21 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   }
 
   if (!OperatorNew) {
-    if (PromiseContainsNew)
+    if (PromiseContainsNew) {
       S.Diag(Loc, diag::err_coroutine_unusable_new) << PromiseType << &FD;
-    else if (RequiresNoThrowAlloc)
+      DiagnoseTypeAwareAllocatorsIfNecessary(
+          S, Loc, diag::note_coroutine_unusable_type_aware_allocators, NewName,
+          PromiseType);
+    } else if (RequiresNoThrowAlloc)
       S.Diag(Loc, diag::err_coroutine_unfound_nothrow_new)
           << &FD << S.getLangOpts().CoroAlignedAllocation;
 
     return false;
   }
+
+  DiagnoseTypeAwareAllocatorsIfNecessary(
+      S, Loc, diag::warn_coroutine_type_aware_allocator_ignored, NewName,
+      PromiseType);
 
   if (RequiresNoThrowAlloc) {
     const auto *FT = OperatorNew->getType()->castAs<FunctionProtoType>();

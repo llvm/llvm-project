@@ -2261,6 +2261,12 @@ inline SizedDeallocationMode sizedDeallocationModeFromBool(bool IsSized) {
 }
 
 struct ImplicitAllocationParameters {
+  ImplicitAllocationParameters(QualType Type,
+                               TypeAwareAllocationMode PassTypeIdentity,
+                               AlignedAllocationMode PassAlignment)
+      : Type(Type.isNull() ? Type : Type.getUnqualifiedType()),
+        PassTypeIdentity(PassTypeIdentity), PassAlignment(PassAlignment) {}
+  QualType Type;
   TypeAwareAllocationMode PassTypeIdentity;
   AlignedAllocationMode PassAlignment;
   unsigned getNumImplicitArgs() const {
@@ -2274,6 +2280,14 @@ struct ImplicitAllocationParameters {
 };
 
 struct ImplicitDeallocationParameters {
+  ImplicitDeallocationParameters(QualType Type,
+                                 TypeAwareAllocationMode PassTypeIdentity,
+                                 AlignedAllocationMode PassAlignment,
+                                 SizedDeallocationMode PassSize)
+      : Type(Type.isNull() ? Type : Type.getUnqualifiedType()),
+        PassTypeIdentity(PassTypeIdentity), PassAlignment(PassAlignment),
+        PassSize(PassSize) {}
+  QualType Type;
   TypeAwareAllocationMode PassTypeIdentity;
   AlignedAllocationMode PassAlignment;
   SizedDeallocationMode PassSize;
@@ -2502,6 +2516,7 @@ public:
   /// parameters in this call
   ImplicitAllocationParameters implicitAllocationParameters() const {
     return ImplicitAllocationParameters{
+        getAllocatedType(),
         typeAwareAllocationModeFromBool(CXXNewExprBits.ShouldPassTypeIdentity),
         alignedAllocationModeFromBool(CXXNewExprBits.ShouldPassAlignment)};
   }

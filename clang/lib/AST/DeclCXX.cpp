@@ -2480,26 +2480,20 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
   bool IsTypeAware = isTypeAwareOperatorNewOrDelete();
 
   // C++ [basic.stc.dynamic.deallocation]p2:
+  //   Pre-type aware allocators:
   //   A template instance is never a usual deallocation function,
   //   regardless of its signature.
+  //   Pending final C++26 text:
+  //   A template instance is only a usual deallocation function if it
+  //   is a type aware deallocation function, and only the type-identity
+  //   parameter is dependent.
   if (FunctionTemplateDecl *PrimaryTemplate = getPrimaryTemplate()) {
-    // Addendum: a template instance is a usual deallocation function if there
-    // is a single template parameter, that parameter is a type, only the first
-    // parameter is dependent, and that parameter is a specialization of
-    // std::type_identity.
     if (!IsTypeAware) {
       // Stop early on if the specialization is not explicitly type aware
       return false;
     }
 
     FunctionDecl *SpecializedDecl = PrimaryTemplate->getTemplatedDecl();
-    if (!SpecializedDecl->isTypeAwareOperatorNewOrDelete()) {
-      // The underlying template decl must also be explicitly type aware
-      // e.g. template <typename T> void operator delete(T, ...)
-      // specialized on T=type_identity<X> is not usual
-      return false;
-    }
-
     for (unsigned Idx = 1; Idx < NumParams; ++Idx) {
       if (SpecializedDecl->getParamDecl(Idx)->getType()->isDependentType())
         return false;
@@ -2512,9 +2506,10 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
 
   // C++ [basic.stc.dynamic.deallocation]p2:
   //   If a class T has a member deallocation function named operator delete
-  //   with exactly one parameter, then that function is a usual (non-placement)
+  //   with exactly one parameter or a type aware operator delete with two
+  //   two arguments, then that function is a usual (non-placement)
   //   deallocation function. [...]
-  if (getNumParams() == 1)
+  if (getNumParams() == UsualParams)
     return true;
 
   // C++ P0722:

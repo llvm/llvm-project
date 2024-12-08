@@ -1775,12 +1775,15 @@ static bool isNonPlacementDeallocationFunction(Sema &S, FunctionDecl *FD) {
 
 namespace {
   struct UsualDeallocFnInfo {
-    UsualDeallocFnInfo() : Found(), FD(nullptr) {}
+    UsualDeallocFnInfo()
+        : Found(), FD(nullptr),
+          IDP(QualType(), TypeAwareAllocationMode::No,
+              AlignedAllocationMode::No, SizedDeallocationMode::No) {}
     UsualDeallocFnInfo(Sema &S, DeclAccessPair Found, QualType AllocType)
         : Found(Found), FD(dyn_cast<FunctionDecl>(Found->getUnderlyingDecl())),
           Destroying(false),
-          IDP({TypeAwareAllocationMode::No, AlignedAllocationMode::No,
-               SizedDeallocationMode::No}),
+          IDP({AllocType, TypeAwareAllocationMode::No,
+               AlignedAllocationMode::No, SizedDeallocationMode::No}),
           CUDAPref(SemaCUDA::CFP_Native) {
       // A function template declaration is only a usual deallocation function
       // if it is a typed delete.
@@ -2008,7 +2011,7 @@ static bool doesUsualArrayDeleteWantSize(Sema &S, SourceLocation loc,
   //   If the deallocation functions have class scope, the one without a
   //   parameter of type std::size_t is selected.
   ImplicitDeallocationParameters IDP = {
-      PassType,
+      allocType, PassType,
       alignedAllocationModeFromBool(hasNewExtendedAlignment(S, allocType)),
       SizedDeallocationMode::No};
   auto Best = resolveDeallocationOverload(S, ops, IDP, allocType);
@@ -2425,6 +2428,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
       AllocType->isDependentType() ? 0 : Context.getTypeAlign(AllocType);
   unsigned NewAlignment = Context.getTargetInfo().getNewAlign();
   ImplicitAllocationParameters IAP = {
+      AllocType,
       typeAwareAllocationModeFromBool(getLangOpts().TypeAwareAllocators),
       alignedAllocationModeFromBool(getLangOpts().AlignedAllocation &&
                                     Alignment > NewAlignment)};
@@ -3159,7 +3163,7 @@ bool Sema::FindAllocationFunctions(
     // with a size_t where possible (which it always is in this case).
     llvm::SmallVector<UsualDeallocFnInfo, 4> BestDeallocFns;
     ImplicitDeallocationParameters IDP = {
-        OriginalTypeAwareState,
+        AllocElemType, OriginalTypeAwareState,
         alignedAllocationModeFromBool(
             hasNewExtendedAlignment(*this, AllocElemType)),
         sizedDeallocationModeFromBool(FoundGlobalDelete)};
@@ -3197,9 +3201,9 @@ bool Sema::FindAllocationFunctions(
         OperatorDelete->getDeclContext() != OperatorNew->getDeclContext()) {
       Diag(StartLoc, diag::warn_type_aware_cleanup_deallocator_context_mismatch)
           << OperatorNew << DeleteName << OperatorNew->getDeclContext();
-      Diag(OperatorNew->getLocation(), diag::err_type_aware_operator_found)
+      Diag(OperatorNew->getLocation(), diag::note_type_aware_operator_found)
           << OperatorNew << OperatorNew->getDeclContext();
-      Diag(OperatorDelete->getLocation(), diag::err_type_aware_operator_found)
+      Diag(OperatorDelete->getLocation(), diag::note_type_aware_operator_found)
           << OperatorDelete << OperatorDelete->getDeclContext();
     }
 
@@ -3221,7 +3225,7 @@ bool Sema::FindAllocationFunctions(
       bool IsSizedDelete = isSizedDeallocation(Info.IDP.PassSize);
       if (IsSizedDelete && !FoundGlobalDelete) {
         ImplicitDeallocationParameters SizeTestingIDP = {
-            Info.IDP.PassTypeIdentity, Info.IDP.PassAlignment,
+            AllocElemType, Info.IDP.PassTypeIdentity, Info.IDP.PassAlignment,
             SizedDeallocationMode::No};
         auto NonSizedDelete = resolveDeallocationOverload(
             *this, FoundDelete, SizeTestingIDP, AllocElemType);
@@ -3544,6 +3548,7 @@ FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
   FunctionDecl *OperatorDelete = nullptr;
   QualType DeallocType = Context.getRecordType(RD);
   ImplicitDeallocationParameters IDP = {
+      DeallocType,
       typeAwareAllocationModeFromBool(getLangOpts().TypeAwareAllocators),
       AlignedAllocationMode::No, SizedDeallocationMode::No};
 
@@ -4017,6 +4022,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
 
     if (PointeeRD) {
       ImplicitDeallocationParameters IDP = {
+          Pointee,
           typeAwareAllocationModeFromBool(getLangOpts().TypeAwareAllocators),
           AlignedAllocationMode::No, SizedDeallocationMode::No};
       if (!UseGlobal &&
@@ -4070,6 +4076,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
 
       // Look for a global declaration.
       ImplicitDeallocationParameters IDP = {
+          Pointee,
           typeAwareAllocationModeFromBool(getLangOpts().TypeAwareAllocators),
           alignedAllocationModeFromBool(Overaligned),
           sizedDeallocationModeFromBool(CanProvideSize)};
