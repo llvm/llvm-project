@@ -55,6 +55,17 @@ public:
 
   using iterator_adaptor_base::operator++;
 
+  bool operator==(const TargetSuperClassIterator &Other) const {
+    // End can be represented either with a nullptr or with a ptr to
+    // a sentinel value of ~0U. They must compare equal.
+    bool SelfIsEnd = !I || *I == ~0U;
+    bool OtherIsEnd = !Other.I || *Other.I == ~0U;
+    if (SelfIsEnd && OtherIsEnd)
+      return true;
+
+    return I == Other.I;
+  }
+
   /// Returns true if this iterator is not yet at the end.
   bool isValid() const { return I && *I != ~0U; }
 };
