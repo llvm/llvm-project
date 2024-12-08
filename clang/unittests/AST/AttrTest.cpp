@@ -181,9 +181,12 @@ TEST(Attr, AnnotateType) {
   // Fortunately, ObjC has one specific function type attribute that
   // creates an AttributedType with different modified type and
   // equivalent type.
-  auto AST_ObjC = buildASTFromCodeWithArgs(R"objc(
+  auto AST_ObjC = buildASTFromCodeWithArgs(
+      R"objc(
     __attribute__((ns_returns_retained)) id f();
-  )objc", {"-fobjc-arc",}, "input.mm");
+  )objc",
+      {"-fobjc-arc", "-fsyntax-only", "-fobjc-runtime=macosx-10.7"},
+      "input.mm");
   {
     const FunctionDecl *f = getFunctionNode(AST_ObjC.get(), "f");
     const FunctionTypeLoc FTL = f->getFunctionTypeLoc();
@@ -205,7 +208,6 @@ TEST(Attr, AnnotateType) {
     AutoTypeLoc AutoTL;
     AssertAnnotatedAs(Var->getTypeSourceInfo()->getTypeLoc(), "auto", AutoTL);
   }
-
 }
 
 TEST(Attr, RegularKeywordAttribute) {
