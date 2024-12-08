@@ -1837,22 +1837,10 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     dir[DEBUG_DIRECTORY].RelativeVirtualAddress = debugDirectory->getRVA();
     dir[DEBUG_DIRECTORY].Size = debugDirectory->getSize();
   }
-  if (Symbol *sym = ctx.symtab.findUnderscore("_load_config_used")) {
-    if (auto *b = dyn_cast<DefinedRegular>(sym)) {
-      SectionChunk *sc = b->getChunk();
-      assert(b->getRVA() >= sc->getRVA());
-      uint64_t offsetInChunk = b->getRVA() - sc->getRVA();
-      if (!sc->hasData || offsetInChunk + 4 > sc->getSize())
-        Fatal(ctx) << "_load_config_used is malformed";
-
-      ArrayRef<uint8_t> secContents = sc->getContents();
-      uint32_t loadConfigSize =
-          *reinterpret_cast<const ulittle32_t *>(&secContents[offsetInChunk]);
-      if (offsetInChunk + loadConfigSize > sc->getSize())
-        Fatal(ctx) << "_load_config_used is too large";
-      dir[LOAD_CONFIG_TABLE].RelativeVirtualAddress = b->getRVA();
-      dir[LOAD_CONFIG_TABLE].Size = loadConfigSize;
-    }
+  if (ctx.symtab.loadConfigSym) {
+    dir[LOAD_CONFIG_TABLE].RelativeVirtualAddress =
+        ctx.symtab.loadConfigSym->getRVA();
+    dir[LOAD_CONFIG_TABLE].Size = ctx.symtab.loadConfigSize;
   }
   if (!delayIdata.empty()) {
     dir[DELAY_IMPORT_DESCRIPTOR].RelativeVirtualAddress =
@@ -2649,31 +2637,14 @@ void Writer::fixTlsAlignment() {
 }
 
 void Writer::prepareLoadConfig() {
-  Symbol *sym = ctx.symtab.findUnderscore("_load_config_used");
-  auto *b = cast_if_present<DefinedRegular>(sym);
-  if (!b) {
-    if (ctx.config.guardCF != GuardCFLevel::Off)
-      Warn(ctx)
-          << "Control Flow Guard is enabled but '_load_config_used' is missing";
-    if (ctx.config.dependentLoadFlags)
-      Warn(ctx) << "_load_config_used not found, /dependentloadflag will have "
-                   "no effect";
+  if (!ctx.symtab.loadConfigSym)
     return;
-  }
 
-  OutputSection *sec = ctx.getOutputSection(b->getChunk());
-  uint8_t *buf = buffer->getBufferStart();
-  uint8_t *secBuf = buf + sec->getFileOff();
-  uint8_t *symBuf = secBuf + (b->getRVA() - sec->getRVA());
-  uint32_t expectedAlign = ctx.config.is64() ? 8 : 4;
-  if (b->getChunk()->getAlignment() < expectedAlign)
-    Warn(ctx) << "'_load_config_used' is misaligned (expected alignment to be "
-              << expectedAlign << " bytes, got "
-              << b->getChunk()->getAlignment() << " instead)";
-  else if (!isAligned(Align(expectedAlign), b->getRVA()))
-    Warn(ctx) << "'_load_config_used' is misaligned (RVA is 0x"
-              << Twine::utohexstr(b->getRVA()) << " not aligned to "
-              << expectedAlign << " bytes)";
+  OutputSection *sec =
+      ctx.getOutputSection(ctx.symtab.loadConfigSym->getChunk());
+  uint8_t *secBuf = buffer->getBufferStart() + sec->getFileOff();
+  uint8_t *symBuf =
+      secBuf + (ctx.symtab.loadConfigSym->getRVA() - sec->getRVA());
 
   if (ctx.config.is64())
     prepareLoadConfig(reinterpret_cast<coff_load_configuration64 *>(symBuf));
