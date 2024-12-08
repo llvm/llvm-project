@@ -1183,10 +1183,6 @@ template <> struct MappingTraits<memprof::Frame> {
     (void)Column;
     (void)IsInlineFrame;
   }
-
-  // Request the inline notation for brevity:
-  //   { Function: 123, LineOffset: 11, Column: 10; IsInlineFrame: true }
-  static const bool flow = true;
 };
 
 template <> struct CustomMappingTraits<memprof::PortableMemInfoBlock> {
@@ -1211,13 +1207,8 @@ template <> struct CustomMappingTraits<memprof::PortableMemInfoBlock> {
     Io.setError("Key is not a valid validation event");
   }
 
-  static void output(IO &Io, memprof::PortableMemInfoBlock &MIB) {
-    auto Schema = MIB.getSchema();
-#define MIBEntryDef(NameTag, Name, Type)                                       \
-  if (Schema.test(llvm::to_underlying(memprof::Meta::Name)))                   \
-    Io.mapRequired(#Name, MIB.Name);
-#include "llvm/ProfileData/MIBEntryDef.inc"
-#undef MIBEntryDef
+  static void output(IO &Io, memprof::PortableMemInfoBlock &VI) {
+    llvm_unreachable("To be implemented");
   }
 };
 
