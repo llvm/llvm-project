@@ -801,11 +801,9 @@ define <8 x i32> @shuffle_compress_singlesrc_gaps_e32(<8 x i32> %v) {
 define <8 x i32> @shuffle_spread2_singlesrc_e32(<8 x i32> %v) {
 ; CHECK-LABEL: shuffle_spread2_singlesrc_e32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vwaddu.vv v10, v8, v8
-; CHECK-NEXT:    li a0, -1
-; CHECK-NEXT:    vwmaccu.vx v10, a0, v8
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-NEXT:    vzext.vf2 v10, v8
+; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
   %out = shufflevector <8 x i32> %v, <8 x i32> poison, <8 x i32> <i32 0, i32 undef, i32 1, i32 undef, i32 2, i32 undef, i32 3, i32 undef>
   ret <8 x i32> %out
@@ -814,11 +812,10 @@ define <8 x i32> @shuffle_spread2_singlesrc_e32(<8 x i32> %v) {
 define <8 x i32> @shuffle_spread2_singlesrc_e32_index1(<8 x i32> %v) {
 ; CHECK-LABEL: shuffle_spread2_singlesrc_e32_index1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vwaddu.vv v10, v8, v8
-; CHECK-NEXT:    li a0, -1
-; CHECK-NEXT:    vwmaccu.vx v10, a0, v8
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-NEXT:    vzext.vf2 v10, v8
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vsll.vx v8, v10, a0
 ; CHECK-NEXT:    ret
   %out = shufflevector <8 x i32> %v, <8 x i32> poison, <8 x i32> <i32 undef, i32 0, i32 undef, i32 1, i32 undef, i32 2, i32 undef, i32 3>
   ret <8 x i32> %out
