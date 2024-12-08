@@ -1271,3 +1271,69 @@ define i64 @bswap_i64(i64 %a) {
   %1 = call i64 @llvm.bswap.i64(i64 %a)
   ret i64 %1
 }
+
+; This creates a i16->i32 G_ZEXT that we need to be able to select
+define i32 @zext_i16_i32(i1 %z, ptr %x, i32 %y) {
+; RV64I-LABEL: zext_i16_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    andi a3, a0, 1
+; RV64I-NEXT:    bnez a3, .LBB35_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    mv a0, a2
+; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB35_2:
+; RV64I-NEXT:    lh a0, 0(a1)
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: zext_i16_i32:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    andi a3, a0, 1
+; RV64ZBB-NEXT:    bnez a3, .LBB35_2
+; RV64ZBB-NEXT:  # %bb.1:
+; RV64ZBB-NEXT:    mv a0, a2
+; RV64ZBB-NEXT:    ret
+; RV64ZBB-NEXT:  .LBB35_2:
+; RV64ZBB-NEXT:    lh a0, 0(a1)
+; RV64ZBB-NEXT:    zext.h a0, a0
+; RV64ZBB-NEXT:    ret
+  %w = load i16, ptr %x
+  %a = freeze i16 %w
+  %b = zext i16 %a to i32
+  %c = select i1 %z, i32 %b, i32 %y
+  ret i32 %c
+}
+
+; This creates a i16->i32 G_SEXT that we need to be able to select
+define i32 @sext_i16_i32(i1 %z, ptr %x, i32 %y) {
+; RV64I-LABEL: sext_i16_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    andi a3, a0, 1
+; RV64I-NEXT:    bnez a3, .LBB36_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    mv a0, a2
+; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB36_2:
+; RV64I-NEXT:    lh a0, 0(a1)
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srai a0, a0, 48
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: sext_i16_i32:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    andi a3, a0, 1
+; RV64ZBB-NEXT:    bnez a3, .LBB36_2
+; RV64ZBB-NEXT:  # %bb.1:
+; RV64ZBB-NEXT:    mv a0, a2
+; RV64ZBB-NEXT:    ret
+; RV64ZBB-NEXT:  .LBB36_2:
+; RV64ZBB-NEXT:    lh a0, 0(a1)
+; RV64ZBB-NEXT:    sext.h a0, a0
+; RV64ZBB-NEXT:    ret
+  %w = load i16, ptr %x
+  %a = freeze i16 %w
+  %b = sext i16 %a to i32
+  %c = select i1 %z, i32 %b, i32 %y
+  ret i32 %c
+}

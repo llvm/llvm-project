@@ -428,6 +428,9 @@ New Compiler Flags
 - The ``-Warray-compare`` warning has been added to warn about array comparison
   on versions older than C++20.
 
+- The ``-Warray-compare-cxx26`` warning has been added to warn about array comparison
+  starting from C++26, this warning is enabled as an error by default.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -796,7 +799,6 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure caused by mangled names with invalid identifiers. (#GH112205)
 - Fixed an incorrect lambda scope of generic lambdas that caused Clang to crash when computing potential lambda
   captures at the end of a full expression. (#GH115931)
-- Clang no longer rejects deleting a pointer of incomplete enumeration type. (#GH99278)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

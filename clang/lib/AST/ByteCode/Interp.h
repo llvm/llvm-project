@@ -14,6 +14,7 @@
 #define LLVM_CLANG_AST_INTERP_INTERP_H
 
 #include "../ExprConstShared.h"
+#include "BitcastBuffer.h"
 #include "Boolean.h"
 #include "DynamicAllocator.h"
 #include "FixedPoint.h"
@@ -3050,7 +3051,16 @@ inline bool BitCast(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
   llvm::SmallVector<std::byte> Buff(BuffSize);
   bool HasIndeterminateBits = false;
 
-  if (!DoBitCast(S, OpPC, FromPtr, Buff.data(), BuffSize, HasIndeterminateBits))
+  Bits FullBitWidth(ResultBitWidth);
+  Bits BitWidth = FullBitWidth;
+
+  if constexpr (std::is_same_v<T, Floating>) {
+    assert(Sem);
+    BitWidth = Bits(llvm::APFloatBase::getSizeInBits(*Sem));
+  }
+
+  if (!DoBitCast(S, OpPC, FromPtr, Buff.data(), BitWidth, FullBitWidth,
+                 HasIndeterminateBits))
     return false;
 
   if (!CheckBitCast(S, OpPC, HasIndeterminateBits, TargetIsUCharOrByte))
@@ -3058,16 +3068,7 @@ inline bool BitCast(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
 
   if constexpr (std::is_same_v<T, Floating>) {
     assert(Sem);
-    ptrdiff_t Offset = 0;
-
-    if (llvm::sys::IsBigEndianHost) {
-      unsigned NumBits = llvm::APFloatBase::getSizeInBits(*Sem);
-      assert(NumBits % 8 == 0);
-      assert(NumBits <= ResultBitWidth);
-      Offset = (ResultBitWidth - NumBits) / 8;
-    }
-
-    S.Stk.push<Floating>(T::bitcastFromMemory(Buff.data() + Offset, *Sem));
+    S.Stk.push<Floating>(T::bitcastFromMemory(Buff.data(), *Sem));
   } else {
     assert(!Sem);
     S.Stk.push<T>(T::bitcastFromMemory(Buff.data(), ResultBitWidth));

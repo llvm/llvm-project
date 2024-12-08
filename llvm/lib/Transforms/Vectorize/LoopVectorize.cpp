@@ -7678,11 +7678,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
                               OrigLoop->getHeader()->getContext());
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
 
-  LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << BestVF
-                    << ", UF=" << BestUF << '\n');
-  BestVPlan.setName("Final VPlan");
-  LLVM_DEBUG(BestVPlan.dump());
-
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, BestUF, LI, DT, ILV.Builder, &ILV,
                          &BestVPlan);
@@ -7859,12 +7854,10 @@ EpilogueVectorizerMainLoop::createEpilogueVectorizedLoopSkeleton(
   SmallPtrSet<PHINode *, 4> WideIVs;
   for (VPRecipeBase &H :
        EPI.EpiloguePlan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
-    if (!isa<VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe>(&H))
-      continue;
     if (auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&H))
       WideIVs.insert(WideIV->getPHINode());
-    else
-      WideIVs.insert(cast<PHINode>(H.getVPSingleValue()->getUnderlyingValue()));
+    else if (auto *PtrIV = dyn_cast<VPWidenPointerInductionRecipe>(&H))
+      WideIVs.insert(cast<PHINode>(PtrIV->getUnderlyingValue()));
   }
   createInductionResumeVPValues(ExpandedSCEVs, nullptr, &WideIVs);
 
