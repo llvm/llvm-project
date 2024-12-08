@@ -26,10 +26,10 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Setup ccache
-      uses: hendrikmuhs/ccache-action@v1
+      uses: hendrikmuhs/ccache-action@v1.2
       with:
         max-size: 256M
-        key: ${{ github.job }}-${{ matrix.c_compiler }}
+        key: libc_fullbuild_${{ matrix.c_compiler }}
         variant: sccache
     
     - name: Prepare dependencies (Ubuntu)

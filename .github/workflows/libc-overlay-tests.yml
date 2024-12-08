@@ -39,7 +39,7 @@ jobs:
       uses: hendrikmuhs/ccache-action@v1
       with:
         max-size: 256M
-        key: ${{ github.job }}-${{ matrix.os }}-${{ matrix.compiler.c_compiler }}
+        key: libc_overlay_build_${{ matrix.os }}_${{ matrix.compiler.c_compiler }}
         variant: sccache
     
     - name: Prepare dependencies (Ubuntu)
