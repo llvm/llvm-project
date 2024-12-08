@@ -60,7 +60,16 @@ jobs:
         -S ${{ github.workspace }}/runtimes
 
     - name: Build
-      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --parallel --config RelWithDebInfo
+      run: >
+        cmake 
+        --build ${{ steps.strings.outputs.build-output-dir }} 
+        --parallel 
+        --config RelWithDebInfo 
+        --target libc
 
     - name: Test
-      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --target check-libc
+      run: >
+        cmake 
+        --build ${{ steps.strings.outputs.build-output-dir }} 
+        --parallel 
+        --target check-libc
