@@ -61,6 +61,11 @@ def Linalg_Dialect : Dialect {
   }];
 }
 
+// Define the enum-type Elemwise func attribute.
+def ElemwiseFnAttr : EnumAttr<Linalg_Dialect, ElemwiseFn, "elemwise_fn"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
 // Define the function attribute enums matching the OpDSL functions.
 def UnaryFnAttr : EnumAttr<Linalg_Dialect, UnaryFn, "unary_fn"> {
   let assemblyFormat = "`<` $value `>`";

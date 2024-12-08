@@ -203,6 +203,15 @@ static void buildMatmulOp(OpBuilder &b, OperationState &state,
                            attributes, regionBuilder);
 }
 
+static void buildElemwiseOp(OpBuilder &b, OperationState &state,
+                            std::optional<TypeRange> resultTensorTypes,
+                            ValueRange inputs, ValueRange outputs,
+                            ArrayRef<NamedAttribute> attributes,
+                            RegionBuilderFn regionBuilder) {
+  return buildStructuredOp(b, state, resultTensorTypes, inputs, outputs,
+                           attributes, regionBuilder);
+}
+
 /// Common parsing used for both named structured ops created by ods-gen and by
 /// manually defined C++ ops. Does not handle regions.
 static ParseResult
@@ -3566,6 +3575,7 @@ ParseResult MatmulOp::parse(OpAsmParser &parser, OperationState &result) {
   return parseNamedStructuredOp(parser, result, MatmulOp::getNumRegionArgs(),
                                 MatmulOp::getRegionBuilder());
 }
+
 void MatmulOp::print(OpAsmPrinter &p) {
   SmallVector<StringRef, 3> elidedAttrs = {
       "operandSegmentSizes", "linalg.memoized_indexing_maps", "indexing_maps"};
@@ -3608,6 +3618,283 @@ void MatmulOp::getEffects(
 }
 
 Speculation::Speculatability MatmulOp::getSpeculatability() {
+  return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
+}
+
+//===----------------------------------------------------------------------===//
+// ElemwiseOp - with support for affine map, func_type and comp_type
+//===----------------------------------------------------------------------===//
+//
+namespace {
+struct NAryCategoryAndFn {
+  // The enum category class {Unary, Binary, Ternary, ..}
+  ElemwiseNAryCategory category;
+
+  union NAryFn {
+    UnaryFn unaryFn;
+    BinaryFn binaryFn;
+    TernaryFn ternaryFn;
+  } fn;
+
+  ::llvm::StringRef stringifyCategory() {
+    switch (category) {
+    case ElemwiseNAryCategory::Unary:
+      return "unary";
+    case ElemwiseNAryCategory::Binary:
+      return "binary";
+    case ElemwiseNAryCategory::Ternary:
+      return "ternary";
+    }
+    llvm_unreachable("unknown-category");
+  }
+
+  ::llvm::StringRef stringifyFn() {
+    switch (category) {
+    case ElemwiseNAryCategory::Unary:
+      return stringifyUnaryFn(fn.unaryFn);
+    case ElemwiseNAryCategory::Binary:
+      return stringifyBinaryFn(fn.binaryFn);
+    case ElemwiseNAryCategory::Ternary:
+      return stringifyTernaryFn(fn.ternaryFn);
+    }
+    llvm_unreachable("unknown-fn");
+  }
+};
+
+unsigned getArityFromCategory(ElemwiseNAryCategory category) {
+  switch (category) {
+  case ElemwiseNAryCategory::Unary:
+    return 1;
+  case ElemwiseNAryCategory::Binary:
+    return 2;
+  case ElemwiseNAryCategory::Ternary:
+    return 3;
+  }
+  llvm_unreachable("unhandled category");
+}
+} // namespace
+
+static NAryCategoryAndFn getNAryCategoryAndFn(ElemwiseFn fn) {
+  constexpr int lastUnary = static_cast<int>(ElemwiseFn::erf);
+  constexpr int lastBinary = static_cast<int>(ElemwiseFn::powf);
+  constexpr int lastTernary = static_cast<int>(ElemwiseFn::select);
+
+  int val = static_cast<int>(fn);
+  NAryCategoryAndFn result;
+  if (val <= lastUnary) {
+    result.category = ElemwiseNAryCategory::Unary;
+    result.fn.unaryFn = static_cast<UnaryFn>(val);
+    return result;
+  }
+  if (val <= lastBinary) {
+    result.category = ElemwiseNAryCategory::Binary;
+    result.fn.binaryFn = static_cast<BinaryFn>(val - lastUnary - 1);
+    return result;
+  }
+  if (val > lastTernary) {
+    llvm_unreachable("unhandled ElemwiseFn");
+  }
+  result.category = ElemwiseNAryCategory::Ternary;
+  result.fn.ternaryFn = static_cast<TernaryFn>(val - lastBinary - 1);
+  return result;
+}
+
+unsigned ElemwiseOp::getResultRank() {
+  auto output = getDpsInitOperand(0)->get();
+  auto shapedType = llvm::cast<ShapedType>(output.getType());
+  return shapedType.getRank();
+}
+
+SmallVector<utils::IteratorType> ElemwiseOp::getIteratorTypesArray() {
+  auto rank = getResultRank();
+  return SmallVector<utils::IteratorType>(rank, utils::IteratorType::parallel);
+}
+
+SmallVector<AffineMap>
+ElemwiseOp::getDefaultIndexingMaps(unsigned numMaps, unsigned numDims,
+                                   MLIRContext *context) {
+  auto map = AffineMap::getMultiDimIdentityMap(numDims, context);
+  return SmallVector<AffineMap>(numMaps, map);
+}
+
+bool ElemwiseOp::hasUserDefinedMaps() {
+  auto category = getNAryCategoryAndFn(getElemwiseFnVal()).category;
+  auto arity = getArityFromCategory(category);
+
+  auto numDims = getResultRank();
+  SmallVector<AffineMap, 3> defaultMaps =
+      getDefaultIndexingMaps(arity + 1, numDims, this->getContext());
+  SmallVector<AffineMap, 3> explicitMaps = getIndexingMapsArray();
+  return defaultMaps != explicitMaps;
+}
+
+ParseResult ElemwiseOp::parse(OpAsmParser &parser, OperationState &result) {
+  // Expect e.g. `func_type = #linalg.elemwise_fn<add>`
+  Attribute attr;
+  mlir::linalg::ElemwiseFn elemwiseFnVal;
+  if (parser.parseKeyword("func_type"))
+    return failure();
+  if (parser.parseEqual())
+    return failure();
+
+  if (succeeded(parser.parseAttribute(attr))) {
+    auto elemwiseFnAttr = dyn_cast<ElemwiseFnAttr>(attr);
+    if (!elemwiseFnAttr)
+      return parser.emitError(parser.getCurrentLocation(),
+                              "expected ElemwiseFn attribute");
+    elemwiseFnVal = elemwiseFnAttr.getValue();
+  } else {
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected 'func_type' attribute");
+  }
+  result.addAttribute("func_type",
+                      ElemwiseFnAttr::get(parser.getContext(), elemwiseFnVal));
+
+  // Parse optional `indexing_maps`
+  SmallVector<Attribute, 3> indexingMapsAttr;
+  Attribute mapAttr;
+  if (succeeded(parser.parseOptionalKeyword("indexing_maps"))) {
+    if (parser.parseEqual())
+      return failure();
+
+    if (parser.parseLSquare())
+      return failure();
+    do {
+      if (parser.parseAttribute(mapAttr))
+        return failure();
+
+      if (!isa<AffineMapAttr>(mapAttr))
+        return parser.emitError(parser.getCurrentLocation(),
+                                "expected affine map attribute");
+
+      indexingMapsAttr.push_back(mapAttr);
+
+      if (parser.parseOptionalComma())
+        break;
+    } while (true);
+
+    if (parser.parseRSquare())
+      return failure();
+  }
+
+  // At this stage of parsing the only way to infer number of region
+  // args is through op kind, as input output tensors are not parsed yet.
+  auto arityAndCategory = getNAryCategoryAndFn(elemwiseFnVal);
+  auto arity = getArityFromCategory(arityAndCategory.category);
+  int numRegionArgs = arity + 1 /*output*/;
+
+  if (parseNamedStructuredOp(parser, result, numRegionArgs,
+                             ElemwiseOp::getRegionBuilder())) {
+    return parser.emitError(parser.getCurrentLocation(),
+                            "unable to parse elemwise op");
+  }
+
+  // Initialize indexingMaps, if not supplied explicitly.
+  if (indexingMapsAttr.empty()) {
+    // We need to infer the `number of indexing maps` needed from the result
+    // type which is already parsed by now.
+    auto resultType = result.operands[result.operands.size() - 1].getType();
+    auto shapedType = llvm::dyn_cast<ShapedType>(resultType);
+    if (!shapedType)
+      return parser.emitError(parser.getCurrentLocation(),
+                              "return type needs to be shaped type");
+    auto numDims = shapedType.getRank();
+    indexingMapsAttr = llvm::map_to_vector(
+        ElemwiseOp::getDefaultIndexingMaps(arity + 1, numDims,
+                                           parser.getContext()),
+        [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
+  }
+  result.addAttribute("indexing_maps",
+                      parser.getBuilder().getArrayAttr(indexingMapsAttr));
+  return success();
+}
+
+void ElemwiseOp::print(OpAsmPrinter &p) {
+  p << " func_type=";
+  p.printAttribute(getFuncTypeAttr());
+
+  SmallVector<StringRef, 3> elidedAttrs = {"operandSegmentSizes", "func_type",
+                                           "indexing_maps"};
+
+  auto category = getNAryCategoryAndFn(getElemwiseFnVal()).category;
+  auto arity = getArityFromCategory(category);
+
+  auto numDims = getResultRank();
+  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector(
+      ElemwiseOp::getDefaultIndexingMaps(arity + 1, numDims, getContext()),
+      [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
+  if (!llvm::equal(getIndexingMaps(), indexingMaps)) {
+    p << " indexing_maps = [";
+    llvm::interleaveComma(getIndexingMaps(), p,
+                          [&](Attribute attr) { p.printAttribute(attr); });
+    p << "]";
+  }
+
+  printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs(),
+                         elidedAttrs);
+}
+
+LogicalResult ElemwiseOp::verify() {
+  // All necessary checks are done either by
+  // - EnumAttr (e.g. unknown func_type)
+  // - verifyStructuredOpInterface (incorrect map, sizes).
+  return success();
+}
+
+/// Implements the block region builder for the ElemwiseOp. This is called by
+/// 'fillStructuredOpRegion'.
+void ElemwiseOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
+                               ArrayRef<NamedAttribute> attrs) {
+  ElemwiseFn elemwiseFn;
+  for (auto attr : attrs) {
+    if (attr.getName() == b.getStringAttr("func_type")) {
+      auto funcTypeAttr = dyn_cast<ElemwiseFnAttr>(attr.getValue());
+      assert(funcTypeAttr && "func_type attribute incorrectly set");
+      elemwiseFn = funcTypeAttr.getValue();
+      break;
+    }
+  }
+
+  NAryCategoryAndFn categoryAndFn = getNAryCategoryAndFn(elemwiseFn);
+  ElemwiseNAryCategory category = categoryAndFn.category;
+
+  unsigned numBlockArgs = getArityFromCategory(categoryAndFn.category) + 1;
+  assert(block.getNumArguments() == numBlockArgs &&
+         "Elemwise regionBuilder number of block args mismatch");
+
+  RegionBuilderHelper helper(b, block);
+  SmallVector<Value> yields;
+  Value result;
+
+  if (category == ElemwiseNAryCategory::Unary) {
+    result =
+        helper.buildUnaryFn(categoryAndFn.fn.unaryFn, block.getArgument(0));
+
+  } else if (category == ElemwiseNAryCategory::Binary) {
+    result = helper.buildBinaryFn(categoryAndFn.fn.binaryFn,
+                                  block.getArgument(0), block.getArgument(1));
+  } else if (category == ElemwiseNAryCategory::Ternary) {
+    result = helper.buildTernaryFn(categoryAndFn.fn.ternaryFn,
+                                  block.getArgument(0), block.getArgument(1), block.getArgument(2));
+  } else
+  assert(false && "found unhandled category in elemwise print");
+
+  yields.push_back(result);
+  helper.yieldOutputs(yields);
+}
+
+LogicalResult ElemwiseOp::fold(FoldAdaptor, SmallVectorImpl<OpFoldResult> &) {
+  return memref::foldMemRefCast(*this);
+}
+void ElemwiseOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  if (hasPureTensorSemantics())
+    return;
+  getGenericEffectsImpl(effects, cast<LinalgOp>(getOperation()));
+}
+
+Speculation::Speculatability ElemwiseOp::getSpeculatability() {
   return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
 }
 
