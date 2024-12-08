@@ -105,7 +105,7 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType type, const Symbol &s,
   case R_MIPS_GPREL32:
   case R_MICROMIPS_GPREL16:
   case R_MICROMIPS_GPREL7_S2:
-    return R_MIPS_GOTREL;
+    return RE_MIPS_GOTREL;
   case R_MIPS_26:
   case R_MICROMIPS_26_S1:
     return R_PLT;
@@ -122,9 +122,9 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType type, const Symbol &s,
     // equal to the start of .got section. In that case we consider these
     // relocations as relative.
     if (&s == ctx.sym.mipsGpDisp)
-      return R_MIPS_GOT_GP_PC;
+      return RE_MIPS_GOT_GP_PC;
     if (&s == ctx.sym.mipsLocalGp)
-      return R_MIPS_GOT_GP;
+      return RE_MIPS_GOT_GP;
     [[fallthrough]];
   case R_MIPS_32:
   case R_MIPS_64:
@@ -163,14 +163,14 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType type, const Symbol &s,
   case R_MIPS_GOT16:
   case R_MICROMIPS_GOT16:
     if (s.isLocal())
-      return R_MIPS_GOT_LOCAL_PAGE;
+      return RE_MIPS_GOT_LOCAL_PAGE;
     [[fallthrough]];
   case R_MIPS_CALL16:
   case R_MIPS_GOT_DISP:
   case R_MIPS_TLS_GOTTPREL:
   case R_MICROMIPS_CALL16:
   case R_MICROMIPS_TLS_GOTTPREL:
-    return R_MIPS_GOT_OFF;
+    return RE_MIPS_GOT_OFF;
   case R_MIPS_CALL_HI16:
   case R_MIPS_CALL_LO16:
   case R_MIPS_GOT_HI16:
@@ -179,15 +179,15 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType type, const Symbol &s,
   case R_MICROMIPS_CALL_LO16:
   case R_MICROMIPS_GOT_HI16:
   case R_MICROMIPS_GOT_LO16:
-    return R_MIPS_GOT_OFF32;
+    return RE_MIPS_GOT_OFF32;
   case R_MIPS_GOT_PAGE:
-    return R_MIPS_GOT_LOCAL_PAGE;
+    return RE_MIPS_GOT_LOCAL_PAGE;
   case R_MIPS_TLS_GD:
   case R_MICROMIPS_TLS_GD:
-    return R_MIPS_TLSGD;
+    return RE_MIPS_TLSGD;
   case R_MIPS_TLS_LDM:
   case R_MICROMIPS_TLS_LDM:
-    return R_MIPS_TLSLD;
+    return RE_MIPS_TLSLD;
   case R_MIPS_NONE:
     return R_NONE;
   default:
@@ -369,7 +369,7 @@ bool MIPS<ELFT>::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   if (type != R_MIPS_26 && type != R_MIPS_PC26_S2 &&
       type != R_MICROMIPS_26_S1 && type != R_MICROMIPS_PC26_S1)
     return false;
-  auto *f = dyn_cast_or_null<ObjFile<ELFT>>(file);
+  auto *f = dyn_cast<ObjFile<ELFT>>(file);
   if (!f)
     return false;
   // If current file has PIC code, LA25 stub is not required.
@@ -503,7 +503,7 @@ calculateMipsRelChain(Ctx &ctx, uint8_t *loc, uint32_t type, uint64_t val) {
   if (type2 == R_MIPS_SUB && (type3 == R_MIPS_HI16 || type3 == R_MIPS_LO16))
     return std::make_pair(type3, -val);
   Err(ctx) << getErrorLoc(ctx, loc) << "unsupported relocations combination "
-           << Twine(type);
+           << type;
   return std::make_pair(type & 0xff, val);
 }
 

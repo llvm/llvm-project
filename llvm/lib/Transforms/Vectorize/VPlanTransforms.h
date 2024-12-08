@@ -134,6 +134,9 @@ struct VPlanTransforms {
                                          Loop *OrigLoop,
                                          BasicBlock *UncountableExitingBlock,
                                          VPRecipeBuilder &RecipeBuilder);
+
+  /// Lower abstract recipes to concrete ones, that can be codegen'd.
+  static void prepareToExecute(VPlan &Plan);
 };
 
 } // namespace llvm

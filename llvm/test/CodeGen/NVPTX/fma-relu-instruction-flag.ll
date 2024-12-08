@@ -694,7 +694,7 @@ define <2 x bfloat> @fma_bf16x2_expanded_no_nans(<2 x bfloat> %a, <2 x bfloat> %
 define <2 x bfloat> @fma_bf16x2_expanded_no_nans_multiple_uses_of_fma(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c)  {
 ; CHECK-LABEL: fma_bf16x2_expanded_no_nans_multiple_uses_of_fma(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<15>;
+; CHECK-NEXT:    .reg .b16 %rs<13>;
 ; CHECK-NEXT:    .reg .b32 %r<20>;
 ; CHECK-NEXT:    .reg .f32 %f<11>;
 ; CHECK-EMPTY:
@@ -706,40 +706,38 @@ define <2 x bfloat> @fma_bf16x2_expanded_no_nans_multiple_uses_of_fma(<2 x bfloa
 ; CHECK-NEXT:    mov.b32 %r5, 0;
 ; CHECK-NEXT:    max.bf16x2 %r6, %r4, %r5;
 ; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
-; CHECK-NEXT:    cvt.u32.u16 %r7, %rs1;
+; CHECK-NEXT:    cvt.u32.u16 %r7, %rs2;
 ; CHECK-NEXT:    shl.b32 %r8, %r7, 16;
 ; CHECK-NEXT:    mov.b32 %f1, %r8;
 ; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f40E00000;
 ; CHECK-NEXT:    cvt.rn.bf16.f32 %rs4, %f2;
-; CHECK-NEXT:    cvt.u32.u16 %r9, %rs2;
+; CHECK-NEXT:    cvt.u32.u16 %r9, %rs1;
 ; CHECK-NEXT:    shl.b32 %r10, %r9, 16;
 ; CHECK-NEXT:    mov.b32 %f3, %r10;
 ; CHECK-NEXT:    add.rn.f32 %f4, %f3, 0f40E00000;
 ; CHECK-NEXT:    cvt.rn.bf16.f32 %rs6, %f4;
 ; CHECK-NEXT:    mov.b32 {%rs7, %rs8}, %r6;
-; CHECK-NEXT:    cvt.u32.u16 %r11, %rs8;
+; CHECK-NEXT:    cvt.u32.u16 %r11, %rs7;
 ; CHECK-NEXT:    shl.b32 %r12, %r11, 16;
 ; CHECK-NEXT:    mov.b32 %f5, %r12;
 ; CHECK-NEXT:    cvt.u32.u16 %r13, %rs6;
 ; CHECK-NEXT:    shl.b32 %r14, %r13, 16;
 ; CHECK-NEXT:    mov.b32 %f6, %r14;
 ; CHECK-NEXT:    add.rn.f32 %f7, %f5, %f6;
-; CHECK-NEXT:    cvt.rn.bf16.f32 %rs11, %f7;
-; CHECK-NEXT:    cvt.u32.u16 %r15, %rs7;
+; CHECK-NEXT:    cvt.u32.u16 %r15, %rs8;
 ; CHECK-NEXT:    shl.b32 %r16, %r15, 16;
 ; CHECK-NEXT:    mov.b32 %f8, %r16;
 ; CHECK-NEXT:    cvt.u32.u16 %r17, %rs4;
 ; CHECK-NEXT:    shl.b32 %r18, %r17, 16;
 ; CHECK-NEXT:    mov.b32 %f9, %r18;
 ; CHECK-NEXT:    add.rn.f32 %f10, %f8, %f9;
-; CHECK-NEXT:    cvt.rn.bf16.f32 %rs14, %f10;
-; CHECK-NEXT:    mov.b32 %r19, {%rs14, %rs11};
+; CHECK-NEXT:    cvt.rn.bf16x2.f32 %r19, %f10, %f7;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r19;
 ; CHECK-NEXT:    ret;
 ;
 ; CHECK-FTZ-LABEL: fma_bf16x2_expanded_no_nans_multiple_uses_of_fma(
 ; CHECK-FTZ:       {
-; CHECK-FTZ-NEXT:    .reg .b16 %rs<15>;
+; CHECK-FTZ-NEXT:    .reg .b16 %rs<13>;
 ; CHECK-FTZ-NEXT:    .reg .b32 %r<20>;
 ; CHECK-FTZ-NEXT:    .reg .f32 %f<11>;
 ; CHECK-FTZ-EMPTY:
@@ -751,34 +749,32 @@ define <2 x bfloat> @fma_bf16x2_expanded_no_nans_multiple_uses_of_fma(<2 x bfloa
 ; CHECK-FTZ-NEXT:    mov.b32 %r5, 0;
 ; CHECK-FTZ-NEXT:    max.bf16x2 %r6, %r4, %r5;
 ; CHECK-FTZ-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
-; CHECK-FTZ-NEXT:    cvt.u32.u16 %r7, %rs1;
+; CHECK-FTZ-NEXT:    cvt.u32.u16 %r7, %rs2;
 ; CHECK-FTZ-NEXT:    shl.b32 %r8, %r7, 16;
 ; CHECK-FTZ-NEXT:    mov.b32 %f1, %r8;
 ; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %f2, %f1, 0f40E00000;
 ; CHECK-FTZ-NEXT:    cvt.rn.bf16.f32 %rs4, %f2;
-; CHECK-FTZ-NEXT:    cvt.u32.u16 %r9, %rs2;
+; CHECK-FTZ-NEXT:    cvt.u32.u16 %r9, %rs1;
 ; CHECK-FTZ-NEXT:    shl.b32 %r10, %r9, 16;
 ; CHECK-FTZ-NEXT:    mov.b32 %f3, %r10;
 ; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %f4, %f3, 0f40E00000;
 ; CHECK-FTZ-NEXT:    cvt.rn.bf16.f32 %rs6, %f4;
 ; CHECK-FTZ-NEXT:    mov.b32 {%rs7, %rs8}, %r6;
-; CHECK-FTZ-NEXT:    cvt.u32.u16 %r11, %rs8;
+; CHECK-FTZ-NEXT:    cvt.u32.u16 %r11, %rs7;
 ; CHECK-FTZ-NEXT:    shl.b32 %r12, %r11, 16;
 ; CHECK-FTZ-NEXT:    mov.b32 %f5, %r12;
 ; CHECK-FTZ-NEXT:    cvt.u32.u16 %r13, %rs6;
 ; CHECK-FTZ-NEXT:    shl.b32 %r14, %r13, 16;
 ; CHECK-FTZ-NEXT:    mov.b32 %f6, %r14;
 ; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %f7, %f5, %f6;
-; CHECK-FTZ-NEXT:    cvt.rn.bf16.f32 %rs11, %f7;
-; CHECK-FTZ-NEXT:    cvt.u32.u16 %r15, %rs7;
+; CHECK-FTZ-NEXT:    cvt.u32.u16 %r15, %rs8;
 ; CHECK-FTZ-NEXT:    shl.b32 %r16, %r15, 16;
 ; CHECK-FTZ-NEXT:    mov.b32 %f8, %r16;
 ; CHECK-FTZ-NEXT:    cvt.u32.u16 %r17, %rs4;
 ; CHECK-FTZ-NEXT:    shl.b32 %r18, %r17, 16;
 ; CHECK-FTZ-NEXT:    mov.b32 %f9, %r18;
 ; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %f10, %f8, %f9;
-; CHECK-FTZ-NEXT:    cvt.rn.bf16.f32 %rs14, %f10;
-; CHECK-FTZ-NEXT:    mov.b32 %r19, {%rs14, %rs11};
+; CHECK-FTZ-NEXT:    cvt.rn.bf16x2.f32 %r19, %f10, %f7;
 ; CHECK-FTZ-NEXT:    st.param.b32 [func_retval0], %r19;
 ; CHECK-FTZ-NEXT:    ret;
 ;
@@ -1637,7 +1633,7 @@ define <2 x bfloat> @fma_bf16x2_no_nans(<2 x bfloat> %a, <2 x bfloat> %b, <2 x b
 define <2 x bfloat> @fma_bf16x2_no_nans_multiple_uses_of_fma(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c)  {
 ; CHECK-LABEL: fma_bf16x2_no_nans_multiple_uses_of_fma(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<11>;
+; CHECK-NEXT:    .reg .b16 %rs<9>;
 ; CHECK-NEXT:    .reg .b32 %r<14>;
 ; CHECK-NEXT:    .reg .f32 %f<9>;
 ; CHECK-EMPTY:
@@ -1647,12 +1643,12 @@ define <2 x bfloat> @fma_bf16x2_no_nans_multiple_uses_of_fma(<2 x bfloat> %a, <2
 ; CHECK-NEXT:    ld.param.b32 %r3, [fma_bf16x2_no_nans_multiple_uses_of_fma_param_0];
 ; CHECK-NEXT:    fma.rn.bf16x2 %r4, %r3, %r2, %r1;
 ; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
-; CHECK-NEXT:    cvt.u32.u16 %r5, %rs1;
+; CHECK-NEXT:    cvt.u32.u16 %r5, %rs2;
 ; CHECK-NEXT:    shl.b32 %r6, %r5, 16;
 ; CHECK-NEXT:    mov.b32 %f1, %r6;
 ; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f40E00000;
 ; CHECK-NEXT:    cvt.rn.bf16.f32 %rs4, %f2;
-; CHECK-NEXT:    cvt.u32.u16 %r7, %rs2;
+; CHECK-NEXT:    cvt.u32.u16 %r7, %rs1;
 ; CHECK-NEXT:    shl.b32 %r8, %r7, 16;
 ; CHECK-NEXT:    mov.b32 %f3, %r8;
 ; CHECK-NEXT:    add.rn.f32 %f4, %f3, 0f40E00000;
@@ -1661,19 +1657,17 @@ define <2 x bfloat> @fma_bf16x2_no_nans_multiple_uses_of_fma(<2 x bfloat> %a, <2
 ; CHECK-NEXT:    shl.b32 %r10, %r9, 16;
 ; CHECK-NEXT:    mov.b32 %f5, %r10;
 ; CHECK-NEXT:    add.rn.f32 %f6, %f5, %f3;
-; CHECK-NEXT:    cvt.rn.bf16.f32 %rs8, %f6;
 ; CHECK-NEXT:    cvt.u32.u16 %r11, %rs4;
 ; CHECK-NEXT:    shl.b32 %r12, %r11, 16;
 ; CHECK-NEXT:    mov.b32 %f7, %r12;
 ; CHECK-NEXT:    add.rn.f32 %f8, %f7, %f1;
-; CHECK-NEXT:    cvt.rn.bf16.f32 %rs10, %f8;
-; CHECK-NEXT:    mov.b32 %r13, {%rs10, %rs8};
+; CHECK-NEXT:    cvt.rn.bf16x2.f32 %r13, %f8, %f6;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r13;
 ; CHECK-NEXT:    ret;
 ;
 ; CHECK-FTZ-LABEL: fma_bf16x2_no_nans_multiple_uses_of_fma(
 ; CHECK-FTZ:       {
-; CHECK-FTZ-NEXT:    .reg .b16 %rs<11>;
+; CHECK-FTZ-NEXT:    .reg .b16 %rs<9>;
 ; CHECK-FTZ-NEXT:    .reg .b32 %r<14>;
 ; CHECK-FTZ-NEXT:    .reg .f32 %f<9>;
 ; CHECK-FTZ-EMPTY:
@@ -1683,12 +1677,12 @@ define <2 x bfloat> @fma_bf16x2_no_nans_multiple_uses_of_fma(<2 x bfloat> %a, <2
 ; CHECK-FTZ-NEXT:    ld.param.b32 %r3, [fma_bf16x2_no_nans_multiple_uses_of_fma_param_0];
 ; CHECK-FTZ-NEXT:    fma.rn.bf16x2 %r4, %r3, %r2, %r1;
 ; CHECK-FTZ-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
-; CHECK-FTZ-NEXT:    cvt.u32.u16 %r5, %rs1;
+; CHECK-FTZ-NEXT:    cvt.u32.u16 %r5, %rs2;
 ; CHECK-FTZ-NEXT:    shl.b32 %r6, %r5, 16;
 ; CHECK-FTZ-NEXT:    mov.b32 %f1, %r6;
 ; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %f2, %f1, 0f40E00000;
 ; CHECK-FTZ-NEXT:    cvt.rn.bf16.f32 %rs4, %f2;
-; CHECK-FTZ-NEXT:    cvt.u32.u16 %r7, %rs2;
+; CHECK-FTZ-NEXT:    cvt.u32.u16 %r7, %rs1;
 ; CHECK-FTZ-NEXT:    shl.b32 %r8, %r7, 16;
 ; CHECK-FTZ-NEXT:    mov.b32 %f3, %r8;
 ; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %f4, %f3, 0f40E00000;
@@ -1697,13 +1691,11 @@ define <2 x bfloat> @fma_bf16x2_no_nans_multiple_uses_of_fma(<2 x bfloat> %a, <2
 ; CHECK-FTZ-NEXT:    shl.b32 %r10, %r9, 16;
 ; CHECK-FTZ-NEXT:    mov.b32 %f5, %r10;
 ; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %f6, %f5, %f3;
-; CHECK-FTZ-NEXT:    cvt.rn.bf16.f32 %rs8, %f6;
 ; CHECK-FTZ-NEXT:    cvt.u32.u16 %r11, %rs4;
 ; CHECK-FTZ-NEXT:    shl.b32 %r12, %r11, 16;
 ; CHECK-FTZ-NEXT:    mov.b32 %f7, %r12;
 ; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %f8, %f7, %f1;
-; CHECK-FTZ-NEXT:    cvt.rn.bf16.f32 %rs10, %f8;
-; CHECK-FTZ-NEXT:    mov.b32 %r13, {%rs10, %rs8};
+; CHECK-FTZ-NEXT:    cvt.rn.bf16x2.f32 %r13, %f8, %f6;
 ; CHECK-FTZ-NEXT:    st.param.b32 [func_retval0], %r13;
 ; CHECK-FTZ-NEXT:    ret;
 ;

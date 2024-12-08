@@ -5,7 +5,7 @@ add_entrypoint_object(
   HDRS
     ../creal.h
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.complex_type
@@ -18,7 +18,7 @@ add_entrypoint_object(
   HDRS
     ../crealf.h
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.complex_type
@@ -31,7 +31,7 @@ add_entrypoint_object(
   HDRS
     ../creall.h
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.complex_type
@@ -44,7 +44,7 @@ add_entrypoint_object(
   HDRS
     ../crealf16.h
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.complex_type
@@ -59,7 +59,7 @@ add_entrypoint_object(
   HDRS
     ../crealf128.h
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.complex_type
@@ -74,7 +74,7 @@ add_entrypoint_object(
   HDRS
     ../cimag.h
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.complex_type
@@ -87,7 +87,7 @@ add_entrypoint_object(
   HDRS
     ../cimagf.h
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.complex_type
@@ -100,7 +100,7 @@ add_entrypoint_object(
   HDRS
     ../cimagl.h
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.complex_type
@@ -113,7 +113,7 @@ add_entrypoint_object(
   HDRS
     ../cimagf16.h
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.complex_type
@@ -128,7 +128,7 @@ add_entrypoint_object(
   HDRS
     ../cimagf128.h
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.complex_type

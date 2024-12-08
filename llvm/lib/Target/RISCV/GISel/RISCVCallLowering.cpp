@@ -350,10 +350,13 @@ static bool isSupportedArgumentType(Type *T, const RISCVSubtarget &Subtarget,
                                     bool IsLowerArgs = false) {
   if (T->isIntegerTy())
     return true;
-  if (T->isHalfTy() || T->isFloatTy() || T->isDoubleTy())
+  if (T->isHalfTy() || T->isFloatTy() || T->isDoubleTy() || T->isFP128Ty())
     return true;
   if (T->isPointerTy())
     return true;
+  if (T->isArrayTy())
+    return isSupportedArgumentType(T->getArrayElementType(), Subtarget,
+                                   IsLowerArgs);
   // TODO: Support fixed vector types.
   if (IsLowerArgs && T->isVectorTy() && Subtarget.hasVInstructions() &&
       T->isScalableTy() &&

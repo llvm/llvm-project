@@ -353,7 +353,7 @@ def GPU_OptionalDimSizeHintAttr : ConfinedAttr<OptionalAttr<DenseI32ArrayAttr>,
 
 def GPU_GPUFuncOp : GPU_Op<"func", [
     HasParent<"GPUModuleOp">, AutomaticAllocationScope, FunctionOpInterface,
-    IsolatedFromAbove
+    IsolatedFromAbove, AffineScope
   ]> {
   let summary = "Function executable on a GPU";
 
@@ -803,7 +803,9 @@ def GPU_LaunchOp : GPU_Op<"launch", [
                Optional<Index>:$clusterSizeX,
                Optional<Index>:$clusterSizeY,
                Optional<Index>:$clusterSizeZ,
-               Optional<I32>:$dynamicSharedMemorySize)>,
+               Optional<I32>:$dynamicSharedMemorySize,
+               OptionalAttr<SymbolRefAttr>:$kernelFunc,
+               OptionalAttr<SymbolRefAttr>:$kernelModule)>,
     Results<(outs Optional<GPU_AsyncToken>:$asyncToken)> {
   let summary = "GPU kernel launch operation";
 
@@ -836,6 +838,9 @@ def GPU_LaunchOp : GPU_Op<"launch", [
         grid and block sizes).
     -   a variadic number of Workgroup memory attributions.
     -   a variadic number of Private memory attributions.
+
+    The `kernelFunc` and `kernelModule` attributes are optional and specifies
+    the kernel name and a module in which the kernel should be outlined. 
 
     Syntax:
 

@@ -114,6 +114,11 @@ static cl::opt<bool>
                       cl::desc("Enable the RISC-V VL Optimizer pass"),
                       cl::init(false), cl::Hidden);
 
+static cl::opt<bool> DisableVectorMaskMutation(
+    "riscv-disable-vector-mask-mutation",
+    cl::desc("Disable the vector mask scheduling mutation"), cl::init(false),
+    cl::Hidden);
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
   RegisterTargetMachine<RISCVTargetMachine> Y(getTheRISCV64Target());
@@ -366,6 +371,12 @@ public:
           DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
       DAG->addMutation(createStoreClusterDAGMutation(
           DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
+    }
+
+    const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
+    if (!DisableVectorMaskMutation && ST.hasVInstructions()) {
+      DAG = DAG ? DAG : createGenericSchedLive(C);
+      DAG->addMutation(createRISCVVectorMaskDAGMutation(DAG->TRI));
     }
     return DAG;
   }

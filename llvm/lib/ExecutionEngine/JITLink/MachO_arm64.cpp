@@ -27,9 +27,10 @@ namespace {
 class MachOLinkGraphBuilder_arm64 : public MachOLinkGraphBuilder {
 public:
   MachOLinkGraphBuilder_arm64(const object::MachOObjectFile &Obj,
+                              std::shared_ptr<orc::SymbolStringPool> SSP,
                               SubtargetFeatures Features)
-      : MachOLinkGraphBuilder(Obj, getObjectTriple(Obj), std::move(Features),
-                              aarch64::getEdgeKindName),
+      : MachOLinkGraphBuilder(Obj, std::move(SSP), getObjectTriple(Obj),
+                              std::move(Features), aarch64::getEdgeKindName),
         NumSymbols(Obj.getSymtabLoadCommand().nsyms) {}
 
 private:
@@ -580,8 +581,8 @@ private:
   uint64_t NullValue = 0;
 };
 
-Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromMachOObject_arm64(MemoryBufferRef ObjectBuffer) {
+Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromMachOObject_arm64(
+    MemoryBufferRef ObjectBuffer, std::shared_ptr<orc::SymbolStringPool> SSP) {
   auto MachOObj = object::ObjectFile::createMachOObjectFile(ObjectBuffer);
   if (!MachOObj)
     return MachOObj.takeError();
@@ -590,7 +591,8 @@ createLinkGraphFromMachOObject_arm64(MemoryBufferRef ObjectBuffer) {
   if (!Features)
     return Features.takeError();
 
-  return MachOLinkGraphBuilder_arm64(**MachOObj, std::move(*Features))
+  return MachOLinkGraphBuilder_arm64(**MachOObj, std::move(SSP),
+                                     std::move(*Features))
       .buildGraph();
 }
 

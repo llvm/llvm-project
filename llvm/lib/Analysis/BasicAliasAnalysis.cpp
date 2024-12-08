@@ -947,8 +947,14 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
   //
   // Make sure the object has not escaped here, and then check that none of the
   // call arguments alias the object below.
+  //
+  // We model calls that can return twice (setjmp) as clobbering non-escaping
+  // objects, to model any accesses that may occur prior to the second return.
+  // As an exception, ignore allocas, as setjmp is not required to preserve
+  // non-volatile stores for them.
   if (!isa<Constant>(Object) && Call != Object &&
-      AAQI.CA->isNotCapturedBefore(Object, Call, /*OrAt*/ false)) {
+      AAQI.CA->isNotCapturedBefore(Object, Call, /*OrAt*/ false) &&
+      (isa<AllocaInst>(Object) || !Call->hasFnAttr(Attribute::ReturnsTwice))) {
 
     // Optimistically assume that call doesn't touch Object and check this
     // assumption in the following loop.
@@ -1449,9 +1455,10 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
     return AliasResult::NoAlias;
   // If the values are PHIs in the same block, we can do a more precise
   // as well as efficient check: just check for aliases between the values
-  // on corresponding edges.
+  // on corresponding edges. Don't do this if we are analyzing across
+  // iterations, as we may pick a different phi entry in different iterations.
   if (const PHINode *PN2 = dyn_cast<PHINode>(V2))
-    if (PN2->getParent() == PN->getParent()) {
+    if (PN2->getParent() == PN->getParent() && !AAQI.MayBeCrossIteration) {
       std::optional<AliasResult> Alias;
       for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
         AliasResult ThisAlias = AAQI.AAR.alias(
