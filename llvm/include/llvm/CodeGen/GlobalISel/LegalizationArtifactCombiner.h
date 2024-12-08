@@ -1074,6 +1074,17 @@ public:
 
     Builder.setInstrAndDebugLoc(MI);
 
+    if (SrcDef->getOpcode() == TargetOpcode::G_IMPLICIT_DEF) {
+      auto Undef = Builder.buildUndef(DestTy);
+      for (unsigned I = 0; I != NumDefs; ++I) {
+        Register Def = MI.getReg(I);
+        replaceRegOrBuildCopy(Def, Undef.getReg(0), MRI, Builder, UpdatedDefs,
+                              Observer);
+      }
+      markInstAndDefDead(MI, *SrcDef, DeadInsts, SrcDefIdx);
+      return true;
+    }
+
     ArtifactValueFinder Finder(MRI, Builder, LI);
     if (Finder.tryCombineUnmergeDefs(MI, Observer, UpdatedDefs)) {
       markInstAndDefDead(MI, *SrcDef, DeadInsts, SrcDefIdx);
