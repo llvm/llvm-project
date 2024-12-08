@@ -23,17 +23,14 @@ jobs:
             compiler:
               c_compiler: clang
               cpp_compiler: clang++
-            cmake_config: -GNinja
           - os: windows-2022
             compiler:
               c_compiler: clang-cl
               cpp_compiler: clang-cl
-            cmake_config: -TClangCL
           - os: macos-14
             compiler:
               c_compiler: clang
               cpp_compiler: clang++
-            cmake_config:
     
     steps:
     - uses: actions/checkout@v4
@@ -46,6 +43,16 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y libmpfr-dev libgmp-dev libmpc-dev ninja-build
+    
+    - name: Prepare dependencies (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        choco install ninja
+    
+    - name: Prepare dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew install ninja
 
     - name: Set reusable strings
       id: strings
@@ -64,7 +71,7 @@ jobs:
         -DCMAKE_POLICY_DEFAULT_CMP0141=NEW
         -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded
         -DLLVM_ENABLE_RUNTIMES=libc
-        ${{ matrix.cmake_config }}
+        -G Ninja
         -S ${{ github.workspace }}/runtimes
 
     - name: Build
