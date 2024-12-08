@@ -23,7 +23,7 @@ jobs:
             compiler:
               c_compiler: clang
               cpp_compiler: clang++
-            cmake_config:
+            cmake_config: -GNinja
           - os: windows-latest
             compiler:
               c_compiler: clang-cl
@@ -45,7 +45,7 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y libmpfr-dev libgmp-dev libmpc-dev
+        sudo apt-get install -y libmpfr-dev libgmp-dev libmpc-dev ninja-build
 
     - name: Set reusable strings
       id: strings
