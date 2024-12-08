@@ -1271,7 +1271,7 @@ def ByteSel : NamedIntOperand<"byte_sel"> {
   let Validator = "isUInt<2>";
 }
 
-def BitOp3 : CustomOperand<i8, 1, "BitOp3">;
+def BitOp3 : CustomOperand<i32, 1, "BitOp3">;
 def bitop3_0 : DefaultOperand<BitOp3, 0>;
 
 class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
