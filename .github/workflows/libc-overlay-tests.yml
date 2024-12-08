@@ -27,6 +27,8 @@ jobs:
         exclude:
           - os: windows-latest
             compiler: { c_compiler: gcc, cpp_compiler: g++ }
+          - os: windows-latest
+            compiler: { c_compiler: clang, cpp_compiler: clang++ }
           - os: ubuntu-latest
             compiler: { c_compiler: clang-cl, cpp_compiler: clang-cl }
           - os: macos-latest
