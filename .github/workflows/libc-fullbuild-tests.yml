@@ -30,7 +30,7 @@ jobs:
     - name: Prepare dependencies (Ubuntu)
       run: |
         sudo apt-get update
-        sudo apt-get install -y libmpfr-dev libgmp-dev libmpc-dev ninja-build
+        sudo apt-get install -y libmpfr-dev libgmp-dev libmpc-dev ninja-build linux-headers-generic
 
     - name: Set reusable strings
       id: strings
@@ -54,6 +54,7 @@ jobs:
         -DCOMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC=ON
         -DCOMPILER_RT_BUILD_GWP_ASAN=OFF
         -DCOMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF
+        -G Ninja
         -S ${{ github.workspace }}/runtimes
 
     - name: Build
