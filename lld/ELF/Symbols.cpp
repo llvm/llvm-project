@@ -278,7 +278,8 @@ bool Symbol::includeInDynsym(Ctx &ctx) const {
     // __pthread_initialize_minimal reference in csu/libc-start.c.
     return !(isUndefWeak() && ctx.arg.noDynamicLinker);
 
-  return exportDynamic;
+  return exportDynamic ||
+         (ctx.arg.exportDynamic && (isUsedInRegularObj || !ltoCanOmit));
 }
 
 // Print out a log message for --trace-symbol.
@@ -375,9 +376,6 @@ bool elf::computeIsPreemptible(Ctx &ctx, const Symbol &sym) {
 // and that's the result of symbol resolution. However, symbols that
 // were not chosen still affect some symbol properties.
 void Symbol::mergeProperties(const Symbol &other) {
-  if (other.exportDynamic)
-    exportDynamic = true;
-
   // DSO symbols do not affect visibility in the output.
   if (!other.isShared() && other.visibility() != STV_DEFAULT) {
     uint8_t v = visibility(), ov = other.visibility();
@@ -564,8 +562,6 @@ void Symbol::checkDuplicate(Ctx &ctx, const Defined &other) const {
 }
 
 void Symbol::resolve(Ctx &ctx, const CommonSymbol &other) {
-  if (other.exportDynamic)
-    exportDynamic = true;
   if (other.visibility() != STV_DEFAULT) {
     uint8_t v = visibility(), ov = other.visibility();
     setVisibility(v == STV_DEFAULT ? ov : std::min(v, ov));
@@ -602,8 +598,6 @@ void Symbol::resolve(Ctx &ctx, const CommonSymbol &other) {
 }
 
 void Symbol::resolve(Ctx &ctx, const Defined &other) {
-  if (other.exportDynamic)
-    exportDynamic = true;
   if (other.visibility() != STV_DEFAULT) {
     uint8_t v = visibility(), ov = other.visibility();
     setVisibility(v == STV_DEFAULT ? ov : std::min(v, ov));

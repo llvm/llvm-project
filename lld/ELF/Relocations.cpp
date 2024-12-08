@@ -310,7 +310,6 @@ static void replaceWithDefined(Ctx &ctx, Symbol &sym, SectionBase &sec,
       .overwrite(sym);
 
   sym.versionId = old.versionId;
-  sym.exportDynamic = true;
   sym.isUsedInRegularObj = true;
   // A copy relocated alias may need a GOT entry.
   sym.flags.store(old.flags.load(std::memory_order_relaxed) & NEEDS_GOT,
