@@ -47,6 +47,18 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y cmake ninja-build libmpfr-dev libgmp-dev libmpc-dev
+    
+    - name: Prepare dependencies (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        winget install --silent --exact --force LLVM.LLVM
+        winget install --silent --exact --force Ninja-build.Ninja
+        echo "C:\\Program Files\\LLVM\\bin" >> $GITHUB_PATH
+
+    - name: Prepare dependencies (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew install ninja
 
     - name: Set reusable strings
       id: strings
@@ -63,6 +75,7 @@ jobs:
         -DCMAKE_C_COMPILER_LAUNCHER=sccache
         -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
         -DLLVM_ENABLE_RUNTIMES=libc
+        -G Ninja
         -S ${{ github.workspace }}/runtimes
 
     - name: Build
