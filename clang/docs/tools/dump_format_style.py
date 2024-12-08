@@ -20,7 +20,7 @@ DOC_FILE = os.path.join(CLANG_DIR, "docs/ClangFormatStyleOptions.rst")
 PLURALS_FILE = os.path.join(os.path.dirname(__file__), "plurals.txt")
 
 plurals: Set[str] = set()
-with open(PLURALS_FILE, "a+") as f:
+with open(PLURALS_FILE) as f:
     f.seek(0)
     plurals = set(f.read().splitlines())
 
