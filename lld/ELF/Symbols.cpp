@@ -278,7 +278,7 @@ bool Symbol::includeInDynsym(Ctx &ctx) const {
     // __pthread_initialize_minimal reference in csu/libc-start.c.
     return !(isUndefWeak() && ctx.arg.noDynamicLinker);
 
-  return exportDynamic || inDynamicList;
+  return exportDynamic;
 }
 
 // Print out a log message for --trace-symbol.
