@@ -206,7 +206,7 @@ void ObjFile::initializeECThunks() {
       case Arm64ECThunkType::GuestExit:
         break;
       default:
-        warn("Ignoring unknown EC thunk type " + Twine(entry->type));
+        Warn(ctx) << "Ignoring unknown EC thunk type " << entry->type;
       }
     }
   }
