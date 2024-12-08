@@ -52,6 +52,9 @@ Improvements and New Features
 - The ``lexicographical_compare`` and ``ranges::lexicographical_compare`` algorithms have been optimized for trivially
   equality comparable types, resulting in a performance improvement of up to 40x.
 
+- The ``std::vector::erase`` function has been optimized for types that can be relocated trivially (such as ``std::string``),
+  yielding speed ups witnessed to be around 2x for these types (but subject to the use case).
+
 - The ``_LIBCPP_ENABLE_CXX20_REMOVED_TEMPORARY_BUFFER`` macro has been added to make ``std::get_temporary_buffer`` and
   ``std::return_temporary_buffer`` available.
 

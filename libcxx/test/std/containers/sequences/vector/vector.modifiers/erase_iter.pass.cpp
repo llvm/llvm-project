@@ -107,31 +107,5 @@ int main(int, char**) {
   }
 #endif
 
-  // Make sure we satisfy the complexity requirement in terms of the number of times the assignment
-  // operator is called.
-  //
-  // There is currently ambiguity as to whether this is truly mandated by the Standard, so we only
-  // test it for libc++.
-#ifdef _LIBCPP_VERSION
-  {
-    Tracker tracker;
-    std::vector<TrackedAssignment> v;
-
-    // Set up the vector with 5 elements.
-    for (int i = 0; i != 5; ++i) {
-      v.emplace_back(&tracker);
-    }
-    assert(tracker.copy_assignments == 0);
-    assert(tracker.move_assignments == 0);
-
-    // Erase element [1] from it. Elements [2] [3] [4] should be shifted, so we should
-    // see 3 move assignments (and nothing else).
-    v.erase(v.begin() + 1);
-    assert(v.size() == 4);
-    assert(tracker.copy_assignments == 0);
-    assert(tracker.move_assignments == 3);
-  }
-#endif
-
   return 0;
 }

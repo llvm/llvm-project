@@ -22,6 +22,7 @@
 #include <__iterator/move_iterator.h>
 #include <__memory/allocator.h>
 #include <__memory/construct_at.h>
+#include <__memory/destroy.h>
 #include <__memory/unique_ptr.h>
 #include <__numeric/reduce.h>
 #include <__pstl/backend_fwd.h>

@@ -21,6 +21,24 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+template <class _Tp>
+struct __temporary_emplace_value {
+  union {
+    _Tp __value_;
+  };
+
+  template <class _Allocator, class... _Args>
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit __temporary_emplace_value(_Allocator& __alloc, _Args&&... __args) {
+    allocator_traits<_Allocator>::construct(__alloc, std::addressof(__value_), std::forward<_Args>(__args)...);
+  }
+
+  // Don't destroy anything, since we assume that the value gets relocated by whoever uses this type
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 ~__temporary_emplace_value() {}
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp* __address() { return std::addressof(__value_); }
+};
+
 template <class _Tp, class _Alloc>
 struct __temp_value {
   typedef allocator_traits<_Alloc> _Traits;
