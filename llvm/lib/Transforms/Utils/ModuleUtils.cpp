@@ -31,6 +31,11 @@ static void appendToGlobalArray(StringRef ArrayName, Module &M, Function *F,
   IRBuilder<> IRB(M.getContext());
   FunctionType *FnTy = FunctionType::get(IRB.getVoidTy(), false);
 
+  unsigned CtorPtrAS = M.getDataLayout().getProgramAddressSpace();
+  unsigned GlobalsAS = M.getDataLayout().getDefaultGlobalsAddressSpace();
+  llvm::Type *CtorPFTy = llvm::PointerType::get(FnTy, CtorPtrAS);
+  llvm::Type *ArgTy = IRB.getPtrTy(GlobalsAS);
+
   // Get the current set of static global constructors and add the new ctor
   // to the list.
   SmallVector<Constant *, 16> CurrentCtors;
@@ -45,17 +50,16 @@ static void appendToGlobalArray(StringRef ArrayName, Module &M, Function *F,
     }
     GVCtor->eraseFromParent();
   } else {
-    EltTy = StructType::get(IRB.getInt32Ty(),
-                            PointerType::get(FnTy, F->getAddressSpace()),
-                            IRB.getPtrTy());
+    EltTy = StructType::get(
+        IRB.getInt32Ty(), PointerType::get(FnTy, F->getAddressSpace()), ArgTy);
   }
 
   // Build a 3 field global_ctor entry.  We don't take a comdat key.
   Constant *CSVals[3];
   CSVals[0] = IRB.getInt32(Priority);
   CSVals[1] = F;
-  CSVals[2] = Data ? ConstantExpr::getPointerCast(Data, IRB.getPtrTy())
-                   : Constant::getNullValue(IRB.getPtrTy());
+  CSVals[2] = Data ? ConstantExpr::getPointerCast(Data, ArgTy)
+                   : Constant::getNullValue(ArgTy);
   Constant *RuntimeCtorInit =
       ConstantStruct::get(EltTy, ArrayRef(CSVals, EltTy->getNumElements()));
 
@@ -483,7 +487,8 @@ bool llvm::lowerGlobalIFuncUsersAsGlobalCtor(
 
   InitBuilder.CreateRetVoid();
 
-  PointerType *ConstantDataTy = PointerType::get(Ctx, 0);
+  PointerType *ConstantDataTy =
+      PointerType::get(Ctx, DL.getDefaultGlobalsAddressSpace());
 
   // TODO: Is this the right priority? Probably should be before any other
   // constructors?
