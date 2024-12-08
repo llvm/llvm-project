@@ -207,68 +207,16 @@ define <4 x float> @fneg(<4 x float> %Q) nounwind {
 
 ; store(fneg(load())) - convert scalar to integer
 define void @fneg_int_rmw_half(ptr %ptr) nounwind {
-; X86-SSE1-LABEL: fneg_int_rmw_half:
-; X86-SSE1:       # %bb.0:
-; X86-SSE1-NEXT:    pushl %esi
-; X86-SSE1-NEXT:    subl $8, %esp
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE1-NEXT:    movzwl (%esi), %eax
-; X86-SSE1-NEXT:    movl %eax, (%esp)
-; X86-SSE1-NEXT:    calll __gnu_h2f_ieee
-; X86-SSE1-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE1-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE1-NEXT:    movss %xmm0, (%esp)
-; X86-SSE1-NEXT:    calll __gnu_f2h_ieee
-; X86-SSE1-NEXT:    movw %ax, (%esi)
-; X86-SSE1-NEXT:    addl $8, %esp
-; X86-SSE1-NEXT:    popl %esi
-; X86-SSE1-NEXT:    retl
+; X86-SSE-LABEL: fneg_int_rmw_half:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    xorb $-128, 1(%eax)
+; X86-SSE-NEXT:    retl
 ;
-; X86-SSE2-LABEL: fneg_int_rmw_half:
-; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pushl %esi
-; X86-SSE2-NEXT:    subl $8, %esp
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE2-NEXT:    pinsrw $0, (%esi), %xmm0
-; X86-SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; X86-SSE2-NEXT:    movw %ax, (%esp)
-; X86-SSE2-NEXT:    calll __extendhfsf2
-; X86-SSE2-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE2-NEXT:    movd %xmm0, (%esp)
-; X86-SSE2-NEXT:    calll __truncsfhf2
-; X86-SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; X86-SSE2-NEXT:    movw %ax, (%esi)
-; X86-SSE2-NEXT:    addl $8, %esp
-; X86-SSE2-NEXT:    popl %esi
-; X86-SSE2-NEXT:    retl
-;
-; X64-SSE1-LABEL: fneg_int_rmw_half:
-; X64-SSE1:       # %bb.0:
-; X64-SSE1-NEXT:    pushq %rbx
-; X64-SSE1-NEXT:    movq %rdi, %rbx
-; X64-SSE1-NEXT:    movzwl (%rdi), %edi
-; X64-SSE1-NEXT:    callq __gnu_h2f_ieee@PLT
-; X64-SSE1-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-SSE1-NEXT:    callq __gnu_f2h_ieee@PLT
-; X64-SSE1-NEXT:    movw %ax, (%rbx)
-; X64-SSE1-NEXT:    popq %rbx
-; X64-SSE1-NEXT:    retq
-;
-; X64-SSE2-LABEL: fneg_int_rmw_half:
-; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pushq %rbx
-; X64-SSE2-NEXT:    movq %rdi, %rbx
-; X64-SSE2-NEXT:    pinsrw $0, (%rdi), %xmm0
-; X64-SSE2-NEXT:    callq __extendhfsf2@PLT
-; X64-SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-SSE2-NEXT:    callq __truncsfhf2@PLT
-; X64-SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; X64-SSE2-NEXT:    movw %ax, (%rbx)
-; X64-SSE2-NEXT:    popq %rbx
-; X64-SSE2-NEXT:    retq
+; X64-SSE-LABEL: fneg_int_rmw_half:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    xorb $-128, 1(%rdi)
+; X64-SSE-NEXT:    retq
   %1 = load half, ptr %ptr
   %2 = fneg half %1
   store half %2, ptr %ptr
@@ -276,71 +224,21 @@ define void @fneg_int_rmw_half(ptr %ptr) nounwind {
 }
 
 define void @fneg_int_bfloat(ptr %src, ptr %dst) nounwind {
-; X86-SSE1-LABEL: fneg_int_bfloat:
-; X86-SSE1:       # %bb.0:
-; X86-SSE1-NEXT:    pushl %esi
-; X86-SSE1-NEXT:    subl $8, %esp
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE1-NEXT:    movzwl (%eax), %eax
-; X86-SSE1-NEXT:    shll $16, %eax
-; X86-SSE1-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE1-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE1-NEXT:    movss %xmm0, (%esp)
-; X86-SSE1-NEXT:    calll __truncsfbf2
-; X86-SSE1-NEXT:    movw %ax, (%esi)
-; X86-SSE1-NEXT:    addl $8, %esp
-; X86-SSE1-NEXT:    popl %esi
-; X86-SSE1-NEXT:    retl
+; X86-SSE-LABEL: fneg_int_bfloat:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-NEXT:    movzwl (%ecx), %ecx
+; X86-SSE-NEXT:    xorl $32768, %ecx # imm = 0x8000
+; X86-SSE-NEXT:    movw %cx, (%eax)
+; X86-SSE-NEXT:    retl
 ;
-; X86-SSE2-LABEL: fneg_int_bfloat:
-; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pushl %esi
-; X86-SSE2-NEXT:    pushl %eax
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movzwl (%eax), %eax
-; X86-SSE2-NEXT:    shll $16, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm0
-; X86-SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE2-NEXT:    movd %xmm0, (%esp)
-; X86-SSE2-NEXT:    calll __truncsfbf2
-; X86-SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; X86-SSE2-NEXT:    movw %ax, (%esi)
-; X86-SSE2-NEXT:    addl $4, %esp
-; X86-SSE2-NEXT:    popl %esi
-; X86-SSE2-NEXT:    retl
-;
-; X64-SSE1-LABEL: fneg_int_bfloat:
-; X64-SSE1:       # %bb.0:
-; X64-SSE1-NEXT:    pushq %rbx
-; X64-SSE1-NEXT:    subq $16, %rsp
-; X64-SSE1-NEXT:    movq %rsi, %rbx
-; X64-SSE1-NEXT:    movzwl (%rdi), %eax
-; X64-SSE1-NEXT:    shll $16, %eax
-; X64-SSE1-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
-; X64-SSE1-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-SSE1-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-SSE1-NEXT:    callq __truncsfbf2@PLT
-; X64-SSE1-NEXT:    movw %ax, (%rbx)
-; X64-SSE1-NEXT:    addq $16, %rsp
-; X64-SSE1-NEXT:    popq %rbx
-; X64-SSE1-NEXT:    retq
-;
-; X64-SSE2-LABEL: fneg_int_bfloat:
-; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pushq %rbx
-; X64-SSE2-NEXT:    movq %rsi, %rbx
-; X64-SSE2-NEXT:    movzwl (%rdi), %eax
-; X64-SSE2-NEXT:    shll $16, %eax
-; X64-SSE2-NEXT:    movd %eax, %xmm0
-; X64-SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-SSE2-NEXT:    callq __truncsfbf2@PLT
-; X64-SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; X64-SSE2-NEXT:    movw %ax, (%rbx)
-; X64-SSE2-NEXT:    popq %rbx
-; X64-SSE2-NEXT:    retq
+; X64-SSE-LABEL: fneg_int_bfloat:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    movzwl (%rdi), %eax
+; X64-SSE-NEXT:    xorl $32768, %eax # imm = 0x8000
+; X64-SSE-NEXT:    movw %ax, (%rsi)
+; X64-SSE-NEXT:    retq
   %1 = load bfloat, ptr %src
   %2 = fneg bfloat %1
   store bfloat %2, ptr %dst
