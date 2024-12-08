@@ -137,8 +137,12 @@ getCapabilitiesEnabledByExtension(SPIRV::Extension::Extension Extension) {
 
   CapabilityList Capabilities;
   while (Entry &&
-         Entry->Category == SPIRV::OperandCategory::CapabilityOperand &&
-         Entry->ReqExtension == Extension) {
+         Entry->Category == SPIRV::OperandCategory::CapabilityOperand) {
+    // Some capabilities' codes might go not in order.
+    if (Entry->ReqExtension != Extension) {
+      ++Entry;
+      continue;
+    }
     Capabilities.push_back(
         static_cast<SPIRV::Capability::Capability>(Entry->Value));
     ++Entry;
