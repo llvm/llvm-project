@@ -10,16 +10,14 @@
 #ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_XCOFF_OBJECTFILEXCOFF_H
 #define LLDB_SOURCE_PLUGINS_OBJECTFILE_XCOFF_OBJECTFILEXCOFF_H
 
-#include <cstdint>
-
-#include <vector>
-
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-private.h"
 #include "llvm/Object/XCOFFObjectFile.h"
+#include <cstdint>
+#include <vector>
 
 /// \class ObjectFileXCOFF
 /// Generic XCOFF object file reader.
@@ -103,12 +101,6 @@ protected:
   typedef struct llvm::object::XCOFFFileHeader64 xcoff_header_t;
 
   typedef struct llvm::object::XCOFFAuxiliaryHeader64 xcoff_aux_header_t;
-
-  static bool ParseXCOFFHeader(lldb_private::DataExtractor &data,
-                               lldb::offset_t *offset_ptr,
-                               xcoff_header_t &xcoff_header);
-  bool ParseXCOFFOptionalHeader(lldb_private::DataExtractor &data,
-                                lldb::offset_t *offset_ptr);
 
   static lldb::WritableDataBufferSP
   MapFileDataWritable(const lldb_private::FileSpec &file, uint64_t Size,
