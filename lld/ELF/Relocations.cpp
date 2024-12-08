@@ -1805,6 +1805,7 @@ void elf::postScanRelocations(Ctx &ctx) {
         diag << "both AUTH and non-AUTH GOT entries for '" << sym.getName()
              << "' requested, but only one type of GOT entry per symbol is "
                 "supported";
+        return;
       }
       if (flags & NEEDS_GOT_AUTH)
         addGotAuthEntry(ctx, sym);
