@@ -1,8 +1,8 @@
-=======================
-Date and Time Functions
-=======================
+======
+time.h
+======
 
-.. include:: check.rst
+.. include:: ../check.rst
 
 ---------------
 Source location

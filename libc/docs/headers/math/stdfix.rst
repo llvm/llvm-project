@@ -2,7 +2,7 @@
 StdFix Functions
 ================
 
-.. include:: ../check.rst
+.. include:: ../../check.rst
 
 Standards and Goals
 -------------------

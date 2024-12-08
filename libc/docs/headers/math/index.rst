@@ -1,10 +1,10 @@
 .. _math:
 
-==============
-Math Functions
-==============
+======
+math.h
+======
 
-.. include:: ../check.rst
+.. include:: ../../check.rst
 
 .. raw:: html
 

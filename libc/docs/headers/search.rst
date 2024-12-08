@@ -1,8 +1,8 @@
-=============
-Search Tables
-=============
+========
+search.h
+========
 
-.. include:: check.rst
+.. include:: ../check.rst
 
 ---------------
 Source Location
