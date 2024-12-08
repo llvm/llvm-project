@@ -55,11 +55,10 @@ jobs:
         -DCMAKE_C_COMPILER_LAUNCHER=sccache
         -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
         -DLLVM_ENABLE_RUNTIMES=libc
-        -G Ninja
         -S ${{ github.workspace }}/runtimes
 
     - name: Build
-      run: cmake --build ${{ steps.strings.outputs.build-output-dir }}
+      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --parallel
 
     - name: Test
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
