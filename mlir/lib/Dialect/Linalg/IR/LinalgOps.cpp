@@ -1199,7 +1199,7 @@ static void getGenericEffectsImpl(
         &effects,
     LinalgOp linalgOp) {
   for (auto [index, operand] : llvm::enumerate(linalgOp.getDpsInputs())) {
-    if (!llvm::isa<MemRefType>(operand.getType()))
+    if (!operand || !llvm::isa<MemRefType>(operand.getType()))
       continue;
     effects.emplace_back(
         MemoryEffects::Read::get(), &linalgOp->getOpOperand(index), /*stage=*/0,
@@ -1207,7 +1207,7 @@ static void getGenericEffectsImpl(
   }
 
   for (OpOperand &operand : linalgOp.getDpsInitsMutable()) {
-    if (!llvm::isa<MemRefType>(operand.get().getType()))
+    if (!operand.get() || !llvm::isa<MemRefType>(operand.get().getType()))
       continue;
     if (linalgOp.payloadUsesValueFromOperand(&operand)) {
       effects.emplace_back(MemoryEffects::Read::get(), &operand, /*stage=*/0,
