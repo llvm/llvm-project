@@ -83,7 +83,7 @@ INITIALIZE_PASS_BEGIN(LiveIntervalsWrapperPass, "liveintervals",
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_END(LiveIntervalsWrapperPass, "liveintervals",
-                    "Live Interval Analysis", false, false)
+                    "Live Interval Analysis", false, true)
 
 bool LiveIntervalsWrapperPass::runOnMachineFunction(MachineFunction &MF) {
   LIS.Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();

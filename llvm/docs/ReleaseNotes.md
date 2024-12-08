@@ -113,6 +113,8 @@ Changes to LLVM infrastructure
 Changes to building LLVM
 ------------------------
 
+* Raised the minimum MSVC version to Visual Studio 2019 16.8.
+
 Changes to TableGen
 -------------------
 
