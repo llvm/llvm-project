@@ -61,5 +61,4 @@ jobs:
       run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --parallel --config RelWithDebInfo
 
     - name: Test
-      working-directory: ${{ steps.strings.outputs.build-output-dir }}
-      run: ninja check-libc
+      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --target check-libc
