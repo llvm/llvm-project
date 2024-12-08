@@ -1045,7 +1045,7 @@ void RewriteInstance::discoverFileObjects() {
         unsigned Major = std::stoi(Match[2].str());
         unsigned Minor = std::stoi(Match[3].str());
         unsigned Rev = Match.size() > 5 ? std::stoi(Match[5].str()) : 0;
-        BC->LinuxKernelVersion = std::make_tuple(Major, Minor, Rev);
+        BC->LinuxKernelVersion = LKVersion(Major, Minor, Rev);
         BC->outs() << "BOLT-INFO: Linux kernel version is " << Match[1].str();
       }
     }
@@ -1225,7 +1225,7 @@ void RewriteInstance::discoverFileObjects() {
     PreviousFunction = BF;
   }
 
-  if (BC->IsLinuxKernel && !std::get<0>(BC->LinuxKernelVersion))
+  if (BC->IsLinuxKernel && !BC->LinuxKernelVersion.Major)
     BC->errs() << "BOLT-WARNING: Linux kernel version is unknown\n";
 
   // Read dynamic relocation first as their presence affects the way we process

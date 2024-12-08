@@ -218,3 +218,17 @@ TEST_P(BinaryContextTester, BaseAddressSegmentsSmallerThanAlignment) {
   ASSERT_TRUE(BaseAddress.has_value());
   ASSERT_EQ(*BaseAddress, 0xaaaaaaaa0000ULL);
 }
+
+TEST(BinaryContextTester, LKVersion) {
+  LKVersion V1;
+  LKVersion V2(5, 9, 15);
+  LKVersion V3(6, 12, 1);
+
+  V1 = V3;
+  ASSERT_TRUE(V1 == V3);
+  ASSERT_TRUE(V2 != V3);
+  ASSERT_TRUE(V2 < V3);
+  ASSERT_TRUE(V2 <= V3);
+  ASSERT_TRUE(V3 > V2);
+  ASSERT_TRUE(V3 >= V2);
+}
