@@ -45,7 +45,7 @@ namespace llvm {
 namespace memprof {
 namespace {
 template <class T = uint64_t> inline T alignedRead(const char *Ptr) {
-  static_assert(std::is_pod<T>::value, "Not a pod type.");
+  static_assert(std::is_integral_v<T>, "Not an integral type");
   assert(reinterpret_cast<size_t>(Ptr) % sizeof(T) == 0 && "Unaligned Read");
   return *reinterpret_cast<const T *>(Ptr);
 }
