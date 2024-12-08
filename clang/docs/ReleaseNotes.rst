@@ -408,13 +408,10 @@ Non-comprehensive list of changes in this release
   The flexible array member (FAM) can now be accessed immediately without causing
   issues with the sanitizer because the counter is automatically set.
 
-- ``__builtin_reduce_add`` function can now be used in constant expressions.
-- ``__builtin_reduce_mul`` function can now be used in constant expressions.
-- ``__builtin_reduce_and`` function can now be used in constant expressions.
-- ``__builtin_reduce_or`` and ``__builtin_reduce_xor`` functions can now be used in constant expressions.
-- ``__builtin_elementwise_popcount`` function can now be used in constant expressions.
-- ``__builtin_elementwise_bitreverse`` function can now be used in constant expressions.
-- ``__builtin_elementwise_add_sat`` function can now be used in constant expressions.
+- The following builtins can now be used in constant expressions: ``__builtin_reduce_add``,
+  ``__builtin_reduce_mul``, ``__builtin_reduce_and``, ``__builtin_reduce_or``,
+  ``__builtin_reduce_xor``, ``__builtin_elementwise_popcount``,
+  ``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``.
 
 New Compiler Flags
 ------------------
