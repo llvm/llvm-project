@@ -30,7 +30,7 @@ jobs:
     - name: Prepare dependencies (Ubuntu)
       run: |
         sudo apt-get update
-        sudo apt-get install -y libmpfr-dev libgmp-dev libmpc-dev ninja-build linux-headers-generic
+        sudo apt-get install -y libmpfr-dev libgmp-dev libmpc-dev ninja-build linux-headers-generic linux-libc-dev
 
     - name: Set reusable strings
       id: strings
