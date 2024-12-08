@@ -4,6 +4,7 @@
 // RUN: llvm-mc -filetype=obj -triple=aarch64-windows test.s -o test.obj
 // RUN: llvm-mc -filetype=obj -triple=aarch64-windows loadconfig.s -o loadconfig.obj
 // RUN: llvm-mc -filetype=obj -triple=aarch64-windows loadconfig-short.s -o loadconfig-short.obj
+// RUN: llvm-mc -filetype=obj -triple=arm64ec-windows loadconfig-short.s -o loadconfig-short-arm64ec.obj
 
 // RUN: lld-link -machine:arm64x -out:out.dll -dll -noentry loadconfig.obj test.obj
 
@@ -43,6 +44,7 @@
 // HEADERS-NEXT: VirtualSize: 0x38
 
 // RUN: lld-link -machine:arm64x -out:out-short.dll -dll -noentry loadconfig-short.obj 2>&1 | FileCheck --check-prefix=WARN-RELOC-SIZE %s
+// RUN: lld-link -machine:arm64x -out:out-short.dll -dll -noentry loadconfig-short-arm64ec.obj 2>&1 | FileCheck --check-prefix=WARN-RELOC-SIZE %s
 // WARN-RELOC-SIZE: lld-link: warning: '_load_config_used' structure too small to include dynamic relocations
 
 #--- test.s
