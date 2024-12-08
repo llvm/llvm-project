@@ -19,14 +19,14 @@ define i32 @with_dbg(ptr %a, ptr %b) !dbg !3 {
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
-  %tmp1 = load i32, ptr %a, align 4
-  %cmp = icmp eq i32 %tmp1, 42
+  %t = load i32, ptr %a, align 4
+  %cmp = icmp eq i32 %t, 42
   br i1 %cmp, label %0, label %1
 0:
-  store i32 %tmp1, ptr %b
+  store i32 %t, ptr %b
   br label %1
 1:
-  ret i32 %tmp1
+  ret i32 %t
 }
 
 define i32 @without_dbg(ptr %a, ptr %b) {
@@ -45,14 +45,14 @@ define i32 @without_dbg(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
-  %tmp1 = load i32, ptr %a, align 4
-  %cmp = icmp eq i32 %tmp1, 42
+  %t = load i32, ptr %a, align 4
+  %cmp = icmp eq i32 %t, 42
   br i1 %cmp, label %0, label %1
 0:
-  store i32 %tmp1, ptr %b
+  store i32 %t, ptr %b
   br label %1
 1:
-  ret i32 %tmp1
+  ret i32 %t
 }
 
 !llvm.dbg.cu = !{!0}
