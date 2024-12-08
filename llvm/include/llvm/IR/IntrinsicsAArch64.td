@@ -2983,13 +2983,6 @@ let TargetPrefix = "aarch64" in {
            LLVMMatchType<0>,
            llvm_anyvector_ty], [ImmArg<ArgIndex<0>>]>;
 
-  class SME_FP8_OuterProduct_Intrinsic
-      : DefaultAttrsIntrinsic<[],
-          [llvm_i32_ty,
-           llvm_nxv16i1_ty, llvm_nxv16i1_ty,
-           llvm_nxv16i8_ty, llvm_nxv16i8_ty],
-          [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly, IntrHasSideEffects]>;
-
   def int_aarch64_sme_mopa : SME_OuterProduct_Intrinsic;
   def int_aarch64_sme_mops : SME_OuterProduct_Intrinsic;
 
@@ -3004,10 +2997,6 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_sumops_wide : SME_OuterProduct_Intrinsic;
   def int_aarch64_sme_usmopa_wide : SME_OuterProduct_Intrinsic;
   def int_aarch64_sme_usmops_wide : SME_OuterProduct_Intrinsic;
-
-  // FP8 outer product
-  def int_aarch64_sme_fp8_fmopa_za16 : SME_FP8_OuterProduct_Intrinsic;
-  def int_aarch64_sme_fp8_fmopa_za32 : SME_FP8_OuterProduct_Intrinsic;
 
   class SME_AddVectorToTile_Intrinsic
       : DefaultAttrsIntrinsic<[],
@@ -3875,6 +3864,13 @@ let TargetPrefix = "aarch64" in {
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
                             [llvm_nxv16i8_ty],
                             [IntrReadMem, IntrInaccessibleMemOnly]>;
+
+  class SME_FP8_OuterProduct_Intrinsic
+      : DefaultAttrsIntrinsic<[],
+          [llvm_i32_ty,
+          llvm_nxv16i1_ty, llvm_nxv16i1_ty,
+          llvm_nxv16i8_ty, llvm_nxv16i8_ty],
+          [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly, IntrHasSideEffects]>;
   //
   // CVT from FP8 to half-precision/BFloat16 multi-vector
   //
@@ -3886,4 +3882,8 @@ let TargetPrefix = "aarch64" in {
   //
   def int_aarch64_sve_fp8_cvtl1_x2 : SME2_FP8_CVT_X2_Single_Intrinsic;
   def int_aarch64_sve_fp8_cvtl2_x2 : SME2_FP8_CVT_X2_Single_Intrinsic;
+
+  // FP8 outer product
+  def int_aarch64_sme_fp8_fmopa_za16 : SME_FP8_OuterProduct_Intrinsic;
+  def int_aarch64_sme_fp8_fmopa_za32 : SME_FP8_OuterProduct_Intrinsic;
 }
