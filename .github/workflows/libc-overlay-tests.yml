@@ -51,14 +51,14 @@ jobs:
         cmake -B ${{ steps.strings.outputs.build-output-dir }}
         -DCMAKE_CXX_COMPILER=${{ matrix.compiler.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.compiler.c_compiler }}
-        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo
         -DCMAKE_C_COMPILER_LAUNCHER=sccache
         -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
         -DLLVM_ENABLE_RUNTIMES=libc
         -S ${{ github.workspace }}/runtimes
 
     - name: Build
-      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --parallel
+      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --parallel --config RelWithDebInfo
 
     - name: Test
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
