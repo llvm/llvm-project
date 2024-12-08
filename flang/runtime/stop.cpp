@@ -185,7 +185,7 @@ static void PrintBacktrace() {
   std::abort();
 }
 
-void RTNAME(Backtrace)() { PrintBacktrace(); }
+void FORTRAN_PROCEDURE_NAME(backtrace)() { PrintBacktrace(); }
 
 [[noreturn]] void RTNAME(ReportFatalUserError)(
     const char *message, const char *source, int line) {

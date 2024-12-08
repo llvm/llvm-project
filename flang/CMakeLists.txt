@@ -90,11 +90,6 @@ if (FLANG_STANDALONE_BUILD)
   # We need a pre-built/installed version of LLVM.
   find_package(LLVM REQUIRED HINTS "${LLVM_DIR_ABSOLUTE}")
 
-  # function checks
-  find_package(Backtrace)
-  set(HAVE_BACKTRACE ${Backtrace_FOUND})
-  set(BACKTRACE_HEADER ${Backtrace_HEADER})
-
   # Users might specify a path to CLANG_DIR that's:
   #   * a full path, or
   #   * a path relative to the path of this script.

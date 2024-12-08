@@ -28,13 +28,6 @@ void fir::runtime::genAbort(fir::FirOpBuilder &builder, mlir::Location loc) {
   builder.create<fir::CallOp>(loc, abortFunc, std::nullopt);
 }
 
-void fir::runtime::genBacktrace(fir::FirOpBuilder &builder,
-                                mlir::Location loc) {
-  mlir::func::FuncOp backtraceFunc =
-      fir::runtime::getRuntimeFunc<mkRTKey(Backtrace)>(loc, builder);
-  builder.create<fir::CallOp>(loc, backtraceFunc, std::nullopt);
-}
-
 void fir::runtime::genReportFatalUserError(fir::FirOpBuilder &builder,
                                            mlir::Location loc,
                                            llvm::StringRef message) {

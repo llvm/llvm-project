@@ -30,9 +30,6 @@ void genExit(fir::FirOpBuilder &, mlir::Location, mlir::Value status);
 /// Generate call to ABORT intrinsic runtime routine.
 void genAbort(fir::FirOpBuilder &, mlir::Location);
 
-/// Generate call to BACKTRACE intrinsic runtime routine.
-void genBacktrace(fir::FirOpBuilder &builder, mlir::Location loc);
-
 /// Generate call to crash the program with an error message when detecting
 /// an invalid situation at runtime.
 void genReportFatalUserError(fir::FirOpBuilder &, mlir::Location,
