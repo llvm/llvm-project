@@ -50,7 +50,13 @@ jobs:
     - name: Prepare dependencies (Windows)
       if: matrix.os == 'windows-latest'
       run: |
-        Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe
+        $progressPreference = 'silentlyContinue'
+        Write-Host "Installing WinGet PowerShell module from PSGallery..."
+        Install-PackageProvider -Name NuGet -Force | Out-Null
+        Install-Module -Name Microsoft.WinGet.Client -Force -Repository PSGallery | Out-Null
+        Write-Host "Using Repair-WinGetPackageManager cmdlet to bootstrap WinGet..."
+        Repair-WinGetPackageManager
+        Write-Host "Done."
         winget install --silent --exact --force LLVM.LLVM
         winget install --silent --exact --force Ninja-build.Ninja
         echo "C:\\Program Files\\LLVM\\bin" >> $GITHUB_PATH
