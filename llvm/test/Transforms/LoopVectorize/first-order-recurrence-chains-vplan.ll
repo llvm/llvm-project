@@ -39,9 +39,6 @@ define void @test_chained_first_order_recurrences_1(ptr %ptr) {
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<exit>
-; CHECK-NEXT:  No successors
-; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph
 ; CHECK-NEXT:    EMIT vp<[[RESUME_1_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<22>
 ; CHECK-NEXT:    EMIT vp<[[RESUME_2_P:%.*]]>.1 = resume-phi vp<[[RESUME_2]]>.1, ir<33>
@@ -52,6 +49,9 @@ define void @test_chained_first_order_recurrences_1(ptr %ptr) {
 ; CHECK-NEXT:    IR   %for.2 = phi i16 [ 33, %entry ], [ %for.1, %loop ] (extra operand: vp<[[RESUME_2_P]]>.1 from scalar.ph)
 ; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK:         IR   %exitcond.not = icmp eq i64 %iv.next, 1000
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT: }
 ;
@@ -115,9 +115,6 @@ define void @test_chained_first_order_recurrences_3(ptr %ptr) {
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<exit>
-; CHECK-NEXT:  No successors
-; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph
 ; CHECK-NEXT:    EMIT vp<[[RESUME_1_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<22>
 ; CHECK-NEXT:    EMIT vp<[[RESUME_2_P:%.*]]>.1 = resume-phi vp<[[RESUME_2]]>.1, ir<33>
@@ -131,6 +128,9 @@ define void @test_chained_first_order_recurrences_3(ptr %ptr) {
 ; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK:         IR   %exitcond.not = icmp eq i64 %iv.next, 1000
 ; CHECK-NEXT: No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>
+; CHECK-NEXT:  No successors
 ; CHECK-NEXT: }
 ;
 entry:
@@ -195,9 +195,6 @@ define i32 @test_chained_first_order_recurrences_4(ptr %base, i64 %x) {
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[MIDDLE_C]]>
 ; CHECK-NEXT: Successor(s): ir-bb<ret>, scalar.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<ret>:
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
 ; CHECK-NEXT:   EMIT vp<[[RESUME_X:%.+]]> = resume-phi vp<[[EXT_X]]>, ir<0>
 ; CHECK-NEXT:   EMIT vp<[[RESUME_Y:%.+]]>.1 = resume-phi vp<[[EXT_Y]]>.1, ir<0>
@@ -208,6 +205,9 @@ define i32 @test_chained_first_order_recurrences_4(ptr %base, i64 %x) {
 ; CHECK-NEXT:   IR   %for.x = phi i64 [ %for.x.next, %loop ], [ 0, %entry ] (extra operand: vp<[[RESUME_X]]> from scalar.ph)
 ; CHECK-NEXT:   IR   %for.y = phi i32 [ %for.x.prev, %loop ], [ 0, %entry ] (extra operand: vp<[[RESUME_Y]]>.1 from scalar.ph)
 ; CHECK:     No successors
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<ret>:
+; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
 entry:
@@ -269,9 +269,6 @@ define i32 @test_chained_first_order_recurrences_5_hoist_to_load(ptr %base) {
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[MIDDLE_C]]>
 ; CHECK-NEXT: Successor(s): ir-bb<ret>, scalar.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<ret>:
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
 ; CHECK-NEXT:   EMIT vp<[[RESUME_X:%.+]]> = resume-phi vp<[[EXT_X]]>, ir<0>
 ; CHECK-NEXT:   EMIT vp<[[RESUME_Y:%.+]]>.1 = resume-phi vp<[[EXT_Y]]>.1, ir<0>
@@ -282,6 +279,9 @@ define i32 @test_chained_first_order_recurrences_5_hoist_to_load(ptr %base) {
 ; CHECK-NEXT:   IR   %for.x = phi i64 [ %for.x.next, %loop ], [ 0, %entry ] (extra operand: vp<[[RESUME_X]]> from scalar.ph)
 ; CHECK-NEXT:   IR   %for.y = phi i32 [ %for.x.prev, %loop ], [ 0, %entry ] (extra operand: vp<[[RESUME_Y]]>.1 from scalar.ph)
 ; CHECK:     No successors
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<ret>:
+; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
 entry:

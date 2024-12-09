@@ -667,6 +667,11 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setTruncStoreAction(VT, MVT::i1, Expand);
   }
 
+  setCondCodeAction({ISD::SETNE, ISD::SETEQ, ISD::SETUGE, ISD::SETULE,
+                     ISD::SETUGT, ISD::SETULT, ISD::SETGT, ISD::SETLT,
+                     ISD::SETGE, ISD::SETLE},
+                    MVT::i1, Expand);
+
   // expand extload of vector of integers.
   setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::v2i16,
                    MVT::v2i8, Expand);

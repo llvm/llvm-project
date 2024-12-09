@@ -1073,9 +1073,6 @@ define void @merge_with_dead_gep_between_regions(i32 %n, ptr noalias %src, ptr n
 ; CHECK-NEXT:   EMIT branch-on-cond ir<true>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT: Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
@@ -1088,6 +1085,9 @@ define void @merge_with_dead_gep_between_regions(i32 %n, ptr noalias %src, ptr n
 ; CHECK-NEXT:   IR   %gep.dst = getelementptr inbounds i32, ptr %dst, i32 %iv
 ; CHECK-NEXT:   IR   store i32 %l, ptr %gep.dst, align 16
 ; CHECK-NEXT:   IR   %ec = icmp eq i32 %iv.next, 0
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -1164,9 +1164,6 @@ define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>:
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
 ; CHECK-NEXT: Successor(s): ir-bb<loop.header>
 ; CHECK-EMPTY:
@@ -1175,6 +1172,9 @@ define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-NEXT:   IR   %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 -1
 ; CHECK-NEXT:   IR   %l = load i8, ptr %ptr.iv.next, align 1
 ; CHECK-NEXT:   IR   %c.1 = icmp eq i8 %l, 0
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;

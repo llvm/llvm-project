@@ -601,15 +601,8 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
     return diag::Severity::Ignored;
 
   // Clang-diagnostics pragmas always take precedence over suppression mapping.
-  if (!Mapping.isPragma() && Diag.DiagSuppressionMapping) {
-    // We also use presumed locations here to improve reproducibility for
-    // preprocessed inputs.
-    if (PresumedLoc PLoc = SM.getPresumedLoc(Loc);
-        PLoc.isValid() && Diag.isSuppressedViaMapping(
-                              DiagID, llvm::sys::path::remove_leading_dotslash(
-                                          PLoc.getFilename())))
-      return diag::Severity::Ignored;
-  }
+  if (!Mapping.isPragma() && Diag.isSuppressedViaMapping(DiagID, Loc))
+    return diag::Severity::Ignored;
 
   return Result;
 }
