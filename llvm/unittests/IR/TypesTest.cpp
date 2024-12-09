@@ -65,16 +65,16 @@ TEST(TypesTest, TargetExtType) {
 
   // ensure that literal structs in the target extension type print the struct
   // body
-  StructType *OtherStruct =
+  Struct =
       StructType::get(Context, Struct->elements(), /*isPacked=*/false);
 
-  Type *OtherTargetExtensionType =
-      TargetExtType::get(Context, "structTET", {OtherStruct}, {0, 1});
-  SmallVector<char, 50> OtherTETV;
-  llvm::raw_svector_ostream OtherTETStream(OtherTETV);
-  OtherTargetExtensionType->print(OtherTETStream);
+  TargetExtensionType =
+      TargetExtType::get(Context, "structTET", {Struct}, {0, 1});
+  TETV.clear();
+  llvm::raw_svector_ostream TETStream(TETV);
+  TargetExtensionType->print(TETStream);
 
-  EXPECT_STREQ(OtherTETStream.str().str().data(),
+  EXPECT_STREQ(TETStream.str().str().data(),
                "target(\"structTET\", { i32, float }, 0, 1)");
 }
 
