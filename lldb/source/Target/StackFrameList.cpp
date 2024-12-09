@@ -650,35 +650,7 @@ StackFrameSP StackFrameList::GetFrameAtIndexNoLock(
   }
 
   if (idx < m_frames.size()) {
-    if (m_show_inlined_frames) {
-      // When inline frames are enabled we actually create all the frames in
-      // GetFramesUpTo.
       frame_sp = m_frames[idx];
-    } else {
-      addr_t pc, cfa;
-      bool behaves_like_zeroth_frame = (idx == 0);
-      if (m_thread.GetUnwinder().GetFrameInfoAtIndex(
-              idx, cfa, pc, behaves_like_zeroth_frame)) {
-        const bool cfa_is_valid = true;
-        frame_sp = std::make_shared<StackFrame>(
-            m_thread.shared_from_this(), idx, idx, cfa, cfa_is_valid, pc,
-            StackFrame::Kind::Regular, behaves_like_zeroth_frame, nullptr);
-
-        Function *function =
-            frame_sp->GetSymbolContext(eSymbolContextFunction).function;
-        if (function) {
-          // When we aren't showing inline functions we always use the top
-          // most function block as the scope.
-          frame_sp->SetSymbolContextScope(&function->GetBlock(false));
-        } else {
-          // Set the symbol scope from the symbol regardless if it is nullptr
-          // or valid.
-          frame_sp->SetSymbolContextScope(
-              frame_sp->GetSymbolContext(eSymbolContextSymbol).symbol);
-        }
-        SetFrameAtIndex(idx, frame_sp);
-      }
-    }
   } else if (original_idx == 0) {
     // There should ALWAYS be a frame at index 0.  If something went wrong with
     // the CurrentInlinedDepth such that there weren't as many frames as we
