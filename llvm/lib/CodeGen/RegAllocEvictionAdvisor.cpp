@@ -120,23 +120,15 @@ private:
 
 AnalysisKey RegAllocEvictionAdvisorAnalysis::Key;
 
-void RegAllocEvictionAdvisorAnalysis::initializeProvider(LLVMContext &Ctx) {
+void RegAllocEvictionAdvisorAnalysis::initializeProvider(
+    RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode Mode, LLVMContext &Ctx) {
   if (Provider)
     return;
-  switch (Mode) {
-  case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Default:
+  if (Mode == RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Default)
     Provider.reset(
         new DefaultEvictionAdvisorProvider(/*NotAsRequested*/ false, Ctx));
-    break;
-  case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Development:
-#if defined(LLVM_HAVE_TFLITE)
-    Provider.reset(createDevelopmentModeAdvisorProvider(Ctx));
-#endif
-    break;
-  case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Release:
-    Provider.reset(createReleaseModeAdvisorProvider(Ctx));
-    break;
-  }
+  else
+    initializeMLProvider(Mode, Ctx);
   if (!Provider)
     Provider.reset(
         new DefaultEvictionAdvisorProvider(/*NotAsRequested*/ true, Ctx));
@@ -146,7 +138,7 @@ RegAllocEvictionAdvisorAnalysis::Result
 RegAllocEvictionAdvisorAnalysis::run(MachineFunction &MF,
                                      MachineFunctionAnalysisManager &MFAM) {
   // Lazy initialization of the provider.
-  initializeProvider(MF.getFunction().getContext());
+  initializeProvider(::Mode, MF.getFunction().getContext());
   auto *MBFI = &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
   auto *Loops = &MFAM.getResult<MachineLoopAnalysis>(MF);
   Provider->setAnalyses(MBFI, Loops);

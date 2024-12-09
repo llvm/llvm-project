@@ -233,11 +233,6 @@ private:
   const AdvisorMode Mode;
 };
 
-RegAllocEvictionAdvisorProvider *
-createReleaseModeAdvisorProvider(LLVMContext &Ctx);
-RegAllocEvictionAdvisorProvider *
-createDevelopmentModeAdvisorProvider(LLVMContext &Ctx);
-
 /// A MachineFunction analysis for fetching the Eviction Advisor.
 /// This sets up the Provider lazily and caches it.
 /// - in the ML implementation case, the evaluator is stateless but (especially
@@ -276,7 +271,13 @@ public:
   Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MAM);
 
 private:
-  void initializeProvider(LLVMContext &Ctx);
+  void
+  initializeProvider(RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode Mode,
+                     LLVMContext &Ctx);
+  void
+  initializeMLProvider(RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode Mode,
+                       LLVMContext &Ctx);
+
   std::unique_ptr<RegAllocEvictionAdvisorProvider> Provider;
 };
 
