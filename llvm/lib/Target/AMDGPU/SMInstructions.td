@@ -332,15 +332,15 @@ defm S_LOAD_I16      : SM_Pseudo_Loads <SReg_64, SReg_32_XM0_XEXEC>;
 defm S_LOAD_U16      : SM_Pseudo_Loads <SReg_64, SReg_32_XM0_XEXEC>;
 
 let is_buffer = 1 in {
-defm S_BUFFER_LOAD_DWORD : SM_Pseudo_Loads <SReg_128, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_LOAD_DWORD : SM_Pseudo_Loads <SReg_128_XNULL, SReg_32_XM0_XEXEC>;
 // FIXME: exec_lo/exec_hi appear to be allowed for SMRD loads on
 // SI/CI, bit disallowed for SMEM on VI.
-defm S_BUFFER_LOAD_DWORDX2 : SM_Pseudo_Loads <SReg_128, SReg_64_XEXEC>;
+defm S_BUFFER_LOAD_DWORDX2 : SM_Pseudo_Loads <SReg_128_XNULL, SReg_64_XEXEC>;
 let SubtargetPredicate = HasScalarDwordx3Loads in
-  defm S_BUFFER_LOAD_DWORDX3 : SM_Pseudo_Loads <SReg_128, SReg_96>;
-defm S_BUFFER_LOAD_DWORDX4 : SM_Pseudo_Loads <SReg_128, SReg_128>;
-defm S_BUFFER_LOAD_DWORDX8 : SM_Pseudo_Loads <SReg_128, SReg_256>;
-defm S_BUFFER_LOAD_DWORDX16 : SM_Pseudo_Loads <SReg_128, SReg_512>;
+  defm S_BUFFER_LOAD_DWORDX3 : SM_Pseudo_Loads <SReg_128_XNULL, SReg_96>;
+defm S_BUFFER_LOAD_DWORDX4 : SM_Pseudo_Loads <SReg_128_XNULL, SReg_128>;
+defm S_BUFFER_LOAD_DWORDX8 : SM_Pseudo_Loads <SReg_128_XNULL, SReg_256>;
+defm S_BUFFER_LOAD_DWORDX16 : SM_Pseudo_Loads <SReg_128_XNULL, SReg_512>;
 defm S_BUFFER_LOAD_I8 : SM_Pseudo_Loads <SReg_128, SReg_32_XM0_XEXEC>;
 defm S_BUFFER_LOAD_U8 : SM_Pseudo_Loads <SReg_128, SReg_32_XM0_XEXEC>;
 defm S_BUFFER_LOAD_I16 : SM_Pseudo_Loads <SReg_128, SReg_32_XM0_XEXEC>;
@@ -353,9 +353,9 @@ defm S_STORE_DWORDX2 : SM_Pseudo_Stores <SReg_64, SReg_64_XEXEC>;
 defm S_STORE_DWORDX4 : SM_Pseudo_Stores <SReg_64, SReg_128>;
 
 let is_buffer = 1 in {
-defm S_BUFFER_STORE_DWORD : SM_Pseudo_Stores <SReg_128, SReg_32_XM0_XEXEC>;
-defm S_BUFFER_STORE_DWORDX2 : SM_Pseudo_Stores <SReg_128, SReg_64_XEXEC>;
-defm S_BUFFER_STORE_DWORDX4 : SM_Pseudo_Stores <SReg_128, SReg_128>;
+defm S_BUFFER_STORE_DWORD : SM_Pseudo_Stores <SReg_128_XNULL, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_STORE_DWORDX2 : SM_Pseudo_Stores <SReg_128_XNULL, SReg_64_XEXEC>;
+defm S_BUFFER_STORE_DWORDX4 : SM_Pseudo_Stores <SReg_128_XNULL, SReg_128>;
 }
 } // End SubtargetPredicate = HasScalarStores
 
@@ -401,33 +401,33 @@ defm S_SCRATCH_STORE_DWORDX4 : SM_Pseudo_Stores <SReg_64, SReg_128>;
 let SubtargetPredicate = HasScalarAtomics in {
 
 let is_buffer = 1 in {
-defm S_BUFFER_ATOMIC_SWAP         : SM_Pseudo_Atomics <SReg_128, SReg_32_XM0_XEXEC>;
-defm S_BUFFER_ATOMIC_CMPSWAP      : SM_Pseudo_Atomics <SReg_128, SReg_64_XEXEC>;
-defm S_BUFFER_ATOMIC_ADD          : SM_Pseudo_Atomics <SReg_128, SReg_32_XM0_XEXEC>;
-defm S_BUFFER_ATOMIC_SUB          : SM_Pseudo_Atomics <SReg_128, SReg_32_XM0_XEXEC>;
-defm S_BUFFER_ATOMIC_SMIN         : SM_Pseudo_Atomics <SReg_128, SReg_32_XM0_XEXEC>;
-defm S_BUFFER_ATOMIC_UMIN         : SM_Pseudo_Atomics <SReg_128, SReg_32_XM0_XEXEC>;
-defm S_BUFFER_ATOMIC_SMAX         : SM_Pseudo_Atomics <SReg_128, SReg_32_XM0_XEXEC>;
-defm S_BUFFER_ATOMIC_UMAX         : SM_Pseudo_Atomics <SReg_128, SReg_32_XM0_XEXEC>;
-defm S_BUFFER_ATOMIC_AND          : SM_Pseudo_Atomics <SReg_128, SReg_32_XM0_XEXEC>;
-defm S_BUFFER_ATOMIC_OR           : SM_Pseudo_Atomics <SReg_128, SReg_32_XM0_XEXEC>;
-defm S_BUFFER_ATOMIC_XOR          : SM_Pseudo_Atomics <SReg_128, SReg_32_XM0_XEXEC>;
-defm S_BUFFER_ATOMIC_INC          : SM_Pseudo_Atomics <SReg_128, SReg_32_XM0_XEXEC>;
-defm S_BUFFER_ATOMIC_DEC          : SM_Pseudo_Atomics <SReg_128, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_ATOMIC_SWAP         : SM_Pseudo_Atomics <SReg_128_XNULL, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_ATOMIC_CMPSWAP      : SM_Pseudo_Atomics <SReg_128_XNULL, SReg_64_XEXEC>;
+defm S_BUFFER_ATOMIC_ADD          : SM_Pseudo_Atomics <SReg_128_XNULL, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_ATOMIC_SUB          : SM_Pseudo_Atomics <SReg_128_XNULL, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_ATOMIC_SMIN         : SM_Pseudo_Atomics <SReg_128_XNULL, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_ATOMIC_UMIN         : SM_Pseudo_Atomics <SReg_128_XNULL, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_ATOMIC_SMAX         : SM_Pseudo_Atomics <SReg_128_XNULL, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_ATOMIC_UMAX         : SM_Pseudo_Atomics <SReg_128_XNULL, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_ATOMIC_AND          : SM_Pseudo_Atomics <SReg_128_XNULL, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_ATOMIC_OR           : SM_Pseudo_Atomics <SReg_128_XNULL, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_ATOMIC_XOR          : SM_Pseudo_Atomics <SReg_128_XNULL, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_ATOMIC_INC          : SM_Pseudo_Atomics <SReg_128_XNULL, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_ATOMIC_DEC          : SM_Pseudo_Atomics <SReg_128_XNULL, SReg_32_XM0_XEXEC>;
 
-defm S_BUFFER_ATOMIC_SWAP_X2      : SM_Pseudo_Atomics <SReg_128, SReg_64_XEXEC>;
-defm S_BUFFER_ATOMIC_CMPSWAP_X2   : SM_Pseudo_Atomics <SReg_128, SReg_128>;
-defm S_BUFFER_ATOMIC_ADD_X2       : SM_Pseudo_Atomics <SReg_128, SReg_64_XEXEC>;
-defm S_BUFFER_ATOMIC_SUB_X2       : SM_Pseudo_Atomics <SReg_128, SReg_64_XEXEC>;
-defm S_BUFFER_ATOMIC_SMIN_X2      : SM_Pseudo_Atomics <SReg_128, SReg_64_XEXEC>;
-defm S_BUFFER_ATOMIC_UMIN_X2      : SM_Pseudo_Atomics <SReg_128, SReg_64_XEXEC>;
-defm S_BUFFER_ATOMIC_SMAX_X2      : SM_Pseudo_Atomics <SReg_128, SReg_64_XEXEC>;
-defm S_BUFFER_ATOMIC_UMAX_X2      : SM_Pseudo_Atomics <SReg_128, SReg_64_XEXEC>;
-defm S_BUFFER_ATOMIC_AND_X2       : SM_Pseudo_Atomics <SReg_128, SReg_64_XEXEC>;
-defm S_BUFFER_ATOMIC_OR_X2        : SM_Pseudo_Atomics <SReg_128, SReg_64_XEXEC>;
-defm S_BUFFER_ATOMIC_XOR_X2       : SM_Pseudo_Atomics <SReg_128, SReg_64_XEXEC>;
-defm S_BUFFER_ATOMIC_INC_X2       : SM_Pseudo_Atomics <SReg_128, SReg_64_XEXEC>;
-defm S_BUFFER_ATOMIC_DEC_X2       : SM_Pseudo_Atomics <SReg_128, SReg_64_XEXEC>;
+defm S_BUFFER_ATOMIC_SWAP_X2      : SM_Pseudo_Atomics <SReg_128_XNULL, SReg_64_XEXEC>;
+defm S_BUFFER_ATOMIC_CMPSWAP_X2   : SM_Pseudo_Atomics <SReg_128_XNULL, SReg_128>;
+defm S_BUFFER_ATOMIC_ADD_X2       : SM_Pseudo_Atomics <SReg_128_XNULL, SReg_64_XEXEC>;
+defm S_BUFFER_ATOMIC_SUB_X2       : SM_Pseudo_Atomics <SReg_128_XNULL, SReg_64_XEXEC>;
+defm S_BUFFER_ATOMIC_SMIN_X2      : SM_Pseudo_Atomics <SReg_128_XNULL, SReg_64_XEXEC>;
+defm S_BUFFER_ATOMIC_UMIN_X2      : SM_Pseudo_Atomics <SReg_128_XNULL, SReg_64_XEXEC>;
+defm S_BUFFER_ATOMIC_SMAX_X2      : SM_Pseudo_Atomics <SReg_128_XNULL, SReg_64_XEXEC>;
+defm S_BUFFER_ATOMIC_UMAX_X2      : SM_Pseudo_Atomics <SReg_128_XNULL, SReg_64_XEXEC>;
+defm S_BUFFER_ATOMIC_AND_X2       : SM_Pseudo_Atomics <SReg_128_XNULL, SReg_64_XEXEC>;
+defm S_BUFFER_ATOMIC_OR_X2        : SM_Pseudo_Atomics <SReg_128_XNULL, SReg_64_XEXEC>;
+defm S_BUFFER_ATOMIC_XOR_X2       : SM_Pseudo_Atomics <SReg_128_XNULL, SReg_64_XEXEC>;
+defm S_BUFFER_ATOMIC_INC_X2       : SM_Pseudo_Atomics <SReg_128_XNULL, SReg_64_XEXEC>;
+defm S_BUFFER_ATOMIC_DEC_X2       : SM_Pseudo_Atomics <SReg_128_XNULL, SReg_64_XEXEC>;
 }
 
 defm S_ATOMIC_SWAP                : SM_Pseudo_Atomics <SReg_64, SReg_32_XM0_XEXEC>;

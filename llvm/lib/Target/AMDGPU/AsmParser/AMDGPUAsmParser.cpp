@@ -9760,13 +9760,10 @@ unsigned AMDGPUAsmParser::validateTargetOperandClass(MCParsedAsmOperand &Op,
   case MCK_SReg_64:
   case MCK_SReg_64_XEXEC:
     // Null is defined as a 32-bit register but
-    // it should also be enabled with 64-bit operands.
-    // The following code enables it for SReg_64 operands
+    // it should also be enabled with 64-bit operands or larger.
+    // The following code enables it for SReg_64 and larger operands
     // used as source and destination. Remaining source
     // operands are handled in isInlinableImm.
-    //
-    // Additionally, allow null where destination of 128-bit or larger is
-    // expected.
   case MCK_SReg_128:
   case MCK_SReg_256:
   case MCK_SReg_512:
