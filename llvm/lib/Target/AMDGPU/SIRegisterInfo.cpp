@@ -3573,10 +3573,11 @@ SIRegisterInfo::getEquivalentVGPRClass(const TargetRegisterClass *SRC) const {
     break;
   case AMDGPU::VS_32_Lo256RegClassID:
   case AMDGPU::VS_64_Lo256RegClassID:
-    return getAlignedLo256VGPRClassForBitWidth(Size);
+    return getAllocatableClass(getAlignedLo256VGPRClassForBitWidth(Size));
   }
 
-  const TargetRegisterClass *VRC = getVGPRClassForBitWidth(Size);
+  const TargetRegisterClass *VRC =
+      getAllocatableClass(getVGPRClassForBitWidth(Size));
   assert(VRC && "Invalid register class size");
   return VRC;
 }
