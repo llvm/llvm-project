@@ -251,7 +251,7 @@ endif()
 
 if(APPLE)
   # Darwin-specific linker flags for loadable modules.
-  set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,-flat_namespace -Wl,-undefined -Wl,suppress")
+  set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,-flat_namespace -Wl,-undefined -Wl,dynamic_lookup")
 endif()
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
@@ -1285,7 +1285,7 @@ elseif(LLVM_ENABLE_LTO)
   endif()
 endif()
 
-if(LLVM_ENABLE_FATLTO AND UNIX AND NOT APPLE)
+if(LLVM_ENABLE_FATLTO AND ((UNIX AND NOT APPLE) OR FUCHSIA))
   append("-ffat-lto-objects" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   if(NOT LINKER_IS_LLD_LINK)
     append("-ffat-lto-objects" CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS)

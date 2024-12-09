@@ -17,20 +17,18 @@
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeVisitor.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
-#include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaConcept.h"
 #include "clang/Sema/SemaInternal.h"
@@ -153,9 +151,9 @@ getEnclosingTypeAliasTemplateDecl(Sema &SemaRef) {
 bool isLambdaEnclosedByTypeAliasDecl(
     const FunctionDecl *LambdaCallOperator,
     const TypeAliasTemplateDecl *PrimaryTypeAliasDecl) {
-  struct Visitor : RecursiveASTVisitor<Visitor> {
+  struct Visitor : DynamicRecursiveASTVisitor {
     Visitor(const FunctionDecl *CallOperator) : CallOperator(CallOperator) {}
-    bool VisitLambdaExpr(const LambdaExpr *LE) {
+    bool VisitLambdaExpr(LambdaExpr *LE) override {
       // Return true to bail out of the traversal, implying the Decl contains
       // the lambda.
       return getPrimaryTemplateOfGenericLambda(LE->getCallOperator()) !=
@@ -200,7 +198,7 @@ HandleVarTemplateSpec(const VarTemplateSpecializationDecl *VarTemplSpec,
     if (Partial->isMemberSpecialization())
       return Response::Done();
   } else {
-    VarTemplateDecl *Tmpl = Specialized.get<VarTemplateDecl *>();
+    VarTemplateDecl *Tmpl = cast<VarTemplateDecl *>(Specialized);
     if (!SkipForSpecialization)
       Result.addOuterTemplateArguments(
           Tmpl, VarTemplSpec->getTemplateInstantiationArgs().asArray(),
@@ -2460,7 +2458,7 @@ TemplateInstantiator::TransformFunctionParmPackRefExpr(DeclRefExpr *E,
 
     TransformedDecl = (*Pack)[getSema().ArgumentPackSubstitutionIndex];
   } else {
-    TransformedDecl = Found->get<Decl*>();
+    TransformedDecl = cast<Decl *>(*Found);
   }
 
   // We have either an unexpanded pack or a specific expansion.
@@ -2829,7 +2827,7 @@ TemplateInstantiator::TransformExprRequirement(concepts::ExprRequirement *Req) {
     return RebuildExprRequirement(E, Req->isSimple(), Req->getNoexceptLoc(),
                                   std::move(*TransRetReq));
   return RebuildExprRequirement(
-      TransExpr.get<concepts::Requirement::SubstitutionDiagnostic *>(),
+      cast<concepts::Requirement::SubstitutionDiagnostic *>(TransExpr),
       Req->isSimple(), Req->getNoexceptLoc(), std::move(*TransRetReq));
 }
 
@@ -4055,7 +4053,7 @@ getPatternForClassTemplateSpecialization(
   llvm::PointerUnion<ClassTemplateDecl *,
                      ClassTemplatePartialSpecializationDecl *>
       Specialized = ClassTemplateSpec->getSpecializedTemplateOrPartial();
-  if (!Specialized.is<ClassTemplatePartialSpecializationDecl *>()) {
+  if (!isa<ClassTemplatePartialSpecializationDecl *>(Specialized)) {
     // Find best matching specialization.
     ClassTemplateDecl *Template = ClassTemplateSpec->getSpecializedTemplate();
 
@@ -4666,14 +4664,14 @@ void LocalInstantiationScope::InstantiatedLocal(const Decl *D, Decl *Inst) {
   } else if (DeclArgumentPack *Pack = Stored.dyn_cast<DeclArgumentPack *>()) {
     Pack->push_back(cast<VarDecl>(Inst));
   } else {
-    assert(Stored.get<Decl *>() == Inst && "Already instantiated this local");
+    assert(cast<Decl *>(Stored) == Inst && "Already instantiated this local");
   }
 }
 
 void LocalInstantiationScope::InstantiatedLocalPackArg(const Decl *D,
                                                        VarDecl *Inst) {
   D = getCanonicalParmVarDecl(D);
-  DeclArgumentPack *Pack = LocalDecls[D].get<DeclArgumentPack *>();
+  DeclArgumentPack *Pack = cast<DeclArgumentPack *>(LocalDecls[D]);
   Pack->push_back(Inst);
 }
 

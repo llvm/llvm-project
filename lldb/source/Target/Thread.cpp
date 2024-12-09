@@ -244,7 +244,7 @@ Thread::~Thread() {
   LLDB_LOGF(log, "%p Thread::~Thread(tid = 0x%4.4" PRIx64 ")",
             static_cast<void *>(this), GetID());
   /// If you hit this assert, it means your derived class forgot to call
-  /// DoDestroy in its destructor.
+  /// DestroyThread in its destructor.
   assert(m_destroy_called);
 }
 

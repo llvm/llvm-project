@@ -591,14 +591,12 @@ template <class T>
 
 #include <__atomic/aliases.h>
 #include <__atomic/atomic.h>
-#include <__atomic/atomic_base.h>
 #include <__atomic/atomic_flag.h>
 #include <__atomic/atomic_init.h>
 #include <__atomic/atomic_lock_free.h>
 #include <__atomic/atomic_sync.h>
 #include <__atomic/check_memory_order.h>
 #include <__atomic/contention_t.h>
-#include <__atomic/cxx_atomic_impl.h>
 #include <__atomic/fence.h>
 #include <__atomic/is_always_lock_free.h>
 #include <__atomic/kill_dependency.h>

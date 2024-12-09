@@ -223,6 +223,10 @@ public:
     /// Note that the bundles themselves may have additional ordering, created
     /// by the subclasses by insertAt. The bundles themselves may also have used
     /// instructions.
+
+    // TODO: Range_size counts fully used-bundles. Further, iterating over
+    // anything other than the Bundles in a SeedContainer includes used
+    // seeds. Rework the iterator logic to clean this up.
     iterator(BundleMapT &Map, BundleMapT::iterator MapIt, ValT *Vec, int VecIdx)
         : Map(&Map), MapIt(MapIt), Vec(Vec), VecIdx(VecIdx) {}
     value_type &operator*() {
@@ -288,7 +292,7 @@ class SeedCollector {
   SeedContainer StoreSeeds;
   SeedContainer LoadSeeds;
   Context &Ctx;
-
+  Context::CallbackID EraseCallbackID;
   /// \Returns the number of SeedBundle groups for all seed types.
   /// This is to be used for limiting compilation time.
   unsigned totalNumSeedGroups() const {

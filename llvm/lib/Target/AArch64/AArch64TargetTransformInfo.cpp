@@ -11,6 +11,7 @@
 #include "AArch64PerfectShuffle.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64SMEAttributes.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -265,16 +266,7 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
       return false;
   }
 
-  const TargetMachine &TM = getTLI()->getTargetMachine();
-
-  const FeatureBitset &CallerBits =
-      TM.getSubtargetImpl(*Caller)->getFeatureBits();
-  const FeatureBitset &CalleeBits =
-      TM.getSubtargetImpl(*Callee)->getFeatureBits();
-
-  // Inline a callee if its target-features are a subset of the callers
-  // target-features.
-  return (CallerBits & CalleeBits) == CalleeBits;
+  return BaseT::areInlineCompatible(Caller, Callee);
 }
 
 bool AArch64TTIImpl::areTypesABICompatible(
@@ -3177,10 +3169,10 @@ InstructionCost AArch64TTIImpl::getCFInstrCost(unsigned Opcode,
   return 0;
 }
 
-InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(const Instruction *I,
-                                                         Type *Val,
-                                                         unsigned Index,
-                                                         bool HasRealUse) {
+InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
+    unsigned Opcode, Type *Val, unsigned Index, bool HasRealUse,
+    const Instruction *I, Value *Scalar,
+    ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) {
   assert(Val->isVectorTy() && "This must be a vector type");
 
   if (Index != -1U) {
@@ -3226,6 +3218,120 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(const Instruction *I,
     // compile-time considerations.
   }
 
+  // In case of Neon, if there exists extractelement from lane != 0 such that
+  // 1. extractelement does not necessitate a move from vector_reg -> GPR.
+  // 2. extractelement result feeds into fmul.
+  // 3. Other operand of fmul is an extractelement from lane 0 or lane
+  // equivalent to 0.
+  // then the extractelement can be merged with fmul in the backend and it
+  // incurs no cost.
+  // e.g.
+  // define double @foo(<2 x double> %a) {
+  //   %1 = extractelement <2 x double> %a, i32 0
+  //   %2 = extractelement <2 x double> %a, i32 1
+  //   %res = fmul double %1, %2
+  //   ret double %res
+  // }
+  // %2 and %res can be merged in the backend to generate fmul d0, d0, v1.d[1]
+  auto ExtractCanFuseWithFmul = [&]() {
+    // We bail out if the extract is from lane 0.
+    if (Index == 0)
+      return false;
+
+    // Check if the scalar element type of the vector operand of ExtractElement
+    // instruction is one of the allowed types.
+    auto IsAllowedScalarTy = [&](const Type *T) {
+      return T->isFloatTy() || T->isDoubleTy() ||
+             (T->isHalfTy() && ST->hasFullFP16());
+    };
+
+    // Check if the extractelement user is scalar fmul.
+    auto IsUserFMulScalarTy = [](const Value *EEUser) {
+      // Check if the user is scalar fmul.
+      const auto *BO = dyn_cast<BinaryOperator>(EEUser);
+      return BO && BO->getOpcode() == BinaryOperator::FMul &&
+             !BO->getType()->isVectorTy();
+    };
+
+    // Check if the extract index is from lane 0 or lane equivalent to 0 for a
+    // certain scalar type and a certain vector register width.
+    auto IsExtractLaneEquivalentToZero = [&](unsigned Idx, unsigned EltSz) {
+      auto RegWidth =
+          getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
+              .getFixedValue();
+      return Idx == 0 || (RegWidth != 0 && (Idx * EltSz) % RegWidth == 0);
+    };
+
+    // Check if the type constraints on input vector type and result scalar type
+    // of extractelement instruction are satisfied.
+    if (!isa<FixedVectorType>(Val) || !IsAllowedScalarTy(Val->getScalarType()))
+      return false;
+
+    if (Scalar) {
+      DenseMap<User *, unsigned> UserToExtractIdx;
+      for (auto *U : Scalar->users()) {
+        if (!IsUserFMulScalarTy(U))
+          return false;
+        // Recording entry for the user is important. Index value is not
+        // important.
+        UserToExtractIdx[U];
+      }
+      if (UserToExtractIdx.empty())
+        return false;
+      for (auto &[S, U, L] : ScalarUserAndIdx) {
+        for (auto *U : S->users()) {
+          if (UserToExtractIdx.find(U) != UserToExtractIdx.end()) {
+            auto *FMul = cast<BinaryOperator>(U);
+            auto *Op0 = FMul->getOperand(0);
+            auto *Op1 = FMul->getOperand(1);
+            if ((Op0 == S && Op1 == S) || Op0 != S || Op1 != S) {
+              UserToExtractIdx[U] = L;
+              break;
+            }
+          }
+        }
+      }
+      for (auto &[U, L] : UserToExtractIdx) {
+        if (!IsExtractLaneEquivalentToZero(Index, Val->getScalarSizeInBits()) &&
+            !IsExtractLaneEquivalentToZero(L, Val->getScalarSizeInBits()))
+          return false;
+      }
+    } else {
+      const auto *EE = cast<ExtractElementInst>(I);
+
+      const auto *IdxOp = dyn_cast<ConstantInt>(EE->getIndexOperand());
+      if (!IdxOp)
+        return false;
+
+      return !EE->users().empty() && all_of(EE->users(), [&](const User *U) {
+        if (!IsUserFMulScalarTy(U))
+          return false;
+
+        // Check if the other operand of extractelement is also extractelement
+        // from lane equivalent to 0.
+        const auto *BO = cast<BinaryOperator>(U);
+        const auto *OtherEE = dyn_cast<ExtractElementInst>(
+            BO->getOperand(0) == EE ? BO->getOperand(1) : BO->getOperand(0));
+        if (OtherEE) {
+          const auto *IdxOp = dyn_cast<ConstantInt>(OtherEE->getIndexOperand());
+          if (!IdxOp)
+            return false;
+          return IsExtractLaneEquivalentToZero(
+              cast<ConstantInt>(OtherEE->getIndexOperand())
+                  ->getValue()
+                  .getZExtValue(),
+              OtherEE->getType()->getScalarSizeInBits());
+        }
+        return true;
+      });
+    }
+    return true;
+  };
+
+  if (Opcode == Instruction::ExtractElement && (I || Scalar) &&
+      ExtractCanFuseWithFmul())
+    return 0;
+
   // All other insert/extracts cost this much.
   return ST->getVectorInsertExtractBaseCost();
 }
@@ -3236,19 +3342,28 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                    Value *Op1) {
   bool HasRealUse =
       Opcode == Instruction::InsertElement && Op0 && !isa<UndefValue>(Op0);
-  return getVectorInstrCostHelper(nullptr, Val, Index, HasRealUse);
+  return getVectorInstrCostHelper(Opcode, Val, Index, HasRealUse);
+}
+
+InstructionCost AArch64TTIImpl::getVectorInstrCost(
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    Value *Scalar,
+    ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) {
+  return getVectorInstrCostHelper(Opcode, Val, Index, false, nullptr, Scalar,
+                                  ScalarUserAndIdx);
 }
 
 InstructionCost AArch64TTIImpl::getVectorInstrCost(const Instruction &I,
                                                    Type *Val,
                                                    TTI::TargetCostKind CostKind,
                                                    unsigned Index) {
-  return getVectorInstrCostHelper(&I, Val, Index, true /* HasRealUse */);
+  return getVectorInstrCostHelper(I.getOpcode(), Val, Index,
+                                  true /* HasRealUse */, &I);
 }
 
 InstructionCost AArch64TTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind) {
+    TTI::TargetCostKind CostKind, ArrayRef<Value *> VL) {
   if (isa<ScalableVectorType>(Ty))
     return InstructionCost::getInvalid();
   if (Ty->getElementType()->isFloatingPointTy())
@@ -3874,6 +3989,92 @@ getFalkorUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   }
 }
 
+/// For Apple CPUs, we want to runtime-unroll loops to make better use if the
+/// OOO engine's wide instruction window and various predictors.
+static void
+getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
+                                 TargetTransformInfo::UnrollingPreferences &UP,
+                                 AArch64TTIImpl &TTI) {
+  // Limit loops with structure that is highly likely to benefit from runtime
+  // unrolling; that is we exclude outer loops, loops with multiple exits and
+  // many blocks (i.e. likely with complex control flow). Note that the
+  // heuristics here may be overly conservative and we err on the side of
+  // avoiding runtime unrolling rather than unroll excessively. They are all
+  // subject to further refinement.
+  if (!L->isInnermost() || !L->getExitBlock() || L->getNumBlocks() > 8)
+    return;
+
+  const SCEV *BTC = SE.getBackedgeTakenCount(L);
+  if (isa<SCEVConstant>(BTC) || isa<SCEVCouldNotCompute>(BTC) ||
+      (SE.getSmallConstantMaxTripCount(L) > 0 &&
+       SE.getSmallConstantMaxTripCount(L) <= 32))
+    return;
+  if (findStringMetadataForLoop(L, "llvm.loop.isvectorized"))
+    return;
+
+  int64_t Size = 0;
+  for (auto *BB : L->getBlocks()) {
+    for (auto &I : *BB) {
+      if (!isa<IntrinsicInst>(&I) && isa<CallBase>(&I))
+        return;
+      SmallVector<const Value *, 4> Operands(I.operand_values());
+      Size +=
+          *TTI.getInstructionCost(&I, Operands, TTI::TCK_CodeSize).getValue();
+    }
+  }
+
+  // Limit to loops with trip counts that are cheap to expand.
+  UP.SCEVExpansionBudget = 1;
+
+  // Try to unroll small, single block loops, if they have load/store
+  // dependencies, to expose more parallel memory access streams.
+  if (L->getHeader() != L->getLoopLatch() || Size > 8)
+    return;
+
+  SmallPtrSet<Value *, 8> LoadedValues;
+  SmallVector<StoreInst *> Stores;
+  for (auto *BB : L->blocks()) {
+    for (auto &I : *BB) {
+      Value *Ptr = getLoadStorePointerOperand(&I);
+      if (!Ptr)
+        continue;
+      const SCEV *PtrSCEV = SE.getSCEV(Ptr);
+      if (SE.isLoopInvariant(PtrSCEV, L))
+        continue;
+      if (isa<LoadInst>(&I))
+        LoadedValues.insert(&I);
+      else
+        Stores.push_back(cast<StoreInst>(&I));
+    }
+  }
+
+  // Try to find an unroll count that maximizes the use of the instruction
+  // window, i.e. trying to fetch as many instructions per cycle as possible.
+  unsigned MaxInstsPerLine = 16;
+  unsigned UC = 1;
+  unsigned BestUC = 1;
+  unsigned SizeWithBestUC = BestUC * Size;
+  while (UC <= 8) {
+    unsigned SizeWithUC = UC * Size;
+    if (SizeWithUC > 48)
+      break;
+    if ((SizeWithUC % MaxInstsPerLine) == 0 ||
+        (SizeWithBestUC % MaxInstsPerLine) < (SizeWithUC % MaxInstsPerLine)) {
+      BestUC = UC;
+      SizeWithBestUC = BestUC * Size;
+    }
+    UC++;
+  }
+
+  if (BestUC == 1 || none_of(Stores, [&LoadedValues](StoreInst *SI) {
+        return LoadedValues.contains(SI->getOperand(0));
+      }))
+    return;
+
+  UP.Runtime = true;
+  UP.DefaultUnrollRuntimeCount = BestUC;
+}
+
 void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                              TTI::UnrollingPreferences &UP,
                                              OptimizationRemarkEmitter *ORE) {
@@ -3891,9 +4092,21 @@ void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   // Disable partial & runtime unrolling on -Os.
   UP.PartialOptSizeThreshold = 0;
 
-  if (ST->getProcFamily() == AArch64Subtarget::Falkor &&
-      EnableFalkorHWPFUnrollFix)
-    getFalkorUnrollingPreferences(L, SE, UP);
+  // Apply subtarget-specific unrolling preferences.
+  switch (ST->getProcFamily()) {
+  case AArch64Subtarget::AppleA14:
+  case AArch64Subtarget::AppleA15:
+  case AArch64Subtarget::AppleA16:
+  case AArch64Subtarget::AppleM4:
+    getAppleRuntimeUnrollPreferences(L, SE, UP, *this);
+    break;
+  case AArch64Subtarget::Falkor:
+    if (EnableFalkorHWPFUnrollFix)
+      getFalkorUnrollingPreferences(L, SE, UP);
+    break;
+  default:
+    break;
+  }
 
   // Scan the loop: don't unroll loops with calls as this could prevent
   // inlining. Don't unroll vector loops either, as they don't benefit much from
@@ -4613,6 +4826,10 @@ static bool containsDecreasingPointers(Loop *TheLoop,
   return false;
 }
 
+unsigned AArch64TTIImpl::getEpilogueVectorizationMinVF() const {
+  return ST->getEpilogueVectorizationMinVF();
+}
+
 bool AArch64TTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) {
   if (!ST->hasSVE())
     return false;
@@ -4678,14 +4895,20 @@ AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
 }
 
 bool AArch64TTIImpl::shouldTreatInstructionLikeSelect(const Instruction *I) {
-  // For the binary operators (e.g. or) we need to be more careful than
-  // selects, here we only transform them if they are already at a natural
-  // break point in the code - the end of a block with an unconditional
-  // terminator.
-  if (EnableOrLikeSelectOpt && I->getOpcode() == Instruction::Or &&
-      isa<BranchInst>(I->getNextNode()) &&
-      cast<BranchInst>(I->getNextNode())->isUnconditional())
-    return true;
+  if (EnableOrLikeSelectOpt) {
+    // For the binary operators (e.g. or) we need to be more careful than
+    // selects, here we only transform them if they are already at a natural
+    // break point in the code - the end of a block with an unconditional
+    // terminator.
+    if (I->getOpcode() == Instruction::Or &&
+        isa<BranchInst>(I->getNextNode()) &&
+        cast<BranchInst>(I->getNextNode())->isUnconditional())
+      return true;
+
+    if (I->getOpcode() == Instruction::Add ||
+        I->getOpcode() == Instruction::Sub)
+      return true;
+  }
   return BaseT::shouldTreatInstructionLikeSelect(I);
 }
 
@@ -5045,26 +5268,45 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     return false;
   }
   case Instruction::Mul: {
+    auto ShouldSinkSplatForIndexedVariant = [](Value *V) {
+      auto *Ty = cast<VectorType>(V->getType());
+      // For SVE the lane-indexing is within 128-bits, so we can't fold splats.
+      if (Ty->isScalableTy())
+        return false;
+
+      // Indexed variants of Mul exist for i16 and i32 element types only.
+      return Ty->getScalarSizeInBits() == 16 || Ty->getScalarSizeInBits() == 32;
+    };
+
     int NumZExts = 0, NumSExts = 0;
     for (auto &Op : I->operands()) {
       // Make sure we are not already sinking this operand
       if (any_of(Ops, [&](Use *U) { return U->get() == Op; }))
         continue;
 
-      if (match(&Op, m_SExt(m_Value()))) {
-        NumSExts++;
-        continue;
-      } else if (match(&Op, m_ZExt(m_Value()))) {
-        NumZExts++;
+      if (match(&Op, m_ZExtOrSExt(m_Value()))) {
+        auto *Ext = cast<Instruction>(Op);
+        auto *ExtOp = Ext->getOperand(0);
+        if (isSplatShuffle(ExtOp) && ShouldSinkSplatForIndexedVariant(ExtOp))
+          Ops.push_back(&Ext->getOperandUse(0));
+        Ops.push_back(&Op);
+
+        if (isa<SExtInst>(Ext))
+          NumSExts++;
+        else
+          NumZExts++;
+
         continue;
       }
 
       ShuffleVectorInst *Shuffle = dyn_cast<ShuffleVectorInst>(Op);
+      if (!Shuffle)
+        continue;
 
       // If the Shuffle is a splat and the operand is a zext/sext, sinking the
       // operand and the s/zext can help create indexed s/umull. This is
       // especially useful to prevent i64 mul being scalarized.
-      if (Shuffle && isSplatShuffle(Shuffle) &&
+      if (isSplatShuffle(Shuffle) &&
           match(Shuffle->getOperand(0), m_ZExtOrSExt(m_Value()))) {
         Ops.push_back(&Shuffle->getOperandUse(0));
         Ops.push_back(&Op);
@@ -5074,9 +5316,6 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
           NumZExts++;
         continue;
       }
-
-      if (!Shuffle)
-        continue;
 
       Value *ShuffleOperand = Shuffle->getOperand(0);
       InsertElementInst *Insert = dyn_cast<InsertElementInst>(ShuffleOperand);
@@ -5109,12 +5348,42 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
         NumZExts++;
       }
 
+      Ops.push_back(&Insert->getOperandUse(1));
       Ops.push_back(&Shuffle->getOperandUse(0));
       Ops.push_back(&Op);
     }
 
-    // Is it profitable to sink if we found two of the same type of extends.
-    return !Ops.empty() && (NumSExts == 2 || NumZExts == 2);
+    // It is profitable to sink if we found two of the same type of extends.
+    if (!Ops.empty() && (NumSExts == 2 || NumZExts == 2))
+      return true;
+
+    // Otherwise, see if we should sink splats for indexed variants.
+    if (!ShouldSinkSplatForIndexedVariant(I))
+      return false;
+
+    Ops.clear();
+    if (isSplatShuffle(I->getOperand(0)))
+      Ops.push_back(&I->getOperandUse(0));
+    if (isSplatShuffle(I->getOperand(1)))
+      Ops.push_back(&I->getOperandUse(1));
+
+    return !Ops.empty();
+  }
+  case Instruction::FMul: {
+    // For SVE the lane-indexing is within 128-bits, so we can't fold splats.
+    if (I->getType()->isScalableTy())
+      return false;
+
+    if (cast<VectorType>(I->getType())->getElementType()->isHalfTy() &&
+        !ST->hasFullFP16())
+      return false;
+
+    // Sink splats for index lane variants
+    if (isSplatShuffle(I->getOperand(0)))
+      Ops.push_back(&I->getOperandUse(0));
+    if (isSplatShuffle(I->getOperand(1)))
+      Ops.push_back(&I->getOperandUse(1));
+    return !Ops.empty();
   }
   default:
     return false;

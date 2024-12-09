@@ -15,12 +15,9 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCELFExtras.h"
 #include "llvm/MC/MCTargetOptions.h"
-#include "llvm/Object/ELF.h"
-#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/Path.h"
 #include <algorithm>
 #include <cstddef>
