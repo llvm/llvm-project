@@ -11,4 +11,4 @@ The Progress class helps make sure that progress is correctly reported
 and will always send an initial progress update, updates when
 Progress::Increment() is called, and also will make sure that a progress
 completed update is reported even if the user doesn't explicitly cause one
-to be sent.") lldb::SBProgress
+to be sent.") lldb::SBProgress;

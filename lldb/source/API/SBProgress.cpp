@@ -1,5 +1,4 @@
-//===-- SBProgress.cpp -------------------------------------------*- C++
-//-*-===//
+//===-- SBProgress.cpp --------------------------------------------------*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,23 +10,31 @@
 #include "lldb/Core/Progress.h"
 #include "lldb/Utility/Instrumentation.h"
 
+#include "Utils.h"
+
 using namespace lldb;
 
 SBProgress::SBProgress(const char *title, const char *details,
                        SBDebugger &debugger) {
-  LLDB_INSTRUMENT_VA(this, title, details, debugger)
+  LLDB_INSTRUMENT_VA(this, title, details, debugger);
+
   m_opaque_up = std::make_unique<lldb_private::Progress>(
       title, details, std::nullopt, debugger.get());
 }
 
 SBProgress::SBProgress(const char *title, const char *details,
                        uint64_t total_units, SBDebugger &debugger) {
-  LLDB_INSTRUMENT_VA(this, title, details, total_units, debugger)
+  LLDB_INSTRUMENT_VA(this, title, details, total_units, debugger);
+
   m_opaque_up = std::make_unique<lldb_private::Progress>(
       title, details, total_units, debugger.get());
 }
 
+SBProgress::~SBProgress() = default;
+
 void SBProgress::Increment(uint64_t amount, const char *description) {
+  LLDB_INSTRUMENT_VA(amount, description);
+
   m_opaque_up->Increment(amount, description);
 }
 
