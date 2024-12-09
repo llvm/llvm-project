@@ -4026,6 +4026,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  // Approximation only
+  void handleNEONVectorMultiplyIntrinsic(IntrinsicInst &I) {
+    handleShadowOr(I);
+  }
+
   void visitIntrinsicInst(IntrinsicInst &I) {
     switch (I.getIntrinsicID()) {
     case Intrinsic::uadd_with_overflow:
@@ -4426,6 +4431,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_tbx4: {
       // The last trailing argument (index register) should be handled verbatim
       handleIntrinsicByApplyingToShadow(I, 1);
+      break;
+    }
+
+    case Intrinsic::aarch64_neon_fmulx:
+    case Intrinsic::aarch64_neon_pmul:
+    case Intrinsic::aarch64_neon_pmull:
+    case Intrinsic::aarch64_neon_smull:
+    case Intrinsic::aarch64_neon_pmull64:
+    case Intrinsic::aarch64_neon_umull: {
+      handleNEONVectorMultiplyIntrinsic(I);
       break;
     }
 
