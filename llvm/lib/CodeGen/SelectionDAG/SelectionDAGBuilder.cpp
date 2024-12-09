@@ -8124,12 +8124,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue Input = getValue(I.getOperand(1));
 
     if (!TLI.shouldExpandPartialReductionIntrinsic(cast<IntrinsicInst>(&I))) {
-      if (TLI.isPartialReductionInputSigned(Input))
-        setValue(&I,
-                 DAG.getNode(ISD::PARTIAL_REDUCE_SADD, dl, AccVT, Acc, Input));
-      else
-        setValue(&I,
-                 DAG.getNode(ISD::PARTIAL_REDUCE_UADD, dl, AccVT, Acc, Input));
+      setValue(&I,
+               DAG.getNode(ISD::PARTIAL_REDUCE_UADD, dl, AccVT, Acc, Input));
       return;
     }
     setValue(&I, DAG.expandPartialReduceAdd(dl, Acc, Input));

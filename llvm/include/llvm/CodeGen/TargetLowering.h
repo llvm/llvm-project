@@ -462,16 +462,6 @@ public:
     return true;
   }
 
-  /// Return true if there is a sign extend on the input to this function. Used
-  /// to determine whether to transform the
-  /// @llvm.experimental.vector.partial.reduce.* intrinsic to
-  /// PARTIAL_REDUCE_SADD or PARTIAL_REDUCE_UADD. It also removes the extend
-  /// from the input. \p Input The 'Input' operand to the
-  /// @llvm.experimental.vector.partial.reduce.* intrinsic.
-  virtual bool isPartialReductionInputSigned(SDValue &Input) const {
-    return false;
-  }
-
   /// Return true if the @llvm.get.active.lane.mask intrinsic should be expanded
   /// using generic code in SelectionDAGBuilder.
   virtual bool shouldExpandGetActiveLaneMask(EVT VT, EVT OpVT) const {

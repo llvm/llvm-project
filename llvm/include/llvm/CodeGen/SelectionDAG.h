@@ -1604,8 +1604,7 @@ public:
   /// the target's desired shift amount type.
   SDValue getShiftAmountOperand(EVT LHSTy, SDValue Op);
 
-  /// Expands PARTIAL_REDUCE_S/UADD nodes to a sequence of subvector extracts
-  /// followed by vector adds.
+  /// Expands PARTIAL_REDUCE_S/UADD nodes.
   /// \p Op1 Accumulator for where the result is stored for the partial
   /// reduction operation.
   /// \p Op2 Input for the partial reduction operation.

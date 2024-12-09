@@ -1451,8 +1451,8 @@ enum NodeType {
   VECREDUCE_UMAX,
   VECREDUCE_UMIN,
 
-  // These correspond to the `llvm.experimental.vector.partial.reduce.add`
-  // intrinsic
+  // Nodes used to represent a partial reduction addition operation (signed and
+  // unsigned).
   // Operands: Accumulator, Input
   // Outputs: Output
   PARTIAL_REDUCE_SADD,
