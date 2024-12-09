@@ -25,7 +25,7 @@ class NextUseResult {
   SlotIndexes *Indexes;
   const MachineRegisterInfo *MRI;
   MachineLoopInfo *LI;
-
+  DenseMap<const SlotIndex *, DenseMap<Register, unsigned>> InstrCache;
 public:
   using VRegDistances = DenseMap<Register, unsigned>;
 
@@ -104,6 +104,9 @@ private:
     VRegs[VReg] = Distance;
   }
 
+  unsigned computeNextUseDistance(const MachineBasicBlock &MBB,
+                                  const SlotIndex I, Register Vreg);
+
   void clear() {
     NextUseMap.clear();
     EdgeWeigths.clear();
@@ -120,12 +123,19 @@ public:
 
   void print(raw_ostream &O) const { dump(O); }
 
-  unsigned getNextUseDistance(const MachineInstr &MI, Register Vreg);
+  unsigned getNextUseDistance(const MachineInstr &MI, Register VReg);
+  unsigned getNextUseDistance(const MachineBasicBlock &MBB, Register VReg);
 
-  bool isDead(MachineBasicBlock::iterator Pos, Register R) {
+  bool isDead(MachineBasicBlock &MBB, Register R) {
     if (!R.isVirtual())
       report_fatal_error("Only virtual registers allowed!\n", true);
-    return getNextUseDistance(*Pos, R) == Infinity;
+    return getNextUseDistance(MBB, R) == Infinity;
+  }
+
+  bool isDead(MachineInstr &MI, Register R) {
+    if (!R.isVirtual())
+      report_fatal_error("Only virtual registers allowed!\n", true);
+    return getNextUseDistance(MI, R) == Infinity;
   }
 
   void getSortedForInstruction(const MachineInstr &MI,
