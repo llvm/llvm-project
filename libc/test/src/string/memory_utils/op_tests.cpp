@@ -246,7 +246,6 @@ int CmpBlockAdaptor(cpp::span<char> p1, cpp::span<char> p2, size_t size) {
   return (int)FnImpl(as_byte(p1), as_byte(p2));
 }
 
-// TODO: should testing of bcmp be moved to libc/test/src/strings/ dir?
 TYPED_TEST(LlvmLibcOpTest, Bcmp, BcmpImplementations) {
   using Impl = ParamType;
   constexpr size_t kSize = Impl::SIZE;
