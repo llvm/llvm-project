@@ -99,29 +99,20 @@ protected:
   friend class Thread;
   friend class ScriptedThread;
 
+  /// Use this API to build a stack frame list (used for scripted threads, for
+  /// instance.)  This API is not meant for StackFrameLists that have unwinders
+  /// and partake in lazy stack filling (using GetFramesUpTo).  Rather if you
+  /// are building StackFrameLists with this API, you should build the entire
+  /// list before making it available for use.
   bool SetFrameAtIndex(uint32_t idx, lldb::StackFrameSP &frame_sp);
 
-  /// Realizes frames up to (and including) end_idx (which can be greater than
-  /// the actual number of frames.)
+  /// Ensures that frames up to (and including) `end_idx` are realized in the
+  /// StackFrameList.  `end_idx` can be larger than the actual number of frames,
+  /// in which case all the frames will be fetched.
   /// Returns true if the function was interrupted, false otherwise.
-  /// Must be called with a shared_locked mutex locked.
+  /// Must be called with a shared mutex locked in `guard`.
   bool GetFramesUpTo(uint32_t end_idx, InterruptionControl allow_interrupt,
                      std::shared_lock<std::shared_mutex> &guard);
-
-  /// These two Fetch frames APIs must be called with the stack mutex shared
-  /// lock acquired.  They are the only places where we acquire the writer
-  /// end of the stack list mutex to add frames, but they will always exit with
-  /// the shared side reacquired.
-  /// Returns true if fetching frames was interrupted, false otherwise
-  bool FetchFramesUpTo(uint32_t end_idx, InterruptionControl allow_interrupt,
-                       std::shared_lock<std::shared_mutex> &guard);
-
-  void FetchOnlyConcreteFramesUpTo(uint32_t end_idx,
-                                   std::shared_lock<std::shared_mutex> &guard);
-
-  // This gets called without the StackFrameList lock held, callers should
-  // hold the lock.
-  void SynthesizeTailCallFrames(StackFrame &next_frame);
 
   bool GetAllFramesFetched() { return m_concrete_frames_fetched == UINT32_MAX; }
 
@@ -196,6 +187,23 @@ private:
   lldb::StackFrameSP
   GetFrameAtIndexNoLock(uint32_t idx,
                         std::shared_lock<std::shared_mutex> &guard);
+
+  /// These two Fetch frames APIs are called in GetFramesUpTo, they are the ones
+  /// that actually add frames.  They must be called with the stack list shared
+  /// lock acquired.  They will acquire the writer end of the stack list mutex 
+  /// to add frames, but they will always exit with the shared side reacquired.
+  /// Returns true if fetching frames was interrupted, false otherwise.
+  bool FetchFramesUpTo(uint32_t end_idx, InterruptionControl allow_interrupt,
+                       std::shared_lock<std::shared_mutex> &guard);
+
+  /// This is the same as FetchFramesUpTo, but only fetches concrete frames.
+  /// It is not currently interruptible - so it returns nothing.
+  void FetchOnlyConcreteFramesUpTo(uint32_t end_idx,
+                                   std::shared_lock<std::shared_mutex> &guard);
+
+  // This is a utility function, called by FetchFramesUpTo.  It must be called
+  // with the writer end of the stack list mutex held.
+  void SynthesizeTailCallFrames(StackFrame &next_frame);
 
   StackFrameList(const StackFrameList &) = delete;
   const StackFrameList &operator=(const StackFrameList &) = delete;

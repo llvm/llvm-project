@@ -415,10 +415,6 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
     guard.lock();
   });
 
-  if (m_frames.size() > end_idx || GetAllFramesFetched()) {
-    return false;
-  }
-
 #if defined(DEBUG_STACK_FRAMES)
   StreamFile s(stdout, false);
 #endif
@@ -721,6 +717,7 @@ StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {
 }
 
 bool StackFrameList::SetFrameAtIndex(uint32_t idx, StackFrameSP &frame_sp) {
+  std::unique_lock<std::shared_mutex> guard(m_list_mutex);
   if (idx >= m_frames.size())
     m_frames.resize(idx + 1);
   // Make sure allocation succeeded by checking bounds again
