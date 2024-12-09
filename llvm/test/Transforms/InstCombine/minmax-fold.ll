@@ -713,12 +713,12 @@ define zeroext i8 @look_through_cast_int_min(i8 %a, i32 %min) {
 
 define zeroext i16 @look_through_cast_int_max(i16 %a, i32 %max) {
 ; CHECK-LABEL: @look_through_cast_int_max(
-; CHECK-NEXT:    [[A32:%.*]] = sext i16 [[A:%.*]] to i32
+; CHECK-NEXT:    [[A32:%.*]] = zext i16 [[A:%.*]] to i32
 ; CHECK-NEXT:    [[SEL1:%.*]] = call i32 @llvm.smax.i32(i32 [[MAX:%.*]], i32 [[A32]])
 ; CHECK-NEXT:    [[SEL:%.*]] = trunc i32 [[SEL1]] to i16
 ; CHECK-NEXT:    ret i16 [[SEL]]
 ;
-  %a32 = sext i16 %a to i32
+  %a32 = zext i16 %a to i32
   %cmp = icmp sgt i32 %max, %a32
   %max8 = trunc i32 %max to i16
   %sel = select i1 %cmp, i16 %max8, i16 %a
@@ -752,12 +752,12 @@ define <2 x i8> @min_through_cast_vec2(<2 x i32> %x) {
 define <8 x i8> @look_through_cast_int_min_vec(<8 x i8> %a, <8 x i32> %min) {
 ; CHECK-LABEL: @look_through_cast_int_min_vec(
 ; CHECK-NEXT:    [[A32:%.*]] = sext <8 x i8> [[A:%.*]] to <8 x i32>
-; CHECK-NEXT:    [[SEL1:%.*]] = call <8 x i32> @llvm.smin.v8i32(<8 x i32> [[MIN:%.*]], <8 x i32> [[A32]])
+; CHECK-NEXT:    [[SEL1:%.*]] = call <8 x i32> @llvm.umin.v8i32(<8 x i32> [[MIN:%.*]], <8 x i32> [[A32]])
 ; CHECK-NEXT:    [[SEL:%.*]] = trunc <8 x i32> [[SEL1]] to <8 x i8>
 ; CHECK-NEXT:    ret <8 x i8> [[SEL]]
 ;
   %a32 = sext <8 x i8> %a to <8 x i32>
-  %cmp = icmp slt <8 x i32> %a32, %min
+  %cmp = icmp ult <8 x i32> %a32, %min
   %min8 = trunc <8 x i32> %min to <8 x i8>
   %sel = select <8 x i1> %cmp, <8 x i8> %a, <8 x i8> %min8
   ret <8 x i8> %sel
@@ -765,12 +765,12 @@ define <8 x i8> @look_through_cast_int_min_vec(<8 x i8> %a, <8 x i32> %min) {
 
 define <8 x i32> @look_through_cast_int_max_vec(<8 x i32> %a, <8 x i64> %max) {
 ; CHECK-LABEL: @look_through_cast_int_max_vec(
-; CHECK-NEXT:    [[A32:%.*]] = sext <8 x i32> [[A:%.*]] to <8 x i64>
+; CHECK-NEXT:    [[A32:%.*]] = zext <8 x i32> [[A:%.*]] to <8 x i64>
 ; CHECK-NEXT:    [[SEL1:%.*]] = call <8 x i64> @llvm.smax.v8i64(<8 x i64> [[MAX:%.*]], <8 x i64> [[A32]])
 ; CHECK-NEXT:    [[SEL:%.*]] = trunc <8 x i64> [[SEL1]] to <8 x i32>
 ; CHECK-NEXT:    ret <8 x i32> [[SEL]]
 ;
-  %a32 = sext <8 x i32> %a to <8 x i64>
+  %a32 = zext <8 x i32> %a to <8 x i64>
   %cmp = icmp sgt <8 x i64> %a32, %max
   %max8 = trunc <8 x i64> %max to <8 x i32>
   %sel = select <8 x i1> %cmp, <8 x i32> %a, <8 x i32> %max8
