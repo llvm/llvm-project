@@ -2045,7 +2045,7 @@ define void @load_16byte_chunk_of_32byte_alloca(ptr %src, i64 %byteOff, ptr %dst
 ; X86-SHLD-NEXT:    pushl %ebx
 ; X86-SHLD-NEXT:    pushl %edi
 ; X86-SHLD-NEXT:    pushl %esi
-; X86-SHLD-NEXT:    subl $92, %esp
+; X86-SHLD-NEXT:    subl $76, %esp
 ; X86-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SHLD-NEXT:    movups (%eax), %xmm0
@@ -2055,28 +2055,27 @@ define void @load_16byte_chunk_of_32byte_alloca(ptr %src, i64 %byteOff, ptr %dst
 ; X86-SHLD-NEXT:    movaps %xmm2, {{[0-9]+}}(%esp)
 ; X86-SHLD-NEXT:    movaps %xmm2, {{[0-9]+}}(%esp)
 ; X86-SHLD-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
-; X86-SHLD-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
+; X86-SHLD-NEXT:    movaps %xmm0, (%esp)
 ; X86-SHLD-NEXT:    movl %ecx, %eax
 ; X86-SHLD-NEXT:    shrb $5, %al
-; X86-SHLD-NEXT:    movzbl %al, %ebx
-; X86-SHLD-NEXT:    movl 24(%esp,%ebx,4), %esi
-; X86-SHLD-NEXT:    movl 16(%esp,%ebx,4), %eax
-; X86-SHLD-NEXT:    movl 20(%esp,%ebx,4), %edi
-; X86-SHLD-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SHLD-NEXT:    shrdl %cl, %esi, %edi
-; X86-SHLD-NEXT:    movl 28(%esp,%ebx,4), %ebp
-; X86-SHLD-NEXT:    shrdl %cl, %ebp, %esi
-; X86-SHLD-NEXT:    movl 32(%esp,%ebx,4), %ebx
-; X86-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SHLD-NEXT:    shrdl %cl, %ebx, %ebp
-; X86-SHLD-NEXT:    movl %ebp, 12(%edx)
-; X86-SHLD-NEXT:    movl %esi, 8(%edx)
-; X86-SHLD-NEXT:    movl %edi, 4(%edx)
+; X86-SHLD-NEXT:    movzbl %al, %esi
+; X86-SHLD-NEXT:    movl 8(%esp,%esi,4), %eax
+; X86-SHLD-NEXT:    movl 4(%esp,%esi,4), %edi
+; X86-SHLD-NEXT:    movl %edi, %edx
+; X86-SHLD-NEXT:    shrdl %cl, %eax, %edx
+; X86-SHLD-NEXT:    movl 12(%esp,%esi,4), %ebx
+; X86-SHLD-NEXT:    shrdl %cl, %ebx, %eax
+; X86-SHLD-NEXT:    movl 16(%esp,%esi,4), %ebp
+; X86-SHLD-NEXT:    shrdl %cl, %ebp, %ebx
+; X86-SHLD-NEXT:    movl (%esp,%esi,4), %esi
 ; X86-SHLD-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X86-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
-; X86-SHLD-NEXT:    shrdl %cl, %esi, %eax
-; X86-SHLD-NEXT:    movl %eax, (%edx)
-; X86-SHLD-NEXT:    addl $92, %esp
+; X86-SHLD-NEXT:    shrdl %cl, %edi, %esi
+; X86-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SHLD-NEXT:    movl %ebx, 12(%ecx)
+; X86-SHLD-NEXT:    movl %eax, 8(%ecx)
+; X86-SHLD-NEXT:    movl %edx, 4(%ecx)
+; X86-SHLD-NEXT:    movl %esi, (%ecx)
+; X86-SHLD-NEXT:    addl $76, %esp
 ; X86-SHLD-NEXT:    popl %esi
 ; X86-SHLD-NEXT:    popl %edi
 ; X86-SHLD-NEXT:    popl %ebx

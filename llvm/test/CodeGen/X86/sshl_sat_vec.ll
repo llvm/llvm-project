@@ -432,8 +432,8 @@ define <8 x i16> @vec_v8i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cmovel %edx, %ecx
 ; X86-NEXT:    movl %ecx, %ebp
-; X86-NEXT:    movl %eax, %edx
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %eax, %edx
 ; X86-NEXT:    shll %cl, %edx
 ; X86-NEXT:    movswl %dx, %esi
 ; X86-NEXT:    sarl %cl, %esi
@@ -444,8 +444,8 @@ define <8 x i16> @vec_v8i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; X86-NEXT:    cmpw %si, %ax
 ; X86-NEXT:    cmovel %edx, %ebx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %esi
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %eax, %esi
 ; X86-NEXT:    shll %cl, %esi
 ; X86-NEXT:    movswl %si, %edi
 ; X86-NEXT:    sarl %cl, %edi
@@ -634,43 +634,57 @@ define <16 x i8> @vec_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $44, %esp
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %dh
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %dl
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %bh
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %ch
-; X86-NEXT:    movb %ch, %bh
-; X86-NEXT:    shlb %cl, %bh
-; X86-NEXT:    movzbl %bh, %esi
-; X86-NEXT:    sarb %cl, %bh
+; X86-NEXT:    movb %ch, %dl
+; X86-NEXT:    shlb %cl, %dl
+; X86-NEXT:    movzbl %dl, %esi
+; X86-NEXT:    sarb %cl, %dl
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    testb %ch, %ch
 ; X86-NEXT:    sets %al
 ; X86-NEXT:    addl $127, %eax
-; X86-NEXT:    cmpb %bh, %ch
+; X86-NEXT:    cmpb %dl, %ch
 ; X86-NEXT:    cmovel %esi, %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl %ebx, %eax
-; X86-NEXT:    movl %edx, %ecx
+; X86-NEXT:    movb %bh, %al
+; X86-NEXT:    movl %ebx, %ecx
 ; X86-NEXT:    shlb %cl, %al
 ; X86-NEXT:    movzbl %al, %esi
 ; X86-NEXT:    sarb %cl, %al
 ; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    testb %bl, %bl
+; X86-NEXT:    testb %bh, %bh
 ; X86-NEXT:    sets %cl
 ; X86-NEXT:    addl $127, %ecx
-; X86-NEXT:    cmpb %al, %bl
+; X86-NEXT:    cmpb %al, %bh
 ; X86-NEXT:    cmovel %esi, %ecx
 ; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movb %dh, %al
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %dl
+; X86-NEXT:    movl %edx, %eax
+; X86-NEXT:    movb %dh, %cl
+; X86-NEXT:    shlb %cl, %al
+; X86-NEXT:    movzbl %al, %esi
+; X86-NEXT:    sarb %cl, %al
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    testb %dl, %dl
+; X86-NEXT:    sets %cl
+; X86-NEXT:    addl $127, %ecx
+; X86-NEXT:    cmpb %al, %dl
+; X86-NEXT:    cmovel %esi, %ecx
+; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    shlb %cl, %al
 ; X86-NEXT:    movzbl %al, %esi
 ; X86-NEXT:    sarb %cl, %al
 ; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    testb %dh, %dh
+; X86-NEXT:    testb %dl, %dl
 ; X86-NEXT:    sets %cl
 ; X86-NEXT:    addl $127, %ecx
-; X86-NEXT:    cmpb %al, %dh
+; X86-NEXT:    cmpb %al, %dl
 ; X86-NEXT:    cmovel %esi, %ecx
 ; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %ah
@@ -688,19 +702,6 @@ define <16 x i8> @vec_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cmovel %esi, %edx
 ; X86-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    shlb %cl, %dl
-; X86-NEXT:    movzbl %dl, %esi
-; X86-NEXT:    sarb %cl, %dl
-; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    testb %al, %al
-; X86-NEXT:    sets %cl
-; X86-NEXT:    addl $127, %ecx
-; X86-NEXT:    cmpb %dl, %al
-; X86-NEXT:    cmovel %esi, %ecx
-; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, %edx
 ; X86-NEXT:    shlb %cl, %dl
 ; X86-NEXT:    movzbl %dl, %esi

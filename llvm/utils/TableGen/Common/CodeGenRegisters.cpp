@@ -2053,15 +2053,14 @@ void CodeGenRegBank::computeRegUnitSets() {
 
   // Iterate over all unit sets, including new ones added by this loop.
   unsigned NumRegUnitSubSets = RegUnitSets.size();
-  for (unsigned Idx = 0, EndIdx = RegUnitSets.size(); Idx != EndIdx; ++Idx) {
+  for (unsigned Idx = 0; Idx != RegUnitSets.size(); ++Idx) {
     // In theory, this is combinatorial. In practice, it needs to be bounded
     // by a small number of sets for regpressure to be efficient.
     // If the assert is hit, we need to implement pruning.
-    assert(Idx < (2 * NumRegUnitSubSets) && "runaway unit set inference");
+    assert(Idx < (100 * NumRegUnitSubSets) && "runaway unit set inference");
 
     // Compare new sets with all original classes.
-    for (unsigned SearchIdx = (Idx >= NumRegUnitSubSets) ? 0 : Idx + 1;
-         SearchIdx != EndIdx; ++SearchIdx) {
+    for (unsigned SearchIdx = 0; SearchIdx != Idx; ++SearchIdx) {
       std::vector<unsigned> Intersection;
       std::set_intersection(
           RegUnitSets[Idx].Units.begin(), RegUnitSets[Idx].Units.end(),
@@ -2070,8 +2069,8 @@ void CodeGenRegBank::computeRegUnitSets() {
       if (Intersection.empty())
         continue;
 
-      RegUnitSet RUSet(RegUnitSets[Idx].Name + "_with_" +
-                       RegUnitSets[SearchIdx].Name);
+      RegUnitSet RUSet(RegUnitSets[SearchIdx].Name + "_with_" +
+                       RegUnitSets[Idx].Name);
       std::set_union(RegUnitSets[Idx].Units.begin(),
                      RegUnitSets[Idx].Units.end(),
                      RegUnitSets[SearchIdx].Units.begin(),
