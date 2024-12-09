@@ -13857,6 +13857,52 @@ static SDValue getMad64_32(SelectionDAG &DAG, const SDLoc &SL, EVT VT,
   return DAG.getNode(ISD::TRUNCATE, SL, VT, Mad);
 }
 
+// Fold
+//     y = lshr i64 x, 32
+//     res = add (mul i64 y, Constant), x   where "Constant" is a 32 bit
+//     negative value
+// To
+//     res = mad_u64_u32 y.lo ,Constant.lo, x.lo
+static SDValue tryFoldMADwithSRL(SelectionDAG &DAG, const SDLoc &SL,
+                                 SDValue MulLHS, SDValue MulRHS,
+                                 SDValue AddRHS) {
+
+  if (MulLHS.getValueType() != MVT::i64)
+    return SDValue();
+
+  ConstantSDNode *ConstOp;
+  SDValue ShiftOp;
+  if (MulLHS.getOpcode() == ISD::SRL && MulRHS.getOpcode() == ISD::Constant) {
+    ConstOp = cast<ConstantSDNode>(MulRHS.getNode());
+    ShiftOp = MulLHS;
+  } else if (MulRHS.getOpcode() == ISD::SRL &&
+             MulLHS.getOpcode() == ISD::Constant) {
+    ConstOp = cast<ConstantSDNode>(MulLHS.getNode());
+    ShiftOp = MulRHS;
+  } else
+    return SDValue();
+
+  if (ShiftOp.getOperand(1).getOpcode() != ISD::Constant ||
+      AddRHS != ShiftOp.getOperand(0))
+    return SDValue();
+
+  if (cast<ConstantSDNode>(ShiftOp->getOperand(1))->getAsZExtVal() != 32)
+    return SDValue();
+
+  APInt ConstVal = ConstOp->getAPIntValue();
+  if (!ConstVal.isNegative() || !ConstVal.isSignedIntN(33))
+    return SDValue();
+
+  SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
+  SDValue ConstMul = DAG.getConstant(
+      ConstVal.getZExtValue() & 0x00000000FFFFFFFF, SL, MVT::i32);
+  AddRHS = DAG.getNode(ISD::AND, SL, MVT::i64, AddRHS,
+                       DAG.getConstant(0x00000000FFFFFFFF, SL, MVT::i64));
+  return getMad64_32(DAG, SL, MVT::i64,
+                     DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, MulLHS), ConstMul,
+                     AddRHS, false);
+}
+
 // Fold (add (mul x, y), z) --> (mad_[iu]64_[iu]32 x, y, z) plus high
 // multiplies, if any.
 //
@@ -13914,6 +13960,9 @@ SDValue SITargetLowering::tryFoldToMad64_32(SDNode *N,
   SDValue MulLHS = LHS.getOperand(0);
   SDValue MulRHS = LHS.getOperand(1);
   SDValue AddRHS = RHS;
+
+  if (SDValue FoldedMAD = tryFoldMADwithSRL(DAG, SL, MulLHS, MulRHS, AddRHS))
+    return FoldedMAD;
 
   // Always check whether operands are small unsigned values, since that
   // knowledge is useful in more cases. Check for small signed values only if
