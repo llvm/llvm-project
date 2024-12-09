@@ -441,7 +441,7 @@ ArrayRef<std::pair<const char *, const char *>>
 MachOPlatform::standardLazyCompilationAliases() {
   static const std::pair<const char *, const char *>
       StandardLazyCompilationAliases[] = {
-          {"__orc_rt_reentry", "__orc_rt_sysv_reentry"},
+          {"__orc_rt_reenter", "__orc_rt_sysv_reenter"},
           {"__orc_rt_resolve_tag", "___orc_rt_resolve_tag"}};
 
   return ArrayRef<std::pair<const char *, const char *>>(
