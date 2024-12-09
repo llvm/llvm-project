@@ -8113,7 +8113,7 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
     if (attr.getNumArgs() &&
         !S.checkUInt32Argument(attr, attr.getArgAsExpr(0), ABIVLen))
       return false;
-    if (ABIVLen != 2 && (ABIVLen < 32 || ABIVLen > 65536)) {
+    if (attr.getNumArgs() && (ABIVLen < 32 || ABIVLen > 65536)) {
       S.Diag(attr.getLoc(), diag::err_argument_invalid_range)
           << ABIVLen << 32 << 65536;
       return false;
