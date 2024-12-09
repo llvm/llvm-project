@@ -23,9 +23,9 @@
 
 void test_base_nodiscard() {
   const std::vector<int> intv = {1, 2, 3};
-  auto sv = std::ranges::stride_view(intv, 3);
+  auto sv                     = std::ranges::stride_view(intv, 3);
 
-  sv.base(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  sv.base();            // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::move(sv).base(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }
 
@@ -36,7 +36,6 @@ void test_begin_nodiscard() {
   const_sv.begin();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   unsimple_sv.begin(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }
-
 
 void test_views_stride_nodiscard() {
   const int range[] = {1, 2, 3};
@@ -66,6 +65,6 @@ void test_size_nodiscard() {
 
 void test_stride_nodiscard() {
   const int range[] = {1, 2, 3};
-  auto const_sv = std::views::stride(range, 2);
+  auto const_sv     = std::views::stride(range, 2);
   const_sv.stride(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }
