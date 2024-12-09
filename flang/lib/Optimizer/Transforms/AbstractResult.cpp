@@ -460,17 +460,10 @@ public:
     const bool shouldBoxResult = this->passResultAsBox.getValue();
 
     mlir::TypeSwitch<mlir::Operation *, void>(op)
-        .Case<mlir::func::FuncOp, fir::GlobalOp>([&](auto op) {
-          runOnSpecificOperation(op, shouldBoxResult, patterns, target);
-        })
-        .Case<mlir::gpu::GPUModuleOp>([&](auto op) {
-          auto gpuMod = mlir::dyn_cast<mlir::gpu::GPUModuleOp>(*op);
-          for (auto funcOp : gpuMod.template getOps<mlir::func::FuncOp>())
-            runOnSpecificOperation(funcOp, shouldBoxResult, patterns, target);
-          for (auto gpuFuncOp : gpuMod.template getOps<mlir::gpu::GPUFuncOp>())
-            runOnSpecificOperation(gpuFuncOp, shouldBoxResult, patterns,
-                                   target);
-        });
+        .Case<mlir::func::FuncOp, fir::GlobalOp, mlir::gpu::GPUFuncOp>(
+            [&](auto op) {
+              runOnSpecificOperation(op, shouldBoxResult, patterns, target);
+            });
 
     // Convert the calls and, if needed,  the ReturnOp in the function body.
     target.addLegalDialect<fir::FIROpsDialect, mlir::arith::ArithDialect,
