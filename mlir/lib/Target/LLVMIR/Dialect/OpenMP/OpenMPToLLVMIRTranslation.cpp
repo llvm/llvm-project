@@ -254,7 +254,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkAllocate(op, result);
         checkInReduction(op, result);
         checkPriority(op, result);
-        checkUntied(op, result);
       })
       .Case([&](omp::TaskgroupOp op) {
         checkAllocate(op, result);

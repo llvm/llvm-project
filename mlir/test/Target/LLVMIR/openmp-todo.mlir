@@ -458,17 +458,6 @@ llvm.func @task_priority(%x : i32) {
 
 // -----
 
-llvm.func @task_untied() {
-  // expected-error@below {{not yet implemented: Unhandled clause untied in omp.task operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.task}}
-  omp.task untied {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 llvm.func @taskgroup_allocate(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.taskgroup operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.taskgroup}}
