@@ -127,23 +127,18 @@ public:
   // - If -shared or --export-dynamic is specified, any symbol in an object
   //   file/bitcode sets this property, unless suppressed by LTO
   //   canBeOmittedFromSymbolTable().
+  //
+  // Primarily set in two locations, (a) after parseSymbolVersion and
+  // (b) during demoteSymbols.
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t isExported : 1;
+
+  // Used to compute isExported. Set when defined or referenced by a SharedFile.
   LLVM_PREFERRED_TYPE(bool)
   uint8_t exportDynamic : 1;
 
   LLVM_PREFERRED_TYPE(bool)
   uint8_t ltoCanOmit : 1;
-
-  // Used to track if there has been at least one undefined reference to the
-  // symbol. For Undefined and SharedSymbol, the binding may change to STB_WEAK
-  // if the first undefined reference from a non-shared object is weak.
-  LLVM_PREFERRED_TYPE(bool)
-  uint8_t referenced : 1;
-
-  // Used to track if this symbol will be referenced after wrapping is performed
-  // (i.e. this will be true for foo if __real_foo is referenced, and will be
-  // true for __wrap_foo if foo is referenced).
-  LLVM_PREFERRED_TYPE(bool)
-  uint8_t referencedAfterWrap : 1;
 
   // True if this symbol is specified by --trace-symbol option.
   LLVM_PREFERRED_TYPE(bool)
@@ -332,6 +327,18 @@ public:
   // exported into .dynsym.
   LLVM_PREFERRED_TYPE(bool)
   uint8_t inDynamicList : 1;
+
+  // Used to track if there has been at least one undefined reference to the
+  // symbol. For Undefined and SharedSymbol, the binding may change to STB_WEAK
+  // if the first undefined reference from a non-shared object is weak.
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t referenced : 1;
+
+  // Used to track if this symbol will be referenced after wrapping is performed
+  // (i.e. this will be true for foo if __real_foo is referenced, and will be
+  // true for __wrap_foo if foo is referenced).
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t referencedAfterWrap : 1;
 
   void setFlags(uint16_t bits) {
     flags.fetch_or(bits, std::memory_order_relaxed);

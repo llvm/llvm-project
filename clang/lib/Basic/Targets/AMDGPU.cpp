@@ -88,13 +88,18 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
 } // namespace targets
 } // namespace clang
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+static constexpr int NumBuiltins =
+    clang::AMDGPU::LastTSBuiltin - Builtin::FirstTSBuiltin;
+
+static constexpr auto BuiltinStorage = Builtin::Storage<NumBuiltins>::Make(
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsAMDGPU.def"
-};
+    , {
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsAMDGPU.def"
+      });
 
 const char *const AMDGPUTargetInfo::GCCRegNames[] = {
   "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8",
@@ -266,9 +271,9 @@ void AMDGPUTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
                      !isAMDGCN(getTriple()));
 }
 
-ArrayRef<Builtin::Info> AMDGPUTargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfo,
-                        clang::AMDGPU::LastTSBuiltin - Builtin::FirstTSBuiltin);
+std::pair<const char *, ArrayRef<Builtin::Info>>
+AMDGPUTargetInfo::getTargetBuiltinStorage() const {
+  return {BuiltinStorage.StringTable, BuiltinStorage.Infos};
 }
 
 void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,

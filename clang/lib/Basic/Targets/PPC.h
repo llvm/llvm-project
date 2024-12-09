@@ -187,7 +187,8 @@ public:
 
   StringRef getABI() const override { return ABI; }
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  std::pair<const char *, ArrayRef<Builtin::Info>>
+  getTargetBuiltinStorage() const override;
 
   bool isCLZForZeroUndef() const override { return false; }
 
