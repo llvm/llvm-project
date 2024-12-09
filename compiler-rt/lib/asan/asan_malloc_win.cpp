@@ -224,7 +224,7 @@ INTERCEPTOR_WINAPI(LPVOID, HeapAlloc, HANDLE hHeap, DWORD dwFlags,
     // In the case that we don't hook the rtl allocators,
     // this becomes an assert since there is no failover to the original
     // allocator.
-    CHECK((HEAP_ALLOCATE_UNSUPPORTED_FLAGS & dwFlags) != 0 &&
+    CHECK((HEAP_ALLOCATE_UNSUPPORTED_FLAGS & dwFlags) == 0 &&
           "unsupported flags");
   }
   GET_STACK_TRACE_MALLOC;
@@ -249,7 +249,7 @@ INTERCEPTOR_WINAPI(BOOL, HeapFree, HANDLE hHeap, DWORD dwFlags, LPVOID lpMem) {
     if (OWNED_BY_RTL(hHeap, lpMem))
       return REAL(HeapFree)(hHeap, dwFlags, lpMem);
   } else {
-    CHECK((HEAP_FREE_UNSUPPORTED_FLAGS & dwFlags) != 0 && "unsupported flags");
+    CHECK((HEAP_FREE_UNSUPPORTED_FLAGS & dwFlags) == 0 && "unsupported flags");
   }
   GET_STACK_TRACE_FREE;
   asan_free(lpMem, &stack, FROM_MALLOC);
@@ -356,7 +356,7 @@ void *SharedReAlloc(ReAllocFunction reallocFunc, SizeFunction heapSizeFunc,
     // Pass through even when it's neither since this could be a null realloc or
     // UAF that ASAN needs to catch.
   } else {
-    CHECK((HEAP_REALLOC_UNSUPPORTED_FLAGS & dwFlags) != 0 &&
+    CHECK((HEAP_REALLOC_UNSUPPORTED_FLAGS & dwFlags) == 0 &&
           "unsupported flags");
   }
   // asan_realloc will never reallocate in place, so for now this flag is
