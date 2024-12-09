@@ -78,7 +78,7 @@ steps:
 
     portableBuildArgs=
     if [ '${{ parameters.platform.portableBuild }}' != '' ]; then
-      portableBuildArgs='/p:PortabelBuild=${{ parameters.platform.portableBuild }}'
+      portableBuildArgs='/p:PortableBuild=${{ parameters.platform.portableBuild }}'
     fi
 
     ${{ coalesce(parameters.platform.buildScript, './build.sh') }} --ci \
