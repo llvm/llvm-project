@@ -1611,8 +1611,8 @@ void PreRARematStage::sinkTriviallyRematInsts(
   // rematerialization, and map those whose maximum RP we need to fully
   // recompute at the end to true.
   SmallDenseMap<unsigned, bool> ImpactedRegions;
-  // Maps rematerialized instuctions to the one they were rematerialized from.
-  DenseMap<MachineInstr *, MachineInstr *> InsertedMIToOldDef;
+  // Collect new MIs, in rematerialization order.
+  SmallVector<MachineInstr *> NewMIs;
 
   // Rematerialize all instructions.
   for (const RematInstruction &Remat : RematInstructions) {
@@ -1629,7 +1629,7 @@ void PreRARematStage::sinkTriviallyRematInsts(
     MachineInstr *NewMI = &*std::prev(InsertPos);
     NewMI->getOperand(0).setSubReg(DefMI->getOperand(0).getSubReg());
     DAG.LIS->InsertMachineInstrInMaps(*NewMI);
-    InsertedMIToOldDef[NewMI] = DefMI;
+    NewMIs.push_back(NewMI);
 
     // Update region boundaries in scheduling region we sinked from since we
     // may sink an instruction that was at the beginning or end of its region.
@@ -1668,15 +1668,39 @@ void PreRARematStage::sinkTriviallyRematInsts(
   }
 
   // Clean up the IR; remove rematerialized instructions from state.
-  for (auto &[NewMI, OldMI] : InsertedMIToOldDef) {
+  for (auto [Remat, NewMI] : llvm::zip_equal(RematInstructions, NewMIs)) {
     // Remove rematerialized instruction from BBLiveInMap since we are sinking
-    // it from its MBB.
+    // it from its MBB. Also remove it from live intervals and from its MBB.
+    MachineInstr *OldMI = Remat.RematMI;
     DAG.BBLiveInMap.erase(OldMI);
-
-    // Remove the rematerialized instruction and update live intervals.
-    Register Reg = NewMI->getOperand(0).getReg();
     DAG.LIS->RemoveMachineInstrFromMaps(*OldMI);
     OldMI->eraseFromParent();
+
+    // Update the register's live interval manually. This is aligned with the
+    // instruction collection phase in that it assumes a single def and use
+    // (possibly subreg).
+    SlotIndexes *Slots = DAG.LIS->getSlotIndexes();
+    SlotIndex NewDef = Slots->getInstructionIndex(*NewMI).getRegSlot();
+    SlotIndex NewKill = Slots->getInstructionIndex(*Remat.UseMI).getRegSlot();
+
+    auto UpdateSegment = [&](LiveRange::Segments &Segments) -> void {
+      assert(Segments.size() == 1 && "expected single segment");
+      LiveRange::Segment &Seg = Segments.front();
+      Seg.start = NewDef;
+      Seg.end = NewKill;
+      if (Seg.valno)
+        Seg.valno->def = NewDef;
+    };
+
+    Register Reg = NewMI->getOperand(0).getReg();
+    LiveInterval &RegLI = DAG.LIS->getInterval(Reg);
+    UpdateSegment(RegLI.segments);
+    if (RegLI.hasSubRanges()) {
+      LiveInterval::SubRange &SubRange = *RegLI.subrange_begin();
+      assert(!SubRange.Next && "expected at most one subrange");
+      UpdateSegment(SubRange.segments);
+    }
+
     DAG.LIS->removeInterval(Reg);
     DAG.LIS->createAndComputeVirtRegInterval(Reg);
   }
