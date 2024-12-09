@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MATH_TRAITS_H
-#define _LIBCPP___MATH_TRAITS_H
+#ifndef _LIBCPP___CXX03___MATH_TRAITS_H
+#define _LIBCPP___CXX03___MATH_TRAITS_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/enable_if.h>
@@ -185,4 +185,4 @@ _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI bool isunordered(_A1 __x, _A2 __y
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MATH_TRAITS_H
+#endif // _LIBCPP___CXX03___MATH_TRAITS_H
