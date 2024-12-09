@@ -1,11 +1,9 @@
 ///  BUILT with
 ///     xcrun -sdk macosx.internal clang -mcpu=apple-m4 -g sme.c -o sme 
 
-
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
-
 
 void write_sve_regs() {
   asm volatile("ptrue p0.b\n\t");
@@ -78,27 +76,19 @@ void set_za_register(int svl, int value_offset) {
   }
 }
 
-static uint16_t
-arm_sme_svl_b(void)
-{
-        uint64_t ret = 0;
-        asm volatile (
-                "rdsvl  %[ret], #1"
-                : [ret] "=r"(ret)
-        );
-        return (uint16_t)ret;
+static uint16_t arm_sme_svl_b(void) {
+  uint64_t ret = 0;
+  asm volatile("rdsvl  %[ret], #1" : [ret] "=r"(ret));
+  return (uint16_t)ret;
 }
 
-
-// lldb/test/API/commands/register/register/aarch64_sme_z_registers/save_restore/main.c
-void
-arm_sme2_set_zt0() {
+void arm_sme2_set_zt0() {
 #define ZTO_LEN (512 / 8)
-    uint8_t data[ZTO_LEN];
-    for (unsigned i = 0; i < ZTO_LEN; ++i)
-      data[i] = i + 0;
+  uint8_t data[ZTO_LEN];
+  for (unsigned i = 0; i < ZTO_LEN; ++i)
+    data[i] = i + 0;
 
-    asm volatile("ldr zt0, [%0]" ::"r"(&data));
+  asm volatile("ldr zt0, [%0]" ::"r"(&data));
 #undef ZT0_LEN
 }
 
@@ -107,8 +97,8 @@ int main()
 
   printf("Enable SME mode\n");
 
-  asm volatile ("smstart");
- 
+  asm volatile("smstart");
+
   write_sve_regs();
 
   set_za_register(arm_sme_svl_b(), 4);
@@ -119,5 +109,5 @@ int main()
   c += 5;
   c += 5;
 
-  asm volatile ("smstop");
+  asm volatile("smstop");
 }

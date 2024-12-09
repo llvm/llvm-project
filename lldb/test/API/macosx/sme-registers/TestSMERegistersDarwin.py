@@ -6,7 +6,6 @@ import os
 
 
 class TestSMERegistersDarwin(TestBase):
-
     NO_DEBUG_INFO_TESTCASE = True
     mydir = TestBase.compute_mydir(__file__)
 
