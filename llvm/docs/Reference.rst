@@ -52,6 +52,7 @@ LLVM and API reference documentation.
    TestingGuide
    TransformMetadata
    TypeMetadata
+   UndefinedBehavior
    XRay
    XRayExample
    XRayFDRFormat
