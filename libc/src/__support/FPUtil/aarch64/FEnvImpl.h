@@ -26,7 +26,10 @@
 
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
-
+#pragma push_macro("OVERFLOW")
+#undef OVERFLOW
+#pragma push_macro("UNDERFLOW")
+#undef UNDERFLOW
 struct FEnv {
   struct FPState {
     uint32_t ControlWord;
@@ -279,6 +282,8 @@ LIBC_INLINE int set_env(const fenv_t *envp) {
   return 0;
 }
 
+#pragma pop_macro("UNDERFLOW")
+#pragma pop_macro("OVERFLOW")
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL
 
