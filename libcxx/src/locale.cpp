@@ -1115,7 +1115,7 @@ bool ctype_byname<wchar_t>::do_is(mask m, char_type c) const {
   bool result = false;
   wint_t ch   = static_cast<wint_t>(c);
   if ((m & space) == space)
-    result |= (__locale__libcpp_iswspace(ch, __l_) != 0);
+    result |= (__locale::__libcpp_iswspace(ch, __l_) != 0);
   if ((m & print) == print)
     result |= (__locale::__libcpp_iswprint(ch, __l_) != 0);
   if ((m & cntrl) == cntrl)
@@ -1145,7 +1145,7 @@ const wchar_t* ctype_byname<wchar_t>::do_is(const char_type* low, const char_typ
     else {
       *vec      = 0;
       wint_t ch = static_cast<wint_t>(*low);
-      if (__locale__libcpp_iswspace(ch, __l_))
+      if (__locale::__libcpp_iswspace(ch, __l_))
         *vec |= space;
 #  ifndef _LIBCPP_CTYPE_MASK_IS_COMPOSITE_PRINT
       if (__locale::__libcpp_iswprint(ch, __l_))
@@ -1183,7 +1183,7 @@ const wchar_t* ctype_byname<wchar_t>::do_scan_is(mask m, const char_type* low, c
       break;
 #  else
     wint_t ch = static_cast<wint_t>(*low);
-    if ((m & space) == space && __locale__libcpp_iswspace(ch, __l_))
+    if ((m & space) == space && __locale::__libcpp_iswspace(ch, __l_))
       break;
     if ((m & print) == print && __locale::__libcpp_iswprint(ch, __l_))
       break;
@@ -1215,7 +1215,7 @@ const wchar_t* ctype_byname<wchar_t>::do_scan_not(mask m, const char_type* low, 
       break;
 #  else
     wint_t ch = static_cast<wint_t>(*low);
-    if ((m & space) == space && __locale__libcpp_iswspace(ch, __l_))
+    if ((m & space) == space && __locale::__libcpp_iswspace(ch, __l_))
       continue;
     if ((m & print) == print && __locale::__libcpp_iswprint(ch, __l_))
       continue;
