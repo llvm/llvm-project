@@ -1700,9 +1700,6 @@ void PreRARematStage::sinkTriviallyRematInsts(
       assert(!SubRange.Next && "expected at most one subrange");
       UpdateSegment(SubRange.segments);
     }
-
-    DAG.LIS->removeInterval(Reg);
-    DAG.LIS->createAndComputeVirtRegInterval(Reg);
   }
 
   // All regions impacted by at least one rematerialization must be rescheduled.
