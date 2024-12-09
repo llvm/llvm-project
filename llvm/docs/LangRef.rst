@@ -16723,12 +16723,14 @@ type.
 
 Semantics:
 """"""""""
-Follows the semantics of mininumNumber in IEEE-754-2019, except for signaling NaNs. If either operand
+Follows the semantics of minimumNumber in IEEE-754-2019, except for signaling NaNs. If either operand
 is an sNaN, the result is always a qNaN. This matches the recommended behavior for the libm
 function `fmin`, although not all implementations have implemented these recommended behaviors.
 
-If either operand is a qNaN, returns the other non-NaN operand. Returns
-NaN only if both operands are NaN or if either operand is sNaN.
+If either operand is a qNaN, returns the other non-NaN operand. Returns NaN only if both operands are
+NaN or if either operand is sNaN. Note that arithmetic on an sNaN doesn't consistently produce a qNaN,
+so arithmetic feeding into a minnum can produce inconsistent results. For example,
+`minnum(fadd(sNaN, 0.0), 1.0)` can produce qNaN or 1.0 depending on whether `fadd` is folded.
 
 IEEE-754-2008 defines minNum, and it is removed in IEEE-754-2019. The behavior of this intrinsic is
 stricter than minNum in IEEE-754-2008, where either zero may be returned. To achieve the same permissiveness,
@@ -16743,14 +16745,8 @@ Some architectures have similiar ones while they are not exact equivalent. Such 
 which implements the semantics of C code `a<b?a:b`: NUM vs qNaN always return qNaN. `MINPS` can be used
 if `nsz` and `nnan` are given.
 
-
 In the real libc worlds, the bebhaviors of fmin may be quite different on sNaN and signed zero behaviors,
 even in the same release of a single libm implemention.
-
-Note that arithmetic on an sNaN doesn't consistently produce a qNaN,
-so arithmetic feeding into a minnum can produce inconsistent results.
-For example, `maxnum(fadd(sNaN, 0.0), 1.0)` can produce qNaN or 1.0 depending on whether `fadd`
-is folded.
 
 .. _i_maxnum:
 
@@ -16787,12 +16783,14 @@ type.
 
 Semantics:
 """"""""""
-Follows the semantics of maxinumNumber in IEEE-754-2019, except for signaling NaNs. If either operand
+Follows the semantics of maximumNumber in IEEE-754-2019, except for signaling NaNs. If either operand
 is an sNaN, the result is always a qNaN. This matches the recommended behavior for the libm
 function `fmin`, although not all implementations have implemented these recommended behaviors.
 
-If either operand is a qNaN, returns the other non-NaN operand. Returns
-NaN only if both operands are NaN or if either operand is sNaN.
+If either operand is a qNaN, returns the other non-NaN operand. Returns NaN only if both operands are
+NaN or if either operand is sNaN. Note that arithmetic on an sNaN doesn't consistently produce a qNaN,
+so arithmetic feeding into a maxnum can produce inconsistent results. For example,
+`maxnum(fadd(sNaN, 0.0), 1.0)` can produce qNaN or 1.0 depending on whether `fadd` is folded.
 
 IEEE-754-2008 defines maxNum, and it is removed in IEEE-754-2019. The behavior of this intrinsic is
 stricter than minNum in IEEE-754-2008, where either zero may be returned. To achieve the same permissiveness,
@@ -16809,11 +16807,6 @@ if `nsz` and `nnan` are given.
 
 In the real libc worlds, the bebhaviors of fmin may be quite different on sNaN and signed zero behaviors,
 even in the same release of a single libm implemention.
-
-Note that arithmetic on an sNaN doesn't consistently produce a qNaN,
-so arithmetic feeding into a maxnum can produce inconsistent results.
-For example, `maxnum(fadd(sNaN, 0.0), 1.0)` can produce qNaN or 1.0 depending on whether `fadd`
-is folded.
 
 .. _i_minimum:
 
