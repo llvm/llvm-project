@@ -1735,7 +1735,8 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
           ompLoc, allocaIP, bodyCB, !taskOp.getUntied(),
           moduleTranslation.lookupValue(taskOp.getFinal()),
           moduleTranslation.lookupValue(taskOp.getIfExpr()), dds,
-          taskOp.getMergeable());
+          taskOp.getMergeable(),
+          moduleTranslation.lookupValue(taskOp.getEventHandle()));
 
   if (failed(handleError(afterIP, *taskOp)))
     return failure();
@@ -1791,7 +1792,6 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   auto loopOp = cast<omp::LoopNestOp>(wsloopOp.getWrappedLoop());
-
   llvm::ArrayRef<bool> isByRef = getIsByRef(wsloopOp.getReductionByref());
   assert(isByRef.size() == wsloopOp.getNumReductionVars());
 
@@ -1828,6 +1828,11 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
 
   SmallVector<llvm::Value *> privateReductionVariables(
       wsloopOp.getNumReductionVars());
+
+  splitBB(llvm::OpenMPIRBuilder::InsertPointTy(
+              allocaIP.getBlock(),
+              allocaIP.getBlock()->getTerminator()->getIterator()),
+          true, "omp.region.after_alloca");
 
   llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
       builder, moduleTranslation, privateBlockArgs, privateDecls,

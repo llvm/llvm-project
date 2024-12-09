@@ -10201,6 +10201,8 @@ CodeGenFunction::getSVEType(const SVETypeFlags &TypeFlags) {
   case SVETypeFlags::EltTyInt64:
     return llvm::ScalableVectorType::get(Builder.getInt64Ty(), 2);
 
+  case SVETypeFlags::EltTyMFloat8:
+    return llvm::ScalableVectorType::get(Builder.getInt8Ty(), 16);
   case SVETypeFlags::EltTyFloat16:
     return llvm::ScalableVectorType::get(Builder.getHalfTy(), 8);
   case SVETypeFlags::EltTyBFloat16:
@@ -10646,7 +10648,7 @@ Value *CodeGenFunction::EmitSMELd1St1(const SVETypeFlags &TypeFlags,
   NewOps.push_back(Ops[2]);
 
   llvm::Value *BasePtr = Ops[3];
-
+  llvm::Value *RealSlice = Ops[1];
   // If the intrinsic contains the vnum parameter, multiply it with the vector
   // size in bytes.
   if (Ops.size() == 5) {
@@ -10658,10 +10660,13 @@ Value *CodeGenFunction::EmitSMELd1St1(const SVETypeFlags &TypeFlags,
         Builder.CreateMul(StreamingVectorLengthCall, Ops[4], "mulvl");
     // The type of the ptr parameter is void *, so use Int8Ty here.
     BasePtr = Builder.CreateGEP(Int8Ty, Ops[3], Mulvl);
+    RealSlice = Builder.CreateZExt(RealSlice, Int64Ty);
+    RealSlice = Builder.CreateAdd(RealSlice, Ops[4]);
+    RealSlice = Builder.CreateTrunc(RealSlice, Int32Ty);
   }
   NewOps.push_back(BasePtr);
   NewOps.push_back(Ops[0]);
-  NewOps.push_back(Ops[1]);
+  NewOps.push_back(RealSlice);
   Function *F = CGM.getIntrinsic(IntID);
   return Builder.CreateCall(F, NewOps);
 }
@@ -11252,6 +11257,10 @@ Value *CodeGenFunction::EmitAArch64SMEBuiltinExpr(unsigned BuiltinID,
            BuiltinID == SME::BI__builtin_sme_svstr_za)
     return EmitSMELdrStr(TypeFlags, Ops, Builtin->LLVMIntrinsic);
 
+  // Emit set FPMR for intrinsics that require it
+  if (TypeFlags.setsFPMR())
+    Builder.CreateCall(CGM.getIntrinsic(Intrinsic::aarch64_set_fpmr),
+                       Ops.pop_back_val());
   // Handle builtins which require their multi-vector operands to be swapped
   swapCommutativeSMEOperands(BuiltinID, Ops);
 

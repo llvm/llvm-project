@@ -1268,6 +1268,11 @@ let True16Predicate = NotHasTrue16BitInsts, SubtargetPredicate = isGFX10Plus in 
    >;
 } // End True16Predicate = NotHasTrue16BitInsts, SubtargetPredicate = isGFX10Plus
 
+let True16Predicate = UseRealTrue16Insts in {
+  def : OpSelBinOpClampPat<uaddsat, V_ADD_NC_U16_t16_e64>;
+  def : OpSelBinOpClampPat<usubsat, V_SUB_NC_U16_t16_e64>;
+} // End OtherPredicates = [UseRealTrue16Insts]
+
 let True16Predicate = UseFakeTrue16Insts in {
    def : OpSelBinOpClampPat<uaddsat, V_ADD_NC_U16_fake16_e64>;
    def : OpSelBinOpClampPat<usubsat, V_SUB_NC_U16_fake16_e64>;
@@ -1744,6 +1749,11 @@ defm V_OR_B16_t16          : VOP3Only_Realtriple_t16_gfx11_gfx12<0x363, "v_or_b1
 defm V_OR_B16_fake16       : VOP3Only_Realtriple_t16_gfx11_gfx12<0x363, "v_or_b16">;
 defm V_XOR_B16_t16         : VOP3Only_Realtriple_t16_gfx11_gfx12<0x364, "v_xor_b16">;
 defm V_XOR_B16_fake16      : VOP3Only_Realtriple_t16_gfx11_gfx12<0x364, "v_xor_b16">;
+
+let AssemblerPredicate = isGFX11Plus in {
+  def : AMDGPUMnemonicAlias<"v_add3_nc_u32", "v_add3_u32">;
+  def : AMDGPUMnemonicAlias<"v_xor_add_u32", "v_xad_u32">;
+}
 
 //===----------------------------------------------------------------------===//
 // GFX10.

@@ -1205,15 +1205,16 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
     if (DTy.isNull() || DTy->isDependentType()) {
       CT = CT_Dependent;
     } else {
-      CT = canCalleeThrow(*this, DE, DE->getOperatorDelete());
-      if (const RecordType *RT = DTy->getAs<RecordType>()) {
-        const CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
-        const CXXDestructorDecl *DD = RD->getDestructor();
-        if (DD)
-          CT = mergeCanThrow(CT, canCalleeThrow(*this, DE, DD));
+      const FunctionDecl *OperatorDelete = DE->getOperatorDelete();
+      CT = canCalleeThrow(*this, DE, OperatorDelete);
+      if (!OperatorDelete->isDestroyingOperatorDelete()) {
+        if (const auto *RD = DTy->getAsCXXRecordDecl()) {
+          if (const CXXDestructorDecl *DD = RD->getDestructor())
+            CT = mergeCanThrow(CT, canCalleeThrow(*this, DE, DD));
+        }
+        if (CT == CT_Can)
+          return CT;
       }
-      if (CT == CT_Can)
-        return CT;
     }
     return mergeCanThrow(CT, canSubStmtsThrow(*this, DE));
   }
