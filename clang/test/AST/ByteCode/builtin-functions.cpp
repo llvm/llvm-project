@@ -51,6 +51,15 @@ namespace strcmp {
     return __builtin_strcmp(buffer, "mutable") == 0;
   }
   static_assert(char_memchr_mutable(), "");
+
+  static_assert(__builtin_strncmp("abaa", "abba", 5) == -1);
+  static_assert(__builtin_strncmp("abaa", "abba", 4) == -1);
+  static_assert(__builtin_strncmp("abaa", "abba", 3) == -1);
+  static_assert(__builtin_strncmp("abaa", "abba", 2) == 0);
+  static_assert(__builtin_strncmp("abaa", "abba", 1) == 0);
+  static_assert(__builtin_strncmp("abaa", "abba", 0) == 0);
+  static_assert(__builtin_strncmp(0, 0, 0) == 0);
+  static_assert(__builtin_strncmp("abab\0banana", "abab\0canada", 100) == 0);
 }
 
 /// Copied from constant-expression-cxx11.cpp
@@ -1188,4 +1197,14 @@ namespace BuiltinMemcpy {
     return b;
   }
   static_assert(simpleMove() == 12);
+
+  constexpr int memcpyTypeRem() { // ref-error {{never produces a constant expression}}
+    int a = 12;
+    int b = 0;
+    __builtin_memmove(&b, &a, 1); // both-note {{'memmove' not supported: size to copy (1) is not a multiple of size of element type 'int'}} \
+                                  // ref-note {{not supported}}
+    return b;
+  }
+  static_assert(memcpyTypeRem() == 12); // both-error {{not an integral constant expression}} \
+                                        // both-note {{in call to}}
 }

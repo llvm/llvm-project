@@ -197,8 +197,18 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
   const Pointer &A = getParam<Pointer>(Frame, 0);
   const Pointer &B = getParam<Pointer>(Frame, 1);
 
-  if (ID == Builtin::BIstrcmp)
+  if (ID == Builtin::BIstrcmp || ID == Builtin::BIstrncmp)
     diagnoseNonConstexprBuiltin(S, OpPC, ID);
+
+  uint64_t Limit = ~static_cast<uint64_t>(0);
+  if (ID == Builtin::BIstrncmp || ID == Builtin::BI__builtin_strncmp)
+    Limit = peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)))
+                .getZExtValue();
+
+  if (Limit == 0) {
+    pushInteger(S, 0, Call->getType());
+    return true;
+  }
 
   if (!CheckLive(S, OpPC, A, AK_Read) || !CheckLive(S, OpPC, B, AK_Read))
     return false;
@@ -212,7 +222,11 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
   unsigned IndexA = A.getIndex();
   unsigned IndexB = B.getIndex();
   int32_t Result = 0;
-  for (;; ++IndexA, ++IndexB) {
+  uint64_t Steps = 0;
+  for (;; ++IndexA, ++IndexB, ++Steps) {
+
+    if (Steps >= Limit)
+      break;
     const Pointer &PA = A.atIndex(IndexA);
     const Pointer &PB = B.atIndex(IndexB);
     if (!CheckRange(S, OpPC, PA, AK_Read) ||
@@ -259,7 +273,7 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
   unsigned ElemSize = StrPtr.getFieldDesc()->getElemSize();
 
   if (ID == Builtin::BI__builtin_wcslen || ID == Builtin::BIwcslen) {
-    const ASTContext &AC = S.getASTContext();
+    [[maybe_unused]] const ASTContext &AC = S.getASTContext();
     assert(ElemSize == AC.getTypeSizeInChars(AC.getWCharType()).getQuantity());
   }
 
@@ -1846,6 +1860,21 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     return false;
   }
 
+  QualType ElemType;
+  if (SrcPtr.getFieldDesc()->isArray())
+    ElemType = SrcPtr.getFieldDesc()->getElemQualType();
+  else
+    ElemType = SrcPtr.getType();
+
+  unsigned ElemSize =
+      S.getASTContext().getTypeSizeInChars(ElemType).getQuantity();
+  if (Size.urem(ElemSize) != 0) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_memcpy_unsupported)
+        << Move << /*IsWchar=*/false << 0 << ElemType << Size << ElemSize;
+    return false;
+  }
+
   // As a last resort, reject dummy pointers.
   if (DestPtr.isDummy() || SrcPtr.isDummy())
     return false;
@@ -1873,6 +1902,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     break;
   case Builtin::BI__builtin_strcmp:
   case Builtin::BIstrcmp:
+  case Builtin::BI__builtin_strncmp:
+  case Builtin::BIstrncmp:
     if (!interp__builtin_strcmp(S, OpPC, Frame, F, Call))
       return false;
     break;

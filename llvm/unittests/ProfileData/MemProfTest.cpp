@@ -123,7 +123,7 @@ MATCHER_P4(FrameContains, FunctionName, LineOffset, Column, Inline, "") {
 }
 
 TEST(MemProf, FillsValue) {
-  std::unique_ptr<MockSymbolizer> Symbolizer(new MockSymbolizer());
+  auto Symbolizer = std::make_unique<MockSymbolizer>();
 
   EXPECT_CALL(*Symbolizer, symbolizeInlinedCode(SectionedAddress{0x1000},
                                                 specifier(), false))
@@ -341,7 +341,7 @@ TEST(MemProf, RecordSerializationRoundTripVersion2HotColdSchema) {
 }
 
 TEST(MemProf, SymbolizationFilter) {
-  std::unique_ptr<MockSymbolizer> Symbolizer(new MockSymbolizer());
+  auto Symbolizer = std::make_unique<MockSymbolizer>();
 
   EXPECT_CALL(*Symbolizer, symbolizeInlinedCode(SectionedAddress{0x1000},
                                                 specifier(), false))

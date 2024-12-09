@@ -75,6 +75,12 @@ if (NOT APPLE) # On Apple platforms, we always use -nostdlib++ so we don't need 
   add_library_flags_if(LIBCXXABI_HAS_C_LIB c)
 endif()
 
+if (FUCHSIA)
+    # TODO: Use CMAKE_LINK_LIBRARY_USING_FEATURE once our minimum CMake is at least 3.24
+    # https://cmake.org/cmake/help/latest/variable/CMAKE_LINK_LIBRARY_USING_FEATURE.html 
+    add_link_flags("-Wl,--push-state,--as-needed,-lzircon,--pop-state")
+endif()
+
 if (NOT LIBCXXABI_USE_COMPILER_RT)
   add_library_flags_if(LIBCXXABI_HAS_GCC_LIB gcc)
 endif()
