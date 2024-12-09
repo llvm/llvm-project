@@ -3110,9 +3110,8 @@ private:
       SmallVectorImpl<SmallVector<const TreeEntry *>> &Entries,
       unsigned NumParts, bool ForOrder = false);
 
-  /// \returns the scalarization cost for this list of values. Assuming that
-  /// this subtree gets vectorized, we may need to extract the values from the
-  /// roots. This method calculates the cost of extracting the values.
+  /// \returns the cost of gathering (inserting) the values in \p VL into a
+  /// vector.
   /// \param ForPoisonSrc true if initial vector is poison, false otherwise.
   InstructionCost getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                                 Type *ScalarTy) const;
@@ -6074,6 +6073,23 @@ void BoUpSLP::reorderTopToBottom() {
                                      TE->Scalars.size();
                         }) &&
                  "All users must be of VF size.");
+          if (SLPReVec) {
+            assert(SLPReVec && "Only supported by REVEC.");
+            // ShuffleVectorInst does not do reorderOperands (and it should not
+            // because ShuffleVectorInst supports only a limited set of
+            // patterns). Only do reorderNodeWithReuses if all of the users are
+            // not ShuffleVectorInst.
+            if (all_of(TE->UserTreeIndices, [&](const EdgeInfo &EI) {
+                  return isa<ShuffleVectorInst>(EI.UserTE->getMainOp());
+                }))
+              continue;
+            assert(none_of(TE->UserTreeIndices,
+                           [&](const EdgeInfo &EI) {
+                             return isa<ShuffleVectorInst>(
+                                 EI.UserTE->getMainOp());
+                           }) &&
+                   "Does not know how to reorder.");
+          }
           // Update ordering of the operands with the smaller VF than the given
           // one.
           reorderNodeWithReuses(*TE, Mask);
@@ -6919,8 +6935,8 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
               // 2. All users are deleted.
               // 3. The load broadcasts are not allowed or the load is not
               // broadcasted.
-              if (std::distance(LI->user_begin(), LI->user_end()) !=
-                      LI->getNumUses())
+              if (static_cast<unsigned int>(std::distance(
+                      LI->user_begin(), LI->user_end())) != LI->getNumUses())
                 return false;
               if (!IsLegalBroadcastLoad)
                 continue;
@@ -9762,7 +9778,8 @@ void BoUpSLP::transformNodes() {
                                              Slice.front()->getType(), 2 * VF)),
                                          1U, 2 * VF)) ||
               count(Slice, Slice.front()) ==
-                  (isa<UndefValue>(Slice.front()) ? VF - 1 : 1)) {
+                  static_cast<long>(isa<UndefValue>(Slice.front()) ? VF - 1
+                                                                   : 1)) {
             if (IsSplat)
               continue;
             InstructionsState S = getSameOpcode(Slice, *TLI);
@@ -13498,9 +13515,10 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
               TTI::SK_InsertSubvector, VecTy, std::nullopt, CostKind,
               I * ScalarTyNumElements, cast<FixedVectorType>(ScalarTy));
     } else {
-      Cost = TTI->getScalarizationOverhead(VecTy, ~ShuffledElements,
+      Cost = TTI->getScalarizationOverhead(VecTy,
+                                           /*DemandedElts*/ ~ShuffledElements,
                                            /*Insert*/ true,
-                                           /*Extract*/ false, CostKind);
+                                           /*Extract*/ false, CostKind, VL);
     }
   }
   if (DuplicateNonConst)
@@ -16197,6 +16215,11 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
     }
     Builder.SetCurrentDebugLocation(UserI->getDebugLoc());
     Value *Vec = vectorizeTree(TE, /*PostponedPHIs=*/false);
+    if (auto *VecI = dyn_cast<Instruction>(Vec);
+        VecI && VecI->getParent() == Builder.GetInsertBlock() &&
+        Builder.GetInsertPoint()->comesBefore(VecI))
+      VecI->moveBeforePreserving(*Builder.GetInsertBlock(),
+                                 Builder.GetInsertPoint());
     if (Vec->getType() != PrevVec->getType()) {
       assert(Vec->getType()->isIntOrIntVectorTy() &&
              PrevVec->getType()->isIntOrIntVectorTy() &&
@@ -17799,6 +17822,8 @@ bool BoUpSLP::collectValuesToDemote(
     // original type and the sign bit of the truncate type are similar.
     auto AShrChecker = [&](unsigned BitWidth, unsigned OrigBitWidth) {
       return all_of(E.Scalars, [&](Value *V) {
+        if (isa<PoisonValue>(V))
+          return true;
         auto *I = cast<Instruction>(V);
         KnownBits AmtKnownBits = computeKnownBits(I->getOperand(1), *DL);
         unsigned ShiftedBits = OrigBitWidth - BitWidth;

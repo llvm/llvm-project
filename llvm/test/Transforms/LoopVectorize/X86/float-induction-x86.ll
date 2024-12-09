@@ -39,9 +39,9 @@ define void @fp_iv_loop1(ptr noalias nocapture %A, i32 %N) #0 {
 ; AUTO_VEC-NEXT:    [[STEP_ADD2:%.*]] = fadd fast <8 x float> [[VEC_IND]], splat (float 8.000000e+00)
 ; AUTO_VEC-NEXT:    [[STEP_ADD3:%.*]] = fadd fast <8 x float> [[VEC_IND]], splat (float 1.200000e+01)
 ; AUTO_VEC-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
-; AUTO_VEC-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 32
-; AUTO_VEC-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 64
-; AUTO_VEC-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 96
+; AUTO_VEC-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 32
+; AUTO_VEC-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 64
+; AUTO_VEC-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 96
 ; AUTO_VEC-NEXT:    store <8 x float> [[VEC_IND]], ptr [[TMP1]], align 4
 ; AUTO_VEC-NEXT:    store <8 x float> [[STEP_ADD]], ptr [[TMP2]], align 4
 ; AUTO_VEC-NEXT:    store <8 x float> [[STEP_ADD2]], ptr [[TMP3]], align 4
@@ -86,7 +86,7 @@ define void @fp_iv_loop1(ptr noalias nocapture %A, i32 %N) #0 {
 ; AUTO_VEC:       for.body:
 ; AUTO_VEC-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ITER_CHECK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[N_VEC3]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; AUTO_VEC-NEXT:    [[X_06:%.*]] = phi float [ [[CONV1:%.*]], [[FOR_BODY]] ], [ 1.000000e+00, [[ITER_CHECK]] ], [ [[IND_END8]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[IND_END6]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
-; AUTO_VEC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
+; AUTO_VEC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDVARS_IV]]
 ; AUTO_VEC-NEXT:    store float [[X_06]], ptr [[ARRAYIDX]], align 4
 ; AUTO_VEC-NEXT:    [[CONV1]] = fadd fast float [[X_06]], 5.000000e-01
 ; AUTO_VEC-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -147,35 +147,35 @@ define void @fp_iv_loop2(ptr noalias nocapture %A, i32 %N) {
 ; AUTO_VEC-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER_NEW]] ], [ [[INDVARS_IV_NEXT_7:%.*]], [[FOR_BODY]] ]
 ; AUTO_VEC-NEXT:    [[X_06:%.*]] = phi float [ 1.000000e+00, [[FOR_BODY_PREHEADER_NEW]] ], [ [[CONV1_7:%.*]], [[FOR_BODY]] ]
 ; AUTO_VEC-NEXT:    [[NITER:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER_NEW]] ], [ [[NITER_NEXT_7:%.*]], [[FOR_BODY]] ]
-; AUTO_VEC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; AUTO_VEC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[A:%.*]], i64 [[INDVARS_IV]]
 ; AUTO_VEC-NEXT:    store float [[X_06]], ptr [[ARRAYIDX]], align 4
 ; AUTO_VEC-NEXT:    [[CONV1:%.*]] = fadd float [[X_06]], 5.000000e-01
 ; AUTO_VEC-NEXT:    [[INDVARS_IV_NEXT:%.*]] = or disjoint i64 [[INDVARS_IV]], 1
-; AUTO_VEC-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV_NEXT]]
+; AUTO_VEC-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDVARS_IV_NEXT]]
 ; AUTO_VEC-NEXT:    store float [[CONV1]], ptr [[ARRAYIDX_1]], align 4
 ; AUTO_VEC-NEXT:    [[CONV1_1:%.*]] = fadd float [[CONV1]], 5.000000e-01
 ; AUTO_VEC-NEXT:    [[INDVARS_IV_NEXT_1:%.*]] = or disjoint i64 [[INDVARS_IV]], 2
-; AUTO_VEC-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV_NEXT_1]]
+; AUTO_VEC-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDVARS_IV_NEXT_1]]
 ; AUTO_VEC-NEXT:    store float [[CONV1_1]], ptr [[ARRAYIDX_2]], align 4
 ; AUTO_VEC-NEXT:    [[CONV1_2:%.*]] = fadd float [[CONV1_1]], 5.000000e-01
 ; AUTO_VEC-NEXT:    [[INDVARS_IV_NEXT_2:%.*]] = or disjoint i64 [[INDVARS_IV]], 3
-; AUTO_VEC-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV_NEXT_2]]
+; AUTO_VEC-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDVARS_IV_NEXT_2]]
 ; AUTO_VEC-NEXT:    store float [[CONV1_2]], ptr [[ARRAYIDX_3]], align 4
 ; AUTO_VEC-NEXT:    [[CONV1_3:%.*]] = fadd float [[CONV1_2]], 5.000000e-01
 ; AUTO_VEC-NEXT:    [[INDVARS_IV_NEXT_3:%.*]] = or disjoint i64 [[INDVARS_IV]], 4
-; AUTO_VEC-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV_NEXT_3]]
+; AUTO_VEC-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDVARS_IV_NEXT_3]]
 ; AUTO_VEC-NEXT:    store float [[CONV1_3]], ptr [[ARRAYIDX_4]], align 4
 ; AUTO_VEC-NEXT:    [[CONV1_4:%.*]] = fadd float [[CONV1_3]], 5.000000e-01
 ; AUTO_VEC-NEXT:    [[INDVARS_IV_NEXT_4:%.*]] = or disjoint i64 [[INDVARS_IV]], 5
-; AUTO_VEC-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV_NEXT_4]]
+; AUTO_VEC-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDVARS_IV_NEXT_4]]
 ; AUTO_VEC-NEXT:    store float [[CONV1_4]], ptr [[ARRAYIDX_5]], align 4
 ; AUTO_VEC-NEXT:    [[CONV1_5:%.*]] = fadd float [[CONV1_4]], 5.000000e-01
 ; AUTO_VEC-NEXT:    [[INDVARS_IV_NEXT_5:%.*]] = or disjoint i64 [[INDVARS_IV]], 6
-; AUTO_VEC-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV_NEXT_5]]
+; AUTO_VEC-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDVARS_IV_NEXT_5]]
 ; AUTO_VEC-NEXT:    store float [[CONV1_5]], ptr [[ARRAYIDX_6]], align 4
 ; AUTO_VEC-NEXT:    [[CONV1_6:%.*]] = fadd float [[CONV1_5]], 5.000000e-01
 ; AUTO_VEC-NEXT:    [[INDVARS_IV_NEXT_6:%.*]] = or disjoint i64 [[INDVARS_IV]], 7
-; AUTO_VEC-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV_NEXT_6]]
+; AUTO_VEC-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDVARS_IV_NEXT_6]]
 ; AUTO_VEC-NEXT:    store float [[CONV1_6]], ptr [[ARRAYIDX_7]], align 4
 ; AUTO_VEC-NEXT:    [[CONV1_7]] = fadd float [[CONV1_6]], 5.000000e-01
 ; AUTO_VEC-NEXT:    [[INDVARS_IV_NEXT_7]] = add nuw nsw i64 [[INDVARS_IV]], 8
@@ -191,7 +191,7 @@ define void @fp_iv_loop2(ptr noalias nocapture %A, i32 %N) {
 ; AUTO_VEC-NEXT:    [[INDVARS_IV_EPIL:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_EPIL:%.*]], [[FOR_BODY_EPIL]] ], [ [[INDVARS_IV_UNR]], [[FOR_END_LOOPEXIT_UNR_LCSSA]] ]
 ; AUTO_VEC-NEXT:    [[X_06_EPIL:%.*]] = phi float [ [[CONV1_EPIL:%.*]], [[FOR_BODY_EPIL]] ], [ [[X_06_UNR]], [[FOR_END_LOOPEXIT_UNR_LCSSA]] ]
 ; AUTO_VEC-NEXT:    [[EPIL_ITER:%.*]] = phi i64 [ [[EPIL_ITER_NEXT:%.*]], [[FOR_BODY_EPIL]] ], [ 0, [[FOR_END_LOOPEXIT_UNR_LCSSA]] ]
-; AUTO_VEC-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV_EPIL]]
+; AUTO_VEC-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDVARS_IV_EPIL]]
 ; AUTO_VEC-NEXT:    store float [[X_06_EPIL]], ptr [[ARRAYIDX_EPIL]], align 4
 ; AUTO_VEC-NEXT:    [[CONV1_EPIL]] = fadd float [[X_06_EPIL]], 5.000000e-01
 ; AUTO_VEC-NEXT:    [[INDVARS_IV_NEXT_EPIL]] = add nuw nsw i64 [[INDVARS_IV_EPIL]], 1
@@ -411,9 +411,9 @@ define void @fadd_reassoc_FMF(ptr nocapture %p, i32 %N) {
 ; AUTO_VEC-NEXT:    [[STEP_ADD2:%.*]] = fadd reassoc <8 x float> [[STEP_ADD]], splat (float 3.360000e+02)
 ; AUTO_VEC-NEXT:    [[STEP_ADD3:%.*]] = fadd reassoc <8 x float> [[STEP_ADD2]], splat (float 3.360000e+02)
 ; AUTO_VEC-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[P:%.*]], i64 [[INDEX]]
-; AUTO_VEC-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 32
-; AUTO_VEC-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 64
-; AUTO_VEC-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 96
+; AUTO_VEC-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 32
+; AUTO_VEC-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 64
+; AUTO_VEC-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 96
 ; AUTO_VEC-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x float>, ptr [[TMP2]], align 4
 ; AUTO_VEC-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x float>, ptr [[TMP3]], align 4
 ; AUTO_VEC-NEXT:    [[WIDE_LOAD3:%.*]] = load <8 x float>, ptr [[TMP4]], align 4
@@ -470,7 +470,7 @@ define void @fadd_reassoc_FMF(ptr nocapture %p, i32 %N) {
 ; AUTO_VEC:       for.body:
 ; AUTO_VEC-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ITER_CHECK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[N_VEC6]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; AUTO_VEC-NEXT:    [[X_012:%.*]] = phi float [ [[ADD3:%.*]], [[FOR_BODY]] ], [ 1.000000e+00, [[ITER_CHECK]] ], [ [[IND_END11]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[IND_END9]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
-; AUTO_VEC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[P]], i64 [[INDVARS_IV]]
+; AUTO_VEC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[P]], i64 [[INDVARS_IV]]
 ; AUTO_VEC-NEXT:    [[TMP16:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; AUTO_VEC-NEXT:    [[ADD:%.*]] = fadd reassoc float [[X_012]], [[TMP16]]
 ; AUTO_VEC-NEXT:    store float [[ADD]], ptr [[ARRAYIDX]], align 4

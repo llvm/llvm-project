@@ -418,7 +418,7 @@ static void *AllocateTrampolineRegion(uptr min_addr, uptr max_addr,
   ReportError(
       "interception_win: AllocateTrampolineRegion failed to find free memory; "
       "min_addr: %p, max_addr: %p, func_addr: %p, granularity: %zu\n",
-      (void *)min_addr, (void *)max_addr, granularity);
+      (void *)min_addr, (void *)max_addr, (void *)func_addr, granularity);
   return nullptr;
 #else
   return ::VirtualAlloc(nullptr,
@@ -635,7 +635,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
       return 2;
 
     // Cannot overwrite control-instruction. Return 0 to indicate failure.
-    case 0x25FF:  // FF 25 XX XX XX XX : jmp [XXXXXXXX]
+    case 0x25FF:  // FF 25 XX YY ZZ WW : jmp dword ptr ds:[WWZZYYXX]
       return 0;
   }
 
@@ -872,7 +872,6 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x75FF:  // FF 75 XX : push dword ptr [ebp + XX]
       return 3;
     case 0xC1F7:  // F7 C1 XX YY ZZ WW : test ecx, WWZZYYXX
-    case 0x25FF:  // FF 25 XX YY ZZ WW : jmp dword ptr ds:[WWZZYYXX]
       return 6;
     case 0x3D83:  // 83 3D XX YY ZZ WW TT : cmp TT, WWZZYYXX
       return 7;
@@ -1248,7 +1247,7 @@ uptr InternalGetProcAddress(void *module, const char *func_name) {
         char function_name[256];
         size_t funtion_name_length = _strlen(func);
         if (funtion_name_length >= sizeof(function_name) - 1) {
-          ReportError("interception_win: func too long: '%s'\n", func);
+          ReportError("interception_win: func too long: '%s'\n", (char *)func);
           InterceptionFailed();
         }
 

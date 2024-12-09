@@ -47,9 +47,6 @@ define void @foo(i64 %n) {
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[C]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>:
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
 ; CHECK-NEXT: Successor(s): ir-bb<outer.header>
 ; CHECK-EMPTY:
@@ -58,6 +55,9 @@ define void @foo(i64 %n) {
 ; CHECK-NEXT:   IR   %gep.1 = getelementptr inbounds [8 x i64], ptr @arr2, i64 0, i64 %outer.iv
 ; CHECK-NEXT:   IR   store i64 %outer.iv, ptr %gep.1, align 4
 ; CHECK-NEXT:   IR   %add = add nsw i64 %outer.iv, %n
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 entry:

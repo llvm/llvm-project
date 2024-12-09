@@ -4577,7 +4577,7 @@ static std::optional<SmallVector<int64_t>>
 foldCstValueToCstAttrBasis(ArrayRef<OpFoldResult> mixedBasis,
                            MutableOperandRange mutableDynamicBasis,
                            ArrayRef<Attribute> dynamicBasis) {
-  int64_t dynamicBasisIndex = 0;
+  uint64_t dynamicBasisIndex = 0;
   for (OpFoldResult basis : dynamicBasis) {
     if (basis) {
       mutableDynamicBasis.erase(dynamicBasisIndex);

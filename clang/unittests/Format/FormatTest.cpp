@@ -27386,6 +27386,13 @@ TEST_F(FormatTest, RemoveSemicolon) {
                Style);
 #endif
 
+  verifyFormat("auto sgf = [] {\n"
+               "  ogl = {\n"
+               "      a, b, c, d, e,\n"
+               "  };\n"
+               "};",
+               Style);
+
   Style.TypenameMacros.push_back("STRUCT");
   verifyFormat("STRUCT(T, B) { int i; };", Style);
 }

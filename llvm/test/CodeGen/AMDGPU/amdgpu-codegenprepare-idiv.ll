@@ -9999,3 +9999,101 @@ define <2 x i64> @v_udiv_i64_exact(<2 x i64> %num) {
    %result = udiv exact <2 x i64> %num, <i64 4096, i64 1024>
    ret <2 x i64> %result
 }
+
+define i64 @udiv_i64_gt_smax(i8 %size) {
+; GFX6-LABEL: udiv_i64_gt_smax:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_bfe_i32 v0, v0, 0, 8
+; GFX6-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX6-NEXT:    v_not_b32_e32 v1, v1
+; GFX6-NEXT:    v_not_b32_e32 v0, v0
+; GFX6-NEXT:    s_mov_b32 s4, 0xcccccccd
+; GFX6-NEXT:    v_mul_lo_u32 v3, v1, s4
+; GFX6-NEXT:    v_mul_hi_u32 v4, v0, s4
+; GFX6-NEXT:    s_mov_b32 s6, 0xcccccccc
+; GFX6-NEXT:    v_mul_hi_u32 v5, v1, s4
+; GFX6-NEXT:    v_mul_hi_u32 v2, v0, s6
+; GFX6-NEXT:    v_mul_lo_u32 v0, v0, s6
+; GFX6-NEXT:    v_add_i32_e32 v3, vcc, v3, v4
+; GFX6-NEXT:    v_addc_u32_e32 v4, vcc, 0, v5, vcc
+; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v0, v3
+; GFX6-NEXT:    v_addc_u32_e32 v0, vcc, 0, v2, vcc
+; GFX6-NEXT:    v_mul_lo_u32 v2, v1, s6
+; GFX6-NEXT:    v_mul_hi_u32 v1, v1, s6
+; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v4, v0
+; GFX6-NEXT:    v_addc_u32_e64 v3, s[4:5], 0, 0, vcc
+; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v2, v0
+; GFX6-NEXT:    v_addc_u32_e32 v1, vcc, v1, v3, vcc
+; GFX6-NEXT:    v_alignbit_b32 v0, v1, v0, 3
+; GFX6-NEXT:    v_lshrrev_b32_e32 v1, 3, v1
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: udiv_i64_gt_smax:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v1, 31
+; GFX9-NEXT:    v_not_b32_sdwa v4, sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
+; GFX9-NEXT:    s_mov_b32 s4, 0xcccccccd
+; GFX9-NEXT:    v_ashrrev_i32_sdwa v1, v1, sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX9-NEXT:    v_mul_hi_u32 v0, v4, s4
+; GFX9-NEXT:    v_not_b32_e32 v5, v1
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NEXT:    s_mov_b32 s6, 0xcccccccc
+; GFX9-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v5, s4, v[0:1]
+; GFX9-NEXT:    v_mov_b32_e32 v6, v3
+; GFX9-NEXT:    v_mov_b32_e32 v3, v1
+; GFX9-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v4, s6, v[2:3]
+; GFX9-NEXT:    v_mov_b32_e32 v0, v1
+; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, v6, v0
+; GFX9-NEXT:    v_addc_co_u32_e64 v1, s[4:5], 0, 0, vcc
+; GFX9-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v5, s6, v[0:1]
+; GFX9-NEXT:    v_alignbit_b32 v0, v1, v0, 3
+; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 3, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %esize = sext i8 %size to i64
+  %minus = sub nuw nsw i64 -1, %esize
+  %div = udiv i64 %minus, 10
+  ret i64 %div
+}
+
+define i64 @udiv_i64_9divbits(i8 %size) {
+; GFX6-LABEL: udiv_i64_9divbits:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_and_b32_e32 v0, 0xff, v0
+; GFX6-NEXT:    v_add_i32_e32 v0, vcc, 1, v0
+; GFX6-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; GFX6-NEXT:    s_mov_b32 s4, 0x41200000
+; GFX6-NEXT:    v_mul_f32_e32 v1, 0x3dcccccd, v0
+; GFX6-NEXT:    v_trunc_f32_e32 v1, v1
+; GFX6-NEXT:    v_cvt_u32_f32_e32 v2, v1
+; GFX6-NEXT:    v_mad_f32 v0, -v1, s4, v0
+; GFX6-NEXT:    v_cmp_ge_f32_e64 vcc, |v0|, s4
+; GFX6-NEXT:    v_mov_b32_e32 v1, 0
+; GFX6-NEXT:    v_addc_u32_e32 v0, vcc, 0, v2, vcc
+; GFX6-NEXT:    v_and_b32_e32 v0, 0x1ff, v0
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: udiv_i64_9divbits:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v1, 1
+; GFX9-NEXT:    v_add_u32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX9-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; GFX9-NEXT:    s_mov_b32 s4, 0x41200000
+; GFX9-NEXT:    v_mul_f32_e32 v1, 0x3dcccccd, v0
+; GFX9-NEXT:    v_trunc_f32_e32 v1, v1
+; GFX9-NEXT:    v_cvt_u32_f32_e32 v2, v1
+; GFX9-NEXT:    v_mad_f32 v0, -v1, s4, v0
+; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v0|, s4
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NEXT:    v_addc_co_u32_e32 v0, vcc, 0, v2, vcc
+; GFX9-NEXT:    v_and_b32_e32 v0, 0x1ff, v0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %zextend = zext i8 %size to i64
+  %num = add nuw nsw i64 1, %zextend
+  %div = udiv i64 %num, 10
+  ret i64 %div
+}
+
