@@ -142,8 +142,8 @@ public:
               }
             }
             Builder.SetInsertPoint(&I);
-            auto AllocaSizeInBits = AI.getAllocationSizeInBits(DL);
-            if (!AllocaSizeInBits) {
+            auto AllocaSizeInBytes = AI.getAllocationSize(DL);
+            if (!AllocaSizeInBytes) {
               // YKFIXME: Deal with functions where the stack size isn't know at
               // compile time, e.g. when `alloca` is used.
               Context.emitError("Unable to add shadow stack: function has "
@@ -153,7 +153,6 @@ public:
             // Calculate this `AllocaInst`s size, aligning its pointer if
             // necessary, and create a replacement pointer into the shadow
             // stack.
-            size_t AllocaSize = *AllocaSizeInBits / sizeof(uintptr_t);
             size_t Align = AI.getAlign().value();
             Offset = int((Offset + (Align - 1)) / Align) * Align;
             if (Offset == 0) {
@@ -168,11 +167,10 @@ public:
                   Int8Ty, SSPtr, {ConstantInt::get(Int32Ty, Offset)}, "",
                   cast<Instruction>(&AI));
               Builder.SetInsertPoint(GEP);
-              Builder.CreateBitCast(GEP, AI.getAllocatedType()->getPointerTo());
               cast<Value>(I).replaceAllUsesWith(GEP);
             }
             RemoveAllocas.push_back(cast<Instruction>(&AI));
-            Offset += AllocaSize;
+            Offset += *AllocaSizeInBytes;
           } else if (isa<CallInst>(I)) {
             // When we see a call, we need make space for a new stack frame. We
             // do this by simply adjusting the pointer stored in the global
@@ -217,6 +215,11 @@ public:
             Builder.CreateStore(GEP, GShadowStackPtr);
             Builder.SetInsertPoint(I.getNextNonDebugInstruction());
             Builder.CreateStore(SSPtr, GShadowStackPtr);
+          } else if (isa<CallBase>(I)) {
+            // FIXME: There are other call-like instructions (e.g. `invoke`,
+            // `callbr`) that we will need to think about when they arise.
+            Context.emitError("Unimplemented shadow stack allocation");
+            return false;
           }
         }
       }
