@@ -132,10 +132,10 @@ _LIBCPP_EXPORTED_FROM_ABI int toupper_l(int, locale_t);
 _LIBCPP_EXPORTED_FROM_ABI int tolower_l(int, locale_t);
 _LIBCPP_EXPORTED_FROM_ABI wint_t towupper_l(wint_t, locale_t);
 _LIBCPP_EXPORTED_FROM_ABI wint_t towlower_l(wint_t, locale_t);
-_LIBCPP_EXPORTED_FROM_ABI int strcoll_l(const char *, const char *, locale_t);
-_LIBCPP_EXPORTED_FROM_ABI size_t strxfrm_l(char *, const char *, size_t, locale_t);
-_LIBCPP_EXPORTED_FROM_ABI size_t strftime_l(char *, size_t , const char *, const struct tm *, locale_t);
-_LIBCPP_EXPORTED_FROM_ABI int wcscoll_l(const wchar_t *, const wchar_t *, locale_t);
-_LIBCPP_EXPORTED_FROM_ABI size_t wcsxfrm_l(wchar_t *, const wchar_t *, size_t , locale_t);
-}
+_LIBCPP_EXPORTED_FROM_ABI int strcoll_l(const char*, const char*, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI size_t strxfrm_l(char*, const char*, size_t, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI size_t strftime_l(char*, size_t, const char*, const struct tm*, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI int wcscoll_l(const wchar_t*, const wchar_t*, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI size_t wcsxfrm_l(wchar_t*, const wchar_t*, size_t, locale_t);
+} // namespace __ibm
 #endif // _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_IBM_H

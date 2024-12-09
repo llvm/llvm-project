@@ -166,7 +166,8 @@ inline _LIBCPP_HIDE_FROM_ABI long double __libcpp_strtold(const char* __nptr, ch
   return strtold_l(__nptr, __endptr, __loc);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long long __libcpp_strtoll(const char* __nptr, char** __endptr, int __base, __locale_t __loc) {
+inline _LIBCPP_HIDE_FROM_ABI long long
+__libcpp_strtoll(const char* __nptr, char** __endptr, int __base, __locale_t __loc) {
   return strtoll_l(__nptr, __endptr, __base, __loc);
 }
 
@@ -175,9 +176,9 @@ __libcpp_strtoull(const char* __nptr, char** __endptr, int __base, __locale_t __
   return strtoull_l(__nptr, __endptr, __base, __loc);
 }
 
-#    if defined(__MVS__)
+#  if defined(__MVS__)
 using namespace __ibm;
-#    endif
+#  endif
 
 //
 // Character manipulation functions
@@ -199,7 +200,8 @@ inline _LIBCPP_HIDE_FROM_ABI int __libcpp_tolower(int __ch, __locale_t __loc) { 
 inline _LIBCPP_HIDE_FROM_ABI int __libcpp_wcscoll(const wchar_t* __s1, const wchar_t* __s2, __locale_t __loc) {
   return wcscoll_l(__s1, __s2, __loc);
 }
-inline _LIBCPP_HIDE_FROM_ABI size_t __libcpp_wcsxfrm(wchar_t* __dest, const wchar_t* __src, size_t __n, __locale_t __loc) {
+inline _LIBCPP_HIDE_FROM_ABI size_t
+__libcpp_wcsxfrm(wchar_t* __dest, const wchar_t* __src, size_t __n, __locale_t __loc) {
   return wcsxfrm_l(__dest, __src, __n, __loc);
 }
 inline _LIBCPP_HIDE_FROM_ABI int __libcpp_iswspace(wint_t __ch, __locale_t __loc) { return iswspace_l(__ch, __loc); }
