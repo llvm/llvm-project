@@ -192,40 +192,45 @@ static LogicalResult checkWaitAndAsyncConflict(Op op) {
   return success();
 }
 
-static ParseResult parsevarPtrTypes(mlir::OpAsmParser &parser,
-                                    mlir::Type &varPtrRawType,
-                                    mlir::TypeAttr &varTypeAttr) {
-  if (failed(parser.parseType(varPtrRawType))) {
+static ParseResult parseVarPtrType(mlir::OpAsmParser &parser,
+                                   mlir::Type &varPtrType,
+                                   mlir::TypeAttr &varTypeAttr) {
+  if (failed(parser.parseType(varPtrType)))
     return failure();
-  }
+  if (failed(parser.parseRParen()))
+    return failure();
 
-  // If there is no comma, it means that the varType is implied from the
-  // element type of varPtr.
-  if (succeeded(parser.parseOptionalComma())) {
+  if (succeeded(parser.parseOptionalKeyword("varType"))) {
+    if (failed(parser.parseLParen()))
+      return failure();
     mlir::Type varType;
     if (failed(parser.parseType(varType)))
       return failure();
     varTypeAttr = mlir::TypeAttr::get(varType);
+    if (failed(parser.parseRParen()))
+      return failure();
   } else {
+    // Set `varType` from the element type of the type of `varPtr`.
     varTypeAttr = mlir::TypeAttr::get(
-        mlir::cast<mlir::acc::PointerLikeType>(varPtrRawType).getElementType());
+        mlir::cast<mlir::acc::PointerLikeType>(varPtrType).getElementType());
   }
 
   return success();
 }
 
-static void printvarPtrTypes(mlir::OpAsmPrinter &p, mlir::Operation *op,
-                             mlir::Type varPtrType,
-                             mlir::TypeAttr varTypeAttr) {
+static void printVarPtrType(mlir::OpAsmPrinter &p, mlir::Operation *op,
+                            mlir::Type varPtrType, mlir::TypeAttr varTypeAttr) {
   p.printType(varPtrType);
-  mlir::Type varType = varTypeAttr.getValue();
+  p << ")";
 
-  // Avoid printing the varType if it is already captured as the element type
-  // of varPtr's type.
+  // Print the `varType` only if it differs from the element type of
+  // `varPtr`'s type.
+  mlir::Type varType = varTypeAttr.getValue();
   if (mlir::cast<mlir::acc::PointerLikeType>(varPtrType).getElementType() !=
       varType) {
-    p << ", ";
+    p << " varType(";
     p.printType(varType);
+    p << ")";
   }
 }
 

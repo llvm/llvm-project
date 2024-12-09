@@ -459,7 +459,7 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
   }];
 
   let assemblyFormat = [{
-    `varPtr` `(` $varPtr `:` custom<varPtrTypes>(type($varPtr), $varType)  `)`
+    `varPtr` `(` $varPtr `:` custom<VarPtrType>(type($varPtr), $varType)
     oilist(
         `varPtrPtr` `(` $varPtrPtr `:` type($varPtrPtr) `)`
       | `bounds` `(` $bounds `)`
@@ -817,7 +817,7 @@ class OpenACC_DataExitOpWithVarPtr<string mnemonic, string clause>
     (`bounds` `(` $bounds^ `)` )?
     (`async` `(` custom<DeviceTypeOperands>($asyncOperands,
             type($asyncOperands), $asyncOperandsDeviceType)^ `)`)?
-    `to` `varPtr` `(` $varPtr `:` custom<varPtrTypes>(type($varPtr), $varType) `)`
+    `to` `varPtr` `(` $varPtr `:` custom<VarPtrType>(type($varPtr), $varType)
     attr-dict
   }];
 
