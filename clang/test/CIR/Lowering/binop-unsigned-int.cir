@@ -49,6 +49,8 @@ module {
     %33 = cir.load %1 : !cir.ptr<!u32i>, !u32i
     %34 = cir.binop(or, %32, %33) : !u32i
     cir.store %34, %2 : !u32i, !cir.ptr<!u32i>
+    %35 = cir.binop(add, %32, %33) sat: !u32i
+    %36 = cir.binop(sub, %32, %33) sat: !u32i  
     cir.return
   }
 }
@@ -62,7 +64,8 @@ module {
 // MLIR: = llvm.shl
 // MLIR: = llvm.and
 // MLIR: = llvm.xor
-// MLIR: = llvm.or
+// MLIR: = llvm.intr.uadd.sat{{.*}}(i32, i32) -> i32
+// MLIR: = llvm.intr.usub.sat{{.*}}(i32, i32) -> i32 
 
 // LLVM: = mul i32
 // LLVM: = udiv i32
@@ -74,3 +77,5 @@ module {
 // LLVM: = and i32
 // LLVM: = xor i32
 // LLVM: = or i32
+// LLVM: = call i32 @llvm.uadd.sat.i32
+// LLVM: = call i32 @llvm.usub.sat.i32

@@ -2832,7 +2832,7 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
   case NEON::BI__builtin_neon_vqaddh_u16:
     llvm_unreachable(" neon_vqaddh_u16 NYI ");
   case NEON::BI__builtin_neon_vqadds_s32:
-    llvm_unreachable(" neon_vqadds_s32 NYI ");
+    return builder.createAdd(ops[0], ops[1], false, false, true);
   case NEON::BI__builtin_neon_vqadds_u32:
     llvm_unreachable(" neon_vqadds_u32 NYI ");
   case NEON::BI__builtin_neon_vqdmulhh_s16:
@@ -2981,7 +2981,7 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
   case NEON::BI__builtin_neon_vqsubh_u16:
     llvm_unreachable(" neon_vqsubh_u16 NYI ");
   case NEON::BI__builtin_neon_vqsubs_s32:
-    llvm_unreachable(" neon_vqsubs_s32 NYI ");
+    return builder.createSub(ops[0], ops[1], false, false, true);
   case NEON::BI__builtin_neon_vqsubs_u32:
     llvm_unreachable(" neon_vqsubs_u32 NYI ");
   case NEON::BI__builtin_neon_vrecped_f64:

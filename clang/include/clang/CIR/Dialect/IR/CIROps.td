@@ -1192,12 +1192,14 @@ def BinOp : CIR_Op<"binop", [Pure,
   let arguments = (ins Arg<BinOpKind, "binop kind">:$kind,
                        CIR_AnyType:$lhs, CIR_AnyType:$rhs,
                        UnitAttr:$no_unsigned_wrap,
-                       UnitAttr:$no_signed_wrap);
+                       UnitAttr:$no_signed_wrap,
+                       UnitAttr:$saturated);
 
   let assemblyFormat = [{
     `(` $kind `,` $lhs `,` $rhs  `)`
     (`nsw` $no_signed_wrap^)?
     (`nuw` $no_unsigned_wrap^)?
+    (`sat` $saturated^)?
     `:` type($lhs) attr-dict
   }];
 

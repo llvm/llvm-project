@@ -419,13 +419,15 @@ public:
   }
 
   mlir::Value createSub(mlir::Value lhs, mlir::Value rhs, bool hasNUW = false,
-                        bool hasNSW = false) {
+                        bool hasNSW = false, bool saturated = false) {
     auto op = create<cir::BinOp>(lhs.getLoc(), lhs.getType(),
                                  cir::BinOpKind::Sub, lhs, rhs);
     if (hasNUW)
       op.setNoUnsignedWrap(true);
     if (hasNSW)
       op.setNoSignedWrap(true);
+    if (saturated)
+      op.setSaturated(true);
     return op;
   }
 
@@ -438,13 +440,15 @@ public:
   }
 
   mlir::Value createAdd(mlir::Value lhs, mlir::Value rhs, bool hasNUW = false,
-                        bool hasNSW = false) {
+                        bool hasNSW = false, bool saturated = false) {
     auto op = create<cir::BinOp>(lhs.getLoc(), lhs.getType(),
                                  cir::BinOpKind::Add, lhs, rhs);
     if (hasNUW)
       op.setNoUnsignedWrap(true);
     if (hasNSW)
       op.setNoSignedWrap(true);
+    if (saturated)
+      op.setSaturated(true);
     return op;
   }
 

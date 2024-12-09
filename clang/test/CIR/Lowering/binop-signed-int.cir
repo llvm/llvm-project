@@ -58,6 +58,10 @@ module {
     %33 = cir.load %1 : !cir.ptr<!s32i>, !s32i
     %34 = cir.binop(or, %32, %33) : !s32i
     // CHECK: = llvm.or
+    %35 = cir.binop(add, %32, %33) sat: !s32i
+    // CHECK: = llvm.intr.sadd.sat{{.*}}(i32, i32) -> i32
+    %36 = cir.binop(sub, %32, %33) sat: !s32i
+    // CHECK: = llvm.intr.ssub.sat{{.*}}(i32, i32) -> i32 
     cir.store %34, %2 : !s32i, !cir.ptr<!s32i>
     cir.return
   }
