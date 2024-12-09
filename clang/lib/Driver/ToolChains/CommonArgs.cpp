@@ -1410,7 +1410,7 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
   // libresolv.a, even if exists, is an empty archive to satisfy POSIX -lresolv
   // requirement.
   if (TC.getTriple().isOSLinux() && !TC.getTriple().isAndroid() &&
-      !TC.getTriple().isMusl())
+      !TC.getTriple().isMusl() && TC.getSanitizerArgs(Args).needsMsanRt())
     CmdArgs.push_back("-lresolv");
 }
 
