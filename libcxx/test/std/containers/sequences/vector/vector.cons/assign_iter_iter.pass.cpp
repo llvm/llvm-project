@@ -135,7 +135,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
       assert(v[2].value == 42);
     }
   }
-  { // Test with size() < new_size < capacity() for inputs_iterator, resulting in construction at end during assign
+  { // Test with size() < new_size < capacity() for input_iterator, resulting in construction at end during assign
     using T  = EmplaceConstructibleMoveableAndAssignable<int>;
     using It = cpp17_input_iterator<int*>;
     {
