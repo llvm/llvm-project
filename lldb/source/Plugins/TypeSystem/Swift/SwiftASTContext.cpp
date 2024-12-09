@@ -2147,7 +2147,7 @@ static std::string GetSDKPathFromDebugInfo(std::string m_description,
     return {};
   auto sdk_or_err = platform_sp->GetSDKPathFromDebugInfo(module);
   if (!sdk_or_err) {
-    Debugger::ReportError("Error while parsing SDK path from debug-info: " +
+    Debugger::ReportError("Error while parsing SDK path from debug info: " +
                           toString(sdk_or_err.takeError()));
     return {};
   }
@@ -2824,8 +2824,28 @@ SwiftASTContext::CreateInstance(const SymbolContext &sc,
   FileSpec target_sdk_spec = target_sp ? target_sp->GetSDKPath() : FileSpec();
   if (target_sdk_spec && FileSystem::Instance().Exists(target_sdk_spec)) {
     swift_ast_sp->SetPlatformSDKPath(target_sdk_spec.GetPath());
+    LOG_PRINTF(GetLog(LLDBLog::Types), "Using target SDK override: %s",
+               target_sdk_spec.GetPath().c_str());
     handled_sdk_path = true;
   }
+
+  // Get the precise SDK from the symbol context.
+  if (cu)
+    if (auto platform_sp = Platform::GetHostPlatform()) {
+      auto sdk_or_err = platform_sp->GetSDKPathFromDebugInfo(*cu);
+      if (!sdk_or_err)
+        Debugger::ReportError("Error while parsing SDK path from debug info: " +
+                              toString(sdk_or_err.takeError()));
+      else {
+        std::string sdk_path = GetSDKPath(m_description, *sdk_or_err);
+        if (!sdk_path.empty()) {
+          swift_ast_sp->SetPlatformSDKPath(sdk_path);
+          handled_sdk_path = true;
+          LOG_PRINTF(GetLog(LLDBLog::Types), "Using precise SDK: %s",
+                     sdk_path.c_str());
+        }
+      }
+    }
 
   if (!handled_sdk_path) {
     for (size_t mi = 0; mi != num_images; ++mi) {
@@ -2838,8 +2858,8 @@ SwiftASTContext::CreateInstance(const SymbolContext &sc,
       if (sdk_path.empty())
         continue;
 
-      handled_sdk_path = true;
       swift_ast_sp->SetPlatformSDKPath(sdk_path);
+      handled_sdk_path = true;
       break;
     }
   }
