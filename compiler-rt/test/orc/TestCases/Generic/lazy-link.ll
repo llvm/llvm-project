@@ -4,13 +4,14 @@
 ; referenced by main, should be linked (despite being passed with -lazy).
 ;
 ; RUN: rm -rf %t && mkdir -p %t
-; RUN: llc -filetype=obj -o %t/foo.o %S/Inputs/foo-ret-42.ll
-; RUN: llc -filetype=obj -o %t/x.o %S/Inputs/var-x-42.ll
-; RUN: llc -filetype=obj -o %t/main.o %s
-; RUN: llvm-jitlink -noexec -show-linked-files %t/main.o -lazy %t/foo.o \
+; RUN: %clang -c -o %t/foo.o %S/Inputs/foo-ret-42.ll
+; RUN: %clang -c -o %t/x.o %S/Inputs/var-x-42.ll
+; RUN: %clang -c -o %t/main.o %s
+; RUN: %llvm_jitlink -noexec -show-linked-files %t/main.o -lazy %t/foo.o \
 ; RUN:     -lazy %t/x.o | FileCheck %s
 ;
-; UNSUPPORTED: system-windows, target={{arm[^6][^4].*}}, target=powerpc64{{.*}}
+; UNSUPPORTED: system-windows
+; REQUIRES: target={{(arm|aarch)64.*}}
 ;
 ; CHECK: Linking {{.*}}main.o
 ; CHECK-DAG: Linking <indirect stubs graph #1>
