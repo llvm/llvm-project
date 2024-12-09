@@ -20,7 +20,6 @@ define void @iv_no_binary_op_in_descriptor(i1 %c, ptr %dst) {
 ; CHECK-NEXT:     CLONE ir<%gep> = getelementptr inbounds ir<%dst>, vp<[[STEPS:%.+]]>
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep>
 ; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR]]>, ir<%iv>
-; CHECK-NEXT:     EMIT vp<[[CAN_INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_INC]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }

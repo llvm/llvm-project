@@ -7674,13 +7674,16 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
-  TailFoldingStyle Style = CM.getTailFoldingStyle(
-      !isIndvarOverflowCheckKnownFalse(&CM, BestVF, BestUF));
-  // When not folding the tail, we know that the induction increment will not
-  // overflow.
-  bool HasNUW = Style == TailFoldingStyle::None;
+  bool IVUpdateMayOverflow =
+      !isIndvarOverflowCheckKnownFalse(&CM, BestVF, BestUF);
+  TailFoldingStyle Style = CM.getTailFoldingStyle(IVUpdateMayOverflow);
   bool WithoutRuntimeCheck =
       Style == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
+  // Use NUW for the induction increment if we proved that it won't overflow in
+  // the vector loop or when not folding the tail. In the later case, we know
+  // that the canonical induction increment will not overflow as the vector trip
+  // count is >= increment and a multiple of the increment.
+  bool HasNUW = !IVUpdateMayOverflow || Style == TailFoldingStyle::None;
   VPlanTransforms::lowerCanonicalIV(BestVPlan, HasNUW, WithoutRuntimeCheck);
   VPlanTransforms::unrollByUF(BestVPlan, BestUF,
                               OrigLoop->getHeader()->getContext());
@@ -9099,26 +9102,8 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
                                             PSE, RequiresScalarEpilogueCheck,
                                             CM.foldTailByMasking(), OrigLoop);
 
-  // Don't use getDecisionAndClampRange here, because we don't know the UF
-  // so this function is better to be conservative, rather than to split
-  // it up into different VPlans.
-  // TODO: Consider using getDecisionAndClampRange here to split up VPlans.
-  bool IVUpdateMayOverflow = false;
-  for (ElementCount VF : Range)
-    IVUpdateMayOverflow |= !isIndvarOverflowCheckKnownFalse(&CM, VF);
-
   DebugLoc DL = getDebugLocFromInstOrOperands(Legal->getPrimaryInduction());
-  TailFoldingStyle Style = CM.getTailFoldingStyle(IVUpdateMayOverflow);
-///<<<<<<< HEAD
   addCanonicalIV(*Plan, Legal->getWidestInductionType(), DL);
-/*=======*/
-  /*// Use NUW for the induction increment if we proved that it won't overflow in*/
-  /*// the vector loop or when not folding the tail. In the later case, we know*/
-  /*// that the canonical induction increment will not overflow as the vector trip*/
-  /*// count is >= increment and a multiple of the increment.*/
-  /*bool HasNUW = !IVUpdateMayOverflow || Style == TailFoldingStyle::None;*/
-  /*addCanonicalIVRecipes(*Plan, Legal->getWidestInductionType(), HasNUW, DL);*/
-/*>>>>>>> origin/main*/
 
   VPRecipeBuilder RecipeBuilder(*Plan, OrigLoop, TLI, Legal, CM, PSE, Builder);
 
@@ -9314,6 +9299,15 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   if (!VPlanTransforms::adjustFixedOrderRecurrences(*Plan, Builder))
     return nullptr;
 
+  // Don't use getDecisionAndClampRange here, because we don't know the UF
+  // so this function is better to be conservative, rather than to split
+  // it up into different VPlans.
+  // TODO: Consider using getDecisionAndClampRange here to split up VPlans.
+  bool IVUpdateMayOverflow = false;
+  for (ElementCount VF : Range)
+    IVUpdateMayOverflow |= !isIndvarOverflowCheckKnownFalse(&CM, VF);
+
+  TailFoldingStyle Style = CM.getTailFoldingStyle(IVUpdateMayOverflow);
   if (useActiveLaneMask(Style)) {
     // TODO: Move checks to VPlanTransforms::addActiveLaneMask once
     // TailFoldingStyle is visible there.
