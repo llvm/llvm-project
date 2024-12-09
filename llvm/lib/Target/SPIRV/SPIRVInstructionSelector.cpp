@@ -2162,6 +2162,7 @@ bool SPIRVInstructionSelector::selectBuildVector(Register ResVReg,
     report_fatal_error(
         "There must be at least two constituent operands in a vector");
 
+  MRI->setRegClass(ResVReg, GR.getRegClass(ResType));
   auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
                      TII.get(IsConst ? SPIRV::OpConstantComposite
                                      : SPIRV::OpCompositeConstruct))
@@ -2195,6 +2196,7 @@ bool SPIRVInstructionSelector::selectSplatVector(Register ResVReg,
     report_fatal_error(
         "There must be at least two constituent operands in a vector");
 
+  MRI->setRegClass(ResVReg, GR.getRegClass(ResType));
   auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
                      TII.get(IsConst ? SPIRV::OpConstantComposite
                                      : SPIRV::OpCompositeConstruct))
@@ -2701,7 +2703,7 @@ bool SPIRVInstructionSelector::wrapIntoSpecConstantOp(
       continue;
     }
     // Create a new register for the wrapper
-    WrapReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
+    WrapReg = MRI->createVirtualRegister(GR.getRegClass(OpType));
     GR.add(OpDefine, MF, WrapReg);
     CompositeArgs.push_back(WrapReg);
     // Decorate the wrapper register and generate a new instruction
@@ -2766,6 +2768,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
       if (!wrapIntoSpecConstantOp(I, CompositeArgs))
         return false;
     }
+    MRI->setRegClass(ResVReg, GR.getRegClass(ResType));
     auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
                    .addDef(ResVReg)
                    .addUse(GR.getSPIRVTypeID(ResType));
@@ -3388,7 +3391,10 @@ bool SPIRVInstructionSelector::selectPhi(Register ResVReg,
     MIB.addUse(I.getOperand(i + 0).getReg());
     MIB.addMBB(I.getOperand(i + 1).getMBB());
   }
-  return MIB.constrainAllUses(TII, TRI, RBI);
+  bool Res = MIB.constrainAllUses(TII, TRI, RBI);
+  MIB->setDesc(TII.get(TargetOpcode::PHI));
+  MIB->removeOperand(1);
+  return Res;
 }
 
 bool SPIRVInstructionSelector::selectGlobalValue(

@@ -1551,14 +1551,17 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
   if (Reg.isValid())
     return getSPIRVTypeForVReg(Reg);
   // create a new type
-  auto MIB = BuildMI(MIRBuilder.getMBB(), MIRBuilder.getInsertPt(),
-                     MIRBuilder.getDebugLoc(),
-                     MIRBuilder.getTII().get(SPIRV::OpTypePointer))
-                 .addDef(createTypeVReg(CurMF->getRegInfo()))
-                 .addImm(static_cast<uint32_t>(SC))
-                 .addUse(getSPIRVTypeID(BaseType));
-  DT.add(PointerElementType, AddressSpace, CurMF, getSPIRVTypeID(MIB));
-  return finishCreatingSPIRVType(LLVMTy, MIB);
+  return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+    auto MIB = BuildMI(MIRBuilder.getMBB(), MIRBuilder.getInsertPt(),
+                       MIRBuilder.getDebugLoc(),
+                       MIRBuilder.getTII().get(SPIRV::OpTypePointer))
+                   .addDef(createTypeVReg(CurMF->getRegInfo()))
+                   .addImm(static_cast<uint32_t>(SC))
+                   .addUse(getSPIRVTypeID(BaseType));
+    DT.add(PointerElementType, AddressSpace, CurMF, getSPIRVTypeID(MIB));
+    finishCreatingSPIRVType(LLVMTy, MIB);
+    return MIB;
+  });
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
