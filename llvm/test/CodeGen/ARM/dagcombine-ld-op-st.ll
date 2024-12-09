@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple armv7 -O1 | FileCheck %s -check-prefix=CHECK-LE-NORMAL
 ; RUN: llc < %s -mtriple armv7 -O1 -combiner-reduce-load-op-store-width-force-narrowing-profitable=1 | FileCheck %s -check-prefix=CHECK-LE-NARROW
 ; RUN: llc < %s -mtriple armv7eb -O1 | FileCheck %s -check-prefix=CHECK-BE-NORMAL
-; XXXRUNXXX: llc < %s -mtriple armv7eb -O1 -combiner-reduce-load-op-store-width-force-narrowing-profitable=1 | FileCheck %s -check-prefix=CHECK-BE-NARROW
+; RUN: llc < %s -mtriple armv7eb -O1 -combiner-reduce-load-op-store-width-force-narrowing-profitable=1 | FileCheck %s -check-prefix=CHECK-BE-NARROW
 
 ; This is a reproducer for a bug when DAGCombiner::ReduceLoadOpStoreWidth
 ; would end up narrowing the load-op-store sequence into this SDNode sequence
@@ -12,12 +12,12 @@
 ;   t20: i32 = or t18, Constant:i32<65534>
 ;   t21: ch = store<(store (s32) into %ir.p1 + 8, align 8)> t18:1, t20, t17, undef:i32
 ;
-; This is wrong since it accesses memory above %ir.p1+9 which is outside the
+; This was wrong since it accesses memory above %ir.p1+9 which is outside the
 ; "store size" for the original store.
 ;
-; For big-endian we hit an assertion due to passing a negative offset to
-; getMemBasePlusOffset (at least after commit 3e1b55cafc95d4ef4, while before
-; that commit we got load/store instructions that accessed memory at a
+; For big-endian we used to hit an assertion due to passing a negative offset
+; to getMemBasePlusOffset (at least after commit 3e1b55cafc95d4ef4, while
+; before that commit we got load/store instructions that accessed memory at a
 ; negative offset from %p1).
 ;
 define i16 @test(ptr %p1) {
@@ -32,10 +32,10 @@ define i16 @test(ptr %p1) {
 ;
 ; CHECK-LE-NARROW-LABEL: test:
 ; CHECK-LE-NARROW:       @ %bb.0: @ %entry
-; CHECK-LE-NARROW-NEXT:    ldr r1, [r0, #8]
+; CHECK-LE-NARROW-NEXT:    ldrh r1, [r0, #8]
 ; CHECK-LE-NARROW-NEXT:    movw r2, #65534
 ; CHECK-LE-NARROW-NEXT:    orr r1, r1, r2
-; CHECK-LE-NARROW-NEXT:    str r1, [r0, #8]
+; CHECK-LE-NARROW-NEXT:    strh r1, [r0, #8]
 ; CHECK-LE-NARROW-NEXT:    mov r0, #0
 ; CHECK-LE-NARROW-NEXT:    bx lr
 ;
@@ -47,6 +47,15 @@ define i16 @test(ptr %p1) {
 ; CHECK-BE-NORMAL-NEXT:    strh r1, [r0]
 ; CHECK-BE-NORMAL-NEXT:    mov r0, #0
 ; CHECK-BE-NORMAL-NEXT:    bx lr
+;
+; CHECK-BE-NARROW-LABEL: test:
+; CHECK-BE-NARROW:       @ %bb.0: @ %entry
+; CHECK-BE-NARROW-NEXT:    ldrh r1, [r0]
+; CHECK-BE-NARROW-NEXT:    movw r2, #65534
+; CHECK-BE-NARROW-NEXT:    orr r1, r1, r2
+; CHECK-BE-NARROW-NEXT:    strh r1, [r0]
+; CHECK-BE-NARROW-NEXT:    mov r0, #0
+; CHECK-BE-NARROW-NEXT:    bx lr
 entry:
   %load = load i80, ptr %p1, align 32
   %mask = shl i80 -1, 65

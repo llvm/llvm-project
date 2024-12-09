@@ -20379,10 +20379,14 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
     // either. It should be possible to improve that by using
     // ReduceLoadOpStoreWidthForceNarrowingProfitable.
 
-    // If the lsb changed does not start at the type bitwidth boundary,
-    // start at the previous one.
-    if (ShAmt % NewBW)
-      ShAmt = (((ShAmt + NewBW - 1) / NewBW) * NewBW) - NewBW;
+    // If the lsb that is modified does not start at the type bitwidth boundary,
+    // align to start at the previous boundary.
+    ShAmt = ShAmt - (ShAmt % NewBW);
+
+    // Make sure we do not access memory outside the memory touched by the
+    // original load/store.
+    if (ShAmt + NewBW > VT.getStoreSizeInBits())
+      return SDValue();
 
     APInt Mask = APInt::getBitsSet(BitWidth, ShAmt,
                                    std::min(BitWidth, ShAmt + NewBW));
