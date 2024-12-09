@@ -1515,6 +1515,9 @@ void ELFState<ELFT>::writeSectionContent(
     if (PGOEntry.FuncEntryCount)
       SHeader.sh_size += CBA.writeULEB128(*PGOEntry.FuncEntryCount);
 
+    if (PGOEntry.DynamicInstCount)
+      SHeader.sh_size += CBA.writeULEB128(*PGOEntry.DynamicInstCount);
+
     if (!PGOEntry.PGOBBEntries)
       continue;
 

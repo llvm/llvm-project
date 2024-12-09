@@ -1872,6 +1872,7 @@ void MappingTraits<ELFYAML::PGOAnalysisMapEntry>::mapping(
     IO &IO, ELFYAML::PGOAnalysisMapEntry &E) {
   assert(IO.getContext() && "The IO context is not initialized");
   IO.mapOptional("FuncEntryCount", E.FuncEntryCount);
+  IO.mapOptional("DynamicInstCount", E.DynamicInstCount);
   IO.mapOptional("PGOBBEntries", E.PGOBBEntries);
 }
 

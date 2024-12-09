@@ -143,6 +143,7 @@ using namespace llvm;
 enum class PGOMapFeaturesEnum {
   None,
   FuncEntryCount,
+  DynInstCount,
   BBFreq,
   BrProb,
   All,
@@ -153,6 +154,8 @@ static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
         clEnumValN(PGOMapFeaturesEnum::None, "none", "Disable all options"),
         clEnumValN(PGOMapFeaturesEnum::FuncEntryCount, "func-entry-count",
                    "Function Entry Count"),
+        clEnumValN(PGOMapFeaturesEnum::DynInstCount, "dyn-inst-count",
+                   "Dynamic instruction count"),
         clEnumValN(PGOMapFeaturesEnum::BBFreq, "bb-freq",
                    "Basic Block Frequency"),
         clEnumValN(PGOMapFeaturesEnum::BrProb, "br-prob", "Branch Probability"),
@@ -1412,6 +1415,9 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
   bool FuncEntryCountEnabled =
       AllFeatures || (!NoFeatures && PgoAnalysisMapFeatures.isSet(
                                          PGOMapFeaturesEnum::FuncEntryCount));
+  bool DynInstCountEnabled =
+      AllFeatures || (!NoFeatures && PgoAnalysisMapFeatures.isSet(
+                                         PGOMapFeaturesEnum::DynInstCount));
   bool BBFreqEnabled =
       AllFeatures ||
       (!NoFeatures && PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::BBFreq));
@@ -1424,9 +1430,12 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
         "BB entries info is required for BBFreq and BrProb "
         "features");
   }
-  return {FuncEntryCountEnabled, BBFreqEnabled, BrProbEnabled,
+  return {FuncEntryCountEnabled,
+          BBFreqEnabled,
+          BrProbEnabled,
           MF.hasBBSections() && NumMBBSectionRanges > 1,
-          static_cast<bool>(BBAddrMapSkipEmitBBEntries)};
+          static_cast<bool>(BBAddrMapSkipEmitBBEntries),
+          DynInstCountEnabled};
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
@@ -1519,7 +1528,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
           MaybeEntryCount ? MaybeEntryCount->getCount() : 0);
     }
     const MachineBlockFrequencyInfo *MBFI =
-        Features.BBFreq
+        Features.BBFreq || Features.DynamicInstCount
             ? &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI()
             : nullptr;
     const MachineBranchProbabilityInfo *MBPI =
@@ -1527,8 +1536,13 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
             ? &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI()
             : nullptr;
 
-    if (Features.BBFreq || Features.BrProb) {
+    if (Features.BBFreq || Features.BrProb || Features.DynamicInstCount) {
+      uint64_t DynInstCount = 0;
       for (const MachineBasicBlock &MBB : MF) {
+        if (Features.DynamicInstCount) {
+          DynInstCount +=
+              MBFI->getBlockProfileCount(&MBB).value_or(0) * MBB.size();
+        }
         if (Features.BBFreq) {
           OutStreamer->AddComment("basic block frequency");
           OutStreamer->emitULEB128IntValue(
@@ -1546,6 +1560,10 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
                 MBPI->getEdgeProbability(&MBB, SuccMBB).getNumerator());
           }
         }
+      }
+      if (Features.DynamicInstCount) {
+        OutStreamer->AddComment("Dynamic instruction count");
+        OutStreamer->emitULEB128IntValue(DynInstCount);
       }
     }
   }

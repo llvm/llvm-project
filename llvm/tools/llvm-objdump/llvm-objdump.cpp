@@ -198,15 +198,19 @@ public:
     raw_string_ostream PGOSS(PGOString);
 
     PGOSS << " (";
-    if (PGOMap.FeatEnable.FuncEntryCount && PGOBBEntryIndex == 0) {
+    if (PGOMap.FeatEnable.FuncEntryCount && PGOBBEntryIndex == 0)
       PGOSS << "Entry count: " << Twine(PGOMap.FuncEntryCount);
-      if (PGOMap.FeatEnable.hasPGOAnalysisBBData()) {
+
+    if (PGOMap.FeatEnable.DynamicInstCount && PGOBBEntryIndex == 0) {
+      if (PGOMap.FeatEnable.FuncEntryCount)
         PGOSS << ", ";
-      }
+      PGOSS << "Dynamic instruction count: " << Twine(PGOMap.DynamicInstCount);
     }
 
     if (PGOMap.FeatEnable.hasPGOAnalysisBBData()) {
-
+      if (PGOBBEntryIndex == 0 && (PGOMap.FeatEnable.FuncEntryCount ||
+                                   PGOMap.FeatEnable.DynamicInstCount))
+        PGOSS << ", ";
       assert(PGOBBEntryIndex < PGOMap.BBEntries.size() &&
              "Expected PGOAnalysisMap and BBAddrMap to have the same entries");
       const PGOAnalysisMap::PGOBBEntry &PGOBBEntry =
