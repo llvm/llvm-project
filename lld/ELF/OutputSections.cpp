@@ -249,7 +249,6 @@ void OutputSection::finalizeInputSections() {
     // catch misuses.
     isd->sectionBases.clear();
 
-
     // Some input sections may be removed from the list after ICF.
     for (InputSection *s : isd->sections)
       commitSection(s);
