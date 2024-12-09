@@ -313,7 +313,7 @@ extern unsigned struct_statvfs_sz;
 
 struct __sanitizer_iovec {
   void *iov_base;
-  uptr iov_len;
+  usize iov_len;
 };
 
 #if !SANITIZER_ANDROID

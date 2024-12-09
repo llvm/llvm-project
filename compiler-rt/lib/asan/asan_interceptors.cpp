@@ -85,7 +85,7 @@ int OnExit() {
 // ---------------------- Wrappers ---------------- {{{1
 using namespace __asan;
 
-DECLARE_REAL_AND_INTERCEPTOR(void *, malloc, uptr)
+DECLARE_REAL_AND_INTERCEPTOR(void *, malloc, usize)
 DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
 
 #define COMMON_INTERCEPT_FUNCTION_VER(name, ver) \
@@ -529,7 +529,7 @@ DEFINE_REAL(char*, index, const char *string, int c)
     return REAL(strcat)(to, from);
   }
 
-INTERCEPTOR(char*, strncat, char *to, const char *from, uptr size) {
+INTERCEPTOR(char*, strncat, char *to, const char *from, usize size) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strncat);
   AsanInitFromRtl();
@@ -617,7 +617,7 @@ INTERCEPTOR(char*, __strdup, const char *s) {
 }
 #endif // ASAN_INTERCEPT___STRDUP
 
-INTERCEPTOR(char*, strncpy, char *to, const char *from, uptr size) {
+INTERCEPTOR(char*, strncpy, char *to, const char *from, usize size) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strncpy);
   AsanInitFromRtl();
