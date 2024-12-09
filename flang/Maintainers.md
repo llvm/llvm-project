@@ -81,7 +81,7 @@ haqadeer@amd.com (email), abidh (GitHub), abidh (Discourse)
 
 ## Inactive Maintainers
 ### Lead Maintainers
-#### Backend : Lowering, FIR, Codegen)
+#### Backend : (Lowering, FIR, Codegen)
 Eric Schweitz \
 eschweitz@nvidia.com (email), schweitzpgi (GitHub), schweitz (Discourse)
 
