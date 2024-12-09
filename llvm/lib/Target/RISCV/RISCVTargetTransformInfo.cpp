@@ -1060,8 +1060,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (ST->hasVInstructions() && LT.second.isVector()) {
       SmallVector<unsigned, 3> Opcodes;
       // f16 with zvfhmin and bf16 with zvfbfmin
-      if (LT.second.getVectorElementType() == MVT::bf16 &&
-          ST->hasVInstructionsBF16Minimal())
+      if (LT.second.getVectorElementType() == MVT::bf16)
         Opcodes = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFSQRT_V,
                    RISCV::VFNCVTBF16_F_F_W};
       else if (LT.second.getVectorElementType() == MVT::f16 &&
