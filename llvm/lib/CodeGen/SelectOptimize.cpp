@@ -496,7 +496,10 @@ static Value *getTrueOrFalseValue(
 
   auto *CBO = BO->clone();
   auto CondIdx = SI.getConditionOpIndex();
-  CBO->setOperand(CondIdx, ConstantInt::get(CBO->getType(), 1));
+  bool HasSExt = isa<SExtInst>(CBO->getOperand(CondIdx));
+  Constant *CI = HasSExt ? ConstantInt::get(CBO->getType(), -1)
+                         : ConstantInt::get(CBO->getType(), 1);
+  CBO->setOperand(CondIdx, CI);
 
   unsigned OtherIdx = 1 - CondIdx;
   if (auto *IV = dyn_cast<Instruction>(CBO->getOperand(OtherIdx))) {
@@ -769,7 +772,7 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
   // inserted position.
   auto ProcessSelectInfo = [&SelectInfo](Instruction *I) {
     Value *Cond;
-    if (match(I, m_OneUse(m_ZExt(m_Value(Cond)))) &&
+    if (match(I, m_OneUse(m_ZExtOrSExt(m_Value(Cond)))) &&
         Cond->getType()->isIntegerTy(1)) {
       bool Inverted = match(Cond, m_Not(m_Value(Cond)));
       return SelectInfo.insert({I, {Cond, true, Inverted, 0}}).first;
@@ -793,9 +796,9 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
       case Instruction::Sub: {
         Value *X;
         if (!((PatternMatch::match(I->getOperand(0),
-                                   m_OneUse(m_ZExt(m_Value(X)))) ||
+                                   m_OneUse(m_ZExtOrSExt(m_Value(X)))) ||
                PatternMatch::match(I->getOperand(1),
-                                   m_OneUse(m_ZExt(m_Value(X))))) &&
+                                   m_OneUse(m_ZExtOrSExt(m_Value(X))))) &&
               X->getType()->isIntegerTy(1)))
           return SelectInfo.end();
         break;
