@@ -1235,6 +1235,7 @@ module std [system] {
 
   module flat_map {
     module flat_map                       { header "__flat_map/flat_map.h" }
+    module key_value_iterator             { header "__flat_map/key_value_iterator.h" }
     module sorted_unique                  { header "__flat_map/sorted_unique.h" }
 
     header "flat_map"
