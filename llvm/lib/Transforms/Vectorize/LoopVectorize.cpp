@@ -487,12 +487,11 @@ public:
   /// on, while the old loop will be used as the scalar remainder. Control flow
   /// is generated around the vectorized (and scalar epilogue) loops consisting
   /// of various checks and bypasses. Return the pre-header block of the new
-  /// loop and the start value for the canonical induction, if it is != 0. The
-  /// latter is the case when vectorizing the epilogue loop. In the case of
-  /// epilogue vectorization, this function is overriden to handle the more
-  /// complex control flow around the loops.  \p ExpandedSCEVs is used to
-  /// look up SCEV expansions for expressions needed during skeleton creation.
-  virtual std::pair<BasicBlock *, Value *>
+  /// loop. In the case of epilogue vectorization, this function is overriden to
+  /// handle the more complex control flow around the loops. \p ExpandedSCEVs is
+  /// used to look up SCEV expansions for expressions needed during skeleton
+  /// creation.
+  virtual BasicBlock *
   createVectorizedLoopSkeleton(const SCEV2ValueTy &ExpandedSCEVs);
 
   /// Fix the vectorized code, taking care of header phi's, and more.
@@ -747,15 +746,15 @@ public:
 
   // Override this function to handle the more complex control flow around the
   // three loops.
-  std::pair<BasicBlock *, Value *> createVectorizedLoopSkeleton(
-      const SCEV2ValueTy &ExpandedSCEVs) final {
+  BasicBlock *
+  createVectorizedLoopSkeleton(const SCEV2ValueTy &ExpandedSCEVs) final {
     return createEpilogueVectorizedLoopSkeleton(ExpandedSCEVs);
   }
 
   /// The interface for creating a vectorized skeleton using one of two
   /// different strategies, each corresponding to one execution of the vplan
   /// as described above.
-  virtual std::pair<BasicBlock *, Value *>
+  virtual BasicBlock *
   createEpilogueVectorizedLoopSkeleton(const SCEV2ValueTy &ExpandedSCEVs) = 0;
 
   /// Holds and updates state information required to vectorize the main loop
@@ -784,7 +783,7 @@ public:
                                        EPI, LVL, CM, BFI, PSI, Check, Plan) {}
   /// Implements the interface for creating a vectorized skeleton using the
   /// *main loop* strategy (ie the first pass of vplan execution).
-  std::pair<BasicBlock *, Value *>
+  BasicBlock *
   createEpilogueVectorizedLoopSkeleton(const SCEV2ValueTy &ExpandedSCEVs) final;
 
 protected:
@@ -819,7 +818,7 @@ public:
   }
   /// Implements the interface for creating a vectorized skeleton using the
   /// *epilogue loop* strategy (ie the second pass of vplan execution).
-  std::pair<BasicBlock *, Value *>
+  BasicBlock *
   createEpilogueVectorizedLoopSkeleton(const SCEV2ValueTy &ExpandedSCEVs) final;
 
 protected:
@@ -2716,6 +2715,7 @@ void InnerLoopVectorizer::createInductionResumeVPValues(
   // Otherwise we provide the trip count from the main vector loop.
   VPBasicBlock *ScalarPHVPBB = Plan.getScalarPreheader();
   VPBuilder ScalarPHBuilder(ScalarPHVPBB, ScalarPHVPBB->begin());
+  bool HasCanonical = false;
   for (VPRecipeBase &R : *Plan.getScalarHeader()) {
     auto *PhiR = cast<VPIRInstruction>(&R);
     auto *Phi = dyn_cast<PHINode>(&PhiR->getInstruction());
@@ -2728,11 +2728,25 @@ void InnerLoopVectorizer::createInductionResumeVPValues(
     createInductionResumeVPValue(PhiR, II, getExpandedStep(II, ExpandedSCEVs),
                                  LoopBypassBlocks, ScalarPHBuilder,
                                  MainVectorTripCount);
+    auto *ConstStart = dyn_cast<ConstantInt>(II.getStartValue());
+    auto *ConstStep = II.getConstIntStepValue();
+    if (Phi->getType() == VectorTripCount->getType() && ConstStart &&
+        ConstStart->isZero() && ConstStep && ConstStep->isOne())
+      HasCanonical = true;
   }
+
+  if (!IVSubset || HasCanonical)
+    return;
+  // When vectorizing the epilogue, create a resume phi for the canonical IV if
+  // no suitable resume phi was already created.
+  ScalarPHBuilder.createNaryOp(
+      VPInstruction::ResumePhi,
+      {Plan.getOrAddLiveIn(VectorTripCount),
+       Plan.getOrAddLiveIn(ConstantInt::get(VectorTripCount->getType(), 0))},
+      {}, "vec.epilog.resume.val");
 }
 
-std::pair<BasicBlock *, Value *>
-InnerLoopVectorizer::createVectorizedLoopSkeleton(
+BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton(
     const SCEV2ValueTy &ExpandedSCEVs) {
   /*
    In this function we generate a new loop. The new loop will contain
@@ -2792,7 +2806,7 @@ InnerLoopVectorizer::createVectorizedLoopSkeleton(
   // Emit phis for the new starting index of the scalar loop.
   createInductionResumeVPValues(ExpandedSCEVs);
 
-  return {LoopVectorPreHeader, nullptr};
+  return LoopVectorPreHeader;
 }
 
 // Fix up external users of the induction variable. At this point, we are
@@ -7740,10 +7754,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // 1. Set up the skeleton for vectorization, including vector pre-header and
   // middle block. The vector loop is created during VPlan execution.
-  Value *CanonicalIVStartValue;
-  std::tie(State.CFG.PrevBB, CanonicalIVStartValue) =
-      ILV.createVectorizedLoopSkeleton(ExpandedSCEVs ? *ExpandedSCEVs
-                                                     : State.ExpandedSCEVs);
+  State.CFG.PrevBB = ILV.createVectorizedLoopSkeleton(
+      ExpandedSCEVs ? *ExpandedSCEVs : State.ExpandedSCEVs);
   if (VectorizingEpilogue)
     VPlanTransforms::removeDeadRecipes(BestVPlan);
 
@@ -7781,8 +7793,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // 2. Copy and widen instructions from the old loop into the new loop.
   BestVPlan.prepareToExecute(ILV.getTripCount(),
-                             ILV.getOrCreateVectorTripCount(nullptr),
-                             CanonicalIVStartValue, State);
+                             ILV.getOrCreateVectorTripCount(nullptr), State);
   VPlanTransforms::convertToConcreteRecipes(BestVPlan);
 
   BestVPlan.execute(&State);
@@ -7859,8 +7870,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
 /// This function is partially responsible for generating the control flow
 /// depicted in https://llvm.org/docs/Vectorizers.html#epilogue-vectorization.
-std::pair<BasicBlock *, Value *>
-EpilogueVectorizerMainLoop::createEpilogueVectorizedLoopSkeleton(
+BasicBlock *EpilogueVectorizerMainLoop::createEpilogueVectorizedLoopSkeleton(
     const SCEV2ValueTy &ExpandedSCEVs) {
   createVectorLoopSkeleton("");
 
@@ -7904,7 +7914,7 @@ EpilogueVectorizerMainLoop::createEpilogueVectorizedLoopSkeleton(
   }
   createInductionResumeVPValues(ExpandedSCEVs, nullptr, &WideIVs);
 
-  return {LoopVectorPreHeader, nullptr};
+  return LoopVectorPreHeader;
 }
 
 void EpilogueVectorizerMainLoop::printDebugTracesAtStart() {
@@ -7984,7 +7994,7 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
 
 /// This function is partially responsible for generating the control flow
 /// depicted in https://llvm.org/docs/Vectorizers.html#epilogue-vectorization.
-std::pair<BasicBlock *, Value *>
+BasicBlock *
 EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton(
     const SCEV2ValueTy &ExpandedSCEVs) {
   createVectorLoopSkeleton("vec.epilog.");
@@ -8068,30 +8078,6 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton(
       Phi->removeIncomingValue(EPI.MemSafetyCheck);
   }
 
-  // Generate a resume phi for the canonical induction of the vector epilogue
-  // and put it in the vector epilogue preheader, unless such a phi already
-  // exists there - and can be reused.
-  PHINode *EPResumeVal = nullptr;
-  Type *IdxTy = Legal->getWidestInductionType();
-  Value *TC = EPI.VectorTripCount;
-  Constant *Init = ConstantInt::get(IdxTy, 0);
-
-  for (PHINode &P : LoopVectorPreHeader->phis()) {
-    if (P.getType() == IdxTy &&
-        P.getIncomingValueForBlock(VecEpilogueIterationCountCheck) == TC &&
-        P.getIncomingValueForBlock(EPI.MainLoopIterationCountCheck) == Init) {
-      EPResumeVal = &P;
-      EPResumeVal->setName("vec.epilog.resume.val");
-      break;
-    }
-  }
-  if (!EPResumeVal) {
-    EPResumeVal = PHINode::Create(IdxTy, 2, "vec.epilog.resume.val");
-    EPResumeVal->insertBefore(LoopVectorPreHeader->getFirstNonPHIIt());
-    EPResumeVal->addIncoming(TC, VecEpilogueIterationCountCheck);
-    EPResumeVal->addIncoming(Init, EPI.MainLoopIterationCountCheck);
-  }
-
   // Generate induction resume values. These variables save the new starting
   // indexes for the scalar loop. They are used to test if there are any tail
   // iterations left once the vector loop has completed.
@@ -8100,7 +8086,7 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton(
   // the trip count of the main vector loop, passed as the second argument.
   createInductionResumeVPValues(ExpandedSCEVs, EPI.VectorTripCount);
 
-  return {LoopVectorPreHeader, EPResumeVal};
+  return LoopVectorPreHeader;
 }
 
 BasicBlock *
@@ -9993,7 +9979,8 @@ LoopVectorizePass::LoopVectorizePass(LoopVectorizeOptions Opts)
 /// SCEVs from \p ExpandedSCEVs and set resume values for header recipes.
 static void
 preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
-                                 const SCEV2ValueTy &ExpandedSCEVs) {
+                                 const SCEV2ValueTy &ExpandedSCEVs,
+                                 const EpilogueLoopVectorizationInfo &EPI) {
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = VectorLoop->getEntryBasicBlock();
   Header->setName("vec.epilog.vector.body");
@@ -10016,12 +10003,53 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
     ExpandR->eraseFromParent();
   }
 
-  // Ensure that the start values for any VPWidenIntOrFpInductionRecipe,
-  // VPWidenPointerInductionRecipe and VPReductionPHIRecipes are updated
-  // before vectorizing the epilogue loop.
+  // Ensure that the start values for all header phi recipes are updated before
+  // vectorizing the epilogue loop.
   for (VPRecipeBase &R : Header->phis()) {
-    if (isa<VPCanonicalIVPHIRecipe>(&R))
+    if (auto *IV = dyn_cast<VPCanonicalIVPHIRecipe>(&R)) {
+      // When vectorizing the epilogue loop, the canonical induction start
+      // value needs to be changed from zero to the value after the main
+      // vector loop. Find the resume value created during execution of the main
+      // VPlan.
+      // FIXME: Improve modeling for canonical IV start values in the epilogue
+      // loop.
+      BasicBlock *MainMiddle = find_singleton<BasicBlock>(
+          predecessors(L->getLoopPreheader()),
+          [&EPI](BasicBlock *BB, bool) -> BasicBlock * {
+            if (BB != EPI.MainLoopIterationCountCheck &&
+                BB != EPI.EpilogueIterationCountCheck &&
+                BB != EPI.SCEVSafetyCheck && BB != EPI.MemSafetyCheck)
+              return BB;
+            return nullptr;
+          });
+      using namespace llvm::PatternMatch;
+      Type *IdxTy = IV->getScalarType();
+      PHINode *EPResumeVal = find_singleton<PHINode>(
+          L->getLoopPreheader()->phis(),
+          [&EPI, IdxTy, MainMiddle](PHINode &P, bool) -> PHINode * {
+            if (P.getType() == IdxTy &&
+                P.getIncomingValueForBlock(MainMiddle) == EPI.VectorTripCount &&
+                match(
+                    P.getIncomingValueForBlock(EPI.MainLoopIterationCountCheck),
+                    m_SpecificInt(0)))
+              return &P;
+            return nullptr;
+          });
+      assert(EPResumeVal && "must have a resume value for the canonical IV");
+      VPValue *VPV = Plan.getOrAddLiveIn(EPResumeVal);
+      assert(all_of(IV->users(),
+                    [](const VPUser *U) {
+                      return isa<VPScalarIVStepsRecipe>(U) ||
+                             isa<VPScalarCastRecipe>(U) ||
+                             isa<VPDerivedIVRecipe>(U) ||
+                             cast<VPInstruction>(U)->getOpcode() ==
+                                 Instruction::Add;
+                    }) &&
+             "the canonical IV should only be used by its increment or "
+             "ScalarIVSteps when resetting the start value");
+      IV->setOperand(0, VPV);
       continue;
+    }
 
     Value *ResumeV = nullptr;
     // TODO: Move setting of resume values to prepareToExecute.
@@ -10425,7 +10453,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                                  ORE, EPI, &LVL, &CM, BFI, PSI,
                                                  Checks, BestEpiPlan);
         EpilogILV.setTripCount(MainILV.getTripCount());
-        preparePlanForEpilogueVectorLoop(BestEpiPlan, L, ExpandedSCEVs);
+        preparePlanForEpilogueVectorLoop(BestEpiPlan, L, ExpandedSCEVs, EPI);
 
         assert(DT->verify(DominatorTree::VerificationLevel::Fast) &&
                "DT not preserved correctly");
