@@ -397,8 +397,13 @@ template <class ELFT> void MarkLive<ELFT>::mark() {
       enqueue(sec.nextInSectionGroup, 0, nullptr, &sec);
   }
 
-  printWhyLive(ctx.symtab->find("bar"));
-}
+  for (Symbol *sym : ctx.symtab->getSymbols()) {
+    if (llvm::any_of(ctx.arg.whyLive, [sym](const llvm::GlobPattern &pat) {
+          return pat.match(sym->getName());
+        }))
+      printWhyLive(sym);
+  }
+  }
 
 // Move the sections for some symbols to the main partition, specifically ifuncs
 // (because they can result in an IRELATIVE being added to the main partition's
