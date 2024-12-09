@@ -141,7 +141,6 @@ public:
     SelectLike(Instruction *I, bool Inverted = false, unsigned CondIdx = 0)
         : I(I), Inverted(Inverted), CondIdx(CondIdx) {}
 
-
     Instruction *getI() { return I; }
     const Instruction *getI() const { return I; }
 
