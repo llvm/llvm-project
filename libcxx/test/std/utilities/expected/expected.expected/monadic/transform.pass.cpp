@@ -239,7 +239,7 @@ constexpr void test_sfinae() {
 
   (void)e1.transform(never_called);
   (void)std::move(e1).transform(never_called);
-  (void)ce1.and_then(never_called);
+  (void)ce1.transform(never_called);
   (void)std::move(ce1).transform(never_called);
 }
 
