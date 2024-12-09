@@ -243,7 +243,7 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
   unsigned ID = Func->getBuiltinID();
   const Pointer &StrPtr = getParam<Pointer>(Frame, 0);
 
-  if (ID == Builtin::BIstrlen)
+  if (ID == Builtin::BIstrlen || ID == Builtin::BIwcslen)
     diagnoseNonConstexprBuiltin(S, OpPC, ID);
 
   if (!CheckArray(S, OpPC, StrPtr))
@@ -256,6 +256,12 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
     return false;
 
   assert(StrPtr.getFieldDesc()->isPrimitiveArray());
+  unsigned ElemSize = StrPtr.getFieldDesc()->getElemSize();
+
+  if (ID == Builtin::BI__builtin_wcslen || ID == Builtin::BIwcslen) {
+    const ASTContext &AC = S.getASTContext();
+    assert(ElemSize == AC.getTypeSizeInChars(AC.getWCharType()).getQuantity());
+  }
 
   size_t Len = 0;
   for (size_t I = StrPtr.getIndex();; ++I, ++Len) {
@@ -264,7 +270,20 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
     if (!CheckRange(S, OpPC, ElemPtr, AK_Read))
       return false;
 
-    uint8_t Val = ElemPtr.deref<uint8_t>();
+    uint32_t Val;
+    switch (ElemSize) {
+    case 1:
+      Val = ElemPtr.deref<uint8_t>();
+      break;
+    case 2:
+      Val = ElemPtr.deref<uint16_t>();
+      break;
+    case 4:
+      Val = ElemPtr.deref<uint32_t>();
+      break;
+    default:
+      llvm_unreachable("Unsupported char size");
+    }
     if (Val == 0)
       break;
   }
@@ -1859,6 +1878,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     break;
   case Builtin::BI__builtin_strlen:
   case Builtin::BIstrlen:
+  case Builtin::BI__builtin_wcslen:
+  case Builtin::BIwcslen:
     if (!interp__builtin_strlen(S, OpPC, Frame, F, Call))
       return false;
     break;

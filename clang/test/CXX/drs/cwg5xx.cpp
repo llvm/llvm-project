@@ -1209,6 +1209,11 @@ namespace cwg591 { // cwg591: 20
     };
   };
 
+  template <typename, bool> struct M {
+    class P;
+    int M;
+  };
+
   template<typename T> struct A<T>::B::C : A<T> {
     M m;
   };
@@ -1222,6 +1227,10 @@ namespace cwg591 { // cwg591: 20
   template<typename F>
   struct H<T>::B<U>::C<F>::D : B<U> {
     M m;
+  };
+
+  template<typename T, bool B> class M<T,B>::P : M {
+    int foo() { (void) M; }
   };
 
   template<typename T> struct A<T>::B::D : A<T*> {

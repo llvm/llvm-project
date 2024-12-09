@@ -210,34 +210,6 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   DISubprogram *SPClonedWithinModule =
       CollectDebugInfoForCloning(*OldFunc, Changes, DIFinder);
 
-  // Loop over all of the basic blocks in the function, cloning them as
-  // appropriate.  Note that we save BE this way in order to handle cloning of
-  // recursive functions into themselves.
-  for (const BasicBlock &BB : *OldFunc) {
-
-    // Create a new basic block and copy instructions into it!
-    BasicBlock *CBB = CloneBasicBlock(&BB, VMap, NameSuffix, NewFunc, CodeInfo);
-
-    // Add basic block mapping.
-    VMap[&BB] = CBB;
-
-    // It is only legal to clone a function if a block address within that
-    // function is never referenced outside of the function.  Given that, we
-    // want to map block addresses from the old function to block addresses in
-    // the clone. (This is different from the generic ValueMapper
-    // implementation, which generates an invalid blockaddress when
-    // cloning a function.)
-    if (BB.hasAddressTaken()) {
-      Constant *OldBBAddr = BlockAddress::get(const_cast<Function *>(OldFunc),
-                                              const_cast<BasicBlock *>(&BB));
-      VMap[OldBBAddr] = BlockAddress::get(NewFunc, CBB);
-    }
-
-    // Note return instructions for the caller.
-    if (ReturnInst *RI = dyn_cast<ReturnInst>(CBB->getTerminator()))
-      Returns.push_back(RI);
-  }
-
   if (Changes < CloneFunctionChangeType::DifferentModule &&
       DIFinder.subprogram_count() > 0) {
     // Turn on module-level changes, since we need to clone (some of) the
@@ -287,6 +259,34 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   for (auto MD : MDs) {
     NewFunc->addMetadata(MD.first, *MapMetadata(MD.second, VMap, RemapFlag,
                                                 TypeMapper, Materializer));
+  }
+
+  // Loop over all of the basic blocks in the function, cloning them as
+  // appropriate.  Note that we save BE this way in order to handle cloning of
+  // recursive functions into themselves.
+  for (const BasicBlock &BB : *OldFunc) {
+
+    // Create a new basic block and copy instructions into it!
+    BasicBlock *CBB = CloneBasicBlock(&BB, VMap, NameSuffix, NewFunc, CodeInfo);
+
+    // Add basic block mapping.
+    VMap[&BB] = CBB;
+
+    // It is only legal to clone a function if a block address within that
+    // function is never referenced outside of the function.  Given that, we
+    // want to map block addresses from the old function to block addresses in
+    // the clone. (This is different from the generic ValueMapper
+    // implementation, which generates an invalid blockaddress when
+    // cloning a function.)
+    if (BB.hasAddressTaken()) {
+      Constant *OldBBAddr = BlockAddress::get(const_cast<Function *>(OldFunc),
+                                              const_cast<BasicBlock *>(&BB));
+      VMap[OldBBAddr] = BlockAddress::get(NewFunc, CBB);
+    }
+
+    // Note return instructions for the caller.
+    if (ReturnInst *RI = dyn_cast<ReturnInst>(CBB->getTerminator()))
+      Returns.push_back(RI);
   }
 
   // Loop over all of the instructions in the new function, fixing up operand
