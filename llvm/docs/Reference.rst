@@ -120,6 +120,9 @@ LLVM IR
   Defines the LLVM intermediate representation and the assembly form of the
   different nodes.
 
+:doc:`Undefined Behavior (UB) <UndefinedBehavior>`
+  A guide on what UB/undef/poison are and when to use each one.
+
 :doc:`InAlloca`
   Description of the ``inalloca`` argument attribute.
 
