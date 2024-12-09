@@ -6020,7 +6020,7 @@ types.
 MSVC Extensions
 ===============
 
-Clang supports a number of extensions inorder to imitate MSVC.
+Clang supports a number of extensions in order to imitate MSVC.
 Some of these extensions are behind ``-fms-compatibility`` and ``-fms-extensions`` which
 are further described in :doc:`MSVCCompatibility`.
 
@@ -6040,9 +6040,9 @@ for more information on this non-conforming C++ extension.
 MSVC allows user-defined type temporaries to be bound to non-const lvalue references when ``/permissive``
 or ``/Zc:referenceBinding-`` are given on the command line.
 
-The current default behavior as of MSVC 1940 is ``/permissive``.
-As of Visual Studio 2017, ``/permissive-`` is the default for projects meaning C++ conformance is enforced when
-building with MSVC in Visual Studio.
+The current default behavior as of MSVC 1942 is ``/permissive``.
+As of Visual Studio 2017, ``/permissive-`` is the default for newly generated projects in Visual Studio meaning C++
+conformance is enforced when building with MSVC in Visual Studio.
 
 This MSVC extension can be enabled with ``-fms-reference-binding`` with the clang or cl driver.
 This MSVC extension can be enabled with ``/Zc:referenceBinding-`` with the cl driver.
