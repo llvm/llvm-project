@@ -82,7 +82,7 @@ most of the supported architectures.
 Deferred UB
 ===========
 Deferred UB is a lighter form of UB. It enables instructions to be executed
-speculatively while marking some corner cases having erroneous values.
+speculatively while marking some corner cases as having erroneous values.
 Deferred UB should be used for cases where the semantics offered by common
 CPUs differ, but the CPU does not trap.
 
