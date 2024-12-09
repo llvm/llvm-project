@@ -114,11 +114,6 @@ public:
     context_.set_location(std::nullopt);
   }
 
-  // This is necessary to avoid "walking" into the Fail clause,
-  // which confuses the CheckAllowed into thinking there's another
-  // memoryorder, when it's actually the argument to the fail clause.
-  bool Pre(const parser::OmpFailClause &) { return false; }
-
   bool Walk(const parser::Program &program) {
     parser::Walk(program, *this);
     return !context_.AnyFatalError();
