@@ -166,18 +166,14 @@ template <size_t N> struct Storage {
 // `StrOffsets` struct for arguments to `Storage::Make`.
 #define CLANG_BUILTIN_DETAIL_STR_OFFSETS(ID, TYPE, ATTRS)                      \
   Builtin::Info::StrOffsets {                                                  \
-    llvm::StringLiteral(#ID).size() + 1, llvm::StringLiteral(TYPE).size() + 1, \
-        llvm::StringLiteral(ATTRS).size() + 1,                                 \
-        llvm::StringLiteral("").size() + 1                                     \
+    sizeof(#ID), sizeof(TYPE), sizeof(ATTRS), sizeof("")                       \
   }
 
 // A detail macro used internally to compute the desired string table
 // `StrOffsets` struct for arguments to `Storage::Make`.
 #define CLANG_TARGET_BUILTIN_DETAIL_STR_OFFSETS(ID, TYPE, ATTRS, FEATURE)      \
   Builtin::Info::StrOffsets {                                                  \
-    llvm::StringLiteral(#ID).size() + 1, llvm::StringLiteral(TYPE).size() + 1, \
-        llvm::StringLiteral(ATTRS).size() + 1,                                 \
-        llvm::StringLiteral(FEATURE).size() + 1                                \
+    sizeof(#ID), sizeof(TYPE), sizeof(ATTRS), sizeof(FEATURE)                  \
   }
 
 // A set of macros that can be used with builtin `.def' files as an X-macro to
