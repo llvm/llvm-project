@@ -1638,14 +1638,14 @@ static void getMaxByValAlign(Type *Ty, Align &MaxAlign, Align MaxMaxAlign) {
 
 /// getByValTypeAlignment - Return the desired alignment for ByVal aggregate
 /// function arguments in the caller parameter area.
-uint64_t PPCTargetLowering::getByValTypeAlignment(Type *Ty,
-                                                  const DataLayout &DL) const {
+Align PPCTargetLowering::getByValTypeAlignment(Type *Ty,
+                                               const DataLayout &DL) const {
   // 16byte and wider vectors are passed on 16byte boundary.
   // The rest is 8 on PPC64 and 4 on PPC32 boundary.
   Align Alignment = Subtarget.isPPC64() ? Align(8) : Align(4);
   if (Subtarget.hasAltivec())
     getMaxByValAlign(Ty, Alignment, Align(16));
-  return Alignment.value();
+  return Alignment;
 }
 
 bool PPCTargetLowering::useSoftFloat() const {
