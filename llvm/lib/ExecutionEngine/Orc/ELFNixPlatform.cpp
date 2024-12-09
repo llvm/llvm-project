@@ -349,7 +349,6 @@ ELFNixPlatform::standardPlatformAliases(ExecutionSession &ES,
   SymbolAliasMap Aliases;
   addAliases(ES, Aliases, requiredCXXAliases());
   addAliases(ES, Aliases, standardRuntimeUtilityAliases());
-  addAliases(ES, Aliases, standardLazyCompilationAliases());
   return Aliases;
 }
 
@@ -376,16 +375,6 @@ ELFNixPlatform::standardRuntimeUtilityAliases() {
 
   return ArrayRef<std::pair<const char *, const char *>>(
       StandardRuntimeUtilityAliases);
-}
-
-ArrayRef<std::pair<const char *, const char *>>
-ELFNixPlatform::standardLazyCompilationAliases() {
-  static const std::pair<const char *, const char *>
-      StandardLazyCompilationAliases[] = {
-          {"__orc_rt_reentry", "__orc_rt_sysv_reentry"}};
-
-  return ArrayRef<std::pair<const char *, const char *>>(
-      StandardLazyCompilationAliases);
 }
 
 bool ELFNixPlatform::supportedTarget(const Triple &TT) {

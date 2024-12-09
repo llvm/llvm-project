@@ -71,9 +71,10 @@ private:
 };
 
 LazyObjectLinkingLayer::LazyObjectLinkingLayer(ObjectLinkingLayer &BaseLayer,
-                                               LazyReexportsManager &LRMgr)
+                                               LazyCallThroughManager &LCTMgr,
+                                               RedirectableSymbolManager &RSMgr)
     : ObjectLayer(BaseLayer.getExecutionSession()), BaseLayer(BaseLayer),
-      LRMgr(LRMgr) {
+      LCTMgr(LCTMgr), RSMgr(RSMgr) {
   BaseLayer.addPlugin(std::make_unique<RenamerPlugin>());
 }
 
@@ -100,7 +101,8 @@ Error LazyObjectLinkingLayer::add(ResourceTrackerSP RT,
     return Err;
 
   auto &JD = RT->getJITDylib();
-  return JD.define(lazyReexports(LRMgr, std::move(LazySymbols)), std::move(RT));
+  return JD.define(lazyReexports(LCTMgr, RSMgr, JD, std::move(LazySymbols)),
+                   std::move(RT));
 }
 
 void LazyObjectLinkingLayer::emit(
