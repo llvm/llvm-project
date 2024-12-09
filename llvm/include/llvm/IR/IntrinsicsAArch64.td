@@ -3997,6 +3997,18 @@ let TargetPrefix = "aarch64" in {
     : DefaultAttrsIntrinsic<[], [llvm_i32_ty,
                                 llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty,
                                 llvm_nxv16i8_ty],
+                              [IntrInaccessibleMemOnly, IntrHasSideEffects]>;
+
+  class SME_FP8_ZA_MULTI_VGx2_Intrinsic
+    : DefaultAttrsIntrinsic<[], [llvm_i32_ty,
+                                 llvm_nxv16i8_ty, llvm_nxv16i8_ty,
+                                 llvm_nxv16i8_ty, llvm_nxv16i8_ty],
+                            [IntrInaccessibleMemOnly, IntrHasSideEffects]>;
+
+  class SME_FP8_ZA_MULTI_VGx4_Intrinsic
+    : DefaultAttrsIntrinsic<[], [llvm_i32_ty,
+                                 llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty,
+                                 llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty],
                             [IntrInaccessibleMemOnly, IntrHasSideEffects]>;
   //
   // CVT from FP8 to half-precision/BFloat16 multi-vector
@@ -4036,6 +4048,9 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_fp8_fmlal_single_za16_vg2x1 : SME_FP8_ZA_SINGLE_VGx1_Intrinsic;
   def int_aarch64_sme_fp8_fmlal_single_za16_vg2x2 : SME_FP8_ZA_SINGLE_VGx2_Intrinsic;
   def int_aarch64_sme_fp8_fmlal_single_za16_vg2x4 : SME_FP8_ZA_SINGLE_VGx4_Intrinsic;
+  // Multi
+  def int_aarch64_sme_fp8_fmlal_multi_za16_vg2x2 : SME_FP8_ZA_MULTI_VGx2_Intrinsic;
+  def int_aarch64_sme_fp8_fmlal_multi_za16_vg2x4 : SME_FP8_ZA_MULTI_VGx4_Intrinsic;
 
   // Quad-vector groups (F8F32)
   def int_aarch64_sme_fp8_fmlall_lane_za32_vg4x1 : SME_FP8_ZA_LANE_VGx1_Intrinsic;
@@ -4045,6 +4060,9 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_fp8_fmlall_single_za32_vg4x1 : SME_FP8_ZA_SINGLE_VGx1_Intrinsic;
   def int_aarch64_sme_fp8_fmlall_single_za32_vg4x2 : SME_FP8_ZA_SINGLE_VGx2_Intrinsic;
   def int_aarch64_sme_fp8_fmlall_single_za32_vg4x4 : SME_FP8_ZA_SINGLE_VGx4_Intrinsic;
+  // Multi
+  def int_aarch64_sme_fp8_fmlall_multi_za32_vg4x2 : SME_FP8_ZA_MULTI_VGx2_Intrinsic;
+  def int_aarch64_sme_fp8_fmlall_multi_za32_vg4x4 : SME_FP8_ZA_MULTI_VGx4_Intrinsic;
 
   //
   // FP8 FDOT intrinsics
