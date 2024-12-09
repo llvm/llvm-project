@@ -42,7 +42,7 @@ define { <2 x float>, <2 x float> } @sincos_vector() {
 
 define { <2 x float>, <2 x float> } @sincos_zero_vector() {
 ; CHECK-LABEL: define { <2 x float>, <2 x float> } @sincos_zero_vector() {
-; CHECK-NEXT:    ret { <2 x float>, <2 x float> } { <2 x float> zeroinitializer, <2 x float> <float 1.000000e+00, float 1.000000e+00> }
+; CHECK-NEXT:    ret { <2 x float>, <2 x float> } { <2 x float> zeroinitializer, <2 x float> splat (float 1.000000e+00) }
 ;
   %ret = call { <2 x float>, <2 x float> } @llvm.sincos.v2f32(<2 x float> zeroinitializer)
   ret { <2 x float>, <2 x float> } %ret
