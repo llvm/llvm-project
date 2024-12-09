@@ -581,6 +581,15 @@ set(files
   __mutex/once_flag.h
   __mutex/tag_types.h
   __mutex/unique_lock.h
+  __new/align_val_t.h
+  __new/allocate.h
+  __new/destroying_delete_t.h
+  __new/exceptions.h
+  __new/interference_size.h
+  __new/launder.h
+  __new/new_handler.h
+  __new/nothrow_t.h
+  __new/operators.h
   __node_handle
   __numeric/accumulate.h
   __numeric/adjacent_difference.h

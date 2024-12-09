@@ -11,6 +11,7 @@
 
 #include <__config>
 #include <__cstddef/byte.h>
+#include <__cstddef/size_t.h>
 #include <__memory/construct_at.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/is_trivially_constructible.h>

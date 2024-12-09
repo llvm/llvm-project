@@ -10,6 +10,7 @@
 #define _LIBCPP___MEMORY_BUILTIN_NEW_ALLOCATOR_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__memory/unique_ptr.h>
 #include <new>
 

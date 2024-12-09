@@ -12,6 +12,7 @@
 
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
+#include <__cstddef/size_t.h>
 #include <__memory/addressof.h>
 #include <__memory/allocate_at_least.h>
 #include <__memory/allocator_traits.h>
