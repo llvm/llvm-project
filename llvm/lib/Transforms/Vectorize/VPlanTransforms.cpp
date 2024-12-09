@@ -2051,20 +2051,61 @@ void VPlanTransforms::createInterleaveGroups(
 }
 
 void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
+  Type *CanonicalIVType = Plan.getCanonicalIV()->getScalarType();
+  VPTypeAnalysis TypeInfo(CanonicalIVType);
+
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
-    for (VPRecipeBase &R : make_early_inc_range(VPBB->phis())) {
-      if (!isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(&R))
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      if (isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(&R)) {
+        auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
+        StringRef Name =
+            isa<VPCanonicalIVPHIRecipe>(PhiR) ? "index" : "evl.based.iv";
+        auto *ScalarR = new VPScalarPHIRecipe(PhiR->getStartValue(),
+                                              PhiR->getBackedgeValue(),
+                                              PhiR->getDebugLoc(), Name);
+        ScalarR->insertBefore(PhiR);
+        PhiR->replaceAllUsesWith(ScalarR);
+        PhiR->eraseFromParent();
         continue;
-      auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
-      StringRef Name =
-          isa<VPCanonicalIVPHIRecipe>(PhiR) ? "index" : "evl.based.iv";
-      auto *ScalarR =
-          new VPScalarPHIRecipe(PhiR->getStartValue(), PhiR->getBackedgeValue(),
-                                PhiR->getDebugLoc(), Name);
-      ScalarR->insertBefore(PhiR);
-      PhiR->replaceAllUsesWith(ScalarR);
-      PhiR->eraseFromParent();
+      }
+
+      auto *VPI = dyn_cast<VPInstruction>(&R);
+      if (VPI && VPI->getOpcode() == VPInstruction::WideIVStep) {
+        VPBuilder Builder(VPI->getParent(), VPI->getIterator());
+        VPValue *VectorStep = VPI->getOperand(0);
+        Type *IVTy = TypeInfo.inferScalarType(VPI->getOperand(2));
+        if (TypeInfo.inferScalarType(VectorStep) != IVTy) {
+          Instruction::CastOps CastOp = IVTy->isFloatingPointTy()
+                                            ? Instruction::UIToFP
+                                            : Instruction::Trunc;
+          VectorStep = Builder.createWidenCast(CastOp, VectorStep, IVTy);
+        }
+
+        VPValue *ScalarStep = VPI->getOperand(1);
+        auto *ConstStep =
+            ScalarStep->isLiveIn()
+                ? dyn_cast<ConstantInt>(ScalarStep->getLiveInIRValue())
+                : nullptr;
+        if (!ConstStep || ConstStep->getValue() != 1) {
+          if (TypeInfo.inferScalarType(ScalarStep) != IVTy) {
+            ScalarStep =
+                Builder.createWidenCast(Instruction::Trunc, ScalarStep, IVTy);
+          }
+
+          std::optional<FastMathFlags> FMFs;
+          if (IVTy->isFloatingPointTy())
+            FMFs = VPI->getFastMathFlags();
+
+          unsigned MulOpc =
+              IVTy->isFloatingPointTy() ? Instruction::FMul : Instruction::Mul;
+          VPInstruction *Mul = Builder.createNaryOp(
+              MulOpc, {VectorStep, ScalarStep}, FMFs, R.getDebugLoc());
+          VectorStep = Mul;
+        }
+        VPI->replaceAllUsesWith(VectorStep);
+        VPI->eraseFromParent();
+      }
     }
   }
 }
