@@ -1212,3 +1212,20 @@ void test_copy_mf8x3(__clang_svmfloat8x3_t a) {
 void test_copy_mf8x4(__clang_svmfloat8x4_t a) {
   __clang_svmfloat8x4_t b{a};
 }
+
+/// Reduced from: https://github.com/llvm/llvm-project/issues/107609
+using vec_t = __SVInt8_t;
+
+// CHECK-LABEL: define dso_local void @_Z20test_copy_s8_typedefu10__SVInt8_t
+// CHECK-SAME: (<vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 16 x i8>, align 16
+// CHECK-NEXT:    [[VEC:%.*]] = alloca <vscale x 16 x i8>, align 16
+// CHECK-NEXT:    store <vscale x 16 x i8> [[A]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i8>, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store <vscale x 16 x i8> [[TMP0]], ptr [[VEC]], align 16
+// CHECK-NEXT:    ret void
+//
+void test_copy_s8_typedef(__SVInt8_t a) {
+  vec_t vec{a};
+}
