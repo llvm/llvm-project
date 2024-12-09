@@ -16215,6 +16215,11 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
     }
     Builder.SetCurrentDebugLocation(UserI->getDebugLoc());
     Value *Vec = vectorizeTree(TE, /*PostponedPHIs=*/false);
+    if (auto *VecI = dyn_cast<Instruction>(Vec);
+        VecI && VecI->getParent() == Builder.GetInsertBlock() &&
+        Builder.GetInsertPoint()->comesBefore(VecI))
+      VecI->moveBeforePreserving(*Builder.GetInsertBlock(),
+                                 Builder.GetInsertPoint());
     if (Vec->getType() != PrevVec->getType()) {
       assert(Vec->getType()->isIntOrIntVectorTy() &&
              PrevVec->getType()->isIntOrIntVectorTy() &&

@@ -2085,6 +2085,11 @@ def : AMDGPUMnemonicAlias<"v_perm_pk4_b8_u8", "v_perm_b32"> {
   let AssemblerPredicate = isGFX13Plus;
 }
 
+let AssemblerPredicate = isGFX11Plus in {
+  def : AMDGPUMnemonicAlias<"v_add3_nc_u32", "v_add3_u32">;
+  def : AMDGPUMnemonicAlias<"v_xor_add_u32", "v_xad_u32">;
+}
+
 // These instructions differ from GFX12 variant by supporting DPP:
 defm V_FMA_F64                       : VOP3Only_Realtriple_gfx1210_gfx13<0x214>;
 defm V_DIV_FIXUP_F64                 : VOP3Only_Realtriple_gfx1210<0x228>;

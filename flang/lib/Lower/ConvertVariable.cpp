@@ -39,7 +39,7 @@
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
-#include "flang/Runtime/allocator-registry.h"
+#include "flang/Runtime/allocator-registry-consts.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/Support/CommandLine.h"
