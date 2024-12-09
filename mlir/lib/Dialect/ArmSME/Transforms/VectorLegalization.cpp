@@ -265,8 +265,8 @@ struct LegalizeMaskedVectorOuterProductOpsByDecomposition
   LogicalResult
   matchAndRewrite(vector::MaskOp maskOp, OpAdaptor adaptor,
                   OneToNPatternRewriter &rewriter) const override {
-    if (auto outerProductOp =
-            llvm::dyn_cast<vector::OuterProductOp>(maskOp.getMaskableOp())) {
+    if (auto outerProductOp = llvm::dyn_cast_or_null<vector::OuterProductOp>(
+            maskOp.getMaskableOp())) {
       LegalizeVectorOuterProductOpsByDecomposition pattern(*getTypeConverter(),
                                                            getContext());
       return static_cast<RewritePattern &>(pattern).matchAndRewrite(

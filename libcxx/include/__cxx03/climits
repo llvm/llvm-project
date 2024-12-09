@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CLIMITS
-#define _LIBCPP_CLIMITS
+#ifndef _LIBCPP___CXX03_CLIMITS
+#define _LIBCPP___CXX03_CLIMITS
 
 /*
     climits synopsis
@@ -45,4 +45,4 @@ Macros:
 #  pragma GCC system_header
 #endif
 
-#endif // _LIBCPP_CLIMITS
+#endif // _LIBCPP___CXX03_CLIMITS

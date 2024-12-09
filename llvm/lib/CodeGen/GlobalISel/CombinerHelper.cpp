@@ -7717,10 +7717,151 @@ bool CombinerHelper::matchShuffleUndefRHS(MachineInstr &MI,
   if (!Changed)
     return false;
 
-  MatchInfo = [&, NewMask](MachineIRBuilder &B) {
+  MatchInfo = [&, NewMask = std::move(NewMask)](MachineIRBuilder &B) {
     B.buildShuffleVector(MI.getOperand(0), MI.getOperand(1), MI.getOperand(2),
-                         NewMask);
+                         std::move(NewMask));
   };
 
   return true;
+}
+
+static void commuteMask(MutableArrayRef<int> Mask, const unsigned NumElems) {
+  const unsigned MaskSize = Mask.size();
+  for (unsigned I = 0; I < MaskSize; ++I) {
+    int Idx = Mask[I];
+    if (Idx < 0)
+      continue;
+
+    if (Idx < (int)NumElems)
+      Mask[I] = Idx + NumElems;
+    else
+      Mask[I] = Idx - NumElems;
+  }
+}
+
+bool CombinerHelper::matchShuffleDisjointMask(MachineInstr &MI,
+                                              BuildFnTy &MatchInfo) {
+
+  auto &Shuffle = cast<GShuffleVector>(MI);
+  // If any of the two inputs is already undef, don't check the mask again to
+  // prevent infinite loop
+  if (getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, Shuffle.getSrc1Reg(), MRI))
+    return false;
+
+  if (getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, Shuffle.getSrc2Reg(), MRI))
+    return false;
+
+  const LLT DstTy = MRI.getType(Shuffle.getReg(0));
+  const LLT Src1Ty = MRI.getType(Shuffle.getSrc1Reg());
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_SHUFFLE_VECTOR, {DstTy, Src1Ty}}))
+    return false;
+
+  ArrayRef<int> Mask = Shuffle.getMask();
+  const unsigned NumSrcElems = Src1Ty.isVector() ? Src1Ty.getNumElements() : 1;
+
+  bool TouchesSrc1 = false;
+  bool TouchesSrc2 = false;
+  const unsigned NumElems = Mask.size();
+  for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
+    if (Mask[Idx] < 0)
+      continue;
+
+    if (Mask[Idx] < (int)NumSrcElems)
+      TouchesSrc1 = true;
+    else
+      TouchesSrc2 = true;
+  }
+
+  if (TouchesSrc1 == TouchesSrc2)
+    return false;
+
+  Register NewSrc1 = Shuffle.getSrc1Reg();
+  SmallVector<int, 16> NewMask(Mask);
+  if (TouchesSrc2) {
+    NewSrc1 = Shuffle.getSrc2Reg();
+    commuteMask(NewMask, NumSrcElems);
+  }
+
+  MatchInfo = [=, &Shuffle](MachineIRBuilder &B) {
+    auto Undef = B.buildUndef(Src1Ty);
+    B.buildShuffleVector(Shuffle.getReg(0), NewSrc1, Undef, NewMask);
+  };
+
+  return true;
+}
+
+bool CombinerHelper::matchSuboCarryOut(const MachineInstr &MI,
+                                       BuildFnTy &MatchInfo) {
+  const GSubCarryOut *Subo = cast<GSubCarryOut>(&MI);
+
+  Register Dst = Subo->getReg(0);
+  Register LHS = Subo->getLHSReg();
+  Register RHS = Subo->getRHSReg();
+  Register Carry = Subo->getCarryOutReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT CarryTy = MRI.getType(Carry);
+
+  // Check legality before known bits.
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SUB, {DstTy}}) ||
+      !isConstantLegalOrBeforeLegalizer(CarryTy))
+    return false;
+
+  ConstantRange KBLHS =
+      ConstantRange::fromKnownBits(KB->getKnownBits(LHS),
+                                   /* IsSigned=*/Subo->isSigned());
+  ConstantRange KBRHS =
+      ConstantRange::fromKnownBits(KB->getKnownBits(RHS),
+                                   /* IsSigned=*/Subo->isSigned());
+
+  if (Subo->isSigned()) {
+    // G_SSUBO
+    switch (KBLHS.signedSubMayOverflow(KBRHS)) {
+    case ConstantRange::OverflowResult::MayOverflow:
+      return false;
+    case ConstantRange::OverflowResult::NeverOverflows: {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildSub(Dst, LHS, RHS, MachineInstr::MIFlag::NoSWrap);
+        B.buildConstant(Carry, 0);
+      };
+      return true;
+    }
+    case ConstantRange::OverflowResult::AlwaysOverflowsLow:
+    case ConstantRange::OverflowResult::AlwaysOverflowsHigh: {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildSub(Dst, LHS, RHS);
+        B.buildConstant(Carry, getICmpTrueVal(getTargetLowering(),
+                                              /*isVector=*/CarryTy.isVector(),
+                                              /*isFP=*/false));
+      };
+      return true;
+    }
+    }
+    return false;
+  }
+
+  // G_USUBO
+  switch (KBLHS.unsignedSubMayOverflow(KBRHS)) {
+  case ConstantRange::OverflowResult::MayOverflow:
+    return false;
+  case ConstantRange::OverflowResult::NeverOverflows: {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildSub(Dst, LHS, RHS, MachineInstr::MIFlag::NoUWrap);
+      B.buildConstant(Carry, 0);
+    };
+    return true;
+  }
+  case ConstantRange::OverflowResult::AlwaysOverflowsLow:
+  case ConstantRange::OverflowResult::AlwaysOverflowsHigh: {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildSub(Dst, LHS, RHS);
+      B.buildConstant(Carry, getICmpTrueVal(getTargetLowering(),
+                                            /*isVector=*/CarryTy.isVector(),
+                                            /*isFP=*/false));
+    };
+    return true;
+  }
+  }
+
+  return false;
 }

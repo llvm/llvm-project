@@ -184,14 +184,30 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
   const SourceManager &SM = PP.getSourceManager();
   const ModuleMap &MM = HS.getModuleMap();
 
-  llvm::DenseSet<FileID> ModuleMaps;
-
-  llvm::DenseSet<const Module *> ProcessedModules;
-  auto CollectModuleMapsForHierarchy = [&](const Module *M) {
+  // Module maps used only by textual headers are special. Their FileID is
+  // non-affecting, but their FileEntry is (i.e. must be written as InputFile).
+  enum AffectedReason : bool {
+    AR_TextualHeader = 0,
+    AR_ImportOrTextualHeader = 1,
+  };
+  auto AssignMostImportant = [](AffectedReason &LHS, AffectedReason RHS) {
+    LHS = std::max(LHS, RHS);
+  };
+  llvm::DenseMap<FileID, AffectedReason> ModuleMaps;
+  llvm::DenseMap<const Module *, AffectedReason> ProcessedModules;
+  auto CollectModuleMapsForHierarchy = [&](const Module *M,
+                                           AffectedReason Reason) {
     M = M->getTopLevelModule();
 
-    if (!ProcessedModules.insert(M).second)
+    // We need to process the header either when it was not present or when we
+    // previously flagged module map as textual headers and now we found a
+    // proper import.
+    if (auto [It, Inserted] = ProcessedModules.insert({M, Reason});
+        !Inserted && Reason <= It->second) {
       return;
+    } else {
+      It->second = Reason;
+    }
 
     std::queue<const Module *> Q;
     Q.push(M);
@@ -202,12 +218,12 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
       // The containing module map is affecting, because it's being pointed
       // into by Module::DefinitionLoc.
       if (auto F = MM.getContainingModuleMapFileID(Mod); F.isValid())
-        ModuleMaps.insert(F);
+        AssignMostImportant(ModuleMaps[F], Reason);
       // For inferred modules, the module map that allowed inferring is not
       // related to the virtual containing module map file. It did affect the
       // compilation, though.
       if (auto UniqF = MM.getModuleMapFileIDForUniquing(Mod); UniqF.isValid())
-        ModuleMaps.insert(UniqF);
+        AssignMostImportant(ModuleMaps[UniqF], Reason);
 
       for (auto *SubM : Mod->submodules())
         Q.push(SubM);
@@ -216,7 +232,7 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
 
   // Handle all the affecting modules referenced from the root module.
 
-  CollectModuleMapsForHierarchy(RootModule);
+  CollectModuleMapsForHierarchy(RootModule, AR_ImportOrTextualHeader);
 
   std::queue<const Module *> Q;
   Q.push(RootModule);
@@ -225,9 +241,9 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
     Q.pop();
 
     for (const Module *ImportedModule : CurrentModule->Imports)
-      CollectModuleMapsForHierarchy(ImportedModule);
+      CollectModuleMapsForHierarchy(ImportedModule, AR_ImportOrTextualHeader);
     for (const Module *UndeclaredModule : CurrentModule->UndeclaredUses)
-      CollectModuleMapsForHierarchy(UndeclaredModule);
+      CollectModuleMapsForHierarchy(UndeclaredModule, AR_ImportOrTextualHeader);
 
     for (auto *M : CurrentModule->submodules())
       Q.push(M);
@@ -256,7 +272,7 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
 
     for (const auto &KH : HS.findResolvedModulesForHeader(*File))
       if (const Module *M = KH.getModule())
-        CollectModuleMapsForHierarchy(M);
+        CollectModuleMapsForHierarchy(M, AR_TextualHeader);
   }
 
   // FIXME: This algorithm is not correct for module map hierarchies where
@@ -278,13 +294,16 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
   // includes a module map defining a module that's not a submodule of X.
 
   llvm::DenseSet<const FileEntry *> ModuleFileEntries;
-  for (FileID MM : ModuleMaps) {
-    if (auto *FE = SM.getFileEntryForID(MM))
+  llvm::DenseSet<FileID> ModuleFileIDs;
+  for (auto [FID, Reason] : ModuleMaps) {
+    if (Reason == AR_ImportOrTextualHeader)
+      ModuleFileIDs.insert(FID);
+    if (auto *FE = SM.getFileEntryForID(FID))
       ModuleFileEntries.insert(FE);
   }
 
   AffectingModuleMaps R;
-  R.DefinitionFileIDs = std::move(ModuleMaps);
+  R.DefinitionFileIDs = std::move(ModuleFileIDs);
   R.DefinitionFiles = std::move(ModuleFileEntries);
   return std::move(R);
 }
@@ -878,7 +897,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(MODULE_NAME);
   RECORD(MODULE_DIRECTORY);
   RECORD(MODULE_MAP_FILE);
-  RECORD(IMPORTS);
+  RECORD(IMPORT);
   RECORD(ORIGINAL_FILE);
   RECORD(ORIGINAL_FILE_ID);
   RECORD(INPUT_FILE_OFFSETS);
@@ -1536,34 +1555,53 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
 
   // Imports
   if (Chain) {
-    serialization::ModuleManager &Mgr = Chain->getModuleManager();
-    Record.clear();
+    auto Abbrev = std::make_shared<BitCodeAbbrev>();
+    Abbrev->Add(BitCodeAbbrevOp(IMPORT));
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // Kind
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // ImportLoc
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Module name len
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Standard C++ mod
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File size
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File timestamp
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File name len
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Strings
+    unsigned AbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
 
-    for (ModuleFile &M : Mgr) {
+    SmallString<128> Blob;
+
+    for (ModuleFile &M : Chain->getModuleManager()) {
       // Skip modules that weren't directly imported.
       if (!M.isDirectlyImported())
         continue;
 
+      Record.clear();
+      Blob.clear();
+
+      Record.push_back(IMPORT);
       Record.push_back((unsigned)M.Kind); // FIXME: Stable encoding
-      Record.push_back(M.StandardCXXModule);
       AddSourceLocation(M.ImportLoc, Record);
+      AddStringBlob(M.ModuleName, Record, Blob);
+      Record.push_back(M.StandardCXXModule);
 
       // We don't want to hard code the information about imported modules
       // in the C++20 named modules.
-      if (!M.StandardCXXModule) {
+      if (M.StandardCXXModule) {
+        Record.push_back(0);
+        Record.push_back(0);
+        Record.push_back(0);
+      } else {
         // If we have calculated signature, there is no need to store
         // the size or timestamp.
         Record.push_back(M.Signature ? 0 : M.File.getSize());
         Record.push_back(M.Signature ? 0 : getTimestampForOutput(M.File));
-        llvm::append_range(Record, M.Signature);
+
+        llvm::append_range(Blob, M.Signature);
+
+        AddPathBlob(M.FileName, Record, Blob);
       }
 
-      AddString(M.ModuleName, Record);
-
-      if (!M.StandardCXXModule)
-        AddPath(M.FileName, Record);
+      Stream.EmitRecordWithBlob(AbbrevCode, Record, Blob);
     }
-    Stream.EmitRecord(IMPORTS, Record);
   }
 
   // Write the options block.
@@ -4777,6 +4815,12 @@ void ASTWriter::AddString(StringRef Str, RecordDataImpl &Record) {
   Record.insert(Record.end(), Str.begin(), Str.end());
 }
 
+void ASTWriter::AddStringBlob(StringRef Str, RecordDataImpl &Record,
+                              SmallVectorImpl<char> &Blob) {
+  Record.push_back(Str.size());
+  Blob.insert(Blob.end(), Str.begin(), Str.end());
+}
+
 bool ASTWriter::PreparePathForOutput(SmallVectorImpl<char> &Path) {
   assert(WritingAST && "can't prepare path for output when not writing AST");
 
@@ -4803,6 +4847,13 @@ void ASTWriter::AddPath(StringRef Path, RecordDataImpl &Record) {
   SmallString<128> FilePath(Path);
   PreparePathForOutput(FilePath);
   AddString(FilePath, Record);
+}
+
+void ASTWriter::AddPathBlob(StringRef Path, RecordDataImpl &Record,
+                            SmallVectorImpl<char> &Blob) {
+  SmallString<128> FilePath(Path);
+  PreparePathForOutput(FilePath);
+  AddStringBlob(FilePath, Record, Blob);
 }
 
 void ASTWriter::EmitRecordWithPath(unsigned Abbrev, RecordDataRef Record,

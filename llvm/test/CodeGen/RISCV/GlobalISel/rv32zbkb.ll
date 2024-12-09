@@ -111,8 +111,8 @@ define i32 @packh_i32(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: packh_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a2, 16
-; CHECK-NEXT:    addi a2, a2, -256
 ; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    addi a2, a2, -256
 ; CHECK-NEXT:    slli a1, a1, 8
 ; CHECK-NEXT:    and a1, a1, a2
 ; CHECK-NEXT:    or a0, a1, a0
@@ -149,8 +149,8 @@ define i64 @packh_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: packh_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, 16
-; CHECK-NEXT:    addi a1, a1, -256
 ; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    addi a1, a1, -256
 ; CHECK-NEXT:    slli a2, a2, 8
 ; CHECK-NEXT:    and a1, a2, a1
 ; CHECK-NEXT:    or a0, a1, a0

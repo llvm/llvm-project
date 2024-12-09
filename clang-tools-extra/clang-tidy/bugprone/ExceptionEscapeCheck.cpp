@@ -20,7 +20,7 @@ namespace {
 
 AST_MATCHER_P(FunctionDecl, isEnabled, llvm::StringSet<>,
               FunctionsThatShouldNotThrow) {
-  return FunctionsThatShouldNotThrow.count(Node.getNameAsString()) > 0;
+  return FunctionsThatShouldNotThrow.contains(Node.getNameAsString());
 }
 
 AST_MATCHER(FunctionDecl, isExplicitThrow) {

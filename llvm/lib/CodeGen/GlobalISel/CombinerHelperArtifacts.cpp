@@ -56,3 +56,31 @@ bool CombinerHelper::matchMergeXAndUndef(const MachineInstr &MI,
   };
   return true;
 }
+
+bool CombinerHelper::matchMergeXAndZero(const MachineInstr &MI,
+                                        BuildFnTy &MatchInfo) {
+  const GMerge *Merge = cast<GMerge>(&MI);
+
+  Register Dst = Merge->getReg(0);
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Merge->getSourceReg(0));
+
+  // No multi-use check. It is a constant.
+
+  //
+  //   %bits_8_15:_(s8) = G_CONSTANT i8 0
+  //   %0:_(s16) = G_MERGE_VALUES %bits_0_7:(s8), %bits_8_15:(s8)
+  //
+  // ->
+  //
+  //   %0:_(s16) = G_ZEXT %bits_0_7:(s8)
+  //
+
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_ZEXT, {DstTy, SrcTy}}))
+    return false;
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    B.buildZExt(Dst, Merge->getSourceReg(0));
+  };
+  return true;
+}

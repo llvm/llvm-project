@@ -830,6 +830,7 @@ struct BBAddrMap {
     bool BBFreq : 1;
     bool BrProb : 1;
     bool MultiBBRange : 1;
+    bool OmitBBEntries : 1;
 
     bool hasPGOAnalysis() const { return FuncEntryCount || BBFreq || BrProb; }
 
@@ -840,7 +841,8 @@ struct BBAddrMap {
       return (static_cast<uint8_t>(FuncEntryCount) << 0) |
              (static_cast<uint8_t>(BBFreq) << 1) |
              (static_cast<uint8_t>(BrProb) << 2) |
-             (static_cast<uint8_t>(MultiBBRange) << 3);
+             (static_cast<uint8_t>(MultiBBRange) << 3) |
+             (static_cast<uint8_t>(OmitBBEntries) << 4);
     }
 
     // Decodes from minimum bit width representation and validates no
@@ -848,7 +850,8 @@ struct BBAddrMap {
     static Expected<Features> decode(uint8_t Val) {
       Features Feat{
           static_cast<bool>(Val & (1 << 0)), static_cast<bool>(Val & (1 << 1)),
-          static_cast<bool>(Val & (1 << 2)), static_cast<bool>(Val & (1 << 3))};
+          static_cast<bool>(Val & (1 << 2)), static_cast<bool>(Val & (1 << 3)),
+          static_cast<bool>(Val & (1 << 4))};
       if (Feat.encode() != Val)
         return createStringError(
             std::error_code(), "invalid encoding for BBAddrMap::Features: 0x%x",
@@ -857,9 +860,10 @@ struct BBAddrMap {
     }
 
     bool operator==(const Features &Other) const {
-      return std::tie(FuncEntryCount, BBFreq, BrProb, MultiBBRange) ==
+      return std::tie(FuncEntryCount, BBFreq, BrProb, MultiBBRange,
+                      OmitBBEntries) ==
              std::tie(Other.FuncEntryCount, Other.BBFreq, Other.BrProb,
-                      Other.MultiBBRange);
+                      Other.MultiBBRange, Other.OmitBBEntries);
     }
   };
 

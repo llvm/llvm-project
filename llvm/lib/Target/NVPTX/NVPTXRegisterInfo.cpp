@@ -13,14 +13,11 @@
 #include "NVPTXRegisterInfo.h"
 #include "MCTargetDesc/NVPTXInstPrinter.h"
 #include "NVPTX.h"
-#include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/MC/MachineLocation.h"
 
 using namespace llvm;
 

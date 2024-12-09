@@ -6,8 +6,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef _LIBCPP___EXPECTED_BAD_EXPECTED_ACCESS_H
-#define _LIBCPP___EXPECTED_BAD_EXPECTED_ACCESS_H
+#ifndef _LIBCPP___CXX03___EXPECTED_BAD_EXPECTED_ACCESS_H
+#define _LIBCPP___CXX03___EXPECTED_BAD_EXPECTED_ACCESS_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__exception/exception.h>
@@ -70,4 +70,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___EXPECTED_BAD_EXPECTED_ACCESS_H
+#endif // _LIBCPP___CXX03___EXPECTED_BAD_EXPECTED_ACCESS_H

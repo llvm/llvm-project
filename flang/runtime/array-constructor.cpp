@@ -92,13 +92,10 @@ extern "C" {
 RT_EXT_API_GROUP_BEGIN
 
 void RTDEF(InitArrayConstructorVector)(ArrayConstructorVector &vector,
-    Descriptor &to, bool useValueLengthParameters, int vectorClassSize,
-    const char *sourceFile, int sourceLine) {
+    Descriptor &to, bool useValueLengthParameters, const char *sourceFile,
+    int sourceLine) {
   Terminator terminator{vector.sourceFile, vector.sourceLine};
-  RUNTIME_CHECK(terminator,
-      to.rank() == 1 &&
-          sizeof(ArrayConstructorVector) <=
-              static_cast<std::size_t>(vectorClassSize));
+  RUNTIME_CHECK(terminator, to.rank() == 1);
   SubscriptValue actualAllocationSize{
       to.IsAllocated() ? static_cast<SubscriptValue>(to.Elements()) : 0};
   (void)new (&vector) ArrayConstructorVector{to, /*nextValuePosition=*/0,

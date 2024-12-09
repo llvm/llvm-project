@@ -600,12 +600,13 @@ MachineInstrBuilder MachineIRBuilder::buildCast(const DstOp &Dst,
     return buildCopy(Dst, Src);
 
   unsigned Opcode;
-  if (SrcTy.isPointer() && DstTy.isScalar())
+  if (SrcTy.isPointerOrPointerVector())
     Opcode = TargetOpcode::G_PTRTOINT;
-  else if (DstTy.isPointer() && SrcTy.isScalar())
+  else if (DstTy.isPointerOrPointerVector())
     Opcode = TargetOpcode::G_INTTOPTR;
   else {
-    assert(!SrcTy.isPointer() && !DstTy.isPointer() && "n G_ADDRCAST yet");
+    assert(!SrcTy.isPointerOrPointerVector() &&
+           !DstTy.isPointerOrPointerVector() && "no G_ADDRCAST yet");
     Opcode = TargetOpcode::G_BITCAST;
   }
 

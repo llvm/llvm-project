@@ -1828,7 +1828,7 @@ Value *ScalarExprEmitter::VisitExpr(Expr *E) {
   CGF.ErrorUnsupported(E, "scalar expression");
   if (E->getType()->isVoidType())
     return nullptr;
-  return llvm::UndefValue::get(CGF.ConvertType(E->getType()));
+  return llvm::PoisonValue::get(CGF.ConvertType(E->getType()));
 }
 
 Value *
@@ -2102,7 +2102,8 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
       Expr *InitVector = E->getInit(0);
 
       // Initialize from another scalable vector of the same type.
-      if (InitVector->getType() == E->getType())
+      if (InitVector->getType().getCanonicalType() ==
+          E->getType().getCanonicalType())
         return Visit(InitVector);
     }
 
