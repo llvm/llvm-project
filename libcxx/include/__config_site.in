@@ -28,7 +28,11 @@
 #cmakedefine01 _LIBCPP_HAS_FILESYSTEM
 #cmakedefine01 _LIBCPP_HAS_RANDOM_DEVICE
 #cmakedefine01 _LIBCPP_HAS_LOCALIZATION
+#if defined(__MVS__) && !defined(__NATIVE_ASCII_F)
+#cmakedefine _LIBCPP_HAS_UNICODE 0
+#else
 #cmakedefine01 _LIBCPP_HAS_UNICODE
+#endif
 #cmakedefine01 _LIBCPP_HAS_WIDE_CHARACTERS
 #cmakedefine _LIBCPP_HAS_NO_STD_MODULES
 #cmakedefine01 _LIBCPP_HAS_TIME_ZONE_DATABASE
