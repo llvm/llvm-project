@@ -122,6 +122,8 @@ public:
         RefsUpperBound(std::min((size_t)std::numeric_limits<unsigned>::max(),
                                 RefsUpperBound)) {}
 
+  using const_iterator = SmallVector<TrackingMDRef, 1>::const_iterator;
+
   // vector compatibility methods
   unsigned size() const { return MetadataPtrs.size(); }
   void resize(unsigned N) { MetadataPtrs.resize(N); }
@@ -130,6 +132,8 @@ public:
   Metadata *back() const { return MetadataPtrs.back(); }
   void pop_back() { MetadataPtrs.pop_back(); }
   bool empty() const { return MetadataPtrs.empty(); }
+  const_iterator begin() {  return MetadataPtrs.begin(); }
+  const_iterator end() { return MetadataPtrs.end(); }
 
   Metadata *operator[](unsigned i) const {
     assert(i < MetadataPtrs.size());
@@ -546,7 +550,7 @@ class MetadataLoader::MetadataLoaderImpl {
 
   /// Move local imports from DICompileUnit's 'imports' field to
   /// DISubprogram's retainedNodes.
-  /// Move fucntion-local enums from DICompileUnit's enums
+  /// Move function-local enums from DICompileUnit's enums
   /// to DISubprogram's retainedNodes.
   void upgradeCULocals() {
     if (NamedMDNode *CUNodes = TheModule.getNamedMetadata("llvm.dbg.cu")) {
@@ -739,8 +743,8 @@ class MetadataLoader::MetadataLoaderImpl {
   }
 
   void cloneLocalTypes() {
-    for (unsigned I = 0; I < MetadataList.size(); ++I) {
-      if (auto *SP = dyn_cast_or_null<DISubprogram>(MetadataList[I])) {
+    for (Metadata *M : MetadataList) {
+      if (auto *SP = dyn_cast_or_null<DISubprogram>(M)) {
         auto RetainedNodes = SP->getRetainedNodes();
         SmallVector<Metadata *> MDs(RetainedNodes.begin(), RetainedNodes.end());
         bool HasChanged = false;
