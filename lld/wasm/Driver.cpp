@@ -59,6 +59,7 @@ void Ctx::reset() {
   stubFiles.clear();
   sharedFiles.clear();
   bitcodeFiles.clear();
+  lazyBitcodeFiles.clear();
   syntheticFunctions.clear();
   syntheticGlobals.clear();
   syntheticTables.clear();

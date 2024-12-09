@@ -69,6 +69,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/big_int.h" // make_integral_or_big_int_unsigned_t
 #include "src/__support/common.h"
+#include "src/__support/ctype_utils.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -214,9 +215,9 @@ template <typename T, typename Fmt = radix::Dec> class IntegerToString {
     using UNSIGNED_T = make_integral_or_big_int_unsigned_t<T>;
 
     LIBC_INLINE static char digit_char(uint8_t digit) {
-      if (digit < 10)
-        return '0' + static_cast<char>(digit);
-      return (Fmt::IS_UPPERCASE ? 'A' : 'a') + static_cast<char>(digit - 10);
+      const int result = internal::int_to_b36_char(digit);
+      return static_cast<char>(Fmt::IS_UPPERCASE ? internal::toupper(result)
+                                                 : result);
     }
 
     LIBC_INLINE static void

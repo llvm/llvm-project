@@ -244,14 +244,29 @@ INTERCEPTOR(FILE *, fopen, const char *path, const char *mode) {
   return REAL(fopen)(path, mode);
 }
 
+INTERCEPTOR(FILE *, freopen, const char *path, const char *mode, FILE *stream) {
+  __rtsan_notify_intercepted_call("freopen");
+  return REAL(freopen)(path, mode, stream);
+}
+
+// Streams
+
 #if SANITIZER_INTERCEPT_FOPEN64
 INTERCEPTOR(FILE *, fopen64, const char *path, const char *mode) {
   __rtsan_notify_intercepted_call("fopen64");
   return REAL(fopen64)(path, mode);
 }
-#define RTSAN_MAYBE_INTERCEPT_FOPEN64 INTERCEPT_FUNCTION(fopen64)
+
+INTERCEPTOR(FILE *, freopen64, const char *path, const char *mode,
+            FILE *stream) {
+  __rtsan_notify_intercepted_call("freopen64");
+  return REAL(freopen64)(path, mode, stream);
+}
+#define RTSAN_MAYBE_INTERCEPT_FOPEN64 INTERCEPT_FUNCTION(fopen64);
+#define RTSAN_MAYBE_INTERCEPT_FREOPEN64 INTERCEPT_FUNCTION(freopen64);
 #else
 #define RTSAN_MAYBE_INTERCEPT_FOPEN64
+#define RTSAN_MAYBE_INTERCEPT_FREOPEN64
 #endif // SANITIZER_INTERCEPT_FOPEN64
 
 INTERCEPTOR(size_t, fread, void *ptr, size_t size, size_t nitems,
@@ -276,7 +291,11 @@ INTERCEPTOR(int, fputs, const char *s, FILE *stream) {
   return REAL(fputs)(s, stream);
 }
 
-// Streams
+INTERCEPTOR(FILE *, fdopen, int fd, const char *mode) {
+  __rtsan_notify_intercepted_call("fdopen");
+  return REAL(fdopen)(fd, mode);
+}
+
 INTERCEPTOR(int, puts, const char *s) {
   __rtsan_notify_intercepted_call("puts");
   return REAL(puts)(s);
@@ -707,6 +726,17 @@ INTERCEPTOR(int, shutdown, int socket, int how) {
   return REAL(shutdown)(socket, how);
 }
 
+#if SANITIZER_INTERCEPT_ACCEPT4
+INTERCEPTOR(int, accept4, int socket, struct sockaddr *address,
+            socklen_t *address_len, int flags) {
+  __rtsan_notify_intercepted_call("accept4");
+  return REAL(accept4)(socket, address, address_len, flags);
+}
+#define RTSAN_MAYBE_INTERCEPT_ACCEPT4 INTERCEPT_FUNCTION(accept4)
+#else
+#define RTSAN_MAYBE_INTERCEPT_ACCEPT4
+#endif
+
 // I/O Multiplexing
 
 INTERCEPTOR(int, poll, struct pollfd *fds, nfds_t nfds, int timeout) {
@@ -815,6 +845,22 @@ INTERCEPTOR(int, mkfifo, const char *pathname, mode_t mode) {
   return REAL(mkfifo)(pathname, mode);
 }
 
+INTERCEPTOR(pid_t, fork, void) {
+  __rtsan_notify_intercepted_call("fork");
+  return REAL(fork)();
+}
+
+INTERCEPTOR(int, execve, const char *filename, char *const argv[],
+            char *const envp[]) {
+  __rtsan_notify_intercepted_call("execve");
+  return REAL(execve)(filename, argv, envp);
+}
+
+// TODO: the `wait` family of functions is an oddity. In testing, if you
+// intercept them, Darwin seemingly ignores them, and linux never returns from
+// the test. Revisit this in the future, but hopefully intercepting fork/exec is
+// enough to dissuade usage of wait by proxy.
+
 #if SANITIZER_APPLE
 #define INT_TYPE_SYSCALL int
 #else
@@ -877,6 +923,7 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(close);
   INTERCEPT_FUNCTION(fopen);
   RTSAN_MAYBE_INTERCEPT_FOPEN64;
+  RTSAN_MAYBE_INTERCEPT_FREOPEN64;
   INTERCEPT_FUNCTION(fread);
   INTERCEPT_FUNCTION(read);
   INTERCEPT_FUNCTION(write);
@@ -894,6 +941,8 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_CREAT64;
   INTERCEPT_FUNCTION(puts);
   INTERCEPT_FUNCTION(fputs);
+  INTERCEPT_FUNCTION(fdopen);
+  INTERCEPT_FUNCTION(freopen);
   INTERCEPT_FUNCTION(lseek);
   RTSAN_MAYBE_INTERCEPT_LSEEK64;
   INTERCEPT_FUNCTION(dup);
@@ -940,6 +989,7 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(sendto);
   INTERCEPT_FUNCTION(shutdown);
   INTERCEPT_FUNCTION(socket);
+  RTSAN_MAYBE_INTERCEPT_ACCEPT4;
 
   RTSAN_MAYBE_INTERCEPT_SELECT;
   INTERCEPT_FUNCTION(pselect);
@@ -955,6 +1005,9 @@ void __rtsan::InitializeInterceptors() {
 
   INTERCEPT_FUNCTION(pipe);
   INTERCEPT_FUNCTION(mkfifo);
+
+  INTERCEPT_FUNCTION(fork);
+  INTERCEPT_FUNCTION(execve);
 
   INTERCEPT_FUNCTION(syscall);
 }

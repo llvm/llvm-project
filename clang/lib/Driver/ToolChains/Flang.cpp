@@ -213,6 +213,14 @@ void Flang::AddLoongArch64TargetArgs(const ArgList &Args,
       D.Diag(diag::err_drv_argument_not_allowed_with) << "-mabi" << V;
     }
   }
+
+  if (const Arg *A = Args.getLastArg(options::OPT_mannotate_tablejump,
+                                     options::OPT_mno_annotate_tablejump)) {
+    if (A->getOption().matches(options::OPT_mannotate_tablejump)) {
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("-loongarch-annotate-tablejump");
+    }
+  }
 }
 
 void Flang::AddPPCTargetArgs(const ArgList &Args,
@@ -776,6 +784,13 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     addPreprocessingOptions(Args, CmdArgs);
 
   addFortranDialectOptions(Args, CmdArgs);
+
+  // 'flang -E' always produces output that is suitable for use as fixed form
+  // Fortran. However it is only valid free form source if the original is also
+  // free form.
+  if (InputType == types::TY_PP_Fortran &&
+      !Args.getLastArg(options::OPT_ffixed_form, options::OPT_ffree_form))
+    CmdArgs.push_back("-ffixed-form");
 
   handleColorDiagnosticsArgs(D, Args, CmdArgs);
 

@@ -154,7 +154,7 @@ SBAddress SBFunction::GetEndAddress() {
 
   SBAddress addr;
   if (m_opaque_ptr) {
-    llvm::ArrayRef<AddressRange> ranges = m_opaque_ptr->GetAddressRanges();
+    AddressRanges ranges = m_opaque_ptr->GetAddressRanges();
     if (!ranges.empty()) {
       // Return the end of the first range, use GetRanges to get all ranges.
       addr.SetAddress(ranges.front().GetBaseAddress());

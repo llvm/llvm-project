@@ -256,6 +256,12 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
     return false;
 
   assert(StrPtr.getFieldDesc()->isPrimitiveArray());
+  unsigned ElemSize = StrPtr.getFieldDesc()->getElemSize();
+
+  if (ID == Builtin::BI__builtin_wcslen || ID == Builtin::BIwcslen) {
+    const ASTContext &AC = S.getASTContext();
+    assert(ElemSize == AC.getTypeSizeInChars(AC.getWCharType()).getQuantity());
+  }
 
   size_t Len = 0;
   for (size_t I = StrPtr.getIndex();; ++I, ++Len) {
@@ -264,7 +270,20 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
     if (!CheckRange(S, OpPC, ElemPtr, AK_Read))
       return false;
 
-    uint8_t Val = ElemPtr.deref<uint8_t>();
+    uint32_t Val;
+    switch (ElemSize) {
+    case 1:
+      Val = ElemPtr.deref<uint8_t>();
+      break;
+    case 2:
+      Val = ElemPtr.deref<uint16_t>();
+      break;
+    case 4:
+      Val = ElemPtr.deref<uint32_t>();
+      break;
+    default:
+      llvm_unreachable("Unsupported char size");
+    }
     if (Val == 0)
       break;
   }
@@ -1813,9 +1832,6 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
 
   bool Move = (ID == Builtin::BI__builtin_memmove || ID == Builtin::BImemmove);
 
-  if (DestPtr.isDummy() || SrcPtr.isDummy())
-    return false;
-
   // If the size is zero, we treat this as always being a valid no-op.
   if (Size.isZero()) {
     S.Stk.push<Pointer>(DestPtr);
@@ -1830,7 +1846,11 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  if (!DoBitCastPtr(S, OpPC, SrcPtr, DestPtr))
+  // As a last resort, reject dummy pointers.
+  if (DestPtr.isDummy() || SrcPtr.isDummy())
+    return false;
+
+  if (!DoBitCastPtr(S, OpPC, SrcPtr, DestPtr, Size.getZExtValue()))
     return false;
 
   S.Stk.push<Pointer>(DestPtr);

@@ -1163,12 +1163,23 @@ namespace BuiltinMemcpy {
   }
   static_assert(simple() == 12);
 
+  constexpr bool arrayMemcpy() {
+    char src[] = "abc";
+    char dst[4] = {};
+    __builtin_memcpy(dst, src, 4);
+    return dst[0] == 'a' && dst[1] == 'b' && dst[2] == 'c' && dst[3] == '\0';
+  }
+  static_assert(arrayMemcpy());
 
   extern struct Incomplete incomplete;
   constexpr struct Incomplete *null_incomplete = 0;
   static_assert(__builtin_memcpy(null_incomplete, null_incomplete, sizeof(wchar_t))); // both-error {{not an integral constant expression}} \
                                                                                       // both-note {{source of 'memcpy' is nullptr}}
 
+  wchar_t global;
+  constexpr wchar_t *null = 0;
+  static_assert(__builtin_memcpy(&global, null, sizeof(wchar_t))); // both-error {{not an integral constant expression}} \
+                                                                   // both-note {{source of 'memcpy' is nullptr}}
 
   constexpr int simpleMove() {
     int a = 12;

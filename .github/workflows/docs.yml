@@ -148,21 +148,21 @@ jobs:
           cmake -B libunwind-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_RUNTIMES="libunwind" -DLLVM_ENABLE_SPHINX=ON ./runtimes
           TZ=UTC ninja -C libunwind-build docs-libunwind-html
           mkdir built-docs/libunwind
-          cp -r libunwind-build/docs/* built-docs/libunwind
+          cp -r libunwind-build/libunwind/docs/* built-docs/libunwind
       - name: Build libcxx docs
         if: steps.docs-changed-subprojects.outputs.libcxx_any_changed == 'true'
         run: |
           cmake -B libcxx-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_RUNTIMES="libcxxabi;libcxx;libunwind" -DLLVM_ENABLE_SPHINX=ON ./runtimes
           TZ=UTC ninja -C libcxx-build docs-libcxx-html
           mkdir built-docs/libcxx
-          cp -r libcxx-build/docs/* built-docs/libcxx/
+          cp -r libcxx-build/libcxx/docs/* built-docs/libcxx/
       - name: Build libc docs
         if: steps.docs-changed-subprojects.outputs.libc_any_changed == 'true'
         run: |
           cmake -B libc-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_RUNTIMES="libc" -DLLVM_ENABLE_SPHINX=ON ./runtimes
           TZ=UTC ninja -C libc-build docs-libc-html
           mkdir built-docs/libc
-          cp -r libc-build/docs/* built-docs/libc/
+          cp -r libc-build/libc/docs/* built-docs/libc/
       - name: Build LLD docs
         if: steps.docs-changed-subprojects.outputs.lld_any_changed == 'true'
         run: |

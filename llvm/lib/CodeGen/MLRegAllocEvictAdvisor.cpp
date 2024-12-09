@@ -559,14 +559,13 @@ private:
 
 float MLEvictAdvisor::getInitialQueueSize(const MachineFunction &MF) {
   auto &MRI = MF.getRegInfo();
-  float Ret = 0.0;
+  unsigned NumUsedRegs = 0;
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
     Register Reg = Register::index2VirtReg(I);
-    if (MRI.reg_nodbg_empty(Reg))
-      continue;
-    ++Ret;
+    if (!MRI.reg_nodbg_empty(Reg))
+      ++NumUsedRegs;
   }
-  return Ret;
+  return static_cast<float>(NumUsedRegs);
 }
 
 MLEvictAdvisor::MLEvictAdvisor(const MachineFunction &MF, const RAGreedy &RA,
