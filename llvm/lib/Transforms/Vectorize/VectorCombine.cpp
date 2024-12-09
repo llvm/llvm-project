@@ -249,7 +249,7 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   Type *LoadTy = Load->getType();
   unsigned AS = Load->getPointerAddressSpace();
   InstructionCost OldCost =
-      TTI.getMemoryOpCost(Instruction::Load, LoadTy, Alignment, AS);
+      TTI.getMemoryOpCost(Instruction::Load, LoadTy, Alignment, AS, CostKind);
   APInt DemandedElts = APInt::getOneBitSet(MinVecNumElts, 0);
   OldCost +=
       TTI.getScalarizationOverhead(MinVecTy, DemandedElts,
@@ -257,7 +257,7 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
 
   // New pattern: load VecPtr
   InstructionCost NewCost =
-      TTI.getMemoryOpCost(Instruction::Load, MinVecTy, Alignment, AS);
+      TTI.getMemoryOpCost(Instruction::Load, MinVecTy, Alignment, AS, CostKind);
   // Optionally, we are shuffling the loaded vector element(s) into place.
   // For the mask set everything but element 0 to undef to prevent poison from
   // propagating from the extra loaded memory. This will also optionally
@@ -1341,7 +1341,7 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
 
   InstructionCost OriginalCost =
       TTI.getMemoryOpCost(Instruction::Load, VecTy, LI->getAlign(),
-                          LI->getPointerAddressSpace());
+                          LI->getPointerAddressSpace(), CostKind);
   InstructionCost ScalarizedCost = 0;
 
   Instruction *LastCheckedInst = LI;
@@ -1389,7 +1389,7 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
                                Index ? Index->getZExtValue() : -1);
     ScalarizedCost +=
         TTI.getMemoryOpCost(Instruction::Load, VecTy->getElementType(),
-                            Align(1), LI->getPointerAddressSpace());
+                            Align(1), LI->getPointerAddressSpace(), CostKind);
     ScalarizedCost += TTI.getAddressComputationCost(VecTy->getElementType());
   }
 
