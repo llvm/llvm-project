@@ -34,15 +34,17 @@ define i1 @test_and1_logical(i32 %x, i32 %n) {
 
 define i1 @test_and1_sext(i32 %x, i64 %n) {
 ; CHECK-LABEL: @test_and1_sext(
-; CHECK-NEXT:    [[NN:%.*]] = and i64 [[N:%.*]], 2147483647
+; CHECK-NEXT:    [[N_NOT_NEGATIVE:%.*]] = icmp sgt i64 [[NN:%.*]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[N_NOT_NEGATIVE]])
 ; CHECK-NEXT:    [[X_SEXT:%.*]] = sext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i64 [[NN]], [[X_SEXT]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
-  %nn = and i64 %n, 2147483647
+  %n_not_negative = icmp sge i64 %n, 0
+  call void @llvm.assume(i1 %n_not_negative)
   %x_sext = sext i32 %x to i64
   %a = icmp sge i32 %x, 0
-  %b = icmp slt i64 %x_sext, %nn
+  %b = icmp slt i64 %x_sext, %n
   %c = and i1 %a, %b
   ret i1 %c
 }
@@ -77,15 +79,17 @@ define i1 @test_and2_logical(i32 %x, i32 %n) {
 
 define i1 @test_and2_sext(i32 %x, i64 %n) {
 ; CHECK-LABEL: @test_and2_sext(
-; CHECK-NEXT:    [[NN:%.*]] = and i64 [[N:%.*]], 2147483647
+; CHECK-NEXT:    [[N_NOT_NEGATIVE:%.*]] = icmp sgt i64 [[NN:%.*]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[N_NOT_NEGATIVE]])
 ; CHECK-NEXT:    [[X_SEXT:%.*]] = sext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[C:%.*]] = icmp uge i64 [[NN]], [[X_SEXT]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
-  %nn = and i64 %n, 2147483647
+  %n_not_negative = icmp sge i64 %n, 0
+  call void @llvm.assume(i1 %n_not_negative)
   %x_sext = sext i32 %x to i64
   %a = icmp sgt i32 %x, -1
-  %b = icmp sle i64 %x_sext, %nn
+  %b = icmp sle i64 %x_sext, %n
   %c = and i1 %a, %b
   ret i1 %c
 }
@@ -118,14 +122,16 @@ define i1 @test_and3_logical(i32 %x, i32 %n) {
 
 define i1 @test_and3_sext(i32 %x, i64 %n) {
 ; CHECK-LABEL: @test_and3_sext(
-; CHECK-NEXT:    [[NN:%.*]] = and i64 [[N:%.*]], 2147483647
+; CHECK-NEXT:    [[N_NOT_NEGATIVE:%.*]] = icmp sgt i64 [[NN:%.*]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[N_NOT_NEGATIVE]])
 ; CHECK-NEXT:    [[X_SEXT:%.*]] = sext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i64 [[NN]], [[X_SEXT]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
-  %nn = and i64 %n, 2147483647
+  %n_not_negative = icmp sge i64 %n, 0
+  call void @llvm.assume(i1 %n_not_negative)
   %x_sext = sext i32 %x to i64
-  %a = icmp sgt i64 %nn, %x_sext
+  %a = icmp sgt i64 %n, %x_sext
   %b = icmp sge i32 %x, 0
   %c = and i1 %a, %b
   ret i1 %c
@@ -159,14 +165,16 @@ define i1 @test_and4_logical(i32 %x, i32 %n) {
 
 define i1 @test_and4_sext(i32 %x, i64 %n) {
 ; CHECK-LABEL: @test_and4_sext(
-; CHECK-NEXT:    [[NN:%.*]] = and i64 [[N:%.*]], 2147483647
+; CHECK-NEXT:    [[N_NOT_NEGATIVE:%.*]] = icmp sgt i64 [[NN:%.*]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[N_NOT_NEGATIVE]])
 ; CHECK-NEXT:    [[X_SEXT:%.*]] = sext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[C:%.*]] = icmp uge i64 [[NN]], [[X_SEXT]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
-  %nn = and i64 %n, 2147483647
+  %n_not_negative = icmp sge i64 %n, 0
+  call void @llvm.assume(i1 %n_not_negative)
   %x_sext = sext i32 %x to i64
-  %a = icmp sge i64 %nn, %x_sext
+  %a = icmp sge i64 %n, %x_sext
   %b = icmp sge i32 %x, 0
   %c = and i1 %a, %b
   ret i1 %c
@@ -202,15 +210,17 @@ define i1 @test_or1_logical(i32 %x, i32 %n) {
 
 define i1 @test_or1_sext(i32 %x, i64 %n) {
 ; CHECK-LABEL: @test_or1_sext(
-; CHECK-NEXT:    [[NN:%.*]] = and i64 [[N:%.*]], 2147483647
+; CHECK-NEXT:    [[N_NOT_NEGATIVE:%.*]] = icmp sgt i64 [[NN:%.*]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[N_NOT_NEGATIVE]])
 ; CHECK-NEXT:    [[X_SEXT:%.*]] = sext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[C:%.*]] = icmp ule i64 [[NN]], [[X_SEXT]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
-  %nn = and i64 %n, 2147483647
+  %n_not_negative = icmp sge i64 %n, 0
+  call void @llvm.assume(i1 %n_not_negative)
   %x_sext = sext i32 %x to i64
   %a = icmp slt i32 %x, 0
-  %b = icmp sge i64 %x_sext, %nn
+  %b = icmp sge i64 %x_sext, %n
   %c = or i1 %a, %b
   ret i1 %c
 }
@@ -245,15 +255,17 @@ define i1 @test_or2_logical(i32 %x, i32 %n) {
 
 define i1 @test_or2_sext(i32 %x, i64 %n) {
 ; CHECK-LABEL: @test_or2_sext(
-; CHECK-NEXT:    [[NN:%.*]] = and i64 [[N:%.*]], 2147483647
+; CHECK-NEXT:    [[N_NOT_NEGATIVE:%.*]] = icmp sgt i64 [[NN:%.*]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[N_NOT_NEGATIVE]])
 ; CHECK-NEXT:    [[X_SEXT:%.*]] = sext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[NN]], [[X_SEXT]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
-  %nn = and i64 %n, 2147483647
+  %n_not_negative = icmp sge i64 %n, 0
+  call void @llvm.assume(i1 %n_not_negative)
   %x_sext = sext i32 %x to i64
   %a = icmp sle i32 %x, -1
-  %b = icmp sgt i64 %x_sext, %nn
+  %b = icmp sgt i64 %x_sext, %n
   %c = or i1 %a, %b
   ret i1 %c
 }
@@ -286,14 +298,16 @@ define i1 @test_or3_logical(i32 %x, i32 %n) {
 
 define i1 @test_or3_sext(i32 %x, i64 %n) {
 ; CHECK-LABEL: @test_or3_sext(
-; CHECK-NEXT:    [[NN:%.*]] = and i64 [[N:%.*]], 2147483647
+; CHECK-NEXT:    [[N_NOT_NEGATIVE:%.*]] = icmp sgt i64 [[NN:%.*]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[N_NOT_NEGATIVE]])
 ; CHECK-NEXT:    [[X_SEXT:%.*]] = sext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[C:%.*]] = icmp ule i64 [[NN]], [[X_SEXT]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
-  %nn = and i64 %n, 2147483647
+  %n_not_negative = icmp sge i64 %n, 0
+  call void @llvm.assume(i1 %n_not_negative)
   %x_sext = sext i32 %x to i64
-  %a = icmp sle i64 %nn, %x_sext
+  %a = icmp sle i64 %n, %x_sext
   %b = icmp slt i32 %x, 0
   %c = or i1 %a, %b
   ret i1 %c
@@ -327,14 +341,16 @@ define i1 @test_or4_logical(i32 %x, i32 %n) {
 
 define i1 @test_or4_sext(i32 %x, i64 %n) {
 ; CHECK-LABEL: @test_or4_sext(
-; CHECK-NEXT:    [[NN:%.*]] = and i64 [[N:%.*]], 2147483647
+; CHECK-NEXT:    [[N_NOT_NEGATIVE:%.*]] = icmp sgt i64 [[NN:%.*]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[N_NOT_NEGATIVE]])
 ; CHECK-NEXT:    [[X_SEXT:%.*]] = sext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[NN]], [[X_SEXT]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
-  %nn = and i64 %n, 2147483647
+  %n_not_negative = icmp sge i64 %n, 0
+  call void @llvm.assume(i1 %n_not_negative)
   %x_sext = sext i32 %x to i64
-  %a = icmp slt i64 %nn, %x_sext
+  %a = icmp slt i64 %n, %x_sext
   %b = icmp slt i32 %x, 0
   %c = or i1 %a, %b
   ret i1 %c
