@@ -474,6 +474,10 @@ if "system-aix" in config.available_features:
 # default configs for the test runs.
 config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"
 
+# Configuring clang with CLANG_USE_XCSELECT=ON breaks some tests, so disable
+# its behaviour while running tests.
+config.environment["CLANG_NO_XCSELECT"] = "1"
+
 if lit_config.update_tests:
     import sys
     import os
