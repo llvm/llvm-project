@@ -1820,9 +1820,7 @@ void VPlanTransforms::createInterleaveGroups(
   }
 }
 
-void VPlanTransforms::prepareToExecute(VPlan &Plan) {
-  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
-      Plan.getVectorLoopRegion());
+void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(VPBB->phis())) {
