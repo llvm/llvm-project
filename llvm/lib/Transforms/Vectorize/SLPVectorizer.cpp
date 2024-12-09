@@ -2541,18 +2541,12 @@ public:
 
   public:
     /// Initialize with all the operands of the instruction vector \p RootVL.
-    VLOperands(ArrayRef<Value *> RootVL, const BoUpSLP &R, Instruction *VL0)
+    VLOperands(ArrayRef<Value *> RootVL, Instruction *VL0, const BoUpSLP &R)
         : TLI(*R.TLI), DL(*R.DL), SE(*R.SE), R(R),
           L(R.LI->getLoopFor((VL0->getParent()))) {
       // Append all the operands of RootVL.
       appendOperandsOfVL(RootVL, VL0);
     }
-
-    /// Initialize with all the operands of the instruction vector \p RootVL.
-    VLOperands(ArrayRef<Value *> RootVL, const BoUpSLP &R)
-        : VLOperands(
-              RootVL, R,
-              cast<Instruction>(*find_if(RootVL, IsaPred<Instruction>))) {}
 
     /// \Returns a value vector with the operands across all lanes for the
     /// opearnd at \p OpIdx.
@@ -3342,12 +3336,12 @@ private:
     }
 
     /// Set this bundle's operand from Scalars.
-    void setOperand(const BoUpSLP &R, bool RequireReorder = false) {
-      auto *I0 = cast<Instruction>(*find_if(Scalars, IsaPred<Instruction>));
-      VLOperands Ops(Scalars, R, I0);
+    void setOperand(Instruction *VL0, const BoUpSLP &R,
+                    bool RequireReorder = false) {
+      VLOperands Ops(Scalars, VL0, R);
       if (RequireReorder)
         Ops.reorder();
-      for (unsigned I : seq<unsigned>(I0->getNumOperands()))
+      for (unsigned I : seq<unsigned>(VL0->getNumOperands()))
         setOperand(I, Ops.getVL(I));
     }
 
@@ -8448,7 +8442,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                                    {}, CurrentOrder);
       LLVM_DEBUG(dbgs() << "SLP: added inserts bundle.\n");
 
-      TE->setOperand(*this);
+      TE->setOperand(VL0, *this);
       buildTree_rec(TE->getOperand(1), Depth + 1, {TE, 1});
       return;
     }
@@ -8486,7 +8480,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       case TreeEntry::NeedToGather:
         llvm_unreachable("Unexpected loads state.");
       }
-      TE->setOperand(*this);
+      TE->setOperand(VL0, *this);
       if (State == TreeEntry::ScatterVectorize)
         buildTree_rec(PointerOps, Depth + 1, {TE, 0});
       return;
@@ -8526,7 +8520,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                                    ReuseShuffleIndices);
       LLVM_DEBUG(dbgs() << "SLP: added a vector of casts.\n");
 
-      TE->setOperand(*this);
+      TE->setOperand(VL0, *this);
       for (unsigned I : seq<unsigned>(VL0->getNumOperands()))
         buildTree_rec(TE->getOperand(I), Depth + 1, {TE, I});
       if (ShuffleOrOp == Instruction::Trunc) {
@@ -8554,7 +8548,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       LLVM_DEBUG(dbgs() << "SLP: added a vector of compares.\n");
 
       ValueList Left, Right;
-      VLOperands Ops(VL, *this);
+      VLOperands Ops(VL, VL0, *this);
       if (cast<CmpInst>(VL0)->isCommutative()) {
         // Commutative predicate - collect + sort operands of the instructions
         // so that each side is more likely to have the same opcode.
@@ -8623,7 +8617,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                                    ReuseShuffleIndices);
       LLVM_DEBUG(dbgs() << "SLP: added a vector of un/bin op.\n");
 
-      TE->setOperand(*this, isa<BinaryOperator>(VL0) && isCommutative(VL0));
+      TE->setOperand(VL0, *this,
+                     isa<BinaryOperator>(VL0) && isCommutative(VL0));
       for (unsigned I : seq<unsigned>(VL0->getNumOperands()))
         buildTree_rec(TE->getOperand(I), Depth + 1, {TE, I});
       return;
@@ -8689,7 +8684,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         fixupOrderingIndices(CurrentOrder);
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
                                    ReuseShuffleIndices, CurrentOrder);
-      TE->setOperand(*this);
+      TE->setOperand(VL0, *this);
       buildTree_rec(TE->getOperand(0), Depth + 1, {TE, 0});
       if (Consecutive)
         LLVM_DEBUG(dbgs() << "SLP: added a vector of stores.\n");
@@ -8705,7 +8700,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
                                    ReuseShuffleIndices);
-      TE->setOperand(*this, isCommutative(VL0));
+      TE->setOperand(VL0, *this, isCommutative(VL0));
       for (unsigned I : seq<unsigned>(CI->arg_size())) {
         // For scalar operands no need to create an entry since no need to
         // vectorize it.
@@ -8761,7 +8756,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         return;
       }
 
-      TE->setOperand(*this, isa<BinaryOperator>(VL0) || CI);
+      TE->setOperand(VL0, *this, isa<BinaryOperator>(VL0) || CI);
       for (unsigned I : seq<unsigned>(VL0->getNumOperands()))
         buildTree_rec(TE->getOperand(I), Depth + 1, {TE, I});
       return;
