@@ -8388,7 +8388,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
       TreeEntry *TE =
           newTreeEntry(VL, Bundle, S, UserTreeIdx, ReuseShuffleIndices);
-      LLVM_DEBUG(dbgs() << "SLP: added a vector of PHINodes.\n");
+      LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (PHINode).\n");
 
       // Keeps the reordered operands to avoid code duplication.
       PHIHandler Handler(*DT, PH, VL);
@@ -8417,13 +8417,13 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       }
       // Insert new order with initial value 0, if it does not exist,
       // otherwise return the iterator to the existing one.
-      newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
-                   ReuseShuffleIndices, CurrentOrder);
+      TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
+                                   ReuseShuffleIndices, CurrentOrder);
+      LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry "
+                           "(ExtractValueInst/ExtractElementInst).\n");
       // This is a special case, as it does not gather, but at the same time
       // we are not extending buildTree_rec() towards the operands.
-      ValueList Op0;
-      Op0.assign(VL.size(), VL0->getOperand(0));
-      VectorizableTree.back()->setOperand(0, Op0);
+      TE->setOperand(*this);
       return;
     }
     case Instruction::InsertElement: {
@@ -8451,7 +8451,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         CurrentOrder.clear();
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
                                    {}, CurrentOrder);
-      LLVM_DEBUG(dbgs() << "SLP: added inserts bundle.\n");
+      LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (InsertElementInst).\n");
 
       TE->setOperand(*this);
       buildTree_rec(TE->getOperand(1), Depth + 1, {TE, 1});
@@ -8471,21 +8471,25 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
                           ReuseShuffleIndices, CurrentOrder, InterleaveFactor);
         if (CurrentOrder.empty())
-          LLVM_DEBUG(dbgs() << "SLP: added a vector of loads.\n");
+          LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (LoadInst).\n");
         else
-          LLVM_DEBUG(dbgs() << "SLP: added a vector of jumbled loads.\n");
+          LLVM_DEBUG(dbgs()
+                     << "SLP: added a new TreeEntry (jumbled LoadInst).\n");
         break;
       case TreeEntry::StridedVectorize:
         // Vectorizing non-consecutive loads with `llvm.masked.gather`.
         TE = newTreeEntry(VL, TreeEntry::StridedVectorize, Bundle, S,
                           UserTreeIdx, ReuseShuffleIndices, CurrentOrder);
-        LLVM_DEBUG(dbgs() << "SLP: added a vector of strided loads.\n");
+        LLVM_DEBUG(
+            dbgs() << "SLP: added a new TreeEntry (strided LoadInst).\n");
         break;
       case TreeEntry::ScatterVectorize:
         // Vectorizing non-consecutive loads with `llvm.masked.gather`.
         TE = newTreeEntry(VL, TreeEntry::ScatterVectorize, Bundle, S,
                           UserTreeIdx, ReuseShuffleIndices);
-        LLVM_DEBUG(dbgs() << "SLP: added a vector of non-consecutive loads.\n");
+        LLVM_DEBUG(
+            dbgs()
+            << "SLP: added a new TreeEntry (non-consecutive LoadInst).\n");
         break;
       case TreeEntry::CombinedVectorize:
       case TreeEntry::NeedToGather:
@@ -8529,7 +8533,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       }
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
                                    ReuseShuffleIndices);
-      LLVM_DEBUG(dbgs() << "SLP: added a vector of casts.\n");
+      LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (CastInst).\n");
 
       TE->setOperand(*this);
       for (unsigned I : seq<unsigned>(VL0->getNumOperands()))
@@ -8556,7 +8560,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       CmpInst::Predicate P0 = cast<CmpInst>(VL0)->getPredicate();
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
                                    ReuseShuffleIndices);
-      LLVM_DEBUG(dbgs() << "SLP: added a vector of compares.\n");
+      LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (CmpInst).\n");
 
       ValueList Left, Right;
       VLOperands Ops(VL, VL0, *this);
@@ -8626,7 +8630,9 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     case Instruction::Freeze: {
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
                                    ReuseShuffleIndices);
-      LLVM_DEBUG(dbgs() << "SLP: added a vector of un/bin op.\n");
+      LLVM_DEBUG(
+          dbgs() << "SLP: added a new TreeEntry "
+                    "(SelectInst/UnaryOperator/BinaryOperator/FreezeInst).\n");
 
       TE->setOperand(*this, isa<BinaryOperator>(VL0) && isCommutative(VL0));
       for (unsigned I : seq<unsigned>(VL0->getNumOperands()))
@@ -8636,7 +8642,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     case Instruction::GetElementPtr: {
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
                                    ReuseShuffleIndices);
-      LLVM_DEBUG(dbgs() << "SLP: added a vector of GEPs.\n");
+      LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (GetElementPtrInst).\n");
       SmallVector<ValueList, 2> Operands(2);
       // Prepare the operand vector for pointer operands.
       for (Value *V : VL) {
@@ -8694,12 +8700,13 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         fixupOrderingIndices(CurrentOrder);
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
                                    ReuseShuffleIndices, CurrentOrder);
+      if (Consecutive)
+        LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (StoreInst).\n");
+      else
+        LLVM_DEBUG(
+            dbgs() << "SLP: added a new TreeEntry (jumbled StoreInst).\n");
       TE->setOperand(*this);
       buildTree_rec(TE->getOperand(0), Depth + 1, {TE, 0});
-      if (Consecutive)
-        LLVM_DEBUG(dbgs() << "SLP: added a vector of stores.\n");
-      else
-        LLVM_DEBUG(dbgs() << "SLP: added a vector of jumbled stores.\n");
       return;
     }
     case Instruction::Call: {
@@ -8710,6 +8717,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
                                    ReuseShuffleIndices);
+      LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (CallInst).\n");
       TE->setOperand(*this, isCommutative(VL0));
       for (unsigned I : seq<unsigned>(CI->arg_size())) {
         // For scalar operands no need to create an entry since no need to
@@ -8723,7 +8731,13 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     case Instruction::ShuffleVector: {
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
                                    ReuseShuffleIndices);
-      LLVM_DEBUG(dbgs() << "SLP: added a ShuffleVector op.\n");
+      if (S.isAltShuffle()) {
+        LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (alternate op).\n");
+      } else {
+        assert(SLPReVec && "Only supported by REVEC.");
+        LLVM_DEBUG(
+            dbgs() << "SLP: added a new TreeEntry (ShuffleVectorInst).\n");
+      }
 
       // Reorder operands if reordering would enable vectorization.
       auto *CI = dyn_cast<CmpInst>(VL0);
