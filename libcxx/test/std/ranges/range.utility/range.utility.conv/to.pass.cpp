@@ -550,11 +550,30 @@ constexpr void test_recursive() {
   assert(std::ranges::to<C4>(in_owning_view) == result);
 }
 
+struct adl_only_range {
+  static constexpr int numbers[2]{42, 1729};
+
+  void begin() const = delete;
+  void end() const   = delete;
+
+  friend constexpr const int* begin(const adl_only_range&) { return std::ranges::begin(numbers); }
+  friend constexpr const int* end(const adl_only_range&) { return std::ranges::end(numbers); }
+};
+
+constexpr void test_lwg4016_regression() {
+  using Cont = Container<int, CtrChoice::DefaultCtrAndInsert, InserterChoice::PushBack, true>;
+
+  std::ranges::contiguous_range auto r = adl_only_range{};
+  auto v                               = r | std::ranges::to<Cont>();
+  assert(std::ranges::equal(v, adl_only_range::numbers));
+}
+
 constexpr bool test() {
   test_constraints();
   test_ctr_choice_order();
   test_lwg_3785();
   test_recursive();
+  test_lwg4016_regression();
 
   return true;
 }
