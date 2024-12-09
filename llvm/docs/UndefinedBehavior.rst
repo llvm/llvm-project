@@ -16,7 +16,9 @@ We also provide guidelines on when to use each form of UB.
 Introduction
 ============
 Undefined behavior is used to specify the behavior of corner cases for which we
-don't wish to specify the concrete results.
+don't wish to specify the concrete results. UB is also used to provide
+additional constraints to the optimizers (e.g., assumptions that the frontend
+guarantees through the language type system or the runtime).
 For example, we could specify the result of division by zero as zero, but
 since we are not really interested in the result, we say it is UB.
 
@@ -309,11 +311,9 @@ We can make the loop unswitching optimization above correct as follows:
       br i1 %c2, label %then, label %else
 
 
-Writing Tests
-=============
+Writing Tests that Avoid UB
+===========================
 
-Avoiding UB
------------
 When writing tests, it is important to ensure that they don't trigger UB
 unnecessarily. Some automated test reduces sometimes use undef or poison
 values as dummy values, but this is considered a bad practice if this leads
@@ -349,20 +349,3 @@ conditions and dereferencing undef/poison/null pointers.
    If you need a placeholder value to pass as an argument to an instruction
    that may trigger UB, add a new argument to the function rather than using
    undef or poison.
-
-
-Reducing bitwidth
------------------
-To speed up automated verification of tests (e.g., using Alive), it is
-recommended that tests use low bitwidth formats and small vector sizes.
-For example, if we write a test to check that a multiplication by two is
-replaced by a shift left, we can do so using 8-bit integers instead of the
-usual 32-bit integers:
-
-.. code-block:: llvm
-
-    define i8 @fn(i8 %val) {
-      ; CHECK: %mul2 = shl %val, 1
-      %mul2 = mul i8 %val, 2
-      ret i8 %mul2
-   }
