@@ -2505,6 +2505,23 @@ llvm.mlir.global internal @_QFsubEx() : i32
 
 // -----
 
+// CHECK-LABEL: define void @omp_task_detach
+// CHECK-SAME: (ptr %[[event_handle:.*]])
+llvm.func @omp_task_detach(%event_handle : !llvm.ptr){
+   // CHECK: %[[omp_global_thread_num:.+]] = call i32 @__kmpc_global_thread_num({{.+}})
+   // CHECK: %[[task_data:.+]] = call ptr @__kmpc_omp_task_alloc
+   // CHECK: %[[return_val:.*]] = call ptr @__kmpc_task_allow_completion_event(ptr {{.*}}, i32 %[[omp_global_thread_num]], ptr %[[task_data]])
+   // CHECK: %[[conv:.*]] = ptrtoint ptr %[[return_val]] to i64
+   // CHECK: store i64 %[[conv]], ptr %[[event_handle]], align 4
+   // CHECK: call i32 @__kmpc_omp_task(ptr @{{.+}}, i32 %[[omp_global_thread_num]], ptr %[[task_data]])
+   omp.task detach(%event_handle : !llvm.ptr){
+     omp.terminator
+   }
+   llvm.return
+}
+
+// -----
+
 // CHECK-LABEL: define void @omp_task
 // CHECK-SAME: (i32 %[[x:.+]], i32 %[[y:.+]], ptr %[[zaddr:.+]])
 llvm.func @omp_task(%x: i32, %y: i32, %zaddr: !llvm.ptr) {
@@ -2999,6 +3016,19 @@ module attributes {omp.is_target_device = true} {
       } {
     llvm.return
   }
+}
+
+// -----
+
+// Third argument is 5: essentially (4 || 1)
+// signifying this task is TIED and MERGEABLE
+
+// CHECK: {{.*}} = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 %omp_global_thread_num, i32 5, i64 40, i64 0, ptr @omp_task_mergeable..omp_par)
+llvm.func @omp_task_mergeable() {
+  omp.task mergeable {
+    omp.terminator
+  }
+  llvm.return
 }
 
 // -----

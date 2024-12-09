@@ -4,12 +4,12 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 @nuls = external global [10 x i8]
 
-define fastcc void @p_ere() nounwind {
+define fastcc void @p_ere(i1 %arg) nounwind {
 entry:
   br label %"<bb 5>"
 
 "<L18>.i":
-  br i1 undef, label %"<bb 3>.i30.i", label %doemit.exit51.i
+  br i1 %arg, label %"<bb 3>.i30.i", label %doemit.exit51.i
 
 "<bb 3>.i30.i":
   unreachable
@@ -18,7 +18,7 @@ doemit.exit51.i:
   br label %"<bb 53>.i"
 
 "<L19>.i":
-  br i1 undef, label %"<bb 3>.i55.i", label %doemit.exit76.i
+  br i1 %arg, label %"<bb 3>.i55.i", label %doemit.exit76.i
 
 "<bb 3>.i55.i":
   unreachable
@@ -34,7 +34,7 @@ doemit.exit76.i:
   br label %"<bb 53>.i"
 
 "<L24>.i":
-  br i1 undef, label %"<bb 53>.i", label %"<bb 35>.i"
+  br i1 %arg, label %"<bb 53>.i", label %"<bb 35>.i"
 
 "<bb 35>.i":
   br label %"<bb 53>.i"
@@ -51,13 +51,13 @@ doemit.exit76.i:
 "<bb 53>.i":
   %wascaret_2.i = phi i32 [ 0, %"<L39>.i" ], [ 0, %"<L29>.i" ], [ 0, %"<L28>.i" ], [ 0, %"<bb 35>.i" ], [ 0, %"<L99>.i" ], [ 0, %"<L98>.i" ], [ 0, %doemit.exit76.i ], [ 1, %doemit.exit51.i ], [ 0, %"<L24>.i" ]
   %D.5496_84.i = load ptr, ptr undef, align 8
-  br i1 undef, label %"<bb 54>.i", label %"<bb 5>"
+  br i1 %arg, label %"<bb 54>.i", label %"<bb 5>"
 
 "<bb 54>.i":
-  br i1 undef, label %"<bb 5>", label %"<bb 58>.i"
+  br i1 %arg, label %"<bb 5>", label %"<bb 58>.i"
 
 "<bb 58>.i":
-  br i1 undef, label %"<bb 64>.i", label %"<bb 59>.i"
+  br i1 %arg, label %"<bb 64>.i", label %"<bb 59>.i"
 
 "<bb 59>.i":
   br label %"<bb 64>.i"
@@ -71,7 +71,7 @@ doemit.exit76.i:
   ]
 
 "<L54>.i":
-  br i1 undef, label %"<bb 3>.i105.i", label %doemit.exit127.i
+  br i1 %arg, label %"<bb 3>.i105.i", label %doemit.exit127.i
 
 "<bb 3>.i105.i":
   unreachable
@@ -80,7 +80,7 @@ doemit.exit127.i:
   unreachable
 
 "<L55>.i":
-  br i1 undef, label %"<bb 3>.i157.i", label %"<bb 5>"
+  br i1 %arg, label %"<bb 3>.i157.i", label %"<bb 5>"
 
 "<bb 3>.i157.i":
   unreachable

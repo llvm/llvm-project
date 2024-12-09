@@ -2073,7 +2073,7 @@ void deque<_Tp, _Allocator>::__add_front_capacity() {
     std::swap(__map_.__first_, __buf.__first_);
     std::swap(__map_.__begin_, __buf.__begin_);
     std::swap(__map_.__end_, __buf.__end_);
-    std::swap(__map_.__end_cap_, __buf.__end_cap_);
+    std::swap(__map_.__cap_, __buf.__cap_);
     __start_ = __map_.size() == 1 ? __block_size / 2 : __start_ + __block_size;
   }
   __annotate_whole_block(0, __asan_poison);
@@ -2150,7 +2150,7 @@ void deque<_Tp, _Allocator>::__add_front_capacity(size_type __n) {
     std::swap(__map_.__first_, __buf.__first_);
     std::swap(__map_.__begin_, __buf.__begin_);
     std::swap(__map_.__end_, __buf.__end_);
-    std::swap(__map_.__end_cap_, __buf.__end_cap_);
+    std::swap(__map_.__cap_, __buf.__cap_);
     __start_ += __ds;
   }
 }
@@ -2196,7 +2196,7 @@ void deque<_Tp, _Allocator>::__add_back_capacity() {
     std::swap(__map_.__first_, __buf.__first_);
     std::swap(__map_.__begin_, __buf.__begin_);
     std::swap(__map_.__end_, __buf.__end_);
-    std::swap(__map_.__end_cap_, __buf.__end_cap_);
+    std::swap(__map_.__cap_, __buf.__cap_);
     __annotate_whole_block(__map_.size() - 1, __asan_poison);
   }
 }
@@ -2275,7 +2275,7 @@ void deque<_Tp, _Allocator>::__add_back_capacity(size_type __n) {
     std::swap(__map_.__first_, __buf.__first_);
     std::swap(__map_.__begin_, __buf.__begin_);
     std::swap(__map_.__end_, __buf.__end_);
-    std::swap(__map_.__end_cap_, __buf.__end_cap_);
+    std::swap(__map_.__cap_, __buf.__cap_);
     __start_ -= __ds;
   }
 }

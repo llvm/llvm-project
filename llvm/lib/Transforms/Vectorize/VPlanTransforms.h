@@ -128,6 +128,9 @@ struct VPlanTransforms {
   /// induction.
   static void lowerCanonicalIV(VPlan &Plan, bool HasNUW,
                                bool DataAndControlFlowWithoutRuntimeCheck);
+
+  /// Lower abstract recipes to concrete ones, that can be codegen'd.
+  static void convertToConcreteRecipes(VPlan &Plan);
 };
 
 } // namespace llvm

@@ -11,6 +11,7 @@
 
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/SandboxIR/BasicBlock.h"
 #include "llvm/SandboxIR/Constant.h"
@@ -2501,9 +2502,6 @@ public:
   WRAP_BOTH(isEquality);
   WRAP_BOTH(isRelational);
   WRAP_BOTH(isSigned);
-  WRAP_BOTH(getSignedPredicate);
-  WRAP_BOTH(getUnsignedPredicate);
-  WRAP_BOTH(getFlippedSignednessPredicate);
   WRAP_BOTH(isTrueWhenEqual);
   WRAP_BOTH(isFalseWhenEqual);
   WRAP_BOTH(isUnsigned);
@@ -2544,6 +2542,7 @@ public:
 
   WRAP_BOTH(getSignedPredicate);
   WRAP_BOTH(getUnsignedPredicate);
+  WRAP_BOTH(getFlippedSignednessPredicate);
   WRAP_BOTH(isEquality);
   WRAP_MEMBER(isCommutative);
   WRAP_MEMBER(isRelational);

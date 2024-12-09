@@ -8,7 +8,7 @@
 
 #include "src/network/htons.h"
 #include "src/__support/common.h"
-#include "src/__support/endian.h"
+#include "src/__support/endian_internal.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {

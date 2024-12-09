@@ -174,6 +174,9 @@ struct InlineTreeNode {
   uint32_t CallSiteProbe;
   // Index in PseudoProbeDesc.GUID, UINT32_MAX for same as previous (omitted)
   uint32_t GUIDIndex;
+  // Decoded contents, ParentIndexDelta becomes absolute value.
+  uint64_t GUID;
+  uint64_t Hash;
   bool operator==(const InlineTreeNode &) const { return false; }
 };
 } // end namespace bolt

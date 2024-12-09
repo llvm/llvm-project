@@ -29,7 +29,6 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -666,7 +665,7 @@ SourceManager::createExpansionLocImpl(const ExpansionInfo &Info,
   LocalSLocEntryTable.push_back(SLocEntry::get(NextLocalOffset, Info));
   if (NextLocalOffset + Length + 1 <= NextLocalOffset ||
       NextLocalOffset + Length + 1 > CurrentLoadedOffset) {
-    Diag.Report(SourceLocation(), diag::err_sloc_space_too_large);
+    Diag.Report(diag::err_sloc_space_too_large);
     // FIXME: call `noteSLocAddressSpaceUsage` to report details to users and
     // use a source location from `Info` to point at an error.
     // Currently, both cause Clang to run indefinitely, this needs to be fixed.
@@ -2228,28 +2227,6 @@ LLVM_DUMP_METHOD void SourceManager::dump() const {
   }
 }
 
-// 123 -> "123".
-// 1234 -> "1.23k".
-// 123456 -> "123.46k".
-// 1234567 -> "1.23M".
-// 1234567890 -> "1.23G".
-// 1234567890123 -> "1.23T".
-static std::string humanizeNumber(uint64_t Number) {
-  static constexpr std::array<std::pair<uint64_t, char>, 4> Units = {
-      {{1'000'000'000'000UL, 'T'},
-       {1'000'000'000UL, 'G'},
-       {1'000'000UL, 'M'},
-       {1'000UL, 'k'}}};
-
-  for (const auto &[UnitSize, UnitSign] : Units) {
-    if (Number >= UnitSize) {
-      return llvm::formatv("{0:F}{1}", Number / static_cast<double>(UnitSize),
-                           UnitSign);
-    }
-  }
-  return std::to_string(Number);
-}
-
 void SourceManager::noteSLocAddressSpaceUsage(
     DiagnosticsEngine &Diag, std::optional<unsigned> MaxNotes) const {
   struct Info {
@@ -2318,10 +2295,9 @@ void SourceManager::noteSLocAddressSpaceUsage(
   uint64_t LoadedUsage = MaxLoadedOffset - CurrentLoadedOffset;
   int UsagePercent = static_cast<int>(100.0 * double(LocalUsage + LoadedUsage) /
                                       MaxLoadedOffset);
-  Diag.Report(SourceLocation(), diag::note_total_sloc_usage)
-      << LocalUsage << humanizeNumber(LocalUsage) << LoadedUsage
-      << humanizeNumber(LoadedUsage) << (LocalUsage + LoadedUsage)
-      << humanizeNumber(LocalUsage + LoadedUsage) << UsagePercent;
+  Diag.Report(diag::note_total_sloc_usage)
+      << LocalUsage << LoadedUsage << (LocalUsage + LoadedUsage)
+      << UsagePercent;
 
   // Produce notes on sloc address space usage for each file with a high usage.
   uint64_t ReportedSize = 0;
@@ -2329,17 +2305,14 @@ void SourceManager::noteSLocAddressSpaceUsage(
        llvm::make_range(SortedUsage.begin(), SortedEnd)) {
     Diag.Report(FileInfo.Loc, diag::note_file_sloc_usage)
         << FileInfo.Inclusions << FileInfo.DirectSize
-        << humanizeNumber(FileInfo.DirectSize)
-        << (FileInfo.TotalSize - FileInfo.DirectSize)
-        << humanizeNumber(FileInfo.TotalSize - FileInfo.DirectSize);
+        << (FileInfo.TotalSize - FileInfo.DirectSize);
     ReportedSize += FileInfo.TotalSize;
   }
 
   // Describe any remaining usage not reported in the per-file usage.
   if (ReportedSize != CountedSize) {
-    Diag.Report(SourceLocation(), diag::note_file_misc_sloc_usage)
-        << (SortedUsage.end() - SortedEnd) << CountedSize - ReportedSize
-        << humanizeNumber(CountedSize - ReportedSize);
+    Diag.Report(diag::note_file_misc_sloc_usage)
+        << (SortedUsage.end() - SortedEnd) << CountedSize - ReportedSize;
   }
 }
 

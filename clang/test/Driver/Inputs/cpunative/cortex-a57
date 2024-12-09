@@ -1,0 +1,8 @@
+processor       : 0
+BogoMIPS        : 200.00
+Features        : fp asimd evtstrm crc32 cpuid
+CPU implementer : 0x41
+CPU architecture: 8
+CPU variant     : 0x1
+CPU part        : 0xd07
+CPU revision    : 1

@@ -628,13 +628,13 @@ define i1 @test_urem_larger(i63 %X) nounwind {
 ; ARM5-NEXT:    mla r0, r1, r12, r4
 ; ARM5-NEXT:    bic r0, r0, #-2147483648
 ; ARM5-NEXT:    lsrs r0, r0, #1
-; ARM5-NEXT:    rrx r1, r3
+; ARM5-NEXT:    rrx r2, r3
 ; ARM5-NEXT:    orr r0, r0, r3, lsl #30
 ; ARM5-NEXT:    ldr r3, .LCPI5_2
-; ARM5-NEXT:    bic r2, r0, #-2147483648
+; ARM5-NEXT:    bic r1, r0, #-2147483648
 ; ARM5-NEXT:    mov r0, #0
-; ARM5-NEXT:    subs r1, r1, r3
-; ARM5-NEXT:    sbcs r1, r2, #1
+; ARM5-NEXT:    subs r2, r2, r3
+; ARM5-NEXT:    sbcs r1, r1, #1
 ; ARM5-NEXT:    movlo r0, #1
 ; ARM5-NEXT:    pop {r4, pc}
 ; ARM5-NEXT:    .p2align 2
@@ -656,13 +656,13 @@ define i1 @test_urem_larger(i63 %X) nounwind {
 ; ARM6-NEXT:    mla r0, r1, r12, r0
 ; ARM6-NEXT:    bic r0, r0, #-2147483648
 ; ARM6-NEXT:    lsrs r0, r0, #1
-; ARM6-NEXT:    rrx r1, r3
+; ARM6-NEXT:    rrx r2, r3
 ; ARM6-NEXT:    orr r0, r0, r3, lsl #30
 ; ARM6-NEXT:    ldr r3, .LCPI5_2
-; ARM6-NEXT:    bic r2, r0, #-2147483648
+; ARM6-NEXT:    bic r1, r0, #-2147483648
 ; ARM6-NEXT:    mov r0, #0
-; ARM6-NEXT:    subs r1, r1, r3
-; ARM6-NEXT:    sbcs r1, r2, #1
+; ARM6-NEXT:    subs r2, r2, r3
+; ARM6-NEXT:    sbcs r1, r1, #1
 ; ARM6-NEXT:    movlo r0, #1
 ; ARM6-NEXT:    pop {r11, pc}
 ; ARM6-NEXT:    .p2align 2
@@ -686,14 +686,14 @@ define i1 @test_urem_larger(i63 %X) nounwind {
 ; ARM7-NEXT:    mla r0, r1, r12, r0
 ; ARM7-NEXT:    bic r0, r0, #-2147483648
 ; ARM7-NEXT:    lsrs r0, r0, #1
-; ARM7-NEXT:    rrx r1, r3
+; ARM7-NEXT:    rrx r2, r3
 ; ARM7-NEXT:    orr r0, r0, r3, lsl #30
 ; ARM7-NEXT:    movw r3, #24026
-; ARM7-NEXT:    bic r2, r0, #-2147483648
+; ARM7-NEXT:    bic r1, r0, #-2147483648
 ; ARM7-NEXT:    movt r3, #48461
-; ARM7-NEXT:    subs r1, r1, r3
+; ARM7-NEXT:    subs r2, r2, r3
 ; ARM7-NEXT:    mov r0, #0
-; ARM7-NEXT:    sbcs r1, r2, #1
+; ARM7-NEXT:    sbcs r1, r1, #1
 ; ARM7-NEXT:    movwlo r0, #1
 ; ARM7-NEXT:    pop {r11, pc}
 ;
@@ -709,14 +709,14 @@ define i1 @test_urem_larger(i63 %X) nounwind {
 ; ARM8-NEXT:    mla r0, r1, r12, r0
 ; ARM8-NEXT:    bic r0, r0, #-2147483648
 ; ARM8-NEXT:    lsrs r0, r0, #1
-; ARM8-NEXT:    rrx r1, r3
+; ARM8-NEXT:    rrx r2, r3
 ; ARM8-NEXT:    orr r0, r0, r3, lsl #30
 ; ARM8-NEXT:    movw r3, #24026
-; ARM8-NEXT:    bic r2, r0, #-2147483648
+; ARM8-NEXT:    bic r1, r0, #-2147483648
 ; ARM8-NEXT:    movt r3, #48461
-; ARM8-NEXT:    subs r1, r1, r3
+; ARM8-NEXT:    subs r2, r2, r3
 ; ARM8-NEXT:    mov r0, #0
-; ARM8-NEXT:    sbcs r1, r2, #1
+; ARM8-NEXT:    sbcs r1, r1, #1
 ; ARM8-NEXT:    movwlo r0, #1
 ; ARM8-NEXT:    pop {r11, pc}
 ;
@@ -732,14 +732,14 @@ define i1 @test_urem_larger(i63 %X) nounwind {
 ; NEON7-NEXT:    mla r0, r1, r12, r0
 ; NEON7-NEXT:    bic r0, r0, #-2147483648
 ; NEON7-NEXT:    lsrs r0, r0, #1
-; NEON7-NEXT:    rrx r1, r3
+; NEON7-NEXT:    rrx r2, r3
 ; NEON7-NEXT:    orr r0, r0, r3, lsl #30
 ; NEON7-NEXT:    movw r3, #24026
-; NEON7-NEXT:    bic r2, r0, #-2147483648
+; NEON7-NEXT:    bic r1, r0, #-2147483648
 ; NEON7-NEXT:    movt r3, #48461
-; NEON7-NEXT:    subs r1, r1, r3
+; NEON7-NEXT:    subs r2, r2, r3
 ; NEON7-NEXT:    mov r0, #0
-; NEON7-NEXT:    sbcs r1, r2, #1
+; NEON7-NEXT:    sbcs r1, r1, #1
 ; NEON7-NEXT:    movwlo r0, #1
 ; NEON7-NEXT:    pop {r11, pc}
 ;
@@ -755,14 +755,14 @@ define i1 @test_urem_larger(i63 %X) nounwind {
 ; NEON8-NEXT:    mla r0, r1, r12, r0
 ; NEON8-NEXT:    bic r0, r0, #-2147483648
 ; NEON8-NEXT:    lsrs r0, r0, #1
-; NEON8-NEXT:    rrx r1, r3
+; NEON8-NEXT:    rrx r2, r3
 ; NEON8-NEXT:    orr r0, r0, r3, lsl #30
 ; NEON8-NEXT:    movw r3, #24026
-; NEON8-NEXT:    bic r2, r0, #-2147483648
+; NEON8-NEXT:    bic r1, r0, #-2147483648
 ; NEON8-NEXT:    movt r3, #48461
-; NEON8-NEXT:    subs r1, r1, r3
+; NEON8-NEXT:    subs r2, r2, r3
 ; NEON8-NEXT:    mov r0, #0
-; NEON8-NEXT:    sbcs r1, r2, #1
+; NEON8-NEXT:    sbcs r1, r1, #1
 ; NEON8-NEXT:    movwlo r0, #1
 ; NEON8-NEXT:    pop {r11, pc}
   %urem = urem i63 %X, 1234567890

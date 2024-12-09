@@ -724,6 +724,11 @@ class TagInfo : public CommonTypeInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftCopyable : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SwiftEscapableSpecified : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SwiftEscapable : 1;
+
 public:
   std::optional<std::string> SwiftImportAs;
   std::optional<std::string> SwiftRetainOp;
@@ -736,7 +741,8 @@ public:
 
   TagInfo()
       : HasFlagEnum(0), IsFlagEnum(0), SwiftCopyableSpecified(false),
-        SwiftCopyable(false) {}
+        SwiftCopyable(false), SwiftEscapableSpecified(false),
+        SwiftEscapable(false) {}
 
   std::optional<bool> isFlagEnum() const {
     if (HasFlagEnum)
@@ -755,6 +761,16 @@ public:
   void setSwiftCopyable(std::optional<bool> Value) {
     SwiftCopyableSpecified = Value.has_value();
     SwiftCopyable = Value.value_or(false);
+  }
+
+  std::optional<bool> isSwiftEscapable() const {
+    return SwiftEscapableSpecified ? std::optional<bool>(SwiftEscapable)
+                                   : std::nullopt;
+  }
+
+  void setSwiftEscapable(std::optional<bool> Value) {
+    SwiftEscapableSpecified = Value.has_value();
+    SwiftEscapable = Value.value_or(false);
   }
 
   TagInfo &operator|=(const TagInfo &RHS) {
@@ -779,6 +795,9 @@ public:
     if (!SwiftCopyableSpecified)
       setSwiftCopyable(RHS.isSwiftCopyable());
 
+    if (!SwiftEscapableSpecified)
+      setSwiftEscapable(RHS.isSwiftEscapable());
+
     return *this;
   }
 
@@ -795,6 +814,7 @@ inline bool operator==(const TagInfo &LHS, const TagInfo &RHS) {
          LHS.SwiftConformance == RHS.SwiftConformance &&
          LHS.isFlagEnum() == RHS.isFlagEnum() &&
          LHS.isSwiftCopyable() == RHS.isSwiftCopyable() &&
+         LHS.isSwiftEscapable() == RHS.isSwiftEscapable() &&
          LHS.EnumExtensibility == RHS.EnumExtensibility;
 }
 
