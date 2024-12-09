@@ -140,7 +140,7 @@ uint64_t llvm::get_threadid() {
   return uint64_t(getthrid());
 #elif defined(__ANDROID__)
   return uint64_t(gettid());
-#elif defined(__linux__)
+#elif defined(__linux__) && defined(SYS_gettid)
   return uint64_t(syscall(SYS_gettid));
 #else
   return uint64_t(pthread_self());
