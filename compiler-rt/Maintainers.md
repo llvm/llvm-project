@@ -107,7 +107,9 @@ help with the success of the project!
 ### Inactive or former component maintainers
 
 Kostya Serebryany ([kcc](https://github.com/kcc)) - Sanitizers
-Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) - Sanitizers
-Kostya Kortchinsky ([cryptoad](https://github.com/cryptoad)) - SCUDO
-Mitch Phillips ([hctim](https://github.com/hctim)) - GWP ASAN
 
+Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) - Sanitizers
+
+Kostya Kortchinsky ([cryptoad](https://github.com/cryptoad)) - SCUDO
+
+Mitch Phillips ([hctim](https://github.com/hctim)) - GWP ASAN
