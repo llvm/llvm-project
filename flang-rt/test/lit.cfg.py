@@ -68,7 +68,7 @@ if config.osx_sysroot:
 tools = [
     ToolSubst(
         "%flang",
-        command=FindTool("flang"),
+        command=config.flang,
         extra_args=isysroot_flag,
         unresolved="fatal",
     ),
