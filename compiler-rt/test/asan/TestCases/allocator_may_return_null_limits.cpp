@@ -16,6 +16,7 @@ extern "C" __declspec(dllexport) extern const char *__asan_default_options() {
 #endif
 
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <limits>
 
