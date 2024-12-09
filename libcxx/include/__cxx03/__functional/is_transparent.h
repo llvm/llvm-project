@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_IS_TRANSPARENT
-#define _LIBCPP___FUNCTIONAL_IS_TRANSPARENT
+#ifndef _LIBCPP___CXX03___FUNCTIONAL_IS_TRANSPARENT
+#define _LIBCPP___CXX03___FUNCTIONAL_IS_TRANSPARENT
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/void_t.h>
@@ -31,4 +31,4 @@ inline const bool __is_transparent_v<_Tp, _Up, __void_t<typename _Tp::is_transpa
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_IS_TRANSPARENT
+#endif // _LIBCPP___CXX03___FUNCTIONAL_IS_TRANSPARENT
