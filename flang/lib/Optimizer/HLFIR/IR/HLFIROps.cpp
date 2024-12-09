@@ -1342,6 +1342,108 @@ void hlfir::MatmulTransposeOp::getEffects(
 }
 
 //===----------------------------------------------------------------------===//
+// CShiftOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult hlfir::CShiftOp::verify() {
+  mlir::Value array = getArray();
+  fir::SequenceType arrayTy = mlir::cast<fir::SequenceType>(
+      hlfir::getFortranElementOrSequenceType(array.getType()));
+  llvm::ArrayRef<int64_t> inShape = arrayTy.getShape();
+  std::size_t arrayRank = inShape.size();
+  mlir::Type eleTy = arrayTy.getEleTy();
+  hlfir::ExprType resultTy = mlir::cast<hlfir::ExprType>(getResult().getType());
+  llvm::ArrayRef<int64_t> resultShape = resultTy.getShape();
+  std::size_t resultRank = resultShape.size();
+  mlir::Type resultEleTy = resultTy.getEleTy();
+  mlir::Value shift = getShift();
+  mlir::Type shiftTy = hlfir::getFortranElementOrSequenceType(shift.getType());
+
+  if (eleTy != resultEleTy) {
+    if (mlir::isa<fir::CharacterType>(eleTy) &&
+        mlir::isa<fir::CharacterType>(resultEleTy)) {
+      auto eleCharTy = mlir::cast<fir::CharacterType>(eleTy);
+      auto resultCharTy = mlir::cast<fir::CharacterType>(resultEleTy);
+      if (eleCharTy.getFKind() != resultCharTy.getFKind())
+        return emitOpError("kind mismatch between input and output arrays");
+      if (eleCharTy.getLen() != fir::CharacterType::unknownLen() &&
+          resultCharTy.getLen() != fir::CharacterType::unknownLen() &&
+          eleCharTy.getLen() != resultCharTy.getLen())
+        return emitOpError(
+            "character LEN mismatch between input and output arrays");
+    } else {
+      return emitOpError(
+          "input and output arrays should have the same element type");
+    }
+  }
+
+  if (arrayRank != resultRank)
+    return emitOpError("input and output arrays should have the same rank");
+
+  constexpr int64_t unknownExtent = fir::SequenceType::getUnknownExtent();
+  for (auto [inDim, resultDim] : llvm::zip(inShape, resultShape))
+    if (inDim != unknownExtent && resultDim != unknownExtent &&
+        inDim != resultDim)
+      return emitOpError(
+          "output array's shape conflicts with the input array's shape");
+
+  int64_t dimVal = -1;
+  if (!getDim())
+    dimVal = 1;
+  else if (auto dim = fir::getIntIfConstant(getDim()))
+    dimVal = *dim;
+
+  // The DIM argument may be statically invalid (e.g. exceed the
+  // input array rank) in dead code after constant propagation,
+  // so avoid some checks unless useStrictIntrinsicVerifier is true.
+  if (useStrictIntrinsicVerifier && dimVal != -1) {
+    if (dimVal < 1)
+      return emitOpError("DIM must be >= 1");
+    if (dimVal > static_cast<int64_t>(arrayRank))
+      return emitOpError("DIM must be <= input array's rank");
+  }
+
+  if (auto shiftSeqTy = mlir::dyn_cast<fir::SequenceType>(shiftTy)) {
+    // SHIFT is an array. Verify the rank and the shape (if DIM is constant).
+    llvm::ArrayRef<int64_t> shiftShape = shiftSeqTy.getShape();
+    std::size_t shiftRank = shiftShape.size();
+    if (shiftRank != arrayRank - 1)
+      return emitOpError(
+          "SHIFT's rank must be 1 less than the input array's rank");
+
+    if (useStrictIntrinsicVerifier && dimVal != -1) {
+      // SHIFT's shape must be [d(1), d(2), ..., d(DIM-1), d(DIM+1), ..., d(n)],
+      // where [d(1), d(2), ..., d(n)] is the shape of the ARRAY.
+      int64_t arrayDimIdx = 0;
+      int64_t shiftDimIdx = 0;
+      for (auto shiftDim : shiftShape) {
+        if (arrayDimIdx == dimVal - 1)
+          ++arrayDimIdx;
+
+        if (inShape[arrayDimIdx] != unknownExtent &&
+            shiftDim != unknownExtent && inShape[arrayDimIdx] != shiftDim)
+          return emitOpError("SHAPE(ARRAY)(" + llvm::Twine(arrayDimIdx + 1) +
+                             ") must be equal to SHAPE(SHIFT)(" +
+                             llvm::Twine(shiftDimIdx + 1) +
+                             "): " + llvm::Twine(inShape[arrayDimIdx]) +
+                             " != " + llvm::Twine(shiftDim));
+        ++arrayDimIdx;
+        ++shiftDimIdx;
+      }
+    }
+  }
+
+  return mlir::success();
+}
+
+void hlfir::CShiftOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
+}
+
+//===----------------------------------------------------------------------===//
 // AssociateOp
 //===----------------------------------------------------------------------===//
 
