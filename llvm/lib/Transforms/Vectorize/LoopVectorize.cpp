@@ -2691,7 +2691,11 @@ static void addFullyUnrolledInstructionsToIgnore(
   auto *Cmp = L->getLatchCmpInst();
   if (Cmp)
     InstsToIgnore.insert(Cmp);
-  for (const auto &[IV, IndDesc] : IL) {
+  for (const auto &KV : IL) {
+    // Extract the key by hand so that it can be used in the lambda below.  Note
+    // that captured structured bindings are a C++20 extension.
+    const PHINode *IV = KV.first;
+
     // Get next iteration value of the induction variable.
     Instruction *IVInst =
         cast<Instruction>(IV->getIncomingValueForBlock(L->getLoopLatch()));
