@@ -877,7 +877,6 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
       return;
     auto *HIPTC = &getOffloadingDeviceToolChain(C.getInputArgs(), *HIPTriple,
                                                 *HostTC, OFK);
-    assert(HIPTC && "Could not create offloading device tool chain.");
     C.addOffloadDeviceToolChain(HIPTC, OFK);
   }
 
@@ -1060,7 +1059,6 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
     for (const auto &TargetTriple : UniqueSYCLTriplesVec) {
       auto SYCLTC = &getOffloadingDeviceToolChain(
           C.getInputArgs(), TargetTriple, *HostTC, Action::OFK_SYCL);
-      assert(SYCLTC && "Could not create offloading device tool chain.");
       C.addOffloadDeviceToolChain(SYCLTC, Action::OFK_SYCL);
     }
   }
@@ -6697,7 +6695,7 @@ const ToolChain &Driver::getOffloadingDeviceToolChain(
       break;
     }
   }
-
+  assert(TC && "Could not create offloading device tool chain.");
   return *TC;
 }
 
