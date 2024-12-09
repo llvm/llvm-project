@@ -1,4 +1,7 @@
-// RUN: %clang  --driver-mode=dxc -Zi -Fc out.s -T cs_6_3 -O0 %s
+// RUN: %clang  --driver-mode=dxc -Zi -Fc - -T cs_6_3 -O0 %s | FileCheck %s
+
+// CHECK: #dbg_declare(ptr [[ThisReg:%this\..*]], [[ThisMd:![0-9]+]],
+// CHECK-DAG: [[ThisMd]] = !DILocalVariable(name: "this", arg: 1, scope: !{{[0-9]+}}, type: ![[type:[0-9]+]], flags: DIFlagArtificial | DIFlagObjectPointer)
 
 RWBuffer<float4> Out : register(u7, space4);
 
