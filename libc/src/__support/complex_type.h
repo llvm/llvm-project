@@ -21,33 +21,53 @@ template <typename T> struct Complex {
 
 template <typename T> struct make_complex;
 
-template<> struct make_complex<float> { using type = _Complex float; };
-template<> struct make_complex<double> { using type = _Complex double; };
-template<> struct make_complex<long double> { using type = _Complex long double; };
+template <> struct make_complex<float> {
+  using type = _Complex float;
+};
+template <> struct make_complex<double> {
+  using type = _Complex double;
+};
+template <> struct make_complex<long double> {
+  using type = _Complex long double;
+};
 
 #if defined(LIBC_TYPES_HAS_CFLOAT16)
-  template<> struct make_complex<float16> { using type = cfloat16; };
+template <> struct make_complex<float16> {
+  using type = cfloat16;
+};
 #endif
 #if defined(LIBC_TYPES_HAS_CFLOAT128)
-  template<> struct make_complex<float128> { using type = cfloat128; };
+template <> struct make_complex<float128> {
+  using type = cfloat128;
+};
 #endif
 
-template<typename T> using make_complex_t = typename make_complex<T>::type;
+template <typename T> using make_complex_t = typename make_complex<T>::type;
 
 template <typename T> struct make_real;
 
-template<> struct make_real<_Complex float> { using type = float; };
-template<> struct make_real<_Complex double> { using type = double; };
-template<> struct make_real<_Complex long double> { using type = long double; };
+template <> struct make_real<_Complex float> {
+  using type = float;
+};
+template <> struct make_real<_Complex double> {
+  using type = double;
+};
+template <> struct make_real<_Complex long double> {
+  using type = long double;
+};
 
 #if defined(LIBC_TYPES_HAS_CFLOAT16)
-  template<> struct make_real<cfloat16> { using type = float16; };
+template <> struct make_real<cfloat16> {
+  using type = float16;
+};
 #endif
 #if defined(LIBC_TYPES_HAS_CFLOAT128)
-  template<> struct make_real<cfloat128> { using type = float128; };
+template <> struct make_real<cfloat128> {
+  using type = float128;
+};
 #endif
 
-template<typename T> using make_real_t = typename make_real<T>::type;
+template <typename T> using make_real_t = typename make_real<T>::type;
 
 template <typename T> T conjugate(T c) {
   Complex<make_real_t<T>> c_c = cpp::bit_cast<Complex<make_real_t<T>>>(c);
