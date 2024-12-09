@@ -6,6 +6,8 @@
 ; Stack Pointer from Slot 4.
 ; Literal Pool Pointer from Slot 5.
 
+; RUN: llc < %s -verify-machineinstrs -mtriple=s390x-linux-gnu | FileCheck %s
+
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -O2 | FileCheck %s
 
 @buf = global [20 x ptr] zeroinitializer, align 8

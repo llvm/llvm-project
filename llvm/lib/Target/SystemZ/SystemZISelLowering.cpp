@@ -961,6 +961,7 @@ SystemZTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   Register DstReg = MI.getOperand(0).getReg();
   const TargetRegisterClass *RC = MRI.getRegClass(DstReg);
   assert(TRI->isTypeLegalForClass(*RC, MVT::i32) && "Invalid destination!");
+  (void)TRI;
   Register mainDstReg = MRI.createVirtualRegister(RC);
   Register restoreDstReg = MRI.createVirtualRegister(RC);
 
@@ -1059,7 +1060,7 @@ SystemZTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   // Slot 3(Offset = 2) Backchain value (if building with -mbackchain).
   bool BackChain = MF->getSubtarget<SystemZSubtarget>().hasBackChain();
   if (BackChain) {
-    Register BCReg = MRI.createVirtualRegister(RC);
+    Register BCReg = MRI.createVirtualRegister(PtrRC);
     auto *TFL = Subtarget.getFrameLowering<SystemZFrameLowering>();
     MIB = BuildMI(*thisMBB, MI, DL, TII->get(SystemZ::LG), BCReg)
               .addReg(SpecialRegs->getStackPointerRegister())
