@@ -18,7 +18,7 @@ define dso_local void @_Z3fooPiii(ptr %A, i32 %N, i32 %M) #0 {
 ; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER_US:%.*]]
 ; CHECK:       for.cond1.preheader.us:
 ; CHECK-NEXT:    [[INDVAR6:%.*]] = phi i64 [ [[INDVAR_NEXT7:%.*]], [[FOR_COND1_PREHEADER_US]] ], [ 0, [[FOR_COND1_PREHEADER_LR_PH_SPLIT_US]] ]
-; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVAR6]]
+; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds nuw i32, ptr [[A:%.*]], i64 [[INDVAR6]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX_US]], align 4
 ; CHECK-NEXT:    tail call void @_Z1fi(i32 [[TMP2]])
 ; CHECK-NEXT:    [[INDVAR_NEXT7]] = add nuw i64 [[INDVAR6]], 1

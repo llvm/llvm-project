@@ -53,7 +53,7 @@ public:
   }
   template <typename A> RT_API_ATTRS bool Accumulate(A x) {
     // Kahan summation
-    auto next{x + correction_};
+    auto next{x - correction_};
     auto oldSum{sum_};
     sum_ += next;
     correction_ = (sum_ - oldSum) - next; // algebraically zero

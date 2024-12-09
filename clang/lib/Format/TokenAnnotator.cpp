@@ -1554,7 +1554,7 @@ private:
         };
 
         if (IsInstancePort())
-          Tok->setFinalizedType(TT_VerilogInstancePortLParen);
+          Tok->setType(TT_VerilogInstancePortLParen);
       }
 
       if (!parseParens())
@@ -1730,7 +1730,7 @@ private:
         Tok->setType(TT_InheritanceComma);
         break;
       case Context::VerilogInstancePortList:
-        Tok->setFinalizedType(TT_VerilogInstancePortComma);
+        Tok->setType(TT_VerilogInstancePortComma);
         break;
       default:
         if (Style.isVerilog() && Contexts.size() == 1 &&
@@ -3901,6 +3901,11 @@ bool TokenAnnotator::mustBreakForReturnType(const AnnotatedLine &Line) const {
 }
 
 void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
+  if (Line.Computed)
+    return;
+
+  Line.Computed = true;
+
   for (AnnotatedLine *ChildLine : Line.Children)
     calculateFormattingInformation(*ChildLine);
 

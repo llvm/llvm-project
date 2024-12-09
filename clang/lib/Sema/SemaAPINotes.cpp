@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CheckExprLifetime.h"
 #include "TypeLocBuilder.h"
 #include "clang/APINotes/APINotesReader.h"
 #include "clang/AST/Decl.h"
@@ -18,7 +19,6 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaSwift.h"
 #include <stack>
@@ -482,7 +482,7 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
   Decl *D = FD;
   ObjCMethodDecl *MD = nullptr;
   if (!D) {
-    MD = AnyFunc.get<ObjCMethodDecl *>();
+    MD = cast<ObjCMethodDecl *>(AnyFunc);
     D = MD;
   }
 
@@ -569,7 +569,8 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
 static void ProcessAPINotes(Sema &S, CXXMethodDecl *Method,
                             const api_notes::CXXMethodInfo &Info,
                             VersionedInfoMetadata Metadata) {
-  if (Info.This && Info.This->isLifetimebound()) {
+  if (Info.This && Info.This->isLifetimebound() &&
+      !sema::implicitObjectParamIsLifetimeBound(Method)) {
     auto MethodType = Method->getType();
     auto *attr = ::new (S.Context)
         LifetimeBoundAttr(S.Context, getPlaceholderAttrInfo());

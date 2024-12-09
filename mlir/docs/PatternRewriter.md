@@ -73,7 +73,7 @@ public:
     // otherwise.
     // ...
   }
-  void rewrite(Operation *op, PatternRewriter &rewriter) {
+  void rewrite(Operation *op, PatternRewriter &rewriter) const override {
     // The `rewrite` method performs mutations on the IR rooted at `op` using
     // the provided rewriter. All mutations must go through the provided
     // rewriter.
@@ -81,7 +81,7 @@ public:
 
   /// In this section, the `match` and `rewrite` implementation is specified
   /// using a single hook.
-  LogicalResult matchAndRewrite(Operation *op, PatternRewriter &rewriter) {
+  LogicalResult matchAndRewrite(Operation *op, PatternRewriter &rewriter) const override {
     // The `matchAndRewrite` method performs both the matching and the mutation.
     // Note that the match must reach a successful point before IR mutation may
     // take place.
