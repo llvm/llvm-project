@@ -3989,6 +3989,92 @@ getFalkorUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   }
 }
 
+/// For Apple CPUs, we want to runtime-unroll loops to make better use if the
+/// OOO engine's wide instruction window and various predictors.
+static void
+getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
+                                 TargetTransformInfo::UnrollingPreferences &UP,
+                                 AArch64TTIImpl &TTI) {
+  // Limit loops with structure that is highly likely to benefit from runtime
+  // unrolling; that is we exclude outer loops, loops with multiple exits and
+  // many blocks (i.e. likely with complex control flow). Note that the
+  // heuristics here may be overly conservative and we err on the side of
+  // avoiding runtime unrolling rather than unroll excessively. They are all
+  // subject to further refinement.
+  if (!L->isInnermost() || !L->getExitBlock() || L->getNumBlocks() > 8)
+    return;
+
+  const SCEV *BTC = SE.getBackedgeTakenCount(L);
+  if (isa<SCEVConstant>(BTC) || isa<SCEVCouldNotCompute>(BTC) ||
+      (SE.getSmallConstantMaxTripCount(L) > 0 &&
+       SE.getSmallConstantMaxTripCount(L) <= 32))
+    return;
+  if (findStringMetadataForLoop(L, "llvm.loop.isvectorized"))
+    return;
+
+  int64_t Size = 0;
+  for (auto *BB : L->getBlocks()) {
+    for (auto &I : *BB) {
+      if (!isa<IntrinsicInst>(&I) && isa<CallBase>(&I))
+        return;
+      SmallVector<const Value *, 4> Operands(I.operand_values());
+      Size +=
+          *TTI.getInstructionCost(&I, Operands, TTI::TCK_CodeSize).getValue();
+    }
+  }
+
+  // Limit to loops with trip counts that are cheap to expand.
+  UP.SCEVExpansionBudget = 1;
+
+  // Try to unroll small, single block loops, if they have load/store
+  // dependencies, to expose more parallel memory access streams.
+  if (L->getHeader() != L->getLoopLatch() || Size > 8)
+    return;
+
+  SmallPtrSet<Value *, 8> LoadedValues;
+  SmallVector<StoreInst *> Stores;
+  for (auto *BB : L->blocks()) {
+    for (auto &I : *BB) {
+      Value *Ptr = getLoadStorePointerOperand(&I);
+      if (!Ptr)
+        continue;
+      const SCEV *PtrSCEV = SE.getSCEV(Ptr);
+      if (SE.isLoopInvariant(PtrSCEV, L))
+        continue;
+      if (isa<LoadInst>(&I))
+        LoadedValues.insert(&I);
+      else
+        Stores.push_back(cast<StoreInst>(&I));
+    }
+  }
+
+  // Try to find an unroll count that maximizes the use of the instruction
+  // window, i.e. trying to fetch as many instructions per cycle as possible.
+  unsigned MaxInstsPerLine = 16;
+  unsigned UC = 1;
+  unsigned BestUC = 1;
+  unsigned SizeWithBestUC = BestUC * Size;
+  while (UC <= 8) {
+    unsigned SizeWithUC = UC * Size;
+    if (SizeWithUC > 48)
+      break;
+    if ((SizeWithUC % MaxInstsPerLine) == 0 ||
+        (SizeWithBestUC % MaxInstsPerLine) < (SizeWithUC % MaxInstsPerLine)) {
+      BestUC = UC;
+      SizeWithBestUC = BestUC * Size;
+    }
+    UC++;
+  }
+
+  if (BestUC == 1 || none_of(Stores, [&LoadedValues](StoreInst *SI) {
+        return LoadedValues.contains(SI->getOperand(0));
+      }))
+    return;
+
+  UP.Runtime = true;
+  UP.DefaultUnrollRuntimeCount = BestUC;
+}
+
 void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                              TTI::UnrollingPreferences &UP,
                                              OptimizationRemarkEmitter *ORE) {
@@ -4006,9 +4092,21 @@ void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   // Disable partial & runtime unrolling on -Os.
   UP.PartialOptSizeThreshold = 0;
 
-  if (ST->getProcFamily() == AArch64Subtarget::Falkor &&
-      EnableFalkorHWPFUnrollFix)
-    getFalkorUnrollingPreferences(L, SE, UP);
+  // Apply subtarget-specific unrolling preferences.
+  switch (ST->getProcFamily()) {
+  case AArch64Subtarget::AppleA14:
+  case AArch64Subtarget::AppleA15:
+  case AArch64Subtarget::AppleA16:
+  case AArch64Subtarget::AppleM4:
+    getAppleRuntimeUnrollPreferences(L, SE, UP, *this);
+    break;
+  case AArch64Subtarget::Falkor:
+    if (EnableFalkorHWPFUnrollFix)
+      getFalkorUnrollingPreferences(L, SE, UP);
+    break;
+  default:
+    break;
+  }
 
   // Scan the loop: don't unroll loops with calls as this could prevent
   // inlining. Don't unroll vector loops either, as they don't benefit much from
@@ -5170,26 +5268,45 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     return false;
   }
   case Instruction::Mul: {
+    auto ShouldSinkSplatForIndexedVariant = [](Value *V) {
+      auto *Ty = cast<VectorType>(V->getType());
+      // For SVE the lane-indexing is within 128-bits, so we can't fold splats.
+      if (Ty->isScalableTy())
+        return false;
+
+      // Indexed variants of Mul exist for i16 and i32 element types only.
+      return Ty->getScalarSizeInBits() == 16 || Ty->getScalarSizeInBits() == 32;
+    };
+
     int NumZExts = 0, NumSExts = 0;
     for (auto &Op : I->operands()) {
       // Make sure we are not already sinking this operand
       if (any_of(Ops, [&](Use *U) { return U->get() == Op; }))
         continue;
 
-      if (match(&Op, m_SExt(m_Value()))) {
-        NumSExts++;
-        continue;
-      } else if (match(&Op, m_ZExt(m_Value()))) {
-        NumZExts++;
+      if (match(&Op, m_ZExtOrSExt(m_Value()))) {
+        auto *Ext = cast<Instruction>(Op);
+        auto *ExtOp = Ext->getOperand(0);
+        if (isSplatShuffle(ExtOp) && ShouldSinkSplatForIndexedVariant(ExtOp))
+          Ops.push_back(&Ext->getOperandUse(0));
+        Ops.push_back(&Op);
+
+        if (isa<SExtInst>(Ext))
+          NumSExts++;
+        else
+          NumZExts++;
+
         continue;
       }
 
       ShuffleVectorInst *Shuffle = dyn_cast<ShuffleVectorInst>(Op);
+      if (!Shuffle)
+        continue;
 
       // If the Shuffle is a splat and the operand is a zext/sext, sinking the
       // operand and the s/zext can help create indexed s/umull. This is
       // especially useful to prevent i64 mul being scalarized.
-      if (Shuffle && isSplatShuffle(Shuffle) &&
+      if (isSplatShuffle(Shuffle) &&
           match(Shuffle->getOperand(0), m_ZExtOrSExt(m_Value()))) {
         Ops.push_back(&Shuffle->getOperandUse(0));
         Ops.push_back(&Op);
@@ -5199,9 +5316,6 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
           NumZExts++;
         continue;
       }
-
-      if (!Shuffle)
-        continue;
 
       Value *ShuffleOperand = Shuffle->getOperand(0);
       InsertElementInst *Insert = dyn_cast<InsertElementInst>(ShuffleOperand);
@@ -5234,12 +5348,26 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
         NumZExts++;
       }
 
+      Ops.push_back(&Insert->getOperandUse(1));
       Ops.push_back(&Shuffle->getOperandUse(0));
       Ops.push_back(&Op);
     }
 
-    // Is it profitable to sink if we found two of the same type of extends.
-    return !Ops.empty() && (NumSExts == 2 || NumZExts == 2);
+    // It is profitable to sink if we found two of the same type of extends.
+    if (!Ops.empty() && (NumSExts == 2 || NumZExts == 2))
+      return true;
+
+    // Otherwise, see if we should sink splats for indexed variants.
+    if (!ShouldSinkSplatForIndexedVariant(I))
+      return false;
+
+    Ops.clear();
+    if (isSplatShuffle(I->getOperand(0)))
+      Ops.push_back(&I->getOperandUse(0));
+    if (isSplatShuffle(I->getOperand(1)))
+      Ops.push_back(&I->getOperandUse(1));
+
+    return !Ops.empty();
   }
   case Instruction::FMul: {
     // For SVE the lane-indexing is within 128-bits, so we can't fold splats.

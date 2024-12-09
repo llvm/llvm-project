@@ -428,7 +428,7 @@ def unary_undef_to_zero: GICombineRule<
 // replaced with undef.
 def propagate_undef_any_op: GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_ADD, G_FPTOSI, G_FPTOUI, G_SUB, G_XOR, G_TRUNC, G_BITCAST, G_ANYEXT):$root,
+  (match (wip_match_opcode G_ADD, G_FPTOSI, G_FPTOUI, G_SUB, G_XOR, G_TRUNC, G_BITCAST, G_ANYEXT, G_PTRTOINT, G_INTTOPTR):$root,
          [{ return Helper.matchAnyExplicitUseIsUndef(*${root}); }]),
   (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
 

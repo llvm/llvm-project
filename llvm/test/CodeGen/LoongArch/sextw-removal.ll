@@ -1314,4 +1314,23 @@ bb7:                                              ; preds = %bb2
   ret i32 %trunc
 }
 
- declare void @side_effect(i64)
+declare void @side_effect(i64)
+
+declare i32 @llvm.loongarch.lsx.vpickve2gr.w(<4 x i32>, i32)
+
+define signext i32 @test20(<4 x i32> %v) {
+; CHECK-LABEL: test20:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 3
+; CHECK-NEXT:    addi.w $a0, $a0, 0
+; CHECK-NEXT:    ret
+;
+; NORMV-LABEL: test20:
+; NORMV:       # %bb.0: # %entry
+; NORMV-NEXT:    vpickve2gr.w $a0, $vr0, 3
+; NORMV-NEXT:    addi.w $a0, $a0, 0
+; NORMV-NEXT:    ret
+entry:
+  %a = call i32 @llvm.loongarch.lsx.vpickve2gr.w(<4 x i32> %v, i32 3)
+  ret i32 %a
+}

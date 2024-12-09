@@ -21,9 +21,9 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+namespace llvm {
+namespace memprof {
 namespace {
-using namespace llvm;
-using namespace llvm::memprof;
 using testing::Contains;
 using testing::ElementsAre;
 using testing::Pair;
@@ -315,15 +315,12 @@ MemInfoBlock makePartialMIB() {
 }
 
 IndexedMemProfRecord
-makeRecordV2(std::initializer_list<::llvm::memprof::CallStackId> AllocFrames,
-             std::initializer_list<::llvm::memprof::CallStackId> CallSiteFrames,
-             const MemInfoBlock &Block, const memprof::MemProfSchema &Schema) {
-  llvm::memprof::IndexedMemProfRecord MR;
-  for (const auto &CSId : AllocFrames) {
-    // We don't populate IndexedAllocationInfo::CallStack because we use it only
-    // in Version1.
+makeRecordV2(std::initializer_list<CallStackId> AllocFrames,
+             std::initializer_list<CallStackId> CallSiteFrames,
+             const MemInfoBlock &Block, const MemProfSchema &Schema) {
+  IndexedMemProfRecord MR;
+  for (const auto &CSId : AllocFrames)
     MR.AllocSites.emplace_back(CSId, Block, Schema);
-  }
   for (const auto &CSId : CallSiteFrames)
     MR.CallSiteIds.push_back(CSId);
   return MR;
@@ -427,7 +424,7 @@ attributes #1 = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "t
 
   const MemInfoBlock MIB = makePartialMIB();
 
-  Writer.setMemProfVersionRequested(memprof::Version3);
+  Writer.setMemProfVersionRequested(Version3);
   Writer.setMemProfFullSchema(false);
 
   ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::MemProf),
@@ -435,9 +432,9 @@ attributes #1 = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "t
 
   const IndexedMemProfRecord IndexedMR = makeRecordV2(
       /*AllocFrames=*/{0x111, 0x222, 0x333},
-      /*CallSiteFrames=*/{}, MIB, memprof::getHotColdSchema());
+      /*CallSiteFrames=*/{}, MIB, getHotColdSchema());
 
-  memprof::IndexedMemProfData MemProfData;
+  IndexedMemProfData MemProfData;
   // The call sites within foo.
   MemProfData.Frames.try_emplace(0, GUIDFoo, 1, 8, false);
   MemProfData.Frames.try_emplace(1, GUIDFoo, 2, 3, false);
@@ -447,14 +444,11 @@ attributes #1 = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "t
   MemProfData.Frames.try_emplace(4, GUIDZzz, 9, 9, false);
   MemProfData.Frames.try_emplace(5, GUIDBaz, 9, 9, false);
   MemProfData.CallStacks.try_emplace(
-      0x111,
-      std::initializer_list<memprof::FrameId>{3, 0}); // bar called by foo
+      0x111, std::initializer_list<FrameId>{3, 0}); // bar called by foo
   MemProfData.CallStacks.try_emplace(
-      0x222,
-      std::initializer_list<memprof::FrameId>{4, 1}); // zzz called by foo
+      0x222, std::initializer_list<FrameId>{4, 1}); // zzz called by foo
   MemProfData.CallStacks.try_emplace(
-      0x333,
-      std::initializer_list<memprof::FrameId>{5, 2}); // baz called by foo
+      0x333, std::initializer_list<FrameId>{5, 2}); // baz called by foo
   MemProfData.Records.try_emplace(0x9999, IndexedMR);
   Writer.addMemProfData(MemProfData, Err);
 
@@ -488,3 +482,5 @@ attributes #1 = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "t
                                Pair(LineLocation(3, 3), LineLocation(2, 8))))));
 }
 } // namespace
+} // namespace memprof
+} // namespace llvm
