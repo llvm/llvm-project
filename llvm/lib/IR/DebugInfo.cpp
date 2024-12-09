@@ -256,7 +256,7 @@ void DebugInfoFinder::processCompileUnit(DICompileUnit *CU) {
 void DebugInfoFinder::processInstruction(const Module &M,
                                          const Instruction &I) {
   if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
-    processVariable(M, DVI->getVariable());
+    processVariable(DVI->getVariable());
 
   if (auto DbgLoc = I.getDebugLoc())
     processLocation(M, DbgLoc.get());
@@ -274,7 +274,7 @@ void DebugInfoFinder::processLocation(const Module &M, const DILocation *Loc) {
 
 void DebugInfoFinder::processDbgRecord(const Module &M, const DbgRecord &DR) {
   if (const DbgVariableRecord *DVR = dyn_cast<const DbgVariableRecord>(&DR))
-    processVariable(M, DVR->getVariable());
+    processVariable(DVR->getVariable());
   processLocation(M, DR.getDebugLoc().get());
 }
 
@@ -349,12 +349,18 @@ void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
       processType(TVal->getType());
     }
   }
+
+  for (auto *N : SP->getRetainedNodes()) {
+    if (auto *Var = dyn_cast_or_null<DILocalVariable>(N)) {
+      processVariable(Var);
+    }
+  }
 }
 
-void DebugInfoFinder::processVariable(const Module &M,
-                                      const DILocalVariable *DV) {
+void DebugInfoFinder::processVariable(DILocalVariable *DV) {
   if (!NodesSeen.insert(DV).second)
     return;
+  LVs.push_back(DV);
   processScope(DV->getScope());
   processType(DV->getType());
 }
