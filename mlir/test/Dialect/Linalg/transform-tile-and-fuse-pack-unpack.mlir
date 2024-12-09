@@ -1,14 +1,14 @@
 // RUN: mlir-opt %s --transform-interpreter --split-input-file -canonicalize | FileCheck %s
 
 // For pack op, we use lowerPadLikeWithInsertSlice = false to ensure no insert_slice is generated.
-// This allows linalg.transpose to be fused as a producer operation. Alternatively, without this attribute
-// insert_slice will be generated and fusion blocked.
+// This allows linalg.transpose to be fused as a producer operation. In below testcase, linalg.transpose
+// as a producer operation is fused into the scf.forall loop.
 
 module {
   // CHECK-label: func @fuse_pack_as_producer
   // CHECK:       scf.forall {{.*}} {
-  // CHECK:         linalg.transpose
-  // CHECK:         linalg.generic
+  // CHECK:         %[[PRODUCER:.*]] = linalg.transpose
+  // CHECK:         linalg.generic {{.*}} ins(%[[PRODUCER]]
   // CHECK:         scf.forall.in_parallel
   // CHECK:       }
   func.func @fuse_pack_as_producer(%src: tensor<128x256xf32>, %other: tensor<4x4x128x256xf32>)
@@ -60,11 +60,13 @@ module {
 
 // -----
 // For pack op, by default lowerPadLikeWithInsertSlice = true, which generates insert_slice and blocks fusion.
+// In below testcase, tensor.insert_slice as a producer operation cannot be fused into the scf.forall loop.
 
 module {
   // CHECK-label: func @fuse_pack_as_producer_blocked_by_insert_slice
-  // CHECK:       tensor.insert_slice
+  // CHECK:       %[[PRODUCER:.*]] = tensor.insert_slice
   // CHECK:       scf.forall {{.*}} {
+  // CHECK:         linalg.generic {{.*}} ins(%[[PRODUCER]]
   // CHECK:         scf.forall.in_parallel
   // CHECK:       }
   func.func @fuse_pack_as_producer_blocked_by_insert_slice(%src: tensor<128x256xf32>, %other: tensor<4x4x128x256xf32>)
@@ -116,14 +118,13 @@ module {
 
 // -----
 // For unpack op, we use lowerUnpadLikeWithExtractSlice = false to ensure no extract_slice is generated.
-// This allows linalg.transpose to be fused as a consumer operation. Alternatively, without this attribute
-// extract_slice will be generated and fusion blocked.
-
+// This allows linalg.transpose to be fused as a consumer operation. In below testcase, linalg.transpose
+// as a consumer operation is fused into the scf.forall loop.
 module {
   // CHECK-label: func @fuse_unpack_as_consumer
   // CHECK:       scf.forall {{.*}} {
-  // CHECK:         linalg.generic
-  // CHECK:         linalg.transpose
+  // CHECK:         %[[CONSUMER:.*]] = linalg.generic
+  // CHECK:         linalg.transpose ins(%[[CONSUMER]]
   // CHECK:         scf.forall.in_parallel
   // CHECK:       }
   func.func @fuse_unpack_as_consumer(%src: tensor<4x4x128x256xf32>, %other: tensor<4x4x128x256xf32>)
@@ -178,14 +179,15 @@ module {
 
 // -----
 // For unpack op, by default lowerUnpadLikeWithExtractSlice = true, which generates extract_slice and blocks fusion.
-
+// In below testcase, tensor.extract_slice as a consumer operation cannot be fused into the scf.forall loop.
 module {
   // CHECK-label: func @fuse_unpack_as_consumer_blocked_by_extract_slice
-  // CHECK:       scf.forall {{.*}} {
-  // CHECK:         linalg.generic
+  // CHECK:       %[[CONSUMER:.*]] = scf.forall {{.*}} {
+  // CHECK:         %[[ADDF:.*]] = linalg.generic
   // CHECK:         scf.forall.in_parallel
+  // CHECK:           tensor.parallel_insert_slice %[[ADDF]]
   // CHECK:       }
-  // CHECK:       tensor.extract_slice
+  // CHECK:       tensor.extract_slice %[[CONSUMER]]
   func.func @fuse_unpack_as_consumer_blocked_by_extract_slice(%src: tensor<4x4x128x256xf32>, %other: tensor<4x4x128x256xf32>)
       -> tensor<128x256xf32> {
     %out = tensor.empty() : tensor<1x1x128x256xf32>
