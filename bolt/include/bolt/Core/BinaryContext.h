@@ -180,34 +180,6 @@ struct JournalingStreams {
 Error createNonFatalBOLTError(const Twine &S);
 Error createFatalBOLTError(const Twine &S);
 
-/// Linux kernel version
-struct LKVersion {
-  LKVersion() {}
-  LKVersion(unsigned Major, unsigned Minor, unsigned Rev)
-      : Major(Major), Minor(Minor), Rev(Rev) {}
-
-  bool operator<(const LKVersion &Other) const {
-    return std::make_tuple(Major, Minor, Rev) <
-           std::make_tuple(Other.Major, Other.Minor, Other.Rev);
-  }
-
-  bool operator>(const LKVersion &Other) const { return Other < *this; }
-
-  bool operator<=(const LKVersion &Other) const { return !(*this > Other); }
-
-  bool operator>=(const LKVersion &Other) const { return !(*this < Other); }
-
-  bool operator==(const LKVersion &Other) const {
-    return Major == Other.Major && Minor == Other.Minor && Rev == Other.Rev;
-  }
-
-  bool operator!=(const LKVersion &Other) const { return !(*this == Other); }
-
-  unsigned Major{0};
-  unsigned Minor{0};
-  unsigned Rev{0};
-};
-
 class BinaryContext {
   BinaryContext() = delete;
 
@@ -697,8 +669,6 @@ public:
 
   /// Indicates if the binary is Linux kernel.
   bool IsLinuxKernel{false};
-
-  LKVersion LinuxKernelVersion;
 
   /// Indicates if relocations are available for usage.
   bool HasRelocations{false};
