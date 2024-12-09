@@ -527,6 +527,7 @@ void reportDuplicate(Ctx &, const Symbol &sym, const InputFile *newFile,
                      InputSectionBase *errSec, uint64_t errOffset);
 void maybeWarnUnorderableSymbol(Ctx &, const Symbol *sym);
 bool computeIsPreemptible(Ctx &, const Symbol &sym);
+void parseVersionAndComputeIsPreemptible(Ctx &);
 
 } // namespace lld::elf
 
