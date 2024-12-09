@@ -226,6 +226,11 @@ public:
             Builder.CreateStore(GEP, GShadowStackPtr);
             Builder.SetInsertPoint(I.getNextNonDebugInstruction());
             Builder.CreateStore(SSPtr, GShadowStackPtr);
+          } else if (isa<CallBase>(I)) {
+            // FIXME: There are other call-like instructions (e.g. `invoke`,
+            // `callbr`) that we will need to think about when they arise.
+            Context.emitError("Unimplemented shadow stack allocation");
+            return false;
           }
         }
       }
