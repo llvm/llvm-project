@@ -70,8 +70,6 @@ TEST(TypesTest, TargetExtType) {
   TargetExtensionType =
       TargetExtType::get(Context, "structTET", {Struct}, {0, 1});
   TETV.clear();
-  TETStream.clear();
-  TETStream(TETV);
   TargetExtensionType->print(TETStream);
 
   EXPECT_STREQ(TETStream.str().str().data(),
