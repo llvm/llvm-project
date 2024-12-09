@@ -95,7 +95,7 @@ chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.co
 
 ### Instrumentation and sanitizers
 
-#### AddressSanitizer, HWAddressSanitizer, MemorySanitizer, ThreadSanitizer
+#### Sanitizers not covered by someone else
 
 Vitaly Buka \
 vitalybuka@google.com (email), [vitalybuka](https://github.com/vitalybuka) (GitHub)
