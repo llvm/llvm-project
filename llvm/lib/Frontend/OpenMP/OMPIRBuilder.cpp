@@ -8073,7 +8073,7 @@ OpenMPIRBuilder::createAtomicRead(const LocationDescription &Loc,
     const DataLayout &LoadDL = OldVal->getModule()->getDataLayout();
     unsigned LoadSize =
         LoadDL.getTypeStoreSize(OldVal->getPointerOperand()->getType());
-    OpenMPIRBuilder::AtomicInfo atomicInfo(
+    OpenMPIRBuilder::AtomicInfoBase atomicInfo(
         &Builder, XElemTy, LoadSize * 8, LoadSize * 8, OldVal->getAlign(),
         OldVal->getAlign(), true /* UseLibcall */, X.Var);
     auto AtomicLoadRes = atomicInfo.EmitAtomicLoadLibcall(AO);
@@ -8236,7 +8236,7 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
     unsigned LoadSize =
         LoadDL.getTypeStoreSize(OldVal->getPointerOperand()->getType());
 
-    OpenMPIRBuilder::AtomicInfo atomicInfo(
+    OpenMPIRBuilder::AtomicInfoBase atomicInfo(
         &Builder, XElemTy, LoadSize * 8, LoadSize * 8, OldVal->getAlign(),
         OldVal->getAlign(), true /* UseLibcall */, X);
     auto AtomicLoadRes = atomicInfo.EmitAtomicLoadLibcall(AO);
