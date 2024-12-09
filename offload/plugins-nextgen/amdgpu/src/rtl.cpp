@@ -191,7 +191,7 @@ Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst, hsa_agent_t DstAgent,
 }
 
 Error getTargetTripleAndFeatures(hsa_agent_t Agent,
-                                 SmallVector<StringRef> &Targets) {
+                                 SmallVector<SmallString<32>> &Targets) {
   auto Err = hsa_utils::iterateAgentISAs(Agent, [&](hsa_isa_t ISA) {
     uint32_t Length;
     hsa_status_t Status;
@@ -1988,10 +1988,10 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return Err;
 
     // Detect if XNACK is enabled
-    SmallVector<StringRef> Targets;
+    SmallVector<SmallString<32>> Targets;
     if (auto Err = hsa_utils::getTargetTripleAndFeatures(Agent, Targets))
       return Err;
-    if (!Targets.empty() && Targets[0].contains("xnack+"))
+    if (!Targets.empty() && Targets[0].str().contains("xnack+"))
       IsXnackEnabled = true;
 
     // detect if device is an APU.
@@ -3205,7 +3205,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     if (!Processor)
       return false;
 
-    SmallVector<StringRef> Targets;
+    SmallVector<SmallString<32>> Targets;
     if (auto Err = hsa_utils::getTargetTripleAndFeatures(
             getKernelAgent(DeviceId), Targets))
       return Err;
