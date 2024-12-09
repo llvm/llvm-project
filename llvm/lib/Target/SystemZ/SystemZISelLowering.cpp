@@ -961,6 +961,7 @@ SystemZTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   Register DstReg = MI.getOperand(0).getReg();
   const TargetRegisterClass *RC = MRI.getRegClass(DstReg);
   assert(TRI->isTypeLegalForClass(*RC, MVT::i32) && "Invalid destination!");
+  (void)TRI;
   Register mainDstReg = MRI.createVirtualRegister(RC);
   Register restoreDstReg = MRI.createVirtualRegister(RC);
 
