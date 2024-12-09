@@ -7,8 +7,8 @@
 define {<16 x i1>, <16 x i1>} @vector_deinterleave_v16i1_v32i1(<32 x i1> %vec) {
 ; CHECK-LABEL: vector_deinterleave_v16i1_v32i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmv1r.v v8, v0
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
+; CHECK-NEXT:    vmv1r.v v8, v0
 ; CHECK-NEXT:    vslidedown.vi v0, v0, 2
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0

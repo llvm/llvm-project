@@ -1818,7 +1818,7 @@ static Value *emitTaskDependencies(
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
     BodyGenCallbackTy BodyGenCB, bool Tied, Value *Final, Value *IfCondition,
-    SmallVector<DependData> Dependencies, bool Mergeable) {
+    SmallVector<DependData> Dependencies, bool Mergeable, Value *EventHandle) {
 
   if (!updateToLocation(Loc))
     return InsertPointTy();
@@ -1864,7 +1864,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
       Builder, AllocaIP, ToBeDeleted, TaskAllocaIP, "global.tid", false));
 
   OI.PostOutlineCB = [this, Ident, Tied, Final, IfCondition, Dependencies,
-                      Mergeable, TaskAllocaBB,
+                      Mergeable, EventHandle, TaskAllocaBB,
                       ToBeDeleted](Function &OutlinedFn) mutable {
     // Replace the Stale CI by appropriate RTL function call.
     assert(OutlinedFn.getNumUses() == 1 &&
@@ -1935,6 +1935,20 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
                       /*sizeof_task=*/TaskSize, /*sizeof_shared=*/SharedsSize,
                       /*task_func=*/&OutlinedFn});
 
+    // Emit detach clause initialization.
+    // evt = (typeof(evt))__kmpc_task_allow_completion_event(loc, tid,
+    // task_descriptor);
+    if (EventHandle) {
+      Function *TaskDetachFn = getOrCreateRuntimeFunctionPtr(
+          OMPRTL___kmpc_task_allow_completion_event);
+      llvm::Value *EventVal =
+          Builder.CreateCall(TaskDetachFn, {Ident, ThreadID, TaskData});
+      llvm::Value *EventHandleAddr =
+          Builder.CreatePointerBitCastOrAddrSpaceCast(EventHandle,
+                                                      Builder.getPtrTy(0));
+      EventVal = Builder.CreatePtrToInt(EventVal, Builder.getInt64Ty());
+      Builder.CreateStore(EventVal, EventHandleAddr);
+    }
     // Copy the arguments for outlined function
     if (HasShareds) {
       Value *Shareds = StaleCI->getArgOperand(1);

@@ -2537,6 +2537,7 @@ void SITargetLowering::allocatePreloadKernArgSGPRs(
 
       // Arg is preloaded into the previous SGPR.
       if (ArgLoc.getLocVT().getStoreSize() < 4 && Alignment < 4) {
+        assert(InIdx >= 1 && "No previous SGPR");
         Info.getArgInfo().PreloadKernArgs[InIdx].Regs.push_back(
             Info.getArgInfo().PreloadKernArgs[InIdx - 1].Regs[0]);
         continue;
@@ -2545,8 +2546,7 @@ void SITargetLowering::allocatePreloadKernArgSGPRs(
       unsigned Padding = ArgOffset - LastExplicitArgOffset;
       unsigned PaddingSGPRs = alignTo(Padding, 4) / 4;
       // Check for free user SGPRs for preloading.
-      if (PaddingSGPRs + NumAllocSGPRs + 1 /*Synthetic SGPRs*/ >
-          SGPRInfo.getNumFreeUserSGPRs()) {
+      if (PaddingSGPRs + NumAllocSGPRs > SGPRInfo.getNumFreeUserSGPRs()) {
         InPreloadSequence = false;
         break;
       }
@@ -3024,6 +3024,20 @@ SDValue SITargetLowering::LowerFormalArguments(
           NewArg = DAG.getMergeValues({NewArg, Chain}, DL);
         }
       } else {
+        // Hidden arguments that are in the kernel signature must be preloaded
+        // to user SGPRs. Print a diagnostic error if a hidden argument is in
+        // the argument list and is not preloaded.
+        if (Arg.isOrigArg()) {
+          Argument *OrigArg = Fn.getArg(Arg.getOrigArgIndex());
+          if (OrigArg->hasAttribute("amdgpu-hidden-argument")) {
+            DiagnosticInfoUnsupported NonPreloadHiddenArg(
+                *OrigArg->getParent(),
+                "hidden argument in kernel signature was not preloaded",
+                DL.getDebugLoc());
+            DAG.getContext()->diagnose(NonPreloadHiddenArg);
+          }
+        }
+
         NewArg =
             lowerKernargMemParameter(DAG, VT, MemVT, DL, Chain, Offset,
                                      Alignment, Ins[i].Flags.isSExt(), &Ins[i]);

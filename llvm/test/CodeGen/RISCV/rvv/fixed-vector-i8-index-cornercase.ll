@@ -16,10 +16,10 @@ define <512 x i8> @single_source(<512 x i8> %a) {
 ; CHECK-NEXT:    addi s0, sp, 1536
 ; CHECK-NEXT:    .cfi_def_cfa s0, 0
 ; CHECK-NEXT:    andi sp, sp, -512
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv8r.v v16, v8
 ; CHECK-NEXT:    li a0, 512
 ; CHECK-NEXT:    addi a1, sp, 512
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a2, v16
 ; CHECK-NEXT:    vslidedown.vi v24, v16, 5
 ; CHECK-NEXT:    li a3, 432
@@ -104,10 +104,10 @@ define <512 x i8> @two_source(<512 x i8> %a, <512 x i8> %b) {
 ; CHECK-NEXT:    addi s0, sp, 1536
 ; CHECK-NEXT:    .cfi_def_cfa s0, 0
 ; CHECK-NEXT:    andi sp, sp, -512
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv8r.v v24, v8
 ; CHECK-NEXT:    li a0, 512
 ; CHECK-NEXT:    addi a1, sp, 512
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v24, 5
 ; CHECK-NEXT:    vmv.x.s a2, v24
 ; CHECK-NEXT:    li a3, 432

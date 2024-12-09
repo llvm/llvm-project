@@ -3018,9 +3018,9 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
       assert(C1 && "Must be constant int");
       assert((C1->isOne() || C1->isZero()) && "Must be 0 or 1");
 
-      // Undef or minimum val operand with poison min --> undef
+      // Undef or minimum val operand with poison min --> poison
       if (C1->isOne() && (!C0 || C0->isMinSignedValue()))
-        return UndefValue::get(Ty);
+        return PoisonValue::get(Ty);
 
       // Undef operand with no poison min --> 0 (sign bit must be clear)
       if (!C0)

@@ -157,8 +157,8 @@ add_libc_unittest(
   SRCS
     time_test.cpp
   DEPENDS
-    libc.include.time
     libc.src.time.time
+    libc.src.__support.time.clock_gettime
     libc.src.errno.errno
 )
 
