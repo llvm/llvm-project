@@ -68,7 +68,7 @@ alexander.v.shaposhnikov@gmail.com (email), [alexander-shaposhnikov](https://git
 #### Realtime Sanitizer (RTSan)
 
 Christopher Apple \
-cja-private@pm.me (email), [cjappl](https://github.com/cjappl) (GitHub) \
+cja-private@pm.me (email), [cjappl](https://github.com/cjappl) (GitHub)
 
 David Trevelyan \
 david.trevelyan@gmail.com (email), [davidtrevelyan](https://github.com/davidtrevelyan) (GitHub)
