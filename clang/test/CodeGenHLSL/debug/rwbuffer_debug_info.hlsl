@@ -1,4 +1,4 @@
-// RUN: %clang  --driver-mode=dxc -Zi -Fc out.s -T cs_6_3 %s
+// RUN: %clang  --driver-mode=dxc -Zi -Fc out.s -T cs_6_3 -O0 %s
 
 RWBuffer<float4> Out : register(u7, space4);
 
