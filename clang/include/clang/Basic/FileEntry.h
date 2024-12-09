@@ -71,11 +71,9 @@ public:
     return *getBaseMapEntry().second->V.get<FileEntry *>();
   }
 
-  // This is a non const version of getFileEntry() which is used if the buffer
-  // size needs to be increased due to potential z/OS EBCDIC -> UTF-8 conversion
-  FileEntry &getFileEntryToUpdate() {
-    return *getBaseMapEntry().second->V.get<FileEntry *>();
-  }
+  // This function is used if the buffer size needs to be increased
+  // due to potential z/OS EBCDIC -> UTF-8 conversion
+  inline void updateFileEntryBufferSize(unsigned BufferSize);
 
   DirectoryEntryRef getDir() const { return ME->second->Dir; }
 
@@ -361,6 +359,10 @@ time_t FileEntryRef::getModificationTime() const {
 bool FileEntryRef::isNamedPipe() const { return getFileEntry().isNamedPipe(); }
 
 void FileEntryRef::closeFile() const { getFileEntry().closeFile(); }
+
+void FileEntryRef::updateFileEntryBufferSize(unsigned BufferSize) {
+  getBaseMapEntry().second->V.get<FileEntry *>()->setSize(BufferSize);
+}
 
 } // end namespace clang
 

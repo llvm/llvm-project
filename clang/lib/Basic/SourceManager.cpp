@@ -627,7 +627,7 @@ FileID SourceManager::createFileIDImpl(ContentCache &File, StringRef Filename,
       unsigned BufSize = Buffer->getBufferSize();
       if (BufSize > FileSize) {
         if (File.ContentsEntry.has_value())
-          File.ContentsEntry->getFileEntryToUpdate().setSize(BufSize);
+          File.ContentsEntry->updateFileEntryBufferSize(BufSize);
         FileSize = BufSize;
       }
     }
