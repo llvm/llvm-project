@@ -1,4 +1,4 @@
-//===-- sysv_reentry.arm64.s ------------------------------------*- ASM -*-===//
+//===-- sysv_reenter.arm64.s ------------------------------------*- ASM -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,8 +16,8 @@
         .text
 
         // Saves GPRs, calls __orc_rt_sysv_resolve
-        .globl __orc_rt_sysv_reentry
-__orc_rt_sysv_reentry:
+        .globl __orc_rt_sysv_reenter
+__orc_rt_sysv_reenter:
         // Save register state, set up new stack frome.
         stp  x27, x28, [sp, #-16]!
         stp  x25, x26, [sp, #-16]!

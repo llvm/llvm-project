@@ -19,7 +19,7 @@ using namespace llvm;
 using namespace llvm::jitlink;
 
 namespace {
-constexpr StringRef ReentryFnName = "__orc_rt_reentry";
+constexpr StringRef ReentryFnName = "__orc_rt_reenter";
 constexpr StringRef ReentrySectionName = "__orc_stubs";
 } // namespace
 

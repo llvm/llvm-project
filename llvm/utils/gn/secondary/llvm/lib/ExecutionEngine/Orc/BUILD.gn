@@ -38,7 +38,6 @@ static_library("Orc") {
     "IRTransformLayer.cpp",
     "IndirectionUtils.cpp",
     "JITLinkRedirectableSymbolManager.cpp",
-    "JITLinkReentryTrampolines.cpp",
     "JITTargetMachineBuilder.cpp",
     "LLJIT.cpp",
     "Layer.cpp",
