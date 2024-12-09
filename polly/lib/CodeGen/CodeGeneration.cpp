@@ -237,7 +237,7 @@ static bool generateCode(Scop &S, IslAstInfo &AI, LoopInfo &LI,
   // The code below annotates the "llvm.loop.vectorize.enable" to false
   // for the code flow taken when RTCs fail. Because we don't want the
   // Loop Vectorizer to come in later and vectorize the original fall back
-  // loop when polly is enabled.
+  // loop when Polly is enabled.
   for (Loop *L : LI.getLoopsInPreorder()) {
     if (S.contains(L))
       addStringMetadataToLoop(L, "llvm.loop.vectorize.enable", 0);
