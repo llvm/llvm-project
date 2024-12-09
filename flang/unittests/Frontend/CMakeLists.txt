@@ -19,6 +19,7 @@ target_link_libraries(FlangFrontendTests
   FortranParser
   FortranSemantics
   FortranCommon
+  FortranSupport
   FortranEvaluate
   MLIRIR
 )

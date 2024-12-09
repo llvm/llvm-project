@@ -33,6 +33,7 @@ target_link_libraries(bbc PRIVATE
   MLIRAffineToStandard
   MLIRSCFToControlFlow
   FortranCommon
+  FortranSupport
   FortranParser
   FortranEvaluate
   FortranSemantics

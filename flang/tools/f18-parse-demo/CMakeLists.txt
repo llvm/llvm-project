@@ -12,5 +12,6 @@ add_flang_tool(f18-parse-demo
 target_link_libraries(f18-parse-demo
   PRIVATE
   FortranCommon
+  FortranSupport
   FortranParser
   )

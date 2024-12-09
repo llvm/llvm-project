@@ -20,6 +20,7 @@ target_link_libraries(tco PRIVATE
   flangPasses
   FlangOpenMPTransforms
   FortranCommon
+  FortranSupport
   ${dialect_libs}
   ${extension_libs}
   MLIRIR
