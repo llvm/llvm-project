@@ -161,6 +161,7 @@ bool static canProcess(const DWARFUnit &Unit, const DIE &Die,
   case dwarf::DW_TAG_structure_type:
   case dwarf::DW_TAG_typedef:
   case dwarf::DW_TAG_unspecified_type:
+  case dwarf::DW_TAG_union_type:
     if (TagsOnly || Die.findAttribute(dwarf::Attribute::DW_AT_name))
       return true;
     return false;

@@ -5347,15 +5347,23 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
         case NestedNameSpecifier::TypeSpec:
         case NestedNameSpecifier::TypeSpecWithTemplate:
-          ClsType = QualType(NNS->getAsType(), 0);
+          const Type *NNSType = NNS->getAsType();
+          ClsType = QualType(NNSType, 0);
           // Note: if the NNS has a prefix and ClsType is a nondependent
-          // TemplateSpecializationType, then the NNS prefix is NOT included
-          // in ClsType; hence we wrap ClsType into an ElaboratedType.
-          // NOTE: in particular, no wrap occurs if ClsType already is an
-          // Elaborated, DependentName, or DependentTemplateSpecialization.
-          if (isa<TemplateSpecializationType>(NNS->getAsType()))
+          // TemplateSpecializationType or a RecordType, then the NNS prefix is
+          // NOT included in ClsType; hence we wrap ClsType into an
+          // ElaboratedType. NOTE: in particular, no wrap occurs if ClsType
+          // already is an Elaborated, DependentName, or
+          // DependentTemplateSpecialization.
+          if (isa<DependentTemplateSpecializationType>(NNSType)) {
+            // FIXME: Rebuild DependentTemplateSpecializationType, adding the
+            // Prefix.
+          } else if (isa<TemplateSpecializationType, RecordType>(NNSType)) {
+            // Either the dependent case (TemplateSpecializationType), or the
+            // non-dependent one (RecordType).
             ClsType = Context.getElaboratedType(ElaboratedTypeKeyword::None,
                                                 NNSPrefix, ClsType);
+          }
           break;
         }
       } else {

@@ -719,11 +719,35 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitNumGangsClause(
         << /*NoArgs=*/1 << Clause.getDirectiveKind() << MaxArgs
         << Clause.getIntExprs().size();
 
+  // OpenACC 3.3 Section 2.9.11: A reduction clause may not appear on a loop
+  // directive that has a gang clause and is within a compute construct that has
+  // a num_gangs clause with more than one explicit argument.
+  if (Clause.getIntExprs().size() > 1 &&
+      isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind())) {
+    auto *GangClauseItr =
+        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCGangClause>);
+    auto *ReductionClauseItr =
+        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCReductionClause>);
+
+    if (GangClauseItr != ExistingClauses.end() &&
+        ReductionClauseItr != ExistingClauses.end()) {
+      SemaRef.Diag(Clause.getBeginLoc(),
+                   diag::err_acc_gang_reduction_numgangs_conflict)
+          << OpenACCClauseKind::Reduction << OpenACCClauseKind::Gang
+          << Clause.getDirectiveKind() << /*is on combined directive=*/1;
+      SemaRef.Diag((*ReductionClauseItr)->getBeginLoc(),
+                   diag::note_acc_previous_clause_here);
+      SemaRef.Diag((*GangClauseItr)->getBeginLoc(),
+                   diag::note_acc_previous_clause_here);
+      return nullptr;
+    }
+  }
+
   // OpenACC 3.3 Section 2.5.4:
   // A reduction clause may not appear on a parallel construct with a
   // num_gangs clause that has more than one argument.
-  // TODO: OpenACC: Reduction on Combined Construct needs to do this too.
-  if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Parallel &&
+  if ((Clause.getDirectiveKind() == OpenACCDirectiveKind::Parallel ||
+       Clause.getDirectiveKind() == OpenACCDirectiveKind::ParallelLoop) &&
       Clause.getIntExprs().size() > 1) {
     auto *Parallel =
         llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCReductionClause>);
@@ -731,7 +755,8 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitNumGangsClause(
     if (Parallel != ExistingClauses.end()) {
       SemaRef.Diag(Clause.getBeginLoc(),
                    diag::err_acc_reduction_num_gangs_conflict)
-          << Clause.getIntExprs().size();
+          << /*>1 arg in first loc=*/1 << Clause.getClauseKind()
+          << Clause.getDirectiveKind() << OpenACCClauseKind::Reduction;
       SemaRef.Diag((*Parallel)->getBeginLoc(),
                    diag::note_acc_previous_clause_here);
       return nullptr;
@@ -739,7 +764,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitNumGangsClause(
   }
 
   // OpenACC 3.3 Section 2.9.2:
-  // An argument with no keyword or with the 'num' wkeyword is allowed only when
+  // An argument with no keyword or with the 'num' keyword is allowed only when
   // the 'num_gangs' does not appear on the 'kernel' construct.
   if (Clause.getDirectiveKind() == OpenACCDirectiveKind::KernelsLoop) {
     auto GangClauses = llvm::make_filter_range(
@@ -803,6 +828,25 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitVectorLengthClause(
   // sense.
   if (checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
     return nullptr;
+
+  // OpenACC 3.3 Section 2.9.4:
+  // An argument is allowed only when the 'vector_length' does not appear on the
+  // 'kernels' construct.
+  if (Clause.getDirectiveKind() == OpenACCDirectiveKind::KernelsLoop) {
+    auto VectorClauses = llvm::make_filter_range(
+        ExistingClauses, llvm::IsaPred<OpenACCVectorClause>);
+
+    for (auto *VC : VectorClauses) {
+      if (cast<OpenACCVectorClause>(VC)->hasIntExpr()) {
+        SemaRef.Diag(Clause.getBeginLoc(),
+                     diag::err_acc_num_arg_conflict_reverse)
+            << OpenACCClauseKind::VectorLength << OpenACCClauseKind::Vector
+            << /*num argument*/ 0;
+        SemaRef.Diag(VC->getBeginLoc(), diag::note_acc_previous_clause_here);
+        return nullptr;
+      }
+    }
+  }
 
   assert(Clause.getIntExprs().size() == 1 &&
          "Invalid number of expressions for NumWorkers");
@@ -1097,6 +1141,14 @@ ExprResult DiagIntArgInvalid(SemaOpenACC &S, Expr *E, OpenACCGangKind GK,
       << HasAssocKind(DK, AssocKind) << AssocKind;
   return ExprError();
 }
+ExprResult DiagIntArgInvalid(SemaOpenACC &S, Expr *E, StringRef TagKind,
+                             OpenACCClauseKind CK, OpenACCDirectiveKind DK,
+                             OpenACCDirectiveKind AssocKind) {
+  S.Diag(E->getBeginLoc(), diag::err_acc_int_arg_invalid)
+      << TagKind << CK << IsOrphanLoop(DK, AssocKind) << DK
+      << HasAssocKind(DK, AssocKind) << AssocKind;
+  return ExprError();
+}
 
 ExprResult CheckGangParallelExpr(SemaOpenACC &S, OpenACCDirectiveKind DK,
                                  OpenACCDirectiveKind AssocKind,
@@ -1172,8 +1224,9 @@ ExprResult CheckGangKernelsExpr(SemaOpenACC &S,
 
     if (Itr != Collection.end()) {
       S.Diag(E->getBeginLoc(), diag::err_acc_num_arg_conflict)
-          << OpenACCClauseKind::Gang << DK << HasAssocKind(DK, AssocKind)
-          << AssocKind << OpenACCClauseKind::NumGangs;
+          << "num" << OpenACCClauseKind::Gang << DK
+          << HasAssocKind(DK, AssocKind) << AssocKind
+          << OpenACCClauseKind::NumGangs;
 
       S.Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
       return ExprError();
@@ -1206,63 +1259,94 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitVectorClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
   if (DiagIfSeqClause(Clause))
     return nullptr;
-  // Restrictions only properly implemented on 'loop' constructs, and it is
-  // the only construct that can do anything with this, so skip/treat as
-  // unimplemented for the combined constructs.
-  if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop)
+
+  // Restrictions only properly implemented on 'loop'/'combined' constructs, and
+  // it is the only construct that can do anything with this, so skip/treat as
+  // unimplemented for the routine constructs.
+  if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop &&
+      !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()))
     return isNotImplemented();
 
   Expr *IntExpr =
       Clause.getNumIntExprs() != 0 ? Clause.getIntExprs()[0] : nullptr;
   if (IntExpr) {
-    switch (SemaRef.getActiveComputeConstructInfo().Kind) {
-    case OpenACCDirectiveKind::Invalid:
-    case OpenACCDirectiveKind::Parallel:
-      // No restriction on when 'parallel' can contain an argument.
-      break;
-    case OpenACCDirectiveKind::Serial:
-      // GCC disallows this, and there is no real good reason for us to permit
-      // it, so disallow until we come up with a use case that makes sense.
-      DiagIntArgInvalid(SemaRef, IntExpr, OpenACCGangKind::Num,
-                        OpenACCClauseKind::Vector, Clause.getDirectiveKind(),
-                        SemaRef.getActiveComputeConstructInfo().Kind);
-      IntExpr = nullptr;
-      break;
-    case OpenACCDirectiveKind::Kernels: {
-      const auto *Itr =
-          llvm::find_if(SemaRef.getActiveComputeConstructInfo().Clauses,
-                        llvm::IsaPred<OpenACCVectorLengthClause>);
-      if (Itr != SemaRef.getActiveComputeConstructInfo().Clauses.end()) {
-        SemaRef.Diag(IntExpr->getBeginLoc(), diag::err_acc_num_arg_conflict)
-            << OpenACCClauseKind::Vector << Clause.getDirectiveKind()
-            << HasAssocKind(Clause.getDirectiveKind(),
-                            SemaRef.getActiveComputeConstructInfo().Kind)
-            << SemaRef.getActiveComputeConstructInfo().Kind
-            << OpenACCClauseKind::VectorLength;
-        SemaRef.Diag((*Itr)->getBeginLoc(),
-                     diag::note_acc_previous_clause_here);
-
+    if (!isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind())) {
+      switch (SemaRef.getActiveComputeConstructInfo().Kind) {
+      case OpenACCDirectiveKind::Invalid:
+      case OpenACCDirectiveKind::Parallel:
+        // No restriction on when 'parallel' can contain an argument.
+        break;
+      case OpenACCDirectiveKind::Serial:
+        // GCC disallows this, and there is no real good reason for us to permit
+        // it, so disallow until we come up with a use case that makes sense.
+        DiagIntArgInvalid(SemaRef, IntExpr, "length", OpenACCClauseKind::Vector,
+                          Clause.getDirectiveKind(),
+                          SemaRef.getActiveComputeConstructInfo().Kind);
         IntExpr = nullptr;
+        break;
+      case OpenACCDirectiveKind::Kernels: {
+        const auto *Itr =
+            llvm::find_if(SemaRef.getActiveComputeConstructInfo().Clauses,
+                          llvm::IsaPred<OpenACCVectorLengthClause>);
+        if (Itr != SemaRef.getActiveComputeConstructInfo().Clauses.end()) {
+          SemaRef.Diag(IntExpr->getBeginLoc(), diag::err_acc_num_arg_conflict)
+              << "length" << OpenACCClauseKind::Vector
+              << Clause.getDirectiveKind()
+              << HasAssocKind(Clause.getDirectiveKind(),
+                              SemaRef.getActiveComputeConstructInfo().Kind)
+              << SemaRef.getActiveComputeConstructInfo().Kind
+              << OpenACCClauseKind::VectorLength;
+          SemaRef.Diag((*Itr)->getBeginLoc(),
+                       diag::note_acc_previous_clause_here);
+
+          IntExpr = nullptr;
+        }
+        break;
       }
-      break;
-    }
-    default:
-      llvm_unreachable("Non compute construct in active compute construct");
+      default:
+        llvm_unreachable("Non compute construct in active compute construct");
+      }
+    } else {
+      if (Clause.getDirectiveKind() == OpenACCDirectiveKind::SerialLoop) {
+        DiagIntArgInvalid(SemaRef, IntExpr, "length", OpenACCClauseKind::Vector,
+                          Clause.getDirectiveKind(),
+                          SemaRef.getActiveComputeConstructInfo().Kind);
+        IntExpr = nullptr;
+      } else if (Clause.getDirectiveKind() ==
+                 OpenACCDirectiveKind::KernelsLoop) {
+        const auto *Itr = llvm::find_if(
+            ExistingClauses, llvm::IsaPred<OpenACCVectorLengthClause>);
+        if (Itr != ExistingClauses.end()) {
+          SemaRef.Diag(IntExpr->getBeginLoc(), diag::err_acc_num_arg_conflict)
+              << "length" << OpenACCClauseKind::Vector
+              << Clause.getDirectiveKind()
+              << HasAssocKind(Clause.getDirectiveKind(),
+                              SemaRef.getActiveComputeConstructInfo().Kind)
+              << SemaRef.getActiveComputeConstructInfo().Kind
+              << OpenACCClauseKind::VectorLength;
+          SemaRef.Diag((*Itr)->getBeginLoc(),
+                       diag::note_acc_previous_clause_here);
+
+          IntExpr = nullptr;
+        }
+      }
     }
   }
 
-  // OpenACC 3.3 2.9.4: The region of a loop with a 'vector' clause may not
-  // contain a loop with a gang, worker, or vector clause unless within a nested
-  // compute region.
-  if (SemaRef.LoopVectorClauseLoc.isValid()) {
-    // This handles the 'inner loop' diagnostic, but we cannot set that we're on
-    // one of these until we get to the end of the construct.
-    SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_clause_in_clause_region)
-        << OpenACCClauseKind::Vector << OpenACCClauseKind::Vector
-        << /*skip kernels construct info*/ 0;
-    SemaRef.Diag(SemaRef.LoopVectorClauseLoc,
-                 diag::note_acc_previous_clause_here);
-    return nullptr;
+  if (!isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind())) {
+    // OpenACC 3.3 2.9.4: The region of a loop with a 'vector' clause may not
+    // contain a loop with a gang, worker, or vector clause unless within a
+    // nested compute region.
+    if (SemaRef.LoopVectorClauseLoc.isValid()) {
+      // This handles the 'inner loop' diagnostic, but we cannot set that we're
+      // on one of these until we get to the end of the construct.
+      SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_clause_in_clause_region)
+          << OpenACCClauseKind::Vector << OpenACCClauseKind::Vector
+          << /*skip kernels construct info*/ 0;
+      SemaRef.Diag(SemaRef.LoopVectorClauseLoc,
+                   diag::note_acc_previous_clause_here);
+      return nullptr;
+    }
   }
 
   return OpenACCVectorClause::Create(Ctx, Clause.getBeginLoc(),
@@ -1305,7 +1389,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitWorkerClause(
                           llvm::IsaPred<OpenACCNumWorkersClause>);
         if (Itr != SemaRef.getActiveComputeConstructInfo().Clauses.end()) {
           SemaRef.Diag(IntExpr->getBeginLoc(), diag::err_acc_num_arg_conflict)
-              << OpenACCClauseKind::Worker << Clause.getDirectiveKind()
+              << "num" << OpenACCClauseKind::Worker << Clause.getDirectiveKind()
               << HasAssocKind(Clause.getDirectiveKind(),
                               SemaRef.getActiveComputeConstructInfo().Kind)
               << SemaRef.getActiveComputeConstructInfo().Kind
@@ -1334,7 +1418,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitWorkerClause(
                                         llvm::IsaPred<OpenACCNumWorkersClause>);
         if (Itr != ExistingClauses.end()) {
           SemaRef.Diag(IntExpr->getBeginLoc(), diag::err_acc_num_arg_conflict)
-              << OpenACCClauseKind::Worker << Clause.getDirectiveKind()
+              << "num" << OpenACCClauseKind::Worker << Clause.getDirectiveKind()
               << HasAssocKind(Clause.getDirectiveKind(),
                               SemaRef.getActiveComputeConstructInfo().Kind)
               << SemaRef.getActiveComputeConstructInfo().Kind
@@ -1398,32 +1482,36 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitGangClause(
   // OpenACC 3.3 Section 2.9.11: A reduction clause may not appear on a loop
   // directive that has a gang clause and is within a compute construct that has
   // a num_gangs clause with more than one explicit argument.
-  // TODO OpenACC: When we implement reduction on combined constructs, we need
-  // to do this too.
-  if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Loop &&
-      SemaRef.getActiveComputeConstructInfo().Kind !=
-          OpenACCDirectiveKind::Invalid) {
+  if ((Clause.getDirectiveKind() == OpenACCDirectiveKind::Loop &&
+       SemaRef.getActiveComputeConstructInfo().Kind !=
+           OpenACCDirectiveKind::Invalid) ||
+      isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind())) {
     // num_gangs clause on the active compute construct.
-    auto *NumGangsClauseItr =
-        llvm::find_if(SemaRef.getActiveComputeConstructInfo().Clauses,
-                      llvm::IsaPred<OpenACCNumGangsClause>);
+    auto ActiveComputeConstructContainer =
+        isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind())
+            ? ExistingClauses
+            : SemaRef.getActiveComputeConstructInfo().Clauses;
+    auto *NumGangsClauseItr = llvm::find_if(
+        ActiveComputeConstructContainer, llvm::IsaPred<OpenACCNumGangsClause>);
 
-    auto *ReductionClauseItr =
-        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCReductionClause>);
-
-    if (ReductionClauseItr != ExistingClauses.end() &&
-        NumGangsClauseItr !=
-            SemaRef.getActiveComputeConstructInfo().Clauses.end() &&
+    if (NumGangsClauseItr != ActiveComputeConstructContainer.end() &&
         cast<OpenACCNumGangsClause>(*NumGangsClauseItr)->getIntExprs().size() >
             1) {
-      SemaRef.Diag(Clause.getBeginLoc(),
-                   diag::err_acc_gang_reduction_numgangs_conflict)
-          << OpenACCClauseKind::Gang << OpenACCClauseKind::Reduction;
-      SemaRef.Diag((*ReductionClauseItr)->getBeginLoc(),
-                   diag::note_acc_previous_clause_here);
-      SemaRef.Diag((*NumGangsClauseItr)->getBeginLoc(),
-                   diag::note_acc_previous_clause_here);
-      return nullptr;
+      auto *ReductionClauseItr =
+          llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCReductionClause>);
+
+      if (ReductionClauseItr != ExistingClauses.end()) {
+        SemaRef.Diag(Clause.getBeginLoc(),
+                     diag::err_acc_gang_reduction_numgangs_conflict)
+            << OpenACCClauseKind::Gang << OpenACCClauseKind::Reduction
+            << Clause.getDirectiveKind()
+            << isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind());
+        SemaRef.Diag((*ReductionClauseItr)->getBeginLoc(),
+                     diag::note_acc_previous_clause_here);
+        SemaRef.Diag((*NumGangsClauseItr)->getBeginLoc(),
+                     diag::note_acc_previous_clause_here);
+        return nullptr;
+      }
     }
   }
 
@@ -1504,9 +1592,9 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitGangClause(
     }
   }
 
-  return SemaRef.CheckGangClause(ExistingClauses, Clause.getBeginLoc(),
-                                 Clause.getLParenLoc(), GangKinds, IntExprs,
-                                 Clause.getEndLoc());
+  return SemaRef.CheckGangClause(Clause.getDirectiveKind(), ExistingClauses,
+                                 Clause.getBeginLoc(), Clause.getLParenLoc(),
+                                 GangKinds, IntExprs, Clause.getEndLoc());
 }
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitSeqClause(
@@ -1550,41 +1638,39 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitSeqClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitReductionClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute' constructs, and
-  // 'compute' constructs are the only construct that can do anything with
-  // this yet, so skip/treat as unimplemented in this case.
-  // TODO: OpenACC: Remove check once we get combined constructs for this clause.
-  if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
-      Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop)
-    return isNotImplemented();
-
   // OpenACC 3.3 Section 2.9.11: A reduction clause may not appear on a loop
   // directive that has a gang clause and is within a compute construct that has
   // a num_gangs clause with more than one explicit argument.
-  if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Loop &&
-      SemaRef.getActiveComputeConstructInfo().Kind !=
-          OpenACCDirectiveKind::Invalid) {
+  if ((Clause.getDirectiveKind() == OpenACCDirectiveKind::Loop &&
+       SemaRef.getActiveComputeConstructInfo().Kind !=
+           OpenACCDirectiveKind::Invalid) ||
+      isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind())) {
     // num_gangs clause on the active compute construct.
-    auto *NumGangsClauseItr =
-        llvm::find_if(SemaRef.getActiveComputeConstructInfo().Clauses,
-                      llvm::IsaPred<OpenACCNumGangsClause>);
+    auto ActiveComputeConstructContainer =
+        isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind())
+            ? ExistingClauses
+            : SemaRef.getActiveComputeConstructInfo().Clauses;
+    auto *NumGangsClauseItr = llvm::find_if(
+        ActiveComputeConstructContainer, llvm::IsaPred<OpenACCNumGangsClause>);
 
-    auto *GangClauseItr =
-        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCGangClause>);
-
-    if (GangClauseItr != ExistingClauses.end() &&
-        NumGangsClauseItr !=
-            SemaRef.getActiveComputeConstructInfo().Clauses.end() &&
+    if (NumGangsClauseItr != ActiveComputeConstructContainer.end() &&
         cast<OpenACCNumGangsClause>(*NumGangsClauseItr)->getIntExprs().size() >
             1) {
-      SemaRef.Diag(Clause.getBeginLoc(),
-                   diag::err_acc_gang_reduction_numgangs_conflict)
-          << OpenACCClauseKind::Reduction << OpenACCClauseKind::Gang;
-      SemaRef.Diag((*GangClauseItr)->getBeginLoc(),
-                   diag::note_acc_previous_clause_here);
-      SemaRef.Diag((*NumGangsClauseItr)->getBeginLoc(),
-                   diag::note_acc_previous_clause_here);
-      return nullptr;
+      auto *GangClauseItr =
+          llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCGangClause>);
+
+      if (GangClauseItr != ExistingClauses.end()) {
+        SemaRef.Diag(Clause.getBeginLoc(),
+                     diag::err_acc_gang_reduction_numgangs_conflict)
+            << OpenACCClauseKind::Reduction << OpenACCClauseKind::Gang
+            << Clause.getDirectiveKind()
+            << isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind());
+        SemaRef.Diag((*GangClauseItr)->getBeginLoc(),
+                     diag::note_acc_previous_clause_here);
+        SemaRef.Diag((*NumGangsClauseItr)->getBeginLoc(),
+                     diag::note_acc_previous_clause_here);
+        return nullptr;
+      }
     }
   }
 
@@ -1608,7 +1694,8 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitReductionClause(
   // OpenACC 3.3 Section 2.5.4:
   // A reduction clause may not appear on a parallel construct with a
   // num_gangs clause that has more than one argument.
-  if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Parallel) {
+  if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Parallel ||
+      Clause.getDirectiveKind() == OpenACCDirectiveKind::ParallelLoop) {
     auto NumGangsClauses = llvm::make_filter_range(
         ExistingClauses, llvm::IsaPred<OpenACCNumGangsClause>);
 
@@ -1619,7 +1706,8 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitReductionClause(
       if (NumExprs > 1) {
         SemaRef.Diag(Clause.getBeginLoc(),
                      diag::err_acc_reduction_num_gangs_conflict)
-            << NumExprs;
+            << /*>1 arg in first loc=*/0 << Clause.getClauseKind()
+            << Clause.getDirectiveKind() << OpenACCClauseKind::NumGangs;
         SemaRef.Diag(NGC->getBeginLoc(), diag::note_acc_previous_clause_here);
         return nullptr;
       }
@@ -2565,7 +2653,8 @@ SemaOpenACC::CheckGangExpr(ArrayRef<const OpenACCClause *> ExistingClauses,
 }
 
 OpenACCClause *
-SemaOpenACC::CheckGangClause(ArrayRef<const OpenACCClause *> ExistingClauses,
+SemaOpenACC::CheckGangClause(OpenACCDirectiveKind DirKind,
+                             ArrayRef<const OpenACCClause *> ExistingClauses,
                              SourceLocation BeginLoc, SourceLocation LParenLoc,
                              ArrayRef<OpenACCGangKind> GangKinds,
                              ArrayRef<Expr *> IntExprs, SourceLocation EndLoc) {
@@ -2590,7 +2679,7 @@ SemaOpenACC::CheckGangClause(ArrayRef<const OpenACCClause *> ExistingClauses,
       if (const auto *DimVal = dyn_cast<ConstantExpr>(DimExpr);
           DimVal && DimVal->getResultAsAPSInt() > 1) {
         Diag(DimVal->getBeginLoc(), diag::err_acc_gang_reduction_conflict)
-            << /*gang/reduction=*/0;
+            << /*gang/reduction=*/0 << DirKind;
         Diag((*ReductionItr)->getBeginLoc(),
              diag::note_acc_previous_clause_here);
         return nullptr;
@@ -2607,30 +2696,29 @@ OpenACCClause *SemaOpenACC::CheckReductionClause(
     OpenACCDirectiveKind DirectiveKind, SourceLocation BeginLoc,
     SourceLocation LParenLoc, OpenACCReductionOperator ReductionOp,
     ArrayRef<Expr *> Vars, SourceLocation EndLoc) {
-  if (DirectiveKind == OpenACCDirectiveKind::Loop) {
+  if (DirectiveKind == OpenACCDirectiveKind::Loop ||
+      isOpenACCCombinedDirectiveKind(DirectiveKind)) {
     // OpenACC 3.3 2.9.11: A reduction clause may not appear on a loop directive
     // that has a gang clause with a dim: argument whose value is greater
     // than 1.
-    const auto *GangItr =
-        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCGangClause>);
+    const auto GangClauses = llvm::make_filter_range(
+        ExistingClauses, llvm::IsaPred<OpenACCGangClause>);
 
-    while (GangItr != ExistingClauses.end()) {
-      auto *GangClause = cast<OpenACCGangClause>(*GangItr);
+    for (auto *GC : GangClauses) {
+      const auto *GangClause = cast<OpenACCGangClause>(GC);
       for (unsigned I = 0; I < GangClause->getNumExprs(); ++I) {
         std::pair<OpenACCGangKind, const Expr *> EPair = GangClause->getExpr(I);
-        // We know there is only 1 on this gang, so move onto the next gang.
         if (EPair.first != OpenACCGangKind::Dim)
-          break;
+          continue;
 
         if (const auto *DimVal = dyn_cast<ConstantExpr>(EPair.second);
             DimVal && DimVal->getResultAsAPSInt() > 1) {
           Diag(BeginLoc, diag::err_acc_gang_reduction_conflict)
-              << /*reduction/gang=*/1;
-          Diag((*GangItr)->getBeginLoc(), diag::note_acc_previous_clause_here);
+              << /*reduction/gang=*/1 << DirectiveKind;
+          Diag(GangClause->getBeginLoc(), diag::note_acc_previous_clause_here);
           return nullptr;
         }
       }
-      ++GangItr;
     }
   }
 

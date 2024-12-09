@@ -130,13 +130,8 @@ FunctionPass *SPIRVPassConfig::createTargetRegisterAllocator(bool) {
   return nullptr;
 }
 
-// Disable passes that may break CFG.
+// A place to disable passes that may break CFG.
 void SPIRVPassConfig::addMachineSSAOptimization() {
-  // Some standard passes that optimize machine instructions in SSA form uses
-  // MI.isPHI() that doesn't account for OpPhi in SPIR-V and so are able to
-  // break the CFG (e.g., MachineSink).
-  disablePass(&MachineSinkingID);
-
   TargetPassConfig::addMachineSSAOptimization();
 }
 
