@@ -42,9 +42,6 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[C]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>:
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
 ; CHECK-NEXT: Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
@@ -52,6 +49,9 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT:   IR   %iv = phi i64 [ %and, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:   IR   %p.src = phi ptr [ %A, %entry ], [ %p.src.next, %loop ]
 ; CHECK:        IR   %cmp = icmp eq i64 %iv.next, 0
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -95,9 +95,6 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[C]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>:
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
 ; CHECK-NEXT: Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
@@ -105,6 +102,9 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT:   IR   %iv = phi i64 [ %and, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:   IR   %p.src = phi ptr [ %A, %entry ], [ %p.src.next, %loop ]
 ; CHECK:        IR   %cmp = icmp eq i64 %iv.next, 0
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
