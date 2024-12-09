@@ -347,7 +347,7 @@ extern const short *_tolower_tab_;
   uptr copy_length = internal_strnlen(s, size);                               \
   char *new_mem = (char *)WRAP(malloc)(copy_length + 1);                      \
   if (common_flags()->intercept_strndup) {                                    \
-    COMMON_INTERCEPTOR_READ_STRING(ctx, s, Min(size, copy_length + 1));       \
+    COMMON_INTERCEPTOR_READ_STRING(ctx, s, Min<uptr>(size, copy_length + 1)); \
   }                                                                           \
   if (new_mem) {                                                              \
     COMMON_INTERCEPTOR_COPY_STRING(ctx, new_mem, s, copy_length);             \
