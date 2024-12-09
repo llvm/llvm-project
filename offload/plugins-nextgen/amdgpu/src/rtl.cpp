@@ -190,9 +190,8 @@ Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst, hsa_agent_t DstAgent,
 #endif
 }
 
-Expected<StringRef>
-getTargetTripleAndFeatures(hsa_agent_t Agent, SmallVector<StringRef> &Targets) {
-  StringRef SpecificTarget;
+Error getTargetTripleAndFeatures(hsa_agent_t Agent,
+                                 SmallVector<StringRef> &Targets) {
   auto Err = hsa_utils::iterateAgentISAs(Agent, [&](hsa_isa_t ISA) {
     uint32_t Length;
     hsa_status_t Status;
@@ -209,16 +208,10 @@ getTargetTripleAndFeatures(hsa_agent_t Agent, SmallVector<StringRef> &Targets) {
     if (TripleTarget.consume_front("amdgcn-amd-amdhsa")) {
       auto Target = TripleTarget.ltrim('-').rtrim('\0');
       Targets.push_back(Target);
-      if (!Target.ends_with("generic"))
-        SpecificTarget = Target; // Expect one (and only one) to be found
     }
     return HSA_STATUS_SUCCESS;
   });
-  if (Err)
-    return Err;
-  if (SpecificTarget.empty())
-    return Plugin::error("Specific Target ISA not found");
-  return SpecificTarget;
+  return Err;
 }
 } // namespace hsa_utils
 
@@ -1996,12 +1989,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // Detect if XNACK is enabled
     SmallVector<StringRef> Targets;
-    auto TargeTripleAndFeaturesOrError =
-        hsa_utils::getTargetTripleAndFeatures(Agent, Targets);
-    if (!TargeTripleAndFeaturesOrError)
-      return TargeTripleAndFeaturesOrError.takeError();
-    if (static_cast<StringRef>(*TargeTripleAndFeaturesOrError)
-            .contains("xnack+"))
+    if (auto Err = hsa_utils::getTargetTripleAndFeatures(Agent, Targets))
+      return Err;
+    if (!Targets.empty() && Targets[0].contains("xnack+"))
       IsXnackEnabled = true;
 
     // detect if device is an APU.
@@ -3216,10 +3206,9 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
       return false;
 
     SmallVector<StringRef> Targets;
-    auto TargetTripleAndFeaturesOrError = hsa_utils::getTargetTripleAndFeatures(
-        getKernelAgent(DeviceId), Targets);
-    if (!TargetTripleAndFeaturesOrError)
-      return TargetTripleAndFeaturesOrError.takeError();
+    if (auto Err = hsa_utils::getTargetTripleAndFeatures(
+            getKernelAgent(DeviceId), Targets))
+      return Err;
     for (auto &Target : Targets)
       if (offloading::amdgpu::isImageCompatibleWithEnv(
               Processor ? *Processor : "", ElfOrErr->getPlatformFlags(),
