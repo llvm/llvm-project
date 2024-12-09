@@ -197,6 +197,12 @@ public:
                            : I.getPrefix(StrTable, PrefixesTable, 0);
   }
 
+  void appendOptionPrefixes(OptSpecifier id,
+                            SmallVectorImpl<StringRef> &Prefixes) const {
+    const Info &I = getInfo(id);
+    I.appendPrefixes(StrTable, PrefixesTable, Prefixes);
+  }
+
   /// Lookup the prefixed name of the given option.
   StringRef getOptionPrefixedName(OptSpecifier id) const {
     return getInfo(id).getPrefixedName(StrTable);
