@@ -7938,15 +7938,17 @@ LegalizerHelper::lowerThreewayCompare(MachineInstr &MI) {
 
   auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
   const DataLayout &DL = MIRBuilder.getDataLayout();
+  auto BC = TLI.getBooleanContents(DstTy.isVector(), /*isFP=*/false);
   if (TLI.shouldExpandCmpUsingSelects(
-          getApproximateEVTForLLT(SrcTy, DL, Ctx))) {
+          getApproximateEVTForLLT(SrcTy, DL, Ctx)) ||
+      BC == TargetLowering::UndefinedBooleanContent) {
     auto One = MIRBuilder.buildConstant(DstTy, 1);
     auto SelectZeroOrOne = MIRBuilder.buildSelect(DstTy, IsGT, One, Zero);
 
     auto MinusOne = MIRBuilder.buildConstant(DstTy, -1);
     MIRBuilder.buildSelect(Dst, IsLT, MinusOne, SelectZeroOrOne);
   } else {
-    if (TLI.getBooleanContents(DstTy.isVector(), /*isFP=*/false))
+    if (BC == TargetLowering::ZeroOrNegativeOneBooleanContent)
       std::swap(IsGT, IsLT);
     unsigned BoolExtOp =
         MIRBuilder.getBoolExtOp(DstTy.isVector(), /*isFP=*/false);
