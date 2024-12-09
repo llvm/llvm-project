@@ -43,7 +43,9 @@ add_mlir_python_common_capi_library(StandalonePythonCAPI
     # TODO: Remove this in favor of showing fine grained registration once
     # available.
     MLIRPythonExtension.RegisterEverything
+    MLIRPythonExtension.ExecutionEngine
     MLIRPythonSources.Core
+    MLIRPythonSources.Dialects
 )
 
 ################################################################################
