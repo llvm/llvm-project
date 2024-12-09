@@ -98,15 +98,15 @@ module attributes {transform.with_named_sequence} {
 
 // This is same as pack_as_pad but since we explicitly added {lowerPadLikeWithInsertSlice = false}, it should not
 // be lowered to insert_slice.
-// CHECK-LABEL: func.func @pack_disallowed_as_pad(
-func.func @pack_disallowed_as_pad(%arg0: tensor<129x47x16x16xf32>, %arg1: tensor<1x1x1x1x136x64x16x16xf32>) -> tensor<1x1x1x1x136x64x16x16xf32> {
+// CHECK-LABEL: func.func @pack_as_pad_disabled_insert_slice(
+func.func @pack_as_pad_disabled_insert_slice(%arg0: tensor<129x47x16x16xf32>, %arg1: tensor<1x1x1x1x136x64x16x16xf32>) -> tensor<1x1x1x1x136x64x16x16xf32> {
   %cst_0 = arith.constant 0.0 : f32
   // tensor.pack is lowered to tensor.pad + tensor.expand_shape + linalg.transpose
   // CHECK-SAME: %[[ARG0:[^:]*]]: tensor<129x47x16x16xf32>
-  //      CHECK: %[[PAD:.*]] = tensor.pad %[[ARG0]]
+  //  CHECK-DAG: %[[PAD:.*]] = tensor.pad %[[ARG0]]
   //  CHECK-NOT: %[[RES:.*]] = tensor.insert_slice %[[PAD]]
   //      CHECK: %[[PAD_EXPANDED:.*]] = tensor.expand_shape %[[PAD]]
-  //      CHECK: %[[RES:.*]] = linalg.transpose ins(%[[PAD_EXPANDED]]
+  //  CHECK-DAG: %[[RES:.*]] = linalg.transpose ins(%[[PAD_EXPANDED]]
   %pack = tensor.pack %arg0 padding_value(%cst_0 : f32) inner_dims_pos = [0, 1, 2, 3] inner_tiles = [136, 64, 16, 16] into %arg1
     : tensor<129x47x16x16xf32> -> tensor<1x1x1x1x136x64x16x16xf32>
   return %pack :  tensor<1x1x1x1x136x64x16x16xf32>
@@ -261,18 +261,18 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// This is same as upack_as_pad but since we explicitly added {lowerUnpadLikeWithExtractSlice = false}, it should not 
+// This is same as upack_as_pad but since we explicitly added {lowerUnpadLikeWithExtractSlice = false}, it should not
 // be lowered to extract_slice.
-// CHECK-LABEL: func.func @unpack_disallowed_as_pad(
-func.func @unpack_disallowed_as_pad(%arg0: tensor<1x1x1x1x136x64x16x16xf32>, %arg1: tensor<129x47x16x16xf32>) -> tensor<129x47x16x16xf32> {
+// CHECK-LABEL: func.func @unpack_as_pad_disabled_extract_slice(
+func.func @unpack_as_pad_disabled_extract_slice(%arg0: tensor<1x1x1x1x136x64x16x16xf32>, %arg1: tensor<129x47x16x16xf32>) -> tensor<129x47x16x16xf32> {
   %cst_0 = arith.constant 0.0 : f32
 
   // tensor.unpack is lowered to tensor.extract_slice + linalg.transpose + tensor.collapse_shape
-  // CHECK-SAME: %[[ARG0:[^:]*]]: tensor<1x1x1x1x136x64x16x16xf32>
-  //  CHECK-NOT: %[[RES:.*]] = tensor.extract_slice %[[ARG0]]
-  //      CHECK: %[[TRANSPOSED:.*]] = linalg.transpose ins(%[[ARG0]]
-  //      CHECK: %[[COLLAPSED:.*]] = tensor.collapse_shape %[[TRANSPOSED]]
-  //      CHECK: %[[RES:.*]] = tensor.extract_slice %[[COLLAPSED]]
+  // CHECK-DAG: %[[ARG0:[^:]*]]: tensor<1x1x1x1x136x64x16x16xf32>
+  // CHECK-NOT: %[[RES:.*]] = tensor.extract_slice %[[ARG0]]
+  //     CHECK: %[[TRANSPOSED:.*]] = linalg.transpose ins(%[[ARG0]]
+  //     CHECK: %[[COLLAPSED:.*]] = tensor.collapse_shape %[[TRANSPOSED]]
+  // CHECK-DAG: %[[RES:.*]] = tensor.extract_slice %[[COLLAPSED]]
   %pack = tensor.unpack %arg0 inner_dims_pos = [0, 1, 2, 3] inner_tiles = [136, 64, 16, 16] into %arg1
     : tensor<1x1x1x1x136x64x16x16xf32> -> tensor<129x47x16x16xf32>
   return %pack : tensor<129x47x16x16xf32>
@@ -632,7 +632,7 @@ func.func @unpack_fully_dynamic(%source: tensor<?x?x?x?xf32>, %dest: tensor<?x?x
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %unpack = transform.structured.match ops{["tensor.unpack"]} in %module_op
-      : (!transform.any_op) -> !transform.op<"tensor.unpack"> 
+      : (!transform.any_op) -> !transform.op<"tensor.unpack">
     transform.structured.lower_unpack %unpack : (!transform.op<"tensor.unpack">)
           -> (!transform.op<"tensor.empty">,
           !transform.op<"linalg.transpose">,
@@ -687,9 +687,9 @@ module attributes {transform.with_named_sequence} {
 // CHECK-LABEL: @unpack_with_outer_dims_perm
 //  CHECK-SAME: %[[ARG0:.*]]: tensor<32x64xf32>, %[[ARG1:.*]]: tensor<2x4x32x8xf32>
 //       CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<4x8x2x32xf32>
-//       CHECK: %[[TRAN:.*]] = linalg.transpose 
-//  CHECK-SAME:   ins(%[[ARG1]] : tensor<2x4x32x8xf32>) 
-//  CHECK-SAME:   outs(%[[EMPTY]] : tensor<4x8x2x32xf32>) 
+//       CHECK: %[[TRAN:.*]] = linalg.transpose
+//  CHECK-SAME:   ins(%[[ARG1]] : tensor<2x4x32x8xf32>)
+//  CHECK-SAME:   outs(%[[EMPTY]] : tensor<4x8x2x32xf32>)
 //  CHECK-SAME:   permutation = [1, 3, 0, 2]
 //       CHECK: %[[CLP:.*]] = tensor.collapse_shape %[[TRAN]] {{\[}}[0, 1], [2, 3]]
 //  CHECK-SAME:   : tensor<4x8x2x32xf32> into tensor<32x64xf32>
@@ -698,7 +698,7 @@ module attributes {transform.with_named_sequence} {
 //       CHECK: linalg.copy ins(%[[SLICE]]
 //  CHECK-SAME:   : tensor<32x64xf32>) outs(%[[ARG0]] : tensor<32x64xf32>) -> tensor<32x64xf32>
 func.func @unpack_with_outer_dims_perm(%arg0: tensor<32x64xf32>, %arg1: tensor<2x4x32x8xf32>) -> tensor<32x64xf32> {
-  %unpack = tensor.unpack %arg1 outer_dims_perm = [1, 0] 
+  %unpack = tensor.unpack %arg1 outer_dims_perm = [1, 0]
     inner_dims_pos = [1, 0] inner_tiles = [32, 8] into %arg0 : tensor<2x4x32x8xf32> -> tensor<32x64xf32>
   return %unpack : tensor<32x64xf32>
 }
