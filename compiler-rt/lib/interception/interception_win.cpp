@@ -808,7 +808,6 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x798141:  // 41 81 79 XX YY YY YY YY : cmp DWORD PTR [r9+YY], XX XX XX XX
     case 0x7a8141:  // 41 81 7a XX YY YY YY YY : cmp DWORD PTR [r10+YY], XX XX XX XX
     case 0x7b8141:  // 41 81 7b XX YY YY YY YY : cmp DWORD PTR [r11+YY], XX XX XX XX
-    case 0x7c8141:  // 41 81 7c XX YY YY YY YY : cmp DWORD PTR [r12+YY], XX XX XX XX
     case 0x7d8141:  // 41 81 7d XX YY YY YY YY : cmp DWORD PTR [r13+YY], XX XX XX XX
     case 0x7e8141:  // 41 81 7e XX YY YY YY YY : cmp DWORD PTR [r14+YY], XX XX XX XX
     case 0x7f8141:  // 41 81 7f YY XX XX XX XX : cmp DWORD PTR [r15+YY], XX XX XX XX
@@ -835,6 +834,10 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x2444c7:    // C7 44 24 XX YY YY YY YY
                       //   mov dword ptr [rsp + XX], YYYYYYYY
       return 8;
+
+    case 0x7c8141:  // 41 81 7c ZZ YY XX XX XX XX
+                    // cmp DWORD PTR [reg+reg*n+YY], XX XX XX XX
+      return 9;
   }
 
   switch (*(u32*)(address)) {
