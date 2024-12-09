@@ -178,27 +178,6 @@ void UnexpectedSymbolDefinitions::log(raw_ostream &OS) const {
      << ": " << Symbols;
 }
 
-void SymbolInstance::lookupAsync(LookupAsyncOnCompleteFn OnComplete) const {
-  JD->getExecutionSession().lookup(
-      LookupKind::Static, {{JD.get(), JITDylibLookupFlags::MatchAllSymbols}},
-      SymbolLookupSet(Name), SymbolState::Ready,
-      [OnComplete = std::move(OnComplete)
-#ifndef NDEBUG
-           ,
-       Name = this->Name // Captured for the assert below only.
-#endif                   // NDEBUG
-  ](Expected<SymbolMap> Result) mutable {
-        if (Result) {
-          assert(Result->size() == 1 && "Unexpected number of results");
-          assert(Result->count(Name) &&
-                 "Result does not contain expected symbol");
-          OnComplete(Result->begin()->second);
-        } else
-          OnComplete(Result.takeError());
-      },
-      NoDependenciesToRegister);
-}
-
 AsynchronousSymbolQuery::AsynchronousSymbolQuery(
     const SymbolLookupSet &Symbols, SymbolState RequiredState,
     SymbolsResolvedCallback NotifyComplete)
@@ -1476,9 +1455,10 @@ void JITDylib::installMaterializationUnit(
 void JITDylib::detachQueryHelper(AsynchronousSymbolQuery &Q,
                                  const SymbolNameSet &QuerySymbols) {
   for (auto &QuerySymbol : QuerySymbols) {
-    auto MII = MaterializingInfos.find(QuerySymbol);
-    if (MII != MaterializingInfos.end())
-      MII->second.removeQuery(Q);
+    assert(MaterializingInfos.count(QuerySymbol) &&
+           "QuerySymbol does not have MaterializingInfo");
+    auto &MI = MaterializingInfos[QuerySymbol];
+    MI.removeQuery(Q);
   }
 }
 
