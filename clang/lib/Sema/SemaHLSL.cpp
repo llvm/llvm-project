@@ -1865,10 +1865,10 @@ static bool CheckAnyScalarOrVector(Sema *S, CallExpr *TheCall,
   return false;
 }
 
-static bool CheckNotBoolType(Sema *S, CallExpr *TheCall, unsigned ArgIndex) {
+static bool CheckWaveActive(Sema *S, CallExpr *TheCall) {
   QualType BoolType = S->getASTContext().BoolTy;
-  assert(TheCall->getNumArgs() >= ArgIndex);
-  QualType ArgType = TheCall->getArg(ArgIndex)->getType();
+  assert(TheCall->getNumArgs() >= 1);
+  QualType ArgType = TheCall->getArg(0)->getType();
   auto *VTy = ArgType->getAs<VectorType>();
   // is the bool or vector<bool>
   if (S->Context.hasSameUnqualifiedType(ArgType, BoolType) ||
@@ -2179,7 +2179,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     // Ensure input expr type is a scalar/vector and the same as the return type
     if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0))
       return true;
-    if (CheckNotBoolType(&SemaRef, TheCall, 0))
+    if (CheckWaveActive(&SemaRef, TheCall))
       return true;
     ExprResult Expr = TheCall->getArg(0);
     QualType ArgTyExpr = Expr.get()->getType();
