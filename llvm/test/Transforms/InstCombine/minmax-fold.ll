@@ -697,7 +697,7 @@ define zeroext i8 @look_through_cast2(i32 %x) {
   ret i8 %res
 }
 
-define zeroext i8 @look_through_cast_int_min(i8 %a, i32 %min) {
+define i8 @look_through_cast_int_min(i8 %a, i32 %min) {
 ; CHECK-LABEL: @look_through_cast_int_min(
 ; CHECK-NEXT:    [[A32:%.*]] = sext i8 [[A:%.*]] to i32
 ; CHECK-NEXT:    [[SEL1:%.*]] = call i32 @llvm.smin.i32(i32 [[MIN:%.*]], i32 [[A32]])
@@ -711,7 +711,7 @@ define zeroext i8 @look_through_cast_int_min(i8 %a, i32 %min) {
   ret i8 %sel
 }
 
-define zeroext i16 @look_through_cast_int_max(i16 %a, i32 %max) {
+define i16 @look_through_cast_int_max(i16 %a, i32 %max) {
 ; CHECK-LABEL: @look_through_cast_int_max(
 ; CHECK-NEXT:    [[A32:%.*]] = zext i16 [[A:%.*]] to i32
 ; CHECK-NEXT:    [[SEL1:%.*]] = call i32 @llvm.smax.i32(i32 [[MAX:%.*]], i32 [[A32]])

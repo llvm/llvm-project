@@ -8907,10 +8907,8 @@ static Value *lookThroughCast(CmpInst *CmpI, Value *V1, Value *V2,
 
   Value *CastedTo = nullptr;
   if (*CastOp == Instruction::Trunc) {
-    Value *ExtV;
-    if ((match(CmpI->getOperand(1), m_ZExt(m_Value(ExtV))) ||
-         match(CmpI->getOperand(1), m_SExt(m_Value(ExtV)))) &&
-        ExtV->getType() == Cast1->getType() && ExtV == V2) {
+    if (match(CmpI->getOperand(1), m_ZExtOrSExt(m_Specific(V2))) &&
+        V2->getType() == Cast1->getType()) {
       // Here we have the following case:
       //   %y_ext = sext iK %y to iN
       //   %cond = cmp iN %x, %y_ext
