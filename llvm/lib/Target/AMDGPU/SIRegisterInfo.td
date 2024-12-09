@@ -1219,6 +1219,12 @@ def AV_32_STAGING : SIRegisterClass<"AMDGPU", VGPR_32.RegTypes, 32, (add VGPR_32
   let HasVGPR = 1;
   let HasAGPR = 1;
 }
+
+def VS_64_Lo256 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32, (add VReg_64_STAGING_Lo256_Align2, SReg_64)> {
+  let isAllocatable = 0;
+  let HasVGPR = 1;
+  let HasSGPR = 1;
+}
 } // End GeneratePressureSet = 0
 
 def RsrcReg128 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, [v4i32]), 32, (add VGPR_32, SReg_32, SReg_128)> {
@@ -1586,6 +1592,7 @@ def VCSrc_v2bf16: SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_V2BF16", 1
 def VCSrc_v2f16 : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_INLINE_C_V2FP16", 16, OperandSemantics.FP16>;
 def VCSrc_b32_Lo256 : SrcRegOrImm9 <VS_32_Lo256, "OPW32", "OPERAND_REG_INLINE_C_INT32", 32, OperandSemantics.INT>;
 def VCSrc_v2b32 : SrcRegOrImm9 <VS_64, "OPW64", "OPERAND_REG_INLINE_C_V2INT32", 64, OperandSemantics.INT>;
+def VCSrc_b64_Lo256 : SrcRegOrImm9 <VS_64_Lo256, "OPW64", "OPERAND_REG_INLINE_C_INT64", 64, OperandSemantics.INT>;
 
 // True 16 Operands
 def VCSrcT_b16 : SrcRegOrImm9_t16 <"OPERAND_REG_INLINE_C_INT16", OperandSemantics.INT>;
