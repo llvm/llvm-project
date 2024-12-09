@@ -412,9 +412,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(G_BRINDIRECT).legalFor({p0});
 
   getActionDefinitionsBuilder(G_PHI)
-      .legalFor({p0, sXLen})
+      .legalFor({p0, s32, sXLen})
       .widenScalarToNextPow2(0)
-      .clampScalar(0, sXLen, sXLen);
+      .clampScalar(0, s32, sXLen);
 
   getActionDefinitionsBuilder({G_GLOBAL_VALUE, G_JUMP_TABLE, G_CONSTANT_POOL})
       .legalFor({p0});
@@ -481,6 +481,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtZbb(), {sXLen})
       .minScalar(ST.hasStdExtZbb(), 0, sXLen)
       .lower();
+
+  getActionDefinitionsBuilder({G_SCMP, G_UCMP}).lower();
 
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
 
