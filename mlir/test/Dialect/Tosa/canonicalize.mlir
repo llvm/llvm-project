@@ -497,19 +497,19 @@ func.func @reduce_min_nofold(%arg0: tensor<?x1xf32>) -> tensor<?x1xf32> {
 
 // -----
 
-// CHECK-LABEL: @reduce_prod_fold
-func.func @reduce_prod_fold(%arg0: tensor<?x1xf32>) -> tensor<?x1xf32> {
+// CHECK-LABEL: @reduce_product_fold
+func.func @reduce_product_fold(%arg0: tensor<?x1xf32>) -> tensor<?x1xf32> {
   // CHECK: return %arg0
-  %0 = tosa.reduce_prod %arg0 {axis = 1 : i32}: (tensor<?x1xf32>) -> tensor<?x1xf32>
+  %0 = tosa.reduce_product %arg0 {axis = 1 : i32}: (tensor<?x1xf32>) -> tensor<?x1xf32>
   return %0 : tensor<?x1xf32>
 }
 
 // -----
 
-// CHECK-LABEL: @reduce_prod_nofold
-func.func @reduce_prod_nofold(%arg0: tensor<?x1xf32>) -> tensor<?x1xf32> {
-  // CHECK: tosa.reduce_prod
-  %0 = tosa.reduce_prod %arg0 {axis = 0 : i32}: (tensor<?x1xf32>) -> tensor<?x1xf32>
+// CHECK-LABEL: @reduce_product_nofold
+func.func @reduce_product_nofold(%arg0: tensor<?x1xf32>) -> tensor<?x1xf32> {
+  // CHECK: tosa.reduce_product
+  %0 = tosa.reduce_product %arg0 {axis = 0 : i32}: (tensor<?x1xf32>) -> tensor<?x1xf32>
   return %0 : tensor<?x1xf32>
 }
 

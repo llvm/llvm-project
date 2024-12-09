@@ -45,8 +45,8 @@ func.func @test_reduce_min(%arg0: tensor<1x1x1x1x13x21x3xf32>) -> tensor<1x1x1x1
 // -----
 
 func.func @test_reduce_prod(%arg0: tensor<1x1x1x1x13x21x3xf32>) -> tensor<1x1x1x1x13x21x3xf32> {
-  // expected-error@+1 {{'tosa.reduce_prod' op failed level check: operand rank(shape) <= MAX_RANK}}
-  %0 = "tosa.reduce_prod"(%arg0) {axis = 0 : i32} : (tensor<1x1x1x1x13x21x3xf32>) -> tensor<1x1x1x1x13x21x3xf32>
+  // expected-error@+1 {{'tosa.reduce_product' op failed level check: operand rank(shape) <= MAX_RANK}}
+  %0 = "tosa.reduce_product"(%arg0) {axis = 0 : i32} : (tensor<1x1x1x1x13x21x3xf32>) -> tensor<1x1x1x1x13x21x3xf32>
   return %0 : tensor<1x1x1x1x13x21x3xf32>
 }
 
