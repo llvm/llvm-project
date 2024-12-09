@@ -5982,36 +5982,18 @@ static Expr *getInitialExprFromCapturedExpr(Expr *Cond) {
   return nullptr;
 }
 
-// Next two functions, cloneAssociatedStmt() &
-// replaceWithNewTraitsOrDirectCall(), are for transforming the call traits.
-// e.g.
-// #pragma omp declare variant(foo_variant_dispatch) match(construct={dispatch})
-// #pragma omp declare variant(foo_variant_allCond) match(user={condition(1)})
-// ..
-//     #pragma omp dispatch nocontext(cond_true)
-//         foo(i, j);
-// is changed to:
-// if (cond_true) {
-//    foo(i,j) // with traits: CodeGen call to foo_variant_allCond(i,j)
-// } else {
-//   #pragma omp dispatch
-//   foo(i,j)  // with traits: CodeGen call to foo_variant_dispatch(i,j)
-// }
-//
-// The next 2 functions, are for:
-// if (cond_true) {
-//   foo(i,j) // with traits: runtime call to foo_variant_allCond(i,j)
-// }
-//
 static Expr *replaceWithNewTraitsOrDirectCall(const ASTContext &Context, Expr *,
                                               SemaOpenMP *, bool);
 
+/// cloneAssociatedStmt() function is for cloning the Associated Statement
+/// present with a Directive and then modifying it. By this we avoid modifying
+/// the original Associated Statement.
 static StmtResult cloneAssociatedStmt(const ASTContext &Context, Stmt *StmtP,
                                       SemaOpenMP *SemaPtr, bool NoContext) {
-  if (CapturedStmt *AssocStmt = dyn_cast<CapturedStmt>(StmtP)) {
+  if (auto *AssocStmt = dyn_cast<CapturedStmt>(StmtP)) {
     CapturedDecl *CDecl = AssocStmt->getCapturedDecl();
     Stmt *AssocExprStmt = AssocStmt->getCapturedStmt();
-    Expr *AssocExpr = dyn_cast<Expr>(AssocExprStmt);
+    auto *AssocExpr = dyn_cast<Expr>(AssocExprStmt);
     Expr *NewCallOrPseudoObjOrBinExpr = replaceWithNewTraitsOrDirectCall(
         Context, AssocExpr, SemaPtr, NoContext);
 
@@ -6021,21 +6003,21 @@ static StmtResult cloneAssociatedStmt(const ASTContext &Context, Stmt *StmtP,
         CapturedDecl::Create(const_cast<ASTContext &>(Context),
                              CDecl->getDeclContext(), CDecl->getNumParams());
     NewDecl->setBody(static_cast<Stmt *>(NewCallOrPseudoObjOrBinExpr));
-    for (unsigned i = 0; i < CDecl->getNumParams(); ++i) {
-      if (i != CDecl->getContextParamPosition())
-        NewDecl->setParam(i, CDecl->getParam(i));
+    for (unsigned I : llvm::seq<unsigned>(CDecl->getNumParams())) {
+      if (I != CDecl->getContextParamPosition())
+        NewDecl->setParam(I, CDecl->getParam(I));
       else
-        NewDecl->setContextParam(i, CDecl->getContextParam());
+        NewDecl->setContextParam(I, CDecl->getContextParam());
     }
 
     // Create a New Captured Stmt containing the New Captured Decl
     SmallVector<CapturedStmt::Capture, 4> Captures;
     SmallVector<Expr *, 4> CaptureInits;
-    for (auto capture : AssocStmt->captures())
-      Captures.push_back(capture);
-    for (auto capture_init : AssocStmt->capture_inits())
-      CaptureInits.push_back(capture_init);
-    CapturedStmt *NewStmt = CapturedStmt::Create(
+    for (const CapturedStmt::Capture &Capture : AssocStmt->captures())
+      Captures.push_back(Capture);
+    for (Expr *CaptureInit : AssocStmt->capture_inits())
+      CaptureInits.push_back(CaptureInit);
+    auto *NewStmt = CapturedStmt::Create(
         Context, AssocStmt->getCapturedStmt(),
         AssocStmt->getCapturedRegionKind(), Captures, CaptureInits, NewDecl,
         const_cast<RecordDecl *>(AssocStmt->getCapturedRecordDecl()));
@@ -6045,6 +6027,26 @@ static StmtResult cloneAssociatedStmt(const ASTContext &Context, Stmt *StmtP,
   return static_cast<Stmt *>(nullptr);
 }
 
+/// replaceWithNewTraitsOrDirectCall() is for transforming the call traits.
+/// Call traits associated with a function call are removed and replaced with
+/// a direct call. For clause "nocontext" only, the direct call is then
+/// modified to have call traits for a non-dispatch variant.
+/// For "nocontext" an example is provided below for clear understanding.
+///
+/// #pragma omp declare variant(foo_variant_dispatch)
+/// match(construct={dispatch}) #pragma omp declare variant(foo_variant_allCond)
+/// match(user={condition(1)})
+/// ...
+///     #pragma omp dispatch nocontext(cond_true)
+///         foo(i, j); // with traits: CodeGen call to foo_variant_dispatch(i,j)
+/// dispatch construct is changed to:
+/// if (cond_true) {
+///    foo(i,j) // with traits: CodeGen call to foo_variant_allCond(i,j)
+/// } else {
+///   #pragma omp dispatch
+///   foo(i,j)  // with traits: CodeGen call to foo_variant_dispatch(i,j)
+/// }
+///
 static Expr *replaceWithNewTraitsOrDirectCall(const ASTContext &Context,
                                               Expr *AssocExpr,
                                               SemaOpenMP *SemaPtr,
@@ -6052,7 +6054,7 @@ static Expr *replaceWithNewTraitsOrDirectCall(const ASTContext &Context,
   BinaryOperator *BinaryCopyOpr = nullptr;
   bool IsBinaryOp = false;
   Expr *PseudoObjExprOrCall = AssocExpr;
-  if (BinaryOperator *BinOprExpr = dyn_cast<BinaryOperator>(AssocExpr)) {
+  if (auto *BinOprExpr = dyn_cast<BinaryOperator>(AssocExpr)) {
     IsBinaryOp = true;
     BinaryCopyOpr = BinaryOperator::Create(
         Context, BinOprExpr->getLHS(), BinOprExpr->getRHS(),
@@ -6064,14 +6066,13 @@ static Expr *replaceWithNewTraitsOrDirectCall(const ASTContext &Context,
 
   Expr *CallWithoutInvariants = PseudoObjExprOrCall;
   // Change PseudoObjectExpr to a direct call
-  if (PseudoObjectExpr *PseudoObjExpr =
-          dyn_cast<PseudoObjectExpr>(PseudoObjExprOrCall))
+  if (auto *PseudoObjExpr = dyn_cast<PseudoObjectExpr>(PseudoObjExprOrCall))
     CallWithoutInvariants = *((PseudoObjExpr->semantics_begin()) - 1);
 
   Expr *FinalCall = CallWithoutInvariants; // For noinvariants clause
   if (NoContext) {
     // Convert StmtResult to a CallExpr before calling ActOnOpenMPCall()
-    CallExpr *CallExprWithinStmt = dyn_cast<CallExpr>(CallWithoutInvariants);
+    auto *CallExprWithinStmt = cast<CallExpr>(CallWithoutInvariants);
     int NumArgs = CallExprWithinStmt->getNumArgs();
     clang::Expr **Args = CallExprWithinStmt->getArgs();
     // ActOnOpenMPCall() adds traits to a simple function call
@@ -6097,7 +6098,7 @@ static StmtResult combine2Stmts(ASTContext &Context, Stmt *FirstStmt,
   llvm::SmallVector<Stmt *, 2> NewCombinedStmtVector;
   NewCombinedStmtVector.push_back(FirstStmt);
   NewCombinedStmtVector.push_back(SecondStmt);
-  CompoundStmt *CombinedStmt = CompoundStmt::Create(
+  auto *CombinedStmt = CompoundStmt::Create(
       Context, llvm::ArrayRef<Stmt *>(NewCombinedStmtVector),
       FPOptionsOverride(), SourceLocation(), SourceLocation());
   StmtResult FinalStmts(CombinedStmt);
@@ -6240,14 +6241,11 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
 
   if ((Kind == OMPD_dispatch) && (Clauses.size() > 0)) {
 
-    bool UnSupportedClause = false;
-    for (OMPClause *C : Clauses) {
-      if (!((C->getClauseKind() == OMPC_novariants) ||
-            (C->getClauseKind() == OMPC_nocontext) ||
-            (C->getClauseKind() == OMPC_depend)))
-        UnSupportedClause = true;
-    }
-    if (!UnSupportedClause)
+    if (llvm::all_of(Clauses, [](OMPClause *C) {
+          return llvm::is_contained(
+              {OMPC_novariants, OMPC_nocontext, OMPC_depend},
+              C->getClauseKind());
+        }))
       return transformDispatchDirective(Kind, DirName, CancelRegion, Clauses,
                                         AStmt, StartLoc, EndLoc);
   }
@@ -7483,7 +7481,6 @@ ExprResult SemaOpenMP::ActOnOpenMPCall(ExprResult Call, Scope *Scope,
   } while (!VMIs.empty());
 
   if (!NewCall.isUsable()) {
-    fprintf(stdout, "Returning Call, NewCall is not usable\n");
     return Call;
   }
   return PseudoObjectExpr::Create(getASTContext(), CE, {NewCall.get()}, 0);
@@ -10795,11 +10792,11 @@ StmtResult SemaOpenMP::ActOnOpenMPSectionDirective(Stmt *AStmt,
                                      DSAStack->isCancelRegion());
 }
 
-// PseudoObjectExpr is a Trait for dispatch containing the
-// function and its variant. Returning only the function.
+/// PseudoObjectExpr is a Trait for dispatch containing the
+/// function and its variant. Returning only the function.
 static Expr *RemovePseudoObjectExpr(Expr *PseudoObjExprOrDirectCall) {
   Expr *DirectCallExpr = PseudoObjExprOrDirectCall;
-  if (PseudoObjectExpr *PseudoObjExpr =
+  if (auto *PseudoObjExpr =
           dyn_cast<PseudoObjectExpr>(PseudoObjExprOrDirectCall))
     DirectCallExpr = *((PseudoObjExpr->semantics_begin()) - 1);
   return DirectCallExpr;

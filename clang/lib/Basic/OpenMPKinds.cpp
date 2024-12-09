@@ -623,7 +623,7 @@ bool clang::isOpenMPParallelDirective(OpenMPDirectiveKind DKind) {
 
 bool clang::isOpenMPDispatchDirective(OpenMPDirectiveKind DKind) {
   return DKind == OMPD_dispatch ||
-         llvm::is_contained(getLeafConstructs(DKind), OMPD_target);
+         llvm::is_contained(getLeafConstructs(DKind), OMPD_dispatch);
 }
 
 bool clang::isOpenMPTargetExecutionDirective(OpenMPDirectiveKind DKind) {
