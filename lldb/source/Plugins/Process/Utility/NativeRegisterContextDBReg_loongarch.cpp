@@ -33,29 +33,33 @@ NativeRegisterContextDBReg_loongarch::GetWatchpointSize(uint32_t wp_index) {
   }
 }
 
-bool NativeRegisterContextDBReg_loongarch::ValidateWatchpoint(
-    size_t size, lldb::addr_t &addr) {
+std::optional<NativeRegisterContextDBReg::WatchpointDetails>
+NativeRegisterContextDBReg_loongarch::AdjustWatchpoint(
+    const WatchpointDetails &details) {
   // LoongArch only needs to check the size; it does not need to check the
   // address.
-  return size == 1 || size == 2 || size == 4 || size == 8;
+  size_t size = details.size;
+  if (size != 1 && size != 2 && size != 4 && size != 8)
+    return std::nullopt;
+
+  return details;
 }
 
 uint32_t
-NativeRegisterContextDBReg_loongarch::MakeControlValue(size_t size,
-                                                       uint32_t *watch_flags) {
-  // Encoding hardware breakpoint control value.
-  if (watch_flags == NULL)
-    return m_hw_dbg_enable_bit;
+NativeRegisterContextDBReg_loongarch::MakeBreakControlValue(size_t size) {
+  // Return encoded hardware breakpoint control value.
+  return m_hw_dbg_enable_bit;
+}
 
+uint32_t NativeRegisterContextDBReg_loongarch::MakeWatchControlValue(
+    size_t size, uint32_t watch_flags) {
   // Encoding hardware watchpoint control value.
   // Size encoded:
   // case 1 : 0b11
   // case 2 : 0b10
   // case 4 : 0b01
   // case 8 : 0b00
-  auto EncodingSizeBits = [](int size) {
-    return (3 - llvm::Log2_32(size)) << 10;
-  };
+  size_t encoded_size = (3 - llvm::Log2_32(size)) << 10;
 
-  return m_hw_dbg_enable_bit | EncodingSizeBits(size) | (*watch_flags << 8);
+  return m_hw_dbg_enable_bit | encoded_size | (watch_flags << 8);
 }

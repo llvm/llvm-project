@@ -59,15 +59,13 @@ NativeRegisterContextLinux_loongarch64::NativeRegisterContextLinux_loongarch64(
     std::unique_ptr<RegisterInfoPOSIX_loongarch64> register_info_up)
     : NativeRegisterContextRegisterInfo(native_thread,
                                         register_info_up.release()),
-      NativeRegisterContextLinux(native_thread) {
+      NativeRegisterContextLinux(native_thread),
+      NativeRegisterContextDBReg_arm64(/*CTRL_PLV3_ENABLE=*/0x10U) {
   ::memset(&m_fpr, 0, sizeof(m_fpr));
   ::memset(&m_gpr, 0, sizeof(m_gpr));
 
   ::memset(&m_hwp_regs, 0, sizeof(m_hwp_regs));
   ::memset(&m_hbp_regs, 0, sizeof(m_hbp_regs));
-
-  // CTRL_PLV3_ENABLE, used to enable breakpoint/watchpoint
-  m_hw_dbg_enable_bit = 0x10;
 
   // Refer to:
   // https://loongson.github.io/LoongArch-Documentation/LoongArch-Vol1-EN.html#control-and-status-registers-related-to-watchpoints

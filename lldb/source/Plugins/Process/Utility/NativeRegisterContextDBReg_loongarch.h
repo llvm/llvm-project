@@ -14,11 +14,19 @@
 namespace lldb_private {
 
 class NativeRegisterContextDBReg_loongarch : public NativeRegisterContextDBReg {
+public:
+  explicit NativeRegisterContextDBReg_loongarch(uint32_t enable_bit)
+      : NativeRegisterContextDBReg(enable_bit) {}
+
+private:
   uint32_t GetWatchpointSize(uint32_t wp_index) override;
 
-  bool ValidateWatchpoint(size_t size, lldb::addr_t &addr) override;
+  std::optional<WatchpointDetails>
+  AdjustWatchpoint(const WatchpointDetails &details) override;
 
-  uint32_t MakeControlValue(size_t size, uint32_t *watch_flags = NULL) override;
+  uint32_t MakeBreakControlValue(size_t size) override;
+
+  uint32_t MakeWatchControlValue(size_t size, uint32_t watch_flags) override;
 };
 
 } // namespace lldb_private

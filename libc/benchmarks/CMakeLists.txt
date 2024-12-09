@@ -212,5 +212,3 @@ target_link_libraries(libc.benchmarks.memory_functions.opt_host
   benchmark_main
 )
 llvm_update_compile_flags(libc.benchmarks.memory_functions.opt_host)
-
-add_subdirectory(automemcpy)

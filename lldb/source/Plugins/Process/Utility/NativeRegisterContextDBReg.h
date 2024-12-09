@@ -13,11 +13,17 @@
 
 #include <array>
 
+// Common utilities for hardware breakpoints and hardware watchpoints on AArch64
+// and LoongArch.
+
 namespace lldb_private {
 
 class NativeRegisterContextDBReg
     : public virtual NativeRegisterContextRegisterInfo {
 public:
+  explicit NativeRegisterContextDBReg(uint32_t enable_bit)
+      : m_hw_dbg_enable_bit(enable_bit) {}
+
   uint32_t NumSupportedHardwareBreakpoints() override;
 
   uint32_t SetHardwareBreakpoint(lldb::addr_t addr, size_t size) override;
@@ -63,19 +69,24 @@ protected:
 
   uint32_t m_max_hbp_supported;
   uint32_t m_max_hwp_supported;
-  uint32_t m_hw_dbg_enable_bit;
+  const uint32_t m_hw_dbg_enable_bit;
 
   bool WatchpointIsEnabled(uint32_t wp_index);
   bool BreakpointIsEnabled(uint32_t bp_index);
 
-  // Default hardware breakpoint length size is 4.
-  // Default hardware breakpoint target address must 4-byte alignment.
-  virtual bool ValidateBreakpoint(size_t size, lldb::addr_t addr) {
+  // Hardware breakpoint length size is 4, and target address must 4-byte
+  // alignment.
+  bool ValidateBreakpoint(size_t size, lldb::addr_t addr) {
     return (size == 4) && !(addr & 0x3);
   }
-  virtual bool ValidateWatchpoint(size_t size, lldb::addr_t &addr) = 0;
-  virtual uint32_t MakeControlValue(size_t size,
-                                    uint32_t *watch_flags = NULL) = 0;
+  struct WatchpointDetails {
+    size_t size;
+    lldb::addr_t addr;
+  };
+  virtual std::optional<WatchpointDetails>
+  AdjustWatchpoint(const WatchpointDetails &details) = 0;
+  virtual uint32_t MakeBreakControlValue(size_t size) = 0;
+  virtual uint32_t MakeWatchControlValue(size_t size, uint32_t watch_flags) = 0;
   virtual uint32_t GetWatchpointSize(uint32_t wp_index) = 0;
 
   virtual Status ReadHardwareDebugInfo() = 0;
