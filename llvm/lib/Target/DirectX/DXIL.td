@@ -348,7 +348,7 @@ class IntrinArgI32  <int value> : IntrinArgSelect<IntrinArgSelect_I32,   value>;
 //     IntrinSelect<int_dx_wave_active_usum,
 //       [ IntrinArgIndex<0>, IntrinArgI8<0>, IntrinArgI8<1> ]
 //     >,
-//     IntrinSelect<int_dx_wave_active_sum,
+//     IntrinSelect<int_dx_wave_reduce_sum,
 //       [ IntrinArgIndex<0>, IntrinArgI8<0>, IntrinArgI8<0> ]
 //     >,
 //   ]
@@ -991,10 +991,10 @@ def WaveActiveOp : DXILOp<119, waveActiveOp> {
   let Doc = "returns the result of the operation across waves";
   let intrinsics = [
     IntrinSelect<
-        int_dx_wave_active_sum,
+        int_dx_wave_reduce_sum,
         [ IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Sum>, IntrinArgI8<SignedOpKind_Signed> ]>,
     IntrinSelect<
-        int_dx_wave_active_usum,
+        int_dx_wave_reduce_usum,
         [ IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Sum>, IntrinArgI8<SignedOpKind_Unsigned> ]>,
   ];
 

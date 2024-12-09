@@ -14,7 +14,7 @@
 define float @test_float(float %fexpr) {
 entry:
 ; CHECK:   %[[#fret:]] = OpGroupNonUniformFAdd %[[#f32]] %[[#scope]] Reduce %[[#fexpr]]
-  %0 = call float @llvm.spv.wave.active.sum.f32(float %fexpr)
+  %0 = call float @llvm.spv.wave.reduce.sum.f32(float %fexpr)
   ret float %0
 }
 
@@ -23,7 +23,7 @@ entry:
 define i32 @test_int(i32 %iexpr) {
 entry:
 ; CHECK:   %[[#iret:]] = OpGroupNonUniformIAdd %[[#uint]] %[[#scope]] Reduce %[[#iexpr]]
-  %0 = call i32 @llvm.spv.wave.active.sum.i32(i32 %iexpr)
+  %0 = call i32 @llvm.spv.wave.reduce.sum.i32(i32 %iexpr)
   ret i32 %0
 }
 
@@ -32,10 +32,10 @@ entry:
 define <4 x half> @test_vhalf(<4 x half> %vbexpr) {
 entry:
 ; CHECK:   %[[#vhalfret:]] = OpGroupNonUniformFAdd %[[#v4_half]] %[[#scope]] Reduce %[[#vbexpr]]
-  %0 = call <4 x half> @llvm.spv.wave.active.sum.v4half(<4 x half> %vbexpr)
+  %0 = call <4 x half> @llvm.spv.wave.reduce.sum.v4half(<4 x half> %vbexpr)
   ret <4 x half> %0
 }
 
-declare float @llvm.spv.wave.active.sum.f32(float)
-declare i32 @llvm.spv.wave.active.sum.i32(i32)
-declare <4 x half> @llvm.spv.wave.active.sum.v4half(<4 x half>)
+declare float @llvm.spv.wave.reduce.sum.f32(float)
+declare i32 @llvm.spv.wave.reduce.sum.i32(i32)
+declare <4 x half> @llvm.spv.wave.reduce.sum.v4half(<4 x half>)

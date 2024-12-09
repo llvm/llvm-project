@@ -205,7 +205,7 @@ private:
   bool selectDot4AddPackedExpansion(Register ResVReg, const SPIRVType *ResType,
                                     MachineInstr &I) const;
 
-  bool selectWaveActiveSum(Register ResVReg, const SPIRVType *ResType,
+  bool selectWaveReduceSum(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I) const;
 
   void renderImm32(MachineInstrBuilder &MIB, const MachineInstr &I,
@@ -2074,7 +2074,7 @@ bool SPIRVInstructionSelector::selectWaveActiveCountBits(
   return Result;
 }
 
-bool SPIRVInstructionSelector::selectWaveActiveSum(Register ResVReg,
+bool SPIRVInstructionSelector::selectWaveReduceSum(Register ResVReg,
                                                    const SPIRVType *ResType,
                                                    MachineInstr &I) const {
   assert(I.getNumOperands() == 3);
@@ -3026,8 +3026,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformAny);
   case Intrinsic::spv_wave_is_first_lane:
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformElect);
-  case Intrinsic::spv_wave_active_sum:
-    return selectWaveActiveSum(ResVReg, ResType, I);
+  case Intrinsic::spv_wave_reduce_sum:
+    return selectWaveReduceSum(ResVReg, ResType, I);
   case Intrinsic::spv_wave_readlane:
     return selectWaveOpInst(ResVReg, ResType, I,
                             SPIRV::OpGroupNonUniformShuffle);

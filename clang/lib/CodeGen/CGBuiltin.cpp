@@ -19191,11 +19191,11 @@ static Intrinsic::ID getWaveActiveSumIntrinsic(llvm::Triple::ArchType Arch,
                                                CGHLSLRuntime &RT, QualType QT) {
   switch (Arch) {
   case llvm::Triple::spirv:
-    return llvm::Intrinsic::spv_wave_active_sum;
+    return llvm::Intrinsic::spv_wave_reduce_sum;
   case llvm::Triple::dxil: {
     if (QT->isUnsignedIntegerType())
-      return llvm::Intrinsic::dx_wave_active_usum;
-    return llvm::Intrinsic::dx_wave_active_sum;
+      return llvm::Intrinsic::dx_wave_reduce_usum;
+    return llvm::Intrinsic::dx_wave_reduce_sum;
   }
   default:
     llvm_unreachable("Intrinsic WaveActiveSum"
