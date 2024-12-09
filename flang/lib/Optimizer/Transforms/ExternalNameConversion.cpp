@@ -62,11 +62,10 @@ void ExternalNameConversionPass::runOnOperation() {
 
   auto processFctOrGlobal = [&](mlir::Operation &funcOrGlobal) {
     auto symName = funcOrGlobal.getAttrOfType<mlir::StringAttr>(
-              mlir::SymbolTable::getSymbolAttrName());
+        mlir::SymbolTable::getSymbolAttrName());
     auto deconstructedName = fir::NameUniquer::deconstruct(symName);
     if (fir::NameUniquer::isExternalFacingUniquedName(deconstructedName)) {
-      auto newName =
-          mangleExternalName(deconstructedName, appendUnderscoreOpt);
+      auto newName = mangleExternalName(deconstructedName, appendUnderscoreOpt);
       auto newAttr = mlir::StringAttr::get(context, newName);
       mlir::SymbolTable::setSymbolName(&funcOrGlobal, newAttr);
       auto newSymRef = mlir::FlatSymbolRefAttr::get(newAttr);
@@ -82,7 +81,8 @@ void ExternalNameConversionPass::runOnOperation() {
         processFctOrGlobal(op);
       } else if (auto gpuMod = mlir::dyn_cast<mlir::gpu::GPUModuleOp>(op)) {
         for (auto &gpuOp : gpuMod.getBodyRegion().front())
-          if (mlir::isa<mlir::func::FuncOp, fir::GlobalOp, mlir::gpu::GPUFuncOp>(gpuOp))
+          if (mlir::isa<mlir::func::FuncOp, fir::GlobalOp,
+                        mlir::gpu::GPUFuncOp>(gpuOp))
             processFctOrGlobal(gpuOp);
       }
     }
@@ -104,7 +104,9 @@ void ExternalNameConversionPass::runOnOperation() {
             remap != remappings.end()) {
           mlir::SymbolRefAttr symAttr = mlir::FlatSymbolRefAttr(remap->second);
           if (mlir::isa<mlir::gpu::LaunchFuncOp>(nestedOp))
-            symAttr = mlir::SymbolRefAttr::get(symRef.getRootReference(), {mlir::FlatSymbolRefAttr(remap->second)});
+            symAttr = mlir::SymbolRefAttr::get(
+                symRef.getRootReference(),
+                {mlir::FlatSymbolRefAttr(remap->second)});
           updates.emplace_back(std::pair<mlir::StringAttr, mlir::SymbolRefAttr>{
               attr.getName(), symAttr});
         }
