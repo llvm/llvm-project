@@ -187,6 +187,8 @@ private:
   void CheckDoacross(const parser::OmpDoacross &doa);
   bool IsDataRefTypeParamInquiry(const parser::DataRef *dataRef);
   void CheckIsVarPartOfAnotherVar(const parser::CharBlock &source,
+      const parser::OmpObject &obj, llvm::StringRef clause = "");
+  void CheckIsVarPartOfAnotherVar(const parser::CharBlock &source,
       const parser::OmpObjectList &objList, llvm::StringRef clause = "");
   void CheckThreadprivateOrDeclareTargetVar(
       const parser::OmpObjectList &objList);
