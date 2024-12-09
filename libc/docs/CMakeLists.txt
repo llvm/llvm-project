@@ -45,6 +45,7 @@ if (SPHINX_FOUND)
       locale
       net/if
       netinet/in
+      pthread
       setjmp
       signal
       stdbit
