@@ -20,7 +20,7 @@ struct throwing_t {
   int* throw_after_n_ = nullptr;
   throwing_t() { throw 0; }
 
-  throwing_t(int& throw_after_n) : throw_after_n_(&throw_after_n) {
+  explicit throwing_t(int& throw_after_n) : throw_after_n_(&throw_after_n) {
     if (throw_after_n == 0)
       throw 0;
     --throw_after_n;
@@ -95,7 +95,7 @@ struct throwing_iterator {
   int i_;
   T v_;
 
-  throwing_iterator(int i = 0, const T& v = T()) : i_(i), v_(v) {}
+  explicit throwing_iterator(int i = 0, const T& v = T()) : i_(i), v_(v) {}
 
   reference operator*() {
     if (i_ == 1)
