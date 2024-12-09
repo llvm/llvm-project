@@ -11,6 +11,7 @@
 #include "InputFiles.h"
 #include "InputSection.h"
 #include "OutputSections.h"
+#include "SymbolTable.h"
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Writer.h"
@@ -345,7 +346,7 @@ bool elf::computeIsPreemptible(Ctx &ctx, const Symbol &sym) {
 
   // Only symbols with default visibility that appear in dynsym can be
   // preempted. Symbols with protected visibility cannot be preempted.
-  if (!sym.includeInDynsym(ctx) || sym.visibility() != STV_DEFAULT)
+  if (sym.visibility() != STV_DEFAULT)
     return false;
 
   // At this point copy relocations have not been created yet, so any
@@ -368,6 +369,20 @@ bool elf::computeIsPreemptible(Ctx &ctx, const Symbol &sym) {
        sym.binding != STB_WEAK))
     return sym.inDynamicList;
   return true;
+}
+
+void elf::parseVersionAndComputeIsPreemptible(Ctx &ctx) {
+  // Symbol themselves might know their versions because symbols
+  // can contain versions in the form of <name>@<version>.
+  // Let them parse and update their names to exclude version suffix.
+  bool hasDynSymTab = ctx.arg.hasDynSymTab;
+  for (Symbol *sym : ctx.symtab->getSymbols()) {
+    if (sym->hasVersionSuffix)
+      sym->parseSymbolVersion(ctx);
+    if (hasDynSymTab)
+      sym->isPreemptible =
+          sym->includeInDynsym(ctx) && computeIsPreemptible(ctx, *sym);
+  }
 }
 
 // Merge symbol properties.
