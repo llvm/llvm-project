@@ -527,6 +527,9 @@ Attribute Changes in Clang
 
 - The ``target_version`` attribute is now only supported for AArch64 and RISC-V architectures.
 
+- Clang now permits the usage of the placement new operator in ``[[msvc::constexpr]]``
+  context outside of the std namespace. (#GH74924)
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
