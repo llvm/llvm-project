@@ -179,6 +179,11 @@ public:
     return {ST.getMinFlatWorkGroupSize(), ST.getMaxFlatWorkGroupSize()};
   }
 
+  SmallVector<unsigned> getMaxNumWorkGroups(const Function &F) {
+    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+    return ST.getMaxNumWorkGroups(F);
+  }
+
   /// Get code object version.
   unsigned getCodeObjectVersion() const { return CodeObjectVersion; }
 
@@ -821,6 +826,145 @@ AAAMDFlatWorkGroupSize::createForPosition(const IRPosition &IRP,
       "AAAMDFlatWorkGroupSize is only valid for function position");
 }
 
+struct TupleDecIntegerRangeState : public AbstractState {
+  DecIntegerState<uint32_t> X, Y, Z;
+
+  bool isValidState() const override {
+    return X.isValidState() && Y.isValidState() && Z.isValidState();
+  }
+
+  bool isAtFixpoint() const override {
+    return X.isAtFixpoint() && Y.isAtFixpoint() && Z.isAtFixpoint();
+  }
+
+  ChangeStatus indicateOptimisticFixpoint() override {
+    return X.indicateOptimisticFixpoint() | Y.indicateOptimisticFixpoint() |
+           Z.indicateOptimisticFixpoint();
+  }
+
+  ChangeStatus indicatePessimisticFixpoint() override {
+    return X.indicatePessimisticFixpoint() | Y.indicatePessimisticFixpoint() |
+           Z.indicatePessimisticFixpoint();
+  }
+
+  TupleDecIntegerRangeState operator^=(const TupleDecIntegerRangeState &Other) {
+    X ^= Other.X;
+    Y ^= Other.Y;
+    Z ^= Other.Z;
+    return *this;
+  }
+
+  bool operator==(const TupleDecIntegerRangeState &Other) const {
+    return X == Other.X && Y == Other.Y && Z == Other.Z;
+  }
+
+  TupleDecIntegerRangeState &getAssumed() { return *this; }
+  const TupleDecIntegerRangeState &getAssumed() const { return *this; }
+};
+
+using AAAMDMaxNumWorkgroupsState =
+    StateWrapper<TupleDecIntegerRangeState, AbstractAttribute, uint32_t>;
+
+/// Propagate amdgpu-max-num-workgroups attribute.
+struct AAAMDMaxNumWorkgroups
+    : public StateWrapper<TupleDecIntegerRangeState, AbstractAttribute> {
+  using Base = StateWrapper<TupleDecIntegerRangeState, AbstractAttribute>;
+
+  AAAMDMaxNumWorkgroups(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  void initialize(Attributor &A) override {
+    Function *F = getAssociatedFunction();
+    auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
+
+    SmallVector<unsigned> MaxNumWorkgroups = InfoCache.getMaxNumWorkGroups(*F);
+
+    X.takeKnownMinimum(MaxNumWorkgroups[0]);
+    Y.takeKnownMinimum(MaxNumWorkgroups[1]);
+    Z.takeKnownMinimum(MaxNumWorkgroups[2]);
+
+    if (AMDGPU::isEntryFunctionCC(F->getCallingConv()))
+      indicatePessimisticFixpoint();
+  }
+
+  ChangeStatus updateImpl(Attributor &A) override {
+    ChangeStatus Change = ChangeStatus::UNCHANGED;
+
+    auto CheckCallSite = [&](AbstractCallSite CS) {
+      Function *Caller = CS.getInstruction()->getFunction();
+      LLVM_DEBUG(dbgs() << "[AAAMDMaxNumWorkgroups] Call " << Caller->getName()
+                        << "->" << getAssociatedFunction()->getName() << '\n');
+
+      const auto *CallerInfo = A.getAAFor<AAAMDMaxNumWorkgroups>(
+          *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
+      if (!CallerInfo || !CallerInfo->isValidState())
+        return false;
+
+      Change |=
+          clampStateAndIndicateChange(this->getState(), CallerInfo->getState());
+      return true;
+    };
+
+    bool AllCallSitesKnown = true;
+    if (!A.checkForAllCallSites(CheckCallSite, *this,
+                                /*RequireAllCallSites=*/true,
+                                AllCallSitesKnown))
+      return indicatePessimisticFixpoint();
+
+    return Change;
+  }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAAMDMaxNumWorkgroups &createForPosition(const IRPosition &IRP,
+                                                  Attributor &A);
+
+  ChangeStatus manifest(Attributor &A) override {
+    Function *F = getAssociatedFunction();
+    LLVMContext &Ctx = F->getContext();
+    SmallString<32> Buffer;
+    raw_svector_ostream OS(Buffer);
+    OS << X.getAssumed() << ',' << Y.getAssumed() << ',' << Z.getAssumed();
+
+    // TODO: Should annotate loads of the group size for this to do anything
+    // useful.
+    return A.manifestAttrs(
+        getIRPosition(),
+        {Attribute::get(Ctx, "amdgpu-max-num-workgroups", OS.str())},
+        /* ForceReplace= */ true);
+  }
+
+  const std::string getName() const override { return "AAAMDMaxNumWorkgroups"; }
+
+  const std::string getAsStr(Attributor *) const override {
+    std::string Buffer = "AAAMDMaxNumWorkgroupsState[";
+    raw_string_ostream OS(Buffer);
+    OS << X.getAssumed() << ',' << Y.getAssumed() << ',' << Z.getAssumed()
+       << ']';
+    return OS.str();
+  }
+
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAAMDMaxNumWorkgroups
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  void trackStatistics() const override {}
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+const char AAAMDMaxNumWorkgroups::ID = 0;
+
+AAAMDMaxNumWorkgroups &
+AAAMDMaxNumWorkgroups::createForPosition(const IRPosition &IRP, Attributor &A) {
+  if (IRP.getPositionKind() == IRPosition::IRP_FUNCTION)
+    return *new (A.Allocator) AAAMDMaxNumWorkgroups(IRP, A);
+  llvm_unreachable("AAAMDMaxNumWorkgroups is only valid for function position");
+}
+
 /// Propagate amdgpu-waves-per-eu attribute.
 struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
   AAAMDWavesPerEU(const IRPosition &IRP, Attributor &A)
@@ -1046,8 +1190,8 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
   DenseSet<const char *> Allowed(
       {&AAAMDAttributes::ID, &AAUniformWorkGroupSize::ID,
        &AAPotentialValues::ID, &AAAMDFlatWorkGroupSize::ID,
-       &AAAMDWavesPerEU::ID, &AAAMDGPUNoAGPR::ID, &AACallEdges::ID,
-       &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
+       &AAAMDMaxNumWorkgroups::ID, &AAAMDWavesPerEU::ID, &AAAMDGPUNoAGPR::ID,
+       &AACallEdges::ID, &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
        &AAUnderlyingObjects::ID, &AAAddressSpace::ID, &AAIndirectCallInfo::ID,
        &AAInstanceInfo::ID});
 
@@ -1071,6 +1215,7 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
   for (auto *F : Functions) {
     A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(*F));
     A.getOrCreateAAFor<AAUniformWorkGroupSize>(IRPosition::function(*F));
+    A.getOrCreateAAFor<AAAMDMaxNumWorkgroups>(IRPosition::function(*F));
     A.getOrCreateAAFor<AAAMDGPUNoAGPR>(IRPosition::function(*F));
     CallingConv::ID CC = F->getCallingConv();
     if (!AMDGPU::isEntryFunctionCC(CC)) {

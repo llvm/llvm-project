@@ -411,3 +411,21 @@ func.func @sum_non_const_dim(%arg0: !fir.box<!fir.array<3xi32>>, %dim: i32) {
 // CHECK:           %[[VAL_2:.*]] = hlfir.sum %[[VAL_0]] dim %[[VAL_1]] : (!fir.box<!fir.array<3xi32>>, i32) -> i32
 // CHECK:           return
 // CHECK:         }
+
+// negative: invalid dim==0
+func.func @sum_invalid_dim0(%arg0: !hlfir.expr<2x3xi32>) {
+  %cst = arith.constant 0 : i32
+  %res = hlfir.sum %arg0 dim %cst : (!hlfir.expr<2x3xi32>, i32) -> !hlfir.expr<3xi32>
+  return
+}
+// CHECK-LABEL:   func.func @sum_invalid_dim0(
+// CHECK:           hlfir.sum %{{.*}} dim %{{.*}} : (!hlfir.expr<2x3xi32>, i32) -> !hlfir.expr<3xi32>
+
+// negative: invalid dim>rank
+func.func @sum_invalid_dim_big(%arg0: !hlfir.expr<2x3xi32>) {
+  %cst = arith.constant 3 : i32
+  %res = hlfir.sum %arg0 dim %cst : (!hlfir.expr<2x3xi32>, i32) -> !hlfir.expr<3xi32>
+  return
+}
+// CHECK-LABEL:   func.func @sum_invalid_dim_big(
+// CHECK:           hlfir.sum %{{.*}} dim %{{.*}} : (!hlfir.expr<2x3xi32>, i32) -> !hlfir.expr<3xi32>

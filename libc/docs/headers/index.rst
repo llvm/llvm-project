@@ -19,3 +19,4 @@ Implementation Status
    strings
    threads
    time
+   uchar
