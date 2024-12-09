@@ -16,7 +16,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(cfloat16, conjf16, (cfloat16 x)) {
-  return conjugate<cfloat16, float16>(x);
+  return conjugate<cfloat16>(x);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

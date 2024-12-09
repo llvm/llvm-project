@@ -14,7 +14,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(_Complex long double, conjl, (_Complex long double x)) {
-  return conjugate<_Complex long double, long double>(x);
+  return conjugate<_Complex long double>(x);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

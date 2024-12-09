@@ -14,7 +14,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(_Complex float, conjf, (_Complex float x)) {
-  return conjugate<_Complex float, float>(x);
+  return conjugate<_Complex float>(x);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
