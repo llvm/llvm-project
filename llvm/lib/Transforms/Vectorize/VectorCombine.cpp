@@ -67,9 +67,10 @@ class VectorCombine {
 public:
   VectorCombine(Function &F, const TargetTransformInfo &TTI,
                 const DominatorTree &DT, AAResults &AA, AssumptionCache &AC,
-                const DataLayout *DL, bool TryEarlyFoldsOnly)
+                const DataLayout *DL, TTI::TargetCostKind CostKind,
+                bool TryEarlyFoldsOnly)
       : F(F), Builder(F.getContext()), TTI(TTI), DT(DT), AA(AA), AC(AC), DL(DL),
-        TryEarlyFoldsOnly(TryEarlyFoldsOnly) {}
+        CostKind(CostKind), TryEarlyFoldsOnly(TryEarlyFoldsOnly) {}
 
   bool run();
 
@@ -81,6 +82,7 @@ private:
   AAResults &AA;
   AssumptionCache &AC;
   const DataLayout *DL;
+  TTI::TargetCostKind CostKind;
 
   /// If true, only perform beneficial early IR transforms. Do not introduce new
   /// vector operations.
@@ -91,40 +93,38 @@ private:
   // TODO: Direct calls from the top-level "run" loop use a plain "Instruction"
   //       parameter. That should be updated to specific sub-classes because the
   //       run loop was changed to dispatch on opcode.
-  bool vectorizeLoadInsert(Instruction &I, TTI::TargetCostKind CostKind);
-  bool widenSubvectorLoad(Instruction &I, TTI::TargetCostKind CostKind);
+  bool vectorizeLoadInsert(Instruction &I);
+  bool widenSubvectorLoad(Instruction &I);
   ExtractElementInst *getShuffleExtract(ExtractElementInst *Ext0,
                                         ExtractElementInst *Ext1,
-                                        TTI::TargetCostKind CostKind,
                                         unsigned PreferredExtractIndex) const;
   bool isExtractExtractCheap(ExtractElementInst *Ext0, ExtractElementInst *Ext1,
                              const Instruction &I,
                              ExtractElementInst *&ConvertToShuffle,
-                             TTI::TargetCostKind CostKind,
                              unsigned PreferredExtractIndex);
   void foldExtExtCmp(ExtractElementInst *Ext0, ExtractElementInst *Ext1,
                      Instruction &I);
   void foldExtExtBinop(ExtractElementInst *Ext0, ExtractElementInst *Ext1,
                        Instruction &I);
-  bool foldExtractExtract(Instruction &I, TTI::TargetCostKind CostKind);
-  bool foldInsExtFNeg(Instruction &I, TTI::TargetCostKind CostKind);
-  bool foldInsExtVectorToShuffle(Instruction &I, TTI::TargetCostKind CostKind);
-  bool foldBitcastShuffle(Instruction &I, TTI::TargetCostKind CostKind);
-  bool scalarizeBinopOrCmp(Instruction &I, TTI::TargetCostKind CostKind);
-  bool scalarizeVPIntrinsic(Instruction &I, TTI::TargetCostKind CostKind);
-  bool foldExtractedCmps(Instruction &I, TTI::TargetCostKind CostKind);
+  bool foldExtractExtract(Instruction &I);
+  bool foldInsExtFNeg(Instruction &I);
+  bool foldInsExtVectorToShuffle(Instruction &I);
+  bool foldBitcastShuffle(Instruction &I);
+  bool scalarizeBinopOrCmp(Instruction &I);
+  bool scalarizeVPIntrinsic(Instruction &I);
+  bool foldExtractedCmps(Instruction &I);
   bool foldSingleElementStore(Instruction &I);
-  bool scalarizeLoadExtract(Instruction &I, TTI::TargetCostKind CostKind);
-  bool foldPermuteOfBinops(Instruction &I, TTI::TargetCostKind CostKind);
-  bool foldShuffleOfBinops(Instruction &I, TTI::TargetCostKind CostKind);
-  bool foldShuffleOfCastops(Instruction &I, TTI::TargetCostKind CostKind);
-  bool foldShuffleOfShuffles(Instruction &I, TTI::TargetCostKind CostKind);
-  bool foldShuffleOfIntrinsics(Instruction &I, TTI::TargetCostKind CostKind);
-  bool foldShuffleToIdentity(Instruction &I, TTI::TargetCostKind CostKind);
+  bool scalarizeLoadExtract(Instruction &I);
+  bool foldPermuteOfBinops(Instruction &I);
+  bool foldShuffleOfBinops(Instruction &I);
+  bool foldShuffleOfCastops(Instruction &I);
+  bool foldShuffleOfShuffles(Instruction &I);
+  bool foldShuffleOfIntrinsics(Instruction &I);
+  bool foldShuffleToIdentity(Instruction &I);
   bool foldShuffleFromReductions(Instruction &I);
-  bool foldCastFromReductions(Instruction &I, TTI::TargetCostKind CostKind);
+  bool foldCastFromReductions(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
-  bool shrinkType(Instruction &I, TTI::TargetCostKind CostKind);
+  bool shrinkType(Instruction &I);
 
   void replaceValue(Value &Old, Value &New) {
     Old.replaceAllUsesWith(&New);
@@ -174,8 +174,7 @@ static bool canWidenLoad(LoadInst *Load, const TargetTransformInfo &TTI) {
   return true;
 }
 
-bool VectorCombine::vectorizeLoadInsert(Instruction &I,
-                                        TTI::TargetCostKind CostKind) {
+bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // Match insert into fixed vector of scalar value.
   // TODO: Handle non-zero insert index.
   Value *Scalar;
@@ -295,8 +294,7 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I,
 /// If we are loading a vector and then inserting it into a larger vector with
 /// undefined elements, try to load the larger vector and eliminate the insert.
 /// This removes a shuffle in IR and may allow combining of other loaded values.
-bool VectorCombine::widenSubvectorLoad(Instruction &I,
-                                       TTI::TargetCostKind CostKind) {
+bool VectorCombine::widenSubvectorLoad(Instruction &I) {
   // Match subvector insert of fixed vector.
   auto *Shuf = cast<ShuffleVectorInst>(&I);
   if (!Shuf->isIdentityWithPadding())
@@ -356,7 +354,6 @@ bool VectorCombine::widenSubvectorLoad(Instruction &I,
 /// followed by extract from a different index.
 ExtractElementInst *VectorCombine::getShuffleExtract(
     ExtractElementInst *Ext0, ExtractElementInst *Ext1,
-    TTI::TargetCostKind CostKind,
     unsigned PreferredExtractIndex = InvalidIndex) const {
   auto *Index0C = dyn_cast<ConstantInt>(Ext0->getIndexOperand());
   auto *Index1C = dyn_cast<ConstantInt>(Ext1->getIndexOperand());
@@ -408,7 +405,6 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
                                           ExtractElementInst *Ext1,
                                           const Instruction &I,
                                           ExtractElementInst *&ConvertToShuffle,
-                                          TTI::TargetCostKind CostKind,
                                           unsigned PreferredExtractIndex) {
   auto *Ext0IndexC = dyn_cast<ConstantInt>(Ext0->getIndexOperand());
   auto *Ext1IndexC = dyn_cast<ConstantInt>(Ext1->getIndexOperand());
@@ -478,8 +474,7 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
               !Ext1->hasOneUse() * Extract1Cost;
   }
 
-  ConvertToShuffle =
-      getShuffleExtract(Ext0, Ext1, CostKind, PreferredExtractIndex);
+  ConvertToShuffle = getShuffleExtract(Ext0, Ext1, PreferredExtractIndex);
   if (ConvertToShuffle) {
     if (IsBinOp && DisableBinopExtractShuffle)
       return true;
@@ -593,8 +588,7 @@ void VectorCombine::foldExtExtBinop(ExtractElementInst *Ext0,
 }
 
 /// Match an instruction with extracted vector operands.
-bool VectorCombine::foldExtractExtract(Instruction &I,
-                                       TTI::TargetCostKind CostKind) {
+bool VectorCombine::foldExtractExtract(Instruction &I) {
   // It is not safe to transform things like div, urem, etc. because we may
   // create undefined behavior when executing those on unknown vector elements.
   if (!isSafeToSpeculativelyExecute(&I))
@@ -626,8 +620,7 @@ bool VectorCombine::foldExtractExtract(Instruction &I,
           m_InsertElt(m_Value(), m_Value(), m_ConstantInt(InsertIndex)));
 
   ExtractElementInst *ExtractToChange;
-  if (isExtractExtractCheap(Ext0, Ext1, I, ExtractToChange, CostKind,
-                            InsertIndex))
+  if (isExtractExtractCheap(Ext0, Ext1, I, ExtractToChange, InsertIndex))
     return false;
 
   if (ExtractToChange) {
@@ -654,8 +647,7 @@ bool VectorCombine::foldExtractExtract(Instruction &I,
 
 /// Try to replace an extract + scalar fneg + insert with a vector fneg +
 /// shuffle.
-bool VectorCombine::foldInsExtFNeg(Instruction &I,
-                                   TTI::TargetCostKind CostKind) {
+bool VectorCombine::foldInsExtFNeg(Instruction &I) {
   // Match an insert (op (extract)) pattern.
   Value *DestVec;
   uint64_t Index;
@@ -718,8 +710,7 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I,
 /// If this is a bitcast of a shuffle, try to bitcast the source vector to the
 /// destination type followed by shuffle. This can enable further transforms by
 /// moving bitcasts or shuffles together.
-bool VectorCombine::foldBitcastShuffle(Instruction &I,
-                                       TTI::TargetCostKind CostKind) {
+bool VectorCombine::foldBitcastShuffle(Instruction &I) {
   Value *V0, *V1;
   ArrayRef<int> Mask;
   if (!match(&I, m_BitCast(m_OneUse(
@@ -808,8 +799,7 @@ bool VectorCombine::foldBitcastShuffle(Instruction &I,
 /// VP Intrinsics whose vector operands are both splat values may be simplified
 /// into the scalar version of the operation and the result splatted. This
 /// can lead to scalarization down the line.
-bool VectorCombine::scalarizeVPIntrinsic(Instruction &I,
-                                         TTI::TargetCostKind CostKind) {
+bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   if (!isa<VPIntrinsic>(I))
     return false;
   VPIntrinsic &VPI = cast<VPIntrinsic>(I);
@@ -929,8 +919,7 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I,
 
 /// Match a vector binop or compare instruction with at least one inserted
 /// scalar operand and convert to scalar binop/cmp followed by insertelement.
-bool VectorCombine::scalarizeBinopOrCmp(Instruction &I,
-                                        TTI::TargetCostKind CostKind) {
+bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
   CmpInst::Predicate Pred = CmpInst::BAD_ICMP_PREDICATE;
   Value *Ins0, *Ins1;
   if (!match(&I, m_BinOp(m_Value(Ins0), m_Value(Ins1))) &&
@@ -1058,8 +1047,7 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I,
 /// Try to combine a scalar binop + 2 scalar compares of extracted elements of
 /// a vector into vector operations followed by extract. Note: The SLP pass
 /// may miss this pattern because of implementation problems.
-bool VectorCombine::foldExtractedCmps(Instruction &I,
-                                      TTI::TargetCostKind CostKind) {
+bool VectorCombine::foldExtractedCmps(Instruction &I) {
   auto *BI = dyn_cast<BinaryOperator>(&I);
 
   // We are looking for a scalar binop of booleans.
@@ -1337,8 +1325,7 @@ bool VectorCombine::foldSingleElementStore(Instruction &I) {
 }
 
 /// Try to scalarize vector loads feeding extractelement instructions.
-bool VectorCombine::scalarizeLoadExtract(Instruction &I,
-                                         TTI::TargetCostKind CostKind) {
+bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
   Value *Ptr;
   if (!match(&I, m_Load(m_Value(Ptr))))
     return false;
@@ -1434,8 +1421,7 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I,
 
 /// Try to convert "shuffle (binop (shuffle, shuffle)), undef"
 ///           -->  "binop (shuffle), (shuffle)".
-bool VectorCombine::foldPermuteOfBinops(Instruction &I,
-                                        TTI::TargetCostKind CostKind) {
+bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
   BinaryOperator *BinOp;
   ArrayRef<int> OuterMask;
   if (!match(&I,
@@ -1528,8 +1514,7 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I,
 }
 
 /// Try to convert "shuffle (binop), (binop)" into "binop (shuffle), (shuffle)".
-bool VectorCombine::foldShuffleOfBinops(Instruction &I,
-                                        TTI::TargetCostKind CostKind) {
+bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   BinaryOperator *B0, *B1;
   ArrayRef<int> OldMask;
   if (!match(&I, m_Shuffle(m_OneUse(m_BinOp(B0)), m_OneUse(m_BinOp(B1)),
@@ -1616,8 +1601,7 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I,
 
 /// Try to convert "shuffle (castop), (castop)" with a shared castop operand
 /// into "castop (shuffle)".
-bool VectorCombine::foldShuffleOfCastops(Instruction &I,
-                                         TTI::TargetCostKind CostKind) {
+bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
   Value *V0, *V1;
   ArrayRef<int> OldMask;
   if (!match(&I, m_Shuffle(m_Value(V0), m_Value(V1), m_Mask(OldMask))))
@@ -1720,8 +1704,7 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I,
 
 /// Try to convert "shuffle (shuffle x, undef), (shuffle y, undef)"
 /// into "shuffle x, y".
-bool VectorCombine::foldShuffleOfShuffles(Instruction &I,
-                                          TTI::TargetCostKind CostKind) {
+bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
   Value *V0, *V1;
   UndefValue *U0, *U1;
   ArrayRef<int> OuterMask, InnerMask0, InnerMask1;
@@ -1809,8 +1792,7 @@ bool VectorCombine::foldShuffleOfShuffles(Instruction &I,
 
 /// Try to convert
 /// "shuffle (intrinsic), (intrinsic)" into "intrinsic (shuffle), (shuffle)".
-bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I,
-                                            TTI::TargetCostKind CostKind) {
+bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
   Value *V0, *V1;
   ArrayRef<int> OldMask;
   if (!match(&I, m_Shuffle(m_OneUse(m_Value(V0)), m_OneUse(m_Value(V1)),
@@ -2048,8 +2030,7 @@ static Value *generateNewInstTree(ArrayRef<InstLane> Item, FixedVectorType *Ty,
 // Starting from a shuffle, look up through operands tracking the shuffled index
 // of each lane. If we can simplify away the shuffles to identities then
 // do so.
-bool VectorCombine::foldShuffleToIdentity(Instruction &I,
-                                          TTI::TargetCostKind CostKind) {
+bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
   auto *Ty = dyn_cast<FixedVectorType>(I.getType());
   if (!Ty || I.use_empty())
     return false;
@@ -2333,8 +2314,7 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
 ///   reduce(trunc(x)) -> trunc(reduce(x)).
 ///   reduce(sext(x))  -> sext(reduce(x)).
 ///   reduce(zext(x))  -> zext(reduce(x)).
-bool VectorCombine::foldCastFromReductions(Instruction &I,
-                                           TTI::TargetCostKind CostKind) {
+bool VectorCombine::foldCastFromReductions(Instruction &I) {
   auto *II = dyn_cast<IntrinsicInst>(&I);
   if (!II)
     return false;
@@ -2718,7 +2698,7 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
 ///     lshr((zext(x),y) -> zext(lshr(x,trunc(y)))
 /// Cost model calculations takes into account if zext(x) has other users and
 /// whether it can be propagated through them too.
-bool VectorCombine::shrinkType(Instruction &I, TTI::TargetCostKind CostKind) {
+bool VectorCombine::shrinkType(Instruction &I) {
   Value *ZExted, *OtherOperand;
   if (!match(&I, m_c_BitwiseLogic(m_ZExt(m_Value(ZExted)),
                                   m_Value(OtherOperand))) &&
@@ -2809,8 +2789,7 @@ bool VectorCombine::shrinkType(Instruction &I, TTI::TargetCostKind CostKind) {
 
 /// insert (DstVec, (extract SrcVec, ExtIdx), InsIdx) -->
 /// shuffle (DstVec, SrcVec, Mask)
-bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I,
-                                              TTI::TargetCostKind CostKind) {
+bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
   Value *DstVec, *SrcVec;
   uint64_t ExtIdx, InsIdx;
   if (!match(&I,
@@ -2865,7 +2844,6 @@ bool VectorCombine::run() {
   bool MadeChange = false;
   auto FoldInst = [this, &MadeChange](Instruction &I) {
     Builder.SetInsertPoint(&I);
-    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     bool IsFixedVectorType = isa<FixedVectorType>(I.getType());
     auto Opcode = I.getOpcode();
 
@@ -2876,10 +2854,10 @@ bool VectorCombine::run() {
     if (IsFixedVectorType) {
       switch (Opcode) {
       case Instruction::InsertElement:
-        MadeChange |= vectorizeLoadInsert(I, CostKind);
+        MadeChange |= vectorizeLoadInsert(I);
         break;
       case Instruction::ShuffleVector:
-        MadeChange |= widenSubvectorLoad(I, CostKind);
+        MadeChange |= widenSubvectorLoad(I);
         break;
       default:
         break;
@@ -2889,9 +2867,9 @@ bool VectorCombine::run() {
     // This transform works with scalable and fixed vectors
     // TODO: Identify and allow other scalable transforms
     if (isa<VectorType>(I.getType())) {
-      MadeChange |= scalarizeBinopOrCmp(I, CostKind);
-      MadeChange |= scalarizeLoadExtract(I, CostKind);
-      MadeChange |= scalarizeVPIntrinsic(I, CostKind);
+      MadeChange |= scalarizeBinopOrCmp(I);
+      MadeChange |= scalarizeLoadExtract(I);
+      MadeChange |= scalarizeVPIntrinsic(I);
     }
 
     if (Opcode == Instruction::Store)
@@ -2908,39 +2886,39 @@ bool VectorCombine::run() {
     if (IsFixedVectorType) {
       switch (Opcode) {
       case Instruction::InsertElement:
-        MadeChange |= foldInsExtFNeg(I, CostKind);
-        MadeChange |= foldInsExtVectorToShuffle(I, CostKind);
+        MadeChange |= foldInsExtFNeg(I);
+        MadeChange |= foldInsExtVectorToShuffle(I);
         break;
       case Instruction::ShuffleVector:
-        MadeChange |= foldPermuteOfBinops(I, CostKind);
-        MadeChange |= foldShuffleOfBinops(I, CostKind);
-        MadeChange |= foldShuffleOfCastops(I, CostKind);
-        MadeChange |= foldShuffleOfShuffles(I, CostKind);
-        MadeChange |= foldShuffleOfIntrinsics(I, CostKind);
-        MadeChange |= foldSelectShuffle(I, CostKind);
-        MadeChange |= foldShuffleToIdentity(I, CostKind);
+        MadeChange |= foldPermuteOfBinops(I);
+        MadeChange |= foldShuffleOfBinops(I);
+        MadeChange |= foldShuffleOfCastops(I);
+        MadeChange |= foldShuffleOfShuffles(I);
+        MadeChange |= foldShuffleOfIntrinsics(I);
+        MadeChange |= foldSelectShuffle(I);
+        MadeChange |= foldShuffleToIdentity(I);
         break;
       case Instruction::BitCast:
-        MadeChange |= foldBitcastShuffle(I, CostKind);
+        MadeChange |= foldBitcastShuffle(I);
         break;
       default:
-        MadeChange |= shrinkType(I, CostKind);
+        MadeChange |= shrinkType(I);
         break;
       }
     } else {
       switch (Opcode) {
       case Instruction::Call:
         MadeChange |= foldShuffleFromReductions(I);
-        MadeChange |= foldCastFromReductions(I, CostKind);
+        MadeChange |= foldCastFromReductions(I);
         break;
       case Instruction::ICmp:
       case Instruction::FCmp:
-        MadeChange |= foldExtractExtract(I, CostKind);
+        MadeChange |= foldExtractExtract(I);
         break;
       default:
         if (Instruction::isBinaryOp(Opcode)) {
-          MadeChange |= foldExtractExtract(I, CostKind);
-          MadeChange |= foldExtractedCmps(I, CostKind);
+          MadeChange |= foldExtractExtract(I);
+          MadeChange |= foldExtractedCmps(I);
         }
         break;
       }
@@ -2982,7 +2960,8 @@ PreservedAnalyses VectorCombinePass::run(Function &F,
   DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   AAResults &AA = FAM.getResult<AAManager>(F);
   const DataLayout *DL = &F.getDataLayout();
-  VectorCombine Combiner(F, TTI, DT, AA, AC, DL, TryEarlyFoldsOnly);
+  VectorCombine Combiner(F, TTI, DT, AA, AC, DL, TTI::TCK_RecipThroughput,
+                         TryEarlyFoldsOnly);
   if (!Combiner.run())
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
