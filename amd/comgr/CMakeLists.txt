@@ -384,7 +384,7 @@ set(LLD_LIBS
   lldCommon)
 
 if (LLVM_LINK_LLVM_DYLIB)
-  set(LLVM_LIBS LLVM)
+  set(LLVM_LIBS LLVM LLVMSPIRVAMDLib)
 else()
   llvm_map_components_to_libnames(LLVM_LIBS
     ${LLVM_TARGETS_TO_BUILD}
