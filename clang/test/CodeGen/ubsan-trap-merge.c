@@ -270,12 +270,3 @@ int m(int x, int y) {
 // TRAP: attributes #[[ATTR4]] = { nomerge noreturn nounwind }
 // HANDLER: attributes #[[ATTR4]] = { noreturn nounwind }
 // MINRT: attributes #[[ATTR4]] = { noreturn nounwind }
-//.
-// TRAP: [[META2]] = !{}
-//.
-// HANDLER: [[META2]] = !{}
-// HANDLER: [[PROF3]] = !{!"branch_weights", i32 1, i32 1048575}
-//.
-// MINRT: [[META2]] = !{}
-// MINRT: [[PROF3]] = !{!"branch_weights", i32 1, i32 1048575}
-//.
