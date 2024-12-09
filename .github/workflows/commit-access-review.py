@@ -137,7 +137,7 @@ def check_manual_requests(start_date: datetime.datetime, token: str) -> list[str
         """
     formatted_start_date = start_date.strftime("%Y-%m-%dT%H:%M:%S")
     variables = {
-        "query": f"type:issue created:>{formatted_start_date} org:llvm repo:llvm-project label:infrastructure:commit-access"
+        "query": f"type:issue created:>{formatted_start_date} org:llvm repo:llvm-project label:infra:commit-access"
     }
 
     data = run_graphql_query(query, variables, token)
