@@ -174,14 +174,15 @@ static void PrintBacktrace() {
 #else
 
   // TODO: Need to implement the version for other platforms.
-  Fortran::runtime::Terminator{}.PrintCrashArgs(
-      "Handle the case when a backtrace is not available\n");
+  Fortran::runtime::Terminator{}.PrintCrashArgs("backtrace is not supported.");
 
 #endif
 }
 
 [[noreturn]] void RTNAME(Abort)() {
+#ifdef HAVE_BACKTRACE
   PrintBacktrace();
+#endif
   std::abort();
 }
 
