@@ -2,7 +2,7 @@
 
 This file is a list of the
 [maintainers](https://llvm.org/docs/DeveloperPolicy.html#maintainers) for
-LLVM.
+LLVM compiler-rt.
 
 ## Current Maintainers
 
