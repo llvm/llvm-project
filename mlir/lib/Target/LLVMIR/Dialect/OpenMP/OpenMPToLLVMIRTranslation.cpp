@@ -263,6 +263,10 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkDepend(op, result);
         checkNowait(op, result);
       })
+      .Case([&](omp::TaskloopOp op) {
+        // TODO: Add other clauses check
+        checkUntied(op, result);
+      })
       .Case([&](omp::WsloopOp op) {
         checkAllocate(op, result);
         checkLinear(op, result);
