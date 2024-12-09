@@ -9,8 +9,7 @@
 #if !defined(ARM_SME_STATE)
 
 #define _STRUCT_ARM_SME_STATE struct arm_sme_state
-_STRUCT_ARM_SME_STATE
-{
+_STRUCT_ARM_SME_STATE {
   uint64_t svcr;
   uint64_t tpidr2_el0;
   uint16_t svl_b;

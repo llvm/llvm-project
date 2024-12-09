@@ -1,5 +1,5 @@
 ///  BUILT with
-///     xcrun -sdk macosx.internal clang -mcpu=apple-m4 -g sme.c -o sme 
+///    xcrun -sdk macosx.internal clang -mcpu=apple-m4 -g sme.c -o sme
 
 #include <stdint.h>
 #include <stdio.h>
@@ -92,9 +92,7 @@ void arm_sme2_set_zt0() {
 #undef ZT0_LEN
 }
 
-int main()
-{
-
+int main() {
   printf("Enable SME mode\n");
 
   asm volatile("smstart");
