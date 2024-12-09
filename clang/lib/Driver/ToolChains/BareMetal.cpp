@@ -166,7 +166,7 @@ static void
 findMultilibsFromYAML(const ToolChain &TC, const Driver &D,
                       StringRef MultilibPath, const ArgList &Args,
                       DetectedMultilibs &Result,
-                      SmallVector<StringRef> &CustomFlagsCompilationArgs) {
+                      SmallVector<StringRef> &CustomFlagsMacroDefines) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MB =
       D.getVFS().getBufferForFile(MultilibPath);
   if (!MB)
@@ -178,7 +178,7 @@ findMultilibsFromYAML(const ToolChain &TC, const Driver &D,
     return;
   Result.Multilibs = ErrorOrMultilibSet.get();
   if (Result.Multilibs.select(D, Flags, Result.SelectedMultilibs,
-                              &CustomFlagsCompilationArgs))
+                              &CustomFlagsMacroDefines))
     return;
   D.Diag(clang::diag::warn_drv_missing_multilib) << llvm::join(Flags, " ");
   std::stringstream ss;
@@ -237,13 +237,13 @@ void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
     // If multilib.yaml is found, update sysroot so it doesn't use a target
     // specific suffix
     SysRoot = computeBaseSysRoot(D, /*IncludeTriple=*/false);
-    SmallVector<StringRef> CustomFlagDriverArgs;
+    SmallVector<StringRef> CustomFlagMacroDefines;
     findMultilibsFromYAML(*this, D, *MultilibPath, Args, Result,
-                          CustomFlagDriverArgs);
+                          CustomFlagMacroDefines);
     SelectedMultilibs = Result.SelectedMultilibs;
     Multilibs = Result.Multilibs;
-    MultilibDriverArgs.append(CustomFlagDriverArgs.begin(),
-                              CustomFlagDriverArgs.end());
+    MultilibMacroDefines.append(CustomFlagMacroDefines.begin(),
+                                CustomFlagMacroDefines.end());
   } else if (isRISCVBareMetal(Triple)) {
     if (findRISCVMultilibs(D, Triple, Args, Result)) {
       SelectedMultilibs = Result.SelectedMultilibs;
@@ -560,6 +560,6 @@ SanitizerMask BareMetal::getSupportedSanitizers() const {
 }
 
 SmallVector<std::string>
-BareMetal::getMultilibDriverArgsStr(llvm::opt::ArgList &Args) const {
-  return MultilibDriverArgs;
+BareMetal::getMultilibMacroDefinesStr(llvm::opt::ArgList &Args) const {
+  return MultilibMacroDefines;
 }

@@ -1398,9 +1398,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   bool HasConfigFileTail = !ContainsError && CfgOptionsTail;
 
   // All arguments, from both config file and command line.
-  auto UArgs = std::make_unique<InputArgList>(
-      HasConfigFileHead ? std::move(*CfgOptionsHead) : std::move(*CLOptions));
-  InputArgList &Args = *UArgs;
+  InputArgList Args = HasConfigFileHead ? std::move(*CfgOptionsHead) : std::move(*CLOptions);
 
   if (HasConfigFileHead)
     for (auto *Opt : *CLOptions)
@@ -1427,6 +1425,52 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
           appendOneArg(Args, Opt);
     }
   }
+
+  // Check for working directory option before accessing any files
+  if (Arg *WD = Args.getLastArg(options::OPT_working_directory))
+    if (VFS->setCurrentWorkingDirectory(WD->getValue()))
+      Diag(diag::err_drv_unable_to_set_working_directory) << WD->getValue();
+
+  // Check for missing include directories.
+  if (!Diags.isIgnored(diag::warn_missing_include_dirs, SourceLocation())) {
+    for (auto IncludeDir : Args.getAllArgValues(options::OPT_I_Group)) {
+      if (!VFS->exists(IncludeDir))
+        Diag(diag::warn_missing_include_dirs) << IncludeDir;
+    }
+  }
+
+  // FIXME: This stuff needs to go into the Compilation, not the driver.
+  bool CCCPrintPhases;
+
+  // -canonical-prefixes, -no-canonical-prefixes are used very early in main.
+  Args.ClaimAllArgs(options::OPT_canonical_prefixes);
+  Args.ClaimAllArgs(options::OPT_no_canonical_prefixes);
+
+  // f(no-)integated-cc1 is also used very early in main.
+  Args.ClaimAllArgs(options::OPT_fintegrated_cc1);
+  Args.ClaimAllArgs(options::OPT_fno_integrated_cc1);
+
+  // Ignore -pipe.
+  Args.ClaimAllArgs(options::OPT_pipe);
+
+  // Extract -ccc args.
+  //
+  // FIXME: We need to figure out where this behavior should live. Most of it
+  // should be outside in the client; the parts that aren't should have proper
+  // options, either by introducing new ones or by overloading gcc ones like -V
+  // or -b.
+  CCCPrintPhases = Args.hasArg(options::OPT_ccc_print_phases);
+  CCCPrintBindings = Args.hasArg(options::OPT_ccc_print_bindings);
+  if (const Arg *A = Args.getLastArg(options::OPT_ccc_gcc_name))
+    CCCGenericGCCName = A->getValue();
+
+  // Process -fproc-stat-report options.
+  if (const Arg *A = Args.getLastArg(options::OPT_fproc_stat_report_EQ)) {
+    CCPrintProcessStats = true;
+    CCPrintStatReportFilename = A->getValue();
+  }
+  if (Args.hasArg(options::OPT_fproc_stat_report))
+    CCPrintProcessStats = true;
 
   // FIXME: TargetTriple is used by the target-prefixed calls to as/ld
   // and getToolChain is const.
@@ -1485,79 +1529,6 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
     TargetTriple = A->getValue();
   if (const Arg *A = Args.getLastArg(options::OPT_ccc_install_dir))
     Dir = Dir = A->getValue();
-  if (const Arg *A = Args.getLastArg(options::OPT__sysroot_EQ))
-    SysRoot = A->getValue();
-  if (const Arg *A = Args.getLastArg(options::OPT_resource_dir))
-    ResourceDir = A->getValue();
-  if (const Arg *A = Args.getLastArg(options::OPT__dyld_prefix_EQ))
-    DyldPrefix = A->getValue();
-
-  setLTOMode(Args);
-
-  // Owned by the host.
-  const ToolChain &TC =
-      getToolChain(Args, computeTargetTriple(*this, TargetTriple, Args));
-
-  SmallVector<std::string> MultilibDriverArgsStr =
-      TC.getMultilibDriverArgsStr(Args);
-  SmallVector<const char *> MLArgsChar(
-      llvm::map_range(MultilibDriverArgsStr, [&Args](const auto &S) {
-        return Args.MakeArgString(S);
-      }));
-  bool MLContainsError;
-  auto MultilibDriverArgList = std::make_unique<InputArgList>(
-      ParseArgStrings(MLArgsChar, /*UseDriverMode=*/false, MLContainsError));
-  if (!MLContainsError)
-    for (auto *Opt : *MultilibDriverArgList) {
-      appendOneArg(Args, Opt, nullptr);
-    }
-
-  // Check for working directory option before accessing any files
-  if (Arg *WD = Args.getLastArg(options::OPT_working_directory))
-    if (VFS->setCurrentWorkingDirectory(WD->getValue()))
-      Diag(diag::err_drv_unable_to_set_working_directory) << WD->getValue();
-
-  // Check for missing include directories.
-  if (!Diags.isIgnored(diag::warn_missing_include_dirs, SourceLocation())) {
-    for (auto IncludeDir : Args.getAllArgValues(options::OPT_I_Group)) {
-      if (!VFS->exists(IncludeDir))
-        Diag(diag::warn_missing_include_dirs) << IncludeDir;
-    }
-  }
-
-  // FIXME: This stuff needs to go into the Compilation, not the driver.
-  bool CCCPrintPhases;
-
-  // -canonical-prefixes, -no-canonical-prefixes are used very early in main.
-  Args.ClaimAllArgs(options::OPT_canonical_prefixes);
-  Args.ClaimAllArgs(options::OPT_no_canonical_prefixes);
-
-  // f(no-)integated-cc1 is also used very early in main.
-  Args.ClaimAllArgs(options::OPT_fintegrated_cc1);
-  Args.ClaimAllArgs(options::OPT_fno_integrated_cc1);
-
-  // Ignore -pipe.
-  Args.ClaimAllArgs(options::OPT_pipe);
-
-  // Extract -ccc args.
-  //
-  // FIXME: We need to figure out where this behavior should live. Most of it
-  // should be outside in the client; the parts that aren't should have proper
-  // options, either by introducing new ones or by overloading gcc ones like -V
-  // or -b.
-  CCCPrintPhases = Args.hasArg(options::OPT_ccc_print_phases);
-  CCCPrintBindings = Args.hasArg(options::OPT_ccc_print_bindings);
-  if (const Arg *A = Args.getLastArg(options::OPT_ccc_gcc_name))
-    CCCGenericGCCName = A->getValue();
-
-  // Process -fproc-stat-report options.
-  if (const Arg *A = Args.getLastArg(options::OPT_fproc_stat_report_EQ)) {
-    CCPrintProcessStats = true;
-    CCPrintStatReportFilename = A->getValue();
-  }
-  if (Args.hasArg(options::OPT_fproc_stat_report))
-    CCPrintProcessStats = true;
-
   for (const Arg *A : Args.filtered(options::OPT_B)) {
     A->claim();
     PrefixDirs.push_back(A->getValue(0));
@@ -1572,6 +1543,13 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
       CompilerPath = Split.second;
     }
   }
+  if (const Arg *A = Args.getLastArg(options::OPT__sysroot_EQ))
+    SysRoot = A->getValue();
+  if (const Arg *A = Args.getLastArg(options::OPT__dyld_prefix_EQ))
+    DyldPrefix = A->getValue();
+
+  if (const Arg *A = Args.getLastArg(options::OPT_resource_dir))
+    ResourceDir = A->getValue();
 
   if (const Arg *A = Args.getLastArg(options::OPT_save_temps_EQ)) {
     SaveTemps = llvm::StringSwitch<SaveTempsMode>(A->getValue())
@@ -1590,6 +1568,8 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
     else
       Offload = OffloadHostDevice;
   }
+
+  setLTOMode(Args);
 
   // Process -fembed-bitcode= flags.
   if (Arg *A = Args.getLastArg(options::OPT_fembed_bitcode_EQ)) {
@@ -1641,6 +1621,31 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
             << A->getAsString(Args) << ArgName;
       } else
         CXX20HeaderType = static_cast<ModuleHeaderMode>(Kind);
+    }
+  }
+
+  std::unique_ptr<llvm::opt::InputArgList> UArgs =
+      std::make_unique<InputArgList>(std::move(Args));
+
+  // Owned by the host.
+  const ToolChain &TC =
+      getToolChain(*UArgs, computeTargetTriple(*this, TargetTriple, *UArgs));
+
+  {
+    SmallVector<std::string> MultilibMacroDefinesStr =
+        TC.getMultilibMacroDefinesStr(*UArgs);
+    SmallVector<const char *> MLMacroDefinesChar(
+        llvm::map_range(MultilibMacroDefinesStr, [&UArgs](const auto &S) {
+          return UArgs->MakeArgString(Twine("-D") + Twine(S));
+        }));
+    bool MLContainsError;
+    auto MultilibMacroDefineList =
+        std::make_unique<InputArgList>(ParseArgStrings(
+            MLMacroDefinesChar, /*UseDriverMode=*/false, MLContainsError));
+    if (!MLContainsError) {
+      for (auto *Opt : *MultilibMacroDefineList) {
+        appendOneArg(*UArgs, Opt);
+      }
     }
   }
 

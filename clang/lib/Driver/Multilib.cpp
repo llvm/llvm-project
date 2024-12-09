@@ -154,7 +154,7 @@ std::pair<Multilib::flags_list, SmallVector<StringRef>>
 MultilibSet::processCustomFlags(const Driver &D,
                                 const Multilib::flags_list &Flags) const {
   Multilib::flags_list Result;
-  SmallVector<StringRef> CompilationArgs;
+  SmallVector<StringRef> MacroDefines;
 
   // Custom flag values detected in the flags list
   SmallVector<const custom_flag::ValueDetail *> ClaimedCustomFlagValues;
@@ -193,9 +193,9 @@ MultilibSet::processCustomFlags(const Driver &D,
     if (!TriggeredCustomFlagDecls.insert(CustomFlagValue->Decl).second)
       continue;
     Result.push_back(std::string(custom_flag::Prefix) + CustomFlagValue->Name);
-    if (CustomFlagValue->DriverArgs)
-      CompilationArgs.append(CustomFlagValue->DriverArgs->begin(),
-                             CustomFlagValue->DriverArgs->end());
+    if (CustomFlagValue->MacroDefines)
+      MacroDefines.append(CustomFlagValue->MacroDefines->begin(),
+                          CustomFlagValue->MacroDefines->end());
   }
 
   // Detect flag declarations with no value passed in. Select default value.
@@ -205,28 +205,28 @@ MultilibSet::processCustomFlags(const Driver &D,
     custom_flag::ValueDetail &CustomFlagValue =
         Decl->ValueList[*Decl->DefaultValueIdx];
     Result.push_back(std::string(custom_flag::Prefix) + CustomFlagValue.Name);
-    if (CustomFlagValue.DriverArgs)
-      CompilationArgs.append(CustomFlagValue.DriverArgs->begin(),
-                             CustomFlagValue.DriverArgs->end());
+    if (CustomFlagValue.MacroDefines)
+      MacroDefines.append(CustomFlagValue.MacroDefines->begin(),
+                          CustomFlagValue.MacroDefines->end());
   }
 
   DiagnoseUnclaimedMultilibCustomFlags(D, UnclaimedCustomFlagValueStrs,
                                        CustomFlagDecls);
 
-  return {Result, CompilationArgs};
+  return {Result, MacroDefines};
 }
 
 bool MultilibSet::select(
     const Driver &D, const Multilib::flags_list &Flags,
     llvm::SmallVectorImpl<Multilib> &Selected,
-    llvm::SmallVector<StringRef> *CustomFlagCompilationArgs) const {
-  auto [FlagsWithCustom, CFCompilationArgs] = processCustomFlags(D, Flags);
+    llvm::SmallVector<StringRef> *CustomFlagMacroDefines) const {
+  auto [FlagsWithCustom, CFMacroDefines] = processCustomFlags(D, Flags);
   llvm::StringSet<> FlagSet(expandFlags(FlagsWithCustom));
   Selected.clear();
   bool AnyErrors = false;
 
-  if (CustomFlagCompilationArgs)
-    *CustomFlagCompilationArgs = std::move(CFCompilationArgs);
+  if (CustomFlagMacroDefines)
+    *CustomFlagMacroDefines = std::move(CFMacroDefines);
 
   // Decide which multilibs we're going to select at all.
   llvm::DenseSet<StringRef> ExclusiveGroupsSelected;

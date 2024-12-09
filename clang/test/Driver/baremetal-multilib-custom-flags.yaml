@@ -37,17 +37,17 @@
 # CHECK-PRINT-MULTI-LIB: arm-none-eabi/multithreaded/thumb/v8-m.main/nofp;@-target=thumbv8m.main-unknown-none-eabi@mfpu=none@fmultilib-flag=multithreaded
 
 # RUN: %clang --target=arm-none-eabi --multi-lib-config=%s -x c %s -fmultilib-flag=no-multithreaded -### -o /dev/null 2>&1 \
-# RUN: | FileCheck --check-prefix=CHECK-DRIVERARGS-NOMULTI %s
-# CHECK-DRIVERARGS-NOMULTI:        "-D" "__SINGLE_THREAD__"
+# RUN: | FileCheck --check-prefix=CHECK-MACRODEFINES-NOMULTI %s
+# CHECK-MACRODEFINES-NOMULTI:        "-D" "__SINGLE_THREAD__"
 
 # RUN: %clang --target=arm-none-eabi --multi-lib-config=%s -x c %s -fmultilib-flag=io-semihosting -### -o /dev/null 2>&1 \
-# RUN: | FileCheck --check-prefix=CHECK-DRIVERARGS-IO-SEMIHOSTING %s
-# CHECK-DRIVERARGS-IO-SEMIHOSTING: "-D" "SEMIHOSTING"
+# RUN: | FileCheck --check-prefix=CHECK-MACRODEFINES-IO-SEMIHOSTING %s
+# CHECK-MACRODEFINES-IO-SEMIHOSTING: "-D" "SEMIHOSTING"
 
 # RUN: %clang --target=arm-none-eabi --multi-lib-config=%s -x c %s -fmultilib-flag=io-linux-syscalls -### -o /dev/null 2>&1 \
-# RUN: | FileCheck --check-prefix=CHECK-DRIVERARGS-IO-LINUX %s
-# CHECK-DRIVERARGS-IO-LINUX:       "-U" "SEMIHOSTING"
-# CHECK-DRIVERARGS-IO-LINUX-SAME:  "-D" "LINUX_SYSCALLS"
+# RUN: | FileCheck --check-prefix=CHECK-MACRODEFINES-IO-LINUX %s
+# CHECK-MACRODEFINES-IO-LINUX:  "-D" "LINUX_SYSCALLS"
+# CHECK-MACRODEFINES-IO-LINUX-SAME:  "-D" "HOSTED"
 
 ---
 MultilibVersion: 1.0
@@ -68,14 +68,14 @@ Flags:
   - Name: multithreading
     Values:
     - Name: no-multithreaded
-      DriverArgs: [-D__SINGLE_THREAD__]
+      MacroDefines: [__SINGLE_THREAD__]
     - Name: multithreaded
     Default: no-multithreaded
   - Name: io
     Values:
     - Name: io-none
     - Name: io-semihosting
-      DriverArgs: [-DSEMIHOSTING]
+      MacroDefines: [SEMIHOSTING]
     - Name: io-linux-syscalls
-      DriverArgs: [-USEMIHOSTING, -DLINUX_SYSCALLS]
+      MacroDefines: [LINUX_SYSCALLS, HOSTED]
     Default: io-none

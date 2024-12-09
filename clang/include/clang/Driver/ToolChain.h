@@ -686,10 +686,10 @@ public:
   /// Add warning options that need to be passed to cc1 for this target.
   virtual void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const;
 
-  // Get the list of extra driver arguments strings requested by the multilib
+  // Get the list of extra macro defines requested by the multilib
   // configuration.
   virtual SmallVector<std::string>
-  getMultilibDriverArgsStr(llvm::opt::ArgList &Args) const {
+  getMultilibMacroDefinesStr(llvm::opt::ArgList &Args) const {
     return {};
   };
 

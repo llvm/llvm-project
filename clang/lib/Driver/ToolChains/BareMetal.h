@@ -71,7 +71,7 @@ public:
   SanitizerMask getSupportedSanitizers() const override;
 
   SmallVector<std::string>
-  getMultilibDriverArgsStr(llvm::opt::ArgList &Args) const override;
+  getMultilibMacroDefinesStr(llvm::opt::ArgList &Args) const override;
 
 private:
   using OrderedMultilibs =
@@ -80,7 +80,7 @@ private:
 
   std::string SysRoot;
 
-  SmallVector<std::string> MultilibDriverArgs;
+  SmallVector<std::string> MultilibMacroDefines;
 };
 
 } // namespace toolchains

@@ -169,10 +169,10 @@ public:
   const_iterator end() const { return Multilibs.end(); }
 
   /// Process custom flags from \p Flags and returns an expanded flags list and
-  /// a list of extra compilation arguments.
+  /// a list of macro defines.
   /// Returns a pair where:
   ///  - first: the new flags list including custom flags after processing.
-  ///  - second: the extra compilation arguments to be fed to the driver.
+  ///  - second: the extra macro defines to be fed to the driver.
   std::pair<Multilib::flags_list, SmallVector<StringRef>>
   processCustomFlags(const Driver &D, const Multilib::flags_list &Flags) const;
 
