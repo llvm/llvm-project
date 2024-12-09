@@ -312,3 +312,8 @@ v_cvt_scale_pk32_bf16_bf6 v[10:25], s[20:25], 0xcf00
 // GFX121X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // GFX121X-ERR-NEXT:{{^}}v_cvt_scale_pk32_bf16_bf6 v[10:25], s[20:25], 0xcf00
 // GFX121X-ERR-NEXT:{{^}}                                    ^
+
+v_cvt_scale_pk16_bf16_bf6 v[10:17], s[20:22], 0xcf00
+// GFX121X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX121X-ERR-NEXT:{{^}}v_cvt_scale_pk16_bf16_bf6 v[10:17], s[20:22], 0xcf00
+// GFX121X-ERR-NEXT:{{^}}                                    ^
