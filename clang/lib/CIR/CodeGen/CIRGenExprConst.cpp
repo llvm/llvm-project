@@ -193,7 +193,7 @@ bool ConstantAggregateBuilder::add(mlir::Attribute A, CharUnits Offset,
 
 bool ConstantAggregateBuilder::addBits(llvm::APInt Bits, uint64_t OffsetInBits,
                                        bool AllowOverwrite) {
-  const ASTContext &Context = CGM.getASTContext();
+  const ASTContext &astContext = CGM.getASTContext();
   const uint64_t CharWidth = CGM.getASTContext().getCharWidth();
   auto charTy = CGM.getBuilder().getUIntNTy(CharWidth);
   // Offset of where we want the first bit to go within the bits of the
@@ -203,7 +203,7 @@ bool ConstantAggregateBuilder::addBits(llvm::APInt Bits, uint64_t OffsetInBits,
   // We split bit-fields up into individual bytes. Walk over the bytes and
   // update them.
   for (CharUnits OffsetInChars =
-           Context.toCharUnitsFromBits(OffsetInBits - OffsetWithinChar);
+           astContext.toCharUnitsFromBits(OffsetInBits - OffsetWithinChar);
        /**/; ++OffsetInChars) {
     // Number of bits we want to fill in this char.
     unsigned WantedBits =
@@ -515,9 +515,9 @@ bool ConstStructBuilder::AppendField(const FieldDecl *Field,
                                      uint64_t FieldOffset,
                                      mlir::Attribute InitCst,
                                      bool AllowOverwrite) {
-  const ASTContext &Context = CGM.getASTContext();
+  const ASTContext &astContext = CGM.getASTContext();
 
-  CharUnits FieldOffsetInChars = Context.toCharUnitsFromBits(FieldOffset);
+  CharUnits FieldOffsetInChars = astContext.toCharUnitsFromBits(FieldOffset);
 
   return AppendBytes(FieldOffsetInChars, InitCst, AllowOverwrite);
 }
@@ -1374,10 +1374,10 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
     if (auto *FD = dyn_cast<FunctionDecl>(D)) {
       auto fop = CGM.GetAddrOfFunction(FD);
       auto builder = CGM.getBuilder();
-      auto ctxt = builder.getContext();
+      mlir::MLIRContext *mlirContext = builder.getContext();
       return cir::GlobalViewAttr::get(
           builder.getPointerTo(fop.getFunctionType()),
-          mlir::FlatSymbolRefAttr::get(ctxt, fop.getSymNameAttr()));
+          mlir::FlatSymbolRefAttr::get(mlirContext, fop.getSymNameAttr()));
     }
 
     if (auto *VD = dyn_cast<VarDecl>(D)) {
@@ -2013,9 +2013,9 @@ static mlir::TypedAttr emitNullConstant(CIRGenModule &CGM,
     }
   }
 
-  mlir::MLIRContext *mlirCtx = structure.getContext();
-  return cir::ConstStructAttr::get(mlirCtx, structure,
-                                   mlir::ArrayAttr::get(mlirCtx, elements));
+  mlir::MLIRContext *mlirContext = structure.getContext();
+  return cir::ConstStructAttr::get(mlirContext, structure,
+                                   mlir::ArrayAttr::get(mlirContext, elements));
 }
 
 mlir::TypedAttr

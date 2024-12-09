@@ -208,13 +208,13 @@ public:
 
   QualType HigherPrecisionTypeForComplexArithmetic(QualType ElementType,
                                                    bool IsDivOpCode) {
-    ASTContext &Ctx = CGF.getContext();
+    ASTContext &astContext = CGF.getContext();
     const QualType HigherElementType =
-        Ctx.GetHigherPrecisionFPType(ElementType);
+        astContext.GetHigherPrecisionFPType(ElementType);
     const llvm::fltSemantics &ElementTypeSemantics =
-        Ctx.getFloatTypeSemantics(ElementType);
+        astContext.getFloatTypeSemantics(ElementType);
     const llvm::fltSemantics &HigherElementTypeSemantics =
-        Ctx.getFloatTypeSemantics(HigherElementType);
+        astContext.getFloatTypeSemantics(HigherElementType);
     // Check that the promoted type can handle the intermediate values without
     // overflowing. This can be interpreted as:
     // (SmallerType.LargestFiniteVal * SmallerType.LargestFiniteVal) * 2 <=
@@ -225,7 +225,7 @@ public:
     if (llvm::APFloat::semanticsMaxExponent(ElementTypeSemantics) * 2 + 1 <=
         llvm::APFloat::semanticsMaxExponent(HigherElementTypeSemantics)) {
       FPHasBeenPromoted = true;
-      return Ctx.getComplexType(HigherElementType);
+      return astContext.getComplexType(HigherElementType);
     } else {
       // The intermediate values can't be represented in the promoted type
       // without overflowing.

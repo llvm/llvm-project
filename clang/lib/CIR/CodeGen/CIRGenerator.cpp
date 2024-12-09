@@ -41,27 +41,29 @@ CIRGenerator::~CIRGenerator() {
 }
 
 static void setMLIRDataLayout(mlir::ModuleOp &mod, const llvm::DataLayout &dl) {
-  auto *context = mod.getContext();
-  mlir::DataLayoutSpecInterface dlSpec = mlir::translateDataLayout(dl, context);
+  mlir::MLIRContext *mlirContext = mod.getContext();
+  mlir::DataLayoutSpecInterface dlSpec =
+      mlir::translateDataLayout(dl, mlirContext);
   mod->setAttr(mlir::DLTIDialect::kDataLayoutAttrName, dlSpec);
 }
 
-void CIRGenerator::Initialize(ASTContext &astCtx) {
+void CIRGenerator::Initialize(ASTContext &astContext) {
   using namespace llvm;
 
-  this->astCtx = &astCtx;
+  this->astContext = &astContext;
 
-  mlirCtx = std::make_unique<mlir::MLIRContext>();
-  mlirCtx->getOrLoadDialect<mlir::DLTIDialect>();
-  mlirCtx->getOrLoadDialect<mlir::func::FuncDialect>();
-  mlirCtx->getOrLoadDialect<cir::CIRDialect>();
-  mlirCtx->getOrLoadDialect<mlir::LLVM::LLVMDialect>();
-  mlirCtx->getOrLoadDialect<mlir::memref::MemRefDialect>();
-  mlirCtx->getOrLoadDialect<mlir::omp::OpenMPDialect>();
-  CGM = std::make_unique<clang::CIRGen::CIRGenModule>(*mlirCtx.get(), astCtx,
-                                                      codeGenOpts, Diags);
+  mlirContext = std::make_unique<mlir::MLIRContext>();
+  mlirContext->getOrLoadDialect<mlir::DLTIDialect>();
+  mlirContext->getOrLoadDialect<mlir::func::FuncDialect>();
+  mlirContext->getOrLoadDialect<cir::CIRDialect>();
+  mlirContext->getOrLoadDialect<mlir::LLVM::LLVMDialect>();
+  mlirContext->getOrLoadDialect<mlir::memref::MemRefDialect>();
+  mlirContext->getOrLoadDialect<mlir::omp::OpenMPDialect>();
+  CGM = std::make_unique<clang::CIRGen::CIRGenModule>(
+      *mlirContext.get(), astContext, codeGenOpts, Diags);
   auto mod = CGM->getModule();
-  auto layout = llvm::DataLayout(astCtx.getTargetInfo().getDataLayoutString());
+  auto layout =
+      llvm::DataLayout(astContext.getTargetInfo().getDataLayoutString());
   setMLIRDataLayout(mod, layout);
 }
 
@@ -152,11 +154,11 @@ void CIRGenerator::HandleTagDeclDefinition(TagDecl *D) {
 
   // For MSVC compatibility, treat declarations of static data members with
   // inline initializers as definitions.
-  if (astCtx->getTargetInfo().getCXXABI().isMicrosoft()) {
+  if (astContext->getTargetInfo().getCXXABI().isMicrosoft()) {
     llvm_unreachable("NYI");
   }
   // For OpenMP emit declare reduction functions, if required.
-  if (astCtx->getLangOpts().OpenMP) {
+  if (astContext->getLangOpts().OpenMP) {
     llvm_unreachable("NYI");
   }
 }

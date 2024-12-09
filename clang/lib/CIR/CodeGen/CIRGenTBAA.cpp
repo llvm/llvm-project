@@ -9,19 +9,20 @@
 #include "llvm/Support/ErrorHandling.h"
 namespace clang::CIRGen {
 
-cir::TBAAAttr tbaa_NYI(mlir::MLIRContext *ctx) {
-  return cir::TBAAAttr::get(ctx);
+cir::TBAAAttr tbaa_NYI(mlir::MLIRContext *mlirContext) {
+  return cir::TBAAAttr::get(mlirContext);
 }
 
-CIRGenTBAA::CIRGenTBAA(mlir::MLIRContext *ctx, clang::ASTContext &context,
-                       CIRGenTypes &types, mlir::ModuleOp moduleOp,
+CIRGenTBAA::CIRGenTBAA(mlir::MLIRContext *mlirContext,
+                       clang::ASTContext &astContext, CIRGenTypes &types,
+                       mlir::ModuleOp moduleOp,
                        const clang::CodeGenOptions &codeGenOpts,
                        const clang::LangOptions &features)
-    : ctx(ctx), context(context), types(types), moduleOp(moduleOp),
-      codeGenOpts(codeGenOpts), features(features) {}
+    : mlirContext(mlirContext), astContext(astContext), types(types),
+      moduleOp(moduleOp), codeGenOpts(codeGenOpts), features(features) {}
 
 cir::TBAAAttr CIRGenTBAA::getTypeInfo(clang::QualType qty) {
-  return tbaa_NYI(ctx);
+  return tbaa_NYI(mlirContext);
 }
 
 TBAAAccessInfo CIRGenTBAA::getAccessInfo(clang::QualType accessType) {
@@ -33,15 +34,15 @@ TBAAAccessInfo CIRGenTBAA::getVTablePtrAccessInfo(mlir::Type vtablePtrType) {
 }
 
 mlir::ArrayAttr CIRGenTBAA::getTBAAStructInfo(clang::QualType qty) {
-  return mlir::ArrayAttr::get(ctx, {});
+  return mlir::ArrayAttr::get(mlirContext, {});
 }
 
 cir::TBAAAttr CIRGenTBAA::getBaseTypeInfo(clang::QualType qty) {
-  return tbaa_NYI(ctx);
+  return tbaa_NYI(mlirContext);
 }
 
 mlir::ArrayAttr CIRGenTBAA::getAccessTagInfo(TBAAAccessInfo tbaaInfo) {
-  return mlir::ArrayAttr::get(ctx, {tbaa_NYI(ctx)});
+  return mlir::ArrayAttr::get(mlirContext, {tbaa_NYI(mlirContext)});
 }
 
 TBAAAccessInfo CIRGenTBAA::mergeTBAAInfoForCast(TBAAAccessInfo sourceInfo,

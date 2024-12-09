@@ -154,12 +154,12 @@ struct WidthAndSignedness {
 } // namespace
 
 static WidthAndSignedness
-getIntegerWidthAndSignedness(const clang::ASTContext &context,
+getIntegerWidthAndSignedness(const clang::ASTContext &astContext,
                              const clang::QualType Type) {
   assert(Type->isIntegerType() && "Given type is not an integer.");
   unsigned Width = Type->isBooleanType()  ? 1
-                   : Type->isBitIntType() ? context.getIntWidth(Type)
-                                          : context.getTypeInfo(Type).Width;
+                   : Type->isBitIntType() ? astContext.getIntWidth(Type)
+                                          : astContext.getTypeInfo(Type).Width;
   bool Signed = Type->isSignedIntegerType();
   return {Width, Signed};
 }
@@ -224,11 +224,11 @@ static mlir::Value emitSignBit(mlir::Location loc, CIRGenFunction &CGF,
 }
 
 static Address checkAtomicAlignment(CIRGenFunction &CGF, const CallExpr *E) {
-  ASTContext &ctx = CGF.getContext();
+  ASTContext &astContext = CGF.getContext();
   Address ptr = CGF.emitPointerWithAlignment(E->getArg(0));
   unsigned bytes =
       isa<cir::PointerType>(ptr.getElementType())
-          ? ctx.getTypeSizeInChars(ctx.VoidPtrTy).getQuantity()
+          ? astContext.getTypeSizeInChars(astContext.VoidPtrTy).getQuantity()
           : CGF.CGM.getDataLayout().getTypeSizeInBits(ptr.getElementType()) / 8;
   unsigned align = ptr.getAlignment().getQuantity();
   if (align % bytes != 0) {
@@ -331,10 +331,10 @@ static mlir::Value MakeAtomicCmpXchgValue(CIRGenFunction &cgf,
 }
 
 static bool
-typeRequiresBuiltinLaunderImp(const ASTContext &ctx, QualType ty,
+typeRequiresBuiltinLaunderImp(const ASTContext &astContext, QualType ty,
                               llvm::SmallPtrSetImpl<const Decl *> &seen) {
-  if (const auto *arr = ctx.getAsArrayType(ty))
-    ty = ctx.getBaseElementType(arr);
+  if (const auto *arr = astContext.getAsArrayType(ty))
+    ty = astContext.getBaseElementType(arr);
 
   const auto *record = ty->getAsCXXRecordDecl();
   if (!record)
@@ -351,7 +351,7 @@ typeRequiresBuiltinLaunderImp(const ASTContext &ctx, QualType ty,
     return true;
 
   for (FieldDecl *fld : record->fields()) {
-    if (typeRequiresBuiltinLaunderImp(ctx, fld->getType(), seen))
+    if (typeRequiresBuiltinLaunderImp(astContext, fld->getType(), seen))
       return true;
   }
   return false;
@@ -2641,7 +2641,7 @@ mlir::Value CIRGenFunction::evaluateOrEmitBuiltinObjectSize(
 /// for "fabsf".
 cir::FuncOp CIRGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
                                                 unsigned BuiltinID) {
-  assert(astCtx.BuiltinInfo.isLibFunction(BuiltinID));
+  assert(astContext.BuiltinInfo.isLibFunction(BuiltinID));
 
   // Get the name, skip over the __builtin_ prefix (if necessary).
   StringRef Name;
@@ -2703,7 +2703,7 @@ cir::FuncOp CIRGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
                  AIXLongDouble64Builtins.end())
       Name = AIXLongDouble64Builtins[BuiltinID];
     else
-      Name = astCtx.BuiltinInfo.getName(BuiltinID).substr(10);
+      Name = astContext.BuiltinInfo.getName(BuiltinID).substr(10);
   }
 
   auto Ty = getTypes().ConvertType(FD->getType());

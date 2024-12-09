@@ -1207,13 +1207,13 @@ RValue CIRGenFunction::emitBuiltinNewDeleteCall(const FunctionProtoType *type,
   CallArgList args;
   emitCallArgs(args, type, theCall->arguments());
   // Find the allocation or deallocation function that we're calling.
-  ASTContext &ctx = getContext();
-  DeclarationName name =
-      ctx.DeclarationNames.getCXXOperatorName(isDelete ? OO_Delete : OO_New);
+  ASTContext &astContext = getContext();
+  DeclarationName name = astContext.DeclarationNames.getCXXOperatorName(
+      isDelete ? OO_Delete : OO_New);
 
-  for (auto *decl : ctx.getTranslationUnitDecl()->lookup(name))
+  for (auto *decl : astContext.getTranslationUnitDecl()->lookup(name))
     if (auto *fd = dyn_cast<FunctionDecl>(decl))
-      if (ctx.hasSameType(fd->getType(), QualType(type, 0)))
+      if (astContext.hasSameType(fd->getType(), QualType(type, 0)))
         return emitNewDeleteCall(*this, fd, type, args);
   llvm_unreachable("predeclared global operator new/delete is missing");
 }

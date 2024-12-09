@@ -55,11 +55,11 @@ mlir::Type CIRGenVTables::getVTableComponentType() {
 
 mlir::Type CIRGenVTables::getVTableType(const VTableLayout &layout) {
   SmallVector<mlir::Type, 4> tys;
-  auto ctx = CGM.getBuilder().getContext();
+  mlir::MLIRContext *mlirContext = CGM.getBuilder().getContext();
   auto componentType = getVTableComponentType();
   for (unsigned i = 0, e = layout.getNumVTables(); i != e; ++i)
-    tys.push_back(
-        cir::ArrayType::get(ctx, componentType, layout.getVTableSize(i)));
+    tys.push_back(cir::ArrayType::get(mlirContext, componentType,
+                                      layout.getVTableSize(i)));
 
   // FIXME(cir): should VTableLayout be encoded like we do for some
   // AST nodes?
@@ -405,7 +405,7 @@ cir::GlobalLinkageKind CIRGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
 
   // We're at the end of the translation unit, so the current key
   // function is fully correct.
-  const CXXMethodDecl *keyFunction = astCtx.getCurrentKeyFunction(RD);
+  const CXXMethodDecl *keyFunction = astContext.getCurrentKeyFunction(RD);
   if (keyFunction && !RD->hasAttr<DLLImportAttr>()) {
     // If this class has a key function, use that to determine the
     // linkage of the vtable.
@@ -425,19 +425,19 @@ cir::GlobalLinkageKind CIRGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
         return cir::GlobalLinkageKind::AvailableExternallyLinkage;
 
       if (keyFunction->isInlined())
-        return !astCtx.getLangOpts().AppleKext
+        return !astContext.getLangOpts().AppleKext
                    ? cir::GlobalLinkageKind::LinkOnceODRLinkage
                    : cir::GlobalLinkageKind::InternalLinkage;
 
       return cir::GlobalLinkageKind::ExternalLinkage;
 
     case TSK_ImplicitInstantiation:
-      return !astCtx.getLangOpts().AppleKext
+      return !astContext.getLangOpts().AppleKext
                  ? cir::GlobalLinkageKind::LinkOnceODRLinkage
                  : cir::GlobalLinkageKind::InternalLinkage;
 
     case TSK_ExplicitInstantiationDefinition:
-      return !astCtx.getLangOpts().AppleKext
+      return !astContext.getLangOpts().AppleKext
                  ? cir::GlobalLinkageKind::WeakODRLinkage
                  : cir::GlobalLinkageKind::InternalLinkage;
 
@@ -448,7 +448,7 @@ cir::GlobalLinkageKind CIRGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
 
   // -fapple-kext mode does not support weak linkage, so we must use
   // internal linkage.
-  if (astCtx.getLangOpts().AppleKext)
+  if (astContext.getLangOpts().AppleKext)
     return cir::GlobalLinkageKind::InternalLinkage;
 
   auto DiscardableODRLinkage = cir::GlobalLinkageKind::LinkOnceODRLinkage;

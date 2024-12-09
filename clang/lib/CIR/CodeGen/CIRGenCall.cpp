@@ -103,11 +103,12 @@ class ClangToCIRArgMapping {
   SmallVector<CIRArgs, 8> ArgInfo;
 
 public:
-  ClangToCIRArgMapping(const ASTContext &Context, const CIRGenFunctionInfo &FI,
+  ClangToCIRArgMapping(const ASTContext &astContext,
+                       const CIRGenFunctionInfo &FI,
                        bool OnlyRequiredArgs = false)
       : InallocaArgNo(InvalidIndex), SRetArgNo(InvalidIndex), TotalCIRArgs(0),
         ArgInfo(OnlyRequiredArgs ? FI.getNumRequiredArgs() : FI.arg_size()) {
-    construct(Context, FI, OnlyRequiredArgs);
+    construct(astContext, FI, OnlyRequiredArgs);
   }
 
   bool hasSRetArg() const { return SRetArgNo != InvalidIndex; }
@@ -130,11 +131,11 @@ public:
   }
 
 private:
-  void construct(const ASTContext &Context, const CIRGenFunctionInfo &FI,
+  void construct(const ASTContext &astContext, const CIRGenFunctionInfo &FI,
                  bool OnlyRequiredArgs);
 };
 
-void ClangToCIRArgMapping::construct(const ASTContext &Context,
+void ClangToCIRArgMapping::construct(const ASTContext &astContext,
                                      const CIRGenFunctionInfo &FI,
                                      bool OnlyRequiredArgs) {
   unsigned CIRArgNo = 0;
@@ -314,7 +315,7 @@ static Address emitAddressAtOffset(CIRGenFunction &CGF, Address addr,
 }
 
 static void AddAttributesFromFunctionProtoType(CIRGenBuilderTy &builder,
-                                               ASTContext &Ctx,
+                                               ASTContext &astContext,
                                                mlir::NamedAttrList &FuncAttrs,
                                                const FunctionProtoType *FPT) {
   if (!FPT)
@@ -366,7 +367,7 @@ void CIRGenModule::constructAttributeList(StringRef Name,
   // TODO: NoReturn, cmse_nonsecure_call
 
   // Collect function CIR attributes from the callee prototype if we have one.
-  AddAttributesFromFunctionProtoType(getBuilder(), astCtx, funcAttrs,
+  AddAttributesFromFunctionProtoType(getBuilder(), astContext, funcAttrs,
                                      CalleeInfo.getCalleeFunctionProtoType());
 
   const Decl *TargetDecl = CalleeInfo.getCalleeDecl().getDecl();
@@ -388,7 +389,7 @@ void CIRGenModule::constructAttributeList(StringRef Name,
 
     if (const FunctionDecl *Fn = dyn_cast<FunctionDecl>(TargetDecl)) {
       AddAttributesFromFunctionProtoType(
-          getBuilder(), astCtx, funcAttrs,
+          getBuilder(), astContext, funcAttrs,
           Fn->getType()->getAs<FunctionProtoType>());
       if (AttrOnCallSite && Fn->isReplaceableGlobalAllocationFunction()) {
         // A sane operator new returns a non-aliasing pointer.
@@ -1054,9 +1055,9 @@ void CIRGenFunction::emitCallArgs(
     if (PS == nullptr)
       return;
 
-    const auto &Context = getContext();
-    auto SizeTy = Context.getSizeType();
-    auto T = builder.getUIntNTy(Context.getTypeSize(SizeTy));
+    const clang::ASTContext &astContext = getContext();
+    auto SizeTy = astContext.getSizeType();
+    auto T = builder.getUIntNTy(astContext.getTypeSize(SizeTy));
     assert(EmittedArg.getScalarVal() && "We emitted nothing for the arg?");
     auto V = evaluateOrEmitBuiltinObjectSize(
         Arg, PS->getType(), T, EmittedArg.getScalarVal(), PS->isDynamic());
@@ -1212,8 +1213,8 @@ CIRGenTypes::arrangeCXXStructorDeclaration(GlobalDecl GD) {
   FunctionType::ExtInfo extInfo = FTP->getExtInfo();
   CanQualType resultType = TheCXXABI.HasThisReturn(GD) ? argTypes.front()
                            : TheCXXABI.hasMostDerivedReturn(GD)
-                               ? Context.VoidPtrTy
-                               : Context.VoidTy;
+                               ? astContext.VoidPtrTy
+                               : astContext.VoidTy;
 
   assert(!TheCXXABI.HasThisReturn(GD) &&
          "Please sent PR with a test and remove this");
@@ -1300,7 +1301,7 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXConstructorCall(
   // FIXME: Kill copy.
   llvm::SmallVector<CanQualType, 16> ArgTypes;
   for (const auto &Arg : Args)
-    ArgTypes.push_back(Context.getCanonicalParamType(Arg.Ty));
+    ArgTypes.push_back(astContext.getCanonicalParamType(Arg.Ty));
 
   // +1 for implicit this, which should always be args[0]
   unsigned TotalPrefixArgs = 1 + ExtraPrefixArgs;
@@ -1314,7 +1315,7 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXConstructorCall(
   GlobalDecl GD(D, CtorKind);
   assert(!TheCXXABI.HasThisReturn(GD) && "ThisReturn NYI");
   assert(!TheCXXABI.hasMostDerivedReturn(GD) && "Most derived return NYI");
-  CanQualType ResultType = Context.VoidTy;
+  CanQualType ResultType = astContext.VoidTy;
 
   FunctionType::ExtInfo Info = FPT->getExtInfo();
   llvm::SmallVector<FunctionProtoType::ExtParameterInfo, 16> ParamInfos;
@@ -1336,7 +1337,7 @@ bool CIRGenTypes::inheritingCtorHasParams(const InheritedConstructor &Inherited,
          !Target.getCXXABI().hasConstructorVariants();
 }
 
-bool CIRGenModule::MayDropFunctionReturn(const ASTContext &Context,
+bool CIRGenModule::MayDropFunctionReturn(const ASTContext &astContext,
                                          QualType ReturnType) {
   // We can't just disard the return value for a record type with a complex
   // destructor or a non-trivially copyable type.
@@ -1345,7 +1346,7 @@ bool CIRGenModule::MayDropFunctionReturn(const ASTContext &Context,
     llvm_unreachable("NYI");
   }
 
-  return ReturnType.isTriviallyCopyableType(Context);
+  return ReturnType.isTriviallyCopyableType(astContext);
 }
 
 static bool isInAllocaArgument(CIRGenCXXABI &ABI, QualType type) {
@@ -1437,10 +1438,10 @@ arrangeFreeFunctionLikeCall(CIRGenTypes &CGT, CIRGenModule &CGM,
 }
 
 static llvm::SmallVector<CanQualType, 16>
-getArgTypesForCall(ASTContext &ctx, const CallArgList &args) {
+getArgTypesForCall(ASTContext &astContext, const CallArgList &args) {
   llvm::SmallVector<CanQualType, 16> argTypes;
   for (auto &arg : args)
-    argTypes.push_back(ctx.getCanonicalParamType(arg.Ty));
+    argTypes.push_back(astContext.getCanonicalParamType(arg.Ty));
   return argTypes;
 }
 
@@ -1469,7 +1470,7 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXMethodCall(
       getExtParameterInfosForCall(proto, numPrefixArgs + 1, args.size());
 
   // FIXME: Kill copy.
-  auto argTypes = getArgTypesForCall(Context, args);
+  auto argTypes = getArgTypesForCall(astContext, args);
 
   auto info = proto->getExtInfo();
   return arrangeCIRFunctionInfo(GetReturnType(proto->getReturnType()),

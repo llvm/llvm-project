@@ -64,7 +64,7 @@ class CIRGenModule : public CIRGenTypeCache {
   CIRGenModule &operator=(CIRGenModule &) = delete;
 
 public:
-  CIRGenModule(mlir::MLIRContext &context, clang::ASTContext &astctx,
+  CIRGenModule(mlir::MLIRContext &mlirContext, clang::ASTContext &astContext,
                const clang::CodeGenOptions &CGO,
                clang::DiagnosticsEngine &Diags);
 
@@ -81,7 +81,7 @@ private:
   CIRGenBuilderTy builder;
 
   /// Hold Clang AST information.
-  clang::ASTContext &astCtx;
+  clang::ASTContext &astContext;
 
   const clang::LangOptions &langOpts;
 
@@ -153,7 +153,7 @@ private:
 public:
   mlir::ModuleOp getModule() const { return theModule; }
   CIRGenBuilderTy &getBuilder() { return builder; }
-  clang::ASTContext &getASTContext() const { return astCtx; }
+  clang::ASTContext &getASTContext() const { return astContext; }
   const clang::TargetInfo &getTarget() const { return target; }
   const clang::CodeGenOptions &getCodeGenOpts() const { return codeGenOpts; }
   clang::DiagnosticsEngine &getDiags() const { return Diags; }
@@ -615,7 +615,7 @@ public:
 
   /// Whether this function's return type has no side effects, and thus may be
   /// trivially discared if it is unused.
-  bool MayDropFunctionReturn(const clang::ASTContext &Context,
+  bool MayDropFunctionReturn(const clang::ASTContext &astContext,
                              clang::QualType ReturnType);
 
   bool isInNoSanitizeList(clang::SanitizerMask Kind, cir::FuncOp Fn,

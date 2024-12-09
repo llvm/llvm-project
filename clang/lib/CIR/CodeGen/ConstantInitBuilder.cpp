@@ -300,7 +300,7 @@ mlir::Attribute ConstantAggregateBuilderBase::finishArray(mlir::Type eltTy) {
 }
 
 mlir::Attribute
-ConstantAggregateBuilderBase::finishStruct(mlir::MLIRContext *ctx,
+ConstantAggregateBuilderBase::finishStruct(mlir::MLIRContext *mlirContext,
                                            cir::StructType ty) {
   markFinished();
 
@@ -317,7 +317,7 @@ ConstantAggregateBuilderBase::finishStruct(mlir::MLIRContext *ctx,
     // assert(ty->isPacked() == Packed);
     // constant = llvm::ConstantStruct::get(ty, elts);
   } else {
-    const auto members = mlir::ArrayAttr::get(ctx, elts);
+    const auto members = mlir::ArrayAttr::get(mlirContext, elts);
     constant = Builder.CGM.getBuilder().getAnonConstStruct(members, Packed);
   }
 

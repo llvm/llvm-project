@@ -280,10 +280,10 @@ public:
   }
 
   static LValue makeAddr(Address address, clang::QualType type,
-                         clang::ASTContext &context, LValueBaseInfo baseInfo,
+                         clang::ASTContext &astContext, LValueBaseInfo baseInfo,
                          TBAAAccessInfo tbaaInfo) {
     clang::Qualifiers qs = type.getQualifiers();
-    qs.setObjCGCAttr(context.getObjCGCAttrKind(type));
+    qs.setObjCGCAttr(astContext.getObjCGCAttrKind(type));
 
     LValue R;
     R.LVType = Simple;
@@ -533,10 +533,10 @@ public:
   /// Get the preferred size to use when storing a value to this slot. This
   /// is the type size unless that might overlap another object, in which
   /// case it's the dsize.
-  clang::CharUnits getPreferredSize(clang::ASTContext &Ctx,
+  clang::CharUnits getPreferredSize(clang::ASTContext &astContext,
                                     clang::QualType Type) {
-    return mayOverlap() ? Ctx.getTypeInfoDataSizeInChars(Type).Width
-                        : Ctx.getTypeSizeInChars(Type);
+    return mayOverlap() ? astContext.getTypeInfoDataSizeInChars(Type).Width
+                        : astContext.getTypeSizeInChars(Type);
   }
 };
 

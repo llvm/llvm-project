@@ -93,7 +93,7 @@ static Address emitAddrOfFieldStorage(CIRGenFunction &CGF, Address Base,
   return addr;
 }
 
-static bool hasAnyVptr(const QualType Type, const ASTContext &Context) {
+static bool hasAnyVptr(const QualType Type, const ASTContext &astContext) {
   const auto *RD = Type.getTypePtr()->getAsCXXRecordDecl();
   if (!RD)
     return false;
@@ -102,11 +102,11 @@ static bool hasAnyVptr(const QualType Type, const ASTContext &Context) {
     return true;
 
   for (const auto &Base : RD->bases())
-    if (hasAnyVptr(Base.getType(), Context))
+    if (hasAnyVptr(Base.getType(), astContext))
       return true;
 
   for (const FieldDecl *Field : RD->fields())
-    if (hasAnyVptr(Field->getType(), Context))
+    if (hasAnyVptr(Field->getType(), astContext))
       return true;
 
   return false;
@@ -1691,12 +1691,12 @@ emitArraySubscriptPtr(CIRGenFunction &CGF, mlir::Location beginLoc,
                                           shouldDecay);
 }
 
-static QualType getFixedSizeElementType(const ASTContext &ctx,
+static QualType getFixedSizeElementType(const ASTContext &astContext,
                                         const VariableArrayType *vla) {
   QualType eltType;
   do {
     eltType = vla->getElementType();
-  } while ((vla = ctx.getAsVariableArrayType(eltType)));
+  } while ((vla = astContext.getAsVariableArrayType(eltType)));
   return eltType;
 }
 

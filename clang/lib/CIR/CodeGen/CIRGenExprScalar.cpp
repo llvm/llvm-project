@@ -1183,28 +1183,28 @@ mlir::Value CIRGenFunction::emitPromotedScalarExpr(const Expr *E,
 }
 
 /// If \p E is a widened promoted integer, get its base (unpromoted) type.
-static std::optional<QualType> getUnwidenedIntegerType(const ASTContext &Ctx,
-                                                       const Expr *E) {
+static std::optional<QualType>
+getUnwidenedIntegerType(const ASTContext &astContext, const Expr *E) {
   const Expr *Base = E->IgnoreImpCasts();
   if (E == Base)
     return std::nullopt;
 
   QualType BaseTy = Base->getType();
-  if (!Ctx.isPromotableIntegerType(BaseTy) ||
-      Ctx.getTypeSize(BaseTy) >= Ctx.getTypeSize(E->getType()))
+  if (!astContext.isPromotableIntegerType(BaseTy) ||
+      astContext.getTypeSize(BaseTy) >= astContext.getTypeSize(E->getType()))
     return std::nullopt;
 
   return BaseTy;
 }
 
 /// Check if \p E is a widened promoted integer.
-[[maybe_unused]] static bool IsWidenedIntegerOp(const ASTContext &Ctx,
+[[maybe_unused]] static bool IsWidenedIntegerOp(const ASTContext &astContext,
                                                 const Expr *E) {
-  return getUnwidenedIntegerType(Ctx, E).has_value();
+  return getUnwidenedIntegerType(astContext, E).has_value();
 }
 
 /// Check if we can skip the overflow check for \p Op.
-[[maybe_unused]] static bool CanElideOverflowCheck(const ASTContext &Ctx,
+[[maybe_unused]] static bool CanElideOverflowCheck(const ASTContext &astContext,
                                                    const BinOpInfo &Op) {
   assert((isa<UnaryOperator>(Op.E) || isa<BinaryOperator>(Op.E)) &&
          "Expected a unary or binary operator");
@@ -1221,11 +1221,11 @@ static std::optional<QualType> getUnwidenedIntegerType(const ASTContext &Ctx,
   // We usually don't need overflow checks for binops with widened operands.
   // Multiplication with promoted unsigned operands is a special case.
   const auto *BO = cast<BinaryOperator>(Op.E);
-  auto OptionalLHSTy = getUnwidenedIntegerType(Ctx, BO->getLHS());
+  auto OptionalLHSTy = getUnwidenedIntegerType(astContext, BO->getLHS());
   if (!OptionalLHSTy)
     return false;
 
-  auto OptionalRHSTy = getUnwidenedIntegerType(Ctx, BO->getRHS());
+  auto OptionalRHSTy = getUnwidenedIntegerType(astContext, BO->getRHS());
   if (!OptionalRHSTy)
     return false;
 
@@ -1240,9 +1240,9 @@ static std::optional<QualType> getUnwidenedIntegerType(const ASTContext &Ctx,
 
   // For unsigned multiplication the overflow check can be elided if either one
   // of the unpromoted types are less than half the size of the promoted type.
-  unsigned PromotedSize = Ctx.getTypeSize(Op.E->getType());
-  return (2 * Ctx.getTypeSize(LHSTy)) < PromotedSize ||
-         (2 * Ctx.getTypeSize(RHSTy)) < PromotedSize;
+  unsigned PromotedSize = astContext.getTypeSize(Op.E->getType());
+  return (2 * astContext.getTypeSize(LHSTy)) < PromotedSize ||
+         (2 * astContext.getTypeSize(RHSTy)) < PromotedSize;
 }
 
 /// Emit pointer + index arithmetic.

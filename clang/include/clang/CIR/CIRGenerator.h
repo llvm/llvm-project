@@ -45,7 +45,7 @@ namespace cir {
 class CIRGenerator : public clang::ASTConsumer {
   virtual void anchor();
   clang::DiagnosticsEngine &Diags;
-  clang::ASTContext *astCtx;
+  clang::ASTContext *astContext;
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
       fs; // Only used for debug info.
 
@@ -71,7 +71,7 @@ class CIRGenerator : public clang::ASTConsumer {
   };
 
 protected:
-  std::unique_ptr<mlir::MLIRContext> mlirCtx;
+  std::unique_ptr<mlir::MLIRContext> mlirContext;
   std::unique_ptr<clang::CIRGen::CIRGenModule> CGM;
 
 private:
@@ -86,7 +86,7 @@ public:
   bool EmitFunction(const clang::FunctionDecl *FD);
 
   bool HandleTopLevelDecl(clang::DeclGroupRef D) override;
-  void HandleTranslationUnit(clang::ASTContext &Ctx) override;
+  void HandleTranslationUnit(clang::ASTContext &astContext) override;
   void HandleInlineFunctionDefinition(clang::FunctionDecl *D) override;
   void HandleTagDeclDefinition(clang::TagDecl *D) override;
   void HandleTagDeclRequiredDefinition(const clang::TagDecl *D) override;
@@ -96,7 +96,7 @@ public:
 
   mlir::ModuleOp getModule();
   std::unique_ptr<mlir::MLIRContext> takeContext() {
-    return std::move(mlirCtx);
+    return std::move(mlirContext);
   };
 
   bool verifyModule();

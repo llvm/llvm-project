@@ -324,7 +324,7 @@ public:
 
 protected:
   mlir::Attribute finishArray(mlir::Type eltTy);
-  mlir::Attribute finishStruct(mlir::MLIRContext *ctx,
+  mlir::Attribute finishStruct(mlir::MLIRContext *mlirContext,
                                cir::StructType structTy);
 
 private:
@@ -377,18 +377,20 @@ public:
   /// builder.  This aids in readability by making it easier to find the
   /// places that add components to a builder, as well as "bookending"
   /// the sub-builder more explicitly.
-  void finishAndAddTo(mlir::MLIRContext *ctx, AggregateBuilderBase &parent) {
+  void finishAndAddTo(mlir::MLIRContext *mlirContext,
+                      AggregateBuilderBase &parent) {
     assert(this->Parent == &parent && "adding to non-parent builder");
-    parent.add(asImpl().finishImpl(ctx));
+    parent.add(asImpl().finishImpl(mlirContext));
   }
 
   /// Given that this builder was created by beginning an array or struct
   /// directly on a ConstantInitBuilder, finish the array/struct and
   /// create a global variable with it as the initializer.
   template <class... As>
-  cir::GlobalOp finishAndCreateGlobal(mlir::MLIRContext *ctx, As &&...args) {
+  cir::GlobalOp finishAndCreateGlobal(mlir::MLIRContext *mlirContext,
+                                      As &&...args) {
     assert(!this->Parent && "finishing non-root builder");
-    return this->Builder.createGlobal(asImpl().finishImpl(ctx),
+    return this->Builder.createGlobal(asImpl().finishImpl(mlirContext),
                                       std::forward<As>(args)...);
   }
 
@@ -415,9 +417,9 @@ public:
   /// This is useful for allowing a finished initializer to passed to
   /// an API which will build the global.  However, the "future" preserves
   /// a dependency on the original builder; it is an error to pass it aside.
-  ConstantInitFuture finishAndCreateFuture(mlir::MLIRContext *ctx) {
+  ConstantInitFuture finishAndCreateFuture(mlir::MLIRContext *mlirContext) {
     assert(!this->Parent && "finishing non-root builder");
-    return this->Builder.createFuture(asImpl().finishImpl(ctx));
+    return this->Builder.createFuture(asImpl().finishImpl(mlirContext));
   }
 };
 
@@ -447,7 +449,7 @@ protected:
 private:
   /// Form an array constant from the values that have been added to this
   /// builder.
-  mlir::Attribute finishImpl([[maybe_unused]] mlir::MLIRContext *ctx) {
+  mlir::Attribute finishImpl([[maybe_unused]] mlir::MLIRContext *mlirContext) {
     return AggregateBuilderBase::finishArray(EltTy);
   }
 };
@@ -499,8 +501,8 @@ public:
 private:
   /// Form an array constant from the values that have been added to this
   /// builder.
-  mlir::Attribute finishImpl(mlir::MLIRContext *ctx) {
-    return AggregateBuilderBase::finishStruct(ctx, StructTy);
+  mlir::Attribute finishImpl(mlir::MLIRContext *mlirContext) {
+    return AggregateBuilderBase::finishStruct(mlirContext, StructTy);
   }
 };
 

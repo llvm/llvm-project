@@ -102,15 +102,16 @@ static CIRGenCXXABI *createCXXABI(CIRGenModule &CGM) {
   }
 }
 
-CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
-                           clang::ASTContext &astctx,
+CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
+                           clang::ASTContext &astContext,
                            const clang::CodeGenOptions &CGO,
                            DiagnosticsEngine &Diags)
-    : builder(context, *this), astCtx(astctx), langOpts(astctx.getLangOpts()),
-      codeGenOpts(CGO),
+    : builder(mlirContext, *this), astContext(astContext),
+      langOpts(astContext.getLangOpts()), codeGenOpts(CGO),
       theModule{mlir::ModuleOp::create(builder.getUnknownLoc())}, Diags(Diags),
-      target(astCtx.getTargetInfo()), ABI(createCXXABI(*this)), genTypes{*this},
-      VTables{*this}, openMPRuntime(new CIRGenOpenMPRuntime(*this)) {
+      target(astContext.getTargetInfo()), ABI(createCXXABI(*this)),
+      genTypes{*this}, VTables{*this},
+      openMPRuntime(new CIRGenOpenMPRuntime(*this)) {
 
   // Initialize CIR signed integer types cache.
   SInt8Ty = cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/true);
@@ -140,20 +141,20 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
 
   // TODO: PointerWidthInBits
   PointerAlignInBytes =
-      astctx
+      astContext
           .toCharUnitsFromBits(
-              astctx.getTargetInfo().getPointerAlign(LangAS::Default))
+              astContext.getTargetInfo().getPointerAlign(LangAS::Default))
           .getQuantity();
   // TODO: SizeSizeInBytes
   // TODO: IntAlignInBytes
   UCharTy = cir::IntType::get(&getMLIRContext(),
-                              astCtx.getTargetInfo().getCharWidth(),
+                              astContext.getTargetInfo().getCharWidth(),
                               /*isSigned=*/false);
-  UIntTy =
-      cir::IntType::get(&getMLIRContext(), astCtx.getTargetInfo().getIntWidth(),
-                        /*isSigned=*/false);
+  UIntTy = cir::IntType::get(&getMLIRContext(),
+                             astContext.getTargetInfo().getIntWidth(),
+                             /*isSigned=*/false);
   UIntPtrTy = cir::IntType::get(&getMLIRContext(),
-                                astCtx.getTargetInfo().getMaxPointerWidth(),
+                                astContext.getTargetInfo().getMaxPointerWidth(),
                                 /*isSigned=*/false);
   UInt8PtrTy = builder.getPointerTo(UInt8Ty);
   UInt8PtrPtrTy = builder.getPointerTo(UInt8PtrTy);
@@ -163,7 +164,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
   CIRAllocaAddressSpace = getTargetCIRGenInfo().getCIRAllocaAddressSpace();
 
   PtrDiffTy = cir::IntType::get(&getMLIRContext(),
-                                astCtx.getTargetInfo().getMaxPointerWidth(),
+                                astContext.getTargetInfo().getMaxPointerWidth(),
                                 /*isSigned=*/true);
 
   if (langOpts.OpenCL) {
@@ -186,32 +187,33 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
   // FIXME(cir): Implement a custom CIR Module Op and attributes to leverage
   // MLIR features.
   theModule->setAttr(cir::CIRDialect::getSOBAttrName(),
-                     cir::SignedOverflowBehaviorAttr::get(&context, sob));
-  auto lang = SourceLanguageAttr::get(&context, getCIRSourceLanguage());
+                     cir::SignedOverflowBehaviorAttr::get(&mlirContext, sob));
+  auto lang = SourceLanguageAttr::get(&mlirContext, getCIRSourceLanguage());
   theModule->setAttr(cir::CIRDialect::getLangAttrName(),
-                     cir::LangAttr::get(&context, lang));
+                     cir::LangAttr::get(&mlirContext, lang));
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
   if (CGO.OptimizationLevel > 0 || CGO.OptimizeSize > 0)
     theModule->setAttr(cir::CIRDialect::getOptInfoAttrName(),
-                       cir::OptInfoAttr::get(&context, CGO.OptimizationLevel,
+                       cir::OptInfoAttr::get(&mlirContext,
+                                             CGO.OptimizationLevel,
                                              CGO.OptimizeSize));
   // Set the module name to be the name of the main file. TranslationUnitDecl
   // often contains invalid source locations and isn't a reliable source for the
   // module location.
-  auto MainFileID = astctx.getSourceManager().getMainFileID();
+  auto MainFileID = astContext.getSourceManager().getMainFileID();
   const FileEntry &MainFile =
-      *astctx.getSourceManager().getFileEntryForID(MainFileID);
+      *astContext.getSourceManager().getFileEntryForID(MainFileID);
   auto Path = MainFile.tryGetRealPathName();
   if (!Path.empty()) {
     theModule.setSymName(Path);
-    theModule->setLoc(mlir::FileLineColLoc::get(&context, Path,
+    theModule->setLoc(mlir::FileLineColLoc::get(&mlirContext, Path,
                                                 /*line=*/0,
                                                 /*col=*/0));
   }
   if (langOpts.Sanitize.has(SanitizerKind::Thread) ||
       (!codeGenOpts.RelaxedAliasing && codeGenOpts.OptimizationLevel > 0)) {
-    tbaa.reset(new CIRGenTBAA(&context, astctx, genTypes, theModule,
+    tbaa.reset(new CIRGenTBAA(&mlirContext, astContext, genTypes, theModule,
                               codeGenOpts, langOpts));
   }
 }
@@ -220,12 +222,12 @@ CIRGenModule::~CIRGenModule() {}
 
 bool CIRGenModule::isTypeConstant(QualType Ty, bool ExcludeCtor,
                                   bool ExcludeDtor) {
-  if (!Ty.isConstant(astCtx) && !Ty->isReferenceType())
+  if (!Ty.isConstant(astContext) && !Ty->isReferenceType())
     return false;
 
-  if (astCtx.getLangOpts().CPlusPlus) {
+  if (astContext.getLangOpts().CPlusPlus) {
     if (const CXXRecordDecl *Record =
-            astCtx.getBaseElementType(Ty)->getAsCXXRecordDecl())
+            astContext.getBaseElementType(Ty)->getAsCXXRecordDecl())
       return ExcludeCtor && !Record->hasMutableFields() &&
              (Record->hasTrivialDestructor() || ExcludeDtor);
   }
@@ -241,7 +243,7 @@ CharUnits CIRGenModule::getClassPointerAlignment(const CXXRecordDecl *RD) {
   if (!RD->hasDefinition())
     return CharUnits::One(); // Hopefully won't be used anywhere.
 
-  auto &layout = astCtx.getASTRecordLayout(RD);
+  auto &layout = astContext.getASTRecordLayout(RD);
 
   // If the class is final, then we know that the pointer points to an
   // object of that type and can use the full alignment.
@@ -280,7 +282,7 @@ CharUnits CIRGenModule::getNaturalTypeAlignment(QualType T,
     if (auto Align = TT->getDecl()->getMaxAlignment()) {
       if (BaseInfo)
         *BaseInfo = LValueBaseInfo(AlignmentSource::AttributedType);
-      return astCtx.toCharUnitsFromBits(Align);
+      return astContext.toCharUnitsFromBits(Align);
     }
   }
 
@@ -288,7 +290,7 @@ CharUnits CIRGenModule::getNaturalTypeAlignment(QualType T,
 
   // Analyze the base element type, so we don't get confused by incomplete
   // array types.
-  T = astCtx.getBaseElementType(T);
+  T = astContext.getBaseElementType(T);
 
   if (T->isIncompleteType()) {
     // We could try to replicate the logic from
@@ -316,13 +318,14 @@ CharUnits CIRGenModule::getNaturalTypeAlignment(QualType T,
     // non-virtual alignment.
     Alignment = getClassPointerAlignment(RD);
   } else {
-    Alignment = astCtx.getTypeAlignInChars(T);
+    Alignment = astContext.getTypeAlignInChars(T);
   }
 
   // Cap to the global maximum type alignment unless the alignment
   // was somehow explicit on the type.
-  if (unsigned MaxAlign = astCtx.getLangOpts().MaxTypeAlign) {
-    if (Alignment.getQuantity() > MaxAlign && !astCtx.isAlignmentRequired(T))
+  if (unsigned MaxAlign = astContext.getLangOpts().MaxTypeAlign) {
+    if (Alignment.getQuantity() > MaxAlign &&
+        !astContext.isAlignmentRequired(T))
       Alignment = CharUnits::fromQuantity(MaxAlign);
   }
   return Alignment;
@@ -364,7 +367,7 @@ bool CIRGenModule::MayBeEmittedEagerly(const ValueDecl *Global) {
     // A definition of an inline constexpr static data member may change
     // linkage later if it's redeclared outside the class.
     // TODO(cir): do we care?
-    assert(astCtx.getInlineVariableDefinitionKind(VD) !=
+    assert(astContext.getInlineVariableDefinitionKind(VD) !=
                ASTContext::InlineVariableDefinitionKind::WeakUnknown &&
            "not implemented");
 
@@ -552,7 +555,7 @@ void CIRGenModule::emitGlobal(GlobalDecl GD) {
     const auto *VD = cast<VarDecl>(Global);
     assert(VD->isFileVarDecl() && "Cannot emit local var decl as global.");
     if (VD->isThisDeclarationADefinition() != VarDecl::Definition &&
-        !astCtx.isMSStaticDataMemberInlineDefinition(VD)) {
+        !astContext.isMSStaticDataMemberInlineDefinition(VD)) {
       if (langOpts.OpenMP) {
         // Emit declaration of the must-be-emitted declare target variable.
         if (std::optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
@@ -562,7 +565,7 @@ void CIRGenModule::emitGlobal(GlobalDecl GD) {
       }
       // If this declaration may have caused an inline variable definition to
       // change linkage, make sure that it's emitted.
-      if (astCtx.getInlineVariableDefinitionKind(VD) ==
+      if (astContext.getInlineVariableDefinitionKind(VD) ==
           ASTContext::InlineVariableDefinitionKind::Strong)
         getAddrOfGlobalVar(VD);
       return;
@@ -968,7 +971,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
 
     // FIXME: This code is overly simple and should be merged with other global
     // handling.
-    GV.setAlignmentAttr(getSize(astCtx.getDeclAlign(D)));
+    GV.setAlignmentAttr(getSize(astContext.getDeclAlign(D)));
     GV.setConstant(isTypeConstant(D->getType(), false, false));
     // TODO(cir): setLinkageForGV(GV, D);
 
@@ -982,7 +985,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
 
     // If required by the ABI, treat declarations of static data members with
     // inline initializers as definitions.
-    if (astCtx.isMSStaticDataMemberInlineDefinition(D)) {
+    if (astContext.isMSStaticDataMemberInlineDefinition(D)) {
       assert(0 && "not implemented");
     }
 
@@ -1147,10 +1150,10 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *D,
   // If yes, we shouldn't emit the GloablCtor and GlobalDtor for the variable
   // since this is the job for its original source.
   bool IsDefinitionAvailableExternally =
-      astCtx.GetGVALinkageForVariable(D) == GVA_AvailableExternally;
+      astContext.GetGVALinkageForVariable(D) == GVA_AvailableExternally;
   bool NeedsGlobalDtor =
       !IsDefinitionAvailableExternally &&
-      D->needsDestruction(astCtx) == QualType::DK_cxx_destructor;
+      D->needsDestruction(astContext) == QualType::DK_cxx_destructor;
 
   // It is helpless to emit the definition for an available_externally variable
   // which can't be marked as const.
@@ -1212,7 +1215,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *D,
         T = D->getType();
 
       if (getLangOpts().CPlusPlus) {
-        if (InitDecl->hasFlexibleArrayInit(astCtx))
+        if (InitDecl->hasFlexibleArrayInit(astContext))
           ErrorUnsupported(D, "flexible array initializer");
         Init = builder.getZeroInitAttr(getCIRType(T));
         if (!IsDefinitionAvailableExternally)
@@ -1325,7 +1328,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *D,
   // weak or linkonce, the de-duplication semantics are important to preserve,
   // so we don't change the linkage.
   if (D->getTLSKind() == VarDecl::TLS_Dynamic && GV.isPublic() &&
-      astCtx.getTargetInfo().getTriple().isOSDarwin() &&
+      astContext.getTargetInfo().getTriple().isOSDarwin() &&
       !D->hasAttr<ConstInitAttr>()) {
     // TODO(cir): set to mlir::SymbolTable::Visibility::Private once we have
     // testcases.
@@ -1427,7 +1430,8 @@ CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *E) {
     SmallString<64> Str(E->getString());
 
     // Resize the string to the right size, which is indicated by its type.
-    const ConstantArrayType *CAT = astCtx.getAsConstantArrayType(E->getType());
+    const ConstantArrayType *CAT =
+        astContext.getAsConstantArrayType(E->getType());
     auto finalSize = CAT->getSize().getZExtValue();
     Str.resize(finalSize);
 
@@ -1524,7 +1528,7 @@ cir::GlobalViewAttr
 CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *S,
                                                  StringRef Name) {
   CharUnits Alignment =
-      astCtx.getAlignOfGlobalVarInChars(S->getType(), /*VD=*/nullptr);
+      astContext.getAlignOfGlobalVarInChars(S->getType(), /*VD=*/nullptr);
 
   mlir::Attribute C = getConstantArrayFromStringLiteral(S);
 
@@ -1847,7 +1851,7 @@ static bool shouldBeInCOMDAT(CIRGenModule &CGM, const Decl &D) {
 }
 
 // TODO(cir): this could be a common method between LLVM codegen.
-static bool isVarDeclStrongDefinition(const ASTContext &Context,
+static bool isVarDeclStrongDefinition(const ASTContext &astContext,
                                       CIRGenModule &CGM, const VarDecl *D,
                                       bool NoCommon) {
   // Don't give variables common linkage if -fno-common was specified unless it
@@ -1889,11 +1893,11 @@ static bool isVarDeclStrongDefinition(const ASTContext &Context,
 
   // Declarations with a required alignment do not have common linkage in MSVC
   // mode.
-  if (Context.getTargetInfo().getCXXABI().isMicrosoft()) {
+  if (astContext.getTargetInfo().getCXXABI().isMicrosoft()) {
     if (D->hasAttr<AlignedAttr>())
       return true;
     QualType VarType = D->getType();
-    if (Context.isAlignmentRequired(VarType))
+    if (astContext.isAlignmentRequired(VarType))
       return true;
 
     if (const auto *RT = VarType->getAs<RecordType>()) {
@@ -1903,7 +1907,7 @@ static bool isVarDeclStrongDefinition(const ASTContext &Context,
           continue;
         if (FD->hasAttr<AlignedAttr>())
           return true;
-        if (Context.isAlignmentRequired(FD->getType()))
+        if (astContext.isAlignmentRequired(FD->getType()))
           return true;
       }
     }
@@ -1915,9 +1919,9 @@ static bool isVarDeclStrongDefinition(const ASTContext &Context,
   // Other COFF linkers (ld.bfd and LLD) support arbitrary power-of-two
   // alignments for common symbols via the aligncomm directive, so this
   // restriction only applies to MSVC environments.
-  if (Context.getTargetInfo().getTriple().isKnownWindowsMSVCEnvironment() &&
-      Context.getTypeAlignIfKnown(D->getType()) >
-          Context.toBits(CharUnits::fromQuantity(32)))
+  if (astContext.getTargetInfo().getTriple().isKnownWindowsMSVCEnvironment() &&
+      astContext.getTypeAlignIfKnown(D->getType()) >
+          astContext.toBits(CharUnits::fromQuantity(32)))
     return true;
 
   return false;
@@ -1973,6 +1977,7 @@ cir::VisibilityKind CIRGenModule::getGlobalVisibilityKindFromClangVisibility(
   case clang::VisibilityAttr::VisibilityType::Protected:
     return VisibilityKind::Protected;
   }
+  llvm_unreachable("unexpected visibility value");
 }
 
 cir::VisibilityAttr
@@ -2021,7 +2026,7 @@ cir::GlobalLinkageKind CIRGenModule::getCIRLinkageForDeclarator(
   // merged with other definitions. c) C++ has the ODR, so we know the
   // definition is dependable.
   if (Linkage == GVA_DiscardableODR)
-    return !astCtx.getLangOpts().AppleKext
+    return !astContext.getLangOpts().AppleKext
                ? cir::GlobalLinkageKind::LinkOnceODRLinkage
                : cir::GlobalLinkageKind::InternalLinkage;
 
@@ -2049,7 +2054,7 @@ cir::GlobalLinkageKind CIRGenModule::getCIRLinkageForDeclarator(
   // C++ doesn't have tentative definitions and thus cannot have common
   // linkage.
   if (!getLangOpts().CPlusPlus && isa<VarDecl>(D) &&
-      !isVarDeclStrongDefinition(astCtx, *this, cast<VarDecl>(D),
+      !isVarDeclStrongDefinition(astContext, *this, cast<VarDecl>(D),
                                  getCodeGenOpts().NoCommon))
     return cir::GlobalLinkageKind::CommonLinkage;
 
@@ -2118,14 +2123,14 @@ void CIRGenModule::ReplaceUsesOfNonProtoTypeWithRealFunction(
 cir::GlobalLinkageKind
 CIRGenModule::getCIRLinkageVarDefinition(const VarDecl *VD, bool IsConstant) {
   assert(!IsConstant && "constant variables NYI");
-  GVALinkage Linkage = astCtx.GetGVALinkageForVariable(VD);
+  GVALinkage Linkage = astContext.GetGVALinkageForVariable(VD);
   return getCIRLinkageForDeclarator(VD, Linkage, IsConstant);
 }
 
 cir::GlobalLinkageKind CIRGenModule::getFunctionLinkage(GlobalDecl GD) {
   const auto *D = cast<FunctionDecl>(GD.getDecl());
 
-  GVALinkage Linkage = astCtx.GetGVALinkageForFunction(D);
+  GVALinkage Linkage = astContext.GetGVALinkageForFunction(D);
 
   if (const auto *Dtor = dyn_cast<CXXDestructorDecl>(D))
     return getCXXABI().getCXXDestructorLinkage(Linkage, Dtor, GD.getDtorType());
@@ -2806,7 +2811,7 @@ cir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
 
 mlir::Location CIRGenModule::getLoc(SourceLocation SLoc) {
   assert(SLoc.isValid() && "expected valid source location");
-  const SourceManager &SM = astCtx.getSourceManager();
+  const SourceManager &SM = astContext.getSourceManager();
   PresumedLoc PLoc = SM.getPresumedLoc(SLoc);
   StringRef Filename = PLoc.getFilename();
   return mlir::FileLineColLoc::get(builder.getStringAttr(Filename),
@@ -2920,7 +2925,7 @@ void CIRGenModule::emitDeferred(unsigned recursionLimit) {
     if (getCodeGenOpts().ClangIRSkipFunctionsFromSystemHeaders) {
       auto *decl = D.getDecl();
       assert(decl && "expected decl");
-      if (astCtx.getSourceManager().isInSystemHeader(decl->getLocation()))
+      if (astContext.getSourceManager().isInSystemHeader(decl->getLocation()))
         continue;
     }
 
@@ -2984,7 +2989,7 @@ void CIRGenModule::Release() {
   assert(!MissingFeatures::registerGlobalDtorsWithAtExit());
   assert(!MissingFeatures::emitCXXThreadLocalInitFunc());
   assert(!MissingFeatures::objCRuntime());
-  if (astCtx.getLangOpts().CUDA) {
+  if (astContext.getLangOpts().CUDA) {
     llvm_unreachable("NYI");
   }
   assert(!MissingFeatures::openMPRuntime());
@@ -3003,7 +3008,7 @@ void CIRGenModule::Release() {
   if (langOpts.Sanitize.has(SanitizerKind::KCFI))
     llvm_unreachable("NYI");
   assert(!MissingFeatures::emitAtAvailableLinkGuard());
-  if (astCtx.getTargetInfo().getTriple().isWasm())
+  if (astContext.getTargetInfo().getTriple().isWasm())
     llvm_unreachable("NYI");
 
   if (getTriple().isAMDGPU() ||
@@ -3015,7 +3020,7 @@ void CIRGenModule::Release() {
   // used by host functions and mark it as used for CUDA/HIP. This is necessary
   // to get kernels or device variables in archives linked in even if these
   // kernels or device variables are only used in host functions.
-  if (!astCtx.CUDAExternalDeviceDeclODRUsedByHost.empty()) {
+  if (!astContext.CUDAExternalDeviceDeclODRUsedByHost.empty()) {
     llvm_unreachable("NYI");
   }
   if (langOpts.HIP && !getLangOpts().OffloadingNewDriver) {
@@ -3024,7 +3029,7 @@ void CIRGenModule::Release() {
   assert(!MissingFeatures::emitLLVMUsed());
   assert(!MissingFeatures::sanStats());
 
-  if (codeGenOpts.Autolink && (astCtx.getLangOpts().Modules ||
+  if (codeGenOpts.Autolink && (astContext.getLangOpts().Modules ||
                                !MissingFeatures::linkerOptionsMetadata())) {
     assert(!MissingFeatures::emitModuleLinkOptions());
   }
@@ -3048,7 +3053,7 @@ void CIRGenModule::Release() {
   if (codeGenOpts.Dwarf64)
     llvm_unreachable("NYI");
 
-  if (astCtx.getLangOpts().SemanticInterposition)
+  if (astContext.getLangOpts().SemanticInterposition)
     // Require various optimization to respect semantic interposition.
     llvm_unreachable("NYI");
 
@@ -3070,7 +3075,7 @@ void CIRGenModule::Release() {
     // Function ID tables for EH Continuation Guard.
     llvm_unreachable("NYI");
   }
-  if (astCtx.getLangOpts().Kernel) {
+  if (astContext.getLangOpts().Kernel) {
     // Note if we are compiling with /kernel.
     llvm_unreachable("NYI");
   }
@@ -3095,7 +3100,7 @@ void CIRGenModule::Release() {
     llvm_unreachable("NYI");
   }
 
-  llvm::Triple t = astCtx.getTargetInfo().getTriple();
+  llvm::Triple t = astContext.getTargetInfo().getTriple();
   if (t.isARM() || t.isThumb()) {
     // The minimum width of an enum in bytes
     assert(!MissingFeatures::enumWidth());
@@ -3156,7 +3161,7 @@ void CIRGenModule::Release() {
   // different flags therefore module flags are set to "Min" behavior to achieve
   // the same end result of the normal build where e.g BTI is off if any object
   // doesn't support it.
-  if (astCtx.getTargetInfo().hasFeature("ptrauth") &&
+  if (astContext.getTargetInfo().hasFeature("ptrauth") &&
       langOpts.getSignReturnAddressScope() !=
           LangOptions::SignReturnAddressScopeKind::None)
     llvm_unreachable("NYI");
@@ -3220,10 +3225,10 @@ void CIRGenModule::Release() {
   if (langOpts.HLSL)
     llvm_unreachable("NYI");
 
-  if (uint32_t picLevel = astCtx.getLangOpts().PICLevel) {
+  if (uint32_t picLevel = astContext.getLangOpts().PICLevel) {
     assert(picLevel < 3 && "Invalid PIC Level");
     assert(!MissingFeatures::setPICLevel());
-    if (astCtx.getLangOpts().PIE)
+    if (astContext.getLangOpts().PIE)
       assert(!MissingFeatures::setPIELevel());
   }
 
@@ -3242,7 +3247,7 @@ void CIRGenModule::Release() {
       assert(!MissingFeatures::codeModel());
 
       if ((cm == llvm::CodeModel::Medium || cm == llvm::CodeModel::Large) &&
-          astCtx.getTargetInfo().getTriple().getArch() ==
+          astContext.getTargetInfo().getTriple().getArch() ==
               llvm::Triple::x86_64) {
         assert(!MissingFeatures::largeDataThreshold());
       }
@@ -3379,7 +3384,7 @@ bool CIRGenModule::isTriviallyRecursive(const FunctionDecl *func) {
     name = func->getName();
   }
 
-  FunctionIsDirectlyRecursive walker(name, astCtx.BuiltinInfo);
+  FunctionIsDirectlyRecursive walker(name, astContext.BuiltinInfo);
   const Stmt *body = func->getBody();
   return body ? walker.Visit(body) : false;
 }
@@ -3403,7 +3408,7 @@ bool CIRGenModule::shouldEmitFunction(GlobalDecl globalDecl) {
   // behavior may break ABI compatibility of the current unit.
   if (const Module *mod = func->getOwningModule();
       mod && mod->getTopLevelModule()->isNamedModule() &&
-      astCtx.getCurrentNamedModule() != mod->getTopLevelModule()) {
+      astContext.getCurrentNamedModule() != mod->getTopLevelModule()) {
     // There are practices to mark template member function as always-inline
     // and mark the template as extern explicit instantiation but not give
     // the definition for member function. So we have to emit the function
@@ -3658,7 +3663,7 @@ CharUnits CIRGenModule::computeNonVirtualBaseClassOffset(
     CastExpr::path_const_iterator End) {
   CharUnits Offset = CharUnits::Zero();
 
-  const ASTContext &Context = getASTContext();
+  const ASTContext &astContext = getASTContext();
   const CXXRecordDecl *RD = DerivedClass;
 
   for (CastExpr::path_const_iterator I = Start; I != End; ++I) {
@@ -3666,7 +3671,7 @@ CharUnits CIRGenModule::computeNonVirtualBaseClassOffset(
     assert(!Base->isVirtual() && "Should not see virtual bases here!");
 
     // Get the layout.
-    const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
+    const ASTRecordLayout &Layout = astContext.getASTRecordLayout(RD);
 
     const auto *BaseDecl =
         cast<CXXRecordDecl>(Base->getType()->castAs<RecordType>()->getDecl());
@@ -3682,7 +3687,7 @@ CharUnits CIRGenModule::computeNonVirtualBaseClassOffset(
 
 void CIRGenModule::Error(SourceLocation loc, StringRef message) {
   unsigned diagID = getDiags().getCustomDiagID(DiagnosticsEngine::Error, "%0");
-  getDiags().Report(astCtx.getFullLoc(loc), diagID) << message;
+  getDiags().Report(astContext.getFullLoc(loc), diagID) << message;
 }
 
 /// Print out an error that codegen doesn't support the specified stmt yet.
@@ -3690,7 +3695,7 @@ void CIRGenModule::ErrorUnsupported(const Stmt *S, const char *Type) {
   unsigned DiagID = getDiags().getCustomDiagID(DiagnosticsEngine::Error,
                                                "cannot compile this %0 yet");
   std::string Msg = Type;
-  getDiags().Report(astCtx.getFullLoc(S->getBeginLoc()), DiagID)
+  getDiags().Report(astContext.getFullLoc(S->getBeginLoc()), DiagID)
       << Msg << S->getSourceRange();
 }
 
@@ -3699,7 +3704,7 @@ void CIRGenModule::ErrorUnsupported(const Decl *D, const char *Type) {
   unsigned DiagID = getDiags().getCustomDiagID(DiagnosticsEngine::Error,
                                                "cannot compile this %0 yet");
   std::string Msg = Type;
-  getDiags().Report(astCtx.getFullLoc(D->getLocation()), DiagID) << Msg;
+  getDiags().Report(astContext.getFullLoc(D->getLocation()), DiagID) << Msg;
 }
 
 cir::SourceLanguage CIRGenModule::getCIRSourceLanguage() {

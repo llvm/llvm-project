@@ -863,14 +863,15 @@ bool CIRGenFunction::ShouldXRayInstrumentFunction() const {
   return CGM.getCodeGenOpts().XRayInstrumentFunctions;
 }
 
-static bool matchesStlAllocatorFn(const Decl *D, const ASTContext &Ctx) {
+static bool matchesStlAllocatorFn(const Decl *D, const ASTContext &astContext) {
   auto *MD = dyn_cast_or_null<CXXMethodDecl>(D);
   if (!MD || !MD->getDeclName().getAsIdentifierInfo() ||
       !MD->getDeclName().getAsIdentifierInfo()->isStr("allocate") ||
       (MD->getNumParams() != 1 && MD->getNumParams() != 2))
     return false;
 
-  if (MD->parameters()[0]->getType().getCanonicalType() != Ctx.getSizeType())
+  if (MD->parameters()[0]->getType().getCanonicalType() !=
+      astContext.getSizeType())
     return false;
 
   if (MD->getNumParams() == 2) {

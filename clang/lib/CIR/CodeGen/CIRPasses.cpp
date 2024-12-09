@@ -23,8 +23,8 @@
 
 namespace cir {
 mlir::LogicalResult runCIRToCIRPasses(
-    mlir::ModuleOp theModule, mlir::MLIRContext *mlirCtx,
-    clang::ASTContext &astCtx, bool enableVerifier, bool enableLifetime,
+    mlir::ModuleOp theModule, mlir::MLIRContext *mlirContext,
+    clang::ASTContext &astContext, bool enableVerifier, bool enableLifetime,
     llvm::StringRef lifetimeOpts, bool enableIdiomRecognizer,
     llvm::StringRef idiomRecognizerOpts, bool enableLibOpt,
     llvm::StringRef libOptOpts, std::string &passOptParsingFailure,
@@ -33,7 +33,7 @@ mlir::LogicalResult runCIRToCIRPasses(
 
   llvm::TimeTraceScope scope("CIR To CIR Passes");
 
-  mlir::PassManager pm(mlirCtx);
+  mlir::PassManager pm(mlirContext);
   pm.addPass(mlir::createCIRCanonicalizePass());
 
   // TODO(CIR): Make this actually propagate errors correctly. This is stubbed
@@ -43,7 +43,7 @@ mlir::LogicalResult runCIRToCIRPasses(
   };
 
   if (enableLifetime) {
-    auto lifetimePass = mlir::createLifetimeCheckPass(&astCtx);
+    auto lifetimePass = mlir::createLifetimeCheckPass(&astContext);
     if (lifetimePass->initializeOptions(lifetimeOpts, errorHandler).failed()) {
       passOptParsingFailure = lifetimeOpts;
       return mlir::failure();
@@ -52,7 +52,7 @@ mlir::LogicalResult runCIRToCIRPasses(
   }
 
   if (enableIdiomRecognizer) {
-    auto idiomPass = mlir::createIdiomRecognizerPass(&astCtx);
+    auto idiomPass = mlir::createIdiomRecognizerPass(&astContext);
     if (idiomPass->initializeOptions(idiomRecognizerOpts, errorHandler)
             .failed()) {
       passOptParsingFailure = idiomRecognizerOpts;
@@ -62,7 +62,7 @@ mlir::LogicalResult runCIRToCIRPasses(
   }
 
   if (enableLibOpt) {
-    auto libOpPass = mlir::createLibOptPass(&astCtx);
+    auto libOpPass = mlir::createLibOptPass(&astContext);
     if (libOpPass->initializeOptions(libOptOpts, errorHandler).failed()) {
       passOptParsingFailure = libOptOpts;
       return mlir::failure();
@@ -73,7 +73,7 @@ mlir::LogicalResult runCIRToCIRPasses(
   if (enableCIRSimplify)
     pm.addPass(mlir::createCIRSimplifyPass());
 
-  pm.addPass(mlir::createLoweringPreparePass(&astCtx));
+  pm.addPass(mlir::createLoweringPreparePass(&astContext));
 
   if (flattenCIR || enableMem2Reg)
     mlir::populateCIRPreLoweringPasses(pm, enableCallConvLowering);

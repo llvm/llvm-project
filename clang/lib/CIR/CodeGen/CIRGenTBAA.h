@@ -97,15 +97,15 @@ struct TBAAAccessInfo {
 /// This class organizes the cross-module state that is used while lowering AST
 /// types to LLVM types.
 class CIRGenTBAA {
-  mlir::MLIRContext *ctx;
-  [[maybe_unused]] clang::ASTContext &context;
+  mlir::MLIRContext *mlirContext;
+  [[maybe_unused]] clang::ASTContext &astContext;
   [[maybe_unused]] CIRGenTypes &types;
   mlir::ModuleOp moduleOp;
   [[maybe_unused]] const clang::CodeGenOptions &codeGenOpts;
   [[maybe_unused]] const clang::LangOptions &features;
 
 public:
-  CIRGenTBAA(mlir::MLIRContext *ctx, clang::ASTContext &context,
+  CIRGenTBAA(mlir::MLIRContext *mlirContext, clang::ASTContext &astContext,
              CIRGenTypes &types, mlir::ModuleOp moduleOp,
              const clang::CodeGenOptions &codeGenOpts,
              const clang::LangOptions &features);

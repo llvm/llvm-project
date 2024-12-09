@@ -78,7 +78,7 @@ class CIRGenBuilderTy;
 /// This class organizes the cross-module state that is used while lowering
 /// AST types to CIR types.
 class CIRGenTypes {
-  clang::ASTContext &Context;
+  clang::ASTContext &astContext;
   CIRGenBuilderTy &Builder;
   CIRGenModule &CGM;
   const clang::TargetInfo &Target;
@@ -140,7 +140,7 @@ public:
   using TypeCacheTy = llvm::DenseMap<const clang::Type *, mlir::Type>;
   TypeCacheTy TypeCache;
 
-  clang::ASTContext &getContext() const { return Context; }
+  clang::ASTContext &getContext() const { return astContext; }
   mlir::MLIRContext &getMLIRContext() const;
 
   bool isRecordLayoutComplete(const clang::Type *Ty) const;

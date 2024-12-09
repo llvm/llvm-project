@@ -96,7 +96,7 @@ bool CIRGenModule::tryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
     return true;
 
   // If the base is at a non-zero offset, give up.
-  const ASTRecordLayout &ClassLayout = astCtx.getASTRecordLayout(Class);
+  const ASTRecordLayout &ClassLayout = astContext.getASTRecordLayout(Class);
   if (!ClassLayout.getBaseClassOffset(UniqueBase).isZero())
     return true;
 

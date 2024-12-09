@@ -417,7 +417,7 @@ bool CIRGenItaniumCXXABI::classifyReturnType(CIRGenFunctionInfo &FI) const {
 CIRGenCXXABI::AddedStructorArgCounts
 CIRGenItaniumCXXABI::buildStructorSignature(
     GlobalDecl GD, llvm::SmallVectorImpl<CanQualType> &ArgTys) {
-  auto &Context = getContext();
+  clang::ASTContext &astContext = getContext();
 
   // All parameters are already in place except VTT, which goes after 'this'.
   // These are clang types, so we don't need to worry about sret yet.
@@ -427,9 +427,9 @@ CIRGenItaniumCXXABI::buildStructorSignature(
                                              : GD.getDtorType() == Dtor_Base) &&
       cast<CXXMethodDecl>(GD.getDecl())->getParent()->getNumVBases() != 0) {
     LangAS AS = CGM.getGlobalVarAddressSpace(nullptr);
-    QualType Q = Context.getAddrSpaceQualType(Context.VoidPtrTy, AS);
+    QualType Q = astContext.getAddrSpaceQualType(astContext.VoidPtrTy, AS);
     ArgTys.insert(ArgTys.begin() + 1,
-                  Context.getPointerType(CanQualType::CreateUnsafe(Q)));
+                  astContext.getPointerType(CanQualType::CreateUnsafe(Q)));
     return AddedStructorArgCounts::prefix(1);
   }
 
@@ -569,15 +569,15 @@ void CIRGenItaniumCXXABI::addImplicitStructorParams(CIRGenFunction &CGF,
 
   // Check if we need a VTT parameter as well.
   if (NeedsVTTParameter(CGF.CurGD)) {
-    ASTContext &Context = getContext();
+    ASTContext &astContext = getContext();
 
     // FIXME: avoid the fake decl
     LangAS AS = CGM.getGlobalVarAddressSpace(nullptr);
-    QualType Q = Context.getAddrSpaceQualType(Context.VoidPtrTy, AS);
-    QualType T = Context.getPointerType(Q);
+    QualType Q = astContext.getAddrSpaceQualType(astContext.VoidPtrTy, AS);
+    QualType T = astContext.getPointerType(Q);
     auto *VTTDecl = ImplicitParamDecl::Create(
-        Context, /*DC=*/nullptr, MD->getLocation(), &Context.Idents.get("vtt"),
-        T, ImplicitParamKind::CXXVTT);
+        astContext, /*DC=*/nullptr, MD->getLocation(),
+        &astContext.Idents.get("vtt"), T, ImplicitParamKind::CXXVTT);
     Params.insert(Params.begin() + 1, VTTDecl);
     getStructorImplicitParamDecl(CGF) = VTTDecl;
   }
@@ -1309,11 +1309,11 @@ static bool IsStandardLibraryRTTIDescriptor(QualType Ty) {
 /// standard-library type.
 /// TODO(cir): this can unified with LLVM codegen
 static bool ShouldUseExternalRTTIDescriptor(CIRGenModule &CGM, QualType Ty) {
-  ASTContext &Context = CGM.getASTContext();
+  ASTContext &astContext = CGM.getASTContext();
 
   // If RTTI is disabled, assume it might be disabled in the
   // translation unit that defines any potential key function, too.
-  if (!Context.getLangOpts().RTTI)
+  if (!astContext.getLangOpts().RTTI)
     return false;
 
   if (const RecordType *RecordTy = dyn_cast<RecordType>(Ty)) {
@@ -2347,7 +2347,7 @@ void CIRGenItaniumCXXABI::emitBadCastCall(CIRGenFunction &CGF,
   emitCallToBadCast(CGF, loc);
 }
 
-static CharUnits computeOffsetHint(ASTContext &Context,
+static CharUnits computeOffsetHint(ASTContext &astContext,
                                    const CXXRecordDecl *Src,
                                    const CXXRecordDecl *Dst) {
   CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
@@ -2378,7 +2378,8 @@ static CharUnits computeOffsetHint(ASTContext &Context,
         continue;
 
       // Accumulate the base class offsets.
-      const ASTRecordLayout &L = Context.getASTRecordLayout(PathElement.Class);
+      const ASTRecordLayout &L =
+          astContext.getASTRecordLayout(PathElement.Class);
       Offset += L.getBaseClassOffset(
           PathElement.Base->getType()->getAsCXXRecordDecl());
     }
@@ -2620,9 +2621,9 @@ CIRGenItaniumCXXABI::buildVirtualMethodAttr(cir::MethodType MethodTy,
     // Multiply by 4-byte relative offsets.
     VTableOffset = Index * 4;
   } else {
-    const ASTContext &Context = getContext();
-    CharUnits PointerWidth = Context.toCharUnitsFromBits(
-        Context.getTargetInfo().getPointerWidth(LangAS::Default));
+    const ASTContext &astContext = getContext();
+    CharUnits PointerWidth = astContext.toCharUnitsFromBits(
+        astContext.getTargetInfo().getPointerWidth(LangAS::Default));
     VTableOffset = Index * PointerWidth.getQuantity();
   }
 

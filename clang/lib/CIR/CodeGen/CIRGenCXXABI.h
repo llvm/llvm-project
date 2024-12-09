@@ -31,10 +31,10 @@ class CIRGenFunctionInfo;
 class CIRGenCXXABI {
 protected:
   CIRGenModule &CGM;
-  std::unique_ptr<clang::MangleContext> MangleCtx;
+  std::unique_ptr<clang::MangleContext> MangleContext;
 
   CIRGenCXXABI(CIRGenModule &CGM)
-      : CGM{CGM}, MangleCtx(CGM.getASTContext().createMangleContext()) {}
+      : CGM{CGM}, MangleContext(CGM.getASTContext().createMangleContext()) {}
 
   clang::ASTContext &getContext() const { return CGM.getASTContext(); }
 
@@ -115,7 +115,7 @@ public:
   virtual bool classifyReturnType(CIRGenFunctionInfo &FI) const = 0;
 
   /// Gets the mangle context.
-  clang::MangleContext &getMangleContext() { return *MangleCtx; }
+  clang::MangleContext &getMangleContext() { return *MangleContext; }
 
   clang::ImplicitParamDecl *&getStructorImplicitParamDecl(CIRGenFunction &CGF) {
     return CGF.CXXStructorImplicitParamDecl;

@@ -127,15 +127,16 @@ public:
   }
 
   CharUnits getMemcpySize(uint64_t FirstByteOffset) const {
-    ASTContext &Ctx = CGF.getContext();
+    ASTContext &astContext = CGF.getContext();
     unsigned LastFieldSize =
         LastField->isBitField()
             ? LastField->getBitWidthValue()
-            : Ctx.toBits(
-                  Ctx.getTypeInfoDataSizeInChars(LastField->getType()).Width);
+            : astContext.toBits(
+                  astContext.getTypeInfoDataSizeInChars(LastField->getType())
+                      .Width);
     uint64_t MemcpySizeBits = LastFieldOffset + LastFieldSize -
-                              FirstByteOffset + Ctx.getCharWidth() - 1;
-    CharUnits MemcpySize = Ctx.toCharUnitsFromBits(MemcpySizeBits);
+                              FirstByteOffset + astContext.getCharWidth() - 1;
+    CharUnits MemcpySize = astContext.toCharUnitsFromBits(MemcpySizeBits);
     return MemcpySize;
   }
 
@@ -1096,12 +1097,12 @@ void CIRGenFunction::destroyCXXObject(CIRGenFunction &CGF, Address addr,
                             /*Delegating=*/false, addr, type);
 }
 
-static bool FieldHasTrivialDestructorBody(ASTContext &Context,
+static bool FieldHasTrivialDestructorBody(ASTContext &astContext,
                                           const FieldDecl *Field);
 
 // FIXME(cir): this should be shared with traditional codegen.
 static bool
-HasTrivialDestructorBody(ASTContext &Context,
+HasTrivialDestructorBody(ASTContext &astContext,
                          const CXXRecordDecl *BaseClassDecl,
                          const CXXRecordDecl *MostDerivedClassDecl) {
   // If the destructor is trivial we don't have to check anything else.
@@ -1113,7 +1114,7 @@ HasTrivialDestructorBody(ASTContext &Context,
 
   // Check fields.
   for (const auto *Field : BaseClassDecl->fields())
-    if (!FieldHasTrivialDestructorBody(Context, Field))
+    if (!FieldHasTrivialDestructorBody(astContext, Field))
       return false;
 
   // Check non-virtual bases.
@@ -1123,7 +1124,7 @@ HasTrivialDestructorBody(ASTContext &Context,
 
     const CXXRecordDecl *NonVirtualBase =
         cast<CXXRecordDecl>(I.getType()->castAs<RecordType>()->getDecl());
-    if (!HasTrivialDestructorBody(Context, NonVirtualBase,
+    if (!HasTrivialDestructorBody(astContext, NonVirtualBase,
                                   MostDerivedClassDecl))
       return false;
   }
@@ -1133,7 +1134,8 @@ HasTrivialDestructorBody(ASTContext &Context,
     for (const auto &I : BaseClassDecl->vbases()) {
       const CXXRecordDecl *VirtualBase =
           cast<CXXRecordDecl>(I.getType()->castAs<RecordType>()->getDecl());
-      if (!HasTrivialDestructorBody(Context, VirtualBase, MostDerivedClassDecl))
+      if (!HasTrivialDestructorBody(astContext, VirtualBase,
+                                    MostDerivedClassDecl))
         return false;
     }
   }
@@ -1142,9 +1144,10 @@ HasTrivialDestructorBody(ASTContext &Context,
 }
 
 // FIXME(cir): this should be shared with traditional codegen.
-static bool FieldHasTrivialDestructorBody(ASTContext &Context,
+static bool FieldHasTrivialDestructorBody(ASTContext &astContext,
                                           const FieldDecl *Field) {
-  QualType FieldBaseElementType = Context.getBaseElementType(Field->getType());
+  QualType FieldBaseElementType =
+      astContext.getBaseElementType(Field->getType());
 
   const RecordType *RT = FieldBaseElementType->getAs<RecordType>();
   if (!RT)
@@ -1156,7 +1159,7 @@ static bool FieldHasTrivialDestructorBody(ASTContext &Context,
   if (FieldClassDecl->isUnion() && FieldClassDecl->isAnonymousStructOrUnion())
     return false;
 
-  return HasTrivialDestructorBody(Context, FieldClassDecl, FieldClassDecl);
+  return HasTrivialDestructorBody(astContext, FieldClassDecl, FieldClassDecl);
 }
 
 /// Check whether we need to initialize any vtable pointers before calling this
