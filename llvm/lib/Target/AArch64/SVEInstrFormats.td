@@ -10971,9 +10971,6 @@ multiclass sve2_fp8_dot_indexed_h<string asm, SDPatternOperator op> {
 
     let Inst{20-19} = iop{2-1};
     let Inst{11}    = iop{0};
-
-    let mayLoad  = 1;
-    let mayStore = 0;
   }
 
   def : SVE_4_Op_Pat<nxv8f16, op, nxv8f16, nxv16i8, nxv16i8, i32, !cast<Instruction>(NAME)>;
@@ -10984,9 +10981,6 @@ multiclass sve2_fp8_dot_indexed_s<string asm, SDPatternOperator op> {
     bits<2> iop;
 
     let Inst{20-19} = iop{1-0};
-
-    let mayLoad  = 1;
-    let mayStore = 0;
   }
 
   def : SVE_4_Op_Pat<nxv4f32, op, nxv4f32, nxv16i8, nxv16i8, i32, !cast<Instruction>(NAME)>;
