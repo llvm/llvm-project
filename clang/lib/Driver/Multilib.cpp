@@ -269,7 +269,7 @@ struct llvm::yaml::MappingContextTraits<custom_flag::ValueDetail,
   static void mapping(llvm::yaml::IO &io, custom_flag::ValueDetail &V,
                       llvm::SmallSet<std::string, 32> &) {
     io.mapRequired("Name", V.Name);
-    io.mapOptional("DriverArgs", V.DriverArgs);
+    io.mapOptional("MacroDefines", V.MacroDefines);
   }
   static std::string validate(IO &io, custom_flag::ValueDetail &V,
                               llvm::SmallSet<std::string, 32> &NameSet) {

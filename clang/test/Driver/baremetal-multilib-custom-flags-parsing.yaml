@@ -1,8 +1,8 @@
 # RUN: split-file %s %t
 
-# RUN: %clang --target=arm-none-eabi --multi-lib-config=%t/multilib-without-extra-build-args.yaml %s -### -o /dev/null 2>&1 \
+# RUN: %clang --target=arm-none-eabi --multi-lib-config=%t/multilib-without-macro-defines.yaml %s -### -o /dev/null 2>&1 \
 # RUN: | FileCheck %s
-# RUN: %clang --target=arm-none-eabi --multi-lib-config=%t/multilib-with-extra-build-args.yaml %s -### -o /dev/null 2>&1 \
+# RUN: %clang --target=arm-none-eabi --multi-lib-config=%t/multilib-with-macro-defines.yaml %s -### -o /dev/null 2>&1 \
 # RUN: | FileCheck %s
 # CHECK-NOT: error:
 
@@ -27,7 +27,7 @@
 # CHECK-DUPLICATE-FLAG-VALUE-NAME:      error: duplicate custom flag value name: "value-name"
 # CHECK-DUPLICATE-FLAG-VALUE-NAME-NEXT: - Name: value-name
 
-#--- multilib-without-extra-build-args.yaml
+#--- multilib-without-macro-defines.yaml
 ---
 MultilibVersion: 1.0
 
@@ -42,7 +42,7 @@ Flags:
     - Name: b
     Default: a
 
-#--- multilib-with-extra-build-args.yaml
+#--- multilib-with-macro-defines.yaml
 ---
 MultilibVersion: 1.0
 
@@ -54,9 +54,9 @@ Flags:
   - Name: flag
     Values:
     - Name: a
-      DriverArgs: [-DFEATURE_A]
+      MacroDefines: [FEATURE_A]
     - Name: b
-      DriverArgs: [-DFEATURE_B]
+      MacroDefines: [FEATURE_B]
     Default: a
 
 #--- missing-flag-name.yaml

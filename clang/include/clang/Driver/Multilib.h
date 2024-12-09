@@ -107,7 +107,7 @@ using DeclarationPtr = std::shared_ptr<Declaration>;
 
 struct ValueDetail {
   std::string Name;
-  std::optional<SmallVector<std::string>> DriverArgs;
+  std::optional<SmallVector<std::string>> MacroDefines;
   DeclarationPtr Decl;
 };
 
