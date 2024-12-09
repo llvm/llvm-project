@@ -856,12 +856,17 @@ module std [system] {
     }
     module check_memory_order     { header "__atomic/check_memory_order.h" }
     module contention_t           { header "__atomic/contention_t.h" }
-    module cxx_atomic_impl        { header "__atomic/cxx_atomic_impl.h" }
     module fence                  { header "__atomic/fence.h" }
     module is_always_lock_free    { header "__atomic/is_always_lock_free.h" }
     module kill_dependency        { header "__atomic/kill_dependency.h" }
     module memory_order           { header "__atomic/memory_order.h" }
     module to_gcc_order           { header "__atomic/to_gcc_order.h" }
+
+    module support {
+      header "__atomic/support.h"
+      textual header "__atomic/support/c11.h"
+      textual header "__atomic/support/gcc.h"
+    }
 
     header "atomic"
     export *
