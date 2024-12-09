@@ -778,6 +778,18 @@ static bool isTLIScalarize(const TargetLibraryInfo &TLI, const CallInst &CI) {
   return Scalarize;
 }
 
+/// Returns true if the call return type `Ty` can be widened by the loop
+/// vectorizer.
+static bool canWidenCallReturnType(Type *Ty) {
+  auto *StructTy = dyn_cast<StructType>(Ty);
+  // TODO: Remove the homogeneous types restriction. This is just an initial
+  // simplification. When we want to support things like the overflow intrinsics
+  // we will have to lift this restriction.
+  if (StructTy && !StructTy->containsHomogeneousTypes())
+    return false;
+  return canVectorizeTy(StructTy);
+}
+
 bool LoopVectorizationLegality::canVectorizeInstrs() {
   BasicBlock *Header = TheLoop->getHeader();
 
@@ -942,11 +954,24 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
       if (CI && !VFDatabase::getMappings(*CI).empty())
         VecCallVariantsFound = true;
 
+      auto canWidenInstruction = [this](Instruction const &Inst) {
+        Type *InstTy = Inst.getType();
+        if (isa<CallInst>(Inst) && isa<StructType>(InstTy) &&
+            canWidenCallReturnType(InstTy)) {
+          StructVecVecCallFound = true;
+          // For now, we can only widen struct values returned from calls where
+          // all users are extractvalue instructions.
+          return llvm::all_of(Inst.uses(), [](auto &Use) {
+            return isa<ExtractValueInst>(Use.getUser());
+          });
+        }
+        return VectorType::isValidElementType(InstTy) || InstTy->isVoidTy();
+      };
+
       // Check that the instruction return type is vectorizable.
       // We can't vectorize casts from vector type to scalar type.
       // Also, we can't vectorize extractelement instructions.
-      if ((!VectorType::isValidElementType(I.getType()) &&
-           !I.getType()->isVoidTy()) ||
+      if (!canWidenInstruction(I) ||
           (isa<CastInst>(I) &&
            !VectorType::isValidElementType(I.getOperand(0)->getType())) ||
           isa<ExtractElementInst>(I)) {
