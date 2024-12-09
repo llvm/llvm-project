@@ -7920,6 +7920,7 @@ LegalizerHelper::lowerThreewayCompare(MachineInstr &MI) {
 
   Register Dst = Cmp->getReg(0);
   LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Cmp->getReg(1));
   LLT CmpTy = DstTy.changeElementSize(1);
 
   CmpInst::Predicate LTPredicate = Cmp->isSigned()
@@ -7929,16 +7930,30 @@ LegalizerHelper::lowerThreewayCompare(MachineInstr &MI) {
                                        ? CmpInst::Predicate::ICMP_SGT
                                        : CmpInst::Predicate::ICMP_UGT;
 
-  auto One = MIRBuilder.buildConstant(DstTy, 1);
   auto Zero = MIRBuilder.buildConstant(DstTy, 0);
   auto IsGT = MIRBuilder.buildICmp(GTPredicate, CmpTy, Cmp->getLHSReg(),
                                    Cmp->getRHSReg());
-  auto SelectZeroOrOne = MIRBuilder.buildSelect(DstTy, IsGT, One, Zero);
-
-  auto MinusOne = MIRBuilder.buildConstant(DstTy, -1);
   auto IsLT = MIRBuilder.buildICmp(LTPredicate, CmpTy, Cmp->getLHSReg(),
                                    Cmp->getRHSReg());
-  MIRBuilder.buildSelect(Dst, IsLT, MinusOne, SelectZeroOrOne);
+
+  auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  if (TLI.shouldExpandCmpUsingSelects(
+          getApproximateEVTForLLT(SrcTy, DL, Ctx))) {
+    auto One = MIRBuilder.buildConstant(DstTy, 1);
+    auto SelectZeroOrOne = MIRBuilder.buildSelect(DstTy, IsGT, One, Zero);
+
+    auto MinusOne = MIRBuilder.buildConstant(DstTy, -1);
+    MIRBuilder.buildSelect(Dst, IsLT, MinusOne, SelectZeroOrOne);
+  } else {
+    if (TLI.getBooleanContents(DstTy.isVector(), /*isFP=*/false))
+      std::swap(IsGT, IsLT);
+    unsigned BoolExtOp =
+        MIRBuilder.getBoolExtOp(DstTy.isVector(), /*isFP=*/false);
+    IsGT = MIRBuilder.buildInstr(BoolExtOp, {DstTy}, {IsGT});
+    IsLT = MIRBuilder.buildInstr(BoolExtOp, {DstTy}, {IsLT});
+    MIRBuilder.buildSub(Dst, IsGT, IsLT);
+  }
 
   MI.eraseFromParent();
   return Legalized;
