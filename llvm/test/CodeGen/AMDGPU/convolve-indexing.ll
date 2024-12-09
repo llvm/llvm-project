@@ -31,7 +31,6 @@ bb:
   ret void
 }
 
-
 @acc_in_var_f16_iu4_3x3_4x2 = external local_unnamed_addr addrspace(10) global <4 x half>
 @weights_var_f16_iu4_3x3_4x2 = external local_unnamed_addr addrspace(10) global <18 x i32>
 @tensor_col_center_var_f16_iu4_3x3_4x2 = external local_unnamed_addr addrspace(10) global <3 x i32>
@@ -61,7 +60,6 @@ bb:
   store <4 x half> %dst, ptr addrspace(10) @out_var_f16_iu4_3x3_4x2
   ret void
 }
-
 
 @acc_in_var_f16_iu4_3x3_4x4 = external local_unnamed_addr addrspace(10) global <8 x half>
 @weights_var_f16_iu4_3x3_4x4 = external local_unnamed_addr addrspace(10) global <9 x i32>
@@ -93,7 +91,6 @@ bb:
   ret void
 }
 
-
 @acc_in_var_f16_iu4_3x3_8x4 = external local_unnamed_addr addrspace(10) global <8 x half>
 @weights_var_f16_iu4_3x3_8x4 = external local_unnamed_addr addrspace(10) global <5 x i32>
 @tensor_col_center_var_f16_iu4_3x3_8x4 = external local_unnamed_addr addrspace(10) global <4 x i32>
@@ -123,7 +120,6 @@ bb:
   store <8 x half> %dst, ptr addrspace(10) @out_var_f16_iu4_3x3_8x4
   ret void
 }
-
 
 @acc_in_var_i32_iu4_3x3_4x2 = external local_unnamed_addr addrspace(10) global <4 x i32>
 @weights_var_i32_iu4_3x3_4x2 = external local_unnamed_addr addrspace(10) global <18 x i32>
@@ -155,7 +151,6 @@ bb:
   ret void
 }
 
-
 @acc_in_var_f32i32_iu4_3x3_4x2 = external local_unnamed_addr addrspace(10) global <4 x i32>
 @weights_var_f32i32_iu4_3x3_4x2 = external local_unnamed_addr addrspace(10) global <18 x i32>
 @tensor_col_center_var_f32i32_iu4_3x3_4x2 = external local_unnamed_addr addrspace(10) global <3 x i32>
@@ -185,7 +180,6 @@ bb:
   store <4 x float> %dst, ptr addrspace(10) @out_var_f32i32_iu4_3x3_4x2
   ret void
 }
-
 
 @acc_in_var_f32_iu8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <4 x float>
 @weights_var_f32_iu8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <18 x i32>
@@ -217,7 +211,6 @@ bb:
   ret void
 }
 
-
 @acc_in_var_f16_iu8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <4 x half>
 @weights_var_f16_iu8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <18 x i32>
 @tensor_col_center_var_f16_iu8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <3 x i32>
@@ -247,7 +240,6 @@ bb:
   store <4 x half> %dst, ptr addrspace(10) @out_var_f16_iu8_3x3_4x2
   ret void
 }
-
 
 @acc_in_var_f16_iu8_3x3_4x4 = external local_unnamed_addr addrspace(10) global <8 x half>
 @weights_var_f16_iu8_3x3_4x4 = external local_unnamed_addr addrspace(10) global <9 x i32>
@@ -279,7 +271,6 @@ bb:
   ret void
 }
 
-
 @acc_in_var_f16_iu8_3x3_8x4 = external local_unnamed_addr addrspace(10) global <8 x half>
 @weights_var_f16_iu8_3x3_8x4 = external local_unnamed_addr addrspace(10) global <5 x i32>
 @tensor_col_center_var_f16_iu8_3x3_8x4 = external local_unnamed_addr addrspace(10) global <4 x i32>
@@ -309,7 +300,6 @@ bb:
   store <8 x half> %dst, ptr addrspace(10) @out_var_f16_iu8_3x3_8x4
   ret void
 }
-
 
 @acc_in_var_i32_iu8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <4 x i32>
 @weights_var_i32_iu8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <18 x i32>
@@ -341,7 +331,6 @@ bb:
   ret void
 }
 
-
 @acc_in_var_f32i32_iu8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <4 x i32>
 @weights_var_f32i32_iu8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <18 x i32>
 @tensor_col_center_var_f32i32_iu8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <3 x i32>
@@ -371,7 +360,6 @@ bb:
   store <4 x float> %dst, ptr addrspace(10) @out_var_f32i32_iu8_3x3_4x2
   ret void
 }
-
 
 @acc_in_var_f32_fp8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <4 x float>
 @weights_var_f32_fp8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <18 x i32>
@@ -403,7 +391,6 @@ bb:
   ret void
 }
 
-
 @acc_in_var_f16_fp8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <4 x half>
 @weights_var_f16_fp8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <18 x i32>
 @tensor_col_center_var_f16_fp8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <3 x i32>
@@ -433,7 +420,6 @@ bb:
   store <4 x half> %dst, ptr addrspace(10) @out_var_f16_fp8_3x3_4x2
   ret void
 }
-
 
 @acc_in_var_f16_fp8_3x3_4x4 = external local_unnamed_addr addrspace(10) global <8 x half>
 @weights_var_f16_fp8_3x3_4x4 = external local_unnamed_addr addrspace(10) global <9 x i32>
@@ -465,7 +451,6 @@ bb:
   ret void
 }
 
-
 @acc_in_var_f16_fp8_3x3_8x4 = external local_unnamed_addr addrspace(10) global <8 x half>
 @weights_var_f16_fp8_3x3_8x4 = external local_unnamed_addr addrspace(10) global <5 x i32>
 @tensor_col_center_var_f16_fp8_3x3_8x4 = external local_unnamed_addr addrspace(10) global <4 x i32>
@@ -495,7 +480,6 @@ bb:
   store <8 x half> %dst, ptr addrspace(10) @out_var_f16_fp8_3x3_8x4
   ret void
 }
-
 
 @acc_in_var_f32_bf8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <4 x float>
 @weights_var_f32_bf8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <18 x i32>
@@ -527,99 +511,95 @@ bb:
   ret void
 }
 
+@acc_in_var_f16_bf8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <4 x half>
+@weights_var_f16_bf8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <18 x i32>
+@tensor_col_center_var_f16_bf8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <3 x i32>
+@tensor_col_left_var_f16_bf8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <3 x i32>
+@tensor_col_right_var_f16_bf8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <3 x i32>
+@out_var_f16_bf8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <4 x half>
 
-@acc_in_var_bf16_bf8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
-@weights_var_bf16_bf8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <18 x i32>
-@tensor_col_center_var_bf16_bf8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <3 x i32>
-@tensor_col_left_var_bf16_bf8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <3 x i32>
-@tensor_col_right_var_bf16_bf8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <3 x i32>
-@out_var_bf16_bf8_3x3_4x2 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
-
-define amdgpu_ps void @test_convolve.bf16_bf8_3x3_4x2() {
-; GFX13-LABEL: test_convolve.bf16_bf8_3x3_4x2:
+define amdgpu_ps void @test_convolve.f16_bf8_3x3_4x2() {
+; GFX13-LABEL: test_convolve.f16_bf8_3x3_4x2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_bf16_bf8 v[0:1], v[46:47], v[14:31], v[10:12], v[6:8], v[2:4] aux_data:3 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_bf8 v[0:1], v[46:47], v[14:31], v[10:12], v[6:8], v[2:4] aux_data:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
-  %acc_in = load <4 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf8_3x3_4x2
-  %weights = load <18 x i32>, ptr addrspace(10) @weights_var_bf16_bf8_3x3_4x2
-  %tensor_col_center = load <3 x i32>, ptr addrspace(10) @tensor_col_center_var_bf16_bf8_3x3_4x2
-  %tensor_col_left = load <3 x i32>, ptr addrspace(10) @tensor_col_left_var_bf16_bf8_3x3_4x2
-  %tensor_col_right = load <3 x i32>, ptr addrspace(10) @tensor_col_right_var_bf16_bf8_3x3_4x2
+  %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_3x3_4x2
+  %weights = load <18 x i32>, ptr addrspace(10) @weights_var_f16_bf8_3x3_4x2
+  %tensor_col_center = load <3 x i32>, ptr addrspace(10) @tensor_col_center_var_f16_bf8_3x3_4x2
+  %tensor_col_left = load <3 x i32>, ptr addrspace(10) @tensor_col_left_var_f16_bf8_3x3_4x2
+  %tensor_col_right = load <3 x i32>, ptr addrspace(10) @tensor_col_right_var_f16_bf8_3x3_4x2
 
-  %dst = call <4 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.3x3.v4bf16.v4bf16.v18i32.v3i32(<4 x bfloat> %acc_in, <18 x i32> %weights, <3 x i32> %tensor_col_center, <3 x i32> %tensor_col_left, <3 x i32> %tensor_col_right,
+  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.3x3.v4f16.v4f16.v18i32.v3i32(<4 x half> %acc_in, <18 x i32> %weights, <3 x i32> %tensor_col_center, <3 x i32> %tensor_col_left, <3 x i32> %tensor_col_right,
               ;   AUX_DATA: PIXEL_SHAPE_4x2 == (3 << 0)
               i32 3,
               ;   CLAMP
               i1 1)
-  store <4 x bfloat> %dst, ptr addrspace(10) @out_var_bf16_bf8_3x3_4x2
+  store <4 x half> %dst, ptr addrspace(10) @out_var_f16_bf8_3x3_4x2
   ret void
 }
 
+@acc_in_var_f16_bf8_3x3_4x4 = external local_unnamed_addr addrspace(10) global <8 x half>
+@weights_var_f16_bf8_3x3_4x4 = external local_unnamed_addr addrspace(10) global <9 x i32>
+@tensor_col_center_var_f16_bf8_3x3_4x4 = external local_unnamed_addr addrspace(10) global <3 x i32>
+@tensor_col_left_var_f16_bf8_3x3_4x4 = external local_unnamed_addr addrspace(10) global <3 x i32>
+@tensor_col_right_var_f16_bf8_3x3_4x4 = external local_unnamed_addr addrspace(10) global <3 x i32>
+@out_var_f16_bf8_3x3_4x4 = external local_unnamed_addr addrspace(10) global <8 x half>
 
-@acc_in_var_bf16_bf8_3x3_4x4 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
-@weights_var_bf16_bf8_3x3_4x4 = external local_unnamed_addr addrspace(10) global <9 x i32>
-@tensor_col_center_var_bf16_bf8_3x3_4x4 = external local_unnamed_addr addrspace(10) global <3 x i32>
-@tensor_col_left_var_bf16_bf8_3x3_4x4 = external local_unnamed_addr addrspace(10) global <3 x i32>
-@tensor_col_right_var_bf16_bf8_3x3_4x4 = external local_unnamed_addr addrspace(10) global <3 x i32>
-@out_var_bf16_bf8_3x3_4x4 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
-
-define amdgpu_ps void @test_convolve.bf16_bf8_3x3_4x4() {
-; GFX13-LABEL: test_convolve.bf16_bf8_3x3_4x4:
+define amdgpu_ps void @test_convolve.f16_bf8_3x3_4x4() {
+; GFX13-LABEL: test_convolve.f16_bf8_3x3_4x4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_bf16_bf8 v[0:3], v[32:35], v[16:24], v[12:14], v[8:10], v[4:6] aux_data:2 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_bf8 v[0:3], v[32:35], v[16:24], v[12:14], v[8:10], v[4:6] aux_data:2 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
-  %acc_in = load <8 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf8_3x3_4x4
-  %weights = load <9 x i32>, ptr addrspace(10) @weights_var_bf16_bf8_3x3_4x4
-  %tensor_col_center = load <3 x i32>, ptr addrspace(10) @tensor_col_center_var_bf16_bf8_3x3_4x4
-  %tensor_col_left = load <3 x i32>, ptr addrspace(10) @tensor_col_left_var_bf16_bf8_3x3_4x4
-  %tensor_col_right = load <3 x i32>, ptr addrspace(10) @tensor_col_right_var_bf16_bf8_3x3_4x4
+  %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_3x3_4x4
+  %weights = load <9 x i32>, ptr addrspace(10) @weights_var_f16_bf8_3x3_4x4
+  %tensor_col_center = load <3 x i32>, ptr addrspace(10) @tensor_col_center_var_f16_bf8_3x3_4x4
+  %tensor_col_left = load <3 x i32>, ptr addrspace(10) @tensor_col_left_var_f16_bf8_3x3_4x4
+  %tensor_col_right = load <3 x i32>, ptr addrspace(10) @tensor_col_right_var_f16_bf8_3x3_4x4
 
-  %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.3x3.v8bf16.v8bf16.v9i32.v3i32(<8 x bfloat> %acc_in, <9 x i32> %weights, <3 x i32> %tensor_col_center, <3 x i32> %tensor_col_left, <3 x i32> %tensor_col_right,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> %acc_in, <9 x i32> %weights, <3 x i32> %tensor_col_center, <3 x i32> %tensor_col_left, <3 x i32> %tensor_col_right,
               ;   AUX_DATA: PIXEL_SHAPE_4x4 == (2 << 0)
               i32 2,
               ;   CLAMP
               i1 1)
-  store <8 x bfloat> %dst, ptr addrspace(10) @out_var_bf16_bf8_3x3_4x4
+  store <8 x half> %dst, ptr addrspace(10) @out_var_f16_bf8_3x3_4x4
   ret void
 }
 
+@acc_in_var_f16_bf8_3x3_8x4 = external local_unnamed_addr addrspace(10) global <8 x half>
+@weights_var_f16_bf8_3x3_8x4 = external local_unnamed_addr addrspace(10) global <5 x i32>
+@tensor_col_center_var_f16_bf8_3x3_8x4 = external local_unnamed_addr addrspace(10) global <4 x i32>
+@tensor_col_left_var_f16_bf8_3x3_8x4 = external local_unnamed_addr addrspace(10) global <4 x i32>
+@tensor_col_right_var_f16_bf8_3x3_8x4 = external local_unnamed_addr addrspace(10) global <4 x i32>
+@out_var_f16_bf8_3x3_8x4 = external local_unnamed_addr addrspace(10) global <8 x half>
 
-@acc_in_var_bf16_bf8_3x3_8x4 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
-@weights_var_bf16_bf8_3x3_8x4 = external local_unnamed_addr addrspace(10) global <5 x i32>
-@tensor_col_center_var_bf16_bf8_3x3_8x4 = external local_unnamed_addr addrspace(10) global <4 x i32>
-@tensor_col_left_var_bf16_bf8_3x3_8x4 = external local_unnamed_addr addrspace(10) global <4 x i32>
-@tensor_col_right_var_bf16_bf8_3x3_8x4 = external local_unnamed_addr addrspace(10) global <4 x i32>
-@out_var_bf16_bf8_3x3_8x4 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
-
-define amdgpu_ps void @test_convolve.bf16_bf8_3x3_8x4() {
-; GFX13-LABEL: test_convolve.bf16_bf8_3x3_8x4:
+define amdgpu_ps void @test_convolve.f16_bf8_3x3_8x4() {
+; GFX13-LABEL: test_convolve.f16_bf8_3x3_8x4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_bf16_bf8 v[0:3], v[24:27], v[16:20], v[12:15], v[8:11], v[4:7] clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_bf8 v[0:3], v[24:27], v[16:20], v[12:15], v[8:11], v[4:7] clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
-  %acc_in = load <8 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf8_3x3_8x4
-  %weights = load <5 x i32>, ptr addrspace(10) @weights_var_bf16_bf8_3x3_8x4
-  %tensor_col_center = load <4 x i32>, ptr addrspace(10) @tensor_col_center_var_bf16_bf8_3x3_8x4
-  %tensor_col_left = load <4 x i32>, ptr addrspace(10) @tensor_col_left_var_bf16_bf8_3x3_8x4
-  %tensor_col_right = load <4 x i32>, ptr addrspace(10) @tensor_col_right_var_bf16_bf8_3x3_8x4
+  %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_3x3_8x4
+  %weights = load <5 x i32>, ptr addrspace(10) @weights_var_f16_bf8_3x3_8x4
+  %tensor_col_center = load <4 x i32>, ptr addrspace(10) @tensor_col_center_var_f16_bf8_3x3_8x4
+  %tensor_col_left = load <4 x i32>, ptr addrspace(10) @tensor_col_left_var_f16_bf8_3x3_8x4
+  %tensor_col_right = load <4 x i32>, ptr addrspace(10) @tensor_col_right_var_f16_bf8_3x3_8x4
 
-  %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.3x3.v8bf16.v8bf16.v5i32.v4i32(<8 x bfloat> %acc_in, <5 x i32> %weights, <4 x i32> %tensor_col_center, <4 x i32> %tensor_col_left, <4 x i32> %tensor_col_right,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.3x3.v8f16.v8f16.v5i32.v4i32(<8 x half> %acc_in, <5 x i32> %weights, <4 x i32> %tensor_col_center, <4 x i32> %tensor_col_left, <4 x i32> %tensor_col_right,
               ;   AUX_DATA: PIXEL_SHAPE_8x4 == (0 << 0)
               i32 0,
               ;   CLAMP
               i1 1)
-  store <8 x bfloat> %dst, ptr addrspace(10) @out_var_bf16_bf8_3x3_8x4
+  store <8 x half> %dst, ptr addrspace(10) @out_var_f16_bf8_3x3_8x4
   ret void
 }
-
 
 @acc_in_var_f32_f16_3x3_4x2 = external local_unnamed_addr addrspace(10) global <4 x float>
 @weights_var_f32_f16_3x3_4x2 = external local_unnamed_addr addrspace(10) global <36 x half>
@@ -651,7 +631,6 @@ bb:
   ret void
 }
 
-
 @acc_in_var_f16_f16_3x3_4x2 = external local_unnamed_addr addrspace(10) global <4 x half>
 @weights_var_f16_f16_3x3_4x2 = external local_unnamed_addr addrspace(10) global <36 x half>
 @tensor_col_center_var_f16_f16_3x3_4x2 = external local_unnamed_addr addrspace(10) global <6 x half>
@@ -681,7 +660,6 @@ bb:
   store <4 x half> %dst, ptr addrspace(10) @out_var_f16_f16_3x3_4x2
   ret void
 }
-
 
 @acc_in_var_f16_f16_3x3_4x4 = external local_unnamed_addr addrspace(10) global <8 x half>
 @weights_var_f16_f16_3x3_4x4 = external local_unnamed_addr addrspace(10) global <18 x half>
@@ -713,7 +691,6 @@ bb:
   ret void
 }
 
-
 @acc_in_var_f16_f16_3x3_8x4 = external local_unnamed_addr addrspace(10) global <8 x half>
 @weights_var_f16_f16_3x3_8x4 = external local_unnamed_addr addrspace(10) global <10 x half>
 @tensor_col_center_var_f16_f16_3x3_8x4 = external local_unnamed_addr addrspace(10) global <8 x half>
@@ -743,7 +720,6 @@ bb:
   store <8 x half> %dst, ptr addrspace(10) @out_var_f16_f16_3x3_8x4
   ret void
 }
-
 
 @acc_in_var_f32_bf16_3x3_4x2 = external local_unnamed_addr addrspace(10) global <4 x float>
 @weights_var_f32_bf16_3x3_4x2 = external local_unnamed_addr addrspace(10) global <36 x bfloat>
@@ -775,7 +751,6 @@ bb:
   ret void
 }
 
-
 @acc_in_var_bf16_bf16_3x3_4x2 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
 @weights_var_bf16_bf16_3x3_4x2 = external local_unnamed_addr addrspace(10) global <36 x bfloat>
 @tensor_col_center_var_bf16_bf16_3x3_4x2 = external local_unnamed_addr addrspace(10) global <6 x bfloat>
@@ -805,7 +780,6 @@ bb:
   store <4 x bfloat> %dst, ptr addrspace(10) @out_var_bf16_bf16_3x3_4x2
   ret void
 }
-
 
 @acc_in_var_bf16_bf16_3x3_4x4 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
 @weights_var_bf16_bf16_3x3_4x4 = external local_unnamed_addr addrspace(10) global <18 x bfloat>
@@ -837,7 +811,6 @@ bb:
   ret void
 }
 
-
 @acc_in_var_bf16_bf16_3x3_8x4 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
 @weights_var_bf16_bf16_3x3_8x4 = external local_unnamed_addr addrspace(10) global <10 x bfloat>
 @tensor_col_center_var_bf16_bf16_3x3_8x4 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
@@ -868,13 +841,11 @@ bb:
   ret void
 }
 
-
 @acc_in_var_f32_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x float>
 @weights_var_f32_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
 @tensor_0_var_f32_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_1_var_f32_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_f32_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f32_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
+
+
 @out_var_f32_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x float>
 
 define amdgpu_ps void @test_convolve.f32_iu4_1x1_4x2_iter_1() {
@@ -896,8 +867,6 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32_iu4_1x1_4x2_iter_1
 
 
-
-
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu4.1x1.v4f32.v4f32.v2i32.i32(<4 x float> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
               i32 3,
@@ -911,9 +880,8 @@ bb:
 @acc_in_var_f16_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x half>
 @weights_var_f16_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
 @tensor_0_var_f16_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_1_var_f16_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_f16_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f16_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
+
+
 @out_var_f16_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x half>
 
 define amdgpu_ps void @test_convolve.f16_iu4_1x1_4x2_iter_1() {
@@ -933,8 +901,6 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_iu4_1x1_4x2_iter_1
 
 
-
-
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v4f16.v4f16.v2i32.i32(<4 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
               i32 3,
@@ -948,9 +914,8 @@ bb:
 @acc_in_var_f16_iu4_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x half>
 @weights_var_f16_iu4_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
 @tensor_0_var_f16_iu4_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_1_var_f16_iu4_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_f16_iu4_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f16_iu4_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
+
+
 @out_var_f16_iu4_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x half>
 
 define amdgpu_ps void @test_convolve.f16_iu4_1x1_4x4_iter_1() {
@@ -963,8 +928,6 @@ bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_iu4_1x1_4x4_iter_1
   %weights = load i32, ptr addrspace(10) @weights_var_f16_iu4_1x1_4x4_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_iu4_1x1_4x4_iter_1
-
-
 
 
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v8f16.v8f16.i32.i32(<8 x half> %acc_in, i32 %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
@@ -980,9 +943,8 @@ bb:
 @acc_in_var_f16_iu4_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x half>
 @weights_var_f16_iu4_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
 @tensor_0_var_f16_iu4_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_1_var_f16_iu4_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_2_var_f16_iu4_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_3_var_f16_iu4_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
+
+
 @out_var_f16_iu4_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x half>
 
 define amdgpu_ps void @test_convolve.f16_iu4_1x1_8x4_iter_1() {
@@ -1002,8 +964,6 @@ bb:
   %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_f16_iu4_1x1_8x4_iter_1
 
 
-
-
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> undef, <2 x i32> undef, <2 x i32> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_1) == (0 << 0 | 0 << 12)
               i32 0,
@@ -1017,9 +977,8 @@ bb:
 @acc_in_var_i32_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x i32>
 @weights_var_i32_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
 @tensor_0_var_i32_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_1_var_i32_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_i32_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_i32_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
+
+
 @out_var_i32_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x i32>
 
 define amdgpu_ps void @test_convolve.i32_iu4_1x1_4x2_iter_1() {
@@ -1041,8 +1000,6 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_i32_iu4_1x1_4x2_iter_1
 
 
-
-
   %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu4.1x1.v4i32.v4i32.v2i32.i32(<4 x i32> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
               i32 3,
@@ -1056,9 +1013,8 @@ bb:
 @acc_in_var_f32i32_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x i32>
 @weights_var_f32i32_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
 @tensor_0_var_f32i32_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_1_var_f32i32_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_f32i32_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f32i32_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
+
+
 @out_var_f32i32_iu4_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x float>
 
 define amdgpu_ps void @test_convolve.f32i32_iu4_1x1_4x2_iter_1() {
@@ -1080,8 +1036,6 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32i32_iu4_1x1_4x2_iter_1
 
 
-
-
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu4.1x1.v4f32.v4i32.v2i32.i32(<4 x i32> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
               i32 3,
@@ -1096,8 +1050,7 @@ bb:
 @weights_var_f32_iu4_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x i32>
 @tensor_0_var_f32_iu4_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_f32_iu4_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_f32_iu4_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f32_iu4_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_f32_iu4_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x float>
 
 define amdgpu_ps void @test_convolve.f32_iu4_1x1_4x2_iter_2() {
@@ -1111,7 +1064,6 @@ bb:
   %weights = load <4 x i32>, ptr addrspace(10) @weights_var_f32_iu4_1x1_4x2_iter_2
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32_iu4_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32_iu4_1x1_4x2_iter_2
-
 
 
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu4.1x1.v4f32.v4f32.v4i32.i32(<4 x float> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
@@ -1128,8 +1080,7 @@ bb:
 @weights_var_f16_iu4_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x i32>
 @tensor_0_var_f16_iu4_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_f16_iu4_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_f16_iu4_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f16_iu4_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_f16_iu4_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x half>
 
 define amdgpu_ps void @test_convolve.f16_iu4_1x1_4x2_iter_2() {
@@ -1143,7 +1094,6 @@ bb:
   %weights = load <4 x i32>, ptr addrspace(10) @weights_var_f16_iu4_1x1_4x2_iter_2
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_iu4_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_iu4_1x1_4x2_iter_2
-
 
 
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v4f16.v4f16.v4i32.i32(<4 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
@@ -1160,8 +1110,7 @@ bb:
 @weights_var_f16_iu4_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x i32>
 @tensor_0_var_f16_iu4_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_f16_iu4_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_f16_iu4_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f16_iu4_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_f16_iu4_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global <8 x half>
 
 define amdgpu_ps void @test_convolve.f16_iu4_1x1_4x4_iter_2() {
@@ -1175,7 +1124,6 @@ bb:
   %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f16_iu4_1x1_4x4_iter_2
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_iu4_1x1_4x4_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_iu4_1x1_4x4_iter_2
-
 
 
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v8f16.v8f16.v2i32.i32(<8 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
@@ -1192,8 +1140,7 @@ bb:
 @weights_var_f16_iu4_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global i32
 @tensor_0_var_f16_iu4_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x i32>
 @tensor_1_var_f16_iu4_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_2_var_f16_iu4_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_3_var_f16_iu4_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x i32>
+
 @out_var_f16_iu4_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <8 x half>
 
 define amdgpu_ps void @test_convolve.f16_iu4_1x1_8x4_iter_2() {
@@ -1214,7 +1161,6 @@ bb:
   %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_f16_iu4_1x1_8x4_iter_2
 
 
-
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> undef, <2 x i32> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_2) == (0 << 0 | 1 << 12)
               i32 4096,
@@ -1229,8 +1175,7 @@ bb:
 @weights_var_i32_iu4_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x i32>
 @tensor_0_var_i32_iu4_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_i32_iu4_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_i32_iu4_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_i32_iu4_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_i32_iu4_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x i32>
 
 define amdgpu_ps void @test_convolve.i32_iu4_1x1_4x2_iter_2() {
@@ -1244,7 +1189,6 @@ bb:
   %weights = load <4 x i32>, ptr addrspace(10) @weights_var_i32_iu4_1x1_4x2_iter_2
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_i32_iu4_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_i32_iu4_1x1_4x2_iter_2
-
 
 
   %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu4.1x1.v4i32.v4i32.v4i32.i32(<4 x i32> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
@@ -1261,8 +1205,7 @@ bb:
 @weights_var_f32i32_iu4_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x i32>
 @tensor_0_var_f32i32_iu4_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_f32i32_iu4_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_f32i32_iu4_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f32i32_iu4_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_f32i32_iu4_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x float>
 
 define amdgpu_ps void @test_convolve.f32i32_iu4_1x1_4x2_iter_2() {
@@ -1276,7 +1219,6 @@ bb:
   %weights = load <4 x i32>, ptr addrspace(10) @weights_var_f32i32_iu4_1x1_4x2_iter_2
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32i32_iu4_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32i32_iu4_1x1_4x2_iter_2
-
 
 
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu4.1x1.v4f32.v4i32.v4i32.i32(<4 x i32> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
@@ -1294,7 +1236,7 @@ bb:
 @tensor_0_var_f32_iu4_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_f32_iu4_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_2_var_f32_iu4_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f32_iu4_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_f32_iu4_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <4 x float>
 
 define amdgpu_ps void @test_convolve.f32_iu4_1x1_4x2_iter_3() {
@@ -1323,7 +1265,6 @@ bb:
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32_iu4_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32_iu4_1x1_4x2_iter_3
 
-
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu4.1x1.v4f32.v4f32.v6i32.i32(<4 x float> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
               i32 8195,
@@ -1339,7 +1280,7 @@ bb:
 @tensor_0_var_f16_iu4_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_f16_iu4_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_2_var_f16_iu4_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f16_iu4_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_f16_iu4_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <4 x half>
 
 define amdgpu_ps void @test_convolve.f16_iu4_1x1_4x2_iter_3() {
@@ -1365,7 +1306,6 @@ bb:
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_iu4_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f16_iu4_1x1_4x2_iter_3
 
-
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v4f16.v4f16.v6i32.i32(<4 x half> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
               i32 8195,
@@ -1381,7 +1321,7 @@ bb:
 @tensor_0_var_f16_iu4_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_f16_iu4_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_2_var_f16_iu4_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f16_iu4_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_f16_iu4_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global <8 x half>
 
 define amdgpu_ps void @test_convolve.f16_iu4_1x1_4x4_iter_3() {
@@ -1405,7 +1345,6 @@ bb:
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_iu4_1x1_4x4_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f16_iu4_1x1_4x4_iter_3
 
-
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v8f16.v8f16.v3i32.i32(<8 x half> %acc_in, <3 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_3) == (2 << 0 | 2 << 12)
               i32 8194,
@@ -1421,7 +1360,7 @@ bb:
 @tensor_0_var_f16_iu4_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x i32>
 @tensor_1_var_f16_iu4_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x i32>
 @tensor_2_var_f16_iu4_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_3_var_f16_iu4_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x i32>
+
 @out_var_f16_iu4_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <8 x half>
 
 define amdgpu_ps void @test_convolve.f16_iu4_1x1_8x4_iter_3() {
@@ -1436,7 +1375,6 @@ bb:
   %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_f16_iu4_1x1_8x4_iter_3
   %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_f16_iu4_1x1_8x4_iter_3
   %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_f16_iu4_1x1_8x4_iter_3
-
 
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_3) == (0 << 0 | 2 << 12)
@@ -1453,7 +1391,7 @@ bb:
 @tensor_0_var_i32_iu4_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_i32_iu4_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_2_var_i32_iu4_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_i32_iu4_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_i32_iu4_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <4 x i32>
 
 define amdgpu_ps void @test_convolve.i32_iu4_1x1_4x2_iter_3() {
@@ -1482,7 +1420,6 @@ bb:
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_i32_iu4_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_i32_iu4_1x1_4x2_iter_3
 
-
   %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu4.1x1.v4i32.v4i32.v6i32.i32(<4 x i32> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
               i32 8195,
@@ -1498,7 +1435,7 @@ bb:
 @tensor_0_var_f32i32_iu4_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_f32i32_iu4_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_2_var_f32i32_iu4_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f32i32_iu4_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_f32i32_iu4_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <4 x float>
 
 define amdgpu_ps void @test_convolve.f32i32_iu4_1x1_4x2_iter_3() {
@@ -1526,7 +1463,6 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32i32_iu4_1x1_4x2_iter_3
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32i32_iu4_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32i32_iu4_1x1_4x2_iter_3
-
 
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu4.1x1.v4f32.v4i32.v6i32.i32(<4 x i32> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
@@ -1733,9 +1669,8 @@ bb:
 @acc_in_var_f32_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x float>
 @weights_var_f32_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
 @tensor_0_var_f32_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_1_var_f32_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_f32_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f32_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
+
+
 @out_var_f32_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x float>
 
 define amdgpu_ps void @test_convolve.f32_iu8_1x1_4x2_iter_1() {
@@ -1755,9 +1690,7 @@ bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_iu8_1x1_4x2_iter_1
   %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f32_iu8_1x1_4x2_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32_iu8_1x1_4x2_iter_1
-  %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32i32_iu4_1x1_4x2_iter_4
-  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32i32_iu4_1x1_4x2_iter_4
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu4_1x1_4x2_iter_4
+
 
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu8.1x1.v4f32.v4f32.v2i32.i32(<4 x float> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
@@ -1772,9 +1705,8 @@ bb:
 @acc_in_var_f16_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x half>
 @weights_var_f16_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
 @tensor_0_var_f16_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_1_var_f16_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_f16_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f16_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
+
+
 @out_var_f16_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x half>
 
 define amdgpu_ps void @test_convolve.f16_iu8_1x1_4x2_iter_1() {
@@ -1792,9 +1724,7 @@ bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_iu8_1x1_4x2_iter_1
   %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f16_iu8_1x1_4x2_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_iu8_1x1_4x2_iter_1
-  %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32i32_iu4_1x1_4x2_iter_4
-  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32i32_iu4_1x1_4x2_iter_4
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu4_1x1_4x2_iter_4
+
 
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v4f16.v4f16.v2i32.i32(<4 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
@@ -1809,9 +1739,8 @@ bb:
 @acc_in_var_f16_iu8_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x half>
 @weights_var_f16_iu8_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
 @tensor_0_var_f16_iu8_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_1_var_f16_iu8_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_f16_iu8_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f16_iu8_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
+
+
 @out_var_f16_iu8_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x half>
 
 define amdgpu_ps void @test_convolve.f16_iu8_1x1_4x4_iter_1() {
@@ -1824,9 +1753,7 @@ bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_iu8_1x1_4x4_iter_1
   %weights = load i32, ptr addrspace(10) @weights_var_f16_iu8_1x1_4x4_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_iu8_1x1_4x4_iter_1
-  %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32i32_iu4_1x1_4x2_iter_4
-  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32i32_iu4_1x1_4x2_iter_4
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu4_1x1_4x2_iter_4
+
 
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v8f16.v8f16.i32.i32(<8 x half> %acc_in, i32 %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_1) == (2 << 0 | 0 << 12)
@@ -1841,9 +1768,8 @@ bb:
 @acc_in_var_f16_iu8_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x half>
 @weights_var_f16_iu8_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
 @tensor_0_var_f16_iu8_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_1_var_f16_iu8_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_2_var_f16_iu8_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_3_var_f16_iu8_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
+
+
 @out_var_f16_iu8_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x half>
 
 define amdgpu_ps void @test_convolve.f16_iu8_1x1_8x4_iter_1() {
@@ -1861,9 +1787,7 @@ bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_iu8_1x1_8x4_iter_1
   %weights = load i32, ptr addrspace(10) @weights_var_f16_iu8_1x1_8x4_iter_1
   %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_f16_iu8_1x1_8x4_iter_1
-  %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32i32_iu4_1x1_4x2_iter_4
-  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32i32_iu4_1x1_4x2_iter_4
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu4_1x1_4x2_iter_4
+
 
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> undef, <2 x i32> undef, <2 x i32> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_1) == (0 << 0 | 0 << 12)
@@ -1878,9 +1802,8 @@ bb:
 @acc_in_var_i32_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x i32>
 @weights_var_i32_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
 @tensor_0_var_i32_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_1_var_i32_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_i32_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_i32_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
+
+
 @out_var_i32_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x i32>
 
 define amdgpu_ps void @test_convolve.i32_iu8_1x1_4x2_iter_1() {
@@ -1900,9 +1823,7 @@ bb:
   %acc_in = load <4 x i32>, ptr addrspace(10) @acc_in_var_i32_iu8_1x1_4x2_iter_1
   %weights = load <2 x i32>, ptr addrspace(10) @weights_var_i32_iu8_1x1_4x2_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_i32_iu8_1x1_4x2_iter_1
-  %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32i32_iu4_1x1_4x2_iter_4
-  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32i32_iu4_1x1_4x2_iter_4
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu4_1x1_4x2_iter_4
+
 
   %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu8.1x1.v4i32.v4i32.v2i32.i32(<4 x i32> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
@@ -1917,9 +1838,8 @@ bb:
 @acc_in_var_f32i32_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x i32>
 @weights_var_f32i32_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
 @tensor_0_var_f32i32_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_1_var_f32i32_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_f32i32_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f32i32_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
+
+
 @out_var_f32i32_iu8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x float>
 
 define amdgpu_ps void @test_convolve.f32i32_iu8_1x1_4x2_iter_1() {
@@ -1939,9 +1859,7 @@ bb:
   %acc_in = load <4 x i32>, ptr addrspace(10) @acc_in_var_f32i32_iu8_1x1_4x2_iter_1
   %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f32i32_iu8_1x1_4x2_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32i32_iu8_1x1_4x2_iter_1
-  %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32i32_iu4_1x1_4x2_iter_4
-  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32i32_iu4_1x1_4x2_iter_4
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu4_1x1_4x2_iter_4
+
 
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu8.1x1.v4f32.v4i32.v2i32.i32(<4 x i32> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
@@ -1957,8 +1875,7 @@ bb:
 @weights_var_f32_iu8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x i32>
 @tensor_0_var_f32_iu8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_f32_iu8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_f32_iu8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f32_iu8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_f32_iu8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x float>
 
 define amdgpu_ps void @test_convolve.f32_iu8_1x1_4x2_iter_2() {
@@ -1972,8 +1889,7 @@ bb:
   %weights = load <4 x i32>, ptr addrspace(10) @weights_var_f32_iu8_1x1_4x2_iter_2
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32_iu8_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32_iu8_1x1_4x2_iter_2
-  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32i32_iu4_1x1_4x2_iter_4
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu4_1x1_4x2_iter_4
+
 
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu8.1x1.v4f32.v4f32.v4i32.i32(<4 x float> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
@@ -1989,8 +1905,7 @@ bb:
 @weights_var_f16_iu8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x i32>
 @tensor_0_var_f16_iu8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_f16_iu8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_f16_iu8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f16_iu8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_f16_iu8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x half>
 
 define amdgpu_ps void @test_convolve.f16_iu8_1x1_4x2_iter_2() {
@@ -2004,8 +1919,7 @@ bb:
   %weights = load <4 x i32>, ptr addrspace(10) @weights_var_f16_iu8_1x1_4x2_iter_2
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_iu8_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_iu8_1x1_4x2_iter_2
-  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32i32_iu4_1x1_4x2_iter_4
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu4_1x1_4x2_iter_4
+
 
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v4f16.v4f16.v4i32.i32(<4 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
@@ -2021,8 +1935,7 @@ bb:
 @weights_var_f16_iu8_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x i32>
 @tensor_0_var_f16_iu8_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_f16_iu8_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_f16_iu8_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f16_iu8_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_f16_iu8_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global <8 x half>
 
 define amdgpu_ps void @test_convolve.f16_iu8_1x1_4x4_iter_2() {
@@ -2036,8 +1949,7 @@ bb:
   %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f16_iu8_1x1_4x4_iter_2
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_iu8_1x1_4x4_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_iu8_1x1_4x4_iter_2
-  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32i32_iu4_1x1_4x2_iter_4
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu4_1x1_4x2_iter_4
+
 
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v8f16.v8f16.v2i32.i32(<8 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_2) == (2 << 0 | 1 << 12)
@@ -2053,8 +1965,7 @@ bb:
 @weights_var_f16_iu8_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global i32
 @tensor_0_var_f16_iu8_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x i32>
 @tensor_1_var_f16_iu8_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_2_var_f16_iu8_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_3_var_f16_iu8_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x i32>
+
 @out_var_f16_iu8_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <8 x half>
 
 define amdgpu_ps void @test_convolve.f16_iu8_1x1_8x4_iter_2() {
@@ -2073,8 +1984,7 @@ bb:
   %weights = load i32, ptr addrspace(10) @weights_var_f16_iu8_1x1_8x4_iter_2
   %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_f16_iu8_1x1_8x4_iter_2
   %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_f16_iu8_1x1_8x4_iter_2
-  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32i32_iu4_1x1_4x2_iter_4
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu4_1x1_4x2_iter_4
+
 
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> undef, <2 x i32> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_2) == (0 << 0 | 1 << 12)
@@ -2090,8 +2000,7 @@ bb:
 @weights_var_i32_iu8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x i32>
 @tensor_0_var_i32_iu8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_i32_iu8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_i32_iu8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_i32_iu8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_i32_iu8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x i32>
 
 define amdgpu_ps void @test_convolve.i32_iu8_1x1_4x2_iter_2() {
@@ -2105,8 +2014,7 @@ bb:
   %weights = load <4 x i32>, ptr addrspace(10) @weights_var_i32_iu8_1x1_4x2_iter_2
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_i32_iu8_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_i32_iu8_1x1_4x2_iter_2
-  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32i32_iu4_1x1_4x2_iter_4
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu4_1x1_4x2_iter_4
+
 
   %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu8.1x1.v4i32.v4i32.v4i32.i32(<4 x i32> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
@@ -2122,8 +2030,7 @@ bb:
 @weights_var_f32i32_iu8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x i32>
 @tensor_0_var_f32i32_iu8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_f32i32_iu8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_f32i32_iu8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f32i32_iu8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_f32i32_iu8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x float>
 
 define amdgpu_ps void @test_convolve.f32i32_iu8_1x1_4x2_iter_2() {
@@ -2137,8 +2044,7 @@ bb:
   %weights = load <4 x i32>, ptr addrspace(10) @weights_var_f32i32_iu8_1x1_4x2_iter_2
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32i32_iu8_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32i32_iu8_1x1_4x2_iter_2
-  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32i32_iu4_1x1_4x2_iter_4
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu4_1x1_4x2_iter_4
+
 
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu8.1x1.v4f32.v4i32.v4i32.i32(<4 x i32> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
@@ -2155,7 +2061,7 @@ bb:
 @tensor_0_var_f32_iu8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_f32_iu8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_2_var_f32_iu8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f32_iu8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_f32_iu8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <4 x float>
 
 define amdgpu_ps void @test_convolve.f32_iu8_1x1_4x2_iter_3() {
@@ -2183,7 +2089,6 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32_iu8_1x1_4x2_iter_3
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32_iu8_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32_iu8_1x1_4x2_iter_3
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu4_1x1_4x2_iter_4
 
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu8.1x1.v4f32.v4f32.v6i32.i32(<4 x float> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
@@ -2200,7 +2105,7 @@ bb:
 @tensor_0_var_f16_iu8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_f16_iu8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_2_var_f16_iu8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f16_iu8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_f16_iu8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <4 x half>
 
 define amdgpu_ps void @test_convolve.f16_iu8_1x1_4x2_iter_3() {
@@ -2225,7 +2130,6 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_iu8_1x1_4x2_iter_3
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_iu8_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f16_iu8_1x1_4x2_iter_3
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu4_1x1_4x2_iter_4
 
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v4f16.v4f16.v6i32.i32(<4 x half> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
@@ -2242,7 +2146,7 @@ bb:
 @tensor_0_var_f16_iu8_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_f16_iu8_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_2_var_f16_iu8_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f16_iu8_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_f16_iu8_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global <8 x half>
 
 define amdgpu_ps void @test_convolve.f16_iu8_1x1_4x4_iter_3() {
@@ -2265,7 +2169,6 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_iu8_1x1_4x4_iter_3
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_iu8_1x1_4x4_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f16_iu8_1x1_4x4_iter_3
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu4_1x1_4x2_iter_4
 
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v8f16.v8f16.v3i32.i32(<8 x half> %acc_in, <3 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_3) == (2 << 0 | 2 << 12)
@@ -2282,7 +2185,7 @@ bb:
 @tensor_0_var_f16_iu8_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x i32>
 @tensor_1_var_f16_iu8_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x i32>
 @tensor_2_var_f16_iu8_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_3_var_f16_iu8_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x i32>
+
 @out_var_f16_iu8_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <8 x half>
 
 define amdgpu_ps void @test_convolve.f16_iu8_1x1_8x4_iter_3() {
@@ -2297,7 +2200,6 @@ bb:
   %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_f16_iu8_1x1_8x4_iter_3
   %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_f16_iu8_1x1_8x4_iter_3
   %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_f16_iu8_1x1_8x4_iter_3
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu4_1x1_4x2_iter_4
 
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_3) == (0 << 0 | 2 << 12)
@@ -2314,7 +2216,7 @@ bb:
 @tensor_0_var_i32_iu8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_i32_iu8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_2_var_i32_iu8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_i32_iu8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_i32_iu8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <4 x i32>
 
 define amdgpu_ps void @test_convolve.i32_iu8_1x1_4x2_iter_3() {
@@ -2342,7 +2244,6 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_i32_iu8_1x1_4x2_iter_3
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_i32_iu8_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_i32_iu8_1x1_4x2_iter_3
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu4_1x1_4x2_iter_4
 
   %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu8.1x1.v4i32.v4i32.v6i32.i32(<4 x i32> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
@@ -2359,7 +2260,7 @@ bb:
 @tensor_0_var_f32i32_iu8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_f32i32_iu8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_2_var_f32i32_iu8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f32i32_iu8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_f32i32_iu8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <4 x float>
 
 define amdgpu_ps void @test_convolve.f32i32_iu8_1x1_4x2_iter_3() {
@@ -2387,7 +2288,6 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32i32_iu8_1x1_4x2_iter_3
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32i32_iu8_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32i32_iu8_1x1_4x2_iter_3
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu4_1x1_4x2_iter_4
 
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu8.1x1.v4f32.v4i32.v6i32.i32(<4 x i32> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
@@ -2594,9 +2494,8 @@ bb:
 @acc_in_var_f32_fp8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x float>
 @weights_var_f32_fp8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
 @tensor_0_var_f32_fp8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_1_var_f32_fp8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_f32_fp8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f32_fp8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
+
+
 @out_var_f32_fp8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x float>
 
 define amdgpu_ps void @test_convolve.f32_fp8_1x1_4x2_iter_1() {
@@ -2616,9 +2515,7 @@ bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_fp8_1x1_4x2_iter_1
   %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f32_fp8_1x1_4x2_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32_fp8_1x1_4x2_iter_1
-  %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32i32_iu8_1x1_4x2_iter_4
-  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32i32_iu8_1x1_4x2_iter_4
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu8_1x1_4x2_iter_4
+
 
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.fp8.1x1.v4f32.v4f32.v2i32.i32(<4 x float> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
@@ -2633,9 +2530,8 @@ bb:
 @acc_in_var_f16_fp8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x half>
 @weights_var_f16_fp8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
 @tensor_0_var_f16_fp8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_1_var_f16_fp8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_f16_fp8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f16_fp8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
+
+
 @out_var_f16_fp8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x half>
 
 define amdgpu_ps void @test_convolve.f16_fp8_1x1_4x2_iter_1() {
@@ -2653,9 +2549,7 @@ bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_1x1_4x2_iter_1
   %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f16_fp8_1x1_4x2_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_fp8_1x1_4x2_iter_1
-  %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32i32_iu8_1x1_4x2_iter_4
-  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32i32_iu8_1x1_4x2_iter_4
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu8_1x1_4x2_iter_4
+
 
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.fp8.1x1.v4f16.v4f16.v2i32.i32(<4 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
@@ -2670,9 +2564,8 @@ bb:
 @acc_in_var_f16_fp8_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x half>
 @weights_var_f16_fp8_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
 @tensor_0_var_f16_fp8_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_1_var_f16_fp8_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_f16_fp8_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f16_fp8_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
+
+
 @out_var_f16_fp8_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x half>
 
 define amdgpu_ps void @test_convolve.f16_fp8_1x1_4x4_iter_1() {
@@ -2685,9 +2578,7 @@ bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_1x1_4x4_iter_1
   %weights = load i32, ptr addrspace(10) @weights_var_f16_fp8_1x1_4x4_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_fp8_1x1_4x4_iter_1
-  %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32i32_iu8_1x1_4x2_iter_4
-  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32i32_iu8_1x1_4x2_iter_4
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu8_1x1_4x2_iter_4
+
 
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.1x1.v8f16.v8f16.i32.i32(<8 x half> %acc_in, i32 %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_1) == (2 << 0 | 0 << 12)
@@ -2702,9 +2593,8 @@ bb:
 @acc_in_var_f16_fp8_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x half>
 @weights_var_f16_fp8_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
 @tensor_0_var_f16_fp8_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_1_var_f16_fp8_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_2_var_f16_fp8_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_3_var_f16_fp8_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
+
+
 @out_var_f16_fp8_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x half>
 
 define amdgpu_ps void @test_convolve.f16_fp8_1x1_8x4_iter_1() {
@@ -2722,9 +2612,7 @@ bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_1x1_8x4_iter_1
   %weights = load i32, ptr addrspace(10) @weights_var_f16_fp8_1x1_8x4_iter_1
   %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_f16_fp8_1x1_8x4_iter_1
-  %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32i32_iu8_1x1_4x2_iter_4
-  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32i32_iu8_1x1_4x2_iter_4
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu8_1x1_4x2_iter_4
+
 
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> undef, <2 x i32> undef, <2 x i32> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_1) == (0 << 0 | 0 << 12)
@@ -2740,8 +2628,7 @@ bb:
 @weights_var_f32_fp8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x i32>
 @tensor_0_var_f32_fp8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_f32_fp8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_f32_fp8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f32_fp8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_f32_fp8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x float>
 
 define amdgpu_ps void @test_convolve.f32_fp8_1x1_4x2_iter_2() {
@@ -2755,8 +2642,7 @@ bb:
   %weights = load <4 x i32>, ptr addrspace(10) @weights_var_f32_fp8_1x1_4x2_iter_2
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32_fp8_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32_fp8_1x1_4x2_iter_2
-  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32i32_iu8_1x1_4x2_iter_4
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu8_1x1_4x2_iter_4
+
 
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.fp8.1x1.v4f32.v4f32.v4i32.i32(<4 x float> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
@@ -2772,8 +2658,7 @@ bb:
 @weights_var_f16_fp8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x i32>
 @tensor_0_var_f16_fp8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_f16_fp8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_f16_fp8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f16_fp8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_f16_fp8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x half>
 
 define amdgpu_ps void @test_convolve.f16_fp8_1x1_4x2_iter_2() {
@@ -2787,8 +2672,7 @@ bb:
   %weights = load <4 x i32>, ptr addrspace(10) @weights_var_f16_fp8_1x1_4x2_iter_2
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_fp8_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_fp8_1x1_4x2_iter_2
-  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32i32_iu8_1x1_4x2_iter_4
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu8_1x1_4x2_iter_4
+
 
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.fp8.1x1.v4f16.v4f16.v4i32.i32(<4 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
@@ -2804,8 +2688,7 @@ bb:
 @weights_var_f16_fp8_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x i32>
 @tensor_0_var_f16_fp8_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_f16_fp8_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_f16_fp8_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f16_fp8_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_f16_fp8_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global <8 x half>
 
 define amdgpu_ps void @test_convolve.f16_fp8_1x1_4x4_iter_2() {
@@ -2819,8 +2702,7 @@ bb:
   %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f16_fp8_1x1_4x4_iter_2
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_fp8_1x1_4x4_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_fp8_1x1_4x4_iter_2
-  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32i32_iu8_1x1_4x2_iter_4
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu8_1x1_4x2_iter_4
+
 
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.1x1.v8f16.v8f16.v2i32.i32(<8 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_2) == (2 << 0 | 1 << 12)
@@ -2836,8 +2718,7 @@ bb:
 @weights_var_f16_fp8_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global i32
 @tensor_0_var_f16_fp8_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x i32>
 @tensor_1_var_f16_fp8_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_2_var_f16_fp8_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_3_var_f16_fp8_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x i32>
+
 @out_var_f16_fp8_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <8 x half>
 
 define amdgpu_ps void @test_convolve.f16_fp8_1x1_8x4_iter_2() {
@@ -2856,8 +2737,7 @@ bb:
   %weights = load i32, ptr addrspace(10) @weights_var_f16_fp8_1x1_8x4_iter_2
   %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_f16_fp8_1x1_8x4_iter_2
   %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_f16_fp8_1x1_8x4_iter_2
-  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32i32_iu8_1x1_4x2_iter_4
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu8_1x1_4x2_iter_4
+
 
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> undef, <2 x i32> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_2) == (0 << 0 | 1 << 12)
@@ -2874,7 +2754,7 @@ bb:
 @tensor_0_var_f32_fp8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_f32_fp8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_2_var_f32_fp8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f32_fp8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_f32_fp8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <4 x float>
 
 define amdgpu_ps void @test_convolve.f32_fp8_1x1_4x2_iter_3() {
@@ -2902,7 +2782,6 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32_fp8_1x1_4x2_iter_3
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32_fp8_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32_fp8_1x1_4x2_iter_3
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu8_1x1_4x2_iter_4
 
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.fp8.1x1.v4f32.v4f32.v6i32.i32(<4 x float> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
@@ -2919,7 +2798,7 @@ bb:
 @tensor_0_var_f16_fp8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_f16_fp8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_2_var_f16_fp8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f16_fp8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_f16_fp8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <4 x half>
 
 define amdgpu_ps void @test_convolve.f16_fp8_1x1_4x2_iter_3() {
@@ -2944,7 +2823,6 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_fp8_1x1_4x2_iter_3
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_fp8_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f16_fp8_1x1_4x2_iter_3
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu8_1x1_4x2_iter_4
 
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.fp8.1x1.v4f16.v4f16.v6i32.i32(<4 x half> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
@@ -2961,7 +2839,7 @@ bb:
 @tensor_0_var_f16_fp8_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_f16_fp8_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_2_var_f16_fp8_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f16_fp8_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_f16_fp8_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global <8 x half>
 
 define amdgpu_ps void @test_convolve.f16_fp8_1x1_4x4_iter_3() {
@@ -2984,7 +2862,6 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_fp8_1x1_4x4_iter_3
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_fp8_1x1_4x4_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f16_fp8_1x1_4x4_iter_3
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu8_1x1_4x2_iter_4
 
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.1x1.v8f16.v8f16.v3i32.i32(<8 x half> %acc_in, <3 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_3) == (2 << 0 | 2 << 12)
@@ -3001,7 +2878,7 @@ bb:
 @tensor_0_var_f16_fp8_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x i32>
 @tensor_1_var_f16_fp8_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x i32>
 @tensor_2_var_f16_fp8_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_3_var_f16_fp8_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x i32>
+
 @out_var_f16_fp8_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <8 x half>
 
 define amdgpu_ps void @test_convolve.f16_fp8_1x1_8x4_iter_3() {
@@ -3016,7 +2893,6 @@ bb:
   %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_f16_fp8_1x1_8x4_iter_3
   %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_f16_fp8_1x1_8x4_iter_3
   %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_f16_fp8_1x1_8x4_iter_3
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f32i32_iu8_1x1_4x2_iter_4
 
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_3) == (0 << 0 | 2 << 12)
@@ -3159,9 +3035,8 @@ bb:
 @acc_in_var_f32_bf8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x float>
 @weights_var_f32_bf8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
 @tensor_0_var_f32_bf8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_1_var_f32_bf8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_f32_bf8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f32_bf8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
+
+
 @out_var_f32_bf8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x float>
 
 define amdgpu_ps void @test_convolve.f32_bf8_1x1_4x2_iter_1() {
@@ -3181,9 +3056,7 @@ bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_bf8_1x1_4x2_iter_1
   %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f32_bf8_1x1_4x2_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32_bf8_1x1_4x2_iter_1
-  %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_f16_fp8_1x1_8x4_iter_4
-  %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_f16_fp8_1x1_8x4_iter_4
-  %tensor_3 = load <2 x i32>, ptr addrspace(10) @tensor_3_var_f16_fp8_1x1_8x4_iter_4
+
 
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf8.1x1.v4f32.v4f32.v2i32.i32(<4 x float> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
@@ -3195,16 +3068,15 @@ bb:
   ret void
 }
 
-@acc_in_var_bf16_bf8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
-@weights_var_bf16_bf8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_0_var_bf16_bf8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_1_var_bf16_bf8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_bf16_bf8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_bf16_bf8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@out_var_bf16_bf8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
+@acc_in_var_f16_bf8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x half>
+@weights_var_f16_bf8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
+@tensor_0_var_f16_bf8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global i32
 
-define amdgpu_ps void @test_convolve.bf16_bf8_1x1_4x2_iter_1() {
-; GFX13-LABEL: test_convolve.bf16_bf8_1x1_4x2_iter_1:
+
+@out_var_f16_bf8_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x half>
+
+define amdgpu_ps void @test_convolve.f16_bf8_1x1_4x2_iter_1() {
+; GFX13-LABEL: test_convolve.f16_bf8_1x1_4x2_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -3212,68 +3084,62 @@ define amdgpu_ps void @test_convolve.bf16_bf8_1x1_4x2_iter_1() {
 ; GFX13-NEXT:    v_mov_b32_e32 v1, v6
 ; GFX13-NEXT:    v_mov_b32_e32 v2, v3
 ; GFX13-NEXT:    v_mov_b32_e32 v3, v4
-; GFX13-NEXT:    v_convolve_bf16_bf8 v[0:1], v[0:1], v[2:3], v2 aux_data:3 clamp idxs:0x1001
+; GFX13-NEXT:    v_convolve_f16_bf8 v[0:1], v[0:1], v[2:3], v2 aux_data:3 clamp idxs:0x1001
 ; GFX13-NEXT:    s_endpgm
 bb:
-  %acc_in = load <4 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf8_1x1_4x2_iter_1
-  %weights = load <2 x i32>, ptr addrspace(10) @weights_var_bf16_bf8_1x1_4x2_iter_1
-  %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_bf16_bf8_1x1_4x2_iter_1
-  %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_f16_fp8_1x1_8x4_iter_4
-  %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_f16_fp8_1x1_8x4_iter_4
-  %tensor_3 = load <2 x i32>, ptr addrspace(10) @tensor_3_var_f16_fp8_1x1_8x4_iter_4
+  %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_1x1_4x2_iter_1
+  %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f16_bf8_1x1_4x2_iter_1
+  %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_bf8_1x1_4x2_iter_1
 
-  %dst = call <4 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.1x1.v4bf16.v4bf16.v2i32.i32(<4 x bfloat> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
+
+  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.1x1.v4f16.v4f16.v2i32.i32(<4 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
               i32 3,
               ;   CLAMP
               i1 1)
 
-  store <4 x bfloat> %dst, ptr addrspace(10) @out_var_bf16_bf8_1x1_4x2_iter_1
+  store <4 x half> %dst, ptr addrspace(10) @out_var_f16_bf8_1x1_4x2_iter_1
   ret void
 }
 
-@acc_in_var_bf16_bf8_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
-@weights_var_bf16_bf8_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_0_var_bf16_bf8_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_1_var_bf16_bf8_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_bf16_bf8_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_bf16_bf8_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@out_var_bf16_bf8_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
+@acc_in_var_f16_bf8_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x half>
+@weights_var_f16_bf8_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
+@tensor_0_var_f16_bf8_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
 
-define amdgpu_ps void @test_convolve.bf16_bf8_1x1_4x4_iter_1() {
-; GFX13-LABEL: test_convolve.bf16_bf8_1x1_4x4_iter_1:
+
+@out_var_f16_bf8_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x half>
+
+define amdgpu_ps void @test_convolve.f16_bf8_1x1_4x4_iter_1() {
+; GFX13-LABEL: test_convolve.f16_bf8_1x1_4x4_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_bf16_bf8 v[0:3], v[6:9], v5, v4 aux_data:2 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_bf8 v[0:3], v[6:9], v5, v4 aux_data:2 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
-  %acc_in = load <8 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf8_1x1_4x4_iter_1
-  %weights = load i32, ptr addrspace(10) @weights_var_bf16_bf8_1x1_4x4_iter_1
-  %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_bf16_bf8_1x1_4x4_iter_1
-  %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_f16_fp8_1x1_8x4_iter_4
-  %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_f16_fp8_1x1_8x4_iter_4
-  %tensor_3 = load <2 x i32>, ptr addrspace(10) @tensor_3_var_f16_fp8_1x1_8x4_iter_4
+  %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_1x1_4x4_iter_1
+  %weights = load i32, ptr addrspace(10) @weights_var_f16_bf8_1x1_4x4_iter_1
+  %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_bf8_1x1_4x4_iter_1
 
-  %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.1x1.v8bf16.v8bf16.i32.i32(<8 x bfloat> %acc_in, i32 %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
+
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> %acc_in, i32 %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_1) == (2 << 0 | 0 << 12)
               i32 2,
               ;   CLAMP
               i1 1)
 
-  store <8 x bfloat> %dst, ptr addrspace(10) @out_var_bf16_bf8_1x1_4x4_iter_1
+  store <8 x half> %dst, ptr addrspace(10) @out_var_f16_bf8_1x1_4x4_iter_1
   ret void
 }
 
-@acc_in_var_bf16_bf8_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
-@weights_var_bf16_bf8_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
-@tensor_0_var_bf16_bf8_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_1_var_bf16_bf8_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_2_var_bf16_bf8_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_3_var_bf16_bf8_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@out_var_bf16_bf8_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
+@acc_in_var_f16_bf8_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x half>
+@weights_var_f16_bf8_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global i32
+@tensor_0_var_f16_bf8_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x i32>
 
-define amdgpu_ps void @test_convolve.bf16_bf8_1x1_8x4_iter_1() {
-; GFX13-LABEL: test_convolve.bf16_bf8_1x1_8x4_iter_1:
+
+@out_var_f16_bf8_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x half>
+
+define amdgpu_ps void @test_convolve.f16_bf8_1x1_8x4_iter_1() {
+; GFX13-LABEL: test_convolve.f16_bf8_1x1_8x4_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -3281,23 +3147,21 @@ define amdgpu_ps void @test_convolve.bf16_bf8_1x1_8x4_iter_1() {
 ; GFX13-NEXT:    v_mov_b32_e32 v1, v8
 ; GFX13-NEXT:    v_mov_b32_e32 v2, v9
 ; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_convolve_bf16_bf8 v[0:3], v[0:3], v6, v[4:5] clamp idxs:0x1101
+; GFX13-NEXT:    v_convolve_f16_bf8 v[0:3], v[0:3], v6, v[4:5] clamp idxs:0x1101
 ; GFX13-NEXT:    s_endpgm
 bb:
-  %acc_in = load <8 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf8_1x1_8x4_iter_1
-  %weights = load i32, ptr addrspace(10) @weights_var_bf16_bf8_1x1_8x4_iter_1
-  %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_bf16_bf8_1x1_8x4_iter_1
-  %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_f16_fp8_1x1_8x4_iter_4
-  %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_f16_fp8_1x1_8x4_iter_4
-  %tensor_3 = load <2 x i32>, ptr addrspace(10) @tensor_3_var_f16_fp8_1x1_8x4_iter_4
+  %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_1x1_8x4_iter_1
+  %weights = load i32, ptr addrspace(10) @weights_var_f16_bf8_1x1_8x4_iter_1
+  %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_f16_bf8_1x1_8x4_iter_1
 
-  %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.1x1.v8bf16.v8bf16.i32.v2i32(<8 x bfloat> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> undef, <2 x i32> undef, <2 x i32> undef,
+
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> undef, <2 x i32> undef, <2 x i32> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_1) == (0 << 0 | 0 << 12)
               i32 0,
               ;   CLAMP
               i1 1)
 
-  store <8 x bfloat> %dst, ptr addrspace(10) @out_var_bf16_bf8_1x1_8x4_iter_1
+  store <8 x half> %dst, ptr addrspace(10) @out_var_f16_bf8_1x1_8x4_iter_1
   ret void
 }
 
@@ -3305,8 +3169,7 @@ bb:
 @weights_var_f32_bf8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x i32>
 @tensor_0_var_f32_bf8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_f32_bf8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_f32_bf8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f32_bf8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_f32_bf8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x float>
 
 define amdgpu_ps void @test_convolve.f32_bf8_1x1_4x2_iter_2() {
@@ -3320,8 +3183,7 @@ bb:
   %weights = load <4 x i32>, ptr addrspace(10) @weights_var_f32_bf8_1x1_4x2_iter_2
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32_bf8_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32_bf8_1x1_4x2_iter_2
-  %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_f16_fp8_1x1_8x4_iter_4
-  %tensor_3 = load <2 x i32>, ptr addrspace(10) @tensor_3_var_f16_fp8_1x1_8x4_iter_4
+
 
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf8.1x1.v4f32.v4f32.v4i32.i32(<4 x float> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
@@ -3333,80 +3195,75 @@ bb:
   ret void
 }
 
-@acc_in_var_bf16_bf8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
-@weights_var_bf16_bf8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x i32>
-@tensor_0_var_bf16_bf8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_1_var_bf16_bf8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_bf16_bf8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_bf16_bf8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@out_var_bf16_bf8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
+@acc_in_var_f16_bf8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x half>
+@weights_var_f16_bf8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x i32>
+@tensor_0_var_f16_bf8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
+@tensor_1_var_f16_bf8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global i32
 
-define amdgpu_ps void @test_convolve.bf16_bf8_1x1_4x2_iter_2() {
-; GFX13-LABEL: test_convolve.bf16_bf8_1x1_4x2_iter_2:
+@out_var_f16_bf8_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x half>
+
+define amdgpu_ps void @test_convolve.f16_bf8_1x1_4x2_iter_2() {
+; GFX13-LABEL: test_convolve.f16_bf8_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_bf16_bf8 v[0:1], v[8:9], v[4:7], v3, v2 aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_bf8 v[0:1], v[8:9], v[4:7], v3, v2 aux_data:4099 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
-  %acc_in = load <4 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf8_1x1_4x2_iter_2
-  %weights = load <4 x i32>, ptr addrspace(10) @weights_var_bf16_bf8_1x1_4x2_iter_2
-  %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_bf16_bf8_1x1_4x2_iter_2
-  %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_bf16_bf8_1x1_4x2_iter_2
-  %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_f16_fp8_1x1_8x4_iter_4
-  %tensor_3 = load <2 x i32>, ptr addrspace(10) @tensor_3_var_f16_fp8_1x1_8x4_iter_4
+  %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_1x1_4x2_iter_2
+  %weights = load <4 x i32>, ptr addrspace(10) @weights_var_f16_bf8_1x1_4x2_iter_2
+  %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_bf8_1x1_4x2_iter_2
+  %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_bf8_1x1_4x2_iter_2
 
-  %dst = call <4 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.1x1.v4bf16.v4bf16.v4i32.i32(<4 x bfloat> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
+
+  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.1x1.v4f16.v4f16.v4i32.i32(<4 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
               i32 4099,
               ;   CLAMP
               i1 1)
 
-  store <4 x bfloat> %dst, ptr addrspace(10) @out_var_bf16_bf8_1x1_4x2_iter_2
+  store <4 x half> %dst, ptr addrspace(10) @out_var_f16_bf8_1x1_4x2_iter_2
   ret void
 }
 
-@acc_in_var_bf16_bf8_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
-@weights_var_bf16_bf8_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_0_var_bf16_bf8_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_1_var_bf16_bf8_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_bf16_bf8_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_bf16_bf8_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@out_var_bf16_bf8_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
+@acc_in_var_f16_bf8_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global <8 x half>
+@weights_var_f16_bf8_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x i32>
+@tensor_0_var_f16_bf8_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global i32
+@tensor_1_var_f16_bf8_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global i32
 
-define amdgpu_ps void @test_convolve.bf16_bf8_1x1_4x4_iter_2() {
-; GFX13-LABEL: test_convolve.bf16_bf8_1x1_4x4_iter_2:
+@out_var_f16_bf8_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global <8 x half>
+
+define amdgpu_ps void @test_convolve.f16_bf8_1x1_4x4_iter_2() {
+; GFX13-LABEL: test_convolve.f16_bf8_1x1_4x4_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_bf16_bf8 v[0:3], v[8:11], v[6:7], v5, v4 aux_data:4098 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_bf8 v[0:3], v[8:11], v[6:7], v5, v4 aux_data:4098 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
-  %acc_in = load <8 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf8_1x1_4x4_iter_2
-  %weights = load <2 x i32>, ptr addrspace(10) @weights_var_bf16_bf8_1x1_4x4_iter_2
-  %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_bf16_bf8_1x1_4x4_iter_2
-  %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_bf16_bf8_1x1_4x4_iter_2
-  %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_f16_fp8_1x1_8x4_iter_4
-  %tensor_3 = load <2 x i32>, ptr addrspace(10) @tensor_3_var_f16_fp8_1x1_8x4_iter_4
+  %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_1x1_4x4_iter_2
+  %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f16_bf8_1x1_4x4_iter_2
+  %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_bf8_1x1_4x4_iter_2
+  %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_bf8_1x1_4x4_iter_2
 
-  %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.1x1.v8bf16.v8bf16.v2i32.i32(<8 x bfloat> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
+
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.1x1.v8f16.v8f16.v2i32.i32(<8 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_2) == (2 << 0 | 1 << 12)
               i32 4098,
               ;   CLAMP
               i1 1)
 
-  store <8 x bfloat> %dst, ptr addrspace(10) @out_var_bf16_bf8_1x1_4x4_iter_2
+  store <8 x half> %dst, ptr addrspace(10) @out_var_f16_bf8_1x1_4x4_iter_2
   ret void
 }
 
-@acc_in_var_bf16_bf8_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
-@weights_var_bf16_bf8_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global i32
-@tensor_0_var_bf16_bf8_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_1_var_bf16_bf8_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_2_var_bf16_bf8_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_3_var_bf16_bf8_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@out_var_bf16_bf8_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
+@acc_in_var_f16_bf8_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <8 x half>
+@weights_var_f16_bf8_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global i32
+@tensor_0_var_f16_bf8_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x i32>
+@tensor_1_var_f16_bf8_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x i32>
 
-define amdgpu_ps void @test_convolve.bf16_bf8_1x1_8x4_iter_2() {
-; GFX13-LABEL: test_convolve.bf16_bf8_1x1_8x4_iter_2:
+@out_var_f16_bf8_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <8 x half>
+
+define amdgpu_ps void @test_convolve.f16_bf8_1x1_8x4_iter_2() {
+; GFX13-LABEL: test_convolve.f16_bf8_1x1_8x4_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -3414,23 +3271,22 @@ define amdgpu_ps void @test_convolve.bf16_bf8_1x1_8x4_iter_2() {
 ; GFX13-NEXT:    v_mov_b32_e32 v1, v10
 ; GFX13-NEXT:    v_mov_b32_e32 v2, v11
 ; GFX13-NEXT:    v_mov_b32_e32 v3, v12
-; GFX13-NEXT:    v_convolve_bf16_bf8 v[0:3], v[0:3], v8, v[6:7], v[4:5] aux_data:4096 clamp idxs:0x11101
+; GFX13-NEXT:    v_convolve_f16_bf8 v[0:3], v[0:3], v8, v[6:7], v[4:5] aux_data:4096 clamp idxs:0x11101
 ; GFX13-NEXT:    s_endpgm
 bb:
-  %acc_in = load <8 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf8_1x1_8x4_iter_2
-  %weights = load i32, ptr addrspace(10) @weights_var_bf16_bf8_1x1_8x4_iter_2
-  %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_bf16_bf8_1x1_8x4_iter_2
-  %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_bf16_bf8_1x1_8x4_iter_2
-  %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_f16_fp8_1x1_8x4_iter_4
-  %tensor_3 = load <2 x i32>, ptr addrspace(10) @tensor_3_var_f16_fp8_1x1_8x4_iter_4
+  %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_1x1_8x4_iter_2
+  %weights = load i32, ptr addrspace(10) @weights_var_f16_bf8_1x1_8x4_iter_2
+  %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_f16_bf8_1x1_8x4_iter_2
+  %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_f16_bf8_1x1_8x4_iter_2
 
-  %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.1x1.v8bf16.v8bf16.i32.v2i32(<8 x bfloat> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> undef, <2 x i32> undef,
+
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> undef, <2 x i32> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_2) == (0 << 0 | 1 << 12)
               i32 4096,
               ;   CLAMP
               i1 1)
 
-  store <8 x bfloat> %dst, ptr addrspace(10) @out_var_bf16_bf8_1x1_8x4_iter_2
+  store <8 x half> %dst, ptr addrspace(10) @out_var_f16_bf8_1x1_8x4_iter_2
   ret void
 }
 
@@ -3439,7 +3295,7 @@ bb:
 @tensor_0_var_f32_bf8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_1_var_f32_bf8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
 @tensor_2_var_f32_bf8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_f32_bf8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
+
 @out_var_f32_bf8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <4 x float>
 
 define amdgpu_ps void @test_convolve.f32_bf8_1x1_4x2_iter_3() {
@@ -3467,7 +3323,6 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32_bf8_1x1_4x2_iter_3
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32_bf8_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32_bf8_1x1_4x2_iter_3
-  %tensor_3 = load <2 x i32>, ptr addrspace(10) @tensor_3_var_f16_fp8_1x1_8x4_iter_4
 
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf8.1x1.v4f32.v4f32.v6i32.i32(<4 x float> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
@@ -3479,16 +3334,16 @@ bb:
   ret void
 }
 
-@acc_in_var_bf16_bf8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
-@weights_var_bf16_bf8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <6 x i32>
-@tensor_0_var_bf16_bf8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
-@tensor_1_var_bf16_bf8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_bf16_bf8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_bf16_bf8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
-@out_var_bf16_bf8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
+@acc_in_var_f16_bf8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <4 x half>
+@weights_var_f16_bf8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <6 x i32>
+@tensor_0_var_f16_bf8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
+@tensor_1_var_f16_bf8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
+@tensor_2_var_f16_bf8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global i32
 
-define amdgpu_ps void @test_convolve.bf16_bf8_1x1_4x2_iter_3() {
-; GFX13-LABEL: test_convolve.bf16_bf8_1x1_4x2_iter_3:
+@out_var_f16_bf8_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <4 x half>
+
+define amdgpu_ps void @test_convolve.f16_bf8_1x1_4x2_iter_3() {
+; GFX13-LABEL: test_convolve.f16_bf8_1x1_4x2_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -3501,36 +3356,35 @@ define amdgpu_ps void @test_convolve.bf16_bf8_1x1_4x2_iter_3() {
 ; GFX13-NEXT:    v_mov_b32_e32 v3, v8
 ; GFX13-NEXT:    v_mov_b32_e32 v4, v9
 ; GFX13-NEXT:    v_mov_b32_e32 v5, v10
-; GFX13-NEXT:    v_convolve_bf16_bf8 v[0:1], v[6:7], v[0:5], v4, v3, v2 aux_data:8195 clamp idxs:0x111001
+; GFX13-NEXT:    v_convolve_f16_bf8 v[0:1], v[6:7], v[0:5], v4, v3, v2 aux_data:8195 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
-  %acc_in = load <4 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf8_1x1_4x2_iter_3
-  %weights = load <6 x i32>, ptr addrspace(10) @weights_var_bf16_bf8_1x1_4x2_iter_3
-  %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_bf16_bf8_1x1_4x2_iter_3
-  %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_bf16_bf8_1x1_4x2_iter_3
-  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_bf16_bf8_1x1_4x2_iter_3
-  %tensor_3 = load <2 x i32>, ptr addrspace(10) @tensor_3_var_f16_fp8_1x1_8x4_iter_4
+  %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_1x1_4x2_iter_3
+  %weights = load <6 x i32>, ptr addrspace(10) @weights_var_f16_bf8_1x1_4x2_iter_3
+  %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_bf8_1x1_4x2_iter_3
+  %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_bf8_1x1_4x2_iter_3
+  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f16_bf8_1x1_4x2_iter_3
 
-  %dst = call <4 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.1x1.v4bf16.v4bf16.v6i32.i32(<4 x bfloat> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
+  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.1x1.v4f16.v4f16.v6i32.i32(<4 x half> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
               i32 8195,
               ;   CLAMP
               i1 1)
 
-  store <4 x bfloat> %dst, ptr addrspace(10) @out_var_bf16_bf8_1x1_4x2_iter_3
+  store <4 x half> %dst, ptr addrspace(10) @out_var_f16_bf8_1x1_4x2_iter_3
   ret void
 }
 
-@acc_in_var_bf16_bf8_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
-@weights_var_bf16_bf8_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global <3 x i32>
-@tensor_0_var_bf16_bf8_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global i32
-@tensor_1_var_bf16_bf8_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_bf16_bf8_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_bf16_bf8_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global i32
-@out_var_bf16_bf8_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
+@acc_in_var_f16_bf8_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global <8 x half>
+@weights_var_f16_bf8_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global <3 x i32>
+@tensor_0_var_f16_bf8_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global i32
+@tensor_1_var_f16_bf8_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global i32
+@tensor_2_var_f16_bf8_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global i32
 
-define amdgpu_ps void @test_convolve.bf16_bf8_1x1_4x4_iter_3() {
-; GFX13-LABEL: test_convolve.bf16_bf8_1x1_4x4_iter_3:
+@out_var_f16_bf8_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global <8 x half>
+
+define amdgpu_ps void @test_convolve.f16_bf8_1x1_4x4_iter_3() {
+; GFX13-LABEL: test_convolve.f16_bf8_1x1_4x4_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -3541,55 +3395,53 @@ define amdgpu_ps void @test_convolve.bf16_bf8_1x1_4x4_iter_3() {
 ; GFX13-NEXT:    v_mov_b32_e32 v4, v7
 ; GFX13-NEXT:    v_mov_b32_e32 v5, v8
 ; GFX13-NEXT:    v_mov_b32_e32 v6, v9
-; GFX13-NEXT:    v_convolve_bf16_bf8 v[0:3], v[0:3], v[4:6], v6, v5, v4 aux_data:8194 clamp idxs:0x111001
+; GFX13-NEXT:    v_convolve_f16_bf8 v[0:3], v[0:3], v[4:6], v6, v5, v4 aux_data:8194 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
-  %acc_in = load <8 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf8_1x1_4x4_iter_3
-  %weights = load <3 x i32>, ptr addrspace(10) @weights_var_bf16_bf8_1x1_4x4_iter_3
-  %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_bf16_bf8_1x1_4x4_iter_3
-  %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_bf16_bf8_1x1_4x4_iter_3
-  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_bf16_bf8_1x1_4x4_iter_3
-  %tensor_3 = load <2 x i32>, ptr addrspace(10) @tensor_3_var_f16_fp8_1x1_8x4_iter_4
+  %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_1x1_4x4_iter_3
+  %weights = load <3 x i32>, ptr addrspace(10) @weights_var_f16_bf8_1x1_4x4_iter_3
+  %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_bf8_1x1_4x4_iter_3
+  %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_bf8_1x1_4x4_iter_3
+  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f16_bf8_1x1_4x4_iter_3
 
-  %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.1x1.v8bf16.v8bf16.v3i32.i32(<8 x bfloat> %acc_in, <3 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.1x1.v8f16.v8f16.v3i32.i32(<8 x half> %acc_in, <3 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_3) == (2 << 0 | 2 << 12)
               i32 8194,
               ;   CLAMP
               i1 1)
 
-  store <8 x bfloat> %dst, ptr addrspace(10) @out_var_bf16_bf8_1x1_4x4_iter_3
+  store <8 x half> %dst, ptr addrspace(10) @out_var_f16_bf8_1x1_4x4_iter_3
   ret void
 }
 
-@acc_in_var_bf16_bf8_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
-@weights_var_bf16_bf8_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_0_var_bf16_bf8_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_1_var_bf16_bf8_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_2_var_bf16_bf8_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_3_var_bf16_bf8_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@out_var_bf16_bf8_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
+@acc_in_var_f16_bf8_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <8 x half>
+@weights_var_f16_bf8_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x i32>
+@tensor_0_var_f16_bf8_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x i32>
+@tensor_1_var_f16_bf8_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x i32>
+@tensor_2_var_f16_bf8_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x i32>
 
-define amdgpu_ps void @test_convolve.bf16_bf8_1x1_8x4_iter_3() {
-; GFX13-LABEL: test_convolve.bf16_bf8_1x1_8x4_iter_3:
+@out_var_f16_bf8_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <8 x half>
+
+define amdgpu_ps void @test_convolve.f16_bf8_1x1_8x4_iter_3() {
+; GFX13-LABEL: test_convolve.f16_bf8_1x1_8x4_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_bf16_bf8 v[0:3], v[12:15], v[10:11], v[8:9], v[6:7], v[4:5] aux_data:8192 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_bf8 v[0:3], v[12:15], v[10:11], v[8:9], v[6:7], v[4:5] aux_data:8192 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
-  %acc_in = load <8 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf8_1x1_8x4_iter_3
-  %weights = load <2 x i32>, ptr addrspace(10) @weights_var_bf16_bf8_1x1_8x4_iter_3
-  %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_bf16_bf8_1x1_8x4_iter_3
-  %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_bf16_bf8_1x1_8x4_iter_3
-  %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_bf16_bf8_1x1_8x4_iter_3
-  %tensor_3 = load <2 x i32>, ptr addrspace(10) @tensor_3_var_f16_fp8_1x1_8x4_iter_4
+  %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_1x1_8x4_iter_3
+  %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f16_bf8_1x1_8x4_iter_3
+  %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_f16_bf8_1x1_8x4_iter_3
+  %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_f16_bf8_1x1_8x4_iter_3
+  %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_f16_bf8_1x1_8x4_iter_3
 
-  %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.1x1.v8bf16.v8bf16.v2i32.v2i32(<8 x bfloat> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_3) == (0 << 0 | 2 << 12)
               i32 8192,
               ;   CLAMP
               i1 1)
 
-  store <8 x bfloat> %dst, ptr addrspace(10) @out_var_bf16_bf8_1x1_8x4_iter_3
+  store <8 x half> %dst, ptr addrspace(10) @out_var_f16_bf8_1x1_8x4_iter_3
   ret void
 }
 
@@ -3625,108 +3477,107 @@ bb:
   ret void
 }
 
-@acc_in_var_bf16_bf8_1x1_4x2_iter_4 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
-@weights_var_bf16_bf8_1x1_4x2_iter_4 = external local_unnamed_addr addrspace(10) global <8 x i32>
-@tensor_0_var_bf16_bf8_1x1_4x2_iter_4 = external local_unnamed_addr addrspace(10) global i32
-@tensor_1_var_bf16_bf8_1x1_4x2_iter_4 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_bf16_bf8_1x1_4x2_iter_4 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_bf16_bf8_1x1_4x2_iter_4 = external local_unnamed_addr addrspace(10) global i32
-@out_var_bf16_bf8_1x1_4x2_iter_4 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
+@acc_in_var_f16_bf8_1x1_4x2_iter_4 = external local_unnamed_addr addrspace(10) global <4 x half>
+@weights_var_f16_bf8_1x1_4x2_iter_4 = external local_unnamed_addr addrspace(10) global <8 x i32>
+@tensor_0_var_f16_bf8_1x1_4x2_iter_4 = external local_unnamed_addr addrspace(10) global i32
+@tensor_1_var_f16_bf8_1x1_4x2_iter_4 = external local_unnamed_addr addrspace(10) global i32
+@tensor_2_var_f16_bf8_1x1_4x2_iter_4 = external local_unnamed_addr addrspace(10) global i32
+@tensor_3_var_f16_bf8_1x1_4x2_iter_4 = external local_unnamed_addr addrspace(10) global i32
+@out_var_f16_bf8_1x1_4x2_iter_4 = external local_unnamed_addr addrspace(10) global <4 x half>
 
-define amdgpu_ps void @test_convolve.bf16_bf8_1x1_4x2_iter_4() {
-; GFX13-LABEL: test_convolve.bf16_bf8_1x1_4x2_iter_4:
+define amdgpu_ps void @test_convolve.f16_bf8_1x1_4x2_iter_4() {
+; GFX13-LABEL: test_convolve.f16_bf8_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_bf16_bf8 v[0:1], v[14:15], v[6:13], v5, v4, v3, v2 aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_bf8 v[0:1], v[14:15], v[6:13], v5, v4, v3, v2 aux_data:12291 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
-  %acc_in = load <4 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf8_1x1_4x2_iter_4
-  %weights = load <8 x i32>, ptr addrspace(10) @weights_var_bf16_bf8_1x1_4x2_iter_4
-  %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_bf16_bf8_1x1_4x2_iter_4
-  %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_bf16_bf8_1x1_4x2_iter_4
-  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_bf16_bf8_1x1_4x2_iter_4
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_bf16_bf8_1x1_4x2_iter_4
+  %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_1x1_4x2_iter_4
+  %weights = load <8 x i32>, ptr addrspace(10) @weights_var_f16_bf8_1x1_4x2_iter_4
+  %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_bf8_1x1_4x2_iter_4
+  %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_bf8_1x1_4x2_iter_4
+  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f16_bf8_1x1_4x2_iter_4
+  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f16_bf8_1x1_4x2_iter_4
 
-  %dst = call <4 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.1x1.v4bf16.v4bf16.v8i32.i32(<4 x bfloat> %acc_in, <8 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
+  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.1x1.v4f16.v4f16.v8i32.i32(<4 x half> %acc_in, <8 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_4) == (3 << 0 | 3 << 12)
               i32 12291,
               ;   CLAMP
               i1 1)
 
-  store <4 x bfloat> %dst, ptr addrspace(10) @out_var_bf16_bf8_1x1_4x2_iter_4
+  store <4 x half> %dst, ptr addrspace(10) @out_var_f16_bf8_1x1_4x2_iter_4
   ret void
 }
 
-@acc_in_var_bf16_bf8_1x1_4x4_iter_4 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
-@weights_var_bf16_bf8_1x1_4x4_iter_4 = external local_unnamed_addr addrspace(10) global <4 x i32>
-@tensor_0_var_bf16_bf8_1x1_4x4_iter_4 = external local_unnamed_addr addrspace(10) global i32
-@tensor_1_var_bf16_bf8_1x1_4x4_iter_4 = external local_unnamed_addr addrspace(10) global i32
-@tensor_2_var_bf16_bf8_1x1_4x4_iter_4 = external local_unnamed_addr addrspace(10) global i32
-@tensor_3_var_bf16_bf8_1x1_4x4_iter_4 = external local_unnamed_addr addrspace(10) global i32
-@out_var_bf16_bf8_1x1_4x4_iter_4 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
+@acc_in_var_f16_bf8_1x1_4x4_iter_4 = external local_unnamed_addr addrspace(10) global <8 x half>
+@weights_var_f16_bf8_1x1_4x4_iter_4 = external local_unnamed_addr addrspace(10) global <4 x i32>
+@tensor_0_var_f16_bf8_1x1_4x4_iter_4 = external local_unnamed_addr addrspace(10) global i32
+@tensor_1_var_f16_bf8_1x1_4x4_iter_4 = external local_unnamed_addr addrspace(10) global i32
+@tensor_2_var_f16_bf8_1x1_4x4_iter_4 = external local_unnamed_addr addrspace(10) global i32
+@tensor_3_var_f16_bf8_1x1_4x4_iter_4 = external local_unnamed_addr addrspace(10) global i32
+@out_var_f16_bf8_1x1_4x4_iter_4 = external local_unnamed_addr addrspace(10) global <8 x half>
 
-define amdgpu_ps void @test_convolve.bf16_bf8_1x1_4x4_iter_4() {
-; GFX13-LABEL: test_convolve.bf16_bf8_1x1_4x4_iter_4:
+define amdgpu_ps void @test_convolve.f16_bf8_1x1_4x4_iter_4() {
+; GFX13-LABEL: test_convolve.f16_bf8_1x1_4x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_bf16_bf8 v[0:3], v[12:15], v[8:11], v7, v6, v5, v4 aux_data:12290 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_bf8 v[0:3], v[12:15], v[8:11], v7, v6, v5, v4 aux_data:12290 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
-  %acc_in = load <8 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf8_1x1_4x4_iter_4
-  %weights = load <4 x i32>, ptr addrspace(10) @weights_var_bf16_bf8_1x1_4x4_iter_4
-  %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_bf16_bf8_1x1_4x4_iter_4
-  %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_bf16_bf8_1x1_4x4_iter_4
-  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_bf16_bf8_1x1_4x4_iter_4
-  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_bf16_bf8_1x1_4x4_iter_4
+  %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_1x1_4x4_iter_4
+  %weights = load <4 x i32>, ptr addrspace(10) @weights_var_f16_bf8_1x1_4x4_iter_4
+  %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_bf8_1x1_4x4_iter_4
+  %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_bf8_1x1_4x4_iter_4
+  %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f16_bf8_1x1_4x4_iter_4
+  %tensor_3 = load i32, ptr addrspace(10) @tensor_3_var_f16_bf8_1x1_4x4_iter_4
 
-  %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.1x1.v8bf16.v8bf16.v4i32.i32(<8 x bfloat> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.1x1.v8f16.v8f16.v4i32.i32(<8 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_4) == (2 << 0 | 3 << 12)
               i32 12290,
               ;   CLAMP
               i1 1)
 
-  store <8 x bfloat> %dst, ptr addrspace(10) @out_var_bf16_bf8_1x1_4x4_iter_4
+  store <8 x half> %dst, ptr addrspace(10) @out_var_f16_bf8_1x1_4x4_iter_4
   ret void
 }
 
-@acc_in_var_bf16_bf8_1x1_8x4_iter_4 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
-@weights_var_bf16_bf8_1x1_8x4_iter_4 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_0_var_bf16_bf8_1x1_8x4_iter_4 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_1_var_bf16_bf8_1x1_8x4_iter_4 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_2_var_bf16_bf8_1x1_8x4_iter_4 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@tensor_3_var_bf16_bf8_1x1_8x4_iter_4 = external local_unnamed_addr addrspace(10) global <2 x i32>
-@out_var_bf16_bf8_1x1_8x4_iter_4 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
+@acc_in_var_f16_bf8_1x1_8x4_iter_4 = external local_unnamed_addr addrspace(10) global <8 x half>
+@weights_var_f16_bf8_1x1_8x4_iter_4 = external local_unnamed_addr addrspace(10) global <2 x i32>
+@tensor_0_var_f16_bf8_1x1_8x4_iter_4 = external local_unnamed_addr addrspace(10) global <2 x i32>
+@tensor_1_var_f16_bf8_1x1_8x4_iter_4 = external local_unnamed_addr addrspace(10) global <2 x i32>
+@tensor_2_var_f16_bf8_1x1_8x4_iter_4 = external local_unnamed_addr addrspace(10) global <2 x i32>
+@tensor_3_var_f16_bf8_1x1_8x4_iter_4 = external local_unnamed_addr addrspace(10) global <2 x i32>
+@out_var_f16_bf8_1x1_8x4_iter_4 = external local_unnamed_addr addrspace(10) global <8 x half>
 
-define amdgpu_ps void @test_convolve.bf16_bf8_1x1_8x4_iter_4() {
-; GFX13-LABEL: test_convolve.bf16_bf8_1x1_8x4_iter_4:
+define amdgpu_ps void @test_convolve.f16_bf8_1x1_8x4_iter_4() {
+; GFX13-LABEL: test_convolve.f16_bf8_1x1_8x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_bf16_bf8 v[0:3], v[14:17], v[12:13], v[10:11], v[8:9], v[6:7], v[4:5] aux_data:12288 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_bf8 v[0:3], v[14:17], v[12:13], v[10:11], v[8:9], v[6:7], v[4:5] aux_data:12288 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
-  %acc_in = load <8 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf8_1x1_8x4_iter_4
-  %weights = load <2 x i32>, ptr addrspace(10) @weights_var_bf16_bf8_1x1_8x4_iter_4
-  %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_bf16_bf8_1x1_8x4_iter_4
-  %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_bf16_bf8_1x1_8x4_iter_4
-  %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_bf16_bf8_1x1_8x4_iter_4
-  %tensor_3 = load <2 x i32>, ptr addrspace(10) @tensor_3_var_bf16_bf8_1x1_8x4_iter_4
+  %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_1x1_8x4_iter_4
+  %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f16_bf8_1x1_8x4_iter_4
+  %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_f16_bf8_1x1_8x4_iter_4
+  %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_f16_bf8_1x1_8x4_iter_4
+  %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_f16_bf8_1x1_8x4_iter_4
+  %tensor_3 = load <2 x i32>, ptr addrspace(10) @tensor_3_var_f16_bf8_1x1_8x4_iter_4
 
-  %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf8.1x1.v8bf16.v8bf16.v2i32.v2i32(<8 x bfloat> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> %tensor_3,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> %tensor_3,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_4) == (0 << 0 | 3 << 12)
               i32 12288,
               ;   CLAMP
               i1 1)
 
-  store <8 x bfloat> %dst, ptr addrspace(10) @out_var_bf16_bf8_1x1_8x4_iter_4
+  store <8 x half> %dst, ptr addrspace(10) @out_var_f16_bf8_1x1_8x4_iter_4
   ret void
 }
 
 @acc_in_var_f32_f16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x float>
 @weights_var_f32_f16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x half>
 @tensor_0_var_f32_f16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x half>
-@tensor_1_var_f32_f16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x half>
-@tensor_2_var_f32_f16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x half>
-@tensor_3_var_f32_f16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x half>
+
+
 @out_var_f32_f16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x float>
 
 define amdgpu_ps void @test_convolve.f32_f16_1x1_4x2_iter_1() {
@@ -3746,9 +3597,7 @@ bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_f16_1x1_4x2_iter_1
   %weights = load <4 x half>, ptr addrspace(10) @weights_var_f32_f16_1x1_4x2_iter_1
   %tensor_0 = load <2 x half>, ptr addrspace(10) @tensor_0_var_f32_f16_1x1_4x2_iter_1
-  %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_bf16_bf8_1x1_8x4_iter_4
-  %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_bf16_bf8_1x1_8x4_iter_4
-  %tensor_3 = load <2 x i32>, ptr addrspace(10) @tensor_3_var_bf16_bf8_1x1_8x4_iter_4
+
 
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.f16.1x1.v4f32.v4f32.v4f16.v2f16(<4 x float> %acc_in, <4 x half> %weights, <2 x half> %tensor_0, <2 x half> undef, <2 x half> undef, <2 x half> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
@@ -3763,9 +3612,8 @@ bb:
 @acc_in_var_f16_f16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x half>
 @weights_var_f16_f16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x half>
 @tensor_0_var_f16_f16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x half>
-@tensor_1_var_f16_f16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x half>
-@tensor_2_var_f16_f16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x half>
-@tensor_3_var_f16_f16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x half>
+
+
 @out_var_f16_f16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x half>
 
 define amdgpu_ps void @test_convolve.f16_f16_1x1_4x2_iter_1() {
@@ -3783,9 +3631,7 @@ bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_f16_1x1_4x2_iter_1
   %weights = load <4 x half>, ptr addrspace(10) @weights_var_f16_f16_1x1_4x2_iter_1
   %tensor_0 = load <2 x half>, ptr addrspace(10) @tensor_0_var_f16_f16_1x1_4x2_iter_1
-  %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_bf16_bf8_1x1_8x4_iter_4
-  %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_bf16_bf8_1x1_8x4_iter_4
-  %tensor_3 = load <2 x i32>, ptr addrspace(10) @tensor_3_var_bf16_bf8_1x1_8x4_iter_4
+
 
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v4f16.v4f16.v4f16.v2f16(<4 x half> %acc_in, <4 x half> %weights, <2 x half> %tensor_0, <2 x half> undef, <2 x half> undef, <2 x half> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
@@ -3800,9 +3646,8 @@ bb:
 @acc_in_var_f16_f16_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x half>
 @weights_var_f16_f16_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x half>
 @tensor_0_var_f16_f16_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x half>
-@tensor_1_var_f16_f16_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x half>
-@tensor_2_var_f16_f16_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x half>
-@tensor_3_var_f16_f16_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x half>
+
+
 @out_var_f16_f16_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x half>
 
 define amdgpu_ps void @test_convolve.f16_f16_1x1_4x4_iter_1() {
@@ -3815,9 +3660,7 @@ bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_f16_1x1_4x4_iter_1
   %weights = load <2 x half>, ptr addrspace(10) @weights_var_f16_f16_1x1_4x4_iter_1
   %tensor_0 = load <2 x half>, ptr addrspace(10) @tensor_0_var_f16_f16_1x1_4x4_iter_1
-  %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_bf16_bf8_1x1_8x4_iter_4
-  %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_bf16_bf8_1x1_8x4_iter_4
-  %tensor_3 = load <2 x i32>, ptr addrspace(10) @tensor_3_var_bf16_bf8_1x1_8x4_iter_4
+
 
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v8f16.v8f16.v2f16.v2f16(<8 x half> %acc_in, <2 x half> %weights, <2 x half> %tensor_0, <2 x half> undef, <2 x half> undef, <2 x half> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_1) == (2 << 0 | 0 << 12)
@@ -3832,9 +3675,8 @@ bb:
 @acc_in_var_f16_f16_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x half>
 @weights_var_f16_f16_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x half>
 @tensor_0_var_f16_f16_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <4 x half>
-@tensor_1_var_f16_f16_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <4 x half>
-@tensor_2_var_f16_f16_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <4 x half>
-@tensor_3_var_f16_f16_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <4 x half>
+
+
 @out_var_f16_f16_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x half>
 
 define amdgpu_ps void @test_convolve.f16_f16_1x1_8x4_iter_1() {
@@ -3852,9 +3694,7 @@ bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_f16_1x1_8x4_iter_1
   %weights = load <2 x half>, ptr addrspace(10) @weights_var_f16_f16_1x1_8x4_iter_1
   %tensor_0 = load <4 x half>, ptr addrspace(10) @tensor_0_var_f16_f16_1x1_8x4_iter_1
-  %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_bf16_bf8_1x1_8x4_iter_4
-  %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_bf16_bf8_1x1_8x4_iter_4
-  %tensor_3 = load <2 x i32>, ptr addrspace(10) @tensor_3_var_bf16_bf8_1x1_8x4_iter_4
+
 
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v8f16.v8f16.v2f16.v4f16(<8 x half> %acc_in, <2 x half> %weights, <4 x half> %tensor_0, <4 x half> undef, <4 x half> undef, <4 x half> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_1) == (0 << 0 | 0 << 12)
@@ -3870,8 +3710,7 @@ bb:
 @weights_var_f32_f16_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <8 x half>
 @tensor_0_var_f32_f16_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <2 x half>
 @tensor_1_var_f32_f16_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <2 x half>
-@tensor_2_var_f32_f16_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <2 x half>
-@tensor_3_var_f32_f16_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <2 x half>
+
 @out_var_f32_f16_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x float>
 
 define amdgpu_ps void @test_convolve.f32_f16_1x1_4x2_iter_2() {
@@ -3885,8 +3724,7 @@ bb:
   %weights = load <8 x half>, ptr addrspace(10) @weights_var_f32_f16_1x1_4x2_iter_2
   %tensor_0 = load <2 x half>, ptr addrspace(10) @tensor_0_var_f32_f16_1x1_4x2_iter_2
   %tensor_1 = load <2 x half>, ptr addrspace(10) @tensor_1_var_f32_f16_1x1_4x2_iter_2
-  %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_bf16_bf8_1x1_8x4_iter_4
-  %tensor_3 = load <2 x i32>, ptr addrspace(10) @tensor_3_var_bf16_bf8_1x1_8x4_iter_4
+
 
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.f16.1x1.v4f32.v4f32.v8f16.v2f16(<4 x float> %acc_in, <8 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> undef, <2 x half> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
@@ -3902,8 +3740,7 @@ bb:
 @weights_var_f16_f16_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <8 x half>
 @tensor_0_var_f16_f16_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <2 x half>
 @tensor_1_var_f16_f16_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <2 x half>
-@tensor_2_var_f16_f16_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <2 x half>
-@tensor_3_var_f16_f16_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <2 x half>
+
 @out_var_f16_f16_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x half>
 
 define amdgpu_ps void @test_convolve.f16_f16_1x1_4x2_iter_2() {
@@ -3917,8 +3754,7 @@ bb:
   %weights = load <8 x half>, ptr addrspace(10) @weights_var_f16_f16_1x1_4x2_iter_2
   %tensor_0 = load <2 x half>, ptr addrspace(10) @tensor_0_var_f16_f16_1x1_4x2_iter_2
   %tensor_1 = load <2 x half>, ptr addrspace(10) @tensor_1_var_f16_f16_1x1_4x2_iter_2
-  %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_bf16_bf8_1x1_8x4_iter_4
-  %tensor_3 = load <2 x i32>, ptr addrspace(10) @tensor_3_var_bf16_bf8_1x1_8x4_iter_4
+
 
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v4f16.v4f16.v8f16.v2f16(<4 x half> %acc_in, <8 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> undef, <2 x half> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
@@ -3934,8 +3770,7 @@ bb:
 @weights_var_f16_f16_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global <4 x half>
 @tensor_0_var_f16_f16_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x half>
 @tensor_1_var_f16_f16_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x half>
-@tensor_2_var_f16_f16_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x half>
-@tensor_3_var_f16_f16_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x half>
+
 @out_var_f16_f16_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global <8 x half>
 
 define amdgpu_ps void @test_convolve.f16_f16_1x1_4x4_iter_2() {
@@ -3949,8 +3784,7 @@ bb:
   %weights = load <4 x half>, ptr addrspace(10) @weights_var_f16_f16_1x1_4x4_iter_2
   %tensor_0 = load <2 x half>, ptr addrspace(10) @tensor_0_var_f16_f16_1x1_4x4_iter_2
   %tensor_1 = load <2 x half>, ptr addrspace(10) @tensor_1_var_f16_f16_1x1_4x4_iter_2
-  %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_bf16_bf8_1x1_8x4_iter_4
-  %tensor_3 = load <2 x i32>, ptr addrspace(10) @tensor_3_var_bf16_bf8_1x1_8x4_iter_4
+
 
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v8f16.v8f16.v4f16.v2f16(<8 x half> %acc_in, <4 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> undef, <2 x half> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_2) == (2 << 0 | 1 << 12)
@@ -3966,8 +3800,7 @@ bb:
 @weights_var_f16_f16_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x half>
 @tensor_0_var_f16_f16_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <4 x half>
 @tensor_1_var_f16_f16_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <4 x half>
-@tensor_2_var_f16_f16_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <4 x half>
-@tensor_3_var_f16_f16_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <4 x half>
+
 @out_var_f16_f16_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <8 x half>
 
 define amdgpu_ps void @test_convolve.f16_f16_1x1_8x4_iter_2() {
@@ -3986,8 +3819,7 @@ bb:
   %weights = load <2 x half>, ptr addrspace(10) @weights_var_f16_f16_1x1_8x4_iter_2
   %tensor_0 = load <4 x half>, ptr addrspace(10) @tensor_0_var_f16_f16_1x1_8x4_iter_2
   %tensor_1 = load <4 x half>, ptr addrspace(10) @tensor_1_var_f16_f16_1x1_8x4_iter_2
-  %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_bf16_bf8_1x1_8x4_iter_4
-  %tensor_3 = load <2 x i32>, ptr addrspace(10) @tensor_3_var_bf16_bf8_1x1_8x4_iter_4
+
 
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v8f16.v8f16.v2f16.v4f16(<8 x half> %acc_in, <2 x half> %weights, <4 x half> %tensor_0, <4 x half> %tensor_1, <4 x half> undef, <4 x half> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_2) == (0 << 0 | 1 << 12)
@@ -4004,7 +3836,7 @@ bb:
 @tensor_0_var_f32_f16_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <2 x half>
 @tensor_1_var_f32_f16_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <2 x half>
 @tensor_2_var_f32_f16_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <2 x half>
-@tensor_3_var_f32_f16_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <2 x half>
+
 @out_var_f32_f16_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <4 x float>
 
 define amdgpu_ps void @test_convolve.f32_f16_1x1_4x2_iter_3() {
@@ -4032,7 +3864,6 @@ bb:
   %tensor_0 = load <2 x half>, ptr addrspace(10) @tensor_0_var_f32_f16_1x1_4x2_iter_3
   %tensor_1 = load <2 x half>, ptr addrspace(10) @tensor_1_var_f32_f16_1x1_4x2_iter_3
   %tensor_2 = load <2 x half>, ptr addrspace(10) @tensor_2_var_f32_f16_1x1_4x2_iter_3
-  %tensor_3 = load <2 x i32>, ptr addrspace(10) @tensor_3_var_bf16_bf8_1x1_8x4_iter_4
 
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.f16.1x1.v4f32.v4f32.v16f16.v2f16(<4 x float> %acc_in, <16 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> %tensor_2, <2 x half> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
@@ -4049,7 +3880,7 @@ bb:
 @tensor_0_var_f16_f16_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <2 x half>
 @tensor_1_var_f16_f16_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <2 x half>
 @tensor_2_var_f16_f16_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <2 x half>
-@tensor_3_var_f16_f16_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <2 x half>
+
 @out_var_f16_f16_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <4 x half>
 
 define amdgpu_ps void @test_convolve.f16_f16_1x1_4x2_iter_3() {
@@ -4075,7 +3906,6 @@ bb:
   %tensor_0 = load <2 x half>, ptr addrspace(10) @tensor_0_var_f16_f16_1x1_4x2_iter_3
   %tensor_1 = load <2 x half>, ptr addrspace(10) @tensor_1_var_f16_f16_1x1_4x2_iter_3
   %tensor_2 = load <2 x half>, ptr addrspace(10) @tensor_2_var_f16_f16_1x1_4x2_iter_3
-  %tensor_3 = load <2 x i32>, ptr addrspace(10) @tensor_3_var_bf16_bf8_1x1_8x4_iter_4
 
   %dst = call <4 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v4f16.v4f16.v16f16.v2f16(<4 x half> %acc_in, <16 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> %tensor_2, <2 x half> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
@@ -4092,7 +3922,7 @@ bb:
 @tensor_0_var_f16_f16_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x half>
 @tensor_1_var_f16_f16_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x half>
 @tensor_2_var_f16_f16_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x half>
-@tensor_3_var_f16_f16_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x half>
+
 @out_var_f16_f16_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global <8 x half>
 
 define amdgpu_ps void @test_convolve.f16_f16_1x1_4x4_iter_3() {
@@ -4115,7 +3945,6 @@ bb:
   %tensor_0 = load <2 x half>, ptr addrspace(10) @tensor_0_var_f16_f16_1x1_4x4_iter_3
   %tensor_1 = load <2 x half>, ptr addrspace(10) @tensor_1_var_f16_f16_1x1_4x4_iter_3
   %tensor_2 = load <2 x half>, ptr addrspace(10) @tensor_2_var_f16_f16_1x1_4x4_iter_3
-  %tensor_3 = load <2 x i32>, ptr addrspace(10) @tensor_3_var_bf16_bf8_1x1_8x4_iter_4
 
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v8f16.v8f16.v6f16.v2f16(<8 x half> %acc_in, <6 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> %tensor_2, <2 x half> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_3) == (2 << 0 | 2 << 12)
@@ -4132,7 +3961,7 @@ bb:
 @tensor_0_var_f16_f16_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <4 x half>
 @tensor_1_var_f16_f16_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <4 x half>
 @tensor_2_var_f16_f16_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <4 x half>
-@tensor_3_var_f16_f16_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <4 x half>
+
 @out_var_f16_f16_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <8 x half>
 
 define amdgpu_ps void @test_convolve.f16_f16_1x1_8x4_iter_3() {
@@ -4147,7 +3976,6 @@ bb:
   %tensor_0 = load <4 x half>, ptr addrspace(10) @tensor_0_var_f16_f16_1x1_8x4_iter_3
   %tensor_1 = load <4 x half>, ptr addrspace(10) @tensor_1_var_f16_f16_1x1_8x4_iter_3
   %tensor_2 = load <4 x half>, ptr addrspace(10) @tensor_2_var_f16_f16_1x1_8x4_iter_3
-  %tensor_3 = load <2 x i32>, ptr addrspace(10) @tensor_3_var_bf16_bf8_1x1_8x4_iter_4
 
   %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v8f16.v8f16.v4f16.v4f16(<8 x half> %acc_in, <4 x half> %weights, <4 x half> %tensor_0, <4 x half> %tensor_1, <4 x half> %tensor_2, <4 x half> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_3) == (0 << 0 | 2 << 12)
@@ -4290,9 +4118,8 @@ bb:
 @acc_in_var_f32_bf16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x float>
 @weights_var_f32_bf16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
 @tensor_0_var_f32_bf16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
-@tensor_1_var_f32_bf16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
-@tensor_2_var_f32_bf16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
-@tensor_3_var_f32_bf16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
+
+
 @out_var_f32_bf16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x float>
 
 define amdgpu_ps void @test_convolve.f32_bf16_1x1_4x2_iter_1() {
@@ -4312,9 +4139,7 @@ bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_bf16_1x1_4x2_iter_1
   %weights = load <4 x bfloat>, ptr addrspace(10) @weights_var_f32_bf16_1x1_4x2_iter_1
   %tensor_0 = load <2 x bfloat>, ptr addrspace(10) @tensor_0_var_f32_bf16_1x1_4x2_iter_1
-  %tensor_1 = load <4 x half>, ptr addrspace(10) @tensor_1_var_f16_f16_1x1_8x4_iter_4
-  %tensor_2 = load <4 x half>, ptr addrspace(10) @tensor_2_var_f16_f16_1x1_8x4_iter_4
-  %tensor_3 = load <4 x half>, ptr addrspace(10) @tensor_3_var_f16_f16_1x1_8x4_iter_4
+
 
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf16.1x1.v4f32.v4f32.v4bf16.v2bf16(<4 x float> %acc_in, <4 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> undef, <2 x bfloat> undef, <2 x bfloat> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
@@ -4329,9 +4154,8 @@ bb:
 @acc_in_var_bf16_bf16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
 @weights_var_bf16_bf16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
 @tensor_0_var_bf16_bf16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
-@tensor_1_var_bf16_bf16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
-@tensor_2_var_bf16_bf16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
-@tensor_3_var_bf16_bf16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
+
+
 @out_var_bf16_bf16_1x1_4x2_iter_1 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
 
 define amdgpu_ps void @test_convolve.bf16_bf16_1x1_4x2_iter_1() {
@@ -4349,9 +4173,7 @@ bb:
   %acc_in = load <4 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf16_1x1_4x2_iter_1
   %weights = load <4 x bfloat>, ptr addrspace(10) @weights_var_bf16_bf16_1x1_4x2_iter_1
   %tensor_0 = load <2 x bfloat>, ptr addrspace(10) @tensor_0_var_bf16_bf16_1x1_4x2_iter_1
-  %tensor_1 = load <4 x half>, ptr addrspace(10) @tensor_1_var_f16_f16_1x1_8x4_iter_4
-  %tensor_2 = load <4 x half>, ptr addrspace(10) @tensor_2_var_f16_f16_1x1_8x4_iter_4
-  %tensor_3 = load <4 x half>, ptr addrspace(10) @tensor_3_var_f16_f16_1x1_8x4_iter_4
+
 
   %dst = call <4 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v4bf16.v4bf16.v4bf16.v2bf16(<4 x bfloat> %acc_in, <4 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> undef, <2 x bfloat> undef, <2 x bfloat> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_1) == (3 << 0 | 0 << 12)
@@ -4366,9 +4188,8 @@ bb:
 @acc_in_var_bf16_bf16_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
 @weights_var_bf16_bf16_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
 @tensor_0_var_bf16_bf16_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
-@tensor_1_var_bf16_bf16_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
-@tensor_2_var_bf16_bf16_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
-@tensor_3_var_bf16_bf16_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
+
+
 @out_var_bf16_bf16_1x1_4x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
 
 define amdgpu_ps void @test_convolve.bf16_bf16_1x1_4x4_iter_1() {
@@ -4381,9 +4202,7 @@ bb:
   %acc_in = load <8 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf16_1x1_4x4_iter_1
   %weights = load <2 x bfloat>, ptr addrspace(10) @weights_var_bf16_bf16_1x1_4x4_iter_1
   %tensor_0 = load <2 x bfloat>, ptr addrspace(10) @tensor_0_var_bf16_bf16_1x1_4x4_iter_1
-  %tensor_1 = load <4 x half>, ptr addrspace(10) @tensor_1_var_f16_f16_1x1_8x4_iter_4
-  %tensor_2 = load <4 x half>, ptr addrspace(10) @tensor_2_var_f16_f16_1x1_8x4_iter_4
-  %tensor_3 = load <4 x half>, ptr addrspace(10) @tensor_3_var_f16_f16_1x1_8x4_iter_4
+
 
   %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v8bf16.v8bf16.v2bf16.v2bf16(<8 x bfloat> %acc_in, <2 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> undef, <2 x bfloat> undef, <2 x bfloat> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_1) == (2 << 0 | 0 << 12)
@@ -4398,9 +4217,8 @@ bb:
 @acc_in_var_bf16_bf16_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
 @weights_var_bf16_bf16_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
 @tensor_0_var_bf16_bf16_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
-@tensor_1_var_bf16_bf16_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
-@tensor_2_var_bf16_bf16_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
-@tensor_3_var_bf16_bf16_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
+
+
 @out_var_bf16_bf16_1x1_8x4_iter_1 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
 
 define amdgpu_ps void @test_convolve.bf16_bf16_1x1_8x4_iter_1() {
@@ -4418,9 +4236,7 @@ bb:
   %acc_in = load <8 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf16_1x1_8x4_iter_1
   %weights = load <2 x bfloat>, ptr addrspace(10) @weights_var_bf16_bf16_1x1_8x4_iter_1
   %tensor_0 = load <4 x bfloat>, ptr addrspace(10) @tensor_0_var_bf16_bf16_1x1_8x4_iter_1
-  %tensor_1 = load <4 x half>, ptr addrspace(10) @tensor_1_var_f16_f16_1x1_8x4_iter_4
-  %tensor_2 = load <4 x half>, ptr addrspace(10) @tensor_2_var_f16_f16_1x1_8x4_iter_4
-  %tensor_3 = load <4 x half>, ptr addrspace(10) @tensor_3_var_f16_f16_1x1_8x4_iter_4
+
 
   %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v8bf16.v8bf16.v2bf16.v4bf16(<8 x bfloat> %acc_in, <2 x bfloat> %weights, <4 x bfloat> %tensor_0, <4 x bfloat> undef, <4 x bfloat> undef, <4 x bfloat> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_1) == (0 << 0 | 0 << 12)
@@ -4436,8 +4252,7 @@ bb:
 @weights_var_f32_bf16_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
 @tensor_0_var_f32_bf16_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
 @tensor_1_var_f32_bf16_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
-@tensor_2_var_f32_bf16_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
-@tensor_3_var_f32_bf16_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
+
 @out_var_f32_bf16_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x float>
 
 define amdgpu_ps void @test_convolve.f32_bf16_1x1_4x2_iter_2() {
@@ -4451,8 +4266,7 @@ bb:
   %weights = load <8 x bfloat>, ptr addrspace(10) @weights_var_f32_bf16_1x1_4x2_iter_2
   %tensor_0 = load <2 x bfloat>, ptr addrspace(10) @tensor_0_var_f32_bf16_1x1_4x2_iter_2
   %tensor_1 = load <2 x bfloat>, ptr addrspace(10) @tensor_1_var_f32_bf16_1x1_4x2_iter_2
-  %tensor_2 = load <4 x half>, ptr addrspace(10) @tensor_2_var_f16_f16_1x1_8x4_iter_4
-  %tensor_3 = load <4 x half>, ptr addrspace(10) @tensor_3_var_f16_f16_1x1_8x4_iter_4
+
 
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf16.1x1.v4f32.v4f32.v8bf16.v2bf16(<4 x float> %acc_in, <8 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> undef, <2 x bfloat> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
@@ -4468,8 +4282,7 @@ bb:
 @weights_var_bf16_bf16_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
 @tensor_0_var_bf16_bf16_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
 @tensor_1_var_bf16_bf16_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
-@tensor_2_var_bf16_bf16_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
-@tensor_3_var_bf16_bf16_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
+
 @out_var_bf16_bf16_1x1_4x2_iter_2 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
 
 define amdgpu_ps void @test_convolve.bf16_bf16_1x1_4x2_iter_2() {
@@ -4483,8 +4296,7 @@ bb:
   %weights = load <8 x bfloat>, ptr addrspace(10) @weights_var_bf16_bf16_1x1_4x2_iter_2
   %tensor_0 = load <2 x bfloat>, ptr addrspace(10) @tensor_0_var_bf16_bf16_1x1_4x2_iter_2
   %tensor_1 = load <2 x bfloat>, ptr addrspace(10) @tensor_1_var_bf16_bf16_1x1_4x2_iter_2
-  %tensor_2 = load <4 x half>, ptr addrspace(10) @tensor_2_var_f16_f16_1x1_8x4_iter_4
-  %tensor_3 = load <4 x half>, ptr addrspace(10) @tensor_3_var_f16_f16_1x1_8x4_iter_4
+
 
   %dst = call <4 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v4bf16.v4bf16.v8bf16.v2bf16(<4 x bfloat> %acc_in, <8 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> undef, <2 x bfloat> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_2) == (3 << 0 | 1 << 12)
@@ -4500,8 +4312,7 @@ bb:
 @weights_var_bf16_bf16_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
 @tensor_0_var_bf16_bf16_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
 @tensor_1_var_bf16_bf16_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
-@tensor_2_var_bf16_bf16_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
-@tensor_3_var_bf16_bf16_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
+
 @out_var_bf16_bf16_1x1_4x4_iter_2 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
 
 define amdgpu_ps void @test_convolve.bf16_bf16_1x1_4x4_iter_2() {
@@ -4515,8 +4326,7 @@ bb:
   %weights = load <4 x bfloat>, ptr addrspace(10) @weights_var_bf16_bf16_1x1_4x4_iter_2
   %tensor_0 = load <2 x bfloat>, ptr addrspace(10) @tensor_0_var_bf16_bf16_1x1_4x4_iter_2
   %tensor_1 = load <2 x bfloat>, ptr addrspace(10) @tensor_1_var_bf16_bf16_1x1_4x4_iter_2
-  %tensor_2 = load <4 x half>, ptr addrspace(10) @tensor_2_var_f16_f16_1x1_8x4_iter_4
-  %tensor_3 = load <4 x half>, ptr addrspace(10) @tensor_3_var_f16_f16_1x1_8x4_iter_4
+
 
   %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v8bf16.v8bf16.v4bf16.v2bf16(<8 x bfloat> %acc_in, <4 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> undef, <2 x bfloat> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_2) == (2 << 0 | 1 << 12)
@@ -4532,8 +4342,7 @@ bb:
 @weights_var_bf16_bf16_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
 @tensor_0_var_bf16_bf16_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
 @tensor_1_var_bf16_bf16_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
-@tensor_2_var_bf16_bf16_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
-@tensor_3_var_bf16_bf16_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
+
 @out_var_bf16_bf16_1x1_8x4_iter_2 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
 
 define amdgpu_ps void @test_convolve.bf16_bf16_1x1_8x4_iter_2() {
@@ -4552,8 +4361,7 @@ bb:
   %weights = load <2 x bfloat>, ptr addrspace(10) @weights_var_bf16_bf16_1x1_8x4_iter_2
   %tensor_0 = load <4 x bfloat>, ptr addrspace(10) @tensor_0_var_bf16_bf16_1x1_8x4_iter_2
   %tensor_1 = load <4 x bfloat>, ptr addrspace(10) @tensor_1_var_bf16_bf16_1x1_8x4_iter_2
-  %tensor_2 = load <4 x half>, ptr addrspace(10) @tensor_2_var_f16_f16_1x1_8x4_iter_4
-  %tensor_3 = load <4 x half>, ptr addrspace(10) @tensor_3_var_f16_f16_1x1_8x4_iter_4
+
 
   %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v8bf16.v8bf16.v2bf16.v4bf16(<8 x bfloat> %acc_in, <2 x bfloat> %weights, <4 x bfloat> %tensor_0, <4 x bfloat> %tensor_1, <4 x bfloat> undef, <4 x bfloat> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_2) == (0 << 0 | 1 << 12)
@@ -4570,7 +4378,7 @@ bb:
 @tensor_0_var_f32_bf16_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
 @tensor_1_var_f32_bf16_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
 @tensor_2_var_f32_bf16_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
-@tensor_3_var_f32_bf16_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
+
 @out_var_f32_bf16_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <4 x float>
 
 define amdgpu_ps void @test_convolve.f32_bf16_1x1_4x2_iter_3() {
@@ -4598,7 +4406,6 @@ bb:
   %tensor_0 = load <2 x bfloat>, ptr addrspace(10) @tensor_0_var_f32_bf16_1x1_4x2_iter_3
   %tensor_1 = load <2 x bfloat>, ptr addrspace(10) @tensor_1_var_f32_bf16_1x1_4x2_iter_3
   %tensor_2 = load <2 x bfloat>, ptr addrspace(10) @tensor_2_var_f32_bf16_1x1_4x2_iter_3
-  %tensor_3 = load <4 x half>, ptr addrspace(10) @tensor_3_var_f16_f16_1x1_8x4_iter_4
 
   %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf16.1x1.v4f32.v4f32.v16bf16.v2bf16(<4 x float> %acc_in, <16 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> %tensor_2, <2 x bfloat> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
@@ -4615,7 +4422,7 @@ bb:
 @tensor_0_var_bf16_bf16_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
 @tensor_1_var_bf16_bf16_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
 @tensor_2_var_bf16_bf16_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
-@tensor_3_var_bf16_bf16_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
+
 @out_var_bf16_bf16_1x1_4x2_iter_3 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
 
 define amdgpu_ps void @test_convolve.bf16_bf16_1x1_4x2_iter_3() {
@@ -4641,7 +4448,6 @@ bb:
   %tensor_0 = load <2 x bfloat>, ptr addrspace(10) @tensor_0_var_bf16_bf16_1x1_4x2_iter_3
   %tensor_1 = load <2 x bfloat>, ptr addrspace(10) @tensor_1_var_bf16_bf16_1x1_4x2_iter_3
   %tensor_2 = load <2 x bfloat>, ptr addrspace(10) @tensor_2_var_bf16_bf16_1x1_4x2_iter_3
-  %tensor_3 = load <4 x half>, ptr addrspace(10) @tensor_3_var_f16_f16_1x1_8x4_iter_4
 
   %dst = call <4 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v4bf16.v4bf16.v16bf16.v2bf16(<4 x bfloat> %acc_in, <16 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> %tensor_2, <2 x bfloat> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_ITER_3) == (3 << 0 | 2 << 12)
@@ -4658,7 +4464,7 @@ bb:
 @tensor_0_var_bf16_bf16_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
 @tensor_1_var_bf16_bf16_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
 @tensor_2_var_bf16_bf16_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
-@tensor_3_var_bf16_bf16_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global <2 x bfloat>
+
 @out_var_bf16_bf16_1x1_4x4_iter_3 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
 
 define amdgpu_ps void @test_convolve.bf16_bf16_1x1_4x4_iter_3() {
@@ -4681,7 +4487,6 @@ bb:
   %tensor_0 = load <2 x bfloat>, ptr addrspace(10) @tensor_0_var_bf16_bf16_1x1_4x4_iter_3
   %tensor_1 = load <2 x bfloat>, ptr addrspace(10) @tensor_1_var_bf16_bf16_1x1_4x4_iter_3
   %tensor_2 = load <2 x bfloat>, ptr addrspace(10) @tensor_2_var_bf16_bf16_1x1_4x4_iter_3
-  %tensor_3 = load <4 x half>, ptr addrspace(10) @tensor_3_var_f16_f16_1x1_8x4_iter_4
 
   %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v8bf16.v8bf16.v6bf16.v2bf16(<8 x bfloat> %acc_in, <6 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> %tensor_2, <2 x bfloat> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_ITER_3) == (2 << 0 | 2 << 12)
@@ -4698,7 +4503,7 @@ bb:
 @tensor_0_var_bf16_bf16_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
 @tensor_1_var_bf16_bf16_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
 @tensor_2_var_bf16_bf16_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
-@tensor_3_var_bf16_bf16_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <4 x bfloat>
+
 @out_var_bf16_bf16_1x1_8x4_iter_3 = external local_unnamed_addr addrspace(10) global <8 x bfloat>
 
 define amdgpu_ps void @test_convolve.bf16_bf16_1x1_8x4_iter_3() {
@@ -4713,7 +4518,6 @@ bb:
   %tensor_0 = load <4 x bfloat>, ptr addrspace(10) @tensor_0_var_bf16_bf16_1x1_8x4_iter_3
   %tensor_1 = load <4 x bfloat>, ptr addrspace(10) @tensor_1_var_bf16_bf16_1x1_8x4_iter_3
   %tensor_2 = load <4 x bfloat>, ptr addrspace(10) @tensor_2_var_bf16_bf16_1x1_8x4_iter_3
-  %tensor_3 = load <4 x half>, ptr addrspace(10) @tensor_3_var_f16_f16_1x1_8x4_iter_4
 
   %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v8bf16.v8bf16.v4bf16.v4bf16(<8 x bfloat> %acc_in, <4 x bfloat> %weights, <4 x bfloat> %tensor_0, <4 x bfloat> %tensor_1, <4 x bfloat> %tensor_2, <4 x bfloat> undef,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_ITER_3) == (0 << 0 | 2 << 12)

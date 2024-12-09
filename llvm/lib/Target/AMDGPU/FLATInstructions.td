@@ -15,6 +15,7 @@ def GlobalSAddrNoIOffsetM0 : ComplexPattern<iPTR, 3, "SelectGlobalSAddrNoIOffset
 def GlobalSAddr : ComplexPattern<iPTR, 4, "SelectGlobalSAddr", [], [SDNPWantRoot], -10>;
 def GlobalSAddrGLC : ComplexPattern<iPTR, 4, "SelectGlobalSAddrGLC", [], [SDNPWantRoot], -10>;
 def GlobalSAddrCPol : ComplexPattern<iPTR, 4, "SelectGlobalSAddrCPol", [], [SDNPWantRoot], -10>;
+def GlobalSAddrCPolM0 : ComplexPattern<iPTR, 4, "SelectGlobalSAddrCPolM0", [], [SDNPWantRoot], -10>;
 def ScratchSAddr : ComplexPattern<iPTR, 2, "SelectScratchSAddr", [], [SDNPWantRoot], -10>;
 def ScratchSVAddr : ComplexPattern<iPTR, 4, "SelectScratchSVAddr", [], [SDNPWantRoot], -10>;
 
@@ -443,17 +444,20 @@ class FLAT_Global_Invalidate_Writeback<string opName, SDPatternOperator node = n
   let sve = 0;
 }
 
-class FLAT_RTS<string opName, bit HasVdst, bit HasData, RegisterClass vdstClass = VGPR_32> : FLAT_Pseudo<
+class FLAT_RTS<string opName, bit HasVdst, bit HasData, bit isStore, bit isLoad, RegisterClass vdstClass = VGPR_32> : FLAT_Pseudo<
   opName,
   !if(HasVdst, (outs vdstClass:$vdst), (outs)),
   !con(!if(HasData, !if(HasVdst, (ins VReg_64:$vdata), (ins VGPR_32:$vdata)), (ins)),(ins CPol:$cpol)),
   !if(!and(HasVdst, HasData), " $vdst, $vdata", !if(HasVdst, " $vdst", !if(HasData, " $vdata", "")))#"$cpol">{
 
+  let hasSideEffects = 1;
   let is_flat_global = 1;
   let has_offset = 0;
   let has_vaddr = 0;
   let has_data = HasData;
   let has_vdst = HasVdst;
+  let mayLoad = isLoad;
+  let mayStore = isStore;
 }
 
 class FLAT_SWC<string opName, bit HasVdst, bit HasAddr> : FLAT_Pseudo<
@@ -1334,12 +1338,12 @@ defm SCRATCH_DISCARD_B32  : FLAT_Scratch_Discard_Pseudo<"scratch_discard_b32">;
 defm SCRATCH_DISCARD_B128 : FLAT_Scratch_Discard_Pseudo<"scratch_discard_b128">;
 
 let SubtargetPredicate = isGFX13Plus in {
-  def RTS_READ_RESULT_ALL_STOP : FLAT_RTS<"rts_read_result_all_stop", 1, 0, VReg_64>;
-  def RTS_READ_RESULT_ONGOING  : FLAT_RTS<"rts_read_result_ongoing", 1, 0, VReg_64>;
-  def RTS_RAY_RESTORE          : FLAT_RTS<"rts_ray_restore", 0, 1>;
-  def RTS_RAY_SAVE             : FLAT_RTS<"rts_ray_save", 1, 0>;
-  def RTS_UPDATE_RAY           : FLAT_RTS<"rts_update_ray", 1, 1>;
-  def RTS_FLUSH                : FLAT_RTS<"rts_flush", 0, 0>;
+  def RTS_READ_RESULT_ALL_STOP : FLAT_RTS<"rts_read_result_all_stop", 1, 0, 0, 1,VReg_64>;
+  def RTS_READ_RESULT_ONGOING  : FLAT_RTS<"rts_read_result_ongoing", 1, 0, 0, 1, VReg_64>;
+  def RTS_RAY_RESTORE          : FLAT_RTS<"rts_ray_restore", 0, 1, 0, 1>;
+  def RTS_RAY_SAVE             : FLAT_RTS<"rts_ray_save", 1, 0, 1, 1>;
+  def RTS_UPDATE_RAY           : FLAT_RTS<"rts_update_ray", 1, 1, 1, 1>;
+  def RTS_FLUSH                : FLAT_RTS<"rts_flush", 0, 0, 1, 1>;
 
   let OtherPredicates = [HasSWC] in {
   def SWC_REORDER             : FLAT_SWC<"swc_reorder", 1, 1>;
@@ -1361,6 +1365,28 @@ class FlatLoadPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCN
   (vt (node (FlatOffset i64:$vaddr, i32:$offset))),
   (inst $vaddr, $offset)
 >;
+
+class FlatRtsPat<SDPatternOperator node, FLAT_Pseudo opcode,
+                 ValueType vdst_vt = isVoid,
+                 ValueType vdata_vt = isVoid> : GCNPat<
+  !if(!ne(vdst_vt, isVoid),
+      !if(!ne(vdata_vt, isVoid),
+          (vdst_vt:$vdst (node vdata_vt:$vdata)),
+          (vdst_vt:$vdst (node))),
+      !if(!ne(vdata_vt, isVoid),
+          (node vdata_vt:$vdata),
+          (node))),
+  !if(!ne(vdata_vt, isVoid),
+      (opcode vdata_vt:$vdata, (i32 0)),
+      (opcode (i32 0)))
+>;
+
+def : FlatRtsPat<int_amdgcn_rts_read_result_all_stop, RTS_READ_RESULT_ALL_STOP, i64>;
+def : FlatRtsPat<int_amdgcn_rts_read_result_ongoing, RTS_READ_RESULT_ONGOING, i64>;
+def : FlatRtsPat<int_amdgcn_rts_flush, RTS_FLUSH>;
+def : FlatRtsPat<int_amdgcn_rts_ray_save, RTS_RAY_SAVE, i32>;
+def : FlatRtsPat<int_amdgcn_rts_ray_restore, RTS_RAY_RESTORE, isVoid, i32>;
+def : FlatRtsPat<int_amdgcn_rts_update_ray, RTS_UPDATE_RAY, i32, i64>;
 
 class FlatLoadPat_CPOL <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (FlatOffset i64:$vaddr, i32:$offset), (i32 timm:$cpol))),
@@ -1423,12 +1449,12 @@ class FlatLoadSaddrPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> 
 >;
 
 class FlatLoadSignedPat_M0 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (vt (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), M0)),
-  (inst $vaddr, $offset)
+  (vt (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), (i32 timm:$cpol), M0)),
+  (inst $vaddr, $offset, $cpol)
 >;
 
 class GlobalLoadSaddrPat_M0 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), M0)),
+  (vt (node (GlobalSAddrCPolM0 (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), (i32 timm), M0)),
   (inst $saddr, $voffset, $offset, $cpol)
 >;
 

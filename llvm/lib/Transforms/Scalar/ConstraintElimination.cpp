@@ -452,7 +452,9 @@ static Decomposition decomposeGEP(GEPOperator &GEP,
                       "unsigned predicates at the moment.");
   const auto &[BasePtr, ConstantOffset, VariableOffsets, NW] =
       collectOffsets(GEP, DL);
-  if (!BasePtr || !NW.hasNoUnsignedSignedWrap())
+  // We support either plain gep nuw, or gep nusw with non-negative offset,
+  // which implies gep nuw.
+  if (!BasePtr || NW == GEPNoWrapFlags::none())
     return &GEP;
 
   Decomposition Result(ConstantOffset.getSExtValue(), DecompEntry(1, BasePtr));
@@ -461,11 +463,13 @@ static Decomposition decomposeGEP(GEPOperator &GEP,
     IdxResult.mul(Scale.getSExtValue());
     Result.add(IdxResult);
 
-    // If Op0 is signed non-negative, the GEP is increasing monotonically and
-    // can be de-composed.
-    if (!isKnownNonNegative(Index, DL))
-      Preconditions.emplace_back(CmpInst::ICMP_SGE, Index,
-                                 ConstantInt::get(Index->getType(), 0));
+    if (!NW.hasNoUnsignedWrap()) {
+      // Try to prove nuw from nusw and nneg.
+      assert(NW.hasNoUnsignedSignedWrap() && "Must have nusw flag");
+      if (!isKnownNonNegative(Index, DL))
+        Preconditions.emplace_back(CmpInst::ICMP_SGE, Index,
+                                   ConstantInt::get(Index->getType(), 0));
+    }
   }
   return Result;
 }
@@ -517,6 +521,9 @@ static Decomposition decompose(Value *V,
     else if (match(V, m_NNegZExt(m_Value(Op0)))) {
       V = Op0;
       IsKnownNonNegative = true;
+    } else if (match(V, m_NSWTrunc(m_Value(Op0)))) {
+      if (Op0->getType()->getScalarSizeInBits() <= 64)
+        V = Op0;
     }
 
     if (match(V, m_NSWAdd(m_Value(Op0), m_Value(Op1))))
@@ -554,12 +561,19 @@ static Decomposition decompose(Value *V,
   if (match(V, m_ZExt(m_Value(Op0)))) {
     IsKnownNonNegative = true;
     V = Op0;
-  }
-
-  if (match(V, m_SExt(m_Value(Op0)))) {
+  } else if (match(V, m_SExt(m_Value(Op0)))) {
     V = Op0;
     Preconditions.emplace_back(CmpInst::ICMP_SGE, Op0,
                                ConstantInt::get(Op0->getType(), 0));
+  } else if (auto *Trunc = dyn_cast<TruncInst>(V)) {
+    if (Trunc->getSrcTy()->getScalarSizeInBits() <= 64) {
+      if (Trunc->hasNoUnsignedWrap() || Trunc->hasNoSignedWrap()) {
+        V = Trunc->getOperand(0);
+        if (!Trunc->hasNoUnsignedWrap())
+          Preconditions.emplace_back(CmpInst::ICMP_SGE, V,
+                                     ConstantInt::get(V->getType(), 0));
+      }
+    }
   }
 
   Value *Op1;

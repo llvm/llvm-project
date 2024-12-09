@@ -3508,7 +3508,7 @@ multiclass Conv<LLVMType outTy, LLVMType weightsTensorTy, LLVMType accinTy = out
 defm int_amdgcn_convolve_f16_f16   : Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 defm int_amdgcn_convolve_bf16_bf16 : Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 defm int_amdgcn_convolve_f16_fp8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
-defm int_amdgcn_convolve_bf16_bf8  : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f16_bf8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
 defm int_amdgcn_convolve_f16_iu8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
 defm int_amdgcn_convolve_f16_iu4   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
 
@@ -3915,6 +3915,28 @@ defm int_amdgcn_cvt_to_tensor_f16_bf16 : AMDGPUCvtTensor<llvm_v2f16_ty, llvm_v8b
 defm int_amdgcn_cvt_to_tensor_bf16_f32 : AMDGPUCvtTensor<llvm_v2bf16_ty, llvm_v4f32_ty>;
 defm int_amdgcn_cvt_to_tensor_bf16_f16 : AMDGPUCvtTensor<llvm_v2bf16_ty, llvm_v8f16_ty, llvm_v4f16_ty, llvm_v8f16_ty>;
 defm int_amdgcn_cvt_to_tensor_bf16_bf16 : AMDGPUCvtTensor<llvm_v2bf16_ty, llvm_v8bf16_ty, llvm_v4bf16_ty, llvm_v8bf16_ty>;
+
+class AMDGPU_rts_read_result: Intrinsic<
+       [llvm_i64_ty], [], [IntrReadMem, IntrHasSideEffects, IntrNoCallback, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]
+>;
+
+def int_amdgcn_rts_read_result_all_stop : AMDGPU_rts_read_result;
+def int_amdgcn_rts_read_result_ongoing : AMDGPU_rts_read_result;
+
+def int_amdgcn_rts_update_ray: Intrinsic<
+  [llvm_i32_ty], [llvm_i64_ty], [IntrNoCallback, IntrHasSideEffects, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]
+>;
+
+def int_amdgcn_rts_flush: Intrinsic<
+  [], [], [IntrHasSideEffects, IntrNoCallback, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]
+>;
+
+def int_amdgcn_rts_ray_save: Intrinsic<
+  [llvm_i32_ty], [], [IntrHasSideEffects, IntrNoCallback, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]
+>;
+def int_amdgcn_rts_ray_restore: Intrinsic<
+  [], [llvm_i32_ty], [IntrReadMem, IntrHasSideEffects, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]
+>;
 
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
@@ -4753,9 +4775,12 @@ class AMDGPUClusterLoad<LLVMType ptr_ty>:
   Intrinsic<
     [llvm_any_ty],
     [ptr_ty,
-    llvm_i32_ty],     // workgroup broadcast mask (in M0)
+     llvm_i32_ty,      // gfx12+ cachepolicy:
+                       //   bits [0-2] = th
+                       //   bits [3-4] = scope
+     llvm_i32_ty],     // workgroup broadcast mask (in M0)
     [IntrArgMemOnly, IntrReadMem, ReadOnly<ArgIndex<0>>, IntrWillReturn, IntrConvergent,
-     NoCapture<ArgIndex<0>>, IntrNoCallback, IntrNoFree],
+     NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>, IntrNoCallback, IntrNoFree],
     "", [SDNPMemOperand]
   >;
 

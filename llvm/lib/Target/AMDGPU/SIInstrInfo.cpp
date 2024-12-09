@@ -353,6 +353,20 @@ static bool isStride64(unsigned Opc) {
   }
 }
 
+static bool isRTSOpc(unsigned op) {
+  switch (op) {
+  case AMDGPU::RTS_READ_RESULT_ALL_STOP:
+  case AMDGPU::RTS_READ_RESULT_ONGOING:
+  case AMDGPU::RTS_FLUSH:
+  case AMDGPU::RTS_RAY_SAVE:
+  case AMDGPU::RTS_RAY_RESTORE:
+  case AMDGPU::RTS_UPDATE_RAY:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
     int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
@@ -496,7 +510,7 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     return true;
   }
 
-  if (isFLAT(LdSt)) {
+  if (isFLAT(LdSt) && !isRTSOpc(LdSt.getOpcode())) {
     // Instructions have either vaddr or saddr or both or none.
     BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
     if (BaseOp)

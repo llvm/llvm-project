@@ -2,9 +2,9 @@
 ; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1210 -O3 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1210,GFX1210-SDAG %s
 ; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1210 -O3 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1210,GFX1210-GISEL %s
 
-declare i32 @llvm.amdgcn.cluster.load.b32.i32.p1(ptr addrspace(1), i32 %broadcast_mask)
-declare <2 x i32> @llvm.amdgcn.cluster.load.b64.v2i32.p1(ptr addrspace(1), i32 %mask)
-declare <4 x i32> @llvm.amdgcn.cluster.load.b128.v4i32.p1(ptr addrspace(1), i32 %mask)
+declare i32 @llvm.amdgcn.cluster.load.b32.i32.p1(ptr addrspace(1), i32 %cpol, i32 %mask)
+declare <2 x i32> @llvm.amdgcn.cluster.load.b64.v2i32.p1(ptr addrspace(1), i32 %cpol, i32 %mask)
+declare <4 x i32> @llvm.amdgcn.cluster.load.b128.v4i32.p1(ptr addrspace(1), i32 %cpol, i32 %mask)
 
 define amdgpu_ps void @cluster_load_b32_vaddr(ptr addrspace(1) %addr, ptr addrspace(1) %use, i32 %mask) {
 ; GFX1210-SDAG-LABEL: cluster_load_b32_vaddr:
@@ -12,7 +12,7 @@ define amdgpu_ps void @cluster_load_b32_vaddr(ptr addrspace(1) %addr, ptr addrsp
 ; GFX1210-SDAG-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-SDAG-NEXT:    s_mov_b32 m0, s0
-; GFX1210-SDAG-NEXT:    cluster_load_b32 v0, v[0:1], off offset:32
+; GFX1210-SDAG-NEXT:    cluster_load_b32 v0, v[0:1], off offset:32 th:TH_LOAD_NT
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-SDAG-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX1210-SDAG-NEXT:    s_endpgm
@@ -20,13 +20,13 @@ define amdgpu_ps void @cluster_load_b32_vaddr(ptr addrspace(1) %addr, ptr addrsp
 ; GFX1210-GISEL-LABEL: cluster_load_b32_vaddr:
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
 ; GFX1210-GISEL-NEXT:    v_readfirstlane_b32 m0, v4
-; GFX1210-GISEL-NEXT:    cluster_load_b32 v0, v[0:1], off offset:32
+; GFX1210-GISEL-NEXT:    cluster_load_b32 v0, v[0:1], off offset:32 th:TH_LOAD_NT
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-GISEL-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX1210-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
-  %val = call i32 @llvm.amdgcn.cluster.load.b32.i32.p1(ptr addrspace(1) %gep, i32 %mask)
+  %val = call i32 @llvm.amdgcn.cluster.load.b32.i32.p1(ptr addrspace(1) %gep, i32 1, i32 %mask)
   store i32 %val, ptr addrspace(1) %use
   ret void
 }
@@ -35,13 +35,13 @@ define amdgpu_ps void @cluster_load_b32_vaddr_imm_mask(ptr addrspace(1) %addr, p
 ; GFX1210-LABEL: cluster_load_b32_vaddr_imm_mask:
 ; GFX1210:       ; %bb.0: ; %entry
 ; GFX1210-NEXT:    s_mov_b32 m0, 7
-; GFX1210-NEXT:    cluster_load_b32 v0, v[0:1], off offset:32
+; GFX1210-NEXT:    cluster_load_b32 v0, v[0:1], off offset:32 th:TH_LOAD_HT scope:SCOPE_SE
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX1210-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
-  %val = call i32 @llvm.amdgcn.cluster.load.b32.i32.p1(ptr addrspace(1) %gep, i32 7)
+  %val = call i32 @llvm.amdgcn.cluster.load.b32.i32.p1(ptr addrspace(1) %gep, i32 10, i32 7)
   store i32 %val, ptr addrspace(1) %use
   ret void
 }
@@ -51,13 +51,29 @@ define amdgpu_ps void @cluster_load_b32_saddr(ptr addrspace(1) inreg %addr, ptr 
 ; GFX1210:       ; %bb.0: ; %entry
 ; GFX1210-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1210-NEXT:    s_mov_b32 m0, s2
-; GFX1210-NEXT:    cluster_load_b32 v2, v2, s[0:1] offset:32
+; GFX1210-NEXT:    cluster_load_b32 v2, v2, s[0:1] offset:32 th:TH_LOAD_NT_HT scope:SCOPE_DEV
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1210-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
-  %val = call i32 @llvm.amdgcn.cluster.load.b32.i32.p1(ptr addrspace(1) %gep, i32 %mask)
+  %val = call i32 @llvm.amdgcn.cluster.load.b32.i32.p1(ptr addrspace(1) %gep, i32 22, i32 %mask)
+  store i32 %val, ptr addrspace(1) %use
+  ret void
+}
+
+define amdgpu_ps void @cluster_load_monitor_b32_saddr_scale_offset(ptr addrspace(1) inreg %addr, ptr addrspace(1) %use, i32 inreg %mask, i32 %idx) {
+; GFX1210-LABEL: cluster_load_monitor_b32_saddr_scale_offset:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b32 m0, s2
+; GFX1210-NEXT:    cluster_load_b32 v2, v2, s[0:1] scale_offset th:TH_LOAD_BYPASS scope:SCOPE_SYS
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1210-NEXT:    s_endpgm
+entry:
+  %idxprom = sext i32 %idx to i64
+  %gep = getelementptr i32, ptr addrspace(1) %addr, i64 %idxprom
+  %val = call i32 @llvm.amdgcn.cluster.load.b32.i32.p1(ptr addrspace(1) %gep, i32 27, i32 inreg %mask)
   store i32 %val, ptr addrspace(1) %use
   ret void
 }
@@ -68,7 +84,7 @@ define amdgpu_ps void @cluster_load_b64_vaddr(ptr addrspace(1) %addr, ptr addrsp
 ; GFX1210-SDAG-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-SDAG-NEXT:    s_mov_b32 m0, s0
-; GFX1210-SDAG-NEXT:    cluster_load_b64 v[0:1], v[0:1], off offset:32
+; GFX1210-SDAG-NEXT:    cluster_load_b64 v[0:1], v[0:1], off offset:32 th:TH_LOAD_NT
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-SDAG-NEXT:    global_store_b64 v[2:3], v[0:1], off
 ; GFX1210-SDAG-NEXT:    s_endpgm
@@ -76,13 +92,13 @@ define amdgpu_ps void @cluster_load_b64_vaddr(ptr addrspace(1) %addr, ptr addrsp
 ; GFX1210-GISEL-LABEL: cluster_load_b64_vaddr:
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
 ; GFX1210-GISEL-NEXT:    v_readfirstlane_b32 m0, v4
-; GFX1210-GISEL-NEXT:    cluster_load_b64 v[0:1], v[0:1], off offset:32
+; GFX1210-GISEL-NEXT:    cluster_load_b64 v[0:1], v[0:1], off offset:32 th:TH_LOAD_NT
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-GISEL-NEXT:    global_store_b64 v[2:3], v[0:1], off
 ; GFX1210-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
-  %val = call <2 x i32> @llvm.amdgcn.cluster.load.b64.v2i32.p1(ptr addrspace(1) %gep, i32 %mask)
+  %val = call <2 x i32> @llvm.amdgcn.cluster.load.b64.v2i32.p1(ptr addrspace(1) %gep, i32 1, i32 %mask)
   store <2 x i32> %val, ptr addrspace(1) %use
   ret void
 }
@@ -91,13 +107,13 @@ define amdgpu_ps void @cluster_load_b64_vaddr_imm_mask(ptr addrspace(1) %addr, p
 ; GFX1210-LABEL: cluster_load_b64_vaddr_imm_mask:
 ; GFX1210:       ; %bb.0: ; %entry
 ; GFX1210-NEXT:    s_mov_b32 m0, 0x10007
-; GFX1210-NEXT:    cluster_load_b64 v[0:1], v[0:1], off offset:32
+; GFX1210-NEXT:    cluster_load_b64 v[0:1], v[0:1], off offset:32 th:TH_LOAD_HT scope:SCOPE_SE
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    global_store_b64 v[2:3], v[0:1], off
 ; GFX1210-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
-  %val = call <2 x i32> @llvm.amdgcn.cluster.load.b64.v2i32.p1(ptr addrspace(1) %gep, i32 65543)
+  %val = call <2 x i32> @llvm.amdgcn.cluster.load.b64.v2i32.p1(ptr addrspace(1) %gep, i32 10, i32 65543)
   store <2 x i32> %val, ptr addrspace(1) %use
   ret void
 }
@@ -107,13 +123,29 @@ define amdgpu_ps void @cluster_load_b64_saddr(ptr addrspace(1) inreg %addr, ptr 
 ; GFX1210:       ; %bb.0: ; %entry
 ; GFX1210-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1210-NEXT:    s_mov_b32 m0, s2
-; GFX1210-NEXT:    cluster_load_b64 v[2:3], v2, s[0:1] offset:32
+; GFX1210-NEXT:    cluster_load_b64 v[2:3], v2, s[0:1] offset:32 th:TH_LOAD_NT_HT scope:SCOPE_DEV
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX1210-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
-  %val = call <2 x i32> @llvm.amdgcn.cluster.load.b64.v2i32.p1(ptr addrspace(1) %gep, i32 %mask)
+  %val = call <2 x i32> @llvm.amdgcn.cluster.load.b64.v2i32.p1(ptr addrspace(1) %gep, i32 22, i32 %mask)
+  store <2 x i32> %val, ptr addrspace(1) %use
+  ret void
+}
+
+define amdgpu_ps void @cluster_load_monitor_b64_saddr_scale_offset(ptr addrspace(1) inreg %addr, ptr addrspace(1) %use, i32 inreg %mask, i32 %idx) {
+; GFX1210-LABEL: cluster_load_monitor_b64_saddr_scale_offset:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b32 m0, s2
+; GFX1210-NEXT:    cluster_load_b64 v[2:3], v2, s[0:1] scale_offset th:TH_LOAD_BYPASS scope:SCOPE_SYS
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX1210-NEXT:    s_endpgm
+entry:
+  %idxprom = sext i32 %idx to i64
+  %gep = getelementptr i64, ptr addrspace(1) %addr, i64 %idxprom
+  %val = call <2 x i32> @llvm.amdgcn.cluster.load.b64.v2i32.p1(ptr addrspace(1) %gep, i32 27, i32 inreg %mask)
   store <2 x i32> %val, ptr addrspace(1) %use
   ret void
 }
@@ -124,7 +156,7 @@ define amdgpu_ps void @cluster_load_b128_vaddr(ptr addrspace(1) %addr, ptr addrs
 ; GFX1210-SDAG-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-SDAG-NEXT:    s_mov_b32 m0, s0
-; GFX1210-SDAG-NEXT:    cluster_load_b128 v[4:7], v[0:1], off offset:32
+; GFX1210-SDAG-NEXT:    cluster_load_b128 v[4:7], v[0:1], off offset:32 th:TH_LOAD_NT
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off
 ; GFX1210-SDAG-NEXT:    s_endpgm
@@ -132,13 +164,13 @@ define amdgpu_ps void @cluster_load_b128_vaddr(ptr addrspace(1) %addr, ptr addrs
 ; GFX1210-GISEL-LABEL: cluster_load_b128_vaddr:
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
 ; GFX1210-GISEL-NEXT:    v_readfirstlane_b32 m0, v4
-; GFX1210-GISEL-NEXT:    cluster_load_b128 v[4:7], v[0:1], off offset:32
+; GFX1210-GISEL-NEXT:    cluster_load_b128 v[4:7], v[0:1], off offset:32 th:TH_LOAD_NT
 ; GFX1210-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-GISEL-NEXT:    global_store_b128 v[2:3], v[4:7], off
 ; GFX1210-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
-  %val = call <4 x i32> @llvm.amdgcn.cluster.load.b128.v4i32.p1(ptr addrspace(1) %gep, i32 %mask)
+  %val = call <4 x i32> @llvm.amdgcn.cluster.load.b128.v4i32.p1(ptr addrspace(1) %gep, i32 1, i32 %mask)
   store <4 x i32> %val, ptr addrspace(1) %use
   ret void
 }
@@ -147,13 +179,13 @@ define amdgpu_ps void @cluster_load_b128_vaddr_imm_mask(ptr addrspace(1) %addr, 
 ; GFX1210-LABEL: cluster_load_b128_vaddr_imm_mask:
 ; GFX1210:       ; %bb.0: ; %entry
 ; GFX1210-NEXT:    s_mov_b32 m0, 15
-; GFX1210-NEXT:    cluster_load_b128 v[4:7], v[0:1], off offset:32
+; GFX1210-NEXT:    cluster_load_b128 v[4:7], v[0:1], off offset:32 th:TH_LOAD_HT scope:SCOPE_SE
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    global_store_b128 v[2:3], v[4:7], off
 ; GFX1210-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
-  %val = call <4 x i32> @llvm.amdgcn.cluster.load.b128.v4i32.p1(ptr addrspace(1) %gep, i32 15)
+  %val = call <4 x i32> @llvm.amdgcn.cluster.load.b128.v4i32.p1(ptr addrspace(1) %gep, i32 10, i32 15)
   store <4 x i32> %val, ptr addrspace(1) %use
   ret void
 }
@@ -163,13 +195,13 @@ define amdgpu_ps void @cluster_load_b128_saddr(ptr addrspace(1) inreg %addr, ptr
 ; GFX1210:       ; %bb.0: ; %entry
 ; GFX1210-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1210-NEXT:    s_mov_b32 m0, s2
-; GFX1210-NEXT:    cluster_load_b128 v[2:5], v2, s[0:1] offset:32
+; GFX1210-NEXT:    cluster_load_b128 v[2:5], v2, s[0:1] offset:32 th:TH_LOAD_BYPASS scope:SCOPE_SYS
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX1210-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
-  %val = call <4 x i32> @llvm.amdgcn.cluster.load.b128.v4i32.p1(ptr addrspace(1) %gep, i32 inreg %mask)
+  %val = call <4 x i32> @llvm.amdgcn.cluster.load.b128.v4i32.p1(ptr addrspace(1) %gep, i32 27, i32 inreg %mask)
   store <4 x i32> %val, ptr addrspace(1) %use
   ret void
 }

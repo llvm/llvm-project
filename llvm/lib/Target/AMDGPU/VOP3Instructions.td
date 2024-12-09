@@ -1384,6 +1384,11 @@ let True16Predicate = NotHasTrue16BitInsts, SubtargetPredicate = isGFX10Plus in 
    >;
 } // End True16Predicate = NotHasTrue16BitInsts, SubtargetPredicate = isGFX10Plus
 
+let True16Predicate = UseRealTrue16Insts in {
+  def : OpSelBinOpClampPat<uaddsat, V_ADD_NC_U16_t16_e64>;
+  def : OpSelBinOpClampPat<usubsat, V_SUB_NC_U16_t16_e64>;
+} // End OtherPredicates = [UseRealTrue16Insts]
+
 let True16Predicate = UseFakeTrue16Insts in {
    def : OpSelBinOpClampPat<uaddsat, V_ADD_NC_U16_fake16_e64>;
    def : OpSelBinOpClampPat<usubsat, V_SUB_NC_U16_fake16_e64>;
@@ -1421,10 +1426,10 @@ let SubtargetPredicate = isGFX1210Plus in {
 let SubtargetPredicate = HasBitOp3Insts in {
   let isReMaterializable = 1 in {
     defm V_BITOP3_B16 : VOP3Inst <"v_bitop3_b16",
-                                  VOP3_BITOP3_Profile<VOPProfile_True16<VOPProfile <[i16, i16, i16, i16, i8]>>,
+                                  VOP3_BITOP3_Profile<VOPProfile_True16<VOPProfile <[i16, i16, i16, i16, i32]>>,
                                                       VOP3_OPSEL>>;
     defm V_BITOP3_B32 : VOP3Inst <"v_bitop3_b32",
-                                  VOP3_BITOP3_Profile<VOPProfile <[i32, i32, i32, i32, i8]>, VOP3_REGULAR>>,
+                                  VOP3_BITOP3_Profile<VOPProfile <[i32, i32, i32, i32, i32]>, VOP3_REGULAR>>,
                         VOPD_Component<0x12, "v_bitop2_b32">;
   }
   def : GCNPat<
@@ -2078,6 +2083,11 @@ defm V_XOR_B16_fake16      : VOP3Only_Realtriple_t16_gfx11_gfx12_gfx13<0x364, 0x
 
 def : AMDGPUMnemonicAlias<"v_perm_pk4_b8_u8", "v_perm_b32"> {
   let AssemblerPredicate = isGFX13Plus;
+}
+
+let AssemblerPredicate = isGFX11Plus in {
+  def : AMDGPUMnemonicAlias<"v_add3_nc_u32", "v_add3_u32">;
+  def : AMDGPUMnemonicAlias<"v_xor_add_u32", "v_xad_u32">;
 }
 
 // These instructions differ from GFX12 variant by supporting DPP:
