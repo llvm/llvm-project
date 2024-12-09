@@ -297,8 +297,11 @@ static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
       }
     }
 
-    if (ctx.arg.hasDynSymTab)
-      sym->isPreemptible = computeIsPreemptible(ctx, *sym);
+    if (ctx.arg.hasDynSymTab) {
+      sym->exportDynamic = sym->includeInDynsym(ctx);
+      sym->isPreemptible =
+          sym->exportDynamic && computeIsPreemptible(ctx, *sym);
+    }
   }
 }
 
@@ -1888,7 +1891,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       if (ctx.in.symTab)
         ctx.in.symTab->addSymbol(sym);
 
-      if (sym->includeInDynsym(ctx)) {
+      if (sym->exportDynamic) {
         ctx.partitions[sym->partition - 1].dynSymTab->addSymbol(sym);
         if (auto *file = dyn_cast<SharedFile>(sym->file))
           if (file->isNeeded && !sym->isUndefined())
