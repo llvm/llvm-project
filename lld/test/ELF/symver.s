@@ -139,7 +139,8 @@
 
 # W3:      error: undefined symbol: __wrap_foo@v1
 # W3-NEXT: >>> referenced by {{.*}}ref1.o:(.text+0x1)
-# W3-NOT:  {{.}}
+# W3-NEXT: >>> did you mean: __wrap_foo{{$}}
+# W3-NEXT: >>> defined in: {{.*}}wrap.o
 
 ## foo@v1 is correctly wrapped.
 # RUN: ld.lld -shared --soname=t --version-script=%t/ver --wrap=foo@v1 %t/ref.o %t/ref1.o %t/def1.o %t/wrap1.o -o %t.w4
