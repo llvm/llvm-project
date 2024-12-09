@@ -1,4 +1,5 @@
 
+
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -78,7 +79,7 @@ void NextUseResult::analyze(const MachineFunction &MF) {
           if (MO.isReg() && MO.getReg().isVirtual() && MO.isUse()) {
             Register VReg = MO.getReg();
             MachineInstr *Def = MRI->getVRegDef(VReg);
-            if (Def->getParent() == MBB)
+            if (Def && Def->getParent() == MBB)
               // defined in block - skip it
               continue;
             unsigned Distance =
@@ -99,32 +100,75 @@ void NextUseResult::analyze(const MachineFunction &MF) {
   }
 }
 
-unsigned NextUseResult::getNextUseDistance(const MachineInstr &MI, const Register Vreg) {
-  unsigned Dist = Infinity;
-  const MachineBasicBlock *MBB = MI.getParent();
-  SlotIndex Begin = Indexes->getMBBStartIdx(MBB->getNumber());
+unsigned NextUseResult::getNextUseDistance(const MachineInstr &MI,
+                                           const Register VReg) {
   SlotIndex Idx = Indexes->getInstructionIndex(MI);
-  int IDist = Begin.distance(Idx)/SlotIndex::InstrDist;
-  if (auto VMapRef = getVRegMap(MBB)) {
+  assert(Idx.isValid() && "Invalid Instruction index!");
+  if (InstrCache.contains(&Idx) && InstrCache[&Idx].contains(VReg)) {
+    return InstrCache[&Idx][VReg];
+  }
+  return computeNextUseDistance(*MI.getParent(), Idx, VReg);
+}
+
+unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock &MBB,
+                                           Register VReg) {
+  SlotIndex Idx = Indexes->getMBBEndIdx(&MBB);
+  assert(Idx.isValid() && "Invalid Instruction index!");
+  if (InstrCache.contains(&Idx) && InstrCache[&Idx].contains(VReg)) {
+    return InstrCache[&Idx][VReg];
+  }
+  return computeNextUseDistance(MBB, Idx, VReg);
+}
+
+unsigned NextUseResult::computeNextUseDistance(const MachineBasicBlock &MBB,
+                                               const SlotIndex I,
+                                               Register VReg) {
+  unsigned Dist = Infinity;
+
+  SlotIndex Begin = Indexes->getMBBStartIdx(MBB.getNumber());
+  
+  int IDist = Begin.distance(I)/SlotIndex::InstrDist;
+  if (auto VMapRef = getVRegMap(&MBB)) {
     VRegDistances &VRegs = VMapRef.value();
-    if (VRegs.contains(Vreg)) {
-      int UseDist = VRegs[Vreg];
+    if (VRegs.contains(VReg)) {
+      int UseDist = VRegs[VReg];
       if ((UseDist - IDist) < 0) {
-        for (auto Succ : successors(MBB)) {
+        for (auto Succ : successors(&MBB)) {
           if (auto SuccVMapRef = getVRegMap(Succ)) {
             VRegDistances &SuccVRegs = SuccVMapRef.value();
-            if (SuccVRegs.contains(Vreg)) {
-              Dist = std::min(Dist, SuccVRegs[Vreg]);
+            if (SuccVRegs.contains(VReg)) {
+              Dist = std::min(Dist, SuccVRegs[VReg]);
             }
           }
         }
       } else {
         Dist = UseDist - IDist;
       }
-      return Dist;
+    } else {
+      // We hit a case when the VReg is defined and used inside the block.
+      // Let's see if the I is in between.
+      MachineInstr *Def = MRI->getVRegDef(VReg);
+      assert(Def && "Neither use distance no Def found for reg!");
+      SlotIndex DefIdx = Indexes->getInstructionIndex(*Def);
+      assert(DefIdx.isValid() && "Register Def not in the Index");
+      if (SlotIndex::isEarlierInstr(DefIdx, I)) {
+        // "I" is after the Def
+        for (auto &U : MRI->use_instructions(VReg)) {
+          assert(U.getParent() == &MBB &&
+                 "Use out of the block fount but distance was not recorded");
+          SlotIndex UIdx = Indexes->getInstructionIndex(U);
+          if (SlotIndex::isEarlierInstr(I, UIdx)) {
+            unsigned UDist = I.distance(UIdx)/SlotIndex::InstrDist;
+            if (UDist < Dist)
+              Dist = UDist;
+          }
+        }
+      }
     }
+    if (Dist != Infinity)
+      InstrCache[&I][VReg] = Dist;
   }
-  return Infinity;
+  return Dist;
 }
 
 AMDGPUNextUseAnalysis::Result
@@ -154,7 +198,6 @@ char AMDGPUNextUseAnalysisWrapper::ID = 0;
 char &llvm::AMDGPUNextUseAnalysisID = AMDGPUNextUseAnalysisWrapper::ID;
 INITIALIZE_PASS_BEGIN(AMDGPUNextUseAnalysisWrapper, "amdgpu-next-use",
                       "AMDGPU Next Use Analysis", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(AMDGPUNextUseAnalysisWrapper, "amdgpu-next-use",
@@ -165,6 +208,7 @@ bool AMDGPUNextUseAnalysisWrapper::runOnMachineFunction(
   NU.Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
   NU.LI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   NU.MRI = &MF.getRegInfo();
+  assert(NU.MRI->isSSA());
   NU.init(MF);
   NU.analyze(MF);
   LLVM_DEBUG(NU.dump());
@@ -173,13 +217,9 @@ bool AMDGPUNextUseAnalysisWrapper::runOnMachineFunction(
 
 void AMDGPUNextUseAnalysisWrapper::getAnalysisUsage(
     AnalysisUsage &AU) const {
-  AU.setPreservesCFG();
-  AU.addRequiredTransitiveID(MachineLoopInfoID);
-  AU.addPreservedID(MachineLoopInfoID);
-  AU.addRequiredTransitiveID(MachineDominatorsID);
-  AU.addPreservedID(MachineDominatorsID);
-  AU.addPreserved<SlotIndexesWrapperPass>();
-  AU.addRequiredTransitive<SlotIndexesWrapperPass>();
+  AU.setPreservesAll();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
+  AU.addRequired<SlotIndexesWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
