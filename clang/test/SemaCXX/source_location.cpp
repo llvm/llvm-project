@@ -1021,11 +1021,11 @@ struct X{
 };
 static_assert(X{}.foo() == __LINE__);
 static_assert(X{}.
-                foo() ==__LINE__);
+                foo() == __LINE__);
 static_assert(X{}.
 
 
-                foo() ==__LINE__);
+                foo() == __LINE__);
 #line 10000
 static_assert(X{}.
                 foo() == 10001);
