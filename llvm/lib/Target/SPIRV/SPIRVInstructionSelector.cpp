@@ -262,12 +262,6 @@ private:
   bool selectSaturate(Register ResVReg, const SPIRVType *ResType,
                       MachineInstr &I) const;
 
-  bool selectSpvThreadId(Register ResVReg, const SPIRVType *ResType,
-                         MachineInstr &I) const;
-
-  bool selectSpvGroupThreadId(Register ResVReg, const SPIRVType *ResType,
-                              MachineInstr &I) const;
-
   bool selectWaveOpInst(Register ResVReg, const SPIRVType *ResType,
                         MachineInstr &I, unsigned Opcode) const;
 
@@ -2831,9 +2825,21 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
       return BuildCOPY(ResVReg, I.getOperand(2).getReg(), I);
     break;
   case Intrinsic::spv_thread_id:
-    return selectSpvThreadId(ResVReg, ResType, I);
+    // The HLSL SV_DispatchThreadID semantic is lowered to llvm.spv.thread.id
+    // intrinsic in LLVM IR for SPIR-V backend.
+    //
+    // In SPIR-V backend, llvm.spv.thread.id is now correctly translated to a
+    // `GlobalInvocationId` builtin variable
+    return loadVec3BuiltinInputID(SPIRV::BuiltIn::GlobalInvocationId, ResVReg,
+                                  ResType, I);
   case Intrinsic::spv_thread_id_in_group:
-    return selectSpvGroupThreadId(ResVReg, ResType, I);
+    // The HLSL SV_GroupThreadId semantic is lowered to
+    // llvm.spv.thread.id.in.group intrinsic in LLVM IR for SPIR-V backend.
+    //
+    // In SPIR-V backend, llvm.spv.thread.id.in.group is now correctly
+    // translated to a `LocalInvocationId` builtin variable
+    return loadVec3BuiltinInputID(SPIRV::BuiltIn::LocalInvocationId, ResVReg,
+                                  ResType, I);
   case Intrinsic::spv_fdot:
     return selectFloatDot(ResVReg, ResType, I);
   case Intrinsic::spv_udot:
@@ -3535,7 +3541,7 @@ bool SPIRVInstructionSelector::selectLog10(Register ResVReg,
 
 // Generate the instructions to load 3-element vector builtin input
 // IDs/Indices.
-// Like: SV_DispatchThreadID, SV_GroupThreadID, etc....
+// Like: GlobalInvocationId, LocalInvocationId, etc....
 bool SPIRVInstructionSelector::loadVec3BuiltinInputID(
     SPIRV::BuiltIn::BuiltIn BuiltInValue, Register ResVReg,
     const SPIRVType *ResType, MachineInstr &I) const {
@@ -3585,32 +3591,6 @@ bool SPIRVInstructionSelector::loadVec3BuiltinInputID(
                  .addUse(LoadedRegister)
                  .addImm(ThreadId);
   return Result && MIB.constrainAllUses(TII, TRI, RBI);
-}
-
-bool SPIRVInstructionSelector::selectSpvThreadId(Register ResVReg,
-                                                 const SPIRVType *ResType,
-                                                 MachineInstr &I) const {
-  // DX intrinsic: @llvm.dx.thread.id(i32)
-  // ID  Name      Description
-  // 93  ThreadId  reads the thread ID
-  //
-  // In SPIR-V, llvm.dx.thread.id maps to a `GlobalInvocationId` builtin
-  // variable
-  return loadVec3BuiltinInputID(SPIRV::BuiltIn::GlobalInvocationId, ResVReg,
-                                ResType, I);
-}
-
-bool SPIRVInstructionSelector::selectSpvGroupThreadId(Register ResVReg,
-                                                      const SPIRVType *ResType,
-                                                      MachineInstr &I) const {
-  // DX intrinsic: @llvm.dx.thread.id.in.group(i32)
-  // ID  Name           Description
-  // 95  GroupThreadId  Reads the thread ID within the group
-  //
-  // In SPIR-V, llvm.dx.thread.id.in.group maps to a `LocalInvocationId` builtin
-  // variable
-  return loadVec3BuiltinInputID(SPIRV::BuiltIn::LocalInvocationId, ResVReg,
-                                ResType, I);
 }
 
 SPIRVType *SPIRVInstructionSelector::widenTypeToVec4(const SPIRVType *Type,
