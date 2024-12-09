@@ -2878,7 +2878,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       break;
     }
 
-    if (FI.getExtParameterInfo(ArgNo).isNoEscape())
+    if (FI.getExtParameterInfo(ArgNo).isNoEscape() &&
+        isValidPointerAttrType(ParamType, /*RefOkay=*/true))
       Attrs.addAttribute(llvm::Attribute::NoCapture);
 
     if (Attrs.hasAttributes()) {

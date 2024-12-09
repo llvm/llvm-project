@@ -527,6 +527,8 @@ Attribute Changes in Clang
 
 - The ``target_version`` attribute is now only supported for AArch64 and RISC-V architectures.
 
+- Now ``__attribute__((noescape))`` can be applied to non-pointer types like ``std::span``.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 

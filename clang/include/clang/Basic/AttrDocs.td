@@ -228,12 +228,13 @@ members, and static locals.
 def NoEscapeDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
-``noescape`` placed on a function parameter of a pointer type is used to inform
-the compiler that the pointer cannot escape: that is, no reference to the object
-the pointer points to that is derived from the parameter value will survive
-after the function returns. Users are responsible for making sure parameters
-annotated with ``noescape`` do not actually escape. Calling ``free()`` on such
-a parameter does not constitute an escape.
+``noescape`` placed on a function parameter is used to inform the compiler that
+the pointer (or the pointer members in case of a user defined type) cannot
+escape: that is, no reference to the object the pointer points to that is
+derived from the parameter value will survive after the function returns. Users
+are responsible for making sure parameters annotated with ``noescape`` do not
+actually escape. Calling ``free()`` on such a parameter does not constitute an
+escape.
 
 For example:
 
