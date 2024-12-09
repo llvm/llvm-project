@@ -184,7 +184,7 @@ namespace cwg522 { // cwg522: yes
     b2(am);
     b2a(am);
     // expected-error@-1 {{no matching function for call to 'b2a'}}
-    //   expected-note@#cwg522-b2a {{candidate template ignored: deduced type 'volatile int *cwg522::S::*const *' of 1st parameter does not match adjusted type 'int *cwg522::S::**' of argument}}
+    //   expected-note@#cwg522-b2a {{candidate template ignored: deduced type 'volatile int *S::*const *' of 1st parameter does not match adjusted type 'int *S::**' of argument}}
     b3(d);
     b3(cd);
   }

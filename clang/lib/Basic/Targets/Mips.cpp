@@ -20,13 +20,17 @@
 using namespace clang;
 using namespace clang::targets;
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define LIBBUILTIN(ID, TYPE, ATTRS, HEADER)                                    \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::HEADER, ALL_LANGUAGES},
+static constexpr int NumBuiltins =
+    clang::Mips::LastTSBuiltin - Builtin::FirstTSBuiltin;
+
+static constexpr auto BuiltinStorage = Builtin::Storage<NumBuiltins>::Make(
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsMips.def"
-};
+    , {
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
+#include "clang/Basic/BuiltinsMips.def"
+      });
 
 bool MipsTargetInfo::processorSupportsGPR64() const {
   return llvm::StringSwitch<bool>(CPU)
@@ -223,9 +227,9 @@ bool MipsTargetInfo::hasFeature(StringRef Feature) const {
       .Default(false);
 }
 
-ArrayRef<Builtin::Info> MipsTargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfo,
-                        clang::Mips::LastTSBuiltin - Builtin::FirstTSBuiltin);
+std::pair<const char *, ArrayRef<Builtin::Info>>
+MipsTargetInfo::getTargetBuiltinStorage() const {
+  return {BuiltinStorage.StringTable, BuiltinStorage.Infos};
 }
 
 unsigned MipsTargetInfo::getUnwindWordWidth() const {
