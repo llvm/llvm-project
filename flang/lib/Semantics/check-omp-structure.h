@@ -146,13 +146,14 @@ private:
   bool CheckAllowedClause(llvmOmpClause clause);
   bool IsVariableListItem(const Symbol &sym);
   bool IsExtendedListItem(const Symbol &sym);
+  bool IsCommonBlock(const Symbol &sym);
   std::optional<bool> IsContiguous(const parser::OmpObject &object);
   void CheckMultipleOccurrence(semantics::UnorderedSymbolSet &listVars,
       const std::list<parser::Name> &nameList, const parser::CharBlock &item,
       const std::string &clauseName);
   void CheckMultListItems();
-  void CheckStructureElement(const parser::OmpObjectList &ompObjectList,
-      const llvm::omp::Clause clause);
+  void CheckStructureComponent(
+      const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
   bool HasInvalidWorksharingNesting(
       const parser::CharBlock &, const OmpDirectiveSet &);
   bool IsCloselyNestedRegion(const OmpDirectiveSet &set);
@@ -171,6 +172,9 @@ private:
       typename IterTy = decltype(std::declval<RangeTy>().begin())>
   std::optional<IterTy> FindDuplicate(RangeTy &&);
 
+  const Symbol *GetObjectSymbol(const parser::OmpObject &object);
+  std::optional<parser::CharBlock> GetObjectSource(
+      const parser::OmpObject &object);
   void CheckDependList(const parser::DataRef &);
   void CheckDependArraySection(
       const common::Indirection<parser::ArrayElement> &, const parser::Name &);
@@ -182,8 +186,8 @@ private:
       const parser::OmpObjectList &objList);
   void CheckSymbolNames(
       const parser::CharBlock &source, const parser::OmpObjectList &objList);
-  void CheckIntentInPointer(
-      const parser::OmpObjectList &, const llvm::omp::Clause);
+  void CheckIntentInPointer(SymbolSourceMap &, const llvm::omp::Clause);
+  void CheckProcedurePointer(SymbolSourceMap &, const llvm::omp::Clause);
   void GetSymbolsInObjectList(const parser::OmpObjectList &, SymbolSourceMap &);
   void CheckDefinableObjects(SymbolSourceMap &, const llvm::omp::Clause);
   void CheckCopyingPolymorphicAllocatable(
@@ -220,6 +224,8 @@ private:
   void CheckCancellationNest(
       const parser::CharBlock &source, const parser::OmpCancelType::Type &type);
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
+  void CheckReductionObjects(
+      const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
   bool CheckReductionOperators(const parser::OmpClause::Reduction &);
   bool CheckIntrinsicOperator(
       const parser::DefinedOperator::IntrinsicOperator &);
@@ -232,8 +238,6 @@ private:
   void ChecksOnOrderedAsStandalone();
   void CheckOrderedDependClause(std::optional<std::int64_t> orderedValue);
   void CheckReductionArraySection(const parser::OmpObjectList &ompObjectList);
-  void CheckIntentInPointerAndDefinable(
-      const parser::OmpObjectList &, const llvm::omp::Clause);
   void CheckArraySection(const parser::ArrayElement &arrayElement,
       const parser::Name &name, const llvm::omp::Clause clause);
   void CheckSharedBindingInOuterContext(

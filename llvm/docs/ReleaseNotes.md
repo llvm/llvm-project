@@ -105,11 +105,15 @@ Changes to the LLVM IR
 
 * Operand bundle values can now be metadata strings.
 
+* Fast math flags are now permitted on `fptrunc` and `fpext`.
+
 Changes to LLVM infrastructure
 ------------------------------
 
 Changes to building LLVM
 ------------------------
+
+* Raised the minimum MSVC version to Visual Studio 2019 16.8.
 
 Changes to TableGen
 -------------------
@@ -264,6 +268,13 @@ Changes to the X86 Backend
 * Supported ISA of `MSR_IMM`.
 
 * Supported ``-mcpu=diamondrapids``
+
+* Supported emitting relocation types for x86-64 target:
+  * `R_X86_64_CODE_4_GOTPCRELX`
+  * `R_X86_64_CODE_4_GOTTPOFF`
+  * `R_X86_64_CODE_4_GOTPC32_TLSDESC`
+  * `R_X86_64_CODE_6_GOTTPOFF`
+
 
 Changes to the OCaml bindings
 -----------------------------

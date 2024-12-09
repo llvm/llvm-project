@@ -450,6 +450,37 @@ static bool isTriviallyUniform(const Use &U) {
   return false;
 }
 
+/// Simplify a lane index operand (e.g. llvm.amdgcn.readlane src1).
+///
+/// The instruction only reads the low 5 bits for wave32, and 6 bits for wave64.
+bool GCNTTIImpl::simplifyDemandedLaneMaskArg(InstCombiner &IC,
+                                             IntrinsicInst &II,
+                                             unsigned LaneArgIdx) const {
+  unsigned MaskBits = ST->getWavefrontSizeLog2();
+  APInt DemandedMask(32, maskTrailingOnes<unsigned>(MaskBits));
+
+  KnownBits Known(32);
+  if (IC.SimplifyDemandedBits(&II, LaneArgIdx, DemandedMask, Known))
+    return true;
+
+  if (!Known.isConstant())
+    return false;
+
+  // Out of bounds indexes may appear in wave64 code compiled for wave32.
+  // Unlike the DAG version, SimplifyDemandedBits does not change constants, so
+  // manually fix it up.
+
+  Value *LaneArg = II.getArgOperand(LaneArgIdx);
+  Constant *MaskedConst =
+      ConstantInt::get(LaneArg->getType(), Known.getConstant() & DemandedMask);
+  if (MaskedConst != LaneArg) {
+    II.getOperandUse(LaneArgIdx).set(MaskedConst);
+    return true;
+  }
+
+  return false;
+}
+
 std::optional<Instruction *>
 GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   Intrinsic::ID IID = II.getIntrinsicID();
@@ -1092,7 +1123,17 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     const Use &Src = II.getArgOperandUse(0);
     if (isTriviallyUniform(Src))
       return IC.replaceInstUsesWith(II, Src.get());
-    break;
+
+    if (IID == Intrinsic::amdgcn_readlane &&
+        simplifyDemandedLaneMaskArg(IC, II, 1))
+      return &II;
+
+    return std::nullopt;
+  }
+  case Intrinsic::amdgcn_writelane: {
+    if (simplifyDemandedLaneMaskArg(IC, II, 1))
+      return &II;
+    return std::nullopt;
   }
   case Intrinsic::amdgcn_trig_preop: {
     // The intrinsic is declared with name mangling, but currently the

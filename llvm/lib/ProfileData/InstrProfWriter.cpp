@@ -810,6 +810,45 @@ uint64_t InstrProfWriter::writeHeader(const IndexedInstrProf::Header &Header,
   return BackPatchStartOffset;
 }
 
+Error InstrProfWriter::writeBinaryIds(ProfOStream &OS) {
+  // BinaryIdSection has two parts:
+  // 1. uint64_t BinaryIdsSectionSize
+  // 2. list of binary ids that consist of:
+  //    a. uint64_t BinaryIdLength
+  //    b. uint8_t  BinaryIdData
+  //    c. uint8_t  Padding (if necessary)
+  // Calculate size of binary section.
+  uint64_t BinaryIdsSectionSize = 0;
+
+  // Remove duplicate binary ids.
+  llvm::sort(BinaryIds);
+  BinaryIds.erase(llvm::unique(BinaryIds), BinaryIds.end());
+
+  for (const auto &BI : BinaryIds) {
+    // Increment by binary id length data type size.
+    BinaryIdsSectionSize += sizeof(uint64_t);
+    // Increment by binary id data length, aligned to 8 bytes.
+    BinaryIdsSectionSize += alignToPowerOf2(BI.size(), sizeof(uint64_t));
+  }
+  // Write binary ids section size.
+  OS.write(BinaryIdsSectionSize);
+
+  for (const auto &BI : BinaryIds) {
+    uint64_t BILen = BI.size();
+    // Write binary id length.
+    OS.write(BILen);
+    // Write binary id data.
+    for (unsigned K = 0; K < BILen; K++)
+      OS.writeByte(BI[K]);
+    // Write padding if necessary.
+    uint64_t PaddingSize = alignToPowerOf2(BILen, sizeof(uint64_t)) - BILen;
+    for (unsigned K = 0; K < PaddingSize; K++)
+      OS.writeByte(0);
+  }
+
+  return Error::success();
+}
+
 Error InstrProfWriter::writeVTableNames(ProfOStream &OS) {
   std::vector<std::string> VTableNameStrs;
   for (StringRef VTableName : VTableNames.keys())
@@ -920,41 +959,9 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
       return E;
   }
 
-  // BinaryIdSection has two parts:
-  // 1. uint64_t BinaryIdsSectionSize
-  // 2. list of binary ids that consist of:
-  //    a. uint64_t BinaryIdLength
-  //    b. uint8_t  BinaryIdData
-  //    c. uint8_t  Padding (if necessary)
   uint64_t BinaryIdSectionStart = OS.tell();
-  // Calculate size of binary section.
-  uint64_t BinaryIdsSectionSize = 0;
-
-  // Remove duplicate binary ids.
-  llvm::sort(BinaryIds);
-  BinaryIds.erase(llvm::unique(BinaryIds), BinaryIds.end());
-
-  for (const auto &BI : BinaryIds) {
-    // Increment by binary id length data type size.
-    BinaryIdsSectionSize += sizeof(uint64_t);
-    // Increment by binary id data length, aligned to 8 bytes.
-    BinaryIdsSectionSize += alignToPowerOf2(BI.size(), sizeof(uint64_t));
-  }
-  // Write binary ids section size.
-  OS.write(BinaryIdsSectionSize);
-
-  for (const auto &BI : BinaryIds) {
-    uint64_t BILen = BI.size();
-    // Write binary id length.
-    OS.write(BILen);
-    // Write binary id data.
-    for (unsigned K = 0; K < BILen; K++)
-      OS.writeByte(BI[K]);
-    // Write padding if necessary.
-    uint64_t PaddingSize = alignToPowerOf2(BILen, sizeof(uint64_t)) - BILen;
-    for (unsigned K = 0; K < PaddingSize; K++)
-      OS.writeByte(0);
-  }
+  if (auto E = writeBinaryIds(OS))
+    return E;
 
   uint64_t VTableNamesSectionStart = OS.tell();
 

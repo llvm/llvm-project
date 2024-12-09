@@ -7,6 +7,7 @@ if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
 endif()
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
+include(CheckCXXCompilerFlag)
 
 if (LIBC_CMAKE_VERBOSE_LOGGING)
   get_directory_property(LIBC_OLD_PREPROCESSOR_DEFS COMPILE_DEFINITIONS)
@@ -57,7 +58,7 @@ if(LIBC_BUILD_GPU_LOADER OR ((NOT LLVM_RUNTIMES_BUILD) AND LLVM_LIBC_GPU_BUILD))
   return()
 endif()
 
-add_subdirectory(newhdrgen)
+add_subdirectory(hdrgen)
 
 option(LIBC_CMAKE_VERBOSE_LOGGING
   "Log details warnings and notifications during CMake configuration." OFF)
