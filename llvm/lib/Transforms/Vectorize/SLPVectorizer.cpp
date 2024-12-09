@@ -8790,27 +8790,15 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
       // Reorder operands if reordering would enable vectorization.
       auto *CI = dyn_cast<CmpInst>(VL0);
-<<<<<<< HEAD
-      if (CI && any_of(VL, [](Value *V) {
-            return !isa<PoisonValue>(V) && !cast<CmpInst>(V)->isCommutative();
-          })) {
-        auto *MainCI = cast<CmpInst>(S.getMainOp());
-        auto *AltCI = cast<CmpInst>(S.getAltOp());
-        CmpInst::Predicate MainP = MainCI->getPredicate();
-        CmpInst::Predicate AltP = AltCI->getPredicate();
-        assert(MainP != AltP &&
-               "Expected different main/alternate predicates.");
-=======
       if (isa<BinaryOperator>(VL0) || CI) {
->>>>>>> upstream/main
         ValueList Left, Right;
         if (!CI || all_of(VL, [](Value *V) {
               return isa<PoisonValue>(V) || cast<CmpInst>(V)->isCommutative();
             })) {
           reorderInputsAccordingToOpcode(VL, Left, Right, *this);
         } else {
-          auto *MainCI = cast<CmpInst>(S.MainOp);
-          auto *AltCI = cast<CmpInst>(S.AltOp);
+          auto *MainCI = cast<CmpInst>(S.getMainOp());
+          auto *AltCI = cast<CmpInst>(S.getAltOp());
           CmpInst::Predicate MainP = MainCI->getPredicate();
           CmpInst::Predicate AltP = AltCI->getPredicate();
           assert(MainP != AltP &&
