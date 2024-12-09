@@ -26,21 +26,8 @@ void SYCLInstallationDetector::AddSYCLIncludeArgs(
     return;
 
   // Add the SYCL header search locations in the specified order.
-  //   ../include/sycl/stl_wrappers
-  //   ../include
-  SmallString<128> IncludePath(D.Dir);
-  llvm::sys::path::append(IncludePath, "..");
-  llvm::sys::path::append(IncludePath, "include");
-  // This is used to provide our wrappers around STL headers that provide
-  // additional functions/template specializations when the user includes those
-  // STL headers in their programs (e.g., <complex>).
-  SmallString<128> STLWrappersPath(IncludePath);
-  llvm::sys::path::append(STLWrappersPath, "sycl");
-  llvm::sys::path::append(STLWrappersPath, "stl_wrappers");
-  CC1Args.push_back("-internal-isystem");
-  CC1Args.push_back(DriverArgs.MakeArgString(STLWrappersPath));
-  CC1Args.push_back("-internal-isystem");
-  CC1Args.push_back(DriverArgs.MakeArgString(IncludePath));
+  // FIXME: Add the header file locations once the SYCL library and headers
+  //        are properly established within the build.
 }
 
 // Unsupported options for SYCL device compilation.

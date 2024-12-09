@@ -46,30 +46,6 @@
 // CHK-FSYCL-IS-DEVICE: clang{{.*}} "-fsycl-is-device" {{.*}} "-emit-llvm-bc"
 // CHK-FSYCL-IS-HOST: clang{{.*}} "-fsycl-is-host"
 
-// Verify header search dirs are added with -fsycl
-// RUN: %clang -### -fsycl %s 2>&1 \
-// RUN: | FileCheck %s -check-prefixes=CHECK-HEADER-DIR
-// RUN: %clang_cl -### -fsycl %s 2>&1 \
-// RUN: | FileCheck %s -check-prefixes=CHECK-HEADER-DIR
-// CHECK-HEADER-DIR: clang{{.*}} "-fsycl-is-device"
-// CHECK-HEADER-DIR-SAME: "-internal-isystem" "[[ROOT:[^"]*]]bin{{[/\\]+}}..{{[/\\]+}}include{{[/\\]+}}sycl{{[/\\]+}}stl_wrappers"
-// CHECK-HEADER-DIR-NOT: -internal-isystem
-// CHECK-HEADER-DIR-SAME: "-internal-isystem" "[[ROOT]]bin{{[/\\]+}}..{{[/\\]+}}include"
-// CHECK-HEADER-DIR: clang{{.*}} "-fsycl-is-host"
-// CHECK-HEADER-DIR-SAME: "-internal-isystem" "[[ROOT]]bin{{[/\\]+}}..{{[/\\]+}}include{{[/\\]+}}sycl{{[/\\]+}}stl_wrappers"
-// CHECK-HEADER-DIR-NOT: -internal-isystem
-// CHECK-HEADER-DIR-SAME: "-internal-isystem" "[[ROOT]]bin{{[/\\]+}}..{{[/\\]+}}include"
-
-// Verify no header search dirs are added with -fsycl -nobuiltininc
-// RUN: %clang -### -fsycl -nobuiltininc %s 2>&1 \
-// RUN: | FileCheck %s -check-prefixes=NO-HEADER-DIR
-// RUN: %clang_cl -### -fsycl -nobuiltininc %s 2>&1 \
-// RUN: | FileCheck %s -check-prefixes=NO-HEADER-DIR
-// NO-HEADER-DIR: clang{{.*}} "-fsycl-is-device"
-// NO-HEADER-DIR-NOT: "-internal-isystem" "{{.*}}include{{[/\\]+}}sycl{{[/\\]+}}stl_wrappers"
-// NO-HEADER-DIR: clang{{.*}} "-fsycl-is-host"
-// NO-HEADER-DIR-NOT: "-internal-isystem" "{{.*}}include{{[/\\]+}}sycl{{[/\\]+}}stl_wrappers"
-
 /// Check for option incompatibility with -fsycl
 // RUN: not %clang -### -fsycl -ffreestanding %s 2>&1 \
 // RUN: | FileCheck -check-prefix=CHK-INCOMPATIBILITY %s \
