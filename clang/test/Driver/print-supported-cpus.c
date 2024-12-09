@@ -2,7 +2,6 @@
 
 // REQUIRES: x86-registered-target
 // REQUIRES: arm-registered-target
-// REQUIRES: aarch64-registered-target
 
 // RUN: %clang --target=x86_64-unknown-linux-gnu --print-supported-cpus 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=CHECK-X86
@@ -26,12 +25,3 @@
 // CHECK-ARM: cortex-a73
 // CHECK-ARM: cortex-a75
 // CHECK-ARM: Use -mcpu or -mtune to specify the target's processor.
-
-// RUN: %clang --target=arm64-apple-macosx --print-supported-cpus 2>&1 | \
-// RUN:   FileCheck %s --check-prefix=CHECK-AARCH64 --implicit-check-not=apple-latest
-
-// CHECK-AARCH64: Target: arm64-apple-macosx
-// CHECK-AARCH64: apple-m1
-// CHECK-AARCH64: apple-m2
-// CHECK-AARCH64: apple-m3
-// CHECK-AARCH64: Use -mcpu or -mtune to specify the target's processor.

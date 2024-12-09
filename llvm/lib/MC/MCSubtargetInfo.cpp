@@ -116,6 +116,9 @@ static void Help(ArrayRef<StringRef> CPUNames,
   // Print the CPU table.
   errs() << "Available CPUs for this target:\n\n";
   for (auto &CPUName : CPUNames) {
+    // Skip apple-latest, as that's only meant to be used in
+    // disassemblers/debuggers, and we don't want normal code to be built with
+    // it as an -mcpu=
     if (CPUName == "apple-latest")
       continue;
     errs() << format("  %-*s - Select the %s processor.\n", MaxCPULen,
@@ -147,6 +150,9 @@ static void cpuHelp(ArrayRef<StringRef> CPUNames) {
   // Print the CPU table.
   errs() << "Available CPUs for this target:\n\n";
   for (auto &CPU : CPUNames) {
+    // Skip apple-latest, as that's only meant to be used in
+    // disassemblers/debuggers, and we don't want normal code to be built with
+    // it as an -mcpu=
     if (CPU == "apple-latest")
       continue;
     errs() << "\t" << CPU << "\n";
