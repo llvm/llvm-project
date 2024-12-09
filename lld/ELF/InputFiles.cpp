@@ -1736,10 +1736,9 @@ static void createBitcodeSymbol(Ctx &ctx, Symbol *&sym,
   if (c != -1 && !keptComdats[c]) {
     Defined newSym(ctx, &f, StringRef(), binding, visibility, type, 0, 0,
                    nullptr);
-    if (objSym.canBeOmittedFromSymbolTable())
-      newSym.exportDynamic = false;
+    sym->ltoCanOmit = objSym.canBeOmittedFromSymbolTable() &&
+                      (!sym->isDefined() || sym->ltoCanOmit);
     sym->resolve(ctx, newSym);
-    sym->referenced = true;
     return;
   }
 

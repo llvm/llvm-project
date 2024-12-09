@@ -9,6 +9,9 @@
 target triple = "x86_64-unknown-linux-gnu"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
+$f1 = comdat any
+$f2 = comdat any
+
 @c = linkonce_odr constant i32 1
 @g = linkonce_odr global i32 1
 @u_c = linkonce_odr unnamed_addr constant i32 1
@@ -46,6 +49,14 @@ define linkonce_odr void @baz() {
 
 @use_baz = global ptr @baz
 
+define weak_odr void @f1() local_unnamed_addr comdat {
+  ret void
+}
+
+define linkonce_odr void @f2() local_unnamed_addr comdat {
+  ret void
+}
+
 ; Check what gets internalized.
 ; CHECK: @c = weak_odr dso_local constant i32 1
 ; CHECK: @g = weak_odr dso_local global i32 1
@@ -60,6 +71,8 @@ define linkonce_odr void @baz() {
 ; CHECK: define internal void @zed2()
 ; CHECK: define weak_odr dso_local void @bah()
 ; CHECK: define weak_odr dso_local void @baz()
+; CHECK: define weak_odr dso_local void @f1() comdat
+; CHECK: define weak_odr dso_local void @f2() comdat
 
 ; DSO: @c = weak_odr constant i32 1
 ; DSO: @g = weak_odr global i32 1
@@ -74,3 +87,5 @@ define linkonce_odr void @baz() {
 ; DSO: define internal void @zed2()
 ; DSO: define weak_odr void @bah()
 ; DSO: define weak_odr void @baz()
+; DSO: define weak_odr void @f1() comdat
+; DSO: define weak_odr void @f2() comdat
