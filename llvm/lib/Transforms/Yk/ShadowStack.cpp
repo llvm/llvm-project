@@ -167,7 +167,6 @@ public:
                   Int8Ty, SSPtr, {ConstantInt::get(Int32Ty, Offset)}, "",
                   cast<Instruction>(&AI));
               Builder.SetInsertPoint(GEP);
-              Builder.CreateBitCast(GEP, AI.getAllocatedType()->getPointerTo());
               cast<Value>(I).replaceAllUsesWith(GEP);
             }
             RemoveAllocas.push_back(cast<Instruction>(&AI));
