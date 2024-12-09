@@ -259,7 +259,7 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
   unsigned ElemSize = StrPtr.getFieldDesc()->getElemSize();
 
   if (ID == Builtin::BI__builtin_wcslen || ID == Builtin::BIwcslen) {
-    const ASTContext &AC = S.getASTContext();
+    [[maybe_unused]] const ASTContext &AC = S.getASTContext();
     assert(ElemSize == AC.getTypeSizeInChars(AC.getWCharType()).getQuantity());
   }
 
