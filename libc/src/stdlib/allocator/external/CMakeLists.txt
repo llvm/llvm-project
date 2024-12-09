@@ -1,0 +1,15 @@
+add_entrypoint_external(
+  @libc.src.stdlib.malloc
+)
+add_entrypoint_external(
+  @libc.src.stdlib.free
+)
+add_entrypoint_external(
+  @libc.src.stdlib.calloc
+)
+add_entrypoint_external(
+  @libc.src.stdlib.realloc
+)
+add_entrypoint_external(
+  @libc.src.stdlib.aligned_alloc
+)
