@@ -14600,61 +14600,57 @@ SDValue SITargetLowering::performFMulCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
   EVT VT = N->getValueType(0);
-  EVT scalarVT = VT.getScalarType();
+  EVT ScalarVT = VT.getScalarType();
   EVT IntVT = VT.changeElementType(MVT::i32);
 
-  SDLoc SL(N);
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
-  SDNodeFlags Flags = N->getFlags();
-  SDNodeFlags LHSFlags = LHS->getFlags();
-
   // It is cheaper to realize i32 inline constants as compared against
-  // as materializing f16 or f64 (or even non-inline f32) values,
+  // materializing f16 or f64 (or even non-inline f32) values,
   // possible via ldexp usage, as shown below :
   //
   // Given : A = 2^a  &  B = 2^b ; where a and b are integers.
   // fmul x, (select y, A, B)     -> ldexp( x, (select i32 y, a, b) )
   // fmul x, (select y, -A, -B)   -> ldexp( (fneg x), (select i32 y, a, b) )
-  if (scalarVT == MVT::f64 || scalarVT == MVT::f32 || scalarVT == MVT::f16) {
-    if (RHS.hasOneUse() && RHS.getOpcode() == ISD::SELECT) {
-      const ConstantFPSDNode *TrueNode =
-          isConstOrConstSplatFP(RHS.getOperand(1));
-      if (!TrueNode)
-        return SDValue();
-      const ConstantFPSDNode *FalseNode =
-          isConstOrConstSplatFP(RHS.getOperand(2));
-      if (!FalseNode)
-        return SDValue();
+  if ((ScalarVT == MVT::f64 || ScalarVT == MVT::f32 || ScalarVT == MVT::f16) &&
+      (RHS.hasOneUse() && RHS.getOpcode() == ISD::SELECT)) {
+    const ConstantFPSDNode *TrueNode = isConstOrConstSplatFP(RHS.getOperand(1));
+    if (!TrueNode)
+      return SDValue();
+    const ConstantFPSDNode *FalseNode =
+        isConstOrConstSplatFP(RHS.getOperand(2));
+    if (!FalseNode)
+      return SDValue();
 
-      if (TrueNode->isNegative() != FalseNode->isNegative())
-        return SDValue();
+    if (TrueNode->isNegative() != FalseNode->isNegative())
+      return SDValue();
 
-      // For f32, only non-inline constants should be transformed.
-      const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
-      if (scalarVT == MVT::f32 &&
-          TII->isInlineConstant(TrueNode->getValueAPF()) &&
-          TII->isInlineConstant(FalseNode->getValueAPF()))
-        return SDValue();
+    // For f32, only non-inline constants should be transformed.
+    const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
+    if (ScalarVT == MVT::f32 &&
+        TII->isInlineConstant(TrueNode->getValueAPF()) &&
+        TII->isInlineConstant(FalseNode->getValueAPF()))
+      return SDValue();
 
-      LHS = TrueNode->isNegative()
-                ? DAG.getNode(ISD::FNEG, SL, VT, LHS, LHSFlags)
-                : LHS;
+    int TrueNodeExpVal = TrueNode->getValueAPF().getExactLog2Abs();
+    if (TrueNodeExpVal == INT_MIN)
+      return SDValue();
+    int FalseNodeExpVal = FalseNode->getValueAPF().getExactLog2Abs();
+    if (FalseNodeExpVal == INT_MIN)
+      return SDValue();
 
-      int TrueNodeExpVal = TrueNode->getValueAPF().getExactLog2Abs();
-      if (TrueNodeExpVal == INT_MIN)
-        return SDValue();
-      int FalseNodeExpVal = FalseNode->getValueAPF().getExactLog2Abs();
-      if (FalseNodeExpVal == INT_MIN)
-        return SDValue();
+    SDLoc SL(N);
+    SDValue SelectNode =
+        DAG.getNode(ISD::SELECT, SL, IntVT, RHS.getOperand(0),
+                    DAG.getSignedConstant(TrueNodeExpVal, SL, IntVT),
+                    DAG.getSignedConstant(FalseNodeExpVal, SL, IntVT));
 
-      SDValue SelectNode =
-          DAG.getNode(ISD::SELECT, SL, IntVT, RHS.getOperand(0),
-                      DAG.getSignedConstant(TrueNodeExpVal, SL, IntVT),
-                      DAG.getSignedConstant(FalseNodeExpVal, SL, IntVT));
-      return DAG.getNode(ISD::FLDEXP, SL, VT, LHS, SelectNode, Flags);
-    }
+    LHS = TrueNode->isNegative()
+              ? DAG.getNode(ISD::FNEG, SL, VT, LHS, LHS->getFlags())
+              : LHS;
+
+    return DAG.getNode(ISD::FLDEXP, SL, VT, LHS, SelectNode, N->getFlags());
   }
 
   return SDValue();
