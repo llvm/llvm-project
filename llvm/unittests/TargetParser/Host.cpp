@@ -140,6 +140,9 @@ TEST(getLinuxHostCPUName, AArch64) {
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x51\n"
                                               "CPU part        : 0x001"),
             "oryon-1");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x46\n"
+                                              "CPU part        : 0x003"),
+            "fujitsu-monaka");
 
   // MSM8992/4 weirdness
   StringRef MSM8992ProcCpuInfo = R"(
