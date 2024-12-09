@@ -1,3 +1,8 @@
+if ((CMAKE_CXX_COMPILER_ID STREQUAL "GNU") OR
+    (CMAKE_CXX_COMPILER_ID STREQUAL "GNU"))
+    set(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE TRUE)
+endif
+
 function(_get_compile_options_from_flags output_var)
   set(compile_options "")
 
@@ -8,7 +13,7 @@ function(_get_compile_options_from_flags output_var)
   check_flag(ADD_EXPLICIT_SIMD_OPT_FLAG ${EXPLICIT_SIMD_OPT_FLAG} ${ARGN})
   check_flag(ADD_MISC_MATH_BASIC_OPS_OPT_FLAG ${MISC_MATH_BASIC_OPS_OPT_FLAG} ${ARGN})
 
-  if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
+  if(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
     if(ADD_FMA_FLAG)
       if(LIBC_TARGET_ARCHITECTURE_IS_X86_64)
         list(APPEND compile_options "-mavx2")
@@ -96,7 +101,7 @@ function(_get_common_compile_options output_var flags)
 
   set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags} ${config_flags})
 
-  if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
+  if(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
 
     if(LLVM_LIBC_FULL_BUILD)
@@ -210,7 +215,7 @@ function(_get_common_test_compile_options output_var c_test flags)
       ${LIBC_TEST_COMPILE_OPTIONS_DEFAULT}
       ${compile_flags})
 
-  if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
+  if(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
 
     if(LLVM_LIBC_FULL_BUILD)
