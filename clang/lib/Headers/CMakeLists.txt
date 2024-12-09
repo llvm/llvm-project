@@ -381,6 +381,7 @@ set(llvm_libc_wrapper_files
 
 set(zos_wrapper_files
   zos_wrappers/builtins.h
+  zos_wrappers/locale.h
 )
 
 include(GetClangResourceDir)

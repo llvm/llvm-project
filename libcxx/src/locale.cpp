@@ -625,7 +625,7 @@ int collate_byname<char>::do_compare(
     const char_type* __lo1, const char_type* __hi1, const char_type* __lo2, const char_type* __hi2) const {
   string_type lhs(__lo1, __hi1);
   string_type rhs(__lo2, __hi2);
-  int r = __locale::__strcoll(lhs.c_str(), rhs.c_str(), __l_);
+  int r = __locale::__libcpp_strcoll(lhs.c_str(), rhs.c_str(), __l_);
   if (r < 0)
     return -1;
   if (r > 0)
@@ -635,8 +635,8 @@ int collate_byname<char>::do_compare(
 
 collate_byname<char>::string_type collate_byname<char>::do_transform(const char_type* lo, const char_type* hi) const {
   const string_type in(lo, hi);
-  string_type out(__locale::__strxfrm(0, in.c_str(), 0, __l_), char());
-  __locale::__strxfrm(const_cast<char*>(out.c_str()), in.c_str(), out.size() + 1, __l_);
+  string_type out(__locale::__libcpp_strxfrm(0, in.c_str(), 0, __l_), char());
+  __locale::__libcpp_strxfrm(const_cast<char*>(out.c_str()), in.c_str(), out.size() + 1, __l_);
   return out;
 }
 
@@ -669,7 +669,7 @@ int collate_byname<wchar_t>::do_compare(
     const char_type* __lo1, const char_type* __hi1, const char_type* __lo2, const char_type* __hi2) const {
   string_type lhs(__lo1, __hi1);
   string_type rhs(__lo2, __hi2);
-  int r = __locale::__wcscoll(lhs.c_str(), rhs.c_str(), __l_);
+  int r = __locale::__libcpp_wcscoll(lhs.c_str(), rhs.c_str(), __l_);
   if (r < 0)
     return -1;
   if (r > 0)
@@ -680,8 +680,8 @@ int collate_byname<wchar_t>::do_compare(
 collate_byname<wchar_t>::string_type
 collate_byname<wchar_t>::do_transform(const char_type* lo, const char_type* hi) const {
   const string_type in(lo, hi);
-  string_type out(__locale::__wcsxfrm(0, in.c_str(), 0, __l_), wchar_t());
-  __locale::__wcsxfrm(const_cast<wchar_t*>(out.c_str()), in.c_str(), out.size() + 1, __l_);
+  string_type out(__locale::__libcpp_wcsxfrm(0, in.c_str(), 0, __l_), wchar_t());
+  __locale::__libcpp_wcsxfrm(const_cast<wchar_t*>(out.c_str()), in.c_str(), out.size() + 1, __l_);
   return out;
 }
 #endif // _LIBCPP_HAS_WIDE_CHARACTERS
@@ -736,7 +736,7 @@ wchar_t ctype<wchar_t>::do_toupper(char_type c) const {
 #  elif defined(__GLIBC__) || defined(__EMSCRIPTEN__) || defined(__NetBSD__) || defined(__MVS__)
   return isascii(c) ? ctype<char>::__classic_upper_table()[c] : c;
 #  else
-  return (isascii(c) && __locale::__iswlower(c, _LIBCPP_GET_C_LOCALE)) ? c - L'a' + L'A' : c;
+  return (isascii(c) && __locale::__libcpp_iswlower(c, _LIBCPP_GET_C_LOCALE)) ? c - L'a' + L'A' : c;
 #  endif
 }
 
@@ -1064,22 +1064,22 @@ ctype_byname<char>::ctype_byname(const string& name, size_t refs)
 ctype_byname<char>::~ctype_byname() { __locale::__freelocale(__l_); }
 
 char ctype_byname<char>::do_toupper(char_type c) const {
-  return static_cast<char>(__locale::__toupper(static_cast<unsigned char>(c), __l_));
+  return static_cast<char>(__locale::__libcpp_toupper(static_cast<unsigned char>(c), __l_));
 }
 
 const char* ctype_byname<char>::do_toupper(char_type* low, const char_type* high) const {
   for (; low != high; ++low)
-    *low = static_cast<char>(__locale::__toupper(static_cast<unsigned char>(*low), __l_));
+    *low = static_cast<char>(__locale::__libcpp_toupper(static_cast<unsigned char>(*low), __l_));
   return low;
 }
 
 char ctype_byname<char>::do_tolower(char_type c) const {
-  return static_cast<char>(__locale::__tolower(static_cast<unsigned char>(c), __l_));
+  return static_cast<char>(__locale::__libcpp_tolower(static_cast<unsigned char>(c), __l_));
 }
 
 const char* ctype_byname<char>::do_tolower(char_type* low, const char_type* high) const {
   for (; low != high; ++low)
-    *low = static_cast<char>(__locale::__tolower(static_cast<unsigned char>(*low), __l_));
+    *low = static_cast<char>(__locale::__libcpp_tolower(static_cast<unsigned char>(*low), __l_));
   return low;
 }
 
@@ -1115,25 +1115,25 @@ bool ctype_byname<wchar_t>::do_is(mask m, char_type c) const {
   bool result = false;
   wint_t ch   = static_cast<wint_t>(c);
   if ((m & space) == space)
-    result |= (__locale::__iswspace(ch, __l_) != 0);
+    result |= (__locale__libcpp_iswspace(ch, __l_) != 0);
   if ((m & print) == print)
-    result |= (__locale::__iswprint(ch, __l_) != 0);
+    result |= (__locale::__libcpp_iswprint(ch, __l_) != 0);
   if ((m & cntrl) == cntrl)
-    result |= (__locale::__iswcntrl(ch, __l_) != 0);
+    result |= (__locale::__libcpp_iswcntrl(ch, __l_) != 0);
   if ((m & upper) == upper)
-    result |= (__locale::__iswupper(ch, __l_) != 0);
+    result |= (__locale::__libcpp_iswupper(ch, __l_) != 0);
   if ((m & lower) == lower)
-    result |= (__locale::__iswlower(ch, __l_) != 0);
+    result |= (__locale::__libcpp_iswlower(ch, __l_) != 0);
   if ((m & alpha) == alpha)
-    result |= (__locale::__iswalpha(ch, __l_) != 0);
+    result |= (__locale::__libcpp_iswalpha(ch, __l_) != 0);
   if ((m & digit) == digit)
-    result |= (__locale::__iswdigit(ch, __l_) != 0);
+    result |= (__locale::__libcpp_iswdigit(ch, __l_) != 0);
   if ((m & punct) == punct)
-    result |= (__locale::__iswpunct(ch, __l_) != 0);
+    result |= (__locale::__libcpp_iswpunct(ch, __l_) != 0);
   if ((m & xdigit) == xdigit)
-    result |= (__locale::__iswxdigit(ch, __l_) != 0);
+    result |= (__locale::__libcpp_iswxdigit(ch, __l_) != 0);
   if ((m & blank) == blank)
-    result |= (__locale::__iswblank(ch, __l_) != 0);
+    result |= (__locale::__libcpp_iswblank(ch, __l_) != 0);
   return result;
 #  endif
 }
@@ -1145,31 +1145,31 @@ const wchar_t* ctype_byname<wchar_t>::do_is(const char_type* low, const char_typ
     else {
       *vec      = 0;
       wint_t ch = static_cast<wint_t>(*low);
-      if (__locale::__iswspace(ch, __l_))
+      if (__locale__libcpp_iswspace(ch, __l_))
         *vec |= space;
 #  ifndef _LIBCPP_CTYPE_MASK_IS_COMPOSITE_PRINT
-      if (__locale::__iswprint(ch, __l_))
+      if (__locale::__libcpp_iswprint(ch, __l_))
         *vec |= print;
 #  endif
-      if (__locale::__iswcntrl(ch, __l_))
+      if (__locale::__libcpp_iswcntrl(ch, __l_))
         *vec |= cntrl;
-      if (__locale::__iswupper(ch, __l_))
+      if (__locale::__libcpp_iswupper(ch, __l_))
         *vec |= upper;
-      if (__locale::__iswlower(ch, __l_))
+      if (__locale::__libcpp_iswlower(ch, __l_))
         *vec |= lower;
 #  ifndef _LIBCPP_CTYPE_MASK_IS_COMPOSITE_ALPHA
-      if (__locale::__iswalpha(ch, __l_))
+      if (__locale::__libcpp_iswalpha(ch, __l_))
         *vec |= alpha;
 #  endif
-      if (__locale::__iswdigit(ch, __l_))
+      if (__locale::__libcpp_iswdigit(ch, __l_))
         *vec |= digit;
-      if (__locale::__iswpunct(ch, __l_))
+      if (__locale::__libcpp_iswpunct(ch, __l_))
         *vec |= punct;
 #  ifndef _LIBCPP_CTYPE_MASK_IS_COMPOSITE_XDIGIT
-      if (__locale::__iswxdigit(ch, __l_))
+      if (__locale::__libcpp_iswxdigit(ch, __l_))
         *vec |= xdigit;
 #  endif
-      if (__locale::__iswblank(ch, __l_))
+      if (__locale::__libcpp_iswblank(ch, __l_))
         *vec |= blank;
     }
   }
@@ -1183,25 +1183,25 @@ const wchar_t* ctype_byname<wchar_t>::do_scan_is(mask m, const char_type* low, c
       break;
 #  else
     wint_t ch = static_cast<wint_t>(*low);
-    if ((m & space) == space && __locale::__iswspace(ch, __l_))
+    if ((m & space) == space && __locale__libcpp_iswspace(ch, __l_))
       break;
-    if ((m & print) == print && __locale::__iswprint(ch, __l_))
+    if ((m & print) == print && __locale::__libcpp_iswprint(ch, __l_))
       break;
-    if ((m & cntrl) == cntrl && __locale::__iswcntrl(ch, __l_))
+    if ((m & cntrl) == cntrl && __locale::__libcpp_iswcntrl(ch, __l_))
       break;
-    if ((m & upper) == upper && __locale::__iswupper(ch, __l_))
+    if ((m & upper) == upper && __locale::__libcpp_iswupper(ch, __l_))
       break;
-    if ((m & lower) == lower && __locale::__iswlower(ch, __l_))
+    if ((m & lower) == lower && __locale::__libcpp_iswlower(ch, __l_))
       break;
-    if ((m & alpha) == alpha && __locale::__iswalpha(ch, __l_))
+    if ((m & alpha) == alpha && __locale::__libcpp_iswalpha(ch, __l_))
       break;
-    if ((m & digit) == digit && __locale::__iswdigit(ch, __l_))
+    if ((m & digit) == digit && __locale::__libcpp_iswdigit(ch, __l_))
       break;
-    if ((m & punct) == punct && __locale::__iswpunct(ch, __l_))
+    if ((m & punct) == punct && __locale::__libcpp_iswpunct(ch, __l_))
       break;
-    if ((m & xdigit) == xdigit && __locale::__iswxdigit(ch, __l_))
+    if ((m & xdigit) == xdigit && __locale::__libcpp_iswxdigit(ch, __l_))
       break;
-    if ((m & blank) == blank && __locale::__iswblank(ch, __l_))
+    if ((m & blank) == blank && __locale::__libcpp_iswblank(ch, __l_))
       break;
 #  endif
   }
@@ -1215,25 +1215,25 @@ const wchar_t* ctype_byname<wchar_t>::do_scan_not(mask m, const char_type* low, 
       break;
 #  else
     wint_t ch = static_cast<wint_t>(*low);
-    if ((m & space) == space && __locale::__iswspace(ch, __l_))
+    if ((m & space) == space && __locale__libcpp_iswspace(ch, __l_))
       continue;
-    if ((m & print) == print && __locale::__iswprint(ch, __l_))
+    if ((m & print) == print && __locale::__libcpp_iswprint(ch, __l_))
       continue;
-    if ((m & cntrl) == cntrl && __locale::__iswcntrl(ch, __l_))
+    if ((m & cntrl) == cntrl && __locale::__libcpp_iswcntrl(ch, __l_))
       continue;
-    if ((m & upper) == upper && __locale::__iswupper(ch, __l_))
+    if ((m & upper) == upper && __locale::__libcpp_iswupper(ch, __l_))
       continue;
-    if ((m & lower) == lower && __locale::__iswlower(ch, __l_))
+    if ((m & lower) == lower && __locale::__libcpp_iswlower(ch, __l_))
       continue;
-    if ((m & alpha) == alpha && __locale::__iswalpha(ch, __l_))
+    if ((m & alpha) == alpha && __locale::__libcpp_iswalpha(ch, __l_))
       continue;
-    if ((m & digit) == digit && __locale::__iswdigit(ch, __l_))
+    if ((m & digit) == digit && __locale::__libcpp_iswdigit(ch, __l_))
       continue;
-    if ((m & punct) == punct && __locale::__iswpunct(ch, __l_))
+    if ((m & punct) == punct && __locale::__libcpp_iswpunct(ch, __l_))
       continue;
-    if ((m & xdigit) == xdigit && __locale::__iswxdigit(ch, __l_))
+    if ((m & xdigit) == xdigit && __locale::__libcpp_iswxdigit(ch, __l_))
       continue;
-    if ((m & blank) == blank && __locale::__iswblank(ch, __l_))
+    if ((m & blank) == blank && __locale::__libcpp_iswblank(ch, __l_))
       continue;
     break;
 #  endif
@@ -1241,19 +1241,19 @@ const wchar_t* ctype_byname<wchar_t>::do_scan_not(mask m, const char_type* low, 
   return low;
 }
 
-wchar_t ctype_byname<wchar_t>::do_toupper(char_type c) const { return __locale::__towupper(c, __l_); }
+wchar_t ctype_byname<wchar_t>::do_toupper(char_type c) const { return __locale::__libcpp_towupper(c, __l_); }
 
 const wchar_t* ctype_byname<wchar_t>::do_toupper(char_type* low, const char_type* high) const {
   for (; low != high; ++low)
-    *low = __locale::__towupper(*low, __l_);
+    *low = __locale::__libcpp_towupper(*low, __l_);
   return low;
 }
 
-wchar_t ctype_byname<wchar_t>::do_tolower(char_type c) const { return __locale::__towlower(c, __l_); }
+wchar_t ctype_byname<wchar_t>::do_tolower(char_type c) const { return __locale::__libcpp_towlower(c, __l_); }
 
 const wchar_t* ctype_byname<wchar_t>::do_tolower(char_type* low, const char_type* high) const {
   for (; low != high; ++low)
-    *low = __locale::__towlower(*low, __l_);
+    *low = __locale::__libcpp_towlower(*low, __l_);
   return low;
 }
 
@@ -4467,7 +4467,7 @@ string __time_get_storage<char>::__analyze(char fmt, const ctype<char>& ct) {
   char f[3] = {0};
   f[0]      = '%';
   f[1]      = fmt;
-  size_t n  = __locale::__strftime(buf, countof(buf), f, &t, __loc_);
+  size_t n  = __locale::__libcpp_strftime(buf, countof(buf), f, &t, __loc_);
   char* bb  = buf;
   char* be  = buf + n;
   string result;
@@ -4598,7 +4598,7 @@ wstring __time_get_storage<wchar_t>::__analyze(char fmt, const ctype<wchar_t>& c
   char f[3] = {0};
   f[0]      = '%';
   f[1]      = fmt;
-  __locale::__strftime(buf, countof(buf), f, &t, __loc_);
+  __locale::__libcpp_strftime(buf, countof(buf), f, &t, __loc_);
   wchar_t wbuf[100];
   wchar_t* wbb   = wbuf;
   mbstate_t mb   = {0};
@@ -4724,25 +4724,25 @@ void __time_get_storage<char>::init(const ctype<char>& ct) {
   // __weeks_
   for (int i = 0; i < 7; ++i) {
     t.tm_wday = i;
-    __locale::__strftime(buf, countof(buf), "%A", &t, __loc_);
+    __locale::__libcpp_strftime(buf, countof(buf), "%A", &t, __loc_);
     __weeks_[i] = buf;
-    __locale::__strftime(buf, countof(buf), "%a", &t, __loc_);
+    __locale::__libcpp_strftime(buf, countof(buf), "%a", &t, __loc_);
     __weeks_[i + 7] = buf;
   }
   // __months_
   for (int i = 0; i < 12; ++i) {
     t.tm_mon = i;
-    __locale::__strftime(buf, countof(buf), "%B", &t, __loc_);
+    __locale::__libcpp_strftime(buf, countof(buf), "%B", &t, __loc_);
     __months_[i] = buf;
-    __locale::__strftime(buf, countof(buf), "%b", &t, __loc_);
+    __locale::__libcpp_strftime(buf, countof(buf), "%b", &t, __loc_);
     __months_[i + 12] = buf;
   }
   // __am_pm_
   t.tm_hour = 1;
-  __locale::__strftime(buf, countof(buf), "%p", &t, __loc_);
+  __locale::__libcpp_strftime(buf, countof(buf), "%p", &t, __loc_);
   __am_pm_[0] = buf;
   t.tm_hour   = 13;
-  __locale::__strftime(buf, countof(buf), "%p", &t, __loc_);
+  __locale::__libcpp_strftime(buf, countof(buf), "%p", &t, __loc_);
   __am_pm_[1] = buf;
   __c_        = __analyze('c', ct);
   __r_        = __analyze('r', ct);
@@ -4761,7 +4761,7 @@ void __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct) {
   // __weeks_
   for (int i = 0; i < 7; ++i) {
     t.tm_wday = i;
-    __locale::__strftime(buf, countof(buf), "%A", &t, __loc_);
+    __locale::__libcpp_strftime(buf, countof(buf), "%A", &t, __loc_);
     mb             = mbstate_t();
     const char* bb = buf;
     size_t j       = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, __loc_);
@@ -4769,7 +4769,7 @@ void __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct) {
       __throw_runtime_error("locale not supported");
     wbe = wbuf + j;
     __weeks_[i].assign(wbuf, wbe);
-    __locale::__strftime(buf, countof(buf), "%a", &t, __loc_);
+    __locale::__libcpp_strftime(buf, countof(buf), "%a", &t, __loc_);
     mb = mbstate_t();
     bb = buf;
     j  = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, __loc_);
@@ -4781,7 +4781,7 @@ void __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct) {
   // __months_
   for (int i = 0; i < 12; ++i) {
     t.tm_mon = i;
-    __locale::__strftime(buf, countof(buf), "%B", &t, __loc_);
+    __locale::__libcpp_strftime(buf, countof(buf), "%B", &t, __loc_);
     mb             = mbstate_t();
     const char* bb = buf;
     size_t j       = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, __loc_);
@@ -4789,7 +4789,7 @@ void __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct) {
       __throw_runtime_error("locale not supported");
     wbe = wbuf + j;
     __months_[i].assign(wbuf, wbe);
-    __locale::__strftime(buf, countof(buf), "%b", &t, __loc_);
+    __locale::__libcpp_strftime(buf, countof(buf), "%b", &t, __loc_);
     mb = mbstate_t();
     bb = buf;
     j  = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, __loc_);
@@ -4800,7 +4800,7 @@ void __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct) {
   }
   // __am_pm_
   t.tm_hour = 1;
-  __locale::__strftime(buf, countof(buf), "%p", &t, __loc_);
+  __locale::__libcpp_strftime(buf, countof(buf), "%p", &t, __loc_);
   mb             = mbstate_t();
   const char* bb = buf;
   size_t j       = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, __loc_);
@@ -4809,7 +4809,7 @@ void __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct) {
   wbe = wbuf + j;
   __am_pm_[0].assign(wbuf, wbe);
   t.tm_hour = 13;
-  __locale::__strftime(buf, countof(buf), "%p", &t, __loc_);
+  __locale::__libcpp_strftime(buf, countof(buf), "%p", &t, __loc_);
   mb = mbstate_t();
   bb = buf;
   j  = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, __loc_);
@@ -5041,7 +5041,7 @@ void __time_put::__do_put(char* __nb, char*& __ne, const tm* __tm, char __fmt, c
   char fmt[] = {'%', __fmt, __mod, 0};
   if (__mod != 0)
     swap(fmt[1], fmt[2]);
-  size_t n = __locale::__strftime(__nb, countof(__nb, __ne), fmt, __tm, __loc_);
+  size_t n = __locale::__libcpp_strftime(__nb, countof(__nb, __ne), fmt, __tm, __loc_);
   __ne     = __nb + n;
 }
 

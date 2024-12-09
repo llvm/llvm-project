@@ -105,4 +105,37 @@ _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 2, 0) int vasprintf(char** strp, const char
   return str_size;
 }
 
+namespace __ibm {
+_LIBCPP_EXPORTED_FROM_ABI int isalnum_l(int, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI int isalpha_l(int, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI int isblank_l(int, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI int iscntrl_l(int, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI int isgraph_l(int, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI int islower_l(int, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI int isprint_l(int, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI int ispunct_l(int, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI int isspace_l(int, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI int isupper_l(int, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI int iswalnum_l(wint_t, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI int iswalpha_l(wint_t, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI int iswblank_l(wint_t, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI int iswcntrl_l(wint_t, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI int iswdigit_l(wint_t, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI int iswgraph_l(wint_t, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI int iswlower_l(wint_t, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI int iswprint_l(wint_t, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI int iswpunct_l(wint_t, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI int iswspace_l(wint_t, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI int iswupper_l(wint_t, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI int iswxdigit_l(wint_t, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI int toupper_l(int, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI int tolower_l(int, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI wint_t towupper_l(wint_t, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI wint_t towlower_l(wint_t, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI int strcoll_l(const char *, const char *, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI size_t strxfrm_l(char *, const char *, size_t, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI size_t strftime_l(char *, size_t , const char *, const struct tm *, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI int wcscoll_l(const wchar_t *, const wchar_t *, locale_t);
+_LIBCPP_EXPORTED_FROM_ABI size_t wcsxfrm_l(wchar_t *, const wchar_t *, size_t , locale_t);
+}
 #endif // _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_IBM_H

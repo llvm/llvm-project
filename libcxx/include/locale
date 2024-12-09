@@ -1126,11 +1126,11 @@ void __num_put<_CharT>::__widen_and_group_float(
     *__oe++ = __ct.widen(*__nf++);
     *__oe++ = __ct.widen(*__nf++);
     for (__ns = __nf; __ns < __ne; ++__ns)
-      if (!__locale::__isxdigit(*__ns, _LIBCPP_GET_C_LOCALE))
+      if (!__locale::__libcpp_isxdigit(*__ns, _LIBCPP_GET_C_LOCALE))
         break;
   } else {
     for (__ns = __nf; __ns < __ne; ++__ns)
-      if (!__locale::__isdigit(*__ns, _LIBCPP_GET_C_LOCALE))
+      if (!__locale::__libcpp_isdigit(*__ns, _LIBCPP_GET_C_LOCALE))
         break;
   }
   if (__grouping.empty()) {
