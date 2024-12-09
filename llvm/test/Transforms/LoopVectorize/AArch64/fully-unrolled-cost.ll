@@ -119,11 +119,9 @@ define i1 @test_extra_cmp_user(ptr nocapture noundef %dst, ptr nocapture noundef
 ; CHECK-NEXT: Cost of 4 for VF 8: exit condition instruction   %exitcond.not = icmp eq i64 %indvars.iv.next, 16
 ; CHECK-NEXT: Cost of 0 for VF 8: EMIT vp<%3> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost for VF 8: 12
-; CHECK-NEXT: Cost of 8 for VF 16: induction instruction   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
 ; CHECK-NEXT: Cost of 0 for VF 16: induction instruction   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-; CHECK-NEXT: Cost of 8 for VF 16: exit condition instruction   %exitcond.not = icmp eq i64 %indvars.iv.next, 16
 ; CHECK-NEXT: Cost of 0 for VF 16: EMIT vp<%3> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK: Cost for VF 16: 20
+; CHECK: Cost for VF 16: 4
 ; CHECK: LV: Selecting VF: 16
 entry:
   br label %for.body
