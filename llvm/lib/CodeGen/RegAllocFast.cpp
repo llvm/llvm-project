@@ -682,7 +682,7 @@ void RegAllocFastImpl::reloadAtBegin(MachineBasicBlock &MBB) {
       getMBBBeginInsertionPoint(MBB, PrologLiveIns);
   for (const LiveReg &LR : LiveVirtRegs) {
     MCPhysReg PhysReg = LR.PhysReg;
-    if (PhysReg == 0)
+    if (PhysReg == 0 || LR.Error)
       continue;
 
     MCRegister FirstUnit = *TRI->regunits(PhysReg).begin();
@@ -963,14 +963,22 @@ void RegAllocFastImpl::allocVirtReg(MachineInstr &MI, LiveReg &LR,
   if (!BestReg) {
     // Nothing we can do: Report an error and keep going with an invalid
     // allocation.
-    if (MI.isInlineAsm())
+    if (MI.isInlineAsm()) {
       MI.emitInlineAsmError(
           "inline assembly requires more registers than available");
-    else
-      MI.emitInlineAsmError("ran out of registers during register allocation");
+    } else {
+      const Function &Fn = MBB->getParent()->getFunction();
+      DiagnosticInfoRegAllocFailure DI(
+          "ran out of registers during register allocation", Fn,
+          MI.getDebugLoc());
+      Fn.getContext().diagnose(DI);
+    }
 
     LR.Error = true;
-    LR.PhysReg = 0;
+    if (!AllocationOrder.empty())
+      LR.PhysReg = AllocationOrder.front();
+    else
+      LR.PhysReg = 0;
     return;
   }
 
@@ -1076,7 +1084,7 @@ bool RegAllocFastImpl::defineVirtReg(MachineInstr &MI, unsigned OpNum,
       return setPhysReg(MI, MO, *AllocationOrder.begin());
     }
   } else {
-    assert(!isRegUsedInInstr(LRI->PhysReg, LookAtPhysRegUses) &&
+    assert((!isRegUsedInInstr(LRI->PhysReg, LookAtPhysRegUses) || LRI->Error) &&
            "TODO: preassign mismatch");
     LLVM_DEBUG(dbgs() << "In def of " << printReg(VirtReg, TRI)
                       << " use existing assignment to "
