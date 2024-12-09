@@ -1374,8 +1374,13 @@ std::error_code closeFile(file_t &F) {
 }
 
 std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
-  const std::filesystem::path Path(path.str());
-  std::error_code EC;
+  // Convert to utf-16.
+  SmallVector<wchar_t, 128> Path16;
+  std::error_code EC = widenPath(path, Path16);
+  if (EC && !IgnoreErrors)
+    return EC;
+  Path16.push_back(0);
+  const std::filesystem::path Path(Path16.data());
   std::filesystem::remove_all(Path, EC);
   return IgnoreErrors ? std::error_code() : EC;
 }
