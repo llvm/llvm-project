@@ -1039,10 +1039,8 @@ let Uses = [O6],
   // call with trailing imm argument.
   // The imm argument is discarded.
   let isAsmParserOnly = 1 in {
-    def CALLi : InstSP<(outs), (ins calltarget:$disp, i32imm:$imm, variable_ops),
-                    "call $disp, $imm",
-                    [],
-                    IIC_jmp_or_call> {
+    def CALLi : InstSP<(outs), (ins calltarget:$disp, i32imm:$imm),
+                    "call $disp, $imm", []> {
       bits<30> disp;
       let op = 1;
       let Inst{29-0} = disp;
@@ -1065,15 +1063,11 @@ let Uses = [O6],
 
   let isAsmParserOnly = 1, rd = 15 in {
     def CALLrri : F3_1<2, 0b111000,
-                      (outs), (ins (MEMrr $rs1, $rs2):$addr, i32imm:$imm, variable_ops),
-                      "call $addr, $imm",
-                      [],
-                      IIC_jmp_or_call>;
+                      (outs), (ins (MEMrr $rs1, $rs2):$addr, i32imm:$imm),
+                      "call $addr, $imm", []>;
     def CALLrii : F3_2<2, 0b111000,
-                      (outs), (ins (MEMri $rs1, $simm13):$addr, i32imm:$imm, variable_ops),
-                      "call $addr, $imm",
-                      [],
-                      IIC_jmp_or_call>;
+                      (outs), (ins (MEMri $rs1, $simm13):$addr, i32imm:$imm),
+                      "call $addr, $imm", []>;
   }
 }
 

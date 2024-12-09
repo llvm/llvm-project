@@ -375,13 +375,12 @@ bool Filler::needsUnimp(MachineBasicBlock::iterator I, unsigned &StructSize)
   unsigned structSizeOpNum = 0;
   switch (I->getOpcode()) {
   default: llvm_unreachable("Unknown call opcode.");
-  case SP::CALL: structSizeOpNum = 1; break;
-  case SP::CALLi:
+  case SP::CALL:
+    structSizeOpNum = 1;
+    break;
   case SP::CALLrr:
-  case SP::CALLri: structSizeOpNum = 2; break;
-  case SP::CALLrri:
-  case SP::CALLrii:
-    structSizeOpNum = 3;
+  case SP::CALLri:
+    structSizeOpNum = 2;
     break;
   case SP::TLS_CALL: return false;
   case SP::TAIL_CALLri:
