@@ -42301,11 +42301,11 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     return SDValue();
   }
   case X86ISD::VPERMV3: {
-    // Combine VPERMV3 to widened VPERMV if the two source operands are split
-    // from the same vector.
     SDValue V1 = peekThroughBitcasts(N.getOperand(0));
     SDValue V2 = peekThroughBitcasts(N.getOperand(2));
     MVT SVT = V1.getSimpleValueType();
+    // Combine VPERMV3 to widened VPERMV if the two source operands are split
+    // from the same vector.
     if (V1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
         V1.getConstantOperandVal(1) == 0 &&
         V2.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
@@ -42326,14 +42326,25 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     }
     SmallVector<SDValue, 2> Ops;
     SmallVector<int, 32> Mask;
-    if (isShuffleFoldableLoad(N.getOperand(0)) &&
-        !isShuffleFoldableLoad(N.getOperand(2)) &&
-        getTargetShuffleMask(N, /*AllowSentinelZero=*/false, Ops, Mask)) {
-      ShuffleVectorSDNode::commuteMask(Mask);
-      SDValue NewMask = getConstVector(
-          Mask, N.getOperand(1).getSimpleValueType(), DAG, DL, /*IsMask=*/true);
-      return DAG.getNode(X86ISD::VPERMV3, DL, VT, N.getOperand(2), NewMask,
-                         N.getOperand(0));
+    if (getTargetShuffleMask(N, /*AllowSentinelZero=*/false, Ops, Mask)) {
+      MVT MaskVT = N.getOperand(1).getSimpleValueType();
+      // Canonicalize to VPERMV if both sources are the same.
+      if (V1 == V2) {
+        for (int &M : Mask)
+          M = (M < 0 ? M : M & Mask.size() - 1);
+        SDValue NewMask = getConstVector(Mask, MaskVT, DAG, DL,
+                                         /*IsMask=*/true);
+        return DAG.getNode(X86ISD::VPERMV, DL, VT, NewMask, N.getOperand(0));
+      }
+      // Commute foldable source to the RHS.
+      if (isShuffleFoldableLoad(N.getOperand(0)) &&
+          !isShuffleFoldableLoad(N.getOperand(2))) {
+        ShuffleVectorSDNode::commuteMask(Mask);
+        SDValue NewMask =
+            getConstVector(Mask, MaskVT, DAG, DL, /*IsMask=*/true);
+        return DAG.getNode(X86ISD::VPERMV3, DL, VT, N.getOperand(2), NewMask,
+                           N.getOperand(0));
+      }
     }
     return SDValue();
   }
