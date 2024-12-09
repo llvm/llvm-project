@@ -428,9 +428,9 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
            "Expected a compare");
     CmpInst::Predicate Pred = cast<CmpInst>(I).getPredicate();
     ScalarOpCost = TTI.getCmpSelInstrCost(
-        Opcode, ScalarTy, CmpInst::makeCmpResultType(ScalarTy), Pred);
+        Opcode, ScalarTy, CmpInst::makeCmpResultType(ScalarTy), Pred, CostKind);
     VectorOpCost = TTI.getCmpSelInstrCost(
-        Opcode, VecTy, CmpInst::makeCmpResultType(VecTy), Pred);
+        Opcode, VecTy, CmpInst::makeCmpResultType(VecTy), Pred, CostKind);
   }
 
   // Get cost estimates for the extract elements. These costs will factor into
@@ -991,9 +991,9 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
   if (IsCmp) {
     CmpInst::Predicate Pred = cast<CmpInst>(I).getPredicate();
     ScalarOpCost = TTI.getCmpSelInstrCost(
-        Opcode, ScalarTy, CmpInst::makeCmpResultType(ScalarTy), Pred);
+        Opcode, ScalarTy, CmpInst::makeCmpResultType(ScalarTy), Pred, CostKind);
     VectorOpCost = TTI.getCmpSelInstrCost(
-        Opcode, VecTy, CmpInst::makeCmpResultType(VecTy), Pred);
+        Opcode, VecTy, CmpInst::makeCmpResultType(VecTy), Pred, CostKind);
   } else {
     ScalarOpCost = TTI.getArithmeticInstrCost(Opcode, ScalarTy, CostKind);
     VectorOpCost = TTI.getArithmeticInstrCost(Opcode, VecTy, CostKind);
@@ -1093,14 +1093,15 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
     return false;
 
   InstructionCost Ext0Cost =
-                      TTI.getVectorInstrCost(*Ext0, VecTy, CostKind, Index0),
-                  Ext1Cost =
-                      TTI.getVectorInstrCost(*Ext1, VecTy, CostKind, Index1);
+      TTI.getVectorInstrCost(*Ext0, VecTy, CostKind, Index0);
+  InstructionCost Ext1Cost =
+      TTI.getVectorInstrCost(*Ext1, VecTy, CostKind, Index1);
+  InstructionCost CmpCost = TTI.getCmpSelInstrCost(
+      CmpOpcode, I0->getType(), CmpInst::makeCmpResultType(I0->getType()), Pred,
+      CostKind);
+
   InstructionCost OldCost =
-      Ext0Cost + Ext1Cost +
-      TTI.getCmpSelInstrCost(CmpOpcode, I0->getType(),
-                             CmpInst::makeCmpResultType(I0->getType()), Pred) *
-          2 +
+      Ext0Cost + Ext1Cost + CmpCost * 2 +
       TTI.getArithmeticInstrCost(I.getOpcode(), I.getType(), CostKind);
 
   // The proposed vector pattern is:
@@ -1110,7 +1111,8 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
   int ExpensiveIndex = ConvertToShuf == Ext0 ? Index0 : Index1;
   auto *CmpTy = cast<FixedVectorType>(CmpInst::makeCmpResultType(X->getType()));
   InstructionCost NewCost = TTI.getCmpSelInstrCost(
-      CmpOpcode, X->getType(), CmpInst::makeCmpResultType(X->getType()), Pred);
+      CmpOpcode, X->getType(), CmpInst::makeCmpResultType(X->getType()), Pred,
+      CostKind);
   SmallVector<int, 32> ShufMask(VecTy->getNumElements(), PoisonMaskElem);
   ShufMask[CheapIndex] = ExpensiveIndex;
   NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, CmpTy,
