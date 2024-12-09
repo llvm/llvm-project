@@ -1703,7 +1703,8 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
           ompLoc, allocaIP, bodyCB, !taskOp.getUntied(),
           moduleTranslation.lookupValue(taskOp.getFinal()),
           moduleTranslation.lookupValue(taskOp.getIfExpr()), dds,
-          taskOp.getMergeable());
+          taskOp.getMergeable(),
+          moduleTranslation.lookupValue(taskOp.getEventHandle()));
 
   if (failed(handleError(afterIP, *taskOp)))
     return failure();
