@@ -180,7 +180,8 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
     std::unique_ptr<RegisterInfoPOSIX_arm64> register_info_up)
     : NativeRegisterContextRegisterInfo(native_thread,
                                         register_info_up.release()),
-      NativeRegisterContextLinux(native_thread) {
+      NativeRegisterContextLinux(native_thread),
+      NativeRegisterContextDBReg_arm64(1U) {
   g_register_flags_detector.UpdateRegisterInfo(
       GetRegisterInfoInterface().GetRegisterInfo(),
       GetRegisterInfoInterface().GetRegisterCount());
@@ -201,9 +202,6 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
   // 16 is just a maximum value, query hardware for actual watchpoint count
   m_max_hwp_supported = 16;
   m_max_hbp_supported = 16;
-
-  // E (bit 0), used to enable breakpoint/watchpoint
-  m_hw_dbg_enable_bit = 1;
 
   m_refresh_hwdebug_info = true;
 

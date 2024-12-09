@@ -111,14 +111,11 @@ void DataSharingProcessor::insertDeallocs() {
 }
 
 void DataSharingProcessor::cloneSymbol(const semantics::Symbol *sym) {
-  bool success = converter.createHostAssociateVarClone(*sym);
+  bool isFirstPrivate = sym->test(semantics::Symbol::Flag::OmpFirstPrivate);
+  bool success = converter.createHostAssociateVarClone(
+      *sym, /*skipDefaultInit=*/isFirstPrivate);
   (void)success;
   assert(success && "Privatization failed due to existing binding");
-
-  bool isFirstPrivate = sym->test(semantics::Symbol::Flag::OmpFirstPrivate);
-  if (!isFirstPrivate &&
-      Fortran::lower::hasDefaultInitialization(sym->GetUltimate()))
-    Fortran::lower::defaultInitializeAtRuntime(converter, *sym, *symTable);
 }
 
 void DataSharingProcessor::copyFirstPrivateSymbol(

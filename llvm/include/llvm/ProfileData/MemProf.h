@@ -1159,7 +1159,7 @@ template <> struct MappingTraits<memprof::Frame> {
     Io.mapRequired("Function", F.Function);
     Io.mapRequired("LineOffset", F.LineOffset);
     Io.mapRequired("Column", F.Column);
-    Io.mapRequired("Inline", F.IsInlineFrame);
+    Io.mapRequired("IsInlineFrame", F.IsInlineFrame);
 
     // Assert that the definition of Frame matches what we expect.  The
     // structured bindings below detect changes to the number of fields.
@@ -1214,8 +1214,10 @@ template <> struct CustomMappingTraits<memprof::PortableMemInfoBlock> {
   static void output(IO &Io, memprof::PortableMemInfoBlock &MIB) {
     auto Schema = MIB.getSchema();
 #define MIBEntryDef(NameTag, Name, Type)                                       \
-  if (Schema.test(llvm::to_underlying(memprof::Meta::Name)))                   \
-    Io.mapRequired(#Name, MIB.Name);
+  if (Schema.test(llvm::to_underlying(memprof::Meta::Name))) {                 \
+    uint64_t Value = MIB.Name;                                                 \
+    Io.mapRequired(#Name, Value);                                              \
+  }
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
   }
