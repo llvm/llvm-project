@@ -615,6 +615,9 @@ public:
     unsigned MaxIterationsCountToAnalyze;
     /// Don't disable runtime unroll for the loops which were vectorized.
     bool UnrollVectorizedLoop = false;
+    /// Don't allow runtime unrolling if expanding the trip count takes more
+    /// than SCEVExpansionBudget.
+    unsigned SCEVExpansionBudget;
   };
 
   /// Get target-customized preferences for the generic loop unrolling

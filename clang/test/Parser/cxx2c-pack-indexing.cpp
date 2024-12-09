@@ -74,3 +74,12 @@ struct SS {
     }
 };
 }
+
+namespace GH119072 {
+
+template<typename... Ts>
+void foo() {
+  decltype(Ts...[0]::t) value;
+}
+
+}

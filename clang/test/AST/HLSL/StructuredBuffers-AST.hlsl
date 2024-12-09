@@ -75,19 +75,35 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: HLSLResourceAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit RawBuffer
 
 // CHECK-SUBSCRIPT: CXXMethodDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> operator[] 'const element_type &(unsigned int) const'
-// CHECK-SUBSCRIPT-NEXT: ParmVarDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> Idx 'unsigned int'
+// CHECK-SUBSCRIPT-NEXT: ParmVarDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> Index 'unsigned int'
 // CHECK-SUBSCRIPT-NEXT: CompoundStmt 0x{{[0-9A-Fa-f]+}} <<invalid sloc>>
 // CHECK-SUBSCRIPT-NEXT: ReturnStmt 0x{{[0-9A-Fa-f]+}} <<invalid sloc>>
-// CHECK-SUBSCRIPT-NEXT: MemberExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> 'element_type' lvalue .e 0x{{[0-9A-Fa-f]+}}
+// CHECK-SUBSCRIPT-NEXT: UnaryOperator 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> 'element_type' prefix '*' cannot overflow
+// CHECK-SUBSCRIPT-NEXT: CallExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> 'element_type *'
+// CHECK-SUBSCRIPT-NEXT: DeclRefExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> '<builtin fn type>' Function 0x{{[0-9A-Fa-f]+}} '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
+// CHECK-SUBSCRIPT-NEXT: MemberExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> '__hlsl_resource_t
+// CHECK-SUBSCRIPT-SAME{LITERAL}: [[hlsl::resource_class(
+// CHECK-SUBSCRIPT-SAME{LITERAL}: [[hlsl::raw_buffer]]
+// CHECK-SUBSCRIPT-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// CHECK-SUBSCRIPT-SAME: ' lvalue .__handle 0x{{[0-9A-Fa-f]+}}
 // CHECK-SUBSCRIPT-NEXT: CXXThisExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> 'const [[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK-SUBSCRIPT-NEXT: DeclRefExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> 'unsigned int' ParmVar 0x{{[0-9A-Fa-f]+}} 'Index' 'unsigned int'
 // CHECK-SUBSCRIPT-NEXT: AlwaysInlineAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit always_inline
 
 // CHECK-SUBSCRIPT-NEXT: CXXMethodDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> operator[] 'element_type &(unsigned int)'
-// CHECK-SUBSCRIPT-NEXT: ParmVarDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> Idx 'unsigned int'
+// CHECK-SUBSCRIPT-NEXT: ParmVarDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> Index 'unsigned int'
 // CHECK-SUBSCRIPT-NEXT: CompoundStmt 0x{{[0-9A-Fa-f]+}} <<invalid sloc>>
 // CHECK-SUBSCRIPT-NEXT: ReturnStmt 0x{{[0-9A-Fa-f]+}} <<invalid sloc>>
-// CHECK-SUBSCRIPT-NEXT: MemberExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> 'element_type' lvalue .e 0x{{[0-9A-Fa-f]+}}
+// CHECK-SUBSCRIPT-NEXT: UnaryOperator 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> 'element_type' prefix '*' cannot overflow
+// CHECK-SUBSCRIPT-NEXT: CallExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> 'element_type *'
+// CHECK-SUBSCRIPT-NEXT: DeclRefExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> '<builtin fn type>' Function 0x{{[0-9A-Fa-f]+}} '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
+// CHECK-SUBSCRIPT-NEXT: MemberExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> '__hlsl_resource_t
+// CHECK-SUBSCRIPT-SAME{LITERAL}: [[hlsl::resource_class(
+// CHECK-SUBSCRIPT-SAME{LITERAL}: [[hlsl::raw_buffer]]
+// CHECK-SUBSCRIPT-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// CHECK-SUBSCRIPT-SAME: ' lvalue .__handle 0x{{[0-9A-Fa-f]+}}
 // CHECK-SUBSCRIPT-NEXT: CXXThisExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> '[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK-SUBSCRIPT-NEXT: DeclRefExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> 'unsigned int' ParmVar 0x{{[0-9A-Fa-f]+}} 'Index' 'unsigned int'
 // CHECK-SUBSCRIPT-NEXT: AlwaysInlineAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit always_inline
 
 // CHECK-NOSUBSCRIPT-NOT: CXXMethodDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> operator[] 'const element_type &(unsigned int) const'
@@ -97,7 +113,7 @@ RESOURCE<float> Buffer;
 // CHECK-COUNTER-NEXT: CompoundStmt 0x{{[0-9A-Fa-f]+}} <<invalid sloc>>
 // CHECK-COUNTER-NEXT: ReturnStmt 0x{{[0-9A-Fa-f]+}} <<invalid sloc>>
 // CHECK-COUNTER-NEXT: CallExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> 'unsigned int'
-// CHECK-COUNTER-NEXT: DeclRefExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> 'unsigned int (...) noexcept' Function 0x{{[0-9A-Fa-f]+}} '__builtin_hlsl_buffer_update_counter' 'unsigned int (...) noexcept'
+// CHECK-COUNTER-NEXT: DeclRefExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> '<builtin fn type>' Function 0x{{[0-9A-Fa-f]+}} '__builtin_hlsl_buffer_update_counter' 'unsigned int (...) noexcept'
 // CHECK-COUNTER-NEXT: MemberExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> '__hlsl_resource_t
 // CHECK-COUNTER-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-COUNTER-SAME{LITERAL}: [[hlsl::raw_buffer]]
@@ -110,7 +126,7 @@ RESOURCE<float> Buffer;
 // CHECK-COUNTER-NEXT: CompoundStmt 0x{{[0-9A-Fa-f]+}} <<invalid sloc>>
 // CHECK-COUNTER-NEXT: ReturnStmt 0x{{[0-9A-Fa-f]+}} <<invalid sloc>>
 // CHECK-COUNTER-NEXT: CallExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> 'unsigned int'
-// CHECK-COUNTER-NEXT: DeclRefExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> 'unsigned int (...) noexcept' Function 0x{{[0-9A-Fa-f]+}} '__builtin_hlsl_buffer_update_counter' 'unsigned int (...) noexcept'
+// CHECK-COUNTER-NEXT: DeclRefExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> '<builtin fn type>' Function 0x{{[0-9A-Fa-f]+}} '__builtin_hlsl_buffer_update_counter' 'unsigned int (...) noexcept'
 // CHECK-COUNTER-NEXT: MemberExpr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> '__hlsl_resource_t
 // CHECK-COUNTER-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-COUNTER-SAME{LITERAL}: [[hlsl::raw_buffer]]

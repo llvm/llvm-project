@@ -35,13 +35,16 @@ namespace {
 
 struct TemplateParameterListBuilder;
 
-struct BuiltinTypeDeclBuilder {
-  Sema &SemaRef;
-  CXXRecordDecl *Record = nullptr;
+class BuiltinTypeDeclBuilder {
   ClassTemplateDecl *Template = nullptr;
   ClassTemplateDecl *PrevTemplate = nullptr;
   NamespaceDecl *HLSLNamespace = nullptr;
   llvm::StringMap<FieldDecl *> Fields;
+
+public:
+  Sema &SemaRef;
+  CXXRecordDecl *Record = nullptr;
+  friend struct TemplateParameterListBuilder;
 
   BuiltinTypeDeclBuilder(Sema &SemaRef, CXXRecordDecl *R)
       : SemaRef(SemaRef), Record(R) {
@@ -51,7 +54,7 @@ struct BuiltinTypeDeclBuilder {
 
   BuiltinTypeDeclBuilder(Sema &SemaRef, NamespaceDecl *Namespace,
                          StringRef Name)
-      : SemaRef(SemaRef), HLSLNamespace(Namespace) {
+      : HLSLNamespace(Namespace), SemaRef(SemaRef) {
     ASTContext &AST = SemaRef.getASTContext();
     IdentifierInfo &II = AST.Idents.get(Name, tok::TokenKind::identifier);
 
@@ -91,6 +94,18 @@ struct BuiltinTypeDeclBuilder {
       HLSLNamespace->addDecl(Record);
   }
 
+  CXXRecordDecl *finalizeForwardDeclaration() {
+    // Force the QualType to be generated for the record declaration. In most
+    // cases this will happen naturally when something uses the type the
+    // QualType gets lazily created. Unfortunately, with our injected types if a
+    // type isn't used in a translation unit the QualType may not get
+    // automatically generated before a PCH is generated. To resolve this we
+    // just force that the QualType is generated after we create a forward
+    // declaration.
+    (void)Record->getASTContext().getRecordType(Record);
+    return Record;
+  }
+
   BuiltinTypeDeclBuilder &
   addMemberVariable(StringRef Name, QualType Type, llvm::ArrayRef<Attr *> Attrs,
                     AccessSpecifier Access = AccessSpecifier::AS_private) {
@@ -123,12 +138,8 @@ struct BuiltinTypeDeclBuilder {
     assert(!Record->isCompleteDefinition() && "record is already complete");
 
     ASTContext &Ctx = SemaRef.getASTContext();
-    TypeSourceInfo *ElementTypeInfo = nullptr;
-
-    QualType ElemTy = Ctx.Char8Ty;
-    if (Template)
-      ElemTy = getFirstTemplateTypeParam();
-    ElementTypeInfo = Ctx.getTrivialTypeSourceInfo(ElemTy, SourceLocation());
+    TypeSourceInfo *ElementTypeInfo =
+        Ctx.getTrivialTypeSourceInfo(getHandleElementType(), SourceLocation());
 
     // add handle member with resource type attributes
     QualType AttributedResTy = QualType();
@@ -171,80 +182,12 @@ struct BuiltinTypeDeclBuilder {
   }
 
   BuiltinTypeDeclBuilder &addArraySubscriptOperators() {
-    addArraySubscriptOperator(true);
-    addArraySubscriptOperator(false);
-    return *this;
-  }
-
-  BuiltinTypeDeclBuilder &addArraySubscriptOperator(bool IsConst) {
-    assert(!Record->isCompleteDefinition() && "record is already complete");
-
     ASTContext &AST = Record->getASTContext();
-    QualType ElemTy = AST.Char8Ty;
-    if (Template)
-      ElemTy = getFirstTemplateTypeParam();
-    QualType ReturnTy = ElemTy;
+    DeclarationName Subscript =
+        AST.DeclarationNames.getCXXOperatorName(OO_Subscript);
 
-    FunctionProtoType::ExtProtoInfo ExtInfo;
-
-    // Subscript operators return references to elements, const makes the
-    // reference and method const so that the underlying data is not mutable.
-    if (IsConst) {
-      ExtInfo.TypeQuals.addConst();
-      ReturnTy.addConst();
-    }
-    ReturnTy = AST.getLValueReferenceType(ReturnTy);
-
-    QualType MethodTy =
-        AST.getFunctionType(ReturnTy, {AST.UnsignedIntTy}, ExtInfo);
-    auto *TSInfo = AST.getTrivialTypeSourceInfo(MethodTy, SourceLocation());
-    auto *MethodDecl = CXXMethodDecl::Create(
-        AST, Record, SourceLocation(),
-        DeclarationNameInfo(
-            AST.DeclarationNames.getCXXOperatorName(OO_Subscript),
-            SourceLocation()),
-        MethodTy, TSInfo, SC_None, false, false, ConstexprSpecKind::Unspecified,
-        SourceLocation());
-
-    IdentifierInfo &II = AST.Idents.get("Idx", tok::TokenKind::identifier);
-    auto *IdxParam = ParmVarDecl::Create(
-        AST, MethodDecl->getDeclContext(), SourceLocation(), SourceLocation(),
-        &II, AST.UnsignedIntTy,
-        AST.getTrivialTypeSourceInfo(AST.UnsignedIntTy, SourceLocation()),
-        SC_None, nullptr);
-    MethodDecl->setParams({IdxParam});
-
-    // Also add the parameter to the function prototype.
-    auto FnProtoLoc = TSInfo->getTypeLoc().getAs<FunctionProtoTypeLoc>();
-    FnProtoLoc.setParam(0, IdxParam);
-
-    // FIXME: Placeholder to make sure we return the correct type - create
-    // field of element_type and return reference to it. This field will go
-    // away once indexing into resources is properly implemented in
-    // llvm/llvm-project#95956.
-    if (Fields.count("e") == 0) {
-      addMemberVariable("e", ElemTy, {});
-    }
-    FieldDecl *ElemFieldDecl = Fields["e"];
-
-    auto *This =
-        CXXThisExpr::Create(AST, SourceLocation(),
-                            MethodDecl->getFunctionObjectParameterType(), true);
-    Expr *ElemField = MemberExpr::CreateImplicit(
-        AST, This, false, ElemFieldDecl, ElemFieldDecl->getType(), VK_LValue,
-        OK_Ordinary);
-    auto *Return =
-        ReturnStmt::Create(AST, SourceLocation(), ElemField, nullptr);
-
-    MethodDecl->setBody(CompoundStmt::Create(AST, {Return}, FPOptionsOverride(),
-                                             SourceLocation(),
-                                             SourceLocation()));
-    MethodDecl->setLexicalDeclContext(Record);
-    MethodDecl->setAccess(AccessSpecifier::AS_public);
-    MethodDecl->addAttr(AlwaysInlineAttr::CreateImplicit(
-        AST, SourceRange(), AlwaysInlineAttr::CXX11_clang_always_inline));
-    Record->addDecl(MethodDecl);
-
+    addHandleAccessFunction(Subscript, /*IsConst=*/true, /*IsRef=*/true);
+    addHandleAccessFunction(Subscript, /*IsConst=*/false, /*IsRef=*/true);
     return *this;
   }
 
@@ -263,6 +206,13 @@ struct BuiltinTypeDeclBuilder {
       return QualType(TTD->getTypeForDecl(), 0);
     }
     return QualType();
+  }
+
+  QualType getHandleElementType() {
+    if (Template)
+      return getFirstTemplateTypeParam();
+    // TODO: Should we default to VoidTy? Using `i8` is arguably ambiguous.
+    return SemaRef.getASTContext().Char8Ty;
   }
 
   BuiltinTypeDeclBuilder &startDefinition() {
@@ -294,6 +244,8 @@ struct BuiltinTypeDeclBuilder {
   // Builtin types methods
   BuiltinTypeDeclBuilder &addIncrementCounterMethod();
   BuiltinTypeDeclBuilder &addDecrementCounterMethod();
+  BuiltinTypeDeclBuilder &addHandleAccessFunction(DeclarationName &Name,
+                                                  bool IsConst, bool IsRef);
 };
 
 struct TemplateParameterListBuilder {
@@ -453,7 +405,7 @@ struct TemplateParameterListBuilder {
 // Builder for methods of builtin types. Allows adding methods to builtin types
 // using the builder pattern like this:
 //
-//   BuiltinTypeMethodBuilder(Sema, RecordBuilder, "MethodName", ReturnType)
+//   BuiltinTypeMethodBuilder(RecordBuilder, "MethodName", ReturnType)
 //       .addParam("param_name", Type, InOutModifier)
 //       .callBuiltin("builtin_name", BuiltinParams...)
 //       .finalizeMethod();
@@ -486,6 +438,7 @@ struct BuiltinTypeMethodBuilder {
   DeclarationNameInfo NameInfo;
   QualType ReturnTy;
   CXXMethodDecl *Method;
+  bool IsConst;
   llvm::SmallVector<MethodParam> Params;
   llvm::SmallVector<Stmt *> StmtsList;
 
@@ -508,11 +461,16 @@ struct BuiltinTypeMethodBuilder {
   Expr *convertPlaceholder(Expr *E) { return E; }
 
 public:
-  BuiltinTypeMethodBuilder(Sema &S, BuiltinTypeDeclBuilder &DB, StringRef Name,
-                           QualType ReturnTy)
-      : DeclBuilder(DB), ReturnTy(ReturnTy), Method(nullptr) {
+  BuiltinTypeMethodBuilder(BuiltinTypeDeclBuilder &DB, DeclarationName &Name,
+                           QualType ReturnTy, bool IsConst = false)
+      : DeclBuilder(DB), NameInfo(DeclarationNameInfo(Name, SourceLocation())),
+        ReturnTy(ReturnTy), Method(nullptr), IsConst(IsConst) {}
+
+  BuiltinTypeMethodBuilder(BuiltinTypeDeclBuilder &DB, StringRef Name,
+                           QualType ReturnTy, bool IsConst = false)
+      : DeclBuilder(DB), ReturnTy(ReturnTy), Method(nullptr), IsConst(IsConst) {
     const IdentifierInfo &II =
-        S.getASTContext().Idents.get(Name, tok::TokenKind::identifier);
+        DB.SemaRef.getASTContext().Idents.get(Name, tok::TokenKind::identifier);
     NameInfo = DeclarationNameInfo(DeclarationName(&II), SourceLocation());
   }
 
@@ -535,8 +493,12 @@ private:
     SmallVector<QualType> ParamTypes;
     for (MethodParam &MP : Params)
       ParamTypes.emplace_back(MP.Ty);
-    QualType MethodTy = AST.getFunctionType(ReturnTy, ParamTypes,
-                                            FunctionProtoType::ExtProtoInfo());
+
+    FunctionProtoType::ExtProtoInfo ExtInfo;
+    if (IsConst)
+      ExtInfo.TypeQuals.addConst();
+
+    QualType MethodTy = AST.getFunctionType(ReturnTy, ParamTypes, ExtInfo);
 
     // create method decl
     auto *TSInfo = AST.getTrivialTypeSourceInfo(MethodTy, SourceLocation());
@@ -586,7 +548,8 @@ public:
   }
 
   template <typename... Ts>
-  BuiltinTypeMethodBuilder &callBuiltin(StringRef BuiltinName, Ts... ArgSpecs) {
+  BuiltinTypeMethodBuilder &callBuiltin(StringRef BuiltinName,
+                                        QualType ReturnType, Ts... ArgSpecs) {
     std::array<Expr *, sizeof...(ArgSpecs)> Args{
         convertPlaceholder(std::forward<Ts>(ArgSpecs))...};
 
@@ -599,12 +562,29 @@ public:
     FunctionDecl *FD = lookupBuiltinFunction(DeclBuilder.SemaRef, BuiltinName);
     DeclRefExpr *DRE = DeclRefExpr::Create(
         AST, NestedNameSpecifierLoc(), SourceLocation(), FD, false,
-        FD->getNameInfo(), FD->getType(), VK_PRValue);
+        FD->getNameInfo(), AST.BuiltinFnTy, VK_PRValue);
 
-    Expr *Call =
-        CallExpr::Create(AST, DRE, Args, FD->getReturnType(), VK_PRValue,
-                         SourceLocation(), FPOptionsOverride());
+    if (ReturnType.isNull())
+      ReturnType = FD->getReturnType();
+
+    Expr *Call = CallExpr::Create(AST, DRE, Args, ReturnType, VK_PRValue,
+                                  SourceLocation(), FPOptionsOverride());
     StmtsList.push_back(Call);
+    return *this;
+  }
+
+  BuiltinTypeMethodBuilder &dereference() {
+    assert(!StmtsList.empty() && "Nothing to dereference");
+    ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
+
+    Expr *LastExpr = dyn_cast<Expr>(StmtsList.back());
+    assert(LastExpr && "No expression to dereference");
+    Expr *Deref = UnaryOperator::Create(
+        AST, LastExpr, UO_Deref, LastExpr->getType()->getPointeeType(),
+        VK_PRValue, OK_Ordinary, SourceLocation(),
+        /*CanOverflow=*/false, FPOptionsOverride());
+    StmtsList.pop_back();
+    StmtsList.push_back(Deref);
     return *this;
   }
 
@@ -621,11 +601,8 @@ public:
              "nothing to return from non-void method");
       if (ReturnTy != AST.VoidTy) {
         if (Expr *LastExpr = dyn_cast<Expr>(StmtsList.back())) {
-          assert(AST.hasSameUnqualifiedType(
-                     isa<CallExpr>(LastExpr)
-                         ? cast<CallExpr>(LastExpr)->getCallReturnType(AST)
-                         : LastExpr->getType(),
-                     ReturnTy) &&
+          assert(AST.hasSameUnqualifiedType(LastExpr->getType(),
+                                            ReturnTy.getNonReferenceType()) &&
                  "Return type of the last statement must match the return type "
                  "of the method");
           if (!isa<ReturnStmt>(LastExpr)) {
@@ -672,19 +649,43 @@ BuiltinTypeDeclBuilder::addSimpleTemplateParams(ArrayRef<StringRef> Names,
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addIncrementCounterMethod() {
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
-  return BuiltinTypeMethodBuilder(SemaRef, *this, "IncrementCounter",
+  return BuiltinTypeMethodBuilder(*this, "IncrementCounter",
                                   SemaRef.getASTContext().UnsignedIntTy)
-      .callBuiltin("__builtin_hlsl_buffer_update_counter", PH::Handle,
-                   getConstantIntExpr(1))
+      .callBuiltin("__builtin_hlsl_buffer_update_counter", QualType(),
+                   PH::Handle, getConstantIntExpr(1))
       .finalizeMethod();
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDecrementCounterMethod() {
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
-  return BuiltinTypeMethodBuilder(SemaRef, *this, "DecrementCounter",
+  return BuiltinTypeMethodBuilder(*this, "DecrementCounter",
                                   SemaRef.getASTContext().UnsignedIntTy)
-      .callBuiltin("__builtin_hlsl_buffer_update_counter", PH::Handle,
-                   getConstantIntExpr(-1))
+      .callBuiltin("__builtin_hlsl_buffer_update_counter", QualType(),
+                   PH::Handle, getConstantIntExpr(-1))
+      .finalizeMethod();
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addHandleAccessFunction(DeclarationName &Name,
+                                                bool IsConst, bool IsRef) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = SemaRef.getASTContext();
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  QualType ElemTy = getHandleElementType();
+  // TODO: Map to an hlsl_device address space.
+  QualType ElemPtrTy = AST.getPointerType(ElemTy);
+  QualType ReturnTy = ElemTy;
+  if (IsConst)
+    ReturnTy.addConst();
+  if (IsRef)
+    ReturnTy = AST.getLValueReferenceType(ReturnTy);
+
+  return BuiltinTypeMethodBuilder(*this, Name, ReturnTy, IsConst)
+      .addParam("Index", AST.UnsignedIntTy)
+      .callBuiltin("__builtin_hlsl_resource_getpointer", ElemPtrTy, PH::Handle,
+                   PH::_0)
+      .dereference()
       .finalizeMethod();
 }
 
@@ -863,7 +864,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
       constructTypedBufferConceptDecl(*SemaPtr, HLSLNamespace);
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWBuffer")
              .addSimpleTemplateParams({"element_type"}, TypedBufferConcept)
-             .Record;
+             .finalizeForwardDeclaration();
 
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
@@ -876,7 +877,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   Decl =
       BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RasterizerOrderedBuffer")
           .addSimpleTemplateParams({"element_type"})
-          .Record;
+          .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
                     ResourceKind::TypedBuffer, /*IsROV=*/true,
@@ -887,7 +888,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
 
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "StructuredBuffer")
              .addSimpleTemplateParams({"element_type"})
-             .Record;
+             .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::SRV, ResourceKind::RawBuffer,
                     /*IsROV=*/false, /*RawBuffer=*/true)
@@ -897,7 +898,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
 
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWStructuredBuffer")
              .addSimpleTemplateParams({"element_type"})
-             .Record;
+             .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
                     /*IsROV=*/false, /*RawBuffer=*/true)
@@ -910,7 +911,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   Decl =
       BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "AppendStructuredBuffer")
           .addSimpleTemplateParams({"element_type"})
-          .Record;
+          .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
                     /*IsROV=*/false, /*RawBuffer=*/true)
@@ -920,7 +921,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   Decl =
       BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "ConsumeStructuredBuffer")
           .addSimpleTemplateParams({"element_type"})
-          .Record;
+          .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
                     /*IsROV=*/false, /*RawBuffer=*/true)
@@ -930,13 +931,39 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace,
                                 "RasterizerOrderedStructuredBuffer")
              .addSimpleTemplateParams({"element_type"})
-             .Record;
+             .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
                     /*IsROV=*/true, /*RawBuffer=*/true)
         .addArraySubscriptOperators()
         .addIncrementCounterMethod()
         .addDecrementCounterMethod()
+        .completeDefinition();
+  });
+
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "ByteAddressBuffer")
+             .finalizeForwardDeclaration();
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupBufferType(Decl, *SemaPtr, ResourceClass::SRV, ResourceKind::RawBuffer,
+                    /*IsROV=*/false,
+                    /*RawBuffer=*/true)
+        .completeDefinition();
+  });
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWByteAddressBuffer")
+             .finalizeForwardDeclaration();
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
+                    /*IsROV=*/false,
+                    /*RawBuffer=*/true)
+        .completeDefinition();
+  });
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace,
+                                "RasterizerOrderedByteAddressBuffer")
+             .finalizeForwardDeclaration();
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
+                    /*IsROV=*/true,
+                    /*RawBuffer=*/true)
         .completeDefinition();
   });
 }

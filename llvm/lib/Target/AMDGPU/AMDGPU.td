@@ -432,6 +432,12 @@ def FeatureAshrPkInsts : SubtargetFeature<"ashr-pk-insts",
   "Has Arithmetic Shift Pack instructions"
 >;
 
+def FeatureCvtPkF16F32Inst : SubtargetFeature<"cvt-pk-f16-f32-inst",
+  "HasCvtPkF16F32Inst",
+  "true",
+  "Has cvt_pk_f16_f32 instruction"
+>;
+
 def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
   "GFX950Insts",
   "true",
@@ -445,8 +451,9 @@ def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
    FeatureFP6BF6ConversionScaleInsts,
    FeatureF16BF16ToFP6BF6ConversionScaleInsts,
    FeatureF32ToF16BF16ConversionSRInsts,
+   FeatureCvtPkF16F32Inst,
    FeatureMinimum3Maximum3F32,
-   FeatureMinimum3Maximum3PKF16
+   FeatureMinimum3Maximum3PKF16,
    ]
 >;
 
@@ -2509,6 +2516,9 @@ def HasFP6BF6ConversionScaleInsts : Predicate<"Subtarget->hasFP6BF6ConversionSca
 
 def HasF16BF16ToFP6BF6ConversionScaleInsts : Predicate<"Subtarget->hasF16BF16ToFP6BF6ConversionScaleInsts()">,
   AssemblerPredicate<(all_of FeatureF16BF16ToFP6BF6ConversionScaleInsts)>;
+
+def HasCvtPkF16F32Inst : Predicate<"Subtarget->hasCvtPkF16F32Inst()">,
+  AssemblerPredicate<(all_of FeatureCvtPkF16F32Inst)>;
 
 def HasF32ToF16BF16ConversionSRInsts : Predicate<"Subtarget->hasF32ToF16BF16ConversionSRInsts()">,
   AssemblerPredicate<(all_of FeatureF32ToF16BF16ConversionSRInsts)>;

@@ -70,6 +70,11 @@ std::string lld::toString(const coff::InputFile *file) {
       .str();
 }
 
+const COFFSyncStream &coff::operator<<(const COFFSyncStream &s,
+                                       const InputFile *f) {
+  return s << toString(f);
+}
+
 /// Checks that Source is compatible with being a weak alias to Target.
 /// If Source is Undefined and has no weak alias set, makes it a weak
 /// alias to Target.
@@ -139,7 +144,8 @@ void ArchiveFile::addMember(const Archive::Symbol &sym) {
   ctx.driver.enqueueArchiveMember(c, sym, getName());
 }
 
-std::vector<MemoryBufferRef> lld::coff::getArchiveMembers(Archive *file) {
+std::vector<MemoryBufferRef>
+lld::coff::getArchiveMembers(COFFLinkerContext &ctx, Archive *file) {
   std::vector<MemoryBufferRef> v;
   Error err = Error::success();
   for (const Archive::Child &c : file->children(err)) {
@@ -150,8 +156,8 @@ std::vector<MemoryBufferRef> lld::coff::getArchiveMembers(Archive *file) {
     v.push_back(mbref);
   }
   if (err)
-    fatal(file->getFileName() +
-          ": Archive::children failed: " + toString(std::move(err)));
+    Fatal(ctx) << file->getFileName()
+               << ": Archive::children failed: " << toString(std::move(err));
   return v;
 }
 
@@ -182,7 +188,7 @@ struct ECMapEntry {
 void ObjFile::initializeECThunks() {
   for (SectionChunk *chunk : hybmpChunks) {
     if (chunk->getContents().size() % sizeof(ECMapEntry)) {
-      error("Invalid .hybmp chunk size " + Twine(chunk->getContents().size()));
+      Err(ctx) << "Invalid .hybmp chunk size " << chunk->getContents().size();
       continue;
     }
 
@@ -201,7 +207,7 @@ void ObjFile::initializeECThunks() {
       case Arm64ECThunkType::GuestExit:
         break;
       default:
-        warn("Ignoring unknown EC thunk type " + Twine(entry->type));
+        Warn(ctx) << "Ignoring unknown EC thunk type " << entry->type;
       }
     }
   }
@@ -215,7 +221,7 @@ void ObjFile::parse() {
     bin.release();
     coffObj.reset(obj);
   } else {
-    fatal(toString(this) + " is not a COFF file");
+    Fatal(ctx) << toString(this) << " is not a COFF file";
   }
 
   // Read section and symbol tables.
@@ -229,7 +235,7 @@ void ObjFile::parse() {
 const coff_section *ObjFile::getSection(uint32_t i) {
   auto sec = coffObj->getSection(i);
   if (!sec)
-    fatal("getSection failed: #" + Twine(i) + ": " + toString(sec.takeError()));
+    Fatal(ctx) << "getSection failed: #" << i << ": " << sec.takeError();
   return *sec;
 }
 
@@ -262,8 +268,8 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
   if (Expected<StringRef> e = coffObj->getSectionName(sec))
     name = *e;
   else
-    fatal("getSectionName failed: #" + Twine(sectionNumber) + ": " +
-          toString(e.takeError()));
+    Fatal(ctx) << "getSectionName failed: #" << sectionNumber << ": "
+               << e.takeError();
 
   if (name == ".drectve") {
     ArrayRef<uint8_t> data;
@@ -358,9 +364,9 @@ void ObjFile::readAssociativeDefinition(COFFSymbolRef sym,
     const coff_section *parentSec = getSection(parentIndex);
     if (Expected<StringRef> e = coffObj->getSectionName(parentSec))
       parentName = *e;
-    error(toString(this) + ": associative comdat " + name + " (sec " +
-          Twine(sectionNumber) + ") has invalid reference to section " +
-          parentName + " (sec " + Twine(parentIndex) + ")");
+    Err(ctx) << toString(this) << ": associative comdat " << name << " (sec "
+             << sectionNumber << ") has invalid reference to section "
+             << parentName << " (sec " << parentIndex << ")";
   };
 
   if (parent == pendingComdat) {
@@ -513,8 +519,8 @@ void ObjFile::initializeSymbols() {
     }
     if (sparseChunks[sym.getSectionNumber()] == pendingComdat) {
       StringRef name = check(coffObj->getSymbolName(sym));
-      log("comdat section " + name +
-          " without leader and unassociated, discarding");
+      Log(ctx) << "comdat section " << name
+               << " without leader and unassociated, discarding";
       continue;
     }
     symbols[i] = createRegular(sym);
@@ -615,10 +621,9 @@ void ObjFile::handleComdatSelection(
   // seems better though.
   // (This behavior matches ModuleLinker::getComdatResult().)
   if (selection != leaderSelection) {
-    log(("conflicting comdat type for " + toString(ctx, *leader) + ": " +
-         Twine((int)leaderSelection) + " in " + toString(leader->getFile()) +
-         " and " + Twine((int)selection) + " in " + toString(this))
-            .str());
+    Log(ctx) << "conflicting comdat type for " << leader << ": "
+             << (int)leaderSelection << " in " << leader->getFile() << " and "
+             << (int)selection << " in " << this;
     ctx.symtab.reportDuplicate(leader, this);
     return;
   }
@@ -719,12 +724,14 @@ std::optional<Symbol *> ObjFile::createDefined(
     return nullptr;
 
   if (llvm::COFF::isReservedSectionNumber(sectionNumber))
-    fatal(toString(this) + ": " + getName() +
-          " should not refer to special section " + Twine(sectionNumber));
+    Fatal(ctx) << toString(this) << ": " << getName()
+               << " should not refer to special section "
+               << Twine(sectionNumber);
 
   if ((uint32_t)sectionNumber >= sparseChunks.size())
-    fatal(toString(this) + ": " + getName() +
-          " should not refer to non-existent section " + Twine(sectionNumber));
+    Fatal(ctx) << toString(this) << ": " << getName()
+               << " should not refer to non-existent section "
+               << Twine(sectionNumber);
 
   // Comdat handling.
   // A comdat symbol consists of two symbol table entries.
@@ -754,8 +761,9 @@ std::optional<Symbol *> ObjFile::createDefined(
         // Intentionally ends at IMAGE_COMDAT_SELECT_LARGEST: link.exe
         // doesn't understand IMAGE_COMDAT_SELECT_NEWEST either.
         def->Selection > (int)IMAGE_COMDAT_SELECT_LARGEST) {
-      fatal("unknown comdat type " + std::to_string((int)def->Selection) +
-            " for " + getName() + " in " + toString(this));
+      Fatal(ctx) << "unknown comdat type "
+                 << std::to_string((int)def->Selection) << " for " << getName()
+                 << " in " << toString(this);
     }
     COMDATType selection = (COMDATType)def->Selection;
 
@@ -1080,7 +1088,7 @@ void ImportFile::parse() {
   // Check if the total size is valid.
   if (mb.getBufferSize() < sizeof(*hdr) ||
       mb.getBufferSize() != sizeof(*hdr) + hdr->SizeOfData)
-    fatal("broken import library");
+    Fatal(ctx) << "broken import library";
 
   // Read names and create an __imp_ symbol.
   StringRef buf = mb.getBuffer().substr(sizeof(*hdr));
@@ -1321,12 +1329,12 @@ void DLLFile::parse() {
     bin.release();
     coffObj.reset(obj);
   } else {
-    error(toString(this) + " is not a COFF file");
+    Err(ctx) << toString(this) << " is not a COFF file";
     return;
   }
 
   if (!coffObj->getPE32Header() && !coffObj->getPE32PlusHeader()) {
-    error(toString(this) + " is not a PE-COFF executable");
+    Err(ctx) << toString(this) << " is not a PE-COFF executable";
     return;
   }
 

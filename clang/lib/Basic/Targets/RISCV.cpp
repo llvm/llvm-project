@@ -240,22 +240,28 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 }
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#include "clang/Basic/BuiltinsRISCVVector.def"
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#include "clang/Basic/BuiltinsRISCV.inc"
-};
+static constexpr int NumBuiltins =
+    clang::RISCV::LastTSBuiltin - Builtin::FirstTSBuiltin;
 
-ArrayRef<Builtin::Info> RISCVTargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfo,
-                        clang::RISCV::LastTSBuiltin - Builtin::FirstTSBuiltin);
+static constexpr auto BuiltinStorage = Builtin::Storage<NumBuiltins>::Make(
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsRISCVVector.def"
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsRISCV.inc"
+    , {
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsRISCVVector.def"
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsRISCV.inc"
+      });
+
+std::pair<const char *, ArrayRef<Builtin::Info>>
+RISCVTargetInfo::getTargetBuiltinStorage() const {
+  return {BuiltinStorage.StringTable, BuiltinStorage.Infos};
 }
 
 bool RISCVTargetInfo::initFeatureMap(

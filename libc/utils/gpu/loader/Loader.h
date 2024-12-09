@@ -168,13 +168,13 @@ inline uint32_t handle_server(rpc::Server &server, uint32_t index,
     port->recv([&](rpc::Buffer *, uint32_t) {});
     break;
   }
-  case RPC_MALLOC: {
+  case LIBC_MALLOC: {
     port->recv_and_send([&](rpc::Buffer *buffer, uint32_t) {
       buffer->data[0] = reinterpret_cast<uintptr_t>(alloc(buffer->data[0]));
     });
     break;
   }
-  case RPC_FREE: {
+  case LIBC_FREE: {
     port->recv([&](rpc::Buffer *buffer, uint32_t) {
       free(reinterpret_cast<void *>(buffer->data[0]));
     });

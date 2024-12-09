@@ -623,7 +623,7 @@ class TargetRegisterClass;
     SDValue LowerInterruptReturn(SmallVectorImpl<SDValue> &RetOps,
                                  const SDLoc &DL, SelectionDAG &DAG) const;
 
-    bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const override;
+    bool shouldSignExtendTypeInLibCall(Type *Ty, bool IsSigned) const override;
 
     // Inline asm support
     ConstraintType getConstraintType(StringRef Constraint) const override;

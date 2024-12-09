@@ -11310,7 +11310,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   switch (E->getBuiltinCallee()) {
   default:
     return false;
-  case Builtin::BI__builtin_elementwise_popcount: {
+  case Builtin::BI__builtin_elementwise_popcount:
+  case Builtin::BI__builtin_elementwise_bitreverse: {
     APValue Source;
     if (!EvaluateAsRValue(Info, E->getArg(0), Source))
       return false;
@@ -11322,9 +11323,49 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
       APSInt Elt = Source.getVectorElt(EltNum).getInt();
-      ResultElements.push_back(
-          APValue(APSInt(APInt(Info.Ctx.getIntWidth(DestEltTy), Elt.popcount()),
-                         DestEltTy->isUnsignedIntegerOrEnumerationType())));
+      switch (E->getBuiltinCallee()) {
+      case Builtin::BI__builtin_elementwise_popcount:
+        ResultElements.push_back(APValue(
+            APSInt(APInt(Info.Ctx.getIntWidth(DestEltTy), Elt.popcount()),
+                   DestEltTy->isUnsignedIntegerOrEnumerationType())));
+        break;
+      case Builtin::BI__builtin_elementwise_bitreverse:
+        ResultElements.push_back(
+            APValue(APSInt(Elt.reverseBits(),
+                           DestEltTy->isUnsignedIntegerOrEnumerationType())));
+        break;
+      }
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  case Builtin::BI__builtin_elementwise_add_sat:
+  case Builtin::BI__builtin_elementwise_sub_sat: {
+    APValue SourceLHS, SourceRHS;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
+      return false;
+
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+    unsigned SourceLen = SourceLHS.getVectorLength();
+    SmallVector<APValue, 4> ResultElements;
+    ResultElements.reserve(SourceLen);
+
+    for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
+      APSInt LHS = SourceLHS.getVectorElt(EltNum).getInt();
+      APSInt RHS = SourceRHS.getVectorElt(EltNum).getInt();
+      switch (E->getBuiltinCallee()) {
+      case Builtin::BI__builtin_elementwise_add_sat:
+        ResultElements.push_back(APValue(
+            APSInt(LHS.isSigned() ? LHS.sadd_sat(RHS) : RHS.uadd_sat(RHS),
+                   DestEltTy->isUnsignedIntegerOrEnumerationType())));
+        break;
+      case Builtin::BI__builtin_elementwise_sub_sat:
+        ResultElements.push_back(APValue(
+            APSInt(LHS.isSigned() ? LHS.ssub_sat(RHS) : RHS.usub_sat(RHS),
+                   DestEltTy->isUnsignedIntegerOrEnumerationType())));
+        break;
+      }
     }
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
@@ -12833,7 +12874,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_bitreverse8:
   case Builtin::BI__builtin_bitreverse16:
   case Builtin::BI__builtin_bitreverse32:
-  case Builtin::BI__builtin_bitreverse64: {
+  case Builtin::BI__builtin_bitreverse64:
+  case Builtin::BI__builtin_elementwise_bitreverse: {
     APSInt Val;
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
@@ -13191,6 +13233,25 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
 
     return Success(Val.rotr(Amt.urem(Val.getBitWidth())), E);
+  }
+
+  case Builtin::BI__builtin_elementwise_add_sat: {
+    APSInt LHS, RHS;
+    if (!EvaluateInteger(E->getArg(0), LHS, Info) ||
+        !EvaluateInteger(E->getArg(1), RHS, Info))
+      return false;
+
+    APInt Result = LHS.isSigned() ? LHS.sadd_sat(RHS) : LHS.uadd_sat(RHS);
+    return Success(APSInt(Result, !LHS.isSigned()), E);
+  }
+  case Builtin::BI__builtin_elementwise_sub_sat: {
+    APSInt LHS, RHS;
+    if (!EvaluateInteger(E->getArg(0), LHS, Info) ||
+        !EvaluateInteger(E->getArg(1), RHS, Info))
+      return false;
+
+    APInt Result = LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
+    return Success(APSInt(Result, !LHS.isSigned()), E);
   }
 
   case Builtin::BIstrlen:
