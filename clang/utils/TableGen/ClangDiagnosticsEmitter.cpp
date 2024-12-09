@@ -1908,7 +1908,7 @@ void clang::EmitClangDiagDocs(const RecordKeeper &Records, raw_ostream &OS) {
   for (const Record *G : DiagGroups) {
     bool IsRemarkGroup = isRemarkGroup(G, DiagsInGroup);
     auto &GroupInfo =
-        DiagsInGroup[std::string(G->getValueAsString("GroupName"))];
+        DiagsInGroup[G->getValueAsString("GroupName")];
     bool IsSynonym = GroupInfo.DiagsInGroup.empty() &&
                      GroupInfo.SubGroups.size() == 1;
 
