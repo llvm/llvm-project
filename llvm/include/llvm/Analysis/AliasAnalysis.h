@@ -875,6 +875,13 @@ bool isIdentifiedObject(const Value *V);
 /// IdentifiedObjects.
 bool isIdentifiedFunctionLocal(const Value *V);
 
+/// Return true if we know V to the base address of the corresponding memory
+/// object.  This implies that any address less than V must be out of bounds
+/// for the underlying object.  Note that just being isIdentifiedObject() is
+/// not enough - For example, a negative offset from a noalias argument or call
+/// can be inbounds w.r.t the actual underlying object.
+bool isBaseOfObject(const Value *V);
+
 /// Returns true if the pointer is one which would have been considered an
 /// escape by isNonEscapingLocalObject.
 bool isEscapeSource(const Value *V);

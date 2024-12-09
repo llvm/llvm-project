@@ -1656,7 +1656,7 @@ void ASTDeclWriter::VisitFriendDecl(FriendDecl *D) {
   // so as to simplify memory allocation during deserialization.
   Record.push_back(D->NumTPLists);
   VisitDecl(D);
-  bool hasFriendDecl = D->Friend.is<NamedDecl*>();
+  bool hasFriendDecl = isa<NamedDecl *>(D->Friend);
   Record.push_back(hasFriendDecl);
   if (hasFriendDecl)
     Record.AddDeclRef(D->getFriendDecl());
@@ -1757,7 +1757,7 @@ void ASTDeclWriter::VisitClassTemplateSpecializationDecl(
   if (Decl *InstFromD = InstFrom.dyn_cast<ClassTemplateDecl *>()) {
     Record.AddDeclRef(InstFromD);
   } else {
-    Record.AddDeclRef(InstFrom.get<ClassTemplatePartialSpecializationDecl *>());
+    Record.AddDeclRef(cast<ClassTemplatePartialSpecializationDecl *>(InstFrom));
     Record.AddTemplateArgumentList(&D->getTemplateInstantiationArgs());
   }
 
@@ -1835,7 +1835,7 @@ void ASTDeclWriter::VisitVarTemplateSpecializationDecl(
   if (Decl *InstFromD = InstFrom.dyn_cast<VarTemplateDecl *>()) {
     Record.AddDeclRef(InstFromD);
   } else {
-    Record.AddDeclRef(InstFrom.get<VarTemplatePartialSpecializationDecl *>());
+    Record.AddDeclRef(cast<VarTemplatePartialSpecializationDecl *>(InstFrom));
     Record.AddTemplateArgumentList(&D->getTemplateInstantiationArgs());
   }
 
