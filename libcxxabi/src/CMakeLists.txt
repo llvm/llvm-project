@@ -76,7 +76,7 @@ if (NOT APPLE) # On Apple platforms, we always use -nostdlib++ so we don't need 
 endif()
 
 if (FUCHSIA)
-    # TODO use CMAKE_LINK_LIBRARY_USING_FEATURE once our minimum CMake is at least 3.24
+    # TODO: Use CMAKE_LINK_LIBRARY_USING_FEATURE once our minimum CMake is at least 3.24
     # https://cmake.org/cmake/help/latest/variable/CMAKE_LINK_LIBRARY_USING_FEATURE.html 
     add_link_flags("-Wl,--push-state,--as-needed,-lzircon,--pop-state")
 endif()

@@ -146,7 +146,10 @@ PreservedAnalyses CoroAnnotationElidePass::run(LazyCallGraph::SCC &C,
       bool HasAttr = CB->hasFnAttr(llvm::Attribute::CoroElideSafe);
       if (IsCallerPresplitCoroutine && HasAttr) {
         auto *CallerN = CG.lookup(*Caller);
-        auto *CallerC = CG.lookupSCC(*CallerN);
+        auto *CallerC = CallerN ? CG.lookupSCC(*CallerN) : nullptr;
+        // If CallerC is nullptr, it means LazyCallGraph hasn't visited Caller
+        // yet. Skip the call graph update.
+        auto ShouldUpdateCallGraph = !!CallerC;
         processCall(CB, Caller, NewCallee, FrameSize, FrameAlign);
 
         ORE.emit([&]() {
@@ -158,8 +161,9 @@ PreservedAnalyses CoroAnnotationElidePass::run(LazyCallGraph::SCC &C,
 
         FAM.invalidate(*Caller, PreservedAnalyses::none());
         Changed = true;
-        updateCGAndAnalysisManagerForCGSCCPass(CG, *CallerC, *CallerN, AM, UR,
-                                               FAM);
+        if (ShouldUpdateCallGraph)
+          updateCGAndAnalysisManagerForCGSCCPass(CG, *CallerC, *CallerN, AM, UR,
+                                                 FAM);
 
       } else {
         ORE.emit([&]() {

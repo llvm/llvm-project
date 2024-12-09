@@ -527,7 +527,7 @@ void DebugNamesDWARFIndex::GetTypesWithQuery(
   ConstString name = query.GetTypeBasename();
   std::vector<lldb_private::CompilerContext> query_context =
       query.GetContextRef();
-  if (query_context.size() <= 1)
+  if (query_context.size() <= 1 && !query.GetExactMatch())
     return GetTypes(name, callback);
 
   llvm::SmallVector<CompilerContext> parent_contexts =

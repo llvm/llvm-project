@@ -193,6 +193,8 @@ typedef basic_fstream<wchar_t> wfstream;
 #include <__fwd/fstream.h>
 #include <__locale>
 #include <__memory/addressof.h>
+#include <__memory/unique_ptr.h>
+#include <__ostream/basic_ostream.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_same.h>
 #include <__utility/move.h>
@@ -200,7 +202,7 @@ typedef basic_fstream<wchar_t> wfstream;
 #include <__utility/unreachable.h>
 #include <cstdio>
 #include <istream>
-#include <ostream>
+#include <streambuf>
 #include <typeinfo>
 #include <version>
 

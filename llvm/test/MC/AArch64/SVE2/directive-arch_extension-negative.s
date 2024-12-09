@@ -9,7 +9,7 @@ tbx z0.b, z1.b, z2.b
 .arch_extension sve-aes
 .arch_extension nosve-aes
 aesd z23.b, z23.b, z13.b
-// CHECK: error: instruction requires: sve2 sve-aes
+// CHECK: error: instruction requires: sve2 or ssve-aes sve-aes
 // CHECK-NEXT: aesd z23.b, z23.b, z13.b
 
 // nosve2-aes should disable sve-aes but not sve2.

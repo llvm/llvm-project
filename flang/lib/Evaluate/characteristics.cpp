@@ -731,11 +731,16 @@ static std::optional<Procedure> CharacterizeProcedure(
               return std::optional<Procedure>{};
             }
           },
-          [&](const semantics::EntityDetails &) {
+          [&](const semantics::EntityDetails &x) {
             CheckForNested(symbol);
             return std::optional<Procedure>{};
           },
           [&](const semantics::SubprogramNameDetails &) {
+            if (const semantics::Symbol *
+                ancestor{FindAncestorModuleProcedure(&symbol)}) {
+              return CharacterizeProcedure(
+                  *ancestor, context, seenProcs, emitError);
+            }
             CheckForNested(symbol);
             return std::optional<Procedure>{};
           },

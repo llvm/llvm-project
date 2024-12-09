@@ -48,6 +48,19 @@ std::optional<AArch64::ArchInfo> AArch64::ArchInfo::findBySubArch(StringRef SubA
   return {};
 }
 
+unsigned AArch64::getFMVPriority(ArrayRef<StringRef> Features) {
+  constexpr unsigned MaxFMVPriority = 1000;
+  unsigned Priority = 0;
+  unsigned NumFeatures = 0;
+  for (StringRef Feature : Features) {
+    if (auto Ext = parseFMVExtension(Feature)) {
+      Priority = std::max(Priority, Ext->Priority);
+      NumFeatures++;
+    }
+  }
+  return Priority + MaxFMVPriority * NumFeatures;
+}
+
 uint64_t AArch64::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
   uint64_t FeaturesMask = 0;
   for (const StringRef &FeatureStr : FeatureStrs) {

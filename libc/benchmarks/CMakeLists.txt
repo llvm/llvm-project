@@ -126,6 +126,7 @@ add_library(libc-memory-benchmark
 target_include_directories(libc-memory-benchmark
     PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${LIBC_SOURCE_DIR}
 )
 target_link_libraries(libc-memory-benchmark
     PUBLIC
@@ -211,5 +212,3 @@ target_link_libraries(libc.benchmarks.memory_functions.opt_host
   benchmark_main
 )
 llvm_update_compile_flags(libc.benchmarks.memory_functions.opt_host)
-
-add_subdirectory(automemcpy)

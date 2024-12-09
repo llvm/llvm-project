@@ -20,6 +20,7 @@
 #include "flang/Tools/CrossToolHelpers.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -123,7 +124,8 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 /// \param optLevel - optimization level used for creating FIR optimization
 ///   passes pipeline
 void createHLFIRToFIRPassPipeline(
-    mlir::PassManager &pm, llvm::OptimizationLevel optLevel = defaultOptLevel);
+    mlir::PassManager &pm, bool enableOpenMP,
+    llvm::OptimizationLevel optLevel = defaultOptLevel);
 
 /// Create a pass pipeline for handling certain OpenMP transformations needed
 /// prior to FIR lowering.

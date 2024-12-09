@@ -51,6 +51,8 @@ add_proxy_header_library(
   struct_flock
   HDRS
     struct_flock.h
+  DEPENDS
+    libc.hdr.fcntl_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_flock
 )
@@ -59,6 +61,8 @@ add_proxy_header_library(
   struct_flock64
   HDRS
     struct_flock64.h
+  DEPENDS
+    libc.hdr.fcntl_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_flock64
 )
@@ -67,6 +71,8 @@ add_proxy_header_library(
   struct_f_owner_ex
   HDRS
     struct_f_owner_ex.h
+  DEPENDS
+    libc.hdr.fcntl_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_f_owner_ex
 )
