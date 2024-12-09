@@ -379,9 +379,9 @@ void elf::parseVersionAndComputeIsPreemptible(Ctx &ctx) {
   for (Symbol *sym : ctx.symtab->getSymbols()) {
     if (sym->hasVersionSuffix)
       sym->parseSymbolVersion(ctx);
+    sym->isExported = sym->includeInDynsym(ctx);
     if (hasDynSymTab)
-      sym->isPreemptible =
-          sym->includeInDynsym(ctx) && computeIsPreemptible(ctx, *sym);
+      sym->isPreemptible = sym->isExported && computeIsPreemptible(ctx, *sym);
   }
 }
 
