@@ -3903,8 +3903,8 @@ CGDebugInfo::getOrCreateLimitedType(const RecordType *Ty) {
   return Res;
 }
 
-llvm::DIScope *
-CGDebugInfo::PickCompositeTypeScope(llvm::DIScope *S, StringRef Identifier) {
+llvm::DIScope *CGDebugInfo::PickCompositeTypeScope(llvm::DIScope *S,
+                                                   StringRef Identifier) {
   using llvm::DISubprogram;
 
   // Only adjust the scope for composite types placed into functions.
@@ -3947,9 +3947,8 @@ CGDebugInfo::PickCompositeTypeScope(llvm::DIScope *S, StringRef Identifier) {
 
   DISubprogram *DeclSP = DBuilder.createFunction(
       SP->getScope(), SP->getName(), SP->getLinkageName(), SP->getFile(),
-      SP->getLine(), SP->getType(), SP->getScopeLine(),
-      Flags, SPFlags, SP->getTemplateParams(), nullptr, nullptr,
-      SP->getAnnotations());
+      SP->getLine(), SP->getType(), SP->getScopeLine(), Flags, SPFlags,
+      SP->getTemplateParams(), nullptr, nullptr, SP->getAnnotations());
 
   SP->replaceDeclaration(DeclSP);
   return DeclSP;
