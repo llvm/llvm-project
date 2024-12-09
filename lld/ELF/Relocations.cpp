@@ -65,21 +65,8 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
-static std::optional<std::string> getLinkerScriptLocation(Ctx &ctx,
-                                                          const Symbol &sym) {
-  for (SectionCommand *cmd : ctx.script->sectionCommands)
-    if (auto *assign = dyn_cast<SymbolAssignment>(cmd))
-      if (assign->sym == &sym)
-        return assign->location;
-  return std::nullopt;
-}
-
 static void printDefinedLocation(ELFSyncStream &s, const Symbol &sym) {
-  s << "\n>>> defined in ";
-  if (sym.file)
-    return void(s << sym.file);
-  if (std::optional<std::string> loc = getLinkerScriptLocation(s.ctx, sym))
-    return void(s << *loc);
+  s << "\n>>> defined in " << sym.file;
 }
 
 // Construct a message in the following format.
