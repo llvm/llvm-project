@@ -1,0 +1,76 @@
+# This workflow is for pre-commit testing of the LLVM-libc project.
+name: LLVM-libc Pre-commit Fullbuild Tests
+
+on:
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'libc/**'
+      - '.github/workflows/libc-fullbuild-tests.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - c_compiler: clang
+            cpp_compiler: clang++
+          # TODO: add back gcc build when it is fixed
+          # - c_compiler: gcc
+          #   cpp_compiler: g++
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        max-size: 1G
+        key: libc_fullbuild_${{ matrix.c_compiler }}
+        variant: sccache
+    
+    - name: Prepare dependencies (Ubuntu)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libmpfr-dev libgmp-dev libmpc-dev ninja-build linux-headers-generic linux-libc-dev
+        sudo ln -sf /usr/include/$(uname -p)-linux-gnu/asm /usr/include/asm
+
+    - name: Set reusable strings
+      id: strings
+      shell: bash
+      run: |
+        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+        echo "build-install-dir=${{ github.workspace }}/install" >> "$GITHUB_OUTPUT"
+
+    - name: Configure CMake
+      run: >
+        cmake -B ${{ steps.strings.outputs.build-output-dir }}
+        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
+        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+        -DCMAKE_BUILD_TYPE=MinSizeRel
+        -DCMAKE_C_COMPILER_LAUNCHER=sccache
+        -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+        -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }}
+        -DLLVM_ENABLE_RUNTIMES="libc;compiler-rt"
+        -DLLVM_LIBC_FULL_BUILD=ON
+        -DLLVM_LIBC_INCLUDE_SCUDO=ON
+        -DCOMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC=ON
+        -DCOMPILER_RT_BUILD_GWP_ASAN=OFF
+        -DCOMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF
+        -G Ninja
+        -S ${{ github.workspace }}/runtimes
+
+    - name: Build
+      run: >
+        cmake 
+        --build ${{ steps.strings.outputs.build-output-dir }} 
+        --parallel
+        --target install
+
+    - name: Test
+      run: >
+        cmake 
+        --build ${{ steps.strings.outputs.build-output-dir }} 
+        --parallel
+        --target check-libc
