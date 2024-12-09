@@ -816,7 +816,7 @@ Some parameter attributes, used to communicate additional information about the 
 
 ByVal
 -----
-A ByVal parameter on an argument indicates that the pointer parameter should really be passed by value to the function.
+A ByVal parameter on an argument indicates that the pointee should be treated as being passed by value to the function.
 Prior to the coroutine transforms loads and stores to/from the pointer are generated where the value is needed.
 Consequently, a ByVal argument is treated much like an alloca.
 Space is allocated for it on the coroutine frame and the uses of the argument pointer are replaced with a pointer to the coroutine frame.
