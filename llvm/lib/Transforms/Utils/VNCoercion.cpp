@@ -27,6 +27,11 @@ bool canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
       isFirstClassAggregateOrScalableType(StoredTy))
     return false;
 
+  // We aren't allowed to introduce integer casts of non-integral pointers.
+  if (DL.isNonIntegralPointerType(LoadTy) ||
+      DL.isNonIntegralPointerType(StoredTy))
+    return false;
+
   uint64_t StoreSize = DL.getTypeSizeInBits(StoredTy).getFixedValue();
 
   // The store size must be byte-aligned to support future type casts.
