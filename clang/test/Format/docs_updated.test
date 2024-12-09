@@ -1,2 +1,5 @@
-// RUN: %python %S/../../docs/tools/dump_format_style.py %t
-// RUN: diff %t %S/../../docs/ClangFormatStyleOptions.rst
+// RUN: %python %S/../../docs/tools/dump_format_style.py -o %t.style
+// RUN: diff %t.style %S/../../docs/ClangFormatStyleOptions.rst
+
+// RUN: %python %S/../../docs/tools/dump_format_help.py -o %t.help
+// RUN: diff %t.help %S/../../docs/ClangFormat.rst

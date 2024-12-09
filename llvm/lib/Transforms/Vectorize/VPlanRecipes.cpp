@@ -3486,7 +3486,7 @@ void VPEVLBasedIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPScalarPHIRecipe::execute(VPTransformState &State) {
   BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
-  Value *Start = State.get(getOperand(0), VPLane(0));
+  Value *Start = State.get(getStartValue(), VPLane(0));
   PHINode *Phi = State.Builder.CreatePHI(Start->getType(), 2, Name);
   Phi->addIncoming(Start, VectorPH);
   Phi->setDebugLoc(getDebugLoc());
@@ -3496,7 +3496,7 @@ void VPScalarPHIRecipe::execute(VPTransformState &State) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPScalarPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
-  O << Indent << "SCALAR-PHI";
+  O << Indent << "SCALAR-PHI ";
   printAsOperand(O, SlotTracker);
   O << " = phi ";
   printOperands(O, SlotTracker);
