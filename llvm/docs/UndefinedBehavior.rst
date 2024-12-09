@@ -84,7 +84,7 @@ Deferred UB
 Deferred UB is a lighter form of UB. It enables instructions to be executed
 speculatively while marking some corner cases having erroneous values.
 Deferred UB should be used for cases where the semantics offered by common
-CPUs differs,but the CPU does not trap.
+CPUs differ, but the CPU does not trap.
 
 As an example, consider the shift instructions. The x86 and ARM architectures
 offer different semantics when the shift amount is equal to or greater than
