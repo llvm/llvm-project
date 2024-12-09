@@ -18989,11 +18989,90 @@ static SDValue performVectorCompareAndMaskUnaryOpCombine(SDNode *N,
   return SDValue();
 }
 
+/// Tries to replace scalar FP <-> INT conversions with SVE in streaming
+/// functions, this can help to reduce the number of fmovs to/from GPRs.
+static SDValue
+tryToReplaceScalarFPConversionWithSVE(SDNode *N, SelectionDAG &DAG,
+                                      const AArch64Subtarget *Subtarget) {
+  if (N->isStrictFPOpcode())
+    return SDValue();
+
+  if (!Subtarget->isSVEorStreamingSVEAvailable() ||
+      (!Subtarget->isStreaming() && !Subtarget->isStreamingCompatible()))
+    return SDValue();
+
+  auto isSupportedType = [](EVT VT) {
+    if (!VT.isSimple())
+      return false;
+    // There are SVE instructions that can convert to/from all pairs of these
+    // int and float types. Note: We don't bother with i8 or i16 as those are
+    // illegal types for scalars.
+    return is_contained({MVT::i32, MVT::i64, MVT::f16, MVT::f32, MVT::f64},
+                        VT.getSimpleVT().SimpleTy);
+  };
+
+  if (!isSupportedType(N->getValueType(0)) ||
+      !isSupportedType(N->getOperand(0).getValueType()))
+    return SDValue();
+
+  unsigned Opc = N->getOpcode();
+  bool IsSigned = Opc == ISD::SINT_TO_FP || Opc == ISD::FP_TO_SINT;
+
+  SDValue SrcVal = N->getOperand(0);
+  EVT SrcTy = SrcVal.getValueType();
+  EVT DestTy = N->getValueType(0);
+
+  EVT SrcVecTy;
+  EVT DestVecTy;
+  if (DestTy.bitsGT(SrcTy)) {
+    DestVecTy = getPackedSVEVectorVT(DestTy);
+    SrcVecTy = SrcTy == MVT::i32 ? getPackedSVEVectorVT(SrcTy)
+                                 : DestVecTy.changeVectorElementType(SrcTy);
+  } else {
+    SrcVecTy = getPackedSVEVectorVT(SrcTy);
+    DestVecTy = DestTy == MVT::i32 ? getPackedSVEVectorVT(DestTy)
+                                   : SrcVecTy.changeVectorElementType(DestTy);
+  }
+
+  SDLoc DL(N);
+  SDValue ZeroIdx = DAG.getVectorIdxConstant(0, DL);
+  SDValue Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, SrcVecTy,
+                            DAG.getUNDEF(SrcVecTy), SrcVal, ZeroIdx);
+
+  // Conversions between f64 and i32 are a special case as nxv2i32 is an illegal
+  // type (unlike the equivalent nxv2f32 for floating-point types). So the only
+  // way to lower to these variants is via the intrinsics. Note: We could
+  // sign/zero extend to the i64 variant, but that may result in extra extends
+  // or fmovs in the final assembly.
+  bool IsI32ToF64 = SrcTy == MVT::i32 && DestTy == MVT::f64;
+  bool isF64ToI32 = SrcTy == MVT::f64 && DestTy == MVT::i32;
+  if (IsI32ToF64 || isF64ToI32) {
+    unsigned IntrinsicOpc;
+    if (IsI32ToF64)
+      IntrinsicOpc = IsSigned ? Intrinsic::aarch64_sve_scvtf_f64i32
+                              : Intrinsic::aarch64_sve_ucvtf_f64i32;
+    else
+      IntrinsicOpc = IsSigned ? Intrinsic::aarch64_sve_fcvtzs_i32f64
+                              : Intrinsic::aarch64_sve_fcvtzu_i32f64;
+    SDValue PTrue = getPredicateForVector(DAG, DL, MVT::nxv2f64);
+    Vec = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, DestVecTy,
+                      {DAG.getConstant(IntrinsicOpc, DL, MVT::i32),
+                       DAG.getUNDEF(DestTy), PTrue, Vec});
+  } else {
+    Vec = DAG.getNode(Opc, DL, DestVecTy, Vec);
+  }
+
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, DestTy, Vec, ZeroIdx);
+}
+
 static SDValue performIntToFpCombine(SDNode *N, SelectionDAG &DAG,
                                      const AArch64Subtarget *Subtarget) {
   // First try to optimize away the conversion when it's conditionally from
   // a constant. Vectors only.
   if (SDValue Res = performVectorCompareAndMaskUnaryOpCombine(N, DAG))
+    return Res;
+
+  if (SDValue Res = tryToReplaceScalarFPConversionWithSVE(N, DAG, Subtarget))
     return Res;
 
   EVT VT = N->getValueType(0);
@@ -19034,6 +19113,9 @@ static SDValue performIntToFpCombine(SDNode *N, SelectionDAG &DAG,
 static SDValue performFpToIntCombine(SDNode *N, SelectionDAG &DAG,
                                      TargetLowering::DAGCombinerInfo &DCI,
                                      const AArch64Subtarget *Subtarget) {
+  if (SDValue Res = tryToReplaceScalarFPConversionWithSVE(N, DAG, Subtarget))
+    return Res;
+
   if (!Subtarget->isNeonAvailable())
     return SDValue();
 
