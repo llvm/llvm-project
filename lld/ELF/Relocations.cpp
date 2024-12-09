@@ -1056,7 +1056,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
   // direct relocation on through.
   if (LLVM_UNLIKELY(isIfunc) && ctx.arg.zIfuncNoplt) {
     std::lock_guard<std::mutex> lock(ctx.relocMutex);
-    sym.exportDynamic = true;
+    sym.isExported = true;
     ctx.mainPart->relaDyn->addSymbolReloc(type, *sec, offset, sym, addend,
                                           type);
     return;
