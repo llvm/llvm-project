@@ -356,7 +356,8 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
 
   Relocation::Arch = TheTriple.getArch();
   auto BCOrErr = BinaryContext::createBinaryContext(
-      TheTriple, File->getFileName(), Features.get(), IsPIC,
+      TheTriple, std::make_shared<orc::SymbolStringPool>(), File->getFileName(),
+      Features.get(), IsPIC,
       DWARFContext::create(*File, DWARFContext::ProcessDebugRelocations::Ignore,
                            nullptr, opts::DWPPathName,
                            WithColor::defaultErrorHandler,
@@ -2927,6 +2928,23 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: ignoring relocation from data to data\n");
 }
 
+static BinaryFunction *getInitFunctionIfStaticBinary(BinaryContext &BC) {
+  // Workaround for https://github.com/llvm/llvm-project/issues/100096
+  // ("[BOLT] GOT array pointer incorrectly rewritten"). In aarch64
+  // static glibc binaries, the .init section's _init function pointer can
+  // alias with a data pointer for the end of an array. GOT rewriting
+  // currently can't detect this and updates the data pointer to the
+  // moved _init, causing a runtime crash. Skipping _init on the other
+  // hand should be harmless.
+  if (!BC.IsStaticExecutable)
+    return nullptr;
+  const BinaryData *BD = BC.getBinaryDataByName("_init");
+  if (!BD || BD->getSectionName() != ".init")
+    return nullptr;
+  LLVM_DEBUG(dbgs() << "BOLT-DEBUG: skip _init in for GOT workaround.\n");
+  return BC.getBinaryFunctionAtAddress(BD->getAddress());
+}
+
 void RewriteInstance::selectFunctionsToProcess() {
   // Extend the list of functions to process or skip from a file.
   auto populateFunctionNames = [](cl::opt<std::string> &FunctionNamesFile,
@@ -3046,6 +3064,9 @@ void RewriteInstance::selectFunctionsToProcess() {
 
     return true;
   };
+
+  if (BinaryFunction *Init = getInitFunctionIfStaticBinary(*BC))
+    Init->setIgnored();
 
   for (auto &BFI : BC->getBinaryFunctions()) {
     BinaryFunction &Function = BFI.second;

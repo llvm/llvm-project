@@ -320,11 +320,11 @@ define float @f10(i32 %a, i32 %b) nounwind uwtable readnone ssp {
 ;
 ; CHECK-VFP-LABEL: f10:
 ; CHECK-VFP:       @ %bb.0:
-; CHECK-VFP-NEXT:    vmov.f32 s2, #1.000000e+00
-; CHECK-VFP-NEXT:    vldr s0, .LCPI9_0
+; CHECK-VFP-NEXT:    vmov.f32 s0, #1.000000e+00
+; CHECK-VFP-NEXT:    vldr s2, .LCPI9_0
 ; CHECK-VFP-NEXT:    cmp r0, r1
-; CHECK-VFP-NEXT:    vmoveq.f32 s0, s2
-; CHECK-VFP-NEXT:    vmov r0, s0
+; CHECK-VFP-NEXT:    vmoveq.f32 s2, s0
+; CHECK-VFP-NEXT:    vmov r0, s2
 ; CHECK-VFP-NEXT:    bx lr
 ; CHECK-VFP-NEXT:    .p2align 2
 ; CHECK-VFP-NEXT:  @ %bb.1:
@@ -333,12 +333,12 @@ define float @f10(i32 %a, i32 %b) nounwind uwtable readnone ssp {
 ;
 ; CHECK-NEON-LABEL: f10:
 ; CHECK-NEON:       @ %bb.0:
-; CHECK-NEON-NEXT:    vldr s0, LCPI9_0
-; CHECK-NEON-NEXT:    vmov.f32 s2, #1.000000e+00
+; CHECK-NEON-NEXT:    vldr s2, LCPI9_0
+; CHECK-NEON-NEXT:    vmov.f32 s0, #1.000000e+00
 ; CHECK-NEON-NEXT:    cmp r0, r1
 ; CHECK-NEON-NEXT:    it eq
-; CHECK-NEON-NEXT:    vmoveq.f32 s0, s2
-; CHECK-NEON-NEXT:    vmov r0, s0
+; CHECK-NEON-NEXT:    vmoveq.f32 s2, s0
+; CHECK-NEON-NEXT:    vmov r0, s2
 ; CHECK-NEON-NEXT:    bx lr
 ; CHECK-NEON-NEXT:    .p2align 2
 ; CHECK-NEON-NEXT:  @ %bb.1:
@@ -364,11 +364,11 @@ define float @f11(i32 %a, i32 %b) nounwind uwtable readnone ssp {
 ;
 ; CHECK-VFP-LABEL: f11:
 ; CHECK-VFP:       @ %bb.0:
-; CHECK-VFP-NEXT:    vmov.f32 s2, #-1.000000e+00
-; CHECK-VFP-NEXT:    vldr s0, .LCPI10_0
+; CHECK-VFP-NEXT:    vmov.f32 s0, #-1.000000e+00
+; CHECK-VFP-NEXT:    vldr s2, .LCPI10_0
 ; CHECK-VFP-NEXT:    cmp r0, r1
-; CHECK-VFP-NEXT:    vmoveq.f32 s0, s2
-; CHECK-VFP-NEXT:    vmov r0, s0
+; CHECK-VFP-NEXT:    vmoveq.f32 s2, s0
+; CHECK-VFP-NEXT:    vmov r0, s2
 ; CHECK-VFP-NEXT:    bx lr
 ; CHECK-VFP-NEXT:    .p2align 2
 ; CHECK-VFP-NEXT:  @ %bb.1:
@@ -377,12 +377,12 @@ define float @f11(i32 %a, i32 %b) nounwind uwtable readnone ssp {
 ;
 ; CHECK-NEON-LABEL: f11:
 ; CHECK-NEON:       @ %bb.0:
-; CHECK-NEON-NEXT:    vldr s0, LCPI10_0
-; CHECK-NEON-NEXT:    vmov.f32 s2, #-1.000000e+00
+; CHECK-NEON-NEXT:    vldr s2, LCPI10_0
+; CHECK-NEON-NEXT:    vmov.f32 s0, #-1.000000e+00
 ; CHECK-NEON-NEXT:    cmp r0, r1
 ; CHECK-NEON-NEXT:    it eq
-; CHECK-NEON-NEXT:    vmoveq.f32 s0, s2
-; CHECK-NEON-NEXT:    vmov r0, s0
+; CHECK-NEON-NEXT:    vmoveq.f32 s2, s0
+; CHECK-NEON-NEXT:    vmov r0, s2
 ; CHECK-NEON-NEXT:    bx lr
 ; CHECK-NEON-NEXT:    .p2align 2
 ; CHECK-NEON-NEXT:  @ %bb.1:
@@ -406,11 +406,11 @@ define float @f12(i32 %a, i32 %b) nounwind uwtable readnone ssp {
 ;
 ; CHECK-VFP-LABEL: f12:
 ; CHECK-VFP:       @ %bb.0:
-; CHECK-VFP-NEXT:    vmov.f32 s2, #1.000000e+00
-; CHECK-VFP-NEXT:    vldr s0, .LCPI11_0
+; CHECK-VFP-NEXT:    vmov.f32 s0, #1.000000e+00
+; CHECK-VFP-NEXT:    vldr s2, .LCPI11_0
 ; CHECK-VFP-NEXT:    cmp r0, r1
-; CHECK-VFP-NEXT:    vmoveq.f32 s0, s2
-; CHECK-VFP-NEXT:    vmov r0, s0
+; CHECK-VFP-NEXT:    vmoveq.f32 s2, s0
+; CHECK-VFP-NEXT:    vmov r0, s2
 ; CHECK-VFP-NEXT:    bx lr
 ; CHECK-VFP-NEXT:    .p2align 2
 ; CHECK-VFP-NEXT:  @ %bb.1:
@@ -419,12 +419,12 @@ define float @f12(i32 %a, i32 %b) nounwind uwtable readnone ssp {
 ;
 ; CHECK-NEON-LABEL: f12:
 ; CHECK-NEON:       @ %bb.0:
-; CHECK-NEON-NEXT:    vldr s0, LCPI11_0
-; CHECK-NEON-NEXT:    vmov.f32 s2, #1.000000e+00
+; CHECK-NEON-NEXT:    vldr s2, LCPI11_0
+; CHECK-NEON-NEXT:    vmov.f32 s0, #1.000000e+00
 ; CHECK-NEON-NEXT:    cmp r0, r1
 ; CHECK-NEON-NEXT:    it eq
-; CHECK-NEON-NEXT:    vmoveq.f32 s0, s2
-; CHECK-NEON-NEXT:    vmov r0, s0
+; CHECK-NEON-NEXT:    vmoveq.f32 s2, s0
+; CHECK-NEON-NEXT:    vmov r0, s2
 ; CHECK-NEON-NEXT:    bx lr
 ; CHECK-NEON-NEXT:    .p2align 2
 ; CHECK-NEON-NEXT:  @ %bb.1:

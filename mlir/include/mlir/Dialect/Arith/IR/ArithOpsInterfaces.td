@@ -45,13 +45,12 @@ def ArithFastMathInterface : OpInterface<"ArithFastMathInterface"> {
         return "fastmath";
       }]
       >
-
   ];
 }
 
 def ArithIntegerOverflowFlagsInterface : OpInterface<"ArithIntegerOverflowFlagsInterface"> {
   let description = [{
-    Access to op integer overflow flags.
+    Access to operation integer overflow flags.
   }];
 
   let cppNamespace = "::mlir::arith";
@@ -108,7 +107,7 @@ def ArithIntegerOverflowFlagsInterface : OpInterface<"ArithIntegerOverflowFlagsI
 
 def ArithRoundingModeInterface : OpInterface<"ArithRoundingModeInterface"> {
   let description = [{
-    Access to op rounding mode.
+    Access to operation rounding mode.
   }];
 
   let cppNamespace = "::mlir::arith";
@@ -138,5 +137,40 @@ def ArithRoundingModeInterface : OpInterface<"ArithRoundingModeInterface"> {
     >
   ];
 }
+
+
+def ArithDenormalModeInterface : OpInterface<"ArithDenormalModeInterface"> {
+  let description = [{
+    Access the operation denormal modes.
+  }];
+
+  let cppNamespace = "::mlir::arith";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/        "Returns a DenormalModeAttr attribute for the operation",
+      /*returnType=*/  "DenormalModeAttr",
+      /*methodName=*/  "getDenormalModeAttr",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        return op.getDenormalAttr();
+      }]
+    >,
+    StaticInterfaceMethod<
+      /*desc=*/        [{Returns the name of the DenormalModeAttr attribute for
+                         the operation}],
+      /*returnType=*/  "StringRef",
+      /*methodName=*/  "getDenormalModeAttrName",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        return "denormal";
+      }]
+    >
+  ];
+}
+
 
 #endif // ARITH_OPS_INTERFACES

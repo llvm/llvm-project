@@ -1727,9 +1727,9 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::aarch64_neon_fminnm:
     return LowerBinOp(TargetOpcode::G_FMINNUM);
   case Intrinsic::aarch64_neon_smull:
-    return LowerBinOp(AArch64::G_UMULL);
-  case Intrinsic::aarch64_neon_umull:
     return LowerBinOp(AArch64::G_SMULL);
+  case Intrinsic::aarch64_neon_umull:
+    return LowerBinOp(AArch64::G_UMULL);
   case Intrinsic::aarch64_neon_abs: {
     // Lower the intrinsic to G_ABS.
     MachineIRBuilder MIB(MI);

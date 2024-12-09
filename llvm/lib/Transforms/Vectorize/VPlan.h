@@ -1412,7 +1412,7 @@ public:
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
-  Instruction &getInstruction() { return I; }
+  Instruction &getInstruction() const { return I; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -2230,6 +2230,45 @@ public:
   /// take place.
   VPValue *getFirstUnrolledPartOperand() {
     return getUnrollPart(*this) == 0 ? this : getOperand(2);
+  }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
+/// Recipe to generate a scalar PHI. Used to generate code for recipes that
+/// produce scalar header phis, including VPCanonicalIVPHIRecipe and
+/// VPEVLBasedIVPHIRecipe.
+class VPScalarPHIRecipe : public VPHeaderPHIRecipe {
+  std::string Name;
+
+public:
+  VPScalarPHIRecipe(VPValue *Start, VPValue *BackedgeValue, DebugLoc DL,
+                    StringRef Name)
+      : VPHeaderPHIRecipe(VPDef::VPScalarPHISC, nullptr, Start, DL),
+        Name(Name.str()) {
+    addOperand(BackedgeValue);
+  }
+
+  ~VPScalarPHIRecipe() override = default;
+
+  VPScalarPHIRecipe *clone() override {
+    llvm_unreachable("cloning not implemented yet");
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPScalarPHISC)
+
+  /// Generate the phi/select nodes.
+  void execute(VPTransformState &State) override;
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3134,8 +3173,10 @@ public:
     return D->getVPDefID() == VPDef::VPCanonicalIVPHISC;
   }
 
-  /// Generate the canonical scalar induction phi of the vector loop.
-  void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override {
+    llvm_unreachable(
+        "cannot execute this recipe, should be replaced by VPScalarPHIRecipe");
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3231,9 +3272,10 @@ public:
     return D->getVPDefID() == VPDef::VPEVLBasedIVPHISC;
   }
 
-  /// Generate phi for handling IV based on EVL over iterations correctly.
-  /// TODO: investigate if it can share the code with VPCanonicalIVPHIRecipe.
-  void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override {
+    llvm_unreachable(
+        "cannot execute this recipe, should be replaced by VPScalarPHIRecipe");
+  }
 
   /// Return the cost of this VPEVLBasedIVPHIRecipe.
   InstructionCost computeCost(ElementCount VF,
@@ -3825,12 +3867,17 @@ public:
   VPBasicBlock *getEntry() { return Entry; }
   const VPBasicBlock *getEntry() const { return Entry; }
 
-  /// Return the VPIRBasicBlock wrapping the header of the scalar loop.
-  VPIRBasicBlock *getScalarHeader() const { return ScalarHeader; }
+  /// Returns the preheader of the vector loop region.
+  VPBasicBlock *getVectorPreheader() {
+    return cast<VPBasicBlock>(getVectorLoopRegion()->getSinglePredecessor());
+  }
 
-  /// Return the VPBasicBlock for the preheader of the scalar loop.
-  VPBasicBlock *getScalarPreheader() const {
-    return cast<VPBasicBlock>(ScalarHeader->getSinglePredecessor());
+  /// Returns the VPRegionBlock of the vector loop.
+  VPRegionBlock *getVectorLoopRegion() {
+    return cast<VPRegionBlock>(getEntry()->getSingleSuccessor());
+  }
+  const VPRegionBlock *getVectorLoopRegion() const {
+    return cast<VPRegionBlock>(getEntry()->getSingleSuccessor());
   }
 
   /// Returns the 'middle' block of the plan, that is the block that selects
@@ -3842,6 +3889,14 @@ public:
   VPBasicBlock *getMiddleBlock() {
     return cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor());
   }
+
+  /// Return the VPBasicBlock for the preheader of the scalar loop.
+  VPBasicBlock *getScalarPreheader() const {
+    return cast<VPBasicBlock>(ScalarHeader->getSinglePredecessor());
+  }
+
+  /// Return the VPIRBasicBlock wrapping the header of the scalar loop.
+  VPIRBasicBlock *getScalarHeader() const { return ScalarHeader; }
 
   /// Return an iterator range over the VPIRBasicBlock wrapping the exit blocks
   /// of the VPlan, that is leaf nodes except the scalar header. Defined in
@@ -3952,19 +4007,6 @@ public:
   /// Dump the plan to stderr (for debugging).
   LLVM_DUMP_METHOD void dump() const;
 #endif
-
-  /// Returns the VPRegionBlock of the vector loop.
-  VPRegionBlock *getVectorLoopRegion() {
-    return cast<VPRegionBlock>(getEntry()->getSingleSuccessor());
-  }
-  const VPRegionBlock *getVectorLoopRegion() const {
-    return cast<VPRegionBlock>(getEntry()->getSingleSuccessor());
-  }
-
-  /// Returns the preheader of the vector loop region.
-  VPBasicBlock *getVectorPreheader() {
-    return cast<VPBasicBlock>(getVectorLoopRegion()->getSinglePredecessor());
-  }
 
   /// Returns the canonical induction recipe of the vector loop.
   VPCanonicalIVPHIRecipe *getCanonicalIV() {
