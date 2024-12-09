@@ -969,27 +969,34 @@ SDValue XtensaTargetLowering::LowerVASTART(SDValue Op,
 SDValue XtensaTargetLowering::LowerVACOPY(SDValue Op, SelectionDAG &DAG) const {
   // Size of the va_list_tag structure
   constexpr unsigned VAListSize = 3 * 4;
-  return DAG.getMemcpy(
-      Op.getOperand(0), Op, Op.getOperand(1), Op.getOperand(2),
-      DAG.getConstant(VAListSize, SDLoc(Op), MVT::i32), Align(4),
-      /*isVolatile=*/false, /*AlwaysInline=*/false,
-      /*CI=*/nullptr, std::nullopt, MachinePointerInfo(), MachinePointerInfo());
+  SDValue Chain = Op.getOperand(0);
+  SDValue DstPtr = Op.getOperand(1);
+  SDValue SrcPtr = Op.getOperand(2);
+  const Value *DstSV = cast<SrcValueSDNode>(Op.getOperand(3))->getValue();
+  const Value *SrcSV = cast<SrcValueSDNode>(Op.getOperand(4))->getValue();
+  SDLoc DL(Op);
+
+  return DAG.getMemcpy(Chain, DL, DstPtr, SrcPtr,
+                       DAG.getConstant(VAListSize, SDLoc(Op), MVT::i32),
+                       Align(4), /*isVolatile*/ false, /*AlwaysInline*/ true,
+                       /*CI=*/nullptr, std::nullopt, MachinePointerInfo(DstSV),
+                       MachinePointerInfo(SrcSV));
 }
 
 SDValue XtensaTargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
   SDNode *Node = Op.getNode();
   EVT VT = Node->getValueType(0);
+  Type *Ty = VT.getTypeForEVT(*DAG.getContext());
   EVT PtrVT = Op.getValueType();
   SDValue InChain = Node->getOperand(0);
   SDValue VAListPtr = Node->getOperand(1);
   const Value *SV = cast<SrcValueSDNode>(Node->getOperand(2))->getValue();
   SDLoc DL(Node);
   auto &TD = DAG.getDataLayout();
-  Align ArgAlignment = TD.getPrefTypeAlign(VT.getTypeForEVT(*DAG.getContext()));
+  Align ArgAlignment = TD.getABITypeAlign(Ty);
   unsigned ArgAlignInBytes = ArgAlignment.value();
-  unsigned ArgSizeInBytes =
-      TD.getTypeAllocSize(VT.getTypeForEVT(*DAG.getContext()));
-  unsigned VASizeInBytes = (ArgSizeInBytes + 3) & 0x3;
+  unsigned ArgSizeInBytes = TD.getTypeAllocSize(Ty);
+  unsigned VASizeInBytes = llvm::alignTo(ArgSizeInBytes, 4);
 
   // va_stk
   SDValue VAStack =
