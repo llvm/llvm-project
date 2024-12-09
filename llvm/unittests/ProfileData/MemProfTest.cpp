@@ -549,12 +549,6 @@ TEST(MemProf, IndexedMemProfRecordToMemProfRecord) {
   EXPECT_EQ(Record.CallSites[1][1].hash(), F4.hash());
 }
 
-using FrameIdMapTy =
-    llvm::DenseMap<::llvm::memprof::FrameId, ::llvm::memprof::Frame>;
-using CallStackIdMapTy =
-    llvm::DenseMap<::llvm::memprof::CallStackId,
-                   ::llvm::SmallVector<::llvm::memprof::FrameId>>;
-
 // Populate those fields returned by getHotColdSchema.
 MemInfoBlock makePartialMIB() {
   MemInfoBlock MIB;
@@ -575,12 +569,11 @@ TEST(MemProf, MissingCallStackId) {
   IndexedMR.AllocSites.push_back(AI);
 
   // Create empty maps.
-  const FrameIdMapTy IdToFrameMap;
-  const CallStackIdMapTy CSIdToCallStackMap;
-  llvm::memprof::FrameIdConverter<decltype(IdToFrameMap)> FrameIdConv(
-      IdToFrameMap);
-  llvm::memprof::CallStackIdConverter<decltype(CSIdToCallStackMap)> CSIdConv(
-      CSIdToCallStackMap, FrameIdConv);
+  IndexedMemProfData MemProfData;
+  llvm::memprof::FrameIdConverter<decltype(MemProfData.Frames)> FrameIdConv(
+      MemProfData.Frames);
+  llvm::memprof::CallStackIdConverter<decltype(MemProfData.CallStacks)>
+      CSIdConv(MemProfData.CallStacks, FrameIdConv);
 
   // We are only interested in errors, not the return value.
   (void)IndexedMR.toMemProfRecord(CSIdConv);
@@ -597,15 +590,14 @@ TEST(MemProf, MissingFrameId) {
   IndexedMemProfRecord IndexedMR;
   IndexedMR.AllocSites.push_back(AI);
 
-  // An empty map to trigger a mapping error.
-  const FrameIdMapTy IdToFrameMap;
-  CallStackIdMapTy CSIdToCallStackMap;
-  CSIdToCallStackMap.insert({0x222, {2, 3}});
+  // An empty Frame map to trigger a mapping error.
+  IndexedMemProfData MemProfData;
+  MemProfData.CallStacks.insert({0x222, {2, 3}});
 
-  llvm::memprof::FrameIdConverter<decltype(IdToFrameMap)> FrameIdConv(
-      IdToFrameMap);
-  llvm::memprof::CallStackIdConverter<decltype(CSIdToCallStackMap)> CSIdConv(
-      CSIdToCallStackMap, FrameIdConv);
+  llvm::memprof::FrameIdConverter<decltype(MemProfData.Frames)> FrameIdConv(
+      MemProfData.Frames);
+  llvm::memprof::CallStackIdConverter<decltype(MemProfData.CallStacks)>
+      CSIdConv(MemProfData.CallStacks, FrameIdConv);
 
   // We are only interested in errors, not the return value.
   (void)IndexedMR.toMemProfRecord(CSIdConv);
