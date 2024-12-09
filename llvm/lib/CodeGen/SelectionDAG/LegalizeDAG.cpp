@@ -2104,7 +2104,7 @@ std::pair<SDValue, SDValue> SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall L
     InChain = TCChain;
 
   TargetLowering::CallLoweringInfo CLI(DAG);
-  bool signExtend = TLI.shouldSignExtendTypeInLibCall(RetVT, isSigned);
+  bool signExtend = TLI.shouldSignExtendTypeInLibCall(RetTy, isSigned);
   CLI.setDebugLoc(SDLoc(Node))
       .setChain(InChain)
       .setLibCallee(TLI.getLibcallCallingConv(LC), RetTy, Callee,
@@ -2135,7 +2135,7 @@ std::pair<SDValue, SDValue> SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall L
     Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
     Entry.Node = Op;
     Entry.Ty = ArgTy;
-    Entry.IsSExt = TLI.shouldSignExtendTypeInLibCall(ArgVT, isSigned);
+    Entry.IsSExt = TLI.shouldSignExtendTypeInLibCall(ArgTy, isSigned);
     Entry.IsZExt = !Entry.IsSExt;
     Args.push_back(Entry);
   }
@@ -4794,7 +4794,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     SDValue Op = DAG.getNode(Signed ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND, dl,
                              NVT, Node->getOperand(IsStrict ? 1 : 0));
     TargetLowering::MakeLibCallOptions CallOptions;
-    CallOptions.setSExt(Signed);
+    CallOptions.setIsSigned(Signed);
     std::pair<SDValue, SDValue> Tmp =
         TLI.makeLibCall(DAG, LC, RVT, Op, CallOptions, dl, Chain);
     Results.push_back(Tmp.first);
@@ -5277,7 +5277,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
       Tmp1 = DAG.getNode(TruncOp, dl, Node->getValueType(0), Tmp1);
     else
       Tmp1 = DAG.getNode(TruncOp, dl, Node->getValueType(0), Tmp1,
-                         DAG.getIntPtrConstant(0, dl));
+                         DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
     Results.push_back(Tmp1);
     break;
   }
@@ -5425,7 +5425,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Tmp1 = DAG.getNode(Node->getOpcode(), dl, {NVT, MVT::Other},
                        {Tmp3, Tmp1, Tmp2});
     Tmp1 = DAG.getNode(ISD::STRICT_FP_ROUND, dl, {OVT, MVT::Other},
-                       {Tmp1.getValue(1), Tmp1, DAG.getIntPtrConstant(0, dl)});
+                       {Tmp1.getValue(1), Tmp1,
+                        DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)});
     Results.push_back(Tmp1);
     Results.push_back(Tmp1.getValue(1));
     break;
@@ -5450,7 +5451,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Tmp4 = DAG.getNode(Node->getOpcode(), dl, {NVT, MVT::Other},
                        {Tmp4, Tmp1, Tmp2, Tmp3});
     Tmp4 = DAG.getNode(ISD::STRICT_FP_ROUND, dl, {OVT, MVT::Other},
-                       {Tmp4.getValue(1), Tmp4, DAG.getIntPtrConstant(0, dl)});
+                       {Tmp4.getValue(1), Tmp4,
+                        DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)});
     Results.push_back(Tmp4);
     Results.push_back(Tmp4.getValue(1));
     break;
@@ -5491,7 +5493,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Tmp2 = DAG.getNode(Node->getOpcode(), dl, {NVT, MVT::Other},
                        {Tmp1.getValue(1), Tmp1, Node->getOperand(2)});
     Tmp3 = DAG.getNode(ISD::STRICT_FP_ROUND, dl, {OVT, MVT::Other},
-                       {Tmp2.getValue(1), Tmp2, DAG.getIntPtrConstant(0, dl)});
+                       {Tmp2.getValue(1), Tmp2,
+                        DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)});
     Results.push_back(Tmp3);
     Results.push_back(Tmp3.getValue(1));
     break;
@@ -5575,7 +5578,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Tmp2 = DAG.getNode(Node->getOpcode(), dl, {NVT, MVT::Other},
                        {Tmp1.getValue(1), Tmp1});
     Tmp3 = DAG.getNode(ISD::STRICT_FP_ROUND, dl, {OVT, MVT::Other},
-                       {Tmp2.getValue(1), Tmp2, DAG.getIntPtrConstant(0, dl)});
+                       {Tmp2.getValue(1), Tmp2,
+                        DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)});
     Results.push_back(Tmp3);
     Results.push_back(Tmp3.getValue(1));
     break;

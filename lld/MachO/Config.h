@@ -204,6 +204,7 @@ struct Configuration {
   std::vector<llvm::StringRef> frameworkSearchPaths;
   bool warnDuplicateRpath = true;
   llvm::SmallVector<llvm::StringRef, 0> runtimePaths;
+  llvm::SmallVector<llvm::StringRef, 0> allowableClients;
   std::vector<std::string> astPaths;
   std::vector<Symbol *> explicitUndefineds;
   llvm::StringSet<> explicitDynamicLookups;

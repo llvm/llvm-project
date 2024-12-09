@@ -1736,7 +1736,7 @@ def fno_profile_sample_use : Flag<["-"], "fno-profile-sample-use">, Group<f_Grou
     Visibility<[ClangOption, CLOption]>;
 def fprofile_sample_use_EQ : Joined<["-"], "fprofile-sample-use=">,
     Group<f_Group>,
-    Visibility<[ClangOption, CC1Option]>,
+    Visibility<[ClangOption, CLOption, CC1Option]>,
     HelpText<"Enable sample-based profile guided optimizations">,
     MarshallingInfoString<CodeGenOpts<"SampleProfileFile">>;
 def fprofile_sample_accurate : Flag<["-"], "fprofile-sample-accurate">,
@@ -1786,12 +1786,12 @@ defm debug_info_for_profiling : BoolFOption<"debug-info-for-profiling",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Emit extra debug info to make sample profile more accurate">,
   NegFlag<SetFalse>>;
-def fprofile_generate_cold_function_coverage : Flag<["-"], "fprofile-generate-cold-function-coverage">, 
+def fprofile_generate_cold_function_coverage : Flag<["-"], "fprofile-generate-cold-function-coverage">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Generate instrumented code to collect coverage info for cold functions into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;
-def fprofile_generate_cold_function_coverage_EQ : Joined<["-"], "fprofile-generate-cold-function-coverage=">, 
+def fprofile_generate_cold_function_coverage_EQ : Joined<["-"], "fprofile-generate-cold-function-coverage=">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>, MetaVarName<"<directory>">,
-    HelpText<"Generate instrumented code to collect coverage info for cold functions into <directory>/default.profraw (overridden by LLVM_PROFILE_FILE env var)">; 
+    HelpText<"Generate instrumented code to collect coverage info for cold functions into <directory>/default.profraw (overridden by LLVM_PROFILE_FILE env var)">;
 def fprofile_instr_generate : Flag<["-"], "fprofile-instr-generate">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Generate instrumented code to collect execution counts into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;
@@ -4353,6 +4353,7 @@ defm ptrauth_init_fini : OptInCC1FFlag<"ptrauth-init-fini", "Enable signing of f
 defm ptrauth_init_fini_address_discrimination : OptInCC1FFlag<"ptrauth-init-fini-address-discrimination",
   "Enable address discrimination of function pointers in init/fini arrays">;
 defm ptrauth_elf_got : OptInCC1FFlag<"ptrauth-elf-got", "Enable authentication of pointers from GOT (ELF only)">;
+defm aarch64_jump_table_hardening: OptInCC1FFlag<"aarch64-jump-table-hardening", "Use hardened lowering for jump-table dispatch">;
 }
 
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
@@ -5092,6 +5093,10 @@ def matomics : Flag<["-"], "matomics">, Group<m_wasm_Features_Group>;
 def mno_atomics : Flag<["-"], "mno-atomics">, Group<m_wasm_Features_Group>;
 def mbulk_memory : Flag<["-"], "mbulk-memory">, Group<m_wasm_Features_Group>;
 def mno_bulk_memory : Flag<["-"], "mno-bulk-memory">, Group<m_wasm_Features_Group>;
+def mbulk_memory_opt : Flag<["-"], "mbulk-memory-opt">, Group<m_wasm_Features_Group>;
+def mno_bulk_memory_opt : Flag<["-"], "mno-bulk-memory-opt">, Group<m_wasm_Features_Group>;
+def mcall_indirect_overlong : Flag<["-"], "mcall-indirect-overlong">, Group<m_wasm_Features_Group>;
+def mno_call_indirect_overlong : Flag<["-"], "mno-call-indirect-overlong">, Group<m_wasm_Features_Group>;
 def mexception_handing : Flag<["-"], "mexception-handling">, Group<m_wasm_Features_Group>;
 def mno_exception_handing : Flag<["-"], "mno-exception-handling">, Group<m_wasm_Features_Group>;
 def mextended_const : Flag<["-"], "mextended-const">, Group<m_wasm_Features_Group>;
@@ -5413,10 +5418,18 @@ def mlam_bh : Flag<["-"], "mlam-bh">, Group<m_loongarch_Features_Group>,
   HelpText<"Enable amswap[_db].{b/h} and amadd[_db].{b/h}">;
 def mno_lam_bh : Flag<["-"], "mno-lam-bh">, Group<m_loongarch_Features_Group>,
   HelpText<"Disable amswap[_db].{b/h} and amadd[_db].{b/h}">;
+def mlamcas : Flag<["-"], "mlamcas">, Group<m_loongarch_Features_Group>,
+  HelpText<"Enable amcas[_db].{b/h/w/d}">;
+def mno_lamcas : Flag<["-"], "mno-lamcas">, Group<m_loongarch_Features_Group>,
+  HelpText<"Disable amcas[_db].{b/h/w/d}">;
 def mld_seq_sa : Flag<["-"], "mld-seq-sa">, Group<m_loongarch_Features_Group>,
   HelpText<"Do not generate load-load barrier instructions (dbar 0x700)">;
 def mno_ld_seq_sa : Flag<["-"], "mno-ld-seq-sa">, Group<m_loongarch_Features_Group>,
   HelpText<"Generate load-load barrier instructions (dbar 0x700)">;
+def mdiv32 : Flag<["-"], "mdiv32">, Group<m_loongarch_Features_Group>,
+  HelpText<"Use div.w[u] and mod.w[u] instructions with input not sign-extended.">;
+def mno_div32 : Flag<["-"], "mno-div32">, Group<m_loongarch_Features_Group>,
+  HelpText<"Do not use div.w[u] and mod.w[u] instructions with input not sign-extended.">;
 def mannotate_tablejump : Flag<["-"], "mannotate-tablejump">, Group<m_loongarch_Features_Group>,
   HelpText<"Enable annotate table jump instruction to correlate it with the jump table.">;
 def mno_annotate_tablejump : Flag<["-"], "mno-annotate-tablejump">, Group<m_loongarch_Features_Group>,
@@ -7375,9 +7388,12 @@ def fuse_register_sized_bitfield_access: Flag<["-"], "fuse-register-sized-bitfie
 def relaxed_aliasing : Flag<["-"], "relaxed-aliasing">,
   HelpText<"Turn off Type Based Alias Analysis">,
   MarshallingInfoFlag<CodeGenOpts<"RelaxedAliasing">>;
-def pointer_tbaa: Flag<["-"], "pointer-tbaa">,
-  HelpText<"Turn on Type Based Alias Analysis for pointer accesses">,
-  MarshallingInfoFlag<CodeGenOpts<"PointerTBAA">>;
+defm pointer_tbaa: BoolOption<"", "pointer-tbaa", CodeGenOpts<"PointerTBAA">, 
+DefaultTrue,
+  PosFlag<SetTrue, [], [ClangOption], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption], " that single precision floating-point divide and sqrt used in ">>
+  ;
 def no_struct_path_tbaa : Flag<["-"], "no-struct-path-tbaa">,
   HelpText<"Turn off struct-path aware Type Based Alias Analysis">,
   MarshallingInfoNegativeFlag<CodeGenOpts<"StructPathTBAA">>;

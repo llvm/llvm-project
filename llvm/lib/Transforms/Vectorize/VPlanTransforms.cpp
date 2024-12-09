@@ -1157,9 +1157,8 @@ void VPlanTransforms::truncateToMinimalBitwidths(
             continue;
           auto *UV = dyn_cast_or_null<Instruction>(Op->getUnderlyingValue());
           if (UV && MinBWs.contains(UV) && !ProcessedTruncs.contains(Op) &&
-              all_of(Op->users(), [](VPUser *U) {
-                return !isa<VPWidenRecipe, VPWidenSelectRecipe>(U);
-              })) {
+              none_of(Op->users(),
+                      IsaPred<VPWidenRecipe, VPWidenSelectRecipe>)) {
             // Add an entry to ProcessedTruncs to avoid counting the same
             // operand multiple times.
             ProcessedTruncs[Op] = nullptr;
@@ -1481,6 +1480,26 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                 VPValue *NewMask = GetNewMask(Red->getCondOp());
                 return new VPReductionEVLRecipe(*Red, EVL, NewMask);
               })
+              .Case<VPWidenIntrinsicRecipe>(
+                  [&](VPWidenIntrinsicRecipe *CInst) -> VPRecipeBase * {
+                    auto *CI = cast<CallInst>(CInst->getUnderlyingInstr());
+                    Intrinsic::ID VPID = VPIntrinsic::getForIntrinsic(
+                        CI->getCalledFunction()->getIntrinsicID());
+                    if (VPID == Intrinsic::not_intrinsic)
+                      return nullptr;
+
+                    SmallVector<VPValue *> Ops(CInst->operands());
+                    assert(VPIntrinsic::getMaskParamPos(VPID) &&
+                           VPIntrinsic::getVectorLengthParamPos(VPID) &&
+                           "Expected VP intrinsic");
+                    VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(
+                        IntegerType::getInt1Ty(CI->getContext())));
+                    Ops.push_back(Mask);
+                    Ops.push_back(&EVL);
+                    return new VPWidenIntrinsicRecipe(
+                        *CI, VPID, Ops, TypeInfo.inferScalarType(CInst),
+                        CInst->getDebugLoc());
+                  })
               .Case<VPWidenSelectRecipe>([&](VPWidenSelectRecipe *Sel) {
                 SmallVector<VPValue *> Ops(Sel->operands());
                 Ops.push_back(&EVL);
@@ -1573,10 +1592,9 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
   // The transform updates all users of inductions to work based on EVL, instead
   // of the VF directly. At the moment, widened inductions cannot be updated, so
   // bail out if the plan contains any.
-  bool ContainsWidenInductions = any_of(Header->phis(), [](VPRecipeBase &Phi) {
-    return isa<VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe>(
-        &Phi);
-  });
+  bool ContainsWidenInductions = any_of(
+      Header->phis(),
+      IsaPred<VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe>);
   if (ContainsWidenInductions)
     return false;
 
@@ -1799,5 +1817,24 @@ void VPlanTransforms::createInterleaveGroups(
         }
         MemberR->eraseFromParent();
       }
+  }
+}
+
+void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(VPBB->phis())) {
+      if (!isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(&R))
+        continue;
+      auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
+      StringRef Name =
+          isa<VPCanonicalIVPHIRecipe>(PhiR) ? "index" : "evl.based.iv";
+      auto *ScalarR =
+          new VPScalarPHIRecipe(PhiR->getStartValue(), PhiR->getBackedgeValue(),
+                                PhiR->getDebugLoc(), Name);
+      ScalarR->insertBefore(PhiR);
+      PhiR->replaceAllUsesWith(ScalarR);
+      PhiR->eraseFromParent();
+    }
   }
 }

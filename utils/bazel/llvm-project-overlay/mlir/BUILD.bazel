@@ -3430,6 +3430,31 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "MeshToMPIConversion",
+    srcs = glob([
+        "lib/Conversion/MeshToMPI/*.cpp",
+    ]),
+    hdrs = glob(["include/mlir/Conversion/MeshToMPI/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":BufferizationDialect",
+        ":ConversionPassIncGen",
+        ":DialectUtils",
+        ":IR",
+        ":MPIDialect",
+        ":MemRefDialect",
+        ":MeshDialect",
+        ":Pass",
+        ":SCFDialect",
+        ":Support",
+        ":TensorDialect",
+        ":TransformUtils",
+        "//llvm:Support",
+    ],
+)
+
 ##---------------------------------------------------------------------------##
 # NVGPU dialect.
 ##---------------------------------------------------------------------------##
@@ -4230,6 +4255,7 @@ cc_library(
         ":MemRefToEmitC",
         ":MemRefToLLVM",
         ":MemRefToSPIRV",
+        ":MeshToMPIConversion",
         ":NVGPUToNVVM",
         ":NVVMToLLVM",
         ":OpenACCToSCF",
@@ -13752,6 +13778,7 @@ cc_library(
         ":MPIIncGen",
         ":MPIOpsIncGen",
         ":MPITypesIncGen",
+        ":MemRefDialect",
         "//llvm:Support",
     ],
 )

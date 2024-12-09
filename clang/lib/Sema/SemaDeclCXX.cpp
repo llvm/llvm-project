@@ -7535,8 +7535,15 @@ void Sema::CheckExplicitlyDefaultedFunction(Scope *S, FunctionDecl *FD) {
     return;
   }
 
-  if (DefKind.isComparison())
-    UnusedPrivateFields.clear();
+  if (DefKind.isComparison()) {
+    auto PT = FD->getParamDecl(0)->getType();
+    if (const CXXRecordDecl *RD =
+            PT.getNonReferenceType()->getAsCXXRecordDecl()) {
+      for (FieldDecl *Field : RD->fields()) {
+        UnusedPrivateFields.remove(Field);
+      }
+    }
+  }
 
   if (DefKind.isSpecialMember()
           ? CheckExplicitlyDefaultedSpecialMember(cast<CXXMethodDecl>(FD),
@@ -9218,7 +9225,7 @@ struct SpecialMemberVisitor {
     if (auto *B = Subobj.dyn_cast<CXXBaseSpecifier*>())
       return B->getBaseTypeLoc();
     else
-      return Subobj.get<FieldDecl*>()->getLocation();
+      return cast<FieldDecl *>(Subobj)->getLocation();
   }
 
   enum BasesToVisit {
@@ -9369,7 +9376,7 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
           << /*IsField*/ true << Field << DiagKind << IsDtorCallInCtor
           << /*IsObjCPtr*/ false;
     } else {
-      CXXBaseSpecifier *Base = Subobj.get<CXXBaseSpecifier*>();
+      CXXBaseSpecifier *Base = cast<CXXBaseSpecifier *>(Subobj);
       S.Diag(Base->getBeginLoc(),
              diag::note_deleted_special_member_class_subobject)
           << llvm::to_underlying(getEffectiveCSM()) << MD->getParent()
@@ -11466,8 +11473,8 @@ bool Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
         // This could still instantiate to the right type, unless we know it
         // names the wrong class template.
         auto *TD = SpecifiedName.getAsTemplateDecl();
-        MightInstantiateToSpecialization = !(TD && isa<ClassTemplateDecl>(TD) &&
-                                             !TemplateMatches);
+        MightInstantiateToSpecialization =
+            !(TD && isa<ClassTemplateDecl>(TD) && !TemplateMatches);
       }
     } else if (!RetTy.hasQualifiers() && RetTy->isDependentType()) {
       MightInstantiateToSpecialization = true;
@@ -17487,7 +17494,7 @@ DeclResult Sema::ActOnTemplatedFriendTag(
     if (getDepthAndIndex(U).first >= FriendDeclDepth) {
       auto *ND = U.first.dyn_cast<NamedDecl *>();
       if (!ND)
-        ND = U.first.get<const TemplateTypeParmType *>()->getDecl();
+        ND = cast<const TemplateTypeParmType *>(U.first)->getDecl();
       Diag(U.second, diag::friend_template_decl_malformed_pack_expansion)
           << ND->getDeclName() << SourceRange(SS.getBeginLoc(), EllipsisLoc);
       return true;

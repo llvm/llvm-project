@@ -3248,19 +3248,18 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
     // Check if the extractelement user is scalar fmul.
     auto IsUserFMulScalarTy = [](const Value *EEUser) {
       // Check if the user is scalar fmul.
-      const auto *BO = dyn_cast_if_present<BinaryOperator>(EEUser);
+      const auto *BO = dyn_cast<BinaryOperator>(EEUser);
       return BO && BO->getOpcode() == BinaryOperator::FMul &&
              !BO->getType()->isVectorTy();
     };
 
     // Check if the extract index is from lane 0 or lane equivalent to 0 for a
     // certain scalar type and a certain vector register width.
-    auto IsExtractLaneEquivalentToZero = [&](const unsigned &Idx,
-                                             const unsigned &EltSz) {
+    auto IsExtractLaneEquivalentToZero = [&](unsigned Idx, unsigned EltSz) {
       auto RegWidth =
           getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
               .getFixedValue();
-      return (Idx == 0 || (Idx * EltSz) % RegWidth == 0);
+      return Idx == 0 || (RegWidth != 0 && (Idx * EltSz) % RegWidth == 0);
     };
 
     // Check if the type constraints on input vector type and result scalar type
@@ -3277,13 +3276,15 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
         // important.
         UserToExtractIdx[U];
       }
+      if (UserToExtractIdx.empty())
+        return false;
       for (auto &[S, U, L] : ScalarUserAndIdx) {
         for (auto *U : S->users()) {
           if (UserToExtractIdx.find(U) != UserToExtractIdx.end()) {
             auto *FMul = cast<BinaryOperator>(U);
             auto *Op0 = FMul->getOperand(0);
             auto *Op1 = FMul->getOperand(1);
-            if ((Op0 == S && Op1 == S) || (Op0 != S) || (Op1 != S)) {
+            if ((Op0 == S && Op1 == S) || Op0 != S || Op1 != S) {
               UserToExtractIdx[U] = L;
               break;
             }
@@ -3362,7 +3363,7 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(const Instruction &I,
 
 InstructionCost AArch64TTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind) {
+    TTI::TargetCostKind CostKind, ArrayRef<Value *> VL) {
   if (isa<ScalableVectorType>(Ty))
     return InstructionCost::getInvalid();
   if (Ty->getElementType()->isFloatingPointTy())
@@ -4796,14 +4797,20 @@ AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
 }
 
 bool AArch64TTIImpl::shouldTreatInstructionLikeSelect(const Instruction *I) {
-  // For the binary operators (e.g. or) we need to be more careful than
-  // selects, here we only transform them if they are already at a natural
-  // break point in the code - the end of a block with an unconditional
-  // terminator.
-  if (EnableOrLikeSelectOpt && I->getOpcode() == Instruction::Or &&
-      isa<BranchInst>(I->getNextNode()) &&
-      cast<BranchInst>(I->getNextNode())->isUnconditional())
-    return true;
+  if (EnableOrLikeSelectOpt) {
+    // For the binary operators (e.g. or) we need to be more careful than
+    // selects, here we only transform them if they are already at a natural
+    // break point in the code - the end of a block with an unconditional
+    // terminator.
+    if (I->getOpcode() == Instruction::Or &&
+        isa<BranchInst>(I->getNextNode()) &&
+        cast<BranchInst>(I->getNextNode())->isUnconditional())
+      return true;
+
+    if (I->getOpcode() == Instruction::Add ||
+        I->getOpcode() == Instruction::Sub)
+      return true;
+  }
   return BaseT::shouldTreatInstructionLikeSelect(I);
 }
 
@@ -5163,26 +5170,45 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     return false;
   }
   case Instruction::Mul: {
+    auto ShouldSinkSplatForIndexedVariant = [](Value *V) {
+      auto *Ty = cast<VectorType>(V->getType());
+      // For SVE the lane-indexing is within 128-bits, so we can't fold splats.
+      if (Ty->isScalableTy())
+        return false;
+
+      // Indexed variants of Mul exist for i16 and i32 element types only.
+      return Ty->getScalarSizeInBits() == 16 || Ty->getScalarSizeInBits() == 32;
+    };
+
     int NumZExts = 0, NumSExts = 0;
     for (auto &Op : I->operands()) {
       // Make sure we are not already sinking this operand
       if (any_of(Ops, [&](Use *U) { return U->get() == Op; }))
         continue;
 
-      if (match(&Op, m_SExt(m_Value()))) {
-        NumSExts++;
-        continue;
-      } else if (match(&Op, m_ZExt(m_Value()))) {
-        NumZExts++;
+      if (match(&Op, m_ZExtOrSExt(m_Value()))) {
+        auto *Ext = cast<Instruction>(Op);
+        auto *ExtOp = Ext->getOperand(0);
+        if (isSplatShuffle(ExtOp) && ShouldSinkSplatForIndexedVariant(ExtOp))
+          Ops.push_back(&Ext->getOperandUse(0));
+        Ops.push_back(&Op);
+
+        if (isa<SExtInst>(Ext))
+          NumSExts++;
+        else
+          NumZExts++;
+
         continue;
       }
 
       ShuffleVectorInst *Shuffle = dyn_cast<ShuffleVectorInst>(Op);
+      if (!Shuffle)
+        continue;
 
       // If the Shuffle is a splat and the operand is a zext/sext, sinking the
       // operand and the s/zext can help create indexed s/umull. This is
       // especially useful to prevent i64 mul being scalarized.
-      if (Shuffle && isSplatShuffle(Shuffle) &&
+      if (isSplatShuffle(Shuffle) &&
           match(Shuffle->getOperand(0), m_ZExtOrSExt(m_Value()))) {
         Ops.push_back(&Shuffle->getOperandUse(0));
         Ops.push_back(&Op);
@@ -5192,9 +5218,6 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
           NumZExts++;
         continue;
       }
-
-      if (!Shuffle)
-        continue;
 
       Value *ShuffleOperand = Shuffle->getOperand(0);
       InsertElementInst *Insert = dyn_cast<InsertElementInst>(ShuffleOperand);
@@ -5227,12 +5250,26 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
         NumZExts++;
       }
 
+      Ops.push_back(&Insert->getOperandUse(1));
       Ops.push_back(&Shuffle->getOperandUse(0));
       Ops.push_back(&Op);
     }
 
-    // Is it profitable to sink if we found two of the same type of extends.
-    return !Ops.empty() && (NumSExts == 2 || NumZExts == 2);
+    // It is profitable to sink if we found two of the same type of extends.
+    if (!Ops.empty() && (NumSExts == 2 || NumZExts == 2))
+      return true;
+
+    // Otherwise, see if we should sink splats for indexed variants.
+    if (!ShouldSinkSplatForIndexedVariant(I))
+      return false;
+
+    Ops.clear();
+    if (isSplatShuffle(I->getOperand(0)))
+      Ops.push_back(&I->getOperandUse(0));
+    if (isSplatShuffle(I->getOperand(1)))
+      Ops.push_back(&I->getOperandUse(1));
+
+    return !Ops.empty();
   }
   case Instruction::FMul: {
     // For SVE the lane-indexing is within 128-bits, so we can't fold splats.

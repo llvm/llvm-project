@@ -616,6 +616,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         DefaultLogical},
     {"llt", {{"string_a", SameCharNoLen}, {"string_b", SameCharNoLen}},
         DefaultLogical},
+    {"lnblnk", {{"string", AnyChar}}, DefaultInt},
     {"loc", {{"x", Addressable, Rank::anyOrAssumedRank}}, SubscriptInt,
         Rank::scalar},
     {"log", {{"x", SameFloating}}, SameFloating},
@@ -884,6 +885,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         IntrinsicClass::transformationalFunction},
     {"sum", {{"array", SameNumeric, Rank::array}, MissingDIM, OptionalMASK},
         SameNumeric, Rank::scalar, IntrinsicClass::transformationalFunction},
+    {"system", {{"command", DefaultChar, Rank::scalar}}, DefaultInt,
+        Rank::scalar},
     {"tan", {{"x", SameFloating}}, SameFloating},
     {"tand", {{"x", SameFloating}}, SameFloating},
     {"tanh", {{"x", SameFloating}}, SameFloating},
@@ -2640,7 +2643,7 @@ bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
   // Collection for some intrinsics with function and subroutine form,
   // in order to pass the semantic check.
   static const std::string dualIntrinsic[]{
-      {"etime"s}, {"getcwd"s}, {"rename"s}, {"second"s}};
+      {"etime"s}, {"getcwd"s}, {"rename"s}, {"second"s}, {"system"s}};
 
   return llvm::is_contained(dualIntrinsic, name);
 }

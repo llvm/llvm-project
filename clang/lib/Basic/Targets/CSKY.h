@@ -73,7 +73,10 @@ public:
 
   unsigned getMinGlobalAlign(uint64_t, bool HasNonWeakDef) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  std::pair<const char *, ArrayRef<Builtin::Info>>
+  getTargetBuiltinStorage() const override {
+    return {nullptr, {}};
+  }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return VoidPtrBuiltinVaList;
