@@ -7,6 +7,7 @@
 ; CHECK-NEXT: .csect ..text..[PR],5
 ; CHECK-NEXT: .rename ..text..[PR],""
 ; CHECK-NEXT: .machine "PWR10"
+; CHECK-NOT:  .machine "PWR8"
 
 source_filename = "file.c"
 
