@@ -241,6 +241,8 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset,
 template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
   std::string out;
   int indent = 0;
+  if (!whyLive.contains(s))
+    return;
   for (std::optional<LiveObject> cur = s; cur; indent += 2) {
     if (indent)
       out += "\n" + std::string(indent, ' ');
@@ -403,7 +405,7 @@ template <class ELFT> void MarkLive<ELFT>::mark() {
         }))
       printWhyLive(sym);
   }
-  }
+}
 
 // Move the sections for some symbols to the main partition, specifically ifuncs
 // (because they can result in an IRELATIVE being added to the main partition's
