@@ -660,12 +660,14 @@ bool isTrue16Inst(unsigned Opc) {
 
 FPType getFPDstSelType(unsigned Opc) {
   const FP4FP8DstByteSelInfo *Info = getFP4FP8DstByteSelHelper(Opc);
-  if (Info && Info->HasFP8DstByteSel)
-    return FPType::FP8;
-  else if (Info && Info->HasFP4DstByteSel)
-    return FPType::FP4;
-  else
+  if (!Info)
     return FPType::None;
+  if (Info->HasFP8DstByteSel)
+    return FPType::FP8;
+  if (Info->HasFP4DstByteSel)
+    return FPType::FP4;
+
+  return FPType::None;
 }
 
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {
