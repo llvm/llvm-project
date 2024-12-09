@@ -3754,6 +3754,14 @@ def fno_openmp_target_xteam_scan : Flag<["-"], "fno-openmp-target-xteam-scan">, 
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Do not use the cross-team scan code generation technique.">,
   MarshallingInfoFlag<LangOpts<"OpenMPTargetXteamScan">>;
+def fopenmp_target_xteam_scan_segmented : Flag<["-"], "fopenmp-target-xteam-scan-segmented">, Group<f_Group>, 
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Use the cross-team segmented scan code generation technique.">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetXteamScanSegmented">>;
+def fno_openmp_target_xteam_scan_segmented : Flag<["-"], "fno-openmp-target-xteam-scan-segmented">, Group<f_Group>, 
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Do not use the cross-team segmented scan code generation technique.">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetXteamScanSegmented">>;
 def fopenmp_target_multi_device : Flag<["-"], "fopenmp-target-multi-device">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option, FlangOption]>,
   HelpText<"Enable code generation to emit support for multi device target region execution">,

@@ -376,6 +376,33 @@ void _INLINE_ATTR_  __kmpc_xteams_ul_2x32
    (_UL v, _UL* storage, _UL* r_array, _UL *tvs, uint32_t *td, void (*_rf)(_UL *, _UL),
       void (*_rf_lds)(_RF_LDS _UL *, _RF_LDS _UL *), const _UL iv,
       const uint64_t k, const uint32_t numteams);
+
+// Phase Two Entry points
+void _INLINE_ATTR_ __kmpc_xteams_phase2_i_16x64(int *storage, int segment_size,
+                                               int *tvs, int *seg_vals,
+                                               void (*rf)(int *, int),
+                                               const int rnv, const uint64_t k,
+                                               bool is_inclusive_scan);
+void _INLINE_ATTR_ __kmpc_xteams_phase2_i_8x64(int *storage, int segment_size,
+                                               int *tvs, int *seg_vals,
+                                               void (*rf)(int *, int),
+                                               const int rnv, const uint64_t k,
+                                               bool is_inclusive_scan);
+void _INLINE_ATTR_ __kmpc_xteams_phase2_i_4x64(int *storage, int segment_size,
+                                               int *tvs, int *seg_vals,
+                                               void (*rf)(int *, int),
+                                               const int rnv, const uint64_t k,
+                                               bool is_inclusive_scan);
+void _INLINE_ATTR_ __kmpc_xteams_phase2_i_16x32(int *storage, int segment_size,
+                                                int *tvs, int *seg_vals,
+                                                void (*rf)(int *, int),
+                                                const int rnv, const uint64_t k,
+                                                bool is_inclusive_scan);
+void _INLINE_ATTR_ __kmpc_xteams_phase2_i_16x32(int *storage, int segment_size,
+                                                int *tvs, int *seg_vals,
+                                                void (*rf)(int *, int),
+                                                const int rnv, const uint64_t k,
+                                                bool is_inclusive_scan);
 } // end extern C
 
 #undef _CD

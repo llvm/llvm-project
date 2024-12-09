@@ -9462,11 +9462,17 @@ static void emitTargetCallKernelLaunch(
     CodeGenModule::XteamRedVarMap &XteamRVM = CGF.CGM.getXteamRedVarMap(FStmt);
     auto &XteamOrdVars = CGF.CGM.getXteamOrderedRedVar(FStmt);
 
-    // The Xteam Reduction kernels require two helper variables - `team_vals`
+    // Note Regarding the ExpectedNumArgs:
+    // 1. The Xteam Reduction kernels require two helper variables - `team_vals`
     // array and `teams_done_ptr`.
-    // The Xteam Scan Reduction kernels require a third helper variable - 
+    // 2. The Xteam Scan Reduction kernels require a third helper variable -
     // `scan_storage` array.
-    int ExpectedNumArgs = CGF.CGM.isXteamScanKernel() ? 3 : 2;
+    //    a. The segmented scan variant requires a fourth helper variable -
+    //    `segmented_vals`
+    size_t ExpectedNumArgs =
+        CGF.CGM.isXteamScanKernel()
+            ? (CGF.CGM.getLangOpts().OpenMPTargetXteamScanSegmented ? 4 : 3)
+            : 2;
     assert((CapturedVars.size() ==
             CapturedCount + ExpectedNumArgs * XteamRVM.size()) &&
            "Unexpected number of captured vars");
@@ -9534,19 +9540,24 @@ static void emitTargetCallKernelLaunch(
       // For the Phase 2 of the Xteam Scan codegen, fresh memory allocation for
       // reduction helper data structures is not needed. The helpers generated
       // during the Phase 1 will be re-used here.
-      assert(CGF.CGM.ReductionVars.size() == 3 &&
-             "Xteam Scan reduction code-generates three helper variables");
+      assert(CGF.CGM.ReductionVars.size() == ExpectedNumArgs &&
+             "Insufficient number of helper variables for Xteam Scan reduction "
+             "code-generation");
       addXTeamReductionComponentHelper(
           CGF, CombinedInfo, CGF.CGM.ReductionVars[0]); // team_vals
       addXTeamReductionComponentHelper(
           CGF, CombinedInfo, CGF.CGM.ReductionVars[1]); // teams_done_ptr
       addXTeamReductionComponentHelper(
           CGF, CombinedInfo, CGF.CGM.ReductionVars[2]); // scan_storage
+      if (CGF.CGM.getLangOpts().OpenMPTargetXteamScanSegmented)
+        addXTeamReductionComponentHelper(
+            CGF, CombinedInfo, CGF.CGM.ReductionVars[3]); // segment_vals
     } else {
       for (; CapturedCount + ArgPos < CapturedVars.size();) {
         // Process the pair of captured variables:
         llvm::Value *DTeamValsInst = nullptr;
         llvm::Value *DScanStorageInst = nullptr;
+        llvm::Value *DSegmentValsInst = nullptr;
 
         assert(CapturedCount + ArgPos < CapturedVars.size() &&
                "Xteam reduction argument position out of bounds");
@@ -9594,7 +9605,7 @@ static void emitTargetCallKernelLaunch(
                 XteamRedNumTeamsFromClauseVal ? XteamRedNumTeamsFromClauseVal
                                               : XteamRedNumTeamsFromOccupancy,
                 CGF.Builder.CreateIntCast(
-                    OMPRuntime->emitNumThreadsForTargetDirective(CGF, D),
+                    CGF.Builder.getInt32(CGF.CGM.getXteamRedBlockSize(D)),
                     CGF.Int64Ty, false),
                 "total_num_threads");
             llvm::Value *StorageSize = CGF.Builder.CreateAdd(
@@ -9608,6 +9619,41 @@ static void emitTargetCallKernelLaunch(
                 OMPBuilder.getOrCreateRuntimeFunction(CGF.CGM.getModule(),
                                                       OMPRTL_omp_target_alloc),
                 TgtAllocArgsScan, "d_scan_storage");
+            if (CGF.CGM.getLangOpts().OpenMPTargetXteamScanSegmented) {
+              // Emit the lower and upper bounds
+              const auto *LBDecl = cast<VarDecl>(
+                  cast<DeclRefExpr>(
+                      cast<OMPLoopDirective>(D).getLowerBoundVariable())
+                      ->getDecl());
+              CGF.EmitVarDecl(*LBDecl);
+
+              const auto *UBDecl = cast<VarDecl>(
+                  cast<DeclRefExpr>(
+                      cast<OMPLoopDirective>(D).getUpperBoundVariable())
+                      ->getDecl());
+              CGF.EmitVarDecl(*UBDecl);
+              const auto UBLValue = CGF.EmitLValue(cast<DeclRefExpr>(
+                  cast<OMPLoopDirective>(D).getUpperBoundVariable()));
+              const auto LBLValue = CGF.EmitLValue(cast<DeclRefExpr>(
+                  cast<OMPLoopDirective>(D).getLowerBoundVariable()));
+              // Emit SegmentValsSize = UBLValue - LBLValue + 1
+              llvm::Value *SegmentValsSize = CGF.Builder.CreateAdd(
+                  CGF.Builder.CreateSub(
+                      CGF.Builder.CreateLoad(UBLValue.getAddress()),
+                      CGF.Builder.CreateLoad(LBLValue.getAddress())),
+                  llvm::ConstantInt::get(CGF.Int32Ty, 1), "segment_vals_size");
+
+              llvm::Value *DSegmentValsSz = CGF.Builder.CreateMul(
+                  RedVarTySz,
+                  CGF.Builder.CreateIntCast(SegmentValsSize, CGF.Int64Ty,
+                                            /*isSigned*/ false),
+                  "d_segment_vals_sz");
+              llvm::Value *TgtAllocArgsScan[] = {DSegmentValsSz, DevIdVal};
+              DSegmentValsInst = CGF.EmitRuntimeCall(
+                  OMPBuilder.getOrCreateRuntimeFunction(
+                      CGF.CGM.getModule(), OMPRTL_omp_target_alloc),
+                  TgtAllocArgsScan, "d_segment_vals");
+            }
           }
         }
         CGF.CGM.ReductionVars.push_back(DTeamValsInst);
@@ -9665,6 +9711,12 @@ static void emitTargetCallKernelLaunch(
           ++ArgPos;
           CGF.CGM.ReductionVars.push_back(DScanStorageInst);
           addXTeamReductionComponentHelper(CGF, CombinedInfo, DScanStorageInst);
+          if (CGF.CGM.getLangOpts().OpenMPTargetXteamScanSegmented) {
+            ++ArgPos;
+            CGF.CGM.ReductionVars.push_back(DSegmentValsInst);
+            addXTeamReductionComponentHelper(CGF, CombinedInfo,
+                                             DSegmentValsInst);
+          }
         }
         // Advance to the next reduction variable in the pair:
         ++ArgPos;

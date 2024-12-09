@@ -182,6 +182,67 @@ __attribute__((flatten, always_inline)) void _xteam_scan(
   }
 }
 
+/// Templated internal function used by all extern typed scans for phase 2 of
+/// segmented scan
+///
+/// \param  Template typename parameter T
+/// \param  Template parameter for number of waves, must be power of two
+/// \param  Template parameter for warp size, 32 o 64
+///
+/// \param storage Pointer to global shared storage array used by all the
+/// threads. Stores reduction computed at the segment level 
+/// \param segment_size The length of a segment of the array assigned to one thread 
+/// \param team_vals Pointer to global shared array storing reduction computed
+/// after per team scan 
+/// \param segment_vals Pointer to global shared array that maintains the
+/// intermediate scanned values per for every segment 
+/// \param _rf Function pointer to TLS pair reduction function 
+/// \param rnv Reduction null value (e.g. 0 for addition) 
+/// \param k The iteration value from 0 to (NumTeams*_NUM_THREADS)-1 
+/// \param is_inclusive_scan Specifies the inclusive/exclusive kind of scan
+
+template <typename T, const int32_t _NW, const int32_t _WSZ>
+__attribute__((flatten, always_inline)) void
+_xteam_scan_phase2(T *storage, int segment_size, T *team_vals, T *segment_vals,
+                   void (*_rf)(T *, T), const T rnv, const uint64_t k,
+                   bool is_inclusive_scan) {
+
+  constexpr uint32_t _NT = _NW * _WSZ;     // number of threads within a team
+  const uint32_t omp_thread_num = k % _NT; // thread ID within a team
+  uint32_t omp_team_num = k / _NT;         // team ID
+
+  T thread_level_result = rnv;
+  if (omp_thread_num >= 1)
+    thread_level_result = storage[k - 1];
+  if (omp_team_num >= 1)
+    (*_rf)(&thread_level_result, team_vals[omp_team_num - 1]);
+
+  if (is_inclusive_scan) { 
+    for (int i = 0; i < segment_size; i++)
+      segment_vals[(k * segment_size) + i] += thread_level_result;
+  } else { // Exclusive scan
+    // Populate the non-first element in every segment with scanned result
+    for (int i = segment_size - 1; i > 0; i--)
+      segment_vals[(k * segment_size) + i] =
+          segment_vals[(k * segment_size) + i - 1] + thread_level_result;
+
+    // Populate the first element in every segment.
+    // Compute thread_level_result for the previous thread because the
+    // first index(that is, i==0) will always consume the result from the
+    // previous thread.
+    T prev_thread_level_result = rnv;
+    if (omp_thread_num >= 1)
+      prev_thread_level_result = storage[k - 1];
+    if (omp_team_num >= 1) {
+      if (omp_thread_num == 0) // the previous thread is in the previous team
+        prev_thread_level_result = team_vals[omp_team_num - 1];
+      else
+        (*_rf)(&prev_thread_level_result, team_vals[omp_team_num - 1]);
+    }
+    segment_vals[k * segment_size] = prev_thread_level_result;
+  }
+}
+
 //  Calls to these __kmpc extern C functions will be created in clang codegen
 //  for C and C++. They may also be used for simulation and testing.
 //  The headers for these extern C functions are in ../include/Xteams.h
@@ -753,6 +814,46 @@ __kmpc_xteams_ul_2x32(_UL v, _UL* storage, _UL* r_p, _UL *tvs, uint32_t *td,
                       void (*rflds)(_LDS _UL *, _LDS _UL *), const _UL rnv,
                       const uint64_t k, const uint32_t nt) {
   _xteam_scan<_UL, 2, 32>(v, storage, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_xteams_phase2_i_16x64(int *storage, int segment_size, int *tvs,
+                            int *seg_vals, void (*rf)(int *, int),
+                            const int rnv, const uint64_t k,
+                            bool is_inclusive_scan) {
+  _xteam_scan_phase2<int, 16, 64>(storage, segment_size, tvs, seg_vals, rf, rnv,
+                                 k, is_inclusive_scan);
+}
+_EXT_ATTR
+__kmpc_xteams_phase2_i_8x64(int *storage, int segment_size, int *tvs,
+                            int *seg_vals, void (*rf)(int *, int),
+                            const int rnv, const uint64_t k,
+                            bool is_inclusive_scan) {
+  _xteam_scan_phase2<int, 8, 64>(storage, segment_size, tvs, seg_vals, rf, rnv,
+                                 k, is_inclusive_scan);
+}
+_EXT_ATTR
+__kmpc_xteams_phase2_i_4x64(int *storage, int segment_size, int *tvs,
+                            int *seg_vals, void (*rf)(int *, int),
+                            const int rnv, const uint64_t k,
+                            bool is_inclusive_scan) {
+  _xteam_scan_phase2<int, 4, 64>(storage, segment_size, tvs, seg_vals, rf, rnv,
+                                 k, is_inclusive_scan);
+}
+_EXT_ATTR
+__kmpc_xteams_phase2_i_16x32(int *storage, int segment_size, int *tvs,
+                             int *seg_vals, void (*rf)(int *, int),
+                             const int rnv, const uint64_t k,
+                             bool is_inclusive_scan) {
+  _xteam_scan_phase2<int, 16, 32>(storage, segment_size, tvs, seg_vals, rf, rnv,
+                                  k, is_inclusive_scan);
+}
+_EXT_ATTR
+__kmpc_xteams_phase2_i_8x32(int *storage, int segment_size, int *tvs,
+                            int *seg_vals, void (*rf)(int *, int),
+                            const int rnv, const uint64_t k,
+                            bool is_inclusive_scan) {
+  _xteam_scan_phase2<int, 8, 32>(storage, segment_size, tvs, seg_vals, rf, rnv,
+                                 k, is_inclusive_scan);
 }
 #undef _CF
 #undef _UI

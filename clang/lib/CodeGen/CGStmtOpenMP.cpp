@@ -423,6 +423,20 @@ void CodeGenFunction::InitializeXteamRedCapturedVars(
 
     assert(DScanStorageInst && "Device scan storage pointer cannot be null");
     CapturedVars.push_back(DScanStorageInst);
+    if (CGM.getLangOpts().OpenMPTargetXteamScanSegmented) {
+      // Placeholder for d_segment_vals initialized to nullptr
+      llvm::Value *DSegmentValsInst =
+          Builder.CreateAlloca(RedVarType, nullptr, "d_segment_vals");
+      Address DSegmentValsAddr(
+          DSegmentValsInst, Int32Ty,
+          Context.getTypeAlignInChars(Context.UnsignedIntTy));
+      llvm::Value *NullPtrDSegmentVals =
+          llvm::ConstantPointerNull::get(Int32Ty->getPointerTo());
+      Builder.CreateStore(NullPtrDSegmentVals, DSegmentValsAddr);
+
+      assert(DSegmentValsInst && "Segment Vals Array pointer cannot be null");
+      CapturedVars.push_back(DSegmentValsInst);
+    }
   }
 }
 
@@ -762,6 +776,12 @@ static llvm::Function *emitOutlinedFunctionPrologue(
             Ctx, Ctx.VoidPtrTy, ImplicitParamKind::CapturedContext);
         Args.emplace_back(DScanStorageVD);
         TargetArgs.emplace_back(DScanStorageVD);
+        if (CGM.getLangOpts().OpenMPTargetXteamScanSegmented) {
+          VarDecl *DSegmentValsVD = ImplicitParamDecl::Create(
+              Ctx, Ctx.VoidPtrTy, ImplicitParamKind::CapturedContext);
+          Args.emplace_back(DSegmentValsVD);
+          TargetArgs.emplace_back(DSegmentValsVD);
+        }
       }
     }
   }
@@ -4136,7 +4156,28 @@ static void emitScanBasedDirectiveDecls(
                   ->getSizeExpr()),
           RValue::get(OMPScanNumIterations));
       // Emit temp buffer.
-      CGF.EmitVarDecl(*cast<VarDecl>(cast<DeclRefExpr>(*ITA)->getDecl()));
+      auto TempVarDecl = cast<VarDecl>(cast<DeclRefExpr>(*ITA)->getDecl());
+      if (CGF.CGM.isXteamScanKernel() &&
+          !CGF.CGM.getLangOpts().OpenMPIsTargetDevice &&
+          CGF.hasAddrOfLocalVar(TempVarDecl)) {
+        // While generating the Host Fallback function for the Xteam Scan
+        // Kernels, emit the stack allocation pointer for the VLA(Variable
+        // Length Array) of size <N>(i.e. OMPScanNumIterations) - a helper
+        // variable required for host scan. In a previous allocation for this
+        // VarDecl, only a dummy VLA allocation of size 0 was emitted just so
+        // that there is an entry in the LocalDeclMap at the CGF level. However,
+        // this is the place where the actual allocation happens and the new
+        // alloca's pointer is now stored at the address of older alloca's
+        // pointer.
+        auto TempVLAInst = CGF.Builder.CreateAlloca(
+            CGF.Int32Ty, OMPScanNumIterations, "tmp.vla");
+        Address TempVDAddr = CGF.GetAddrOfLocalVar(TempVarDecl);
+        auto TempVDAddrLValue =
+            CGF.MakeAddrLValue(TempVDAddr, TempVarDecl->getType());
+        CGF.EmitStoreOfScalar(TempVLAInst, TempVDAddrLValue,
+                              /* isInitialization */ false);
+      } else
+        CGF.EmitVarDecl(*TempVarDecl);
       ++ITA;
       ++Count;
     }
@@ -8008,8 +8049,20 @@ static void emitTargetTeamsDistributeParallelForRegion(
         CGF, OMPD_distribute, CodeGenDistribute, /*HasCancel=*/false);
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_teams);
   };
+
+  auto &&NumIteratorsGen = [&S](CodeGenFunction &CGF) {
+    CodeGenFunction::OMPLocalDeclMapRAII Scope(CGF);
+    OMPLoopScope LoopScope(CGF, S);
+    return CGF.EmitScalarExpr(S.getNumIterations());
+  };
+
+  if (CGF.CGM.isXteamScanKernel())
+    emitScanBasedDirectiveDecls(CGF, S, NumIteratorsGen);
   emitCommonOMPTeamsDirective(CGF, S, OMPD_distribute_parallel_for,
                               CodeGenTeams);
+  if (CGF.CGM.isXteamScanKernel())
+    emitScanBasedDirectiveFinals(CGF, S, NumIteratorsGen);
+
   emitPostUpdateForReductionClause(CGF, S,
                                    [](CodeGenFunction &) { return nullptr; });
 }
@@ -8042,7 +8095,10 @@ void CodeGenFunction::EmitOMPTargetTeamsDistributeParallelForDirective(
       CGCapturedStmtInfo CGSI(CR_OpenMP);
       CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGSI);
       OMPLoopScope LoopScope(CGF, S);
-      return CGF.EmitScalarExpr(S.getNumIterations());
+      // Emit the size 0 to emit a dummy alloca just so that the LocalDeclMap
+      // contains the respective VarDecl. We later emit the actual alloca during
+      // host fallback generation for Xteam Scan kernels.
+      return CGF.Builder.getInt32(0);
     };
     bool IsInscan =
         llvm::any_of(S.getClausesOfKind<OMPReductionClause>(),

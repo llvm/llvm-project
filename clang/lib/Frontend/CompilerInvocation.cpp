@@ -3836,6 +3836,11 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
   else
     GenerateArg(Consumer, OPT_fno_openmp_target_xteam_scan);
 
+  if (Opts.OpenMPTargetXteamScanSegmented)
+    GenerateArg(Consumer, OPT_fopenmp_target_xteam_scan_segmented);
+  else
+    GenerateArg(Consumer, OPT_fno_openmp_target_xteam_scan_segmented);
+
   if (Opts.OpenMPThreadSubscription)
     GenerateArg(Consumer, OPT_fopenmp_assume_threads_oversubscription);
 
@@ -4371,6 +4376,10 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   Opts.OpenMPTargetXteamScan =
       Args.hasFlag(options::OPT_fopenmp_target_xteam_scan,
                    options::OPT_fno_openmp_target_xteam_scan, false);
+
+  Opts.OpenMPTargetXteamScanSegmented =
+      Args.hasFlag(options::OPT_fopenmp_target_xteam_scan_segmented,
+                   options::OPT_fno_openmp_target_xteam_scan_segmented, false);
 
   Opts.OpenMPKernelIO =
       Args.hasFlag(options::OPT_fopenmp_allow_kernel_io,

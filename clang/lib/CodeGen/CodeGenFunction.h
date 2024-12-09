@@ -5556,6 +5556,9 @@ private:
                        int BlockSize);
   void EmitXteamScanSum(const ForStmt *FStmt, const FunctionArgList &Args,
                         int BlockSize);
+  void EmitXteamScanPhaseTwo(const ForStmt *FStmt, llvm::Value *SegmentSize,
+                             const FunctionArgList &Args, int BlockSize,
+                             bool IsInclusiveScan);
   bool EmitXteamRedStmt(const Stmt *S);
 
   llvm::Value *FormX86ResolverCondition(const FMVResolverOption &RO);

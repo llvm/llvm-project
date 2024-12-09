@@ -757,7 +757,11 @@ void CodeGenFunction::EmitXteamRedCode(const OMPExecutableDirective &D,
   EmitXteamLocalAggregator(CapturedForStmt);
 
   if (CGM.isXteamScanKernel()) {
-    if (CGM.isXteamScanPhaseOne) {
+    if (CGM.getLangOpts().OpenMPTargetXteamScanSegmented) {
+      EmitForStmtWithArgs(cast<ForStmt>(*CapturedForStmt), Args);
+      // Toggle the Phase number(1 or 2) after emitting any of the phases
+      CGM.isXteamScanPhaseOne = !CGM.isXteamScanPhaseOne;
+    } else if (CGM.isXteamScanPhaseOne) {
       EmitNoLoopXteamScanPhaseOneCode(D, CapturedForStmt, Loc, Args);
       CGM.isXteamScanPhaseOne = false;
     } else {
@@ -896,6 +900,48 @@ void CodeGenFunction::EmitXteamScanSum(const ForStmt *FStmt,
                        OrigRedVarAddr.emitRawPointer(*this), DTeamVals,
                        DTeamsDonePtr, DScanStorage, ThreadStartIdx, NumTeams,
                        BlockSize, IsFast);
+  }
+}
+
+/// Emit calls to the DeviceRTL implementations(__kmpc_xteams_phase2_*) for
+/// computing the phase two of segmented Xteam scan.
+void CodeGenFunction::EmitXteamScanPhaseTwo(const ForStmt *FStmt,
+                                            llvm::Value *SegmentSize,
+                                            const FunctionArgList &Args,
+                                            int BlockSize,
+                                            bool IsInclusiveScan) {
+  auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
+  const CodeGenModule::XteamRedVarMap &RedVarMap = CGM.getXteamRedVarMap(FStmt);
+
+  llvm::Value *ThreadStartIdx = CGM.getXteamRedThreadStartIndex(FStmt);
+  assert(ThreadStartIdx && "Thread start index cannot be null");
+
+  auto XteamOrdVars = CGM.getXteamOrderedRedVar(FStmt);
+  // Always emit calls to Xteam device functions in the same order as
+  // user-specified reduction variables.
+  for (auto XteamVD : XteamOrdVars) {
+    auto Itr = RedVarMap.find(XteamVD);
+    assert(Itr != RedVarMap.end() && "Metadata not found");
+
+    const CodeGenModule::XteamRedVarInfo &RVI = Itr->second;
+
+    assert(RVI.ArgPos + 1 < Args.size() && "Arg position beyond bounds");
+
+    Address XteamRedSumArg1 = GetAddrOfLocalVar(Args[RVI.ArgPos]);
+    llvm::Value *DTeamVals = Builder.CreateLoad(XteamRedSumArg1);
+
+    Address XteamRedSumArg2 = GetAddrOfLocalVar(Args[RVI.ArgPos + 2]);
+    llvm::Value *DScanStorage = Builder.CreateLoad(XteamRedSumArg2);
+
+    Address XteamRedSumArg3 = GetAddrOfLocalVar(Args[RVI.ArgPos + 3]);
+    llvm::Value *DSegmentVals = Builder.CreateLoad(XteamRedSumArg3);
+
+    const Expr *OrigRedVarExpr = RVI.RedVarExpr;
+    const DeclRefExpr *DRE = cast<DeclRefExpr>(OrigRedVarExpr);
+    Address OrigRedVarAddr = EmitLValue(DRE).getAddress();
+    RT.getXteamScanPhaseTwo(*this, Builder.CreateLoad(RVI.RedVarAddr),
+                            SegmentSize, DTeamVals, DScanStorage, DSegmentVals,
+                            ThreadStartIdx, BlockSize, IsInclusiveScan);
   }
 }
 
@@ -2237,6 +2283,91 @@ void CodeGenFunction::EmitForStmtWithArgs(const ForStmt &S,
       EmitStmt(S.getInit());
   }
 
+  llvm::Value *SegmentLoopUB = nullptr;
+  llvm::Value *DSegmentVals = nullptr;
+  llvm::Value *ThreadLevelRes = nullptr;
+  llvm::Value *GlobalUpperBound = nullptr;
+  const Address *RedVarAddr = nullptr;
+  llvm::BasicBlock *ExecBB = nullptr;
+  llvm::BasicBlock *DoneBB = nullptr;
+  clang::QualType RedVarType;
+  if (getLangOpts().OpenMPIsTargetDevice &&
+      getLangOpts().OpenMPTargetXteamScanSegmented) {
+    // Compute Loop trip-count (N) = GlobalUB - GlobalLB + 1
+    const auto UBLValue = EmitLValue(
+        cast<DeclRefExpr>(BigJumpLoopLD->getUpperBoundVariable())); // GlobalUB
+    const auto LBLValue = EmitLValue(
+        cast<DeclRefExpr>(BigJumpLoopLD->getLowerBoundVariable())); // GlobalLB
+    GlobalUpperBound =
+        Builder.CreateLoad(UBLValue.getAddress(), "global_upper_bound");
+    auto InputSize = Builder.CreateAdd(
+        Builder.CreateSub(GlobalUpperBound,
+                          Builder.CreateLoad(LBLValue.getAddress())),
+        llvm::ConstantInt::get(Int32Ty, 1)); // GlobalUB - GlobalLB + 1
+    auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
+
+    // Compute Global thread ID (GlobalTID) = (WorkGroupID * WorkGroupSize) +
+    // GpuThreadId
+    llvm::Value *GpuThreadId = RT.getGPUThreadID(*this);
+    llvm::Value *WorkGroupSize = RT.getGPUNumThreads(*this);
+    llvm::Value *WorkGroupId = RT.getGPUBlockID(*this);
+    llvm::Value *WorkGroup = Builder.CreateMul(WorkGroupId, WorkGroupSize);
+    llvm::Value *GlobalGpuThreadId = Builder.CreateAdd(WorkGroup, GpuThreadId);
+
+    // Compute Grid Size (Total number of threads T) = WorkGroupSize * NumTeams
+    llvm::Value *NumTeams = RT.getGPUNumBlocks(*this);
+    auto TotalNumThreads = Builder.CreateMul(WorkGroupSize, NumTeams);
+
+    // Create a conditional break to the end of the kernel if the iteration
+    // variable(iv) exceeds total number of threads in the entire Grid. Note
+    // that `iv` was initialized with the GlobalTID of a thread.
+    llvm::Value *ThreadCondVal =
+        Builder.CreateICmpULT(Builder.CreateLoad(BigJumpLoopIvAddr),
+                              TotalNumThreads); // iv < TotalNumThreads
+    ExecBB = createBasicBlock("omp.kernel.body");
+    DoneBB = createBasicBlock("omp.kernel.done");
+    Builder.CreateCondBr(ThreadCondVal, ExecBB, DoneBB);
+    EmitBlock(ExecBB);
+
+    // Compute Segment size required for a work-item to loop through
+    llvm::Value *SegmentSizeForScan =
+        Builder.CreateAdd(Builder.CreateUDiv(InputSize, TotalNumThreads),
+                          llvm::ConstantInt::get(Int32Ty, 1),
+                          "padded_segment_size"); // Seg_Size = ceil(N / T)
+
+    if (!CGM.isXteamScanPhaseOne) // Emit call to DeviceRTL to compute segmented
+                                  // scanned values
+      EmitXteamScanPhaseTwo(
+          &S, SegmentSizeForScan, *Args,
+          CGM.getXteamRedBlockSize(*BigJumpLoopLD),
+          CGM.OMPPresentScanDirective->hasClausesOfKind<OMPInclusiveClause>());
+
+    // Every thread starts looping from the lower bound: GlobalTID * Seg_Size
+    Builder.CreateStore(
+        Builder.CreateMul(SegmentSizeForScan, GlobalGpuThreadId),
+        BigJumpLoopIvAddr); // *iv = GlobalTID * Seg_Size
+
+    // Every thread loops till just before the SegmentLoopUB = (GlobaTID + 1) *
+    // Seg_Size
+    SegmentLoopUB = Builder.CreateMul(
+        SegmentSizeForScan,
+        Builder.CreateAdd(GlobalGpuThreadId,
+                          llvm::ConstantInt::get(Int32Ty, 1)));
+
+    auto XteamVD = *(CGM.getXteamOrderedRedVar(&S).begin());
+    const CodeGenModule::XteamRedVarMap &RedVarMap = CGM.getXteamRedVarMap(&S);
+    const CodeGenModule::XteamRedVarInfo &RVI =
+        (RedVarMap.find(XteamVD))->second;
+    RedVarAddr = &(RVI.RedVarAddr);
+    RedVarType = XteamVD->getType();
+
+    // SegmentValsAddr points to the SegmentVals array which will store the
+    // intermediate scan results computed per segment by a single thread
+    // sequentially.
+    Address SegmentValsAddr = GetAddrOfLocalVar((*Args)[RVI.ArgPos + 3]);
+    DSegmentVals = Builder.CreateLoad(SegmentValsAddr);
+  }
+
   const Expr *CondExpr = BigJumpLoopLD ? BigJumpLoopLD->getCond() : S.getCond();
 
   // Start the loop with a block that tests the condition.
@@ -2298,16 +2429,37 @@ void CodeGenFunction::EmitForStmtWithArgs(const ForStmt &S,
     // As long as the condition is true, iterate the loop.
     llvm::BasicBlock *ForBody = createBasicBlock("for.body");
 
-    // C99 6.8.5p2/p4: The first substatement is executed if the expression
-    // compares unequal to 0.  The condition must be a scalar type.
-    llvm::Value *BoolCondVal = EvaluateExprAsBool(CondExpr);
-    llvm::MDNode *Weights =
-        createProfileWeightsForLoop(CondExpr, getProfileCount(S.getBody()));
-    if (!Weights && CGM.getCodeGenOpts().OptimizationLevel)
-      BoolCondVal = emitCondLikelihoodViaExpectIntrinsic(
-          BoolCondVal, Stmt::getLikelihood(S.getBody()));
+    if (getLangOpts().OpenMPIsTargetDevice &&
+        getLangOpts().OpenMPTargetXteamScanSegmented) {
+      // Emit the Segment loop breaking condition
 
-    Builder.CreateCondBr(BoolCondVal, ForBody, ExitBlock, Weights);
+      llvm::Value *loopIterationVar = Builder.CreateLoad(BigJumpLoopIvAddr);
+      llvm::Value *isWithinSegmentBounds = Builder.CreateICmpULT(
+          loopIterationVar, SegmentLoopUB); // iv < SegmentLoopUB
+      llvm::Value *isWithinGlobalBounds = Builder.CreateICmpULE(
+          loopIterationVar, GlobalUpperBound); // iv <= GlobalUB
+      llvm::Value *BoolCondVal = Builder.CreateAnd(
+          isWithinGlobalBounds,
+          isWithinSegmentBounds); // (iv < SegmentLoopUB) && (iv <= GlobalUB)
+      llvm::MDNode *Weights =
+          createProfileWeightsForLoop(CondExpr, getProfileCount(S.getBody()));
+      if (!Weights && CGM.getCodeGenOpts().OptimizationLevel)
+        BoolCondVal = emitCondLikelihoodViaExpectIntrinsic(
+            BoolCondVal, Stmt::getLikelihood(S.getBody()));
+
+      Builder.CreateCondBr(BoolCondVal, ForBody, ExitBlock, Weights);
+    } else {
+      // C99 6.8.5p2/p4: The first substatement is executed if the expression
+      // compares unequal to 0.  The condition must be a scalar type.
+      llvm::Value *BoolCondVal = EvaluateExprAsBool(CondExpr);
+      llvm::MDNode *Weights =
+          createProfileWeightsForLoop(CondExpr, getProfileCount(S.getBody()));
+      if (!Weights && CGM.getCodeGenOpts().OptimizationLevel)
+        BoolCondVal = emitCondLikelihoodViaExpectIntrinsic(
+            BoolCondVal, Stmt::getLikelihood(S.getBody()));
+
+      Builder.CreateCondBr(BoolCondVal, ForBody, ExitBlock, Weights);
+    }
 
     if (ExitBlock != LoopExit.getBlock()) {
       EmitBlock(ExitBlock);
@@ -2343,7 +2495,29 @@ void CodeGenFunction::EmitForStmtWithArgs(const ForStmt &S,
                              getProfileCount(BigJumpLoopLD->getBody()));
         EmitBlock(NextBB);
       }
-      EmitOMPNoLoopBody(*BigJumpLoopLD);
+      if (CGM.getLangOpts().OpenMPTargetXteamScanSegmented) {
+        if (!CGM.isXteamScanPhaseOne) {
+          // SegmentVals contains the final scanned results computed for every
+          // element in a segment.
+          Address SegmentValsGEP = Address(
+              Builder.CreateGEP(Int32Ty, DSegmentVals,
+                                Builder.CreateLoad(BigJumpLoopIvAddr)),
+              Int32Ty,
+              getContext().getTypeAlignInChars(RedVarType)); // SegmentVals[*iv]
+          // emit redvar = SegmentVals[omp.iv]
+          Builder.CreateStore(Builder.CreateLoad(SegmentValsGEP), *RedVarAddr);
+        }
+        CodeGenFunction::ParentLoopDirectiveForScanRegion ScanRegion(
+            *this, *BigJumpLoopLD);
+        {
+          OMPFirstScanLoop = CGM.isXteamScanPhaseOne;
+          CodeGenFunction::OMPLocalDeclMapRAII Scope(*this);
+          EmitOMPXteamScanNoLoopBody(*BigJumpLoopLD);
+        }
+        if (!CGM.isXteamScanPhaseOne)
+          CGM.OMPPresentScanDirective = nullptr;
+      } else
+        EmitOMPNoLoopBody(*BigJumpLoopLD);
     } else {
       EmitStmt(S.getBody());
     }
@@ -2351,10 +2525,26 @@ void CodeGenFunction::EmitForStmtWithArgs(const ForStmt &S,
 
   if (CGM.getLangOpts().OpenMPIsTargetDevice &&
       (CGM.isXteamRedKernel(&S) || CGM.isBigJumpLoopKernel(&S))) {
-    EmitBlock(Continue.getBlock());
-    EmitBigJumpLoopInc(
-        S, LoopVar,
-        BigJumpLoopIvAddr); // *iv = *iv + num_teams * num_threads
+    if (CGM.getLangOpts().OpenMPTargetXteamScanSegmented) {
+      EmitBlock(Continue.getBlock());
+      Address SegmentValsGEP = Address(
+          Builder.CreateGEP(Int32Ty, DSegmentVals,
+                            Builder.CreateLoad(BigJumpLoopIvAddr)),
+          Int32Ty,
+          getContext().getTypeAlignInChars(RedVarType)); // Segment_Vals[*iv]
+      Builder.CreateStore(Builder.CreateLoad(*RedVarAddr),
+                          SegmentValsGEP); // Segment_Vals[*iv] = red_var
+      llvm::Value *SegmentScanLoopInc =
+          Builder.CreateAdd(llvm::ConstantInt::get(Int32Ty, 1),
+                            Builder.CreateLoad(BigJumpLoopIvAddr));
+      Builder.CreateStore(SegmentScanLoopInc,
+                          BigJumpLoopIvAddr); // *iv = *iv + 1
+    } else {
+      EmitBlock(Continue.getBlock());
+      EmitBigJumpLoopInc(
+          S, LoopVar,
+          BigJumpLoopIvAddr); // *iv = *iv + num_teams * num_threads
+    }
   } else {
     // If there is an increment, emit it next.
     if (S.getInc()) {
@@ -2379,6 +2569,13 @@ void CodeGenFunction::EmitForStmtWithArgs(const ForStmt &S,
   // Emit the fall-through block.
   EmitBlock(LoopExit.getBlock(), true);
 
+  if (CGM.getLangOpts().OpenMPIsTargetDevice &&
+      CGM.getLangOpts().OpenMPTargetXteamScanSegmented) {
+    if (CGM.isXteamScanPhaseOne)
+      EmitXteamScanSum(&S, *Args, CGM.getXteamRedBlockSize(*BigJumpLoopLD));
+    EmitBranch(DoneBB);
+    EmitBlock(DoneBB);
+  }
   // When single byte coverage mode is enabled, add a counter to continuation
   // block.
   if (llvm::EnableSingleByteCoverage)

@@ -2906,7 +2906,12 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamScanSum(
 
   if (SumType->isIntegerTy()) {
     if (WarpSize == 64) {
-      if (BlockSize == 512)
+      if (BlockSize == 1024)
+        return CGF.EmitRuntimeCall(
+            OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                  OMPRTL___kmpc_xteams_i_16x64),
+            Args);
+      else if (BlockSize == 512)
         return CGF.EmitRuntimeCall(
             OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
                                                   OMPRTL___kmpc_xteams_i_8x64),
@@ -2917,7 +2922,7 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamScanSum(
                                                   OMPRTL___kmpc_xteams_i_4x64),
             Args);
       else
-        llvm_unreachable("Block size should be 256 or 512.");
+        llvm_unreachable("Block size should be 256, 512 or 1024.");
     } else if (WarpSize == 32) {
       if (BlockSize == 512)
         return CGF.EmitRuntimeCall(
@@ -2928,6 +2933,79 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamScanSum(
         return CGF.EmitRuntimeCall(
             OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
                                                   OMPRTL___kmpc_xteams_i_8x32),
+            Args);
+      else
+        llvm_unreachable("Block size should be 256 or 512.");
+    } else
+      llvm_unreachable("Warp size should be 32 or 64.");
+  }
+  llvm_unreachable("No support for other types currently.");
+}
+
+llvm::Value *CGOpenMPRuntimeGPU::getXteamScanPhaseTwo(
+    CodeGenFunction &CGF, llvm::Value *Val, llvm::Value *SegmentSize,
+    llvm::Value *DTeamVals, llvm::Value *DScanStorage,
+    llvm::Value *DSegmentVals, llvm::Value *ThreadStartIndex, int BlockSize,
+    bool IsInclusiveScan) {
+  // TODO handle more types
+  llvm::Type *SumType = Val->getType();
+  assert(
+      (SumType->isIntegerTy() && (SumType->getPrimitiveSizeInBits() == 32 ||
+                                  SumType->getPrimitiveSizeInBits() == 64)) &&
+      "Unhandled type");
+
+  llvm::Type *Int32Ty = llvm::Type::getInt32Ty(CGM.getLLVMContext());
+  llvm::Type *Int64Ty = llvm::Type::getInt64Ty(CGM.getLLVMContext());
+
+  std::pair<llvm::Value *, llvm::Value *> RfunPair =
+      getXteamRedFunctionPtrs(CGF, SumType);
+  llvm::Value *ZeroVal = SumType->getPrimitiveSizeInBits() == 32
+                             ? llvm::ConstantInt::get(Int32Ty, 0)
+                             : llvm::ConstantInt::get(Int64Ty, 0);
+
+  llvm::Value *IsInclusiveScanVal =
+      llvm::ConstantInt::get(Int32Ty, IsInclusiveScan);
+  llvm::Value *Args[] = {DScanStorage,     SegmentSize,       DTeamVals,
+                         DSegmentVals,     RfunPair.first,    ZeroVal,
+                         ThreadStartIndex, IsInclusiveScanVal};
+
+  unsigned WarpSize = CGF.getTarget().getGridValue().GV_Warp_Size;
+  assert(WarpSize == 32 || WarpSize == 64);
+
+  assert(BlockSize > 0 && BlockSize <= llvm::omp::xteam_red::MaxBlockSize &&
+         "XTeam Reduction blocksize outside expected range");
+  assert(((BlockSize & (BlockSize - 1)) == 0) &&
+         "XTeam Reduction blocksize must be a power of two");
+
+  if (SumType->isIntegerTy()) {
+    if (WarpSize == 64) {
+      if (BlockSize == 1024)
+        return CGF.EmitRuntimeCall(
+            OMPBuilder.getOrCreateRuntimeFunction(
+                CGM.getModule(), OMPRTL___kmpc_xteams_phase2_i_16x64),
+            Args);
+      else if (BlockSize == 512)
+        return CGF.EmitRuntimeCall(
+            OMPBuilder.getOrCreateRuntimeFunction(
+                CGM.getModule(), OMPRTL___kmpc_xteams_phase2_i_8x64),
+            Args);
+      else if (BlockSize == 256)
+        return CGF.EmitRuntimeCall(
+            OMPBuilder.getOrCreateRuntimeFunction(
+                CGM.getModule(), OMPRTL___kmpc_xteams_phase2_i_4x64),
+            Args);
+      else
+        llvm_unreachable("Block size should be 256, 512 or 1024.");
+    } else if (WarpSize == 32) {
+      if (BlockSize == 512)
+        return CGF.EmitRuntimeCall(
+            OMPBuilder.getOrCreateRuntimeFunction(
+                CGM.getModule(), OMPRTL___kmpc_xteams_phase2_i_16x32),
+            Args);
+      else if (BlockSize == 256)
+        return CGF.EmitRuntimeCall(
+            OMPBuilder.getOrCreateRuntimeFunction(
+                CGM.getModule(), OMPRTL___kmpc_xteams_phase2_i_8x32),
             Args);
       else
         llvm_unreachable("Block size should be 256 or 512.");
