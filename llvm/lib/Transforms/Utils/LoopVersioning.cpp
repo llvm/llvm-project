@@ -280,7 +280,7 @@ bool runImpl(LoopInfo *LI, LoopAccessInfoManager &LAIs, DominatorTree *DT,
         (LAI.getNumRuntimePointerChecks() ||
          !LAI.getPSE().getPredicate().isAlwaysTrue())) {
       if (!L->isLCSSAForm(*DT))
-        llvm::formLCSSARecursively(*L, *DT, LI, SE);
+       formLCSSARecursively(*L, *DT, LI, SE);
 
       LoopVersioning LVer(LAI, LAI.getRuntimePointerChecking()->getChecks(), L,
                           LI, DT, SE);
