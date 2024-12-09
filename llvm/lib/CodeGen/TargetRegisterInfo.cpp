@@ -674,6 +674,49 @@ TargetRegisterInfo::prependOffsetExpression(const DIExpression *Expr,
                                       PrependFlags & DIExpression::EntryValue);
 }
 
+unsigned TargetRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
+                                                    unsigned Idx) const {
+  const TargetRegisterClass *RC = nullptr;
+  unsigned NumRCUnits = 0;
+  for (const TargetRegisterClass *C : regclasses()) {
+    const int *PSetID = getRegClassPressureSets(C);
+    for (; *PSetID != -1; ++PSetID) {
+      if ((unsigned)*PSetID == Idx)
+        break;
+    }
+    if (*PSetID == -1)
+      continue;
+
+    // Found a register class that counts against this pressure set.
+    // For efficiency, only compute the set order for the largest set.
+    unsigned NUnits = getRegClassWeight(C).WeightLimit;
+    if (!RC || NUnits > NumRCUnits) {
+      RC = C;
+      NumRCUnits = NUnits;
+    }
+  }
+  assert(RC && "Failed to find register class");
+
+  unsigned NReserved = 0;
+  const BitVector Reserved = MF.getRegInfo().getReservedRegs();
+  for (MCPhysReg PhysReg : RC->getRawAllocationOrder(MF))
+    if (Reserved.test(PhysReg))
+      NReserved++;
+
+  unsigned NAllocatableRegs = RC->getNumRegs() - NReserved;
+  unsigned RegPressureSetLimit = getRawRegPressureSetLimit(MF, Idx);
+  // If all the regs are reserved, return raw RegPressureSetLimit.
+  // One example is VRSAVERC in PowerPC.
+  // Avoid returning zero, RegisterClassInfo::getRegPressureSetLimit(Idx)
+  // assumes this returns non-zero value.
+  if (NAllocatableRegs == 0) {
+    LLVM_DEBUG(dbgs() << "All registers of " << getRegClassName(RC)
+                      << " are reserved!\n";);
+    return RegPressureSetLimit;
+  }
+  return RegPressureSetLimit - getRegClassWeight(RC).RegWeight * NReserved;
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD
 void TargetRegisterInfo::dumpReg(Register Reg, unsigned SubRegIndex,

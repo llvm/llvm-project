@@ -1,7 +1,7 @@
 ; REQUIRES: asserts
-; RUN: llc -debug-only=regalloc < %s 2>&1 |FileCheck %s --check-prefix=DEBUG
+; RUN: llc -debug-only=target-reg-info < %s 2>&1 |FileCheck %s --check-prefix=DEBUG
 
-; DEBUG-COUNT-1:         AllocationOrder(VRSAVERC) = [ ]
+; DEBUG-COUNT-1: All registers of VRSAVERC are reserved!
 
 target triple = "powerpc64le-unknown-linux-gnu"
 
