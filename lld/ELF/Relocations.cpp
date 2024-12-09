@@ -65,21 +65,8 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
-static std::optional<std::string> getLinkerScriptLocation(Ctx &ctx,
-                                                          const Symbol &sym) {
-  for (SectionCommand *cmd : ctx.script->sectionCommands)
-    if (auto *assign = dyn_cast<SymbolAssignment>(cmd))
-      if (assign->sym == &sym)
-        return assign->location;
-  return std::nullopt;
-}
-
 static void printDefinedLocation(ELFSyncStream &s, const Symbol &sym) {
-  s << "\n>>> defined in ";
-  if (sym.file)
-    return void(s << sym.file);
-  if (std::optional<std::string> loc = getLinkerScriptLocation(s.ctx, sym))
-    return void(s << *loc);
+  s << "\n>>> defined in " << sym.file;
 }
 
 // Construct a message in the following format.
@@ -323,7 +310,6 @@ static void replaceWithDefined(Ctx &ctx, Symbol &sym, SectionBase &sec,
       .overwrite(sym);
 
   sym.versionId = old.versionId;
-  sym.exportDynamic = true;
   sym.isUsedInRegularObj = true;
   // A copy relocated alias may need a GOT entry.
   sym.flags.store(old.flags.load(std::memory_order_relaxed) & NEEDS_GOT,
@@ -526,7 +512,7 @@ int64_t RelocationScanner::computeMipsAddend(const RelTy &rel, RelExpr expr,
 // Custom error message if Sym is defined in a discarded section.
 template <class ELFT>
 static void maybeReportDiscarded(Ctx &ctx, ELFSyncStream &msg, Undefined &sym) {
-  auto *file = dyn_cast_or_null<ObjFile<ELFT>>(sym.file);
+  auto *file = dyn_cast<ObjFile<ELFT>>(sym.file);
   if (!file || !sym.discardedSecIdx)
     return;
   ArrayRef<typename ELFT::Shdr> objSections =
@@ -582,11 +568,11 @@ static const Symbol *getAlternativeSpelling(Ctx &ctx, const Undefined &sym,
                                             std::string &pre_hint,
                                             std::string &post_hint) {
   DenseMap<StringRef, const Symbol *> map;
-  if (sym.file && sym.file->kind() == InputFile::ObjKind) {
+  if (sym.file->kind() == InputFile::ObjKind) {
     auto *file = cast<ELFFileBase>(sym.file);
     // If sym is a symbol defined in a discarded section, maybeReportDiscarded()
     // will give an error. Don't suggest an alternative spelling.
-    if (file && sym.discardedSecIdx != 0 &&
+    if (sym.discardedSecIdx != 0 &&
         file->getSections()[sym.discardedSecIdx] == &InputSection::discarded)
       return nullptr;
 
@@ -756,9 +742,8 @@ static void reportUndefinedSymbol(Ctx &ctx, const UndefinedDiag &undef,
     std::string pre_hint = ": ", post_hint;
     if (const Symbol *corrected =
             getAlternativeSpelling(ctx, sym, pre_hint, post_hint)) {
-      msg << "\n>>> did you mean" << pre_hint << corrected << post_hint;
-      if (corrected->file)
-        msg << "\n>>> defined in: " << corrected->file;
+      msg << "\n>>> did you mean" << pre_hint << corrected << post_hint
+          << "\n>>> defined in: " << corrected->file;
     }
   }
 
@@ -1071,7 +1056,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
   // direct relocation on through.
   if (LLVM_UNLIKELY(isIfunc) && ctx.arg.zIfuncNoplt) {
     std::lock_guard<std::mutex> lock(ctx.relocMutex);
-    sym.exportDynamic = true;
+    sym.isExported = true;
     ctx.mainPart->relaDyn->addSymbolReloc(type, *sec, offset, sym, addend,
                                           type);
     return;
@@ -1687,6 +1672,17 @@ template <class ELFT> void elf::scanRelocations(Ctx &ctx) {
     outerFn();
 }
 
+RelocationBaseSection &elf::getIRelativeSection(Ctx &ctx) {
+  // Prior to Android V, there was a bug that caused RELR relocations to be
+  // applied after packed relocations. This meant that resolvers referenced by
+  // IRELATIVE relocations in the packed relocation section would read
+  // unrelocated globals with RELR relocations when
+  // --pack-relative-relocs=android+relr is enabled. Work around this by placing
+  // IRELATIVE in .rela.plt.
+  return ctx.arg.androidPackDynRelocs ? *ctx.in.relaPlt
+                                      : *ctx.mainPart->relaDyn;
+}
+
 static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
   // Handle a reference to a non-preemptible ifunc. These are special in a
   // few ways:
@@ -1736,17 +1732,9 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
   // original section/value pairs. For non-GOT non-PLT relocation case below, we
   // may alter section/value, so create a copy of the symbol to make
   // section/value fixed.
-  //
-  // Prior to Android V, there was a bug that caused RELR relocations to be
-  // applied after packed relocations. This meant that resolvers referenced by
-  // IRELATIVE relocations in the packed relocation section would read
-  // unrelocated globals with RELR relocations when
-  // --pack-relative-relocs=android+relr is enabled. Work around this by placing
-  // IRELATIVE in .rela.plt.
   auto *directSym = makeDefined(cast<Defined>(sym));
   directSym->allocateAux(ctx);
-  auto &dyn =
-      ctx.arg.androidPackDynRelocs ? *ctx.in.relaPlt : *ctx.mainPart->relaDyn;
+  auto &dyn = getIRelativeSection(ctx);
   addPltEntry(ctx, *ctx.in.iplt, *ctx.in.igotPlt, dyn, ctx.target->iRelativeRel,
               *directSym);
   sym.allocateAux(ctx);

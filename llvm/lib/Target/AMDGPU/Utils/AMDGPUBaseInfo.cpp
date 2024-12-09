@@ -406,9 +406,6 @@ struct FP8DstByteSelInfo {
 #if LLPC_BUILD_GFX12
 #define GET_DPMACCInstructionTable_DECL
 #define GET_DPMACCInstructionTable_IMPL
-#else /* LLPC_BUILD_GFX12 */
-#define GET_FP8DstByteSelTable_DECL
-#define GET_FP8DstByteSelTable_IMPL
 #endif /* LLPC_BUILD_GFX12 */
 #define GET_MTBUFInfoTable_DECL
 #define GET_MTBUFInfoTable_IMPL
