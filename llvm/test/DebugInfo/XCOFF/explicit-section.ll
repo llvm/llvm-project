@@ -43,6 +43,7 @@ entry:
 !16 = !DILocation(line: 3, column: 3, scope: !14)
 
 ; CHECK:               .file   "2.c"
+; CHECK-NEXT:          .machine "PWR7"
 ; CHECK-NEXT:          .csect ..text..[PR],5
 ; CHECK-NEXT:          .rename ..text..[PR],""
 ; CHECK-NEXT:          .globl  bar[DS]                         # -- Begin function bar
