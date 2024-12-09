@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CODECVT
-#define _LIBCPP_CODECVT
+#ifndef _LIBCPP___CXX03_CODECVT
+#define _LIBCPP___CXX03_CODECVT
 
 /*
     codecvt synopsis
@@ -594,4 +594,4 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <__cxx03/typeinfo>
 #endif
 
-#endif // _LIBCPP_CODECVT
+#endif // _LIBCPP___CXX03_CODECVT

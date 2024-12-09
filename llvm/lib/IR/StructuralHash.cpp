@@ -301,7 +301,6 @@ public:
     Hashes.emplace_back(Hash);
     Hashes.emplace_back(GlobalHeaderHash);
     Hashes.emplace_back(GV.getValueType()->getTypeID());
-    Hashes.emplace_back(hashGlobalVariable(GV));
 
     // Update the combined hash in place.
     Hash = stable_hash_combine(Hashes);

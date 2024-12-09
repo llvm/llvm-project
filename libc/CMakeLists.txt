@@ -7,6 +7,7 @@ if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
 endif()
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
+include(CheckCXXCompilerFlag)
 
 if (LIBC_CMAKE_VERBOSE_LOGGING)
   get_directory_property(LIBC_OLD_PREPROCESSOR_DEFS COMPILE_DEFINITIONS)
@@ -52,25 +53,12 @@ set(LIBC_NAMESPACE ${default_namespace}
 
 # We will build the GPU utilities if we are not doing a runtimes build.
 option(LIBC_BUILD_GPU_LOADER "Always build the GPU loader utilities" OFF)
-if(LIBC_BUILD_GPU_LOADER OR NOT LLVM_RUNTIMES_BUILD)
-  foreach(_name ${LLVM_RUNTIME_TARGETS})
-    if("libc" IN_LIST RUNTIMES_${_name}_LLVM_ENABLE_RUNTIMES)
-      if("${_name}" STREQUAL "amdgcn-amd-amdhsa" OR "${_name}" STREQUAL "nvptx64-nvidia-cuda")
-        set(LIBC_NEED_LOADER_UTILS TRUE)
-      endif()
-    endif()
-  endforeach()
-  if("${LIBC_TARGET_TRIPLE}" STREQUAL "amdgcn-amd-amdhsa" OR
-     "${LIBC_TARGET_TRIPLE}" STREQUAL "nvptx64-nvidia-cuda")
-    set(LIBC_NEED_LOADER_UTILS TRUE)
-  endif()
-  if(LIBC_NEED_LOADER_UTILS)
-    add_subdirectory(utils/gpu)
-    return()
-  endif()
+if(LIBC_BUILD_GPU_LOADER OR ((NOT LLVM_RUNTIMES_BUILD) AND LLVM_LIBC_GPU_BUILD))
+  add_subdirectory(utils/gpu)
+  return()
 endif()
 
-add_subdirectory(newhdrgen)
+add_subdirectory(hdrgen)
 
 option(LIBC_CMAKE_VERBOSE_LOGGING
   "Log details warnings and notifications during CMake configuration." OFF)
