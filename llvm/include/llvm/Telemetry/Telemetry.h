@@ -32,8 +32,9 @@ public:
   virtual void writeInt32(StringRef KeyName, int Value) = 0;
   virtual void writeSizeT(StringRef KeyName, size_t Value) = 0;
   virtual void writeString(StringRef KeyName, StringRef Value) = 0;
-  virtual void writeKeyValueMap(StringRef KeyName,
-                                std::map<std::string, std::string> Value) = 0;
+  virtual void
+  writeKeyValueMap(StringRef KeyName,
+                   const std::map<std::string, std::string> &Value) = 0;
   virtual llvm::Error finish() = 0;
 };
 
