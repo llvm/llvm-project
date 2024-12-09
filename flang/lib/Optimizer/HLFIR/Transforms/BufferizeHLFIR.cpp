@@ -806,8 +806,13 @@ struct ElementalOpConversion
     // elemental is a "view" over a variable (e.g parentheses or transpose).
     if (auto asExpr = elementValue.getDefiningOp<hlfir::AsExprOp>()) {
       if (asExpr->hasOneUse() && !asExpr.isMove()) {
-        elementValue = hlfir::Entity{asExpr.getVar()};
-        rewriter.eraseOp(asExpr);
+        // Check that the asExpr is the final operation before the yield,
+        // otherwise, clean-ups could impact the memory being re-used.
+        mlir::Operation *nextOp = asExpr->getNextNode();
+        if (nextOp && nextOp == yield.getOperation()) {
+          elementValue = hlfir::Entity{asExpr.getVar()};
+          rewriter.eraseOp(asExpr);
+        }
       }
     }
     rewriter.eraseOp(yield);
