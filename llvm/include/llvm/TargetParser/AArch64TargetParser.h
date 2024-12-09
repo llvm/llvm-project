@@ -209,6 +209,9 @@ struct ExtensionSet {
   void reconstructFromParsedFeatures(const std::vector<std::string> &Features,
                                      std::vector<std::string> &NonExtensions);
 
+  // Constructs a FMV feature mask according to the enabled bits of this set.
+  uint64_t toCpuSupportsMask() const;
+
   // Convert the set of enabled extension to an LLVM feature list, appending
   // them to Features.
   template <typename T> void toLLVMFeatureList(std::vector<T> &Features) const {
