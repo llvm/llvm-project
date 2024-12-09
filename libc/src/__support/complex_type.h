@@ -69,7 +69,7 @@ template <> struct make_real<cfloat128> {
 
 template <typename T> using make_real_t = typename make_real<T>::type;
 
-template <typename T> T conjugate(T c) {
+template <typename T> LIBC_INLINE constexpr T conjugate(T c) {
   Complex<make_real_t<T>> c_c = cpp::bit_cast<Complex<make_real_t<T>>>(c);
   c_c.imag = -c_c.imag;
   return cpp::bit_cast<T>(c_c);
