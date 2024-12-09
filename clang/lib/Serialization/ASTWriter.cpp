@@ -4937,7 +4937,7 @@ ASTWriter::WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
 
   Sema *SemaPtr = Subject.dyn_cast<Sema *>();
   Preprocessor &PPRef =
-      SemaPtr ? SemaPtr->getPreprocessor() : *Subject.get<Preprocessor *>();
+      SemaPtr ? SemaPtr->getPreprocessor() : *cast<Preprocessor *>(Subject);
 
   ASTHasCompilerErrors = PPRef.getDiagnostics().hasUncompilableErrorOccurred();
 

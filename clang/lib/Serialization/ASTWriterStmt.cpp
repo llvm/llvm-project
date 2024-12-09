@@ -480,7 +480,7 @@ addConstraintSatisfaction(ASTRecordWriter &Record,
       if (E)
         Record.AddStmt(E);
       else {
-        auto *Diag = DetailRecord.get<std::pair<SourceLocation, StringRef> *>();
+        auto *Diag = cast<std::pair<SourceLocation, StringRef> *>(DetailRecord);
         Record.AddSourceLocation(Diag->first);
         Record.AddString(Diag->second);
       }
@@ -532,10 +532,11 @@ void ASTStmtWriter::VisitRequiresExpr(RequiresExpr *E) {
       Record.push_back(ExprReq->getKind());
       Record.push_back(ExprReq->Status);
       if (ExprReq->isExprSubstitutionFailure()) {
-        addSubstitutionDiagnostic(Record,
-         ExprReq->Value.get<concepts::Requirement::SubstitutionDiagnostic *>());
+        addSubstitutionDiagnostic(
+            Record, cast<concepts::Requirement::SubstitutionDiagnostic *>(
+                        ExprReq->Value));
       } else
-        Record.AddStmt(ExprReq->Value.get<Expr *>());
+        Record.AddStmt(cast<Expr *>(ExprReq->Value));
       if (ExprReq->getKind() == concepts::Requirement::RK_Compound) {
         Record.AddSourceLocation(ExprReq->NoexceptLoc);
         const auto &RetReq = ExprReq->getReturnTypeRequirement();
@@ -1166,7 +1167,7 @@ void ASTStmtWriter::VisitInitListExpr(InitListExpr *E) {
   Record.AddStmt(E->getSyntacticForm());
   Record.AddSourceLocation(E->getLBraceLoc());
   Record.AddSourceLocation(E->getRBraceLoc());
-  bool isArrayFiller = E->ArrayFillerOrUnionFieldInit.is<Expr*>();
+  bool isArrayFiller = isa<Expr *>(E->ArrayFillerOrUnionFieldInit);
   Record.push_back(isArrayFiller);
   if (isArrayFiller)
     Record.AddStmt(E->getArrayFiller());
