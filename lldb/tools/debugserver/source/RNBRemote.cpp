@@ -22,6 +22,7 @@
 #include <mach/mach_vm.h>
 #include <mach/task_info.h>
 #include <pwd.h>
+#include <string>
 #include <sys/stat.h>
 #include <sys/sysctl.h>
 #include <unistd.h>
@@ -2567,10 +2568,13 @@ rnb_err_t RNBRemote::HandlePacket_QSetProcessEvent(const char *p) {
   return SendPacket("OK");
 }
 
-void register_value_in_hex_fixed_width(std::ostream &ostrm, nub_process_t pid,
+// if a fail_value is provided, a correct-length reply is always provided,
+// even if the register cannot be read right now on this thread.
+bool register_value_in_hex_fixed_width(std::ostream &ostrm, nub_process_t pid,
                                        nub_thread_t tid,
                                        const register_map_entry_t *reg,
-                                       const DNBRegisterValue *reg_value_ptr) {
+                                       const DNBRegisterValue *reg_value_ptr,
+                                       std::optional<uint8_t> fail_value) {
   if (reg != NULL) {
     DNBRegisterValue reg_value;
     if (reg_value_ptr == NULL) {
@@ -2582,27 +2586,31 @@ void register_value_in_hex_fixed_width(std::ostream &ostrm, nub_process_t pid,
     if (reg_value_ptr) {
       append_hex_value(ostrm, reg_value_ptr->value.v_uint8, reg->nub_info.size,
                        false);
-    } else {
-      // If we fail to read a register value, check if it has a default
-      // fail value. If it does, return this instead in case some of
-      // the registers are not available on the current system.
-      if (reg->nub_info.size > 0) {
-        std::vector<uint8_t> zeros(reg->nub_info.size, '\0');
-        append_hex_value(ostrm, zeros.data(), zeros.size(), false);
-      }
+      return true;
     }
+    if (!fail_value || reg->nub_info.size == 0)
+      return false;
+
+    // Pad out the reply to the correct size to maintain correct offsets,
+    // even if we could not read the register value.
+    std::vector<uint8_t> zeros(reg->nub_info.size, *fail_value);
+    append_hex_value(ostrm, zeros.data(), zeros.size(), false);
+    return true;
   }
+  return false;
 }
 
 void debugserver_regnum_with_fixed_width_hex_register_value(
     std::ostream &ostrm, nub_process_t pid, nub_thread_t tid,
-    const register_map_entry_t *reg, const DNBRegisterValue *reg_value_ptr) {
+    const register_map_entry_t *reg, const DNBRegisterValue *reg_value_ptr,
+    std::optional<uint8_t> fail_value) {
   // Output the register number as 'NN:VVVVVVVV;' where NN is a 2 bytes HEX
   // gdb register number, and VVVVVVVV is the correct number of hex bytes
   // as ASCII for the register value.
   if (reg != NULL) {
     ostrm << RAWHEX8(reg->debugserver_regnum) << ':';
-    register_value_in_hex_fixed_width(ostrm, pid, tid, reg, reg_value_ptr);
+    register_value_in_hex_fixed_width(ostrm, pid, tid, reg, reg_value_ptr,
+                                      fail_value);
     ostrm << ';';
   }
 }
@@ -2842,31 +2850,32 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
     if (g_num_reg_entries == 0)
       InitializeRegisters();
 
-    if (g_reg_entries != NULL) {
-      auto interesting_regset = [](int regset) -> bool {
-#if defined(__arm64__) || defined(__aarch64__)
-        // GPRs and exception registers, helpful for debugging
-        // from packet logs.
-        return regset == 1 || regset == 3;
-#else
-        return regset == 1;
-#endif
-      };
+    nub_size_t num_reg_sets = 0;
+    const DNBRegisterSetInfo *reg_sets = DNBGetRegisterSetInfo(&num_reg_sets);
 
-      DNBRegisterValue reg_value;
-      for (uint32_t reg = 0; reg < g_num_reg_entries; reg++) {
-        // Expedite all registers in the first register set that aren't
-        // contained in other registers
-        if (interesting_regset(g_reg_entries[reg].nub_info.set) &&
-            g_reg_entries[reg].nub_info.value_regs == NULL) {
-          if (!DNBThreadGetRegisterValueByID(
-                  pid, tid, g_reg_entries[reg].nub_info.set,
-                  g_reg_entries[reg].nub_info.reg, &reg_value))
-            continue;
+    DNBRegisterValue reg_value;
+    for (uint32_t reg = 0; reg < g_num_reg_entries; reg++) {
+      int regset = g_reg_entries[reg].nub_info.set;
+      bool include_reg = false;
+      // Expedite interesting register sets, all registers not
+      // contained in other registers
+      if (g_reg_entries[reg].nub_info.value_regs == nullptr &&
+          (strcmp("General Purpose Registers", reg_sets[regset].name) == 0 ||
+           strcmp("Exception State Registers", reg_sets[regset].name) == 0))
+        include_reg = true;
+      // Include the SME state registers
+      if (strcmp("svcr", g_reg_entries[reg].nub_info.name) == 0 ||
+          strcmp("tpidr2", g_reg_entries[reg].nub_info.name) == 0 ||
+          strcmp("svl", g_reg_entries[reg].nub_info.name) == 0)
+        include_reg = true;
 
-          debugserver_regnum_with_fixed_width_hex_register_value(
-              ostrm, pid, tid, &g_reg_entries[reg], &reg_value);
-        }
+      if (include_reg) {
+        if (!DNBThreadGetRegisterValueByID(
+                pid, tid, regset, g_reg_entries[reg].nub_info.reg, &reg_value))
+          continue;
+
+        debugserver_regnum_with_fixed_width_hex_register_value(
+            ostrm, pid, tid, &g_reg_entries[reg], &reg_value, std::nullopt);
       }
     }
 
@@ -4212,7 +4221,9 @@ rnb_err_t RNBRemote::HandlePacket_p(const char *p) {
       append_hex_value(ostrm, zeros.data(), zeros.size(), false);
     }
   } else {
-    register_value_in_hex_fixed_width(ostrm, pid, tid, reg_entry, NULL);
+    if (!register_value_in_hex_fixed_width(ostrm, pid, tid, reg_entry, NULL,
+                                           std::nullopt))
+      return SendErrorPacket("E97");
   }
   return SendPacket(ostrm.str());
 }
