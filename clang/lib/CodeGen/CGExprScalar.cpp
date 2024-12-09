@@ -2267,6 +2267,9 @@ static Value *EmitHLSLAggregateFlatCast(CodeGenFunction &CGF, Address RHSVal,
                                         QualType RHSTy, QualType LHSTy,
                                         SourceLocation Loc) {
   SmallVector<llvm::Value *, 4> IdxList;
+  IdxList.push_back(
+      llvm::ConstantInt::get(llvm::IntegerType::get(CGF.getLLVMContext(), 32),
+                             0)); // because an Address is a pointer
   SmallVector<std::pair<Address, llvm::Value *>, 16> LoadGEPList;
   SmallVector<QualType> SrcTypes; // Flattened type
   CGF.FlattenAccessAndType(RHSVal, RHSTy, IdxList, LoadGEPList, SrcTypes);
@@ -2277,7 +2280,10 @@ static Value *EmitHLSLAggregateFlatCast(CodeGenFunction &CGF, Address RHSVal,
         CGF.Builder.CreateLoad(CGF.CreateIRTemp(LHSTy, "flatcast.tmp"));
     // write to V.
     for (unsigned i = 0; i < VecTy->getNumElements(); i++) {
-      llvm::Value *Load = CGF.PerformLoad(LoadGEPList[i]);
+      llvm::Value *Load = CGF.Builder.CreateLoad(LoadGEPList[i].first, "load");
+      llvm::Value *Idx = LoadGEPList[i].second;
+      Load = Idx ? CGF.Builder.CreateExtractElement(Load, Idx, "vec.extract")
+                 : Load;
       llvm::Value *Cast = CGF.EmitScalarConversion(
           Load, SrcTypes[i], VecTy->getElementType(), Loc);
       V = CGF.Builder.CreateInsertElement(V, Cast, i);
@@ -2288,8 +2294,11 @@ static Value *EmitHLSLAggregateFlatCast(CodeGenFunction &CGF, Address RHSVal,
   assert(LHSTy->isBuiltinType() &&
          "Destination type must be a vector or builtin type.");
   // TODO add asserts about things being long enough
-  return CGF.EmitScalarConversion(CGF.PerformLoad(LoadGEPList[0]), LHSTy,
-                                  SrcTypes[0], Loc);
+  llvm::Value *Load = CGF.Builder.CreateLoad(LoadGEPList[0].first, "load");
+  llvm::Value *Idx = LoadGEPList[0].second;
+  Load =
+      Idx ? CGF.Builder.CreateExtractElement(Load, Idx, "vec.extract") : Load;
+  return CGF.EmitScalarConversion(Load, LHSTy, SrcTypes[0], Loc);
 }
 
 // VisitCastExpr - Emit code for an explicit or implicit cast.  Implicit casts

@@ -11,8 +11,8 @@ struct S {
 // CHECK-NEXT: [[s:%.*]] = alloca %struct.S, align 4
 // CHECK-NEXT: store <2 x i32> <i32 1, i32 2>, ptr [[A]], align 8
 // CHECK-NEXT: [[L:%.*]] = load <2 x i32>, ptr [[A]], align 8
-// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0
-// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 1
+// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0, i32 0
+// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0, i32 1
 // CHECK-NEXT: [[VL:%.*]] = extractelement <2 x i32> [[L]], i64 0
 // CHECK-NEXT: store i32 [[VL]], ptr [[G1]], align 4
 // CHECK-NEXT: [[VL2:%.*]] = extractelement <2 x i32> [[L]], i64 1
@@ -31,10 +31,10 @@ export void call1() {
 // CHECK-NEXT: [[Tmp:%.*]] = alloca [2 x i32], align 4
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[A]], ptr align 4 {{.*}}, i32 8, i1 false)
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[A]], i32 8, i1 false)
-// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0
-// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 1
-// CHECK-NEXT: [[G3:%.*]] = getelementptr inbounds [2 x i32], ptr [[Tmp]], i32 0
-// CHECK-NEXT: [[G4:%.*]] = getelementptr inbounds [2 x i32], ptr [[Tmp]], i32 1
+// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0, i32 0
+// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0, i32 1
+// CHECK-NEXT: [[G3:%.*]] = getelementptr inbounds [2 x i32], ptr [[Tmp]], i32 0, i32 0
+// CHECK-NEXT: [[G4:%.*]] = getelementptr inbounds [2 x i32], ptr [[Tmp]], i32 0, i32 1
 // CHECK-NEXT: [[L:%.*]] = load i32, ptr [[G3]], align 4
 // CHECK-NEXT: store i32 [[L]], ptr [[G1]], align 4
 // CHECK-NEXT: [[L4:%.*]] = load i32, ptr [[G4]], align 4
@@ -61,10 +61,10 @@ struct R {
 // CHECK-NEXT: [[Tmp:%.*]] = alloca %struct.R, align 4
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[r]], ptr align 4 {{.*}}, i32 8, i1 false)
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[r]], i32 8, i1 false)
-// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0
-// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 1
+// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0, i32 0
+// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0, i32 1
 // CHECK-NEXT: [[G3:%.*]] = getelementptr inbounds %struct.R, ptr [[Tmp]], i32 0, i32 0
-// CHECK-NEXT: [[G4:%.*]] = getelementptr inbounds %struct.R, ptr [[Tmp]], i32 1
+// CHECK-NEXT: [[G4:%.*]] = getelementptr inbounds %struct.R, ptr [[Tmp]], i32 0, i32 1
 // CHECK-NEXT: [[L:%.*]] = load i32, ptr [[G3]], align 4
 // CHECK-NEXT: store i32 [[L]], ptr [[G1]], align 4
 // CHECK-NEXT: [[L4:%.*]] = load float, ptr [[G4]], align 4
@@ -82,9 +82,9 @@ export void call6() {
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[A]], ptr align 4 {{.*}}, i32 8, i1 false)
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[A]], i32 8, i1 false)
 // CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds %struct.R, ptr [[r]], i32 0, i32 0
-// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.R, ptr [[r]], i32 1
-// CHECK-NEXT: [[G3:%.*]] = getelementptr inbounds [2 x i32], ptr [[Tmp]], i32 0
-// CHECK-NEXT: [[G4:%.*]] = getelementptr inbounds [2 x i32], ptr [[Tmp]], i32 1
+// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.R, ptr [[r]], i32 0, i32 1
+// CHECK-NEXT: [[G3:%.*]] = getelementptr inbounds [2 x i32], ptr [[Tmp]], i32 0, i32 0
+// CHECK-NEXT: [[G4:%.*]] = getelementptr inbounds [2 x i32], ptr [[Tmp]], i32 0, i32 1
 // CHECK-NEXT: [[L:%.*]] = load i32, ptr [[G3]], align 4
 // CHECK-NEXT: store i32 [[L]], ptr [[G1]], align 4
 // CHECK-NEXT: [[L4:%.*]] = load i32, ptr [[G4]], align 4
@@ -108,11 +108,11 @@ struct T {
 // CHECK-NEXT: [[Tmp:%.*]] = alloca %struct.T, align 4
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[t]], ptr align 4 {{.*}}, i32 12, i1 false)
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[t]], i32 12, i1 false)
-// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0
-// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 1
-// CHECK-NEXT: [[G3:%.*]] = getelementptr inbounds %struct.T, ptr [[Tmp]], i32 0
-// CHECK-NEXT: %gep3 = getelementptr inbounds %struct.T, ptr %agg-temp, i32 1
-// CHECK-NEXT: %gep4 = getelementptr inbounds %struct.T, ptr %agg-temp, i32 2
+// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0, i32 0
+// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0, i32 1
+// CHECK-NEXT: [[G3:%.*]] = getelementptr inbounds %struct.T, ptr [[Tmp]], i32 0, i32 0
+// CHECK-NEXT: %gep3 = getelementptr inbounds %struct.T, ptr %agg-temp, i32 0, i32 1
+// CHECK-NEXT: %gep4 = getelementptr inbounds %struct.T, ptr %agg-temp, i32 0, i32 2
 // CHECK-NEXT: %load = load i32, ptr %gep2, align 4
 // CHECK-NEXT: store i32 %load, ptr %gep, align 4
 // CHECK-NEXT: %load5 = load i32, ptr %gep3, align 4

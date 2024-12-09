@@ -8,9 +8,9 @@
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[A]], ptr align 4 {{.*}}, i32 8, i1 false)
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[B]], ptr align 4 {{.*}}, i32 4, i1 false)
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[A]], i32 8, i1 false)
-// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds [1 x i32], ptr [[B]], i32 0
-// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds [2 x i32], ptr [[Tmp]], i32 0
-// CHECK-NEXT: [[G3:%.*]] = getelementptr inbounds [2 x i32], ptr [[Tmp]], i32 1
+// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds [1 x i32], ptr [[B]], i32 0, i32 0
+// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds [2 x i32], ptr [[Tmp]], i32 0, i32 0
+// CHECK-NEXT: [[G3:%.*]] = getelementptr inbounds [2 x i32], ptr [[Tmp]], i32 0, i32 1
 // CHECK-NEXT: [[L:%.*]] = load i32, ptr [[G2]], align 4
 // CHECK-NEXT: store i32 [[L]], ptr [[G1]], align 4
 export void call1() {
@@ -27,8 +27,8 @@ export void call1() {
 // CHECK-NEXT: call void @llvm.memset.p0.i32(ptr align 4 [[A]], i8 0, i32 4, i1 false)
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[B]], ptr align 4 {{.*}}, i32 4, i1 false)
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[A]], i32 4, i1 false)
-// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds [1 x float], ptr [[B]], i32 0
-// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds [1 x i32], ptr [[Tmp]], i32 0
+// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds [1 x float], ptr [[B]], i32 0, i32 0
+// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds [1 x i32], ptr [[Tmp]], i32 0, i32 0
 // CHECK-NEXT: [[L:%.*]] = load i32, ptr [[G2]], align 4
 // CHECK-NEXT: [[C:%.*]] = sitofp i32 [[L]] to float
 // CHECK-NEXT: store float [[C]], ptr [[G1]], align 4
@@ -45,7 +45,7 @@ export void call2() {
 // CHECK-NEXT: store <1 x float> splat (float 0x3FF3333340000000), ptr [[A]], align 4
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[B]], ptr align 4 {{.*}}, i32 4, i1 false)
 // CHECK-NEXT: [[C:%.*]] = load <1 x float>, ptr [[A]], align 4
-// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds [1 x i32], ptr [[B]], i32 0
+// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds [1 x i32], ptr [[B]], i32 0, i32 0
 // CHECK-NEXT: [[V:%.*]] = extractelement <1 x float> [[C]], i64 0
 // CHECK-NEXT: [[C:%.*]] = fptosi float [[V]] to i32
 // CHECK-NEXT: store i32 [[C]], ptr [[G1]], align 4
@@ -63,9 +63,9 @@ export void call3() {
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[A]], ptr align 8 {{.*}}, i32 8, i1 false)
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[B]], ptr align 4 {{.*}}, i32 8, i1 false)
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[Tmp]], ptr align 8 [[A]], i32 8, i1 false)
-// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], i32 0
-// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], i32 1
-// CHECK-NEXT: [[VG:%.*]] = getelementptr inbounds [1 x <2 x float>], ptr [[Tmp]], i32 0
+// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], i32 0, i32 0
+// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], i32 0, i32 1
+// CHECK-NEXT: [[VG:%.*]] = getelementptr inbounds [1 x <2 x float>], ptr [[Tmp]], i32 0, i32 0
 // CHECK-NEXT: [[L:%.*]] = load <2 x float>, ptr [[VG]], align 8
 // CHECK-NEXT: [[VL:%.*]] = extractelement <2 x float> [[L]], i32 0
 // CHECK-NEXT: [[C:%.*]] = fptosi float [[VL]] to i32
@@ -88,10 +88,10 @@ export void call5() {
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[A]], ptr align 4 {{.*}}, i32 8, i1 false)
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[B]], ptr align 4 {{.*}}, i32 8, i1 false)
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[A]], i32 8, i1 false)
-// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], i32 0
-// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], i32 1
-// CHECK-NEXT: [[G3:%.*]] = getelementptr inbounds [2 x [1 x i32]], ptr [[Tmp]], i32 0, i32 0
-// CHECK-NEXT: [[G4:%.*]] = getelementptr inbounds [2 x [1 x i32]], ptr [[Tmp]], i32 1, i32 0
+// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], i32 0, i32 0
+// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], i32 0, i32 1
+// CHECK-NEXT: [[G3:%.*]] = getelementptr inbounds [2 x [1 x i32]], ptr [[Tmp]], i32 0, i32 0, i32 0
+// CHECK-NEXT: [[G4:%.*]] = getelementptr inbounds [2 x [1 x i32]], ptr [[Tmp]], i32 0, i32 1, i32 0
 // CHECK-NEXT: [[L:%.*]] = load i32, ptr [[G3]], align 4
 // CHECK-NEXT: store i32 [[L]], ptr [[G1]], align 4
 // CHECK-NEXT: [[L4:%.*]] = load i32, ptr [[G4]], align 4
@@ -115,9 +115,9 @@ struct S {
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[s]], ptr align 4 {{.*}}, i32 8, i1 false)
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[A]], ptr align 4 {{.*}}, i32 4, i1 false)
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[s]], i32 8, i1 false)
-// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds [1 x i32], ptr [[A]], i32 0
-// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.S, ptr [[Tmp]], i32 0
-// CHECK-NEXT: [[G3:%.*]] = getelementptr inbounds %struct.S, ptr [[Tmp]], i32 1
+// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds [1 x i32], ptr [[A]], i32 0, i32 0
+// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.S, ptr [[Tmp]], i32 0, i32 0
+// CHECK-NEXT: [[G3:%.*]] = getelementptr inbounds %struct.S, ptr [[Tmp]], i32 0, i32 1
 // CHECK-NEXT: [[L:%.*]] = load i32, ptr [[G2]], align 4
 // CHECK-NEXT: store i32 [[L]], ptr [[G1]], align 4
 export void call7() {

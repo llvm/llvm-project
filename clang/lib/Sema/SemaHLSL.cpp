@@ -2412,34 +2412,26 @@ bool SemaHLSL::CheckCompatibleParameterABI(FunctionDecl *New,
   return HadError;
 }
 
-// Follows PerformScalarCast
+// Generally follows PerformScalarCast, with cases reordered for
+// clarity of what types are supported
 bool SemaHLSL::CanPerformScalarCast(QualType SrcTy, QualType DestTy) {
 
   if (SemaRef.getASTContext().hasSameUnqualifiedType(SrcTy, DestTy))
     return true;
 
   switch (Type::ScalarTypeKind SrcKind = SrcTy->getScalarTypeKind()) {
-  case Type::STK_MemberPointer:
-  case Type::STK_CPointer:
-  case Type::STK_BlockPointer:
-  case Type::STK_ObjCObjectPointer:
-    llvm_unreachable("HLSL doesn't support pointers.");
-
-  case Type::STK_FixedPoint:
-    llvm_unreachable("HLSL doesn't support fixed point types.");
-
   case Type::STK_Bool: // casting from bool is like casting from an integer
   case Type::STK_Integral:
     switch (DestTy->getScalarTypeKind()) {
+    case Type::STK_Bool:
+    case Type::STK_Integral:
+    case Type::STK_Floating:
+      return true;
     case Type::STK_CPointer:
     case Type::STK_ObjCObjectPointer:
     case Type::STK_BlockPointer:
     case Type::STK_MemberPointer:
       llvm_unreachable("HLSL doesn't support pointers.");
-    case Type::STK_Bool:
-    case Type::STK_Integral:
-    case Type::STK_Floating:
-      return true;
     case Type::STK_IntegralComplex:
     case Type::STK_FloatingComplex:
       llvm_unreachable("HLSL doesn't support complex types.");
@@ -2466,6 +2458,15 @@ bool SemaHLSL::CanPerformScalarCast(QualType SrcTy, QualType DestTy) {
       llvm_unreachable("HLSL doesn't support pointers.");
     }
     llvm_unreachable("Should have returned before this");
+
+  case Type::STK_MemberPointer:
+  case Type::STK_CPointer:
+  case Type::STK_BlockPointer:
+  case Type::STK_ObjCObjectPointer:
+    llvm_unreachable("HLSL doesn't support pointers.");
+
+  case Type::STK_FixedPoint:
+    llvm_unreachable("HLSL doesn't support fixed point types.");
 
   case Type::STK_FloatingComplex:
   case Type::STK_IntegralComplex:

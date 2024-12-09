@@ -6360,30 +6360,6 @@ LValue CodeGenFunction::EmitPseudoObjectLValue(const PseudoObjectExpr *E) {
   return emitPseudoObjectExpr(*this, E, true, AggValueSlot::ignored()).LV;
 }
 
-llvm::Value *
-CodeGenFunction::PerformLoad(std::pair<Address, llvm::Value *> &GEP) {
-  Address GEPAddress = GEP.first;
-  llvm::Value *Idx = GEP.second;
-  llvm::Value *V = Builder.CreateLoad(GEPAddress, "load");
-  if (Idx) { // loading from a vector so perform an extract as well
-    return Builder.CreateExtractElement(V, Idx, "vec.load");
-  }
-  return V;
-}
-
-llvm::Value *
-CodeGenFunction::PerformStore(std::pair<Address, llvm::Value *> &GEP,
-                              llvm::Value *Val) {
-  Address GEPAddress = GEP.first;
-  llvm::Value *Idx = GEP.second;
-  if (Idx) {
-    llvm::Value *V = Builder.CreateLoad(GEPAddress, "load.for.insert");
-    return Builder.CreateInsertElement(V, Val, Idx);
-  } else {
-    return Builder.CreateStore(Val, GEPAddress);
-  }
-}
-
 void CodeGenFunction::FlattenAccessAndType(
     Address Val, QualType SrcTy, SmallVector<llvm::Value *, 4> &IdxList,
     SmallVector<std::pair<Address, llvm::Value *>, 16> &GEPList,

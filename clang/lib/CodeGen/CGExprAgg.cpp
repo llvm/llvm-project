@@ -498,6 +498,9 @@ static void EmitHLSLScalarFlatCast(CodeGenFunction &CGF, Address DestVal,
   // Flatten our destination
   SmallVector<QualType> DestTypes; // Flattened type
   SmallVector<llvm::Value *, 4> IdxList;
+  IdxList.push_back(
+      llvm::ConstantInt::get(llvm::IntegerType::get(CGF.getLLVMContext(), 32),
+                             0)); // because an Address is a pointer
   SmallVector<std::pair<Address, llvm::Value *>, 16> StoreGEPList;
   // ^^ Flattened accesses to DestVal we want to store into
   CGF.FlattenAccessAndType(DestVal, DestTy, IdxList, StoreGEPList, DestTypes);
@@ -513,7 +516,15 @@ static void EmitHLSLScalarFlatCast(CodeGenFunction &CGF, Address DestVal,
           CGF.Builder.CreateExtractElement(SrcVal, i, "vec.load");
       llvm::Value *Cast =
           CGF.EmitScalarConversion(Load, SrcTy, DestTypes[i], Loc);
-      CGF.PerformStore(StoreGEPList[i], Cast);
+
+      // store back
+      llvm::Value *Idx = StoreGEPList[i].second;
+      if (Idx) {
+        llvm::Value *V =
+            CGF.Builder.CreateLoad(StoreGEPList[i].first, "load.for.insert");
+        Cast = CGF.Builder.CreateInsertElement(V, Cast, Idx);
+      }
+      CGF.Builder.CreateStore(Cast, StoreGEPList[i].first);
     }
     return;
   }
@@ -527,6 +538,9 @@ static void EmitHLSLAggregateFlatCast(CodeGenFunction &CGF, Address DestVal,
   // Flatten our destination
   SmallVector<QualType> DestTypes; // Flattened type
   SmallVector<llvm::Value *, 4> IdxList;
+  IdxList.push_back(
+      llvm::ConstantInt::get(llvm::IntegerType::get(CGF.getLLVMContext(), 32),
+                             0)); // Because an Address is a pointer
   SmallVector<std::pair<Address, llvm::Value *>, 16> StoreGEPList;
   // ^^ Flattened accesses to DestVal we want to store into
   CGF.FlattenAccessAndType(DestVal, DestTy, IdxList, StoreGEPList, DestTypes);
@@ -535,6 +549,9 @@ static void EmitHLSLAggregateFlatCast(CodeGenFunction &CGF, Address DestVal,
   SmallVector<std::pair<Address, llvm::Value *>, 16> LoadGEPList;
   // ^^ Flattened accesses to SrcVal we want to load from
   IdxList.clear();
+  IdxList.push_back(
+      llvm::ConstantInt::get(llvm::IntegerType::get(CGF.getLLVMContext(), 32),
+                             0)); // Because an Address is a pointer
   CGF.FlattenAccessAndType(SrcVal, SrcTy, IdxList, LoadGEPList, SrcTypes);
 
   assert(StoreGEPList.size() <= LoadGEPList.size() &&
@@ -543,10 +560,21 @@ static void EmitHLSLAggregateFlatCast(CodeGenFunction &CGF, Address DestVal,
   // apply casts to what we load from LoadGEPList
   // and store result in Dest
   for (unsigned i = 0; i < StoreGEPList.size(); i++) {
-    llvm::Value *Load = CGF.PerformLoad(LoadGEPList[i]);
+    llvm::Value *Idx = LoadGEPList[i].second;
+    llvm::Value *Load = CGF.Builder.CreateLoad(LoadGEPList[i].first, "load");
+    Load =
+        Idx ? CGF.Builder.CreateExtractElement(Load, Idx, "vec.extract") : Load;
     llvm::Value *Cast =
         CGF.EmitScalarConversion(Load, SrcTypes[i], DestTypes[i], Loc);
-    CGF.PerformStore(StoreGEPList[i], Cast);
+
+    // store back
+    Idx = StoreGEPList[i].second;
+    if (Idx) {
+      llvm::Value *V =
+          CGF.Builder.CreateLoad(StoreGEPList[i].first, "load.for.insert");
+      Cast = CGF.Builder.CreateInsertElement(V, Cast, Idx);
+    }
+    CGF.Builder.CreateStore(Cast, StoreGEPList[i].first);
   }
 }
 
