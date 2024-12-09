@@ -53,7 +53,9 @@ struct MaybeNoexceptNegation {
 };
 
 template <bool IsNoexcept>
-MaybeNoexceptNegation<IsNoexcept> maybe_noexcept_negation() noexcept; // not defined
+MaybeNoexceptNegation<IsNoexcept> maybe_noexcept_negation() noexcept {
+  return {};
+}
 
 constexpr void basic_tests() {
   { // Test constant functions
