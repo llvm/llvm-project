@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/SelectOptimize.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
@@ -774,7 +775,7 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
   DenseMap<Value *, SelectLikeInfo> SelectInfo;
   // Keeps visited comparisons to help identify AShr/LShr variants of auxiliary
   // instructions.
-  SmallPtrSet<CmpInst *, 2> SeenCmp;
+  SmallSetVector<CmpInst *, 4> SeenCmp;
 
   // Check if the instruction is SelectLike or might be part of SelectLike
   // expression, put information into SelectInfo and return the iterator to the
@@ -808,7 +809,7 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
       for (auto *CmpI : SeenCmp) {
         auto Pred = CmpI->getPredicate();
         if (Val != CmpI->getOperand(0))
-          return SelectInfo.end();
+          continue;
         if ((Pred == CmpInst::ICMP_SGT &&
              match(CmpI->getOperand(1), m_ConstantInt<-1>())) ||
             (Pred == CmpInst::ICMP_SGE &&
@@ -822,6 +823,7 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
           return SelectInfo.insert({I, {CmpI, true, Inverted, 0}}).first;
         }
       }
+      return SelectInfo.end();
     }
 
     // An BinOp(Aux(X), Y) can also be treated like a select, with condition X
