@@ -65,8 +65,7 @@ TEST(TypesTest, TargetExtType) {
 
   // ensure that literal structs in the target extension type print the struct
   // body
-  Struct =
-      StructType::get(Context, Struct->elements(), /*isPacked=*/false);
+  Struct = StructType::get(Context, Struct->elements(), /*isPacked=*/false);
 
   TargetExtensionType =
       TargetExtType::get(Context, "structTET", {Struct}, {0, 1});
