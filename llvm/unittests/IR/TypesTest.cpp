@@ -70,7 +70,8 @@ TEST(TypesTest, TargetExtType) {
   TargetExtensionType =
       TargetExtType::get(Context, "structTET", {Struct}, {0, 1});
   TETV.clear();
-  llvm::raw_svector_ostream TETStream(TETV);
+  TETStream.clear();
+  TETStream(TETV);
   TargetExtensionType->print(TETStream);
 
   EXPECT_STREQ(TETStream.str().str().data(),
