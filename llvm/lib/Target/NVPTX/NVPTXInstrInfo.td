@@ -2120,17 +2120,6 @@ defm : ISET_FORMAT_UNSIGNED<setule, CmpLE>;
 defm : ISET_FORMAT_UNSIGNED<setueq, CmpEQ>;
 defm : ISET_FORMAT_UNSIGNED<setune, CmpNE>;
 
-// i1 compares
-def : Pat<(setne Int1Regs:$a, Int1Regs:$b),
-          (XORb1rr Int1Regs:$a, Int1Regs:$b)>;
-def : Pat<(setune Int1Regs:$a, Int1Regs:$b),
-          (XORb1rr Int1Regs:$a, Int1Regs:$b)>;
-
-def : Pat<(seteq Int1Regs:$a, Int1Regs:$b),
-          (NOT1 (XORb1rr Int1Regs:$a, Int1Regs:$b))>;
-def : Pat<(setueq Int1Regs:$a, Int1Regs:$b),
-          (NOT1 (XORb1rr Int1Regs:$a, Int1Regs:$b))>;
-
 // comparisons of i8 extracted with BFE as i32
 // It's faster to do comparison directly on i32 extracted by BFE,
 // instead of the long conversion and sign extending.

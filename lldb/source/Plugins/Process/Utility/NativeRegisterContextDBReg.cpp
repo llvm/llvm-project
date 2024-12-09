@@ -49,7 +49,7 @@ uint32_t NativeRegisterContextDBReg::SetHardwareBreakpoint(lldb::addr_t addr,
     return LLDB_INVALID_INDEX32;
 
   // Setup control value
-  control_value = MakeControlValue(size);
+  control_value = MakeBreakControlValue(size);
 
   // Iterate over stored breakpoints and find a free bp_index
   bp_index = LLDB_INVALID_INDEX32;
@@ -208,31 +208,32 @@ uint32_t NativeRegisterContextDBReg::SetHardwareWatchpoint(
 
   uint32_t control_value = 0, wp_index = 0;
   lldb::addr_t real_addr = addr;
+  WatchpointDetails details{size, addr};
 
-  // Check hardware watchpoint size and address.
-  if (!ValidateWatchpoint(size, addr))
+  auto adjusted = AdjustWatchpoint(details);
+  if (adjusted == std::nullopt)
     return LLDB_INVALID_INDEX32;
+  size = adjusted->size;
+  addr = adjusted->addr;
 
-  // lldb::eWatchpointKindRead | lldb::eWatchpointKindWrite = 3
-  if (watch_flags > 3)
+  // Check if we are setting watchpoint other than read/write/access Also
+  // update watchpoint flag to match AArch64/LoongArch write-read bit
+  // configuration.
+  switch (watch_flags) {
+  case lldb::eWatchpointKindWrite:
+    watch_flags = 2;
+    break;
+  case lldb::eWatchpointKindRead:
+    watch_flags = 1;
+    break;
+  case (lldb::eWatchpointKindRead | lldb::eWatchpointKindWrite):
+    break;
+  default:
     return LLDB_INVALID_INDEX32;
-  // Encoding watch_flags
-  auto EncodingWatchFlags = [&]() {
-    switch (watch_flags & 0x3) {
-    case lldb::eWatchpointKindWrite:
-      watch_flags = 2;
-      break;
-    case lldb::eWatchpointKindRead:
-      watch_flags = 1;
-      break;
-    case (lldb::eWatchpointKindRead | lldb::eWatchpointKindWrite):
-      break;
-    }
-  };
-  EncodingWatchFlags();
+  }
 
   // Setup control value
-  control_value = MakeControlValue(size, &watch_flags);
+  control_value = MakeWatchControlValue(size, watch_flags);
 
   // Iterate over stored watchpoints and find a free wp_index
   wp_index = LLDB_INVALID_INDEX32;

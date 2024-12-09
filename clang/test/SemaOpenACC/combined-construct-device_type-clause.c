@@ -57,7 +57,6 @@ void uses() {
   for(int i = 0; i < 5; ++i);
 #pragma acc kernels loop device_type(*) auto
   for(int i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented, clause ignored}}
 #pragma acc parallel loop device_type(*) worker
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'nohost' may not follow a 'device_type' clause in a 'serial loop' construct}}
@@ -212,7 +211,6 @@ void uses() {
   for(int j = 0; j < 5; ++j)
     for(int i = 0; i < 5; ++i);
 
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
 #pragma acc serial loop dtype(*) gang
   for(int i = 0; i < 5; ++i);
 #pragma acc parallel loop device_type(*) wait
