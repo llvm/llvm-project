@@ -794,9 +794,9 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
 
     enum CycleSinkStage { COPY, LOW_LATENCY, AGGRESSIVE, END };
     for (unsigned Stage = CycleSinkStage::COPY; Stage != CycleSinkStage::END;
-         ++Stage) {
+         ++Stage, SunkInstrs.clear()) {
       HasHighPressure = false;
-      SunkInstrs.clear();
+
       for (auto *Cycle : Cycles) {
         MachineBasicBlock *Preheader = Cycle->getCyclePreheader();
         if (!Preheader) {
@@ -1757,8 +1757,8 @@ bool MachineSinking::aggressivelySinkIntoCycle(
 
     // Conservatively clear any kill flags on uses of sunk instruction
     for (MachineOperand &MO : NewMI->all_uses()) {
-      if (MO.isReg())
-        RegsToClearKillFlags.insert(MO.getReg());
+      assert(MO.isReg() && MO.isUse());
+      RegsToClearKillFlags.insert(MO.getReg());
     }
 
     // The instruction is moved from its basic block, so do not retain the
