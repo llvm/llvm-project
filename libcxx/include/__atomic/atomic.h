@@ -11,9 +11,9 @@
 
 #include <__atomic/atomic_sync.h>
 #include <__atomic/check_memory_order.h>
-#include <__atomic/cxx_atomic_impl.h>
 #include <__atomic/is_always_lock_free.h>
 #include <__atomic/memory_order.h>
+#include <__atomic/support.h>
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
 #include <__memory/addressof.h>

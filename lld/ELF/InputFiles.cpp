@@ -528,7 +528,7 @@ template <class ELFT> void ELFFileBase::init(InputFile::Kind k) {
     Fatal(ctx) << this << ": invalid sh_info in symbol table";
 
   elfSyms = reinterpret_cast<const void *>(eSyms.data());
-  numELFSyms = uint32_t(eSyms.size());
+  numSymbols = eSyms.size();
   stringTable = CHECK2(obj.getStringTableForSymtab(*symtabSec, sections), this);
 }
 
@@ -1089,10 +1089,8 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
 template <class ELFT>
 void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
   ArrayRef<Elf_Sym> eSyms = this->getELFSyms<ELFT>();
-  if (numSymbols == 0) {
-    numSymbols = eSyms.size();
+  if (!symbols)
     symbols = std::make_unique<Symbol *[]>(numSymbols);
-  }
 
   // Some entries have been filled by LazyObjFile.
   auto *symtab = ctx.symtab.get();
@@ -1431,6 +1429,7 @@ template <class ELFT> void SharedFile::parse() {
   const Elf_Shdr *versymSec = nullptr;
   const Elf_Shdr *verdefSec = nullptr;
   const Elf_Shdr *verneedSec = nullptr;
+  symbols = std::make_unique<Symbol *[]>(numSymbols);
 
   // Search for .dynsym, .dynamic, .symtab, .gnu.version and .gnu.version_d.
   for (const Elf_Shdr &sec : sections) {
@@ -1453,7 +1452,7 @@ template <class ELFT> void SharedFile::parse() {
     }
   }
 
-  if (versymSec && numELFSyms == 0) {
+  if (versymSec && numSymbols == 0) {
     ErrAlways(ctx) << "SHT_GNU_versym should be associated with symbol table";
     return;
   }
@@ -1496,7 +1495,7 @@ template <class ELFT> void SharedFile::parse() {
   // Parse ".gnu.version" section which is a parallel array for the symbol
   // table. If a given file doesn't have a ".gnu.version" section, we use
   // VER_NDX_GLOBAL.
-  size_t size = numELFSyms - firstGlobal;
+  size_t size = numSymbols - firstGlobal;
   std::vector<uint16_t> versyms(size, VER_NDX_GLOBAL);
   if (versymSec) {
     ArrayRef<Elf_Versym> versym =
