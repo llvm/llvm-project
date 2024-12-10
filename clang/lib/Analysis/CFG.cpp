@@ -431,7 +431,6 @@ namespace {
 class reverse_children {
   llvm::SmallVector<Stmt *, 12> childrenBuf;
   ArrayRef<Stmt *> children;
-  ASTContext *astContext;
 
 public:
   reverse_children(Stmt *S, ASTContext *astContext = nullptr);
@@ -444,8 +443,7 @@ public:
 
 } // namespace
 
-reverse_children::reverse_children(Stmt *S, ASTContext *AstC)
-    : astContext(AstC) {
+reverse_children::reverse_children(Stmt *S, ASTContext *AstC) {
   if (CallExpr *CE = dyn_cast<CallExpr>(S)) {
     children = CE->getRawSubExprs();
     return;
@@ -460,7 +458,7 @@ reverse_children::reverse_children(Stmt *S, ASTContext *AstC)
     }
     case Stmt::AttributedStmtClass: {
       assert(S->getStmtClass() == Stmt::AttributedStmtClass);
-      assert(this->astContext &&
+      assert(AstC &&
              "Attributes need the ast context to determine side-effects");
       AttributedStmt *AS = cast<AttributedStmt>(S);
       assert(attrStmt);
@@ -480,7 +478,7 @@ reverse_children::reverse_children(Stmt *S, ASTContext *AstC)
         // it doesn't get "branch"-ed by symbol analysis engine
         // presumably because it's literally not in the CFG
 
-        if (AssumeExpr->HasSideEffects(*astContext)) {
+        if (AssumeExpr->HasSideEffects(*AstC)) {
           continue;
         }
         childrenBuf.push_back(AssumeExpr);

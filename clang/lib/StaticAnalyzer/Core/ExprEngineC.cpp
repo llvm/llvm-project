@@ -785,7 +785,8 @@ void ExprEngine::VisitGuardedExpr(const Expr *Ex,
                                   const Expr *R,
                                   ExplodedNode *Pred,
                                   ExplodedNodeSet &Dst) {
-  assert(L && R);
+  assert(L && "L does not exist!");
+  assert(R && "R does not exist!");
 
   StmtNodeBuilder B(Pred, Dst, *currBldrCtx);
   ProgramStateRef state = Pred->getState();
@@ -794,9 +795,10 @@ void ExprEngine::VisitGuardedExpr(const Expr *Ex,
 
   // Find the predecessor block.
   ProgramStateRef SrcState = state;
+
   for (const ExplodedNode *N = Pred ; N ; N = *N->pred_begin()) {
     ProgramPoint PP = N->getLocation();
-    if (PP.getAs<PreStmtPurgeDeadSymbols>() || PP.getAs<BlockEntrance>()) {
+    if (PP.getAs<PreStmtPurgeDeadSymbols>() || PP.getAs<BlockEntrance>() || PP.getAs<StmtPoint>()) {
       // If the state N has multiple predecessors P, it means that successors
       // of P are all equivalent.
       // In turn, that means that all nodes at P are equivalent in terms
@@ -804,6 +806,7 @@ void ExprEngine::VisitGuardedExpr(const Expr *Ex,
       // FIXME: a more robust solution which does not walk up the tree.
       continue;
     }
+    assert(PP.getAs<BlockEdge>());
     SrcBlock = PP.castAs<BlockEdge>().getSrc();
     SrcState = N->getState();
     break;
@@ -815,6 +818,22 @@ void ExprEngine::VisitGuardedExpr(const Expr *Ex,
   // expression that is used for the value of the ternary expression.
   bool hasValue = false;
   SVal V;
+
+  llvm::errs() << "\nSrcBlock"; SrcBlock->dump();
+  llvm::errs() << "\nempty=" << SrcBlock->empty();
+  llvm::errs() << "\nsize=" << SrcBlock->size();
+  CFGBlock::const_iterator  bb = SrcBlock->begin();
+  llvm::errs() << "\nbegin=|" ;   bb->dump(); llvm::errs() << "|";
+  CFGElement const&  xx = *bb;
+  llvm::errs() << "\nbegin-deref=|" ;   xx.dump();llvm::errs() << "|";
+  // manual iteration
+  for(auto it = SrcBlock->begin(); it != SrcBlock->end() ; ++it) {
+    llvm::errs() << "\nit.kind=|" << it->getKind() << "|";
+  }
+
+  llvm::errs() << "\nend=" ; (SrcBlock->end()-1)->dump();
+  llvm::errs() << "\nrbegin=" << SrcBlock->rbegin();
+  llvm::errs() << "\nrend=" << SrcBlock->rend();
 
   for (CFGElement CE : llvm::reverse(*SrcBlock)) {
     if (std::optional<CFGStmt> CS = CE.getAs<CFGStmt>()) {
