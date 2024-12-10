@@ -52,6 +52,8 @@
    The loop tail is handled by always copying 64 bytes from the end.
 */
 
+.arch armv8+fp+simd
+
 DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_sc_memcpy)
         add     srcend1, src, count
         add     dstend1, dstin, count
