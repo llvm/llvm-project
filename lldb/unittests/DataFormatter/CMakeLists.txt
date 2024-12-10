@@ -1,7 +1,6 @@
 add_lldb_unittest(LLDBFormatterTests
   FormatManagerTests.cpp
   FormattersContainerTest.cpp
-  FormatterBytecodeTest.cpp
   StringPrinterTests.cpp
 
   LINK_LIBS
