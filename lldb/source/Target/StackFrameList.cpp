@@ -25,7 +25,6 @@
 #include "lldb/Target/Unwind.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
 #include <memory>
@@ -580,9 +579,12 @@ uint32_t StackFrameList::GetNumFrames(bool can_create) {
     // Don't allow interrupt or we might not return the correct count
     GetFramesUpTo(UINT32_MAX, DoNotAllowInterruption);
   }
-  // Formally we should acquire the shared lock here, but since we've forced
-  // fetching all the frames, it can't change anymore so that's not required. 
-  return GetVisibleStackFrameIndex(m_frames.size());
+  uint32_t frame_idx;
+  {
+    std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+    frame_idx = GetVisibleStackFrameIndex(m_frames.size());
+  }
+  return frame_idx;
 }
 
 void StackFrameList::Dump(Stream *s) {
@@ -624,7 +626,7 @@ StackFrameSP StackFrameList::GetFrameAtIndex(uint32_t idx) {
 
     if (frame_sp)
       return frame_sp;
-  }
+  } // End of reader lock scope
 
   // GetFramesUpTo will fill m_frames with as many frames as you asked for, if
   // there are that many.  If there weren't then you asked for too many frames.
@@ -635,22 +637,25 @@ StackFrameSP StackFrameList::GetFrameAtIndex(uint32_t idx) {
     return {};
   }
 
-  if (idx < m_frames.size()) {
-      frame_sp = m_frames[idx];
-  } else if (original_idx == 0) {
-    // There should ALWAYS be a frame at index 0.  If something went wrong with
-    // the CurrentInlinedDepth such that there weren't as many frames as we
-    // thought taking that into account, then reset the current inlined depth
-    // and return the real zeroth frame.
-    if (m_frames.empty()) {
-      // Why do we have a thread with zero frames, that should not ever
-      // happen...
-      assert(!m_thread.IsValid() && "A valid thread has no frames.");
-    } else {
-      ResetCurrentInlinedDepth();
-      frame_sp = m_frames[original_idx];
+  {  // Now we're accessing m_frames as a reader, so acquire the reader lock.
+    std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+    if (idx < m_frames.size()) {
+        frame_sp = m_frames[idx];
+    } else if (original_idx == 0) {
+      // There should ALWAYS be a frame at index 0.  If something went wrong
+      // with the CurrentInlinedDepth such that there weren't as many frames as
+      // we thought taking that into account, then reset the current inlined
+      // depth and return the real zeroth frame.
+      if (m_frames.empty()) {
+        // Why do we have a thread with zero frames, that should not ever
+        // happen...
+        assert(!m_thread.IsValid() && "A valid thread has no frames.");
+      } else {
+        ResetCurrentInlinedDepth();
+        frame_sp = m_frames[original_idx];
+      }
     }
-  }
+  } // End of reader lock scope
 
   return frame_sp;
 }
@@ -688,16 +693,10 @@ StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {
       // the shared mutex:
       std::shared_lock<std::shared_mutex> guard(m_list_mutex);
       // Do a binary search in case the stack frame is already in our cache
-      collection::const_iterator begin = m_frames.begin();
-      collection::const_iterator end = m_frames.end();
-      if (begin != end) {
-        collection::const_iterator pos =
-            std::lower_bound(begin, end, stack_id, CompareStackID);
-        if (pos != end) {
-          if ((*pos)->GetStackID() == stack_id)
-            return *pos;
-        }
-      }
+      collection::const_iterator pos =
+          llvm::lower_bound(m_frames, stack_id, CompareStackID);
+      if (pos != m_frames.end() && (*pos)->GetStackID() == stack_id)
+        return *pos;
     }
     // If we needed to add more frames, we would get to here.
     do {
@@ -801,8 +800,6 @@ StackFrameList::GetSelectedFrameIndex(SelectMostRelevant select_most_relevant) {
 
 uint32_t
 StackFrameList::SetSelectedFrame(lldb_private::StackFrame *frame) {
-  uint32_t result = 0;
-
   std::shared_lock<std::shared_mutex> guard(m_list_mutex);
 
   const_iterator pos;
@@ -820,8 +817,7 @@ StackFrameList::SetSelectedFrame(lldb_private::StackFrame *frame) {
     }
   }
   SetDefaultFileAndLineToSelectedFrame();
-  result = *m_selected_frame_idx;
-  return result;
+  return *m_selected_frame_idx;
 }
 
 bool StackFrameList::SetSelectedFrameByIndex(uint32_t idx) {
