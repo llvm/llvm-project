@@ -1,6 +1,7 @@
 # This workflow is for pre-commit testing of the LLVM-libc project.
 name: LLVM-libc Pre-commit Fullbuild Tests
-
+permissions:
+  contents: read
 on:
   pull_request:
     branches: [ "main" ]
@@ -22,7 +23,13 @@ jobs:
           #   cpp_compiler: g++
     steps:
     - uses: actions/checkout@v4
-
+    
+    # Libc's build is relatively small comparing with other components of LLVM.
+    # A fresh fullbuild takes about 190MiB of uncompressed disk space, which can
+    # be compressed into ~40MiB. Limiting the cache size to 1G should be enough.
+    # Prefer sccache as it is more modern.
+    # Do not use direct GHAC access even though it is supported by sccache. GHAC rejects
+    # frequent small object writes.
     - name: Setup ccache
       uses: hendrikmuhs/ccache-action@v1.2
       with:
@@ -30,6 +37,10 @@ jobs:
         key: libc_fullbuild_${{ matrix.c_compiler }}
         variant: sccache
     
+    # Notice:
+    # - MPFR is required by some of the mathlib tests.
+    # - Debian has a multilib setup, so we need to symlink the asm directory.
+    #   For more information, see https://wiki.debian.org/Multiarch/LibraryPathOverview
     - name: Prepare dependencies (Ubuntu)
       run: |
         sudo apt-get update
@@ -42,7 +53,9 @@ jobs:
       run: |
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
         echo "build-install-dir=${{ github.workspace }}/install" >> "$GITHUB_OUTPUT"
-
+    
+    # Configure libc fullbuild with scudo.
+    # Use MinSizeRel to reduce the size of the build.
     - name: Configure CMake
       run: >
         cmake -B ${{ steps.strings.outputs.build-output-dir }}
