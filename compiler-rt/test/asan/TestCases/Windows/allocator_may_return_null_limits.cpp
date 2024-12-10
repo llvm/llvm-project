@@ -1,9 +1,9 @@
 // RUN: %clangxx_asan -O0 %s -o %t
 // RUN: %env_asan_opts=allocator_may_return_null=0 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-ABORT
-// RUN: %env_asan_opts=allocator_may_return_null=1 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-RETURN_NULL
+// RUN: %env_asan_opts=allocator_may_return_null=1 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-RETURN-NULL
 
 // RUN: %clangxx_asan -O0 %s -o %t -DUSER_FUNCTION
-// RUN: %env_asan_opts=allocator_may_return_null=1 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-RETURN_NULL
+// RUN: %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-RETURN-NULL
 
 #if USER_FUNCTION
 // On Windows, flags configured through the user-defined function `__asan_default_options`
@@ -29,6 +29,6 @@ int main() {
   // CHECK-ABORT: ABORT
   free(malloc(max));
 
-  printf("Success"); // CHECK-RETURN_NULL: Success
+  printf("Success"); // CHECK-RETURN-NULL: Success
   return 0;
 }
