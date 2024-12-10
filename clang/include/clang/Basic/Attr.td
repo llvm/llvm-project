@@ -3728,8 +3728,9 @@ def Lockable : InheritableAttr {
   let ASTNode = 0;  // Replaced by Capability
 }
 
-def ScopedLockable : InheritableAttr {
-  let Spellings = [Clang<"scoped_lockable", 0>];
+def ScopedCapability : InheritableAttr {
+  let Spellings = [Clang<"scoped_capability", 0>,
+                   Clang<"scoped_lockable", 0>];
   let Subjects = SubjectList<[Record]>;
   let Documentation = [Undocumented];
   let SimpleHandler = 1;
@@ -3924,8 +3925,9 @@ def SharedTrylockFunction : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
-def LockReturned : InheritableAttr {
-  let Spellings = [GNU<"lock_returned">];
+def CapabilityReturned : InheritableAttr {
+  let Spellings = [GNU<"capability_returned">,
+                   GNU<"lock_returned">];
   let Args = [ExprArgument<"Arg">];
   let LateParsed = LateAttrParseStandard;
   let TemplateDependent = 1;
@@ -3934,8 +3936,9 @@ def LockReturned : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
-def LocksExcluded : InheritableAttr {
-  let Spellings = [GNU<"locks_excluded">];
+def CapabilitiesExcluded : InheritableAttr {
+  let Spellings = [GNU<"capabilities_excluded">,
+                   GNU<"locks_excluded">];
   let Args = [VariadicExprArgument<"Args">];
   let LateParsed = LateAttrParseStandard;
   let TemplateDependent = 1;

@@ -9420,13 +9420,13 @@ Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
                   From->args_size());
     break;
   }
-  case attr::LockReturned: {
-    const auto *From = cast<LockReturnedAttr>(FromAttr);
+  case attr::CapabilityReturned: {
+    const auto *From = cast<CapabilityReturnedAttr>(FromAttr);
     AI.importAttr(From, AI.importArg(From->getArg()).value());
     break;
   }
-  case attr::LocksExcluded: {
-    const auto *From = cast<LocksExcludedAttr>(FromAttr);
+  case attr::CapabilitiesExcluded: {
+    const auto *From = cast<CapabilitiesExcludedAttr>(FromAttr);
     AI.importAttr(From,
                   AI.importArrayArg(From->args(), From->args_size()).value(),
                   From->args_size());

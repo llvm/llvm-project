@@ -887,7 +887,7 @@ public:
   }
 };
 
-class ScopedLockableFactEntry : public FactEntry {
+class ScopedCapabilityFactEntry : public FactEntry {
 private:
   enum UnderlyingCapabilityKind {
     UCK_Acquired,          ///< Any kind of acquired capability.
@@ -903,7 +903,7 @@ private:
   SmallVector<UnderlyingCapability, 2> UnderlyingMutexes;
 
 public:
-  ScopedLockableFactEntry(const CapabilityExpr &CE, SourceLocation Loc)
+  ScopedCapabilityFactEntry(const CapabilityExpr &CE, SourceLocation Loc)
       : FactEntry(CE, LK_Exclusive, Loc, Acquired) {}
 
   void addLock(const CapabilityExpr &M) {
@@ -1814,7 +1814,7 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
       assert(inserted.second && "Are we visiting the same expression again?");
       if (isa<CXXConstructExpr>(Exp))
         Self = Placeholder.first;
-      if (TagT->getDecl()->hasAttr<ScopedLockableAttr>())
+      if (TagT->getDecl()->hasAttr<ScopedCapabilityAttr>())
         Scp = CapabilityExpr(Placeholder.first, Placeholder.second, false);
     }
 
@@ -1898,8 +1898,8 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
         break;
       }
 
-      case attr::LocksExcluded: {
-        const auto *A = cast<LocksExcludedAttr>(At);
+      case attr::CapabilitiesExcluded: {
+        const auto *A = cast<CapabilitiesExcludedAttr>(At);
         for (auto *Arg : A->args()) {
           Analyzer->warnIfMutexHeld(FSet, D, Exp, Arg, Self, Loc);
           // use for deferring a lock
@@ -1937,7 +1937,7 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
 
   if (!Scp.shouldIgnore()) {
     // Add the managing object as a dummy mutex, mapped to the underlying mutex.
-    auto ScopedEntry = std::make_unique<ScopedLockableFactEntry>(Scp, Loc);
+    auto ScopedEntry = std::make_unique<ScopedCapabilityFactEntry>(Scp, Loc);
     for (const auto &M : ExclusiveLocksToAdd)
       ScopedEntry->addLock(M);
     for (const auto &M : SharedLocksToAdd)
