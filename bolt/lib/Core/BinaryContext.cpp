@@ -1945,28 +1945,6 @@ static void printDebugInfo(raw_ostream &OS, const MCInst &Instruction,
     OS << " discriminator:" << Row.Discriminator;
 }
 
-/// Skip instructions that do not potentially manipulate or compare function
-/// addresses.
-static bool skipInstruction(const MCInst &Inst, const BinaryContext &BC) {
-  return (BC.MIB->isPseudo(Inst) || BC.MIB->isUnconditionalBranch(Inst) ||
-          BC.MIB->isConditionalBranch(Inst) || BC.MIB->isCall(Inst) ||
-          BC.MIB->isBranch(Inst));
-}
-void BinaryContext::processInstructionForFuncReferences(const MCInst &Inst) {
-  if (skipInstruction(Inst, *this))
-    return;
-  for (const MCOperand &Op : MCPlus::primeOperands(Inst)) {
-    if (!Op.isExpr())
-      continue;
-    const MCExpr &Expr = *Op.getExpr();
-    if (Expr.getKind() == MCExpr::SymbolRef) {
-      const MCSymbol &Symbol = cast<MCSymbolRefExpr>(Expr).getSymbol();
-      if (BinaryFunction *BF = getFunctionForSymbol(&Symbol))
-        BF->setHasAddressTaken(true);
-    }
-  }
-}
-
 void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
                                      uint64_t Offset,
                                      const BinaryFunction *Function,

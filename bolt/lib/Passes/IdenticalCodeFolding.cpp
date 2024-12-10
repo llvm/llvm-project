@@ -439,9 +439,12 @@ Error IdenticalCodeFolding::markFunctionsUnsafeToFold(BinaryContext &BC) {
   }
 
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
-    for (const BinaryBasicBlock *BB : BF.getLayout().blocks())
-      for (const MCInst &Inst : *BB)
-        BC.processInstructionForFuncReferences(Inst);
+    for (const BinaryBasicBlock *BB : BF.getLayout().blocks()) {
+      for (const MCInst &Inst : *BB) {
+        if (!(BC.MIB->isCall(Inst) || BC.MIB->isBranch(Inst)))
+          BF.processInstructionForFuncReferences(BC, Inst);
+      }
+    }
   };
   ParallelUtilities::PredicateTy SkipFunc =
       [&](const BinaryFunction &BF) -> bool {

@@ -1513,6 +1513,20 @@ MCSymbol *BinaryFunction::registerBranch(uint64_t Src, uint64_t Dst) {
   return Target;
 }
 
+void BinaryFunction::processInstructionForFuncReferences(BinaryContext &BC,
+                                                         const MCInst &Inst) {
+  for (const MCOperand &Op : MCPlus::primeOperands(Inst)) {
+    if (!Op.isExpr())
+      continue;
+    const MCExpr &Expr = *Op.getExpr();
+    if (Expr.getKind() == MCExpr::SymbolRef) {
+      const MCSymbol &Symbol = cast<MCSymbolRefExpr>(Expr).getSymbol();
+      if (BinaryFunction *BF = BC.getFunctionForSymbol(&Symbol))
+        BF->setHasAddressTaken(true);
+    }
+  }
+}
+
 bool BinaryFunction::scanExternalRefs() {
   bool Success = true;
   bool DisassemblyFailed = false;
@@ -1626,8 +1640,6 @@ bool BinaryFunction::scanExternalRefs() {
     if (!BC.HasRelocations)
       continue;
 
-    BC.processInstructionForFuncReferences(Instruction);
-
     if (BranchTargetSymbol) {
       BC.MIB->replaceBranchTarget(Instruction, BranchTargetSymbol,
                                   Emitter.LocalCtx.get());
@@ -1635,6 +1647,8 @@ bool BinaryFunction::scanExternalRefs() {
                              [](const MCOperand &Op) { return Op.isExpr(); })) {
       // Skip assembly if the instruction may not have any symbolic operands.
       continue;
+    } else {
+      processInstructionForFuncReferences(BC, Instruction);
     }
 
     // Emit the instruction using temp emitter and generate relocations.
