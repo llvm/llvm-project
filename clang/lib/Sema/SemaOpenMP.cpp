@@ -7482,9 +7482,8 @@ ExprResult SemaOpenMP::ActOnOpenMPCall(ExprResult Call, Scope *Scope,
     Exprs.erase(Exprs.begin() + BestIdx);
   } while (!VMIs.empty());
 
-  if (!NewCall.isUsable()) {
+  if (!NewCall.isUsable())
     return Call;
-  }
   return PseudoObjectExpr::Create(getASTContext(), CE, {NewCall.get()}, 0);
 }
 
