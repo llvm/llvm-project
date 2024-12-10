@@ -1591,9 +1591,9 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
       // Number of C.NOP or NOP
       return (STI.hasStdExtCOrZca() ? 2 : 4) * Num;
     }
-    // XRay uses C.JAL + 25 or 33 C.NOP for each sled in RV32 and RV64,
+    // XRay uses C.JAL + 21 or 33 C.NOP for each sled in RV32 and RV64,
     // respectively.
-    return STI.is64Bit() ? 68 : 52;
+    return STI.is64Bit() ? 68 : 44;
   }
   default:
     return get(Opcode).getSize();

@@ -84,7 +84,7 @@ static inline bool patchSled(const bool Enable, const uint32_t FuncId,
   //
   // xray_sled_n:
   //	J .tmpN
-  //	25 or 33 C.NOPs (50 or 66 bytes)
+  //	21 or 33 C.NOPs (42 or 66 bytes)
   //	.tmpN
   //
   // With one of the following runtime patches:
@@ -158,11 +158,11 @@ static inline bool patchSled(const bool Enable, const uint32_t FuncId,
     size_t Idx = 1U;
     const uint32_t XLenBytes = __riscv_xlen / 8;
 #if __riscv_xlen == 64
-    const unsigned LoadOp = PatchOpcodes::PO_LD;
-    const unsigned StoreOp = PatchOpcodes::PO_SD;
+    const uint32_t LoadOp = PatchOpcodes::PO_LD;
+    const uint32_t StoreOp = PatchOpcodes::PO_SD;
 #elif __riscv_xlen == 32
-    const unsigned LoadOp = PatchOpcodes::PO_LW;
-    const unsigned StoreOp = PatchOpcodes::PO_SW;
+    const uint32_t LoadOp = PatchOpcodes::PO_LW;
+    const uint32_t StoreOp = PatchOpcodes::PO_SW;
 #endif
 
     Address[Idx++] = encodeSTypeInstruction(StoreOp, RegNum::RN_SP,
