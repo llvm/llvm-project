@@ -79,20 +79,18 @@ define i8 @scmp.8.128(i128 %x, i128 %y) nounwind {
 ;
 ; CHECK-GI-LABEL: scmp.8.128:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    cmp x1, x3
-; CHECK-GI-NEXT:    cset w8, gt
 ; CHECK-GI-NEXT:    cmp x0, x2
-; CHECK-GI-NEXT:    cset w9, hi
+; CHECK-GI-NEXT:    cset w8, hi
 ; CHECK-GI-NEXT:    cmp x1, x3
-; CHECK-GI-NEXT:    csel w8, w9, w8, eq
+; CHECK-GI-NEXT:    cset w9, gt
+; CHECK-GI-NEXT:    csel w8, w8, w9, eq
 ; CHECK-GI-NEXT:    tst w8, #0x1
 ; CHECK-GI-NEXT:    cset w8, ne
-; CHECK-GI-NEXT:    cmp x1, x3
-; CHECK-GI-NEXT:    cset w9, lt
 ; CHECK-GI-NEXT:    cmp x0, x2
-; CHECK-GI-NEXT:    cset w10, lo
+; CHECK-GI-NEXT:    cset w9, lo
 ; CHECK-GI-NEXT:    cmp x1, x3
-; CHECK-GI-NEXT:    csel w9, w10, w9, eq
+; CHECK-GI-NEXT:    cset w10, lt
+; CHECK-GI-NEXT:    csel w9, w9, w10, eq
 ; CHECK-GI-NEXT:    tst w9, #0x1
 ; CHECK-GI-NEXT:    csinv w0, w8, wzr, eq
 ; CHECK-GI-NEXT:    ret
