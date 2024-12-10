@@ -3,8 +3,8 @@
 // shows whether -ubsan-unique-traps attaches 'nomerge' to each ubsan call.
 //
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 -mllvm -ubsan-unique-traps %s -o - -fsanitize-trap=signed-integer-overflow | FileCheck %s --check-prefix=TRAP
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 -mllvm -ubsan-unique-traps %s -o - | FileCheck %s --check-prefix=HANDLER
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 -mllvm -ubsan-unique-traps %s -o - -fsanitize-minimal-runtime | FileCheck %s --check-prefix=MINRT
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 -mllvm -ubsan-unique-traps %s -o -                                         | FileCheck %s --check-prefix=HANDLER
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 -mllvm -ubsan-unique-traps %s -o - -fsanitize-minimal-runtime              | FileCheck %s --check-prefix=MINRT
 //
 // REQUIRES: x86-registered-target
 
