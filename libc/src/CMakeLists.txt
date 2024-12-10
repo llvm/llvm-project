@@ -12,6 +12,7 @@ add_subdirectory(stdfix)
 add_subdirectory(stdio)
 add_subdirectory(stdlib)
 add_subdirectory(string)
+add_subdirectory(strings)
 add_subdirectory(wchar)
 add_subdirectory(time)
 

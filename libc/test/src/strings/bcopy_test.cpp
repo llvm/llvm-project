@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/macros/config.h"
-#include "src/string/bcopy.h"
+#include "src/strings/bcopy.h"
 
-#include "memory_utils/memory_check_utils.h"
 #include "src/__support/CPP/span.h"
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/MemoryMatcher.h"
 #include "test/UnitTest/Test.h"
+#include "test/src/string/memory_utils/memory_check_utils.h"
 
 using LIBC_NAMESPACE::cpp::array;
 using LIBC_NAMESPACE::cpp::span;

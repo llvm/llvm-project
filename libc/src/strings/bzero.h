@@ -1,4 +1,4 @@
-//===-- Implementation of index -------------------------------------------===//
+//===-- Implementation header for bzero -------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/string/index.h"
+#ifndef LLVM_LIBC_SRC_STRINGS_BZERO_H
+#define LLVM_LIBC_SRC_STRINGS_BZERO_H
 
-#include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/string/string_utils.h"
+#include <stddef.h> // size_t
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(char *, index, (const char *src, int c)) {
-  return internal::strchr_implementation(src, c);
-}
+void bzero(void *ptr, size_t count);
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC_STRINGS_BZERO_H

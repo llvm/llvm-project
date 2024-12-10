@@ -1,4 +1,4 @@
-//===-- Implementation of bcopy -------------------------------------------===//
+//===-- Implementation header for strcasecmp --------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/string/bcopy.h"
-#include "src/__support/common.h"
+#ifndef LLVM_LIBC_SRC_STRINGS_STRCASECMP_H
+#define LLVM_LIBC_SRC_STRINGS_STRCASECMP_H
+
 #include "src/__support/macros/config.h"
-#include "src/string/memory_utils/inline_memmove.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(void, bcopy, (const void *src, void *dst, size_t count)) {
-  return inline_memmove(dst, src, count);
-}
+int strcasecmp(const char *left, const char *right);
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC_STRINGS_STRCASECMP_H
