@@ -2823,8 +2823,6 @@ void InnerLoopVectorizer::fixupIVUsers(PHINode *OrigPhi,
   // value (the value that feeds into the phi from the loop latch).
   // We allow both, but they, obviously, have different values.
 
-  assert(OrigLoop->getUniqueExitBlock() && "Expected a single exit block");
-
   DenseMap<Value *, Value *> MissingVals;
 
   Value *EndValue = cast<PHINode>(OrigPhi->getIncomingValueForBlock(
@@ -2877,6 +2875,9 @@ void InnerLoopVectorizer::fixupIVUsers(PHINode *OrigPhi,
       MissingVals[UI] = Escape;
     }
   }
+
+  assert((MissingVals.empty() || OrigLoop->getUniqueExitBlock()) &&
+         "Expected a single exit block for escaping values");
 
   for (auto &I : MissingVals) {
     PHINode *PHI = cast<PHINode>(I.first);
