@@ -1078,7 +1078,7 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
       // For ByVal, alignment should come from FE. BE will guess if this info
       // is not there, but there are cases it cannot get right.
       if (!MemAlign)
-        MemAlign = Align(TLI.getByValTypeAlignment(Arg.IndirectType, DL));
+        MemAlign = TLI.getByValTypeAlignment(Arg.IndirectType, DL);
       Flags.setByValSize(FrameSize);
     } else if (!MemAlign) {
       MemAlign = DL.getABITypeAlign(Arg.Ty);

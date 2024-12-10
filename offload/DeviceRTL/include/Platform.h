@@ -125,6 +125,18 @@ extern const inline unsigned __oclc_ISA_version = 11503;
 extern const inline unsigned __oclc_ISA_version = 12000;
 #elif defined(__gfx1201__)
 extern const inline unsigned __oclc_ISA_version = 12001;
+#elif defined(__gfx9_generic__)
+extern const inline unsigned __oclc_ISA_version = 9000;
+#elif defined(__gfx9_4_generic__)
+extern const inline unsigned __oclc_ISA_version = 9400;
+#elif defined(__gfx10_1_generic__)
+extern const inline unsigned __oclc_ISA_version = 10100;
+#elif defined(__gfx10_3_generic__)
+extern const inline unsigned __oclc_ISA_version = 10300;
+#elif defined(__gfx11_generic__)
+extern const inline unsigned __oclc_ISA_version = 11000;
+#elif defined(__gfx12_generic__)
+extern const inline unsigned __oclc_ISA_version = 12000;
 #else
 #error "Unknown AMDGPU architecture"
 #endif

@@ -18,11 +18,15 @@ Macros
     - POSIX.1-2024 Standard Section
   * - ONCE_FLAG_INIT
     -
-    - 7.28.1.3
+    - 7.28.1
     -
   * - TSS_DTOR_ITERATIONS
     -
-    - 7.28.1.3
+    - 7.28.1
+    -
+  * - __STDC_NO_THREADS__
+    -
+    - 7.28.1
     -
 
 Functions
@@ -67,27 +71,27 @@ Functions
     -
   * - mtx_destroy
     - |check|
-    - 7.28.4.1
+    - 7.28.4.2
     -
   * - mtx_init
     - |check|
-    - 7.28.4.2
+    - 7.28.4.3
     -
   * - mtx_lock
     - |check|
-    - 7.28.4.3
+    - 7.28.4.4
     -
   * - mtx_timedlock
     -
-    - 7.28.4.4
+    - 7.28.4.5
     -
   * - mtx_trylock
     -
-    - 7.28.4.5
+    - 7.28.4.6
     -
   * - mtx_unlock
     - |check|
-    - 7.28.4.6
+    - 7.28.4.7
     -
   * - thrd_create
     - |check|
