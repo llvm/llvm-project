@@ -146,11 +146,29 @@ v_fmamk_f16_e32 v5.l, v1.l, 0xfe0b, v255.l
 v_fmamk_f16_e32 v5.l, v255.l, 0xfe0b, v3.l
 // GFX11: :[[@LINE-1]]:23: error: invalid operand for instruction
 
+v_ldexp_f16 v5.h, v1.h, v255 dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:25: error: invalid operand for instruction
+
+v_ldexp_f16 v5.h, v1.h, v255 quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:25: error: invalid operand for instruction
+
+v_ldexp_f16_dpp v255.h, v1.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:17: error: invalid operand for instruction
+
+v_ldexp_f16_dpp v255.h, v1.h, v2.h quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:17: error: invalid operand for instruction
+
 v_ldexp_f16_dpp v255.l, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: :[[@LINE-1]]:17: error: invalid operand for instruction
 
 v_ldexp_f16_dpp v255.l, v1.l, v2.l quad_perm:[3,2,1,0]
 // GFX11: :[[@LINE-1]]:17: error: invalid operand for instruction
+
+v_ldexp_f16_dpp v5.h, v255.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_ldexp_f16_dpp v5.h, v255.h, v2.h quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:23: error: invalid operand for instruction
 
 v_ldexp_f16_dpp v5.l, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: :[[@LINE-1]]:29: error: invalid operand for instruction
@@ -164,8 +182,17 @@ v_ldexp_f16_dpp v5.l, v255.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
 v_ldexp_f16_dpp v5.l, v255.l, v2.l quad_perm:[3,2,1,0]
 // GFX11: :[[@LINE-1]]:23: error: invalid operand for instruction
 
+v_ldexp_f16_e32 v255.h, v1.h, v2.h
+// GFX11: :[[@LINE-1]]:17: error: invalid operand for instruction
+
 v_ldexp_f16_e32 v255.l, v1.l, v2.l
 // GFX11: :[[@LINE-1]]:17: error: invalid operand for instruction
+
+v_ldexp_f16_e32 v5.h, v1.h, v255.h
+// GFX11: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_ldexp_f16_e32 v5.h, v255.h, v2.h
+// GFX11: :[[@LINE-1]]:23: error: invalid operand for instruction
 
 v_ldexp_f16_e32 v5.l, v1.l, v255.l
 // GFX11: :[[@LINE-1]]:29: error: invalid operand for instruction
