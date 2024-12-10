@@ -571,6 +571,9 @@ void MIRPrinter::convertCallSiteObjects(yaml::MachineFunction &YMF,
       printRegMIR(ArgReg.Reg, YmlArgReg.Reg, TRI);
       YmlCS.ArgForwardingRegs.emplace_back(YmlArgReg);
     }
+    // Get type id.
+    if (CSInfo.second.TypeId)
+      YmlCS.TypeId = CSInfo.second.TypeId->getZExtValue();
     YMF.CallSitesInfo.push_back(YmlCS);
   }
 
