@@ -436,8 +436,10 @@ LLVM_19 {
 
 LLVM_20 {
   global:
+    clang_getOffsetOfBase;
     clang_getTypePrettyPrinted;
     clang_isBeforeInTranslationUnit;
+    clang_visitCXXBaseClasses;
 };
 
 # Example of how to add a new symbol version entry.  If you do add a new symbol
