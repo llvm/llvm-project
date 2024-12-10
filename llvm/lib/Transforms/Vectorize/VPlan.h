@@ -236,7 +236,7 @@ public:
 struct VPTransformState {
   VPTransformState(const TargetTransformInfo *TTI, ElementCount VF, unsigned UF,
                    LoopInfo *LI, DominatorTree *DT, IRBuilderBase &Builder,
-                   InnerLoopVectorizer *ILV, VPlan *Plan);
+                   InnerLoopVectorizer *ILV, VPlan *Plan, Type *CanonicalIVTy);
   /// Target Transform Info.
   const TargetTransformInfo *TTI;
 
