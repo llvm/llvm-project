@@ -21402,10 +21402,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     Args.push_back(EmitScalarExpr(E->getArg(ClampArg)));
 
     SmallVector<llvm::Type *> ArgTypes;
-    llvm::Type *ResultType = ConvertType(E->getType());
-    ArgTypes.push_back(ResultType);
     ArgTypes.push_back(Args[0]->getType());
-
     Function *F = CGM.getIntrinsic(IntrinsicID, ArgTypes);
 
     return Builder.CreateCall(F, Args);
