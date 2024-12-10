@@ -33,7 +33,7 @@ bool tryToFindPtrOrigin(
       E = tempExpr->getSubExpr();
       continue;
     }
-    if (auto *tempExpr = dyn_cast<CXXTemporaryObjectExpr>(E)) {
+    if (auto *tempExpr = dyn_cast<CXXConstructExpr>(E)) {
       if (auto *C = tempExpr->getConstructor()) {
         if (auto *Class = C->getParent(); Class && isSafePtr(Class))
           return callback(E, true);
