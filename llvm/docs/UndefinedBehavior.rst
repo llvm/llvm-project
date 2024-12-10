@@ -15,17 +15,20 @@ We also provide guidelines on when to use each form of UB.
 
 Introduction
 ============
-Undefined behavior is used to specify the behavior of corner cases for which we
-don't wish to specify the concrete results. UB is also used to provide
+Undefined behavior (UB) is used to specify the behavior of corner cases for
+which we don't wish to specify the concrete results. UB is also used to provide
 additional constraints to the optimizers (e.g., assumptions that the frontend
 guarantees through the language type system or the runtime).
 For example, we could specify the result of division by zero as zero, but
 since we are not really interested in the result, we say it is UB.
 
-There exist two forms of undefined behaviour in LLVM: immediate UB and deferred UB.
-The latter comes in two flavours: undef and poison values.
+There exist two forms of undefined behavior in LLVM: immediate UB and deferred
+UB. The latter comes in two flavors: undef and poison values.
+There is also a ``freeze`` instruction to tame the propagation of deferred UB.
 The lattice of values in LLVM is:
-immediate UB > poison > undef > freeze > concrete value.
+immediate UB > poison > undef > freeze(poison) > concrete value.
+
+We explain each of the concepts in detail below.
 
 
 Immediate UB
@@ -79,6 +82,31 @@ This example highlights why we minimize the cases that trigger immediate UB
 as much as possible.
 As a rule of thumb, use immediate UB only for the cases that trap the CPU for
 most of the supported architectures.
+
+
+Time Travel
+-----------
+Immediate UB in LLVM IR allows the so-called time travelling. What this means
+is that if a program triggers UB, then we are not required to preserve any of
+its observable behavior, including I/O.
+For example, the following function triggers UB after calling ``printf``:
+
+.. code-block:: llvm
+
+    define void @fn() {
+      call void @printf(...) willreturn
+      unreachable
+    }
+
+Since we know that ``printf`` will always return, and because LLVM's UB can
+time-travel, it is legal to remove the call to ``printf`` altogether and
+optimize the function to simply:
+
+.. code-block:: llvm
+
+    define void @fn() {
+      unreachable
+    }
 
 
 Deferred UB
@@ -311,8 +339,8 @@ We can make the loop unswitching optimization above correct as follows:
       br i1 %c2, label %then, label %else
 
 
-Writing Tests that Avoid UB
-===========================
+Writing Tests Without Undefined Behavior
+========================================
 
 When writing tests, it is important to ensure that they don't trigger UB
 unnecessarily. Some automated test reduces sometimes use undef or poison
@@ -349,3 +377,17 @@ conditions and dereferencing undef/poison/null pointers.
    If you need a placeholder value to pass as an argument to an instruction
    that may trigger UB, add a new argument to the function rather than using
    undef or poison.
+
+
+Summary
+=======
+Undefined behavior (UB) in LLVM IR consists of two well-defined concepts:
+immediate and deferred UB (undef and poison values).
+Passing deferred UB values to certain operations leads to immediate UB.
+This can be avoided in some cases through the use of the ``freeze``
+instruction.
+
+The lattice of values in LLVM is:
+immediate UB > poison > undef > freeze(poison) > concrete value.
+It is only valid to transform values from the left to the right (e.g., a poison
+value can be replaced with a concrete value, but not the other way around).
