@@ -1,13 +1,16 @@
 // RUN: mlir-opt %s --nvvm-attach-target='module=nvvm.* O=3 chip=sm_90' --rocdl-attach-target='module=rocdl.* O=3 chip=gfx90a' | FileCheck %s
 // RUN: mlir-opt %s --nvvm-attach-target='module=options.* O=1 chip=sm_70 fast=true ftz=true' --rocdl-attach-target='module=options.* l=file1.bc,file2.bc wave64=false finite-only=true' | FileCheck %s --check-prefix=CHECK_OPTS
+// RUN: mlir-opt %s --nvvm-attach-target='module=nvvm.* section=__fatbin' | FileCheck %s --check-prefix=CHECK_SECTION
 
 module attributes {gpu.container_module} {
 // Verify the target is appended.
 // CHECK: @nvvm_module_1 [#nvvm.target<O = 3, chip = "sm_90">] {
+// CHECK_SECTION: @nvvm_module_1 [#nvvm.target<section = "__fatbin">] 
 gpu.module @nvvm_module_1 {
 }
 // Verify the target is appended.
 // CHECK: @nvvm_module_2 [#nvvm.target<chip = "sm_60">, #nvvm.target<O = 3, chip = "sm_90">] {
+// CHECK_SECTION: gpu.module @nvvm_module_2 [#nvvm.target<chip = "sm_60">, #nvvm.target<section = "__fatbin">] 
 gpu.module @nvvm_module_2 [#nvvm.target<chip = "sm_60">] {
 }
 // Verify the target is not added multiple times.
