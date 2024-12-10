@@ -1326,7 +1326,7 @@ private:
   // Calculate the upper limit of each pressure set
   void computePressureSetLimit(const RegisterClassInfo &RCI) {
     for (unsigned PSet = 0; PSet < PSetNum; PSet++)
-      PressureSetLimit[PSet] = TRI->getRegPressureSetLimit(MF, PSet);
+      PressureSetLimit[PSet] = RCI.getRegPressureSetLimit(PSet);
   }
 
   // There are two patterns of last-use.
