@@ -33,8 +33,7 @@ Value *AtomicInfo::EmitAtomicLoadOp(AtomicOrdering AO, bool IsVolatile,
   return Load;
 }
 
-CallInst *AtomicInfo::EmitAtomicLibcall(IRBuilderBase *Builder,
-                                        StringRef fnName, Type *ResultType,
+CallInst *AtomicInfo::EmitAtomicLibcall(StringRef fnName, Type *ResultType,
                                         ArrayRef<Value *> Args) {
   LLVMContext &ctx = Builder->getContext();
   SmallVector<Type *, 6> ArgTys;
@@ -81,7 +80,7 @@ std::pair<Value *, Value *> AtomicInfo::EmitAtomicCompareExchangeLibcall(
                                 APInt(IntBits, static_cast<uint64_t>(Failure),
                                       /*signed=*/true)),
   };
-  auto Result = EmitAtomicLibcall(Builder, "__atomic_compare_exchange",
+  auto Result = EmitAtomicLibcall("__atomic_compare_exchange",
                                   IntegerType::getInt1Ty(ctx), Args);
   return std::make_pair(ExpectedVal, Result);
 }

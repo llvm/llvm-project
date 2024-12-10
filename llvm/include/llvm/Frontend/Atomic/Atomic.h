@@ -10,18 +10,10 @@
 #ifndef LLVM_FRONTEND_ATOMIC_ATOMIC_H
 #define LLVM_FRONTEND_ATOMIC_ATOMIC_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/Operator.h"
-#include "llvm/IR/RuntimeLibcalls.h"
 
 namespace llvm {
-class AtomicInfo;
-
 class AtomicInfo {
 protected:
   IRBuilderBase *Builder;
@@ -68,8 +60,8 @@ public:
   Value *EmitAtomicLoadOp(AtomicOrdering AO, bool IsVolatile,
                           bool CmpXchg = false);
 
-  CallInst *EmitAtomicLibcall(IRBuilderBase *Builder, StringRef fnName,
-                              Type *ResultType, ArrayRef<Value *> Args);
+  CallInst *EmitAtomicLibcall(StringRef fnName, Type *ResultType,
+                              ArrayRef<Value *> Args);
 
   Value *getAtomicSizeValue() const {
     LLVMContext &ctx = getLLVMContext();
