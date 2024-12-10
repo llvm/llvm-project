@@ -1375,14 +1375,13 @@ bool LoopVectorizationLegality::isFixedOrderRecurrence(
 }
 
 bool LoopVectorizationLegality::blockNeedsPredication(BasicBlock *BB) const {
-  // When vectorizing early exits, create predicates for the latch block. The
-  // early exiting block must be a direct predecessor of the latch at the
+  // When vectorizing early exits, create predicates for the latch block only.
+  // The early exiting block must be a direct predecessor of the latch at the
   // moment.
   BasicBlock *Latch = TheLoop->getLoopLatch();
   if (hasUncountableEarlyExit()) {
     assert(
-        getUncountableExitingBlocks().size() == 1 &&
-        is_contained(predecessors(Latch), getUncountableExitingBlocks()[0]) &&
+        is_contained(predecessors(Latch), getUncountableEarlyExitingBlock()) &&
         "Uncountable exiting block must be a direct predecessor of latch");
     return BB == Latch;
   }
@@ -1799,13 +1798,15 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
 
   HasUncountableEarlyExit = false;
   if (isa<SCEVCouldNotCompute>(PSE.getBackedgeTakenCount())) {
+    HasUncountableEarlyExit = true;
     if (!isVectorizableEarlyExitLoop()) {
+      UncountableExitingBlocks.clear();
+      HasUncountableEarlyExit = false;
       if (DoExtraAnalysis)
         Result = false;
       else
         return false;
-    } else
-      HasUncountableEarlyExit = true;
+    }
   }
 
   // Go over each instruction and look at memory deps.
