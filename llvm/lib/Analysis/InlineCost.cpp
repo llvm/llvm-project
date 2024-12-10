@@ -1438,8 +1438,8 @@ void CallAnalyzer::disableLoadElimination() {
 /// Returns false if unable to compute the offset for any reason. Respects any
 /// simplified values known during the analysis of this callsite.
 bool CallAnalyzer::accumulateGEPOffset(GEPOperator &GEP, APInt &Offset) {
-  unsigned IntPtrWidth = DL.getIndexTypeSizeInBits(GEP.getType());
-  assert(IntPtrWidth == Offset.getBitWidth());
+  unsigned IndexWidth = DL.getIndexTypeSizeInBits(GEP.getType());
+  assert(IndexWidth == Offset.getBitWidth());
 
   for (gep_type_iterator GTI = gep_type_begin(GEP), GTE = gep_type_end(GEP);
        GTI != GTE; ++GTI) {
@@ -1454,12 +1454,12 @@ bool CallAnalyzer::accumulateGEPOffset(GEPOperator &GEP, APInt &Offset) {
     if (StructType *STy = GTI.getStructTypeOrNull()) {
       unsigned ElementIdx = OpC->getZExtValue();
       const StructLayout *SL = DL.getStructLayout(STy);
-      Offset += APInt(IntPtrWidth, SL->getElementOffset(ElementIdx));
+      Offset += APInt(IndexWidth, SL->getElementOffset(ElementIdx));
       continue;
     }
 
-    APInt TypeSize(IntPtrWidth, GTI.getSequentialElementStride(DL));
-    Offset += OpC->getValue().sextOrTrunc(IntPtrWidth) * TypeSize;
+    APInt TypeSize(IndexWidth, GTI.getSequentialElementStride(DL));
+    Offset += OpC->getValue().sextOrTrunc(IndexWidth) * TypeSize;
   }
   return true;
 }
@@ -1743,7 +1743,7 @@ bool CallAnalyzer::visitPtrToInt(PtrToIntInst &I) {
   // integer is large enough to represent the pointer.
   unsigned IntegerSize = I.getType()->getScalarSizeInBits();
   unsigned AS = I.getOperand(0)->getType()->getPointerAddressSpace();
-  if (IntegerSize == DL.getPointerSizeInBits(AS)) {
+  if (IntegerSize == DL.getIndexSizeInBits(AS)) {
     std::pair<Value *, APInt> BaseAndOffset =
         ConstantOffsetPtrs.lookup(I.getOperand(0));
     if (BaseAndOffset.first)
@@ -1773,7 +1773,7 @@ bool CallAnalyzer::visitIntToPtr(IntToPtrInst &I) {
   // modifications provided the integer is not too large.
   Value *Op = I.getOperand(0);
   unsigned IntegerSize = Op->getType()->getScalarSizeInBits();
-  if (IntegerSize <= DL.getPointerTypeSizeInBits(I.getType())) {
+  if (IntegerSize <= DL.getIndexTypeSizeInBits(I.getType())) {
     std::pair<Value *, APInt> BaseAndOffset = ConstantOffsetPtrs.lookup(Op);
     if (BaseAndOffset.first)
       ConstantOffsetPtrs[&I] = BaseAndOffset;
