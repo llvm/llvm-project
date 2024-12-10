@@ -974,8 +974,6 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
 
   CallInst *V = State.Builder.CreateCall(VectorF, Args, OpBundles);
 
-  // FIXME: vp.cast and vp.select dont pass the underlying instruction into the
-  // recipe, which set the flags and metadata be needed.
   setFlags(V);
 
   if (!V->getType()->isVoidTy())
