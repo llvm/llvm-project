@@ -5990,6 +5990,7 @@ static Expr *replaceWithNewTraitsOrDirectCall(const ASTContext &Context, Expr *,
 /// the original Associated Statement.
 static StmtResult cloneAssociatedStmt(const ASTContext &Context, Stmt *StmtP,
                                       SemaOpenMP *SemaPtr, bool NoContext) {
+  StmtResult ResultAssocStmt;
   if (auto *AssocStmt = dyn_cast<CapturedStmt>(StmtP)) {
     CapturedDecl *CDecl = AssocStmt->getCapturedDecl();
     Stmt *AssocExprStmt = AssocStmt->getCapturedStmt();
@@ -6022,9 +6023,9 @@ static StmtResult cloneAssociatedStmt(const ASTContext &Context, Stmt *StmtP,
         AssocStmt->getCapturedRegionKind(), Captures, CaptureInits, NewDecl,
         const_cast<RecordDecl *>(AssocStmt->getCapturedRecordDecl()));
 
-    return NewStmt;
+    ResultAssocStmt = NewStmt;
   }
-  return static_cast<Stmt *>(nullptr);
+  return ResultAssocStmt;
 }
 
 /// replaceWithNewTraitsOrDirectCall() is for transforming the call traits.
@@ -6103,8 +6104,7 @@ static StmtResult combine2Stmts(ASTContext &Context, Stmt *FirstStmt,
   auto *CombinedStmt = CompoundStmt::Create(
       Context, llvm::ArrayRef<Stmt *>(NewCombinedStmtVector),
       FPOptionsOverride(), SourceLocation(), SourceLocation());
-  StmtResult FinalStmts(CombinedStmt);
-  return FinalStmts;
+  return CombinedStmt;
 }
 
 template <typename SpecificClause>
@@ -6120,21 +6120,19 @@ StmtResult SemaOpenMP::transformDispatchDirective(
     Stmt *AStmt, SourceLocation StartLoc, SourceLocation EndLoc) {
 
   StmtResult RetValue;
-  llvm::SmallVector<OMPClause *, 8> DependVector;
+  llvm::SmallVector<OMPClause *, 8> DependClauseVector;
   for (const OMPDependClause *ConstDependClause :
        OMPExecutableDirective::getClausesOfKind<OMPDependClause>(Clauses)) {
-    OMPDependClause *DependClause =
-        const_cast<OMPDependClause *>(ConstDependClause);
-    DependVector.push_back(DependClause);
+    auto *DependClause = const_cast<OMPDependClause *>(ConstDependClause);
+    DependClauseVector.push_back(DependClause);
   }
-  llvm::ArrayRef<OMPClause *> DependCArray(DependVector);
 
   // #pragma omp dispatch depend() is changed to #pragma omp taskwait depend()
   // This is done by calling ActOnOpenMPExecutableDirective() for the
   // new taskwait directive.
-  StmtResult DispatchDepend2taskwait =
-      ActOnOpenMPExecutableDirective(OMPD_taskwait, DirName, CancelRegion,
-                                     DependCArray, NULL, StartLoc, EndLoc);
+  StmtResult DispatchDepend2taskwait = ActOnOpenMPExecutableDirective(
+      OMPD_taskwait, DirName, CancelRegion, DependClauseVector, NULL, StartLoc,
+      EndLoc);
 
   if (OMPExecutableDirective::getSingleClause<OMPNovariantsClause>(Clauses)) {
 
@@ -6241,7 +6239,7 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
           OMPExecutableDirective::getSingleClause<OMPBindClause>(Clauses))
     BindKind = BC->getBindKind();
 
-  if ((Kind == OMPD_dispatch) && (Clauses.size() > 0)) {
+  if ((Kind == OMPD_dispatch) && (!Clauses.empty())) {
 
     if (llvm::all_of(Clauses, [](OMPClause *C) {
           return llvm::is_contained(
@@ -10795,7 +10793,7 @@ StmtResult SemaOpenMP::ActOnOpenMPSectionDirective(Stmt *AStmt,
 
 /// PseudoObjectExpr is a Trait for dispatch containing the
 /// function and its variant. Returning only the function.
-static Expr *RemovePseudoObjectExpr(Expr *PseudoObjExprOrDirectCall) {
+static Expr *removePseudoObjectExpr(Expr *PseudoObjExprOrDirectCall) {
   Expr *DirectCallExpr = PseudoObjExprOrDirectCall;
   if (auto *PseudoObjExpr =
           dyn_cast<PseudoObjectExpr>(PseudoObjExprOrDirectCall))
@@ -10805,7 +10803,7 @@ static Expr *RemovePseudoObjectExpr(Expr *PseudoObjExprOrDirectCall) {
 
 static Expr *getDirectCallExpr(Expr *E) {
   Expr *PseudoObjExpr = E->IgnoreParenCasts()->IgnoreImplicit();
-  Expr *DirectCallExpr = RemovePseudoObjectExpr(PseudoObjExpr);
+  Expr *DirectCallExpr = removePseudoObjectExpr(PseudoObjExpr);
   if (auto *CE = dyn_cast<CallExpr>(DirectCallExpr))
     if (CE->getDirectCallee())
       return DirectCallExpr;
@@ -10840,18 +10838,15 @@ SemaOpenMP::ActOnOpenMPDispatchDirective(ArrayRef<OMPClause *> Clauses,
     E = E->IgnoreParenCasts()->IgnoreImplicit();
 
     if (auto *BO = dyn_cast<BinaryOperator>(E)) {
-      if (BO->getOpcode() == BO_Assign) {
+      if (BO->getOpcode() == BO_Assign)
         TargetCall = getDirectCallExpr(BO->getRHS());
-      }
     } else {
       if (auto *COCE = dyn_cast<CXXOperatorCallExpr>(E))
         if (COCE->getOperator() == OO_Equal)
           TargetCall = getDirectCallExpr(COCE->getArg(1));
-      if (!TargetCall) {
+      if (!TargetCall)
         TargetCall = getDirectCallExpr(E);
-      }
     }
-
     if (!TargetCall) {
       Diag(E->getBeginLoc(), diag::err_omp_dispatch_statement_call);
       return StmtError();
