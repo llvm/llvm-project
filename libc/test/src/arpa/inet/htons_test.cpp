@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/endian_internal.h"
-#include "src/network/htons.h"
-#include "src/network/ntohs.h"
+#include "src/arpa/inet/htons.h"
+#include "src/arpa/inet/ntohs.h"
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcHtons, SmokeTest) {

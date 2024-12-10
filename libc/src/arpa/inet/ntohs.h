@@ -1,4 +1,4 @@
-//===-- Implementation of ntohl function ----------------------------------===//
+//===-- Implementation header of ntohs --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,18 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/network/ntohl.h"
-#include "src/__support/common.h"
-#include "src/__support/endian_internal.h"
+#ifndef LLVM_LIBC_SRC_ARPA_INET_NTOHS_H
+#define LLVM_LIBC_SRC_ARPA_INET_NTOHS_H
+
 #include "src/__support/macros/config.h"
+#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(uint32_t, ntohl, (uint32_t netlong)) {
-  if constexpr (Endian::IS_LITTLE)
-    return __builtin_bswap32(netlong);
-  else
-    return netlong;
-}
+uint16_t ntohs(uint16_t netshort);
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC_ARPA_INET_NTOHS_H
