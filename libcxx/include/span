@@ -369,12 +369,12 @@ public:
 #    endif
 
   _LIBCPP_HIDE_FROM_ABI constexpr reference front() const noexcept {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "span<T, N>::front() on empty span");
+    static_assert(_Extent >= 1, "span<T, N>::front() on empty span");
     return __data_[0];
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr reference back() const noexcept {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "span<T, N>::back() on empty span");
+    static_assert(_Extent >= 1, "span<T, N>::back() on empty span");
     return __data_[size() - 1];
   }
 

@@ -12,25 +12,22 @@
 //
 // constexpr reference back() const noexcept;
 
-// Make sure that accessing a span out-of-bounds triggers an assertion.
-
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: libcpp-hardening-mode=none
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
+// Make sure that accessing a statically-sized span out-of-bounds triggers a
+// compile-time error.
 
 #include <array>
 #include <span>
 
-#include "check_assertion.h"
-
 int main(int, char**) {
+  std::array<int, 3> array{0, 1, 2};
   {
-    std::array<int, 3> array{0, 1, 2};
-    std::span<int> const s(array.data(), 0);
-    TEST_LIBCPP_ASSERT_FAILURE(s.back(), "span<T>::back() on empty span");
+    std::span<int, 0> const s(array.data(), 0);
+    s.back(); // expected-error@span:* {{span<T, N>::back() on empty span}}
   }
-
-  // back() on a span with a static extent is caught statically and tested in front.verify.cpp
+  {
+    std::span<int, 3> const s(array.data(), 3);
+    s.back(); // nothing
+  }
 
   return 0;
 }
