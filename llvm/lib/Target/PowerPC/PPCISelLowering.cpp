@@ -7295,22 +7295,20 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
       SDValue ArgValue =
           DAG.getLoad(ValVT, dl, Chain, FIN, MachinePointerInfo());
 
-      // While the ABI specifies the the higher bits of the load should be
-      // zeroed out this is not always the case. For safety this code will zero
-      // extend the loaded value if the size of the argument type is smaller
-      // then the load.
+      // While the ABI specifies that the higher bits of the load should be
+      // zeroed out or sign extended this is not always the case. For safety
+      // this code will zero or sign extend the loaded value if the size of
+      // the argument type is smaller than the load.
       if (!ArgVT.isVector() && !ValVT.isVector() && ArgVT.isInteger() &&
           ValVT.isInteger() &&
           ArgVT.getScalarSizeInBits() < ValVT.getScalarSizeInBits()) {
         SDValue ArgValueTrunc = DAG.getNode(ISD::TRUNCATE, dl, ArgVT, ArgValue);
-        //    DAG.getLoad(ArgVT, dl, Chain, FIN, MachinePointerInfo());
         SDValue ArgValueExt =
             ArgSignExt ? DAG.getSExtOrTrunc(ArgValueTrunc, dl, ValVT)
                        : DAG.getZExtOrTrunc(ArgValueTrunc, dl, ValVT);
         InVals.push_back(ArgValueExt);
-      } else {
+      } else
         InVals.push_back(ArgValue);
-      }
     };
 
     // Vector arguments to VaArg functions are passed both on the stack, and
