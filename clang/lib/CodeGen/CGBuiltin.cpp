@@ -14105,7 +14105,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Tys[0] = llvm::FixedVectorType::get(HalfTy, 8);
     // Op[1] is mfloat8x16_t, but the intrinsic converts only the lower
     //  part of the vector.
-    if (BuiltinID == NEON::BI__builtin_neon_vcvt1_low_bf16_mf8_fpm) {
+    if (BuiltinID == NEON::BI__builtin_neon_vcvt1_low_f16_mf8_fpm) {
       Tys[1] = GetNeonType(this, NeonTypeFlags(Type.getEltType(), false,
                                                /*isQuad*/ false));
       Ops[0] = Builder.CreateExtractVector(Tys[1], Ops[0], Builder.getInt64(0));
@@ -14123,7 +14123,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Tys[0] = llvm::FixedVectorType::get(HalfTy, 8);
     // Op[1] is mfloat8x16_t, but the intrinsic converts only the lower
     //  part of the vector.
-    if (BuiltinID == NEON::BI__builtin_neon_vcvt2_low_bf16_mf8_fpm) {
+    if (BuiltinID == NEON::BI__builtin_neon_vcvt2_low_f16_mf8_fpm) {
       Tys[1] = GetNeonType(this, NeonTypeFlags(Type.getEltType(), false,
                                                /*isQuad*/ false));
       Ops[0] = Builder.CreateExtractVector(Tys[1], Ops[0], Builder.getInt64(0));
