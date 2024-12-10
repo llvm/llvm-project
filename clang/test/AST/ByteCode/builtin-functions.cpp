@@ -51,6 +51,15 @@ namespace strcmp {
     return __builtin_strcmp(buffer, "mutable") == 0;
   }
   static_assert(char_memchr_mutable(), "");
+
+  static_assert(__builtin_strncmp("abaa", "abba", 5) == -1);
+  static_assert(__builtin_strncmp("abaa", "abba", 4) == -1);
+  static_assert(__builtin_strncmp("abaa", "abba", 3) == -1);
+  static_assert(__builtin_strncmp("abaa", "abba", 2) == 0);
+  static_assert(__builtin_strncmp("abaa", "abba", 1) == 0);
+  static_assert(__builtin_strncmp("abaa", "abba", 0) == 0);
+  static_assert(__builtin_strncmp(0, 0, 0) == 0);
+  static_assert(__builtin_strncmp("abab\0banana", "abab\0canada", 100) == 0);
 }
 
 /// Copied from constant-expression-cxx11.cpp
