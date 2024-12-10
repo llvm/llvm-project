@@ -1645,11 +1645,8 @@ static ConstantInt *extractNumericCGTypeId(const Function &F) {
     }
   }
 
-  if (!MDGeneralizedTypeId) {
-    errs() << "warning: can't find indirect target type id metadata "
-           << "for " << F.getName() << "\n";
+  if (!MDGeneralizedTypeId)
     return nullptr;
-  }
 
   uint64_t TypeIdVal = llvm::MD5Hash(MDGeneralizedTypeId->getString());
   Type *Int64Ty = Type::getInt64Ty(F.getContext());
