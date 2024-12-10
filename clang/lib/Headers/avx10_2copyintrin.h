@@ -33,9 +33,8 @@
 ///
 /// \param __A
 ///    A 128-bit integer vector.
-///
 /// \returns A 128-bit integer vector. The lower 32 bits are copied from the
-/// parameter \a __A; the upper bits are zeroed.
+///    parameter \a __A; the upper bits are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_move_epi32(__m128i __A) {
   return (__m128i)__builtin_shufflevector(
       (__v4si)__A, (__v4si)_mm_setzero_si128(), 0, 4, 4, 4);
@@ -55,9 +54,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_move_epi32(__m128i __A) {
 ///
 /// \param __A
 ///    A 128-bit integer vector.
-///
 /// \returns A 128-bit integer vector. The lower 16 bits are copied from the
-/// parameter \a __A; the upper bits are zeroed.
+///    parameter \a __A; the upper bits are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_move_epi16(__m128i __A) {
   return (__m128i)__builtin_shufflevector(
       (__v8hi)__A, (__v8hi)_mm_setzero_si128(), 0, 8, 8, 8, 8, 8, 8, 8);
