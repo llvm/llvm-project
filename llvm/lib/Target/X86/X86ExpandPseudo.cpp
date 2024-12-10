@@ -14,7 +14,6 @@
 
 #include "X86.h"
 #include "X86FrameLowering.h"
-#include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
@@ -559,12 +558,76 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     return true;
   }
   case X86::PTILELOADDV:
-  case X86::PTILELOADDT1V: {
+  case X86::PTILELOADDT1V:
+  case X86::PTILELOADDRSV:
+  case X86::PTILELOADDRST1V:
+  case X86::PTCVTROWD2PSrreV:
+  case X86::PTCVTROWD2PSrriV:
+  case X86::PTCVTROWPS2PBF16HrreV:
+  case X86::PTCVTROWPS2PBF16HrriV:
+  case X86::PTCVTROWPS2PBF16LrreV:
+  case X86::PTCVTROWPS2PBF16LrriV:
+  case X86::PTCVTROWPS2PHHrreV:
+  case X86::PTCVTROWPS2PHHrriV:
+  case X86::PTCVTROWPS2PHLrreV:
+  case X86::PTCVTROWPS2PHLrriV:
+  case X86::PTILEMOVROWrreV:
+  case X86::PTILEMOVROWrriV: {
     for (unsigned i = 2; i > 0; --i)
       MI.removeOperand(i);
-    unsigned Opc = Opcode == X86::PTILELOADDV
-                       ? GET_EGPR_IF_ENABLED(X86::TILELOADD)
-                       : GET_EGPR_IF_ENABLED(X86::TILELOADDT1);
+    unsigned Opc;
+    switch (Opcode) {
+    case X86::PTILELOADDRSV:
+      Opc = X86::TILELOADDRS;
+      break;
+    case X86::PTILELOADDRST1V:
+      Opc = X86::TILELOADDRST1;
+      break;
+    case X86::PTILELOADDV:
+      Opc = GET_EGPR_IF_ENABLED(X86::TILELOADD);
+      break;
+    case X86::PTILELOADDT1V:
+      Opc = GET_EGPR_IF_ENABLED(X86::TILELOADDT1);
+      break;
+    case X86::PTCVTROWD2PSrreV:
+      Opc = X86::TCVTROWD2PSrre;
+      break;
+    case X86::PTCVTROWD2PSrriV:
+      Opc = X86::TCVTROWD2PSrri;
+      break;
+    case X86::PTCVTROWPS2PBF16HrreV:
+      Opc = X86::TCVTROWPS2PBF16Hrre;
+      break;
+    case X86::PTCVTROWPS2PBF16HrriV:
+      Opc = X86::TCVTROWPS2PBF16Hrri;
+      break;
+    case X86::PTCVTROWPS2PBF16LrreV:
+      Opc = X86::TCVTROWPS2PBF16Lrre;
+      break;
+    case X86::PTCVTROWPS2PBF16LrriV:
+      Opc = X86::TCVTROWPS2PBF16Lrri;
+      break;
+    case X86::PTCVTROWPS2PHHrreV:
+      Opc = X86::TCVTROWPS2PHHrre;
+      break;
+    case X86::PTCVTROWPS2PHHrriV:
+      Opc = X86::TCVTROWPS2PHHrri;
+      break;
+    case X86::PTCVTROWPS2PHLrreV:
+      Opc = X86::TCVTROWPS2PHLrre;
+      break;
+    case X86::PTCVTROWPS2PHLrriV:
+      Opc = X86::TCVTROWPS2PHLrri;
+      break;
+    case X86::PTILEMOVROWrreV:
+      Opc = X86::TILEMOVROWrre;
+      break;
+    case X86::PTILEMOVROWrriV:
+      Opc = X86::TILEMOVROWrri;
+      break;
+    default:
+      llvm_unreachable("Unexpected Opcode");
+    }
     MI.setDesc(TII->get(Opc));
     return true;
   }
@@ -664,7 +727,11 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case X86::PT2RPNTLVWZ0V:
   case X86::PT2RPNTLVWZ0T1V:
   case X86::PT2RPNTLVWZ1V:
-  case X86::PT2RPNTLVWZ1T1V: {
+  case X86::PT2RPNTLVWZ1T1V:
+  case X86::PT2RPNTLVWZ0RSV:
+  case X86::PT2RPNTLVWZ0RST1V:
+  case X86::PT2RPNTLVWZ1RSV:
+  case X86::PT2RPNTLVWZ1RST1V: {
     for (unsigned i = 3; i > 0; --i)
       MI.removeOperand(i);
     unsigned Opc;
@@ -681,16 +748,30 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     case X86::PT2RPNTLVWZ1T1V:
       Opc = X86::T2RPNTLVWZ1T1;
       break;
+    case X86::PT2RPNTLVWZ0RSV:
+      Opc = X86::T2RPNTLVWZ0RS;
+      break;
+    case X86::PT2RPNTLVWZ0RST1V:
+      Opc = X86::T2RPNTLVWZ0RST1;
+      break;
+    case X86::PT2RPNTLVWZ1RSV:
+      Opc = X86::T2RPNTLVWZ1RS;
+      break;
+    case X86::PT2RPNTLVWZ1RST1V:
+      Opc = X86::T2RPNTLVWZ1RST1;
+      break;
     default:
       llvm_unreachable("Impossible Opcode!");
     }
     MI.setDesc(TII->get(Opc));
     return true;
   }
-  case X86::PTTRANSPOSEDV: {
+  case X86::PTTRANSPOSEDV:
+  case X86::PTCONJTFP16V: {
     for (int i = 2; i > 0; --i)
       MI.removeOperand(i);
-    MI.setDesc(TII->get(X86::TTRANSPOSED));
+    MI.setDesc(TII->get(Opcode == X86::PTTRANSPOSEDV ? X86::TTRANSPOSED
+                                                     : X86::TCONJTFP16));
     return true;
   }
   case X86::PTCMMIMFP16PSV:
@@ -700,7 +781,18 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case X86::PTDPBUSDV:
   case X86::PTDPBUUDV:
   case X86::PTDPBF16PSV:
-  case X86::PTDPFP16PSV: {
+  case X86::PTDPFP16PSV:
+  case X86::PTTDPBF16PSV:
+  case X86::PTTDPFP16PSV:
+  case X86::PTTCMMIMFP16PSV:
+  case X86::PTTCMMRLFP16PSV:
+  case X86::PTCONJTCMMIMFP16PSV:
+  case X86::PTMMULTF32PSV:
+  case X86::PTTMMULTF32PSV:
+  case X86::PTDPBF8PSV:
+  case X86::PTDPBHF8PSV:
+  case X86::PTDPHBF8PSV:
+  case X86::PTDPHF8PSV: {
     MI.untieRegOperand(4);
     for (unsigned i = 3; i > 0; --i)
       MI.removeOperand(i);
@@ -714,7 +806,42 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     case X86::PTDPBUUDV:   Opc = X86::TDPBUUD; break;
     case X86::PTDPBF16PSV: Opc = X86::TDPBF16PS; break;
     case X86::PTDPFP16PSV: Opc = X86::TDPFP16PS; break;
-    default: llvm_unreachable("Impossible Opcode!");
+    case X86::PTTDPBF16PSV:
+      Opc = X86::TTDPBF16PS;
+      break;
+    case X86::PTTDPFP16PSV:
+      Opc = X86::TTDPFP16PS;
+      break;
+    case X86::PTTCMMIMFP16PSV:
+      Opc = X86::TTCMMIMFP16PS;
+      break;
+    case X86::PTTCMMRLFP16PSV:
+      Opc = X86::TTCMMRLFP16PS;
+      break;
+    case X86::PTCONJTCMMIMFP16PSV:
+      Opc = X86::TCONJTCMMIMFP16PS;
+      break;
+    case X86::PTMMULTF32PSV:
+      Opc = X86::TMMULTF32PS;
+      break;
+    case X86::PTTMMULTF32PSV:
+      Opc = X86::TTMMULTF32PS;
+      break;
+    case X86::PTDPBF8PSV:
+      Opc = X86::TDPBF8PS;
+      break;
+    case X86::PTDPBHF8PSV:
+      Opc = X86::TDPBHF8PS;
+      break;
+    case X86::PTDPHBF8PSV:
+      Opc = X86::TDPHBF8PS;
+      break;
+    case X86::PTDPHF8PSV:
+      Opc = X86::TDPHF8PS;
+      break;
+
+    default:
+      llvm_unreachable("Unexpected Opcode");
     }
     MI.setDesc(TII->get(Opc));
     MI.tieOperands(0, 1);

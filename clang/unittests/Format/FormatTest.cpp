@@ -9441,6 +9441,15 @@ TEST_F(FormatTest, AlignsAfterOpenBracket) {
       "    aaaaaaaaaaaaaaaa\n"
       ");",
       Style);
+  verifyFormat("void foo(\n"
+               "    void (*foobarpntr)(\n"
+               "        aaaaaaaaaaaaaaaaaa *,\n"
+               "        bbbbbbbbbbbbbb *,\n"
+               "        cccccccccccccccccccc *,\n"
+               "        dddddddddddddddddd *\n"
+               "    )\n"
+               ");",
+               Style);
   verifyFormat("aaaaaaa<bbbbbbbb> const aaaaaaaaaa{\n"
                "    aaaaaaaaaaaaa(aaaaaaaaaaa, aaaaaaaaaaaaaaaa)\n"
                "};",
@@ -27385,6 +27394,13 @@ TEST_F(FormatTest, RemoveSemicolon) {
                "; int bar;",
                Style);
 #endif
+
+  verifyFormat("auto sgf = [] {\n"
+               "  ogl = {\n"
+               "      a, b, c, d, e,\n"
+               "  };\n"
+               "};",
+               Style);
 
   Style.TypenameMacros.push_back("STRUCT");
   verifyFormat("STRUCT(T, B) { int i; };", Style);

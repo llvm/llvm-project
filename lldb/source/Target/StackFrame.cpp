@@ -22,6 +22,7 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrameRecognizer.h"
@@ -512,14 +513,16 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
     VariableSP &var_sp, Status &error) {
   ExecutionContext exe_ctx;
   CalculateExecutionContext(exe_ctx);
+
   //bool use_DIL = exe_ctx.GetTargetRef().GetUseDIL(&exe_ctx);
   bool use_DIL = true;
+
   if (use_DIL)
     return DILGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
                                                 var_sp, error);
-
-  return LegacyGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
-                                                 var_sp, error);
+  else
+    return LegacyGetValueForVariableExpressionPath(var_expr, use_dynamic,
+                                                   options, var_sp, error);
 }
 
 ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
@@ -706,8 +709,8 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
         }
       }
 
-      // If we have a non pointer type with a sythetic value then lets check if
-      // we have an sythetic dereference specified.
+      // If we have a non-pointer type with a synthetic value then lets check if
+      // we have a synthetic dereference specified.
       if (!valobj_sp->IsPointerType() && valobj_sp->HasSyntheticValue()) {
         Status deref_error;
         if (valobj_sp->GetCompilerType().IsReferenceType()) {
@@ -722,13 +725,13 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
         valobj_sp = valobj_sp->Dereference(deref_error);
         if (!valobj_sp || deref_error.Fail()) {
           error = Status::FromErrorStringWithFormatv(
-              "Failed to dereference sythetic value: {0}", deref_error);
+              "Failed to dereference synthetic value: {0}", deref_error);
           return ValueObjectSP();
         }
         // Some synthetic plug-ins fail to set the error in Dereference
         if (!valobj_sp) {
           error =
-              Status::FromErrorString("Failed to dereference sythetic value");
+              Status::FromErrorString("Failed to dereference synthetic value");
           return ValueObjectSP();
         }
         expr_is_ptr = false;
@@ -1267,6 +1270,71 @@ bool StackFrame::IsHidden() {
   return false;
 }
 
+StructuredData::ObjectSP StackFrame::GetLanguageSpecificData() {
+  auto process_sp = CalculateProcess();
+  SourceLanguage language = GetLanguage();
+  if (!language)
+    return {};
+  if (auto runtime_sp =
+          process_sp->GetLanguageRuntime(language.AsLanguageType()))
+    return runtime_sp->GetLanguageSpecificData(
+        GetSymbolContext(eSymbolContextFunction));
+  return {};
+}
+
+const char *StackFrame::GetFunctionName() {
+  const char *name = nullptr;
+  SymbolContext sc = GetSymbolContext(
+      eSymbolContextFunction | eSymbolContextBlock | eSymbolContextSymbol);
+  if (sc.block) {
+    Block *inlined_block = sc.block->GetContainingInlinedBlock();
+    if (inlined_block) {
+      const InlineFunctionInfo *inlined_info =
+          inlined_block->GetInlinedFunctionInfo();
+      if (inlined_info)
+        name = inlined_info->GetName().AsCString();
+    }
+  }
+
+  if (name == nullptr) {
+    if (sc.function)
+      name = sc.function->GetName().GetCString();
+  }
+
+  if (name == nullptr) {
+    if (sc.symbol)
+      name = sc.symbol->GetName().GetCString();
+  }
+
+  return name;
+}
+
+const char *StackFrame::GetDisplayFunctionName() {
+  const char *name = nullptr;
+  SymbolContext sc = GetSymbolContext(
+      eSymbolContextFunction | eSymbolContextBlock | eSymbolContextSymbol);
+  if (sc.block) {
+    Block *inlined_block = sc.block->GetContainingInlinedBlock();
+    if (inlined_block) {
+      const InlineFunctionInfo *inlined_info =
+          inlined_block->GetInlinedFunctionInfo();
+      if (inlined_info)
+        name = inlined_info->GetDisplayName().AsCString();
+    }
+  }
+
+  if (name == nullptr) {
+    if (sc.function)
+      name = sc.function->GetDisplayName().GetCString();
+  }
+
+  if (name == nullptr) {
+    if (sc.symbol)
+      name = sc.symbol->GetDisplayName().GetCString();
+  }
+  return name;
+}
+
 SourceLanguage StackFrame::GetLanguage() {
   CompileUnit *cu = GetSymbolContext(eSymbolContextCompUnit).comp_unit;
   if (cu)
@@ -1376,11 +1444,13 @@ lldb::ValueObjectSP StackFrame::GuessValueForAddress(lldb::addr_t addr) {
 
   const char *plugin_name = nullptr;
   const char *flavor = nullptr;
+  const char *cpu = nullptr;
+  const char *features = nullptr;
   const bool force_live_memory = true;
 
-  DisassemblerSP disassembler_sp =
-      Disassembler::DisassembleRange(target_arch, plugin_name, flavor,
-                                     *target_sp, pc_range, force_live_memory);
+  DisassemblerSP disassembler_sp = Disassembler::DisassembleRange(
+      target_arch, plugin_name, flavor, cpu, features, *target_sp, pc_range,
+      force_live_memory);
 
   if (!disassembler_sp || !disassembler_sp->GetInstructionList().GetSize()) {
     return ValueObjectSP();
@@ -1757,10 +1827,12 @@ lldb::ValueObjectSP StackFrame::GuessValueForRegisterAndOffset(ConstString reg,
 
   const char *plugin_name = nullptr;
   const char *flavor = nullptr;
+  const char *cpu = nullptr;
+  const char *features = nullptr;
   const bool force_live_memory = true;
-  DisassemblerSP disassembler_sp =
-      Disassembler::DisassembleRange(target_arch, plugin_name, flavor,
-                                     *target_sp, pc_range, force_live_memory);
+  DisassemblerSP disassembler_sp = Disassembler::DisassembleRange(
+      target_arch, plugin_name, flavor, cpu, features, *target_sp, pc_range,
+      force_live_memory);
 
   if (!disassembler_sp || !disassembler_sp->GetInstructionList().GetSize()) {
     return ValueObjectSP();
@@ -1974,32 +2046,22 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
       if (m_sc.comp_unit && m_sc.line_entry.IsValid()) {
         have_debuginfo = true;
         if (source_lines_before > 0 || source_lines_after > 0) {
+          SupportFileSP source_file_sp = m_sc.line_entry.file_sp;
           uint32_t start_line = m_sc.line_entry.line;
           if (!start_line && m_sc.function) {
-            FileSpec source_file;
-            m_sc.function->GetStartLineSourceInfo(source_file, start_line);
+            m_sc.function->GetStartLineSourceInfo(source_file_sp, start_line);
           }
 
           size_t num_lines =
               target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
-                  m_sc.line_entry.file_sp, start_line, m_sc.line_entry.column,
+                  source_file_sp, start_line, m_sc.line_entry.column,
                   source_lines_before, source_lines_after, "->", &strm);
           if (num_lines != 0)
             have_source = true;
           // TODO: Give here a one time warning if source file is missing.
-          if (!m_sc.line_entry.line) {
-            ConstString fn_name = m_sc.GetFunctionName();
-
-            if (!fn_name.IsEmpty())
-              strm.Printf(
-                  "Note: this address is compiler-generated code in function "
-                  "%s that has no source code associated with it.",
-                  fn_name.AsCString());
-            else
-              strm.Printf("Note: this address is compiler-generated code that "
-                          "has no source code associated with it.");
-            strm.EOL();
-          }
+          if (!m_sc.line_entry.line)
+            strm << "note: This address is not associated with a specific line "
+                    "of code. This may be due to compiler optimizations.\n";
         }
       }
       switch (disasm_display) {
@@ -2026,6 +2088,7 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
             const bool mixed_source_and_assembly = false;
             Disassembler::Disassemble(
                 target->GetDebugger(), target_arch, plugin_name, flavor,
+                target->GetDisassemblyCPU(), target->GetDisassemblyFeatures(),
                 exe_ctx, GetFrameCodeAddress(),
                 {Disassembler::Limit::Instructions, disasm_lines},
                 mixed_source_and_assembly, 0,

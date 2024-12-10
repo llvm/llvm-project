@@ -74,15 +74,15 @@ CHECK-NEXT: pdb file ni: 1 `{{.*}}out.pdb`, src file ni: 0 ``
 CHECK:                             Public Symbols
 CHECK-NEXT: ============================================================
 CHECK-NEXT:   Records
-CHECK-NEXT:      544 | S_PUB32 [size = 28] `x86_64_sym`
+CHECK-NEXT:      584 | S_PUB32 [size = 28] `x86_64_sym`
 CHECK-NEXT:            flags = none, addr = 0005:0008
-CHECK-NEXT:      496 | S_PUB32 [size = 28] `arm64ec_sym`
+CHECK-NEXT:      536 | S_PUB32 [size = 28] `arm64ec_sym`
 CHECK-NEXT:            flags = none, addr = 0005:0000
 CHECK-NEXT:      168 | S_PUB32 [size = 44] `__hybrid_auxiliary_iat_copy`
 CHECK-NEXT:            flags = none, addr = 0002:
 CHECK-NEXT:       96 | S_PUB32 [size = 32] `__chpe_metadata`
 CHECK-NEXT:            flags = none, addr = 0003:0000
-CHECK-NEXT:      416 | S_PUB32 [size = 48] `__x64_code_ranges_to_entry_points`
+CHECK-NEXT:      456 | S_PUB32 [size = 48] `__x64_code_ranges_to_entry_points`
 CHECK-NEXT:            flags = none, addr = 0002:
 CHECK-NEXT:        0 | S_PUB32 [size = 20] `#func`
 CHECK-NEXT:            flags = function, addr = 0001:0008
@@ -90,9 +90,9 @@ CHECK-NEXT:      244 | S_PUB32 [size = 40] `__icall_helper_arm64ec`
 CHECK-NEXT:            flags = none, addr = 0001:0000
 CHECK-NEXT:       64 | S_PUB32 [size = 32] `__auximpcopy_func`
 CHECK-NEXT:            flags = none, addr = 0002:
-CHECK-NEXT:      464 | S_PUB32 [size = 32] `_load_config_used`
+CHECK-NEXT:      504 | S_PUB32 [size = 32] `_load_config_used`
 CHECK-NEXT:            flags = none, addr = 0002:
-CHECK-NEXT:      524 | S_PUB32 [size = 20] `func`
+CHECK-NEXT:      564 | S_PUB32 [size = 20] `func`
 CHECK-NEXT:            flags = function, addr = 0001:4096
 CHECK-NEXT:      128 | S_PUB32 [size = 40] `__hybrid_auxiliary_iat`
 CHECK-NEXT:            flags = none, addr = 0002:8192
@@ -106,6 +106,8 @@ CHECK-NEXT:      212 | S_PUB32 [size = 32] `__hybrid_code_map`
 CHECK-NEXT:            flags = none, addr = 0002:
 CHECK-NEXT:       20 | S_PUB32 [size = 44] `__arm64x_redirection_metadata`
 CHECK-NEXT:            flags = none, addr = 0004:0000
+CHECK-NEXT:      416 | S_PUB32 [size = 40] `__os_arm64x_dispatch_ret`
+CHECK-NEXT:            flags = none, addr = 0002:
 CHECK-NEXT:      316 | S_PUB32 [size = 28] `__imp_func`
 CHECK-NEXT:            flags = none, addr = 0002:8192
 

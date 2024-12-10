@@ -4756,7 +4756,7 @@ define void @vec384_i64_widen_to_i128_factor2_broadcast_to_v3i128_factor3(ptr %i
 ; AVX-NEXT:    vpaddb 48(%rsi), %xmm2, %xmm2
 ; AVX-NEXT:    vpaddb (%rsi), %xmm0, %xmm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm3
-; AVX-NEXT:    vshufpd {{.*#+}} ymm2 = ymm3[0],ymm2[1],ymm3[2],ymm2[2]
+; AVX-NEXT:    vblendps {{.*#+}} ymm2 = ymm3[0,1],ymm2[2,3],ymm3[4,5],ymm2[6,7]
 ; AVX-NEXT:    vextractf128 $1, %ymm2, %xmm3
 ; AVX-NEXT:    vpaddb 16(%rdx), %xmm3, %xmm3
 ; AVX-NEXT:    vpaddb (%rdx), %xmm2, %xmm2

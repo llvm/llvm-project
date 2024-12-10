@@ -119,6 +119,10 @@ public:
 
   const char *GetDisassemblyFlavor() const;
 
+  const char *GetDisassemblyCPU() const;
+
+  const char *GetDisassemblyFeatures() const;
+
   InlineStrategy GetInlineStrategy() const;
 
   RealpathPrefixes GetSourceRealpathPrefixes() const;
@@ -1630,6 +1634,8 @@ public:
   ///     Returns a JSON value that contains all target metrics.
   llvm::json::Value
   ReportStatistics(const lldb_private::StatisticsOptions &options);
+
+  void ResetStatistics();
 
   TargetStats &GetStatistics() { return m_stats; }
 

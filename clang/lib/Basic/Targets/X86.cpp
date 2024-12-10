@@ -23,31 +23,45 @@
 namespace clang {
 namespace targets {
 
-static constexpr Builtin::Info BuiltinInfoX86[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
+// The x86-32 builtins are a subset and prefix of the x86-64 builtins.
+static constexpr int NumX86Builtins =
+    X86::LastX86CommonBuiltin - Builtin::FirstTSBuiltin + 1;
+static constexpr int NumX86_64Builtins =
+    X86::LastTSBuiltin - Builtin::FirstTSBuiltin;
+static_assert(NumX86Builtins < NumX86_64Builtins);
+
+static constexpr auto BuiltinStorage =
+    Builtin::Storage<NumX86_64Builtins>::Make(
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsX86.def"
 
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsX86.inc"
 
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsX86_64.def"
-};
+        , {
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsX86.def"
+
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsX86.inc"
+
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsX86_64.def"
+          });
 
 static const char *const GCCRegNames[] = {
     "ax",    "dx",    "cx",    "bx",    "si",      "di",    "bp",    "sp",
@@ -430,8 +444,14 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAMXCOMPLEX = true;
     } else if (Feature == "+amx-fp8") {
       HasAMXFP8 = true;
+    } else if (Feature == "+amx-movrs") {
+      HasAMXMOVRS = true;
     } else if (Feature == "+amx-transpose") {
       HasAMXTRANSPOSE = true;
+    } else if (Feature == "+amx-avx512") {
+      HasAMXAVX512 = true;
+    } else if (Feature == "+amx-tf32") {
+      HasAMXTF32 = true;
     } else if (Feature == "+cmpccxadd") {
       HasCMPCCXADD = true;
     } else if (Feature == "+raoint") {
@@ -661,6 +681,7 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_GraniterapidsD:
   case CK_Emeraldrapids:
   case CK_Clearwaterforest:
+  case CK_Diamondrapids:
     // FIXME: Historically, we defined this legacy name, it would be nice to
     // remove it at some point. We've never exposed fine-grained names for
     // recent primary x86 CPUs, and we should keep it that way.
@@ -953,8 +974,14 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AMX_COMPLEX__");
   if (HasAMXFP8)
     Builder.defineMacro("__AMX_FP8__");
+  if (HasAMXMOVRS)
+    Builder.defineMacro("__AMX_MOVRS__");
   if (HasAMXTRANSPOSE)
     Builder.defineMacro("__AMX_TRANSPOSE__");
+  if (HasAMXAVX512)
+    Builder.defineMacro("__AMX_AVX512__");
+  if (HasAMXTF32)
+    Builder.defineMacro("__AMX_TF32__");
   if (HasCMPCCXADD)
     Builder.defineMacro("__CMPCCXADD__");
   if (HasRAOINT)
@@ -1080,11 +1107,14 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
   return llvm::StringSwitch<bool>(Name)
       .Case("adx", true)
       .Case("aes", true)
+      .Case("amx-avx512", true)
       .Case("amx-bf16", true)
       .Case("amx-complex", true)
       .Case("amx-fp16", true)
       .Case("amx-fp8", true)
       .Case("amx-int8", true)
+      .Case("amx-movrs", true)
+      .Case("amx-tf32", true)
       .Case("amx-tile", true)
       .Case("amx-transpose", true)
       .Case("avx", true)
@@ -1146,6 +1176,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("pconfig", true)
       .Case("pku", true)
       .Case("popcnt", true)
+      .Case("prefer-256-bit", true)
       .Case("prefetchi", true)
       .Case("prfchw", true)
       .Case("ptwrite", true)
@@ -1200,11 +1231,14 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Case("adx", HasADX)
       .Case("aes", HasAES)
+      .Case("amx-avx512", HasAMXAVX512)
       .Case("amx-bf16", HasAMXBF16)
       .Case("amx-complex", HasAMXCOMPLEX)
       .Case("amx-fp16", HasAMXFP16)
       .Case("amx-fp8", HasAMXFP8)
       .Case("amx-int8", HasAMXINT8)
+      .Case("amx-movrs", HasAMXMOVRS)
+      .Case("amx-tf32", HasAMXTF32)
       .Case("amx-tile", HasAMXTILE)
       .Case("amx-transpose", HasAMXTRANSPOSE)
       .Case("avx", SSELevel >= AVX)
@@ -1345,19 +1379,26 @@ static llvm::X86::ProcessorFeatures getFeature(StringRef Name) {
   // correct, so it asserts if the value is out of range.
 }
 
-unsigned X86TargetInfo::multiVersionSortPriority(StringRef Name) const {
-  // Valid CPUs have a 'key feature' that compares just better than its key
-  // feature.
-  using namespace llvm::X86;
-  CPUKind Kind = parseArchX86(Name);
-  if (Kind != CK_None) {
-    ProcessorFeatures KeyFeature = getKeyFeature(Kind);
-    return (getFeaturePriority(KeyFeature) << 1) + 1;
-  }
+unsigned X86TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
+  auto getPriority = [](StringRef Feature) -> unsigned {
+    // Valid CPUs have a 'key feature' that compares just better than its key
+    // feature.
+    using namespace llvm::X86;
+    CPUKind Kind = parseArchX86(Feature);
+    if (Kind != CK_None) {
+      ProcessorFeatures KeyFeature = getKeyFeature(Kind);
+      return (getFeaturePriority(KeyFeature) << 1) + 1;
+    }
+    // Now we know we have a feature, so get its priority and shift it a few so
+    // that we have sufficient room for the CPUs (above).
+    return getFeaturePriority(getFeature(Feature)) << 1;
+  };
 
-  // Now we know we have a feature, so get its priority and shift it a few so
-  // that we have sufficient room for the CPUs (above).
-  return getFeaturePriority(getFeature(Name)) << 1;
+  unsigned Priority = 0;
+  for (StringRef Feature : Features)
+    if (!Feature.empty())
+      Priority = std::max(Priority, getPriority(Feature));
+  return Priority;
 }
 
 bool X86TargetInfo::validateCPUSpecificCPUDispatch(StringRef Name) const {
@@ -1633,6 +1674,7 @@ std::optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_GraniterapidsD:
     case CK_Emeraldrapids:
     case CK_Clearwaterforest:
+    case CK_Diamondrapids:
     case CK_KNL:
     case CK_KNM:
     // K7
@@ -1836,12 +1878,14 @@ ArrayRef<TargetInfo::AddlRegName> X86TargetInfo::getGCCAddlRegNames() const {
   return llvm::ArrayRef(AddlRegNames);
 }
 
-ArrayRef<Builtin::Info> X86_32TargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfoX86, clang::X86::LastX86CommonBuiltin -
-                                            Builtin::FirstTSBuiltin + 1);
+std::pair<const char *, ArrayRef<Builtin::Info>>
+X86_32TargetInfo::getTargetBuiltinStorage() const {
+  // Only use the relevant prefix of the infos, the string table base is common.
+  return {BuiltinStorage.StringTable,
+          llvm::ArrayRef(BuiltinStorage.Infos).take_front(NumX86Builtins)};
 }
 
-ArrayRef<Builtin::Info> X86_64TargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfoX86,
-                        X86::LastTSBuiltin - Builtin::FirstTSBuiltin);
+std::pair<const char *, ArrayRef<Builtin::Info>>
+X86_64TargetInfo::getTargetBuiltinStorage() const {
+  return {BuiltinStorage.StringTable, BuiltinStorage.Infos};
 }

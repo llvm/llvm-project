@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_FORMAT_PARSE_CONTEXT_H
-#define _LIBCPP___FORMAT_FORMAT_PARSE_CONTEXT_H
+#ifndef _LIBCPP___CXX03___FORMAT_FORMAT_PARSE_CONTEXT_H
+#define _LIBCPP___CXX03___FORMAT_FORMAT_PARSE_CONTEXT_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__format/format_error.h>
@@ -102,4 +102,4 @@ using wformat_parse_context = basic_format_parse_context<wchar_t>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_FORMAT_PARSE_CONTEXT_H
+#endif // _LIBCPP___CXX03___FORMAT_FORMAT_PARSE_CONTEXT_H

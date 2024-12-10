@@ -23,11 +23,9 @@
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -636,6 +634,7 @@ const MCFixupKindInfo &X86AsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"reloc_riprel_4byte_relax", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"reloc_riprel_4byte_relax_rex", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"reloc_riprel_4byte_relax_rex2", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"reloc_riprel_6byte_relax", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"reloc_signed_4byte", 0, 32, 0},
       {"reloc_signed_4byte_relax", 0, 32, 0},
       {"reloc_global_offset_table", 0, 32, 0},
@@ -685,6 +684,7 @@ static unsigned getFixupKindSize(unsigned Kind) {
   case X86::reloc_riprel_4byte_relax_rex2:
   case X86::reloc_riprel_4byte_movq_load:
   case X86::reloc_riprel_4byte_movq_load_rex2:
+  case X86::reloc_riprel_6byte_relax:
   case X86::reloc_signed_4byte:
   case X86::reloc_signed_4byte_relax:
   case X86::reloc_global_offset_table:

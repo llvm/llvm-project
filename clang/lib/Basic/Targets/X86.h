@@ -158,7 +158,10 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasAMXBF16 = false;
   bool HasAMXCOMPLEX = false;
   bool HasAMXFP8 = false;
+  bool HasAMXMOVRS = false;
   bool HasAMXTRANSPOSE = false;
+  bool HasAMXAVX512 = false;
+  bool HasAMXTF32 = false;
   bool HasSERIALIZE = false;
   bool HasTSXLDTRK = false;
   bool HasUSERMSR = false;
@@ -381,7 +384,7 @@ public:
     return CPU != llvm::X86::CK_None;
   }
 
-  unsigned multiVersionSortPriority(StringRef Name) const override;
+  unsigned getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   bool setFPMath(StringRef Name) override;
 
@@ -505,7 +508,8 @@ public:
       MaxAtomicInlineWidth = 64;
   }
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  std::pair<const char *, ArrayRef<Builtin::Info>>
+  getTargetBuiltinStorage() const override;
 
   bool hasBitIntType() const override { return true; }
   size_t getMaxBitIntWidth() const override {
@@ -809,7 +813,8 @@ public:
       MaxAtomicInlineWidth = 128;
   }
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  std::pair<const char *, ArrayRef<Builtin::Info>>
+  getTargetBuiltinStorage() const override;
 
   bool hasBitIntType() const override { return true; }
   size_t getMaxBitIntWidth() const override {

@@ -1403,26 +1403,6 @@ static TemplateParameterList *CreateTemplateParameterList(
   return template_param_list;
 }
 
-std::string TypeSystemClang::PrintTemplateParams(
-    const TemplateParameterInfos &template_param_infos) {
-  llvm::SmallVector<NamedDecl *, 8> ignore;
-  clang::TemplateParameterList *template_param_list =
-      CreateTemplateParameterList(getASTContext(), template_param_infos,
-                                  ignore);
-  llvm::SmallVector<clang::TemplateArgument, 2> args(
-      template_param_infos.GetArgs());
-  if (template_param_infos.hasParameterPack()) {
-    llvm::ArrayRef<TemplateArgument> pack_args =
-        template_param_infos.GetParameterPackArgs();
-    args.append(pack_args.begin(), pack_args.end());
-  }
-  std::string str;
-  llvm::raw_string_ostream os(str);
-  clang::printTemplateArgumentList(os, args, GetTypePrintingPolicy(),
-                                   template_param_list);
-  return str;
-}
-
 clang::FunctionTemplateDecl *TypeSystemClang::CreateFunctionTemplateDecl(
     clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
     clang::FunctionDecl *func_decl,
@@ -2772,7 +2752,17 @@ static bool GetCompleteQualType(clang::ASTContext *ast,
         allow_completion);
 
   case clang::Type::MemberPointer:
-    return !qual_type.getTypePtr()->isIncompleteType();
+    // MS C++ ABI requires type of the class to be complete of which the pointee
+    // is a member.
+    if (ast->getTargetInfo().getCXXABI().isMicrosoft()) {
+      auto *MPT = qual_type.getTypePtr()->castAs<clang::MemberPointerType>();
+      if (MPT->getClass()->isRecordType())
+        GetCompleteRecordType(ast, clang::QualType(MPT->getClass(), 0),
+                              allow_completion);
+
+      return !qual_type.getTypePtr()->isIncompleteType();
+    }
+    break;
 
   default:
     break;
@@ -6749,8 +6739,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
             if (field_type.GetIndexOfChildMemberWithName(
                     name, omit_empty_base_classes, child_indexes))
               return child_indexes.size();
-            else
-              child_indexes = save_indices;
+            child_indexes = std::move(save_indices);
           } else if (field_name == name) {
             // We have to add on the number of base classes to this index!
             child_indexes.push_back(
@@ -9117,7 +9106,7 @@ ConstString TypeSystemClang::DeclGetName(void *opaque_decl) {
     clang::NamedDecl *nd =
         llvm::dyn_cast<NamedDecl>((clang::Decl *)opaque_decl);
     if (nd != nullptr)
-      return ConstString(nd->getDeclName().getAsString());
+      return ConstString(GetTypeNameForDecl(nd, /*qualified=*/false));
   }
   return ConstString();
 }

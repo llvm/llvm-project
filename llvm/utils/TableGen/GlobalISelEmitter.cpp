@@ -1015,6 +1015,15 @@ Error GlobalISelEmitter::importChildMatcher(
         return Error::success();
       }
     }
+  } else if (auto *ChildDefInit = dyn_cast<DefInit>(SrcChild.getLeafValue())) {
+    auto *ChildRec = ChildDefInit->getDef();
+    if (ChildRec->isSubClassOf("ValueType") && !SrcChild.hasName()) {
+      // An unnamed ValueType as in (sext_inreg GPR:$foo, i8). GISel represents
+      // this as a literal constant with the scalar size.
+      MVT::SimpleValueType VT = llvm::getValueType(ChildRec);
+      OM.addPredicate<LiteralIntOperandMatcher>(MVT(VT).getScalarSizeInBits());
+      return Error::success();
+    }
   }
 
   // Immediate arguments have no meaningful type to check as they don't have
@@ -2109,9 +2118,9 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
         return failedImport(
             "Cannot infer register class for SUBREG_TO_REG operand #0");
       MatchedRC = *MaybeRegClass;
-    } else if (MatchedRC.get<const Record *>()->isSubClassOf("RegisterOperand"))
-      MatchedRC = MatchedRC.get<const Record *>()->getValueAsDef("RegClass");
-    else if (!MatchedRC.get<const Record *>()->isSubClassOf("RegisterClass"))
+    } else if (cast<const Record *>(MatchedRC)->isSubClassOf("RegisterOperand"))
+      MatchedRC = cast<const Record *>(MatchedRC)->getValueAsDef("RegClass");
+    else if (!cast<const Record *>(MatchedRC)->isSubClassOf("RegisterClass"))
       return failedImport("Dst MI def isn't a register class" + to_string(Dst));
 
     OperandMatcher &OM = InsnMatcher.getOperand(OpIdx);
@@ -2121,10 +2130,10 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     // GIM_CheckIsSameOperand predicates by the defineOperand method.
     OM.setSymbolicName(getMangledRootDefName(DstIOperand.Name));
     M.defineOperand(OM.getSymbolicName(), OM);
-    if (MatchedRC.is<const Record *>())
-      MatchedRC = &Target.getRegisterClass(MatchedRC.get<const Record *>());
+    if (auto *R = dyn_cast<const Record *>(MatchedRC))
+      MatchedRC = &Target.getRegisterClass(R);
     OM.addPredicate<RegisterBankOperandMatcher>(
-        *MatchedRC.get<const CodeGenRegisterClass *>());
+        *cast<const CodeGenRegisterClass *>(MatchedRC));
     ++OpIdx;
   }
 

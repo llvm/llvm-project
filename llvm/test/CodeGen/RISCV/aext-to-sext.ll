@@ -78,12 +78,14 @@ bar:
 define i64 @sext_phi_constants(i32 signext %c) {
 ; RV64I-LABEL: sext_phi_constants:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, -1
-; RV64I-NEXT:    bnez a0, .LBB2_2
-; RV64I-NEXT:  # %bb.1: # %iffalse
-; RV64I-NEXT:    li a1, -2
-; RV64I-NEXT:  .LBB2_2: # %merge
-; RV64I-NEXT:    slli a0, a1, 32
+; RV64I-NEXT:    beqz a0, .LBB2_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    li a0, -1
+; RV64I-NEXT:    j .LBB2_3
+; RV64I-NEXT:  .LBB2_2: # %iffalse
+; RV64I-NEXT:    li a0, -2
+; RV64I-NEXT:  .LBB2_3: # %merge
+; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    ret
   %a = icmp ne i32 %c, 0
