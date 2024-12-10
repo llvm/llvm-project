@@ -131,7 +131,7 @@ function add-dependencies() {
         echo $p
       done
     ;;
-    compiler-rt|libc|openmp)
+    compiler-rt|libc|offload|openmp)
       echo clang lld
     ;;
     flang|lldb|libclc)
@@ -172,6 +172,7 @@ function exclude-windows() {
     libc)                ;; # no Windows support
     lldb)                ;; # custom environment requirements (https://github.com/llvm/llvm-project/pull/94208#issuecomment-2146256857)
     bolt)                ;; # tests are not supported yet
+    offload)             ;; # no windows support
     *)
       echo "${project}"
     ;;
@@ -250,7 +251,7 @@ fi
 # needs while letting them run on the infrastructure provided by LLVM.
 
 # Figure out which projects need to be built on each platform
-all_projects="bolt clang clang-tools-extra compiler-rt cross-project-tests flang libc libclc lld lldb llvm mlir openmp polly pstl"
+all_projects="bolt clang clang-tools-extra compiler-rt cross-project-tests flang libc libclc lld lldb llvm mlir offload openmp polly pstl"
 modified_projects="$(keep-modified-projects ${all_projects})"
 
 linux_projects_to_test=$(exclude-linux $(compute-projects-to-test 0 ${modified_projects}))
