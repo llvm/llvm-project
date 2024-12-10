@@ -1754,9 +1754,9 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      return expandMultiVecPseudo(
          MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
          AArch64::LDNT1D_4Z, AArch64::LDNT1D_4Z_STRIDED);
-   case AArch64::FORM_STRIDED_TUPLE_X2_PSEUDO:
+   case AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO:
      return expandFormTuplePseudo(MBB, MBBI, NextMBBI, 2);
-   case AArch64::FORM_STRIDED_TUPLE_X4_PSEUDO:
+   case AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO:
      return expandFormTuplePseudo(MBB, MBBI, NextMBBI, 4);
   }
   return false;
