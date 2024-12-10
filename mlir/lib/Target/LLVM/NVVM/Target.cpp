@@ -669,8 +669,9 @@ NVVMTargetAttrImpl::createObject(Attribute attribute, Operation *module,
     properties.push_back(
         builder.getNamedAttr("O", builder.getI32IntegerAttr(target.getO())));
 
-  if (StringAttr section = target.getSection())
-    properties.push_back(builder.getNamedAttr("section", section));
+  if (auto section = options.getELFSection(); !section.empty())
+    properties.push_back(
+        builder.getNamedAttr("section", builder.getStringAttr(section)));
 
   if (!properties.empty())
     objectProps = builder.getDictionaryAttr(properties);
