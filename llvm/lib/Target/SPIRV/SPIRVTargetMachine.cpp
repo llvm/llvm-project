@@ -12,10 +12,10 @@
 
 #include "SPIRVTargetMachine.h"
 #include "SPIRV.h"
-#include "SPIRVStructurizerWrapper.h"
 #include "SPIRVCallLowering.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVLegalizerInfo.h"
+#include "SPIRVStructurizerWrapper.h"
 #include "SPIRVTargetObjectFile.h"
 #include "SPIRVTargetTransformInfo.h"
 #include "TargetInfo/SPIRVTargetInfo.h"

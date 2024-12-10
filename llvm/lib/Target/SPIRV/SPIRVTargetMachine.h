@@ -43,7 +43,7 @@ public:
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
-  
+
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
 };
 } // namespace llvm

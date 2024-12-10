@@ -1227,7 +1227,8 @@ FunctionPass *llvm::createSPIRVStructurizerPass() {
   return new SPIRVStructurizer();
 }
 
-PreservedAnalyses SPIRVStructurizerWrapper::run(Function &F, FunctionAnalysisManager &AF){
+PreservedAnalyses SPIRVStructurizerWrapper::run(Function &F,
+                                                FunctionAnalysisManager &AF) {
   FunctionPass *StructurizerPass = createSPIRVStructurizerPass();
   if (!StructurizerPass->runOnFunction(F))
     return PreservedAnalyses::all();
