@@ -124,6 +124,7 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
 
   const TargetRegisterClass *Super = RC;
   auto I = RC->superclasses().begin();
+  auto E = RC->superclasses().end();
   do {
     switch (Super->getID()) {
     case X86::FR32RegClassID:
@@ -172,7 +173,7 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
       if (getRegSizeInBits(*Super) == getRegSizeInBits(*RC))
         return Super;
     }
-    Super = I.isValid() ? getRegClass(*I) : nullptr;
+    Super = (I != E) ? getRegClass(*I) : nullptr;
     ++I;
   } while (Super);
   return RC;

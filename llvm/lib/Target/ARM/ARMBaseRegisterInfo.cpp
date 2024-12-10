@@ -264,6 +264,7 @@ ARMBaseRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
                                                const MachineFunction &MF) const {
   unsigned SuperID = RC->getID();
   auto I = RC->superclasses().begin();
+  auto E = RC->superclasses().end();
   do {
     switch (SuperID) {
     case ARM::GPRRegClassID:
@@ -284,7 +285,7 @@ ARMBaseRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
         return getRegClass(SuperID);
       break;
     }
-    SuperID = *I++;
+    SuperID = (I != E) ? *I++ : ~0U;
   } while (SuperID != ~0U);
   return RC;
 }

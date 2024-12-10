@@ -41,22 +41,6 @@ class RegScavenger;
 class VirtRegMap;
 class LiveIntervals;
 class LiveInterval;
-
-/// TargetSuperClassIterator enumerates all super-classes of RegClass.
-class TargetSuperClassIterator
-    : public iterator_adaptor_base<TargetSuperClassIterator, const unsigned *> {
-public:
-  /// Constructs an end iterator.
-  TargetSuperClassIterator(const unsigned *V) { I = V; }
-
-  const unsigned &operator*() const { return *I; }
-
-  using iterator_adaptor_base::operator++;
-
-  /// Returns true if this iterator is not yet at the end.
-  bool isValid() const { return *I != ~0U; }
-};
-
 class TargetRegisterClass {
 public:
   using iterator = const MCPhysReg *;
@@ -190,17 +174,16 @@ public:
     return SuperRegIndices;
   }
 
-  /// Returns a ~0U-terminated list of super-classes.  The
+  /// Returns a list of super-classes.  The
   /// classes are ordered by ID which is also a topological ordering from large
   /// to small classes.  The list does NOT include the current class.
-  iterator_range<TargetSuperClassIterator> superclasses() const {
-    return make_range(TargetSuperClassIterator(SuperClasses),
-                      {SuperClasses + SuperClassesSize});
+  ArrayRef<unsigned> superclasses() const {
+    return ArrayRef(SuperClasses, SuperClassesSize);
   }
 
   /// Return true if this TargetRegisterClass is a subset
   /// class of at least one other TargetRegisterClass.
-  bool isASubClass() const { return SuperClasses[0] != ~0U; }
+  bool isASubClass() const { return SuperClasses != nullptr; }
 
   /// Returns the preferred order for allocating registers from this register
   /// class in MF. The raw order comes directly from the .td file and may

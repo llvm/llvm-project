@@ -1286,9 +1286,6 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
     }
     OS << "};\n";
 
-    OS << "\nstatic const unsigned "
-       << "NullRegClasses[] = { ~0U };\n\n";
-
     // Emit register class bit mask tables. The first bit mask emitted for a
     // register class, RC, is the set of sub-classes, including RC itself.
     //
@@ -1340,18 +1337,18 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
     SuperRegIdxSeqs.emit(OS, printSubRegIndex);
     OS << "};\n\n";
 
-    // Emit NULL terminated super-class lists.
+    // Emit super-class lists.
     for (const auto &RC : RegisterClasses) {
       ArrayRef<CodeGenRegisterClass *> Supers = RC.getSuperClasses();
 
-      // Skip classes without supers.  We can reuse NullRegClasses.
+      // Skip classes without supers.
       if (Supers.empty())
         continue;
 
       OS << "static unsigned const " << RC.getName() << "Superclasses[] = {\n";
       for (const auto *Super : Supers)
         OS << "  " << Super->getQualifiedIdName() << ",\n";
-      OS << "  ~0U\n};\n\n";
+      OS << "};\n\n";
     }
 
     // Emit methods.
@@ -1405,7 +1402,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
          << (RC.CoveredBySubRegs ? "true" : "false")
          << ", /* CoveredBySubRegs */\n    ";
       if (RC.getSuperClasses().empty())
-        OS << "NullRegClasses, ";
+        OS << "nullptr, ";
       else
         OS << RC.getName() << "Superclasses,  ";
       OS << RC.getSuperClasses().size() << ",\n    ";
