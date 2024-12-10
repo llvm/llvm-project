@@ -1340,7 +1340,7 @@ define <vscale x 4 x i32> @vmadd_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, tu, ma
 ; NOVLOPT-NEXT:    vmadd.vv v8, v8, v10
 ; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vmul.vv v8, v8, v10
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v10
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vmadd_vv:
@@ -1348,7 +1348,7 @@ define <vscale x 4 x i32> @vmadd_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vmadd.vv v8, v8, v10
 ; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; VLOPT-NEXT:    vmul.vv v8, v8, v10
+; VLOPT-NEXT:    vadd.vv v8, v8, v10
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vmadd.nxv4i32.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1, iXLen 0)
   %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
@@ -1362,7 +1362,7 @@ define <vscale x 4 x i32> @vmadd_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
 ; NOVLOPT-NEXT:    vmv2r.v v10, v8
 ; NOVLOPT-NEXT:    vmadd.vx v10, a0, v8
 ; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vmul.vv v8, v10, v8
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vmadd_vx:
@@ -1371,7 +1371,7 @@ define <vscale x 4 x i32> @vmadd_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
 ; VLOPT-NEXT:    vmv2r.v v10, v8
 ; VLOPT-NEXT:    vmadd.vx v10, a0, v8
 ; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; VLOPT-NEXT:    vmul.vv v8, v10, v8
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vmadd.nxv4i32.nxv4i32(<vscale x 4 x i32> %a, i32 %b, <vscale x 4 x i32> %a, iXLen -1, iXLen 0)
   %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
@@ -1384,7 +1384,7 @@ define <vscale x 4 x i32> @vnmsac_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, tu, ma
 ; NOVLOPT-NEXT:    vnmsac.vv v8, v8, v10
 ; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vmul.vv v8, v8, v10
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v10
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vnmsac_vv:
@@ -1392,7 +1392,7 @@ define <vscale x 4 x i32> @vnmsac_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vnmsac.vv v8, v8, v10
 ; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; VLOPT-NEXT:    vmul.vv v8, v8, v10
+; VLOPT-NEXT:    vadd.vv v8, v8, v10
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vnmsac.nxv4i32.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1, iXLen 0)
   %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
@@ -1406,7 +1406,7 @@ define <vscale x 4 x i32> @vnmsac_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
 ; NOVLOPT-NEXT:    vmv2r.v v10, v8
 ; NOVLOPT-NEXT:    vnmsac.vx v10, a0, v8
 ; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vmul.vv v8, v10, v8
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vnmsac_vx:
@@ -1415,7 +1415,7 @@ define <vscale x 4 x i32> @vnmsac_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
 ; VLOPT-NEXT:    vmv2r.v v10, v8
 ; VLOPT-NEXT:    vnmsac.vx v10, a0, v8
 ; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; VLOPT-NEXT:    vmul.vv v8, v10, v8
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vnmsac.nxv4i32.nxv4i32(<vscale x 4 x i32> %a, i32 %b, <vscale x 4 x i32> %a, iXLen -1, iXLen 0)
   %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
@@ -1428,7 +1428,7 @@ define <vscale x 4 x i32> @vnmsub_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, tu, ma
 ; NOVLOPT-NEXT:    vnmsub.vv v8, v8, v10
 ; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vmul.vv v8, v8, v10
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v10
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vnmsub_vv:
@@ -1436,7 +1436,7 @@ define <vscale x 4 x i32> @vnmsub_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vnmsub.vv v8, v8, v10
 ; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; VLOPT-NEXT:    vmul.vv v8, v8, v10
+; VLOPT-NEXT:    vadd.vv v8, v8, v10
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vnmsub.nxv4i32.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1, iXLen 0)
   %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
@@ -1450,7 +1450,7 @@ define <vscale x 4 x i32> @vnmsub_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
 ; NOVLOPT-NEXT:    vmv2r.v v10, v8
 ; NOVLOPT-NEXT:    vnmsub.vx v10, a0, v8
 ; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vmul.vv v8, v10, v8
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vnmsub_vx:
@@ -1459,7 +1459,7 @@ define <vscale x 4 x i32> @vnmsub_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
 ; VLOPT-NEXT:    vmv2r.v v10, v8
 ; VLOPT-NEXT:    vnmsub.vx v10, a0, v8
 ; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; VLOPT-NEXT:    vmul.vv v8, v10, v8
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vnmsub.nxv4i32.nxv4i32(<vscale x 4 x i32> %a, i32 %b, <vscale x 4 x i32> %a, iXLen -1, iXLen 0)
   %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
