@@ -8656,6 +8656,18 @@ static bool checkZExtBool(SDValue Arg, const SelectionDAG &DAG) {
 bool shouldUseFormStridedPseudo(MachineInstr &MI) {
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
 
+  const TargetRegisterClass *RegClass = nullptr;
+  switch (MI.getOpcode()) {
+  case AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO:
+    RegClass = &AArch64::ZPR2StridedOrContiguousRegClass;
+    break;
+  case AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO:
+    RegClass = &AArch64::ZPR4StridedOrContiguousRegClass;
+    break;
+  default:
+    llvm_unreachable("Unexpected opcode.");
+  }
+
   MCRegister SubReg = MCRegister::NoRegister;
   for (unsigned I = 1; I < MI.getNumOperands(); ++I) {
     MachineOperand &MO = MI.getOperand(I);
@@ -8665,25 +8677,14 @@ bool shouldUseFormStridedPseudo(MachineInstr &MI) {
     if (!Def || !Def->getParent()->isCopy())
       return false;
 
-    const MachineOperand &CpySrc = Def->getParent()->getOperand(1);
-    MachineOperand *CopySrcOp = MRI.getOneDef(CpySrc.getReg());
-    unsigned OpSubReg = CpySrc.getSubReg();
+    const MachineOperand &CopySrc = Def->getParent()->getOperand(1);
+    unsigned OpSubReg = CopySrc.getSubReg();
     if (SubReg == MCRegister::NoRegister)
       SubReg = OpSubReg;
+
+    MachineOperand *CopySrcOp = MRI.getOneDef(CopySrc.getReg());
     if (!CopySrcOp || !CopySrcOp->isReg() || OpSubReg != SubReg)
       return false;
-
-    const TargetRegisterClass *RegClass = nullptr;
-    switch (MI.getNumOperands() - 1) {
-    case 2:
-      RegClass = &AArch64::ZPR2StridedOrContiguousRegClass;
-      break;
-    case 4:
-      RegClass = &AArch64::ZPR4StridedOrContiguousRegClass;
-      break;
-    default:
-      llvm_unreachable("Unexpected number of operands to pseudo.");
-    }
 
     if (MRI.getRegClass(CopySrcOp->getReg()) != RegClass)
       return false;
@@ -8721,22 +8722,23 @@ void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
       MI.getOpcode() == AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO) {
     // If input values to the FORM_TRANSPOSED_REG_TUPLE pseudo aren't copies
     // from a StridedOrContiguous class, fall back on REG_SEQUENCE node.
-    if (!shouldUseFormStridedPseudo(MI)) {
-      static const unsigned SubRegs[] = {AArch64::zsub0, AArch64::zsub1,
-                                         AArch64::zsub2, AArch64::zsub3};
+    if (shouldUseFormStridedPseudo(MI))
+      return;
 
-      const TargetInstrInfo *TII = Subtarget->getInstrInfo();
-      MachineInstrBuilder MIB = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
-                                        TII->get(TargetOpcode::REG_SEQUENCE),
-                                        MI.getOperand(0).getReg());
+    static const unsigned SubRegs[] = {AArch64::zsub0, AArch64::zsub1,
+                                       AArch64::zsub2, AArch64::zsub3};
 
-      for (unsigned I = 1; I < MI.getNumOperands(); ++I) {
-        MIB.add(MI.getOperand(I));
-        MIB.addImm(SubRegs[I - 1]);
-      }
+    const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+    MachineInstrBuilder MIB = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                                      TII->get(TargetOpcode::REG_SEQUENCE),
+                                      MI.getOperand(0).getReg());
 
-      MI.eraseFromParent();
+    for (unsigned I = 1; I < MI.getNumOperands(); ++I) {
+      MIB.add(MI.getOperand(I));
+      MIB.addImm(SubRegs[I - 1]);
     }
+
+    MI.eraseFromParent();
     return;
   }
 

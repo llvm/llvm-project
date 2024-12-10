@@ -1130,7 +1130,8 @@ bool AArch64RegisterInfo::getRegAllocationHints(
         MI.getOpcode() != AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO)
       continue;
 
-    switch (MI.getOperand(1).getSubReg()) {
+    unsigned FirstOpSubReg = MI.getOperand(1).getSubReg();
+    switch (FirstOpSubReg) {
     case AArch64::zsub0:
     case AArch64::zsub1:
     case AArch64::zsub2:
@@ -1146,7 +1147,7 @@ bool AArch64RegisterInfo::getRegAllocationHints(
       continue;
 
     MCRegister TupleStartReg =
-        getSubReg(VRM->getPhys(FirstOpVirtReg), MI.getOperand(1).getSubReg());
+        getSubReg(VRM->getPhys(FirstOpVirtReg), FirstOpSubReg);
     for (unsigned I = 0; I < Order.size(); ++I)
       if (MCRegister R = getSubReg(Order[I], AArch64::zsub0))
         if (R == TupleStartReg)

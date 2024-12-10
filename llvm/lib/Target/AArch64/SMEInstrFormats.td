@@ -34,6 +34,16 @@ def tileslicerange0s4 : ComplexPattern<i32, 2, "SelectSMETileSlice<0,  4>", []>;
 
 def am_sme_indexed_b4 :ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<0,15>", [], [SDNPWantRoot]>;
 
+// The FORM_TRANSPOSED_REG_TUPLE pseudos defined below are intended to
+// improve register allocation for intrinsics which use strided and contiguous
+// multi-vector registers, avoiding unnecessary copies.
+// If the operands of the pseudo are copies where the source register is in
+// the StridedOrContiguous class, the pseudo is used to provide a hint to the
+// register allocator suggesting a contigious multi-vector register which
+// matches the subregister sequence used by the operands.
+// If the operands do not match this pattern, the pseudos are expanded
+// to a REG_SEQUENCE using the post-isel hook.
+
 def FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO :
   Pseudo<(outs ZPR2Mul2:$tup),
          (ins ZPR:$zn0, ZPR:$zn1), []>, Sched<[]>{
