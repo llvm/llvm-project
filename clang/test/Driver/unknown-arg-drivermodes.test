@@ -10,7 +10,8 @@
 // RUN: -static                    \
 // RUN: -stdlib                    \
 // RUN: -Xoffload-linker           \
-// RUN: -### -x c++ -c - < /dev/null 2>&1 | FileCheck %s --check-prefix=CL
+// RUN: -### -x c++ -c - < /dev/null 2>&1 \
+// RUN: | FileCheck %s --check-prefix=CL --implicit-check-not="warning:"
 
 // RUN: not %clang_dxc             \
 // RUN: --config                   \
@@ -25,7 +26,8 @@
 // RUN: -stdlib                    \
 // RUN: -Xlinker                   \
 // RUN: -Xoffload-linker           \
-// RUN: -### -T lib_6_3 -Vd - < /dev/null 2>&1 | FileCheck %s --check-prefix=DXC
+// RUN: -### -T lib_6_3 -Vd - < /dev/null 2>&1 \
+// RUN: | FileCheck %s --check-prefix=DXC --implicit-check-not="error:"
 
 // CL: warning: unknown argument ignored in clang-cl: '--config'
 // CL: warning: unknown argument ignored in clang-cl: '-fdiagnostics-color=auto'
