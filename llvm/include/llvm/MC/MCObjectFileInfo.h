@@ -68,9 +68,6 @@ protected:
   /// Language Specific Data Area information is emitted to.
   MCSection *LSDASection = nullptr;
 
-  /// Section containing metadata on call graph.
-  MCSection *CallGraphSection = nullptr;
-
   /// If exception handling is supported by the target and the target can
   /// support a compact representation of the CIE and FDE, this is the section
   /// to emit them into.
@@ -357,8 +354,6 @@ public:
   MCSection *getStackMapSection() const { return StackMapSection; }
   MCSection *getFaultMapSection() const { return FaultMapSection; }
   MCSection *getRemarksSection() const { return RemarksSection; }
-
-  MCSection *getCallGraphSection(const MCSection &TextSec) const;
 
   MCSection *getStackSizesSection(const MCSection &TextSec) const;
 
