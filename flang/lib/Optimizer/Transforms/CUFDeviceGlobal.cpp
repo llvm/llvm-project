@@ -68,6 +68,11 @@ public:
       prepareImplicitDeviceGlobals(funcOp, symTable, candidates);
       return mlir::WalkResult::advance();
     });
+    mod.walk([&](cuf::KernelOp kernelOp) {
+      kernelOp.walk([&](fir::AddrOfOp addrOfOp) {
+        processAddrOfOp(addrOfOp, symTable, candidates);
+      });
+    });
 
     // Copying the device global variable into the gpu module
     mlir::SymbolTable parentSymTable(mod);
