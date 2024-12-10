@@ -109,7 +109,6 @@ template <typename SpecificTy, typename ClauseTy>
 struct SpecificModifierParser {
   using resultType = typename ClauseTy::Modifier;
   std::optional<resultType> Parse(ParseState &state) const {
-    Parser<resultType> p;
     if (auto result{attempt(Parser<resultType>{}).Parse(state)}) {
       if (std::holds_alternative<SpecificTy>(result->u)) {
         return result;
