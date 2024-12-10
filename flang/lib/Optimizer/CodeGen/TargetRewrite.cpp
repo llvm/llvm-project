@@ -911,7 +911,7 @@ public:
           .template Case<fir::RecordType>([&](fir::RecordType recTy) {
             doStructArg(func, recTy, newInTyAndAttrs, fixups);
           })
-          .template Default([&](mlir::Type ty) {
+          .Default([&](mlir::Type ty) {
             newInTyAndAttrs.push_back(
                 fir::CodeGenSpecifics::getTypeAndAttr(ty));
           });
