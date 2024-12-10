@@ -726,14 +726,14 @@ public:
       if (targetFeaturesAttr)
         fn->setAttr("target_features", targetFeaturesAttr);
 
-      convertSignature(fn);
+      convertSignature<mlir::func::ReturnOp>(fn);
     }
 
     for (auto gpuMod : mod.getOps<mlir::gpu::GPUModuleOp>()) {
       for (auto fn : gpuMod.getOps<mlir::func::FuncOp>())
-        convertSignature(fn);
+        convertSignature<mlir::func::ReturnOp>(fn);
       for (auto fn : gpuMod.getOps<mlir::gpu::GPUFuncOp>())
-        convertSignature(fn);
+        convertSignature<mlir::gpu::ReturnOp>(fn);
     }
 
     return mlir::success();
@@ -792,8 +792,8 @@ public:
 
   /// Rewrite the signatures and body of the `FuncOp`s in the module for
   /// the immediately subsequent target code gen.
-  template <typename OpTy>
-  void convertSignature(OpTy func) {
+  template <typename ReturnOpTy, typename FuncOpTy>
+  void convertSignature(FuncOpTy func) {
     auto funcTy = mlir::cast<mlir::FunctionType>(func.getFunctionType());
     if (hasPortableSignature(funcTy, func) && !hasHostAssociations(func))
       return;
@@ -900,7 +900,7 @@ public:
             if (!extensionAttrName.empty() &&
                 isFuncWithCCallingConvention(func))
               fixups.emplace_back(FixupTy::Codes::ArgumentType, argNo,
-                                  [=](OpTy func) {
+                                  [=](FuncOpTy func) {
                                     func.setArgAttr(
                                         argNo, extensionAttrName,
                                         mlir::UnitAttr::get(func.getContext()));
@@ -992,52 +992,29 @@ public:
           auto newArg =
               func.front().insertArgument(fixup.index, fixupType, loc);
           offset++;
-          if constexpr (std::is_same_v<OpTy, mlir::func::FuncOp>)
-            func.walk([&](mlir::func::ReturnOp ret) {
-              rewriter->setInsertionPoint(ret);
-              auto oldOper = ret.getOperand(0);
-              auto oldOperTy = fir::ReferenceType::get(oldOper.getType());
-              auto cast =
-                  rewriter->create<fir::ConvertOp>(loc, oldOperTy, newArg);
-              rewriter->create<fir::StoreOp>(loc, oldOper, cast);
-              rewriter->create<mlir::func::ReturnOp>(loc);
-              ret.erase();
-            });
-          if constexpr (std::is_same_v<OpTy, mlir::gpu::GPUFuncOp>)
-            func.walk([&](mlir::gpu::ReturnOp ret) {
-              rewriter->setInsertionPoint(ret);
-              auto oldOper = ret.getOperand(0);
-              auto oldOperTy = fir::ReferenceType::get(oldOper.getType());
-              auto cast =
-                  rewriter->create<fir::ConvertOp>(loc, oldOperTy, newArg);
-              rewriter->create<fir::StoreOp>(loc, oldOper, cast);
-              rewriter->create<mlir::gpu::ReturnOp>(loc);
-              ret.erase();
-            });
+          func.walk([&](ReturnOpTy ret) {
+            rewriter->setInsertionPoint(ret);
+            auto oldOper = ret.getOperand(0);
+            auto oldOperTy = fir::ReferenceType::get(oldOper.getType());
+            auto cast =
+                rewriter->create<fir::ConvertOp>(loc, oldOperTy, newArg);
+            rewriter->create<fir::StoreOp>(loc, oldOper, cast);
+            rewriter->create<ReturnOpTy>(loc);
+            ret.erase();
+          });
         } break;
         case FixupTy::Codes::ReturnType: {
           // The function is still returning a value, but its type has likely
           // changed to suit the target ABI convention.
-          if constexpr (std::is_same_v<OpTy, mlir::func::FuncOp>)
-            func.walk([&](mlir::func::ReturnOp ret) {
-              rewriter->setInsertionPoint(ret);
-              auto oldOper = ret.getOperand(0);
-              mlir::Value bitcast =
-                  convertValueInMemory(loc, oldOper, newResTys[fixup.index],
-                                       /*inputMayBeBigger=*/false);
-              rewriter->create<mlir::func::ReturnOp>(loc, bitcast);
-              ret.erase();
-            });
-          if constexpr (std::is_same_v<OpTy, mlir::gpu::GPUFuncOp>)
-            func.walk([&](mlir::gpu::ReturnOp ret) {
-              rewriter->setInsertionPoint(ret);
-              auto oldOper = ret.getOperand(0);
-              mlir::Value bitcast =
-                  convertValueInMemory(loc, oldOper, newResTys[fixup.index],
-                                       /*inputMayBeBigger=*/false);
-              rewriter->create<mlir::gpu::ReturnOp>(loc, bitcast);
-              ret.erase();
-            });
+          func.walk([&](ReturnOpTy ret) {
+            rewriter->setInsertionPoint(ret);
+            auto oldOper = ret.getOperand(0);
+            mlir::Value bitcast =
+                convertValueInMemory(loc, oldOper, newResTys[fixup.index],
+                                     /*inputMayBeBigger=*/false);
+            rewriter->create<ReturnOpTy>(loc, bitcast);
+            ret.erase();
+          });
         } break;
         case FixupTy::Codes::Split: {
           // The FIR argument has been split into a pair of distinct arguments
@@ -1138,10 +1115,10 @@ public:
     }
 
     for (auto &fixup : fixups) {
-      if constexpr (std::is_same_v<OpTy, mlir::func::FuncOp>)
+      if constexpr (std::is_same_v<FuncOpTy, mlir::func::FuncOp>)
         if (fixup.finalizer)
           (*fixup.finalizer)(func);
-      if constexpr (std::is_same_v<OpTy, mlir::gpu::GPUFuncOp>)
+      if constexpr (std::is_same_v<FuncOpTy, mlir::gpu::GPUFuncOp>)
         if (fixup.gpuFinalizer)
           (*fixup.gpuFinalizer)(func);
     }
