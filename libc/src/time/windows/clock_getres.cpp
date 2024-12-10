@@ -15,7 +15,7 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/time/units.h"
-#include "src/__support/time/windows/qpc.h"
+#include "src/__support/time/windows/performance_counter.h"
 #include "src/errno/libc_errno.h"
 #include "src/time/clock_getres.h"
 
@@ -36,9 +36,9 @@ LLVM_LIBC_FUNCTION(int, clock_getres, (clockid_t id, struct timespec *res)) {
   constexpr unsigned long long HNS_PER_SEC = 1_s_ns / 100ULL;
   constexpr unsigned long long SEC_LIMIT =
       cpp::numeric_limits<decltype(res->tv_sec)>::max();
-  // For CLOCK_MONOTONIC, we are using QPC
+  // For CLOCK_MONOTONIC, we are using performance counter
   // https://learn.microsoft.com/en-us/windows/win32/sysinfo/acquiring-high-resolution-time-stamps
-  // Hence, the resolution is given by the QPC frequency.
+  // Hence, the resolution is given by the performance counter frequency.
   // For CLOCK_REALTIME, the precision is given by
   // GetSystemTimeAdjustmentPrecise
   // (https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsystemtimeadjustmentprecise)
@@ -51,8 +51,8 @@ LLVM_LIBC_FUNCTION(int, clock_getres, (clockid_t id, struct timespec *res)) {
     return -1;
 
   case CLOCK_MONOTONIC: {
-    long long freq = qpc::get_ticks_per_second();
-    [[clang::assume(freq != 0)]];
+    long long freq = performance_counter::get_ticks_per_second();
+    __builtin_assume(freq != 0);
     // division of 1 second by frequency, rounded up.
     long long tv_sec = static_cast<long long>(freq == 1);
     long long tv_nsec =

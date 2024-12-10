@@ -3,7 +3,7 @@ add_entrypoint_object(
     SRCS
         clock_getres.cpp
     DEPENDS
-        libc.src.__support.time.windows.qpc
+        libc.src.__support.time.windows.performance_counter
         libc.src.__support.time.units
         libc.src.__support.common
         libc.src.__support.macros.optimization

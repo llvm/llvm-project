@@ -1,4 +1,4 @@
-//===--- Cached QPC Frequency  ----------------------------------*- C++ -*-===//
+//===--- Cached Performance Counter Frequency  ----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,7 +14,7 @@
 #include <Windows.h>
 
 namespace LIBC_NAMESPACE_DECL {
-namespace qpc {
+namespace performance_counter {
 LIBC_INLINE long long get_ticks_per_second() {
   static cpp::Atomic<long long> frequency = 0;
   // Relaxed ordering is enough. It is okay to record the frequency multiple
@@ -31,5 +31,5 @@ LIBC_INLINE long long get_ticks_per_second() {
   }
   return freq;
 }
-} // namespace qpc
+} // namespace performance_counter
 } // namespace LIBC_NAMESPACE_DECL
