@@ -6172,7 +6172,6 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   }
   if (CallOrInvoke)
     *CallOrInvoke = LocalCallOrInvoke;
-
   return Call;
 }
 
