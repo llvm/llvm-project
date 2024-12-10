@@ -159,7 +159,7 @@ Custom flags can be declared in the YAML file under the *Flags* section.
   - Name: multithreaded
     Values:
     - Name: no-multithreaded
-      DriverArgs: [-D__SINGLE_THREAD__]
+      MacroDefines: [__SINGLE_THREAD__]
     - Name: multithreaded
     Default: no-multithreaded
 
@@ -176,10 +176,8 @@ Each flag *Value* is defined as:
 
 * Name: name of the value. This is the string to be used in
   ``-fmultilib-flag=<string>``.
-* DriverArgs: a list of strings corresponding to the extra driver arguments
-  used to build a library variant that's in accordance to this specific custom
-  flag value. These arguments are fed back into the driver if this flag *Value*
-  is enabled.
+* MacroDefines: a list of strings to be used as macro definitions. Each string
+  is fed into the driver as ``-D<string>``.
 
 The namespace of flag values is common across all flags. This means that flag
 value names must be unique.
@@ -302,10 +300,9 @@ For a more comprehensive example see
     Values:
       # Name of the custom flag value. To be used in -fmultilib-flag=<string>.
     - Name: no-multithreaded
-      # Extra driver arguments to be printed with -print-multi-lib. Useful for
-      # specifying extra arguments for building the the associated library
-      # variant(s).
-      DriverArgs: [-D__SINGLE_THREAD__]
+      # Macro definitions. Useful for defining extra macros for building the
+      # associated library variant(s).
+      MacroDefines: [__SINGLE_THREAD__]
     - Name: multithreaded
     # Default flag value. If no value for this flag declaration is used in the
     # command-line, the multilib system will use this one. Must be equal to one
