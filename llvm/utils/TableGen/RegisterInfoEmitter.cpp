@@ -1405,9 +1405,10 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
          << (RC.CoveredBySubRegs ? "true" : "false")
          << ", /* CoveredBySubRegs */\n    ";
       if (RC.getSuperClasses().empty())
-        OS << "NullRegClasses,\n    ";
+        OS << "NullRegClasses, ";
       else
-        OS << RC.getName() << "Superclasses,\n    ";
+        OS << RC.getName() << "Superclasses,  ";
+      OS << RC.getSuperClasses().size() << ",\n    ";
       if (RC.AltOrderSelect.empty())
         OS << "nullptr\n";
       else

@@ -42,32 +42,19 @@ class VirtRegMap;
 class LiveIntervals;
 class LiveInterval;
 
-/// TargetSuperClassIterator enumerates all super-registers of RegClass.
+/// TargetSuperClassIterator enumerates all super-classes of RegClass.
 class TargetSuperClassIterator
     : public iterator_adaptor_base<TargetSuperClassIterator, const unsigned *> {
 public:
   /// Constructs an end iterator.
-  TargetSuperClassIterator() = default;
-
   TargetSuperClassIterator(const unsigned *V) { I = V; }
 
   const unsigned &operator*() const { return *I; }
 
   using iterator_adaptor_base::operator++;
 
-  bool operator==(const TargetSuperClassIterator &Other) const {
-    // End can be represented either with a nullptr or with a ptr to
-    // a sentinel value of ~0U. They must compare equal.
-    bool SelfIsEnd = !I || *I == ~0U;
-    bool OtherIsEnd = !Other.I || *Other.I == ~0U;
-    if (SelfIsEnd && OtherIsEnd)
-      return true;
-
-    return I == Other.I;
-  }
-
   /// Returns true if this iterator is not yet at the end.
-  bool isValid() const { return I && *I != ~0U; }
+  bool isValid() const { return *I != ~0U; }
 };
 
 class TargetRegisterClass {
@@ -95,6 +82,7 @@ public:
   /// class. See also the CoveredBySubRegs description in Target.td.
   const bool CoveredBySubRegs;
   const unsigned *SuperClasses;
+  const uint16_t SuperClassesSize;
   ArrayRef<MCPhysReg> (*OrderFunc)(const MachineFunction&);
 
   /// Return the register class ID number.
@@ -202,11 +190,12 @@ public:
     return SuperRegIndices;
   }
 
-  /// Returns a NULL-terminated list of super-classes.  The
+  /// Returns a ~0U-terminated list of super-classes.  The
   /// classes are ordered by ID which is also a topological ordering from large
   /// to small classes.  The list does NOT include the current class.
   iterator_range<TargetSuperClassIterator> superclasses() const {
-    return make_range({SuperClasses}, TargetSuperClassIterator());
+    return make_range(TargetSuperClassIterator(SuperClasses),
+                      {SuperClasses + SuperClassesSize});
   }
 
   /// Return true if this TargetRegisterClass is a subset
