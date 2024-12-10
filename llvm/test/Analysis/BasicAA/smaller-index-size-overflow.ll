@@ -2,8 +2,7 @@
 
 target datalayout = "p1:32:32"
 
-; FIXME: This is a miscompile.
-; CHECK: NoAlias:	i32 addrspace(1)* %gep1, i32 addrspace(1)* %gep2
+; CHECK: PartialAlias:	i32 addrspace(1)* %gep1, i32 addrspace(1)* %gep2
 define void @test(ptr addrspace(1) %p) {
   %gep1 = getelementptr i8, ptr addrspace(1) %p, i32 u0x7fffffff
   %gep2 = getelementptr i8, ptr addrspace(1) %p, i32 u0x80000001
