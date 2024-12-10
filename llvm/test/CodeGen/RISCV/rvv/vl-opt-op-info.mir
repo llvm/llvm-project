@@ -2,6 +2,36 @@
 # RUN: llc %s -o - -mtriple=riscv64 -mattr=+v -run-pass=riscv-vl-optimizer -verify-machineinstrs | FileCheck %s
 
 ---
+name: vop_vi
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vop_vi
+    ; CHECK: %x:vr = PseudoVADD_VI_M1 $noreg, $noreg, 9, 1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VI_M1 $noreg, %x, 9, 1, 3 /* e8 */, 0 /* tu, mu */
+    %x:vr = PseudoVADD_VI_M1 $noreg, $noreg, 9, -1, 3 /* e8 */, 0
+    %y:vr = PseudoVADD_VI_M1 $noreg, %x, 9, 1, 3 /* e8 */, 0
+...
+---
+name: vop_vi_incompatible_eew
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vop_vi_incompatible_eew
+    ; CHECK: %x:vr = PseudoVADD_VI_M1 $noreg, $noreg, 9, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VI_M1 $noreg, %x, 9, 1, 4 /* e16 */, 0 /* tu, mu */
+    %x:vr = PseudoVADD_VI_M1 $noreg, $noreg, 9, -1, 3 /* e8 */, 0
+    %y:vr = PseudoVADD_VI_M1 $noreg, %x, 9, 1, 4 /* e16 */, 0
+...
+---
+name: vop_vi_incompatible_emul
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vop_vi_incompatible_emul
+    ; CHECK: %x:vr = PseudoVADD_VI_M1 $noreg, $noreg, 9, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VI_MF2 $noreg, %x, 9, 1, 3 /* e8 */, 0 /* tu, mu */
+    %x:vr = PseudoVADD_VI_M1 $noreg, $noreg, 9, -1, 3 /* e8 */, 0
+    %y:vr = PseudoVADD_VI_MF2 $noreg, %x, 9, 1, 3 /* e8 */, 0
+...
+---
 name: vop_vv
 body: |
   bb.0:
