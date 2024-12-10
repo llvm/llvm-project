@@ -7,32 +7,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "NativeProcessAIX.h"
-#include "NativeThreadAIX.h"
-#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Target/Process.h"
-#include "lldb/Target/Target.h"
-#include "lldb/Utility/LLDBAssert.h"
-#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Status.h"
-#include "lldb/Utility/StringExtractor.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/FileSystem.h"
 #include <cerrno>
 #include <cstdint>
 #include <cstring>
-#include <fstream>
-#include <mutex>
-#include <optional>
 #include <sstream>
 #include <string>
 #include <unistd.h>
-#include <unordered_map>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -45,17 +34,17 @@ static_assert(sizeof(long) >= k_ptrace_word_size,
 
 // Simple helper function to ensure flags are enabled on the given file
 // descriptor.
-static Status EnsureFDFlags(int fd, int flags) {
-  Status error;
+static llvm::Error EnsureFDFlags(int fd, int flags) {
+  Error error;
 
   int status = fcntl(fd, F_GETFL);
   if (status == -1) {
-    error = Status::FromErrno();
+    error = errorCodeToError(errnoAsErrorCode());
     return error;
   }
 
   if (fcntl(fd, F_SETFL, status | flags) == -1) {
-    error = Status::FromErrno();
+    error = errorCodeToError(errnoAsErrorCode());
     return error;
   }
 
@@ -136,10 +125,7 @@ NativeProcessAIX::Manager::Attach(
 
 NativeProcessAIX::Extension
 NativeProcessAIX::Manager::GetSupportedExtensions() const {
-  NativeProcessAIX::Extension supported =
-      Extension::multiprocess | Extension::fork | Extension::vfork |
-      Extension::pass_signals | Extension::auxv | Extension::libraries_svr4 |
-      Extension::siginfo_read;
+  NativeProcessAIX::Extension supported = {};
 
   return supported;
 }
@@ -169,10 +155,17 @@ NativeProcessAIX::NativeProcessAIX(::pid_t pid, int terminal_fd,
 
 llvm::Expected<std::vector<::pid_t>> NativeProcessAIX::Attach(::pid_t pid) {
 
-  Status status;
+  Error status;
   if ((status = PtraceWrapper(PT_ATTACH, pid)).Fail()) {
-    return status.ToError();
+    return errorCodeToError(errnoAsErrorCode());
   }
+
+  int wpid = llvm::sys::RetryAfterSignal(-1, ::waitpid, pid, nullptr, WNOHANG);
+  if (wpid <= 0) {
+    return llvm::errorCodeToError(
+        std::error_code(errno, std::generic_category()));
+  }
+  LLDB_LOG(log, "adding pid = {0}", pid);
 
   std::vector<::pid_t> tids;
   tids.push_back(pid);
@@ -190,37 +183,37 @@ Status NativeProcessAIX::Resume(const ResumeActionList &resume_actions) {
   return Status();
 }
 
-Status NativeProcessAIX::Halt() {
-  Status error;
+Error NativeProcessAIX::Halt() {
+  Error error;
   return error;
 }
 
-Status NativeProcessAIX::Detach() {
-  Status error;
+Error NativeProcessAIX::Detach() {
+  Error error;
   return error;
 }
 
-Status NativeProcessAIX::Signal(int signo) {
-  Status error;
+Error NativeProcessAIX::Signal(int signo) {
+  Error error;
   return error;
 }
 
-Status NativeProcessAIX::Interrupt() { return Status(); }
+Error NativeProcessAIX::Interrupt() { return Status(); }
 
-Status NativeProcessAIX::Kill() {
-  Status error;
+Error NativeProcessAIX::Kill() {
+  Error error;
   return error;
 }
 
-Status NativeProcessAIX::SetBreakpoint(lldb::addr_t addr, uint32_t size,
-                                       bool hardware) {
+Error NativeProcessAIX::SetBreakpoint(lldb::addr_t addr, uint32_t size,
+                                      bool hardware) {
   if (hardware)
     return SetHardwareBreakpoint(addr, size);
   else
     return SetSoftwareBreakpoint(addr, size);
 }
 
-Status NativeProcessAIX::RemoveBreakpoint(lldb::addr_t addr, bool hardware) {
+Error NativeProcessAIX::RemoveBreakpoint(lldb::addr_t addr, bool hardware) {
   if (hardware)
     return RemoveHardwareBreakpoint(addr);
   else
@@ -231,7 +224,7 @@ int8_t NativeProcessAIX::GetSignalInfo(WaitStatus wstatus) const {
   return wstatus.status;
 }
 
-Status NativeProcessAIX::Detach(lldb::tid_t tid) {
+Error NativeProcessAIX::Detach(lldb::tid_t tid) {
   if (tid == LLDB_INVALID_THREAD_ID)
     return Status();
 
@@ -240,9 +233,33 @@ Status NativeProcessAIX::Detach(lldb::tid_t tid) {
 
 // Wrapper for ptrace to catch errors and log calls. Note that ptrace sets
 // errno on error because -1 can be a valid result (i.e. for PTRACE_PEEK*)
-Status NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
-                                       void *data, size_t data_size,
-                                       long *result) {
-  Status error;
+Error NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
+                                      void *data, size_t data_size,
+                                      long *result) {
+  Error error;
+  long int ret;
+
+  Log *log = GetLog(POSIXLog::Ptrace);
+  errno = 0;
+  if (req < PT_COMMAND_MAX) {
+    if (req == PT_ATTACH) {
+      ptrace64(req, pid, 0, 0, nullptr);
+    } else if (req == PT_DETACH) {
+      ptrace64(req, pid, 0, 0, nullptr);
+    }
+  } else {
+    assert(0 && "Not supported yet.");
+  }
+
+  if (errno) {
+    error = errorCodeToError(errnoAsErrorCode());
+    ret = -1;
+  }
+
+  LLDB_LOG(log, "ptrace({0}, {1}, {2}, {3}, {4})={5:x}", req, pid, addr, data,
+           data_size, ret);
+  if (error.Fail())
+    LLDB_LOG(log, "ptrace() failed: {0}", error);
+
   return error;
 }

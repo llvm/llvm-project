@@ -6,27 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_NativeProcessAIX_H_
-#define liblldb_NativeProcessAIX_H_
+#ifndef LIBLLDB_NATIVEPROCESSAIX_H_
+#define LIBLLDB_NATIVEPROCESSAIX_H_
 
-#include <csignal>
-#include <unordered_set>
-
+#include "Plugins/Process/Utility/NativeProcessSoftwareSingleStep.h"
 #include "lldb/Host/Debug.h"
-#include "lldb/Host/HostThread.h"
+#include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/SmallPtrSet.h"
-
-#include "NativeThreadAIX.h"
-#include "Plugins/Process/Utility/NativeProcessSoftwareSingleStep.h"
-#include "lldb/Host/common/NativeProcessProtocol.h"
+#include <csignal>
+#include <unordered_set>
 
 namespace lldb_private {
-class Status;
-class Scalar;
 
 namespace process_aix {
 /// \class NativeProcessAIX
@@ -36,8 +30,7 @@ namespace process_aix {
 /// for debugging.
 ///
 /// Changes in the inferior process state are broadcasted.
-class NativeProcessAIX : public NativeProcessProtocol,
-                         private NativeProcessSoftwareSingleStep {
+class NativeProcessAIX : public NativeProcessProtocol {
 public:
   class Manager : public NativeProcessProtocol::Manager {
   public:
@@ -99,13 +92,9 @@ public:
                               void *data = nullptr, size_t data_size = 0,
                               long *result = nullptr);
 
-  // Wrapper for ptrace to catch errors and log calls. Note that ptrace sets
-
 private:
   Manager &m_manager;
-  /*MainLoop::SignalHandleUP m_sigchld_handle;*/
   ArchSpec m_arch;
-  /*MainLoop& m_main_loop;*/
 
   // Private Instance Methods
   NativeProcessAIX(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
@@ -127,4 +116,4 @@ private:
 } // namespace process_aix
 } // namespace lldb_private
 
-#endif // #ifndef liblldb_NativeProcessAIX_H_
+#endif // #ifndef LIBLLDB_NATIVEPROCESSAIX_H_
