@@ -1235,7 +1235,7 @@ INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SPIRVConvergenceRegionAnalysisWrapperPass)
 
-INITIALIZE_PASS_END(SPIRVStructurizer, "structurize", "structurize SPIRV",
+INITIALIZE_PASS_END(SPIRVStructurizer, "structurizer", "structurize SPIRV",
                     false, false)
 
 FunctionPass *llvm::createSPIRVStructurizerPass() {
