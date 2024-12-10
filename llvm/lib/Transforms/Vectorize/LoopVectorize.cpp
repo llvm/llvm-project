@@ -7829,7 +7829,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   }
   TargetTransformInfo::UnrollingPreferences UP;
   TTI.getUnrollingPreferences(L, *PSE.getSE(), UP, ORE);
-  if (!UP.UnrollVectorizedLoop || CanonicalIVStartValue)
+  if (!UP.UnrollVectorizedLoop || VectorizingEpilogue)
     addRuntimeUnrollDisableMetaData(L);
 
   // 3. Fix the vectorized code: take care of header phi's, live-outs,
