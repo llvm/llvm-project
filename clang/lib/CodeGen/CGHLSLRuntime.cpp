@@ -204,6 +204,7 @@ void CGHLSLRuntime::finishCodeGen() {
     addBufferResourceAnnotation(GV, RC, RK, /*IsROV=*/false,
                                 llvm::hlsl::ElementType::Invalid, Buf.Binding);
   }
+  generateInitResBindingsFuncBody();
 }
 
 CGHLSLRuntime::Buffer::Buffer(const HLSLBufferDecl *D)
@@ -510,6 +511,10 @@ void CGHLSLRuntime::generateGlobalCtorDtorCalls() {
     for (auto *Fn : CtorFns)
       B.CreateCall(FunctionCallee(Fn), {}, OB);
 
+    // Insert a call to initialize resource handles from bindings
+    Function *ResInitFn = getOrCreateResourceBindingInitFn();
+    B.CreateCall(ResInitFn);
+
     // Insert global dtors before the terminator of the last instruction
     B.SetInsertPoint(F.back().getTerminator());
     for (auto *Fn : DtorFns)
@@ -545,21 +550,49 @@ void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
   ResourcesToBind.emplace_back(VD, GV);
 }
 
-bool CGHLSLRuntime::needsResourceBindingInitFn() {
-  return !ResourcesToBind.empty();
+// Creates a declaration of  _init_resource_bindings function. It will later be
+// populated with calls to initialize resource handles from bindings.
+llvm::Function *CGHLSLRuntime::getOrCreateResourceBindingInitFn() {
+  if (InitResBindingsFunc == nullptr) {
+    InitResBindingsFunc =
+        llvm::Function::Create(llvm::FunctionType::get(CGM.VoidTy, false),
+                               llvm::GlobalValue::InternalLinkage,
+                               "_init_resource_bindings", CGM.getModule());
+  }
+  return InitResBindingsFunc;
 }
 
-llvm::Function *CGHLSLRuntime::createResourceBindingInitFn() {
-  // No resources to bind
-  assert(needsResourceBindingInitFn() && "no resources to bind");
+void CGHLSLRuntime::removeInitResBindingsFunc() {
+  if (!InitResBindingsFunc)
+    return;
+  while (InitResBindingsFunc->user_begin() != InitResBindingsFunc->user_end()) {
+    User *U = *InitResBindingsFunc->user_begin();
+    assert(isa<llvm::CallInst>(U));
+    llvm::CallInst *CI = cast<llvm::CallInst>(U);
+    CI->eraseFromParent();
+  }
+  InitResBindingsFunc->eraseFromParent();
+  InitResBindingsFunc = nullptr;
+}
+
+// Populates the body of _init_resource_bindings function with calls to
+// initialize resource handles from bindings. If there are no resources to bind
+// it will remove the function and all of its calls.
+void CGHLSLRuntime::generateInitResBindingsFuncBody() {
+  if (ResourcesToBind.empty()) {
+    removeInitResBindingsFunc();
+    return;
+  }
+
+  if (InitResBindingsFunc == nullptr) {
+    // FIXME: resource init function did not get created in shader entry point.
+    // Is this a library or just a shader without an entry function?
+    // llvm-project/llvm#119260
+    return;
+  }
 
   LLVMContext &Ctx = CGM.getLLVMContext();
   llvm::Type *Int1Ty = llvm::Type::getInt1Ty(Ctx);
-
-  llvm::Function *InitResBindingsFunc =
-      llvm::Function::Create(llvm::FunctionType::get(CGM.VoidTy, false),
-                             llvm::GlobalValue::InternalLinkage,
-                             "_init_resource_bindings", CGM.getModule());
 
   llvm::BasicBlock *EntryBB =
       llvm::BasicBlock::Create(Ctx, "entry", InitResBindingsFunc);
@@ -567,24 +600,30 @@ llvm::Function *CGHLSLRuntime::createResourceBindingInitFn() {
   const DataLayout &DL = CGM.getModule().getDataLayout();
   Builder.SetInsertPoint(EntryBB);
 
-  for (const auto &[VD, GV] : ResourcesToBind) {
-    for (Attr *A : VD->getAttrs()) {
+  for (const auto &[Decl, GV] : ResourcesToBind) {
+    for (Attr *A : Decl->getAttrs()) {
       HLSLResourceBindingAttr *RBA = dyn_cast<HLSLResourceBindingAttr>(A);
       if (!RBA)
         continue;
 
-      const HLSLAttributedResourceType *AttrResType =
-          HLSLAttributedResourceType::findHandleTypeOnResource(
-              VD->getType().getTypePtr());
+      llvm::Type *TargetTy = nullptr;
+      if (const VarDecl *VD = dyn_cast<VarDecl>(Decl)) {
+        const HLSLAttributedResourceType *AttrResType =
+            HLSLAttributedResourceType::findHandleTypeOnResource(
+                VD->getType().getTypePtr());
 
-      // FIXME: Only simple declarations of resources are supported for now.
-      // Arrays of resources or resources in user defined classes are
-      // not implemented yet.
-      assert(AttrResType != nullptr &&
-             "Resource class must have a handle of HLSLAttributedResourceType");
+        // FIXME: Only simple declarations of resources are supported for now.
+        // Arrays of resources or resources in user defined classes are
+        // not implemented yet.
+        assert(
+            AttrResType != nullptr &&
+            "Resource class must have a handle of HLSLAttributedResourceType");
 
-      llvm::Type *TargetTy =
-          CGM.getTargetCodeGenInfo().getHLSLType(CGM, AttrResType);
+        TargetTy = CGM.getTargetCodeGenInfo().getHLSLType(CGM, AttrResType);
+      } else {
+        assert(isa<HLSLBufferDecl>(Decl));
+        llvm_unreachable("CBuffer codegen is not supported yet");
+      }
       assert(TargetTy != nullptr &&
              "Failed to convert resource handle to target type");
 
@@ -599,7 +638,7 @@ llvm::Function *CGHLSLRuntime::createResourceBindingInitFn() {
 
       llvm::Value *CreateHandle = Builder.CreateIntrinsic(
           /*ReturnType=*/TargetTy, getCreateHandleFromBindingIntrinsic(), Args,
-          nullptr, Twine(VD->getName()).concat("_h"));
+          nullptr, Twine(Decl->getName()).concat("_h"));
 
       llvm::Value *HandleRef =
           Builder.CreateStructGEP(GV->getValueType(), GV, 0);
@@ -609,7 +648,6 @@ llvm::Function *CGHLSLRuntime::createResourceBindingInitFn() {
   }
 
   Builder.CreateRetVoid();
-  return InitResBindingsFunc;
 }
 
 llvm::Instruction *CGHLSLRuntime::getConvergenceToken(BasicBlock &BB) {

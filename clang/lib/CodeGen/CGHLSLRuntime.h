@@ -54,6 +54,7 @@ class StructType;
 
 namespace clang {
 class VarDecl;
+class NamedDecl;
 class ParmVarDecl;
 class HLSLBufferDecl;
 class HLSLResourceBindingAttr;
@@ -136,7 +137,7 @@ protected:
                                  llvm::Type *Ty);
 
 public:
-  CGHLSLRuntime(CodeGenModule &CGM) : CGM(CGM) {}
+  CGHLSLRuntime(CodeGenModule &CGM) : CGM(CGM), InitResBindingsFunc(nullptr) {}
   virtual ~CGHLSLRuntime() {}
 
   llvm::Type *convertHLSLSpecificType(const Type *T);
@@ -153,8 +154,6 @@ public:
   void setHLSLFunctionAttributes(const FunctionDecl *FD, llvm::Function *Fn);
   void handleGlobalVarDefinition(const VarDecl *VD, llvm::GlobalVariable *Var);
 
-  bool needsResourceBindingInitFn();
-  llvm::Function *createResourceBindingInitFn();
   llvm::Instruction *getConvergenceToken(llvm::BasicBlock &BB);
 
 private:
@@ -165,10 +164,15 @@ private:
                                    BufferResBinding &Binding);
   void addConstant(VarDecl *D, Buffer &CB);
   void addBufferDecls(const DeclContext *DC, Buffer &CB);
+
+  llvm::Function *getOrCreateResourceBindingInitFn();
+  void generateInitResBindingsFuncBody();
+  void removeInitResBindingsFunc();
+
   llvm::Triple::ArchType getArch();
   llvm::SmallVector<Buffer> Buffers;
-
-  llvm::SmallVector<std::pair<const VarDecl *, llvm::GlobalVariable *>>
+  llvm::Function *InitResBindingsFunc;
+  llvm::SmallVector<std::pair<const NamedDecl *, llvm::GlobalVariable *>>
       ResourcesToBind;
 };
 

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-DXIL
-// RUN-DISABLED: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-SPIRV
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-compute -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-DXIL
+// RUN-DISABLED: %clang_cc1 -triple spirv-vulkan-compute -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-SPIRV
 
 // NOTE: SPIRV codegen for resource types is not yet implemented
 
@@ -15,9 +15,12 @@ RasterizerOrderedByteAddressBuffer Buffer2: register(u3, space4);
 // CHECK: @Buffer1 = global %"class.hlsl::RWByteAddressBuffer" zeroinitializer, align 4
 // CHECK: @Buffer2 = global %"class.hlsl::RasterizerOrderedByteAddressBuffer" zeroinitializer, align 4
 
-// CHECK: define internal void @_GLOBAL__sub_I_ByteAddressBuffers_constructors.hlsl()
-// CHECK: entry:
-// CHECK: call void @_init_resource_bindings()
+// CHECK: define void @main()
+// CHECK-NEXT: entry:
+// CHECK-NEXT: call void @_GLOBAL__sub_I_ByteAddressBuffers_constructors.hlsl()
+// CHECK-NEXT: call void @_init_resource_bindings()
+// CHECK-NEXT: call void @_Z4mainv()
+// CHECK-NEXT: ret void
 
 // CHECK: define internal void @_init_resource_bindings() {
 // CHECK-NEXT: entry:
@@ -27,3 +30,6 @@ RasterizerOrderedByteAddressBuffer Buffer2: register(u3, space4);
 // CHECK-DXIL-NEXT: store target("dx.RawBuffer", i8, 1, 0) %Buffer1_h, ptr @Buffer1, align 4
 // CHECK-DXIL-NEXT: %Buffer2_h = call target("dx.RawBuffer", i8, 1, 1) @llvm.dx.handle.fromBinding.tdx.RawBuffer_i8_1_1t(i32 4, i32 3, i32 1, i32 0, i1 false)
 // CHECK-DXIL-NEXT: store target("dx.RawBuffer", i8, 1, 1) %Buffer2_h, ptr @Buffer2, align 4
+
+[numthreads(4,1,1)]
+void main() {}
