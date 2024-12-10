@@ -1286,6 +1286,10 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
 
   Attributor A(Functions, InfoCache, AC);
 
+  LLVM_DEBUG(dbgs() << "[AMDGPUAttributor] Module " << M.getName() << " is "
+                    << (AC.IsClosedWorldModule ? "" : "not ")
+                    << "assumed to be a closed world.\n");
+
   for (auto *F : Functions) {
     A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(*F));
     A.getOrCreateAAFor<AAUniformWorkGroupSize>(IRPosition::function(*F));
