@@ -294,6 +294,7 @@ protected:
             LIS->createAndComputeVirtRegInterval(KilledProdReg);
 
         LLVM_DEBUG(dbgs() << "  extended: " << NewFMAInt << '\n');
+        (void)NewFMAInt;
 
         // Extend the live interval of the addend source (it might end at the
         // copy to be removed, or somewhere in between there and here). This

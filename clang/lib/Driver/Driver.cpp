@@ -5815,15 +5815,10 @@ InputInfoList Driver::BuildJobsForActionNoCache(
     }
   } else {
     if (UnbundlingResults.empty())
-      T->ConstructJob(
-          C, *JA, Result, InputInfos,
-          C.getArgsForToolChain(TC, BoundArch, JA->getOffloadingDeviceKind()),
-          LinkingOutput);
+      T->ConstructJob(C, *JA, Result, InputInfos, Args, LinkingOutput);
     else
-      T->ConstructJobMultipleOutputs(
-          C, *JA, UnbundlingResults, InputInfos,
-          C.getArgsForToolChain(TC, BoundArch, JA->getOffloadingDeviceKind()),
-          LinkingOutput);
+      T->ConstructJobMultipleOutputs(C, *JA, UnbundlingResults, InputInfos,
+                                     Args, LinkingOutput);
   }
   return {Result};
 }
