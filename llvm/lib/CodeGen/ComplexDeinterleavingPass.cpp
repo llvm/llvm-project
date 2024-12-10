@@ -108,8 +108,15 @@ static bool isNeg(Value *V);
 static Value *getNegOperand(Value *V);
 
 namespace {
+  template<typename T, typename IterT>
+  std::optional<T> findCommonBetweenCollections(IterT A, IterT B) {
+    auto Common = llvm::find_if(A, [B](T I){return llvm::is_contained(B, I);});
+    if (Common != A.end())
+      return std::make_optional(*Common);
+    return std::nullopt;
+  }
 
-class ComplexDeinterleavingLegacyPass : public FunctionPass {
+  class ComplexDeinterleavingLegacyPass : public FunctionPass {
 public:
   static char ID;
 
@@ -337,7 +344,7 @@ private:
   NodePtr identifyPartialReduction(Value *R, Value *I);
   NodePtr identifyDotProduct(Value *Inst);
 
-  NodePtr identifyNode(Value *R, Value *I, bool *FromCache = nullptr);
+  NodePtr identifyNode(Value *R, Value *I);
 
   /// Determine if a sum of complex numbers can be formed from \p RealAddends
   /// and \p ImagAddens. If \p Accumulator is not null, add the result to it.
@@ -902,16 +909,16 @@ ComplexDeinterleavingGraph::identifySymmetricOperation(Instruction *Real,
 
 ComplexDeinterleavingGraph::NodePtr
 ComplexDeinterleavingGraph::identifyDotProduct(Value *V) {
-  auto *Inst = cast<Instruction>(V);
 
   if (!TL->isComplexDeinterleavingOperationSupported(
-          ComplexDeinterleavingOperation::CDot, Inst->getType())) {
+          ComplexDeinterleavingOperation::CDot, V->getType())) {
     LLVM_DEBUG(dbgs() << "Target doesn't support complex deinterleaving "
                          "operation CDot with the type "
-                      << *Inst->getType() << "\n");
+                      << *V->getType() << "\n");
     return nullptr;
   }
 
+  auto *Inst = cast<Instruction>(V);
   auto *RealUser = cast<Instruction>(*Inst->user_begin());
 
   NodePtr CN =
@@ -987,13 +994,26 @@ ComplexDeinterleavingGraph::identifyDotProduct(Value *V) {
   BReal = UnwrapCast(BReal);
   BImag = UnwrapCast(BImag);
 
-  bool WasANodeFromCache = false;
-  NodePtr Node = identifyNode(AReal, AImag, &WasANodeFromCache);
+  VectorType *VTy = cast<VectorType>(V->getType());
+  Type *ExpectedOperandTy = VectorType::getSubdividedVectorType(VTy, 2);
+  if (AReal->getType() != ExpectedOperandTy)
+    return nullptr;
+  if (AImag->getType() != ExpectedOperandTy)
+    return nullptr;
+  if (BReal->getType() != ExpectedOperandTy)
+    return nullptr;
+  if (BImag->getType() != ExpectedOperandTy)
+    return nullptr;
+
+  if (Phi->getType() != VTy && RealUser->getType() != VTy)
+    return nullptr;
+
+  NodePtr Node = identifyNode(AReal, AImag);
 
   // In the case that a node was identified to figure out the rotation, ensure
   // that trying to identify a node with AReal and AImag post-unwrap results in
   // the same node
-  if (Node && ANode && !WasANodeFromCache) {
+  if (ANode && Node != ANode) {
     LLVM_DEBUG(
         dbgs()
         << "Identified node is different from previously identified node. "
@@ -1010,38 +1030,17 @@ ComplexDeinterleavingGraph::identifyDotProduct(Value *V) {
 
 ComplexDeinterleavingGraph::NodePtr
 ComplexDeinterleavingGraph::identifyPartialReduction(Value *R, Value *I) {
-  if (!I->hasOneUser())
+  // Partial reductions don't support non-vector types, so check these first
+  if (!isa<VectorType>(R->getType()) || !isa<VectorType>(I->getType()))
     return nullptr;
 
-  VectorType *RealTy = dyn_cast<VectorType>(R->getType());
-  if (!RealTy)
-    return nullptr;
-  VectorType *ImagTy = dyn_cast<VectorType>(I->getType());
-  if (!ImagTy)
+  auto CommonUser = findCommonBetweenCollections<Value*>(R->users(), I->users());
+  if (!CommonUser)
     return nullptr;
 
-  if (RealTy->isScalableTy() != ImagTy->isScalableTy())
-    return nullptr;
-  if (RealTy->getElementType() != ImagTy->getElementType())
-    return nullptr;
-
-  // `I` is known to only have one user, so iterate over the Phi (R) users to
-  // find the common user between R and I
-  auto *CommonUser = *I->user_begin();
-  bool CommonUserFound = false;
-  for (auto *User : R->users()) {
-    if (User == CommonUser) {
-      CommonUserFound = true;
-      break;
-    }
-  }
-
-  if (!CommonUserFound)
-    return nullptr;
-
-  auto *IInst = dyn_cast<IntrinsicInst>(CommonUser);
+  auto *IInst = dyn_cast<IntrinsicInst>(*CommonUser);
   if (!IInst || IInst->getIntrinsicID() !=
-                    Intrinsic::experimental_vector_partial_reduce_add)
+      Intrinsic::experimental_vector_partial_reduce_add)
     return nullptr;
 
   if (NodePtr CN = identifyDotProduct(IInst))
@@ -1051,12 +1050,10 @@ ComplexDeinterleavingGraph::identifyPartialReduction(Value *R, Value *I) {
 }
 
 ComplexDeinterleavingGraph::NodePtr
-ComplexDeinterleavingGraph::identifyNode(Value *R, Value *I, bool *FromCache) {
+ComplexDeinterleavingGraph::identifyNode(Value *R, Value *I) {
   auto It = CachedResult.find({R, I});
   if (It != CachedResult.end()) {
     LLVM_DEBUG(dbgs() << " - Folding to existing node\n");
-    if (FromCache != nullptr)
-      *FromCache = true;
     return It->second;
   }
 

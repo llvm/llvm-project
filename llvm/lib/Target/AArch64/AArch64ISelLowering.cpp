@@ -29414,6 +29414,10 @@ bool AArch64TargetLowering::isComplexDeinterleavingOperationSupported(
     return 8 <= ScalarWidth && ScalarWidth <= 64;
   }
 
+  // CDot is not supported outside of scalable/sve scopes
+  if (Operation == ComplexDeinterleavingOperation::CDot)
+    return false;
+
   return (ScalarTy->isHalfTy() && Subtarget->hasFullFP16()) ||
          ScalarTy->isFloatTy() || ScalarTy->isDoubleTy();
 }

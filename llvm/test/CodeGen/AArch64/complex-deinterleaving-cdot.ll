@@ -913,8 +913,224 @@ middle.block:                                     ; preds = %vector.body
   ret i32 %0
 }
 
+define i16 @invalid_type(<vscale x 32 x i8> %a, <vscale x 32 x i8> %b) {
+; CHECK-SVE2-LABEL: define i16 @invalid_type(
+; CHECK-SVE2-SAME: <vscale x 32 x i8> [[A:%.*]], <vscale x 32 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-SVE2-NEXT:  [[ENTRY:.*]]:
+; CHECK-SVE2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-SVE2:       [[VECTOR_BODY]]:
+; CHECK-SVE2-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 8 x i16> [ zeroinitializer, %[[ENTRY]] ], [ [[PARTIAL_REDUCE_SUB:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-SVE2-NEXT:    [[A_DEINTERLEAVED:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> [[A]])
+; CHECK-SVE2-NEXT:    [[B_DEINTERLEAVED:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> [[B]])
+; CHECK-SVE2-NEXT:    [[A_REAL:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[A_DEINTERLEAVED]], 0
+; CHECK-SVE2-NEXT:    [[A_IMAG:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[A_DEINTERLEAVED]], 1
+; CHECK-SVE2-NEXT:    [[B_REAL:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[B_DEINTERLEAVED]], 0
+; CHECK-SVE2-NEXT:    [[B_IMAG:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[B_DEINTERLEAVED]], 1
+; CHECK-SVE2-NEXT:    [[A_REAL_EXT:%.*]] = sext <vscale x 16 x i8> [[A_REAL]] to <vscale x 16 x i32>
+; CHECK-SVE2-NEXT:    [[A_IMAG_EXT:%.*]] = sext <vscale x 16 x i8> [[A_IMAG]] to <vscale x 16 x i32>
+; CHECK-SVE2-NEXT:    [[B_REAL_EXT:%.*]] = sext <vscale x 16 x i8> [[B_REAL]] to <vscale x 16 x i32>
+; CHECK-SVE2-NEXT:    [[B_IMAG_EXT:%.*]] = sext <vscale x 16 x i8> [[B_IMAG]] to <vscale x 16 x i32>
+; CHECK-SVE2-NEXT:    [[REAL_MUL:%.*]] = mul <vscale x 16 x i32> [[B_REAL_EXT]], [[A_REAL_EXT]]
+; CHECK-SVE2-NEXT:    [[REAL_MUL_REDUCED:%.*]] = call <vscale x 8 x i16> @llvm.experimental.vector.partial.reduce.add.nxv8i16.nxv16i32(<vscale x 8 x i16> [[VEC_PHI]], <vscale x 16 x i32> [[REAL_MUL]])
+; CHECK-SVE2-NEXT:    [[IMAG_MUL:%.*]] = mul <vscale x 16 x i32> [[B_IMAG_EXT]], [[A_IMAG_EXT]]
+; CHECK-SVE2-NEXT:    [[IMAG_MUL_NEG:%.*]] = sub <vscale x 16 x i32> zeroinitializer, [[IMAG_MUL]]
+; CHECK-SVE2-NEXT:    [[PARTIAL_REDUCE_SUB]] = call <vscale x 8 x i16> @llvm.experimental.vector.partial.reduce.add.nxv8i16.nxv16i32(<vscale x 8 x i16> [[REAL_MUL_REDUCED]], <vscale x 16 x i32> [[IMAG_MUL_NEG]])
+; CHECK-SVE2-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
+; CHECK-SVE2:       [[MIDDLE_BLOCK]]:
+; CHECK-SVE2-NEXT:    [[TMP0:%.*]] = call i16 @llvm.vector.reduce.add.nxv8i16(<vscale x 8 x i16> [[PARTIAL_REDUCE_SUB]])
+; CHECK-SVE2-NEXT:    ret i16 [[TMP0]]
+;
+; CHECK-SVE-LABEL: define i16 @invalid_type(
+; CHECK-SVE-SAME: <vscale x 32 x i8> [[A:%.*]], <vscale x 32 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-SVE-NEXT:  [[ENTRY:.*]]:
+; CHECK-SVE-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-SVE:       [[VECTOR_BODY]]:
+; CHECK-SVE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 8 x i16> [ zeroinitializer, %[[ENTRY]] ], [ [[PARTIAL_REDUCE_SUB:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-SVE-NEXT:    [[A_DEINTERLEAVED:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> [[A]])
+; CHECK-SVE-NEXT:    [[B_DEINTERLEAVED:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> [[B]])
+; CHECK-SVE-NEXT:    [[A_REAL:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[A_DEINTERLEAVED]], 0
+; CHECK-SVE-NEXT:    [[A_IMAG:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[A_DEINTERLEAVED]], 1
+; CHECK-SVE-NEXT:    [[B_REAL:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[B_DEINTERLEAVED]], 0
+; CHECK-SVE-NEXT:    [[B_IMAG:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[B_DEINTERLEAVED]], 1
+; CHECK-SVE-NEXT:    [[A_REAL_EXT:%.*]] = sext <vscale x 16 x i8> [[A_REAL]] to <vscale x 16 x i32>
+; CHECK-SVE-NEXT:    [[A_IMAG_EXT:%.*]] = sext <vscale x 16 x i8> [[A_IMAG]] to <vscale x 16 x i32>
+; CHECK-SVE-NEXT:    [[B_REAL_EXT:%.*]] = sext <vscale x 16 x i8> [[B_REAL]] to <vscale x 16 x i32>
+; CHECK-SVE-NEXT:    [[B_IMAG_EXT:%.*]] = sext <vscale x 16 x i8> [[B_IMAG]] to <vscale x 16 x i32>
+; CHECK-SVE-NEXT:    [[REAL_MUL:%.*]] = mul <vscale x 16 x i32> [[B_REAL_EXT]], [[A_REAL_EXT]]
+; CHECK-SVE-NEXT:    [[REAL_MUL_REDUCED:%.*]] = call <vscale x 8 x i16> @llvm.experimental.vector.partial.reduce.add.nxv8i16.nxv16i32(<vscale x 8 x i16> [[VEC_PHI]], <vscale x 16 x i32> [[REAL_MUL]])
+; CHECK-SVE-NEXT:    [[IMAG_MUL:%.*]] = mul <vscale x 16 x i32> [[B_IMAG_EXT]], [[A_IMAG_EXT]]
+; CHECK-SVE-NEXT:    [[IMAG_MUL_NEG:%.*]] = sub <vscale x 16 x i32> zeroinitializer, [[IMAG_MUL]]
+; CHECK-SVE-NEXT:    [[PARTIAL_REDUCE_SUB]] = call <vscale x 8 x i16> @llvm.experimental.vector.partial.reduce.add.nxv8i16.nxv16i32(<vscale x 8 x i16> [[REAL_MUL_REDUCED]], <vscale x 16 x i32> [[IMAG_MUL_NEG]])
+; CHECK-SVE-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
+; CHECK-SVE:       [[MIDDLE_BLOCK]]:
+; CHECK-SVE-NEXT:    [[TMP0:%.*]] = call i16 @llvm.vector.reduce.add.nxv8i16(<vscale x 8 x i16> [[PARTIAL_REDUCE_SUB]])
+; CHECK-SVE-NEXT:    ret i16 [[TMP0]]
+;
+; CHECK-NOSVE-LABEL: define i16 @invalid_type(
+; CHECK-NOSVE-SAME: <vscale x 32 x i8> [[A:%.*]], <vscale x 32 x i8> [[B:%.*]]) {
+; CHECK-NOSVE-NEXT:  [[ENTRY:.*]]:
+; CHECK-NOSVE-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-NOSVE:       [[VECTOR_BODY]]:
+; CHECK-NOSVE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 8 x i16> [ zeroinitializer, %[[ENTRY]] ], [ [[PARTIAL_REDUCE_SUB:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NOSVE-NEXT:    [[A_DEINTERLEAVED:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> [[A]])
+; CHECK-NOSVE-NEXT:    [[B_DEINTERLEAVED:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> [[B]])
+; CHECK-NOSVE-NEXT:    [[A_REAL:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[A_DEINTERLEAVED]], 0
+; CHECK-NOSVE-NEXT:    [[A_IMAG:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[A_DEINTERLEAVED]], 1
+; CHECK-NOSVE-NEXT:    [[B_REAL:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[B_DEINTERLEAVED]], 0
+; CHECK-NOSVE-NEXT:    [[B_IMAG:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[B_DEINTERLEAVED]], 1
+; CHECK-NOSVE-NEXT:    [[A_REAL_EXT:%.*]] = sext <vscale x 16 x i8> [[A_REAL]] to <vscale x 16 x i32>
+; CHECK-NOSVE-NEXT:    [[A_IMAG_EXT:%.*]] = sext <vscale x 16 x i8> [[A_IMAG]] to <vscale x 16 x i32>
+; CHECK-NOSVE-NEXT:    [[B_REAL_EXT:%.*]] = sext <vscale x 16 x i8> [[B_REAL]] to <vscale x 16 x i32>
+; CHECK-NOSVE-NEXT:    [[B_IMAG_EXT:%.*]] = sext <vscale x 16 x i8> [[B_IMAG]] to <vscale x 16 x i32>
+; CHECK-NOSVE-NEXT:    [[REAL_MUL:%.*]] = mul <vscale x 16 x i32> [[B_REAL_EXT]], [[A_REAL_EXT]]
+; CHECK-NOSVE-NEXT:    [[REAL_MUL_REDUCED:%.*]] = call <vscale x 8 x i16> @llvm.experimental.vector.partial.reduce.add.nxv8i16.nxv16i32(<vscale x 8 x i16> [[VEC_PHI]], <vscale x 16 x i32> [[REAL_MUL]])
+; CHECK-NOSVE-NEXT:    [[IMAG_MUL:%.*]] = mul <vscale x 16 x i32> [[B_IMAG_EXT]], [[A_IMAG_EXT]]
+; CHECK-NOSVE-NEXT:    [[IMAG_MUL_NEG:%.*]] = sub <vscale x 16 x i32> zeroinitializer, [[IMAG_MUL]]
+; CHECK-NOSVE-NEXT:    [[PARTIAL_REDUCE_SUB]] = call <vscale x 8 x i16> @llvm.experimental.vector.partial.reduce.add.nxv8i16.nxv16i32(<vscale x 8 x i16> [[REAL_MUL_REDUCED]], <vscale x 16 x i32> [[IMAG_MUL_NEG]])
+; CHECK-NOSVE-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
+; CHECK-NOSVE:       [[MIDDLE_BLOCK]]:
+; CHECK-NOSVE-NEXT:    [[TMP0:%.*]] = call i16 @llvm.vector.reduce.add.nxv8i16(<vscale x 8 x i16> [[PARTIAL_REDUCE_SUB]])
+; CHECK-NOSVE-NEXT:    ret i16 [[TMP0]]
+;
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %vec.phi = phi <vscale x 8 x i16> [ zeroinitializer, %entry ], [ %partial.reduce.sub, %vector.body ]
+  %a.deinterleaved = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave2.v32i8(<vscale x 32 x i8> %a)
+  %b.deinterleaved = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave2.v32i8(<vscale x 32 x i8> %b)
+  %a.real = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %a.deinterleaved, 0
+  %a.imag = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %a.deinterleaved, 1
+  %b.real = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %b.deinterleaved, 0
+  %b.imag = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %b.deinterleaved, 1
+  %a.real.ext = sext <vscale x 16 x i8> %a.real to <vscale x 16 x i32>
+  %a.imag.ext = sext <vscale x 16 x i8> %a.imag to <vscale x 16 x i32>
+  %b.real.ext = sext <vscale x 16 x i8> %b.real to <vscale x 16 x i32>
+  %b.imag.ext = sext <vscale x 16 x i8> %b.imag to <vscale x 16 x i32>
+  %real.mul = mul <vscale x 16 x i32> %b.real.ext, %a.real.ext
+  %real.mul.reduced = call <vscale x 8 x i16> @llvm.experimental.vector.partial.reduce.add.nxv8i16.nxv16i32(<vscale x 8 x i16> %vec.phi, <vscale x 16 x i32> %real.mul)
+  %imag.mul = mul <vscale x 16 x i32> %b.imag.ext, %a.imag.ext
+  %imag.mul.neg = sub <vscale x 16 x i32> zeroinitializer, %imag.mul
+  %partial.reduce.sub = call <vscale x 8 x i16> @llvm.experimental.vector.partial.reduce.add.nxv8i16.nxv16i32(<vscale x 8 x i16> %real.mul.reduced, <vscale x 16 x i32> %imag.mul.neg)
+  br i1 true, label %middle.block, label %vector.body
+
+middle.block:                                     ; preds = %vector.body
+  %0 = call i16 @llvm.vector.reduce.add.nxv8i16(<vscale x 8 x i16> %partial.reduce.sub)
+  ret i16 %0
+}
+
+define i32 @cdotp_i8_rot0_fixed_length(<32 x i8> %a, <32 x i8> %b) {
+; CHECK-SVE2-LABEL: define i32 @cdotp_i8_rot0_fixed_length(
+; CHECK-SVE2-SAME: <32 x i8> [[A:%.*]], <32 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-SVE2-NEXT:  [[ENTRY:.*]]:
+; CHECK-SVE2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-SVE2:       [[VECTOR_BODY]]:
+; CHECK-SVE2-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[ENTRY]] ], [ [[PARTIAL_REDUCE_SUB:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-SVE2-NEXT:    [[A_DEINTERLEAVED:%.*]] = call { <16 x i8>, <16 x i8> } @llvm.vector.deinterleave2.v32i8(<32 x i8> [[A]])
+; CHECK-SVE2-NEXT:    [[B_DEINTERLEAVED:%.*]] = call { <16 x i8>, <16 x i8> } @llvm.vector.deinterleave2.v32i8(<32 x i8> [[B]])
+; CHECK-SVE2-NEXT:    [[A_REAL:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[A_DEINTERLEAVED]], 0
+; CHECK-SVE2-NEXT:    [[A_IMAG:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[A_DEINTERLEAVED]], 1
+; CHECK-SVE2-NEXT:    [[B_REAL:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[B_DEINTERLEAVED]], 0
+; CHECK-SVE2-NEXT:    [[B_IMAG:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[B_DEINTERLEAVED]], 1
+; CHECK-SVE2-NEXT:    [[A_REAL_EXT:%.*]] = sext <16 x i8> [[A_REAL]] to <16 x i32>
+; CHECK-SVE2-NEXT:    [[A_IMAG_EXT:%.*]] = sext <16 x i8> [[A_IMAG]] to <16 x i32>
+; CHECK-SVE2-NEXT:    [[B_REAL_EXT:%.*]] = sext <16 x i8> [[B_REAL]] to <16 x i32>
+; CHECK-SVE2-NEXT:    [[B_IMAG_EXT:%.*]] = sext <16 x i8> [[B_IMAG]] to <16 x i32>
+; CHECK-SVE2-NEXT:    [[REAL_MUL:%.*]] = mul <16 x i32> [[B_REAL_EXT]], [[A_REAL_EXT]]
+; CHECK-SVE2-NEXT:    [[REAL_MUL_REDUCED:%.*]] = call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI]], <16 x i32> [[REAL_MUL]])
+; CHECK-SVE2-NEXT:    [[IMAG_MUL:%.*]] = mul <16 x i32> [[B_IMAG_EXT]], [[A_IMAG_EXT]]
+; CHECK-SVE2-NEXT:    [[IMAG_MUL_NEG:%.*]] = sub <16 x i32> zeroinitializer, [[IMAG_MUL]]
+; CHECK-SVE2-NEXT:    [[PARTIAL_REDUCE_SUB]] = call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[REAL_MUL_REDUCED]], <16 x i32> [[IMAG_MUL_NEG]])
+; CHECK-SVE2-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
+; CHECK-SVE2:       [[MIDDLE_BLOCK]]:
+; CHECK-SVE2-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[PARTIAL_REDUCE_SUB]])
+; CHECK-SVE2-NEXT:    ret i32 [[TMP0]]
+;
+; CHECK-SVE-LABEL: define i32 @cdotp_i8_rot0_fixed_length(
+; CHECK-SVE-SAME: <32 x i8> [[A:%.*]], <32 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-SVE-NEXT:  [[ENTRY:.*]]:
+; CHECK-SVE-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-SVE:       [[VECTOR_BODY]]:
+; CHECK-SVE-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[ENTRY]] ], [ [[PARTIAL_REDUCE_SUB:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-SVE-NEXT:    [[A_DEINTERLEAVED:%.*]] = call { <16 x i8>, <16 x i8> } @llvm.vector.deinterleave2.v32i8(<32 x i8> [[A]])
+; CHECK-SVE-NEXT:    [[B_DEINTERLEAVED:%.*]] = call { <16 x i8>, <16 x i8> } @llvm.vector.deinterleave2.v32i8(<32 x i8> [[B]])
+; CHECK-SVE-NEXT:    [[A_REAL:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[A_DEINTERLEAVED]], 0
+; CHECK-SVE-NEXT:    [[A_IMAG:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[A_DEINTERLEAVED]], 1
+; CHECK-SVE-NEXT:    [[B_REAL:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[B_DEINTERLEAVED]], 0
+; CHECK-SVE-NEXT:    [[B_IMAG:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[B_DEINTERLEAVED]], 1
+; CHECK-SVE-NEXT:    [[A_REAL_EXT:%.*]] = sext <16 x i8> [[A_REAL]] to <16 x i32>
+; CHECK-SVE-NEXT:    [[A_IMAG_EXT:%.*]] = sext <16 x i8> [[A_IMAG]] to <16 x i32>
+; CHECK-SVE-NEXT:    [[B_REAL_EXT:%.*]] = sext <16 x i8> [[B_REAL]] to <16 x i32>
+; CHECK-SVE-NEXT:    [[B_IMAG_EXT:%.*]] = sext <16 x i8> [[B_IMAG]] to <16 x i32>
+; CHECK-SVE-NEXT:    [[REAL_MUL:%.*]] = mul <16 x i32> [[B_REAL_EXT]], [[A_REAL_EXT]]
+; CHECK-SVE-NEXT:    [[REAL_MUL_REDUCED:%.*]] = call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI]], <16 x i32> [[REAL_MUL]])
+; CHECK-SVE-NEXT:    [[IMAG_MUL:%.*]] = mul <16 x i32> [[B_IMAG_EXT]], [[A_IMAG_EXT]]
+; CHECK-SVE-NEXT:    [[IMAG_MUL_NEG:%.*]] = sub <16 x i32> zeroinitializer, [[IMAG_MUL]]
+; CHECK-SVE-NEXT:    [[PARTIAL_REDUCE_SUB]] = call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[REAL_MUL_REDUCED]], <16 x i32> [[IMAG_MUL_NEG]])
+; CHECK-SVE-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
+; CHECK-SVE:       [[MIDDLE_BLOCK]]:
+; CHECK-SVE-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[PARTIAL_REDUCE_SUB]])
+; CHECK-SVE-NEXT:    ret i32 [[TMP0]]
+;
+; CHECK-NOSVE-LABEL: define i32 @cdotp_i8_rot0_fixed_length(
+; CHECK-NOSVE-SAME: <32 x i8> [[A:%.*]], <32 x i8> [[B:%.*]]) {
+; CHECK-NOSVE-NEXT:  [[ENTRY:.*]]:
+; CHECK-NOSVE-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-NOSVE:       [[VECTOR_BODY]]:
+; CHECK-NOSVE-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[ENTRY]] ], [ [[PARTIAL_REDUCE_SUB:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NOSVE-NEXT:    [[A_DEINTERLEAVED:%.*]] = call { <16 x i8>, <16 x i8> } @llvm.vector.deinterleave2.v32i8(<32 x i8> [[A]])
+; CHECK-NOSVE-NEXT:    [[B_DEINTERLEAVED:%.*]] = call { <16 x i8>, <16 x i8> } @llvm.vector.deinterleave2.v32i8(<32 x i8> [[B]])
+; CHECK-NOSVE-NEXT:    [[A_REAL:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[A_DEINTERLEAVED]], 0
+; CHECK-NOSVE-NEXT:    [[A_IMAG:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[A_DEINTERLEAVED]], 1
+; CHECK-NOSVE-NEXT:    [[B_REAL:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[B_DEINTERLEAVED]], 0
+; CHECK-NOSVE-NEXT:    [[B_IMAG:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[B_DEINTERLEAVED]], 1
+; CHECK-NOSVE-NEXT:    [[A_REAL_EXT:%.*]] = sext <16 x i8> [[A_REAL]] to <16 x i32>
+; CHECK-NOSVE-NEXT:    [[A_IMAG_EXT:%.*]] = sext <16 x i8> [[A_IMAG]] to <16 x i32>
+; CHECK-NOSVE-NEXT:    [[B_REAL_EXT:%.*]] = sext <16 x i8> [[B_REAL]] to <16 x i32>
+; CHECK-NOSVE-NEXT:    [[B_IMAG_EXT:%.*]] = sext <16 x i8> [[B_IMAG]] to <16 x i32>
+; CHECK-NOSVE-NEXT:    [[REAL_MUL:%.*]] = mul <16 x i32> [[B_REAL_EXT]], [[A_REAL_EXT]]
+; CHECK-NOSVE-NEXT:    [[REAL_MUL_REDUCED:%.*]] = call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI]], <16 x i32> [[REAL_MUL]])
+; CHECK-NOSVE-NEXT:    [[IMAG_MUL:%.*]] = mul <16 x i32> [[B_IMAG_EXT]], [[A_IMAG_EXT]]
+; CHECK-NOSVE-NEXT:    [[IMAG_MUL_NEG:%.*]] = sub <16 x i32> zeroinitializer, [[IMAG_MUL]]
+; CHECK-NOSVE-NEXT:    [[PARTIAL_REDUCE_SUB]] = call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[REAL_MUL_REDUCED]], <16 x i32> [[IMAG_MUL_NEG]])
+; CHECK-NOSVE-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
+; CHECK-NOSVE:       [[MIDDLE_BLOCK]]:
+; CHECK-NOSVE-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[PARTIAL_REDUCE_SUB]])
+; CHECK-NOSVE-NEXT:    ret i32 [[TMP0]]
+;
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %vec.phi = phi <4 x i32> [ zeroinitializer, %entry ], [ %partial.reduce.sub, %vector.body ]
+  %a.deinterleaved = call { <16 x i8>, <16 x i8> } @llvm.vector.deinterleave2.v32i8(<32 x i8> %a)
+  %b.deinterleaved = call { <16 x i8>, <16 x i8> } @llvm.vector.deinterleave2.v32i8(<32 x i8> %b)
+  %a.real = extractvalue { <16 x i8>, <16 x i8> } %a.deinterleaved, 0
+  %a.imag = extractvalue { <16 x i8>, <16 x i8> } %a.deinterleaved, 1
+  %b.real = extractvalue { <16 x i8>, <16 x i8> } %b.deinterleaved, 0
+  %b.imag = extractvalue { <16 x i8>, <16 x i8> } %b.deinterleaved, 1
+  %a.real.ext = sext <16 x i8> %a.real to <16 x i32>
+  %a.imag.ext = sext <16 x i8> %a.imag to <16 x i32>
+  %b.real.ext = sext <16 x i8> %b.real to <16 x i32>
+  %b.imag.ext = sext <16 x i8> %b.imag to <16 x i32>
+  %real.mul = mul <16 x i32> %b.real.ext, %a.real.ext
+  %real.mul.reduced = call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %vec.phi, <16 x i32> %real.mul)
+  %imag.mul = mul <16 x i32> %b.imag.ext, %a.imag.ext
+  %imag.mul.neg = sub <16 x i32> zeroinitializer, %imag.mul
+  %partial.reduce.sub = call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %real.mul.reduced, <16 x i32> %imag.mul.neg)
+  br i1 true, label %middle.block, label %vector.body
+
+middle.block:                                     ; preds = %vector.body
+  %0 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %partial.reduce.sub)
+  ret i32 %0
+}
+
+declare <vscale x 8 x i16> @llvm.experimental.vector.partial.reduce.add.nxv8i16.nxv16i32(<vscale x 8 x i16>, <vscale x 16 x i32>)
 declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32>, <vscale x 16 x i32>)
 declare <vscale x 2 x i64> @llvm.experimental.vector.partial.reduce.add.nxv2i64.nxv8i32(<vscale x 2 x i64>, <vscale x 16 x i32>)
+
+declare <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32>, <16 x i32>)
+declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
 
 declare i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32>)
 declare i64 @llvm.vector.reduce.add.nxv2i64(<vscale x 2 x i64>)
