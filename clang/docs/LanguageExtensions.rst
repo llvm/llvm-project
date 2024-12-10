@@ -4519,7 +4519,7 @@ empty string is returned.
 
 The builtin ``__builtin_COLUMN`` returns the offset from the start of the line,
 beginning from column 1. `This may differ from other implementations.
-<https://en.cppreference.com/w/cpp/utility/source_location/column>`_
+<https://eel.is/c++draft/support.srcloc#tab:support.srcloc.current-row-3-column-2-sentence-2>`_
 
 The builtin ``__builtin_source_location`` returns a pointer to constant static
 data of type ``std::source_location::__impl``. This type must have already been
