@@ -246,10 +246,10 @@ protected:
   }
 
   /// Helper function to apply all pending DomTree updates.
-  void applyDomTreeUpdates();
+  void applyDomTreeUpdates() { applyUpdatesImpl<true>(); }
 
   /// Helper function to apply all pending PostDomTree updates.
-  void applyPostDomTreeUpdates();
+  void applyPostDomTreeUpdates() { applyUpdatesImpl<false>(); }
 
   /// Returns true if the update appears in the LLVM IR.
   /// It is used to check whether an update is valid in
@@ -271,6 +271,7 @@ protected:
 private:
   void splitDTCriticalEdges(ArrayRef<CriticalEdge> Updates);
   void splitPDTCriticalEdges(ArrayRef<CriticalEdge> Updates);
+  template <bool IsForward> void applyUpdatesImpl();
 };
 
 } // namespace llvm

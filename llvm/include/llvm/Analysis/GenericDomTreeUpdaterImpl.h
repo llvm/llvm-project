@@ -263,58 +263,39 @@ GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::dump() const {
 }
 
 template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
+template <bool IsForward>
 void GenericDomTreeUpdater<DerivedT, DomTreeT,
-                           PostDomTreeT>::applyDomTreeUpdates() {
+                           PostDomTreeT>::applyUpdatesImpl() {
+  auto *DomTree = [&]() {
+    if constexpr (IsForward)
+      return DT;
+    else
+      return PDT;
+  }();
   // No pending DomTreeUpdates.
-  if (Strategy != UpdateStrategy::Lazy || !DT)
+  if (Strategy != UpdateStrategy::Lazy || !DomTree)
     return;
+  size_t &PendUpdateIndex = IsForward ? PendDTUpdateIndex : PendPDTUpdateIndex;
 
-  // Only apply updates not are applied by DomTree.
-  while (hasPendingDomTreeUpdates()) {
-    auto I = PendUpdates.begin() + PendDTUpdateIndex;
+  // Only apply updates not are applied by (Post)DomTree.
+  while (IsForward ? hasPendingDomTreeUpdates()
+                   : hasPendingPostDomTreeUpdates()) {
+    auto I = PendUpdates.begin() + PendUpdateIndex;
     const auto E = PendUpdates.end();
     assert(I < E && "Iterator range invalid; there should be DomTree updates.");
     if (!I->IsCriticalEdgeSplit) {
       SmallVector<UpdateT, 32> NormalUpdates;
       for (; I != E && !I->IsCriticalEdgeSplit; ++I)
         NormalUpdates.push_back(I->Update);
-      DT->applyUpdates(NormalUpdates);
-      PendDTUpdateIndex += NormalUpdates.size();
+      DomTree->applyUpdates(NormalUpdates);
+      PendUpdateIndex += NormalUpdates.size();
     } else {
       SmallVector<CriticalEdge> CriticalEdges;
       for (; I != E && I->IsCriticalEdgeSplit; ++I)
         CriticalEdges.push_back(I->EdgeSplit);
-      splitDTCriticalEdges(CriticalEdges);
-      PendDTUpdateIndex += CriticalEdges.size();
-    }
-  }
-}
-
-template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
-void GenericDomTreeUpdater<DerivedT, DomTreeT,
-                           PostDomTreeT>::applyPostDomTreeUpdates() {
-  // No pending PostDomTreeUpdates.
-  if (Strategy != UpdateStrategy::Lazy || !PDT)
-    return;
-
-  // Only apply updates not are applied by PostDomTree.
-  while (hasPendingPostDomTreeUpdates()) {
-    auto I = PendUpdates.begin() + PendPDTUpdateIndex;
-    const auto E = PendUpdates.end();
-    assert(I < E &&
-           "Iterator range invalid; there should be PostDomTree updates.");
-    if (!I->IsCriticalEdgeSplit) {
-      SmallVector<UpdateT, 32> NormalUpdates;
-      for (; I != E && !I->IsCriticalEdgeSplit; ++I)
-        NormalUpdates.push_back(I->Update);
-      PDT->applyUpdates(NormalUpdates);
-      PendPDTUpdateIndex += NormalUpdates.size();
-    } else {
-      SmallVector<CriticalEdge> CriticalEdges;
-      for (; I != E && I->IsCriticalEdgeSplit; ++I)
-        CriticalEdges.push_back(I->EdgeSplit);
-      splitPDTCriticalEdges(CriticalEdges);
-      PendPDTUpdateIndex += CriticalEdges.size();
+      IsForward ? splitDTCriticalEdges(CriticalEdges)
+                : splitPDTCriticalEdges(CriticalEdges);
+      PendUpdateIndex += CriticalEdges.size();
     }
   }
 }

@@ -120,6 +120,13 @@ extern template class GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
 extern template void
 GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
                       PostDominatorTree>::recalculate(Function &F);
+
+extern template void
+GenericDomTreeUpdater<DomTreeUpdater, DominatorTree, PostDominatorTree>::
+    applyUpdatesImpl</*IsForward=*/true>();
+extern template void
+GenericDomTreeUpdater<DomTreeUpdater, DominatorTree, PostDominatorTree>::
+    applyUpdatesImpl</*IsForward=*/false>();
 } // namespace llvm
 
 #endif // LLVM_ANALYSIS_DOMTREEUPDATER_H
