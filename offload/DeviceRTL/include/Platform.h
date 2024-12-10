@@ -128,13 +128,13 @@ extern const inline unsigned __oclc_ISA_version = 12001;
 #elif defined(__gfx9_generic__)
 extern const inline unsigned __oclc_ISA_version = 9000;
 #elif defined(__gfx9_4_generic__)
-extern const inline unsigned __oclc_ISA_version = 9400;
+extern const inline unsigned __oclc_ISA_version = 9402;
 #elif defined(__gfx10_1_generic__)
 extern const inline unsigned __oclc_ISA_version = 10100;
 #elif defined(__gfx10_3_generic__)
 extern const inline unsigned __oclc_ISA_version = 10300;
 #elif defined(__gfx11_generic__)
-extern const inline unsigned __oclc_ISA_version = 11000;
+extern const inline unsigned __oclc_ISA_version = 11003;
 #elif defined(__gfx12_generic__)
 extern const inline unsigned __oclc_ISA_version = 12000;
 #else
