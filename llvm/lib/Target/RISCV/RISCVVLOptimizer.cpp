@@ -252,7 +252,6 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   // Vector Strided Instructions
   /// Dest EEW encoded in the instruction and EMUL=(EEW/SEW)*LMUL
   case RISCV::VSE8_V:
-  case RISCV::VSM_V:
   case RISCV::VSSE8_V:
     return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(3, MI), 3);
   case RISCV::VSE16_V:
