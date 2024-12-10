@@ -64,11 +64,9 @@ static cl::opt<bool>
 
 STATISTIC(NumInstrumentedAccesses, "Number of instrumented accesses");
 
-static Regex AnonNameRegex("^_ZTS.*N[1-9][0-9]*_GLOBAL__N");
-
 namespace {
 
-/// TypeSanitizer: instrument the code in module to find  type-based aliasing
+/// TypeSanitizer: instrument the code in module to find type-based aliasing
 /// violations.
 struct TypeSanitizer {
   TypeSanitizer(Module &M);
@@ -92,11 +90,9 @@ private:
                                   bool SanitizeFunction,
                                   TypeDescriptorsMapTy &TypeDescriptors,
                                   const DataLayout &DL);
-  bool instrumentMemoryAccess(Instruction *I, MemoryLocation &MLoc,
-                              Value *ShadowBase, Value *AppMemMask,
-                              bool SanitizeFunction,
-                              TypeDescriptorsMapTy &TypeDescriptors,
-                              const DataLayout &DL);
+
+  /// Memory-related intrinsics/instructions reset the type of the destination
+  /// memory (including allocas and byval arguments).
   bool instrumentMemInst(Value *I, Value *&ShadowBase, Value *&AppMemMask,
                          const DataLayout &DL);
 
@@ -150,9 +146,8 @@ void TypeSanitizer::initializeCallbacks(Module &M) {
                             OrdTy           // Flags.
       );
 
-  TysanCtorFunction = cast<Function>(
-      M.getOrInsertFunction(kTysanModuleCtorName, Attr, IRB.getVoidTy())
-          .getCallee());
+  TysanCtorFunction =
+      M.getOrInsertFunction(kTysanModuleCtorName, Attr, IRB.getVoidTy());
 }
 
 void TypeSanitizer::instrumentGlobals(Module &M) {
@@ -535,7 +530,6 @@ bool TypeSanitizer::run(Function &F, const TargetLibraryInfo &TLI) {
     if (A.hasByValAttr())
       MemTypeResetInsts.push_back(&A);
 
-
   Module &M = *F.getParent();
   TypeDescriptorsMapTy TypeDescriptors;
   TypeNameMapTy TypeNames;
@@ -552,11 +546,22 @@ bool TypeSanitizer::run(Function &F, const TargetLibraryInfo &TLI) {
 
   const DataLayout &DL = F.getParent()->getDataLayout();
   bool SanitizeFunction = F.hasFnAttribute(Attribute::SanitizeType);
-  Value *ShadowBase = MemoryAccesses.empty() ? nullptr : getShadowBase(F);
-  Value *AppMemMask = MemoryAccesses.empty() ? nullptr : getAppMemMask(F);
-  for (auto &MA : MemoryAccesses)
-    Res |= instrumentMemoryAccess(MA.first, MA.second, ShadowBase, AppMemMask,
-                                  SanitizeFunction, TypeDescriptors, DL);
+  bool NeedsInstrumentation =
+      MemTypeResetInsts.empty() && MemoryAccesses.empty();
+  Value *ShadowBase = NeedsInstrumentation ? nullptr : getShadowBase(F);
+  Value *AppMemMask = NeedsInstrumentation ? nullptr : getAppMemMask(F);
+  for (const auto &[I, MLoc] : MemoryAccesses) {
+    IRBuilder<> IRB(I);
+    assert(MLoc.Size.isPrecise());
+    if (instrumentWithShadowUpdate(
+            IRB, MLoc.AATags.TBAA, const_cast<Value *>(MLoc.Ptr),
+            MLoc.Size.getValue(), I->mayReadFromMemory(), I->mayWriteToMemory(),
+            ShadowBase, AppMemMask, false, SanitizeFunction, TypeDescriptors,
+            DL)) {
+      ++NumInstrumentedAccesses;
+      Res = true;
+    }
+  }
 
   for (auto Inst : MemTypeResetInsts)
     Res |= instrumentMemInst(Inst, ShadowBase, AppMemMask, DL);
@@ -712,26 +717,6 @@ bool TypeSanitizer::instrumentWithShadowUpdate(
   return true;
 }
 
-bool TypeSanitizer::instrumentMemoryAccess(
-    Instruction *I, MemoryLocation &MLoc, Value *ShadowBase, Value *AppMemMask,
-    bool SanitizeFunction, TypeDescriptorsMapTy &TypeDescriptors,
-    const DataLayout &DL) {
-  IRBuilder<> IRB(I);
-  assert(MLoc.Size.isPrecise());
-  if (instrumentWithShadowUpdate(
-          IRB, MLoc.AATags.TBAA, const_cast<Value *>(MLoc.Ptr),
-          MLoc.Size.getValue(), I->mayReadFromMemory(), I->mayWriteToMemory(),
-          ShadowBase, AppMemMask, false, SanitizeFunction, TypeDescriptors,
-          DL)) {
-    ++NumInstrumentedAccesses;
-    return true;
-  }
-
-  return false;
-}
-
-// Memory-related intrinsics/instructions reset the type of the destination
-// memory (including allocas and byval arguments).
 bool TypeSanitizer::instrumentMemInst(Value *V, Value *&ShadowBase,
                                       Value *&AppMemMask,
                                       const DataLayout &DL) {
