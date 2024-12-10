@@ -1948,21 +1948,26 @@ define <vscale x 4 x i32> @vmv_v_i(<vscale x 4 x i32> %a, i32 %x, iXLen %vl) {
   ret <vscale x 4 x i32> %2
 }
 
-define <vscale x 4 x i32> @vmv_v_v(<vscale x 4 x i32> %a, <vscale x 4 x i32> %v, iXLen %vl) {
-; NOVLOPT-LABEL: vmv_v_v:
+; The vmv.v.v is optimized away if we use a vadd as the user.
+define <vscale x 1 x i8> @vmv_v_v(<vscale x 1 x i8> %a, i8 %b, <vscale x 1 x i8> %c, <vscale x 1 x i1> %m, iXLen %vl) {
+; NOVLOPT-LABEL: vmerge_vvm:
 ; NOVLOPT:       # %bb.0:
-; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
+; NOVLOPT-NEXT:    vsetvli a2, zero, e8, mf8, tu, ma
+; NOVLOPT-NEXT:    vmv.v.x v8, a0
+; NOVLOPT-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
+; NOVLOPT-NEXT:    vmerge.vvm v8, v8, v9, v0
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vmv_v_v:
+; VLOPT-LABEL: vmerge_vvm:
 ; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; VLOPT-NEXT:    vadd.vv v8, v10, v8
+; VLOPT-NEXT:    vsetvli zero, a1, e8, mf8, tu, ma
+; VLOPT-NEXT:    vmv.v.x v8, a0
+; VLOPT-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
+; VLOPT-NEXT:    vmerge.vvm v8, v8, v9, v0
 ; VLOPT-NEXT:    ret
-  %1 = call <vscale x 4 x i32> @llvm.riscv.vmv.v.v.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %v, iXLen -1)
-  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
-  ret <vscale x 4 x i32> %2
+  %2 = call <vscale x 1 x i8> @llvm.riscv.vmv.v.x.nxv1i8(<vscale x 1 x i8> %a, i8 %b, iXLen -1)
+  %3 = call <vscale x 1 x i8> @llvm.riscv.vmerge.nxv1i8.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i8> %2, <vscale x 1 x i8> %c, <vscale x 1 x i1> %m, iXLen %vl)
+  ret <vscale x 1 x i8> %3
 }
 
 define <vscale x 4 x i32> @vmv_v_x(<vscale x 4 x i32> %a, i32 %x, iXLen %vl) {
