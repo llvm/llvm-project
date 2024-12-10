@@ -10,17 +10,7 @@
 #define SCUDO_LIST_H_
 
 #include "internal_defs.h"
-
-// TODO: Move the helpers to a header.
-namespace {
-template <typename T> struct isPointer {
-  static constexpr bool value = false;
-};
-
-template <typename T> struct isPointer<T *> {
-  static constexpr bool value = true;
-};
-} // namespace
+#include "type_traits.h"
 
 namespace scudo {
 
