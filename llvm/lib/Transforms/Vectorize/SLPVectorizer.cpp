@@ -808,16 +808,11 @@ namespace {
 
 /// Main data required for vectorization of instructions.
 class InstructionsState {
-  /// The very first instruction in the list with the main opcode.
-  Value *OpValue = nullptr;
-
-  /// The main/alternate instruction.
+  /// The main/alternate instruction. MainOp is also VL0.
   Instruction *MainOp = nullptr;
   Instruction *AltOp = nullptr;
 
 public:
-  Value *getOpValue() const { return OpValue; }
-
   Instruction *getMainOp() const { return MainOp; }
 
   Instruction *getAltOp() const { return AltOp; }
@@ -840,9 +835,9 @@ public:
   }
 
   InstructionsState() = delete;
-  InstructionsState(Value *OpValue, Instruction *MainOp, Instruction *AltOp)
-      : OpValue(OpValue), MainOp(MainOp), AltOp(AltOp) {}
-  static InstructionsState invalid() { return {nullptr, nullptr, nullptr}; }
+  InstructionsState(Instruction *MainOp, Instruction *AltOp)
+      : MainOp(MainOp), AltOp(AltOp) {}
+  static InstructionsState invalid() { return {nullptr, nullptr}; }
 };
 
 } // end anonymous namespace
@@ -1080,7 +1075,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
     return InstructionsState::invalid();
   }
 
-  return InstructionsState(V, cast<Instruction>(V),
+  return InstructionsState(cast<Instruction>(V),
                            cast<Instruction>(VL[AltIndex]));
 }
 
@@ -7551,7 +7546,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
 
   unsigned ShuffleOrOp =
       S.isAltShuffle() ? (unsigned)Instruction::ShuffleVector : S.getOpcode();
-  auto *VL0 = cast<Instruction>(S.getOpValue());
+  Instruction *VL0 = S.getMainOp();
   switch (ShuffleOrOp) {
   case Instruction::PHI: {
     // Too many operands - gather, most probably won't be vectorized.
@@ -8085,11 +8080,11 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
   // Check if this is a duplicate of another entry.
   if (S.getOpcode()) {
-    if (TreeEntry *E = getTreeEntry(S.getOpValue())) {
-      LLVM_DEBUG(dbgs() << "SLP: \tChecking bundle: " << *S.getOpValue()
+    if (TreeEntry *E = getTreeEntry(S.getMainOp())) {
+      LLVM_DEBUG(dbgs() << "SLP: \tChecking bundle: " << *S.getMainOp()
                         << ".\n");
       if (GatheredLoadsEntriesFirst.has_value() || !E->isSame(VL)) {
-        auto It = MultiNodeScalars.find(S.getOpValue());
+        auto It = MultiNodeScalars.find(S.getMainOp());
         if (It != MultiNodeScalars.end()) {
           auto *TEIt = find_if(It->getSecond(),
                                [&](TreeEntry *ME) { return ME->isSame(VL); });
@@ -8102,7 +8097,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         }
       }
       if (!E) {
-        if (!doesNotNeedToBeScheduled(S.getOpValue())) {
+        if (!doesNotNeedToBeScheduled(S.getMainOp())) {
           LLVM_DEBUG(dbgs() << "SLP: Gathering due to partial overlap.\n");
           if (TryToFindDuplicates(S))
             newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx,
@@ -8110,8 +8105,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
           return;
         }
         SmallPtrSet<const TreeEntry *, 4> Nodes;
-        Nodes.insert(getTreeEntry(S.getOpValue()));
-        for (const TreeEntry *E : MultiNodeScalars.lookup(S.getOpValue()))
+        Nodes.insert(getTreeEntry(S.getMainOp()));
+        for (const TreeEntry *E : MultiNodeScalars.lookup(S.getMainOp()))
           Nodes.insert(E);
         SmallPtrSet<Value *, 8> Values(VL.begin(), VL.end());
         if (any_of(Nodes, [&](const TreeEntry *E) {
@@ -8134,7 +8129,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         // used to properly draw the graph rather than for the actual
         // vectorization.
         E->UserTreeIndices.push_back(UserTreeIdx);
-        LLVM_DEBUG(dbgs() << "SLP: Perfect diamond merge at " << *S.getOpValue()
+        LLVM_DEBUG(dbgs() << "SLP: Perfect diamond merge at " << *S.getMainOp()
                           << ".\n");
         return;
       }
@@ -8163,7 +8158,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   // Don't handle scalable vectors
   if (S.getOpcode() == Instruction::ExtractElement &&
       isa<ScalableVectorType>(
-          cast<ExtractElementInst>(S.getOpValue())->getVectorOperandType())) {
+          cast<ExtractElementInst>(S.getMainOp())->getVectorOperandType())) {
     LLVM_DEBUG(dbgs() << "SLP: Gathering due to scalable vector type.\n");
     if (TryToFindDuplicates(S))
       newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx,
@@ -8259,7 +8254,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   bool AreAllSameInsts = AreAllSameBlock || AreScatterAllGEPSameBlock;
   if (!AreAllSameInsts || (!S.getOpcode() && allConstant(VL)) || isSplat(VL) ||
       (isa_and_present<InsertElementInst, ExtractValueInst, ExtractElementInst>(
-           S.getOpValue()) &&
+           S.getMainOp()) &&
        !all_of(VL, isVectorLikeInstWithConstOps)) ||
       NotProfitableForVectorization(VL)) {
     LLVM_DEBUG(dbgs() << "SLP: Gathering due to C,S,B,O, small shuffle. \n");
@@ -8326,7 +8321,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
   // Check that all of the users of the scalars that we want to vectorize are
   // schedulable.
-  auto *VL0 = cast<Instruction>(S.getOpValue());
+  Instruction *VL0 = S.getMainOp();
   BB = VL0->getParent();
 
   if (S.getMainOp() &&
@@ -14495,10 +14490,10 @@ BoUpSLP::TreeEntry *BoUpSLP::getMatchedVectorizedOperand(const TreeEntry *E,
                             VE->isSame(TE->Scalars);
                    }));
   };
-  TreeEntry *VE = getTreeEntry(S.getOpValue());
+  TreeEntry *VE = getTreeEntry(S.getMainOp());
   if (VE && CheckSameVE(VE))
     return VE;
-  auto It = MultiNodeScalars.find(S.getOpValue());
+  auto It = MultiNodeScalars.find(S.getMainOp());
   if (It != MultiNodeScalars.end()) {
     auto *I = find_if(It->getSecond(), [&](const TreeEntry *TE) {
       return TE != VE && CheckSameVE(TE);
@@ -16985,13 +16980,13 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
                                             const InstructionsState &S) {
   // No need to schedule PHIs, insertelement, extractelement and extractvalue
   // instructions.
-  if (isa<PHINode>(S.getOpValue()) ||
-      isVectorLikeInstWithConstOps(S.getOpValue()) || doesNotNeedToSchedule(VL))
+  if (isa<PHINode>(S.getMainOp()) ||
+      isVectorLikeInstWithConstOps(S.getMainOp()) || doesNotNeedToSchedule(VL))
     return nullptr;
 
   // Initialize the instruction bundle.
   Instruction *OldScheduleEnd = ScheduleEnd;
-  LLVM_DEBUG(dbgs() << "SLP:  bundle: " << *S.getOpValue() << "\n");
+  LLVM_DEBUG(dbgs() << "SLP:  bundle: " << *S.getMainOp() << "\n");
 
   auto TryScheduleBundleImpl = [this, OldScheduleEnd, SLP](bool ReSchedule,
                                                          ScheduleData *Bundle) {
@@ -17072,7 +17067,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
   auto *Bundle = buildBundle(VL);
   TryScheduleBundleImpl(ReSchedule, Bundle);
   if (!Bundle->isReady()) {
-    cancelScheduling(VL, S.getOpValue());
+    cancelScheduling(VL, S.getMainOp());
     return std::nullopt;
   }
   return Bundle;
@@ -18988,7 +18983,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   if (!S.getOpcode())
     return false;
 
-  auto *I0 = cast<Instruction>(S.getOpValue());
+  Instruction *I0 = S.getMainOp();
   // Make sure invalid types (including vector type) are rejected before
   // determining vectorization factor for scalar instructions.
   for (Value *V : VL) {
