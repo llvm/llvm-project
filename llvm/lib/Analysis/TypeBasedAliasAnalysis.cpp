@@ -376,7 +376,7 @@ AliasResult TypeBasedAAResult::alias(const MemoryLocation &LocA,
                                      const MemoryLocation &LocB,
                                      AAQueryInfo &AAQI, const Instruction *) {
   if (!shouldUseTBAA())
-    return AAResultBase::alias(LocA, LocB, AAQI, nullptr);
+    return AliasResult::MayAlias;
 
   if (Aliases(LocA.AATags.TBAA, LocB.AATags.TBAA))
     return AliasResult::MayAlias;
@@ -427,7 +427,7 @@ ModRefInfo TypeBasedAAResult::getModRefInfo(const CallBase *Call,
                                             const MemoryLocation &Loc,
                                             AAQueryInfo &AAQI) {
   if (!shouldUseTBAA())
-    return AAResultBase::getModRefInfo(Call, Loc, AAQI);
+    return ModRefInfo::ModRef;
 
   if (const MDNode *L = Loc.AATags.TBAA)
     if (const MDNode *M = Call->getMetadata(LLVMContext::MD_tbaa))
@@ -441,7 +441,7 @@ ModRefInfo TypeBasedAAResult::getModRefInfo(const CallBase *Call1,
                                             const CallBase *Call2,
                                             AAQueryInfo &AAQI) {
   if (!shouldUseTBAA())
-    return AAResultBase::getModRefInfo(Call1, Call2, AAQI);
+    return ModRefInfo::ModRef;
 
   if (const MDNode *M1 = Call1->getMetadata(LLVMContext::MD_tbaa))
     if (const MDNode *M2 = Call2->getMetadata(LLVMContext::MD_tbaa))
