@@ -322,7 +322,7 @@ define float @test11_volatile(i64 %i) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca [4 x float], align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[A]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr align 4 [[A]], ptr addrspace(1) align 4 @I, i64 16, i1 true)
-; CHECK-NEXT:    [[G:%.*]] = getelementptr inbounds [4 x float], ptr [[A]], i64 0, i64 [[I:%.*]]
+; CHECK-NEXT:    [[G:%.*]] = getelementptr inbounds nuw [4 x float], ptr [[A]], i64 0, i64 [[I:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = load float, ptr [[G]], align 4
 ; CHECK-NEXT:    ret float [[R]]
 ;
