@@ -37,7 +37,7 @@ template <> struct make_complex<float16> {
 };
 #endif
 #if defined(LIBC_TYPES_HAS_CFLOAT128)
-#if (LDBL_MANT_DIG != 113)
+#if !(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
 template <> struct make_complex<float128> {
   using type = cfloat128;
 };
@@ -64,7 +64,7 @@ template <> struct make_real<cfloat16> {
 };
 #endif
 #if defined(LIBC_TYPES_HAS_CFLOAT128)
-#if (LDBL_MANT_DIG != 113)
+#if !(LIBC_TYPES_CFLOAT128_IS_COMPLEX_LONG_DOUBLE)
 template <> struct make_real<cfloat128> {
   using type = float128;
 };
