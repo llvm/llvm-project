@@ -357,7 +357,7 @@ namespace bolt {
 /// Scans symbol table and creates a bit vector of memory addresses of vtables.
 static void processSymbolTable(const BinaryContext &BC,
                                llvm::BitVector &BitVector) {
-  for (auto [Address, Data] : BC.getBinaryData()) {
+  for (auto &[Address, Data] : BC.getBinaryData()) {
     // Filter out all symbols that are not vtables.
     if (!Data->getName().starts_with("_ZTV"))
       continue;

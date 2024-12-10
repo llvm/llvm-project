@@ -428,7 +428,7 @@ private:
   /// Function order for streaming into the destination binary.
   uint32_t Index{-1U};
 
-  /// Indicates if the function is safe to fold.
+  /// Indicates function is referenced by none-control flow instruction.
   bool HasAddressTaken{false};
 
   /// Get basic block index assuming it belongs to this function.
@@ -820,10 +820,10 @@ public:
     return nullptr;
   }
 
-  /// Indicates if the function is safe to fold.
+  /// Returns true if function is referenced in none-control flow instructions..
   bool hasAddressTaken() const { return HasAddressTaken; }
 
-  /// Sets the function is not safe to fold.
+  /// Sets whether function is referenced in none-control flow instructions.
   void setHasAddressTaken(bool Hat) { HasAddressTaken = Hat; }
 
   /// Returns the raw binary encoding of this function.
