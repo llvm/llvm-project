@@ -9,8 +9,9 @@
 #ifndef LLVM_LIBC_SRC_SYS_RANDOM_GETRANDOM_H
 #define LLVM_LIBC_SRC_SYS_RANDOM_GETRANDOM_H
 
+#include "hdr/sys_random_macros.h"
+#include "hdr/types/ssize_t.h"
 #include "src/__support/macros/config.h"
-#include <sys/random.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

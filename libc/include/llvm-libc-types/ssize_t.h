@@ -9,6 +9,12 @@
 #ifndef LLVM_LIBC_TYPES_SSIZE_T_H
 #define LLVM_LIBC_TYPES_SSIZE_T_H
 
+// https://learn.microsoft.com/en-us/windows/win32/winprog/windows-data-types
+#if __has_include(<BaseTsd.h>)
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+#else
 typedef __INT64_TYPE__ ssize_t;
+#endif
 
 #endif // LLVM_LIBC_TYPES_SSIZE_T_H

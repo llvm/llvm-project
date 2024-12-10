@@ -8,7 +8,8 @@
 #ifndef LLVM_LIBC_HDR_TYPES_SSIZE_T_H
 #define LLVM_LIBC_HDR_TYPES_SSIZE_T_H
 
-#ifdef LIBC_FULL_BUILD
+// stddef does not provide ssize_t on windows.
+#if defined(LIBC_FULL_BUILD) || defined(_WIN32)
 
 #include "include/llvm-libc-types/ssize_t.h"
 

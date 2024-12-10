@@ -65,7 +65,7 @@ add_subdirectory(time)
 # Depends on utilities in stdlib
 add_subdirectory(inttypes)
 
-if(${LIBC_TARGET_OS} STREQUAL "linux")
+if(${LIBC_TARGET_OS} STREQUAL "linux" OR ${LIBC_TARGET_OS} STREQUAL "windows")
   add_subdirectory(fcntl)
   add_subdirectory(sched)
   add_subdirectory(sys)
