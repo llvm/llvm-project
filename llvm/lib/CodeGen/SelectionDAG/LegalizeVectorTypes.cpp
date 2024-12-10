@@ -6476,9 +6476,8 @@ SDValue DAGTypeLegalizer::WidenVecRes_VECTOR_REVERSE(SDNode *N) {
 
   // Use VECTOR_SHUFFLE to combine new vector from 'ReverseVal' for
   // fixed-vectors.
-  SmallVector<int, 16> Mask(VTNumElts, -1);
-  for (unsigned i = 0; i != VTNumElts; ++i)
-    Mask[i] = IdxVal + i;
+  SmallVector<int, 16> Mask(WidenNumElts, -1);
+  std::iota(Mask.begin(), Mask.begin() + VTNumElts, IdxVal);
 
   return DAG.getVectorShuffle(WidenVT, dl, ReverseVal, DAG.getUNDEF(WidenVT),
                               Mask);
