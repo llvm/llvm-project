@@ -81,16 +81,12 @@ template <typename T, size_t N> struct ExceptValues {
         StorageType out_bits = values[i].rnd_towardzero_result;
         switch (fputil::quick_get_round()) {
         case FE_UPWARD:
-          if (sign)
-            out_bits += values[i].rnd_downward_offset;
-          else
-            out_bits += values[i].rnd_upward_offset;
+          out_bits += sign ? values[i].rnd_downward_offset
+                           : values[i].rnd_upward_offset;
           break;
         case FE_DOWNWARD:
-          if (sign)
-            out_bits += values[i].rnd_upward_offset;
-          else
-            out_bits += values[i].rnd_downward_offset;
+          out_bits += sign ? values[i].rnd_upward_offset
+                           : values[i].rnd_downward_offset;
           break;
         case FE_TONEAREST:
           out_bits += values[i].rnd_tonearest_offset;
