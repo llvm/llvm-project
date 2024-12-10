@@ -6031,22 +6031,6 @@ static StmtResult cloneAssociatedStmt(const ASTContext &Context, Stmt *StmtP,
 /// Call traits associated with a function call are removed and replaced with
 /// a direct call. For clause "nocontext" only, the direct call is then
 /// modified to have call traits for a non-dispatch variant.
-/// For "nocontext" an example is provided below for clear understanding.
-///
-/// #pragma omp declare variant(foo_variant_dispatch)
-/// match(construct={dispatch}) #pragma omp declare variant(foo_variant_allCond)
-/// match(user={condition(1)})
-/// ...
-///     #pragma omp dispatch nocontext(cond_true)
-///         foo(i, j); // with traits: CodeGen call to foo_variant_dispatch(i,j)
-/// dispatch construct is changed to:
-/// if (cond_true) {
-///    foo(i,j) // with traits: CodeGen call to foo_variant_allCond(i,j)
-/// } else {
-///   #pragma omp dispatch
-///   foo(i,j)  // with traits: CodeGen call to foo_variant_dispatch(i,j)
-/// }
-///
 static Expr *replaceWithNewTraitsOrDirectCall(const ASTContext &Context,
                                               Expr *AssocExpr,
                                               SemaOpenMP *SemaPtr,
@@ -6071,6 +6055,24 @@ static Expr *replaceWithNewTraitsOrDirectCall(const ASTContext &Context,
 
   Expr *FinalCall = CallWithoutInvariants; // For noinvariants clause
   if (NoContext) {
+    // example to explain the changes done for "nocontext" clause:
+    //
+    // #pragma omp declare variant(foo_variant_dispatch)
+    // 		 		 match(construct = {dispatch})
+    // #pragma omp declare variant(foo_variant_allCond)
+    // 		 		match(user = {condition(1)})
+    // ...
+    //     #pragma omp dispatch nocontext(cond_true)
+    //         foo(i, j); // with traits: CodeGen call to
+    //         foo_variant_dispatch(i,j)
+    // dispatch construct is changed to:
+    // if (cond_true) {
+    //    foo(i,j) // with traits: CodeGen call to foo_variant_allCond(i,j)
+    // } else {
+    //   #pragma omp dispatch
+    //   foo(i,j)  // with traits: CodeGen call to foo_variant_dispatch(i,j)
+    // }
+
     // Convert StmtResult to a CallExpr before calling ActOnOpenMPCall()
     auto *CallExprWithinStmt = cast<CallExpr>(CallWithoutInvariants);
     int NumArgs = CallExprWithinStmt->getNumArgs();
