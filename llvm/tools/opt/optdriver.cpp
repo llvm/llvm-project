@@ -376,7 +376,7 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "expand-large-fp-convert",
       "callbrprepare",
       "scalarizer",
-      "structurizer"};
+      "spirv-structurizer"};
   for (const auto &P : PassNamePrefix)
     if (Pass.starts_with(P))
       return true;
