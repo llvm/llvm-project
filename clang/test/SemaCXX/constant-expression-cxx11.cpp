@@ -394,6 +394,22 @@ constexpr bool may_overlap_different_encoding[] =
 
 }
 
+constexpr const char *getStr() {
+  return "abc"; // expected-note {{repeated evaluation of the same literal expression can produce different objects}}
+}
+constexpr int strMinus() {
+  (void)(getStr() - getStr()); // expected-note {{arithmetic on addresses of potentially overlapping literals has unspecified value}} \
+                               // cxx11-warning {{C++14 extension}}
+  return 0;
+}
+static_assert(strMinus() == 0, ""); // expected-error {{not an integral constant expression}} \
+                                    // expected-note {{in call to}}
+
+constexpr int a = 0;
+constexpr int b = 1;
+constexpr int n = &b - &a; // expected-error {{must be initialized by a constant expression}} \
+                           // expected-note {{arithmetic involving unrelated objects '&b' and '&a' has unspecified value}}
+
 namespace MaterializeTemporary {
 
 constexpr int f(const int &r) { return r; }
