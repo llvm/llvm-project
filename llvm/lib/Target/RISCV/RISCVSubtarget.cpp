@@ -186,11 +186,6 @@ bool RISCVSubtarget::useRVVForFixedLengthVectors() const {
 
 bool RISCVSubtarget::enableSubRegLiveness() const { return true; }
 
-void RISCVSubtarget::getPostRAMutations(
-    std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
-  Mutations.push_back(createMacroFusionDAGMutation(getMacroFusions()));
-}
-
   /// Enable use of alias analysis during code generation (during MI
   /// scheduling, DAGCombine, etc.).
 bool RISCVSubtarget::useAA() const { return UseAA; }
@@ -207,6 +202,10 @@ void RISCVSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
   // leading to better performance. This will increase compile time.
   Policy.OnlyTopDown = false;
   Policy.OnlyBottomUp = false;
+
+  // Disabling the latency heuristic can reduce the number of spills/reloads but
+  // will cause some regressions on some cores.
+  Policy.DisableLatencyHeuristic = DisableLatencySchedHeuristic;
 
   // Spilling is generally expensive on all RISC-V cores, so always enable
   // register-pressure tracking. This will increase compile time.

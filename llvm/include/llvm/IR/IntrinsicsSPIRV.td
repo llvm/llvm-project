@@ -36,8 +36,8 @@ let TargetPrefix = "spv" in {
   def int_spv_selection_merge : Intrinsic<[], [llvm_vararg_ty]>;
   def int_spv_cmpxchg : Intrinsic<[llvm_i32_ty], [llvm_any_ty, llvm_vararg_ty]>;
   def int_spv_unreachable : Intrinsic<[], []>;
-  def int_spv_alloca : Intrinsic<[llvm_any_ty], []>;
-  def int_spv_alloca_array : Intrinsic<[llvm_any_ty], [llvm_anyint_ty]>;
+  def int_spv_alloca : Intrinsic<[llvm_any_ty], [llvm_i8_ty], [ImmArg<ArgIndex<0>>]>;
+  def int_spv_alloca_array : Intrinsic<[llvm_any_ty], [llvm_anyint_ty, llvm_i8_ty], [ImmArg<ArgIndex<1>>]>;
   def int_spv_undef : Intrinsic<[llvm_i32_ty], []>;
   def int_spv_inline_asm : Intrinsic<[], [llvm_metadata_ty, llvm_metadata_ty, llvm_vararg_ty]>;
 
@@ -106,8 +106,13 @@ let TargetPrefix = "spv" in {
             [llvm_any_ty],
             [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty],
             [IntrNoMem]>;
+
   def int_spv_firstbituhigh : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>], [llvm_anyint_ty], [IntrNoMem]>;
   def int_spv_firstbitshigh : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>], [llvm_anyint_ty], [IntrNoMem]>;
+
+  def int_spv_bufferUpdateCounter
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_ty, llvm_i8_ty],
+                              [IntrInaccessibleMemOrArgMemOnly]>;
 
   // Read a value from the image buffer. It does not translate directly to a
   // single OpImageRead because the result type is not necessarily a 4 element

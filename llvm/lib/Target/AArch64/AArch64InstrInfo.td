@@ -381,6 +381,9 @@ def NoUseScalarIncVL : Predicate<"!Subtarget->useScalarIncVL()">;
 
 def UseSVEFPLD1R : Predicate<"!Subtarget->noSVEFPLD1R()">;
 
+def UseUnaryUndefPseudos
+  : Predicate<"!(Subtarget->isSVEorStreamingSVEAvailable() && (Subtarget->hasSVE2p2() || Subtarget->hasSME2p2()))">;
+
 def AArch64LocalRecover : SDNode<"ISD::LOCAL_RECOVER",
                                   SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
                                                        SDTCisInt<1>]>>;
@@ -1841,28 +1844,28 @@ let Predicates = [HasPAuth] in {
   // materialization here), in part because they're handled in a safer way by
   // the kernel, notably on Darwin.
   def BLRA : Pseudo<(outs), (ins GPR64noip:$Rn, i32imm:$Key, i64imm:$Disc,
-                                 GPR64noip:$AddrDisc),
+                                 GPR64:$AddrDisc),
                     [(AArch64authcall GPR64noip:$Rn, timm:$Key, timm:$Disc,
-                                      GPR64noip:$AddrDisc)]>, Sched<[]> {
+                                      GPR64:$AddrDisc)]>, Sched<[]> {
     let isCodeGenOnly = 1;
     let hasSideEffects = 1;
     let mayStore = 0;
     let mayLoad = 0;
     let isCall = 1;
     let Size = 12; // 4 fixed + 8 variable, to compute discriminator.
-    let Defs = [X17,LR];
+    let Defs = [X16,X17,LR];
     let Uses = [SP];
   }
 
   def BLRA_RVMARKER : Pseudo<
         (outs), (ins i64imm:$rvfunc, GPR64noip:$Rn, i32imm:$Key, i64imm:$Disc,
-                     GPR64noip:$AddrDisc),
+                     GPR64:$AddrDisc),
         [(AArch64authcall_rvmarker tglobaladdr:$rvfunc,
                                    GPR64noip:$Rn, timm:$Key, timm:$Disc,
-                                   GPR64noip:$AddrDisc)]>, Sched<[]> {
+                                   GPR64:$AddrDisc)]>, Sched<[]> {
     let isCodeGenOnly = 1;
     let isCall = 1;
-    let Defs = [X17,LR];
+    let Defs = [X16,X17,LR];
     let Uses = [SP];
   }
 
@@ -1972,7 +1975,7 @@ let Predicates = [HasPAuth] in {
   // make sure at least one register is usable as a scratch one - for that
   // purpose, use tcGPRnotx16x17 register class for one of the operands.
   let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Size = 16,
-      Uses = [SP] in {
+      Defs = [X16,X17], Uses = [SP] in {
     def AUTH_TCRETURN
       : Pseudo<(outs), (ins tcGPRnotx16x17:$dst, i32imm:$FPDiff, i32imm:$Key,
                             i64imm:$Disc, tcGPR64:$AddrDisc),
@@ -7349,7 +7352,8 @@ def : Pat<(vector_extract (v8bf16 V128:$Rn), VectorIndexH:$idx),
 // All concat_vectors operations are canonicalised to act on i64 vectors for
 // AArch64. In the general case we need an instruction, which had just as well be
 // INS.
-multiclass ConcatPat<ValueType DstTy, ValueType SrcTy> {
+multiclass ConcatPat<ValueType DstTy, ValueType SrcTy,
+                     ComplexPattern ExtractHigh> {
   def : Pat<(DstTy (concat_vectors (SrcTy V64:$Rd), V64:$Rn)),
             (INSvi64lane (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub), 1,
                          (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub), 0)>;
@@ -7362,16 +7366,22 @@ multiclass ConcatPat<ValueType DstTy, ValueType SrcTy> {
   // If the high lanes are undef we can just ignore them:
   def : Pat<(DstTy (concat_vectors (SrcTy V64:$Rn), undef)),
             (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub)>;
+
+  // Concatting the high half of two vectors is the insert of the first
+  // into the low half of the second.
+  def : Pat<(DstTy (concat_vectors (ExtractHigh (DstTy V128:$Rn)),
+                                   (ExtractHigh (DstTy V128:$Rm)))),
+            (INSvi64lane V128:$Rm, (i64 0), V128:$Rn, (i64 1))>;
 }
 
-defm : ConcatPat<v2i64, v1i64>;
-defm : ConcatPat<v2f64, v1f64>;
-defm : ConcatPat<v4i32, v2i32>;
-defm : ConcatPat<v4f32, v2f32>;
-defm : ConcatPat<v8i16, v4i16>;
-defm : ConcatPat<v8f16, v4f16>;
-defm : ConcatPat<v8bf16, v4bf16>;
-defm : ConcatPat<v16i8, v8i8>;
+defm : ConcatPat<v2i64, v1i64, extract_high_v2i64>;
+defm : ConcatPat<v2f64, v1f64, extract_high_v2f64>;
+defm : ConcatPat<v4i32, v2i32, extract_high_v4i32>;
+defm : ConcatPat<v4f32, v2f32, extract_high_v4f32>;
+defm : ConcatPat<v8i16, v4i16, extract_high_v8i16>;
+defm : ConcatPat<v8f16, v4f16, extract_high_v8f16>;
+defm : ConcatPat<v8bf16, v4bf16, extract_high_v8bf16>;
+defm : ConcatPat<v16i8, v8i8, extract_high_v16i8>;
 
 //----------------------------------------------------------------------------
 // AdvSIMD across lanes instructions

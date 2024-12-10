@@ -16,11 +16,15 @@
 define ptr @foo(i8 %a, {} %c) personality ptr @baz {
 entry:
 ; CHECK: bl __Unwind_SjLj_Register
+; CHECK-NEXT: mov r0, #1
+; CHECK-NEXT: str r0, [sp, #{{[0-9]+}}]
 ; CHECK-NEXT: {{[A-Z][a-zA-Z0-9]*}}:
 ; CHECK-NEXT: bl _bar
 ; CHECK: bl __Unwind_SjLj_Resume
 
 ; CHECK-LINUX: bl _Unwind_SjLj_Register
+; CHECK-LINUX-NEXT: mov r0, #1
+; CHECK-LINUX-NEXT: str r0, [sp, #{{[0-9]+}}]
 ; CHECK-LINUX-NEXT: .{{[A-Z][a-zA-Z0-9]*}}:
 ; CHECK-LINUX-NEXT: bl bar
 ; CHECK-LINUX: bl _Unwind_SjLj_Resume

@@ -1172,7 +1172,7 @@ llvm::Value *CodeGenFunction::GetCountedByFieldExprGEP(
   Indices.push_back(Builder.getInt32(0));
   return Builder.CreateInBoundsGEP(
       ConvertType(QualType(RD->getTypeForDecl(), 0)), Res,
-      RecIndicesTy(llvm::reverse(Indices)), "..counted_by.gep");
+      RecIndicesTy(llvm::reverse(Indices)), "counted_by.gep");
 }
 
 /// This method is typically called in contexts where we can't generate
@@ -1187,7 +1187,7 @@ llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
     const Expr *Base, const FieldDecl *FAMDecl, const FieldDecl *CountDecl) {
   if (llvm::Value *GEP = GetCountedByFieldExprGEP(Base, FAMDecl, CountDecl))
     return Builder.CreateAlignedLoad(ConvertType(CountDecl->getType()), GEP,
-                                     getIntAlign(), "..counted_by.load");
+                                     getIntAlign(), "counted_by.load");
   return nullptr;
 }
 
@@ -3905,9 +3905,11 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
 
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];
 
-  if (!ClSanitizeDebugDeoptimization &&
-      CGM.getCodeGenOpts().OptimizationLevel && TrapBB &&
-      (!CurCodeDecl || !CurCodeDecl->hasAttr<OptimizeNoneAttr>())) {
+  bool NoMerge = ClSanitizeDebugDeoptimization ||
+                 !CGM.getCodeGenOpts().OptimizationLevel ||
+                 (CurCodeDecl && CurCodeDecl->hasAttr<OptimizeNoneAttr>());
+
+  if (TrapBB && !NoMerge) {
     auto Call = TrapBB->begin();
     assert(isa<llvm::CallInst>(Call) && "Expected call in trap BB");
 
@@ -3919,18 +3921,17 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
     Builder.CreateCondBr(Checked, Cont, TrapBB);
     EmitBlock(TrapBB);
 
-    llvm::CallInst *TrapCall = Builder.CreateCall(
-        CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),
-        llvm::ConstantInt::get(CGM.Int8Ty,
-                               ClSanitizeDebugDeoptimization
-                                   ? TrapBB->getParent()->size()
-                                   : static_cast<uint64_t>(CheckHandlerID)));
+    llvm::CallInst *TrapCall =
+        Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),
+                           llvm::ConstantInt::get(CGM.Int8Ty, CheckHandlerID));
 
     if (!CGM.getCodeGenOpts().TrapFuncName.empty()) {
       auto A = llvm::Attribute::get(getLLVMContext(), "trap-func-name",
                                     CGM.getCodeGenOpts().TrapFuncName);
       TrapCall->addFnAttr(A);
     }
+    if (NoMerge)
+      TrapCall->addFnAttr(llvm::Attribute::NoMerge);
     TrapCall->setDoesNotReturn();
     TrapCall->setDoesNotThrow();
     Builder.CreateUnreachable();
@@ -5826,9 +5827,12 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
 // This function implements trivial copy assignment for HLSL's
 // assignable constant arrays.
 LValue CodeGenFunction::EmitHLSLArrayAssignLValue(const BinaryOperator *E) {
-  LValue TrivialAssignmentRHS = EmitLValue(E->getRHS());
+  // Don't emit an LValue for the RHS because it might not be an LValue
   LValue LHS = EmitLValue(E->getLHS());
-  EmitAggregateAssign(LHS, TrivialAssignmentRHS, E->getLHS()->getType());
+  // In C the RHS of an assignment operator is an RValue.
+  // EmitAggregateAssign takes anan LValue for the RHS. Instead we can call
+  // EmitInitializationToLValue to emit an RValue into an LValue.
+  EmitInitializationToLValue(E->getRHS(), LHS);
   return LHS;
 }
 

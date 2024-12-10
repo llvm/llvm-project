@@ -12027,7 +12027,9 @@ void OpenACCClauseTransform<Derived>::VisitGangClause(
     if (!ER.isUsable())
       continue;
 
-    ER = Self.getSema().OpenACC().CheckGangExpr(C.getExpr(I).first, ER.get());
+    ER = Self.getSema().OpenACC().CheckGangExpr(ExistingClauses,
+                                                ParsedClause.getDirectiveKind(),
+                                                C.getExpr(I).first, ER.get());
     if (!ER.isUsable())
       continue;
     TransformedGangKinds.push_back(C.getExpr(I).first);
@@ -12035,7 +12037,8 @@ void OpenACCClauseTransform<Derived>::VisitGangClause(
   }
 
   NewClause = Self.getSema().OpenACC().CheckGangClause(
-      ExistingClauses, ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
+      ParsedClause.getDirectiveKind(), ExistingClauses,
+      ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
       TransformedGangKinds, TransformedIntExprs, ParsedClause.getEndLoc());
 }
 } // namespace
@@ -14454,7 +14457,7 @@ TreeTransform<Derived>::TransformExprRequirement(concepts::ExprRequirement *Req)
                                                Req->getNoexceptLoc(),
                                                std::move(*TransRetReq));
   return getDerived().RebuildExprRequirement(
-      TransExpr.get<concepts::Requirement::SubstitutionDiagnostic *>(),
+      cast<concepts::Requirement::SubstitutionDiagnostic *>(TransExpr),
       Req->isSimple(), Req->getNoexceptLoc(), std::move(*TransRetReq));
 }
 

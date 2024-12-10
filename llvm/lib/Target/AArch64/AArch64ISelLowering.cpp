@@ -4901,13 +4901,14 @@ SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
     if (IsStrict) {
       SDValue Val = DAG.getNode(Op.getOpcode(), dl, {F32, MVT::Other},
                                 {Op.getOperand(0), In});
-      return DAG.getNode(
-          ISD::STRICT_FP_ROUND, dl, {Op.getValueType(), MVT::Other},
-          {Val.getValue(1), Val.getValue(0), DAG.getIntPtrConstant(0, dl)});
+      return DAG.getNode(ISD::STRICT_FP_ROUND, dl,
+                         {Op.getValueType(), MVT::Other},
+                         {Val.getValue(1), Val.getValue(0),
+                          DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)});
     }
     return DAG.getNode(ISD::FP_ROUND, dl, Op.getValueType(),
                        DAG.getNode(Op.getOpcode(), dl, F32, In),
-                       DAG.getIntPtrConstant(0, dl));
+                       DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
   }
 
   uint64_t VTSize = VT.getFixedSizeInBits();
@@ -4919,9 +4920,9 @@ SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
     if (IsStrict) {
       In = DAG.getNode(Opc, dl, {CastVT, MVT::Other},
                        {Op.getOperand(0), In});
-      return DAG.getNode(
-          ISD::STRICT_FP_ROUND, dl, {VT, MVT::Other},
-          {In.getValue(1), In.getValue(0), DAG.getIntPtrConstant(0, dl)});
+      return DAG.getNode(ISD::STRICT_FP_ROUND, dl, {VT, MVT::Other},
+                         {In.getValue(1), In.getValue(0),
+                          DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)});
     }
     In = DAG.getNode(Opc, dl, CastVT, In);
     return DAG.getNode(ISD::FP_ROUND, dl, VT, In,
@@ -4969,13 +4970,14 @@ SDValue AArch64TargetLowering::LowerINT_TO_FP(SDValue Op,
     if (IsStrict) {
       SDValue Val = DAG.getNode(Op.getOpcode(), dl, {PromoteVT, MVT::Other},
                                 {Op.getOperand(0), SrcVal});
-      return DAG.getNode(
-          ISD::STRICT_FP_ROUND, dl, {Op.getValueType(), MVT::Other},
-          {Val.getValue(1), Val.getValue(0), DAG.getIntPtrConstant(0, dl)});
+      return DAG.getNode(ISD::STRICT_FP_ROUND, dl,
+                         {Op.getValueType(), MVT::Other},
+                         {Val.getValue(1), Val.getValue(0),
+                          DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)});
     }
     return DAG.getNode(ISD::FP_ROUND, dl, Op.getValueType(),
                        DAG.getNode(Op.getOpcode(), dl, PromoteVT, SrcVal),
-                       DAG.getIntPtrConstant(0, dl));
+                       DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
   };
 
   if (Op.getValueType() == MVT::bf16) {
@@ -5067,12 +5069,13 @@ SDValue AArch64TargetLowering::LowerINT_TO_FP(SDValue Op,
           DAG.getNode(ISD::OR, DL, MVT::i64, RoundedBits, NeedsAdjustment);
       SDValue Adjusted = DAG.getNode(ISD::BITCAST, DL, MVT::f64, AdjustedBits);
       return IsStrict
-                 ? DAG.getNode(ISD::STRICT_FP_ROUND, DL,
-                               {Op.getValueType(), MVT::Other},
-                               {Rounded.getValue(1), Adjusted,
-                                DAG.getIntPtrConstant(0, DL)})
+                 ? DAG.getNode(
+                       ISD::STRICT_FP_ROUND, DL,
+                       {Op.getValueType(), MVT::Other},
+                       {Rounded.getValue(1), Adjusted,
+                        DAG.getIntPtrConstant(0, DL, /*isTarget=*/true)})
                  : DAG.getNode(ISD::FP_ROUND, DL, Op.getValueType(), Adjusted,
-                               DAG.getIntPtrConstant(0, DL, true));
+                               DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
     }
   }
 
@@ -7109,7 +7112,7 @@ static SDValue LowerFLDEXP(SDValue Op, SelectionDAG &DAG) {
       DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, X.getValueType(), FScale, Zero);
   if (X.getValueType() != XScalarTy)
     Final = DAG.getNode(ISD::FP_ROUND, DL, XScalarTy, Final,
-                        DAG.getIntPtrConstant(1, SDLoc(Op)));
+                        DAG.getIntPtrConstant(1, SDLoc(Op), /*isTarget=*/true));
   return Final;
 }
 
@@ -15838,11 +15841,27 @@ static SDValue getVectorBitwiseReduce(unsigned Opcode, SDValue Vec, EVT VT,
       return getVectorBitwiseReduce(Opcode, HalfVec, VT, DL, DAG);
     }
 
-    // Vectors that are less than 64 bits get widened to neatly fit a 64 bit
-    // register, so e.g. <4 x i1> gets lowered to <4 x i16>. Sign extending to
+    // Results of setcc operations get widened to 128 bits for xor reduce if
+    // their input operands are 128 bits wide, otherwise vectors that are less
+    // than 64 bits get widened to neatly fit a 64 bit register, so e.g.
+    // <4 x i1> gets lowered to either <4 x i16> or <4 x i32>. Sign extending to
     // this element size leads to the best codegen, since e.g. setcc results
     // might need to be truncated otherwise.
-    EVT ExtendedVT = MVT::getIntegerVT(std::max(64u / NumElems, 8u));
+    unsigned ExtendedWidth = 64;
+    if (ScalarOpcode == ISD::XOR && Vec.getOpcode() == ISD::SETCC &&
+        Vec.getOperand(0).getValueSizeInBits() >= 128) {
+      ExtendedWidth = 128;
+    }
+    EVT ExtendedVT = MVT::getIntegerVT(std::max(ExtendedWidth / NumElems, 8u));
+
+    // Negate the reduced vector value for reduce and operations that use
+    // fcmp.
+    if (ScalarOpcode == ISD::AND && NumElems < 16) {
+      Vec = DAG.getNode(
+          ISD::XOR, DL, VecVT, Vec,
+          DAG.getSplatVector(
+              VecVT, DL, DAG.getConstant(APInt::getAllOnes(32), DL, MVT::i32)));
+    }
 
     // any_ext doesn't work with umin/umax, so only use it for uadd.
     unsigned ExtendOp =
@@ -15851,10 +15870,36 @@ static SDValue getVectorBitwiseReduce(unsigned Opcode, SDValue Vec, EVT VT,
         ExtendOp, DL, VecVT.changeVectorElementType(ExtendedVT), Vec);
     switch (ScalarOpcode) {
     case ISD::AND:
-      Result = DAG.getNode(ISD::VECREDUCE_UMIN, DL, ExtendedVT, Extended);
+      if (NumElems < 16) {
+        // Check if all lanes of the negated bool vector value are zero by
+        // comparing against 0.0 with ordered and equal predicate. The only
+        // non-zero bit pattern that compares ordered and equal to 0.0 is -0.0,
+        // where only the sign bit is set. However the bool vector is
+        // sign-extended so that each bit in a lane is either zero or one,
+        // meaning that it is impossible to get the bit pattern of -0.0.
+        assert(Extended.getValueSizeInBits() == 64);
+        Extended = DAG.getBitcast(MVT::f64, Extended);
+        Result =
+            DAG.getSetCC(DL, MVT::i32, Extended,
+                         DAG.getConstantFP(0.0, DL, MVT::f64), ISD::SETOEQ);
+      } else {
+        Result = DAG.getNode(ISD::VECREDUCE_UMIN, DL, ExtendedVT, Extended);
+      }
       break;
     case ISD::OR:
-      Result = DAG.getNode(ISD::VECREDUCE_UMAX, DL, ExtendedVT, Extended);
+      if (NumElems < 16) {
+        // Check if any lane of the bool vector is set by comparing against 0.0.
+        // NaN bit patterns are handled by using the 'unordered or not equal'
+        // predicate. Similarly to the reduce and case, -0.0 doesn't have to be
+        // handled here (see explanation above).
+        assert(Extended.getValueSizeInBits() == 64);
+        Extended = DAG.getBitcast(MVT::f64, Extended);
+        Result =
+            DAG.getSetCC(DL, MVT::i32, Extended,
+                         DAG.getConstantFP(0.0, DL, MVT::f64), ISD::SETUNE);
+      } else {
+        Result = DAG.getNode(ISD::VECREDUCE_UMAX, DL, ExtendedVT, Extended);
+      }
       break;
     case ISD::XOR:
       Result = DAG.getNode(ISD::VECREDUCE_ADD, DL, ExtendedVT, Extended);
@@ -17927,6 +17972,13 @@ AArch64TargetLowering::isDesirableToCommuteWithShift(const SDNode *N,
 
   SDValue ShiftLHS = N->getOperand(0);
   EVT VT = N->getValueType(0);
+
+  if (!ShiftLHS->hasOneUse())
+    return false;
+
+  if (ShiftLHS.getOpcode() == ISD::SIGN_EXTEND &&
+      !ShiftLHS.getOperand(0)->hasOneUse())
+    return false;
 
   // If ShiftLHS is unsigned bit extraction: ((x >> C) & mask), then do not
   // combine it with shift 'N' to let it be lowered to UBFX except:
@@ -21814,7 +21866,7 @@ SDValue tryLowerPartialReductionToWideAdd(SDNode *N,
              Intrinsic::experimental_vector_partial_reduce_add &&
          "Expected a partial reduction node");
 
-  if (!Subtarget->isSVEorStreamingSVEAvailable())
+  if (!Subtarget->hasSVE2() && !Subtarget->isStreamingSVEAvailable())
     return SDValue();
 
   SDLoc DL(N);
@@ -23233,10 +23285,15 @@ static SDValue performPostLD1Combine(SDNode *N,
   if (!VT.is128BitVector() && !VT.is64BitVector())
     return SDValue();
 
-  unsigned LoadIdx = IsLaneOp ? 1 : 0;
-  SDNode *LD = N->getOperand(LoadIdx).getNode();
   // If it is not LOAD, can not do such combine.
-  if (LD->getOpcode() != ISD::LOAD)
+  unsigned LoadIdx = IsLaneOp ? 1 : 0;
+  LoadSDNode *LD = dyn_cast<LoadSDNode>(N->getOperand(LoadIdx).getNode());
+  if (!LD)
+    return SDValue();
+
+  // If the Generic combiner already helped form a pre- or post-indexed load,
+  // skip forming one here.
+  if (LD->isIndexed())
     return SDValue();
 
   // The vector lane must be a constant in the LD1LANE opcode.

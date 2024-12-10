@@ -49,14 +49,14 @@ define void @arm_abs_q7(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %
 ; CHECK-NEXT:    [[PSRC_ADDR_022:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[BLKCNT_021:%.*]] = phi i32 [ [[DEC:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL4]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[PDST_ADDR_020:%.*]] = phi ptr [ [[INCDEC_PTR13:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL6]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[PSRC_ADDR_022]], i32 1
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[PSRC_ADDR_022]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[PSRC_ADDR_022]], align 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i8 [[TMP7]], 0
 ; CHECK-NEXT:    [[CMP5:%.*]] = icmp eq i8 [[TMP7]], -128
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i8 0, [[TMP7]]
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP5]], i8 127, i8 [[SUB]]
 ; CHECK-NEXT:    [[COND11:%.*]] = select i1 [[CMP1]], i8 [[TMP7]], i8 [[COND]]
-; CHECK-NEXT:    [[INCDEC_PTR13]] = getelementptr inbounds i8, ptr [[PDST_ADDR_020]], i32 1
+; CHECK-NEXT:    [[INCDEC_PTR13]] = getelementptr inbounds nuw i8, ptr [[PDST_ADDR_020]], i32 1
 ; CHECK-NEXT:    store i8 [[COND11]], ptr [[PDST_ADDR_020]], align 1
 ; CHECK-NEXT:    [[DEC]] = add i32 [[BLKCNT_021]], -1
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[DEC]], 0
@@ -144,14 +144,14 @@ define void @arm_abs_q15(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 
 ; CHECK-NEXT:    [[PSRC_ADDR_023:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[BLKCNT_022:%.*]] = phi i32 [ [[DEC:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL4]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[PDST_ADDR_021:%.*]] = phi ptr [ [[INCDEC_PTR13:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL6]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[PSRC_ADDR_023]], i32 2
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[PSRC_ADDR_023]], i32 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i16, ptr [[PSRC_ADDR_023]], align 2
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i16 [[TMP9]], 0
 ; CHECK-NEXT:    [[CMP5:%.*]] = icmp eq i16 [[TMP9]], -32768
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i16 0, [[TMP9]]
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP5]], i16 32767, i16 [[SUB]]
 ; CHECK-NEXT:    [[COND11:%.*]] = select i1 [[CMP1]], i16 [[TMP9]], i16 [[COND]]
-; CHECK-NEXT:    [[INCDEC_PTR13]] = getelementptr inbounds i8, ptr [[PDST_ADDR_021]], i32 2
+; CHECK-NEXT:    [[INCDEC_PTR13]] = getelementptr inbounds nuw i8, ptr [[PDST_ADDR_021]], i32 2
 ; CHECK-NEXT:    store i16 [[COND11]], ptr [[PDST_ADDR_021]], align 2
 ; CHECK-NEXT:    [[DEC]] = add i32 [[BLKCNT_022]], -1
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[DEC]], 0
@@ -239,14 +239,14 @@ define void @arm_abs_q31(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 
 ; CHECK-NEXT:    [[PSRC_ADDR_017:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[BLKCNT_016:%.*]] = phi i32 [ [[DEC:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL4]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[PDST_ADDR_015:%.*]] = phi ptr [ [[INCDEC_PTR7:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL6]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[PSRC_ADDR_017]], i32 4
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[PSRC_ADDR_017]], i32 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[PSRC_ADDR_017]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP9]], 0
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[TMP9]], -2147483648
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 0, [[TMP9]]
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP2]], i32 2147483647, i32 [[SUB]]
 ; CHECK-NEXT:    [[COND6:%.*]] = select i1 [[CMP1]], i32 [[TMP9]], i32 [[COND]]
-; CHECK-NEXT:    [[INCDEC_PTR7]] = getelementptr inbounds i8, ptr [[PDST_ADDR_015]], i32 4
+; CHECK-NEXT:    [[INCDEC_PTR7]] = getelementptr inbounds nuw i8, ptr [[PDST_ADDR_015]], i32 4
 ; CHECK-NEXT:    store i32 [[COND6]], ptr [[PDST_ADDR_015]], align 4
 ; CHECK-NEXT:    [[DEC]] = add i32 [[BLKCNT_016]], -1
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[DEC]], 0

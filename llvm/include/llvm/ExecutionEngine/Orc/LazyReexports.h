@@ -173,6 +173,70 @@ lazyReexports(LazyCallThroughManager &LCTManager,
       LCTManager, RSManager, SourceJD, std::move(CallableAliases), SrcJDLoc);
 }
 
+class LazyReexportsManager {
+
+  friend std::unique_ptr<MaterializationUnit>
+  lazyReexports(LazyReexportsManager &, SymbolAliasMap);
+
+public:
+  using OnTrampolinesReadyFn = unique_function<void(
+      Expected<std::vector<ExecutorSymbolDef>> EntryAddrs)>;
+  using EmitTrampolinesFn =
+      unique_function<void(ResourceTrackerSP RT, size_t NumTrampolines,
+                           OnTrampolinesReadyFn OnTrampolinesReady)>;
+
+  /// Create a LazyReexportsManager that uses the ORC runtime for reentry.
+  /// This will work both in-process and out-of-process.
+  static Expected<std::unique_ptr<LazyReexportsManager>>
+  Create(EmitTrampolinesFn EmitTrampolines, RedirectableSymbolManager &RSMgr,
+         JITDylib &PlatformJD);
+
+  LazyReexportsManager(LazyReexportsManager &&) = delete;
+  LazyReexportsManager &operator=(LazyReexportsManager &&) = delete;
+
+private:
+  struct CallThroughInfo {
+    SymbolStringPtr Name;
+    SymbolStringPtr BodyName;
+    JITDylibSP JD;
+  };
+
+  class MU;
+  class Plugin;
+
+  using ResolveSendResultFn =
+      unique_function<void(Expected<ExecutorSymbolDef>)>;
+
+  LazyReexportsManager(EmitTrampolinesFn EmitTrampolines,
+                       RedirectableSymbolManager &RSMgr, JITDylib &PlatformJD,
+                       Error &Err);
+
+  std::unique_ptr<MaterializationUnit>
+  createLazyReexports(SymbolAliasMap Reexports);
+
+  void emitReentryTrampolines(std::unique_ptr<MaterializationResponsibility> MR,
+                              SymbolAliasMap Reexports);
+  void emitRedirectableSymbols(
+      std::unique_ptr<MaterializationResponsibility> MR,
+      SymbolAliasMap Reexports,
+      Expected<std::vector<ExecutorSymbolDef>> ReentryPoints);
+  void resolve(ResolveSendResultFn SendResult, ExecutorAddr ReentryStubAddr);
+
+  EmitTrampolinesFn EmitTrampolines;
+  RedirectableSymbolManager &RSMgr;
+
+  std::mutex M;
+  DenseMap<ExecutorAddr, CallThroughInfo> CallThroughs;
+};
+
+/// Define lazy-reexports based on the given SymbolAliasMap. Each lazy re-export
+/// is a callable symbol that will look up and dispatch to the given aliasee on
+/// first call. All subsequent calls will go directly to the aliasee.
+inline std::unique_ptr<MaterializationUnit>
+lazyReexports(LazyReexportsManager &LRM, SymbolAliasMap Reexports) {
+  return LRM.createLazyReexports(std::move(Reexports));
+}
+
 } // End namespace orc
 } // End namespace llvm
 

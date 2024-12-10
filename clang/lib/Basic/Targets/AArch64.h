@@ -137,8 +137,7 @@ public:
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
   bool setCPU(const std::string &Name) override;
 
-  unsigned multiVersionSortPriority(StringRef Name) const override;
-  unsigned multiVersionFeatureCost() const override;
+  unsigned getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   bool useFP16ConversionIntrinsics() const override {
     return false;
@@ -181,7 +180,8 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  std::pair<const char *, ArrayRef<Builtin::Info>>
+  getTargetBuiltinStorage() const override;
 
   std::optional<std::pair<unsigned, unsigned>>
   getVScaleRange(const LangOptions &LangOpts) const override;

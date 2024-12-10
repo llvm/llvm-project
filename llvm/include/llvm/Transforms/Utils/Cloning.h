@@ -119,8 +119,7 @@ struct ClonedCodeInfo {
 /// parameter.
 BasicBlock *CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
                             const Twine &NameSuffix = "", Function *F = nullptr,
-                            ClonedCodeInfo *CodeInfo = nullptr,
-                            DebugInfoFinder *DIFinder = nullptr);
+                            ClonedCodeInfo *CodeInfo = nullptr);
 
 /// Return a copy of the specified function and add it to that
 /// function's module.  Also, any references specified in the VMap are changed
@@ -220,6 +219,14 @@ void CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
 DISubprogram *CollectDebugInfoForCloning(const Function &F,
                                          CloneFunctionChangeType Changes,
                                          DebugInfoFinder &DIFinder);
+
+/// Build a map of debug info to use during Metadata cloning.
+/// Returns true if cloning would need module level changes and false if there
+/// would only be local changes.
+bool BuildDebugInfoMDMap(DenseMap<const Metadata *, TrackingMDRef> &MD,
+                         CloneFunctionChangeType Changes,
+                         DebugInfoFinder &DIFinder,
+                         DISubprogram *SPClonedWithinModule);
 
 /// This class captures the data input to the InlineFunction call, and records
 /// the auxiliary results produced by it.

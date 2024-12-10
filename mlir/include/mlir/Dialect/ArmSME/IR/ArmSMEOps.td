@@ -371,7 +371,7 @@ def TileLoadOp : ArmSME_Op<"tile_load", [
   let arguments = (ins
     Arg<AnyMemRef, "the reference to load from", [MemRead]>:$base,
     Variadic<Index>:$indices,
-    Optional<AnyType>:$padding, Optional<AnyVector>:$mask,
+    Optional<AnyType>:$padding, Optional<AnyVectorOfNonZeroRank>:$mask,
     ArmSME_TileSliceLayoutAttr:$layout
   );
   let results = (outs SMETile:$result);
@@ -444,7 +444,7 @@ def TileStoreOp : ArmSME_Op<"tile_store", [
   }];
   let arguments = (ins SMETile:$valueToStore,
     Arg<AnyMemRef, "the reference to store to", [MemWrite]>:$base,
-    Variadic<Index>:$indices, Optional<AnyVector>:$mask,
+    Variadic<Index>:$indices, Optional<AnyVectorOfNonZeroRank>:$mask,
     ArmSME_TileSliceLayoutAttr:$layout
   );
   let extraClassDeclaration = [{
@@ -799,9 +799,9 @@ class OuterProductWideningBase<string mnemonic,
   ]> {
 
   let arguments = (ins
-    AnyTypeOf<allowedInputVectorTypes>:$lhs, AnyVector:$rhs,
-    Optional<AnyVector>:$lhsMask, Optional<AnyVector>:$rhsMask,
-    Optional<AnyVector>:$acc);
+    AnyTypeOf<allowedInputVectorTypes>:$lhs, AnyVectorOfNonZeroRank:$rhs,
+    Optional<AnyVectorOfNonZeroRank>:$lhsMask, Optional<AnyVectorOfNonZeroRank>:$rhsMask,
+    Optional<AnyVectorOfNonZeroRank>:$acc);
   let results = (outs AnyTypeOf<allowedResultVectorTypes>:$result);
 
   let assemblyFormat = [{

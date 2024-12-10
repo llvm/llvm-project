@@ -3552,6 +3552,176 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixMods(SDValue In, SDValue &Src,
   return true;
 }
 
+// Match BITOP3 operation and return a number of matched instructions plus
+// truth table.
+static std::pair<unsigned, uint8_t> BitOp3_Op(SDValue In,
+                                              SmallVectorImpl<SDValue> &Src) {
+  unsigned NumOpcodes = 0;
+  uint8_t LHSBits, RHSBits;
+
+  auto getOperandBits = [&Src, In](SDValue Op, uint8_t &Bits) -> bool {
+    // Define truth table given Src0, Src1, Src2 bits permutations:
+    //                          0     0     0
+    //                          0     0     1
+    //                          0     1     0
+    //                          0     1     1
+    //                          1     0     0
+    //                          1     0     1
+    //                          1     1     0
+    //                          1     1     1
+    const uint8_t SrcBits[3] = { 0xf0, 0xcc, 0xaa };
+
+    if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
+      if (C->isAllOnes()) {
+        Bits = 0xff;
+        return true;
+      }
+      if (C->isZero()) {
+        Bits = 0;
+        return true;
+      }
+    }
+
+    for (unsigned I = 0; I < Src.size(); ++I) {
+      // Try to find existing reused operand
+      if (Src[I] == Op) {
+        Bits = SrcBits[I];
+        return true;
+      }
+      // Try to replace parent operator
+      if (Src[I] == In) {
+        Bits = SrcBits[I];
+        Src[I] = Op;
+        return true;
+      }
+    }
+
+    if (Src.size() == 3) {
+      // No room left for operands. Try one last time, there can be a 'not' of
+      // one of our source operands. In this case we can compute the bits
+      // without growing Src vector.
+      if (Op.getOpcode() == ISD::XOR) {
+        if (auto *C = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+          if (C->isAllOnes()) {
+            SDValue LHS = Op.getOperand(0);
+            for (unsigned I = 0; I < Src.size(); ++I) {
+              if (Src[I] == LHS) {
+                Bits = ~SrcBits[I];
+                return true;
+              }
+            }
+          }
+        }
+      }
+
+      return false;
+    }
+
+    Bits = SrcBits[Src.size()];
+    Src.push_back(Op);
+    return true;
+  };
+
+  switch (In.getOpcode()) {
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR: {
+    SDValue LHS = In.getOperand(0);
+    SDValue RHS = In.getOperand(1);
+
+    SmallVector<SDValue, 3> Backup(Src.begin(), Src.end());
+    if (!getOperandBits(LHS, LHSBits) ||
+        !getOperandBits(RHS, RHSBits)) {
+      Src = Backup;
+      return std::make_pair(0, 0);
+    }
+
+    // Recursion is naturally limited by the size of the operand vector.
+    auto Op = BitOp3_Op(LHS, Src);
+    if (Op.first) {
+      NumOpcodes += Op.first;
+      LHSBits = Op.second;
+    }
+
+    Op = BitOp3_Op(RHS, Src);
+    if (Op.first) {
+      NumOpcodes += Op.first;
+      RHSBits = Op.second;
+    }
+    break;
+  }
+  default:
+    return std::make_pair(0, 0);
+  }
+
+  uint8_t TTbl;
+  switch (In.getOpcode()) {
+  case ISD::AND:
+    TTbl = LHSBits & RHSBits;
+    break;
+  case ISD::OR:
+    TTbl = LHSBits | RHSBits;
+    break;
+  case ISD::XOR:
+    TTbl = LHSBits ^ RHSBits;
+    break;
+  default:
+    break;
+  }
+
+  return std::make_pair(NumOpcodes + 1, TTbl);
+}
+
+bool AMDGPUDAGToDAGISel::SelectBITOP3(SDValue In, SDValue &Src0, SDValue &Src1,
+                                      SDValue &Src2, SDValue &Tbl) const {
+  SmallVector<SDValue, 3> Src;
+  uint8_t TTbl;
+  unsigned NumOpcodes;
+
+  std::tie(NumOpcodes, TTbl) = BitOp3_Op(In, Src);
+
+  // Src.empty() case can happen if all operands are all zero or all ones.
+  // Normally it shall be optimized out before reaching this.
+  if (NumOpcodes < 2 || Src.empty())
+    return false;
+
+  // For a uniform case threshold should be higher to account for moves between
+  // VGPRs and SGPRs. It needs one operand in a VGPR, rest two can be in SGPRs
+  // and a readtfirstlane after.
+  if (NumOpcodes < 4 && !In->isDivergent())
+    return false;
+
+  if (NumOpcodes == 2 && In.getValueType() == MVT::i32) {
+    // Avoid using BITOP3 for OR3, XOR3, AND_OR. This is not faster but makes
+    // asm more readable. This cannot be modeled with AddedComplexity because
+    // selector does not know how many operations did we match.
+    if ((In.getOpcode() == ISD::XOR || In.getOpcode() == ISD::OR) &&
+        (In.getOperand(0).getOpcode() == In.getOpcode() ||
+         In.getOperand(1).getOpcode() == In.getOpcode()))
+      return false;
+
+    if (In.getOpcode() == ISD::OR &&
+        (In.getOperand(0).getOpcode() == ISD::AND ||
+         In.getOperand(1).getOpcode() == ISD::AND))
+      return false;
+  }
+
+  // Last operand can be ignored, turning a ternary operation into a binary.
+  // For example: (~a & b & c) | (~a & b & ~c) -> (~a & b). We can replace
+  // 'c' with 'a' here without changing the answer. In some pathological
+  // cases it should be possible to get an operation with a single operand
+  // too if optimizer would not catch it.
+  while (Src.size() < 3)
+    Src.push_back(Src[0]);
+
+  Src0 = Src[0];
+  Src1 = Src[1];
+  Src2 = Src[2];
+
+  Tbl = CurDAG->getTargetConstant(TTbl, SDLoc(In), MVT::i32);
+  return true;
+}
+
 SDValue AMDGPUDAGToDAGISel::getHi16Elt(SDValue In) const {
   if (In.isUndef())
     return CurDAG->getUNDEF(MVT::i32);

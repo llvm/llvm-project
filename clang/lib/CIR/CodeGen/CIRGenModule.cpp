@@ -31,7 +31,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
                            DiagnosticsEngine &diags)
     : builder(&context), astCtx(astctx), langOpts(astctx.getLangOpts()),
       theModule{mlir::ModuleOp::create(mlir::UnknownLoc::get(&context))},
-      diags(diags), target(astCtx.getTargetInfo()) {}
+      diags(diags), target(astCtx.getTargetInfo()), genTypes(*this) {}
 
 mlir::Location CIRGenModule::getLoc(SourceLocation cLoc) {
   assert(cLoc.isValid() && "expected valid source location");
@@ -67,7 +67,8 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
       return;
     }
   } else {
-    errorNYI(global->getSourceRange(), "global variable declaration");
+    assert(cast<VarDecl>(global)->isFileVarDecl() &&
+           "Cannot emit local var decl as global");
   }
 
   // TODO(CIR): Defer emitting some global definitions until later
@@ -77,9 +78,27 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
 void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
                                                 mlir::Operation *op) {
   auto const *funcDecl = cast<FunctionDecl>(gd.getDecl());
-  auto funcOp = builder.create<cir::FuncOp>(
-      getLoc(funcDecl->getSourceRange()), funcDecl->getIdentifier()->getName());
-  theModule.push_back(funcOp);
+  if (clang::IdentifierInfo *identifier = funcDecl->getIdentifier()) {
+    auto funcOp = builder.create<cir::FuncOp>(
+        getLoc(funcDecl->getSourceRange()), identifier->getName());
+    theModule.push_back(funcOp);
+  } else {
+    errorNYI(funcDecl->getSourceRange().getBegin(),
+             "function definition with a non-identifier for a name");
+  }
+}
+
+void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
+                                           bool isTentative) {
+  mlir::Type type = getTypes().convertType(vd->getType());
+  if (clang::IdentifierInfo *identifier = vd->getIdentifier()) {
+    auto varOp = builder.create<cir::GlobalOp>(getLoc(vd->getSourceRange()),
+                                               identifier->getName(), type);
+    theModule.push_back(varOp);
+  } else {
+    errorNYI(vd->getSourceRange().getBegin(),
+             "variable definition with a non-identifier for a name");
+  }
 }
 
 void CIRGenModule::emitGlobalDefinition(clang::GlobalDecl gd,
@@ -102,6 +121,9 @@ void CIRGenModule::emitGlobalDefinition(clang::GlobalDecl gd,
     emitGlobalFunctionDefinition(gd, op);
     return;
   }
+
+  if (const auto *vd = dyn_cast<VarDecl>(decl))
+    return emitGlobalVarDefinition(vd, !vd->hasDefinition());
 
   llvm_unreachable("Invalid argument to CIRGenModule::emitGlobalDefinition");
 }
@@ -126,13 +148,13 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
       emitGlobal(fd);
     break;
   }
-  }
-}
 
-DiagnosticBuilder CIRGenModule::errorNYI(llvm::StringRef feature) {
-  unsigned diagID = diags.getCustomDiagID(
-      DiagnosticsEngine::Error, "ClangIR code gen Not Yet Implemented: %0");
-  return diags.Report(diagID) << feature;
+  case Decl::Var: {
+    auto *vd = cast<VarDecl>(decl);
+    emitGlobal(vd);
+    break;
+  }
+  }
 }
 
 DiagnosticBuilder CIRGenModule::errorNYI(SourceLocation loc,
@@ -142,21 +164,7 @@ DiagnosticBuilder CIRGenModule::errorNYI(SourceLocation loc,
   return diags.Report(loc, diagID) << feature;
 }
 
-DiagnosticBuilder CIRGenModule::errorNYI(SourceLocation loc,
-                                         llvm::StringRef feature,
-                                         llvm::StringRef name) {
-  unsigned diagID = diags.getCustomDiagID(
-      DiagnosticsEngine::Error, "ClangIR code gen Not Yet Implemented: %0: %1");
-  return diags.Report(loc, diagID) << feature << name;
-}
-
 DiagnosticBuilder CIRGenModule::errorNYI(SourceRange loc,
                                          llvm::StringRef feature) {
   return errorNYI(loc.getBegin(), feature) << loc;
-}
-
-DiagnosticBuilder CIRGenModule::errorNYI(SourceRange loc,
-                                         llvm::StringRef feature,
-                                         llvm::StringRef name) {
-  return errorNYI(loc.getBegin(), feature, name) << loc;
 }

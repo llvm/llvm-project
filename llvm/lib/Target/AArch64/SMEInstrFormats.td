@@ -305,6 +305,21 @@ multiclass sme_outer_product_fp32<bit S, bits<2> sz, ZPRRegOp zpr_ty, string mne
   def : SME_ZA_Tile_TwoPred_TwoVec_Pat<NAME, op, timm32_0_3, nxv4i1, nxv4f32>;
 }
 
+multiclass sme2_fp8_fmopa_za32<string mnemonic, SDPatternOperator intrinsic> {
+    def NAME : sme_fp_outer_product_inst<0, 0b01, 0b00, TileOp32, ZPR8, mnemonic>, SMEPseudo2Instr<NAME, 1> {
+      bits<2> ZAda;
+      let Inst{1-0} = ZAda;
+      let Inst{2}   = 0b0;
+
+      let Uses = [FPMR, FPCR];
+    }
+
+    let mayStore = 1, mayLoad = 1 in
+    def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR8, SMEMatrixTileS>, SMEPseudo2Instr<NAME, 0>;
+
+    def : SME_ZA_Tile_TwoPred_TwoVec_Pat<NAME, intrinsic, timm32_0_3, nxv16i1, nxv16i8>;
+}
+
 multiclass sme_outer_product_fp64<bit S, string mnemonic, SDPatternOperator op> {
   def NAME : sme_fp_outer_product_inst<S, 0b10, 0b00, TileOp64, ZPR64, mnemonic>, SMEPseudo2Instr<NAME, 1> {
     bits<3> ZAda;
@@ -316,12 +331,19 @@ multiclass sme_outer_product_fp64<bit S, string mnemonic, SDPatternOperator op> 
   def : SME_ZA_Tile_TwoPred_TwoVec_Pat<NAME, op, timm32_0_7, nxv2i1, nxv2f64>;
 }
 
-multiclass sme2p1_fmop_tile_f8f16<string mnemonic, bit bf, bit s, bits<2> op> {
-  def NAME : sme_fp_outer_product_inst<s, {0,bf}, op, TileOp16, ZPR8, mnemonic> {
+multiclass sme2_fp8_fmopa_za16<string mnemonic, SDPatternOperator intrinsic> {
+  def NAME : sme_fp_outer_product_inst<0, {0, 0b1}, 0b01, TileOp16, ZPR8, mnemonic>, SMEPseudo2Instr<NAME, 1> {
     bits<1> ZAda;
     let Inst{2-1} = 0b00;
     let Inst{0}   = ZAda;
+
+    let Uses = [FPMR, FPCR];
   }
+
+  let mayStore = 1, mayLoad = 1 in
+  def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR8, SMEMatrixTileH>, SMEPseudo2Instr<NAME, 0>;
+
+  def : SME_ZA_Tile_TwoPred_TwoVec_Pat<NAME, intrinsic, timm32_0_1, nxv16i1, nxv16i8>;
 }
 
 multiclass sme2p1_fmop_tile_fp16<string mnemonic, bit bf, bit s, ValueType vt, SDPatternOperator intrinsic = null_frag> {
@@ -2412,7 +2434,7 @@ multiclass sme2p1_fp_cvt_vector_vg2_single<string mnemonic, bit l> {
 
 // SME2 multi-vec FP8 up convert two registers
 multiclass sme2p1_fp8_cvt_vector_vg2_single<string mnemonic, bits<2> opc, bit L> {
-  def _NAME : sme2_cvt_unpk_vector_vg2<opc, 0b110, L, ZZ_h_mul_r, ZPR8, mnemonic>{
+  def NAME : sme2_cvt_unpk_vector_vg2<opc, 0b110, L, ZZ_h_mul_r, ZPR8, mnemonic>{
     let Uses = [FPMR, FPCR];
   }
 }

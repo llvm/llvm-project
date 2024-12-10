@@ -13,6 +13,9 @@ func.func private @test3(!fir.boxproc<() -> (!fir.type<a{x:i32, y:f64}>)>) -> no
 //CHECK-LABEL:  func.func private @test5(((i32) -> f32) -> ())
 func.func private @test5(!fir.boxproc<(!fir.boxproc<(i32) -> (f32)>) -> ()>)
 
+//CHECK-LABEL:  func.func private @test6(!fir.tdesc<!fir.type<_QMcartesian_2d_objectsTcartesian_2d_objectUnboxProc{base_pde_object:!fir.type<_QMbase_pde_objectsTbase_pde_objectUnboxProc{process_p:(!fir.class<!fir.type<_QMbase_pde_objectsTbase_pde_objectUnboxProc>>) -> !fir.class<!fir.heap<!fir.type<_QMbase_pde_objectsTbase_pde_objectUnboxProc>>>,source_p:(!fir.class<!fir.type<_QMbase_pde_objectsTbase_pde_objectUnboxProc>>, !fir.ref<f32>) -> !fir.class<!fir.heap<!fir.type<_QMbase_pde_objectsTbase_pde_objectUnboxProc>>>}>,c:!fir.box<!fir.heap<!fir.array<?x?xf32>>>,dx:f32,dy:f32}>>) -> !fir.ref<none>
+func.func private @test6(!fir.tdesc<!fir.type<_QMcartesian_2d_objectsTcartesian_2d_object{base_pde_object:!fir.type<_QMbase_pde_objectsTbase_pde_object{process_p:!fir.boxproc<(!fir.class<!fir.type<_QMbase_pde_objectsTbase_pde_object>>) -> !fir.class<!fir.heap<!fir.type<_QMbase_pde_objectsTbase_pde_object>>>>,source_p:!fir.boxproc<(!fir.class<!fir.type<_QMbase_pde_objectsTbase_pde_object>>, !fir.ref<f32>) -> !fir.class<!fir.heap<!fir.type<_QMbase_pde_objectsTbase_pde_object>>>>}>,c:!fir.box<!fir.heap<!fir.array<?x?xf32>>>,dx:f32,dy:f32}>>) -> !fir.ref<none>
+
 // CHECK-LABEL:   func.func @proc_pointer_component(
 // CHECK-SAME:                                      %[[VAL_0:.*]]: (!fir.ref<i32>) -> f32,
 // CHECK-SAME:                                      %[[VAL_1:.*]]: !fir.ref<i32>) {
