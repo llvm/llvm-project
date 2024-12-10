@@ -22,6 +22,8 @@ int main(int argc, char **argv) {
   return *y;
 }
 
+// Produced from the assembler in
+// Shell/ScriptInterpreter/Python/Inputs/FormatterBytecode/formatter.py
 __attribute__((used, section("__DATA_CONST,__lldbformatters"))) unsigned char
     _MyOptional_type_summary[] =
         "\x01"             // version
