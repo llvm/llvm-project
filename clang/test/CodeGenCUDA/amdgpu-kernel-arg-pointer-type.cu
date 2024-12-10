@@ -432,7 +432,7 @@ __global__ void kernel4(struct S s) {
 // CHECK-SPIRV-NEXT:    ret void
 //
 // OPT-LABEL: define dso_local amdgpu_kernel void @_Z7kernel5P1S(
-// OPT-SAME: ptr addrspace(1) nocapture noundef readonly [[S_COERCE:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// OPT-SAME: ptr addrspace(1) nocapture noundef readonly [[S_COERCE:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 // OPT-NEXT:  [[ENTRY:.*:]]
 // OPT-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(1) [[S_COERCE]], align 8
 // OPT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4

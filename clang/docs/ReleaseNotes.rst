@@ -458,6 +458,10 @@ Modified Compiler Flags
   ``memset`` and similar functions for which it is a documented undefined
   behavior. It is implied by ``-Wnontrivial-memaccess``
 
+- Added ``-fmodules-reduced-bmi`` flag corresponding to
+  ``-fexperimental-modules-reduced-bmi`` flag. The ``-fmodules-reduced-bmi`` flag
+  is intended to be enabled by default in the future.
+
 Removed Compiler Flags
 -------------------------
 
@@ -697,6 +701,8 @@ Bug Fixes to Compiler Builtins
 - ``__noop`` can now be used in a constant expression. (#GH102064)
 
 - Fix ``__has_builtin`` incorrectly returning ``false`` for some C++ type traits. (#GH111477)
+
+- Fix ``__builtin_source_location`` incorrectly returning wrong column for method chains. (#GH119129)
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

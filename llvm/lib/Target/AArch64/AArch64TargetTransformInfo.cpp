@@ -2742,275 +2742,274 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     return AdjustCost(
         BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
 
-  static const TypeConversionCostTblEntry
-  ConversionTbl[] = {
-    { ISD::TRUNCATE, MVT::v2i8,   MVT::v2i64,  1},  // xtn
-    { ISD::TRUNCATE, MVT::v2i16,  MVT::v2i64,  1},  // xtn
-    { ISD::TRUNCATE, MVT::v2i32,  MVT::v2i64,  1},  // xtn
-    { ISD::TRUNCATE, MVT::v4i8,   MVT::v4i32,  1},  // xtn
-    { ISD::TRUNCATE, MVT::v4i8,   MVT::v4i64,  3},  // 2 xtn + 1 uzp1
-    { ISD::TRUNCATE, MVT::v4i16,  MVT::v4i32,  1},  // xtn
-    { ISD::TRUNCATE, MVT::v4i16,  MVT::v4i64,  2},  // 1 uzp1 + 1 xtn
-    { ISD::TRUNCATE, MVT::v4i32,  MVT::v4i64,  1},  // 1 uzp1
-    { ISD::TRUNCATE, MVT::v8i8,   MVT::v8i16,  1},  // 1 xtn
-    { ISD::TRUNCATE, MVT::v8i8,   MVT::v8i32,  2},  // 1 uzp1 + 1 xtn
-    { ISD::TRUNCATE, MVT::v8i8,   MVT::v8i64,  4},  // 3 x uzp1 + xtn
-    { ISD::TRUNCATE, MVT::v8i16,  MVT::v8i32,  1},  // 1 uzp1
-    { ISD::TRUNCATE, MVT::v8i16,  MVT::v8i64,  3},  // 3 x uzp1
-    { ISD::TRUNCATE, MVT::v8i32,  MVT::v8i64,  2},  // 2 x uzp1
-    { ISD::TRUNCATE, MVT::v16i8,  MVT::v16i16, 1},  // uzp1
-    { ISD::TRUNCATE, MVT::v16i8,  MVT::v16i32, 3},  // (2 + 1) x uzp1
-    { ISD::TRUNCATE, MVT::v16i8,  MVT::v16i64, 7},  // (4 + 2 + 1) x uzp1
-    { ISD::TRUNCATE, MVT::v16i16, MVT::v16i32, 2},  // 2 x uzp1
-    { ISD::TRUNCATE, MVT::v16i16, MVT::v16i64, 6},  // (4 + 2) x uzp1
-    { ISD::TRUNCATE, MVT::v16i32, MVT::v16i64, 4},  // 4 x uzp1
+  static const TypeConversionCostTblEntry ConversionTbl[] = {
+      {ISD::TRUNCATE, MVT::v2i8, MVT::v2i64, 1},    // xtn
+      {ISD::TRUNCATE, MVT::v2i16, MVT::v2i64, 1},   // xtn
+      {ISD::TRUNCATE, MVT::v2i32, MVT::v2i64, 1},   // xtn
+      {ISD::TRUNCATE, MVT::v4i8, MVT::v4i32, 1},    // xtn
+      {ISD::TRUNCATE, MVT::v4i8, MVT::v4i64, 3},    // 2 xtn + 1 uzp1
+      {ISD::TRUNCATE, MVT::v4i16, MVT::v4i32, 1},   // xtn
+      {ISD::TRUNCATE, MVT::v4i16, MVT::v4i64, 2},   // 1 uzp1 + 1 xtn
+      {ISD::TRUNCATE, MVT::v4i32, MVT::v4i64, 1},   // 1 uzp1
+      {ISD::TRUNCATE, MVT::v8i8, MVT::v8i16, 1},    // 1 xtn
+      {ISD::TRUNCATE, MVT::v8i8, MVT::v8i32, 2},    // 1 uzp1 + 1 xtn
+      {ISD::TRUNCATE, MVT::v8i8, MVT::v8i64, 4},    // 3 x uzp1 + xtn
+      {ISD::TRUNCATE, MVT::v8i16, MVT::v8i32, 1},   // 1 uzp1
+      {ISD::TRUNCATE, MVT::v8i16, MVT::v8i64, 3},   // 3 x uzp1
+      {ISD::TRUNCATE, MVT::v8i32, MVT::v8i64, 2},   // 2 x uzp1
+      {ISD::TRUNCATE, MVT::v16i8, MVT::v16i16, 1},  // uzp1
+      {ISD::TRUNCATE, MVT::v16i8, MVT::v16i32, 3},  // (2 + 1) x uzp1
+      {ISD::TRUNCATE, MVT::v16i8, MVT::v16i64, 7},  // (4 + 2 + 1) x uzp1
+      {ISD::TRUNCATE, MVT::v16i16, MVT::v16i32, 2}, // 2 x uzp1
+      {ISD::TRUNCATE, MVT::v16i16, MVT::v16i64, 6}, // (4 + 2) x uzp1
+      {ISD::TRUNCATE, MVT::v16i32, MVT::v16i64, 4}, // 4 x uzp1
 
-    // Truncations on nxvmiN
-    { ISD::TRUNCATE, MVT::nxv2i1, MVT::nxv2i16, 1 },
-    { ISD::TRUNCATE, MVT::nxv2i1, MVT::nxv2i32, 1 },
-    { ISD::TRUNCATE, MVT::nxv2i1, MVT::nxv2i64, 1 },
-    { ISD::TRUNCATE, MVT::nxv4i1, MVT::nxv4i16, 1 },
-    { ISD::TRUNCATE, MVT::nxv4i1, MVT::nxv4i32, 1 },
-    { ISD::TRUNCATE, MVT::nxv4i1, MVT::nxv4i64, 2 },
-    { ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i16, 1 },
-    { ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i32, 3 },
-    { ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i64, 5 },
-    { ISD::TRUNCATE, MVT::nxv16i1, MVT::nxv16i8, 1 },
-    { ISD::TRUNCATE, MVT::nxv2i16, MVT::nxv2i32, 1 },
-    { ISD::TRUNCATE, MVT::nxv2i32, MVT::nxv2i64, 1 },
-    { ISD::TRUNCATE, MVT::nxv4i16, MVT::nxv4i32, 1 },
-    { ISD::TRUNCATE, MVT::nxv4i32, MVT::nxv4i64, 2 },
-    { ISD::TRUNCATE, MVT::nxv8i16, MVT::nxv8i32, 3 },
-    { ISD::TRUNCATE, MVT::nxv8i32, MVT::nxv8i64, 6 },
+      // Truncations on nxvmiN
+      {ISD::TRUNCATE, MVT::nxv2i1, MVT::nxv2i16, 1},
+      {ISD::TRUNCATE, MVT::nxv2i1, MVT::nxv2i32, 1},
+      {ISD::TRUNCATE, MVT::nxv2i1, MVT::nxv2i64, 1},
+      {ISD::TRUNCATE, MVT::nxv4i1, MVT::nxv4i16, 1},
+      {ISD::TRUNCATE, MVT::nxv4i1, MVT::nxv4i32, 1},
+      {ISD::TRUNCATE, MVT::nxv4i1, MVT::nxv4i64, 2},
+      {ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i16, 1},
+      {ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i32, 3},
+      {ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i64, 5},
+      {ISD::TRUNCATE, MVT::nxv16i1, MVT::nxv16i8, 1},
+      {ISD::TRUNCATE, MVT::nxv2i16, MVT::nxv2i32, 1},
+      {ISD::TRUNCATE, MVT::nxv2i32, MVT::nxv2i64, 1},
+      {ISD::TRUNCATE, MVT::nxv4i16, MVT::nxv4i32, 1},
+      {ISD::TRUNCATE, MVT::nxv4i32, MVT::nxv4i64, 2},
+      {ISD::TRUNCATE, MVT::nxv8i16, MVT::nxv8i32, 3},
+      {ISD::TRUNCATE, MVT::nxv8i32, MVT::nxv8i64, 6},
 
-    // The number of shll instructions for the extension.
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i16, 3 },
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i16, 3 },
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i32, 2 },
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i32, 2 },
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i8,  3 },
-    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i8,  3 },
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i16, 2 },
-    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i16, 2 },
-    { ISD::SIGN_EXTEND, MVT::v8i64,  MVT::v8i8,  7 },
-    { ISD::ZERO_EXTEND, MVT::v8i64,  MVT::v8i8,  7 },
-    { ISD::SIGN_EXTEND, MVT::v8i64,  MVT::v8i16, 6 },
-    { ISD::ZERO_EXTEND, MVT::v8i64,  MVT::v8i16, 6 },
-    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i8, 2 },
-    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i8, 2 },
-    { ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i8, 6 },
-    { ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i8, 6 },
+      // The number of shll instructions for the extension.
+      {ISD::SIGN_EXTEND, MVT::v4i64, MVT::v4i16, 3},
+      {ISD::ZERO_EXTEND, MVT::v4i64, MVT::v4i16, 3},
+      {ISD::SIGN_EXTEND, MVT::v4i64, MVT::v4i32, 2},
+      {ISD::ZERO_EXTEND, MVT::v4i64, MVT::v4i32, 2},
+      {ISD::SIGN_EXTEND, MVT::v8i32, MVT::v8i8, 3},
+      {ISD::ZERO_EXTEND, MVT::v8i32, MVT::v8i8, 3},
+      {ISD::SIGN_EXTEND, MVT::v8i32, MVT::v8i16, 2},
+      {ISD::ZERO_EXTEND, MVT::v8i32, MVT::v8i16, 2},
+      {ISD::SIGN_EXTEND, MVT::v8i64, MVT::v8i8, 7},
+      {ISD::ZERO_EXTEND, MVT::v8i64, MVT::v8i8, 7},
+      {ISD::SIGN_EXTEND, MVT::v8i64, MVT::v8i16, 6},
+      {ISD::ZERO_EXTEND, MVT::v8i64, MVT::v8i16, 6},
+      {ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i8, 2},
+      {ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i8, 2},
+      {ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i8, 6},
+      {ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i8, 6},
 
-    // LowerVectorINT_TO_FP:
-    { ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i32, 1 },
-    { ISD::SINT_TO_FP, MVT::v4f32, MVT::v4i32, 1 },
-    { ISD::SINT_TO_FP, MVT::v2f64, MVT::v2i64, 1 },
-    { ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i32, 1 },
-    { ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i32, 1 },
-    { ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i64, 1 },
+      // LowerVectorINT_TO_FP:
+      {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i32, 1},
+      {ISD::SINT_TO_FP, MVT::v4f32, MVT::v4i32, 1},
+      {ISD::SINT_TO_FP, MVT::v2f64, MVT::v2i64, 1},
+      {ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i32, 1},
+      {ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i32, 1},
+      {ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i64, 1},
 
-    // Complex: to v2f32
-    { ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i8,  3 },
-    { ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i16, 3 },
-    { ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i64, 2 },
-    { ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i8,  3 },
-    { ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i16, 3 },
-    { ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i64, 2 },
+      // Complex: to v2f32
+      {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i8, 3},
+      {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i16, 3},
+      {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i64, 2},
+      {ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i8, 3},
+      {ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i16, 3},
+      {ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i64, 2},
 
-    // Complex: to v4f32
-    { ISD::SINT_TO_FP, MVT::v4f32, MVT::v4i8,  4 },
-    { ISD::SINT_TO_FP, MVT::v4f32, MVT::v4i16, 2 },
-    { ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i8,  3 },
-    { ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i16, 2 },
+      // Complex: to v4f32
+      {ISD::SINT_TO_FP, MVT::v4f32, MVT::v4i8, 4},
+      {ISD::SINT_TO_FP, MVT::v4f32, MVT::v4i16, 2},
+      {ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i8, 3},
+      {ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i16, 2},
 
-    // Complex: to v8f32
-    { ISD::SINT_TO_FP, MVT::v8f32, MVT::v8i8,  10 },
-    { ISD::SINT_TO_FP, MVT::v8f32, MVT::v8i16, 4 },
-    { ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i8,  10 },
-    { ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i16, 4 },
+      // Complex: to v8f32
+      {ISD::SINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
+      {ISD::SINT_TO_FP, MVT::v8f32, MVT::v8i16, 4},
+      {ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
+      {ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i16, 4},
 
-    // Complex: to v16f32
-    { ISD::SINT_TO_FP, MVT::v16f32, MVT::v16i8, 21 },
-    { ISD::UINT_TO_FP, MVT::v16f32, MVT::v16i8, 21 },
+      // Complex: to v16f32
+      {ISD::SINT_TO_FP, MVT::v16f32, MVT::v16i8, 21},
+      {ISD::UINT_TO_FP, MVT::v16f32, MVT::v16i8, 21},
 
-    // Complex: to v2f64
-    { ISD::SINT_TO_FP, MVT::v2f64, MVT::v2i8,  4 },
-    { ISD::SINT_TO_FP, MVT::v2f64, MVT::v2i16, 4 },
-    { ISD::SINT_TO_FP, MVT::v2f64, MVT::v2i32, 2 },
-    { ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i8,  4 },
-    { ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i16, 4 },
-    { ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i32, 2 },
+      // Complex: to v2f64
+      {ISD::SINT_TO_FP, MVT::v2f64, MVT::v2i8, 4},
+      {ISD::SINT_TO_FP, MVT::v2f64, MVT::v2i16, 4},
+      {ISD::SINT_TO_FP, MVT::v2f64, MVT::v2i32, 2},
+      {ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i8, 4},
+      {ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i16, 4},
+      {ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i32, 2},
 
-    // Complex: to v4f64
-    { ISD::SINT_TO_FP, MVT::v4f64, MVT::v4i32,  4 },
-    { ISD::UINT_TO_FP, MVT::v4f64, MVT::v4i32,  4 },
+      // Complex: to v4f64
+      {ISD::SINT_TO_FP, MVT::v4f64, MVT::v4i32, 4},
+      {ISD::UINT_TO_FP, MVT::v4f64, MVT::v4i32, 4},
 
-    // LowerVectorFP_TO_INT
-    { ISD::FP_TO_SINT, MVT::v2i32, MVT::v2f32, 1 },
-    { ISD::FP_TO_SINT, MVT::v4i32, MVT::v4f32, 1 },
-    { ISD::FP_TO_SINT, MVT::v2i64, MVT::v2f64, 1 },
-    { ISD::FP_TO_UINT, MVT::v2i32, MVT::v2f32, 1 },
-    { ISD::FP_TO_UINT, MVT::v4i32, MVT::v4f32, 1 },
-    { ISD::FP_TO_UINT, MVT::v2i64, MVT::v2f64, 1 },
+      // LowerVectorFP_TO_INT
+      {ISD::FP_TO_SINT, MVT::v2i32, MVT::v2f32, 1},
+      {ISD::FP_TO_SINT, MVT::v4i32, MVT::v4f32, 1},
+      {ISD::FP_TO_SINT, MVT::v2i64, MVT::v2f64, 1},
+      {ISD::FP_TO_UINT, MVT::v2i32, MVT::v2f32, 1},
+      {ISD::FP_TO_UINT, MVT::v4i32, MVT::v4f32, 1},
+      {ISD::FP_TO_UINT, MVT::v2i64, MVT::v2f64, 1},
 
-    // Complex, from v2f32: legal type is v2i32 (no cost) or v2i64 (1 ext).
-    { ISD::FP_TO_SINT, MVT::v2i64, MVT::v2f32, 2 },
-    { ISD::FP_TO_SINT, MVT::v2i16, MVT::v2f32, 1 },
-    { ISD::FP_TO_SINT, MVT::v2i8,  MVT::v2f32, 1 },
-    { ISD::FP_TO_UINT, MVT::v2i64, MVT::v2f32, 2 },
-    { ISD::FP_TO_UINT, MVT::v2i16, MVT::v2f32, 1 },
-    { ISD::FP_TO_UINT, MVT::v2i8,  MVT::v2f32, 1 },
+      // Complex, from v2f32: legal type is v2i32 (no cost) or v2i64 (1 ext).
+      {ISD::FP_TO_SINT, MVT::v2i64, MVT::v2f32, 2},
+      {ISD::FP_TO_SINT, MVT::v2i16, MVT::v2f32, 1},
+      {ISD::FP_TO_SINT, MVT::v2i8, MVT::v2f32, 1},
+      {ISD::FP_TO_UINT, MVT::v2i64, MVT::v2f32, 2},
+      {ISD::FP_TO_UINT, MVT::v2i16, MVT::v2f32, 1},
+      {ISD::FP_TO_UINT, MVT::v2i8, MVT::v2f32, 1},
 
-    // Complex, from v4f32: legal type is v4i16, 1 narrowing => ~2
-    { ISD::FP_TO_SINT, MVT::v4i16, MVT::v4f32, 2 },
-    { ISD::FP_TO_SINT, MVT::v4i8,  MVT::v4f32, 2 },
-    { ISD::FP_TO_UINT, MVT::v4i16, MVT::v4f32, 2 },
-    { ISD::FP_TO_UINT, MVT::v4i8,  MVT::v4f32, 2 },
+      // Complex, from v4f32: legal type is v4i16, 1 narrowing => ~2
+      {ISD::FP_TO_SINT, MVT::v4i16, MVT::v4f32, 2},
+      {ISD::FP_TO_SINT, MVT::v4i8, MVT::v4f32, 2},
+      {ISD::FP_TO_UINT, MVT::v4i16, MVT::v4f32, 2},
+      {ISD::FP_TO_UINT, MVT::v4i8, MVT::v4f32, 2},
 
-    // Complex, from nxv2f32.
-    { ISD::FP_TO_SINT, MVT::nxv2i64, MVT::nxv2f32, 1 },
-    { ISD::FP_TO_SINT, MVT::nxv2i32, MVT::nxv2f32, 1 },
-    { ISD::FP_TO_SINT, MVT::nxv2i16, MVT::nxv2f32, 1 },
-    { ISD::FP_TO_SINT, MVT::nxv2i8,  MVT::nxv2f32, 1 },
-    { ISD::FP_TO_UINT, MVT::nxv2i64, MVT::nxv2f32, 1 },
-    { ISD::FP_TO_UINT, MVT::nxv2i32, MVT::nxv2f32, 1 },
-    { ISD::FP_TO_UINT, MVT::nxv2i16, MVT::nxv2f32, 1 },
-    { ISD::FP_TO_UINT, MVT::nxv2i8,  MVT::nxv2f32, 1 },
+      // Complex, from nxv2f32.
+      {ISD::FP_TO_SINT, MVT::nxv2i64, MVT::nxv2f32, 1},
+      {ISD::FP_TO_SINT, MVT::nxv2i32, MVT::nxv2f32, 1},
+      {ISD::FP_TO_SINT, MVT::nxv2i16, MVT::nxv2f32, 1},
+      {ISD::FP_TO_SINT, MVT::nxv2i8, MVT::nxv2f32, 1},
+      {ISD::FP_TO_UINT, MVT::nxv2i64, MVT::nxv2f32, 1},
+      {ISD::FP_TO_UINT, MVT::nxv2i32, MVT::nxv2f32, 1},
+      {ISD::FP_TO_UINT, MVT::nxv2i16, MVT::nxv2f32, 1},
+      {ISD::FP_TO_UINT, MVT::nxv2i8, MVT::nxv2f32, 1},
 
-    // Complex, from v2f64: legal type is v2i32, 1 narrowing => ~2.
-    { ISD::FP_TO_SINT, MVT::v2i32, MVT::v2f64, 2 },
-    { ISD::FP_TO_SINT, MVT::v2i16, MVT::v2f64, 2 },
-    { ISD::FP_TO_SINT, MVT::v2i8,  MVT::v2f64, 2 },
-    { ISD::FP_TO_UINT, MVT::v2i32, MVT::v2f64, 2 },
-    { ISD::FP_TO_UINT, MVT::v2i16, MVT::v2f64, 2 },
-    { ISD::FP_TO_UINT, MVT::v2i8,  MVT::v2f64, 2 },
+      // Complex, from v2f64: legal type is v2i32, 1 narrowing => ~2.
+      {ISD::FP_TO_SINT, MVT::v2i32, MVT::v2f64, 2},
+      {ISD::FP_TO_SINT, MVT::v2i16, MVT::v2f64, 2},
+      {ISD::FP_TO_SINT, MVT::v2i8, MVT::v2f64, 2},
+      {ISD::FP_TO_UINT, MVT::v2i32, MVT::v2f64, 2},
+      {ISD::FP_TO_UINT, MVT::v2i16, MVT::v2f64, 2},
+      {ISD::FP_TO_UINT, MVT::v2i8, MVT::v2f64, 2},
 
-    // Complex, from nxv2f64.
-    { ISD::FP_TO_SINT, MVT::nxv2i64, MVT::nxv2f64, 1 },
-    { ISD::FP_TO_SINT, MVT::nxv2i32, MVT::nxv2f64, 1 },
-    { ISD::FP_TO_SINT, MVT::nxv2i16, MVT::nxv2f64, 1 },
-    { ISD::FP_TO_SINT, MVT::nxv2i8,  MVT::nxv2f64, 1 },
-    { ISD::FP_TO_UINT, MVT::nxv2i64, MVT::nxv2f64, 1 },
-    { ISD::FP_TO_UINT, MVT::nxv2i32, MVT::nxv2f64, 1 },
-    { ISD::FP_TO_UINT, MVT::nxv2i16, MVT::nxv2f64, 1 },
-    { ISD::FP_TO_UINT, MVT::nxv2i8,  MVT::nxv2f64, 1 },
+      // Complex, from nxv2f64.
+      {ISD::FP_TO_SINT, MVT::nxv2i64, MVT::nxv2f64, 1},
+      {ISD::FP_TO_SINT, MVT::nxv2i32, MVT::nxv2f64, 1},
+      {ISD::FP_TO_SINT, MVT::nxv2i16, MVT::nxv2f64, 1},
+      {ISD::FP_TO_SINT, MVT::nxv2i8, MVT::nxv2f64, 1},
+      {ISD::FP_TO_UINT, MVT::nxv2i64, MVT::nxv2f64, 1},
+      {ISD::FP_TO_UINT, MVT::nxv2i32, MVT::nxv2f64, 1},
+      {ISD::FP_TO_UINT, MVT::nxv2i16, MVT::nxv2f64, 1},
+      {ISD::FP_TO_UINT, MVT::nxv2i8, MVT::nxv2f64, 1},
 
-    // Complex, from nxv4f32.
-    { ISD::FP_TO_SINT, MVT::nxv4i64, MVT::nxv4f32, 4 },
-    { ISD::FP_TO_SINT, MVT::nxv4i32, MVT::nxv4f32, 1 },
-    { ISD::FP_TO_SINT, MVT::nxv4i16, MVT::nxv4f32, 1 },
-    { ISD::FP_TO_SINT, MVT::nxv4i8,  MVT::nxv4f32, 1 },
-    { ISD::FP_TO_UINT, MVT::nxv4i64, MVT::nxv4f32, 4 },
-    { ISD::FP_TO_UINT, MVT::nxv4i32, MVT::nxv4f32, 1 },
-    { ISD::FP_TO_UINT, MVT::nxv4i16, MVT::nxv4f32, 1 },
-    { ISD::FP_TO_UINT, MVT::nxv4i8,  MVT::nxv4f32, 1 },
+      // Complex, from nxv4f32.
+      {ISD::FP_TO_SINT, MVT::nxv4i64, MVT::nxv4f32, 4},
+      {ISD::FP_TO_SINT, MVT::nxv4i32, MVT::nxv4f32, 1},
+      {ISD::FP_TO_SINT, MVT::nxv4i16, MVT::nxv4f32, 1},
+      {ISD::FP_TO_SINT, MVT::nxv4i8, MVT::nxv4f32, 1},
+      {ISD::FP_TO_UINT, MVT::nxv4i64, MVT::nxv4f32, 4},
+      {ISD::FP_TO_UINT, MVT::nxv4i32, MVT::nxv4f32, 1},
+      {ISD::FP_TO_UINT, MVT::nxv4i16, MVT::nxv4f32, 1},
+      {ISD::FP_TO_UINT, MVT::nxv4i8, MVT::nxv4f32, 1},
 
-    // Complex, from nxv8f64. Illegal -> illegal conversions not required.
-    { ISD::FP_TO_SINT, MVT::nxv8i16, MVT::nxv8f64, 7 },
-    { ISD::FP_TO_SINT, MVT::nxv8i8,  MVT::nxv8f64, 7 },
-    { ISD::FP_TO_UINT, MVT::nxv8i16, MVT::nxv8f64, 7 },
-    { ISD::FP_TO_UINT, MVT::nxv8i8,  MVT::nxv8f64, 7 },
+      // Complex, from nxv8f64. Illegal -> illegal conversions not required.
+      {ISD::FP_TO_SINT, MVT::nxv8i16, MVT::nxv8f64, 7},
+      {ISD::FP_TO_SINT, MVT::nxv8i8, MVT::nxv8f64, 7},
+      {ISD::FP_TO_UINT, MVT::nxv8i16, MVT::nxv8f64, 7},
+      {ISD::FP_TO_UINT, MVT::nxv8i8, MVT::nxv8f64, 7},
 
-    // Complex, from nxv4f64. Illegal -> illegal conversions not required.
-    { ISD::FP_TO_SINT, MVT::nxv4i32, MVT::nxv4f64, 3 },
-    { ISD::FP_TO_SINT, MVT::nxv4i16, MVT::nxv4f64, 3 },
-    { ISD::FP_TO_SINT, MVT::nxv4i8,  MVT::nxv4f64, 3 },
-    { ISD::FP_TO_UINT, MVT::nxv4i32, MVT::nxv4f64, 3 },
-    { ISD::FP_TO_UINT, MVT::nxv4i16, MVT::nxv4f64, 3 },
-    { ISD::FP_TO_UINT, MVT::nxv4i8,  MVT::nxv4f64, 3 },
+      // Complex, from nxv4f64. Illegal -> illegal conversions not required.
+      {ISD::FP_TO_SINT, MVT::nxv4i32, MVT::nxv4f64, 3},
+      {ISD::FP_TO_SINT, MVT::nxv4i16, MVT::nxv4f64, 3},
+      {ISD::FP_TO_SINT, MVT::nxv4i8, MVT::nxv4f64, 3},
+      {ISD::FP_TO_UINT, MVT::nxv4i32, MVT::nxv4f64, 3},
+      {ISD::FP_TO_UINT, MVT::nxv4i16, MVT::nxv4f64, 3},
+      {ISD::FP_TO_UINT, MVT::nxv4i8, MVT::nxv4f64, 3},
 
-    // Complex, from nxv8f32. Illegal -> illegal conversions not required.
-    { ISD::FP_TO_SINT, MVT::nxv8i16, MVT::nxv8f32, 3 },
-    { ISD::FP_TO_SINT, MVT::nxv8i8,  MVT::nxv8f32, 3 },
-    { ISD::FP_TO_UINT, MVT::nxv8i16, MVT::nxv8f32, 3 },
-    { ISD::FP_TO_UINT, MVT::nxv8i8,  MVT::nxv8f32, 3 },
+      // Complex, from nxv8f32. Illegal -> illegal conversions not required.
+      {ISD::FP_TO_SINT, MVT::nxv8i16, MVT::nxv8f32, 3},
+      {ISD::FP_TO_SINT, MVT::nxv8i8, MVT::nxv8f32, 3},
+      {ISD::FP_TO_UINT, MVT::nxv8i16, MVT::nxv8f32, 3},
+      {ISD::FP_TO_UINT, MVT::nxv8i8, MVT::nxv8f32, 3},
 
-    // Complex, from nxv8f16.
-    { ISD::FP_TO_SINT, MVT::nxv8i64, MVT::nxv8f16, 10 },
-    { ISD::FP_TO_SINT, MVT::nxv8i32, MVT::nxv8f16, 4 },
-    { ISD::FP_TO_SINT, MVT::nxv8i16, MVT::nxv8f16, 1 },
-    { ISD::FP_TO_SINT, MVT::nxv8i8,  MVT::nxv8f16, 1 },
-    { ISD::FP_TO_UINT, MVT::nxv8i64, MVT::nxv8f16, 10 },
-    { ISD::FP_TO_UINT, MVT::nxv8i32, MVT::nxv8f16, 4 },
-    { ISD::FP_TO_UINT, MVT::nxv8i16, MVT::nxv8f16, 1 },
-    { ISD::FP_TO_UINT, MVT::nxv8i8,  MVT::nxv8f16, 1 },
+      // Complex, from nxv8f16.
+      {ISD::FP_TO_SINT, MVT::nxv8i64, MVT::nxv8f16, 10},
+      {ISD::FP_TO_SINT, MVT::nxv8i32, MVT::nxv8f16, 4},
+      {ISD::FP_TO_SINT, MVT::nxv8i16, MVT::nxv8f16, 1},
+      {ISD::FP_TO_SINT, MVT::nxv8i8, MVT::nxv8f16, 1},
+      {ISD::FP_TO_UINT, MVT::nxv8i64, MVT::nxv8f16, 10},
+      {ISD::FP_TO_UINT, MVT::nxv8i32, MVT::nxv8f16, 4},
+      {ISD::FP_TO_UINT, MVT::nxv8i16, MVT::nxv8f16, 1},
+      {ISD::FP_TO_UINT, MVT::nxv8i8, MVT::nxv8f16, 1},
 
-    // Complex, from nxv4f16.
-    { ISD::FP_TO_SINT, MVT::nxv4i64, MVT::nxv4f16, 4 },
-    { ISD::FP_TO_SINT, MVT::nxv4i32, MVT::nxv4f16, 1 },
-    { ISD::FP_TO_SINT, MVT::nxv4i16, MVT::nxv4f16, 1 },
-    { ISD::FP_TO_SINT, MVT::nxv4i8,  MVT::nxv4f16, 1 },
-    { ISD::FP_TO_UINT, MVT::nxv4i64, MVT::nxv4f16, 4 },
-    { ISD::FP_TO_UINT, MVT::nxv4i32, MVT::nxv4f16, 1 },
-    { ISD::FP_TO_UINT, MVT::nxv4i16, MVT::nxv4f16, 1 },
-    { ISD::FP_TO_UINT, MVT::nxv4i8,  MVT::nxv4f16, 1 },
+      // Complex, from nxv4f16.
+      {ISD::FP_TO_SINT, MVT::nxv4i64, MVT::nxv4f16, 4},
+      {ISD::FP_TO_SINT, MVT::nxv4i32, MVT::nxv4f16, 1},
+      {ISD::FP_TO_SINT, MVT::nxv4i16, MVT::nxv4f16, 1},
+      {ISD::FP_TO_SINT, MVT::nxv4i8, MVT::nxv4f16, 1},
+      {ISD::FP_TO_UINT, MVT::nxv4i64, MVT::nxv4f16, 4},
+      {ISD::FP_TO_UINT, MVT::nxv4i32, MVT::nxv4f16, 1},
+      {ISD::FP_TO_UINT, MVT::nxv4i16, MVT::nxv4f16, 1},
+      {ISD::FP_TO_UINT, MVT::nxv4i8, MVT::nxv4f16, 1},
 
-    // Complex, from nxv2f16.
-    { ISD::FP_TO_SINT, MVT::nxv2i64, MVT::nxv2f16, 1 },
-    { ISD::FP_TO_SINT, MVT::nxv2i32, MVT::nxv2f16, 1 },
-    { ISD::FP_TO_SINT, MVT::nxv2i16, MVT::nxv2f16, 1 },
-    { ISD::FP_TO_SINT, MVT::nxv2i8,  MVT::nxv2f16, 1 },
-    { ISD::FP_TO_UINT, MVT::nxv2i64, MVT::nxv2f16, 1 },
-    { ISD::FP_TO_UINT, MVT::nxv2i32, MVT::nxv2f16, 1 },
-    { ISD::FP_TO_UINT, MVT::nxv2i16, MVT::nxv2f16, 1 },
-    { ISD::FP_TO_UINT, MVT::nxv2i8,  MVT::nxv2f16, 1 },
+      // Complex, from nxv2f16.
+      {ISD::FP_TO_SINT, MVT::nxv2i64, MVT::nxv2f16, 1},
+      {ISD::FP_TO_SINT, MVT::nxv2i32, MVT::nxv2f16, 1},
+      {ISD::FP_TO_SINT, MVT::nxv2i16, MVT::nxv2f16, 1},
+      {ISD::FP_TO_SINT, MVT::nxv2i8, MVT::nxv2f16, 1},
+      {ISD::FP_TO_UINT, MVT::nxv2i64, MVT::nxv2f16, 1},
+      {ISD::FP_TO_UINT, MVT::nxv2i32, MVT::nxv2f16, 1},
+      {ISD::FP_TO_UINT, MVT::nxv2i16, MVT::nxv2f16, 1},
+      {ISD::FP_TO_UINT, MVT::nxv2i8, MVT::nxv2f16, 1},
 
-    // Truncate from nxvmf32 to nxvmf16.
-    { ISD::FP_ROUND, MVT::nxv2f16, MVT::nxv2f32, 1 },
-    { ISD::FP_ROUND, MVT::nxv4f16, MVT::nxv4f32, 1 },
-    { ISD::FP_ROUND, MVT::nxv8f16, MVT::nxv8f32, 3 },
+      // Truncate from nxvmf32 to nxvmf16.
+      {ISD::FP_ROUND, MVT::nxv2f16, MVT::nxv2f32, 1},
+      {ISD::FP_ROUND, MVT::nxv4f16, MVT::nxv4f32, 1},
+      {ISD::FP_ROUND, MVT::nxv8f16, MVT::nxv8f32, 3},
 
-    // Truncate from nxvmf64 to nxvmf16.
-    { ISD::FP_ROUND, MVT::nxv2f16, MVT::nxv2f64, 1 },
-    { ISD::FP_ROUND, MVT::nxv4f16, MVT::nxv4f64, 3 },
-    { ISD::FP_ROUND, MVT::nxv8f16, MVT::nxv8f64, 7 },
+      // Truncate from nxvmf64 to nxvmf16.
+      {ISD::FP_ROUND, MVT::nxv2f16, MVT::nxv2f64, 1},
+      {ISD::FP_ROUND, MVT::nxv4f16, MVT::nxv4f64, 3},
+      {ISD::FP_ROUND, MVT::nxv8f16, MVT::nxv8f64, 7},
 
-    // Truncate from nxvmf64 to nxvmf32.
-    { ISD::FP_ROUND, MVT::nxv2f32, MVT::nxv2f64, 1 },
-    { ISD::FP_ROUND, MVT::nxv4f32, MVT::nxv4f64, 3 },
-    { ISD::FP_ROUND, MVT::nxv8f32, MVT::nxv8f64, 6 },
+      // Truncate from nxvmf64 to nxvmf32.
+      {ISD::FP_ROUND, MVT::nxv2f32, MVT::nxv2f64, 1},
+      {ISD::FP_ROUND, MVT::nxv4f32, MVT::nxv4f64, 3},
+      {ISD::FP_ROUND, MVT::nxv8f32, MVT::nxv8f64, 6},
 
-    // Extend from nxvmf16 to nxvmf32.
-    { ISD::FP_EXTEND, MVT::nxv2f32, MVT::nxv2f16, 1},
-    { ISD::FP_EXTEND, MVT::nxv4f32, MVT::nxv4f16, 1},
-    { ISD::FP_EXTEND, MVT::nxv8f32, MVT::nxv8f16, 2},
+      // Extend from nxvmf16 to nxvmf32.
+      {ISD::FP_EXTEND, MVT::nxv2f32, MVT::nxv2f16, 1},
+      {ISD::FP_EXTEND, MVT::nxv4f32, MVT::nxv4f16, 1},
+      {ISD::FP_EXTEND, MVT::nxv8f32, MVT::nxv8f16, 2},
 
-    // Extend from nxvmf16 to nxvmf64.
-    { ISD::FP_EXTEND, MVT::nxv2f64, MVT::nxv2f16, 1},
-    { ISD::FP_EXTEND, MVT::nxv4f64, MVT::nxv4f16, 2},
-    { ISD::FP_EXTEND, MVT::nxv8f64, MVT::nxv8f16, 4},
+      // Extend from nxvmf16 to nxvmf64.
+      {ISD::FP_EXTEND, MVT::nxv2f64, MVT::nxv2f16, 1},
+      {ISD::FP_EXTEND, MVT::nxv4f64, MVT::nxv4f16, 2},
+      {ISD::FP_EXTEND, MVT::nxv8f64, MVT::nxv8f16, 4},
 
-    // Extend from nxvmf32 to nxvmf64.
-    { ISD::FP_EXTEND, MVT::nxv2f64, MVT::nxv2f32, 1},
-    { ISD::FP_EXTEND, MVT::nxv4f64, MVT::nxv4f32, 2},
-    { ISD::FP_EXTEND, MVT::nxv8f64, MVT::nxv8f32, 6},
+      // Extend from nxvmf32 to nxvmf64.
+      {ISD::FP_EXTEND, MVT::nxv2f64, MVT::nxv2f32, 1},
+      {ISD::FP_EXTEND, MVT::nxv4f64, MVT::nxv4f32, 2},
+      {ISD::FP_EXTEND, MVT::nxv8f64, MVT::nxv8f32, 6},
 
-    // Bitcasts from float to integer
-    { ISD::BITCAST, MVT::nxv2f16, MVT::nxv2i16, 0 },
-    { ISD::BITCAST, MVT::nxv4f16, MVT::nxv4i16, 0 },
-    { ISD::BITCAST, MVT::nxv2f32, MVT::nxv2i32, 0 },
+      // Bitcasts from float to integer
+      {ISD::BITCAST, MVT::nxv2f16, MVT::nxv2i16, 0},
+      {ISD::BITCAST, MVT::nxv4f16, MVT::nxv4i16, 0},
+      {ISD::BITCAST, MVT::nxv2f32, MVT::nxv2i32, 0},
 
-    // Bitcasts from integer to float
-    { ISD::BITCAST, MVT::nxv2i16, MVT::nxv2f16, 0 },
-    { ISD::BITCAST, MVT::nxv4i16, MVT::nxv4f16, 0 },
-    { ISD::BITCAST, MVT::nxv2i32, MVT::nxv2f32, 0 },
+      // Bitcasts from integer to float
+      {ISD::BITCAST, MVT::nxv2i16, MVT::nxv2f16, 0},
+      {ISD::BITCAST, MVT::nxv4i16, MVT::nxv4f16, 0},
+      {ISD::BITCAST, MVT::nxv2i32, MVT::nxv2f32, 0},
 
-    // Add cost for extending to illegal -too wide- scalable vectors.
-    // zero/sign extend are implemented by multiple unpack operations,
-    // where each operation has a cost of 1.
-    { ISD::ZERO_EXTEND, MVT::nxv16i16, MVT::nxv16i8, 2},
-    { ISD::ZERO_EXTEND, MVT::nxv16i32, MVT::nxv16i8, 6},
-    { ISD::ZERO_EXTEND, MVT::nxv16i64, MVT::nxv16i8, 14},
-    { ISD::ZERO_EXTEND, MVT::nxv8i32, MVT::nxv8i16, 2},
-    { ISD::ZERO_EXTEND, MVT::nxv8i64, MVT::nxv8i16, 6},
-    { ISD::ZERO_EXTEND, MVT::nxv4i64, MVT::nxv4i32, 2},
+      // Add cost for extending to illegal -too wide- scalable vectors.
+      // zero/sign extend are implemented by multiple unpack operations,
+      // where each operation has a cost of 1.
+      {ISD::ZERO_EXTEND, MVT::nxv16i16, MVT::nxv16i8, 2},
+      {ISD::ZERO_EXTEND, MVT::nxv16i32, MVT::nxv16i8, 6},
+      {ISD::ZERO_EXTEND, MVT::nxv16i64, MVT::nxv16i8, 14},
+      {ISD::ZERO_EXTEND, MVT::nxv8i32, MVT::nxv8i16, 2},
+      {ISD::ZERO_EXTEND, MVT::nxv8i64, MVT::nxv8i16, 6},
+      {ISD::ZERO_EXTEND, MVT::nxv4i64, MVT::nxv4i32, 2},
 
-    { ISD::SIGN_EXTEND, MVT::nxv16i16, MVT::nxv16i8, 2},
-    { ISD::SIGN_EXTEND, MVT::nxv16i32, MVT::nxv16i8, 6},
-    { ISD::SIGN_EXTEND, MVT::nxv16i64, MVT::nxv16i8, 14},
-    { ISD::SIGN_EXTEND, MVT::nxv8i32, MVT::nxv8i16, 2},
-    { ISD::SIGN_EXTEND, MVT::nxv8i64, MVT::nxv8i16, 6},
-    { ISD::SIGN_EXTEND, MVT::nxv4i64, MVT::nxv4i32, 2},
+      {ISD::SIGN_EXTEND, MVT::nxv16i16, MVT::nxv16i8, 2},
+      {ISD::SIGN_EXTEND, MVT::nxv16i32, MVT::nxv16i8, 6},
+      {ISD::SIGN_EXTEND, MVT::nxv16i64, MVT::nxv16i8, 14},
+      {ISD::SIGN_EXTEND, MVT::nxv8i32, MVT::nxv8i16, 2},
+      {ISD::SIGN_EXTEND, MVT::nxv8i64, MVT::nxv8i16, 6},
+      {ISD::SIGN_EXTEND, MVT::nxv4i64, MVT::nxv4i32, 2},
   };
 
   // We have to estimate a cost of fixed length operation upon
@@ -3022,8 +3021,8 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       ST->useSVEForFixedLengthVectors(WiderTy)) {
     std::pair<InstructionCost, MVT> LT =
         getTypeLegalizationCost(WiderTy.getTypeForEVT(Dst->getContext()));
-    unsigned NumElements = AArch64::SVEBitsPerBlock /
-                           LT.second.getScalarSizeInBits();
+    unsigned NumElements =
+        AArch64::SVEBitsPerBlock / LT.second.getScalarSizeInBits();
     return AdjustCost(
         LT.first *
         getCastInstrCost(
@@ -3032,9 +3031,8 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
             CostKind, I));
   }
 
-  if (const auto *Entry = ConvertCostTableLookup(ConversionTbl, ISD,
-                                                 DstTy.getSimpleVT(),
-                                                 SrcTy.getSimpleVT()))
+  if (const auto *Entry = ConvertCostTableLookup(
+          ConversionTbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
     return AdjustCost(Entry->Cost);
 
   static const TypeConversionCostTblEntry FP16Tbl[] = {
