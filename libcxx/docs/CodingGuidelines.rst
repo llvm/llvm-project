@@ -168,3 +168,19 @@ have a recommended practice where to put them, so libc++ applies it whenever it 
 Applications of ``[[nodiscard]]`` are code like any other code, so we aim to test them on public interfaces. This can be
 done with a ``.verify.cpp`` test. Many examples are available. Just look for tests with the suffix
 ``.nodiscard.verify.cpp``.
+
+Don't use public API names for symbols on the ABI boundary
+==========================================================
+
+Most functions in libc++ are defined in headers either as templates or as ``inline`` functions. However, we sometimes
+need or want to define functions in the built library. Symbols that are declared in the headers and defined in the
+built library become part of the ABI of libc++, which must be preserved for backwards compatibility. This means that
+we can't easily remove or rename such symbols except in special cases.
+
+When adding a symbol to the built library, make sure not to use a public name directly. Instead, define a
+``_LIBCPP_HIDE_FROM_ABI`` function in the headers with the public name and have it call a private function in the built
+library. This approach makes it easier to make changes to libc++ like move something from the built library to the
+headers (which is sometimes required for ``constexpr`` support).
+
+When defining a function at the ABI boundary, it can also be useful to consider which attributes (like ``[[gnu::pure]]``
+and ``[[clang::noescape]]``) can be added to the function to improve the compiler's ability to optimize.

@@ -717,7 +717,8 @@ public:
   // Does the checking for a 'gang' clause that needs to be done in dependent
   // and not dependent cases.
   OpenACCClause *
-  CheckGangClause(ArrayRef<const OpenACCClause *> ExistingClauses,
+  CheckGangClause(OpenACCDirectiveKind DirKind,
+                  ArrayRef<const OpenACCClause *> ExistingClauses,
                   SourceLocation BeginLoc, SourceLocation LParenLoc,
                   ArrayRef<OpenACCGangKind> GangKinds,
                   ArrayRef<Expr *> IntExprs, SourceLocation EndLoc);
