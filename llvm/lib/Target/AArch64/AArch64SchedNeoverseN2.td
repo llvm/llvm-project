@@ -833,7 +833,7 @@ def : SchedAlias<WriteFCmp,  N2Write_2c_1V0>;
 
 // FP divide and square root operations are performed using an iterative
 // algorithm and block subsequent similar operations to the same pipeline
-// until complete.
+// until complete (Arm Neoverse N2 Software Optimization Guide, 3.14).
 
 // FP divide, square root
 def : SchedAlias<WriteFDiv,  N2Write_7c_7V0>;
