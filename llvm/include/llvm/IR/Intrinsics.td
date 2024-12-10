@@ -327,6 +327,7 @@ def IIT_I4 : IIT_Int<4, 58>;
 def IIT_AARCH64_SVCOUNT : IIT_VT<aarch64svcount, 59>;
 def IIT_V6 : IIT_Vec<6, 60>;
 def IIT_V10 : IIT_Vec<10, 61>;
+def IIT_v9  : IIT_Vec<9, 62>;
 }
 
 defvar IIT_all_FixedTypes = !filter(iit, IIT_all,
@@ -579,6 +580,7 @@ def llvm_v2f32_ty      : LLVMType<v2f32>;    //  2 x float
 def llvm_v3f32_ty      : LLVMType<v3f32>;    //  3 x float
 def llvm_v4f32_ty      : LLVMType<v4f32>;    //  4 x float
 def llvm_v8f32_ty      : LLVMType<v8f32>;    //  8 x float
+def llvm_v9f32_ty      : LLVMType<v9f32>;    //  9 x float
 def llvm_v10f32_ty     : LLVMType<v10f32>;   // 10 x float
 def llvm_v16f32_ty     : LLVMType<v16f32>;   // 16 x float
 def llvm_v32f32_ty     : LLVMType<v32f32>;   // 32 x float

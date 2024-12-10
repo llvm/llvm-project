@@ -4402,6 +4402,11 @@ bool AMDGPUAsmParser::validateMIMGAtomicDMask(const MCInst &Inst) {
     return true;
   if (!Desc.mayLoad() || !Desc.mayStore())
     return true; // Not atomic
+  if ((Desc.TSFlags & SIInstrFlags::VIMAGE) != 0 &&
+      AMDGPU::getMIMGBaseOpcodeInfo(AMDGPU::getMIMGInfo(Opc)->BaseOpcode)
+          ->BVH &&
+      isGFX13())
+    return true; // RTS instructions don't use dmask
 
   int DMaskIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::dmask);
   unsigned DMask = Inst.getOperand(DMaskIdx).getImm() & 0xf;

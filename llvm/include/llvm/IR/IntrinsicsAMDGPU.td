@@ -3877,6 +3877,21 @@ def int_amdgcn_rts_ray_restore: Intrinsic<
   [], [llvm_i32_ty], [IntrReadMem, IntrHasSideEffects, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]
 >;
 
+// llvm.amdgcn.rts.trace.ray <ray_init_data> <ray_init_flag> <ray_extent> <ray_origin> <ray_dir> <texture_descr>
+def int_amdgcn_rts_trace_ray : Intrinsic<[],
+    [llvm_i32_ty , llvm_v3i32_ty, llvm_float_ty, llvm_v3f32_ty, llvm_v3f32_ty, llvm_v4i32_ty],
+    [IntrHasSideEffects, IntrNoCallback, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<5>;
+
+// <vdata> llvm.amdgcn.rts.trace.ray <ray_init_data> <ray_init_flag> <ray_extent> <ray_origin> <ray_dir> <texture_descr>
+def int_amdgcn_rts_trace_ray_nonblock : Intrinsic<[llvm_i32_ty],
+    [llvm_i32_ty , llvm_v3i32_ty, llvm_float_ty, llvm_v3f32_ty, llvm_v3f32_ty, llvm_v4i32_ty],
+    [IntrHasSideEffects, IntrNoCallback, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<5>;
+
+// <vdata> llvm.amdgcn_rts_read_vertex <vaddr0> <vaddr1> <vaddr2>
+def int_amdgcn_rts_read_vertex: Intrinsic<[llvm_v9f32_ty],
+    [global_ptr_ty, llvm_i32_ty],
+    [IntrReadMem, IntrHasSideEffects, IntrNoCallback, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]>;
+
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
 //===----------------------------------------------------------------------===//

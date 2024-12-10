@@ -1750,6 +1750,21 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 
     return true;
   }
+  case Intrinsic::amdgcn_rts_trace_ray:
+  case Intrinsic::amdgcn_rts_trace_ray_nonblock:
+  case Intrinsic::amdgcn_rts_read_vertex: {
+    if (IntrID == Intrinsic::amdgcn_rts_trace_ray) {
+      Info.opc = ISD::INTRINSIC_VOID;
+      Info.memVT = MVT::i32;
+    } else {
+      Info.opc = ISD::INTRINSIC_W_CHAIN;
+      Info.memVT = MVT::getVT(CI.getType());
+    }
+    Info.flags |= MachineMemOperand::MOLoad;
+    if (IntrID != Intrinsic::amdgcn_rts_read_vertex)
+      Info.flags |= MachineMemOperand::MOStore;
+    return true;
+  }
   case Intrinsic::amdgcn_s_prefetch_data:
   case Intrinsic::amdgcn_flat_prefetch:
   case Intrinsic::amdgcn_global_prefetch: {
