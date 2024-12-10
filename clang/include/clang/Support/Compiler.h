@@ -14,8 +14,6 @@
 #ifndef CLANG_SUPPORT_COMPILER_H
 #define CLANG_SUPPORT_COMPILER_H
 
-#include "llvm/Support/Compiler.h"
-
 /// CLANG_ABI is the main export/visibility macro to mark something as
 /// explicitly exported when clang is built as a shared library with everything
 /// else that is unannotated having hidden visibility.
