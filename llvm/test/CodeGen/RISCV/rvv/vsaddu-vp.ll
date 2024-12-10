@@ -10,11 +10,10 @@ define <vscale x 8 x i7> @vsaddu_vx_nxv8i7(<vscale x 8 x i7> %a, i7 signext %b, 
 ; CHECK-LABEL: vsaddu_vx_nxv8i7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 127
-; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vand.vx v8, v8, a2
 ; CHECK-NEXT:    vand.vx v9, v9, a2
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vminu.vx v8, v8, a2, v0.t
 ; CHECK-NEXT:    ret
