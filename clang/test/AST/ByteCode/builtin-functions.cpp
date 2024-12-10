@@ -1198,11 +1198,11 @@ namespace BuiltinMemcpy {
   }
   static_assert(simpleMove() == 12);
 
-  constexpr int memcpyTypeRem() { // ref-error {{never produces a constant expression}}
+  constexpr int memcpyTypeRem() { // both-error {{never produces a constant expression}}
     int a = 12;
     int b = 0;
     __builtin_memmove(&b, &a, 1); // both-note {{'memmove' not supported: size to copy (1) is not a multiple of size of element type 'int'}} \
-                                  // ref-note {{not supported}}
+                                  // both-note {{not supported}}
     return b;
   }
   static_assert(memcpyTypeRem() == 12); // both-error {{not an integral constant expression}} \
