@@ -7,6 +7,11 @@
 #===------------------------------------------------------------------------===#
 
 include(AddFlangRTOffload)
+# function checks
+find_package(Backtrace)
+set(HAVE_BACKTRACE ${Backtrace_FOUND})
+set(BACKTRACE_HEADER ${Backtrace_HEADER})
+
 
 # List of files that are buildable for all devices.
 set(supported_sources
