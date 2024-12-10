@@ -499,6 +499,26 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VSUB_VX:
   case RISCV::VRSUB_VI:
   case RISCV::VRSUB_VX:
+  // Vector Bitwise Logical Instructions
+  // Vector Single-Width Shift Instructions
+  case RISCV::VAND_VI:
+  case RISCV::VAND_VV:
+  case RISCV::VAND_VX:
+  case RISCV::VOR_VI:
+  case RISCV::VOR_VV:
+  case RISCV::VOR_VX:
+  case RISCV::VXOR_VI:
+  case RISCV::VXOR_VV:
+  case RISCV::VXOR_VX:
+  case RISCV::VSLL_VI:
+  case RISCV::VSLL_VV:
+  case RISCV::VSLL_VX:
+  case RISCV::VSRL_VI:
+  case RISCV::VSRL_VV:
+  case RISCV::VSRL_VX:
+  case RISCV::VSRA_VI:
+  case RISCV::VSRA_VV:
+  case RISCV::VSRA_VX:
   // Vector Widening Integer Add/Subtract
   case RISCV::VWADDU_VV:
   case RISCV::VWADDU_VX:
@@ -525,11 +545,6 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VSEXT_VF8:
   // Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
   // FIXME: Add support
-  // Vector Bitwise Logical Instructions
-  // FIXME: Add support
-  // Vector Single-Width Shift Instructions
-  // FIXME: Add support
-  case RISCV::VSLL_VI:
   // Vector Narrowing Integer Right Shift Instructions
   // FIXME: Add support
   case RISCV::VNSRL_WI:
@@ -592,6 +607,7 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   // FIXME: Add support
   case RISCV::VMV_V_I:
   case RISCV::VMV_V_X:
+  case RISCV::VMV_V_V:
 
   // Vector Crypto
   case RISCV::VWSLL_VI:
