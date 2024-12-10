@@ -726,7 +726,7 @@ public:
       if (targetFeaturesAttr)
         fn->setAttr("target_features", targetFeaturesAttr);
 
-      convertSignature<mlir::func::ReturnOp>(fn);
+      convertSignature<mlir::func::ReturnOp, mlir::func::FuncOp>(fn);
     }
 
     for (auto gpuMod : mod.getOps<mlir::gpu::GPUModuleOp>()) {
