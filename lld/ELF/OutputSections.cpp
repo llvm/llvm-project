@@ -257,13 +257,11 @@ void OutputSection::finalizeInputSections() {
     // Merging may have increased the alignment of a spillable section. Update
     // the alignment of potential spill sections and their containing output
     // sections.
-    if (!script->potentialSpillLists.empty()) {
-      if (auto it = script->potentialSpillLists.find(ms);
-          it != script->potentialSpillLists.end()) {
-        for (PotentialSpillSection *s = it->second.head; s; s = s->next) {
-          s->addralign = std::max(s->addralign, ms->addralign);
-          s->parent->addralign = std::max(s->parent->addralign, s->addralign);
-        }
+    if (auto it = script->potentialSpillLists.find(ms);
+        it != script->potentialSpillLists.end()) {
+      for (PotentialSpillSection *s = it->second.head; s; s = s->next) {
+        s->addralign = std::max(s->addralign, ms->addralign);
+        s->parent->addralign = std::max(s->parent->addralign, s->addralign);
       }
     }
 
