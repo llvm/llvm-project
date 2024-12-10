@@ -4267,14 +4267,6 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
           getCXX20NamedModuleOutputPath(Args, Input.getBaseInput())));
   }
 
-  if ((Input.getType() == driver::types::TY_CXXModule ||
-       Input.getType() == driver::types::TY_PP_CXXModule) &&
-      (Args.hasArg(options::OPT_fmodule_output) ||
-       Args.hasArg(options::OPT_fmodule_output_EQ) ||
-       Args.hasArg(options::OPT__precompile)) &&
-      !Args.hasArg(options::OPT_modules_reduced_bmi))
-    D.Diag(diag::warn_drv_module_reduced_bmi_not_enabled);
-
   // Noop if we see '-fmodules-reduced-bmi' with other translation
   // units than module units. This is more user friendly to allow end uers to
   // enable this feature without asking for help from build systems.

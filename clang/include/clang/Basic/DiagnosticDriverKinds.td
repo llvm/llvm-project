@@ -555,13 +555,6 @@ def err_test_module_file_extension_format : Error<
 def err_drv_module_output_with_multiple_arch : Error<
   "option '-fmodule-output' cannot be used with multiple arch options">;
 
-def warn_drv_module_reduced_bmi_not_enabled : Warning<
-  "reduced BMI is expected to be enabled by default in Clang 21; it can be enabled "
-  "explicitly by passing '-fmodules-reduced-bmi' (in one-phase compilation models, "
-  "like CMake) or by disabling the diagnostic and requesting the build system vendor "
-  "support reduced BMIs (in two-phase compilation models)">,
-  InGroup<DiagGroup<"missing-reduced-bmi">>;
-
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,
   InGroup<DiagGroup<"delayed-template-parsing-in-cxx20">>;

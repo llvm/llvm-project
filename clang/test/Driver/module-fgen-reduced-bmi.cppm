@@ -53,12 +53,6 @@
 // RUN:     -c -o Hello.o -### 2>&1 | FileCheck Hello.cc
 //
 // RUN: %clang -std=c++20 Hello.cppm -fmodule-output=Hello.pcm -c -o Hello.o \
-// RUN:     -### 2>&1 | FileCheck Hello.cppm -check-prefix=WARN
-//
-// RUN: %clang -std=c++20 Hello.cppm --precompile -o Hello.pcm \
-// RUN:     -### 2>&1 | FileCheck Hello.cppm -check-prefix=WARN
-//
-// RUN: %clang -std=c++20 Hello.cppm -fmodule-output=Hello.pcm -c -o Hello.o \
 // RUN:     -Wno-missing-reduced-bmi -### 2>&1 | FileCheck Hello.cppm -check-prefix=NO_WARN
 //
 // RUN: %clang -std=c++20 Hello.cppm --precompile -o Hello.pcm \
@@ -80,7 +74,6 @@ export module Hello;
 // flag.
 // CHECK-EMIT-MODULE-INTERFACE: -emit-module-interface
 
-// WARN: reduced BMI is expected to be enabled by default in Clang 21;
 // NO_WARN-NOT: warning
 
 //--- Hello.cc
