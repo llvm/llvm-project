@@ -563,15 +563,14 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
 
     // Populate the `init` region.
     const bool needsInitialization =
-        !fir::isa_trivial(allocType) ||
-        Fortran::lower::hasDefaultInitialization(sym->GetUltimate());
+        Fortran::lower::hasDefaultInitialization(sym->GetUltimate()) ||
+        mlir::isa<fir::BaseBoxType>(allocType) ||
+        mlir::isa<fir::BoxCharType>(allocType);
     if (needsInitialization) {
       mlir::Region &initRegion = result.getInitRegion();
       mlir::Block *initBlock = firOpBuilder.createBlock(
           &initRegion, /*insertPt=*/{}, {argType, argType}, {symLoc, symLoc});
 
-      if (fir::isa_char(allocType))
-        TODO(symLoc, "Privatization init of characters");
       if (fir::isa_derived(allocType))
         TODO(symLoc, "Privatization init of derived types");
       if (Fortran::lower::hasDefaultInitialization(sym->GetUltimate()))

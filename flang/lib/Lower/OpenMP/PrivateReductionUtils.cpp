@@ -12,9 +12,13 @@
 
 #include "PrivateReductionUtils.h"
 
+#include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -62,6 +66,21 @@ static void createCleanupRegion(fir::FirOpBuilder &builder, mlir::Location loc,
     builder.create<fir::FreeMemOp>(loc, cast);
 
     builder.setInsertionPointAfter(ifOp);
+    builder.create<mlir::omp::YieldOp>(loc);
+    return;
+  }
+
+  if (auto boxCharTy = mlir::dyn_cast<fir::BoxCharType>(argType)) {
+    auto [addr, len] =
+        fir::factory::CharacterExprHelper{builder, loc}.createUnboxChar(
+            block->getArgument(0));
+
+    // convert addr to a heap type so it can be used with fir::FreeMemOp
+    auto refTy = mlir::cast<fir::ReferenceType>(addr.getType());
+    auto heapTy = fir::HeapType::get(refTy.getEleTy());
+    addr = builder.createConvert(loc, heapTy, addr);
+
+    builder.create<fir::FreeMemOp>(loc, addr);
     builder.create<mlir::omp::YieldOp>(loc);
     return;
   }
@@ -129,6 +148,8 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
   // }
   // omp.yield %box_alloca
   moldArg = builder.loadIfRef(loc, moldArg);
+  mlir::SmallVector<mlir::Value> lenParams;
+  hlfir::genLengthParameters(loc, builder, hlfir::Entity{moldArg}, lenParams);
   auto handleNullAllocatable = [&](mlir::Value boxAlloca) -> fir::IfOp {
     mlir::Value addr = builder.create<fir::BoxAddrOp>(loc, moldArg);
     mlir::Value isNotAllocated = builder.genIsNullAddr(loc, addr);
@@ -136,7 +157,9 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
                                                /*withElseRegion=*/true);
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
     // just embox the null address and return
-    mlir::Value nullBox = builder.create<fir::EmboxOp>(loc, ty, addr);
+    mlir::Value nullBox =
+        builder.create<fir::EmboxOp>(loc, ty, addr, /*shape=*/mlir::Value{},
+                                     /*slice=*/mlir::Value{}, lenParams);
     builder.create<fir::StoreOp>(loc, nullBox, boxAlloca);
     return ifOp;
   };
@@ -149,7 +172,8 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
     builder.setInsertionPointToEnd(initBlock);
     mlir::Value boxAlloca = allocatedPrivVarArg;
     mlir::Type innerTy = fir::unwrapRefType(boxTy.getEleTy());
-    if (fir::isa_trivial(innerTy)) {
+    bool isChar = fir::isa_char(innerTy);
+    if (fir::isa_trivial(innerTy) || isChar) {
       // boxed non-sequence value e.g. !fir.box<!fir.heap<i32>>
       if (!isAllocatableOrPointer)
         TODO(loc,
@@ -158,10 +182,13 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
       fir::IfOp ifUnallocated = handleNullAllocatable(boxAlloca);
 
       builder.setInsertionPointToStart(&ifUnallocated.getElseRegion().front());
-      mlir::Value valAlloc = builder.create<fir::AllocMemOp>(loc, innerTy);
+      mlir::Value valAlloc = builder.createHeapTemporary(
+          loc, innerTy, /*name=*/{}, /*shape=*/{}, lenParams);
       if (scalarInitValue)
         builder.createStoreWithConvert(loc, scalarInitValue, valAlloc);
-      mlir::Value box = builder.create<fir::EmboxOp>(loc, ty, valAlloc);
+      mlir::Value box = builder.create<fir::EmboxOp>(
+          loc, ty, valAlloc, /*shape=*/mlir::Value{}, /*slice=*/mlir::Value{},
+          lenParams);
       builder.create<fir::StoreOp>(loc, box, boxAlloca);
 
       createCleanupRegion(builder, loc, argType, cleanupRegion);
@@ -170,7 +197,7 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
       return;
     }
     innerTy = fir::extractSequenceType(boxTy);
-    if (!mlir::isa<fir::SequenceType>(innerTy))
+    if (!innerTy || !mlir::isa<fir::SequenceType>(innerTy))
       TODO(loc, "Unsupported boxed type for reduction/privatization");
 
     fir::IfOp ifUnallocated{nullptr};
@@ -227,6 +254,31 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
     if (ifUnallocated)
       builder.setInsertionPointAfter(ifUnallocated);
     yield(boxAlloca);
+    return;
+  }
+
+  if (auto boxCharTy = mlir::dyn_cast<fir::BoxCharType>(argType)) {
+    mlir::Type eleTy = boxCharTy.getEleTy();
+    builder.setInsertionPointToStart(initBlock);
+    fir::factory::CharacterExprHelper charExprHelper{builder, loc};
+    auto [addr, len] = charExprHelper.createUnboxChar(moldArg);
+
+    // Using heap temporary so that
+    // 1) It is safe to use privatization inside of big loops.
+    // 2) The lifetime can outlive the current stack frame for delayed task
+    // execution.
+    // We can't always allocate a boxchar implicitly as the type of the
+    // omp.private because the allocation potentially needs the length
+    // parameters fetched above.
+    // TODO: this deviates from the intended design for delayed task execution.
+    mlir::Value privateAddr = builder.createHeapTemporary(
+        loc, eleTy, /*name=*/{}, /*shape=*/{}, /*lenParams=*/len);
+    mlir::Value boxChar = charExprHelper.createEmboxChar(privateAddr, len);
+
+    createCleanupRegion(builder, loc, argType, cleanupRegion);
+
+    builder.setInsertionPointToEnd(initBlock);
+    yield(boxChar);
     return;
   }
 
