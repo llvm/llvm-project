@@ -2460,6 +2460,8 @@ public:
     /// the whole vector (it is mixed with constants or loop invariant values).
     /// Note: This modifies the 'IsUsed' flag, so a cleanUsed() must follow.
     bool shouldBroadcast(Value *Op, unsigned OpIdx, unsigned Lane) {
+      assert(Op == getValue(OpIdx, Lane) &&
+             "Op is expected to be getValue(OpIdx, Lane).");
       // Small number of loads - try load matching.
       if (isa<LoadInst>(Op) && getNumLanes() == 2 && getNumOperands() == 2)
         return false;
@@ -2517,6 +2519,8 @@ public:
     /// Checks if there is at least single compatible operand in lanes other
     /// than \p Lane, compatible with the operand \p Op.
     bool canBeVectorized(Instruction *Op, unsigned OpIdx, unsigned Lane) const {
+      assert(Op == getValue(OpIdx, Lane) &&
+             "Op is expected to be getValue(OpIdx, Lane).");
       bool OpAPO = getData(OpIdx, Lane).APO;
       for (unsigned Ln = 0, Lns = getNumLanes(); Ln != Lns; ++Ln) {
         if (Ln == Lane)
