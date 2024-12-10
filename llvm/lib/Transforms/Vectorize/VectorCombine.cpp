@@ -667,7 +667,8 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
 
   auto *VecTy = cast<FixedVectorType>(I.getType());
   auto *SrcVecTy = cast<FixedVectorType>(SrcVec->getType());
-  if (SrcVecTy->getScalarType() != VecTy->getScalarType())
+  auto *ScalarTy = SrcVecTy->getScalarType();
+  if (ScalarTy != VecTy->getScalarType())
     return false;
 
   // Ignore bogus insert/extract index.
@@ -681,8 +682,6 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
   SmallVector<int> Mask(NumElts);
   std::iota(Mask.begin(), Mask.end(), 0);
   Mask[Index] = Index + NumElts;
-
-  Type *ScalarTy = SrcVecTy->getScalarType();
   InstructionCost OldCost =
       TTI.getArithmeticInstrCost(Instruction::FNeg, ScalarTy, CostKind) +
       TTI.getVectorInstrCost(I, VecTy, CostKind, Index);
