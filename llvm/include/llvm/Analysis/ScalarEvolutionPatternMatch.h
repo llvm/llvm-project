@@ -15,6 +15,7 @@
 #define LLVM_ANALYSIS_SCALAREVOLUTIONPATTERNMATCH_H
 
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/IR/PatternMatch.h"
 
 namespace llvm {
 namespace SCEVPatternMatch {
@@ -24,34 +25,19 @@ bool match(const SCEV *S, const Pattern &P) {
   return P.match(S);
 }
 
-/// Match a specified integer value. \p BitWidth optionally specifies the
-/// bitwidth the matched constant must have. If it is 0, the matched constant
-/// can have any bitwidth.
-template <unsigned BitWidth = 0> struct specific_intval {
-  APInt Val;
+struct specific_intval64 : public PatternMatch::specific_intval64<false> {
+  specific_intval64(uint64_t V) : PatternMatch::specific_intval64<false>(V) {}
 
-  specific_intval(APInt V) : Val(std::move(V)) {}
-
-  bool match(const SCEV *S) const {
-    const auto *C = dyn_cast<SCEVConstant>(S);
-    if (!C)
-      return false;
-
-    if (BitWidth != 0 && C->getAPInt().getBitWidth() != BitWidth)
-      return false;
-    return APInt::isSameValue(C->getAPInt(), Val);
+  bool match(const SCEV *S) {
+    auto *Cast = dyn_cast<SCEVConstant>(S);
+    return Cast &&
+           PatternMatch::specific_intval64<false>::match(Cast->getValue());
   }
 };
 
-inline specific_intval<0> m_scev_Zero() {
-  return specific_intval<0>(APInt(64, 0));
-}
-inline specific_intval<0> m_scev_One() {
-  return specific_intval<0>(APInt(64, 1));
-}
-inline specific_intval<0> m_scev_MinusOne() {
-  return specific_intval<0>(APInt(64, -1));
-}
+inline specific_intval64 m_scev_Zero() { return specific_intval64(0); }
+inline specific_intval64 m_scev_One() { return specific_intval64(1); }
+inline specific_intval64 m_scev_MinusOne() { return specific_intval64(-1); }
 
 } // namespace SCEVPatternMatch
 } // namespace llvm
