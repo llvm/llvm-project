@@ -10769,10 +10769,15 @@ class sve2_fp8_cvt_single<bit L, bits<2> opc, string mnemonic,
   let Inst{9-5}   = Zn;
   let Inst{4-0}   = Zd;
   let Uses = [FPMR, FPCR];
+
+  let mayLoad  = 1;
+  let mayStore = 0;
 }
 
-multiclass sve2_fp8_cvt_single<bit L, bits<2> opc, string mnemonic> {
+multiclass sve2_fp8_cvt_single<bit L, bits<2> opc, string mnemonic, ValueType vtd, SDPatternOperator op> {
   def _BtoH : sve2_fp8_cvt_single<L, opc, mnemonic, ZPR16, ZPR8>;
+  
+  def : SVE_1_Op_Pat<vtd, op, nxv16i8, !cast<Instruction>(NAME # _BtoH)>;
 }
 
 // FP8 downconvert

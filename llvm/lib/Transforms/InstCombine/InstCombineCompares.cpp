@@ -3622,7 +3622,8 @@ Instruction *InstCombinerImpl::foldICmpBinOpEqualityWithConstant(
               m_OneUse(m_c_Or(m_CombineAnd(m_Value(Sel),
                                            m_Select(m_Value(Cond), m_Value(TV),
                                                     m_Value(FV))),
-                              m_Value(Other))))) {
+                              m_Value(Other)))) &&
+        Cond->getType() == Cmp.getType()) {
       const SimplifyQuery Q = SQ.getWithInstruction(&Cmp);
       // Easy case is if eq/ne matches whether 0 is trueval/falseval.
       if (Pred == ICmpInst::ICMP_EQ
