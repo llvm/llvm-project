@@ -188,7 +188,6 @@ GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::dump() const {
     return;
   } else
     OS << "Lazy\n";
-  int Index = 0;
 
   auto printBlockInfo = [&](BasicBlockT *BB, StringRef Ending) {
     if (BB) {
@@ -206,12 +205,10 @@ GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::dump() const {
           typename ArrayRef<DomTreeUpdate>::const_iterator end) {
         if (begin == end)
           OS << "  None\n";
-        Index = 0;
-        for (auto It = begin, ItEnd = end; It != ItEnd; ++It) {
-          if (!It->IsCriticalEdgeSplit) {
-            auto U = It->Update;
+        for (auto [Index, DTUpdate] : enumerate(make_range(begin, end))) {
+          if (!DTUpdate.IsCriticalEdgeSplit) {
+            auto U = DTUpdate.Update;
             OS << "  " << Index << " : ";
-            ++Index;
             if (U.getKind() == DomTreeT::Insert)
               OS << "Insert, ";
             else
@@ -219,8 +216,8 @@ GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::dump() const {
             printBlockInfo(U.getFrom(), ", ");
             printBlockInfo(U.getTo(), "\n");
           } else {
-            const auto &Edge = It->EdgeSplit;
-            OS << "  " << Index++ << " : Split critical edge, ";
+            const auto &Edge = DTUpdate.EdgeSplit;
+            OS << "  " << Index << " : Split critical edge, ";
             printBlockInfo(Edge.FromBB, ", ");
             printBlockInfo(Edge.ToBB, ", ");
             printBlockInfo(Edge.NewBB, "\n");
@@ -249,10 +246,8 @@ GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::dump() const {
   }
 
   OS << "Pending DeletedBBs:\n";
-  Index = 0;
-  for (const auto *BB : DeletedBBs) {
+  for (auto [Index, BB] : enumerate(DeletedBBs)) {
     OS << "  " << Index << " : ";
-    ++Index;
     if (BB->hasName())
       OS << BB->getName() << "(";
     else
@@ -463,7 +458,7 @@ void GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::
       if (NewBBs.count(SuccBB)) {
         assert(succ_size(SuccBB) == 1 && "A basic block resulting from a "
                                          "critical edge split has more "
-                                         "than one predecessor!");
+                                         "than one successor!");
         SuccBB = *succ_begin(SuccBB);
       }
       if (!PDT->dominates(PredDTNode, PDT->getNode(SuccBB))) {
