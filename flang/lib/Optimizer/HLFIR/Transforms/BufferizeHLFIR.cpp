@@ -808,8 +808,7 @@ struct ElementalOpConversion
       if (asExpr->hasOneUse() && !asExpr.isMove()) {
         // Check that the asExpr is the final operation before the yield,
         // otherwise, clean-ups could impact the memory being re-used.
-        mlir::Operation *nextOp = asExpr->getNextNode();
-        if (nextOp && nextOp == yield.getOperation()) {
+        if (asExpr->getNextNode() == yield.getOperation()) {
           elementValue = hlfir::Entity{asExpr.getVar()};
           rewriter.eraseOp(asExpr);
         }
