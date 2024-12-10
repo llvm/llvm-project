@@ -19,7 +19,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $r1d = LGFI 0
   ; CHECK-NEXT:   ST128 renamable $r0q, $r15d, 168, $noreg
-  ; CHECK-NEXT:   ST renamable $r0l, $r15d, 160, $noreg
+  ; CHECK-NEXT:   ST killed renamable $r0l, $r15d, 160, $noreg
   ; CHECK-NEXT:   Return
   bb.0:
     renamable $r0l = LHIMux -1
@@ -44,7 +44,7 @@ body:             |
     ; CHECK-NEXT: STG renamable $r1d, killed $r15d, 8, $noreg
     ; CHECK-NEXT: renamable $r0d = LLILL 0
     ; CHECK-NEXT: ST128 renamable $r0q, $r15d, 0, $noreg
-    ; CHECK-NEXT: STG renamable $r1d, killed $r15d, 8, $noreg
+    ; CHECK-NEXT: STG killed renamable $r1d, killed $r15d, 8, $noreg
     ; CHECK-NEXT: Return
     renamable $r1d = LLILL 1
     STG killed renamable $r1d, killed $r15d, 8, $noreg
