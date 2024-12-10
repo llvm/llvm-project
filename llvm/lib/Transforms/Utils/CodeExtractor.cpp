@@ -627,28 +627,23 @@ bool CodeExtractor::isEligible() const {
         return false;
     }
   }
-  // stacksave as input implies stackrestore in the outlined function
-  // This can confuse prologue epilogue insertion phase
-  // stacksave's uses must not cross outlined function
+  // stacksave as input implies stackrestore in the outlined function.
+  // This can confuse prolog epilog insertion phase.
+  // stacksave's uses must not cross outlined function.
   for (BasicBlock *BB : Blocks) {
-    for (Instruction &II : *BB) {
-      if (IntrinsicInst *Intrin = dyn_cast<IntrinsicInst>(&II)) {
-        if (Intrin->getIntrinsicID() == Intrinsic::stacksave) {
-          for (User *U : Intrin->users())
-            if (!definedInRegion(Blocks, U)) {
-              return false; // stack-restore outside outlined region
-            }
-        }
+    for (Instruction &I : *BB) {
+      IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
+      if (!II)
+        continue;
+      bool IsSave = II->getIntrinsicID() == Intrinsic::stacksave;
+      bool IsRestore = II->getIntrinsicID() == Intrinsic::stackrestore;
+      if (IsSave && any_of(II->users(), [&Blks = this->Blocks](User *U) {
+            return !definedInRegion(Blks, U);
+          })) {
+        return false;
       }
-      for (auto &OI : II.operands()) {
-        Value *V = OI;
-        if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(V)) {
-          if (II->getIntrinsicID() == Intrinsic::stacksave) {
-            if (definedInCaller(Blocks, V)) {
-              return false;
-            }
-          }
-        }
+      if (IsRestore && !definedInRegion(Blocks, II->getArgOperand(0))) {
+        return false;
       }
     }
   }
