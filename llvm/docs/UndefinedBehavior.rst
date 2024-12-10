@@ -189,7 +189,7 @@ becoming obvious that it is UB.
 
 Poison Values
 -------------
-Poison values are a stronger from of deferred UB than undef. They still
+Poison values are a stronger form of deferred UB than undef. They still
 allow instructions to be executed speculatively, but they taint the whole
 expression DAG (with some exceptions), akin to floating point NaN values.
 
