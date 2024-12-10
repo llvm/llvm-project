@@ -17,14 +17,14 @@ Functions
     - C23 Standard Section
     - POSIX.1-2024 Standard Section
   * - bcmp
-    -
+    - |check|
     -
     - removed in POSIX.1-2008
   * - bcopy
-    -
+    - |check|
     -
     - removed in POSIX.1-2008
   * - bzero
-    -
+    - |check|
     -
     - removed in POSIX.1-2008
