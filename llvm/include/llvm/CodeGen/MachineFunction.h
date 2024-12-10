@@ -26,11 +26,14 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/EHPersonalities.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ArrayRecycler.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/Recycler.h"
 #include "llvm/Target/TargetOptions.h"
 #include <bitset>
@@ -486,6 +489,40 @@ public:
   struct CallSiteInfo {
     /// Vector of call argument and its forwarding register.
     SmallVector<ArgRegPair, 1> ArgRegPairs;
+
+    /// Callee type id.
+    ConstantInt *TypeId = nullptr;
+
+    CallSiteInfo() = default;
+
+    /// Extracts the numeric type id from the CallBase's type operand bundle,
+    /// and sets TypeId. This is used as type id for the indirect call in the
+    /// call graph section.
+    CallSiteInfo(const CallBase &CB) {
+      // Call graph section needs numeric type id only for indirect calls.
+      if (!CB.isIndirectCall())
+        return;
+
+      std::optional<OperandBundleUse> Opt =
+          CB.getOperandBundle(LLVMContext::OB_type);
+      // Return if the operand bundle for call graph section cannot be found.
+      if (!Opt)
+        return;
+
+      // Get generalized type id string
+      auto OB = *Opt;
+      assert(OB.Inputs.size() == 1 && "invalid input size");
+      auto *OBVal = OB.Inputs.front().get();
+      auto *TypeIdMD = cast<MetadataAsValue>(OBVal)->getMetadata();
+      auto *TypeIdStr = cast<MDString>(TypeIdMD);
+      assert(TypeIdStr->getString().ends_with(".generalized") &&
+             "invalid type identifier");
+
+      // Compute numeric type id from generalized type id string
+      uint64_t TypeIdVal = MD5Hash(TypeIdStr->getString());
+      IntegerType *Int64Ty = Type::getInt64Ty(CB.getContext());
+      TypeId = ConstantInt::get(Int64Ty, TypeIdVal, /*IsSigned=*/false);
+    }
   };
 
 private:
