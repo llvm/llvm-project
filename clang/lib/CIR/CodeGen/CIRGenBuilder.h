@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LIB_CIR_CIRGENBUILDER_H
-#define LLVM_CLANG_LIB_CIR_CIRGENBUILDER_H
+#ifndef LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENBUILDER_H
+#define LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENBUILDER_H
 
 #include "CIRGenTypeCache.h"
 
