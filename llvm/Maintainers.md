@@ -462,8 +462,8 @@ Evan Cheng (evan.cheng@apple.com) -- Parts of code generator not covered by some
 Renato Golin (rengolin@systemcall.eu, [rengolin](https://github.com/rengolin)) -- ARM backend \
 Anton Korobeynikov (anton@korobeynikov.info, [asl](https://github.com/asl)) -- ARM EABI \
 Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management \
-Kostya Serebryany ([kcc](https://github.com/kcc)) - Sanitizers
-Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) - Sanitizers
+Kostya Serebryany ([kcc](https://github.com/kcc)) -- Sanitizers \
+Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) -- Sanitizers
 
 ### Former maintainers of removed components
 
