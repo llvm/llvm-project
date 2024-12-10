@@ -87,8 +87,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strxfrm
 
     # strings.h entrypoints
-    libc.src.string.index
-    libc.src.string.rindex
+    libc.src.strings.index
+    libc.src.strings.rindex
     libc.src.strings.bcmp
     libc.src.strings.bcopy
     libc.src.strings.bzero
