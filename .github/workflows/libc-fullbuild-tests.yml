@@ -44,7 +44,7 @@ jobs:
     - name: Prepare dependencies (Ubuntu)
       run: |
         sudo apt-get update
-        sudo apt-get install -y libmpfr-dev libgmp-dev libmpc-dev ninja-build linux-headers-generic linux-libc-dev
+        sudo apt-get install -y libmpfr-dev libgmp-dev libmpc-dev ninja-build linux-libc-dev
         sudo ln -sf /usr/include/$(uname -p)-linux-gnu/asm /usr/include/asm
 
     - name: Set reusable strings
