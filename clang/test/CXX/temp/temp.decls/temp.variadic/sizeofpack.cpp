@@ -1,3 +1,4 @@
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %s
 // expected-no-diagnostics
 
@@ -202,6 +203,7 @@ void func()
 
 }
 
+#if __cplusplus >= 202002L
 namespace GH81436 {
 
 template <class E> struct Bar;
@@ -220,3 +222,4 @@ auto func() requires requires(Bar<Ts> ...init_lists) {
 void f() { func<int>(); }
 
 } // namespace GH81436
+#endif
