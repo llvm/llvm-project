@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENMODULE_H
 #define LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENMODULE_H
 
+#include "CIRGenBuilder.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenTypes.h"
 
@@ -47,9 +48,7 @@ public:
   ~CIRGenModule() = default;
 
 private:
-  // TODO(CIR) 'builder' will change to CIRGenBuilderTy once that type is
-  // defined
-  mlir::OpBuilder builder;
+  CIRGenBuilderTy builder;
 
   /// Hold Clang AST information.
   clang::ASTContext &astCtx;
@@ -67,9 +66,10 @@ private:
 
 public:
   mlir::ModuleOp getModule() const { return theModule; }
-  mlir::OpBuilder &getBuilder() { return builder; }
+  CIRGenBuilderTy &getBuilder() { return builder; }
   clang::ASTContext &getASTContext() const { return astCtx; }
   CIRGenTypes &getTypes() { return genTypes; }
+  mlir::MLIRContext &getMLIRContext() { return *builder.getContext(); }
 
   /// Helpers to convert the presumed location of Clang's SourceLocation to an
   /// MLIR Location.

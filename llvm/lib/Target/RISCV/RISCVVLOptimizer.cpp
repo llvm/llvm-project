@@ -570,7 +570,14 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VWMULU_VV:
   case RISCV::VWMULU_VX:
   // Vector Single-Width Integer Multiply-Add Instructions
-  // FIXME: Add support
+  case RISCV::VMACC_VV:
+  case RISCV::VMACC_VX:
+  case RISCV::VNMSAC_VV:
+  case RISCV::VNMSAC_VX:
+  case RISCV::VMADD_VV:
+  case RISCV::VMADD_VX:
+  case RISCV::VNMSUB_VV:
+  case RISCV::VNMSUB_VX:
   // Vector Widening Integer Multiply-Add Instructions
   case RISCV::VWMACCU_VV:
   case RISCV::VWMACCU_VX:
