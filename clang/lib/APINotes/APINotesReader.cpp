@@ -373,6 +373,13 @@ void ReadFunctionInfo(const uint8_t *&Data, FunctionInfo &Info) {
       endian::readNext<uint16_t, llvm::endianness::little>(Data);
   Info.ResultType = std::string(Data, Data + ResultTypeLen);
   Data += ResultTypeLen;
+
+  unsigned SwiftReturnOwnershipLength =
+      endian::readNext<uint16_t, llvm::endianness::little>(Data);
+  Info.SwiftReturnOwnership = std::string(reinterpret_cast<const char *>(Data),
+                                          reinterpret_cast<const char *>(Data) +
+                                              SwiftReturnOwnershipLength);
+  Data += SwiftReturnOwnershipLength;
 }
 
 /// Used to deserialize the on-disk Objective-C method table.
