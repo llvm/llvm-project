@@ -3585,8 +3585,7 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
       ClSanitizeDebugDeoptimization ||
       !CGF.CGM.getCodeGenOpts().OptimizationLevel ||
       (CGF.CurCodeDecl && CGF.CurCodeDecl->hasAttr<OptimizeNoneAttr>());
-  // Regular runtime provides a backtrace, making NoMerge a waste of space
-  if (NoMerge && MinimalRuntime)
+  if (NoMerge)
     HandlerCall->addFnAttr(llvm::Attribute::NoMerge);
   if (!MayReturn) {
     HandlerCall->setDoesNotReturn();
