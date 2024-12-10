@@ -2884,6 +2884,7 @@ void InnerLoopVectorizer::fixupIVUsers(PHINode *OrigPhi,
 
   assert((MissingVals.empty() || OrigLoop->getUniqueExitBlock()) &&
          "Expected a single exit block for escaping values");
+
   for (auto &I : MissingVals) {
     PHINode *PHI = cast<PHINode>(I.first);
     // One corner case we have to handle is two IVs "chasing" each-other,
@@ -7741,10 +7742,11 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::unrollByUF(BestVPlan, BestUF,
                               OrigLoop->getHeader()->getContext());
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
+  VPlanTransforms::convertToConcreteRecipes(BestVPlan);
 
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, BestUF, LI, DT, ILV.Builder, &ILV,
-                         &BestVPlan);
+                         &BestVPlan, Legal->getWidestInductionType());
 
   // 0. Generate SCEV-dependent code into the preheader, including TripCount,
   // before making any changes to the CFG.
@@ -7801,7 +7803,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // 2. Copy and widen instructions from the old loop into the new loop.
   BestVPlan.prepareToExecute(ILV.getTripCount(),
                              ILV.getOrCreateVectorTripCount(nullptr), State);
-  VPlanTransforms::convertToConcreteRecipes(BestVPlan);
 
   BestVPlan.execute(&State);
 

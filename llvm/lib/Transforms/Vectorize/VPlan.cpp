@@ -222,9 +222,10 @@ VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
 VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
                                    ElementCount VF, unsigned UF, LoopInfo *LI,
                                    DominatorTree *DT, IRBuilderBase &Builder,
-                                   InnerLoopVectorizer *ILV, VPlan *Plan)
+                                   InnerLoopVectorizer *ILV, VPlan *Plan,
+                                   Type *CanonicalIVTy)
     : TTI(TTI), VF(VF), CFG(DT), LI(LI), Builder(Builder), ILV(ILV), Plan(Plan),
-      LVer(nullptr), TypeAnalysis(Plan->getCanonicalIV()->getScalarType()) {}
+      LVer(nullptr), TypeAnalysis(CanonicalIVTy) {}
 
 Value *VPTransformState::get(VPValue *Def, const VPLane &Lane) {
   if (Def->isLiveIn())
