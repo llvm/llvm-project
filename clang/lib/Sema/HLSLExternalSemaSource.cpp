@@ -246,6 +246,8 @@ public:
   BuiltinTypeDeclBuilder &addDecrementCounterMethod();
   BuiltinTypeDeclBuilder &addHandleAccessFunction(DeclarationName &Name,
                                                   bool IsConst, bool IsRef);
+  BuiltinTypeDeclBuilder &addAppendMethod();
+  BuiltinTypeDeclBuilder &addConsumeMethod();
 };
 
 struct TemplateParameterListBuilder {
@@ -443,13 +445,25 @@ struct BuiltinTypeMethodBuilder {
   llvm::SmallVector<Stmt *> StmtsList;
 
   // Argument placeholders, inspired by std::placeholder. These are the indices
-  // of arguments to forward to `callBuiltin`, and additionally `Handle` which
-  // refers to the resource handle.
-  enum class PlaceHolder { _0, _1, _2, _3, Handle = 127 };
+  // of arguments to forward to `callBuiltin` and other method builder methods.
+  // Additional special values are:
+  //   Handle   - refers to the resource handle.
+  //   LastStmt - refers to the last statement in the method body; referencing
+  //              LastStmt will remove the statement from the method body since
+  //              it will be linked from the new expression being constructed.
+  enum class PlaceHolder { _0, _1, _2, _3, Handle = 128, LastStmt };
 
   Expr *convertPlaceholder(PlaceHolder PH) {
     if (PH == PlaceHolder::Handle)
       return getResourceHandleExpr();
+
+    if (PH == PlaceHolder::LastStmt) {
+      assert(!StmtsList.empty() && "no statements in the list");
+      Stmt *LastStmt = StmtsList.pop_back_val();
+      assert(isa<ValueStmt>(LastStmt) &&
+             "last statement does not have a value");
+      return cast<ValueStmt>(LastStmt)->getExprStmt();
+    }
 
     ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
     ParmVarDecl *ParamDecl = Method->getParamDecl(static_cast<unsigned>(PH));
@@ -573,17 +587,25 @@ public:
     return *this;
   }
 
-  BuiltinTypeMethodBuilder &dereference() {
-    assert(!StmtsList.empty() && "Nothing to dereference");
-    ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
+  template <typename TLHS, typename TRHS>
+  BuiltinTypeMethodBuilder &assign(TLHS LHS, TRHS RHS) {
+    Expr *LHSExpr = convertPlaceholder(LHS);
+    Expr *RHSExpr = convertPlaceholder(RHS);
+    Stmt *AssignStmt = BinaryOperator::Create(
+        DeclBuilder.SemaRef.getASTContext(), LHSExpr, RHSExpr, BO_Assign,
+        LHSExpr->getType(), ExprValueKind::VK_PRValue,
+        ExprObjectKind::OK_Ordinary, SourceLocation(), FPOptionsOverride());
+    StmtsList.push_back(AssignStmt);
+    return *this;
+  }
 
-    Expr *LastExpr = dyn_cast<Expr>(StmtsList.back());
-    assert(LastExpr && "No expression to dereference");
-    Expr *Deref = UnaryOperator::Create(
-        AST, LastExpr, UO_Deref, LastExpr->getType()->getPointeeType(),
-        VK_PRValue, OK_Ordinary, SourceLocation(),
-        /*CanOverflow=*/false, FPOptionsOverride());
-    StmtsList.pop_back();
+  template <typename T> BuiltinTypeMethodBuilder &dereference(T Ptr) {
+    Expr *PtrExpr = convertPlaceholder(Ptr);
+    Expr *Deref =
+        UnaryOperator::Create(DeclBuilder.SemaRef.getASTContext(), PtrExpr,
+                              UO_Deref, PtrExpr->getType()->getPointeeType(),
+                              VK_PRValue, OK_Ordinary, SourceLocation(),
+                              /*CanOverflow=*/false, FPOptionsOverride());
     StmtsList.push_back(Deref);
     return *this;
   }
@@ -685,7 +707,35 @@ BuiltinTypeDeclBuilder::addHandleAccessFunction(DeclarationName &Name,
       .addParam("Index", AST.UnsignedIntTy)
       .callBuiltin("__builtin_hlsl_resource_getpointer", ElemPtrTy, PH::Handle,
                    PH::_0)
-      .dereference()
+      .dereference(PH::LastStmt)
+      .finalizeMethod();
+}
+
+BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addAppendMethod() {
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType ElemTy = getHandleElementType();
+  return BuiltinTypeMethodBuilder(*this, "Append", AST.VoidTy)
+      .addParam("value", ElemTy)
+      .callBuiltin("__builtin_hlsl_buffer_update_counter", AST.UnsignedIntTy,
+                   PH::Handle, getConstantIntExpr(1))
+      .callBuiltin("__builtin_hlsl_resource_getpointer",
+                   AST.getPointerType(ElemTy), PH::Handle, PH::LastStmt)
+      .dereference(PH::LastStmt)
+      .assign(PH::LastStmt, PH::_0)
+      .finalizeMethod();
+}
+
+BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addConsumeMethod() {
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType ElemTy = getHandleElementType();
+  return BuiltinTypeMethodBuilder(*this, "Consume", ElemTy)
+      .callBuiltin("__builtin_hlsl_buffer_update_counter", AST.UnsignedIntTy,
+                   PH::Handle, getConstantIntExpr(-1))
+      .callBuiltin("__builtin_hlsl_resource_getpointer",
+                   AST.getPointerType(ElemTy), PH::Handle, PH::LastStmt)
+      .dereference(PH::LastStmt)
       .finalizeMethod();
 }
 
@@ -915,6 +965,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
                     /*IsROV=*/false, /*RawBuffer=*/true)
+        .addAppendMethod()
         .completeDefinition();
   });
 
@@ -925,6 +976,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
                     /*IsROV=*/false, /*RawBuffer=*/true)
+        .addConsumeMethod()
         .completeDefinition();
   });
 

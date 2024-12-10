@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_COROUTINE
-#define _LIBCPP_COROUTINE
+#ifndef _LIBCPP___CXX03_COROUTINE
+#define _LIBCPP___CXX03_COROUTINE
 
 /**
     coroutine synopsis
@@ -64,4 +64,4 @@ struct suspend_always;
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_COROUTINE
+#endif // _LIBCPP___CXX03_COROUTINE

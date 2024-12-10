@@ -45,6 +45,7 @@ struct Bits {
   bool operator>=(Bits Other) const { return N >= Other.N; }
   bool operator<=(Bits Other) const { return N <= Other.N; }
   bool operator==(Bits Other) const { return N == Other.N; }
+  bool operator!=(Bits Other) const { return N != Other.N; }
 };
 
 /// A quantity in bytes.

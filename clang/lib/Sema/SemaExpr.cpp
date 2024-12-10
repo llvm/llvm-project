@@ -5948,7 +5948,7 @@ Sema::ConvertArgumentsForCall(CallExpr *Call, Expr *Fn,
   SmallVector<Expr *, 8> AllArgs;
   VariadicCallType CallType = getVariadicCallType(FDecl, Proto, Fn);
 
-  Invalid = GatherArgumentsForCall(Call->getBeginLoc(), FDecl, Proto, 0, Args,
+  Invalid = GatherArgumentsForCall(Call->getExprLoc(), FDecl, Proto, 0, Args,
                                    AllArgs, CallType);
   if (Invalid)
     return true;

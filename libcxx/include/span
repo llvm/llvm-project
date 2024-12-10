@@ -267,6 +267,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit span(_It __first, size_type __count) : __data_{std::to_address(__first)} {
     (void)__count;
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(_Extent == __count, "size mismatch in span's constructor (iterator, len)");
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__count == 0 || std::to_address(__first) != nullptr,
+                                     "passed nullptr with non-zero length in span's constructor (iterator, len)");
   }
 
   template <__span_compatible_iterator<element_type> _It, __span_compatible_sentinel_for<_It> _End>
@@ -441,7 +443,10 @@ public:
 
   template <__span_compatible_iterator<element_type> _It>
   _LIBCPP_HIDE_FROM_ABI constexpr span(_It __first, size_type __count)
-      : __data_{std::to_address(__first)}, __size_{__count} {}
+      : __data_{std::to_address(__first)}, __size_{__count} {
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__count == 0 || std::to_address(__first) != nullptr,
+                                     "passed nullptr with non-zero length in span's constructor (iterator, len)");
+  }
 
   template <__span_compatible_iterator<element_type> _It, __span_compatible_sentinel_for<_It> _End>
   _LIBCPP_HIDE_FROM_ABI constexpr span(_It __first, _End __last)
