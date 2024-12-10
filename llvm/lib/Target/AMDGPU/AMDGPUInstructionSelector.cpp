@@ -139,7 +139,7 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
     }
 
     // Allow copy from physical register other than SCC to s1.
-    if (SrcReg.isPhysical() && SrcReg != AMDGPU::SCC)
+    if (SrcReg.isPhysical() && MRI->getType(DstReg) == LLT::scalar(1))
       return true;
 
     if (!isVCC(SrcReg, *MRI)) {
