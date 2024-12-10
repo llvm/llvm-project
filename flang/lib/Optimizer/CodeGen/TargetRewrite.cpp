@@ -731,9 +731,9 @@ public:
 
     for (auto gpuMod : mod.getOps<mlir::gpu::GPUModuleOp>()) {
       for (auto fn : gpuMod.getOps<mlir::func::FuncOp>())
-        convertSignature<mlir::func::ReturnOp>(fn);
+        convertSignature<mlir::func::ReturnOp, mlir::func::FuncOp>(fn);
       for (auto fn : gpuMod.getOps<mlir::gpu::GPUFuncOp>())
-        convertSignature<mlir::gpu::ReturnOp>(fn);
+        convertSignature<mlir::gpu::ReturnOp, mlir::gpu::GPUFuncOp>(fn);
     }
 
     return mlir::success();
