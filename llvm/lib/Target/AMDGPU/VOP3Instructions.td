@@ -211,10 +211,11 @@ defm V_CUBEMA_F32 : VOP3Inst <"v_cubema_f32", VOP3_Profile<VOP_F32_F32_F32_F32>,
 defm V_BFE_U32 : VOP3Inst <"v_bfe_u32", VOP3_Profile<VOP_I32_I32_I32_I32>, AMDGPUbfe_u32>;
 defm V_BFE_I32 : VOP3Inst <"v_bfe_i32", VOP3_Profile<VOP_I32_I32_I32_I32>, AMDGPUbfe_i32>;
 defm V_BFI_B32 : VOP3Inst <"v_bfi_b32", VOP3_Profile<VOP_I32_I32_I32_I32>, AMDGPUbfi>;
-defm V_ALIGNBIT_B32 : VOP3Inst_t16_with_profiles <"v_alignbit_b32", VOP3_Profile<VOP_I32_I32_I32_I32>,
-                                                                    VOP3_Profile_True16<VOP_I32_I32_I32_I16, VOP3_OPSEL>,
-                                                                    VOP3_Profile_Fake16<VOP_I32_I32_I32_I16, VOP3_OPSEL>,
-                                                                    fshr, null_frag>;
+defm V_ALIGNBIT_B32 : VOP3Inst_t16_with_profiles <"v_alignbit_b32",
+                                                   VOP3_Profile<VOP_I32_I32_I32_I32>,
+                                                   VOP3_Profile_True16<VOP_I32_I32_I32_I16, VOP3_OPSEL>,
+                                                   VOP3_Profile_Fake16<VOP_I32_I32_I32_I16, VOP3_OPSEL>,
+                                                   fshr, null_frag>;
 
 defm V_ALIGNBYTE_B32 : VOP3Inst <"v_alignbyte_b32", VOP3_Profile<VOP_I32_I32_I32_I32>, int_amdgcn_alignbyte>;
 
