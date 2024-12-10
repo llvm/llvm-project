@@ -80,8 +80,8 @@ private:
 
   void initializeCallbacks(Module &M);
 
-  Value *getShadowBase(Function &F);
-  Value *getAppMemMask(Function &F);
+  Instruction *getShadowBase(Function &F);
+  Instruction *getAppMemMask(Function &F);
 
   bool instrumentWithShadowUpdate(IRBuilder<> &IRB, const MDNode *TBAAMD,
                                   Value *Ptr, uint64_t AccessSize, bool IsRead,
@@ -93,8 +93,8 @@ private:
 
   /// Memory-related intrinsics/instructions reset the type of the destination
   /// memory (including allocas and byval arguments).
-  bool instrumentMemInst(Value *I, Value *&ShadowBase, Value *&AppMemMask,
-                         const DataLayout &DL);
+  bool instrumentMemInst(Value *I, Instruction *ShadowBase,
+                         Instruction *AppMemMask, const DataLayout &DL);
 
   std::string getAnonymousStructIdentifier(const MDNode *MD,
                                            TypeNameMapTy &TypeNames);
@@ -450,14 +450,14 @@ bool TypeSanitizer::generateTypeDescriptor(
   return true;
 }
 
-Value *TypeSanitizer::getShadowBase(Function &F) {
+Instruction *TypeSanitizer::getShadowBase(Function &F) {
   IRBuilder<> IRB(&F.front().front());
   Constant *GlobalShadowAddress =
       F.getParent()->getOrInsertGlobal(kTysanShadowMemoryAddress, IntptrTy);
   return IRB.CreateLoad(IntptrTy, GlobalShadowAddress, "shadow.base");
 }
 
-Value *TypeSanitizer::getAppMemMask(Function &F) {
+Instruction *TypeSanitizer::getAppMemMask(Function &F) {
   IRBuilder<> IRB(&F.front().front());
   Value *GlobalAppMemMask =
       F.getParent()->getOrInsertGlobal(kTysanAppMemMask, IntptrTy);
@@ -548,8 +548,8 @@ bool TypeSanitizer::run(Function &F, const TargetLibraryInfo &TLI) {
   bool SanitizeFunction = F.hasFnAttribute(Attribute::SanitizeType);
   bool NeedsInstrumentation =
       MemTypeResetInsts.empty() && MemoryAccesses.empty();
-  Value *ShadowBase = NeedsInstrumentation ? nullptr : getShadowBase(F);
-  Value *AppMemMask = NeedsInstrumentation ? nullptr : getAppMemMask(F);
+  Instruction *ShadowBase = NeedsInstrumentation ? nullptr : getShadowBase(F);
+  Instruction *AppMemMask = NeedsInstrumentation ? nullptr : getAppMemMask(F);
   for (const auto &[I, MLoc] : MemoryAccesses) {
     IRBuilder<> IRB(I);
     assert(MLoc.Size.isPrecise());
@@ -569,7 +569,7 @@ bool TypeSanitizer::run(Function &F, const TargetLibraryInfo &TLI) {
   return Res;
 }
 
-static Value *ConvertToShadowDataInt(IRBuilder<> &IRB, Value *Ptr,
+static Value *convertToShadowDataInt(IRBuilder<> &IRB, Value *Ptr,
                                      Type *IntptrTy, uint64_t PtrShift,
                                      Value *ShadowBase, Value *AppMemMask) {
   return IRB.CreateAdd(
@@ -593,7 +593,7 @@ bool TypeSanitizer::instrumentWithShadowUpdate(
 
   Value *TD = IRB.CreateBitCast(TDGV, IRB.getPtrTy());
 
-  Value *ShadowDataInt = ConvertToShadowDataInt(IRB, Ptr, IntptrTy, PtrShift,
+  Value *ShadowDataInt = convertToShadowDataInt(IRB, Ptr, IntptrTy, PtrShift,
                                                 ShadowBase, AppMemMask);
   Type *Int8PtrPtrTy = PointerType::get(IRB.getPtrTy(), 0);
   Value *ShadowData =
@@ -620,105 +620,155 @@ bool TypeSanitizer::instrumentWithShadowUpdate(
     }
   };
 
-  if (!ForceSetType && (!ClWritesAlwaysSetType || IsRead)) {
-    // We need to check the type here. If the type is unknown, then the read
-    // sets the type. If the type is known, then it is checked. If the type
-    // doesn't match, then we call the runtime (which may yet determine that
-    // the mismatch is okay).
-    LLVMContext &C = IRB.getContext();
-    MDNode *UnlikelyBW = MDBuilder(C).createBranchWeights(1, 100000);
-
-    Constant *Flags =
-        ConstantInt::get(OrdTy, (int)IsRead | (((int)IsWrite) << 1));
-
-    Value *LoadedTD = IRB.CreateLoad(IRB.getPtrTy(), ShadowData, "shadow.desc");
-    if (SanitizeFunction) {
-      Value *BadTDCmp = IRB.CreateICmpNE(LoadedTD, TD, "bad.desc");
-      Instruction *BadTDTerm, *GoodTDTerm;
-      SplitBlockAndInsertIfThenElse(BadTDCmp, &*IRB.GetInsertPoint(),
-                                    &BadTDTerm, &GoodTDTerm, UnlikelyBW);
-      IRB.SetInsertPoint(BadTDTerm);
-
-      // We now know that the types did not match (we're on the slow path). If
-      // the type is unknown, then set it.
-      Value *NullTDCmp = IRB.CreateIsNull(LoadedTD);
-      Instruction *NullTDTerm, *MismatchTerm;
-      SplitBlockAndInsertIfThenElse(NullTDCmp, &*IRB.GetInsertPoint(),
-                                    &NullTDTerm, &MismatchTerm);
-
-      // If the type is unknown, then set the type.
-      IRB.SetInsertPoint(NullTDTerm);
-
-      // We're about to set the type. Make sure that all bytes in the value are
-      // also of unknown type.
-      Value *Size = ConstantInt::get(OrdTy, AccessSize);
-      Value *NotAllUnkTD = IRB.getFalse();
-      for (uint64_t i = 1; i < AccessSize; ++i) {
-        Value *UnkShadowData = IRB.CreateIntToPtr(
-            IRB.CreateAdd(ShadowDataInt,
-                          ConstantInt::get(IntptrTy, i << PtrShift)),
-            Int8PtrPtrTy);
-        Value *ILdTD = IRB.CreateLoad(IRB.getPtrTy(), UnkShadowData);
-        NotAllUnkTD = IRB.CreateOr(NotAllUnkTD, IRB.CreateIsNotNull(ILdTD));
-      }
-
-      Instruction *BeforeSetType = &*IRB.GetInsertPoint();
-      Instruction *BadUTDTerm = SplitBlockAndInsertIfThen(
-          NotAllUnkTD, BeforeSetType, false, UnlikelyBW);
-      IRB.SetInsertPoint(BadUTDTerm);
-      IRB.CreateCall(TysanCheck, {IRB.CreateBitCast(Ptr, IRB.getPtrTy()), Size,
-                                  (Value *)TD, (Value *)Flags});
-
-      IRB.SetInsertPoint(BeforeSetType);
-      SetType();
-
-      // We have a non-trivial mismatch. Call the runtime.
-      IRB.SetInsertPoint(MismatchTerm);
-      IRB.CreateCall(TysanCheck, {IRB.CreateBitCast(Ptr, IRB.getPtrTy()), Size,
-                                  (Value *)TD, (Value *)Flags});
-
-      // We appear to have the right type. Make sure that all other bytes in
-      // the type are still marked as interior bytes. If not, call the runtime.
-      IRB.SetInsertPoint(GoodTDTerm);
-      Value *NotAllBadTD = IRB.getFalse();
-      for (uint64_t i = 1; i < AccessSize; ++i) {
-        Value *BadShadowData = IRB.CreateIntToPtr(
-            IRB.CreateAdd(ShadowDataInt,
-                          ConstantInt::get(IntptrTy, i << PtrShift)),
-            Int8PtrPtrTy);
-        Value *ILdTD = IRB.CreatePtrToInt(
-            IRB.CreateLoad(IRB.getPtrTy(), BadShadowData), IntptrTy);
-        NotAllBadTD = IRB.CreateOr(
-            NotAllBadTD,
-            IRB.CreateICmpSGE(ILdTD, ConstantInt::get(IntptrTy, 0)));
-      }
-
-      Instruction *BadITDTerm = SplitBlockAndInsertIfThen(
-          NotAllBadTD, &*IRB.GetInsertPoint(), false, UnlikelyBW);
-      IRB.SetInsertPoint(BadITDTerm);
-      IRB.CreateCall(TysanCheck, {IRB.CreateBitCast(Ptr, IRB.getPtrTy()), Size,
-                                  (Value *)TD, (Value *)Flags});
-    } else {
-      // If we're not sanitizing this function, then we only care whether we
-      // need to *set* the type.
-      Value *NullTDCmp = IRB.CreateIsNull(LoadedTD, "desc.set");
-      Instruction *NullTDTerm = SplitBlockAndInsertIfThen(
-          NullTDCmp, &*IRB.GetInsertPoint(), false, UnlikelyBW);
-      IRB.SetInsertPoint(NullTDTerm);
-      NullTDTerm->getParent()->setName("set.type");
-      SetType();
-    }
-  } else if (ForceSetType || IsWrite) {
+  if (ForceSetType || (ClWritesAlwaysSetType && IsWrite)) {
     // In the mode where writes always set the type, for a write (which does
     // not also read), we just set the type.
     SetType();
+    return true;
   }
 
+  assert((!ClWritesAlwaysSetType || IsRead) &&
+         "should have handled case above");
+  LLVMContext &C = IRB.getContext();
+  MDNode *UnlikelyBW = MDBuilder(C).createBranchWeights(1, 100000);
+
+  if (!SanitizeFunction) {
+    // If we're not sanitizing this function, then we only care whether we
+    // need to *set* the type.
+    Value *LoadedTD = IRB.CreateLoad(IRB.getPtrTy(), ShadowData, "shadow.desc");
+    Value *NullTDCmp = IRB.CreateIsNull(LoadedTD, "desc.set");
+    Instruction *NullTDTerm = SplitBlockAndInsertIfThen(
+        NullTDCmp, &*IRB.GetInsertPoint(), false, UnlikelyBW);
+    IRB.SetInsertPoint(NullTDTerm);
+    NullTDTerm->getParent()->setName("set.type");
+    SetType();
+    return true;
+  }
+  // We need to check the type here. If the type is unknown, then the read
+  // sets the type. If the type is known, then it is checked. If the type
+  // doesn't match, then we call the runtime (which may yet determine that
+  // the mismatch is okay).
+  //
+  // The checks generated below have the following strucutre.
+  //
+  //   ; First we load the descriptor for the load from shadow memory and
+  //   ; compare it against the type descriptor for the current access type.
+  //   %shadow.desc = load ptr %shadow.data
+  //   %bad.desc = icmp ne %shadow.desc, %td
+  //   br %bad.desc, %bad.bb, %good.bb
+  //
+  // bad.bb:
+  //   %shadow.desc.null = icmp eq %shadow.desc, null
+  //   br %shadow.desc.null, %null.td.bb, %good.td.bb
+  //
+  // null.td.bb:
+  //   ; The typ is unknown, set it if all bytes in the value are also unknown.
+  //   ; To check, we load the shadow data for all bytes of the access. For the
+  //   ; pseudo code below, assume an access of size 1.
+  //   %shadow.data.int = add %shadow.data.int, 0
+  //   %l = load (inttoptr %shadow.data.int)
+  //   %is.not.null = icmp ne %l, null
+  //   %not.all.unknown = %is.not.null
+  //   br %no.all.unknown, before.set.type.bb
+  //
+  // before.set.type.bb:
+  //   ; Call runtime to check mismatch.
+  //   call void @__tysan_check()
+  //   br %set.type.bb
+  //
+  // set.type.bb:
+  //   ; Now fill the remainder of the shadow memory corresponding to the
+  //   ; remainder of the the bytes of the type with a bad type descriptor.
+  //   store %TD, %shadow.data
+  //   br %continue.bb
+  //
+  // good.td.bb::
+  //   ; We have a non-trivial mismatch. Call the runtime.
+  //   call void @__tysan_check()
+  //   br %continue.bb
+  //
+  // good.bb:
+  //  ; We appear to have the right type. Make sure that all other bytes in
+  //  ; the type are still marked as interior bytes. If not, call the runtime.
+  //   %shadow.data.int = add %shadow.data.int, 0
+  //   %l = load (inttoptr %shadow.data.int)
+  //   %not.all.interior = icmp sge %l, 0
+  //   br %not.all.interior, label %check.rt.bb, label %continue.bb
+  //
+  //  check.rt.bb:
+  //   call void @__tysan_check()
+  //   br %continue.bb
+
+  Constant *Flags = ConstantInt::get(OrdTy, int(IsRead) | (int(IsWrite) << 1));
+
+  Value *LoadedTD = IRB.CreateLoad(IRB.getPtrTy(), ShadowData, "shadow.desc");
+  Value *BadTDCmp = IRB.CreateICmpNE(LoadedTD, TD, "bad.desc");
+  Instruction *BadTDTerm, *GoodTDTerm;
+  SplitBlockAndInsertIfThenElse(BadTDCmp, &*IRB.GetInsertPoint(), &BadTDTerm,
+                                &GoodTDTerm, UnlikelyBW);
+  IRB.SetInsertPoint(BadTDTerm);
+
+  // We now know that the types did not match (we're on the slow path). If
+  // the type is unknown, then set it.
+  Value *NullTDCmp = IRB.CreateIsNull(LoadedTD);
+  Instruction *NullTDTerm, *MismatchTerm;
+  SplitBlockAndInsertIfThenElse(NullTDCmp, &*IRB.GetInsertPoint(), &NullTDTerm,
+                                &MismatchTerm);
+
+  // If the type is unknown, then set the type.
+  IRB.SetInsertPoint(NullTDTerm);
+
+  // We're about to set the type. Make sure that all bytes in the value are
+  // also of unknown type.
+  Value *Size = ConstantInt::get(OrdTy, AccessSize);
+  Value *NotAllUnkTD = IRB.getFalse();
+  for (uint64_t i = 1; i < AccessSize; ++i) {
+    Value *UnkShadowData = IRB.CreateIntToPtr(
+        IRB.CreateAdd(ShadowDataInt, ConstantInt::get(IntptrTy, i << PtrShift)),
+        Int8PtrPtrTy);
+    Value *ILdTD = IRB.CreateLoad(IRB.getPtrTy(), UnkShadowData);
+    NotAllUnkTD = IRB.CreateOr(NotAllUnkTD, IRB.CreateIsNotNull(ILdTD));
+  }
+
+  Instruction *BeforeSetType = &*IRB.GetInsertPoint();
+  Instruction *BadUTDTerm =
+      SplitBlockAndInsertIfThen(NotAllUnkTD, BeforeSetType, false, UnlikelyBW);
+  IRB.SetInsertPoint(BadUTDTerm);
+  IRB.CreateCall(TysanCheck, {IRB.CreateBitCast(Ptr, IRB.getPtrTy()), Size,
+                              (Value *)TD, (Value *)Flags});
+
+  IRB.SetInsertPoint(BeforeSetType);
+  SetType();
+
+  // We have a non-trivial mismatch. Call the runtime.
+  IRB.SetInsertPoint(MismatchTerm);
+  IRB.CreateCall(TysanCheck, {IRB.CreateBitCast(Ptr, IRB.getPtrTy()), Size,
+                              (Value *)TD, (Value *)Flags});
+
+  // We appear to have the right type. Make sure that all other bytes in
+  // the type are still marked as interior bytes. If not, call the runtime.
+  IRB.SetInsertPoint(GoodTDTerm);
+  Value *NotAllBadTD = IRB.getFalse();
+  for (uint64_t i = 1; i < AccessSize; ++i) {
+    Value *BadShadowData = IRB.CreateIntToPtr(
+        IRB.CreateAdd(ShadowDataInt, ConstantInt::get(IntptrTy, i << PtrShift)),
+        Int8PtrPtrTy);
+    Value *ILdTD = IRB.CreatePtrToInt(
+        IRB.CreateLoad(IRB.getPtrTy(), BadShadowData), IntptrTy);
+    NotAllBadTD = IRB.CreateOr(
+        NotAllBadTD, IRB.CreateICmpSGE(ILdTD, ConstantInt::get(IntptrTy, 0)));
+  }
+
+  Instruction *BadITDTerm = SplitBlockAndInsertIfThen(
+      NotAllBadTD, &*IRB.GetInsertPoint(), false, UnlikelyBW);
+  IRB.SetInsertPoint(BadITDTerm);
+  IRB.CreateCall(TysanCheck, {IRB.CreateBitCast(Ptr, IRB.getPtrTy()), Size,
+                              (Value *)TD, (Value *)Flags});
   return true;
 }
 
-bool TypeSanitizer::instrumentMemInst(Value *V, Value *&ShadowBase,
-                                      Value *&AppMemMask,
+bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
+                                      Instruction *AppMemMask,
                                       const DataLayout &DL) {
   BasicBlock::iterator IP;
   BasicBlock *BB;
@@ -734,14 +784,11 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Value *&ShadowBase,
     BB = &F->getEntryBlock();
     IP = BB->getFirstInsertionPt();
 
-    if (auto *I = cast_or_null<Instruction>(ShadowBase)) {
-      if (IP->comesBefore(I))
-        IP = I->getNextNode()->getIterator();
-    }
-    if (auto *I = cast_or_null<Instruction>(AppMemMask)) {
-      if (IP->comesBefore(I))
-        IP = I->getNextNode()->getIterator();
-    }
+    // Find the next insert point after both ShadowBase and AppMemMask.
+    if (IP->comesBefore(ShadowBase))
+      IP = ShadowBase->getNextNode()->getIterator();
+    if (IP->comesBefore(AppMemMask))
+      IP = AppMemMask->getNextNode()->getIterator();
   }
 
   Value *Dest, *Size, *Src = nullptr;
