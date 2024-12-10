@@ -515,7 +515,7 @@ public:
       auto *OBVal = OB.Inputs.front().get();
       auto *TypeIdMD = cast<MetadataAsValue>(OBVal)->getMetadata();
       auto *TypeIdStr = cast<MDString>(TypeIdMD);
-      assert(TypeIdStr->getString().endswith(".generalized") &&
+      assert(TypeIdStr->getString().ends_with(".generalized") &&
              "invalid type identifier");
 
       // Compute numeric type id from generalized type id string
@@ -530,7 +530,7 @@ private:
   GISelChangeObserver *Observer = nullptr;
 
   using CallSiteInfoMap = DenseMap<const MachineInstr *, CallSiteInfo>;
-  /// Map a call instruction to call site arguments forwarding and type id.
+  /// Map a call instruction to call site arguments forwarding info.
   CallSiteInfoMap CallSitesInfo;
 
   /// A helper function that returns call site info for a give call
@@ -1392,7 +1392,7 @@ public:
     });
   }
 
-  /// Start tracking the arguments passed to the call \p CallI and call type.
+  /// Start tracking the arguments passed to the call \p CallI.
   void addCallSiteInfo(const MachineInstr *CallI, CallSiteInfo &&CallInfo) {
     assert(CallI->isCandidateForCallSiteEntry());
     bool Inserted =
