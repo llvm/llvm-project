@@ -58,7 +58,7 @@ static mlir::Value createKernelArgArray(mlir::Location loc,
         loc, ptrTy, structTy, argStruct, mlir::ArrayRef<mlir::Value>({indice}));
     rewriter.create<LLVM::StoreOp>(loc, arg, structMember);
     mlir::Value arrayMember = rewriter.create<LLVM::GEPOp>(
-        loc, ptrTy, structTy, argArray, mlir::ArrayRef<mlir::Value>({indice}));
+        loc, ptrTy, ptrTy, argArray, mlir::ArrayRef<mlir::Value>({indice}));
     rewriter.create<LLVM::StoreOp>(loc, structMember, arrayMember);
   }
   return argArray;
