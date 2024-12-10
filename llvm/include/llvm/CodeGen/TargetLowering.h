@@ -4304,6 +4304,12 @@ public:
   /// @param Level the current DAGCombine legalization level.
   virtual bool isDesirableToCommuteWithShift(const SDNode *N,
                                              CombineLevel Level) const {
+    SDValue ShiftLHS = N->getOperand(0);
+    if (!ShiftLHS->hasOneUse())
+      return false;
+    if (ShiftLHS.getOpcode() == ISD::SIGN_EXTEND &&
+        !ShiftLHS.getOperand(0)->hasOneUse())
+      return false;
     return true;
   }
 
