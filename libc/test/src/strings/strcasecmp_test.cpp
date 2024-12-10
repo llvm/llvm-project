@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/string/strcasecmp.h"
+#include "src/strings/strcasecmp.h"
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcStrCaseCmpTest, EmptyStringsShouldReturnZero) {

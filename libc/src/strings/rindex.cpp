@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/string/rindex.h"
+#include "src/strings/rindex.h"
 
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"

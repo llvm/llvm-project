@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/string/strcasecmp.h"
+#include "src/strings/strcasecmp.h"
 
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
