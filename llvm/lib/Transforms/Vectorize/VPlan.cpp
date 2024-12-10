@@ -927,7 +927,6 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
 }
 
 void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
-                             Value *CanonicalIVStartValue,
                              VPTransformState &State) {
   Type *TCTy = TripCountV->getType();
   // Check if the backedge taken count is needed, and if so build it.
@@ -952,25 +951,6 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
                : RuntimeVF);
   } else {
     VFxUF.setUnderlyingValue(createStepForVF(Builder, TCTy, State.VF, UF));
-  }
-
-  // When vectorizing the epilogue loop, the canonical induction start value
-  // needs to be changed from zero to the value after the main vector loop.
-  // FIXME: Improve modeling for canonical IV start values in the epilogue loop.
-  if (CanonicalIVStartValue) {
-    VPValue *VPV = getOrAddLiveIn(CanonicalIVStartValue);
-    auto *IV = getCanonicalIV();
-    assert(all_of(IV->users(),
-                  [](const VPUser *U) {
-                    return isa<VPScalarIVStepsRecipe>(U) ||
-                           isa<VPScalarCastRecipe>(U) ||
-                           isa<VPDerivedIVRecipe>(U) ||
-                           cast<VPInstruction>(U)->getOpcode() ==
-                               Instruction::Add;
-                  }) &&
-           "the canonical IV should only be used by its increment or "
-           "ScalarIVSteps when resetting the start value");
-    IV->setOperand(0, VPV);
   }
 }
 

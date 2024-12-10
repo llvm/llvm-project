@@ -10233,7 +10233,7 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
   // Variant of version done on multiply, except mul by a power of 2 is turned
   // into a shift.
   if ((N0.getOpcode() == ISD::ADD || N0.getOpcode() == ISD::OR) &&
-      N0->hasOneUse() && TLI.isDesirableToCommuteWithShift(N, Level)) {
+      TLI.isDesirableToCommuteWithShift(N, Level)) {
     SDValue N01 = N0.getOperand(1);
     if (SDValue Shl1 =
             DAG.FoldConstantArithmetic(ISD::SHL, SDLoc(N1), VT, {N01, N1})) {
@@ -10252,8 +10252,7 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
   // TODO: Should we limit this with isLegalAddImmediate?
   if (N0.getOpcode() == ISD::SIGN_EXTEND &&
       N0.getOperand(0).getOpcode() == ISD::ADD &&
-      N0.getOperand(0)->getFlags().hasNoSignedWrap() && N0->hasOneUse() &&
-      N0.getOperand(0)->hasOneUse() &&
+      N0.getOperand(0)->getFlags().hasNoSignedWrap() &&
       TLI.isDesirableToCommuteWithShift(N, Level)) {
     SDValue Add = N0.getOperand(0);
     SDLoc DL(N0);
