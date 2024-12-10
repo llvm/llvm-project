@@ -6163,14 +6163,18 @@ Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
 
   LLVMContext &Ctx = V->getContext();
 
-  // Undef don't care.
-  auto *UndefInt8 = UndefValue::get(Type::getInt8Ty(Ctx));
-  if (isa<UndefValue>(V))
-    return UndefInt8;
+  // Allow poison.
+  auto *Poison = PoisonValue::get(Type::getInt8Ty(Ctx));
+  if (isa<PoisonValue>(V))
+    return Poison;
 
-  // Return Undef for zero-sized type.
+  // Forbid optimization over undef, for correctness reasons.
+  if (isa<UndefValue>(V))
+    return nullptr;
+
+  // Return poison for zero-sized type.
   if (DL.getTypeStoreSize(V->getType()).isZero())
-    return UndefInt8;
+    return Poison;
 
   Constant *C = dyn_cast<Constant>(V);
   if (!C) {
@@ -6228,15 +6232,15 @@ Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
       return LHS;
     if (!LHS || !RHS)
       return nullptr;
-    if (LHS == UndefInt8)
+    if (LHS == Poison)
       return RHS;
-    if (RHS == UndefInt8)
+    if (RHS == Poison)
       return LHS;
     return nullptr;
   };
 
   if (ConstantDataSequential *CA = dyn_cast<ConstantDataSequential>(C)) {
-    Value *Val = UndefInt8;
+    Value *Val = Poison;
     for (unsigned I = 0, E = CA->getNumElements(); I != E; ++I)
       if (!(Val = Merge(Val, isBytewiseValue(CA->getElementAsConstant(I), DL))))
         return nullptr;
@@ -6244,7 +6248,7 @@ Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
   }
 
   if (isa<ConstantAggregate>(C)) {
-    Value *Val = UndefInt8;
+    Value *Val = Poison;
     for (Value *Op : C->operands())
       if (!(Val = Merge(Val, isBytewiseValue(Op, DL))))
         return nullptr;

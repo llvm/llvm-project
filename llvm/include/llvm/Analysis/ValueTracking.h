@@ -617,8 +617,7 @@ inline std::optional<bool> computeKnownFPSignBit(const Value *V, unsigned Depth,
 /// return the i8 value that it is represented with. This is true for all i8
 /// values obviously, but is also true for i32 0, i32 -1, i16 0xF0F0, double
 /// 0.0 etc. If the value can't be handled with a repeated byte store (e.g.
-/// i16 0x1234), return null. If the value is entirely undef and padding,
-/// return undef.
+/// i16 0x1234), return null. If the value is undef, also return null.
 Value *isBytewiseValue(Value *V, const DataLayout &DL);
 
 /// Given an aggregate and an sequence of indices, see if the scalar value

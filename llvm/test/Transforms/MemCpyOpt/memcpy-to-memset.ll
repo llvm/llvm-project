@@ -3,15 +3,15 @@
 
 declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind
 
-@undef = internal constant i32 undef, align 4
-define void @test_undef() nounwind {
-; CHECK-LABEL: @test_undef(
+@poison = internal constant i32 poison, align 4
+define void @test_poison() nounwind {
+; CHECK-LABEL: @test_poison(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[A]], i8 undef, i64 4, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[A]], i8 poison, i64 4, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i32, align 4
-  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %a, ptr align 4 @undef, i64 4, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %a, ptr align 4 @poison, i64 4, i1 false)
   ret void
 }
 
@@ -27,15 +27,15 @@ define void @test_i32x3() nounwind {
   ret void
 }
 
-@i32x3_undef = internal constant [3 x i32] [i32 -1, i32 undef, i32 -1], align 4
-define void @test_i32x3_undef() nounwind {
-; CHECK-LABEL: @test_i32x3_undef(
+@i32x3_poison = internal constant [3 x i32] [i32 -1, i32 poison, i32 -1], align 4
+define void @test_i32x3_poison() nounwind {
+; CHECK-LABEL: @test_i32x3_poison(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [3 x i32], align 4
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[A]], i8 -1, i64 12, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca [3 x i32], align 4
-  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %a, ptr align 4 @i32x3_undef, i64 12, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %a, ptr align 4 @i32x3_poison, i64 12, i1 false)
   ret void
 }
 
