@@ -2102,9 +2102,9 @@ defm V_MUL_HI_I32                    : VOP3Only_Realtriple_gfx1210<0x32e>;
 defm V_LSHRREV_B64                   : VOP3Only_Realtriple_gfx1210_gfx13<0x33d, 0x300>;
 defm V_ASHRREV_I64                   : VOP3Only_Realtriple_gfx1210_gfx13<0x33e, 0x301>;
 
-defm V_PERM_PK16_B4_U4               : VOP3Only_Real_Base_gfx1210_gfx13<0x23f, 0x341>;
-defm V_PERM_PK16_B6_U4               : VOP3Only_Real_Base_gfx1210_gfx13<0x242, 0x342>;
-defm V_PERM_PK16_B8_U4               : VOP3Only_Real_Base_gfx1210_gfx13<0x243, 0x343>;
+defm V_PERM_PK16_B4_U4               : VOP3Only_Real_Base_gfx1210_gfx13<0x23f, 0x348>;
+defm V_PERM_PK16_B6_U4               : VOP3Only_Real_Base_gfx1210_gfx13<0x242, 0x349>;
+defm V_PERM_PK16_B8_U4               : VOP3Only_Real_Base_gfx1210_gfx13<0x243, 0x34a>;
 defm V_LSHL_ADD_U64                  : VOP3Only_Realtriple_gfx1210_DPP8_gfx13<0x252>;
 defm V_ASHR_PK_I8_I32                : VOP3Only_Realtriple_gfx1210_gfx13<0x290>;
 defm V_ASHR_PK_U8_I32                : VOP3Only_Realtriple_gfx1210_gfx13<0x291>;
