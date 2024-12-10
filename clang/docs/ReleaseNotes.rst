@@ -141,6 +141,9 @@ Improvements to Coverage Mapping
 Bug Fixes in This Version
 -------------------------
 
+- Clang now outputs correct values when #embed data contains bytes with negative
+  signed char values (#GH102798).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
