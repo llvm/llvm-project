@@ -207,7 +207,7 @@ define float @test_fmaximum_nnan(float %x, float %y) nounwind {
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vaddss %xmm1, %xmm0, %xmm2
 ; AVX512DQ-NEXT:    vsubss %xmm1, %xmm0, %xmm0
-; AVX512DQ-NEXT:    vfpclassss $3, %xmm0, %k0
+; AVX512DQ-NEXT:    vfpclassss $3, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveZero(xmm0)
 ; AVX512DQ-NEXT:    kmovw %k0, %k1
 ; AVX512DQ-NEXT:    vmovaps %xmm2, %xmm1
 ; AVX512DQ-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
@@ -466,7 +466,7 @@ define float @test_fmaximum_combine_cmps(float %x, float %y) nounwind {
 ; AVX512DQ-LABEL: test_fmaximum_combine_cmps:
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vdivss %xmm0, %xmm1, %xmm1
-; AVX512DQ-NEXT:    vfpclassss $3, %xmm0, %k0
+; AVX512DQ-NEXT:    vfpclassss $3, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveZero(xmm0)
 ; AVX512DQ-NEXT:    kmovw %k0, %k1
 ; AVX512DQ-NEXT:    vmovaps %xmm1, %xmm2
 ; AVX512DQ-NEXT:    vmovss %xmm0, %xmm2, %xmm2 {%k1}
@@ -687,7 +687,7 @@ define double @test_fminimum_nnan(double %x, double %y) "no-nans-fp-math"="true"
 ;
 ; AVX512DQ-LABEL: test_fminimum_nnan:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vfpclasssd $5, %xmm1, %k0
+; AVX512DQ-NEXT:    vfpclasssd $5, %xmm1, %k0 # k0 = isQuietNaN(xmm1) | isNegativeZero(xmm1)
 ; AVX512DQ-NEXT:    kmovw %k0, %k1
 ; AVX512DQ-NEXT:    vmovapd %xmm0, %xmm2
 ; AVX512DQ-NEXT:    vmovsd %xmm1, %xmm2, %xmm2 {%k1}
@@ -940,7 +940,7 @@ define float @test_fminimum_combine_cmps(float %x, float %y) nounwind {
 ; AVX512DQ-LABEL: test_fminimum_combine_cmps:
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vdivss %xmm0, %xmm1, %xmm1
-; AVX512DQ-NEXT:    vfpclassss $5, %xmm0, %k0
+; AVX512DQ-NEXT:    vfpclassss $5, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isNegativeZero(xmm0)
 ; AVX512DQ-NEXT:    kmovw %k0, %k1
 ; AVX512DQ-NEXT:    vmovaps %xmm1, %xmm2
 ; AVX512DQ-NEXT:    vmovss %xmm0, %xmm2, %xmm2 {%k1}
