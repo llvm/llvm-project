@@ -699,9 +699,12 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
   bool NeedLenChg = SrcVecTy->getNumElements() != NumElts;
   // If the lengths of the two vectors are not equal,
   // we need to add a length-change vector. Add this cost.
-  if (NeedLenChg)
-    NewCost +=
-        TTI.getShuffleCost(TargetTransformInfo::SK_Select, SrcVecTy, Mask);
+  SmallVector<int> SrcMask;
+  if (NeedLenChg) {
+    SrcMask.assign(NumElts, PoisonMaskElem);
+    NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
+                                  SrcVecTy, SrcMask, CostKind);
+  }
 
   if (NewCost > OldCost)
     return false;
@@ -711,7 +714,6 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
   Value *VecFNeg = Builder.CreateFNegFMF(SrcVec, FNeg);
   if (NeedLenChg) {
     // shuffle DestVec, (shuffle (fneg SrcVec), poison, SrcMask), Mask
-    SmallVector<int> SrcMask(NumElts, PoisonMaskElem);
     SrcMask[Index] = Index;
     Value *LenChgShuf = Builder.CreateShuffleVector(
         SrcVec, PoisonValue::get(SrcVecTy), SrcMask);
