@@ -35,10 +35,6 @@ public:
                                  MachineModuleInfo *MMI, const MCSymbol *RawSym,
                                  AArch64PACKey::ID Key,
                                  uint16_t Discriminator) const;
-
-  void emitPersonalityValueImpl(MCStreamer &Streamer, const DataLayout &DL,
-                                const MCSymbol *Sym,
-                                const MachineModuleInfo *MMI) const override;
 };
 
 /// AArch64_MachoTargetObjectFile - This TLOF implementation is used for Darwin.
