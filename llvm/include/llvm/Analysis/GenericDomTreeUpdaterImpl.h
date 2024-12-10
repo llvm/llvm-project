@@ -229,7 +229,7 @@ GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::dump() const {
       };
 
   if (DT) {
-    auto I = PendUpdates.begin() + PendDTUpdateIndex;
+    const auto I = PendUpdates.begin() + PendDTUpdateIndex;
     assert(PendUpdates.begin() <= I && I <= PendUpdates.end() &&
            "Iterator out of range.");
     OS << "Applied but not cleared DomTreeUpdates:\n";
@@ -239,7 +239,7 @@ GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::dump() const {
   }
 
   if (PDT) {
-    auto I = PendUpdates.begin() + PendPDTUpdateIndex;
+    const auto I = PendUpdates.begin() + PendPDTUpdateIndex;
     assert(PendUpdates.begin() <= I && I <= PendUpdates.end() &&
            "Iterator out of range.");
     OS << "Applied but not cleared PostDomTreeUpdates:\n";
