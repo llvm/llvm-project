@@ -45,6 +45,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeGlobalISel(PR);
   initializeSPIRVModuleAnalysisPass(PR);
   initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PR);
+  initializeSPIRVStructurizerPass(PR);
 }
 
 static std::string computeDataLayout(const Triple &TT) {
