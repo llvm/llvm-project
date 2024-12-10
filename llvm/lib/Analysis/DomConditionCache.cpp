@@ -10,19 +10,27 @@
 #include "llvm/Analysis/ValueTracking.h"
 using namespace llvm;
 
-static void findAffectedValues(Value *Cond,
-                               SmallVectorImpl<Value *> &Affected) {
-  auto InsertAffected = [&Affected](Value *V) { Affected.push_back(V); };
+static void findAffectedValues(
+    Value *Cond,
+    SmallVectorImpl<std::pair<Value *, DomConditionFlag>> &Affected) {
+  auto InsertAffected = [&Affected](Value *V, DomConditionFlag Flags) {
+    Affected.push_back({V, Flags});
+  };
   findValuesAffectedByCondition(Cond, /*IsAssume=*/false, InsertAffected);
 }
 
 void DomConditionCache::registerBranch(BranchInst *BI) {
   assert(BI->isConditional() && "Must be conditional branch");
-  SmallVector<Value *, 16> Affected;
+  SmallVector<std::pair<Value *, DomConditionFlag>, 16> Affected;
   findAffectedValues(BI->getCondition(), Affected);
-  for (Value *V : Affected) {
-    auto &AV = AffectedValues[V];
-    if (!is_contained(AV, BI))
-      AV.push_back(BI);
+  for (auto [V, Flags] : Affected) {
+    uint32_t Underlying = to_underlying(Flags);
+    while (Underlying) {
+      uint32_t LSB = Underlying & -Underlying;
+      auto &AV = AffectedValues[countr_zero(LSB)][V];
+      if (llvm::none_of(AV, [&](BranchInst *Elem) { return Elem == BI; }))
+        AV.push_back(BI);
+      Underlying -= LSB;
+    }
   }
 }
