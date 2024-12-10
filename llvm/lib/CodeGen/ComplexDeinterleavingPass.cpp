@@ -108,15 +108,15 @@ static bool isNeg(Value *V);
 static Value *getNegOperand(Value *V);
 
 namespace {
-  template<typename T, typename IterT>
-  std::optional<T> findCommonBetweenCollections(IterT A, IterT B) {
-    auto Common = llvm::find_if(A, [B](T I){return llvm::is_contained(B, I);});
-    if (Common != A.end())
-      return std::make_optional(*Common);
-    return std::nullopt;
-  }
+template <typename T, typename IterT>
+std::optional<T> findCommonBetweenCollections(IterT A, IterT B) {
+  auto Common = llvm::find_if(A, [B](T I) { return llvm::is_contained(B, I); });
+  if (Common != A.end())
+    return std::make_optional(*Common);
+  return std::nullopt;
+}
 
-  class ComplexDeinterleavingLegacyPass : public FunctionPass {
+class ComplexDeinterleavingLegacyPass : public FunctionPass {
 public:
   static char ID;
 
@@ -207,7 +207,7 @@ public:
     }
   }
 
-  bool AreOperandsValid() { return OperandsValid; }
+  bool areOperandsValid() { return OperandsValid; }
 };
 
 class ComplexDeinterleavingGraph {
@@ -1034,13 +1034,14 @@ ComplexDeinterleavingGraph::identifyPartialReduction(Value *R, Value *I) {
   if (!isa<VectorType>(R->getType()) || !isa<VectorType>(I->getType()))
     return nullptr;
 
-  auto CommonUser = findCommonBetweenCollections<Value*>(R->users(), I->users());
+  auto CommonUser =
+      findCommonBetweenCollections<Value *>(R->users(), I->users());
   if (!CommonUser)
     return nullptr;
 
   auto *IInst = dyn_cast<IntrinsicInst>(*CommonUser);
   if (!IInst || IInst->getIntrinsicID() !=
-      Intrinsic::experimental_vector_partial_reduce_add)
+                    Intrinsic::experimental_vector_partial_reduce_add)
     return nullptr;
 
   if (NodePtr CN = identifyDotProduct(IInst))
@@ -1756,7 +1757,7 @@ void ComplexDeinterleavingGraph::identifyReductionNodes() {
 bool ComplexDeinterleavingGraph::checkNodes() {
 
   for (NodePtr N : CompositeNodes) {
-    if (!N->AreOperandsValid())
+    if (!N->areOperandsValid())
       return false;
   }
 
