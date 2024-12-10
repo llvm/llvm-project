@@ -6044,6 +6044,6 @@ The current default behavior as of MSVC 1942 is ``/permissive``.
 As of Visual Studio 2017, ``/permissive-`` is the default for newly generated projects in Visual Studio meaning C++
 conformance is enforced when building with MSVC in Visual Studio.
 
-This MSVC extension can be enabled with ``-fms-reference-binding`` with the clang or cl driver.
-This MSVC extension can be enabled with ``/Zc:referenceBinding-`` with the cl driver.
+This MSVC extension can be enabled with ``-fms-reference-binding`` with the clang or clang-cl driver.
+This MSVC extension can be enabled with ``/Zc:referenceBinding-`` with the clang-cl driver.
 >>>>>>> 43d9c2ac844e (PR Feedback on ext warning)
