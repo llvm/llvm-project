@@ -6172,13 +6172,6 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   }
   if (CallOrInvoke)
     *CallOrInvoke = LocalCallOrInvoke;
-
-  // Set type identifier metadata of indirect calls for call graph section.
-  if (CGM.getCodeGenOpts().CallGraphSection && LocalCallOrInvoke &&
-      LocalCallOrInvoke->isIndirectCall())
-    CGM.CreateFunctionTypeMetadataForIcall(QualType(FnType, 0),
-                                           LocalCallOrInvoke);
-
   return Call;
 }
 

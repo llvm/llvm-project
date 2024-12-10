@@ -1,9 +1,9 @@
 // Tests that we assign appropriate identifiers to indirect calls and targets.
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -fcall-graph-section -S \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -fcall-graph-section \
 // RUN: -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,ITANIUM %s
 
-// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fcall-graph-section -S \
+// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fcall-graph-section \
 // RUN: -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,MS %s
 
 // CHECK-DAG: define {{(dso_local)?}} void @foo({{.*}} !type [[F_TVOID:![0-9]+]]

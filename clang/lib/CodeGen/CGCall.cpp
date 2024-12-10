@@ -38,6 +38,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
@@ -5772,34 +5773,21 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   Attrs = AllocAlignAttrEmitter.TryEmitAsCallSiteAttribute(Attrs);
 
   if (CGM.getCodeGenOpts().CallGraphSection) {
-    // Create operand bundle only for indirect calls, not for all
-    if (callOrInvoke && *callOrInvoke && (*callOrInvoke)->isIndirectCall()) {
+    assert((TargetDecl && TargetDecl->getFunctionType() ||
+            Callee.getAbstractInfo().getCalleeFunctionProtoType()) &&
+           "cannot find callsite type");
+    QualType CST;
+    if (TargetDecl && TargetDecl->getFunctionType())
+      CST = QualType(TargetDecl->getFunctionType(), 0);
+    else if (const auto *FPT =
+                 Callee.getAbstractInfo().getCalleeFunctionProtoType())
+      CST = QualType(FPT, 0);
 
-      assert((TargetDecl && TargetDecl->getFunctionType() ||
-              Callee.getAbstractInfo().getCalleeFunctionProtoType()) &&
-             "cannot find callsite type");
-
-      QualType CST;
-      if (TargetDecl && TargetDecl->getFunctionType())
-        CST = QualType(TargetDecl->getFunctionType(), 0);
-      else if (const auto *FPT =
-                   Callee.getAbstractInfo().getCalleeFunctionProtoType())
-        CST = QualType(FPT, 0);
-
-      if (!CST.isNull()) {
-        auto *TypeIdMD = CGM.CreateMetadataIdentifierGeneralized(CST);
-        auto *TypeIdMDVal =
-            llvm::MetadataAsValue::get(getLLVMContext(), TypeIdMD);
-        BundleList.emplace_back("type", TypeIdMDVal);
-      }
-
-      // Set type identifier metadata of indirect calls for call graph section.
-      if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
-        // Type id metadata is set only for C/C++ contexts.
-        if (isCXXDeclType(FD)) {
-          CGM.CreateFunctionTypeMetadataForIcall(FD->getType(), *callOrInvoke);
-        }
-      }
+    if (!CST.isNull()) {
+      auto *TypeIdMD = CGM.CreateMetadataIdentifierGeneralized(CST);
+      auto *TypeIdMDVal =
+          llvm::MetadataAsValue::get(getLLVMContext(), TypeIdMD);
+      BundleList.emplace_back("type", TypeIdMDVal);
     }
   }
 
@@ -5817,8 +5805,18 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       CI->getCalledFunction()->getName().starts_with("_Z4sqrt")) {
     SetSqrtFPAccuracy(CI);
   }
-  if (callOrInvoke)
+  if (callOrInvoke) {
     *callOrInvoke = CI;
+    if (CGM.getCodeGenOpts().CallGraphSection) {
+      // Set type identifier metadata of indirect calls for call graph section.
+      if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
+        // Type id metadata is set only for C/C++ contexts.
+        if (isCXXDeclType(FD)) {
+          CGM.CreateFunctionTypeMetadataForIcall(FD->getType(), *callOrInvoke);
+        }
+      }
+    }
+  }
 
   // If this is within a function that has the guard(nocf) attribute and is an
   // indirect call, add the "guard_nocf" attribute to this call to indicate that

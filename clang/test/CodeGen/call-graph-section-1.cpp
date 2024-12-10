@@ -1,7 +1,7 @@
 // Tests that we assign appropriate identifiers to indirect calls and targets
 // specifically for C++ class and instance methods.
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -fcall-graph-section -S \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -fcall-graph-section \
 // RUN: -emit-llvm -o %t %s
 // RUN: FileCheck --check-prefix=FT %s < %t
 // RUN: FileCheck --check-prefix=CST %s < %t
