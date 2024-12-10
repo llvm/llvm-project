@@ -23566,6 +23566,9 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
 
     SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
     if (isSoftF16(EltVT, Subtarget)) {
+      if (Subtarget.hasAVX512() && !Subtarget.hasVLX())
+        return SDValue();
+
       // Break 256-bit FP vector compare into smaller ones.
       if (OpVT.is256BitVector() && !Subtarget.useAVX512Regs())
         return splitVSETCC(VT, Op0, Op1, Cond, DAG, dl);
