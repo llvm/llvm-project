@@ -2043,7 +2043,7 @@ static void emitStackProbeInline(MachineFunction &MF, MachineBasicBlock &MBB,
   //   SUB SP, SP, ProbeSize
   BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL, TII->get(RISCV::SUB), SPReg)
       .addReg(SPReg)
-      .addReg(ScratchReg)
+      .addReg(ScratchReg, RegState::InternalRead)
       .setMIFlags(Flags);
 
   //   s[d|w] zero, 0(sp)
@@ -2057,7 +2057,7 @@ static void emitStackProbeInline(MachineFunction &MF, MachineBasicBlock &MBB,
   //   BNE SP, TargetReg, LoopTest
   BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL, TII->get(RISCV::BNE))
       .addReg(SPReg)
-      .addReg(TargetReg)
+      .addReg(TargetReg, RegState::InternalRead)
       .addMBB(LoopTestMBB)
       .setMIFlags(Flags);
 
