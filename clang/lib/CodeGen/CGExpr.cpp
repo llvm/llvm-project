@@ -3581,9 +3581,10 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
                                llvm::AttributeList::FunctionIndex, B),
       /*Local=*/true);
   llvm::CallInst *HandlerCall = CGF.EmitNounwindRuntimeCall(Fn, FnArgs);
-  bool NoMerge = ClSanitizeDebugDeoptimization ||
-                 !CGF.CGM.getCodeGenOpts().OptimizationLevel ||
-                 (CGF.CurCodeDecl && CGF.CurCodeDecl->hasAttr<OptimizeNoneAttr>());
+  bool NoMerge =
+      ClSanitizeDebugDeoptimization ||
+      !CGF.CGM.getCodeGenOpts().OptimizationLevel ||
+      (CGF.CurCodeDecl && CGF.CurCodeDecl->hasAttr<OptimizeNoneAttr>());
   // Regular runtime provides a backtrace, making NoMerge a waste of space
   if (NoMerge && MinimalRuntime)
     HandlerCall->addFnAttr(llvm::Attribute::NoMerge);
