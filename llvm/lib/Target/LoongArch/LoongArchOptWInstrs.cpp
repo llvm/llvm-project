@@ -139,11 +139,6 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
       case LoongArch::MULH_WU:
       case LoongArch::MULW_D_W:
       case LoongArch::MULW_D_WU:
-      // TODO: {DIV,MOD}.{W,WU} consumes the upper 32 bits before LA664+.
-      // case LoongArch::DIV_W:
-      // case LoongArch::DIV_WU:
-      // case LoongArch::MOD_W:
-      // case LoongArch::MOD_WU:
       case LoongArch::SLL_W:
       case LoongArch::SLLI_W:
       case LoongArch::SRL_W:
@@ -168,6 +163,15 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
       case LoongArch::MOVGR2FRH_W:
       case LoongArch::MOVGR2FR_W_64:
         if (Bits >= 32)
+          break;
+        return false;
+      // {DIV,MOD}.W{U} consumes the upper 32 bits if the div32
+      // feature is not enabled.
+      case LoongArch::DIV_W:
+      case LoongArch::DIV_WU:
+      case LoongArch::MOD_W:
+      case LoongArch::MOD_WU:
+        if (Bits >= 32 && ST.hasDiv32())
           break;
         return false;
       case LoongArch::MOVGR2CF:

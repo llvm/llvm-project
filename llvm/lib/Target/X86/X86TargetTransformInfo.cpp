@@ -1630,14 +1630,19 @@ InstructionCost X86TTIImpl::getShuffleCost(
 
   // Subvector insertions are cheap if the subvectors are aligned.
   // Note that in general, the insertion starting at the beginning of a vector
-  // isn't free, because we need to preserve the rest of the wide vector.
+  // isn't free, because we need to preserve the rest of the wide vector,
+  // but if the destination vector legalizes to the same width as the subvector
+  // then the insertion will simplify to a (free) register copy.
   if (Kind == TTI::SK_InsertSubvector && LT.second.isVector()) {
     int NumElts = LT.second.getVectorNumElements();
     std::pair<InstructionCost, MVT> SubLT = getTypeLegalizationCost(SubTp);
     if (SubLT.second.isVector()) {
       int NumSubElts = SubLT.second.getVectorNumElements();
+      bool MatchingTypes =
+          NumElts == NumSubElts &&
+          (SubTp->getElementCount().getKnownMinValue() % NumSubElts) == 0;
       if ((Index % NumSubElts) == 0 && (NumElts % NumSubElts) == 0)
-        return SubLT.first;
+        return MatchingTypes ? TTI::TCC_Free : SubLT.first;
     }
 
     // If the insertion isn't aligned, treat it like a 2-op shuffle.
