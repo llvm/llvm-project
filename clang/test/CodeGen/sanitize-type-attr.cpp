@@ -57,6 +57,17 @@ struct SX {
 };
 SX sx;
 
+void consumer(const char *);
+
+void char_caller() {
+  // TYSAN: void @_Z11char_callerv()
+  // TYSAN-NEXT: entry:
+  // TYSAN-NEXT: call void @_Z8consumerPKc(ptr noundef @.str)
+  // TYSAN-NEXT: ret void
+
+  consumer("foo");
+}
+
 // WITHOUT: attributes [[NOATTR]] = { noinline nounwind{{.*}} }
 
 // BL: attributes [[NOATTR]] = { noinline nounwind{{.*}} }

@@ -72,7 +72,7 @@ void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV,
 
   GV->setSanitizerMetadata(Meta);
 
-  if (!CGM.getLangOpts().Sanitize.has(SanitizerKind::Type) ||
+  if (Ty.isNull() || !CGM.getLangOpts().Sanitize.has(SanitizerKind::Type) ||
       NoSanitizeAttrMask & SanitizerKind::Type)
     return;
 
