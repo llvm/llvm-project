@@ -10,6 +10,7 @@
 
 #include "Analysis/SPIRVConvergenceRegionAnalysis.h"
 #include "SPIRV.h"
+#include "SPIRVStructurizerWrapper.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
@@ -17,6 +18,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
@@ -1223,4 +1225,13 @@ INITIALIZE_PASS_END(SPIRVStructurizer, "spirv-structurizer",
 
 FunctionPass *llvm::createSPIRVStructurizerPass() {
   return new SPIRVStructurizer();
+}
+
+PreservedAnalyses SPIRVStructurizerWrapper::run(Function &F, FunctionAnalysisManager &AF){
+  FunctionPass *StructurizerPass = createSPIRVStructurizerPass();
+  if (!StructurizerPass->runOnFunction(F))
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

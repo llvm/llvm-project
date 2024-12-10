@@ -12,6 +12,7 @@
 
 #include "SPIRVTargetMachine.h"
 #include "SPIRV.h"
+#include "SPIRVStructurizerWrapper.h"
 #include "SPIRVCallLowering.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVLegalizerInfo.h"
@@ -28,6 +29,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar/Reg2Mem.h"
 #include "llvm/Transforms/Utils.h"
@@ -91,6 +93,11 @@ SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
   setFastISel(false);
   setO0WantsFastISel(false);
   setRequiresStructuredCFG(false);
+}
+
+void SPIRVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+#define GET_PASS_REGISTRY "SPIRVPassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
 }
 
 namespace {
