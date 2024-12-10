@@ -10,6 +10,7 @@
 
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -36,6 +37,17 @@ struct ExpandDivF16 : public OpRewritePattern<LLVM::FDivOp> {
 
 private:
   LogicalResult matchAndRewrite(LLVM::FDivOp op,
+                                PatternRewriter &rewriter) const override;
+};
+
+// Replaces sitofp or uitofp on src types no wider than the dst type mantissa
+// with a faster combination of bit ops and add/sub.
+template <typename OpTy> // OpTy should be LLVM::SIToFPOp or LLVM::UIToFPOp.
+struct ExpandIToFP : public OpRewritePattern<OpTy> {
+  using OpRewritePattern<OpTy>::OpRewritePattern;
+
+private:
+  LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override;
 };
 
@@ -92,10 +104,95 @@ LogicalResult ExpandDivF16::matchAndRewrite(LLVM::FDivOp op,
   return success();
 }
 
+template <typename OpTy>
+LogicalResult
+ExpandIToFP<OpTy>::matchAndRewrite(OpTy op, PatternRewriter &rewriter) const {
+  Type srcType = op.getOperand().getType();
+  auto intType = dyn_cast<IntegerType>(getElementTypeOrSelf(srcType));
+  if (!intType)
+    return rewriter.notifyMatchFailure(op, "src type is not integer");
+  Type dstType = op.getType();
+  auto floatType = dyn_cast<FloatType>(getElementTypeOrSelf(dstType));
+  if (!floatType)
+    return rewriter.notifyMatchFailure(op, "dst type is not float");
+
+  // Mantissa width includes the integer bit, e.g. 24 for fp32.
+  auto mantissaWidth = floatType.getFPMantissaWidth();
+  if (mantissaWidth < 2)
+    return rewriter.notifyMatchFailure(op, "mantissa is less than 2 bits");
+  auto intWidth = intType.getWidth();
+  if (intWidth > mantissaWidth)
+    return rewriter.notifyMatchFailure(op, "src is wider than dst mantissa");
+
+  Type extType = IntegerType::get(rewriter.getContext(), floatType.getWidth(),
+                                  intType.getSignedness());
+  if (ShapedType shapedType = dyn_cast<ShapedType>(srcType))
+    extType = shapedType.clone(extType);
+  auto getAttr = [&](APInt value) -> TypedAttr {
+    if (ShapedType shapedType = dyn_cast<ShapedType>(extType))
+      return DenseElementsAttr::get(shapedType, value);
+    return IntegerAttr::get(extType, value);
+  };
+  ImplicitLocOpBuilder builder(op.getLoc(), rewriter);
+
+  if (intWidth == mantissaWidth) {
+    if (std::is_same_v<OpTy, LLVM::UIToFPOp>) {
+      return rewriter.notifyMatchFailure(
+          op, "unsigned src is as wide as dst mantissa");
+    }
+    // Create a float bit-pattern with zero biased-exponent and zero mantissa.
+    APFloat::integerPart intPart = 1ull << (mantissaWidth - 1);
+    APFloat floatBits(floatType.getFloatSemantics(), intPart);
+    if (floatBits.bitcastToAPInt()[mantissaWidth - 1])
+      return rewriter.notifyMatchFailure(op, "bias exponent lsb bit is set");
+    TypedAttr intAttr = getAttr(floatBits.bitcastToAPInt());
+
+    // Combine zero-extended src and float bit-pattern. The msb of src becomes
+    // the lsb of the exponent.
+    Value zext = builder.create<LLVM::ZExtOp>(extType, op.getOperand());
+    Value intConst = builder.create<LLVM::ConstantOp>(intAttr);
+    Value pattern = builder.create<LLVM::OrOp>(zext, intConst);
+
+    // Mask the exponent-lsb and the mantissa to get two separate values.
+    auto mask = APInt::getBitsSetFrom(floatType.getWidth(), mantissaWidth - 1);
+    Value exponentMask = builder.create<LLVM::ConstantOp>(getAttr(mask));
+    Value mantissaMask = builder.create<LLVM::ConstantOp>(getAttr(mask - 1));
+    Value exponentAnd = builder.create<LLVM::AndOp>(pattern, exponentMask);
+    Value mantissaAnd = builder.create<LLVM::AndOp>(pattern, mantissaMask);
+
+    // Bitcast these values to float and subtract or add them.
+    Value exponentCast = builder.create<LLVM::BitcastOp>(dstType, exponentAnd);
+    Value mantissaCast = builder.create<LLVM::BitcastOp>(dstType, mantissaAnd);
+    rewriter.replaceOpWithNewOp<LLVM::FSubOp>(op, mantissaCast, exponentCast);
+    return success();
+  }
+
+  // Create a float with zero biased-exponent and msb-set mantissa.
+  APFloat::integerPart intPart = 3ull << (mantissaWidth - 2);
+  APFloat floatBits(floatType.getFloatSemantics(), intPart);
+  TypedAttr intAttr = getAttr(floatBits.bitcastToAPInt());
+  TypedAttr floatAttr = FloatAttr::get(floatType, floatBits);
+  if (ShapedType shapedType = dyn_cast<ShapedType>(dstType))
+    floatAttr = DenseElementsAttr::get(shapedType, floatAttr);
+
+  // Add extended src and bit-pattern of float, then subtract float.
+  using ExtOp = std::conditional_t<std::is_same_v<OpTy, LLVM::SIToFPOp>,
+                                   LLVM::SExtOp, LLVM::ZExtOp>;
+  Value ext = builder.create<ExtOp>(extType, op.getOperand());
+  Value intConst = builder.create<LLVM::ConstantOp>(intAttr);
+  Value add = builder.create<LLVM::AddOp>(ext, intConst);
+  Value bitcast = builder.create<LLVM::BitcastOp>(dstType, add);
+  Value floatConst = builder.create<LLVM::ConstantOp>(floatAttr);
+  rewriter.replaceOpWithNewOp<LLVM::FSubOp>(op, bitcast, floatConst);
+  return success();
+}
+
 void NVVMOptimizeForTarget::runOnOperation() {
   MLIRContext *ctx = getOperation()->getContext();
   RewritePatternSet patterns(ctx);
-  patterns.add<ExpandDivF16>(ctx);
+  patterns.add<ExpandDivF16, ExpandIToFP<LLVM::SIToFPOp>,
+               ExpandIToFP<LLVM::UIToFPOp>>(ctx);
+
   if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
     return signalPassFailure();
 }
