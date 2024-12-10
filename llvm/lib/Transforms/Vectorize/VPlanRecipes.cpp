@@ -978,7 +978,7 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
 
   if (!V->getType()->isVoidTy())
     State.set(this, V);
-  State.addMetadata(V, dyn_cast_or_null<Instruction>(getUnderlyingValue()));
+  State.addMetadata(V, CI);
 }
 
 InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,

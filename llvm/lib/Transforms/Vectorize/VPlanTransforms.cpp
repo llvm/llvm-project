@@ -1485,8 +1485,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                     auto *CI = cast<CallInst>(CInst->getUnderlyingInstr());
                     Intrinsic::ID VPID = VPIntrinsic::getForIntrinsic(
                         CI->getCalledFunction()->getIntrinsicID());
-                    assert(VPID != Intrinsic::not_intrinsic &&
-                           "Expected VP Instrinsic");
+                    if (VPID == Intrinsic::not_intrinsic)
+                      return nullptr;
 
                     SmallVector<VPValue *> Ops(CInst->operands());
                     assert(VPIntrinsic::getMaskParamPos(VPID) &&
@@ -1495,7 +1495,6 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                     VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(
                         IntegerType::getInt1Ty(CI->getContext())));
                     Ops.push_back(Mask);
-                    ;
                     Ops.push_back(&EVL);
                     return new VPWidenIntrinsicRecipe(
                         *CI, VPID, Ops, TypeInfo.inferScalarType(CInst),
