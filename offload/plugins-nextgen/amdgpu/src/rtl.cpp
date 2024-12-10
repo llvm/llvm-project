@@ -2900,7 +2900,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         OMPX_DisableUsmMaps("OMPX_DISABLE_USM_MAPS", false),
         OMPX_NoMapChecks("OMPX_DISABLE_MAPS", true),
         OMPX_StrictSanityChecks("OMPX_STRICT_SANITY_CHECKS", false),
-        OMPX_SyncCopyBack("LIBOMPTARGET_SYNC_COPY_BACK", true),
+        OMPX_SyncCopyBack("LIBOMPTARGET_SYNC_COPY_BACK", false),
         OMPX_APUPrefaultMemcopy("LIBOMPTARGET_APU_PREFAULT_MEMCOPY", "true"),
         OMPX_APUPrefaultMemcopySize("LIBOMPTARGET_APU_PREFAULT_MEMCOPY_SIZE",
                                     1 * 1024 * 1024), // 1MB
