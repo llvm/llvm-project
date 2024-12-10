@@ -124,12 +124,12 @@ struct VPlanTransforms {
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
 
-  /// Update \p Plan to account for uncountable exit blocks in \p
-  /// UncountableExitingBlocks by
-  ///  * updating the condition to exit the vector loop to include the early
+  /// Update \p Plan to account for the uncountable early exit block in \p
+  /// UncountableExitingBlock by
+  ///  * updating the condition exiting the vector loop to include the early
   ///    exit conditions
   ///  * splitting the original middle block to branch to the early exit blocks
-  ///    if taken. Returns false if the transformation wasn't successful.
+  ///    if taken.
   static void handleUncountableEarlyExit(VPlan &Plan, ScalarEvolution &SE,
                                          Loop *OrigLoop,
                                          BasicBlock *UncountableExitingBlock,

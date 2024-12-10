@@ -87,35 +87,6 @@ e2:
   ret i64 %p2
 }
 
-define i64 @multi_exiting_to_different_exits_load_exit_value() {
-; CHECK: multi_exiting_to_different_exits_load_exit_value
-; CHECK-NOT: VPlan 'Final VPlan for VF={4},UF={1}' {
-entry:
-  %src = alloca [128 x i64]
-  call void @init(ptr %src)
-  br label %loop.header
-
-loop.header:
-  %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ]
-  %gep.src = getelementptr inbounds i64, ptr %src, i64 %iv
-  %l = load i64, ptr %gep.src
-  %c.1 = icmp eq i64 %l, 10
-  br i1 %c.1, label %e1, label %loop.latch
-
-loop.latch:
-  %inc = add nuw i64 %iv, 1
-  %c.2 = icmp eq i64 %inc, 128
-  br i1 %c.2, label %e2, label %loop.header
-
-e1:
-  %p1 = phi i64 [ %l, %loop.header ]
-  ret i64 %p1
-
-e2:
-  %p2 = phi i64 [ 1, %loop.latch ]
-  ret i64 %p2
-}
-
 define i64 @multi_exiting_to_same_exit_live_in_exit_values() {
 ; CHECK: multi_exiting_to_same_exit_live_in_exit_values
 ; CHECK-LABEL: VPlan 'Initial VPlan for VF={4},UF>=1' {
@@ -272,62 +243,3 @@ exit:
 ; uselistorder directives
   uselistorder label %exit, { 1, 0 }
 }
-
-
-define i64 @multi_exiting_to_same_exit_load_exit_value() {
-; CHECK: multi_exiting_to_same_exit_load_exit_value
-; CHECK-NOT: VPlan 'Final VPlan for VF={4},UF={1}' {
-
-entry:
-  %src = alloca [128 x i64]
-  call void @init(ptr %src)
-  br label %loop.header
-
-loop.header:
-  %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ]
-  %gep.src = getelementptr inbounds i64, ptr %src, i64 %iv
-  %l = load i64, ptr %gep.src
-  %l.2 = load i64, ptr %gep.src
-  %c.1 = icmp eq i64 %l, 10
-  br i1 %c.1, label %e1, label %loop.latch
-
-loop.latch:
-  %inc = add nuw i64 %iv, 1
-  %c.2 = icmp eq i64 %inc, 128
-  br i1 %c.2, label %e1, label %loop.header
-
-e1:
-  %p1 = phi i64 [ %l, %loop.header ], [ %l.2, %loop.latch ]
-  ret i64 %p1
-}
-
-define i64 @multi_exiting_to_different_exits_induction_exit_value() {
-; CHECK: multi_exiting_to_different_exits_induction_exit_value
-; CHECK-NOT: VPlan 'Final VPlan for VF={4},UF={1}' {
-entry:
-  %src = alloca [128 x i64]
-  call void @init(ptr %src)
-  br label %loop.header
-
-loop.header:
-  %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ]
-  %gep.src = getelementptr inbounds i64, ptr %src, i64 %iv
-  %l = load i64, ptr %gep.src
-  %c.1 = icmp eq i64 %l, 10
-  br i1 %c.1, label %e1, label %loop.latch
-
-loop.latch:
-  %inc = add nuw i64 %iv, 1
-  %c.2 = icmp eq i64 %inc, 128
-  br i1 %c.2, label %e2, label %loop.header
-
-e1:
-  %p1 = phi i64 [ %iv, %loop.header ]
-  ret i64 %p1
-
-e2:
-  %p2 = phi i64 [ 1, %loop.latch ]
-  ret i64 %p2
-}
-
-

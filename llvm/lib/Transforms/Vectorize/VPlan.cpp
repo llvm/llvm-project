@@ -861,7 +861,7 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   auto Plan = std::make_unique<VPlan>(Entry, VecPreheader, ScalarHeader);
 
   // Create SCEV and VPValue for the trip count.
-  // We use the symbolic max backedge-taken-count, which is used when
+  // We use the symbolic max backedge-taken-count, which works also when
   // vectorizing loops with uncountable early exits.
   const SCEV *BackedgeTakenCountSCEV = PSE.getSymbolicMaxBackedgeTakenCount();
   assert(!isa<SCEVCouldNotCompute>(BackedgeTakenCountSCEV) &&
@@ -901,8 +901,7 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   // 3) Otherwise, construct a runtime check.
   BasicBlock *IRExitBlock = TheLoop->getUniqueLatchExitBlock();
   auto *VPExitBlock = VPIRBasicBlock::fromBasicBlock(IRExitBlock);
-  // The connection order corresponds to the operands of the conditional
-  // branch.
+  // The connection order corresponds to the operands of the conditional branch.
   VPBlockUtils::insertBlockAfter(VPExitBlock, MiddleVPBB);
   VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
 
@@ -1047,10 +1046,7 @@ void VPlan::execute(VPTransformState *State) {
       // Move the last step to the end of the latch block. This ensures
       // consistent placement of all induction updates.
       Instruction *Inc = cast<Instruction>(Phi->getIncomingValue(1));
-      if (VectorLatchBB->getTerminator() == &*VectorLatchBB->getFirstNonPHI())
-        Inc->moveBefore(VectorLatchBB->getTerminator());
-      else
-        Inc->moveBefore(VectorLatchBB->getTerminator()->getPrevNode());
+      Inc->moveBefore(VectorLatchBB->getTerminator()->getPrevNode());
 
       // Use the steps for the last part as backedge value for the induction.
       if (auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))

@@ -1842,50 +1842,57 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
 void VPlanTransforms::handleUncountableEarlyExit(
     VPlan &Plan, ScalarEvolution &SE, Loop *OrigLoop,
     BasicBlock *UncountableExitingBlock, VPRecipeBuilder &RecipeBuilder) {
-  auto *LatchVPBB =
-      cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getExiting());
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  auto *LatchVPBB = cast<VPBasicBlock>(LoopRegion->getExiting());
   VPBuilder Builder(LatchVPBB->getTerminator());
   auto *MiddleVPBB = Plan.getMiddleBlock();
-  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  VPValue *EarlyExitTaken = nullptr;
+  VPValue *IsEarlyExitTaken = nullptr;
 
-  // Process the uncountable exiting block. Update EarlyExitTaken, which tracks
-  // if any uncountable early exit has been taken. Also split the middle block
-  // and branch to the exit block for the early exit if it has been taken.
-  auto *ExitingTerm =
+  // Process the uncountable exiting block. Update IsEarlyExitTaken, which
+  // tracks if the uncountable early exit has been taken. Also split the middle
+  // block and have it conditionally branch to the early exit block if
+  // EarlyExitTaken.
+  auto *EarlyExitingBranch =
       cast<BranchInst>(UncountableExitingBlock->getTerminator());
-  BasicBlock *TrueSucc = ExitingTerm->getSuccessor(0);
-  BasicBlock *FalseSucc = ExitingTerm->getSuccessor(1);
-  VPIRBasicBlock *VPExitBlock;
+  BasicBlock *TrueSucc = EarlyExitingBranch->getSuccessor(0);
+  BasicBlock *FalseSucc = EarlyExitingBranch->getSuccessor(1);
+
+  // The early exit block may or may not be the same as the "countable" exit
+  // block. Creates a new VPIRBB for the early exit block in case it is distinct
+  // from the countable exit block.
+  // TODO: Introduce both exit blocks during VPlan skeleton construction.
+  VPIRBasicBlock *VPEarlyExitBlock;
   if (OrigLoop->getUniqueExitBlock()) {
-    VPExitBlock = cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0]);
+    VPEarlyExitBlock = cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0]);
   } else {
-    VPExitBlock = VPIRBasicBlock::fromBasicBlock(
+    VPEarlyExitBlock = VPIRBasicBlock::fromBasicBlock(
         !OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
   }
 
-  VPValue *M = RecipeBuilder.getBlockInMask(
+  VPValue *EarlyExitNotTakenCond = RecipeBuilder.getBlockInMask(
       OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
-  auto *N = Builder.createNot(M);
-  EarlyExitTaken = Builder.createNaryOp(VPInstruction::AnyOf, {N});
+  auto *EarlyExitTakenCond = Builder.createNot(EarlyExitNotTakenCond);
+  IsEarlyExitTaken =
+      Builder.createNaryOp(VPInstruction::AnyOf, {EarlyExitTakenCond});
 
   VPBasicBlock *NewMiddle = new VPBasicBlock("middle.split");
-  VPBlockUtils::disconnectBlocks(LoopRegion, MiddleVPBB);
-  VPBlockUtils::insertBlockAfter(NewMiddle, LoopRegion);
-  VPBlockUtils::connectBlocks(NewMiddle, VPExitBlock);
-  VPBlockUtils::connectBlocks(NewMiddle, MiddleVPBB);
+  VPBlockUtils::insertOnEdge(LoopRegion, MiddleVPBB, NewMiddle);
+  VPBlockUtils::connectBlocks(NewMiddle, VPEarlyExitBlock);
+  std::swap(NewMiddle->getSuccessors()[0], NewMiddle->getSuccessors()[1]);
 
   VPBuilder MiddleBuilder(NewMiddle);
-  MiddleBuilder.createNaryOp(VPInstruction::BranchOnCond, {EarlyExitTaken});
+  MiddleBuilder.createNaryOp(VPInstruction::BranchOnCond, {IsEarlyExitTaken});
 
-  // Replace the condition controlling the exit from the vector loop with one
-  // exiting if either the original condition of the vector latch is true or any
-  // early exit has been taken.
-  auto *Term = dyn_cast<VPInstruction>(LatchVPBB->getTerminator());
-  auto *IsLatchExiting = Builder.createICmp(
-      CmpInst::ICMP_EQ, Term->getOperand(0), Term->getOperand(1));
-  auto *AnyExiting =
-      Builder.createNaryOp(Instruction::Or, {EarlyExitTaken, IsLatchExiting});
+  // Replace the condition controlling the non-early exit from the vector loop
+  // with one exiting if either the original condition of the vector latch is
+  // true or the early exit has been taken.
+  auto *LatchExitingBranch =
+      dyn_cast<VPInstruction>(LatchVPBB->getTerminator());
+  auto *IsLatchExitTaken =
+      Builder.createICmp(CmpInst::ICMP_EQ, LatchExitingBranch->getOperand(0),
+                         LatchExitingBranch->getOperand(1));
+  auto *AnyExiting = Builder.createNaryOp(Instruction::Or,
+                                          {IsEarlyExitTaken, IsLatchExitTaken});
   Builder.createNaryOp(VPInstruction::BranchOnCond, AnyExiting);
-  Term->eraseFromParent();
+  LatchExitingBranch->eraseFromParent();
 }

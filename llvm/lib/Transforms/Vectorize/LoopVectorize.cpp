@@ -9294,12 +9294,10 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
          "VPBasicBlock");
   RecipeBuilder.fixHeaderPhis();
 
-  if (Legal->hasUncountableEarlyExit()) {
-    assert(Legal->getUncountableExitingBlocks().size() == 1 &&
-           "Only single uncountable exiting bock supported");
+  if (auto *UncountableExitingBlock =
+          Legal->getUncountableEarlyExitingBlock()) {
     VPlanTransforms::handleUncountableEarlyExit(
-        *Plan, *PSE.getSE(), OrigLoop, Legal->getUncountableExitingBlocks()[0],
-        RecipeBuilder);
+        *Plan, *PSE.getSE(), OrigLoop, UncountableExitingBlock, RecipeBuilder);
   }
   addScalarResumePhis(RecipeBuilder, *Plan);
   SetVector<VPIRInstruction *> ExitUsersToFix = collectUsersInExitBlocks(
@@ -10178,15 +10176,13 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
-  if (LVL.hasUncountableEarlyExit()) {
-    if (!EnableEarlyExitVectorization) {
-      reportVectorizationFailure("Auto-vectorization of loops with uncountable "
-                                 "early exit is not enabled",
-                                 "Auto-vectorization of loops with uncountable "
-                                 "early exit is not enabled",
-                                 "UncountableEarlyExitLoopsDisabled", ORE, L);
-      return false;
-    }
+  if (LVL.hasUncountableEarlyExit() && !EnableEarlyExitVectorization) {
+    reportVectorizationFailure("Auto-vectorization of loops with uncountable "
+                               "early exit is not enabled",
+                               "Auto-vectorization of loops with uncountable "
+                               "early exit is not enabled",
+                               "UncountableEarlyExitLoopsDisabled", ORE, L);
+    return false;
   }
 
   // Entrance to the VPlan-native vectorization path. Outer loops are processed
