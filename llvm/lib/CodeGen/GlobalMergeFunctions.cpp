@@ -154,7 +154,7 @@ static Value *createCast(IRBuilder<> &Builder, Value *V, Type *DestTy) {
     auto *DestAT = dyn_cast<ArrayType>(DestTy);
     assert(DestAT);
     assert(SrcAT->getNumElements() == DestAT->getNumElements());
-    Value *Result = UndefValue::get(DestTy);
+    Value *Result = PoisonValue::get(DestTy);
     for (unsigned int I = 0, E = SrcAT->getNumElements(); I < E; ++I) {
       Value *Element =
           createCast(Builder, Builder.CreateExtractValue(V, ArrayRef(I)),
