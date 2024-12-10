@@ -876,13 +876,13 @@ public:
 
   /// Best-effort check if the expression operand refers to a most derived
   /// object. This is not a strong guarantee.
-  bool isMostDerived(ASTContext &Context) const;
+  bool isMostDerived(const ASTContext &Context) const;
 
   bool isTypeOperand() const { return Operand.is<TypeSourceInfo *>(); }
 
   /// Retrieves the type operand of this typeid() expression after
   /// various required adjustments (removing reference types, cv-qualifiers).
-  QualType getTypeOperand(ASTContext &Context) const;
+  QualType getTypeOperand(const ASTContext &Context) const;
 
   /// Retrieve source information for the type operand.
   TypeSourceInfo *getTypeOperandSourceInfo() const {
@@ -2176,8 +2176,9 @@ public:
   const_child_range children() const;
 };
 
-/// An expression "T()" which creates a value-initialized rvalue of type
-/// T, which is a non-class type.  See (C++98 [5.2.3p2]).
+/// An expression "T()" which creates an rvalue of a non-class type T.
+/// For non-void T, the rvalue is value-initialized.
+/// See (C++98 [5.2.3p2]).
 class CXXScalarValueInitExpr : public Expr {
   friend class ASTStmtReader;
 
@@ -3229,7 +3230,7 @@ class UnresolvedLookupExpr final
                        const DeclarationNameInfo &NameInfo, bool RequiresADL,
                        const TemplateArgumentListInfo *TemplateArgs,
                        UnresolvedSetIterator Begin, UnresolvedSetIterator End,
-                       bool KnownDependent);
+                       bool KnownDependent, bool KnownInstantiationDependent);
 
   UnresolvedLookupExpr(EmptyShell Empty, unsigned NumResults,
                        bool HasTemplateKWAndArgsInfo);
@@ -3248,7 +3249,7 @@ public:
          NestedNameSpecifierLoc QualifierLoc,
          const DeclarationNameInfo &NameInfo, bool RequiresADL,
          UnresolvedSetIterator Begin, UnresolvedSetIterator End,
-         bool KnownDependent);
+         bool KnownDependent, bool KnownInstantiationDependent);
 
   // After canonicalization, there may be dependent template arguments in
   // CanonicalConverted But none of Args is dependent. When any of
@@ -3258,7 +3259,8 @@ public:
          NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateKWLoc,
          const DeclarationNameInfo &NameInfo, bool RequiresADL,
          const TemplateArgumentListInfo *Args, UnresolvedSetIterator Begin,
-         UnresolvedSetIterator End, bool KnownDependent);
+         UnresolvedSetIterator End, bool KnownDependent,
+         bool KnownInstantiationDependent);
 
   static UnresolvedLookupExpr *CreateEmpty(const ASTContext &Context,
                                            unsigned NumResults,
@@ -3676,9 +3678,9 @@ public:
 /// an implicit access if a qualifier is provided.
 class CXXDependentScopeMemberExpr final
     : public Expr,
-      private llvm::TrailingObjects<
-          CXXDependentScopeMemberExpr, NestedNameSpecifierLoc, DeclAccessPair,
-          ASTTemplateKWAndArgsInfo, TemplateArgumentLoc> {
+      private llvm::TrailingObjects<CXXDependentScopeMemberExpr,
+                                    ASTTemplateKWAndArgsInfo,
+                                    TemplateArgumentLoc, NamedDecl *> {
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
   friend TrailingObjects;
@@ -3691,14 +3693,16 @@ class CXXDependentScopeMemberExpr final
   /// implicit accesses.
   QualType BaseType;
 
+  /// The nested-name-specifier that precedes the member name, if any.
+  /// FIXME: This could be in principle store as a trailing object.
+  /// However the performance impact of doing so should be investigated first.
+  NestedNameSpecifierLoc QualifierLoc;
+
   /// The member to which this member expression refers, which
   /// can be name, overloaded operator, or destructor.
   ///
   /// FIXME: could also be a template-id
   DeclarationNameInfo MemberNameInfo;
-
-  /// The location of the '->' or '.' operator.
-  SourceLocation OperatorLoc;
 
   // CXXDependentScopeMemberExpr is followed by several trailing objects,
   // some of which optional. They are in order:
@@ -3719,16 +3723,8 @@ class CXXDependentScopeMemberExpr final
     return CXXDependentScopeMemberExprBits.HasTemplateKWAndArgsInfo;
   }
 
-  unsigned getNumUnqualifiedLookups() const {
-    return CXXDependentScopeMemberExprBits.NumUnqualifiedLookups;
-  }
-
-  unsigned numTrailingObjects(OverloadToken<NestedNameSpecifierLoc>) const {
-    return hasQualifier();
-  }
-
-  unsigned numTrailingObjects(OverloadToken<DeclAccessPair>) const {
-    return getNumUnqualifiedLookups();
+  bool hasFirstQualifierFoundInScope() const {
+    return CXXDependentScopeMemberExprBits.HasFirstQualifierFoundInScope;
   }
 
   unsigned numTrailingObjects(OverloadToken<ASTTemplateKWAndArgsInfo>) const {
@@ -3739,32 +3735,33 @@ class CXXDependentScopeMemberExpr final
     return getNumTemplateArgs();
   }
 
+  unsigned numTrailingObjects(OverloadToken<NamedDecl *>) const {
+    return hasFirstQualifierFoundInScope();
+  }
+
   CXXDependentScopeMemberExpr(const ASTContext &Ctx, Expr *Base,
                               QualType BaseType, bool IsArrow,
                               SourceLocation OperatorLoc,
                               NestedNameSpecifierLoc QualifierLoc,
                               SourceLocation TemplateKWLoc,
-                              ArrayRef<DeclAccessPair> UnqualifiedLookups,
+                              NamedDecl *FirstQualifierFoundInScope,
                               DeclarationNameInfo MemberNameInfo,
                               const TemplateArgumentListInfo *TemplateArgs);
 
-  CXXDependentScopeMemberExpr(EmptyShell Empty, bool HasQualifier,
-                              unsigned NumUnqualifiedLookups,
-                              bool HasTemplateKWAndArgsInfo);
+  CXXDependentScopeMemberExpr(EmptyShell Empty, bool HasTemplateKWAndArgsInfo,
+                              bool HasFirstQualifierFoundInScope);
 
 public:
   static CXXDependentScopeMemberExpr *
   Create(const ASTContext &Ctx, Expr *Base, QualType BaseType, bool IsArrow,
          SourceLocation OperatorLoc, NestedNameSpecifierLoc QualifierLoc,
-         SourceLocation TemplateKWLoc,
-         ArrayRef<DeclAccessPair> UnqualifiedLookups,
+         SourceLocation TemplateKWLoc, NamedDecl *FirstQualifierFoundInScope,
          DeclarationNameInfo MemberNameInfo,
          const TemplateArgumentListInfo *TemplateArgs);
 
   static CXXDependentScopeMemberExpr *
-  CreateEmpty(const ASTContext &Ctx, bool HasQualifier,
-              unsigned NumUnqualifiedLookups, bool HasTemplateKWAndArgsInfo,
-              unsigned NumTemplateArgs);
+  CreateEmpty(const ASTContext &Ctx, bool HasTemplateKWAndArgsInfo,
+              unsigned NumTemplateArgs, bool HasFirstQualifierFoundInScope);
 
   /// True if this is an implicit access, i.e. one in which the
   /// member being accessed was not written in the source.  The source
@@ -3789,35 +3786,34 @@ public:
   bool isArrow() const { return CXXDependentScopeMemberExprBits.IsArrow; }
 
   /// Retrieve the location of the '->' or '.' operator.
-  SourceLocation getOperatorLoc() const { return OperatorLoc; }
-
-  /// Determines whether this member expression had a nested-name-specifier
-  /// prior to the name of the member, e.g., x->Base::foo.
-  bool hasQualifier() const {
-    return CXXDependentScopeMemberExprBits.HasQualifier;
+  SourceLocation getOperatorLoc() const {
+    return CXXDependentScopeMemberExprBits.OperatorLoc;
   }
 
-  /// If the member name was qualified, retrieves the nested-name-specifier
-  /// that precedes the member name, with source-location information.
-  NestedNameSpecifierLoc getQualifierLoc() const {
-    if (!hasQualifier())
-      return NestedNameSpecifierLoc();
-    return *getTrailingObjects<NestedNameSpecifierLoc>();
-  }
-
-  /// If the member name was qualified, retrieves the
-  /// nested-name-specifier that precedes the member name. Otherwise, returns
-  /// NULL.
+  /// Retrieve the nested-name-specifier that qualifies the member name.
   NestedNameSpecifier *getQualifier() const {
-    return getQualifierLoc().getNestedNameSpecifier();
+    return QualifierLoc.getNestedNameSpecifier();
   }
 
-  /// Retrieve the declarations found by unqualified lookup for the first
-  /// component name of the nested-name-specifier, if any.
-  ArrayRef<DeclAccessPair> unqualified_lookups() const {
-    if (!getNumUnqualifiedLookups())
-      return std::nullopt;
-    return {getTrailingObjects<DeclAccessPair>(), getNumUnqualifiedLookups()};
+  /// Retrieve the nested-name-specifier that qualifies the member
+  /// name, with source location information.
+  NestedNameSpecifierLoc getQualifierLoc() const { return QualifierLoc; }
+
+  /// Retrieve the first part of the nested-name-specifier that was
+  /// found in the scope of the member access expression when the member access
+  /// was initially parsed.
+  ///
+  /// This function only returns a useful result when member access expression
+  /// uses a qualified member name, e.g., "x.Base::f". Here, the declaration
+  /// returned by this function describes what was found by unqualified name
+  /// lookup for the identifier "Base" within the scope of the member access
+  /// expression itself. At template instantiation time, this information is
+  /// combined with the results of name lookup into the type of the object
+  /// expression itself (the class type of x).
+  NamedDecl *getFirstQualifierFoundInScope() const {
+    if (!hasFirstQualifierFoundInScope())
+      return nullptr;
+    return *getTrailingObjects<NamedDecl *>();
   }
 
   /// Retrieve the name of the member that this expression refers to.
@@ -4310,11 +4306,11 @@ class SizeOfPackExpr final
       : Expr(SizeOfPackExprClass, Empty), Length(NumPartialArgs) {}
 
 public:
-  static SizeOfPackExpr *
-  Create(ASTContext &Context, SourceLocation OperatorLoc, NamedDecl *Pack,
-         SourceLocation PackLoc, SourceLocation RParenLoc,
-         std::optional<unsigned> Length = std::nullopt,
-         ArrayRef<TemplateArgument> PartialArgs = std::nullopt);
+  static SizeOfPackExpr *Create(ASTContext &Context, SourceLocation OperatorLoc,
+                                NamedDecl *Pack, SourceLocation PackLoc,
+                                SourceLocation RParenLoc,
+                                std::optional<unsigned> Length = std::nullopt,
+                                ArrayRef<TemplateArgument> PartialArgs = {});
   static SizeOfPackExpr *CreateDeserialized(ASTContext &Context,
                                             unsigned NumPartialArgs);
 
@@ -4329,6 +4325,8 @@ public:
 
   /// Retrieve the parameter pack.
   NamedDecl *getPack() const { return Pack; }
+
+  void setPack(NamedDecl *NewPack) { Pack = NewPack; }
 
   /// Retrieve the length of the parameter pack.
   ///
@@ -4392,17 +4390,17 @@ class PackIndexingExpr final
   unsigned TransformedExpressions : 31;
 
   LLVM_PREFERRED_TYPE(bool)
-  unsigned ExpandedToEmptyPack : 1;
+  unsigned FullySubstituted : 1;
 
   PackIndexingExpr(QualType Type, SourceLocation EllipsisLoc,
                    SourceLocation RSquareLoc, Expr *PackIdExpr, Expr *IndexExpr,
                    ArrayRef<Expr *> SubstitutedExprs = {},
-                   bool ExpandedToEmptyPack = false)
+                   bool FullySubstituted = false)
       : Expr(PackIndexingExprClass, Type, VK_LValue, OK_Ordinary),
         EllipsisLoc(EllipsisLoc), RSquareLoc(RSquareLoc),
         SubExprs{PackIdExpr, IndexExpr},
         TransformedExpressions(SubstitutedExprs.size()),
-        ExpandedToEmptyPack(ExpandedToEmptyPack) {
+        FullySubstituted(FullySubstituted) {
 
     auto *Exprs = getTrailingObjects<Expr *>();
     std::uninitialized_copy(SubstitutedExprs.begin(), SubstitutedExprs.end(),
@@ -4426,12 +4424,16 @@ public:
                                   SourceLocation RSquareLoc, Expr *PackIdExpr,
                                   Expr *IndexExpr, std::optional<int64_t> Index,
                                   ArrayRef<Expr *> SubstitutedExprs = {},
-                                  bool ExpandedToEmptyPack = false);
+                                  bool FullySubstituted = false);
   static PackIndexingExpr *CreateDeserialized(ASTContext &Context,
                                               unsigned NumTransformedExprs);
 
+  bool isFullySubstituted() const { return FullySubstituted; }
+
   /// Determine if the expression was expanded to empty.
-  bool expandsToEmptyPack() const { return ExpandedToEmptyPack; }
+  bool expandsToEmptyPack() const {
+    return isFullySubstituted() && TransformedExpressions == 0;
+  }
 
   /// Determine the location of the 'sizeof' keyword.
   SourceLocation getEllipsisLoc() const { return EllipsisLoc; }
@@ -4860,15 +4862,7 @@ public:
   CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
               SourceLocation LParenLoc, Expr *LHS, BinaryOperatorKind Opcode,
               SourceLocation EllipsisLoc, Expr *RHS, SourceLocation RParenLoc,
-              std::optional<unsigned> NumExpansions)
-      : Expr(CXXFoldExprClass, T, VK_PRValue, OK_Ordinary),
-        LParenLoc(LParenLoc), EllipsisLoc(EllipsisLoc), RParenLoc(RParenLoc),
-        NumExpansions(NumExpansions ? *NumExpansions + 1 : 0), Opcode(Opcode) {
-    SubExprs[SubExpr::Callee] = Callee;
-    SubExprs[SubExpr::LHS] = LHS;
-    SubExprs[SubExpr::RHS] = RHS;
-    setDependence(computeDependence(this));
-  }
+              std::optional<unsigned> NumExpansions);
 
   CXXFoldExpr(EmptyShell Empty) : Expr(CXXFoldExprClass, Empty) {}
 

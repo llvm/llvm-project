@@ -13,7 +13,7 @@ define i32 @read_only_loop_with_runtime_check(ptr noundef %array, i32 noundef %c
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[DOTNOT_NOT:%.*]] = icmp ult i32 [[TMP1]], [[COUNT]]
+; CHECK-NEXT:    [[DOTNOT_NOT:%.*]] = icmp ugt i32 [[COUNT]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[DOTNOT_NOT]], label [[FOR_BODY_PREHEADER10:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       for.body.preheader10:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 8
@@ -30,7 +30,7 @@ define i32 @read_only_loop_with_runtime_check(ptr noundef %array, i32 noundef %c
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI11:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[ARRAY]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 16
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP4]] = add <4 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
@@ -49,7 +49,7 @@ define i32 @read_only_loop_with_runtime_check(ptr noundef %array, i32 noundef %c
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[INDVARS_IV_PH]], [[FOR_BODY_PREHEADER13]] ]
 ; CHECK-NEXT:    [[SUM_07:%.*]] = phi i32 [ [[ADD]], [[FOR_BODY]] ], [ [[SUM_07_PH]], [[FOR_BODY_PREHEADER13]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[ARRAY]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAY]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[TMP8]], [[SUM_07]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -128,7 +128,7 @@ define dso_local noundef i32 @sum_prefix_with_sum(ptr %s.coerce0, i64 %s.coerce1
 ; CHECK-NEXT:    br i1 [[CMP5_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
-; CHECK-NEXT:    [[DOTNOT_NOT:%.*]] = icmp ult i64 [[TMP0]], [[S_COERCE1]]
+; CHECK-NEXT:    [[DOTNOT_NOT:%.*]] = icmp ugt i64 [[S_COERCE1]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[DOTNOT_NOT]], label [[FOR_BODY_PREHEADER8:%.*]], label [[COND_FALSE_I:%.*]], !prof [[PROF4:![0-9]+]]
 ; CHECK:       for.body.preheader8:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
@@ -145,7 +145,7 @@ define dso_local noundef i32 @sum_prefix_with_sum(ptr %s.coerce0, i64 %s.coerce1
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP3:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI9:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[S_COERCE0]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 16
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3]] = add <4 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
@@ -156,7 +156,7 @@ define dso_local noundef i32 @sum_prefix_with_sum(ptr %s.coerce0, i64 %s.coerce1
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    [[ADD]] = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[N]]
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY_PREHEADER11]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[RET_0_LCSSA1:%.*]] = phi i32 [ 0, [[ENTRY1:%.*]] ], [ [[ADD]], [[SPAN_CHECKED_ACCESS_EXIT]] ], [ [[ADD1:%.*]], [[FOR_BODY1]] ]
@@ -225,9 +225,9 @@ define hidden noundef nonnull align 4 dereferenceable(4) ptr @span_checked_acces
 ; CHECK-LABEL: define hidden noundef nonnull align 4 dereferenceable(4) ptr @span_checked_access(
 ; CHECK-SAME: ptr nocapture noundef nonnull readonly align 8 dereferenceable(16) [[THIS:%.*]], i64 noundef [[__IDX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[__SIZE__I:%.*]] = getelementptr inbounds i8, ptr [[THIS]], i64 8
+; CHECK-NEXT:    [[__SIZE__I:%.*]] = getelementptr inbounds nuw i8, ptr [[THIS]], i64 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[__SIZE__I]], align 8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[TMP0]], [[__IDX]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[__IDX]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]], !prof [[PROF4]]
 ; CHECK:       cond.false:
 ; CHECK-NEXT:    tail call void @llvm.trap()
@@ -270,7 +270,7 @@ define hidden noundef i64 @span_access(ptr noundef nonnull align 8 dereferenceab
 ; CHECK-LABEL: define hidden noundef i64 @span_access(
 ; CHECK-SAME: ptr nocapture noundef nonnull readonly align 8 dereferenceable(16) [[THIS:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[__SIZE_:%.*]] = getelementptr inbounds i8, ptr [[THIS]], i64 8
+; CHECK-NEXT:    [[__SIZE_:%.*]] = getelementptr inbounds nuw i8, ptr [[THIS]], i64 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[__SIZE_]], align 8
 ; CHECK-NEXT:    ret i64 [[TMP0]]
 ;

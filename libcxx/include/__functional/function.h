@@ -12,6 +12,7 @@
 
 #include <__assert>
 #include <__config>
+#include <__cstddef/nullptr_t.h>
 #include <__exception/exception.h>
 #include <__functional/binary_function.h>
 #include <__functional/invoke.h>
@@ -78,8 +79,8 @@ public:
 };
 _LIBCPP_DIAGNOSTIC_POP
 
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_function_call() {
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_function_call() {
+#  if _LIBCPP_HAS_EXCEPTIONS
   throw bad_function_call();
 #  else
   _LIBCPP_VERBOSE_ABORT("bad_function_call was thrown in -fno-exceptions mode");
@@ -123,7 +124,7 @@ _LIBCPP_HIDE_FROM_ABI bool __not_null(function<_Fp> const& __f) {
   return !!__f;
 }
 
-#  ifdef _LIBCPP_HAS_EXTENSION_BLOCKS
+#  if _LIBCPP_HAS_EXTENSION_BLOCKS
 template <class _Rp, class... _Args>
 _LIBCPP_HIDE_FROM_ABI bool __not_null(_Rp (^__p)(_Args...)) {
   return __p;
@@ -143,45 +144,46 @@ class __default_alloc_func;
 
 template <class _Fp, class _Ap, class _Rp, class... _ArgTypes>
 class __alloc_func<_Fp, _Ap, _Rp(_ArgTypes...)> {
-  __compressed_pair<_Fp, _Ap> __f_;
+  _LIBCPP_COMPRESSED_PAIR(_Fp, __func_, _Ap, __alloc_);
 
 public:
   typedef _LIBCPP_NODEBUG _Fp _Target;
   typedef _LIBCPP_NODEBUG _Ap _Alloc;
 
-  _LIBCPP_HIDE_FROM_ABI const _Target& __target() const { return __f_.first(); }
+  _LIBCPP_HIDE_FROM_ABI const _Target& __target() const { return __func_; }
 
   // WIN32 APIs may define __allocator, so use __get_allocator instead.
-  _LIBCPP_HIDE_FROM_ABI const _Alloc& __get_allocator() const { return __f_.second(); }
+  _LIBCPP_HIDE_FROM_ABI const _Alloc& __get_allocator() const { return __alloc_; }
 
-  _LIBCPP_HIDE_FROM_ABI explicit __alloc_func(_Target&& __f)
-      : __f_(piecewise_construct, std::forward_as_tuple(std::move(__f)), std::forward_as_tuple()) {}
+  _LIBCPP_HIDE_FROM_ABI explicit __alloc_func(_Target&& __f) : __func_(std::move(__f)), __alloc_() {}
 
-  _LIBCPP_HIDE_FROM_ABI explicit __alloc_func(const _Target& __f, const _Alloc& __a)
-      : __f_(piecewise_construct, std::forward_as_tuple(__f), std::forward_as_tuple(__a)) {}
+  _LIBCPP_HIDE_FROM_ABI explicit __alloc_func(const _Target& __f, const _Alloc& __a) : __func_(__f), __alloc_(__a) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit __alloc_func(const _Target& __f, _Alloc&& __a)
-      : __f_(piecewise_construct, std::forward_as_tuple(__f), std::forward_as_tuple(std::move(__a))) {}
+      : __func_(__f), __alloc_(std::move(__a)) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit __alloc_func(_Target&& __f, _Alloc&& __a)
-      : __f_(piecewise_construct, std::forward_as_tuple(std::move(__f)), std::forward_as_tuple(std::move(__a))) {}
+      : __func_(std::move(__f)), __alloc_(std::move(__a)) {}
 
   _LIBCPP_HIDE_FROM_ABI _Rp operator()(_ArgTypes&&... __arg) {
     typedef __invoke_void_return_wrapper<_Rp> _Invoker;
-    return _Invoker::__call(__f_.first(), std::forward<_ArgTypes>(__arg)...);
+    return _Invoker::__call(__func_, std::forward<_ArgTypes>(__arg)...);
   }
 
   _LIBCPP_HIDE_FROM_ABI __alloc_func* __clone() const {
     typedef allocator_traits<_Alloc> __alloc_traits;
     typedef __rebind_alloc<__alloc_traits, __alloc_func> _AA;
-    _AA __a(__f_.second());
+    _AA __a(__alloc_);
     typedef __allocator_destructor<_AA> _Dp;
     unique_ptr<__alloc_func, _Dp> __hold(__a.allocate(1), _Dp(__a, 1));
-    ::new ((void*)__hold.get()) __alloc_func(__f_.first(), _Alloc(__a));
+    ::new ((void*)__hold.get()) __alloc_func(__func_, _Alloc(__a));
     return __hold.release();
   }
 
-  _LIBCPP_HIDE_FROM_ABI void destroy() _NOEXCEPT { __f_.~__compressed_pair<_Target, _Alloc>(); }
+  _LIBCPP_HIDE_FROM_ABI void destroy() _NOEXCEPT {
+    __func_.~_Fp();
+    __alloc_.~_Alloc();
+  }
 
   _LIBCPP_HIDE_FROM_ABI static void __destroy_and_delete(__alloc_func* __f) {
     typedef allocator_traits<_Alloc> __alloc_traits;
@@ -243,10 +245,10 @@ public:
   virtual void destroy() _NOEXCEPT            = 0;
   virtual void destroy_deallocate() _NOEXCEPT = 0;
   virtual _Rp operator()(_ArgTypes&&...)      = 0;
-#  ifndef _LIBCPP_HAS_NO_RTTI
+#  if _LIBCPP_HAS_RTTI
   virtual const void* target(const type_info&) const _NOEXCEPT = 0;
   virtual const std::type_info& target_type() const _NOEXCEPT  = 0;
-#  endif // _LIBCPP_HAS_NO_RTTI
+#  endif // _LIBCPP_HAS_RTTI
 };
 
 // __func implements __base for a given functor type.
@@ -272,10 +274,10 @@ public:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void destroy() _NOEXCEPT;
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void destroy_deallocate() _NOEXCEPT;
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual _Rp operator()(_ArgTypes&&... __arg);
-#  ifndef _LIBCPP_HAS_NO_RTTI
+#  if _LIBCPP_HAS_RTTI
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual const void* target(const type_info&) const _NOEXCEPT;
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual const std::type_info& target_type() const _NOEXCEPT;
-#  endif // _LIBCPP_HAS_NO_RTTI
+#  endif // _LIBCPP_HAS_RTTI
 };
 
 template <class _Fp, class _Alloc, class _Rp, class... _ArgTypes>
@@ -313,7 +315,7 @@ _Rp __func<_Fp, _Alloc, _Rp(_ArgTypes...)>::operator()(_ArgTypes&&... __arg) {
   return __f_(std::forward<_ArgTypes>(__arg)...);
 }
 
-#  ifndef _LIBCPP_HAS_NO_RTTI
+#  if _LIBCPP_HAS_RTTI
 
 template <class _Fp, class _Alloc, class _Rp, class... _ArgTypes>
 const void* __func<_Fp, _Alloc, _Rp(_ArgTypes...)>::target(const type_info& __ti) const _NOEXCEPT {
@@ -327,7 +329,7 @@ const std::type_info& __func<_Fp, _Alloc, _Rp(_ArgTypes...)>::target_type() cons
   return typeid(_Fp);
 }
 
-#  endif // _LIBCPP_HAS_NO_RTTI
+#  endif // _LIBCPP_HAS_RTTI
 
 // __value_func creates a value-type from a __func.
 
@@ -464,7 +466,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI explicit operator bool() const _NOEXCEPT { return __f_ != nullptr; }
 
-#  ifndef _LIBCPP_HAS_NO_RTTI
+#  if _LIBCPP_HAS_RTTI
   _LIBCPP_HIDE_FROM_ABI const std::type_info& target_type() const _NOEXCEPT {
     if (__f_ == nullptr)
       return typeid(void);
@@ -477,7 +479,7 @@ public:
       return nullptr;
     return (const _Tp*)__f_->target(typeid(_Tp));
   }
-#  endif // _LIBCPP_HAS_NO_RTTI
+#  endif // _LIBCPP_HAS_RTTI
 };
 
 // Storage for a functor object, to be used with __policy to manage copy and
@@ -520,7 +522,7 @@ struct __policy {
         nullptr,
         nullptr,
         true,
-#  ifndef _LIBCPP_HAS_NO_RTTI
+#  if _LIBCPP_HAS_RTTI
         &typeid(void)
 #  else
         nullptr
@@ -547,7 +549,7 @@ private:
         &__large_clone<_Fun>,
         &__large_destroy<_Fun>,
         false,
-#  ifndef _LIBCPP_HAS_NO_RTTI
+#  if _LIBCPP_HAS_RTTI
         &typeid(typename _Fun::_Target)
 #  else
         nullptr
@@ -562,7 +564,7 @@ private:
         nullptr,
         nullptr,
         false,
-#  ifndef _LIBCPP_HAS_NO_RTTI
+#  if _LIBCPP_HAS_RTTI
         &typeid(typename _Fun::_Target)
 #  else
         nullptr
@@ -724,7 +726,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI explicit operator bool() const _NOEXCEPT { return !__policy_->__is_null; }
 
-#  ifndef _LIBCPP_HAS_NO_RTTI
+#  if _LIBCPP_HAS_RTTI
   _LIBCPP_HIDE_FROM_ABI const std::type_info& target_type() const _NOEXCEPT { return *__policy_->__type_info; }
 
   template <typename _Tp>
@@ -736,10 +738,10 @@ public:
     else
       return reinterpret_cast<const _Tp*>(&__buf_.__small);
   }
-#  endif // _LIBCPP_HAS_NO_RTTI
+#  endif // _LIBCPP_HAS_RTTI
 };
 
-#  if defined(_LIBCPP_HAS_BLOCKS_RUNTIME)
+#  if _LIBCPP_HAS_BLOCKS_RUNTIME
 
 extern "C" void* _Block_copy(const void*);
 extern "C" void _Block_release(const void*);
@@ -751,7 +753,7 @@ class __func<_Rp1 (^)(_ArgTypes1...), _Alloc, _Rp(_ArgTypes...)> : public __base
 
 public:
   _LIBCPP_HIDE_FROM_ABI explicit __func(__block_type const& __f)
-#    ifdef _LIBCPP_HAS_OBJC_ARC
+#    if _LIBCPP_HAS_OBJC_ARC
       : __f_(__f)
 #    else
       : __f_(reinterpret_cast<__block_type>(__f ? _Block_copy(__f) : nullptr))
@@ -762,7 +764,7 @@ public:
   // [TODO] add && to save on a retain
 
   _LIBCPP_HIDE_FROM_ABI explicit __func(__block_type __f, const _Alloc& /* unused */)
-#    ifdef _LIBCPP_HAS_OBJC_ARC
+#    if _LIBCPP_HAS_OBJC_ARC
       : __f_(__f)
 #    else
       : __f_(reinterpret_cast<__block_type>(__f ? _Block_copy(__f) : nullptr))
@@ -784,7 +786,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void destroy() _NOEXCEPT {
-#    ifndef _LIBCPP_HAS_OBJC_ARC
+#    if !_LIBCPP_HAS_OBJC_ARC
     if (__f_)
       _Block_release(__f_);
 #    endif
@@ -803,7 +805,7 @@ public:
     return std::__invoke(__f_, std::forward<_ArgTypes>(__arg)...);
   }
 
-#    ifndef _LIBCPP_HAS_NO_RTTI
+#    if _LIBCPP_HAS_RTTI
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual const void* target(type_info const& __ti) const _NOEXCEPT {
     if (__ti == typeid(__func::__block_type))
       return &__f_;
@@ -813,7 +815,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual const std::type_info& target_type() const _NOEXCEPT {
     return typeid(__func::__block_type);
   }
-#    endif // _LIBCPP_HAS_NO_RTTI
+#    endif // _LIBCPP_HAS_RTTI
 };
 
 #  endif // _LIBCPP_HAS_EXTENSION_BLOCKS
@@ -905,14 +907,14 @@ public:
   // function invocation:
   _LIBCPP_HIDE_FROM_ABI _Rp operator()(_ArgTypes...) const;
 
-#  ifndef _LIBCPP_HAS_NO_RTTI
+#  if _LIBCPP_HAS_RTTI
   // function target access:
   _LIBCPP_HIDE_FROM_ABI const std::type_info& target_type() const _NOEXCEPT;
   template <typename _Tp>
   _LIBCPP_HIDE_FROM_ABI _Tp* target() _NOEXCEPT;
   template <typename _Tp>
   _LIBCPP_HIDE_FROM_ABI const _Tp* target() const _NOEXCEPT;
-#  endif // _LIBCPP_HAS_NO_RTTI
+#  endif // _LIBCPP_HAS_RTTI
 };
 
 #  if _LIBCPP_STD_VER >= 17
@@ -989,7 +991,7 @@ _Rp function<_Rp(_ArgTypes...)>::operator()(_ArgTypes... __arg) const {
   return __f_(std::forward<_ArgTypes>(__arg)...);
 }
 
-#  ifndef _LIBCPP_HAS_NO_RTTI
+#  if _LIBCPP_HAS_RTTI
 
 template <class _Rp, class... _ArgTypes>
 const std::type_info& function<_Rp(_ArgTypes...)>::target_type() const _NOEXCEPT {
@@ -1008,7 +1010,7 @@ const _Tp* function<_Rp(_ArgTypes...)>::target() const _NOEXCEPT {
   return __f_.template target<_Tp>();
 }
 
-#  endif // _LIBCPP_HAS_NO_RTTI
+#  endif // _LIBCPP_HAS_RTTI
 
 template <class _Rp, class... _ArgTypes>
 inline _LIBCPP_HIDE_FROM_ABI bool operator==(const function<_Rp(_ArgTypes...)>& __f, nullptr_t) _NOEXCEPT {

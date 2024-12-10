@@ -24,7 +24,7 @@
 #endif
 
 #ifdef __cplusplus
-#  include <ccomplex>
+#  include <complex>
 #elif __has_include_next(<complex.h>)
 #  include_next <complex.h>
 #endif

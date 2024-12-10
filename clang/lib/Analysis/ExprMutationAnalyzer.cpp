@@ -55,25 +55,13 @@ static bool canExprResolveTo(const Expr *Source, const Expr *Target) {
   // This is matched by `IgnoreDerivedToBase(canResolveToExpr(InnerMatcher))`
   // below.
   const auto ConditionalOperatorM = [Target](const Expr *E) {
-    if (const auto *OP = dyn_cast<ConditionalOperator>(E)) {
-      if (const auto *TE = OP->getTrueExpr()->IgnoreParens())
-        if (canExprResolveTo(TE, Target))
-          return true;
-      if (const auto *FE = OP->getFalseExpr()->IgnoreParens())
-        if (canExprResolveTo(FE, Target))
-          return true;
-    }
-    return false;
-  };
-
-  const auto ElvisOperator = [Target](const Expr *E) {
-    if (const auto *OP = dyn_cast<BinaryConditionalOperator>(E)) {
-      if (const auto *TE = OP->getTrueExpr()->IgnoreParens())
-        if (canExprResolveTo(TE, Target))
-          return true;
-      if (const auto *FE = OP->getFalseExpr()->IgnoreParens())
-        if (canExprResolveTo(FE, Target))
-          return true;
+    if (const auto *CO = dyn_cast<AbstractConditionalOperator>(E)) {
+      const auto *TE = CO->getTrueExpr()->IgnoreParens();
+      if (TE && canExprResolveTo(TE, Target))
+        return true;
+      const auto *FE = CO->getFalseExpr()->IgnoreParens();
+      if (FE && canExprResolveTo(FE, Target))
+        return true;
     }
     return false;
   };
@@ -81,8 +69,7 @@ static bool canExprResolveTo(const Expr *Source, const Expr *Target) {
   const Expr *SourceExprP = Source->IgnoreParens();
   return IgnoreDerivedToBase(SourceExprP,
                              [&](const Expr *E) {
-                               return E == Target || ConditionalOperatorM(E) ||
-                                      ElvisOperator(E);
+                               return E == Target || ConditionalOperatorM(E);
                              }) ||
          EvalCommaExpr(SourceExprP, [&](const Expr *E) {
            return IgnoreDerivedToBase(
@@ -231,13 +218,12 @@ ExprMutationAnalyzer::Analyzer::findPointeeMutation(const Decl *Dec) {
 const Stmt *ExprMutationAnalyzer::Analyzer::findMutationMemoized(
     const Expr *Exp, llvm::ArrayRef<MutationFinder> Finders,
     Memoized::ResultMap &MemoizedResults) {
-  const auto Memoized = MemoizedResults.find(Exp);
-  if (Memoized != MemoizedResults.end())
+  // Assume Exp is not mutated before analyzing Exp.
+  auto [Memoized, Inserted] = MemoizedResults.try_emplace(Exp);
+  if (!Inserted)
     return Memoized->second;
 
-  // Assume Exp is not mutated before analyzing Exp.
-  MemoizedResults[Exp] = nullptr;
-  if (isUnevaluated(Exp))
+  if (ExprMutationAnalyzer::isUnevaluated(Exp, Context))
     return nullptr;
 
   for (const auto &Finder : Finders) {
@@ -269,41 +255,29 @@ ExprMutationAnalyzer::Analyzer::tryEachDeclRef(const Decl *Dec,
   return nullptr;
 }
 
-bool ExprMutationAnalyzer::Analyzer::isUnevaluated(const Stmt *Exp,
-                                                   const Stmt &Stm,
-                                                   ASTContext &Context) {
-  return selectFirst<Stmt>(
-             NodeID<Expr>::value,
-             match(
-                 findFirst(
-                     stmt(canResolveToExpr(Exp),
-                          anyOf(
-                              // `Exp` is part of the underlying expression of
-                              // decltype/typeof if it has an ancestor of
-                              // typeLoc.
-                              hasAncestor(typeLoc(unless(
-                                  hasAncestor(unaryExprOrTypeTraitExpr())))),
-                              hasAncestor(expr(anyOf(
-                                  // `UnaryExprOrTypeTraitExpr` is unevaluated
-                                  // unless it's sizeof on VLA.
-                                  unaryExprOrTypeTraitExpr(unless(sizeOfExpr(
-                                      hasArgumentOfType(variableArrayType())))),
-                                  // `CXXTypeidExpr` is unevaluated unless it's
-                                  // applied to an expression of glvalue of
-                                  // polymorphic class type.
-                                  cxxTypeidExpr(
-                                      unless(isPotentiallyEvaluated())),
-                                  // The controlling expression of
-                                  // `GenericSelectionExpr` is unevaluated.
-                                  genericSelectionExpr(hasControllingExpr(
-                                      hasDescendant(equalsNode(Exp)))),
-                                  cxxNoexceptExpr())))))
-                         .bind(NodeID<Expr>::value)),
-                 Stm, Context)) != nullptr;
-}
-
-bool ExprMutationAnalyzer::Analyzer::isUnevaluated(const Expr *Exp) {
-  return isUnevaluated(Exp, Stm, Context);
+bool ExprMutationAnalyzer::isUnevaluated(const Stmt *Stm, ASTContext &Context) {
+  return !match(stmt(anyOf(
+                    // `Exp` is part of the underlying expression of
+                    // decltype/typeof if it has an ancestor of
+                    // typeLoc.
+                    hasAncestor(typeLoc(
+                        unless(hasAncestor(unaryExprOrTypeTraitExpr())))),
+                    hasAncestor(expr(anyOf(
+                        // `UnaryExprOrTypeTraitExpr` is unevaluated
+                        // unless it's sizeof on VLA.
+                        unaryExprOrTypeTraitExpr(unless(sizeOfExpr(
+                            hasArgumentOfType(variableArrayType())))),
+                        // `CXXTypeidExpr` is unevaluated unless it's
+                        // applied to an expression of glvalue of
+                        // polymorphic class type.
+                        cxxTypeidExpr(unless(isPotentiallyEvaluated())),
+                        // The controlling expression of
+                        // `GenericSelectionExpr` is unevaluated.
+                        genericSelectionExpr(
+                            hasControllingExpr(hasDescendant(equalsNode(Stm)))),
+                        cxxNoexceptExpr()))))),
+                *Stm, Context)
+              .empty();
 }
 
 const Stmt *
@@ -404,25 +378,24 @@ ExprMutationAnalyzer::Analyzer::findDirectMutation(const Expr *Exp) {
             memberExpr(hasObjectExpression(canResolveToExpr(Exp)))),
       nonConstReferenceType());
   const auto NotInstantiated = unless(hasDeclaration(isInstantiated()));
-  const auto TypeDependentCallee =
-      callee(expr(anyOf(unresolvedLookupExpr(), unresolvedMemberExpr(),
-                        cxxDependentScopeMemberExpr(),
-                        hasType(templateTypeParmType()), isTypeDependent())));
 
-  const auto AsNonConstRefArg = anyOf(
-      callExpr(NonConstRefParam, NotInstantiated),
-      cxxConstructExpr(NonConstRefParam, NotInstantiated),
-      callExpr(TypeDependentCallee, hasAnyArgument(canResolveToExpr(Exp))),
-      cxxUnresolvedConstructExpr(hasAnyArgument(canResolveToExpr(Exp))),
-      // Previous False Positive in the following Code:
-      // `template <typename T> void f() { int i = 42; new Type<T>(i); }`
-      // Where the constructor of `Type` takes its argument as reference.
-      // The AST does not resolve in a `cxxConstructExpr` because it is
-      // type-dependent.
-      parenListExpr(hasDescendant(expr(canResolveToExpr(Exp)))),
-      // If the initializer is for a reference type, there is no cast for
-      // the variable. Values are cast to RValue first.
-      initListExpr(hasAnyInit(expr(canResolveToExpr(Exp)))));
+  const auto AsNonConstRefArg =
+      anyOf(callExpr(NonConstRefParam, NotInstantiated),
+            cxxConstructExpr(NonConstRefParam, NotInstantiated),
+            // If the call is type-dependent, we can't properly process any
+            // argument because required type conversions and implicit casts
+            // will be inserted only after specialization.
+            callExpr(isTypeDependent(), hasAnyArgument(canResolveToExpr(Exp))),
+            cxxUnresolvedConstructExpr(hasAnyArgument(canResolveToExpr(Exp))),
+            // Previous False Positive in the following Code:
+            // `template <typename T> void f() { int i = 42; new Type<T>(i); }`
+            // Where the constructor of `Type` takes its argument as reference.
+            // The AST does not resolve in a `cxxConstructExpr` because it is
+            // type-dependent.
+            parenListExpr(hasDescendant(expr(canResolveToExpr(Exp)))),
+            // If the initializer is for a reference type, there is no cast for
+            // the variable. Values are cast to RValue first.
+            initListExpr(hasAnyInit(expr(canResolveToExpr(Exp)))));
 
   // Captured by a lambda by reference.
   // If we're initializing a capture with 'Exp' directly then we're initializing

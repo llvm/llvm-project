@@ -152,6 +152,12 @@ struct DeviceTy {
   /// Ask the device whether the runtime should use auto zero-copy.
   bool useAutoZeroCopy();
 
+  /// Check if there are pending images for this device.
+  bool hasPendingImages() const { return HasPendingImages; }
+
+  /// Indicate that there are pending images for this device or not.
+  void setHasPendingImages(bool V) { HasPendingImages = V; }
+
 private:
   /// Deinitialize the device (and plugin).
   void deinit();
@@ -163,6 +169,9 @@ private:
 
   /// Handler to collect and organize host-2-device mapping information.
   MappingInfoTy MappingInfo;
+
+  /// Flag to indicate pending images (true after construction).
+  bool HasPendingImages = true;
 };
 
 #endif

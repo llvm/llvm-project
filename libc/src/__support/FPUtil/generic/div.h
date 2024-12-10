@@ -35,7 +35,7 @@ div(InType x, InType y) {
   using InFPBits = FPBits<InType>;
   using InStorageType = typename InFPBits::StorageType;
   using DyadicFloat =
-      DyadicFloat<cpp::bit_ceil(static_cast<size_t>(InFPBits::FRACTION_LEN))>;
+      DyadicFloat<cpp::bit_ceil(static_cast<size_t>(InFPBits::SIG_LEN + 1))>;
 
   InFPBits x_bits(x);
   InFPBits y_bits(y);
@@ -49,19 +49,19 @@ div(InType x, InType y) {
         raise_except_if_required(FE_INVALID);
 
       if (x_bits.is_quiet_nan()) {
-        InStorageType x_payload = static_cast<InStorageType>(getpayload(x));
-        if ((x_payload & ~(OutFPBits::FRACTION_MASK >> 1)) == 0)
-          return OutFPBits::quiet_nan(x_bits.sign(),
-                                      static_cast<OutStorageType>(x_payload))
-              .get_val();
+        InStorageType x_payload = x_bits.get_mantissa();
+        x_payload >>= InFPBits::FRACTION_LEN - OutFPBits::FRACTION_LEN;
+        return OutFPBits::quiet_nan(x_bits.sign(),
+                                    static_cast<OutStorageType>(x_payload))
+            .get_val();
       }
 
       if (y_bits.is_quiet_nan()) {
-        InStorageType y_payload = static_cast<InStorageType>(getpayload(y));
-        if ((y_payload & ~(OutFPBits::FRACTION_MASK >> 1)) == 0)
-          return OutFPBits::quiet_nan(y_bits.sign(),
-                                      static_cast<OutStorageType>(y_payload))
-              .get_val();
+        InStorageType y_payload = y_bits.get_mantissa();
+        y_payload >>= InFPBits::FRACTION_LEN - OutFPBits::FRACTION_LEN;
+        return OutFPBits::quiet_nan(y_bits.sign(),
+                                    static_cast<OutStorageType>(y_payload))
+            .get_val();
       }
 
       return OutFPBits::quiet_nan().get_val();

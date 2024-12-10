@@ -295,3 +295,22 @@ log(double x)
 }
 
 #endif // cl_khr_fp64
+
+#ifdef cl_khr_fp16
+
+_CLC_OVERLOAD _CLC_DEF half
+#if defined(COMPILING_LOG2)
+log2(half x) {
+  return (half)log2((float)x);
+}
+#elif defined(COMPILING_LOG10)
+log10(half x) {
+  return (half)log10((float)x);
+}
+#else
+log(half x) {
+  return (half)log((float)x);
+}
+#endif
+
+#endif // cl_khr_fp16

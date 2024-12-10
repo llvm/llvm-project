@@ -15,8 +15,9 @@ namespace LIBC_NAMESPACE_DECL {
 
 #if defined(__thumb__) && __ARM_ARCH_ISA_THUMB == 1
 
-[[gnu::naked, gnu::target("thumb")]]
-LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
+[[gnu::naked, gnu::target("thumb")]] LLVM_LIBC_FUNCTION(void, longjmp,
+                                                        (jmp_buf buf,
+                                                         int val)) {
   asm(R"(
       # Reload r4, r5, r6, r7.
       ldmia r0!, {r4-r7}
@@ -53,8 +54,7 @@ LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
 // TODO(https://github.com/llvm/llvm-project/issues/94061): fp registers
 // (d0-d16)
 // TODO(https://github.com/llvm/llvm-project/issues/94062): pac+bti
-[[gnu::naked]]
-LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
+[[gnu::naked]] LLVM_LIBC_FUNCTION(void, longjmp, (jmp_buf buf, int val)) {
   asm(R"(
       # While sp may appear in a register list for ARM mode, it may not for
       # Thumb2 mode. Just load the previous value of sp into r12 then move it

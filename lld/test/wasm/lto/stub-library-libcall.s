@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t_main.o %t/main.s
 # RUN: llvm-as %S/Inputs/foo.ll -o %t_foo.o
 # RUN: llvm-as %S/Inputs/libcall.ll -o %t_libcall.o
-# RUN: wasm-ld %t_main.o %t_libcall.o %t_foo.o %p/Inputs/stub.so -o %t.wasm
+# RUN: wasm-ld -mllvm -mattr=-bulk-memory,-bulk-memory-opt %t_main.o %t_libcall.o %t_foo.o %p/Inputs/stub.so -o %t.wasm
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
 # The function `func_with_libcall` will generate an undefined reference to
@@ -12,7 +12,7 @@
 # If %t_foo.o is not included in the link we get an undefined symbol reported
 # to the dependency of memcpy on the foo export:
 
-# RUN: not wasm-ld %t_main.o %t_libcall.o %p/Inputs/stub.so -o %t.wasm 2>&1 | FileCheck --check-prefix=MISSING %s
+# RUN: not wasm-ld -mllvm -mattr=-bulk-memory,-bulk-memory-opt %t_main.o %t_libcall.o %p/Inputs/stub.so -o %t.wasm 2>&1 | FileCheck --check-prefix=MISSING %s
 # MISSING: stub.so: undefined symbol: foo. Required by memcpy
 
 #--- main.s

@@ -32,7 +32,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstddef>
@@ -147,23 +146,23 @@ bool CXXTypeidExpr::isPotentiallyEvaluated() const {
   return false;
 }
 
-bool CXXTypeidExpr::isMostDerived(ASTContext &Context) const {
+bool CXXTypeidExpr::isMostDerived(const ASTContext &Context) const {
   assert(!isTypeOperand() && "Cannot call isMostDerived for typeid(type)");
   const Expr *E = getExprOperand()->IgnoreParenNoopCasts(Context);
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
     QualType Ty = DRE->getDecl()->getType();
-    if (!Ty->isPointerType() && !Ty->isReferenceType())
+    if (!Ty->isPointerOrReferenceType())
       return true;
   }
 
   return false;
 }
 
-QualType CXXTypeidExpr::getTypeOperand(ASTContext &Context) const {
+QualType CXXTypeidExpr::getTypeOperand(const ASTContext &Context) const {
   assert(isTypeOperand() && "Cannot call getTypeOperand for typeid(expr)");
   Qualifiers Quals;
   return Context.getUnqualifiedArrayType(
-      Operand.get<TypeSourceInfo *>()->getType().getNonReferenceType(), Quals);
+      cast<TypeSourceInfo *>(Operand)->getType().getNonReferenceType(), Quals);
 }
 
 static bool isGLValueFromPointerDeref(const Expr *E) {
@@ -217,7 +216,7 @@ QualType CXXUuidofExpr::getTypeOperand(ASTContext &Context) const {
   assert(isTypeOperand() && "Cannot call getTypeOperand for __uuidof(expr)");
   Qualifiers Quals;
   return Context.getUnqualifiedArrayType(
-      Operand.get<TypeSourceInfo *>()->getType().getNonReferenceType(), Quals);
+      cast<TypeSourceInfo *>(Operand)->getType().getNonReferenceType(), Quals);
 }
 
 // CXXScalarValueInitExpr
@@ -402,10 +401,11 @@ UnresolvedLookupExpr::UnresolvedLookupExpr(
     NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateKWLoc,
     const DeclarationNameInfo &NameInfo, bool RequiresADL,
     const TemplateArgumentListInfo *TemplateArgs, UnresolvedSetIterator Begin,
-    UnresolvedSetIterator End, bool KnownDependent)
+    UnresolvedSetIterator End, bool KnownDependent,
+    bool KnownInstantiationDependent)
     : OverloadExpr(UnresolvedLookupExprClass, Context, QualifierLoc,
                    TemplateKWLoc, NameInfo, TemplateArgs, Begin, End,
-                   KnownDependent, false, false),
+                   KnownDependent, KnownInstantiationDependent, false),
       NamingClass(NamingClass) {
   UnresolvedLookupExprBits.RequiresADL = RequiresADL;
 }
@@ -420,7 +420,7 @@ UnresolvedLookupExpr *UnresolvedLookupExpr::Create(
     const ASTContext &Context, CXXRecordDecl *NamingClass,
     NestedNameSpecifierLoc QualifierLoc, const DeclarationNameInfo &NameInfo,
     bool RequiresADL, UnresolvedSetIterator Begin, UnresolvedSetIterator End,
-    bool KnownDependent) {
+    bool KnownDependent, bool KnownInstantiationDependent) {
   unsigned NumResults = End - Begin;
   unsigned Size = totalSizeToAlloc<DeclAccessPair, ASTTemplateKWAndArgsInfo,
                                    TemplateArgumentLoc>(NumResults, 0, 0);
@@ -428,7 +428,8 @@ UnresolvedLookupExpr *UnresolvedLookupExpr::Create(
   return new (Mem) UnresolvedLookupExpr(
       Context, NamingClass, QualifierLoc,
       /*TemplateKWLoc=*/SourceLocation(), NameInfo, RequiresADL,
-      /*TemplateArgs=*/nullptr, Begin, End, KnownDependent);
+      /*TemplateArgs=*/nullptr, Begin, End, KnownDependent,
+      KnownInstantiationDependent);
 }
 
 UnresolvedLookupExpr *UnresolvedLookupExpr::Create(
@@ -436,7 +437,8 @@ UnresolvedLookupExpr *UnresolvedLookupExpr::Create(
     NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateKWLoc,
     const DeclarationNameInfo &NameInfo, bool RequiresADL,
     const TemplateArgumentListInfo *Args, UnresolvedSetIterator Begin,
-    UnresolvedSetIterator End, bool KnownDependent) {
+    UnresolvedSetIterator End, bool KnownDependent,
+    bool KnownInstantiationDependent) {
   unsigned NumResults = End - Begin;
   bool HasTemplateKWAndArgsInfo = Args || TemplateKWLoc.isValid();
   unsigned NumTemplateArgs = Args ? Args->size() : 0;
@@ -444,9 +446,9 @@ UnresolvedLookupExpr *UnresolvedLookupExpr::Create(
                                    TemplateArgumentLoc>(
       NumResults, HasTemplateKWAndArgsInfo, NumTemplateArgs);
   void *Mem = Context.Allocate(Size, alignof(UnresolvedLookupExpr));
-  return new (Mem) UnresolvedLookupExpr(Context, NamingClass, QualifierLoc,
-                                        TemplateKWLoc, NameInfo, RequiresADL,
-                                        Args, Begin, End, KnownDependent);
+  return new (Mem) UnresolvedLookupExpr(
+      Context, NamingClass, QualifierLoc, TemplateKWLoc, NameInfo, RequiresADL,
+      Args, Begin, End, KnownDependent, KnownInstantiationDependent);
 }
 
 UnresolvedLookupExpr *UnresolvedLookupExpr::CreateEmpty(
@@ -1489,27 +1491,19 @@ SourceLocation CXXUnresolvedConstructExpr::getBeginLoc() const {
 CXXDependentScopeMemberExpr::CXXDependentScopeMemberExpr(
     const ASTContext &Ctx, Expr *Base, QualType BaseType, bool IsArrow,
     SourceLocation OperatorLoc, NestedNameSpecifierLoc QualifierLoc,
-    SourceLocation TemplateKWLoc, ArrayRef<DeclAccessPair> UnqualifiedLookups,
+    SourceLocation TemplateKWLoc, NamedDecl *FirstQualifierFoundInScope,
     DeclarationNameInfo MemberNameInfo,
     const TemplateArgumentListInfo *TemplateArgs)
     : Expr(CXXDependentScopeMemberExprClass, Ctx.DependentTy, VK_LValue,
            OK_Ordinary),
-      Base(Base), BaseType(BaseType), MemberNameInfo(MemberNameInfo),
-      OperatorLoc(OperatorLoc) {
+      Base(Base), BaseType(BaseType), QualifierLoc(QualifierLoc),
+      MemberNameInfo(MemberNameInfo) {
   CXXDependentScopeMemberExprBits.IsArrow = IsArrow;
-  CXXDependentScopeMemberExprBits.HasQualifier = QualifierLoc.hasQualifier();
-  CXXDependentScopeMemberExprBits.NumUnqualifiedLookups =
-      UnqualifiedLookups.size();
   CXXDependentScopeMemberExprBits.HasTemplateKWAndArgsInfo =
       (TemplateArgs != nullptr) || TemplateKWLoc.isValid();
-
-  if (hasQualifier())
-    new (getTrailingObjects<NestedNameSpecifierLoc>())
-        NestedNameSpecifierLoc(QualifierLoc);
-
-  std::uninitialized_copy_n(UnqualifiedLookups.data(),
-                            UnqualifiedLookups.size(),
-                            getTrailingObjects<DeclAccessPair>());
+  CXXDependentScopeMemberExprBits.HasFirstQualifierFoundInScope =
+      FirstQualifierFoundInScope != nullptr;
+  CXXDependentScopeMemberExprBits.OperatorLoc = OperatorLoc;
 
   if (TemplateArgs) {
     auto Deps = TemplateArgumentDependence::None;
@@ -1521,59 +1515,54 @@ CXXDependentScopeMemberExpr::CXXDependentScopeMemberExpr(
         TemplateKWLoc);
   }
 
+  if (hasFirstQualifierFoundInScope())
+    *getTrailingObjects<NamedDecl *>() = FirstQualifierFoundInScope;
   setDependence(computeDependence(this));
 }
 
 CXXDependentScopeMemberExpr::CXXDependentScopeMemberExpr(
-    EmptyShell Empty, bool HasQualifier, unsigned NumUnqualifiedLookups,
-    bool HasTemplateKWAndArgsInfo)
+    EmptyShell Empty, bool HasTemplateKWAndArgsInfo,
+    bool HasFirstQualifierFoundInScope)
     : Expr(CXXDependentScopeMemberExprClass, Empty) {
-  CXXDependentScopeMemberExprBits.HasQualifier = HasQualifier;
-  CXXDependentScopeMemberExprBits.NumUnqualifiedLookups = NumUnqualifiedLookups;
   CXXDependentScopeMemberExprBits.HasTemplateKWAndArgsInfo =
       HasTemplateKWAndArgsInfo;
+  CXXDependentScopeMemberExprBits.HasFirstQualifierFoundInScope =
+      HasFirstQualifierFoundInScope;
 }
 
 CXXDependentScopeMemberExpr *CXXDependentScopeMemberExpr::Create(
     const ASTContext &Ctx, Expr *Base, QualType BaseType, bool IsArrow,
     SourceLocation OperatorLoc, NestedNameSpecifierLoc QualifierLoc,
-    SourceLocation TemplateKWLoc, ArrayRef<DeclAccessPair> UnqualifiedLookups,
+    SourceLocation TemplateKWLoc, NamedDecl *FirstQualifierFoundInScope,
     DeclarationNameInfo MemberNameInfo,
     const TemplateArgumentListInfo *TemplateArgs) {
-  bool HasQualifier = QualifierLoc.hasQualifier();
-  unsigned NumUnqualifiedLookups = UnqualifiedLookups.size();
-  assert(!NumUnqualifiedLookups || HasQualifier);
   bool HasTemplateKWAndArgsInfo =
       (TemplateArgs != nullptr) || TemplateKWLoc.isValid();
   unsigned NumTemplateArgs = TemplateArgs ? TemplateArgs->size() : 0;
-  unsigned Size =
-      totalSizeToAlloc<NestedNameSpecifierLoc, DeclAccessPair,
-                       ASTTemplateKWAndArgsInfo, TemplateArgumentLoc>(
-          HasQualifier, NumUnqualifiedLookups, HasTemplateKWAndArgsInfo,
-          NumTemplateArgs);
+  bool HasFirstQualifierFoundInScope = FirstQualifierFoundInScope != nullptr;
+
+  unsigned Size = totalSizeToAlloc<ASTTemplateKWAndArgsInfo,
+                                   TemplateArgumentLoc, NamedDecl *>(
+      HasTemplateKWAndArgsInfo, NumTemplateArgs, HasFirstQualifierFoundInScope);
 
   void *Mem = Ctx.Allocate(Size, alignof(CXXDependentScopeMemberExpr));
   return new (Mem) CXXDependentScopeMemberExpr(
       Ctx, Base, BaseType, IsArrow, OperatorLoc, QualifierLoc, TemplateKWLoc,
-      UnqualifiedLookups, MemberNameInfo, TemplateArgs);
+      FirstQualifierFoundInScope, MemberNameInfo, TemplateArgs);
 }
 
 CXXDependentScopeMemberExpr *CXXDependentScopeMemberExpr::CreateEmpty(
-    const ASTContext &Ctx, bool HasQualifier, unsigned NumUnqualifiedLookups,
-    bool HasTemplateKWAndArgsInfo, unsigned NumTemplateArgs) {
-  assert(!NumTemplateArgs || HasTemplateKWAndArgsInfo);
-  assert(!NumUnqualifiedLookups || HasQualifier);
+    const ASTContext &Ctx, bool HasTemplateKWAndArgsInfo,
+    unsigned NumTemplateArgs, bool HasFirstQualifierFoundInScope) {
+  assert(NumTemplateArgs == 0 || HasTemplateKWAndArgsInfo);
 
-  unsigned Size =
-      totalSizeToAlloc<NestedNameSpecifierLoc, DeclAccessPair,
-                       ASTTemplateKWAndArgsInfo, TemplateArgumentLoc>(
-          HasQualifier, NumUnqualifiedLookups, HasTemplateKWAndArgsInfo,
-          NumTemplateArgs);
+  unsigned Size = totalSizeToAlloc<ASTTemplateKWAndArgsInfo,
+                                   TemplateArgumentLoc, NamedDecl *>(
+      HasTemplateKWAndArgsInfo, NumTemplateArgs, HasFirstQualifierFoundInScope);
 
   void *Mem = Ctx.Allocate(Size, alignof(CXXDependentScopeMemberExpr));
-  return new (Mem) CXXDependentScopeMemberExpr(EmptyShell(), HasQualifier,
-                                               NumUnqualifiedLookups,
-                                               HasTemplateKWAndArgsInfo);
+  return new (Mem) CXXDependentScopeMemberExpr(
+      EmptyShell(), HasTemplateKWAndArgsInfo, HasFirstQualifierFoundInScope);
 }
 
 CXXThisExpr *CXXThisExpr::Create(const ASTContext &Ctx, SourceLocation L,
@@ -1728,9 +1717,9 @@ NonTypeTemplateParmDecl *SubstNonTypeTemplateParmExpr::getParameter() const {
 PackIndexingExpr *PackIndexingExpr::Create(
     ASTContext &Context, SourceLocation EllipsisLoc, SourceLocation RSquareLoc,
     Expr *PackIdExpr, Expr *IndexExpr, std::optional<int64_t> Index,
-    ArrayRef<Expr *> SubstitutedExprs, bool ExpandedToEmptyPack) {
+    ArrayRef<Expr *> SubstitutedExprs, bool FullySubstituted) {
   QualType Type;
-  if (Index && !SubstitutedExprs.empty())
+  if (Index && FullySubstituted && !SubstitutedExprs.empty())
     Type = SubstitutedExprs[*Index]->getType();
   else
     Type = Context.DependentTy;
@@ -1739,7 +1728,7 @@ PackIndexingExpr *PackIndexingExpr::Create(
       Context.Allocate(totalSizeToAlloc<Expr *>(SubstitutedExprs.size()));
   return new (Storage)
       PackIndexingExpr(Type, EllipsisLoc, RSquareLoc, PackIdExpr, IndexExpr,
-                       SubstitutedExprs, ExpandedToEmptyPack);
+                       SubstitutedExprs, FullySubstituted);
 }
 
 NamedDecl *PackIndexingExpr::getPackDecl() const {
@@ -1840,11 +1829,11 @@ void MaterializeTemporaryExpr::setExtendingDecl(ValueDecl *ExtendedBy,
 
   // We may need to allocate extra storage for the mangling number and the
   // extended-by ValueDecl.
-  if (!State.is<LifetimeExtendedTemporaryDecl *>())
+  if (!isa<LifetimeExtendedTemporaryDecl *>(State))
     State = LifetimeExtendedTemporaryDecl::Create(
-        cast<Expr>(State.get<Stmt *>()), ExtendedBy, ManglingNumber);
+        cast<Expr>(cast<Stmt *>(State)), ExtendedBy, ManglingNumber);
 
-  auto ES = State.get<LifetimeExtendedTemporaryDecl *>();
+  auto ES = cast<LifetimeExtendedTemporaryDecl *>(State);
   ES->ExtendingDecl = ExtendedBy;
   ES->ManglingNumber = ManglingNumber;
 }
@@ -1956,4 +1945,23 @@ CXXParenListInitExpr *CXXParenListInitExpr::CreateEmpty(ASTContext &C,
   void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(NumExprs),
                          alignof(CXXParenListInitExpr));
   return new (Mem) CXXParenListInitExpr(Empty, NumExprs);
+}
+
+CXXFoldExpr::CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
+                                SourceLocation LParenLoc, Expr *LHS,
+                                BinaryOperatorKind Opcode,
+                                SourceLocation EllipsisLoc, Expr *RHS,
+                                SourceLocation RParenLoc,
+                                std::optional<unsigned> NumExpansions)
+    : Expr(CXXFoldExprClass, T, VK_PRValue, OK_Ordinary), LParenLoc(LParenLoc),
+      EllipsisLoc(EllipsisLoc), RParenLoc(RParenLoc),
+      NumExpansions(NumExpansions ? *NumExpansions + 1 : 0), Opcode(Opcode) {
+  // We rely on asserted invariant to distinguish left and right folds.
+  assert(((LHS && LHS->containsUnexpandedParameterPack()) !=
+          (RHS && RHS->containsUnexpandedParameterPack())) &&
+         "Exactly one of LHS or RHS should contain an unexpanded pack");
+  SubExprs[SubExpr::Callee] = Callee;
+  SubExprs[SubExpr::LHS] = LHS;
+  SubExprs[SubExpr::RHS] = RHS;
+  setDependence(computeDependence(this));
 }

@@ -17,21 +17,21 @@ include "mlir/Dialect/Vector/IR/Vector.td"
 include "mlir/IR/EnumAttr.td"
 
 // The "kind" of combining function for contractions and reductions.
-def COMBINING_KIND_ADD : I32BitEnumAttrCaseBit<"ADD", 0, "add">;
-def COMBINING_KIND_MUL : I32BitEnumAttrCaseBit<"MUL", 1, "mul">;
-def COMBINING_KIND_MINUI : I32BitEnumAttrCaseBit<"MINUI", 2, "minui">;
-def COMBINING_KIND_MINSI : I32BitEnumAttrCaseBit<"MINSI", 3, "minsi">;
-def COMBINING_KIND_MINNUMF : I32BitEnumAttrCaseBit<"MINNUMF", 4, "minnumf">;
-def COMBINING_KIND_MAXUI : I32BitEnumAttrCaseBit<"MAXUI", 5, "maxui">;
-def COMBINING_KIND_MAXSI : I32BitEnumAttrCaseBit<"MAXSI", 6, "maxsi">;
-def COMBINING_KIND_MAXNUMF : I32BitEnumAttrCaseBit<"MAXNUMF", 7, "maxnumf">;
-def COMBINING_KIND_AND : I32BitEnumAttrCaseBit<"AND", 8, "and">;
-def COMBINING_KIND_OR  : I32BitEnumAttrCaseBit<"OR", 9, "or">;
-def COMBINING_KIND_XOR : I32BitEnumAttrCaseBit<"XOR", 10, "xor">;
-def COMBINING_KIND_MINIMUMF : I32BitEnumAttrCaseBit<"MINIMUMF", 11, "minimumf">;
-def COMBINING_KIND_MAXIMUMF : I32BitEnumAttrCaseBit<"MAXIMUMF", 12, "maximumf">;
+def COMBINING_KIND_ADD : I32EnumAttrCase<"ADD", 0, "add">;
+def COMBINING_KIND_MUL : I32EnumAttrCase<"MUL", 1, "mul">;
+def COMBINING_KIND_MINUI : I32EnumAttrCase<"MINUI", 2, "minui">;
+def COMBINING_KIND_MINSI : I32EnumAttrCase<"MINSI", 3, "minsi">;
+def COMBINING_KIND_MINNUMF : I32EnumAttrCase<"MINNUMF", 4, "minnumf">;
+def COMBINING_KIND_MAXUI : I32EnumAttrCase<"MAXUI", 5, "maxui">;
+def COMBINING_KIND_MAXSI : I32EnumAttrCase<"MAXSI", 6, "maxsi">;
+def COMBINING_KIND_MAXNUMF : I32EnumAttrCase<"MAXNUMF", 7, "maxnumf">;
+def COMBINING_KIND_AND : I32EnumAttrCase<"AND", 8, "and">;
+def COMBINING_KIND_OR  : I32EnumAttrCase<"OR", 9, "or">;
+def COMBINING_KIND_XOR : I32EnumAttrCase<"XOR", 10, "xor">;
+def COMBINING_KIND_MINIMUMF : I32EnumAttrCase<"MINIMUMF", 11, "minimumf">;
+def COMBINING_KIND_MAXIMUMF : I32EnumAttrCase<"MAXIMUMF", 12, "maximumf">;
 
-def CombiningKind : I32BitEnumAttr<
+def CombiningKind : I32EnumAttr<
     "CombiningKind",
     "Kind of combining function for contractions and reductions",
     [COMBINING_KIND_ADD, COMBINING_KIND_MUL, COMBINING_KIND_MINUI,

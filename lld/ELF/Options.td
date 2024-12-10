@@ -720,7 +720,7 @@ def: J<"plugin-opt=opt-remarks-format=">,
   HelpText<"Alias for --opt-remarks-format">;
 def: F<"plugin-opt=opt-remarks-with-hotness">,
   Alias<opt_remarks_with_hotness>,
-  HelpText<"Alias for --opt-remarks-with_hotness">;
+  HelpText<"Alias for --opt-remarks-with-hotness">;
 def: J<"plugin-opt=opt-remarks-hotness-threshold=">,
   Alias<opt_remarks_hotness_threshold>,
   HelpText<"Alias for --opt-remarks-hotness-threshold">;
@@ -729,6 +729,7 @@ def: J<"plugin-opt=sample-profile=">,
 def: F<"plugin-opt=save-temps">, Alias<save_temps>, HelpText<"Alias for --save-temps">;
 def plugin_opt_stats_file: J<"plugin-opt=stats-file=">,
   HelpText<"Filename to write LTO statistics to">;
+def: J<"plugin-opt=time-trace=">, Alias<time_trace_eq>, HelpText<"Alias for --time-trace=">;
 def: F<"plugin-opt=thinlto-emit-imports-files">,
   Alias<thinlto_emit_imports_files>,
   HelpText<"Alias for --thinlto-emit-imports-files">;

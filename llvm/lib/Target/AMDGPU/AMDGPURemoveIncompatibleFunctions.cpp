@@ -16,7 +16,6 @@
 #include "GCNSubtarget.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Target/TargetMachine.h"
@@ -28,7 +27,7 @@ using namespace llvm;
 namespace llvm {
 extern const SubtargetFeatureKV
     AMDGPUFeatureKV[AMDGPU::NumSubtargetFeatures - 1];
-}
+} // namespace llvm
 
 namespace {
 

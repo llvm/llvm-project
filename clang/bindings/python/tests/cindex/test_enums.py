@@ -1,17 +1,18 @@
 import unittest
 
 from clang.cindex import (
-    TokenKind,
-    CursorKind,
-    TemplateArgumentKind,
-    ExceptionSpecificationKind,
-    AvailabilityKind,
     AccessSpecifier,
-    TypeKind,
-    RefQualifierKind,
+    AvailabilityKind,
+    BinaryOperator,
+    CursorKind,
+    ExceptionSpecificationKind,
     LinkageKind,
-    TLSKind,
+    RefQualifierKind,
     StorageClass,
+    TemplateArgumentKind,
+    TLSKind,
+    TokenKind,
+    TypeKind,
 )
 
 
@@ -28,6 +29,7 @@ class TestEnums(unittest.TestCase):
         LinkageKind,
         TLSKind,
         StorageClass,
+        BinaryOperator,
     ]
 
     def test_from_id(self):

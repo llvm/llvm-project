@@ -8,7 +8,7 @@
 ; YAML-NEXT:  Function:        min_double
 ; YAML-NEXT:  Args:
 ; YAML-NEXT:    - String:          'Stores SLP vectorized with cost '
-; YAML-NEXT:    - Cost:            '-3'
+; YAML-NEXT:    - Cost:            '-1'
 ; YAML-NEXT:    - String:          ' and with tree size '
 ; YAML-NEXT:    - TreeSize:        '6'
 define i32 @min_double(ptr noalias nocapture %A, ptr noalias nocapture %B) {
@@ -76,7 +76,7 @@ entry:
 ; YAML-NEXT:  Function:        max_double
 ; YAML-NEXT:  Args:
 ; YAML-NEXT:    - String:          'Stores SLP vectorized with cost '
-; YAML-NEXT:    - Cost:            '-3'
+; YAML-NEXT:    - Cost:            '-1'
 ; YAML-NEXT:    - String:          ' and with tree size '
 ; YAML-NEXT:    - TreeSize:        '6'
 define i32 @max_double(ptr noalias nocapture %A, ptr noalias nocapture %B) {

@@ -460,10 +460,10 @@ protected:
     unsigned : NumExprBits;
 
     static_assert(
-        llvm::APFloat::S_MaxSemantics < 16,
-        "Too many Semantics enum values to fit in bitfield of size 4");
+        llvm::APFloat::S_MaxSemantics < 32,
+        "Too many Semantics enum values to fit in bitfield of size 5");
     LLVM_PREFERRED_TYPE(llvm::APFloat::Semantics)
-    unsigned Semantics : 4; // Provides semantics for APFloat construction
+    unsigned Semantics : 5; // Provides semantics for APFloat construction
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsExact : 1;
   };
@@ -561,8 +561,11 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasFPFeatures : 1;
 
+    /// True if the call expression is a must-elide call to a coroutine.
+    unsigned IsCoroElideSafe : 1;
+
     /// Padding used to align OffsetToTrailingObjects to a byte multiple.
-    unsigned : 24 - 3 - NumExprBits;
+    unsigned : 24 - 4 - NumExprBits;
 
     /// The offset in bytes from the this pointer to the start of the
     /// trailing objects belonging to CallExpr. Intentionally byte sized
@@ -650,6 +653,11 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasFPFeatures : 1;
 
+    /// Whether or not this BinaryOperator should be excluded from integer
+    /// overflow sanitization.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned ExcludedOverflowPattern : 1;
+
     SourceLocation OpLoc;
   };
 
@@ -709,6 +717,18 @@ protected:
     /// Ex. __builtin_LINE, __builtin_FUNCTION, etc.
     LLVM_PREFERRED_TYPE(SourceLocIdentKind)
     unsigned Kind : 3;
+  };
+
+  class ParenExprBitfields {
+    friend class ASTStmtReader;
+    friend class ASTStmtWriter;
+    friend class ParenExpr;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned ProducedByFoldExpansion : 1;
   };
 
   class StmtExprBitfields {
@@ -1020,19 +1040,18 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsArrow : 1;
 
-    /// True if this member expression used a nested-name-specifier to
-    /// refer to the member, e.g., "x->Base::f".
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned HasQualifier : 1;
-
     /// Whether this member expression has info for explicit template
     /// keyword and arguments.
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasTemplateKWAndArgsInfo : 1;
 
-    /// Number of declarations found by unqualified lookup for the
-    /// first component name of the nested-name-specifier.
-    unsigned NumUnqualifiedLookups;
+    /// See getFirstQualifierFoundInScope() and the comment listing
+    /// the trailing objects.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasFirstQualifierFoundInScope : 1;
+
+    /// The location of the '->' or '.' operator.
+    SourceLocation OperatorLoc;
   };
 
   class OverloadExprBitfields {
@@ -1234,6 +1253,7 @@ protected:
     GenericSelectionExprBitfields GenericSelectionExprBits;
     PseudoObjectExprBitfields PseudoObjectExprBits;
     SourceLocExprBitfields SourceLocExprBits;
+    ParenExprBitfields ParenExprBits;
 
     // GNU Extensions.
     StmtExprBitfields StmtExprBits;
@@ -1657,6 +1677,11 @@ public:
   FPOptionsOverride getStoredFPFeatures() const {
     assert(hasStoredFPFeatures());
     return *getTrailingObjects<FPOptionsOverride>();
+  }
+
+  /// Get the store FPOptionsOverride or default if not stored.
+  FPOptionsOverride getStoredFPFeaturesOrDefault() const {
+    return hasStoredFPFeatures() ? getStoredFPFeatures() : FPOptionsOverride();
   }
 
   using body_iterator = Stmt **;

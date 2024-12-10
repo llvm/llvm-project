@@ -33,7 +33,6 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
-#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/JsonSupport.h"
@@ -45,11 +44,9 @@
 #include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -763,6 +760,16 @@ void StmtPrinter::VisitOMPUnrollDirective(OMPUnrollDirective *Node) {
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPReverseDirective(OMPReverseDirective *Node) {
+  Indent() << "#pragma omp reverse";
+  PrintOMPExecutableDirective(Node);
+}
+
+void StmtPrinter::VisitOMPInterchangeDirective(OMPInterchangeDirective *Node) {
+  Indent() << "#pragma omp interchange";
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPForDirective(OMPForDirective *Node) {
   Indent() << "#pragma omp for";
   PrintOMPExecutableDirective(Node);
@@ -854,6 +861,11 @@ void StmtPrinter::VisitOMPBarrierDirective(OMPBarrierDirective *Node) {
 
 void StmtPrinter::VisitOMPTaskwaitDirective(OMPTaskwaitDirective *Node) {
   Indent() << "#pragma omp taskwait";
+  PrintOMPExecutableDirective(Node);
+}
+
+void StmtPrinter::VisitOMPAssumeDirective(OMPAssumeDirective *Node) {
+  Indent() << "#pragma omp assume";
   PrintOMPExecutableDirective(Node);
 }
 
@@ -1169,6 +1181,18 @@ void StmtPrinter::VisitOpenACCLoopConstruct(OpenACCLoopConstruct *S) {
   PrintStmt(S->getLoop());
 }
 
+void StmtPrinter::VisitOpenACCCombinedConstruct(OpenACCCombinedConstruct *S) {
+  Indent() << "#pragma acc " << S->getDirectiveKind();
+  if (!S->clauses().empty()) {
+    OS << ' ';
+    OpenACCClausePrinter Printer(OS, Policy);
+    Printer.VisitClauseList(S->clauses());
+  }
+  OS << '\n';
+
+  PrintStmt(S->getLoop());
+}
+
 //===----------------------------------------------------------------------===//
 //  Expr printing methods.
 //===----------------------------------------------------------------------===//
@@ -1292,6 +1316,10 @@ void StmtPrinter::VisitSYCLUniqueStableNameExpr(
 
 void StmtPrinter::VisitPredefinedExpr(PredefinedExpr *Node) {
   OS << PredefinedExpr::getIdentKindName(Node->getIdentKind());
+}
+
+void StmtPrinter::VisitOpenACCAsteriskSizeExpr(OpenACCAsteriskSizeExpr *Node) {
+  OS << '*';
 }
 
 void StmtPrinter::VisitCharacterLiteral(CharacterLiteral *Node) {
@@ -2486,7 +2514,10 @@ void StmtPrinter::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
 }
 
 void StmtPrinter::VisitPackIndexingExpr(PackIndexingExpr *E) {
-  OS << E->getPackIdExpression() << "...[" << E->getIndexExpr() << "]";
+  PrintExpr(E->getPackIdExpression());
+  OS << "...[";
+  PrintExpr(E->getIndexExpr());
+  OS << "]";
 }
 
 void StmtPrinter::VisitSubstNonTypeTemplateParmPackExpr(
@@ -2787,6 +2818,10 @@ void StmtPrinter::VisitAsTypeExpr(AsTypeExpr *Node) {
   OS << ", ";
   Node->getType().print(OS, Policy);
   OS << ")";
+}
+
+void StmtPrinter::VisitHLSLOutArgExpr(HLSLOutArgExpr *Node) {
+  PrintExpr(Node->getArgLValue());
 }
 
 //===----------------------------------------------------------------------===//

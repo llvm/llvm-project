@@ -19,7 +19,7 @@ SECTIONS {
  .foo2 : { *(.foo2) } > AX
 
  .bar1 : { *(.bar1) } > AW
- .bar2 : { *(.bar2) } > AW AT > RAM
+ .bar2 : { *(.bar2) } > "AW" AT > "RAM"
  .bar3 . : { *(.bar3) } > AW
  .bar4 : { *(.bar4) } > AW AT >RAM
 }

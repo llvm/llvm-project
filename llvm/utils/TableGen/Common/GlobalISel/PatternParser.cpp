@@ -57,7 +57,7 @@ bool PatternParser::parsePatternList(
   // The match section consists of a list of matchers and predicates. Parse each
   // one and add the equivalent GIMatchDag nodes, predicates, and edges.
   for (unsigned I = 0; I < List.getNumArgs(); ++I) {
-    Init *Arg = List.getArg(I);
+    const Init *Arg = List.getArg(I);
     std::string Name = List.getArgName(I)
                            ? List.getArgName(I)->getValue().str()
                            : ("__" + AnonPatNamePrefix + "_" + Twine(I)).str();
@@ -104,18 +104,6 @@ getInstrForIntrinsic(const CodeGenTarget &CGT, const CodeGenIntrinsic *I) {
   return CGT.getInstruction(RK.getDef(Opc));
 }
 
-static const CodeGenIntrinsic *getCodeGenIntrinsic(Record *R) {
-  // Intrinsics need to have a static lifetime because the match table keeps
-  // references to CodeGenIntrinsic objects.
-  static DenseMap<const Record *, std::unique_ptr<CodeGenIntrinsic>>
-      AllIntrinsics;
-
-  auto &Ptr = AllIntrinsics[R];
-  if (!Ptr)
-    Ptr = std::make_unique<CodeGenIntrinsic>(R, std::vector<Record *>());
-  return Ptr.get();
-}
-
 std::unique_ptr<Pattern>
 PatternParser::parseInstructionPattern(const Init &Arg, StringRef Name) {
   const DagInit *DagPat = dyn_cast<DagInit>(&Arg);
@@ -129,8 +117,8 @@ PatternParser::parseInstructionPattern(const Init &Arg, StringRef Name) {
         std::make_unique<CodeGenInstructionPattern>(Instr, insertStrRef(Name));
   } else if (const DagInit *IP =
                  getDagWithOperatorOfSubClass(Arg, "Intrinsic")) {
-    Record *TheDef = IP->getOperatorAsDef(DiagLoc);
-    const CodeGenIntrinsic *Intrin = getCodeGenIntrinsic(TheDef);
+    const Record *TheDef = IP->getOperatorAsDef(DiagLoc);
+    const CodeGenIntrinsic *Intrin = &CGT.getIntrinsic(TheDef);
     const CodeGenInstruction &Instr = getInstrForIntrinsic(CGT, Intrin);
     Pat =
         std::make_unique<CodeGenInstructionPattern>(Instr, insertStrRef(Name));
@@ -150,7 +138,7 @@ PatternParser::parseInstructionPattern(const Init &Arg, StringRef Name) {
     return nullptr;
 
   for (unsigned K = 0; K < DagPat->getNumArgs(); ++K) {
-    Init *Arg = DagPat->getArg(K);
+    const Init *Arg = DagPat->getArg(K);
     if (auto *DagArg = getDagWithSpecificOperator(*Arg, "MIFlags")) {
       if (!parseInstructionPatternMIFlags(*Pat, DagArg))
         return nullptr;
@@ -181,7 +169,7 @@ PatternParser::parseWipMatchOpcodeMatcher(const Init &Arg, StringRef Name) {
   // Each argument is an opcode that can match.
   auto Result = std::make_unique<AnyOpcodePattern>(insertStrRef(Name));
   for (const auto &Arg : Matcher->getArgs()) {
-    Record *OpcodeDef = getDefOfSubClass(*Arg, "Instruction");
+    const Record *OpcodeDef = getDefOfSubClass(*Arg, "Instruction");
     if (OpcodeDef) {
       Result->addOpcode(&CGT.getInstruction(OpcodeDef));
       continue;
@@ -320,7 +308,6 @@ bool PatternParser::parseInstructionPatternMIFlags(InstructionPattern &IP,
           return false;
 
         FI.addUnsetFlag(R);
-        continue;
       }
 
       continue;

@@ -28,8 +28,8 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/thread.h"
 #include "llvm/Support/xxhash.h"
 
 #include <algorithm>
@@ -66,7 +66,6 @@ public:
 
   template <class LP> void run();
 
-  DefaultThreadPool threadPool;
   std::unique_ptr<FileOutputBuffer> &buffer;
   uint64_t addr = 0;
   uint64_t fileOff = 0;
@@ -408,6 +407,31 @@ public:
 
 private:
   StringRef path;
+};
+
+class LCSubClient final : public LoadCommand {
+public:
+  explicit LCSubClient(StringRef client) : client(client) {}
+
+  uint32_t getSize() const override {
+    return alignToPowerOf2(sizeof(sub_client_command) + client.size() + 1,
+                           target->wordSize);
+  }
+
+  void writeTo(uint8_t *buf) const override {
+    auto *c = reinterpret_cast<sub_client_command *>(buf);
+    buf += sizeof(sub_client_command);
+
+    c->cmd = LC_SUB_CLIENT;
+    c->cmdsize = getSize();
+    c->client = sizeof(sub_client_command);
+
+    memcpy(buf, client.data(), client.size());
+    buf[client.size()] = '\0';
+  }
+
+private:
+  StringRef client;
 };
 
 class LCDyldEnv final : public LoadCommand {
@@ -823,6 +847,8 @@ template <class LP> void Writer::createLoadCommands() {
     in.header->addLoadCommand(make<LCDylib>(LC_ID_DYLIB, config->installName,
                                             config->dylibCompatibilityVersion,
                                             config->dylibCurrentVersion));
+    for (StringRef client : config->allowableClients)
+      in.header->addLoadCommand(make<LCSubClient>(client));
     break;
   case MH_BUNDLE:
     break;
@@ -1121,14 +1147,12 @@ void Writer::finalizeLinkEditSegment() {
       symtabSection,     indirectSymtabSection,
       dataInCodeSection, functionStartsSection,
   };
-  SmallVector<std::shared_future<void>> threadFutures;
-  threadFutures.reserve(linkEditSections.size());
-  for (LinkEditSection *osec : linkEditSections)
-    if (osec)
-      threadFutures.emplace_back(threadPool.async(
-          [](LinkEditSection *osec) { osec->finalizeContents(); }, osec));
-  for (std::shared_future<void> &future : threadFutures)
-    future.wait();
+
+  parallelForEach(linkEditSections.begin(), linkEditSections.end(),
+                  [](LinkEditSection *osec) {
+                    if (osec)
+                      osec->finalizeContents();
+                  });
 
   // Now that __LINKEDIT is filled out, do a proper calculation of its
   // addresses and offsets.
@@ -1170,6 +1194,8 @@ void Writer::openFile() {
 }
 
 void Writer::writeSections() {
+  TimeTraceScope timeScope("Write output sections");
+
   uint8_t *buf = buffer->getBufferStart();
   std::vector<const OutputSection *> osecs;
   for (const OutputSegment *seg : outputSegments)
@@ -1200,18 +1226,15 @@ void Writer::writeUuid() {
 
   ArrayRef<uint8_t> data{buffer->getBufferStart(), buffer->getBufferEnd()};
   std::vector<ArrayRef<uint8_t>> chunks = split(data, 1024 * 1024);
+
   // Leave one slot for filename
   std::vector<uint64_t> hashes(chunks.size() + 1);
-  SmallVector<std::shared_future<void>> threadFutures;
-  threadFutures.reserve(chunks.size());
-  for (size_t i = 0; i < chunks.size(); ++i)
-    threadFutures.emplace_back(threadPool.async(
-        [&](size_t j) { hashes[j] = xxh3_64bits(chunks[j]); }, i));
-  for (std::shared_future<void> &future : threadFutures)
-    future.wait();
+  parallelFor(0, chunks.size(),
+              [&](size_t i) { hashes[i] = xxh3_64bits(chunks[i]); });
   // Append the output filename so that identical binaries with different names
   // don't get the same UUID.
   hashes[chunks.size()] = xxh3_64bits(sys::path::filename(config->finalOutput));
+
   uint64_t digest = xxh3_64bits({reinterpret_cast<uint8_t *>(hashes.data()),
                                  hashes.size() * sizeof(uint64_t)});
   uuidCommand->writeUuid(digest);
@@ -1330,15 +1353,18 @@ template <class LP> void Writer::run() {
   sortSegmentsAndSections();
   createLoadCommands<LP>();
   finalizeAddresses();
-  threadPool.async([&] {
+
+  llvm::thread mapFileWriter([&] {
     if (LLVM_ENABLE_THREADS && config->timeTraceEnabled)
       timeTraceProfilerInitialize(config->timeTraceGranularity, "writeMapFile");
     writeMapFile();
     if (LLVM_ENABLE_THREADS && config->timeTraceEnabled)
       timeTraceProfilerFinishThread();
   });
+
   finalizeLinkEditSegment();
   writeOutputFile();
+  mapFileWriter.join();
 }
 
 template <class LP> void macho::writeResult() { Writer().run<LP>(); }

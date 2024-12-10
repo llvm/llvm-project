@@ -700,7 +700,7 @@ IBCHNG, ISHA, ISHC, ISHL, IXOR
 IARG, IARGC, NARGS, NUMARG
 BADDRESS, IADDR
 CACHESIZE, EOF, FP_CLASS, INT_PTR_KIND, ISNAN, LOC
-MALLOC
+MALLOC, FREE
 ```
 
 ### Library subroutine 
@@ -765,7 +765,7 @@ This phase currently supports all the intrinsic procedures listed above but the 
 | Coarray intrinsic functions | COSHAPE |
 | Object characteristic inquiry functions | ALLOCATED, ASSOCIATED, EXTENDS_TYPE_OF, IS_CONTIGUOUS, PRESENT, RANK, SAME_TYPE, STORAGE_SIZE |
 | Type inquiry intrinsic functions | BIT_SIZE, DIGITS, EPSILON, HUGE, KIND, MAXEXPONENT, MINEXPONENT, NEW_LINE, PRECISION, RADIX, RANGE, TINY|
-| Non-standard intrinsic functions | AND, OR, XOR, SHIFT, ZEXT, IZEXT, COSD, SIND, TAND, ACOSD, ASIND, ATAND, ATAN2D, COMPL, EQV, NEQV, INT8, JINT, JNINT, KNINT, QCMPLX, DREAL, DFLOAT, QEXT, QFLOAT, QREAL, DNUM, NUM, JNUM, KNUM, QNUM, RNUM, RAN, RANF, ILEN, SIZEOF, MCLOCK, SECNDS, COTAN, IBCHNG, ISHA, ISHC, ISHL, IXOR, IARG, IARGC, NARGS, GETPID, NUMARG, BADDRESS, IADDR, CACHESIZE, EOF, FP_CLASS, INT_PTR_KIND, ISNAN, MALLOC |
+| Non-standard intrinsic functions | AND, OR, XOR, SHIFT, ZEXT, IZEXT, COSD, SIND, TAND, ACOSD, ASIND, ATAND, ATAN2D, COMPL, EQV, NEQV, INT8, JINT, JNINT, KNINT, QCMPLX, DREAL, DFLOAT, QEXT, QFLOAT, QREAL, DNUM, NUM, JNUM, KNUM, QNUM, RNUM, RAN, RANF, ILEN, SIZEOF, MCLOCK, SECNDS, COTAN, IBCHNG, ISHA, ISHC, ISHL, IXOR, IARG, IARGC, NARGS, GETPID, NUMARG, BADDRESS, IADDR, CACHESIZE, EOF, FP_CLASS, INT_PTR_KIND, ISNAN, MALLOC, FREE, GETUID, GETGID |
 | Intrinsic subroutines |MVBITS (elemental), CPU_TIME, DATE_AND_TIME, EVENT_QUERY, EXECUTE_COMMAND_LINE, GET_COMMAND, GET_COMMAND_ARGUMENT, GET_ENVIRONMENT_VARIABLE, MOVE_ALLOC, RANDOM_INIT, RANDOM_NUMBER, RANDOM_SEED, SIGNAL, SLEEP, SYSTEM, SYSTEM_CLOCK |
 | Atomic intrinsic subroutines | ATOMIC_ADD |
 | Collective intrinsic subroutines | CO_REDUCE |
@@ -1001,3 +1001,65 @@ PROGRAM example_getcwd
   PRINT *, status
 END PROGRAM
 ```
+
+### Non-standard Intrinsics: RENAME
+`RENAME(OLD, NEW[, STATUS])` renames/moves a file on the filesystem.
+
+This intrinsic is provided in both subroutine and function form; however, only one form can be used in any given program unit.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL RENAME(SRC, DST[, STATUS])`
+- **Arguments:**
+- **Return value** status code (0: success, non-zero for errors)
+
+| Argument | Description                       |
+|----------|-----------------------------------|
+| `SRC`    | Source path                       |
+| `DST`    | Destination path                  |
+| `STATUS` | Status code (for subroutine form) |
+
+The status code returned by both the subroutine and function form corresponds to the value of `errno` if the invocation of `rename(2)` was not successful.
+
+#### Example
+
+Function form:
+```
+program rename_func
+    implicit none
+    integer :: status
+    status = rename('src', 'dst')
+    print *, 'status:', status
+    status = rename('dst', 'src')
+    print *, 'status:', status
+end program rename_func
+```
+
+Subroutine form:
+```
+program rename_proc
+    implicit none
+    integer :: status
+    call rename('src', 'dst', status)
+    print *, 'status:', status
+    call rename('dst', 'src')
+end program rename_proc
+```
+
+### Non-standard Intrinsics: SECOND
+This intrinsic is an alias for `CPU_TIME`: supporting both a subroutine and a
+function form.
+
+### Non-standard Intrinsics: LNBLNK
+This intrinsic is an alias for `LEN_TRIM`, without the optional KIND argument.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL SECOND(TIME)` or `TIME = SECOND()`
+- **Arguments:** `TIME` - a REAL value into which the elapsed CPU time in
+                          seconds is written
+- **RETURN value:** same as TIME argument

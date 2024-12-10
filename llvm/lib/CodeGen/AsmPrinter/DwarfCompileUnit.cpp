@@ -36,7 +36,6 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
-#include <iterator>
 #include <optional>
 #include <string>
 #include <utility>
@@ -49,6 +48,12 @@ cl::opt<cl::boolOrDefault> AddLinkageNamesToDeclCallOrigins(
     cl::desc("Add DW_AT_linkage_name to function declaration DIEs "
              "referenced by DW_AT_call_origin attributes. Enabled by default "
              "for -gsce debugger tuning."));
+
+static cl::opt<bool> EmitFuncLineTableOffsetsOption(
+    "emit-func-debug-line-table-offsets", cl::Hidden,
+    cl::desc("Include line table offset in function's debug info and emit end "
+             "sequence after each function's line data."),
+    cl::init(false));
 
 static bool AddLinkageNamesToDeclCallOriginsForTuning(const DwarfDebug *DD) {
   bool EnabledByDefault = DD->tuneForSCE();
@@ -347,8 +352,9 @@ void DwarfCompileUnit::addLocationAttribute(
                 Asm->getObjFileLowering().getIndirectSymViaRWPI(Sym));
         // Base register
         Register BaseReg = Asm->getObjFileLowering().getStaticBase();
-        BaseReg = Asm->TM.getMCRegisterInfo()->getDwarfRegNum(BaseReg, false);
-        addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_breg0 + BaseReg);
+        unsigned DwarfBaseReg =
+            Asm->TM.getMCRegisterInfo()->getDwarfRegNum(BaseReg, false);
+        addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_breg0 + DwarfBaseReg);
         // Offset from base register
         addSInt(*Loc, dwarf::DW_FORM_sdata, 0);
         // Operation
@@ -511,7 +517,8 @@ void DwarfCompileUnit::addWasmRelocBaseGlobal(DIELoc *Loc, StringRef GlobalName,
 // Find DIE for the given subprogram and attach appropriate DW_AT_low_pc
 // and DW_AT_high_pc attributes. If there are global variables in this
 // scope then create and insert DIEs for these variables.
-DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
+DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP,
+                                                MCSymbol *LineTableSym) {
   DIE *SPDie = getOrCreateSubprogramDIE(SP, includeMinimalInlineScopes());
   SmallVector<RangeSpan, 2> BB_List;
   // If basic block sections are on, ranges for each basic block section has
@@ -525,6 +532,12 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
       !DD->getCurrentFunction()->getTarget().Options.DisableFramePointerElim(
           *DD->getCurrentFunction()))
     addFlag(*SPDie, dwarf::DW_AT_APPLE_omit_frame_ptr);
+
+  if (emitFuncLineTableOffsets() && LineTableSym) {
+    addSectionLabel(
+        *SPDie, dwarf::DW_AT_LLVM_stmt_sequence, LineTableSym,
+        Asm->getObjFileLowering().getDwarfLineSection()->getBeginSymbol());
+  }
 
   // Only include DW_AT_frame_base in full debug info
   if (!includeMinimalInlineScopes()) {
@@ -778,6 +791,13 @@ DIE *DwarfCompileUnit::constructVariableDIE(DbgVariable &DV, bool Abstract) {
 void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
     const Loc::Single &Single, const DbgVariable &DV, DIE &VariableDie) {
   const DbgValueLoc *DVal = &Single.getValueLoc();
+  if (Asm->TM.getTargetTriple().isNVPTX() && DD->tuneForGDB() &&
+      !Single.getExpr()) {
+    // Lack of expression means it is a register.  Registers for PTX need to
+    // be marked with DW_AT_address_class = 2.  See
+    // https://docs.nvidia.com/cuda/archive/10.0/ptx-writers-guide-to-interoperability/index.html#cuda-specific-dwarf
+    addUInt(VariableDie, dwarf::DW_AT_address_class, dwarf::DW_FORM_data1, 2);
+  }
   if (!DVal->isVariadic()) {
     const DbgValueLocEntry *Entry = DVal->getLocEntries().begin();
     if (Entry->isLocation()) {
@@ -1089,8 +1109,9 @@ sortLocalVars(SmallVectorImpl<DbgVariable *> &Input) {
 }
 
 DIE &DwarfCompileUnit::constructSubprogramScopeDIE(const DISubprogram *Sub,
-                                                   LexicalScope *Scope) {
-  DIE &ScopeDIE = updateSubprogramScopeDIE(Sub);
+                                                   LexicalScope *Scope,
+                                                   MCSymbol *LineTableSym) {
+  DIE &ScopeDIE = updateSubprogramScopeDIE(Sub, LineTableSym);
 
   if (Scope) {
     assert(!Scope->getInlinedAt());
@@ -1208,7 +1229,7 @@ void DwarfCompileUnit::constructAbstractSubprogramScopeDIE(
 }
 
 bool DwarfCompileUnit::useGNUAnalogForDwarf5Feature() const {
-  return DD->getDwarfVersion() == 4 && !DD->tuneForLLDB();
+  return DD->getDwarfVersion() <= 4 && !DD->tuneForLLDB();
 }
 
 dwarf::Tag DwarfCompileUnit::getDwarf5OrGNUTag(dwarf::Tag Tag) const {
@@ -1682,6 +1703,10 @@ void DwarfCompileUnit::finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) 
 bool DwarfCompileUnit::includeMinimalInlineScopes() const {
   return getCUNode()->getEmissionKind() == DICompileUnit::LineTablesOnly ||
          (DD->useSplitDwarf() && !Skeleton);
+}
+
+bool DwarfCompileUnit::emitFuncLineTableOffsets() const {
+  return EmitFuncLineTableOffsetsOption;
 }
 
 void DwarfCompileUnit::addAddrTableBase() {

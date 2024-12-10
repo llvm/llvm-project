@@ -312,7 +312,7 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
   StringSaver Saver(Alloc);
 
   // Parse command line arguments.
-  SmallVector<const char *, 20> NewArgs(ArgsArr.begin(), ArgsArr.end());
+  SmallVector<const char *, 20> NewArgs(ArgsArr);
   cl::ExpandResponseFiles(Saver, cl::TokenizeWindowsCommandLine, NewArgs);
   ArgsArr = NewArgs;
 
@@ -419,10 +419,15 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
       OutputFile = std::move(NativeDef->OutputFile);
     }
 
-    return writeImportLibrary(OutputFile, OutputPath, Def->Exports, LibMachine,
-                              /*MinGW=*/false, NativeExports)
-               ? 1
-               : 0;
+    if (Error E =
+            writeImportLibrary(OutputFile, OutputPath, Def->Exports, LibMachine,
+                               /*MinGW=*/false, NativeExports)) {
+      handleAllErrors(std::move(E), [&](const ErrorInfoBase &EI) {
+        llvm::errs() << OutputPath << ": " << EI.message() << "\n";
+      });
+      return 1;
+    }
+    return 0;
   }
 
   // If no input files and not told otherwise, silently do nothing to match

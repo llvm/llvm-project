@@ -906,22 +906,25 @@ void HexagonFrameLowering::insertAllocframe(MachineBasicBlock &MBB,
   if (NumBytes >= ALLOCFRAME_MAX) {
     // Emit allocframe(#0).
     BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::S2_allocframe))
-      .addDef(SP)
-      .addReg(SP)
-      .addImm(0)
-      .addMemOperand(MMO);
+        .addDef(SP)
+        .addReg(SP)
+        .addImm(0)
+        .addMemOperand(MMO)
+        .setMIFlag(MachineInstr::FrameSetup);
 
     // Subtract the size from the stack pointer.
     Register SP = HRI.getStackRegister();
     BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::A2_addi), SP)
-      .addReg(SP)
-      .addImm(-int(NumBytes));
+        .addReg(SP)
+        .addImm(-int(NumBytes))
+        .setMIFlag(MachineInstr::FrameSetup);
   } else {
     BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::S2_allocframe))
-      .addDef(SP)
-      .addReg(SP)
-      .addImm(NumBytes)
-      .addMemOperand(MMO);
+        .addDef(SP)
+        .addReg(SP)
+        .addImm(NumBytes)
+        .addMemOperand(MMO)
+        .setMIFlag(MachineInstr::FrameSetup);
   }
 }
 
@@ -1032,7 +1035,6 @@ void HexagonFrameLowering::insertCFIInstructionsAt(MachineBasicBlock &MBB,
       MachineBasicBlock::iterator At) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  MachineModuleInfo &MMI = MF.getMMI();
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   auto &HII = *HST.getInstrInfo();
   auto &HRI = *HST.getRegisterInfo();
@@ -1043,7 +1045,7 @@ void HexagonFrameLowering::insertCFIInstructionsAt(MachineBasicBlock &MBB,
   DebugLoc DL;
   const MCInstrDesc &CFID = HII.get(TargetOpcode::CFI_INSTRUCTION);
 
-  MCSymbol *FrameLabel = MMI.getContext().createTempSymbol();
+  MCSymbol *FrameLabel = MF.getContext().createTempSymbol();
   bool HasFP = hasFP(MF);
 
   if (HasFP) {
@@ -1142,10 +1144,7 @@ void HexagonFrameLowering::insertCFIInstructionsAt(MachineBasicBlock &MBB,
   }
 }
 
-bool HexagonFrameLowering::hasFP(const MachineFunction &MF) const {
-  if (MF.getFunction().hasFnAttribute(Attribute::Naked))
-    return false;
-
+bool HexagonFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   auto &MFI = MF.getFrameInfo();
   auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
   bool HasExtraAlign = HRI.hasStackRealignment(MF);
@@ -1660,7 +1659,7 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
   using SpillSlot = TargetFrameLowering::SpillSlot;
 
   unsigned NumFixed;
-  int MinOffset = 0;  // CS offsets are negative.
+  int64_t MinOffset = 0; // CS offsets are negative.
   const SpillSlot *FixedSlots = getCalleeSavedSpillSlots(NumFixed);
   for (const SpillSlot *S = FixedSlots; S != FixedSlots+NumFixed; ++S) {
     if (!SRegs[S->Reg])
@@ -1679,7 +1678,7 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
     Register R = x;
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(R);
     unsigned Size = TRI->getSpillSize(*RC);
-    int Off = MinOffset - Size;
+    int64_t Off = MinOffset - Size;
     Align Alignment = std::min(TRI->getSpillAlign(*RC), getStackAlign());
     Off &= -Alignment.value();
     int FI = MFI.CreateFixedSpillStackObject(Size, Off);

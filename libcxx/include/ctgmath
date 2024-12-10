@@ -18,11 +18,23 @@
 
 */
 
-#include <ccomplex>
 #include <cmath>
+#include <complex>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
+#endif
+
+#if _LIBCPP_STD_VER >= 20
+
+using __standard_header_ctgmath _LIBCPP_DEPRECATED_("removed in C++20. Include <cmath> and <complex> instead.") = void;
+using __use_standard_header_ctgmath = __standard_header_ctgmath;
+
+#elif _LIBCPP_STD_VER >= 17
+
+using __standard_header_ctgmath _LIBCPP_DEPRECATED_("Include <cmath> and <complex> instead.") = void;
+using __use_standard_header_ctgmath = __standard_header_ctgmath;
+
 #endif
 
 #endif // _LIBCPP_CTGMATH

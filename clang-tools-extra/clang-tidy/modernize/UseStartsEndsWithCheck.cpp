@@ -8,7 +8,9 @@
 
 #include "UseStartsEndsWithCheck.h"
 
-#include "../utils/OptionsUtils.h"
+#include "../utils/ASTUtils.h"
+#include "../utils/Matchers.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
 
 #include <string>
@@ -17,168 +19,238 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
+static bool isNegativeComparison(const Expr *ComparisonExpr) {
+  if (const auto *Op = llvm::dyn_cast<BinaryOperator>(ComparisonExpr))
+    return Op->getOpcode() == BO_NE;
+
+  if (const auto *Op = llvm::dyn_cast<CXXOperatorCallExpr>(ComparisonExpr))
+    return Op->getOperator() == OO_ExclaimEqual;
+
+  if (const auto *Op =
+          llvm::dyn_cast<CXXRewrittenBinaryOperator>(ComparisonExpr))
+    return Op->getOperator() == BO_NE;
+
+  return false;
+}
+
+struct NotLengthExprForStringNode {
+  NotLengthExprForStringNode(std::string ID, DynTypedNode Node,
+                             ASTContext *Context)
+      : ID(std::move(ID)), Node(std::move(Node)), Context(Context) {}
+  bool operator()(const internal::BoundNodesMap &Nodes) const {
+    // Match a string literal and an integer size or strlen() call.
+    if (const auto *StringLiteralNode = Nodes.getNodeAs<StringLiteral>(ID)) {
+      if (const auto *IntegerLiteralSizeNode = Node.get<IntegerLiteral>()) {
+        return StringLiteralNode->getLength() !=
+               IntegerLiteralSizeNode->getValue().getZExtValue();
+      }
+
+      if (const auto *StrlenNode = Node.get<CallExpr>()) {
+        if (StrlenNode->getDirectCallee()->getName() != "strlen" ||
+            StrlenNode->getNumArgs() != 1) {
+          return true;
+        }
+
+        if (const auto *StrlenArgNode = dyn_cast<StringLiteral>(
+                StrlenNode->getArg(0)->IgnoreParenImpCasts())) {
+          return StrlenArgNode->getLength() != StringLiteralNode->getLength();
+        }
+      }
+    }
+
+    // Match a string variable and a call to length() or size().
+    if (const auto *ExprNode = Nodes.getNodeAs<Expr>(ID)) {
+      if (const auto *MemberCallNode = Node.get<CXXMemberCallExpr>()) {
+        const CXXMethodDecl *MethodDeclNode = MemberCallNode->getMethodDecl();
+        const StringRef Name = MethodDeclNode->getName();
+        if (!MethodDeclNode->isConst() || MethodDeclNode->getNumParams() != 0 ||
+            (Name != "size" && Name != "length")) {
+          return true;
+        }
+
+        if (const auto *OnNode =
+                dyn_cast<Expr>(MemberCallNode->getImplicitObjectArgument())) {
+          return !utils::areStatementsIdentical(OnNode->IgnoreParenImpCasts(),
+                                                ExprNode->IgnoreParenImpCasts(),
+                                                *Context);
+        }
+      }
+    }
+
+    return true;
+  }
+
+private:
+  std::string ID;
+  DynTypedNode Node;
+  ASTContext *Context;
+};
+
+AST_MATCHER_P(Expr, lengthExprForStringNode, std::string, ID) {
+  return Builder->removeBindings(NotLengthExprForStringNode(
+      ID, DynTypedNode::create(Node), &(Finder->getASTContext())));
+}
+
 UseStartsEndsWithCheck::UseStartsEndsWithCheck(StringRef Name,
                                                ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context) {}
 
 void UseStartsEndsWithCheck::registerMatchers(MatchFinder *Finder) {
   const auto ZeroLiteral = integerLiteral(equals(0));
-  const auto HasStartsWithMethodWithName = [](const std::string &Name) {
-    return hasMethod(
-        cxxMethodDecl(hasName(Name), isConst(), parameterCountIs(1))
-            .bind("starts_with_fun"));
-  };
-  const auto HasStartsWithMethod =
-      anyOf(HasStartsWithMethodWithName("starts_with"),
-            HasStartsWithMethodWithName("startsWith"),
-            HasStartsWithMethodWithName("startswith"));
-  const auto ClassWithStartsWithFunction = cxxRecordDecl(anyOf(
-      HasStartsWithMethod, hasAnyBase(hasType(hasCanonicalType(hasDeclaration(
-                               cxxRecordDecl(HasStartsWithMethod)))))));
 
+  const auto ClassTypeWithMethod = [](const StringRef MethodBoundName,
+                                      const auto... Methods) {
+    return cxxRecordDecl(anyOf(
+        hasMethod(cxxMethodDecl(isConst(), parameterCountIs(1),
+                                returns(booleanType()), hasAnyName(Methods))
+                      .bind(MethodBoundName))...));
+  };
+
+  const auto OnClassWithStartsWithFunction =
+      ClassTypeWithMethod("starts_with_fun", "starts_with", "startsWith",
+                          "startswith", "StartsWith");
+
+  const auto OnClassWithEndsWithFunction = ClassTypeWithMethod(
+      "ends_with_fun", "ends_with", "endsWith", "endswith", "EndsWith");
+
+  // Case 1: X.find(Y) [!=]= 0 -> starts_with.
   const auto FindExpr = cxxMemberCallExpr(
-      // A method call with no second argument or the second argument is zero...
       anyOf(argumentCountIs(1), hasArgument(1, ZeroLiteral)),
-      // ... named find...
-      callee(cxxMethodDecl(hasName("find")).bind("find_fun")),
-      // ... on a class with a starts_with function.
-      on(hasType(
-          hasCanonicalType(hasDeclaration(ClassWithStartsWithFunction)))),
-      // Bind search expression.
-      hasArgument(0, expr().bind("search_expr")));
+      callee(
+          cxxMethodDecl(hasName("find"), ofClass(OnClassWithStartsWithFunction))
+              .bind("find_fun")),
+      hasArgument(0, expr().bind("needle")));
 
+  // Case 2: X.rfind(Y, 0) [!=]= 0 -> starts_with.
   const auto RFindExpr = cxxMemberCallExpr(
-      // A method call with a second argument of zero...
       hasArgument(1, ZeroLiteral),
-      // ... named rfind...
-      callee(cxxMethodDecl(hasName("rfind")).bind("find_fun")),
-      // ... on a class with a starts_with function.
-      on(hasType(
-          hasCanonicalType(hasDeclaration(ClassWithStartsWithFunction)))),
-      // Bind search expression.
-      hasArgument(0, expr().bind("search_expr")));
+      callee(cxxMethodDecl(hasName("rfind"),
+                           ofClass(OnClassWithStartsWithFunction))
+                 .bind("find_fun")),
+      hasArgument(0, expr().bind("needle")));
 
-  // Match a string literal and an integer or strlen() call matching the length.
-  const auto HasStringLiteralAndLengthArgs = [](const auto StringArgIndex,
-                                                const auto LengthArgIndex) {
-    return allOf(
-        hasArgument(StringArgIndex, stringLiteral().bind("string_literal_arg")),
-        hasArgument(LengthArgIndex,
-                    anyOf(integerLiteral().bind("integer_literal_size_arg"),
-                          callExpr(callee(functionDecl(parameterCountIs(1),
-                                                       hasName("strlen"))),
-                                   hasArgument(0, stringLiteral().bind(
-                                                      "strlen_arg"))))));
-  };
-
-  // Match a string variable and a call to length() or size().
-  const auto HasStringVariableAndSizeCallArgs = [](const auto StringArgIndex,
-                                                   const auto LengthArgIndex) {
-    return allOf(
-        hasArgument(StringArgIndex, declRefExpr(hasDeclaration(
-                                        decl().bind("string_var_decl")))),
-        hasArgument(LengthArgIndex,
-                    cxxMemberCallExpr(
-                        callee(cxxMethodDecl(isConst(), parameterCountIs(0),
-                                             hasAnyName("size", "length"))),
-                        on(declRefExpr(
-                            to(decl(equalsBoundNode("string_var_decl"))))))));
-  };
-
-  // Match either one of the two cases above.
-  const auto HasStringAndLengthArgs =
-      [HasStringLiteralAndLengthArgs, HasStringVariableAndSizeCallArgs](
-          const auto StringArgIndex, const auto LengthArgIndex) {
-        return anyOf(
-            HasStringLiteralAndLengthArgs(StringArgIndex, LengthArgIndex),
-            HasStringVariableAndSizeCallArgs(StringArgIndex, LengthArgIndex));
-      };
-
+  // Case 3: X.compare(0, LEN(Y), Y) [!=]= 0 -> starts_with.
   const auto CompareExpr = cxxMemberCallExpr(
-      // A method call with three arguments...
-      argumentCountIs(3),
-      // ... where the first argument is zero...
-      hasArgument(0, ZeroLiteral),
-      // ... named compare...
-      callee(cxxMethodDecl(hasName("compare")).bind("find_fun")),
-      // ... on a class with a starts_with function...
-      on(hasType(
-          hasCanonicalType(hasDeclaration(ClassWithStartsWithFunction)))),
-      // ... where the third argument is some string and the second a length.
-      HasStringAndLengthArgs(2, 1),
-      // Bind search expression.
-      hasArgument(2, expr().bind("search_expr")));
+      argumentCountIs(3), hasArgument(0, ZeroLiteral),
+      callee(cxxMethodDecl(hasName("compare"),
+                           ofClass(OnClassWithStartsWithFunction))
+                 .bind("find_fun")),
+      hasArgument(2, expr().bind("needle")),
+      hasArgument(1, lengthExprForStringNode("needle")));
 
+  // Case 4: X.compare(LEN(X) - LEN(Y), LEN(Y), Y) [!=]= 0 -> ends_with.
+  const auto CompareEndsWithExpr = cxxMemberCallExpr(
+      argumentCountIs(3),
+      callee(cxxMethodDecl(hasName("compare"),
+                           ofClass(OnClassWithEndsWithFunction))
+                 .bind("find_fun")),
+      on(expr().bind("haystack")), hasArgument(2, expr().bind("needle")),
+      hasArgument(1, lengthExprForStringNode("needle")),
+      hasArgument(0,
+                  binaryOperator(hasOperatorName("-"),
+                                 hasLHS(lengthExprForStringNode("haystack")),
+                                 hasRHS(lengthExprForStringNode("needle")))));
+
+  // All cases comparing to 0.
   Finder->addMatcher(
-      // Match [=!]= with a zero on one side and (r?)find|compare on the other.
       binaryOperator(
-          hasAnyOperatorName("==", "!="),
-          hasOperands(cxxMemberCallExpr(anyOf(FindExpr, RFindExpr, CompareExpr))
+          matchers::isEqualityOperator(),
+          hasOperands(cxxMemberCallExpr(anyOf(FindExpr, RFindExpr, CompareExpr,
+                                              CompareEndsWithExpr))
                           .bind("find_expr"),
                       ZeroLiteral))
+          .bind("expr"),
+      this);
+
+  // Case 5: X.rfind(Y) [!=]= LEN(X) - LEN(Y) -> ends_with.
+  Finder->addMatcher(
+      binaryOperator(
+          matchers::isEqualityOperator(),
+          hasOperands(
+              cxxMemberCallExpr(
+                  anyOf(
+                      argumentCountIs(1),
+                      allOf(argumentCountIs(2),
+                            hasArgument(
+                                1,
+                                anyOf(declRefExpr(to(varDecl(hasName("npos")))),
+                                      memberExpr(member(hasName("npos"))))))),
+                  callee(cxxMethodDecl(hasName("rfind"),
+                                       ofClass(OnClassWithEndsWithFunction))
+                             .bind("find_fun")),
+                  on(expr().bind("haystack")),
+                  hasArgument(0, expr().bind("needle")))
+                  .bind("find_expr"),
+              binaryOperator(hasOperatorName("-"),
+                             hasLHS(lengthExprForStringNode("haystack")),
+                             hasRHS(lengthExprForStringNode("needle")))))
+          .bind("expr"),
+      this);
+
+  // Case 6: X.substr(0, LEN(Y)) [!=]= Y -> starts_with.
+  Finder->addMatcher(
+      binaryOperation(
+          hasAnyOperatorName("==", "!="),
+          hasOperands(
+              expr().bind("needle"),
+              cxxMemberCallExpr(
+                  argumentCountIs(2), hasArgument(0, ZeroLiteral),
+                  hasArgument(1, lengthExprForStringNode("needle")),
+                  callee(cxxMethodDecl(hasName("substr"),
+                                       ofClass(OnClassWithStartsWithFunction))
+                             .bind("find_fun")))
+                  .bind("find_expr")))
           .bind("expr"),
       this);
 }
 
 void UseStartsEndsWithCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *ComparisonExpr = Result.Nodes.getNodeAs<BinaryOperator>("expr");
+  const auto *ComparisonExpr = Result.Nodes.getNodeAs<Expr>("expr");
   const auto *FindExpr = Result.Nodes.getNodeAs<CXXMemberCallExpr>("find_expr");
   const auto *FindFun = Result.Nodes.getNodeAs<CXXMethodDecl>("find_fun");
-  const auto *SearchExpr = Result.Nodes.getNodeAs<Expr>("search_expr");
+  const auto *SearchExpr = Result.Nodes.getNodeAs<Expr>("needle");
   const auto *StartsWithFunction =
       Result.Nodes.getNodeAs<CXXMethodDecl>("starts_with_fun");
+  const auto *EndsWithFunction =
+      Result.Nodes.getNodeAs<CXXMethodDecl>("ends_with_fun");
+  assert(bool(StartsWithFunction) != bool(EndsWithFunction));
 
-  const auto *StringLiteralArg =
-      Result.Nodes.getNodeAs<StringLiteral>("string_literal_arg");
-  const auto *IntegerLiteralSizeArg =
-      Result.Nodes.getNodeAs<IntegerLiteral>("integer_literal_size_arg");
-  const auto *StrlenArg = Result.Nodes.getNodeAs<StringLiteral>("strlen_arg");
+  const CXXMethodDecl *ReplacementFunction =
+      StartsWithFunction ? StartsWithFunction : EndsWithFunction;
 
-  // Filter out compare cases where the length does not match string literal.
-  if (StringLiteralArg && IntegerLiteralSizeArg &&
-      StringLiteralArg->getLength() !=
-          IntegerLiteralSizeArg->getValue().getZExtValue()) {
+  if (ComparisonExpr->getBeginLoc().isMacroID() ||
+      FindExpr->getBeginLoc().isMacroID())
     return;
-  }
 
-  if (StringLiteralArg && StrlenArg &&
-      StringLiteralArg->getLength() != StrlenArg->getLength()) {
+  // Make sure FindExpr->getArg(0) can be used to make a range in the FitItHint.
+  if (FindExpr->getNumArgs() == 0)
     return;
-  }
 
-  if (ComparisonExpr->getBeginLoc().isMacroID()) {
-    return;
-  }
+  // Retrieve the source text of the search expression.
+  const auto SearchExprText = Lexer::getSourceText(
+      CharSourceRange::getTokenRange(SearchExpr->getSourceRange()),
+      *Result.SourceManager, Result.Context->getLangOpts());
 
-  const bool Neg = ComparisonExpr->getOpcode() == BO_NE;
+  auto Diagnostic = diag(FindExpr->getExprLoc(), "use %0 instead of %1")
+                    << ReplacementFunction->getName() << FindFun->getName();
 
-  auto Diagnostic =
-      diag(FindExpr->getExprLoc(), "use %0 instead of %1() %select{==|!=}2 0")
-      << StartsWithFunction->getName() << FindFun->getName() << Neg;
-
-  // Remove possible arguments after search expression and ' [!=]= 0' suffix.
-  Diagnostic << FixItHint::CreateReplacement(
-      CharSourceRange::getTokenRange(
-          Lexer::getLocForEndOfToken(SearchExpr->getEndLoc(), 0,
-                                     *Result.SourceManager, getLangOpts()),
-          ComparisonExpr->getEndLoc()),
-      ")");
-
-  // Remove possible '0 [!=]= ' prefix.
+  // Remove everything before the function call.
   Diagnostic << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
       ComparisonExpr->getBeginLoc(), FindExpr->getBeginLoc()));
 
-  // Replace method name by 'starts_with'.
-  // Remove possible arguments before search expression.
-  Diagnostic << FixItHint::CreateReplacement(
-      CharSourceRange::getCharRange(FindExpr->getExprLoc(),
-                                    SearchExpr->getBeginLoc()),
-      (StartsWithFunction->getName() + "(").str());
+  // Rename the function to `starts_with` or `ends_with`.
+  Diagnostic << FixItHint::CreateReplacement(FindExpr->getExprLoc(),
+                                             ReplacementFunction->getName());
 
-  // Add possible negation '!'.
-  if (Neg) {
+  // Replace arguments and everything after the function call.
+  Diagnostic << FixItHint::CreateReplacement(
+      CharSourceRange::getTokenRange(FindExpr->getArg(0)->getBeginLoc(),
+                                     ComparisonExpr->getEndLoc()),
+      (SearchExprText + ")").str());
+
+  // Add negation if necessary.
+  if (isNegativeComparison(ComparisonExpr))
     Diagnostic << FixItHint::CreateInsertion(FindExpr->getBeginLoc(), "!");
-  }
 }
 
 } // namespace clang::tidy::modernize

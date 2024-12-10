@@ -20,15 +20,19 @@
 using namespace clang;
 using namespace clang::targets;
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define LIBBUILTIN(ID, TYPE, ATTRS, HEADER)                                    \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+static constexpr int NumBuiltins =
+    clang::NVPTX::LastTSBuiltin - Builtin::FirstTSBuiltin;
+
+static constexpr auto BuiltinStorage = Builtin::Storage<NumBuiltins>::Make(
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsNVPTX.def"
-};
+    , {
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsNVPTX.def"
+      });
 
 const char *const NVPTXTargetInfo::GCCRegNames[] = {"r0"};
 
@@ -205,9 +209,11 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case OffloadArch::GFX909:
       case OffloadArch::GFX90a:
       case OffloadArch::GFX90c:
+      case OffloadArch::GFX9_4_GENERIC:
       case OffloadArch::GFX940:
       case OffloadArch::GFX941:
       case OffloadArch::GFX942:
+      case OffloadArch::GFX950:
       case OffloadArch::GFX10_1_GENERIC:
       case OffloadArch::GFX1010:
       case OffloadArch::GFX1011:
@@ -229,6 +235,7 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case OffloadArch::GFX1150:
       case OffloadArch::GFX1151:
       case OffloadArch::GFX1152:
+      case OffloadArch::GFX1153:
       case OffloadArch::GFX12_GENERIC:
       case OffloadArch::GFX1200:
       case OffloadArch::GFX1201:
@@ -281,6 +288,8 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case OffloadArch::SM_90:
       case OffloadArch::SM_90a:
         return "900";
+      case OffloadArch::SM_100:
+        return "1000";
       }
       llvm_unreachable("unhandled OffloadArch");
     }();
@@ -290,7 +299,7 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 }
 
-ArrayRef<Builtin::Info> NVPTXTargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfo,
-                        clang::NVPTX::LastTSBuiltin - Builtin::FirstTSBuiltin);
+std::pair<const char *, ArrayRef<Builtin::Info>>
+NVPTXTargetInfo::getTargetBuiltinStorage() const {
+  return {BuiltinStorage.StringTable, BuiltinStorage.Infos};
 }

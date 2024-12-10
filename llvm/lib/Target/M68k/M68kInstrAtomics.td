@@ -10,8 +10,15 @@ foreach size = [8, 16, 32] in {
   def : Pat<(!cast<SDPatternOperator>("atomic_load_"#size) MxCP_ARI:$ptr),
             (!cast<MxInst>("MOV"#size#"dj") !cast<MxMemOp>("MxARI"#size):$ptr)>;
 
+  def : Pat<(!cast<SDPatternOperator>("atomic_load_"#size) MxCP_ARII:$ptr),
+            (!cast<MxInst>("MOV"#size#"df") !cast<MxMemOp>("MxARII"#size):$ptr)>;
+
   def : Pat<(!cast<SDPatternOperator>("atomic_store_"#size) !cast<MxRegOp>("MxDRD"#size):$val, MxCP_ARI:$ptr),
             (!cast<MxInst>("MOV"#size#"jd") !cast<MxMemOp>("MxARI"#size):$ptr,
+                                            !cast<MxRegOp>("MxDRD"#size):$val)>;
+
+  def : Pat<(!cast<SDPatternOperator>("atomic_store_"#size) !cast<MxRegOp>("MxDRD"#size):$val, MxCP_ARII:$ptr),
+            (!cast<MxInst>("MOV"#size#"fd") !cast<MxMemOp>("MxARII"#size):$ptr,
                                             !cast<MxRegOp>("MxDRD"#size):$val)>;
 }
 

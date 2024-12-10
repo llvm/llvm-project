@@ -523,7 +523,8 @@ bool generateDsymCompanion(
   SymtabStart = alignTo(SymtabStart, 0x1000);
 
   // We gathered all the information we need, start emitting the output file.
-  Writer.writeHeader(MachO::MH_DSYM, NumLoadCommands, LoadCommandSize, false);
+  Writer.writeHeader(MachO::MH_DSYM, NumLoadCommands, LoadCommandSize,
+                     /*SubsectionsViaSymbols=*/false);
 
   // Write the load commands.
   assert(OutFile.tell() == HeaderSize);

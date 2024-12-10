@@ -119,6 +119,20 @@ namespace cwg109 { // cwg109: yes
   };
 }
 
+namespace cwg110 { // cwg110: 2.8
+template <typename T>
+void f(T);
+
+class f {};
+
+template <typename T>
+void f(T, T);
+
+class f g;
+void (*h)(int) = static_cast<void(*)(int)>(f);
+void (*i)(int, int) = static_cast<void(*)(int, int)>(f);
+} // namespace cwg110
+
 namespace cwg111 { // cwg111: dup 535
   struct A { A(); A(volatile A&, int = 0); A(A&, const char * = "foo"); };
   struct B : A { B(); }; // #cwg111-B
@@ -568,6 +582,80 @@ namespace cwg137 { // cwg137: yes
   const volatile int *cvqcv = static_cast<const volatile int*>(cvp);
 }
 
+namespace cwg138 { // cwg138: partial
+namespace example1 {
+void foo(); // #cwg138-ex1-foo
+namespace A {
+  using example1::foo; // #cwg138-ex1-using
+  class X {
+    static const int i = 10;
+    // This friend declaration is using neither qualified-id nor template-id,
+    // so name 'foo' is not looked up, which means the using-declaration has no effect.
+    // Target scope of this declaration is A, so this is grating friendship to
+    // (hypothetical) A::foo instead of 'example1::foo' using declaration refers to.
+    // A::foo corresponds to example1::foo named by the using declaration,
+    // and since A::foo is a different entity, they potentially conflict.
+    // FIXME: This is ill-formed, but not for the reason diagnostic says.
+    friend void foo();
+    // expected-error@-1 {{cannot befriend target of using declaration}}
+    //   expected-note@#cwg138-ex1-foo {{target of using declaration}}
+    //   expected-note@#cwg138-ex1-using {{using declaration}}
+  };
+}
+} // namespace example1
+
+namespace example2 {
+void f();
+void g();
+class B {
+  void g();
+};
+class A : public B {
+  static const int i = 10;
+  void f();
+  // Both friend declaration are not using qualified-ids or template-ids,
+  // so 'f' and 'g' are not looked up, which means that presence of A::f
+  // and base B have no effect.
+  // Both target scope of namespace 'example2', and grant friendship to
+  // example2::f and example2::g respectively.
+  friend void f();
+  friend void g();
+};
+void f() {
+  int i2 = A::i;
+}
+void g() {
+  int i3 = A::i;
+}
+} // namespace example2
+
+namespace example3 {
+struct Base {
+private:
+  static const int i = 10; // #cwg138-ex3-Base-i
+  
+public:
+  struct Data;
+  // Elaborated type specifier is not the sole constituent of declaration,
+  // so 'Data' undergoes unqualified type-only lookup, which finds Base::Data.
+  friend class Data;
+
+  struct Data {
+    void f() {
+      int i2 = Base::i;
+    }
+  };
+};
+struct Data {
+  void f() {  
+    int i2 = Base::i;
+    // expected-error@-1 {{'i' is a private member of 'cwg138::example3::Base'}}
+    //   expected-note@#cwg138-ex3-Base-i {{declared private here}}
+  }
+};
+} // namespace example3
+} // namespace cwg138
+
 namespace cwg139 { // cwg139: yes
   namespace example1 {
     typedef int f; // #cwg139-typedef-f
@@ -615,8 +703,10 @@ namespace cwg141 { // cwg141: 3.1
     //   cxx98-note@#cwg141-S {{lookup from the current scope refers here}}
     // expected-error@#cwg141-a {{no member named 'n' in 'cwg141::A::S<int>'; did you mean '::cwg141::S<int>::n'?}}
     //   expected-note@#cwg141-S {{'::cwg141::S<int>::n' declared here}}
+    // FIXME: we issue a useful diagnostic first, then some bogus ones.
     b.f<int>();
     // expected-error@-1 {{no member named 'f' in 'cwg141::B'}}
+    // expected-error@-2 +{{}}
     (void)b.S<int>::n;
   }
   template<typename T> struct C {
@@ -626,12 +716,10 @@ namespace cwg141 { // cwg141: 3.1
       // expected-error@-1 {{use 'template' keyword to treat 'f' as a dependent template name}}
     }
     void h() {
-      (void)t.S<int>::n;
-      // expected-error@-1 {{use 'template' keyword to treat 'S' as a dependent template name}}
+      (void)t.S<int>::n; // ok
     }
     void i() {
-      (void)t.S<int>();
-      // expected-error@-1 {{use 'template' keyword to treat 'S' as a dependent template name}}
+      (void)t.S<int>(); // ok!
     }
   };
   void h() { C<B>().h(); } // ok

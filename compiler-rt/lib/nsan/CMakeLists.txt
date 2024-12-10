@@ -4,11 +4,14 @@ include_directories(..)
 
 set(NSAN_SOURCES
   nsan.cpp
+  nsan_allocator.cpp
   nsan_flags.cpp
   nsan_interceptors.cpp
   nsan_malloc_linux.cpp
+  nsan_new_delete.cpp
   nsan_stats.cpp
   nsan_suppressions.cpp
+  nsan_thread.cpp
 )
 
 set(NSAN_PREINIT_SOURCES
@@ -23,11 +26,11 @@ set(NSAN_HEADERS
   nsan_suppressions.h
 )
 
-append_list_if(COMPILER_RT_HAS_FPIC_FLAG -fPIC NSAN_CFLAGS)
-
 set(NSAN_DYNAMIC_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
 
 set(NSAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
+append_rtti_flag(OFF NSAN_CFLAGS)
+
 set(NSAN_DYNAMIC_CFLAGS ${NSAN_CFLAGS})
 
 set(NSAN_COMMON_RUNTIME_OBJECT_LIBS

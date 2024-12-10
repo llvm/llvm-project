@@ -228,6 +228,8 @@ StringRef ARMTargetInfo::getCPUAttr() const {
     return "9_4A";
   case llvm::ARM::ArchKind::ARMV9_5A:
     return "9_5A";
+  case llvm::ARM::ArchKind::ARMV9_6A:
+    return "9_6A";
   case llvm::ARM::ArchKind::ARMV8MBaseline:
     return "8M_BASE";
   case llvm::ARM::ArchKind::ARMV8MMainline:
@@ -311,7 +313,9 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
     switch (Triple.getEnvironment()) {
     case llvm::Triple::Android:
     case llvm::Triple::GNUEABI:
+    case llvm::Triple::GNUEABIT64:
     case llvm::Triple::GNUEABIHF:
+    case llvm::Triple::GNUEABIHFT64:
     case llvm::Triple::MuslEABI:
     case llvm::Triple::MuslEABIHF:
     case llvm::Triple::OpenHOS:
@@ -891,6 +895,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::ARM::ArchKind::ARMV9_3A:
   case llvm::ARM::ArchKind::ARMV9_4A:
   case llvm::ARM::ArchKind::ARMV9_5A:
+  case llvm::ARM::ArchKind::ARMV9_6A:
     // Filter __arm_cdp, __arm_ldcl, __arm_stcl in arm_acle.h
     FeatureCoprocBF = FEATURE_COPROC_B1 | FEATURE_COPROC_B3;
     break;
@@ -1060,36 +1065,40 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::ARM::ArchKind::ARMV9_3A:
   case llvm::ARM::ArchKind::ARMV9_4A:
   case llvm::ARM::ArchKind::ARMV9_5A:
+  case llvm::ARM::ArchKind::ARMV9_6A:
     getTargetDefinesARMV83A(Opts, Builder);
     break;
   }
 }
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define LIBBUILTIN(ID, TYPE, ATTRS, HEADER)                                    \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+static constexpr int NumBuiltins =
+    clang::ARM::LastTSBuiltin - Builtin::FirstTSBuiltin;
+
+static constexpr auto BuiltinStorage = Builtin::Storage<NumBuiltins>::Make(
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsNEON.def"
 
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define LANGBUILTIN(ID, TYPE, ATTRS, LANG)                                     \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, LANG},
-#define LIBBUILTIN(ID, TYPE, ATTRS, HEADER)                                    \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsARM.def"
-};
+    , {
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsNEON.def"
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define LANGBUILTIN CLANG_LANGBUILTIN_ENTRY
+#define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsARM.def"
+      });
 
-ArrayRef<Builtin::Info> ARMTargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfo,
-                        clang::ARM::LastTSBuiltin - Builtin::FirstTSBuiltin);
+std::pair<const char *, ArrayRef<Builtin::Info>>
+ARMTargetInfo::getTargetBuiltinStorage() const {
+  return {BuiltinStorage.StringTable, BuiltinStorage.Infos};
 }
 
 bool ARMTargetInfo::isCLZForZeroUndef() const { return false; }
@@ -1491,20 +1500,4 @@ void DarwinARMTargetInfo::getOSDefines(const LangOptions &Opts,
                                        const llvm::Triple &Triple,
                                        MacroBuilder &Builder) const {
   getDarwinDefines(Builder, Opts, Triple, PlatformName, PlatformMinVersion);
-}
-
-RenderScript32TargetInfo::RenderScript32TargetInfo(const llvm::Triple &Triple,
-                                                   const TargetOptions &Opts)
-    : ARMleTargetInfo(llvm::Triple("armv7", Triple.getVendorName(),
-                                   Triple.getOSName(),
-                                   Triple.getEnvironmentName()),
-                      Opts) {
-  IsRenderScriptTarget = true;
-  LongWidth = LongAlign = 64;
-}
-
-void RenderScript32TargetInfo::getTargetDefines(const LangOptions &Opts,
-                                                MacroBuilder &Builder) const {
-  Builder.defineMacro("__RENDERSCRIPT__");
-  ARMleTargetInfo::getTargetDefines(Opts, Builder);
 }

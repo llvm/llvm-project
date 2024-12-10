@@ -829,7 +829,7 @@ bool PolynomialMultiplyRecognize::matchRightShift(SelectInst *SelI,
     return false;
 
   Value *X = nullptr;
-  if (!match(C, m_c_And(m_Value(X), m_One())))
+  if (!match(C, m_And(m_Value(X), m_One())))
     return false;
   // Matched: select (X & 1) == +++ ? ... : ...
   //          select (X & 1) != +++ ? ... : ...
@@ -1532,7 +1532,8 @@ Value *PolynomialMultiplyRecognize::generate(BasicBlock::iterator At,
       ParsedValues &PV) {
   IRBuilder<> B(&*At);
   Module *M = At->getParent()->getParent()->getParent();
-  Function *PMF = Intrinsic::getDeclaration(M, Intrinsic::hexagon_M4_pmpyw);
+  Function *PMF =
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::hexagon_M4_pmpyw);
 
   Value *P = PV.P, *Q = PV.Q, *P0 = P;
   unsigned IC = PV.IterCount;

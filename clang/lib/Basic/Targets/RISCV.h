@@ -30,7 +30,7 @@ protected:
   std::unique_ptr<llvm::RISCVISAInfo> ISAInfo;
 
 private:
-  bool FastUnalignedAccess;
+  bool FastScalarUnalignedAccess;
   bool HasExperimental = false;
 
 public:
@@ -62,7 +62,8 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  std::pair<const char *, ArrayRef<Builtin::Info>>
+  getTargetBuiltinStorage() const override;
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::VoidPtrBuiltinVaList;
@@ -122,9 +123,49 @@ public:
   void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) const override;
   bool supportsTargetAttributeTune() const override { return true; }
   ParsedTargetAttr parseTargetAttr(StringRef Str) const override;
+  unsigned getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
     return std::make_pair(32, 32);
+  }
+
+  bool supportsCpuSupports() const override { return getTriple().isOSLinux(); }
+  bool supportsCpuIs() const override { return getTriple().isOSLinux(); }
+  bool supportsCpuInit() const override { return getTriple().isOSLinux(); }
+  bool validateCpuSupports(StringRef Feature) const override;
+  bool validateCpuIs(StringRef CPUName) const override;
+  bool isValidFeatureName(StringRef Name) const override;
+
+  bool validateGlobalRegisterVariable(StringRef RegName, unsigned RegSize,
+                                      bool &HasSizeMismatch) const override;
+
+  bool checkCFProtectionBranchSupported(DiagnosticsEngine &) const override {
+    // Always generate Zicfilp lpad insns
+    // Non-zicfilp CPUs would read them as NOP
+    return true;
+  }
+
+  bool
+  checkCFProtectionReturnSupported(DiagnosticsEngine &Diags) const override {
+    if (ISAInfo->hasExtension("zicfiss"))
+      return true;
+    return TargetInfo::checkCFProtectionReturnSupported(Diags);
+  }
+
+  CFBranchLabelSchemeKind getDefaultCFBranchLabelScheme() const override {
+    return CFBranchLabelSchemeKind::FuncSig;
+  }
+
+  bool
+  checkCFBranchLabelSchemeSupported(const CFBranchLabelSchemeKind Scheme,
+                                    DiagnosticsEngine &Diags) const override {
+    switch (Scheme) {
+    case CFBranchLabelSchemeKind::Default:
+    case CFBranchLabelSchemeKind::Unlabeled:
+    case CFBranchLabelSchemeKind::FuncSig:
+      return true;
+    }
+    return TargetInfo::checkCFBranchLabelSchemeSupported(Scheme, Diags);
   }
 };
 class LLVM_LIBRARY_VISIBILITY RISCV32TargetInfo : public RISCVTargetInfo {

@@ -18,4 +18,4 @@ entry:
     ret ptr @data
 }
 
-; CHECK: 'Code Model': IDs have conflicting values
+; CHECK: 'Code Model': IDs have conflicting values: 'i32 1' from {{.*}}, and 'i32 4' from {{.*}}

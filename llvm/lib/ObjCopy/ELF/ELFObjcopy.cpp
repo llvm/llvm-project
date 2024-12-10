@@ -10,7 +10,6 @@
 #include "ELFObject.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -28,16 +27,12 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Memory.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdlib>
 #include <functional>
-#include <iterator>
 #include <memory>
 #include <string>
 #include <system_error>
@@ -741,6 +736,56 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
                   ". The result would underflow");
         }
         Seg.PAddr += Config.ChangeSectionLMAValAll;
+      }
+    }
+  }
+
+  if (!Config.ChangeSectionAddress.empty()) {
+    if (Obj.Type != ELF::ET_REL)
+      return createStringError(
+          object_error::invalid_file_type,
+          "cannot change section address in a non-relocatable file");
+
+    StringMap<AddressUpdate> SectionsToUpdateAddress;
+    for (const SectionPatternAddressUpdate &PatternUpdate :
+         make_range(Config.ChangeSectionAddress.rbegin(),
+                    Config.ChangeSectionAddress.rend())) {
+      for (SectionBase &Sec : Obj.sections()) {
+        if (PatternUpdate.SectionPattern.matches(Sec.Name) &&
+            SectionsToUpdateAddress.try_emplace(Sec.Name, PatternUpdate.Update)
+                .second) {
+          if (PatternUpdate.Update.Kind == AdjustKind::Subtract &&
+              Sec.Addr < PatternUpdate.Update.Value) {
+            return createStringError(
+                errc::invalid_argument,
+                "address 0x" + Twine::utohexstr(Sec.Addr) +
+                    " cannot be decreased by 0x" +
+                    Twine::utohexstr(PatternUpdate.Update.Value) +
+                    ". The result would underflow");
+          }
+          if (PatternUpdate.Update.Kind == AdjustKind::Add &&
+              Sec.Addr > std::numeric_limits<uint64_t>::max() -
+                             PatternUpdate.Update.Value) {
+            return createStringError(
+                errc::invalid_argument,
+                "address 0x" + Twine::utohexstr(Sec.Addr) +
+                    " cannot be increased by 0x" +
+                    Twine::utohexstr(PatternUpdate.Update.Value) +
+                    ". The result would overflow");
+          }
+
+          switch (PatternUpdate.Update.Kind) {
+          case (AdjustKind::Set):
+            Sec.Addr = PatternUpdate.Update.Value;
+            break;
+          case (AdjustKind::Subtract):
+            Sec.Addr -= PatternUpdate.Update.Value;
+            break;
+          case (AdjustKind::Add):
+            Sec.Addr += PatternUpdate.Update.Value;
+            break;
+          }
+        }
       }
     }
   }

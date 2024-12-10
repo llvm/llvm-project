@@ -1,4 +1,5 @@
-// RUN: mlir-opt --memref-emulate-wide-int="widest-int-supported=32" %s | FileCheck %s
+// RUN: mlir-opt --memref-emulate-wide-int="widest-int-supported=32" %s \
+// RUN:   --split-input-file --verify-diagnostics | FileCheck %s
 
 // Expect no conversions, i32 is supported.
 // CHECK-LABEL: func @memref_i32
@@ -15,6 +16,8 @@ func.func @memref_i32() {
     return
 }
 
+// -----
+
 // Expect no conversions, f64 is not an integer type.
 // CHECK-LABEL: func @memref_f32
 // CHECK:         [[M:%.+]] = memref.alloc() : memref<4xf32, 1>
@@ -29,6 +32,8 @@ func.func @memref_f32() {
     memref.store %c1, %m[%c0] : memref<4xf32, 1>
     return
 }
+
+// -----
 
 // CHECK-LABEL: func @alloc_load_store_i64
 // CHECK:         [[C1:%.+]] = arith.constant dense<[1, 0]> : vector<2xi32>
@@ -45,6 +50,7 @@ func.func @alloc_load_store_i64() {
     return
 }
 
+// -----
 
 // CHECK-LABEL: func @alloc_load_store_i64_nontemporal
 // CHECK:         [[C1:%.+]] = arith.constant dense<[1, 0]> : vector<2xi32>
@@ -59,4 +65,31 @@ func.func @alloc_load_store_i64_nontemporal() {
     %v = memref.load %m[%c0] {nontemporal = true} : memref<4xi64, 1>
     memref.store %c1, %m[%c0] {nontemporal = true} : memref<4xi64, 1>
     return
+}
+
+// -----
+
+// Make sure we do not crash on unsupported types.
+func.func @alloc_i128() {
+  // expected-error@+1 {{failed to legalize operation 'memref.alloc' that was explicitly marked illegal}}
+  %m = memref.alloc() : memref<4xi128, 1>
+  return
+}
+
+// -----
+
+func.func @load_i128(%m: memref<4xi128, 1>) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{failed to legalize operation 'memref.load' that was explicitly marked illegal}}
+  %v = memref.load %m[%c0] : memref<4xi128, 1>
+  return
+}
+
+// -----
+
+func.func @store_i128(%c1: i128, %m: memref<4xi128, 1>) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{failed to legalize operation 'memref.store' that was explicitly marked illegal}}
+  memref.store %c1, %m[%c0] : memref<4xi128, 1>
+  return
 }

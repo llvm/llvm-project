@@ -127,6 +127,12 @@ static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
       (!IsPointer(ultimate) || (isWholeSymbol && isPointerDefinition))) {
     return BlameSymbol(
         at, "'%s' is an INTENT(IN) dummy argument"_en_US, original);
+  } else if (acceptAllocatable && IsAllocatable(ultimate) &&
+      !flags.test(DefinabilityFlag::SourcedAllocation)) {
+    // allocating a function result doesn't count as a def'n
+    // unless there's SOURCE=
+  } else if (!flags.test(DefinabilityFlag::DoNotNoteDefinition)) {
+    scope.context().NoteDefinedSymbol(ultimate);
   }
   if (const Scope * pure{FindPureProcedureContaining(scope)}) {
     // Additional checking for pure subprograms.
@@ -178,7 +184,10 @@ static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
 static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags, const Symbol &original) {
   const Symbol &ultimate{original.GetUltimate()};
-  if (const auto *association{ultimate.detailsIf<AssocEntityDetails>()}) {
+  if (const auto *association{ultimate.detailsIf<AssocEntityDetails>()};
+      association &&
+      (association->rank().has_value() ||
+          !flags.test(DefinabilityFlag::PointerDefinition))) {
     if (auto dataRef{
             evaluate::ExtractDataRef(*association->expr(), true, true)}) {
       return WhyNotDefinableLast(at, scope, flags, dataRef->GetLastSymbol());
@@ -214,7 +223,8 @@ static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
       }
       if (const DerivedTypeSpec * derived{GetDerivedTypeSpec(dyType)}) {
         if (!flags.test(DefinabilityFlag::PolymorphicOkInPure)) {
-          if (auto bad{FindPolymorphicAllocatableUltimateComponent(*derived)}) {
+          if (auto bad{
+                  FindPolymorphicAllocatablePotentialComponent(*derived)}) {
             return BlameSymbol(at,
                 "'%s' has polymorphic component '%s' in a pure subprogram"_en_US,
                 original, bad.BuildResultDesignatorName());
@@ -339,7 +349,8 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
                 if (!portabilityWarning &&
                     scope.context().languageFeatures().ShouldWarn(
                         common::UsageWarning::VectorSubscriptFinalization)) {
-                  portabilityWarning = parser::Message{at,
+                  portabilityWarning = parser::Message{
+                      common::UsageWarning::VectorSubscriptFinalization, at,
                       "Variable '%s' has a vector subscript and will be finalized by non-elemental subroutine '%s'"_port_en_US,
                       expr.AsFortran(), anyRankMatch->name()};
                 }

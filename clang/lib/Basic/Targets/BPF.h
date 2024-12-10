@@ -58,7 +58,8 @@ public:
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  std::pair<const char *, ArrayRef<Builtin::Info>>
+  getTargetBuiltinStorage() const override;
 
   std::string_view getClobbers() const override { return ""; }
 
@@ -67,9 +68,7 @@ public:
   }
 
   bool isValidGCCRegisterName(StringRef Name) const override { return true; }
-  ArrayRef<const char *> getGCCRegNames() const override {
-    return std::nullopt;
-  }
+  ArrayRef<const char *> getGCCRegNames() const override { return {}; }
 
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &Info) const override {
@@ -86,7 +85,7 @@ public:
   }
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return std::nullopt;
+    return {};
   }
 
   bool allowDebugInfoForExternalRef() const override { return true; }

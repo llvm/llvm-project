@@ -8,7 +8,7 @@ define i8 @srem_non_matching(i8 %X, i8 %Y) {
 ; CHECK-LABEL: @srem_non_matching(
 ; CHECK-NEXT:    [[BO0:%.*]] = mul nuw nsw i8 [[X:%.*]], 15
 ; CHECK-NEXT:    [[BO1:%.*]] = mul nuw nsw i8 [[Y:%.*]], 5
-; CHECK-NEXT:    [[R:%.*]] = srem i8 [[BO0]], [[BO1]]
+; CHECK-NEXT:    [[R:%.*]] = urem i8 [[BO0]], [[BO1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %BO0 = mul nsw nuw i8 %X, 15
@@ -98,7 +98,7 @@ define i8 @urem_XY_XZ_with_CY_lt_CZ_with_shl(i8 %X) {
 
 define <2 x i8> @urem_XY_XZ_with_CY_lt_CZ_with_nsw_out(<2 x i8> %X) {
 ; CHECK-LABEL: @urem_XY_XZ_with_CY_lt_CZ_with_nsw_out(
-; CHECK-NEXT:    [[R:%.*]] = shl nuw nsw <2 x i8> [[X:%.*]], <i8 2, i8 2>
+; CHECK-NEXT:    [[R:%.*]] = shl nuw nsw <2 x i8> [[X:%.*]], splat (i8 2)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %BO0 = shl nsw <2 x i8> %X, <i8 2, i8 2>
@@ -284,7 +284,7 @@ define i8 @srem_XY_XZ_with_CY_rem_CZ_eq_0_fail_missing_flag(i8 %X) {
 
 define <2 x i8> @srem_XY_XZ_with_CY_lt_CZ(<2 x i8> %X) {
 ; CHECK-LABEL: @srem_XY_XZ_with_CY_lt_CZ(
-; CHECK-NEXT:    [[R:%.*]] = shl nsw <2 x i8> [[X:%.*]], <i8 3, i8 3>
+; CHECK-NEXT:    [[R:%.*]] = shl nsw <2 x i8> [[X:%.*]], splat (i8 3)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %BO0 = shl <2 x i8> %X, <i8 3, i8 3>
@@ -306,7 +306,7 @@ define i8 @srem_XY_XZ_with_CY_lt_CZ_with_nuw_out(i8 %X) {
 
 define <2 x i8> @srem_XY_XZ_with_CY_lt_CZ_with_nuw_out_with_shl(<2 x i8> %X) {
 ; CHECK-LABEL: @srem_XY_XZ_with_CY_lt_CZ_with_nuw_out_with_shl(
-; CHECK-NEXT:    [[R:%.*]] = shl nuw nsw <2 x i8> <i8 3, i8 3>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw nsw <2 x i8> splat (i8 3), [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %BO0 = shl nuw <2 x i8> <i8 3, i8 3>, %X
@@ -363,7 +363,7 @@ define i8 @srem_XY_XZ_with_CY_gt_CZ_with_nuw_out(i8 %X) {
 
 define <2 x i8> @srem_XY_XZ_with_CY_gt_CZ_no_nuw_out(<2 x i8> %X) {
 ; CHECK-LABEL: @srem_XY_XZ_with_CY_gt_CZ_no_nuw_out(
-; CHECK-NEXT:    [[R:%.*]] = shl nsw <2 x i8> [[X:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    [[R:%.*]] = shl nsw <2 x i8> [[X:%.*]], splat (i8 1)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %BO0 = mul nsw <2 x i8> %X, <i8 10, i8 10>

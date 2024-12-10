@@ -33,23 +33,6 @@ public:
                    AggValueSlot Slot) const override;
 };
 
-// Helper for coercing an aggregate argument or return value into an integer
-// array of the same size (including padding) and alignment.  This alternate
-// coercion happens only for the RenderScript ABI and can be removed after
-// runtimes that rely on it are no longer supported.
-//
-// RenderScript assumes that the size of the argument / return value in the IR
-// is the same as the size of the corresponding qualified type. This helper
-// coerces the aggregate type into an array of the same size (including
-// padding).  This coercion is used in lieu of expansion of struct members or
-// other canonical coercions that return a coerced-type of larger size.
-//
-// Ty          - The argument / return value type
-// Context     - The associated ASTContext
-// LLVMContext - The associated LLVMContext
-ABIArgInfo coerceToIntArray(QualType Ty, ASTContext &Context,
-                            llvm::LLVMContext &LLVMContext);
-
 void AssignToArrayRange(CodeGen::CGBuilderTy &Builder, llvm::Value *Array,
                         llvm::Value *Value, unsigned FirstIndex,
                         unsigned LastIndex);
@@ -136,6 +119,16 @@ bool isEmptyField(ASTContext &Context, const FieldDecl *FD, bool AllowArrays,
 /// them empty.
 bool isEmptyRecord(ASTContext &Context, QualType T, bool AllowArrays,
                    bool AsIfNoUniqueAddr = false);
+
+/// isEmptyFieldForLayout - Return true iff the field is "empty", that is,
+/// either a zero-width bit-field or an \ref isEmptyRecordForLayout.
+bool isEmptyFieldForLayout(const ASTContext &Context, const FieldDecl *FD);
+
+/// isEmptyRecordForLayout - Return true iff a structure contains only empty
+/// base classes (per \ref isEmptyRecordForLayout) and fields (per
+/// \ref isEmptyFieldForLayout). Note, C++ record fields are considered empty
+/// if the [[no_unique_address]] attribute would have made them empty.
+bool isEmptyRecordForLayout(const ASTContext &Context, QualType T);
 
 /// isSingleElementStruct - Determine if a structure is a "single
 /// element struct", i.e. it has exactly one non-empty field or
