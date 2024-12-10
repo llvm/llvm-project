@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/stdlib/realloc.h"
 #include "src/__support/freelist_heap.h"
 #include "src/__support/macros/config.h"
-#include "src/stdlib/realloc.h"
 
 #include <stddef.h>
 

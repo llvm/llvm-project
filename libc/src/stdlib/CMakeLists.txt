@@ -387,6 +387,25 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
     DEPENDS
       ${SCUDO_DEPS}
   )
+elseif(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
+  add_entrypoint_external(
+    malloc
+  )
+  add_entrypoint_external(
+    calloc
+  )
+  add_entrypoint_external(
+    realloc
+  )
+  add_entrypoint_external(
+    aligned_alloc
+  )
+  add_entrypoint_external(
+    free
+  )
+  add_entrypoint_external(
+    mallopt
+  )
 endif()
 
 if(NOT LLVM_LIBC_FULL_BUILD)
@@ -474,40 +493,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
 
-if(LIBC_TARGET_OS_IS_BAREMETAL)
-  add_entrypoint_object(
-    malloc
-    ALIAS
-    DEPENDS
-      .${LIBC_TARGET_OS}.malloc
-  )
-  add_entrypoint_object(
-    free
-    ALIAS
-    DEPENDS
-      .${LIBC_TARGET_OS}.free
-  )
-  add_entrypoint_object(
-    calloc
-    ALIAS
-    DEPENDS
-      .${LIBC_TARGET_OS}.calloc
-  )
-  add_entrypoint_object(
-    realloc
-    ALIAS
-    DEPENDS
-      .${LIBC_TARGET_OS}.realloc
-  )
-  add_entrypoint_object(
-    aligned_alloc
-    ALIAS
-    DEPENDS
-      .${LIBC_TARGET_OS}.aligned_alloc
-  )
-endif()
-
-if(LIBC_TARGET_OS_IS_GPU)
+if(LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU)
   add_entrypoint_object(
     malloc
     ALIAS

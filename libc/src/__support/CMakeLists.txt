@@ -56,7 +56,9 @@ add_object_library(
     freelist_heap.h
   DEPENDS
     .block
+    .freelist
     .freestore
+    .freetrie
     libc.src.__support.CPP.cstddef
     libc.src.__support.CPP.array
     libc.src.__support.CPP.optional
