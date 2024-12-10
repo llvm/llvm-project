@@ -841,7 +841,7 @@ public:
           .template Case<fir::RecordType>([&](fir::RecordType recTy) {
             doStructReturn(func, recTy, newResTys, newInTyAndAttrs, fixups);
           })
-          .template Default([&](mlir::Type ty) { newResTys.push_back(ty); });
+          .Default([&](mlir::Type ty) { newResTys.push_back(ty); });
 
     // Saved potential shift in argument. Handling of result can add arguments
     // at the beginning of the function signature.
