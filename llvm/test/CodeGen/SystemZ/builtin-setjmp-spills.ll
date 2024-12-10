@@ -9,8 +9,6 @@
 
 ; RUN: llc < %s -verify-machineinstrs -mtriple=s390x-linux-gnu | FileCheck %s
 
-; RUN: llc < %s -mtriple=s390x-linux-gnu -O3 | FileCheck %s
-
 declare i32 @llvm.eh.sjlj.setjmp(ptr)
 
 @t = global i32 0, align 4
