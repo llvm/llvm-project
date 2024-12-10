@@ -1,4 +1,4 @@
-//===-- Implementation header for strcasecmp --------------------*- C++ -*-===//
+//===-- Implementation of bcmp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STRING_STRNCASECMP_H
-#define LLVM_LIBC_SRC_STRING_STRNCASECMP_H
-
+#include "src/strings/bcmp.h"
+#include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include <stddef.h>
+#include "src/string/memory_utils/inline_bcmp.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-int strncasecmp(const char *left, const char *right, size_t n);
+LLVM_LIBC_FUNCTION(int, bcmp,
+                   (const void *lhs, const void *rhs, size_t count)) {
+  return inline_bcmp(lhs, rhs, count);
+}
 
 } // namespace LIBC_NAMESPACE_DECL
-
-#endif // LLVM_LIBC_SRC_STRING_STRNCASECMP_H

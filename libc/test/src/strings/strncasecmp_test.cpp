@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/string/strncasecmp.h"
+#include "src/strings/strncasecmp.h"
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcStrNCaseCmpTest,
