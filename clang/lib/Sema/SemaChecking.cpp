@@ -2765,6 +2765,44 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   // types only.
   case Builtin::BI__builtin_elementwise_add_sat:
   case Builtin::BI__builtin_elementwise_sub_sat: {
+    if (checkArgCount(TheCall, 2))
+      return ExprError();
+    ExprResult LHS = TheCall->getArg(0);
+    ExprResult RHS = TheCall->getArg(1);
+    QualType LHSType = LHS.get()->getType().getUnqualifiedType();
+    QualType RHSType = RHS.get()->getType().getUnqualifiedType();
+    // If both LHS/RHS are promotable integer types, do not perform the usual
+    // conversions - we must keep the saturating operation at the correct
+    // bitwidth.
+    if (Context.isPromotableIntegerType(LHSType) &&
+        Context.isPromotableIntegerType(RHSType)) {
+      // First, convert each argument to an r-value.
+      ExprResult ResLHS = DefaultFunctionArrayLvalueConversion(LHS.get());
+      if (ResLHS.isInvalid())
+        return ExprError();
+      LHS = ResLHS.get();
+
+      ExprResult ResRHS = DefaultFunctionArrayLvalueConversion(RHS.get());
+      if (ResRHS.isInvalid())
+        return ExprError();
+      RHS = ResRHS.get();
+
+      LHSType = LHS.get()->getType().getUnqualifiedType();
+      RHSType = RHS.get()->getType().getUnqualifiedType();
+
+      // If the two integer types are not of equal order, cast the smaller
+      // integer one to the larger one
+      if (int Order = Context.getIntegerTypeOrder(LHSType, RHSType); Order == 1)
+        RHS = ImpCastExprToType(RHS.get(), LHSType, CK_IntegralCast);
+      else if (Order == -1)
+        LHS = ImpCastExprToType(LHS.get(), RHSType, CK_IntegralCast);
+
+      TheCall->setArg(0, LHS.get());
+      TheCall->setArg(1, RHS.get());
+      TheCall->setType(LHS.get()->getType().getUnqualifiedType());
+      break;
+    }
+
     if (BuiltinElementwiseMath(TheCall))
       return ExprError();
 

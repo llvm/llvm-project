@@ -68,7 +68,10 @@ void test_builtin_elementwise_add_sat(float f1, float f2, double d1, double d2,
                                       long long int i2, si8 vi1, si8 vi2,
                                       unsigned u1, unsigned u2, u4 vu1, u4 vu2,
                                       _BitInt(31) bi1, _BitInt(31) bi2,
-                                      unsigned _BitInt(55) bu1, unsigned _BitInt(55) bu2) {
+                                      unsigned _BitInt(55) bu1, unsigned _BitInt(55) bu2,
+                                      char c1, char c2, unsigned char uc1,
+                                      unsigned char uc2, short s1, short s2,
+                                      unsigned short us1, unsigned short us2) {
   // CHECK:      [[I1:%.+]] = load i64, ptr %i1.addr, align 8
   // CHECK-NEXT: [[I2:%.+]] = load i64, ptr %i2.addr, align 8
   // CHECK-NEXT: call i64 @llvm.sadd.sat.i64(i64 [[I1]], i64 [[I2]])
@@ -114,6 +117,50 @@ void test_builtin_elementwise_add_sat(float f1, float f2, double d1, double d2,
 
   // CHECK: store i64 98, ptr %i1.addr, align 8
   i1 = __builtin_elementwise_add_sat(1, 'a');
+
+  // CHECK:      [[C1:%.+]] = load i8, ptr %c1.addr, align 1
+  // CHECK-NEXT: [[C2:%.+]] = load i8, ptr %c2.addr, align 1
+  // CHECK-NEXT: call i8 @llvm.sadd.sat.i8(i8 [[C1]], i8 [[C2]])
+  c1 = __builtin_elementwise_add_sat(c1, c2);
+
+  // CHECK:      [[UC1:%.+]] = load i8, ptr %uc1.addr, align 1
+  // CHECK-NEXT: [[UC2:%.+]] = load i8, ptr %uc2.addr, align 1
+  // CHECK-NEXT: call i8 @llvm.uadd.sat.i8(i8 [[UC1]], i8 [[UC2]])
+  uc1 = __builtin_elementwise_add_sat(uc1, uc2);
+
+  // CHECK:      [[S1:%.+]] = load i16, ptr %s1.addr, align 2
+  // CHECK-NEXT: [[S2:%.+]] = load i16, ptr %s2.addr, align 2
+  // CHECK-NEXT: call i16 @llvm.sadd.sat.i16(i16 [[S1]], i16 [[S2]])
+  s1 = __builtin_elementwise_add_sat(s1, s2);
+
+  // CHECK:      [[US1:%.+]] = load i16, ptr %us1.addr, align 2
+  // CHECK-NEXT: [[US2:%.+]] = load i16, ptr %us2.addr, align 2
+  // CHECK-NEXT: call i16 @llvm.uadd.sat.i16(i16 [[US1]], i16 [[US2]])
+  us1 = __builtin_elementwise_add_sat(us1, us2);
+
+  // CHECK:      [[C1:%.+]] = load i8, ptr %c1.addr, align 1
+  // CHECK-NEXT: [[C1EXT:%.+]] = sext i8 [[C1]] to i16
+  // CHECK-NEXT: [[S1:%.+]] = load i16, ptr %s1.addr, align 2
+  // CHECK-NEXT: call i16 @llvm.sadd.sat.i16(i16 [[C1EXT]], i16 [[S1]])
+  s1 = __builtin_elementwise_add_sat(c1, s1);
+
+  // CHECK:      [[S1:%.+]] = load i16, ptr %s1.addr, align 2
+  // CHECK-NEXT: [[C1:%.+]] = load i8, ptr %c1.addr, align 1
+  // CHECK-NEXT: [[C1EXT:%.+]] = sext i8 [[C1]] to i16
+  // CHECK-NEXT: call i16 @llvm.sadd.sat.i16(i16 [[S1]], i16 [[C1EXT]])
+  s1 = __builtin_elementwise_add_sat(s1, c1);
+
+  // CHECK:      [[UC1:%.+]] = load i8, ptr %uc1.addr, align 1
+  // CHECK-NEXT: [[UC1EXT:%.+]] = zext i8 [[UC1]] to i16
+  // CHECK-NEXT: [[S1:%.+]] = load i16, ptr %s1.addr, align 2
+  // CHECK-NEXT: call i16 @llvm.sadd.sat.i16(i16 [[UC1EXT]], i16 [[S1]])
+  s1 = __builtin_elementwise_add_sat(uc1, s1);
+
+  // CHECK:      [[US1:%.+]] = load i16, ptr %us1.addr, align 2
+  // CHECK-NEXT: [[C1:%.+]] = load i8, ptr %c1.addr, align 1
+  // CHECK-NEXT: [[C1EXT:%.+]] = sext i8 [[C1]] to i16
+  // CHECK-NEXT: call i16 @llvm.uadd.sat.i16(i16 [[US1]], i16 [[C1EXT]])
+  us1 = __builtin_elementwise_add_sat(us1, c1);
 }
 
 void test_builtin_elementwise_sub_sat(float f1, float f2, double d1, double d2,
@@ -121,7 +168,10 @@ void test_builtin_elementwise_sub_sat(float f1, float f2, double d1, double d2,
                                       long long int i2, si8 vi1, si8 vi2,
                                       unsigned u1, unsigned u2, u4 vu1, u4 vu2,
                                       _BitInt(31) bi1, _BitInt(31) bi2,
-                                      unsigned _BitInt(55) bu1, unsigned _BitInt(55) bu2) {
+                                      unsigned _BitInt(55) bu1, unsigned _BitInt(55) bu2,
+                                      char c1, char c2, unsigned char uc1,
+                                      unsigned char uc2, short s1, short s2,
+                                      unsigned short us1, unsigned short us2) {
   // CHECK:      [[I1:%.+]] = load i64, ptr %i1.addr, align 8
   // CHECK-NEXT: [[I2:%.+]] = load i64, ptr %i2.addr, align 8
   // CHECK-NEXT: call i64 @llvm.ssub.sat.i64(i64 [[I1]], i64 [[I2]])
@@ -167,6 +217,50 @@ void test_builtin_elementwise_sub_sat(float f1, float f2, double d1, double d2,
 
   // CHECK: store i64 -96, ptr %i1.addr, align 8
   i1 = __builtin_elementwise_sub_sat(1, 'a');
+
+  // CHECK:      [[C1:%.+]] = load i8, ptr %c1.addr, align 1
+  // CHECK-NEXT: [[C2:%.+]] = load i8, ptr %c2.addr, align 1
+  // CHECK-NEXT: call i8 @llvm.ssub.sat.i8(i8 [[C1]], i8 [[C2]])
+  c1 = __builtin_elementwise_sub_sat(c1, c2);
+
+  // CHECK:      [[UC1:%.+]] = load i8, ptr %uc1.addr, align 1
+  // CHECK-NEXT: [[UC2:%.+]] = load i8, ptr %uc2.addr, align 1
+  // CHECK-NEXT: call i8 @llvm.usub.sat.i8(i8 [[UC1]], i8 [[UC2]])
+  uc1 = __builtin_elementwise_sub_sat(uc1, uc2);
+
+  // CHECK:      [[S1:%.+]] = load i16, ptr %s1.addr, align 2
+  // CHECK-NEXT: [[S2:%.+]] = load i16, ptr %s2.addr, align 2
+  // CHECK-NEXT: call i16 @llvm.ssub.sat.i16(i16 [[S1]], i16 [[S2]])
+  s1 = __builtin_elementwise_sub_sat(s1, s2);
+
+  // CHECK:      [[US1:%.+]] = load i16, ptr %us1.addr, align 2
+  // CHECK-NEXT: [[US2:%.+]] = load i16, ptr %us2.addr, align 2
+  // CHECK-NEXT: call i16 @llvm.usub.sat.i16(i16 [[US1]], i16 [[US2]])
+  us1 = __builtin_elementwise_sub_sat(us1, us2);
+
+  // CHECK:      [[C1:%.+]] = load i8, ptr %c1.addr, align 1
+  // CHECK-NEXT: [[C1EXT:%.+]] = sext i8 [[C1]] to i16
+  // CHECK-NEXT: [[S1:%.+]] = load i16, ptr %s1.addr, align 2
+  // CHECK-NEXT: call i16 @llvm.ssub.sat.i16(i16 [[C1EXT]], i16 [[S1]])
+  s1 = __builtin_elementwise_sub_sat(c1, s1);
+
+  // CHECK:      [[S1:%.+]] = load i16, ptr %s1.addr, align 2
+  // CHECK-NEXT: [[C1:%.+]] = load i8, ptr %c1.addr, align 1
+  // CHECK-NEXT: [[C1EXT:%.+]] = sext i8 [[C1]] to i16
+  // CHECK-NEXT: call i16 @llvm.ssub.sat.i16(i16 [[S1]], i16 [[C1EXT]])
+  s1 = __builtin_elementwise_sub_sat(s1, c1);
+
+  // CHECK:      [[UC1:%.+]] = load i8, ptr %uc1.addr, align 1
+  // CHECK-NEXT: [[UC1EXT:%.+]] = zext i8 [[UC1]] to i16
+  // CHECK-NEXT: [[S1:%.+]] = load i16, ptr %s1.addr, align 2
+  // CHECK-NEXT: call i16 @llvm.ssub.sat.i16(i16 [[UC1EXT]], i16 [[S1]])
+  s1 = __builtin_elementwise_sub_sat(uc1, s1);
+
+  // CHECK:      [[US1:%.+]] = load i16, ptr %us1.addr, align 2
+  // CHECK-NEXT: [[C1:%.+]] = load i8, ptr %c1.addr, align 1
+  // CHECK-NEXT: [[C1EXT:%.+]] = sext i8 [[C1]] to i16
+  // CHECK-NEXT: call i16 @llvm.usub.sat.i16(i16 [[US1]], i16 [[C1EXT]])
+  us1 = __builtin_elementwise_sub_sat(us1, c1);
 }
 
 void test_builtin_elementwise_maximum(float f1, float f2, double d1, double d2,
