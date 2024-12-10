@@ -576,7 +576,7 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
 }
 
 uint32_t StackFrameList::GetNumFrames(bool can_create) {
-  if (!GetAllFramesFetched() && can_create) {
+  if (!WereAllFramesFetched() && can_create) {
     // Don't allow interrupt or we might not return the correct count
     GetFramesUpTo(UINT32_MAX, DoNotAllowInterruption);
   }
