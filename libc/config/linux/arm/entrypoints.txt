@@ -207,6 +207,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.complex.cimag
     libc.src.complex.cimagf
     libc.src.complex.cimagl
+    libc.src.complex.conj
+    libc.src.complex.conjf
+    libc.src.complex.conjl
     
     # fenv.h entrypoints
     libc.src.fenv.feclearexcept
