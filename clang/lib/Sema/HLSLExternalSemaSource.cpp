@@ -851,7 +851,7 @@ static Expr *constructTypedBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
                                                 TemplateTypeParmDecl *T) {
   ASTContext &Context = S.getASTContext();
 
-  // Obtain the QualType for 'unsigned long'
+  // Obtain the QualType for 'bool'
   QualType BoolTy = Context.BoolTy;
 
   // Create a QualType that points to this TemplateTypeParmDecl
