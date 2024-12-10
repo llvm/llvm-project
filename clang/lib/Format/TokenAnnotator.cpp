@@ -6105,9 +6105,9 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return false;
   }
 
-  // We can break before an r_brace if there was a corresponding break after
-  // the l_brace, which is tracked by BreakBeforeClosingBrace, or if we are
-  // in a block indented initialization list.
+  // We can break before an r_brace if there was a break after the matching
+  // l_brace, which is tracked by BreakBeforeClosingBrace, or if we are in a
+  // block-indented initialization list.
   if (Right.is(tok::r_brace)) {
     return Right.MatchingParen && (Right.MatchingParen->is(BK_Block) ||
                                    (Right.isBlockIndentedInitRBrace(Style)));
