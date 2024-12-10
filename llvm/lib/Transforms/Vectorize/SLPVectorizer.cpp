@@ -8145,14 +8145,13 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   // a load), in which case peek through to include it in the tree, without
   // ballooning over-budget.
   if (Depth >= RecursionMaxDepth &&
-      !(S.getMainOp() && isa<Instruction>(S.getMainOp()) && !S.isAltShuffle() &&
-        VL.size() >= 4 &&
+      !(S.getMainOp() && !S.isAltShuffle() && VL.size() >= 4 &&
         (match(S.getMainOp(), m_Load(m_Value())) ||
          all_of(VL, [&S](const Value *I) {
            return match(I,
                         m_OneUse(m_ZExtOrSExt(m_OneUse(m_Load(m_Value()))))) &&
                   cast<Instruction>(I)->getOpcode() ==
-                      cast<Instruction>(S.getMainOp())->getOpcode();
+                      S.getMainOp()->getOpcode();
          })))) {
     LLVM_DEBUG(dbgs() << "SLP: Gathering due to max recursion depth.\n");
     if (TryToFindDuplicates(S))
