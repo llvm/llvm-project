@@ -683,7 +683,6 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
   Mask[Index] = Index + NumElts;
 
   Type *ScalarTy = SrcVecTy->getScalarType();
-  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost OldCost =
       TTI.getArithmeticInstrCost(Instruction::FNeg, ScalarTy, CostKind) +
       TTI.getVectorInstrCost(I, VecTy, CostKind, Index);
