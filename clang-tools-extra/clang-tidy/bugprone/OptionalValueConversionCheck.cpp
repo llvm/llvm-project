@@ -43,18 +43,20 @@ OptionalValueConversionCheck::getCheckTraversalKind() const {
 }
 
 void OptionalValueConversionCheck::registerMatchers(MatchFinder *Finder) {
-  auto ConstructTypeMatcher =
-      qualType(hasCleanType(qualType().bind("optional-type")));
+  auto BindOptionalType = qualType(
+      hasCleanType(qualType(hasDeclaration(namedDecl(
+                                matchers::matchesAnyListedName(OptionalTypes))))
+                       .bind("optional-type")));
 
-  auto CallTypeMatcher =
+  auto EqualsBoundOptionalType =
       qualType(hasCleanType(equalsBoundNode("optional-type")));
 
   auto OptionalDereferenceMatcher = callExpr(
       anyOf(
           cxxOperatorCallExpr(hasOverloadedOperatorName("*"),
-                              hasUnaryOperand(hasType(CallTypeMatcher)))
+                              hasUnaryOperand(hasType(EqualsBoundOptionalType)))
               .bind("op-call"),
-          cxxMemberCallExpr(thisPointerType(CallTypeMatcher),
+          cxxMemberCallExpr(thisPointerType(EqualsBoundOptionalType),
                             callee(cxxMethodDecl(anyOf(
                                 hasOverloadedOperatorName("*"),
                                 matchers::matchesAnyListedName(ValueMethods)))))
@@ -66,10 +68,7 @@ void OptionalValueConversionCheck::registerMatchers(MatchFinder *Finder) {
                hasArgument(0, ignoringImpCasts(OptionalDereferenceMatcher)));
   Finder->addMatcher(
       cxxConstructExpr(
-          argumentCountIs(1U),
-          hasDeclaration(cxxConstructorDecl(
-              ofClass(matchers::matchesAnyListedName(OptionalTypes)))),
-          hasType(ConstructTypeMatcher),
+          argumentCountIs(1U), hasType(BindOptionalType),
           hasArgument(0U, ignoringImpCasts(anyOf(OptionalDereferenceMatcher,
                                                  StdMoveCallMatcher))),
           unless(anyOf(hasAncestor(typeLoc()),
