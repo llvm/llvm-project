@@ -7717,9 +7717,9 @@ bool CombinerHelper::matchShuffleUndefRHS(MachineInstr &MI,
   if (!Changed)
     return false;
 
-  MatchInfo = [&, NewMask](MachineIRBuilder &B) {
+  MatchInfo = [&, NewMask = std::move(NewMask)](MachineIRBuilder &B) {
     B.buildShuffleVector(MI.getOperand(0), MI.getOperand(1), MI.getOperand(2),
-                         NewMask);
+                         std::move(NewMask));
   };
 
   return true;
@@ -7789,4 +7789,79 @@ bool CombinerHelper::matchShuffleDisjointMask(MachineInstr &MI,
   };
 
   return true;
+}
+
+bool CombinerHelper::matchSuboCarryOut(const MachineInstr &MI,
+                                       BuildFnTy &MatchInfo) {
+  const GSubCarryOut *Subo = cast<GSubCarryOut>(&MI);
+
+  Register Dst = Subo->getReg(0);
+  Register LHS = Subo->getLHSReg();
+  Register RHS = Subo->getRHSReg();
+  Register Carry = Subo->getCarryOutReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT CarryTy = MRI.getType(Carry);
+
+  // Check legality before known bits.
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SUB, {DstTy}}) ||
+      !isConstantLegalOrBeforeLegalizer(CarryTy))
+    return false;
+
+  ConstantRange KBLHS =
+      ConstantRange::fromKnownBits(KB->getKnownBits(LHS),
+                                   /* IsSigned=*/Subo->isSigned());
+  ConstantRange KBRHS =
+      ConstantRange::fromKnownBits(KB->getKnownBits(RHS),
+                                   /* IsSigned=*/Subo->isSigned());
+
+  if (Subo->isSigned()) {
+    // G_SSUBO
+    switch (KBLHS.signedSubMayOverflow(KBRHS)) {
+    case ConstantRange::OverflowResult::MayOverflow:
+      return false;
+    case ConstantRange::OverflowResult::NeverOverflows: {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildSub(Dst, LHS, RHS, MachineInstr::MIFlag::NoSWrap);
+        B.buildConstant(Carry, 0);
+      };
+      return true;
+    }
+    case ConstantRange::OverflowResult::AlwaysOverflowsLow:
+    case ConstantRange::OverflowResult::AlwaysOverflowsHigh: {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildSub(Dst, LHS, RHS);
+        B.buildConstant(Carry, getICmpTrueVal(getTargetLowering(),
+                                              /*isVector=*/CarryTy.isVector(),
+                                              /*isFP=*/false));
+      };
+      return true;
+    }
+    }
+    return false;
+  }
+
+  // G_USUBO
+  switch (KBLHS.unsignedSubMayOverflow(KBRHS)) {
+  case ConstantRange::OverflowResult::MayOverflow:
+    return false;
+  case ConstantRange::OverflowResult::NeverOverflows: {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildSub(Dst, LHS, RHS, MachineInstr::MIFlag::NoUWrap);
+      B.buildConstant(Carry, 0);
+    };
+    return true;
+  }
+  case ConstantRange::OverflowResult::AlwaysOverflowsLow:
+  case ConstantRange::OverflowResult::AlwaysOverflowsHigh: {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildSub(Dst, LHS, RHS);
+      B.buildConstant(Carry, getICmpTrueVal(getTargetLowering(),
+                                            /*isVector=*/CarryTy.isVector(),
+                                            /*isFP=*/false));
+    };
+    return true;
+  }
+  }
+
+  return false;
 }

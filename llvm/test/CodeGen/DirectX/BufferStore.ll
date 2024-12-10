@@ -90,3 +90,27 @@ define void @storei16(<4 x i16> %data, i32 %index) {
 
   ret void
 }
+
+define void @store_scalarized_floats(float %data0, float %data1, float %data2, float %data3, i32 %index) {
+
+  ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217,
+  ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
+  %buffer = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
+      @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4f32_1_0_0(
+          i32 0, i32 0, i32 1, i32 0, i1 false)
+
+  ; We shouldn't end up with any inserts/extracts.
+  ; CHECK-NOT: insertelement
+  ; CHECK-NOT: extractelement
+
+  ; CHECK: call void @dx.op.bufferStore.f32(i32 69, %dx.types.Handle [[HANDLE]], i32 %index, i32 undef, float %data0, float %data1, float %data2, float %data3, i8 15)
+  %vec.upto0 = insertelement <4 x float> poison, float %data0, i64 0
+  %vec.upto1 = insertelement <4 x float> %vec.upto0, float %data1, i64 1
+  %vec.upto2 = insertelement <4 x float> %vec.upto1, float %data2, i64 2
+  %vec = insertelement <4 x float> %vec.upto2, float %data3, i64 3
+  call void @llvm.dx.typedBufferStore(
+      target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %buffer,
+      i32 %index, <4 x float> %vec)
+
+  ret void
+}

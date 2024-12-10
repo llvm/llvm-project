@@ -25,7 +25,6 @@
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
-#include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Analysis/Analyses/CalledOnceCheck.h"
@@ -48,10 +47,8 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include <algorithm>
 #include <deque>
 #include <iterator>
@@ -2260,24 +2257,33 @@ public:
       } else if (isa<MemberExpr>(Operation)) {
         // note_unsafe_buffer_operation doesn't have this mode yet.
         assert(!IsRelatedToDecl && "Not implemented yet!");
-        auto ME = dyn_cast<MemberExpr>(Operation);
+        auto *ME = cast<MemberExpr>(Operation);
         D = ME->getMemberDecl();
         MsgParam = 5;
       } else if (const auto *ECE = dyn_cast<ExplicitCastExpr>(Operation)) {
         QualType destType = ECE->getType();
+        bool destTypeComplete = true;
+
         if (!isa<PointerType>(destType))
           return;
+        destType = destType.getTypePtr()->getPointeeType();
+        if (const auto *D = destType->getAsTagDecl())
+          destTypeComplete = D->isCompleteDefinition();
 
-        const uint64_t dSize =
-            Ctx.getTypeSize(destType.getTypePtr()->getPointeeType());
+        // If destination type is incomplete, it is unsafe to cast to anyway, no
+        // need to check its type:
+        if (destTypeComplete) {
+          const uint64_t dSize = Ctx.getTypeSize(destType);
+          QualType srcType = ECE->getSubExpr()->getType();
 
-        QualType srcType = ECE->getSubExpr()->getType();
-        const uint64_t sSize =
-            Ctx.getTypeSize(srcType.getTypePtr()->getPointeeType());
+          assert(srcType->isPointerType());
 
-        if (sSize >= dSize)
-          return;
+          const uint64_t sSize =
+              Ctx.getTypeSize(srcType.getTypePtr()->getPointeeType());
 
+          if (sSize >= dSize)
+            return;
+        }
         if (const auto *CE = dyn_cast<CXXMemberCallExpr>(
                 ECE->getSubExpr()->IgnoreParens())) {
           D = CE->getMethodDecl();

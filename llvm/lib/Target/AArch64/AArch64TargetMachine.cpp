@@ -810,7 +810,7 @@ void AArch64PassConfig::addPreRegAlloc() {
     addPass(createAArch64AdvSIMDScalar());
     // The AdvSIMD pass may produce copies that can be rewritten to
     // be register coalescer friendly.
-    addPass(&PeepholeOptimizerID);
+    addPass(&PeepholeOptimizerLegacyID);
   }
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableMachinePipeliner)
     addPass(&MachinePipelinerID);

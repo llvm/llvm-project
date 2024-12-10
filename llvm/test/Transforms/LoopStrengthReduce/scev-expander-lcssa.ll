@@ -3,10 +3,10 @@
 
 ; Make sure SCEVExpander does not crash and introduce unnecessary LCSSA PHI nodes.
 
-define void @schedule_block() {
+define void @schedule_block(i1 %arg) {
 ; CHECK-LABEL: @schedule_block(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    switch i16 undef, label [[IF_END156_I:%.*]] [
+; CHECK-NEXT:    switch i16 0, label [[IF_END156_I:%.*]] [
 ; CHECK-NEXT:    i16 27, label [[IF_THEN_I:%.*]]
 ; CHECK-NEXT:    i16 28, label [[IF_THEN_I]]
 ; CHECK-NEXT:    i16 29, label [[IF_THEN13_I:%.*]]
@@ -19,7 +19,7 @@ define void @schedule_block() {
 ; CHECK:       land.lhs.true136.i:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end156.i:
-; CHECK-NEXT:    switch i16 undef, label [[WHILE_END256:%.*]] [
+; CHECK-NEXT:    switch i16 32, label [[WHILE_END256:%.*]] [
 ; CHECK-NEXT:    i16 29, label [[IF_THEN210:%.*]]
 ; CHECK-NEXT:    i16 28, label [[IF_THEN210]]
 ; CHECK-NEXT:    i16 27, label [[LAND_LHS_TRUE191:%.*]]
@@ -56,7 +56,7 @@ define void @schedule_block() {
 ; CHECK:       for.end34.i:
 ; CHECK-NEXT:    br i1 false, label [[FOR_COND_I2472]], label [[IF_ELSE_I2488:%.*]]
 ; CHECK:       if.else.i2488:
-; CHECK-NEXT:    br i1 undef, label [[IF_END107_I:%.*]], label [[FOR_BODY45_PREHEADER_I:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[IF_END107_I:%.*]], label [[FOR_BODY45_PREHEADER_I:%.*]]
 ; CHECK:       for.body45.preheader.i:
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[I_0_I]] to i64
 ; CHECK-NEXT:    unreachable
@@ -66,7 +66,7 @@ define void @schedule_block() {
 ; CHECK-NEXT:    unreachable
 ;
 entry:
-  switch i16 undef, label %if.end156.i [
+  switch i16 0, label %if.end156.i [
   i16 27, label %if.then.i
   i16 28, label %if.then.i
   i16 29, label %if.then13.i
@@ -83,7 +83,7 @@ land.lhs.true136.i:                               ; preds = %entry
   unreachable
 
 if.end156.i:                                      ; preds = %entry
-  switch i16 undef, label %while.end256 [
+  switch i16 32, label %while.end256 [
   i16 29, label %if.then210
   i16 28, label %if.then210
   i16 27, label %land.lhs.true191
@@ -110,7 +110,7 @@ while.body1013:                                   ; preds = %for.end
 
 for.cond.i2472:                                   ; preds = %for.end34.i, %while.body1013
   %i.0.i = phi i32 [ 0, %while.body1013 ], [ %2, %for.end34.i ]
-  br i1 undef, label %for.cond3.preheader.i, label %if.end107.i
+  br i1 false, label %for.cond3.preheader.i, label %if.end107.i
 
 for.cond3.preheader.i:                            ; preds = %for.cond.i2472
   %0 = sext i32 %i.0.i to i64
@@ -123,17 +123,17 @@ for.cond3.i:                                      ; preds = %for.body5.i, %for.c
   br label %for.body5.i
 
 for.body5.i:                                      ; preds = %for.cond3.i
-  br i1 undef, label %for.cond3.i, label %for.body5.i.for.end.i2475.loopexit_crit_edge
+  br i1 false, label %for.cond3.i, label %for.body5.i.for.end.i2475.loopexit_crit_edge
 
 for.body5.i.for.end.i2475.loopexit_crit_edge:     ; preds = %for.body5.i
   %2 = trunc i64 %indvars.iv.next302.i to i32
   br label %for.end34.i
 
 for.end34.i:                                      ; preds = %for.body5.i.for.end.i2475.loopexit_crit_edge
-  br i1 undef, label %for.cond.i2472, label %if.else.i2488
+  br i1 false, label %for.cond.i2472, label %if.else.i2488
 
 if.else.i2488:                                    ; preds = %for.end34.i
-  br i1 undef, label %if.end107.i, label %for.body45.preheader.i
+  br i1 %arg, label %if.end107.i, label %for.body45.preheader.i
 
 for.body45.preheader.i:                           ; preds = %if.else.i2488
   %3 = sext i32 %i.0.i to i64

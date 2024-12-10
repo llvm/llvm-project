@@ -4,6 +4,7 @@
 // RUN: %clang -### -c -fveclib=MASSV %s 2>&1 | FileCheck --check-prefix=CHECK-MASSV %s
 // RUN: %clang -### -c -fveclib=Darwin_libsystem_m %s 2>&1 | FileCheck --check-prefix=CHECK-DARWIN_LIBSYSTEM_M %s
 // RUN: %clang -### -c --target=aarch64 -fveclib=SLEEF %s 2>&1 | FileCheck --check-prefix=CHECK-SLEEF %s
+// RUN: %clang -### -c --target=riscv64-unknown-linux-gnu -fveclib=SLEEF -march=rv64gcv %s 2>&1 | FileCheck -check-prefix CHECK-SLEEF-RISCV %s
 // RUN: %clang -### -c --target=aarch64 -fveclib=ArmPL %s 2>&1 | FileCheck --check-prefix=CHECK-ARMPL %s
 // RUN: not %clang -c -fveclib=something %s 2>&1 | FileCheck --check-prefix=CHECK-INVALID %s
 
@@ -13,6 +14,7 @@
 // CHECK-MASSV: "-fveclib=MASSV"
 // CHECK-DARWIN_LIBSYSTEM_M: "-fveclib=Darwin_libsystem_m"
 // CHECK-SLEEF: "-fveclib=SLEEF"
+// CHECK-SLEEF-RISCV: "-fveclib=SLEEF"
 // CHECK-ARMPL: "-fveclib=ArmPL"
 
 // CHECK-INVALID: error: invalid value 'something' in '-fveclib=something'
@@ -46,6 +48,9 @@
 
 // RUN: %clang -### --target=aarch64-linux-gnu -fveclib=SLEEF -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-SLEEF %s
 // CHECK-LTO-SLEEF: "-plugin-opt=-vector-library=sleefgnuabi"
+
+// RUN: %clang -### --target=riscv64-unknown-linux-gnu -fveclib=SLEEF -flto -march=rv64gcv %s 2>&1 | FileCheck -check-prefix CHECK-LTO-SLEEF-RISCV %s
+// CHECK-LTO-SLEEF-RISCV: "-plugin-opt=-vector-library=sleefgnuabi"
 
 // RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-ARMPL %s
 // CHECK-LTO-ARMPL: "-plugin-opt=-vector-library=ArmPL"
@@ -84,6 +89,11 @@
 // CHECK-REENABLE-ERRNO-SLEEF: math errno enabled by '-fmath-errno' after it was implicitly disabled by '-fveclib=SLEEF', this may limit the utilization of the vector library [-Wmath-errno-enabled-with-veclib]
 // CHECK-REENABLE-ERRNO-SLEEF: "-fveclib=SLEEF"
 // CHECK-REENABLE-ERRNO-SLEEF-SAME: "-fmath-errno"
+
+// RUN: %clang -### --target=riscv64-unknown-linux-gnu -fveclib=SLEEF -fmath-errno -march=rv64gcv %s 2>&1 | FileCheck --check-prefix=CHECK-REENABLE-ERRNO-SLEEF-RISCV %s
+// CHECK-REENABLE-ERRNO-SLEEF-RISCV: math errno enabled by '-fmath-errno' after it was implicitly disabled by '-fveclib=SLEEF', this may limit the utilization of the vector library [-Wmath-errno-enabled-with-veclib]
+// CHECK-REENABLE-ERRNO-SLEEF-RISCV: "-fveclib=SLEEF"
+// CHECK-REENABLE-ERRNO-SLEEF-RISCV-SAME: "-fmath-errno"
 
 // RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL -fno-fast-math %s 2>&1 | FileCheck --check-prefix=CHECK-REENABLE-ERRNO-NFM %s
 // CHECK-REENABLE-ERRNO-NFM: math errno enabled by '-fno-fast-math' after it was implicitly disabled by '-fveclib=ArmPL', this may limit the utilization of the vector library [-Wmath-errno-enabled-with-veclib]

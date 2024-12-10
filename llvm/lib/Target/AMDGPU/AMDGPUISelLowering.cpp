@@ -1072,6 +1072,15 @@ bool AMDGPUTargetLowering::isDesirableToCommuteWithShift(
   assert((N->getOpcode() == ISD::SHL || N->getOpcode() == ISD::SRA ||
           N->getOpcode() == ISD::SRL) &&
          "Expected shift op");
+
+  SDValue ShiftLHS = N->getOperand(0);
+  if (!ShiftLHS->hasOneUse())
+    return false;
+
+  if (ShiftLHS.getOpcode() == ISD::SIGN_EXTEND &&
+      !ShiftLHS.getOperand(0)->hasOneUse())
+    return false;
+
   // Always commute pre-type legalization and right shifts.
   // We're looking for shl(or(x,y),z) patterns.
   if (Level < CombineLevel::AfterLegalizeTypes ||
@@ -2333,7 +2342,7 @@ SDValue AMDGPUTargetLowering::LowerSDIVREM(SDValue Op,
   SDValue RHS = Op.getOperand(1);
 
   SDValue Zero = DAG.getConstant(0, DL, VT);
-  SDValue NegOne = DAG.getConstant(-1, DL, VT);
+  SDValue NegOne = DAG.getAllOnesConstant(DL, VT);
 
   if (VT == MVT::i32) {
     if (SDValue Res = LowerDIVREM24(Op, DAG, true))
@@ -3794,7 +3803,11 @@ static SDValue constantFoldBFE(SelectionDAG &DAG, IntTy Src0, uint32_t Offset,
   if (Width + Offset < 32) {
     uint32_t Shl = static_cast<uint32_t>(Src0) << (32 - Offset - Width);
     IntTy Result = static_cast<IntTy>(Shl) >> (32 - Width);
-    return DAG.getConstant(Result, DL, MVT::i32);
+    if constexpr (std::is_signed_v<IntTy>) {
+      return DAG.getSignedConstant(Result, DL, MVT::i32);
+    } else {
+      return DAG.getConstant(Result, DL, MVT::i32);
+    }
   }
 
   return DAG.getConstant(Src0 >> Offset, DL, MVT::i32);

@@ -20,8 +20,6 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
-#include "clang/Sema/SemaDiagnostic.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"

@@ -415,14 +415,14 @@ def AddrRegImm : ComplexPattern<iPTR, 2, "SelectAddrRegImm">;
 
 // Return the negation of an immediate value.
 def NegImm : SDNodeXForm<imm, [{
-  return CurDAG->getSignedConstant(-N->getSExtValue(), SDLoc(N),
-                                   N->getValueType(0), /*isTarget=*/true);
+  return CurDAG->getSignedTargetConstant(-N->getSExtValue(), SDLoc(N),
+                                         N->getValueType(0));
 }]>;
 
 // Return an immediate value minus 32.
 def ImmSub32 : SDNodeXForm<imm, [{
-  return CurDAG->getSignedConstant(N->getSExtValue() - 32, SDLoc(N),
-                                   N->getValueType(0), /*isTarget=*/true);
+  return CurDAG->getSignedTargetConstant(N->getSExtValue() - 32, SDLoc(N),
+                                         N->getValueType(0));
 }]>;
 
 // Return an immediate subtracted from XLen.
@@ -454,16 +454,15 @@ def AddiPair : PatLeaf<(imm), [{
 def AddiPairImmSmall : SDNodeXForm<imm, [{
   int64_t Imm = N->getSExtValue();
   int64_t Adj = N->getSExtValue() < 0 ? -2048 : 2047;
-  return CurDAG->getSignedConstant(Imm - Adj, SDLoc(N),
-                                   N->getValueType(0), /*isTarget=*/true);
+  return CurDAG->getSignedTargetConstant(Imm - Adj, SDLoc(N),
+                                         N->getValueType(0));
 }]>;
 
 // Return -2048 if immediate is negative or 2047 if positive. These are the
 // largest simm12 values.
 def AddiPairImmLarge : SDNodeXForm<imm, [{
   int64_t Imm = N->getSExtValue() < 0 ? -2048 : 2047;
-  return CurDAG->getSignedConstant(Imm, SDLoc(N),
-                                   N->getValueType(0), /*isTarget=*/true);
+  return CurDAG->getSignedTargetConstant(Imm, SDLoc(N), N->getValueType(0));
 }]>;
 
 def TrailingZeros : SDNodeXForm<imm, [{
@@ -1374,6 +1373,17 @@ def PseudoAddTPRel : Pseudo<(outs GPR:$rd),
 def : Pat<(FrameAddrRegImm (iPTR GPR:$rs1), simm12:$imm12),
           (ADDI GPR:$rs1, simm12:$imm12)>;
 
+/// Stack probing
+
+let hasSideEffects = 1, mayLoad = 1, mayStore = 1, isCodeGenOnly = 1 in {
+// Probed stack allocation of a constant size, used in function prologues when
+// stack-clash protection is enabled.
+def PROBED_STACKALLOC : Pseudo<(outs GPR:$sp),
+                               (ins GPR:$scratch),
+                               []>,
+                               Sched<[]>;
+}
+
 /// HI and ADD_LO address nodes.
 
 // Pseudo for a rematerializable LUI+ADDI sequence for loading an address.
@@ -2065,6 +2075,7 @@ include "RISCVInstrInfoXSf.td"
 include "RISCVInstrInfoSFB.td"
 include "RISCVInstrInfoXCV.td"
 include "RISCVInstrInfoXwch.td"
+include "RISCVInstrInfoXqci.td"
 
 //===----------------------------------------------------------------------===//
 // Global ISel

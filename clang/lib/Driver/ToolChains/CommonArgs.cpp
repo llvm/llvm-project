@@ -19,6 +19,7 @@
 #include "Arch/SystemZ.h"
 #include "Arch/VE.h"
 #include "Arch/X86.h"
+#include "BareMetal.h"
 #include "HIPAMD.h"
 #include "Hexagon.h"
 #include "MSP430.h"
@@ -150,6 +151,9 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
       return false;
     }
   }
+
+  if (arm::isARMEABIBareMetal(Triple))
+    return false;
 
   return true;
 }
@@ -1406,7 +1410,7 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
   // libresolv.a, even if exists, is an empty archive to satisfy POSIX -lresolv
   // requirement.
   if (TC.getTriple().isOSLinux() && !TC.getTriple().isAndroid() &&
-      !TC.getTriple().isMusl())
+      !TC.getTriple().isMusl() && TC.getSanitizerArgs(Args).needsMsanRt())
     CmdArgs.push_back("-lresolv");
 }
 
@@ -1763,18 +1767,13 @@ Arg *tools::getLastProfileUseArg(const ArgList &Args) {
 
 Arg *tools::getLastProfileSampleUseArg(const ArgList &Args) {
   auto *ProfileSampleUseArg = Args.getLastArg(
-      options::OPT_fprofile_sample_use, options::OPT_fprofile_sample_use_EQ,
-      options::OPT_fauto_profile, options::OPT_fauto_profile_EQ,
-      options::OPT_fno_profile_sample_use, options::OPT_fno_auto_profile);
+      options::OPT_fprofile_sample_use_EQ, options::OPT_fno_profile_sample_use);
 
-  if (ProfileSampleUseArg &&
-      (ProfileSampleUseArg->getOption().matches(
-           options::OPT_fno_profile_sample_use) ||
-       ProfileSampleUseArg->getOption().matches(options::OPT_fno_auto_profile)))
+  if (ProfileSampleUseArg && (ProfileSampleUseArg->getOption().matches(
+                                 options::OPT_fno_profile_sample_use)))
     return nullptr;
 
-  return Args.getLastArg(options::OPT_fprofile_sample_use_EQ,
-                         options::OPT_fauto_profile_EQ);
+  return Args.getLastArg(options::OPT_fprofile_sample_use_EQ);
 }
 
 const char *tools::RelocationModelName(llvm::Reloc::Model Model) {

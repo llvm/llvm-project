@@ -188,14 +188,14 @@ __global__ void kernel2(int &x) {
 // CHECK-SPIRV-NEXT:    ret void
 //
 // OPT-LABEL: define dso_local amdgpu_kernel void @_Z7kernel3PU3AS2iPU3AS1i(
-// OPT-SAME: ptr addrspace(2) nocapture noundef readonly [[X:%.*]], ptr addrspace(1) nocapture noundef writeonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// OPT-SAME: ptr addrspace(2) nocapture noundef readonly [[X:%.*]], ptr addrspace(1) nocapture noundef writeonly initializes((0, 4)) [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // OPT-NEXT:  [[ENTRY:.*:]]
 // OPT-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(2) [[X]], align 4
 // OPT-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[Y]], align 4
 // OPT-NEXT:    ret void
 //
 // OPT-SPIRV-LABEL: define spir_kernel void @_Z7kernel3PU3AS2iPU3AS1i(
-// OPT-SPIRV-SAME: ptr addrspace(2) nocapture noundef readonly [[X:%.*]], ptr addrspace(1) nocapture noundef writeonly [[Y:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR1:[0-9]+]] {
+// OPT-SPIRV-SAME: ptr addrspace(2) nocapture noundef readonly [[X:%.*]], ptr addrspace(1) nocapture noundef writeonly initializes((0, 4)) [[Y:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR1:[0-9]+]] {
 // OPT-SPIRV-NEXT:  [[ENTRY:.*:]]
 // OPT-SPIRV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(2) [[X]], align 4
 // OPT-SPIRV-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[Y]], align 4
@@ -331,7 +331,7 @@ struct S {
 // OPT-NEXT:  [[ENTRY:.*:]]
 // OPT-NEXT:    [[COERCE_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr addrspace(4) [[TMP0]], align 8, !amdgpu.noclobber [[META4:![0-9]+]]
 // OPT-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[COERCE_SROA_0_0_COPYLOAD]] to ptr addrspace(1)
-// OPT-NEXT:    [[COERCE_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TMP0]], i64 8
+// OPT-NEXT:    [[COERCE_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP0]], i64 8
 // OPT-NEXT:    [[COERCE_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr addrspace(4) [[COERCE_SROA_2_0__SROA_IDX]], align 8, !amdgpu.noclobber [[META4]]
 // OPT-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[COERCE_SROA_2_0_COPYLOAD]] to ptr addrspace(1)
 // OPT-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[TMP1]], align 4, !amdgpu.noclobber [[META4]]
@@ -432,13 +432,13 @@ __global__ void kernel4(struct S s) {
 // CHECK-SPIRV-NEXT:    ret void
 //
 // OPT-LABEL: define dso_local amdgpu_kernel void @_Z7kernel5P1S(
-// OPT-SAME: ptr addrspace(1) nocapture noundef readonly [[S_COERCE:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// OPT-SAME: ptr addrspace(1) nocapture noundef readonly [[S_COERCE:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 // OPT-NEXT:  [[ENTRY:.*:]]
 // OPT-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(1) [[S_COERCE]], align 8
 // OPT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
 // OPT-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP1]], 1
 // OPT-NEXT:    store i32 [[INC]], ptr [[TMP0]], align 4
-// OPT-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[S_COERCE]], i64 8
+// OPT-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[S_COERCE]], i64 8
 // OPT-NEXT:    [[TMP2:%.*]] = load ptr, ptr addrspace(1) [[Y]], align 8
 // OPT-NEXT:    [[TMP3:%.*]] = load float, ptr [[TMP2]], align 4
 // OPT-NEXT:    [[ADD:%.*]] = fadd contract float [[TMP3]], 1.000000e+00
@@ -539,7 +539,7 @@ struct T {
 // OPT-NEXT:  [[ENTRY:.*:]]
 // OPT-NEXT:    [[COERCE_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr addrspace(4) [[TMP0]], align 8, !amdgpu.noclobber [[META4]]
 // OPT-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[COERCE_SROA_0_0_COPYLOAD]] to ptr addrspace(1)
-// OPT-NEXT:    [[COERCE_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TMP0]], i64 8
+// OPT-NEXT:    [[COERCE_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP0]], i64 8
 // OPT-NEXT:    [[COERCE_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr addrspace(4) [[COERCE_SROA_2_0__SROA_IDX]], align 8, !amdgpu.noclobber [[META4]]
 // OPT-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[COERCE_SROA_2_0_COPYLOAD]] to ptr addrspace(1)
 // OPT-NEXT:    [[TMP3:%.*]] = load float, ptr addrspace(1) [[TMP1]], align 4, !amdgpu.noclobber [[META4]]

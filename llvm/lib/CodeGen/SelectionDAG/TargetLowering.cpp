@@ -61,10 +61,10 @@ bool TargetLowering::isInTailCallPosition(SelectionDAG &DAG, SDNode *Node,
   // the return. Ignore following attributes because they don't affect the
   // call sequence.
   AttrBuilder CallerAttrs(F.getContext(), F.getAttributes().getRetAttrs());
-  for (const auto &Attr :
-       {Attribute::Alignment, Attribute::Dereferenceable,
-        Attribute::DereferenceableOrNull, Attribute::NoAlias,
-        Attribute::NonNull, Attribute::NoUndef, Attribute::Range})
+  for (const auto &Attr : {Attribute::Alignment, Attribute::Dereferenceable,
+                           Attribute::DereferenceableOrNull, Attribute::NoAlias,
+                           Attribute::NonNull, Attribute::NoUndef,
+                           Attribute::Range, Attribute::NoFPClass})
     CallerAttrs.removeAttribute(Attr);
 
   if (CallerAttrs.hasAttributes())
@@ -159,8 +159,8 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
     SDValue NewOp = Ops[i];
     Entry.Node = NewOp;
     Entry.Ty = Entry.Node.getValueType().getTypeForEVT(*DAG.getContext());
-    Entry.IsSExt = shouldSignExtendTypeInLibCall(NewOp.getValueType(),
-                                                 CallOptions.IsSExt);
+    Entry.IsSExt =
+        shouldSignExtendTypeInLibCall(Entry.Ty, CallOptions.IsSigned);
     Entry.IsZExt = !Entry.IsSExt;
 
     if (CallOptions.IsSoften &&
@@ -177,7 +177,7 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
 
   Type *RetTy = RetVT.getTypeForEVT(*DAG.getContext());
   TargetLowering::CallLoweringInfo CLI(DAG);
-  bool signExtend = shouldSignExtendTypeInLibCall(RetVT, CallOptions.IsSExt);
+  bool signExtend = shouldSignExtendTypeInLibCall(RetTy, CallOptions.IsSigned);
   bool zeroExtend = !signExtend;
 
   if (CallOptions.IsSoften &&
@@ -3724,6 +3724,11 @@ bool TargetLowering::SimplifyDemandedVectorElts(
                                    KnownZero, TLO, Depth + 1))
       return true;
 
+    if (!DemandedElts.isAllOnes())
+      if (SDValue NewOp = SimplifyMultipleUseDemandedVectorElts(
+              Op.getOperand(0), DemandedElts, TLO.DAG, Depth + 1))
+        return TLO.CombineTo(Op, TLO.DAG.getNode(Opcode, SDLoc(Op), VT, NewOp));
+
     if (Op.getOpcode() == ISD::ZERO_EXTEND) {
       // zext(undef) upper bits are guaranteed to be zero.
       if (DemandedElts.isSubsetOf(KnownUndef))
@@ -3731,6 +3736,15 @@ bool TargetLowering::SimplifyDemandedVectorElts(
       KnownUndef.clearAllBits();
     }
     break;
+  case ISD::SINT_TO_FP:
+  case ISD::UINT_TO_FP:
+  case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT:
+    if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedElts, KnownUndef,
+                                   KnownZero, TLO, Depth + 1))
+      return true;
+    // Don't fall through to generic undef -> undef handling.
+    return false;
   default: {
     if (Op.getOpcode() >= ISD::BUILTIN_OP_END) {
       if (SimplifyDemandedVectorEltsForTargetNode(Op, DemandedElts, KnownUndef,
@@ -10871,7 +10885,7 @@ void TargetLowering::forceExpandWideMUL(SelectionDAG &DAG, const SDLoc &dl,
     // Attempt a libcall.
     SDValue Ret;
     TargetLowering::MakeLibCallOptions CallOptions;
-    CallOptions.setSExt(Signed);
+    CallOptions.setIsSigned(Signed);
     CallOptions.setIsPostTypeLegalization(true);
     if (shouldSplitFunctionArgumentsAsLittleEndian(DAG.getDataLayout())) {
       // Halves of WideVT are packed into registers in different order
@@ -11872,6 +11886,47 @@ bool TargetLowering::LegalizeSetCCCondCode(SelectionDAG &DAG, EVT VT,
       NeedInvert = true;
       if (NeedSwap)
         std::swap(LHS, RHS);
+      return true;
+    }
+
+    // Special case: expand i1 comparisons using logical operations.
+    if (OpVT == MVT::i1) {
+      SDValue Ret;
+      switch (CCCode) {
+      default:
+        llvm_unreachable("Unknown integer setcc!");
+      case ISD::SETEQ: // X == Y  -->  ~(X ^ Y)
+        Ret = DAG.getNOT(dl, DAG.getNode(ISD::XOR, dl, MVT::i1, LHS, RHS),
+                         MVT::i1);
+        break;
+      case ISD::SETNE: // X != Y  -->  (X ^ Y)
+        Ret = DAG.getNode(ISD::XOR, dl, MVT::i1, LHS, RHS);
+        break;
+      case ISD::SETGT:  // X >s Y  -->  X == 0 & Y == 1  -->  ~X & Y
+      case ISD::SETULT: // X <u Y  -->  X == 0 & Y == 1  -->  ~X & Y
+        Ret = DAG.getNode(ISD::AND, dl, MVT::i1, RHS,
+                          DAG.getNOT(dl, LHS, MVT::i1));
+        break;
+      case ISD::SETLT:  // X <s Y  -->  X == 1 & Y == 0  -->  ~Y & X
+      case ISD::SETUGT: // X >u Y  -->  X == 1 & Y == 0  -->  ~Y & X
+        Ret = DAG.getNode(ISD::AND, dl, MVT::i1, LHS,
+                          DAG.getNOT(dl, RHS, MVT::i1));
+        break;
+      case ISD::SETULE: // X <=u Y  -->  X == 0 | Y == 1  -->  ~X | Y
+      case ISD::SETGE:  // X >=s Y  -->  X == 0 | Y == 1  -->  ~X | Y
+        Ret = DAG.getNode(ISD::OR, dl, MVT::i1, RHS,
+                          DAG.getNOT(dl, LHS, MVT::i1));
+        break;
+      case ISD::SETUGE: // X >=u Y  -->  X == 1 | Y == 0  -->  ~Y | X
+      case ISD::SETLE:  // X <=s Y  -->  X == 1 | Y == 0  -->  ~Y | X
+        Ret = DAG.getNode(ISD::OR, dl, MVT::i1, LHS,
+                          DAG.getNOT(dl, RHS, MVT::i1));
+        break;
+      }
+
+      LHS = DAG.getZExtOrTrunc(Ret, dl, VT);
+      RHS = SDValue();
+      CC = SDValue();
       return true;
     }
 

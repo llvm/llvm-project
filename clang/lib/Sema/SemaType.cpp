@@ -26,7 +26,6 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeLocVisitor.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
@@ -39,18 +38,14 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateInstCallback.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLForwardCompat.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <bitset>
 #include <optional>
@@ -4887,9 +4882,17 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                       cast<AutoType>(T)->getKeyword() !=
                           AutoTypeKeyword::Auto ||
                       cast<AutoType>(T)->isConstrained())) {
-            S.Diag(D.getDeclSpec().getTypeSpecTypeLoc(),
-                   diag::err_trailing_return_without_auto)
-                << T << D.getDeclSpec().getSourceRange();
+            // Attach a valid source location for diagnostics on functions with
+            // trailing return types missing 'auto'. Attempt to get the location
+            // from the declared type; if invalid, fall back to the trailing
+            // return type's location.
+            SourceLocation Loc = D.getDeclSpec().getTypeSpecTypeLoc();
+            SourceRange SR = D.getDeclSpec().getSourceRange();
+            if (Loc.isInvalid()) {
+              Loc = FTI.getTrailingReturnTypeLoc();
+              SR = D.getSourceRange();
+            }
+            S.Diag(Loc, diag::err_trailing_return_without_auto) << T << SR;
             D.setInvalidType(true);
             // FIXME: recover and fill decls in `TypeLoc`s.
             AreDeclaratorChunksValid = false;
@@ -5344,15 +5347,23 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
         case NestedNameSpecifier::TypeSpec:
         case NestedNameSpecifier::TypeSpecWithTemplate:
-          ClsType = QualType(NNS->getAsType(), 0);
+          const Type *NNSType = NNS->getAsType();
+          ClsType = QualType(NNSType, 0);
           // Note: if the NNS has a prefix and ClsType is a nondependent
-          // TemplateSpecializationType, then the NNS prefix is NOT included
-          // in ClsType; hence we wrap ClsType into an ElaboratedType.
-          // NOTE: in particular, no wrap occurs if ClsType already is an
-          // Elaborated, DependentName, or DependentTemplateSpecialization.
-          if (isa<TemplateSpecializationType>(NNS->getAsType()))
+          // TemplateSpecializationType or a RecordType, then the NNS prefix is
+          // NOT included in ClsType; hence we wrap ClsType into an
+          // ElaboratedType. NOTE: in particular, no wrap occurs if ClsType
+          // already is an Elaborated, DependentName, or
+          // DependentTemplateSpecialization.
+          if (isa<DependentTemplateSpecializationType>(NNSType)) {
+            // FIXME: Rebuild DependentTemplateSpecializationType, adding the
+            // Prefix.
+          } else if (isa<TemplateSpecializationType, RecordType>(NNSType)) {
+            // Either the dependent case (TemplateSpecializationType), or the
+            // non-dependent one (RecordType).
             ClsType = Context.getElaboratedType(ElaboratedTypeKeyword::None,
                                                 NNSPrefix, ClsType);
+          }
           break;
         }
       } else {
@@ -5678,6 +5689,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   assert(!T.isNull() && "T must not be null at the end of this function");
   if (!AreDeclaratorChunksValid)
     return Context.getTrivialTypeSourceInfo(T);
+
+  if (state.didParseHLSLParamMod() && !T->isConstantArrayType())
+    T = S.HLSL().getInoutParameterType(T);
   return GetTypeSourceInfoForDeclarator(state, T, TInfo);
 }
 
@@ -8631,7 +8645,6 @@ static void HandleHLSLParamModifierAttr(TypeProcessingState &State,
     return;
   if (Attr.getSemanticSpelling() == HLSLParamModifierAttr::Keyword_inout ||
       Attr.getSemanticSpelling() == HLSLParamModifierAttr::Keyword_out) {
-    CurType = S.HLSL().getInoutParameterType(CurType);
     State.setParsedHLSLParamMod(true);
   }
 }

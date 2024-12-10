@@ -229,6 +229,16 @@ void transform::ApplyEraseUnnecessaryInputsPatternsOp::populatePatterns(
   linalg::populateEraseUnnecessaryInputsPatterns(patterns);
 }
 
+void transform::ApplyDecomposeTensorPackUnpackPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateDecomposePackUnpackPatterns(patterns);
+}
+
+void transform::ApplyDecomposeTensorPadPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateDecomposePadPatterns(patterns);
+}
+
 void transform::ApplyFoldUnitExtentDimsViaReshapesPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   linalg::ControlDropUnitDims options;
@@ -1166,7 +1176,9 @@ DiagnosedSilenceableFailure transform::LowerPackOp::applyToOne(
     transform::ApplyToEachResultList &transformResults,
     transform::TransformState &state) {
   rewriter.setInsertionPoint(target);
-  FailureOr<LowerPackResult> res = lowerPack(rewriter, target);
+  bool lowerPadLikeWithInsertSlice = getLowerPadLikeWithInsertSlice();
+  FailureOr<LowerPackResult> res =
+      lowerPack(rewriter, target, lowerPadLikeWithInsertSlice);
   if (failed(res)) {
     return mlir::emitSilenceableFailure(target->getLoc())
            << "cannot lower to pad + expand + transpose";
@@ -1186,7 +1198,9 @@ DiagnosedSilenceableFailure transform::LowerUnPackOp::applyToOne(
     transform::ApplyToEachResultList &transformResults,
     transform::TransformState &state) {
   rewriter.setInsertionPoint(target);
-  FailureOr<LowerUnPackOpResult> res = lowerUnPack(rewriter, target);
+  bool lowerUnpadLikeWithExtractSlice = getLowerUnpadLikeWithExtractSlice();
+  FailureOr<LowerUnPackOpResult> res =
+      lowerUnPack(rewriter, target, lowerUnpadLikeWithExtractSlice);
   if (failed(res)) {
     DiagnosedSilenceableFailure diag =
         emitSilenceableError()
@@ -3486,8 +3500,12 @@ transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
   // Add misc. vectorization patterns (e.g. for tensor.insert_slice)
   linalg::populateInsertSliceVectorizationPatterns(patterns);
 
-  if (getVectorizePadding())
+  if (getVectorizePadding()) {
     linalg::populatePadOpVectorizationPatterns(patterns);
+    // This creates an alternative path for lowering tensor.pad - by
+    // decomposing it into e.g. linalg.fill.
+    linalg::populateDecomposePadPatterns(patterns);
+  }
   vector::populateVectorStepLoweringPatterns(patterns);
 
   TrackingListener listener(state, *this);

@@ -102,6 +102,7 @@ public:
   SPIRVTargetMachine &getSPIRVTargetMachine() const {
     return getTM<SPIRVTargetMachine>();
   }
+  void addMachineSSAOptimization() override;
   void addIRPasses() override;
   void addISelPrepare() override;
 
@@ -127,6 +128,11 @@ private:
 // the entire pipeline, so return nullptr to disable register allocation.
 FunctionPass *SPIRVPassConfig::createTargetRegisterAllocator(bool) {
   return nullptr;
+}
+
+// A place to disable passes that may break CFG.
+void SPIRVPassConfig::addMachineSSAOptimization() {
+  TargetPassConfig::addMachineSSAOptimization();
 }
 
 // Disable passes that break from assuming no virtual registers exist.

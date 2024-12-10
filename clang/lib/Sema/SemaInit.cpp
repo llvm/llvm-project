@@ -16,10 +16,8 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
-#include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/TypeLoc.h"
-#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
@@ -28,13 +26,11 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLForwardCompat.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -749,6 +745,7 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
     if (Field->hasInClassInitializer()) {
       if (VerifyOnly)
         return;
+
       ExprResult DIE;
       {
         // Enter a default initializer rebuild context, then we can support
@@ -7405,7 +7402,7 @@ PerformConstructorInitialization(Sema &S,
 
 void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
                                     Expr *Init) {
-  return sema::checkExprLifetime(*this, Entity, Init);
+  return sema::checkInitLifetime(*this, Entity, Init);
 }
 
 static void DiagnoseNarrowingInInitList(Sema &S,

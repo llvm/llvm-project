@@ -520,12 +520,6 @@ enum NodeType : unsigned {
   STP,
   STILP,
   STNP,
-
-  // Memory Operations
-  MOPS_MEMSET,
-  MOPS_MEMSET_TAGGING,
-  MOPS_MEMCOPY,
-  MOPS_MEMMOVE,
 };
 
 } // end namespace AArch64ISD
@@ -1354,6 +1348,10 @@ private:
   unsigned getMinimumJumpTableEntries() const override;
 
   bool softPromoteHalfType() const override { return true; }
+
+  bool shouldScalarizeBinop(SDValue VecOp) const override {
+    return VecOp.getOpcode() == ISD::SETCC;
+  }
 };
 
 namespace AArch64 {

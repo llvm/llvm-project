@@ -79,73 +79,26 @@ using namespace llvm::support;
 using namespace lld;
 using namespace lld::elf;
 
-Ctx elf::ctx;
-
 static void setConfigs(Ctx &ctx, opt::InputArgList &args);
 static void readConfigs(Ctx &ctx, opt::InputArgList &args);
 
 ELFSyncStream elf::Log(Ctx &ctx) { return {ctx, DiagLevel::Log}; }
+ELFSyncStream elf::Msg(Ctx &ctx) { return {ctx, DiagLevel::Msg}; }
 ELFSyncStream elf::Warn(Ctx &ctx) { return {ctx, DiagLevel::Warn}; }
 ELFSyncStream elf::Err(Ctx &ctx) {
   return {ctx, ctx.arg.noinhibitExec ? DiagLevel::Warn : DiagLevel::Err};
 }
 ELFSyncStream elf::ErrAlways(Ctx &ctx) { return {ctx, DiagLevel::Err}; }
 ELFSyncStream elf::Fatal(Ctx &ctx) { return {ctx, DiagLevel::Fatal}; }
-uint64_t elf::errCount(Ctx &ctx) { return ctx.errHandler->errorCount; }
+uint64_t elf::errCount(Ctx &ctx) { return ctx.e.errorCount; }
 
-void elf::internalLinkerError(StringRef loc, const Twine &msg) {
-  ELFSyncStream(ctx, DiagLevel::Err) << "internal linker error: " << msg << '\n'
-                                     << llvm::getBugReportMsg();
+ELFSyncStream elf::InternalErr(Ctx &ctx, const uint8_t *buf) {
+  ELFSyncStream s(ctx, DiagLevel::Err);
+  s << "internal linker error: ";
+  return s;
 }
 
 Ctx::Ctx() : driver(*this) {}
-
-void Ctx::reset() {
-  arg.~Config();
-  new (&arg) Config();
-  driver.~LinkerDriver();
-  new (&driver) LinkerDriver(*this);
-  script = nullptr;
-  target.reset();
-
-  errHandler = nullptr;
-
-  bufferStart = nullptr;
-  mainPart = nullptr;
-  tlsPhdr = nullptr;
-  out = OutSections{};
-  outputSections.clear();
-  partitions.clear();
-
-  in.reset();
-  sym = ElfSym{};
-  symtab = std::make_unique<SymbolTable>(*this);
-
-  memoryBuffers.clear();
-  objectFiles.clear();
-  sharedFiles.clear();
-  binaryFiles.clear();
-  bitcodeFiles.clear();
-  lazyBitcodeFiles.clear();
-  inputSections.clear();
-  ehInputSections.clear();
-
-  symAux.clear();
-  duplicates.clear();
-  nonPrevailingSyms.clear();
-  whyExtractRecords.clear();
-  backwardReferences.clear();
-  auxiliaryFiles.clear();
-  tar.reset();
-  internalFile = nullptr;
-  hasSympart.store(false, std::memory_order_relaxed);
-  hasTlsIe.store(false, std::memory_order_relaxed);
-  needsTlsLd.store(false, std::memory_order_relaxed);
-  scriptSymOrderCounter = 1;
-  scriptSymOrder.clear();
-  ppc64noTocRelax.clear();
-  ltoAllVtablesHaveTypeInfos = false;
-}
 
 llvm::raw_fd_ostream Ctx::openAuxiliaryFile(llvm::StringRef filename,
                                             std::error_code &ec) {
@@ -160,25 +113,17 @@ namespace elf {
 bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
           llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput) {
   // This driver-specific context will be freed later by unsafeLldMain().
-  auto *context = new CommonLinkerContext;
+  auto *context = new Ctx;
+  Ctx &ctx = *context;
 
   context->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
-  context->e.cleanupCallback = []() {
-    Ctx &ctx = elf::ctx;
-    ctx.reset();
-    ctx.partitions.emplace_back(ctx);
-
-    SharedFile::vernauxNum = 0;
-  };
   context->e.logName = args::getFilenameWithoutExe(args[0]);
   context->e.errorLimitExceededMsg =
       "too many errors emitted, stopping now (use "
       "--error-limit=0 to see all errors)";
 
-  Ctx &ctx = elf::ctx;
   LinkerScript script(ctx);
   ctx.script = &script;
-  ctx.errHandler = &context->e;
   ctx.symAux.emplace_back();
   ctx.symtab = std::make_unique<SymbolTable>(ctx);
 
@@ -286,8 +231,8 @@ bool LinkerDriver::tryAddFatLTOFile(MemoryBufferRef mb, StringRef archiveName,
       IRObjectFile::findBitcodeInMemBuffer(mb);
   if (errorToBool(fatLTOData.takeError()))
     return false;
-  files.push_back(
-      make<BitcodeFile>(ctx, *fatLTOData, archiveName, offsetInArchive, lazy));
+  files.push_back(std::make_unique<BitcodeFile>(ctx, *fatLTOData, archiveName,
+                                                offsetInArchive, lazy));
   return true;
 }
 
@@ -301,7 +246,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
   MemoryBufferRef mbref = *buffer;
 
   if (ctx.arg.formatBinary) {
-    files.push_back(make<BinaryFile>(ctx, mbref));
+    files.push_back(std::make_unique<BinaryFile>(ctx, mbref));
     return;
   }
 
@@ -314,8 +259,8 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     if (inWholeArchive) {
       for (const std::pair<MemoryBufferRef, uint64_t> &p : members) {
         if (isBitcode(p.first))
-          files.push_back(
-              make<BitcodeFile>(ctx, p.first, path, p.second, false));
+          files.push_back(std::make_unique<BitcodeFile>(ctx, p.first, path,
+                                                        p.second, false));
         else if (!tryAddFatLTOFile(p.first, path, p.second, false))
           files.push_back(createObjFile(ctx, p.first, path));
       }
@@ -343,7 +288,8 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
         if (!tryAddFatLTOFile(p.first, path, p.second, true))
           files.push_back(createObjFile(ctx, p.first, path, true));
       } else if (magic == file_magic::bitcode)
-        files.push_back(make<BitcodeFile>(ctx, p.first, path, p.second, true));
+        files.push_back(
+            std::make_unique<BitcodeFile>(ctx, p.first, path, p.second, true));
       else
         Warn(ctx) << path << ": archive member '"
                   << p.first.getBufferIdentifier()
@@ -364,14 +310,14 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     // the directory part is ignored. Note that path may be a temporary and
     // cannot be stored into SharedFile::soName.
     path = mbref.getBufferIdentifier();
-    auto *f =
-        make<SharedFile>(ctx, mbref, withLOption ? path::filename(path) : path);
+    auto f = std::make_unique<SharedFile>(
+        ctx, mbref, withLOption ? path::filename(path) : path);
     f->init();
-    files.push_back(f);
+    files.push_back(std::move(f));
     return;
   }
   case file_magic::bitcode:
-    files.push_back(make<BitcodeFile>(ctx, mbref, "", 0, inLib));
+    files.push_back(std::make_unique<BitcodeFile>(ctx, mbref, "", 0, inLib));
     break;
   case file_magic::elf_relocatable:
     if (!tryAddFatLTOFile(mbref, "", 0, inLib))
@@ -385,9 +331,10 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
 // Add a given library by searching it from input search paths.
 void LinkerDriver::addLibrary(StringRef name) {
   if (std::optional<std::string> path = searchLibrary(ctx, name))
-    addFile(saver().save(*path), /*withLOption=*/true);
+    addFile(ctx.saver.save(*path), /*withLOption=*/true);
   else
-    error("unable to find library -l" + name, ErrorTag::LibNotFound, {name});
+    ctx.e.error("unable to find library -l" + name, ErrorTag::LibNotFound,
+                {name});
 }
 
 // This function is called on startup. We need this for LTO since
@@ -640,12 +587,12 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ELFOptTable parser;
   opt::InputArgList args = parser.parse(ctx, argsArr.slice(1));
 
-  // Interpret these flags early because error()/warn() depend on them.
-  errorHandler().errorLimit = args::getInteger(args, OPT_error_limit, 20);
-  errorHandler().fatalWarnings =
+  // Interpret these flags early because Err/Warn depend on them.
+  ctx.e.errorLimit = args::getInteger(args, OPT_error_limit, 20);
+  ctx.e.fatalWarnings =
       args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false) &&
       !args.hasArg(OPT_no_warnings);
-  errorHandler().suppressWarnings = args.hasArg(OPT_no_warnings);
+  ctx.e.suppressWarnings = args.hasArg(OPT_no_warnings);
 
   // Handle -help
   if (args.hasArg(OPT_help)) {
@@ -668,7 +615,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // of Libtool. We cannot convince every software developer to migrate to
   // the latest version and re-generate scripts. So we have this hack.
   if (args.hasArg(OPT_v) || args.hasArg(OPT_version))
-    message(getLLDVersion() + " (compatible with GNU linkers)");
+    Msg(ctx) << getLLDVersion() << " (compatible with GNU linkers)";
 
   if (const char *path = getReproduceOption(args)) {
     // Note that --reproduce is a debug option so you can ignore it
@@ -683,7 +630,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       if (!ltoSampleProfile.empty())
         readFile(ctx, ltoSampleProfile);
     } else {
-      ErrAlways(ctx) << "--reproduce: " << toString(errOrWriter.takeError());
+      ErrAlways(ctx) << "--reproduce: " << errOrWriter.takeError();
     }
   }
 
@@ -719,8 +666,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   }
 
   if (ctx.arg.timeTraceEnabled) {
-    checkError(timeTraceProfilerWrite(
-        args.getLastArgValue(OPT_time_trace_eq).str(), ctx.arg.outputFile));
+    checkError(ctx.e, timeTraceProfilerWrite(
+                          args.getLastArgValue(OPT_time_trace_eq).str(),
+                          ctx.arg.outputFile));
     timeTraceProfilerCleanup();
   }
 }
@@ -1139,8 +1087,7 @@ static void ltoValidateAllVtablesHaveTypeInfos(Ctx &ctx,
           << knownSafeName;
     Expected<GlobPattern> pat = GlobPattern::create(knownSafeName);
     if (!pat)
-      ErrAlways(ctx) << "--lto-known-safe-vtables=: "
-                     << toString(pat.takeError());
+      ErrAlways(ctx) << "--lto-known-safe-vtables=: " << pat.takeError();
     vtableSymbolsWithNoRTTI.remove_if(
         [&](StringRef s) { return pat->match(s); });
   }
@@ -1148,10 +1095,10 @@ static void ltoValidateAllVtablesHaveTypeInfos(Ctx &ctx,
   ctx.ltoAllVtablesHaveTypeInfos = vtableSymbolsWithNoRTTI.empty();
   // Check for unmatched RTTI symbols
   for (StringRef s : vtableSymbolsWithNoRTTI) {
-    message(
-        "--lto-validate-all-vtables-have-type-infos: RTTI missing for vtable "
-        "_ZTV" +
-        s + ", --lto-whole-program-visibility disabled");
+    Msg(ctx) << "--lto-validate-all-vtables-have-type-infos: RTTI missing for "
+                "vtable "
+                "_ZTV"
+             << s << ", --lto-whole-program-visibility disabled";
   }
 }
 
@@ -1270,8 +1217,7 @@ static bool remapInputs(Ctx &ctx, StringRef line, const Twine &location) {
   else if (Expected<GlobPattern> pat = GlobPattern::create(fields[0]))
     ctx.arg.remapInputsWildcards.emplace_back(std::move(*pat), fields[1]);
   else {
-    ErrAlways(ctx) << location << ": " << toString(pat.takeError()) << ": "
-                   << fields[0];
+    ErrAlways(ctx) << location << ": " << pat.takeError() << ": " << fields[0];
     return true;
   }
   return false;
@@ -1279,8 +1225,8 @@ static bool remapInputs(Ctx &ctx, StringRef line, const Twine &location) {
 
 // Initializes Config members by the command line options.
 static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
-  errorHandler().verbose = args.hasArg(OPT_verbose);
-  errorHandler().vsDiagnostics =
+  ctx.e.verbose = args.hasArg(OPT_verbose);
+  ctx.e.vsDiagnostics =
       args.hasArg(OPT_visual_studio_diagnostics_format, false);
 
   ctx.arg.allowMultipleDefinition =
@@ -1338,8 +1284,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       args.hasArg(OPT_enable_non_contiguous_regions);
   ctx.arg.entry = args.getLastArgValue(OPT_entry);
 
-  errorHandler().errorHandlingScript =
-      args.getLastArgValue(OPT_error_handling_script);
+  ctx.e.errorHandlingScript = args.getLastArgValue(OPT_error_handling_script);
 
   ctx.arg.executeOnly =
       args.hasFlag(OPT_execute_only, OPT_no_execute_only, false);
@@ -1382,15 +1327,13 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
                    OPT_no_lto_validate_all_vtables_have_type_infos, false);
   ctx.arg.ltoo = args::getInteger(args, OPT_lto_O, 2);
   if (ctx.arg.ltoo > 3)
-    ErrAlways(ctx) << "invalid optimization level for LTO: "
-                   << Twine(ctx.arg.ltoo);
+    ErrAlways(ctx) << "invalid optimization level for LTO: " << ctx.arg.ltoo;
   unsigned ltoCgo =
       args::getInteger(args, OPT_lto_CGO, args::getCGOptLevel(ctx.arg.ltoo));
   if (auto level = CodeGenOpt::getLevel(ltoCgo))
     ctx.arg.ltoCgo = *level;
   else
-    ErrAlways(ctx) << "invalid codegen optimization level for LTO: "
-                   << Twine(ltoCgo);
+    ErrAlways(ctx) << "invalid codegen optimization level for LTO: " << ltoCgo;
   ctx.arg.ltoObjPath = args.getLastArgValue(OPT_lto_obj_path_eq);
   ctx.arg.ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
   ctx.arg.ltoSampleProfile = args.getLastArgValue(OPT_lto_sample_profile);
@@ -1599,8 +1542,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     else if (Expected<GlobPattern> pat = GlobPattern::create(kv.first))
       ctx.arg.shuffleSections.emplace_back(std::move(*pat), uint32_t(v));
     else
-      ErrAlways(ctx) << errPrefix << toString(pat.takeError()) << ": "
-                     << kv.first;
+      ErrAlways(ctx) << errPrefix << pat.takeError() << ": " << kv.first;
   }
 
   auto reports = {std::make_pair("bti-report", &ctx.arg.zBtiReport),
@@ -1615,7 +1557,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
         continue;
       arg->claim();
       if (!isValidReportString(option.second)) {
-        ErrAlways(ctx) << Twine("-z ") << reportArg.first << "= parameter "
+        ErrAlways(ctx) << "-z " << reportArg.first << "= parameter "
                        << option.second << " is not recognized";
         continue;
       }
@@ -1644,7 +1586,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     if (Expected<GlobPattern> pat = GlobPattern::create(fields[0])) {
       ctx.arg.compressSections.emplace_back(std::move(*pat), type, level);
     } else {
-      ErrAlways(ctx) << arg->getSpelling() << ": " << toString(pat.takeError());
+      ErrAlways(ctx) << arg->getSpelling() << ": " << pat.takeError();
       continue;
     }
   }
@@ -1676,7 +1618,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
 
   // Parse LTO options.
   if (auto *arg = args.getLastArg(OPT_plugin_opt_mcpu_eq))
-    parseClangOption(ctx, saver().save("-mcpu=" + StringRef(arg->getValue())),
+    parseClangOption(ctx, ctx.saver.save("-mcpu=" + StringRef(arg->getValue())),
                      arg->getSpelling());
 
   for (opt::Arg *arg : args.filtered(OPT_plugin_opt_eq_minus))
@@ -1860,7 +1802,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       if (std::optional<MemoryBufferRef> buffer = readFile(ctx, *path))
         readVersionScript(ctx, *buffer);
     } else {
-      ErrAlways(ctx) << Twine("cannot find version script ") << arg->getValue();
+      ErrAlways(ctx) << "cannot find version script " << arg->getValue();
     }
 }
 
@@ -2005,7 +1947,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
         }
         break;
       }
-      ErrAlways(ctx) << Twine("cannot find linker script ") << arg->getValue();
+      ErrAlways(ctx) << "cannot find linker script " << arg->getValue();
       break;
     case OPT_as_needed:
       ctx.arg.asNeeded = true;
@@ -2097,7 +2039,7 @@ void LinkerDriver::inferMachineType() {
     return;
 
   bool inferred = false;
-  for (InputFile *f : files) {
+  for (auto &f : files) {
     if (f->ekind == ELFNoneKind)
       continue;
     if (!inferred) {
@@ -2307,15 +2249,15 @@ static void writeWhyExtract(Ctx &ctx) {
 
   os << "reference\textracted\tsymbol\n";
   for (auto &entry : ctx.whyExtractRecords) {
-    os << std::get<0>(entry) << '\t' << toString(std::get<1>(entry)) << '\t'
-       << toString(std::get<2>(entry)) << '\n';
+    os << std::get<0>(entry) << '\t' << toStr(ctx, std::get<1>(entry)) << '\t'
+       << toStr(ctx, std::get<2>(entry)) << '\n';
   }
 }
 
 static void reportBackrefs(Ctx &ctx) {
   for (auto &ref : ctx.backwardReferences) {
     const Symbol &sym = *ref.first;
-    std::string to = toString(ref.second.second);
+    std::string to = toStr(ctx, ref.second.second);
     // Some libraries have known problems and can cause noise. Filter them out
     // with --warn-backrefs-exclude=. The value may look like (for --start-lib)
     // *.o or (archive member) *.a(*.o).
@@ -2431,8 +2373,9 @@ static void markAddrsig(bool icfSafe, Symbol *s) {
   // We don't need to keep text sections unique under --icf=all even if they
   // are address-significant.
   if (auto *d = dyn_cast_or_null<Defined>(s))
-    if (d->section && (icfSafe || !(d->section->flags & SHF_EXECINSTR)))
-      d->section->keepUnique = true;
+    if (auto *sec = dyn_cast_or_null<InputSectionBase>(d->section))
+      if (icfSafe || !(sec->flags & SHF_EXECINSTR))
+        sec->keepUnique = true;
 }
 
 // Record sections that define symbols mentioned in --keep-unique <symbol>
@@ -2447,7 +2390,8 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
       Warn(ctx) << "could not find symbol " << name << " to keep unique";
       continue;
     }
-    d->section->keepUnique = true;
+    if (auto *sec = dyn_cast<InputSectionBase>(d->section))
+      sec->keepUnique = true;
   }
 
   // --icf=all --ignore-data-address-equality means that we can ignore
@@ -2508,7 +2452,7 @@ static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
     sym = readEntry(s->file, rels.rels);
   else
     sym = readEntry(s->file, rels.relas);
-  if (!isa_and_nonnull<Defined>(sym) || !sym->includeInDynsym(ctx))
+  if (!isa_and_nonnull<Defined>(sym) || !sym->isExported)
     return;
 
   StringRef partName = reinterpret_cast<const char *>(s->content().data());
@@ -2587,8 +2531,9 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
   if (!ctx.bitcodeFiles.empty())
     markBuffersAsDontNeed(ctx, skipLinkedOutput);
 
-  for (InputFile *file : lto->compile()) {
-    auto *obj = cast<ObjFile<ELFT>>(file);
+  ltoObjectFiles = lto->compile();
+  for (auto &file : ltoObjectFiles) {
+    auto *obj = cast<ObjFile<ELFT>>(file.get());
     obj->parse(/*ignoreComdats=*/true);
 
     // Parse '@' in symbol names for non-relocatable output.
@@ -2623,7 +2568,7 @@ static std::vector<WrappedSymbol> addWrappedSymbols(Ctx &ctx,
                                                     opt::InputArgList &args) {
   std::vector<WrappedSymbol> v;
   DenseSet<StringRef> seen;
-
+  auto &ss = ctx.saver;
   for (auto *arg : args.filtered(OPT_wrap)) {
     StringRef name = arg->getValue();
     if (!seen.insert(name).second)
@@ -2633,12 +2578,12 @@ static std::vector<WrappedSymbol> addWrappedSymbols(Ctx &ctx,
     if (!sym)
       continue;
 
-    Symbol *wrap = ctx.symtab->addUnusedUndefined(
-        saver().save("__wrap_" + name), sym->binding);
+    Symbol *wrap =
+        ctx.symtab->addUnusedUndefined(ss.save("__wrap_" + name), sym->binding);
 
     // If __real_ is referenced, pull in the symbol if it is lazy. Do this after
     // processing __wrap_ as that may have referenced __real_.
-    StringRef realName = saver().save("__real_" + name);
+    StringRef realName = ctx.saver.save("__real_" + name);
     if (Symbol *real = ctx.symtab->find(realName)) {
       ctx.symtab->addUnusedUndefined(name, sym->binding);
       // Update sym's binding, which will replace real's later in
@@ -2755,21 +2700,6 @@ static void redirectSymbols(Ctx &ctx, ArrayRef<WrappedSymbol> wrapped) {
     ctx.symtab->wrap(w.sym, w.real, w.wrap);
 }
 
-static void reportMissingFeature(Ctx &ctx, StringRef config,
-                                 const Twine &report) {
-  if (config == "error")
-    ErrAlways(ctx) << report;
-  else if (config == "warning")
-    Warn(ctx) << report;
-}
-
-static void checkAndReportMissingFeature(Ctx &ctx, StringRef config,
-                                         uint32_t features, uint32_t mask,
-                                         const Twine &report) {
-  if (!(features & mask))
-    reportMissingFeature(ctx, config, report);
-}
-
 // To enable CET (x86's hardware-assisted control flow enforcement), each
 // source file must be compiled with -fcf-protection. Object files compiled
 // with the flag contain feature flags indicating that they are compatible
@@ -2802,28 +2732,43 @@ static void readSecurityNotes(Ctx &ctx) {
   bool hasValidPauthAbiCoreInfo = llvm::any_of(
       ctx.aarch64PauthAbiCoreInfo, [](uint8_t c) { return c != 0; });
 
+  auto report = [&](StringRef config) -> ELFSyncStream {
+    if (config == "error")
+      return {ctx, DiagLevel::Err};
+    else if (config == "warning")
+      return {ctx, DiagLevel::Warn};
+    return {ctx, DiagLevel::None};
+  };
+  auto reportUnless = [&](StringRef config, bool cond) -> ELFSyncStream {
+    if (cond)
+      return {ctx, DiagLevel::None};
+    return report(config);
+  };
   for (ELFFileBase *f : ctx.objectFiles) {
     uint32_t features = f->andFeatures;
 
-    checkAndReportMissingFeature(
-        ctx, ctx.arg.zBtiReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_BTI,
-        toString(f) + ": -z bti-report: file does not have "
-                      "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property");
+    reportUnless(ctx.arg.zBtiReport,
+                 features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)
+        << f
+        << ": -z bti-report: file does not have "
+           "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property";
 
-    checkAndReportMissingFeature(
-        ctx, ctx.arg.zGcsReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_GCS,
-        toString(f) + ": -z gcs-report: file does not have "
-                      "GNU_PROPERTY_AARCH64_FEATURE_1_GCS property");
+    reportUnless(ctx.arg.zGcsReport,
+                 features & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
+        << f
+        << ": -z gcs-report: file does not have "
+           "GNU_PROPERTY_AARCH64_FEATURE_1_GCS property";
 
-    checkAndReportMissingFeature(
-        ctx, ctx.arg.zCetReport, features, GNU_PROPERTY_X86_FEATURE_1_IBT,
-        toString(f) + ": -z cet-report: file does not have "
-                      "GNU_PROPERTY_X86_FEATURE_1_IBT property");
+    reportUnless(ctx.arg.zCetReport, features & GNU_PROPERTY_X86_FEATURE_1_IBT)
+        << f
+        << ": -z cet-report: file does not have "
+           "GNU_PROPERTY_X86_FEATURE_1_IBT property";
 
-    checkAndReportMissingFeature(
-        ctx, ctx.arg.zCetReport, features, GNU_PROPERTY_X86_FEATURE_1_SHSTK,
-        toString(f) + ": -z cet-report: file does not have "
-                      "GNU_PROPERTY_X86_FEATURE_1_SHSTK property");
+    reportUnless(ctx.arg.zCetReport,
+                 features & GNU_PROPERTY_X86_FEATURE_1_SHSTK)
+        << f
+        << ": -z cet-report: file does not have "
+           "GNU_PROPERTY_X86_FEATURE_1_SHSTK property";
 
     if (ctx.arg.zForceBti && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
@@ -2853,11 +2798,11 @@ static void readSecurityNotes(Ctx &ctx) {
       continue;
 
     if (f->aarch64PauthAbiCoreInfo.empty()) {
-      reportMissingFeature(ctx, ctx.arg.zPauthReport,
-                           toString(f) +
-                               ": -z pauth-report: file does not have AArch64 "
-                               "PAuth core info while '" +
-                               referenceFileName + "' has one");
+      report(ctx.arg.zPauthReport)
+          << f
+          << ": -z pauth-report: file does not have AArch64 "
+             "PAuth core info while '"
+          << referenceFileName << "' has one";
       continue;
     }
 
@@ -3028,7 +2973,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Create elfHeader early. We need a dummy section in
   // addReservedSymbols to mark the created symbols as not absolute.
-  ctx.out.elfHeader = make<OutputSection>(ctx, "", 0, SHF_ALLOC);
+  ctx.out.elfHeader = std::make_unique<OutputSection>(ctx, "", 0, SHF_ALLOC);
 
   // We need to create some reserved symbols such as _end. Create them.
   if (!ctx.arg.relocatable)
@@ -3042,6 +2987,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   if (!ctx.arg.relocatable) {
     llvm::TimeTraceScope timeScope("Process symbol versions");
     ctx.symtab->scanVersionScript();
+
+    parseVersionAndComputeIsPreemptible(ctx);
   }
 
   // Skip the normal linked output if some LTO options are specified.
@@ -3096,10 +3043,9 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   auto newInputFiles = ArrayRef(ctx.driver.files).slice(numInputFilesBeforeLTO);
   if (!newInputFiles.empty()) {
     DenseSet<StringRef> oldFilenames;
-    for (InputFile *f :
-         ArrayRef(ctx.driver.files).slice(0, numInputFilesBeforeLTO))
+    for (auto &f : ArrayRef(ctx.driver.files).slice(0, numInputFilesBeforeLTO))
       oldFilenames.insert(f->getName());
-    for (InputFile *newFile : newInputFiles)
+    for (auto &newFile : newInputFiles)
       if (!oldFilenames.contains(newFile->getName()))
         Err(ctx) << "input file '" << newFile->getName() << "' added after LTO";
   }

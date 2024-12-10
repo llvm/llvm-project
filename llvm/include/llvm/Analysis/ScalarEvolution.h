@@ -1328,7 +1328,7 @@ public:
     /// Collect loop guards in \p Guards, starting from PHINode \p
     /// Phi, by calling \p collectFromBlock on the incoming blocks of
     /// \Phi and trying to merge the found constraints into a single
-    /// combined on for \p Phi.
+    /// combined one for \p Phi.
     static void collectFromPHI(
         ScalarEvolution &SE, ScalarEvolution::LoopGuards &Guards,
         const PHINode &Phi, SmallPtrSetImpl<const BasicBlock *> &VisitedBlocks,
@@ -1780,6 +1780,10 @@ private:
   /// V.
   const SCEV *getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops);
 
+  /// Returns SCEV for the first operand of a phi if all phi operands have
+  /// identical opcodes and operands.
+  const SCEV *createNodeForPHIWithIdenticalOperands(PHINode *PN);
+
   /// Provide the special handling we need to analyze PHI SCEVs.
   const SCEV *createNodeForPHI(PHINode *PN);
 
@@ -2186,6 +2190,9 @@ private:
   /// prove B must execute given A executes.
   bool isGuaranteedToTransferExecutionTo(const Instruction *A,
                                          const Instruction *B);
+
+  /// Returns true if \p Op is guaranteed not to cause immediate UB.
+  bool isGuaranteedNotToCauseUB(const SCEV *Op);
 
   /// Returns true if \p Op is guaranteed to not be poison.
   static bool isGuaranteedNotToBePoison(const SCEV *Op);

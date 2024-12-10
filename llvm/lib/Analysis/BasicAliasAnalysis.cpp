@@ -191,13 +191,14 @@ static bool areBothVScale(const Value *V1, const Value *V2) {
 }
 
 //===----------------------------------------------------------------------===//
-// CaptureInfo implementations
+// CaptureAnalysis implementations
 //===----------------------------------------------------------------------===//
 
-CaptureInfo::~CaptureInfo() = default;
+CaptureAnalysis::~CaptureAnalysis() = default;
 
-bool SimpleCaptureInfo::isNotCapturedBefore(const Value *Object,
-                                            const Instruction *I, bool OrAt) {
+bool SimpleCaptureAnalysis::isNotCapturedBefore(const Value *Object,
+                                                const Instruction *I,
+                                                bool OrAt) {
   return isNonEscapingLocalObject(Object, &IsCapturedCache);
 }
 
@@ -209,8 +210,9 @@ static bool isNotInCycle(const Instruction *I, const DominatorTree *DT,
          !isPotentiallyReachableFromMany(Succs, BB, nullptr, DT, LI);
 }
 
-bool EarliestEscapeInfo::isNotCapturedBefore(const Value *Object,
-                                             const Instruction *I, bool OrAt) {
+bool EarliestEscapeAnalysis::isNotCapturedBefore(const Value *Object,
+                                                 const Instruction *I,
+                                                 bool OrAt) {
   if (!isIdentifiedFunctionLocal(Object))
     return false;
 
@@ -241,7 +243,7 @@ bool EarliestEscapeInfo::isNotCapturedBefore(const Value *Object,
   return !isPotentiallyReachable(Iter.first->second, I, nullptr, &DT, LI);
 }
 
-void EarliestEscapeInfo::removeInstruction(Instruction *I) {
+void EarliestEscapeAnalysis::removeInstruction(Instruction *I) {
   auto Iter = Inst2Obj.find(I);
   if (Iter != Inst2Obj.end()) {
     for (const Value *Obj : Iter->second)
@@ -945,8 +947,14 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
   //
   // Make sure the object has not escaped here, and then check that none of the
   // call arguments alias the object below.
+  //
+  // We model calls that can return twice (setjmp) as clobbering non-escaping
+  // objects, to model any accesses that may occur prior to the second return.
+  // As an exception, ignore allocas, as setjmp is not required to preserve
+  // non-volatile stores for them.
   if (!isa<Constant>(Object) && Call != Object &&
-      AAQI.CI->isNotCapturedBefore(Object, Call, /*OrAt*/ false)) {
+      AAQI.CA->isNotCapturedBefore(Object, Call, /*OrAt*/ false) &&
+      (isa<AllocaInst>(Object) || !Call->hasFnAttr(Attribute::ReturnsTwice))) {
 
     // Optimistically assume that call doesn't touch Object and check this
     // assumption in the following loop.
@@ -1064,19 +1072,6 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call1,
 
   // Be conservative.
   return ModRefInfo::ModRef;
-}
-
-/// Return true if we know V to the base address of the corresponding memory
-/// object.  This implies that any address less than V must be out of bounds
-/// for the underlying object.  Note that just being isIdentifiedObject() is
-/// not enough - For example, a negative offset from a noalias argument or call
-/// can be inbounds w.r.t the actual underlying object.
-static bool isBaseOfObject(const Value *V) {
-  // TODO: We can handle other cases here
-  // 1) For GC languages, arguments to functions are often required to be
-  //    base pointers.
-  // 2) Result of allocation routines are often base pointers.  Leverage TLI.
-  return (isa<AllocaInst>(V) || isa<GlobalVariable>(V));
 }
 
 /// Provides a bunch of ad-hoc rules to disambiguate a GEP instruction against
@@ -1447,9 +1442,10 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
     return AliasResult::NoAlias;
   // If the values are PHIs in the same block, we can do a more precise
   // as well as efficient check: just check for aliases between the values
-  // on corresponding edges.
+  // on corresponding edges. Don't do this if we are analyzing across
+  // iterations, as we may pick a different phi entry in different iterations.
   if (const PHINode *PN2 = dyn_cast<PHINode>(V2))
-    if (PN2->getParent() == PN->getParent()) {
+    if (PN2->getParent() == PN->getParent() && !AAQI.MayBeCrossIteration) {
       std::optional<AliasResult> Alias;
       for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
         AliasResult ThisAlias = AAQI.AAR.alias(
@@ -1621,10 +1617,10 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     // temporary store the nocapture argument's value in a temporary memory
     // location if that memory location doesn't escape. Or it may pass a
     // nocapture value to other functions as long as they don't capture it.
-    if (isEscapeSource(O1) && AAQI.CI->isNotCapturedBefore(
+    if (isEscapeSource(O1) && AAQI.CA->isNotCapturedBefore(
                                   O2, dyn_cast<Instruction>(O1), /*OrAt*/ true))
       return AliasResult::NoAlias;
-    if (isEscapeSource(O2) && AAQI.CI->isNotCapturedBefore(
+    if (isEscapeSource(O2) && AAQI.CA->isNotCapturedBefore(
                                   O1, dyn_cast<Instruction>(O2), /*OrAt*/ true))
       return AliasResult::NoAlias;
   }
