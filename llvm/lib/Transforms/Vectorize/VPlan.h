@@ -236,7 +236,7 @@ public:
 struct VPTransformState {
   VPTransformState(const TargetTransformInfo *TTI, ElementCount VF, unsigned UF,
                    LoopInfo *LI, DominatorTree *DT, IRBuilderBase &Builder,
-                   InnerLoopVectorizer *ILV, VPlan *Plan);
+                   InnerLoopVectorizer *ILV, VPlan *Plan, Type *CanonicalIVTy);
   /// Target Transform Info.
   const TargetTransformInfo *TTI;
 
@@ -3856,7 +3856,7 @@ public:
 
   /// Prepare the plan for execution, setting up the required live-in values.
   void prepareToExecute(Value *TripCount, Value *VectorTripCount,
-                        Value *CanonicalIVStartValue, VPTransformState &State);
+                        VPTransformState &State);
 
   /// Generate the IR code for this VPlan.
   void execute(VPTransformState *State);

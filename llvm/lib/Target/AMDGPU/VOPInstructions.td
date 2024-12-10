@@ -359,9 +359,12 @@ class VOP3FP8OpSel_src_bytesel_gfx11_gfx12<bits<10> op, VOPProfile p> : VOP3e_gf
    let Inst{14-13} = byte_sel;  // op_sel2/3
  }
 
-class VOP3DotOpSel_gfx11_gfx12<bits<10> op, VOPProfile p> : VOP3OpSel_gfx11_gfx12<op, p>{
+class VOP3DotOpSel_gfx11_gfx12<bits<10> op, VOPProfile p> :
+    VOP3e_t16_gfx11_gfx12<op, p>{
   let Inst{11} = ?;
   let Inst{12} = ?;
+  let Inst{13} = !if(p.HasSrc2Mods, src2_modifiers{2}, 0);
+  let Inst{14} = !if(!and(p.HasDst, p.HasSrc0Mods),  src0_modifiers{3}, 0);
 }
 
 // NB: For V_INTERP* opcodes, src0 is encoded as src1 and vice versa
@@ -1706,10 +1709,12 @@ multiclass VOP3_Real_Base<GFXGen Gen, bits<10> op, string opName = NAME,
   }
 }
 
-multiclass VOP3Dot_Real_Base<GFXGen Gen, bits<10> op, string opName = NAME,
+multiclass VOP3Dot_Real_Base<GFXGen Gen, bits<10> op, string asmName, string opName = NAME,
                              bit isSingle = 0> {
   defvar ps = !cast<VOP_Pseudo>(opName#"_e64");
-  let IsSingle = !or(isSingle, ps.Pfl.IsSingle) in {
+  let AsmString = asmName # ps.AsmOperands,
+      DecoderNamespace = Gen.DecoderNamespace # !if(ps.Pfl.IsRealTrue16, "", "_FAKE16"),
+      IsSingle = !or(isSingle, ps.Pfl.IsSingle) in {
     def _e64#Gen.Suffix :
       VOP3_Real_Gen<ps, Gen>,
       VOP3DotOpSel_gfx11_gfx12<op, ps.Pfl>;
@@ -1773,9 +1778,13 @@ multiclass VOP3_Real_dpp_Base<GFXGen Gen, bits<10> op, string opName = NAME> {
       VOP3_DPP16_Gen<op, ps, Gen>;
 }
 
-multiclass VOP3Dot_Real_dpp_Base<GFXGen Gen, bits<10> op, string opName = NAME> {
+multiclass VOP3Dot_Real_dpp_Base<GFXGen Gen, bits<10> op, string asmName, string opName = NAME> {
+  defvar ps = !cast<VOP_DPP_Pseudo>(opName#"_e64"#"_dpp");
   def _e64_dpp#Gen.Suffix :
-    VOP3_DPP16_Gen<op, !cast<VOP_DPP_Pseudo>(opName#"_e64"#"_dpp"), Gen> {
+    VOP3_DPP16_Gen_t16<op, ps, Gen> {
+      let AsmString = asmName # ps.Pfl.AsmVOP3DPP16;
+      let DecoderNamespace = Gen.DecoderNamespace
+                             # !if(ps.Pfl.IsRealTrue16, "", "_FAKE16");
       let Inst{11} = ?;
       let Inst{12} = ?;
     }
@@ -1797,12 +1806,14 @@ multiclass VOP3_Real_dpp8_Base<GFXGen Gen, bits<10> op, string opName = NAME> {
   }
 }
 
-multiclass VOP3Dot_Real_dpp8_Base<GFXGen Gen, bits<10> op, string opName = NAME> {
+multiclass VOP3Dot_Real_dpp8_Base<GFXGen Gen, bits<10> op, string asmName, string opName = NAME> {
   defvar ps = !cast<VOP3_Pseudo>(opName#"_e64");
-  def _e64_dpp8#Gen.Suffix : Base_VOP3_DPP8<op, ps> {
+  def _e64_dpp8#Gen.Suffix : Base_VOP3_DPP8_t16<op, ps> {
     let Inst{11} = ?;
     let Inst{12} = ?;
-    let DecoderNamespace = Gen.DecoderNamespace;
+    let AsmString = asmName # ps.Pfl.AsmVOP3DPP8;
+    let DecoderNamespace = Gen.DecoderNamespace
+                           # !if(ps.Pfl.IsRealTrue16, "", "_FAKE16");
     let AssemblerPredicate = Gen.AssemblerPredicate;
   }
 }
@@ -1855,11 +1866,11 @@ multiclass VOP3_Realtriple<GFXGen Gen, bits<10> op, bit isSingle = 0,
   VOP3_Real_dpp_Base<Gen, op, opName>,
   VOP3_Real_dpp8_Base<Gen, op, opName>;
 
-multiclass VOP3Dot_Realtriple<GFXGen Gen, bits<10> op, bit isSingle = 0,
+multiclass VOP3Dot_Realtriple<GFXGen Gen, bits<10> op, string asmName, bit isSingle = 0,
                               string opName = NAME> :
-  VOP3Dot_Real_Base<Gen, op, opName, isSingle>,
-  VOP3Dot_Real_dpp_Base<Gen, op, opName>,
-  VOP3Dot_Real_dpp8_Base<Gen, op, opName>;
+  VOP3Dot_Real_Base<Gen, op, asmName, opName, isSingle>,
+  VOP3Dot_Real_dpp_Base<Gen, op, asmName, opName>,
+  VOP3Dot_Real_dpp8_Base<Gen, op, asmName, opName>;
 
 multiclass VOP3Only_Realtriple<GFXGen Gen, bits<10> op> :
   VOP3_Realtriple<Gen, op, 1>;
@@ -1956,6 +1967,12 @@ multiclass VOP3Only_Realtriple_with_name_gfx11_gfx12<bits<10> op, string opName,
                                                      string asmName> :
   VOP3Only_Realtriple_with_name<GFX11Gen, op, opName, asmName>,
   VOP3Only_Realtriple_with_name<GFX12Gen, op, opName, asmName>;
+
+multiclass VOP3Dot_Realtriple_gfx11_gfx12<bits<10> op, string asmName, bit isSingle = 0,
+                                          string opName = NAME> :
+  VOP3Dot_Realtriple<GFX11Gen, op, asmName, isSingle, opName>,
+  VOP3Dot_Realtriple<GFX12Gen, op, asmName, isSingle, opName>;
+
 
 //===----------------------------------------------------------------------===//
 

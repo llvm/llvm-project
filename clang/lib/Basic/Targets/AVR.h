@@ -63,7 +63,10 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override { return {}; }
+  std::pair<const char *, ArrayRef<Builtin::Info>>
+  getTargetBuiltinStorage() const override {
+    return {nullptr, {}};
+  }
 
   bool allowsLargerPreferedTypeAlignment() const override { return false; }
 

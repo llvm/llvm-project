@@ -222,6 +222,35 @@ static bool CheckBitcastType(InterpState &S, CodePtr OpPC, QualType T,
                         IsToType))
     return false;
 
+  if (const auto *VT = T->getAs<VectorType>()) {
+    const ASTContext &ASTCtx = S.getASTContext();
+    QualType EltTy = VT->getElementType();
+    unsigned NElts = VT->getNumElements();
+    unsigned EltSize =
+        VT->isExtVectorBoolType() ? 1 : ASTCtx.getTypeSize(EltTy);
+
+    if ((NElts * EltSize) % ASTCtx.getCharWidth() != 0) {
+      // The vector's size in bits is not a multiple of the target's byte size,
+      // so its layout is unspecified. For now, we'll simply treat these cases
+      // as unsupported (this should only be possible with OpenCL bool vectors
+      // whose element count isn't a multiple of the byte size).
+      const Expr *E = S.Current->getExpr(OpPC);
+      S.FFDiag(E, diag::note_constexpr_bit_cast_invalid_vector)
+          << QualType(VT, 0) << EltSize << NElts << ASTCtx.getCharWidth();
+      return false;
+    }
+
+    if (EltTy->isRealFloatingType() &&
+        &ASTCtx.getFloatTypeSemantics(EltTy) == &APFloat::x87DoubleExtended()) {
+      // The layout for x86_fp80 vectors seems to be handled very inconsistently
+      // by both clang and LLVM, so for now we won't allow bit_casts involving
+      // it in a constexpr context.
+      const Expr *E = S.Current->getExpr(OpPC);
+      S.FFDiag(E, diag::note_constexpr_bit_cast_unsupported_type) << EltTy;
+      return false;
+    }
+  }
+
   return true;
 }
 
@@ -248,12 +277,10 @@ static bool readPointerToBuffer(const Context &Ctx, const Pointer &FromPtr,
         if (BitWidth.isZero())
           return true;
 
-        if (!P.isInitialized()) {
-          assert(false && "Implement uninitialized value tracking");
-          return ReturnOnUninit;
-        }
+        // Bits will be left uninitialized and diagnosed when reading.
+        if (!P.isInitialized())
+          return true;
 
-        assert(P.isInitialized());
         if (T == PT_Ptr) {
           assert(P.getType()->isNullPtrType());
           // Clang treats nullptr_t has having NO bits in its value
@@ -262,6 +289,7 @@ static bool readPointerToBuffer(const Context &Ctx, const Pointer &FromPtr,
           return true;
         }
 
+        assert(P.isInitialized());
         auto Buff =
             std::make_unique<std::byte[]>(ObjectReprChars.getQuantity());
         // Work around floating point types that contain unused padding bytes.
@@ -279,11 +307,13 @@ static bool readPointerToBuffer(const Context &Ctx, const Pointer &FromPtr,
           if (llvm::sys::IsBigEndianHost)
             swapBytes(Buff.get(), NumBits.roundToBytes());
 
+          Buffer.markInitialized(BitOffset, NumBits);
         } else {
           BITCAST_TYPE_SWITCH(T, { P.deref<T>().bitcastToMemory(Buff.get()); });
 
           if (llvm::sys::IsBigEndianHost)
             swapBytes(Buff.get(), FullBitWidth.roundToBytes());
+          Buffer.markInitialized(BitOffset, BitWidth);
         }
 
         Buffer.pushData(Buff.get(), BitOffset, BitWidth, TargetEndianness);
@@ -292,30 +322,34 @@ static bool readPointerToBuffer(const Context &Ctx, const Pointer &FromPtr,
 }
 
 bool clang::interp::DoBitCast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                              std::byte *Buff, size_t BuffSize,
+                              std::byte *Buff, Bits BitWidth, Bits FullBitWidth,
                               bool &HasIndeterminateBits) {
   assert(Ptr.isLive());
   assert(Ptr.isBlockPointer());
   assert(Buff);
+  assert(BitWidth <= FullBitWidth);
+  assert(FullBitWidth.isFullByte());
+  assert(BitWidth.isFullByte());
 
-  Bits BitSize = Bytes(BuffSize).toBits();
-  BitcastBuffer Buffer(BitSize);
+  BitcastBuffer Buffer(FullBitWidth);
+  size_t BuffSize = FullBitWidth.roundToBytes();
   if (!CheckBitcastType(S, OpPC, Ptr.getType(), /*IsToType=*/false))
     return false;
 
   bool Success = readPointerToBuffer(S.getContext(), Ptr, Buffer,
                                      /*ReturnOnUninit=*/false);
-  HasIndeterminateBits = !Buffer.allInitialized();
+  HasIndeterminateBits = !Buffer.rangeInitialized(Bits::zero(), BitWidth);
 
   const ASTContext &ASTCtx = S.getASTContext();
   Endian TargetEndianness =
       ASTCtx.getTargetInfo().isLittleEndian() ? Endian::Little : Endian::Big;
-  auto B = Buffer.copyBits(Bits::zero(), BitSize, BitSize, TargetEndianness);
+  auto B =
+      Buffer.copyBits(Bits::zero(), BitWidth, FullBitWidth, TargetEndianness);
 
   std::memcpy(Buff, B.get(), BuffSize);
 
   if (llvm::sys::IsBigEndianHost)
-    swapBytes(Buff, BuffSize);
+    swapBytes(Buff, BitWidth.roundToBytes());
 
   return Success;
 }
@@ -354,10 +388,11 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
       ToPtr, S.getContext(), Buffer.size(),
       [&](const Pointer &P, PrimType T, Bits BitOffset,
           bool PackedBools) -> bool {
-        CharUnits ObjectReprChars = ASTCtx.getTypeSizeInChars(P.getType());
+        QualType PtrType = P.getType();
+        CharUnits ObjectReprChars = ASTCtx.getTypeSizeInChars(PtrType);
         Bits FullBitWidth = Bits(ASTCtx.toBits(ObjectReprChars));
         if (T == PT_Float) {
-          const auto &Semantics = ASTCtx.getFloatTypeSemantics(P.getType());
+          const auto &Semantics = ASTCtx.getFloatTypeSemantics(PtrType);
           Bits NumBits = Bits(llvm::APFloatBase::getSizeInBits(Semantics));
           assert(NumBits.isFullByte());
           assert(NumBits.getQuantity() <= FullBitWidth.getQuantity());
@@ -380,6 +415,23 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
           BitWidth = Bits(1);
         else
           BitWidth = FullBitWidth;
+
+        // If any of the bits are uninitialized, we need to abort unless the
+        // target type is std::byte or unsigned char.
+        bool Initialized = Buffer.rangeInitialized(BitOffset, BitWidth);
+        if (!Initialized) {
+          if (!PtrType->isStdByteType() &&
+              !PtrType->isSpecificBuiltinType(BuiltinType::UChar) &&
+              !PtrType->isSpecificBuiltinType(BuiltinType::Char_U)) {
+            const Expr *E = S.Current->getExpr(OpPC);
+            S.FFDiag(E, diag::note_constexpr_bit_cast_indet_dest)
+                << PtrType << S.getLangOpts().CharIsSigned
+                << E->getSourceRange();
+
+            return false;
+          }
+          return true;
+        }
 
         auto Memory = Buffer.copyBits(BitOffset, BitWidth, FullBitWidth,
                                       TargetEndianness);

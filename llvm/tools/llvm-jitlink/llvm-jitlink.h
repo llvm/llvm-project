@@ -15,9 +15,9 @@
 
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/EPCIndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/LazyObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/LazyReexports.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/RedirectionManager.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
@@ -33,20 +33,14 @@ namespace llvm {
 struct Session {
 
   struct LazyLinkingSupport {
-    LazyLinkingSupport(std::unique_ptr<orc::EPCIndirectionUtils> EPCIU,
-                       std::unique_ptr<orc::RedirectableSymbolManager> RSMgr,
+    LazyLinkingSupport(std::unique_ptr<orc::RedirectableSymbolManager> RSMgr,
+                       std::unique_ptr<orc::LazyReexportsManager> LRMgr,
                        orc::ObjectLinkingLayer &ObjLinkingLayer)
-        : EPCIU(std::move(EPCIU)), RSMgr(std::move(RSMgr)),
-          LazyObjLinkingLayer(ObjLinkingLayer,
-                              this->EPCIU->getLazyCallThroughManager(),
-                              *this->RSMgr) {}
-    ~LazyLinkingSupport() {
-      if (auto Err = EPCIU->cleanup())
-        LazyObjLinkingLayer.getExecutionSession().reportError(std::move(Err));
-    }
+        : RSMgr(std::move(RSMgr)), LRMgr(std::move(LRMgr)),
+          LazyObjLinkingLayer(ObjLinkingLayer, *this->LRMgr) {}
 
-    std::unique_ptr<orc::EPCIndirectionUtils> EPCIU;
     std::unique_ptr<orc::RedirectableSymbolManager> RSMgr;
+    std::unique_ptr<orc::LazyReexportsManager> LRMgr;
     orc::LazyObjectLinkingLayer LazyObjLinkingLayer;
   };
 
