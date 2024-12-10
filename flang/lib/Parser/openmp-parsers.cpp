@@ -506,7 +506,7 @@ TYPE_PARSER(
     // an array element (i.e. a list item).
     // LINEAR(linear-modifier(list) [: step-simple-modifier])
     construct<OmpLinearClause>( //
-        applyFunction(makeLinearFromOldSyntax,
+        applyFunction<OmpLinearClause>(makeLinearFromOldSyntax,
             SpecificModifierParser<OmpLinearModifier, OmpLinearClause>{},
             parenthesized(Parser<OmpObjectList>{}),
             maybe(":"_tok >> SpecificModifierParser<OmpStepSimpleModifier,
