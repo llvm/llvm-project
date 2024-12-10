@@ -791,7 +791,7 @@ HeapProfileRecords:
 
   // Verify the entire contents of MemProfData.Records.
   ASSERT_THAT(MemProfData.Records, SizeIs(1));
-  const auto &[GUID, Record] = *MemProfData.Records.begin();
+  const auto &[GUID, Record] = MemProfData.Records.front();
   EXPECT_EQ(GUID, IndexedMemProfRecord::getGUID("_Z3fooi"));
   ASSERT_THAT(Record.AllocSites, SizeIs(1));
   EXPECT_EQ(Record.AllocSites[0].CSId, hashCallStack(CS1));

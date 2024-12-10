@@ -1177,6 +1177,10 @@ template <> struct ScalarTraits<memprof::GUIDHex64> {
     Out << format("0x%016" PRIx64, (uint64_t)Val);
   }
   static StringRef input(StringRef Scalar, void *, memprof::GUIDHex64 &Val) {
+    // Reject decimal GUIDs.
+    if (all_of(Scalar, [](char C) { return std::isdigit(C); }))
+      return "use a hexadecimal GUID or a function instead";
+
     uint64_t Num;
     if (Scalar.starts_with_insensitive("0x")) {
       // Accept hexadecimal numbers starting with 0x or 0X.
