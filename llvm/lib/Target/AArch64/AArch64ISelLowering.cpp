@@ -15859,7 +15859,8 @@ static SDValue getVectorBitwiseReduce(unsigned Opcode, SDValue Vec, EVT VT,
     if (ScalarOpcode == ISD::AND && NumElems < 16) {
       Vec = DAG.getNode(
           ISD::XOR, DL, VecVT, Vec,
-          DAG.getSplatVector(VecVT, DL, DAG.getConstant(-1, DL, MVT::i32)));
+          DAG.getSplatVector(
+              VecVT, DL, DAG.getConstant(APInt::getAllOnes(32), DL, MVT::i32)));
     }
 
     // any_ext doesn't work with umin/umax, so only use it for uadd.
