@@ -55,11 +55,19 @@ template <typename MarkerTy> struct ShouldRunExtraPasses {
 /// request additional transformations on demand. An example is extra
 /// simplifications after loop-vectorization, if runtime checks have been added.
 template <typename MarkerTy>
-struct ExtraFunctionPassManager : public FunctionPassManager {
+class ExtraFunctionPassManager
+    : public PassInfoMixin<ExtraFunctionPassManager<MarkerTy>> {
+  FunctionPassManager InnerFPM;
+
+public:
+  template <typename PassT> void addPass(PassT &&Pass) {
+    InnerFPM.addPass(std::move(Pass));
+  }
+
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM) {
     auto PA = PreservedAnalyses::all();
     if (AM.getCachedResult<MarkerTy>(F))
-      PA.intersect(FunctionPassManager::run(F, AM));
+      PA.intersect(InnerFPM.run(F, AM));
     PA.abandon<MarkerTy>();
     return PA;
   }
@@ -69,12 +77,20 @@ struct ExtraFunctionPassManager : public FunctionPassManager {
 /// present. This allows passes to request additional transformations on demand.
 /// An example is doing additional runs of SimpleLoopUnswitch.
 template <typename MarkerTy>
-struct ExtraLoopPassManager : public LoopPassManager {
+class ExtraLoopPassManager
+    : public PassInfoMixin<ExtraLoopPassManager<MarkerTy>> {
+  LoopPassManager InnerLPM;
+
+public:
+  template <typename PassT> void addPass(PassT &&Pass) {
+    InnerLPM.addPass(std::move(Pass));
+  }
+
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U) {
     auto PA = PreservedAnalyses::all();
     if (AM.getCachedResult<MarkerTy>(L))
-      PA.intersect(LoopPassManager::run(L, AM, AR, U));
+      PA.intersect(InnerLPM.run(L, AM, AR, U));
     PA.abandon<MarkerTy>();
     return PA;
   }
