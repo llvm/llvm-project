@@ -138,6 +138,11 @@ void StackFrameList::SetCurrentInlinedDepth(uint32_t new_depth) {
     m_current_inlined_pc = m_thread.GetRegisterContext()->GetPC();
 }
 
+bool StackFrameList::WereAllFramesFetched() const {
+  std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+  return GetAllFramesFetched();
+}
+
 /// A sequence of calls that comprise some portion of a backtrace. Each frame
 /// is represented as a pair of a callee (Function *) and an address within the
 /// callee.
@@ -335,56 +340,47 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
 }
 
 bool StackFrameList::GetFramesUpTo(uint32_t end_idx,
-                                   InterruptionControl allow_interrupt,
-                                   std::shared_lock<std::shared_mutex> &guard) {
-  // Do not fetch frames for an invalid thread.
+                                   InterruptionControl allow_interrupt) {
+  // GetFramesUpTo is always called with the intent to add frames, so get the
+  // writer lock: 
+  std::unique_lock<std::shared_mutex> guard(m_list_mutex);
+  // Now that we have the lock, check to make sure someone didn't get there 
+  // ahead of us:
+  if (m_frames.size() > end_idx || GetAllFramesFetched()) 
+    return false;
+
+  // Do not fetch frames for an invalid thread.  
   bool was_interrupted = false;
   if (!m_thread.IsValid())
     return false;
 
-  // We've already gotten more frames than asked for, or we've already finished
-  // unwinding, return.
-  if (m_frames.size() > end_idx || GetAllFramesFetched())
-    return false;
-
+  // lock the writer side of m_list_mutex as we're going to add frames here:
   if (!m_show_inlined_frames) {
     if (end_idx < m_concrete_frames_fetched)
       return false;
     // We're adding concrete frames now:
     // FIXME: This should also be interruptible:
-    FetchOnlyConcreteFramesUpTo(end_idx, guard);
+    FetchOnlyConcreteFramesUpTo(end_idx);
     return false;
   }
 
   // We're adding concrete and inlined frames now:
-  was_interrupted = FetchFramesUpTo(end_idx, allow_interrupt, guard);
+  was_interrupted = FetchFramesUpTo(end_idx, allow_interrupt);
 
 #if defined(DEBUG_STACK_FRAMES)
   s.PutCString("\n\nNew frames:\n");
   Dump(&s);
   s.EOL();
 #endif
-  // Don't report interrupted if we happen to have gotten all the frames:
-  if (!GetAllFramesFetched())
-    return was_interrupted;
-  return false;
-  
+  return was_interrupted;  
 }
 
-void StackFrameList::FetchOnlyConcreteFramesUpTo(
-    uint32_t end_idx, std::shared_lock<std::shared_mutex> &guard) {
+void StackFrameList::FetchOnlyConcreteFramesUpTo(uint32_t end_idx) {
   assert(m_thread.IsValid() && "Expected valid thread");
   assert(m_frames.size() <= end_idx && "Expected there to be frames to fill");
-  assert(guard.owns_lock() && "Must be called with the shared lock acquired"); 
 
   Unwind &unwinder = m_thread.GetUnwinder();
 
-  guard.unlock();
-  m_list_mutex.lock();
-  auto on_exit = llvm::make_scope_exit([&]() {
-    m_list_mutex.unlock();
-    guard.lock();
-  });
   if (end_idx < m_concrete_frames_fetched)
     return;
 
@@ -401,19 +397,9 @@ void StackFrameList::FetchOnlyConcreteFramesUpTo(
 
 
 bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
-                                   InterruptionControl allow_interrupt,
-                                   std::shared_lock<std::shared_mutex> &guard) {
-  assert(guard.owns_lock() && "Must be called with the shared lock acquired");
-
+                                   InterruptionControl allow_interrupt) {
   Unwind &unwinder = m_thread.GetUnwinder();
   bool was_interrupted = false;
-
-  guard.unlock();
-  m_list_mutex.lock();
-  auto on_exit = llvm::make_scope_exit([&]() {
-    m_list_mutex.unlock();
-    guard.lock();
-  });
 
 #if defined(DEBUG_STACK_FRAMES)
   StreamFile s(stdout, false);
@@ -583,16 +569,19 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
     // We are done with the old stack frame list, we can release it now.
     m_prev_frames_sp.reset();
   }
-  return was_interrupted;
+  // Don't report interrupted if we happen to have gotten all the frames:
+  if (!GetAllFramesFetched())
+    return was_interrupted;
+  return false;
 }
 
 uint32_t StackFrameList::GetNumFrames(bool can_create) {
-  std::shared_lock<std::shared_mutex> guard(m_list_mutex);
-
-  if (can_create) {
+  if (!GetAllFramesFetched() && can_create) {
     // Don't allow interrupt or we might not return the correct count
-    GetFramesUpTo(UINT32_MAX, DoNotAllowInterruption, guard);
+    GetFramesUpTo(UINT32_MAX, DoNotAllowInterruption);
   }
+  // Formally we should acquire the shared lock here, but since we've forced
+  // fetching all the frames, it can't change anymore so that's not required. 
   return GetVisibleStackFrameIndex(m_frames.size());
 }
 
@@ -617,29 +606,30 @@ void StackFrameList::Dump(Stream *s) {
 }
 
 StackFrameSP StackFrameList::GetFrameAtIndex(uint32_t idx) {
-  std::shared_lock<std::shared_mutex> guard(m_list_mutex);
-  return GetFrameAtIndexNoLock(idx, guard);
-}
-
-StackFrameSP StackFrameList::GetFrameAtIndexNoLock(
-    uint32_t idx, std::shared_lock<std::shared_mutex> &guard) {
   StackFrameSP frame_sp;
   uint32_t original_idx = idx;
 
-  uint32_t inlined_depth = GetCurrentInlinedDepth();
-  if (inlined_depth != UINT32_MAX)
-    idx += inlined_depth;
+  // We're going to consult the m_frames.size, but if there are already
+  // enough frames for our request we don't want to block other readers, so
+  // first acquire the shared lock:
+  { // Scope for shared lock:
+    std::shared_lock<std::shared_mutex> guard(m_list_mutex);
 
-  if (idx < m_frames.size())
-    frame_sp = m_frames[idx];
+    uint32_t inlined_depth = GetCurrentInlinedDepth();
+    if (inlined_depth != UINT32_MAX)
+      idx += inlined_depth;
 
-  if (frame_sp)
-    return frame_sp;
+    if (idx < m_frames.size())
+      frame_sp = m_frames[idx];
+
+    if (frame_sp)
+      return frame_sp;
+  }
 
   // GetFramesUpTo will fill m_frames with as many frames as you asked for, if
   // there are that many.  If there weren't then you asked for too many frames.
   // GetFramesUpTo returns true if interrupted:
-  if (GetFramesUpTo(idx, AllowInterruption, guard)) {
+  if (GetFramesUpTo(idx, AllowInterruption)) {
     Log *log = GetLog(LLDBLog::Thread);
     LLDB_LOG(log, "GetFrameAtIndex was interrupted");
     return {};
@@ -674,12 +664,11 @@ StackFrameList::GetFrameWithConcreteFrameIndex(uint32_t unwind_idx) {
   // after we make all the inlined frames. Most of the time the unwind frame
   // index (or the concrete frame index) is the same as the frame index.
   uint32_t frame_idx = unwind_idx;
-  std::shared_lock<std::shared_mutex> guard(m_list_mutex);
-  StackFrameSP frame_sp(GetFrameAtIndexNoLock(frame_idx, guard));
+  StackFrameSP frame_sp(GetFrameAtIndex(frame_idx));
   while (frame_sp) {
     if (frame_sp->GetFrameIndex() == unwind_idx)
       break;
-    frame_sp = GetFrameAtIndexNoLock(++frame_idx, guard);
+    frame_sp = GetFrameAtIndex(++frame_idx);
   }
   return frame_sp;
 }
@@ -693,21 +682,26 @@ StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {
   StackFrameSP frame_sp;
 
   if (stack_id.IsValid()) {
-    std::shared_lock<std::shared_mutex> guard(m_list_mutex);
     uint32_t frame_idx = 0;
-    // Do a binary search in case the stack frame is already in our cache
-    collection::const_iterator begin = m_frames.begin();
-    collection::const_iterator end = m_frames.end();
-    if (begin != end) {
-      collection::const_iterator pos =
-          std::lower_bound(begin, end, stack_id, CompareStackID);
-      if (pos != end) {
-        if ((*pos)->GetStackID() == stack_id)
-          return *pos;
+    {
+      // First see if the frame is already realized.  This is the scope for
+      // the shared mutex:
+      std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+      // Do a binary search in case the stack frame is already in our cache
+      collection::const_iterator begin = m_frames.begin();
+      collection::const_iterator end = m_frames.end();
+      if (begin != end) {
+        collection::const_iterator pos =
+            std::lower_bound(begin, end, stack_id, CompareStackID);
+        if (pos != end) {
+          if ((*pos)->GetStackID() == stack_id)
+            return *pos;
+        }
       }
     }
+    // If we needed to add more frames, we would get to here.
     do {
-      frame_sp = GetFrameAtIndexNoLock(frame_idx, guard);
+      frame_sp = GetFrameAtIndex(frame_idx);
       if (frame_sp && frame_sp->GetStackID() == stack_id)
         break;
       frame_idx++;
@@ -794,33 +788,22 @@ uint32_t
 StackFrameList::GetSelectedFrameIndex(SelectMostRelevant select_most_relevant) {
   if (!m_selected_frame_idx && select_most_relevant)
     SelectMostRelevantFrame();
-  { // Scope for lock guard
-    std::shared_lock<std::shared_mutex> guard(m_list_mutex);
-    if (!m_selected_frame_idx) {
-      // If we aren't selecting the most relevant frame, and the selected frame
-      // isn't set, then don't force a selection here, just return 0.
-      if (!select_most_relevant)
-        return 0;
-      // If the inlined stack frame is set, then use that:
-      m_selected_frame_idx = 0;
-    }
-    return *m_selected_frame_idx;
+  if (!m_selected_frame_idx) {
+    // If we aren't selecting the most relevant frame, and the selected frame
+    // isn't set, then don't force a selection here, just return 0.
+    if (!select_most_relevant)
+      return 0;
+    // If the inlined stack frame is set, then use that:
+    m_selected_frame_idx = 0;
   }
-}
-
-uint32_t StackFrameList::SetSelectedFrame(lldb_private::StackFrame *frame) {
-  uint32_t result = 0;
-  {
-    std::shared_lock<std::shared_mutex> guard(m_list_mutex);
-    result = SetSelectedFrameNoLock(frame);
-  }
-  SetDefaultFileAndLineToSelectedFrame();
-  return result;
+  return *m_selected_frame_idx;
 }
 
 uint32_t
-StackFrameList::SetSelectedFrameNoLock(lldb_private::StackFrame *frame) {
+StackFrameList::SetSelectedFrame(lldb_private::StackFrame *frame) {
   uint32_t result = 0;
+
+  std::shared_lock<std::shared_mutex> guard(m_list_mutex);
 
   const_iterator pos;
   const_iterator begin = m_frames.begin();
@@ -836,6 +819,7 @@ StackFrameList::SetSelectedFrameNoLock(lldb_private::StackFrame *frame) {
       break;
     }
   }
+  SetDefaultFileAndLineToSelectedFrame();
   result = *m_selected_frame_idx;
   return result;
 }

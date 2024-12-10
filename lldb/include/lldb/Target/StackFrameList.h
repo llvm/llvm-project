@@ -94,6 +94,9 @@ public:
                    bool show_frame_info, uint32_t num_frames_with_source,
                    bool show_unique = false, bool show_hidden = false,
                    const char *frame_marker = nullptr);
+                
+  /// Returns whether we have currently fetched all the frames of a stack.
+  bool WereAllFramesFetched() const;
 
 protected:
   friend class Thread;
@@ -108,14 +111,20 @@ protected:
 
   /// Ensures that frames up to (and including) `end_idx` are realized in the
   /// StackFrameList.  `end_idx` can be larger than the actual number of frames,
-  /// in which case all the frames will be fetched.
+  /// in which case all the frames will be fetched.  Acquires the writer end of
+  /// the list mutex.
   /// Returns true if the function was interrupted, false otherwise.
-  /// Must be called with a shared mutex locked in `guard`.
-  bool GetFramesUpTo(uint32_t end_idx, InterruptionControl allow_interrupt,
-                     std::shared_lock<std::shared_mutex> &guard);
+  /// Callers should first check (under the shared mutex) whether we need to
+  /// fetch frames or not.
+  bool GetFramesUpTo(uint32_t end_idx, InterruptionControl allow_interrupt);
 
-  bool GetAllFramesFetched() { return m_concrete_frames_fetched == UINT32_MAX; }
+  // This should be called with either the reader or writer end of the list 
+  // mutex held:
+  bool GetAllFramesFetched() const { 
+    return m_concrete_frames_fetched == UINT32_MAX; 
+  }
 
+  // This should be called with the writer end of the list mutex held. 
   void SetAllFramesFetched() { m_concrete_frames_fetched = UINT32_MAX; }
 
   bool DecrementCurrentInlinedDepth();
@@ -188,21 +197,14 @@ private:
   GetFrameAtIndexNoLock(uint32_t idx,
                         std::shared_lock<std::shared_mutex> &guard);
 
-  /// These two Fetch frames APIs are called in GetFramesUpTo, they are the ones
-  /// that actually add frames.  They must be called with the stack list shared
-  /// lock acquired.  They will acquire the writer end of the stack list mutex 
-  /// to add frames, but they will always exit with the shared side reacquired.
+  /// These two Fetch frames APIs and SynthesizeTailCallFrames are called in 
+  /// GetFramesUpTo, they are the ones that actually add frames.  They must be
+  /// called with the writer end of the list mutex held.
+
   /// Returns true if fetching frames was interrupted, false otherwise.
-  bool FetchFramesUpTo(uint32_t end_idx, InterruptionControl allow_interrupt,
-                       std::shared_lock<std::shared_mutex> &guard);
-
-  /// This is the same as FetchFramesUpTo, but only fetches concrete frames.
-  /// It is not currently interruptible - so it returns nothing.
-  void FetchOnlyConcreteFramesUpTo(uint32_t end_idx,
-                                   std::shared_lock<std::shared_mutex> &guard);
-
-  // This is a utility function, called by FetchFramesUpTo.  It must be called
-  // with the writer end of the stack list mutex held.
+  bool FetchFramesUpTo(uint32_t end_idx, InterruptionControl allow_interrupt);
+  /// Not currently interruptible so returns void.
+  void FetchOnlyConcreteFramesUpTo(uint32_t end_idx);
   void SynthesizeTailCallFrames(StackFrame &next_frame);
 
   StackFrameList(const StackFrameList &) = delete;
