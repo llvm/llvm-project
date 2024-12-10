@@ -67,7 +67,6 @@ add_llvm_target(AArch64CodeGen
   AArch64LoadStoreOptimizer.cpp
   AArch64LowerHomogeneousPrologEpilog.cpp
   AArch64MachineFunctionInfo.cpp
-  AArch64MachineModuleInfo.cpp
   AArch64MachineScheduler.cpp
   AArch64MacroFusion.cpp
   AArch64MIPeepholeOpt.cpp
