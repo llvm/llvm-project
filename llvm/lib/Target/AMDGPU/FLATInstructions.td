@@ -207,14 +207,13 @@ class FLAT_Load_Pseudo <string opName, RegisterClass regClass,
   opName,
   (outs vdata_op:$vdst),
   !con(
-    !con(
-      !if(EnableSaddr,
-        (ins SReg_64_XEXEC_XNULL:$saddr, VGPR_32:$vaddr),
-        (ins VReg_64:$vaddr)),
-        (ins flat_offset:$offset)),
-        // FIXME: Operands with default values do not work with following non-optional operands.
-        !if(HasTiedOutput, (ins CPol:$cpol, vdata_op:$vdst_in),
-                           (ins CPol_0:$cpol))),
+    !if(EnableSaddr,
+      (ins SReg_64_XEXEC_XNULL:$saddr, VGPR_32:$vaddr),
+      (ins VReg_64:$vaddr)),
+      (ins flat_offset:$offset),
+      // FIXME: Operands with default values do not work with following non-optional operands.
+      !if(HasTiedOutput, (ins CPol:$cpol, vdata_op:$vdst_in),
+                         (ins CPol_0:$cpol))),
   " $vdst, $vaddr"#!if(HasSaddr, !if(EnableSaddr, ", $saddr", ", off"), "")#"$offset$cpol"> {
   let has_data = 0;
   let mayLoad = 1;
