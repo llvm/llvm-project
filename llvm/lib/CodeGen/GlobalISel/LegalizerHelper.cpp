@@ -1785,12 +1785,11 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
         }
 
         if (!CmpIn) {
-          MIRBuilder.buildICmp(PartPred, CmpOut,
-                               LHSPartRegs[I], RHSPartRegs[I]);
+          MIRBuilder.buildICmp(PartPred, CmpOut, LHSPartRegs[I],
+                               RHSPartRegs[I]);
         } else {
-          auto Cmp =
-              MIRBuilder.buildICmp(PartPred, ResTy,
-                                   LHSPartRegs[I], RHSPartRegs[I]);
+          auto Cmp = MIRBuilder.buildICmp(PartPred, ResTy, LHSPartRegs[I],
+                                          RHSPartRegs[I]);
           auto CmpEq = MIRBuilder.buildICmp(CmpInst::Predicate::ICMP_EQ, ResTy,
                                             LHSPartRegs[I], RHSPartRegs[I]);
           MIRBuilder.buildSelect(CmpOut, CmpEq, CmpIn, Cmp);
@@ -1812,14 +1811,14 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
         }
 
         if (!CmpIn) {
-          MIRBuilder.buildICmp(PartPred, CmpOut,
-                               LHSLeftoverRegs[I], RHSLeftoverRegs[I]);
+          MIRBuilder.buildICmp(PartPred, CmpOut, LHSLeftoverRegs[I],
+                               RHSLeftoverRegs[I]);
         } else {
-          auto Cmp =
-              MIRBuilder.buildICmp(PartPred, ResTy,
+          auto Cmp = MIRBuilder.buildICmp(PartPred, ResTy, LHSLeftoverRegs[I],
+                                          RHSLeftoverRegs[I]);
+          auto CmpEq =
+              MIRBuilder.buildICmp(CmpInst::Predicate::ICMP_EQ, ResTy,
                                    LHSLeftoverRegs[I], RHSLeftoverRegs[I]);
-          auto CmpEq = MIRBuilder.buildICmp(CmpInst::Predicate::ICMP_EQ, ResTy,
-                                            LHSLeftoverRegs[I], RHSLeftoverRegs[I]);
           MIRBuilder.buildSelect(CmpOut, CmpEq, CmpIn, Cmp);
         }
 
