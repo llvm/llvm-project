@@ -664,9 +664,17 @@ NVVMTargetAttrImpl::createObject(Attribute attribute, Operation *module,
   gpu::CompilationTarget format = options.getCompilationTarget();
   DictionaryAttr objectProps;
   Builder builder(attribute.getContext());
+  SmallVector<NamedAttribute, 2> properties;
   if (format == gpu::CompilationTarget::Assembly)
-    objectProps = builder.getDictionaryAttr(
-        {builder.getNamedAttr("O", builder.getI32IntegerAttr(target.getO()))});
+    properties.push_back(
+        builder.getNamedAttr("O", builder.getI32IntegerAttr(target.getO())));
+
+  if (StringAttr section = target.getSection())
+    properties.push_back(builder.getNamedAttr("section", section));
+
+  if (!properties.empty())
+    objectProps = builder.getDictionaryAttr(properties);
+
   return builder.getAttr<gpu::ObjectAttr>(
       attribute, format,
       builder.getStringAttr(StringRef(object.data(), object.size())),

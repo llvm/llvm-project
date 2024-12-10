@@ -1249,8 +1249,8 @@ LogicalResult NVVMDialect::verifyRegionArgAttribute(Operation *op,
 LogicalResult
 NVVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                        int optLevel, StringRef triple, StringRef chip,
-                       StringRef features, DictionaryAttr flags,
-                       ArrayAttr files) {
+                       StringRef features, StringAttr elfSection,
+                       DictionaryAttr flags, ArrayAttr files) {
   if (optLevel < 0 || optLevel > 3) {
     emitError() << "The optimization level must be a number between 0 and 3.";
     return failure();

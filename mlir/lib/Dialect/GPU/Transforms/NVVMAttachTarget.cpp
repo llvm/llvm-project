@@ -63,7 +63,9 @@ void NVVMAttachTarget::runOnOperation() {
   ArrayRef<std::string> libs(linkLibs);
   SmallVector<StringRef> filesToLink(libs);
   auto target = builder.getAttr<NVVMTargetAttr>(
-      optLevel, triple, chip, features, getFlags(builder),
+      optLevel, triple, chip, features,
+      elfSection.empty() ? nullptr : builder.getStringAttr(elfSection),
+      getFlags(builder),
       filesToLink.empty() ? nullptr : builder.getStrArrayAttr(filesToLink));
   llvm::Regex matcher(moduleMatcher);
   for (Region &region : getOperation()->getRegions())

@@ -2367,20 +2367,22 @@ def NVVM_TargettAttr : NVVM_Attr<"NVVMTarget", "target"> {
     StringRefParameter<"Target triple.", "\"nvptx64-nvidia-cuda\"">:$triple,
     StringRefParameter<"Target chip.", "\"sm_50\"">:$chip,
     StringRefParameter<"Target chip features.", "\"+ptx60\"">:$features,
+    OptionalParameter<"StringAttr", "ELF section.">:$section,
     OptionalParameter<"DictionaryAttr", "Target specific flags.">:$flags,
     OptionalParameter<"ArrayAttr", "Files to link to the LLVM module.">:$link
   );
   let assemblyFormat = [{
-    (`<` struct($O, $triple, $chip, $features, $flags, $link)^ `>`)?
+    (`<` struct($O, $triple, $chip, $features, $section, $flags, $link)^ `>`)?
   }];
   let builders = [
     AttrBuilder<(ins CArg<"int", "2">:$optLevel,
                      CArg<"StringRef", "\"nvptx64-nvidia-cuda\"">:$triple,
                      CArg<"StringRef", "\"sm_50\"">:$chip,
                      CArg<"StringRef", "\"+ptx60\"">:$features,
+                     CArg<"StringAttr", "nullptr">:$section,
                      CArg<"DictionaryAttr", "nullptr">:$targetFlags,
                      CArg<"ArrayAttr", "nullptr">:$linkFiles), [{
-      return Base::get($_ctxt, optLevel, triple, chip, features, targetFlags, linkFiles);
+      return Base::get($_ctxt, optLevel, triple, chip, features, section, targetFlags, linkFiles);
     }]>
   ];
   let skipDefaultBuilders = 1;
