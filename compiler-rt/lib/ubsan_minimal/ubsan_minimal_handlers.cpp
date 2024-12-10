@@ -20,7 +20,8 @@ static __sanitizer::atomic_uintptr_t caller_pcs[kMaxCallerPcs];
 // that "too many errors" has already been reported.
 static __sanitizer::atomic_uint32_t caller_pcs_sz;
 
-__attribute__((noinline)) static bool report_this_error(uintptr_t caller) {
+SANITIZER_INTERFACE_WEAK_DEF(int, __sanitizer_report_ubsan_error,
+                             uintptr_t caller, const char* name) {
   if (caller == 0)
     return false;
   while (true) {
@@ -97,10 +98,10 @@ constexpr unsigned kAddrBuf = SANITIZER_WORDSIZE / 4;
 #define MSG_BUF_LEN(msg) (sizeof(MSG_TMPL(msg)) + kAddrBuf + 1)
 
 #define HANDLER_RECOVER(name, msg)                               \
-  SANITIZER_INTERFACE_WEAK_DEF(                                  \
-    void, __ubsan_handle_##name##_minimal, void) {               \
+  INTERFACE void __ubsan_handle_##name##_minimal() {             \
     uintptr_t caller = GET_CALLER_PC();                          \
-    if (!report_this_error(caller)) return;                      \
+    if (!__sanitizer_report_ubsan_error(caller, #name))          \
+      return;                                                    \
     char msg_buf[MSG_BUF_LEN(msg)] = MSG_TMPL(msg);              \
     decorate_msg(MSG_TMPL_END(msg_buf, msg), caller);            \
     message(msg_buf);                                            \
