@@ -6406,10 +6406,12 @@ LegalizerHelper::narrowScalarAddSub(MachineInstr &MI, unsigned TypeIdx,
   for (int i = 0, e = Src1Regs.size(); i != e; ++i) {
     Register DstReg =
         MRI.createGenericVirtualRegister(MRI.getType(Src1Regs[i]));
-    Register CarryOut = MRI.createGenericVirtualRegister(LLT::scalar(1));
+    Register CarryOut;
     // Forward the final carry-out to the destination register
     if (i == e - 1 && CarryDst)
       CarryOut = CarryDst;
+    else
+      CarryOut = MRI.createGenericVirtualRegister(LLT::scalar(1));
 
     if (!CarryIn) {
       MIRBuilder.buildInstr(OpO, {DstReg, CarryOut},
