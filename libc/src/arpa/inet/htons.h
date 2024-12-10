@@ -1,4 +1,4 @@
-//===-- Implementation of htons function ----------------------------------===//
+//===-- Implementation header of htons --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/network/htons.h"
-#include "src/__support/common.h"
-#include "src/__support/endian_internal.h"
+#ifndef LLVM_LIBC_SRC_ARPA_INET_HTONS_H
+#define LLVM_LIBC_SRC_ARPA_INET_HTONS_H
+
 #include "src/__support/macros/config.h"
+#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(uint16_t, htons, (uint16_t hostshort)) {
-  return Endian::to_big_endian(hostshort);
-}
+uint16_t htons(uint16_t hostshort);
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC_ARPA_INET_HTONS_H

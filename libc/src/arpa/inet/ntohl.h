@@ -1,4 +1,4 @@
-//===-- Implementation of htonl function ----------------------------------===//
+//===-- Implementation header of ntohl --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/network/htonl.h"
-#include "src/__support/common.h"
-#include "src/__support/endian_internal.h"
+#ifndef LLVM_LIBC_SRC_ARPA_INET_NTOHL_H
+#define LLVM_LIBC_SRC_ARPA_INET_NTOHL_H
+
 #include "src/__support/macros/config.h"
+#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(uint32_t, htonl, (uint32_t hostlong)) {
-  return Endian::to_big_endian(hostlong);
-}
+uint32_t ntohl(uint32_t netlong);
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC_ARPA_INET_NTOHL_H
