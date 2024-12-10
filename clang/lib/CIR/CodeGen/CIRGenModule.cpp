@@ -29,9 +29,22 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
                            clang::ASTContext &astctx,
                            const clang::CodeGenOptions &cgo,
                            DiagnosticsEngine &diags)
-    : builder(&context), astCtx(astctx), langOpts(astctx.getLangOpts()),
+    : builder(context, *this), astCtx(astctx), langOpts(astctx.getLangOpts()),
       theModule{mlir::ModuleOp::create(mlir::UnknownLoc::get(&context))},
-      diags(diags), target(astCtx.getTargetInfo()), genTypes(*this) {}
+      diags(diags), target(astctx.getTargetInfo()), genTypes(*this) {
+
+  // Initialize cached types
+  SInt8Ty = cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/true);
+  SInt16Ty = cir::IntType::get(&getMLIRContext(), 16, /*isSigned=*/true);
+  SInt32Ty = cir::IntType::get(&getMLIRContext(), 32, /*isSigned=*/true);
+  SInt64Ty = cir::IntType::get(&getMLIRContext(), 64, /*isSigned=*/true);
+  SInt128Ty = cir::IntType::get(&getMLIRContext(), 128, /*isSigned=*/true);
+  UInt8Ty = cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/false);
+  UInt16Ty = cir::IntType::get(&getMLIRContext(), 16, /*isSigned=*/false);
+  UInt32Ty = cir::IntType::get(&getMLIRContext(), 32, /*isSigned=*/false);
+  UInt64Ty = cir::IntType::get(&getMLIRContext(), 64, /*isSigned=*/false);
+  UInt128Ty = cir::IntType::get(&getMLIRContext(), 128, /*isSigned=*/false);
+}
 
 mlir::Location CIRGenModule::getLoc(SourceLocation cLoc) {
   assert(cLoc.isValid() && "expected valid source location");
