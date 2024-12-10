@@ -458,6 +458,10 @@ Modified Compiler Flags
   ``memset`` and similar functions for which it is a documented undefined
   behavior. It is implied by ``-Wnontrivial-memaccess``
 
+- Added ``-fmodules-reduced-bmi`` flag corresponding to
+  ``-fexperimental-modules-reduced-bmi`` flag. The ``-fmodules-reduced-bmi`` flag
+  is intended to be enabled by default in the future.
+
 Removed Compiler Flags
 -------------------------
 
