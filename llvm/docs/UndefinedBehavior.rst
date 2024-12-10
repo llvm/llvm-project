@@ -145,7 +145,9 @@ Undef Values
 ------------
 .. warning::
    Undef values are deprecated and should be used only when strictly necessary.
-   No new uses should be added unless justified.
+   Uses of undef values should be restricted to representing loads of
+   uninitialized memory. This is the only part of the IR semantics that cannot
+   be replaced with alternatives yet (work in ongoing).
 
 An undef value represents any value of a given type. Moreover, each use of
 an instruction that depends on undef can observe a different value.
@@ -201,11 +203,6 @@ However, as we've seen above, the following function does not:
 This optimization is wrong just because undef values exist, even if they are
 not used in this part of the program as LLVM has no way to tell if ``%v`` is
 undef or not.
-
-.. note::
-   Uses of undef values should be restricted to representing loads of
-   uninitialized memory. This is the only part of the IR semantics that cannot
-   be replaced with alternatives yet (work in ongoing).
 
 Looking at the value lattice, ``undef`` values can only be replaced with either
 a ``freeze`` instruction or a concrete value.
@@ -391,3 +388,6 @@ The lattice of values in LLVM is:
 immediate UB > poison > undef > freeze(poison) > concrete value.
 It is only valid to transform values from the left to the right (e.g., a poison
 value can be replaced with a concrete value, but not the other way around).
+
+Undef is now deprecated and should be used only to represent loads of
+uninitialized memory.
