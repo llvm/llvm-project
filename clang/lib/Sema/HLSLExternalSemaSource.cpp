@@ -325,9 +325,9 @@ struct TemplateParameterListBuilder {
         Context,                          // AST context
         Builder.Record->getDeclContext(), // DeclContext
         SourceLocation(), SourceLocation(),
-        /*depth=*/0,                // Depth in the template parameter list
-        /*position=*/0,             // Position in the template parameter list
-        /*id=*/nullptr,             // Identifier for 'T'
+        /*D=*/0,                    // Depth in the template parameter list
+        /*P=*/0,                    // Position in the template parameter list
+        /*Id=*/nullptr,             // Identifier for 'T'
         /*Typename=*/true,          // Indicates this is a 'typename' or 'class'
         /*ParameterPack=*/false,    // Not a parameter pack
         /*HasTypeConstraint=*/false // Has no type constraint
@@ -877,9 +877,9 @@ static ConceptDecl *constructTypedBufferConceptDecl(Sema &S,
   IdentifierInfo &ElementTypeII = Context.Idents.get("element_type");
   TemplateTypeParmDecl *T = TemplateTypeParmDecl::Create(
       Context, NSD->getDeclContext(), DeclLoc, DeclLoc,
-      /*depth=*/0,
-      /*position=*/0,
-      /*id=*/&ElementTypeII,
+      /*D=*/0,
+      /*P=*/0,
+      /*Id=*/&ElementTypeII,
       /*Typename=*/true,
       /*ParameterPack=*/false);
 
