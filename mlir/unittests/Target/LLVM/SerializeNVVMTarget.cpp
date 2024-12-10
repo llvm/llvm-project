@@ -81,7 +81,7 @@ TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(SerializeNVVMMToLLVM)) {
   // Serialize the module.
   auto serializer = dyn_cast<gpu::TargetAttrInterface>(target);
   ASSERT_TRUE(!!serializer);
-  gpu::TargetOptions options("", {}, "", gpu::CompilationTarget::Offload);
+  gpu::TargetOptions options("", {}, "", "", gpu::CompilationTarget::Offload);
   for (auto gpuModule : (*module).getBody()->getOps<gpu::GPUModuleOp>()) {
     std::optional<SmallVector<char, 0>> object =
         serializer.serializeToObject(gpuModule, options);
@@ -117,7 +117,7 @@ TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(SerializeNVVMToPTX)) {
   // Serialize the module.
   auto serializer = dyn_cast<gpu::TargetAttrInterface>(target);
   ASSERT_TRUE(!!serializer);
-  gpu::TargetOptions options("", {}, "", gpu::CompilationTarget::Assembly);
+  gpu::TargetOptions options("", {}, "", "", gpu::CompilationTarget::Assembly);
   for (auto gpuModule : (*module).getBody()->getOps<gpu::GPUModuleOp>()) {
     std::optional<SmallVector<char, 0>> object =
         serializer.serializeToObject(gpuModule, options);
@@ -147,7 +147,7 @@ TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(SerializeNVVMToBinary)) {
   // Serialize the module.
   auto serializer = dyn_cast<gpu::TargetAttrInterface>(target);
   ASSERT_TRUE(!!serializer);
-  gpu::TargetOptions options("", {}, "", gpu::CompilationTarget::Binary);
+  gpu::TargetOptions options("", {}, "", "", gpu::CompilationTarget::Binary);
   for (auto gpuModule : (*module).getBody()->getOps<gpu::GPUModuleOp>()) {
     std::optional<SmallVector<char, 0>> object =
         serializer.serializeToObject(gpuModule, options);
@@ -194,9 +194,9 @@ TEST_F(MLIRTargetLLVMNVVM,
     isaResult = isa.str();
   };
 
-  gpu::TargetOptions options({}, {}, {}, gpu::CompilationTarget::Assembly, {},
-                             initialCallback, linkedCallback, optimizedCallback,
-                             isaCallback);
+  gpu::TargetOptions options({}, {}, {}, {}, gpu::CompilationTarget::Assembly,
+                             {}, initialCallback, linkedCallback,
+                             optimizedCallback, isaCallback);
 
   for (auto gpuModule : (*module).getBody()->getOps<gpu::GPUModuleOp>()) {
     std::optional<SmallVector<char, 0>> object =

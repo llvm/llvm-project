@@ -87,16 +87,15 @@ def GpuModuleToBinaryPass
     3. `binary`, `bin`: produces binaries.
     4. `fatbinary`, `fatbin`: produces fatbinaries.
   }];
-  let options = [
-    Option<"toolkitPath", "toolkit", "std::string", [{""}],
-           "Toolkit path.">,
-    ListOption<"linkFiles", "l", "std::string",
-           "Extra files to link to.">,
-    Option<"cmdOptions", "opts", "std::string", [{""}],
-           "Command line options to pass to the tools.">,
-    Option<"compilationTarget", "format", "std::string", [{"fatbin"}],
-           "The target representation of the compilation process.">
-  ];
+  let options =
+      [Option<"toolkitPath", "toolkit", "std::string", [{""}], "Toolkit path.">,
+       ListOption<"linkFiles", "l", "std::string", "Extra files to link to.">,
+       Option<"cmdOptions", "opts", "std::string", [{""}],
+              "Command line options to pass to the tools.">,
+       Option<"compilationTarget", "format", "std::string", [{"fatbin"}],
+              "The target representation of the compilation process.">,
+       Option<"elfSection", "section", "std::string", [{""}],
+              "ELF section where binary is to be located.">];
 }
 
 def GpuNVVMAttachTarget: Pass<"nvvm-attach-target", ""> {
