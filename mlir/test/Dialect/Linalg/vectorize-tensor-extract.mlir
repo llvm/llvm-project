@@ -98,10 +98,10 @@ func.func @vectorize_nd_tensor_extract_scalar_broadcast(%src: tensor<3x3xf32>, %
 // CHECK-LABEL:   func.func @vectorize_nd_tensor_extract_scalar_broadcast(
 // CHECK-SAME:      %[[SRC:.*]]: tensor<3x3xf32>,
 // CHECK-SAME:      %[[INIT:.*]]: tensor<1x1x3xf32>) -> tensor<1x1x3xf32> {
-// CHECK:           %[[C0:.*]] = arith.constant 0 : index
-// CHECK:           %[[C1:.*]] = arith.constant 1 : index
-// CHECK:           %[[C2:.*]] = arith.constant 2 : index
-// CHECK:           %[[PAD:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:       %[[C2:.*]] = arith.constant 2 : index
+// CHECK-DAG:       %[[PAD:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:           %[[READ:.*]] = vector.transfer_read %[[SRC]][%[[C1]], %[[C2]]], %[[PAD]] : tensor<3x3xf32>, vector<f32>
 // CHECK:           %[[READ_BCAST:.*]] = vector.broadcast %[[READ]] : vector<f32> to vector<1x1x3xf32>
 // CHECK:           vector.transfer_write %[[READ_BCAST]], %[[INIT]][%[[C0]], %[[C0]], %[[C0]]] {in_bounds = [true, true, true]} : vector<1x1x3xf32>, tensor<1x1x3xf32>
