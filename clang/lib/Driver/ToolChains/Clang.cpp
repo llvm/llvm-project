@@ -4260,7 +4260,7 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
   if (Args.hasArg(options::OPT_modules_reduced_bmi) &&
       (Input.getType() == driver::types::TY_CXXModule ||
        Input.getType() == driver::types::TY_PP_CXXModule)) {
-    CmdArgs.push_back("-fexperimental-modules-reduced-bmi");
+    CmdArgs.push_back("-fmodules-reduced-bmi");
 
     if (Args.hasArg(options::OPT_fmodule_output_EQ))
       Args.AddLastArg(CmdArgs, options::OPT_fmodule_output_EQ);
@@ -4270,7 +4270,7 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
           getCXX20NamedModuleOutputPath(Args, Input.getBaseInput())));
   }
 
-  // Noop if we see '-fexperimental-modules-reduced-bmi' with other translation
+  // Noop if we see '-fmodules-reduced-bmi' with other translation
   // units than module units. This is more user friendly to allow end uers to
   // enable this feature without asking for help from build systems.
   Args.ClaimAllArgs(options::OPT_modules_reduced_bmi);
