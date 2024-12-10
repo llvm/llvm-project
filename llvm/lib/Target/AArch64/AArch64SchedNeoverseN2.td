@@ -512,6 +512,12 @@ def N2Write_8c_3L_4V : SchedWriteRes<[N2UnitL, N2UnitL, N2UnitL,
   let NumMicroOps = 7;
 }
 
+def N2Write_7c_7V0 : SchedWriteRes<[N2UnitV0]> {
+  let Latency     = 7;
+  let NumMicroOps = 7;
+  let ReleaseAtCycles = [7];
+}
+
 //===----------------------------------------------------------------------===//
 // Define generic 8 micro-op types
 
@@ -545,12 +551,6 @@ def N2Write_9c_4L_4V : SchedWriteRes<[N2UnitL, N2UnitL, N2UnitL, N2UnitL,
                                       N2UnitV, N2UnitV, N2UnitV, N2UnitV]> {
   let Latency     = 9;
   let NumMicroOps = 8;
-}
-
-def N2Write_7c_7V0 : SchedWriteRes<[N2UnitV0]> {
-  let Latency     = 7;
-  let NumMicroOps = 7;
-  let ReleaseAtCycles = [7];
 }
 
 //===----------------------------------------------------------------------===//
