@@ -247,6 +247,25 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
     llvm_unreachable("Configuration setting instructions do not read or write "
                      "vector registers");
 
+  // Vector Store Whole Register Instructions
+  // EMUL=nr. EEW=eew. Since in-register byte layouts are idential to in-memory
+  // byte layouts, the same data is writen to destination register regardless
+  // of EEW. eew is just a hint to the hardware and has not functional impact.
+  // Therefore, it is be okay if we ignore eew and always use the same EEW to
+  // create more optimization opportunities.
+  // FIXME: Instead of using any SEW, we really should return the SEW in the
+  // instruction and add a field to OperandInfo that says the SEW is just a hint
+  // so that this optimization can use any sew to construct a ratio.
+  case RISCV::VS1R_V:
+    return OperandInfo(RISCVII::VLMUL::LMUL_1, 0);
+  case RISCV::VS2R_V:
+    return OperandInfo(RISCVII::VLMUL::LMUL_2, 0);
+  case RISCV::VS4R_V:
+    return OperandInfo(RISCVII::VLMUL::LMUL_4, 0);
+  case RISCV::VS8R_V:
+    return OperandInfo(RISCVII::VLMUL::LMUL_8, 0);
+
+
   // Vector Integer Arithmetic Instructions
   // Vector Single-Width Integer Add and Subtract
   case RISCV::VADD_VI:
