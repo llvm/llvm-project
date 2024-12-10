@@ -168,7 +168,7 @@ void UnrollState::unrollWidenInductionByUF(
   auto *ConstStep = ScalarStep->isLiveIn()
                         ? dyn_cast<ConstantInt>(ScalarStep->getLiveInIRValue())
                         : nullptr;
-  if (!ConstStep || ConstStep->getZExtValue() != 1) {
+  if (!ConstStep || ConstStep->getValue() != 1) {
     if (TypeInfo.inferScalarType(ScalarStep) != IVTy) {
       ScalarStep =
           Builder.createWidenCast(Instruction::Trunc, ScalarStep, IVTy);

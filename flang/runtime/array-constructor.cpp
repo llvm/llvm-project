@@ -50,8 +50,8 @@ static RT_API_ATTRS void AllocateOrReallocateVectorIfNeeded(
           initialAllocationSize(fromElements, to.ElementBytes())};
       to.GetDimension(0).SetBounds(1, allocationSize);
       RTNAME(AllocatableAllocate)
-      (to, /*asyncId=*/-1, /*hasStat=*/false, /*errMsg=*/nullptr,
-          vector.sourceFile, vector.sourceLine);
+      (to, /*hasStat=*/false, /*errMsg=*/nullptr, vector.sourceFile,
+          vector.sourceLine);
       to.GetDimension(0).SetBounds(1, fromElements);
       vector.actualAllocationSize = allocationSize;
     } else {
@@ -59,8 +59,8 @@ static RT_API_ATTRS void AllocateOrReallocateVectorIfNeeded(
       // first value: there should be no reallocation.
       RUNTIME_CHECK(terminator, previousToElements >= fromElements);
       RTNAME(AllocatableAllocate)
-      (to, /*asyncId=*/-1, /*hasStat=*/false, /*errMsg=*/nullptr,
-          vector.sourceFile, vector.sourceLine);
+      (to, /*hasStat=*/false, /*errMsg=*/nullptr, vector.sourceFile,
+          vector.sourceLine);
       vector.actualAllocationSize = previousToElements;
     }
   } else {
@@ -92,13 +92,10 @@ extern "C" {
 RT_EXT_API_GROUP_BEGIN
 
 void RTDEF(InitArrayConstructorVector)(ArrayConstructorVector &vector,
-    Descriptor &to, bool useValueLengthParameters, int vectorClassSize,
-    const char *sourceFile, int sourceLine) {
+    Descriptor &to, bool useValueLengthParameters, const char *sourceFile,
+    int sourceLine) {
   Terminator terminator{vector.sourceFile, vector.sourceLine};
-  RUNTIME_CHECK(terminator,
-      to.rank() == 1 &&
-          sizeof(ArrayConstructorVector) <=
-              static_cast<std::size_t>(vectorClassSize));
+  RUNTIME_CHECK(terminator, to.rank() == 1);
   SubscriptValue actualAllocationSize{
       to.IsAllocated() ? static_cast<SubscriptValue>(to.Elements()) : 0};
   (void)new (&vector) ArrayConstructorVector{to, /*nextValuePosition=*/0,

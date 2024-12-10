@@ -755,6 +755,32 @@ inline Symbol &createAnonymousPointerJumpStub(LinkGraph &G,
       sizeof(PointerJumpStubContent), true, false);
 }
 
+/// AArch64 reentry trampoline.
+///
+/// Contains the instruction sequence for a trampoline that stores its return
+/// address on the stack and passes its own address in x0:
+///   STP  x29, x30, [sp, #-16]!
+///   BL   <reentry-symbol>
+extern const char ReentryTrampolineContent[8];
+
+/// Create a block of N reentry trampolines.
+inline Block &createReentryTrampolineBlock(LinkGraph &G,
+                                           Section &TrampolineSection,
+                                           Symbol &ReentrySymbol) {
+  auto &B = G.createContentBlock(TrampolineSection, ReentryTrampolineContent,
+                                 orc::ExecutorAddr(~uint64_t(7)), 4, 0);
+  B.addEdge(Branch26PCRel, 4, ReentrySymbol, 0);
+  return B;
+}
+
+inline Symbol &createAnonymousReentryTrampoline(LinkGraph &G,
+                                                Section &TrampolineSection,
+                                                Symbol &ReentrySymbol) {
+  return G.addAnonymousSymbol(
+      createReentryTrampolineBlock(G, TrampolineSection, ReentrySymbol), 0,
+      sizeof(ReentryTrampolineContent), true, false);
+}
+
 /// Global Offset Table Builder.
 class GOTTableManager : public TableManager<GOTTableManager> {
 public:

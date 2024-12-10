@@ -9,6 +9,7 @@ Implementation Status
    ctype
    errno
    fenv
+   float
    locale
    math/index.rst
    search
@@ -19,3 +20,6 @@ Implementation Status
    strings
    threads
    time
+   uchar
+   wchar
+   wctype

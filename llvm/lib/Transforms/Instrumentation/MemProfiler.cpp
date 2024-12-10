@@ -166,6 +166,11 @@ static cl::opt<bool>
                                      "context in this module's profiles"),
                             cl::Hidden, cl::init(false));
 
+static cl::opt<std::string>
+    MemprofRuntimeDefaultOptions("memprof-runtime-default-options",
+                                 cl::desc("The default memprof options"),
+                                 cl::Hidden, cl::init(""));
+
 extern cl::opt<bool> MemProfReportHintedSizes;
 
 // Instrumentation statistics
@@ -547,6 +552,20 @@ void createMemprofHistogramFlagVar(Module &M) {
   appendToCompilerUsed(M, MemprofHistogramFlag);
 }
 
+void createMemprofDefaultOptionsVar(Module &M) {
+  Constant *OptionsConst = ConstantDataArray::getString(
+      M.getContext(), MemprofRuntimeDefaultOptions, /*AddNull=*/true);
+  GlobalVariable *OptionsVar =
+      new GlobalVariable(M, OptionsConst->getType(), /*isConstant=*/true,
+                         GlobalValue::WeakAnyLinkage, OptionsConst,
+                         "__memprof_default_options_str");
+  Triple TT(M.getTargetTriple());
+  if (TT.supportsCOMDAT()) {
+    OptionsVar->setLinkage(GlobalValue::ExternalLinkage);
+    OptionsVar->setComdat(M.getOrInsertComdat(OptionsVar->getName()));
+  }
+}
+
 bool ModuleMemProfiler::instrumentModule(Module &M) {
 
   // Create a module constructor.
@@ -565,6 +584,8 @@ bool ModuleMemProfiler::instrumentModule(Module &M) {
   createProfileFileNameVar(M);
 
   createMemprofHistogramFlagVar(M);
+
+  createMemprofDefaultOptionsVar(M);
 
   return true;
 }

@@ -648,7 +648,8 @@ elementwise to the input.
 Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±infinity
 
 The integer elementwise intrinsics, including ``__builtin_elementwise_popcount``,
-``__builtin_elementwise_bitreverse``, can be called in a ``constexpr`` context.
+``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
+``__builtin_elementwise_sub_sat`` can be called in a ``constexpr`` context.
 
 ============================================== ====================================================================== =========================================
          Name                                   Operation                                                             Supported element types
