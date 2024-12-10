@@ -1,0 +1,60 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc string.h functions.
+
+load("//libc:libc_build_rules.bzl", "libc_support_library")
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+# libc_support_library(
+#     name = "memory_check_utils",
+#     hdrs = ["memory_utils/memory_check_utils.h"],
+#     deps = [
+#         "//libc:__support_cpp_span",
+#         "//libc:__support_libc_assert",
+#         "//libc:__support_macros_config",
+#         "//libc:__support_macros_sanitizer",
+#         "//libc:string_memory_utils",
+#     ],
+# )
+
+libc_test(
+    name = "bcopy_test",
+    srcs = ["bcopy_test.cpp"],
+    libc_function_deps = [
+        "//libc:bcopy",
+    ],
+    deps = [
+        "//libc/test/string:memory_check_utils",
+        "//libc:__support_cpp_span",
+        "//libc/test/UnitTest:memory_matcher",
+    ],
+)
+
+libc_test(
+    name = "bcmp_test",
+    srcs = ["bcmp_test.cpp"],
+    libc_function_deps = [
+        "//libc:bcmp",
+    ],
+    deps = [
+        "//libc/test/string:memory_check_utils",
+        "//libc/test/UnitTest:test_logger",
+    ],
+)
+
+libc_test(
+    name = "bzero_test",
+    srcs = ["bzero_test.cpp"],
+    libc_function_deps = [
+        "//libc:bzero",
+    ],
+    deps = [
+        "//libc/test/string:memory_check_utils",
+    ],
+)
