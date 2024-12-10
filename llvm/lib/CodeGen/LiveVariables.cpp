@@ -277,11 +277,22 @@ void LiveVariables::HandlePhysRegUse(Register Reg, MachineInstr &MI) {
           continue;
         if (PartDefRegs.count(SubReg))
           continue;
+
+        // Check if SubReg is defined at LastPartialDef.
+        bool IsDefinedHere = false;
+        for (int I = 0; I < LastPartialDef->getNumOperands(); ++I) {
+          const auto MO = LastPartialDef->getOperand(I);
+          if (!MO.isReg() || !MO.isDef())
+            continue;
+          if (TRI->isSubRegister(SubReg, MO.getReg())) {
+            IsDefinedHere = true;
+            break;
+          }
+        }
         // This part of Reg was defined before the last partial def. It's killed
         // here.
-        LastPartialDef->addOperand(MachineOperand::CreateReg(SubReg,
-                                                             false/*IsDef*/,
-                                                             true/*IsImp*/));
+        LastPartialDef->addOperand(
+            MachineOperand::CreateReg(SubReg, IsDefinedHere, true /*IsImp*/));
         PhysRegDef[SubReg] = LastPartialDef;
         for (MCPhysReg SS : TRI->subregs(SubReg))
           Processed.insert(SS);
