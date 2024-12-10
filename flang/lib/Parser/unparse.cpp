@@ -2142,7 +2142,7 @@ public:
   void Unparse(const OmpLinearClause &x) {
     using Modifier = OmpLinearClause::Modifier;
     auto &modifiers{std::get<std::optional<std::list<Modifier>>>(x.t)};
-    if (std::get<bool>(x.t)) {  // PostModified
+    if (std::get<bool>(x.t)) { // PostModified
       Walk(std::get<OmpObjectList>(x.t));
       Walk(": ", modifiers);
     } else {
