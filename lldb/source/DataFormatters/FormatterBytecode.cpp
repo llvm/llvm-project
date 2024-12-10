@@ -551,7 +551,7 @@ llvm::Error Interpret(std::vector<ControlStackElement> &control,
       }
       case sel_strlen: {
         TYPE_CHECK(String);
-        data.Push(data.Pop<std::string>().size());
+        data.Push((uint64_t)data.Pop<std::string>().size());
         break;
       }
       case sel_fmt: {
