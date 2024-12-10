@@ -1107,7 +1107,7 @@ define i64 @test_ints_stack(i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6
   ; 32BIT-NEXT:   renamable $r30 = LWZ 0, %fixed-stack.3 :: (load (s32) from %fixed-stack.3, align 16)
   ; 32BIT-NEXT:   renamable $r29 = LWZ 0, %fixed-stack.5 :: (load (s32) from %fixed-stack.5, align 8)
   ; 32BIT-NEXT:   renamable $r28 = LBZ 3, %fixed-stack.6 :: (load (s8) from %fixed-stack.6 + 3, basealign 4)
-  ; 32BIT-NEXT:   renamable $r27 = LHZ 2, %fixed-stack.7 :: (load (s16) from %fixed-stack.7 + 2, basealign 4)
+  ; 32BIT-NEXT:   renamable $r27 = LHA 2, %fixed-stack.7 :: (load (s16) from %fixed-stack.7 + 2, basealign 4)
   ; 32BIT-NEXT:   renamable $r26 = LWZ 4, %fixed-stack.9 :: (load (s32) from %fixed-stack.9 + 4, basealign 8)
   ; 32BIT-NEXT:   renamable $r25 = LWZ 0, %fixed-stack.9 :: (load (s32) from %fixed-stack.9, align 8)
   ; 32BIT-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r4
@@ -1149,7 +1149,7 @@ define i64 @test_ints_stack(i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6
   ; 64BIT-NEXT:   renamable $x2 = LWA 0, %fixed-stack.0 :: (load (s32) from %fixed-stack.0)
   ; 64BIT-NEXT:   renamable $x31 = LD 0, %fixed-stack.2 :: (load (s64) from %fixed-stack.2)
   ; 64BIT-NEXT:   renamable $x30 = LWA 0, %fixed-stack.3 :: (load (s32) from %fixed-stack.3)
-  ; 64BIT-NEXT:   renamable $x29 = LHZ8 2, %fixed-stack.6
+  ; 64BIT-NEXT:   renamable $x29 = LHA8 2, %fixed-stack.6
   ; 64BIT-NEXT:   renamable $x28 = LD 0, %fixed-stack.7 :: (load (s64) from %fixed-stack.7, align 16)
   ; 64BIT-NEXT:   renamable $r3 = nsw ADD4 renamable $r3, renamable $r4, implicit killed $x4, implicit killed $x3
   ; 64BIT-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, renamable $r5, implicit killed $x5
@@ -1611,7 +1611,7 @@ define i32 @mix_callee(double %d1, double %d2, double %d3, double %d4, i8 zeroex
   ; 32BIT-NEXT:   liveins: $f1, $f2, $f3, $f4
   ; 32BIT-NEXT: {{  $}}
   ; 32BIT-NEXT:   renamable $r3 = LWZ 0, %fixed-stack.3 :: (load (s32) from %fixed-stack.3)
-  ; 32BIT-NEXT:   renamable $r4 = LHZ 2, %fixed-stack.5 :: (load (s16) from %fixed-stack.5 + 2, basealign 4)
+  ; 32BIT-NEXT:   renamable $r4 = LHA 2, %fixed-stack.5 :: (load (s16) from %fixed-stack.5 + 2, basealign 4)
   ; 32BIT-NEXT:   renamable $r5 = LBZ 3, %fixed-stack.6 :: (load (s8) from %fixed-stack.6 + 3, basealign 4)
   ; 32BIT-NEXT:   renamable $r6 = LWZ 0, %fixed-stack.2 :: (load (s32) from %fixed-stack.2, align 8)
   ; 32BIT-NEXT:   renamable $r7 = LIS 17200
