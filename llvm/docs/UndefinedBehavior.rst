@@ -22,7 +22,8 @@ guarantees through the language type system or the runtime).
 For example, we could specify the result of division by zero as zero, but
 since we are not really interested in the result, we say it is UB.
 
-There exist two forms of undefined behaviour in LLVM: immediate UB and deferred UB. The latter comes in two flavours: undef and poison values.
+There exist two forms of undefined behaviour in LLVM: immediate UB and deferred UB.
+The latter comes in two flavours: undef and poison values.
 The lattice of values in LLVM is:
 immediate UB > poison > undef > freeze > concrete value.
 
