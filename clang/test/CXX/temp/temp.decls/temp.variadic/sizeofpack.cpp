@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %s
 // expected-no-diagnostics
 
 namespace pr12262 {
@@ -201,3 +201,22 @@ void func()
 }
 
 }
+
+namespace GH81436 {
+
+template <class E> struct Bar;
+
+template <class E>
+Bar(E) -> Bar<E>;
+
+template <int> struct Foo {};
+
+// Bar<Ts> doesn't have to be of a complete type.
+template <class... Ts>
+auto func() requires requires(Bar<Ts> ...init_lists) {
+  sizeof...(init_lists) > 0;
+} {}
+
+void f() { func<int>(); }
+
+} // namespace GH81436
