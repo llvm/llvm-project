@@ -698,6 +698,8 @@ Bug Fixes to Compiler Builtins
 
 - Fix ``__has_builtin`` incorrectly returning ``false`` for some C++ type traits. (#GH111477)
 
+- Fix ``__builtin_source_location`` incorrectly returning wrong column for method chains. (#GH119129)
+
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
