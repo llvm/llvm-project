@@ -117,7 +117,7 @@ static void SplitStringDelims(
   // Obtain any leading delimiters.
   auto Start = std::find_if(Head, Source.end(), IsLegalChar);
   if (Start != Head)
-    OutFragments.push_back({"", Source.slice(0, Start - Head)});
+    OutFragments.push_back({"", Source.substr(0, Start - Head)});
 
   // Capture each word and the delimiters following that word.
   while (Start != Source.end()) {

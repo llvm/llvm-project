@@ -1663,7 +1663,7 @@ bool PPCAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
   // If the instruction ends in a '.', we need to create a separate
   // token for it, to match what TableGen is doing.
   size_t Dot = Name.find('.');
-  StringRef Mnemonic = Name.slice(0, Dot);
+  StringRef Mnemonic = Name.substr(0, Dot);
   if (!NewOpcode.empty()) // Underlying memory for Name is volatile.
     Operands.push_back(
         PPCOperand::CreateTokenWithStringCopy(Mnemonic, NameLoc, isPPC64()));

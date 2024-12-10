@@ -327,7 +327,7 @@ void StringRef::split(SmallVectorImpl<StringRef> &A,
 
     // Push this split.
     if (KeepEmpty || Idx > 0)
-      A.push_back(S.slice(0, Idx));
+      A.push_back(S.substr(0, Idx));
 
     // Jump forward.
     S = S.substr(Idx + Separator.size());
@@ -353,7 +353,7 @@ void StringRef::split(SmallVectorImpl<StringRef> &A, char Separator,
 
     // Push this split.
     if (KeepEmpty || Idx > 0)
-      A.push_back(S.slice(0, Idx));
+      A.push_back(S.substr(0, Idx));
 
     // Jump forward.
     S = S.substr(Idx + 1);

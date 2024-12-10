@@ -507,7 +507,7 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
     }
 
     size_t Idx = Arch.find('_');
-    StringRef Ext = Arch.slice(0, Idx);
+    StringRef Ext = Arch.substr(0, Idx);
     Arch = Arch.substr(Idx);
 
     StringRef Prefix, MinorVersionStr;
@@ -532,7 +532,7 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
     if (VersionStart == 0)
       return getError("missing extension name");
 
-    StringRef ExtName = Prefix.slice(0, VersionStart);
+    StringRef ExtName = Prefix.substr(0, VersionStart);
     StringRef MajorVersionStr = Prefix.substr(VersionStart);
     if (MajorVersionStr.getAsInteger(10, MajorVersion))
       return getError("failed to parse major version number");
@@ -661,7 +661,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     }
 
     size_t Idx = Arch.find('_');
-    StringRef Ext = Arch.slice(0, Idx);
+    StringRef Ext = Arch.substr(0, Idx);
     Arch = Arch.substr(Idx);
 
     do {

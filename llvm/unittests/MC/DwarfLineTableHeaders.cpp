@@ -151,7 +151,7 @@ public:
       StringRef Contents = *ContentsOrErr;
       ASSERT_TRUE(Contents.size() > ExpectedEncoding.size());
       EXPECT_EQ(
-          arrayRefFromStringRef(Contents.slice(0, ExpectedEncoding.size())),
+          arrayRefFromStringRef(Contents.substr(0, ExpectedEncoding.size())),
           ExpectedEncoding);
       return;
     }

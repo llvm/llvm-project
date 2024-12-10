@@ -1954,7 +1954,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         size_t DotOffset = Identifier.find_first_of('.');
         if (DotOffset != StringRef::npos) {
           consumeToken();
-          StringRef LHS = Identifier.slice(0, DotOffset);
+          StringRef LHS = Identifier.substr(0, DotOffset);
           StringRef Dot = Identifier.substr(DotOffset, 1);
           StringRef RHS = Identifier.substr(DotOffset + 1);
           if (!RHS.empty()) {

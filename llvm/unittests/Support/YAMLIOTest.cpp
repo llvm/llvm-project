@@ -1077,7 +1077,7 @@ namespace yaml {
     static StringRef input(StringRef scalar, void* ctxt, MyCustomType &value) {
       size_t byStart = scalar.find("by");
       if ( byStart != StringRef::npos ) {
-        StringRef lenStr = scalar.slice(0, byStart);
+        StringRef lenStr = scalar.substr(0, byStart);
         lenStr = lenStr.rtrim();
         if ( lenStr.getAsInteger(0, value.length) ) {
           return "malformed length";
