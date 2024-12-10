@@ -414,6 +414,8 @@ Non-comprehensive list of changes in this release
   ``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
   ``__builtin_elementwise_sub_sat``.
 
+- Clang now rejects ``_Complex _BitInt`` types.
+
 New Compiler Flags
 ------------------
 
