@@ -1373,6 +1373,17 @@ def PseudoAddTPRel : Pseudo<(outs GPR:$rd),
 def : Pat<(FrameAddrRegImm (iPTR GPR:$rs1), simm12:$imm12),
           (ADDI GPR:$rs1, simm12:$imm12)>;
 
+/// Stack probing
+
+let hasSideEffects = 1, mayLoad = 1, mayStore = 1, isCodeGenOnly = 1 in {
+// Probed stack allocation of a constant size, used in function prologues when
+// stack-clash protection is enabled.
+def PROBED_STACKALLOC : Pseudo<(outs GPR:$sp),
+                               (ins GPR:$scratch),
+                               []>,
+                               Sched<[]>;
+}
+
 /// HI and ADD_LO address nodes.
 
 // Pseudo for a rematerializable LUI+ADDI sequence for loading an address.

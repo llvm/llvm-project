@@ -152,6 +152,54 @@ DISubprogram *llvm::CollectDebugInfoForCloning(const Function &F,
   return SPClonedWithinModule;
 }
 
+bool llvm::BuildDebugInfoMDMap(DenseMap<const Metadata *, TrackingMDRef> &MD,
+                               CloneFunctionChangeType Changes,
+                               DebugInfoFinder &DIFinder,
+                               DISubprogram *SPClonedWithinModule) {
+  bool ModuleLevelChanges = Changes > CloneFunctionChangeType::LocalChangesOnly;
+  if (Changes < CloneFunctionChangeType::DifferentModule &&
+      DIFinder.subprogram_count() > 0) {
+    // Turn on module-level changes, since we need to clone (some of) the
+    // debug info metadata.
+    //
+    // FIXME: Metadata effectively owned by a function should be made
+    // local, and only that local metadata should be cloned.
+    ModuleLevelChanges = true;
+
+    auto mapToSelfIfNew = [&MD](MDNode *N) {
+      // Avoid clobbering an existing mapping.
+      (void)MD.try_emplace(N, N);
+    };
+
+    // Avoid cloning types, compile units, and (other) subprograms.
+    SmallPtrSet<const DISubprogram *, 16> MappedToSelfSPs;
+    for (DISubprogram *ISP : DIFinder.subprograms()) {
+      if (ISP != SPClonedWithinModule) {
+        mapToSelfIfNew(ISP);
+        MappedToSelfSPs.insert(ISP);
+      }
+    }
+
+    // If a subprogram isn't going to be cloned skip its lexical blocks as well.
+    for (DIScope *S : DIFinder.scopes()) {
+      auto *LScope = dyn_cast<DILocalScope>(S);
+      if (LScope && MappedToSelfSPs.count(LScope->getSubprogram()))
+        mapToSelfIfNew(S);
+    }
+
+    for (DICompileUnit *CU : DIFinder.compile_units())
+      mapToSelfIfNew(CU);
+
+    for (DIType *Type : DIFinder.types())
+      mapToSelfIfNew(Type);
+  } else {
+    assert(!SPClonedWithinModule &&
+           "Subprogram should be in DIFinder->subprogram_count()...");
+  }
+
+  return ModuleLevelChanges;
+}
+
 // Clone OldFunc into NewFunc, transforming the old arguments into references to
 // VMap values.
 void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
@@ -210,45 +258,8 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   DISubprogram *SPClonedWithinModule =
       CollectDebugInfoForCloning(*OldFunc, Changes, DIFinder);
 
-  if (Changes < CloneFunctionChangeType::DifferentModule &&
-      DIFinder.subprogram_count() > 0) {
-    // Turn on module-level changes, since we need to clone (some of) the
-    // debug info metadata.
-    //
-    // FIXME: Metadata effectively owned by a function should be made
-    // local, and only that local metadata should be cloned.
-    ModuleLevelChanges = true;
-
-    auto mapToSelfIfNew = [&VMap](MDNode *N) {
-      // Avoid clobbering an existing mapping.
-      (void)VMap.MD().try_emplace(N, N);
-    };
-
-    // Avoid cloning types, compile units, and (other) subprograms.
-    SmallPtrSet<const DISubprogram *, 16> MappedToSelfSPs;
-    for (DISubprogram *ISP : DIFinder.subprograms()) {
-      if (ISP != SPClonedWithinModule) {
-        mapToSelfIfNew(ISP);
-        MappedToSelfSPs.insert(ISP);
-      }
-    }
-
-    // If a subprogram isn't going to be cloned skip its lexical blocks as well.
-    for (DIScope *S : DIFinder.scopes()) {
-      auto *LScope = dyn_cast<DILocalScope>(S);
-      if (LScope && MappedToSelfSPs.count(LScope->getSubprogram()))
-        mapToSelfIfNew(S);
-    }
-
-    for (DICompileUnit *CU : DIFinder.compile_units())
-      mapToSelfIfNew(CU);
-
-    for (DIType *Type : DIFinder.types())
-      mapToSelfIfNew(Type);
-  } else {
-    assert(!SPClonedWithinModule &&
-           "Subprogram should be in DIFinder->subprogram_count()...");
-  }
+  ModuleLevelChanges =
+      BuildDebugInfoMDMap(VMap.MD(), Changes, DIFinder, SPClonedWithinModule);
 
   const auto RemapFlag = ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges;
   // Duplicate the metadata that is attached to the cloned function.
