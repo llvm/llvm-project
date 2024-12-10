@@ -94,7 +94,7 @@ void  operator delete[](void* ptr, void*) noexcept;
 #  include <__new/exceptions.h>
 #  include <__new/new_handler.h>
 #  include <__new/nothrow_t.h>
-#  include <__new/operators.h>
+#  include <__new/operator_new_delete.h>
 
 #  if _LIBCPP_STD_VER >= 17
 #    include <__new/interference_size.h>

@@ -1611,7 +1611,7 @@ module std [system] {
     module launder              { header "__new/launder.h" }
     module new_handler          { header "__new/new_handler.h" }
     module nothrow_t            { header "__new/nothrow_t.h" }
-    module operators            { header "__new/operators.h" }
+    module operator_new_delete  { header "__new/operator_new_delete.h" }
 
     export *
   }

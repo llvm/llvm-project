@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NEW_OPERATORS_H
-#define _LIBCPP___NEW_OPERATORS_H
+#ifndef _LIBCPP___NEW_OPERATOR_NEW_DELETE_H
+#define _LIBCPP___NEW_OPERATOR_NEW_DELETE_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -97,4 +97,4 @@ inline _LIBCPP_HIDE_FROM_ABI void operator delete(void*, void*) _NOEXCEPT {}
 inline _LIBCPP_HIDE_FROM_ABI void operator delete[](void*, void*) _NOEXCEPT {}
 #endif
 
-#endif // _LIBCPP___NEW_OPERATORS_H
+#endif // _LIBCPP___NEW_OPERATOR_NEW_DELETE_H

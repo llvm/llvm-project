@@ -13,7 +13,7 @@
 #include <__cstddef/max_align_t.h>
 #include <__cstddef/size_t.h>
 #include <__new/align_val_t.h>
-#include <__new/operators.h> // for _LIBCPP_HAS_SIZED_DEALLOCATION
+#include <__new/operator_new_delete.h> // for _LIBCPP_HAS_SIZED_DEALLOCATION
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

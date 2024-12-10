@@ -589,7 +589,7 @@ set(files
   __new/launder.h
   __new/new_handler.h
   __new/nothrow_t.h
-  __new/operators.h
+  __new/operator_new_delete.h
   __node_handle
   __numeric/accumulate.h
   __numeric/adjacent_difference.h
