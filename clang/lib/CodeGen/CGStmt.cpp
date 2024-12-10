@@ -458,6 +458,18 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OpenACCCombinedConstructClass:
     EmitOpenACCCombinedConstruct(cast<OpenACCCombinedConstruct>(*S));
     break;
+  case Stmt::OpenACCDataConstructClass:
+    EmitOpenACCDataConstruct(cast<OpenACCDataConstruct>(*S));
+    break;
+  case Stmt::OpenACCEnterDataConstructClass:
+    EmitOpenACCEnterDataConstruct(cast<OpenACCEnterDataConstruct>(*S));
+    break;
+  case Stmt::OpenACCExitDataConstructClass:
+    EmitOpenACCExitDataConstruct(cast<OpenACCExitDataConstruct>(*S));
+    break;
+  case Stmt::OpenACCHostDataConstructClass:
+    EmitOpenACCHostDataConstruct(cast<OpenACCHostDataConstruct>(*S));
+    break;
   }
 }
 

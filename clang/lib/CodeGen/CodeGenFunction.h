@@ -4094,6 +4094,30 @@ public:
     EmitStmt(S.getLoop());
   }
 
+  void EmitOpenACCDataConstruct(const OpenACCDataConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // simply emitting its structured block, but in the future we will implement
+    // some sort of IR.
+    EmitStmt(S.getStructuredBlock());
+  }
+
+  void EmitOpenACCEnterDataConstruct(const OpenACCEnterDataConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // but in the future we will implement some sort of IR.
+  }
+
+  void EmitOpenACCExitDataConstruct(const OpenACCExitDataConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // but in the future we will implement some sort of IR.
+  }
+
+  void EmitOpenACCHostDataConstruct(const OpenACCHostDataConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // simply emitting its structured block, but in the future we will implement
+    // some sort of IR.
+    EmitStmt(S.getStructuredBlock());
+  }
+
   //===--------------------------------------------------------------------===//
   //                         LValue Expression Emission
   //===--------------------------------------------------------------------===//
