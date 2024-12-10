@@ -18,9 +18,9 @@ libc_test(
         "//libc:bcopy",
     ],
     deps = [
-        "//libc/test/src/string:memory_check_utils",
         "//libc:__support_cpp_span",
         "//libc/test/UnitTest:memory_matcher",
+        "//libc/test/src/string:memory_check_utils",
     ],
 )
 
@@ -31,8 +31,8 @@ libc_test(
         "//libc:bcmp",
     ],
     deps = [
-        "//libc/test/src/string:memory_check_utils",
         "//libc/test/UnitTest:test_logger",
+        "//libc/test/src/string:memory_check_utils",
     ],
 )
 
