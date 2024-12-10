@@ -391,11 +391,13 @@ public:
   //
   // element access
   //
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI reference operator[](size_type __n) _NOEXCEPT {
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI reference
+  operator[](size_type __n) _NOEXCEPT {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n < size(), "vector[] index out of bounds");
     return this->__begin_[__n];
   }
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_reference operator[](size_type __n) const _NOEXCEPT {
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_reference
+  operator[](size_type __n) const _NOEXCEPT {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n < size(), "vector[] index out of bounds");
     return this->__begin_[__n];
   }
@@ -410,19 +412,23 @@ public:
     return this->__begin_[__n];
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI reference front() _NOEXCEPT {
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI reference
+  front() _NOEXCEPT {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "front() called on an empty vector");
     return *this->__begin_;
   }
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_reference front() const _NOEXCEPT {
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_reference
+  front() const _NOEXCEPT {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "front() called on an empty vector");
     return *this->__begin_;
   }
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI reference back() _NOEXCEPT {
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI reference
+  back() _NOEXCEPT {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "back() called on an empty vector");
     return *(this->__end_ - 1);
   }
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_reference back() const _NOEXCEPT {
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_reference
+  back() const _NOEXCEPT {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "back() called on an empty vector");
     return *(this->__end_ - 1);
   }
@@ -462,7 +468,7 @@ public:
   }
 #endif
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void pop_back() {
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void pop_back() {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "vector::pop_back called on an empty vector");
     this->__destruct_at_end(this->__end_ - 1);
   }
@@ -1115,7 +1121,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 inline
 }
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::iterator
+_LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI
+typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::erase(const_iterator __position) {
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
       __position != end(), "vector::erase(iterator) called with a non-dereferenceable iterator");
@@ -1126,7 +1133,7 @@ vector<_Tp, _Allocator>::erase(const_iterator __position) {
 }
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
+_LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::erase(const_iterator __first, const_iterator __last) {
   _LIBCPP_ASSERT_VALID_INPUT_RANGE(__first <= __last, "vector::erase(first, last) called with invalid range");
   pointer __p = this->__begin_ + (__first - begin());

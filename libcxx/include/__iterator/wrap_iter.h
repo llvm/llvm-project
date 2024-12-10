@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___ITERATOR_WRAP_ITER_H
 #define _LIBCPP___ITERATOR_WRAP_ITER_H
 
+#include <__assert>
 #include <__compare/ordering.h>
 #include <__compare/three_way_comparable.h>
 #include <__config>
@@ -57,7 +58,10 @@ public:
                      int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter(const __wrap_iter<_OtherIter>& __u) _NOEXCEPT
       : __i_(__u.__i_) {}
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 reference operator*() const _NOEXCEPT { return *__i_; }
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 reference
+  operator*() const _NOEXCEPT {
+    return *__i_;
+  }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pointer operator->() const _NOEXCEPT {
     return std::__to_address(__i_);
   }
@@ -96,7 +100,8 @@ public:
     *this += -__n;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 reference operator[](difference_type __n) const _NOEXCEPT {
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 reference
+  operator[](difference_type __n) const _NOEXCEPT {
     return __i_[__n];
   }
 

@@ -115,4 +115,10 @@
 #endif // _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_FAST
 // clang-format on
 
+#if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_NONE
+#  define _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION [[_Clang::__unsafe_buffer_usage__]]
+#else
+#  define _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION // those are checked
+#endif
+
 #endif // _LIBCPP___ASSERT
