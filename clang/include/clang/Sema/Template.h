@@ -522,6 +522,9 @@ enum class TemplateSubstitutionKind : char {
     llvm::PointerUnion<Decl *, DeclArgumentPack *> *
     findInstantiationOf(const Decl *D);
 
+    llvm::PointerUnion<Decl *, DeclArgumentPack *> *
+    findInstantiationUnsafe(const Decl *D);
+
     void InstantiatedLocal(const Decl *D, Decl *Inst);
     void InstantiatedLocalPackArg(const Decl *D, VarDecl *Inst);
     void MakeInstantiatedLocalArgPack(const Decl *D);
