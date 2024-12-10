@@ -222,6 +222,35 @@ static bool CheckBitcastType(InterpState &S, CodePtr OpPC, QualType T,
                         IsToType))
     return false;
 
+  if (const auto *VT = T->getAs<VectorType>()) {
+    const ASTContext &ASTCtx = S.getASTContext();
+    QualType EltTy = VT->getElementType();
+    unsigned NElts = VT->getNumElements();
+    unsigned EltSize =
+        VT->isExtVectorBoolType() ? 1 : ASTCtx.getTypeSize(EltTy);
+
+    if ((NElts * EltSize) % ASTCtx.getCharWidth() != 0) {
+      // The vector's size in bits is not a multiple of the target's byte size,
+      // so its layout is unspecified. For now, we'll simply treat these cases
+      // as unsupported (this should only be possible with OpenCL bool vectors
+      // whose element count isn't a multiple of the byte size).
+      const Expr *E = S.Current->getExpr(OpPC);
+      S.FFDiag(E, diag::note_constexpr_bit_cast_invalid_vector)
+          << QualType(VT, 0) << EltSize << NElts << ASTCtx.getCharWidth();
+      return false;
+    }
+
+    if (EltTy->isRealFloatingType() &&
+        &ASTCtx.getFloatTypeSemantics(EltTy) == &APFloat::x87DoubleExtended()) {
+      // The layout for x86_fp80 vectors seems to be handled very inconsistently
+      // by both clang and LLVM, so for now we won't allow bit_casts involving
+      // it in a constexpr context.
+      const Expr *E = S.Current->getExpr(OpPC);
+      S.FFDiag(E, diag::note_constexpr_bit_cast_unsupported_type) << EltTy;
+      return false;
+    }
+  }
+
   return true;
 }
 
