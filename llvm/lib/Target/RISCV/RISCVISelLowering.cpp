@@ -5239,12 +5239,12 @@ static SDValue lowerDisjointIndicesShuffle(ShuffleVectorSDNode *SVN,
     if (Lane == -1)
       SelectMaskVals.push_back(DAG.getUNDEF(XLenVT));
     else
-      SelectMaskVals.push_back(DAG.getConstant(Lane, DL, XLenVT));
+      SelectMaskVals.push_back(DAG.getConstant(Lane ? 0 : 1, DL, XLenVT));
   }
   MVT MaskVT = VT.changeVectorElementType(MVT::i1);
   SDValue SelectMask = DAG.getBuildVector(MaskVT, DL, SelectMaskVals);
   SDValue Select = DAG.getNode(ISD::VSELECT, DL, VT, SelectMask,
-                               SVN->getOperand(1), SVN->getOperand(0));
+                               SVN->getOperand(0), SVN->getOperand(1));
 
   // Move all indices relative to the first source.
   SmallVector<int> NewMask(Mask.size());
