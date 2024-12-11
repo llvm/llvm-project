@@ -1,4 +1,4 @@
-//===------- Offload API tests - olGetPlatformCount ------------------===//
+//===------- Offload API tests - olRetainProgram --------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,13 +10,12 @@
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
 
-using olGetPlatformCountTest = OffloadTest;
+using olRetainProgramTest = OffloadProgramTest;
 
-TEST_F(olGetPlatformCountTest, Success) {
-  uint32_t PlatformCount;
-  ASSERT_SUCCESS(olGetPlatformCount(&PlatformCount));
+TEST_F(olRetainProgramTest, Success) {
+  ASSERT_SUCCESS(olRetainProgram(Program));
 }
 
-TEST_F(olGetPlatformCountTest, InvalidNullPointer) {
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER, olGetPlatformCount(nullptr));
+TEST_F(olRetainProgramTest, InvalidNullHandle) {
+  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE, olRetainProgram(nullptr));
 }
