@@ -42,6 +42,8 @@ A fA();
 A&& fARvalueRef();
 A(&&fARvalueRefArray())[1];
 
+void fADefaultArgRef2(A& = fARvalueRef());
+
 void fARef(A&) {}
 
 // expected-note@+2 {{candidate function not viable: expects an lvalue for 1st argument}}
