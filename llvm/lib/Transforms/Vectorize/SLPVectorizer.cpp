@@ -946,18 +946,15 @@ getInterchangeableInstruction(Instruction *I, Instruction *MainOp,
   auto Iter = find_if(IIList, [&](const InterchangeableInstruction &II) {
     return II.Opcode == MainOp->getOpcode();
   });
-  Value *SelectedOp;
   if (Iter == IIList.end()) {
     Iter = find_if(IIList, [&](const InterchangeableInstruction &II) {
       return II.Opcode == AltOp->getOpcode();
     });
     assert(Iter != IIList.end() &&
            "Cannot find an interchangeable instruction.");
-    SelectedOp = AltOp;
-  } else {
-    SelectedOp = MainOp;
+    return std::make_pair(AltOp, Iter->Ops);
   }
-  return std::make_pair(SelectedOp, Iter->Ops);
+  return std::make_pair(MainOp, Iter->Ops);
 }
 
 /// \returns true if \p Opcode is allowed as part of the main/alternate
