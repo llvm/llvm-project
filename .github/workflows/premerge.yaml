@@ -17,4 +17,8 @@ jobs:
         uses: actions/checkout@v4
       - name: Build and Test
         run: |
-          echo test
+          ${MODIFIED_FILES:=$(git diff --name-only HEAD~1...HEAD)}
+          echo $MODIFIED_FILES
+          modified_dirs=$(echo "$MODIFIED_FILES" | cut -d'/' -f1 | sort -u)
+          echo "$modified_dirs" >&2
+
