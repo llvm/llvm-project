@@ -256,27 +256,37 @@ extensions like GCS.
 
 ### Expression Evaluation
 
-To execute an expression, LLDB must push the return address of the expression
-wrapper (usually the entry point of the program) to the Guarded Control Stack.
-It does this by decrementing `gcspr_el0` and writing to the location that
-`gcspr_el0` then points to (instead of using the GCS push instructions).
+To execute an expression when GCS is enabled, LLDB must push the return
+address of the expression wrapper (usually the entry point of the program)
+to the Guarded Control Stack. It does this by decrementing `gcspr_el0` and
+writing to the location now pointed to by `gcspr_el0` (instead of using the
+GCS push instructions).
 
-After an expression finishes, LLDB will restore the contents of all 3 registers,
-apart from the enable bit of `gcs_features_enabled`.
+After an expression finishes, LLDB will restore the contents of all 3
+GCS registers, apart from the enable bit of `gcs_features_enabled`. This is
+because there are limits on how often and from where you can set this
+bit.
 
-This is because there are limits on how often and from where you can set this
-value. We cannot enable GCS from ptrace at all and it is expected that a process
+We cannot enable GCS from ptrace at all and it is expected that a process
 that has enabled GCS then disabled it, will not enable it again. The simplest
-choice was to not restore the enable bit at all. It's up to the user or
-program to manage that value.
+choice was to not restore the enable bit at all. It is up to the user or
+program to manage that bit.
 
-The return address that was pushed onto the Guarded Control Stack will be left
+The return address that LLDB pushed onto the Guarded Control Stack will be left
 in place. As will any values that were pushed to the stack by functions run
 during the expresison.
 
 When the process resumes, `gcspr_el0` will be pointing to the original entry
-on the stack. So the other values will have no effect and likely be overwritten
-by future function calls.
+on the guarded control stack. So the other values will have no effect and
+likely be overwritten by future function calls.
 
 LLDB does not track and restore changes to general memory during expressions,
 so not restoring the GCS contents fits with the current behaviour.
+
+Note that if GCS is disabled and an expression enables it, LLDB will not
+be able to setup the return address and it is up to that expression to do that
+if it wants to return to LLDB correctly.
+
+If it does not do this, the expression will fail and although most process
+state will be restored, GCS will be left enabled. Which means that the program
+is very unlikely to be able to progress.
