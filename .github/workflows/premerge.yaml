@@ -19,8 +19,8 @@ jobs:
           fetch-depth: 2
       - name: Build and Test
         run: |
-          ${MODIFIED_FILES:=$(git diff --name-only HEAD~1...HEAD)}
-          echo $MODIFIED_FILES
-          modified_dirs=$(echo "$MODIFIED_FILES" | cut -d'/' -f1 | sort -u)
+          modified_files=$(git diff --name-only HEAD~1...HEAD)
+          echo $modified_files
+          modified_dirs=$(echo "$modified_files" | cut -d'/' -f1 | sort -u)
           echo "$modified_dirs"
 
