@@ -8,7 +8,6 @@ typedef int    v4i   __attribute__((ext_vector_type(4)));
 typedef int    v8i   __attribute__((ext_vector_type(8)));
 typedef unsigned int __attribute__((ext_vector_type(2))) uint2;
 typedef unsigned int __attribute__((ext_vector_type(3))) uint3;
-typedef unsigned int __attribute__((ext_vector_type(6))) uint6;
 typedef __bf16 __attribute__((ext_vector_type(8))) bfloat8;
 typedef __bf16 __attribute__((ext_vector_type(16))) bfloat16;
 typedef __bf16 __attribute__((ext_vector_type(32))) bfloat32;
@@ -50,18 +49,11 @@ void test_cvt_sr_f8_f16(global int* out, uint sr, int old, int sel)
   *out = __builtin_amdgcn_cvt_sr_fp8_f16(1.0, sr, old, sel); // expected-error {{'__builtin_amdgcn_cvt_sr_fp8_f16' must be a constant integer}}
 }
 
-void test_cvt_scale_pk(global half32 *outh32, global bfloat32 *outy32, uint6 src6,
-                       global half8 *outh8, global bfloat8 *outy8, uint2 src2,
+void test_cvt_scale_pk(global half8 *outh8, global bfloat8 *outy8, uint2 src2,
                        global float32 *outf32, global half16 *outh16, global bfloat16 *outy16,
                        global float16 *outf16, uint3 src3,
                        global float8 *outf8, uint src1, uint scale, uint scale_sel)
 {
-  *outh32 = __builtin_amdgcn_cvt_scale_pk32_f16_fp6(src6, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk32_f16_fp6' must be a constant integer}}
-  *outy32 = __builtin_amdgcn_cvt_scale_pk32_bf16_fp6(src6, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk32_bf16_fp6' must be a constant integer}}
-  *outh32 = __builtin_amdgcn_cvt_scale_pk32_f16_bf6(src6, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk32_f16_bf6' must be a constant integer}}
-  *outy32 = __builtin_amdgcn_cvt_scale_pk32_bf16_bf6(src6, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk32_bf16_bf6' must be a constant integer}}
-  *outf32 = __builtin_amdgcn_cvt_scale_pk32_f32_fp6(src6, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk32_f32_fp6' must be a constant integer}}
-  *outf32 = __builtin_amdgcn_cvt_scale_pk32_f32_bf6(src6, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk32_f32_bf6' must be a constant integer}}
   *outh8 = __builtin_amdgcn_cvt_scale_pk8_f16_fp8(src2, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk8_f16_fp8' must be a constant integer}}
   *outy8 = __builtin_amdgcn_cvt_scale_pk8_bf16_fp8(src2, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk8_bf16_fp8' must be a constant integer}}
   *outh8 = __builtin_amdgcn_cvt_scale_pk8_f16_bf8(src2, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk8_f16_bf8' must be a constant integer}}
@@ -78,12 +70,6 @@ void test_cvt_scale_pk(global half32 *outh32, global bfloat32 *outy32, uint6 src
   *outf16 = __builtin_amdgcn_cvt_scale_pk16_f32_fp6(src3, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk16_f32_fp6' must be a constant integer}}
   *outf16 = __builtin_amdgcn_cvt_scale_pk16_f32_bf6(src3, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk16_f32_bf6' must be a constant integer}}
 
-  *outh32 = __builtin_amdgcn_cvt_scale_pk32_f16_fp6(src6, scale, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
-  *outy32 = __builtin_amdgcn_cvt_scale_pk32_bf16_fp6(src6, scale, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
-  *outh32 = __builtin_amdgcn_cvt_scale_pk32_f16_bf6(src6, scale, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
-  *outy32 = __builtin_amdgcn_cvt_scale_pk32_bf16_bf6(src6, scale, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
-  *outf32 = __builtin_amdgcn_cvt_scale_pk32_f32_fp6(src6, scale, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
-  *outf32 = __builtin_amdgcn_cvt_scale_pk32_f32_bf6(src6, scale, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
   *outh8 = __builtin_amdgcn_cvt_scale_pk8_f16_fp8(src2, scale, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
   *outy8 = __builtin_amdgcn_cvt_scale_pk8_bf16_fp8(src2, scale, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
   *outh8 = __builtin_amdgcn_cvt_scale_pk8_f16_bf8(src2, scale, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}

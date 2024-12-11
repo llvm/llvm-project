@@ -84,12 +84,6 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_update_dpp: {
     return checkMovDPPFunctionCall(TheCall, 6, 2);
   }
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_f16_fp6:
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_bf16_fp6:
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_f16_bf6:
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_bf16_bf6:
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_f32_fp6:
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_f32_bf6:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f16_fp8:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_bf16_fp8:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f16_bf8:

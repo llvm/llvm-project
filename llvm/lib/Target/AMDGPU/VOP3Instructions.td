@@ -1558,12 +1558,6 @@ let SubtargetPredicate = isGFX1210Plus in {
     }
 
     let Constraints = "@earlyclobber $vdst" in {
-      defm V_CVT_SCALE_PK32_F16_FP6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_f16_fp6",  VOP_V32F16_V6I32_I32,  int_amdgcn_cvt_scale_pk32_f16_fp6>;
-      defm V_CVT_SCALE_PK32_BF16_FP6 : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_bf16_fp6", VOP_V32BF16_V6I32_I32, int_amdgcn_cvt_scale_pk32_bf16_fp6>;
-      defm V_CVT_SCALE_PK32_F16_BF6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_f16_bf6",  VOP_V32F16_V6I32_I32,  int_amdgcn_cvt_scale_pk32_f16_bf6>;
-      defm V_CVT_SCALE_PK32_BF16_BF6 : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_bf16_bf6", VOP_V32BF16_V6I32_I32, int_amdgcn_cvt_scale_pk32_bf16_bf6>;
-      defm V_CVT_SCALE_PK32_F32_FP6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_f32_fp6",  VOP_V32F32_V6I32_I32,  int_amdgcn_cvt_scale_pk32_f32_fp6>;
-      defm V_CVT_SCALE_PK32_F32_BF6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_f32_bf6",  VOP_V32F32_V6I32_I32,  int_amdgcn_cvt_scale_pk32_f32_bf6>;
       defm V_CVT_SCALE_PK8_F16_FP8   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f16_fp8",   VOP_V8F16_V2I32_I32,   int_amdgcn_cvt_scale_pk8_f16_fp8>;
       defm V_CVT_SCALE_PK8_BF16_FP8  : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_bf16_fp8",  VOP_V8BF16_V2I32_I32,  int_amdgcn_cvt_scale_pk8_bf16_fp8>;
       defm V_CVT_SCALE_PK8_F16_BF8   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f16_bf8",   VOP_V8F16_V2I32_I32,   int_amdgcn_cvt_scale_pk8_f16_bf8>;
@@ -1584,8 +1578,6 @@ let SubtargetPredicate = isGFX1210Plus in {
   } // End ReadsModeReg = 0
 
   let Constraints = "@earlyclobber $vdst" in {
-    defm V_CVT_SCALEF32_PK32_FP6_F32   : VOP3Inst<"v_cvt_scalef32_pk32_fp6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V32F32_F32>,  int_amdgcn_cvt_scalef32_pk32_fp6_f32>;
-    defm V_CVT_SCALEF32_PK32_BF6_F32   : VOP3Inst<"v_cvt_scalef32_pk32_bf6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V32F32_F32>,  int_amdgcn_cvt_scalef32_pk32_bf6_f32>;
     defm V_CVT_SCALEF32_PK8_FP8_BF16   : VOP3Inst<"v_cvt_scalef32_pk8_fp8_bf16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V2I32_V8BF16_F32>,  int_amdgcn_cvt_scalef32_pk8_fp8_bf16>;
     defm V_CVT_SCALEF32_PK8_BF8_BF16   : VOP3Inst<"v_cvt_scalef32_pk8_bf8_bf16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V2I32_V8BF16_F32>,  int_amdgcn_cvt_scalef32_pk8_bf8_bf16>;
     defm V_CVT_SCALEF32_PK8_FP8_F16    : VOP3Inst<"v_cvt_scalef32_pk8_fp8_f16",   VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V2I32_V8F16_F32>,   int_amdgcn_cvt_scalef32_pk8_fp8_f16>;
@@ -2045,40 +2037,22 @@ defm V_ASHR_PK_U8_I32                : VOP3Only_Realtriple_gfx1210<0x291>;
 defm V_CVT_SCALE_PK8_F16_FP4         : VOP3Only_ScaleSel_Real_gfx1210<0x29f>;
 defm V_CVT_SCALE_PK8_BF16_FP4        : VOP3Only_ScaleSel_Real_gfx1210<0x2a0>;
 defm V_CVT_SCALE_PK8_F32_FP4         : VOP3Only_ScaleSel_Real_gfx1210<0x2a1>;
-defm V_CVT_SCALE_PK32_F16_FP6        : VOP3Only_ScaleSel_Real_gfx1210<0x2a2>;
-defm V_CVT_SCALE_PK32_BF16_FP6       : VOP3Only_ScaleSel_Real_gfx1210<0x2a3>;
-defm V_CVT_SCALE_PK32_F32_FP6        : VOP3Only_ScaleSel_Real_gfx1210<0x2a4>;
-defm V_CVT_SCALE_PK32_F16_BF6        : VOP3Only_ScaleSel_Real_gfx1210<0x2a5>;
-defm V_CVT_SCALE_PK32_BF16_BF6       : VOP3Only_ScaleSel_Real_gfx1210<0x2a6>;
-defm V_CVT_SCALE_PK32_F32_BF6        : VOP3Only_ScaleSel_Real_gfx1210<0x2a7>;
 defm V_CVT_SCALE_PK8_F16_FP8         : VOP3Only_ScaleSel_Real_gfx1210<0x2a8>;
 defm V_CVT_SCALE_PK8_BF16_FP8        : VOP3Only_ScaleSel_Real_gfx1210<0x2a9>;
 defm V_CVT_SCALE_PK8_F32_FP8         : VOP3Only_ScaleSel_Real_gfx1210<0x2aa>;
 defm V_CVT_SCALE_PK8_F16_BF8         : VOP3Only_ScaleSel_Real_gfx1210<0x2ab>;
 defm V_CVT_SCALE_PK8_BF16_BF8        : VOP3Only_ScaleSel_Real_gfx1210<0x2ac>;
 defm V_CVT_SCALE_PK8_F32_BF8         : VOP3Only_ScaleSel_Real_gfx1210<0x2ad>;
-defm V_CVT_SCALEF32_SR_PK32_FP6_F32  : VOP3Only_Real_Base_gfx1210<0x295>;
-defm V_CVT_SCALEF32_SR_PK32_BF6_F32  : VOP3Only_Real_Base_gfx1210<0x296>;
 defm V_CVT_SCALEF32_SR_PK8_FP4_F32   : VOP3Only_Real_Base_gfx1210<0x297>;
 defm V_CVT_SCALEF32_SR_PK8_FP8_F32   : VOP3Only_Real_Base_gfx1210<0x298>;
 defm V_CVT_SCALEF32_SR_PK8_BF8_F32   : VOP3Only_Real_Base_gfx1210<0x299>;
-defm V_CVT_SCALEF32_PK32_FP6_F32     : VOP3Only_Real_Base_gfx1210<0x2ae>;
-defm V_CVT_SCALEF32_PK32_BF6_F32     : VOP3Only_Real_Base_gfx1210<0x2af>;
 defm V_CVT_SCALEF32_PK8_FP4_F32      : VOP3Only_Real_Base_gfx1210<0x2b0>;
-defm V_CVT_SCALEF32_PK32_FP6_F16     : VOP3Only_Real_Base_gfx1210<0x2b1>;
-defm V_CVT_SCALEF32_PK32_BF6_F16     : VOP3Only_Real_Base_gfx1210<0x2b2>;
 defm V_CVT_SCALEF32_PK8_FP4_F16      : VOP3Only_Real_Base_gfx1210<0x2b3>;
 defm V_CVT_SCALEF32_PK8_FP8_BF16     : VOP3Only_Real_Base_gfx1210<0x2b4>;
 defm V_CVT_SCALEF32_PK8_BF8_BF16     : VOP3Only_Real_Base_gfx1210<0x2b5>;
-defm V_CVT_SCALEF32_PK32_FP6_BF16    : VOP3Only_Real_Base_gfx1210<0x2b6>;
-defm V_CVT_SCALEF32_PK32_BF6_BF16    : VOP3Only_Real_Base_gfx1210<0x2b7>;
 defm V_CVT_SCALEF32_PK8_FP4_BF16     : VOP3Only_Real_Base_gfx1210<0x2b8>;
 defm V_CVT_SCALEF32_SR_PK8_FP4_F16   : VOP3Only_Real_Base_gfx1210<0x2b9>;
-defm V_CVT_SCALEF32_SR_PK32_FP6_F16  : VOP3Only_Real_Base_gfx1210<0x2ba>;
-defm V_CVT_SCALEF32_SR_PK32_BF6_F16  : VOP3Only_Real_Base_gfx1210<0x2bb>;
 defm V_CVT_SCALEF32_SR_PK8_FP4_BF16  : VOP3Only_Real_Base_gfx1210<0x2bc>;
-defm V_CVT_SCALEF32_SR_PK32_FP6_BF16 : VOP3Only_Real_Base_gfx1210<0x2bd>;
-defm V_CVT_SCALEF32_SR_PK32_BF6_BF16 : VOP3Only_Real_Base_gfx1210<0x2be>;
 defm V_CVT_SCALEF32_SR_PK8_FP8_F16   : VOP3Only_Real_Base_gfx1210<0x2bf>;
 defm V_CVT_SCALEF32_SR_PK8_FP8_BF16  : VOP3Only_Real_Base_gfx1210<0x2c0>;
 defm V_CVT_SCALEF32_SR_PK8_BF8_F16   : VOP3Only_Real_Base_gfx1210<0x2c1>;
