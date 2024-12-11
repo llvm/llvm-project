@@ -108,7 +108,7 @@ int main()
       return 1;
 
     // test 1 / (1 - eps(0.5)) = 1 + eps(1)
-    if (test__divsf3(1.0F, 0x1.ffffep-1F, UINT32_C(0x3f800001)))
+    if (test__divsf3(1.0F, 0x1.fffffep-1F, UINT32_C(0x3f800001)))
       return 1;
 
     return 0;
