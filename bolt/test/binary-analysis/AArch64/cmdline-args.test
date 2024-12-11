@@ -1,5 +1,5 @@
 # This file tests error messages produced on invalid command line arguments.
-# It also check that help messages are generated as expected.
+# It also checks that help messages are generated as expected.
 
 # Verify that an error message is provided if an input file is missing or incorrect
 
@@ -13,7 +13,7 @@ NONEXISTINGFILEARG:       llvm-bolt-binary-analysis: 'non-existing-file': No suc
 RUN: not llvm-bolt-binary-analysis %p/Inputs/dummy.txt 2>&1 | FileCheck -check-prefix=NOELFFILEARG %s
 NOELFFILEARG:       llvm-bolt-binary-analysis: '{{.*}}/Inputs/dummy.txt': The file was not recognized as a valid object file.
 
-RUN: %clang %cflags %p/../Inputs/asm_foo.s %p/../Inputs/asm_main.c -o %t.exe
+RUN: %clang %cflags %p/../../Inputs/asm_foo.s %p/../../Inputs/asm_main.c -o %t.exe
 RUN: llvm-bolt-binary-analysis %t.exe 2>&1 | FileCheck -check-prefix=VALIDELFFILEARG --allow-empty %s
 # Check that there are no BOLT-WARNING or BOLT-ERROR output lines
 VALIDELFFILEARG:     BOLT-INFO:

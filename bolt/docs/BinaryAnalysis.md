@@ -5,7 +5,7 @@ on binaries such as recontructing control flow graphs, and more.
 
 The `llvm-bolt-binary-analysis` tool enables running requested binary analyses
 on binaries, and generating reports. It does this by building on top of the
-analyses implementing in the BOLT libraries.
+analyses implemented in the BOLT libraries.
 
 ## Which binary analyses are implemented?
 
