@@ -1450,13 +1450,13 @@ def ElementwiseFma : Builtin {
 
 def ElementwiseAddSat : Builtin {
   let Spellings = ["__builtin_elementwise_add_sat"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def ElementwiseSubSat : Builtin {
   let Spellings = ["__builtin_elementwise_sub_sat"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
@@ -4928,6 +4928,12 @@ def HLSLClip: LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_clip"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
+}
+
+def HLSLGroupMemoryBarrierWithGroupSync: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_group_memory_barrier_with_group_sync"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void()";
 }
 
 // Builtins for XRay.

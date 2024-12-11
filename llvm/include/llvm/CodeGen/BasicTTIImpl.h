@@ -1935,6 +1935,8 @@ public:
 
       return Cost;
     }
+    case Intrinsic::experimental_vector_match:
+      return thisT()->getTypeBasedIntrinsicInstrCost(ICA, CostKind);
     }
 
     // Assume that we need to scalarize this intrinsic.)
@@ -2190,6 +2192,35 @@ public:
     case Intrinsic::vector_reduce_fminimum:
       return thisT()->getMinMaxReductionCost(getMinMaxReductionIntrinsicOp(IID),
                                              VecOpTy, ICA.getFlags(), CostKind);
+    case Intrinsic::experimental_vector_match: {
+      auto *SearchTy = cast<VectorType>(ICA.getArgTypes()[0]);
+      auto *NeedleTy = cast<FixedVectorType>(ICA.getArgTypes()[1]);
+      unsigned SearchSize = NeedleTy->getNumElements();
+
+      // If we're not expanding the intrinsic then we assume this is cheap to
+      // implement.
+      EVT SearchVT = getTLI()->getValueType(DL, SearchTy);
+      if (!getTLI()->shouldExpandVectorMatch(SearchVT, SearchSize))
+        return getTypeLegalizationCost(RetTy).first;
+
+      // Approximate the cost based on the expansion code in
+      // SelectionDAGBuilder.
+      InstructionCost Cost = 0;
+      Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, NeedleTy,
+                                          CostKind, 1, nullptr, nullptr);
+      Cost += thisT()->getVectorInstrCost(Instruction::InsertElement, SearchTy,
+                                          CostKind, 0, nullptr, nullptr);
+      Cost += thisT()->getShuffleCost(TTI::SK_Broadcast, SearchTy, std::nullopt,
+                                      CostKind, 0, nullptr);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, SearchTy, RetTy,
+                                          CmpInst::ICMP_EQ, CostKind);
+      Cost +=
+          thisT()->getArithmeticInstrCost(BinaryOperator::Or, RetTy, CostKind);
+      Cost *= SearchSize;
+      Cost +=
+          thisT()->getArithmeticInstrCost(BinaryOperator::And, RetTy, CostKind);
+      return Cost;
+    }
     case Intrinsic::abs:
       ISD = ISD::ABS;
       break;

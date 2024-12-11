@@ -1268,6 +1268,11 @@ let True16Predicate = NotHasTrue16BitInsts, SubtargetPredicate = isGFX10Plus in 
    >;
 } // End True16Predicate = NotHasTrue16BitInsts, SubtargetPredicate = isGFX10Plus
 
+let True16Predicate = UseRealTrue16Insts in {
+  def : OpSelBinOpClampPat<uaddsat, V_ADD_NC_U16_t16_e64>;
+  def : OpSelBinOpClampPat<usubsat, V_SUB_NC_U16_t16_e64>;
+} // End OtherPredicates = [UseRealTrue16Insts]
+
 let True16Predicate = UseFakeTrue16Insts in {
    def : OpSelBinOpClampPat<uaddsat, V_ADD_NC_U16_fake16_e64>;
    def : OpSelBinOpClampPat<usubsat, V_SUB_NC_U16_fake16_e64>;
@@ -1291,28 +1296,28 @@ let SubtargetPredicate = isGFX12Plus in {
 let SubtargetPredicate = HasBitOp3Insts  in {
   let isReMaterializable = 1 in {
     defm V_BITOP3_B16 : VOP3Inst <"v_bitop3_b16",
-                                  VOP3_BITOP3_Profile<VOPProfile_True16<VOPProfile <[i16, i16, i16, i16, i8]>>,
+                                  VOP3_BITOP3_Profile<VOPProfile_True16<VOPProfile <[i16, i16, i16, i16, i32]>>,
                                                       VOP3_OPSEL>>;
     defm V_BITOP3_B32 : VOP3Inst <"v_bitop3_b32",
-                                  VOP3_BITOP3_Profile<VOPProfile <[i32, i32, i32, i32, i8]>, VOP3_REGULAR>>;
+                                  VOP3_BITOP3_Profile<VOPProfile <[i32, i32, i32, i32, i32]>, VOP3_REGULAR>>;
   }
   def : GCNPat<
-    (i32 (int_amdgcn_bitop3 i32:$src0, i32:$src1, i32:$src2, i8:$bitop3)),
+    (i32 (int_amdgcn_bitop3 i32:$src0, i32:$src1, i32:$src2, i32:$bitop3)),
     (i32 (V_BITOP3_B32_e64 VSrc_b32:$src0, VSrc_b32:$src1, VSrc_b32:$src2, timm:$bitop3))
   >;
 
   def : GCNPat<
-    (i16 (int_amdgcn_bitop3 i16:$src0, i16:$src1, i16:$src2, i8:$bitop3)),
+    (i16 (int_amdgcn_bitop3 i16:$src0, i16:$src1, i16:$src2, i32:$bitop3)),
     (i16 (V_BITOP3_B16_e64 0, VSrc_b16:$src0, 0, VSrc_b16:$src1, 0, VSrc_b16:$src2, timm:$bitop3, 0))
   >;
 
   def : GCNPat<
-    (i32 (BITOP3_32 i32:$src0, i32:$src1, i32:$src2, i8:$bitop3)),
+    (i32 (BITOP3_32 i32:$src0, i32:$src1, i32:$src2, i32:$bitop3)),
     (i32 (V_BITOP3_B32_e64 VSrc_b32:$src0, VSrc_b32:$src1, VSrc_b32:$src2, timm:$bitop3))
   >;
 
   def : GCNPat<
-    (i16 (BITOP3_16 i16:$src0, i16:$src1, i16:$src2, i8:$bitop3)),
+    (i16 (BITOP3_16 i16:$src0, i16:$src1, i16:$src2, i32:$bitop3)),
     (i16 (V_BITOP3_B16_e64 0, VSrc_b16:$src0, 0, VSrc_b16:$src1, 0, VSrc_b16:$src2, timm:$bitop3, 0))
   >;
 } // End SubtargetPredicate = HasBitOp3Insts
@@ -1338,6 +1343,30 @@ def : DivFmasPat<f64, V_DIV_FMAS_F64_e64, VCC_LO>;
 class VOP3_DOT_Profile<VOPProfile P> : VOP3_Profile<P, VOP3_OPSEL> {
   let HasClamp = 0;
   let HasOMod = 0;
+}
+
+class VOP3_DOT_Profile_t16<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOP3_Profile_True16<P, Features> {
+  let HasClamp = 0;
+  let HasOMod = 0;
+  // Override modifiers for bf16(i16) (same as float modifiers).
+  let HasSrc0Mods = 1;
+  let HasSrc1Mods = 1;
+  let HasSrc2Mods = 1;
+  let Src0ModVOP3DPP = FPVRegInputMods;
+  let Src1ModVOP3DPP = FP32VCSrcInputMods;
+  let Src2ModVOP3DPP = FPT16VCSrcInputMods</*IsFake16*/0>;
+}
+
+class VOP3_DOT_Profile_fake16<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOP3_Profile_Fake16<P, Features> {
+  let HasClamp = 0;
+  let HasOMod = 0;
+  // Override modifiers for bf16(i16) (same as float modifiers).
+  let HasSrc0Mods = 1;
+  let HasSrc1Mods = 1;
+  let HasSrc2Mods = 1;
+  let AsmVOP3Base = getAsmVOP3Base<NumSrcArgs, HasDst, HasClamp,
+   HasOpSel, HasOMod, IsVOP3P, HasModifiers, 1/*HasSrc0Mods*/, 1/*HasSrc1Mods*/,
+   1/*HasSrc2Mods*/, DstVT>.ret;
 }
 
 let SubtargetPredicate = isGFX11Plus in {
@@ -1404,9 +1433,15 @@ let SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0 in {
   defm V_MINIMUMMAXIMUM_F16 : VOP3Inst<"v_minimummaximum_f16", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>>;
 } // End SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0
 
-let OtherPredicates = [HasDot9Insts], IsDOT=1 in {
-  defm V_DOT2_F16_F16 :   VOP3Inst<"v_dot2_f16_f16",   VOP3_DOT_Profile<VOP_F16_V2F16_V2F16_F16>, int_amdgcn_fdot2_f16_f16>;
-  defm V_DOT2_BF16_BF16 : VOP3Inst<"v_dot2_bf16_bf16", VOP3_DOT_Profile<VOP_BF16_V2BF16_V2BF16_BF16>, int_amdgcn_fdot2_bf16_bf16>;
+let SubtargetPredicate = HasDot9Insts, IsDOT=1 in {
+  defm V_DOT2_F16_F16 :   VOP3Inst_t16_with_profiles<"v_dot2_f16_f16", VOP3_DOT_Profile<VOP_F16_V2F16_V2F16_F16>,
+                                                      VOP3_DOT_Profile_t16<VOP_F16_V2F16_V2F16_F16>,
+                                                      VOP3_DOT_Profile_fake16<VOP_F16_V2F16_V2F16_F16>,
+                                                      int_amdgcn_fdot2_f16_f16>;
+  defm V_DOT2_BF16_BF16 : VOP3Inst_t16_with_profiles<"v_dot2_bf16_bf16", VOP3_DOT_Profile<VOP_BF16_V2BF16_V2BF16_BF16>,
+                                                      VOP3_DOT_Profile_t16<VOP_BF16_V2BF16_V2BF16_BF16>,
+                                                      VOP3_DOT_Profile_fake16<VOP_BF16_V2BF16_V2BF16_BF16>,
+                                                      int_amdgcn_fdot2_bf16_bf16>;
 }
 
 class VOP_Pseudo_Scalar<RegisterClass Dst, RegisterOperand SrcOp,
@@ -1604,8 +1639,10 @@ multiclass VOP3_Realtriple_with_name_gfx11_gfx12<bits<10> op, string opName,
   VOP3_Realtriple_with_name<GFX11Gen, op, opName, asmName>,
   VOP3_Realtriple_with_name<GFX12Gen, op, opName, asmName>;
 
-multiclass VOP3Dot_Realtriple_gfx11_gfx12<bits<10> op> :
-  VOP3Dot_Realtriple<GFX11Gen, op>, VOP3Dot_Realtriple<GFX12Gen, op>;
+multiclass VOP3Dot_Realtriple_t16_and_fake16_gfx11_gfx12<bits<10> op, string asmName, string opName = NAME> {
+  defm _t16: VOP3Dot_Realtriple_gfx11_gfx12<op, asmName, 0, opName#"_t16">;
+  defm _fake16: VOP3Dot_Realtriple_gfx11_gfx12<op, asmName, 0, opName#"_fake16">;
+}
 
 multiclass VOP3_Realtriple_t16_gfx11_gfx12<bits<10> op, string asmName, string opName = NAME,
                                            string pseudo_mnemonic = "", bit isSingle = 0> :
@@ -1697,8 +1734,8 @@ defm V_MAXMIN_U32          : VOP3_Realtriple_gfx11_gfx12<0x262>;
 defm V_MINMAX_U32          : VOP3_Realtriple_gfx11_gfx12<0x263>;
 defm V_MAXMIN_I32          : VOP3_Realtriple_gfx11_gfx12<0x264>;
 defm V_MINMAX_I32          : VOP3_Realtriple_gfx11_gfx12<0x265>;
-defm V_DOT2_F16_F16        : VOP3Dot_Realtriple_gfx11_gfx12<0x266>;
-defm V_DOT2_BF16_BF16      : VOP3Dot_Realtriple_gfx11_gfx12<0x267>;
+defm V_DOT2_F16_F16        : VOP3Dot_Realtriple_t16_and_fake16_gfx11_gfx12<0x266, "v_dot2_f16_f16">;
+defm V_DOT2_BF16_BF16      : VOP3Dot_Realtriple_t16_and_fake16_gfx11_gfx12<0x267, "v_dot2_bf16_bf16">;
 defm V_DIV_SCALE_F32       : VOP3be_Real_gfx11_gfx12<0x2fc, "V_DIV_SCALE_F32", "v_div_scale_f32">;
 defm V_DIV_SCALE_F64       : VOP3be_Real_gfx11_gfx12<0x2fd, "V_DIV_SCALE_F64", "v_div_scale_f64">;
 defm V_MAD_U64_U32_gfx11   : VOP3be_Real_gfx11<0x2fe, "V_MAD_U64_U32_gfx11", "v_mad_u64_u32">;
@@ -1744,6 +1781,11 @@ defm V_OR_B16_t16          : VOP3Only_Realtriple_t16_gfx11_gfx12<0x363, "v_or_b1
 defm V_OR_B16_fake16       : VOP3Only_Realtriple_t16_gfx11_gfx12<0x363, "v_or_b16">;
 defm V_XOR_B16_t16         : VOP3Only_Realtriple_t16_gfx11_gfx12<0x364, "v_xor_b16">;
 defm V_XOR_B16_fake16      : VOP3Only_Realtriple_t16_gfx11_gfx12<0x364, "v_xor_b16">;
+
+let AssemblerPredicate = isGFX11Plus in {
+  def : AMDGPUMnemonicAlias<"v_add3_nc_u32", "v_add3_u32">;
+  def : AMDGPUMnemonicAlias<"v_xor_add_u32", "v_xad_u32">;
+}
 
 //===----------------------------------------------------------------------===//
 // GFX10.

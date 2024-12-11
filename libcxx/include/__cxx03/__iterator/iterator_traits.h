@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_ITERATOR_TRAITS_H
-#define _LIBCPP___ITERATOR_ITERATOR_TRAITS_H
+#ifndef _LIBCPP___CXX03___ITERATOR_ITERATOR_TRAITS_H
+#define _LIBCPP___CXX03___ITERATOR_ITERATOR_TRAITS_H
 
 #include <__cxx03/__concepts/arithmetic.h>
 #include <__cxx03/__concepts/constructible.h>
@@ -525,4 +525,4 @@ using iter_value_t =
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_ITERATOR_TRAITS_H
+#endif // _LIBCPP___CXX03___ITERATOR_ITERATOR_TRAITS_H

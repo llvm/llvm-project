@@ -280,8 +280,9 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
 
   if (Implementer == "0x46") { // Fujitsu Ltd.
     return StringSwitch<const char *>(Part)
-      .Case("0x001", "a64fx")
-      .Default("generic");
+        .Case("0x001", "a64fx")
+        .Case("0x003", "fujitsu-monaka")
+        .Default("generic");
   }
 
   if (Implementer == "0x4e") { // NVIDIA Corporation
@@ -815,7 +816,7 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
 
     // Gracemont
     case 0xbe:
-      CPU = "gracement";
+      CPU = "gracemont";
       *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_ALDERLAKE;
       break;

@@ -148,6 +148,17 @@ static bool retPrimValue(InterpState &S, CodePtr OpPC,
 #undef RET_CASE
 }
 
+static void diagnoseNonConstexprBuiltin(InterpState &S, CodePtr OpPC,
+                                        unsigned ID) {
+  auto Loc = S.Current->getSource(OpPC);
+  if (S.getLangOpts().CPlusPlus11)
+    S.CCEDiag(Loc, diag::note_constexpr_invalid_function)
+        << /*isConstexpr=*/0 << /*isConstructor=*/0
+        << ("'" + S.getASTContext().BuiltinInfo.getName(ID) + "'").str();
+  else
+    S.CCEDiag(Loc, diag::note_invalid_subexpr_in_const_expr);
+}
+
 static bool interp__builtin_is_constant_evaluated(InterpState &S, CodePtr OpPC,
                                                   const InterpFrame *Frame,
                                                   const CallExpr *Call) {
@@ -181,9 +192,23 @@ static bool interp__builtin_is_constant_evaluated(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
-                                   const CallExpr *Call) {
+                                   const Function *Func, const CallExpr *Call) {
+  unsigned ID = Func->getBuiltinID();
   const Pointer &A = getParam<Pointer>(Frame, 0);
   const Pointer &B = getParam<Pointer>(Frame, 1);
+
+  if (ID == Builtin::BIstrcmp || ID == Builtin::BIstrncmp)
+    diagnoseNonConstexprBuiltin(S, OpPC, ID);
+
+  uint64_t Limit = ~static_cast<uint64_t>(0);
+  if (ID == Builtin::BIstrncmp || ID == Builtin::BI__builtin_strncmp)
+    Limit = peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)))
+                .getZExtValue();
+
+  if (Limit == 0) {
+    pushInteger(S, 0, Call->getType());
+    return true;
+  }
 
   if (!CheckLive(S, OpPC, A, AK_Read) || !CheckLive(S, OpPC, B, AK_Read))
     return false;
@@ -197,7 +222,11 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
   unsigned IndexA = A.getIndex();
   unsigned IndexB = B.getIndex();
   int32_t Result = 0;
-  for (;; ++IndexA, ++IndexB) {
+  uint64_t Steps = 0;
+  for (;; ++IndexA, ++IndexB, ++Steps) {
+
+    if (Steps >= Limit)
+      break;
     const Pointer &PA = A.atIndex(IndexA);
     const Pointer &PB = B.atIndex(IndexB);
     if (!CheckRange(S, OpPC, PA, AK_Read) ||
@@ -224,8 +253,12 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
-                                   const CallExpr *Call) {
+                                   const Function *Func, const CallExpr *Call) {
+  unsigned ID = Func->getBuiltinID();
   const Pointer &StrPtr = getParam<Pointer>(Frame, 0);
+
+  if (ID == Builtin::BIstrlen || ID == Builtin::BIwcslen)
+    diagnoseNonConstexprBuiltin(S, OpPC, ID);
 
   if (!CheckArray(S, OpPC, StrPtr))
     return false;
@@ -237,6 +270,12 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
     return false;
 
   assert(StrPtr.getFieldDesc()->isPrimitiveArray());
+  unsigned ElemSize = StrPtr.getFieldDesc()->getElemSize();
+
+  if (ID == Builtin::BI__builtin_wcslen || ID == Builtin::BIwcslen) {
+    [[maybe_unused]] const ASTContext &AC = S.getASTContext();
+    assert(ElemSize == AC.getTypeSizeInChars(AC.getWCharType()).getQuantity());
+  }
 
   size_t Len = 0;
   for (size_t I = StrPtr.getIndex();; ++I, ++Len) {
@@ -245,7 +284,20 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
     if (!CheckRange(S, OpPC, ElemPtr, AK_Read))
       return false;
 
-    uint8_t Val = ElemPtr.deref<uint8_t>();
+    uint32_t Val;
+    switch (ElemSize) {
+    case 1:
+      Val = ElemPtr.deref<uint8_t>();
+      break;
+    case 2:
+      Val = ElemPtr.deref<uint16_t>();
+      break;
+    case 4:
+      Val = ElemPtr.deref<uint32_t>();
+      break;
+    default:
+      llvm_unreachable("Unsupported char size");
+    }
     if (Val == 0)
       break;
   }
@@ -1772,6 +1824,7 @@ static bool interp__builtin_elementwise_popcount(InterpState &S, CodePtr OpPC,
     INT_TYPE_SWITCH_NO_BOOL(ElemT, {
       Dst.atIndex(I).deref<T>() =
           T::from(Arg.atIndex(I).deref<T>().toAPSInt().popcount());
+      Dst.atIndex(I).initialize();
     });
   }
 
@@ -1781,14 +1834,17 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
                                    const Function *Func, const CallExpr *Call) {
   assert(Call->getNumArgs() == 3);
+  unsigned ID = Func->getBuiltinID();
   Pointer DestPtr = getParam<Pointer>(Frame, 0);
   const Pointer &SrcPtr = getParam<Pointer>(Frame, 1);
   const APSInt &Size =
       peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
   assert(!Size.isSigned() && "memcpy and friends take an unsigned size");
 
-  if (DestPtr.isDummy() || SrcPtr.isDummy())
-    return false;
+  if (ID == Builtin::BImemcpy || ID == Builtin::BImemmove)
+    diagnoseNonConstexprBuiltin(S, OpPC, ID);
+
+  bool Move = (ID == Builtin::BI__builtin_memmove || ID == Builtin::BImemmove);
 
   // If the size is zero, we treat this as always being a valid no-op.
   if (Size.isZero()) {
@@ -1799,12 +1855,31 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
   if (SrcPtr.isZero() || DestPtr.isZero()) {
     Pointer DiagPtr = (SrcPtr.isZero() ? SrcPtr : DestPtr);
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_memcpy_null)
-        << /*IsMove=*/false << /*IsWchar=*/false << !SrcPtr.isZero()
+        << /*IsMove=*/Move << /*IsWchar=*/false << !SrcPtr.isZero()
         << DiagPtr.toDiagnosticString(S.getASTContext());
     return false;
   }
 
-  if (!DoBitCastPtr(S, OpPC, SrcPtr, DestPtr))
+  QualType ElemType;
+  if (SrcPtr.getFieldDesc()->isArray())
+    ElemType = SrcPtr.getFieldDesc()->getElemQualType();
+  else
+    ElemType = SrcPtr.getType();
+
+  unsigned ElemSize =
+      S.getASTContext().getTypeSizeInChars(ElemType).getQuantity();
+  if (Size.urem(ElemSize) != 0) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_memcpy_unsupported)
+        << Move << /*IsWchar=*/false << 0 << ElemType << Size << ElemSize;
+    return false;
+  }
+
+  // As a last resort, reject dummy pointers.
+  if (DestPtr.isDummy() || SrcPtr.isDummy())
+    return false;
+
+  if (!DoBitCastPtr(S, OpPC, SrcPtr, DestPtr, Size.getZExtValue()))
     return false;
 
   S.Stk.push<Pointer>(DestPtr);
@@ -1826,11 +1901,17 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__assume:
     break;
   case Builtin::BI__builtin_strcmp:
-    if (!interp__builtin_strcmp(S, OpPC, Frame, Call))
+  case Builtin::BIstrcmp:
+  case Builtin::BI__builtin_strncmp:
+  case Builtin::BIstrncmp:
+    if (!interp__builtin_strcmp(S, OpPC, Frame, F, Call))
       return false;
     break;
   case Builtin::BI__builtin_strlen:
-    if (!interp__builtin_strlen(S, OpPC, Frame, Call))
+  case Builtin::BIstrlen:
+  case Builtin::BI__builtin_wcslen:
+  case Builtin::BIwcslen:
+    if (!interp__builtin_strlen(S, OpPC, Frame, F, Call))
       return false;
     break;
   case Builtin::BI__builtin_nan:
@@ -2271,6 +2352,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     break;
 
   case Builtin::BI__builtin_memcpy:
+  case Builtin::BImemcpy:
+  case Builtin::BI__builtin_memmove:
+  case Builtin::BImemmove:
     if (!interp__builtin_memcpy(S, OpPC, Frame, F, Call))
       return false;
     break;

@@ -11,9 +11,9 @@ declare <vscale x 1 x i1> @llvm.vector.splice.nxv1i1(<vscale x 1 x i1>, <vscale 
 define <vscale x 1 x i1> @splice_nxv1i1_offset_negone(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b) #0 {
 ; CHECK-LABEL: splice_nxv1i1_offset_negone:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vmerge.vim v10, v8, 1, v0
@@ -33,9 +33,9 @@ define <vscale x 1 x i1> @splice_nxv1i1_offset_negone(<vscale x 1 x i1> %a, <vsc
 define <vscale x 1 x i1> @splice_nxv1i1_offset_max(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b) #0 {
 ; CHECK-LABEL: splice_nxv1i1_offset_max:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vmerge.vim v10, v8, 1, v0
@@ -59,9 +59,9 @@ declare <vscale x 2 x i1> @llvm.vector.splice.nxv2i1(<vscale x 2 x i1>, <vscale 
 define <vscale x 2 x i1> @splice_nxv2i1_offset_negone(<vscale x 2 x i1> %a, <vscale x 2 x i1> %b) #0 {
 ; CHECK-LABEL: splice_nxv2i1_offset_negone:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vmerge.vim v10, v8, 1, v0
@@ -81,9 +81,9 @@ define <vscale x 2 x i1> @splice_nxv2i1_offset_negone(<vscale x 2 x i1> %a, <vsc
 define <vscale x 2 x i1> @splice_nxv2i1_offset_max(<vscale x 2 x i1> %a, <vscale x 2 x i1> %b) #0 {
 ; CHECK-LABEL: splice_nxv2i1_offset_max:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vmerge.vim v10, v8, 1, v0
@@ -107,9 +107,9 @@ declare <vscale x 4 x i1> @llvm.vector.splice.nxv4i1(<vscale x 4 x i1>, <vscale 
 define <vscale x 4 x i1> @splice_nxv4i1_offset_negone(<vscale x 4 x i1> %a, <vscale x 4 x i1> %b) #0 {
 ; CHECK-LABEL: splice_nxv4i1_offset_negone:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vmerge.vim v10, v8, 1, v0
@@ -129,9 +129,9 @@ define <vscale x 4 x i1> @splice_nxv4i1_offset_negone(<vscale x 4 x i1> %a, <vsc
 define <vscale x 4 x i1> @splice_nxv4i1_offset_max(<vscale x 4 x i1> %a, <vscale x 4 x i1> %b) #0 {
 ; CHECK-LABEL: splice_nxv4i1_offset_max:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vmerge.vim v10, v8, 1, v0
@@ -155,9 +155,9 @@ declare <vscale x 8 x i1> @llvm.vector.splice.nxv8i1(<vscale x 8 x i1>, <vscale 
 define <vscale x 8 x i1> @splice_nxv8i1_offset_negone(<vscale x 8 x i1> %a, <vscale x 8 x i1> %b) #0 {
 ; CHECK-LABEL: splice_nxv8i1_offset_negone:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vmerge.vim v10, v8, 1, v0
@@ -176,9 +176,9 @@ define <vscale x 8 x i1> @splice_nxv8i1_offset_negone(<vscale x 8 x i1> %a, <vsc
 define <vscale x 8 x i1> @splice_nxv8i1_offset_max(<vscale x 8 x i1> %a, <vscale x 8 x i1> %b) #0 {
 ; CHECK-LABEL: splice_nxv8i1_offset_max:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vmerge.vim v10, v8, 1, v0
@@ -201,9 +201,9 @@ declare <vscale x 16 x i1> @llvm.vector.splice.nxv16i1(<vscale x 16 x i1>, <vsca
 define <vscale x 16 x i1> @splice_nxv16i1_offset_negone(<vscale x 16 x i1> %a, <vscale x 16 x i1> %b) #0 {
 ; CHECK-LABEL: splice_nxv16i1_offset_negone:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vmerge.vim v12, v10, 1, v0
@@ -223,9 +223,9 @@ define <vscale x 16 x i1> @splice_nxv16i1_offset_negone(<vscale x 16 x i1> %a, <
 define <vscale x 16 x i1> @splice_nxv16i1_offset_max(<vscale x 16 x i1> %a, <vscale x 16 x i1> %b) #0 {
 ; CHECK-LABEL: splice_nxv16i1_offset_max:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vmerge.vim v12, v10, 1, v0
@@ -249,9 +249,9 @@ declare <vscale x 32 x i1> @llvm.vector.splice.nxv32i1(<vscale x 32 x i1>, <vsca
 define <vscale x 32 x i1> @splice_nxv32i1_offset_negone(<vscale x 32 x i1> %a, <vscale x 32 x i1> %b) #0 {
 ; CHECK-LABEL: splice_nxv32i1_offset_negone:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v12, 0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vmerge.vim v16, v12, 1, v0
@@ -296,9 +296,9 @@ declare <vscale x 64 x i1> @llvm.vector.splice.nxv64i1(<vscale x 64 x i1>, <vsca
 define <vscale x 64 x i1> @splice_nxv64i1_offset_negone(<vscale x 64 x i1> %a, <vscale x 64 x i1> %b) #0 {
 ; CHECK-LABEL: splice_nxv64i1_offset_negone:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v24, 0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vmerge.vim v16, v24, 1, v0

@@ -1315,7 +1315,7 @@
 # CHECK: bassm %r15, %r1
 0x0c 0xf1
 
-# CHECK: nop 0
+# CHECK: nop
 0x47 0x00 0x00 0x00
 
 # CHECK: nop 4095
