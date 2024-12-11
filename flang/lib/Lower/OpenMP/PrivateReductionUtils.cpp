@@ -119,7 +119,7 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type argType,
     mlir::Value scalarInitValue, mlir::Block *initBlock,
     mlir::Value allocatedPrivVarArg, mlir::Value moldArg,
-    mlir::Region &cleanupRegion) {
+    mlir::Region &cleanupRegion, bool isPrivate) {
   mlir::Type ty = fir::unwrapRefType(argType);
   builder.setInsertionPointToEnd(initBlock);
   auto yield = [&](mlir::Value ret) {
@@ -147,11 +147,10 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
   //   fir.store %something to %box_alloca
   // }
   // omp.yield %box_alloca
-  moldArg = builder.loadIfRef(loc, moldArg);
   mlir::SmallVector<mlir::Value> lenParams;
-  hlfir::genLengthParameters(loc, builder, hlfir::Entity{moldArg}, lenParams);
-  auto handleNullAllocatable = [&](mlir::Value boxAlloca) -> fir::IfOp {
-    mlir::Value addr = builder.create<fir::BoxAddrOp>(loc, moldArg);
+  auto handleNullAllocatable = [&](mlir::Value boxAlloca,
+                                   mlir::Value loadedMold) -> fir::IfOp {
+    mlir::Value addr = builder.create<fir::BoxAddrOp>(loc, loadedMold);
     mlir::Value isNotAllocated = builder.genIsNullAddr(loc, addr);
     fir::IfOp ifOp = builder.create<fir::IfOp>(loc, isNotAllocated,
                                                /*withElseRegion=*/true);
@@ -171,6 +170,21 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
 
     builder.setInsertionPointToEnd(initBlock);
     mlir::Value boxAlloca = allocatedPrivVarArg;
+
+    // The initial state of a private pointer is undefined so we don't need to
+    // match the mold argument (OpenMP 5.2 end of page 106).
+    if (isPrivate && mlir::isa<fir::PointerType>(boxTy.getEleTy())) {
+      // Just incase, do initialize the box with a null value
+      mlir::Value null = builder.createNullConstant(loc, boxTy.getEleTy());
+      mlir::Value nullBox = builder.create<fir::EmboxOp>(loc, boxTy, null);
+      builder.create<fir::StoreOp>(loc, nullBox, boxAlloca);
+      yield(boxAlloca);
+      return;
+    }
+
+    moldArg = builder.loadIfRef(loc, moldArg);
+    hlfir::genLengthParameters(loc, builder, hlfir::Entity{moldArg}, lenParams);
+
     mlir::Type innerTy = fir::unwrapRefType(boxTy.getEleTy());
     bool isChar = fir::isa_char(innerTy);
     if (fir::isa_trivial(innerTy) || isChar) {
@@ -179,7 +193,7 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
         TODO(loc,
              "Reduction/Privatization of non-allocatable trivial typed box");
 
-      fir::IfOp ifUnallocated = handleNullAllocatable(boxAlloca);
+      fir::IfOp ifUnallocated = handleNullAllocatable(boxAlloca, moldArg);
 
       builder.setInsertionPointToStart(&ifUnallocated.getElseRegion().front());
       mlir::Value valAlloc = builder.createHeapTemporary(
@@ -200,9 +214,12 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
     if (!innerTy || !mlir::isa<fir::SequenceType>(innerTy))
       TODO(loc, "Unsupported boxed type for reduction/privatization");
 
+    moldArg = builder.loadIfRef(loc, moldArg);
+    hlfir::genLengthParameters(loc, builder, hlfir::Entity{moldArg}, lenParams);
+
     fir::IfOp ifUnallocated{nullptr};
     if (isAllocatableOrPointer) {
-      ifUnallocated = handleNullAllocatable(boxAlloca);
+      ifUnallocated = handleNullAllocatable(boxAlloca, moldArg);
       builder.setInsertionPointToStart(&ifUnallocated.getElseRegion().front());
     }
 

@@ -504,13 +504,15 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
   assert(hsb && "Host symbol box not found");
 
   mlir::Value privVal = hsb.getAddr();
-  mlir::Type allocType = fir::unwrapRefType(privVal.getType());
+  mlir::Type allocType;
+  if (mlir::isa<fir::PointerType>(privVal.getType()))
+    allocType = privVal.getType();
+  else
+    allocType = fir::unwrapRefType(privVal.getType());
+
   mlir::Location symLoc = hsb.getAddr().getLoc();
   std::string privatizerName = sym->name().ToString() + ".privatizer";
   bool isFirstPrivate = sym->test(semantics::Symbol::Flag::OmpFirstPrivate);
-
-  if (mlir::isa<fir::PointerType>(hsb.getAddr().getType()))
-    TODO(symLoc, "Privatization of pointers");
 
   if (auto poly = mlir::dyn_cast<fir::ClassType>(allocType)) {
     if (!mlir::isa<fir::PointerType>(poly.getEleTy()) && isFirstPrivate)
@@ -580,7 +582,7 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
       populateByRefInitAndCleanupRegions(
           firOpBuilder, symLoc, argType, /*scalarInitValue=*/nullptr, initBlock,
           result.getInitPrivateArg(), result.getInitMoldArg(),
-          result.getDeallocRegion());
+          result.getDeallocRegion(), /*isPrivate=*/true);
     }
 
     // Populate the `copy` region if this is a `firstprivate`.

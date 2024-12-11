@@ -31,14 +31,13 @@ namespace omp {
 
 /// Generate init and cleanup regions suitable for reduction or privatizer
 /// declarations. `scalarInitValue` may be nullptr if there is no default
-/// initialization (for privatization).
-void populateByRefInitAndCleanupRegions(fir::FirOpBuilder &builder,
-                                        mlir::Location loc, mlir::Type argType,
-                                        mlir::Value scalarInitValue,
-                                        mlir::Block *initBlock,
-                                        mlir::Value allocatedPrivVarArg,
-                                        mlir::Value moldArg,
-                                        mlir::Region &cleanupRegion);
+/// initialization (for privatization). If this is for a privatizer, set
+/// `isPrivate` to `true`.
+void populateByRefInitAndCleanupRegions(
+    fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type argType,
+    mlir::Value scalarInitValue, mlir::Block *initBlock,
+    mlir::Value allocatedPrivVarArg, mlir::Value moldArg,
+    mlir::Region &cleanupRegion, bool isPrivate = false);
 
 /// Generate a fir::ShapeShift op describing the provided boxed array.
 fir::ShapeShiftOp getShapeShift(fir::FirOpBuilder &builder, mlir::Location loc,

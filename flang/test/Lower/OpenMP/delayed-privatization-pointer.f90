@@ -15,20 +15,18 @@ subroutine delayed_privatization_pointer
 end subroutine
 
 ! CHECK-LABEL: omp.private {type = firstprivate}
-! CHECK-SAME: @[[PRIVATIZER_SYM:.*]] : [[TYPE:!fir.ref<!fir.box<!fir.ptr<i32>>>]] alloc {
+! CHECK-SAME: @[[PRIVATIZER_SYM:.*]] : [[TYPE:!fir.box<!fir.ptr<i32>>]] init {
 
-! CHECK-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE]]):
+! CHECK-NEXT: ^bb0(%[[PRIV_ARG:.*]]: !fir.ref<[[TYPE]]>, %[[PRIV_ALLOC:.*]]: !fir.ref<[[TYPE]]>):
 
-! CHECK-NEXT:   %[[PRIV_ALLOC:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "var1", pinned, uniq_name = "_QFdelayed_privatization_pointerEvar1"}
 ! CHECK-NEXT:   %[[NULL:.*]] = fir.zero_bits !fir.ptr<i32>
 ! CHECK-NEXT:   %[[INIT:.*]] = fir.embox %[[NULL]] : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>
 ! CHECK-NEXT:   fir.store %[[INIT]] to %[[PRIV_ALLOC]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
-! CHECK-NEXT:   %[[PRIV_DECL:.*]]:2 = hlfir.declare %[[PRIV_ALLOC]]
-! CHECK-NEXT:   omp.yield(%[[PRIV_DECL]]#0 : [[TYPE]])
+! CHECK-NEXT:   omp.yield(%[[PRIV_ALLOC]] : !fir.ref<[[TYPE]]>)
 
 ! CHECK-NEXT: } copy {
-! CHECK: ^bb0(%[[PRIV_ORIG_ARG:.*]]: [[TYPE]], %[[PRIV_PRIV_ARG:.*]]: [[TYPE]]):
+! CHECK: ^bb0(%[[PRIV_ORIG_ARG:.*]]: !fir.ref<[[TYPE]]>, %[[PRIV_PRIV_ARG:.*]]: !fir.ref<[[TYPE]]>):
 ! CHECK-NEXT:    %[[ORIG_BASE_VAL:.*]] = fir.load %[[PRIV_ORIG_ARG]]
  ! CHECK-NEXT:   fir.store %[[ORIG_BASE_VAL]] to %[[PRIV_PRIV_ARG]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
-! CHECK-NEXT:   omp.yield(%[[PRIV_PRIV_ARG]] : [[TYPE]])
+! CHECK-NEXT:   omp.yield(%[[PRIV_PRIV_ARG]] : !fir.ref<[[TYPE]]>)
 ! CHECK-NEXT: }
