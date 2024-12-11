@@ -103,6 +103,8 @@ public:
   StringRef getType() const { return rec->getValueAsString("type"); }
   StringRef getName() const { return rec->getValueAsString("name"); }
   StringRef getDesc() const { return rec->getValueAsString("desc"); }
+  bool isPointerType() const { return getType().ends_with('*'); }
+  bool isHandleType() const { return getType().ends_with("_handle_t"); }
 
 private:
   const Record *rec;

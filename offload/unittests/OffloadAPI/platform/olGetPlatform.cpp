@@ -10,7 +10,7 @@
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
 
-using olGetPlatformTest = offloadTest;
+using olGetPlatformTest = OffloadTest;
 
 TEST_F(olGetPlatformTest, Success) {
   uint32_t PlatformCount;

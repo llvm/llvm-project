@@ -35,7 +35,7 @@ static void EmitValidationFunc(const FunctionRec &F, raw_ostream &OS) {
   }
   OS << ") {\n";
 
-  OS << TAB_1 "if (true /*enableParameterValidation*/) {\n";
+  OS << TAB_1 "if (offloadConfig().ValidationEnabled) {\n";
   // Emit validation checks
   for (const auto &Return : F.getReturns()) {
     for (auto &Condition : Return.getConditions()) {
@@ -51,7 +51,8 @@ static void EmitValidationFunc(const FunctionRec &F, raw_ostream &OS) {
 
   // Perform actual function call to the implementation
   ParamNameList = ParamNameList.substr(0, ParamNameList.size() - 2);
-  OS << formatv(TAB_1 "return {0}_impl({1});\n\n", F.getName(), ParamNameList);
+  OS << formatv(TAB_1 "return llvm::offload::{0}_impl({1});\n\n", F.getName(),
+                ParamNameList);
   OS << "}\n";
 }
 
@@ -72,7 +73,7 @@ static void EmitEntryPointFunc(const FunctionRec &F, raw_ostream &OS) {
 
   // Emit pre-call prints
   OS << TAB_1 "if (offloadConfig().TracingEnabled) {\n";
-  OS << formatv(TAB_2 "std::cout << \"---> {0}\";\n", F.getName());
+  OS << formatv(TAB_2 "llvm::errs() << \"---> {0}\";\n", F.getName());
   OS << TAB_1 "}\n\n";
 
   // Perform actual function call to the validation wrapper
@@ -91,13 +92,13 @@ static void EmitEntryPointFunc(const FunctionRec &F, raw_ostream &OS) {
       }
     }
     OS << formatv("};\n");
-    OS << TAB_2 "std::cout << \"(\" << &Params << \")\";\n";
+    OS << TAB_2 "llvm::errs() << \"(\" << &Params << \")\";\n";
   } else {
-    OS << TAB_2 "std::cout << \"()\";\n";
+    OS << TAB_2 "llvm::errs() << \"()\";\n";
   }
-  OS << TAB_2 "std::cout << \"-> \" << Result << \"\\n\";\n";
+  OS << TAB_2 "llvm::errs() << \"-> \" << Result << \"\\n\";\n";
   OS << TAB_2 "if (Result && Result->Details) {\n";
-  OS << TAB_3 "std::cout << \"     *Error Details* \" << Result->Details "
+  OS << TAB_3 "llvm::errs() << \"     *Error Details* \" << Result->Details "
               "<< \" \\n\";\n";
   OS << TAB_2 "}\n";
   OS << TAB_1 "}\n";
@@ -121,7 +122,7 @@ static void EmitCodeLocWrapper(const FunctionRec &F, raw_ostream &OS) {
   OS << "ol_code_location_t *CodeLocation";
   OS << ") {\n";
   OS << TAB_1 "currentCodeLocation() = CodeLocation;\n";
-  OS << formatv(TAB_1 "{0}_result_t Result = {1}({2});\n\n", PrefixLower,
+  OS << formatv(TAB_1 "{0}_result_t Result = ::{1}({2});\n\n", PrefixLower,
                 F.getName(), ParamNameList);
   OS << TAB_1 "currentCodeLocation() = nullptr;\n";
   OS << TAB_1 "return Result;\n";
