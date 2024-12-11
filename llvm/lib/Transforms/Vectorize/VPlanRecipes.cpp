@@ -967,7 +967,8 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
   Module *M = State.Builder.GetInsertBlock()->getModule();
   Function *VectorF =
       Intrinsic::getOrInsertDeclaration(M, VectorIntrinsicID, TysForDecl);
-  assert(VectorF && "Can't retrieve vector intrinsic.");
+  assert(VectorF &&
+         "Can't retrieve vector intrinsic or vector-predication intrinsics.");
 
   auto *CI = cast_or_null<CallInst>(getUnderlyingValue());
   SmallVector<OperandBundleDef, 1> OpBundles;
