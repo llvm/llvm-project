@@ -339,8 +339,7 @@ let FPDPRounding = 1 in {
   } // End Predicates = [Has16BitInsts, isGFX8Only]
 
   let SubtargetPredicate = isGFX9Plus in {
-    defm V_DIV_FIXUP_F16_gfx9 : VOP3Inst <"v_div_fixup_f16_gfx9",
-                                          VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>, AMDGPUdiv_fixup>;
+    defm V_DIV_FIXUP_F16_gfx9 : VOP3Inst_t16 <"v_div_fixup_f16_gfx9", VOP_F16_F16_F16_F16, AMDGPUdiv_fixup>;
     defm V_FMA_F16_gfx9 : VOP3Inst <"v_fma_f16_gfx9", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>, any_fma>;
   } // End SubtargetPredicate = isGFX9Plus
 } // End FPDPRounding = 1
@@ -1717,7 +1716,7 @@ defm V_MED3_F16            : VOP3_Realtriple_gfx11<0x24f>;
 defm V_MED3_I16            : VOP3_Realtriple_gfx11_gfx12<0x250>;
 defm V_MED3_U16            : VOP3_Realtriple_gfx11_gfx12<0x251>;
 defm V_MAD_I16             : VOP3_Realtriple_with_name_gfx11_gfx12<0x253, "V_MAD_I16_gfx9", "v_mad_i16">;
-defm V_DIV_FIXUP_F16       : VOP3_Realtriple_with_name_gfx11_gfx12<0x254, "V_DIV_FIXUP_F16_gfx9", "v_div_fixup_f16">;
+defm V_DIV_FIXUP_F16       : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<0x254, "v_div_fixup_f16", "V_DIV_FIXUP_F16_gfx9">;
 defm V_ADD3_U32            : VOP3_Realtriple_gfx11_gfx12<0x255>;
 defm V_LSHL_OR_B32         : VOP3_Realtriple_gfx11_gfx12<0x256>;
 defm V_AND_OR_B32          : VOP3_Realtriple_gfx11_gfx12<0x257>;
