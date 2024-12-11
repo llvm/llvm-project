@@ -27,7 +27,9 @@ void test_no_message() {
 
 int main(int argc, const char** argv) {
   Result = atoi(argv[1]);
-  if (Result) test_message();
-  else test_no_message();
+  if (Result)
+    test_message();
+  else
+    test_no_message();
   return 0;
 }
