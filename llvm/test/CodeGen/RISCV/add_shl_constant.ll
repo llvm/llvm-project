@@ -12,8 +12,8 @@ define i32 @add_shl_oneUse(i32 %x, i32 %y) nounwind {
 ;
 ; ZBA-LABEL: add_shl_oneUse:
 ; ZBA:       # %bb.0:
+; ZBA-NEXT:    addi a0, a0, 123
 ; ZBA-NEXT:    sh3add a0, a0, a1
-; ZBA-NEXT:    addi a0, a0, 984
 ; ZBA-NEXT:    ret
   %add.0 = add i32 %x, 123
   %shl = shl i32 %add.0, 3
@@ -182,13 +182,19 @@ entry:
 }
 
 define i32 @add_shl_moreOneUse_sh1add(i32 %x) {
-; RV32-LABEL: add_shl_moreOneUse_sh1add:
-; RV32:       # %bb.0:
-; RV32-NEXT:    ori a1, a0, 1
-; RV32-NEXT:    slli a0, a0, 1
-; RV32-NEXT:    ori a0, a0, 2
-; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    ret
+; NO-ZBA-LABEL: add_shl_moreOneUse_sh1add:
+; NO-ZBA:       # %bb.0:
+; NO-ZBA-NEXT:    ori a1, a0, 1
+; NO-ZBA-NEXT:    slli a0, a0, 1
+; NO-ZBA-NEXT:    ori a0, a0, 2
+; NO-ZBA-NEXT:    add a0, a0, a1
+; NO-ZBA-NEXT:    ret
+;
+; ZBA-LABEL: add_shl_moreOneUse_sh1add:
+; ZBA:       # %bb.0:
+; ZBA-NEXT:    ori a0, a0, 1
+; ZBA-NEXT:    sh1add a0, a0, a0
+; ZBA-NEXT:    ret
   %or = or i32 %x, 1
   %mul = shl i32 %or, 1
   %add = add i32 %mul, %or
@@ -196,13 +202,19 @@ define i32 @add_shl_moreOneUse_sh1add(i32 %x) {
 }
 
 define i32 @add_shl_moreOneUse_sh2add(i32 %x) {
-; RV32-LABEL: add_shl_moreOneUse_sh2add:
-; RV32:       # %bb.0:
-; RV32-NEXT:    ori a1, a0, 1
-; RV32-NEXT:    slli a0, a0, 2
-; RV32-NEXT:    ori a0, a0, 4
-; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    ret
+; NO-ZBA-LABEL: add_shl_moreOneUse_sh2add:
+; NO-ZBA:       # %bb.0:
+; NO-ZBA-NEXT:    ori a1, a0, 1
+; NO-ZBA-NEXT:    slli a0, a0, 2
+; NO-ZBA-NEXT:    ori a0, a0, 4
+; NO-ZBA-NEXT:    add a0, a0, a1
+; NO-ZBA-NEXT:    ret
+;
+; ZBA-LABEL: add_shl_moreOneUse_sh2add:
+; ZBA:       # %bb.0:
+; ZBA-NEXT:    ori a0, a0, 1
+; ZBA-NEXT:    sh2add a0, a0, a0
+; ZBA-NEXT:    ret
   %or = or i32 %x, 1
   %mul = shl i32 %or, 2
   %add = add i32 %mul, %or
@@ -210,13 +222,19 @@ define i32 @add_shl_moreOneUse_sh2add(i32 %x) {
 }
 
 define i32 @add_shl_moreOneUse_sh3add(i32 %x) {
-; RV32-LABEL: add_shl_moreOneUse_sh3add:
-; RV32:       # %bb.0:
-; RV32-NEXT:    ori a1, a0, 1
-; RV32-NEXT:    slli a0, a0, 3
-; RV32-NEXT:    ori a0, a0, 8
-; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    ret
+; NO-ZBA-LABEL: add_shl_moreOneUse_sh3add:
+; NO-ZBA:       # %bb.0:
+; NO-ZBA-NEXT:    ori a1, a0, 1
+; NO-ZBA-NEXT:    slli a0, a0, 3
+; NO-ZBA-NEXT:    ori a0, a0, 8
+; NO-ZBA-NEXT:    add a0, a0, a1
+; NO-ZBA-NEXT:    ret
+;
+; ZBA-LABEL: add_shl_moreOneUse_sh3add:
+; ZBA:       # %bb.0:
+; ZBA-NEXT:    ori a0, a0, 1
+; ZBA-NEXT:    sh3add a0, a0, a0
+; ZBA-NEXT:    ret
   %or = or i32 %x, 1
   %mul = shl i32 %or, 3
   %add = add i32 %mul, %or

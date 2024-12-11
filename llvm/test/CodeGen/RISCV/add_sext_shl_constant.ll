@@ -261,13 +261,19 @@ entry:
 }
 
 define i64 @add_shl_moreOneUse_sh1add(i64 %x) {
-; RV64-LABEL: add_shl_moreOneUse_sh1add:
-; RV64:       # %bb.0:
-; RV64-NEXT:    ori a1, a0, 1
-; RV64-NEXT:    slli a0, a0, 1
-; RV64-NEXT:    ori a0, a0, 2
-; RV64-NEXT:    add a0, a0, a1
-; RV64-NEXT:    ret
+; NO-ZBA-LABEL: add_shl_moreOneUse_sh1add:
+; NO-ZBA:       # %bb.0:
+; NO-ZBA-NEXT:    ori a1, a0, 1
+; NO-ZBA-NEXT:    slli a0, a0, 1
+; NO-ZBA-NEXT:    ori a0, a0, 2
+; NO-ZBA-NEXT:    add a0, a0, a1
+; NO-ZBA-NEXT:    ret
+;
+; ZBA-LABEL: add_shl_moreOneUse_sh1add:
+; ZBA:       # %bb.0:
+; ZBA-NEXT:    ori a0, a0, 1
+; ZBA-NEXT:    sh1add a0, a0, a0
+; ZBA-NEXT:    ret
   %or = or i64 %x, 1
   %mul = shl i64 %or, 1
   %add = add i64 %mul, %or
@@ -275,13 +281,19 @@ define i64 @add_shl_moreOneUse_sh1add(i64 %x) {
 }
 
 define i64 @add_shl_moreOneUse_sh2add(i64 %x) {
-; RV64-LABEL: add_shl_moreOneUse_sh2add:
-; RV64:       # %bb.0:
-; RV64-NEXT:    ori a1, a0, 1
-; RV64-NEXT:    slli a0, a0, 2
-; RV64-NEXT:    ori a0, a0, 4
-; RV64-NEXT:    add a0, a0, a1
-; RV64-NEXT:    ret
+; NO-ZBA-LABEL: add_shl_moreOneUse_sh2add:
+; NO-ZBA:       # %bb.0:
+; NO-ZBA-NEXT:    ori a1, a0, 1
+; NO-ZBA-NEXT:    slli a0, a0, 2
+; NO-ZBA-NEXT:    ori a0, a0, 4
+; NO-ZBA-NEXT:    add a0, a0, a1
+; NO-ZBA-NEXT:    ret
+;
+; ZBA-LABEL: add_shl_moreOneUse_sh2add:
+; ZBA:       # %bb.0:
+; ZBA-NEXT:    ori a0, a0, 1
+; ZBA-NEXT:    sh2add a0, a0, a0
+; ZBA-NEXT:    ret
   %or = or i64 %x, 1
   %mul = shl i64 %or, 2
   %add = add i64 %mul, %or
@@ -289,13 +301,19 @@ define i64 @add_shl_moreOneUse_sh2add(i64 %x) {
 }
 
 define i64 @add_shl_moreOneUse_sh3add(i64 %x) {
-; RV64-LABEL: add_shl_moreOneUse_sh3add:
-; RV64:       # %bb.0:
-; RV64-NEXT:    ori a1, a0, 1
-; RV64-NEXT:    slli a0, a0, 3
-; RV64-NEXT:    ori a0, a0, 8
-; RV64-NEXT:    add a0, a0, a1
-; RV64-NEXT:    ret
+; NO-ZBA-LABEL: add_shl_moreOneUse_sh3add:
+; NO-ZBA:       # %bb.0:
+; NO-ZBA-NEXT:    ori a1, a0, 1
+; NO-ZBA-NEXT:    slli a0, a0, 3
+; NO-ZBA-NEXT:    ori a0, a0, 8
+; NO-ZBA-NEXT:    add a0, a0, a1
+; NO-ZBA-NEXT:    ret
+;
+; ZBA-LABEL: add_shl_moreOneUse_sh3add:
+; ZBA:       # %bb.0:
+; ZBA-NEXT:    ori a0, a0, 1
+; ZBA-NEXT:    sh3add a0, a0, a0
+; ZBA-NEXT:    ret
   %or = or i64 %x, 1
   %mul = shl i64 %or, 3
   %add = add i64 %mul, %or
