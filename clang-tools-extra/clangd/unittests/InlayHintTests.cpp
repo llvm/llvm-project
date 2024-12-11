@@ -1577,19 +1577,21 @@ TEST(TypeHints, Aliased) {
 }
 
 TEST(TypeHints, CallingConvention) {
-  // Check that we don't crash for lambdas without a FunctionTypeLoc
+  // Check that we don't crash for lambdas with an annotation
   // https://github.com/clangd/clangd/issues/2223
-  std::string Code = R"cpp(
+  Annotations Source(R"cpp(
     void test() {
-      []() __cdecl {};
+      []($lambda[[)]]__cdecl {};
     }
-  )cpp";
-  TestTU TU = TestTU::withCode(Code);
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
   TU.ExtraArgs.push_back("--target=x86_64-w64-mingw32");
   TU.PredefineMacros = true; // for the __cdecl
   auto AST = TU.build();
 
-  EXPECT_THAT(hintsOfKind(AST, InlayHintKind::Type), IsEmpty());
+  EXPECT_THAT(
+      hintsOfKind(AST, InlayHintKind::Type),
+      ElementsAre(HintMatcher(ExpectedHint{"-> void", "lambda"}, Source)));
 }
 
 TEST(TypeHints, Decltype) {
