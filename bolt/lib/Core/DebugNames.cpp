@@ -270,7 +270,7 @@ std::optional<std::string> DWARF5AcceleratorTable::getName(
     if (!NameToUse.empty())
       NameIndexOffset = MainBinaryStrWriter.addString(Name);
     It.StrOffset = NameIndexOffset;
-    // This the same hash function used in DWARF5AccelTableData.
+    // This is the same hash function used in DWARF5AccelTableData.
     It.HashValue = caseFoldingDjbHash(Name);
   }
   return Name;
@@ -301,9 +301,8 @@ std::optional<BOLTDWARF5AccelTableData *> DWARF5AcceleratorTable::addEntry(
   }
   std::optional<uint64_t> ParentOffset =
       (Parent ? std::optional<uint64_t>(getEntryID(**Parent)) : std::nullopt);
-  // This will be populated later in writeEntry.
-  // This way only parent entries get tracked.
-  // Keeping memory footprint down.
+  // This will be only populated in writeEntry, in order to keep only the parent
+  // entries, and keep the footprint down.
   if (ParentOffset)
     EntryRelativeOffsets.insert({*ParentOffset, 0});
   bool IsParentRoot = false;
@@ -387,7 +386,7 @@ DWARF5AcceleratorTable::addAccelTableEntry(
   if (!canProcess(Unit, Die, NameToUse, false))
     return std::nullopt;
 
-  // Addes a Unit to either CU, LocalTU or ForeignTU list the first time we
+  // Adds a Unit to either CU, LocalTU or ForeignTU list the first time we
   // encounter it.
   // Invoking it here so that we don't add Units that don't have any entries.
   if (&Unit != CurrentUnit) {
@@ -414,10 +413,10 @@ DWARF5AcceleratorTable::addAccelTableEntry(
 
   // The DIE doesn't have DW_AT_name or DW_AT_linkage_name, so we need to see if
   // we can follow other attributes to find them. For the purposes of
-  // determining whether a debugging information entry has a particular
-  // attribute (such as DW_AT_name), if debugging information entry A has a
+  // determining whether a debug information entry has a particular
+  // attribute (such as DW_AT_name), if debug information entry A has a
   // DW_AT_specification or DW_AT_abstract_origin attribute pointing to another
-  // debugging information entry B, any attributes of B are considered to be
+  // debug information entry B, any attributes of B are considered to be
   // part of A.
   if (std::optional<BOLTDWARF5AccelTableData *> Entry = processReferencedDie(
           Unit, Die, DWOID, Parent, NameToUse, NumberParentsInChain,
