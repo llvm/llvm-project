@@ -2856,6 +2856,7 @@ bool DNBArchMachARM64::SetRegisterValue(uint32_t set, uint32_t reg,
         success = true;
       }
       if (reg >= sve_p0 && reg <= sve_p15) {
+        uint16_t max_svl_bytes = GetSMEMaxSVL();
         memcpy(&m_state.context.sve.p[reg - sve_p0], &value->value.v_uint8,
                max_svl_bytes / 8);
         success = true;
