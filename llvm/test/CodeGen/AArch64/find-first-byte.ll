@@ -16,72 +16,85 @@ define ptr @find_first_of_i8(ptr %0, ptr %1, ptr %2, ptr %3) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq ptr [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq ptr [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    br i1 [[TMP7]], label %[[BB48:.*]], label %[[DOTPREHEADER:.*]]
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[BB60:.*]], [[DOTPREHEADER:label %.*]]
 ; CHECK:       [[_PREHEADER:.*:]]
-; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 16)
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[BB9:.*]]
-; CHECK:       [[BB9]]:
-; CHECK-NEXT:    [[PSEARCH:%.*]] = phi ptr [ [[TMP0]], %[[DOTPREHEADER]] ], [ [[TMP33:%.*]], %[[TMP32:.*]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[PSEARCH]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP12:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[TMP10]], i64 [[TMP11]])
-; CHECK-NEXT:    [[TMP13:%.*]] = and <vscale x 16 x i1> [[TMP8]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr [[PSEARCH]], i32 1, <vscale x 16 x i1> [[TMP13]], <vscale x 16 x i8> zeroinitializer)
-; CHECK-NEXT:    br label %[[BB15:.*]]
-; CHECK:       [[BB15]]:
-; CHECK-NEXT:    [[PNEEDLE:%.*]] = phi ptr [ [[TMP2]], %[[BB9]] ], [ [[TMP30:%.*]], %[[TMP29:.*]] ]
-; CHECK-NEXT:    [[TMP16:%.*]] = ptrtoint ptr [[PNEEDLE]] to i64
-; CHECK-NEXT:    [[TMP17:%.*]] = ptrtoint ptr [[TMP3]] to i64
-; CHECK-NEXT:    [[TMP18:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[TMP16]], i64 [[TMP17]])
-; CHECK-NEXT:    [[TMP19:%.*]] = and <vscale x 16 x i1> [[TMP8]], [[TMP18]]
-; CHECK-NEXT:    [[TMP20:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr [[PNEEDLE]], i32 1, <vscale x 16 x i1> [[TMP19]], <vscale x 16 x i8> zeroinitializer)
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <vscale x 16 x i8> [[TMP20]], i64 0
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[TMP21]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP22:%.*]] = select <vscale x 16 x i1> [[TMP19]], <vscale x 16 x i8> [[TMP20]], <vscale x 16 x i8> [[DOTSPLAT]]
-; CHECK-NEXT:    [[TMP23:%.*]] = call <16 x i8> @llvm.vector.extract.v16i8.nxv16i8(<vscale x 16 x i8> [[TMP22]], i64 0)
-; CHECK-NEXT:    [[TMP24:%.*]] = call <vscale x 16 x i1> @llvm.experimental.vector.match.nxv16i8.v16i8(<vscale x 16 x i8> [[TMP14]], <16 x i8> [[TMP23]], <vscale x 16 x i1> [[TMP13]])
-; CHECK-NEXT:    [[TMP25:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[TMP24]])
-; CHECK-NEXT:    br i1 [[TMP25]], label %[[BB26:.*]], label %[[TMP29]]
+; CHECK-NEXT:    br label %[[BB8:.*]]
+; CHECK:       [[BB8]]:
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP12:%.*]] = ptrtoint ptr [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP13:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 16)
+; CHECK-NEXT:    [[TMP14:%.*]] = lshr i64 [[TMP9]], 12
+; CHECK-NEXT:    [[TMP15:%.*]] = lshr i64 [[TMP10]], 12
+; CHECK-NEXT:    [[TMP16:%.*]] = lshr i64 [[TMP11]], 12
+; CHECK-NEXT:    [[TMP17:%.*]] = lshr i64 [[TMP12]], 12
+; CHECK-NEXT:    [[TMP18:%.*]] = icmp ne i64 [[TMP14]], [[TMP15]]
+; CHECK-NEXT:    [[TMP19:%.*]] = icmp ne i64 [[TMP16]], [[TMP17]]
+; CHECK-NEXT:    [[TMP20:%.*]] = or i1 [[TMP18]], [[TMP19]]
+; CHECK-NEXT:    br i1 [[TMP20]], label %[[SCALAR_PH:.*]], label %[[BB21:.*]], !prof [[PROF0:![0-9]+]]
+; CHECK:       [[BB21]]:
+; CHECK-NEXT:    [[PSEARCH:%.*]] = phi ptr [ [[TMP0]], %[[BB8]] ], [ [[TMP45:%.*]], %[[TMP44:.*]] ]
+; CHECK-NEXT:    [[TMP22:%.*]] = ptrtoint ptr [[PSEARCH]] to i64
+; CHECK-NEXT:    [[TMP23:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[TMP22]], i64 [[TMP10]])
+; CHECK-NEXT:    [[TMP24:%.*]] = and <vscale x 16 x i1> [[TMP13]], [[TMP23]]
+; CHECK-NEXT:    [[TMP25:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr [[PSEARCH]], i32 1, <vscale x 16 x i1> [[TMP24]], <vscale x 16 x i8> zeroinitializer)
+; CHECK-NEXT:    br label %[[BB26:.*]]
 ; CHECK:       [[BB26]]:
-; CHECK-NEXT:    [[TMP27:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv16i1(<vscale x 16 x i1> [[TMP24]], i1 true)
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i8, ptr [[PSEARCH]], i64 [[TMP27]]
+; CHECK-NEXT:    [[PNEEDLE:%.*]] = phi ptr [ [[TMP2]], %[[BB21]] ], [ [[TMP42:%.*]], %[[TMP41:.*]] ]
+; CHECK-NEXT:    [[TMP27:%.*]] = ptrtoint ptr [[PNEEDLE]] to i64
+; CHECK-NEXT:    [[TMP28:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[TMP27]], i64 [[TMP12]])
+; CHECK-NEXT:    [[TMP29:%.*]] = and <vscale x 16 x i1> [[TMP13]], [[TMP28]]
+; CHECK-NEXT:    [[TMP30:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr [[PNEEDLE]], i32 1, <vscale x 16 x i1> [[TMP29]], <vscale x 16 x i8> zeroinitializer)
+; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <vscale x 16 x i8> [[TMP30]], i64 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[TMP31]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP32:%.*]] = select <vscale x 16 x i1> [[TMP29]], <vscale x 16 x i8> [[TMP30]], <vscale x 16 x i8> [[DOTSPLAT]]
+; CHECK-NEXT:    [[TMP33:%.*]] = call <16 x i8> @llvm.vector.extract.v16i8.nxv16i8(<vscale x 16 x i8> [[TMP32]], i64 0)
+; CHECK-NEXT:    [[TMP34:%.*]] = call <vscale x 16 x i1> @llvm.experimental.vector.match.nxv16i8.v16i8(<vscale x 16 x i8> [[TMP25]], <16 x i8> [[TMP33]], <vscale x 16 x i1> [[TMP24]])
+; CHECK-NEXT:    [[TMP35:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[TMP34]])
+; CHECK-NEXT:    br i1 [[TMP35]], label %[[BB36:.*]], label %[[TMP41]]
+; CHECK:       [[BB36]]:
+; CHECK-NEXT:    [[TMP37:%.*]] = phi ptr [ [[PSEARCH]], %[[BB26]] ]
+; CHECK-NEXT:    [[TMP38:%.*]] = phi <vscale x 16 x i1> [ [[TMP34]], %[[BB26]] ]
+; CHECK-NEXT:    [[TMP39:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv16i1(<vscale x 16 x i1> [[TMP38]], i1 true)
+; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr i8, ptr [[TMP37]], i64 [[TMP39]]
 ; CHECK-NEXT:    br label %[[DOTLOOPEXIT:.*]]
-; CHECK:       [[TMP29]]:
-; CHECK-NEXT:    [[TMP30]] = getelementptr i8, ptr [[PNEEDLE]], i64 16
-; CHECK-NEXT:    [[TMP31:%.*]] = icmp ult ptr [[TMP30]], [[TMP3]]
-; CHECK-NEXT:    br i1 [[TMP31]], label %[[BB15]], label %[[TMP32]]
-; CHECK:       [[TMP32]]:
-; CHECK-NEXT:    [[TMP33]] = getelementptr i8, ptr [[PSEARCH]], i64 16
-; CHECK-NEXT:    [[TMP34:%.*]] = icmp ult ptr [[TMP33]], [[TMP1]]
-; CHECK-NEXT:    br i1 [[TMP34]], label %[[BB9]], label %[[DOTLOOPEXIT1:.*]]
+; CHECK:       [[TMP41]]:
+; CHECK-NEXT:    [[TMP42]] = getelementptr i8, ptr [[PNEEDLE]], i64 16
+; CHECK-NEXT:    [[TMP43:%.*]] = icmp ult ptr [[TMP42]], [[TMP3]]
+; CHECK-NEXT:    br i1 [[TMP43]], label %[[BB26]], label %[[TMP44]]
+; CHECK:       [[TMP44]]:
+; CHECK-NEXT:    [[TMP45]] = getelementptr i8, ptr [[PSEARCH]], i64 16
+; CHECK-NEXT:    [[TMP46:%.*]] = icmp ult ptr [[TMP45]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[TMP46]], label %[[BB21]], label %[[DOTLOOPEXIT1:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    br label %[[BB35:.*]]
-; CHECK:       [[BB35]]:
-; CHECK-NEXT:    [[TMP36:%.*]] = phi ptr [ [[TMP46:%.*]], %[[TMP45:.*]] ], [ [[TMP0]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[TMP37:%.*]] = load i8, ptr [[TMP36]], align 1
-; CHECK-NEXT:    br label %[[BB41:.*]]
-; CHECK:       [[BB38:.*]]:
-; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr inbounds i8, ptr [[TMP42:%.*]], i64 1
-; CHECK-NEXT:    [[TMP40:%.*]] = icmp eq ptr [[TMP39]], [[TMP3]]
-; CHECK-NEXT:    br i1 [[TMP40]], label %[[TMP45]], label %[[BB41]]
-; CHECK:       [[BB41]]:
-; CHECK-NEXT:    [[TMP42]] = phi ptr [ [[TMP2]], %[[BB35]] ], [ [[TMP39]], %[[BB38]] ]
-; CHECK-NEXT:    [[TMP43:%.*]] = load i8, ptr [[TMP42]], align 1
-; CHECK-NEXT:    [[TMP44:%.*]] = icmp eq i8 [[TMP37]], [[TMP43]]
-; CHECK-NEXT:    br i1 [[TMP44]], label %[[DOTLOOPEXIT]], label %[[BB38]]
-; CHECK:       [[TMP45]]:
-; CHECK-NEXT:    [[TMP46]] = getelementptr inbounds i8, ptr [[TMP36]], i64 1
-; CHECK-NEXT:    [[TMP47:%.*]] = icmp eq ptr [[TMP46]], [[TMP1]]
-; CHECK-NEXT:    br i1 [[TMP47]], label %[[DOTLOOPEXIT1]], label %[[BB35]]
+; CHECK-NEXT:    br label %[[BB47:.*]]
+; CHECK:       [[BB47]]:
+; CHECK-NEXT:    [[TMP48:%.*]] = phi ptr [ [[TMP58:%.*]], %[[TMP57:.*]] ], [ [[TMP0]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[TMP49:%.*]] = load i8, ptr [[TMP48]], align 1
+; CHECK-NEXT:    br label %[[BB53:.*]]
+; CHECK:       [[BB50:.*]]:
+; CHECK-NEXT:    [[TMP51:%.*]] = getelementptr inbounds i8, ptr [[TMP54:%.*]], i64 1
+; CHECK-NEXT:    [[TMP52:%.*]] = icmp eq ptr [[TMP51]], [[TMP3]]
+; CHECK-NEXT:    br i1 [[TMP52]], label %[[TMP57]], label %[[BB53]]
+; CHECK:       [[BB53]]:
+; CHECK-NEXT:    [[TMP54]] = phi ptr [ [[TMP2]], %[[BB47]] ], [ [[TMP51]], %[[BB50]] ]
+; CHECK-NEXT:    [[TMP55:%.*]] = load i8, ptr [[TMP54]], align 1
+; CHECK-NEXT:    [[TMP56:%.*]] = icmp eq i8 [[TMP49]], [[TMP55]]
+; CHECK-NEXT:    br i1 [[TMP56]], label %[[DOTLOOPEXIT]], label %[[BB50]]
+; CHECK:       [[TMP57]]:
+; CHECK-NEXT:    [[TMP58]] = getelementptr inbounds i8, ptr [[TMP48]], i64 1
+; CHECK-NEXT:    [[TMP59:%.*]] = icmp eq ptr [[TMP58]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[TMP59]], label %[[DOTLOOPEXIT1]], label %[[BB47]]
 ; CHECK:       [[_LOOPEXIT:.*:]]
-; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi ptr [ [[TMP36]], %[[BB41]] ], [ [[TMP28]], %[[BB26]] ]
-; CHECK-NEXT:    br label %[[BB48]]
+; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi ptr [ [[TMP48]], %[[BB53]] ], [ [[TMP40]], %[[BB36]] ]
+; CHECK-NEXT:    br label %[[BB60]]
 ; CHECK:       [[_LOOPEXIT1:.*:]]
-; CHECK-NEXT:    br label %[[BB48]]
-; CHECK:       [[BB48]]:
-; CHECK-NEXT:    [[TMP49:%.*]] = phi ptr [ [[TMP1]], [[TMP4:%.*]] ], [ [[DOTLCSSA]], %[[DOTLOOPEXIT]] ], [ [[TMP1]], %[[DOTLOOPEXIT1]] ]
-; CHECK-NEXT:    ret ptr [[TMP49]]
+; CHECK-NEXT:    br label %[[BB60]]
+; CHECK:       [[BB60]]:
+; CHECK-NEXT:    [[TMP61:%.*]] = phi ptr [ [[TMP1]], [[TMP4:%.*]] ], [ [[DOTLCSSA]], %[[DOTLOOPEXIT]] ], [ [[TMP1]], %[[DOTLOOPEXIT1]] ]
+; CHECK-NEXT:    ret ptr [[TMP61]]
 ;
 ; DISABLE-LABEL: define ptr @find_first_of_i8(
 ; DISABLE-SAME: ptr [[TMP0:%.*]], ptr [[TMP1:%.*]], ptr [[TMP2:%.*]], ptr [[TMP3:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -157,72 +170,85 @@ define ptr @find_first_of_i16(ptr %0, ptr %1, ptr %2, ptr %3) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq ptr [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq ptr [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    br i1 [[TMP7]], label %[[BB48:.*]], label %[[DOTPREHEADER:.*]]
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[BB60:.*]], [[DOTPREHEADER:label %.*]]
 ; CHECK:       [[_PREHEADER:.*:]]
-; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 8)
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[BB9:.*]]
-; CHECK:       [[BB9]]:
-; CHECK-NEXT:    [[PSEARCH:%.*]] = phi ptr [ [[TMP0]], %[[DOTPREHEADER]] ], [ [[TMP33:%.*]], %[[TMP32:.*]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[PSEARCH]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP12:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[TMP10]], i64 [[TMP11]])
-; CHECK-NEXT:    [[TMP13:%.*]] = and <vscale x 8 x i1> [[TMP8]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr [[PSEARCH]], i32 1, <vscale x 8 x i1> [[TMP13]], <vscale x 8 x i16> zeroinitializer)
-; CHECK-NEXT:    br label %[[BB15:.*]]
-; CHECK:       [[BB15]]:
-; CHECK-NEXT:    [[PNEEDLE:%.*]] = phi ptr [ [[TMP2]], %[[BB9]] ], [ [[TMP30:%.*]], %[[TMP29:.*]] ]
-; CHECK-NEXT:    [[TMP16:%.*]] = ptrtoint ptr [[PNEEDLE]] to i64
-; CHECK-NEXT:    [[TMP17:%.*]] = ptrtoint ptr [[TMP3]] to i64
-; CHECK-NEXT:    [[TMP18:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[TMP16]], i64 [[TMP17]])
-; CHECK-NEXT:    [[TMP19:%.*]] = and <vscale x 8 x i1> [[TMP8]], [[TMP18]]
-; CHECK-NEXT:    [[TMP20:%.*]] = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr [[PNEEDLE]], i32 1, <vscale x 8 x i1> [[TMP19]], <vscale x 8 x i16> zeroinitializer)
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <vscale x 8 x i16> [[TMP20]], i64 0
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[TMP21]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[DOTSPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP22:%.*]] = select <vscale x 8 x i1> [[TMP19]], <vscale x 8 x i16> [[TMP20]], <vscale x 8 x i16> [[DOTSPLAT]]
-; CHECK-NEXT:    [[TMP23:%.*]] = call <8 x i16> @llvm.vector.extract.v8i16.nxv8i16(<vscale x 8 x i16> [[TMP22]], i64 0)
-; CHECK-NEXT:    [[TMP24:%.*]] = call <vscale x 8 x i1> @llvm.experimental.vector.match.nxv8i16.v8i16(<vscale x 8 x i16> [[TMP14]], <8 x i16> [[TMP23]], <vscale x 8 x i1> [[TMP13]])
-; CHECK-NEXT:    [[TMP25:%.*]] = call i1 @llvm.vector.reduce.or.nxv8i1(<vscale x 8 x i1> [[TMP24]])
-; CHECK-NEXT:    br i1 [[TMP25]], label %[[BB26:.*]], label %[[TMP29]]
+; CHECK-NEXT:    br label %[[BB8:.*]]
+; CHECK:       [[BB8]]:
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP12:%.*]] = ptrtoint ptr [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP13:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 8)
+; CHECK-NEXT:    [[TMP14:%.*]] = lshr i64 [[TMP9]], 12
+; CHECK-NEXT:    [[TMP15:%.*]] = lshr i64 [[TMP10]], 12
+; CHECK-NEXT:    [[TMP16:%.*]] = lshr i64 [[TMP11]], 12
+; CHECK-NEXT:    [[TMP17:%.*]] = lshr i64 [[TMP12]], 12
+; CHECK-NEXT:    [[TMP18:%.*]] = icmp ne i64 [[TMP14]], [[TMP15]]
+; CHECK-NEXT:    [[TMP19:%.*]] = icmp ne i64 [[TMP16]], [[TMP17]]
+; CHECK-NEXT:    [[TMP20:%.*]] = or i1 [[TMP18]], [[TMP19]]
+; CHECK-NEXT:    br i1 [[TMP20]], label %[[SCALAR_PH:.*]], label %[[BB21:.*]], !prof [[PROF0]]
+; CHECK:       [[BB21]]:
+; CHECK-NEXT:    [[PSEARCH:%.*]] = phi ptr [ [[TMP0]], %[[BB8]] ], [ [[TMP45:%.*]], %[[TMP44:.*]] ]
+; CHECK-NEXT:    [[TMP22:%.*]] = ptrtoint ptr [[PSEARCH]] to i64
+; CHECK-NEXT:    [[TMP23:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[TMP22]], i64 [[TMP10]])
+; CHECK-NEXT:    [[TMP24:%.*]] = and <vscale x 8 x i1> [[TMP13]], [[TMP23]]
+; CHECK-NEXT:    [[TMP25:%.*]] = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr [[PSEARCH]], i32 1, <vscale x 8 x i1> [[TMP24]], <vscale x 8 x i16> zeroinitializer)
+; CHECK-NEXT:    br label %[[BB26:.*]]
 ; CHECK:       [[BB26]]:
-; CHECK-NEXT:    [[TMP27:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1> [[TMP24]], i1 true)
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i16, ptr [[PSEARCH]], i64 [[TMP27]]
+; CHECK-NEXT:    [[PNEEDLE:%.*]] = phi ptr [ [[TMP2]], %[[BB21]] ], [ [[TMP42:%.*]], %[[TMP41:.*]] ]
+; CHECK-NEXT:    [[TMP27:%.*]] = ptrtoint ptr [[PNEEDLE]] to i64
+; CHECK-NEXT:    [[TMP28:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[TMP27]], i64 [[TMP12]])
+; CHECK-NEXT:    [[TMP29:%.*]] = and <vscale x 8 x i1> [[TMP13]], [[TMP28]]
+; CHECK-NEXT:    [[TMP30:%.*]] = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr [[PNEEDLE]], i32 1, <vscale x 8 x i1> [[TMP29]], <vscale x 8 x i16> zeroinitializer)
+; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <vscale x 8 x i16> [[TMP30]], i64 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[TMP31]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[DOTSPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP32:%.*]] = select <vscale x 8 x i1> [[TMP29]], <vscale x 8 x i16> [[TMP30]], <vscale x 8 x i16> [[DOTSPLAT]]
+; CHECK-NEXT:    [[TMP33:%.*]] = call <8 x i16> @llvm.vector.extract.v8i16.nxv8i16(<vscale x 8 x i16> [[TMP32]], i64 0)
+; CHECK-NEXT:    [[TMP34:%.*]] = call <vscale x 8 x i1> @llvm.experimental.vector.match.nxv8i16.v8i16(<vscale x 8 x i16> [[TMP25]], <8 x i16> [[TMP33]], <vscale x 8 x i1> [[TMP24]])
+; CHECK-NEXT:    [[TMP35:%.*]] = call i1 @llvm.vector.reduce.or.nxv8i1(<vscale x 8 x i1> [[TMP34]])
+; CHECK-NEXT:    br i1 [[TMP35]], label %[[BB36:.*]], label %[[TMP41]]
+; CHECK:       [[BB36]]:
+; CHECK-NEXT:    [[TMP37:%.*]] = phi ptr [ [[PSEARCH]], %[[BB26]] ]
+; CHECK-NEXT:    [[TMP38:%.*]] = phi <vscale x 8 x i1> [ [[TMP34]], %[[BB26]] ]
+; CHECK-NEXT:    [[TMP39:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1> [[TMP38]], i1 true)
+; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr i16, ptr [[TMP37]], i64 [[TMP39]]
 ; CHECK-NEXT:    br label %[[DOTLOOPEXIT:.*]]
-; CHECK:       [[TMP29]]:
-; CHECK-NEXT:    [[TMP30]] = getelementptr i16, ptr [[PNEEDLE]], i64 8
-; CHECK-NEXT:    [[TMP31:%.*]] = icmp ult ptr [[TMP30]], [[TMP3]]
-; CHECK-NEXT:    br i1 [[TMP31]], label %[[BB15]], label %[[TMP32]]
-; CHECK:       [[TMP32]]:
-; CHECK-NEXT:    [[TMP33]] = getelementptr i16, ptr [[PSEARCH]], i64 8
-; CHECK-NEXT:    [[TMP34:%.*]] = icmp ult ptr [[TMP33]], [[TMP1]]
-; CHECK-NEXT:    br i1 [[TMP34]], label %[[BB9]], label %[[DOTLOOPEXIT1:.*]]
+; CHECK:       [[TMP41]]:
+; CHECK-NEXT:    [[TMP42]] = getelementptr i16, ptr [[PNEEDLE]], i64 8
+; CHECK-NEXT:    [[TMP43:%.*]] = icmp ult ptr [[TMP42]], [[TMP3]]
+; CHECK-NEXT:    br i1 [[TMP43]], label %[[BB26]], label %[[TMP44]]
+; CHECK:       [[TMP44]]:
+; CHECK-NEXT:    [[TMP45]] = getelementptr i16, ptr [[PSEARCH]], i64 8
+; CHECK-NEXT:    [[TMP46:%.*]] = icmp ult ptr [[TMP45]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[TMP46]], label %[[BB21]], label %[[DOTLOOPEXIT1:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    br label %[[BB35:.*]]
-; CHECK:       [[BB35]]:
-; CHECK-NEXT:    [[TMP36:%.*]] = phi ptr [ [[TMP46:%.*]], %[[TMP45:.*]] ], [ [[TMP0]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[TMP37:%.*]] = load i16, ptr [[TMP36]], align 1
-; CHECK-NEXT:    br label %[[BB41:.*]]
-; CHECK:       [[BB38:.*]]:
-; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr inbounds i16, ptr [[TMP42:%.*]], i64 1
-; CHECK-NEXT:    [[TMP40:%.*]] = icmp eq ptr [[TMP39]], [[TMP3]]
-; CHECK-NEXT:    br i1 [[TMP40]], label %[[TMP45]], label %[[BB41]]
-; CHECK:       [[BB41]]:
-; CHECK-NEXT:    [[TMP42]] = phi ptr [ [[TMP2]], %[[BB35]] ], [ [[TMP39]], %[[BB38]] ]
-; CHECK-NEXT:    [[TMP43:%.*]] = load i16, ptr [[TMP42]], align 1
-; CHECK-NEXT:    [[TMP44:%.*]] = icmp eq i16 [[TMP37]], [[TMP43]]
-; CHECK-NEXT:    br i1 [[TMP44]], label %[[DOTLOOPEXIT]], label %[[BB38]]
-; CHECK:       [[TMP45]]:
-; CHECK-NEXT:    [[TMP46]] = getelementptr inbounds i16, ptr [[TMP36]], i64 1
-; CHECK-NEXT:    [[TMP47:%.*]] = icmp eq ptr [[TMP46]], [[TMP1]]
-; CHECK-NEXT:    br i1 [[TMP47]], label %[[DOTLOOPEXIT1]], label %[[BB35]]
+; CHECK-NEXT:    br label %[[BB47:.*]]
+; CHECK:       [[BB47]]:
+; CHECK-NEXT:    [[TMP48:%.*]] = phi ptr [ [[TMP58:%.*]], %[[TMP57:.*]] ], [ [[TMP0]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[TMP49:%.*]] = load i16, ptr [[TMP48]], align 1
+; CHECK-NEXT:    br label %[[BB53:.*]]
+; CHECK:       [[BB50:.*]]:
+; CHECK-NEXT:    [[TMP51:%.*]] = getelementptr inbounds i16, ptr [[TMP54:%.*]], i64 1
+; CHECK-NEXT:    [[TMP52:%.*]] = icmp eq ptr [[TMP51]], [[TMP3]]
+; CHECK-NEXT:    br i1 [[TMP52]], label %[[TMP57]], label %[[BB53]]
+; CHECK:       [[BB53]]:
+; CHECK-NEXT:    [[TMP54]] = phi ptr [ [[TMP2]], %[[BB47]] ], [ [[TMP51]], %[[BB50]] ]
+; CHECK-NEXT:    [[TMP55:%.*]] = load i16, ptr [[TMP54]], align 1
+; CHECK-NEXT:    [[TMP56:%.*]] = icmp eq i16 [[TMP49]], [[TMP55]]
+; CHECK-NEXT:    br i1 [[TMP56]], label %[[DOTLOOPEXIT]], label %[[BB50]]
+; CHECK:       [[TMP57]]:
+; CHECK-NEXT:    [[TMP58]] = getelementptr inbounds i16, ptr [[TMP48]], i64 1
+; CHECK-NEXT:    [[TMP59:%.*]] = icmp eq ptr [[TMP58]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[TMP59]], label %[[DOTLOOPEXIT1]], label %[[BB47]]
 ; CHECK:       [[_LOOPEXIT:.*:]]
-; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi ptr [ [[TMP36]], %[[BB41]] ], [ [[TMP28]], %[[BB26]] ]
-; CHECK-NEXT:    br label %[[BB48]]
+; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi ptr [ [[TMP48]], %[[BB53]] ], [ [[TMP40]], %[[BB36]] ]
+; CHECK-NEXT:    br label %[[BB60]]
 ; CHECK:       [[_LOOPEXIT1:.*:]]
-; CHECK-NEXT:    br label %[[BB48]]
-; CHECK:       [[BB48]]:
-; CHECK-NEXT:    [[TMP49:%.*]] = phi ptr [ [[TMP1]], [[TMP4:%.*]] ], [ [[DOTLCSSA]], %[[DOTLOOPEXIT]] ], [ [[TMP1]], %[[DOTLOOPEXIT1]] ]
-; CHECK-NEXT:    ret ptr [[TMP49]]
+; CHECK-NEXT:    br label %[[BB60]]
+; CHECK:       [[BB60]]:
+; CHECK-NEXT:    [[TMP61:%.*]] = phi ptr [ [[TMP1]], [[TMP4:%.*]] ], [ [[DOTLCSSA]], %[[DOTLOOPEXIT]] ], [ [[TMP1]], %[[DOTLOOPEXIT1]] ]
+; CHECK-NEXT:    ret ptr [[TMP61]]
 ;
 ; DISABLE-LABEL: define ptr @find_first_of_i16(
 ; DISABLE-SAME: ptr [[TMP0:%.*]], ptr [[TMP1:%.*]], ptr [[TMP2:%.*]], ptr [[TMP3:%.*]]) #[[ATTR0]] {
@@ -414,3 +440,6 @@ define ptr @find_first_of_i8_outside_use(ptr %0, ptr %1, ptr %2, ptr %3) #0 {
 }
 
 attributes #0 = { "target-features"="+sve2" }
+;.
+; CHECK: [[PROF0]] = !{!"branch_weights", i32 10, i32 90}
+;.
