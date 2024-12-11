@@ -6,8 +6,10 @@ import lit.util
 from lit.llvm import llvm_config
 from lit.llvm.subst import ToolSubst, FindTool
 
-def shjoin(args, sep=' '):
+
+def shjoin(args, sep=" "):
     return sep.join([shlex.quote(arg) for arg in args])
+
 
 # Configuration file for the 'lit' test runner.
 
@@ -78,11 +80,7 @@ tools = [
         extra_args=isysroot_flag,
         unresolved="fatal",
     ),
-    ToolSubst("%cc",
-        command=config.cc,
-        extra_args=isysroot_flag,
-        unresolved="fatal"
-    ),
+    ToolSubst("%cc", command=config.cc, extra_args=isysroot_flag, unresolved="fatal"),
 ]
 llvm_config.add_tool_substitutions(tools)
 
@@ -102,5 +100,5 @@ config.substitutions.append(("%include", include))
 # Additional library depedendencies the that flang driver does not add itself.
 deplibs = []
 if config.flang_rt_experimental_offload_support == "CUDA":
-    deplibs.append('-lcudart')
+    deplibs.append("-lcudart")
 config.substitutions.append(("%deplibs", shjoin(deplibs)))
