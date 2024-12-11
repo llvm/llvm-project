@@ -36,11 +36,15 @@ N: Teresa Johnson
 E: tejohnson@google.com
 D: MemProf
 
-N: Kostya Kortchinsky
+N: Christopher Ferris
+E: cferris@google.com
+D: SCUDO, GWP ASAN
+
+N: Kostya Kortchinsky (Emeritus)
 E: kostya.kortchinsky@gmail.com
 D: SCUDO
 
-N: Mitch Phillips
+N: Mitch Phillips (Emeritus)
 E: mitchp@google.com
 D: GWP ASAN
 
@@ -48,7 +52,7 @@ N: Alexander Potapenko
 E: glider@google.com
 D: Sanitizers
 
-N: Kostya Serebryany
+N: Kostya Serebryany (Emeritus)
 E: kcc@google.com
 D: AddressSanitizer, sanitizer_common, LeakSanitizer, LibFuzzer
 
@@ -56,7 +60,7 @@ N: Richard Smith
 E: richard-llvm@metafoo.co.uk
 D: UndefinedBehaviorSanitizer
 
-N: Evgeniy Stepanov
+N: Evgeniy Stepanov (Emeritus)
 E: eugenis@google.com
 D: MemorySanitizer, Android port of sanitizers
 
