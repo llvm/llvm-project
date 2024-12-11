@@ -2575,18 +2575,18 @@ public:
     }
 
     /// Go through the instructions in VL and append their operands.
-    void appendOperandsOfVL(ArrayRef<Value *> VL, Instruction *VL0) {
+    void appendOperandsOfVL(ArrayRef<Value *> VL, Instruction *MainOp,
+                            Instruction *AltOp) {
       assert(!VL.empty() && "Bad VL");
       assert((empty() || VL.size() == getNumLanes()) &&
              "Expected same number of lanes");
       // IntrinsicInst::isCommutative returns true if swapping the first "two"
       // arguments to the intrinsic produces the same result.
       constexpr unsigned IntrinsicNumOperands = 2;
-      unsigned NumOperands = VL0->getNumOperands();
-      ArgSize = isa<IntrinsicInst>(VL0) ? IntrinsicNumOperands : NumOperands;
+      unsigned NumOperands = MainOp->getNumOperands();
+      ArgSize = isa<IntrinsicInst>(MainOp) ? IntrinsicNumOperands : NumOperands;
       OpsVec.resize(NumOperands);
       unsigned NumLanes = VL.size();
-      InstructionsState S = getSameOpcode(VL, TLI);
       for (unsigned OpIdx : seq<unsigned>(NumOperands))
         OpsVec[OpIdx].resize(NumLanes);
       for (auto [Lane, V] : enumerate(VL)) {
@@ -2595,12 +2595,12 @@ public:
         if (isa<PoisonValue>(V)) {
           for (unsigned OpIdx : seq<unsigned>(NumOperands))
             OpsVec[OpIdx][Lane] = {
-                PoisonValue::get(VL0->getOperand(OpIdx)->getType()), true,
+                PoisonValue::get(MainOp->getOperand(OpIdx)->getType()), true,
                 false};
           continue;
         }
-        auto [SelectedOp, Ops] = getInterchangeableInstruction(
-            cast<Instruction>(V), S.getMainOp(), S.getAltOp());
+        auto [SelectedOp, Ops] =
+            getInterchangeableInstruction(cast<Instruction>(V), MainOp, AltOp);
         // Our tree has just 3 nodes: the root and two operands.
         // It is therefore trivial to get the APO. We only need to check the
         // opcode of V and whether the operand at OpIdx is the LHS or RHS
@@ -2721,11 +2721,12 @@ public:
 
   public:
     /// Initialize with all the operands of the instruction vector \p RootVL.
-    VLOperands(ArrayRef<Value *> RootVL, Instruction *VL0, const BoUpSLP &R)
+    VLOperands(ArrayRef<Value *> RootVL, Instruction *MainOp,
+               Instruction *AltOp, const BoUpSLP &R)
         : TLI(*R.TLI), DL(*R.DL), SE(*R.SE), R(R),
-          L(R.LI->getLoopFor((VL0->getParent()))) {
+          L(R.LI->getLoopFor(MainOp->getParent())) {
       // Append all the operands of RootVL.
-      appendOperandsOfVL(RootVL, VL0);
+      appendOperandsOfVL(RootVL, MainOp, AltOp);
     }
 
     /// \Returns a value vector with the operands across all lanes for the
@@ -3517,7 +3518,7 @@ private:
 
     /// Set this bundle's operand from Scalars.
     void setOperand(const BoUpSLP &R, bool RequireReorder = false) {
-      VLOperands Ops(Scalars, MainOp, R);
+      VLOperands Ops(Scalars, MainOp, AltOp, R);
       if (RequireReorder)
         Ops.reorder();
       for (unsigned I : seq<unsigned>(MainOp->getNumOperands()))
@@ -8733,7 +8734,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       LLVM_DEBUG(dbgs() << "SLP: added a vector of compares.\n");
 
       ValueList Left, Right;
-      VLOperands Ops(VL, VL0, *this);
+      VLOperands Ops(VL, VL0, S.getAltOp(), *this);
       if (cast<CmpInst>(VL0)->isCommutative()) {
         // Commutative predicate - collect + sort operands of the instructions
         // so that each side is more likely to have the same opcode.
