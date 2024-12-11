@@ -558,30 +558,20 @@ vector<bool, _Allocator>::__recommend(size_type __new_size) const {
 template <class _Allocator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 vector<bool, _Allocator>::__construct_at_end(size_type __n, bool __x) {
-  size_type __old_size = this->__size_;
+  iterator __old_end = end();
   this->__size_ += __n;
-  if (__old_size == 0 || ((__old_size - 1) / __bits_per_word) != ((this->__size_ - 1) / __bits_per_word)) {
-    if (this->__size_ <= __bits_per_word)
-      this->__begin_[0] = __storage_type(0);
-    else
-      this->__begin_[(this->__size_ - 1) / __bits_per_word] = __storage_type(0);
-  }
-  std::fill_n(__make_iter(__old_size), __n, __x);
+  this->__begin_[(this->__size_ - 1) / __bits_per_word] = __storage_type(0);
+  std::fill_n(__old_end, __n, __x);
 }
 
 template <class _Allocator>
 template <class _InputIterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 vector<bool, _Allocator>::__construct_at_end(_InputIterator __first, _Sentinel __last, size_type __n) {
-  size_type __old_size = this->__size_;
+  iterator __old_end = end();
   this->__size_ += __n;
-  if (__old_size == 0 || ((__old_size - 1) / __bits_per_word) != ((this->__size_ - 1) / __bits_per_word)) {
-    if (this->__size_ <= __bits_per_word)
-      this->__begin_[0] = __storage_type(0);
-    else
-      this->__begin_[(this->__size_ - 1) / __bits_per_word] = __storage_type(0);
-  }
-  std::__copy(std::move(__first), std::move(__last), __make_iter(__old_size));
+  this->__begin_[(this->__size_ - 1) / __bits_per_word] = __storage_type(0);
+  std::__copy(std::move(__first), std::move(__last), __old_end);
 }
 
 template <class _Allocator>
@@ -855,7 +845,9 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::reserve(size_type _
       this->__throw_length_error();
     vector __v(this->get_allocator());
     __v.__vallocate(__n);
-    __v.__construct_at_end(this->begin(), this->end(), this->size());
+    // Ensure that the call to __construct_at_end(first, last, n) meets the precondition of n > 0
+    if (this->size() > 0)
+      __v.__construct_at_end(this->begin(), this->end(), this->size());
     swap(__v);
   }
 }
