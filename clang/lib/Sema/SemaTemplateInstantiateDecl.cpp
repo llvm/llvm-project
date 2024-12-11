@@ -2151,13 +2151,14 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     isFriend = (FunctionTemplate->getFriendObjectKind() != Decl::FOK_None);
   else
     isFriend = (D->getFriendObjectKind() != Decl::FOK_None);
+
   // Friend function defined withing class template may stop being function
   // definition during AST merges from different modules, in this case decl
   // with function body should be used for instantiation.
   if (isFriend) {
-    const FunctionDecl* Defn = nullptr;
+    const FunctionDecl *Defn = nullptr;
     if (D->hasBody(Defn)) {
-      D = const_cast<FunctionDecl*>(Defn);
+      D = const_cast<FunctionDecl *>(Defn);
       FunctionTemplate = Defn->getDescribedFunctionTemplate();
     }
   }
