@@ -787,17 +787,15 @@ define zeroext i16 @fcvt_wu_s_i16(double %a) nounwind {
 ; RV32IFD-LABEL: fcvt_wu_s_i16:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    fcvt.wu.d a0, fa0, rtz
-; RV32IFD-NEXT:    lui a1, 16
-; RV32IFD-NEXT:    addi a1, a1, -1
-; RV32IFD-NEXT:    and a0, a0, a1
+; RV32IFD-NEXT:    slli a0, a0, 16
+; RV32IFD-NEXT:    srli a0, a0, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fcvt_wu_s_i16:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    fcvt.wu.d a0, fa0, rtz
-; RV64IFD-NEXT:    lui a1, 16
-; RV64IFD-NEXT:    addiw a1, a1, -1
-; RV64IFD-NEXT:    and a0, a0, a1
+; RV64IFD-NEXT:    slli a0, a0, 48
+; RV64IFD-NEXT:    srli a0, a0, 48
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_wu_s_i16:
@@ -805,9 +803,8 @@ define zeroext i16 @fcvt_wu_s_i16(double %a) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    call __fixunsdfsi
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -817,9 +814,8 @@ define zeroext i16 @fcvt_wu_s_i16(double %a) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    call __fixunsdfsi
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
