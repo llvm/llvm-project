@@ -1,4 +1,4 @@
-# RUN: llc -march=mips64 -o - %s -run-pass=register-coalescer -verify-coalescing | FileCheck %s
+# RUN: llc -mtriple=mips64 -o - %s -run-pass=register-coalescer -verify-coalescing | FileCheck %s
 
 ---
 name:            f

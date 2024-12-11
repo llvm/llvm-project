@@ -11,6 +11,7 @@
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/HashBuilder.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -491,11 +492,15 @@ struct MemProfRecord {
   }
 };
 
+// A "typedef" for GUID.  See ScalarTraits<memprof::GUIDHex64> for how a GUID is
+// serialized and deserialized in YAML.
+LLVM_YAML_STRONG_TYPEDEF(uint64_t, GUIDHex64)
+
 // Helper struct for AllMemProfData.  In YAML, we treat the GUID and the fields
 // within MemProfRecord at the same level as if the GUID were part of
 // MemProfRecord.
 struct GUIDMemProfRecordPair {
-  GlobalValue::GUID GUID;
+  GUIDHex64 GUID;
   MemProfRecord Record;
 };
 
@@ -1166,6 +1171,31 @@ public:
 } // namespace memprof
 
 namespace yaml {
+template <> struct ScalarTraits<memprof::GUIDHex64> {
+  static void output(const memprof::GUIDHex64 &Val, void *, raw_ostream &Out) {
+    // Print GUID as a 16-digit hexadecimal number.
+    Out << format("0x%016" PRIx64, (uint64_t)Val);
+  }
+  static StringRef input(StringRef Scalar, void *, memprof::GUIDHex64 &Val) {
+    // Reject decimal GUIDs.
+    if (all_of(Scalar, [](char C) { return std::isdigit(C); }))
+      return "use a hexadecimal GUID or a function instead";
+
+    uint64_t Num;
+    if (Scalar.starts_with_insensitive("0x")) {
+      // Accept hexadecimal numbers starting with 0x or 0X.
+      if (Scalar.getAsInteger(0, Num))
+        return "invalid hex64 number";
+      Val = Num;
+    } else {
+      // Otherwise, treat the input as a string containing a function name.
+      Val = memprof::IndexedMemProfRecord::getGUID(Scalar);
+    }
+    return StringRef();
+  }
+  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+};
+
 template <> struct MappingTraits<memprof::Frame> {
   static void mapping(IO &Io, memprof::Frame &F) {
     Io.mapRequired("Function", F.Function);
