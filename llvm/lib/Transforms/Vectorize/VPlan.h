@@ -621,6 +621,14 @@ public:
   /// Remove all the successors of this block.
   void clearSuccessors() { Successors.clear(); }
 
+  /// Swap successors of the block. The block must have exactly 2 successors.
+  // TODO: This should be part of introducing conditional branch recipes rather
+  // than being independent.
+  void swapSuccessors() {
+    assert(Successors.size() == 2 && "must have 2 successors to swap");
+    std::swap(Successors[0], Successors[1]);
+  }
+
   /// The method which generates the output IR that correspond to this
   /// VPBlockBase, thereby "executing" the VPlan.
   virtual void execute(VPTransformState *State) = 0;
@@ -1232,6 +1240,9 @@ public:
     // operand). Only generates scalar values (either for the first lane only or
     // for all lanes, depending on its uses).
     PtrAdd,
+    // Returns a scalar boolean value, which is true if any lane of its single
+    // operand is true.
+    AnyOf,
   };
 
 private:
@@ -3884,10 +3895,10 @@ public:
   /// whether to execute the scalar tail loop or the exit block from the loop
   /// latch.
   const VPBasicBlock *getMiddleBlock() const {
-    return cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor());
+    return cast<VPBasicBlock>(getScalarPreheader()->getSinglePredecessor());
   }
   VPBasicBlock *getMiddleBlock() {
-    return cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor());
+    return cast<VPBasicBlock>(getScalarPreheader()->getSinglePredecessor());
   }
 
   /// Return the VPBasicBlock for the preheader of the scalar loop.
