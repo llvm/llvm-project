@@ -114,6 +114,7 @@ bool ObjectFileXCOFF::CreateBinary() {
   LLDB_LOG(log, "this = {0}, module = {1} ({2}), file = {3}, binary = {4}",
            this, GetModule().get(), GetModule()->GetSpecificationDescription(),
            m_file.GetPath(), m_binary.get());
+
   return true;
 }
 
@@ -174,17 +175,8 @@ bool ObjectFileXCOFF::ParseHeader() {
   bool retVal = false;
   ModuleSP module_sp(GetModule());
   if (module_sp) {
-    std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-
-    const auto *fileHeaderPtr = m_binary->fileHeader64();
-    m_xcoff_header = *fileHeaderPtr;
-    if (m_xcoff_header.Magic != 0) {
-      if (m_xcoff_header.AuxHeaderSize > 0) {
-        const auto *fileAuxHeader = m_binary->auxiliaryHeader64();
-        m_xcoff_aux_header = *fileAuxHeader;
-      }
+    if (m_binary->fileHeader64()->Magic == XCOFF::XCOFF64)
       retVal = true;
-    }
   }
 
   return retVal;
@@ -195,11 +187,10 @@ ByteOrder ObjectFileXCOFF::GetByteOrder() const { return eByteOrderBig; }
 bool ObjectFileXCOFF::IsExecutable() const { return true; }
 
 uint32_t ObjectFileXCOFF::GetAddressByteSize() const {
-  if (m_xcoff_header.Magic == XCOFF::XCOFF64)
-    return 8;
-  else if (m_xcoff_header.Magic == XCOFF::XCOFF32)
-    return 4;
-  return 4;
+
+  /* TODO: Need to handle 32-bit support, until then
+   * return 8 for 64-bit XCOFF::XCOFF64 */
+  return 8;
 }
 
 AddressClass ObjectFileXCOFF::GetAddressClass(addr_t file_addr) {
@@ -225,9 +216,9 @@ UUID ObjectFileXCOFF::GetUUID() { return UUID(); }
 uint32_t ObjectFileXCOFF::GetDependentModules(FileSpecList &files) { return 0; }
 
 ObjectFile::Type ObjectFileXCOFF::CalculateType() {
-  if (m_xcoff_header.Flags & XCOFF::F_EXEC)
+  if (m_binary->fileHeader64()->Flags & XCOFF::F_EXEC)
     return eTypeExecutable;
-  else if (m_xcoff_header.Flags & XCOFF::F_SHROBJ)
+  else if (m_binary->fileHeader64()->Flags & XCOFF::F_SHROBJ)
     return eTypeSharedLibrary;
   return eTypeUnknown;
 }

@@ -98,10 +98,6 @@ public:
                   const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
 
 protected:
-  typedef struct llvm::object::XCOFFFileHeader64 xcoff_header_t;
-
-  typedef struct llvm::object::XCOFFAuxiliaryHeader64 xcoff_aux_header_t;
-
   static lldb::WritableDataBufferSP
   MapFileDataWritable(const lldb_private::FileSpec &file, uint64_t Size,
                       uint64_t Offset);
@@ -109,8 +105,6 @@ protected:
 private:
   bool CreateBinary();
 
-  xcoff_header_t m_xcoff_header = {};
-  xcoff_aux_header_t m_xcoff_aux_header = {};
   std::unique_ptr<llvm::object::XCOFFObjectFile> m_binary;
 };
 
