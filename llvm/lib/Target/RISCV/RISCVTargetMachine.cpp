@@ -271,8 +271,8 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
 MachineFunctionInfo *RISCVTargetMachine::createMachineFunctionInfo(
     BumpPtrAllocator &Allocator, const Function &F,
     const TargetSubtargetInfo *STI) const {
-  return RISCVMachineFunctionInfo::create<RISCVMachineFunctionInfo>(Allocator,
-                                                                    F, STI);
+  return RISCVMachineFunctionInfo::create<RISCVMachineFunctionInfo>(
+      Allocator, F, static_cast<const RISCVSubtarget *>(STI));
 }
 
 TargetTransformInfo

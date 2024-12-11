@@ -1875,6 +1875,20 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     return false;
   }
 
+  // Check for overlapping memory regions.
+  if (!Move && SrcPtr.block() == DestPtr.block()) {
+    unsigned SrcIndex = SrcPtr.getIndex() * SrcPtr.elemSize();
+    unsigned DstIndex = DestPtr.getIndex() * DestPtr.elemSize();
+    unsigned N = Size.getZExtValue();
+
+    if ((SrcIndex <= DstIndex && (SrcIndex + N) > DstIndex) ||
+        (DstIndex <= SrcIndex && (DstIndex + N) > SrcIndex)) {
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_memcpy_overlap)
+          << /*IsWChar=*/false;
+      return false;
+    }
+  }
+
   // As a last resort, reject dummy pointers.
   if (DestPtr.isDummy() || SrcPtr.isDummy())
     return false;
