@@ -176,33 +176,39 @@ bool CIRGenModule::tryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
   return false;
 }
 
-static void emitDeclInit(CIRGenFunction &CGF, const VarDecl *D,
-                         Address DeclPtr) {
-  assert((D->hasGlobalStorage() ||
-          (D->hasLocalStorage() &&
-           CGF.getContext().getLangOpts().OpenCLCPlusPlus)) &&
+static void emitDeclInit(CIRGenFunction &cgf, const VarDecl *varDecl,
+                         Address declPtr) {
+  assert((varDecl->hasGlobalStorage() ||
+          (varDecl->hasLocalStorage() &&
+           cgf.getContext().getLangOpts().OpenCLCPlusPlus)) &&
          "VarDecl must have global or local (in the case of OpenCL) storage!");
-  assert(!D->getType()->isReferenceType() &&
+  assert(!varDecl->getType()->isReferenceType() &&
          "Should not call emitDeclInit on a reference!");
 
-  QualType type = D->getType();
-  LValue lv = CGF.makeAddrLValue(DeclPtr, type);
+  QualType type = varDecl->getType();
+  LValue lv = cgf.makeAddrLValue(declPtr, type);
 
-  const Expr *Init = D->getInit();
+  const Expr *init = varDecl->getInit();
   switch (CIRGenFunction::getEvaluationKind(type)) {
+  case cir::TEK_Scalar:
+    if (lv.isObjCStrong())
+      llvm_unreachable("NYI");
+    else if (lv.isObjCWeak())
+      llvm_unreachable("NYI");
+    else
+      cgf.emitScalarInit(init, cgf.getLoc(varDecl->getLocation()), lv, false);
+    return;
+  case cir::TEK_Complex:
+    llvm_unreachable("complext evaluation NYI");
   case cir::TEK_Aggregate:
-    CGF.emitAggExpr(Init,
+    cgf.emitAggExpr(init,
                     AggValueSlot::forLValue(lv, AggValueSlot::IsDestructed,
                                             AggValueSlot::DoesNotNeedGCBarriers,
                                             AggValueSlot::IsNotAliased,
                                             AggValueSlot::DoesNotOverlap));
     return;
-  case cir::TEK_Scalar:
-    CGF.emitScalarInit(Init, CGF.getLoc(D->getLocation()), lv, false);
-    return;
-  case cir::TEK_Complex:
-    llvm_unreachable("complext evaluation NYI");
   }
+  llvm_unreachable("bad evaluation kind");
 }
 
 static void emitDeclDestroy(CIRGenFunction &CGF, const VarDecl *D) {
@@ -336,7 +342,7 @@ void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
 
   assert(varDecl && " Expected a global declaration!");
   CIRGenFunction cgf{*this, builder, true};
-  llvm::SaveAndRestore<CIRGenFunction*> savedCGF(CurCGF, &cgf);
+  llvm::SaveAndRestore<CIRGenFunction *> savedCGF(CurCGF, &cgf);
   CurCGF->CurFn = addr;
 
   CIRGenFunction::SourceLocRAIIObject fnLoc{cgf,
