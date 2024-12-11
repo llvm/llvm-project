@@ -55,13 +55,6 @@ using ::llvm::Error;
 using ::llvm::telemetry::Destination;
 using ::llvm::telemetry::TelemetryInfo;
 
-static std::string GetDuration(const EventStats &stats) {
-  if (stats.end.has_value())
-    return std::to_string((stats.end.value() - stats.start).count()) +
-           "(nanosec)";
-  return "<NONE>";
-}
-
 static size_t ToNanosecOrZero(const std::optional<SteadyTimePoint> &Point) {
   if (!Point.has_value())
     return 0;
