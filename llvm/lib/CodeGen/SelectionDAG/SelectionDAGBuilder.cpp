@@ -2200,14 +2200,9 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
     // Emit a store of the return value through the virtual register.
     // Leave Outs empty so that LowerReturn won't try to load return
     // registers the usual way.
-    SmallVector<EVT, 1> PtrValueVTs;
-    ComputeValueVTs(TLI, DL,
-                    PointerType::get(F->getContext(),
-                                     DAG.getDataLayout().getAllocaAddrSpace()),
-                    PtrValueVTs);
-
+    MVT PtrValueVT = TLI.getPointerTy(DL, DL.getAllocaAddrSpace());
     SDValue RetPtr =
-        DAG.getCopyFromReg(Chain, getCurSDLoc(), DemoteReg, PtrValueVTs[0]);
+        DAG.getCopyFromReg(Chain, getCurSDLoc(), DemoteReg, PtrValueVT);
     SDValue RetOp = getValue(I.getOperand(0));
 
     SmallVector<EVT, 4> ValueVTs, MemVTs;
@@ -11310,13 +11305,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
   if (!CanLowerReturn) {
     // The instruction result is the result of loading from the
     // hidden sret parameter.
-    SmallVector<EVT, 1> PVTs;
-    Type *PtrRetTy =
-        PointerType::get(OrigRetTy->getContext(), DL.getAllocaAddrSpace());
-
-    ComputeValueVTs(*this, DL, PtrRetTy, PVTs);
-    assert(PVTs.size() == 1 && "Pointers should fit in one register");
-    EVT PtrVT = PVTs[0];
+    MVT PtrVT = getPointerTy(DL, DL.getAllocaAddrSpace());
 
     unsigned NumValues = RetTys.size();
     ReturnValues.resize(NumValues);
@@ -11636,18 +11625,12 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
 
   if (!FuncInfo->CanLowerReturn) {
     // Put in an sret pointer parameter before all the other parameters.
-    SmallVector<EVT, 1> ValueVTs;
-    ComputeValueVTs(*TLI, DAG.getDataLayout(),
-                    PointerType::get(F.getContext(),
-                                     DAG.getDataLayout().getAllocaAddrSpace()),
-                    ValueVTs);
+    MVT ValueVT = TLI->getPointerTy(DL, DL.getAllocaAddrSpace());
 
-    // NOTE: Assuming that a pointer will never break down to more than one VT
-    // or one register.
     ISD::ArgFlagsTy Flags;
     Flags.setSRet();
-    MVT RegisterVT = TLI->getRegisterType(*DAG.getContext(), ValueVTs[0]);
-    ISD::InputArg RetArg(Flags, RegisterVT, ValueVTs[0], true,
+    MVT RegisterVT = TLI->getRegisterType(*DAG.getContext(), ValueVT);
+    ISD::InputArg RetArg(Flags, RegisterVT, ValueVT, true,
                          ISD::InputArg::NoArgIndex, 0);
     Ins.push_back(RetArg);
   }
@@ -11830,12 +11813,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
   if (!FuncInfo->CanLowerReturn) {
     // Create a virtual register for the sret pointer, and put in a copy
     // from the sret argument into it.
-    SmallVector<EVT, 1> ValueVTs;
-    ComputeValueVTs(*TLI, DAG.getDataLayout(),
-                    PointerType::get(F.getContext(),
-                                     DAG.getDataLayout().getAllocaAddrSpace()),
-                    ValueVTs);
-    MVT VT = ValueVTs[0].getSimpleVT();
+    MVT VT = TLI->getPointerTy(DL, DL.getAllocaAddrSpace());
     MVT RegVT = TLI->getRegisterType(*CurDAG->getContext(), VT);
     std::optional<ISD::NodeType> AssertOp;
     SDValue ArgValue =
