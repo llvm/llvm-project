@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_LEXICOGRAPHICAL_COMPARE_H
-#define _LIBCPP___ALGORITHM_LEXICOGRAPHICAL_COMPARE_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_LEXICOGRAPHICAL_COMPARE_H
+#define _LIBCPP___CXX03___ALGORITHM_LEXICOGRAPHICAL_COMPARE_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/comp_ref_type.h>
@@ -54,4 +54,4 @@ _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 boo
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_LEXICOGRAPHICAL_COMPARE_H
+#endif // _LIBCPP___CXX03___ALGORITHM_LEXICOGRAPHICAL_COMPARE_H
