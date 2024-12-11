@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx82 | FileCheck %s -check-prefixes=CHECK,SM70
 ; RUN: %if ptxas-12.2 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx82 | %ptxas-verify -arch=sm_70 %}
 
-; TODO: add i1, <8 x i8>, and <6 x i8> vector tests.
+; TODO: add i1, and <6 x i8> vector tests.
 
 ; TODO: add test for vectors that exceed 128-bit length
 ; Per https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#vectors
@@ -194,6 +194,156 @@ define void @generic_4xi8(ptr %a) {
   ret void
 }
 
+define void @generic_8xi8(ptr %a) {
+; CHECK-LABEL: generic_8xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<17>;
+; CHECK-NEXT:    .reg .b32 %r<25>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_8xi8_param_0];
+; CHECK-NEXT:    ld.v2.b32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    bfe.u32 %r3, %r2, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r3;
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r4, %rs2;
+; CHECK-NEXT:    bfe.u32 %r5, %r2, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r5;
+; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r6, %rs4;
+; CHECK-NEXT:    prmt.b32 %r7, %r6, %r4, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r8, %r2, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r8;
+; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r9, %rs6;
+; CHECK-NEXT:    bfe.u32 %r10, %r2, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r10;
+; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r11, %rs8;
+; CHECK-NEXT:    prmt.b32 %r12, %r11, %r9, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r13, %r12, %r7, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r14, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs9, %r14;
+; CHECK-NEXT:    add.s16 %rs10, %rs9, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r15, %rs10;
+; CHECK-NEXT:    bfe.u32 %r16, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs11, %r16;
+; CHECK-NEXT:    add.s16 %rs12, %rs11, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r17, %rs12;
+; CHECK-NEXT:    prmt.b32 %r18, %r17, %r15, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r19, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs13, %r19;
+; CHECK-NEXT:    add.s16 %rs14, %rs13, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r20, %rs14;
+; CHECK-NEXT:    bfe.u32 %r21, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs15, %r21;
+; CHECK-NEXT:    add.s16 %rs16, %rs15, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r22, %rs16;
+; CHECK-NEXT:    prmt.b32 %r23, %r22, %r20, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r24, %r23, %r18, 0x5410U;
+; CHECK-NEXT:    st.v2.b32 [%rd1], {%r24, %r13};
+; CHECK-NEXT:    ret;
+  %a.load = load <8 x i8>, ptr %a
+  %a.add = add <8 x i8> %a.load, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  store <8 x i8> %a.add, ptr %a
+  ret void
+}
+
+define void @generic_16xi8(ptr %a) {
+; CHECK-LABEL: generic_16xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<33>;
+; CHECK-NEXT:    .reg .b32 %r<49>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_16xi8_param_0];
+; CHECK-NEXT:    ld.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    bfe.u32 %r5, %r4, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r5;
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r6, %rs2;
+; CHECK-NEXT:    bfe.u32 %r7, %r4, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r7;
+; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r8, %rs4;
+; CHECK-NEXT:    prmt.b32 %r9, %r8, %r6, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r10, %r4, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r10;
+; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r11, %rs6;
+; CHECK-NEXT:    bfe.u32 %r12, %r4, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r12;
+; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r13, %rs8;
+; CHECK-NEXT:    prmt.b32 %r14, %r13, %r11, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r15, %r14, %r9, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r16, %r3, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs9, %r16;
+; CHECK-NEXT:    add.s16 %rs10, %rs9, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r17, %rs10;
+; CHECK-NEXT:    bfe.u32 %r18, %r3, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs11, %r18;
+; CHECK-NEXT:    add.s16 %rs12, %rs11, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r19, %rs12;
+; CHECK-NEXT:    prmt.b32 %r20, %r19, %r17, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r21, %r3, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs13, %r21;
+; CHECK-NEXT:    add.s16 %rs14, %rs13, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r22, %rs14;
+; CHECK-NEXT:    bfe.u32 %r23, %r3, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs15, %r23;
+; CHECK-NEXT:    add.s16 %rs16, %rs15, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r24, %rs16;
+; CHECK-NEXT:    prmt.b32 %r25, %r24, %r22, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r26, %r25, %r20, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r27, %r2, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs17, %r27;
+; CHECK-NEXT:    add.s16 %rs18, %rs17, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r28, %rs18;
+; CHECK-NEXT:    bfe.u32 %r29, %r2, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs19, %r29;
+; CHECK-NEXT:    add.s16 %rs20, %rs19, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r30, %rs20;
+; CHECK-NEXT:    prmt.b32 %r31, %r30, %r28, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r32, %r2, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs21, %r32;
+; CHECK-NEXT:    add.s16 %rs22, %rs21, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r33, %rs22;
+; CHECK-NEXT:    bfe.u32 %r34, %r2, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs23, %r34;
+; CHECK-NEXT:    add.s16 %rs24, %rs23, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r35, %rs24;
+; CHECK-NEXT:    prmt.b32 %r36, %r35, %r33, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r37, %r36, %r31, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r38, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs25, %r38;
+; CHECK-NEXT:    add.s16 %rs26, %rs25, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r39, %rs26;
+; CHECK-NEXT:    bfe.u32 %r40, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs27, %r40;
+; CHECK-NEXT:    add.s16 %rs28, %rs27, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r41, %rs28;
+; CHECK-NEXT:    prmt.b32 %r42, %r41, %r39, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r43, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs29, %r43;
+; CHECK-NEXT:    add.s16 %rs30, %rs29, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r44, %rs30;
+; CHECK-NEXT:    bfe.u32 %r45, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs31, %r45;
+; CHECK-NEXT:    add.s16 %rs32, %rs31, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r46, %rs32;
+; CHECK-NEXT:    prmt.b32 %r47, %r46, %r44, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r48, %r47, %r42, 0x5410U;
+; CHECK-NEXT:    st.v4.b32 [%rd1], {%r48, %r37, %r26, %r15};
+; CHECK-NEXT:    ret;
+  %a.load = load <16 x i8>, ptr %a
+  %a.add = add <16 x i8> %a.load, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  store <16 x i8> %a.add, ptr %a
+  ret void
+}
+
 define void @generic_2xi16(ptr %a) {
 ; CHECK-LABEL: generic_2xi16(
 ; CHECK:       {
@@ -234,6 +384,40 @@ define void @generic_4xi16(ptr %a) {
   %a.load = load <4 x i16>, ptr %a
   %a.add = add <4 x i16> %a.load, <i16 1, i16 1, i16 1, i16 1>
   store <4 x i16> %a.add, ptr %a
+  ret void
+}
+
+define void @generic_8xi16(ptr %a) {
+; CHECK-LABEL: generic_8xi16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<17>;
+; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_8xi16_param_0];
+; CHECK-NEXT:    ld.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
+; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
+; CHECK-NEXT:    mov.b32 %r5, {%rs4, %rs3};
+; CHECK-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
+; CHECK-NEXT:    add.s16 %rs7, %rs6, 1;
+; CHECK-NEXT:    add.s16 %rs8, %rs5, 1;
+; CHECK-NEXT:    mov.b32 %r6, {%rs8, %rs7};
+; CHECK-NEXT:    mov.b32 {%rs9, %rs10}, %r2;
+; CHECK-NEXT:    add.s16 %rs11, %rs10, 1;
+; CHECK-NEXT:    add.s16 %rs12, %rs9, 1;
+; CHECK-NEXT:    mov.b32 %r7, {%rs12, %rs11};
+; CHECK-NEXT:    mov.b32 {%rs13, %rs14}, %r1;
+; CHECK-NEXT:    add.s16 %rs15, %rs14, 1;
+; CHECK-NEXT:    add.s16 %rs16, %rs13, 1;
+; CHECK-NEXT:    mov.b32 %r8, {%rs16, %rs15};
+; CHECK-NEXT:    st.v4.b32 [%rd1], {%r8, %r7, %r6, %r5};
+; CHECK-NEXT:    ret;
+  %a.load = load <8 x i16>, ptr %a
+  %a.add = add <8 x i16> %a.load, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  store <8 x i16> %a.add, ptr %a
   ret void
 }
 
@@ -538,6 +722,156 @@ define void @generic_volatile_4xi8(ptr %a) {
   ret void
 }
 
+define void @generic_volatile_8xi8(ptr %a) {
+; CHECK-LABEL: generic_volatile_8xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<17>;
+; CHECK-NEXT:    .reg .b32 %r<25>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_8xi8_param_0];
+; CHECK-NEXT:    ld.volatile.v2.b32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    bfe.u32 %r3, %r2, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r3;
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r4, %rs2;
+; CHECK-NEXT:    bfe.u32 %r5, %r2, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r5;
+; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r6, %rs4;
+; CHECK-NEXT:    prmt.b32 %r7, %r6, %r4, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r8, %r2, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r8;
+; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r9, %rs6;
+; CHECK-NEXT:    bfe.u32 %r10, %r2, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r10;
+; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r11, %rs8;
+; CHECK-NEXT:    prmt.b32 %r12, %r11, %r9, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r13, %r12, %r7, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r14, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs9, %r14;
+; CHECK-NEXT:    add.s16 %rs10, %rs9, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r15, %rs10;
+; CHECK-NEXT:    bfe.u32 %r16, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs11, %r16;
+; CHECK-NEXT:    add.s16 %rs12, %rs11, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r17, %rs12;
+; CHECK-NEXT:    prmt.b32 %r18, %r17, %r15, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r19, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs13, %r19;
+; CHECK-NEXT:    add.s16 %rs14, %rs13, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r20, %rs14;
+; CHECK-NEXT:    bfe.u32 %r21, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs15, %r21;
+; CHECK-NEXT:    add.s16 %rs16, %rs15, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r22, %rs16;
+; CHECK-NEXT:    prmt.b32 %r23, %r22, %r20, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r24, %r23, %r18, 0x5410U;
+; CHECK-NEXT:    st.volatile.v2.b32 [%rd1], {%r24, %r13};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <8 x i8>, ptr %a
+  %a.add = add <8 x i8> %a.load, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  store volatile <8 x i8> %a.add, ptr %a
+  ret void
+}
+
+define void @generic_volatile_16xi8(ptr %a) {
+; CHECK-LABEL: generic_volatile_16xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<33>;
+; CHECK-NEXT:    .reg .b32 %r<49>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_16xi8_param_0];
+; CHECK-NEXT:    ld.volatile.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    bfe.u32 %r5, %r4, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r5;
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r6, %rs2;
+; CHECK-NEXT:    bfe.u32 %r7, %r4, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r7;
+; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r8, %rs4;
+; CHECK-NEXT:    prmt.b32 %r9, %r8, %r6, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r10, %r4, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r10;
+; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r11, %rs6;
+; CHECK-NEXT:    bfe.u32 %r12, %r4, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r12;
+; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r13, %rs8;
+; CHECK-NEXT:    prmt.b32 %r14, %r13, %r11, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r15, %r14, %r9, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r16, %r3, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs9, %r16;
+; CHECK-NEXT:    add.s16 %rs10, %rs9, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r17, %rs10;
+; CHECK-NEXT:    bfe.u32 %r18, %r3, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs11, %r18;
+; CHECK-NEXT:    add.s16 %rs12, %rs11, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r19, %rs12;
+; CHECK-NEXT:    prmt.b32 %r20, %r19, %r17, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r21, %r3, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs13, %r21;
+; CHECK-NEXT:    add.s16 %rs14, %rs13, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r22, %rs14;
+; CHECK-NEXT:    bfe.u32 %r23, %r3, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs15, %r23;
+; CHECK-NEXT:    add.s16 %rs16, %rs15, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r24, %rs16;
+; CHECK-NEXT:    prmt.b32 %r25, %r24, %r22, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r26, %r25, %r20, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r27, %r2, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs17, %r27;
+; CHECK-NEXT:    add.s16 %rs18, %rs17, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r28, %rs18;
+; CHECK-NEXT:    bfe.u32 %r29, %r2, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs19, %r29;
+; CHECK-NEXT:    add.s16 %rs20, %rs19, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r30, %rs20;
+; CHECK-NEXT:    prmt.b32 %r31, %r30, %r28, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r32, %r2, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs21, %r32;
+; CHECK-NEXT:    add.s16 %rs22, %rs21, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r33, %rs22;
+; CHECK-NEXT:    bfe.u32 %r34, %r2, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs23, %r34;
+; CHECK-NEXT:    add.s16 %rs24, %rs23, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r35, %rs24;
+; CHECK-NEXT:    prmt.b32 %r36, %r35, %r33, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r37, %r36, %r31, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r38, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs25, %r38;
+; CHECK-NEXT:    add.s16 %rs26, %rs25, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r39, %rs26;
+; CHECK-NEXT:    bfe.u32 %r40, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs27, %r40;
+; CHECK-NEXT:    add.s16 %rs28, %rs27, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r41, %rs28;
+; CHECK-NEXT:    prmt.b32 %r42, %r41, %r39, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r43, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs29, %r43;
+; CHECK-NEXT:    add.s16 %rs30, %rs29, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r44, %rs30;
+; CHECK-NEXT:    bfe.u32 %r45, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs31, %r45;
+; CHECK-NEXT:    add.s16 %rs32, %rs31, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r46, %rs32;
+; CHECK-NEXT:    prmt.b32 %r47, %r46, %r44, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r48, %r47, %r42, 0x5410U;
+; CHECK-NEXT:    st.volatile.v4.b32 [%rd1], {%r48, %r37, %r26, %r15};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <16 x i8>, ptr %a
+  %a.add = add <16 x i8> %a.load, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  store volatile <16 x i8> %a.add, ptr %a
+  ret void
+}
+
 define void @generic_volatile_2xi16(ptr %a) {
 ; CHECK-LABEL: generic_volatile_2xi16(
 ; CHECK:       {
@@ -578,6 +912,40 @@ define void @generic_volatile_4xi16(ptr %a) {
   %a.load = load volatile <4 x i16>, ptr %a
   %a.add = add <4 x i16> %a.load, <i16 1, i16 1, i16 1, i16 1>
   store volatile <4 x i16> %a.add, ptr %a
+  ret void
+}
+
+define void @generic_volatile_8xi16(ptr %a) {
+; CHECK-LABEL: generic_volatile_8xi16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<17>;
+; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_8xi16_param_0];
+; CHECK-NEXT:    ld.volatile.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
+; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
+; CHECK-NEXT:    mov.b32 %r5, {%rs4, %rs3};
+; CHECK-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
+; CHECK-NEXT:    add.s16 %rs7, %rs6, 1;
+; CHECK-NEXT:    add.s16 %rs8, %rs5, 1;
+; CHECK-NEXT:    mov.b32 %r6, {%rs8, %rs7};
+; CHECK-NEXT:    mov.b32 {%rs9, %rs10}, %r2;
+; CHECK-NEXT:    add.s16 %rs11, %rs10, 1;
+; CHECK-NEXT:    add.s16 %rs12, %rs9, 1;
+; CHECK-NEXT:    mov.b32 %r7, {%rs12, %rs11};
+; CHECK-NEXT:    mov.b32 {%rs13, %rs14}, %r1;
+; CHECK-NEXT:    add.s16 %rs15, %rs14, 1;
+; CHECK-NEXT:    add.s16 %rs16, %rs13, 1;
+; CHECK-NEXT:    mov.b32 %r8, {%rs16, %rs15};
+; CHECK-NEXT:    st.volatile.v4.b32 [%rd1], {%r8, %r7, %r6, %r5};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <8 x i16>, ptr %a
+  %a.add = add <8 x i16> %a.load, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  store volatile <8 x i16> %a.add, ptr %a
   ret void
 }
 
@@ -1443,6 +1811,156 @@ define void @global_4xi8(ptr addrspace(1) %a) {
   ret void
 }
 
+define void @global_8xi8(ptr addrspace(1) %a) {
+; CHECK-LABEL: global_8xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<17>;
+; CHECK-NEXT:    .reg .b32 %r<25>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_8xi8_param_0];
+; CHECK-NEXT:    ld.global.v2.b32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    bfe.u32 %r3, %r2, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r3;
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r4, %rs2;
+; CHECK-NEXT:    bfe.u32 %r5, %r2, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r5;
+; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r6, %rs4;
+; CHECK-NEXT:    prmt.b32 %r7, %r6, %r4, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r8, %r2, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r8;
+; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r9, %rs6;
+; CHECK-NEXT:    bfe.u32 %r10, %r2, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r10;
+; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r11, %rs8;
+; CHECK-NEXT:    prmt.b32 %r12, %r11, %r9, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r13, %r12, %r7, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r14, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs9, %r14;
+; CHECK-NEXT:    add.s16 %rs10, %rs9, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r15, %rs10;
+; CHECK-NEXT:    bfe.u32 %r16, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs11, %r16;
+; CHECK-NEXT:    add.s16 %rs12, %rs11, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r17, %rs12;
+; CHECK-NEXT:    prmt.b32 %r18, %r17, %r15, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r19, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs13, %r19;
+; CHECK-NEXT:    add.s16 %rs14, %rs13, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r20, %rs14;
+; CHECK-NEXT:    bfe.u32 %r21, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs15, %r21;
+; CHECK-NEXT:    add.s16 %rs16, %rs15, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r22, %rs16;
+; CHECK-NEXT:    prmt.b32 %r23, %r22, %r20, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r24, %r23, %r18, 0x5410U;
+; CHECK-NEXT:    st.global.v2.b32 [%rd1], {%r24, %r13};
+; CHECK-NEXT:    ret;
+  %a.load = load <8 x i8>, ptr addrspace(1) %a
+  %a.add = add <8 x i8> %a.load, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  store <8 x i8> %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_16xi8(ptr addrspace(1) %a) {
+; CHECK-LABEL: global_16xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<33>;
+; CHECK-NEXT:    .reg .b32 %r<49>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_16xi8_param_0];
+; CHECK-NEXT:    ld.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    bfe.u32 %r5, %r4, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r5;
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r6, %rs2;
+; CHECK-NEXT:    bfe.u32 %r7, %r4, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r7;
+; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r8, %rs4;
+; CHECK-NEXT:    prmt.b32 %r9, %r8, %r6, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r10, %r4, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r10;
+; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r11, %rs6;
+; CHECK-NEXT:    bfe.u32 %r12, %r4, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r12;
+; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r13, %rs8;
+; CHECK-NEXT:    prmt.b32 %r14, %r13, %r11, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r15, %r14, %r9, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r16, %r3, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs9, %r16;
+; CHECK-NEXT:    add.s16 %rs10, %rs9, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r17, %rs10;
+; CHECK-NEXT:    bfe.u32 %r18, %r3, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs11, %r18;
+; CHECK-NEXT:    add.s16 %rs12, %rs11, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r19, %rs12;
+; CHECK-NEXT:    prmt.b32 %r20, %r19, %r17, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r21, %r3, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs13, %r21;
+; CHECK-NEXT:    add.s16 %rs14, %rs13, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r22, %rs14;
+; CHECK-NEXT:    bfe.u32 %r23, %r3, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs15, %r23;
+; CHECK-NEXT:    add.s16 %rs16, %rs15, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r24, %rs16;
+; CHECK-NEXT:    prmt.b32 %r25, %r24, %r22, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r26, %r25, %r20, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r27, %r2, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs17, %r27;
+; CHECK-NEXT:    add.s16 %rs18, %rs17, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r28, %rs18;
+; CHECK-NEXT:    bfe.u32 %r29, %r2, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs19, %r29;
+; CHECK-NEXT:    add.s16 %rs20, %rs19, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r30, %rs20;
+; CHECK-NEXT:    prmt.b32 %r31, %r30, %r28, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r32, %r2, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs21, %r32;
+; CHECK-NEXT:    add.s16 %rs22, %rs21, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r33, %rs22;
+; CHECK-NEXT:    bfe.u32 %r34, %r2, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs23, %r34;
+; CHECK-NEXT:    add.s16 %rs24, %rs23, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r35, %rs24;
+; CHECK-NEXT:    prmt.b32 %r36, %r35, %r33, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r37, %r36, %r31, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r38, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs25, %r38;
+; CHECK-NEXT:    add.s16 %rs26, %rs25, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r39, %rs26;
+; CHECK-NEXT:    bfe.u32 %r40, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs27, %r40;
+; CHECK-NEXT:    add.s16 %rs28, %rs27, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r41, %rs28;
+; CHECK-NEXT:    prmt.b32 %r42, %r41, %r39, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r43, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs29, %r43;
+; CHECK-NEXT:    add.s16 %rs30, %rs29, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r44, %rs30;
+; CHECK-NEXT:    bfe.u32 %r45, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs31, %r45;
+; CHECK-NEXT:    add.s16 %rs32, %rs31, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r46, %rs32;
+; CHECK-NEXT:    prmt.b32 %r47, %r46, %r44, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r48, %r47, %r42, 0x5410U;
+; CHECK-NEXT:    st.global.v4.b32 [%rd1], {%r48, %r37, %r26, %r15};
+; CHECK-NEXT:    ret;
+  %a.load = load <16 x i8>, ptr addrspace(1) %a
+  %a.add = add <16 x i8> %a.load, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  store <16 x i8> %a.add, ptr addrspace(1) %a
+  ret void
+}
+
 define void @global_2xi16(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_2xi16(
 ; CHECK:       {
@@ -1483,6 +2001,40 @@ define void @global_4xi16(ptr addrspace(1) %a) {
   %a.load = load <4 x i16>, ptr addrspace(1) %a
   %a.add = add <4 x i16> %a.load, <i16 1, i16 1, i16 1, i16 1>
   store <4 x i16> %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_8xi16(ptr addrspace(1) %a) {
+; CHECK-LABEL: global_8xi16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<17>;
+; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_8xi16_param_0];
+; CHECK-NEXT:    ld.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
+; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
+; CHECK-NEXT:    mov.b32 %r5, {%rs4, %rs3};
+; CHECK-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
+; CHECK-NEXT:    add.s16 %rs7, %rs6, 1;
+; CHECK-NEXT:    add.s16 %rs8, %rs5, 1;
+; CHECK-NEXT:    mov.b32 %r6, {%rs8, %rs7};
+; CHECK-NEXT:    mov.b32 {%rs9, %rs10}, %r2;
+; CHECK-NEXT:    add.s16 %rs11, %rs10, 1;
+; CHECK-NEXT:    add.s16 %rs12, %rs9, 1;
+; CHECK-NEXT:    mov.b32 %r7, {%rs12, %rs11};
+; CHECK-NEXT:    mov.b32 {%rs13, %rs14}, %r1;
+; CHECK-NEXT:    add.s16 %rs15, %rs14, 1;
+; CHECK-NEXT:    add.s16 %rs16, %rs13, 1;
+; CHECK-NEXT:    mov.b32 %r8, {%rs16, %rs15};
+; CHECK-NEXT:    st.global.v4.b32 [%rd1], {%r8, %r7, %r6, %r5};
+; CHECK-NEXT:    ret;
+  %a.load = load <8 x i16>, ptr addrspace(1) %a
+  %a.add = add <8 x i16> %a.load, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  store <8 x i16> %a.add, ptr addrspace(1) %a
   ret void
 }
 
@@ -1768,6 +2320,156 @@ define void @global_volatile_4xi8(ptr addrspace(1) %a) {
   ret void
 }
 
+define void @global_volatile_8xi8(ptr addrspace(1) %a) {
+; CHECK-LABEL: global_volatile_8xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<17>;
+; CHECK-NEXT:    .reg .b32 %r<25>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_8xi8_param_0];
+; CHECK-NEXT:    ld.volatile.global.v2.b32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    bfe.u32 %r3, %r2, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r3;
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r4, %rs2;
+; CHECK-NEXT:    bfe.u32 %r5, %r2, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r5;
+; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r6, %rs4;
+; CHECK-NEXT:    prmt.b32 %r7, %r6, %r4, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r8, %r2, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r8;
+; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r9, %rs6;
+; CHECK-NEXT:    bfe.u32 %r10, %r2, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r10;
+; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r11, %rs8;
+; CHECK-NEXT:    prmt.b32 %r12, %r11, %r9, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r13, %r12, %r7, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r14, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs9, %r14;
+; CHECK-NEXT:    add.s16 %rs10, %rs9, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r15, %rs10;
+; CHECK-NEXT:    bfe.u32 %r16, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs11, %r16;
+; CHECK-NEXT:    add.s16 %rs12, %rs11, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r17, %rs12;
+; CHECK-NEXT:    prmt.b32 %r18, %r17, %r15, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r19, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs13, %r19;
+; CHECK-NEXT:    add.s16 %rs14, %rs13, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r20, %rs14;
+; CHECK-NEXT:    bfe.u32 %r21, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs15, %r21;
+; CHECK-NEXT:    add.s16 %rs16, %rs15, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r22, %rs16;
+; CHECK-NEXT:    prmt.b32 %r23, %r22, %r20, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r24, %r23, %r18, 0x5410U;
+; CHECK-NEXT:    st.volatile.global.v2.b32 [%rd1], {%r24, %r13};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <8 x i8>, ptr addrspace(1) %a
+  %a.add = add <8 x i8> %a.load, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  store volatile <8 x i8> %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_volatile_16xi8(ptr addrspace(1) %a) {
+; CHECK-LABEL: global_volatile_16xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<33>;
+; CHECK-NEXT:    .reg .b32 %r<49>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_16xi8_param_0];
+; CHECK-NEXT:    ld.volatile.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    bfe.u32 %r5, %r4, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r5;
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r6, %rs2;
+; CHECK-NEXT:    bfe.u32 %r7, %r4, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r7;
+; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r8, %rs4;
+; CHECK-NEXT:    prmt.b32 %r9, %r8, %r6, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r10, %r4, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r10;
+; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r11, %rs6;
+; CHECK-NEXT:    bfe.u32 %r12, %r4, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r12;
+; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r13, %rs8;
+; CHECK-NEXT:    prmt.b32 %r14, %r13, %r11, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r15, %r14, %r9, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r16, %r3, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs9, %r16;
+; CHECK-NEXT:    add.s16 %rs10, %rs9, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r17, %rs10;
+; CHECK-NEXT:    bfe.u32 %r18, %r3, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs11, %r18;
+; CHECK-NEXT:    add.s16 %rs12, %rs11, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r19, %rs12;
+; CHECK-NEXT:    prmt.b32 %r20, %r19, %r17, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r21, %r3, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs13, %r21;
+; CHECK-NEXT:    add.s16 %rs14, %rs13, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r22, %rs14;
+; CHECK-NEXT:    bfe.u32 %r23, %r3, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs15, %r23;
+; CHECK-NEXT:    add.s16 %rs16, %rs15, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r24, %rs16;
+; CHECK-NEXT:    prmt.b32 %r25, %r24, %r22, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r26, %r25, %r20, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r27, %r2, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs17, %r27;
+; CHECK-NEXT:    add.s16 %rs18, %rs17, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r28, %rs18;
+; CHECK-NEXT:    bfe.u32 %r29, %r2, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs19, %r29;
+; CHECK-NEXT:    add.s16 %rs20, %rs19, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r30, %rs20;
+; CHECK-NEXT:    prmt.b32 %r31, %r30, %r28, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r32, %r2, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs21, %r32;
+; CHECK-NEXT:    add.s16 %rs22, %rs21, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r33, %rs22;
+; CHECK-NEXT:    bfe.u32 %r34, %r2, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs23, %r34;
+; CHECK-NEXT:    add.s16 %rs24, %rs23, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r35, %rs24;
+; CHECK-NEXT:    prmt.b32 %r36, %r35, %r33, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r37, %r36, %r31, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r38, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs25, %r38;
+; CHECK-NEXT:    add.s16 %rs26, %rs25, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r39, %rs26;
+; CHECK-NEXT:    bfe.u32 %r40, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs27, %r40;
+; CHECK-NEXT:    add.s16 %rs28, %rs27, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r41, %rs28;
+; CHECK-NEXT:    prmt.b32 %r42, %r41, %r39, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r43, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs29, %r43;
+; CHECK-NEXT:    add.s16 %rs30, %rs29, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r44, %rs30;
+; CHECK-NEXT:    bfe.u32 %r45, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs31, %r45;
+; CHECK-NEXT:    add.s16 %rs32, %rs31, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r46, %rs32;
+; CHECK-NEXT:    prmt.b32 %r47, %r46, %r44, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r48, %r47, %r42, 0x5410U;
+; CHECK-NEXT:    st.volatile.global.v4.b32 [%rd1], {%r48, %r37, %r26, %r15};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <16 x i8>, ptr addrspace(1) %a
+  %a.add = add <16 x i8> %a.load, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  store volatile <16 x i8> %a.add, ptr addrspace(1) %a
+  ret void
+}
+
 define void @global_volatile_2xi16(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_2xi16(
 ; CHECK:       {
@@ -1808,6 +2510,40 @@ define void @global_volatile_4xi16(ptr addrspace(1) %a) {
   %a.load = load volatile <4 x i16>, ptr addrspace(1) %a
   %a.add = add <4 x i16> %a.load, <i16 1, i16 1, i16 1, i16 1>
   store volatile <4 x i16> %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_volatile_8xi16(ptr addrspace(1) %a) {
+; CHECK-LABEL: global_volatile_8xi16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<17>;
+; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_8xi16_param_0];
+; CHECK-NEXT:    ld.volatile.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
+; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
+; CHECK-NEXT:    mov.b32 %r5, {%rs4, %rs3};
+; CHECK-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
+; CHECK-NEXT:    add.s16 %rs7, %rs6, 1;
+; CHECK-NEXT:    add.s16 %rs8, %rs5, 1;
+; CHECK-NEXT:    mov.b32 %r6, {%rs8, %rs7};
+; CHECK-NEXT:    mov.b32 {%rs9, %rs10}, %r2;
+; CHECK-NEXT:    add.s16 %rs11, %rs10, 1;
+; CHECK-NEXT:    add.s16 %rs12, %rs9, 1;
+; CHECK-NEXT:    mov.b32 %r7, {%rs12, %rs11};
+; CHECK-NEXT:    mov.b32 {%rs13, %rs14}, %r1;
+; CHECK-NEXT:    add.s16 %rs15, %rs14, 1;
+; CHECK-NEXT:    add.s16 %rs16, %rs13, 1;
+; CHECK-NEXT:    mov.b32 %r8, {%rs16, %rs15};
+; CHECK-NEXT:    st.volatile.global.v4.b32 [%rd1], {%r8, %r7, %r6, %r5};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <8 x i16>, ptr addrspace(1) %a
+  %a.add = add <8 x i16> %a.load, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  store volatile <8 x i16> %a.add, ptr addrspace(1) %a
   ret void
 }
 
@@ -2815,6 +3551,156 @@ define void @shared_4xi8(ptr addrspace(3) %a) {
   ret void
 }
 
+define void @shared_8xi8(ptr addrspace(3) %a) {
+; CHECK-LABEL: shared_8xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<17>;
+; CHECK-NEXT:    .reg .b32 %r<25>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_8xi8_param_0];
+; CHECK-NEXT:    ld.shared.v2.b32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    bfe.u32 %r3, %r2, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r3;
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r4, %rs2;
+; CHECK-NEXT:    bfe.u32 %r5, %r2, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r5;
+; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r6, %rs4;
+; CHECK-NEXT:    prmt.b32 %r7, %r6, %r4, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r8, %r2, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r8;
+; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r9, %rs6;
+; CHECK-NEXT:    bfe.u32 %r10, %r2, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r10;
+; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r11, %rs8;
+; CHECK-NEXT:    prmt.b32 %r12, %r11, %r9, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r13, %r12, %r7, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r14, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs9, %r14;
+; CHECK-NEXT:    add.s16 %rs10, %rs9, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r15, %rs10;
+; CHECK-NEXT:    bfe.u32 %r16, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs11, %r16;
+; CHECK-NEXT:    add.s16 %rs12, %rs11, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r17, %rs12;
+; CHECK-NEXT:    prmt.b32 %r18, %r17, %r15, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r19, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs13, %r19;
+; CHECK-NEXT:    add.s16 %rs14, %rs13, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r20, %rs14;
+; CHECK-NEXT:    bfe.u32 %r21, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs15, %r21;
+; CHECK-NEXT:    add.s16 %rs16, %rs15, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r22, %rs16;
+; CHECK-NEXT:    prmt.b32 %r23, %r22, %r20, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r24, %r23, %r18, 0x5410U;
+; CHECK-NEXT:    st.shared.v2.b32 [%rd1], {%r24, %r13};
+; CHECK-NEXT:    ret;
+  %a.load = load <8 x i8>, ptr addrspace(3) %a
+  %a.add = add <8 x i8> %a.load, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  store <8 x i8> %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_16xi8(ptr addrspace(3) %a) {
+; CHECK-LABEL: shared_16xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<33>;
+; CHECK-NEXT:    .reg .b32 %r<49>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_16xi8_param_0];
+; CHECK-NEXT:    ld.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    bfe.u32 %r5, %r4, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r5;
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r6, %rs2;
+; CHECK-NEXT:    bfe.u32 %r7, %r4, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r7;
+; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r8, %rs4;
+; CHECK-NEXT:    prmt.b32 %r9, %r8, %r6, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r10, %r4, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r10;
+; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r11, %rs6;
+; CHECK-NEXT:    bfe.u32 %r12, %r4, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r12;
+; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r13, %rs8;
+; CHECK-NEXT:    prmt.b32 %r14, %r13, %r11, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r15, %r14, %r9, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r16, %r3, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs9, %r16;
+; CHECK-NEXT:    add.s16 %rs10, %rs9, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r17, %rs10;
+; CHECK-NEXT:    bfe.u32 %r18, %r3, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs11, %r18;
+; CHECK-NEXT:    add.s16 %rs12, %rs11, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r19, %rs12;
+; CHECK-NEXT:    prmt.b32 %r20, %r19, %r17, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r21, %r3, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs13, %r21;
+; CHECK-NEXT:    add.s16 %rs14, %rs13, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r22, %rs14;
+; CHECK-NEXT:    bfe.u32 %r23, %r3, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs15, %r23;
+; CHECK-NEXT:    add.s16 %rs16, %rs15, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r24, %rs16;
+; CHECK-NEXT:    prmt.b32 %r25, %r24, %r22, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r26, %r25, %r20, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r27, %r2, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs17, %r27;
+; CHECK-NEXT:    add.s16 %rs18, %rs17, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r28, %rs18;
+; CHECK-NEXT:    bfe.u32 %r29, %r2, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs19, %r29;
+; CHECK-NEXT:    add.s16 %rs20, %rs19, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r30, %rs20;
+; CHECK-NEXT:    prmt.b32 %r31, %r30, %r28, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r32, %r2, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs21, %r32;
+; CHECK-NEXT:    add.s16 %rs22, %rs21, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r33, %rs22;
+; CHECK-NEXT:    bfe.u32 %r34, %r2, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs23, %r34;
+; CHECK-NEXT:    add.s16 %rs24, %rs23, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r35, %rs24;
+; CHECK-NEXT:    prmt.b32 %r36, %r35, %r33, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r37, %r36, %r31, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r38, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs25, %r38;
+; CHECK-NEXT:    add.s16 %rs26, %rs25, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r39, %rs26;
+; CHECK-NEXT:    bfe.u32 %r40, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs27, %r40;
+; CHECK-NEXT:    add.s16 %rs28, %rs27, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r41, %rs28;
+; CHECK-NEXT:    prmt.b32 %r42, %r41, %r39, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r43, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs29, %r43;
+; CHECK-NEXT:    add.s16 %rs30, %rs29, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r44, %rs30;
+; CHECK-NEXT:    bfe.u32 %r45, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs31, %r45;
+; CHECK-NEXT:    add.s16 %rs32, %rs31, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r46, %rs32;
+; CHECK-NEXT:    prmt.b32 %r47, %r46, %r44, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r48, %r47, %r42, 0x5410U;
+; CHECK-NEXT:    st.shared.v4.b32 [%rd1], {%r48, %r37, %r26, %r15};
+; CHECK-NEXT:    ret;
+  %a.load = load <16 x i8>, ptr addrspace(3) %a
+  %a.add = add <16 x i8> %a.load, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  store <16 x i8> %a.add, ptr addrspace(3) %a
+  ret void
+}
+
 define void @shared_2xi16(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_2xi16(
 ; CHECK:       {
@@ -2855,6 +3741,40 @@ define void @shared_4xi16(ptr addrspace(3) %a) {
   %a.load = load <4 x i16>, ptr addrspace(3) %a
   %a.add = add <4 x i16> %a.load, <i16 1, i16 1, i16 1, i16 1>
   store <4 x i16> %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_8xi16(ptr addrspace(3) %a) {
+; CHECK-LABEL: shared_8xi16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<17>;
+; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_8xi16_param_0];
+; CHECK-NEXT:    ld.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
+; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
+; CHECK-NEXT:    mov.b32 %r5, {%rs4, %rs3};
+; CHECK-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
+; CHECK-NEXT:    add.s16 %rs7, %rs6, 1;
+; CHECK-NEXT:    add.s16 %rs8, %rs5, 1;
+; CHECK-NEXT:    mov.b32 %r6, {%rs8, %rs7};
+; CHECK-NEXT:    mov.b32 {%rs9, %rs10}, %r2;
+; CHECK-NEXT:    add.s16 %rs11, %rs10, 1;
+; CHECK-NEXT:    add.s16 %rs12, %rs9, 1;
+; CHECK-NEXT:    mov.b32 %r7, {%rs12, %rs11};
+; CHECK-NEXT:    mov.b32 {%rs13, %rs14}, %r1;
+; CHECK-NEXT:    add.s16 %rs15, %rs14, 1;
+; CHECK-NEXT:    add.s16 %rs16, %rs13, 1;
+; CHECK-NEXT:    mov.b32 %r8, {%rs16, %rs15};
+; CHECK-NEXT:    st.shared.v4.b32 [%rd1], {%r8, %r7, %r6, %r5};
+; CHECK-NEXT:    ret;
+  %a.load = load <8 x i16>, ptr addrspace(3) %a
+  %a.add = add <8 x i16> %a.load, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  store <8 x i16> %a.add, ptr addrspace(3) %a
   ret void
 }
 
@@ -3140,6 +4060,156 @@ define void @shared_volatile_4xi8(ptr addrspace(3) %a) {
   ret void
 }
 
+define void @shared_volatile_8xi8(ptr addrspace(3) %a) {
+; CHECK-LABEL: shared_volatile_8xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<17>;
+; CHECK-NEXT:    .reg .b32 %r<25>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_8xi8_param_0];
+; CHECK-NEXT:    ld.volatile.shared.v2.b32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    bfe.u32 %r3, %r2, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r3;
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r4, %rs2;
+; CHECK-NEXT:    bfe.u32 %r5, %r2, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r5;
+; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r6, %rs4;
+; CHECK-NEXT:    prmt.b32 %r7, %r6, %r4, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r8, %r2, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r8;
+; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r9, %rs6;
+; CHECK-NEXT:    bfe.u32 %r10, %r2, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r10;
+; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r11, %rs8;
+; CHECK-NEXT:    prmt.b32 %r12, %r11, %r9, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r13, %r12, %r7, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r14, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs9, %r14;
+; CHECK-NEXT:    add.s16 %rs10, %rs9, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r15, %rs10;
+; CHECK-NEXT:    bfe.u32 %r16, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs11, %r16;
+; CHECK-NEXT:    add.s16 %rs12, %rs11, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r17, %rs12;
+; CHECK-NEXT:    prmt.b32 %r18, %r17, %r15, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r19, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs13, %r19;
+; CHECK-NEXT:    add.s16 %rs14, %rs13, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r20, %rs14;
+; CHECK-NEXT:    bfe.u32 %r21, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs15, %r21;
+; CHECK-NEXT:    add.s16 %rs16, %rs15, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r22, %rs16;
+; CHECK-NEXT:    prmt.b32 %r23, %r22, %r20, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r24, %r23, %r18, 0x5410U;
+; CHECK-NEXT:    st.volatile.shared.v2.b32 [%rd1], {%r24, %r13};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <8 x i8>, ptr addrspace(3) %a
+  %a.add = add <8 x i8> %a.load, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  store volatile <8 x i8> %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_volatile_16xi8(ptr addrspace(3) %a) {
+; CHECK-LABEL: shared_volatile_16xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<33>;
+; CHECK-NEXT:    .reg .b32 %r<49>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_16xi8_param_0];
+; CHECK-NEXT:    ld.volatile.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    bfe.u32 %r5, %r4, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r5;
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r6, %rs2;
+; CHECK-NEXT:    bfe.u32 %r7, %r4, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r7;
+; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r8, %rs4;
+; CHECK-NEXT:    prmt.b32 %r9, %r8, %r6, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r10, %r4, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r10;
+; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r11, %rs6;
+; CHECK-NEXT:    bfe.u32 %r12, %r4, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r12;
+; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r13, %rs8;
+; CHECK-NEXT:    prmt.b32 %r14, %r13, %r11, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r15, %r14, %r9, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r16, %r3, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs9, %r16;
+; CHECK-NEXT:    add.s16 %rs10, %rs9, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r17, %rs10;
+; CHECK-NEXT:    bfe.u32 %r18, %r3, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs11, %r18;
+; CHECK-NEXT:    add.s16 %rs12, %rs11, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r19, %rs12;
+; CHECK-NEXT:    prmt.b32 %r20, %r19, %r17, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r21, %r3, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs13, %r21;
+; CHECK-NEXT:    add.s16 %rs14, %rs13, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r22, %rs14;
+; CHECK-NEXT:    bfe.u32 %r23, %r3, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs15, %r23;
+; CHECK-NEXT:    add.s16 %rs16, %rs15, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r24, %rs16;
+; CHECK-NEXT:    prmt.b32 %r25, %r24, %r22, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r26, %r25, %r20, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r27, %r2, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs17, %r27;
+; CHECK-NEXT:    add.s16 %rs18, %rs17, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r28, %rs18;
+; CHECK-NEXT:    bfe.u32 %r29, %r2, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs19, %r29;
+; CHECK-NEXT:    add.s16 %rs20, %rs19, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r30, %rs20;
+; CHECK-NEXT:    prmt.b32 %r31, %r30, %r28, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r32, %r2, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs21, %r32;
+; CHECK-NEXT:    add.s16 %rs22, %rs21, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r33, %rs22;
+; CHECK-NEXT:    bfe.u32 %r34, %r2, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs23, %r34;
+; CHECK-NEXT:    add.s16 %rs24, %rs23, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r35, %rs24;
+; CHECK-NEXT:    prmt.b32 %r36, %r35, %r33, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r37, %r36, %r31, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r38, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs25, %r38;
+; CHECK-NEXT:    add.s16 %rs26, %rs25, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r39, %rs26;
+; CHECK-NEXT:    bfe.u32 %r40, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs27, %r40;
+; CHECK-NEXT:    add.s16 %rs28, %rs27, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r41, %rs28;
+; CHECK-NEXT:    prmt.b32 %r42, %r41, %r39, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r43, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs29, %r43;
+; CHECK-NEXT:    add.s16 %rs30, %rs29, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r44, %rs30;
+; CHECK-NEXT:    bfe.u32 %r45, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs31, %r45;
+; CHECK-NEXT:    add.s16 %rs32, %rs31, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r46, %rs32;
+; CHECK-NEXT:    prmt.b32 %r47, %r46, %r44, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r48, %r47, %r42, 0x5410U;
+; CHECK-NEXT:    st.volatile.shared.v4.b32 [%rd1], {%r48, %r37, %r26, %r15};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <16 x i8>, ptr addrspace(3) %a
+  %a.add = add <16 x i8> %a.load, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  store volatile <16 x i8> %a.add, ptr addrspace(3) %a
+  ret void
+}
+
 define void @shared_volatile_2xi16(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_2xi16(
 ; CHECK:       {
@@ -3180,6 +4250,40 @@ define void @shared_volatile_4xi16(ptr addrspace(3) %a) {
   %a.load = load volatile <4 x i16>, ptr addrspace(3) %a
   %a.add = add <4 x i16> %a.load, <i16 1, i16 1, i16 1, i16 1>
   store volatile <4 x i16> %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_volatile_8xi16(ptr addrspace(3) %a) {
+; CHECK-LABEL: shared_volatile_8xi16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<17>;
+; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_8xi16_param_0];
+; CHECK-NEXT:    ld.volatile.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
+; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
+; CHECK-NEXT:    mov.b32 %r5, {%rs4, %rs3};
+; CHECK-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
+; CHECK-NEXT:    add.s16 %rs7, %rs6, 1;
+; CHECK-NEXT:    add.s16 %rs8, %rs5, 1;
+; CHECK-NEXT:    mov.b32 %r6, {%rs8, %rs7};
+; CHECK-NEXT:    mov.b32 {%rs9, %rs10}, %r2;
+; CHECK-NEXT:    add.s16 %rs11, %rs10, 1;
+; CHECK-NEXT:    add.s16 %rs12, %rs9, 1;
+; CHECK-NEXT:    mov.b32 %r7, {%rs12, %rs11};
+; CHECK-NEXT:    mov.b32 {%rs13, %rs14}, %r1;
+; CHECK-NEXT:    add.s16 %rs15, %rs14, 1;
+; CHECK-NEXT:    add.s16 %rs16, %rs13, 1;
+; CHECK-NEXT:    mov.b32 %r8, {%rs16, %rs15};
+; CHECK-NEXT:    st.volatile.shared.v4.b32 [%rd1], {%r8, %r7, %r6, %r5};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <8 x i16>, ptr addrspace(3) %a
+  %a.add = add <8 x i16> %a.load, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  store volatile <8 x i16> %a.add, ptr addrspace(3) %a
   ret void
 }
 
@@ -4045,6 +5149,156 @@ define void @local_4xi8(ptr addrspace(5) %a) {
   ret void
 }
 
+define void @local_8xi8(ptr addrspace(5) %a) {
+; CHECK-LABEL: local_8xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<17>;
+; CHECK-NEXT:    .reg .b32 %r<25>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_8xi8_param_0];
+; CHECK-NEXT:    ld.local.v2.b32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    bfe.u32 %r3, %r2, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r3;
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r4, %rs2;
+; CHECK-NEXT:    bfe.u32 %r5, %r2, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r5;
+; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r6, %rs4;
+; CHECK-NEXT:    prmt.b32 %r7, %r6, %r4, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r8, %r2, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r8;
+; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r9, %rs6;
+; CHECK-NEXT:    bfe.u32 %r10, %r2, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r10;
+; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r11, %rs8;
+; CHECK-NEXT:    prmt.b32 %r12, %r11, %r9, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r13, %r12, %r7, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r14, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs9, %r14;
+; CHECK-NEXT:    add.s16 %rs10, %rs9, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r15, %rs10;
+; CHECK-NEXT:    bfe.u32 %r16, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs11, %r16;
+; CHECK-NEXT:    add.s16 %rs12, %rs11, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r17, %rs12;
+; CHECK-NEXT:    prmt.b32 %r18, %r17, %r15, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r19, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs13, %r19;
+; CHECK-NEXT:    add.s16 %rs14, %rs13, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r20, %rs14;
+; CHECK-NEXT:    bfe.u32 %r21, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs15, %r21;
+; CHECK-NEXT:    add.s16 %rs16, %rs15, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r22, %rs16;
+; CHECK-NEXT:    prmt.b32 %r23, %r22, %r20, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r24, %r23, %r18, 0x5410U;
+; CHECK-NEXT:    st.local.v2.b32 [%rd1], {%r24, %r13};
+; CHECK-NEXT:    ret;
+  %a.load = load <8 x i8>, ptr addrspace(5) %a
+  %a.add = add <8 x i8> %a.load, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  store <8 x i8> %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_16xi8(ptr addrspace(5) %a) {
+; CHECK-LABEL: local_16xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<33>;
+; CHECK-NEXT:    .reg .b32 %r<49>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_16xi8_param_0];
+; CHECK-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    bfe.u32 %r5, %r4, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r5;
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r6, %rs2;
+; CHECK-NEXT:    bfe.u32 %r7, %r4, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r7;
+; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r8, %rs4;
+; CHECK-NEXT:    prmt.b32 %r9, %r8, %r6, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r10, %r4, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r10;
+; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r11, %rs6;
+; CHECK-NEXT:    bfe.u32 %r12, %r4, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r12;
+; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r13, %rs8;
+; CHECK-NEXT:    prmt.b32 %r14, %r13, %r11, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r15, %r14, %r9, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r16, %r3, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs9, %r16;
+; CHECK-NEXT:    add.s16 %rs10, %rs9, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r17, %rs10;
+; CHECK-NEXT:    bfe.u32 %r18, %r3, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs11, %r18;
+; CHECK-NEXT:    add.s16 %rs12, %rs11, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r19, %rs12;
+; CHECK-NEXT:    prmt.b32 %r20, %r19, %r17, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r21, %r3, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs13, %r21;
+; CHECK-NEXT:    add.s16 %rs14, %rs13, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r22, %rs14;
+; CHECK-NEXT:    bfe.u32 %r23, %r3, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs15, %r23;
+; CHECK-NEXT:    add.s16 %rs16, %rs15, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r24, %rs16;
+; CHECK-NEXT:    prmt.b32 %r25, %r24, %r22, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r26, %r25, %r20, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r27, %r2, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs17, %r27;
+; CHECK-NEXT:    add.s16 %rs18, %rs17, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r28, %rs18;
+; CHECK-NEXT:    bfe.u32 %r29, %r2, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs19, %r29;
+; CHECK-NEXT:    add.s16 %rs20, %rs19, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r30, %rs20;
+; CHECK-NEXT:    prmt.b32 %r31, %r30, %r28, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r32, %r2, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs21, %r32;
+; CHECK-NEXT:    add.s16 %rs22, %rs21, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r33, %rs22;
+; CHECK-NEXT:    bfe.u32 %r34, %r2, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs23, %r34;
+; CHECK-NEXT:    add.s16 %rs24, %rs23, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r35, %rs24;
+; CHECK-NEXT:    prmt.b32 %r36, %r35, %r33, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r37, %r36, %r31, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r38, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs25, %r38;
+; CHECK-NEXT:    add.s16 %rs26, %rs25, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r39, %rs26;
+; CHECK-NEXT:    bfe.u32 %r40, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs27, %r40;
+; CHECK-NEXT:    add.s16 %rs28, %rs27, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r41, %rs28;
+; CHECK-NEXT:    prmt.b32 %r42, %r41, %r39, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r43, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs29, %r43;
+; CHECK-NEXT:    add.s16 %rs30, %rs29, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r44, %rs30;
+; CHECK-NEXT:    bfe.u32 %r45, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs31, %r45;
+; CHECK-NEXT:    add.s16 %rs32, %rs31, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r46, %rs32;
+; CHECK-NEXT:    prmt.b32 %r47, %r46, %r44, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r48, %r47, %r42, 0x5410U;
+; CHECK-NEXT:    st.local.v4.b32 [%rd1], {%r48, %r37, %r26, %r15};
+; CHECK-NEXT:    ret;
+  %a.load = load <16 x i8>, ptr addrspace(5) %a
+  %a.add = add <16 x i8> %a.load, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  store <16 x i8> %a.add, ptr addrspace(5) %a
+  ret void
+}
+
 define void @local_2xi16(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_2xi16(
 ; CHECK:       {
@@ -4085,6 +5339,40 @@ define void @local_4xi16(ptr addrspace(5) %a) {
   %a.load = load <4 x i16>, ptr addrspace(5) %a
   %a.add = add <4 x i16> %a.load, <i16 1, i16 1, i16 1, i16 1>
   store <4 x i16> %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_8xi16(ptr addrspace(5) %a) {
+; CHECK-LABEL: local_8xi16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<17>;
+; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_8xi16_param_0];
+; CHECK-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
+; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
+; CHECK-NEXT:    mov.b32 %r5, {%rs4, %rs3};
+; CHECK-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
+; CHECK-NEXT:    add.s16 %rs7, %rs6, 1;
+; CHECK-NEXT:    add.s16 %rs8, %rs5, 1;
+; CHECK-NEXT:    mov.b32 %r6, {%rs8, %rs7};
+; CHECK-NEXT:    mov.b32 {%rs9, %rs10}, %r2;
+; CHECK-NEXT:    add.s16 %rs11, %rs10, 1;
+; CHECK-NEXT:    add.s16 %rs12, %rs9, 1;
+; CHECK-NEXT:    mov.b32 %r7, {%rs12, %rs11};
+; CHECK-NEXT:    mov.b32 {%rs13, %rs14}, %r1;
+; CHECK-NEXT:    add.s16 %rs15, %rs14, 1;
+; CHECK-NEXT:    add.s16 %rs16, %rs13, 1;
+; CHECK-NEXT:    mov.b32 %r8, {%rs16, %rs15};
+; CHECK-NEXT:    st.local.v4.b32 [%rd1], {%r8, %r7, %r6, %r5};
+; CHECK-NEXT:    ret;
+  %a.load = load <8 x i16>, ptr addrspace(5) %a
+  %a.add = add <8 x i16> %a.load, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  store <8 x i16> %a.add, ptr addrspace(5) %a
   ret void
 }
 
@@ -4370,6 +5658,156 @@ define void @local_volatile_4xi8(ptr addrspace(5) %a) {
   ret void
 }
 
+define void @local_volatile_8xi8(ptr addrspace(5) %a) {
+; CHECK-LABEL: local_volatile_8xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<17>;
+; CHECK-NEXT:    .reg .b32 %r<25>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_8xi8_param_0];
+; CHECK-NEXT:    ld.local.v2.b32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    bfe.u32 %r3, %r2, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r3;
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r4, %rs2;
+; CHECK-NEXT:    bfe.u32 %r5, %r2, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r5;
+; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r6, %rs4;
+; CHECK-NEXT:    prmt.b32 %r7, %r6, %r4, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r8, %r2, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r8;
+; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r9, %rs6;
+; CHECK-NEXT:    bfe.u32 %r10, %r2, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r10;
+; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r11, %rs8;
+; CHECK-NEXT:    prmt.b32 %r12, %r11, %r9, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r13, %r12, %r7, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r14, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs9, %r14;
+; CHECK-NEXT:    add.s16 %rs10, %rs9, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r15, %rs10;
+; CHECK-NEXT:    bfe.u32 %r16, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs11, %r16;
+; CHECK-NEXT:    add.s16 %rs12, %rs11, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r17, %rs12;
+; CHECK-NEXT:    prmt.b32 %r18, %r17, %r15, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r19, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs13, %r19;
+; CHECK-NEXT:    add.s16 %rs14, %rs13, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r20, %rs14;
+; CHECK-NEXT:    bfe.u32 %r21, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs15, %r21;
+; CHECK-NEXT:    add.s16 %rs16, %rs15, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r22, %rs16;
+; CHECK-NEXT:    prmt.b32 %r23, %r22, %r20, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r24, %r23, %r18, 0x5410U;
+; CHECK-NEXT:    st.local.v2.b32 [%rd1], {%r24, %r13};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <8 x i8>, ptr addrspace(5) %a
+  %a.add = add <8 x i8> %a.load, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  store volatile <8 x i8> %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_volatile_16xi8(ptr addrspace(5) %a) {
+; CHECK-LABEL: local_volatile_16xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<33>;
+; CHECK-NEXT:    .reg .b32 %r<49>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_16xi8_param_0];
+; CHECK-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    bfe.u32 %r5, %r4, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r5;
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r6, %rs2;
+; CHECK-NEXT:    bfe.u32 %r7, %r4, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r7;
+; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r8, %rs4;
+; CHECK-NEXT:    prmt.b32 %r9, %r8, %r6, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r10, %r4, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r10;
+; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r11, %rs6;
+; CHECK-NEXT:    bfe.u32 %r12, %r4, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r12;
+; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r13, %rs8;
+; CHECK-NEXT:    prmt.b32 %r14, %r13, %r11, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r15, %r14, %r9, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r16, %r3, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs9, %r16;
+; CHECK-NEXT:    add.s16 %rs10, %rs9, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r17, %rs10;
+; CHECK-NEXT:    bfe.u32 %r18, %r3, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs11, %r18;
+; CHECK-NEXT:    add.s16 %rs12, %rs11, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r19, %rs12;
+; CHECK-NEXT:    prmt.b32 %r20, %r19, %r17, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r21, %r3, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs13, %r21;
+; CHECK-NEXT:    add.s16 %rs14, %rs13, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r22, %rs14;
+; CHECK-NEXT:    bfe.u32 %r23, %r3, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs15, %r23;
+; CHECK-NEXT:    add.s16 %rs16, %rs15, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r24, %rs16;
+; CHECK-NEXT:    prmt.b32 %r25, %r24, %r22, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r26, %r25, %r20, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r27, %r2, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs17, %r27;
+; CHECK-NEXT:    add.s16 %rs18, %rs17, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r28, %rs18;
+; CHECK-NEXT:    bfe.u32 %r29, %r2, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs19, %r29;
+; CHECK-NEXT:    add.s16 %rs20, %rs19, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r30, %rs20;
+; CHECK-NEXT:    prmt.b32 %r31, %r30, %r28, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r32, %r2, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs21, %r32;
+; CHECK-NEXT:    add.s16 %rs22, %rs21, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r33, %rs22;
+; CHECK-NEXT:    bfe.u32 %r34, %r2, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs23, %r34;
+; CHECK-NEXT:    add.s16 %rs24, %rs23, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r35, %rs24;
+; CHECK-NEXT:    prmt.b32 %r36, %r35, %r33, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r37, %r36, %r31, 0x5410U;
+; CHECK-NEXT:    bfe.u32 %r38, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs25, %r38;
+; CHECK-NEXT:    add.s16 %rs26, %rs25, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r39, %rs26;
+; CHECK-NEXT:    bfe.u32 %r40, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs27, %r40;
+; CHECK-NEXT:    add.s16 %rs28, %rs27, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r41, %rs28;
+; CHECK-NEXT:    prmt.b32 %r42, %r41, %r39, 0x3340U;
+; CHECK-NEXT:    bfe.u32 %r43, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs29, %r43;
+; CHECK-NEXT:    add.s16 %rs30, %rs29, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r44, %rs30;
+; CHECK-NEXT:    bfe.u32 %r45, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs31, %r45;
+; CHECK-NEXT:    add.s16 %rs32, %rs31, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r46, %rs32;
+; CHECK-NEXT:    prmt.b32 %r47, %r46, %r44, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r48, %r47, %r42, 0x5410U;
+; CHECK-NEXT:    st.local.v4.b32 [%rd1], {%r48, %r37, %r26, %r15};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <16 x i8>, ptr addrspace(5) %a
+  %a.add = add <16 x i8> %a.load, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  store volatile <16 x i8> %a.add, ptr addrspace(5) %a
+  ret void
+}
+
 define void @local_volatile_2xi16(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_2xi16(
 ; CHECK:       {
@@ -4410,6 +5848,40 @@ define void @local_volatile_4xi16(ptr addrspace(5) %a) {
   %a.load = load volatile <4 x i16>, ptr addrspace(5) %a
   %a.add = add <4 x i16> %a.load, <i16 1, i16 1, i16 1, i16 1>
   store volatile <4 x i16> %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_volatile_8xi16(ptr addrspace(5) %a) {
+; CHECK-LABEL: local_volatile_8xi16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<17>;
+; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_8xi16_param_0];
+; CHECK-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
+; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
+; CHECK-NEXT:    mov.b32 %r5, {%rs4, %rs3};
+; CHECK-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
+; CHECK-NEXT:    add.s16 %rs7, %rs6, 1;
+; CHECK-NEXT:    add.s16 %rs8, %rs5, 1;
+; CHECK-NEXT:    mov.b32 %r6, {%rs8, %rs7};
+; CHECK-NEXT:    mov.b32 {%rs9, %rs10}, %r2;
+; CHECK-NEXT:    add.s16 %rs11, %rs10, 1;
+; CHECK-NEXT:    add.s16 %rs12, %rs9, 1;
+; CHECK-NEXT:    mov.b32 %r7, {%rs12, %rs11};
+; CHECK-NEXT:    mov.b32 {%rs13, %rs14}, %r1;
+; CHECK-NEXT:    add.s16 %rs15, %rs14, 1;
+; CHECK-NEXT:    add.s16 %rs16, %rs13, 1;
+; CHECK-NEXT:    mov.b32 %r8, {%rs16, %rs15};
+; CHECK-NEXT:    st.local.v4.b32 [%rd1], {%r8, %r7, %r6, %r5};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <8 x i16>, ptr addrspace(5) %a
+  %a.add = add <8 x i16> %a.load, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  store volatile <8 x i16> %a.add, ptr addrspace(5) %a
   ret void
 }
 

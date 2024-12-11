@@ -136,6 +136,8 @@ static bool IsPTXVectorType(MVT VT) {
   case MVT::v4i1:
   case MVT::v2i8:
   case MVT::v4i8:
+  case MVT::v8i8:  // <2 x i8x4>
+  case MVT::v16i8: // <4 x i8x4>
   case MVT::v2i16:
   case MVT::v4i16:
   case MVT::v8i16: // <4 x i16x2>
@@ -766,8 +768,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   // We have some custom DAG combine patterns for these nodes
   setTargetDAGCombine({ISD::ADD, ISD::AND, ISD::EXTRACT_VECTOR_ELT, ISD::FADD,
-                       ISD::LOAD, ISD::MUL, ISD::SHL, ISD::SREM, ISD::UREM,
-                       ISD::VSELECT, ISD::BUILD_VECTOR});
+                       ISD::MUL, ISD::SHL, ISD::SREM, ISD::UREM, ISD::VSELECT,
+                       ISD::BUILD_VECTOR});
 
   // setcc for f16x2 and bf16x2 needs special handling to prevent
   // legalizer's attempt to scalarize it due to v2i1 not being legal.
@@ -2807,6 +2809,13 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(N);
   EVT ValVT = Val.getValueType();
 
+  // Vectors of 8-and-16-bit elements above a certain size are special cases.
+  // PTX doesn't have anything larger than st.v4 for those element types.
+  // Here in Type Legalization, rather than splitting those vectors into
+  // multiple stores, we split the vector into v2x16/v4i8 chunks. Later, in
+  // Instruction Selection, we lower to PTX as vector stores of b32.
+  bool UpsizeElementTypes = false;
+
   if (ValVT.isVector()) {
     // We only handle "native" vector sizes for now, e.g. <4 x double> is not
     // legal.  We can (and should) split that into 2 stores of <2 x double> here
@@ -2830,10 +2839,15 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
     case MVT::v4f16:
     case MVT::v4bf16:
     case MVT::v4f32:
-    case MVT::v8f16: // <4 x f16x2>
+      // This is a "native" vector type
+      break;
+    case MVT::v8i8:   // <2 x i8x4>
+    case MVT::v8f16:  // <4 x f16x2>
     case MVT::v8bf16: // <4 x bf16x2>
     case MVT::v8i16:  // <4 x i16x2>
-      // This is a "native" vector type
+    case MVT::v16i8:  // <4 x i8x4>
+      // This can be upsized into a "native" vector type
+      UpsizeElementTypes = true;
       break;
     }
 
@@ -2856,6 +2870,33 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
     EVT EltVT = ValVT.getVectorElementType();
     unsigned NumElts = ValVT.getVectorNumElements();
 
+    if (UpsizeElementTypes) {
+      switch (ValVT.getSimpleVT().SimpleTy) {
+      default:
+        llvm_unreachable("Unexpected Vector Type");
+      case MVT::v8i8: // <2 x i8x4>
+        NumElts = 2;
+        EltVT = MVT::v4i8;
+        break;
+      case MVT::v8f16: // <4 x f16x2>
+        NumElts = 4;
+        EltVT = MVT::v2f16;
+        break;
+      case MVT::v8bf16: // <4 x bf16x2>
+        NumElts = 4;
+        EltVT = MVT::v2bf16;
+        break;
+      case MVT::v8i16: // <4 x i16x2>
+        NumElts = 4;
+        EltVT = MVT::v2i16;
+        break;
+      case MVT::v16i8: // <4 x i8x4>
+        NumElts = 4;
+        EltVT = MVT::v4i8;
+        break;
+      }
+    }
+
     // Since StoreV2 is a target node, we cannot rely on DAG type legalization.
     // Therefore, we must ensure the type is legal.  For i1 and i8, we set the
     // stored type to i16 and propagate the "real" type as the memory type.
@@ -2863,7 +2904,6 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
     if (EltVT.getSizeInBits() < 16)
       NeedExt = true;
 
-    bool StoreF16x2 = false;
     switch (NumElts) {
     default:
       return SDValue();
@@ -2873,14 +2913,6 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
     case 4:
       Opcode = NVPTXISD::StoreV4;
       break;
-    case 8:
-      // v8f16 is a special case. PTX doesn't have st.v8.f16
-      // instruction. Instead, we split the vector into v2f16 chunks and
-      // store them with st.v4.b32.
-      assert(Is16bitsType(EltVT.getSimpleVT()) && "Wrong type for the vector.");
-      Opcode = NVPTXISD::StoreV4;
-      StoreF16x2 = true;
-      break;
     }
 
     SmallVector<SDValue, 8> Ops;
@@ -2888,17 +2920,23 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
     // First is the chain
     Ops.push_back(N->getOperand(0));
 
-    if (StoreF16x2) {
-      // Combine f16,f16 -> v2f16
-      NumElts /= 2;
+    if (UpsizeElementTypes) {
+      // Combine individual elements into v2[i,f,bf]16/v4i8 subvectors to be
+      // stored as b32s
+      unsigned NumEltsPerSubVector = EltVT.getVectorNumElements();
       for (unsigned i = 0; i < NumElts; ++i) {
-        SDValue E0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Val,
-                                 DAG.getIntPtrConstant(i * 2, DL));
-        SDValue E1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Val,
-                                 DAG.getIntPtrConstant(i * 2 + 1, DL));
-        EVT VecVT = EVT::getVectorVT(*DAG.getContext(), EltVT, 2);
-        SDValue V2 = DAG.getNode(ISD::BUILD_VECTOR, DL, VecVT, E0, E1);
-        Ops.push_back(V2);
+        SmallVector<SDValue, 8> Elts;
+        for (unsigned j = 0; j < NumEltsPerSubVector; ++j) {
+          SDValue E = DAG.getNode(
+              ISD::EXTRACT_VECTOR_ELT, DL, EltVT.getVectorElementType(), Val,
+              DAG.getIntPtrConstant(i * NumEltsPerSubVector + j, DL));
+          Elts.push_back(E);
+        }
+        EVT VecVT =
+            EVT::getVectorVT(*DAG.getContext(), EltVT.getVectorElementType(),
+                             NumEltsPerSubVector);
+        SDValue SubVector = DAG.getNode(ISD::BUILD_VECTOR, DL, VecVT, Elts);
+        Ops.push_back(SubVector);
       }
     } else {
       // Then the split values
@@ -5077,49 +5115,6 @@ static SDValue PerformVSELECTCombine(SDNode *N,
   return DCI.DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v4i8, E);
 }
 
-static SDValue PerformLOADCombine(SDNode *N,
-                                  TargetLowering::DAGCombinerInfo &DCI) {
-  SelectionDAG &DAG = DCI.DAG;
-  LoadSDNode *LD = cast<LoadSDNode>(N);
-
-  // Lower a v16i8 load into a LoadV4 operation with i32 results instead of
-  // letting ReplaceLoadVector split it into smaller loads during legalization.
-  // This is done at dag-combine1 time, so that vector operations with i8
-  // elements can be optimised away instead of being needlessly split during
-  // legalization, which involves storing to the stack and loading it back.
-  EVT VT = N->getValueType(0);
-  bool CorrectlyAligned =
-      DCI.DAG.getTargetLoweringInfo().allowsMemoryAccessForAlignment(
-          *DAG.getContext(), DAG.getDataLayout(), LD->getMemoryVT(),
-          *LD->getMemOperand());
-  if (!(VT == MVT::v16i8 && CorrectlyAligned))
-    return SDValue();
-
-  SDLoc DL(N);
-
-  // Create a v4i32 vector load operation, effectively <4 x v4i8>.
-  unsigned Opc = NVPTXISD::LoadV4;
-  EVT NewVT = MVT::v4i32;
-  EVT EltVT = NewVT.getVectorElementType();
-  unsigned NumElts = NewVT.getVectorNumElements();
-  EVT RetVTs[] = {EltVT, EltVT, EltVT, EltVT, MVT::Other};
-  SDVTList RetVTList = DAG.getVTList(RetVTs);
-  SmallVector<SDValue, 8> Ops(N->ops());
-  Ops.push_back(DAG.getIntPtrConstant(LD->getExtensionType(), DL));
-  SDValue NewLoad = DAG.getMemIntrinsicNode(Opc, DL, RetVTList, Ops, NewVT,
-                                            LD->getMemOperand());
-  SDValue NewChain = NewLoad.getValue(NumElts);
-
-  // Create a vector of the same type returned by the original load.
-  SmallVector<SDValue, 4> Elts;
-  for (unsigned i = 0; i < NumElts; i++)
-    Elts.push_back(NewLoad.getValue(i));
-  return DCI.DAG.getMergeValues(
-      {DCI.DAG.getBitcast(VT, DCI.DAG.getBuildVector(NewVT, DL, Elts)),
-       NewChain},
-      DL);
-}
-
 static SDValue
 PerformBUILD_VECTORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   auto VT = N->getValueType(0);
@@ -5200,8 +5195,6 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
       return PerformREMCombine(N, DCI, OptLevel);
     case ISD::SETCC:
       return PerformSETCCCombine(N, DCI, STI.getSmVersion());
-    case ISD::LOAD:
-      return PerformLOADCombine(N, DCI);
     case NVPTXISD::StoreRetval:
     case NVPTXISD::StoreRetvalV2:
     case NVPTXISD::StoreRetvalV4:
@@ -5250,6 +5243,13 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
 
   assert(ResVT.isVector() && "Vector load must have vector type");
 
+  // Vectors of 8-and-16-bit elements above a certain size are special cases.
+  // PTX doesn't have anything larger than ld.v4 for those element types.
+  // Here in Type Legalization, rather than splitting those vectors into
+  // multiple loads, we split the vector into v2x16/v4i8 chunks. Later, in
+  // Instruction Selection, we lower to PTX as vector loads of b32.
+  bool UpsizeElementTypes = false;
+
   // We only handle "native" vector sizes for now, e.g. <4 x double> is not
   // legal.  We can (and should) split that into 2 loads of <2 x double> here
   // but I'm leaving that as a TODO for now.
@@ -5270,10 +5270,15 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
   case MVT::v4f16:
   case MVT::v4bf16:
   case MVT::v4f32:
+    // This is a "native" vector type
+    break;
+  case MVT::v8i8:   // <2 x i8x4>
   case MVT::v8f16:  // <4 x f16x2>
   case MVT::v8bf16: // <4 x bf16x2>
   case MVT::v8i16:  // <4 x i16x2>
-    // This is a "native" vector type
+  case MVT::v16i8:  // <4 x i8x4>
+    // This can be upsized into a "native" vector type
+    UpsizeElementTypes = true;
     break;
   }
 
@@ -5295,6 +5300,33 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
   EVT EltVT = ResVT.getVectorElementType();
   unsigned NumElts = ResVT.getVectorNumElements();
 
+  if (UpsizeElementTypes) {
+    switch (ResVT.getSimpleVT().SimpleTy) {
+    default:
+      llvm_unreachable("Unexpected Vector Type");
+    case MVT::v8i8: // <2 x i8x4>
+      NumElts = 2;
+      EltVT = MVT::v4i8;
+      break;
+    case MVT::v8f16: // <4 x f16x2>
+      NumElts = 4;
+      EltVT = MVT::v2f16;
+      break;
+    case MVT::v8bf16: // <4 x bf16x2>
+      NumElts = 4;
+      EltVT = MVT::v2bf16;
+      break;
+    case MVT::v8i16: // <4 x i16x2>
+      NumElts = 4;
+      EltVT = MVT::v2i16;
+      break;
+    case MVT::v16i8: // <4 x i8x4>
+      NumElts = 4;
+      EltVT = MVT::v4i8;
+      break;
+    }
+  }
+
   // Since LoadV2 is a target node, we cannot rely on DAG type legalization.
   // Therefore, we must ensure the type is legal.  For i1 and i8, we set the
   // loaded type to i16 and propagate the "real" type as the memory type.
@@ -5306,7 +5338,6 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
 
   unsigned Opcode = 0;
   SDVTList LdResVTs;
-  bool Load16x2 = false;
 
   switch (NumElts) {
   default:
@@ -5318,31 +5349,6 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
   case 4: {
     Opcode = NVPTXISD::LoadV4;
     EVT ListVTs[] = { EltVT, EltVT, EltVT, EltVT, MVT::Other };
-    LdResVTs = DAG.getVTList(ListVTs);
-    break;
-  }
-  case 8: {
-    // v8f16 is a special case. PTX doesn't have ld.v8.f16
-    // instruction. Instead, we split the vector into v2f16 chunks and
-    // load them with ld.v4.b32.
-    assert(Is16bitsType(EltVT.getSimpleVT()) && "Unsupported v8 vector type.");
-    Load16x2 = true;
-    Opcode = NVPTXISD::LoadV4;
-    EVT VVT;
-    switch (EltVT.getSimpleVT().SimpleTy) {
-    case MVT::f16:
-      VVT = MVT::v2f16;
-      break;
-    case MVT::bf16:
-      VVT = MVT::v2bf16;
-      break;
-    case MVT::i16:
-      VVT = MVT::v2i16;
-      break;
-    default:
-      llvm_unreachable("Unsupported v8 vector type.");
-    }
-    EVT ListVTs[] = {VVT, VVT, VVT, VVT, MVT::Other};
     LdResVTs = DAG.getVTList(ListVTs);
     break;
   }
@@ -5360,17 +5366,18 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
                                           LD->getMemOperand());
 
   SmallVector<SDValue, 8> ScalarRes;
-  if (Load16x2) {
-    // Split v2f16 subvectors back into individual elements.
-    NumElts /= 2;
+  if (UpsizeElementTypes) {
+    // Generate EXTRACT_VECTOR_ELTs to split v2[i,f,bf]16/v4i8 subvectors back
+    // into individual elements.
+    unsigned NumEltsPerSubVector = EltVT.getVectorNumElements();
     for (unsigned i = 0; i < NumElts; ++i) {
       SDValue SubVector = NewLD.getValue(i);
-      SDValue E0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, SubVector,
-                               DAG.getIntPtrConstant(0, DL));
-      SDValue E1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, SubVector,
-                               DAG.getIntPtrConstant(1, DL));
-      ScalarRes.push_back(E0);
-      ScalarRes.push_back(E1);
+      for (unsigned j = 0; j < NumEltsPerSubVector; ++j) {
+        SDValue E =
+            DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT.getScalarType(),
+                        SubVector, DAG.getIntPtrConstant(j, DL));
+        ScalarRes.push_back(E);
+      }
     }
   } else {
     for (unsigned i = 0; i < NumElts; ++i) {

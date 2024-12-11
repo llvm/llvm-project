@@ -1055,11 +1055,12 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
 
   EVT EltVT = N->getValueType(0);
 
-  // v8x16 is a special case. PTX doesn't have ld.v8.16
-  // instruction. Instead, we split the vector into v2x16 chunks and
-  // load them with ld.v4.b32.
-  if (Isv2x16VT(EltVT)) {
-    assert(N->getOpcode() == NVPTXISD::LoadV4 && "Unexpected load opcode.");
+  // Vectors of 8-and-16-bit elements above a certain size are special cases.
+  // PTX doesn't have anything larger than ld.v4 for those element types.
+  // In Type Legalization, rather than splitting those vectors into multiple
+  // loads, we split the vector into v2x16/v4i8 chunks. Now, we lower to PTX as
+  // vector loads of b32.
+  if (Isv2x16VT(EltVT) || EltVT == MVT::v4i8) {
     EltVT = MVT::i32;
     FromType = NVPTX::PTXLdStInstCode::Untyped;
     FromTypeWidth = 32;
@@ -1739,11 +1740,12 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
     return false;
   }
 
-  // v8x16 is a special case. PTX doesn't have st.v8.x16
-  // instruction. Instead, we split the vector into v2x16 chunks and
-  // store them with st.v4.b32.
-  if (Isv2x16VT(EltVT)) {
-    assert(N->getOpcode() == NVPTXISD::StoreV4 && "Unexpected load opcode.");
+  // Vectors of 8-and-16-bit elements above a certain size are special cases.
+  // PTX doesn't have anything larger than st.v4 for those element types.
+  // In Type Legalization, rather than splitting those vectors into multiple
+  // stores, we split the vector into v2x16/v4i8 chunks. Now, we lower to
+  // PTX as vector stores of b32.
+  if (Isv2x16VT(EltVT) || EltVT == MVT::v4i8) {
     EltVT = MVT::i32;
     ToType = NVPTX::PTXLdStInstCode::Untyped;
     ToTypeWidth = 32;
