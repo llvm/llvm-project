@@ -350,7 +350,8 @@ public:
     mlir::Location loc = cshift.getLoc();
     fir::FirOpBuilder builder{rewriter, cshift.getOperation()};
     hlfir::ExprType expr = mlir::dyn_cast<hlfir::ExprType>(cshift.getType());
-    assert(expr && "expected an expression type for the result of hlfir.sum");
+    assert(expr &&
+           "expected an expression type for the result of hlfir.cshift");
     mlir::Type elementType = expr.getElementType();
     hlfir::Entity array = hlfir::Entity{cshift.getArray()};
     mlir::Value arrayShape = hlfir::genShape(loc, builder, array);
