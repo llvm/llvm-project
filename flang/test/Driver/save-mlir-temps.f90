@@ -4,8 +4,8 @@
 ! the driver does not generate specific passes for MLIR. Instead, they are
 ! generated during code generation as additional outputs.
 
-! As `flang` does not implement `-fc1as` (i.e. a driver for the integrated
-! assembler), we need to use `-fno-integrated-as` here.
+! `flang` does not implement `-fc1as` (i.e. a driver for the integrated
+! assembler).
 ! However, calling an external assembler on arm64 Macs fails, because it's
 ! currently being invoked with the `-Q` flag, that is not supported on arm64.
 ! UNSUPPORTED: system-windows, system-darwin
@@ -20,13 +20,13 @@
 ! Save to cwd
 !--------------------------
 ! RUN: rm -rf %t && mkdir -p %t
-! RUN: pushd %t && %flang -c -fno-integrated-as -save-temps=cwd -o out.o %s 2>&1
+! RUN: pushd %t && %flang -c -save-temps=cwd -o out.o %s 2>&1
 ! RUN: FileCheck %s -input-file=save-mlir-temps-fir.mlir -check-prefix=MLIR-FIR
 ! RUN: FileCheck %s -input-file=save-mlir-temps-llvmir.mlir -check-prefix=MLIR-LLVMIR
 ! RUN: popd
 
 ! RUN: rm -rf %t && mkdir -p %t
-! RUN: pushd %t && %flang -c -fno-integrated-as -save-temps -o out.o %s 2>&1
+! RUN: pushd %t && %flang -c -save-temps -o out.o %s 2>&1
 ! RUN: FileCheck %s -input-file=save-mlir-temps-fir.mlir -check-prefix=MLIR-FIR
 ! RUN: FileCheck %s -input-file=save-mlir-temps-llvmir.mlir -check-prefix=MLIR-LLVMIR
 ! RUN: popd
@@ -35,7 +35,7 @@
 ! Save to output directory
 !--------------------------
 ! RUN: rm -rf %t && mkdir -p %t
-! RUN: %flang -c -fno-integrated-as -save-temps=obj -o %t/out.o %s 2>&1
+! RUN: %flang -c -save-temps=obj -o %t/out.o %s 2>&1
 ! RUN: FileCheck %s -input-file=%t/save-mlir-temps-fir.mlir -check-prefix=MLIR-FIR
 ! RUN: FileCheck %s -input-file=%t/save-mlir-temps-llvmir.mlir -check-prefix=MLIR-LLVMIR
 
@@ -43,7 +43,7 @@
 ! Save to specific directory
 !--------------------------
 ! RUN: rm -rf %t && mkdir -p %t
-! RUN: %flang -c -fno-integrated-as -save-temps=%t -o %t/out.o %s 2>&1
+! RUN: %flang -c -save-temps=%t -o %t/out.o %s 2>&1
 ! RUN: FileCheck %s -input-file=%t/save-mlir-temps-fir.mlir -check-prefix=MLIR-FIR
 ! RUN: FileCheck %s -input-file=%t/save-mlir-temps-llvmir.mlir -check-prefix=MLIR-LLVMIR
 
