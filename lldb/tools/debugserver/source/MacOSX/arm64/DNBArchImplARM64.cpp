@@ -127,19 +127,9 @@ unsigned int DNBArchMachARM64::GetSMEMaxSVL() {
       if (sysctlbyname("hw.optional.arm.sme_max_svl_b", &ret, &size, NULL, 0) !=
           -1)
         g_sme_max_svl = ret;
-      else
-        g_sme_max_svl = get_svl_bytes();
     }
   });
   return g_sme_max_svl;
-}
-
-// This function can only be called on systems with hw.optional.arm.FEAT_SME
-// It will return the maximum SVL length for this process.
-uint16_t __attribute__((target("sme"))) DNBArchMachARM64::get_svl_bytes(void) {
-  uint64_t ret = 0;
-  asm volatile("rdsvl	%[ret], #1" : [ret] "=r"(ret));
-  return (uint16_t)ret;
 }
 
 static uint64_t clear_pac_bits(uint64_t value) {
@@ -2721,8 +2711,7 @@ bool DNBArchMachARM64::GetRegisterValue(uint32_t set, uint32_t reg,
         memcpy(&value->value.v_uint8, &m_state.context.sve.z[reg - sve_z0],
                max_svl_bytes);
         return true;
-      }
-      if (reg >= sve_p0 && reg <= sve_p15) {
+      } else if (reg >= sve_p0 && reg <= sve_p15) {
         memset(&value->value.v_uint8, 0, max_svl_bytes / 8);
         memcpy(&value->value.v_uint8, &m_state.context.sve.p[reg - sve_p0],
                max_svl_bytes / 8);
@@ -2737,21 +2726,17 @@ bool DNBArchMachARM64::GetRegisterValue(uint32_t set, uint32_t reg,
       if (reg == sme_svcr) {
         value->value.uint64 = m_state.context.sme.svcr;
         return true;
-      }
-      if (reg == sme_tpidr2) {
+      } else if (reg == sme_tpidr2) {
         value->value.uint64 = m_state.context.sme.tpidr2;
         return true;
-      }
-      if (reg == sme_svl_b) {
+      } else if (reg == sme_svl_b) {
         value->value.uint64 = m_state.context.sme.svl_b;
         return true;
-      }
-      if (reg == sme_za) {
+      } else if (reg == sme_za) {
         memcpy(&value->value.v_uint8, m_state.context.sme.za.data(),
                max_svl_bytes * max_svl_bytes);
         return true;
-      }
-      if (reg == sme_zt0) {
+      } else if (reg == sme_zt0) {
         memcpy(&value->value.v_uint8, &m_state.context.sme.zt0, 64);
         return true;
       }
@@ -2872,7 +2857,7 @@ bool DNBArchMachARM64::SetRegisterValue(uint32_t set, uint32_t reg,
       }
       if (reg >= sve_p0 && reg <= sve_p15) {
         memcpy(&m_state.context.sve.p[reg - sve_p0], &value->value.v_uint8,
-               256 / 8);
+               max_svl_bytes / 8);
         success = true;
       }
       break;

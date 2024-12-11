@@ -295,7 +295,6 @@ public:
   static bool CPUHasSME();
   static bool CPUHasSME2();
   static unsigned int GetSMEMaxSVL();
-  static uint16_t __attribute__((target("sme"))) get_svl_bytes();
 
 private:
   static DNBRegisterInfo *get_vfp_registerinfo(size_t &num_vfp_registers);

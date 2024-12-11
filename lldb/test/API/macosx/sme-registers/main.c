@@ -93,7 +93,7 @@ void arm_sme2_set_zt0() {
 }
 
 int main() {
-  printf("Enable SME mode\n");
+  printf("Enable SME mode\n"); // break before sme
 
   asm volatile("smstart");
 
@@ -103,9 +103,11 @@ int main() {
 
   arm_sme2_set_zt0();
 
-  int c = 10; // break here
+  int c = 10; // break while sme
   c += 5;
   c += 5;
 
   asm volatile("smstop");
+
+  printf("SME mode disabled\n"); // break after sme
 }
