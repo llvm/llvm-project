@@ -431,9 +431,8 @@ unsigned HexagonRegisterInfo::getHexagonSubRegIndex(
       return WSub[GenIdx];
   }
 
-  if (!RC.superclasses().empty())
-    return getHexagonSubRegIndex(*getRegClass(*RC.superclasses().begin()),
-                                 GenIdx);
+  if (const TargetRegisterClass *SuperRC = *RC.getSuperClasses())
+    return getHexagonSubRegIndex(*SuperRC, GenIdx);
 
   llvm_unreachable("Invalid register class");
 }
