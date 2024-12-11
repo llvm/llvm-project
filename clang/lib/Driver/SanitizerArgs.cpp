@@ -424,7 +424,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
               D.Diag(diag::err_drv_argument_not_allowed_with)
                   << Desc << A->getAsString(Args);
             else
-              D.Diag(diag::err_drv_argument_not_allowed_with)
+              D.Diag(diag::err_drv_unsupported_opt_for_target)
                   << Desc << Triple.str();
           }
           DiagnosedKinds |= KindsToDiagnose;
