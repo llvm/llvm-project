@@ -521,6 +521,32 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
     return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0);
   }
 
+  // Vector Integer Compare Instructions
+  // Dest EEW=1 and EMUL=(EEW/SEW)*LMUL. Source EEW=SEW and EMUL=LMUL.
+  case RISCV::VMSEQ_VI:
+  case RISCV::VMSEQ_VV:
+  case RISCV::VMSEQ_VX:
+  case RISCV::VMSNE_VI:
+  case RISCV::VMSNE_VV:
+  case RISCV::VMSNE_VX:
+  case RISCV::VMSLTU_VV:
+  case RISCV::VMSLTU_VX:
+  case RISCV::VMSLT_VV:
+  case RISCV::VMSLT_VX:
+  case RISCV::VMSLEU_VV:
+  case RISCV::VMSLEU_VI:
+  case RISCV::VMSLEU_VX:
+  case RISCV::VMSLE_VV:
+  case RISCV::VMSLE_VI:
+  case RISCV::VMSLE_VX:
+  case RISCV::VMSGTU_VI:
+  case RISCV::VMSGTU_VX:
+  case RISCV::VMSGT_VI:
+  case RISCV::VMSGT_VX:
+    if (IsMODef)
+      return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0);
+    return OperandInfo(MIVLMul, MILog2SEW);
+
   default:
     return {};
   }
@@ -599,7 +625,26 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VNSRA_WV:
   case RISCV::VNSRA_WX:
   // Vector Integer Compare Instructions
-  // FIXME: Add support
+  case RISCV::VMSEQ_VI:
+  case RISCV::VMSEQ_VV:
+  case RISCV::VMSEQ_VX:
+  case RISCV::VMSNE_VI:
+  case RISCV::VMSNE_VV:
+  case RISCV::VMSNE_VX:
+  case RISCV::VMSLTU_VV:
+  case RISCV::VMSLTU_VX:
+  case RISCV::VMSLT_VV:
+  case RISCV::VMSLT_VX:
+  case RISCV::VMSLEU_VV:
+  case RISCV::VMSLEU_VI:
+  case RISCV::VMSLEU_VX:
+  case RISCV::VMSLE_VV:
+  case RISCV::VMSLE_VI:
+  case RISCV::VMSLE_VX:
+  case RISCV::VMSGTU_VI:
+  case RISCV::VMSGTU_VX:
+  case RISCV::VMSGT_VI:
+  case RISCV::VMSGT_VX:
   // Vector Integer Min/Max Instructions
   case RISCV::VMINU_VV:
   case RISCV::VMINU_VX:
