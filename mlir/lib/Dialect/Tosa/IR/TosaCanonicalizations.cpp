@@ -88,13 +88,10 @@ struct ConsolidateTransposeOptimization
       return rewriter.notifyMatchFailure(transposeOp,
                                          "input must be transpose operation");
 
-    SmallVector<int32_t> transposePerms, innerTransposePerms;
-    if (transposeOp.getConstantPerms(transposePerms).failed())
-      return rewriter.notifyMatchFailure(transposeOp,
-                                         "transpose perms must be constant");
-    if (innerTranspose.getConstantPerms(innerTransposePerms).failed())
-      return rewriter.notifyMatchFailure(
-          transposeOp, "inner transpose perms must be constant");
+    const llvm::ArrayRef<int32_t> transposePerms = transposeOp.getPerms();
+    const llvm::ArrayRef<int32_t> innerTransposePerms =
+        innerTranspose.getPerms();
+
     if (transposePerms.size() != innerTransposePerms.size())
       return rewriter.notifyMatchFailure(
           transposeOp,
@@ -108,15 +105,9 @@ struct ConsolidateTransposeOptimization
     for (int i = 0, s = transposePerms.size(); i < s; ++i)
       perms[i] = innerTransposePerms[transposePerms[i]];
 
-    auto permsTy =
-        RankedTensorType::get(transposePerms.size(), rewriter.getI32Type());
-    auto permsAttr = DenseIntElementsAttr::get(permsTy, perms);
-    Value permsValue = rewriter.create<tosa::ConstOp>(transposeOp.getLoc(),
-                                                      permsTy, permsAttr);
-
     rewriter.replaceOpWithNewOp<tosa::TransposeOp>(
         transposeOp, transposeOp.getResult().getType(),
-        innerTranspose.getInput1(), permsValue);
+        innerTranspose.getInput1(), rewriter.getDenseI32ArrayAttr(perms));
 
     return success();
   }
@@ -128,10 +119,6 @@ struct TransposeIsReshape : public OpRewritePattern<tosa::TransposeOp> {
 
   LogicalResult matchAndRewrite(tosa::TransposeOp op,
                                 PatternRewriter &rewriter) const override {
-    DenseIntElementsAttr permAttr;
-    if (!matchPattern(op.getPerms(), m_Constant(&permAttr)))
-      return rewriter.notifyMatchFailure(op, "Non-constant permutation");
-
     if (op.getInput1().getDefiningOp<tosa::TransposeOp>())
       return rewriter.notifyMatchFailure(
           op, "Src is from transpose, can compose transposes");
@@ -156,9 +143,7 @@ struct TransposeIsReshape : public OpRewritePattern<tosa::TransposeOp> {
     if (numDynDims > 1)
       return rewriter.notifyMatchFailure(op, "Has more than one dynamic dim.");
 
-    SmallVector<int64_t> permValues = llvm::to_vector<6>(
-        llvm::map_range(permAttr.getValues<APInt>(),
-                        [](const APInt &val) { return val.getSExtValue(); }));
+    const llvm::ArrayRef<int32_t> permValues = op.getPerms();
 
     SmallVector<int64_t> nonZeroPerms;
     nonZeroPerms.reserve(permValues.size());
@@ -1175,9 +1160,7 @@ OpFoldResult TransposeOp::fold(FoldAdaptor adaptor) {
   }
 
   // Transpose is not the identity transpose.
-  SmallVector<int32_t> perms;
-  if (getConstantPerms(perms).failed())
-    return {};
+  const llvm::ArrayRef<int32_t> perms = getPerms();
 
   if (!llvm::equal(llvm::seq<int32_t>(0, perms.size()), perms))
     return {};

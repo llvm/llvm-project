@@ -56,15 +56,6 @@ static LogicalResult checkConstantOperandPad(Operation *op) {
   return success();
 }
 
-static LogicalResult checkConstantOperandTranspose(Operation *op) {
-  if (auto transposeOp = dyn_cast<tosa::TransposeOp>(op)) {
-    DenseElementsAttr perms;
-    if (!matchPattern(transposeOp.getPerms(), m_Constant(&perms)))
-      return op->emitOpError("perms of transpose is not constant");
-  }
-  return success();
-}
-
 struct TosaLevel {
   int32_t MAX_RANK = 0;
   int32_t MAX_KERNEL = 0;
@@ -118,7 +109,6 @@ public:
 private:
   void populateConstantOperandChecks() {
     constCheckers.emplace_back(checkConstantOperandPad);
-    constCheckers.emplace_back(checkConstantOperandTranspose);
   }
 
   bool levelCheckKernel(Operation *op, int32_t v,
