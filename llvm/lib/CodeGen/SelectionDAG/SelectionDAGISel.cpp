@@ -2717,7 +2717,7 @@ getSimpleVT(const unsigned char *MatcherTable, unsigned &MatcherIndex) {
 
 void SelectionDAGISel::Select_JUMP_TABLE_DEBUG_INFO(SDNode *N) {
   SDLoc dl(N);
-  CurDAG->SelectNodeTo(N, TargetOpcode::JUMP_TABLE_DEBUG_INFO, MVT::Glue,
+  CurDAG->SelectNodeTo(N, TargetOpcode::JUMP_TABLE_DEBUG_INFO, MVT::Other,
                        CurDAG->getTargetConstant(N->getConstantOperandVal(1),
                                                  dl, MVT::i64, true));
 }
