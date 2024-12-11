@@ -119,8 +119,7 @@ struct ClonedCodeInfo {
 /// parameter.
 BasicBlock *CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
                             const Twine &NameSuffix = "", Function *F = nullptr,
-                            ClonedCodeInfo *CodeInfo = nullptr,
-                            DebugInfoFinder *DIFinder = nullptr);
+                            ClonedCodeInfo *CodeInfo = nullptr);
 
 /// Return a copy of the specified function and add it to that
 /// function's module.  Also, any references specified in the VMap are changed

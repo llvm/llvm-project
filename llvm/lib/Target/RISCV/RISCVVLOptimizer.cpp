@@ -403,7 +403,19 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VWMULSU_VV:
   case RISCV::VWMULSU_VX:
   case RISCV::VWMULU_VV:
-  case RISCV::VWMULU_VX: {
+  case RISCV::VWMULU_VX:
+  // Vector Widening Integer Multiply-Add Instructions
+  // Destination EEW=2*SEW and EMUL=2*LMUL. Source EEW=SEW and EMUL=LMUL.
+  // A SEW-bit*SEW-bit multiply of the sources forms a 2*SEW-bit value, which
+  // is then added to the 2*SEW-bit Dest. These instructions never have a
+  // passthru operand.
+  case RISCV::VWMACCU_VV:
+  case RISCV::VWMACCU_VX:
+  case RISCV::VWMACC_VV:
+  case RISCV::VWMACC_VX:
+  case RISCV::VWMACCSU_VV:
+  case RISCV::VWMACCSU_VX:
+  case RISCV::VWMACCUS_VX: {
     unsigned Log2EEW = IsMODef ? MILog2SEW + 1 : MILog2SEW;
     RISCVII::VLMUL EMUL =
         IsMODef ? RISCVVType::twoTimesVLMUL(MIVLMul) : MIVLMul;
@@ -418,18 +430,7 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VWADD_WV:
   case RISCV::VWADD_WX:
   case RISCV::VWSUB_WV:
-  case RISCV::VWSUB_WX:
-  // Vector Widening Integer Multiply-Add Instructions
-  // Destination EEW=2*SEW and EMUL=2*LMUL. Source EEW=SEW and EMUL=LMUL.
-  // Even though the add is a 2*SEW addition, the operands of the add are the
-  // Dest which is 2*SEW and the result of the multiply which is 2*SEW.
-  case RISCV::VWMACCU_VV:
-  case RISCV::VWMACCU_VX:
-  case RISCV::VWMACC_VV:
-  case RISCV::VWMACC_VX:
-  case RISCV::VWMACCSU_VV:
-  case RISCV::VWMACCSU_VX:
-  case RISCV::VWMACCUS_VX: {
+  case RISCV::VWSUB_WX: {
     bool IsOp1 = HasPassthru ? MO.getOperandNo() == 2 : MO.getOperandNo() == 1;
     bool TwoTimes = IsMODef || IsOp1;
     unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
@@ -571,9 +572,13 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   // Vector Single-Width Integer Multiply-Add Instructions
   // FIXME: Add support
   // Vector Widening Integer Multiply-Add Instructions
-  // FIXME: Add support
-  case RISCV::VWMACC_VX:
+  case RISCV::VWMACCU_VV:
   case RISCV::VWMACCU_VX:
+  case RISCV::VWMACC_VV:
+  case RISCV::VWMACC_VX:
+  case RISCV::VWMACCSU_VV:
+  case RISCV::VWMACCSU_VX:
+  case RISCV::VWMACCUS_VX:
   // Vector Integer Merge Instructions
   // FIXME: Add support
   // Vector Integer Move Instructions

@@ -234,9 +234,9 @@ private:
 
   size_t GetFPMRBufferSize() { return sizeof(m_fpmr_reg); }
 
-  Status ReadHardwareDebugInfo() override;
+  llvm::Error ReadHardwareDebugInfo() override;
 
-  Status WriteHardwareDebugRegs(DREGType hwbType) override;
+  llvm::Error WriteHardwareDebugRegs(DREGType hwbType) override;
 
   uint32_t CalculateFprOffset(const RegisterInfo *reg_info) const;
 

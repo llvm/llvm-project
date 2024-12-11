@@ -180,8 +180,7 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
     std::unique_ptr<RegisterInfoPOSIX_arm64> register_info_up)
     : NativeRegisterContextRegisterInfo(native_thread,
                                         register_info_up.release()),
-      NativeRegisterContextLinux(native_thread),
-      NativeRegisterContextDBReg_arm64(1U) {
+      NativeRegisterContextLinux(native_thread) {
   g_register_flags_detector.UpdateRegisterInfo(
       GetRegisterInfoInterface().GetRegisterInfo(),
       GetRegisterInfoInterface().GetRegisterCount());
@@ -1068,9 +1067,10 @@ bool NativeRegisterContextLinux_arm64::IsFPMR(unsigned reg) const {
   return GetRegisterInfo().IsFPMRReg(reg);
 }
 
-Status NativeRegisterContextLinux_arm64::ReadHardwareDebugInfo() {
-  if (!m_refresh_hwdebug_info)
-    return Status();
+llvm::Error NativeRegisterContextLinux_arm64::ReadHardwareDebugInfo() {
+  if (!m_refresh_hwdebug_info) {
+    return llvm::Error::success();
+  }
 
   ::pid_t tid = m_thread.GetID();
 
@@ -1085,7 +1085,7 @@ Status NativeRegisterContextLinux_arm64::ReadHardwareDebugInfo() {
                                             &ioVec, ioVec.iov_len);
 
   if (error.Fail())
-    return error;
+    return error.ToError();
 
   m_max_hwp_supported = dreg_state.dbg_info & 0xff;
 
@@ -1094,15 +1094,15 @@ Status NativeRegisterContextLinux_arm64::ReadHardwareDebugInfo() {
                                             &ioVec, ioVec.iov_len);
 
   if (error.Fail())
-    return error;
+    return error.ToError();
 
   m_max_hbp_supported = dreg_state.dbg_info & 0xff;
   m_refresh_hwdebug_info = false;
 
-  return Status();
+  return llvm::Error::success();
 }
 
-Status
+llvm::Error
 NativeRegisterContextLinux_arm64::WriteHardwareDebugRegs(DREGType hwbType) {
   struct iovec ioVec;
   struct user_hwdebug_state dreg_state;
@@ -1135,7 +1135,8 @@ NativeRegisterContextLinux_arm64::WriteHardwareDebugRegs(DREGType hwbType) {
   }
 
   return NativeProcessLinux::PtraceWrapper(PTRACE_SETREGSET, m_thread.GetID(),
-                                           &regset, &ioVec, ioVec.iov_len);
+                                           &regset, &ioVec, ioVec.iov_len)
+      .ToError();
 }
 
 Status NativeRegisterContextLinux_arm64::ReadGPR() {
