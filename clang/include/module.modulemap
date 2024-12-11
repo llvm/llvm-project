@@ -183,6 +183,8 @@ module Clang_StaticAnalyzer_Frontend {
   module * { export * }
 }
 
+module Clang_Support { requires cplusplus umbrella "clang/Support" module * { export * } }
+
 module Clang_Testing {
   requires cplusplus
   umbrella "clang/Testing"
