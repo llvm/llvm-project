@@ -2848,6 +2848,12 @@ bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
   if (OldCost < NewCost)
     return false;
 
+  // Canonicalize undef param to RHS to help further folds.
+  if (isa<UndefValue>(DstVec) && !isa<UndefValue>(SrcVec)) {
+    ShuffleVectorInst::commuteShuffleMask(Mask, NumElts);
+    std::swap(DstVec, SrcVec);
+  }
+
   Value *Shuf = Builder.CreateShuffleVector(DstVec, SrcVec, Mask);
   replaceValue(I, *Shuf);
 
