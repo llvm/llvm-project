@@ -7381,10 +7381,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fdelayed-template-parsing");
   }
 
-  if (Args.hasFlag(options::OPT_fms_reference_binding,
-                   options::OPT_fno_ms_reference_binding,
-                   false))
-    CmdArgs.push_back("-fms-reference-binding");
+  Args.addOptInFlag(CmdArgs, options::OPT_fms_reference_binding,
+                    options::OPT_fno_ms_reference_binding);
 
   if (Args.hasFlag(options::OPT_fpch_validate_input_files_content,
                    options::OPT_fno_pch_validate_input_files_content, false))
