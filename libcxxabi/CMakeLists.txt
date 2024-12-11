@@ -34,6 +34,11 @@ MACRO_ENSURE_OUT_OF_SOURCE_BUILD(
  build directory and run 'cmake /path/to/${PROJECT_NAME} [options]' there."
  )
 
+if (MSVC)
+  message(FATAL_ERROR "Libc++abi can't be built for MSVC targets, and doing so is pointless anyway because such "
+                      "targets must use the MS C++ ABI, and libc++abi provides the Itanium C++ ABI.")
+endif()
+
 #===============================================================================
 # Setup CMake Options
 #===============================================================================
