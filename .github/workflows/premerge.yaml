@@ -1,0 +1,20 @@
+name: LLVM Premerge Checks
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/premerge.yaml
+
+jobs:
+  premerge-checks-linux:
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@v4
+      - name: Build and Test
+        run: |
+          echo test
