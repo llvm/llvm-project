@@ -621,6 +621,14 @@ public:
   /// Remove all the successors of this block.
   void clearSuccessors() { Successors.clear(); }
 
+  /// Swap successors of the block. The block must have exactly 2 successors.
+  // TODO: This should be part of introducing conditional branch recipes rather
+  // than being independent.
+  void swapSuccessors() {
+    assert(Successors.size() == 2 && "must have 2 successors to swap");
+    std::swap(Successors[0], Successors[1]);
+  }
+
   /// The method which generates the output IR that correspond to this
   /// VPBlockBase, thereby "executing" the VPlan.
   virtual void execute(VPTransformState *State) = 0;

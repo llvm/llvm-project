@@ -128,7 +128,7 @@ struct VPlanTransforms {
   /// UncountableExitingBlock by
   ///  * updating the condition exiting the vector loop to include the early
   ///    exit conditions
-  ///  * splitting the original middle block to branch to the early exit blocks
+  ///  * splitting the original middle block to branch to the early exit block
   ///    if taken.
   static void handleUncountableEarlyExit(VPlan &Plan, ScalarEvolution &SE,
                                          Loop *OrigLoop,

@@ -1898,7 +1898,7 @@ void VPlanTransforms::handleUncountableEarlyExit(
   VPBasicBlock *NewMiddle = new VPBasicBlock("middle.split");
   VPBlockUtils::insertOnEdge(LoopRegion, MiddleVPBB, NewMiddle);
   VPBlockUtils::connectBlocks(NewMiddle, VPEarlyExitBlock);
-  std::swap(NewMiddle->getSuccessors()[0], NewMiddle->getSuccessors()[1]);
+  NewMiddle->swapSuccessors();
 
   VPBuilder MiddleBuilder(NewMiddle);
   MiddleBuilder.createNaryOp(VPInstruction::BranchOnCond, {IsEarlyExitTaken});
@@ -1906,13 +1906,14 @@ void VPlanTransforms::handleUncountableEarlyExit(
   // Replace the condition controlling the non-early exit from the vector loop
   // with one exiting if either the original condition of the vector latch is
   // true or the early exit has been taken.
-  auto *LatchExitingBranch =
-      dyn_cast<VPInstruction>(LatchVPBB->getTerminator());
+  auto *LatchExitingBranch = cast<VPInstruction>(LatchVPBB->getTerminator());
+  assert(LatchExitingBranch->getOpcode() == VPInstruction::BranchOnCount &&
+         "Unexpected terminator");
   auto *IsLatchExitTaken =
       Builder.createICmp(CmpInst::ICMP_EQ, LatchExitingBranch->getOperand(0),
                          LatchExitingBranch->getOperand(1));
-  auto *AnyExiting = Builder.createNaryOp(Instruction::Or,
-                                          {IsEarlyExitTaken, IsLatchExitTaken});
-  Builder.createNaryOp(VPInstruction::BranchOnCond, AnyExiting);
+  auto *AnyExitTaken = Builder.createNaryOp(
+      Instruction::Or, {IsEarlyExitTaken, IsLatchExitTaken});
+  Builder.createNaryOp(VPInstruction::BranchOnCond, AnyExitTaken);
   LatchExitingBranch->eraseFromParent();
 }
