@@ -8,7 +8,7 @@ target datalayout = "e-m:o-p:40:64:64:32-i64:64-f80:128-n8:16:32:64-S128"
 @.str.1 = private unnamed_addr constant [2 x i8] c"w\00", align 1
 @.str.2 = private unnamed_addr constant [4 x i8] c"str\00", align 1
 
-;; Check fwrite is generated with arguments of ptr size, not index size
+;; Check fwrite is generated with arguments of index size, not ptr size
 
 define internal void @fputs_test_custom_dl() {
 ; CHECK-LABEL: @fputs_test_custom_dl(
