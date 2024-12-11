@@ -33424,15 +33424,26 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   case X86ISD::FMINC:
   case X86ISD::FMIN:
   case X86ISD::FMAXC:
-  case X86ISD::FMAX: {
+  case X86ISD::FMAX:
+  case X86ISD::STRICT_FMIN:
+  case X86ISD::STRICT_FMAX: {
     EVT VT = N->getValueType(0);
     assert(VT == MVT::v2f32 && "Unexpected type (!= v2f32) on FMIN/FMAX.");
+    bool IsStrict = Opc == X86ISD::STRICT_FMIN || Opc == X86ISD::STRICT_FMAX;
     SDValue UNDEF = DAG.getUNDEF(VT);
     SDValue LHS = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32,
-                              N->getOperand(0), UNDEF);
+                              N->getOperand(IsStrict ? 1 : 0), UNDEF);
     SDValue RHS = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32,
-                              N->getOperand(1), UNDEF);
-    Results.push_back(DAG.getNode(N->getOpcode(), dl, MVT::v4f32, LHS, RHS));
+                              N->getOperand(IsStrict ? 2 : 1), UNDEF);
+    SDValue Res;
+    if (IsStrict)
+      Res = DAG.getNode(Opc, dl, {MVT::v4f32, MVT::Other},
+                        {N->getOperand(0), LHS, RHS});
+    else
+      Res = DAG.getNode(Opc, dl, MVT::v4f32, LHS, RHS);
+    Results.push_back(Res);
+    if (IsStrict)
+      Results.push_back(Res.getValue(1));
     return;
   }
   case ISD::SDIV:
