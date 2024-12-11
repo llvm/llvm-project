@@ -1914,15 +1914,7 @@ void VPlanTransforms::prepareToExecute(VPlan &Plan) {
       Plan.getVectorLoopRegion());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
-    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (auto *ExtRed = dyn_cast<VPExtendedReductionRecipe>(&R)) {
-        expandVPExtendedReduction(ExtRed);
-        continue;
-      }
-      if (auto *MulAcc = dyn_cast<VPMulAccRecipe>(&R)) {
-        expandVPMulAcc(MulAcc);
-        continue;
-      }
+    for (VPRecipeBase &R : make_early_inc_range(VPBB->phis())) {
       if (!isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(&R))
         continue;
       auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
@@ -1934,6 +1926,16 @@ void VPlanTransforms::prepareToExecute(VPlan &Plan) {
       ScalarR->insertBefore(PhiR);
       PhiR->replaceAllUsesWith(ScalarR);
       PhiR->eraseFromParent();
+    }
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      if (!isa<VPExtendedReductionRecipe, VPMulAccRecipe>(&R))
+        continue;
+      if (auto *ExtRed = dyn_cast<VPExtendedReductionRecipe>(&R)) {
+        expandVPExtendedReduction(ExtRed);
+      }
+      if (auto *MulAcc = dyn_cast<VPMulAccRecipe>(&R)) {
+        expandVPMulAcc(MulAcc);
+      }
     }
   }
 }

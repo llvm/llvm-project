@@ -9265,18 +9265,30 @@ static VPExtendedReductionRecipe *tryToMatchAndCreateExtendedReduction(
   VPValue *A;
   Type *RedTy = RdxDesc.getRecurrenceType();
 
-  // Test if the cost of extended-reduction is valid and clamp the range.
-  // Note that extended-reduction is not always valid for all VF and types.
+  // Test if using extended-reduction is beneficial and clamp the range.
   auto IsExtendedRedValidAndClampRange = [&](unsigned Opcode, bool isZExt,
                                              Type *SrcTy) -> bool {
     return LoopVectorizationPlanner::getDecisionAndClampRange(
         [&](ElementCount VF) {
           VectorType *SrcVecTy = cast<VectorType>(ToVectorTy(SrcTy, VF));
-          return Ctx.TTI
-              .getExtendedReductionCost(Opcode, isZExt, RedTy, SrcVecTy,
-                                        RdxDesc.getFastMathFlags(),
-                                        TTI::TCK_RecipThroughput)
-              .isValid();
+          VectorType *VectorTy = cast<VectorType>(ToVectorTy(RedTy, VF));
+          TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+          InstructionCost ExtRedCost = Ctx.TTI.getExtendedReductionCost(
+              Opcode, isZExt, RedTy, SrcVecTy, RdxDesc.getFastMathFlags(),
+              CostKind);
+          InstructionCost ExtCost =
+              cast<VPWidenCastRecipe>(VecOp)->computeCost(VF, Ctx);
+          RecurKind RdxKind = RdxDesc.getRecurrenceKind();
+          InstructionCost RedCost;
+          if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind)) {
+            Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RdxKind);
+            RedCost = Ctx.TTI.getMinMaxReductionCost(
+                Id, VectorTy, RdxDesc.getFastMathFlags(), CostKind);
+          } else {
+            RedCost = Ctx.TTI.getArithmeticReductionCost(
+                Opcode, VectorTy, RdxDesc.getFastMathFlags(), CostKind);
+          }
+          return ExtRedCost.isValid() && ExtRedCost < ExtCost + RedCost;
         },
         Range);
   };
@@ -9312,16 +9324,32 @@ static VPMulAccRecipe *tryToMatchAndCreateMulAcc(
   VPValue *A, *B;
   Type *RedTy = RdxDesc.getRecurrenceType();
 
-  // Test if the cost of MulAcc is valid and clamp the range.
-  // Note that mul-acc is not always valid for all VF and types.
-  auto IsMulAccValidAndClampRange = [&](bool isZExt, Type *SrcTy) -> bool {
+  // Test if using mul-acc-reduction is beneficial and clamp the range.
+  auto IsMulAccValidAndClampRange =
+      [&](bool isZExt, VPWidenRecipe *Mul, VPWidenCastRecipe *Ext0,
+          VPWidenCastRecipe *Ext1, VPWidenCastRecipe *OuterExt) -> bool {
     return LoopVectorizationPlanner::getDecisionAndClampRange(
         [&](ElementCount VF) {
+          TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+          Type *SrcTy =
+              Ext0 ? Ctx.Types.inferScalarType(Ext0->getOperand(0)) : RedTy;
           VectorType *SrcVecTy = cast<VectorType>(ToVectorTy(SrcTy, VF));
-          return Ctx.TTI
-              .getMulAccReductionCost(isZExt, RedTy, SrcVecTy,
-                                      TTI::TCK_RecipThroughput)
-              .isValid();
+          VectorType *VectorTy = cast<VectorType>(ToVectorTy(RedTy, VF));
+          InstructionCost MulAccCost =
+              Ctx.TTI.getMulAccReductionCost(isZExt, RedTy, SrcVecTy, CostKind);
+          InstructionCost MulCost = Mul->computeCost(VF, Ctx);
+          InstructionCost RedCost = Ctx.TTI.getArithmeticReductionCost(
+              Instruction::Add, VectorTy, RdxDesc.getFastMathFlags(), CostKind);
+          InstructionCost ExtCost = 0;
+          if (Ext0)
+            ExtCost += Ext0->computeCost(VF, Ctx);
+          if (Ext1)
+            ExtCost += Ext1->computeCost(VF, Ctx);
+          if (OuterExt)
+            ExtCost += OuterExt->computeCost(VF, Ctx);
+
+          return MulAccCost.isValid() &&
+                 MulAccCost < ExtCost + MulCost + RedCost;
         },
         Range);
   };
@@ -9335,6 +9363,7 @@ static VPMulAccRecipe *tryToMatchAndCreateMulAcc(
         dyn_cast_if_present<VPWidenCastRecipe>(A->getDefiningRecipe());
     VPWidenCastRecipe *RecipeB =
         dyn_cast_if_present<VPWidenCastRecipe>(B->getDefiningRecipe());
+    VPWidenRecipe *Mul = cast<VPWidenRecipe>(VecOp->getDefiningRecipe());
 
     // Matched reduce.add(mul(ext, ext))
     if (RecipeA && RecipeB && match(RecipeA, m_ZExtOrSExt(m_VPValue())) &&
@@ -9344,22 +9373,19 @@ static VPMulAccRecipe *tryToMatchAndCreateMulAcc(
       // Only create MulAccRecipe if the cost is valid.
       if (!IsMulAccValidAndClampRange(RecipeA->getOpcode() ==
                                           Instruction::CastOps::ZExt,
-                                      Ctx.Types.inferScalarType(RecipeA)))
+                                      Mul, RecipeA, RecipeB, nullptr))
         return nullptr;
 
       return new VPMulAccRecipe(RdxDesc, CurrentLinkI, PreviousLink, CondOp,
-                                CM.useOrderedReductions(RdxDesc),
-                                cast<VPWidenRecipe>(VecOp->getDefiningRecipe()),
-                                RecipeA, RecipeB);
+                                CM.useOrderedReductions(RdxDesc), Mul, RecipeA,
+                                RecipeB);
     } else {
       // Matched reduce.add(mul)
-      if (!IsMulAccValidAndClampRange(true, RedTy))
+      if (!IsMulAccValidAndClampRange(true, Mul, nullptr, nullptr, nullptr))
         return nullptr;
 
-      return new VPMulAccRecipe(
-          RdxDesc, CurrentLinkI, PreviousLink, CondOp,
-          CM.useOrderedReductions(RdxDesc),
-          cast<VPWidenRecipe>(VecOp->getDefiningRecipe()));
+      return new VPMulAccRecipe(RdxDesc, CurrentLinkI, PreviousLink, CondOp,
+                                CM.useOrderedReductions(RdxDesc), Mul);
     }
     // Matched reduce.add(ext(mul(ext(A), ext(B))))
     // All extend instructions must have same opcode or A == B
@@ -9379,7 +9405,7 @@ static VPMulAccRecipe *tryToMatchAndCreateMulAcc(
       // Only create MulAcc recipe if the cost if valid.
       if (!IsMulAccValidAndClampRange(Ext0->getOpcode() ==
                                           Instruction::CastOps::ZExt,
-                                      Ctx.Types.inferScalarType(Ext0)))
+                                      Mul, Ext0, Ext1, Ext))
         return nullptr;
 
       return new VPMulAccRecipe(RdxDesc, CurrentLinkI, PreviousLink, CondOp,
