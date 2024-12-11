@@ -17,6 +17,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Progress.h"
 #include "lldb/Core/StreamAsynchronousIO.h"
+#include "lldb/Core/TelemetryVendor.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/Expression/REPL.h"
 #include "lldb/Host/File.h"
@@ -867,7 +868,7 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_broadcaster(m_broadcaster_manager_sp,
                     GetStaticBroadcasterClass().str()),
       m_forward_listener_sp(), m_clear_once(),
-      m_telemeter(LldbTelemeter::CreateInstance(this)) {
+      m_telemeter(TelemetryVendor::FindPlugin()->CreateTelemeter(this)) {
   // Initialize the debugger properties as early as possible as other parts of
   // LLDB will start querying them during construction.
   m_collection_sp->Initialize(g_debugger_properties);

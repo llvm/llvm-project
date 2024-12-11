@@ -10,6 +10,7 @@
 #ifndef LLDB_CORE_TELEMETRY_H
 #define LLDB_CORE_TELEMETRY_H
 
+#include <atomic>
 #include <chrono>
 #include <ctime>
 #include <memory>
@@ -254,21 +255,21 @@ public:
   ///    implementation for testing.
   ///
   /// See also lldb_private::TelemetryVendor.
-  static std::unique_ptr<LldbTelemeter> CreateInstance(Debugger *debugger);
-
-  virtual ~LldbTelemeter() = default;
+  static std::unique_ptr<LldbTelemeter>
+  CreateInstance(std::unique_ptr<llvm::telemetry::Config> config,
+                 Debugger *debugger);
 
   /// To be invoked upon LLDB startup.
-  virtual void LogStartup(DebuggerTelemetryInfo *entry) = 0;
+  virtual void LogStartup(DebuggerTelemetryInfo *entry);
 
   /// To be invoked upon LLDB exit.
-  virtual void LogExit(DebuggerTelemetryInfo *entry) = 0;
+  virtual void LogExit(DebuggerTelemetryInfo *entry);
 
   /// To be invoked upon loading the main executable module.
   /// We log in a fire-n-forget fashion so that if the load
   /// crashes, we don't lose the entry.
-  virtual void LogMainExecutableLoadStart(TargetTelemetryInfo *entry) = 0;
-  virtual void LogMainExecutableLoadEnd(TargetTelemetryInfo *entry) = 0;
+  virtual void LogMainExecutableLoadStart(TargetTelemetryInfo *entry);
+  virtual void LogMainExecutableLoadEnd(TargetTelemetryInfo *entry);
 
   /// To be invoked upon process exit.
   virtual void LogProcessExit(TargetTelemetryInfo *entry);
@@ -276,23 +277,33 @@ public:
   /// Invoked for each command
   /// We log in a fire-n-forget fashion so that if the command execution
   /// crashes, we don't lose the entry.
-  virtual void LogCommandStart(CommandTelemetryInfo *entry) = 0;
-  virtual void LogCommandEnd(CommandTelemetryInfo *entry) = 0;
-
-  virtual std::string GetNextUUID() = 0;
+  virtual void LogCommandStart(CommandTelemetryInfo *entry);
+  virtual void LogCommandEnd(CommandTelemetryInfo *entry);
 
   /// For client (eg., SB API) to send telemetry entries.
   virtual void
-  LogClientTelemetry(const lldb_private::StructuredDataImpl &entry) = 0;
+  LogClientTelemetry(const lldb_private::StructuredDataImpl &entry);
+
+  virtual std::string GetNextUUID() {
+    return std::to_string(uuid_seed.fetch_add(1));
+  }
+
+  llvm::Error dispatch(TelemetryInfo *entry) override;
+  void addDestination(std::unique_ptr<Destination> destination) override;
+
+protected:
+  LldbTelemeter(std::unique_ptr<llvm::telemetry::Config> config,
+                Debugger *debugger);
+  LldbTelemeter() = default;
+  virtual void CollectMiscBuildInfo();
 
 private:
-  const std::string SessionId;
-  std::vector<std::unique_ptr<Destination>> destinations;
+  std::atomic<size_t> uuid_seed = 0;
+  std::unique_ptr<llvm::telemetry::Config> m_config;
+  const std::string m_session_uuid;
+  Debugger *m_debugger;
+  std::vector<std::unique_ptr<Destination>> m_destinations;
 };
-
-/// Logger configs. This should be overriden by vendor's specific config.
-/// The default (upstream) config will have telemetry disabled.
-llvm::telemetry::Config *GetTelemetryConfig();
 
 } // namespace lldb_private
 #endif // LLDB_CORE_TELEMETRY_H
