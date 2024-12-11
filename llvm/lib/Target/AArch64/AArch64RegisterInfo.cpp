@@ -1128,7 +1128,7 @@ bool AArch64RegisterInfo::getRegAllocationHints(
   for (MachineInstr &MI : MRI.def_instructions(VirtReg)) {
     if (MI.getOpcode() != AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO &&
         MI.getOpcode() != AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO)
-      continue;
+      break;
 
     unsigned FirstOpSubReg = MI.getOperand(1).getSubReg();
     switch (FirstOpSubReg) {
@@ -1138,13 +1138,14 @@ bool AArch64RegisterInfo::getRegAllocationHints(
     case AArch64::zsub3:
       break;
     default:
-      continue;
+      return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints,
+                                                       MF, VRM);
     }
 
     // Look up the physical register mapped to the first operand of the pseudo.
     Register FirstOpVirtReg = MI.getOperand(1).getReg();
     if (!VRM->hasPhys(FirstOpVirtReg))
-      continue;
+      break;
 
     MCRegister TupleStartReg =
         getSubReg(VRM->getPhys(FirstOpVirtReg), FirstOpSubReg);
