@@ -43,8 +43,10 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
+#include "llvm/CodeGen/RegAllocGreedyPass.h"
 #include "llvm/CodeGen/RegAllocPriorityAdvisor.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
@@ -55,6 +57,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
@@ -146,11 +149,134 @@ static cl::opt<unsigned> SplitThresholdForRegWithHint(
 static RegisterRegAlloc greedyRegAlloc("greedy", "greedy register allocator",
                                        createGreedyRegisterAllocator);
 
-char RAGreedy::ID = 0;
-char &llvm::RAGreedyID = RAGreedy::ID;
+namespace {
+class RAGreedyLegacy : public MachineFunctionPass {
+  RegAllocFilterFunc F;
 
-INITIALIZE_PASS_BEGIN(RAGreedy, "greedy",
-                "Greedy Register Allocator", false, false)
+public:
+  RAGreedyLegacy(const RegAllocFilterFunc F = nullptr);
+
+  static char ID;
+  /// Return the pass name.
+  StringRef getPassName() const override { return "Greedy Register Allocator"; }
+
+  /// RAGreedy analysis usage.
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  /// Perform register allocation.
+  bool runOnMachineFunction(MachineFunction &mf) override;
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::NoPHIs);
+  }
+
+  MachineFunctionProperties getClearedProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::IsSSA);
+  }
+};
+
+} // end anonymous namespace
+
+RAGreedyLegacy::RAGreedyLegacy(const RegAllocFilterFunc F)
+    : MachineFunctionPass(ID), F(F) {
+  initializeRAGreedyLegacyPass(*PassRegistry::getPassRegistry());
+}
+
+RAGreedy::RAGreedy(const RegAllocFilterFunc F) : RegAllocBase(F) {}
+
+void RAGreedy::setAnalyses(RequiredAnalyses &Analyses) {
+  VRM = Analyses.VRM;
+  LIS = Analyses.LIS;
+  Matrix = Analyses.LRM;
+  Indexes = Analyses.Indexes;
+  MBFI = Analyses.MBFI;
+  DomTree = Analyses.DomTree;
+  Loops = Analyses.Loops;
+  ORE = Analyses.ORE;
+  Bundles = Analyses.Bundles;
+  SpillPlacer = Analyses.SpillPlacer;
+  DebugVars = Analyses.DebugVars;
+  LSS = Analyses.LSS;
+  EvictProvider = Analyses.EvictProvider;
+  PriorityProvider = Analyses.PriorityProvider;
+}
+
+PreservedAnalyses RAGreedyPass::run(MachineFunction &MF,
+                                    MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+
+  RAGreedy Impl(Filter);
+  RAGreedy::RequiredAnalyses Analyses;
+
+  Analyses.VRM = &MFAM.getResult<VirtRegMapAnalysis>(MF);
+  Analyses.LIS = &MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  Analyses.LRM = &MFAM.getResult<LiveRegMatrixAnalysis>(MF);
+  Analyses.LSS = &MFAM.getResult<LiveStacksAnalysis>(MF);
+  Analyses.Indexes = &MFAM.getResult<SlotIndexesAnalysis>(MF);
+  Analyses.MBFI = &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+  Analyses.DomTree = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  Analyses.ORE = &MFAM.getResult<MachineOptimizationRemarkEmitterAnalysis>(MF);
+  Analyses.Loops = &MFAM.getResult<MachineLoopAnalysis>(MF);
+  Analyses.Bundles = &MFAM.getResult<EdgeBundlesAnalysis>(MF);
+  Analyses.SpillPlacer = &MFAM.getResult<SpillPlacementAnalysis>(MF);
+  Analyses.DebugVars = &MFAM.getResult<LiveDebugVariablesAnalysis>(MF);
+  Analyses.EvictProvider =
+      MFAM.getResult<RegAllocEvictionAdvisorAnalysis>(MF).Provider;
+  Analyses.PriorityProvider =
+      MFAM.getResult<RegAllocPriorityAdvisorAnalysis>(MF).Provider;
+
+  Impl.setAnalyses(Analyses);
+  bool Changed = Impl.run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<MachineBlockFrequencyAnalysis>();
+  PA.preserve<LiveIntervalsAnalysis>();
+  PA.preserve<SlotIndexesAnalysis>();
+  PA.preserve<LiveDebugVariablesAnalysis>();
+  PA.preserve<LiveStacksAnalysis>();
+  PA.preserve<MachineDominatorTreeAnalysis>();
+  PA.preserve<MachineLoopAnalysis>();
+  PA.preserve<VirtRegMapAnalysis>();
+  PA.preserve<LiveRegMatrixAnalysis>();
+  return PA;
+}
+
+bool RAGreedyLegacy::runOnMachineFunction(MachineFunction &MF) {
+  RAGreedy Impl(F);
+
+  RAGreedy::RequiredAnalyses Analyses;
+  Analyses.VRM = &getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
+  Analyses.LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  Analyses.LSS = &getAnalysis<LiveStacksWrapperLegacy>().getLS();
+  Analyses.LRM = &getAnalysis<LiveRegMatrixWrapperLegacy>().getLRM();
+  Analyses.Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
+  Analyses.MBFI =
+      &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
+  Analyses.DomTree =
+      &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  Analyses.ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
+  Analyses.Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  Analyses.Bundles = &getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
+  Analyses.SpillPlacer =
+      &getAnalysis<SpillPlacementWrapperLegacy>().getResult();
+  Analyses.DebugVars = &getAnalysis<LiveDebugVariablesWrapperLegacy>().getLDV();
+  Analyses.EvictProvider =
+      getAnalysis<RegAllocEvictionAdvisorAnalysisLegacy>().getProvider().get();
+  Analyses.PriorityProvider =
+      &getAnalysis<RegAllocPriorityAdvisorAnalysisLegacy>().getProvider();
+
+  Impl.setAnalyses(Analyses);
+  return Impl.run(MF);
+}
+
+char RAGreedyLegacy::ID = 0;
+char &llvm::RAGreedyLegacyID = RAGreedyLegacy::ID;
+
+INITIALIZE_PASS_BEGIN(RAGreedyLegacy, "greedy", "Greedy Register Allocator",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveDebugVariablesWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
@@ -166,8 +292,8 @@ INITIALIZE_PASS_DEPENDENCY(SpillPlacementWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(MachineOptimizationRemarkEmitterPass)
 INITIALIZE_PASS_DEPENDENCY(RegAllocEvictionAdvisorAnalysisLegacy)
 INITIALIZE_PASS_DEPENDENCY(RegAllocPriorityAdvisorAnalysisLegacy)
-INITIALIZE_PASS_END(RAGreedy, "greedy",
-                "Greedy Register Allocator", false, false)
+INITIALIZE_PASS_END(RAGreedyLegacy, "greedy", "Greedy Register Allocator",
+                    false, false)
 
 #ifndef NDEBUG
 const char *const RAGreedy::StageName[] = {
@@ -186,17 +312,14 @@ const char *const RAGreedy::StageName[] = {
 const float Hysteresis = (2007 / 2048.0f); // 0.97998046875
 
 FunctionPass* llvm::createGreedyRegisterAllocator() {
-  return new RAGreedy();
+  return new RAGreedyLegacy();
 }
 
 FunctionPass *llvm::createGreedyRegisterAllocator(RegAllocFilterFunc Ftor) {
-  return new RAGreedy(Ftor);
+  return new RAGreedyLegacy(Ftor);
 }
 
-RAGreedy::RAGreedy(RegAllocFilterFunc F)
-    : MachineFunctionPass(ID), RegAllocBase(F) {}
-
-void RAGreedy::getAnalysisUsage(AnalysisUsage &AU) const {
+void RAGreedyLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
   AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
@@ -1057,7 +1180,8 @@ void RAGreedy::splitAroundRegion(LiveRangeEdit &LREdit,
   }
 
   if (VerifyEnabled)
-    MF->verify(this, "After splitting live range around region", &errs());
+    MF->verify(LIS, Indexes, "After splitting live range around region",
+               &errs());
 }
 
 MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
@@ -1326,7 +1450,7 @@ MCRegister RAGreedy::tryBlockSplit(const LiveInterval &VirtReg,
   }
 
   if (VerifyEnabled)
-    MF->verify(this, "After splitting live range around basic blocks", &errs());
+    MF->verify(LIS, Indexes, "After splitting live range around basic blocks", &errs());
   return MCRegister();
 }
 
@@ -2524,7 +2648,7 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
       DebugVars->splitRegister(r, LRE.regs(), *LIS);
 
     if (VerifyEnabled)
-      MF->verify(this, "After spilling", &errs());
+      MF->verify(LIS, Indexes, "After spilling", &errs());
   }
 
   // The live virtual register requesting allocation was spilled, so tell
@@ -2717,7 +2841,7 @@ bool RAGreedy::hasVirtRegAlloc() {
   return false;
 }
 
-bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
+bool RAGreedy::run(MachineFunction &mf) {
   LLVM_DEBUG(dbgs() << "********** GREEDY REGISTER ALLOCATION **********\n"
                     << "********** Function: " << mf.getName() << '\n');
 
@@ -2725,29 +2849,18 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   TII = MF->getSubtarget().getInstrInfo();
 
   if (VerifyEnabled)
-    MF->verify(this, "Before greedy register allocator", &errs());
+    MF->verify(LIS, Indexes, "Before greedy register allocator", &errs());
 
-  RegAllocBase::init(getAnalysis<VirtRegMapWrapperLegacy>().getVRM(),
-                     getAnalysis<LiveIntervalsWrapperPass>().getLIS(),
-                     getAnalysis<LiveRegMatrixWrapperLegacy>().getLRM());
+  RegAllocBase::init(*this->VRM, *this->LIS, *this->Matrix);
 
   // Early return if there is no virtual register to be allocated to a
   // physical register.
   if (!hasVirtRegAlloc())
     return false;
 
-  Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
   // Renumber to get accurate and consistent results from
   // SlotIndexes::getApproxInstrDistance.
   Indexes->packIndexes();
-  MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
-  DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
-  Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  Bundles = &getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
-  SpillPlacer = &getAnalysis<SpillPlacementWrapperLegacy>().getResult();
-  DebugVars = &getAnalysis<LiveDebugVariablesWrapperLegacy>().getLDV();
-  auto &LSS = getAnalysis<LiveStacksWrapperLegacy>().getLS();
 
   initializeCSRCost();
 
@@ -2763,17 +2876,12 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
 
   ExtraInfo.emplace();
 
-  auto &EvictAdvisorProvider =
-      getAnalysis<RegAllocEvictionAdvisorAnalysisLegacy>().getProvider();
-  EvictAdvisor = EvictAdvisorProvider.getAdvisor(*MF, *this, MBFI, Loops);
-
-  PriorityAdvisor = getAnalysis<RegAllocPriorityAdvisorAnalysisLegacy>()
-                        .getProvider()
-                        .getAdvisor(*MF, *this, *Indexes);
+  EvictAdvisor = EvictProvider->getAdvisor(*MF, *this, MBFI, Loops);
+  PriorityAdvisor = PriorityProvider->getAdvisor(*MF, *this, *Indexes);
 
   VRAI = std::make_unique<VirtRegAuxInfo>(*MF, *LIS, *VRM, *Loops, *MBFI);
   SpillerInstance.reset(
-      createInlineSpiller({*LIS, LSS, *DomTree, *MBFI}, *MF, *VRM, *VRAI));
+      createInlineSpiller({*LIS, *LSS, *DomTree, *MBFI}, *MF, *VRM, *VRAI));
 
   VRAI->calculateSpillWeightsAndHints();
 
@@ -2790,7 +2898,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   tryHintsRecoloring();
 
   if (VerifyEnabled)
-    MF->verify(this, "Before post optimization", &errs());
+    MF->verify(LIS, Indexes, "Before post optimization", &errs());
   postOptimization();
   reportStats();
 

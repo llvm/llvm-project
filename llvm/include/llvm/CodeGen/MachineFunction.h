@@ -927,6 +927,7 @@ public:
 
   /// Run the current MachineFunction through the machine code verifier, useful
   /// for debugger use.
+  /// TODO: Add the param LiveStks
   /// \returns true if no problems were found.
   bool verify(LiveIntervals *LiveInts, SlotIndexes *Indexes,
               const char *Banner = nullptr, raw_ostream *OS = nullptr,

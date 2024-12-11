@@ -195,6 +195,15 @@ MACHINE_FUNCTION_PASS_WITH_PARAMS(
       return parseRegAllocFastPassOptions(*PB, Params);
     },
     "filter=reg-filter;no-clear-vregs")
+
+MACHINE_FUNCTION_PASS_WITH_PARAMS(
+    "regallocgreedy", "RAGreedy",
+    [](RegAllocFilterFunc F) { return RAGreedyPass(F); },
+    [PB = this](StringRef Params) {
+      // TODO: parseRegAllocFilter(*PB, Params);
+      return Expected<RegAllocFilterFunc>(nullptr);
+    }, ""
+)
 #undef MACHINE_FUNCTION_PASS_WITH_PARAMS
 
 // After a pass is converted to new pass manager, its entry should be moved from
