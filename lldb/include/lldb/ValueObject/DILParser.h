@@ -61,10 +61,10 @@ enum class ErrorCode : unsigned char {
 
 void SetUbStatus(Status& error, ErrorCode code);
 
-// TypeDeclaration builds information about the literal type definition as type
-// is being parsed. It doesn't perform semantic analysis for non-basic types --
-// e.g. "char&&&" is a valid type declaration.
-// NOTE: CV qualifiers are ignored.
+/// TypeDeclaration builds information about the literal type definition as
+/// type is being parsed. It doesn't perform semantic analysis for non-basic
+/// types -- e.g. "char&&&" is a valid type declaration.
+/// NOTE: CV qualifiers are ignored.
 class TypeDeclaration {
  public:
   enum class TypeSpecifier {
@@ -133,8 +133,8 @@ class BuiltinFunctionDef {
   std::vector<CompilerType> m_arguments;
 }; // class BuiltinFunctionDef
 
-// Pure recursive descent parser for C++ like expressions.
-// EBNF grammar for the parser is described in lldb/docs/dil-expr-lang.ebnf
+/// Pure recursive descent parser for C++ like expressions.
+/// EBNF grammar for the parser is described in lldb/docs/dil-expr-lang.ebnf
 class DILParser {
  public:
   explicit DILParser(std::shared_ptr<DILSourceManager> dil_sm,
@@ -197,11 +197,11 @@ class DILParser {
   DILASTNodeUP ParseCharLiteral();
   DILASTNodeUP ParseStringLiteral();
   DILASTNodeUP ParsePointerLiteral();
-  DILASTNodeUP ParseNumericConstant(DILToken token);
+  DILASTNodeUP ParseNumericConstant();
   DILASTNodeUP ParseFloatingLiteral(NumericLiteralParser& literal,
-                                  DILToken token);
+                                    DILToken& token);
   DILASTNodeUP ParseIntegerLiteral(NumericLiteralParser& literal,
-                                 DILToken token);
+                                   DILToken& token);
   DILASTNodeUP ParseBuiltinFunction(uint32_t loc,
                                   std::unique_ptr<BuiltinFunctionDef> func_def);
 
@@ -295,8 +295,11 @@ class DILParser {
     return node->info();
   }
 
- private:
-  friend class TentativeParsingAction;
+  void TentativeParsingRollback(uint32_t saved_idx) {
+    m_error.Clear();
+    m_dil_lexer.ResetTokenIdx(saved_idx);
+    m_dil_token = m_dil_lexer.GetCurrentToken();
+  }
 
   // Parser doesn't own the evaluation context. The produced AST may depend on
   // it (for example, for source locations), so it's expected that expression
@@ -317,42 +320,6 @@ class DILParser {
   bool m_check_ptr_vs_member;
   DILLexer m_dil_lexer;
 }; // class DILParser
-
-
-// Enables tentative parsing mode, allowing to rollback the parser state. Call
-// Commit() or Rollback() to control the parser state. If neither was called,
-// the destructor will assert.
-class TentativeParsingAction {
- public:
-  TentativeParsingAction(DILParser* parser) : m_parser(parser) {
-    m_backtrack_token = m_parser->m_dil_token;
-    m_parser->m_dil_lexer.EnableBacktrackAtThisPos();
-    m_enabled = true;
-  }
-
-  ~TentativeParsingAction() {
-    assert(!m_enabled &&
-           "Tentative parsing wasn't finalized. Did you forget to call "
-           "Commit() or Rollback()?");
-  }
-
-  void Commit() {
-    m_parser->m_dil_lexer.CommitBacktrackedTokens();
-    m_enabled = false;
-  }
-
-  void Rollback() {
-    m_parser->m_dil_lexer.Backtrack();
-    m_parser->m_error.Clear();
-    m_parser->m_dil_token = m_backtrack_token;
-    m_enabled = false;
-  }
-
- private:
-  DILParser* m_parser;
-  DILToken m_backtrack_token;
-  bool m_enabled;
-}; // class TentativeParsingAction
 
 }  // namespace dil
 

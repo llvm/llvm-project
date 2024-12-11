@@ -24,6 +24,8 @@
 #include <type_traits>
 #include <vector>
 
+#include <limits.h>
+
 #include "lldb/lldb-enumerations.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/ValueObject/DILAST.h"
@@ -1262,7 +1264,9 @@ DILASTNodeUP DILParser::ParseCastExpression() {
 
     // Enable lexer backtracking, so that we can rollback in case it's not
     // actually a type declaration.
-    TentativeParsingAction tentative_parsing(this);
+
+    // Start tentative parsing (save token location/idx, for possible rollback).
+    uint32_t save_token_idx = m_dil_lexer.GetCurrentTokenIdx();
 
     // Consume the token only after enabling the backtracking.
     ConsumeToken();
@@ -1273,7 +1277,6 @@ DILASTNodeUP DILParser::ParseCastExpression() {
     if (type_id) {
       // Successfully parsed the type declaration. Commit the backtracked
       // tokens and parse the cast_expression.
-      tentative_parsing.Commit();
 
       if (!type_id.value().IsValid()) {
         CompilerType bad_type;
@@ -1290,7 +1293,8 @@ DILASTNodeUP DILParser::ParseCastExpression() {
 
     // Failed to parse the contents of the parentheses as a type declaration.
     // Rollback the lexer and try parsing it as unary_expression.
-    tentative_parsing.Rollback();
+
+    TentativeParsingRollback(save_token_idx);
   }
 
   return ParseUnaryExpression();
@@ -1363,7 +1367,9 @@ DILASTNodeUP DILParser::ParseUnaryExpression() {
 
     // `(` can mean either a type_id or a parenthesized expression.
     if (m_dil_token.is(dil::TokenKind::l_paren)) {
-      TentativeParsingAction tentative_parsing(this);
+      // Start tentative parsing (save token location/idx, for possible
+      // rollback).
+      uint32_t save_token_idx = m_dil_lexer.GetCurrentTokenIdx();
 
       Expect(dil::TokenKind::l_paren);
       ConsumeToken();
@@ -1371,8 +1377,6 @@ DILASTNodeUP DILParser::ParseUnaryExpression() {
       // Parse the type definition and resolve the type.
       auto type_id = ParseTypeId();
       if (type_id) {
-        tentative_parsing.Commit();
-
         // type_id requires parentheses, so there must be a closing one.
         Expect(dil::TokenKind::r_paren);
         ConsumeToken();
@@ -1380,7 +1384,7 @@ DILASTNodeUP DILParser::ParseUnaryExpression() {
         operand = type_id.value();
 
       } else {
-        tentative_parsing.Rollback();
+        TentativeParsingRollback(save_token_idx);
 
         // Failed to parse type_id, fallback to parsing an unary_expression.
         operand = ParseUnaryExpression()->GetDereferencedResultType();
@@ -1604,10 +1608,7 @@ DILASTNodeUP DILParser::ParsePrimaryExpression() {
         && m_dil_lexer.LookAhead(1).is(dil::TokenKind::kw_namespace)
         && m_dil_lexer.LookAhead(2).is(dil::TokenKind::r_paren)
         && m_dil_lexer.LookAhead(3).is(dil::TokenKind::coloncolon)) {
-      ConsumeToken(); // l_paren
-      ConsumeToken(); // identifier 'anonymous'
-      ConsumeToken(); // keyword 'namespace'
-      ConsumeToken(); // r_paren
+      m_dil_token = m_dil_lexer.AcceptLookAhead(3);
       std::string identifier = "(anonymous namespace)";
       Expect(dil::TokenKind::coloncolon);
       // Save the source location for the diagnostics message.
@@ -1877,11 +1878,7 @@ std::string DILParser::ParseNestedNameSpecifier() {
         && m_dil_lexer.LookAhead(1).is(dil::TokenKind::kw_namespace)
         && m_dil_lexer.LookAhead(2).is(dil::TokenKind::r_paren)
         && m_dil_lexer.LookAhead(3).is(dil::TokenKind::coloncolon)) {
-      ConsumeToken(); // l_paren
-      ConsumeToken(); // identifier 'anonymous'
-      ConsumeToken(); // keyword 'namespace'
-      ConsumeToken(); // r_paren
-      ConsumeToken(); // coloncolon
+      m_dil_token = m_dil_lexer.AcceptLookAhead(3);
 
       assert ((m_dil_token.is(dil::TokenKind::identifier)
                || m_dil_token.is(dil::TokenKind::l_paren)) &&
@@ -1904,7 +1901,7 @@ std::string DILParser::ParseNestedNameSpecifier() {
   if (m_dil_lexer.LookAhead(0).is(dil::TokenKind::coloncolon)) {
     // This nested_name_specifier is a single identifier.
     std::string identifier = m_dil_token.getSpelling();
-    ConsumeToken();
+    m_dil_token = m_dil_lexer.AcceptLookAhead(0);
     Expect(dil::TokenKind::coloncolon);
     ConsumeToken();
     // Continue parsing the nested_name_specifier.
@@ -1916,24 +1913,27 @@ std::string DILParser::ParseNestedNameSpecifier() {
   if (m_dil_lexer.LookAhead(0).is(dil::TokenKind::less)) {
     // We don't know whether this will be a nested_name_identifier or just a
     // type_name. Prepare to rollback if this is not a nested_name_identifier.
-    TentativeParsingAction tentative_parsing(this);
+
+    // Start tentative parsing (save token location/idx, for possible rollback).
+    uint32_t save_token_idx = m_dil_lexer.GetCurrentTokenIdx();
 
     // TODO: Parse just the simple_template_id?
     auto type_name = ParseTypeName();
 
     // If we did parse the type_name successfully and it's followed by the scope
-    // operator ("::"), then this is indeed a nested_name_specifier. Commit the
-    // tentative parsing and continue parsing nested_name_specifier.
+    // operator ("::"), then this is indeed a nested_name_specifier. Continue
+    // parsing nested_name_specifier.
     if (!type_name.empty() && m_dil_token.is(dil::TokenKind::coloncolon)) {
-      tentative_parsing.Commit();
-      ConsumeToken();
+      m_dil_lexer.IncrementTokenIdx();
+      m_dil_token = m_dil_lexer.GetCurrentToken();
       // Continue parsing the nested_name_specifier.
       return type_name + "::" + ParseNestedNameSpecifier();
     }
 
     // Not a nested_name_specifier, but could be just a type_name or something
     // else entirely. Rollback the parser and try a different path.
-    tentative_parsing.Rollback();
+
+    TentativeParsingRollback(save_token_idx);
   }
 
   return "";
@@ -1970,7 +1970,7 @@ std::string DILParser::ParseTypeName() {
   if (m_dil_lexer.LookAhead(0).is(dil::TokenKind::less)) {
     // Parse the template_name. In this case it's just an identifier.
     std::string template_name = m_dil_token.getSpelling();
-    ConsumeToken();
+    m_dil_token = m_dil_lexer.AcceptLookAhead(0);
     // Consume the "<" token.
     ConsumeToken();
 
@@ -2068,11 +2068,11 @@ std::string DILParser::ParseTemplateArgument() {
     // template-parameter.
 
     // Therefore, first try parsing type_id.
-    TentativeParsingAction tentative_parsing(this);
+    // Start tentative parsing (save token location/idx, for possible rollback).
+    uint32_t save_token_idx = m_dil_lexer.GetCurrentTokenIdx();
 
     auto type_id = ParseTypeId();
     if (type_id) {
-      tentative_parsing.Commit();
 
       CompilerType type = type_id.value();
       return type.IsValid()
@@ -2081,13 +2081,14 @@ std::string DILParser::ParseTemplateArgument() {
 
     } else {
       // Failed to parse a type_id. Rollback the parser and try something else.
-      tentative_parsing.Rollback();
+      TentativeParsingRollback(save_token_idx);
     }
   }
 
   {
     // The next candidate is a numeric_literal.
-    TentativeParsingAction tentative_parsing(this);
+    // Start tentative parsing (save token location/idx, for possible rollback).
+    uint32_t save_token_idx = m_dil_lexer.GetCurrentTokenIdx();
 
     // Parse a numeric_literal.
     if (m_dil_token.is(dil::TokenKind::numeric_constant)) {
@@ -2097,18 +2098,18 @@ std::string DILParser::ParseTemplateArgument() {
       ConsumeToken();
 
       if (TokenEndsTemplateArgumentList(m_dil_token)) {
-        tentative_parsing.Commit();
         return numeric_literal;
       }
     }
 
     // Failed to parse a numeric_literal.
-    tentative_parsing.Rollback();
+    TentativeParsingRollback(save_token_idx);
   }
 
   {
     // The next candidate is an id_expression.
-    TentativeParsingAction tentative_parsing(this);
+    // Start tentative parsing (save token location/idx, for possible rollback).
+    uint32_t save_token_idx = m_dil_lexer.GetCurrentTokenIdx();
 
     // Parse an id_expression.
     auto id_expression = ParseIdExpression();
@@ -2116,11 +2117,10 @@ std::string DILParser::ParseTemplateArgument() {
     // If we've parsed the id_expression successfully and the next token can
     // finish the template_argument, then we're done here.
     if (!id_expression.empty() && TokenEndsTemplateArgumentList(m_dil_token)) {
-      tentative_parsing.Commit();
       return id_expression;
     }
     // Failed to parse a id_expression.
-    tentative_parsing.Rollback();
+    TentativeParsingRollback(save_token_idx);
   }
 
   // TODO: Another valid option here is a constant_expression, but
@@ -2237,7 +2237,7 @@ std::string DILParser::ParseUnqualifiedId() {
 //
 DILASTNodeUP DILParser::ParseNumericLiteral() {
   Expect(dil::TokenKind::numeric_constant);
-  DILASTNodeUP numeric_constant = ParseNumericConstant(m_dil_token);
+  DILASTNodeUP numeric_constant = ParseNumericConstant();
   ConsumeToken();
   return numeric_constant;
 }
@@ -2308,44 +2308,47 @@ DILASTNodeUP DILParser::ParsePointerLiteral() {
       loc, GetBasicType(m_ctx_scope, lldb::eBasicTypeNullPtr), scalar_value);
 }
 
-DILASTNodeUP DILParser::ParseNumericConstant(DILToken token) {
+DILASTNodeUP DILParser::ParseNumericConstant() {
   CompilerType bad_type;
   // Parse numeric constant, it can be either integer or float.
-  llvm::StringRef tok_spelling = token.getSpelling();
+  std::string tok_spelling = m_dil_token.getSpelling();
+  llvm::StringRef tok_spelling_ref(tok_spelling);
 
   lldb::TargetSP target_sp = m_ctx_scope->CalculateTarget();
   dil::NumericLiteralParser literal(
-      tok_spelling, token.getLocation(), /*AllowHalfType=*/true, m_dil_lexer,
+      tok_spelling_ref, m_dil_token.getLocation(), /*AllowHalfType=*/true,
+      m_dil_lexer,
       /*AllowMicrosoftExt=*/true);
 
   if (literal.hadError) {
     BailOut(
         ErrorCode::kInvalidNumericLiteral,
-        "Failed to parse token as numeric-constant: " + TokenDescription(token),
-        token.getLocation());
+        "Failed to parse token as numeric-constant: " +
+        TokenDescription(m_dil_token),
+        m_dil_token.getLocation());
     return std::make_unique<ErrorNode>(bad_type);
   }
 
   // Check for floating-literal and integer-literal. Fail on anything else (i.e.
   // fixed-point literal, who needs them anyway??).
   if (literal.isFloatingLiteral()) {
-    return ParseFloatingLiteral(literal, token);
+    return ParseFloatingLiteral(literal, m_dil_token);
   }
   if (literal.isIntegerLiteral()) {
-    return ParseIntegerLiteral(literal, token);
+    return ParseIntegerLiteral(literal, m_dil_token);
   }
 
   // Don't care about anything else.
   BailOut(ErrorCode::kInvalidNumericLiteral,
           "numeric-constant should be either float or integer literal: " +
-              TokenDescription(token),
-          token.getLocation());
+              TokenDescription(m_dil_token),
+          m_dil_token.getLocation());
   return std::make_unique<ErrorNode>(bad_type);
 }
 
 DILASTNodeUP DILParser::ParseFloatingLiteral(
     dil::NumericLiteralParser& literal,
-    DILToken token) {
+    DILToken& token) {
   const llvm::fltSemantics& format = literal.isFloat
                                          ? llvm::APFloat::IEEEsingle()
                                          : llvm::APFloat::IEEEdouble();
@@ -2373,7 +2376,7 @@ DILASTNodeUP DILParser::ParseFloatingLiteral(
 }
 
 DILASTNodeUP DILParser::ParseIntegerLiteral(dil::NumericLiteralParser& literal,
-                                            DILToken token) {
+                                            DILToken& token) {
   // Create a value big enough to fit all valid numbers.
   llvm::APInt raw_value(type_width<uintmax_t>(), 0);
 
@@ -4027,7 +4030,14 @@ void DILParser::ConsumeToken() {
     // occurred during parsing and we're trying to bail out.
     return;
   }
+  bool all_ok;
   m_dil_lexer.Lex(m_dil_token);
+  if (m_dil_lexer.GetCurrentTokenIdx() == UINT_MAX)
+    all_ok = m_dil_lexer.ResetTokenIdx(0);
+  else
+    all_ok = m_dil_lexer.IncrementTokenIdx();
+  if (!all_ok)
+    BailOut(ErrorCode::kUnknown, "Invalid lexer token index", 0);
 }
 
 std::string DILParser::TokenDescription(const DILToken& token) {

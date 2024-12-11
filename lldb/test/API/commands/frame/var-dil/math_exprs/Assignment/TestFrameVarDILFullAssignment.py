@@ -56,16 +56,14 @@ class TestFrameVarDILAssignment(TestBase):
         command_result = lldb.SBCommandReturnObject()
         interp = self.dbg.GetCommandInterpreter()
 
-        #self.expect("settings set target.experimental.use-DIL true",
-        #            substrs=[""])
+        self.expect("settings set target.experimental.use-DIL true",
+                    substrs=[""])
 
-        #
-        # TestCompositeAssignmentBitwise
-        #
-        #self.expect("frame variable a", substrs=["1"])
-        #self.expect("frame variable '1 == 1'", substrs=["true"])
-        #        self.expect("frame variable -- '-9223372036854775808 - 1'",
-        #                    patterns=["0x[0-9]+"])
-        #        self.expect("frame variable -- '-p'", error=True,
-        #                    substrs=["invalid argument type 'int *' to unary "
-        #                             "expression"])
+        # TestCompositeAssignment
+
+        self.expect("frame variable '1 == 1'", substrs=["true"])
+        self.expect("frame variable -- '-9223372036854775808 - 1'",
+                    patterns=["[0-9]+"])
+        self.expect("frame variable -- '-p'", error=True,
+                    substrs=["invalid argument type 'float *' to unary "
+                             "expression"])

@@ -13,6 +13,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <limits.h>
 #include <string>
 #include <utility>
 #include <vector>
@@ -214,8 +215,8 @@ class DILLexer {
   DILLexer(std::shared_ptr<DILSourceManager> dil_sm) :
       m_expr(dil_sm->GetSource()) {
     m_cur_pos = m_expr.begin();
-    m_is_backtracking = false;
-    m_backtracking_startpos = m_cur_pos;
+    // Use UINT_MAX to indicate invalid/uninitialized value.
+    m_tokens_idx = UINT_MAX;
   }
 
   bool Lex(DILToken &result, bool look_ahead=false);
@@ -233,19 +234,45 @@ class DILLexer {
 
   uint32_t GetLocation() { return m_cur_pos - m_expr.begin(); }
 
-  void ClearTokenCache() { m_cached_tokens.clear(); }
+  /// Update 'result' with the other paremeter values, create a
+  /// duplicate token, and push the duplicate token onto the vector of
+  /// lexed tokens.
+  void UpdateLexedTokens (DILToken &result, dil::TokenKind tok_kind,
+                          std::string tok_str, uint32_t tok_pos,
+                          uint32_t tok_len);
 
-  void ClearBacktrackTokens() { m_backtrack_tokens.clear(); }
-
+  /// Return the lexed token N+1 positions ahead of the 'current' token
+  /// being handled by the DIL parser.
   const DILToken &LookAhead(uint32_t N);
 
-  bool IsBacktracking() { return m_is_backtracking; }
+  const DILToken &AcceptLookAhead(uint32_t N);
 
-  void EnableBacktrackAtThisPos();
+  /// Return the index for the 'current' token being handled by the DIL parser.
+  uint32_t GetCurrentTokenIdx() { return m_tokens_idx; }
 
-  void CommitBacktrackedTokens();
+  /// Return the current token to be handled by the DIL parser.
+  DILToken& GetCurrentToken() { return m_lexed_tokens[m_tokens_idx]; }
 
-  void Backtrack();
+  /// Update the index for the 'current' token, to point to the next lexed
+  /// token.
+  bool IncrementTokenIdx() {
+    if (m_tokens_idx >= m_lexed_tokens.size() - 1)
+      return false;
+
+    m_tokens_idx++;
+    return true;
+  }
+
+  /// Set the index for the 'current' token (to be handled by the parser)
+  /// to a particular position. Used for either committing 'look ahead' parsing
+  /// or rolling back tentative parsing.
+  bool ResetTokenIdx(uint32_t new_value) {
+    if (new_value > m_lexed_tokens.size() - 1)
+      return false;
+
+    m_tokens_idx = new_value;
+    return true;
+  }
 
   uint32_t getCharWidth() { return 8; }
   uint32_t getIntWidth() { return 32; }
@@ -253,12 +280,22 @@ class DILLexer {
 
 
  private:
+  // The input string we are lexing & parsing.
   std::string m_expr;
+
+  // The current position of the lexer within m_expr (the character position,
+  // within the string, of the next item to be lexed).
   std::string::iterator m_cur_pos;
-  std::vector<std::pair<DILToken, std::string::iterator>> m_cached_tokens;
-  std::vector<std::pair<DILToken, std::string::iterator>> m_backtrack_tokens;
-  bool m_is_backtracking;
-  std::string::iterator m_backtracking_startpos;
+
+  // Holds all of the tokens lexed so far.
+  std::vector<DILToken> m_lexed_tokens;
+
+  // Index into m_lexed_tokens; indicates which token the DIL parser is
+  // currently trying to parse/handle.
+  uint32_t m_tokens_idx;
+
+  // "invalid" token; to be returned by lexer when 'look ahead' fails.
+  DILToken m_invalid_token;
 };
 
 } // namespace dil
