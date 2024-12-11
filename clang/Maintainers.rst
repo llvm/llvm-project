@@ -320,8 +320,8 @@ OpenMP conformance
 
 OpenCL conformance
 ~~~~~~~~~~~~~~~~~~
-| Anastasia Stulova
-| anastasia\@compiler-experts.com (email), Anastasia (Phabricator), AnastasiaStulova (GitHub)
+| Sven van Haastregt
+| sven.vanhaastregt@arm.com (email), svenvh (GitHub)
 
 
 OpenACC
@@ -365,6 +365,7 @@ Emeritus Lead Maintainers
 
 Inactive component maintainers
 ------------------------------
+| Anastasia Stulova (stulovaa\@gmail.com) -- OpenCL, C++ for OpenCL
 | Chandler Carruth (chandlerc\@gmail.com, chandlerc\@google.com) -- CMake, library layering
 | Devin Coughlin (dcoughlin\@apple.com) -- Clang static analyzer
 | Manuel Klimek (klimek\@google.com (email), klimek (Phabricator), r4nt (GitHub)) -- Tooling, AST matchers
