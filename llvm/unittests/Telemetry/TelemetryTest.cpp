@@ -51,7 +51,7 @@ class JsonSerializer : public Serializer {
 public:
   json::Object *getOutputObject() { return object.get(); }
 
-  llvm::Error start() override {
+  llvm::Error init() override {
     if (started)
       return createStringError("Serializer already in use");
     started = true;
@@ -59,23 +59,23 @@ public:
     return Error::success();
   }
 
-  void writeBool(StringRef KeyName, bool Value) override {
+  void write(StringRef KeyName, bool Value) override {
     writeHelper(KeyName, Value);
   }
 
-  void writeInt32(StringRef KeyName, int Value) override {
+  void write(StringRef KeyName, int Value) override {
     writeHelper(KeyName, Value);
   }
 
-  void writeSizeT(StringRef KeyName, size_t Value) override {
+  void write(StringRef KeyName, size_t Value) override {
     writeHelper(KeyName, Value);
   }
-  void writeString(StringRef KeyName, StringRef Value) override {
+  void write(StringRef KeyName, StringRef Value) override {
     writeHelper(KeyName, Value);
   }
 
-  void writeKeyValueMap(StringRef KeyName,
-                        std::map<std::string, std::string> Value) override {
+  void write(StringRef KeyName,
+             const std::map<std::string, std::string> &Value) override {
     json::Object Inner;
     for (auto kv : Value) {
       Inner.try_emplace(kv.first, kv.second);
@@ -83,7 +83,7 @@ public:
     writeHelper(KeyName, json::Value(std::move(Inner)));
   }
 
-  llvm::Error finish() override {
+  llvm::Error finalize() override {
     if (!started)
       return createStringError("Serializer not currently in use");
     started = false;
@@ -103,7 +103,7 @@ class StringSerializer : public Serializer {
 public:
   const std::string &getString() { return Buffer; }
 
-  llvm::Error start() override {
+  llvm::Error init() override {
     if (started)
       return createStringError("Serializer already in use");
     started = true;
@@ -111,23 +111,23 @@ public:
     return Error::success();
   }
 
-  void writeBool(StringRef KeyName, bool Value) override {
+  void write(StringRef KeyName, bool Value) override {
     writeHelper(KeyName, Value);
   }
 
-  void writeInt32(StringRef KeyName, int Value) override {
+  void write(StringRef KeyName, int Value) override {
     writeHelper(KeyName, Value);
   }
 
-  void writeSizeT(StringRef KeyName, size_t Value) override {
+  void write(StringRef KeyName, size_t Value) override {
     writeHelper(KeyName, Value);
   }
-  void writeString(StringRef KeyName, StringRef Value) override {
+  void write(StringRef KeyName, StringRef Value) override {
     assert(started && "serializer not started");
   }
 
-  void writeKeyValueMap(StringRef KeyName,
-                        std::map<std::string, std::string> Value) override {
+  void write(StringRef KeyName,
+             const std::map<std::string, std::string> &Value) override {
     std::string Inner;
     for (auto kv : Value) {
       writeHelper(StringRef(kv.first), StringRef(kv.second), &Inner);
@@ -135,7 +135,7 @@ public:
     writeHelper(KeyName, StringRef(Inner));
   }
 
-  llvm::Error finish() override {
+  llvm::Error finalize() override {
     if (!started)
       return createStringError("Serializer not currently in use");
     started = false;
@@ -175,11 +175,11 @@ public:
   JsonStorageDestination(TestContext *Ctxt) : CurrentContext(Ctxt) {}
 
   Error receiveEntry(const TelemetryInfo *Entry) override {
-    if (Error err = serializer.start()) {
+    if (Error err = serializer.init()) {
       return err;
     }
     Entry->serialize(serializer);
-    if (Error err = serializer.finish()) {
+    if (Error err = serializer.finalize()) {
       return err;
     }
 
@@ -201,7 +201,7 @@ struct StartupInfo : public TelemetryInfo {
 
   void serialize(Serializer &serializer) const override {
     TelemetryInfo::serialize(serializer);
-    serializer.writeString("ToolName", ToolName);
+    serializer.write("ToolName", ToolName);
   }
 };
 
@@ -210,8 +210,8 @@ struct ExitInfo : public TelemetryInfo {
   std::string ExitDesc;
   void serialize(Serializer &serializer) const override {
     TelemetryInfo::serialize(serializer);
-    serializer.writeInt32("ExitCode", ExitCode);
-    serializer.writeString("ExitDesc", ExitDesc);
+    serializer.write("ExitCode", ExitCode);
+    serializer.write("ExitDesc", ExitDesc);
   }
 };
 

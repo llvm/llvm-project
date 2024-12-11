@@ -27,21 +27,20 @@ namespace telemetry {
 
 class Serializer {
 public:
-  virtual llvm::Error start() = 0;
-  virtual void writeBool(StringRef KeyName, bool Value) = 0;
-  virtual void writeInt32(StringRef KeyName, int Value) = 0;
-  virtual void writeSizeT(StringRef KeyName, size_t Value) = 0;
-  virtual void writeString(StringRef KeyName, StringRef Value) = 0;
-  virtual void
-  writeKeyValueMap(StringRef KeyName,
-                   const std::map<std::string, std::string> &Value) = 0;
-  virtual llvm::Error finish() = 0;
+  virtual llvm::Error init() = 0;
+  virtual void write(StringRef KeyName, bool Value) = 0;
+  virtual void write(StringRef KeyName, int Value) = 0;
+  virtual void write(StringRef KeyName, size_t Value) = 0;
+  virtual void write(StringRef KeyName, StringRef Value) = 0;
+  virtual void write(StringRef KeyName,
+                     const std::map<std::string, std::string> &Value) = 0;
+  virtual llvm::Error finalize() = 0;
 };
 
-/// Configuration for the Telemeter class.
+/// Configuration for the Manager class.
 /// This stores configurations from both users and vendors and is passed
-/// to the Telemeter upon construction. (Any changes to the config after
-/// the Telemeter's construction will not have any effect on it).
+/// to the Manager upon construction. (Any changes to the config after
+/// the Manager's construction will not have any effect on it).
 ///
 /// This struct can be extended as needed to add additional configuration
 /// points specific to a vendor's implementation.

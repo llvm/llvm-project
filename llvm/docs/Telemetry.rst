@@ -95,7 +95,7 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
   public:
     json::Object *getOutputObject() { return object.get(); }
 
-    llvm::Error start() override {
+    llvm::Error init() override {
       if (started)
         return createStringError("Serializer already in use");
       started = true;
@@ -103,23 +103,24 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
       return Error::success();
     }
 
-    void writeBool(StringRef KeyName, bool Value) override {
+    // Serialize the given value.
+    void write(StringRef KeyName, bool Value) override {
       writeHelper(KeyName, Value);
     }
 
-    void writeInt32(StringRef KeyName, int Value) override {
+    void write(StringRef KeyName, int Value) override {
       writeHelper(KeyName, Value);
     }
 
-    void writeSizeT(StringRef KeyName, size_t Value) override {
+    void write(StringRef KeyName, size_t Value) override {
       writeHelper(KeyName, Value);
     }
-    void writeString(StringRef KeyName, StringRef Value) override {
+    void write(StringRef KeyName, StringRef Value) override {
       writeHelper(KeyName, Value);
     }
 
-    void writeKeyValueMap(StringRef KeyName,
-                          std::map<std::string, std::string> Value) override {
+    void write(StringRef KeyName,
+               const std::map<std::string, std::string>& Value) override {
       json::Object Inner;
       for (auto kv : Value) {
         Inner.try_emplace(kv.first, kv.second);
@@ -127,7 +128,7 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
       writeHelper(KeyName, json::Value(std::move(Inner)));
     }
 
-    Error finish() override {
+    Error finalize() override {
       if (!started)
         return createStringError("Serializer not currently in use");
       started = false;
@@ -175,7 +176,7 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
   
   private:
     void emitToAllDestinations(const TelemetryInfo* Entry) {
-      for (Destination* Dest : Destinations)
+      for (Destination* Dest : Destinations) {
         Dest->receiveEntry(Entry);
       }
     }
@@ -187,11 +188,11 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
   class MyDestination : public telemetry::Destination {
   public:
     Error receiveEntry(const TelemetryInfo* Entry) override {
-      if (Error err = serializer.start()) {
+      if (Error err = serializer.init()) {
         return err;
       }
       Entry->serialize(serializer);
-      if (Error err = serializer.finish()) {
+      if (Error err = serializer.finalize()) {
         return err;
       }
 
@@ -206,9 +207,6 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
 
   // This defines a custom TelemetryInfo that has an additional Msg field.
   struct MyTelemetryInfo : public telemetry::TelemetryInfo {
-    std::chrono::time_point<std::chrono::steady_clock> Start;
-    std::chrono::time_point<std::chrono::steady_clock> End;
-    
     std::string Msg;
     
     Error serialize(Serializer& serializer) const override {

@@ -4,7 +4,7 @@ namespace llvm {
 namespace telemetry {
 
 void TelemetryInfo::serialize(Serializer &serializer) const {
-  serializer.writeString("SessionId", SessionId);
+  serializer.write("SessionId", SessionId);
 }
 
 } // namespace telemetry
