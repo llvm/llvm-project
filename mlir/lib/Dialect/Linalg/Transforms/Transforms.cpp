@@ -1261,21 +1261,30 @@ LogicalResult DecomposeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
   Attribute zeroIdxAttr = rewriter.getIndexAttr(0);
   Attribute oneIdxAttr = rewriter.getIndexAttr(1);
 
-  // The sizes, affset and strides attributes for ExtractSliceOp.
+  // The shape for ExtractSliceOp. Note that this will consist of 3 blocks of
+  // dims:
+  //    [ outer-untiled-dims, outer-tiled-dims, tile-sizes ]
+  SmallVector<int64_t> readShapeForExtractSlice;
+  // The sizes attribute for ExtractSliceOp. Due to rank-reducing (and
+  // outer-tiled-dims being all 1), this will be
+  //    [ outer-untiled-dims, tile-sizes ]
   SmallVector<OpFoldResult> extractSliceSizes;
+  // The offset and strides attributes for ExtractSliceOp.
   SmallVector<OpFoldResult> extractSliceOffsets(srcRank, zeroIdxAttr);
   SmallVector<OpFoldResult> extractSliceStrides(srcRank, oneIdxAttr);
-  // The shape for ExtractSliceOp (due to rank-reducing, this is likely !=
-  // extractSliceSizes).
-  SmallVector<int64_t> readShapeForExtractSlice;
 
   // Shape for EmptyOp that's used as the init value for TransposeOp below.
-  // This should match tile size + transposition.
+  // This should be:
+  //    [ outer-untiled-dims, tile-sizes ]
+  // However, skip unit dims - TransposeOp (below) applies rank-reduced
+  // permutation.
   SmallVector<OpFoldResult> shapeForEmptyOp;
 
   for (auto i : llvm::seq<unsigned>(0, destRank)) {
-    // Given the assumption that all outer tiled dims are 1, the corresponding
-    // slice size to read is also 1. As this will be rank-reducing "extract
+    // Compute sizes attribute for ExtractSliceOp - outer-tiled-dims.
+    //
+    // As all outer tiled dims are 1, so the corresponding
+    // slice size to read will also 1. As this will be rank-reducing "extract
     // slice" (i.e. the unit dims will be "collapsed"), there's no need to
     // update:
     //  * the output shape for ExtractSliceOp, nor
@@ -1285,7 +1294,8 @@ LogicalResult DecomposeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
       continue;
     }
 
-    // Compute sizes attribute for ExtractSliceOp + EmptyOp
+    // Compute sizes attribute for ExtractSliceOp + EmptyOp -
+    // outer-untiled-dims
     if (ShapedType::isDynamic(srcShape[i])) {
       OpFoldResult dynamicDim =
           rewriter.create<tensor::DimOp>(loc, source, i).getResult();
@@ -1296,15 +1306,15 @@ LogicalResult DecomposeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
       if (srcShape[i] != 1)
         shapeForEmptyOp.push_back(rewriter.getIndexAttr(srcShape[i]));
     }
-    // Compute the output shape for ExtractSliceOp (take into account
-    // rank-reducing)
+    // Compute the output shape for ExtractSliceOp  - outer-untiled-dims (take
+    // into account rank-reducing)
     if (srcShape[i] != 1) {
       readShapeForExtractSlice.push_back(srcShape[i]);
     }
   }
+  // Append the tile sizes to "sizes attribute" for ExtractSliceOp and the
+  // shape for EmptyOp.
   auto mixedTiles = unpackOp.getMixedTiles();
-  // TODO: This effectively assumes that that tile sizes match the trailing
-  // sizes for ExtractSliceOp and EmptyOp - document this.
   extractSliceSizes.append(mixedTiles.begin(), mixedTiles.end());
   shapeForEmptyOp.append(mixedTiles.begin(), mixedTiles.end());
 
