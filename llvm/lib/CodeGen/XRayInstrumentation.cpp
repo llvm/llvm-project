@@ -24,7 +24,6 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -212,12 +211,8 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
   auto &FirstMI = *FirstMBB.begin();
 
   if (!MF.getSubtarget().isXRaySupported()) {
-
-    const Function &Fn = FirstMBB.getParent()->getFunction();
-    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
-        Fn, "An attempt to perform XRay instrumentation for an"
-            " unsupported target."));
-
+    FirstMI.emitError("An attempt to perform XRay instrumentation for an"
+                      " unsupported target.");
     return false;
   }
 
