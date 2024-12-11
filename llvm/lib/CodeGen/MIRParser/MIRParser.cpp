@@ -1098,7 +1098,7 @@ bool MIRParserImpl::initializeSaveRestorePoints(
   SMDiagnostic Error;
   MachineBasicBlock *MBB = nullptr;
   llvm::SaveRestorePoints SRPoints;
-  std::vector<Register> Registers{};
+  std::vector<Register> Registers;
 
   if (std::holds_alternative<std::vector<yaml::SaveRestorePointEntry>>(
           YamlSRPoints)) {
@@ -1116,7 +1116,6 @@ bool MIRParserImpl::initializeSaveRestorePoints(
         Register Reg;
         if (parseNamedRegisterReference(PFS, Reg, RegStr.Value, Error))
           return error(Error, RegStr.SourceRange);
-
         Registers.push_back(Reg);
       }
       SRPoints.insert(std::make_pair(MBB, Registers));
