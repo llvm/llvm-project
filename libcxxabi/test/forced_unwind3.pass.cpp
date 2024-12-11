@@ -60,10 +60,14 @@ struct Stop<R (*)(Args...)> {
   }
 };
 
+static void cleanup(_Unwind_Reason_Code, struct _Unwind_Exception* exc) {
+  delete exc;
+}
+
 static void forced_unwind() {
   _Unwind_Exception* exc = new _Unwind_Exception;
   memset(&exc->exception_class, 0, sizeof(exc->exception_class));
-  exc->exception_cleanup = 0;
+  exc->exception_cleanup = cleanup;
   _Unwind_ForcedUnwind(exc, Stop<_Unwind_Stop_Fn>::stop, 0);
   abort();
 }
