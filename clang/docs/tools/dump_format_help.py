@@ -57,6 +57,7 @@ def validate(text, columns):
 
 p = argparse.ArgumentParser()
 p.add_argument("-d", "--directory", help="directory of clang-format")
+p.add_argument("-o", "--output", help="path of output file")
 opts = p.parse_args()
 
 binary = "clang-format"
@@ -66,10 +67,10 @@ if opts.directory:
 help_text = get_help_text()
 validate(help_text, 100)
 
-with open(DOC_FILE) as f:
+with open(DOC_FILE, encoding="utf-8") as f:
     contents = f.read()
 
 contents = substitute(contents, "FORMAT_HELP", help_text)
 
-with open(DOC_FILE, "wb") as output:
+with open(opts.output if opts.output else DOC_FILE, "wb") as output:
     output.write(contents.encode())

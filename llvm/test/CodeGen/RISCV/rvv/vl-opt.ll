@@ -136,3 +136,17 @@ define <vscale x 4 x i32> @different_imm_vl_with_tu(<vscale x 4 x i32> %passthru
   %w = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %v, <vscale x 4 x i32> %a,iXLen 4)
   ret <vscale x 4 x i32> %w
 }
+
+define <vscale x 4 x i32> @dont_optimize_tied_def(<vscale x 4 x i32> %a, <vscale x 4 x i16> %b, <vscale x 4 x i16> %c, iXLen %vl) {
+; CHECK-LABEL: dont_optimize_tied_def:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e16, m1, tu, ma
+; CHECK-NEXT:    vwmacc.vv v8, v10, v11
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
+; CHECK-NEXT:    vwmacc.vv v8, v10, v11
+; CHECK-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vwmacc.nxv4i32.nxv4i16(<vscale x 4 x i32> %a, <vscale x 4 x i16> %b, <vscale x 4 x i16> %c, iXLen -1, iXLen 0)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vwmacc.nxv4i32.nxv4i16(<vscale x 4 x i32> %1, <vscale x 4 x i16> %b, <vscale x 4 x i16> %c, iXLen %vl, iXLen 0)
+  ret <vscale x 4 x i32> %2
+}
+

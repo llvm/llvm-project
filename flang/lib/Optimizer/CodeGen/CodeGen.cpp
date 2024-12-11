@@ -23,8 +23,8 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/TypeCode.h"
 #include "flang/Optimizer/Support/Utils.h"
-#include "flang/Runtime/allocator-registry.h"
-#include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/allocator-registry-consts.h"
+#include "flang/Runtime/descriptor-consts.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
@@ -1322,16 +1322,12 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
           insertField(rewriter, loc, descriptor, {kExtraPosInBox}, extraField);
     } else {
       // Compute the value of the extra field based on allocator_idx and
-      // addendum present using a Descriptor object.
-      Fortran::runtime::StaticDescriptor staticDescriptor;
-      Fortran::runtime::Descriptor &desc{staticDescriptor.descriptor()};
-      desc.raw().extra = 0;
-      desc.SetAllocIdx(allocatorIdx);
+      // addendum present.
+      unsigned extra = allocatorIdx << _CFI_ALLOCATOR_IDX_SHIFT;
       if (hasAddendum)
-        desc.SetHasAddendum();
-      descriptor =
-          insertField(rewriter, loc, descriptor, {kExtraPosInBox},
-                      this->genI32Constant(loc, rewriter, desc.raw().extra));
+        extra |= _CFI_ADDENDUM_FLAG;
+      descriptor = insertField(rewriter, loc, descriptor, {kExtraPosInBox},
+                               this->genI32Constant(loc, rewriter, extra));
     }
 
     if (hasAddendum) {

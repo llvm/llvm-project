@@ -74,8 +74,8 @@ protected:
   bool WatchpointIsEnabled(uint32_t wp_index);
   bool BreakpointIsEnabled(uint32_t bp_index);
 
-  // Hardware breakpoint length size is 4, and target address must 4-byte
-  // alignment.
+  // On AArch64 and Loongarch the hardware breakpoint length size is 4, and the
+  // target address must 4-byte alignment.
   bool ValidateBreakpoint(size_t size, lldb::addr_t addr) {
     return (size == 4) && !(addr & 0x3);
   }
@@ -89,8 +89,8 @@ protected:
   virtual uint32_t MakeWatchControlValue(size_t size, uint32_t watch_flags) = 0;
   virtual uint32_t GetWatchpointSize(uint32_t wp_index) = 0;
 
-  virtual Status ReadHardwareDebugInfo() = 0;
-  virtual Status WriteHardwareDebugRegs(DREGType hwbType) = 0;
+  virtual llvm::Error ReadHardwareDebugInfo() = 0;
+  virtual llvm::Error WriteHardwareDebugRegs(DREGType hwbType) = 0;
   virtual lldb::addr_t FixWatchpointHitAddress(lldb::addr_t hit_addr) {
     return hit_addr;
   }

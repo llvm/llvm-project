@@ -18,10 +18,11 @@ uint32_t NativeRegisterContextDBReg::NumSupportedHardwareBreakpoints() {
   Log *log = GetLog(LLDBLog::Breakpoints);
 
   // Read hardware breakpoint and watchpoint information.
-  Status error = ReadHardwareDebugInfo();
+  llvm::Error error = ReadHardwareDebugInfo();
 
-  if (error.Fail()) {
-    LLDB_LOG(log, "failed to read debug registers");
+  if (error) {
+    LLDB_LOG_ERROR(log, std::move(error),
+                   "failed to read debug registers: {0}");
     return 0;
   }
 
@@ -35,20 +36,19 @@ uint32_t NativeRegisterContextDBReg::SetHardwareBreakpoint(lldb::addr_t addr,
   LLDB_LOG(log, "addr: {0:x}, size: {1:x}", addr, size);
 
   // Read hardware breakpoint and watchpoint information.
-  Status error = ReadHardwareDebugInfo();
-  if (error.Fail()) {
-    LLDB_LOG(log,
-             "unable to set breakpoint: failed to read debug registers: {0}");
+  llvm::Error error = ReadHardwareDebugInfo();
+  if (error) {
+    LLDB_LOG_ERROR(
+        log, std::move(error),
+        "unable to set breakpoint: failed to read debug registers: {0}");
     return LLDB_INVALID_INDEX32;
   }
 
   uint32_t control_value = 0, bp_index = 0;
 
-  // Check hardware breakpoint size and address.
   if (!ValidateBreakpoint(size, addr))
     return LLDB_INVALID_INDEX32;
 
-  // Setup control value
   control_value = MakeBreakControlValue(size);
 
   // Iterate over stored breakpoints and find a free bp_index
@@ -71,12 +71,13 @@ uint32_t NativeRegisterContextDBReg::SetHardwareBreakpoint(lldb::addr_t addr,
   // PTRACE call to set corresponding hardware breakpoint register.
   error = WriteHardwareDebugRegs(eDREGTypeBREAK);
 
-  if (error.Fail()) {
+  if (error) {
     m_hbp_regs[bp_index].address = 0;
     m_hbp_regs[bp_index].control &= ~m_hw_dbg_enable_bit;
 
-    LLDB_LOG(log,
-             "unable to set breakpoint: failed to write debug registers: {0}");
+    LLDB_LOG_ERROR(
+        log, std::move(error),
+        "unable to set breakpoint: failed to write debug registers: {0}");
     return LLDB_INVALID_INDEX32;
   }
 
@@ -88,10 +89,11 @@ bool NativeRegisterContextDBReg::ClearHardwareBreakpoint(uint32_t hw_idx) {
   LLDB_LOG(log, "hw_idx: {0}", hw_idx);
 
   // Read hardware breakpoint and watchpoint information.
-  Status error = ReadHardwareDebugInfo();
-  if (error.Fail()) {
-    LLDB_LOG(log,
-             "unable to clear breakpoint: failed to read debug registers: {0}");
+  llvm::Error error = ReadHardwareDebugInfo();
+  if (error) {
+    LLDB_LOG_ERROR(
+        log, std::move(error),
+        "unable to clear breakpoint: failed to read debug registers: {0}");
     return false;
   }
 
@@ -108,12 +110,13 @@ bool NativeRegisterContextDBReg::ClearHardwareBreakpoint(uint32_t hw_idx) {
   // PTRACE call to clear corresponding hardware breakpoint register.
   error = WriteHardwareDebugRegs(eDREGTypeBREAK);
 
-  if (error.Fail()) {
+  if (error) {
     m_hbp_regs[hw_idx].control = tempControl;
     m_hbp_regs[hw_idx].address = tempAddr;
 
-    LLDB_LOG(log,
-             "unable to clear breakpoint: failed to write debug registers");
+    LLDB_LOG_ERROR(
+        log, std::move(error),
+        "unable to clear breakpoint: failed to write debug registers: {0}");
     return false;
   }
 
@@ -148,9 +151,9 @@ Status NativeRegisterContextDBReg::ClearAllHardwareBreakpoints() {
   LLDB_LOGF(log, "NativeRegisterContextDBReg::%s()", __FUNCTION__);
 
   // Read hardware breakpoint and watchpoint information.
-  Status error = ReadHardwareDebugInfo();
-  if (error.Fail())
-    return error;
+  llvm::Error error = ReadHardwareDebugInfo();
+  if (error)
+    return Status::FromError(std::move(error));
 
   for (uint32_t i = 0; i < m_max_hbp_supported; i++) {
     if (!BreakpointIsEnabled(i))
@@ -166,11 +169,11 @@ Status NativeRegisterContextDBReg::ClearAllHardwareBreakpoints() {
     // Ptrace call to update hardware debug registers
     error = WriteHardwareDebugRegs(eDREGTypeBREAK);
 
-    if (error.Fail()) {
+    if (error) {
       m_hbp_regs[i].control = tempControl;
       m_hbp_regs[i].address = tempAddr;
 
-      return error;
+      return Status::FromError(std::move(error));
     }
   }
 
@@ -183,9 +186,10 @@ bool NativeRegisterContextDBReg::BreakpointIsEnabled(uint32_t bp_index) {
 
 uint32_t NativeRegisterContextDBReg::NumSupportedHardwareWatchpoints() {
   Log *log = GetLog(LLDBLog::Watchpoints);
-  Status error = ReadHardwareDebugInfo();
-  if (error.Fail()) {
-    LLDB_LOG(log, "failed to read debug registers");
+  llvm::Error error = ReadHardwareDebugInfo();
+  if (error) {
+    LLDB_LOG_ERROR(log, std::move(error),
+                   "failed to read debug registers: {0}");
     return 0;
   }
 
@@ -199,10 +203,11 @@ uint32_t NativeRegisterContextDBReg::SetHardwareWatchpoint(
            watch_flags);
 
   // Read hardware breakpoint and watchpoint information.
-  Status error = ReadHardwareDebugInfo();
-  if (error.Fail()) {
-    LLDB_LOG(log,
-             "unable to set watchpoint: failed to read debug registers: {0}");
+  llvm::Error error = ReadHardwareDebugInfo();
+  if (error) {
+    LLDB_LOG_ERROR(
+        log, std::move(error),
+        "unable to set watchpoint: failed to read debug registers: {0}");
     return LLDB_INVALID_INDEX32;
   }
 
@@ -232,7 +237,6 @@ uint32_t NativeRegisterContextDBReg::SetHardwareWatchpoint(
     return LLDB_INVALID_INDEX32;
   }
 
-  // Setup control value
   control_value = MakeWatchControlValue(size, watch_flags);
 
   // Iterate over stored watchpoints and find a free wp_index
@@ -256,12 +260,13 @@ uint32_t NativeRegisterContextDBReg::SetHardwareWatchpoint(
   // PTRACE call to set corresponding watchpoint register.
   error = WriteHardwareDebugRegs(eDREGTypeWATCH);
 
-  if (error.Fail()) {
+  if (error) {
     m_hwp_regs[wp_index].address = 0;
     m_hwp_regs[wp_index].control &= ~m_hw_dbg_enable_bit;
 
-    LLDB_LOG(log,
-             "unable to set watchpoint: failed to write debug registers: {0}");
+    LLDB_LOG_ERROR(
+        log, std::move(error),
+        "unable to set watchpoint: failed to write debug registers: {0}");
     return LLDB_INVALID_INDEX32;
   }
 
@@ -273,9 +278,11 @@ bool NativeRegisterContextDBReg::ClearHardwareWatchpoint(uint32_t wp_index) {
   LLDB_LOG(log, "wp_index: {0}", wp_index);
 
   // Read hardware breakpoint and watchpoint information.
-  Status error = ReadHardwareDebugInfo();
-  if (error.Fail()) {
-    LLDB_LOG(log, "unable to set watchpoint: failed to read debug registers");
+  llvm::Error error = ReadHardwareDebugInfo();
+  if (error) {
+    LLDB_LOG_ERROR(
+        log, std::move(error),
+        "unable to set watchpoint: failed to read debug registers: {0}");
     return LLDB_INVALID_INDEX32;
   }
 
@@ -293,11 +300,13 @@ bool NativeRegisterContextDBReg::ClearHardwareWatchpoint(uint32_t wp_index) {
   // Ptrace call to update hardware debug registers
   error = WriteHardwareDebugRegs(eDREGTypeWATCH);
 
-  if (error.Fail()) {
+  if (error) {
     m_hwp_regs[wp_index].control = tempControl;
     m_hwp_regs[wp_index].address = tempAddr;
 
-    LLDB_LOG(log, "unable to clear watchpoint: failed to read debug registers");
+    LLDB_LOG_ERROR(
+        log, std::move(error),
+        "unable to clear watchpoint: failed to read debug registers: {0}");
     return false;
   }
 
@@ -306,9 +315,9 @@ bool NativeRegisterContextDBReg::ClearHardwareWatchpoint(uint32_t wp_index) {
 
 Status NativeRegisterContextDBReg::ClearAllHardwareWatchpoints() {
   // Read hardware breakpoint and watchpoint information.
-  Status error = ReadHardwareDebugInfo();
-  if (error.Fail())
-    return error;
+  llvm::Error error = ReadHardwareDebugInfo();
+  if (error)
+    return Status::FromError(std::move(error));
 
   for (uint32_t i = 0; i < m_max_hwp_supported; i++) {
     if (!WatchpointIsEnabled(i))
@@ -324,11 +333,11 @@ Status NativeRegisterContextDBReg::ClearAllHardwareWatchpoints() {
     // Ptrace call to update hardware debug registers
     error = WriteHardwareDebugRegs(eDREGTypeWATCH);
 
-    if (error.Fail()) {
+    if (error) {
       m_hwp_regs[i].control = tempControl;
       m_hwp_regs[i].address = tempAddr;
 
-      return error;
+      return Status::FromError(std::move(error));
     }
   }
 
@@ -342,12 +351,11 @@ NativeRegisterContextDBReg::GetWatchpointHitIndex(uint32_t &wp_index,
   LLDB_LOG(log, "wp_index: {0}, trap_addr: {1:x}", wp_index, trap_addr);
 
   // Read hardware breakpoint and watchpoint information.
-  Status error = ReadHardwareDebugInfo();
-  if (error.Fail())
-    return error;
+  llvm::Error error = ReadHardwareDebugInfo();
+  if (error)
+    return Status::FromError(std::move(error));
 
-  // Mask off ignored bits from watchpoint trap address.
-  // aarch64
+  // AArch64 need mask off ignored bits from watchpoint trap address.
   trap_addr = FixWatchpointHitAddress(trap_addr);
 
   uint32_t watch_size;

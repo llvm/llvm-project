@@ -60,7 +60,7 @@ STATISTIC(NumIdCopies,   "Number of identity moves eliminated after rewriting");
 char VirtRegMapWrapperLegacy::ID = 0;
 
 INITIALIZE_PASS(VirtRegMapWrapperLegacy, "virtregmap", "Virtual Register Map",
-                false, false)
+                false, true)
 
 void VirtRegMap::init(MachineFunction &mf) {
   MRI = &mf.getRegInfo();
