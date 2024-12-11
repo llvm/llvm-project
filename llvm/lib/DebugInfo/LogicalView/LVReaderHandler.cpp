@@ -90,7 +90,7 @@ Error LVReaderHandler::handleArchive(LVReaders &Readers, StringRef Filename,
 
   if (Err)
     return createStringError(errorToErrorCode(std::move(Err)), "%s",
-                               Filename.str().c_str());
+                             Filename.str().c_str());
   return Error::success();
 }
 
