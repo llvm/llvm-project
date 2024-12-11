@@ -355,22 +355,21 @@ typedef std::unordered_map<BinaryFunction *, std::vector<BinaryFunction *>,
 namespace llvm {
 namespace bolt {
 /// Scans symbol table and creates a bit vector of memory addresses of vtables.
-static void processSymbolTable(const BinaryContext &BC,
-                               llvm::BitVector &BitVector) {
+void IdenticalCodeFolding::processSymbolTable(const BinaryContext &BC) {
   for (auto &[Address, Data] : BC.getBinaryData()) {
     // Filter out all symbols that are not vtables.
     if (!Data->getName().starts_with("_ZTV"))
       continue;
     for (uint64_t I = Address / 8, End = I + (Data->getSize() / 8); I < End;
          ++I)
-      BitVector.set(I);
+      VtableBitVector.set(I);
   }
 }
 Error IdenticalCodeFolding::processDataRelocations(
     BinaryContext &BC, const SectionRef &SecRefRelData,
-    const llvm::BitVector &BitVector, const bool HasAddressTaken) {
+    const bool HasAddressTaken) {
   for (const RelocationRef &Rel : SecRefRelData.relocations()) {
-    if (BitVector.test(Rel.getOffset() / 8))
+    if (isInVTable(Rel.getOffset()))
       continue;
     symbol_iterator SymbolIter = Rel.getSymbol();
     const ObjectFile *OwningObj = Rel.getObject();
@@ -393,10 +392,8 @@ Error IdenticalCodeFolding::processDataRelocations(
 
 Error IdenticalCodeFolding::markFunctionsUnsafeToFold(BinaryContext &BC) {
   if (!BC.isX86())
-    BC.outs() << "BOLT-WARNING: Safe ICF is only supported for x86\n";
-  constexpr uint64_t NumBits = (((uint64_t)1) << 32) / 8;
-  llvm::BitVector BitVector(NumBits);
-  processSymbolTable(BC, BitVector);
+    BC.outs() << "BOLT-WARNING: safe ICF is only supported for x86\n";
+  processSymbolTable(BC);
   for (const auto &Sec : BC.sections()) {
     if (!Sec.hasSectionRef() || !Sec.isRela())
       continue;
@@ -414,8 +411,8 @@ Error IdenticalCodeFolding::markFunctionsUnsafeToFold(BinaryContext &BC) {
     if (!RelocatedSecRef.isData() || SkipRelocs)
       continue;
 
-    Error ErrorStatus = processDataRelocations(BC, SecRef, BitVector,
-                                               /* HasAddressTaken */ true);
+    Error ErrorStatus =
+        processDataRelocations(BC, SecRef, /* HasAddressTaken */ true);
     if (ErrorStatus)
       return ErrorStatus;
   }
@@ -423,8 +420,8 @@ Error IdenticalCodeFolding::markFunctionsUnsafeToFold(BinaryContext &BC) {
       BC.getUniqueSectionByName(".rela.init_array");
   if (SecRelDataIA) {
     const SectionRef SecRefRelData = SecRelDataIA->getSectionRef();
-    Error ErrorStatus = processDataRelocations(BC, SecRefRelData, BitVector,
-                                               /* !HasAddressTaken */ false);
+    Error ErrorStatus =
+        processDataRelocations(BC, SecRefRelData, /* !HasAddressTaken */ false);
     if (ErrorStatus)
       return ErrorStatus;
   }
@@ -432,8 +429,8 @@ Error IdenticalCodeFolding::markFunctionsUnsafeToFold(BinaryContext &BC) {
       BC.getUniqueSectionByName(".rela.fini_array");
   if (SecRelDataFIA) {
     const SectionRef SecRefRelData = SecRelDataFIA->getSectionRef();
-    Error ErrorStatus = processDataRelocations(BC, SecRefRelData, BitVector,
-                                               /* !HasAddressTaken */ false);
+    Error ErrorStatus =
+        processDataRelocations(BC, SecRefRelData, /* !HasAddressTaken */ false);
     if (ErrorStatus)
       return ErrorStatus;
   }

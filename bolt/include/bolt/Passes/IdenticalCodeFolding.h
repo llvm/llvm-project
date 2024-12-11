@@ -39,12 +39,22 @@ public:
     All,  // Aggressive ICF for code.
   };
   explicit IdenticalCodeFolding(const cl::opt<bool> &PrintPass)
-      : BinaryFunctionPass(PrintPass) {}
+      : BinaryFunctionPass(PrintPass) {
+    VtableBitVector.resize((((uint64_t)1) << 32) / 8);
+  }
 
   const char *getName() const override { return "identical-code-folding"; }
   Error runOnFunctions(BinaryContext &BC) override;
 
 private:
+  /// Bit vector of memory addresses of vtables.
+  llvm::BitVector VtableBitVector;
+  bool isInVTable(uint64_t Address) const {
+    return VtableBitVector.test(Address / 8);
+  }
+  /// Scans symbol table and creates a bit vector of memory addresses of
+  /// vtables.
+  void processSymbolTable(const BinaryContext &BC);
   /// Analyze .text section and relocations and mark functions that are not
   /// safe to fold.
   Error markFunctionsUnsafeToFold(BinaryContext &BC);
@@ -52,7 +62,6 @@ private:
   /// references.
   Error processDataRelocations(BinaryContext &BC,
                                const SectionRef &SecRefRelData,
-                               const llvm::BitVector &BitVector,
                                const bool HasAddressTaken);
 };
 
