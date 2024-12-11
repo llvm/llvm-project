@@ -111,8 +111,8 @@ define <vscale x 4 x i32> @different_vl_with_ta(<vscale x 4 x i32> %a, <vscale x
 define <vscale x 4 x i32> @different_vl_with_tu(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl1, iXLen %vl2) {
 ; CHECK-LABEL: different_vl_with_tu:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmv2r.v v14, v10
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
+; CHECK-NEXT:    vmv2r.v v14, v10
 ; CHECK-NEXT:    vadd.vv v14, v10, v12
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
 ; CHECK-NEXT:    vadd.vv v8, v14, v10
@@ -126,8 +126,8 @@ define <vscale x 4 x i32> @different_vl_with_tu(<vscale x 4 x i32> %passthru, <v
 define <vscale x 4 x i32> @different_imm_vl_with_tu(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl1, iXLen %vl2) {
 ; CHECK-LABEL: different_imm_vl_with_tu:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmv2r.v v14, v10
 ; CHECK-NEXT:    vsetivli zero, 5, e32, m2, tu, ma
+; CHECK-NEXT:    vmv2r.v v14, v10
 ; CHECK-NEXT:    vadd.vv v14, v10, v12
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
 ; CHECK-NEXT:    vadd.vv v8, v14, v10
@@ -136,3 +136,17 @@ define <vscale x 4 x i32> @different_imm_vl_with_tu(<vscale x 4 x i32> %passthru
   %w = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %v, <vscale x 4 x i32> %a,iXLen 4)
   ret <vscale x 4 x i32> %w
 }
+
+define <vscale x 4 x i32> @dont_optimize_tied_def(<vscale x 4 x i32> %a, <vscale x 4 x i16> %b, <vscale x 4 x i16> %c, iXLen %vl) {
+; CHECK-LABEL: dont_optimize_tied_def:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e16, m1, tu, ma
+; CHECK-NEXT:    vwmacc.vv v8, v10, v11
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
+; CHECK-NEXT:    vwmacc.vv v8, v10, v11
+; CHECK-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vwmacc.nxv4i32.nxv4i16(<vscale x 4 x i32> %a, <vscale x 4 x i16> %b, <vscale x 4 x i16> %c, iXLen -1, iXLen 0)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vwmacc.nxv4i32.nxv4i16(<vscale x 4 x i32> %1, <vscale x 4 x i16> %b, <vscale x 4 x i16> %c, iXLen %vl, iXLen 0)
+  ret <vscale x 4 x i32> %2
+}
+

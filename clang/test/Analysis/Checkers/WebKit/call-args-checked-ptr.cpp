@@ -365,3 +365,22 @@ namespace call_with_explicit_temporary_obj {
     CheckedPtr { provide() }->method();
   }
 }
+
+namespace call_with_checked_ptr {
+
+  class Foo : public CheckedObj {
+  public:
+    CheckedPtr<CheckedObj> obj1() { return m_obj; }
+    CheckedRef<CheckedObj> obj2() { return *m_obj; }
+  private:
+    CheckedObj* m_obj;
+  };
+
+  Foo* getFoo();
+
+  void bar() {
+    getFoo()->obj1()->method();
+    getFoo()->obj2()->method();
+  }
+
+}

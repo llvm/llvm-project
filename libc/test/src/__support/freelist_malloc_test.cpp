@@ -13,6 +13,7 @@
 #include "src/stdlib/malloc.h"
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::Block;
 using LIBC_NAMESPACE::freelist_heap;
 using LIBC_NAMESPACE::FreeListHeap;
 using LIBC_NAMESPACE::FreeListHeapBuffer;
@@ -21,8 +22,6 @@ TEST(LlvmLibcFreeListMalloc, Malloc) {
   constexpr size_t kAllocSize = 256;
   constexpr size_t kCallocNum = 4;
   constexpr size_t kCallocSize = 64;
-
-  typedef FreeListHeap<>::BlockType Block;
 
   void *ptr1 = LIBC_NAMESPACE::malloc(kAllocSize);
   auto *block = Block::from_usable_space(ptr1);

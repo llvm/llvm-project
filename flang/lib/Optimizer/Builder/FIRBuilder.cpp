@@ -267,6 +267,26 @@ mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
   return getEntryBlock();
 }
 
+static mlir::ArrayAttr makeI64ArrayAttr(llvm::ArrayRef<int64_t> values,
+                                        mlir::MLIRContext *context) {
+  llvm::SmallVector<mlir::Attribute, 4> attrs;
+  attrs.reserve(values.size());
+  for (auto &v : values)
+    attrs.push_back(mlir::IntegerAttr::get(mlir::IntegerType::get(context, 64),
+                                           mlir::APInt(64, v)));
+  return mlir::ArrayAttr::get(context, attrs);
+}
+
+mlir::ArrayAttr fir::FirOpBuilder::create2DI64ArrayAttr(
+    llvm::SmallVectorImpl<llvm::SmallVector<int64_t>> &intData) {
+  llvm::SmallVector<mlir::Attribute> arrayAttr;
+  arrayAttr.reserve(intData.size());
+  mlir::MLIRContext *context = getContext();
+  for (auto &v : intData)
+    arrayAttr.push_back(makeI64ArrayAttr(v, context));
+  return mlir::ArrayAttr::get(context, arrayAttr);
+}
+
 mlir::Value fir::FirOpBuilder::createTemporaryAlloc(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
     mlir::ValueRange lenParams, mlir::ValueRange shape,

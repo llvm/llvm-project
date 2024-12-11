@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_STRING_VIEW
-#define _LIBCPP_STRING_VIEW
+#ifndef _LIBCPP___CXX03_STRING_VIEW
+#define _LIBCPP___CXX03_STRING_VIEW
 
 // clang-format off
 
@@ -945,4 +945,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_STRING_VIEW
+#endif // _LIBCPP___CXX03_STRING_VIEW

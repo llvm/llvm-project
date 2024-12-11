@@ -1,4 +1,4 @@
-//=== ClangASTPropsEmitter.cpp - Generate Clang AST properties --*- C++ -*-===//
+//===-- ClangASTPropsEmitter.cpp - Generate Clang AST properties ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,14 +13,12 @@
 #include "ASTTableGen.h"
 #include "TableGenBackends.h"
 
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <cctype>
 #include <map>
-#include <optional>
 #include <set>
 #include <string>
 using namespace llvm;

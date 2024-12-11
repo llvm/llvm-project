@@ -105,7 +105,7 @@ void RegAllocBase::allocatePhysRegs() {
     // result from splitting.
     LLVM_DEBUG(dbgs() << "\nselectOrSplit "
                       << TRI->getRegClassName(MRI->getRegClass(VirtReg->reg()))
-                      << ':' << *VirtReg << " w=" << VirtReg->weight() << '\n');
+                      << ':' << *VirtReg << '\n');
 
     using VirtRegVec = SmallVector<Register, 4>;
 
@@ -127,7 +127,8 @@ void RegAllocBase::allocatePhysRegs() {
       if (AllocOrder.empty())
         report_fatal_error("no registers from class available to allocate");
       else if (MI && MI->isInlineAsm()) {
-        MI->emitError("inline assembly requires more registers than available");
+        MI->emitInlineAsmError(
+            "inline assembly requires more registers than available");
       } else if (MI) {
         LLVMContext &Context =
             MI->getParent()->getParent()->getFunction().getContext();

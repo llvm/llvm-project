@@ -327,4 +327,23 @@ entry:
   ret void
 }
 
+; GCN-LABEL: {{^}}fi_vop3_literal_error:
+; CI: v_lshr_b32_e64 [[SCALED_FP:v[0-9]+]], s33, 6
+; CI: s_movk_i32 vcc_lo, 0x3000
+; CI-NEXT: v_add_i32_e32 [[SCALED_FP]], vcc, vcc_lo, [[SCALED_FP]]
+; CI-NEXT: v_add_i32_e32 v0, vcc, 64, [[SCALED_FP]]
+
+; GFX9-MUBUF: v_lshrrev_b32_e64 [[SCALED_FP:v[0-9]+]], 6, s33
+; GFX9-MUBUF-NEXT: v_add_u32_e32 [[SCALED_FP]], 0x3000, [[SCALED_FP]]
+; GFX9-MUBUF-NEXT: v_add_u32_e32 v0, 64, [[SCALED_FP]]
+define void @fi_vop3_literal_error() {
+entry:
+  %pin.low = alloca i32, align 8192, addrspace(5)
+  %local.area = alloca [1060 x i64], align 4096, addrspace(5)
+  store i32 0, ptr addrspace(5) %pin.low, align 4
+  %gep.small.offset = getelementptr i8, ptr addrspace(5) %local.area, i64 64
+  %load1 = load volatile i64, ptr addrspace(5) %gep.small.offset, align 4
+  ret void
+}
+
 attributes #0 = { nounwind }

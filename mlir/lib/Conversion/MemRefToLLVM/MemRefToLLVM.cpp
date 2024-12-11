@@ -192,22 +192,15 @@ struct AssumeAlignmentOpLowering
     Value ptr = getStridedElementPtr(loc, srcMemRefType, memref, /*indices=*/{},
                                      rewriter);
 
-    // Emit llvm.assume(memref & (alignment - 1) == 0).
-    //
-    // This relies on LLVM's CSE optimization (potentially after SROA), since
-    // after CSE all memref instances should get de-duplicated into the same
-    // pointer SSA value.
-    MemRefDescriptor memRefDescriptor(memref);
-    auto intPtrType =
-        getIntPtrType(memRefDescriptor.getElementPtrType().getAddressSpace());
-    Value zero = createIndexAttrConstant(rewriter, loc, intPtrType, 0);
-    Value mask =
-        createIndexAttrConstant(rewriter, loc, intPtrType, alignment - 1);
-    Value ptrValue = rewriter.create<LLVM::PtrToIntOp>(loc, intPtrType, ptr);
-    rewriter.create<LLVM::AssumeOp>(
-        loc, rewriter.create<LLVM::ICmpOp>(
-                 loc, LLVM::ICmpPredicate::eq,
-                 rewriter.create<LLVM::AndOp>(loc, ptrValue, mask), zero));
+    // Emit llvm.assume(true) ["align"(memref, alignment)].
+    // This is more direct than ptrtoint-based checks, is explicitly supported,
+    // and works with non-integral address spaces.
+    Value trueCond =
+        rewriter.create<LLVM::ConstantOp>(loc, rewriter.getBoolAttr(true));
+    Value alignmentConst =
+        createIndexAttrConstant(rewriter, loc, getIndexType(), alignment);
+    rewriter.create<LLVM::AssumeOp>(loc, trueCond, LLVM::AssumeAlignTag(), ptr,
+                                    alignmentConst);
 
     rewriter.eraseOp(op);
     return success();

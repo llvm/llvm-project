@@ -273,6 +273,12 @@ enum NodeType : unsigned {
   UADDLV,
   SADDLV,
 
+  // Wide adds
+  SADDWT,
+  SADDWB,
+  UADDWT,
+  UADDWB,
+
   // Add Pairwise of two vectors
   ADDP,
   // Add Long Pairwise
@@ -514,12 +520,6 @@ enum NodeType : unsigned {
   STP,
   STILP,
   STNP,
-
-  // Memory Operations
-  MOPS_MEMSET,
-  MOPS_MEMSET_TAGGING,
-  MOPS_MEMCOPY,
-  MOPS_MEMMOVE,
 };
 
 } // end namespace AArch64ISD
@@ -985,6 +985,8 @@ public:
 
   bool shouldExpandCttzElements(EVT VT) const override;
 
+  bool shouldExpandVectorMatch(EVT VT, unsigned SearchSize) const override;
+
   /// If a change in streaming mode is required on entry to/return from a
   /// function call it emits and returns the corresponding SMSTART or SMSTOP
   /// node. \p Condition should be one of the enum values from
@@ -1346,6 +1348,10 @@ private:
   unsigned getMinimumJumpTableEntries() const override;
 
   bool softPromoteHalfType() const override { return true; }
+
+  bool shouldScalarizeBinop(SDValue VecOp) const override {
+    return VecOp.getOpcode() == ISD::SETCC;
+  }
 };
 
 namespace AArch64 {

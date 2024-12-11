@@ -33,6 +33,10 @@ TEST(LlvmLibcSysStatvfsTest, StatvfsInvalidPath) {
   constexpr const char *FILENAME = "statvfs.testdir";
   auto TEST_DIR = libc_make_test_file_path(FILENAME);
 
+  // Always delete the folder so that we start in a consistent state.
+  LIBC_NAMESPACE::rmdir(TEST_DIR);
+  LIBC_NAMESPACE::libc_errno = 0; // Reset errno
+
   ASSERT_THAT(LIBC_NAMESPACE::mkdirat(AT_FDCWD, TEST_DIR, S_IRWXU),
               Succeeds(0));
 

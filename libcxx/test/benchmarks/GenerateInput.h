@@ -53,6 +53,7 @@ inline std::vector<IntT> getDuplicateIntegerInputs(std::size_t N) {
 template <class IntT>
 inline std::vector<IntT> getSortedIntegerInputs(std::size_t N) {
   std::vector<IntT> inputs;
+  inputs.reserve(N);
   for (std::size_t i = 0; i < N; i += 1)
     inputs.push_back(i);
   return inputs;
@@ -61,6 +62,7 @@ inline std::vector<IntT> getSortedIntegerInputs(std::size_t N) {
 template <class IntT>
 std::vector<IntT> getSortedLargeIntegerInputs(std::size_t N) {
   std::vector<IntT> inputs;
+  inputs.reserve(N);
   for (std::size_t i = 0; i < N; ++i)
     inputs.push_back(i + N);
   return inputs;
@@ -77,6 +79,7 @@ std::vector<IntT> getSortedTopBitsIntegerInputs(std::size_t N) {
 template <class IntT>
 inline std::vector<IntT> getReverseSortedIntegerInputs(std::size_t N) {
   std::vector<IntT> inputs;
+  inputs.reserve(N);
   std::size_t i = N;
   while (i > 0) {
     --i;
@@ -99,8 +102,17 @@ std::vector<IntT> getPipeOrganIntegerInputs(std::size_t N) {
 template <class IntT>
 std::vector<IntT> getRandomIntegerInputs(std::size_t N) {
   std::vector<IntT> inputs;
+  inputs.reserve(N);
   for (std::size_t i = 0; i < N; ++i)
     inputs.push_back(getRandomInteger<IntT>(0, std::numeric_limits<IntT>::max()));
+  return inputs;
+}
+
+inline std::vector<std::string> getRandomStringInputsWithLength(std::size_t N, std::size_t len) { // N-by-len
+  std::vector<std::string> inputs;
+  inputs.reserve(N);
+  for (std::size_t i = 0; i < N; ++i)
+    inputs.push_back(getRandomString(len));
   return inputs;
 }
 
@@ -110,14 +122,21 @@ inline std::vector<std::string> getDuplicateStringInputs(std::size_t N) {
 }
 
 inline std::vector<std::string> getRandomStringInputs(std::size_t N) {
-  std::vector<std::string> inputs;
+  return getRandomStringInputsWithLength(N, 1024);
+}
+
+template <class IntT>
+std::vector<std::vector<IntT>> getRandomIntegerInputsWithLength(std::size_t N, std::size_t len) { // N-by-len
+  std::vector<std::vector<IntT>> inputs;
+  inputs.reserve(N);
   for (std::size_t i = 0; i < N; ++i)
-    inputs.push_back(getRandomString(1024));
+    inputs.push_back(getRandomIntegerInputs<IntT>(len));
   return inputs;
 }
 
 inline std::vector<std::string> getPrefixedRandomStringInputs(std::size_t N) {
   std::vector<std::string> inputs;
+  inputs.reserve(N);
   constexpr int kSuffixLength = 32;
   const std::string prefix    = getRandomString(1024 - kSuffixLength);
   for (std::size_t i = 0; i < N; ++i)

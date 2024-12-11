@@ -363,7 +363,7 @@ struct TestVectorTransferCollapseInnerMostContiguousDims
   }
 
   StringRef getDescription() const final {
-    return "Test lowering patterns that reducedes the rank of the vector "
+    return "Test lowering patterns that reduces the rank of the vector "
            "transfer memory and vector operands.";
   }
 
@@ -388,7 +388,7 @@ struct TestVectorSinkPatterns
   StringRef getArgument() const final { return "test-vector-sink-patterns"; }
 
   StringRef getDescription() const final {
-    return "Test lowering patterns that eliminate redundant brodacast "
+    return "Test lowering patterns that eliminate redundant broadcast "
            "and transpose operations.";
   }
 
@@ -519,7 +519,7 @@ struct TestVectorScanLowering
 /// Allocate shared memory for a single warp to test lowering of
 /// WarpExecuteOnLane0Op.
 static Value allocateGlobalSharedMemory(Location loc, OpBuilder &builder,
-                                        WarpExecuteOnLane0Op warpOp,
+                                        gpu::WarpExecuteOnLane0Op warpOp,
                                         Type type) {
   static constexpr int64_t kSharedMemorySpace = 3;
   // Compute type of shared memory buffer.
@@ -583,8 +583,9 @@ struct TestVectorDistribution
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorDistribution)
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<scf::SCFDialect, memref::MemRefDialect, gpu::GPUDialect,
-                    affine::AffineDialect>();
+    registry
+        .insert<vector::VectorDialect, scf::SCFDialect, memref::MemRefDialect,
+                gpu::GPUDialect, affine::AffineDialect>();
   }
 
   StringRef getArgument() const final { return "test-vector-warp-distribute"; }
@@ -616,13 +617,13 @@ struct TestVectorDistribution
 
   Option<bool> propagateDistribution{
       *this, "propagate-distribution",
-      llvm::cl::desc("Test distribution propgation"), llvm::cl::init(false)};
+      llvm::cl::desc("Test distribution propagation"), llvm::cl::init(false)};
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
 
     getOperation().walk([&](Operation *op) {
-      if (auto warpOp = dyn_cast<WarpExecuteOnLane0Op>(op)) {
+      if (auto warpOp = dyn_cast<gpu::WarpExecuteOnLane0Op>(op)) {
         if (hoistUniform) {
           moveScalarUniformCode(warpOp);
         }
@@ -677,7 +678,7 @@ struct TestVectorDistribution
     WarpExecuteOnLane0LoweringOptions options;
     options.warpAllocationFn = allocateGlobalSharedMemory;
     options.warpSyncronizationFn = [](Location loc, OpBuilder &builder,
-                                      WarpExecuteOnLane0Op warpOp) {
+                                      gpu::WarpExecuteOnLane0Op warpOp) {
       builder.create<gpu::BarrierOp>(loc);
     };
     // Test on one pattern in isolation.

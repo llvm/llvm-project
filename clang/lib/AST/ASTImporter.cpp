@@ -53,13 +53,11 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
-#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <algorithm>
@@ -106,8 +104,8 @@ namespace clang {
   char ASTImportError::ID;
 
   template <class T>
-  SmallVector<Decl *, 2>
-  getCanonicalForwardRedeclChain(Redeclarable<T>* D) {
+  static SmallVector<Decl *, 2>
+  getCanonicalForwardRedeclChain(Redeclarable<T> *D) {
     SmallVector<Decl *, 2> Redecls;
     for (auto *R : D->getFirstDecl()->redecls()) {
       if (R != D->getFirstDecl())
@@ -128,7 +126,7 @@ namespace clang {
     llvm_unreachable("Bad declaration kind");
   }
 
-  void updateFlags(const Decl *From, Decl *To) {
+  static void updateFlags(const Decl *From, Decl *To) {
     // Check if some flags or attrs are new in 'From' and copy into 'To'.
     // FIXME: Other flags or attrs?
     if (From->isUsed(false) && !To->isUsed(false))
@@ -6095,8 +6093,7 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
                                               Decl::IDNS_TagFriend))
         continue;
 
-      Decl *Found = FoundDecl;
-      auto *FoundTemplate = dyn_cast<ClassTemplateDecl>(Found);
+      auto *FoundTemplate = dyn_cast<ClassTemplateDecl>(FoundDecl);
       if (FoundTemplate) {
         if (!hasSameVisibilityContextAndLinkage(FoundTemplate, D))
           continue;
@@ -6120,6 +6117,19 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
           // see ASTTests test ImportExistingFriendClassTemplateDef.
           continue;
         }
+        // When importing a friend, it is possible that multiple declarations
+        // with same name can co-exist in specific cases (if a template contains
+        // a friend template and has a specialization). For this case the
+        // declarations should match, except that the "template depth" is
+        // different. No linking of previous declaration is needed in this case.
+        // FIXME: This condition may need refinement.
+        if (D->getFriendObjectKind() != Decl::FOK_None &&
+            FoundTemplate->getFriendObjectKind() != Decl::FOK_None &&
+            D->getFriendObjectKind() != FoundTemplate->getFriendObjectKind() &&
+            IsStructuralMatch(D, FoundTemplate, /*Complain=*/false,
+                              /*IgnoreTemplateParmDepth=*/true))
+          continue;
+
         ConflictingDecls.push_back(FoundDecl);
       }
     }

@@ -25,8 +25,6 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/ScopeInfo.h"
-#include "clang/Sema/SemaInternal.h"
-#include "llvm/ADT/SmallSet.h"
 
 using namespace clang;
 using namespace sema;

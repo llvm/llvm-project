@@ -2184,6 +2184,18 @@ multiclass EFLAGSDefiningPats<string suffix, Predicate p> {
 defm : EFLAGSDefiningPats<"", NoNDD>;
 defm : EFLAGSDefiningPats<"_ND", HasNDD>;
 
+let Predicates = [HasZU] in {
+  // zext (mul reg/mem, imm) -> imulzu
+  def : Pat<(i32 (zext (i16 (mul GR16:$src1, imm:$src2)))),
+            (SUBREG_TO_REG (i32 0), (IMULZU16rri GR16:$src1, imm:$src2), sub_16bit)>;
+  def : Pat<(i32 (zext (i16 (mul (loadi16 addr:$src1), imm:$src2)))),
+            (SUBREG_TO_REG (i32 0), (IMULZU16rmi addr:$src1, imm:$src2), sub_16bit)>;
+  def : Pat<(i64 (zext (i16 (mul GR16:$src1, imm:$src2)))),
+            (SUBREG_TO_REG (i64 0), (IMULZU16rri GR16:$src1, imm:$src2), sub_16bit)>;
+  def : Pat<(i64 (zext (i16 (mul (loadi16 addr:$src1), imm:$src2)))),
+            (SUBREG_TO_REG (i64 0), (IMULZU16rmi addr:$src1, imm:$src2), sub_16bit)>;
+}
+  
 // mul reg, imm
 def : Pat<(mul GR16:$src1, imm:$src2),
           (IMUL16rri GR16:$src1, imm:$src2)>;

@@ -16,18 +16,14 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearchOptions.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
-#include "llvm/CodeGen/RegAllocRegistry.h"
-#include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/IR/DataLayout.h"
@@ -39,7 +35,6 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/LTO/LTOBackend.h"
-#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -794,13 +789,12 @@ static void addSanitizers(const Triple &TargetTriple,
   }
 
   if (LowerAllowCheckPass::IsRequested()) {
-    // We can optimize after inliner, and PGO profile matching. The hook below
-    // is called at the end `buildFunctionSimplificationPipeline`, which called
-    // from `buildInlinerPipeline`, which called after profile matching.
-    PB.registerScalarOptimizerLateEPCallback(
-        [](FunctionPassManager &FPM, OptimizationLevel Level) {
-          FPM.addPass(LowerAllowCheckPass());
-        });
+    // We want to call it after inline, which is about OptimizerEarlyEPCallback.
+    PB.registerOptimizerEarlyEPCallback([](ModulePassManager &MPM,
+                                           OptimizationLevel Level,
+                                           ThinOrFullLTOPhase Phase) {
+      MPM.addPass(createModuleToFunctionPassAdaptor(LowerAllowCheckPass()));
+    });
   }
 }
 
@@ -1029,12 +1023,14 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
             FPM.addPass(BoundsCheckingPass());
           });
 
-    if (LangOpts.Sanitize.has(SanitizerKind::Realtime))
+    if (LangOpts.Sanitize.has(SanitizerKind::Realtime)) {
       PB.registerScalarOptimizerLateEPCallback(
           [](FunctionPassManager &FPM, OptimizationLevel Level) {
             RealtimeSanitizerOptions Opts;
             FPM.addPass(RealtimeSanitizerPass(Opts));
           });
+      MPM.addPass(ModuleRealtimeSanitizerPass());
+    }
 
     // Don't add sanitizers if we are here from ThinLTO PostLink. That already
     // done on PreLink stage.

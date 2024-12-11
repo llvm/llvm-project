@@ -12,10 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86CustomBehaviour.h"
-#include "TargetInfo/X86TargetInfo.h"
 #include "MCTargetDesc/X86BaseInfo.h"
+#include "TargetInfo/X86TargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/WithColor.h"
 
 namespace llvm {
 namespace mca {
