@@ -392,8 +392,6 @@ llvm::Error Interpret(std::vector<ControlStackElement> &control,
       int64_t x = data.Pop<int64_t>();                                         \
       if (y > 64)                                                              \
         return error("shift out of bounds");                                   \
-      if (y < 0)                                                               \
-        return error("shift out of bounds");                                   \
       data.Push(x OP y);                                                       \
     } else                                                                     \
       return error("unsupported data types");                                  \
