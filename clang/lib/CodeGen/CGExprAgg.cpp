@@ -496,14 +496,10 @@ static void EmitHLSLScalarFlatCast(CodeGenFunction &CGF, Address DestVal,
                                    QualType DestTy, llvm::Value *SrcVal,
                                    QualType SrcTy, SourceLocation Loc) {
   // Flatten our destination
-  SmallVector<QualType> DestTypes; // Flattened type
-  SmallVector<llvm::Value *, 4> IdxList;
-  IdxList.push_back(
-      llvm::ConstantInt::get(llvm::IntegerType::get(CGF.getLLVMContext(), 32),
-                             0)); // because an Address is a pointer
+  SmallVector<QualType, 16> DestTypes; // Flattened type
   SmallVector<std::pair<Address, llvm::Value *>, 16> StoreGEPList;
   // ^^ Flattened accesses to DestVal we want to store into
-  CGF.FlattenAccessAndType(DestVal, DestTy, IdxList, StoreGEPList, DestTypes);
+  CGF.FlattenAccessAndType(DestVal, DestTy, StoreGEPList, DestTypes);
 
   if (const VectorType *VT = SrcTy->getAs<VectorType>()) {
     SrcTy = VT->getElementType();
@@ -536,23 +532,15 @@ static void EmitHLSLAggregateFlatCast(CodeGenFunction &CGF, Address DestVal,
                                       QualType DestTy, Address SrcVal,
                                       QualType SrcTy, SourceLocation Loc) {
   // Flatten our destination
-  SmallVector<QualType> DestTypes; // Flattened type
-  SmallVector<llvm::Value *, 4> IdxList;
-  IdxList.push_back(
-      llvm::ConstantInt::get(llvm::IntegerType::get(CGF.getLLVMContext(), 32),
-                             0)); // Because an Address is a pointer
+  SmallVector<QualType, 16> DestTypes; // Flattened type
   SmallVector<std::pair<Address, llvm::Value *>, 16> StoreGEPList;
   // ^^ Flattened accesses to DestVal we want to store into
-  CGF.FlattenAccessAndType(DestVal, DestTy, IdxList, StoreGEPList, DestTypes);
+  CGF.FlattenAccessAndType(DestVal, DestTy, StoreGEPList, DestTypes);
   // Flatten our src
-  SmallVector<QualType> SrcTypes; // Flattened type
+  SmallVector<QualType, 16> SrcTypes; // Flattened type
   SmallVector<std::pair<Address, llvm::Value *>, 16> LoadGEPList;
   // ^^ Flattened accesses to SrcVal we want to load from
-  IdxList.clear();
-  IdxList.push_back(
-      llvm::ConstantInt::get(llvm::IntegerType::get(CGF.getLLVMContext(), 32),
-                             0)); // Because an Address is a pointer
-  CGF.FlattenAccessAndType(SrcVal, SrcTy, IdxList, LoadGEPList, SrcTypes);
+  CGF.FlattenAccessAndType(SrcVal, SrcTy, LoadGEPList, SrcTypes);
 
   assert(StoreGEPList.size() <= LoadGEPList.size() &&
          "Cannot perform HLSL flat cast when flattened source object \

@@ -6361,62 +6361,87 @@ LValue CodeGenFunction::EmitPseudoObjectLValue(const PseudoObjectExpr *E) {
 }
 
 void CodeGenFunction::FlattenAccessAndType(
-    Address Val, QualType SrcTy, SmallVector<llvm::Value *, 4> &IdxList,
-    SmallVector<std::pair<Address, llvm::Value *>, 16> &GEPList,
-    SmallVector<QualType> &FlatTypes) {
+    Address Addr, QualType AddrType,
+    SmallVectorImpl<std::pair<Address, llvm::Value *>> &AccessList,
+    SmallVectorImpl<QualType> &FlatTypes) {
+  // WorkList is list of type we are processing + the Index List to access
+  // the field of that type in Addr for use in a GEP
+  llvm::SmallVector<std::pair<QualType, llvm::SmallVector<llvm::Value *, 4>>,
+                    16>
+      WorkList;
   llvm::IntegerType *IdxTy = llvm::IntegerType::get(getLLVMContext(), 32);
-  if (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(SrcTy)) {
-    uint64_t Size = CAT->getZExtSize();
-    for (unsigned i = 0; i < Size; i++) {
-      // flatten each member of the array
-      // add index of this element to index list
-      llvm::Value *Idx = llvm::ConstantInt::get(IdxTy, i);
-      IdxList.push_back(Idx);
-      // recur on this object
-      FlattenAccessAndType(Val, CAT->getElementType(), IdxList, GEPList,
-                           FlatTypes);
-      // remove index of this element from index list
-      IdxList.pop_back();
-    }
-  } else if (const RecordType *RT = SrcTy->getAs<RecordType>()) {
-    RecordDecl *Record = RT->getDecl();
-    const CGRecordLayout &RL = getTypes().getCGRecordLayout(Record);
-    // do I need to check if its a cxx record decl?
+  WorkList.push_back(
+      {AddrType,
+       {llvm::ConstantInt::get(
+           IdxTy,
+           0)}}); // Addr should be a pointer so we need to 'dereference' it
 
-    for (auto fieldIter = Record->field_begin(), fieldEnd = Record->field_end();
-         fieldIter != fieldEnd; ++fieldIter) {
-      // get the field number
-      unsigned FieldNum = RL.getLLVMFieldNo(*fieldIter);
-      // can we just do *fieldIter->getFieldIndex();
-      // add that index to the index list
-      llvm::Value *Idx = llvm::ConstantInt::get(IdxTy, FieldNum);
-      IdxList.push_back(Idx);
-      // recur on the field
-      FlattenAccessAndType(Val, fieldIter->getType(), IdxList, GEPList,
-                           FlatTypes);
-      // remove index of this element from index list
-      IdxList.pop_back();
+  while (!WorkList.empty()) {
+    std::pair<QualType, llvm::SmallVector<llvm::Value *, 4>> P =
+        WorkList.pop_back_val();
+    QualType T = P.first;
+    llvm::SmallVector<llvm::Value *, 4> IdxList = P.second;
+    T = T.getCanonicalType().getUnqualifiedType();
+    assert(!isa<MatrixType>(T) && "Matrix types not yet supported in HLSL");
+    if (const auto *CAT = dyn_cast<ConstantArrayType>(T)) {
+      uint64_t Size = CAT->getZExtSize();
+      for (int64_t i = Size - 1; i > -1; i--) {
+        llvm::SmallVector<llvm::Value *, 4> IdxListCopy = IdxList;
+        IdxListCopy.push_back(llvm::ConstantInt::get(IdxTy, i));
+        WorkList.insert(WorkList.end(), {CAT->getElementType(), IdxListCopy});
+      }
+    } else if (const auto *RT = dyn_cast<RecordType>(T)) {
+      const RecordDecl *Record = RT->getDecl();
+      if (Record->isUnion()) {
+        IdxList.push_back(llvm::ConstantInt::get(IdxTy, 0));
+        llvm::Type *LLVMT = ConvertTypeForMem(T);
+        CharUnits Align = getContext().getTypeAlignInChars(T);
+        Address GEP =
+            Builder.CreateInBoundsGEP(Addr, IdxList, LLVMT, Align, "union.gep");
+        AccessList.push_back({GEP, NULL});
+        FlatTypes.push_back(T);
+        continue;
+      }
+      const CXXRecordDecl *CXXD = dyn_cast<CXXRecordDecl>(Record);
+
+      llvm::SmallVector<QualType, 16> FieldTypes;
+      if (CXXD && CXXD->isStandardLayout())
+        Record = CXXD->getStandardLayoutBaseWithFields();
+
+      // deal with potential base classes
+      if (CXXD && !CXXD->isStandardLayout()) {
+        for (auto &Base : CXXD->bases())
+          FieldTypes.push_back(Base.getType());
+      }
+
+      for (auto *FD : Record->fields())
+        FieldTypes.push_back(FD->getType());
+
+      for (int64_t i = FieldTypes.size() - 1; i > -1; i--) {
+        llvm::SmallVector<llvm::Value *, 4> IdxListCopy = IdxList;
+        IdxListCopy.push_back(llvm::ConstantInt::get(IdxTy, i));
+        WorkList.insert(WorkList.end(), {FieldTypes[i], IdxListCopy});
+      }
+    } else if (const auto *VT = dyn_cast<VectorType>(T)) {
+      llvm::Type *LLVMT = ConvertTypeForMem(T);
+      CharUnits Align = getContext().getTypeAlignInChars(T);
+      Address GEP =
+          Builder.CreateInBoundsGEP(Addr, IdxList, LLVMT, Align, "vector.gep");
+      for (unsigned i = 0; i < VT->getNumElements(); i++) {
+        llvm::Value *Idx = llvm::ConstantInt::get(IdxTy, i);
+        // gep on vector fields is not recommended so combine gep with
+        // extract/insert
+        AccessList.push_back({GEP, Idx});
+        FlatTypes.push_back(VT->getElementType());
+      }
+    } else {
+      // a scalar/builtin type
+      llvm::Type *LLVMT = ConvertTypeForMem(T);
+      CharUnits Align = getContext().getTypeAlignInChars(T);
+      Address GEP =
+          Builder.CreateInBoundsGEP(Addr, IdxList, LLVMT, Align, "gep");
+      AccessList.push_back({GEP, NULL});
+      FlatTypes.push_back(T);
     }
-  } else if (const VectorType *VT = SrcTy->getAs<VectorType>()) {
-    llvm::Type *VTy = ConvertTypeForMem(SrcTy);
-    CharUnits Align = getContext().getTypeAlignInChars(SrcTy);
-    Address GEP =
-        Builder.CreateInBoundsGEP(Val, IdxList, VTy, Align, "vector.gep");
-    for (unsigned i = 0; i < VT->getNumElements(); i++) {
-      // add index to the list
-      llvm::Value *Idx = llvm::ConstantInt::get(IdxTy, i);
-      // create gep. no need to recur since its always a scalar
-      // gep on vector is not recommended so combine gep with extract/insert
-      GEPList.push_back({GEP, Idx});
-      FlatTypes.push_back(VT->getElementType());
-    }
-  } else { // should be a scalar should we assert or check?
-    // create a gep
-    llvm::Type *Ty = ConvertTypeForMem(SrcTy);
-    CharUnits Align = getContext().getTypeAlignInChars(SrcTy);
-    Address GEP = Builder.CreateInBoundsGEP(Val, IdxList, Ty, Align, "gep");
-    GEPList.push_back({GEP, NULL});
-    FlatTypes.push_back(SrcTy);
   }
-  // target extension types?
 }

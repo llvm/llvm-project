@@ -2266,13 +2266,9 @@ bool CodeGenFunction::ShouldNullCheckClassCastValue(const CastExpr *CE) {
 static Value *EmitHLSLAggregateFlatCast(CodeGenFunction &CGF, Address RHSVal,
                                         QualType RHSTy, QualType LHSTy,
                                         SourceLocation Loc) {
-  SmallVector<llvm::Value *, 4> IdxList;
-  IdxList.push_back(
-      llvm::ConstantInt::get(llvm::IntegerType::get(CGF.getLLVMContext(), 32),
-                             0)); // because an Address is a pointer
   SmallVector<std::pair<Address, llvm::Value *>, 16> LoadGEPList;
-  SmallVector<QualType> SrcTypes; // Flattened type
-  CGF.FlattenAccessAndType(RHSVal, RHSTy, IdxList, LoadGEPList, SrcTypes);
+  SmallVector<QualType, 16> SrcTypes; // Flattened type
+  CGF.FlattenAccessAndType(RHSVal, RHSTy, LoadGEPList, SrcTypes);
   // LHS is either a vector or a builtin?
   // if its a vector create a temp alloca to store into and return that
   if (auto *VecTy = LHSTy->getAs<VectorType>()) {
