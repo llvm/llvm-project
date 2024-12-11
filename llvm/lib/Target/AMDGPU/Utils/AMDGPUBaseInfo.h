@@ -55,6 +55,8 @@ static constexpr unsigned GFX12 = 1;
 
 enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5, AMDHSA_COV6 = 6 };
 
+enum class FPType { None, FP4, FP8 };
+
 /// \returns True if \p STI is AMDHSA.
 bool isHsaAbi(const MCSubtargetInfo &STI);
 
@@ -885,7 +887,7 @@ LLVM_READONLY
 bool isTrue16Inst(unsigned Opc);
 
 LLVM_READONLY
-bool isFP8DstSelInst(unsigned Opc);
+FPType getFPDstSelType(unsigned Opc);
 
 LLVM_READONLY
 bool isInvalidSingleUseConsumerInst(unsigned Opc);
