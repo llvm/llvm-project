@@ -54,6 +54,8 @@ add_object_library(
     freelist_heap.cpp
   HDRS
     freelist_heap.h
+  COMPILE_OPTIONS
+    -DLIBC_FREELIST_MALLOC_SIZE=${LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE}
   DEPENDS
     .block
     .freelist
@@ -66,9 +68,6 @@ add_object_library(
     libc.src.__support.libc_assert
     libc.src.string.memory_utils.inline_memcpy
     libc.src.string.memory_utils.inline_memset
-  COMPILE_OPTIONS
-    -DLIBC_FREELIST_MALLOC_SIZE=${LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE}
-
 )
 
 add_header_library(
