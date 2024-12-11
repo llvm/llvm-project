@@ -20,9 +20,7 @@ on:
 jobs:
   build-ci-container:
     if: github.repository_owner == 'llvm'
-    runs-on: llvm-premerge-linux-runners
-    container:
-      image: gcr.io/kaniko-project/executor:debug
+    runs-on: depot-ubuntu-22.04-16
     outputs:
       container-name: ${{ steps.vars.outputs.container-name }}
       container-name-tag: ${{ steps.vars.outputs.container-name-tag }}
@@ -58,6 +56,12 @@ jobs:
           name: container
           path: ${{ steps.vars.outputs.container-filename }}
           retention-days: 14
+
+      - name: Test Container
+        run: |
+          for image in ${{ steps.vars.outputs.container-name-tag }} ${{  steps.vars.outputs.container-name }}; do
+            podman run --rm -it $image /usr/bin/bash -x -c 'printf '\''#include <iostream>\nint main(int argc, char **argv) { std::cout << "Hello\\n"; }'\'' | clang++ -x c++ - && ./a.out | grep Hello'
+          done
 
   push-ci-container:
     if: github.event_name == 'push'
