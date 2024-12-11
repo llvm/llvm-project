@@ -162,8 +162,8 @@ private:
   };
   CppHashInfoTy CppHashInfo;
 
-  /// Have we seen any file line comment.
-  bool HadCppHashFilename = false;
+  /// The filename from the first cpp hash file line comment, if any.
+  StringRef FirstCppHashFilename;
 
   /// List of forward directional labels for diagnosis at the end.
   SmallVector<std::tuple<SMLoc, CppHashInfoTy, MCSymbol *>, 4> DirLabels;
@@ -952,6 +952,12 @@ bool AsmParser::enabledGenDwarfForAssembly() {
   // the assembler source was produced with debug info already) then emit one
   // describing the assembler source file itself.
   if (getContext().getGenDwarfFileNumber() == 0) {
+    // Use the first #line directive for this, if any. It's preprocessed, so
+    // there is no checksum, and of course no source directive.
+    if (!FirstCppHashFilename.empty())
+      getContext().setMCLineTableRootFile(
+          /*CUID=*/0, getContext().getCompilationDir(), FirstCppHashFilename,
+          /*Cksum=*/std::nullopt, /*Source=*/std::nullopt);
     const MCDwarfFile &RootFile =
         getContext().getMCDwarfLineTable(/*CUID=*/0).getRootFile();
     getContext().setGenDwarfFileNumber(getStreamer().emitDwarfFileDirective(
@@ -2434,19 +2440,8 @@ bool AsmParser::parseCppHashLineFilenameComment(SMLoc L, bool SaveLocInfo) {
   CppHashInfo.Filename = Filename;
   CppHashInfo.LineNumber = LineNumber;
   CppHashInfo.Buf = CurBuffer;
-  if (!HadCppHashFilename) {
-    HadCppHashFilename = true;
-    // If we haven't encountered any .file directives, then the first #line
-    // directive describes the "root" file and directory of the compilation
-    // unit.
-    if (getContext().getGenDwarfFileNumber() == 0) {
-      // It's preprocessed, so there is no checksum, and of course no source
-      // directive.
-      getContext().setMCLineTableRootFile(
-          /*CUID=*/0, getContext().getCompilationDir(), Filename,
-          /*Cksum=*/std::nullopt, /*Source=*/std::nullopt);
-    }
-  }
+  if (FirstCppHashFilename.empty())
+    FirstCppHashFilename = Filename;
   return false;
 }
 
