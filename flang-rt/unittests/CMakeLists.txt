@@ -6,6 +6,13 @@
 #
 #===------------------------------------------------------------------------===#
 
+# LLVM uses a modified version of GTest that uses LLVMSupport for console
+# output. Therefore it also needs to include files from LLVM. Unfortunately,
+# LLVM/GTest doesn't add the include search path itself. Limiting the scope
+# using target_include_directories does not work because with
+# LLVM_INSTALL_GTEST=ON, llvm_gtest is an IMPORT library.
+include_directories("${LLVM_INCLUDE_DIR}" "${LLVM_MAIN_INCLUDE_DIR}")
+
 # Add GTest if not already present.
 # Using a function so LLVM_SUBPROJECT_TITLE does not propagate.
 function (build_gtest)
@@ -15,10 +22,6 @@ endfunction ()
 if (NOT TARGET llvm_gtest)
   build_gtest()
 endif ()
-
-# LLVM's modified GTest depends on LLVM, but not all sibling runtime projects
-# creating a llvm_gtest target also use target_include_directories.
-target_include_directories(llvm_gtest PUBLIC "${LLVM_INCLUDE_DIR}" "${LLVM_MAIN_INCLUDE_DIR}")
 
 # Required because LLVMSupport is compiled with this option (by default).
 set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
