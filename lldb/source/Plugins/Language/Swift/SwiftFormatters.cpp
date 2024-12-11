@@ -257,6 +257,8 @@ static bool makeStringGutsSummary(
   │ Immortal, Small     ║  1  │ASCII│  1  │  0  │
   ├─────────────────────╫─────┼─────┼─────┼─────┤
   │ Immortal, Large     ║  1  │  0  │  0  │  0  │
+  ├─────────────────────╫─────┼─────┼─────┼─────┤
+  │ Immortal, Bridged   ║  1  │  1  │  0  │  0  │
   ╞═════════════════════╬═════╪═════╪═════╪═════╡
   │ Native              ║  0  │  0  │  0  │  0  │
   ├─────────────────────╫─────┼─────┼─────┼─────┤
@@ -373,7 +375,7 @@ static bool makeStringGutsSummary(
   if ((discriminator & 0b0111'0000) == 0)
     return error("unexpected discriminator");
 
-  if ((discriminator & 0b1110'0000) == 0b0100'0000) { // 010xxxxx: Bridged
+  if ((discriminator & 0b0110'0000) == 0b0100'0000) { // x10xxxxx: Bridged
     TypeSystemClangSP clang_ts_sp =
         ScratchTypeSystemClang::GetForTarget(process->GetTarget());
     if (!clang_ts_sp)
