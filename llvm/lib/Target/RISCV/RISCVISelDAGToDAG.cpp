@@ -1048,7 +1048,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         // where C2 has C4 leading zeros and no trailing zeros.
         // This is profitable if the "and" was to be lowered to
         // (srli (slli X, C4), C4) and not (andi X, C2).
-        // For "LeadingZeros == 32" we prefer Zba (slli.uw X, C).
+        // For "LeadingZeros == 32":
+        // - with Zba it's just (slli.uw X, C)
+        // - without Zba a tablegen pattern applies the very same
+        //   transform as we would have done here
         SDNode *SLLI = CurDAG->getMachineNode(
             RISCV::SLLI, DL, VT, N0->getOperand(0),
             CurDAG->getTargetConstant(LeadingZeros, DL, VT));
