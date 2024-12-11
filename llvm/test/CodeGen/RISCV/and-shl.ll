@@ -8,15 +8,13 @@ define i32 @and_0xfff_shl_2(i32 %x) {
 ; RV32I-LABEL: and_0xfff_shl_2:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a0, a0, 20
-; RV32I-NEXT:    srli a0, a0, 20
-; RV32I-NEXT:    slli a0, a0, 2
+; RV32I-NEXT:    srli a0, a0, 18
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and_0xfff_shl_2:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 52
-; RV64I-NEXT:    srli a0, a0, 52
-; RV64I-NEXT:    slli a0, a0, 2
+; RV64I-NEXT:    srli a0, a0, 50
 ; RV64I-NEXT:    ret
   %a = and i32 %x, 4095
   %s = shl i32 %a, 2
