@@ -62,12 +62,20 @@ unsigned AArch64::getFMVPriority(ArrayRef<StringRef> Features) {
 }
 
 uint64_t AArch64::getCpuSupportsMask(ArrayRef<StringRef> Features) {
+  // Transitively enable the Arch Extensions which correspond to each feature.
   ExtensionSet FeatureBits;
-  for (StringRef Feature : Features)
-    if (auto Ext = parseFMVExtension(Feature))
-      if (Ext->ID)
-        FeatureBits.enable(*Ext->ID);
-  return FeatureBits.toCpuSupportsMask();
+  for (const StringRef Feature : Features)
+    if (std::optional<FMVInfo> Info = parseFMVExtension(Feature))
+      if (Info->ID)
+        FeatureBits.enable(*Info->ID);
+
+  // Construct a bitmask for all the transitively enabled Arch Extensions.
+  uint64_t FeaturesMask = 0;
+  for (const FMVInfo &Info : getFMVInfo())
+    if (Info.ID && FeatureBits.Enabled.test(*Info.ID))
+      FeaturesMask |= (1ULL << Info.Bit);
+
+  return FeaturesMask;
 }
 
 bool AArch64::getExtensionFeatures(
@@ -347,14 +355,6 @@ void AArch64::ExtensionSet::reconstructFromParsedFeatures(
     }
     NonExtensions.push_back(F);
   }
-}
-
-uint64_t AArch64::ExtensionSet::toCpuSupportsMask() const {
-  uint64_t FeaturesMask = 0;
-  for (const auto &I : getFMVInfo())
-    if (I.ID && Enabled.test(*I.ID))
-      FeaturesMask |= (1ULL << I.Bit);
-  return FeaturesMask;
 }
 
 void AArch64::ExtensionSet::dump() const {
