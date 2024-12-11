@@ -804,7 +804,7 @@ Bug Fixes to C++ Support
   captures at the end of a full expression. (#GH115931)
 - Clang no longer rejects deleting a pointer of incomplete enumeration type. (#GH99278)
 - Fixed recognition of ``std::initializer_list`` when it's surrounded with ``extern "C++"`` and exported
-  out of a module. (#GH118218)
+  out of a module (which is the case e.g. in MSVC's implementation of ``std`` module). (#GH118218)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
