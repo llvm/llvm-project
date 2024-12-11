@@ -1261,9 +1261,10 @@ static void genTaskClauses(lower::AbstractConverter &converter,
   cp.processMergeable(clauseOps);
   cp.processPriority(stmtCtx, clauseOps);
   cp.processUntied(clauseOps);
+  cp.processDetach(clauseOps);
   // TODO Support delayed privatization.
 
-  cp.processTODO<clause::Affinity, clause::Detach, clause::InReduction>(
+  cp.processTODO<clause::Affinity, clause::InReduction>(
       loc, llvm::omp::Directive::OMPD_task);
 }
 
@@ -2869,7 +2870,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
         !std::holds_alternative<clause::UseDevicePtr>(clause.u) &&
         !std::holds_alternative<clause::InReduction>(clause.u) &&
         !std::holds_alternative<clause::Mergeable>(clause.u) &&
-        !std::holds_alternative<clause::TaskReduction>(clause.u)) {
+        !std::holds_alternative<clause::TaskReduction>(clause.u) &&
+        !std::holds_alternative<clause::Detach>(clause.u)) {
       std::string name =
           parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(clause.id));
       TODO(clauseLocation, name + " clause is not implemented yet");

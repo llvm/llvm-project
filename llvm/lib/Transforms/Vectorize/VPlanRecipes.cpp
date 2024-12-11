@@ -631,8 +631,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
     NewPhi->addIncoming(IncomingFromVPlanPred, VPlanPred);
     // TODO: Predecessors are temporarily reversed to reduce test changes.
     // Remove it and update remaining tests after functional change landed.
-    for (auto *OtherPred :
-         reverse(to_vector(predecessors(Builder.GetInsertBlock())))) {
+    auto Predecessors = to_vector(predecessors(Builder.GetInsertBlock()));
+    for (auto *OtherPred : reverse(Predecessors)) {
       assert(OtherPred != VPlanPred &&
              "VPlan predecessors should not be connected yet");
       NewPhi->addIncoming(IncomingFromOtherPreds, OtherPred);
@@ -967,7 +967,8 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
   Module *M = State.Builder.GetInsertBlock()->getModule();
   Function *VectorF =
       Intrinsic::getOrInsertDeclaration(M, VectorIntrinsicID, TysForDecl);
-  assert(VectorF && "Can't retrieve vector intrinsic.");
+  assert(VectorF &&
+         "Can't retrieve vector intrinsic or vector-predication intrinsics.");
 
   auto *CI = cast_or_null<CallInst>(getUnderlyingValue());
   SmallVector<OperandBundleDef, 1> OpBundles;
@@ -3486,7 +3487,7 @@ void VPEVLBasedIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPScalarPHIRecipe::execute(VPTransformState &State) {
   BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
-  Value *Start = State.get(getOperand(0), VPLane(0));
+  Value *Start = State.get(getStartValue(), VPLane(0));
   PHINode *Phi = State.Builder.CreatePHI(Start->getType(), 2, Name);
   Phi->addIncoming(Start, VectorPH);
   Phi->setDebugLoc(getDebugLoc());
@@ -3496,7 +3497,7 @@ void VPScalarPHIRecipe::execute(VPTransformState &State) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPScalarPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
-  O << Indent << "SCALAR-PHI";
+  O << Indent << "SCALAR-PHI ";
   printAsOperand(O, SlotTracker);
   O << " = phi ";
   printOperands(O, SlotTracker);

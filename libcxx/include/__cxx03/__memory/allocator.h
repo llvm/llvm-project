@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_ALLOCATOR_H
-#define _LIBCPP___MEMORY_ALLOCATOR_H
+#ifndef _LIBCPP___CXX03___MEMORY_ALLOCATOR_H
+#define _LIBCPP___CXX03___MEMORY_ALLOCATOR_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__memory/addressof.h>
@@ -265,4 +265,4 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const allocator<_Tp>&, const alloca
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_ALLOCATOR_H
+#endif // _LIBCPP___CXX03___MEMORY_ALLOCATOR_H

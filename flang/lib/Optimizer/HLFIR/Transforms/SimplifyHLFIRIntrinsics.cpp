@@ -29,6 +29,10 @@ namespace hlfir {
 #include "flang/Optimizer/HLFIR/Passes.h.inc"
 } // namespace hlfir
 
+static llvm::cl::opt<bool>
+    simplifySum("flang-simplify-hlfir-sum",
+                llvm::cl::desc("Expand hlfir.sum into an inline sequence"),
+                llvm::cl::init(false));
 namespace {
 
 class TransposeAsElementalConversion
@@ -108,7 +112,6 @@ public:
     mlir::Value mask = sum.getMask();
     mlir::Value dim = sum.getDim();
     int64_t dimVal = fir::getIntIfConstant(dim).value_or(0);
-    assert(dimVal > 0 && "DIM must be present and a positive constant");
     mlir::Value resultShape, dimExtent;
     std::tie(resultShape, dimExtent) =
         genResultShape(loc, builder, array, dimVal);
@@ -235,6 +238,9 @@ private:
     mlir::Value inShape = hlfir::genShape(loc, builder, array);
     llvm::SmallVector<mlir::Value> inExtents =
         hlfir::getExplicitExtentsFromShape(inShape, builder);
+    assert(dimVal > 0 && dimVal <= static_cast<int64_t>(inExtents.size()) &&
+           "DIM must be present and a positive constant not exceeding "
+           "the array's rank");
     if (inShape.getUses().empty())
       inShape.getDefiningOp()->erase();
 
@@ -347,13 +353,23 @@ public:
     // expanding the SUM into a total reduction loop nest
     // would avoid creating a temporary for the elemental array expression.
     target.addDynamicallyLegalOp<hlfir::SumOp>([](hlfir::SumOp sum) {
+      if (!simplifySum)
+        return true;
       if (mlir::Value dim = sum.getDim()) {
-        if (fir::getIntIfConstant(dim)) {
+        if (auto dimVal = fir::getIntIfConstant(dim)) {
           if (!fir::isa_trivial(sum.getType())) {
             // Ignore the case SUM(a, DIM=X), where 'a' is a 1D array.
             // It is only legal when X is 1, and it should probably be
             // canonicalized into SUM(a).
-            return false;
+            fir::SequenceType arrayTy = mlir::cast<fir::SequenceType>(
+                hlfir::getFortranElementOrSequenceType(
+                    sum.getArray().getType()));
+            if (*dimVal > 0 && *dimVal <= arrayTy.getDimension()) {
+              // Ignore SUMs with illegal DIM values.
+              // They may appear in dead code,
+              // and they do not have to be converted.
+              return false;
+            }
           }
         }
       }

@@ -45,6 +45,7 @@ struct Bits {
   bool operator>=(Bits Other) const { return N >= Other.N; }
   bool operator<=(Bits Other) const { return N <= Other.N; }
   bool operator==(Bits Other) const { return N == Other.N; }
+  bool operator!=(Bits Other) const { return N != Other.N; }
 };
 
 /// A quantity in bytes.
@@ -55,6 +56,7 @@ struct Bytes {
   Bits toBits() const { return Bits(N * 8); }
 };
 
+/// A bit range. Both Start and End are inclusive.
 struct BitRange {
   Bits Start;
   Bits End;
@@ -62,6 +64,8 @@ struct BitRange {
   BitRange(Bits Start, Bits End) : Start(Start), End(End) {}
   Bits size() const { return End - Start + Bits(1); }
   bool operator<(BitRange Other) const { return Start.N < Other.Start.N; }
+
+  bool contains(Bits B) { return Start <= B && End >= B; }
 };
 
 /// Track what bits have been initialized to known values and which ones
@@ -85,6 +89,7 @@ struct BitcastBuffer {
   /// Marks the bits in the given range as initialized.
   /// FIXME: Can we do this automatically in pushData()?
   void markInitialized(Bits Start, Bits Length);
+  bool rangeInitialized(Bits Offset, Bits Length) const;
 
   /// Push \p BitWidth bits at \p BitOffset from \p In into the buffer.
   /// \p TargetEndianness is the endianness of the target we're compiling for.

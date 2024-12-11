@@ -818,7 +818,7 @@ protected:
   void setSize(CharUnits NewSize) { Size = Context.toBits(NewSize); }
   void setSize(uint64_t NewSize) { Size = NewSize; }
 
-  CharUnits getAligment() const { return Alignment; }
+  CharUnits getAlignment() const { return Alignment; }
 
   CharUnits getDataSize() const {
     assert(DataSize % Context.getCharWidth() == 0);

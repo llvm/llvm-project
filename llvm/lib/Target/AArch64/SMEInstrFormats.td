@@ -305,6 +305,21 @@ multiclass sme_outer_product_fp32<bit S, bits<2> sz, ZPRRegOp zpr_ty, string mne
   def : SME_ZA_Tile_TwoPred_TwoVec_Pat<NAME, op, timm32_0_3, nxv4i1, nxv4f32>;
 }
 
+multiclass sme2_fp8_fmopa_za32<string mnemonic, SDPatternOperator intrinsic> {
+    def NAME : sme_fp_outer_product_inst<0, 0b01, 0b00, TileOp32, ZPR8, mnemonic>, SMEPseudo2Instr<NAME, 1> {
+      bits<2> ZAda;
+      let Inst{1-0} = ZAda;
+      let Inst{2}   = 0b0;
+
+      let Uses = [FPMR, FPCR];
+    }
+
+    let mayStore = 1, mayLoad = 1 in
+    def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR8, SMEMatrixTileS>, SMEPseudo2Instr<NAME, 0>;
+
+    def : SME_ZA_Tile_TwoPred_TwoVec_Pat<NAME, intrinsic, timm32_0_3, nxv16i1, nxv16i8>;
+}
+
 multiclass sme_outer_product_fp64<bit S, string mnemonic, SDPatternOperator op> {
   def NAME : sme_fp_outer_product_inst<S, 0b10, 0b00, TileOp64, ZPR64, mnemonic>, SMEPseudo2Instr<NAME, 1> {
     bits<3> ZAda;
@@ -316,12 +331,19 @@ multiclass sme_outer_product_fp64<bit S, string mnemonic, SDPatternOperator op> 
   def : SME_ZA_Tile_TwoPred_TwoVec_Pat<NAME, op, timm32_0_7, nxv2i1, nxv2f64>;
 }
 
-multiclass sme2p1_fmop_tile_f8f16<string mnemonic, bit bf, bit s, bits<2> op> {
-  def NAME : sme_fp_outer_product_inst<s, {0,bf}, op, TileOp16, ZPR8, mnemonic> {
+multiclass sme2_fp8_fmopa_za16<string mnemonic, SDPatternOperator intrinsic> {
+  def NAME : sme_fp_outer_product_inst<0, {0, 0b1}, 0b01, TileOp16, ZPR8, mnemonic>, SMEPseudo2Instr<NAME, 1> {
     bits<1> ZAda;
     let Inst{2-1} = 0b00;
     let Inst{0}   = ZAda;
+
+    let Uses = [FPMR, FPCR];
   }
+
+  let mayStore = 1, mayLoad = 1 in
+  def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR8, SMEMatrixTileH>, SMEPseudo2Instr<NAME, 0>;
+
+  def : SME_ZA_Tile_TwoPred_TwoVec_Pat<NAME, intrinsic, timm32_0_1, nxv16i1, nxv16i8>;
 }
 
 multiclass sme2p1_fmop_tile_fp16<string mnemonic, bit bf, bit s, ValueType vt, SDPatternOperator intrinsic = null_frag> {
@@ -2376,10 +2398,14 @@ multiclass sme2_cvt_vg2_single<string mnemonic, bits<5> op, ValueType out_vt,
 }
 
 // SME2 multi-vec FP8 down convert two registers
-multiclass sme2_fp8_cvt_vg2_single<string mnemonic, bit op> {
+multiclass sme2_fp8_cvt_vg2_single<string mnemonic, bit op, ValueType in_vt, SDPatternOperator intrinsic> {
   def NAME :  sme2_cvt_vg2_single<mnemonic, {op, 0b1000}, ZPR8, ZZ_h_mul_r>{
+    let mayLoad = 1;
+    let mayStore = 0;
     let Uses = [FPMR, FPCR];
   }
+  def : Pat<(nxv16i8 (intrinsic in_vt:$Zn1, in_vt:$Zn2)),
+            (!cast<Instruction>(NAME) (REG_SEQUENCE ZPR2Mul2, in_vt:$Zn1, zsub0, in_vt:$Zn2, zsub1))>;
 }
 
 class sme2_cvt_unpk_vector_vg2<bits<2>sz, bits<3> op, bit u, RegisterOperand first_ty,
@@ -2445,8 +2471,13 @@ multiclass sme2_int_cvt_vg4_single<string mnemonic, bits<3> op, SDPatternOperato
 }
 
 //SME2 multi-vec FP8 down convert four registers
-multiclass sme2_fp8_cvt_vg4_single<string mnemonic, bit N> {
- def _NAME : sme2_cvt_vg4_single<0b0, {0b00, N}, 0b0100, ZPR8, ZZZZ_s_mul_r, mnemonic>;
+multiclass sme2_fp8_cvt_vg4_single<string mnemonic, bit N, SDPatternOperator intrinsic> {
+ def NAME : sme2_cvt_vg4_single<0b0, {0b00, N}, 0b0100, ZPR8, ZZZZ_s_mul_r, mnemonic> {
+    let mayLoad = 1;
+    let mayStore = 0;
+    let Uses = [FPMR, FPCR];
+ }
+ def : SME2_Cvt_VG4_Pat<NAME, intrinsic, nxv16i8, nxv4f32>;
 }
 
 class sme2_unpk_vector_vg4<bits<2>sz, bit u, RegisterOperand first_ty,
