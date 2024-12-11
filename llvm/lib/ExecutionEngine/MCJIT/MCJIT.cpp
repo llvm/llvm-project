@@ -508,8 +508,8 @@ GlobalVariable *MCJIT::FindGlobalVariableNamed(StringRef Name, bool AllowInterna
 }
 
 // FIXME: A lot of unaligned loads `(intptr_t)FPtr`.
-__attribute__((no_sanitize("alignment")))
-GenericValue MCJIT::runFunction(Function *F, ArrayRef<GenericValue> ArgValues) {
+__attribute__((no_sanitize("alignment"))) GenericValue
+MCJIT::runFunction(Function *F, ArrayRef<GenericValue> ArgValues) {
   assert(F && "Function *F was null at entry to run()");
 
   void *FPtr = getPointerToFunction(F);
