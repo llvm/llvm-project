@@ -1550,6 +1550,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sqrtf128_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    sqrtf128_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.sqrtf128
+)
+
+add_fp_unittest(
   generic_sqrtf_test
   NEED_MPFR
   SUITE
