@@ -575,9 +575,9 @@ name: vmop_mm_mask
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmop_mm_mask
-    ; CHECK: %x:vmv0 = PseudoVMAND_MM_M1 $noreg, $noreg, 1, 3 /* e8 */
+    ; CHECK: %x:vmv0 = PseudoVMAND_MM_M1 $noreg, $noreg, -1, 0 /* e8 */
     ; CHECK-NEXT: %y:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, $noreg, $noreg, %x, 1, 3 /* e8 */, 0 /* tu, mu */
-    %x:vmv0 = PseudoVMAND_MM_M1 $noreg, $noreg, -1, 3 /* e8 */
+    %x:vmv0 = PseudoVMAND_MM_M1 $noreg, $noreg, -1, 0
     %y:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, $noreg, $noreg, %x, 1, 3 /* e8 */, 0
 ...
 ---
