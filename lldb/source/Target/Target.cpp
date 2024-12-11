@@ -1619,8 +1619,6 @@ static void LoadTypeSummariesForModule(ModuleSP module_sp) {
       continue;
     }
 
-    uint64_t version = extractor.GetULEB128(&offset);
-    uint64_t record_size = extractor.GetULEB128(&offset);
     if (version == 1) {
       uint64_t type_size = extractor.GetULEB128(&offset);
       llvm::StringRef type_name = extractor.GetCStr(&offset, type_size);
