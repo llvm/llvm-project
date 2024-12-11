@@ -1479,7 +1479,8 @@ bool VectorCombine::foldConcatOfBoolMasks(Instruction &I) {
     return false;
 
   auto *ConcatTy = FixedVectorType::getDoubleElementsVectorType(MaskTy);
-  auto *ConcatIntTy = Type::getIntNTy(Ty->getContext(), ConcatTy->getNumElements());
+  auto *ConcatIntTy =
+      Type::getIntNTy(Ty->getContext(), ConcatTy->getNumElements());
   auto *MaskIntTy = Type::getIntNTy(Ty->getContext(), ShAmtDiff);
 
   SmallVector<int, 32> ConcatMask(ConcatTy->getNumElements());
