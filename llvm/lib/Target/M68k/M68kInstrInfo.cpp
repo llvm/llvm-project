@@ -916,6 +916,7 @@ struct M68kGlobalBaseReg : public MachineFunctionPass {
   bool runOnMachineFunction(MachineFunction &MF) override {
     const M68kSubtarget &STI = MF.getSubtarget<M68kSubtarget>();
     M68kMachineFunctionInfo *MxFI = MF.getInfo<M68kMachineFunctionInfo>();
+    MachineRegisterInfo &RegInfo = MF.getRegInfo();
 
     unsigned GlobalBaseReg = MxFI->getGlobalBaseReg();
 
@@ -929,9 +930,29 @@ struct M68kGlobalBaseReg : public MachineFunctionPass {
     DebugLoc DL = FirstMBB.findDebugLoc(MBBI);
     const M68kInstrInfo *TII = STI.getInstrInfo();
 
-    // Generate lea (__GLOBAL_OFFSET_TABLE_,%PC), %A5
-    BuildMI(FirstMBB, MBBI, DL, TII->get(M68k::LEA32q), GlobalBaseReg)
-        .addExternalSymbol("_GLOBAL_OFFSET_TABLE_", M68kII::MO_GOTPCREL);
+    if (STI.useXGOT()) {
+      // Generate the following, as PC relative addressing is limited to i16
+      // offset
+      //  lea (0,%PC), %A5
+      //  lea _GLOBAL_OFFSET_TABLE_, %AX
+      //  suba.l %AX, %A5
+      // where %AX can be any other assigned address register.
+      // This should allow programs in a >16bit PC state to still use GOTPCREL
+      // addressing.
+      Register LoadPC = RegInfo.createVirtualRegister(&M68k::AR32_NOSPRegClass);
+      Register LoadGOT =
+          RegInfo.createVirtualRegister(&M68k::AR32_NOSPRegClass);
+      BuildMI(FirstMBB, MBBI, DL, TII->get(M68k::LEA32q), LoadPC).addImm(0);
+      BuildMI(FirstMBB, MBBI, DL, TII->get(M68k::LEA32b), LoadGOT)
+          .addExternalSymbol("_GLOBAL_OFFSET_TABLE_");
+      BuildMI(FirstMBB, MBBI, DL, TII->get(M68k::SUB32ar), GlobalBaseReg)
+          .addReg(LoadGOT)
+          .addReg(LoadPC);
+    } else {
+      // Generate lea (__GLOBAL_OFFSET_TABLE_,%PC), %A5
+      BuildMI(FirstMBB, MBBI, DL, TII->get(M68k::LEA32q), GlobalBaseReg)
+          .addExternalSymbol("_GLOBAL_OFFSET_TABLE_", M68kII::MO_GOTPCREL);
+    }
 
     return true;
   }
