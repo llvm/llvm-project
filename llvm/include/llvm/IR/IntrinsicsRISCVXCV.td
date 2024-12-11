@@ -43,28 +43,28 @@ class ScalarCoreVMacGprGprGprImmIntrinsic
               [IntrNoMem, IntrWillReturn, IntrSpeculatable, ImmArg<ArgIndex<3>>]>;
 
 class ScalarCoreVSimdGprIntrinsic
-    : Intrinsic<[llvm_i32_ty], [llvm_i32_ty],
-                [IntrNoMem, IntrWillReturn, IntrSpeculatable]>;
+    : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty],
+                            [IntrNoMem, IntrSpeculatable]>;
 
 class ScalarCoreVSimdGprGprIntrinsic
-    : Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
-                [IntrNoMem, IntrWillReturn, IntrSpeculatable]>;
+    : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+                            [IntrNoMem, IntrSpeculatable]>;
 
 class ScalarCoreVSimdGprImmIntrinsic
-    : Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
-                [IntrNoMem, IntrWillReturn, IntrSpeculatable, ImmArg<ArgIndex<1>>]>;
+    : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+                            [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>]>;
 
 class ScalarCoreVSimdGprGprGprIntrinsic
-    : Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-                [IntrNoMem, IntrWillReturn, IntrSpeculatable]>;
+    : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+                            [IntrNoMem, IntrSpeculatable]>;
 
 class ScalarCoreVSimdGprGprImmIntrinsic
-    : Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-                [IntrNoMem, IntrWillReturn, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
+    : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+                            [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
 
 class ScalarCoreVSimdGprGprGprImmIntrinsic
-    : Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-                [IntrNoMem, IntrWillReturn, IntrSpeculatable, ImmArg<ArgIndex<3>>]>;
+    : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+                            [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>>]>;
 
 multiclass ScalarCoreVSimdGprIntrinsicHB {
   def int_riscv_cv_simd_ # NAME # _h : ScalarCoreVSimdGprIntrinsic;
