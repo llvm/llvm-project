@@ -1887,17 +1887,17 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
                                        CommandReturnObject &result,
                                        bool force_repeat_command) {
   EventStats start_command_stats(std::chrono::steady_clock::now());
-  LldbTelemeter *telemeter = GetDebugger().GetTelemeter();
+  TelemetryManager *manager = GetDebugger().GetTelemetryManager();
   // Generate a UUID for this command so the logger can match
   // the start/end entries correctly.
-  const std::string command_uuid = telemeter->GetNextUUID();
+  const std::string command_uuid = manager->GetNextUUID();
 
   CommandTelemetryInfo start_entry;
   start_entry.stats = start_command_stats;
   start_entry.command_uuid = command_uuid;
   start_entry.target_ptr = GetExecutionContext().GetTargetPtr();
 
-  telemeter->LogCommandStart(&start_entry);
+  manager->LogCommandStart(&start_entry);
 
   std::string command_string(command_line);
   std::string original_command_string(command_line);
@@ -1920,7 +1920,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     end_entry.args = parsed_command_args;
     end_entry.target_ptr = GetExecutionContext().GetTargetPtr();
     end_entry.result = &result;
-    telemeter->LogCommandEnd(&end_entry);
+    manager->LogCommandEnd(&end_entry);
   });
 
   Log *log = GetLog(LLDBLog::Commands);

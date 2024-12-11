@@ -153,7 +153,7 @@ public:
 
   repro::DataRecorder *GetInputRecorder();
 
-  LldbTelemeter *GetTelemeter() { return m_telemeter.get(); }
+  TelemetryManager *GetTelemetryManager() { return m_telemetry_manager.get(); }
 
   void SendClientTelemetry(const lldb_private::StructuredDataImpl &entry);
 
@@ -767,7 +767,7 @@ protected:
     eBroadcastBitEventThreadIsListening = (1 << 0),
   };
 
-  std::unique_ptr<LldbTelemeter> m_telemeter;
+  std::unique_ptr<TelemetryManager> m_telemetry_manager;
 
 private:
   // Use Debugger::CreateInstance() to get a shared pointer to a new debugger

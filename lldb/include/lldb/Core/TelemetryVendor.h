@@ -27,10 +27,10 @@ public:
 
   std::unique_ptr<llvm::telemetry::Config> GetTelemetryConfig();
 
-  // Creates an LldbTelemeter instance.
+  // Creates a TelemetryManager instance.
   // Vendor plugins can override this to create customized instance as needed.
-  virtual std::unique_ptr<LldbTelemeter>
-  CreateTelemeter(lldb_private::Debugger *debugger);
+  virtual std::unique_ptr<TelemetryManager>
+  CreateTelemetryManager(lldb_private::Debugger *debugger);
 
 protected:
   // Returns a vendor-specific config which may or may not be the same as the

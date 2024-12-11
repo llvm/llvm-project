@@ -1564,14 +1564,14 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
     load_start.stats = load_executable_stats;
     load_start.exec_mod = executable_sp;
 
-    m_debugger.GetTelemeter()->LogMainExecutableLoadStart(&load_start);
+    m_debugger.GetTelemetryManager()->LogMainExecutableLoadStart(&load_start);
 
     auto log_on_exit = llvm::make_scope_exit([&]() {
       load_executable_stats.end = std::chrono::steady_clock::now();
       TargetTelemetryInfo load_end;
       load_end.stats = load_executable_stats;
       load_end.exec_mod = executable_sp;
-      m_debugger.GetTelemeter()->LogMainExecutableLoadEnd(&load_end);
+      m_debugger.GetTelemetryManager()->LogMainExecutableLoadEnd(&load_end);
     });
   }
   if (executable_sp) {

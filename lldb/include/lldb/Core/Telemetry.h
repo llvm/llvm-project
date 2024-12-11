@@ -246,16 +246,16 @@ struct MiscTelemetryInfo : public LldbBaseTelemetryInfo {
 /// The base Telemetry manager instance in LLDB
 /// This class declares additional instrumentation points
 /// applicable to LLDB.
-class LldbTelemeter : public llvm::telemetry::Manager {
+class TelemetryManager : public llvm::telemetry::Manager {
 public:
-  /// Creates an instance of LldbTelemeter.
+  /// Creates an instance of TelemetryManager.
   /// This uses the plugin registry to find an instance:
   ///  - If a vendor supplies a implementation, it will use it.
   ///  - If not, it will either return a no-op instance or a basic
   ///    implementation for testing.
   ///
   /// See also lldb_private::TelemetryVendor.
-  static std::unique_ptr<LldbTelemeter>
+  static std::unique_ptr<TelemetryManager>
   CreateInstance(std::unique_ptr<llvm::telemetry::Config> config,
                  Debugger *debugger);
 
@@ -292,16 +292,16 @@ public:
   void addDestination(std::unique_ptr<Destination> destination) override;
 
 protected:
-  LldbTelemeter(std::unique_ptr<llvm::telemetry::Config> config,
-                Debugger *debugger);
-  LldbTelemeter() = default;
+  TelemetryManager(std::unique_ptr<llvm::telemetry::Config> config,
+                   Debugger *debugger);
+  TelemetryManager() = default;
   virtual void CollectMiscBuildInfo();
 
 private:
   std::atomic<size_t> uuid_seed = 0;
   std::unique_ptr<llvm::telemetry::Config> m_config;
-  const std::string m_session_uuid;
   Debugger *m_debugger;
+  const std::string m_session_uuid;
   std::vector<std::unique_ptr<Destination>> m_destinations;
 };
 

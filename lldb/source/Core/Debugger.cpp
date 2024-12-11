@@ -745,7 +745,7 @@ DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
   DebuggerTelemetryInfo entry;
   entry.lldb_path = HostInfo::GetProgramFileSpec().GetPath();
   entry.stats = {start_time, std::chrono::steady_clock::now()};
-  debugger_sp->m_telemeter->LogStartup(&entry);
+  debugger_sp->m_telemetry_manager->LogStartup(&entry);
   return debugger_sp;
 }
 
@@ -868,7 +868,8 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_broadcaster(m_broadcaster_manager_sp,
                     GetStaticBroadcasterClass().str()),
       m_forward_listener_sp(), m_clear_once(),
-      m_telemeter(TelemetryVendor::FindPlugin()->CreateTelemeter(this)) {
+      m_telemetry_manager(
+          TelemetryVendor::FindPlugin()->CreateTelemetryManager(this)) {
   // Initialize the debugger properties as early as possible as other parts of
   // LLDB will start querying them during construction.
   m_collection_sp->Initialize(g_debugger_properties);
@@ -989,7 +990,7 @@ void Debugger::Clear() {
     DebuggerTelemetryInfo entry;
     entry.stats = {quit_start_time, std::chrono::steady_clock::now()};
     entry.lldb_path = HostInfo::GetProgramFileSpec().GetPath();
-    m_telemeter->LogExit(&entry);
+    m_telemetry_manager->LogExit(&entry);
   });
 }
 
@@ -2258,5 +2259,5 @@ llvm::ThreadPoolInterface &Debugger::GetThreadPool() {
 
 void Debugger::SendClientTelemetry(
     const lldb_private::StructuredDataImpl &entry) {
-  m_telemeter->LogClientTelemetry(entry);
+  m_telemetry_manager->LogClientTelemetry(entry);
 }

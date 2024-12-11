@@ -143,21 +143,22 @@ static std::string MakeUUID(lldb_private::Debugger *debugger) {
   return ret;
 }
 
-LldbTelemeter::LldbTelemeter(std::unique_ptr<llvm::telemetry::Config> config,
-                             lldb_private::Debugger *debugger)
+TelemetryManager::TelemetryManager(
+    std::unique_ptr<llvm::telemetry::Config> config,
+    lldb_private::Debugger *debugger)
     : m_config(std::move(config)), m_debugger(debugger),
       m_session_uuid(MakeUUID(debugger)) {}
 
-std::unique_ptr<LldbTelemeter>
-LldbTelemeter::CreateInstance(std::unique_ptr<llvm::telemetry::Config> config,
-                              lldb_private::Debugger *debugger) {
+std::unique_ptr<TelemetryManager> TelemetryManager::CreateInstance(
+    std::unique_ptr<llvm::telemetry::Config> config,
+    lldb_private::Debugger *debugger) {
 
-  LldbTelemeter *ins = new LldbTelemeter(std::move(config), debugger);
+  TelemetryManager *ins = new TelemetryManager(std::move(config), debugger);
 
-  return std::unique_ptr<LldbTelemeter>(ins);
+  return std::unique_ptr<TelemetryManager>(ins);
 }
 
-llvm::Error LldbTelemeter::dispatch(TelemetryInfo *entry) {
+llvm::Error TelemetryManager::dispatch(TelemetryInfo *entry) {
   entry->SessionId = m_session_uuid;
 
   for (auto &destination : m_destinations) {
@@ -169,11 +170,12 @@ llvm::Error LldbTelemeter::dispatch(TelemetryInfo *entry) {
   return Error::success();
 }
 
-void LldbTelemeter::addDestination(std::unique_ptr<Destination> destination) {
+void TelemetryManager::addDestination(
+    std::unique_ptr<Destination> destination) {
   m_destinations.push_back(std::move(destination));
 }
 
-void LldbTelemeter::LogStartup(DebuggerTelemetryInfo *entry) {
+void TelemetryManager::LogStartup(DebuggerTelemetryInfo *entry) {
   UserIDResolver &resolver = lldb_private::HostInfo::GetUserIDResolver();
   std::optional<llvm::StringRef> opt_username =
       resolver.GetUserName(lldb_private::HostInfo::GetUserID());
@@ -203,7 +205,7 @@ void LldbTelemeter::LogStartup(DebuggerTelemetryInfo *entry) {
   CollectMiscBuildInfo();
 }
 
-void LldbTelemeter::LogExit(DebuggerTelemetryInfo *entry) {
+void TelemetryManager::LogExit(DebuggerTelemetryInfo *entry) {
   if (auto *selected_target =
           m_debugger->GetSelectedExecutionContext().GetTargetPtr()) {
     if (!selected_target->IsDummyTarget()) {
@@ -221,7 +223,7 @@ void LldbTelemeter::LogExit(DebuggerTelemetryInfo *entry) {
   dispatch(entry);
 }
 
-void LldbTelemeter::LogProcessExit(TargetTelemetryInfo *entry) {
+void TelemetryManager::LogProcessExit(TargetTelemetryInfo *entry) {
   entry->target_uuid =
       entry->target_ptr && !entry->target_ptr->IsDummyTarget()
           ? entry->target_ptr->GetExecutableModule()->GetUUID().GetAsString()
@@ -230,11 +232,11 @@ void LldbTelemeter::LogProcessExit(TargetTelemetryInfo *entry) {
   dispatch(entry);
 }
 
-void LldbTelemeter::CollectMiscBuildInfo() {
+void TelemetryManager::CollectMiscBuildInfo() {
   // collecting use-case specific data
 }
 
-void LldbTelemeter::LogMainExecutableLoadStart(TargetTelemetryInfo *entry) {
+void TelemetryManager::LogMainExecutableLoadStart(TargetTelemetryInfo *entry) {
   entry->binary_path =
       entry->exec_mod->GetFileSpec().GetPathAsConstString().GetCString();
   entry->file_format = entry->exec_mod->GetArchitecture().GetArchitectureName();
@@ -248,7 +250,7 @@ void LldbTelemeter::LogMainExecutableLoadStart(TargetTelemetryInfo *entry) {
   dispatch(entry);
 }
 
-void LldbTelemeter::LogMainExecutableLoadEnd(TargetTelemetryInfo *entry) {
+void TelemetryManager::LogMainExecutableLoadEnd(TargetTelemetryInfo *entry) {
   lldb::ModuleSP exec_mod = entry->exec_mod;
   entry->binary_path =
       exec_mod->GetFileSpec().GetPathAsConstString().GetCString();
@@ -268,7 +270,7 @@ void LldbTelemeter::LogMainExecutableLoadEnd(TargetTelemetryInfo *entry) {
   dispatch(&misc_info);
 }
 
-void LldbTelemeter::LogClientTelemetry(
+void TelemetryManager::LogClientTelemetry(
     const lldb_private::StructuredDataImpl &entry) {
   // TODO: pull the dictionary out of entry
   ClientTelemetryInfo client_info;
@@ -309,7 +311,7 @@ void LldbTelemeter::LogClientTelemetry(
   dispatch(&client_info);
 }
 
-void LldbTelemeter::LogCommandStart(CommandTelemetryInfo *entry) {
+void TelemetryManager::LogCommandStart(CommandTelemetryInfo *entry) {
   // If we have a target attached to this command, then get the UUID.
   if (entry->target_ptr &&
       entry->target_ptr->GetExecutableModule() != nullptr) {
@@ -322,7 +324,7 @@ void LldbTelemeter::LogCommandStart(CommandTelemetryInfo *entry) {
   dispatch(entry);
 }
 
-void LldbTelemeter::LogCommandEnd(CommandTelemetryInfo *entry) {
+void TelemetryManager::LogCommandEnd(CommandTelemetryInfo *entry) {
   // If we have a target attached to this command, then get the UUID.
   if (entry->target_ptr &&
       entry->target_ptr->GetExecutableModule() != nullptr) {

@@ -62,10 +62,10 @@ using ::llvm::telemetry::Destination;
 using ::llvm::telemetry::TelemetryInfo;
 
 // No-op logger to use when users disable telemetry
-class NoOpTelemeter : public LldbTelemeter {
+class NoOpTelemeter : public TelemetryManager {
 public:
-  static std::unique_ptr<LldbTelemeter> CreateInstance(Debugger *debugger) {
-    return std::unique_ptr<LldbTelemeter>(new NoOpTelemeter(debugger));
+  static std::unique_ptr<TelemetryManager> CreateInstance(Debugger *debugger) {
+    return std::unique_ptr<TelemetryManager>(new NoOpTelemeter(debugger));
   }
 
   NoOpTelemeter(Debugger *debugger) {}
@@ -263,13 +263,13 @@ TelemetryVendor::GetVendorSpecificConfig(
   return std::move(default_config);
 }
 
-std::unique_ptr<LldbTelemeter>
-TelemetryVendor::CreateTelemeter(Debugger *debugger) {
+std::unique_ptr<TelemetryManager>
+TelemetryVendor::CreateTelemetryManager(Debugger *debugger) {
   auto config = GetTelemetryConfig();
 
   if (!config->EnableTelemetry) {
     return NoOpTelemeter::CreateInstance(debugger);
   }
 
-  return LldbTelemeter::CreateInstance(std::move(config), debugger);
+  return TelemetryManager::CreateInstance(std::move(config), debugger);
 }

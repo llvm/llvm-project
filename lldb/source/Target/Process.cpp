@@ -1103,7 +1103,7 @@ bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
   entry.stats = {start_time, std::chrono::steady_clock::now()};
   entry.exit_desc = {status, exit_string.str()};
   entry.target_ptr = &GetTarget();
-  GetTarget().GetDebugger().GetTelemeter()->LogProcessExit(&entry);
+  GetTarget().GetDebugger().GetTelemetryManager()->LogProcessExit(&entry);
 
   return true;
 }
