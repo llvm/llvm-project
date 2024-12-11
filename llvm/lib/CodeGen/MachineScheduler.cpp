@@ -2450,8 +2450,6 @@ SchedBoundary::getNextResourceCycle(const MCSchedClassDesc *SC, unsigned PIdx,
 /// simple counters that the scheduler itself maintains. It explicitly checks
 /// for instruction dispatch limitations, including the number of micro-ops that
 /// can dispatch per cycle.
-///
-/// TODO: Also check whether the SU must start a new group.
 bool SchedBoundary::checkHazard(SUnit *SU) {
   if (HazardRec->isEnabled()
       && HazardRec->getHazardType(SU) != ScheduleHazardRecognizer::NoHazard) {
@@ -2460,8 +2458,7 @@ bool SchedBoundary::checkHazard(SUnit *SU) {
 
   unsigned uops = SchedModel->getNumMicroOps(SU->getInstr());
   if ((CurrMOps > 0) && (CurrMOps + uops > SchedModel->getIssueWidth())) {
-    LLVM_DEBUG(dbgs() << "  SU(" << SU->NodeNum << ") uops="
-                      << SchedModel->getNumMicroOps(SU->getInstr()) << '\n');
+    LLVM_DEBUG(dbgs() << "  SU(" << SU->NodeNum << ") uops=" << uops << '\n');
     return true;
   }
 

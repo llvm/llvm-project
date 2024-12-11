@@ -428,7 +428,9 @@ void ConvergingVLIWScheduler::VLIWSchedBoundary::bumpNode(SUnit *SU) {
   startNewCycle = ResourceModel->reserveResources(SU, isTop());
 
   // Check the instruction group dispatch limit.
-  // TODO: Check if this SU must end a dispatch group.
+  assert(IssueCount == 0 ||
+         (!(isTop() && SchedModel->mustBeginGroup(SU->getInstr())) &&
+          !(!isTop() && SchedModel->mustEndGroup(SU->getInstr()))));
   IssueCount += SchedModel->getNumMicroOps(SU->getInstr());
   if (startNewCycle) {
     LLVM_DEBUG(dbgs() << "*** Max instrs at cycle " << CurrCycle << '\n');
