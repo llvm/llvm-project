@@ -27,27 +27,26 @@ AST_MATCHER_P(QualType, hasCleanType, Matcher<QualType>, InnerMatcher) {
       Finder, Builder);
 }
 
-AST_MATCHER_P2(Expr, constructFrom, Matcher<QualType>, TypeMatcher,
-               Matcher<Expr>, ArgumentMatcher) {
-  std::array<StringRef, 2> NameList{
-      "::std::make_unique",
-      "::std::make_shared",
-  };
-  return expr(anyOf(
-                  // construct optional
-                  cxxConstructExpr(argumentCountIs(1U), hasType(TypeMatcher),
-                                   hasArgument(0U, ArgumentMatcher)),
-                  // known template methods in std
-                  callExpr(
-                      argumentCountIs(1),
-                      callee(functionDecl(
-                          matchers::matchesAnyListedName(NameList),
-                          hasTemplateArgument(0, refersToType(TypeMatcher)))),
-                      hasArgument(0, ArgumentMatcher))),
-              unless(
-                  anyOf(hasAncestor(typeLoc()),
-                        hasAncestor(expr(matchers::hasUnevaluatedContext())))))
-      .matches(Node, Finder, Builder);
+constexpr std::array<StringRef, 2> NameList{
+    "::std::make_unique",
+    "::std::make_shared",
+};
+
+Matcher<Expr> constructFrom(Matcher<QualType> TypeMatcher,
+                            Matcher<Expr> ArgumentMatcher) {
+  return expr(
+      anyOf(
+          // construct optional
+          cxxConstructExpr(argumentCountIs(1U), hasType(TypeMatcher),
+                           hasArgument(0U, ArgumentMatcher)),
+          // known template methods in std
+          callExpr(argumentCountIs(1),
+                   callee(functionDecl(
+                       matchers::matchesAnyListedName(NameList),
+                       hasTemplateArgument(0, refersToType(TypeMatcher)))),
+                   hasArgument(0, ArgumentMatcher))),
+      unless(anyOf(hasAncestor(typeLoc()),
+                   hasAncestor(expr(matchers::hasUnevaluatedContext())))));
 }
 
 } // namespace
