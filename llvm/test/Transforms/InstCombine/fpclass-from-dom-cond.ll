@@ -467,7 +467,9 @@ define i1 @pr118257(half %v0, half %v1) {
 ; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_END:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CAST1:%.*]] = bitcast half [[V1]] to i16
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp slt i16 [[CAST1]], 0
+; CHECK-NEXT:    ret i1 [[CMP3]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -496,7 +498,9 @@ define i1 @pr118257_is_fpclass(half %v0, half %v1) {
 ; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_END:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CAST1:%.*]] = bitcast half [[V1]] to i16
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp slt i16 [[CAST1]], 0
+; CHECK-NEXT:    ret i1 [[CMP3]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret i1 false
 ;
