@@ -1989,22 +1989,23 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     Type *ScalarType = Val->getScalarType();
     Align VecAlign = DL.getPrefTypeAlign(Val);
     Align SclAlign = DL.getPrefTypeAlign(ScalarType);
+    // Extra addi for unknown index.
+    InstructionCost IdxCost = Index == -1U ? 1 : 0;
 
     // Store all split vectors into stack and load the target element.
     if (Opcode == Instruction::ExtractElement)
-      return LT.first * getMemoryOpCost(Instruction::Store, Val, VecAlign, 0,
-                                        CostKind) +
+      return getMemoryOpCost(Instruction::Store, Val, VecAlign, 0, CostKind) +
              getMemoryOpCost(Instruction::Load, ScalarType, SclAlign, 0,
-                             CostKind);
+                             CostKind) +
+             IdxCost;
 
     // Store all split vectors into stack and store the target element and load
     // vectors back.
-    return LT.first * (getMemoryOpCost(Instruction::Store, Val, VecAlign, 0,
-                                       CostKind) +
-                       getMemoryOpCost(Instruction::Load, Val, VecAlign, 0,
-                                       CostKind)) +
+    return getMemoryOpCost(Instruction::Store, Val, VecAlign, 0, CostKind) +
+           getMemoryOpCost(Instruction::Load, Val, VecAlign, 0, CostKind) +
            getMemoryOpCost(Instruction::Store, ScalarType, SclAlign, 0,
-                           CostKind);
+                           CostKind) +
+           IdxCost;
   }
 
   // Extract i64 in the target that has XLEN=32 need more instruction.
@@ -2030,7 +2031,6 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     // TODO: should we count these special vsetvlis?
     BaseCost = Opcode == Instruction::InsertElement ? 3 : 4;
   }
-
   return BaseCost + SlideCost;
 }
 
