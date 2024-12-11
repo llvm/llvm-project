@@ -195,6 +195,15 @@ void CloneFunctionMetadataInto(Function &NewFunc, const Function &OldFunc,
                                ValueMapTypeRemapper *TypeMapper = nullptr,
                                ValueMaterializer *Materializer = nullptr);
 
+/// Clone OldFunc's body into NewFunc.
+void CloneFunctionBodyInto(Function &NewFunc, const Function &OldFunc,
+                           ValueToValueMapTy &VMap, RemapFlags RemapFlag,
+                           SmallVectorImpl<ReturnInst *> &Returns,
+                           const char *NameSuffix = "",
+                           ClonedCodeInfo *CodeInfo = nullptr,
+                           ValueMapTypeRemapper *TypeMapper = nullptr,
+                           ValueMaterializer *Materializer = nullptr);
+
 void CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
                                const Instruction *StartingInst,
                                ValueToValueMapTy &VMap, bool ModuleLevelChanges,
