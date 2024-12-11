@@ -1049,18 +1049,14 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::resize(size_type __
 
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::flip() _NOEXCEPT {
-  // do middle whole words
+  // Process the whole words in the front
   size_type __n         = __size_;
   __storage_pointer __p = __begin_;
   for (; __n >= __bits_per_word; ++__p, __n -= __bits_per_word)
     *__p = ~*__p;
-  // do last partial word
-  if (__n > 0) {
-    __storage_type __m = ~__storage_type(0) >> (__bits_per_word - __n);
-    __storage_type __b = *__p & __m;
-    *__p &= ~__m;
-    *__p |= ~__b & __m;
-  }
+  // Process the last partial word, if it exists
+  if (__n > 0)
+    *__p ^= ~__storage_type(0) >> (__bits_per_word - __n);
 }
 
 template <class _Allocator>
