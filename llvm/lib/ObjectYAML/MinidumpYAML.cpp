@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ObjectYAML/MinidumpYAML.h"
+#include "llvm/Support/Allocator.h"
 
 using namespace llvm;
 using namespace llvm::MinidumpYAML;

@@ -10,4 +10,5 @@ add_mlir_conversion_library(MLIRGPUToLLVMSPV
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
   MLIRSPIRVAttrToLLVMConversion
+  MLIRSPIRVDialect
 )

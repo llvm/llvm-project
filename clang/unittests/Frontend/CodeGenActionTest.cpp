@@ -16,7 +16,6 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -53,7 +52,7 @@ TEST(CodeGenTest, TestNullCodeGen) {
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance Compiler;
   Compiler.setInvocation(std::move(Invocation));
-  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+  Compiler.createDiagnostics();
   EXPECT_TRUE(Compiler.hasDiagnostics());
 
   std::unique_ptr<FrontendAction> Act(new NullCodeGenAction);
@@ -71,7 +70,7 @@ TEST(CodeGenTest, CodeGenFromIRMemBuffer) {
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance Compiler;
   Compiler.setInvocation(std::move(Invocation));
-  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+  Compiler.createDiagnostics();
   EXPECT_TRUE(Compiler.hasDiagnostics());
 
   EmitLLVMOnlyAction Action;
@@ -102,7 +101,7 @@ TEST(CodeGenTest, DebugInfoCWDCodeGen) {
   SmallString<256> IRBuffer;
   Compiler.setOutputStream(std::make_unique<raw_svector_ostream>(IRBuffer));
   Compiler.setInvocation(std::move(Invocation));
-  Compiler.createDiagnostics(*VFS);
+  Compiler.createDiagnostics();
   Compiler.createFileManager(std::move(VFS));
 
   EmitLLVMAction Action;

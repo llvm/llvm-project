@@ -12,13 +12,14 @@ using namespace clang;
 
 namespace {
 
-class InitListExprPreOrderNoQueueVisitor : public ExpectedLocationVisitor {
+class InitListExprPreOrderNoQueueVisitor
+    : public ExpectedLocationVisitor<InitListExprPreOrderNoQueueVisitor> {
 public:
-  bool TraverseInitListExpr(InitListExpr *ILE) override {
+  bool TraverseInitListExpr(InitListExpr *ILE) {
     return ExpectedLocationVisitor::TraverseInitListExpr(ILE);
   }
 
-  bool VisitInitListExpr(InitListExpr *ILE) override {
+  bool VisitInitListExpr(InitListExpr *ILE) {
     Match(ILE->isSemanticForm() ? "semantic" : "syntactic", ILE->getBeginLoc());
     return true;
   }

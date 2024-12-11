@@ -20,7 +20,7 @@
 #include <random>
 
 namespace llvm {
-static std::unique_ptr<TargetMachine> initTM() {
+static std::unique_ptr<LLVMTargetMachine> initTM() {
   LLVMInitializeX86TargetInfo();
   LLVMInitializeX86Target();
   LLVMInitializeX86TargetMC();
@@ -28,9 +28,9 @@ static std::unique_ptr<TargetMachine> initTM() {
   auto TT(Triple::normalize("x86_64--"));
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
-  return std::unique_ptr<TargetMachine>(
+  return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
       TheTarget->createTargetMachine(TT, "", "", TargetOptions(), std::nullopt,
-                                     std::nullopt, CodeGenOptLevel::Default));
+                                     std::nullopt, CodeGenOptLevel::Default)));
 }
 
 struct TernTester {

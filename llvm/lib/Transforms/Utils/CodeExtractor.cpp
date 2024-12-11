@@ -1465,7 +1465,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
           : Suffix;
 
   ValueSet StructValues;
-  StructType *StructTy = nullptr;
+  StructType *StructTy;
   Function *newFunction = constructFunctionDeclaration(
       inputs, outputs, EntryFreq, oldFunction->getName() + "." + SuffixToUse,
       StructValues, StructTy);

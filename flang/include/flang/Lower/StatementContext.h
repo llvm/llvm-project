@@ -92,13 +92,10 @@ public:
     cufs.back().reset();
   }
 
-  /// Pop the stack top list.
-  void pop() { cufs.pop_back(); }
-
   /// Make cleanup calls. Pop the stack top list.
   void finalizeAndPop() {
     finalizeAndKeep();
-    pop();
+    cufs.pop_back();
   }
 
   bool hasCode() const {

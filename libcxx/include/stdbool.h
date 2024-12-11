@@ -19,25 +19,22 @@ Macros:
 
 */
 
-#if 0
-#else // 0
-#  include <__config>
+#include <__config>
 
-#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#    pragma GCC system_header
-#  endif
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
 
-#  if __has_include_next(<stdbool.h>)
-#    include_next <stdbool.h>
-#  endif
+#if __has_include_next(<stdbool.h>)
+#  include_next <stdbool.h>
+#endif
 
-#  ifdef __cplusplus
-#    undef bool
-#    undef true
-#    undef false
-#    undef __bool_true_false_are_defined
-#    define __bool_true_false_are_defined 1
-#  endif
-#endif // 0
+#ifdef __cplusplus
+#  undef bool
+#  undef true
+#  undef false
+#  undef __bool_true_false_are_defined
+#  define __bool_true_false_are_defined 1
+#endif
 
 #endif // _LIBCPP_STDBOOL_H

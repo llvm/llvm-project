@@ -106,22 +106,9 @@ add_entrypoint_object(
 
 add_entrypoint_object(
   time
-  SRCS
-    time.cpp
-  HDRS
-    time_func.h
-  DEPENDS
-    libc.hdr.time_macros
-    libc.hdr.types.time_t
-    libc.src.__support.time.clock_gettime
-    libc.src.errno.errno
-)
-
-add_entrypoint_object(
-  timespec_get
   ALIAS
   DEPENDS
-    .${LIBC_TARGET_OS}.timespec_get
+    .${LIBC_TARGET_OS}.time
 )
 
 add_entrypoint_object(
@@ -150,11 +137,4 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.gettimeofday
-)
-
-add_entrypoint_object(
-  clock_getres
-  ALIAS
-  DEPENDS
-    .${LIBC_TARGET_OS}.clock_getres
 )

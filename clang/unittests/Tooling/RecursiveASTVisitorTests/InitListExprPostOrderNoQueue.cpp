@@ -6,19 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CRTPTestVisitor.h"
+#include "TestVisitor.h"
 
 using namespace clang;
 
 namespace {
 
 class InitListExprPostOrderNoQueueVisitor
-    : public CRTPExpectedLocationVisitor<InitListExprPostOrderNoQueueVisitor> {
+    : public ExpectedLocationVisitor<InitListExprPostOrderNoQueueVisitor> {
 public:
   bool shouldTraversePostOrder() const { return true; }
 
   bool TraverseInitListExpr(InitListExpr *ILE) {
-    return CRTPExpectedLocationVisitor::TraverseInitListExpr(ILE);
+    return ExpectedLocationVisitor::TraverseInitListExpr(ILE);
   }
 
   bool VisitInitListExpr(InitListExpr *ILE) {

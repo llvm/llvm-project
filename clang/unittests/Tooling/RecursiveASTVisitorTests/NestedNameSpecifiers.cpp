@@ -13,16 +13,17 @@ using namespace clang;
 namespace {
 
 // Check to ensure that nested name specifiers are visited.
-class NestedNameSpecifiersVisitor : public ExpectedLocationVisitor {
+class NestedNameSpecifiersVisitor
+    : public ExpectedLocationVisitor<NestedNameSpecifiersVisitor> {
 public:
-  bool VisitRecordTypeLoc(RecordTypeLoc RTL) override {
+  bool VisitRecordTypeLoc(RecordTypeLoc RTL) {
     if (!RTL)
       return true;
     Match(RTL.getDecl()->getName(), RTL.getNameLoc());
     return true;
   }
 
-  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) override {
+  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) {
     if (!NNS)
       return true;
     if (const NamespaceDecl *ND =

@@ -6,14 +6,9 @@
 #
 #===--------------------------------------------------------------------===//
 
-if(NOT TARGET llvm-libc-common-utilities)
-  set(libc_path ${CMAKE_CURRENT_LIST_DIR}/../../../libc)
-  if (EXISTS ${libc_path} AND IS_DIRECTORY ${libc_path})
-    add_library(llvm-libc-common-utilities INTERFACE)
-    # TODO: Reorganize the libc shared section so that it can be included without
-    # adding the root "libc" directory to the include path.
-    target_include_directories(llvm-libc-common-utilities INTERFACE ${libc_path})
-    target_compile_definitions(llvm-libc-common-utilities INTERFACE LIBC_NAMESPACE=__llvm_libc_common_utils)
-    target_compile_features(llvm-libc-common-utilities INTERFACE cxx_std_17)
-  endif()
-endif()
+add_library(llvm-libc-common-utilities INTERFACE)
+# TODO: Reorganize the libc shared section so that it can be included without
+# adding the root "libc" directory to the include path.
+target_include_directories(llvm-libc-common-utilities INTERFACE ${CMAKE_CURRENT_LIST_DIR}/../../../libc)
+target_compile_definitions(llvm-libc-common-utilities INTERFACE LIBC_NAMESPACE=__llvm_libc_common_utils)
+target_compile_features(llvm-libc-common-utilities INTERFACE cxx_std_17)

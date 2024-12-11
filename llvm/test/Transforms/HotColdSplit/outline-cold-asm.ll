@@ -9,9 +9,9 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK-LABEL: define {{.*}}@fun.cold.1(
 ; CHECK: asm ""
 
-define void @fun(i1 %arg) {
+define void @fun() {
 entry:
-  br i1 %arg, label %if.then, label %if.else
+  br i1 undef, label %if.then, label %if.else
 
 if.then:
   ret void

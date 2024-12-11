@@ -9,7 +9,7 @@
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -20,7 +20,6 @@
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ToolOutputFile.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
 
@@ -54,7 +53,7 @@ public:
   }
 
 private:
-  class Visitor : public ASTConsumer, public DynamicRecursiveASTVisitor {
+  class Visitor : public ASTConsumer, public RecursiveASTVisitor<Visitor> {
   public:
     Visitor(CompilerInstance &CI, bool ActOnEndOfTranslationUnit,
             std::vector<std::string> &decl_names) :
@@ -68,7 +67,7 @@ private:
       TraverseDecl(context.getTranslationUnitDecl());
     }
 
-    bool VisitNamedDecl(NamedDecl *Decl) override {
+    virtual bool VisitNamedDecl(NamedDecl *Decl) {
       decl_names_.push_back(Decl->getQualifiedNameAsString());
       return true;
     }
@@ -91,7 +90,7 @@ TEST(ASTFrontendAction, Sanity) {
   invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance compiler;
   compiler.setInvocation(std::move(invocation));
-  compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+  compiler.createDiagnostics();
 
   TestASTFrontendAction test_action;
   ASSERT_TRUE(compiler.ExecuteAction(test_action));
@@ -111,7 +110,7 @@ TEST(ASTFrontendAction, IncrementalParsing) {
   invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance compiler;
   compiler.setInvocation(std::move(invocation));
-  compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+  compiler.createDiagnostics();
 
   TestASTFrontendAction test_action(/*enableIncrementalProcessing=*/true);
   ASSERT_TRUE(compiler.ExecuteAction(test_action));
@@ -138,7 +137,7 @@ TEST(ASTFrontendAction, LateTemplateIncrementalParsing) {
   invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance compiler;
   compiler.setInvocation(std::move(invocation));
-  compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+  compiler.createDiagnostics();
 
   TestASTFrontendAction test_action(/*enableIncrementalProcessing=*/true,
                                     /*actOnEndOfTranslationUnit=*/true);
@@ -184,7 +183,7 @@ TEST(PreprocessorFrontendAction, EndSourceFile) {
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance Compiler;
   Compiler.setInvocation(std::move(Invocation));
-  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+  Compiler.createDiagnostics();
 
   TestPPCallbacks *Callbacks = new TestPPCallbacks;
   TestPPCallbacksFrontendAction TestAction(Callbacks);
@@ -246,8 +245,7 @@ TEST(ASTFrontendAction, ExternalSemaSource) {
   CompilerInstance Compiler;
   Compiler.setInvocation(std::move(Invocation));
   auto *TDC = new TypoDiagnosticConsumer;
-  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem(), TDC,
-                             /*ShouldOwnClient=*/true);
+  Compiler.createDiagnostics(TDC, /*ShouldOwnClient=*/true);
   Compiler.setExternalSemaSource(new TypoExternalSemaSource(Compiler));
 
   SyntaxOnlyAction TestAction;
@@ -279,7 +277,7 @@ TEST(GeneratePCHFrontendAction, CacheGeneratedPCH) {
     Invocation->getTargetOpts().Triple = "x86_64-apple-darwin19.0.0";
     CompilerInstance Compiler;
     Compiler.setInvocation(std::move(Invocation));
-    Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+    Compiler.createDiagnostics();
 
     GeneratePCHAction TestAction;
     ASSERT_TRUE(Compiler.ExecuteAction(TestAction));

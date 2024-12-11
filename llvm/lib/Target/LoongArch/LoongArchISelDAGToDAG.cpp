@@ -61,7 +61,7 @@ void LoongArchDAGToDAGISel::Select(SDNode *Node) {
     SDValue SrcReg = CurDAG->getRegister(LoongArch::R0, GRLenVT);
     // The instructions in the sequence are handled here.
     for (LoongArchMatInt::Inst &Inst : LoongArchMatInt::generateInstSeq(Imm)) {
-      SDValue SDImm = CurDAG->getSignedTargetConstant(Inst.Imm, DL, GRLenVT);
+      SDValue SDImm = CurDAG->getTargetConstant(Inst.Imm, DL, GRLenVT);
       switch (Inst.Opc) {
       case LoongArch::LU12I_W:
         Result = CurDAG->getMachineNode(Inst.Opc, DL, GRLenVT, SDImm);

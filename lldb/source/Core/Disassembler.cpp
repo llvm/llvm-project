@@ -205,20 +205,16 @@ Disassembler::GetFunctionDeclLineEntry(const SymbolContext &sc) {
     return {};
 
   LineEntry prologue_end_line = sc.line_entry;
-  SupportFileSP func_decl_file_sp;
+  FileSpec func_decl_file;
   uint32_t func_decl_line;
-  sc.function->GetStartLineSourceInfo(func_decl_file_sp, func_decl_line);
+  sc.function->GetStartLineSourceInfo(func_decl_file, func_decl_line);
 
-  if (!func_decl_file_sp)
-    return {};
-  if (!func_decl_file_sp->Equal(*prologue_end_line.file_sp,
-                                SupportFile::eEqualFileSpecAndChecksumIfSet) &&
-      !func_decl_file_sp->Equal(*prologue_end_line.original_file_sp,
-                                SupportFile::eEqualFileSpecAndChecksumIfSet))
+  if (func_decl_file != prologue_end_line.GetFile() &&
+      func_decl_file != prologue_end_line.original_file_sp->GetSpecOnly())
     return {};
 
   SourceLine decl_line;
-  decl_line.file = func_decl_file_sp->GetSpecOnly();
+  decl_line.file = func_decl_file;
   decl_line.line = func_decl_line;
   // TODO: Do we care about column on these entries?  If so, we need to plumb
   // that through GetStartLineSourceInfo.
@@ -414,24 +410,20 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
                 LineEntry prologue_end_line = sc.line_entry;
                 if (!ElideMixedSourceAndDisassemblyLine(exe_ctx, sc,
                                                         prologue_end_line)) {
-                  SupportFileSP func_decl_file_sp;
+                  FileSpec func_decl_file;
                   uint32_t func_decl_line;
-                  sc.function->GetStartLineSourceInfo(func_decl_file_sp,
+                  sc.function->GetStartLineSourceInfo(func_decl_file,
                                                       func_decl_line);
-                  if (func_decl_file_sp &&
-                      (func_decl_file_sp->Equal(
-                           *prologue_end_line.file_sp,
-                           SupportFile::eEqualFileSpecAndChecksumIfSet) ||
-                       func_decl_file_sp->Equal(
-                           *prologue_end_line.original_file_sp,
-                           SupportFile::eEqualFileSpecAndChecksumIfSet))) {
+                  if (func_decl_file == prologue_end_line.GetFile() ||
+                      func_decl_file ==
+                          prologue_end_line.original_file_sp->GetSpecOnly()) {
                     // Add all the lines between the function declaration and
                     // the first non-prologue source line to the list of lines
                     // to print.
                     for (uint32_t lineno = func_decl_line;
                          lineno <= prologue_end_line.line; lineno++) {
                       SourceLine this_line;
-                      this_line.file = func_decl_file_sp->GetSpecOnly();
+                      this_line.file = func_decl_file;
                       this_line.line = lineno;
                       source_lines_to_display.lines.push_back(this_line);
                     }

@@ -135,20 +135,6 @@ static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
       dummy.type.type().kind() == actualType.type().kind() &&
       !dummy.attrs.test(
           characteristics::DummyDataObject::Attr::DeducedFromActual)) {
-    bool actualIsAssumedRank{evaluate::IsAssumedRank(actual)};
-    if (actualIsAssumedRank &&
-        !dummy.type.attrs().test(
-            characteristics::TypeAndShape::Attr::AssumedRank)) {
-      if (!context.languageFeatures().IsEnabled(
-              common::LanguageFeature::AssumedRankPassedToNonAssumedRank)) {
-        messages.Say(
-            "Assumed-rank character array may not be associated with a dummy argument that is not assumed-rank"_err_en_US);
-      } else {
-        context.Warn(common::LanguageFeature::AssumedRankPassedToNonAssumedRank,
-            messages.at(),
-            "Assumed-rank character array should not be associated with a dummy argument that is not assumed-rank"_port_en_US);
-      }
-    }
     if (dummy.type.LEN() && actualType.LEN()) {
       evaluate::FoldingContext &foldingContext{context.foldingContext()};
       auto dummyLength{
@@ -162,7 +148,7 @@ static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
           if (auto dummySize{evaluate::ToInt64(evaluate::Fold(
                   foldingContext, evaluate::GetSize(dummy.type.shape())))}) {
             auto dummyChars{*dummySize * *dummyLength};
-            if (actualType.Rank() == 0 && !actualIsAssumedRank) {
+            if (actualType.Rank() == 0) {
               evaluate::DesignatorFolder folder{
                   context.foldingContext(), /*getLastComponent=*/true};
               if (auto actualOffset{folder.FoldDesignator(actual)}) {
@@ -616,18 +602,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             characteristics::DummyDataObject::Attr::DeducedFromActual)) {
       if (auto dummySize{evaluate::ToInt64(evaluate::Fold(
               foldingContext, evaluate::GetSize(dummy.type.shape())))}) {
-        if (actualIsAssumedRank) {
-          if (!context.languageFeatures().IsEnabled(
-                  common::LanguageFeature::AssumedRankPassedToNonAssumedRank)) {
-            messages.Say(
-                "Assumed-rank array may not be associated with a dummy argument that is not assumed-rank"_err_en_US);
-          } else {
-            context.Warn(
-                common::LanguageFeature::AssumedRankPassedToNonAssumedRank,
-                messages.at(),
-                "Assumed-rank array should not be associated with a dummy argument that is not assumed-rank"_port_en_US);
-          }
-        } else if (actualRank == 0) {
+        if (actualRank == 0 && !actualIsAssumedRank) {
           if (evaluate::IsArrayElement(actual)) {
             // Actual argument is a scalar array element
             evaluate::DesignatorFolder folder{
@@ -668,7 +643,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
               }
             }
           }
-        } else {
+        } else { // actualRank > 0 || actualIsAssumedRank
           if (auto actualSize{evaluate::ToInt64(evaluate::Fold(
                   foldingContext, evaluate::GetSize(actualType.shape())))};
               actualSize && *actualSize < *dummySize) {

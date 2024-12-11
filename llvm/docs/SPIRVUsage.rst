@@ -141,18 +141,14 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
 
    * - Extension Name
      - Description
-   * - ``SPV_EXT_arithmetic_fence``
-     - Adds an instruction that prevents fast-math optimizations between its argument and the expression that contains it.
-   * - ``SPV_EXT_demote_to_helper_invocation``
-     - Adds an instruction that demotes a fragment shader invocation to a helper invocation.
-   * - ``SPV_EXT_optnone``
-     - Adds OptNoneEXT value for Function Control mask that indicates a request to not optimize the function.
    * - ``SPV_EXT_shader_atomic_float16_add``
      - Extends the SPV_EXT_shader_atomic_float_add extension to support atomically adding to 16-bit floating-point numbers in memory.
    * - ``SPV_EXT_shader_atomic_float_add``
      - Adds atomic add instruction on floating-point numbers.
    * - ``SPV_EXT_shader_atomic_float_min_max``
      - Adds atomic min and max instruction on floating-point numbers.
+   * - ``SPV_EXT_arithmetic_fence``
+     - Adds an instruction that prevents fast-math optimizations between its argument and the expression that contains it.
    * - ``SPV_INTEL_arbitrary_precision_integers``
      - Allows generating arbitrary width integer types.
    * - ``SPV_INTEL_bfloat16_conversion``
@@ -167,8 +163,6 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds decorations that can be applied to global (module scope) variables.
    * - ``SPV_INTEL_global_variable_fpga_decorations``
      - Adds decorations that can be applied to global (module scope) variables to help code generation for FPGA devices.
-   * - ``SPV_INTEL_media_block_io``
-     - Adds additional subgroup block read and write functionality that allow applications to flexibly specify the width and height of the block to read from or write to a 2D image.
    * - ``SPV_INTEL_optnone``
      - Adds OptNoneINTEL value for Function Control mask that indicates a request to not optimize the function.
    * - ``SPV_INTEL_split_barrier``
@@ -179,8 +173,6 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Introduces two new storage classes that are subclasses of the CrossWorkgroup storage class that provides additional information that can enable optimization.
    * - ``SPV_INTEL_variable_length_array``
      - Allows to allocate local arrays whose number of elements is unknown at compile time.
-   * - ``SPV_INTEL_joint_matrix``
-     - Adds few matrix capabilities on top of SPV_KHR_cooperative_matrix extension, such as matrix prefetch, get element coordinate and checked load/store/construct instructions, tensor float 32 and bfloat type interpretations for multuply-add instruction.
    * - ``SPV_KHR_bit_instructions``
      - Enables bit instructions to be used by SPIR-V modules without requiring the Shader capability.
    * - ``SPV_KHR_expect_assume``
@@ -408,11 +400,6 @@ SPIR-V backend, along with their descriptions and argument details.
        return type is a scalar, then the first element of the vector is \
        returned. If the return type is an n-element vector, then the first \
        n-elements of the 4-element vector are returned.
-   * - `int_spv_typedBufferStore`
-     - void
-     - `[spirv.Image Image, 32-bit Integer coordinate, vec4 data]`
-     - Stores the data to the image buffer at the given coordinate. The \
-       data must be a 4-element vector.
 
 .. _spirv-builtin-functions:
 

@@ -43,7 +43,7 @@
 namespace llvm {
 
 class Function;
-class TargetMachine;
+class LLVMTargetMachine;
 class MachineFunction;
 class Module;
 
@@ -83,7 +83,7 @@ class MachineModuleInfo {
   friend class MachineModuleInfoWrapperPass;
   friend class MachineModuleAnalysis;
 
-  const TargetMachine &TM;
+  const LLVMTargetMachine &TM;
 
   /// This is the MCContext used for the entire code generator.
   MCContext Context;
@@ -109,9 +109,10 @@ class MachineModuleInfo {
   MachineModuleInfo &operator=(MachineModuleInfo &&MMII) = delete;
 
 public:
-  explicit MachineModuleInfo(const TargetMachine *TM = nullptr);
+  explicit MachineModuleInfo(const LLVMTargetMachine *TM = nullptr);
 
-  explicit MachineModuleInfo(const TargetMachine *TM, MCContext *ExtContext);
+  explicit MachineModuleInfo(const LLVMTargetMachine *TM,
+                             MCContext *ExtContext);
 
   MachineModuleInfo(MachineModuleInfo &&MMII);
 
@@ -120,7 +121,7 @@ public:
   void initialize();
   void finalize();
 
-  const TargetMachine &getTarget() const { return TM; }
+  const LLVMTargetMachine &getTarget() const { return TM; }
 
   const MCContext &getContext() const {
     return ExternalContext ? *ExternalContext : Context;
@@ -172,9 +173,9 @@ class MachineModuleInfoWrapperPass : public ImmutablePass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  explicit MachineModuleInfoWrapperPass(const TargetMachine *TM = nullptr);
+  explicit MachineModuleInfoWrapperPass(const LLVMTargetMachine *TM = nullptr);
 
-  explicit MachineModuleInfoWrapperPass(const TargetMachine *TM,
+  explicit MachineModuleInfoWrapperPass(const LLVMTargetMachine *TM,
                                         MCContext *ExtContext);
 
   // Initialization and Finalization

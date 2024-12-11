@@ -21,10 +21,7 @@
 // unsigned negation, for example:
 // unsigned long A = -1UL;
 
-// Skip over parts of the IR containing this file's name.
-// CHECK: source_filename = {{.*}}
 
-// Ensure we don't see anything about handling overflow before the tests below.
 // CHECK-NOT: handle{{.*}}overflow
 
 extern unsigned a, b, c;

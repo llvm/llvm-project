@@ -29,7 +29,8 @@ operator<<(std::ostream &OS, const MachineFunction &MF) {
 
 }
 
-std::unique_ptr<TargetMachine> AArch64GISelMITest::createTargetMachine() const {
+std::unique_ptr<LLVMTargetMachine>
+AArch64GISelMITest::createTargetMachine() const {
   Triple TargetTriple("aarch64--");
   std::string Error;
   const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
@@ -37,9 +38,9 @@ std::unique_ptr<TargetMachine> AArch64GISelMITest::createTargetMachine() const {
     return nullptr;
 
   TargetOptions Options;
-  return std::unique_ptr<TargetMachine>(
+  return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
       T->createTargetMachine("AArch64", "", "", Options, std::nullopt,
-                             std::nullopt, CodeGenOptLevel::Aggressive));
+                             std::nullopt, CodeGenOptLevel::Aggressive)));
 }
 
 void AArch64GISelMITest::getTargetTestModuleString(SmallString<512> &S,
@@ -66,7 +67,8 @@ body: |
       .toNullTerminatedStringRef(S);
 }
 
-std::unique_ptr<TargetMachine> AMDGPUGISelMITest::createTargetMachine() const {
+std::unique_ptr<LLVMTargetMachine>
+AMDGPUGISelMITest::createTargetMachine() const {
   Triple TargetTriple("amdgcn-amd-amdhsa");
   std::string Error;
   const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
@@ -74,9 +76,10 @@ std::unique_ptr<TargetMachine> AMDGPUGISelMITest::createTargetMachine() const {
     return nullptr;
 
   TargetOptions Options;
-  return std::unique_ptr<TargetMachine>(T->createTargetMachine(
-      "amdgcn-amd-amdhsa", "gfx900", "", Options, std::nullopt, std::nullopt,
-      CodeGenOptLevel::Aggressive));
+  return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+      T->createTargetMachine("amdgcn-amd-amdhsa", "gfx900", "", Options,
+                             std::nullopt, std::nullopt,
+                             CodeGenOptLevel::Aggressive)));
 }
 
 void AMDGPUGISelMITest::getTargetTestModuleString(

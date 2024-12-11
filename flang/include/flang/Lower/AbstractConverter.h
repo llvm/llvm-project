@@ -61,7 +61,6 @@ class SymMap;
 struct SymbolBox;
 namespace pft {
 struct Variable;
-struct FunctionLikeUnit;
 }
 
 using SomeExpr = Fortran::evaluate::Expr<Fortran::evaluate::SomeType>;
@@ -118,11 +117,8 @@ public:
 
   /// For a given symbol which is host-associated, create a clone using
   /// parameters from the host-associated symbol.
-  /// The clone is default initialized if its type has any default
-  /// initialization unless `skipDefaultInit` is set.
   virtual bool
-  createHostAssociateVarClone(const Fortran::semantics::Symbol &sym,
-                              bool skipDefaultInit) = 0;
+  createHostAssociateVarClone(const Fortran::semantics::Symbol &sym) = 0;
 
   virtual void
   createHostAssociateVarCloneDealloc(const Fortran::semantics::Symbol &sym) = 0;
@@ -236,10 +232,6 @@ public:
   /// during the instatiation of the variables.
   virtual bool
   isRegisteredDummySymbol(Fortran::semantics::SymbolRef symRef) const = 0;
-
-  /// Returns the FunctionLikeUnit being lowered, if any.
-  virtual const Fortran::lower::pft::FunctionLikeUnit *
-  getCurrentFunctionUnit() const = 0;
 
   //===--------------------------------------------------------------------===//
   // Types

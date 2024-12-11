@@ -40,10 +40,7 @@ class DWARFCache;
 namespace coff {
 class COFFLinkerContext;
 
-const COFFSyncStream &operator<<(const COFFSyncStream &, const InputFile *);
-
-std::vector<MemoryBufferRef> getArchiveMembers(COFFLinkerContext &,
-                                               llvm::object::Archive *file);
+std::vector<MemoryBufferRef> getArchiveMembers(llvm::object::Archive *file);
 
 using llvm::COFF::IMAGE_FILE_MACHINE_UNKNOWN;
 using llvm::COFF::MachineTypes;

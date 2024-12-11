@@ -299,11 +299,10 @@ static bool applyDiceHeuristic(StringRef Arg, StringRef Param,
 
 /// Checks if ArgType binds to ParamType regarding reference-ness and
 /// cv-qualifiers.
-static bool areRefAndQualCompatible(QualType ArgType, QualType ParamType,
-                                    const ASTContext &Ctx) {
+static bool areRefAndQualCompatible(QualType ArgType, QualType ParamType) {
   return !ParamType->isReferenceType() ||
          ParamType.getNonReferenceType().isAtLeastAsQualifiedAs(
-             ArgType.getNonReferenceType(), Ctx);
+             ArgType.getNonReferenceType());
 }
 
 static bool isPointerOrArray(QualType TypeToCheck) {
@@ -312,12 +311,12 @@ static bool isPointerOrArray(QualType TypeToCheck) {
 
 /// Checks whether ArgType is an array type identical to ParamType's array type.
 /// Enforces array elements' qualifier compatibility as well.
-static bool isCompatibleWithArrayReference(QualType ArgType, QualType ParamType,
-                                           const ASTContext &Ctx) {
+static bool isCompatibleWithArrayReference(QualType ArgType,
+                                           QualType ParamType) {
   if (!ArgType->isArrayType())
     return false;
   // Here, qualifiers belong to the elements of the arrays.
-  if (!ParamType.isAtLeastAsQualifiedAs(ArgType, Ctx))
+  if (!ParamType.isAtLeastAsQualifiedAs(ArgType))
     return false;
 
   return ParamType.getUnqualifiedType() == ArgType.getUnqualifiedType();
@@ -343,13 +342,12 @@ static QualType convertToPointeeOrArrayElementQualType(QualType TypeToConvert) {
 /// every * in ParamType to the right of that cv-qualifier, except the last
 /// one, must also be const-qualified.
 static bool arePointersStillQualCompatible(QualType ArgType, QualType ParamType,
-                                           bool &IsParamContinuouslyConst,
-                                           const ASTContext &Ctx) {
+                                           bool &IsParamContinuouslyConst) {
   // The types are compatible, if the parameter is at least as qualified as the
   // argument, and if it is more qualified, it has to be const on upper pointer
   // levels.
   bool AreTypesQualCompatible =
-      ParamType.isAtLeastAsQualifiedAs(ArgType, Ctx) &&
+      ParamType.isAtLeastAsQualifiedAs(ArgType) &&
       (!ParamType.hasQualifiers() || IsParamContinuouslyConst);
   // Check whether the parameter's constness continues at the current pointer
   // level.
@@ -361,10 +359,9 @@ static bool arePointersStillQualCompatible(QualType ArgType, QualType ParamType,
 /// Checks whether multilevel pointers are compatible in terms of levels,
 /// qualifiers and pointee type.
 static bool arePointerTypesCompatible(QualType ArgType, QualType ParamType,
-                                      bool IsParamContinuouslyConst,
-                                      const ASTContext &Ctx) {
+                                      bool IsParamContinuouslyConst) {
   if (!arePointersStillQualCompatible(ArgType, ParamType,
-                                      IsParamContinuouslyConst, Ctx))
+                                      IsParamContinuouslyConst))
     return false;
 
   do {
@@ -375,7 +372,7 @@ static bool arePointerTypesCompatible(QualType ArgType, QualType ParamType,
     // Check whether cv-qualifiers permit compatibility on
     // current level.
     if (!arePointersStillQualCompatible(ArgType, ParamType,
-                                        IsParamContinuouslyConst, Ctx))
+                                        IsParamContinuouslyConst))
       return false;
 
     if (ParamType.getUnqualifiedType() == ArgType.getUnqualifiedType())
@@ -399,7 +396,7 @@ static bool areTypesCompatible(QualType ArgType, QualType ParamType,
     return true;
 
   // Check for constness and reference compatibility.
-  if (!areRefAndQualCompatible(ArgType, ParamType, Ctx))
+  if (!areRefAndQualCompatible(ArgType, ParamType))
     return false;
 
   bool IsParamReference = ParamType->isReferenceType();
@@ -437,7 +434,7 @@ static bool areTypesCompatible(QualType ArgType, QualType ParamType,
   // When ParamType is an array reference, ArgType has to be of the same-sized
   // array-type with cv-compatible element type.
   if (IsParamReference && ParamType->isArrayType())
-    return isCompatibleWithArrayReference(ArgType, ParamType, Ctx);
+    return isCompatibleWithArrayReference(ArgType, ParamType);
 
   bool IsParamContinuouslyConst =
       !IsParamReference || ParamType.getNonReferenceType().isConstQualified();
@@ -447,7 +444,7 @@ static bool areTypesCompatible(QualType ArgType, QualType ParamType,
   ParamType = convertToPointeeOrArrayElementQualType(ParamType);
 
   // Check qualifier compatibility on the next level.
-  if (!ParamType.isAtLeastAsQualifiedAs(ArgType, Ctx))
+  if (!ParamType.isAtLeastAsQualifiedAs(ArgType))
     return false;
 
   if (ParamType.getUnqualifiedType() == ArgType.getUnqualifiedType())
@@ -475,8 +472,8 @@ static bool areTypesCompatible(QualType ArgType, QualType ParamType,
   if (!(ParamType->isAnyPointerType() && ArgType->isAnyPointerType()))
     return false;
 
-  return arePointerTypesCompatible(ArgType, ParamType, IsParamContinuouslyConst,
-                                   Ctx);
+  return arePointerTypesCompatible(ArgType, ParamType,
+                                   IsParamContinuouslyConst);
 }
 
 static bool isOverloadedUnaryOrBinarySymbolOperator(const FunctionDecl *FD) {

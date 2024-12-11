@@ -97,6 +97,19 @@ static DISubprogram *getSubprogram(DIScope *Scope) {
   return cast<DILocalScope>(Scope)->getSubprogram();
 }
 
+/// Erase \p V from \p BB and move \II forward to avoid invalidating
+/// iterators.
+static void eraseFromParentAndMove(Value *V, BasicBlock::reverse_iterator &II,
+                                   BasicBlock &BB) {
+  auto *Inst = cast<Instruction>(V);
+  // Still used, don't erase.
+  if (!Inst->use_empty())
+    return;
+  if (II != BB.rend() && Inst == &*II)
+    ++II;
+  Inst->eraseFromParent();
+}
+
 /// Return true if V is a splat of a value (which is used when multiplying a
 /// matrix with a scalar).
 static bool isSplat(Value *V) {
@@ -246,7 +259,7 @@ static bool isUniformShape(Value *V) {
 /// Return the ShapeInfo for the result of \p I, it it can be determined.
 static std::optional<ShapeInfo>
 computeShapeInfoForInst(Instruction *I,
-                        const DenseMap<Value *, ShapeInfo> &ShapeMap) {
+                        const ValueMap<Value *, ShapeInfo> &ShapeMap) {
   Value *M;
   Value *N;
   Value *K;
@@ -310,11 +323,10 @@ class LowerMatrixIntrinsics {
   Function &Func;
   const DataLayout &DL;
   const TargetTransformInfo &TTI;
-  FunctionAnalysisManager *AM;
-  AliasAnalysis *AA = nullptr;
-  DominatorTree *DT = nullptr;
-  LoopInfo *LI = nullptr;
-  OptimizationRemarkEmitter *ORE = nullptr;
+  AliasAnalysis *AA;
+  DominatorTree *DT;
+  LoopInfo *LI;
+  OptimizationRemarkEmitter *ORE;
 
   /// Contains estimates of the number of operations (loads, stores, compute) required to lower a matrix operation.
   struct OpInfoTy {
@@ -480,16 +492,10 @@ class LowerMatrixIntrinsics {
   /// the result value of the instruction, with the only exceptions being store
   /// instructions and the matrix_column_major_store intrinsics. For those, the
   /// shape information indicates that those instructions should be lowered
-  /// using shape information as well. Note that extra care is needed when
-  /// erasing or RAUW'ing a value that is present in ShapeMap. If the
-  /// replacement is also a matrix operation, use
-  /// updateShapeAndReplaceAllUsesWith to make sure the replacement is added to
-  /// ShapeMap.  We don't use ValueMap, as there are also cases where we do not
-  /// want to add shape information for a replacement instruction. When directly
-  /// erasing a value with an entry in ShapeMap, use
-  /// eraseFromParentAndRemoveFromShapeMap to make sure ShapeMap is also updated
-  /// accordingly.
-  DenseMap<Value *, ShapeInfo> ShapeMap;
+  /// using shape information as well.  A ValueMap is used so that when
+  /// sub-passes like optimizeTransposes performs RAUW the map stays
+  /// up-to-date.
+  ValueMap<Value *, ShapeInfo> ShapeMap;
 
   /// List of instructions to remove. While lowering, we are not replacing all
   /// users of a lowered instruction, if shape information is available and
@@ -513,8 +519,10 @@ private:
 
 public:
   LowerMatrixIntrinsics(Function &F, TargetTransformInfo &TTI,
-                        FunctionAnalysisManager *AM)
-      : Func(F), DL(F.getDataLayout()), TTI(TTI), AM(AM) {}
+                        AliasAnalysis *AA, DominatorTree *DT, LoopInfo *LI,
+                        OptimizationRemarkEmitter *ORE)
+      : Func(F), DL(F.getDataLayout()), TTI(TTI), AA(AA), DT(DT),
+        LI(LI), ORE(ORE) {}
 
   unsigned getNumOps(Type *VT) {
     assert(isa<VectorType>(VT) && "Expected vector type");
@@ -751,30 +759,6 @@ public:
     return Operation(T0, Shape0.t(), T1, Shape1.t());
   }
 
-  /// Erase \p Inst from both ShapeMap (if an entry exists) and erase \p Inst
-  /// itself.
-  void eraseFromParentAndRemoveFromShapeMap(Instruction *Inst) {
-    auto Iter = ShapeMap.find(Inst);
-    if (Iter != ShapeMap.end())
-      ShapeMap.erase(Iter);
-    Inst->eraseFromParent();
-  }
-
-  /// Erase \p V from \p BB and move \II forward to avoid invalidating
-  /// iterators.
-  void eraseFromParentAndMove(Value *V, BasicBlock::reverse_iterator &II,
-                              BasicBlock &BB) {
-    auto *Inst = cast<Instruction>(V);
-    // Still used, don't erase.
-    if (!Inst->use_empty())
-      return;
-    if (II != BB.rend() && Inst == &*II)
-      ++II;
-    eraseFromParentAndRemoveFromShapeMap(Inst);
-  }
-
-  /// Add a new entry to ShapeMap for \p New with \p Old's shape info, erase the
-  /// entry for \p Old and replace all uses of \p Old with \p New.
   void updateShapeAndReplaceAllUsesWith(Instruction &Old, Value *New) {
     // We need to remove Old from the ShapeMap otherwise RAUW will replace it
     // with New. We should only add New it it supportsShapeInfo so we insert
@@ -888,13 +872,13 @@ public:
 
   void liftTranspose(Instruction &I) {
     // Erase dead Instructions after lifting transposes from binops.
-    auto CleanupBinOp = [this](Instruction &T, Value *A, Value *B) {
+    auto CleanupBinOp = [](Instruction &T, Value *A, Value *B) {
       if (T.use_empty())
-        eraseFromParentAndRemoveFromShapeMap(&T);
+        T.eraseFromParent();
       if (A->use_empty())
-        eraseFromParentAndRemoveFromShapeMap(cast<Instruction>(A));
+        cast<Instruction>(A)->eraseFromParent();
       if (A != B && B->use_empty())
-        eraseFromParentAndRemoveFromShapeMap(cast<Instruction>(B));
+        cast<Instruction>(B)->eraseFromParent();
     };
 
     Value *A, *B, *AT, *BT;
@@ -924,7 +908,8 @@ public:
              match(B, m_Intrinsic<Intrinsic::matrix_transpose>(
                           m_Value(BT), m_ConstantInt(), m_ConstantInt()))) {
       IRBuilder<> Builder(&I);
-      auto *Add = Builder.CreateFAdd(AT, BT, "mfadd");
+      auto *Add = cast<Instruction>(Builder.CreateFAdd(AT, BT, "mfadd"));
+      setShapeInfo(Add, {R, C});
       MatrixBuilder MBuilder(Builder);
       Instruction *NewInst = MBuilder.CreateMatrixTranspose(
           Add, R->getZExtValue(), C->getZExtValue(), "mfadd_t");
@@ -933,13 +918,9 @@ public:
                  computeShapeInfoForInst(&I, ShapeMap) &&
              "Shape of new instruction doesn't match original shape.");
       CleanupBinOp(I, A, B);
-      if (auto *AddI = dyn_cast<Instruction>(Add)) {
-        setShapeInfo(AddI, {R, C});
-        assert(
-            computeShapeInfoForInst(AddI, ShapeMap).value_or(ShapeMap[AddI]) ==
-                ShapeMap[AddI] &&
-            "Shape of updated addition doesn't match cached shape.");
-      }
+      assert(computeShapeInfoForInst(Add, ShapeMap).value_or(ShapeMap[Add]) ==
+                 ShapeMap[Add] &&
+             "Shape of updated addition doesn't match cached shape.");
     }
   }
 
@@ -993,13 +974,6 @@ public:
     if (WorkList.empty())
       return false;
 
-    if (AM) {
-      ORE = &AM->getResult<OptimizationRemarkEmitterAnalysis>(Func);
-      AA = &AM->getResult<AAManager>(Func);
-      DT = &AM->getResult<DominatorTreeAnalysis>(Func);
-      LI = &AM->getResult<LoopAnalysis>(Func);
-    }
-
     // Propagate shapes until nothing changes any longer.
     while (!WorkList.empty()) {
       WorkList = propagateShapeForward(WorkList);
@@ -1040,8 +1014,7 @@ public:
 
     // Third, try to fuse candidates.
     for (CallInst *CI : MaybeFusableInsts)
-      if (!FusedInsts.contains(CI))
-        LowerMatrixMultiplyFused(CI, FusedInsts, LifetimeEnds);
+      LowerMatrixMultiplyFused(CI, FusedInsts, LifetimeEnds);
 
     Changed = !FusedInsts.empty();
 
@@ -1504,7 +1477,7 @@ public:
                         m_Value(Arg)))) {
         auto *NewLoad = Builder.CreateLoad(Op->getType(), Arg);
         Op->replaceAllUsesWith(NewLoad);
-        eraseFromParentAndRemoveFromShapeMap(cast<Instruction>(Op));
+        cast<Instruction>(Op)->eraseFromParent();
         return;
       } else if (match(Op, m_Intrinsic<Intrinsic::matrix_transpose>(
                                m_Value(Arg)))) {
@@ -1873,15 +1846,15 @@ public:
     // Mark eliminated instructions as fused and remove them.
     FusedInsts.insert(Store);
     FusedInsts.insert(MatMul);
-    eraseFromParentAndRemoveFromShapeMap(Store);
-    eraseFromParentAndRemoveFromShapeMap(MatMul);
+    Store->eraseFromParent();
+    MatMul->eraseFromParent();
     if (LoadOp0->hasNUses(0)) {
       FusedInsts.insert(LoadOp0);
-      eraseFromParentAndRemoveFromShapeMap(LoadOp0);
+      LoadOp0->eraseFromParent();
     }
     if (LoadOp1 != LoadOp0 && LoadOp1->hasNUses(0)) {
       FusedInsts.insert(LoadOp1);
-      eraseFromParentAndRemoveFromShapeMap(LoadOp1);
+      LoadOp1->eraseFromParent();
     }
   }
 
@@ -2644,8 +2617,19 @@ public:
 PreservedAnalyses LowerMatrixIntrinsicsPass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
+  OptimizationRemarkEmitter *ORE = nullptr;
+  AAResults *AA = nullptr;
+  DominatorTree *DT = nullptr;
+  LoopInfo *LI = nullptr;
 
-  LowerMatrixIntrinsics LMT(F, TTI, Minimal ? nullptr : &AM);
+  if (!Minimal) {
+    ORE = &AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+    AA = &AM.getResult<AAManager>(F);
+    DT = &AM.getResult<DominatorTreeAnalysis>(F);
+    LI = &AM.getResult<LoopAnalysis>(F);
+  }
+
+  LowerMatrixIntrinsics LMT(F, TTI, AA, DT, LI, ORE);
   if (LMT.Visit()) {
     PreservedAnalyses PA;
     if (!Minimal) {

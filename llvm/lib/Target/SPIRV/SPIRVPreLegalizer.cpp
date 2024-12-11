@@ -466,13 +466,8 @@ void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
   for (auto &Op : MI.operands()) {
     if (!Op.isReg() || Op.isDef())
       continue;
-    Register OpReg = Op.getReg();
-    SPIRVType *SpvType = GR->getSPIRVTypeForVReg(OpReg);
-    auto IdOpInfo = createNewIdReg(SpvType, OpReg, MRI, *GR);
-    MIB.buildInstr(IdOpInfo.second).addDef(IdOpInfo.first).addUse(OpReg);
-    const TargetRegisterClass *RC = GR->getRegClass(SpvType);
-    if (RC != MRI.getRegClassOrNull(OpReg))
-      MRI.setRegClass(OpReg, RC);
+    auto IdOpInfo = createNewIdReg(nullptr, Op.getReg(), MRI, *GR);
+    MIB.buildInstr(IdOpInfo.second).addDef(IdOpInfo.first).addUse(Op.getReg());
     Op.setReg(IdOpInfo.first);
   }
 }

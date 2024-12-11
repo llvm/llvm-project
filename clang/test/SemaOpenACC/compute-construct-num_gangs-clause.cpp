@@ -105,6 +105,7 @@ void Test() {
   // expected-error@+1{{OpenACC 'num_gangs' clause is not valid on 'serial' directive}}
 #pragma acc serial num_gangs(Explicit, NC, Ambiguous)
   while(1);
+  // TODO
 }
 
 struct HasInt {

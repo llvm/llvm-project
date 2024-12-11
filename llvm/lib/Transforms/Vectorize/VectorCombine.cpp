@@ -67,10 +67,9 @@ class VectorCombine {
 public:
   VectorCombine(Function &F, const TargetTransformInfo &TTI,
                 const DominatorTree &DT, AAResults &AA, AssumptionCache &AC,
-                const DataLayout *DL, TTI::TargetCostKind CostKind,
-                bool TryEarlyFoldsOnly)
+                const DataLayout *DL, bool TryEarlyFoldsOnly)
       : F(F), Builder(F.getContext()), TTI(TTI), DT(DT), AA(AA), AC(AC), DL(DL),
-        CostKind(CostKind), TryEarlyFoldsOnly(TryEarlyFoldsOnly) {}
+        TryEarlyFoldsOnly(TryEarlyFoldsOnly) {}
 
   bool run();
 
@@ -82,7 +81,6 @@ private:
   AAResults &AA;
   AssumptionCache &AC;
   const DataLayout *DL;
-  TTI::TargetCostKind CostKind;
 
   /// If true, only perform beneficial early IR transforms. Do not introduce new
   /// vector operations.
@@ -108,7 +106,6 @@ private:
                        Instruction &I);
   bool foldExtractExtract(Instruction &I);
   bool foldInsExtFNeg(Instruction &I);
-  bool foldInsExtVectorToShuffle(Instruction &I);
   bool foldBitcastShuffle(Instruction &I);
   bool scalarizeBinopOrCmp(Instruction &I);
   bool scalarizeVPIntrinsic(Instruction &I);
@@ -249,15 +246,16 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   Type *LoadTy = Load->getType();
   unsigned AS = Load->getPointerAddressSpace();
   InstructionCost OldCost =
-      TTI.getMemoryOpCost(Instruction::Load, LoadTy, Alignment, AS, CostKind);
+      TTI.getMemoryOpCost(Instruction::Load, LoadTy, Alignment, AS);
   APInt DemandedElts = APInt::getOneBitSet(MinVecNumElts, 0);
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   OldCost +=
       TTI.getScalarizationOverhead(MinVecTy, DemandedElts,
                                    /* Insert */ true, HasExtract, CostKind);
 
   // New pattern: load VecPtr
   InstructionCost NewCost =
-      TTI.getMemoryOpCost(Instruction::Load, MinVecTy, Alignment, AS, CostKind);
+      TTI.getMemoryOpCost(Instruction::Load, MinVecTy, Alignment, AS);
   // Optionally, we are shuffling the loaded vector element(s) into place.
   // For the mask set everything but element 0 to undef to prevent poison from
   // propagating from the extra loaded memory. This will also optionally
@@ -271,8 +269,7 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   assert(OffsetEltIndex < MinVecNumElts && "Address offset too big");
   Mask[0] = OffsetEltIndex;
   if (OffsetEltIndex)
-    NewCost +=
-        TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, MinVecTy, Mask, CostKind);
+    NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, MinVecTy, Mask);
 
   // We can aggressively convert to the vector form because the backend can
   // invert this transform if it does not result in a performance win.
@@ -331,11 +328,11 @@ bool VectorCombine::widenSubvectorLoad(Instruction &I) {
   // undef value is 0. We could add that cost if the cost model accurately
   // reflects the real cost of that operation.
   InstructionCost OldCost =
-      TTI.getMemoryOpCost(Instruction::Load, LoadTy, Alignment, AS, CostKind);
+      TTI.getMemoryOpCost(Instruction::Load, LoadTy, Alignment, AS);
 
   // New pattern: load PtrOp
   InstructionCost NewCost =
-      TTI.getMemoryOpCost(Instruction::Load, Ty, Alignment, AS, CostKind);
+      TTI.getMemoryOpCost(Instruction::Load, Ty, Alignment, AS);
 
   // We can aggressively convert to the vector form because the backend can
   // invert this transform if it does not result in a performance win.
@@ -368,6 +365,7 @@ ExtractElementInst *VectorCombine::getShuffleExtract(
     return nullptr;
 
   Type *VecTy = Ext0->getVectorOperand()->getType();
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   assert(VecTy == Ext1->getVectorOperand()->getType() && "Need matching types");
   InstructionCost Cost0 =
       TTI.getVectorInstrCost(*Ext0, VecTy, CostKind, Index0);
@@ -421,22 +419,23 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
   // Get cost estimates for scalar and vector versions of the operation.
   bool IsBinOp = Instruction::isBinaryOp(Opcode);
   if (IsBinOp) {
-    ScalarOpCost = TTI.getArithmeticInstrCost(Opcode, ScalarTy, CostKind);
-    VectorOpCost = TTI.getArithmeticInstrCost(Opcode, VecTy, CostKind);
+    ScalarOpCost = TTI.getArithmeticInstrCost(Opcode, ScalarTy);
+    VectorOpCost = TTI.getArithmeticInstrCost(Opcode, VecTy);
   } else {
     assert((Opcode == Instruction::ICmp || Opcode == Instruction::FCmp) &&
            "Expected a compare");
     CmpInst::Predicate Pred = cast<CmpInst>(I).getPredicate();
     ScalarOpCost = TTI.getCmpSelInstrCost(
-        Opcode, ScalarTy, CmpInst::makeCmpResultType(ScalarTy), Pred, CostKind);
+        Opcode, ScalarTy, CmpInst::makeCmpResultType(ScalarTy), Pred);
     VectorOpCost = TTI.getCmpSelInstrCost(
-        Opcode, VecTy, CmpInst::makeCmpResultType(VecTy), Pred, CostKind);
+        Opcode, VecTy, CmpInst::makeCmpResultType(VecTy), Pred);
   }
 
   // Get cost estimates for the extract elements. These costs will factor into
   // both sequences.
   unsigned Ext0Index = Ext0IndexC->getZExtValue();
   unsigned Ext1Index = Ext1IndexC->getZExtValue();
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
   InstructionCost Extract0Cost =
       TTI.getVectorInstrCost(*Ext0, VecTy, CostKind, Ext0Index);
@@ -450,8 +449,6 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
   // TODO: Evaluate whether that always results in lowest cost. Alternatively,
   //       check the cost of creating a broadcast shuffle and shuffling both
   //       operands to element 0.
-  unsigned BestExtIndex = Extract0Cost > Extract1Cost ? Ext0Index : Ext1Index;
-  unsigned BestInsIndex = Extract0Cost > Extract1Cost ? Ext1Index : Ext0Index;
   InstructionCost CheapExtractCost = std::min(Extract0Cost, Extract1Cost);
 
   // Extra uses of the extracts mean that we include those costs in the
@@ -487,18 +484,8 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
     // ShufMask = { poison, poison, 0, poison }
     // TODO: The cost model has an option for a "broadcast" shuffle
     //       (splat-from-element-0), but no option for a more general splat.
-    if (auto *FixedVecTy = dyn_cast<FixedVectorType>(VecTy)) {
-      SmallVector<int> ShuffleMask(FixedVecTy->getNumElements(),
-                                   PoisonMaskElem);
-      ShuffleMask[BestInsIndex] = BestExtIndex;
-      NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
-                                    VecTy, ShuffleMask, CostKind, 0, nullptr,
-                                    {ConvertToShuffle});
-    } else {
-      NewCost +=
-          TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, VecTy,
-                             {}, CostKind, 0, nullptr, {ConvertToShuffle});
-    }
+    NewCost +=
+        TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, VecTy);
   }
 
   // Aggressively form a vector op if the cost is equal because the transform
@@ -683,8 +670,9 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
   Mask[Index] = Index + NumElts;
 
   Type *ScalarTy = VecTy->getScalarType();
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost OldCost =
-      TTI.getArithmeticInstrCost(Instruction::FNeg, ScalarTy, CostKind) +
+      TTI.getArithmeticInstrCost(Instruction::FNeg, ScalarTy) +
       TTI.getVectorInstrCost(I, VecTy, CostKind, Index);
 
   // If the extract has one use, it will be eliminated, so count it in the
@@ -694,8 +682,8 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
     OldCost += TTI.getVectorInstrCost(*Extract, VecTy, CostKind, Index);
 
   InstructionCost NewCost =
-      TTI.getArithmeticInstrCost(Instruction::FNeg, VecTy, CostKind) +
-      TTI.getShuffleCost(TargetTransformInfo::SK_Select, VecTy, Mask, CostKind);
+      TTI.getArithmeticInstrCost(Instruction::FNeg, VecTy) +
+      TTI.getShuffleCost(TargetTransformInfo::SK_Select, VecTy, Mask);
 
   if (NewCost > OldCost)
     return false;
@@ -771,20 +759,21 @@ bool VectorCombine::foldBitcastShuffle(Instruction &I) {
   unsigned NumOps = IsUnary ? 1 : 2;
 
   // The new shuffle must not cost more than the old shuffle.
+  TargetTransformInfo::TargetCostKind CK =
+      TargetTransformInfo::TCK_RecipThroughput;
   TargetTransformInfo::ShuffleKind SK =
       IsUnary ? TargetTransformInfo::SK_PermuteSingleSrc
               : TargetTransformInfo::SK_PermuteTwoSrc;
 
   InstructionCost DestCost =
-      TTI.getShuffleCost(SK, NewShuffleTy, NewMask, CostKind) +
+      TTI.getShuffleCost(SK, NewShuffleTy, NewMask, CK) +
       (NumOps * TTI.getCastInstrCost(Instruction::BitCast, NewShuffleTy, SrcTy,
                                      TargetTransformInfo::CastContextHint::None,
-                                     CostKind));
+                                     CK));
   InstructionCost SrcCost =
-      TTI.getShuffleCost(SK, SrcTy, Mask, CostKind) +
+      TTI.getShuffleCost(SK, SrcTy, Mask, CK) +
       TTI.getCastInstrCost(Instruction::BitCast, DestTy, OldShuffleTy,
-                           TargetTransformInfo::CastContextHint::None,
-                           CostKind);
+                           TargetTransformInfo::CastContextHint::None, CK);
   if (DestCost > SrcCost || !DestCost.isValid())
     return false;
 
@@ -839,13 +828,13 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   // Calculate cost of splatting both operands into vectors and the vector
   // intrinsic
   VectorType *VecTy = cast<VectorType>(VPI.getType());
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   SmallVector<int> Mask;
   if (auto *FVTy = dyn_cast<FixedVectorType>(VecTy))
     Mask.resize(FVTy->getNumElements(), 0);
   InstructionCost SplatCost =
       TTI.getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind, 0) +
-      TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy, Mask,
-                         CostKind);
+      TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy, Mask);
 
   // Calculate the cost of the VP Intrinsic
   SmallVector<Type *, 4> Args;
@@ -871,8 +860,8 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
     IntrinsicCostAttributes Attrs(*ScalarIntrID, VecTy->getScalarType(), Args);
     ScalarOpCost = TTI.getIntrinsicInstrCost(Attrs, CostKind);
   } else {
-    ScalarOpCost = TTI.getArithmeticInstrCost(*FunctionalOpcode,
-                                              VecTy->getScalarType(), CostKind);
+    ScalarOpCost =
+        TTI.getArithmeticInstrCost(*FunctionalOpcode, VecTy->getScalarType());
   }
 
   // The existing splats may be kept around if other instructions use them.
@@ -991,16 +980,17 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
   if (IsCmp) {
     CmpInst::Predicate Pred = cast<CmpInst>(I).getPredicate();
     ScalarOpCost = TTI.getCmpSelInstrCost(
-        Opcode, ScalarTy, CmpInst::makeCmpResultType(ScalarTy), Pred, CostKind);
+        Opcode, ScalarTy, CmpInst::makeCmpResultType(ScalarTy), Pred);
     VectorOpCost = TTI.getCmpSelInstrCost(
-        Opcode, VecTy, CmpInst::makeCmpResultType(VecTy), Pred, CostKind);
+        Opcode, VecTy, CmpInst::makeCmpResultType(VecTy), Pred);
   } else {
-    ScalarOpCost = TTI.getArithmeticInstrCost(Opcode, ScalarTy, CostKind);
-    VectorOpCost = TTI.getArithmeticInstrCost(Opcode, VecTy, CostKind);
+    ScalarOpCost = TTI.getArithmeticInstrCost(Opcode, ScalarTy);
+    VectorOpCost = TTI.getArithmeticInstrCost(Opcode, VecTy);
   }
 
   // Get cost estimate for the insert element. This cost will factor into
   // both sequences.
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost InsertCost = TTI.getVectorInstrCost(
       Instruction::InsertElement, VecTy, CostKind, Index);
   InstructionCost OldCost =
@@ -1077,7 +1067,7 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
 
   auto *Ext0 = cast<ExtractElementInst>(I0);
   auto *Ext1 = cast<ExtractElementInst>(I1);
-  ExtractElementInst *ConvertToShuf = getShuffleExtract(Ext0, Ext1, CostKind);
+  ExtractElementInst *ConvertToShuf = getShuffleExtract(Ext0, Ext1);
   if (!ConvertToShuf)
     return false;
   assert((ConvertToShuf == Ext0 || ConvertToShuf == Ext1) &&
@@ -1086,23 +1076,23 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
   // The original scalar pattern is:
   // binop i1 (cmp Pred (ext X, Index0), C0), (cmp Pred (ext X, Index1), C1)
   CmpInst::Predicate Pred = P0;
-  unsigned CmpOpcode =
-      CmpInst::isFPPredicate(Pred) ? Instruction::FCmp : Instruction::ICmp;
+  unsigned CmpOpcode = CmpInst::isFPPredicate(Pred) ? Instruction::FCmp
+                                                    : Instruction::ICmp;
   auto *VecTy = dyn_cast<FixedVectorType>(X->getType());
   if (!VecTy)
     return false;
 
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost Ext0Cost =
-      TTI.getVectorInstrCost(*Ext0, VecTy, CostKind, Index0);
-  InstructionCost Ext1Cost =
-      TTI.getVectorInstrCost(*Ext1, VecTy, CostKind, Index1);
-  InstructionCost CmpCost = TTI.getCmpSelInstrCost(
-      CmpOpcode, I0->getType(), CmpInst::makeCmpResultType(I0->getType()), Pred,
-      CostKind);
-
+                      TTI.getVectorInstrCost(*Ext0, VecTy, CostKind, Index0),
+                  Ext1Cost =
+                      TTI.getVectorInstrCost(*Ext1, VecTy, CostKind, Index1);
   InstructionCost OldCost =
-      Ext0Cost + Ext1Cost + CmpCost * 2 +
-      TTI.getArithmeticInstrCost(I.getOpcode(), I.getType(), CostKind);
+      Ext0Cost + Ext1Cost +
+      TTI.getCmpSelInstrCost(CmpOpcode, I0->getType(),
+                             CmpInst::makeCmpResultType(I0->getType()), Pred) *
+          2 +
+      TTI.getArithmeticInstrCost(I.getOpcode(), I.getType());
 
   // The proposed vector pattern is:
   // vcmp = cmp Pred X, VecC
@@ -1111,13 +1101,12 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
   int ExpensiveIndex = ConvertToShuf == Ext0 ? Index0 : Index1;
   auto *CmpTy = cast<FixedVectorType>(CmpInst::makeCmpResultType(X->getType()));
   InstructionCost NewCost = TTI.getCmpSelInstrCost(
-      CmpOpcode, X->getType(), CmpInst::makeCmpResultType(X->getType()), Pred,
-      CostKind);
+      CmpOpcode, X->getType(), CmpInst::makeCmpResultType(X->getType()), Pred);
   SmallVector<int, 32> ShufMask(VecTy->getNumElements(), PoisonMaskElem);
   ShufMask[CheapIndex] = ExpensiveIndex;
   NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, CmpTy,
-                                ShufMask, CostKind);
-  NewCost += TTI.getArithmeticInstrCost(I.getOpcode(), CmpTy, CostKind);
+                                ShufMask);
+  NewCost += TTI.getArithmeticInstrCost(I.getOpcode(), CmpTy);
   NewCost += TTI.getVectorInstrCost(*Ext0, CmpTy, CostKind, CheapIndex);
   NewCost += Ext0->hasOneUse() ? 0 : Ext0Cost;
   NewCost += Ext1->hasOneUse() ? 0 : Ext1Cost;
@@ -1341,7 +1330,7 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
 
   InstructionCost OriginalCost =
       TTI.getMemoryOpCost(Instruction::Load, VecTy, LI->getAlign(),
-                          LI->getPointerAddressSpace(), CostKind);
+                          LI->getPointerAddressSpace());
   InstructionCost ScalarizedCost = 0;
 
   Instruction *LastCheckedInst = LI;
@@ -1384,12 +1373,13 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
     }
 
     auto *Index = dyn_cast<ConstantInt>(UI->getOperand(1));
+    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     OriginalCost +=
         TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy, CostKind,
                                Index ? Index->getZExtValue() : -1);
     ScalarizedCost +=
         TTI.getMemoryOpCost(Instruction::Load, VecTy->getElementType(),
-                            Align(1), LI->getPointerAddressSpace(), CostKind);
+                            Align(1), LI->getPointerAddressSpace());
     ScalarizedCost += TTI.getAddressComputationCost(VecTy->getElementType());
   }
 
@@ -1477,6 +1467,8 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
   }
 
   // Try to merge shuffles across the binop if the new shuffles are not costly.
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+
   InstructionCost OldCost =
       TTI.getArithmeticInstrCost(Opcode, BinOpTy, CostKind) +
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, BinOpTy,
@@ -1570,6 +1562,8 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   }
 
   // Try to replace a binop with a shuffle if the shuffle is not costly.
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+
   InstructionCost OldCost =
       TTI.getArithmeticInstrCost(B0->getOpcode(), BinOpTy, CostKind) +
       TTI.getArithmeticInstrCost(B1->getOpcode(), BinOpTy, CostKind) +
@@ -1665,6 +1659,8 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
       FixedVectorType::get(CastSrcTy->getScalarType(), NewMask.size());
 
   // Try to replace a castop with a shuffle if the shuffle is not costly.
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+
   InstructionCost CostC0 =
       TTI.getCastInstrCost(C0->getOpcode(), CastDstTy, CastSrcTy,
                            TTI::CastContextHint::None, CostKind);
@@ -1706,30 +1702,21 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
   return true;
 }
 
-/// Try to convert any of:
-/// "shuffle (shuffle x, undef), (shuffle y, undef)"
-/// "shuffle (shuffle x, undef), y"
-/// "shuffle x, (shuffle y, undef)"
+/// Try to convert "shuffle (shuffle x, undef), (shuffle y, undef)"
 /// into "shuffle x, y".
 bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
-  ArrayRef<int> OuterMask;
-  Value *OuterV0, *OuterV1;
-  if (!match(&I,
-             m_Shuffle(m_Value(OuterV0), m_Value(OuterV1), m_Mask(OuterMask))))
+  Value *V0, *V1;
+  UndefValue *U0, *U1;
+  ArrayRef<int> OuterMask, InnerMask0, InnerMask1;
+  if (!match(&I, m_Shuffle(m_OneUse(m_Shuffle(m_Value(V0), m_UndefValue(U0),
+                                              m_Mask(InnerMask0))),
+                           m_OneUse(m_Shuffle(m_Value(V1), m_UndefValue(U1),
+                                              m_Mask(InnerMask1))),
+                           m_Mask(OuterMask))))
     return false;
 
-  ArrayRef<int> InnerMask0, InnerMask1;
-  Value *V0 = nullptr, *V1 = nullptr;
-  UndefValue *U0 = nullptr, *U1 = nullptr;
-  bool Match0 = match(
-      OuterV0, m_Shuffle(m_Value(V0), m_UndefValue(U0), m_Mask(InnerMask0)));
-  bool Match1 = match(
-      OuterV1, m_Shuffle(m_Value(V1), m_UndefValue(U1), m_Mask(InnerMask1)));
-  if (!Match0 && !Match1)
-    return false;
-
-  V0 = Match0 ? V0 : OuterV0;
-  V1 = Match1 ? V1 : OuterV1;
+  auto *ShufI0 = dyn_cast<Instruction>(I.getOperand(0));
+  auto *ShufI1 = dyn_cast<Instruction>(I.getOperand(1));
   auto *ShuffleDstTy = dyn_cast<FixedVectorType>(I.getType());
   auto *ShuffleSrcTy = dyn_cast<FixedVectorType>(V0->getType());
   auto *ShuffleImmTy = dyn_cast<FixedVectorType>(I.getOperand(0)->getType());
@@ -1741,9 +1728,9 @@ bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
   unsigned NumImmElts = ShuffleImmTy->getNumElements();
 
   // Bail if either inner masks reference a RHS undef arg.
-  if ((Match0 && !isa<PoisonValue>(U0) &&
+  if ((!isa<PoisonValue>(U0) &&
        any_of(InnerMask0, [&](int M) { return M >= (int)NumSrcElts; })) ||
-      (Match1 && !isa<PoisonValue>(U1) &&
+      (!isa<PoisonValue>(U1) &&
        any_of(InnerMask1, [&](int M) { return M >= (int)NumSrcElts; })))
     return false;
 
@@ -1751,15 +1738,12 @@ bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
   SmallVector<int, 16> NewMask(OuterMask);
   for (int &M : NewMask) {
     if (0 <= M && M < (int)NumImmElts) {
-      if (Match0)
-        M = (InnerMask0[M] >= (int)NumSrcElts) ? PoisonMaskElem : InnerMask0[M];
+      M = (InnerMask0[M] >= (int)NumSrcElts) ? PoisonMaskElem : InnerMask0[M];
     } else if (M >= (int)NumImmElts) {
-      if (Match1) {
-        if (InnerMask1[M - NumImmElts] >= (int)NumSrcElts)
-          M = PoisonMaskElem;
-        else
-          M = InnerMask1[M - NumImmElts] + (V0 == V1 ? 0 : NumSrcElts);
-      }
+      if (InnerMask1[M - NumImmElts] >= (int)NumSrcElts)
+        M = PoisonMaskElem;
+      else
+        M = InnerMask1[M - NumImmElts] + (V0 == V1 ? 0 : NumSrcElts);
     }
   }
 
@@ -1770,31 +1754,19 @@ bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
   }
 
   // Try to merge the shuffles if the new shuffle is not costly.
-  InstructionCost InnerCost0 = 0;
-  if (Match0)
-    InnerCost0 = TTI.getShuffleCost(
-        TargetTransformInfo::SK_PermuteSingleSrc, ShuffleSrcTy, InnerMask0,
-        CostKind, 0, nullptr, {V0, U0}, cast<ShuffleVectorInst>(OuterV0));
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
-  InstructionCost InnerCost1 = 0;
-  if (Match1)
-    InnerCost1 = TTI.getShuffleCost(
-        TargetTransformInfo::SK_PermuteSingleSrc, ShuffleSrcTy, InnerMask1,
-        CostKind, 0, nullptr, {V1, U1}, cast<ShuffleVectorInst>(OuterV1));
-
-  InstructionCost OuterCost = TTI.getShuffleCost(
-      TargetTransformInfo::SK_PermuteTwoSrc, ShuffleImmTy, OuterMask, CostKind,
-      0, nullptr, {OuterV0, OuterV1}, &I);
-
-  InstructionCost OldCost = InnerCost0 + InnerCost1 + OuterCost;
+  InstructionCost OldCost =
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, ShuffleSrcTy,
+                         InnerMask0, CostKind, 0, nullptr, {V0, U0}, ShufI0) +
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, ShuffleSrcTy,
+                         InnerMask1, CostKind, 0, nullptr, {V1, U1}, ShufI1) +
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, ShuffleImmTy,
+                         OuterMask, CostKind, 0, nullptr, {ShufI0, ShufI1}, &I);
 
   InstructionCost NewCost =
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, ShuffleSrcTy,
                          NewMask, CostKind, 0, nullptr, {V0, V1});
-  if (!OuterV0->hasOneUse())
-    NewCost += InnerCost0;
-  if (!OuterV1->hasOneUse())
-    NewCost += InnerCost1;
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two shuffles: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
@@ -1845,10 +1817,12 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
       return false;
 
   InstructionCost OldCost =
-      TTI.getIntrinsicInstrCost(IntrinsicCostAttributes(IID, *II0), CostKind) +
-      TTI.getIntrinsicInstrCost(IntrinsicCostAttributes(IID, *II1), CostKind) +
+      TTI.getIntrinsicInstrCost(IntrinsicCostAttributes(IID, *II0),
+                                TTI::TCK_RecipThroughput) +
+      TTI.getIntrinsicInstrCost(IntrinsicCostAttributes(IID, *II1),
+                                TTI::TCK_RecipThroughput) +
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, II0Ty, OldMask,
-                         CostKind, 0, nullptr, {II0, II1}, &I);
+                         TTI::TCK_RecipThroughput, 0, nullptr, {II0, II1}, &I);
 
   SmallVector<Type *> NewArgsTy;
   InstructionCost NewCost = 0;
@@ -1860,10 +1834,10 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
       NewArgsTy.push_back(FixedVectorType::get(VecTy->getElementType(),
                                                VecTy->getNumElements() * 2));
       NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc,
-                                    VecTy, OldMask, CostKind);
+                                    VecTy, OldMask, TTI::TCK_RecipThroughput);
     }
   IntrinsicCostAttributes NewAttr(IID, ShuffleDstTy, NewArgsTy);
-  NewCost += TTI.getIntrinsicInstrCost(NewAttr, CostKind);
+  NewCost += TTI.getIntrinsicInstrCost(NewAttr, TTI::TCK_RecipThroughput);
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two intrinsics: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
@@ -1929,7 +1903,7 @@ generateInstLaneVectorFromOperand(ArrayRef<InstLane> Item, int Op) {
 }
 
 /// Detect concat of multiple values into a vector
-static bool isFreeConcat(ArrayRef<InstLane> Item, TTI::TargetCostKind CostKind,
+static bool isFreeConcat(ArrayRef<InstLane> Item,
                          const TargetTransformInfo &TTI) {
   auto *Ty = cast<FixedVectorType>(Item.front().first->get()->getType());
   unsigned NumElts = Ty->getNumElements();
@@ -1940,7 +1914,8 @@ static bool isFreeConcat(ArrayRef<InstLane> Item, TTI::TargetCostKind CostKind,
   // during legalization.
   SmallVector<int, 16> ConcatMask(NumElts * 2);
   std::iota(ConcatMask.begin(), ConcatMask.end(), 0);
-  if (TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, Ty, ConcatMask, CostKind) != 0)
+  if (TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, Ty, ConcatMask,
+                         TTI::TCK_RecipThroughput) != 0)
     return false;
 
   unsigned NumSlices = Item.size() / NumElts;
@@ -2194,7 +2169,7 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
       }
     }
 
-    if (isFreeConcat(Item, CostKind, TTI)) {
+    if (isFreeConcat(Item, TTI)) {
       ConcatLeafs.insert(FrontU);
       continue;
     }
@@ -2311,10 +2286,10 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
       (UsesSecondVec && !IsTruncatingShuffle) ? VecType : ShuffleInputType;
   InstructionCost OldCost = TTI.getShuffleCost(
       UsesSecondVec ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc,
-      VecTyForCost, Shuffle->getShuffleMask(), CostKind);
+      VecTyForCost, Shuffle->getShuffleMask());
   InstructionCost NewCost = TTI.getShuffleCost(
       UsesSecondVec ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc,
-      VecTyForCost, ConcatMask, CostKind);
+      VecTyForCost, ConcatMask);
 
   LLVM_DEBUG(dbgs() << "Found a reduction feeding from a shuffle: " << *Shuffle
                     << "\n");
@@ -2372,6 +2347,7 @@ bool VectorCombine::foldCastFromReductions(Instruction &I) {
   auto *ReductionSrcTy = cast<VectorType>(ReductionSrc->getType());
   Type *ResultTy = I.getType();
 
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost OldCost = TTI.getArithmeticReductionCost(
       ReductionOpc, ReductionSrcTy, std::nullopt, CostKind);
   OldCost += TTI.getCastInstrCost(CastOpc, ReductionSrcTy, SrcTy,
@@ -2628,17 +2604,17 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
     return C + TTI.getShuffleCost(isa<UndefValue>(SV->getOperand(1))
                                       ? TTI::SK_PermuteSingleSrc
                                       : TTI::SK_PermuteTwoSrc,
-                                  VT, SV->getShuffleMask(), CostKind);
+                                  VT, SV->getShuffleMask());
   };
   auto AddShuffleMaskCost = [&](InstructionCost C, ArrayRef<int> Mask) {
-    return C + TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, VT, Mask, CostKind);
+    return C + TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, VT, Mask);
   };
 
   // Get the costs of the shuffles + binops before and after with the new
   // shuffle masks.
   InstructionCost CostBefore =
-      TTI.getArithmeticInstrCost(Op0->getOpcode(), VT, CostKind) +
-      TTI.getArithmeticInstrCost(Op1->getOpcode(), VT, CostKind);
+      TTI.getArithmeticInstrCost(Op0->getOpcode(), VT) +
+      TTI.getArithmeticInstrCost(Op1->getOpcode(), VT);
   CostBefore += std::accumulate(Shuffles.begin(), Shuffles.end(),
                                 InstructionCost(0), AddShuffleCost);
   CostBefore += std::accumulate(InputShuffles.begin(), InputShuffles.end(),
@@ -2651,8 +2627,8 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
   FixedVectorType *Op1SmallVT =
       FixedVectorType::get(VT->getScalarType(), V2.size());
   InstructionCost CostAfter =
-      TTI.getArithmeticInstrCost(Op0->getOpcode(), Op0SmallVT, CostKind) +
-      TTI.getArithmeticInstrCost(Op1->getOpcode(), Op1SmallVT, CostKind);
+      TTI.getArithmeticInstrCost(Op0->getOpcode(), Op0SmallVT) +
+      TTI.getArithmeticInstrCost(Op1->getOpcode(), Op1SmallVT);
   CostAfter += std::accumulate(ReconstructMasks.begin(), ReconstructMasks.end(),
                                InstructionCost(0), AddShuffleMaskCost);
   std::set<SmallVector<int>> OutputShuffleMasks({V1A, V1B, V2A, V2B});
@@ -2721,7 +2697,7 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
 ///     lshr((zext(x),y) -> zext(lshr(x,trunc(y)))
 /// Cost model calculations takes into account if zext(x) has other users and
 /// whether it can be propagated through them too.
-bool VectorCombine::shrinkType(Instruction &I) {
+bool VectorCombine::shrinkType(llvm::Instruction &I) {
   Value *ZExted, *OtherOperand;
   if (!match(&I, m_c_BitwiseLogic(m_ZExt(m_Value(ZExted)),
                                   m_Value(OtherOperand))) &&
@@ -2750,6 +2726,7 @@ bool VectorCombine::shrinkType(Instruction &I) {
 
   // Calculate costs of leaving current IR as it is and moving ZExt operation
   // later, along with adding truncates if needed
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost ZExtCost = TTI.getCastInstrCost(
       Instruction::ZExt, BigTy, SmallTy,
       TargetTransformInfo::CastContextHint::None, CostKind);
@@ -2810,50 +2787,6 @@ bool VectorCombine::shrinkType(Instruction &I) {
   return true;
 }
 
-/// insert (DstVec, (extract SrcVec, ExtIdx), InsIdx) -->
-/// shuffle (DstVec, SrcVec, Mask)
-bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
-  Value *DstVec, *SrcVec;
-  uint64_t ExtIdx, InsIdx;
-  if (!match(&I,
-             m_InsertElt(m_Value(DstVec),
-                         m_ExtractElt(m_Value(SrcVec), m_ConstantInt(ExtIdx)),
-                         m_ConstantInt(InsIdx))))
-    return false;
-
-  auto *VecTy = dyn_cast<FixedVectorType>(I.getType());
-  if (!VecTy || SrcVec->getType() != VecTy)
-    return false;
-
-  unsigned NumElts = VecTy->getNumElements();
-  if (ExtIdx >= NumElts || InsIdx >= NumElts)
-    return false;
-
-  SmallVector<int> Mask(NumElts, 0);
-  std::iota(Mask.begin(), Mask.end(), 0);
-  Mask[InsIdx] = ExtIdx + NumElts;
-  // Cost
-  auto *Ins = cast<InsertElementInst>(&I);
-  auto *Ext = cast<ExtractElementInst>(I.getOperand(1));
-
-  InstructionCost OldCost =
-      TTI.getVectorInstrCost(*Ext, VecTy, CostKind, ExtIdx) +
-      TTI.getVectorInstrCost(*Ins, VecTy, CostKind, InsIdx);
-
-  InstructionCost NewCost = TTI.getShuffleCost(
-      TargetTransformInfo::SK_PermuteTwoSrc, VecTy, Mask, CostKind);
-  if (!Ext->hasOneUse())
-    NewCost += TTI.getVectorInstrCost(*Ext, VecTy, CostKind, ExtIdx);
-
-  if (OldCost < NewCost)
-    return false;
-
-  Value *Shuf = Builder.CreateShuffleVector(DstVec, SrcVec, Mask);
-  replaceValue(I, *Shuf);
-
-  return true;
-}
-
 /// This is the entry point for all transforms. Pass manager differences are
 /// handled in the callers of this function.
 bool VectorCombine::run() {
@@ -2910,7 +2843,6 @@ bool VectorCombine::run() {
       switch (Opcode) {
       case Instruction::InsertElement:
         MadeChange |= foldInsExtFNeg(I);
-        MadeChange |= foldInsExtVectorToShuffle(I);
         break;
       case Instruction::ShuffleVector:
         MadeChange |= foldPermuteOfBinops(I);
@@ -2983,8 +2915,7 @@ PreservedAnalyses VectorCombinePass::run(Function &F,
   DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   AAResults &AA = FAM.getResult<AAManager>(F);
   const DataLayout *DL = &F.getDataLayout();
-  VectorCombine Combiner(F, TTI, DT, AA, AC, DL, TTI::TCK_RecipThroughput,
-                         TryEarlyFoldsOnly);
+  VectorCombine Combiner(F, TTI, DT, AA, AC, DL, TryEarlyFoldsOnly);
   if (!Combiner.run())
     return PreservedAnalyses::all();
   PreservedAnalyses PA;

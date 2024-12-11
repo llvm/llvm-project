@@ -84,7 +84,6 @@ def MPI_SendOp : MPI_Op<"send", []> {
   let assemblyFormat = "`(` $ref `,` $tag `,` $rank `)` attr-dict `:` "
                        "type($ref) `,` type($tag) `,` type($rank)"
                        "(`->` type($retval)^)?";
-  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -115,7 +114,6 @@ def MPI_RecvOp : MPI_Op<"recv", []> {
   let assemblyFormat = "`(` $ref `,` $tag `,` $rank `)` attr-dict `:` "
                        "type($ref) `,` type($tag) `,` type($rank)"
                        "(`->` type($retval)^)?";
-  let hasCanonicalizer = 1;
 }
 
 

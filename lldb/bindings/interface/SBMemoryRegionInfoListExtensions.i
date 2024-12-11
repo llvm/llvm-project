@@ -7,12 +7,7 @@
 
     def __iter__(self):
       '''Iterate over all the memory regions in a lldb.SBMemoryRegionInfoList object.'''
-      import lldb
-      size = self.GetSize()
-      region = lldb.SBMemoryRegionInfo()
-      for i in range(size):
-        self.GetMemoryRegionAtIndex(i, region)
-        yield region
+      return lldb_iter(self, 'GetSize', 'GetMemoryRegionAtIndex')
     %}
 #endif
 }

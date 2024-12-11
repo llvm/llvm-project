@@ -33,6 +33,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/OperatorKinds.h"
+#include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
@@ -546,9 +547,9 @@ void CXXRecordDecl::addedClassSubobject(CXXRecordDecl *Subobj) {
     data().NeedOverloadResolutionForDestructor = true;
   }
 
-  // C++20 [dcl.constexpr]p5:
-  //  The definition of a constexpr destructor whose function-body is not
-  //  = delete shall additionally satisfy the following requirement:
+  // C++2a [dcl.constexpr]p4:
+  //   The definition of a constexpr destructor [shall] satisfy the
+  //   following requirement:
   //   -- for every subobject of class type or (possibly multi-dimensional)
   //      array thereof, that class type shall have a constexpr destructor
   if (!Subobj->hasConstexprDestructor())
@@ -1213,13 +1214,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
             data().DefaultedCopyAssignmentIsDeleted = true;
           if (FieldRec->hasNonTrivialMoveAssignment())
             data().DefaultedMoveAssignmentIsDeleted = true;
-          if (FieldRec->hasNonTrivialDestructor()) {
+          if (FieldRec->hasNonTrivialDestructor())
             data().DefaultedDestructorIsDeleted = true;
-            // C++20 [dcl.constexpr]p5:
-            //   The definition of a constexpr destructor whose function-body is
-            //   not = delete shall additionally satisfy...
-            data().DefaultedDestructorIsConstexpr = true;
-          }
         }
 
         // For an anonymous union member, our overload resolution will perform
@@ -2602,6 +2598,8 @@ bool CXXMethodDecl::isMoveAssignmentOperator() const {
 
 void CXXMethodDecl::addOverriddenMethod(const CXXMethodDecl *MD) {
   assert(MD->isCanonicalDecl() && "Method is not canonical!");
+  assert(!MD->getParent()->isDependentContext() &&
+         "Can't add an overridden method to a class template!");
   assert(MD->isVirtual() && "Method is not virtual!");
 
   getASTContext().addOverriddenMethod(this, MD);
@@ -2736,14 +2734,14 @@ int64_t CXXCtorInitializer::getID(const ASTContext &Context) const {
 
 TypeLoc CXXCtorInitializer::getBaseClassLoc() const {
   if (isBaseInitializer())
-    return cast<TypeSourceInfo *>(Initializee)->getTypeLoc();
+    return Initializee.get<TypeSourceInfo*>()->getTypeLoc();
   else
     return {};
 }
 
 const Type *CXXCtorInitializer::getBaseClass() const {
   if (isBaseInitializer())
-    return cast<TypeSourceInfo *>(Initializee)->getType().getTypePtr();
+    return Initializee.get<TypeSourceInfo*>()->getType().getTypePtr();
   else
     return nullptr;
 }
@@ -2755,7 +2753,7 @@ SourceLocation CXXCtorInitializer::getSourceLocation() const {
   if (isAnyMemberInitializer())
     return getMemberLocation();
 
-  if (const auto *TSInfo = cast<TypeSourceInfo *>(Initializee))
+  if (const auto *TSInfo = Initializee.get<TypeSourceInfo *>())
     return TSInfo->getTypeLoc().getBeginLoc();
 
   return {};

@@ -1996,17 +1996,13 @@ mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
           candidateSliceOp, "containingOp's result yield with stride");
     }
 
-    // 10. Try to get iter domain position from input position. Use
-    // clonedConsumerOp instead of tiledConsumerOp, because the iteration domain
-    // may require index computation based on the result size. The sizes and
-    // offsets should be the same either way, but using tiledConsumerOp could
-    // lead to some chained unnecessary extra index computation.
+    // 10. Try to get iter domain position from input position.
     SmallVector<OpFoldResult> iterDomainOffsets, iterDomainSizes;
-    if (failed(clonedConsumerOp.getIterationDomainTileFromOperandTile(
+    if (failed(tiledConsumerOp.getIterationDomainTileFromOperandTile(
             rewriter, operandNumber, offsets, sizes, iterDomainOffsets,
             iterDomainSizes))) {
       return rewriter.notifyMatchFailure(
-          clonedConsumerOp,
+          tiledConsumerOp,
           "can't get iter domain position from input position");
     }
 

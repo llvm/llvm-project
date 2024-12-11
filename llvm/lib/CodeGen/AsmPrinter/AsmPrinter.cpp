@@ -161,13 +161,6 @@ static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
         "Enable extended information within the SHT_LLVM_BB_ADDR_MAP that is "
         "extracted from PGO related analysis."));
 
-static cl::opt<bool> BBAddrMapSkipEmitBBEntries(
-    "basic-block-address-map-skip-bb-entries",
-    cl::desc("Skip emitting basic block entries in the SHT_LLVM_BB_ADDR_MAP "
-             "section. It's used to save binary size when BB entries are "
-             "unnecessary for some PGOAnalysisMap features."),
-    cl::Hidden, cl::init(false));
-
 static cl::opt<bool> EmitJumpTableSizesSection(
     "emit-jump-table-sizes-section",
     cl::desc("Emit a section containing jump table addresses and sizes"),
@@ -786,7 +779,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   // If the alignment is specified, we *must* obey it.  Overaligning a global
   // with a specified alignment is a prompt way to break globals emitted to
   // sections and expected to be contiguous (e.g. ObjC metadata).
-  Align Alignment = getGVAlignment(GV, DL);
+  const Align Alignment = getGVAlignment(GV, DL);
 
   for (auto &Handler : DebugHandlers)
     Handler->setSymbolSize(GVSym, Size);
@@ -1418,15 +1411,8 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
   bool BrProbEnabled =
       AllFeatures ||
       (!NoFeatures && PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::BrProb));
-
-  if ((BBFreqEnabled || BrProbEnabled) && BBAddrMapSkipEmitBBEntries) {
-    MF.getFunction().getContext().emitError(
-        "BB entries info is required for BBFreq and BrProb "
-        "features");
-  }
   return {FuncEntryCountEnabled, BBFreqEnabled, BrProbEnabled,
-          MF.hasBBSections() && NumMBBSectionRanges > 1,
-          static_cast<bool>(BBAddrMapSkipEmitBBEntries)};
+          MF.hasBBSections() && NumMBBSectionRanges > 1};
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
@@ -1483,28 +1469,24 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       OutStreamer->emitULEB128IntValue(MBBSectionNumBlocks[MBB.getSectionID()]);
       PrevMBBEndSymbol = MBBSymbol;
     }
-
-    if (!Features.OmitBBEntries) {
-      // TODO: Remove this check when version 1 is deprecated.
-      if (BBAddrMapVersion > 1) {
-        OutStreamer->AddComment("BB id");
-        // Emit the BB ID for this basic block.
-        // We only emit BaseID since CloneID is unset for
-        // -basic-block-adress-map.
-        // TODO: Emit the full BBID when labels and sections can be mixed
-        // together.
-        OutStreamer->emitULEB128IntValue(MBB.getBBID()->BaseID);
-      }
-      // Emit the basic block offset relative to the end of the previous block.
-      // This is zero unless the block is padded due to alignment.
-      emitLabelDifferenceAsULEB128(MBBSymbol, PrevMBBEndSymbol);
-      // Emit the basic block size. When BBs have alignments, their size cannot
-      // always be computed from their offsets.
-      emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), MBBSymbol);
-      // Emit the Metadata.
-      OutStreamer->emitULEB128IntValue(getBBAddrMapMetadata(MBB));
+    // TODO: Remove this check when version 1 is deprecated.
+    if (BBAddrMapVersion > 1) {
+      OutStreamer->AddComment("BB id");
+      // Emit the BB ID for this basic block.
+      // We only emit BaseID since CloneID is unset for
+      // -basic-block-adress-map.
+      // TODO: Emit the full BBID when labels and sections can be mixed
+      // together.
+      OutStreamer->emitULEB128IntValue(MBB.getBBID()->BaseID);
     }
-
+    // Emit the basic block offset relative to the end of the previous block.
+    // This is zero unless the block is padded due to alignment.
+    emitLabelDifferenceAsULEB128(MBBSymbol, PrevMBBEndSymbol);
+    // Emit the basic block size. When BBs have alignments, their size cannot
+    // always be computed from their offsets.
+    emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), MBBSymbol);
+    // Emit the Metadata.
+    OutStreamer->emitULEB128IntValue(getBBAddrMapMetadata(MBB));
     PrevMBBEndSymbol = MBB.getEndSymbol();
   }
 
@@ -3910,8 +3892,6 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
                                    AsmPrinter &AP, const Constant *BaseCV,
                                    uint64_t Offset,
                                    AsmPrinter::AliasMapTy *AliasList) {
-  assert((!AliasList || AP.TM.getTargetTriple().isOSBinFormatXCOFF()) &&
-         "AliasList only expected for XCOFF");
   emitGlobalAliasInline(AP, Offset, AliasList);
   uint64_t Size = DL.getTypeAllocSize(CV->getType());
 
@@ -3921,27 +3901,7 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
   if (!BaseCV && CV->hasOneUse())
     BaseCV = dyn_cast<Constant>(CV->user_back());
 
-  if (isa<ConstantAggregateZero>(CV)) {
-    StructType *structType;
-    if (AliasList && (structType = llvm::dyn_cast<StructType>(CV->getType()))) {
-      // Handle cases of aliases to direct struct elements
-      const StructLayout *Layout = DL.getStructLayout(structType);
-      uint64_t SizeSoFar = 0;
-      for (unsigned int i = 0, n = structType->getNumElements(); i < n - 1;
-           ++i) {
-        uint64_t GapToNext = Layout->getElementOffset(i + 1) - SizeSoFar;
-        AP.OutStreamer->emitZeros(GapToNext);
-        SizeSoFar += GapToNext;
-        emitGlobalAliasInline(AP, Offset + SizeSoFar, AliasList);
-      }
-      AP.OutStreamer->emitZeros(Size - SizeSoFar);
-      return;
-    } else {
-      return AP.OutStreamer->emitZeros(Size);
-    }
-  }
-
-  if (isa<UndefValue>(CV))
+  if (isa<ConstantAggregateZero>(CV) || isa<UndefValue>(CV))
     return AP.OutStreamer->emitZeros(Size);
 
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CV)) {

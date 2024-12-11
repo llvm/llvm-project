@@ -279,7 +279,8 @@ uint32_t LoongArch::calcEFlags() const {
 int64_t LoongArch::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   default:
-    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
+    internalLinkerError(getErrorLoc(ctx, buf),
+                        "cannot read addend for relocation " + toString(type));
     return 0;
   case R_LARCH_32:
   case R_LARCH_TLS_DTPMOD32:
@@ -428,7 +429,7 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_SUB_ULEB128:
     // The LoongArch add/sub relocs behave like the RISCV counterparts; reuse
     // the RelExpr to avoid code duplication.
-    return RE_RISCV_ADD;
+    return R_RISCV_ADD;
   case R_LARCH_32_PCREL:
   case R_LARCH_64_PCREL:
   case R_LARCH_PCREL20_S2:
@@ -444,17 +445,17 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_TLS_IE_PC_HI20:
   case R_LARCH_TLS_IE64_PC_LO20:
   case R_LARCH_TLS_IE64_PC_HI12:
-    return RE_LOONGARCH_GOT_PAGE_PC;
+    return R_LOONGARCH_GOT_PAGE_PC;
   case R_LARCH_GOT_PC_LO12:
   case R_LARCH_TLS_IE_PC_LO12:
-    return RE_LOONGARCH_GOT;
+    return R_LOONGARCH_GOT;
   case R_LARCH_TLS_LD_PC_HI20:
   case R_LARCH_TLS_GD_PC_HI20:
-    return RE_LOONGARCH_TLSGD_PAGE_PC;
+    return R_LOONGARCH_TLSGD_PAGE_PC;
   case R_LARCH_PCALA_HI20:
-    // Why not RE_LOONGARCH_PAGE_PC, majority of references don't go through
-    // PLT anyway so why waste time checking only to get everything relaxed back
-    // to it?
+    // Why not R_LOONGARCH_PAGE_PC, majority of references don't go through PLT
+    // anyway so why waste time checking only to get everything relaxed back to
+    // it?
     //
     // This is again due to the R_LARCH_PCALA_LO12 on JIRL case, where we want
     // both the HI20 and LO12 to potentially refer to the PLT. But in reality
@@ -474,12 +475,12 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
     //
     // So, unfortunately we have to again workaround this quirk the same way as
     // BFD: assuming every R_LARCH_PCALA_HI20 is potentially PLT-needing, only
-    // relaxing back to RE_LOONGARCH_PAGE_PC if it's known not so at a later
+    // relaxing back to R_LOONGARCH_PAGE_PC if it's known not so at a later
     // stage.
-    return RE_LOONGARCH_PLT_PAGE_PC;
+    return R_LOONGARCH_PLT_PAGE_PC;
   case R_LARCH_PCALA64_LO20:
   case R_LARCH_PCALA64_HI12:
-    return RE_LOONGARCH_PAGE_PC;
+    return R_LOONGARCH_PAGE_PC;
   case R_LARCH_GOT_HI20:
   case R_LARCH_GOT_LO12:
   case R_LARCH_GOT64_LO20:
@@ -501,7 +502,7 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_TLS_DESC_PC_HI20:
   case R_LARCH_TLS_DESC64_PC_LO20:
   case R_LARCH_TLS_DESC64_PC_HI12:
-    return RE_LOONGARCH_TLSDESC_PAGE_PC;
+    return R_LOONGARCH_TLSDESC_PAGE_PC;
   case R_LARCH_TLS_DESC_PC_LO12:
   case R_LARCH_TLS_DESC_LD:
   case R_LARCH_TLS_DESC_HI20:
@@ -527,7 +528,7 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   //
   // [1]: https://web.archive.org/web/20230709064026/https://github.com/loongson/LoongArch-Documentation/issues/51
   default:
-    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
              << ") against symbol " << &s;
     return R_NONE;
   }
@@ -774,9 +775,9 @@ static bool relax(Ctx &ctx, InputSection &sec) {
       // If we can't satisfy this alignment, we've found a bad input.
       if (LLVM_UNLIKELY(static_cast<int32_t>(remove) < 0)) {
         Err(ctx) << getErrorLoc(ctx, (const uint8_t *)loc)
-                 << "insufficient padding bytes for " << r.type << ": "
-                 << allBytes << " bytes available for "
-                 << "requested alignment of " << align << " bytes";
+                 << "insufficient padding bytes for " << lld::toString(r.type)
+                 << ": " << Twine(allBytes) << " bytes available for "
+                 << "requested alignment of " << Twine(align) << " bytes";
         remove = 0;
       }
       break;
@@ -807,7 +808,7 @@ static bool relax(Ctx &ctx, InputSection &sec) {
   }
   // Inform assignAddresses that the size has changed.
   if (!isUInt<32>(delta))
-    Fatal(ctx) << "section size decrease is too large: " << delta;
+    Fatal(ctx) << "section size decrease is too large: " << Twine(delta);
   sec.bytesDropped = delta;
   return changed;
 }
@@ -838,7 +839,7 @@ bool LoongArch::relaxOnce(int pass) const {
 }
 
 void LoongArch::finalizeRelax(int passes) const {
-  Log(ctx) << "relaxation passes: " << passes;
+  Log(ctx) << "relaxation passes: " << Twine(passes);
   SmallVector<InputSection *, 0> storage;
   for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
@@ -851,7 +852,7 @@ void LoongArch::finalizeRelax(int passes) const {
       MutableArrayRef<Relocation> rels = sec->relocs();
       ArrayRef<uint8_t> old = sec->content();
       size_t newSize = old.size() - aux.relocDeltas[rels.size() - 1];
-      uint8_t *p = ctx.bAlloc.Allocate<uint8_t>(newSize);
+      uint8_t *p = context().bAlloc.Allocate<uint8_t>(newSize);
       uint64_t offset = 0;
       int64_t delta = 0;
       sec->content_ = p;

@@ -13,9 +13,10 @@ using namespace clang;
 namespace {
 
 // Matches the (optional) capture-default of a lambda-introducer.
-class LambdaDefaultCaptureVisitor : public ExpectedLocationVisitor {
+class LambdaDefaultCaptureVisitor
+  : public ExpectedLocationVisitor<LambdaDefaultCaptureVisitor> {
 public:
-  bool VisitLambdaExpr(LambdaExpr *Lambda) override {
+  bool VisitLambdaExpr(LambdaExpr *Lambda) {
     if (Lambda->getCaptureDefault() != LCD_None) {
       Match("", Lambda->getCaptureDefaultLoc());
     }

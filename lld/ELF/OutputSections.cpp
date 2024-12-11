@@ -67,13 +67,10 @@ void OutputSection::writeHeaderTo(typename ELFT::Shdr *shdr) {
 
 OutputSection::OutputSection(Ctx &ctx, StringRef name, uint32_t type,
                              uint64_t flags)
-    : SectionBase(Output, ctx.internalFile, name, type, flags, /*link=*/0,
-                  /*info=*/0, /*addralign=*/1, /*entsize=*/0),
+    : SectionBase(Output, ctx.internalFile, name, flags, /*entsize=*/0,
+                  /*addralign=*/1, type,
+                  /*info=*/0, /*link=*/0),
       ctx(ctx) {}
-
-uint64_t OutputSection::getLMA() const {
-  return ptLoad ? addr + ptLoad->lmaOffset : addr;
-}
 
 // We allow sections of types listed below to merged into a
 // single progbits section. This is typically done by linker
@@ -121,9 +118,9 @@ void OutputSection::commitSection(InputSection *isec) {
       type = SHT_CREL;
       if (type == SHT_REL) {
         if (name.consume_front(".rel"))
-          name = ctx.saver.save(".crel" + name);
+          name = saver().save(".crel" + name);
       } else if (name.consume_front(".rela")) {
-        name = ctx.saver.save(".crel" + name);
+        name = saver().save(".crel" + name);
       }
     } else {
       if (typeIsSet || !canMergeToProgbits(ctx, type) ||
@@ -155,9 +152,9 @@ void OutputSection::commitSection(InputSection *isec) {
     // Otherwise, check if new type or flags are compatible with existing ones.
     if ((flags ^ isec->flags) & SHF_TLS)
       ErrAlways(ctx) << "incompatible section flags for " << name << "\n>>> "
-                     << isec << ": 0x" << utohexstr(isec->flags, true)
+                     << isec << ": 0x" << utohexstr(isec->flags)
                      << "\n>>> output section " << name << ": 0x"
-                     << utohexstr(flags, true);
+                     << utohexstr(flags);
   }
 
   isec->parent = this;
@@ -253,20 +250,8 @@ void OutputSection::finalizeInputSections() {
     for (InputSection *s : isd->sections)
       commitSection(s);
   }
-  for (auto *ms : mergeSections) {
-    // Merging may have increased the alignment of a spillable section. Update
-    // the alignment of potential spill sections and their containing output
-    // sections.
-    if (auto it = script->potentialSpillLists.find(ms);
-        it != script->potentialSpillLists.end()) {
-      for (PotentialSpillSection *s = it->second.head; s; s = s->next) {
-        s->addralign = std::max(s->addralign, ms->addralign);
-        s->parent->addralign = std::max(s->parent->addralign, s->addralign);
-      }
-    }
-
+  for (auto *ms : mergeSections)
     ms->finalizeContents();
-  }
 }
 
 static void sortByOrder(MutableArrayRef<InputSection *> in,
@@ -323,14 +308,14 @@ static void fill(uint8_t *buf, size_t size,
 }
 
 #if LLVM_ENABLE_ZLIB
-static SmallVector<uint8_t, 0> deflateShard(Ctx &ctx, ArrayRef<uint8_t> in,
-                                            int level, int flush) {
+static SmallVector<uint8_t, 0> deflateShard(ArrayRef<uint8_t> in, int level,
+                                            int flush) {
   // 15 and 8 are default. windowBits=-15 is negative to generate raw deflate
   // data with no zlib header or trailer.
   z_stream s = {};
   auto res = deflateInit2(&s, level, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY);
   if (res != 0) {
-    Err(ctx) << "--compress-sections: deflateInit2 returned " << res;
+    Err(ctx) << "--compress-sections: deflateInit2 returned " << Twine(res);
     return {};
   }
   s.next_in = const_cast<uint8_t *>(in.data());
@@ -447,7 +432,7 @@ template <class ELFT> void OutputSection::maybeCompress(Ctx &ctx) {
     // concatenated with the next shard.
     auto shardsAdler = std::make_unique<uint32_t[]>(numShards);
     parallelFor(0, numShards, [&](size_t i) {
-      shardsOut[i] = deflateShard(ctx, shardsIn[i], level,
+      shardsOut[i] = deflateShard(shardsIn[i], level,
                                   i != numShards - 1 ? Z_SYNC_FLUSH : Z_FINISH);
       shardsAdler[i] = adler32(1, shardsIn[i].data(), shardsIn[i].size());
     });
@@ -551,7 +536,7 @@ void OutputSection::writeTo(Ctx &ctx, uint8_t *buf, parallel::TaskGroup &tg) {
       // instructions to little-endian, leaving the data big-endian.
       if (ctx.arg.emachine == EM_ARM && !ctx.arg.isLE && ctx.arg.armBe8 &&
           (flags & SHF_EXECINSTR))
-        convertArmInstructionstoBE8(ctx, isec, buf + isec->outSecOff);
+        convertArmInstructionstoBE8(isec, buf + isec->outSecOff);
 
       // Fill gaps between sections.
       if (nonZeroFiller) {
@@ -923,12 +908,13 @@ void OutputSection::checkDynRelAddends(Ctx &ctx) {
               ? 0
               : ctx.target->getImplicitAddend(relocTarget, rel.type);
       if (addend != writtenAddend)
-        InternalErr(ctx, relocTarget)
-            << "wrote incorrect addend value 0x" << utohexstr(writtenAddend)
-            << " instead of 0x" << utohexstr(addend)
-            << " for dynamic relocation " << rel.type << " at offset 0x"
-            << utohexstr(rel.getOffset())
-            << (rel.sym ? " against symbol " + rel.sym->getName() : "");
+        internalLinkerError(
+            getErrorLoc(ctx, relocTarget),
+            "wrote incorrect addend value 0x" + utohexstr(writtenAddend) +
+                " instead of 0x" + utohexstr(addend) +
+                " for dynamic relocation " + toString(rel.type) +
+                " at offset 0x" + utohexstr(rel.getOffset()) +
+                (rel.sym ? " against symbol " + toString(*rel.sym) : ""));
     }
   });
 }

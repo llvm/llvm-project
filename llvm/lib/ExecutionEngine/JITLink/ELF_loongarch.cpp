@@ -68,8 +68,6 @@ private:
       return RequestGOTAndTransformToPage20;
     case ELF::R_LARCH_GOT_PC_LO12:
       return RequestGOTAndTransformToPageOffset12;
-    case ELF::R_LARCH_CALL36:
-      return Call36PCRel;
     }
 
     return make_error<JITLinkError>(
@@ -131,12 +129,10 @@ private:
 
 public:
   ELFLinkGraphBuilder_loongarch(StringRef FileName,
-                                const object::ELFFile<ELFT> &Obj,
-                                std::shared_ptr<orc::SymbolStringPool> SSP,
-                                Triple TT, SubtargetFeatures Features)
-      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(SSP), std::move(TT),
-                                  std::move(Features), FileName,
-                                  loongarch::getEdgeKindName) {}
+                                const object::ELFFile<ELFT> &Obj, Triple TT,
+                                SubtargetFeatures Features)
+      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), std::move(Features),
+                                  FileName, loongarch::getEdgeKindName) {}
 };
 
 Error buildTables_ELF_loongarch(LinkGraph &G) {
@@ -153,8 +149,8 @@ Error buildTables_ELF_loongarch(LinkGraph &G) {
 namespace llvm {
 namespace jitlink {
 
-Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromELFObject_loongarch(
-    MemoryBufferRef ObjectBuffer, std::shared_ptr<orc::SymbolStringPool> SSP) {
+Expected<std::unique_ptr<LinkGraph>>
+createLinkGraphFromELFObject_loongarch(MemoryBufferRef ObjectBuffer) {
   LLVM_DEBUG({
     dbgs() << "Building jitlink graph for new input "
            << ObjectBuffer.getBufferIdentifier() << "...\n";
@@ -172,7 +168,7 @@ Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromELFObject_loongarch(
     auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF64LE>>(**ELFObj);
     return ELFLinkGraphBuilder_loongarch<object::ELF64LE>(
                (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
-               std::move(SSP), (*ELFObj)->makeTriple(), std::move(*Features))
+               (*ELFObj)->makeTriple(), std::move(*Features))
         .buildGraph();
   }
 
@@ -180,7 +176,7 @@ Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromELFObject_loongarch(
          "Invalid triple for LoongArch ELF object file");
   auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF32LE>>(**ELFObj);
   return ELFLinkGraphBuilder_loongarch<object::ELF32LE>(
-             (*ELFObj)->getFileName(), ELFObjFile.getELFFile(), std::move(SSP),
+             (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
              (*ELFObj)->makeTriple(), std::move(*Features))
       .buildGraph();
 }

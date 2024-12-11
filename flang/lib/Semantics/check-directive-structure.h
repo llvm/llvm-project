@@ -15,8 +15,6 @@
 #include "flang/Common/enum-set.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
-#include "llvm/ADT/iterator_range.h"
-
 #include <unordered_map>
 
 namespace Fortran::semantics {
@@ -294,9 +292,10 @@ protected:
     return nullptr;
   }
 
-  llvm::iterator_range<typename ClauseMapTy::iterator> FindClauses(C type) {
+  std::pair<typename ClauseMapTy::iterator, typename ClauseMapTy::iterator>
+  FindClauses(C type) {
     auto it{GetContext().clauseInfo.equal_range(type)};
-    return llvm::make_range(it);
+    return it;
   }
 
   DirectiveContext *GetEnclosingDirContext() {

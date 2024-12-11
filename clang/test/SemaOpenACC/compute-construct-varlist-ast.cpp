@@ -1,12 +1,5 @@
 // RUN: %clang_cc1 %s -fopenacc -Wno-openacc-deprecated-clause-alias -ast-dump | FileCheck %s
 
-// Test this with PCH.
-// RUN: %clang_cc1 %s -fopenacc -emit-pch -Wno-openacc-deprecated-clause-alias -o %t %s
-// RUN: %clang_cc1 %s -fopenacc -include-pch %t -Wno-openacc-deprecated-clause-alias -ast-dump-all | FileCheck %s
-
-#ifndef PCH_HELPER
-#define PCH_HELPER
-
 int Global;
 short GlobalArray[5];
 
@@ -442,7 +435,7 @@ void TemplUses(T t, U u, T*PointerParam) {
   // CHECK-NEXT: TemplateArgument type 'int'
   // CHECK-NEXT: BuiltinType{{.*}} 'int'
   // CHECK-NEXT: TemplateArgument type 'int[1]'
-  // CHECK-NEXT: ConstantArrayType{{.*}} 'int[1]'{{.*}} 1
+  // CHECK-NEXT: ConstantArrayType{{.*}} 'int[1]' 1
   // CHECK-NEXT: BuiltinType{{.*}} 'int'
   // CHECK-NEXT: ParmVarDecl{{.*}} used t 'int'
   // CHECK-NEXT: ParmVarDecl{{.*}} used u 'int *'
@@ -986,4 +979,3 @@ void Inst() {
   STempl<int> stempl;
   stempl.bar<int>();
 }
-#endif

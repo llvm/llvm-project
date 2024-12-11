@@ -17,6 +17,10 @@ namespace lldb {
 
 class LLDB_API SBBreakpointName {
 public:
+//  typedef bool (*BreakpointHitCallback)(void *baton, SBProcess &process,
+//                                        SBThread &thread,
+//                                        lldb::SBBreakpointLocation &location);
+
   SBBreakpointName();
   
   SBBreakpointName(SBTarget &target, const char *name);

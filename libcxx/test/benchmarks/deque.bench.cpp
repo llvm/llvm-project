@@ -9,7 +9,6 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
 #include <deque>
-#include <string>
 
 #include "benchmark/benchmark.h"
 
@@ -41,15 +40,5 @@ BENCHMARK_CAPTURE(BM_ConstructFromRange, deque_size_t, std::deque<size_t>{}, get
 
 BENCHMARK_CAPTURE(BM_ConstructFromRange, deque_string, std::deque<std::string>{}, getRandomStringInputs)
     ->Arg(TestNumInputs);
-
-BENCHMARK_CAPTURE(BM_erase_iter_in_middle, deque_int, std::deque<int>{}, getRandomIntegerInputs<int>)
-    ->Range(TestNumInputs, TestNumInputs * 10);
-BENCHMARK_CAPTURE(BM_erase_iter_in_middle, deque_string, std::deque<std::string>{}, getRandomStringInputs)
-    ->Range(TestNumInputs, TestNumInputs * 10);
-
-BENCHMARK_CAPTURE(BM_erase_iter_at_start, deque_int, std::deque<int>{}, getRandomIntegerInputs<int>)
-    ->Range(TestNumInputs, TestNumInputs * 10);
-BENCHMARK_CAPTURE(BM_erase_iter_at_start, deque_string, std::deque<std::string>{}, getRandomStringInputs)
-    ->Range(TestNumInputs, TestNumInputs * 10);
 
 BENCHMARK_MAIN();

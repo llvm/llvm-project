@@ -65,11 +65,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI ostreambuf_iterator& operator++(int) { return *this; }
   _LIBCPP_HIDE_FROM_ABI bool failed() const _NOEXCEPT { return __sbuf_ == nullptr; }
 
-#if _LIBCPP_HAS_LOCALIZATION
   template <class _Ch, class _Tr>
   friend _LIBCPP_HIDE_FROM_ABI ostreambuf_iterator<_Ch, _Tr> __pad_and_output(
       ostreambuf_iterator<_Ch, _Tr> __s, const _Ch* __ob, const _Ch* __op, const _Ch* __oe, ios_base& __iob, _Ch __fl);
-#endif // _LIBCPP_HAS_LOCALIZATION
 };
 
 _LIBCPP_END_NAMESPACE_STD

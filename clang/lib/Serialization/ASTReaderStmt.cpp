@@ -911,9 +911,9 @@ void ASTStmtReader::VisitRequiresExpr(RequiresExpr *E) {
                   std::move(*Req), Status, SubstitutedConstraintExpr);
         else
           R = new (Record.getContext()) concepts::ExprRequirement(
-              cast<concepts::Requirement::SubstitutionDiagnostic *>(E),
-              RK == concepts::Requirement::RK_Simple, NoexceptLoc,
-              std::move(*Req));
+                  E.get<concepts::Requirement::SubstitutionDiagnostic *>(),
+                  RK == concepts::Requirement::RK_Simple, NoexceptLoc,
+                  std::move(*Req));
       } break;
       case concepts::Requirement::RK_Nested: {
         ASTContext &C = Record.getContext();
@@ -2191,7 +2191,7 @@ void ASTStmtReader::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
 void ASTStmtReader::VisitPackIndexingExpr(PackIndexingExpr *E) {
   VisitExpr(E);
   E->TransformedExpressions = Record.readInt();
-  E->FullySubstituted = Record.readInt();
+  E->ExpandedToEmptyPack = Record.readInt();
   E->EllipsisLoc = readSourceLocation();
   E->RSquareLoc = readSourceLocation();
   E->SubExprs[0] = Record.readStmt();

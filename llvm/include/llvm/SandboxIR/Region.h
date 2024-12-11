@@ -63,11 +63,6 @@ class Region {
 
   Context &Ctx;
 
-  /// ID (for later deregistration) of the "create instruction" callback.
-  Context::CallbackID CreateInstCB;
-  /// ID (for later deregistration) of the "erase instruction" callback.
-  Context::CallbackID EraseInstCB;
-
   // TODO: Add cost modeling.
   // TODO: Add a way to encode/decode region info to/from metadata.
 

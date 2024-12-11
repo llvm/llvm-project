@@ -651,7 +651,7 @@ void MatcherGen::EmitResultOfNamedOperand(
   if (!N.isLeaf()) {
     StringRef OperatorName = N.getOperator()->getName();
     if (OperatorName == "imm" || OperatorName == "fpimm") {
-      AddMatcher(new EmitConvertToTargetMatcher(SlotNo, NextRecordedOperandNo));
+      AddMatcher(new EmitConvertToTargetMatcher(SlotNo));
       ResultOps.push_back(NextRecordedOperandNo++);
       return;
     }
@@ -666,8 +666,7 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
   assert(N.isLeaf() && "Must be a leaf");
 
   if (const IntInit *II = dyn_cast<IntInit>(N.getLeafValue())) {
-    AddMatcher(new EmitIntegerMatcher(II->getValue(), N.getSimpleType(0),
-                                      NextRecordedOperandNo));
+    AddMatcher(new EmitIntegerMatcher(II->getValue(), N.getSimpleType(0)));
     ResultOps.push_back(NextRecordedOperandNo++);
     return;
   }
@@ -677,15 +676,13 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
     const Record *Def = DI->getDef();
     if (Def->isSubClassOf("Register")) {
       const CodeGenRegister *Reg = CGP.getTargetInfo().getRegBank().getReg(Def);
-      AddMatcher(new EmitRegisterMatcher(Reg, N.getSimpleType(0),
-                                         NextRecordedOperandNo));
+      AddMatcher(new EmitRegisterMatcher(Reg, N.getSimpleType(0)));
       ResultOps.push_back(NextRecordedOperandNo++);
       return;
     }
 
     if (Def->getName() == "zero_reg") {
-      AddMatcher(new EmitRegisterMatcher(nullptr, N.getSimpleType(0),
-                                         NextRecordedOperandNo));
+      AddMatcher(new EmitRegisterMatcher(nullptr, N.getSimpleType(0)));
       ResultOps.push_back(NextRecordedOperandNo++);
       return;
     }
@@ -713,13 +710,12 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
           CGP.getTargetInfo().getRegisterClass(Def);
       if (RC.EnumValue <= 127) {
         std::string Value = RC.getQualifiedIdName();
-        AddMatcher(new EmitStringIntegerMatcher(Value, MVT::i32,
-                                                NextRecordedOperandNo));
+        AddMatcher(new EmitStringIntegerMatcher(Value, MVT::i32));
+        ResultOps.push_back(NextRecordedOperandNo++);
       } else {
-        AddMatcher(new EmitIntegerMatcher(RC.EnumValue, MVT::i32,
-                                          NextRecordedOperandNo));
+        AddMatcher(new EmitIntegerMatcher(RC.EnumValue, MVT::i32));
+        ResultOps.push_back(NextRecordedOperandNo++);
       }
-      ResultOps.push_back(NextRecordedOperandNo++);
       return;
     }
 
@@ -732,15 +728,13 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
         const CodeGenSubRegIndex *I = RB.findSubRegIdx(Def);
         assert(I && "Cannot find subreg index by name!");
         if (I->EnumValue > 127) {
-          AddMatcher(new EmitIntegerMatcher(I->EnumValue, MVT::i32,
-                                            NextRecordedOperandNo));
+          AddMatcher(new EmitIntegerMatcher(I->EnumValue, MVT::i32));
           ResultOps.push_back(NextRecordedOperandNo++);
           return;
         }
       }
       std::string Value = getQualifiedName(Def);
-      AddMatcher(
-          new EmitStringIntegerMatcher(Value, MVT::i32, NextRecordedOperandNo));
+      AddMatcher(new EmitStringIntegerMatcher(Value, MVT::i32));
       ResultOps.push_back(NextRecordedOperandNo++);
       return;
     }
@@ -1001,8 +995,7 @@ void MatcherGen::EmitResultSDNodeXFormAsOperand(
   // The input currently must have produced exactly one result.
   assert(InputOps.size() == 1 && "Unexpected input to SDNodeXForm");
 
-  AddMatcher(new EmitNodeXFormMatcher(InputOps[0], N.getOperator(),
-                                      NextRecordedOperandNo));
+  AddMatcher(new EmitNodeXFormMatcher(InputOps[0], N.getOperator()));
   ResultOps.push_back(NextRecordedOperandNo++);
 }
 

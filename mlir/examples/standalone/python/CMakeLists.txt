@@ -17,31 +17,17 @@ declare_mlir_dialect_python_bindings(
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir_standalone"
   TD_FILE dialects/StandaloneOps.td
   SOURCES
-    dialects/standalone_pybind11.py
-    dialects/standalone_nanobind.py
+    dialects/standalone.py
   DIALECT_NAME standalone)
 
-
-declare_mlir_python_extension(StandalonePythonSources.Pybind11Extension
-  MODULE_NAME _standaloneDialectsPybind11
+declare_mlir_python_extension(StandalonePythonSources.Extension
+  MODULE_NAME _standaloneDialects
   ADD_TO_PARENT StandalonePythonSources
   SOURCES
-    StandaloneExtensionPybind11.cpp
+    StandaloneExtension.cpp
   EMBED_CAPI_LINK_LIBS
     StandaloneCAPI
-  PYTHON_BINDINGS_LIBRARY pybind11
 )
-
-declare_mlir_python_extension(StandalonePythonSources.NanobindExtension
-  MODULE_NAME _standaloneDialectsNanobind
-  ADD_TO_PARENT StandalonePythonSources
-  SOURCES
-    StandaloneExtensionNanobind.cpp
-  EMBED_CAPI_LINK_LIBS
-    StandaloneCAPI
-  PYTHON_BINDINGS_LIBRARY nanobind
-)
-
 
 ################################################################################
 # Common CAPI

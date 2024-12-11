@@ -8,7 +8,6 @@ subroutine reduction_inscan()
 
   !$omp do reduction(inscan, +:i)
   do j=1,10
-     !$omp scan inclusive(i)
      i = i + 1
   end do
   !$omp end do

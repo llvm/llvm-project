@@ -18,7 +18,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/RegUsageInfoPropagate.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -26,7 +25,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegisterUsageInfo.h"
-#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
@@ -40,16 +38,26 @@ using namespace llvm;
 
 namespace {
 
-class RegUsageInfoPropagation {
+class RegUsageInfoPropagation : public MachineFunctionPass {
 public:
-  explicit RegUsageInfoPropagation(PhysicalRegisterUsageInfo *PRUI)
-      : PRUI(PRUI) {}
+  RegUsageInfoPropagation() : MachineFunctionPass(ID) {
+    PassRegistry &Registry = *PassRegistry::getPassRegistry();
+    initializeRegUsageInfoPropagationPass(Registry);
+  }
 
-  bool run(MachineFunction &MF);
+  StringRef getPassName() const override { return RUIP_NAME; }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<PhysicalRegisterUsageInfo>();
+    AU.setPreservesAll();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  static char ID;
 
 private:
-  PhysicalRegisterUsageInfo *PRUI;
-
   static void setRegMask(MachineInstr &MI, ArrayRef<uint32_t> RegMask) {
     assert(RegMask.size() ==
            MachineOperand::getRegMaskSize(MI.getParent()->getParent()
@@ -63,34 +71,15 @@ private:
   }
 };
 
-class RegUsageInfoPropagationLegacy : public MachineFunctionPass {
-public:
-  static char ID;
-  RegUsageInfoPropagationLegacy() : MachineFunctionPass(ID) {
-    PassRegistry &Registry = *PassRegistry::getPassRegistry();
-    initializeRegUsageInfoPropagationLegacyPass(Registry);
-  }
-
-  StringRef getPassName() const override { return RUIP_NAME; }
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<PhysicalRegisterUsageInfoWrapperLegacy>();
-    AU.setPreservesAll();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-};
-
 } // end of anonymous namespace
 
-INITIALIZE_PASS_BEGIN(RegUsageInfoPropagationLegacy, "reg-usage-propagation",
+INITIALIZE_PASS_BEGIN(RegUsageInfoPropagation, "reg-usage-propagation",
                       RUIP_NAME, false, false)
-INITIALIZE_PASS_DEPENDENCY(PhysicalRegisterUsageInfoWrapperLegacy)
-INITIALIZE_PASS_END(RegUsageInfoPropagationLegacy, "reg-usage-propagation",
+INITIALIZE_PASS_DEPENDENCY(PhysicalRegisterUsageInfo)
+INITIALIZE_PASS_END(RegUsageInfoPropagation, "reg-usage-propagation",
                     RUIP_NAME, false, false)
 
-char RegUsageInfoPropagationLegacy::ID = 0;
+char RegUsageInfoPropagation::ID = 0;
 
 // Assumes call instructions have a single reference to a function.
 static const Function *findCalledFunction(const Module &M,
@@ -106,29 +95,11 @@ static const Function *findCalledFunction(const Module &M,
   return nullptr;
 }
 
-bool RegUsageInfoPropagationLegacy::runOnMachineFunction(MachineFunction &MF) {
-  PhysicalRegisterUsageInfo *PRUI =
-      &getAnalysis<PhysicalRegisterUsageInfoWrapperLegacy>().getPRUI();
-
-  RegUsageInfoPropagation RUIP(PRUI);
-  return RUIP.run(MF);
-}
-
-PreservedAnalyses
-RegUsageInfoPropagationPass::run(MachineFunction &MF,
-                                 MachineFunctionAnalysisManager &MFAM) {
-  Module &MFA = *MF.getFunction().getParent();
-  auto *PRUI = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
-                   .getCachedResult<PhysicalRegisterUsageAnalysis>(MFA);
-  assert(PRUI && "PhysicalRegisterUsageAnalysis not available");
-  RegUsageInfoPropagation(PRUI).run(MF);
-  return PreservedAnalyses::all();
-}
-
-bool RegUsageInfoPropagation::run(MachineFunction &MF) {
+bool RegUsageInfoPropagation::runOnMachineFunction(MachineFunction &MF) {
   const Module &M = *MF.getFunction().getParent();
+  PhysicalRegisterUsageInfo *PRUI = &getAnalysis<PhysicalRegisterUsageInfo>();
 
-  LLVM_DEBUG(dbgs() << " ++++++++++++++++++++ " << RUIP_NAME
+  LLVM_DEBUG(dbgs() << " ++++++++++++++++++++ " << getPassName()
                     << " ++++++++++++++++++++  \n");
   LLVM_DEBUG(dbgs() << "MachineFunction : " << MF.getName() << "\n");
 
@@ -179,5 +150,5 @@ bool RegUsageInfoPropagation::run(MachineFunction &MF) {
 }
 
 FunctionPass *llvm::createRegUsageInfoPropPass() {
-  return new RegUsageInfoPropagationLegacy();
+  return new RegUsageInfoPropagation();
 }

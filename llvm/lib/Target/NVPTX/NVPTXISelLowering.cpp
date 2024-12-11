@@ -63,6 +63,7 @@
 #include <cstdint>
 #include <iterator>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -667,11 +668,6 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setTruncStoreAction(VT, MVT::i1, Expand);
   }
 
-  setCondCodeAction({ISD::SETNE, ISD::SETEQ, ISD::SETUGE, ISD::SETULE,
-                     ISD::SETUGT, ISD::SETULT, ISD::SETGT, ISD::SETLT,
-                     ISD::SETGE, ISD::SETLE},
-                    MVT::i1, Expand);
-
   // expand extload of vector of integers.
   setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::v2i16,
                    MVT::v2i8, Expand);
@@ -867,19 +863,16 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(Op, MVT::bf16, Promote);
     AddPromotedToType(Op, MVT::bf16, MVT::f32);
   }
-
-  setOperationAction(ISD::FABS, {MVT::f32, MVT::f64}, Legal);
-  if (STI.getPTXVersion() >= 65) {
-    setFP16OperationAction(ISD::FABS, MVT::f16, Legal, Promote);
-    setFP16OperationAction(ISD::FABS, MVT::v2f16, Legal, Expand);
-  } else {
-    setOperationAction(ISD::FABS, MVT::f16, Promote);
-    setOperationAction(ISD::FABS, MVT::v2f16, Expand);
+  for (const auto &Op : {ISD::FABS}) {
+    setOperationAction(Op, MVT::f16, Promote);
+    setOperationAction(Op, MVT::f32, Legal);
+    setOperationAction(Op, MVT::f64, Legal);
+    setOperationAction(Op, MVT::v2f16, Expand);
+    setBF16OperationAction(Op, MVT::v2bf16, Legal, Expand);
+    setBF16OperationAction(Op, MVT::bf16, Legal, Promote);
+    if (getOperationAction(Op, MVT::bf16) == Promote)
+      AddPromotedToType(Op, MVT::bf16, MVT::f32);
   }
-  setBF16OperationAction(ISD::FABS, MVT::v2bf16, Legal, Expand);
-  setBF16OperationAction(ISD::FABS, MVT::bf16, Legal, Promote);
-  if (getOperationAction(ISD::FABS, MVT::bf16) == Promote)
-    AddPromotedToType(ISD::FABS, MVT::bf16, MVT::f32);
 
   for (const auto &Op : {ISD::FMINNUM, ISD::FMAXNUM}) {
     setOperationAction(Op, MVT::f32, Legal);
@@ -2719,10 +2712,10 @@ SDValue NVPTXTargetLowering::LowerFROUND32(SDValue Op,
 
   // RoundedA = (float) (int) ( A > 0 ? (A + 0.5f) : (A - 0.5f))
   SDValue Bitcast  = DAG.getNode(ISD::BITCAST, SL, MVT::i32, A);
-  const unsigned SignBitMask = 0x80000000;
+  const int SignBitMask = 0x80000000;
   SDValue Sign = DAG.getNode(ISD::AND, SL, MVT::i32, Bitcast,
                              DAG.getConstant(SignBitMask, SL, MVT::i32));
-  const unsigned PointFiveInBits = 0x3F000000;
+  const int PointFiveInBits = 0x3F000000;
   SDValue PointFiveWithSignRaw =
       DAG.getNode(ISD::OR, SL, MVT::i32, Sign,
                   DAG.getConstant(PointFiveInBits, SL, MVT::i32));
@@ -2791,7 +2784,7 @@ SDValue NVPTXTargetLowering::LowerINT_TO_FP(SDValue Op,
     return DAG.getNode(
         ISD::FP_ROUND, Loc, MVT::bf16,
         DAG.getNode(Op.getOpcode(), Loc, MVT::f32, Op.getOperand(0)),
-        DAG.getIntPtrConstant(0, Loc, /*isTarget=*/true));
+        DAG.getIntPtrConstant(0, Loc));
   }
 
   // Everything else is considered legal.
@@ -3036,9 +3029,9 @@ SDValue NVPTXTargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
         ISD::ADD, DL, VAList.getValueType(), VAList,
         DAG.getConstant(MA->value() - 1, DL, VAList.getValueType()));
 
-    VAList = DAG.getNode(ISD::AND, DL, VAList.getValueType(), VAList,
-                         DAG.getSignedConstant(-(int64_t)MA->value(), DL,
-                                               VAList.getValueType()));
+    VAList = DAG.getNode(
+        ISD::AND, DL, VAList.getValueType(), VAList,
+        DAG.getConstant(-(int64_t)MA->value(), DL, VAList.getValueType()));
   }
 
   // Increment the pointer, VAList, to the next vaarg

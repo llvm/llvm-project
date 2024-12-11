@@ -111,19 +111,6 @@ public:
     return getPointerWidthV(AddrSpace);
   }
 
-  virtual bool isAddressSpaceSupersetOf(LangAS A, LangAS B) const override {
-    // The flat address space AS(0) is a superset of all the other address
-    // spaces used by the backend target.
-    return A == B ||
-           ((A == LangAS::Default ||
-             (isTargetAddressSpace(A) &&
-              toTargetAddressSpace(A) == llvm::AMDGPUAS::FLAT_ADDRESS)) &&
-            isTargetAddressSpace(B) &&
-            toTargetAddressSpace(B) >= llvm::AMDGPUAS::FLAT_ADDRESS &&
-            toTargetAddressSpace(B) <= llvm::AMDGPUAS::PRIVATE_ADDRESS &&
-            toTargetAddressSpace(B) != llvm::AMDGPUAS::REGION_ADDRESS);
-  }
-
   uint64_t getMaxPointerWidth() const override {
     return getTriple().getArch() == llvm::Triple::amdgcn ? 64 : 32;
   }
@@ -257,8 +244,7 @@ public:
                  StringRef CPU,
                  const std::vector<std::string> &FeatureVec) const override;
 
-  std::pair<const char *, ArrayRef<Builtin::Info>>
-  getTargetBuiltinStorage() const override;
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
   bool useFP16ConversionIntrinsics() const override { return false; }
 

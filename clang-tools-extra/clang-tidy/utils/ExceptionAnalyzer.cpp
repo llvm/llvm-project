@@ -320,12 +320,6 @@ bool isQualificationConvertiblePointer(QualType From, QualType To,
 } // namespace
 
 static bool canThrow(const FunctionDecl *Func) {
-  // consteval specifies that every call to the function must produce a
-  // compile-time constant, which cannot evaluate a throw expression without
-  // producing a compilation error.
-  if (Func->isConsteval())
-    return false;
-
   const auto *FunProto = Func->getType()->getAs<FunctionProtoType>();
   if (!FunProto)
     return true;
@@ -424,7 +418,7 @@ ExceptionAnalyzer::ExceptionInfo::filterIgnoredExceptions(
       if (TD->getDeclName().isIdentifier()) {
         if ((IgnoreBadAlloc &&
              (TD->getName() == "bad_alloc" && TD->isInStdNamespace())) ||
-            (IgnoredTypes.contains(TD->getName())))
+            (IgnoredTypes.count(TD->getName()) > 0))
           TypesToDelete.push_back(T);
       }
     }
@@ -455,8 +449,7 @@ void ExceptionAnalyzer::ExceptionInfo::reevaluateBehaviour() {
 ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     const FunctionDecl *Func, const ExceptionInfo::Throwables &Caught,
     llvm::SmallSet<const FunctionDecl *, 32> &CallStack) {
-  if (!Func || CallStack.contains(Func) ||
-      (!CallStack.empty() && !canThrow(Func)))
+  if (!Func || CallStack.count(Func) || (!CallStack.empty() && !canThrow(Func)))
     return ExceptionInfo::createNonThrowing();
 
   if (const Stmt *Body = Func->getBody()) {
@@ -514,7 +507,7 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     for (unsigned I = 0; I < Try->getNumHandlers(); ++I) {
       const CXXCatchStmt *Catch = Try->getHandler(I);
 
-      // Everything is caught through 'catch(...)'.
+      // Everything is catched through 'catch(...)'.
       if (!Catch->getExceptionDecl()) {
         ExceptionInfo Rethrown = throwsException(
             Catch->getHandlerBlock(), Uncaught.getExceptionTypes(), CallStack);

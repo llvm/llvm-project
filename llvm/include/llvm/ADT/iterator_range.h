@@ -43,8 +43,7 @@ class iterator_range {
   IteratorT begin_iterator, end_iterator;
 
 public:
-#if defined(__GNUC__) &&                                                       \
-    (__GNUC__ == 7 || (__GNUC__ == 8 && __GNUC_MINOR__ < 4))
+#if __GNUC__ == 7 || (__GNUC__ == 8 && __GNUC_MINOR__ < 4)
   // Be careful no to break gcc-7 and gcc-8 < 8.4 on the mlir target.
   // See https://github.com/llvm/llvm-project/issues/63843
   template <typename Container>

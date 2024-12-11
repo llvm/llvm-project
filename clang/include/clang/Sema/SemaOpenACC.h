@@ -87,10 +87,6 @@ private:
     /// which allows us to diagnose if the value of 'N' is too large for the
     /// current number of 'for' loops.
     bool CollapseDepthSatisfied = true;
-
-    /// Records the kind of the directive that this clause is attached to, which
-    /// allows us to use it in diagnostics.
-    OpenACCDirectiveKind DirectiveKind = OpenACCDirectiveKind::Invalid;
   } CollapseInfo;
 
   /// The 'tile' clause requires a bit of additional checking as well, so like
@@ -107,10 +103,6 @@ private:
     /// which allows us to diagnose if the number of arguments is too large for
     /// the current number of 'for' loops.
     bool TileDepthSatisfied = true;
-
-    /// Records the kind of the directive that this clause is attached to, which
-    /// allows us to use it in diagnostics.
-    OpenACCDirectiveKind DirectiveKind = OpenACCDirectiveKind::Invalid;
   } TileInfo;
 
   /// A list of the active reduction clauses, which allows us to check that all
@@ -164,14 +156,9 @@ public:
   }
 
   /// If there is a current 'active' loop construct with a 'gang' clause on a
-  /// 'kernel' construct, this will have the source location for it, and the
-  /// 'kernel kind'. This permits us to implement the restriction of no further
-  /// 'gang' clauses.
-  struct LoopGangOnKernelTy {
-    SourceLocation Loc;
-    OpenACCDirectiveKind DirKind = OpenACCDirectiveKind::Invalid;
-  } LoopGangClauseOnKernel;
-
+  /// 'kernel' construct, this will have the source location for it. This
+  /// permits us to implement the restriction of no further 'gang' clauses.
+  SourceLocation LoopGangClauseOnKernelLoc;
   /// If there is a current 'active' loop construct with a 'worker' clause on it
   /// (on any sort of construct), this has the source location for it.  This
   /// permits us to implement the restriction of no further 'gang' or 'worker'
@@ -710,15 +697,12 @@ public:
   ExprResult CheckTileSizeExpr(Expr *SizeExpr);
 
   // Check a single expression on a gang clause.
-  ExprResult CheckGangExpr(ArrayRef<const OpenACCClause *> ExistingClauses,
-                           OpenACCDirectiveKind DK, OpenACCGangKind GK,
-                           Expr *E);
+  ExprResult CheckGangExpr(OpenACCGangKind GK, Expr *E);
 
   // Does the checking for a 'gang' clause that needs to be done in dependent
   // and not dependent cases.
   OpenACCClause *
-  CheckGangClause(OpenACCDirectiveKind DirKind,
-                  ArrayRef<const OpenACCClause *> ExistingClauses,
+  CheckGangClause(ArrayRef<const OpenACCClause *> ExistingClauses,
                   SourceLocation BeginLoc, SourceLocation LParenLoc,
                   ArrayRef<OpenACCGangKind> GangKinds,
                   ArrayRef<Expr *> IntExprs, SourceLocation EndLoc);
@@ -779,7 +763,7 @@ public:
     SemaOpenACC &SemaRef;
     ComputeConstructInfo OldActiveComputeConstructInfo;
     OpenACCDirectiveKind DirKind;
-    LoopGangOnKernelTy OldLoopGangClauseOnKernel;
+    SourceLocation OldLoopGangClauseOnKernelLoc;
     SourceLocation OldLoopWorkerClauseLoc;
     SourceLocation OldLoopVectorClauseLoc;
     LoopWithoutSeqCheckingInfo OldLoopWithoutSeqInfo;

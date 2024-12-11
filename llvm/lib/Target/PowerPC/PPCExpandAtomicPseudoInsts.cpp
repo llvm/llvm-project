@@ -15,6 +15,7 @@
 #include "MCTargetDesc/PPCPredicates.h"
 #include "PPC.h"
 #include "PPCInstrInfo.h"
+#include "PPCTargetMachine.h"
 
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"

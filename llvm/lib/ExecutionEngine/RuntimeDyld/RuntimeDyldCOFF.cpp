@@ -15,6 +15,7 @@
 #include "Targets/RuntimeDyldCOFFI386.h"
 #include "Targets/RuntimeDyldCOFFThumb.h"
 #include "Targets/RuntimeDyldCOFFX86_64.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TargetParser/Triple.h"

@@ -39,21 +39,21 @@ ThreadPlanStack::ThreadPlanStack(const Thread &thread, bool make_null) {
 void ThreadPlanStack::DumpThreadPlans(Stream &s,
                                       lldb::DescriptionLevel desc_level,
                                       bool include_internal) const {
-  llvm::sys::ScopedReader guard(m_stack_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   s.IndentMore();
-  PrintOneStackNoLock(s, "Active plan stack", m_plans, desc_level,
-                      include_internal);
-  PrintOneStackNoLock(s, "Completed plan stack", m_completed_plans, desc_level,
-                      include_internal);
-  PrintOneStackNoLock(s, "Discarded plan stack", m_discarded_plans, desc_level,
-                      include_internal);
+  PrintOneStack(s, "Active plan stack", m_plans, desc_level, include_internal);
+  PrintOneStack(s, "Completed plan stack", m_completed_plans, desc_level,
+                include_internal);
+  PrintOneStack(s, "Discarded plan stack", m_discarded_plans, desc_level,
+                include_internal);
   s.IndentLess();
 }
 
-void ThreadPlanStack::PrintOneStackNoLock(Stream &s, llvm::StringRef stack_name,
-                                          const PlanStack &stack,
-                                          lldb::DescriptionLevel desc_level,
-                                          bool include_internal) const {
+void ThreadPlanStack::PrintOneStack(Stream &s, llvm::StringRef stack_name,
+                                    const PlanStack &stack,
+                                    lldb::DescriptionLevel desc_level,
+                                    bool include_internal) const {
+  std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   // If the stack is empty, just exit:
   if (stack.empty())
     return;
@@ -82,7 +82,7 @@ void ThreadPlanStack::PrintOneStackNoLock(Stream &s, llvm::StringRef stack_name,
 }
 
 size_t ThreadPlanStack::CheckpointCompletedPlans() {
-  llvm::sys::ScopedWriter guard(m_stack_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   m_completed_plan_checkpoint++;
   m_completed_plan_store.insert(
       std::make_pair(m_completed_plan_checkpoint, m_completed_plans));
@@ -90,7 +90,7 @@ size_t ThreadPlanStack::CheckpointCompletedPlans() {
 }
 
 void ThreadPlanStack::RestoreCompletedPlanCheckpoint(size_t checkpoint) {
-  llvm::sys::ScopedWriter guard(m_stack_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   auto result = m_completed_plan_store.find(checkpoint);
   assert(result != m_completed_plan_store.end() &&
          "Asked for a checkpoint that didn't exist");
@@ -99,13 +99,13 @@ void ThreadPlanStack::RestoreCompletedPlanCheckpoint(size_t checkpoint) {
 }
 
 void ThreadPlanStack::DiscardCompletedPlanCheckpoint(size_t checkpoint) {
-  llvm::sys::ScopedWriter guard(m_stack_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   m_completed_plan_store.erase(checkpoint);
 }
 
 void ThreadPlanStack::ThreadDestroyed(Thread *thread) {
   // Tell the plan stacks that this thread is going away:
-  llvm::sys::ScopedWriter guard(m_stack_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   for (ThreadPlanSP plan : m_plans)
     plan->ThreadDestroyed();
 
@@ -134,22 +134,20 @@ void ThreadPlanStack::PushPlan(lldb::ThreadPlanSP new_plan_sp) {
   // If the thread plan doesn't already have a tracer, give it its parent's
   // tracer:
   // The first plan has to be a base plan:
-  { // Scope for Lock - DidPush often adds plans to the stack:
-    llvm::sys::ScopedWriter guard(m_stack_mutex);
-    assert((m_plans.size() > 0 || new_plan_sp->IsBasePlan()) &&
-           "Zeroth plan must be a base plan");
+  std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
+  assert((m_plans.size() > 0 || new_plan_sp->IsBasePlan()) &&
+         "Zeroth plan must be a base plan");
 
-    if (!new_plan_sp->GetThreadPlanTracer()) {
-      assert(!m_plans.empty());
-      new_plan_sp->SetThreadPlanTracer(m_plans.back()->GetThreadPlanTracer());
-    }
-    m_plans.push_back(new_plan_sp);
+  if (!new_plan_sp->GetThreadPlanTracer()) {
+    assert(!m_plans.empty());
+    new_plan_sp->SetThreadPlanTracer(m_plans.back()->GetThreadPlanTracer());
   }
+  m_plans.push_back(new_plan_sp);
   new_plan_sp->DidPush();
 }
 
 lldb::ThreadPlanSP ThreadPlanStack::PopPlan() {
-  llvm::sys::ScopedWriter guard(m_stack_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   assert(m_plans.size() > 1 && "Can't pop the base thread plan");
 
   // Note that moving the top element of the vector would leave it in an
@@ -163,11 +161,7 @@ lldb::ThreadPlanSP ThreadPlanStack::PopPlan() {
 }
 
 lldb::ThreadPlanSP ThreadPlanStack::DiscardPlan() {
-  llvm::sys::ScopedWriter guard(m_stack_mutex);
-  return DiscardPlanNoLock();
-}
-
-lldb::ThreadPlanSP ThreadPlanStack::DiscardPlanNoLock() {
+  std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   assert(m_plans.size() > 1 && "Can't discard the base thread plan");
 
   // Note that moving the top element of the vector would leave it in an
@@ -183,12 +177,12 @@ lldb::ThreadPlanSP ThreadPlanStack::DiscardPlanNoLock() {
 // If the input plan is nullptr, discard all plans.  Otherwise make sure this
 // plan is in the stack, and if so discard up to and including it.
 void ThreadPlanStack::DiscardPlansUpToPlan(ThreadPlan *up_to_plan_ptr) {
-  llvm::sys::ScopedWriter guard(m_stack_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   int stack_size = m_plans.size();
 
   if (up_to_plan_ptr == nullptr) {
     for (int i = stack_size - 1; i > 0; i--)
-      DiscardPlanNoLock();
+      DiscardPlan();
     return;
   }
 
@@ -203,23 +197,23 @@ void ThreadPlanStack::DiscardPlansUpToPlan(ThreadPlan *up_to_plan_ptr) {
   if (found_it) {
     bool last_one = false;
     for (int i = stack_size - 1; i > 0 && !last_one; i--) {
-      if (GetCurrentPlanNoLock().get() == up_to_plan_ptr)
+      if (GetCurrentPlan().get() == up_to_plan_ptr)
         last_one = true;
-      DiscardPlanNoLock();
+      DiscardPlan();
     }
   }
 }
 
 void ThreadPlanStack::DiscardAllPlans() {
-  llvm::sys::ScopedWriter guard(m_stack_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   int stack_size = m_plans.size();
   for (int i = stack_size - 1; i > 0; i--) {
-    DiscardPlanNoLock();
+    DiscardPlan();
   }
 }
 
 void ThreadPlanStack::DiscardConsultingControllingPlans() {
-  llvm::sys::ScopedWriter guard(m_stack_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   while (true) {
     int controlling_plan_idx;
     bool discard = true;
@@ -240,30 +234,26 @@ void ThreadPlanStack::DiscardConsultingControllingPlans() {
 
     // First pop all the dependent plans:
     for (int i = m_plans.size() - 1; i > controlling_plan_idx; i--) {
-      DiscardPlanNoLock();
+      DiscardPlan();
     }
 
     // Now discard the controlling plan itself.
     // The bottom-most plan never gets discarded.  "OkayToDiscard" for it
     // means discard it's dependent plans, but not it...
     if (controlling_plan_idx > 0) {
-      DiscardPlanNoLock();
+      DiscardPlan();
     }
   }
 }
 
 lldb::ThreadPlanSP ThreadPlanStack::GetCurrentPlan() const {
-  llvm::sys::ScopedReader guard(m_stack_mutex);
-  return GetCurrentPlanNoLock();
-}
-
-lldb::ThreadPlanSP ThreadPlanStack::GetCurrentPlanNoLock() const {
+  std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   assert(m_plans.size() != 0 && "There will always be a base plan.");
   return m_plans.back();
 }
 
 lldb::ThreadPlanSP ThreadPlanStack::GetCompletedPlan(bool skip_private) const {
-  llvm::sys::ScopedReader guard(m_stack_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   if (m_completed_plans.empty())
     return {};
 
@@ -281,7 +271,7 @@ lldb::ThreadPlanSP ThreadPlanStack::GetCompletedPlan(bool skip_private) const {
 
 lldb::ThreadPlanSP ThreadPlanStack::GetPlanByIndex(uint32_t plan_idx,
                                                    bool skip_private) const {
-  llvm::sys::ScopedReader guard(m_stack_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   uint32_t idx = 0;
 
   for (lldb::ThreadPlanSP plan_sp : m_plans) {
@@ -295,7 +285,7 @@ lldb::ThreadPlanSP ThreadPlanStack::GetPlanByIndex(uint32_t plan_idx,
 }
 
 lldb::ValueObjectSP ThreadPlanStack::GetReturnValueObject() const {
-  llvm::sys::ScopedReader guard(m_stack_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   if (m_completed_plans.empty())
     return {};
 
@@ -309,7 +299,7 @@ lldb::ValueObjectSP ThreadPlanStack::GetReturnValueObject() const {
 }
 
 lldb::ExpressionVariableSP ThreadPlanStack::GetExpressionVariable() const {
-  llvm::sys::ScopedReader guard(m_stack_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   if (m_completed_plans.empty())
     return {};
 
@@ -322,23 +312,23 @@ lldb::ExpressionVariableSP ThreadPlanStack::GetExpressionVariable() const {
   return {};
 }
 bool ThreadPlanStack::AnyPlans() const {
-  llvm::sys::ScopedReader guard(m_stack_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   // There is always a base plan...
   return m_plans.size() > 1;
 }
 
 bool ThreadPlanStack::AnyCompletedPlans() const {
-  llvm::sys::ScopedReader guard(m_stack_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   return !m_completed_plans.empty();
 }
 
 bool ThreadPlanStack::AnyDiscardedPlans() const {
-  llvm::sys::ScopedReader guard(m_stack_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   return !m_discarded_plans.empty();
 }
 
 bool ThreadPlanStack::IsPlanDone(ThreadPlan *in_plan) const {
-  llvm::sys::ScopedReader guard(m_stack_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   for (auto plan : m_completed_plans) {
     if (plan.get() == in_plan)
       return true;
@@ -347,7 +337,7 @@ bool ThreadPlanStack::IsPlanDone(ThreadPlan *in_plan) const {
 }
 
 bool ThreadPlanStack::WasPlanDiscarded(ThreadPlan *in_plan) const {
-  llvm::sys::ScopedReader guard(m_stack_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   for (auto plan : m_discarded_plans) {
     if (plan.get() == in_plan)
       return true;
@@ -356,7 +346,7 @@ bool ThreadPlanStack::WasPlanDiscarded(ThreadPlan *in_plan) const {
 }
 
 ThreadPlan *ThreadPlanStack::GetPreviousPlan(ThreadPlan *current_plan) const {
-  llvm::sys::ScopedReader guard(m_stack_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   if (current_plan == nullptr)
     return nullptr;
 
@@ -371,7 +361,7 @@ ThreadPlan *ThreadPlanStack::GetPreviousPlan(ThreadPlan *current_plan) const {
   // If this is the first completed plan, the previous one is the
   // bottom of the regular plan stack.
   if (stack_size > 0 && m_completed_plans[0].get() == current_plan) {
-    return GetCurrentPlanNoLock().get();
+    return GetCurrentPlan().get();
   }
 
   // Otherwise look for it in the regular plans.
@@ -384,7 +374,7 @@ ThreadPlan *ThreadPlanStack::GetPreviousPlan(ThreadPlan *current_plan) const {
 }
 
 ThreadPlan *ThreadPlanStack::GetInnermostExpression() const {
-  llvm::sys::ScopedReader guard(m_stack_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   int stack_size = m_plans.size();
 
   for (int i = stack_size - 1; i > 0; i--) {
@@ -395,13 +385,13 @@ ThreadPlan *ThreadPlanStack::GetInnermostExpression() const {
 }
 
 void ThreadPlanStack::ClearThreadCache() {
-  llvm::sys::ScopedReader guard(m_stack_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   for (lldb::ThreadPlanSP thread_plan_sp : m_plans)
     thread_plan_sp->ClearThreadCache();
 }
 
 void ThreadPlanStack::WillResume() {
-  llvm::sys::ScopedWriter guard(m_stack_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_stack_mutex);
   m_completed_plans.clear();
   m_discarded_plans.clear();
 }

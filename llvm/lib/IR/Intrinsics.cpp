@@ -34,13 +34,16 @@
 using namespace llvm;
 
 /// Table of string intrinsic names indexed by enum value.
+static constexpr const char *const IntrinsicNameTable[] = {
+    "not_intrinsic",
 #define GET_INTRINSIC_NAME_TABLE
 #include "llvm/IR/IntrinsicImpl.inc"
 #undef GET_INTRINSIC_NAME_TABLE
+};
 
 StringRef Intrinsic::getBaseName(ID id) {
   assert(id < num_intrinsics && "Invalid intrinsic ID!");
-  return IntrinsicNameTable + IntrinsicNameOffsetTable[id];
+  return IntrinsicNameTable[id];
 }
 
 StringRef Intrinsic::getName(ID id) {
@@ -618,12 +621,9 @@ bool Intrinsic::isTargetIntrinsic(Intrinsic::ID IID) {
   return IID > TargetInfos[0].Count;
 }
 
-/// Looks up Name in NameTable via binary search. NameTable must be sorted
-/// and all entries must start with "llvm.".  If NameTable contains an exact
-/// match for Name or a prefix of Name followed by a dot, its index in
-/// NameTable is returned. Otherwise, -1 is returned.
-static int lookupLLVMIntrinsicByName(ArrayRef<unsigned> NameOffsetTable,
-                                     StringRef Name, StringRef Target = "") {
+int llvm::Intrinsic::lookupLLVMIntrinsicByName(ArrayRef<const char *> NameTable,
+                                               StringRef Name,
+                                               StringRef Target) {
   assert(Name.starts_with("llvm.") && "Unexpected intrinsic prefix");
   assert(Name.drop_front(5).starts_with(Target) && "Unexpected target");
 
@@ -638,31 +638,15 @@ static int lookupLLVMIntrinsicByName(ArrayRef<unsigned> NameOffsetTable,
   if (!Target.empty())
     CmpEnd += 1 + Target.size(); // skip the .target component.
 
-  const unsigned *Low = NameOffsetTable.begin();
-  const unsigned *High = NameOffsetTable.end();
-  const unsigned *LastLow = Low;
+  const char *const *Low = NameTable.begin();
+  const char *const *High = NameTable.end();
+  const char *const *LastLow = Low;
   while (CmpEnd < Name.size() && High - Low > 0) {
     size_t CmpStart = CmpEnd;
     CmpEnd = Name.find('.', CmpStart + 1);
     CmpEnd = CmpEnd == StringRef::npos ? Name.size() : CmpEnd;
-    auto Cmp = [CmpStart, CmpEnd](auto LHS, auto RHS) {
-      // `equal_range` requires the comparison to work with either side being an
-      // offset or the value. Detect which kind each side is to set up the
-      // compared strings.
-      const char *LHSStr;
-      if constexpr (std::is_integral_v<decltype(LHS)>) {
-        LHSStr = &IntrinsicNameTable[LHS];
-      } else {
-        LHSStr = LHS;
-      }
-      const char *RHSStr;
-      if constexpr (std::is_integral_v<decltype(RHS)>) {
-        RHSStr = &IntrinsicNameTable[RHS];
-      } else {
-        RHSStr = RHS;
-      }
-      return strncmp(LHSStr + CmpStart, RHSStr + CmpStart, CmpEnd - CmpStart) <
-             0;
+    auto Cmp = [CmpStart, CmpEnd](const char *LHS, const char *RHS) {
+      return strncmp(LHS + CmpStart, RHS + CmpStart, CmpEnd - CmpStart) < 0;
     };
     LastLow = Low;
     std::tie(Low, High) = std::equal_range(Low, High, Name.data(), Cmp);
@@ -670,21 +654,20 @@ static int lookupLLVMIntrinsicByName(ArrayRef<unsigned> NameOffsetTable,
   if (High - Low > 0)
     LastLow = Low;
 
-  if (LastLow == NameOffsetTable.end())
+  if (LastLow == NameTable.end())
     return -1;
-  StringRef NameFound = &IntrinsicNameTable[*LastLow];
+  StringRef NameFound = *LastLow;
   if (Name == NameFound ||
       (Name.starts_with(NameFound) && Name[NameFound.size()] == '.'))
-    return LastLow - NameOffsetTable.begin();
+    return LastLow - NameTable.begin();
   return -1;
 }
 
-/// Find the segment of \c IntrinsicNameOffsetTable for intrinsics with the same
+/// Find the segment of \c IntrinsicNameTable for intrinsics with the same
 /// target as \c Name, or the generic table if \c Name is not target specific.
 ///
-/// Returns the relevant slice of \c IntrinsicNameOffsetTable and the target
-/// name.
-static std::pair<ArrayRef<unsigned>, StringRef>
+/// Returns the relevant slice of \c IntrinsicNameTable and the target name.
+static std::pair<ArrayRef<const char *>, StringRef>
 findTargetSubtable(StringRef Name) {
   assert(Name.starts_with("llvm."));
 
@@ -697,26 +680,25 @@ findTargetSubtable(StringRef Name) {
   // We've either found the target or just fall back to the generic set, which
   // is always first.
   const auto &TI = It != Targets.end() && It->Name == Target ? *It : Targets[0];
-  return {ArrayRef(&IntrinsicNameOffsetTable[1] + TI.Offset, TI.Count),
-          TI.Name};
+  return {ArrayRef(&IntrinsicNameTable[1] + TI.Offset, TI.Count), TI.Name};
 }
 
 /// This does the actual lookup of an intrinsic ID which matches the given
 /// function name.
 Intrinsic::ID Intrinsic::lookupIntrinsicID(StringRef Name) {
-  auto [NameOffsetTable, Target] = findTargetSubtable(Name);
-  int Idx = lookupLLVMIntrinsicByName(NameOffsetTable, Name, Target);
+  auto [NameTable, Target] = findTargetSubtable(Name);
+  int Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable, Name, Target);
   if (Idx == -1)
     return Intrinsic::not_intrinsic;
 
   // Intrinsic IDs correspond to the location in IntrinsicNameTable, but we have
   // an index into a sub-table.
-  int Adjust = NameOffsetTable.data() - IntrinsicNameOffsetTable;
+  int Adjust = NameTable.data() - IntrinsicNameTable;
   Intrinsic::ID ID = static_cast<Intrinsic::ID>(Idx + Adjust);
 
   // If the intrinsic is not overloaded, require an exact match. If it is
   // overloaded, require either exact or prefix match.
-  const auto MatchSize = strlen(&IntrinsicNameTable[NameOffsetTable[Idx]]);
+  const auto MatchSize = strlen(NameTable[Idx]);
   assert(Name.size() >= MatchSize && "Expected either exact or prefix match");
   bool IsExactMatch = Name.size() == MatchSize;
   return IsExactMatch || Intrinsic::isOverloaded(ID) ? ID

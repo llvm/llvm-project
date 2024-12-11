@@ -1,4 +1,5 @@
-! Offloading test checking the use of the depend clause on the target construct
+! Offloading test checking the use of the depend clause on
+! the target construct
 ! REQUIRES: flang, amdgcn-amd-amdhsa
 ! UNSUPPORTED: nvptx64-nvidia-cuda
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO

@@ -20,10 +20,10 @@ using namespace CodeGen;
 
 llvm::Type *ConstantInitFuture::getType() const {
   assert(Data && "dereferencing null future");
-  if (const auto *C = dyn_cast<llvm::Constant *>(Data)) {
-    return C->getType();
+  if (Data.is<llvm::Constant*>()) {
+    return Data.get<llvm::Constant*>()->getType();
   } else {
-    return cast<ConstantInitBuilderBase *>(Data)->Buffer[0]->getType();
+    return Data.get<ConstantInitBuilderBase*>()->Buffer[0]->getType();
   }
 }
 
@@ -37,10 +37,10 @@ void ConstantInitFuture::abandon() {
 
 void ConstantInitFuture::installInGlobal(llvm::GlobalVariable *GV) {
   assert(Data && "installing null future");
-  if (auto *C = dyn_cast<llvm::Constant *>(Data)) {
-    GV->setInitializer(C);
+  if (Data.is<llvm::Constant*>()) {
+    GV->setInitializer(Data.get<llvm::Constant*>());
   } else {
-    auto &builder = *cast<ConstantInitBuilderBase *>(Data);
+    auto &builder = *Data.get<ConstantInitBuilderBase*>();
     assert(builder.Buffer.size() == 1);
     builder.setGlobalInitializer(GV, builder.Buffer[0]);
     builder.Buffer.clear();

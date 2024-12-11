@@ -76,15 +76,13 @@ getSymbolicOperandMnemonic(SPIRV::OperandCategory::OperandCategory Category,
   const SPIRV::SymbolicOperand *EnumValueInCategory =
       SPIRV::lookupSymbolicOperandByCategory(Category);
 
-  auto TableEnd = ArrayRef(SPIRV::SymbolicOperands).end();
   while (EnumValueInCategory && EnumValueInCategory->Category == Category) {
     if ((EnumValueInCategory->Value != 0) &&
         (Value & EnumValueInCategory->Value)) {
       Name += Separator + EnumValueInCategory->Mnemonic.str();
       Separator = "|";
     }
-    if (++EnumValueInCategory == TableEnd)
-      break;
+    ++EnumValueInCategory;
   }
 
   return Name;
@@ -117,16 +115,15 @@ getSymbolicOperandMaxVersion(SPIRV::OperandCategory::OperandCategory Category,
 CapabilityList
 getSymbolicOperandCapabilities(SPIRV::OperandCategory::OperandCategory Category,
                                uint32_t Value) {
-  CapabilityList Capabilities;
   const SPIRV::CapabilityEntry *Capability =
       SPIRV::lookupCapabilityByCategoryAndValue(Category, Value);
-  auto TableEnd = ArrayRef(SPIRV::CapabilityEntries).end();
+
+  CapabilityList Capabilities;
   while (Capability && Capability->Category == Category &&
          Capability->Value == Value) {
     Capabilities.push_back(
         static_cast<SPIRV::Capability::Capability>(Capability->ReqCapability));
-    if (++Capability == TableEnd)
-      break;
+    ++Capability;
   }
 
   return Capabilities;
@@ -139,15 +136,12 @@ getCapabilitiesEnabledByExtension(SPIRV::Extension::Extension Extension) {
           Extension, SPIRV::OperandCategory::CapabilityOperand);
 
   CapabilityList Capabilities;
-  auto TableEnd = ArrayRef(SPIRV::ExtensionEntries).end();
   while (Entry &&
-         Entry->Category == SPIRV::OperandCategory::CapabilityOperand) {
-    // Some capabilities' codes might go not in order.
-    if (Entry->ReqExtension == Extension)
-      Capabilities.push_back(
-          static_cast<SPIRV::Capability::Capability>(Entry->Value));
-    if (++Entry == TableEnd)
-      break;
+         Entry->Category == SPIRV::OperandCategory::CapabilityOperand &&
+         Entry->ReqExtension == Extension) {
+    Capabilities.push_back(
+        static_cast<SPIRV::Capability::Capability>(Entry->Value));
+    ++Entry;
   }
 
   return Capabilities;
@@ -160,13 +154,11 @@ getSymbolicOperandExtensions(SPIRV::OperandCategory::OperandCategory Category,
       SPIRV::lookupExtensionByCategoryAndValue(Category, Value);
 
   ExtensionList Extensions;
-  auto TableEnd = ArrayRef(SPIRV::ExtensionEntries).end();
   while (Extension && Extension->Category == Category &&
          Extension->Value == Value) {
     Extensions.push_back(
         static_cast<SPIRV::Extension::Extension>(Extension->ReqExtension));
-    if (++Extension == TableEnd)
-      break;
+    ++Extension;
   }
 
   return Extensions;

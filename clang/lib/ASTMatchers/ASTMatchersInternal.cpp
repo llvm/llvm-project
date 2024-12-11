@@ -21,7 +21,6 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -698,40 +697,25 @@ static bool isTokenAtLoc(const SourceManager &SM, const LangOptions &LangOpts,
   return !Invalid && Text == TokenText;
 }
 
-static std::optional<SourceLocation> getExpansionLocOfMacroRecursive(
-    StringRef MacroName, SourceLocation Loc, const ASTContext &Context,
-    llvm::DenseSet<SourceLocation> &CheckedLocations) {
+std::optional<SourceLocation>
+getExpansionLocOfMacro(StringRef MacroName, SourceLocation Loc,
+                       const ASTContext &Context) {
   auto &SM = Context.getSourceManager();
   const LangOptions &LangOpts = Context.getLangOpts();
   while (Loc.isMacroID()) {
-    if (CheckedLocations.count(Loc))
-      return std::nullopt;
-    CheckedLocations.insert(Loc);
     SrcMgr::ExpansionInfo Expansion =
         SM.getSLocEntry(SM.getFileID(Loc)).getExpansion();
-    if (Expansion.isMacroArgExpansion()) {
+    if (Expansion.isMacroArgExpansion())
       // Check macro argument for an expansion of the given macro. For example,
       // `F(G(3))`, where `MacroName` is `G`.
-      if (std::optional<SourceLocation> ArgLoc =
-              getExpansionLocOfMacroRecursive(MacroName,
-                                              Expansion.getSpellingLoc(),
-                                              Context, CheckedLocations)) {
+      if (std::optional<SourceLocation> ArgLoc = getExpansionLocOfMacro(
+              MacroName, Expansion.getSpellingLoc(), Context))
         return ArgLoc;
-      }
-    }
     Loc = Expansion.getExpansionLocStart();
     if (isTokenAtLoc(SM, LangOpts, MacroName, Loc))
       return Loc;
   }
   return std::nullopt;
-}
-
-std::optional<SourceLocation>
-getExpansionLocOfMacro(StringRef MacroName, SourceLocation Loc,
-                       const ASTContext &Context) {
-  llvm::DenseSet<SourceLocation> CheckedLocations;
-  return getExpansionLocOfMacroRecursive(MacroName, Loc, Context,
-                                         CheckedLocations);
 }
 
 std::shared_ptr<llvm::Regex> createAndVerifyRegex(StringRef Regex,
@@ -815,7 +799,6 @@ const internal::VariadicDynCastAllOfMatcher<TypeLoc, ElaboratedTypeLoc>
 
 const internal::VariadicDynCastAllOfMatcher<Stmt, UnaryExprOrTypeTraitExpr>
     unaryExprOrTypeTraitExpr;
-const internal::VariadicDynCastAllOfMatcher<Decl, ExportDecl> exportDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, ValueDecl> valueDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, CXXConstructorDecl>
     cxxConstructorDecl;
@@ -1114,8 +1097,7 @@ AST_TYPELOC_TRAVERSE_MATCHER_DEF(hasValueType,
 AST_TYPELOC_TRAVERSE_MATCHER_DEF(
     pointee,
     AST_POLYMORPHIC_SUPPORTED_TYPES(BlockPointerType, MemberPointerType,
-                                    PointerType, ReferenceType,
-                                    ObjCObjectPointerType));
+                                    PointerType, ReferenceType));
 
 const internal::VariadicDynCastAllOfMatcher<Stmt, OMPExecutableDirective>
     ompExecutableDirective;

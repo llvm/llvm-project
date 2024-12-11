@@ -570,8 +570,7 @@ defm : PatFprFpr_m<riscv_fsgnjx, FSGNJX_S, Ext>;
 }
 
 let Predicates = [HasStdExtF] in {
-def : Pat<(fcopysign FPR32:$rs1, (fneg FPR32:$rs2)),
-          (FSGNJN_S FPR32:$rs1, FPR32:$rs2)>;
+def : Pat<(fcopysign FPR32:$rs1, (fneg FPR32:$rs2)), (FSGNJN_S $rs1, $rs2)>;
 
 // fmadd: rs1 * rs2 + rs3
 def : Pat<(any_fma FPR32:$rs1, FPR32:$rs2, FPR32:$rs3),
@@ -595,8 +594,7 @@ def : Pat<(fneg (any_fma_nsz FPR32:$rs1, FPR32:$rs2, FPR32:$rs3)),
 } // Predicates = [HasStdExtF]
 
 let Predicates = [HasStdExtZfinx] in {
-def : Pat<(fcopysign FPR32INX:$rs1, (fneg FPR32INX:$rs2)),
-          (FSGNJN_S_INX FPR32INX:$rs1, FPR32INX:$rs2)>;
+def : Pat<(fcopysign FPR32INX:$rs1, (fneg FPR32INX:$rs2)), (FSGNJN_S_INX $rs1, $rs2)>;
 
 // fmadd: rs1 * rs2 + rs3
 def : Pat<(any_fma FPR32INX:$rs1, FPR32INX:$rs2, FPR32INX:$rs3),
@@ -710,13 +708,13 @@ def : LdPat<load, LW_INX, f32>;
 def : StPat<store, SW_INX, GPRF32, f32>;
 } // Predicates = [HasStdExtZfinx]
 
-let Predicates = [HasStdExtF, IsRV32] in {
+let Predicates = [HasStdExtF] in {
 // Moves (no conversion)
 def : Pat<(bitconvert (i32 GPR:$rs1)), (FMV_W_X GPR:$rs1)>;
 def : Pat<(i32 (bitconvert FPR32:$rs1)), (FMV_X_W FPR32:$rs1)>;
 } // Predicates = [HasStdExtF]
 
-let Predicates = [HasStdExtZfinx, IsRV32] in {
+let Predicates = [HasStdExtZfinx] in {
 // Moves (no conversion)
 def : Pat<(f32 (bitconvert (i32 GPR:$rs1))), (EXTRACT_SUBREG GPR:$rs1, sub_32)>;
 def : Pat<(i32 (bitconvert FPR32INX:$rs1)), (INSERT_SUBREG (XLenVT (IMPLICIT_DEF)), FPR32INX:$rs1, sub_32)>;

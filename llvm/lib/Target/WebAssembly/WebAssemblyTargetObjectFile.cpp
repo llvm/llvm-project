@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyTargetObjectFile.h"
+#include "WebAssemblyTargetMachine.h"
 
 using namespace llvm;
 

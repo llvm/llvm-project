@@ -3,7 +3,6 @@ set(LLVM_LINK_COMPONENTS
   IRReader
   JITLink
   OrcJIT
-  OrcShared
   Support
   nativecodegen
   )

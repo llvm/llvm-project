@@ -24,7 +24,6 @@ enum InfoType : uint32_t {
   LineTableInfo = 1u,
   InlineInfo = 2u,
   MergedFunctionsInfo = 3u,
-  CallSiteInfo = 4u,
 };
 
 raw_ostream &llvm::gsym::operator<<(raw_ostream &OS, const FunctionInfo &FI) {
@@ -33,8 +32,6 @@ raw_ostream &llvm::gsym::operator<<(raw_ostream &OS, const FunctionInfo &FI) {
     OS << FI.OptLineTable << '\n';
   if (FI.Inline)
     OS << FI.Inline << '\n';
-  if (FI.CallSites)
-    OS << *FI.CallSites << '\n';
   return OS;
 }
 
@@ -96,14 +93,6 @@ llvm::Expected<FunctionInfo> FunctionInfo::decode(DataExtractor &Data,
           FI.MergedFunctions = std::move(MI.get());
         else
           return MI.takeError();
-        break;
-
-      case InfoType::CallSiteInfo:
-        if (Expected<llvm::gsym::CallSiteInfoCollection> CI =
-                llvm::gsym::CallSiteInfoCollection::decode(InfoData))
-          FI.CallSites = std::move(CI.get());
-        else
-          return CI.takeError();
         break;
 
       default:
@@ -211,25 +200,7 @@ llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &Out,
     Out.fixup32(static_cast<uint32_t>(Length), StartOffset - 4);
   }
 
-  // Write out the call sites if we have any and if they are valid.
-  if (CallSites) {
-    Out.writeU32(InfoType::CallSiteInfo);
-    // Write a uint32_t length as zero for now, we will fix this up after
-    // writing the CallSites out with the number of bytes that were written.
-    Out.writeU32(0);
-    const auto StartOffset = Out.tell();
-    Error Err = CallSites->encode(Out);
-    if (Err)
-      return std::move(Err);
-    const auto Length = Out.tell() - StartOffset;
-    if (Length > UINT32_MAX)
-      return createStringError(std::errc::invalid_argument,
-                               "CallSites length is greater than UINT32_MAX");
-    // Fixup the size of the CallSites data with the correct size.
-    Out.fixup32(static_cast<uint32_t>(Length), StartOffset - 4);
-  }
-
-  // Terminate the data chunks with an end of list with zero size.
+  // Terminate the data chunks with and end of list with zero size
   Out.writeU32(InfoType::EndOfList);
   Out.writeU32(0);
   return FuncInfoOffset;

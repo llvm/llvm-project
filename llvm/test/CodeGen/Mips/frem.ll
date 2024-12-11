@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=mipsel 
+; RUN: llc < %s -march=mipsel 
 
 define float @fmods(float %x, float %y) {
 entry:

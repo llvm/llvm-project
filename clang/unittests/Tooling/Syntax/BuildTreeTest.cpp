@@ -5659,6 +5659,8 @@ struct X {
 };
 [[void (X::*xp)();]]
 [[void (X::**xpp)(const int*);]]
+// FIXME: Generate the right syntax tree for this type,
+// i.e. create a syntax node for the outer member pointer
 [[void (X::Y::*xyp)(const int*, char);]]
 )cpp",
       {R"txt(
@@ -5712,9 +5714,9 @@ SimpleDeclaration
 | `-SimpleDeclarator ListElement
 |   |-ParenDeclarator
 |   | |-'(' OpenParen
+|   | |-'X'
+|   | |-'::'
 |   | |-MemberPointer
-|   | | |-'X'
-|   | | |-'::'
 |   | | |-'Y'
 |   | | |-'::'
 |   | | `-'*'

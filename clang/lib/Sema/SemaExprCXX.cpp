@@ -18,10 +18,10 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprObjC.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/AlignedAllocation.h"
@@ -3747,8 +3747,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
     } else if (!Pointee->isDependentType()) {
       // FIXME: This can result in errors if the definition was imported from a
       // module but is hidden.
-      if (Pointee->isEnumeralType() ||
-          !RequireCompleteType(StartLoc, Pointee,
+      if (!RequireCompleteType(StartLoc, Pointee,
                                LangOpts.CPlusPlus26
                                    ? diag::err_delete_incomplete
                                    : diag::warn_delete_incomplete,
@@ -4432,21 +4431,10 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     break;
 
   case ICK_HLSL_Array_RValue:
-    if (ToType->isArrayParameterType()) {
-      FromType = Context.getArrayParameterType(FromType);
-      From = ImpCastExprToType(From, FromType, CK_HLSLArrayRValue, VK_PRValue,
-                               /*BasePath=*/nullptr, CCK)
-                 .get();
-    } else { // FromType must be ArrayParameterType
-      assert(FromType->isArrayParameterType() &&
-             "FromType must be ArrayParameterType in ICK_HLSL_Array_RValue \
-              if it is not ToType");
-      const ArrayParameterType *APT = cast<ArrayParameterType>(FromType);
-      FromType = APT->getConstantArrayType(Context);
-      From = ImpCastExprToType(From, FromType, CK_HLSLArrayRValue, VK_PRValue,
-                               /*BasePath=*/nullptr, CCK)
-                 .get();
-    }
+    FromType = Context.getArrayParameterType(FromType);
+    From = ImpCastExprToType(From, FromType, CK_HLSLArrayRValue, VK_PRValue,
+                             /*BasePath=*/nullptr, CCK)
+               .get();
     break;
 
   case ICK_Function_To_Pointer:
@@ -4795,8 +4783,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
         ToType->castAs<BlockPointerType>()->getPointeeType().getAddressSpace();
     LangAS AddrSpaceR =
         FromType->castAs<BlockPointerType>()->getPointeeType().getAddressSpace();
-    assert(Qualifiers::isAddressSpaceSupersetOf(AddrSpaceL, AddrSpaceR,
-                                                getASTContext()) &&
+    assert(Qualifiers::isAddressSpaceSupersetOf(AddrSpaceL, AddrSpaceR) &&
            "Invalid cast");
     CastKind Kind =
         AddrSpaceL != AddrSpaceR ? CK_AddressSpaceConversion : CK_BitCast;
@@ -5732,7 +5719,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
   case UTT_IsTypedResourceElementCompatible:
     assert(Self.getLangOpts().HLSL &&
            "typed resource element compatible types are an HLSL-only feature");
-    if (T->isIncompleteType())
+    if (Self.RequireCompleteType(TInfo->getTypeLoc().getBeginLoc(), T,
+                                 diag::err_incomplete_type))
       return false;
 
     return Self.HLSL().IsTypedResourceElementCompatible(T);
@@ -6653,7 +6641,7 @@ static bool TryClassUnification(Sema &Self, Expr *From, Expr *To,
     //         same type as, or a base class of, the class of T1, and
     //         [cv2 > cv1].
     if (FRec == TRec || FDerivedFromT) {
-      if (TTy.isAtLeastAsQualifiedAs(FTy, Self.getASTContext())) {
+      if (TTy.isAtLeastAsQualifiedAs(FTy)) {
         InitializedEntity Entity = InitializedEntity::InitializeTemporary(TTy);
         InitializationSequence InitSeq(Self, Entity, Kind, From);
         if (InitSeq) {
@@ -7375,8 +7363,8 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
       if (Q1.getAddressSpace() == Q2.getAddressSpace()) {
         Quals.setAddressSpace(Q1.getAddressSpace());
       } else if (Steps.size() == 1) {
-        bool MaybeQ1 = Q1.isAddressSpaceSupersetOf(Q2, getASTContext());
-        bool MaybeQ2 = Q2.isAddressSpaceSupersetOf(Q1, getASTContext());
+        bool MaybeQ1 = Q1.isAddressSpaceSupersetOf(Q2);
+        bool MaybeQ2 = Q2.isAddressSpaceSupersetOf(Q1);
         if (MaybeQ1 == MaybeQ2) {
           // Exception for ptr size address spaces. Should be able to choose
           // either address space during comparison.
@@ -8833,13 +8821,13 @@ static ExprResult attemptRecovery(Sema &SemaRef,
 }
 
 namespace {
-class FindTypoExprs : public DynamicRecursiveASTVisitor {
+class FindTypoExprs : public RecursiveASTVisitor<FindTypoExprs> {
   llvm::SmallSetVector<TypoExpr *, 2> &TypoExprs;
 
 public:
   explicit FindTypoExprs(llvm::SmallSetVector<TypoExpr *, 2> &TypoExprs)
       : TypoExprs(TypoExprs) {}
-  bool VisitTypoExpr(TypoExpr *TE) override {
+  bool VisitTypoExpr(TypoExpr *TE) {
     TypoExprs.insert(TE);
     return true;
   }

@@ -92,10 +92,10 @@ AMDGPUAnnotateUniformValuesPass::run(Function &F,
   AMDGPUAnnotateUniformValues Impl(UI, MSSA, AA, F);
   Impl.visit(F);
 
-  if (!Impl.changed())
-    return PreservedAnalyses::all();
-
   PreservedAnalyses PA = PreservedAnalyses::none();
+  if (!Impl.changed())
+    return PA;
+
   // TODO: Should preserve nearly everything
   PA.preserveSet<CFGAnalyses>();
   return PA;

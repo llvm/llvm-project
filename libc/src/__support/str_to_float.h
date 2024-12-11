@@ -909,7 +909,7 @@ decimal_string_to_float(const char *__restrict src, const char DECIMAL_POINT,
       cpp::numeric_limits<StorageType>::max() / BASE;
   while (true) {
     if (isdigit(src[index])) {
-      uint32_t digit = b36_char_to_int(src[index]);
+      uint32_t digit = src[index] - '0';
       seen_digit = true;
 
       if (mantissa < bitstype_max_div_by_base) {

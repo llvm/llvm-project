@@ -1460,7 +1460,7 @@ SelectionDAG::getStrictFPExtendOrRound(SDValue Op, SDValue Chain,
       VT.bitsGT(Op.getValueType())
           ? getNode(ISD::STRICT_FP_EXTEND, DL, {VT, MVT::Other}, {Chain, Op})
           : getNode(ISD::STRICT_FP_ROUND, DL, {VT, MVT::Other},
-                    {Chain, Op, getIntPtrConstant(0, DL, /*isTarget=*/true)});
+                    {Chain, Op, getIntPtrConstant(0, DL)});
 
   return std::pair<SDValue, SDValue>(Res, SDValue(Res.getNode(), 1));
 }
@@ -1637,7 +1637,14 @@ SDValue SelectionDAG::getBoolConstant(bool V, const SDLoc &DL, EVT VT,
 
 SDValue SelectionDAG::getConstant(uint64_t Val, const SDLoc &DL, EVT VT,
                                   bool isT, bool isO) {
-  return getConstant(APInt(VT.getScalarSizeInBits(), Val, /*isSigned=*/false),
+  EVT EltVT = VT.getScalarType();
+  assert((EltVT.getSizeInBits() >= 64 ||
+          (uint64_t)((int64_t)Val >> EltVT.getSizeInBits()) + 1 < 2) &&
+         "getConstant with a uint64_t value that doesn't fit in the type!");
+  // TODO: Avoid implicit trunc?
+  // See https://github.com/llvm/llvm-project/issues/112510.
+  return getConstant(APInt(EltVT.getSizeInBits(), Val, /*isSigned=*/false,
+                           /*implicitTrunc=*/true),
                      DL, VT, isT, isO);
 }
 
@@ -6823,7 +6830,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
             ScalarOps.push_back(getUNDEF(OpVT));
             continue;
           }
-          const APInt &Val = cast<ConstantSDNode>(Op)->getAPIntValue();
+          APInt Val = cast<ConstantSDNode>(Op)->getAPIntValue();
           ScalarOps.push_back(SignExtendInReg(Val, OpVT));
         }
         return getBuildVector(VT, DL, ScalarOps);
@@ -7348,10 +7355,11 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return N1;
     break;
   case ISD::FP_ROUND:
-    assert(VT.isFloatingPoint() && N1.getValueType().isFloatingPoint() &&
-           VT.bitsLE(N1.getValueType()) && N2C &&
-           (N2C->getZExtValue() == 0 || N2C->getZExtValue() == 1) &&
-           N2.getOpcode() == ISD::TargetConstant && "Invalid FP_ROUND!");
+    assert(VT.isFloatingPoint() &&
+           N1.getValueType().isFloatingPoint() &&
+           VT.bitsLE(N1.getValueType()) &&
+           N2C && (N2C->getZExtValue() == 0 || N2C->getZExtValue() == 1) &&
+           "Invalid FP_ROUND!");
     if (N1.getValueType() == VT) return N1;  // noop conversion.
     break;
   case ISD::AssertSext:
@@ -10534,7 +10542,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
     assert(VTList.VTs[0].isFloatingPoint() &&
            Ops[1].getValueType().isFloatingPoint() &&
            VTList.VTs[0].bitsLT(Ops[1].getValueType()) &&
-           Ops[2].getOpcode() == ISD::TargetConstant &&
+           isa<ConstantSDNode>(Ops[2]) &&
            (Ops[2]->getAsZExtVal() == 0 || Ops[2]->getAsZExtVal() == 1) &&
            "Invalid STRICT_FP_ROUND!");
     break;
@@ -10623,10 +10631,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
 }
 
 SDVTList SelectionDAG::getVTList(EVT VT) {
-  if (!VT.isExtended())
-    return makeVTList(SDNode::getValueTypeList(VT.getSimpleVT()), 1);
-
-  return makeVTList(&(*EVTs.insert(VT).first), 1);
+  return makeVTList(SDNode::getValueTypeList(VT), 1);
 }
 
 SDVTList SelectionDAG::getVTList(EVT VT1, EVT VT2) {
@@ -12386,11 +12391,17 @@ namespace {
 
 /// getValueTypeList - Return a pointer to the specified value type.
 ///
-const EVT *SDNode::getValueTypeList(MVT VT) {
+const EVT *SDNode::getValueTypeList(EVT VT) {
+  static std::set<EVT, EVT::compareRawBits> EVTs;
   static EVTArray SimpleVTArray;
+  static sys::SmartMutex<true> VTMutex;
 
-  assert(VT < MVT::VALUETYPE_SIZE && "Value type out of range!");
-  return &SimpleVTArray.VTs[VT.SimpleTy];
+  if (VT.isExtended()) {
+    sys::SmartScopedLock<true> Lock(VTMutex);
+    return &(*EVTs.insert(VT).first);
+  }
+  assert(VT.getSimpleVT() < MVT::VALUETYPE_SIZE && "Value type out of range!");
+  return &SimpleVTArray.VTs[VT.getSimpleVT().SimpleTy];
 }
 
 /// hasNUsesOfValue - Return true if there are exactly NUSES uses of the

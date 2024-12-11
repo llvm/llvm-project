@@ -16,10 +16,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
-#include "llvm/ExecutionEngine/Orc/LazyObjectLinkingLayer.h"
-#include "llvm/ExecutionEngine/Orc/LazyReexports.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
-#include "llvm/ExecutionEngine/Orc/RedirectionManager.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
 #include "llvm/ExecutionEngine/RuntimeDyldChecker.h"
 #include "llvm/Support/Error.h"
@@ -32,24 +29,11 @@ namespace llvm {
 
 struct Session {
 
-  struct LazyLinkingSupport {
-    LazyLinkingSupport(std::unique_ptr<orc::RedirectableSymbolManager> RSMgr,
-                       std::unique_ptr<orc::LazyReexportsManager> LRMgr,
-                       orc::ObjectLinkingLayer &ObjLinkingLayer)
-        : RSMgr(std::move(RSMgr)), LRMgr(std::move(LRMgr)),
-          LazyObjLinkingLayer(ObjLinkingLayer, *this->LRMgr) {}
-
-    std::unique_ptr<orc::RedirectableSymbolManager> RSMgr;
-    std::unique_ptr<orc::LazyReexportsManager> LRMgr;
-    orc::LazyObjectLinkingLayer LazyObjLinkingLayer;
-  };
-
   orc::ExecutionSession ES;
   orc::JITDylib *MainJD = nullptr;
   orc::JITDylib *ProcessSymsJD = nullptr;
   orc::JITDylib *PlatformJD = nullptr;
   orc::ObjectLinkingLayer ObjLayer;
-  std::unique_ptr<LazyLinkingSupport> LazyLinking;
   orc::JITDylibSearchOrder JDSearchOrder;
   SubtargetFeatures Features;
 
@@ -58,7 +42,7 @@ struct Session {
   static Expected<std::unique_ptr<Session>> Create(Triple TT,
                                                    SubtargetFeatures Features);
   void dumpSessionInfo(raw_ostream &OS);
-  void modifyPassConfig(jitlink::LinkGraph &G,
+  void modifyPassConfig(const Triple &FTT,
                         jitlink::PassConfiguration &PassConfig);
 
   using MemoryRegionInfo = RuntimeDyldChecker::MemoryRegionInfo;
@@ -72,6 +56,7 @@ struct Session {
     using LinkGraph = jitlink::LinkGraph;
     using GetSymbolTargetFunction =
         unique_function<Expected<Symbol &>(LinkGraph &G, jitlink::Block &)>;
+
     Error registerGOTEntry(LinkGraph &G, Symbol &Sym,
                            GetSymbolTargetFunction GetSymbolTarget);
     Error registerStubEntry(LinkGraph &G, Symbol &Sym,
@@ -81,19 +66,11 @@ struct Session {
   };
 
   using DynLibJDMap = std::map<std::string, orc::JITDylib *, std::less<>>;
-  using SymbolInfoMap = DenseMap<orc::SymbolStringPtr, MemoryRegionInfo>;
+  using SymbolInfoMap = StringMap<MemoryRegionInfo>;
   using FileInfoMap = StringMap<FileInfo>;
 
   Expected<orc::JITDylib *> getOrLoadDynamicLibrary(StringRef LibPath);
   Error loadAndLinkDynamicLibrary(orc::JITDylib &JD, StringRef LibPath);
-
-  orc::ObjectLayer &getLinkLayer(bool Lazy) {
-    assert((!Lazy || LazyLinking) &&
-           "Lazy linking requested but not available");
-    return Lazy ? static_cast<orc::ObjectLayer &>(
-                      LazyLinking->LazyObjLinkingLayer)
-                : static_cast<orc::ObjectLayer &>(ObjLayer);
-  }
 
   Expected<FileInfo &> findFileInfo(StringRef FileName);
   Expected<MemoryRegionInfo &> findSectionInfo(StringRef FileName,
@@ -104,8 +81,8 @@ struct Session {
   Expected<MemoryRegionInfo &> findGOTEntryInfo(StringRef FileName,
                                                 StringRef TargetName);
 
-  bool isSymbolRegistered(const orc::SymbolStringPtr &Name);
-  Expected<MemoryRegionInfo &> findSymbolInfo(const orc::SymbolStringPtr &Name,
+  bool isSymbolRegistered(StringRef Name);
+  Expected<MemoryRegionInfo &> findSymbolInfo(StringRef SymbolName,
                                               Twine ErrorMsgStem);
 
   DynLibJDMap DynLibJDs;

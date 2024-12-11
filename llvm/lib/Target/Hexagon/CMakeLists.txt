@@ -59,7 +59,7 @@ add_llvm_target(HexagonCodeGen
   HexagonSelectionDAGInfo.cpp
   HexagonSplitConst32AndConst64.cpp
   HexagonSplitDouble.cpp
-  HexagonLoadStoreWidening.cpp
+  HexagonStoreWidening.cpp
   HexagonSubtarget.cpp
   HexagonTargetMachine.cpp
   HexagonTargetObjectFile.cpp

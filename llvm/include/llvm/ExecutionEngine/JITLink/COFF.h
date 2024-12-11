@@ -24,8 +24,7 @@ namespace jitlink {
 /// its contents. The caller is responsible for ensuring that the object buffer
 /// outlives the graph.
 Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromCOFFObject(MemoryBufferRef ObjectBuffer,
-                              std::shared_ptr<orc::SymbolStringPool> SSP);
+createLinkGraphFromCOFFObject(MemoryBufferRef ObjectBuffer);
 
 /// Link the given graph.
 ///

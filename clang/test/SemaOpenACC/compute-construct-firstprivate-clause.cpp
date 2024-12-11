@@ -60,34 +60,34 @@ void uses(int IntParam, char *PointerParam, float ArrayParam[5], Complete Compos
 template<typename T, unsigned I, typename V>
 void TemplUses(T t, T (&arrayT)[I], V TemplComp) {
   // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
-#pragma acc parallel firstprivate(+t)
+#pragma acc parallel private(+t)
   while(true);
 
   // NTTP's are only valid if it is a reference to something.
   // expected-error@+2{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
   // expected-note@#TEMPL_USES_INST{{in instantiation of}}
-#pragma acc parallel firstprivate(I)
+#pragma acc parallel private(I)
   while(true);
 
   // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
-#pragma acc parallel firstprivate(t, I)
+#pragma acc parallel private(t, I)
   while(true);
 
-#pragma acc parallel firstprivate(arrayT)
+#pragma acc parallel private(arrayT)
   while(true);
 
-#pragma acc parallel firstprivate(TemplComp)
+#pragma acc parallel private(TemplComp)
   while(true);
 
-#pragma acc parallel firstprivate(TemplComp.PointerMember[5])
+#pragma acc parallel private(TemplComp.PointerMember[5])
   while(true);
  int *Pointer;
-#pragma acc parallel firstprivate(Pointer[:I])
+#pragma acc parallel private(Pointer[:I])
   while(true);
-#pragma acc parallel firstprivate(Pointer[:t])
+#pragma acc parallel private(Pointer[:t])
   while(true);
   // expected-error@+1{{OpenACC sub-array length is unspecified and cannot be inferred because the subscripted value is not an array}}
-#pragma acc parallel firstprivate(Pointer[1:])
+#pragma acc parallel private(Pointer[1:])
   while(true);
 }
 
@@ -96,10 +96,10 @@ void NTTP() {
   // NTTP's are only valid if it is a reference to something.
   // expected-error@+2{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
   // expected-note@#NTTP_INST{{in instantiation of}}
-#pragma acc parallel firstprivate(I)
+#pragma acc parallel private(I)
   while(true);
 
-#pragma acc parallel firstprivate(NTTP_REF)
+#pragma acc parallel private(NTTP_REF)
   while(true);
 }
 

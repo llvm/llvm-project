@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Config/config.h" // C_INCLUDE_DIRS
@@ -17,6 +18,8 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -343,7 +346,6 @@ void InitHeaderSearch::AddDefaultIncludePaths(
         AddPath("/System/DriverKit/System/Library/Frameworks", System, true);
       } else {
         AddPath("/System/Library/Frameworks", System, true);
-        AddPath("/System/Library/SubFrameworks", System, true);
         AddPath("/Library/Frameworks", System, true);
       }
     }

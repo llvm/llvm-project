@@ -385,7 +385,16 @@ bool BinaryFunction::isForwardCall(const MCSymbol *CalleeSymbol) const {
   if (CalleeBF) {
     if (CalleeBF->isInjected())
       return true;
-    return compareBinaryFunctionByIndex(this, CalleeBF);
+
+    if (hasValidIndex() && CalleeBF->hasValidIndex()) {
+      return getIndex() < CalleeBF->getIndex();
+    } else if (hasValidIndex() && !CalleeBF->hasValidIndex()) {
+      return true;
+    } else if (!hasValidIndex() && CalleeBF->hasValidIndex()) {
+      return false;
+    } else {
+      return getAddress() < CalleeBF->getAddress();
+    }
   } else {
     // Absolute symbol.
     ErrorOr<uint64_t> CalleeAddressOrError = BC.getSymbolValue(*CalleeSymbol);

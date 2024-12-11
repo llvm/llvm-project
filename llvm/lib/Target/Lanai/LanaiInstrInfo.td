@@ -74,8 +74,7 @@ def HI16 : SDNodeXForm<imm, [{
 }]>;
 
 def NEG : SDNodeXForm<imm, [{
-  return CurDAG->getSignedTargetConstant(-N->getSExtValue(), SDLoc(N),
-                                         MVT::i32);
+  return CurDAG->getTargetConstant(-N->getSExtValue(), SDLoc(N), MVT::i32);
 }]>;
 
 def LO21 : SDNodeXForm<imm, [{

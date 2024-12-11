@@ -545,8 +545,7 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
   // especially bad when the PHIs are in the header of a loop.
   bool NeededPhi = false;
 
-  // Remember flags of the first phi-operand getelementptr.
-  GEPNoWrapFlags NW = FirstInst->getNoWrapFlags();
+  GEPNoWrapFlags NW = GEPNoWrapFlags::all();
 
   // Scan to see if all operands are the same opcode, and all have one user.
   for (Value *V : drop_begin(PN.incoming_values())) {

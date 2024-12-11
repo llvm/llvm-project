@@ -23,7 +23,6 @@
 #include <iterator>
 #include <optional>
 #include <set>
-#include <type_traits>
 #include <utility>
 
 namespace llvm {
@@ -96,10 +95,7 @@ template <class GraphT,
           bool ExtStorage = false, class GT = GraphTraits<GraphT>>
 class po_iterator : public po_iterator_storage<SetType, ExtStorage> {
 public:
-  // When External storage is used we are not multi-pass safe.
-  using iterator_category =
-      std::conditional_t<ExtStorage, std::input_iterator_tag,
-                         std::forward_iterator_tag>;
+  using iterator_category = std::forward_iterator_tag;
   using value_type = typename GT::NodeRef;
   using difference_type = std::ptrdiff_t;
   using pointer = value_type *;

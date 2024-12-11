@@ -226,12 +226,6 @@ def TestAttrWithOptionalUnsigned : Test_Attr<"TestAttrWithOptionalUnsigned"> {
   let mnemonic = "attr_with_optional_unsigned";
 }
 
-def TestAttrWithOptionalEnum : Test_Attr<"TestAttrWithOptionalEnum"> {
-  let parameters = (ins OptionalParameter<"std::optional<SimpleEnum>">:$value);
-  let assemblyFormat = "`<` $value `>`";
-  let mnemonic = "attr_with_optional_enum";
-}
-
 def TestAttrUgly : Test_Attr<"TestAttrUgly"> {
   let parameters = (ins "::mlir::Attribute":$attr);
 

@@ -21,8 +21,7 @@ using namespace llvm::jitlink;
 
 TEST(LinkGraphTest, Construction) {
   // Check that LinkGraph construction works as expected.
-  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
               getGenericEdgeKindName);
   EXPECT_EQ(G.getName(), "foo");
   EXPECT_EQ(G.getTargetTriple().str(), "x86_64-apple-darwin");
@@ -36,8 +35,7 @@ TEST(LinkGraphTest, Construction) {
 
 TEST(LinkGraphTest, AddressAccess) {
   // Check that we can get addresses for blocks, symbols, and edges.
-  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
               getGenericEdgeKindName);
 
   auto &Sec1 =
@@ -56,8 +54,7 @@ TEST(LinkGraphTest, AddressAccess) {
 
 TEST(LinkGraphTest, SectionEmpty) {
   // Check that Section::empty behaves as expected.
-  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
               getGenericEdgeKindName);
   auto &Sec1 =
       G.createSection("__data.1", orc::MemProt::Read | orc::MemProt::Write);
@@ -75,8 +72,7 @@ TEST(LinkGraphTest, SectionEmpty) {
 
 TEST(LinkGraphTest, BlockAndSymbolIteration) {
   // Check that we can iterate over blocks within Sections and across sections.
-  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
               getGenericEdgeKindName);
   auto &Sec1 =
       G.createSection("__data.1", orc::MemProt::Read | orc::MemProt::Write);
@@ -129,8 +125,7 @@ TEST(LinkGraphTest, BlockAndSymbolIteration) {
 
 TEST(LinkGraphTest, ContentAccessAndUpdate) {
   // Check that we can make a defined symbol external.
-  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
               getGenericEdgeKindName);
   auto &Sec =
       G.createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
@@ -219,8 +214,7 @@ TEST(LinkGraphTest, ContentAccessAndUpdate) {
 
 TEST(LinkGraphTest, MakeExternal) {
   // Check that we can make defined and absolute symbols external.
-  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
               getGenericEdgeKindName);
   auto &Sec =
       G.createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
@@ -290,8 +284,7 @@ TEST(LinkGraphTest, MakeExternal) {
 
 TEST(LinkGraphTest, MakeAbsolute) {
   // Check that we can make defined and external symbols absolute.
-  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
               getGenericEdgeKindName);
   auto &Sec =
       G.createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
@@ -360,8 +353,7 @@ TEST(LinkGraphTest, MakeAbsolute) {
 
 TEST(LinkGraphTest, MakeDefined) {
   // Check that we can make an external symbol defined.
-  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
               getGenericEdgeKindName);
   auto &Sec =
       G.createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
@@ -409,8 +401,7 @@ TEST(LinkGraphTest, MakeDefined) {
 
 TEST(LinkGraphTest, TransferDefinedSymbol) {
   // Check that we can transfer a defined symbol from one block to another.
-  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
               getGenericEdgeKindName);
   auto &Sec =
       G.createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
@@ -445,8 +436,7 @@ TEST(LinkGraphTest, TransferDefinedSymbol) {
 TEST(LinkGraphTest, TransferDefinedSymbolAcrossSections) {
   // Check that we can transfer a defined symbol from an existing block in one
   // section to another.
-  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
               getGenericEdgeKindName);
   auto &Sec1 =
       G.createSection("__data.1", orc::MemProt::Read | orc::MemProt::Write);
@@ -480,8 +470,7 @@ TEST(LinkGraphTest, TransferDefinedSymbolAcrossSections) {
 TEST(LinkGraphTest, TransferBlock) {
   // Check that we can transfer a block (and all associated symbols) from one
   // section to another.
-  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
               getGenericEdgeKindName);
   auto &Sec1 =
       G.createSection("__data.1", orc::MemProt::Read | orc::MemProt::Write);
@@ -529,8 +518,7 @@ TEST(LinkGraphTest, TransferBlock) {
 TEST(LinkGraphTest, MergeSections) {
   // Check that we can transfer a block (and all associated symbols) from one
   // section to another.
-  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
               getGenericEdgeKindName);
   auto &Sec1 =
       G.createSection("__data.1", orc::MemProt::Read | orc::MemProt::Write);
@@ -616,8 +604,7 @@ TEST(LinkGraphTest, MergeSections) {
 
 TEST(LinkGraphTest, SplitBlock) {
   // Check that the LinkGraph::splitBlock test works as expected.
-  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
               getGenericEdgeKindName);
   auto &Sec =
       G.createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
@@ -635,11 +622,8 @@ TEST(LinkGraphTest, SplitBlock) {
                                 false, false);
   auto &S4 = G.addDefinedSymbol(B1, 12, "S4", 4, Linkage::Strong,
                                 Scope::Default, false, false);
-  // Add some symbols that extend beyond splits, one in the first block and one
-  // in a subsequent block.
+  // Add a symbol that extends beyond the split.
   auto &S5 = G.addDefinedSymbol(B1, 0, "S5", 16, Linkage::Strong,
-                                Scope::Default, false, false);
-  auto &S6 = G.addDefinedSymbol(B1, 6, "S6", 10, Linkage::Strong,
                                 Scope::Default, false, false);
 
   // Add an extra block, EB, and target symbols, and use these to add edges
@@ -662,56 +646,54 @@ TEST(LinkGraphTest, SplitBlock) {
   B1.addEdge(Edge::FirstRelocation, 12, ES4, 0);
 
   // Split B1.
-  auto Blocks = G.splitBlock(B1, ArrayRef<int>({4, 12}));
+  auto Blocks = G.splitBlock(B1, ArrayRef<int>({8}));
 
-  EXPECT_EQ(Blocks.size(), 3U);
+  EXPECT_EQ(Blocks.size(), 2U);
   EXPECT_EQ(Blocks[0], &B1);
   auto &B2 = *Blocks[1];
-  auto &B3 = *Blocks[2];
 
   // Check that the block addresses and content matches what we would expect.
   EXPECT_EQ(B1.getAddress(), B1Addr);
-  EXPECT_EQ(B1.getContent(), BlockContent.slice(0, 4));
-  EXPECT_EQ(B1.edges_size(), 1U);
+  EXPECT_EQ(B1.getContent(), BlockContent.slice(0, 8));
+  EXPECT_EQ(B1.edges_size(), 2U);
 
-  EXPECT_EQ(B2.getAddress(), B1Addr + 4);
-  EXPECT_EQ(B2.getContent(), BlockContent.slice(4, 8));
+  EXPECT_EQ(B2.getAddress(), B1Addr + 8);
+  EXPECT_EQ(B2.getContent(), BlockContent.slice(8));
   EXPECT_EQ(B2.edges_size(), 2U);
 
-  EXPECT_EQ(B3.getAddress(), B1Addr + 12);
-  EXPECT_EQ(B3.getContent(), BlockContent.slice(12));
-  EXPECT_EQ(B3.edges_size(), 1U);
-
   // Check that symbols in B2 were transferred as expected:
-  // We expect S1 and S5 to have been transferred to B1; S2, S3 and S6 to
-  // B2; and S4 to B3. Symbols should have had their offsets slid to account
-  // for the change of containing block.
+  // We expect S1 and S2 to have been transferred to B1, and S3 and S4 to have
+  // remained attached to B2. Symbols S3 and S4 should have had their offsets
+  // slid to account for the change in address of B1.
   EXPECT_EQ(&S1.getBlock(), &B1);
   EXPECT_EQ(S1.getOffset(), 0U);
 
-  EXPECT_EQ(&S2.getBlock(), &B2);
-  EXPECT_EQ(S2.getOffset(), 0U);
+  EXPECT_EQ(&S2.getBlock(), &B1);
+  EXPECT_EQ(S2.getOffset(), 4U);
 
   EXPECT_EQ(&S3.getBlock(), &B2);
-  EXPECT_EQ(S3.getOffset(), 4U);
+  EXPECT_EQ(S3.getOffset(), 0U);
 
-  EXPECT_EQ(&S4.getBlock(), &B3);
-  EXPECT_EQ(S4.getOffset(), 0U);
+  EXPECT_EQ(&S4.getBlock(), &B2);
+  EXPECT_EQ(S4.getOffset(), 4U);
 
   EXPECT_EQ(&S5.getBlock(), &B1);
   EXPECT_EQ(S5.getOffset(), 0U);
 
-  EXPECT_EQ(&S6.getBlock(), &B2);
-  EXPECT_EQ(S6.getOffset(), 2U);
-
   // Size shrinks to fit.
-  EXPECT_EQ(S5.getSize(), 4U);
-  EXPECT_EQ(S6.getSize(), 6U);
+  EXPECT_EQ(S5.getSize(), 8U);
 
-  // Check that edges in have been transferred as expected:
-  EXPECT_EQ(llvm::size(B1.edges()), 1);
-  if (size(B1.edges()) == 2)
-    EXPECT_EQ(B1.edges().begin()->getOffset(), 0U);
+  // Check that edges in B2 have been transferred as expected:
+  // Both blocks should now have two edges each at offsets 0 and 4.
+  EXPECT_EQ(llvm::size(B1.edges()), 2);
+  if (size(B1.edges()) == 2) {
+    auto *E1 = &*B1.edges().begin();
+    auto *E2 = &*(B1.edges().begin() + 1);
+    if (E2->getOffset() < E1->getOffset())
+      std::swap(E1, E2);
+    EXPECT_EQ(E1->getOffset(), 0U);
+    EXPECT_EQ(E2->getOffset(), 4U);
+  }
 
   EXPECT_EQ(llvm::size(B2.edges()), 2);
   if (size(B2.edges()) == 2) {
@@ -722,15 +704,10 @@ TEST(LinkGraphTest, SplitBlock) {
     EXPECT_EQ(E1->getOffset(), 0U);
     EXPECT_EQ(E2->getOffset(), 4U);
   }
-
-  EXPECT_EQ(llvm::size(B3.edges()), 1);
-  if (size(B3.edges()) == 2)
-    EXPECT_EQ(B3.edges().begin()->getOffset(), 0U);
 }
 
 TEST(LinkGraphTest, GraphAllocationMethods) {
-  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
               getGenericEdgeKindName);
 
   // Test allocation of sized, uninitialized buffer.
@@ -751,8 +728,7 @@ TEST(LinkGraphTest, GraphAllocationMethods) {
 
 TEST(LinkGraphTest, IsCStringBlockTest) {
   // Check that the LinkGraph::splitBlock test works as expected.
-  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
               getGenericEdgeKindName);
   auto &Sec =
       G.createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
@@ -776,8 +752,8 @@ TEST(LinkGraphTest, IsCStringBlockTest) {
 }
 
 TEST(LinkGraphTest, BasicLayoutHonorsNoAlloc) {
-  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
+  // Check that BasicLayout honors NoAlloc.
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
               getGenericEdgeKindName);
 
   // Create a regular section and block.

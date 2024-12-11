@@ -1,4 +1,4 @@
-//===-- ClangAttrEmitter.cpp - Generate Clang attribute handling ----------===//
+//===- ClangAttrEmitter.cpp - Generate Clang attribute handling =-*- C++ -*--=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,14 +20,18 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringMatcher.h"
 #include "llvm/TableGen/TableGenBackend.h"
+#include <algorithm>
 #include <cassert>
 #include <cctype>
 #include <cstddef>
@@ -36,6 +40,7 @@
 #include <memory>
 #include <optional>
 #include <set>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -1821,9 +1826,9 @@ CreateSemanticSpellings(const std::vector<FlattenedSpelling> &Spellings,
   return Ret;
 }
 
-static void WriteSemanticSpellingSwitch(StringRef VarName,
-                                        const SemanticSpellingMap &Map,
-                                        raw_ostream &OS) {
+void WriteSemanticSpellingSwitch(StringRef VarName,
+                                 const SemanticSpellingMap &Map,
+                                 raw_ostream &OS) {
   OS << "  switch (" << VarName << ") {\n    default: "
     << "llvm_unreachable(\"Unknown spelling list index\");\n";
   for (const auto &I : Map)
@@ -2367,12 +2372,12 @@ template <typename Fn> static void forEachSpelling(const Record &Attr, Fn &&F) {
   }
 }
 
-static std::map<StringRef, std::vector<const Record *>> NameToAttrsMap;
+std::map<StringRef, std::vector<const Record *>> NameToAttrsMap;
 
 /// Build a map from the attribute name to the Attrs that use that name. If more
 /// than one Attr use a name, the arguments could be different so a more complex
 /// check is needed in the generated switch.
-static void generateNameToAttrsMap(const RecordKeeper &Records) {
+void generateNameToAttrsMap(const RecordKeeper &Records) {
   for (const auto *A : Records.getAllDerivedDefinitions("Attr")) {
     for (const FlattenedSpelling &S : GetFlattenedSpellings(*A)) {
       auto [It, Inserted] = NameToAttrsMap.try_emplace(S.name());
@@ -3965,9 +3970,9 @@ void EmitClangAttrASTVisitor(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#endif  // ATTR_VISITOR_DECLS_ONLY\n";
 }
 
-static void
-EmitClangAttrTemplateInstantiateHelper(ArrayRef<const Record *> Attrs,
-                                       raw_ostream &OS, bool AppliesToDecl) {
+void EmitClangAttrTemplateInstantiateHelper(ArrayRef<const Record *> Attrs,
+                                            raw_ostream &OS,
+                                            bool AppliesToDecl) {
 
   OS << "  switch (At->getKind()) {\n";
   for (const auto *Attr : Attrs) {
@@ -4622,7 +4627,7 @@ static bool isParamExpr(const Record *Arg) {
              .Default(false);
 }
 
-static void GenerateIsParamExpr(const Record &Attr, raw_ostream &OS) {
+void GenerateIsParamExpr(const Record &Attr, raw_ostream &OS) {
   OS << "bool isParamExpr(size_t N) const override {\n";
   OS << "  return ";
   auto Args = Attr.getValueAsListOfDefs("Args");
@@ -4633,8 +4638,8 @@ static void GenerateIsParamExpr(const Record &Attr, raw_ostream &OS) {
   OS << "}\n\n";
 }
 
-static void GenerateHandleAttrWithDelayedArgs(const RecordKeeper &Records,
-                                              raw_ostream &OS) {
+void GenerateHandleAttrWithDelayedArgs(const RecordKeeper &Records,
+                                       raw_ostream &OS) {
   OS << "static void handleAttrWithDelayedArgs(Sema &S, Decl *D, ";
   OS << "const ParsedAttr &Attr) {\n";
   OS << "  SmallVector<Expr *, 4> ArgExprs;\n";
@@ -5178,9 +5183,6 @@ GetAttributeHeadingAndSpellings(const Record &Documentation,
 
 static void WriteDocumentation(const RecordKeeper &Records,
                                const DocumentationData &Doc, raw_ostream &OS) {
-  if (StringRef Label = Doc.Documentation->getValueAsString("Label");
-      !Label.empty())
-    OS << ".. _" << Label << ":\n\n";
   OS << Doc.Heading << "\n" << std::string(Doc.Heading.length(), '-') << "\n";
 
   // List what spelling syntaxes the attribute supports.

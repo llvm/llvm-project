@@ -8,7 +8,6 @@
 
 #include <__assert>
 #include <__config>
-#include <__system_error/throw_system_error.h>
 #include <__verbose_abort>
 #include <cerrno>
 #include <cstdio>

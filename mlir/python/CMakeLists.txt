@@ -683,9 +683,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRPythonTestSources.Dialects.PythonTest
     ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
     ADD_TO_PARENT MLIRPythonTestSources.Dialects
-    SOURCES
-      dialects/python_test.py
-  )
+    SOURCES dialects/python_test.py)
   set(LLVM_TARGET_DEFINITIONS
     "${MLIR_MAIN_SRC_DIR}/test/python/python_test_ops.td")
   mlir_tablegen(
@@ -699,25 +697,12 @@ if(MLIR_INCLUDE_TESTS)
     ADD_TO_PARENT MLIRPythonTestSources.Dialects.PythonTest
     SOURCES "dialects/_python_test_ops_gen.py")
 
-  declare_mlir_python_extension(MLIRPythonTestSources.PythonTestExtensionPybind11
-    MODULE_NAME _mlirPythonTestPybind11
+  declare_mlir_python_extension(MLIRPythonTestSources.PythonTestExtension
+    MODULE_NAME _mlirPythonTest
     ADD_TO_PARENT MLIRPythonTestSources.Dialects
     ROOT_DIR "${MLIR_SOURCE_DIR}/test/python/lib"
-    PYTHON_BINDINGS_LIBRARY pybind11
     SOURCES
-      PythonTestModulePybind11.cpp
-    PRIVATE_LINK_LIBS
-      LLVMSupport
-    EMBED_CAPI_LINK_LIBS
-      MLIRCAPIPythonTestDialect
-  )
-  declare_mlir_python_extension(MLIRPythonTestSources.PythonTestExtensionNanobind
-    MODULE_NAME _mlirPythonTestNanobind
-    ADD_TO_PARENT MLIRPythonTestSources.Dialects
-    ROOT_DIR "${MLIR_SOURCE_DIR}/test/python/lib"
-    PYTHON_BINDINGS_LIBRARY nanobind
-    SOURCES
-      PythonTestModuleNanobind.cpp
+      PythonTestModule.cpp
     PRIVATE_LINK_LIBS
       LLVMSupport
     EMBED_CAPI_LINK_LIBS

@@ -14,7 +14,7 @@
 
 #else
 
-#include "hdr/fcntl_overlay.h"
+#include <fcntl.h>
 
 #endif // LIBC_FULL_BUILD
 

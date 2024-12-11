@@ -159,7 +159,7 @@ bool isKnownPositive(const Value *V, const SimplifyQuery &SQ,
 
 /// Returns true if the given value is known be negative (i.e. non-positive
 /// and non-zero).
-bool isKnownNegative(const Value *V, const SimplifyQuery &SQ,
+bool isKnownNegative(const Value *V, const SimplifyQuery &DL,
                      unsigned Depth = 0);
 
 /// Return true if the given values are known to be non-equal when defined.
@@ -180,7 +180,7 @@ bool isKnownNonEqual(const Value *V1, const Value *V2, const DataLayout &DL,
 /// same width as the vector element, and the bit is set only if it is true
 /// for all of the elements in the vector.
 bool MaskedValueIsZero(const Value *V, const APInt &Mask,
-                       const SimplifyQuery &SQ, unsigned Depth = 0);
+                       const SimplifyQuery &DL, unsigned Depth = 0);
 
 /// Return the number of times the sign bit of the register is replicated into
 /// the other bits. We know that at least 1 bit is always equal to the sign
@@ -1178,19 +1178,9 @@ SelectPatternResult matchDecomposedSelectPattern(
     CmpInst *CmpI, Value *TrueVal, Value *FalseVal, Value *&LHS, Value *&RHS,
     Instruction::CastOps *CastOp = nullptr, unsigned Depth = 0);
 
-/// Determine the pattern for predicate `X Pred Y ? X : Y`.
-SelectPatternResult
-getSelectPattern(CmpInst::Predicate Pred,
-                 SelectPatternNaNBehavior NaNBehavior = SPNB_NA,
-                 bool Ordered = false);
-
 /// Return the canonical comparison predicate for the specified
 /// minimum/maximum flavor.
 CmpInst::Predicate getMinMaxPred(SelectPatternFlavor SPF, bool Ordered = false);
-
-/// Convert given `SPF` to equivalent min/max intrinsic.
-/// Caller must ensure `SPF` is an integer min or max pattern.
-Intrinsic::ID getMinMaxIntrinsic(SelectPatternFlavor SPF);
 
 /// Return the inverse minimum/maximum flavor of the specified flavor.
 /// For example, signed minimum is the inverse of signed maximum.
@@ -1255,7 +1245,8 @@ std::optional<bool> isImpliedCondition(const Value *LHS, const Value *RHS,
                                        const DataLayout &DL,
                                        bool LHSIsTrue = true,
                                        unsigned Depth = 0);
-std::optional<bool> isImpliedCondition(const Value *LHS, CmpPredicate RHSPred,
+std::optional<bool> isImpliedCondition(const Value *LHS,
+                                       CmpInst::Predicate RHSPred,
                                        const Value *RHSOp0, const Value *RHSOp1,
                                        const DataLayout &DL,
                                        bool LHSIsTrue = true,
@@ -1266,8 +1257,8 @@ std::optional<bool> isImpliedCondition(const Value *LHS, CmpPredicate RHSPred,
 std::optional<bool> isImpliedByDomCondition(const Value *Cond,
                                             const Instruction *ContextI,
                                             const DataLayout &DL);
-std::optional<bool> isImpliedByDomCondition(CmpPredicate Pred, const Value *LHS,
-                                            const Value *RHS,
+std::optional<bool> isImpliedByDomCondition(CmpInst::Predicate Pred,
+                                            const Value *LHS, const Value *RHS,
                                             const Instruction *ContextI,
                                             const DataLayout &DL);
 

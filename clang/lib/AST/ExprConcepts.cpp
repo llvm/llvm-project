@@ -23,7 +23,10 @@
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/Support/TrailingObjects.h"
 #include <algorithm>
+#include <string>
+#include <utility>
 
 using namespace clang;
 
@@ -94,7 +97,8 @@ ConceptSpecializationExpr::Create(const ASTContext &C, ConceptReference *Loc,
 const TypeConstraint *
 concepts::ExprRequirement::ReturnTypeRequirement::getTypeConstraint() const {
   assert(isTypeConstraint());
-  auto TPL = cast<TemplateParameterList *>(TypeConstraintInfo.getPointer());
+  auto TPL =
+      TypeConstraintInfo.getPointer().get<TemplateParameterList *>();
   return cast<TemplateTypeParmDecl>(TPL->getParam(0))
       ->getTypeConstraint();
 }

@@ -37,9 +37,9 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCSymbolXCOFF.h"
-#include "llvm/MC/MCXCOFFObjectWriter.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
@@ -259,11 +259,7 @@ public:
   }
 
   void emitMachine(StringRef CPU) override {
-    const Triple &TT = Streamer.getContext().getTargetTriple();
-    if (TT.isOSBinFormatXCOFF())
-      OS << "\t.machine\t" << '\"' << CPU << '\"' << '\n';
-    else
-      OS << "\t.machine " << CPU << '\n';
+    OS << "\t.machine " << CPU << '\n';
   }
 
   void emitAbiVersion(int AbiVersion) override {
@@ -427,8 +423,7 @@ public:
   }
 
   void emitMachine(StringRef CPU) override {
-    static_cast<XCOFFObjectWriter &>(Streamer.getAssemblerPtr()->getWriter())
-        .setCPU(CPU);
+    llvm_unreachable("Machine pseudo-ops are invalid for XCOFF.");
   }
 
   void emitAbiVersion(int AbiVersion) override {

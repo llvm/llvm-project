@@ -11,12 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CRTPTestVisitor.h"
+#include "TestVisitor.h"
 
 using namespace clang;
 
 namespace {
-class RecordingVisitor : public CRTPTestVisitor<RecordingVisitor> {
+
+class RecordingVisitor : public TestVisitor<RecordingVisitor> {
+
   bool VisitPostOrder;
 
 public:

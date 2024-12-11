@@ -61,20 +61,15 @@ void setCurrentDebugTypes(const char **Types, unsigned Count);
 ///
 /// This will emit the debug information if -debug is present, and -debug-only
 /// is not specified, or is specified as "bitset".
-#define DEBUG_WITH_TYPE(TYPE, ...)                                             \
-  do {                                                                         \
-    if (::llvm::DebugFlag && ::llvm::isCurrentDebugType(TYPE)) {               \
-      __VA_ARGS__;                                                             \
-    }                                                                          \
+#define DEBUG_WITH_TYPE(TYPE, X)                                        \
+  do { if (::llvm::DebugFlag && ::llvm::isCurrentDebugType(TYPE)) { X; } \
   } while (false)
 
 #else
 #define isCurrentDebugType(X) (false)
 #define setCurrentDebugType(X) do { (void)(X); } while (false)
 #define setCurrentDebugTypes(X, N) do { (void)(X); (void)(N); } while (false)
-#define DEBUG_WITH_TYPE(TYPE, ...)                                             \
-  do {                                                                         \
-  } while (false)
+#define DEBUG_WITH_TYPE(TYPE, X) do { } while (false)
 #endif
 
 /// This boolean is set to true if the '-debug' command line option
@@ -103,7 +98,7 @@ raw_ostream &dbgs();
 //
 // LLVM_DEBUG(dbgs() << "Bitset contains: " << Bitset << "\n");
 //
-#define LLVM_DEBUG(...) DEBUG_WITH_TYPE(DEBUG_TYPE, __VA_ARGS__)
+#define LLVM_DEBUG(X) DEBUG_WITH_TYPE(DEBUG_TYPE, X)
 
 } // end namespace llvm
 

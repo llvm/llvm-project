@@ -740,10 +740,12 @@ unsigned DataLayout::getPointerSize(unsigned AS) const {
   return divideCeil(getPointerSpec(AS).BitWidth, 8);
 }
 
-unsigned DataLayout::getMaxIndexSizeInBits() const {
+unsigned DataLayout::getMaxIndexSize() const {
   unsigned MaxIndexSize = 0;
   for (const PointerSpec &Spec : PointerSpecs)
-    MaxIndexSize = std::max(MaxIndexSize, Spec.IndexBitWidth);
+    MaxIndexSize =
+        std::max(MaxIndexSize, (unsigned)divideCeil(Spec.BitWidth, 8));
+
   return MaxIndexSize;
 }
 

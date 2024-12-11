@@ -339,7 +339,7 @@ define i1 @test10_struct_arr_noinbounds_i64(i64 %x) {
 define i1 @pr93017(i64 %idx) {
 ; CHECK-LABEL: @pr93017(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[IDX:%.*]] to i32
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [2 x ptr], ptr @table, i32 0, i32 [[TMP1]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @table, i32 0, i32 [[TMP1]]
 ; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[V]], null
 ; CHECK-NEXT:    ret i1 [[CMP]]

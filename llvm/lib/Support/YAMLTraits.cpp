@@ -21,6 +21,7 @@
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -837,40 +838,26 @@ void Output::newLineCheck(bool EmptySequence) {
     return;
 
   unsigned Indent = StateStack.size() - 1;
-  bool PossiblyNestedSeq = false;
-  auto I = StateStack.rbegin(), E = StateStack.rend();
+  bool OutputDash = false;
 
-  if (inSeqAnyElement(*I)) {
-    PossiblyNestedSeq = true; // Not possibly but always.
-    ++Indent;
-  } else if (*I == inMapFirstKey || *I == inFlowMapFirstKey ||
-             inFlowSeqAnyElement(*I)) {
-    PossiblyNestedSeq = true;
-    ++I; // Skip back().
+  if (StateStack.back() == inSeqFirstElement ||
+      StateStack.back() == inSeqOtherElement) {
+    OutputDash = true;
+  } else if ((StateStack.size() > 1) &&
+             ((StateStack.back() == inMapFirstKey) ||
+              inFlowSeqAnyElement(StateStack.back()) ||
+              (StateStack.back() == inFlowMapFirstKey)) &&
+             inSeqAnyElement(StateStack[StateStack.size() - 2])) {
+    --Indent;
+    OutputDash = true;
   }
 
-  unsigned OutputDashCount = 0;
-  if (PossiblyNestedSeq) {
-    // Count up consecutive inSeqFirstElement from the end, unless
-    // inSeqFirstElement is the top of nested sequence.
-    while (I != E) {
-      // Don't count the top of nested sequence.
-      if (!inSeqAnyElement(*I))
-        break;
-
-      ++OutputDashCount;
-
-      // Stop counting if consecutive inSeqFirstElement ends.
-      if (*I++ != inSeqFirstElement)
-        break;
-    }
-  }
-
-  for (unsigned I = OutputDashCount; I < Indent; ++I)
+  for (unsigned i = 0; i < Indent; ++i) {
     output("  ");
-
-  for (unsigned I = 0; I < OutputDashCount; ++I)
+  }
+  if (OutputDash) {
     output("- ");
+  }
 }
 
 void Output::paddedKey(StringRef key) {

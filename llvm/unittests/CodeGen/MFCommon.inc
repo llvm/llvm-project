@@ -78,8 +78,8 @@ public:
 class BogusSubtarget : public TargetSubtargetInfo {
 public:
   BogusSubtarget(TargetMachine &TM)
-      : TargetSubtargetInfo(Triple(""), "", "", "", {}, {}, {}, nullptr,
-                            nullptr, nullptr, nullptr, nullptr, nullptr),
+      : TargetSubtargetInfo(Triple(""), "", "", "", {}, {}, nullptr, nullptr,
+                            nullptr, nullptr, nullptr, nullptr),
         FL(), TL(TM) {}
   ~BogusSubtarget() override {}
 
@@ -104,12 +104,12 @@ static TargetOptions getTargetOptionsForBogusMachine() {
   return Opts;
 }
 
-class BogusTargetMachine : public CodeGenTargetMachineImpl {
+class BogusTargetMachine : public LLVMTargetMachine {
 public:
   BogusTargetMachine()
-      : CodeGenTargetMachineImpl(
-            Target(), "", Triple(""), "", "", getTargetOptionsForBogusMachine(),
-            Reloc::Static, CodeModel::Small, CodeGenOptLevel::Default),
+      : LLVMTargetMachine(Target(), "", Triple(""), "", "",
+                          getTargetOptionsForBogusMachine(), Reloc::Static,
+                          CodeModel::Small, CodeGenOptLevel::Default),
         ST(*this) {}
 
   ~BogusTargetMachine() override {}

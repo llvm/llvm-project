@@ -44,14 +44,13 @@ private:
   llvm::SmallVector<Decl *, 8> TraversalStack;
 };
 
-class DummyMatchVisitor : public ExpectedLocationVisitor {
+class DummyMatchVisitor : public ExpectedLocationVisitor<DummyMatchVisitor> {
   bool EmitDeclIndices, EmitStmtIndices;
 
 public:
   DummyMatchVisitor(bool EmitDeclIndices = false, bool EmitStmtIndices = false)
       : EmitDeclIndices(EmitDeclIndices), EmitStmtIndices(EmitStmtIndices) {}
-
-  bool VisitTranslationUnitDecl(TranslationUnitDecl *TU) override {
+  bool VisitTranslationUnitDecl(TranslationUnitDecl *TU) {
     const ASTContext &Context = TU->getASTContext();
     const SourceManager &SM = Context.getSourceManager();
     LexicallyOrderedDeclVisitor SubVisitor(*this, SM, EmitDeclIndices,

@@ -145,35 +145,23 @@ bool isCtorOfSafePtr(const clang::FunctionDecl *F) {
   return isCtorOfRefCounted(F) || isCtorOfCheckedPtr(F);
 }
 
-template <typename Predicate>
-static bool isPtrOfType(const clang::QualType T, Predicate Pred) {
+bool isSafePtrType(const clang::QualType T) {
   QualType type = T;
   while (!type.isNull()) {
     if (auto *elaboratedT = type->getAs<ElaboratedType>()) {
       type = elaboratedT->desugar();
       continue;
     }
-    auto *SpecialT = type->getAs<TemplateSpecializationType>();
-    if (!SpecialT)
+    if (auto *specialT = type->getAs<TemplateSpecializationType>()) {
+      if (auto *decl = specialT->getTemplateName().getAsTemplateDecl()) {
+        auto name = decl->getNameAsString();
+        return isRefType(name) || isCheckedPtr(name);
+      }
       return false;
-    auto *Decl = SpecialT->getTemplateName().getAsTemplateDecl();
-    if (!Decl)
-      return false;
-    return Pred(Decl->getNameAsString());
+    }
+    return false;
   }
   return false;
-}
-
-bool isSafePtrType(const clang::QualType T) {
-  return isPtrOfType(
-      T, [](auto Name) { return isRefType(Name) || isCheckedPtr(Name); });
-}
-
-bool isOwnerPtrType(const clang::QualType T) {
-  return isPtrOfType(T, [](auto Name) {
-    return isRefType(Name) || isCheckedPtr(Name) || Name == "unique_ptr" ||
-           Name == "UniqueRef" || Name == "LazyUniqueRef";
-  });
 }
 
 std::optional<bool> isUncounted(const QualType T) {
@@ -515,10 +503,6 @@ public:
     auto *Callee = MCE->getMethodDecl();
     if (!Callee)
       return false;
-
-    auto Name = safeGetName(Callee);
-    if (Name == "ref" || Name == "incrementCheckedPtrCount")
-      return true;
 
     std::optional<bool> IsGetterOfRefCounted = isGetterOfSafePtr(Callee);
     if (IsGetterOfRefCounted && *IsGetterOfRefCounted)

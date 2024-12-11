@@ -214,8 +214,8 @@ public:
 
         Builder.addSymbol("", MachO::N_BNSYM, 1, 0, 0);
         StabSymbols.push_back(
-            {*Sym, Builder.addSymbol(*Sym->getName(), SymType, 1, 0, 0),
-             Builder.addSymbol(*Sym->getName(), SymType, 0, 0, 0)});
+            {*Sym, Builder.addSymbol(Sym->getName(), SymType, 1, 0, 0),
+             Builder.addSymbol(Sym->getName(), SymType, 0, 0, 0)});
         Builder.addSymbol("", MachO::N_ENSYM, 1, 0, 0);
       }
     }

@@ -1,4 +1,5 @@
-! Offloading test for target nested inside a target data region
+! Offloading test for target nested inside
+! a target data region
 ! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic

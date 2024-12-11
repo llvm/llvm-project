@@ -11,7 +11,7 @@
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/type.h"
-#include "flang/Runtime/descriptor-consts.h"
+#include "flang/Runtime/descriptor.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
@@ -339,12 +339,8 @@ auto ComputeOffsetsHelper::GetSizeAndAlignment(
     const auto *derived{evaluate::GetDerivedTypeSpec(dyType)};
     int lenParams{derived ? CountLenParameters(*derived) : 0};
     bool needAddendum{derived || (dyType && dyType->IsUnlimitedPolymorphic())};
-
-    // FIXME: Get descriptor size from targetCharacteristics instead
-    // overapproximation
-    std::size_t size{runtime::MaxDescriptorSizeInBytes(
+    std::size_t size{runtime::Descriptor::SizeInBytes(
         symbol.Rank(), needAddendum, lenParams)};
-
     return {size, targetCharacteristics.descriptorAlignment()};
   }
   if (IsProcedurePointer(symbol)) {

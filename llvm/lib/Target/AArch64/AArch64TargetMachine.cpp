@@ -49,7 +49,6 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/CFGuard.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Utils/LowerIFunc.h"
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
 #include <memory>
 #include <optional>
@@ -356,11 +355,11 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool JIT,
                                            bool LittleEndian)
-    : CodeGenTargetMachineImpl(
-          T, computeDataLayout(TT, Options.MCOptions, LittleEndian), TT,
-          computeDefaultCPU(TT, CPU), FS, Options,
-          getEffectiveRelocModel(TT, RM),
-          getEffectiveAArch64CodeModel(TT, CM, JIT), OL),
+    : LLVMTargetMachine(T,
+                        computeDataLayout(TT, Options.MCOptions, LittleEndian),
+                        TT, computeDefaultCPU(TT, CPU), FS, Options,
+                        getEffectiveRelocModel(TT, RM),
+                        getEffectiveAArch64CodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian) {
   initAsmInfo();
 
@@ -570,11 +569,6 @@ void AArch64TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
         LPM.addPass(LoopIdiomVectorizePass());
       });
-  if (getTargetTriple().isOSWindows())
-    PB.registerPipelineEarlySimplificationEPCallback(
-        [](ModulePassManager &PM, OptimizationLevel, ThinOrFullLTOPhase) {
-          PM.addPass(LowerIFuncPass());
-        });
 }
 
 TargetTransformInfo
@@ -808,7 +802,7 @@ void AArch64PassConfig::addPreRegAlloc() {
     addPass(createAArch64AdvSIMDScalar());
     // The AdvSIMD pass may produce copies that can be rewritten to
     // be register coalescer friendly.
-    addPass(&PeepholeOptimizerLegacyID);
+    addPass(&PeepholeOptimizerID);
   }
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableMachinePipeliner)
     addPass(&MachinePipelinerID);

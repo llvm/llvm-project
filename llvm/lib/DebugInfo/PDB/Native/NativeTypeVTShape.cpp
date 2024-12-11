@@ -1,4 +1,5 @@
 #include "llvm/DebugInfo/PDB/Native/NativeTypeVTShape.h"
+#include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
 

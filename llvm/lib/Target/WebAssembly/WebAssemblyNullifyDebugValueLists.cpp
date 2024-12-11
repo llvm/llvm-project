@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
+#include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 using namespace llvm;
 

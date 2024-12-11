@@ -12,7 +12,7 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
@@ -49,31 +49,34 @@ public:
     // The calls to checkAST* from AnalysisConsumer don't
     // visit template instantiations or lambda classes. We
     // want to visit those, so we make our own RecursiveASTVisitor.
-    struct LocalVisitor : DynamicRecursiveASTVisitor {
+    struct LocalVisitor : public RecursiveASTVisitor<LocalVisitor> {
+      using Base = RecursiveASTVisitor<LocalVisitor>;
+
       const RawPtrRefCallArgsChecker *Checker;
       Decl *DeclWithIssue{nullptr};
 
       explicit LocalVisitor(const RawPtrRefCallArgsChecker *Checker)
           : Checker(Checker) {
         assert(Checker);
-        ShouldVisitTemplateInstantiations = true;
-        ShouldVisitImplicitCode = false;
       }
 
-      bool TraverseClassTemplateDecl(ClassTemplateDecl *Decl) override {
+      bool shouldVisitTemplateInstantiations() const { return true; }
+      bool shouldVisitImplicitCode() const { return false; }
+
+      bool TraverseClassTemplateDecl(ClassTemplateDecl *Decl) {
         if (isRefType(safeGetName(Decl)))
           return true;
-        return DynamicRecursiveASTVisitor::TraverseClassTemplateDecl(Decl);
+        return Base::TraverseClassTemplateDecl(Decl);
       }
 
-      bool TraverseDecl(Decl *D) override {
+      bool TraverseDecl(Decl *D) {
         llvm::SaveAndRestore SavedDecl(DeclWithIssue);
         if (D && (isa<FunctionDecl>(D) || isa<ObjCMethodDecl>(D)))
           DeclWithIssue = D;
-        return DynamicRecursiveASTVisitor::TraverseDecl(D);
+        return Base::TraverseDecl(D);
       }
 
-      bool VisitCallExpr(CallExpr *CE) override {
+      bool VisitCallExpr(const CallExpr *CE) {
         Checker->visitCallExpr(CE, DeclWithIssue);
         return true;
       }

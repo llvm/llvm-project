@@ -71,19 +71,9 @@ add_libc_test(
   SUITE
     libc_time_unittests
   SRCS
-    clock_gettime_test.cpp
+  clock_gettime_test.cpp
   DEPENDS
     libc.src.time.clock_gettime
-)
-
-add_libc_test(
-  clock_getres_test
-  SUITE
-    libc_time_unittests
-  SRCS
-    clock_getres_test.cpp
-  DEPENDS
-    libc.src.time.clock_getres
 )
 
 add_libc_unittest(
@@ -167,19 +157,9 @@ add_libc_unittest(
   SRCS
     time_test.cpp
   DEPENDS
+    libc.include.time
     libc.src.time.time
-    libc.src.__support.time.clock_gettime
     libc.src.errno.errno
-)
-
-add_libc_test(
-  timespec_get_test
-  SUITE
-    libc_time_unittests
-  SRCS
-    timespec_get_test.cpp
-  DEPENDS
-    libc.src.time.timespec_get
 )
 
 add_libc_test(

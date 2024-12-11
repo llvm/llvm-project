@@ -234,11 +234,3 @@ subroutine task_multiple_clauses()
   !CHECK: omp.terminator
   !$omp end task
 end subroutine task_multiple_clauses
-
-subroutine task_mergeable()
-!CHECK: omp.task mergeable {
-!CHECK: omp.terminator
-!CHECK: }
- !$omp task mergeable
- !$omp end task
-end subroutine

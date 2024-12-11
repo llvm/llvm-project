@@ -56,7 +56,7 @@ static VTuneMethodBatch getMethodBatch(LinkGraph &G, bool EmitDebugInfo) {
     Method.ParentMI = 0;
     Method.LoadAddr = Sym->getAddress();
     Method.LoadSize = Sym->getSize();
-    Method.NameSI = GetStringIdx(*Sym->getName());
+    Method.NameSI = GetStringIdx(Sym->getName());
     Method.ClassFileSI = 0;
     Method.SourceFileSI = 0;
 

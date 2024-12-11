@@ -1,7 +1,7 @@
 {
   "name": "lldb-dap",
   "displayName": "LLDB DAP",
-  "version": "0.2.8",
+  "version": "0.2.6",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://lldb.llvm.org",
   "description": "LLDB debugging from VSCode",
@@ -44,7 +44,7 @@
     "format": "npx prettier './src-ts/' --write",
     "package": "vsce package --out ./out/lldb-dap.vsix",
     "publish": "vsce publish",
-    "vscode-uninstall": "code --uninstall-extension llvm-vs-code-extensions.lldb-dap",
+    "vscode-uninstall": "code --uninstall-extension llvm.lldb-dap",
     "vscode-install": "code --install-extension ./out/lldb-dap.vsix"
   },
   "contributes": {
@@ -141,7 +141,7 @@
     "debuggers": [
       {
         "type": "lldb-dap",
-        "label": "LLDB DAP Debugger",
+        "label": "Native LLDB Debugger",
         "program": "./bin/lldb-dap",
         "windows": {
           "program": "./bin/lldb-dap.exe"
@@ -507,28 +507,6 @@
               "args": [],
               "env": [],
               "cwd": "^\"\\${workspaceRoot}\""
-            }
-          },
-          {
-            "label": "LLDB: Attach",
-            "description": "",
-            "body": {
-              "type": "lldb-dap",
-              "request": "attach",
-              "name": "${2:Attach}",
-              "program": "${1:<your program>}",
-              "waitFor": true
-            }
-          },
-          {
-            "label": "LLDB: Load Coredump",
-            "description": "",
-            "body": {
-              "type": "lldb-dap",
-              "request": "attach",
-              "name": "${2:Core}",
-              "program": "${1:<your program>}",
-              "coreFile": "${1:<your program>}.core"
             }
           }
         ]

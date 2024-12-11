@@ -115,10 +115,9 @@ void M68kTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__HAVE_68881__");
 }
 
-std::pair<const char *, ArrayRef<Builtin::Info>>
-M68kTargetInfo::getTargetBuiltinStorage() const {
+ArrayRef<Builtin::Info> M68kTargetInfo::getTargetBuiltins() const {
   // FIXME: Implement.
-  return {nullptr, {}};
+  return {};
 }
 
 bool M68kTargetInfo::hasFeature(StringRef Feature) const {

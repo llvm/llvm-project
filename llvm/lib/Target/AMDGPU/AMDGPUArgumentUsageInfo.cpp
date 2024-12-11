@@ -8,6 +8,7 @@
 
 #include "AMDGPUArgumentUsageInfo.h"
 #include "AMDGPU.h"
+#include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"

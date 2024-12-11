@@ -45,7 +45,6 @@ entry:
 ; CHECK:               .file   "2.c"
 ; CHECK-NEXT:          .csect ..text..[PR],5
 ; CHECK-NEXT:          .rename ..text..[PR],""
-; CHECK-NEXT:          .machine "COM"
 ; CHECK-NEXT:          .globl  bar[DS]                         # -- Begin function bar
 ; CHECK-NEXT:          .globl  .bar
 ; CHECK-NEXT:          .align  2

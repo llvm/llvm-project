@@ -11,7 +11,7 @@ module attributes {gpu.container_module} {
       %0 = spirv.mlir.addressof @kernel_arg_0 : !spirv.ptr<!spirv.struct<(!spirv.array<12 x f32, stride=4> [0])>, StorageBuffer>
       %2 = spirv.Constant 0 : i32
       %3 = spirv.mlir.addressof @kernel_arg_0 : !spirv.ptr<!spirv.struct<(!spirv.array<12 x f32, stride=4> [0])>, StorageBuffer>
-      %4 = spirv.AccessChain %0[%2, %2] : !spirv.ptr<!spirv.struct<(!spirv.array<12 x f32, stride=4> [0])>, StorageBuffer>, i32, i32 -> !spirv.ptr<f32, StorageBuffer>
+      %4 = spirv.AccessChain %0[%2, %2] : !spirv.ptr<!spirv.struct<(!spirv.array<12 x f32, stride=4> [0])>, StorageBuffer>, i32, i32
       %5 = spirv.Load "StorageBuffer" %4 : f32
       spirv.Return
     }

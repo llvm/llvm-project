@@ -102,7 +102,10 @@ static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           if (!ResType) {
             // There was no "assign type" actions, let's fix this now
             ResType = ScalarType;
-            setRegClassType(ResVReg, ResType, GR, &MRI, *GR->CurMF, true);
+            MRI.setRegClass(ResVReg, &SPIRV::iIDRegClass);
+            MRI.setType(ResVReg,
+                        LLT::scalar(GR->getScalarOrVectorBitWidth(ResType)));
+            GR->assignSPIRVTypeToVReg(ResType, ResVReg, *GR->CurMF);
           }
         }
       } else if (mayBeInserted(Opcode) && I.getNumDefs() == 1 &&
@@ -121,7 +124,9 @@ static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           if (!ResVType)
             continue;
           // Set type & class
-          setRegClassType(ResVReg, ResVType, GR, &MRI, *GR->CurMF, true);
+          MRI.setRegClass(ResVReg, GR->getRegClass(ResVType));
+          MRI.setType(ResVReg, GR->getRegType(ResVType));
+          GR->assignSPIRVTypeToVReg(ResVType, ResVReg, *GR->CurMF);
         }
         // If this is a simple operation that is to be reduced by TableGen
         // definition we must apply some of pre-legalizer rules here

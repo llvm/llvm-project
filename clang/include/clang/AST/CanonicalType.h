@@ -30,7 +30,6 @@ namespace clang {
 
 template<typename T> class CanProxy;
 template<typename T> struct CanProxyAdaptor;
-class ASTContext;
 class CXXRecordDecl;
 class EnumDecl;
 class Expr;
@@ -165,14 +164,14 @@ public:
 
   /// Determines whether this canonical type is more qualified than
   /// the @p Other canonical type.
-  bool isMoreQualifiedThan(CanQual<T> Other, const ASTContext &Ctx) const {
-    return Stored.isMoreQualifiedThan(Other.Stored, Ctx);
+  bool isMoreQualifiedThan(CanQual<T> Other) const {
+    return Stored.isMoreQualifiedThan(Other.Stored);
   }
 
   /// Determines whether this canonical type is at least as qualified as
   /// the @p Other canonical type.
-  bool isAtLeastAsQualifiedAs(CanQual<T> Other, const ASTContext &Ctx) const {
-    return Stored.isAtLeastAsQualifiedAs(Other.Stored, Ctx);
+  bool isAtLeastAsQualifiedAs(CanQual<T> Other) const {
+    return Stored.isAtLeastAsQualifiedAs(Other.Stored);
   }
 
   /// If the canonical type is a reference type, returns the type that

@@ -756,15 +756,8 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
           }
           Name = std::move(*MangledName);
         } else if (!E.Noname && ExportName.empty()) {
-          std::optional<std::string> DemangledName =
-              getArm64ECDemangledFunctionName(Name);
-          if (!DemangledName)
-            return make_error<StringError>(
-                StringRef(Twine("Invalid ARM64EC function name '" + Name + "'")
-                              .str()),
-                object_error::parse_failed);
           NameType = IMPORT_NAME_EXPORTAS;
-          ExportName = std::move(*DemangledName);
+          ExportName = std::move(*getArm64ECDemangledFunctionName(Name));
         }
       }
 

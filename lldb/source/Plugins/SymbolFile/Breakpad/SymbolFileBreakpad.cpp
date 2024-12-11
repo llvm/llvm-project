@@ -299,7 +299,9 @@ size_t SymbolFileBreakpad::ParseBlocksRecursive(Function &func) {
   // "INLINE 0 ...", the current level is 0 and its parent block is the
   // function block at index 0.
   std::vector<Block *> blocks;
-  blocks.push_back(&func.GetBlock(false));
+  Block &block = func.GetBlock(false);
+  block.AddRange(Block::Range(0, func.GetAddressRange().GetByteSize()));
+  blocks.push_back(&block);
 
   size_t blocks_added = 0;
   addr_t func_base = func.GetAddressRange().GetBaseAddress().GetOffset();
@@ -313,8 +315,7 @@ size_t SymbolFileBreakpad::ParseBlocksRecursive(Function &func) {
       if (record->InlineNestLevel == 0 ||
           record->InlineNestLevel <= last_added_nest_level + 1) {
         last_added_nest_level = record->InlineNestLevel;
-        BlockSP block_sp = blocks[record->InlineNestLevel]->CreateChild(
-            It.GetBookmark().offset);
+        BlockSP block_sp = std::make_shared<Block>(It.GetBookmark().offset);
         FileSpec callsite_file;
         if (record->CallSiteFileNum < m_files->size())
           callsite_file = (*m_files)[record->CallSiteFileNum];
@@ -332,6 +333,7 @@ size_t SymbolFileBreakpad::ParseBlocksRecursive(Function &func) {
         }
         block_sp->FinalizeRanges();
 
+        blocks[record->InlineNestLevel]->AddChild(block_sp);
         if (record->InlineNestLevel + 1 >= blocks.size()) {
           blocks.resize(blocks.size() + 1);
         }

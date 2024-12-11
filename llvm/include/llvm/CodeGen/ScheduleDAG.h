@@ -32,7 +32,7 @@ namespace llvm {
 
 template <class GraphType> struct GraphTraits;
 template<class Graph> class GraphWriter;
-class TargetMachine;
+class LLVMTargetMachine;
 class MachineFunction;
 class MachineRegisterInfo;
 class MCInstrDesc;
@@ -571,7 +571,7 @@ class TargetRegisterInfo;
 
   class ScheduleDAG {
   public:
-    const TargetMachine &TM;            ///< Target processor
+    const LLVMTargetMachine &TM;        ///< Target processor
     const TargetInstrInfo *TII;         ///< Target instruction information
     const TargetRegisterInfo *TRI;      ///< Target processor register info
     MachineFunction &MF;                ///< Machine function

@@ -23,10 +23,14 @@
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Basic/BitmaskEnum.h"
+#include "clang/Basic/FileManager.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitcode/BitcodeReader.h"
@@ -36,6 +40,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
@@ -4666,7 +4671,7 @@ void CGOpenMPRuntime::emitTaskLoopCall(CodeGenFunction &CGF, SourceLocation Loc,
                                CGF.getContext().VoidPtrTy);
   }
   enum { NoSchedule = 0, Grainsize = 1, NumTasks = 2 };
-  llvm::SmallVector<llvm::Value *, 12> TaskArgs{
+  llvm::Value *TaskArgs[] = {
       UpLoc,
       ThreadID,
       Result.NewTask,
@@ -4683,18 +4688,12 @@ void CGOpenMPRuntime::emitTaskLoopCall(CodeGenFunction &CGF, SourceLocation Loc,
       Data.Schedule.getPointer()
           ? CGF.Builder.CreateIntCast(Data.Schedule.getPointer(), CGF.Int64Ty,
                                       /*isSigned=*/false)
-          : llvm::ConstantInt::get(CGF.Int64Ty, /*V=*/0)};
-  if (Data.HasModifier)
-    TaskArgs.push_back(llvm::ConstantInt::get(CGF.Int32Ty, 1));
-
-  TaskArgs.push_back(Result.TaskDupFn
-                         ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-                               Result.TaskDupFn, CGF.VoidPtrTy)
-                         : llvm::ConstantPointerNull::get(CGF.VoidPtrTy));
+          : llvm::ConstantInt::get(CGF.Int64Ty, /*V=*/0),
+      Result.TaskDupFn ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+                             Result.TaskDupFn, CGF.VoidPtrTy)
+                       : llvm::ConstantPointerNull::get(CGF.VoidPtrTy)};
   CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                          CGM.getModule(), Data.HasModifier
-                                               ? OMPRTL___kmpc_taskloop_5
-                                               : OMPRTL___kmpc_taskloop),
+                          CGM.getModule(), OMPRTL___kmpc_taskloop),
                       TaskArgs);
 }
 
@@ -7770,7 +7769,7 @@ private:
       if (const auto *Base = Data.dyn_cast<const CXXRecordDecl *>())
         getPlainLayout(Base, Layout, /*AsBase=*/true);
       else
-        Layout.push_back(cast<const FieldDecl *>(Data));
+        Layout.push_back(Data.get<const FieldDecl *>());
     }
   }
 
@@ -8333,9 +8332,9 @@ public:
       MapCombinedInfoTy &CombinedInfo, llvm::OpenMPIRBuilder &OMPBuilder,
       const llvm::DenseSet<CanonicalDeclPtr<const Decl>> &SkipVarSet =
           llvm::DenseSet<CanonicalDeclPtr<const Decl>>()) const {
-    assert(isa<const OMPExecutableDirective *>(CurDir) &&
+    assert(CurDir.is<const OMPExecutableDirective *>() &&
            "Expect a executable directive");
-    const auto *CurExecDir = cast<const OMPExecutableDirective *>(CurDir);
+    const auto *CurExecDir = CurDir.get<const OMPExecutableDirective *>();
     generateAllInfoForClauses(CurExecDir->clauses(), CombinedInfo, OMPBuilder,
                               SkipVarSet);
   }
@@ -8345,9 +8344,9 @@ public:
   /// in \a CombinedInfo).
   void generateAllInfoForMapper(MapCombinedInfoTy &CombinedInfo,
                                 llvm::OpenMPIRBuilder &OMPBuilder) const {
-    assert(isa<const OMPDeclareMapperDecl *>(CurDir) &&
+    assert(CurDir.is<const OMPDeclareMapperDecl *>() &&
            "Expect a declare mapper directive");
-    const auto *CurMapperDir = cast<const OMPDeclareMapperDecl *>(CurDir);
+    const auto *CurMapperDir = CurDir.get<const OMPDeclareMapperDecl *>();
     generateAllInfoForClauses(CurMapperDir->clauses(), CombinedInfo,
                               OMPBuilder);
   }
@@ -8519,9 +8518,9 @@ public:
         DeclComponentLists.emplace_back(MCL, OMPC_MAP_tofrom, Unknown,
                                         /*IsImpicit = */ true, nullptr,
                                         nullptr);
-    assert(isa<const OMPExecutableDirective *>(CurDir) &&
+    assert(CurDir.is<const OMPExecutableDirective *>() &&
            "Expect a executable directive");
-    const auto *CurExecDir = cast<const OMPExecutableDirective *>(CurDir);
+    const auto *CurExecDir = CurDir.get<const OMPExecutableDirective *>();
     bool HasMapBasePtr = false;
     bool HasMapArraySec = false;
     for (const auto *C : CurExecDir->getClausesOfKind<OMPMapClause>()) {

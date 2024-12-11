@@ -9,6 +9,7 @@
 #include "EvaluationResult.h"
 #include "InterpState.h"
 #include "Record.h"
+#include "clang/AST/ExprCXX.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include <iterator>

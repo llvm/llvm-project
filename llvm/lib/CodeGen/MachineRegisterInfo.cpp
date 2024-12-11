@@ -635,13 +635,7 @@ const MCPhysReg *MachineRegisterInfo::getCalleeSavedRegs() const {
   if (IsUpdatedCSRsInitialized)
     return UpdatedCSRs.data();
 
-  const MCPhysReg *Regs = getTargetRegisterInfo()->getCalleeSavedRegs(MF);
-
-  for (unsigned I = 0; Regs[I]; ++I)
-    if (MF->getSubtarget().isRegisterReservedByUser(Regs[I]))
-      MF->getRegInfo().disableCalleeSavedRegister(Regs[I]);
-
-  return Regs;
+  return getTargetRegisterInfo()->getCalleeSavedRegs(MF);
 }
 
 void MachineRegisterInfo::setCalleeSavedRegs(ArrayRef<MCPhysReg> CSRs) {

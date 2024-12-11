@@ -18,6 +18,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPCELFStreamer.h"
+#include "PPCFixupKinds.h"
 #include "PPCMCCodeEmitter.h"
 #include "PPCMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -28,6 +29,8 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCSymbolELF.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/SourceMgr.h"
 
 using namespace llvm;

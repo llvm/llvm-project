@@ -83,8 +83,8 @@ define i32 @any_of_reduction_used_in_blend_with_mutliple_phis(ptr %src, i64 %N, 
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PREDPHI:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = xor <vscale x 2 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
-; CHECK-NEXT:    [[TMP7:%.*]] = xor <vscale x 2 x i1> [[BROADCAST_SPLAT2]], splat (i1 true)
+; CHECK-NEXT:    [[TMP6:%.*]] = xor <vscale x 2 x i1> [[BROADCAST_SPLAT]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP7:%.*]] = xor <vscale x 2 x i1> [[BROADCAST_SPLAT2]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP8:%.*]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i1> [[TMP7]], <vscale x 2 x i1> zeroinitializer
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x ptr> @llvm.masked.gather.nxv2p0.nxv2p0(<vscale x 2 x ptr> [[BROADCAST_SPLAT4]], i32 8, <vscale x 2 x i1> [[TMP8]], <vscale x 2 x ptr> poison)
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <vscale x 2 x ptr> [[WIDE_MASKED_GATHER]], zeroinitializer

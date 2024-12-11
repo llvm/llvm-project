@@ -85,9 +85,7 @@ def loongarch_sll_w : SDNode<"LoongArchISD::SLL_W", SDT_LoongArchIntBinOpW>;
 def loongarch_sra_w : SDNode<"LoongArchISD::SRA_W", SDT_LoongArchIntBinOpW>;
 def loongarch_srl_w : SDNode<"LoongArchISD::SRL_W", SDT_LoongArchIntBinOpW>;
 def loongarch_rotr_w : SDNode<"LoongArchISD::ROTR_W", SDT_LoongArchIntBinOpW>;
-def loongarch_div_w : SDNode<"LoongArchISD::DIV_W", SDT_LoongArchIntBinOpW>;
 def loongarch_div_wu : SDNode<"LoongArchISD::DIV_WU", SDT_LoongArchIntBinOpW>;
-def loongarch_mod_w : SDNode<"LoongArchISD::MOD_W", SDT_LoongArchIntBinOpW>;
 def loongarch_mod_wu : SDNode<"LoongArchISD::MOD_WU", SDT_LoongArchIntBinOpW>;
 def loongarch_crc_w_b_w
     : SDNode<"LoongArchISD::CRC_W_B_W", SDT_LoongArchIntBinOpW, [SDNPHasChain]>;
@@ -112,7 +110,6 @@ def loongarch_bstrpick
 def loongarch_revb_2h : SDNode<"LoongArchISD::REVB_2H", SDTUnaryOp>;
 def loongarch_revb_2w : SDNode<"LoongArchISD::REVB_2W", SDTUnaryOp>;
 def loongarch_bitrev_4b : SDNode<"LoongArchISD::BITREV_4B", SDTUnaryOp>;
-def loongarch_bitrev_8b : SDNode<"LoongArchISD::BITREV_8B", SDTUnaryOp>;
 def loongarch_bitrev_w : SDNode<"LoongArchISD::BITREV_W", SDTUnaryOp>;
 def loongarch_clzw : SDNode<"LoongArchISD::CLZ_W", SDTIntBitCountUnaryOp>;
 def loongarch_ctzw : SDNode<"LoongArchISD::CTZ_W", SDTIntBitCountUnaryOp>;
@@ -484,8 +481,8 @@ def simm12_plus1 : ImmLeaf<GRLenVT,
 
 // Return the negation of an immediate value.
 def NegImm : SDNodeXForm<imm, [{
-  return CurDAG->getSignedTargetConstant(-N->getSExtValue(), SDLoc(N),
-                                         N->getValueType(0));
+  return CurDAG->getTargetConstant(-N->getSExtValue(), SDLoc(N),
+                                   N->getValueType(0));
 }]>;
 
 // FP immediate patterns.
@@ -541,16 +538,16 @@ def AddiPair : PatLeaf<(imm), [{
 // Return -2048 if immediate is negative or 2047 if positive.
 def AddiPairImmLarge : SDNodeXForm<imm, [{
   int64_t Imm = N->getSExtValue() < 0 ? -2048 : 2047;
-  return CurDAG->getSignedTargetConstant(Imm, SDLoc(N),
-                                         N->getValueType(0));
+  return CurDAG->getTargetConstant(Imm, SDLoc(N),
+                                   N->getValueType(0));
 }]>;
 
 // Return imm - (imm < 0 ? -2048 : 2047).
 def AddiPairImmSmall : SDNodeXForm<imm, [{
   int64_t Imm = N->getSExtValue();
   int64_t Adj = Imm < 0 ? -2048 : 2047;
-  return CurDAG->getSignedTargetConstant(Imm - Adj, SDLoc(N),
-                                         N->getValueType(0));
+  return CurDAG->getTargetConstant(Imm - Adj, SDLoc(N),
+                                   N->getValueType(0));
 }]>;
 
 // Check if (mul r, imm) can be optimized to (SLLI (ALSL r, r, i0), i1),
@@ -713,22 +710,10 @@ class STORE_2RI14<bits<32> op>
                "$rd, $rj, $imm14">;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 1
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 1,
-    IsSubjectToAMORdConstraint = 1 in {
+let hasSideEffects = 0, mayLoad = 1, mayStore = 1, Constraints = "@earlyclobber $rd" in
 class AM_3R<bits<32> op>
     : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rk, GPRMemAtomic:$rj),
-            "$rd, $rk, $rj"> {
-  let Constraints = "@earlyclobber $rd";
-}
-
-class AMCAS_3R<bits<32> op>
-    : Fmt3R<op, (outs GPR:$dst), (ins GPR:$rd, GPR:$rk, GPRMemAtomic:$rj),
-            "$rd, $rk, $rj"> {
-  let Constraints = "@earlyclobber $dst, $dst = $rd";
-  let IsAMCAS = 1;
-}
-} // hasSideEffects = 0, mayLoad = 1, mayStore = 1,
-  // IsSubjectToAMORdConstraint = 1
+            "$rd, $rk, $rj">;
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
 class LLBase<bits<32> op>
@@ -1039,14 +1024,14 @@ def AMMAX__DB_WU : AM_3R<0x38700000>;
 def AMMAX__DB_DU : AM_3R<0x38708000>;
 def AMMIN__DB_WU : AM_3R<0x38710000>;
 def AMMIN__DB_DU : AM_3R<0x38718000>;
-def AMCAS_B      : AMCAS_3R<0x38580000>;
-def AMCAS_H      : AMCAS_3R<0x38588000>;
-def AMCAS_W      : AMCAS_3R<0x38590000>;
-def AMCAS_D      : AMCAS_3R<0x38598000>;
-def AMCAS__DB_B  : AMCAS_3R<0x385a0000>;
-def AMCAS__DB_H  : AMCAS_3R<0x385a8000>;
-def AMCAS__DB_W  : AMCAS_3R<0x385b0000>;
-def AMCAS__DB_D  : AMCAS_3R<0x385b8000>;
+def AMCAS_B     : AM_3R<0x38580000>;
+def AMCAS_H     : AM_3R<0x38588000>;
+def AMCAS_W     : AM_3R<0x38590000>;
+def AMCAS_D     : AM_3R<0x38598000>;
+def AMCAS__DB_B     : AM_3R<0x385a0000>;
+def AMCAS__DB_H     : AM_3R<0x385a8000>;
+def AMCAS__DB_W     : AM_3R<0x385b0000>;
+def AMCAS__DB_D     : AM_3R<0x385b8000>;
 def LL_D : LLBase<0x22000000>;
 def SC_D : SCBase<0x23000000>;
 def SC_Q : SCBase_128<0x38570000>;
@@ -1159,12 +1144,10 @@ def : PatGprGpr<sub, SUB_D>;
 def : PatGprGpr<sdiv, DIV_D>;
 def : PatGprGpr_32<sdiv, DIV_W>;
 def : PatGprGpr<udiv, DIV_DU>;
-def : PatGprGpr<loongarch_div_w, DIV_W>;
 def : PatGprGpr<loongarch_div_wu, DIV_WU>;
 def : PatGprGpr<srem, MOD_D>;
 def : PatGprGpr_32<srem, MOD_W>;
 def : PatGprGpr<urem, MOD_DU>;
-def : PatGprGpr<loongarch_mod_w, MOD_W>;
 def : PatGprGpr<loongarch_mod_wu, MOD_WU>;
 def : PatGprGpr<shiftop<rotr>, ROTR_D>;
 def : PatGprGpr<shiftopw<loongarch_rotr_w>, ROTR_W>;
@@ -1766,7 +1749,6 @@ def : Pat<(bitreverse (bswap GPR:$rj)), (BITREV_4B GPR:$rj)>;
 let Predicates = [IsLA64] in {
 def : Pat<(loongarch_revb_2w GPR:$rj), (REVB_2W GPR:$rj)>;
 def : Pat<(bswap GPR:$rj), (REVB_D GPR:$rj)>;
-def : Pat<(loongarch_bitrev_8b GPR:$rj), (BITREV_8B GPR:$rj)>;
 def : Pat<(loongarch_bitrev_w GPR:$rj), (BITREV_W GPR:$rj)>;
 def : Pat<(bitreverse GPR:$rj), (BITREV_D GPR:$rj)>;
 def : Pat<(bswap (bitreverse GPR:$rj)), (BITREV_8B GPR:$rj)>;
@@ -2111,6 +2093,7 @@ multiclass binary_atomic_op_bh<string inst, string op> {
 }
 
 let Predicates = [ HasLAM_BH, IsLA64 ] in {
+  
 defm : binary_atomic_op_bh<"AMSWAP", "atomic_swap">;
 defm : binary_atomic_op_bh<"AMADD", "atomic_load_add">;
 def : Pat<(atomic_load_sub_i8_monotonic GPR:$rj, GPR:$rk),
@@ -2124,27 +2107,9 @@ def : Pat<(atomic_load_sub_i16 GPR:$rj, GPR:$rk),
           (AMADD__DB_H (SUB_W R0, GPR:$rk), GPR:$rj)>;
 } // Predicates = [ IsLA64, HasLAM_BH ]
 
-let Predicates = [ HasLAMCAS, IsLA64 ] in {
-def : Pat<(atomic_cmp_swap_i8_monotonic GPR:$addr, GPR:$cmp, GPR:$new),
-          (AMCAS_B GPR:$cmp, GPR:$new, GPR:$addr)>;
-def : Pat<(atomic_cmp_swap_i16_monotonic GPR:$addr, GPR:$cmp, GPR:$new),
-          (AMCAS_H GPR:$cmp, GPR:$new, GPR:$addr)>;
-def : Pat<(atomic_cmp_swap_i32_monotonic GPR:$addr, GPR:$cmp, GPR:$new),
-          (AMCAS_W GPR:$cmp, GPR:$new, GPR:$addr)>;
-def : Pat<(atomic_cmp_swap_i64_monotonic GPR:$addr, GPR:$cmp, GPR:$new),
-          (AMCAS_D GPR:$cmp, GPR:$new, GPR:$addr)>;
-
-def : Pat<(atomic_cmp_swap_i8 GPR:$addr, GPR:$cmp, GPR:$new),
-          (AMCAS__DB_B GPR:$cmp, GPR:$new, GPR:$addr)>;
-def : Pat<(atomic_cmp_swap_i16 GPR:$addr, GPR:$cmp, GPR:$new),
-          (AMCAS__DB_H GPR:$cmp, GPR:$new, GPR:$addr)>;
-def : Pat<(atomic_cmp_swap_i32 GPR:$addr, GPR:$cmp, GPR:$new),
-          (AMCAS__DB_W GPR:$cmp, GPR:$new, GPR:$addr)>;
-def : Pat<(atomic_cmp_swap_i64 GPR:$addr, GPR:$cmp, GPR:$new),
-          (AMCAS__DB_D GPR:$cmp, GPR:$new, GPR:$addr)>;
-}
 
 let Predicates = [IsLA64] in {
+
 defm : binary_atomic_op_wd<"AMSWAP", "atomic_swap">;
 defm : binary_atomic_op_wd<"AMADD", "atomic_load_add">;
 defm : binary_atomic_op_wd<"AMAND", "atomic_load_and">;

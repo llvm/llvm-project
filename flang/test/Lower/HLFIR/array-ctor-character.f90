@@ -52,7 +52,7 @@ contains
 ! CHECK:  %[[VAL_15:.*]] = arith.constant true
 ! CHECK:  %[[VAL_16:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.array<10xi64>>) -> !fir.llvm_ptr<i8>
 ! CHECK:  %[[VAL_20:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<2x!fir.char<1,?>>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK:  %[[VAL_22:.*]] = fir.call @_FortranAInitArrayConstructorVector(%[[VAL_16]], %[[VAL_20]], %[[VAL_15]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.llvm_ptr<i8>, !fir.ref<!fir.box<none>>, i1, !fir.ref<i8>, i32) -> none
+! CHECK:  %[[VAL_22:.*]] = fir.call @_FortranAInitArrayConstructorVector(%[[VAL_16]], %[[VAL_20]], %[[VAL_15]], %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.llvm_ptr<i8>, !fir.ref<!fir.box<none>>, i1, i32, !fir.ref<i8>, i32) -> none
 ! CHECK:  fir.call @_QMchararrayctorPchar_pointer(
 ! CHECK:  fir.call @_FortranAPushArrayConstructorValue(%[[VAL_16]], %{{.*}}) {{.*}}: (!fir.llvm_ptr<i8>, !fir.box<none>) -> none
 ! CHECK:  fir.call @_QMchararrayctorPchar_pointer(

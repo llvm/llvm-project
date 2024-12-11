@@ -78,7 +78,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasBFloat16 = false;
   bool HasSVE2 = false;
   bool HasSVE2p1 = false;
-  bool HasSVEAES = false;
+  bool HasSVE2AES = false;
   bool HasSVE2SHA3 = false;
   bool HasSVE2SM4 = false;
   bool HasSVEB16B16 = false;
@@ -137,7 +137,8 @@ public:
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
   bool setCPU(const std::string &Name) override;
 
-  unsigned getFMVPriority(ArrayRef<StringRef> Features) const override;
+  unsigned multiVersionSortPriority(StringRef Name) const override;
+  unsigned multiVersionFeatureCost() const override;
 
   bool useFP16ConversionIntrinsics() const override {
     return false;
@@ -180,8 +181,7 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  std::pair<const char *, ArrayRef<Builtin::Info>>
-  getTargetBuiltinStorage() const override;
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
   std::optional<std::pair<unsigned, unsigned>>
   getVScaleRange(const LangOptions &LangOpts) const override;

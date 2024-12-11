@@ -898,20 +898,6 @@ TEST(InstructionsTest, GEPIndices) {
   delete GEPI;
 }
 
-TEST(InstructionsTest, ZeroIndexGEP) {
-  LLVMContext Context;
-  DataLayout DL;
-  Type *PtrTy = PointerType::getUnqual(Context);
-  auto *GEP = GetElementPtrInst::Create(Type::getInt8Ty(Context),
-                                        PoisonValue::get(PtrTy), {});
-
-  APInt Offset(DL.getIndexTypeSizeInBits(PtrTy), 0);
-  EXPECT_TRUE(GEP->accumulateConstantOffset(DL, Offset));
-  EXPECT_TRUE(Offset.isZero());
-
-  delete GEP;
-}
-
 TEST(InstructionsTest, SwitchInst) {
   LLVMContext C;
 
@@ -1935,28 +1921,6 @@ TEST(InstructionsTest, AtomicSyncscope) {
                              LLVMAtomicOrderingSequentiallyConsistent,
                              LLVMAtomicOrderingSequentiallyConsistent, 1);
   EXPECT_TRUE(LLVMIsAtomicSingleThread(CmpXchg));
-}
-
-TEST(InstructionsTest, CmpPredicate) {
-  CmpPredicate P0(CmpInst::ICMP_ULE, false), P1(CmpInst::ICMP_ULE, true),
-      P2(CmpInst::ICMP_SLE, false), P3(CmpInst::ICMP_SLT, false);
-  CmpPredicate Q0 = P0, Q1 = P1, Q2 = P2;
-  CmpInst::Predicate R0 = P0, R1 = P1, R2 = P2;
-
-  EXPECT_EQ(*CmpPredicate::getMatching(P0, P1), CmpInst::ICMP_ULE);
-  EXPECT_EQ(CmpPredicate::getMatching(P0, P1)->hasSameSign(), false);
-  EXPECT_EQ(*CmpPredicate::getMatching(P1, P1), CmpInst::ICMP_ULE);
-  EXPECT_EQ(CmpPredicate::getMatching(P1, P1)->hasSameSign(), true);
-  EXPECT_EQ(CmpPredicate::getMatching(P0, P2), std::nullopt);
-  EXPECT_EQ(*CmpPredicate::getMatching(P1, P2), CmpInst::ICMP_SLE);
-  EXPECT_EQ(CmpPredicate::getMatching(P1, P2)->hasSameSign(), false);
-  EXPECT_EQ(CmpPredicate::getMatching(P1, P3), std::nullopt);
-  EXPECT_FALSE(Q0.hasSameSign());
-  EXPECT_TRUE(Q1.hasSameSign());
-  EXPECT_FALSE(Q2.hasSameSign());
-  EXPECT_EQ(P0, R0);
-  EXPECT_EQ(P1, R1);
-  EXPECT_EQ(P2, R2);
 }
 
 } // end anonymous namespace

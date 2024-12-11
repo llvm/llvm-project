@@ -190,8 +190,8 @@ Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst, hsa_agent_t DstAgent,
 #endif
 }
 
-Error getTargetTripleAndFeatures(hsa_agent_t Agent,
-                                 SmallVector<SmallString<32>> &Targets) {
+Expected<std::string> getTargetTripleAndFeatures(hsa_agent_t Agent) {
+  std::string Target;
   auto Err = hsa_utils::iterateAgentISAs(Agent, [&](hsa_isa_t ISA) {
     uint32_t Length;
     hsa_status_t Status;
@@ -205,13 +205,13 @@ Error getTargetTripleAndFeatures(hsa_agent_t Agent,
       return Status;
 
     llvm::StringRef TripleTarget(ISAName.begin(), Length);
-    if (TripleTarget.consume_front("amdgcn-amd-amdhsa")) {
-      auto Target = TripleTarget.ltrim('-').rtrim('\0');
-      Targets.push_back(Target);
-    }
+    if (TripleTarget.consume_front("amdgcn-amd-amdhsa"))
+      Target = TripleTarget.ltrim('-').rtrim('\0').str();
     return HSA_STATUS_SUCCESS;
   });
-  return Err;
+  if (Err)
+    return Err;
+  return Target;
 }
 } // namespace hsa_utils
 
@@ -468,7 +468,11 @@ struct AMDGPUDeviceImageTy : public DeviceImageTy {
   /// Unload the executable.
   Error unloadExecutable() {
     hsa_status_t Status = hsa_executable_destroy(Executable);
-    return Plugin::check(Status, "Error in hsa_executable_destroy: %s");
+    if (auto Err = Plugin::check(Status, "Error in hsa_executable_destroy: %s"))
+      return Err;
+
+    Status = hsa_code_object_destroy(CodeObject);
+    return Plugin::check(Status, "Error in hsa_code_object_destroy: %s");
   }
 
   /// Get the executable.
@@ -495,6 +499,7 @@ struct AMDGPUDeviceImageTy : public DeviceImageTy {
 private:
   /// The exectuable loaded on the agent.
   hsa_executable_t Executable;
+  hsa_code_object_t CodeObject;
   StringMap<offloading::amdgpu::AMDGPUKernelMetaData> KernelInfoMap;
   uint16_t ELFABIVersion;
 };
@@ -559,15 +564,15 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   }
 
   /// Launch the AMDGPU kernel function.
-  Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads[3],
-                   uint32_t NumBlocks[3], KernelArgsTy &KernelArgs,
+  Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
+                   uint64_t NumBlocks, KernelArgsTy &KernelArgs,
                    KernelLaunchParamsTy LaunchParams,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
 
   /// Print more elaborate kernel launch info for AMDGPU
   Error printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
-                               KernelArgsTy &KernelArgs, uint32_t NumThreads[3],
-                               uint32_t NumBlocks[3]) const override;
+                               KernelArgsTy &KernelArgs, uint32_t NumThreads,
+                               uint64_t NumBlocks) const override;
 
   /// Get group and private segment kernel size.
   uint32_t getGroupSize() const { return GroupSize; }
@@ -719,7 +724,7 @@ struct AMDGPUQueueTy {
   /// Push a kernel launch to the queue. The kernel launch requires an output
   /// signal and can define an optional input signal (nullptr if none).
   Error pushKernelLaunch(const AMDGPUKernelTy &Kernel, void *KernelArgs,
-                         uint32_t NumThreads[3], uint32_t NumBlocks[3],
+                         uint32_t NumThreads, uint64_t NumBlocks,
                          uint32_t GroupSize, uint64_t StackSize,
                          AMDGPUSignalTy *OutputSignal,
                          AMDGPUSignalTy *InputSignal) {
@@ -746,18 +751,14 @@ struct AMDGPUQueueTy {
     assert(Packet && "Invalid packet");
 
     // The first 32 bits of the packet are written after the other fields
-    uint16_t Dims = NumBlocks[2] * NumThreads[2] > 1
-                        ? 3
-                        : 1 + (NumBlocks[1] * NumThreads[1] != 1);
-    uint16_t Setup = UINT16_C(Dims)
-                     << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
-    Packet->workgroup_size_x = NumThreads[0];
-    Packet->workgroup_size_y = NumThreads[1];
-    Packet->workgroup_size_z = NumThreads[2];
+    uint16_t Setup = UINT16_C(1) << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
+    Packet->workgroup_size_x = NumThreads;
+    Packet->workgroup_size_y = 1;
+    Packet->workgroup_size_z = 1;
     Packet->reserved0 = 0;
-    Packet->grid_size_x = NumBlocks[0] * NumThreads[0];
-    Packet->grid_size_y = NumBlocks[1] * NumThreads[1];
-    Packet->grid_size_z = NumBlocks[2] * NumThreads[2];
+    Packet->grid_size_x = NumBlocks * NumThreads;
+    Packet->grid_size_y = 1;
+    Packet->grid_size_z = 1;
     Packet->private_segment_size =
         Kernel.usesDynamicStack() ? StackSize : Kernel.getPrivateSize();
     Packet->group_segment_size = GroupSize;
@@ -1244,7 +1245,7 @@ public:
   /// the kernel finalizes. Once the kernel is finished, the stream will release
   /// the kernel args buffer to the specified memory manager.
   Error pushKernelLaunch(const AMDGPUKernelTy &Kernel, void *KernelArgs,
-                         uint32_t NumThreads[3], uint32_t NumBlocks[3],
+                         uint32_t NumThreads, uint64_t NumBlocks,
                          uint32_t GroupSize, uint64_t StackSize,
                          AMDGPUMemoryManagerTy &MemoryManager) {
     if (Queue == nullptr)
@@ -1992,10 +1993,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return Err;
 
     // Detect if XNACK is enabled
-    SmallVector<SmallString<32>> Targets;
-    if (auto Err = hsa_utils::getTargetTripleAndFeatures(Agent, Targets))
-      return Err;
-    if (!Targets.empty() && Targets[0].str().contains("xnack+"))
+    auto TargeTripleAndFeaturesOrError =
+        hsa_utils::getTargetTripleAndFeatures(Agent);
+    if (!TargeTripleAndFeaturesOrError)
+      return TargeTripleAndFeaturesOrError.takeError();
+    if (static_cast<StringRef>(*TargeTripleAndFeaturesOrError)
+            .contains("xnack+"))
       IsXnackEnabled = true;
 
     // detect if device is an APU.
@@ -2150,7 +2153,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
   /// We want to set up the RPC server for host services to the GPU if it is
   /// availible.
-  bool shouldSetupRPCServer() const override { return true; }
+  bool shouldSetupRPCServer() const override {
+    return libomptargetSupportsRPC();
+  }
 
   /// The RPC interface should have enough space for all availible parallelism.
   uint64_t requestedRPCPortCount() const override {
@@ -2829,10 +2834,10 @@ private:
     AsyncInfoWrapperTy AsyncInfoWrapper(*this, nullptr);
 
     KernelArgsTy KernelArgs = {};
-    uint32_t NumBlocksAndThreads[3] = {1u, 1u, 1u};
-    if (auto Err = AMDGPUKernel.launchImpl(
-            *this, NumBlocksAndThreads, NumBlocksAndThreads, KernelArgs,
-            KernelLaunchParamsTy{}, AsyncInfoWrapper))
+    if (auto Err =
+            AMDGPUKernel.launchImpl(*this, /*NumThread=*/1u,
+                                    /*NumBlocks=*/1ul, KernelArgs,
+                                    KernelLaunchParamsTy{}, AsyncInfoWrapper))
       return Err;
 
     Error Err = Plugin::success();
@@ -2949,11 +2954,10 @@ private:
 };
 
 Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {
-  hsa_code_object_reader_t Reader;
-  hsa_status_t Status =
-      hsa_code_object_reader_create_from_memory(getStart(), getSize(), &Reader);
-  if (auto Err = Plugin::check(
-          Status, "Error in hsa_code_object_reader_create_from_memory: %s"))
+  hsa_status_t Status;
+  Status = hsa_code_object_deserialize(getStart(), getSize(), "", &CodeObject);
+  if (auto Err =
+          Plugin::check(Status, "Error in hsa_code_object_deserialize: %s"))
     return Err;
 
   Status = hsa_executable_create_alt(
@@ -2962,11 +2966,10 @@ Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {
           Plugin::check(Status, "Error in hsa_executable_create_alt: %s"))
     return Err;
 
-  hsa_loaded_code_object_t Object;
-  Status = hsa_executable_load_agent_code_object(Executable, Device.getAgent(),
-                                                 Reader, "", &Object);
-  if (auto Err = Plugin::check(
-          Status, "Error in hsa_executable_load_agent_code_object: %s"))
+  Status = hsa_executable_load_code_object(Executable, Device.getAgent(),
+                                           CodeObject, "");
+  if (auto Err =
+          Plugin::check(Status, "Error in hsa_executable_load_code_object: %s"))
     return Err;
 
   Status = hsa_executable_freeze(Executable, "");
@@ -2980,11 +2983,6 @@ Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {
 
   if (Result)
     return Plugin::error("Loaded HSA executable does not validate");
-
-  Status = hsa_code_object_reader_destroy(Reader);
-  if (auto Err =
-          Plugin::check(Status, "Error in hsa_code_object_reader_destroy: %s"))
-    return Err;
 
   if (auto Err = hsa_utils::readAMDGPUMetaDataFromImage(
           getMemoryBuffer(), KernelInfoMap, ELFABIVersion))
@@ -3209,16 +3207,13 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     if (!Processor)
       return false;
 
-    SmallVector<SmallString<32>> Targets;
-    if (auto Err = hsa_utils::getTargetTripleAndFeatures(
-            getKernelAgent(DeviceId), Targets))
-      return Err;
-    for (auto &Target : Targets)
-      if (offloading::amdgpu::isImageCompatibleWithEnv(
-              Processor ? *Processor : "", ElfOrErr->getPlatformFlags(),
-              Target.str()))
-        return true;
-    return false;
+    auto TargeTripleAndFeaturesOrError =
+        hsa_utils::getTargetTripleAndFeatures(getKernelAgent(DeviceId));
+    if (!TargeTripleAndFeaturesOrError)
+      return TargeTripleAndFeaturesOrError.takeError();
+    return offloading::amdgpu::isImageCompatibleWithEnv(
+        Processor ? *Processor : "", ElfOrErr->getPlatformFlags(),
+        *TargeTripleAndFeaturesOrError);
   }
 
   bool isDataExchangable(int32_t SrcDeviceId, int32_t DstDeviceId) override {
@@ -3333,7 +3328,7 @@ private:
 };
 
 Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
-                                 uint32_t NumThreads[3], uint32_t NumBlocks[3],
+                                 uint32_t NumThreads, uint64_t NumBlocks,
                                  KernelArgsTy &KernelArgs,
                                  KernelLaunchParamsTy LaunchParams,
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) const {
@@ -3390,15 +3385,13 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   // Only COV5 implicitargs needs to be set. COV4 implicitargs are not used.
   if (ImplArgs &&
       getImplicitArgsSize() == sizeof(hsa_utils::AMDGPUImplicitArgsTy)) {
-    ImplArgs->BlockCountX = NumBlocks[0];
-    ImplArgs->BlockCountY = NumBlocks[1];
-    ImplArgs->BlockCountZ = NumBlocks[2];
-    ImplArgs->GroupSizeX = NumThreads[0];
-    ImplArgs->GroupSizeY = NumThreads[1];
-    ImplArgs->GroupSizeZ = NumThreads[2];
-    ImplArgs->GridDims = NumBlocks[2] * NumThreads[2] > 1
-                             ? 3
-                             : 1 + (NumBlocks[1] * NumThreads[1] != 1);
+    ImplArgs->BlockCountX = NumBlocks;
+    ImplArgs->BlockCountY = 1;
+    ImplArgs->BlockCountZ = 1;
+    ImplArgs->GroupSizeX = NumThreads;
+    ImplArgs->GroupSizeY = 1;
+    ImplArgs->GroupSizeZ = 1;
+    ImplArgs->GridDims = 1;
     ImplArgs->DynamicLdsSize = KernelArgs.DynCGroupMem;
   }
 
@@ -3409,8 +3402,8 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
 Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
                                              KernelArgsTy &KernelArgs,
-                                             uint32_t NumThreads[3],
-                                             uint32_t NumBlocks[3]) const {
+                                             uint32_t NumThreads,
+                                             uint64_t NumBlocks) const {
   // Only do all this when the output is requested
   if (!(getInfoLevel() & OMP_INFOTYPE_PLUGIN_KERNEL))
     return Plugin::success();
@@ -3447,13 +3440,12 @@ Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
   // S/VGPR Spill Count: how many S/VGPRs are spilled by the kernel
   // Tripcount: loop tripcount for the kernel
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, GenericDevice.getDeviceId(),
-       "#Args: %d Teams x Thrds: %4ux%4u (MaxFlatWorkGroupSize: %u) LDS "
+       "#Args: %d Teams x Thrds: %4lux%4u (MaxFlatWorkGroupSize: %u) LDS "
        "Usage: %uB #SGPRs/VGPRs: %u/%u #SGPR/VGPR Spills: %u/%u Tripcount: "
        "%lu\n",
-       ArgNum, NumGroups[0] * NumGroups[1] * NumGroups[2],
-       ThreadsPerGroup[0] * ThreadsPerGroup[1] * ThreadsPerGroup[2],
-       MaxFlatWorkgroupSize, GroupSegmentSize, SGPRCount, VGPRCount,
-       SGPRSpillCount, VGPRSpillCount, LoopTripCount);
+       ArgNum, NumGroups, ThreadsPerGroup, MaxFlatWorkgroupSize,
+       GroupSegmentSize, SGPRCount, VGPRCount, SGPRSpillCount, VGPRSpillCount,
+       LoopTripCount);
 
   return Plugin::success();
 }

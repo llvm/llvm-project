@@ -205,10 +205,10 @@ const NamedDecl *nonloc::PointerToMember::getDecl() const {
     return nullptr;
 
   const NamedDecl *ND = nullptr;
-  if (const auto *NDP = dyn_cast<const NamedDecl *>(PTMD))
-    ND = NDP;
+  if (PTMD.is<const NamedDecl *>())
+    ND = PTMD.get<const NamedDecl *>();
   else
-    ND = cast<const PointerToMemberData *>(PTMD)->getDeclaratorDecl();
+    ND = PTMD.get<const PointerToMemberData *>()->getDeclaratorDecl();
 
   return ND;
 }
@@ -227,16 +227,16 @@ nonloc::CompoundVal::iterator nonloc::CompoundVal::end() const {
 
 nonloc::PointerToMember::iterator nonloc::PointerToMember::begin() const {
   const PTMDataType PTMD = getPTMData();
-  if (isa<const NamedDecl *>(PTMD))
+  if (PTMD.is<const NamedDecl *>())
     return {};
-  return cast<const PointerToMemberData *>(PTMD)->begin();
+  return PTMD.get<const PointerToMemberData *>()->begin();
 }
 
 nonloc::PointerToMember::iterator nonloc::PointerToMember::end() const {
   const PTMDataType PTMD = getPTMData();
-  if (isa<const NamedDecl *>(PTMD))
+  if (PTMD.is<const NamedDecl *>())
     return {};
-  return cast<const PointerToMemberData *>(PTMD)->end();
+  return PTMD.get<const PointerToMemberData *>()->end();
 }
 
 //===----------------------------------------------------------------------===//

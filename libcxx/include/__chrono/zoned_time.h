@@ -58,7 +58,7 @@ struct zoned_traits<const time_zone*> {
 template <class _Duration, class _TimeZonePtr = const time_zone*>
 class zoned_time {
   // [time.zone.zonedtime.ctor]/2
-  static_assert(__is_duration_v<_Duration>,
+  static_assert(__is_duration<_Duration>::value,
                 "the program is ill-formed since _Duration is not a specialization of std::chrono::duration");
 
   // The wording uses the constraints like

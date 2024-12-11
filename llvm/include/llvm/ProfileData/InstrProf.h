@@ -344,9 +344,7 @@ enum class InstrProfKind {
   MemProf = 0x40,
   // A temporal profile.
   TemporalProfile = 0x80,
-  // A profile with loop entry basic blocks instrumentation.
-  LoopEntriesInstrumentation = 0x100,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/LoopEntriesInstrumentation)
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/TemporalProfile)
 };
 
 const std::error_category &instrprof_category();

@@ -22,11 +22,6 @@ while.cond:
   %cmp = icmp ne i32 %2, 0
   br i1 %cmp, label %while.body, label %while.end
 
-; CHECK:        %[[#while_end]] = OpLabel
-; CHECK-NEXT:                     OpReturn
-while.end:
-  ret void
-
 ; CHECK:   %[[#while_body]] = OpLabel
 ; CHECK:                      OpBranch %[[#while_cond]]
 while.body:
@@ -34,6 +29,10 @@ while.body:
   store i32 %3, ptr %idx, align 4
   br label %while.cond
 
+; CHECK:        %[[#while_end]] = OpLabel
+; CHECK-NEXT:                     OpReturn
+while.end:
+  ret void
 }
 
 declare token @llvm.experimental.convergence.entry() #2

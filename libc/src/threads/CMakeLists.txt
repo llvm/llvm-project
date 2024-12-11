@@ -24,7 +24,7 @@ add_entrypoint_object(
     libc.include.threads
     libc.src.errno.errno
   COMPILE_OPTIONS
-    ${libc_opt_high_flag}
+    -O3
     -fno-omit-frame-pointer # This allows us to sniff out the thread args from
                             # the new thread's stack reliably.
 )

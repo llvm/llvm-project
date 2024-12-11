@@ -9,9 +9,7 @@
 ; OPTS-LABEL: foo:
 ; OPTS-NEXT:   .Lfunc_begin0:
 ; OPTS-NEXT:   .file   0 "." "foobar.c"
-; OPTS-NEXT:   .cfi_startproc
-; OPTS-NEXT:   # %bb.0:
-; OPTS-NEXT:   .loc    0 1 0 prologue_end
+; OPTS-NEXT:   .loc    0 1 0
 ; OPTS-LABEL: bar:
 
 define dso_local noundef i32 @foo(ptr nocapture noundef writeonly %bar) local_unnamed_addr !dbg !10 {
@@ -26,9 +24,8 @@ entry:
 
 ; UNOPT-LABEL: bar:
 ; UNOPT-NEXT:   .Lfunc_begin1:
-; UNOPT-NEXT:   .cfi_startproc
+; UNOPT-NEXT:   .loc    0 11 0
 ; UNOPT-LABEL: %bb.0:
-; UNOPT-NEXT:   .loc    0 11 0 prologue_end
 ; UNOPT-NEXT:    movq    %rdi, -8(%rsp)
 ; UNOPT-NEXT:    jmp     .LBB1_1
 ; UNOPT-LABEL: .LBB1_1:

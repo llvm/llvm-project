@@ -315,9 +315,7 @@ public:
   static bool classof(const Symbol *s) { return s->kind() == DefinedDataKind; }
 
   // Returns the output virtual address of a defined data symbol.
-  // For TLS symbols, by default (unless absolute is set), this returns an
-  // address relative the `__tls_base`.
-  uint64_t getVA(bool absolute = false) const;
+  uint64_t getVA() const;
   void setVA(uint64_t va);
 
   // Returns the offset of a defined data symbol within its OutputSegment.

@@ -43,9 +43,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Type.h"
-#include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/DebugInfo/DWARF/DWARFTypePrinter.h"
 #include "llvm/Demangle/Demangle.h"
 
 #include <map>
@@ -827,11 +825,11 @@ std::string DWARFASTParserClang::GetDIEClassTemplateParams(DWARFDIE die) {
   if (llvm::StringRef(die.GetName()).contains("<"))
     return {};
 
-  std::string name;
-  llvm::raw_string_ostream os(name);
-  llvm::DWARFTypePrinter<DWARFDIE> type_printer(os);
-  type_printer.appendAndTerminateTemplateParameters(die);
-  return name;
+  TypeSystemClang::TemplateParameterInfos template_param_infos;
+  if (ParseTemplateParameterInfos(die, template_param_infos))
+    return m_ast.PrintTemplateParams(template_param_infos);
+
+  return {};
 }
 
 void DWARFASTParserClang::MapDeclDIEToDefDIE(
@@ -1619,9 +1617,9 @@ void DWARFASTParserClang::GetUniqueTypeNameAndDeclaration(
     case DW_TAG_structure_type:
     case DW_TAG_union_type: {
       if (const char *class_union_struct_name = parent_decl_ctx_die.GetName()) {
+        qualified_name.insert(
+            0, GetDIEClassTemplateParams(parent_decl_ctx_die));
         qualified_name.insert(0, "::");
-        qualified_name.insert(0,
-                              GetDIEClassTemplateParams(parent_decl_ctx_die));
         qualified_name.insert(0, class_union_struct_name);
       }
       parent_decl_ctx_die = parent_decl_ctx_die.GetParentDeclContextDIE();
@@ -1674,12 +1672,6 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   if (attrs.name) {
     GetUniqueTypeNameAndDeclaration(die, cu_language, unique_typename,
                                     unique_decl);
-    if (log) {
-      dwarf->GetObjectFile()->GetModule()->LogMessage(
-          log, "SymbolFileDWARF({0:p}) - {1:x16}: {2} has unique name: {3} ",
-          static_cast<void *>(this), die.GetID(), DW_TAG_value_to_name(tag),
-          unique_typename.AsCString());
-    }
     if (UniqueDWARFASTType *unique_ast_entry_type =
             dwarf->GetUniqueDWARFASTTypeMap().Find(
                 unique_typename, die, unique_decl, byte_size,
@@ -2145,16 +2137,6 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
       m_ast.GetAsCXXRecordDecl(clang_type.GetOpaqueQualType());
   if (record_decl)
     GetClangASTImporter().SetRecordLayout(record_decl, layout_info);
-
-  // DWARF doesn't have the attribute, but we can infer the value the same way
-  // as Clang Sema does. It's required to calculate the size of pointers to
-  // member functions of this type.
-  if (m_ast.getASTContext().getTargetInfo().getCXXABI().isMicrosoft()) {
-    auto IM = record_decl->calculateInheritanceModel();
-    record_decl->addAttr(clang::MSInheritanceAttr::CreateImplicit(
-        m_ast.getASTContext(), true, {},
-        clang::MSInheritanceAttr::Spelling(IM)));
-  }
 
   // Now parse all contained types inside of the class. We make forward
   // declarations to all classes, but we need the CXXRecordDecl to have decls

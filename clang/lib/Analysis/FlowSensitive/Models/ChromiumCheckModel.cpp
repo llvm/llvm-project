@@ -16,9 +16,8 @@ namespace dataflow {
 
 /// Determines whether `D` is one of the methods used to implement Chromium's
 /// `CHECK` macros. Populates `CheckDecls`, if empty.
-static bool
-isCheckLikeMethod(llvm::SmallDenseSet<const CXXMethodDecl *> &CheckDecls,
-                  const CXXMethodDecl &D) {
+bool isCheckLikeMethod(llvm::SmallDenseSet<const CXXMethodDecl *> &CheckDecls,
+                       const CXXMethodDecl &D) {
   // All of the methods of interest are static, so avoid any lookup for
   // non-static methods (the common case).
   if (!D.isStatic())

@@ -70,6 +70,11 @@ raw_ostream &lld::outs() {
   return e.outs();
 }
 
+raw_ostream &lld::errs() {
+  ErrorHandler &e = errorHandler();
+  return e.errs();
+}
+
 raw_ostream &ErrorHandler::outs() {
   if (disableOutput)
     return llvm::nulls();
@@ -141,11 +146,6 @@ void lld::checkError(Error e) {
                   [&](ErrorInfoBase &eib) { error(eib.message()); });
 }
 
-void lld::checkError(ErrorHandler &eh, Error e) {
-  handleAllErrors(std::move(e),
-                  [&](ErrorInfoBase &eib) { eh.error(eib.message()); });
-}
-
 // This is for --vs-diagnostics.
 //
 // Normally, lld's error message starts with argv[0]. Therefore, it usually
@@ -210,7 +210,7 @@ void ErrorHandler::reportDiagnostic(StringRef location, Colors c,
   raw_svector_ostream os(buf);
   os << sep << location << ": ";
   if (!diagKind.empty()) {
-    if (errs().colors_enabled()) {
+    if (lld::errs().colors_enabled()) {
       os.enable_colors(true);
       os << c << diagKind << ": " << Colors::RESET;
     } else {
@@ -218,10 +218,7 @@ void ErrorHandler::reportDiagnostic(StringRef location, Colors c,
     }
   }
   os << msg << '\n';
-  errs() << buf;
-  // If msg contains a newline, ensure that the next diagnostic is preceded by
-  // a blank line separator.
-  sep = getSeparator(msg);
+  lld::errs() << buf;
 }
 
 void ErrorHandler::log(const Twine &msg) {
@@ -250,6 +247,7 @@ void ErrorHandler::warn(const Twine &msg) {
 
   std::lock_guard<std::mutex> lock(mu);
   reportDiagnostic(getLocation(msg), Colors::MAGENTA, "warning", msg);
+  sep = getSeparator(msg);
 }
 
 void ErrorHandler::error(const Twine &msg) {
@@ -280,6 +278,7 @@ void ErrorHandler::error(const Twine &msg) {
       exit = exitEarly;
     }
 
+    sep = getSeparator(msg);
     ++errorCount;
   }
 
@@ -338,14 +337,10 @@ void ErrorHandler::fatal(const Twine &msg) {
 }
 
 SyncStream::~SyncStream() {
+  os.flush();
   switch (level) {
-  case DiagLevel::None:
-    break;
   case DiagLevel::Log:
     e.log(buf);
-    break;
-  case DiagLevel::Msg:
-    e.message(buf, e.outs());
     break;
   case DiagLevel::Warn:
     e.warn(buf);

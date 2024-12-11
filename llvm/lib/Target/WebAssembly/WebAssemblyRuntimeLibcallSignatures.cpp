@@ -21,6 +21,7 @@
 #include "WebAssemblyRuntimeLibcallSignatures.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 
 using namespace llvm;
 

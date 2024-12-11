@@ -408,9 +408,4 @@ def AffineExpandIndexOps : Pass<"affine-expand-index-ops"> {
   let constructor = "mlir::affine::createAffineExpandIndexOpsPass()";
 }
 
-def AffineExpandIndexOpsAsAffine : Pass<"affine-expand-index-ops-as-affine"> {
-  let summary = "Lower affine operations operating on indices into affine.apply operations";
-  let constructor = "mlir::affine::createAffineExpandIndexOpsAsAffinePass()";
-}
-
 #endif // MLIR_DIALECT_AFFINE_PASSES

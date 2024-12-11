@@ -287,8 +287,6 @@ protected:
   }
 
   DominatorTreeBase &operator=(DominatorTreeBase &&RHS) {
-    if (this == &RHS)
-      return *this;
     Roots = std::move(RHS.Roots);
     DomTreeNodes = std::move(RHS.DomTreeNodes);
     NodeNumberMap = std::move(RHS.NodeNumberMap);

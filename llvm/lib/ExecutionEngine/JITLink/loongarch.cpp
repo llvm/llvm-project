@@ -49,7 +49,6 @@ const char *getEdgeKindName(Edge::Kind K) {
     KIND_NAME_CASE(PageOffset12)
     KIND_NAME_CASE(RequestGOTAndTransformToPage20)
     KIND_NAME_CASE(RequestGOTAndTransformToPageOffset12)
-    KIND_NAME_CASE(Call36PCRel)
   default:
     return getGenericEdgeKindName(K);
   }

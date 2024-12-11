@@ -73,7 +73,20 @@ bool TransferOptimization::isReachable(Operation *start, Operation *dest) {
   // Simple case where the start op dominate the destination.
   if (dominators.dominates(start, dest))
     return true;
-  return start->getBlock()->isReachable(dest->getBlock());
+  Block *startBlock = start->getBlock();
+  Block *destBlock = dest->getBlock();
+  SmallVector<Block *, 32> worklist(startBlock->succ_begin(),
+                                    startBlock->succ_end());
+  SmallPtrSet<Block *, 32> visited;
+  while (!worklist.empty()) {
+    Block *bb = worklist.pop_back_val();
+    if (!visited.insert(bb).second)
+      continue;
+    if (dominators.dominates(bb, destBlock))
+      return true;
+    worklist.append(bb->succ_begin(), bb->succ_end());
+  }
+  return false;
 }
 
 /// For transfer_write to overwrite fully another transfer_write must:

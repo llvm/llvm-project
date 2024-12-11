@@ -11,8 +11,10 @@
 
 // <semaphore>
 
-#include <cstddef>
 #include <semaphore>
+#include <thread>
+
+#include "test_macros.h"
 
 int main(int, char**)
 {

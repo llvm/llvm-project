@@ -29,15 +29,15 @@ CIRGenerator::CIRGenerator(clang::DiagnosticsEngine &diags,
     : diags(diags), fs(std::move(vfs)), codeGenOpts{cgo} {}
 CIRGenerator::~CIRGenerator() = default;
 
-void CIRGenerator::Initialize(ASTContext &astContext) {
+void CIRGenerator::Initialize(ASTContext &astCtx) {
   using namespace llvm;
 
-  this->astContext = &astContext;
+  this->astCtx = &astCtx;
 
-  mlirContext = std::make_unique<mlir::MLIRContext>();
-  mlirContext->loadDialect<cir::CIRDialect>();
-  cgm = std::make_unique<clang::CIRGen::CIRGenModule>(
-      *mlirContext.get(), astContext, codeGenOpts, diags);
+  mlirCtx = std::make_unique<mlir::MLIRContext>();
+  mlirCtx->loadDialect<cir::CIRDialect>();
+  cgm = std::make_unique<clang::CIRGen::CIRGenModule>(*mlirCtx.get(), astCtx,
+                                                      codeGenOpts, diags);
 }
 
 mlir::ModuleOp CIRGenerator::getModule() const { return cgm->getModule(); }

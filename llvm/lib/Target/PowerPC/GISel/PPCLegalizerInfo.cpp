@@ -10,6 +10,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPCLegalizerInfo.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
+#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "ppc-legalinfo"
 

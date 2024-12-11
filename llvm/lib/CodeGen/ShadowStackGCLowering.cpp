@@ -42,6 +42,7 @@
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
 #include <cassert>
 #include <optional>
+#include <string>
 #include <utility>
 #include <vector>
 

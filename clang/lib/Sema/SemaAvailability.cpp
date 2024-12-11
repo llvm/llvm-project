@@ -13,9 +13,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/AST/DynamicRecursiveASTVisitor.h"
-#include "clang/AST/ExprObjC.h"
-#include "clang/AST/StmtObjC.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
@@ -743,11 +741,11 @@ bool isBodyLikeChildStmt(const Stmt *S, const Stmt *Parent) {
   }
 }
 
-class StmtUSEFinder : public DynamicRecursiveASTVisitor {
+class StmtUSEFinder : public RecursiveASTVisitor<StmtUSEFinder> {
   const Stmt *Target;
 
 public:
-  bool VisitStmt(Stmt *S) override { return S != Target; }
+  bool VisitStmt(Stmt *S) { return S != Target; }
 
   /// Returns true if the given statement is present in the given declaration.
   static bool isContained(const Stmt *Target, const Decl *D) {
@@ -759,11 +757,11 @@ public:
 
 /// Traverses the AST and finds the last statement that used a given
 /// declaration.
-class LastDeclUSEFinder : public DynamicRecursiveASTVisitor {
+class LastDeclUSEFinder : public RecursiveASTVisitor<LastDeclUSEFinder> {
   const Decl *D;
 
 public:
-  bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
     if (DRE->getDecl() == D)
       return false;
     return true;
@@ -787,7 +785,10 @@ public:
 /// to a partially available declaration. Whenever we encounter an \c if of the
 /// form: \c if(@available(...)), we use the version from the condition to visit
 /// the then statement.
-class DiagnoseUnguardedAvailability : public DynamicRecursiveASTVisitor {
+class DiagnoseUnguardedAvailability
+    : public RecursiveASTVisitor<DiagnoseUnguardedAvailability> {
+  typedef RecursiveASTVisitor<DiagnoseUnguardedAvailability> Base;
+
   Sema &SemaRef;
   Decl *Ctx;
 
@@ -805,26 +806,26 @@ public:
         SemaRef.Context.getTargetInfo().getPlatformMinVersion());
   }
 
-  bool TraverseStmt(Stmt *S) override {
+  bool TraverseStmt(Stmt *S) {
     if (!S)
       return true;
     StmtStack.push_back(S);
-    bool Result = DynamicRecursiveASTVisitor::TraverseStmt(S);
+    bool Result = Base::TraverseStmt(S);
     StmtStack.pop_back();
     return Result;
   }
 
   void IssueDiagnostics(Stmt *S) { TraverseStmt(S); }
 
-  bool TraverseIfStmt(IfStmt *If) override;
+  bool TraverseIfStmt(IfStmt *If);
 
   // for 'case X:' statements, don't bother looking at the 'X'; it can't lead
   // to any useful diagnostics.
-  bool TraverseCaseStmt(CaseStmt *CS) override {
-    return TraverseStmt(CS->getSubStmt());
-  }
+  bool TraverseCaseStmt(CaseStmt *CS) { return TraverseStmt(CS->getSubStmt()); }
 
-  bool VisitObjCMessageExpr(ObjCMessageExpr *Msg) override {
+  bool VisitObjCPropertyRefExpr(ObjCPropertyRefExpr *PRE) { return true; }
+
+  bool VisitObjCMessageExpr(ObjCMessageExpr *Msg) {
     if (ObjCMethodDecl *D = Msg->getMethodDecl()) {
       ObjCInterfaceDecl *ID = nullptr;
       QualType ReceiverTy = Msg->getClassReceiver();
@@ -837,25 +838,25 @@ public:
     return true;
   }
 
-  bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
     DiagnoseDeclAvailability(DRE->getDecl(),
                              SourceRange(DRE->getBeginLoc(), DRE->getEndLoc()));
     return true;
   }
 
-  bool VisitMemberExpr(MemberExpr *ME) override {
+  bool VisitMemberExpr(MemberExpr *ME) {
     DiagnoseDeclAvailability(ME->getMemberDecl(),
                              SourceRange(ME->getBeginLoc(), ME->getEndLoc()));
     return true;
   }
 
-  bool VisitObjCAvailabilityCheckExpr(ObjCAvailabilityCheckExpr *E) override {
+  bool VisitObjCAvailabilityCheckExpr(ObjCAvailabilityCheckExpr *E) {
     SemaRef.Diag(E->getBeginLoc(), diag::warn_at_available_unchecked_use)
         << (!SemaRef.getLangOpts().ObjC);
     return true;
   }
 
-  bool VisitTypeLoc(TypeLoc Ty) override;
+  bool VisitTypeLoc(TypeLoc Ty);
 };
 
 void DiagnoseUnguardedAvailability::DiagnoseDeclAvailability(
@@ -1037,7 +1038,7 @@ bool DiagnoseUnguardedAvailability::TraverseIfStmt(IfStmt *If) {
   ExtractedAvailabilityExpr IfCond = extractAvailabilityExpr(If->getCond());
   if (!IfCond.E) {
     // This isn't an availability checking 'if', we can just continue.
-    return DynamicRecursiveASTVisitor::TraverseIfStmt(If);
+    return Base::TraverseIfStmt(If);
   }
 
   VersionTuple CondVersion = IfCond.E->getVersion();

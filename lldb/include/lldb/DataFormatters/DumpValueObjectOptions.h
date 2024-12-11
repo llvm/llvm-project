@@ -22,12 +22,13 @@ namespace lldb_private {
 class DumpValueObjectOptions {
 public:
   struct PointerDepth {
-    uint32_t m_count = 0;
+    enum class Mode { Always, Default, Never } m_mode;
+    uint32_t m_count;
 
     PointerDepth Decremented() const {
       if (m_count > 0)
-        return {m_count - 1};
-      return *this;
+        return PointerDepth{m_mode, m_count - 1};
+      return PointerDepth{m_mode, m_count};
     }
 
     bool CanAllowExpansion() const;
@@ -64,7 +65,8 @@ public:
 
   DumpValueObjectOptions(ValueObject &valobj);
 
-  DumpValueObjectOptions &SetMaximumPointerDepth(uint32_t depth);
+  DumpValueObjectOptions &
+  SetMaximumPointerDepth(PointerDepth depth = {PointerDepth::Mode::Never, 0});
 
   DumpValueObjectOptions &SetMaximumDepth(uint32_t depth, bool is_default);
 

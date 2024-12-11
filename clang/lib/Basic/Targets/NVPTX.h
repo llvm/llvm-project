@@ -17,7 +17,6 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
@@ -74,8 +73,7 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  std::pair<const char *, ArrayRef<Builtin::Info>>
-  getTargetBuiltinStorage() const override;
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
   bool useFP16ConversionIntrinsics() const override { return false; }
 
@@ -90,20 +88,6 @@ public:
   }
 
   bool hasFeature(StringRef Feature) const override;
-
-  virtual bool isAddressSpaceSupersetOf(LangAS A, LangAS B) const override {
-    // The generic address space AS(0) is a superset of all the other address
-    // spaces used by the backend target.
-    return A == B ||
-           ((A == LangAS::Default ||
-             (isTargetAddressSpace(A) &&
-              toTargetAddressSpace(A) ==
-                  llvm::NVPTXAS::ADDRESS_SPACE_GENERIC)) &&
-            isTargetAddressSpace(B) &&
-            toTargetAddressSpace(B) >= llvm::NVPTXAS::ADDRESS_SPACE_GENERIC &&
-            toTargetAddressSpace(B) <= llvm::NVPTXAS::ADDRESS_SPACE_LOCAL &&
-            toTargetAddressSpace(B) != 2);
-  }
 
   ArrayRef<const char *> getGCCRegNames() const override;
 

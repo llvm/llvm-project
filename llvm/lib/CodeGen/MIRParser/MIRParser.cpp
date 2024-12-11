@@ -314,7 +314,7 @@ bool MIRParserImpl::parseMachineFunction(Module &M, MachineModuleInfo &MMI,
   yaml::MachineFunction YamlMF;
   yaml::EmptyContext Ctx;
 
-  const TargetMachine &TM = MMI.getTarget();
+  const LLVMTargetMachine &TM = MMI.getTarget();
   YamlMF.MachineFuncInfo = std::unique_ptr<yaml::MachineFunctionInfo>(
       TM.createDefaultFuncInfoYAML());
 
@@ -461,7 +461,7 @@ bool MIRParserImpl::initializeCallSiteInfo(
     PerFunctionMIParsingState &PFS, const yaml::MachineFunction &YamlMF) {
   MachineFunction &MF = PFS.MF;
   SMDiagnostic Error;
-  const TargetMachine &TM = MF.getTarget();
+  const LLVMTargetMachine &TM = MF.getTarget();
   for (auto &YamlCSInfo : YamlMF.CallSitesInfo) {
     yaml::CallSiteInfo::MachineInstrLoc MILoc = YamlCSInfo.CallLocation;
     if (MILoc.BlockNum >= MF.size())
@@ -615,7 +615,7 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
     return true;
 
   if (YamlMF.MachineFuncInfo) {
-    const TargetMachine &TM = MF.getTarget();
+    const LLVMTargetMachine &TM = MF.getTarget();
     // Note this is called after the initial constructor of the
     // MachineFunctionInfo based on the MachineFunction, which may depend on the
     // IR.

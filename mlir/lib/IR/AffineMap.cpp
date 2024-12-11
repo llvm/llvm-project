@@ -833,10 +833,7 @@ AffineMap mlir::inverseAndBroadcastProjectedPermutation(AffineMap map) {
   return AffineMap::get(map.getNumResults(), /*symbolCount=*/0, exprs, context);
 }
 
-AffineMap mlir::concatAffineMaps(ArrayRef<AffineMap> maps,
-                                 MLIRContext *context) {
-  if (maps.empty())
-    return AffineMap::get(context);
+AffineMap mlir::concatAffineMaps(ArrayRef<AffineMap> maps) {
   unsigned numResults = 0, numDims = 0, numSymbols = 0;
   for (auto m : maps)
     numResults += m.getNumResults();
@@ -849,7 +846,8 @@ AffineMap mlir::concatAffineMaps(ArrayRef<AffineMap> maps,
     numSymbols += m.getNumSymbols();
     numDims = std::max(m.getNumDims(), numDims);
   }
-  return AffineMap::get(numDims, numSymbols, results, context);
+  return AffineMap::get(numDims, numSymbols, results,
+                        maps.front().getContext());
 }
 
 /// Common implementation to project out dimensions or symbols from an affine

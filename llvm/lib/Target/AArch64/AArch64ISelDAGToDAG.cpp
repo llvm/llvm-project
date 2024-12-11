@@ -32,7 +32,7 @@ using namespace llvm;
 #define PASS_NAME "AArch64 Instruction Selection"
 
 // https://github.com/llvm/llvm-project/issues/114425
-#if defined(_MSC_VER) && !defined(__clang__) && !defined(NDEBUG)
+#if defined(_WIN32) && !defined(__clang__) && !defined(NDEBUG)
 #pragma inline_depth(0)
 #endif
 
@@ -383,7 +383,6 @@ public:
   void SelectPExtPair(SDNode *N, unsigned Opc);
   void SelectWhilePair(SDNode *N, unsigned Opc);
   void SelectCVTIntrinsic(SDNode *N, unsigned NumVecs, unsigned Opcode);
-  void SelectCVTIntrinsicFP8(SDNode *N, unsigned NumVecs, unsigned Opcode);
   void SelectClamp(SDNode *N, unsigned NumVecs, unsigned Opcode);
   void SelectUnaryMultiIntrinsic(SDNode *N, unsigned NumOutVecs,
                                  bool IsTupleInput, unsigned Opc);
@@ -921,7 +920,8 @@ bool AArch64DAGToDAGISel::SelectRDVLImm(SDValue N, SDValue &Imm) {
   if ((MulImm % std::abs(Scale)) == 0) {
     int64_t RDVLImm = MulImm / Scale;
     if ((RDVLImm >= Low) && (RDVLImm <= High)) {
-      Imm = CurDAG->getSignedTargetConstant(RDVLImm, SDLoc(N), MVT::i32);
+      Imm = CurDAG->getSignedConstant(RDVLImm, SDLoc(N), MVT::i32,
+                                      /*isTarget=*/true);
       return true;
     }
   }
@@ -1864,27 +1864,6 @@ void AArch64DAGToDAGISel::SelectCVTIntrinsic(SDNode *N, unsigned NumVecs,
     ReplaceUses(SDValue(N, i), CurDAG->getTargetExtractSubreg(
                                    AArch64::zsub0 + i, DL, VT, SuperReg));
 
-  CurDAG->RemoveDeadNode(N);
-}
-
-void AArch64DAGToDAGISel::SelectCVTIntrinsicFP8(SDNode *N, unsigned NumVecs,
-                                                unsigned Opcode) {
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
-  SmallVector<SDValue, 4> Ops(N->op_begin() + 2, N->op_end());
-  Ops.push_back(/*Chain*/ N->getOperand(0));
-
-  SDNode *Instruction =
-      CurDAG->getMachineNode(Opcode, DL, {MVT::Untyped, MVT::Other}, Ops);
-  SDValue SuperReg = SDValue(Instruction, 0);
-
-  for (unsigned i = 0; i < NumVecs; ++i)
-    ReplaceUses(SDValue(N, i), CurDAG->getTargetExtractSubreg(
-                                   AArch64::zsub0 + i, DL, VT, SuperReg));
-
-  // Copy chain
-  unsigned ChainIdx = NumVecs;
-  ReplaceUses(SDValue(N, ChainIdx), SDValue(Instruction, 1));
   CurDAG->RemoveDeadNode(N);
 }
 
@@ -4304,7 +4283,7 @@ bool AArch64DAGToDAGISel::SelectSVESignedArithImm(SDValue N, SDValue &Imm) {
     int64_t ImmVal = CNode->getSExtValue();
     SDLoc DL(N);
     if (ImmVal >= -128 && ImmVal < 128) {
-      Imm = CurDAG->getSignedTargetConstant(ImmVal, DL, MVT::i32);
+      Imm = CurDAG->getSignedConstant(ImmVal, DL, MVT::i32, /*isTarget=*/true);
       return true;
     }
   }
@@ -5569,30 +5548,6 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       SelectMultiVectorLuti(Node, 4, AArch64::LUTI4_4ZZT2Z);
       return;
     }
-    case Intrinsic::aarch64_sve_fp8_cvtl1_x2:
-      if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::FP>(
-              Node->getValueType(0),
-              {AArch64::BF1CVTL_2ZZ_BtoH, AArch64::F1CVTL_2ZZ_BtoH}))
-        SelectCVTIntrinsicFP8(Node, 2, Opc);
-      return;
-    case Intrinsic::aarch64_sve_fp8_cvtl2_x2:
-      if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::FP>(
-              Node->getValueType(0),
-              {AArch64::BF2CVTL_2ZZ_BtoH, AArch64::F2CVTL_2ZZ_BtoH}))
-        SelectCVTIntrinsicFP8(Node, 2, Opc);
-      return;
-    case Intrinsic::aarch64_sve_fp8_cvt1_x2:
-      if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::FP>(
-              Node->getValueType(0),
-              {AArch64::BF1CVT_2ZZ_BtoH, AArch64::F1CVT_2ZZ_BtoH}))
-        SelectCVTIntrinsicFP8(Node, 2, Opc);
-      return;
-    case Intrinsic::aarch64_sve_fp8_cvt2_x2:
-      if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::FP>(
-              Node->getValueType(0),
-              {AArch64::BF2CVT_2ZZ_BtoH, AArch64::F2CVT_2ZZ_BtoH}))
-        SelectCVTIntrinsicFP8(Node, 2, Opc);
-      return;
     }
   } break;
   case ISD::INTRINSIC_WO_CHAIN: {

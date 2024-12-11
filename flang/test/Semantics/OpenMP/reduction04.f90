@@ -14,7 +14,8 @@ program omp_Reduction
   end do
   !$omp end parallel do
 
-  !ERROR: Common block names are not allowed in REDUCTION clause
+  !ERROR: Variable 'c' on the REDUCTION clause is not definable
+  !BECAUSE: 'c' is not a variable
   !$omp parallel do reduction(*:/c/)
   do i = 1, 10
     l = k + 1

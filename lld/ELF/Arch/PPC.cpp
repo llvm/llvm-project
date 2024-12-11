@@ -250,7 +250,7 @@ RelExpr PPC::getRelExpr(RelType type, const Symbol &s,
   case R_PPC_REL24:
     return R_PLT_PC;
   case R_PPC_PLTREL24:
-    return RE_PPC32_PLTREL;
+    return R_PPC32_PLTREL;
   case R_PPC_GOT_TLSGD16:
     return R_TLSGD_GOT;
   case R_PPC_GOT_TLSLD16:
@@ -269,7 +269,7 @@ RelExpr PPC::getRelExpr(RelType type, const Symbol &s,
   case R_PPC_TPREL16_HI:
     return R_TPREL;
   default:
-    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
              << ") against symbol " << &s;
     return R_NONE;
   }
@@ -296,7 +296,8 @@ int64_t PPC::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_PPC_TPREL32:
     return SignExtend64<32>(read32(ctx, buf));
   default:
-    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
+    internalLinkerError(getErrorLoc(ctx, buf),
+                        "cannot read addend for relocation " + toString(type));
     return 0;
   }
 }

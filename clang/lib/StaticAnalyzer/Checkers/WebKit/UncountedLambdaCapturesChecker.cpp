@@ -10,7 +10,7 @@
 #include "DiagOutputUtils.h"
 #include "PtrTypesSemantics.h"
 #include "clang/AST/CXXInheritance.h"
-#include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -37,23 +37,25 @@ public:
     // The calls to checkAST* from AnalysisConsumer don't
     // visit template instantiations or lambda classes. We
     // want to visit those, so we make our own RecursiveASTVisitor.
-    struct LocalVisitor : DynamicRecursiveASTVisitor {
+    struct LocalVisitor : public RecursiveASTVisitor<LocalVisitor> {
       const UncountedLambdaCapturesChecker *Checker;
       llvm::DenseSet<const DeclRefExpr *> DeclRefExprsToIgnore;
       QualType ClsType;
 
+      using Base = RecursiveASTVisitor<LocalVisitor>;
+
       explicit LocalVisitor(const UncountedLambdaCapturesChecker *Checker)
           : Checker(Checker) {
         assert(Checker);
-        ShouldVisitTemplateInstantiations = true;
-        ShouldVisitImplicitCode = false;
       }
 
-      bool TraverseCXXMethodDecl(CXXMethodDecl *CXXMD) override {
+      bool shouldVisitTemplateInstantiations() const { return true; }
+      bool shouldVisitImplicitCode() const { return false; }
+
+      bool TraverseCXXMethodDecl(CXXMethodDecl *CXXMD) {
         llvm::SaveAndRestore SavedDecl(ClsType);
-        if (CXXMD && CXXMD->isInstance())
-          ClsType = CXXMD->getThisType();
-        return DynamicRecursiveASTVisitor::TraverseCXXMethodDecl(CXXMD);
+        ClsType = CXXMD->getThisType();
+        return Base::TraverseCXXMethodDecl(CXXMD);
       }
 
       bool shouldCheckThis() {
@@ -61,7 +63,7 @@ public:
         return result && *result;
       }
 
-      bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
+      bool VisitDeclRefExpr(DeclRefExpr *DRE) {
         if (DeclRefExprsToIgnore.contains(DRE))
           return true;
         auto *VD = dyn_cast_or_null<VarDecl>(DRE->getDecl());
@@ -86,7 +88,7 @@ public:
         return safeGetName(NsDecl) == "WTF" && safeGetName(Decl) == "switchOn";
       }
 
-      bool VisitCallExpr(CallExpr *CE) override {
+      bool VisitCallExpr(CallExpr *CE) {
         checkCalleeLambda(CE);
         if (auto *Callee = CE->getDirectCallee()) {
           bool TreatAllArgsAsNoEscape = shouldTreatAllArgAsNoEscape(Callee);
@@ -114,7 +116,7 @@ public:
         if (!DRE)
           return;
         auto *MD = dyn_cast_or_null<CXXMethodDecl>(DRE->getDecl());
-        if (!MD || CE->getNumArgs() < 1)
+        if (!MD || CE->getNumArgs() != 1)
           return;
         auto *Arg = CE->getArg(0)->IgnoreParenCasts();
         auto *ArgRef = dyn_cast<DeclRefExpr>(Arg);

@@ -63,7 +63,7 @@ enum DAPBroadcasterBits {
   eBroadcastBitStopProgressThread = 1u << 1
 };
 
-typedef void (*RequestCallback)(DAP &dap, const llvm::json::Object &command);
+typedef void (*RequestCallback)(const llvm::json::Object &command);
 typedef void (*ResponseCallback)(llvm::Expected<llvm::json::Value> value);
 
 enum class PacketStatus {
@@ -116,28 +116,22 @@ struct Variables {
 };
 
 struct StartDebuggingRequestHandler : public lldb::SBCommandPluginInterface {
-  DAP &dap;
-  explicit StartDebuggingRequestHandler(DAP &d) : dap(d) {};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
 
 struct ReplModeRequestHandler : public lldb::SBCommandPluginInterface {
-  DAP &dap;
-  explicit ReplModeRequestHandler(DAP &d) : dap(d) {};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
 
 struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
-  DAP &dap;
-  explicit SendEventRequestHandler(DAP &d) : dap(d) {};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
 
 struct DAP {
-  llvm::StringRef debug_adaptor_path;
+  std::string debug_adaptor_path;
   InputStream input;
   OutputStream output;
   lldb::SBDebugger debugger;
@@ -198,7 +192,7 @@ struct DAP {
   // will contain that expression.
   std::string last_nonempty_var_expression;
 
-  DAP(llvm::StringRef path, ReplMode repl_mode);
+  DAP();
   ~DAP();
   DAP(const DAP &rhs) = delete;
   void operator=(const DAP &rhs) = delete;
@@ -352,6 +346,8 @@ private:
   // JSON bytes.
   void SendJSON(const std::string &json_str);
 };
+
+extern DAP g_dap;
 
 } // namespace lldb_dap
 

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics
+// RUN: mlir-opt <%s -split-input-file -verify-diagnostics
 
 // Asking the dimension of a 0-D shape doesn't make sense.
 func.func @dim_0_ranked(%arg : tensor<f32>, %arg1 : index) {
@@ -90,7 +90,7 @@ func.func @tensor.from_elements_wrong_result_type() {
 // -----
 
 func.func @tensor.from_elements_wrong_elements_count() {
-  // expected-error@+2 {{number of operands and types do not match: got 1 operands and 2 types}}
+  // expected-error@+2 {{1 operands present, but expected 2}}
   %c0 = arith.constant 0 : index
   %0 = tensor.from_elements %c0 : tensor<2xindex>
   return
@@ -692,17 +692,9 @@ func.func @pack_invalid_duplicate_element_in_outer_perm(%input: tensor<256x128xf
 // -----
 
 func.func @pack_invalid_output_rank(%input: tensor<256x128xf32>, %output: tensor<64x32x16xf32>) -> tensor<64x32x16xf32> {
-  // expected-error@+1 {{packed rank != (unpacked rank + num tiling factors), got 3 != 4}}
+  // expected-error@+1 {{packed rank must equal unpacked rank + tiling factors}}
   %0 = tensor.pack %input inner_dims_pos = [0, 1] inner_tiles = [32, 16] into %output : tensor<256x128xf32> -> tensor<64x32x16xf32>
   return %0 : tensor<64x32x16xf32>
-}
-
-// -----
-
-func.func @pack_invalid_output_rank(%input: tensor<256x128xf32>, %output: tensor<64x32x16xf32>) -> tensor<256x128xf32> {
-  // expected-error@+1 {{packed rank != (unpacked rank + num tiling factors), got 3 != 4}}
-  %0 = tensor.unpack %output inner_dims_pos = [0, 1] inner_tiles = [32, 16] into %input : tensor<64x32x16xf32> -> tensor<256x128xf32>
-  return %0 : tensor<256x128xf32>
 }
 
 // -----

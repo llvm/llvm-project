@@ -4,7 +4,6 @@ add_flang_library(FIRAnalysis
 
   DEPENDS
   FIRDialect
-  FIRSupport
   HLFIRDialect
   MLIRIR
   MLIROpenMPDialect

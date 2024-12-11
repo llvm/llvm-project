@@ -14,6 +14,7 @@
 #include "AVRELFStreamer.h"
 #include "AVRInstPrinter.h"
 #include "AVRMCAsmInfo.h"
+#include "AVRMCELFStreamer.h"
 #include "AVRTargetStreamer.h"
 #include "TargetInfo/AVRTargetInfo.h"
 

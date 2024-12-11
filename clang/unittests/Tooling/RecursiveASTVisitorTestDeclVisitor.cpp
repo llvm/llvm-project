@@ -12,12 +12,12 @@ using namespace clang;
 
 namespace {
 
-class VarDeclVisitor : public ExpectedLocationVisitor {
+class VarDeclVisitor : public ExpectedLocationVisitor<VarDeclVisitor> {
 public:
-  bool VisitVarDecl(VarDecl *Variable) override {
-    Match(Variable->getNameAsString(), Variable->getBeginLoc());
-    return true;
-  }
+ bool VisitVarDecl(VarDecl *Variable) {
+   Match(Variable->getNameAsString(), Variable->getBeginLoc());
+   return true;
+ }
 };
 
 TEST(RecursiveASTVisitor, VisitsCXXForRangeStmtLoopVariable) {
@@ -29,11 +29,12 @@ TEST(RecursiveASTVisitor, VisitsCXXForRangeStmtLoopVariable) {
     VarDeclVisitor::Lang_CXX11));
 }
 
-class ParmVarDeclVisitorForImplicitCode : public ExpectedLocationVisitor {
+class ParmVarDeclVisitorForImplicitCode :
+  public ExpectedLocationVisitor<ParmVarDeclVisitorForImplicitCode> {
 public:
-  ParmVarDeclVisitorForImplicitCode() { ShouldVisitImplicitCode = true; }
+  bool shouldVisitImplicitCode() const { return true; }
 
-  bool VisitParmVarDecl(ParmVarDecl *ParamVar) override {
+  bool VisitParmVarDecl(ParmVarDecl *ParamVar) {
     Match(ParamVar->getNameAsString(), ParamVar->getBeginLoc());
     return true;
   }
@@ -57,9 +58,10 @@ TEST(RecursiveASTVisitor, VisitsParmVarDeclForImplicitCode) {
     "void bar(Y a) {Y b = a;}"));
 }
 
-class NamedDeclVisitor : public ExpectedLocationVisitor {
+class NamedDeclVisitor
+  : public ExpectedLocationVisitor<NamedDeclVisitor> {
 public:
-  bool VisitNamedDecl(NamedDecl *Decl) override {
+  bool VisitNamedDecl(NamedDecl *Decl) {
     std::string NameWithTemplateArgs;
     llvm::raw_string_ostream OS(NameWithTemplateArgs);
     Decl->getNameForDiagnostic(OS,

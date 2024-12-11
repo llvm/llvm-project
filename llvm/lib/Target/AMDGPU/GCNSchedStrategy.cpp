@@ -615,138 +615,6 @@ bool GCNMaxILPSchedStrategy::tryCandidate(SchedCandidate &Cand,
   return false;
 }
 
-GCNMaxMemoryClauseSchedStrategy::GCNMaxMemoryClauseSchedStrategy(
-    const MachineSchedContext *C)
-    : GCNSchedStrategy(C) {
-  SchedStages.push_back(GCNSchedStageID::MemoryClauseInitialSchedule);
-}
-
-/// GCNMaxMemoryClauseSchedStrategy tries best to clause memory instructions as
-/// much as possible. This is achieved by:
-//  1. Prioritize clustered operations before stall latency heuristic.
-//  2. Prioritize long-latency-load before stall latency heuristic.
-///
-/// \param Cand provides the policy and current best candidate.
-/// \param TryCand refers to the next SUnit candidate, otherwise uninitialized.
-/// \param Zone describes the scheduled zone that we are extending, or nullptr
-///             if Cand is from a different zone than TryCand.
-/// \return \c true if TryCand is better than Cand (Reason is NOT NoCand)
-bool GCNMaxMemoryClauseSchedStrategy::tryCandidate(SchedCandidate &Cand,
-                                                   SchedCandidate &TryCand,
-                                                   SchedBoundary *Zone) const {
-  // Initialize the candidate if needed.
-  if (!Cand.isValid()) {
-    TryCand.Reason = NodeOrder;
-    return true;
-  }
-
-  // Bias PhysReg Defs and copies to their uses and defined respectively.
-  if (tryGreater(biasPhysReg(TryCand.SU, TryCand.AtTop),
-                 biasPhysReg(Cand.SU, Cand.AtTop), TryCand, Cand, PhysReg))
-    return TryCand.Reason != NoCand;
-
-  if (DAG->isTrackingPressure()) {
-    // Avoid exceeding the target's limit.
-    if (tryPressure(TryCand.RPDelta.Excess, Cand.RPDelta.Excess, TryCand, Cand,
-                    RegExcess, TRI, DAG->MF))
-      return TryCand.Reason != NoCand;
-
-    // Avoid increasing the max critical pressure in the scheduled region.
-    if (tryPressure(TryCand.RPDelta.CriticalMax, Cand.RPDelta.CriticalMax,
-                    TryCand, Cand, RegCritical, TRI, DAG->MF))
-      return TryCand.Reason != NoCand;
-  }
-
-  // MaxMemoryClause-specific: We prioritize clustered instructions as we would
-  // get more benefit from clausing these memory instructions.
-  const SUnit *CandNextClusterSU =
-      Cand.AtTop ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
-  const SUnit *TryCandNextClusterSU =
-      TryCand.AtTop ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
-  if (tryGreater(TryCand.SU == TryCandNextClusterSU,
-                 Cand.SU == CandNextClusterSU, TryCand, Cand, Cluster))
-    return TryCand.Reason != NoCand;
-
-  // We only compare a subset of features when comparing nodes between
-  // Top and Bottom boundary. Some properties are simply incomparable, in many
-  // other instances we should only override the other boundary if something
-  // is a clear good pick on one boundary. Skip heuristics that are more
-  // "tie-breaking" in nature.
-  bool SameBoundary = Zone != nullptr;
-  if (SameBoundary) {
-    // For loops that are acyclic path limited, aggressively schedule for
-    // latency. Within an single cycle, whenever CurrMOps > 0, allow normal
-    // heuristics to take precedence.
-    if (Rem.IsAcyclicLatencyLimited && !Zone->getCurrMOps() &&
-        tryLatency(TryCand, Cand, *Zone))
-      return TryCand.Reason != NoCand;
-
-    // MaxMemoryClause-specific: Prioritize long latency memory load
-    // instructions in top-bottom order to hide more latency. The mayLoad check
-    // is used to exclude store-like instructions, which we do not want to
-    // scheduler them too early.
-    bool TryMayLoad =
-        TryCand.SU->isInstr() && TryCand.SU->getInstr()->mayLoad();
-    bool CandMayLoad = Cand.SU->isInstr() && Cand.SU->getInstr()->mayLoad();
-
-    if (TryMayLoad || CandMayLoad) {
-      bool TryLongLatency =
-          TryCand.SU->Latency > 10 * Cand.SU->Latency && TryMayLoad;
-      bool CandLongLatency =
-          10 * TryCand.SU->Latency < Cand.SU->Latency && CandMayLoad;
-
-      if (tryGreater(Zone->isTop() ? TryLongLatency : CandLongLatency,
-                     Zone->isTop() ? CandLongLatency : TryLongLatency, TryCand,
-                     Cand, Stall))
-        return TryCand.Reason != NoCand;
-    }
-    // Prioritize instructions that read unbuffered resources by stall cycles.
-    if (tryLess(Zone->getLatencyStallCycles(TryCand.SU),
-                Zone->getLatencyStallCycles(Cand.SU), TryCand, Cand, Stall))
-      return TryCand.Reason != NoCand;
-  }
-
-  if (SameBoundary) {
-    // Weak edges are for clustering and other constraints.
-    if (tryLess(getWeakLeft(TryCand.SU, TryCand.AtTop),
-                getWeakLeft(Cand.SU, Cand.AtTop), TryCand, Cand, Weak))
-      return TryCand.Reason != NoCand;
-  }
-
-  // Avoid increasing the max pressure of the entire region.
-  if (DAG->isTrackingPressure() &&
-      tryPressure(TryCand.RPDelta.CurrentMax, Cand.RPDelta.CurrentMax, TryCand,
-                  Cand, RegMax, TRI, DAG->MF))
-    return TryCand.Reason != NoCand;
-
-  if (SameBoundary) {
-    // Avoid critical resource consumption and balance the schedule.
-    TryCand.initResourceDelta(DAG, SchedModel);
-    if (tryLess(TryCand.ResDelta.CritResources, Cand.ResDelta.CritResources,
-                TryCand, Cand, ResourceReduce))
-      return TryCand.Reason != NoCand;
-    if (tryGreater(TryCand.ResDelta.DemandedResources,
-                   Cand.ResDelta.DemandedResources, TryCand, Cand,
-                   ResourceDemand))
-      return TryCand.Reason != NoCand;
-
-    // Avoid serializing long latency dependence chains.
-    // For acyclic path limited loops, latency was already checked above.
-    if (!RegionPolicy.DisableLatencyHeuristic && TryCand.Policy.ReduceLatency &&
-        !Rem.IsAcyclicLatencyLimited && tryLatency(TryCand, Cand, *Zone))
-      return TryCand.Reason != NoCand;
-
-    // Fall through to original instruction order.
-    if (Zone->isTop() == (TryCand.SU->NodeNum < Cand.SU->NodeNum)) {
-      assert(TryCand.SU->NodeNum != Cand.SU->NodeNum);
-      TryCand.Reason = NodeOrder;
-      return true;
-    }
-  }
-
-  return false;
-}
-
 GCNScheduleDAGMILive::GCNScheduleDAGMILive(
     MachineSchedContext *C, std::unique_ptr<MachineSchedStrategy> S)
     : ScheduleDAGMILive(C, std::move(S)), ST(MF.getSubtarget<GCNSubtarget>()),
@@ -776,9 +644,6 @@ GCNScheduleDAGMILive::createSchedStage(GCNSchedStageID SchedStageID) {
     return std::make_unique<PreRARematStage>(SchedStageID, *this);
   case GCNSchedStageID::ILPInitialSchedule:
     return std::make_unique<ILPInitialScheduleStage>(SchedStageID, *this);
-  case GCNSchedStageID::MemoryClauseInitialSchedule:
-    return std::make_unique<MemoryClauseInitialScheduleStage>(SchedStageID,
-                                                              *this);
   }
 
   llvm_unreachable("Unknown SchedStageID.");
@@ -1004,9 +869,6 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const GCNSchedStageID &StageID) {
   case GCNSchedStageID::ILPInitialSchedule:
     OS << "Max ILP Initial Schedule";
     break;
-  case GCNSchedStageID::MemoryClauseInitialSchedule:
-    OS << "Max memory clause Initial Schedule";
-    break;
   }
 
   return OS;
@@ -1226,8 +1088,7 @@ void GCNSchedStage::setupNewBlock() {
   // Get real RP for the region if it hasn't be calculated before. After the
   // initial schedule stage real RP will be collected after scheduling.
   if (StageID == GCNSchedStageID::OccInitialSchedule ||
-      StageID == GCNSchedStageID::ILPInitialSchedule ||
-      StageID == GCNSchedStageID::MemoryClauseInitialSchedule)
+      StageID == GCNSchedStageID::ILPInitialSchedule)
     DAG.computeBlockPressure(RegionIdx, CurrentMBB);
 }
 
@@ -1526,11 +1387,6 @@ bool ILPInitialScheduleStage::shouldRevertScheduling(unsigned WavesAfter) {
     return true;
 
   return false;
-}
-
-bool MemoryClauseInitialScheduleStage::shouldRevertScheduling(
-    unsigned WavesAfter) {
-  return mayCauseSpilling(WavesAfter);
 }
 
 bool GCNSchedStage::mayCauseSpilling(unsigned WavesAfter) {

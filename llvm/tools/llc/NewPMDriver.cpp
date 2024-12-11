@@ -99,6 +99,8 @@ int llvm::compileModuleWithNewPM(
     return 1;
   }
 
+  LLVMTargetMachine &LLVMTM = static_cast<LLVMTargetMachine &>(*Target);
+
   raw_pwrite_stream *OS = &Out->os();
 
   // Fetch options from TargetPassConfig
@@ -107,12 +109,12 @@ int llvm::compileModuleWithNewPM(
   Opt.DebugPM = DebugPM;
   Opt.RegAlloc = RegAlloc;
 
-  MachineModuleInfo MMI(Target.get());
+  MachineModuleInfo MMI(&LLVMTM);
 
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(Context, Opt.DebugPM,
                               VK == VerifierKind::EachPass);
-  registerCodeGenCallback(PIC, *Target);
+  registerCodeGenCallback(PIC, LLVMTM);
 
   MachineFunctionAnalysisManager MFAM;
   LoopAnalysisManager LAM;
@@ -156,7 +158,7 @@ int llvm::compileModuleWithNewPM(
     if (MIR->parseMachineFunctions(*M, MAM))
       return 1;
   } else {
-    ExitOnErr(Target->buildCodeGenPipeline(
+    ExitOnErr(LLVMTM.buildCodeGenPipeline(
         MPM, *OS, DwoOut ? &DwoOut->os() : nullptr, FileType, Opt, &PIC));
   }
 

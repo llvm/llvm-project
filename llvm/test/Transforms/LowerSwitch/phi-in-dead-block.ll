@@ -2,9 +2,9 @@
 
 ; CHECK-LABEL: @phi_in_dead_block(
 ; CHECK-NOT: switch
-define void @phi_in_dead_block(i1 %arg) {
+define void @phi_in_dead_block() {
 bb:
-  br i1 %arg, label %bb2, label %bb3
+  br i1 undef, label %bb2, label %bb3
 
 bb1:                                              ; No predecessors!
   switch i32 undef, label %bb2 [
@@ -21,9 +21,9 @@ bb3:                                              ; preds = %bb1, %bb
 
 ; CHECK-LABEL: @phi_in_dead_block_br_to_self(
 ; CHECK-NOT: switch
-define void @phi_in_dead_block_br_to_self(i1 %arg) {
+define void @phi_in_dead_block_br_to_self() {
 bb:
-  br i1 %arg, label %bb2, label %bb3
+  br i1 undef, label %bb2, label %bb3
 
 bb1:                                              ; No predecessors!
   switch i32 undef, label %bb2 [

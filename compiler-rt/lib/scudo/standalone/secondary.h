@@ -71,8 +71,7 @@ namespace {
 
 struct CachedBlock {
   static constexpr u16 CacheIndexMax = UINT16_MAX;
-  static constexpr u16 EndOfListVal = CacheIndexMax;
-
+  static constexpr u16 InvalidEntry = CacheIndexMax;
   // We allow a certain amount of fragmentation and part of the fragmented bytes
   // will be released by `releaseAndZeroPagesToOS()`. This increases the chance
   // of cache hit rate and reduces the overhead to the RSS at the same time. See
@@ -207,16 +206,17 @@ public:
                       &Fractional);
     const s32 Interval = atomic_load_relaxed(&ReleaseToOsIntervalMs);
     Str->append(
-        "Stats: MapAllocatorCache: EntriesCount: %zu, "
+        "Stats: MapAllocatorCache: EntriesCount: %d, "
         "MaxEntriesCount: %u, MaxEntrySize: %zu, ReleaseToOsIntervalMs = %d\n",
-        LRUEntries.size(), atomic_load_relaxed(&MaxEntriesCount),
+        EntriesCount, atomic_load_relaxed(&MaxEntriesCount),
         atomic_load_relaxed(&MaxEntrySize), Interval >= 0 ? Interval : -1);
     Str->append("Stats: CacheRetrievalStats: SuccessRate: %u/%u "
                 "(%zu.%02zu%%)\n",
                 SuccessfulRetrieves, CallsToRetrieve, Integral, Fractional);
     Str->append("Cache Entry Info (Most Recent -> Least Recent):\n");
 
-    for (CachedBlock &Entry : LRUEntries) {
+    for (u32 I = LRUHead; I != CachedBlock::InvalidEntry; I = Entries[I].Next) {
+      CachedBlock &Entry = Entries[I];
       Str->append("  StartBlockAddress: 0x%zx, EndBlockAddress: 0x%zx, "
                   "BlockSize: %zu %s\n",
                   Entry.CommitBase, Entry.CommitBase + Entry.CommitSize,
@@ -234,7 +234,7 @@ public:
                 "Cache entry array is too large to be indexed.");
 
   void init(s32 ReleaseToOsInterval) NO_THREAD_SAFETY_ANALYSIS {
-    DCHECK_EQ(LRUEntries.size(), 0U);
+    DCHECK_EQ(EntriesCount, 0U);
     setOption(Option::MaxCacheEntriesCount,
               static_cast<sptr>(Config::getDefaultMaxEntriesCount()));
     setOption(Option::MaxCacheEntrySize,
@@ -244,13 +244,17 @@ public:
       ReleaseToOsInterval = Config::getDefaultReleaseToOsIntervalMs();
     setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
 
-    LRUEntries.clear();
-    LRUEntries.init(Entries, sizeof(Entries));
+    // The cache is initially empty
+    LRUHead = CachedBlock::InvalidEntry;
+    LRUTail = CachedBlock::InvalidEntry;
 
-    AvailEntries.clear();
-    AvailEntries.init(Entries, sizeof(Entries));
-    for (u32 I = 0; I < Config::getEntriesArraySize(); I++)
-      AvailEntries.push_back(&Entries[I]);
+    // Available entries will be retrieved starting from the beginning of the
+    // Entries array
+    AvailableHead = 0;
+    for (u32 I = 0; I < Config::getEntriesArraySize() - 1; I++)
+      Entries[I].Next = static_cast<u16>(I + 1);
+
+    Entries[Config::getEntriesArraySize() - 1].Next = CachedBlock::InvalidEntry;
   }
 
   void store(const Options &Options, uptr CommitBase, uptr CommitSize,
@@ -322,15 +326,11 @@ public:
         Entry = PrevEntry;
       }
 
-      // All excess entries are evicted from the cache. Note that when
-      // `MaxEntriesCount` is zero, cache storing shouldn't happen and it's
-      // guarded by the `DCHECK(canCache(CommitSize))` above. As a result, we
-      // won't try to pop `LRUEntries` when it's empty.
-      while (LRUEntries.size() >= atomic_load_relaxed(&MaxEntriesCount)) {
+      // All excess entries are evicted from the cache
+      while (needToEvict()) {
         // Save MemMaps of evicted entries to perform unmap outside of lock
-        CachedBlock *Entry = LRUEntries.back();
-        EvictionMemMaps.push_back(Entry->MemMap);
-        remove(Entry);
+        EvictionMemMaps.push_back(Entries[LRUTail].MemMap);
+        remove(LRUTail);
       }
 
       insert(Entry);
@@ -360,9 +360,9 @@ public:
     {
       ScopedLock L(Mutex);
       CallsToRetrieve++;
-      if (LRUEntries.size() == 0)
+      if (EntriesCount == 0)
         return {};
-      CachedBlock *RetrievedEntry = nullptr;
+      u16 RetrievedIndex = CachedBlock::InvalidEntry;
       uptr MinDiff = UINTPTR_MAX;
 
       //  Since allocation sizes don't always match cached memory chunk sizes
@@ -382,9 +382,10 @@ public:
       //  well as the header metadata. If EntryHeaderPos - CommitBase exceeds
       //  MaxAllowedFragmentedPages * PageSize, the cached memory chunk is
       //  not considered valid for retrieval.
-      for (CachedBlock &Entry : LRUEntries) {
-        const uptr CommitBase = Entry.CommitBase;
-        const uptr CommitSize = Entry.CommitSize;
+      for (u16 I = LRUHead; I != CachedBlock::InvalidEntry;
+           I = Entries[I].Next) {
+        const uptr CommitBase = Entries[I].CommitBase;
+        const uptr CommitSize = Entries[I].CommitSize;
         const uptr AllocPos =
             roundDown(CommitBase + CommitSize - Size, Alignment);
         const uptr HeaderPos = AllocPos - HeadersSize;
@@ -407,7 +408,7 @@ public:
           continue;
 
         MinDiff = Diff;
-        RetrievedEntry = &Entry;
+        RetrievedIndex = I;
         EntryHeaderPos = HeaderPos;
 
         // Immediately use a cached block if its size is close enough to the
@@ -417,10 +418,9 @@ public:
         if (Diff <= OptimalFitThesholdBytes)
           break;
       }
-
-      if (RetrievedEntry != nullptr) {
-        Entry = *RetrievedEntry;
-        remove(RetrievedEntry);
+      if (RetrievedIndex != CachedBlock::InvalidEntry) {
+        Entry = Entries[RetrievedIndex];
+        remove(RetrievedIndex);
         SuccessfulRetrieves++;
       }
     }
@@ -499,8 +499,10 @@ public:
         Quarantine[I].invalidate();
       }
     }
-    for (CachedBlock &Entry : LRUEntries)
-      Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize, 0);
+    for (u32 I = LRUHead; I != CachedBlock::InvalidEntry; I = Entries[I].Next) {
+      Entries[I].MemMap.setMemoryPermission(Entries[I].CommitBase,
+                                            Entries[I].CommitSize, 0);
+    }
     QuarantinePos = -1U;
   }
 
@@ -511,19 +513,64 @@ public:
   void unmapTestOnly() { empty(); }
 
 private:
-  void insert(const CachedBlock &Entry) REQUIRES(Mutex) {
-    CachedBlock *AvailEntry = AvailEntries.front();
-    AvailEntries.pop_front();
-
-    *AvailEntry = Entry;
-    LRUEntries.push_front(AvailEntry);
+  bool needToEvict() REQUIRES(Mutex) {
+    return (EntriesCount >= atomic_load_relaxed(&MaxEntriesCount));
   }
 
-  void remove(CachedBlock *Entry) REQUIRES(Mutex) {
-    DCHECK(Entry->isValid());
-    LRUEntries.remove(Entry);
-    Entry->invalidate();
-    AvailEntries.push_front(Entry);
+  void insert(const CachedBlock &Entry) REQUIRES(Mutex) {
+    DCHECK_LT(EntriesCount, atomic_load_relaxed(&MaxEntriesCount));
+
+    // Cache should be populated with valid entries when not empty
+    DCHECK_NE(AvailableHead, CachedBlock::InvalidEntry);
+
+    u32 FreeIndex = AvailableHead;
+    AvailableHead = Entries[AvailableHead].Next;
+
+    if (EntriesCount == 0) {
+      LRUTail = static_cast<u16>(FreeIndex);
+    } else {
+      // Check list order
+      if (EntriesCount > 1)
+        DCHECK_GE(Entries[LRUHead].Time, Entries[Entries[LRUHead].Next].Time);
+      Entries[LRUHead].Prev = static_cast<u16>(FreeIndex);
+    }
+
+    Entries[FreeIndex] = Entry;
+    Entries[FreeIndex].Next = LRUHead;
+    Entries[FreeIndex].Prev = CachedBlock::InvalidEntry;
+    LRUHead = static_cast<u16>(FreeIndex);
+    EntriesCount++;
+
+    // Availability stack should not have available entries when all entries
+    // are in use
+    if (EntriesCount == Config::getEntriesArraySize())
+      DCHECK_EQ(AvailableHead, CachedBlock::InvalidEntry);
+  }
+
+  void remove(uptr I) REQUIRES(Mutex) {
+    DCHECK(Entries[I].isValid());
+
+    Entries[I].invalidate();
+
+    if (I == LRUHead)
+      LRUHead = Entries[I].Next;
+    else
+      Entries[Entries[I].Prev].Next = Entries[I].Next;
+
+    if (I == LRUTail)
+      LRUTail = Entries[I].Prev;
+    else
+      Entries[Entries[I].Next].Prev = Entries[I].Prev;
+
+    Entries[I].Next = AvailableHead;
+    AvailableHead = static_cast<u16>(I);
+    EntriesCount--;
+
+    // Cache should not have valid entries when not empty
+    if (EntriesCount == 0) {
+      DCHECK_EQ(LRUHead, CachedBlock::InvalidEntry);
+      DCHECK_EQ(LRUTail, CachedBlock::InvalidEntry);
+    }
   }
 
   void empty() {
@@ -531,10 +578,14 @@ private:
     uptr N = 0;
     {
       ScopedLock L(Mutex);
-
-      for (CachedBlock &Entry : LRUEntries)
-        MapInfo[N++] = Entry.MemMap;
-      LRUEntries.clear();
+      for (uptr I = 0; I < Config::getEntriesArraySize(); I++) {
+        if (!Entries[I].isValid())
+          continue;
+        MapInfo[N] = Entries[I].MemMap;
+        remove(I);
+        N++;
+      }
+      EntriesCount = 0;
     }
     for (uptr I = 0; I < N; I++) {
       MemMapT &MemMap = MapInfo[I];
@@ -556,7 +607,7 @@ private:
 
   void releaseOlderThan(u64 Time) EXCLUDES(Mutex) {
     ScopedLock L(Mutex);
-    if (!LRUEntries.size() || OldestTime == 0 || OldestTime > Time)
+    if (!EntriesCount || OldestTime == 0 || OldestTime > Time)
       return;
     OldestTime = 0;
     for (uptr I = 0; I < Config::getQuarantineSize(); I++)
@@ -566,6 +617,7 @@ private:
   }
 
   HybridMutex Mutex;
+  u32 EntriesCount GUARDED_BY(Mutex) = 0;
   u32 QuarantinePos GUARDED_BY(Mutex) = 0;
   atomic_u32 MaxEntriesCount = {};
   atomic_uptr MaxEntrySize = {};
@@ -578,10 +630,12 @@ private:
   NonZeroLengthArray<CachedBlock, Config::getQuarantineSize()>
       Quarantine GUARDED_BY(Mutex) = {};
 
-  // Cached blocks stored in LRU order
-  DoublyLinkedList<CachedBlock> LRUEntries GUARDED_BY(Mutex);
-  // The unused Entries
-  SinglyLinkedList<CachedBlock> AvailEntries GUARDED_BY(Mutex);
+  // The LRUHead of the cache is the most recently used cache entry
+  u16 LRUHead GUARDED_BY(Mutex) = 0;
+  // The LRUTail of the cache is the least recently used cache entry
+  u16 LRUTail GUARDED_BY(Mutex) = 0;
+  // The AvailableHead is the top of the stack of available entries
+  u16 AvailableHead GUARDED_BY(Mutex) = 0;
 };
 
 template <typename Config> class MapAllocator {

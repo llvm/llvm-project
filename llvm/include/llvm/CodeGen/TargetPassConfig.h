@@ -21,7 +21,7 @@
 
 namespace llvm {
 
-class TargetMachine;
+class LLVMTargetMachine;
 struct MachineSchedContext;
 class PassConfigImpl;
 class ScheduleDAGInstrs;
@@ -120,7 +120,7 @@ private:
   void setStartStopPasses();
 
 protected:
-  TargetMachine *TM;
+  LLVMTargetMachine *TM;
   PassConfigImpl *Impl = nullptr; // Internal data structures
   bool Initialized = false; // Flagged after all passes are configured.
 
@@ -148,7 +148,7 @@ protected:
   bool addCoreISelPasses();
 
 public:
-  TargetPassConfig(TargetMachine &TM, PassManagerBase &PM);
+  TargetPassConfig(LLVMTargetMachine &TM, PassManagerBase &pm);
   // Dummy constructor.
   TargetPassConfig();
 
@@ -413,8 +413,7 @@ protected:
   virtual void addFastRegAlloc();
 
   /// addOptimizedRegAlloc - Add passes related to register allocation.
-  /// CodeGenTargetMachineImpl provides standard regalloc passes for most
-  /// targets.
+  /// LLVMTargetMachine provides standard regalloc passes for most targets.
   virtual void addOptimizedRegAlloc();
 
   /// addPreRewrite - Add passes to the optimized register allocation pipeline
@@ -498,7 +497,7 @@ protected:
 };
 
 void registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
-                             TargetMachine &);
+                             LLVMTargetMachine &);
 
 } // end namespace llvm
 

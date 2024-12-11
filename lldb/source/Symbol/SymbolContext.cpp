@@ -102,11 +102,10 @@ bool SymbolContext::DumpStopContext(
         s->PutCStringColorHighlighted(name.GetStringRef(), settings);
     }
 
-    if (addr_t file_addr = addr.GetFileAddress();
-        file_addr != LLDB_INVALID_ADDRESS) {
+    if (addr.IsValid()) {
       const addr_t function_offset =
-          file_addr -
-          function->GetAddressRange().GetBaseAddress().GetFileAddress();
+          addr.GetOffset() -
+          function->GetAddressRange().GetBaseAddress().GetOffset();
       if (!show_function_name) {
         // Print +offset even if offset is 0
         dumped_something = true;
@@ -127,8 +126,7 @@ bool SymbolContext::DumpStopContext(
       lldb_private::AddressRange block_range;
       if (inlined_block->GetRangeContainingAddress(addr, block_range)) {
         const addr_t inlined_function_offset =
-            addr.GetFileAddress() -
-            block_range.GetBaseAddress().GetFileAddress();
+            addr.GetOffset() - block_range.GetBaseAddress().GetOffset();
         if (inlined_function_offset) {
           s->Printf(" + %" PRIu64, inlined_function_offset);
         }

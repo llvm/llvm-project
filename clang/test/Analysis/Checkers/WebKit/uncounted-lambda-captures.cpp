@@ -1,9 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=webkit.UncountedLambdaCapturesChecker -verify %s
 
-struct A {
-  static void b();
-};
-
 struct RefCountable {
   void ref() {}
   void deref() {}
@@ -125,7 +121,7 @@ void noescape_lambda() {
 }
 
 void lambda_capture_param(RefCountable* obj) {
-  auto someLambda = [&]() {
+  auto someLambda = [&] {
     obj->method();
   };
   someLambda();
@@ -177,11 +173,4 @@ void trivial_lambda() {
     return ref_countable->trivial();
   };
   trivial_lambda();
-}
-
-void lambda_with_args(RefCountable* obj) {
-  auto trivial_lambda = [&](int v) {
-    obj->method();
-  };
-  trivial_lambda(1);
 }

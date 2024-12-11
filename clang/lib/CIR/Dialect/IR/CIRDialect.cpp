@@ -33,22 +33,6 @@ void cir::CIRDialect::initialize() {
 }
 
 //===----------------------------------------------------------------------===//
-// GlobalOp
-//===----------------------------------------------------------------------===//
-
-// TODO(CIR): The properties of global variables that require verification
-// haven't been implemented yet.
-mlir::LogicalResult cir::GlobalOp::verify() { return success(); }
-
-void cir::GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
-                          llvm::StringRef sym_name, mlir::Type sym_type) {
-  odsState.addAttribute(getSymNameAttrName(odsState.name),
-                        odsBuilder.getStringAttr(sym_name));
-  odsState.addAttribute(getSymTypeAttrName(odsState.name),
-                        mlir::TypeAttr::get(sym_type));
-}
-
-//===----------------------------------------------------------------------===//
 // FuncOp
 //===----------------------------------------------------------------------===//
 
@@ -72,8 +56,6 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   p.printSymbolName(getSymName());
 }
 
-// TODO(CIR): The properties of functions that require verification haven't
-// been implemented yet.
 mlir::LogicalResult cir::FuncOp::verify() { return success(); }
 
 //===----------------------------------------------------------------------===//

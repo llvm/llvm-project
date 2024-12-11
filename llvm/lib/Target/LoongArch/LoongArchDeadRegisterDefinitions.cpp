@@ -11,12 +11,14 @@
 //===---------------------------------------------------------------------===//
 
 #include "LoongArch.h"
+#include "LoongArchInstrInfo.h"
 #include "LoongArchSubtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 
 using namespace llvm;
 #define DEBUG_TYPE "loongarch-dead-defs"
@@ -37,8 +39,8 @@ public:
     AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addRequired<LiveIntervalsWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
-    AU.addPreserved<LiveDebugVariablesWrapperLegacy>();
-    AU.addPreserved<LiveStacksWrapperLegacy>();
+    AU.addPreserved<LiveDebugVariables>();
+    AU.addPreserved<LiveStacks>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 

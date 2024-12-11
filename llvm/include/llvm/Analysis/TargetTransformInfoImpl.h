@@ -199,8 +199,6 @@ public:
     return false;
   }
 
-  unsigned getEpilogueVectorizationMinVF() const { return 16; }
-
   bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const { return false; }
 
   TailFoldingStyle
@@ -396,16 +394,10 @@ public:
     return false;
   }
 
-  bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
-                                              int ScalarOpdIdx) const {
-    return ScalarOpdIdx == -1;
-  }
-
   InstructionCost getScalarizationOverhead(VectorType *Ty,
                                            const APInt &DemandedElts,
                                            bool Insert, bool Extract,
-                                           TTI::TargetCostKind CostKind,
-                                           ArrayRef<Value *> VL = {}) const {
+                                           TTI::TargetCostKind CostKind) const {
     return 0;
   }
 
@@ -705,17 +697,6 @@ public:
                                      TTI::TargetCostKind CostKind,
                                      unsigned Index, Value *Op0,
                                      Value *Op1) const {
-    return 1;
-  }
-
-  /// \param ScalarUserAndIdx encodes the information about extracts from a
-  /// vector with 'Scalar' being the value being extracted,'User' being the user
-  /// of the extract(nullptr if user is not known before vectorization) and
-  /// 'Idx' being the extract lane.
-  InstructionCost getVectorInstrCost(
-      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
-      Value *Scalar,
-      ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) const {
     return 1;
   }
 

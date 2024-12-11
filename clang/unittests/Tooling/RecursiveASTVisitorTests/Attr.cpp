@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CRTPTestVisitor.h"
+#include "TestVisitor.h"
 
 using namespace clang;
 
@@ -14,7 +14,7 @@ namespace {
 
 // Check to ensure that attributes and expressions within them are being
 // visited.
-class AttrVisitor : public CRTPExpectedLocationVisitor<AttrVisitor> {
+class AttrVisitor : public ExpectedLocationVisitor<AttrVisitor> {
 public:
   bool VisitMemberExpr(MemberExpr *ME) {
     Match(ME->getMemberDecl()->getNameAsString(), ME->getBeginLoc());
@@ -29,6 +29,7 @@ public:
     return true;
   }
 };
+
 
 TEST(RecursiveASTVisitor, AttributesAreVisited) {
   AttrVisitor Visitor;

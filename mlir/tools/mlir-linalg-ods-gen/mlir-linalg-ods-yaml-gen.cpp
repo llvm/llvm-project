@@ -679,7 +679,8 @@ ParseResult {0}::parse(OpAsmParser &parser, OperationState &result) {{
 }
 void {0}::print(OpAsmPrinter &p) {{
   SmallVector<StringRef, 3> elidedAttrs = {{"operandSegmentSizes",
-                                           "linalg.memoized_indexing_maps"};
+                                           "linalg.memoized_indexing_maps",
+                                           "indexing_maps"};
   ::printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs(),
                            elidedAttrs);
 }

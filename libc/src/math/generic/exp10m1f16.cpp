@@ -119,9 +119,6 @@ LLVM_LIBC_FUNCTION(float16, exp10m1f16, (float16 x)) {
 
     // When |x| <= 2^(-3).
     if (x_abs <= 0x3000U) {
-      if (LIBC_UNLIKELY(x_abs == 0))
-        return x;
-
       if (auto r = EXP10M1F16_EXCEPTS_LO.lookup(x_u);
           LIBC_UNLIKELY(r.has_value()))
         return r.value();

@@ -12,9 +12,10 @@ using namespace clang;
 
 namespace {
 
-class CXXBoolLiteralExprVisitor : public ExpectedLocationVisitor {
+class CXXBoolLiteralExprVisitor 
+  : public ExpectedLocationVisitor<CXXBoolLiteralExprVisitor> {
 public:
-  bool VisitCXXBoolLiteralExpr(CXXBoolLiteralExpr *BE) override {
+  bool VisitCXXBoolLiteralExpr(CXXBoolLiteralExpr *BE) {
     if (BE->getValue())
       Match("true", BE->getLocation());
     else

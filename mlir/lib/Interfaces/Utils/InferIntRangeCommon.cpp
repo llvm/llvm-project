@@ -375,15 +375,6 @@ mlir::intrange::inferCeilDivS(ArrayRef<ConstantIntRanges> argRanges) {
           result.sadd_ov(APInt(result.getBitWidth(), 1), overflowed);
       return overflowed ? std::optional<APInt>() : corrected;
     }
-    // Special case where the usual implementation of ceilDiv causes
-    // INT_MIN / [positive number] to be positive. This doesn't match the
-    // definition of signed ceiling division mathematically, but it prevents
-    // inconsistent constant-folding results. This arises because (-int_min) is
-    // still negative, so -(-int_min / b) is -(int_min / b), which is
-    // positive See #115293.
-    if (lhs.isMinSignedValue() && rhs.sgt(1)) {
-      return -result;
-    }
     return result;
   };
   return inferDivSRange(lhs, rhs, ceilDivSIFix);
@@ -556,25 +547,15 @@ mlir::intrange::inferOr(ArrayRef<ConstantIntRanges> argRanges) {
                   /*isSigned=*/false);
 }
 
-/// Get bitmask of all bits which can change while iterating in
-/// [bound.umin(), bound.umax()].
-static APInt getVaryingBitsMask(const ConstantIntRanges &bound) {
-  APInt leftVal = bound.umin(), rightVal = bound.umax();
-  unsigned bitwidth = leftVal.getBitWidth();
-  unsigned differingBits = bitwidth - (leftVal ^ rightVal).countl_zero();
-  return APInt::getLowBitsSet(bitwidth, differingBits);
-}
-
 ConstantIntRanges
 mlir::intrange::inferXor(ArrayRef<ConstantIntRanges> argRanges) {
-  // Construct mask of varying bits for both ranges, xor values and then replace
-  // masked bits with 0s and 1s to get min and max values respectively.
-  ConstantIntRanges lhs = argRanges[0], rhs = argRanges[1];
-  APInt mask = getVaryingBitsMask(lhs) | getVaryingBitsMask(rhs);
-  APInt res = lhs.umin() ^ rhs.umin();
-  APInt min = res & ~mask;
-  APInt max = res | mask;
-  return ConstantIntRanges::fromUnsigned(min, max);
+  auto [lhsZeros, lhsOnes] = widenBitwiseBounds(argRanges[0]);
+  auto [rhsZeros, rhsOnes] = widenBitwiseBounds(argRanges[1]);
+  auto xori = [](const APInt &a, const APInt &b) -> std::optional<APInt> {
+    return a ^ b;
+  };
+  return minMaxBy(xori, {lhsZeros, lhsOnes}, {rhsZeros, rhsOnes},
+                  /*isSigned=*/false);
 }
 
 //===----------------------------------------------------------------------===//

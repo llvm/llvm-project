@@ -256,10 +256,6 @@ public:
 
   bool GetInjectLocalVariables(ExecutionContext *exe_ctx) const;
 
-  bool GetUseDIL(ExecutionContext *exe_ctx) const;
-
-  void SetUseDIL(ExecutionContext *exe_ctx, bool b);
-
   void SetRequireHardwareBreakpoints(bool b);
 
   bool GetRequireHardwareBreakpoints() const;
@@ -1634,8 +1630,6 @@ public:
   ///     Returns a JSON value that contains all target metrics.
   llvm::json::Value
   ReportStatistics(const lldb_private::StatisticsOptions &options);
-
-  void ResetStatistics();
 
   TargetStats &GetStatistics() { return m_stats; }
 

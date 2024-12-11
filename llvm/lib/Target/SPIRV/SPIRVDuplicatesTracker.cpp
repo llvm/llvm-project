@@ -69,31 +69,16 @@ void SPIRVGeneralDuplicatesTracker::buildDepsGraph(
         MachineOperand *RegOp = &VRegDef->getOperand(0);
         if (Reg2Entry.count(RegOp) == 0 &&
             (MI->getOpcode() != SPIRV::OpVariable || i != 3)) {
-          // try to repair the unexpected code pattern
-          bool IsFixed = false;
-          if (VRegDef->getOpcode() == TargetOpcode::G_CONSTANT &&
-              RegOp->isReg() && MRI.getType(RegOp->getReg()).isScalar()) {
-            const Constant *C = VRegDef->getOperand(1).getCImm();
-            add(C, MI->getParent()->getParent(), RegOp->getReg());
-            auto Iter = CT.Storage.find(C);
-            if (Iter != CT.Storage.end()) {
-              SPIRV::DTSortableEntry &MissedEntry = Iter->second;
-              Reg2Entry[RegOp] = &MissedEntry;
-              IsFixed = true;
-            }
-          }
-          if (!IsFixed) {
-            std::string DiagMsg;
-            raw_string_ostream OS(DiagMsg);
-            OS << "Unexpected pattern while building a dependency "
-                  "graph.\nInstruction: ";
-            MI->print(OS);
-            OS << "Operand: ";
-            Op.print(OS);
-            OS << "\nOperand definition: ";
-            VRegDef->print(OS);
-            report_fatal_error(DiagMsg.c_str());
-          }
+          std::string DiagMsg;
+          raw_string_ostream OS(DiagMsg);
+          OS << "Unexpected pattern while building a dependency "
+                "graph.\nInstruction: ";
+          MI->print(OS);
+          OS << "Operand: ";
+          Op.print(OS);
+          OS << "\nOperand definition: ";
+          VRegDef->print(OS);
+          report_fatal_error(DiagMsg.c_str());
         }
         if (Reg2Entry.count(RegOp))
           E->addDep(Reg2Entry[RegOp]);

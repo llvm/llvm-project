@@ -2667,7 +2667,7 @@ define <vscale x 4 x float> @scalable_splat_pnorm() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define <vscale x 4 x float> @scalable_splat_pnorm
 ; CHECK-SAME: () #[[ATTR3]] {
-; CHECK-NEXT:    ret <vscale x 4 x float> splat (float 1.000000e+00)
+; CHECK-NEXT:    ret <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
 ;
   ret <vscale x 4 x float> splat (float 1.0)
 }

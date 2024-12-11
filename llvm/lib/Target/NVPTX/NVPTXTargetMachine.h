@@ -14,7 +14,7 @@
 #define LLVM_LIB_TARGET_NVPTX_NVPTXTARGETMACHINE_H
 
 #include "NVPTXSubtarget.h"
-#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
+#include "llvm/Target/TargetMachine.h"
 #include <optional>
 #include <utility>
 
@@ -22,7 +22,7 @@ namespace llvm {
 
 /// NVPTXTargetMachine
 ///
-class NVPTXTargetMachine : public CodeGenTargetMachineImpl {
+class NVPTXTargetMachine : public LLVMTargetMachine {
   bool is64bit;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   NVPTX::DrvInterface drvInterface;

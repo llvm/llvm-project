@@ -388,16 +388,12 @@ SymbolCache::findPublicSymbolBySectOffset(uint32_t Sect, uint32_t Offset) {
     return getSymbolById(Iter->second);
 
   auto Publics = Session.getPDBFile().getPDBPublicsStream();
-  if (!Publics) {
-    consumeError(Publics.takeError());
+  if (!Publics)
     return nullptr;
-  }
 
   auto ExpectedSyms = Session.getPDBFile().getPDBSymbolStream();
-  if (!ExpectedSyms) {
-    consumeError(ExpectedSyms.takeError());
+  if (!ExpectedSyms)
     return nullptr;
-  }
   BinaryStreamRef SymStream =
       ExpectedSyms->getSymbolArray().getUnderlyingStream();
 

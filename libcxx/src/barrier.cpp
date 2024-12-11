@@ -17,7 +17,7 @@ class __barrier_algorithm_base {
 public:
   struct alignas(64) /* naturally-align the heap state */ __state_t {
     struct {
-      atomic<__barrier_phase_t> __phase{0};
+      __atomic_base<__barrier_phase_t> __phase{0};
     } __tickets[64];
   };
 

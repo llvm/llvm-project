@@ -554,6 +554,11 @@ sparse_tensor::genToMemref(OpBuilder &builder, Location loc, Value tensor) {
       .getResult();
 }
 
+Value sparse_tensor::genValMemSize(OpBuilder &builder, Location loc,
+                                   Value tensor) {
+  return getDescriptorFromTensorTuple(tensor).getValMemSize(builder, loc);
+}
+
 Value sparse_tensor::createOrFoldSliceOffsetOp(OpBuilder &builder, Location loc,
                                                Value tensor, Dimension dim) {
   auto enc = getSparseTensorEncoding(tensor.getType());

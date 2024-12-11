@@ -185,10 +185,12 @@ ArrayRef<MemorySizeDistribution> getMemcmpSizeDistributions() {
 MemorySizeDistribution
 getDistributionOrDie(ArrayRef<MemorySizeDistribution> Distributions,
                      StringRef Name) {
-  for (const auto &MSD : Distributions)
+  size_t Index = 0;
+  for (const auto &MSD : Distributions) {
     if (MSD.Name == Name)
       return MSD;
-
+    ++Index;
+  }
   std::string Message;
   raw_string_ostream Stream(Message);
   Stream << "Unknown MemorySizeDistribution '" << Name

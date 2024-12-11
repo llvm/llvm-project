@@ -1172,11 +1172,11 @@ namespace cwg480 { // cwg480: yes
 
   int A::*a = &A::n;
   int D::*b = a;
-  // expected-error@-1 {{conversion from pointer to member of class 'A' to pointer to member of class 'D' via virtual base 'cwg480::B' is not allowed}}
+  // expected-error@-1 {{conversion from pointer to member of class 'cwg480::A' to pointer to member of class 'cwg480::D' via virtual base 'cwg480::B' is not allowed}}
 
   extern int D::*c;
   int A::*d = static_cast<int A::*>(c);
-  // expected-error@-1 {{conversion from pointer to member of class 'cwg480::D' to pointer to member of class 'A' via virtual base 'cwg480::B' is not allowed}}
+  // expected-error@-1 {{conversion from pointer to member of class 'cwg480::D' to pointer to member of class 'cwg480::A' via virtual base 'cwg480::B' is not allowed}}
 
   D *e;
   A *f = e;

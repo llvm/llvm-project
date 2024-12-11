@@ -26,10 +26,10 @@ std::string goodbye = "Goodbye!";
 static void ServerCallbackv4(const void *baton, in_port_t port) {
   auto child_pid = fork();
   if (child_pid == 0) {
-    std::string addr_buffer =
-        llvm::formatv("{0}:{1}", (const char *)baton, port).str();
+    char addr_buffer[256];
+    sprintf(addr_buffer, "%s:%d", (const char *)baton, port);
     llvm::Expected<std::unique_ptr<Socket>> socket_or_err =
-        Socket::TcpConnect(addr_buffer);
+        Socket::TcpConnect(addr_buffer, false);
     ASSERT_THAT_EXPECTED(socket_or_err, llvm::Succeeded());
     Socket *client_socket = socket_or_err->get();
 
@@ -59,12 +59,15 @@ void TestSocketListen(const char *addr) {
   if (addresses.size() == 0)
     return;
 
-  const char *fmt = addresses.front().GetFamily() == AF_INET6 ? "[{0}]" : "{0}";
-  std::string addr_wrap = llvm::formatv(fmt, addr).str();
+  char addr_wrap[256];
+  if (addresses.front().GetFamily() == AF_INET6)
+    sprintf(addr_wrap, "[%s]", addr);
+  else
+    sprintf(addr_wrap, "%s", addr);
 
   RNBSocket server_socket;
-  auto result = server_socket.Listen(addr, 0, ServerCallbackv4,
-                                     (const void *)addr_wrap.c_str());
+  auto result =
+      server_socket.Listen(addr, 0, ServerCallbackv4, (const void *)addr_wrap);
   ASSERT_TRUE(result == rnb_success);
   result = server_socket.Write(hello.c_str(), hello.length());
   ASSERT_TRUE(result == rnb_success);
@@ -91,9 +94,11 @@ void TestSocketConnect(const char *addr) {
   if (addresses.size() == 0)
     return;
 
-  const char *fmt =
-      addresses.front().GetFamily() == AF_INET6 ? "[{0}]:0" : "{0}:0";
-  std::string addr_wrap = llvm::formatv(fmt, addr).str();
+  char addr_wrap[256];
+  if (addresses.front().GetFamily() == AF_INET6)
+    sprintf(addr_wrap, "[%s]:0", addr);
+  else
+    sprintf(addr_wrap, "%s:0", addr);
 
   Socket *server_socket;
   llvm::Expected<std::unique_ptr<Socket>> socket_or_err =
@@ -115,8 +120,7 @@ void TestSocketConnect(const char *addr) {
     ASSERT_EQ(bye, goodbye);
   } else {
     Socket *connected_socket;
-    Status err =
-        server_socket->Accept(std::chrono::seconds(10), connected_socket);
+    Status err = server_socket->Accept(connected_socket);
     if (err.Fail()) {
       llvm::errs() << err.AsCString();
       abort();

@@ -1380,8 +1380,6 @@ public:
 
   virtual bool GetProcessInfo(ProcessInstanceInfo &info);
 
-  virtual lldb_private::UUID FindModuleUUID(const llvm::StringRef path);
-
   /// Get the exit status for a process.
   ///
   /// \return

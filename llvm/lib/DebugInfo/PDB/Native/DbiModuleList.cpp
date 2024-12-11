@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Error.h"
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>

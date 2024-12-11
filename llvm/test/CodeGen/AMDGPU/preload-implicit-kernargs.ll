@@ -599,8 +599,10 @@ define amdgpu_kernel void @no_free_sgprs_preloadremainder_z(ptr addrspace(1) inr
 ; GFX940:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
 ; GFX940-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
 ; GFX940-NEXT:  ; %bb.0:
-; GFX940-NEXT:    s_lshr_b32 s0, s15, 16
+; GFX940-NEXT:    s_load_dword s0, s[4:5], 0x1c
 ; GFX940-NEXT:    v_mov_b32_e32 v0, 0
+; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX940-NEXT:    s_lshr_b32 s0, s0, 16
 ; GFX940-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX940-NEXT:    global_store_dword v0, v1, s[8:9] sc0 sc1
 ; GFX940-NEXT:    s_endpgm
@@ -621,76 +623,6 @@ define amdgpu_kernel void @no_free_sgprs_preloadremainder_z(ptr addrspace(1) inr
   %load = load i16, ptr addrspace(4) %gep
   %conv = zext i16 %load to i32
   store i32 %conv, ptr addrspace(1) %out
-  ret void
-}
-
-; Check for consistency between isel and earlier passes preload SGPR accounting with max preload SGPRs.
-
-define amdgpu_kernel void @preload_block_max_user_sgprs(ptr addrspace(1) inreg %out, i192 inreg %t0, i32 inreg %t1) #0 {
-; GFX940-LABEL: preload_block_max_user_sgprs:
-; GFX940:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
-; GFX940-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
-; GFX940-NEXT:  ; %bb.0:
-; GFX940-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-NEXT:    v_mov_b32_e32 v1, s12
-; GFX940-NEXT:    global_store_dword v0, v1, s[2:3] sc0 sc1
-; GFX940-NEXT:    s_endpgm
-;
-; GFX90a-LABEL: preload_block_max_user_sgprs:
-; GFX90a:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
-; GFX90a-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
-; GFX90a-NEXT:  ; %bb.0:
-; GFX90a-NEXT:    s_load_dword s0, s[4:5], 0x28
-; GFX90a-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-NEXT:    v_mov_b32_e32 v1, s0
-; GFX90a-NEXT:    global_store_dword v0, v1, s[6:7]
-; GFX90a-NEXT:    s_endpgm
-  %imp_arg_ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-  %load = load i32, ptr addrspace(4) %imp_arg_ptr
-  store i32 %load, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @preload_block_count_z_workgroup_size_z_remainder_z(ptr addrspace(1) inreg %out) #0 {
-; GFX940-LABEL: preload_block_count_z_workgroup_size_z_remainder_z:
-; GFX940:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
-; GFX940-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
-; GFX940-NEXT:  ; %bb.0:
-; GFX940-NEXT:    s_lshr_b32 s0, s9, 16
-; GFX940-NEXT:    s_and_b32 s1, s8, 0xffff
-; GFX940-NEXT:    v_mov_b32_e32 v3, 0
-; GFX940-NEXT:    v_mov_b32_e32 v0, s6
-; GFX940-NEXT:    v_mov_b32_e32 v1, s1
-; GFX940-NEXT:    v_mov_b32_e32 v2, s0
-; GFX940-NEXT:    global_store_dwordx3 v3, v[0:2], s[2:3] sc0 sc1
-; GFX940-NEXT:    s_endpgm
-;
-; GFX90a-LABEL: preload_block_count_z_workgroup_size_z_remainder_z:
-; GFX90a:         s_trap 2 ; Kernarg preload header. Trap with incompatible firmware that doesn't support preloading kernel arguments.
-; GFX90a-NEXT:    .fill 63, 4, 0xbf800000 ; s_nop 0
-; GFX90a-NEXT:  ; %bb.0:
-; GFX90a-NEXT:    s_lshr_b32 s0, s13, 16
-; GFX90a-NEXT:    s_and_b32 s1, s12, 0xffff
-; GFX90a-NEXT:    v_mov_b32_e32 v3, 0
-; GFX90a-NEXT:    v_mov_b32_e32 v0, s10
-; GFX90a-NEXT:    v_mov_b32_e32 v1, s1
-; GFX90a-NEXT:    v_mov_b32_e32 v2, s0
-; GFX90a-NEXT:    global_store_dwordx3 v3, v[0:2], s[6:7]
-; GFX90a-NEXT:    s_endpgm
-  %imp_arg_ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-  %gep0 = getelementptr i8, ptr addrspace(4) %imp_arg_ptr, i32 8
-  %gep1 = getelementptr i8, ptr addrspace(4) %imp_arg_ptr, i32 16
-  %gep2 = getelementptr i8, ptr addrspace(4) %imp_arg_ptr, i32 22
-  %load0 = load i32, ptr addrspace(4) %gep0
-  %load1 = load i16, ptr addrspace(4) %gep1
-  %load2 = load i16, ptr addrspace(4) %gep2
-  %conv1 = zext i16 %load1 to i32
-  %conv2 = zext i16 %load2 to i32
-  %ins.0 =  insertelement <3 x i32> poison, i32 %load0, i32 0
-  %ins.1 =  insertelement <3 x i32> %ins.0, i32 %conv1, i32 1
-  %ins.2 =  insertelement <3 x i32> %ins.1, i32 %conv2, i32 2
-  store <3 x i32> %ins.2, ptr addrspace(1) %out
   ret void
 }
 

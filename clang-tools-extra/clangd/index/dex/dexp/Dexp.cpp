@@ -375,8 +375,7 @@ std::unique_ptr<SymbolIndex> openIndex(llvm::StringRef Index) {
   return Index.starts_with("remote:")
              ? remote::getClient(Index.drop_front(strlen("remote:")),
                                  ProjectRoot)
-             : loadIndex(Index, SymbolOrigin::Static, /*UseDex=*/true,
-                         /*SupportContainedRefs=*/true);
+             : loadIndex(Index, SymbolOrigin::Static, /*UseDex=*/true);
 }
 
 bool runCommand(std::string Request, const SymbolIndex &Index) {

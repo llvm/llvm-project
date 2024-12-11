@@ -424,22 +424,11 @@ def unary_undef_to_zero: GICombineRule<
          [{ return Helper.matchOperandIsUndef(*${root}, 1); }]),
   (apply [{ Helper.replaceInstWithConstant(*${root}, 0); }])>;
 
-def unary_undef_to_undef_frags : GICombinePatFrag<
-  (outs root:$dst), (ins),
-  !foreach(op,
-           [G_TRUNC, G_BITCAST, G_ANYEXT, G_PTRTOINT, G_INTTOPTR, G_FPTOSI,
-            G_FPTOUI],
-           (pattern (op $dst, $x), (G_IMPLICIT_DEF $x)))>;
-def unary_undef_to_undef : GICombineRule<
-  (defs root:$dst),
-  (match (unary_undef_to_undef_frags $dst)),
-  (apply [{ Helper.replaceInstWithUndef(*${dst}.getParent()); }])>;
-
 // Instructions where if any source operand is undef, the instruction can be
 // replaced with undef.
 def propagate_undef_any_op: GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_ADD, G_SUB, G_XOR):$root,
+  (match (wip_match_opcode G_ADD, G_FPTOSI, G_FPTOUI, G_SUB, G_XOR, G_TRUNC, G_BITCAST, G_ANYEXT):$root,
          [{ return Helper.matchAnyExplicitUseIsUndef(*${root}); }]),
   (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
 
@@ -868,22 +857,6 @@ def unmerge_zext_to_zext : GICombineRule<
   (apply [{ Helper.applyCombineUnmergeZExtToZExt(*${d}); }])
 >;
 
-/// Transform merge_x_undef -> anyext.
-def merge_of_x_and_undef : GICombineRule <
-  (defs root:$root, build_fn_matchinfo:$matchinfo),
-  (match (G_IMPLICIT_DEF $undef),
-         (G_MERGE_VALUES $root, $x, $undef):$MI,
-         [{ return Helper.matchMergeXAndUndef(*${MI}, ${matchinfo}); }]),
-  (apply [{ Helper.applyBuildFn(*${MI}, ${matchinfo}); }])>;
-
-/// Transform merge_x_zero -> zext.
-def merge_of_x_and_zero : GICombineRule <
-  (defs root:$root, build_fn_matchinfo:$matchinfo),
-  (match (G_CONSTANT $zero, 0),
-         (G_MERGE_VALUES $root, $x, $zero):$MI,
-         [{ return Helper.matchMergeXAndZero(*${MI}, ${matchinfo}); }]),
-  (apply [{ Helper.applyBuildFn(*${MI}, ${matchinfo}); }])>;
-
 def merge_combines: GICombineGroup<[
   unmerge_anyext_build_vector,
   unmerge_merge,
@@ -891,9 +864,7 @@ def merge_combines: GICombineGroup<[
   unmerge_cst,
   unmerge_undef,
   unmerge_dead_to_trunc,
-  unmerge_zext_to_zext,
-  merge_of_x_and_undef,
-  merge_of_x_and_zero
+  unmerge_zext_to_zext
 ]>;
 
 // Under certain conditions, transform:
@@ -1396,12 +1367,6 @@ def match_addos : GICombineRule<
         [{ return Helper.matchAddOverflow(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
-def match_subo_no_overflow : GICombineRule<
-  (defs root:$root, build_fn_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_SSUBO, G_USUBO):$root,
-        [{ return Helper.matchSuboCarryOut(*${root}, ${matchinfo}); }]),
-  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
-
 def match_extract_of_element_undef_vector: GICombineRule <
   (defs root:$root),
   (match (G_IMPLICIT_DEF $vector),
@@ -1617,13 +1582,6 @@ def combine_shuffle_undef_rhs : GICombineRule<
   (match (G_IMPLICIT_DEF $undef),
          (G_SHUFFLE_VECTOR $root, $src1, $undef, $mask):$root,
         [{ return Helper.matchShuffleUndefRHS(*${root}, ${matchinfo}); }]),
-  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])
->;
-
-def combine_shuffle_disjoint_mask : GICombineRule<
-  (defs root:$root, build_fn_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
-        [{ return Helper.matchShuffleDisjointMask(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])
 >;
 
@@ -1918,19 +1876,12 @@ def cmp_combines: GICombineGroup<[
   redundant_binop_in_equality
 ]>;
 
-
-def overflow_combines: GICombineGroup<[
-  match_addos,
-  match_subo_no_overflow
-]>;
-
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
                                      binop_left_undef_to_zero,
                                      binop_right_undef_to_undef,
                                      unary_undef_to_zero,
-                                     unary_undef_to_undef,
                                      propagate_undef_any_op,
                                      propagate_undef_all_ops,
                                      propagate_undef_shuffle_mask,
@@ -1985,8 +1936,7 @@ def constant_fold_binops : GICombineGroup<[constant_fold_binop,
 def prefer_sign_combines : GICombineGroup<[nneg_zext]>;
 
 def shuffle_combines : GICombineGroup<[combine_shuffle_concat,
-                                       combine_shuffle_undef_rhs,
-                                       combine_shuffle_disjoint_mask]>;
+                                       combine_shuffle_undef_rhs]>;
 
 def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     vector_ops_combines, freeze_combines, cast_combines,
@@ -2008,9 +1958,9 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
     sub_add_reg, select_to_minmax,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
-    combine_concat_vector,
+    combine_concat_vector, match_addos,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
-    combine_use_vector_truncate, merge_combines, overflow_combines]>;
+    combine_use_vector_truncate, merge_combines]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

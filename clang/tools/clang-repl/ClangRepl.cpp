@@ -139,8 +139,6 @@ ReplListCompleter::operator()(llvm::StringRef Buffer, size_t Pos,
 
 llvm::ExitOnError ExitOnErr;
 int main(int argc, const char **argv) {
-  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
-
   ExitOnErr.setBanner("clang-repl: ");
   llvm::cl::ParseCommandLineOptions(argc, argv);
 

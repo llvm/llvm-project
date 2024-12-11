@@ -162,10 +162,9 @@ the subsequent ``dx.op.annotateHandle`` operation in. Note that we don't have
 an analogue for `dx.op.createHandle`_, since ``dx.op.createHandleFromBinding``
 subsumes it.
 
-We diverge from DXIL and index from the beginning of the binding rather than
-indexing from the beginning of the binding space. This matches the semantics
-more clearly and avoids a non-obvious invariant in what constitutes valid
-arguments.
+For simplicity of lowering, we match DXIL in using an index from the beginning
+of the binding space rather than an index from the lower bound of the binding
+itself.
 
 .. _dx.op.createHandle: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#resource-handles
 
@@ -195,7 +194,7 @@ arguments.
    * - ``%index``
      - 4
      - ``i32``
-     - Index from the beginning of the binding.
+     - Index from the beginning of the binding space to access.
    * - ``%non-uniform``
      - 5
      - i1
@@ -233,12 +232,6 @@ Examples:
    %buf = call target("dx.RawBuffer", i8, 0, 0)
                @llvm.dx.handle.fromBinding.tdx.RawBuffer_i8_0_0t(
                    i32 1, i32 8, i32 1, i32 0, i1 false)
-
-   ; RWBuffer<float4> Global[3] : register(u6, space5)
-   ; RWBuffer<float4> Buf = Global[2];
-   %buf = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
-               @llvm.dx.handle.fromBinding.tdx.TypedBuffer_f32_1_0(
-                   i32 5, i32 6, i32 3, i32 2, i1 false)
 
 .. list-table:: ``@llvm.dx.handle.fromHeap``
    :header-rows: 1

@@ -15,6 +15,7 @@
 #include "clang/Basic/Builtins.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/AMDGPUEmitPrintf.h"
 
 using namespace clang;

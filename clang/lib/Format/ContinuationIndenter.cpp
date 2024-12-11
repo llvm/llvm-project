@@ -693,14 +693,17 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
 
   bool DisallowLineBreaksOnThisLine =
       Style.LambdaBodyIndentation == FormatStyle::LBI_Signature &&
-      // Deal with lambda arguments in C++. The aim here is to ensure that we
-      // don't over-indent lambda function bodies when lambdas are passed as
-      // arguments to function calls. We do this by ensuring that either all
-      // arguments (including any lambdas) go on the same line as the function
-      // call, or we break before the first argument.
-      Style.isCpp() && [&] {
+      Style.isCpp() && [&Current] {
+        // Deal with lambda arguments in C++. The aim here is to ensure that we
+        // don't over-indent lambda function bodies when lambdas are passed as
+        // arguments to function calls. We do this by ensuring that either all
+        // arguments (including any lambdas) go on the same line as the function
+        // call, or we break before the first argument.
+        const auto *Prev = Current.Previous;
+        if (!Prev)
+          return false;
         // For example, `/*Newline=*/false`.
-        if (Previous.is(TT_BlockComment) && Current.SpacesRequiredBefore == 0)
+        if (Prev->is(TT_BlockComment) && Current.SpacesRequiredBefore == 0)
           return false;
         const auto *PrevNonComment = Current.getPreviousNonComment();
         if (!PrevNonComment || PrevNonComment->isNot(tok::l_paren))

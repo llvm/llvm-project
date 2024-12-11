@@ -19,7 +19,6 @@ class AffineExpr;
 class IRMapping;
 class UnknownLoc;
 class FileLineColLoc;
-class FileLineColRange;
 class Type;
 class PrimitiveType;
 class IntegerType;

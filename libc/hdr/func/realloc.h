@@ -10,10 +10,8 @@
 #define LLVM_LIBC_HDR_FUNC_REALLOC_H
 
 #ifdef LIBC_FULL_BUILD
-
 #include "hdr/types/size_t.h"
-
-extern "C" void *realloc(void *ptr, size_t new_size) noexcept;
+extern "C" void *realloc(void *ptr, size_t new_size);
 
 #else // Overlay mode
 

@@ -106,61 +106,27 @@ class PRMerger:
             return False, f"More than 1 commit! {len(data['commits'])}"
         return True
 
-    def _normalize_pr(self, parg: str):
-        if parg.isdigit():
-            return parg
-        elif parg.startswith("https://github.com/llvm/llvm-project/pull"):
-            # try to parse the following url https://github.com/llvm/llvm-project/pull/114089
-            i = parg[parg.rfind("/") + 1 :]
-            if not i.isdigit():
-                raise RuntimeError(f"{i} is not a number, malformatted input.")
-            return i
-        else:
-            raise RuntimeError(
-                f"PR argument must be PR ID or pull request URL - {parg} is wrong."
-            )
-
-    def load_pr_data(self):
-        self.args.pr = self._normalize_pr(self.args.pr)
+    def validate_pr(self):
         fields_to_fetch = [
             "baseRefName",
-            "commits",
-            "headRefName",
-            "headRepository",
-            "headRepositoryOwner",
             "reviewDecision",
-            "state",
-            "statusCheckRollup",
             "title",
+            "statusCheckRollup",
             "url",
+            "state",
+            "commits",
         ]
-        print(f"> Loading PR {self.args.pr}...")
         o = self.run_gh(
             "pr",
             ["view", self.args.pr, "--json", ",".join(fields_to_fetch)],
         )
-        self.prdata = json.loads(o)
+        prdata = json.loads(o)
 
         # save the baseRefName (target branch) so that we know where to push
-        self.target_branch = self.prdata["baseRefName"]
-        srepo = self.prdata["headRepository"]["name"]
-        sowner = self.prdata["headRepositoryOwner"]["login"]
-        self.source_url = f"https://github.com/{sowner}/{srepo}"
-        self.source_branch = self.prdata["headRefName"]
+        self.target_branch = prdata["baseRefName"]
 
-        if srepo != "llvm-project":
-            print("The target repo is NOT llvm-project, check the PR!")
-            sys.exit(1)
-
-        if sowner == "llvm":
-            print(
-                "The source owner should never be github.com/llvm, double check the PR!"
-            )
-            sys.exit(1)
-
-    def validate_pr(self):
-        print(f"> Handling PR {self.args.pr} - {self.prdata['title']}")
-        print(f">   {self.prdata['url']}")
+        print(f"> Handling PR {self.args.pr} - {prdata['title']}")
+        print(f">   {prdata['url']}")
 
         VALIDATIONS = {
             "state": self.validate_state,
@@ -175,7 +141,7 @@ class PRMerger:
         total_ok = True
         for val_name, val_func in VALIDATIONS.items():
             try:
-                validation_data = val_func(self.prdata)
+                validation_data = val_func(prdata)
             except:
                 validation_data = False
             ok = None
@@ -200,20 +166,13 @@ class PRMerger:
         return total_ok
 
     def rebase_pr(self):
-        print("> Fetching upstream")
-        subprocess.run(["git", "fetch", "--all"], check=True)
-        print("> Rebasing...")
-        subprocess.run(
-            ["git", "rebase", self.args.upstream + "/" + self.target_branch], check=True
-        )
-        print("> Publish rebase...")
-        subprocess.run(
-            ["git", "push", "--force", self.source_url, f"HEAD:{self.source_branch}"]
-        )
+        print("> Rebasing")
+        self.run_gh("pr", ["update-branch", "--rebase", self.args.pr])
+        print("> Waiting for GitHub to update PR")
+        time.sleep(4)
 
     def checkout_pr(self):
         print("> Fetching PR changes...")
-        self.merge_branch = "llvm_merger_" + self.args.pr
         self.run_gh(
             "pr",
             [
@@ -221,20 +180,9 @@ class PRMerger:
                 self.args.pr,
                 "--force",
                 "--branch",
-                self.merge_branch,
+                "llvm_merger_" + self.args.pr,
             ],
         )
-
-        # get the branch information so that we can use it for
-        # pushing later.
-        p = subprocess.run(
-            ["git", "config", f"branch.{self.merge_branch}.merge"],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        upstream_branch = p.stdout.strip().replace("refs/heads/", "")
-        print(upstream_branch)
 
     def push_upstream(self):
         print("> Pushing changes...")
@@ -253,7 +201,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "pr",
-        help="The Pull Request ID that should be merged into a release. Can be number or URL",
+        help="The Pull Request ID that should be merged into a release.",
     )
     parser.add_argument(
         "--skip-validation",
@@ -276,20 +224,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--validate-only", action="store_true", help="Only run the validations."
     )
-    parser.add_argument(
-        "--rebase-only", action="store_true", help="Only rebase and exit"
-    )
     args = parser.parse_args()
 
     merger = PRMerger(args)
-    merger.load_pr_data()
-
-    if args.rebase_only:
-        merger.checkout_pr()
-        merger.rebase_pr()
-        merger.delete_local_branch()
-        sys.exit(0)
-
     if not merger.validate_pr():
         print()
         print(
@@ -302,8 +239,8 @@ if __name__ == "__main__":
         print("! --validate-only passed, will exit here")
         sys.exit(0)
 
-    merger.checkout_pr()
     merger.rebase_pr()
+    merger.checkout_pr()
 
     if args.no_push:
         print()

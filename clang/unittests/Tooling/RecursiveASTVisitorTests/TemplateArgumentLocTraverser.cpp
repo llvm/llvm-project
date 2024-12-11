@@ -12,16 +12,18 @@ using namespace clang;
 
 namespace {
 
-class TemplateArgumentLocTraverser : public ExpectedLocationVisitor {
+class TemplateArgumentLocTraverser
+  : public ExpectedLocationVisitor<TemplateArgumentLocTraverser> {
 public:
-  bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &ArgLoc) override {
+  bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &ArgLoc) {
     std::string ArgStr;
     llvm::raw_string_ostream Stream(ArgStr);
     const TemplateArgument &Arg = ArgLoc.getArgument();
 
     Arg.print(Context->getPrintingPolicy(), Stream, /*IncludeType*/ true);
     Match(ArgStr, ArgLoc.getLocation());
-    return ExpectedLocationVisitor::TraverseTemplateArgumentLoc(ArgLoc);
+    return ExpectedLocationVisitor<TemplateArgumentLocTraverser>::
+      TraverseTemplateArgumentLoc(ArgLoc);
   }
 };
 

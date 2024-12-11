@@ -1696,17 +1696,18 @@ private:
     // required chains of hlfir.designate to address the parent components so
     // that the StructureConstructor can later be lowered by addressing these
     // parent components if needed. Note: the front-end orders the components in
-    // structure constructors.
+    // structure constructors. The code below relies on the component to appear
+    // in order.
     using ValueAndParent = std::tuple<const Fortran::lower::SomeExpr &,
                                       const Fortran::semantics::Symbol &,
                                       hlfir::EntityWithAttributes>;
     llvm::SmallVector<ValueAndParent> valuesAndParents;
+    Fortran::lower::ComponentReverseIterator compIterator(
+        ctor.result().derivedTypeSpec());
+    hlfir::EntityWithAttributes currentParent = varOp;
     for (const auto &value : llvm::reverse(ctor.values())) {
       const Fortran::semantics::Symbol &compSym = *value.first;
-      hlfir::EntityWithAttributes currentParent = varOp;
-      for (Fortran::lower::ComponentReverseIterator compIterator(
-               ctor.result().derivedTypeSpec());
-           !compIterator.lookup(compSym.name());) {
+      while (!compIterator.lookup(compSym.name())) {
         const auto &parentType = compIterator.advanceToParentType();
         llvm::StringRef parentName = toStringRef(parentType.name());
         auto baseRecTy = mlir::cast<fir::RecordType>(

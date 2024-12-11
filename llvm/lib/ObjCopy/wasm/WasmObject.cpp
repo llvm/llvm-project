@@ -8,6 +8,9 @@
 
 #include "WasmObject.h"
 
+#include "llvm/Support/LEB128.h"
+#include "llvm/Support/raw_ostream.h"
+
 namespace llvm {
 namespace objcopy {
 namespace wasm {

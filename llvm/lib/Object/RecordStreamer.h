@@ -10,7 +10,6 @@
 #define LLVM_LIB_OBJECT_RECORDSTREAMER_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCStreamer.h"
@@ -33,7 +32,7 @@ private:
   // Map of aliases created by .symver directives, saved so we can update
   // their symbol binding after parsing complete. This maps from each
   // aliasee to its list of aliases.
-  MapVector<const MCSymbol *, std::vector<StringRef>> SymverAliasMap;
+  DenseMap<const MCSymbol *, std::vector<StringRef>> SymverAliasMap;
 
   /// Get the state recorded for the given symbol.
   State getSymbolState(const MCSymbol *Sym);

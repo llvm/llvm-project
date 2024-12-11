@@ -7,7 +7,7 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.jmp_buf
   COMPILE_OPTIONS
-    ${libc_opt_high_flag}
+    -O3
     -fomit-frame-pointer
 )
 
@@ -20,6 +20,6 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.jmp_buf
   COMPILE_OPTIONS
-    ${libc_opt_high_flag}
+    -O3
     -fomit-frame-pointer
 )

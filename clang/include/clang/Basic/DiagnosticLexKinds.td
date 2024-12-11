@@ -486,14 +486,14 @@ def ext_embedded_directive : Extension<
   InGroup<DiagGroup<"embedded-directive">>;
 def ext_c_missing_varargs_arg : Extension<
   "passing no argument for the '...' parameter of a variadic macro is "
-  "a C23 extension">, InGroup<VariadicMacroArgumentsOmitted>;
+  "a C23 extension">, InGroup<C23>;
 def ext_cxx_missing_varargs_arg : Extension<
   "passing no argument for the '...' parameter of a variadic macro is "
-  "a C++20 extension">, InGroup<VariadicMacroArgumentsOmitted>;
+  "a C++20 extension">, InGroup<CXX20>;
 def warn_c17_compat_missing_varargs_arg : Warning<
   "passing no argument for the '...' parameter of a variadic macro is "
   "incompatible with C standards before C23">,
-  InGroup<VariadicMacroArgumentsOmitted>, DefaultIgnore;
+  InGroup<CPre23Compat>, DefaultIgnore;
 def warn_cxx17_compat_missing_varargs_arg : Warning<
   "passing no argument for the '...' parameter of a variadic macro is "
   "incompatible with C++ standards before C++20">,

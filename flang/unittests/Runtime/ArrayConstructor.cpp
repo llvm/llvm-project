@@ -43,7 +43,8 @@ TEST(ArrayConstructor, Basic) {
   result.GetDimension(0).SetBounds(1, 0);
 
   RTNAME(InitArrayConstructorVector)
-  (*acVector, result, /*useValueLengthParameters=*/false);
+  (*acVector, result, /*useValueLengthParameters=*/false,
+      /*vectorClassSize=*/sizeof(ArrayConstructorVector));
   for (std::int32_t i{0}; i <= 99; ++i) {
     RTNAME(PushArrayConstructorSimpleScalar)(*acVector, &i);
     RTNAME(PushArrayConstructorValue)(*acVector, *x);
@@ -70,7 +71,8 @@ TEST(ArrayConstructor, Basic) {
   // and is allocated when the first value is pushed.
   result.GetDimension(0).SetBounds(1, 1234);
   RTNAME(InitArrayConstructorVector)
-  (*acVector, result, /*useValueLengthParameters=*/false);
+  (*acVector, result, /*useValueLengthParameters=*/false,
+      /*vectorClassSize=*/sizeof(ArrayConstructorVector));
   EXPECT_EQ(0, acVector->actualAllocationSize);
   std::int32_t i{42};
   RTNAME(PushArrayConstructorSimpleScalar)(*acVector, &i);
@@ -107,7 +109,8 @@ TEST(ArrayConstructor, Character) {
   static constexpr std::size_t expectedElements{10 * (1 + 4 + 2 * 3)};
   result.GetDimension(0).SetBounds(1, 0);
   RTNAME(InitArrayConstructorVector)
-  (*acVector, result, /*useValueLengthParameters=*/true);
+  (*acVector, result, /*useValueLengthParameters=*/true,
+      /*vectorClassSize=*/sizeof(ArrayConstructorVector));
   for (std::int32_t i{1}; i <= 10; ++i) {
     RTNAME(PushArrayConstructorValue)(*acVector, *c);
     RTNAME(PushArrayConstructorValue)(*acVector, *x);
@@ -148,7 +151,8 @@ TEST(ArrayConstructor, CharacterRuntimeCheck) {
 
   result.GetDimension(0).SetBounds(1, 0);
   RTNAME(InitArrayConstructorVector)
-  (*acVector, result, /*useValueLengthParameters=*/true);
+  (*acVector, result, /*useValueLengthParameters=*/true,
+      /*vectorClassSize=*/sizeof(ArrayConstructorVector));
   RTNAME(PushArrayConstructorValue)(*acVector, *c2);
   ASSERT_DEATH(RTNAME(PushArrayConstructorValue)(*acVector, *c3),
       "Array constructor: mismatched character lengths");

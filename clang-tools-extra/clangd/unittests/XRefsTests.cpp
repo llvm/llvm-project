@@ -1019,15 +1019,6 @@ TEST(LocateSymbol, All) {
           void *Value;
           void *getPointer() const { return Info::get^Pointer(Value); }
         };
-      )cpp",
-      R"cpp(// Deducing this
-        struct S {
-          int bar(this S&);
-        };
-        void foo() {
-          S [[waldo]];
-          int x = wa^ldo.bar();
-        }
     )cpp"};
   for (const char *Test : Tests) {
     Annotations T(Test);
@@ -1044,7 +1035,6 @@ TEST(LocateSymbol, All) {
     TU.Code = std::string(T.code());
 
     TU.ExtraArgs.push_back("-xobjective-c++");
-    TU.ExtraArgs.push_back("-std=c++23");
 
     auto AST = TU.build();
     auto Results = locateSymbolAt(AST, T.point());

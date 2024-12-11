@@ -17,7 +17,7 @@ In LLDB you will be able to see the following new registers:
 
 * `z0-z31` vector registers, each one has size equal to the vector length.
 * `p0-p15` predicate registers, each one containing 1 bit per byte in the vector
-  length. So each one is `vector length in bits / 8` bits.
+  length. Making each one vector length / 8 sized.
 * `ffr` the first fault register, same size as a predicate register.
 * `vg`, the vector length in "granules". Each granule is 8 bytes.
 

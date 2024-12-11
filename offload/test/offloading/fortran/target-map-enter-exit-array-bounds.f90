@@ -1,5 +1,6 @@
-! Offloading test checking interaction of an enter and exit map of an array of
-! scalars with specified bounds
+! Offloading test checking interaction of an
+! enter and exit map of an array of scalars
+! with specified bounds
 ! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic

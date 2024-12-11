@@ -157,8 +157,7 @@ static bool doesSuffixLookLikeMangledType(StringRef Suffix) {
     return false;
 
   // [pi][0-9]+
-  if (Suffix.size() > 1 && is_contained("pi", Suffix[0]) &&
-      all_of(Suffix.drop_front(), isDigit))
+  if (is_contained("pi", Suffix[0]) && all_of(Suffix.drop_front(), isDigit))
     return true;
 
   // Match one of the named types.

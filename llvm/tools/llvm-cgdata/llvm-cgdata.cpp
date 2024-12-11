@@ -76,7 +76,6 @@ static StringRef ToolName;
 static StringRef OutputFilename = "-";
 static StringRef Filename;
 static bool ShowCGDataVersion;
-static bool SkipTrim;
 static CGDataAction Action;
 static std::optional<CGDataFormat> OutputFormat;
 static std::vector<std::string> InputFilenames;
@@ -215,7 +214,7 @@ static int merge_main(int argc, const char *argv[]) {
   if (!Result)
     exitWithError("failed to merge codegen data files.");
 
-  GlobalFunctionMapRecord.finalize(SkipTrim);
+  GlobalFunctionMapRecord.finalize();
 
   CodeGenDataWriter Writer;
   if (!GlobalOutlineRecord.empty())
@@ -302,7 +301,6 @@ static void parseArgs(int argc, char **argv) {
   }
 
   ShowCGDataVersion = Args.hasArg(OPT_cgdata_version);
-  SkipTrim = Args.hasArg(OPT_skip_trim);
 
   if (opt::Arg *A = Args.getLastArg(OPT_format)) {
     StringRef OF = A->getValue();

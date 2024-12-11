@@ -85,9 +85,8 @@ void Scheduler::issueInstructionImpl(
 
   if (IS->isMemOp()) {
     LSU.onInstructionIssued(IR);
-    const CriticalDependency &MemDep =
-        LSU.getCriticalPredecessor(IS->getLSUTokenID());
-    IS->setCriticalMemDep(MemDep);
+    const MemoryGroup &Group = LSU.getGroup(IS->getLSUTokenID());
+    IS->setCriticalMemDep(Group.getCriticalPredecessor());
   }
 
   if (IS->isExecuting())

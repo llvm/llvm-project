@@ -34,7 +34,7 @@ public:
 protected:
   void UnregisterReadObject(IOObject::WaitableHandle handle) override;
 
-  void Interrupt() override;
+  void TriggerPendingCallbacks() override;
 
 private:
   void ProcessReadObject(IOObject::WaitableHandle handle);
@@ -45,7 +45,7 @@ private:
     Callback callback;
   };
   llvm::DenseMap<IOObject::WaitableHandle, FdInfo> m_read_fds;
-  void *m_interrupt_event;
+  void *m_trigger_event;
 };
 
 } // namespace lldb_private

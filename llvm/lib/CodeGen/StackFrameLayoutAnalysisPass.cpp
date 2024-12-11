@@ -34,6 +34,8 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <sstream>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "stack-frame-layout"

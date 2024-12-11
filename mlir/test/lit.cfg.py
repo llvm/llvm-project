@@ -3,7 +3,6 @@
 import os
 import platform
 import re
-import shutil
 import subprocess
 import tempfile
 
@@ -78,75 +77,6 @@ def add_runtime(name):
     return ToolSubst(f"%{name}", find_runtime(name))
 
 
-# Provide the path to asan runtime lib 'libclang_rt.asan_osx_dynamic.dylib' if
-# available. This is darwin specific since it's currently only needed on darwin.
-# Stolen from llvm/test/lit.cfg.py with a few modifications
-def get_asan_rtlib():
-    if not "asan" in config.available_features or not "Darwin" in config.host_os:
-        return ""
-    # Find the asan rt lib
-    resource_dir = (
-        subprocess.check_output([config.host_cc.strip(), "-print-resource-dir"])
-        .decode("utf-8")
-        .strip()
-    )
-    return os.path.join(
-        resource_dir, "lib", "darwin", "libclang_rt.asan_osx_dynamic.dylib"
-    )
-
-
-# On macOS, we can't do the DYLD_INSERT_LIBRARIES trick with a shim python
-# binary as the ASan interceptors get loaded too late. Also, when SIP is
-# enabled, we can't inject libraries into system binaries at all, so we need a
-# copy of the "real" python to work with.
-# Stolen from lldb/test/API/lit.cfg.py with a few modifications
-def find_real_python_interpreter():
-    # If we're running in a virtual environment, we have to copy Python into
-    # the virtual environment for it to work.
-    if sys.prefix != sys.base_prefix:
-        copied_python = os.path.join(sys.prefix, "bin", "copied-python")
-    else:
-        copied_python = os.path.join(config.lldb_build_directory, "copied-python")
-
-    # Avoid doing any work if we already copied the binary.
-    if os.path.isfile(copied_python):
-        return copied_python
-
-    # Find the "real" python binary.
-    real_python = (
-        subprocess.check_output(
-            [
-                config.python_executable,
-                os.path.join(
-                    os.path.dirname(os.path.realpath(__file__)),
-                    "get_darwin_real_python.py",
-                ),
-            ]
-        )
-        .decode("utf-8")
-        .strip()
-    )
-
-    shutil.copy(real_python, copied_python)
-
-    # Now make sure the copied Python works. The Python in Xcode has a relative
-    # RPATH and cannot be copied.
-    try:
-        # We don't care about the output, just make sure it runs.
-        subprocess.check_call([copied_python, "-V"])
-    except subprocess.CalledProcessError:
-        # The copied Python didn't work. Assume we're dealing with the Python
-        # interpreter in Xcode. Given that this is not a system binary SIP
-        # won't prevent us form injecting the interceptors, but when running in
-        # a virtual environment, we can't use it directly. Create a symlink
-        # instead.
-        os.remove(copied_python)
-        os.symlink(real_python, copied_python)
-
-    # The copied Python works.
-    return copied_python
-
-
 llvm_config.with_system_environment(["HOME", "INCLUDE", "LIB", "TMP", "TEMP"])
 
 llvm_config.use_default_substitutions()
@@ -161,7 +91,6 @@ config.excludes = [
     "LICENSE.txt",
     "lit.cfg.py",
     "lit.site.cfg.py",
-    "get_darwin_real_python.py",
 ]
 
 # Tweak the PATH to include the tools dir.
@@ -243,30 +172,10 @@ tools.extend(
 )
 
 python_executable = config.python_executable
-# Python configuration with sanitizer requires some magic preloading. This will only work on clang/linux/darwin.
-# TODO: detect Windows situation (or mark these tests as unsupported on these platforms).
-if "asan" in config.available_features:
-    if "Linux" in config.host_os:
-        python_executable = f"LD_PRELOAD=$({config.host_cxx} -print-file-name=libclang_rt.asan-{config.host_arch}.so) {config.python_executable}"
-    if "Darwin" in config.host_os:
-        # Ensure we use a non-shim Python executable, for the `DYLD_INSERT_LIBRARIES`
-        # env variable to take effect
-        real_python_executable = find_real_python_interpreter()
-        if real_python_executable:
-            python_executable = real_python_executable
-            lit_config.note(
-                "Using {} instead of {}".format(
-                    python_executable, config.python_executable
-                )
-            )
-
-        asan_rtlib = get_asan_rtlib()
-        lit_config.note("Using ASan rtlib {}".format(asan_rtlib))
-        config.environment["MallocNanoZone"] = "0"
-        config.environment["ASAN_OPTIONS"] = "detect_stack_use_after_return=1"
-        config.environment["DYLD_INSERT_LIBRARIES"] = asan_rtlib
-
-
+# Python configuration with sanitizer requires some magic preloading. This will only work on clang/linux.
+# TODO: detect Darwin/Windows situation (or mark these tests as unsupported on these platforms).
+if "asan" in config.available_features and "Linux" in config.host_os:
+    python_executable = f"LD_PRELOAD=$({config.host_cxx} -print-file-name=libclang_rt.asan-{config.host_arch}.so) {config.python_executable}"
 # On Windows the path to python could contains spaces in which case it needs to be provided in quotes.
 # This is the equivalent of how %python is setup in llvm/utils/lit/lit/llvm/config.py.
 elif "Windows" in config.host_os:

@@ -26,7 +26,7 @@ struct FileLocation {
 
 using FileRange = std::pair<FileLocation, FileLocation>;
 
-class SelectionFinderVisitor : public TestVisitor {
+class SelectionFinderVisitor : public TestVisitor<SelectionFinderVisitor> {
   FileLocation Location;
   std::optional<FileRange> SelectionRange;
   llvm::function_ref<void(SourceRange SelectionRange,
@@ -42,7 +42,7 @@ public:
       : Location(Location), SelectionRange(SelectionRange), Consumer(Consumer) {
   }
 
-  bool VisitTranslationUnitDecl(TranslationUnitDecl *TU) override {
+  bool VisitTranslationUnitDecl(const TranslationUnitDecl *TU) {
     const ASTContext &Context = TU->getASTContext();
     const SourceManager &SM = Context.getSourceManager();
 

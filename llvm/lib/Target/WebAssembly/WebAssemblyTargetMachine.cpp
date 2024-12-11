@@ -21,6 +21,7 @@
 #include "WebAssemblyTargetTransformInfo.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -114,17 +115,17 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, std::optional<Reloc::Model> RM,
     std::optional<CodeModel::Model> CM, CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(
+    : LLVMTargetMachine(
           T,
           TT.isArch64Bit()
               ? (TT.isOSEmscripten() ? "e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-"
-                                       "i128:128-f128:64-n32:64-S128-ni:1:10:20"
+                                       "f128:64-n32:64-S128-ni:1:10:20"
                                      : "e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-"
-                                       "i128:128-n32:64-S128-ni:1:10:20")
+                                       "n32:64-S128-ni:1:10:20")
               : (TT.isOSEmscripten() ? "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-"
-                                       "i128:128-f128:64-n32:64-S128-ni:1:10:20"
+                                       "f128:64-n32:64-S128-ni:1:10:20"
                                      : "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-"
-                                       "i128:128-n32:64-S128-ni:1:10:20"),
+                                       "n32:64-S128-ni:1:10:20"),
           TT, CPU, FS, Options, getEffectiveRelocModel(RM, TT),
           getEffectiveCodeModel(CM, CodeModel::Large), OL),
       TLOF(new WebAssemblyTargetObjectFile()),

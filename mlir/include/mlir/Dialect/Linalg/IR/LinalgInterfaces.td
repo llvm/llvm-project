@@ -741,7 +741,7 @@ def LinalgStructuredInterface
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         auto maps =  $_op.getIndexingMapsArray();
-        return concatAffineMaps(maps, $_op.getContext());
+        return concatAffineMaps(maps);
       }]
     >,
     InterfaceMethod<

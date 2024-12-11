@@ -43,11 +43,3 @@ Language *ObjCPlusPlusLanguage::CreateInstance(lldb::LanguageType language) {
     return nullptr;
   }
 }
-
-std::optional<bool>
-ObjCPlusPlusLanguage::GetBooleanFromString(llvm::StringRef str) const {
-  return llvm::StringSwitch<std::optional<bool>>(str)
-      .Cases("true", "YES", {true})
-      .Cases("false", "NO", {false})
-      .Default({});
-}

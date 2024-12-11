@@ -73,9 +73,6 @@ public:
   /// The destructor blocks on any outstanding background tasks.
   ~ClangdLSPServer();
 
-  ClangdLSPServer(const ClangdLSPServer &other) = delete;
-  ClangdLSPServer &operator=(const ClangdLSPServer &other) = delete;
-
   /// Run LSP server loop, communicating with the Transport provided in the
   /// constructor. This method must not be executed more than once.
   ///
@@ -159,9 +156,6 @@ private:
   void onCallHierarchyIncomingCalls(
       const CallHierarchyIncomingCallsParams &,
       Callback<std::vector<CallHierarchyIncomingCall>>);
-  void onCallHierarchyOutgoingCalls(
-      const CallHierarchyOutgoingCallsParams &,
-      Callback<std::vector<CallHierarchyOutgoingCall>>);
   void onClangdInlayHints(const InlayHintsParams &,
                           Callback<llvm::json::Value>);
   void onInlayHint(const InlayHintsParams &, Callback<std::vector<InlayHint>>);

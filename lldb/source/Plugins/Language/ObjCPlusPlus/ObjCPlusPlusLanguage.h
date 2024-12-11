@@ -44,9 +44,6 @@ public:
 
   llvm::StringRef GetInstanceVariableName() override { return "self"; }
 
-  virtual std::optional<bool>
-  GetBooleanFromString(llvm::StringRef str) const override;
-
   static llvm::StringRef GetPluginNameStatic() { return "objcplusplus"; }
 
   // PluginInterface protocol

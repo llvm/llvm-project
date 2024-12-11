@@ -1667,12 +1667,6 @@ SBTypeSynthetic SBDebugger::GetSyntheticForType(SBTypeNameSpecifier type_name) {
       DataVisualization::GetSyntheticForType(type_name.GetSP()));
 }
 
-void SBDebugger::ResetStatistics() {
-  LLDB_INSTRUMENT_VA(this);
-  if (m_opaque_sp)
-    DebuggerStats::ResetStatistics(*m_opaque_sp, nullptr);
-}
-
 static llvm::ArrayRef<const char *> GetCategoryArray(const char **categories) {
   if (categories == nullptr)
     return {};

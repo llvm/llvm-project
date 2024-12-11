@@ -114,7 +114,7 @@ public:
 
 private:
   /// Runs a function.
-  bool Run(State &Parent, const Function *Func);
+  bool Run(State &Parent, const Function *Func, APValue &Result);
 
   /// Current compilation context.
   ASTContext &Ctx;

@@ -26,35 +26,20 @@ static cl::opt<bool>
 ViewEdgeBundles("view-edge-bundles", cl::Hidden,
                 cl::desc("Pop up a window to show edge bundle graphs"));
 
-char EdgeBundlesWrapperLegacy::ID = 0;
+char EdgeBundles::ID = 0;
 
-INITIALIZE_PASS(EdgeBundlesWrapperLegacy, "edge-bundles",
-                "Bundle Machine CFG Edges",
-                /* cfg = */ true, /* is_analysis = */ true)
+INITIALIZE_PASS(EdgeBundles, "edge-bundles", "Bundle Machine CFG Edges",
+                /* cfg = */true, /* is_analysis = */ true)
 
-char &llvm::EdgeBundlesWrapperLegacyID = EdgeBundlesWrapperLegacy::ID;
+char &llvm::EdgeBundlesID = EdgeBundles::ID;
 
-void EdgeBundlesWrapperLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
+void EdgeBundles::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-AnalysisKey EdgeBundlesAnalysis::Key;
-
-EdgeBundles EdgeBundlesAnalysis::run(MachineFunction &MF,
-                                     MachineFunctionAnalysisManager &MFAM) {
-  EdgeBundles Impl(MF);
-  return Impl;
-}
-
-bool EdgeBundlesWrapperLegacy::runOnMachineFunction(MachineFunction &MF) {
-  Impl.reset(new EdgeBundles(MF));
-  return false;
-}
-
-EdgeBundles::EdgeBundles(MachineFunction &MF) : MF(&MF) { init(); }
-
-void EdgeBundles::init() {
+bool EdgeBundles::runOnMachineFunction(MachineFunction &mf) {
+  MF = &mf;
   EC.clear();
   EC.grow(2 * MF->getNumBlockIDs());
 
@@ -79,6 +64,8 @@ void EdgeBundles::init() {
     if (b1 != b0)
       Blocks[b1].push_back(i);
   }
+
+  return false;
 }
 
 namespace llvm {
@@ -112,12 +99,4 @@ raw_ostream &WriteGraph<>(raw_ostream &O, const EdgeBundles &G,
 /// view - Visualize the annotated bipartite CFG with Graphviz.
 void EdgeBundles::view() const {
   ViewGraph(*this, "EdgeBundles");
-}
-
-bool EdgeBundles::invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
-                             MachineFunctionAnalysisManager::Invalidator &Inv) {
-  // Invalidated when CFG is not preserved
-  auto PAC = PA.getChecker<EdgeBundlesAnalysis>();
-  return !PAC.preserved() && !PAC.preservedSet<CFGAnalyses>() &&
-         !PAC.preservedSet<AllAnalysesOn<MachineFunction>>();
 }

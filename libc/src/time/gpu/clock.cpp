@@ -8,7 +8,7 @@
 
 #include "src/time/clock.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/time/gpu/time_utils.h"
+#include "src/time/gpu/time_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

@@ -48,7 +48,7 @@ MachineModuleInfo::MachineModuleInfo(MachineModuleInfo &&MMI)
   TheModule = MMI.TheModule;
 }
 
-MachineModuleInfo::MachineModuleInfo(const TargetMachine *TM)
+MachineModuleInfo::MachineModuleInfo(const LLVMTargetMachine *TM)
     : TM(*TM), Context(TM->getTargetTriple(), TM->getMCAsmInfo(),
                        TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(),
                        nullptr, &TM->Options.MCOptions, false) {
@@ -56,7 +56,7 @@ MachineModuleInfo::MachineModuleInfo(const TargetMachine *TM)
   initialize();
 }
 
-MachineModuleInfo::MachineModuleInfo(const TargetMachine *TM,
+MachineModuleInfo::MachineModuleInfo(const LLVMTargetMachine *TM,
                                      MCContext *ExtContext)
     : TM(*TM), Context(TM->getTargetTriple(), TM->getMCAsmInfo(),
                        TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(),
@@ -151,13 +151,13 @@ FunctionPass *llvm::createFreeMachineFunctionPass() {
 }
 
 MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
-    const TargetMachine *TM)
+    const LLVMTargetMachine *TM)
     : ImmutablePass(ID), MMI(TM) {
   initializeMachineModuleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
 MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
-    const TargetMachine *TM, MCContext *ExtContext)
+    const LLVMTargetMachine *TM, MCContext *ExtContext)
     : ImmutablePass(ID), MMI(TM, ExtContext) {
   initializeMachineModuleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }

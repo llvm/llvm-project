@@ -11,7 +11,6 @@
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
@@ -19,7 +18,6 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/LogicalResult.h"
 
 using namespace mlir;
 using namespace acc;
@@ -190,48 +188,6 @@ static LogicalResult checkWaitAndAsyncConflict(Op op) {
       return op.emitError("wait attribute cannot appear with waitOperands");
   }
   return success();
-}
-
-static ParseResult parseVarPtrType(mlir::OpAsmParser &parser,
-                                   mlir::Type &varPtrType,
-                                   mlir::TypeAttr &varTypeAttr) {
-  if (failed(parser.parseType(varPtrType)))
-    return failure();
-  if (failed(parser.parseRParen()))
-    return failure();
-
-  if (succeeded(parser.parseOptionalKeyword("varType"))) {
-    if (failed(parser.parseLParen()))
-      return failure();
-    mlir::Type varType;
-    if (failed(parser.parseType(varType)))
-      return failure();
-    varTypeAttr = mlir::TypeAttr::get(varType);
-    if (failed(parser.parseRParen()))
-      return failure();
-  } else {
-    // Set `varType` from the element type of the type of `varPtr`.
-    varTypeAttr = mlir::TypeAttr::get(
-        mlir::cast<mlir::acc::PointerLikeType>(varPtrType).getElementType());
-  }
-
-  return success();
-}
-
-static void printVarPtrType(mlir::OpAsmPrinter &p, mlir::Operation *op,
-                            mlir::Type varPtrType, mlir::TypeAttr varTypeAttr) {
-  p.printType(varPtrType);
-  p << ")";
-
-  // Print the `varType` only if it differs from the element type of
-  // `varPtr`'s type.
-  mlir::Type varType = varTypeAttr.getValue();
-  if (mlir::cast<mlir::acc::PointerLikeType>(varPtrType).getElementType() !=
-      varType) {
-    p << " varType(";
-    p.printType(varType);
-    p << ")";
-  }
 }
 
 //===----------------------------------------------------------------------===//

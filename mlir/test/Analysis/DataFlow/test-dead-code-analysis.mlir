@@ -265,7 +265,3 @@ func.func @test_dca_doesnt_crash() -> () {
   }  
   return
 }
-
-func.func @test_dca_doesnt_crash_2() -> () attributes {symbol = @notexistant} {
-   return
-}

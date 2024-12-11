@@ -50,7 +50,7 @@ TEST_F(BranchProbabilityInfoTest, StressUnreachableHeuristic) {
 
   // define void @f() {
   // entry:
-  //   switch i32 poison, label %exit, [
+  //   switch i32 undef, label %exit, [
   //      i32 0, label %preexit
   //      ...                   ;;< Add lots of cases to stress the heuristic.
   //   ]
@@ -69,8 +69,8 @@ TEST_F(BranchProbabilityInfoTest, StressUnreachableHeuristic) {
 
   unsigned NumCases = 4096;
   auto *I32 = IntegerType::get(C, 32);
-  auto *Poison = PoisonValue::get(I32);
-  auto *Switch = SwitchInst::Create(Poison, ExitBB, NumCases, EntryBB);
+  auto *Undef = UndefValue::get(I32);
+  auto *Switch = SwitchInst::Create(Undef, ExitBB, NumCases, EntryBB);
   for (unsigned I = 0; I < NumCases; ++I)
     Switch->addCase(ConstantInt::get(I32, I), PreExitBB);
 

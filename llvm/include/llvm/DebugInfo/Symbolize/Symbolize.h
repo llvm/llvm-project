@@ -120,7 +120,8 @@ public:
   void pruneCache();
 
   static std::string
-  DemangleName(StringRef Name, const SymbolizableModule *DbiModuleDescriptor);
+  DemangleName(const std::string &Name,
+               const SymbolizableModule *DbiModuleDescriptor);
 
   void setBuildIDFetcher(std::unique_ptr<BuildIDFetcher> Fetcher) {
     BIDFetcher = std::move(Fetcher);

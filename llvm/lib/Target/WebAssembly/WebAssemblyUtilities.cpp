@@ -15,6 +15,7 @@
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyTargetMachine.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCContext.h"
 using namespace llvm;
@@ -116,7 +117,7 @@ MCSymbolWasm *WebAssembly::getOrCreateFunctionTableSymbol(
     Sym->setUndefined();
   }
   // MVP object files can't have symtab entries for tables.
-  if (!(Subtarget && Subtarget->hasCallIndirectOverlong()))
+  if (!(Subtarget && Subtarget->hasReferenceTypes()))
     Sym->setOmitFromLinkingSection();
   return Sym;
 }
@@ -141,7 +142,7 @@ MCSymbolWasm *WebAssembly::getOrCreateFuncrefCallTableSymbol(
     Sym->setTableType(TableType);
   }
   // MVP object files can't have symtab entries for tables.
-  if (!(Subtarget && Subtarget->hasCallIndirectOverlong()))
+  if (!(Subtarget && Subtarget->hasReferenceTypes()))
     Sym->setOmitFromLinkingSection();
   return Sym;
 }

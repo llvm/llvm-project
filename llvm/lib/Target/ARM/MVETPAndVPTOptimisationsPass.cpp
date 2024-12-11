@@ -17,6 +17,7 @@
 
 #include "ARM.h"
 #include "ARMSubtarget.h"
+#include "MCTargetDesc/ARMBaseInfo.h"
 #include "MVETailPredUtils.h"
 #include "Thumb2InstrInfo.h"
 #include "llvm/ADT/SmallVector.h"

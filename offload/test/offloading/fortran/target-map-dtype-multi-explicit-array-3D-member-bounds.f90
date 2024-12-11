@@ -1,5 +1,7 @@
-! Offloading test checking interaction of an explicit derived type member
-! mapping of two arrays with explicit bounds when mapped to target
+! Offloading test checking interaction of an
+! explicit derived type member mapping of
+! two arrays with explicit bounds when
+! mapped to target
 ! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic

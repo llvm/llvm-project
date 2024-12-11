@@ -10,7 +10,6 @@
 #include "lldb/API/SBAddressRange.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
-#include "lldb/Core/AddressRangeListImpl.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -154,11 +153,10 @@ SBAddress SBFunction::GetEndAddress() {
 
   SBAddress addr;
   if (m_opaque_ptr) {
-    AddressRanges ranges = m_opaque_ptr->GetAddressRanges();
-    if (!ranges.empty()) {
-      // Return the end of the first range, use GetRanges to get all ranges.
-      addr.SetAddress(ranges.front().GetBaseAddress());
-      addr->Slide(ranges.front().GetByteSize());
+    addr_t byte_size = m_opaque_ptr->GetAddressRange().GetByteSize();
+    if (byte_size > 0) {
+      addr.SetAddress(m_opaque_ptr->GetAddressRange().GetBaseAddress());
+      addr->Slide(byte_size);
     }
   }
   return addr;
@@ -168,8 +166,11 @@ lldb::SBAddressRangeList SBFunction::GetRanges() {
   LLDB_INSTRUMENT_VA(this);
 
   lldb::SBAddressRangeList ranges;
-  if (m_opaque_ptr)
-    ranges.ref() = AddressRangeListImpl(m_opaque_ptr->GetAddressRanges());
+  if (m_opaque_ptr) {
+    lldb::SBAddressRange range;
+    (*range.m_opaque_up) = m_opaque_ptr->GetAddressRange();
+    ranges.Append(std::move(range));
+  }
 
   return ranges;
 }

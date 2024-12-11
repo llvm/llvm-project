@@ -13,9 +13,12 @@ using namespace clang;
 namespace {
 
 // A visitor that visits implicit declarations and matches constructors.
-class ImplicitCtorVisitor : public ExpectedLocationVisitor {
+class ImplicitCtorVisitor
+    : public ExpectedLocationVisitor<ImplicitCtorVisitor> {
 public:
-  bool VisitCXXConstructorDecl(CXXConstructorDecl *Ctor) override {
+  bool shouldVisitImplicitCode() const { return true; }
+
+  bool VisitCXXConstructorDecl(CXXConstructorDecl* Ctor) {
     if (Ctor->isImplicit()) {  // Was not written in source code
       if (const CXXRecordDecl* Class = Ctor->getParent()) {
         Match(Class->getName(), Ctor->getLocation());

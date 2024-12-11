@@ -16,6 +16,7 @@
 
 #include "MCTargetDesc/PPCPredicates.h"
 #include "PPC.h"
+#include "PPCInstrBuilder.h"
 #include "PPCInstrInfo.h"
 #include "PPCSubtarget.h"
 #include "llvm/ADT/Statistic.h"

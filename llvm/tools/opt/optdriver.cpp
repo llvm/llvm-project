@@ -801,11 +801,9 @@ extern "C" int optMain(
   }
 
   if (TM) {
-    Pass *TPC = TM->createPassConfig(Passes);
-    if (!TPC) {
-      errs() << "Target Machine pass config creation failed.\n";
-      return 1;
-    }
+    // FIXME: We should dyn_cast this when supported.
+    auto &LTM = static_cast<LLVMTargetMachine &>(*TM);
+    Pass *TPC = LTM.createPassConfig(Passes);
     Passes.add(TPC);
   }
 

@@ -63,8 +63,7 @@ class Triple;
 class TargetSubtargetInfo : public MCSubtargetInfo {
 protected: // Can only create subclasses...
   TargetSubtargetInfo(const Triple &TT, StringRef CPU, StringRef TuneCPU,
-                      StringRef FS, ArrayRef<StringRef> PN,
-                      ArrayRef<SubtargetFeatureKV> PF,
+                      StringRef FS, ArrayRef<SubtargetFeatureKV> PF,
                       ArrayRef<SubtargetSubTypeKV> PD,
                       const MCWriteProcResEntry *WPR,
                       const MCWriteLatencyEntry *WL,
@@ -350,8 +349,6 @@ public:
     // Conservatively assume such instructions exist by default.
     return true;
   }
-
-  virtual bool isRegisterReservedByUser(Register R) const { return false; }
 };
 } // end namespace llvm
 

@@ -791,29 +791,28 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FFREXP(SDNode *N) {
   return ReturnVal;
 }
 
-SDValue
-DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(SDNode *N,
-                                                       RTLIB::Libcall LC) {
-  assert(!N->isStrictFPOpcode() && "strictfp not implemented");
+SDValue DAGTypeLegalizer::SoftenFloatRes_FSINCOS(SDNode *N) {
+  assert(!N->isStrictFPOpcode() && "strictfp not implemented for fsincos");
   EVT VT = N->getValueType(0);
+  RTLIB::Libcall LC = RTLIB::getFSINCOS(VT);
 
   if (!TLI.getLibcallName(LC))
     return SDValue();
 
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
-  SDValue FirstResultSlot = DAG.CreateStackTemporary(NVT);
-  SDValue SecondResultSlot = DAG.CreateStackTemporary(NVT);
+  SDValue StackSlotSin = DAG.CreateStackTemporary(NVT);
+  SDValue StackSlotCos = DAG.CreateStackTemporary(NVT);
 
   SDLoc DL(N);
 
   TargetLowering::MakeLibCallOptions CallOptions;
-  std::array Ops{GetSoftenedFloat(N->getOperand(0)), FirstResultSlot,
-                 SecondResultSlot};
-  std::array OpsVT{VT, FirstResultSlot.getValueType(),
-                   SecondResultSlot.getValueType()};
+  std::array Ops{GetSoftenedFloat(N->getOperand(0)), StackSlotSin,
+                 StackSlotCos};
+  std::array OpsVT{VT, StackSlotSin.getValueType(),
+                   StackSlotCos.getValueType()};
 
   // TODO: setTypeListBeforeSoften can't properly express multiple return types,
-  // but since both returns have the same type it should be okay.
+  // but since both returns have the same type for sincos it should be okay.
   CallOptions.setTypeListBeforeSoften({OpsVT}, VT, true);
 
   auto [ReturnVal, Chain] = TLI.makeLibCall(DAG, LC, NVT, Ops, CallOptions, DL,
@@ -825,15 +824,10 @@ DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(SDNode *N,
         MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FrameIdx);
     return DAG.getLoad(NVT, DL, Chain, StackSlot, PtrInfo);
   };
-  SetSoftenedFloat(SDValue(N, 0), CreateStackLoad(FirstResultSlot));
-  SetSoftenedFloat(SDValue(N, 1), CreateStackLoad(SecondResultSlot));
+  SetSoftenedFloat(SDValue(N, 0), CreateStackLoad(StackSlotSin));
+  SetSoftenedFloat(SDValue(N, 1), CreateStackLoad(StackSlotCos));
 
   return SDValue();
-}
-
-SDValue DAGTypeLegalizer::SoftenFloatRes_FSINCOS(SDNode *N) {
-  return SoftenFloatRes_UnaryWithTwoFPResults(
-      N, RTLIB::getFSINCOS(N->getValueType(0)));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FREM(SDNode *N) {
@@ -1044,7 +1038,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_XINT_TO_FP(SDNode *N) {
   SDValue Op = DAG.getNode(Signed ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND, dl,
                            NVT, N->getOperand(IsStrict ? 1 : 0));
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setIsSigned(Signed);
+  CallOptions.setSExt(Signed);
   CallOptions.setTypeListBeforeSoften(SVT, RVT, true);
   std::pair<SDValue, SDValue> Tmp =
       TLI.makeLibCall(DAG, LC, TLI.getTypeToTransformTo(*DAG.getContext(), RVT),
@@ -2099,7 +2093,7 @@ void DAGTypeLegalizer::ExpandFloatRes_XINT_TO_FP(SDNode *N, SDValue &Lo,
     assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported XINT_TO_FP!");
 
     TargetLowering::MakeLibCallOptions CallOptions;
-    CallOptions.setIsSigned(true);
+    CallOptions.setSExt(true);
     std::pair<SDValue, SDValue> Tmp =
         TLI.makeLibCall(DAG, LC, VT, Src, CallOptions, dl, Chain);
     if (Strict)
@@ -2767,7 +2761,7 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FFREXP:     R = PromoteFloatRes_FFREXP(N); break;
 
     case ISD::FSINCOS:
-      R = PromoteFloatRes_UnaryWithTwoFPResults(N);
+      R = PromoteFloatRes_FSINCOS(N);
       break;
 
     case ISD::FP_ROUND:   R = PromoteFloatRes_FP_ROUND(N); break;
@@ -2965,7 +2959,7 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_FFREXP(SDNode *N) {
   return Res;
 }
 
-SDValue DAGTypeLegalizer::PromoteFloatRes_UnaryWithTwoFPResults(SDNode *N) {
+SDValue DAGTypeLegalizer::PromoteFloatRes_FSINCOS(SDNode *N) {
   EVT VT = N->getValueType(0);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
   SDValue Op = GetPromotedFloat(N->getOperand(0));
@@ -3229,7 +3223,7 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::FFREXP:      R = SoftPromoteHalfRes_FFREXP(N); break;
 
   case ISD::FSINCOS:
-    R = SoftPromoteHalfRes_UnaryWithTwoFPResults(N);
+    R = SoftPromoteHalfRes_FSINCOS(N);
     break;
 
   case ISD::LOAD:        R = SoftPromoteHalfRes_LOAD(N); break;
@@ -3388,7 +3382,7 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FFREXP(SDNode *N) {
   return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);
 }
 
-SDValue DAGTypeLegalizer::SoftPromoteHalfRes_UnaryWithTwoFPResults(SDNode *N) {
+SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FSINCOS(SDNode *N) {
   EVT OVT = N->getValueType(0);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
   SDValue Op = GetSoftPromotedHalf(N->getOperand(0));
@@ -3414,23 +3408,6 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FP_ROUND(SDNode *N) {
   bool IsStrict = N->isStrictFPOpcode();
   SDValue Op = N->getOperand(IsStrict ? 1 : 0);
   EVT SVT = Op.getValueType();
-
-  // If the input type needs to be softened, do that now so that call lowering
-  // will see the f16 type.
-  if (getTypeAction(SVT) == TargetLowering::TypeSoftenFloat) {
-    RTLIB::Libcall LC = RTLIB::getFPROUND(SVT, RVT);
-    assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_ROUND libcall");
-
-    SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
-    Op = GetSoftenedFloat(Op);
-    TargetLowering::MakeLibCallOptions CallOptions;
-    CallOptions.setTypeListBeforeSoften(SVT, RVT, true);
-    std::pair<SDValue, SDValue> Tmp =
-        TLI.makeLibCall(DAG, LC, RVT, Op, CallOptions, SDLoc(N), Chain);
-    if (IsStrict)
-      ReplaceValueWith(SDValue(N, 1), Tmp.second);
-    return DAG.getNode(ISD::BITCAST, SDLoc(N), MVT::i16, Tmp.first);
-  }
 
   if (IsStrict) {
     SDValue Res = DAG.getNode(GetPromotionOpcodeStrict(SVT, RVT), SDLoc(N),

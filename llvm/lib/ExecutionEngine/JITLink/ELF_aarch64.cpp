@@ -52,13 +52,10 @@ private:
   }
 
   Error getOrCreateGOTSymbol(LinkGraph &G) {
-    auto InteredGOTSymbolName =
-        G.getSymbolStringPool()->intern(ELFGOTSymbolName);
-
     auto DefineExternalGOTSymbolIfPresent =
         createDefineExternalSectionStartAndEndSymbolsPass(
             [&](LinkGraph &LG, Symbol &Sym) -> SectionRangeSymbolDesc {
-              if (*Sym.getName() == ELFGOTSymbolName)
+              if (Sym.getName() == ELFGOTSymbolName)
                 if (auto *GOTSection = G.findSectionByName(
                         aarch64::GOTTableManager::getSectionName())) {
                   GOTSymbol = &Sym;
@@ -84,7 +81,7 @@ private:
 
       // Check for an existing defined symbol.
       for (auto *Sym : GOTSection->symbols())
-        if (Sym->getName() == InteredGOTSymbolName) {
+        if (Sym->getName() == ELFGOTSymbolName) {
           GOTSymbol = Sym;
           return Error::success();
         }
@@ -93,12 +90,11 @@ private:
       SectionRange SR(*GOTSection);
       if (SR.empty())
         GOTSymbol =
-            // FIXME: we should only do this once
-            &G.addAbsoluteSymbol(InteredGOTSymbolName, orc::ExecutorAddr(), 0,
+            &G.addAbsoluteSymbol(ELFGOTSymbolName, orc::ExecutorAddr(), 0,
                                  Linkage::Strong, Scope::Local, true);
       else
         GOTSymbol =
-            &G.addDefinedSymbol(*SR.getFirstBlock(), 0, InteredGOTSymbolName, 0,
+            &G.addDefinedSymbol(*SR.getFirstBlock(), 0, ELFGOTSymbolName, 0,
                                 Linkage::Strong, Scope::Local, false, true);
     }
 
@@ -107,7 +103,7 @@ private:
     // we just need to point the GOT symbol at some address in this graph.
     if (!GOTSymbol) {
       for (auto *Sym : G.external_symbols()) {
-        if (*Sym->getName() == ELFGOTSymbolName) {
+        if (Sym->getName() == ELFGOTSymbolName) {
           auto Blocks = G.blocks();
           if (!Blocks.empty()) {
             G.makeAbsolute(*Sym, (*Blocks.begin())->getAddress());
@@ -529,13 +525,10 @@ private:
 
 public:
   ELFLinkGraphBuilder_aarch64(StringRef FileName,
-                              const object::ELFFile<ELFT> &Obj,
-                              std::shared_ptr<orc::SymbolStringPool> SSP,
-                              Triple TT, SubtargetFeatures Features)
-
-      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(SSP), std::move(TT),
-                                  std::move(Features), FileName,
-                                  aarch64::getEdgeKindName) {}
+                              const object::ELFFile<ELFT> &Obj, Triple TT,
+                              SubtargetFeatures Features)
+      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), std::move(Features),
+                                  FileName, aarch64::getEdgeKindName) {}
 };
 
 // TLS Info Builder.
@@ -672,8 +665,8 @@ Error buildTables_ELF_aarch64(LinkGraph &G) {
 namespace llvm {
 namespace jitlink {
 
-Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromELFObject_aarch64(
-    MemoryBufferRef ObjectBuffer, std::shared_ptr<orc::SymbolStringPool> SSP) {
+Expected<std::unique_ptr<LinkGraph>>
+createLinkGraphFromELFObject_aarch64(MemoryBufferRef ObjectBuffer) {
   LLVM_DEBUG({
     dbgs() << "Building jitlink graph for new input "
            << ObjectBuffer.getBufferIdentifier() << "...\n";
@@ -692,7 +685,7 @@ Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromELFObject_aarch64(
 
   auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF64LE>>(**ELFObj);
   return ELFLinkGraphBuilder_aarch64<object::ELF64LE>(
-             (*ELFObj)->getFileName(), ELFObjFile.getELFFile(), std::move(SSP),
+             (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
              (*ELFObj)->makeTriple(), std::move(*Features))
       .buildGraph();
 }

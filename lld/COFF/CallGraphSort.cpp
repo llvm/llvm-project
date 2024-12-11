@@ -49,7 +49,7 @@ struct Cluster {
 
 class CallGraphSort {
 public:
-  CallGraphSort(COFFLinkerContext &ctx);
+  CallGraphSort(const COFFLinkerContext &ctx);
 
   DenseMap<const SectionChunk *, int> run();
 
@@ -57,7 +57,7 @@ private:
   std::vector<Cluster> clusters;
   std::vector<const SectionChunk *> sections;
 
-  COFFLinkerContext &ctx;
+  const COFFLinkerContext &ctx;
 };
 
 // Maximum amount the combined cluster density can be worse than the original
@@ -73,7 +73,7 @@ using SectionPair = std::pair<const SectionChunk *, const SectionChunk *>;
 // Take the edge list in Config->CallGraphProfile, resolve symbol names to
 // Symbols, and generate a graph between InputSections with the provided
 // weights.
-CallGraphSort::CallGraphSort(COFFLinkerContext &ctx) : ctx(ctx) {
+CallGraphSort::CallGraphSort(const COFFLinkerContext &ctx) : ctx(ctx) {
   const MapVector<SectionPair, uint64_t> &profile = ctx.config.callGraphProfile;
   DenseMap<const SectionChunk *, int> secToCluster;
 
@@ -211,8 +211,7 @@ DenseMap<const SectionChunk *, int> CallGraphSort::run() {
     std::error_code ec;
     raw_fd_ostream os(ctx.config.printSymbolOrder, ec, sys::fs::OF_None);
     if (ec) {
-      Err(ctx) << "cannot open " << ctx.config.printSymbolOrder << ": "
-               << ec.message();
+      error("cannot open " + ctx.config.printSymbolOrder + ": " + ec.message());
       return orderMap;
     }
     // Print the symbols ordered by C3, in the order of increasing curOrder
@@ -245,6 +244,6 @@ DenseMap<const SectionChunk *, int> CallGraphSort::run() {
 // according to the C³ heuristic. All clusters are then sorted by a density
 // metric to further improve locality.
 DenseMap<const SectionChunk *, int>
-coff::computeCallGraphProfileOrder(COFFLinkerContext &ctx) {
+coff::computeCallGraphProfileOrder(const COFFLinkerContext &ctx) {
   return CallGraphSort(ctx).run();
 }

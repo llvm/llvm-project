@@ -38,7 +38,6 @@ Getting Started with libc++
    UserDocumentation
    VendorDocumentation
    Contributing
-   CodingGuidelines
    TestingLibcxx
    ImplementationDefinedBehavior
    Modules
@@ -217,6 +216,7 @@ Design Documents
    DesignDocs/FeatureTestMacros
    DesignDocs/FileTimeType
    DesignDocs/HeaderRemovalPolicy
+   DesignDocs/NodiscardPolicy
    DesignDocs/NoexceptPolicy
    DesignDocs/PSTLIntegration
    DesignDocs/ThreadingSupportAPI

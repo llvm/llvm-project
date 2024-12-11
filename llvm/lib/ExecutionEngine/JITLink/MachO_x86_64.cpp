@@ -27,10 +27,8 @@ namespace {
 class MachOLinkGraphBuilder_x86_64 : public MachOLinkGraphBuilder {
 public:
   MachOLinkGraphBuilder_x86_64(const object::MachOObjectFile &Obj,
-                               std::shared_ptr<orc::SymbolStringPool> SSP,
                                SubtargetFeatures Features)
-      : MachOLinkGraphBuilder(Obj, std::move(SSP),
-                              Triple("x86_64-apple-darwin"),
+      : MachOLinkGraphBuilder(Obj, Triple("x86_64-apple-darwin"),
                               std::move(Features), x86_64::getEdgeKindName) {}
 
 private:
@@ -485,8 +483,8 @@ private:
   }
 };
 
-Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromMachOObject_x86_64(
-    MemoryBufferRef ObjectBuffer, std::shared_ptr<orc::SymbolStringPool> SSP) {
+Expected<std::unique_ptr<LinkGraph>>
+createLinkGraphFromMachOObject_x86_64(MemoryBufferRef ObjectBuffer) {
   auto MachOObj = object::ObjectFile::createMachOObjectFile(ObjectBuffer);
   if (!MachOObj)
     return MachOObj.takeError();
@@ -495,8 +493,7 @@ Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromMachOObject_x86_64(
   if (!Features)
     return Features.takeError();
 
-  return MachOLinkGraphBuilder_x86_64(**MachOObj, std::move(SSP),
-                                      std::move(*Features))
+  return MachOLinkGraphBuilder_x86_64(**MachOObj, std::move(*Features))
       .buildGraph();
 }
 

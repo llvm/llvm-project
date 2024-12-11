@@ -65,8 +65,6 @@ void MultiAffineFunction::print(raw_ostream &os) const {
   output.print(os);
 }
 
-void MultiAffineFunction::dump() const { print(llvm::errs()); }
-
 SmallVector<DynamicAPInt, 8>
 MultiAffineFunction::valueAt(ArrayRef<DynamicAPInt> point) const {
   assert(point.size() == getNumDomainVars() + getNumSymbolVars() &&

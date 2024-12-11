@@ -685,8 +685,9 @@ static int compileModule(char **argv, LLVMContext &Context) {
     }
 
     const char *argv0 = argv[0];
+    LLVMTargetMachine &LLVMTM = static_cast<LLVMTargetMachine &>(*Target);
     MachineModuleInfoWrapperPass *MMIWP =
-        new MachineModuleInfoWrapperPass(Target.get());
+        new MachineModuleInfoWrapperPass(&LLVMTM);
 
     // Construct a custom pass pipeline that starts after instruction
     // selection.
@@ -697,7 +698,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
         delete MMIWP;
         return 1;
       }
-      TargetPassConfig *PTPC = Target->createPassConfig(PM);
+      TargetPassConfig *PTPC = LLVMTM.createPassConfig(PM);
       TargetPassConfig &TPC = *PTPC;
       if (TPC.hasLimitedCodeGenPipeline()) {
         WithColor::warning(errs(), argv[0])
@@ -725,7 +726,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
       reportError("target does not support generation of this file type");
     }
 
-    const_cast<TargetLoweringObjectFile *>(Target->getObjFileLowering())
+    const_cast<TargetLoweringObjectFile *>(LLVMTM.getObjFileLowering())
         ->Initialize(MMIWP->getMMI().getContext(), *Target);
     if (MIR) {
       assert(MMIWP && "Forgot to create MMIWP?");

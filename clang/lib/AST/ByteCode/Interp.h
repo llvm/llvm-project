@@ -14,7 +14,6 @@
 #define LLVM_CLANG_AST_INTERP_INTERP_H
 
 #include "../ExprConstShared.h"
-#include "BitcastBuffer.h"
 #include "Boolean.h"
 #include "DynamicAllocator.h"
 #include "FixedPoint.h"
@@ -41,6 +40,13 @@ namespace interp {
 
 using APSInt = llvm::APSInt;
 using FixedPointSemantics = llvm::FixedPointSemantics;
+
+/// Convert a value to an APValue.
+template <typename T>
+bool ReturnValue(const InterpState &S, const T &V, APValue &R) {
+  R = V.toAPValue(S.getASTContext());
+  return true;
+}
 
 /// Checks if the variable has externally defined storage.
 bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
@@ -293,7 +299,7 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
 bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR);
 
 /// Interpreter entry point.
-bool Interpret(InterpState &S);
+bool Interpret(InterpState &S, APValue &Result);
 
 /// Interpret a builtin function.
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
@@ -315,7 +321,7 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
                               const Function *Func);
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool Ret(InterpState &S, CodePtr &PC) {
+bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
   const T &Ret = S.Stk.pop<T>();
 
   // Make sure returned pointers are live. We might be trying to return a
@@ -343,13 +349,13 @@ bool Ret(InterpState &S, CodePtr &PC) {
   } else {
     delete S.Current;
     S.Current = nullptr;
-    // The topmost frame should come from an EvalEmitter,
-    // which has its own implementation of the Ret<> instruction.
+    if (!ReturnValue<T>(S, Ret, Result))
+      return false;
   }
   return true;
 }
 
-inline bool RetVoid(InterpState &S, CodePtr &PC) {
+inline bool RetVoid(InterpState &S, CodePtr &PC, APValue &Result) {
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
 
   if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
@@ -2433,11 +2439,9 @@ static inline bool ZeroIntAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-inline bool Null(InterpState &S, CodePtr OpPC, uint64_t Value,
-                 const Descriptor *Desc) {
-  // FIXME(perf): This is a somewhat often-used function and the value of a
-  // null pointer is almost always 0.
-  S.Stk.push<T>(Value, Desc);
+inline bool Null(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
+  // Note: Desc can be null.
+  S.Stk.push<T>(0, Desc);
   return true;
 }
 
@@ -3051,16 +3055,7 @@ inline bool BitCast(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
   llvm::SmallVector<std::byte> Buff(BuffSize);
   bool HasIndeterminateBits = false;
 
-  Bits FullBitWidth(ResultBitWidth);
-  Bits BitWidth = FullBitWidth;
-
-  if constexpr (std::is_same_v<T, Floating>) {
-    assert(Sem);
-    BitWidth = Bits(llvm::APFloatBase::getSizeInBits(*Sem));
-  }
-
-  if (!DoBitCast(S, OpPC, FromPtr, Buff.data(), BitWidth, FullBitWidth,
-                 HasIndeterminateBits))
+  if (!DoBitCast(S, OpPC, FromPtr, Buff.data(), BuffSize, HasIndeterminateBits))
     return false;
 
   if (!CheckBitCast(S, OpPC, HasIndeterminateBits, TargetIsUCharOrByte))
@@ -3068,7 +3063,16 @@ inline bool BitCast(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
 
   if constexpr (std::is_same_v<T, Floating>) {
     assert(Sem);
-    S.Stk.push<Floating>(T::bitcastFromMemory(Buff.data(), *Sem));
+    ptrdiff_t Offset = 0;
+
+    if (llvm::sys::IsBigEndianHost) {
+      unsigned NumBits = llvm::APFloatBase::getSizeInBits(*Sem);
+      assert(NumBits % 8 == 0);
+      assert(NumBits <= ResultBitWidth);
+      Offset = (ResultBitWidth - NumBits) / 8;
+    }
+
+    S.Stk.push<Floating>(T::bitcastFromMemory(Buff.data() + Offset, *Sem));
   } else {
     assert(!Sem);
     S.Stk.push<T>(T::bitcastFromMemory(Buff.data(), ResultBitWidth));
@@ -3079,9 +3083,6 @@ inline bool BitCast(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
 inline bool BitCastPtr(InterpState &S, CodePtr OpPC) {
   const Pointer &FromPtr = S.Stk.pop<Pointer>();
   Pointer &ToPtr = S.Stk.peek<Pointer>();
-
-  if (!CheckLoad(S, OpPC, FromPtr))
-    return false;
 
   if (!DoBitCastPtr(S, OpPC, FromPtr, ToPtr))
     return false;

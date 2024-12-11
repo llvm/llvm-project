@@ -58,17 +58,17 @@
 
 ## TP offset of a is at 0x1002218
 # LE-NEXT: lgrl    %r2, 0x1002218
-# LE-NEXT: jgnop
+# LE-NEXT: brcl    0,
 # LE-NEXT: lgf     %r2, 0(%r2,%r7)
 
 ## TP offset of b is at 0x1002220
 # LE-NEXT: lgrl    %r2, 0x1002220
-# LE-NEXT: jgnop
+# LE-NEXT: brcl    0,
 # LE-NEXT: lgf     %r2, 0(%r2,%r7)
 
 ## TP offset of c is at 0x1002228
 # LE-NEXT: lgrl    %r2, 0x1002228
-# LE-NEXT: jgnop
+# LE-NEXT: brcl    0,
 # LE-NEXT: lgf     %r2, 0(%r2,%r7)
 
 ## TP offsets
@@ -88,7 +88,7 @@
 
 ## TP offset of a is at 0x1002340
 # IE-NEXT: lgrl    %r2, 0x1002340
-# IE-NEXT: jgnop
+# IE-NEXT: brcl    0,
 # IE-NEXT: lgf     %r2, 0(%r2,%r7)
 
 ## GOT offset of the TP offset for b is at 0x1002348

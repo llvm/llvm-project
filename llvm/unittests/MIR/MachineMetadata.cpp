@@ -66,15 +66,16 @@ protected:
     });
   }
 
-  std::unique_ptr<TargetMachine>
+  std::unique_ptr<LLVMTargetMachine>
   createTargetMachine(std::string TT, StringRef CPU, StringRef FS) {
     std::string Error;
     const Target *T = TargetRegistry::lookupTarget(TT, Error);
     if (!T)
       return nullptr;
     TargetOptions Options;
-    return std::unique_ptr<TargetMachine>(T->createTargetMachine(
-        TT, CPU, FS, Options, std::nullopt, std::nullopt));
+    return std::unique_ptr<LLVMTargetMachine>(
+        static_cast<LLVMTargetMachine *>(T->createTargetMachine(
+            TT, CPU, FS, Options, std::nullopt, std::nullopt)));
   }
 
   std::unique_ptr<Module> parseMIR(const TargetMachine &TM, StringRef MIRCode,

@@ -31,7 +31,7 @@ void init(void * __attribute__((pass_dynamic_object_size(0))));
 // CHECK-NEXT:    [[GROWABLE:%.*]] = getelementptr inbounds nuw i8, ptr [[FOO]], i64 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[GROWABLE]], align 8, !tbaa [[TBAA2:![0-9]+]]
 // CHECK-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 12
-// CHECK-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 8
+// CHECK-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 8
 // CHECK-NEXT:    [[DOT_COUNTED_BY_LOAD:%.*]] = load i32, ptr [[DOT_COUNTED_BY_GEP]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[DOT_COUNTED_BY_LOAD]] to i64
 // CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[TMP1]], 1
@@ -48,7 +48,7 @@ void test1(struct bucket *foo) {
 // CHECK-SAME: ptr noundef [[FOO:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw i8, ptr [[FOO]], i64 16
-// CHECK-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[FOO]], i64 12
+// CHECK-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[FOO]], i64 12
 // CHECK-NEXT:    [[DOT_COUNTED_BY_LOAD:%.*]] = load i32, ptr [[DOT_COUNTED_BY_GEP]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[DOT_COUNTED_BY_LOAD]] to i64
 // CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[TMP0]], 1

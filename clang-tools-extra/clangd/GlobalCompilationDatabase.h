@@ -203,9 +203,7 @@ public:
   tooling::CompileCommand getFallbackCommand(PathRef File) const override;
 
   /// Sets or clears the compilation command for a particular file.
-  /// Returns true if the command was changed (including insertion and removal),
-  /// false if it was unchanged.
-  bool
+  void
   setCompileCommand(PathRef File,
                     std::optional<tooling::CompileCommand> CompilationCommand);
 

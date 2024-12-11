@@ -157,7 +157,7 @@ public:
   /// conditional branch or select to create a compare with a canonical
   /// (inverted) predicate which is then more likely to be matched with other
   /// values.
-  static bool isCanonicalPredicate(CmpPredicate Pred) {
+  static bool isCanonicalPredicate(CmpInst::Predicate Pred) {
     switch (Pred) {
     case CmpInst::ICMP_NE:
     case CmpInst::ICMP_ULE:
@@ -185,9 +185,10 @@ public:
   }
 
   std::optional<std::pair<
-      CmpPredicate,
-      Constant *>> static getFlippedStrictnessPredicateAndConstant(CmpPredicate
-                                                                       Pred,
+      CmpInst::Predicate,
+      Constant *>> static getFlippedStrictnessPredicateAndConstant(CmpInst::
+                                                                       Predicate
+                                                                           Pred,
                                                                    Constant *C);
 
   static bool shouldAvoidAbsorbingNotIntoSelect(const SelectInst &SI) {

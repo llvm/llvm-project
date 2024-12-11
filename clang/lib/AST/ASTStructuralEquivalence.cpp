@@ -86,6 +86,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
@@ -2302,8 +2303,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
   // Check whether we already know that these two declarations are not
   // structurally equivalent.
-  if (Context.NonEquivalentDecls.count(
-          std::make_tuple(D1, D2, Context.IgnoreTemplateParmDepth)))
+  if (Context.NonEquivalentDecls.count(P))
     return false;
 
   // Check if a check for these declarations is already pending.
@@ -2511,8 +2511,7 @@ bool StructuralEquivalenceContext::Finish() {
     if (!Equivalent) {
       // Note that these two declarations are not equivalent (and we already
       // know about it).
-      NonEquivalentDecls.insert(
-          std::make_tuple(D1, D2, IgnoreTemplateParmDepth));
+      NonEquivalentDecls.insert(P);
 
       return true;
     }

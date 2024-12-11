@@ -345,7 +345,7 @@ void MIRPrinter::convert(yaml::MachineFunction &YamlMF,
     if (PreferredReg)
       printRegMIR(PreferredReg, VReg.PreferredRegister, TRI);
     printRegFlags(Reg, VReg.RegisterFlags, MF, TRI);
-    YamlMF.VirtualRegisters.push_back(std::move(VReg));
+    YamlMF.VirtualRegisters.push_back(VReg);
   }
 
   // Print the live ins.
@@ -354,7 +354,7 @@ void MIRPrinter::convert(yaml::MachineFunction &YamlMF,
     printRegMIR(LI.first, LiveIn.Register, TRI);
     if (LI.second)
       printRegMIR(LI.second, LiveIn.VirtualRegister, TRI);
-    YamlMF.LiveIns.push_back(std::move(LiveIn));
+    YamlMF.LiveIns.push_back(LiveIn);
   }
 
   // Prints the callee saved registers.
@@ -364,9 +364,9 @@ void MIRPrinter::convert(yaml::MachineFunction &YamlMF,
     for (const MCPhysReg *I = CalleeSavedRegs; *I; ++I) {
       yaml::FlowStringValue Reg;
       printRegMIR(*I, Reg, TRI);
-      CalleeSavedRegisters.push_back(std::move(Reg));
+      CalleeSavedRegisters.push_back(Reg);
     }
-    YamlMF.CalleeSavedRegisters = std::move(CalleeSavedRegisters);
+    YamlMF.CalleeSavedRegisters = CalleeSavedRegisters;
   }
 }
 

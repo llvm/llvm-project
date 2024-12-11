@@ -22,9 +22,12 @@ struct Comment {
 class CommentVerifier;
 typedef std::vector<Comment> CommentList;
 
-class CommentHandlerVisitor : public TestVisitor, public CommentHandler {
+class CommentHandlerVisitor : public TestVisitor<CommentHandlerVisitor>,
+                              public CommentHandler {
+  typedef TestVisitor<CommentHandlerVisitor> base;
+
 public:
-  CommentHandlerVisitor() : PP(nullptr), Verified(false) {}
+  CommentHandlerVisitor() : base(), PP(nullptr), Verified(false) {}
 
   ~CommentHandlerVisitor() override {
     EXPECT_TRUE(Verified) << "CommentVerifier not accessed";
@@ -61,7 +64,7 @@ private:
   CommentList Comments;
   bool Verified;
 
-  class CommentHandlerAction : public TestAction {
+  class CommentHandlerAction : public base::TestAction {
   public:
     CommentHandlerAction(CommentHandlerVisitor *Visitor)
         : TestAction(Visitor) { }

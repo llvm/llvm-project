@@ -179,9 +179,10 @@ TEST_F(PassManagerTest, Basic) {
   if (!TM)
     GTEST_SKIP();
 
+  LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
   M->setDataLayout(TM->createDataLayout());
 
-  MachineModuleInfo MMI(TM.get());
+  MachineModuleInfo MMI(LLVMTM);
 
   MachineFunctionAnalysisManager MFAM;
   LoopAnalysisManager LAM;
@@ -228,9 +229,10 @@ TEST_F(PassManagerTest, DiagnosticHandler) {
   if (!TM)
     GTEST_SKIP();
 
+  LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
   M->setDataLayout(TM->createDataLayout());
 
-  MachineModuleInfo MMI(TM.get());
+  MachineModuleInfo MMI(LLVMTM);
 
   LoopAnalysisManager LAM;
   MachineFunctionAnalysisManager MFAM;

@@ -575,7 +575,7 @@ void createRegisterFatbinFunction(Module &M, GlobalVariable *FatbinDesc,
 
   // Create the destructor to unregister the image with the runtime. We cannot
   // use a standard global destructor after CUDA 9.2 so this must be called by
-  // `atexit()` instead.
+  // `atexit()` intead.
   IRBuilder<> DtorBuilder(BasicBlock::Create(C, "entry", DtorFunc));
   LoadInst *BinaryHandle = DtorBuilder.CreateAlignedLoad(
       PtrTy, BinaryHandleGlobal,

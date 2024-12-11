@@ -92,13 +92,11 @@ TEST_F(OverlayCDBTest, GetCompileCommand) {
   EXPECT_EQ(CDB.getCompileCommand(testPath("missing.cc")), std::nullopt);
 
   auto Override = cmd(testPath("foo.cc"), "-DA=3");
-  EXPECT_TRUE(CDB.setCompileCommand(testPath("foo.cc"), Override));
-  EXPECT_FALSE(CDB.setCompileCommand(testPath("foo.cc"), Override));
+  CDB.setCompileCommand(testPath("foo.cc"), Override);
   EXPECT_THAT(CDB.getCompileCommand(testPath("foo.cc"))->CommandLine,
               Contains("-DA=3"));
   EXPECT_EQ(CDB.getCompileCommand(testPath("missing.cc")), std::nullopt);
-  EXPECT_TRUE(CDB.setCompileCommand(testPath("missing.cc"), Override));
-  EXPECT_FALSE(CDB.setCompileCommand(testPath("missing.cc"), Override));
+  CDB.setCompileCommand(testPath("missing.cc"), Override);
   EXPECT_THAT(CDB.getCompileCommand(testPath("missing.cc"))->CommandLine,
               Contains("-DA=3"));
 }
@@ -113,7 +111,7 @@ TEST_F(OverlayCDBTest, NoBase) {
   OverlayCDB CDB(nullptr, {"-DA=6"});
   EXPECT_EQ(CDB.getCompileCommand(testPath("bar.cc")), std::nullopt);
   auto Override = cmd(testPath("bar.cc"), "-DA=5");
-  EXPECT_TRUE(CDB.setCompileCommand(testPath("bar.cc"), Override));
+  CDB.setCompileCommand(testPath("bar.cc"), Override);
   EXPECT_THAT(CDB.getCompileCommand(testPath("bar.cc"))->CommandLine,
               Contains("-DA=5"));
 
@@ -130,10 +128,10 @@ TEST_F(OverlayCDBTest, Watch) {
     Changes.push_back(ChangedFiles);
   });
 
-  EXPECT_TRUE(Inner.setCompileCommand("A.cpp", tooling::CompileCommand()));
-  EXPECT_TRUE(Outer.setCompileCommand("B.cpp", tooling::CompileCommand()));
-  EXPECT_TRUE(Inner.setCompileCommand("A.cpp", std::nullopt));
-  EXPECT_TRUE(Outer.setCompileCommand("C.cpp", std::nullopt));
+  Inner.setCompileCommand("A.cpp", tooling::CompileCommand());
+  Outer.setCompileCommand("B.cpp", tooling::CompileCommand());
+  Inner.setCompileCommand("A.cpp", std::nullopt);
+  Outer.setCompileCommand("C.cpp", std::nullopt);
   EXPECT_THAT(Changes, ElementsAre(ElementsAre("A.cpp"), ElementsAre("B.cpp"),
                                    ElementsAre("A.cpp"), ElementsAre("C.cpp")));
 }
@@ -153,7 +151,7 @@ TEST_F(OverlayCDBTest, Adjustments) {
   tooling::CompileCommand BarCommand;
   BarCommand.Filename = testPath("bar.cc");
   BarCommand.CommandLine = {"clang++", "-DB=1", testPath("bar.cc")};
-  EXPECT_TRUE(CDB.setCompileCommand(testPath("bar.cc"), BarCommand));
+  CDB.setCompileCommand(testPath("bar.cc"), BarCommand);
   Cmd = *CDB.getCompileCommand(testPath("bar.cc"));
   EXPECT_THAT(
       Cmd.CommandLine,
@@ -414,7 +412,7 @@ TEST(GlobalCompilationDatabaseTest, NonCanonicalFilenames) {
 
   llvm::SmallString<128> Root(testRoot());
   llvm::sys::path::append(Root, "build", "..", "a.cc");
-  EXPECT_TRUE(DB.setCompileCommand(Root.str(), tooling::CompileCommand()));
+  DB.setCompileCommand(Root.str(), tooling::CompileCommand());
   EXPECT_THAT(DiscoveredFiles, UnorderedElementsAre(testPath("a.cc")));
   DiscoveredFiles.clear();
 
@@ -434,7 +432,7 @@ TEST_F(OverlayCDBTest, GetProjectInfo) {
   EXPECT_EQ(DB.getProjectInfo(Header)->SourceRoot, testRoot());
 
   // Shouldn't change after an override.
-  EXPECT_TRUE(DB.setCompileCommand(File, tooling::CompileCommand()));
+  DB.setCompileCommand(File, tooling::CompileCommand());
   EXPECT_EQ(DB.getProjectInfo(File)->SourceRoot, testRoot());
   EXPECT_EQ(DB.getProjectInfo(Header)->SourceRoot, testRoot());
 }

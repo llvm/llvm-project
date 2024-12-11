@@ -12,6 +12,7 @@
 
 #include "MipsInstPrinter.h"
 #include "Mips.h"
+#include "MipsMCExpr.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"

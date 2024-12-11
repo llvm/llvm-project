@@ -21,7 +21,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 constexpr size_t N_EXCEPTS = 21;
 
-constexpr fputil::ExceptValues<float16, N_EXCEPTS> TANPIF16_EXCEPTS{{
+constexpr fputil::ExceptValues<float16, N_EXCEPTS> TANF16_EXCEPTS{{
     // (input, RZ output, RU offset, RD offset, RN offset)
     {0x07f2, 0x0e3d, 1, 0, 0}, {0x086a, 0x0eee, 1, 0, 1},
     {0x08db, 0x0fa0, 1, 0, 0}, {0x094c, 0x1029, 1, 0, 0},
@@ -49,7 +49,7 @@ LLVM_LIBC_FUNCTION(float16, tanpif16, (float16 x)) {
       return x;
 
     bool x_sign = x_u >> 15;
-    if (auto r = TANPIF16_EXCEPTS.lookup_odd(x_abs, x_sign);
+    if (auto r = TANF16_EXCEPTS.lookup_odd(x_abs, x_sign);
         LIBC_UNLIKELY(r.has_value()))
       return r.value();
   }

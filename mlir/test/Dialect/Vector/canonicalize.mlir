@@ -782,30 +782,6 @@ func.func @fold_extract_shapecast(%arg0 : vector<5x1x3x2xf32>,
 
 // -----
 
-// CHECK-LABEL: fold_extract_shapecast_0d_result
-//  CHECK-SAME: %[[IN:.*]]: vector<1x1x1xf32>
-//       CHECK:   %[[R:.*]] = vector.extract %[[IN]][0, 0, 0] : f32 from vector<1x1x1xf32>
-//       CHECK:   return %[[R]] : f32
-func.func @fold_extract_shapecast_0d_result(%arg0 : vector<1x1x1xf32>) -> f32 {
-  %0 = vector.shape_cast %arg0 : vector<1x1x1xf32> to vector<f32>
-  %r = vector.extract %0[] : f32 from vector<f32>
-  return %r : f32
-}
-
-// -----
-
-// CHECK-LABEL: fold_extract_shapecast_0d_source
-//  CHECK-SAME: %[[IN:.*]]: vector<f32>
-//       CHECK:   %[[R:.*]] = vector.extract %[[IN]][] : f32 from vector<f32>
-//       CHECK:   return %[[R]] : f32
-func.func @fold_extract_shapecast_0d_source(%arg0 : vector<f32>) -> f32 {
-  %0 = vector.shape_cast %arg0 : vector<f32> to vector<1xf32>
-  %r = vector.extract %0[0] : f32 from vector<1xf32>
-  return %r : f32
-}
-
-// -----
-
 // CHECK-LABEL: fold_extract_shapecast_negative
 //       CHECK:   %[[V:.*]] = vector.shape_cast %{{.*}} : vector<16xf32> to vector<2x4x2xf32>
 //       CHECK:   %[[R:.*]] = vector.extract %[[V]][1] : vector<4x2xf32> from vector<2x4x2xf32>
@@ -814,6 +790,18 @@ func.func @fold_extract_shapecast_negative(%arg0 : vector<16xf32>) -> vector<4x2
   %0 = vector.shape_cast %arg0 : vector<16xf32> to vector<2x4x2xf32>
   %r = vector.extract %0[1] : vector<4x2xf32> from vector<2x4x2xf32>
   return %r : vector<4x2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: dont_fold_0d_extract_shapecast
+//       CHECK:   %[[V:.*]] = vector.shape_cast %{{.*}} : vector<f32> to vector<1xf32>
+//       CHECK:   %[[R:.*]] = vector.extract %[[V]][0] : f32 from vector<1xf32>
+//       CHECK:   return %[[R]] : f32
+func.func @dont_fold_0d_extract_shapecast(%arg0 : vector<f32>) -> f32 {
+  %0 = vector.shape_cast %arg0 : vector<f32> to vector<1xf32>
+  %r = vector.extract %0[0] : f32 from vector<1xf32>
+  return %r : f32
 }
 
 // -----

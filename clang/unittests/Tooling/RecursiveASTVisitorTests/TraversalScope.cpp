@@ -12,17 +12,17 @@ using namespace clang;
 
 namespace {
 
-class Visitor : public ExpectedLocationVisitor {
+class Visitor : public ExpectedLocationVisitor<Visitor, clang::TestVisitor> {
 public:
   Visitor(ASTContext *Context) { this->Context = Context; }
 
-  bool VisitTranslationUnitDecl(TranslationUnitDecl *D) override {
+  bool VisitTranslationUnitDecl(TranslationUnitDecl *D) {
     auto &SM = D->getParentASTContext().getSourceManager();
     Match("TU", SM.getLocForStartOfFile(SM.getMainFileID()));
     return true;
   }
 
-  bool VisitNamedDecl(NamedDecl *D) override {
+  bool VisitNamedDecl(NamedDecl *D) {
     if (!D->isImplicit())
       Match(D->getName(), D->getLocation());
     return true;

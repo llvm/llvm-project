@@ -182,9 +182,6 @@ public:
   /// \c True if this line contains a macro call for which an expansion exists.
   bool ContainsMacroCall = false;
 
-  /// \c True if calculateFormattingInformation() has been called on this line.
-  bool Computed = false;
-
   /// \c True if this line should be formatted, i.e. intersects directly or
   /// indirectly with one of the input ranges.
   bool Affected;

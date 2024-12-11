@@ -240,9 +240,11 @@ public:
   ///     definitions to be included when the expression is parsed.
   ///
   /// \param[in,out] result_valobj_sp
-  ///      If execution is successful, the result valobj is placed
-  ///      here. Otherwise its Error will contain an ExpressionError
-  ///      with details about the failure mode.
+  ///      If execution is successful, the result valobj is placed here.
+  ///
+  /// \param[out] error
+  ///     Filled in with an error in case the expression evaluation
+  ///     fails to parse, run, or evaluated.
   ///
   /// \param[out] fixed_expression
   ///     If non-nullptr, the fixed expression is copied into the provided
@@ -264,7 +266,7 @@ public:
   static lldb::ExpressionResults
   Evaluate(ExecutionContext &exe_ctx, const EvaluateExpressionOptions &options,
            llvm::StringRef expr_cstr, llvm::StringRef expr_prefix,
-           lldb::ValueObjectSP &result_valobj_sp,
+           lldb::ValueObjectSP &result_valobj_sp, Status &error,
            std::string *fixed_expression = nullptr,
            ValueObject *ctx_obj = nullptr);
 

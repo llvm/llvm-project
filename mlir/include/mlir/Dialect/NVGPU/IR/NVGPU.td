@@ -255,7 +255,7 @@ def NVGPU_LdMatrixOp : NVGPU_Op<"ldmatrix", [
   let arguments = (ins Arg<AnyMemRef, "", [MemReadAt<0, FullEffect>]>:$srcMemref,
                            Variadic<Index>:$indices, BoolAttr:$transpose,
                            I32Attr:$numTiles);
-  let results = (outs AnyVectorOfNonZeroRank:$res);
+  let results = (outs AnyVector:$res);
   let assemblyFormat = [{
     $srcMemref`[` $indices `]` attr-dict `:` type($srcMemref) `->` type($res)
   }];
@@ -301,13 +301,13 @@ def NVGPU_MmaSyncOp : NVGPU_MmaSyncOp<"mma.sync"> {
         (vector<4x2xf16>, vector<2x2xf16>, vector<2x2xf32>) -> vector<2x2xf32>
     ```
   }];
-  let arguments = (ins AnyVectorOfNonZeroRank:$matrixA,
-                       AnyVectorOfNonZeroRank:$matrixB,
-                       AnyVectorOfNonZeroRank:$matrixC,
+  let arguments = (ins AnyVector:$matrixA,
+                       AnyVector:$matrixB,
+                       AnyVector:$matrixC,
                        I64ArrayAttr:$mmaShape,
                        OptionalAttr<UnitAttr>:$tf32Enabled);
 
-  let results = (outs AnyVectorOfNonZeroRank:$res);
+  let results = (outs AnyVector:$res);
 
   let builders = [
     OpBuilder<(ins "Value":$matrixA,
@@ -357,16 +357,16 @@ def NVGPU_MmaSparseSyncOp : NVGPU_MmaSyncOp<"mma.sp.sync"> {
   ```
   }];
 
-  let arguments = (ins AnyVectorOfNonZeroRank:$matrixA,
-                       AnyVectorOfNonZeroRank:$matrixB,
-                       AnyVectorOfNonZeroRank:$matrixC,
+  let arguments = (ins AnyVector:$matrixA,
+                       AnyVector:$matrixB,
+                       AnyVector:$matrixC,
                        NVGPU_MmaSparseSyncMetadataType:$sparseMetadata,
                        I64ArrayAttr:$mmaShape,
                        DefaultValuedAttr<I32Attr, "0">:$sparsitySelector,
                        OptionalAttr<UnitAttr>:$tf32Enabled
                        );
 
-  let results = (outs AnyVectorOfNonZeroRank:$res);
+  let results = (outs AnyVector:$res);
 
   let builders = [
     OpBuilder<(ins "Value":$matrixA,
@@ -825,10 +825,10 @@ def NVGPU_RcpOp : NVGPU_Op<"rcp", [Pure,
 
     The input and output must be of the same vector type and shape.
   }];
-  let arguments = (ins VectorOfNonZeroRankOf<[F32]>:$in,
+  let arguments = (ins VectorOf<[F32]>:$in,
                        DefaultValuedAttr<RcpRoundingModeAttr, "RcpRoundingMode::APPROX">:$rounding,
                        UnitAttr:$ftz);
-  let results = (outs VectorOfNonZeroRankOf<[F32]>:$out);
+  let results = (outs VectorOf<[F32]>:$out);
   let assemblyFormat = [{
     $in `{` `rounding` `=` $rounding (`,` `ftz` $ftz^)? `}` 
     attr-dict `:` type($out)

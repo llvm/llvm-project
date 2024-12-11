@@ -204,7 +204,6 @@ public:
   void convertVINTERPInst(MCInst &MI) const;
   void convertFMAanyK(MCInst &MI, int ImmLitIdx) const;
   void convertSDWAInst(MCInst &MI) const;
-  void convertMAIInst(MCInst &MI) const;
   void convertDPP8Inst(MCInst &MI) const;
   void convertMIMGInst(MCInst &MI) const;
   void convertVOP3DPPInst(MCInst &MI) const;
@@ -219,7 +218,6 @@ public:
     OPW96,
     OPW128,
     OPW160,
-    OPW192,
     OPW256,
     OPW288,
     OPW320,

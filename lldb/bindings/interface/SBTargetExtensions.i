@@ -79,11 +79,11 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTarget, lldb::eDescriptionLevelBrief)
                         module = self.sbtarget.GetModuleAtIndex(idx)
                         if module.uuid == key:
                             return module
-                elif isinstance(key, type(re.compile(''))):
+                elif type(key) is re.SRE_Pattern:
                     matching_modules = []
                     for idx in range(num_modules):
                         module = self.sbtarget.GetModuleAtIndex(idx)
-                        re_match = key.search(module.file.fullpath)
+                        re_match = key.search(module.path.fullpath)
                         if re_match:
                             matching_modules.append(module)
                     return matching_modules

@@ -16,6 +16,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Mips.h"
 #include "MipsELFStreamer.h"
 #include "MipsMCNaCl.h"
 #include "llvm/MC/MCAsmBackend.h"

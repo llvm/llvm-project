@@ -1158,6 +1158,17 @@ def get_module_names(thread):
     return list(map(GetModuleName, list(range(thread.GetNumFrames()))))
 
 
+def get_stack_frames(thread):
+    """
+    Returns a sequence of stack frames for this thread.
+    """
+
+    def GetStackFrame(i):
+        return thread.GetFrameAtIndex(i)
+
+    return list(map(GetStackFrame, list(range(thread.GetNumFrames()))))
+
+
 def print_stacktrace(thread, string_buffer=False):
     """Prints a simple stack trace of this thread."""
 

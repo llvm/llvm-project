@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -57,6 +58,7 @@ class MachineLateInstrsCleanup : public MachineFunctionPass {
 
   void removeRedundantDef(MachineInstr *MI);
   void clearKillsForDef(Register Reg, MachineBasicBlock *MBB,
+                        MachineBasicBlock::iterator I,
                         BitVector &VisitedPreds);
 
 public:
@@ -109,11 +111,14 @@ bool MachineLateInstrsCleanup::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-// Clear any preceding kill flag on Reg after removing a redundant
-// definition.
-void MachineLateInstrsCleanup::clearKillsForDef(Register Reg,
-                                                MachineBasicBlock *MBB,
-                                                BitVector &VisitedPreds) {
+// Clear any previous kill flag on Reg found before I in MBB. Walk backwards
+// in MBB and if needed continue in predecessors until a use/def of Reg is
+// encountered. This seems to be faster in practice than tracking kill flags
+// in a map.
+void MachineLateInstrsCleanup::
+clearKillsForDef(Register Reg, MachineBasicBlock *MBB,
+                 MachineBasicBlock::iterator I,
+                 BitVector &VisitedPreds) {
   VisitedPreds.set(MBB->getNumber());
 
   // Kill flag in MBB
@@ -133,13 +138,13 @@ void MachineLateInstrsCleanup::clearKillsForDef(Register Reg,
   assert(!MBB->pred_empty() && "Predecessor def not found!");
   for (MachineBasicBlock *Pred : MBB->predecessors())
     if (!VisitedPreds.test(Pred->getNumber()))
-      clearKillsForDef(Reg, Pred, VisitedPreds);
+      clearKillsForDef(Reg, Pred, Pred->end(), VisitedPreds);
 }
 
 void MachineLateInstrsCleanup::removeRedundantDef(MachineInstr *MI) {
   Register Reg = MI->getOperand(0).getReg();
   BitVector VisitedPreds(MI->getMF()->getNumBlockIDs());
-  clearKillsForDef(Reg, MI->getParent(), VisitedPreds);
+  clearKillsForDef(Reg, MI->getParent(), MI->getIterator(), VisitedPreds);
   MI->eraseFromParent();
   ++NumRemoved;
 }

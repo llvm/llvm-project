@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=mipsel -mcpu=mips32r2 -mattr=+micromips -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=mipsel -mcpu=mips32r2 -mattr=+micromips -verify-machineinstrs < %s | FileCheck %s
 
 define i32 @f1() {
 entry:

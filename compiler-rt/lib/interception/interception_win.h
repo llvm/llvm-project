@@ -63,9 +63,6 @@ bool OverrideFunctionWithTrampoline(
 // Exposed for unittests
 void TestOnlyReleaseTrampolineRegions();
 
-// Exposed for unittests
-SIZE_T TestOnlyGetInstructionSize(uptr address, SIZE_T *rel_offset);
-
 }  // namespace __interception
 
 #if defined(INTERCEPTION_DYNAMIC_CRT)

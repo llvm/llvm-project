@@ -39,7 +39,6 @@ subroutine mod_inscan1(x)
   !Correct: worksharing-loop directive
   !$omp do reduction(inscan, +:x)
   do i = 1, 100
-    !$omp scan inclusive(x)
     x = foo(i)
   enddo
   !$omp end do
@@ -51,7 +50,6 @@ subroutine mod_inscan2(x)
   !Correct: worksharing-loop simd directive
   !$omp do simd reduction(inscan, +:x)
   do i = 1, 100
-    !$omp scan inclusive(x)
     x = foo(i)
   enddo
   !$omp end do simd
@@ -63,7 +61,6 @@ subroutine mod_inscan3(x)
   !Correct: "simd" directive
   !$omp simd reduction(inscan, +:x)
   do i = 1, 100
-    !$omp scan inclusive(x)
     x = foo(i)
   enddo
   !$omp end simd
@@ -72,7 +69,7 @@ end
 subroutine mod_inscan4(x)
   integer, intent(inout) :: x
 
-  !ERROR: Modifier 'INSCAN' on REDUCTION clause is only allowed with WORKSHARING LOOP, WORKSHARING LOOP SIMD, or SIMD directive
+  !ERROR: Modifier 'INSCAN' on REDUCTION clause is only allowed with worksharing-loop, worksharing-loop simd, or SIMD directive
   !$omp parallel reduction(inscan, +:x)
   do i = 1, 100
     x = foo(i)
@@ -83,7 +80,7 @@ end
 subroutine mod_inscan5(x)
   integer, intent(inout) :: x
 
-  !ERROR: Modifier 'INSCAN' on REDUCTION clause is only allowed with WORKSHARING LOOP, WORKSHARING LOOP SIMD, or SIMD directive
+  !ERROR: Modifier 'INSCAN' on REDUCTION clause is only allowed with worksharing-loop, worksharing-loop simd, or SIMD directive
   !$omp sections reduction(inscan, +:x)
   do i = 1, 100
     x = foo(i)

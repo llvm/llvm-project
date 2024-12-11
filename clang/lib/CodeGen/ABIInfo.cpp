@@ -218,8 +218,8 @@ void ABIInfo::appendAttributeMangling(StringRef AttrStr,
     // only have "+" prefixes here.
     assert(LHS.starts_with("+") && RHS.starts_with("+") &&
            "Features should always have a prefix.");
-    return TI.getFMVPriority({LHS.substr(1)}) >
-           TI.getFMVPriority({RHS.substr(1)});
+    return TI.multiVersionSortPriority(LHS.substr(1)) >
+           TI.multiVersionSortPriority(RHS.substr(1));
   });
 
   bool IsFirst = true;

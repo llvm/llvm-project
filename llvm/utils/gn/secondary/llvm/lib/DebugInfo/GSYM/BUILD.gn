@@ -6,7 +6,6 @@ static_library("GSYM") {
     "//llvm/lib/TargetParser",
   ]
   sources = [
-    "CallSiteInfo.cpp",
     "DwarfTransformer.cpp",
     "ExtractRanges.cpp",
     "FileWriter.cpp",

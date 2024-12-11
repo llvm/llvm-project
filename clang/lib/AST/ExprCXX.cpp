@@ -32,6 +32,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstddef>
@@ -162,7 +163,7 @@ QualType CXXTypeidExpr::getTypeOperand(const ASTContext &Context) const {
   assert(isTypeOperand() && "Cannot call getTypeOperand for typeid(expr)");
   Qualifiers Quals;
   return Context.getUnqualifiedArrayType(
-      cast<TypeSourceInfo *>(Operand)->getType().getNonReferenceType(), Quals);
+      Operand.get<TypeSourceInfo *>()->getType().getNonReferenceType(), Quals);
 }
 
 static bool isGLValueFromPointerDeref(const Expr *E) {
@@ -216,7 +217,7 @@ QualType CXXUuidofExpr::getTypeOperand(ASTContext &Context) const {
   assert(isTypeOperand() && "Cannot call getTypeOperand for __uuidof(expr)");
   Qualifiers Quals;
   return Context.getUnqualifiedArrayType(
-      cast<TypeSourceInfo *>(Operand)->getType().getNonReferenceType(), Quals);
+      Operand.get<TypeSourceInfo *>()->getType().getNonReferenceType(), Quals);
 }
 
 // CXXScalarValueInitExpr
@@ -1717,9 +1718,9 @@ NonTypeTemplateParmDecl *SubstNonTypeTemplateParmExpr::getParameter() const {
 PackIndexingExpr *PackIndexingExpr::Create(
     ASTContext &Context, SourceLocation EllipsisLoc, SourceLocation RSquareLoc,
     Expr *PackIdExpr, Expr *IndexExpr, std::optional<int64_t> Index,
-    ArrayRef<Expr *> SubstitutedExprs, bool FullySubstituted) {
+    ArrayRef<Expr *> SubstitutedExprs, bool ExpandedToEmptyPack) {
   QualType Type;
-  if (Index && FullySubstituted && !SubstitutedExprs.empty())
+  if (Index && !SubstitutedExprs.empty())
     Type = SubstitutedExprs[*Index]->getType();
   else
     Type = Context.DependentTy;
@@ -1728,7 +1729,7 @@ PackIndexingExpr *PackIndexingExpr::Create(
       Context.Allocate(totalSizeToAlloc<Expr *>(SubstitutedExprs.size()));
   return new (Storage)
       PackIndexingExpr(Type, EllipsisLoc, RSquareLoc, PackIdExpr, IndexExpr,
-                       SubstitutedExprs, FullySubstituted);
+                       SubstitutedExprs, ExpandedToEmptyPack);
 }
 
 NamedDecl *PackIndexingExpr::getPackDecl() const {
@@ -1829,11 +1830,11 @@ void MaterializeTemporaryExpr::setExtendingDecl(ValueDecl *ExtendedBy,
 
   // We may need to allocate extra storage for the mangling number and the
   // extended-by ValueDecl.
-  if (!isa<LifetimeExtendedTemporaryDecl *>(State))
+  if (!State.is<LifetimeExtendedTemporaryDecl *>())
     State = LifetimeExtendedTemporaryDecl::Create(
-        cast<Expr>(cast<Stmt *>(State)), ExtendedBy, ManglingNumber);
+        cast<Expr>(State.get<Stmt *>()), ExtendedBy, ManglingNumber);
 
-  auto ES = cast<LifetimeExtendedTemporaryDecl *>(State);
+  auto ES = State.get<LifetimeExtendedTemporaryDecl *>();
   ES->ExtendingDecl = ExtendedBy;
   ES->ManglingNumber = ManglingNumber;
 }

@@ -14,6 +14,10 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, toupper, (int c)) { return internal::toupper(c); }
+LLVM_LIBC_FUNCTION(int, toupper, (int c)) {
+  if (internal::islower(c))
+    return c - ('a' - 'A');
+  return c;
+}
 
 } // namespace LIBC_NAMESPACE_DECL

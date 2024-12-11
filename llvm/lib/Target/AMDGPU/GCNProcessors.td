@@ -9,11 +9,11 @@
 // The code produced for "generic" is only useful for tests and cannot
 // reasonably be expected to execute on any particular target.
 def : ProcessorModel<"generic", NoSchedModel,
-  [FeatureGDS, FeatureGWS]
+  [FeatureWavefrontSize64, FeatureGDS, FeatureGWS]
 >;
 
 def : ProcessorModel<"generic-hsa", NoSchedModel,
-  [FeatureGDS, FeatureGWS, FeatureFlatAddressSpace]
+  [FeatureWavefrontSize64, FeatureGDS, FeatureGWS, FeatureFlatAddressSpace]
 >;
 
 //===------------------------------------------------------------===//
@@ -204,18 +204,9 @@ def : ProcessorModel<"gfx942", SIDPGFX940FullSpeedModel,
   FeatureISAVersion9_4_2.Features
 >;
 
-def : ProcessorModel<"gfx950", SIDPGFX950FullSpeedModel,
-  FeatureISAVersion9_5_0.Features
->;
-
 // [gfx900, gfx902, gfx904, gfx906, gfx909, gfx90c]
 def : ProcessorModel<"gfx9-generic", SIQuarterSpeedModel,
   FeatureISAVersion9_Generic.Features
->;
-
-// [gfx940, gfx941, gfx942]
-def : ProcessorModel<"gfx9-4-generic", SIDPGFX940FullSpeedModel,
-  FeatureISAVersion9_4_Generic.Features
 >;
 
 //===----------------------------------------------------------------------===//

@@ -232,7 +232,9 @@ createModule(const std::unique_ptr<LLVMContext> &Context, const DataLayout &DL) 
 BitVector getFunctionReservedRegs(const TargetMachine &TM) {
   std::unique_ptr<LLVMContext> Context = std::make_unique<LLVMContext>();
   std::unique_ptr<Module> Module = createModule(Context, TM.createDataLayout());
-  auto MMIWP = std::make_unique<MachineModuleInfoWrapperPass>(&TM);
+  // TODO: This only works for targets implementing LLVMTargetMachine.
+  const LLVMTargetMachine &LLVMTM = static_cast<const LLVMTargetMachine &>(TM);
+  auto MMIWP = std::make_unique<MachineModuleInfoWrapperPass>(&LLVMTM);
   MachineFunction &MF = createVoidVoidPtrMachineFunction(
       FunctionID, Module.get(), &MMIWP->getMMI());
   // Saving reserved registers for client.
@@ -240,7 +242,7 @@ BitVector getFunctionReservedRegs(const TargetMachine &TM) {
 }
 
 Error assembleToStream(const ExegesisTarget &ET,
-                       std::unique_ptr<TargetMachine> TM,
+                       std::unique_ptr<LLVMTargetMachine> TM,
                        ArrayRef<unsigned> LiveIns, const FillFunction &Fill,
                        raw_pwrite_stream &AsmStream, const BenchmarkKey &Key,
                        bool GenerateMemoryInstructions) {
@@ -272,7 +274,6 @@ Error assembleToStream(const ExegesisTarget &ET,
   }
 
   std::vector<unsigned> RegistersSetUp;
-  RegistersSetUp.reserve(Key.RegisterInitialValues.size());
   for (const auto &InitValue : Key.RegisterInitialValues) {
     RegistersSetUp.push_back(InitValue.Register);
   }
@@ -357,7 +358,7 @@ object::OwningBinary<object::ObjectFile> getObjectFromFile(StringRef Filename) {
 }
 
 Expected<ExecutableFunction> ExecutableFunction::create(
-    std::unique_ptr<TargetMachine> TM,
+    std::unique_ptr<LLVMTargetMachine> TM,
     object::OwningBinary<object::ObjectFile> &&ObjectFileHolder) {
   assert(ObjectFileHolder.getBinary() && "cannot create object file");
   std::unique_ptr<LLVMContext> Ctx = std::make_unique<LLVMContext>();

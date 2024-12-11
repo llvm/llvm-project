@@ -196,14 +196,13 @@ int main(int argc, const char **argv) {
 
   auto reportError = [argv](Error E) {
     logAllUnhandledErrors(std::move(E), WithColor::error(errs(), argv[0]));
-    return 1;
+    exit(1);
   };
 
   auto doWork = [&](std::function<llvm::Error()> Work) {
     if (llvm::Error Err = Work()) {
-      return reportError(std::move(Err));
+      reportError(std::move(Err));
     }
-    return 0;
   };
 
   auto warningOS = [argv]() -> raw_ostream & {
@@ -224,14 +223,14 @@ int main(int argc, const char **argv) {
   if (!Objcopy)
     Objcopy = sys::findProgramByName("llvm-objcopy");
   if (!Objcopy)
-    return reportError(createStringError(
-        Objcopy.getError(), "unable to find 'llvm-objcopy' in path"));
+    reportError(createStringError(Objcopy.getError(),
+                             "unable to find 'llvm-objcopy' in path"));
   else
     BundlerConfig.ObjcopyPath = *Objcopy;
 
   if (InputFileNames.getNumOccurrences() != 0 &&
       InputFileNamesDeprecatedOpt.getNumOccurrences() != 0) {
-    return reportError(createStringError(
+    reportError(createStringError(
         errc::invalid_argument,
         "-inputs and -input cannot be used together, use only -input instead"));
   }
@@ -247,9 +246,9 @@ int main(int argc, const char **argv) {
 
   if (OutputFileNames.getNumOccurrences() != 0 &&
       OutputFileNamesDeprecatedOpt.getNumOccurrences() != 0) {
-    return reportError(createStringError(errc::invalid_argument,
-                                         "-outputs and -output cannot be used "
-                                         "together, use only -output instead"));
+    reportError(createStringError(errc::invalid_argument,
+                                  "-outputs and -output cannot be used "
+                                  "together, use only -output instead"));
   }
 
   if (OutputFileNamesDeprecatedOpt.size()) {
@@ -263,77 +262,77 @@ int main(int argc, const char **argv) {
 
   if (ListBundleIDs) {
     if (Unbundle) {
-      return reportError(
+      reportError(
           createStringError(errc::invalid_argument,
                             "-unbundle and -list cannot be used together"));
     }
     if (InputFileNames.size() != 1) {
-      return reportError(createStringError(
-          errc::invalid_argument, "only one input file supported for -list"));
+      reportError(createStringError(errc::invalid_argument,
+                                    "only one input file supported for -list"));
     }
     if (OutputFileNames.size()) {
-      return reportError(createStringError(
-          errc::invalid_argument, "-outputs option is invalid for -list"));
+      reportError(createStringError(errc::invalid_argument,
+                                    "-outputs option is invalid for -list"));
     }
     if (TargetNames.size()) {
-      return reportError(createStringError(
-          errc::invalid_argument, "-targets option is invalid for -list"));
+      reportError(createStringError(errc::invalid_argument,
+                                    "-targets option is invalid for -list"));
     }
 
-    return doWork([&]() {
-      return OffloadBundler::ListBundleIDsInFile(InputFileNames.front(),
-                                                 BundlerConfig);
-    });
+    doWork([&]() { return OffloadBundler::ListBundleIDsInFile(
+          InputFileNames.front(),
+          BundlerConfig); });
+    return 0;
   }
 
   if (BundlerConfig.CheckInputArchive) {
     if (!Unbundle) {
-      return reportError(createStringError(
-          errc::invalid_argument, "-check-input-archive cannot be used while "
-                                  "bundling"));
+      reportError(createStringError(errc::invalid_argument,
+                                    "-check-input-archive cannot be used while "
+                                    "bundling"));
     }
     if (Unbundle && BundlerConfig.FilesType != "a") {
-      return reportError(createStringError(
-          errc::invalid_argument, "-check-input-archive can only be used for "
-                                  "unbundling archives (-type=a)"));
+      reportError(createStringError(errc::invalid_argument,
+                                    "-check-input-archive can only be used for "
+                                    "unbundling archives (-type=a)"));
     }
   }
 
   if (OutputFileNames.size() == 0) {
-    return reportError(
+    reportError(
         createStringError(errc::invalid_argument, "no output file specified!"));
   }
 
   if (TargetNames.getNumOccurrences() == 0) {
-    return reportError(createStringError(
+    reportError(createStringError(
         errc::invalid_argument,
         "for the --targets option: must be specified at least once!"));
   }
 
   if (Unbundle) {
     if (InputFileNames.size() != 1) {
-      return reportError(createStringError(
+      reportError(createStringError(
           errc::invalid_argument,
           "only one input file supported in unbundling mode"));
     }
     if (OutputFileNames.size() != TargetNames.size()) {
-      return reportError(createStringError(
-          errc::invalid_argument, "number of output files and targets should "
-                                  "match in unbundling mode"));
+      reportError(createStringError(errc::invalid_argument,
+                                    "number of output files and targets should "
+                                    "match in unbundling mode"));
     }
   } else {
     if (BundlerConfig.FilesType == "a") {
-      return reportError(createStringError(errc::invalid_argument,
-                                           "Archive files are only supported "
-                                           "for unbundling"));
+      reportError(createStringError(errc::invalid_argument,
+                                    "Archive files are only supported "
+                                    "for unbundling"));
     }
     if (OutputFileNames.size() != 1) {
-      return reportError(
-          createStringError(errc::invalid_argument,
-                            "only one output file supported in bundling mode"));
+      reportError(createStringError(
+          errc::invalid_argument,
+          "only one output file supported in bundling mode"));
     }
     if (InputFileNames.size() != TargetNames.size()) {
-      return reportError(createStringError(
+      reportError(createStringError(
           errc::invalid_argument,
           "number of input files and targets should match in bundling mode"));
     }
@@ -351,8 +350,8 @@ int main(int argc, const char **argv) {
   std::vector<std::string> StandardizedTargetNames;
   for (StringRef Target : TargetNames) {
     if (!ParsedTargets.insert(Target).second) {
-      return reportError(createStringError(
-          errc::invalid_argument, "Duplicate targets are not allowed"));
+      reportError(createStringError(errc::invalid_argument,
+                                    "Duplicate targets are not allowed"));
     }
 
     auto OffloadInfo = OffloadTargetInfo(Target, BundlerConfig);
@@ -369,7 +368,7 @@ int main(int argc, const char **argv) {
         Msg << ", unknown offloading kind '" << OffloadInfo.OffloadKind << "'";
       if (!TripleIsValid)
         Msg << ", unknown target triple '" << OffloadInfo.Triple.str() << "'";
-      return reportError(createStringError(errc::invalid_argument, Msg.str()));
+      reportError(createStringError(errc::invalid_argument, Msg.str()));
     }
 
     TargetIDs[OffloadInfo.OffloadKind.str() + "-" + OffloadInfo.Triple.str()]
@@ -396,7 +395,7 @@ int main(int argc, const char **argv) {
       Msg << "Cannot bundle inputs with conflicting targets: '"
           << TargetID.first + "-" + ConflictingTID->first << "' and '"
           << TargetID.first + "-" + ConflictingTID->second << "'";
-      return reportError(createStringError(errc::invalid_argument, Msg.str()));
+      reportError(createStringError(errc::invalid_argument, Msg.str()));
     }
   }
 
@@ -409,14 +408,14 @@ int main(int argc, const char **argv) {
   // treat missing host triple as error if we do unbundling.
   if ((Unbundle && HostTargetNum > 1) ||
       (!Unbundle && HostTargetNum != 1 && !BundlerConfig.AllowNoHost)) {
-    return reportError(createStringError(
-        errc::invalid_argument,
-        "expecting exactly one host target but got " + Twine(HostTargetNum)));
+    reportError(createStringError(errc::invalid_argument,
+                                  "expecting exactly one host target but got " +
+                                      Twine(HostTargetNum)));
   }
 
   OffloadBundler Bundler(BundlerConfig);
 
-  return doWork([&]() {
+  doWork([&]() {
     if (Unbundle) {
       if (BundlerConfig.FilesType == "a")
         return Bundler.UnbundleArchive();
@@ -425,4 +424,5 @@ int main(int argc, const char **argv) {
     } else
       return Bundler.BundleFiles();
   });
+  return 0;
 }

@@ -807,7 +807,7 @@ tooling::CompileCommand OverlayCDB::getFallbackCommand(PathRef File) const {
   return Cmd;
 }
 
-bool OverlayCDB::setCompileCommand(PathRef File,
+void OverlayCDB::setCompileCommand(PathRef File,
                                    std::optional<tooling::CompileCommand> Cmd) {
   // We store a canonical version internally to prevent mismatches between set
   // and get compile commands. Also it assures clients listening to broadcasts
@@ -815,19 +815,12 @@ bool OverlayCDB::setCompileCommand(PathRef File,
   std::string CanonPath = removeDots(File);
   {
     std::unique_lock<std::mutex> Lock(Mutex);
-    if (Cmd) {
-      if (auto [It, Inserted] =
-              Commands.try_emplace(CanonPath, std::move(*Cmd));
-          !Inserted) {
-        if (It->second == *Cmd)
-          return false;
-        It->second = *Cmd;
-      }
-    } else
+    if (Cmd)
+      Commands[CanonPath] = std::move(*Cmd);
+    else
       Commands.erase(CanonPath);
   }
   OnCommandChanged.broadcast({CanonPath});
-  return true;
 }
 
 DelegatingCDB::DelegatingCDB(const GlobalCompilationDatabase *Base)

@@ -26,13 +26,7 @@ attributes {
   // CHECK: #test.attr_with_optional_signed<-9223372036854775808>
   attr9 = #test.attr_with_optional_signed<-9223372036854775808>,
   // CHECK: #test.attr_with_optional_unsigned<18446744073709551615>
-  attr_10 = #test.attr_with_optional_unsigned<18446744073709551615>,
-  // CHECK: #test.attr_with_optional_enum<>
-  attr_11 = #test.attr_with_optional_enum<>,
-  // CHECK: #test.attr_with_optional_enum<a>
-  attr_12 = #test.attr_with_optional_enum<a>,
-  // CHECK: #test.attr_with_optional_enum<b>
-  attr_13 = #test.attr_with_optional_enum<b>
+  attr_10 = #test.attr_with_optional_unsigned<18446744073709551615>
 }
 
 // CHECK-LABEL: @test_roundtrip_default_parsers_struct

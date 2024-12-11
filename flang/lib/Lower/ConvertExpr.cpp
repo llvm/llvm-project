@@ -2852,11 +2852,10 @@ public:
       }
     }
 
-    auto loweredResult =
+    ExtValue result =
         Fortran::lower::genCallOpAndResult(loc, converter, symMap, stmtCtx,
                                            caller, callSiteType, resultType)
             .first;
-    auto &result = std::get<ExtValue>(loweredResult);
 
     // Sync pointers and allocatables that may have been modified during the
     // call.
@@ -4882,12 +4881,10 @@ private:
             [&](const auto &) { return fir::getBase(exv); });
         caller.placeInput(argIface, arg);
       }
-      Fortran::lower::LoweredResult res =
-          Fortran::lower::genCallOpAndResult(loc, converter, symMap,
-                                             getElementCtx(), caller,
-                                             callSiteType, retTy)
-              .first;
-      return std::get<ExtValue>(res);
+      return Fortran::lower::genCallOpAndResult(loc, converter, symMap,
+                                                getElementCtx(), caller,
+                                                callSiteType, retTy)
+          .first;
     };
   }
 

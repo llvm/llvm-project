@@ -16,7 +16,7 @@
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Tooling/Tooling.h"
@@ -24,11 +24,20 @@
 #include <vector>
 
 namespace clang {
-namespace detail {
-// Use 'TestVisitor' or include 'CRTPTestVisitor.h' and use 'CRTPTestVisitor'
-// instead of using this directly.
-class TestVisitorHelper {
+
+/// \brief Base class for simple RecursiveASTVisitor based tests.
+///
+/// This is a drop-in replacement for RecursiveASTVisitor itself, with the
+/// additional capability of running it over a snippet of code.
+///
+/// Visits template instantiations and implicit code by default.
+template <typename T>
+class TestVisitor : public RecursiveASTVisitor<T> {
 public:
+  TestVisitor() { }
+
+  virtual ~TestVisitor() { }
+
   enum Language {
     Lang_C,
     Lang_CXX98,
@@ -45,63 +54,57 @@ public:
   bool runOver(StringRef Code, Language L = Lang_CXX) {
     std::vector<std::string> Args;
     switch (L) {
-    case Lang_C:
-      Args.push_back("-x");
-      Args.push_back("c");
-      break;
-    case Lang_CXX98:
-      Args.push_back("-std=c++98");
-      break;
-    case Lang_CXX11:
-      Args.push_back("-std=c++11");
-      break;
-    case Lang_CXX14:
-      Args.push_back("-std=c++14");
-      break;
-    case Lang_CXX17:
-      Args.push_back("-std=c++17");
-      break;
-    case Lang_CXX2a:
-      Args.push_back("-std=c++2a");
-      break;
-    case Lang_OBJC:
-      Args.push_back("-ObjC");
-      Args.push_back("-fobjc-runtime=macosx-10.12.0");
-      break;
-    case Lang_OBJCXX11:
-      Args.push_back("-ObjC++");
-      Args.push_back("-std=c++11");
-      Args.push_back("-fblocks");
-      break;
+      case Lang_C:
+        Args.push_back("-x");
+        Args.push_back("c");
+        break;
+      case Lang_CXX98: Args.push_back("-std=c++98"); break;
+      case Lang_CXX11: Args.push_back("-std=c++11"); break;
+      case Lang_CXX14: Args.push_back("-std=c++14"); break;
+      case Lang_CXX17: Args.push_back("-std=c++17"); break;
+      case Lang_CXX2a: Args.push_back("-std=c++2a"); break;
+      case Lang_OBJC:
+        Args.push_back("-ObjC");
+        Args.push_back("-fobjc-runtime=macosx-10.12.0");
+        break;
+      case Lang_OBJCXX11:
+        Args.push_back("-ObjC++");
+        Args.push_back("-std=c++11");
+        Args.push_back("-fblocks");
+        break;
     }
     return tooling::runToolOnCodeWithArgs(CreateTestAction(), Code, Args);
   }
 
-protected:
-  TestVisitorHelper() = default;
-  virtual ~TestVisitorHelper() = default;
-  virtual void InvokeTraverseDecl(TranslationUnitDecl *D) = 0;
+  bool shouldVisitTemplateInstantiations() const {
+    return true;
+  }
 
+  bool shouldVisitImplicitCode() const {
+    return true;
+  }
+
+protected:
   virtual std::unique_ptr<ASTFrontendAction> CreateTestAction() {
     return std::make_unique<TestAction>(this);
   }
 
   class FindConsumer : public ASTConsumer {
   public:
-    FindConsumer(TestVisitorHelper *Visitor) : Visitor(Visitor) {}
+    FindConsumer(TestVisitor *Visitor) : Visitor(Visitor) {}
 
     void HandleTranslationUnit(clang::ASTContext &Context) override {
       Visitor->Context = &Context;
-      Visitor->InvokeTraverseDecl(Context.getTranslationUnitDecl());
+      Visitor->TraverseDecl(Context.getTranslationUnitDecl());
     }
 
   private:
-    TestVisitorHelper *Visitor;
+    TestVisitor *Visitor;
   };
 
   class TestAction : public ASTFrontendAction {
   public:
-    TestAction(TestVisitorHelper *Visitor) : Visitor(Visitor) {}
+    TestAction(TestVisitor *Visitor) : Visitor(Visitor) {}
 
     std::unique_ptr<clang::ASTConsumer>
     CreateASTConsumer(CompilerInstance &, llvm::StringRef dummy) override {
@@ -110,13 +113,20 @@ protected:
     }
 
   protected:
-    TestVisitorHelper *Visitor;
+    TestVisitor *Visitor;
   };
 
   ASTContext *Context;
 };
 
-class ExpectedLocationVisitorHelper {
+/// \brief A RecursiveASTVisitor to check that certain matches are (or are
+/// not) observed during visitation.
+///
+/// This is a RecursiveASTVisitor for testing the RecursiveASTVisitor itself,
+/// and allows simple creation of test visitors running matches on only a small
+/// subset of the Visit* methods.
+template <typename T, template <typename> class Visitor = TestVisitor>
+class ExpectedLocationVisitor : public Visitor<T> {
 public:
   /// \brief Expect 'Match' *not* to occur at the given 'Line' and 'Column'.
   ///
@@ -137,44 +147,37 @@ public:
   }
 
   /// \brief Checks that all expected matches have been found.
-  virtual ~ExpectedLocationVisitorHelper() {
-    // FIXME: Range-based for loop.
-    for (std::vector<ExpectedMatch>::const_iterator
-             It = ExpectedMatches.begin(),
-             End = ExpectedMatches.end();
+  ~ExpectedLocationVisitor() override {
+    for (typename std::vector<ExpectedMatch>::const_iterator
+             It = ExpectedMatches.begin(), End = ExpectedMatches.end();
          It != End; ++It) {
       It->ExpectFound();
     }
   }
 
 protected:
-  virtual ASTContext *getASTContext() = 0;
-
   /// \brief Checks an actual match against expected and disallowed matches.
   ///
   /// Implementations are required to call this with appropriate values
   /// for 'Name' during visitation.
   void Match(StringRef Name, SourceLocation Location) {
-    const FullSourceLoc FullLocation = getASTContext()->getFullLoc(Location);
+    const FullSourceLoc FullLocation = this->Context->getFullLoc(Location);
 
-    // FIXME: Range-based for loop.
-    for (std::vector<MatchCandidate>::const_iterator
-             It = DisallowedMatches.begin(),
-             End = DisallowedMatches.end();
+    for (typename std::vector<MatchCandidate>::const_iterator
+             It = DisallowedMatches.begin(), End = DisallowedMatches.end();
          It != End; ++It) {
       EXPECT_FALSE(It->Matches(Name, FullLocation))
           << "Matched disallowed " << *It;
     }
 
-    // FIXME: Range-based for loop.
-    for (std::vector<ExpectedMatch>::iterator It = ExpectedMatches.begin(),
-                                              End = ExpectedMatches.end();
+    for (typename std::vector<ExpectedMatch>::iterator
+             It = ExpectedMatches.begin(), End = ExpectedMatches.end();
          It != End; ++It) {
-      It->UpdateFor(Name, FullLocation, getASTContext()->getSourceManager());
+      It->UpdateFor(Name, FullLocation, this->Context->getSourceManager());
     }
   }
 
-private:
+ private:
   struct MatchCandidate {
     std::string ExpectedName;
     unsigned LineNumber;
@@ -244,41 +247,6 @@ private:
   std::vector<MatchCandidate> DisallowedMatches;
   std::vector<ExpectedMatch> ExpectedMatches;
 };
-} // namespace detail
-
-/// \brief Base class for simple (Dynamic)RecursiveASTVisitor based tests.
-///
-/// This is a drop-in replacement for DynamicRecursiveASTVisitor itself, with
-/// the additional capability of running it over a snippet of code.
-///
-/// Visits template instantiations and implicit code by default.
-///
-/// For post-order traversal etc. use CTRPTestVisitor from
-/// CTRPTestVisitor.h instead.
-class TestVisitor : public DynamicRecursiveASTVisitor,
-                    public detail::TestVisitorHelper {
-public:
-  TestVisitor() {
-    ShouldVisitTemplateInstantiations = true;
-    ShouldVisitImplicitCode = true;
-  }
-
-  void InvokeTraverseDecl(TranslationUnitDecl *D) override { TraverseDecl(D); }
-};
-
-/// \brief A RecursiveASTVisitor to check that certain matches are (or are
-/// not) observed during visitation.
-///
-/// This is a RecursiveASTVisitor for testing the RecursiveASTVisitor itself,
-/// and allows simple creation of test visitors running matches on only a small
-/// subset of the Visit* methods.
-///
-/// For post-order traversal etc. use CTRPExpectedLocationVisitor from
-/// CTRPTestVisitor.h instead.
-class ExpectedLocationVisitor : public TestVisitor,
-                                public detail::ExpectedLocationVisitorHelper {
-  ASTContext *getASTContext() override { return Context; }
-};
-} // namespace clang
+}
 
 #endif

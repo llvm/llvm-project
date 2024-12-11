@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Function.h"
+#include "Opcode.h"
 #include "Program.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"

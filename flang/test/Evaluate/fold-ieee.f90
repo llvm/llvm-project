@@ -58,7 +58,7 @@ module m
   logical, parameter :: test_sn_all = ieee_support_subnormal()
   logical, parameter :: test_sn_4 = ieee_support_subnormal(1.)
   logical, parameter :: test_sn_8 = ieee_support_subnormal(1.d0)
-! logical, parameter :: test_uc_all = .not. ieee_support_underflow_control()
-! logical, parameter :: test_uc_4 = ieee_support_underflow_control(1.)
-! logical, parameter :: test_uc_8 = ieee_support_underflow_control(1.d0)
+  logical, parameter :: test_uc_all = ieee_support_underflow_control()
+  logical, parameter :: test_uc_4 = ieee_support_underflow_control(1.)
+  logical, parameter :: test_uc_8 = ieee_support_underflow_control(1.d0)
 end

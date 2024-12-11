@@ -12,6 +12,8 @@
 
 #include "LanaiSubtarget.h"
 
+#include "Lanai.h"
+
 #define DEBUG_TYPE "lanai-subtarget"
 
 #define GET_SUBTARGETINFO_TARGET_DESC

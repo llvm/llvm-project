@@ -154,9 +154,9 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_MOVW_UABS_G3:
     return R_ABS;
   case R_AARCH64_AUTH_ABS64:
-    return RE_AARCH64_AUTH;
+    return R_AARCH64_AUTH;
   case R_AARCH64_TLSDESC_ADR_PAGE21:
-    return RE_AARCH64_TLSDESC_PAGE;
+    return R_AARCH64_TLSDESC_PAGE;
   case R_AARCH64_TLSDESC_LD64_LO12:
   case R_AARCH64_TLSDESC_ADD_LO12:
     return R_TLSDESC;
@@ -198,22 +198,22 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
     return R_PC;
   case R_AARCH64_ADR_PREL_PG_HI21:
   case R_AARCH64_ADR_PREL_PG_HI21_NC:
-    return RE_AARCH64_PAGE_PC;
+    return R_AARCH64_PAGE_PC;
   case R_AARCH64_LD64_GOT_LO12_NC:
   case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
     return R_GOT;
   case R_AARCH64_LD64_GOTPAGE_LO15:
-    return RE_AARCH64_GOT_PAGE;
+    return R_AARCH64_GOT_PAGE;
   case R_AARCH64_ADR_GOT_PAGE:
   case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
-    return RE_AARCH64_GOT_PAGE_PC;
+    return R_AARCH64_GOT_PAGE_PC;
   case R_AARCH64_GOTPCREL32:
   case R_AARCH64_GOT_LD_PREL19:
     return R_GOT_PC;
   case R_AARCH64_NONE:
     return R_NONE;
   default:
-    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
              << ") against symbol " << &s;
     return R_NONE;
   }
@@ -222,7 +222,7 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
 RelExpr AArch64::adjustTlsExpr(RelType type, RelExpr expr) const {
   if (expr == R_RELAX_TLS_GD_TO_IE) {
     if (type == R_AARCH64_TLSDESC_ADR_PAGE21)
-      return RE_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC;
+      return R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC;
     return R_RELAX_TLS_GD_TO_IE_ABS;
   }
   return expr;
@@ -348,7 +348,8 @@ int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
     return SignExtend64<28>(getBits(read32le(buf), 0, 25) << 2);
 
   default:
-    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
+    internalLinkerError(getErrorLoc(ctx, buf),
+                        "cannot read addend for relocation " + toString(type));
     return 0;
   }
 }
@@ -877,7 +878,7 @@ bool AArch64Relaxer::tryRelaxAdrpLdr(const Relocation &adrpRel,
   if (val != llvm::SignExtend64(val, 33))
     return false;
 
-  Relocation adrpSymRel = {RE_AARCH64_PAGE_PC, R_AARCH64_ADR_PREL_PG_HI21,
+  Relocation adrpSymRel = {R_AARCH64_PAGE_PC, R_AARCH64_ADR_PREL_PG_HI21,
                            adrpRel.offset, /*addend=*/0, &sym};
   Relocation addRel = {R_ABS, R_AARCH64_ADD_ABS_LO12_NC, ldrRel.offset,
                        /*addend=*/0, &sym};
@@ -922,21 +923,21 @@ void AArch64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
     }
 
     switch (rel.expr) {
-    case RE_AARCH64_GOT_PAGE_PC:
+    case R_AARCH64_GOT_PAGE_PC:
       if (i + 1 < size &&
           relaxer.tryRelaxAdrpLdr(rel, sec.relocs()[i + 1], secAddr, buf)) {
         ++i;
         continue;
       }
       break;
-    case RE_AARCH64_PAGE_PC:
+    case R_AARCH64_PAGE_PC:
       if (i + 1 < size &&
           relaxer.tryRelaxAdrpAdd(rel, sec.relocs()[i + 1], secAddr, buf)) {
         ++i;
         continue;
       }
       break;
-    case RE_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC:
+    case R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC:
     case R_RELAX_TLS_GD_TO_IE_ABS:
       relaxTlsGdToIe(loc, rel, val);
       continue;
@@ -998,11 +999,7 @@ public:
 
 private:
   bool btiHeader; // bti instruction needed in PLT Header and Entry
-  enum {
-    PEK_NoAuth,
-    PEK_AuthHint, // use autia1716 instr for authenticated branch in PLT entry
-    PEK_Auth,     // use braa instr for authenticated branch in PLT entry
-  } pacEntryKind;
+  bool pacEntry;  // autia1716 instruction needed in PLT Entry
 };
 } // namespace
 
@@ -1017,21 +1014,9 @@ AArch64BtiPac::AArch64BtiPac(Ctx &ctx) : AArch64(ctx) {
   // relocations.
   // The PAC PLT entries require dynamic loader support and this isn't known
   // from properties in the objects, so we use the command line flag.
-  // By default we only use hint-space instructions, but if we detect the
-  // PAuthABI, which requires v8.3-A, we can use the non-hint space
-  // instructions.
+  pacEntry = ctx.arg.zPacPlt;
 
-  if (ctx.arg.zPacPlt) {
-    if (llvm::any_of(ctx.aarch64PauthAbiCoreInfo,
-                     [](uint8_t c) { return c != 0; }))
-      pacEntryKind = PEK_Auth;
-    else
-      pacEntryKind = PEK_AuthHint;
-  } else {
-    pacEntryKind = PEK_NoAuth;
-  }
-
-  if (btiHeader || (pacEntryKind != PEK_NoAuth)) {
+  if (btiHeader || pacEntry) {
     pltEntrySize = 24;
     ipltEntrySize = 24;
   }
@@ -1081,13 +1066,9 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
       0x11, 0x02, 0x40, 0xf9,  // ldr  x17, [x16, Offset(&(.got.plt[n]))]
       0x10, 0x02, 0x00, 0x91   // add  x16, x16, Offset(&(.got.plt[n]))
   };
-  const uint8_t pacHintBr[] = {
-      0x9f, 0x21, 0x03, 0xd5, // autia1716
-      0x20, 0x02, 0x1f, 0xd6  // br   x17
-  };
   const uint8_t pacBr[] = {
-      0x30, 0x0a, 0x1f, 0xd7, // braa x17, x16
-      0x1f, 0x20, 0x03, 0xd5  // nop
+      0x9f, 0x21, 0x03, 0xd5,  // autia1716
+      0x20, 0x02, 0x1f, 0xd6   // br   x17
   };
   const uint8_t stdBr[] = {
       0x20, 0x02, 0x1f, 0xd6,  // br   x17
@@ -1115,10 +1096,8 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
   relocateNoSym(buf + 4, R_AARCH64_LDST64_ABS_LO12_NC, gotPltEntryAddr);
   relocateNoSym(buf + 8, R_AARCH64_ADD_ABS_LO12_NC, gotPltEntryAddr);
 
-  if (pacEntryKind != PEK_NoAuth)
-    memcpy(buf + sizeof(addrInst),
-           pacEntryKind == PEK_AuthHint ? pacHintBr : pacBr,
-           sizeof(pacEntryKind == PEK_AuthHint ? pacHintBr : pacBr));
+  if (pacEntry)
+    memcpy(buf + sizeof(addrInst), pacBr, sizeof(pacBr));
   else
     memcpy(buf + sizeof(addrInst), stdBr, sizeof(stdBr));
   if (!hasBti)
@@ -1128,7 +1107,7 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
 
 template <class ELFT>
 static void
-addTaggedSymbolReferences(Ctx &ctx, InputSectionBase &sec,
+addTaggedSymbolReferences(InputSectionBase &sec,
                           DenseMap<Symbol *, unsigned> &referenceCount) {
   assert(sec.type == SHT_AARCH64_MEMTAG_GLOBALS_STATIC);
 
@@ -1184,7 +1163,7 @@ void elf::createTaggedSymbols(Ctx &ctx) {
       if (!section || section->type != SHT_AARCH64_MEMTAG_GLOBALS_STATIC ||
           section == &InputSection::discarded)
         continue;
-      invokeELFT(addTaggedSymbolReferences, ctx, *section,
+      invokeELFT(addTaggedSymbolReferences, *section,
                  taggedSymbolReferenceCount);
     }
   }

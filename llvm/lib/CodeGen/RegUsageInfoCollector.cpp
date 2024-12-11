@@ -16,11 +16,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/RegUsageInfoCollector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegisterUsageInfo.h"
@@ -38,23 +36,11 @@ STATISTIC(NumCSROpt,
 
 namespace {
 
-class RegUsageInfoCollector {
-  PhysicalRegisterUsageInfo &PRUI;
-
+class RegUsageInfoCollector : public MachineFunctionPass {
 public:
-  RegUsageInfoCollector(PhysicalRegisterUsageInfo &PRUI) : PRUI(PRUI) {}
-  bool run(MachineFunction &MF);
-
-  // Call getCalleeSaves and then also set the bits for subregs and
-  // fully saved superregs.
-  static void computeCalleeSavedRegs(BitVector &SavedRegs, MachineFunction &MF);
-};
-
-class RegUsageInfoCollectorLegacy : public MachineFunctionPass {
-public:
-  static char ID;
-  RegUsageInfoCollectorLegacy() : MachineFunctionPass(ID) {
-    initializeRegUsageInfoCollectorLegacyPass(*PassRegistry::getPassRegistry());
+  RegUsageInfoCollector() : MachineFunctionPass(ID) {
+    PassRegistry &Registry = *PassRegistry::getPassRegistry();
+    initializeRegUsageInfoCollectorPass(Registry);
   }
 
   StringRef getPassName() const override {
@@ -62,25 +48,32 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<PhysicalRegisterUsageInfoWrapperLegacy>();
+    AU.addRequired<PhysicalRegisterUsageInfo>();
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+
+  // Call getCalleeSaves and then also set the bits for subregs and
+  // fully saved superregs.
+  static void computeCalleeSavedRegs(BitVector &SavedRegs, MachineFunction &MF);
+
+  static char ID;
 };
+
 } // end of anonymous namespace
 
-char RegUsageInfoCollectorLegacy::ID = 0;
+char RegUsageInfoCollector::ID = 0;
 
-INITIALIZE_PASS_BEGIN(RegUsageInfoCollectorLegacy, "RegUsageInfoCollector",
+INITIALIZE_PASS_BEGIN(RegUsageInfoCollector, "RegUsageInfoCollector",
                       "Register Usage Information Collector", false, false)
-INITIALIZE_PASS_DEPENDENCY(PhysicalRegisterUsageInfoWrapperLegacy)
-INITIALIZE_PASS_END(RegUsageInfoCollectorLegacy, "RegUsageInfoCollector",
+INITIALIZE_PASS_DEPENDENCY(PhysicalRegisterUsageInfo)
+INITIALIZE_PASS_END(RegUsageInfoCollector, "RegUsageInfoCollector",
                     "Register Usage Information Collector", false, false)
 
 FunctionPass *llvm::createRegUsageInfoCollector() {
-  return new RegUsageInfoCollectorLegacy();
+  return new RegUsageInfoCollector();
 }
 
 // TODO: Move to hook somwehere?
@@ -104,32 +97,14 @@ static bool isCallableFunction(const MachineFunction &MF) {
   }
 }
 
-PreservedAnalyses
-RegUsageInfoCollectorPass::run(MachineFunction &MF,
-                               MachineFunctionAnalysisManager &MFAM) {
-  Module &MFA = *MF.getFunction().getParent();
-  auto *PRUI = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
-                   .getCachedResult<PhysicalRegisterUsageAnalysis>(MFA);
-  assert(PRUI && "PhysicalRegisterUsageAnalysis not available");
-  RegUsageInfoCollector(*PRUI).run(MF);
-  return PreservedAnalyses::all();
-}
-
-bool RegUsageInfoCollectorLegacy::runOnMachineFunction(MachineFunction &MF) {
-  PhysicalRegisterUsageInfo &PRUI =
-      getAnalysis<PhysicalRegisterUsageInfoWrapperLegacy>().getPRUI();
-  return RegUsageInfoCollector(PRUI).run(MF);
-}
-
-bool RegUsageInfoCollector::run(MachineFunction &MF) {
+bool RegUsageInfoCollector::runOnMachineFunction(MachineFunction &MF) {
   MachineRegisterInfo *MRI = &MF.getRegInfo();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  const TargetMachine &TM = MF.getTarget();
+  const LLVMTargetMachine &TM = MF.getTarget();
 
-  LLVM_DEBUG(
-      dbgs()
-      << " -------------------- Register Usage Information Collector Pass"
-      << " -------------------- \nFunction Name : " << MF.getName() << '\n');
+  LLVM_DEBUG(dbgs() << " -------------------- " << getPassName()
+                    << " -------------------- \nFunction Name : "
+                    << MF.getName() << '\n');
 
   // Analyzing the register usage may be expensive on some targets.
   if (!isCallableFunction(MF)) {
@@ -154,6 +129,7 @@ bool RegUsageInfoCollector::run(MachineFunction &MF) {
 
   const Function &F = MF.getFunction();
 
+  PhysicalRegisterUsageInfo &PRUI = getAnalysis<PhysicalRegisterUsageInfo>();
   PRUI.setTargetMachine(TM);
 
   LLVM_DEBUG(dbgs() << "Clobbered Registers: ");

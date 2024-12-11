@@ -175,7 +175,7 @@ func.func @_QMmod2Pinitp(%arg0: !fir.ref<!fir.class<!fir.ptr<none>>> {fir.bindc_
 func.func private @_FortranAPointerAssociate(!fir.ref<!fir.box<none>>, !fir.box<none>) -> none attributes {fir.runtime}
 
 // CHECK-LABEL: define void @_QMmod2Pinitp(
-// CHECK-SAME: ptr nocapture %[[ARG0:.*]]){{.*}}{
+// CHECK-SAME: ptr %[[ARG0:.*]]){{.*}}{
 // CHECK: %[[ALLOCA_CLASS_NONE:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }
 // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr %[[ALLOCA_CLASS_NONE]], ptr %[[ARG0]], i32 40, i1 false)
 // CHECK: %{{.*}} = call {} @_FortranAPointerAssociate(ptr @_QMmod2Ep, ptr %[[ALLOCA_CLASS_NONE]])

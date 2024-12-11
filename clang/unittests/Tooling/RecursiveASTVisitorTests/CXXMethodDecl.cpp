@@ -13,21 +13,25 @@ using namespace clang;
 
 namespace {
 
-class CXXMethodDeclVisitor : public ExpectedLocationVisitor {
+class CXXMethodDeclVisitor
+    : public ExpectedLocationVisitor<CXXMethodDeclVisitor> {
 public:
-  CXXMethodDeclVisitor(bool VisitImplicitCode) {
-    ShouldVisitImplicitCode = VisitImplicitCode;
-  }
+  CXXMethodDeclVisitor(bool VisitImplicitCode)
+      : VisitImplicitCode(VisitImplicitCode) {}
 
-  bool VisitDeclRefExpr(DeclRefExpr *D) override {
+  bool shouldVisitImplicitCode() const { return VisitImplicitCode; }
+
+  bool VisitDeclRefExpr(DeclRefExpr *D) {
     Match("declref", D->getLocation());
     return true;
   }
-
-  bool VisitParmVarDecl(ParmVarDecl *P) override {
+  bool VisitParmVarDecl(ParmVarDecl *P) {
     Match("parm", P->getLocation());
     return true;
   }
+
+private:
+  bool VisitImplicitCode;
 };
 
 TEST(RecursiveASTVisitor, CXXMethodDeclNoDefaultBodyVisited) {

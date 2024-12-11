@@ -54,12 +54,11 @@ protected:
   void UnregisterReadObject(IOObject::WaitableHandle handle) override;
   void UnregisterSignal(int signo, std::list<Callback>::iterator callback_it);
 
-  void Interrupt() override;
+  void TriggerPendingCallbacks() override;
 
 private:
   void ProcessReadObject(IOObject::WaitableHandle handle);
   void ProcessSignal(int signo);
-  void ProcessSignals();
 
   class SignalHandle {
   public:
@@ -88,8 +87,8 @@ private:
 
   llvm::DenseMap<IOObject::WaitableHandle, Callback> m_read_fds;
   llvm::DenseMap<int, SignalInfo> m_signals;
-  Pipe m_interrupt_pipe;
-  std::atomic<bool> m_interrupting = false;
+  Pipe m_trigger_pipe;
+  std::atomic<bool> m_triggering;
 #if HAVE_SYS_EVENT_H
   int m_kqueue;
 #endif

@@ -13,9 +13,10 @@ using namespace clang;
 namespace {
 
 // Check to ensure that implicit default argument expressions are visited.
-class IntegerLiteralVisitor : public ExpectedLocationVisitor {
+class IntegerLiteralVisitor
+    : public ExpectedLocationVisitor<IntegerLiteralVisitor> {
 public:
-  bool VisitIntegerLiteral(IntegerLiteral *IL) override {
+  bool VisitIntegerLiteral(const IntegerLiteral *IL) {
     Match("literal", IL->getLocation());
     return true;
   }

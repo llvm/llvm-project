@@ -168,9 +168,9 @@ void X86InstPrinterCommon::printVPCMPMnemonic(const MCInst *MI,
   case X86::VPCMPDZ128rmik: case X86::VPCMPDZ128rrik:
   case X86::VPCMPDZ256rmik: case X86::VPCMPDZ256rrik:
   case X86::VPCMPDZrmik:    case X86::VPCMPDZrrik:
-  case X86::VPCMPDZ128rmbi: case X86::VPCMPDZ128rmbik:
-  case X86::VPCMPDZ256rmbi: case X86::VPCMPDZ256rmbik:
-  case X86::VPCMPDZrmbi:    case X86::VPCMPDZrmbik:
+  case X86::VPCMPDZ128rmib: case X86::VPCMPDZ128rmibk:
+  case X86::VPCMPDZ256rmib: case X86::VPCMPDZ256rmibk:
+  case X86::VPCMPDZrmib:    case X86::VPCMPDZrmibk:
     OS << "d\t";
     break;
   case X86::VPCMPQZ128rmi:  case X86::VPCMPQZ128rri:
@@ -179,9 +179,9 @@ void X86InstPrinterCommon::printVPCMPMnemonic(const MCInst *MI,
   case X86::VPCMPQZ128rmik: case X86::VPCMPQZ128rrik:
   case X86::VPCMPQZ256rmik: case X86::VPCMPQZ256rrik:
   case X86::VPCMPQZrmik:    case X86::VPCMPQZrrik:
-  case X86::VPCMPQZ128rmbi: case X86::VPCMPQZ128rmbik:
-  case X86::VPCMPQZ256rmbi: case X86::VPCMPQZ256rmbik:
-  case X86::VPCMPQZrmbi:    case X86::VPCMPQZrmbik:
+  case X86::VPCMPQZ128rmib: case X86::VPCMPQZ128rmibk:
+  case X86::VPCMPQZ256rmib: case X86::VPCMPQZ256rmibk:
+  case X86::VPCMPQZrmib:    case X86::VPCMPQZrmibk:
     OS << "q\t";
     break;
   case X86::VPCMPUBZ128rmi:  case X86::VPCMPUBZ128rri:
@@ -198,9 +198,9 @@ void X86InstPrinterCommon::printVPCMPMnemonic(const MCInst *MI,
   case X86::VPCMPUDZ128rmik: case X86::VPCMPUDZ128rrik:
   case X86::VPCMPUDZ256rmik: case X86::VPCMPUDZ256rrik:
   case X86::VPCMPUDZrmik:    case X86::VPCMPUDZrrik:
-  case X86::VPCMPUDZ128rmbi: case X86::VPCMPUDZ128rmbik:
-  case X86::VPCMPUDZ256rmbi: case X86::VPCMPUDZ256rmbik:
-  case X86::VPCMPUDZrmbi:    case X86::VPCMPUDZrmbik:
+  case X86::VPCMPUDZ128rmib: case X86::VPCMPUDZ128rmibk:
+  case X86::VPCMPUDZ256rmib: case X86::VPCMPUDZ256rmibk:
+  case X86::VPCMPUDZrmib:    case X86::VPCMPUDZrmibk:
     OS << "ud\t";
     break;
   case X86::VPCMPUQZ128rmi:  case X86::VPCMPUQZ128rri:
@@ -209,9 +209,9 @@ void X86InstPrinterCommon::printVPCMPMnemonic(const MCInst *MI,
   case X86::VPCMPUQZ128rmik: case X86::VPCMPUQZ128rrik:
   case X86::VPCMPUQZ256rmik: case X86::VPCMPUQZ256rrik:
   case X86::VPCMPUQZrmik:    case X86::VPCMPUQZrrik:
-  case X86::VPCMPUQZ128rmbi: case X86::VPCMPUQZ128rmbik:
-  case X86::VPCMPUQZ256rmbi: case X86::VPCMPUQZ256rmbik:
-  case X86::VPCMPUQZrmbi:    case X86::VPCMPUQZrmbik:
+  case X86::VPCMPUQZ128rmib: case X86::VPCMPUQZ128rmibk:
+  case X86::VPCMPUQZ256rmib: case X86::VPCMPUQZ256rmibk:
+  case X86::VPCMPUQZrmib:    case X86::VPCMPUQZrmibk:
     OS << "uq\t";
     break;
   case X86::VPCMPUWZ128rmi:  case X86::VPCMPUWZ128rri:

@@ -1947,9 +1947,6 @@ void BaseMemOpClusterMutation::collectMemOpRecords(
     LocationSize Width = 0;
     if (TII->getMemOperandsWithOffsetWidth(MI, BaseOps, Offset,
                                            OffsetIsScalable, Width, TRI)) {
-      if (!Width.hasValue())
-        continue;
-
       MemOpRecords.push_back(
           MemOpInfo(&SU, BaseOps, Offset, OffsetIsScalable, Width));
 
@@ -3958,12 +3955,9 @@ bool PostGenericScheduler::tryCandidate(SchedCandidate &Cand,
     return TryCand.Reason != NoCand;
 
   // Keep clustered nodes together.
-  const SUnit *CandNextClusterSU =
-      Cand.AtTop ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
-  const SUnit *TryCandNextClusterSU =
-      TryCand.AtTop ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
-  if (tryGreater(TryCand.SU == TryCandNextClusterSU,
-                 Cand.SU == CandNextClusterSU, TryCand, Cand, Cluster))
+  if (tryGreater(TryCand.SU == DAG->getNextClusterSucc(),
+                 Cand.SU == DAG->getNextClusterSucc(),
+                 TryCand, Cand, Cluster))
     return TryCand.Reason != NoCand;
 
   // Avoid critical resource consumption and balance the schedule.
@@ -3975,13 +3969,9 @@ bool PostGenericScheduler::tryCandidate(SchedCandidate &Cand,
                  TryCand, Cand, ResourceDemand))
     return TryCand.Reason != NoCand;
 
-  // We only compare a subset of features when comparing nodes between
-  // Top and Bottom boundary.
-  if (Cand.AtTop == TryCand.AtTop) {
-    // Avoid serializing long latency dependence chains.
-    if (Cand.Policy.ReduceLatency &&
-        tryLatency(TryCand, Cand, Cand.AtTop ? Top : Bot))
-      return TryCand.Reason != NoCand;
+  // Avoid serializing long latency dependence chains.
+  if (Cand.Policy.ReduceLatency && tryLatency(TryCand, Cand, Top)) {
+    return TryCand.Reason != NoCand;
   }
 
   // Fall through to original instruction order.

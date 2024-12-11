@@ -12,14 +12,17 @@
 
 #include "CheckExprLifetime.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DependenceFlags.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/OperatorKinds.h"
@@ -31,6 +34,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
@@ -39,7 +43,9 @@
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Casting.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -2236,40 +2242,12 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
       return false;
     }
   }
-
+  // Lvalue-to-rvalue conversion (C++11 4.1):
+  //   A glvalue (3.10) of a non-function, non-array type T can
+  //   be converted to a prvalue.
   bool argIsLValue = From->isGLValue();
-  // To handle conversion from ArrayParameterType to ConstantArrayType
-  // this block must be above the one below because Array parameters
-  // do not decay and when handling HLSLOutArgExprs and
-  // the From expression is an LValue.
-  if (S.getLangOpts().HLSL && FromType->isConstantArrayType() &&
-      ToType->isConstantArrayType()) {
-    // HLSL constant array parameters do not decay, so if the argument is a
-    // constant array and the parameter is an ArrayParameterType we have special
-    // handling here.
-    if (ToType->isArrayParameterType()) {
-      FromType = S.Context.getArrayParameterType(FromType);
-      SCS.First = ICK_HLSL_Array_RValue;
-    } else if (FromType->isArrayParameterType()) {
-      const ArrayParameterType *APT = cast<ArrayParameterType>(FromType);
-      FromType = APT->getConstantArrayType(S.Context);
-      SCS.First = ICK_HLSL_Array_RValue;
-    } else {
-      SCS.First = ICK_Identity;
-    }
-
-    if (S.Context.getCanonicalType(FromType) !=
-        S.Context.getCanonicalType(ToType))
-      return false;
-
-    SCS.setAllToTypes(ToType);
-    return true;
-  } else if (argIsLValue && !FromType->canDecayToPointerType() &&
-             S.Context.getCanonicalType(FromType) != S.Context.OverloadTy) {
-    // Lvalue-to-rvalue conversion (C++11 4.1):
-    //   A glvalue (3.10) of a non-function, non-array type T can
-    //   be converted to a prvalue.
-
+  if (argIsLValue && !FromType->canDecayToPointerType() &&
+      S.Context.getCanonicalType(FromType) != S.Context.OverloadTy) {
     SCS.First = ICK_Lvalue_To_Rvalue;
 
     // C11 6.3.2.1p2:
@@ -2283,6 +2261,24 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     // is T (C++ 4.1p1). C++ can't get here with class types; in C, we
     // just strip the qualifiers because they don't matter.
     FromType = FromType.getUnqualifiedType();
+  } else if (S.getLangOpts().HLSL && FromType->isConstantArrayType() &&
+             ToType->isConstantArrayType()) {
+    // HLSL constant array parameters do not decay, so if the argument is a
+    // constant array and the parameter is an ArrayParameterType we have special
+    // handling here.
+    if (ToType->isArrayParameterType()) {
+      FromType = S.Context.getArrayParameterType(FromType);
+      SCS.First = ICK_HLSL_Array_RValue;
+    } else {
+      SCS.First = ICK_Identity;
+    }
+
+    if (S.Context.getCanonicalType(FromType) !=
+        S.Context.getCanonicalType(ToType))
+      return false;
+
+    SCS.setAllToTypes(ToType);
+    return true;
   } else if (FromType->isArrayType()) {
     // Array-to-pointer conversion (C++ 4.2)
     SCS.First = ICK_Array_To_Pointer;
@@ -2967,7 +2963,7 @@ static QualType AdoptQualifiers(ASTContext &Context, QualType T, Qualifiers Qs){
   if (TQs == Qs)
     return T;
 
-  if (Qs.compatiblyIncludes(TQs, Context))
+  if (Qs.compatiblyIncludes(TQs))
     return Context.getQualifiedType(T, Qs);
 
   return Context.getQualifiedType(T.getUnqualifiedType(), Qs);
@@ -3001,7 +2997,7 @@ bool Sema::isObjCPointerConversion(QualType FromType, QualType ToType,
       const ObjCInterfaceType* RHS = FromObjCPtr->getInterfaceType();
       if (getLangOpts().CPlusPlus && LHS && RHS &&
           !ToObjCPtr->getPointeeType().isAtLeastAsQualifiedAs(
-              FromObjCPtr->getPointeeType(), getASTContext()))
+                                                FromObjCPtr->getPointeeType()))
         return false;
       ConvertedType = BuildSimilarlyQualifiedPointerType(FromObjCPtr,
                                                    ToObjCPtr->getPointeeType(),
@@ -3608,8 +3604,7 @@ static bool isNonTrivialObjCLifetimeConversion(Qualifiers FromQuals,
 static bool isQualificationConversionStep(QualType FromType, QualType ToType,
                                           bool CStyle, bool IsTopLevel,
                                           bool &PreviousToQualsIncludeConst,
-                                          bool &ObjCLifetimeConversion,
-                                          const ASTContext &Ctx) {
+                                          bool &ObjCLifetimeConversion) {
   Qualifiers FromQuals = FromType.getQualifiers();
   Qualifiers ToQuals = ToType.getQualifiers();
 
@@ -3640,7 +3635,7 @@ static bool isQualificationConversionStep(QualType FromType, QualType ToType,
 
   //   -- for every j > 0, if const is in cv 1,j then const is in cv
   //      2,j, and similarly for volatile.
-  if (!CStyle && !ToQuals.compatiblyIncludes(FromQuals, Ctx))
+  if (!CStyle && !ToQuals.compatiblyIncludes(FromQuals))
     return false;
 
   // If address spaces mismatch:
@@ -3650,8 +3645,8 @@ static bool isQualificationConversionStep(QualType FromType, QualType ToType,
   //  - in non-top levels it is not a valid conversion.
   if (ToQuals.getAddressSpace() != FromQuals.getAddressSpace() &&
       (!IsTopLevel ||
-       !(ToQuals.isAddressSpaceSupersetOf(FromQuals, Ctx) ||
-         (CStyle && FromQuals.isAddressSpaceSupersetOf(ToQuals, Ctx)))))
+       !(ToQuals.isAddressSpaceSupersetOf(FromQuals) ||
+         (CStyle && FromQuals.isAddressSpaceSupersetOf(ToQuals)))))
     return false;
 
   //   -- if the cv 1,j and cv 2,j are different, then const is in
@@ -3698,10 +3693,9 @@ Sema::IsQualificationConversion(QualType FromType, QualType ToType,
   bool PreviousToQualsIncludeConst = true;
   bool UnwrappedAnyPointer = false;
   while (Context.UnwrapSimilarTypes(FromType, ToType)) {
-    if (!isQualificationConversionStep(FromType, ToType, CStyle,
-                                       !UnwrappedAnyPointer,
-                                       PreviousToQualsIncludeConst,
-                                       ObjCLifetimeConversion, getASTContext()))
+    if (!isQualificationConversionStep(
+            FromType, ToType, CStyle, !UnwrappedAnyPointer,
+            PreviousToQualsIncludeConst, ObjCLifetimeConversion))
       return false;
     UnwrappedAnyPointer = true;
   }
@@ -4552,9 +4546,9 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
         T1 = S.Context.getQualifiedType(UnqualT1, T1Quals);
       if (isa<ArrayType>(T2) && T2Quals)
         T2 = S.Context.getQualifiedType(UnqualT2, T2Quals);
-      if (T2.isMoreQualifiedThan(T1, S.getASTContext()))
+      if (T2.isMoreQualifiedThan(T1))
         return ImplicitConversionSequence::Better;
-      if (T1.isMoreQualifiedThan(T2, S.getASTContext()))
+      if (T1.isMoreQualifiedThan(T2))
         return ImplicitConversionSequence::Worse;
     }
   }
@@ -4993,7 +4987,7 @@ Sema::CompareReferenceRelationship(SourceLocation Loc,
     bool ObjCLifetimeConversion = false;
     if (!isQualificationConversionStep(T2, T1, /*CStyle=*/false, TopLevel,
                                        PreviousToQualsIncludeConst,
-                                       ObjCLifetimeConversion, getASTContext()))
+                                       ObjCLifetimeConversion))
       return (ConvertedReferent || Context.hasSimilarType(T1, T2))
                  ? Ref_Related
                  : Ref_Incompatible;
@@ -5324,7 +5318,7 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
     // MS compiler ignores __unaligned qualifier for references; do the same.
     T1Quals.removeUnaligned();
     T2Quals.removeUnaligned();
-    if (!T1Quals.compatiblyIncludes(T2Quals, S.getASTContext()))
+    if (!T1Quals.compatiblyIncludes(T2Quals))
       return ICS;
   }
 
@@ -5842,7 +5836,7 @@ static ImplicitConversionSequence TryObjectArgumentInitialization(
   if (ImplicitParamType.getCVRQualifiers() !=
           FromTypeCanon.getLocalCVRQualifiers() &&
       !ImplicitParamType.isAtLeastAsQualifiedAs(
-          withoutUnaligned(S.Context, FromTypeCanon), S.getASTContext())) {
+          withoutUnaligned(S.Context, FromTypeCanon))) {
     ICS.setBad(BadConversionSequence::bad_qualifiers,
                FromType, ImplicitParamType);
     return ICS;
@@ -5851,8 +5845,7 @@ static ImplicitConversionSequence TryObjectArgumentInitialization(
   if (FromTypeCanon.hasAddressSpace()) {
     Qualifiers QualsImplicitParamType = ImplicitParamType.getQualifiers();
     Qualifiers QualsFromType = FromTypeCanon.getQualifiers();
-    if (!QualsImplicitParamType.isAddressSpaceSupersetOf(QualsFromType,
-                                                         S.getASTContext())) {
+    if (!QualsImplicitParamType.isAddressSpaceSupersetOf(QualsFromType)) {
       ICS.setBad(BadConversionSequence::bad_qualifiers,
                  FromType, ImplicitParamType);
       return ICS;
@@ -7037,7 +7030,7 @@ void Sema::AddOverloadCandidate(
     // destination address space.
     if (!Qualifiers::isAddressSpaceSupersetOf(
             Constructor->getMethodQualifiers().getAddressSpace(),
-            CandidateSet.getDestAS(), getASTContext())) {
+            CandidateSet.getDestAS())) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_object_addrspace_mismatch;
     }
@@ -10685,9 +10678,9 @@ bool clang::isBetterOverloadCandidate(
     LangAS AS1 = CD1->getMethodQualifiers().getAddressSpace();
     LangAS AS2 = CD2->getMethodQualifiers().getAddressSpace();
     if (AS1 != AS2) {
-      if (Qualifiers::isAddressSpaceSupersetOf(AS2, AS1, S.getASTContext()))
+      if (Qualifiers::isAddressSpaceSupersetOf(AS2, AS1))
         return true;
-      if (Qualifiers::isAddressSpaceSupersetOf(AS1, AS2, S.getASTContext()))
+      if (Qualifiers::isAddressSpaceSupersetOf(AS1, AS2))
         return false;
     }
   }
@@ -11292,7 +11285,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
   }
 
   if (CToTy.getUnqualifiedType() == CFromTy.getUnqualifiedType() &&
-      !CToTy.isAtLeastAsQualifiedAs(CFromTy, S.getASTContext())) {
+      !CToTy.isAtLeastAsQualifiedAs(CFromTy)) {
     Qualifiers FromQs = CFromTy.getQualifiers();
     Qualifiers ToQs = CToTy.getQualifiers();
 
@@ -11391,7 +11384,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
   if (const PointerType *FromPtrTy = FromTy->getAs<PointerType>()) {
     if (const PointerType *ToPtrTy = ToTy->getAs<PointerType>()) {
       if (ToPtrTy->getPointeeType().isAtLeastAsQualifiedAs(
-              FromPtrTy->getPointeeType(), S.getASTContext()) &&
+                                               FromPtrTy->getPointeeType()) &&
           !FromPtrTy->getPointeeType()->isIncompleteType() &&
           !ToPtrTy->getPointeeType()->isIncompleteType() &&
           S.IsDerivedFrom(SourceLocation(), ToPtrTy->getPointeeType(),
@@ -11405,12 +11398,11 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
       if (const ObjCInterfaceDecl *FromIface = FromPtrTy->getInterfaceDecl())
         if (const ObjCInterfaceDecl *ToIface = ToPtrTy->getInterfaceDecl())
           if (ToPtrTy->getPointeeType().isAtLeastAsQualifiedAs(
-                  FromPtrTy->getPointeeType(), S.getASTContext()) &&
+                                                FromPtrTy->getPointeeType()) &&
               FromIface->isSuperClassOf(ToIface))
             BaseToDerivedConversion = 2;
   } else if (const ReferenceType *ToRefTy = ToTy->getAs<ReferenceType>()) {
-    if (ToRefTy->getPointeeType().isAtLeastAsQualifiedAs(FromTy,
-                                                         S.getASTContext()) &&
+    if (ToRefTy->getPointeeType().isAtLeastAsQualifiedAs(FromTy) &&
         !FromTy->isIncompleteType() &&
         !ToRefTy->getPointeeType()->isIncompleteType() &&
         S.IsDerivedFrom(SourceLocation(), ToRefTy->getPointeeType(), FromTy)) {
@@ -14819,7 +14811,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
           // Check for a self move.
           DiagnoseSelfMove(Args[0], Args[1], OpLoc);
           // lifetime check.
-          checkAssignmentLifetime(
+          checkExprLifetime(
               *this, AssignedEntity{Args[0], dyn_cast<CXXMethodDecl>(FnDecl)},
               Args[1]);
         }

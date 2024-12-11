@@ -31,7 +31,6 @@ struct CGPassBuilderOption {
   bool DisableVerify = false;
   bool EnableImplicitNullChecks = false;
   bool EnableBlockPlacementStats = false;
-  bool EnableGlobalMergeFunc = false;
   bool EnableMachineFunctionSplitter = false;
   bool MISchedPostRA = false;
   bool EarlyLiveIntervals = false;

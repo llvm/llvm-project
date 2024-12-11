@@ -9,6 +9,7 @@
 #include "llvm/DebugInfo/PDB/Native/LinePrinter.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/IPDBLineNumber.h"

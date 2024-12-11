@@ -22,7 +22,6 @@
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/CSEConfigBase.h"
-#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/Passes.h"
@@ -142,9 +141,6 @@ static cl::opt<RunOutliner> EnableMachineOutliner(
                           "Disable all outlining"),
                // Sentinel value for unspecified option.
                clEnumValN(RunOutliner::AlwaysOutline, "", "")));
-static cl::opt<bool> EnableGlobalMergeFunc(
-    "enable-global-merge-func", cl::Hidden,
-    cl::desc("Enable global merge functions that are based on hash function"));
 // Disable the pass to fix unwind information. Whether the pass is included in
 // the pipeline is controlled via the target options, this option serves as
 // manual override.
@@ -493,7 +489,6 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
 
   SET_BOOLEAN_OPTION(EarlyLiveIntervals)
   SET_BOOLEAN_OPTION(EnableBlockPlacementStats)
-  SET_BOOLEAN_OPTION(EnableGlobalMergeFunc)
   SET_BOOLEAN_OPTION(EnableImplicitNullChecks)
   SET_BOOLEAN_OPTION(EnableMachineOutliner)
   SET_BOOLEAN_OPTION(MISchedPostRA)
@@ -515,7 +510,7 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
 }
 
 void llvm::registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
-                                   TargetMachine &TM) {
+                                   LLVMTargetMachine &LLVMTM) {
 
   // Register a callback for disabling passes.
   PIC.registerShouldRunOptionalPassCallback([](StringRef P, Any) {
@@ -578,8 +573,8 @@ TargetPassConfig::getStartStopInfo(PassInstrumentationCallbacks &PIC) {
 
 // Out of line constructor provides default values for pass options and
 // registers all common codegen passes.
-TargetPassConfig::TargetPassConfig(TargetMachine &TM, PassManagerBase &PM)
-    : ImmutablePass(ID), PM(&PM), TM(&TM) {
+TargetPassConfig::TargetPassConfig(LLVMTargetMachine &TM, PassManagerBase &pm)
+    : ImmutablePass(ID), PM(&pm), TM(&TM) {
   Impl = new PassConfigImpl();
 
   // Register all target independent codegen passes to activate their PassIDs,
@@ -625,8 +620,7 @@ void TargetPassConfig::insertPass(AnalysisID TargetPassID,
 /// addPassToEmitX methods for generating a pipeline of CodeGen passes.
 ///
 /// Targets may override this to extend TargetPassConfig.
-TargetPassConfig *
-CodeGenTargetMachineImpl::createPassConfig(PassManagerBase &PM) {
+TargetPassConfig *LLVMTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new TargetPassConfig(*this, PM);
 }
 
@@ -890,9 +884,6 @@ void TargetPassConfig::addIRPasses() {
   // Convert conditional moves to conditional jumps when profitable.
   if (getOptLevel() != CodeGenOptLevel::None && !DisableSelectOptimize)
     addPass(createSelectOptimizePass());
-
-  if (EnableGlobalMergeFunc)
-    addPass(createGlobalMergeFuncPass());
 }
 
 /// Turn exception handling constructs into something the code generators can
@@ -1235,13 +1226,13 @@ void TargetPassConfig::addMachinePasses() {
     addPass(createMIRAddFSDiscriminatorsPass(
         sampleprof::FSDiscriminatorPass::PassLast));
 
-  // Machine function splitter uses the basic block sections feature.
-  // When used along with `-basic-block-sections=`, the basic-block-sections
-  // feature takes precedence. This means functions eligible for
-  // basic-block-sections optimizations (`=all`, or `=list=` with function
-  // included in the list profile) will get that optimization instead.
-  if (TM->Options.EnableMachineFunctionSplitter ||
-      EnableMachineFunctionSplitter) {
+  bool NeedsBBSections =
+      TM->getBBSectionsType() != llvm::BasicBlockSection::None;
+  // Machine function splitter uses the basic block sections feature. Both
+  // cannot be enabled at the same time. We do not apply machine function
+  // splitter if -basic-block-sections is requested.
+  if (!NeedsBBSections && (TM->Options.EnableMachineFunctionSplitter ||
+                           EnableMachineFunctionSplitter)) {
     const std::string ProfileFile = getFSProfileFile(TM);
     if (!ProfileFile.empty()) {
       if (EnableFSDiscriminator) {
@@ -1260,8 +1251,7 @@ void TargetPassConfig::addMachinePasses() {
   }
   // We run the BasicBlockSections pass if either we need BB sections or BB
   // address map (or both).
-  if (TM->getBBSectionsType() != llvm::BasicBlockSection::None ||
-      TM->Options.BBAddrMap) {
+  if (NeedsBBSections || TM->Options.BBAddrMap) {
     if (TM->getBBSectionsType() == llvm::BasicBlockSection::List) {
       addPass(llvm::createBasicBlockSectionsProfileReaderWrapperPass(
           TM->getBBSectionsFuncListBuf()));
@@ -1316,7 +1306,7 @@ void TargetPassConfig::addMachineSSAOptimization() {
 
   addPass(&MachineSinkingID);
 
-  addPass(&PeepholeOptimizerLegacyID);
+  addPass(&PeepholeOptimizerID);
   // Clean-up the dead code that may have been generated by peephole
   // rewriting.
   addPass(&DeadMachineInstructionElimID);

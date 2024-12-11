@@ -12,9 +12,9 @@ using namespace clang;
 
 namespace {
 
-class ParenExprVisitor : public ExpectedLocationVisitor {
+class ParenExprVisitor : public ExpectedLocationVisitor<ParenExprVisitor> {
 public:
-  bool VisitParenExpr(ParenExpr *Parens) override {
+  bool VisitParenExpr(ParenExpr *Parens) {
     Match("", Parens->getExprLoc());
     return true;
   }

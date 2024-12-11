@@ -2009,23 +2009,12 @@ void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty,
         else
           os << "unknown";
       })
-      .Case<FileLineColRange>([&](FileLineColRange loc) {
+      .Case<FileLineColLoc>([&](FileLineColLoc loc) {
         if (pretty)
           os << loc.getFilename().getValue();
         else
           printEscapedString(loc.getFilename());
-        if (loc.getEndColumn() == loc.getStartColumn() &&
-            loc.getStartLine() == loc.getEndLine()) {
-          os << ':' << loc.getStartLine() << ':' << loc.getStartColumn();
-          return;
-        }
-        if (loc.getStartLine() == loc.getEndLine()) {
-          os << ':' << loc.getStartLine() << ':' << loc.getStartColumn()
-             << " to :" << loc.getEndColumn();
-          return;
-        }
-        os << ':' << loc.getStartLine() << ':' << loc.getStartColumn() << " to "
-           << loc.getEndLine() << ':' << loc.getEndColumn();
+        os << ':' << loc.getLine() << ':' << loc.getColumn();
       })
       .Case<NameLoc>([&](NameLoc loc) {
         printEscapedString(loc.getName());

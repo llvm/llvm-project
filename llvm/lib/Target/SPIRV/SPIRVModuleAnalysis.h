@@ -157,7 +157,7 @@ struct ModuleAnalysisInfo {
   // The array contains lists of MIs for each module section.
   InstrList MS[NUM_MODULE_SECTIONS];
   // The table maps MBB number to SPIR-V unique ID register.
-  DenseMap<std::pair<const MachineFunction *, int>, Register> BBNumToRegMap;
+  DenseMap<int, Register> BBNumToRegMap;
 
   Register getFuncReg(const Function *F) {
     assert(F && "Function is null");
@@ -188,17 +188,15 @@ struct ModuleAnalysisInfo {
   }
   unsigned getNextID() { return MaxID++; }
   bool hasMBBRegister(const MachineBasicBlock &MBB) {
-    auto Key = std::make_pair(MBB.getParent(), MBB.getNumber());
-    return BBNumToRegMap.contains(Key);
+    return BBNumToRegMap.contains(MBB.getNumber());
   }
   // Convert MBB's number to corresponding ID register.
   Register getOrCreateMBBRegister(const MachineBasicBlock &MBB) {
-    auto Key = std::make_pair(MBB.getParent(), MBB.getNumber());
-    auto It = BBNumToRegMap.find(Key);
-    if (It != BBNumToRegMap.end())
-      return It->second;
+    auto f = BBNumToRegMap.find(MBB.getNumber());
+    if (f != BBNumToRegMap.end())
+      return f->second;
     Register NewReg = Register::index2VirtReg(getNextID());
-    BBNumToRegMap[Key] = NewReg;
+    BBNumToRegMap[MBB.getNumber()] = NewReg;
     return NewReg;
   }
 };

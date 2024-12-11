@@ -3056,14 +3056,6 @@ static bool SimplifyTree(TreePatternNodePtr &N) {
       !N->getExtType(0).empty() &&
       N->getExtType(0) == N->getChild(0).getExtType(0) &&
       N->getName().empty()) {
-    if (!N->getPredicateCalls().empty()) {
-      std::string Str;
-      raw_string_ostream OS(Str);
-      OS << *N
-         << "\n trivial bitconvert node should not have predicate calls\n";
-      PrintFatalError(Str);
-      return false;
-    }
     N = N->getChildShared(0);
     SimplifyTree(N);
     return true;
@@ -3183,8 +3175,7 @@ void TreePattern::dump() const { print(errs()); }
 CodeGenDAGPatterns::CodeGenDAGPatterns(const RecordKeeper &R,
                                        PatternRewriterFn PatternRewriter)
     : Records(R), Target(R), Intrinsics(R),
-      LegalVTS(Target.getLegalValueTypes()),
-      PatternRewriter(std::move(PatternRewriter)) {
+      LegalVTS(Target.getLegalValueTypes()), PatternRewriter(PatternRewriter) {
   ParseNodeInfo();
   ParseNodeTransforms();
   ParseComplexPatterns();

@@ -23,8 +23,8 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/TypeCode.h"
 #include "flang/Optimizer/Support/Utils.h"
-#include "flang/Runtime/allocator-registry-consts.h"
-#include "flang/Runtime/descriptor-consts.h"
+#include "flang/Runtime/allocator-registry.h"
+#include "flang/Runtime/descriptor.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
@@ -41,7 +41,6 @@
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/Transforms/AddComdats.h"
@@ -279,14 +278,7 @@ struct AllocaOpConversion : public fir::FIROpConversion<fir::AllocaOp> {
       mlir::Region *parentRegion = rewriter.getInsertionBlock()->getParent();
       mlir::Block *insertBlock =
           getBlockForAllocaInsert(parentOp, parentRegion);
-
-      // The old size might have had multiple users, some at a broader scope
-      // than we can safely outline the alloca to. As it is only an
-      // llvm.constant operation, it is faster to clone it than to calculate the
-      // dominance to see if it really should be moved.
-      mlir::Operation *clonedSize = rewriter.clone(*size.getDefiningOp());
-      size = clonedSize->getResult(0);
-      clonedSize->moveBefore(&insertBlock->front());
+      size.getDefiningOp()->moveBefore(&insertBlock->front());
       rewriter.setInsertionPointAfter(size.getDefiningOp());
     }
 
@@ -928,19 +920,17 @@ struct EmboxCharOpConversion : public fir::FIROpConversion<fir::EmboxCharOp> {
 };
 } // namespace
 
-template <typename ModuleOp>
+/// Return the LLVMFuncOp corresponding to the standard malloc call.
 static mlir::SymbolRefAttr
-getMallocInModule(ModuleOp mod, fir::AllocMemOp op,
-                  mlir::ConversionPatternRewriter &rewriter) {
+getMalloc(fir::AllocMemOp op, mlir::ConversionPatternRewriter &rewriter) {
   static constexpr char mallocName[] = "malloc";
-  if (auto mallocFunc =
-          mod.template lookupSymbol<mlir::LLVM::LLVMFuncOp>(mallocName))
+  auto module = op->getParentOfType<mlir::ModuleOp>();
+  if (auto mallocFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(mallocName))
     return mlir::SymbolRefAttr::get(mallocFunc);
-  if (auto userMalloc =
-          mod.template lookupSymbol<mlir::func::FuncOp>(mallocName))
+  if (auto userMalloc = module.lookupSymbol<mlir::func::FuncOp>(mallocName))
     return mlir::SymbolRefAttr::get(userMalloc);
-
-  mlir::OpBuilder moduleBuilder(mod.getBodyRegion());
+  mlir::OpBuilder moduleBuilder(
+      op->getParentOfType<mlir::ModuleOp>().getBodyRegion());
   auto indexType = mlir::IntegerType::get(op.getContext(), 64);
   auto mallocDecl = moduleBuilder.create<mlir::LLVM::LLVMFuncOp>(
       op.getLoc(), mallocName,
@@ -948,15 +938,6 @@ getMallocInModule(ModuleOp mod, fir::AllocMemOp op,
                                         indexType,
                                         /*isVarArg=*/false));
   return mlir::SymbolRefAttr::get(mallocDecl);
-}
-
-/// Return the LLVMFuncOp corresponding to the standard malloc call.
-static mlir::SymbolRefAttr
-getMalloc(fir::AllocMemOp op, mlir::ConversionPatternRewriter &rewriter) {
-  if (auto mod = op->getParentOfType<mlir::gpu::GPUModuleOp>())
-    return getMallocInModule(mod, op, rewriter);
-  auto mod = op->getParentOfType<mlir::ModuleOp>();
-  return getMallocInModule(mod, op, rewriter);
 }
 
 /// Helper function for generating the LLVM IR that computes the distance
@@ -1035,20 +1016,18 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
 } // namespace
 
 /// Return the LLVMFuncOp corresponding to the standard free call.
-template <typename ModuleOp>
-static mlir::SymbolRefAttr
-getFreeInModule(ModuleOp mod, fir::FreeMemOp op,
-                mlir::ConversionPatternRewriter &rewriter) {
+static mlir::SymbolRefAttr getFree(fir::FreeMemOp op,
+                                   mlir::ConversionPatternRewriter &rewriter) {
   static constexpr char freeName[] = "free";
+  auto module = op->getParentOfType<mlir::ModuleOp>();
   // Check if free already defined in the module.
-  if (auto freeFunc =
-          mod.template lookupSymbol<mlir::LLVM::LLVMFuncOp>(freeName))
+  if (auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(freeName))
     return mlir::SymbolRefAttr::get(freeFunc);
   if (auto freeDefinedByUser =
-          mod.template lookupSymbol<mlir::func::FuncOp>(freeName))
+          module.lookupSymbol<mlir::func::FuncOp>(freeName))
     return mlir::SymbolRefAttr::get(freeDefinedByUser);
   // Create llvm declaration for free.
-  mlir::OpBuilder moduleBuilder(mod.getBodyRegion());
+  mlir::OpBuilder moduleBuilder(module.getBodyRegion());
   auto voidType = mlir::LLVM::LLVMVoidType::get(op.getContext());
   auto freeDecl = moduleBuilder.create<mlir::LLVM::LLVMFuncOp>(
       rewriter.getUnknownLoc(), freeName,
@@ -1056,14 +1035,6 @@ getFreeInModule(ModuleOp mod, fir::FreeMemOp op,
                                         getLlvmPtrType(op.getContext()),
                                         /*isVarArg=*/false));
   return mlir::SymbolRefAttr::get(freeDecl);
-}
-
-static mlir::SymbolRefAttr getFree(fir::FreeMemOp op,
-                                   mlir::ConversionPatternRewriter &rewriter) {
-  if (auto mod = op->getParentOfType<mlir::gpu::GPUModuleOp>())
-    return getFreeInModule(mod, op, rewriter);
-  auto mod = op->getParentOfType<mlir::ModuleOp>();
-  return getFreeInModule(mod, op, rewriter);
 }
 
 static unsigned getDimension(mlir::LLVM::LLVMArrayType ty) {
@@ -1322,12 +1293,16 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
           insertField(rewriter, loc, descriptor, {kExtraPosInBox}, extraField);
     } else {
       // Compute the value of the extra field based on allocator_idx and
-      // addendum present.
-      unsigned extra = allocatorIdx << _CFI_ALLOCATOR_IDX_SHIFT;
+      // addendum present using a Descriptor object.
+      Fortran::runtime::StaticDescriptor staticDescriptor;
+      Fortran::runtime::Descriptor &desc{staticDescriptor.descriptor()};
+      desc.raw().extra = 0;
+      desc.SetAllocIdx(allocatorIdx);
       if (hasAddendum)
-        extra |= _CFI_ADDENDUM_FLAG;
-      descriptor = insertField(rewriter, loc, descriptor, {kExtraPosInBox},
-                               this->genI32Constant(loc, rewriter, extra));
+        desc.SetHasAddendum();
+      descriptor =
+          insertField(rewriter, loc, descriptor, {kExtraPosInBox},
+                      this->genI32Constant(loc, rewriter, desc.raw().extra));
     }
 
     if (hasAddendum) {
@@ -3755,7 +3730,6 @@ public:
     mlir::configureOpenMPToLLVMConversionLegality(target, typeConverter);
     target.addLegalDialect<mlir::omp::OpenMPDialect>();
     target.addLegalDialect<mlir::acc::OpenACCDialect>();
-    target.addLegalDialect<mlir::gpu::GPUDialect>();
 
     // required NOPs for applying a full conversion
     target.addLegalOp<mlir::ModuleOp>();

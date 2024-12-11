@@ -480,7 +480,7 @@ addConstraintSatisfaction(ASTRecordWriter &Record,
       if (E)
         Record.AddStmt(E);
       else {
-        auto *Diag = cast<std::pair<SourceLocation, StringRef> *>(DetailRecord);
+        auto *Diag = DetailRecord.get<std::pair<SourceLocation, StringRef> *>();
         Record.AddSourceLocation(Diag->first);
         Record.AddString(Diag->second);
       }
@@ -532,11 +532,10 @@ void ASTStmtWriter::VisitRequiresExpr(RequiresExpr *E) {
       Record.push_back(ExprReq->getKind());
       Record.push_back(ExprReq->Status);
       if (ExprReq->isExprSubstitutionFailure()) {
-        addSubstitutionDiagnostic(
-            Record, cast<concepts::Requirement::SubstitutionDiagnostic *>(
-                        ExprReq->Value));
+        addSubstitutionDiagnostic(Record,
+         ExprReq->Value.get<concepts::Requirement::SubstitutionDiagnostic *>());
       } else
-        Record.AddStmt(cast<Expr *>(ExprReq->Value));
+        Record.AddStmt(ExprReq->Value.get<Expr *>());
       if (ExprReq->getKind() == concepts::Requirement::RK_Compound) {
         Record.AddSourceLocation(ExprReq->NoexceptLoc);
         const auto &RetReq = ExprReq->getReturnTypeRequirement();
@@ -1167,7 +1166,7 @@ void ASTStmtWriter::VisitInitListExpr(InitListExpr *E) {
   Record.AddStmt(E->getSyntacticForm());
   Record.AddSourceLocation(E->getLBraceLoc());
   Record.AddSourceLocation(E->getRBraceLoc());
-  bool isArrayFiller = isa<Expr *>(E->ArrayFillerOrUnionFieldInit);
+  bool isArrayFiller = E->ArrayFillerOrUnionFieldInit.is<Expr*>();
   Record.push_back(isArrayFiller);
   if (isArrayFiller)
     Record.AddStmt(E->getArrayFiller());
@@ -2192,7 +2191,7 @@ void ASTStmtWriter::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
 void ASTStmtWriter::VisitPackIndexingExpr(PackIndexingExpr *E) {
   VisitExpr(E);
   Record.push_back(E->TransformedExpressions);
-  Record.push_back(E->FullySubstituted);
+  Record.push_back(E->ExpandedToEmptyPack);
   Record.AddSourceLocation(E->getEllipsisLoc());
   Record.AddSourceLocation(E->getRSquareLoc());
   Record.AddStmt(E->getPackIdExpression());

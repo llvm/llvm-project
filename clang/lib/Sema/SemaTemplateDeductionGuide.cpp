@@ -21,10 +21,10 @@
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
-#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
@@ -43,6 +43,7 @@
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
@@ -636,7 +637,8 @@ private:
 SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
     const TemplateParameterList *TemplateParamsList,
     ArrayRef<TemplateArgument> DeducedArgs) {
-  struct TemplateParamsReferencedFinder : DynamicRecursiveASTVisitor {
+  struct TemplateParamsReferencedFinder
+      : public RecursiveASTVisitor<TemplateParamsReferencedFinder> {
     const TemplateParameterList *TemplateParamList;
     llvm::BitVector ReferencedTemplateParams;
 
@@ -645,22 +647,22 @@ SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
         : TemplateParamList(TemplateParamList),
           ReferencedTemplateParams(TemplateParamList->size()) {}
 
-    bool VisitTemplateTypeParmType(TemplateTypeParmType *TTP) override {
+    bool VisitTemplateTypeParmType(TemplateTypeParmType *TTP) {
       // We use the index and depth to retrieve the corresponding template
       // parameter from the parameter list, which is more robost.
       Mark(TTP->getDepth(), TTP->getIndex());
       return true;
     }
 
-    bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
+    bool VisitDeclRefExpr(DeclRefExpr *DRE) {
       MarkAppeared(DRE->getFoundDecl());
       return true;
     }
 
-    bool TraverseTemplateName(TemplateName Template) override {
+    bool TraverseTemplateName(TemplateName Template) {
       if (auto *TD = Template.getAsTemplateDecl())
         MarkAppeared(TD);
-      return DynamicRecursiveASTVisitor::TraverseTemplateName(Template);
+      return RecursiveASTVisitor::TraverseTemplateName(Template);
     }
 
     void MarkAppeared(NamedDecl *ND) {

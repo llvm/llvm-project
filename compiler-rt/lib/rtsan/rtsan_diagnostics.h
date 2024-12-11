@@ -30,6 +30,4 @@ struct DiagnosticsInfo {
 };
 
 void PrintDiagnostics(const DiagnosticsInfo &info);
-void PrintErrorSummary(const DiagnosticsInfo &info,
-                       const __sanitizer::BufferedStackTrace &stack);
 } // namespace __rtsan

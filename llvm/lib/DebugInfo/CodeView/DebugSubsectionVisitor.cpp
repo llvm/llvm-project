@@ -21,6 +21,7 @@
 #include "llvm/DebugInfo/CodeView/DebugSymbolsSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugUnknownSubsection.h"
 #include "llvm/Support/BinaryStreamReader.h"
+#include "llvm/Support/SwapByteOrder.h"
 
 using namespace llvm;
 using namespace llvm::codeview;

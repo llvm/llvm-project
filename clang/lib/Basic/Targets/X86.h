@@ -384,7 +384,7 @@ public:
     return CPU != llvm::X86::CK_None;
   }
 
-  unsigned getFMVPriority(ArrayRef<StringRef> Features) const override;
+  unsigned multiVersionSortPriority(StringRef Name) const override;
 
   bool setFPMath(StringRef Name) override;
 
@@ -508,8 +508,7 @@ public:
       MaxAtomicInlineWidth = 64;
   }
 
-  std::pair<const char *, ArrayRef<Builtin::Info>>
-  getTargetBuiltinStorage() const override;
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
   bool hasBitIntType() const override { return true; }
   size_t getMaxBitIntWidth() const override {
@@ -813,8 +812,7 @@ public:
       MaxAtomicInlineWidth = 128;
   }
 
-  std::pair<const char *, ArrayRef<Builtin::Info>>
-  getTargetBuiltinStorage() const override;
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
   bool hasBitIntType() const override { return true; }
   size_t getMaxBitIntWidth() const override {

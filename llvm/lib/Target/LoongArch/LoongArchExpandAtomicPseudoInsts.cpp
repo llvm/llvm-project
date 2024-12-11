@@ -588,9 +588,7 @@ bool LoongArchExpandAtomicPseudo::expandAtomicCmpXchg(
 
   // .tail:
   //   dbar 0x700 | acquire
-
-  if (!(hint == 0x700 && MF->getSubtarget<LoongArchSubtarget>().hasLD_SEQ_SA()))
-    BuildMI(TailMBB, DL, TII->get(LoongArch::DBAR)).addImm(hint);
+  BuildMI(TailMBB, DL, TII->get(LoongArch::DBAR)).addImm(hint);
 
   NextMBBI = MBB.end();
   MI.eraseFromParent();

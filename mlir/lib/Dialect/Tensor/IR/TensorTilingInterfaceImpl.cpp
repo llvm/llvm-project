@@ -16,7 +16,6 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
@@ -622,12 +621,6 @@ struct UnPackOpTiling
       SmallVectorImpl<OpFoldResult> &resultOffsets,
       SmallVectorImpl<OpFoldResult> &resultSizes) const {
     auto unPackOp = cast<UnPackOp>(op);
-    // If the operand tile is the dest, then no adjustment is needed.
-    if (operandNumber == unPackOp.getDestMutable().getOperandNumber()) {
-      resultOffsets = llvm::to_vector(offsets);
-      resultSizes = llvm::to_vector(sizes);
-      return success();
-    }
     Location loc = unPackOp.getLoc();
 
     int64_t numTiles = unPackOp.getInnerDimsPos().size();
@@ -636,10 +629,6 @@ struct UnPackOpTiling
     // The tiling is applied on interchanged dimensions. We have to undo the
     // interchange to map sizes and offsets to the original input.
     int64_t outputRank = unPackOp.getDestRank();
-    ReifiedRankedShapedTypeDims reifiedReturnShapes;
-    if (failed(reifyResultShapes(b, unPackOp, reifiedReturnShapes)))
-      return failure();
-    SmallVector<OpFoldResult> outputMixedSizes = reifiedReturnShapes.front();
     SmallVector<OpFoldResult> origOffsets(destOffsets);
     SmallVector<OpFoldResult> origSizes(destSizes);
     applyPermToRange(origOffsets, origSizes,
@@ -651,21 +640,18 @@ struct UnPackOpTiling
     for (auto dim : llvm::seq<int64_t>(0, outputRank)) {
       using AV = affine::AffineValueExpr;
       affine::AffineBuilder ab(b, loc);
-      AffineExpr dim0, dim1, sym0;
+      AffineExpr dim0, dim1, sym;
       bindDims(b.getContext(), dim0, dim1);
-      bindSymbols(b.getContext(), sym0);
+      bindSymbols(b.getContext(), sym);
       if (dimAndTileMapping.count(dim)) {
         // If the data dimension is tiled, the i-th index is the product of
         // offset_i and tile_i, and the i-th size is the product of sizes_i and
-        // tile_i. The sizes must be clamped to the sizes of the unpack result.
+        // tile_i.
         auto avOffset = AV(dim0).bind(origOffsets[dim]);
         auto avSize = AV(dim0).bind(origSizes[dim]);
-        auto avTileSize = AV(sym0).bind(dimAndTileMapping[dim]);
-        auto avResultSize = AV(dim0).bind(outputMixedSizes[dim]);
+        auto avTileSize = AV(sym).bind(dimAndTileMapping[dim]);
         resultOffsets.push_back(ab.mul(avOffset, avTileSize));
-        auto avResultOffset = AV(dim1).bind(resultOffsets.back());
-        resultSizes.push_back(ab.min({ab.mul(avSize, avTileSize),
-                                      ab.sub(avResultSize, avResultOffset)}));
+        resultSizes.push_back(ab.mul(avSize, avTileSize));
       } else {
         resultOffsets.push_back(origOffsets[dim]);
         resultSizes.push_back(origSizes[dim]);

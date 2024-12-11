@@ -647,10 +647,6 @@ elementwise to the input.
 
 Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±infinity
 
-The integer elementwise intrinsics, including ``__builtin_elementwise_popcount``,
-``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
-``__builtin_elementwise_sub_sat`` can be called in a ``constexpr`` context.
-
 ============================================== ====================================================================== =========================================
          Name                                   Operation                                                             Supported element types
 ============================================== ====================================================================== =========================================
@@ -736,10 +732,6 @@ at the end to the next power of 2.
 
 These reductions support both fixed-sized and scalable vector types.
 
-The integer reduction intrinsics, including ``__builtin_reduce_add``,
-``__builtin_reduce_mul``, ``__builtin_reduce_and``, ``__builtin_reduce_or``,
-and ``__builtin_reduce_xor``, can be called in a ``constexpr`` context.
-
 Example:
 
 .. code-block:: c++
@@ -753,10 +745,12 @@ Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
 ======================================= ====================================================================== ==================================
          Name                            Operation                                                              Supported element types
 ======================================= ====================================================================== ==================================
- ET __builtin_reduce_max(VT a)           return the largest element of the vector. The floating point result    integer and floating point types
-                                         will always be a number unless all elements of the vector are NaN.
- ET __builtin_reduce_min(VT a)           return the smallest element of the vector. The floating point result   integer and floating point types
-                                         will always be a number unless all elements of the vector are NaN.
+ ET __builtin_reduce_max(VT a)           return x or y, whichever is larger; If exactly one argument is         integer and floating point types
+                                         a NaN, return the other argument. If both arguments are NaNs,
+                                         fmax() return a NaN.
+ ET __builtin_reduce_min(VT a)           return x or y, whichever is smaller; If exactly one argument           integer and floating point types
+                                         is a NaN, return the other argument. If both arguments are
+                                         NaNs, fmax() return a NaN.
  ET __builtin_reduce_add(VT a)           \+                                                                     integer types
  ET __builtin_reduce_mul(VT a)           \*                                                                     integer types
  ET __builtin_reduce_and(VT a)           &                                                                      integer types
@@ -1990,7 +1984,7 @@ Enumerations with a fixed underlying type
 -----------------------------------------
 
 Clang provides support for C++11 enumerations with a fixed underlying type
-within Objective-C and C `prior to C23 <https://open-std.org/JTC1/SC22/WG14/www/docs/n3030.htm>`_.  For example, one can write an enumeration type as:
+within Objective-C.  For example, one can write an enumeration type as:
 
 .. code-block:: c++
 
@@ -2001,14 +1995,6 @@ value, is ``unsigned char``.
 
 Use ``__has_feature(objc_fixed_enum)`` to determine whether support for fixed
 underlying types is available in Objective-C.
-
-Use ``__has_extension(c_fixed_enum)`` to determine whether support for fixed
-underlying types is available in C prior to C23. This will also report ``true`` in C23
-and later modes as the functionality is available even if it's not an extension in
-those modes.
-
-Use ``__has_feature(c_fixed_enum)`` to determine whether support for fixed
-underlying types is available in C23 and later.
 
 Interoperability with C++11 lambdas
 -----------------------------------

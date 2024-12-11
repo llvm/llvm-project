@@ -78,13 +78,13 @@ bool DXContainerGlobals::runOnModule(Module &M) {
 }
 
 GlobalVariable *DXContainerGlobals::getFeatureFlags(Module &M) {
-  uint64_t CombinedFeatureFlags = getAnalysis<ShaderFlagsAnalysisWrapper>()
-                                      .getShaderFlags()
-                                      .getCombinedFlags()
-                                      .getFeatureFlags();
+  const uint64_t FeatureFlags =
+      static_cast<uint64_t>(getAnalysis<ShaderFlagsAnalysisWrapper>()
+                                .getShaderFlags()
+                                .getFeatureFlags());
 
   Constant *FeatureFlagsConstant =
-      ConstantInt::get(M.getContext(), APInt(64, CombinedFeatureFlags));
+      ConstantInt::get(M.getContext(), APInt(64, FeatureFlags));
   return buildContainerGlobal(M, FeatureFlagsConstant, "dx.sfi0", "SFI0");
 }
 

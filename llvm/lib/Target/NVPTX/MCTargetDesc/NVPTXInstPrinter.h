@@ -48,14 +48,10 @@ public:
                        raw_ostream &O, const char *Modifier = nullptr);
   void printOffseti32imm(const MCInst *MI, int OpNum, raw_ostream &O,
                          const char *Modifier = nullptr);
-  void printHexu32imm(const MCInst *MI, int OpNum, raw_ostream &O,
-                      const char *Modifier = nullptr);
   void printProtoIdent(const MCInst *MI, int OpNum,
                        raw_ostream &O, const char *Modifier = nullptr);
   void printPrmtMode(const MCInst *MI, int OpNum, raw_ostream &O,
                      const char *Modifier = nullptr);
-  void printTmaReductionMode(const MCInst *MI, int OpNum, raw_ostream &O,
-                             const char *Modifier = nullptr);
 };
 
 }

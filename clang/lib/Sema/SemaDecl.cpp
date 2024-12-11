@@ -16,6 +16,7 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
+#include "clang/AST/CommentDiagnostic.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -23,13 +24,13 @@
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/NonTrivialTypeVisitor.h"
+#include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/Randstruct.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/Builtins.h"
-#include "clang/Basic/DiagnosticComment.h"
+#include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
@@ -61,6 +62,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cstring>
+#include <functional>
 #include <optional>
 #include <unordered_map>
 
@@ -6866,7 +6868,11 @@ void Sema::deduceOpenCLAddressSpace(ValueDecl *Decl) {
   }
 }
 
-static void checkWeakAttr(Sema &S, NamedDecl &ND) {
+static void checkAttributesAfterMerging(Sema &S, NamedDecl &ND) {
+  // Ensure that an auto decl is deduced otherwise the checks below might cache
+  // the wrong linkage.
+  assert(S.ParsingInitForAutoVars.count(&ND) == 0);
+
   // 'weak' only applies to declarations with external linkage.
   if (WeakAttr *Attr = ND.getAttr<WeakAttr>()) {
     if (!ND.isExternallyVisible()) {
@@ -6874,18 +6880,13 @@ static void checkWeakAttr(Sema &S, NamedDecl &ND) {
       ND.dropAttr<WeakAttr>();
     }
   }
-}
-
-static void checkWeakRefAttr(Sema &S, NamedDecl &ND) {
   if (WeakRefAttr *Attr = ND.getAttr<WeakRefAttr>()) {
     if (ND.isExternallyVisible()) {
       S.Diag(Attr->getLocation(), diag::err_attribute_weakref_not_static);
       ND.dropAttrs<WeakRefAttr, AliasAttr>();
     }
   }
-}
 
-static void checkAliasAttr(Sema &S, NamedDecl &ND) {
   if (auto *VD = dyn_cast<VarDecl>(&ND)) {
     if (VD->hasInit()) {
       if (const auto *Attr = VD->getAttr<AliasAttr>()) {
@@ -6896,9 +6897,7 @@ static void checkAliasAttr(Sema &S, NamedDecl &ND) {
       }
     }
   }
-}
 
-static void checkSelectAnyAttr(Sema &S, NamedDecl &ND) {
   // 'selectany' only applies to externally visible variable declarations.
   // It does not apply to functions.
   if (SelectAnyAttr *Attr = ND.getAttr<SelectAnyAttr>()) {
@@ -6908,17 +6907,12 @@ static void checkSelectAnyAttr(Sema &S, NamedDecl &ND) {
       ND.dropAttr<SelectAnyAttr>();
     }
   }
-}
 
-static void checkHybridPatchableAttr(Sema &S, NamedDecl &ND) {
   if (HybridPatchableAttr *Attr = ND.getAttr<HybridPatchableAttr>()) {
     if (!ND.isExternallyVisible())
       S.Diag(Attr->getLocation(),
              diag::warn_attribute_hybrid_patchable_non_extern);
   }
-}
-
-static void checkInheritableAttr(Sema &S, NamedDecl &ND) {
   if (const InheritableAttr *Attr = getDLLAttr(&ND)) {
     auto *VD = dyn_cast<VarDecl>(&ND);
     bool IsAnonymousNS = false;
@@ -6943,9 +6937,7 @@ static void checkInheritableAttr(Sema &S, NamedDecl &ND) {
       ND.setInvalidDecl();
     }
   }
-}
 
-static void checkLifetimeBoundAttr(Sema &S, NamedDecl &ND) {
   // Check the attributes on the function type and function params, if any.
   if (const auto *FD = dyn_cast<FunctionDecl>(&ND)) {
     // Don't declare this variable in the second operand of the for-statement;
@@ -6995,20 +6987,6 @@ static void checkLifetimeBoundAttr(Sema &S, NamedDecl &ND) {
       }
     }
   }
-}
-
-static void checkAttributesAfterMerging(Sema &S, NamedDecl &ND) {
-  // Ensure that an auto decl is deduced otherwise the checks below might cache
-  // the wrong linkage.
-  assert(S.ParsingInitForAutoVars.count(&ND) == 0);
-
-  checkWeakAttr(S, ND);
-  checkWeakRefAttr(S, ND);
-  checkAliasAttr(S, ND);
-  checkSelectAnyAttr(S, ND);
-  checkHybridPatchableAttr(S, ND);
-  checkInheritableAttr(S, ND);
-  checkLifetimeBoundAttr(S, ND);
 }
 
 static void checkDLLAttributeRedeclaration(Sema &S, NamedDecl *OldDecl,
@@ -8264,14 +8242,11 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
   DeclContext *NewDC = D->getDeclContext();
 
   if (FieldDecl *FD = dyn_cast<FieldDecl>(ShadowedDecl)) {
-    if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(NewDC)) {
-      // Fields are not shadowed by variables in C++ static methods.
+    // Fields are not shadowed by variables in C++ static methods.
+    if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(NewDC))
       if (MD->isStatic())
         return;
 
-      if (!MD->getParent()->isLambda() && MD->isExplicitObjectMemberFunction())
-        return;
-    }
     // Fields shadowed by constructor parameters are a special case. Usually
     // the constructor initializes the field with the parameter.
     if (isa<CXXConstructorDecl>(NewDC))
@@ -8353,15 +8328,9 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
     return;
 
   // Only warn about certain kinds of shadowing for class members.
-  if (NewDC) {
+  if (NewDC && NewDC->isRecord()) {
     // In particular, don't warn about shadowing non-class members.
-    if (NewDC->isRecord() && !OldDC->isRecord())
-      return;
-
-    // Skip shadowing check if we're in a class scope, dealing with an enum
-    // constant in a different context.
-    DeclContext *ReDC = NewDC->getRedeclContext();
-    if (ReDC->isRecord() && isa<EnumConstantDecl>(D) && !OldDC->Equals(ReDC))
+    if (!OldDC->isRecord())
       return;
 
     // TODO: should we warn about static data members shadowing
@@ -8371,6 +8340,7 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
     // This is hard to do perfectly because we might friend the
     // shadowing context, but that's just a false negative.
   }
+
 
   DeclarationName Name = R.getLookupName();
 
@@ -8759,19 +8729,6 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
            diag::err_typecheck_wasm_table_must_have_zero_length);
       NewVD->setInvalidDecl();
       return;
-    }
-  }
-
-  // zero sized static arrays are not allowed in HIP device functions
-  if (getLangOpts().HIP && LangOpts.CUDAIsDevice) {
-    if (FunctionDecl *FD = getCurFunctionDecl();
-        FD &&
-        (FD->hasAttr<CUDADeviceAttr>() || FD->hasAttr<CUDAGlobalAttr>())) {
-      if (const ConstantArrayType *ArrayT =
-              getASTContext().getAsConstantArrayType(T);
-          ArrayT && ArrayT->isZeroSize()) {
-        Diag(NewVD->getLocation(), diag::err_typecheck_zero_array_size) << 2;
-      }
     }
   }
 
@@ -11929,7 +11886,6 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
   NamedDecl *OldDecl = nullptr;
   bool MayNeedOverloadableChecks = false;
 
-  inferLifetimeCaptureByAttribute(NewFD);
   // Merge or overload the declaration with an existing declaration of
   // the same name, if appropriate.
   if (!Previous.empty()) {
@@ -14712,8 +14668,6 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
     }
   }
 
-  CheckInvalidBuiltinCountedByRef(VD->getInit(), InitializerKind);
-
   checkAttributesAfterMerging(*this, *VD);
 
   if (VD->isStaticLocal())
@@ -15519,25 +15473,10 @@ LambdaScopeInfo *Sema::RebuildLambdaScopeInfo(CXXMethodDecl *CallOperator) {
   LSI->CallOperator = CallOperator;
   LSI->Lambda = LambdaClass;
   LSI->ReturnType = CallOperator->getReturnType();
-  // When this function is called in situation where the context of the call
-  // operator is not entered, we set AfterParameterList to false, so that
+  // This function in calls in situation where the context of the call operator
+  // is not entered, so we set AfterParameterList to false, so that
   // `tryCaptureVariable` finds explicit captures in the appropriate context.
-  // There is also at least a situation as in FinishTemplateArgumentDeduction(),
-  // where we would set the CurContext to the lambda operator before
-  // substituting into it. In this case the flag needs to be true such that
-  // tryCaptureVariable can correctly handle potential captures thereof.
-  LSI->AfterParameterList = CurContext == CallOperator;
-
-  // GLTemplateParameterList is necessary for getCurGenericLambda() which is
-  // used at the point of dealing with potential captures.
-  //
-  // We don't use LambdaClass->isGenericLambda() because this value doesn't
-  // flip for instantiated generic lambdas, where no FunctionTemplateDecls are
-  // associated. (Technically, we could recover that list from their
-  // instantiation patterns, but for now, the GLTemplateParameterList seems
-  // unnecessary in these cases.)
-  if (FunctionTemplateDecl *FTD = CallOperator->getDescribedFunctionTemplate())
-    LSI->GLTemplateParameterList = FTD->getTemplateParameters();
+  LSI->AfterParameterList = false;
   const LambdaCaptureDefault LCD = LambdaClass->getLambdaCaptureDefault();
 
   if (LCD == LCD_None)
@@ -16748,9 +16687,7 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
     }
   }
 
-  LazyProcessLifetimeCaptureByParams(FD);
   inferLifetimeBoundAttribute(FD);
-  inferLifetimeCaptureByAttribute(FD);
   AddKnownFunctionAttributesForReplaceableGlobalAllocationFunction(FD);
 
   // If C++ exceptions are enabled but we are told extern "C" functions cannot
@@ -17306,7 +17243,7 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
         if (TypeSourceInfo *TI = EnumUnderlying.dyn_cast<TypeSourceInfo *>())
           ED->setIntegerTypeSourceInfo(TI);
         else
-          ED->setIntegerType(QualType(cast<const Type *>(EnumUnderlying), 0));
+          ED->setIntegerType(QualType(EnumUnderlying.get<const Type *>(), 0));
         QualType EnumTy = ED->getIntegerType();
         ED->setPromotionType(Context.isPromotableIntegerType(EnumTy)
                                  ? Context.getPromotedIntegerType(EnumTy)
@@ -17939,7 +17876,7 @@ CreateNewDecl:
       if (TypeSourceInfo *TI = EnumUnderlying.dyn_cast<TypeSourceInfo*>())
         ED->setIntegerTypeSourceInfo(TI);
       else
-        ED->setIntegerType(QualType(cast<const Type *>(EnumUnderlying), 0));
+        ED->setIntegerType(QualType(EnumUnderlying.get<const Type *>(), 0));
       QualType EnumTy = ED->getIntegerType();
       ED->setPromotionType(Context.isPromotableIntegerType(EnumTy)
                                ? Context.getPromotedIntegerType(EnumTy)
@@ -19955,7 +19892,7 @@ static void CheckForDuplicateEnumValues(Sema &S, ArrayRef<Decl *> Elements,
       continue;
     }
 
-    ECDVector *Vec = cast<ECDVector *>(Entry);
+    ECDVector *Vec = Entry.get<ECDVector*>();
     // Make sure constants are not added more than once.
     if (*Vec->begin() == ECD)
       continue;

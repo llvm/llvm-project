@@ -14,12 +14,12 @@
 #define LLVM_LIB_TARGET_LOONGARCH_LOONGARCHTARGETMACHINE_H
 
 #include "LoongArchSubtarget.h"
-#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
+#include "llvm/Target/TargetMachine.h"
 #include <optional>
 
 namespace llvm {
 
-class LoongArchTargetMachine : public CodeGenTargetMachineImpl {
+class LoongArchTargetMachine : public LLVMTargetMachine {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<LoongArchSubtarget>> SubtargetMap;
 

@@ -161,7 +161,6 @@ libc_support_library(
     deps = [
         "//libc:__support_cpp_limits",
         "//libc:__support_cpp_type_traits",
-        "//libc:__support_ctype_utils",
         "//libc:__support_macros_properties_architectures",
         "//libc:errno.__internal__",
         "//libc/test/UnitTest:LibcUnitTest",

@@ -4,7 +4,7 @@
 # RUN: not ld.lld --eh-frame-hdr %t -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK:      error: corrupted .eh_frame: corrupted CIE (failed to read LEB128)
-# CHECK-NEXT: >>> defined in {{.*}}:(.eh_frame+0xc)
+# CHECK-NEXT: >>> defined in {{.*}}:(.eh_frame+0xC)
 
 .section .eh_frame,"a",@unwind
   .byte 0x08

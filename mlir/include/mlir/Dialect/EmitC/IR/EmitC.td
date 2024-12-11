@@ -21,7 +21,6 @@ include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
-include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/RegionKindInterface.td"
 
 //===----------------------------------------------------------------------===//
@@ -633,7 +632,7 @@ def EmitC_DeclareFuncOp : EmitC_Op<"declare_func", [
 
 def EmitC_FuncOp : EmitC_Op<"func", [
   AutomaticAllocationScope,
-  FunctionOpInterface, IsolatedFromAbove, OpAsmOpInterface
+  FunctionOpInterface, IsolatedFromAbove
 ]> {
   let summary = "An operation with a name containing a single `SSACFG` region";
   let description = [{
@@ -701,15 +700,6 @@ def EmitC_FuncOp : EmitC_Op<"func", [
 
     /// Returns the result types of this function.
     ArrayRef<Type> getResultTypes() { return getFunctionType().getResults(); }
-
-    //===------------------------------------------------------------------===//
-    // OpAsmOpInterface Methods
-    //===------------------------------------------------------------------===//
-
-    /// EmitC ops in the body can omit their 'emitc.' prefix in the assembly.
-    static ::llvm::StringRef getDefaultDialect() {
-      return "emitc";
-    }
   }];
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
@@ -1120,11 +1110,9 @@ def EmitC_GlobalOp : EmitC_Op<"global", [Symbol]> {
 
     ```mlir
     // Global variable with an initial value.
-    emitc.global @x : !emitc.array<2xf32> = dense<0.0>
-    // Global variable with an initial values.
-    emitc.global @x : !emitc.array<3xi32> = dense<[0, 1, 2]>
+    emitc.global @x : emitc.array<2xf32> = dense<0.0, 2.0>
     // External global variable
-    emitc.global extern @x : !emitc.array<2xf32>
+    emitc.global extern @x : emitc.array<2xf32>
     // Constant global variable with internal linkage
     emitc.global static const @x : i32 = 0
     ```

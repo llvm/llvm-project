@@ -23,11 +23,11 @@
 #include <__algorithm/remove_if.h>
 #include <__assert>
 #include <__compare/synth_three_way.h>
+#include <__concepts/convertible_to.h>
 #include <__concepts/swappable.h>
 #include <__config>
 #include <__cstddef/byte.h>
 #include <__cstddef/ptrdiff_t.h>
-#include <__flat_map/key_value_iterator.h>
 #include <__flat_map/sorted_unique.h>
 #include <__functional/invoke.h>
 #include <__functional/is_transparent.h>
@@ -38,6 +38,7 @@
 #include <__iterator/next.h>
 #include <__iterator/ranges_iterator_traits.h>
 #include <__iterator/reverse_iterator.h>
+#include <__memory/addressof.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/uses_allocator.h>
 #include <__memory/uses_allocator_construction.h>
@@ -56,8 +57,8 @@
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/maybe_const.h>
 #include <__utility/exception_guard.h>
-#include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/scope_guard.h>
 #include <__vector/vector.h>
@@ -81,6 +82,9 @@ template <class _Key,
           class _KeyContainer    = vector<_Key>,
           class _MappedContainer = vector<_Tp>>
 class flat_map {
+  template <bool _Const>
+  struct __iterator;
+
   template <class, class, class, class, class>
   friend class flat_map;
 
@@ -88,9 +92,6 @@ class flat_map {
   static_assert(is_same_v<_Tp, typename _MappedContainer::value_type>);
   static_assert(!is_same_v<_KeyContainer, std::vector<bool>>, "vector<bool> is not a sequence container");
   static_assert(!is_same_v<_MappedContainer, std::vector<bool>>, "vector<bool> is not a sequence container");
-
-  template <bool _Const>
-  using __iterator = __key_value_iterator<flat_map, _KeyContainer, _MappedContainer, _Const>;
 
 public:
   // types
@@ -112,7 +113,7 @@ public:
   class value_compare {
   private:
     key_compare __comp_;
-    _LIBCPP_HIDE_FROM_ABI value_compare(key_compare __c) : __comp_(__c) {}
+    value_compare(key_compare __c) : __comp_(__c) {}
     friend flat_map;
 
   public:
@@ -132,6 +133,123 @@ private:
       _And<uses_allocator<key_container_type, _Allocator>, uses_allocator<mapped_container_type, _Allocator>>::value;
 
   _LIBCPP_HIDE_FROM_ABI static constexpr bool __is_compare_transparent = __is_transparent_v<_Compare, _Compare>;
+
+  template <bool _Const>
+  struct __iterator {
+  private:
+    using __key_iterator    = ranges::iterator_t<const key_container_type>;
+    using __mapped_iterator = ranges::iterator_t<__maybe_const<_Const, mapped_container_type>>;
+    using __reference       = pair<iter_reference_t<__key_iterator>, iter_reference_t<__mapped_iterator>>;
+
+    struct __arrow_proxy {
+      __reference __ref_;
+      _LIBCPP_HIDE_FROM_ABI __reference* operator->() { return std::addressof(__ref_); }
+    };
+
+    __key_iterator __key_iter_;
+    __mapped_iterator __mapped_iter_;
+
+    friend flat_map;
+
+  public:
+    using iterator_concept = random_access_iterator_tag;
+    // `flat_map::iterator` only satisfy "Cpp17InputIterator" named requirements, because
+    // its `reference` is not a reference type.
+    // However, to avoid surprising runtime behaviour when it is used with the
+    // Cpp17 algorithms or operations, iterator_category is set to random_access_iterator_tag.
+    using iterator_category = random_access_iterator_tag;
+    using value_type        = flat_map::value_type;
+    using difference_type   = flat_map::difference_type;
+
+    _LIBCPP_HIDE_FROM_ABI __iterator() = default;
+
+    _LIBCPP_HIDE_FROM_ABI __iterator(__iterator<!_Const> __i)
+      requires _Const && convertible_to<ranges::iterator_t<key_container_type>, __key_iterator> &&
+                   convertible_to<ranges::iterator_t<mapped_container_type>, __mapped_iterator>
+        : __key_iter_(std::move(__i.__key_iter_)), __mapped_iter_(std::move(__i.__mapped_iter_)) {}
+
+    _LIBCPP_HIDE_FROM_ABI __iterator(__key_iterator __key_iter, __mapped_iterator __mapped_iter)
+        : __key_iter_(std::move(__key_iter)), __mapped_iter_(std::move(__mapped_iter)) {}
+
+    _LIBCPP_HIDE_FROM_ABI __reference operator*() const { return __reference(*__key_iter_, *__mapped_iter_); }
+    _LIBCPP_HIDE_FROM_ABI __arrow_proxy operator->() const { return __arrow_proxy{**this}; }
+
+    _LIBCPP_HIDE_FROM_ABI __iterator& operator++() {
+      ++__key_iter_;
+      ++__mapped_iter_;
+      return *this;
+    }
+
+    _LIBCPP_HIDE_FROM_ABI __iterator operator++(int) {
+      __iterator __tmp(*this);
+      ++*this;
+      return __tmp;
+    }
+
+    _LIBCPP_HIDE_FROM_ABI __iterator& operator--() {
+      --__key_iter_;
+      --__mapped_iter_;
+      return *this;
+    }
+
+    _LIBCPP_HIDE_FROM_ABI __iterator operator--(int) {
+      __iterator __tmp(*this);
+      --*this;
+      return __tmp;
+    }
+
+    _LIBCPP_HIDE_FROM_ABI __iterator& operator+=(difference_type __x) {
+      __key_iter_ += __x;
+      __mapped_iter_ += __x;
+      return *this;
+    }
+
+    _LIBCPP_HIDE_FROM_ABI __iterator& operator-=(difference_type __x) {
+      __key_iter_ -= __x;
+      __mapped_iter_ -= __x;
+      return *this;
+    }
+
+    _LIBCPP_HIDE_FROM_ABI __reference operator[](difference_type __n) const { return *(*this + __n); }
+
+    _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __iterator& __y) {
+      return __x.__key_iter_ == __y.__key_iter_;
+    }
+
+    _LIBCPP_HIDE_FROM_ABI friend bool operator<(const __iterator& __x, const __iterator& __y) {
+      return __x.__key_iter_ < __y.__key_iter_;
+    }
+
+    _LIBCPP_HIDE_FROM_ABI friend bool operator>(const __iterator& __x, const __iterator& __y) { return __y < __x; }
+
+    _LIBCPP_HIDE_FROM_ABI friend bool operator<=(const __iterator& __x, const __iterator& __y) { return !(__y < __x); }
+
+    _LIBCPP_HIDE_FROM_ABI friend bool operator>=(const __iterator& __x, const __iterator& __y) { return !(__x < __y); }
+
+    _LIBCPP_HIDE_FROM_ABI friend auto operator<=>(const __iterator& __x, const __iterator& __y)
+      requires three_way_comparable<__key_iterator>
+    {
+      return __x.__key_iter_ <=> __y.__key_iter_;
+    }
+
+    _LIBCPP_HIDE_FROM_ABI friend __iterator operator+(const __iterator& __i, difference_type __n) {
+      auto __tmp = __i;
+      __tmp += __n;
+      return __tmp;
+    }
+
+    _LIBCPP_HIDE_FROM_ABI friend __iterator operator+(difference_type __n, const __iterator& __i) { return __i + __n; }
+
+    _LIBCPP_HIDE_FROM_ABI friend __iterator operator-(const __iterator& __i, difference_type __n) {
+      auto __tmp = __i;
+      __tmp -= __n;
+      return __tmp;
+    }
+
+    _LIBCPP_HIDE_FROM_ABI friend difference_type operator-(const __iterator& __x, const __iterator& __y) {
+      return difference_type(__x.__key_iter_ - __y.__key_iter_);
+    }
+  };
 
 public:
   // [flat.map.cons], construct/copy/destroy
@@ -541,7 +659,7 @@ public:
 
   template <class _InputIterator>
     requires __has_input_iterator_category<_InputIterator>::value
-  _LIBCPP_HIDE_FROM_ABI void insert(sorted_unique_t, _InputIterator __first, _InputIterator __last) {
+  void insert(sorted_unique_t, _InputIterator __first, _InputIterator __last) {
     if constexpr (sized_sentinel_for<_InputIterator, _InputIterator>) {
       __reserve(__last - __first);
     }

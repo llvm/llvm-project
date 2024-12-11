@@ -8,6 +8,7 @@
 
 #include "llvm/DebugInfo/PDB/PDBSymbolFuncDebugStart.h"
 
+#include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/PDBSymDumper.h"
 
 using namespace llvm;

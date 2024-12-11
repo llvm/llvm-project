@@ -452,7 +452,12 @@ when running the benchmarks. For example,
 
 .. code-block:: bash
 
-  $ libcxx/utils/libcxx-lit <build> libcxx/test/benchmarks/string.bench.cpp --show-all --param optimization=speed
+  $ libcxx/utils/libcxx-lit <build> -sv libcxx/test/benchmarks/string.bench.cpp --param optimization=speed
+
+If you want to see where a benchmark is located (e.g. you want to store the executable
+for subsequent analysis), you can print that information by passing ``--show-all`` to
+``lit``. That will print the command-lines being executed, which includes the location
+of the executable created for that benchmark.
 
 Note that benchmarks are only dry-run when run via the ``check-cxx`` target since
 we only want to make sure they don't rot. Do not rely on the results of benchmarks

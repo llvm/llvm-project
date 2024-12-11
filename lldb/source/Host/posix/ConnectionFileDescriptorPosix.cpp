@@ -52,15 +52,18 @@
 using namespace lldb;
 using namespace lldb_private;
 
-ConnectionFileDescriptor::ConnectionFileDescriptor()
-    : Connection(), m_pipe(), m_mutex(), m_shutting_down(false) {
+ConnectionFileDescriptor::ConnectionFileDescriptor(bool child_processes_inherit)
+    : Connection(), m_pipe(), m_mutex(), m_shutting_down(false),
+
+      m_child_processes_inherit(child_processes_inherit) {
   Log *log(GetLog(LLDBLog::Connection | LLDBLog::Object));
   LLDB_LOGF(log, "%p ConnectionFileDescriptor::ConnectionFileDescriptor ()",
             static_cast<void *>(this));
 }
 
 ConnectionFileDescriptor::ConnectionFileDescriptor(int fd, bool owns_fd)
-    : Connection(), m_pipe(), m_mutex(), m_shutting_down(false) {
+    : Connection(), m_pipe(), m_mutex(), m_shutting_down(false),
+      m_child_processes_inherit(false) {
   m_io_sp =
       std::make_shared<NativeFile>(fd, File::eOpenOptionReadWrite, owns_fd);
 
@@ -73,7 +76,8 @@ ConnectionFileDescriptor::ConnectionFileDescriptor(int fd, bool owns_fd)
 }
 
 ConnectionFileDescriptor::ConnectionFileDescriptor(Socket *socket)
-    : Connection(), m_pipe(), m_mutex(), m_shutting_down(false) {
+    : Connection(), m_pipe(), m_mutex(), m_shutting_down(false),
+      m_child_processes_inherit(false) {
   InitializeSocket(socket);
 }
 
@@ -90,7 +94,7 @@ void ConnectionFileDescriptor::OpenCommandPipe() {
 
   Log *log = GetLog(LLDBLog::Connection);
   // Make the command file descriptor here:
-  Status result = m_pipe.CreateNew(/*child_processes_inherit=*/false);
+  Status result = m_pipe.CreateNew(m_child_processes_inherit);
   if (!result.Success()) {
     LLDB_LOGF(log,
               "%p ConnectionFileDescriptor::OpenCommandPipe () - could not "
@@ -535,7 +539,7 @@ lldb::ConnectionStatus ConnectionFileDescriptor::AcceptSocket(
     Status *error_ptr) {
   Status error;
   std::unique_ptr<Socket> listening_socket =
-      Socket::Create(socket_protocol, error);
+      Socket::Create(socket_protocol, m_child_processes_inherit, error);
   Socket *accepted_socket;
 
   if (!error.Fail())
@@ -543,7 +547,7 @@ lldb::ConnectionStatus ConnectionFileDescriptor::AcceptSocket(
 
   if (!error.Fail()) {
     post_listen_callback(*listening_socket);
-    error = listening_socket->Accept(/*timeout=*/std::nullopt, accepted_socket);
+    error = listening_socket->Accept(accepted_socket);
   }
 
   if (!error.Fail()) {
@@ -562,7 +566,8 @@ ConnectionFileDescriptor::ConnectSocket(Socket::SocketProtocol socket_protocol,
                                         llvm::StringRef socket_name,
                                         Status *error_ptr) {
   Status error;
-  std::unique_ptr<Socket> socket = Socket::Create(socket_protocol, error);
+  std::unique_ptr<Socket> socket =
+      Socket::Create(socket_protocol, m_child_processes_inherit, error);
 
   if (!error.Fail())
     error = socket->Connect(socket_name);
@@ -643,7 +648,8 @@ ConnectionFileDescriptor::ConnectUDP(llvm::StringRef s,
                                      Status *error_ptr) {
   if (error_ptr)
     *error_ptr = Status();
-  llvm::Expected<std::unique_ptr<UDPSocket>> socket = Socket::UdpConnect(s);
+  llvm::Expected<std::unique_ptr<UDPSocket>> socket =
+      Socket::UdpConnect(s, m_child_processes_inherit);
   if (!socket) {
     if (error_ptr)
       *error_ptr = Status::FromError(socket.takeError());
@@ -688,7 +694,7 @@ ConnectionFileDescriptor::ConnectFD(llvm::StringRef s,
       // this. For now, we assume we must assume we don't own it.
 
       std::unique_ptr<TCPSocket> tcp_socket;
-      tcp_socket = std::make_unique<TCPSocket>(fd, /*should_close=*/false);
+      tcp_socket = std::make_unique<TCPSocket>(fd, false, false);
       // Try and get a socket option from this file descriptor to see if
       // this is a socket and set m_is_socket accordingly.
       int resuse;
@@ -790,6 +796,15 @@ ConnectionStatus ConnectionFileDescriptor::ConnectSerialPort(
   return eConnectionStatusSuccess;
 #endif // LLDB_ENABLE_POSIX
   llvm_unreachable("this function should be only called w/ LLDB_ENABLE_POSIX");
+}
+
+bool ConnectionFileDescriptor::GetChildProcessesInherit() const {
+  return m_child_processes_inherit;
+}
+
+void ConnectionFileDescriptor::SetChildProcessesInherit(
+    bool child_processes_inherit) {
+  m_child_processes_inherit = child_processes_inherit;
 }
 
 void ConnectionFileDescriptor::InitializeSocket(Socket *socket) {

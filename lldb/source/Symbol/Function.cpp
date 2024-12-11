@@ -278,23 +278,19 @@ Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
                    lldb::user_id_t type_uid, const Mangled &mangled, Type *type,
                    AddressRanges ranges)
     : UserID(func_uid), m_comp_unit(comp_unit), m_type_uid(type_uid),
-      m_type(type), m_mangled(mangled), m_block(*this, func_uid),
-      m_range(CollapseRanges(ranges)), m_prologue_byte_size(0) {
+      m_type(type), m_mangled(mangled), m_block(func_uid),
+      m_ranges(std::move(ranges)), m_range(CollapseRanges(m_ranges)),
+      m_frame_base(), m_flags(), m_prologue_byte_size(0) {
+  m_block.SetParentScope(this);
   assert(comp_unit != nullptr);
-  lldb::addr_t base_file_addr = m_range.GetBaseAddress().GetFileAddress();
-  for (const AddressRange &range : ranges)
-    m_block.AddRange(
-        Block::Range(range.GetBaseAddress().GetFileAddress() - base_file_addr,
-                     range.GetByteSize()));
-  m_block.FinalizeRanges();
 }
 
 Function::~Function() = default;
 
-void Function::GetStartLineSourceInfo(SupportFileSP &source_file_sp,
+void Function::GetStartLineSourceInfo(FileSpec &source_file,
                                       uint32_t &line_no) {
   line_no = 0;
-  source_file_sp.reset();
+  source_file.Clear();
 
   if (m_comp_unit == nullptr)
     return;
@@ -303,8 +299,7 @@ void Function::GetStartLineSourceInfo(SupportFileSP &source_file_sp,
   GetType();
 
   if (m_type != nullptr && m_type->GetDeclaration().GetLine() != 0) {
-    source_file_sp =
-        std::make_shared<SupportFile>(m_type->GetDeclaration().GetFile());
+    source_file = m_type->GetDeclaration().GetFile();
     line_no = m_type->GetDeclaration().GetLine();
   } else {
     LineTable *line_table = m_comp_unit->GetLineTable();
@@ -315,7 +310,7 @@ void Function::GetStartLineSourceInfo(SupportFileSP &source_file_sp,
     if (line_table->FindLineEntryByAddress(GetAddressRange().GetBaseAddress(),
                                            line_entry, nullptr)) {
       line_no = line_entry.line;
-      source_file_sp = line_entry.file_sp;
+      source_file = line_entry.GetFile();
     }
   }
 }
@@ -431,16 +426,13 @@ void Function::GetDescription(Stream *s, lldb::DescriptionLevel level,
     llvm::interleaveComma(decl_context, *s, [&](auto &ctx) { ctx.Dump(*s); });
     *s << "}";
   }
-  *s << ", range" << (m_block.GetNumRanges() > 1 ? "s" : "") << " = ";
+  *s << ", range" << (m_ranges.size() > 1 ? "s" : "") << " = ";
   Address::DumpStyle fallback_style =
       level == eDescriptionLevelVerbose
           ? Address::DumpStyleModuleWithFileAddress
           : Address::DumpStyleFileAddress;
-  for (unsigned idx = 0; idx < m_block.GetNumRanges(); ++idx) {
-    AddressRange range;
-    m_block.GetRangeAtIndex(idx, range);
+  for (const AddressRange &range : m_ranges)
     range.Dump(s, target, Address::DumpStyleLoadAddress, fallback_style);
-  }
 }
 
 void Function::Dump(Stream *s, bool show_context) const {

@@ -14,6 +14,7 @@
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/PrettyPrinter.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 
 using namespace clang;
@@ -22,11 +23,11 @@ static void
 CreateUnsatisfiedConstraintRecord(const ASTContext &C,
                                   const UnsatisfiedConstraintRecord &Detail,
                                   UnsatisfiedConstraintRecord *TrailingObject) {
-  if (auto *E = dyn_cast<Expr *>(Detail))
-    new (TrailingObject) UnsatisfiedConstraintRecord(E);
+  if (Detail.is<Expr *>())
+    new (TrailingObject) UnsatisfiedConstraintRecord(Detail.get<Expr *>());
   else {
     auto &SubstitutionDiagnostic =
-        *cast<std::pair<SourceLocation, StringRef> *>(Detail);
+        *Detail.get<std::pair<SourceLocation, StringRef> *>();
     StringRef Message = C.backupStr(SubstitutionDiagnostic.second);
     auto *NewSubstDiag = new (C) std::pair<SourceLocation, StringRef>(
         SubstitutionDiagnostic.first, Message);

@@ -39,7 +39,6 @@
 // CHECK-NOT: __ARM_FP_FAST 1
 // CHECK: __ARM_NEON 1
 // CHECK: __ARM_NEON_FP 0xE
-// CHECK: __ARM_NEON_SVE_BRIDGE 1
 // CHECK: __ARM_PCS_AAPCS64 1
 // CHECK-NOT: __ARM_PCS 1
 // CHECK-NOT: __ARM_PCS_VFP 1
@@ -228,20 +227,8 @@
 // CHECK-NONEON-NOT: __ARM_FEATURE_SVE 1
 // CHECK-NONEON-NOT: __ARM_NEON 1
 
-// RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve-aes -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVEAES %s
-// CHECK-SVEAES: __ARM_FEATURE_AES 1
-
-// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve2-aes -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2AES %s
-// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve-aes+sve2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2AES %s
-// CHECK-SVE2AES: __ARM_FEATURE_AES 1
-// CHECK-SVE2AES: __ARM_FEATURE_SVE2 1
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2-aes -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2AES %s
 // CHECK-SVE2AES: __ARM_FEATURE_SVE2_AES 1
-
-// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve2-aes+nosve2-aes -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2AES-REV %s
-// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve2+sve-aes+nosve2-aes -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2AES-REV %s
-// CHECK-SVE2AES-REV: __ARM_FEATURE_SVE2 1
-// CHECK-SVE2AES-REV-NOT: __ARM_FEATURE_SVE2_AES 1
-
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2-sha3 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2SHA3 %s
 // CHECK-SVE2SHA3: __ARM_FEATURE_SVE2_SHA3 1
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2-sm4 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2SM4 %s

@@ -446,6 +446,7 @@ class SplitOp(SplitOp):
 
         super().__init__(
             target.type,
+            target.type,
             target,
             dimension=dimension,
             static_chunk_sizes=static_chunk_sizes,

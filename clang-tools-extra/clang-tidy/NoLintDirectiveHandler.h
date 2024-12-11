@@ -31,8 +31,6 @@ class NoLintDirectiveHandler {
 public:
   NoLintDirectiveHandler();
   ~NoLintDirectiveHandler();
-  NoLintDirectiveHandler(const NoLintDirectiveHandler &) = delete;
-  NoLintDirectiveHandler &operator=(const NoLintDirectiveHandler &) = delete;
 
   bool shouldSuppress(DiagnosticsEngine::Level DiagLevel,
                       const Diagnostic &Diag, llvm::StringRef DiagName,

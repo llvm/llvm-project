@@ -56,36 +56,6 @@ enum {
   MO_DESC_CALL,
   // TODO: Add more flags.
 };
-
-// Target-specific flags of LAInst.
-// All definitions must match LoongArchInstrFormats.td.
-enum {
-  // Whether the instruction's rd is normally required to differ from rj and
-  // rk, in the way the 3-register atomic memory operations behave
-  // (Section 2.2.7.1 and 2.2.7.2, LoongArch Reference Manual Volume 1 v1.10;
-  // while Section 2.2.7.3 lacked similar description for the AMCAS
-  // instructions, at least the INE exception is still signaled on Loongson
-  // 3A6000 when its rd == rj).
-  //
-  // Used for generating diagnostics for assembler input that violate the
-  // constraint. As described on the manual, the covered instructions require
-  // rd != rj && rd != rk to work as intended.
-  IsSubjectToAMORdConstraintShift = 0,
-  IsSubjectToAMORdConstraintMask = 1 << IsSubjectToAMORdConstraintShift,
-
-  // Whether the instruction belongs to the AMCAS family.
-  IsAMCASShift = IsSubjectToAMORdConstraintShift + 1,
-  IsAMCASMask = 1 << IsAMCASShift,
-};
-
-/// \returns true if this instruction's rd is normally required to differ
-/// from rj and rk, in the way 3-register atomic memory operations behave.
-static inline bool isSubjectToAMORdConstraint(uint64_t TSFlags) {
-  return TSFlags & IsSubjectToAMORdConstraintMask;
-}
-
-/// \returns true if this instruction belongs to the AMCAS family.
-static inline bool isAMCAS(uint64_t TSFlags) { return TSFlags & IsAMCASMask; }
 } // end namespace LoongArchII
 
 namespace LoongArchABI {

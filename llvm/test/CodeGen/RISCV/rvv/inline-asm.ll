@@ -365,13 +365,11 @@ entry:
 define <vscale x 4 x i8> @test_specify_reg_mf2(<vscale x 4 x i8> %in, <vscale x 4 x i8> %in2) nounwind {
 ; CHECK-LABEL: test_specify_reg_mf2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v2, v9
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    vadd.vv v0, v1, v2
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v0
 ; CHECK-NEXT:    ret
 entry:
@@ -382,13 +380,11 @@ entry:
 define <vscale x 8 x i8> @test_specify_reg_m1(<vscale x 8 x i8> %in, <vscale x 8 x i8> %in2) nounwind {
 ; CHECK-LABEL: test_specify_reg_m1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v2, v9
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    vadd.vv v0, v1, v2
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v0
 ; CHECK-NEXT:    ret
 entry:
@@ -399,13 +395,11 @@ entry:
 define <vscale x 16 x i8> @test_specify_reg_m2(<vscale x 16 x i8> %in, <vscale x 16 x i8> %in2) nounwind {
 ; CHECK-LABEL: test_specify_reg_m2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv2r.v v4, v10
 ; CHECK-NEXT:    vmv2r.v v2, v8
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    vadd.vv v0, v2, v4
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv2r.v v8, v0
 ; CHECK-NEXT:    ret
 entry:
@@ -416,7 +410,6 @@ entry:
 define <vscale x 1 x i1> @test_specify_reg_mask(<vscale x 1 x i1> %in, <vscale x 1 x i1> %in2) nounwind {
 ; CHECK-LABEL: test_specify_reg_mask:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v2, v8
 ; CHECK-NEXT:    vmv1r.v v1, v0
 ; CHECK-NEXT:    #APP

@@ -12,14 +12,23 @@ using namespace clang;
 
 namespace {
 
-class DeclRefExprVisitor : public ExpectedLocationVisitor {
+class DeclRefExprVisitor : public ExpectedLocationVisitor<DeclRefExprVisitor> {
 public:
-  DeclRefExprVisitor() { ShouldVisitImplicitCode = false; }
+  DeclRefExprVisitor() : ShouldVisitImplicitCode(false) {}
 
-  bool VisitDeclRefExpr(DeclRefExpr *Reference) override {
+  bool shouldVisitImplicitCode() const { return ShouldVisitImplicitCode; }
+
+  void setShouldVisitImplicitCode(bool NewValue) {
+    ShouldVisitImplicitCode = NewValue;
+  }
+
+  bool VisitDeclRefExpr(DeclRefExpr *Reference) {
     Match(Reference->getNameInfo().getAsString(), Reference->getLocation());
     return true;
   }
+
+private:
+  bool ShouldVisitImplicitCode;
 };
 
 TEST(RecursiveASTVisitor, VisitsBaseClassTemplateArguments) {
@@ -64,7 +73,7 @@ TEST(RecursiveASTVisitor, VisitsUseOfImplicitLambdaCapture) {
 
 TEST(RecursiveASTVisitor, VisitsImplicitLambdaCaptureInit) {
   DeclRefExprVisitor Visitor;
-  Visitor.ShouldVisitImplicitCode = true;
+  Visitor.setShouldVisitImplicitCode(true);
   // We're expecting "i" to be visited twice: once for the initialization expr
   // for the captured variable "i" outside of the lambda body, and again for
   // the use of "i" inside the lambda.

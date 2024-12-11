@@ -12,17 +12,18 @@
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeOrdering.h"
@@ -49,6 +50,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -2496,7 +2499,10 @@ void Sema::DiagnoseImmediateEscalatingReason(FunctionDecl *FD) {
   assert(FD->isImmediateEscalating() && !FD->isConsteval() &&
          "expected an immediate function");
   assert(FD->hasBody() && "expected the function to have a body");
-  struct ImmediateEscalatingExpressionsVisitor : DynamicRecursiveASTVisitor {
+  struct ImmediateEscalatingExpressionsVisitor
+      : public RecursiveASTVisitor<ImmediateEscalatingExpressionsVisitor> {
+
+    using Base = RecursiveASTVisitor<ImmediateEscalatingExpressionsVisitor>;
     Sema &SemaRef;
 
     const FunctionDecl *ImmediateFn;
@@ -2506,10 +2512,10 @@ void Sema::DiagnoseImmediateEscalatingReason(FunctionDecl *FD) {
 
     ImmediateEscalatingExpressionsVisitor(Sema &SemaRef, FunctionDecl *FD)
         : SemaRef(SemaRef), ImmediateFn(FD),
-          ImmediateFnIsConstructor(isa<CXXConstructorDecl>(FD)) {
-      ShouldVisitImplicitCode = true;
-      ShouldVisitLambdaBody = false;
-    }
+          ImmediateFnIsConstructor(isa<CXXConstructorDecl>(FD)) {}
+
+    bool shouldVisitImplicitCode() const { return true; }
+    bool shouldVisitLambdaBody() const { return false; }
 
     void Diag(const Expr *E, const FunctionDecl *Fn, bool IsCall) {
       SourceLocation Loc = E->getBeginLoc();
@@ -2529,7 +2535,7 @@ void Sema::DiagnoseImmediateEscalatingReason(FunctionDecl *FD) {
           << (CurrentInit && !CurrentInit->isWritten())
           << InitializedField << Range;
     }
-    bool TraverseCallExpr(CallExpr *E) override {
+    bool TraverseCallExpr(CallExpr *E) {
       if (const auto *DR =
               dyn_cast<DeclRefExpr>(E->getCallee()->IgnoreImplicit());
           DR && DR->isImmediateEscalating()) {
@@ -2538,13 +2544,13 @@ void Sema::DiagnoseImmediateEscalatingReason(FunctionDecl *FD) {
       }
 
       for (Expr *A : E->arguments())
-        if (!TraverseStmt(A))
+        if (!getDerived().TraverseStmt(A))
           return false;
 
       return true;
     }
 
-    bool VisitDeclRefExpr(DeclRefExpr *E) override {
+    bool VisitDeclRefExpr(DeclRefExpr *E) {
       if (const auto *ReferencedFn = dyn_cast<FunctionDecl>(E->getDecl());
           ReferencedFn && E->isImmediateEscalating()) {
         Diag(E, ReferencedFn, /*IsCall=*/false);
@@ -2554,7 +2560,7 @@ void Sema::DiagnoseImmediateEscalatingReason(FunctionDecl *FD) {
       return true;
     }
 
-    bool VisitCXXConstructExpr(CXXConstructExpr *E) override {
+    bool VisitCXXConstructExpr(CXXConstructExpr *E) {
       CXXConstructorDecl *D = E->getConstructor();
       if (E->isImmediateEscalating()) {
         Diag(E, D, /*IsCall=*/true);
@@ -2563,18 +2569,18 @@ void Sema::DiagnoseImmediateEscalatingReason(FunctionDecl *FD) {
       return true;
     }
 
-    bool TraverseConstructorInitializer(CXXCtorInitializer *Init) override {
+    bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
       llvm::SaveAndRestore RAII(CurrentInit, Init);
-      return DynamicRecursiveASTVisitor::TraverseConstructorInitializer(Init);
+      return Base::TraverseConstructorInitializer(Init);
     }
 
-    bool TraverseCXXConstructorDecl(CXXConstructorDecl *Ctr) override {
+    bool TraverseCXXConstructorDecl(CXXConstructorDecl *Ctr) {
       llvm::SaveAndRestore RAII(CurrentConstructor, Ctr);
-      return DynamicRecursiveASTVisitor::TraverseCXXConstructorDecl(Ctr);
+      return Base::TraverseCXXConstructorDecl(Ctr);
     }
 
-    bool TraverseType(QualType T) override { return true; }
-    bool VisitBlockExpr(BlockExpr *T) override { return true; }
+    bool TraverseType(QualType T) { return true; }
+    bool VisitBlockExpr(BlockExpr *T) { return true; }
 
   } Visitor(*this, FD);
   Visitor.TraverseDecl(FD);
@@ -4074,28 +4080,24 @@ ExprResult Sema::ConvertMemberDefaultInitExpression(FieldDecl *FD,
 
 void Sema::ActOnFinishCXXInClassMemberInitializer(Decl *D,
                                                   SourceLocation InitLoc,
-                                                  ExprResult InitExpr) {
+                                                  Expr *InitExpr) {
   // Pop the notional constructor scope we created earlier.
   PopFunctionScopeInfo(nullptr, D);
 
-  // Microsoft C++'s property declaration cannot have a default member
-  // initializer.
-  if (isa<MSPropertyDecl>(D)) {
+  FieldDecl *FD = dyn_cast<FieldDecl>(D);
+  assert((isa<MSPropertyDecl>(D) || FD->getInClassInitStyle() != ICIS_NoInit) &&
+         "must set init style when field is created");
+
+  if (!InitExpr) {
     D->setInvalidDecl();
+    if (FD)
+      FD->removeInClassInitializer();
     return;
   }
 
-  FieldDecl *FD = dyn_cast<FieldDecl>(D);
-  assert((FD && FD->getInClassInitStyle() != ICIS_NoInit) &&
-         "must set init style when field is created");
-
-  if (!InitExpr.isUsable() ||
-      DiagnoseUnexpandedParameterPack(InitExpr.get(), UPPC_Initializer)) {
+  if (DiagnoseUnexpandedParameterPack(InitExpr, UPPC_Initializer)) {
     FD->setInvalidDecl();
-    ExprResult RecoveryInit =
-        CreateRecoveryExpr(InitLoc, InitLoc, {}, FD->getType());
-    if (RecoveryInit.isUsable())
-      FD->setInClassInitializer(RecoveryInit.get());
+    FD->removeInClassInitializer();
     return;
   }
 
@@ -7539,15 +7541,8 @@ void Sema::CheckExplicitlyDefaultedFunction(Scope *S, FunctionDecl *FD) {
     return;
   }
 
-  if (DefKind.isComparison()) {
-    auto PT = FD->getParamDecl(0)->getType();
-    if (const CXXRecordDecl *RD =
-            PT.getNonReferenceType()->getAsCXXRecordDecl()) {
-      for (FieldDecl *Field : RD->fields()) {
-        UnusedPrivateFields.remove(Field);
-      }
-    }
-  }
+  if (DefKind.isComparison())
+    UnusedPrivateFields.clear();
 
   if (DefKind.isSpecialMember()
           ? CheckExplicitlyDefaultedSpecialMember(cast<CXXMethodDecl>(FD),
@@ -9229,7 +9224,7 @@ struct SpecialMemberVisitor {
     if (auto *B = Subobj.dyn_cast<CXXBaseSpecifier*>())
       return B->getBaseTypeLoc();
     else
-      return cast<FieldDecl *>(Subobj)->getLocation();
+      return Subobj.get<FieldDecl*>()->getLocation();
   }
 
   enum BasesToVisit {
@@ -9380,7 +9375,7 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
           << /*IsField*/ true << Field << DiagKind << IsDtorCallInCtor
           << /*IsObjCPtr*/ false;
     } else {
-      CXXBaseSpecifier *Base = cast<CXXBaseSpecifier *>(Subobj);
+      CXXBaseSpecifier *Base = Subobj.get<CXXBaseSpecifier*>();
       S.Diag(Base->getBeginLoc(),
              diag::note_deleted_special_member_class_subobject)
           << llvm::to_underlying(getEffectiveCSM()) << MD->getParent()
@@ -11477,8 +11472,8 @@ bool Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
         // This could still instantiate to the right type, unless we know it
         // names the wrong class template.
         auto *TD = SpecifiedName.getAsTemplateDecl();
-        MightInstantiateToSpecialization =
-            !(TD && isa<ClassTemplateDecl>(TD) && !TemplateMatches);
+        MightInstantiateToSpecialization = !(TD && isa<ClassTemplateDecl>(TD) &&
+                                             !TemplateMatches);
       }
     } else if (!RetTy.hasQualifiers() && RetTy->isDependentType()) {
       MightInstantiateToSpecialization = true;
@@ -17498,7 +17493,7 @@ DeclResult Sema::ActOnTemplatedFriendTag(
     if (getDepthAndIndex(U).first >= FriendDeclDepth) {
       auto *ND = U.first.dyn_cast<NamedDecl *>();
       if (!ND)
-        ND = cast<const TemplateTypeParmType *>(U.first)->getDecl();
+        ND = U.first.get<const TemplateTypeParmType *>()->getDecl();
       Diag(U.second, diag::friend_template_decl_malformed_pack_expansion)
           << ND->getDeclName() << SourceRange(SS.getBeginLoc(), EllipsisLoc);
       return true;
@@ -18337,7 +18332,7 @@ bool Sema::CheckOverridingFunctionReturnType(const CXXMethodDecl *New,
 
 
   // The new class type must have the same or less qualifiers as the old type.
-  if (!OldClassTy.isAtLeastAsQualifiedAs(NewClassTy, getASTContext())) {
+  if (!OldClassTy.isAtLeastAsQualifiedAs(NewClassTy)) {
     Diag(New->getLocation(),
          diag::err_covariant_return_type_class_type_not_same_or_less_qualified)
         << New->getDeclName() << NewTy << OldTy
@@ -18755,18 +18750,18 @@ void Sema::CheckDelegatingCtorCycles() {
 
 namespace {
   /// AST visitor that finds references to the 'this' expression.
-class FindCXXThisExpr : public DynamicRecursiveASTVisitor {
-  Sema &S;
+  class FindCXXThisExpr : public RecursiveASTVisitor<FindCXXThisExpr> {
+    Sema &S;
 
-public:
-  explicit FindCXXThisExpr(Sema &S) : S(S) {}
+  public:
+    explicit FindCXXThisExpr(Sema &S) : S(S) { }
 
-  bool VisitCXXThisExpr(CXXThisExpr *E) override {
-    S.Diag(E->getLocation(), diag::err_this_static_member_func)
+    bool VisitCXXThisExpr(CXXThisExpr *E) {
+      S.Diag(E->getLocation(), diag::err_this_static_member_func)
         << E->isImplicit();
-    return false;
-  }
-};
+      return false;
+    }
+  };
 }
 
 bool Sema::checkThisInStaticMemberFunctionType(CXXMethodDecl *Method) {

@@ -130,11 +130,6 @@ public:
   llvm::Expected<std::string>
   ResolveSDKPathFromDebugInfo(Module &module) override;
 
-  llvm::Expected<XcodeSDK> GetSDKPathFromDebugInfo(CompileUnit &unit) override;
-
-  llvm::Expected<std::string>
-  ResolveSDKPathFromDebugInfo(CompileUnit &unit) override;
-
 protected:
   static const char *GetCompatibleArch(ArchSpec::Core core, size_t idx);
 

@@ -13,8 +13,8 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
-#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ParentMap.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Analysis/Analyses/LiveVariables.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
@@ -32,27 +32,27 @@ using namespace ento;
 namespace {
 
 /// A simple visitor to record what VarDecls occur in EH-handling code.
-class EHCodeVisitor : public DynamicRecursiveASTVisitor {
+class EHCodeVisitor : public RecursiveASTVisitor<EHCodeVisitor> {
 public:
   bool inEH;
   llvm::DenseSet<const VarDecl *> &S;
 
-  bool TraverseObjCAtFinallyStmt(ObjCAtFinallyStmt *S) override {
+  bool TraverseObjCAtFinallyStmt(ObjCAtFinallyStmt *S) {
     SaveAndRestore inFinally(inEH, true);
-    return DynamicRecursiveASTVisitor::TraverseObjCAtFinallyStmt(S);
+    return ::RecursiveASTVisitor<EHCodeVisitor>::TraverseObjCAtFinallyStmt(S);
   }
 
-  bool TraverseObjCAtCatchStmt(ObjCAtCatchStmt *S) override {
+  bool TraverseObjCAtCatchStmt(ObjCAtCatchStmt *S) {
     SaveAndRestore inCatch(inEH, true);
-    return DynamicRecursiveASTVisitor::TraverseObjCAtCatchStmt(S);
+    return ::RecursiveASTVisitor<EHCodeVisitor>::TraverseObjCAtCatchStmt(S);
   }
 
-  bool TraverseCXXCatchStmt(CXXCatchStmt *S) override {
+  bool TraverseCXXCatchStmt(CXXCatchStmt *S) {
     SaveAndRestore inCatch(inEH, true);
     return TraverseStmt(S->getHandlerBlock());
   }
 
-  bool VisitDeclRefExpr(DeclRefExpr *DR) override {
+  bool VisitDeclRefExpr(DeclRefExpr *DR) {
     if (inEH)
       if (const VarDecl *D = dyn_cast<VarDecl>(DR->getDecl()))
         S.insert(D);

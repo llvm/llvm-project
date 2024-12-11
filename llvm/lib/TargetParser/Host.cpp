@@ -68,15 +68,11 @@ using namespace llvm;
 
 static std::unique_ptr<llvm::MemoryBuffer>
     LLVM_ATTRIBUTE_UNUSED getProcCpuinfoContent() {
-  const char *CPUInfoFile = "/proc/cpuinfo";
-  if (const char *CpuinfoIntercept = std::getenv("LLVM_CPUINFO"))
-    CPUInfoFile = CpuinfoIntercept;
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
-      llvm::MemoryBuffer::getFileAsStream(CPUInfoFile);
-
+      llvm::MemoryBuffer::getFileAsStream("/proc/cpuinfo");
   if (std::error_code EC = Text.getError()) {
-    llvm::errs() << "Can't read " << CPUInfoFile << ": " << EC.message()
-                 << "\n";
+    llvm::errs() << "Can't read "
+                 << "/proc/cpuinfo: " << EC.message() << "\n";
     return nullptr;
   }
   return std::move(*Text);
@@ -280,9 +276,8 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
 
   if (Implementer == "0x46") { // Fujitsu Ltd.
     return StringSwitch<const char *>(Part)
-        .Case("0x001", "a64fx")
-        .Case("0x003", "fujitsu-monaka")
-        .Default("generic");
+      .Case("0x001", "a64fx")
+      .Default("generic");
   }
 
   if (Implementer == "0x4e") { // NVIDIA Corporation
@@ -809,31 +804,16 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
     // Alderlake:
     case 0x97:
     case 0x9a:
-      CPU = "alderlake";
-      *Type = X86::INTEL_COREI7;
-      *Subtype = X86::INTEL_COREI7_ALDERLAKE;
-      break;
-
     // Gracemont
     case 0xbe:
-      CPU = "gracemont";
-      *Type = X86::INTEL_COREI7;
-      *Subtype = X86::INTEL_COREI7_ALDERLAKE;
-      break;
-
     // Raptorlake:
     case 0xb7:
     case 0xba:
     case 0xbf:
-      CPU = "raptorlake";
-      *Type = X86::INTEL_COREI7;
-      *Subtype = X86::INTEL_COREI7_ALDERLAKE;
-      break;
-
     // Meteorlake:
     case 0xaa:
     case 0xac:
-      CPU = "meteorlake";
+      CPU = "alderlake";
       *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_ALDERLAKE;
       break;
@@ -849,14 +829,9 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
 
     // Arrowlake S:
     case 0xc6:
-      CPU = "arrowlake-s";
-      *Type = X86::INTEL_COREI7;
-      *Subtype = X86::INTEL_COREI7_ARROWLAKE_S;
-      break;
-
     // Lunarlake:
     case 0xbd:
-      CPU = "lunarlake";
+      CPU = "arrowlake-s";
       *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_ARROWLAKE_S;
       break;
@@ -892,11 +867,6 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
 
     // Emerald Rapids:
     case 0xcf:
-      CPU = "emeraldrapids";
-      *Type = X86::INTEL_COREI7;
-      *Subtype = X86::INTEL_COREI7_SAPPHIRERAPIDS;
-      break;
-
     // Sapphire Rapids:
     case 0x8f:
       CPU = "sapphirerapids";
@@ -1036,19 +1006,6 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
     CPU = "pentium4";
     break;
   }
-  case 19:
-    switch (Model) {
-    // Diamond Rapids:
-    case 0x01:
-      CPU = "diamondrapids";
-      *Type = X86::INTEL_COREI7;
-      *Subtype = X86::INTEL_COREI7_DIAMONDRAPIDS;
-      break;
-
-    default: // Unknown family 19 CPU.
-      break;
-    }
-    break;
   default:
     break; // Unknown.
   }
@@ -2037,9 +1994,8 @@ const StringMap<bool> sys::getHostCPUFeatures() {
 const StringMap<bool> sys::getHostCPUFeatures() {
   unsigned long hwcap = getauxval(AT_HWCAP);
   bool HasFPU = hwcap & (1UL << 3); // HWCAP_LOONGARCH_FPU
-  uint32_t cpucfg2 = 0x2, cpucfg3 = 0x3;
+  uint32_t cpucfg2 = 0x2;
   __asm__("cpucfg %[cpucfg2], %[cpucfg2]\n\t" : [cpucfg2] "+r"(cpucfg2));
-  __asm__("cpucfg %[cpucfg3], %[cpucfg3]\n\t" : [cpucfg3] "+r"(cpucfg3));
 
   StringMap<bool> Features;
 
@@ -2050,16 +2006,6 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   Features["lasx"] = hwcap & (1UL << 5); // HWCAP_LOONGARCH_LASX
   Features["lvz"] = hwcap & (1UL << 9);  // HWCAP_LOONGARCH_LVZ
 
-  Features["frecipe"] = cpucfg2 & (1U << 25); // CPUCFG.2.FRECIPE
-  Features["div32"] = cpucfg2 & (1U << 26);   // CPUCFG.2.DIV32
-  Features["lam-bh"] = cpucfg2 & (1U << 27);  // CPUCFG.2.LAM_BH
-  Features["lamcas"] = cpucfg2 & (1U << 28);  // CPUCFG.2.LAMCAS
-
-  Features["ld-seq-sa"] = cpucfg3 & (1U << 23); // CPUCFG.3.LD_SEQ_SA
-
-  // TODO: Need to complete.
-  // Features["llacq-screl"] = cpucfg2 & (1U << 29); // CPUCFG.2.LLACQ_SCREL
-  // Features["scq"] = cpucfg2 & (1U << 30);         // CPUCFG.2.SCQ
   return Features;
 }
 #elif defined(__linux__) && defined(__riscv)

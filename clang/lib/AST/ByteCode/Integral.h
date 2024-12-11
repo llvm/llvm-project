@@ -123,9 +123,7 @@ public:
   APSInt toAPSInt() const {
     return APSInt(APInt(Bits, static_cast<uint64_t>(V), Signed), !Signed);
   }
-  APSInt toAPSInt(unsigned BitWidth) const {
-    return APSInt(toAPInt(BitWidth), !Signed);
-  }
+  APSInt toAPSInt(unsigned BitWidth) const { return APSInt(toAPInt(BitWidth)); }
   APInt toAPInt(unsigned BitWidth) const {
     if constexpr (Signed)
       return APInt(Bits, static_cast<uint64_t>(V), Signed)
@@ -183,7 +181,6 @@ public:
   }
 
   Integral truncate(unsigned TruncBits) const {
-    assert(TruncBits >= 1);
     if (TruncBits >= Bits)
       return *this;
     const ReprT BitMask = (ReprT(1) << ReprT(TruncBits)) - 1;

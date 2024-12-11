@@ -59,11 +59,6 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     )
 endif()
 
-# function checks
-find_package(Backtrace)
-set(HAVE_BACKTRACE ${Backtrace_FOUND})
-set(BACKTRACE_HEADER ${Backtrace_HEADER})
-
 include(CheckCXXSymbolExists)
 include(CheckCXXSourceCompiles)
 check_cxx_symbol_exists(strerror_r string.h HAVE_STRERROR_R)

@@ -179,9 +179,9 @@ static ScopePair GetDiagForGotoScopeDecl(Sema &S, const Decl *D) {
       }
     }
 
-    if (const Expr *Init = VD->getInit(); S.Context.getLangOpts().CPlusPlus &&
-                                          VD->hasLocalStorage() && Init &&
-                                          !Init->containsErrors()) {
+    const Expr *Init = VD->getInit();
+    if (S.Context.getLangOpts().CPlusPlus && VD->hasLocalStorage() && Init &&
+        !Init->containsErrors()) {
       // C++11 [stmt.dcl]p3:
       //   A program that jumps from a point where a variable with automatic
       //   storage duration is not in scope to a point where it is in scope

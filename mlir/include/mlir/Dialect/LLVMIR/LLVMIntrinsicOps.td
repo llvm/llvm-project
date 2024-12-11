@@ -19,7 +19,7 @@ class LLVM_UnaryIntrOpBase<string func, Type element,
            !listconcat([Pure, SameOperandsAndResultType], traits),
            requiresFastmath> {
   dag commonArgs = (ins LLVM_ScalarOrVectorOf<element>:$in);
-  let assemblyFormat = "`(` operands `)` attr-dict `:` "
+  let assemblyFormat = "`(` operands `)` custom<LLVMOpAttrs>(attr-dict) `:` "
       "functional-type(operands, results)";
 }
 
@@ -42,7 +42,7 @@ class LLVM_BinarySameArgsIntrOpBase<string func, Type element,
            requiresFastmath> {
   dag commonArgs = (ins LLVM_ScalarOrVectorOf<element>:$a,
                         LLVM_ScalarOrVectorOf<element>:$b);
-  let assemblyFormat = "`(` operands `)` attr-dict `:` "
+  let assemblyFormat = "`(` operands `)` custom<LLVMOpAttrs>(attr-dict) `:` "
       "functional-type(operands, results)";
 }
 
@@ -67,7 +67,7 @@ class LLVM_TernarySameArgsIntrOpBase<string func, Type element,
   dag commonArgs = (ins LLVM_ScalarOrVectorOf<element>:$a,
                        LLVM_ScalarOrVectorOf<element>:$b,
                        LLVM_ScalarOrVectorOf<element>:$c);
-  let assemblyFormat = "`(` operands `)` attr-dict `:` "
+  let assemblyFormat = "`(` operands `)` custom<LLVMOpAttrs>(attr-dict) `:` "
       "functional-type(operands, results)";
 }
 
@@ -137,7 +137,7 @@ def LLVM_PowIOp : LLVM_OneResultIntrOp<"powi", [], [0,1],
       (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
            AnySignlessInteger:$power,
            DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
-  let assemblyFormat = "`(` operands `)` attr-dict `:` "
+  let assemblyFormat = "`(` operands `)` custom<LLVMOpAttrs>(attr-dict) `:` "
       "functional-type(operands, results)";
 }
 def LLVM_RintOp : LLVM_UnaryIntrOpF<"rint">;
@@ -145,7 +145,7 @@ def LLVM_NearbyintOp : LLVM_UnaryIntrOpF<"nearbyint">;
 class LLVM_IntRoundIntrOpBase<string func> :
         LLVM_OneResultIntrOp<func, [0], [0], [Pure]> {
   let arguments = (ins LLVM_AnyFloat:$val);
-  let assemblyFormat = "`(` operands `)` attr-dict `:` "
+  let assemblyFormat = "`(` operands `)` custom<LLVMOpAttrs>(attr-dict) `:` "
       "functional-type(operands, results)";
 }
 def LLVM_LroundOp : LLVM_IntRoundIntrOpBase<"lround">;
@@ -344,24 +344,6 @@ def LLVM_InvariantEndOp : LLVM_ZeroResultIntrOp<"invariant.end", [2],
                        LLVM_AnyPointer:$ptr);
   let assemblyFormat = "$start `,` $size `,` $ptr attr-dict `:` "
       "qualified(type($ptr))";
-}
-
-def LLVM_LaunderInvariantGroupOp
-    : LLVM_OneResultIntrOp<"launder.invariant.group", [], [0],
-        [DeclareOpInterfaceMethods<PromotableOpInterface>,
-         SameOperandsAndResultType]> {
-  let arguments = (ins LLVM_AnyPointer:$ptr);
-  let results = (outs LLVM_AnyPointer:$res);
-  let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
-}
-
-def LLVM_StripInvariantGroupOp
-    : LLVM_OneResultIntrOp<"strip.invariant.group", [], [0],
-        [DeclareOpInterfaceMethods<PromotableOpInterface>,
-         SameOperandsAndResultType]> {
-  let arguments = (ins LLVM_AnyPointer:$ptr);
-  let results = (outs LLVM_AnyPointer:$res);
-  let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
 }
 
 // Constrained Floating-Point Intrinsics.
@@ -750,7 +732,7 @@ class LLVM_VecReductionF<string mnem>
     ins DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
   let arguments = !con(commonArgs, fmfArg);
 
-  let assemblyFormat = "`(` operands `)` attr-dict `:` "
+  let assemblyFormat = "`(` operands `)` custom<LLVMOpAttrs>(attr-dict) `:` "
       "functional-type(operands, results)";
 }
 

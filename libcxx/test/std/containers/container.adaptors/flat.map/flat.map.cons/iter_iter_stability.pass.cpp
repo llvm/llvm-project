@@ -23,7 +23,6 @@
 #include <flat_map>
 #include <random>
 #include <map>
-#include <vector>
 
 #include "test_macros.h"
 

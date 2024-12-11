@@ -626,15 +626,10 @@ public:
 
   bool VisitLambdaExpr(LambdaExpr *E) {
     FunctionDecl *D = E->getCallOperator();
-    if (!E->hasExplicitResultType()) {
-      SourceLocation TypeHintLoc;
-      if (!E->hasExplicitParameters())
-        TypeHintLoc = E->getIntroducerRange().getEnd();
-      else if (auto FTL = D->getFunctionTypeLoc())
-        TypeHintLoc = FTL.getRParenLoc();
-      if (TypeHintLoc.isValid())
-        addReturnTypeHint(D, TypeHintLoc);
-    }
+    if (!E->hasExplicitResultType())
+      addReturnTypeHint(D, E->hasExplicitParameters()
+                               ? D->getFunctionTypeLoc().getRParenLoc()
+                               : E->getIntroducerRange().getEnd());
     return true;
   }
 

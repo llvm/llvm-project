@@ -188,7 +188,7 @@ namespace UndefinedBehavior {
 
   namespace Ptr {
     struct A {};
-    struct B : A { int n; int m; };
+    struct B : A { int n; };
     B a[3][3];
     constexpr B *p = a[0] + 4; // expected-error {{constant expression}} expected-note {{element 4 of array of 3 elements}}
     B b = {};
@@ -204,7 +204,6 @@ namespace UndefinedBehavior {
     static_assert((A*)nb == 0, "");
     static_assert((B*)na == 0, "");
     constexpr const int &nf = nb->n; // expected-error {{constant expression}} expected-note {{cannot access field of null pointer}}
-    constexpr const int &mf = nb->m; // expected-error {{constant expression}} expected-note {{cannot access field of null pointer}}
     constexpr const int *np1 = (int*)nullptr + 0; // ok
     constexpr const int *np2 = &(*(int(*)[4])nullptr)[0]; // ok
     constexpr const int *np3 = &(*(int(*)[4])nullptr)[2]; // expected-error {{constant expression}} expected-note {{cannot perform pointer arithmetic on null pointer}}

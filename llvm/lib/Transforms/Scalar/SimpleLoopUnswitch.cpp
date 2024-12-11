@@ -1248,9 +1248,8 @@ static BasicBlock *buildClonedLoopBlocks(
       assert(VMap.lookup(&I) == &ClonedI && "Mismatch in the value map!");
 
       // Forget SCEVs based on exit phis in case SCEV looked through the phi.
-      if (SE)
-        if (auto *PN = dyn_cast<PHINode>(&I))
-          SE->forgetLcssaPhiWithNewPredecessor(&L, PN);
+      if (SE && isa<PHINode>(I))
+        SE->forgetValue(&I);
 
       BasicBlock::iterator InsertPt = MergeBB->getFirstInsertionPt();
 

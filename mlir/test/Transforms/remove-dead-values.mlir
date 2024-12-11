@@ -1,15 +1,12 @@
 // RUN: mlir-opt %s -remove-dead-values -split-input-file -verify-diagnostics | FileCheck %s
 
-// The IR is updated regardless of memref.global private constant
+// The IR remains untouched because of the presence of a non-function-like
+// symbol op inside the module (const @__dont_touch_unacceptable_ir).
 //
 module {
-  // CHECK: memref.global "private" constant @__constant_4xi32 : memref<4xi32> = dense<[1, 2, 3, 4]> {alignment = 16 : i64}
-  memref.global "private" constant @__constant_4xi32 : memref<4xi32> = dense<[1, 2, 3, 4]> {alignment = 16 : i64}
+// expected-error @+1 {{cannot optimize an IR with non-function symbol ops, non-call symbol user ops or branch ops}}
+  memref.global "private" constant @__dont_touch_unacceptable_ir : memref<i32> = dense<0>
   func.func @main(%arg0: i32) -> i32 {
-    %0 = tensor.empty() : tensor<10xbf16>
-    // CHECK-NOT: memref.get_global
-    %1 = memref.get_global @__constant_4xi32 : memref<4xi32>
-    // CHECK-NOT: tensor.empty
     return %arg0 : i32
   }
 }
@@ -28,47 +25,18 @@ module @named_module_acceptable {
 
 // -----
 
-// The IR contains both conditional and unconditional branches with a loop
-// in which the last cf.cond_br is referncing the first cf.br
+// The IR remains untouched because of the presence of a branch op `cf.cond_br`.
 //
-func.func @acceptable_ir_has_cleanable_loop_of_conditional_and_branch_op(%arg0: i1) {
+func.func @dont_touch_unacceptable_ir_has_cleanable_simple_op_with_branch_op(%arg0: i1) {
   %non_live = arith.constant 0 : i32
-  // CHECK-NOT: arith.constant
-  cf.br ^bb1(%non_live : i32)
-  // CHECK: cf.br ^[[BB1:bb[0-9]+]]
-^bb1(%non_live_1 : i32):
-  // CHECK: ^[[BB1]]:
-  %non_live_5 = arith.constant 1 : i32
-  cf.br ^bb3(%non_live_1, %non_live_5 : i32, i32)
-  // CHECK: cf.br ^[[BB3:bb[0-9]+]]
-  // CHECK-NOT: i32
-^bb3(%non_live_2 : i32, %non_live_6 : i32):
-  // CHECK: ^[[BB3]]:
-  cf.cond_br %arg0, ^bb1(%non_live_2 : i32), ^bb4(%non_live_2 : i32)
-  // CHECK: cf.cond_br %arg0, ^[[BB1]], ^[[BB4:bb[0-9]+]]
-^bb4(%non_live_4 : i32):
-  // CHECK: ^[[BB4]]:
+  // expected-error @+1 {{cannot optimize an IR with non-function symbol ops, non-call symbol user ops or branch ops}}
+  cf.cond_br %arg0, ^bb1(%non_live : i32), ^bb2(%non_live : i32)
+^bb1(%non_live_0 : i32):
+  cf.br ^bb3
+^bb2(%non_live_1 : i32):
+  cf.br ^bb3
+^bb3:
   return
-}
-
-// -----
-
-// Checking that iter_args are properly handled
-//
-func.func @cleanable_loop_iter_args_value(%arg0: index) -> index {
-  %c0 = arith.constant 0 : index
-  %c1 = arith.constant 1 : index
-  %c10 = arith.constant 10 : index
-  %non_live = arith.constant 0 : index
-  // CHECK: [[RESULT:%.+]] = scf.for [[ARG_1:%.*]] = %c0 to %c10 step %c1 iter_args([[ARG_2:%.*]] = %arg0) -> (index) {
-  %result, %result_non_live = scf.for %i = %c0 to %c10 step %c1 iter_args(%live_arg = %arg0, %non_live_arg = %non_live) -> (index, index) {
-    // CHECK: [[SUM:%.+]] = arith.addi [[ARG_2]], [[ARG_1]] : index
-    %new_live = arith.addi %live_arg, %i : index
-    // CHECK: scf.yield [[SUM:%.+]]
-    scf.yield %new_live, %non_live_arg : index, index
-  }
-  // CHECK: return [[RESULT]] : index
-  return %result : index
 }
 
 // -----
@@ -406,8 +374,3 @@ func.func @kernel(%arg0: memref<18xf32>) {
 
 // CHECK: func.func private @no_block_func_declaration()
 func.func private @no_block_func_declaration() -> ()
-
-// -----
-
-// CHECK: llvm.func @no_block_external_func()
-llvm.func @no_block_external_func() attributes {sym_visibility = "private"}

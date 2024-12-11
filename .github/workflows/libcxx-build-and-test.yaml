@@ -33,11 +33,24 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
+
+env:
+  # LLVM POST-BRANCH bump version
+  # LLVM POST-BRANCH add compiler test for ToT - 1, e.g. "Clang 17"
+  # LLVM RELEASE bump remove compiler ToT - 3, e.g. "Clang 15"
+  LLVM_HEAD_VERSION: "19"   # Used compiler, update POST-BRANCH.
+  LLVM_PREVIOUS_VERSION: "18"
+  LLVM_OLDEST_VERSION: "17"
+  GCC_STABLE_VERSION: "13"
+  LLVM_SYMBOLIZER_PATH: "/usr/bin/llvm-symbolizer-19"
+  CLANG_CRASH_DIAGNOSTICS_DIR: "crash_diagnostics"
+
+
 jobs:
   stage1:
     if: github.repository_owner == 'llvm'
-    runs-on: libcxx-self-hosted-linux
-    container: ghcr.io/llvm/libcxx-linux-builder:0fd6f684b9c84c32d6cbfd9742402e788b2879f1
+    runs-on: libcxx-runners-set
+    container: ghcr.io/libcxx/actions-builder:testing-2024-09-21
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -73,8 +86,8 @@ jobs:
             **/crash_diagnostics/*
   stage2:
     if: github.repository_owner == 'llvm'
-    runs-on: libcxx-self-hosted-linux
-    container: ghcr.io/llvm/libcxx-linux-builder:0fd6f684b9c84c32d6cbfd9742402e788b2879f1
+    runs-on: libcxx-runners-set
+    container: ghcr.io/libcxx/actions-builder:testing-2024-09-21
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
@@ -148,21 +161,21 @@ jobs:
           'generic-static',
           'bootstrapping-build'
         ]
-        machine: [ 'libcxx-self-hosted-linux' ]
+        machine: [ 'libcxx-runners-set' ]
         include:
         - config: 'generic-cxx26'
-          machine: libcxx-self-hosted-linux
+          machine: libcxx-runners-set
         - config: 'generic-asan'
-          machine: libcxx-self-hosted-linux
+          machine: libcxx-runners-set
         - config: 'generic-tsan'
-          machine: libcxx-self-hosted-linux
+          machine: libcxx-runners-set
         - config: 'generic-ubsan'
-          machine: libcxx-self-hosted-linux
+          machine: libcxx-runners-set
         # Use a larger machine for MSAN to avoid timeout and memory allocation issues.
         - config: 'generic-msan'
-          machine: libcxx-self-hosted-linux
+          machine: libcxx-runners-set
     runs-on: ${{ matrix.machine }}
-    container: ghcr.io/llvm/libcxx-linux-builder:0fd6f684b9c84c32d6cbfd9742402e788b2879f1
+    container: ghcr.io/libcxx/actions-builder:testing-2024-09-21
     steps:
       - uses: actions/checkout@v4
       - name: ${{ matrix.config }}
@@ -189,13 +202,13 @@ jobs:
       matrix:
         include:
         - config: generic-cxx03
-          os: macos-15
+          os: macos-latest
         - config: generic-cxx23
-          os: macos-15
+          os: macos-latest
         - config: generic-modules
-          os: macos-15
+          os: macos-latest
         - config: apple-configuration
-          os: macos-15
+          os: macos-latest
         - config: apple-system
           os: macos-13
         - config: apple-system-hardened

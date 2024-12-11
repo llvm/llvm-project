@@ -80,31 +80,28 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [0.1] - V2UnitB
 # CHECK-NEXT: [1.0] - V2UnitD
 # CHECK-NEXT: [1.1] - V2UnitD
-# CHECK-NEXT: [2.0] - V2UnitFlg
-# CHECK-NEXT: [2.1] - V2UnitFlg
-# CHECK-NEXT: [2.2] - V2UnitFlg
-# CHECK-NEXT: [3]   - V2UnitL2
-# CHECK-NEXT: [4.0] - V2UnitL01
-# CHECK-NEXT: [4.1] - V2UnitL01
-# CHECK-NEXT: [5]   - V2UnitM0
-# CHECK-NEXT: [6]   - V2UnitM1
-# CHECK-NEXT: [7]   - V2UnitS0
-# CHECK-NEXT: [8]   - V2UnitS1
-# CHECK-NEXT: [9]   - V2UnitS2
-# CHECK-NEXT: [10]  - V2UnitS3
-# CHECK-NEXT: [11]  - V2UnitV0
-# CHECK-NEXT: [12]  - V2UnitV1
-# CHECK-NEXT: [13]  - V2UnitV2
-# CHECK-NEXT: [14]  - V2UnitV3
+# CHECK-NEXT: [2]   - V2UnitL2
+# CHECK-NEXT: [3.0] - V2UnitL01
+# CHECK-NEXT: [3.1] - V2UnitL01
+# CHECK-NEXT: [4]   - V2UnitM0
+# CHECK-NEXT: [5]   - V2UnitM1
+# CHECK-NEXT: [6]   - V2UnitS0
+# CHECK-NEXT: [7]   - V2UnitS1
+# CHECK-NEXT: [8]   - V2UnitS2
+# CHECK-NEXT: [9]   - V2UnitS3
+# CHECK-NEXT: [10]  - V2UnitV0
+# CHECK-NEXT: [11]  - V2UnitV1
+# CHECK-NEXT: [12]  - V2UnitV2
+# CHECK-NEXT: [13]  - V2UnitV3
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ldr	b0, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ldr	b0, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -159,31 +156,28 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [0.1] - V2UnitB
 # CHECK-NEXT: [1.0] - V2UnitD
 # CHECK-NEXT: [1.1] - V2UnitD
-# CHECK-NEXT: [2.0] - V2UnitFlg
-# CHECK-NEXT: [2.1] - V2UnitFlg
-# CHECK-NEXT: [2.2] - V2UnitFlg
-# CHECK-NEXT: [3]   - V2UnitL2
-# CHECK-NEXT: [4.0] - V2UnitL01
-# CHECK-NEXT: [4.1] - V2UnitL01
-# CHECK-NEXT: [5]   - V2UnitM0
-# CHECK-NEXT: [6]   - V2UnitM1
-# CHECK-NEXT: [7]   - V2UnitS0
-# CHECK-NEXT: [8]   - V2UnitS1
-# CHECK-NEXT: [9]   - V2UnitS2
-# CHECK-NEXT: [10]  - V2UnitS3
-# CHECK-NEXT: [11]  - V2UnitV0
-# CHECK-NEXT: [12]  - V2UnitV1
-# CHECK-NEXT: [13]  - V2UnitV2
-# CHECK-NEXT: [14]  - V2UnitV3
+# CHECK-NEXT: [2]   - V2UnitL2
+# CHECK-NEXT: [3.0] - V2UnitL01
+# CHECK-NEXT: [3.1] - V2UnitL01
+# CHECK-NEXT: [4]   - V2UnitM0
+# CHECK-NEXT: [5]   - V2UnitM1
+# CHECK-NEXT: [6]   - V2UnitS0
+# CHECK-NEXT: [7]   - V2UnitS1
+# CHECK-NEXT: [8]   - V2UnitS2
+# CHECK-NEXT: [9]   - V2UnitS3
+# CHECK-NEXT: [10]  - V2UnitV0
+# CHECK-NEXT: [11]  - V2UnitV1
+# CHECK-NEXT: [12]  - V2UnitV2
+# CHECK-NEXT: [13]  - V2UnitV3
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ldr	h0, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ldr	h0, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -238,31 +232,28 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [0.1] - V2UnitB
 # CHECK-NEXT: [1.0] - V2UnitD
 # CHECK-NEXT: [1.1] - V2UnitD
-# CHECK-NEXT: [2.0] - V2UnitFlg
-# CHECK-NEXT: [2.1] - V2UnitFlg
-# CHECK-NEXT: [2.2] - V2UnitFlg
-# CHECK-NEXT: [3]   - V2UnitL2
-# CHECK-NEXT: [4.0] - V2UnitL01
-# CHECK-NEXT: [4.1] - V2UnitL01
-# CHECK-NEXT: [5]   - V2UnitM0
-# CHECK-NEXT: [6]   - V2UnitM1
-# CHECK-NEXT: [7]   - V2UnitS0
-# CHECK-NEXT: [8]   - V2UnitS1
-# CHECK-NEXT: [9]   - V2UnitS2
-# CHECK-NEXT: [10]  - V2UnitS3
-# CHECK-NEXT: [11]  - V2UnitV0
-# CHECK-NEXT: [12]  - V2UnitV1
-# CHECK-NEXT: [13]  - V2UnitV2
-# CHECK-NEXT: [14]  - V2UnitV3
+# CHECK-NEXT: [2]   - V2UnitL2
+# CHECK-NEXT: [3.0] - V2UnitL01
+# CHECK-NEXT: [3.1] - V2UnitL01
+# CHECK-NEXT: [4]   - V2UnitM0
+# CHECK-NEXT: [5]   - V2UnitM1
+# CHECK-NEXT: [6]   - V2UnitS0
+# CHECK-NEXT: [7]   - V2UnitS1
+# CHECK-NEXT: [8]   - V2UnitS2
+# CHECK-NEXT: [9]   - V2UnitS3
+# CHECK-NEXT: [10]  - V2UnitV0
+# CHECK-NEXT: [11]  - V2UnitV1
+# CHECK-NEXT: [12]  - V2UnitV2
+# CHECK-NEXT: [13]  - V2UnitV3
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ldr	s0, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ldr	s0, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -317,31 +308,28 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [0.1] - V2UnitB
 # CHECK-NEXT: [1.0] - V2UnitD
 # CHECK-NEXT: [1.1] - V2UnitD
-# CHECK-NEXT: [2.0] - V2UnitFlg
-# CHECK-NEXT: [2.1] - V2UnitFlg
-# CHECK-NEXT: [2.2] - V2UnitFlg
-# CHECK-NEXT: [3]   - V2UnitL2
-# CHECK-NEXT: [4.0] - V2UnitL01
-# CHECK-NEXT: [4.1] - V2UnitL01
-# CHECK-NEXT: [5]   - V2UnitM0
-# CHECK-NEXT: [6]   - V2UnitM1
-# CHECK-NEXT: [7]   - V2UnitS0
-# CHECK-NEXT: [8]   - V2UnitS1
-# CHECK-NEXT: [9]   - V2UnitS2
-# CHECK-NEXT: [10]  - V2UnitS3
-# CHECK-NEXT: [11]  - V2UnitV0
-# CHECK-NEXT: [12]  - V2UnitV1
-# CHECK-NEXT: [13]  - V2UnitV2
-# CHECK-NEXT: [14]  - V2UnitV3
+# CHECK-NEXT: [2]   - V2UnitL2
+# CHECK-NEXT: [3.0] - V2UnitL01
+# CHECK-NEXT: [3.1] - V2UnitL01
+# CHECK-NEXT: [4]   - V2UnitM0
+# CHECK-NEXT: [5]   - V2UnitM1
+# CHECK-NEXT: [6]   - V2UnitS0
+# CHECK-NEXT: [7]   - V2UnitS1
+# CHECK-NEXT: [8]   - V2UnitS2
+# CHECK-NEXT: [9]   - V2UnitS3
+# CHECK-NEXT: [10]  - V2UnitV0
+# CHECK-NEXT: [11]  - V2UnitV1
+# CHECK-NEXT: [12]  - V2UnitV2
+# CHECK-NEXT: [13]  - V2UnitV3
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ldr	d0, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ldr	d0, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -396,31 +384,28 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [0.1] - V2UnitB
 # CHECK-NEXT: [1.0] - V2UnitD
 # CHECK-NEXT: [1.1] - V2UnitD
-# CHECK-NEXT: [2.0] - V2UnitFlg
-# CHECK-NEXT: [2.1] - V2UnitFlg
-# CHECK-NEXT: [2.2] - V2UnitFlg
-# CHECK-NEXT: [3]   - V2UnitL2
-# CHECK-NEXT: [4.0] - V2UnitL01
-# CHECK-NEXT: [4.1] - V2UnitL01
-# CHECK-NEXT: [5]   - V2UnitM0
-# CHECK-NEXT: [6]   - V2UnitM1
-# CHECK-NEXT: [7]   - V2UnitS0
-# CHECK-NEXT: [8]   - V2UnitS1
-# CHECK-NEXT: [9]   - V2UnitS2
-# CHECK-NEXT: [10]  - V2UnitS3
-# CHECK-NEXT: [11]  - V2UnitV0
-# CHECK-NEXT: [12]  - V2UnitV1
-# CHECK-NEXT: [13]  - V2UnitV2
-# CHECK-NEXT: [14]  - V2UnitV3
+# CHECK-NEXT: [2]   - V2UnitL2
+# CHECK-NEXT: [3.0] - V2UnitL01
+# CHECK-NEXT: [3.1] - V2UnitL01
+# CHECK-NEXT: [4]   - V2UnitM0
+# CHECK-NEXT: [5]   - V2UnitM1
+# CHECK-NEXT: [6]   - V2UnitS0
+# CHECK-NEXT: [7]   - V2UnitS1
+# CHECK-NEXT: [8]   - V2UnitS2
+# CHECK-NEXT: [9]   - V2UnitS3
+# CHECK-NEXT: [10]  - V2UnitV0
+# CHECK-NEXT: [11]  - V2UnitV1
+# CHECK-NEXT: [12]  - V2UnitV2
+# CHECK-NEXT: [13]  - V2UnitV3
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ldr	q0, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ldr	q0, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -475,31 +460,28 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [0.1] - V2UnitB
 # CHECK-NEXT: [1.0] - V2UnitD
 # CHECK-NEXT: [1.1] - V2UnitD
-# CHECK-NEXT: [2.0] - V2UnitFlg
-# CHECK-NEXT: [2.1] - V2UnitFlg
-# CHECK-NEXT: [2.2] - V2UnitFlg
-# CHECK-NEXT: [3]   - V2UnitL2
-# CHECK-NEXT: [4.0] - V2UnitL01
-# CHECK-NEXT: [4.1] - V2UnitL01
-# CHECK-NEXT: [5]   - V2UnitM0
-# CHECK-NEXT: [6]   - V2UnitM1
-# CHECK-NEXT: [7]   - V2UnitS0
-# CHECK-NEXT: [8]   - V2UnitS1
-# CHECK-NEXT: [9]   - V2UnitS2
-# CHECK-NEXT: [10]  - V2UnitS3
-# CHECK-NEXT: [11]  - V2UnitV0
-# CHECK-NEXT: [12]  - V2UnitV1
-# CHECK-NEXT: [13]  - V2UnitV2
-# CHECK-NEXT: [14]  - V2UnitV3
+# CHECK-NEXT: [2]   - V2UnitL2
+# CHECK-NEXT: [3.0] - V2UnitL01
+# CHECK-NEXT: [3.1] - V2UnitL01
+# CHECK-NEXT: [4]   - V2UnitM0
+# CHECK-NEXT: [5]   - V2UnitM1
+# CHECK-NEXT: [6]   - V2UnitS0
+# CHECK-NEXT: [7]   - V2UnitS1
+# CHECK-NEXT: [8]   - V2UnitS2
+# CHECK-NEXT: [9]   - V2UnitS3
+# CHECK-NEXT: [10]  - V2UnitV0
+# CHECK-NEXT: [11]  - V2UnitV1
+# CHECK-NEXT: [12]  - V2UnitV2
+# CHECK-NEXT: [13]  - V2UnitV3
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ld1	{ v0.8b }, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ld1	{ v0.8b }, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -554,31 +536,28 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [0.1] - V2UnitB
 # CHECK-NEXT: [1.0] - V2UnitD
 # CHECK-NEXT: [1.1] - V2UnitD
-# CHECK-NEXT: [2.0] - V2UnitFlg
-# CHECK-NEXT: [2.1] - V2UnitFlg
-# CHECK-NEXT: [2.2] - V2UnitFlg
-# CHECK-NEXT: [3]   - V2UnitL2
-# CHECK-NEXT: [4.0] - V2UnitL01
-# CHECK-NEXT: [4.1] - V2UnitL01
-# CHECK-NEXT: [5]   - V2UnitM0
-# CHECK-NEXT: [6]   - V2UnitM1
-# CHECK-NEXT: [7]   - V2UnitS0
-# CHECK-NEXT: [8]   - V2UnitS1
-# CHECK-NEXT: [9]   - V2UnitS2
-# CHECK-NEXT: [10]  - V2UnitS3
-# CHECK-NEXT: [11]  - V2UnitV0
-# CHECK-NEXT: [12]  - V2UnitV1
-# CHECK-NEXT: [13]  - V2UnitV2
-# CHECK-NEXT: [14]  - V2UnitV3
+# CHECK-NEXT: [2]   - V2UnitL2
+# CHECK-NEXT: [3.0] - V2UnitL01
+# CHECK-NEXT: [3.1] - V2UnitL01
+# CHECK-NEXT: [4]   - V2UnitM0
+# CHECK-NEXT: [5]   - V2UnitM1
+# CHECK-NEXT: [6]   - V2UnitS0
+# CHECK-NEXT: [7]   - V2UnitS1
+# CHECK-NEXT: [8]   - V2UnitS2
+# CHECK-NEXT: [9]   - V2UnitS3
+# CHECK-NEXT: [10]  - V2UnitV0
+# CHECK-NEXT: [11]  - V2UnitV1
+# CHECK-NEXT: [12]  - V2UnitV2
+# CHECK-NEXT: [13]  - V2UnitV3
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ld1	{ v0.4h }, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ld1	{ v0.4h }, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -633,31 +612,28 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [0.1] - V2UnitB
 # CHECK-NEXT: [1.0] - V2UnitD
 # CHECK-NEXT: [1.1] - V2UnitD
-# CHECK-NEXT: [2.0] - V2UnitFlg
-# CHECK-NEXT: [2.1] - V2UnitFlg
-# CHECK-NEXT: [2.2] - V2UnitFlg
-# CHECK-NEXT: [3]   - V2UnitL2
-# CHECK-NEXT: [4.0] - V2UnitL01
-# CHECK-NEXT: [4.1] - V2UnitL01
-# CHECK-NEXT: [5]   - V2UnitM0
-# CHECK-NEXT: [6]   - V2UnitM1
-# CHECK-NEXT: [7]   - V2UnitS0
-# CHECK-NEXT: [8]   - V2UnitS1
-# CHECK-NEXT: [9]   - V2UnitS2
-# CHECK-NEXT: [10]  - V2UnitS3
-# CHECK-NEXT: [11]  - V2UnitV0
-# CHECK-NEXT: [12]  - V2UnitV1
-# CHECK-NEXT: [13]  - V2UnitV2
-# CHECK-NEXT: [14]  - V2UnitV3
+# CHECK-NEXT: [2]   - V2UnitL2
+# CHECK-NEXT: [3.0] - V2UnitL01
+# CHECK-NEXT: [3.1] - V2UnitL01
+# CHECK-NEXT: [4]   - V2UnitM0
+# CHECK-NEXT: [5]   - V2UnitM1
+# CHECK-NEXT: [6]   - V2UnitS0
+# CHECK-NEXT: [7]   - V2UnitS1
+# CHECK-NEXT: [8]   - V2UnitS2
+# CHECK-NEXT: [9]   - V2UnitS3
+# CHECK-NEXT: [10]  - V2UnitV0
+# CHECK-NEXT: [11]  - V2UnitV1
+# CHECK-NEXT: [12]  - V2UnitV2
+# CHECK-NEXT: [13]  - V2UnitV3
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ld1	{ v0.2s }, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ld1	{ v0.2s }, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -712,31 +688,28 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [0.1] - V2UnitB
 # CHECK-NEXT: [1.0] - V2UnitD
 # CHECK-NEXT: [1.1] - V2UnitD
-# CHECK-NEXT: [2.0] - V2UnitFlg
-# CHECK-NEXT: [2.1] - V2UnitFlg
-# CHECK-NEXT: [2.2] - V2UnitFlg
-# CHECK-NEXT: [3]   - V2UnitL2
-# CHECK-NEXT: [4.0] - V2UnitL01
-# CHECK-NEXT: [4.1] - V2UnitL01
-# CHECK-NEXT: [5]   - V2UnitM0
-# CHECK-NEXT: [6]   - V2UnitM1
-# CHECK-NEXT: [7]   - V2UnitS0
-# CHECK-NEXT: [8]   - V2UnitS1
-# CHECK-NEXT: [9]   - V2UnitS2
-# CHECK-NEXT: [10]  - V2UnitS3
-# CHECK-NEXT: [11]  - V2UnitV0
-# CHECK-NEXT: [12]  - V2UnitV1
-# CHECK-NEXT: [13]  - V2UnitV2
-# CHECK-NEXT: [14]  - V2UnitV3
+# CHECK-NEXT: [2]   - V2UnitL2
+# CHECK-NEXT: [3.0] - V2UnitL01
+# CHECK-NEXT: [3.1] - V2UnitL01
+# CHECK-NEXT: [4]   - V2UnitM0
+# CHECK-NEXT: [5]   - V2UnitM1
+# CHECK-NEXT: [6]   - V2UnitS0
+# CHECK-NEXT: [7]   - V2UnitS1
+# CHECK-NEXT: [8]   - V2UnitS2
+# CHECK-NEXT: [9]   - V2UnitS3
+# CHECK-NEXT: [10]  - V2UnitV0
+# CHECK-NEXT: [11]  - V2UnitV1
+# CHECK-NEXT: [12]  - V2UnitV2
+# CHECK-NEXT: [13]  - V2UnitV3
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -     0.25   0.25   0.25   0.25
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ld1	{ v0.1d }, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -     ld1	{ v0.1d }, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -791,31 +764,28 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [0.1] - V2UnitB
 # CHECK-NEXT: [1.0] - V2UnitD
 # CHECK-NEXT: [1.1] - V2UnitD
-# CHECK-NEXT: [2.0] - V2UnitFlg
-# CHECK-NEXT: [2.1] - V2UnitFlg
-# CHECK-NEXT: [2.2] - V2UnitFlg
-# CHECK-NEXT: [3]   - V2UnitL2
-# CHECK-NEXT: [4.0] - V2UnitL01
-# CHECK-NEXT: [4.1] - V2UnitL01
-# CHECK-NEXT: [5]   - V2UnitM0
-# CHECK-NEXT: [6]   - V2UnitM1
-# CHECK-NEXT: [7]   - V2UnitS0
-# CHECK-NEXT: [8]   - V2UnitS1
-# CHECK-NEXT: [9]   - V2UnitS2
-# CHECK-NEXT: [10]  - V2UnitS3
-# CHECK-NEXT: [11]  - V2UnitV0
-# CHECK-NEXT: [12]  - V2UnitV1
-# CHECK-NEXT: [13]  - V2UnitV2
-# CHECK-NEXT: [14]  - V2UnitV3
+# CHECK-NEXT: [2]   - V2UnitL2
+# CHECK-NEXT: [3.0] - V2UnitL01
+# CHECK-NEXT: [3.1] - V2UnitL01
+# CHECK-NEXT: [4]   - V2UnitM0
+# CHECK-NEXT: [5]   - V2UnitM1
+# CHECK-NEXT: [6]   - V2UnitS0
+# CHECK-NEXT: [7]   - V2UnitS1
+# CHECK-NEXT: [8]   - V2UnitS2
+# CHECK-NEXT: [9]   - V2UnitS3
+# CHECK-NEXT: [10]  - V2UnitV0
+# CHECK-NEXT: [11]  - V2UnitV1
+# CHECK-NEXT: [12]  - V2UnitV2
+# CHECK-NEXT: [13]  - V2UnitV3
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     0.33   1.00   0.33   0.34
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -     0.33   1.00   0.33   0.34
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     1.00    -      -     insr	z0.s, w0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.33    -     0.33   0.34   add	z0.s, z0.s, z0.s
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     1.00    -      -     insr	z0.s, w0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.33    -     0.33   0.34   add	z0.s, z0.s, z0.s
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789          01234

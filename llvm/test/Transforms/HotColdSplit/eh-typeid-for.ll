@@ -6,9 +6,9 @@
 
 ; CHECK-LABEL: @fun
 ; CHECK-NOT: call {{.*}}@fun.cold.1
-define void @fun(i1 %arg) {
+define void @fun() {
 entry:
-  br i1 %arg, label %if.then, label %if.else
+  br i1 undef, label %if.then, label %if.else
 
 if.then:
   ret void

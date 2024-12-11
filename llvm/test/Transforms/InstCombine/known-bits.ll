@@ -1334,7 +1334,7 @@ define i8 @nonzero_reduce_xor_vscale_even(<vscale x 2 x i8> %xx) {
 
 define i8 @nonzero_reduce_xor_vscale_odd_fail(<vscale x 3 x i8> %xx) {
 ; CHECK-LABEL: @nonzero_reduce_xor_vscale_odd_fail(
-; CHECK-NEXT:    [[X:%.*]] = or <vscale x 3 x i8> [[XX:%.*]], splat (i8 1)
+; CHECK-NEXT:    [[X:%.*]] = or <vscale x 3 x i8> [[XX:%.*]], shufflevector (<vscale x 3 x i8> insertelement (<vscale x 3 x i8> poison, i8 1, i64 0), <vscale x 3 x i8> poison, <vscale x 3 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.xor.nxv3i8(<vscale x 3 x i8> [[X]])
 ; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 1
 ; CHECK-NEXT:    ret i8 [[R]]
@@ -1349,7 +1349,7 @@ define i8 @nonzero_reduce_xor_vscale_odd_fail(<vscale x 3 x i8> %xx) {
 
 define i8 @nonzero_reduce_xor_vscale_even_fail(<vscale x 2 x i8> %xx) {
 ; CHECK-LABEL: @nonzero_reduce_xor_vscale_even_fail(
-; CHECK-NEXT:    [[X:%.*]] = or <vscale x 2 x i8> [[XX:%.*]], splat (i8 1)
+; CHECK-NEXT:    [[X:%.*]] = or <vscale x 2 x i8> [[XX:%.*]], shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> poison, i8 1, i64 0), <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.xor.nxv2i8(<vscale x 2 x i8> [[X]])
 ; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 2
 ; CHECK-NEXT:    ret i8 [[R]]

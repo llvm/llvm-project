@@ -8,6 +8,7 @@
 
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/Support/Process.h"
 

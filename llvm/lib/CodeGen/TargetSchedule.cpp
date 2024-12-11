@@ -25,6 +25,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
 #include <numeric>
 
 using namespace llvm;

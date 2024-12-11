@@ -182,14 +182,12 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
 #define HANDLE_EXTENSION(Ext)                                                  \
   llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
 #include "llvm/Support/Extension.def"
-#undef HANDLE_EXTENSION
 
 static void RegisterPassPlugins(ArrayRef<std::string> PassPlugins,
                                 PassBuilder &PB) {
 #define HANDLE_EXTENSION(Ext)                                                  \
   get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
 #include "llvm/Support/Extension.def"
-#undef HANDLE_EXTENSION
 
   // Load requested pass plugins and let them register pass builder callbacks
   for (auto &PluginFN : PassPlugins) {

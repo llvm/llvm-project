@@ -72,10 +72,6 @@ public:
   bool refs(const RefsRequest &Req,
             llvm::function_ref<void(const Ref &)> Callback) const override;
 
-  bool containedRefs(const ContainedRefsRequest &Req,
-                     llvm::function_ref<void(const ContainedRefsResult &)>
-                         Callback) const override;
-
   void relations(const RelationsRequest &Req,
                  llvm::function_ref<void(const SymbolID &, const Symbol &)>
                      Callback) const override;
@@ -97,7 +93,7 @@ private:
   // Set of files which were used during this index build.
   llvm::StringSet<> Files;
   // Contents of the index (symbols, references, etc.)
-  IndexContents IdxContents = IndexContents::None;
+  IndexContents IdxContents;
   std::shared_ptr<void> KeepAlive; // poor man's move-only std::any
   // Size of memory retained by KeepAlive.
   size_t BackingDataSize = 0;

@@ -83,6 +83,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cassert>
+#include <cstdint>
 #include <memory>
 
 using namespace llvm;

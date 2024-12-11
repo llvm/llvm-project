@@ -463,7 +463,7 @@ void MCStreamer::emitCFIStartProc(bool IsSimple, SMLoc Loc) {
   }
 
   FrameInfoStack.emplace_back(DwarfFrameInfos.size(), getCurrentSectionOnly());
-  DwarfFrameInfos.push_back(std::move(Frame));
+  DwarfFrameInfos.push_back(Frame);
 }
 
 void MCStreamer::emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) {
@@ -483,20 +483,6 @@ void MCStreamer::emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) {
   Frame.End = (MCSymbol *)1;
 }
 
-MCSymbol *MCStreamer::emitLineTableLabel() {
-  // Create a label and insert it into the line table and return this label
-  const MCDwarfLoc &DwarfLoc = getContext().getCurrentDwarfLoc();
-
-  MCSymbol *LineStreamLabel = getContext().createTempSymbol();
-  MCDwarfLineEntry LabelLineEntry(nullptr, DwarfLoc, LineStreamLabel);
-  getContext()
-      .getMCDwarfLineTable(getContext().getDwarfCompileUnitID())
-      .getMCLineSections()
-      .addLineEntry(LabelLineEntry, getCurrentSectionOnly() /*Section*/);
-
-  return LineStreamLabel;
-}
-
 MCSymbol *MCStreamer::emitCFILabel() {
   // Return a dummy non-null value so that label fields appear filled in when
   // generating textual assembly.
@@ -510,7 +496,7 @@ void MCStreamer::emitCFIDefCfa(int64_t Register, int64_t Offset, SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(std::move(Instruction));
+  CurFrame->Instructions.push_back(Instruction);
   CurFrame->CurrentCfaRegister = static_cast<unsigned>(Register);
 }
 
@@ -521,7 +507,7 @@ void MCStreamer::emitCFIDefCfaOffset(int64_t Offset, SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(std::move(Instruction));
+  CurFrame->Instructions.push_back(Instruction);
 }
 
 void MCStreamer::emitCFIAdjustCfaOffset(int64_t Adjustment, SMLoc Loc) {
@@ -531,7 +517,7 @@ void MCStreamer::emitCFIAdjustCfaOffset(int64_t Adjustment, SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(std::move(Instruction));
+  CurFrame->Instructions.push_back(Instruction);
 }
 
 void MCStreamer::emitCFIDefCfaRegister(int64_t Register, SMLoc Loc) {
@@ -541,7 +527,7 @@ void MCStreamer::emitCFIDefCfaRegister(int64_t Register, SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(std::move(Instruction));
+  CurFrame->Instructions.push_back(Instruction);
   CurFrame->CurrentCfaRegister = static_cast<unsigned>(Register);
 }
 
@@ -553,7 +539,7 @@ void MCStreamer::emitCFILLVMDefAspaceCfa(int64_t Register, int64_t Offset,
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(std::move(Instruction));
+  CurFrame->Instructions.push_back(Instruction);
   CurFrame->CurrentCfaRegister = static_cast<unsigned>(Register);
 }
 
@@ -564,7 +550,7 @@ void MCStreamer::emitCFIOffset(int64_t Register, int64_t Offset, SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(std::move(Instruction));
+  CurFrame->Instructions.push_back(Instruction);
 }
 
 void MCStreamer::emitCFIRelOffset(int64_t Register, int64_t Offset, SMLoc Loc) {
@@ -574,7 +560,7 @@ void MCStreamer::emitCFIRelOffset(int64_t Register, int64_t Offset, SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(std::move(Instruction));
+  CurFrame->Instructions.push_back(Instruction);
 }
 
 void MCStreamer::emitCFIPersonality(const MCSymbol *Sym,
@@ -601,7 +587,7 @@ void MCStreamer::emitCFIRememberState(SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(std::move(Instruction));
+  CurFrame->Instructions.push_back(Instruction);
 }
 
 void MCStreamer::emitCFIRestoreState(SMLoc Loc) {
@@ -612,7 +598,7 @@ void MCStreamer::emitCFIRestoreState(SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(std::move(Instruction));
+  CurFrame->Instructions.push_back(Instruction);
 }
 
 void MCStreamer::emitCFISameValue(int64_t Register, SMLoc Loc) {
@@ -622,7 +608,7 @@ void MCStreamer::emitCFISameValue(int64_t Register, SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(std::move(Instruction));
+  CurFrame->Instructions.push_back(Instruction);
 }
 
 void MCStreamer::emitCFIRestore(int64_t Register, SMLoc Loc) {
@@ -632,7 +618,7 @@ void MCStreamer::emitCFIRestore(int64_t Register, SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(std::move(Instruction));
+  CurFrame->Instructions.push_back(Instruction);
 }
 
 void MCStreamer::emitCFIEscape(StringRef Values, SMLoc Loc) {
@@ -642,7 +628,7 @@ void MCStreamer::emitCFIEscape(StringRef Values, SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(std::move(Instruction));
+  CurFrame->Instructions.push_back(Instruction);
 }
 
 void MCStreamer::emitCFIGnuArgsSize(int64_t Size, SMLoc Loc) {
@@ -652,7 +638,7 @@ void MCStreamer::emitCFIGnuArgsSize(int64_t Size, SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(std::move(Instruction));
+  CurFrame->Instructions.push_back(Instruction);
 }
 
 void MCStreamer::emitCFISignalFrame() {
@@ -669,7 +655,7 @@ void MCStreamer::emitCFIUndefined(int64_t Register, SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(std::move(Instruction));
+  CurFrame->Instructions.push_back(Instruction);
 }
 
 void MCStreamer::emitCFIRegister(int64_t Register1, int64_t Register2,
@@ -680,7 +666,7 @@ void MCStreamer::emitCFIRegister(int64_t Register1, int64_t Register2,
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(std::move(Instruction));
+  CurFrame->Instructions.push_back(Instruction);
 }
 
 void MCStreamer::emitCFIWindowSave(SMLoc Loc) {
@@ -689,7 +675,7 @@ void MCStreamer::emitCFIWindowSave(SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(std::move(Instruction));
+  CurFrame->Instructions.push_back(Instruction);
 }
 
 void MCStreamer::emitCFINegateRAState(SMLoc Loc) {
@@ -699,7 +685,7 @@ void MCStreamer::emitCFINegateRAState(SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(std::move(Instruction));
+  CurFrame->Instructions.push_back(Instruction);
 }
 
 void MCStreamer::emitCFINegateRAStateWithPC(SMLoc Loc) {
@@ -709,7 +695,7 @@ void MCStreamer::emitCFINegateRAStateWithPC(SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(std::move(Instruction));
+  CurFrame->Instructions.push_back(Instruction);
 }
 
 void MCStreamer::emitCFIReturnColumn(int64_t Register) {
@@ -733,7 +719,7 @@ void MCStreamer::emitCFIValOffset(int64_t Register, int64_t Offset, SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
-  CurFrame->Instructions.push_back(std::move(Instruction));
+  CurFrame->Instructions.push_back(Instruction);
 }
 
 WinEH::FrameInfo *MCStreamer::EnsureValidWinFrameInfo(SMLoc Loc) {

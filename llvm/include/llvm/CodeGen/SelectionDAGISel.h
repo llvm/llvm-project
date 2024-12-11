@@ -315,7 +315,7 @@ public:
     OPC_MorphNodeTo1GlueOutput,
     OPC_MorphNodeTo2GlueOutput,
     OPC_CompleteMatch,
-    // Contains 32-bit offset in table for pattern being selected
+    // Contains offset in table for pattern being selected
     OPC_Coverage
   };
 

@@ -15,17 +15,9 @@ Region::Region(Context &Ctx) : Ctx(Ctx) {
   LLVMContext &LLVMCtx = Ctx.LLVMCtx;
   auto *RegionStrMD = MDString::get(LLVMCtx, RegionStr);
   RegionMDN = MDNode::getDistinct(LLVMCtx, {RegionStrMD});
-
-  CreateInstCB = Ctx.registerCreateInstrCallback(
-      [this](Instruction *NewInst) { add(NewInst); });
-  EraseInstCB = Ctx.registerEraseInstrCallback(
-      [this](Instruction *ErasedInst) { remove(ErasedInst); });
 }
 
-Region::~Region() {
-  Ctx.unregisterCreateInstrCallback(CreateInstCB);
-  Ctx.unregisterEraseInstrCallback(EraseInstCB);
-}
+Region::~Region() {}
 
 void Region::add(Instruction *I) {
   Insts.insert(I);

@@ -19,7 +19,6 @@
 #include "llvm/ExecutionEngine/Orc/Shared/AllocationActions.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
-#include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
@@ -321,15 +320,12 @@ public:
   using OnFinalizedFunction =
       JITLinkMemoryManager::InFlightAlloc::OnFinalizedFunction;
 
-  static void Create(JITLinkMemoryManager &MemMgr,
-                     std::shared_ptr<orc::SymbolStringPool> SSP,
-                     const JITLinkDylib *JD, SegmentMap Segments,
-                     OnCreatedFunction OnCreated);
+  static void Create(JITLinkMemoryManager &MemMgr, const JITLinkDylib *JD,
+                     SegmentMap Segments, OnCreatedFunction OnCreated);
 
-  static Expected<SimpleSegmentAlloc>
-  Create(JITLinkMemoryManager &MemMgr,
-         std::shared_ptr<orc::SymbolStringPool> SSP, const JITLinkDylib *JD,
-         SegmentMap Segments);
+  static Expected<SimpleSegmentAlloc> Create(JITLinkMemoryManager &MemMgr,
+                                             const JITLinkDylib *JD,
+                                             SegmentMap Segments);
 
   SimpleSegmentAlloc(SimpleSegmentAlloc &&);
   SimpleSegmentAlloc &operator=(SimpleSegmentAlloc &&);

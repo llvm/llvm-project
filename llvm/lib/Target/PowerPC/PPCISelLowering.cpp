@@ -34,6 +34,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -47,6 +48,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -73,6 +75,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCSymbolXCOFF.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -197,14 +200,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   }
 
   setOperationAction(ISD::UADDO, RegVT, Custom);
-
-  // On P10, the default lowering generates better code using the
-  // setbc instruction.
-  if (!Subtarget.hasP10Vector()) {
-    setOperationAction(ISD::SSUBO, MVT::i32, Custom);
-    if (isPPC64)
-      setOperationAction(ISD::SSUBO, MVT::i64, Custom);
-  }
 
   // Match BITREVERSE to customized fast code sequence in the td file.
   setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
@@ -1638,14 +1633,14 @@ static void getMaxByValAlign(Type *Ty, Align &MaxAlign, Align MaxMaxAlign) {
 
 /// getByValTypeAlignment - Return the desired alignment for ByVal aggregate
 /// function arguments in the caller parameter area.
-Align PPCTargetLowering::getByValTypeAlignment(Type *Ty,
-                                               const DataLayout &DL) const {
+uint64_t PPCTargetLowering::getByValTypeAlignment(Type *Ty,
+                                                  const DataLayout &DL) const {
   // 16byte and wider vectors are passed on 16byte boundary.
   // The rest is 8 on PPC64 and 4 on PPC32 boundary.
   Align Alignment = Subtarget.isPPC64() ? Align(8) : Align(4);
   if (Subtarget.hasAltivec())
     getMaxByValAlign(Ty, Alignment, Align(16));
-  return Alignment;
+  return Alignment.value();
 }
 
 bool PPCTargetLowering::useSoftFloat() const {
@@ -1850,10 +1845,6 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::LXVRZX:          return "PPCISD::LXVRZX";
   case PPCISD::STORE_COND:
     return "PPCISD::STORE_COND";
-  case PPCISD::SETBC:
-    return "PPCISD::SETBC";
-  case PPCISD::SETBCR:
-    return "PPCISD::SETBCR";
   }
   return nullptr;
 }
@@ -2641,7 +2632,7 @@ SDValue PPC::get_VSPLTI_elt(SDNode *N, unsigned ByteSize, SelectionDAG &DAG) {
 
   // Finally, if this value fits in a 5 bit sext field, return it
   if (SignExtend32<5>(MaskVal) == MaskVal)
-    return DAG.getSignedTargetConstant(MaskVal, SDLoc(N), MVT::i32);
+    return DAG.getTargetConstant(MaskVal, SDLoc(N), MVT::i32);
   return SDValue();
 }
 
@@ -2706,7 +2697,7 @@ bool llvm::isIntS34Immediate(SDNode *N, int64_t &Imm) {
   if (!isa<ConstantSDNode>(N))
     return false;
 
-  Imm = (int64_t)cast<ConstantSDNode>(N)->getSExtValue();
+  Imm = (int64_t)N->getAsZExtVal();
   return isInt<34>(Imm);
 }
 bool llvm::isIntS34Immediate(SDValue Op, int64_t &Imm) {
@@ -2829,7 +2820,7 @@ bool PPCTargetLowering::SelectAddressRegImm(
     int16_t imm = 0;
     if (isIntS16Immediate(N.getOperand(1), imm) &&
         (!EncodingAlignment || isAligned(*EncodingAlignment, imm))) {
-      Disp = DAG.getSignedTargetConstant(imm, dl, N.getValueType());
+      Disp = DAG.getTargetConstant(imm, dl, N.getValueType());
       if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(N.getOperand(0))) {
         Base = DAG.getTargetFrameIndex(FI->getIndex(), N.getValueType());
         fixupFuncForFI(DAG, FI->getIndex(), N.getValueType());
@@ -2928,7 +2919,7 @@ bool PPCTargetLowering::SelectAddressRegImm34(SDValue N, SDValue &Disp,
   if (N.getOpcode() == ISD::ADD) {
     if (!isIntS34Immediate(N.getOperand(1), Imm))
       return false;
-    Disp = DAG.getSignedTargetConstant(Imm, dl, N.getValueType());
+    Disp = DAG.getTargetConstant(Imm, dl, N.getValueType());
     if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(N.getOperand(0)))
       Base = DAG.getTargetFrameIndex(FI->getIndex(), N.getValueType());
     else
@@ -2949,12 +2940,12 @@ bool PPCTargetLowering::SelectAddressRegImm34(SDValue N, SDValue &Disp,
       Base = DAG.getTargetFrameIndex(FI->getIndex(), N.getValueType());
     else
       Base = N.getOperand(0);
-    Disp = DAG.getSignedTargetConstant(Imm, dl, N.getValueType());
+    Disp = DAG.getTargetConstant(Imm, dl, N.getValueType());
     return true;
   }
 
   if (isIntS34Immediate(N, Imm)) { // If the address is a 34-bit const.
-    Disp = DAG.getSignedTargetConstant(Imm, dl, N.getValueType());
+    Disp = DAG.getTargetConstant(Imm, dl, N.getValueType());
     Base = DAG.getRegister(PPC::ZERO8, N.getValueType());
     return true;
   }
@@ -5193,7 +5184,7 @@ static SDNode *isBLACompatibleAddress(SDValue Op, SelectionDAG &DAG) {
     return nullptr;  // Top 6 bits have to be sext of immediate.
 
   return DAG
-      .getSignedConstant(
+      .getConstant(
           (int)C->getZExtValue() >> 2, SDLoc(Op),
           DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout()))
       .getNode();
@@ -8975,10 +8966,9 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
 
     if (Op.getValueType() == MVT::f32 && !Subtarget.hasFPCVT()) {
       if (IsStrict)
-        FP = DAG.getNode(
-            ISD::STRICT_FP_ROUND, dl, DAG.getVTList(MVT::f32, MVT::Other),
-            {Chain, FP, DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)},
-            Flags);
+        FP = DAG.getNode(ISD::STRICT_FP_ROUND, dl,
+                         DAG.getVTList(MVT::f32, MVT::Other),
+                         {Chain, FP, DAG.getIntPtrConstant(0, dl)}, Flags);
       else
         FP = DAG.getNode(ISD::FP_ROUND, dl, MVT::f32, FP,
                          DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
@@ -9057,9 +9047,9 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
     Chain = FP.getValue(1);
   if (Op.getValueType() == MVT::f32 && !Subtarget.hasFPCVT()) {
     if (IsStrict)
-      FP = DAG.getNode(
-          ISD::STRICT_FP_ROUND, dl, DAG.getVTList(MVT::f32, MVT::Other),
-          {Chain, FP, DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)}, Flags);
+      FP = DAG.getNode(ISD::STRICT_FP_ROUND, dl,
+                       DAG.getVTList(MVT::f32, MVT::Other),
+                       {Chain, FP, DAG.getIntPtrConstant(0, dl)}, Flags);
     else
       FP = DAG.getNode(ISD::FP_ROUND, dl, MVT::f32, FP,
                        DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
@@ -9371,11 +9361,7 @@ static SDValue getCanonicalConstSplat(uint64_t Val, unsigned SplatSize, EVT VT,
   EVT CanonicalVT = VTys[SplatSize-1];
 
   // Build a canonical splat for this value.
-  // Explicitly truncate APInt here, as this API is used with a mix of
-  // signed and unsigned values.
-  return DAG.getBitcast(
-      ReqVT,
-      DAG.getConstant(APInt(64, Val).trunc(SplatSize * 8), dl, CanonicalVT));
+  return DAG.getBitcast(ReqVT, DAG.getConstant(Val, dl, CanonicalVT));
 }
 
 /// BuildIntrinsicOp - Return a unary operator intrinsic node with the
@@ -9786,7 +9772,7 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     // To avoid having these optimizations undone by constant folding,
     // we convert to a pseudo that will be expanded later into one of
     // the above forms.
-    SDValue Elt = DAG.getSignedConstant(SextVal, dl, MVT::i32);
+    SDValue Elt = DAG.getConstant(SextVal, dl, MVT::i32);
     EVT VT = (SplatSize == 1 ? MVT::v16i8 :
               (SplatSize == 2 ? MVT::v8i16 : MVT::v4i32));
     SDValue EltSize = DAG.getConstant(SplatSize, dl, MVT::i32);
@@ -11268,54 +11254,30 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   EVT VTs[] = { Op.getOperand(2).getValueType(), MVT::Glue };
   SDValue CompNode = DAG.getNode(PPCISD::VCMP_rec, dl, VTs, Ops);
 
-  // Unpack the result based on how the target uses it.
-  unsigned BitNo; // Bit # of CR6.
-  bool InvertBit; // Invert result?
-  unsigned Bitx;
-  unsigned SetOp;
-  switch (Op.getConstantOperandVal(1)) {
-  default: // Can't happen, don't crash on invalid number though.
-  case 0:  // Return the value of the EQ bit of CR6.
-    BitNo = 0;
-    InvertBit = false;
-    Bitx = PPC::sub_eq;
-    SetOp = PPCISD::SETBC;
-    break;
-  case 1: // Return the inverted value of the EQ bit of CR6.
-    BitNo = 0;
-    InvertBit = true;
-    Bitx = PPC::sub_eq;
-    SetOp = PPCISD::SETBCR;
-    break;
-  case 2: // Return the value of the LT bit of CR6.
-    BitNo = 2;
-    InvertBit = false;
-    Bitx = PPC::sub_lt;
-    SetOp = PPCISD::SETBC;
-    break;
-  case 3: // Return the inverted value of the LT bit of CR6.
-    BitNo = 2;
-    InvertBit = true;
-    Bitx = PPC::sub_lt;
-    SetOp = PPCISD::SETBCR;
-    break;
-  }
-
-  SDValue GlueOp = CompNode.getValue(1);
-  if (Subtarget.isISA3_1()) {
-    SDValue SubRegIdx = DAG.getTargetConstant(Bitx, dl, MVT::i32);
-    SDValue CR6Reg = DAG.getRegister(PPC::CR6, MVT::i32);
-    SDValue CRBit =
-        SDValue(DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::i1,
-                                   CR6Reg, SubRegIdx, GlueOp),
-                0);
-    return DAG.getNode(SetOp, dl, MVT::i32, CRBit);
-  }
-
   // Now that we have the comparison, emit a copy from the CR to a GPR.
   // This is flagged to the above dot comparison.
   SDValue Flags = DAG.getNode(PPCISD::MFOCRF, dl, MVT::i32,
-                              DAG.getRegister(PPC::CR6, MVT::i32), GlueOp);
+                                DAG.getRegister(PPC::CR6, MVT::i32),
+                                CompNode.getValue(1));
+
+  // Unpack the result based on how the target uses it.
+  unsigned BitNo;   // Bit # of CR6.
+  bool InvertBit;   // Invert result?
+  switch (Op.getConstantOperandVal(1)) {
+  default:  // Can't happen, don't crash on invalid number though.
+  case 0:   // Return the value of the EQ bit of CR6.
+    BitNo = 0; InvertBit = false;
+    break;
+  case 1:   // Return the inverted value of the EQ bit of CR6.
+    BitNo = 0; InvertBit = true;
+    break;
+  case 2:   // Return the value of the LT bit of CR6.
+    BitNo = 2; InvertBit = false;
+    break;
+  case 3:   // Return the inverted value of the LT bit of CR6.
+    BitNo = 2; InvertBit = true;
+    break;
+  }
 
   // Shift the bit into the low position.
   Flags = DAG.getNode(ISD::SRL, dl, MVT::i32, Flags,
@@ -12049,30 +12011,6 @@ SDValue PPCTargetLowering::LowerUaddo(SDValue Op, SelectionDAG &DAG) const {
   return Res;
 }
 
-SDValue PPCTargetLowering::LowerSSUBO(SDValue Op, SelectionDAG &DAG) const {
-
-  SDLoc dl(Op);
-  SDValue LHS = Op.getOperand(0);
-  SDValue RHS = Op.getOperand(1);
-  EVT VT = Op.getNode()->getValueType(0);
-
-  SDValue Sub = DAG.getNode(ISD::SUB, dl, VT, LHS, RHS);
-
-  SDValue Xor1 = DAG.getNode(ISD::XOR, dl, VT, RHS, LHS);
-  SDValue Xor2 = DAG.getNode(ISD::XOR, dl, VT, Sub, LHS);
-
-  SDValue And = DAG.getNode(ISD::AND, dl, VT, Xor1, Xor2);
-
-  SDValue Overflow =
-      DAG.getNode(ISD::SRL, dl, VT, And,
-                  DAG.getConstant(VT.getSizeInBits() - 1, dl, MVT::i32));
-
-  SDValue OverflowTrunc =
-      DAG.getNode(ISD::TRUNCATE, dl, Op.getNode()->getValueType(1), Overflow);
-
-  return DAG.getMergeValues({Sub, OverflowTrunc}, dl);
-}
-
 /// LowerOperation - Provide custom lowering hooks for some operations.
 ///
 SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
@@ -12095,8 +12033,6 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SETCC:              return LowerSETCC(Op, DAG);
   case ISD::INIT_TRAMPOLINE:    return LowerINIT_TRAMPOLINE(Op, DAG);
   case ISD::ADJUST_TRAMPOLINE:  return LowerADJUST_TRAMPOLINE(Op, DAG);
-  case ISD::SSUBO:
-    return LowerSSUBO(Op, DAG);
 
   case ISD::INLINEASM:
   case ISD::INLINEASM_BR:       return LowerINLINEASM(Op, DAG);
@@ -18834,7 +18770,7 @@ SDValue PPCTargetLowering::lowerToLibCall(const char *LibCallName, SDValue Op,
   Type *RetTy = RetVT.getTypeForEVT(*DAG.getContext());
   SDValue Callee =
       DAG.getExternalSymbol(LibCallName, TLI.getPointerTy(DAG.getDataLayout()));
-  bool SignExtend = TLI.shouldSignExtendTypeInLibCall(RetTy, false);
+  bool SignExtend = TLI.shouldSignExtendTypeInLibCall(RetVT, false);
   TargetLowering::ArgListTy Args;
   TargetLowering::ArgListEntry Entry;
   for (const SDValue &N : Op->op_values()) {
@@ -18842,7 +18778,7 @@ SDValue PPCTargetLowering::lowerToLibCall(const char *LibCallName, SDValue Op,
     Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
     Entry.Node = N;
     Entry.Ty = ArgTy;
-    Entry.IsSExt = TLI.shouldSignExtendTypeInLibCall(ArgTy, SignExtend);
+    Entry.IsSExt = TLI.shouldSignExtendTypeInLibCall(ArgVT, SignExtend);
     Entry.IsZExt = !Entry.IsSExt;
     Args.push_back(Entry);
   }
@@ -18990,7 +18926,7 @@ PPC::AddrMode PPCTargetLowering::SelectOptimalAddrMode(const SDNode *Parent,
       SDValue Op1 = N.getOperand(1);
       int16_t Imm = Op1->getAsZExtVal();
       if (!Align || isAligned(*Align, Imm)) {
-        Disp = DAG.getSignedTargetConstant(Imm, DL, N.getValueType());
+        Disp = DAG.getTargetConstant(Imm, DL, N.getValueType());
         Base = Op0;
         if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Op0)) {
           Base = DAG.getTargetFrameIndex(FI->getIndex(), N.getValueType());
@@ -19021,7 +18957,7 @@ PPC::AddrMode PPCTargetLowering::SelectOptimalAddrMode(const SDNode *Parent,
       // this as "d, 0".
       int16_t Imm;
       if (isIntS16Immediate(CN, Imm) && (!Align || isAligned(*Align, Imm))) {
-        Disp = DAG.getSignedTargetConstant(Imm, DL, CNType);
+        Disp = DAG.getTargetConstant(Imm, DL, CNType);
         Base = DAG.getRegister(Subtarget.isPPC64() ? PPC::ZERO8 : PPC::ZERO,
                                CNType);
         break;
@@ -19031,7 +18967,7 @@ PPC::AddrMode PPCTargetLowering::SelectOptimalAddrMode(const SDNode *Parent,
           (!Align || isAligned(*Align, CNImm))) {
         int32_t Addr = (int32_t)CNImm;
         // Otherwise, break this down into LIS + Disp.
-        Disp = DAG.getSignedTargetConstant((int16_t)Addr, DL, MVT::i32);
+        Disp = DAG.getTargetConstant((int16_t)Addr, DL, MVT::i32);
         Base =
             DAG.getTargetConstant((Addr - (int16_t)Addr) >> 16, DL, MVT::i32);
         uint32_t LIS = CNType == MVT::i32 ? PPC::LIS : PPC::LIS8;
@@ -19054,14 +18990,14 @@ PPC::AddrMode PPCTargetLowering::SelectOptimalAddrMode(const SDNode *Parent,
     if (((Opcode == ISD::ADD) || (Opcode == ISD::OR)) &&
         (isIntS34Immediate(N.getOperand(1), Imm34))) {
       // N is an Add/OR Node, and it's operand is a 34-bit signed immediate.
-      Disp = DAG.getSignedTargetConstant(Imm34, DL, N.getValueType());
+      Disp = DAG.getTargetConstant(Imm34, DL, N.getValueType());
       if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(N.getOperand(0)))
         Base = DAG.getTargetFrameIndex(FI->getIndex(), N.getValueType());
       else
         Base = N.getOperand(0);
     } else if (isIntS34Immediate(N, Imm34)) {
       // The address is a 34-bit signed immediate.
-      Disp = DAG.getSignedTargetConstant(Imm34, DL, N.getValueType());
+      Disp = DAG.getTargetConstant(Imm34, DL, N.getValueType());
       Base = DAG.getRegister(PPC::ZERO8, N.getValueType());
     }
     break;

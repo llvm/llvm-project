@@ -12,6 +12,9 @@
 
 #include "JITLinkGeneric.h"
 
+#include "llvm/Support/BinaryStreamReader.h"
+#include "llvm/Support/MemoryBuffer.h"
+
 #define DEBUG_TYPE "jitlink"
 
 namespace llvm {
@@ -211,7 +214,8 @@ JITLinkContext::LookupMap JITLinkerBase::getExternalSymbolNames() const {
   for (auto *Sym : G->external_symbols()) {
     assert(!Sym->getAddress() &&
            "External has already been assigned an address");
-    assert(Sym->hasName() && "Externals must be named");
+    assert(Sym->getName() != StringRef() && Sym->getName() != "" &&
+           "Externals must be named");
     SymbolLookupFlags LookupFlags =
         Sym->isWeaklyReferenced() ? SymbolLookupFlags::WeaklyReferencedSymbol
                                   : SymbolLookupFlags::RequiredSymbol;
@@ -252,9 +256,7 @@ void JITLinkerBase::applyLookupResult(AsyncLookupResult Result) {
       }
       switch (Sym->getScope()) {
       case Scope::Local:
-      case Scope::SideEffectsOnly:
-        llvm_unreachable("External symbol should not have local or "
-                         "side-effects-only linkage");
+        llvm_unreachable("External symbol should not have local linkage");
       case Scope::Hidden:
         break;
       case Scope::Default:

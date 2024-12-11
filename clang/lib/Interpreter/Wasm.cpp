@@ -23,31 +23,6 @@
 #include <string>
 
 namespace lld {
-enum Flavor {
-  Invalid,
-  Gnu,     // -flavor gnu
-  MinGW,   // -flavor gnu MinGW
-  WinLink, // -flavor link
-  Darwin,  // -flavor darwin
-  Wasm,    // -flavor wasm
-};
-
-using Driver = bool (*)(llvm::ArrayRef<const char *>, llvm::raw_ostream &,
-                        llvm::raw_ostream &, bool, bool);
-
-struct DriverDef {
-  Flavor f;
-  Driver d;
-};
-
-struct Result {
-  int retCode;
-  bool canRunAgain;
-};
-
-Result lldMain(llvm::ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
-               llvm::raw_ostream &stderrOS, llvm::ArrayRef<DriverDef> drivers);
-
 namespace wasm {
 bool link(llvm::ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
           llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput);
@@ -76,14 +51,13 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
   llvm::TargetMachine *TargetMachine = Target->createTargetMachine(
       PTU.TheModule->getTargetTriple(), "", "", TO, llvm::Reloc::Model::PIC_);
   PTU.TheModule->setDataLayout(TargetMachine->createDataLayout());
-  std::string ObjectFileName = PTU.TheModule->getName().str() + ".o";
-  std::string BinaryFileName = PTU.TheModule->getName().str() + ".wasm";
+  std::string OutputFileName = PTU.TheModule->getName().str() + ".wasm";
 
   std::error_code Error;
-  llvm::raw_fd_ostream ObjectFileOutput(llvm::StringRef(ObjectFileName), Error);
+  llvm::raw_fd_ostream OutputFile(llvm::StringRef(OutputFileName), Error);
 
   llvm::legacy::PassManager PM;
-  if (TargetMachine->addPassesToEmitFile(PM, ObjectFileOutput, nullptr,
+  if (TargetMachine->addPassesToEmitFile(PM, OutputFile, nullptr,
                                          llvm::CodeGenFileType::ObjectFile)) {
     return llvm::make_error<llvm::StringError>(
         "Wasm backend cannot produce object.", llvm::inconvertibleErrorCode());
@@ -95,30 +69,27 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
                                                llvm::inconvertibleErrorCode());
   }
 
-  ObjectFileOutput.close();
+  OutputFile.close();
 
   std::vector<const char *> LinkerArgs = {"wasm-ld",
-                                          "-shared",
+                                          "-pie",
                                           "--import-memory",
+                                          "--no-entry",
+                                          "--export-all",
                                           "--experimental-pic",
+                                          "--no-export-dynamic",
                                           "--stack-first",
-                                          "--allow-undefined",
-                                          ObjectFileName.c_str(),
+                                          OutputFileName.c_str(),
                                           "-o",
-                                          BinaryFileName.c_str()};
-
-  const lld::DriverDef WasmDriver = {lld::Flavor::Wasm, &lld::wasm::link};
-  std::vector<lld::DriverDef> WasmDriverArgs;
-  WasmDriverArgs.push_back(WasmDriver);
-  lld::Result Result =
-      lld::lldMain(LinkerArgs, llvm::outs(), llvm::errs(), WasmDriverArgs);
-
-  if (Result.retCode)
+                                          OutputFileName.c_str()};
+  int Result =
+      lld::wasm::link(LinkerArgs, llvm::outs(), llvm::errs(), false, false);
+  if (!Result)
     return llvm::make_error<llvm::StringError>(
         "Failed to link incremental module", llvm::inconvertibleErrorCode());
 
   void *LoadedLibModule =
-      dlopen(BinaryFileName.c_str(), RTLD_NOW | RTLD_GLOBAL);
+      dlopen(OutputFileName.c_str(), RTLD_NOW | RTLD_GLOBAL);
   if (LoadedLibModule == nullptr) {
     llvm::errs() << dlerror() << '\n';
     return llvm::make_error<llvm::StringError>(
@@ -135,12 +106,6 @@ llvm::Error WasmIncrementalExecutor::removeModule(PartialTranslationUnit &PTU) {
 
 llvm::Error WasmIncrementalExecutor::runCtors() const {
   // This seems to be automatically done when using dlopen()
-  return llvm::Error::success();
-}
-
-llvm::Error WasmIncrementalExecutor::cleanUp() {
-  // Can't call cleanUp through IncrementalExecutor as it
-  // tries to deinitialize JIT which hasn't been initialized
   return llvm::Error::success();
 }
 

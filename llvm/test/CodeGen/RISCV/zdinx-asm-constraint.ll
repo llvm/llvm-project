@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+zdinx -verify-machineinstrs < %s \
 ; RUN:   -target-abi=ilp32 -mattr=+zhinx | FileCheck %s
 
-;; These tests cover the use of `r`, `R`, and `cr` constraints for floating point values on rv32.
+;; These tests cover the use of `r` and `cr` constraints for floating point values on rv32.
 ;;
 ;; In particular, there is significant complexity around using paired GPRs for double values on rv32.
 
@@ -22,62 +22,6 @@ define dso_local void @zdinx_asm(ptr nocapture noundef writeonly %a, double noun
 entry:
   %arrayidx = getelementptr inbounds double, ptr %a, i32 1
   %0 = tail call double asm "fsgnjx.d $0, $1, $2", "=r,r,r"(double %b, double %c)
-  store double %0, ptr %arrayidx, align 8
-  ret void
-}
-
-define dso_local void @zdinx_asm_R(ptr nocapture noundef writeonly %a, double noundef %b, double noundef %c) nounwind {
-; CHECK-LABEL: zdinx_asm_R:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mv a5, a4
-; CHECK-NEXT:    mv a7, a2
-; CHECK-NEXT:    mv a4, a3
-; CHECK-NEXT:    mv a6, a1
-; CHECK-NEXT:    #APP
-; CHECK-NEXT:    fsgnjx.d a2, a6, a4
-; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    sw a2, 8(a0)
-; CHECK-NEXT:    sw a3, 12(a0)
-; CHECK-NEXT:    ret
-entry:
-  %arrayidx = getelementptr inbounds double, ptr %a, i32 1
-  %0 = tail call double asm "fsgnjx.d $0, $1, $2", "=R,R,R"(double %b, double %c)
-  store double %0, ptr %arrayidx, align 8
-  ret void
-}
-
-define dso_local void @zdinx_asm_inout(ptr nocapture noundef writeonly %a, double noundef %b) nounwind {
-; CHECK-LABEL: zdinx_asm_inout:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mv a3, a2
-; CHECK-NEXT:    mv a2, a1
-; CHECK-NEXT:    #APP
-; CHECK-NEXT:    fmv.d a2, a2
-; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    sw a2, 8(a0)
-; CHECK-NEXT:    sw a3, 12(a0)
-; CHECK-NEXT:    ret
-entry:
-  %arrayidx = getelementptr inbounds double, ptr %a, i32 1
-  %0 = tail call double asm "fsgnj.d $0, $1, $1", "=r,0"(double %b)
-  store double %0, ptr %arrayidx, align 8
-  ret void
-}
-
-define dso_local void @zdinx_asm_Pr_inout(ptr nocapture noundef writeonly %a, double noundef %b) nounwind {
-; CHECK-LABEL: zdinx_asm_Pr_inout:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mv a3, a2
-; CHECK-NEXT:    mv a2, a1
-; CHECK-NEXT:    #APP
-; CHECK-NEXT:    fabs.d a2, a2
-; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    sw a2, 8(a0)
-; CHECK-NEXT:    sw a3, 12(a0)
-; CHECK-NEXT:    ret
-entry:
-  %arrayidx = getelementptr inbounds double, ptr %a, i32 1
-  %0 = tail call double asm "fsgnjx.d $0, $1, $1", "=R,0"(double %b)
   store double %0, ptr %arrayidx, align 8
   ret void
 }

@@ -10,6 +10,7 @@
 #include "AVRTargetMachine.h"
 
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/MC/MCContext.h"

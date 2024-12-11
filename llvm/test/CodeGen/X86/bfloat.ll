@@ -1983,6 +1983,8 @@ define bfloat @PR115710(fp128 %0) nounwind {
 ; X86-NEXT:    vmovaps {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    vmovups %xmm0, (%esp)
 ; X86-NEXT:    calll __trunctfbf2
+; X86-NEXT:    # kill: def $ax killed $ax def $eax
+; X86-NEXT:    vmovw %eax, %xmm0
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    retl
 ;

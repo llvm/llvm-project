@@ -9,6 +9,7 @@
 
 #include "ARM.h"
 #include "ARMInstrInfo.h"
+#include "ARMMachineFunctionInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 using namespace llvm;

@@ -35,8 +35,8 @@ using tooling::validateEditRange;
 
 namespace {
 
-struct IntLitVisitor : TestVisitor {
-  bool VisitIntegerLiteral(IntegerLiteral *Expr) override {
+struct IntLitVisitor : TestVisitor<IntLitVisitor> {
+  bool VisitIntegerLiteral(IntegerLiteral *Expr) {
     OnIntLit(Expr, Context);
     return true;
   }
@@ -44,8 +44,8 @@ struct IntLitVisitor : TestVisitor {
   std::function<void(IntegerLiteral *, ASTContext *Context)> OnIntLit;
 };
 
-struct CallsVisitor : TestVisitor {
-  bool VisitCallExpr(CallExpr *Expr) override {
+struct CallsVisitor : TestVisitor<CallsVisitor> {
+  bool VisitCallExpr(CallExpr *Expr) {
     OnCall(Expr, Context);
     return true;
   }
@@ -53,8 +53,8 @@ struct CallsVisitor : TestVisitor {
   std::function<void(CallExpr *, ASTContext *Context)> OnCall;
 };
 
-struct TypeLocVisitor : TestVisitor {
-  bool VisitTypeLoc(TypeLoc TL) override {
+struct TypeLocVisitor : TestVisitor<TypeLocVisitor> {
+  bool VisitTypeLoc(TypeLoc TL) {
     OnTypeLoc(TL, Context);
     return true;
   }
@@ -97,7 +97,7 @@ static ::testing::Matcher<CharSourceRange> AsRange(const SourceManager &SM,
 
 // Base class for visitors that expect a single match corresponding to a
 // specific annotated range.
-class AnnotatedCodeVisitor : public TestVisitor {
+template <typename T> class AnnotatedCodeVisitor : public TestVisitor<T> {
 protected:
   int MatchCount = 0;
   llvm::Annotations Code;
@@ -199,8 +199,9 @@ TEST(SourceCodeTest, getExtendedText) {
 }
 
 TEST(SourceCodeTest, maybeExtendRange_TokenRange) {
-  struct ExtendTokenRangeVisitor : AnnotatedCodeVisitor {
-    bool VisitCallExpr(CallExpr *CE) override {
+  struct ExtendTokenRangeVisitor
+      : AnnotatedCodeVisitor<ExtendTokenRangeVisitor> {
+    bool VisitCallExpr(CallExpr *CE) {
       ++MatchCount;
       EXPECT_THAT(getExtendedRange(*CE, tok::TokenKind::semi, *Context),
                   EqualsAnnotatedRange(Context, Code.range("r")));
@@ -217,8 +218,8 @@ TEST(SourceCodeTest, maybeExtendRange_TokenRange) {
 }
 
 TEST(SourceCodeTest, maybeExtendRange_CharRange) {
-  struct ExtendCharRangeVisitor : AnnotatedCodeVisitor {
-    bool VisitCallExpr(CallExpr *CE) override {
+  struct ExtendCharRangeVisitor : AnnotatedCodeVisitor<ExtendCharRangeVisitor> {
+    bool VisitCallExpr(CallExpr *CE) {
       ++MatchCount;
       CharSourceRange Call = Lexer::getAsCharRange(CE->getSourceRange(),
                                                    Context->getSourceManager(),
@@ -237,8 +238,8 @@ TEST(SourceCodeTest, maybeExtendRange_CharRange) {
 }
 
 TEST(SourceCodeTest, getAssociatedRange) {
-  struct VarDeclsVisitor : AnnotatedCodeVisitor {
-    bool VisitVarDecl(VarDecl *Decl) override { return VisitDeclHelper(Decl); }
+  struct VarDeclsVisitor : AnnotatedCodeVisitor<VarDeclsVisitor> {
+    bool VisitVarDecl(VarDecl *Decl) { return VisitDeclHelper(Decl); }
   };
   VarDeclsVisitor Visitor;
 
@@ -282,10 +283,8 @@ TEST(SourceCodeTest, getAssociatedRange) {
 }
 
 TEST(SourceCodeTest, getAssociatedRangeClasses) {
-  struct RecordDeclsVisitor : AnnotatedCodeVisitor {
-    bool VisitRecordDecl(RecordDecl *Decl) override {
-      return VisitDeclHelper(Decl);
-    }
+  struct RecordDeclsVisitor : AnnotatedCodeVisitor<RecordDeclsVisitor> {
+    bool VisitRecordDecl(RecordDecl *Decl) { return VisitDeclHelper(Decl); }
   };
   RecordDeclsVisitor Visitor;
 
@@ -298,8 +297,8 @@ TEST(SourceCodeTest, getAssociatedRangeClasses) {
 }
 
 TEST(SourceCodeTest, getAssociatedRangeClassTemplateSpecializations) {
-  struct CXXRecordDeclsVisitor : AnnotatedCodeVisitor {
-    bool VisitCXXRecordDecl(CXXRecordDecl *Decl) override {
+  struct CXXRecordDeclsVisitor : AnnotatedCodeVisitor<CXXRecordDeclsVisitor> {
+    bool VisitCXXRecordDecl(CXXRecordDecl *Decl) {
       return Decl->getTemplateSpecializationKind() !=
                  TSK_ExplicitSpecialization ||
              VisitDeclHelper(Decl);
@@ -316,10 +315,8 @@ TEST(SourceCodeTest, getAssociatedRangeClassTemplateSpecializations) {
 }
 
 TEST(SourceCodeTest, getAssociatedRangeFunctions) {
-  struct FunctionDeclsVisitor : AnnotatedCodeVisitor {
-    bool VisitFunctionDecl(FunctionDecl *Decl) override {
-      return VisitDeclHelper(Decl);
-    }
+  struct FunctionDeclsVisitor : AnnotatedCodeVisitor<FunctionDeclsVisitor> {
+    bool VisitFunctionDecl(FunctionDecl *Decl) { return VisitDeclHelper(Decl); }
   };
   FunctionDeclsVisitor Visitor;
 
@@ -331,8 +328,8 @@ TEST(SourceCodeTest, getAssociatedRangeFunctions) {
 }
 
 TEST(SourceCodeTest, getAssociatedRangeMemberTemplates) {
-  struct CXXMethodDeclsVisitor : AnnotatedCodeVisitor {
-    bool VisitCXXMethodDecl(CXXMethodDecl *Decl) override {
+  struct CXXMethodDeclsVisitor : AnnotatedCodeVisitor<CXXMethodDeclsVisitor> {
+    bool VisitCXXMethodDecl(CXXMethodDecl *Decl) {
       // Only consider the definition of the template.
       return !Decl->doesThisDeclarationHaveABody() || VisitDeclHelper(Decl);
     }
@@ -349,8 +346,8 @@ TEST(SourceCodeTest, getAssociatedRangeMemberTemplates) {
 }
 
 TEST(SourceCodeTest, getAssociatedRangeWithComments) {
-  struct VarDeclsVisitor : AnnotatedCodeVisitor {
-    bool VisitVarDecl(VarDecl *Decl) override { return VisitDeclHelper(Decl); }
+  struct VarDeclsVisitor : AnnotatedCodeVisitor<VarDeclsVisitor> {
+    bool VisitVarDecl(VarDecl *Decl) { return VisitDeclHelper(Decl); }
   };
 
   VarDeclsVisitor Visitor;
@@ -450,9 +447,9 @@ TEST(SourceCodeTest, getAssociatedRangeWithComments) {
 }
 
 TEST(SourceCodeTest, getAssociatedRangeInvalidForPartialExpansions) {
-  struct FailingVarDeclsVisitor : TestVisitor {
+  struct FailingVarDeclsVisitor : TestVisitor<FailingVarDeclsVisitor> {
     FailingVarDeclsVisitor() {}
-    bool VisitVarDecl(VarDecl *Decl) override {
+    bool VisitVarDecl(VarDecl *Decl) {
       EXPECT_TRUE(getAssociatedRange(*Decl, *Context).isInvalid());
       return true;
     }

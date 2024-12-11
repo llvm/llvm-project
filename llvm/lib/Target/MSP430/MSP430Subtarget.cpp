@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MSP430Subtarget.h"
+#include "MSP430.h"
 #include "llvm/MC/TargetRegistry.h"
 
 using namespace llvm;

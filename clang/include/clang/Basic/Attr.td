@@ -55,9 +55,6 @@ class Documentation {
   // When set, specifies that the attribute is deprecated and can optionally
   // specify a replacement attribute.
   DocDeprecated Deprecated;
-
-  // When set, specifies a label that can be used to reference the documentation.
-  string Label = "";
 }
 
 // Specifies that the attribute is explicitly omitted from the documentation,
@@ -106,9 +103,6 @@ def NonParmVar : SubsetSubject<Var,
 def NonLocalVar : SubsetSubject<Var,
                                 [{!S->hasLocalStorage()}],
                                 "variables with non-local storage">;
-def VarTmpl : SubsetSubject<Var, [{S->getDescribedVarTemplate()}],
-                            "variable templates">;
-
 def NonBitField : SubsetSubject<Field,
                                 [{!S->isBitField()}],
                                 "non-bit-field non-static data members">;
@@ -482,9 +476,6 @@ def TargetELF : TargetSpec {
 }
 def TargetELFOrMachO : TargetSpec {
   let ObjectFormats = ["ELF", "MachO"];
-}
-def TargetIFuncSupport : TargetSpec {
-  let CustomCode = [{ Target.supportsIFunc() }];
 }
 def TargetWindowsArm64EC : TargetSpec {
   let CustomCode = [{ Target.getTriple().isWindowsArm64EC() }];
@@ -1864,7 +1855,7 @@ def IBOutletCollection : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
-def IFunc : Attr, TargetSpecificAttr<TargetIFuncSupport> {
+def IFunc : Attr, TargetSpecificAttr<TargetELFOrMachO> {
   let Spellings = [GCC<"ifunc">];
   let Args = [StringArgument<"Resolver">];
   let Subjects = SubjectList<[Function]>;
@@ -1896,37 +1887,6 @@ def LifetimeBound : DeclOrTypeAttr {
   let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;
   let Documentation = [LifetimeBoundDocs];
   let SimpleHandler = 1;
-}
-
-def LifetimeCaptureBy : DeclOrTypeAttr {
-  let Spellings = [Clang<"lifetime_capture_by", 0>];
-  let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;
-  let Args = [VariadicParamOrParamIdxArgument<"Params">];
-  let Documentation = [LifetimeCaptureByDocs];
-  let AdditionalMembers = [{
-private:
-  ArrayRef<IdentifierInfo*> ArgIdents;
-  ArrayRef<SourceLocation> ArgLocs;
-
-public:
-  static constexpr int THIS = 0;
-  static constexpr int INVALID = -1;
-  static constexpr int UNKNOWN = -2;
-  static constexpr int GLOBAL = -3;
-
-  void setArgs(ArrayRef<IdentifierInfo*> Idents, ArrayRef<SourceLocation> Locs) {
-    assert(Idents.size() == params_Size);
-    assert(Locs.size() == params_Size);
-    ArgIdents = Idents;
-    ArgLocs = Locs;
-  }
-  auto getArgIdents() const { return ArgIdents; }
-  auto getArgLocs() const { return ArgLocs; }
-  void setParamIdx(size_t Idx, int Val) {
-    assert(Idx < params_Size);
-    params_[Idx] = Val;
-  }
-}];
 }
 
 def TrivialABI : InheritableAttr {
@@ -3266,28 +3226,33 @@ def Target : InheritableAttr {
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [TargetDocs];
   let AdditionalMembers = [{
-    std::optional<StringRef> getX86Architecture() const {
+    StringRef getArchitecture() const {
       StringRef Features = getFeaturesStr();
-      SmallVector<StringRef, 4> AttrFeatures;
-      Features.split(AttrFeatures, ',');
-      for (StringRef Feature : AttrFeatures) {
+      if (Features == "default") return {};
+
+      SmallVector<StringRef, 1> AttrFeatures;
+      Features.split(AttrFeatures, ",");
+
+      for (auto &Feature : AttrFeatures) {
         Feature = Feature.trim();
         if (Feature.starts_with("arch="))
           return Feature.drop_front(sizeof("arch=") - 1);
       }
-      return std::nullopt;
+      return "";
     }
 
     // Gets the list of features as simple string-refs with no +/- or 'no-'.
     // Only adds the items to 'Out' that are additions.
-    void getX86AddedFeatures(llvm::SmallVectorImpl<StringRef> &Out) const {
-      if (isDefaultVersion())
-        return;
+    void getAddedFeatures(llvm::SmallVectorImpl<StringRef> &Out) const {
       StringRef Features = getFeaturesStr();
-      SmallVector<StringRef, 4> AttrFeatures;
-      Features.split(AttrFeatures, ',');
+      if (Features == "default") return;
+
+      SmallVector<StringRef, 1> AttrFeatures;
+      Features.split(AttrFeatures, ",");
+
       for (auto &Feature : AttrFeatures) {
         Feature = Feature.trim();
+
         if (!Feature.starts_with("no-") && !Feature.starts_with("arch=") &&
             !Feature.starts_with("fpmath=") && !Feature.starts_with("tune="))
           Out.push_back(Feature);
@@ -3298,24 +3263,24 @@ def Target : InheritableAttr {
   }];
 }
 
-def TargetVersion : InheritableAttr, TargetSpecificAttr<TargetArch<!listconcat(TargetAArch64.Arches, TargetRISCV.Arches)>> {
+def TargetVersion : InheritableAttr {
   let Spellings = [GCC<"target_version">];
   let Args = [StringArgument<"NamesStr">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [TargetVersionDocs];
   let AdditionalMembers = [{
     StringRef getName() const { return getNamesStr().trim(); }
-
-    bool isDefaultVersion() const { return getName() == "default"; }
-
-    void getFeatures(llvm::SmallVectorImpl<StringRef> &Out,
-                     char Delim = '+') const {
-      if (isDefaultVersion())
-        return;
+    bool isDefaultVersion() const {
+      return getName() == "default";
+    }
+    void getFeatures(llvm::SmallVectorImpl<StringRef> &Out) const {
+      if (isDefaultVersion()) return;
       StringRef Features = getName();
-      SmallVector<StringRef, 4> AttrFeatures;
-      Features.split(AttrFeatures, Delim);
-      for (StringRef Feature : AttrFeatures) {
+
+      SmallVector<StringRef, 8> AttrFeatures;
+      Features.split(AttrFeatures, "+");
+
+      for (auto &Feature : AttrFeatures) {
         Feature = Feature.trim();
         Out.push_back(Feature);
       }
@@ -3332,40 +3297,20 @@ def TargetClones : InheritableAttr {
     StringRef getFeatureStr(unsigned Index) const {
       return *(featuresStrs_begin() + Index);
     }
-
     bool isDefaultVersion(unsigned Index) const {
       return getFeatureStr(Index) == "default";
     }
-
     void getFeatures(llvm::SmallVectorImpl<StringRef> &Out,
-                     unsigned Index, char Delim = '+') const {
-      if (isDefaultVersion(Index))
-        return;
+                     unsigned Index) const {
+      if (isDefaultVersion(Index)) return;
       StringRef Features = getFeatureStr(Index);
-      SmallVector<StringRef, 4> AttrFeatures;
-      Features.split(AttrFeatures, Delim);
-      for (StringRef Feature : AttrFeatures) {
+      SmallVector<StringRef, 8> AttrFeatures;
+      Features.split(AttrFeatures, "+");
+      for (auto &Feature : AttrFeatures) {
         Feature = Feature.trim();
         Out.push_back(Feature);
       }
     }
-
-    std::optional<StringRef> getX86Architecture(unsigned Index) const {
-      StringRef Feature = getFeatureStr(Index);
-      if (Feature.starts_with("arch="))
-        return Feature.drop_front(sizeof("arch=") - 1);
-      return std::nullopt;
-    }
-
-    void getX86Feature(llvm::SmallVectorImpl<StringRef> &Out,
-                       unsigned Index) const {
-      if (isDefaultVersion(Index))
-        return;
-      if (getX86Architecture(Index))
-        return;
-      Out.push_back(getFeatureStr(Index));
-    }
-
     // Given an index into the 'featuresStrs' sequence, compute a unique
     // ID to be used with function name mangling for the associated variant.
     // This mapping is necessary due to a requirement that the mangling ID
@@ -3447,15 +3392,6 @@ def DiagnoseIf : InheritableAttr {
   }];
   let TemplateDependent = 1;
   let Documentation = [DiagnoseIfDocs];
-}
-
-def NoSpecializations : InheritableAttr {
-  let Spellings = [Clang<"no_specializations", /*AllowInC*/0>];
-  let Args = [StringArgument<"Message", 1>];
-  let Subjects = SubjectList<[ClassTmpl, FunctionTmpl, VarTmpl]>;
-  let Documentation = [NoSpecializationsDocs];
-  let MeaningfulToClassTemplateDefinition = 1;
-  let TemplateDependent = 1;
 }
 
 def ArcWeakrefUnavailable : InheritableAttr {
@@ -4651,20 +4587,6 @@ def HLSLNumThreads: InheritableAttr {
   let Documentation = [NumThreadsDocs];
 }
 
-def HLSLSV_GroupThreadID: HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"SV_GroupThreadID">];
-  let Subjects = SubjectList<[ParmVar, Field]>;
-  let LangOpts = [HLSL];
-  let Documentation = [HLSLSV_GroupThreadIDDocs];
-}
-
-def HLSLSV_GroupID: HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"SV_GroupID">];
-  let Subjects = SubjectList<[ParmVar, Field]>;
-  let LangOpts = [HLSL];
-  let Documentation = [HLSLSV_GroupIDDocs];
-}
-
 def HLSLSV_GroupIndex: HLSLAnnotationAttr {
   let Spellings = [HLSLAnnotation<"SV_GroupIndex">];
   let Subjects = SubjectList<[ParmVar, GlobalVar]>;
@@ -4681,7 +4603,7 @@ def HLSLResourceBinding: InheritableAttr {
   let AdditionalMembers = [{
   public:
       enum class RegisterType : unsigned { SRV, UAV, CBuffer, Sampler, C, I };
-
+  
   private:
       RegisterType RegType;
       unsigned SlotNumber;
@@ -4751,7 +4673,7 @@ def HLSLResource : InheritableAttr {
   let Spellings = [];
   let Subjects = SubjectList<[Struct]>;
   let LangOpts = [HLSL];
-  let Args = [
+  let Args = [    
     EnumArgument<
         "ResourceKind", "llvm::hlsl::ResourceKind",
         /*is_string=*/0,
@@ -4776,7 +4698,7 @@ def HLSLResource : InheritableAttr {
 
 def HLSLROV : TypeAttr {
   let Spellings = [CXX11<"hlsl", "is_rov">];
-  let LangOpts = [HLSL];
+  let LangOpts = [HLSL]; 
   let Documentation = [InternalOnly];
 }
 
@@ -4801,7 +4723,7 @@ def HLSLContainedType : TypeAttr {
 
 def HLSLRawBuffer : TypeAttr {
   let Spellings = [CXX11<"hlsl", "raw_buffer">];
-  let LangOpts = [HLSL];
+  let LangOpts = [HLSL]; 
   let Documentation = [InternalOnly];
 }
 
@@ -4930,12 +4852,5 @@ def ClspvLibclcBuiltin: InheritableAttr {
   let Spellings = [Clang<"clspv_libclc_builtin">];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [ClspvLibclcBuiltinDoc];
-  let SimpleHandler = 1;
-}
-
-def NoTrivialAutoVarInit: InheritableAttr {
-  let Spellings = [Declspec<"no_init_all">];
-  let Subjects = SubjectList<[Function, Tag]>;
-  let Documentation = [NoTrivialAutoVarInitDocs];
   let SimpleHandler = 1;
 }

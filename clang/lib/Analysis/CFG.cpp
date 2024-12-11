@@ -760,7 +760,6 @@ private:
   void cleanupConstructionContext(Expr *E);
 
   void autoCreateBlock() { if (!Block) Block = createBlock(); }
-
   CFGBlock *createBlock(bool add_successor = true);
   CFGBlock *createNoReturnBlock();
 
@@ -819,21 +818,15 @@ private:
     B->appendStmt(const_cast<Stmt*>(S), cfg->getBumpVectorContext());
   }
 
-  void appendConstructor(CXXConstructExpr *CE) {
-    CXXConstructorDecl *C = CE->getConstructor();
-    if (C && C->isNoReturn())
-      Block = createNoReturnBlock();
-    else
-      autoCreateBlock();
-
+  void appendConstructor(CFGBlock *B, CXXConstructExpr *CE) {
     if (const ConstructionContext *CC =
             retrieveAndCleanupConstructionContext(CE)) {
-      Block->appendConstructor(CE, CC, cfg->getBumpVectorContext());
+      B->appendConstructor(CE, CC, cfg->getBumpVectorContext());
       return;
     }
 
     // No valid construction context found. Fall back to statement.
-    Block->appendStmt(CE, cfg->getBumpVectorContext());
+    B->appendStmt(CE, cfg->getBumpVectorContext());
   }
 
   void appendCall(CFGBlock *B, CallExpr *CE) {
@@ -3184,13 +3177,10 @@ CFGBlock *CFGBuilder::VisitIfStmt(IfStmt *I) {
     if (!I->isConsteval())
       KnownVal = tryEvaluateBool(I->getCond());
 
-    // Add the successors. If we know that specific branches are
+    // Add the successors.  If we know that specific branches are
     // unreachable, inform addSuccessor() of that knowledge.
     addSuccessor(Block, ThenBlock, /* IsReachable = */ !KnownVal.isFalse());
     addSuccessor(Block, ElseBlock, /* IsReachable = */ !KnownVal.isTrue());
-
-    if (I->isConsteval())
-      return Block;
 
     // Add the condition as the last statement in the new block.  This may
     // create new blocks as the condition may contain control-flow.  Any newly
@@ -4839,7 +4829,9 @@ CFGBlock *CFGBuilder::VisitCXXConstructExpr(CXXConstructExpr *C,
   // construct these objects. Construction contexts we find here aren't for the
   // constructor C, they're for its arguments only.
   findConstructionContextsForArguments(C);
-  appendConstructor(C);
+
+  autoCreateBlock();
+  appendConstructor(Block, C);
 
   return VisitChildren(C);
 }
@@ -4897,15 +4889,16 @@ CFGBlock *CFGBuilder::VisitCXXFunctionalCastExpr(CXXFunctionalCastExpr *E,
   return Visit(E->getSubExpr(), asc);
 }
 
-CFGBlock *CFGBuilder::VisitCXXTemporaryObjectExpr(CXXTemporaryObjectExpr *E,
+CFGBlock *CFGBuilder::VisitCXXTemporaryObjectExpr(CXXTemporaryObjectExpr *C,
                                                   AddStmtChoice asc) {
   // If the constructor takes objects as arguments by value, we need to properly
   // construct these objects. Construction contexts we find here aren't for the
   // constructor C, they're for its arguments only.
-  findConstructionContextsForArguments(E);
-  appendConstructor(E);
+  findConstructionContextsForArguments(C);
 
-  return VisitChildren(E);
+  autoCreateBlock();
+  appendConstructor(Block, C);
+  return VisitChildren(C);
 }
 
 CFGBlock *CFGBuilder::VisitImplicitCastExpr(ImplicitCastExpr *E,

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZCallingConv.h"
+#include "SystemZRegisterInfo.h"
 
 using namespace llvm;
 

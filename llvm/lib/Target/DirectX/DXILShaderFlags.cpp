@@ -13,54 +13,36 @@
 
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace llvm::dxil;
 
-static void updateFunctionFlags(ComputedShaderFlags &CSF,
-                                const Instruction &I) {
-  if (!CSF.Doubles)
-    CSF.Doubles = I.getType()->isDoubleTy();
-
-  if (!CSF.Doubles) {
-    for (Value *Op : I.operands())
-      CSF.Doubles |= Op->getType()->isDoubleTy();
-  }
-  if (CSF.Doubles) {
+static void updateFlags(ComputedShaderFlags &Flags, const Instruction &I) {
+  Type *Ty = I.getType();
+  if (Ty->isDoubleTy()) {
+    Flags.Doubles = true;
     switch (I.getOpcode()) {
     case Instruction::FDiv:
     case Instruction::UIToFP:
     case Instruction::SIToFP:
     case Instruction::FPToUI:
     case Instruction::FPToSI:
-      // TODO: To be set if I is a call to DXIL intrinsic DXIL::Opcode::Fma
-      // https://github.com/llvm/llvm-project/issues/114554
-      CSF.DX11_1_DoubleExtensions = true;
+      Flags.DX11_1_DoubleExtensions = true;
       break;
     }
   }
 }
 
-void ModuleShaderFlags::initialize(const Module &M) {
-  // Collect shader flags for each of the functions
-  for (const auto &F : M.getFunctionList()) {
-    if (F.isDeclaration())
-      continue;
-    ComputedShaderFlags CSF;
+ComputedShaderFlags ComputedShaderFlags::computeFlags(Module &M) {
+  ComputedShaderFlags Flags;
+  for (const auto &F : M)
     for (const auto &BB : F)
       for (const auto &I : BB)
-        updateFunctionFlags(CSF, I);
-    // Insert shader flag mask for function F
-    FunctionFlags.push_back({&F, CSF});
-    // Update combined shader flags mask
-    CombinedSFMask.merge(CSF);
-  }
-  llvm::sort(FunctionFlags);
+        updateFlags(Flags, I);
+  return Flags;
 }
 
 void ComputedShaderFlags::print(raw_ostream &OS) const {
@@ -81,56 +63,18 @@ void ComputedShaderFlags::print(raw_ostream &OS) const {
   OS << ";\n";
 }
 
-/// Return the shader flags mask of the specified function Func.
-const ComputedShaderFlags &
-ModuleShaderFlags::getFunctionFlags(const Function *Func) const {
-  const auto Iter = llvm::lower_bound(
-      FunctionFlags, Func,
-      [](const std::pair<const Function *, ComputedShaderFlags> FSM,
-         const Function *FindFunc) { return (FSM.first < FindFunc); });
-  assert((Iter != FunctionFlags.end() && Iter->first == Func) &&
-         "No Shader Flags Mask exists for function");
-  return Iter->second;
-}
-
-//===----------------------------------------------------------------------===//
-// ShaderFlagsAnalysis and ShaderFlagsAnalysisPrinterPass
-
-// Provide an explicit template instantiation for the static ID.
 AnalysisKey ShaderFlagsAnalysis::Key;
 
-ModuleShaderFlags ShaderFlagsAnalysis::run(Module &M,
-                                           ModuleAnalysisManager &AM) {
-  ModuleShaderFlags MSFI;
-  MSFI.initialize(M);
-  return MSFI;
+ComputedShaderFlags ShaderFlagsAnalysis::run(Module &M,
+                                             ModuleAnalysisManager &AM) {
+  return ComputedShaderFlags::computeFlags(M);
 }
 
 PreservedAnalyses ShaderFlagsAnalysisPrinter::run(Module &M,
                                                   ModuleAnalysisManager &AM) {
-  const ModuleShaderFlags &FlagsInfo = AM.getResult<ShaderFlagsAnalysis>(M);
-  // Print description of combined shader flags for all module functions
-  OS << "; Combined Shader Flags for Module\n";
-  FlagsInfo.getCombinedFlags().print(OS);
-  // Print shader flags mask for each of the module functions
-  OS << "; Shader Flags for Module Functions\n";
-  for (const auto &F : M.getFunctionList()) {
-    if (F.isDeclaration())
-      continue;
-    auto SFMask = FlagsInfo.getFunctionFlags(&F);
-    OS << formatv("; Function {0} : {1:x8}\n;\n", F.getName(),
-                  (uint64_t)(SFMask));
-  }
-
+  ComputedShaderFlags Flags = AM.getResult<ShaderFlagsAnalysis>(M);
+  Flags.print(OS);
   return PreservedAnalyses::all();
-}
-
-//===----------------------------------------------------------------------===//
-// ShaderFlagsAnalysis and ShaderFlagsAnalysisPrinterPass
-
-bool ShaderFlagsAnalysisWrapper::runOnModule(Module &M) {
-  MSFI.initialize(M);
-  return false;
 }
 
 char ShaderFlagsAnalysisWrapper::ID = 0;

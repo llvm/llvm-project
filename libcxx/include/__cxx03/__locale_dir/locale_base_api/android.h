@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___LOCALE_LOCALE_BASE_API_ANDROID_H
-#define _LIBCPP___CXX03___LOCALE_LOCALE_BASE_API_ANDROID_H
+#ifndef _LIBCPP___LOCALE_LOCALE_BASE_API_ANDROID_H
+#define _LIBCPP___LOCALE_LOCALE_BASE_API_ANDROID_H
 
 #include <__cxx03/stdlib.h>
 
@@ -47,4 +47,4 @@ inline _LIBCPP_HIDE_FROM_ABI double strtod_l(const char* __nptr, char** __endptr
 #  endif // __NDK_MAJOR__ <= 16
 #endif   // __has_include(<android/ndk-version.h>)
 
-#endif // _LIBCPP___CXX03___LOCALE_LOCALE_BASE_API_ANDROID_H
+#endif // _LIBCPP___LOCALE_LOCALE_BASE_API_ANDROID_H

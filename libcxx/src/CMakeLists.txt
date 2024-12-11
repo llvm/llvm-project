@@ -1,3 +1,5 @@
+set(LIBCXX_LIB_CMAKEFILES_DIR "${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}"  PARENT_SCOPE)
+
 # Get sources
 set(LIBCXX_SOURCES
   algorithm.cpp
@@ -30,6 +32,7 @@ set(LIBCXX_SOURCES
   include/ryu/ryu.h
   include/to_chars_floating_point.h
   include/from_chars_floating_point.h
+  legacy_pointer_safety.cpp
   memory.cpp
   memory_resource.cpp
   new_handler.cpp

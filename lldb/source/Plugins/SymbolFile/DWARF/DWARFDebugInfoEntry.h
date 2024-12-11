@@ -14,6 +14,7 @@
 
 #include "DWARFAttribute.h"
 #include "DWARFBaseDIE.h"
+#include "DWARFDebugRanges.h"
 #include <map>
 #include <optional>
 #include <set>

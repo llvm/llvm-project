@@ -53,8 +53,7 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     NonBindCInteroperability, CudaManaged, CudaUnified,
     PolymorphicActualAllocatableOrPointerToMonomorphicDummy, RelaxedPureDummy,
     UndefinableAsynchronousOrVolatileActual, AutomaticInMainProgram, PrintCptr,
-    SavedLocalInSpecExpr, PrintNamelist, AssumedRankPassedToNonAssumedRank,
-    IgnoreIrrelevantAttributes)
+    SavedLocalInSpecExpr, PrintNamelist)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
@@ -73,7 +72,7 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     PreviousScalarUse, RedeclaredInaccessibleComponent, ImplicitShared,
     IndexVarRedefinition, IncompatibleImplicitInterfaces, BadTypeForTarget,
     VectorSubscriptFinalization, UndefinedFunctionResult, UselessIomsg,
-    MismatchingDummyProcedure, SubscriptedEmptyArray)
+    MismatchingDummyProcedure)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;

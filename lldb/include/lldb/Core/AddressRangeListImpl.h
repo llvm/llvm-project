@@ -24,8 +24,9 @@ class AddressRangeListImpl {
 public:
   AddressRangeListImpl();
 
-  explicit AddressRangeListImpl(AddressRanges ranges)
-      : m_ranges(std::move(ranges)) {}
+  AddressRangeListImpl(const AddressRangeListImpl &rhs) = default;
+
+  AddressRangeListImpl &operator=(const AddressRangeListImpl &rhs);
 
   size_t GetSize() const;
 

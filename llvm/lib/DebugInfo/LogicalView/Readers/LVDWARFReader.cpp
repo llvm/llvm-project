@@ -19,6 +19,7 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVScope.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVSymbol.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVType.h"
+#include "llvm/Object/Error.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -253,18 +254,15 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
   // We are processing .debug_info section, implicit_const attribute
   // values are not really stored here, but in .debug_abbrev section.
   auto GetAsUnsignedConstant = [&]() -> int64_t {
-    if (AttrSpec.isImplicitConst())
-      return AttrSpec.getImplicitConstValue();
-    if (std::optional<uint64_t> Val = FormValue.getAsUnsignedConstant())
-      return *Val;
-    return 0;
+    return AttrSpec.isImplicitConst() ? AttrSpec.getImplicitConstValue()
+                                      : *FormValue.getAsUnsignedConstant();
   };
 
   auto GetFlag = [](const DWARFFormValue &FormValue) -> bool {
     return FormValue.isFormClass(DWARFFormValue::FC_Flag);
   };
 
-  auto GetBoundValue = [&AttrSpec](const DWARFFormValue &FormValue) -> int64_t {
+  auto GetBoundValue = [](const DWARFFormValue &FormValue) -> int64_t {
     switch (FormValue.getForm()) {
     case dwarf::DW_FORM_ref_addr:
     case dwarf::DW_FORM_ref1:
@@ -285,8 +283,6 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
       return *FormValue.getAsUnsignedConstant();
     case dwarf::DW_FORM_sdata:
       return *FormValue.getAsSignedConstant();
-    case dwarf::DW_FORM_implicit_const:
-      return AttrSpec.getImplicitConstValue();
     default:
       return 0;
     }
@@ -299,13 +295,13 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
 
   switch (AttrSpec.Attr) {
   case dwarf::DW_AT_accessibility:
-    CurrentElement->setAccessibilityCode(GetAsUnsignedConstant());
+    CurrentElement->setAccessibilityCode(*FormValue.getAsUnsignedConstant());
     break;
   case dwarf::DW_AT_artificial:
     CurrentElement->setIsArtificial();
     break;
   case dwarf::DW_AT_bit_size:
-    CurrentElement->setBitSize(GetAsUnsignedConstant());
+    CurrentElement->setBitSize(*FormValue.getAsUnsignedConstant());
     break;
   case dwarf::DW_AT_call_file:
     CurrentElement->setCallFilenameIndex(IncrementFileIndex
@@ -337,12 +333,13 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
         Stream << hexString(Value, 2);
         CurrentElement->setValue(Stream.str());
       } else
-        CurrentElement->setValue(hexString(GetAsUnsignedConstant(), 2));
+        CurrentElement->setValue(
+            hexString(*FormValue.getAsUnsignedConstant(), 2));
     } else
       CurrentElement->setValue(dwarf::toStringRef(FormValue));
     break;
   case dwarf::DW_AT_count:
-    CurrentElement->setCount(GetAsUnsignedConstant());
+    CurrentElement->setCount(*FormValue.getAsUnsignedConstant());
     break;
   case dwarf::DW_AT_decl_line:
     CurrentElement->setLineNumber(GetAsUnsignedConstant());
@@ -361,19 +358,16 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
       CurrentElement->setIsExternal();
     break;
   case dwarf::DW_AT_GNU_discriminator:
-    CurrentElement->setDiscriminator(GetAsUnsignedConstant());
+    CurrentElement->setDiscriminator(*FormValue.getAsUnsignedConstant());
     break;
   case dwarf::DW_AT_inline:
-    CurrentElement->setInlineCode(GetAsUnsignedConstant());
+    CurrentElement->setInlineCode(*FormValue.getAsUnsignedConstant());
     break;
   case dwarf::DW_AT_lower_bound:
     CurrentElement->setLowerBound(GetBoundValue(FormValue));
     break;
   case dwarf::DW_AT_name:
     CurrentElement->setName(dwarf::toStringRef(FormValue));
-    break;
-  case dwarf::DW_AT_GNU_template_name:
-    CurrentElement->setValue(dwarf::toStringRef(FormValue));
     break;
   case dwarf::DW_AT_linkage_name:
   case dwarf::DW_AT_MIPS_linkage_name:
@@ -387,7 +381,7 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
     CurrentElement->setUpperBound(GetBoundValue(FormValue));
     break;
   case dwarf::DW_AT_virtuality:
-    CurrentElement->setVirtualityCode(GetAsUnsignedConstant());
+    CurrentElement->setVirtualityCode(*FormValue.getAsUnsignedConstant());
     break;
 
   case dwarf::DW_AT_abstract_origin:

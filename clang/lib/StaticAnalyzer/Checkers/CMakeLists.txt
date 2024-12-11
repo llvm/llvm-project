@@ -50,6 +50,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   GCDAntipatternChecker.cpp
   GenericTaintChecker.cpp
   GTestChecker.cpp
+  IdenticalExprChecker.cpp
   InnerPointerChecker.cpp
   InvalidatedIteratorChecker.cpp
   cert/InvalidPtrChecker.cpp
@@ -131,7 +132,6 @@ add_clang_library(clangStaticAnalyzerCheckers
   VirtualCallChecker.cpp
   WebKit/RawPtrRefMemberChecker.cpp
   WebKit/ASTUtils.cpp
-  WebKit/MemoryUnsafeCastChecker.cpp
   WebKit/PtrTypesSemantics.cpp
   WebKit/RefCntblBaseVirtualDtorChecker.cpp
   WebKit/RawPtrRefCallArgsChecker.cpp

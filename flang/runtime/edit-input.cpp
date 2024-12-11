@@ -976,10 +976,14 @@ static RT_API_ATTRS bool EditListDirectedCharacterInput(
     return false;
   }
   // Undelimited list-directed character input: stop at a value separator
-  // or the end of the current record.
-  while (auto ch{io.GetCurrentChar(byteCount)}) {
+  // or the end of the current record.  Subtlety: the "remaining" count
+  // here is a dummy that's used to avoid the interpretation of separators
+  // in NextInField.
+  Fortran::common::optional<int> remaining{length > 0 ? maxUTF8Bytes : 0};
+  while (Fortran::common::optional<char32_t> next{
+      io.NextInField(remaining, edit)}) {
     bool isSep{false};
-    switch (*ch) {
+    switch (*next) {
     case ' ':
     case '\t':
     case '/':
@@ -999,17 +1003,11 @@ static RT_API_ATTRS bool EditListDirectedCharacterInput(
       break;
     }
     if (isSep) {
-      break;
+      remaining = 0;
+    } else {
+      *x++ = *next;
+      remaining = --length > 0 ? maxUTF8Bytes : 0;
     }
-    if (length > 0) {
-      *x++ = *ch;
-      --length;
-    } else if (edit.IsNamelist()) {
-      // GNU compatibility
-      break;
-    }
-    io.HandleRelativePosition(byteCount);
-    io.GotChar(byteCount);
   }
   Fortran::runtime::fill_n(x, length, ' ');
   return true;

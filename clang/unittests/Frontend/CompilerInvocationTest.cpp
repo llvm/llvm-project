@@ -12,7 +12,6 @@
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Serialization/ModuleFileExtension.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 
 #include "gmock/gmock.h"
@@ -39,9 +38,9 @@ public:
   }
 
   CommandLineTest()
-      : Diags(CompilerInstance::createDiagnostics(
-            *llvm::vfs::getRealFileSystem(), new DiagnosticOptions(),
-            new TextDiagnosticBuffer())) {}
+      : Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions(),
+                                                  new TextDiagnosticBuffer())) {
+  }
 };
 
 template <typename M>
@@ -1046,16 +1045,5 @@ TEST_F(CommandLineTest, PluginArgsRoundTripDeterminism) {
       "-round-trip-args"};
 
   ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
-}
-
-TEST_F(CommandLineTest, WarningSuppressionMappings) {
-  const char *Args[] = {"--warning-suppression-mappings=foo.txt"};
-
-  EXPECT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
-  EXPECT_EQ(Invocation.getDiagnosticOpts().DiagnosticSuppressionMappingsFile,
-            "foo.txt");
-
-  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
-  EXPECT_THAT(GeneratedArgs, Contains(StrEq(Args[0])));
 }
 } // anonymous namespace

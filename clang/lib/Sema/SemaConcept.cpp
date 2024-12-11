@@ -15,12 +15,14 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprConcepts.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/OperatorPrecedence.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
@@ -1384,7 +1386,8 @@ static void diagnoseUnsatisfiedConstraintExpr(
     return;
   }
 
-  diagnoseWellFormedUnsatisfiedConstraintExpr(S, cast<Expr *>(Record), First);
+  diagnoseWellFormedUnsatisfiedConstraintExpr(S,
+      Record.template get<Expr *>(), First);
 }
 
 void
@@ -1556,12 +1559,12 @@ NormalizedConstraint::NormalizedConstraint(ASTContext &C,
 
 NormalizedConstraint &NormalizedConstraint::getLHS() const {
   assert(isCompound() && "getLHS called on a non-compound constraint.");
-  return cast<CompoundConstraint>(Constraint).getPointer()->LHS;
+  return Constraint.get<CompoundConstraint>().getPointer()->LHS;
 }
 
 NormalizedConstraint &NormalizedConstraint::getRHS() const {
   assert(isCompound() && "getRHS called on a non-compound constraint.");
-  return cast<CompoundConstraint>(Constraint).getPointer()->RHS;
+  return Constraint.get<CompoundConstraint>().getPointer()->RHS;
 }
 
 std::optional<NormalizedConstraint>

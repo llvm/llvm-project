@@ -59,7 +59,6 @@ void Ctx::reset() {
   stubFiles.clear();
   sharedFiles.clear();
   bitcodeFiles.clear();
-  lazyBitcodeFiles.clear();
   syntheticFunctions.clear();
   syntheticGlobals.clear();
   syntheticTables.clear();
@@ -185,17 +184,16 @@ static void handleColorDiagnostics(opt::InputArgList &args) {
                               OPT_no_color_diagnostics);
   if (!arg)
     return;
-  auto &errs = errorHandler().errs();
   if (arg->getOption().getID() == OPT_color_diagnostics) {
-    errs.enable_colors(true);
+    lld::errs().enable_colors(true);
   } else if (arg->getOption().getID() == OPT_no_color_diagnostics) {
-    errs.enable_colors(false);
+    lld::errs().enable_colors(false);
   } else {
     StringRef s = arg->getValue();
     if (s == "always")
-      errs.enable_colors(true);
+      lld::errs().enable_colors(true);
     else if (s == "never")
-      errs.enable_colors(false);
+      lld::errs().enable_colors(false);
     else if (s != "auto")
       error("unknown option: --color-diagnostics=" + s);
   }
@@ -1260,15 +1258,14 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   opt::InputArgList args = parser.parse(argsArr.slice(1));
 
   // Interpret these flags early because error()/warn() depend on them.
-  auto &errHandler = errorHandler();
-  errHandler.errorLimit = args::getInteger(args, OPT_error_limit, 20);
-  errHandler.fatalWarnings =
+  errorHandler().errorLimit = args::getInteger(args, OPT_error_limit, 20);
+  errorHandler().fatalWarnings =
       args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
   checkZOptions(args);
 
   // Handle --help
   if (args.hasArg(OPT_help)) {
-    parser.printHelp(errHandler.outs(),
+    parser.printHelp(lld::outs(),
                      (std::string(argsArr[0]) + " [options] file...").c_str(),
                      "LLVM Linker", false);
     return;
@@ -1276,7 +1273,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle -v or -version.
   if (args.hasArg(OPT_v) || args.hasArg(OPT_version))
-    errHandler.outs() << getLLDVersion() << "\n";
+    lld::outs() << getLLDVersion() << "\n";
 
   // Handle --reproduce
   if (const char *path = getReproduceOption(args)) {

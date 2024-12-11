@@ -138,7 +138,6 @@ typedef enum {
   LLVMDWARFSourceLanguageRuby,
   LLVMDWARFSourceLanguageMove,
   LLVMDWARFSourceLanguageHylo,
-  LLVMDWARFSourceLanguageMetal,
 
   // Vendor extensions:
   LLVMDWARFSourceLanguageMips_Assembler,

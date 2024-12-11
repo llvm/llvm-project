@@ -14,7 +14,6 @@
 #define MLIR_DIALECT_GPU_IR_COMPILATIONINTERFACES_H
 
 #include "mlir/IR/Attributes.h"
-#include "llvm/IR/Module.h"
 
 namespace llvm {
 class IRBuilderBase;
@@ -53,11 +52,7 @@ public:
       StringRef toolkitPath = {}, ArrayRef<std::string> linkFiles = {},
       StringRef cmdOptions = {},
       CompilationTarget compilationTarget = getDefaultCompilationTarget(),
-      function_ref<SymbolTable *()> getSymbolTableCallback = {},
-      function_ref<void(llvm::Module &)> initialLlvmIRCallback = {},
-      function_ref<void(llvm::Module &)> linkedLlvmIRCallback = {},
-      function_ref<void(llvm::Module &)> optimizedLlvmIRCallback = {},
-      function_ref<void(StringRef)> isaCallback = {});
+      function_ref<SymbolTable *()> getSymbolTableCallback = {});
 
   /// Returns the typeID.
   TypeID getTypeID() const;
@@ -85,22 +80,6 @@ public:
   /// table.
   SymbolTable *getSymbolTable() const;
 
-  /// Returns the callback invoked with the initial LLVM IR for the device
-  /// module.
-  function_ref<void(llvm::Module &)> getInitialLlvmIRCallback() const;
-
-  /// Returns the callback invoked with LLVM IR for the device module
-  /// after linking the device libraries.
-  function_ref<void(llvm::Module &)> getLinkedLlvmIRCallback() const;
-
-  /// Returns the callback invoked with LLVM IR for the device module after
-  /// LLVM optimizations but before codegen.
-  function_ref<void(llvm::Module &)> getOptimizedLlvmIRCallback() const;
-
-  /// Returns the callback invoked with the target ISA for the device,
-  /// for example PTX assembly.
-  function_ref<void(StringRef)> getISACallback() const;
-
   /// Returns the default compilation target: `CompilationTarget::Fatbin`.
   static CompilationTarget getDefaultCompilationTarget();
 
@@ -111,11 +90,7 @@ protected:
       TypeID typeID, StringRef toolkitPath = {},
       ArrayRef<std::string> linkFiles = {}, StringRef cmdOptions = {},
       CompilationTarget compilationTarget = getDefaultCompilationTarget(),
-      function_ref<SymbolTable *()> getSymbolTableCallback = {},
-      function_ref<void(llvm::Module &)> initialLlvmIRCallback = {},
-      function_ref<void(llvm::Module &)> linkedLlvmIRCallback = {},
-      function_ref<void(llvm::Module &)> optimizedLlvmIRCallback = {},
-      function_ref<void(StringRef)> isaCallback = {});
+      function_ref<SymbolTable *()> getSymbolTableCallback = {});
 
   /// Path to the target toolkit.
   std::string toolkitPath;
@@ -133,21 +108,6 @@ protected:
   /// Callback for obtaining the parent symbol table of all the GPU modules
   /// being serialized.
   function_ref<SymbolTable *()> getSymbolTableCallback;
-
-  /// Callback invoked with the initial LLVM IR for the device module.
-  function_ref<void(llvm::Module &)> initialLlvmIRCallback;
-
-  /// Callback invoked with LLVM IR for the device module after
-  /// linking the device libraries.
-  function_ref<void(llvm::Module &)> linkedLlvmIRCallback;
-
-  /// Callback invoked with LLVM IR for the device module after
-  /// LLVM optimizations but before codegen.
-  function_ref<void(llvm::Module &)> optimizedLlvmIRCallback;
-
-  /// Callback invoked with the target ISA for the device,
-  /// for example PTX assembly.
-  function_ref<void(StringRef)> isaCallback;
 
 private:
   TypeID typeID;

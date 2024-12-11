@@ -57,8 +57,9 @@ protected:
       GTEST_SKIP();
 
     TargetOptions Options;
-    TM = std::unique_ptr<TargetMachine>(T->createTargetMachine(
-        "amdgcn--amdpal", "gfx1010", "", Options, std::nullopt));
+    TM = std::unique_ptr<LLVMTargetMachine>(
+        static_cast<LLVMTargetMachine *>(T->createTargetMachine(
+            "amdgcn--amdpal", "gfx1010", "", Options, std::nullopt)));
     if (!TM)
       GTEST_SKIP();
 
@@ -79,7 +80,7 @@ protected:
   static std::string PalMDString;
 
   LLVMContext Context;
-  std::unique_ptr<TargetMachine> TM;
+  std::unique_ptr<LLVMTargetMachine> TM;
   std::unique_ptr<Module> M;
   SmallString<1024> Elf;
 };

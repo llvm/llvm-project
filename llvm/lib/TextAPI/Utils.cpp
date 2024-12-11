@@ -120,9 +120,6 @@ bool llvm::MachO::isPrivateLibrary(StringRef Path, bool IsSymLink) {
   if (Path.starts_with("/System/Library/PrivateFrameworks"))
     return true;
 
-  if (Path.starts_with("/System/Library/SubFrameworks"))
-    return true;
-
   // Everything in /usr/lib/swift (including sub-directories) are considered
   // public.
   if (Path.consume_front("/usr/lib/swift/"))

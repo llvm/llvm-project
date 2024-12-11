@@ -13,6 +13,7 @@
 
 #include "LoongArchMCExpr.h"
 #include "LoongArchAsmBackend.h"
+#include "LoongArchFixupKinds.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbolELF.h"

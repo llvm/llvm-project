@@ -320,23 +320,6 @@ define i32 @pr91691_keep_nsw(i32 %0) {
   ret i32 %7
 }
 
-define i32 @test_drop_range_attr(i32 %x) {
-; CHECK-LABEL: @test_drop_range_attr(
-; CHECK-NEXT:    [[CTLZ:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i32 0, [[CTLZ]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 31
-; CHECK-NEXT:    [[SEL:%.*]] = shl nuw i32 1, [[TMP2]]
-; CHECK-NEXT:    ret i32 [[SEL]]
-;
-  %ctlz = call range(i32 1, 33) i32 @llvm.ctlz.i32(i32 %x, i1 false)
-  %sub = sub i32 32, %ctlz
-  %shl = shl i32 1, %sub
-  %dec = add i32 %x, -1
-  %ult = icmp ult i32 %dec, -2
-  %sel = select i1 %ult, i32 %shl, i32 1
-  ret i32 %sel
-}
-
 declare i32 @llvm.ctlz.i32(i32, i1 immarg)
 declare i64 @llvm.ctlz.i64(i64, i1 immarg)
 declare <4 x i32> @llvm.ctlz.v4i32(<4 x i32>, i1)

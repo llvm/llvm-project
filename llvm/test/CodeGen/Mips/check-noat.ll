@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=mipsel < %s | FileCheck %s 
+; RUN: llc -march=mipsel < %s | FileCheck %s 
 
 define void @f() nounwind readnone {
 entry:

@@ -786,6 +786,15 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     }
   }
 
+  // Test if the trunc is the user of a select which is part of a
+  // minimum or maximum operation. If so, don't do any more simplification.
+  // Even simplifying demanded bits can break the canonical form of a
+  // min/max.
+  Value *LHS, *RHS;
+  if (SelectInst *Sel = dyn_cast<SelectInst>(Src))
+    if (matchSelectPattern(Sel, LHS, RHS).Flavor != SPF_UNKNOWN)
+      return nullptr;
+
   // See if we can simplify any instructions used by the input whose sole
   // purpose is to compute bits we don't care about.
   if (SimplifyDemandedInstructionBits(Trunc))
@@ -933,11 +942,6 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
       }
     }
   }
-
-  if (DestWidth == 1 &&
-      (Trunc.hasNoUnsignedWrap() || Trunc.hasNoSignedWrap()) &&
-      isKnownNonZero(Src, SQ.getWithInstruction(&Trunc)))
-    return replaceInstUsesWith(Trunc, ConstantInt::getTrue(DestTy));
 
   bool Changed = false;
   if (!Trunc.hasNoSignedWrap() &&
@@ -1852,16 +1856,15 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
   Value *X;
   Instruction *Op = dyn_cast<Instruction>(FPT.getOperand(0));
   if (Op && Op->hasOneUse()) {
+    // FIXME: The FMF should propagate from the fptrunc, not the source op.
     IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-    FastMathFlags FMF = FPT.getFastMathFlags();
-    if (auto *FPMO = dyn_cast<FPMathOperator>(Op))
-      FMF &= FPMO->getFastMathFlags();
-    Builder.setFastMathFlags(FMF);
+    if (isa<FPMathOperator>(Op))
+      Builder.setFastMathFlags(Op->getFastMathFlags());
 
     if (match(Op, m_FNeg(m_Value(X)))) {
       Value *InnerTrunc = Builder.CreateFPTrunc(X, Ty);
-      Value *Neg = Builder.CreateFNeg(InnerTrunc);
-      return replaceInstUsesWith(FPT, Neg);
+
+      return UnaryOperator::CreateFNegFMF(InnerTrunc, Op);
     }
 
     // If we are truncating a select that has an extended operand, we can
@@ -2112,7 +2115,10 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
         Base->getType() == Ty) {
       Value *Offset = EmitGEPOffset(GEP);
       auto *NewOp = BinaryOperator::CreateAdd(Base, Offset);
-      NewOp->setHasNoUnsignedWrap(GEP->hasNoUnsignedWrap());
+      if (GEP->hasNoUnsignedWrap() ||
+          (GEP->hasNoUnsignedSignedWrap() &&
+           isKnownNonNegative(Offset, SQ.getWithInstruction(&CI))))
+        NewOp->setHasNoUnsignedWrap(true);
       return NewOp;
     }
   }

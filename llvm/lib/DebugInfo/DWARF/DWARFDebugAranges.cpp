@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugArangeSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFObject.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <set>

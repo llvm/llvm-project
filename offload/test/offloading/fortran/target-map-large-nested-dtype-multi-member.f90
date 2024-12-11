@@ -1,5 +1,6 @@
-! Offloading test checking interaction of an explicit member map a large nested
-! derived type
+! Offloading test checking interaction of an
+! explicit member map a large nested derived
+! type
 ! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic

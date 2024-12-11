@@ -21,6 +21,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
@@ -1991,7 +1992,7 @@ void DeclaratorDecl::setQualifierInfo(NestedNameSpecifierLoc QualifierLoc) {
     // Make sure the extended decl info is allocated.
     if (!hasExtInfo()) {
       // Save (non-extended) type source info pointer.
-      auto *savedTInfo = cast<TypeSourceInfo *>(DeclInfo);
+      auto *savedTInfo = DeclInfo.get<TypeSourceInfo*>();
       // Allocate external info struct.
       DeclInfo = new (getASTContext()) ExtInfo;
       // Restore savedTInfo into (extended) decl info.
@@ -2010,7 +2011,7 @@ void DeclaratorDecl::setTrailingRequiresClause(Expr *TrailingRequiresClause) {
   // Make sure the extended decl info is allocated.
   if (!hasExtInfo()) {
     // Save (non-extended) type source info pointer.
-    auto *savedTInfo = cast<TypeSourceInfo *>(DeclInfo);
+    auto *savedTInfo = DeclInfo.get<TypeSourceInfo*>();
     // Allocate external info struct.
     DeclInfo = new (getASTContext()) ExtInfo;
     // Restore savedTInfo into (extended) decl info.
@@ -2026,7 +2027,7 @@ void DeclaratorDecl::setTemplateParameterListsInfo(
   // Make sure the extended decl info is allocated.
   if (!hasExtInfo()) {
     // Save (non-extended) type source info pointer.
-    auto *savedTInfo = cast<TypeSourceInfo *>(DeclInfo);
+    auto *savedTInfo = DeclInfo.get<TypeSourceInfo*>();
     // Allocate external info struct.
     DeclInfo = new (getASTContext()) ExtInfo;
     // Restore savedTInfo into (extended) decl info.
@@ -2534,7 +2535,7 @@ EvaluatedStmt *VarDecl::ensureEvaluatedStmt() const {
     // work to avoid leaking those, but we do so in VarDecl::evaluateValue
     // where we can detect whether there's anything to clean up or not.
     Eval = new (getASTContext()) EvaluatedStmt;
-    Eval->Value = cast<Stmt *>(Init);
+    Eval->Value = Init.get<Stmt *>();
     Init = Eval;
   }
   return Eval;
@@ -3017,7 +3018,7 @@ void ParmVarDecl::setUninstantiatedDefaultArg(Expr *arg) {
 Expr *ParmVarDecl::getUninstantiatedDefaultArg() {
   assert(hasUninstantiatedDefaultArg() &&
          "Wrong kind of initialization expression!");
-  return cast_if_present<Expr>(cast<Stmt *>(Init));
+  return cast_if_present<Expr>(Init.get<Stmt *>());
 }
 
 bool ParmVarDecl::hasDefaultArg() const {
@@ -4010,12 +4011,12 @@ FunctionDecl::TemplatedKind FunctionDecl::getTemplatedKind() const {
            "No other valid types in NamedDecl");
     return TK_FunctionTemplate;
   }
-  if (isa<MemberSpecializationInfo *>(TemplateOrSpecialization))
+  if (TemplateOrSpecialization.is<MemberSpecializationInfo *>())
     return TK_MemberSpecialization;
-  if (isa<FunctionTemplateSpecializationInfo *>(TemplateOrSpecialization))
+  if (TemplateOrSpecialization.is<FunctionTemplateSpecializationInfo *>())
     return TK_FunctionTemplateSpecialization;
-  if (isa<DependentFunctionTemplateSpecializationInfo *>(
-          TemplateOrSpecialization))
+  if (TemplateOrSpecialization.is
+                               <DependentFunctionTemplateSpecializationInfo*>())
     return TK_DependentFunctionTemplateSpecialization;
 
   llvm_unreachable("Did we miss a TemplateOrSpecialization type?");
@@ -4062,9 +4063,9 @@ void FunctionDecl::setDescribedFunctionTemplate(
 }
 
 bool FunctionDecl::isFunctionTemplateSpecialization() const {
-  return isa<FunctionTemplateSpecializationInfo *>(TemplateOrSpecialization) ||
-         isa<DependentFunctionTemplateSpecializationInfo *>(
-             TemplateOrSpecialization);
+  return TemplateOrSpecialization.is<FunctionTemplateSpecializationInfo *>() ||
+         TemplateOrSpecialization
+             .is<DependentFunctionTemplateSpecializationInfo *>();
 }
 
 void FunctionDecl::setInstantiatedFromDecl(FunctionDecl *FD) {
@@ -4216,7 +4217,7 @@ void FunctionDecl::setFunctionTemplateSpecialization(
     const TemplateArgumentListInfo *TemplateArgsAsWritten,
     SourceLocation PointOfInstantiation) {
   assert((TemplateOrSpecialization.isNull() ||
-          isa<MemberSpecializationInfo *>(TemplateOrSpecialization)) &&
+          TemplateOrSpecialization.is<MemberSpecializationInfo *>()) &&
          "Member function is already a specialization");
   assert(TSK != TSK_Undeclared &&
          "Must specify the type of function template specialization");
@@ -4287,8 +4288,8 @@ TemplateSpecializationKind FunctionDecl::getTemplateSpecializationKind() const {
 
   // A dependent function template specialization is an explicit specialization,
   // except when it's a friend declaration.
-  if (isa<DependentFunctionTemplateSpecializationInfo *>(
-          TemplateOrSpecialization) &&
+  if (TemplateOrSpecialization
+          .is<DependentFunctionTemplateSpecializationInfo *>() &&
       getFriendObjectKind() == FOK_None)
     return TSK_ExplicitSpecialization;
 
@@ -4331,8 +4332,8 @@ FunctionDecl::getTemplateSpecializationKindForInstantiation() const {
           TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo *>())
     return MSInfo->getTemplateSpecializationKind();
 
-  if (isa<DependentFunctionTemplateSpecializationInfo *>(
-          TemplateOrSpecialization) &&
+  if (TemplateOrSpecialization
+          .is<DependentFunctionTemplateSpecializationInfo *>() &&
       getFriendObjectKind() == FOK_None)
     return TSK_ExplicitSpecialization;
 

@@ -1,3 +1,4 @@
+// REQUIRES: system-linux
 // REQUIRES: shell
 
 // RUN: mkdir -p %t

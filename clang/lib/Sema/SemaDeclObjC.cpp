@@ -15,9 +15,9 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/DeclSpec.h"
@@ -26,6 +26,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -1587,7 +1588,7 @@ void SemaObjC::actOnObjCTypeArgsOrProtocolQualifiers(
     if (auto *actualTypeDecl = typeDecl.dyn_cast<TypeDecl *>())
       type = Context.getTypeDeclType(actualTypeDecl);
     else
-      type = Context.getObjCInterfaceType(cast<ObjCInterfaceDecl *>(typeDecl));
+      type = Context.getObjCInterfaceType(typeDecl.get<ObjCInterfaceDecl *>());
     TypeSourceInfo *parsedTSInfo = Context.getTrivialTypeSourceInfo(type, loc);
     ParsedType parsedType = SemaRef.CreateParsedType(type, parsedTSInfo);
     DS.SetTypeSpecType(DeclSpec::TST_typename, loc, prevSpec, diagID,
@@ -5316,7 +5317,8 @@ SemaObjC::GetIvarBackingPropertyAccessor(const ObjCMethodDecl *Method,
 namespace {
 /// Used by SemaObjC::DiagnoseUnusedBackingIvarInAccessor to check if a property
 /// accessor references the backing ivar.
-class UnusedBackingIvarChecker : public DynamicRecursiveASTVisitor {
+class UnusedBackingIvarChecker
+    : public RecursiveASTVisitor<UnusedBackingIvarChecker> {
 public:
   Sema &S;
   const ObjCMethodDecl *Method;
@@ -5331,7 +5333,7 @@ public:
     assert(IvarD);
   }
 
-  bool VisitObjCIvarRefExpr(ObjCIvarRefExpr *E) override {
+  bool VisitObjCIvarRefExpr(ObjCIvarRefExpr *E) {
     if (E->getDecl() == IvarD) {
       AccessedIvar = true;
       return false;
@@ -5339,7 +5341,7 @@ public:
     return true;
   }
 
-  bool VisitObjCMessageExpr(ObjCMessageExpr *E) override {
+  bool VisitObjCMessageExpr(ObjCMessageExpr *E) {
     if (E->getReceiverKind() == ObjCMessageExpr::Instance &&
         S.ObjC().isSelfExpr(E->getInstanceReceiver(), Method)) {
       InvokedSelfMethod = true;
