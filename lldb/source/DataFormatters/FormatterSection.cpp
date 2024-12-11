@@ -103,8 +103,9 @@ void LoadTypeSummariesForModule(ModuleSP module_sp) {
         }
         if (type_name.empty() || summary_string.empty()) {
           LLDB_LOG(GetLog(LLDBLog::DataFormatters),
-                   "Missing string(s) in embedded type summary in {0}.",
-                   module_sp->GetFileSpec());
+                   "Missing string(s) in embedded type summary in {0}, "
+                   "type_name={1}, summary={2}",
+                   module_sp->GetFileSpec(), type_name, summary_string);
           return;
         }
         TypeSummaryImpl::Flags flags;
