@@ -17,6 +17,7 @@
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/SymbolMap.h"
+#include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
@@ -94,8 +95,60 @@ void DataSharingProcessor::insertDeallocs() {
 
 void DataSharingProcessor::cloneSymbol(const semantics::Symbol *sym) {
   bool isFirstPrivate = sym->test(semantics::Symbol::Flag::OmpFirstPrivate);
-  bool success = converter.createHostAssociateVarClone(
-      *sym, /*skipDefaultInit=*/isFirstPrivate);
+
+  // If we are doing eager-privatization on a symbol created using delayed
+  // privatization there could be incompatible types here e.g.
+  // fir.ref<fir.box<fir.array<>>>
+  bool success = false;
+  [&]() {
+    const auto *details =
+        sym->detailsIf<Fortran::semantics::HostAssocDetails>();
+    assert(details && "No host-association found");
+    const Fortran::semantics::Symbol &hsym = details->symbol();
+    mlir::Value addr = converter.getSymbolAddress(hsym);
+
+    if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(addr.getType())) {
+      if (auto boxTy = mlir::dyn_cast<fir::BoxType>(refTy.getElementType())) {
+        if (auto arrayTy =
+                mlir::dyn_cast<fir::SequenceType>(boxTy.getElementType())) {
+          // FirConverter/fir::ExtendedValue considers all references to boxes
+          // as mutable boxes. Outside of OpenMP it doesn't make sense to have a
+          // mutable box of an array. Work around this here by loading the
+          // reference so it is a normal boxed array.
+          fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+          mlir::Location loc = converter.genLocation(hsym.name());
+          fir::ExtendedValue hexv = converter.getSymbolExtendedValue(hsym);
+
+          llvm::SmallVector<mlir::Value> extents =
+              fir::factory::getExtents(loc, builder, hexv);
+
+          // TODO: uniqName, name
+          mlir::Value allocVal =
+              builder.allocateLocal(loc, arrayTy, /*uniqName=*/"",
+                                    /*name=*/"", extents, /*typeParams=*/{},
+                                    sym->GetUltimate().attrs().test(
+                                        Fortran::semantics::Attr::TARGET));
+          mlir::Value shape = builder.genShape(loc, extents);
+          mlir::Value box = builder.createBox(loc, boxTy, allocVal, shape,
+                                              nullptr, {}, nullptr);
+
+          // This can't be a CharArrayBoxValue because otherwise
+          // boxTy.getElementType() would be a charcater type.
+          // Assume the array element type isn't polymorphic because we are
+          // privatizing.
+          fir::ExtendedValue newExv = fir::ArrayBoxValue{box, extents};
+
+          converter.bindSymbol(*sym, newExv);
+          success = true;
+          return;
+        }
+      }
+    }
+
+    // Normal case:
+    success = converter.createHostAssociateVarClone(
+        *sym, /*skipDefaultInit=*/isFirstPrivate);
+  }();
   (void)success;
   assert(success && "Privatization failed due to existing binding");
 
