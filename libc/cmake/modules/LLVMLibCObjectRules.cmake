@@ -452,3 +452,41 @@ function(add_redirector_object target_name)
     BEFORE PRIVATE -fPIC ${LIBC_COMPILE_OPTIONS_DEFAULT}
   )
 endfunction(add_redirector_object)
+
+# Helper to define a function with multiple implementations
+# - Computes flags to satisfy required/rejected features and arch,
+# - Declares an entry point,
+# - Attach the REQUIRE_CPU_FEATURES property to the target,
+# - Add the fully qualified target to `${name}_implementations` global property for tests.
+function(add_implementation name impl_name)
+  cmake_parse_arguments(
+    "ADD_IMPL"
+    "" # Optional arguments
+    "" # Single value arguments
+    "REQUIRE;SRCS;HDRS;DEPENDS;COMPILE_OPTIONS;MLLVM_COMPILE_OPTIONS" # Multi value arguments
+    ${ARGN})
+
+  if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    # Note that '-mllvm' needs to be prefixed with 'SHELL:' to prevent CMake flag deduplication.
+    foreach(opt IN LISTS ADD_IMPL_MLLVM_COMPILE_OPTIONS)
+      list(APPEND ADD_IMPL_COMPILE_OPTIONS "SHELL:-mllvm ${opt}")
+    endforeach()
+  endif()
+
+  if("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+    # Prevent warning when passing x86 SIMD types as template arguments.
+    # e.g. "warning: ignoring attributes on template argument ‘__m128i’ [-Wignored-attributes]"
+    list(APPEND ADD_IMPL_COMPILE_OPTIONS "-Wno-ignored-attributes")
+  endif()
+
+  add_entrypoint_object(${impl_name}
+    NAME ${name}
+    SRCS ${ADD_IMPL_SRCS}
+    HDRS ${ADD_IMPL_HDRS}
+    DEPENDS ${ADD_IMPL_DEPENDS}
+    COMPILE_OPTIONS ${libc_opt_high_flag} ${ADD_IMPL_COMPILE_OPTIONS}
+  )
+  get_fq_target_name(${impl_name} fq_target_name)
+  set_target_properties(${fq_target_name} PROPERTIES REQUIRE_CPU_FEATURES "${ADD_IMPL_REQUIRE}")
+  set_property(GLOBAL APPEND PROPERTY "${name}_implementations" "${fq_target_name}")
+endfunction()

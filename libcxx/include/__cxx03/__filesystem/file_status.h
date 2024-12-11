@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FILESYSTEM_FILE_STATUS_H
-#define _LIBCPP___FILESYSTEM_FILE_STATUS_H
+#ifndef _LIBCPP___CXX03___FILESYSTEM_FILE_STATUS_H
+#define _LIBCPP___CXX03___FILESYSTEM_FILE_STATUS_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__filesystem/file_type.h>
@@ -64,4 +64,4 @@ _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 #endif // _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___FILESYSTEM_FILE_STATUS_H
+#endif // _LIBCPP___CXX03___FILESYSTEM_FILE_STATUS_H

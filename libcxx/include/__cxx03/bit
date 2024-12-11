@@ -7,8 +7,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_BIT
-#define _LIBCPP_BIT
+#ifndef _LIBCPP___CXX03_BIT
+#define _LIBCPP___CXX03_BIT
 
 /*
     bit synopsis
@@ -98,4 +98,4 @@ namespace std {
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_BIT
+#endif // _LIBCPP___CXX03_BIT

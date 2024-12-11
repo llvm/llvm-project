@@ -188,7 +188,8 @@ bool IsModuleFileUpToDate(PathRef ModuleFilePath,
 
   clang::clangd::IgnoreDiagnostics IgnoreDiags;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(new DiagnosticOptions, &IgnoreDiags,
+      CompilerInstance::createDiagnostics(*VFS, new DiagnosticOptions,
+                                          &IgnoreDiags,
                                           /*ShouldOwnClient=*/false);
 
   LangOptions LangOpts;
@@ -198,7 +199,7 @@ bool IsModuleFileUpToDate(PathRef ModuleFilePath,
 
   SourceManager SourceMgr(*Diags, FileMgr);
 
-  HeaderSearch HeaderInfo(HSOpts, SourceMgr, *Diags, LangOpts,
+  HeaderSearch HeaderInfo(std::move(HSOpts), SourceMgr, *Diags, LangOpts,
                           /*Target=*/nullptr);
 
   TrivialModuleLoader ModuleLoader;

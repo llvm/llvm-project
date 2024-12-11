@@ -55,16 +55,16 @@ entry:
   %var = alloca i32
   br i1 true, label %a_true, label %a_false
 
-; CHECK: %[[#a_true]] = OpLabel
-; CHECK:                OpStore %[[#r2m_a]] %[[#true]]
-; CHECK:                OpBranch %[[#a_merge]]
-a_true:
-  br label %a_merge
-
 ; CHECK: %[[#a_false]] = OpLabel
 ; CHECK:                 OpStore %[[#r2m_a]] %[[#false]]
 ; CHECK:                 OpBranch %[[#a_merge]]
 a_false:
+  br label %a_merge
+
+; CHECK: %[[#a_true]] = OpLabel
+; CHECK:                OpStore %[[#r2m_a]] %[[#true]]
+; CHECK:                OpBranch %[[#a_merge]]
+a_true:
   br label %a_merge
 
 ; CHECK: %[[#a_merge]] = OpLabel
@@ -89,6 +89,14 @@ b_merge:
   %f1 = call spir_func noundef i32 @_Z2fnv() #4 [ "convergencectrl"(token %0) ]
   br i1 true, label %c_true, label %c_false
 
+; CHECK: %[[#c_false]] = OpLabel
+; CHECK:        %[[#]] = OpFunctionCall
+; CHECK:                 OpStore %[[#r2m_b]] %[[#]]
+; CHECK:                 OpBranch %[[#c_merge]]
+c_false:
+  %f3 = call spir_func noundef i32 @_Z3fn2v() #4 [ "convergencectrl"(token %0) ]
+  br label %c_merge
+
 ; CHECK: %[[#c_true]] = OpLabel
 ; CHECK:       %[[#]] = OpFunctionCall
 ; CHECK:                OpStore %[[#r2m_b]] %[[#]]
@@ -97,13 +105,6 @@ c_true:
   %f2 = call spir_func noundef i32 @_Z3fn1v() #4 [ "convergencectrl"(token %0) ]
   br label %c_merge
 
-; CHECK: %[[#c_false]] = OpLabel
-; CHECK:        %[[#]] = OpFunctionCall
-; CHECK:                 OpStore %[[#r2m_b]] %[[#]]
-; CHECK:                 OpBranch %[[#c_merge]]
-c_false:
-  %f3 = call spir_func noundef i32 @_Z3fn2v() #4 [ "convergencectrl"(token %0) ]
-  br label %c_merge
 
 ; CHECK: %[[#c_merge]] = OpLabel
 ; CHECK:    %[[#tmp:]] = OpLoad %[[#]] %[[#r2m_b]]

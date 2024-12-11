@@ -5,7 +5,7 @@
 ; Constant::getUniqueInteger would crash for a scalable-vector zeroinitializer.
 define <vscale x 1 x i32> @select_opt(<vscale x 1 x i32> %b, <vscale x 1 x i1> %m) {
 ; CHECK-LABEL: @select_opt(
-; CHECK-NEXT:    [[C:%.*]] = add nsw <vscale x 1 x i32> [[B:%.*]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> undef, i32 2, i32 0), <vscale x 1 x i32> undef, <vscale x 1 x i32> zeroinitializer)
+; CHECK-NEXT:    [[C:%.*]] = add nsw <vscale x 1 x i32> [[B:%.*]], splat (i32 2)
 ; CHECK-NEXT:    [[D:%.*]] = select <vscale x 1 x i1> [[M:%.*]], <vscale x 1 x i32> [[C]], <vscale x 1 x i32> [[B]]
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[D]]
 ;

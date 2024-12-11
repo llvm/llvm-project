@@ -302,6 +302,6 @@ associated with relocatable device code linking.
 Extensions
 ----------
 
-We describe which operation the RPC server should take with a 16-bit opcode. We
-consider the first 32768 numbers to be reserved while the others are free to
-use.
+The opcode is a 32-bit integer that must be unique to the requested operation. 
+All opcodes used by ``libc`` internally have the character ``c`` in the most 
+significant byte.
