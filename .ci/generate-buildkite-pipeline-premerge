@@ -52,7 +52,7 @@ modified_dirs=$(echo "$MODIFIED_FILES" | cut -d'/' -f1 | sort -u)
 echo "Directories modified:" >&2
 echo "$modified_dirs" >&2
 
-. ./ci/compute-projects.sh
+. ./.ci/compute-projects.sh
 
 # Project specific pipelines.
 
