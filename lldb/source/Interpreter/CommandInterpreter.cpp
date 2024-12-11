@@ -1886,15 +1886,18 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
                                        LazyBool lazy_add_to_history,
                                        CommandReturnObject &result,
                                        bool force_repeat_command) {
-  llvm::telemetry::EventStats start_command_stats(
-      std::chrono::steady_clock::now());
+  EventStats start_command_stats(std::chrono::steady_clock::now());
   LldbTelemeter *telemeter = GetDebugger().GetTelemeter();
   // Generate a UUID for this command so the logger can match
   // the start/end entries correctly.
   const std::string command_uuid = telemeter->GetNextUUID();
 
-  telemeter->LogCommandStart(command_uuid, command_line, start_command_stats,
-                             GetExecutionContext().GetTargetPtr());
+  CommandTelemetryInfo start_entry;
+  start_entry.stats = start_command_stats;
+  start_entry.command_uuid = command_uuid;
+  start_entry.target_ptr = GetExecutionContext().GetTargetPtr();
+
+  telemeter->LogCommandStart(&start_entry);
 
   std::string command_string(command_line);
   std::string original_command_string(command_line);
@@ -1902,17 +1905,22 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   CommandObject *cmd_obj = nullptr;
 
   auto log_on_exit = llvm::make_scope_exit([&]() {
-    llvm::telemetry::EventStats end_command_stats(
-        start_command_stats.Start, std::chrono::steady_clock::now());
+    EventStats end_command_stats(start_command_stats.start,
+                                 std::chrono::steady_clock::now());
 
     llvm::StringRef command_name =
         cmd_obj ? cmd_obj->GetCommandName() : "<not found>";
     // TODO: this is logging the time the command-handler finishes.
     // But we may want a finer-grain durations too?
     // (ie., the execute_time recorded below?)
-    telemeter->LogCommandEnd(command_uuid, command_name, parsed_command_args,
-                             end_command_stats,
-                             GetExecutionContext().GetTargetPtr(), &result);
+    CommandTelemetryInfo end_entry;
+    end_entry.stats = end_command_stats;
+    end_entry.command_uuid = command_uuid;
+    end_entry.command_name = command_name.str();
+    end_entry.args = parsed_command_args;
+    end_entry.target_ptr = GetExecutionContext().GetTargetPtr();
+    end_entry.result = &result;
+    telemeter->LogCommandEnd(&end_entry);
   });
 
   Log *log = GetLog(LLDBLog::Commands);

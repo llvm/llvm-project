@@ -32,8 +32,6 @@ public:
   virtual std::unique_ptr<LldbTelemeter>
   CreateTelemeter(lldb_private::Debugger *debugger);
 
-  // TODO: move most of the basictelemeter concrete impl here to the plug in (to
-  // its .ccpp file that is)
 protected:
   // Returns a vendor-specific config which may or may not be the same as the
   // given "default_config". Downstream implementation can define their

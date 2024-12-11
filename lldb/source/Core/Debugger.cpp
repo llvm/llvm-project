@@ -734,18 +734,17 @@ void Debugger::InstanceInitialize() {
 
 DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
                                     void *baton) {
-  llvm::telemetry::SteadyTimePoint start_time =
-      std::chrono::steady_clock::now();
+  SteadyTimePoint start_time = std::chrono::steady_clock::now();
   DebuggerSP debugger_sp(new Debugger(log_callback, baton));
   if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
     std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
     g_debugger_list_ptr->push_back(debugger_sp);
   }
   debugger_sp->InstanceInitialize();
-  llvm::telemetry::TelemetryInfo entry;
-  entry.Stats = {start_time, std::chrono::steady_clock::now()};
-  debugger_sp->m_telemeter->logStartup(HostInfo::GetProgramFileSpec().GetPath(),
-                                       &entry);
+  DebuggerTelemetryInfo entry;
+  entry.lldb_path = HostInfo::GetProgramFileSpec().GetPath();
+  entry.stats = {start_time, std::chrono::steady_clock::now()};
+  debugger_sp->m_telemeter->LogStartup(&entry);
   return debugger_sp;
 }
 
@@ -960,8 +959,7 @@ void Debugger::Clear() {
   //     static void Debugger::Destroy(lldb::DebuggerSP &debugger_sp);
   //     static void Debugger::Terminate();
   llvm::call_once(m_clear_once, [this]() {
-    llvm::telemetry::SteadyTimePoint quit_start_time =
-        std::chrono::steady_clock::now();
+    SteadyTimePoint quit_start_time = std::chrono::steady_clock::now();
     ClearIOHandlers();
     StopIOHandlerThread();
     StopEventHandlerThread();
@@ -987,9 +985,10 @@ void Debugger::Clear() {
 
     // Log the "quit" event (including stats on how long the teardown took)
     // TBD: We *may* have to send off the log  BEFORE the ClearIOHanders()?
-    llvm::telemetry::TelemetryInfo entry;
-    entry.Stats = {quit_start_time, std::chrono::steady_clock::now()};
-    m_telemeter->logExit(HostInfo::GetProgramFileSpec().GetPath(), &entry);
+    DebuggerTelemetryInfo entry;
+    entry.stats = {quit_start_time, std::chrono::steady_clock::now()};
+    entry.lldb_path = HostInfo::GetProgramFileSpec().GetPath();
+    m_telemeter->LogExit(&entry);
   });
 }
 

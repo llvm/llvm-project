@@ -40,6 +40,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/LineIterator.h"
@@ -54,10 +55,9 @@ using namespace lldb_private;
 
 namespace {
 
+using ::llvm::Error;
+using ::llvm::StringRef;
 using ::llvm::telemetry::Destination;
-using ::llvm::telemetry::EventStats;
-using ::llvm::telemetry::ExitDescription;
-using ::llvm::telemetry::SteadyTimePoint;
 using ::llvm::telemetry::TelemetryInfo;
 
 // No-op logger to use when users disable telemetry
@@ -68,27 +68,21 @@ public:
   }
 
   NoOpTelemeter(Debugger *debugger) {}
-  void logStartup(llvm::StringRef tool_path, TelemetryInfo *entry) override {}
-  void logExit(llvm::StringRef tool_path, TelemetryInfo *entry) override {}
 
-  void LogProcessExit(int status, llvm::StringRef exit_string, EventStats stats,
-                      Target *target_ptr) override {}
-  void LogMainExecutableLoadStart(lldb::ModuleSP exec_mod,
-                                  EventStats stats) override {}
-  void LogMainExecutableLoadEnd(lldb::ModuleSP exec_mod,
-                                EventStats stats) override {}
-
-  void LogCommandStart(llvm::StringRef uuid, llvm::StringRef original_command,
-                       EventStats stats, Target *target_ptr) override {}
-  void LogCommandEnd(llvm::StringRef uuid, llvm::StringRef command_name,
-                     llvm::StringRef command_args, EventStats stats,
-                     Target *target_ptr, CommandReturnObject *result) override {
+  void addDestination(std::unique_ptr<Destination> destination) override {}
+  llvm::Error dispatch(TelemetryInfo *entry) override {
+    return Error::success();
   }
-
+  void LogStartup(DebuggerTelemetryInfo *entry) override {}
+  void LogExit(DebuggerTelemetryInfo *entry) override {}
+  void LogMainExecutableLoadStart(TargetTelemetryInfo *entry) override {}
+  void LogMainExecutableLoadEnd(TargetTelemetryInfo *entry) override {}
+  void LogProcessExit(TargetTelemetryInfo *entry) override {}
+  void LogCommandStart(CommandTelemetryInfo *entry) override {}
+  void LogCommandEnd(CommandTelemetryInfo *entry) override {}
   void
   LogClientTelemetry(const lldb_private::StructuredDataImpl &entry) override {}
 
-  void addDestination(llvm::telemetry::Destination *destination) override {}
   std::string GetNextUUID() override { return ""; }
 };
 
@@ -100,32 +94,25 @@ public:
 
   virtual ~BasicTelemeter() = default;
 
-  void logStartup(llvm::StringRef lldb_path, TelemetryInfo *entry) override;
-  void logExit(llvm::StringRef lldb_path, TelemetryInfo *entry) override;
-
-  void LogProcessExit(int status, llvm::StringRef exit_string, EventStats stats,
-                      Target *target_ptr) override;
-  void LogMainExecutableLoadStart(lldb::ModuleSP exec_mod,
-                                  EventStats stats) override;
-  void LogMainExecutableLoadEnd(lldb::ModuleSP exec_mod,
-                                EventStats stats) override;
-
-  void LogCommandStart(llvm::StringRef uuid, llvm::StringRef original_command,
-                       EventStats stats, Target *target_ptr) override;
-  void LogCommandEnd(llvm::StringRef uuid, llvm::StringRef command_name,
-                     llvm::StringRef command_args, EventStats stats,
-                     Target *target_ptr, CommandReturnObject *result) override;
-
+  void LogStartup(DebuggerTelemetryInfo *entry) override;
+  void LogExit(DebuggerTelemetryInfo *entry) override;
+  void LogMainExecutableLoadStart(TargetTelemetryInfo *entry) override;
+  void LogMainExecutableLoadEnd(TargetTelemetryInfo *entry) override;
+  void LogProcessExit(TargetTelemetryInfo *entry) override;
+  void LogCommandStart(CommandTelemetryInfo *entry) override;
+  void LogCommandEnd(CommandTelemetryInfo *entry) override;
   void
   LogClientTelemetry(const lldb_private::StructuredDataImpl &entry) override;
 
-  void addDestination(Destination *destination) override {
-    m_destinations.push_back(destination);
+  void addDestination(std::unique_ptr<Destination> destination) override {
+    m_destinations.push_back(std::move(destination));
   }
 
   std::string GetNextUUID() override {
     return std::to_string(uuid_seed.fetch_add(1));
   }
+
+  llvm::Error dispatch(TelemetryInfo *entry) override;
 
 protected:
   BasicTelemeter(std::unique_ptr<llvm::telemetry::Config> config,
@@ -137,11 +124,8 @@ private:
   template <typename EntrySubType> EntrySubType MakeBaseEntry() {
     EntrySubType entry;
     entry.SessionId = m_session_uuid;
-    entry.Counter = counter.fetch_add(1);
     return entry;
   }
-
-  void EmitToDestinations(const TelemetryInfo *entry);
 
   std::unique_ptr<llvm::telemetry::Config> m_config;
   Debugger *m_debugger;
@@ -151,20 +135,86 @@ private:
   // counting number of entries.
   std::atomic<size_t> counter = 0;
 
-  std::vector<Destination *> m_destinations;
+  std::vector<std::unique_ptr<Destination>> m_destinations;
 
   std::atomic<size_t> uuid_seed = 0;
 };
 
+class BasicSerializer : public Serializer {
+public:
+  const std::string &getString() { return Buffer; }
+
+  llvm::Error start() override {
+    if (started)
+      return llvm::createStringError("Serializer already in use");
+    started = true;
+    Buffer.clear();
+    return Error::success();
+  }
+
+  void writeBool(StringRef KeyName, bool Value) override {
+    writeHelper(KeyName, Value);
+  }
+
+  void writeInt32(StringRef KeyName, int Value) override {
+    writeHelper(KeyName, Value);
+  }
+
+  void writeSizeT(StringRef KeyName, size_t Value) override {
+    writeHelper(KeyName, Value);
+  }
+  void writeString(StringRef KeyName, StringRef Value) override {
+    assert(started && "serializer not started");
+  }
+
+  void
+  writeKeyValueMap(StringRef KeyName,
+                   const std::map<std::string, std::string> &Value) override {
+    std::string Inner;
+    for (auto kv : Value) {
+      writeHelper(StringRef(kv.first), StringRef(kv.second), &Inner);
+    }
+    writeHelper(KeyName, StringRef(Inner));
+  }
+
+  llvm::Error finish() override {
+    if (!started)
+      return llvm::createStringError("Serializer not currently in use");
+    started = false;
+    return Error::success();
+  }
+
+private:
+  template <typename T>
+  void writeHelper(StringRef Name, T Value, std::string *Buff) {
+    assert(started && "serializer not started");
+    Buff->append((Name + ":" + llvm::Twine(Value) + "\n").str());
+  }
+
+  template <typename T> void writeHelper(StringRef Name, T Value) {
+    writeHelper(Name, Value, &Buffer);
+  }
+
+  bool started = false;
+  std::string Buffer;
+};
+
 class StreamTelemetryDestination : public Destination {
 public:
-  StreamTelemetryDestination(llvm::raw_ostream &os, std::string desc)
-      : os(os), desc(desc) {}
-  llvm::Error emitEntry(const llvm::telemetry::TelemetryInfo *entry) override {
+  StreamTelemetryDestination(llvm::raw_ostream &os) : os(os) {}
+  llvm::Error
+  receiveEntry(const llvm::telemetry::TelemetryInfo *entry) override {
     // Upstream Telemetry should not leak anything other than the
     // basic data, unless running in test mode.
 #ifdef TEST_TELEMETRY
-    os << entry->ToString() << "\n";
+    if (Error err = serializer.start()) {
+      return err;
+    }
+    entry->serialize(serializer);
+    if (Error err = serializer.finish()) {
+      return err;
+    }
+    os << serializer.getString() << "\n";
 #else
     os << "session_uuid: " << entry->SessionId
        << "<the rest is omitted due to PII risk>\n";
@@ -173,11 +223,11 @@ public:
     return llvm::ErrorSuccess();
   }
 
-  std::string name() const override { return desc; }
+  llvm::StringLiteral name() const override { return "StreamDestination"; }
 
 private:
   llvm::raw_ostream &os;
-  const std::string desc;
+  BasicSerializer serializer;
 };
 
 static std::string MakeUUID(lldb_private::Debugger *debugger) {
@@ -207,145 +257,115 @@ BasicTelemeter::CreateInstance(std::unique_ptr<llvm::telemetry::Config> config,
                                lldb_private::Debugger *debugger) {
 
   BasicTelemeter *ins = new BasicTelemeter(std::move(config), debugger);
-  for (const std ::string &dest : config->AdditionalDestinations) {
-    if (dest == "stdout") {
-      ins->addDestination(
-          new StreamTelemetryDestination(llvm::outs(), "stdout"));
-    } else if (dest == "stderr") {
-      ins->addDestination(
-          new StreamTelemetryDestination(llvm::errs(), "stderr"));
-    } else {
-      // TODO: handle custom values as needed?
-    }
-  }
 
   return std::unique_ptr<BasicTelemeter>(ins);
 }
 
-void BasicTelemeter::EmitToDestinations(const TelemetryInfo *entry) {
-  // TODO: can do this in a separate thread (need to own the ptrs!).
-  for (Destination *destination : m_destinations) {
-    llvm::Error err = destination->emitEntry(entry);
+llvm::Error BasicTelemeter::dispatch(TelemetryInfo *entry) {
+  entry->SessionId = m_session_uuid;
+
+  for (auto &destination : m_destinations) {
+    llvm::Error err = destination->receiveEntry(entry);
     if (err) {
-      LLDB_LOG(GetLog(LLDBLog::Object),
-               "Error emitting to destination(name = {0})",
-               destination->name());
+      return std::move(err);
     }
   }
+  return Error::success();
 }
 
-void BasicTelemeter::logStartup(llvm::StringRef lldb_path,
-                                TelemetryInfo *entry) {
-  startup_lldb_path = lldb_path.str();
-  lldb_private::DebuggerTelemetryInfo startup_info =
-      MakeBaseEntry<DebuggerTelemetryInfo>();
-
+void BasicTelemeter::LogStartup(DebuggerTelemetryInfo *entry) {
   UserIDResolver &resolver = lldb_private::HostInfo::GetUserIDResolver();
   std::optional<llvm::StringRef> opt_username =
       resolver.GetUserName(lldb_private::HostInfo::GetUserID());
   if (opt_username)
-    startup_info.username = *opt_username;
+    entry->username = *opt_username;
 
-  startup_info.lldb_git_sha =
-      lldb_private::GetVersion(); // TODO: find the real git sha
-  startup_info.lldb_path = startup_lldb_path;
-  startup_info.Stats = entry->Stats;
+  entry->lldb_git_sha =
+      lldb_private::GetVersion(); // TODO: find the real git sha?
 
   llvm::SmallString<64> cwd;
   if (!llvm::sys::fs::current_path(cwd)) {
-    startup_info.cwd = cwd.c_str();
+    entry->cwd = cwd.c_str();
   } else {
     MiscTelemetryInfo misc_info = MakeBaseEntry<MiscTelemetryInfo>();
     misc_info.meta_data["internal_errors"] = "Cannot determine CWD";
-    EmitToDestinations(&misc_info);
+    if (auto er = dispatch(&misc_info)) {
+      LLDB_LOG(GetLog(LLDBLog::Object),
+               "Failed to dispatch misc-info from startup");
+    }
   }
 
-  EmitToDestinations(&startup_info);
+  if (auto er = dispatch(entry)) {
+    LLDB_LOG(GetLog(LLDBLog::Object), "Failed to dispatch entry from startup");
+  }
 
   // Optional part
   CollectMiscBuildInfo();
 }
 
-void BasicTelemeter::logExit(llvm::StringRef lldb_path, TelemetryInfo *entry) {
-  // we should be shutting down the same instance that we started?!
-  // llvm::Assert(startup_lldb_path == lldb_path.str());
-
-  lldb_private::DebuggerTelemetryInfo exit_info =
-      MakeBaseEntry<lldb_private::DebuggerTelemetryInfo>();
-  exit_info.Stats = entry->Stats;
-  exit_info.lldb_path = startup_lldb_path;
+void BasicTelemeter::LogExit(DebuggerTelemetryInfo *entry) {
   if (auto *selected_target =
           m_debugger->GetSelectedExecutionContext().GetTargetPtr()) {
     if (!selected_target->IsDummyTarget()) {
       const lldb::ProcessSP proc = selected_target->GetProcessSP();
       if (proc == nullptr) {
         // no process has been launched yet.
-        exit_info.ExitDesc = {-1, "no process launched."};
+        entry->exit_desc = {-1, "no process launched."};
       } else {
-        exit_info.ExitDesc = {proc->GetExitStatus(), ""};
+        entry->exit_desc = {proc->GetExitStatus(), ""};
         if (const char *description = proc->GetExitDescription())
-          exit_info.ExitDesc->Description = std::string(description);
+          entry->exit_desc->description = std::string(description);
       }
     }
   }
-  EmitToDestinations(&exit_info);
+  dispatch(entry);
 }
 
-void BasicTelemeter::LogProcessExit(int status, llvm::StringRef exit_string,
-                                    EventStats stats, Target *target_ptr) {
-  lldb_private::TargetTelemetryInfo exit_info =
-      MakeBaseEntry<TargetTelemetryInfo>();
-  exit_info.Stats = std::move(stats);
-  exit_info.target_uuid =
-      target_ptr && !target_ptr->IsDummyTarget()
-          ? target_ptr->GetExecutableModule()->GetUUID().GetAsString()
+void BasicTelemeter::LogProcessExit(TargetTelemetryInfo *entry) {
+  entry->target_uuid =
+      entry->target_ptr && !entry->target_ptr->IsDummyTarget()
+          ? entry->target_ptr->GetExecutableModule()->GetUUID().GetAsString()
           : "";
-  exit_info.ExitDesc = {status, exit_string.str()};
 
-  EmitToDestinations(&exit_info);
+  dispatch(entry);
 }
 
 void BasicTelemeter::CollectMiscBuildInfo() {
   // collecting use-case specific data
 }
 
-void BasicTelemeter::LogMainExecutableLoadStart(lldb::ModuleSP exec_mod,
-                                                EventStats stats) {
-  TargetTelemetryInfo target_info = MakeBaseEntry<TargetTelemetryInfo>();
-  target_info.Stats = std::move(stats);
-  target_info.binary_path =
-      exec_mod->GetFileSpec().GetPathAsConstString().GetCString();
-  target_info.file_format = exec_mod->GetArchitecture().GetArchitectureName();
-  target_info.target_uuid = exec_mod->GetUUID().GetAsString();
-  if (auto err = llvm::sys::fs::file_size(exec_mod->GetFileSpec().GetPath(),
-                                          target_info.binary_size)) {
+void BasicTelemeter::LogMainExecutableLoadStart(TargetTelemetryInfo *entry) {
+  entry->binary_path =
+      entry->exec_mod->GetFileSpec().GetPathAsConstString().GetCString();
+  entry->file_format = entry->exec_mod->GetArchitecture().GetArchitectureName();
+  entry->target_uuid = entry->exec_mod->GetUUID().GetAsString();
+  if (auto err = llvm::sys::fs::file_size(
+          entry->exec_mod->GetFileSpec().GetPath(), entry->binary_size)) {
     // If there was error obtaining it, just reset the size to 0.
     // Maybe log the error too?
-    target_info.binary_size = 0;
+    entry->binary_size = 0;
   }
-  EmitToDestinations(&target_info);
+  dispatch(entry);
 }
 
-void BasicTelemeter::LogMainExecutableLoadEnd(lldb::ModuleSP exec_mod,
-                                              EventStats stats) {
-  TargetTelemetryInfo target_info = MakeBaseEntry<TargetTelemetryInfo>();
-  target_info.Stats = std::move(stats);
-  target_info.binary_path =
+void BasicTelemeter::LogMainExecutableLoadEnd(TargetTelemetryInfo *entry) {
+  lldb::ModuleSP exec_mod = entry->exec_mod;
+  entry->binary_path =
       exec_mod->GetFileSpec().GetPathAsConstString().GetCString();
-  target_info.file_format = exec_mod->GetArchitecture().GetArchitectureName();
-  target_info.target_uuid = exec_mod->GetUUID().GetAsString();
-  target_info.binary_size = exec_mod->GetObjectFile()->GetByteSize();
+  entry->file_format = exec_mod->GetArchitecture().GetArchitectureName();
+  entry->target_uuid = exec_mod->GetUUID().GetAsString();
+  entry->binary_size = exec_mod->GetObjectFile()->GetByteSize();
 
-  EmitToDestinations(&target_info);
+  dispatch(entry);
 
-  // Collect some more info,  might be useful?
+  // Collect some more info, might be useful?
   MiscTelemetryInfo misc_info = MakeBaseEntry<MiscTelemetryInfo>();
   misc_info.target_uuid = exec_mod->GetUUID().GetAsString();
   misc_info.meta_data["symtab_index_time"] =
       std::to_string(exec_mod->GetSymtabIndexTime().get().count());
   misc_info.meta_data["symtab_parse_time"] =
       std::to_string(exec_mod->GetSymtabParseTime().get().count());
-  EmitToDestinations(&misc_info);
+  dispatch(&misc_info);
 }
 
 void BasicTelemeter::LogClientTelemetry(
@@ -386,55 +406,39 @@ void BasicTelemeter::LogClientTelemetry(
     client_info.error_msg = error_msg->str();
   */
 
-  EmitToDestinations(&client_info);
+  dispatch(&client_info);
 }
 
-void BasicTelemeter::LogCommandStart(llvm::StringRef uuid,
-                                     llvm::StringRef original_command,
-                                     EventStats stats, Target *target_ptr) {
-
-  lldb_private::CommandTelemetryInfo command_info =
-      MakeBaseEntry<CommandTelemetryInfo>();
-
+void BasicTelemeter::LogCommandStart(CommandTelemetryInfo *entry) {
   // If we have a target attached to this command, then get the UUID.
-  command_info.target_uuid = "";
-  if (target_ptr && target_ptr->GetExecutableModule() != nullptr) {
-    command_info.target_uuid =
-        target_ptr->GetExecutableModule()->GetUUID().GetAsString();
+  if (entry->target_ptr &&
+      entry->target_ptr->GetExecutableModule() != nullptr) {
+    entry->target_uuid =
+        entry->target_ptr->GetExecutableModule()->GetUUID().GetAsString();
+  } else {
+    entry->target_uuid = "";
   }
-  command_info.command_uuid = uuid.str();
-  command_info.original_command = original_command.str();
-  command_info.Stats = std::move(stats);
 
-  EmitToDestinations(&command_info);
+  dispatch(entry);
 }
 
-void BasicTelemeter::LogCommandEnd(llvm::StringRef uuid,
-                                   llvm::StringRef command_name,
-                                   llvm::StringRef command_args,
-                                   EventStats stats, Target *target_ptr,
-                                   CommandReturnObject *result) {
-
-  lldb_private::CommandTelemetryInfo command_info =
-      MakeBaseEntry<CommandTelemetryInfo>();
-
+void BasicTelemeter::LogCommandEnd(CommandTelemetryInfo *entry) {
   // If we have a target attached to this command, then get the UUID.
-  command_info.target_uuid = "";
-  if (target_ptr && target_ptr->GetExecutableModule() != nullptr) {
-    command_info.target_uuid =
-        target_ptr->GetExecutableModule()->GetUUID().GetAsString();
+  if (entry->target_ptr &&
+      entry->target_ptr->GetExecutableModule() != nullptr) {
+    entry->target_uuid =
+        entry->target_ptr->GetExecutableModule()->GetUUID().GetAsString();
+  } else {
+    entry->target_uuid = "";
   }
-  command_info.command_uuid = uuid.str();
-  command_info.command_name = command_name.str();
-  command_info.args = command_args.str();
-  command_info.Stats = std::move(stats);
-  command_info.ExitDesc = {result->Succeeded() ? 0 : -1, ""};
-  if (llvm::StringRef error_data = result->GetErrorData();
+
+  entry->exit_desc = {entry->result->Succeeded() ? 0 : -1, ""};
+  if (llvm::StringRef error_data = entry->result->GetErrorData();
       !error_data.empty()) {
-    command_info.ExitDesc->Description = error_data.str();
+    entry->exit_desc->description = error_data.str();
   }
-  command_info.ret_status = result->GetStatus();
-  EmitToDestinations(&command_info);
+  entry->ret_status = entry->result->GetStatus();
+  dispatch(entry);
 }
 
 } // namespace
@@ -480,7 +484,6 @@ static bool ParseBoolValue(llvm::StringRef str, llvm::StringRef label) {
 std::unique_ptr<llvm::telemetry::Config> TelemetryVendor::GetTelemetryConfig() {
   // Telemetry is disabled by default.
   bool enable_telemetry = false;
-  std::vector<std::string> additional_destinations;
 
   // Look in the $HOME/.lldb_telemetry_config file to populate the struct
   llvm::SmallString<64> init_file;
@@ -495,15 +498,6 @@ std::unique_ptr<llvm::telemetry::Config> TelemetryVendor::GetTelemetryConfig() {
       for (; !iter.is_at_eof(); ++iter) {
         if (iter->starts_with("enable_telemetry:")) {
           enable_telemetry = ParseBoolValue(*iter, "enable_telemetry:");
-        } else if (iter->starts_with("destination:")) {
-          llvm::StringRef dest = ParseValue(*iter, "destination:");
-          if (dest == "stdout") {
-            additional_destinations.push_back("stdout");
-          } else if (dest == "stderr") {
-            additional_destinations.push_back("stderr");
-          } else {
-            additional_destinations.push_back(dest.str());
-          }
         }
       }
     } else {
@@ -517,9 +511,7 @@ std::unique_ptr<llvm::telemetry::Config> TelemetryVendor::GetTelemetryConfig() {
   enable_telemetry = true;
 #endif
 
-  auto config = std::make_unique<llvm::telemetry::Config>();
-  config->EnableTelemetry = enable_telemetry;
-  config->AdditionalDestinations = std::move(additional_destinations);
+  auto config = std::make_unique<llvm::telemetry::Config>(enable_telemetry);
 
   // Now apply any additional vendor config, if available.
   // TODO: cache the Config? (given it's not going to change after LLDB starts

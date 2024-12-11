@@ -1555,19 +1555,23 @@ void Target::DidExec() {
 
 void Target::SetExecutableModule(ModuleSP &executable_sp,
                                  LoadDependentFiles load_dependent_files) {
-  llvm::telemetry::EventStats load_executable_stats(
-      std::chrono::steady_clock::now());
+  EventStats load_executable_stats(std::chrono::steady_clock::now());
   Log *log = GetLog(LLDBLog::Target);
   ClearModules(false);
 
   if (executable_sp) {
-    m_debugger.GetTelemeter()->LogMainExecutableLoadStart(
-        executable_sp, load_executable_stats);
+    TargetTelemetryInfo load_start;
+    load_start.stats = load_executable_stats;
+    load_start.exec_mod = executable_sp;
+
+    m_debugger.GetTelemeter()->LogMainExecutableLoadStart(&load_start);
 
     auto log_on_exit = llvm::make_scope_exit([&]() {
-      load_executable_stats.End = std::chrono::steady_clock::now();
-      m_debugger.GetTelemeter()->LogMainExecutableLoadEnd(
-          executable_sp, load_executable_stats);
+      load_executable_stats.end = std::chrono::steady_clock::now();
+      TargetTelemetryInfo load_end;
+      load_end.stats = load_executable_stats;
+      load_end.exec_mod = executable_sp;
+      m_debugger.GetTelemeter()->LogMainExecutableLoadEnd(&load_end);
     });
   }
   if (executable_sp) {

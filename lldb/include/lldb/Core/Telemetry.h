@@ -28,7 +28,10 @@
 
 namespace lldb_private {
 
+using llvm::telemetry::Destination;
 using llvm::telemetry::KindType;
+using llvm::telemetry::Serializer;
+using llvm::telemetry::TelemetryInfo;
 
 struct LldbEntryKind : public ::llvm::telemetry::EntryKind {
   static const KindType BaseInfo = 0b11000;
@@ -39,21 +42,44 @@ struct LldbEntryKind : public ::llvm::telemetry::EntryKind {
   static const KindType MiscInfo = 0b11110;
 };
 
-struct LldbBaseTelemetryInfo : public ::llvm::telemetry::TelemetryInfo {
+/// Defines a convenient type for timestamp of various events.
+/// This is used by the EventStats below.
+using SteadyTimePoint = std::chrono::time_point<std::chrono::steady_clock>;
+
+/// Various time (and possibly memory) statistics of an event.
+struct EventStats {
+  // REQUIRED: Start time of an event
+  SteadyTimePoint start;
+  // OPTIONAL: End time of an event - may be empty if not meaningful.
+  std::optional<SteadyTimePoint> end;
+  // TBD: could add some memory stats here too?
+
+  EventStats() = default;
+  EventStats(SteadyTimePoint start) : start(start) {}
+  EventStats(SteadyTimePoint start, SteadyTimePoint end)
+      : start(start), end(end) {}
+};
+
+/// Describes the exit signal of an event.
+struct ExitDescription {
+  int exit_code;
+  std::string description;
+};
+
+struct LldbBaseTelemetryInfo : public TelemetryInfo {
+  EventStats stats;
+
   // For dyn_cast, isa, etc operations.
   KindType getKind() const override { return LldbEntryKind::BaseInfo; }
 
-  static bool classof(const TelemetryInfo *T) {
-    if (T == nullptr)
+  static bool classof(const TelemetryInfo *t) {
+    if (t == nullptr)
       return false;
     // Subclasses of this is also acceptable.
-    return (T->getKind() & LldbEntryKind::BaseInfo) == LldbEntryKind::BaseInfo;
+    return (t->getKind() & LldbEntryKind::BaseInfo) == LldbEntryKind::BaseInfo;
   }
 
-  // Returns a human-readable string description of the struct.
-  // This is for debugging purposes only.
-  // It is NOT meant as a data-serialisation method.
-  virtual std::string ToString() const;
+  void serialize(Serializer &serializer) const override;
 };
 
 struct DebuggerTelemetryInfo : public LldbBaseTelemetryInfo {
@@ -62,6 +88,7 @@ struct DebuggerTelemetryInfo : public LldbBaseTelemetryInfo {
   std::string lldb_path;
   std::string cwd;
 
+  std::optional<ExitDescription> exit_desc;
   DebuggerTelemetryInfo() = default;
 
   // Provide a copy ctor because we may need to make a copy before
@@ -82,12 +109,13 @@ struct DebuggerTelemetryInfo : public LldbBaseTelemetryInfo {
     return T->getKind() == LldbEntryKind::DebuggerInfo;
   }
 
-  llvm::json::Object serializeToJson() const override;
-
-  std::string ToString() const override;
+  void serialize(Serializer &serializer) const override;
 };
 
 struct TargetTelemetryInfo : public LldbBaseTelemetryInfo {
+  lldb::ModuleSP exec_mod;
+  Target *target_ptr;
+
   // The same as the executable-module's UUID.
   std::string target_uuid;
   std::string file_format;
@@ -95,13 +123,16 @@ struct TargetTelemetryInfo : public LldbBaseTelemetryInfo {
   std::string binary_path;
   size_t binary_size;
 
+  std::optional<ExitDescription> exit_desc;
   TargetTelemetryInfo() = default;
 
   TargetTelemetryInfo(const TargetTelemetryInfo &other) {
+    exec_mod = other.exec_mod;
     target_uuid = other.target_uuid;
     file_format = other.file_format;
     binary_path = other.binary_path;
     binary_size = other.binary_size;
+    exit_desc = other.exit_desc;
   }
 
   KindType getKind() const override { return LldbEntryKind::TargetInfo; }
@@ -112,9 +143,7 @@ struct TargetTelemetryInfo : public LldbBaseTelemetryInfo {
     return T->getKind() == LldbEntryKind::TargetInfo;
   }
 
-  llvm::json::Object serializeToJson() const override;
-
-  std::string ToString() const override;
+  void serialize(Serializer &serializer) const override;
 };
 
 // Entry from client (eg., SB-API)
@@ -137,22 +166,13 @@ struct ClientTelemetryInfo : public LldbBaseTelemetryInfo {
     return T->getKind() == LldbEntryKind::ClientInfo;
   }
 
-  llvm::json::Object serializeToJson() const override;
-
-  std::string ToString() const override;
-};
-
-struct CommandExitDescription : public ::llvm::telemetry::ExitDescription {
-  lldb::ReturnStatus ret_status;
-  CommandExitDescription(int ret_code, std::string ret_desc,
-                         lldb::ReturnStatus status) {
-    ExitCode = ret_code;
-    Description = std::move(ret_desc);
-    ret_status = status;
-  }
+  void serialize(Serializer &serializer) const override;
 };
 
 struct CommandTelemetryInfo : public LldbBaseTelemetryInfo {
+  Target *target_ptr;
+  CommandReturnObject *result;
+
   // If the command is/can be associated with a target entry,
   // this field contains that target's UUID.
   // <EMPTY> otherwise.
@@ -167,6 +187,7 @@ struct CommandTelemetryInfo : public LldbBaseTelemetryInfo {
   std::string original_command;
   std::string args;
 
+  std::optional<ExitDescription> exit_desc;
   lldb::ReturnStatus ret_status;
 
   CommandTelemetryInfo() = default;
@@ -177,6 +198,8 @@ struct CommandTelemetryInfo : public LldbBaseTelemetryInfo {
     command_name = other.command_name;
     original_command = other.original_command;
     args = other.args;
+    exit_desc = other.exit_desc;
+    ret_status = other.ret_status;
   }
 
   KindType getKind() const override { return LldbEntryKind::CommandInfo; }
@@ -187,9 +210,7 @@ struct CommandTelemetryInfo : public LldbBaseTelemetryInfo {
     return T->getKind() == LldbEntryKind::CommandInfo;
   }
 
-  llvm::json::Object serializeToJson() const override;
-
-  std::string ToString() const override;
+  void serialize(Serializer &serializer) const override;
 };
 
 /// The "catch-all" entry to store a set of custom/non-standard
@@ -201,7 +222,7 @@ struct MiscTelemetryInfo : public LldbBaseTelemetryInfo {
   std::string target_uuid;
 
   /// Set of key-value pairs for any optional (or impl-specific) data
-  std::unordered_map<std::string, std::string> meta_data;
+  std::map<std::string, std::string> meta_data;
 
   MiscTelemetryInfo() = default;
 
@@ -218,15 +239,13 @@ struct MiscTelemetryInfo : public LldbBaseTelemetryInfo {
     return T->getKind() == LldbEntryKind::MiscInfo;
   }
 
-  llvm::json::Object serializeToJson() const override;
-
-  std::string ToString() const override;
+  void serialize(Serializer &serializer) const override;
 };
 
-/// The base Telemeter instance in LLDB.
+/// The base Telemetry manager instance in LLDB
 /// This class declares additional instrumentation points
 /// applicable to LLDB.
-class LldbTelemeter : public llvm::telemetry::Telemeter {
+class LldbTelemeter : public llvm::telemetry::Manager {
 public:
   /// Creates an instance of LldbTelemeter.
   /// This uses the plugin registry to find an instance:
@@ -239,65 +258,40 @@ public:
 
   virtual ~LldbTelemeter() = default;
 
-  /// Invoked upon process exit
-  virtual void LogProcessExit(int status, llvm::StringRef exit_string,
-                              llvm::telemetry::EventStats stats,
-                              Target *target_ptr) = 0;
+  /// To be invoked upon LLDB startup.
+  virtual void LogStartup(DebuggerTelemetryInfo *entry) = 0;
 
-  /// Invoked upon loading the main executable module
+  /// To be invoked upon LLDB exit.
+  virtual void LogExit(DebuggerTelemetryInfo *entry) = 0;
+
+  /// To be invoked upon loading the main executable module.
   /// We log in a fire-n-forget fashion so that if the load
   /// crashes, we don't lose the entry.
-  virtual void
-  LogMainExecutableLoadStart(lldb::ModuleSP exec_mod,
-                             llvm::telemetry::EventStats stats) = 0;
-  virtual void LogMainExecutableLoadEnd(lldb::ModuleSP exec_mod,
-                                        llvm::telemetry::EventStats stats) = 0;
+  virtual void LogMainExecutableLoadStart(TargetTelemetryInfo *entry) = 0;
+  virtual void LogMainExecutableLoadEnd(TargetTelemetryInfo *entry) = 0;
+
+  /// To be invoked upon process exit.
+  virtual void LogProcessExit(TargetTelemetryInfo *entry);
 
   /// Invoked for each command
   /// We log in a fire-n-forget fashion so that if the command execution
   /// crashes, we don't lose the entry.
-  virtual void LogCommandStart(llvm::StringRef uuid,
-                               llvm::StringRef original_command,
-                               llvm::telemetry::EventStats stats,
-                               Target *target_ptr) = 0;
-  virtual void LogCommandEnd(llvm::StringRef uuid, llvm::StringRef command_name,
-                             llvm::StringRef command_args,
-                             llvm::telemetry::EventStats stats,
-                             Target *target_ptr,
-                             CommandReturnObject *result) = 0;
+  virtual void LogCommandStart(CommandTelemetryInfo *entry) = 0;
+  virtual void LogCommandEnd(CommandTelemetryInfo *entry) = 0;
 
   virtual std::string GetNextUUID() = 0;
 
   /// For client (eg., SB API) to send telemetry entries.
   virtual void
   LogClientTelemetry(const lldb_private::StructuredDataImpl &entry) = 0;
+
+private:
+  const std::string SessionId;
+  std::vector<std::unique_ptr<Destination>> destinations;
 };
 
-/// Logger configs: LLDB users can also supply their own configs via:
-/// $HOME/.lldb_telemetry_config
-///
-/// We can propose simple syntax: <field_name><colon><value>
-/// Eg.,
-/// enable_telemetry:true
-/// destination:stdout
-/// destination:stderr
-/// destination:/path/to/some/file
-///
-/// The allowed field_name values are:
-///  * enable_telemetry
-///       If the fields are specified more than once, the last line will take
-///       precedence If enable_logging is set to false, no logging will occur.
-///  * destination.
-///       This is allowed to be specified multiple times - it will add to the
-///       default (ie, specified by vendor) list of destinations.
-///       The value can be either:
-///          + one of the two magic values "stdout" or "stderr".
-///          + a path to a local file
-/// !!NOTE!!: We decided to use a separate file instead of the existing settings
-///         file because that file is parsed too late in the process and by the
-///         there might have been lots of telemetry-entries that need to be
-///         sent already.
-///         This approach avoid losing log entries if LLDB crashes during init.
+/// Logger configs. This should be overriden by vendor's specific config.
+/// The default (upstream) config will have telemetry disabled.
 llvm::telemetry::Config *GetTelemetryConfig();
 
 } // namespace lldb_private

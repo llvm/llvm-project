@@ -1068,8 +1068,7 @@ bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
   // Use a mutex to protect setting the exit status.
   std::lock_guard<std::mutex> guard(m_exit_status_mutex);
 
-  llvm::telemetry::SteadyTimePoint start_time =
-      std::chrono::steady_clock::now();
+  SteadyTimePoint start_time = std::chrono::steady_clock::now();
 
   Log *log(GetLog(LLDBLog::State | LLDBLog::Process));
   LLDB_LOG(log, "(plugin = {0} status = {1} ({1:x8}), description=\"{2}\")",
@@ -1100,10 +1099,11 @@ bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
   // Allow subclasses to do some cleanup
   DidExit();
 
-  llvm::telemetry::EventStats stats = {start_time,
-                                       std::chrono::steady_clock::now()};
-  GetTarget().GetDebugger().GetTelemeter()->LogProcessExit(status, exit_string,
-                                                           stats, &GetTarget());
+  TargetTelemetryInfo entry;
+  entry.stats = {start_time, std::chrono::steady_clock::now()};
+  entry.exit_desc = {status, exit_string.str()};
+  entry.target_ptr = &GetTarget();
+  GetTarget().GetDebugger().GetTelemeter()->LogProcessExit(&entry);
 
   return true;
 }
