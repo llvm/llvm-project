@@ -1490,8 +1490,11 @@ bool PreRARematStage::canIncreaseOccupancy(
 
     // We do not rematerialize SGPR-defining regions yet so do not bother
     // optimizing regions whose occupancy is SGPR-limited.
-    if (ST.getOccupancyWithNumSGPRs(RP.getSGPRNum()) == DAG.MinOccupancy)
-      continue;
+    if (ST.getOccupancyWithNumSGPRs(RP.getSGPRNum()) == DAG.MinOccupancy) {
+      RA_DEBUG(dbgs() << "Region " << I
+                      << "'s occupancy is SGPR-limited, aborting\n");
+      return false;
+    }
 
     unsigned NumVGPRs = RP.getVGPRNum(ST.hasGFX90AInsts());
     unsigned NumToIncreaseOcc = ST.getNumVGPRsToIncreaseOccupancy(NumVGPRs);
