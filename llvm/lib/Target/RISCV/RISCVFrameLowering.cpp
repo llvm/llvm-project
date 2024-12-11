@@ -1607,8 +1607,6 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
         int FrameIdx = MFI.CreateFixedSpillStackObject(Size, Offset);
         assert(FrameIdx < 0);
         CS.setFrameIdx(FrameIdx);
-        if (RISCVRegisterInfo::isRVVRegClass(RC))
-          MFI.setStackID(FrameIdx, TargetStackID::ScalableVector);
         continue;
       }
     }
