@@ -512,7 +512,8 @@ void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
 
 void test_builtin_elementwise_bitreverse(si8 vi1, si8 vi2,
                                   long long int i1, long long int i2, short si,
-                                  _BitInt(31) bi1, _BitInt(31) bi2) {
+                                  _BitInt(31) bi1, _BitInt(31) bi2,
+                                  char ci) {
   
 
   // CHECK:      [[I1:%.+]] = load i64, ptr %i1.addr, align 8
@@ -541,10 +542,24 @@ void test_builtin_elementwise_bitreverse(si8 vi1, si8 vi2,
   b = __builtin_elementwise_bitreverse(-10);
 
   // CHECK:      [[SI:%.+]] = load i16, ptr %si.addr, align 2
-  // CHECK-NEXT: [[SI_EXT:%.+]] = sext i16 [[SI]] to i32
-  // CHECK-NEXT: [[RES:%.+]] = call i32 @llvm.bitreverse.i32(i32 [[SI_EXT]])
-  // CHECK-NEXT: = trunc i32 [[RES]] to i16
+  // CHECK-NEXT: [[RES:%.+]] = call i16 @llvm.bitreverse.i16(i16 [[SI]])
   si = __builtin_elementwise_bitreverse(si);
+
+  // CHECK:      store i16 28671, ptr %si.addr, align 2
+  si = __builtin_elementwise_bitreverse((short)-10);
+
+  // CHECK:      store i16 28671, ptr %si.addr, align 2
+  si = __builtin_elementwise_bitreverse((unsigned short)-10);
+
+  // CHECK:      [[CI:%.+]] = load i8, ptr %ci.addr, align 1
+  // CHECK-NEXT: [[RES:%.+]] = call i8 @llvm.bitreverse.i8(i8 [[CI]])
+  ci = __builtin_elementwise_bitreverse(ci);
+
+  // CHECK:      store i8 111, ptr %ci.addr, align 1
+  ci = __builtin_elementwise_bitreverse((unsigned char)-10);
+
+  // CHECK:      store i8 111, ptr %ci.addr, align 1
+  ci = __builtin_elementwise_bitreverse((char)-10);
 }
 
 void test_builtin_elementwise_ceil(float f1, float f2, double d1, double d2,
@@ -762,7 +777,8 @@ void test_builtin_elementwise_log2(float f1, float f2, double d1, double d2,
 
 void test_builtin_elementwise_popcount(si8 vi1, si8 vi2, long long int i1,
                                        long long int i2, short si,
-                                       _BitInt(31) bi1, _BitInt(31) bi2) {
+                                       _BitInt(31) bi1, _BitInt(31) bi2,
+                                       char ci) {
   // CHECK:      [[I1:%.+]] = load i64, ptr %i1.addr, align 8
   // CHECK-NEXT: call i64 @llvm.ctpop.i64(i64 [[I1]])
   i2 = __builtin_elementwise_popcount(i1);
@@ -789,10 +805,24 @@ void test_builtin_elementwise_popcount(si8 vi1, si8 vi2, long long int i1,
   b = __builtin_elementwise_popcount(-10);
 
   // CHECK:      [[SI:%.+]] = load i16, ptr %si.addr, align 2
-  // CHECK-NEXT: [[SI_EXT:%.+]] = sext i16 [[SI]] to i32
-  // CHECK-NEXT: [[RES:%.+]] = call i32 @llvm.ctpop.i32(i32 [[SI_EXT]])
-  // CHECK-NEXT: = trunc i32 [[RES]] to i16
+  // CHECK-NEXT: [[RES:%.+]] = call i16 @llvm.ctpop.i16(i16 [[SI]])
   si = __builtin_elementwise_popcount(si);
+
+  // CHECK:      store i16 3, ptr %si.addr, align 2
+  si = __builtin_elementwise_popcount((unsigned short)32771);
+
+  // CHECK:      store i16 3, ptr %si.addr, align 2
+  si = __builtin_elementwise_popcount((short)32771);
+
+  // CHECK:      [[CI:%.+]] = load i8, ptr %ci.addr, align 1
+  // CHECK-NEXT: [[RES:%.+]] = call i8 @llvm.ctpop.i8(i8 [[CI]])
+  ci = __builtin_elementwise_popcount(ci);
+
+  // CHECK:      store i8 2, ptr %ci.addr, align 1
+  ci = __builtin_elementwise_popcount((unsigned char)192);
+
+  // CHECK:      store i8 2, ptr %ci.addr, align 1
+  ci = __builtin_elementwise_popcount((char)192);
 }
 
 void test_builtin_elementwise_fmod(float f1, float f2, double d1, double d2,

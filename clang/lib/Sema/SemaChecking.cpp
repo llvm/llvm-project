@@ -2828,11 +2828,28 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     break;
   case Builtin::BI__builtin_elementwise_popcount:
   case Builtin::BI__builtin_elementwise_bitreverse: {
+    if (checkArgCount(TheCall, 1))
+      return ExprError();
+
+    Expr *Arg = TheCall->getArg(0);
+    QualType ArgTy = Arg->getType();
+
+    // If the argument is a promotable integer type, do not perform the usual
+    // conversions - we must keep the operation at the correct bitwidth.
+    if (Context.isPromotableIntegerType(ArgTy)) {
+      // Convert the argument to an r-value - avoid the usual conversions.
+      ExprResult ResLHS = DefaultFunctionArrayLvalueConversion(Arg);
+      if (ResLHS.isInvalid())
+        return ExprError();
+      Arg = ResLHS.get();
+      TheCall->setArg(0, Arg);
+      TheCall->setType(Arg->getType());
+      break;
+    }
+
     if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return ExprError();
 
-    const Expr *Arg = TheCall->getArg(0);
-    QualType ArgTy = Arg->getType();
     QualType EltTy = ArgTy;
 
     if (auto *VecTy = EltTy->getAs<VectorType>())
