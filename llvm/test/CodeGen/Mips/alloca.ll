@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel -relocation-model=pic < %s | FileCheck %s
 
 define i32 @twoalloca(i32 %size) nounwind {
 entry:

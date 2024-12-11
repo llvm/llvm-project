@@ -161,8 +161,8 @@ define double @fsgnj_d(double %a, double %b) nounwind {
 ; RV32I-LABEL: fsgnj_d:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a2, 524288
-; RV32I-NEXT:    addi a4, a2, -1
-; RV32I-NEXT:    and a1, a1, a4
+; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    srli a1, a1, 1
 ; RV32I-NEXT:    and a2, a3, a2
 ; RV32I-NEXT:    or a1, a1, a2
 ; RV32I-NEXT:    ret
@@ -170,10 +170,10 @@ define double @fsgnj_d(double %a, double %b) nounwind {
 ; RV64I-LABEL: fsgnj_d:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    li a2, -1
-; RV64I-NEXT:    slli a3, a2, 63
-; RV64I-NEXT:    srli a2, a2, 1
-; RV64I-NEXT:    and a0, a0, a2
-; RV64I-NEXT:    and a1, a1, a3
+; RV64I-NEXT:    slli a0, a0, 1
+; RV64I-NEXT:    slli a2, a2, 63
+; RV64I-NEXT:    srli a0, a0, 1
+; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
   %1 = call double @llvm.copysign.f64(double %a, double %b)
@@ -241,9 +241,9 @@ define double @fsgnjn_d(double %a, double %b) nounwind {
 ; RV32I-LABEL: fsgnjn_d:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a2, 524288
+; RV32I-NEXT:    slli a1, a1, 1
 ; RV32I-NEXT:    xor a3, a3, a2
-; RV32I-NEXT:    addi a4, a2, -1
-; RV32I-NEXT:    and a1, a1, a4
+; RV32I-NEXT:    srli a1, a1, 1
 ; RV32I-NEXT:    and a2, a3, a2
 ; RV32I-NEXT:    or a1, a1, a2
 ; RV32I-NEXT:    ret
@@ -251,11 +251,11 @@ define double @fsgnjn_d(double %a, double %b) nounwind {
 ; RV64I-LABEL: fsgnjn_d:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    li a2, -1
-; RV64I-NEXT:    slli a3, a2, 63
-; RV64I-NEXT:    srli a2, a2, 1
-; RV64I-NEXT:    xor a1, a1, a3
-; RV64I-NEXT:    and a0, a0, a2
-; RV64I-NEXT:    and a1, a1, a3
+; RV64I-NEXT:    slli a0, a0, 1
+; RV64I-NEXT:    slli a2, a2, 63
+; RV64I-NEXT:    xor a1, a1, a2
+; RV64I-NEXT:    srli a0, a0, 1
+; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
   %1 = fneg double %b
@@ -281,9 +281,8 @@ define double @fabs_d(double %a, double %b) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    call __adddf3
 ; RV32I-NEXT:    mv a3, a1
-; RV32I-NEXT:    lui a1, 524288
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a1, a3, a1
+; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    srli a1, a1, 1
 ; RV32I-NEXT:    mv a2, a0
 ; RV32I-NEXT:    call __adddf3
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -296,9 +295,8 @@ define double @fabs_d(double %a, double %b) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    call __adddf3
 ; RV64I-NEXT:    mv a1, a0
-; RV64I-NEXT:    li a0, -1
+; RV64I-NEXT:    slli a0, a0, 1
 ; RV64I-NEXT:    srli a0, a0, 1
-; RV64I-NEXT:    and a0, a1, a0
 ; RV64I-NEXT:    call __adddf3
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16

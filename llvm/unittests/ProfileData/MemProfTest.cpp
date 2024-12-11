@@ -35,6 +35,7 @@ using ::llvm::StringRef;
 using ::llvm::object::SectionedAddress;
 using ::llvm::symbolize::SymbolizableModule;
 using ::testing::ElementsAre;
+using ::testing::IsEmpty;
 using ::testing::Pair;
 using ::testing::Return;
 using ::testing::SizeIs;
@@ -758,6 +759,43 @@ HeapProfileRecords:
   EXPECT_EQ(Record.AllocSites[1].Info.getTotalSize(), 555U);
   EXPECT_THAT(Record.CallSiteIds,
               ElementsAre(hashCallStack(CS3), hashCallStack(CS4)));
+}
+
+// Verify that the YAML parser accepts a GUID expressed as a function name.
+TEST(MemProf, YAMLParserGUID) {
+  StringRef YAMLData = R"YAML(
+---
+HeapProfileRecords:
+- GUID: _Z3fooi
+  AllocSites:
+  - Callstack:
+    - {Function: 0x100, LineOffset: 11, Column: 10, IsInlineFrame: true}
+    MemInfoBlock: {}
+  CallSites: []
+)YAML";
+
+  YAMLMemProfReader YAMLReader;
+  YAMLReader.parse(YAMLData);
+  IndexedMemProfData MemProfData = YAMLReader.takeMemProfData();
+
+  Frame F1(0x100, 11, 10, true);
+
+  llvm::SmallVector<FrameId> CS1 = {F1.hash()};
+
+  // Verify the entire contents of MemProfData.Frames.
+  EXPECT_THAT(MemProfData.Frames, UnorderedElementsAre(Pair(F1.hash(), F1)));
+
+  // Verify the entire contents of MemProfData.Frames.
+  EXPECT_THAT(MemProfData.CallStacks,
+              UnorderedElementsAre(Pair(hashCallStack(CS1), CS1)));
+
+  // Verify the entire contents of MemProfData.Records.
+  ASSERT_THAT(MemProfData.Records, SizeIs(1));
+  const auto &[GUID, Record] = MemProfData.Records.front();
+  EXPECT_EQ(GUID, IndexedMemProfRecord::getGUID("_Z3fooi"));
+  ASSERT_THAT(Record.AllocSites, SizeIs(1));
+  EXPECT_EQ(Record.AllocSites[0].CSId, hashCallStack(CS1));
+  EXPECT_THAT(Record.CallSiteIds, IsEmpty());
 }
 
 template <typename T> std::string serializeInYAML(T &Val) {
