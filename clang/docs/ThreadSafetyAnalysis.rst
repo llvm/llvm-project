@@ -933,11 +933,25 @@ implementation.
     MutexLocker(Mutex *mu, defer_lock_t) EXCLUDES(mu) : mut(mu), locked(false) {}
 
     // Same as constructors, but without tag types. (Requires C++17 copy elision.)
-    static MutexLocker Lock(Mutex *mu) ACQUIRE(mu);
-    static MutexLocker Adopt(Mutex *mu) REQUIRES(mu);
-    static MutexLocker ReaderLock(Mutex *mu) ACQUIRE_SHARED(mu);
-    static MutexLocker AdoptReaderLock(Mutex *mu) REQUIRES_SHARED(mu);
-    static MutexLocker DeferLock(Mutex *mu) EXCLUDES(mu);
+    static MutexLocker Lock(Mutex *mu) ACQUIRE(mu) {
+      return MutexLocker(mu);
+    }
+
+    static MutexLocker Adopt(Mutex *mu) REQUIRES(mu) {
+      return MutexLocker(mu, adopt_lock);
+    }
+
+    static MutexLocker ReaderLock(Mutex *mu) ACQUIRE_SHARED(mu) {
+      return MutexLocker(mu, shared_lock);
+    }
+
+    static MutexLocker AdoptReaderLock(Mutex *mu) REQUIRES_SHARED(mu) {
+      return MutexLocker(mu, adopt_lock, shared_lock);
+    }
+
+    static MutexLocker DeferLock(Mutex *mu) EXCLUDES(mu) {
+      return MutexLocker(mu, defer_lock);
+    }
 
     // Release *this and all associated mutexes, if they are still held.
     // There is no warning if the scope was already unlocked before.

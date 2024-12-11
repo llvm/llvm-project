@@ -186,7 +186,7 @@ if.end:                                           ; preds = %if.then, %entry
 }
 
 ; ci:	.ent	z3
-; ci:	bteqz	$BB6_3
+; ci:	bteqz	$BB6_2
 ; ci:	.end	z3
 
 ; Function Attrs: nounwind optsize
@@ -210,7 +210,7 @@ if.end:                                           ; preds = %if.then, %entry
 
 ; ci:	.ent	z4
 ; ci:	btnez	$BB7_1  # 16 bit inst
-; ci:	jal	$BB7_3	# branch
+; ci:	jal	$BB7_2	# branch
 ; ci:	nop
 ; ci: $BB7_1:
 ; ci:	.p2align	2

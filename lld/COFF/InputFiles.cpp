@@ -70,23 +70,34 @@ std::string lld::toString(const coff::InputFile *file) {
       .str();
 }
 
+const COFFSyncStream &coff::operator<<(const COFFSyncStream &s,
+                                       const InputFile *f) {
+  return s << toString(f);
+}
+
 /// Checks that Source is compatible with being a weak alias to Target.
 /// If Source is Undefined and has no weak alias set, makes it a weak
 /// alias to Target.
 static void checkAndSetWeakAlias(COFFLinkerContext &ctx, InputFile *f,
-                                 Symbol *source, Symbol *target) {
+                                 Symbol *source, Symbol *target,
+                                 bool isAntiDep) {
   if (auto *u = dyn_cast<Undefined>(source)) {
     if (u->weakAlias && u->weakAlias != target) {
-      // Weak aliases as produced by GCC are named in the form
-      // .weak.<weaksymbol>.<othersymbol>, where <othersymbol> is the name
-      // of another symbol emitted near the weak symbol.
-      // Just use the definition from the first object file that defined
-      // this weak symbol.
-      if (ctx.config.allowDuplicateWeak)
+      // Ignore duplicated anti-dependency symbols.
+      if (isAntiDep)
         return;
-      ctx.symtab.reportDuplicate(source, f);
+      if (!u->isAntiDep) {
+        // Weak aliases as produced by GCC are named in the form
+        // .weak.<weaksymbol>.<othersymbol>, where <othersymbol> is the name
+        // of another symbol emitted near the weak symbol.
+        // Just use the definition from the first object file that defined
+        // this weak symbol.
+        if (ctx.config.allowDuplicateWeak)
+          return;
+        ctx.symtab.reportDuplicate(source, f);
+      }
     }
-    u->weakAlias = target;
+    u->setWeakAlias(target, isAntiDep);
   }
 }
 
@@ -133,7 +144,8 @@ void ArchiveFile::addMember(const Archive::Symbol &sym) {
   ctx.driver.enqueueArchiveMember(c, sym, getName());
 }
 
-std::vector<MemoryBufferRef> lld::coff::getArchiveMembers(Archive *file) {
+std::vector<MemoryBufferRef>
+lld::coff::getArchiveMembers(COFFLinkerContext &ctx, Archive *file) {
   std::vector<MemoryBufferRef> v;
   Error err = Error::success();
   for (const Archive::Child &c : file->children(err)) {
@@ -144,8 +156,8 @@ std::vector<MemoryBufferRef> lld::coff::getArchiveMembers(Archive *file) {
     v.push_back(mbref);
   }
   if (err)
-    fatal(file->getFileName() +
-          ": Archive::children failed: " + toString(std::move(err)));
+    Fatal(ctx) << file->getFileName()
+               << ": Archive::children failed: " << toString(std::move(err));
   return v;
 }
 
@@ -176,7 +188,7 @@ struct ECMapEntry {
 void ObjFile::initializeECThunks() {
   for (SectionChunk *chunk : hybmpChunks) {
     if (chunk->getContents().size() % sizeof(ECMapEntry)) {
-      error("Invalid .hybmp chunk size " + Twine(chunk->getContents().size()));
+      Err(ctx) << "Invalid .hybmp chunk size " << chunk->getContents().size();
       continue;
     }
 
@@ -195,7 +207,7 @@ void ObjFile::initializeECThunks() {
       case Arm64ECThunkType::GuestExit:
         break;
       default:
-        warn("Ignoring unknown EC thunk type " + Twine(entry->type));
+        Warn(ctx) << "Ignoring unknown EC thunk type " << entry->type;
       }
     }
   }
@@ -209,7 +221,7 @@ void ObjFile::parse() {
     bin.release();
     coffObj.reset(obj);
   } else {
-    fatal(toString(this) + " is not a COFF file");
+    Fatal(ctx) << toString(this) << " is not a COFF file";
   }
 
   // Read section and symbol tables.
@@ -223,7 +235,7 @@ void ObjFile::parse() {
 const coff_section *ObjFile::getSection(uint32_t i) {
   auto sec = coffObj->getSection(i);
   if (!sec)
-    fatal("getSection failed: #" + Twine(i) + ": " + toString(sec.takeError()));
+    Fatal(ctx) << "getSection failed: #" << i << ": " << sec.takeError();
   return *sec;
 }
 
@@ -256,8 +268,8 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
   if (Expected<StringRef> e = coffObj->getSectionName(sec))
     name = *e;
   else
-    fatal("getSectionName failed: #" + Twine(sectionNumber) + ": " +
-          toString(e.takeError()));
+    Fatal(ctx) << "getSectionName failed: #" << sectionNumber << ": "
+               << e.takeError();
 
   if (name == ".drectve") {
     ArrayRef<uint8_t> data;
@@ -352,9 +364,9 @@ void ObjFile::readAssociativeDefinition(COFFSymbolRef sym,
     const coff_section *parentSec = getSection(parentIndex);
     if (Expected<StringRef> e = coffObj->getSectionName(parentSec))
       parentName = *e;
-    error(toString(this) + ": associative comdat " + name + " (sec " +
-          Twine(sectionNumber) + ") has invalid reference to section " +
-          parentName + " (sec " + Twine(parentIndex) + ")");
+    Err(ctx) << toString(this) << ": associative comdat " << name << " (sec "
+             << sectionNumber << ") has invalid reference to section "
+             << parentName << " (sec " << parentIndex << ")";
   };
 
   if (parent == pendingComdat) {
@@ -436,7 +448,8 @@ void ObjFile::initializeSymbols() {
   uint32_t numSymbols = coffObj->getNumberOfSymbols();
   symbols.resize(numSymbols);
 
-  SmallVector<std::pair<Symbol *, uint32_t>, 8> weakAliases;
+  SmallVector<std::pair<Symbol *, const coff_aux_weak_external *>, 8>
+      weakAliases;
   std::vector<uint32_t> pendingIndexes;
   pendingIndexes.reserve(numSymbols);
 
@@ -448,11 +461,35 @@ void ObjFile::initializeSymbols() {
     COFFSymbolRef coffSym = check(coffObj->getSymbol(i));
     bool prevailingComdat;
     if (coffSym.isUndefined()) {
-      symbols[i] = createUndefined(coffSym);
+      symbols[i] = createUndefined(coffSym, false);
     } else if (coffSym.isWeakExternal()) {
-      symbols[i] = createUndefined(coffSym);
-      uint32_t tagIndex = coffSym.getAux<coff_aux_weak_external>()->TagIndex;
-      weakAliases.emplace_back(symbols[i], tagIndex);
+      auto aux = coffSym.getAux<coff_aux_weak_external>();
+      bool overrideLazy = true;
+
+      // On ARM64EC, external function calls emit a pair of weak-dependency
+      // aliases: func to #func and #func to the func guess exit thunk
+      // (instead of a single undefined func symbol, which would be emitted on
+      // other targets). Allow such aliases to be overridden by lazy archive
+      // symbols, just as we would for undefined symbols.
+      if (isArm64EC(getMachineType()) &&
+          aux->Characteristics == IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY) {
+        COFFSymbolRef targetSym = check(coffObj->getSymbol(aux->TagIndex));
+        if (!targetSym.isAnyUndefined()) {
+          // If the target is defined, it may be either a guess exit thunk or
+          // the actual implementation. If it's the latter, consider the alias
+          // to be part of the implementation and override potential lazy
+          // archive symbols.
+          StringRef targetName = check(coffObj->getSymbolName(targetSym));
+          StringRef name = check(coffObj->getSymbolName(coffSym));
+          std::optional<std::string> mangledName =
+              getArm64ECMangledFunctionName(name);
+          overrideLazy = mangledName == targetName;
+        } else {
+          overrideLazy = false;
+        }
+      }
+      symbols[i] = createUndefined(coffSym, overrideLazy);
+      weakAliases.emplace_back(symbols[i], aux);
     } else if (std::optional<Symbol *> optSym =
                    createDefined(coffSym, comdatDefs, prevailingComdat)) {
       symbols[i] = *optSym;
@@ -482,8 +519,8 @@ void ObjFile::initializeSymbols() {
     }
     if (sparseChunks[sym.getSectionNumber()] == pendingComdat) {
       StringRef name = check(coffObj->getSymbolName(sym));
-      log("comdat section " + name +
-          " without leader and unassociated, discarding");
+      Log(ctx) << "comdat section " << name
+               << " without leader and unassociated, discarding";
       continue;
     }
     symbols[i] = createRegular(sym);
@@ -491,17 +528,34 @@ void ObjFile::initializeSymbols() {
 
   for (auto &kv : weakAliases) {
     Symbol *sym = kv.first;
-    uint32_t idx = kv.second;
-    checkAndSetWeakAlias(ctx, this, sym, symbols[idx]);
+    const coff_aux_weak_external *aux = kv.second;
+    checkAndSetWeakAlias(ctx, this, sym, symbols[aux->TagIndex],
+                         aux->Characteristics ==
+                             IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY);
   }
 
   // Free the memory used by sparseChunks now that symbol loading is finished.
   decltype(sparseChunks)().swap(sparseChunks);
 }
 
-Symbol *ObjFile::createUndefined(COFFSymbolRef sym) {
+Symbol *ObjFile::createUndefined(COFFSymbolRef sym, bool overrideLazy) {
   StringRef name = check(coffObj->getSymbolName(sym));
-  return ctx.symtab.addUndefined(name, this, sym.isWeakExternal());
+  Symbol *s = ctx.symtab.addUndefined(name, this, overrideLazy);
+
+  // Add an anti-dependency alias for undefined AMD64 symbols on the ARM64EC
+  // target.
+  if (isArm64EC(ctx.config.machine) && getMachineType() == AMD64) {
+    auto u = dyn_cast<Undefined>(s);
+    if (u && !u->weakAlias) {
+      if (std::optional<std::string> mangledName =
+              getArm64ECMangledFunctionName(name)) {
+        Symbol *m = ctx.symtab.addUndefined(saver().save(*mangledName), this,
+                                            /*overrideLazy=*/false);
+        u->setWeakAlias(m, /*antiDep=*/true);
+      }
+    }
+  }
+  return s;
 }
 
 static const coff_aux_section_definition *findSectionDef(COFFObjectFile *obj,
@@ -567,10 +621,9 @@ void ObjFile::handleComdatSelection(
   // seems better though.
   // (This behavior matches ModuleLinker::getComdatResult().)
   if (selection != leaderSelection) {
-    log(("conflicting comdat type for " + toString(ctx, *leader) + ": " +
-         Twine((int)leaderSelection) + " in " + toString(leader->getFile()) +
-         " and " + Twine((int)selection) + " in " + toString(this))
-            .str());
+    Log(ctx) << "conflicting comdat type for " << leader << ": "
+             << (int)leaderSelection << " in " << leader->getFile() << " and "
+             << (int)selection << " in " << this;
     ctx.symtab.reportDuplicate(leader, this);
     return;
   }
@@ -671,12 +724,14 @@ std::optional<Symbol *> ObjFile::createDefined(
     return nullptr;
 
   if (llvm::COFF::isReservedSectionNumber(sectionNumber))
-    fatal(toString(this) + ": " + getName() +
-          " should not refer to special section " + Twine(sectionNumber));
+    Fatal(ctx) << toString(this) << ": " << getName()
+               << " should not refer to special section "
+               << Twine(sectionNumber);
 
   if ((uint32_t)sectionNumber >= sparseChunks.size())
-    fatal(toString(this) + ": " + getName() +
-          " should not refer to non-existent section " + Twine(sectionNumber));
+    Fatal(ctx) << toString(this) << ": " << getName()
+               << " should not refer to non-existent section "
+               << Twine(sectionNumber);
 
   // Comdat handling.
   // A comdat symbol consists of two symbol table entries.
@@ -706,8 +761,9 @@ std::optional<Symbol *> ObjFile::createDefined(
         // Intentionally ends at IMAGE_COMDAT_SELECT_LARGEST: link.exe
         // doesn't understand IMAGE_COMDAT_SELECT_NEWEST either.
         def->Selection > (int)IMAGE_COMDAT_SELECT_LARGEST) {
-      fatal("unknown comdat type " + std::to_string((int)def->Selection) +
-            " for " + getName() + " in " + toString(this));
+      Fatal(ctx) << "unknown comdat type "
+                 << std::to_string((int)def->Selection) << " for " << getName()
+                 << " in " << toString(this);
     }
     COMDATType selection = (COMDATType)def->Selection;
 
@@ -1032,7 +1088,7 @@ void ImportFile::parse() {
   // Check if the total size is valid.
   if (mb.getBufferSize() < sizeof(*hdr) ||
       mb.getBufferSize() != sizeof(*hdr) + hdr->SizeOfData)
-    fatal("broken import library");
+    Fatal(ctx) << "broken import library";
 
   // Read names and create an __imp_ symbol.
   StringRef buf = mb.getBuffer().substr(sizeof(*hdr));
@@ -1202,7 +1258,7 @@ void BitcodeFile::parse() {
       sym = ctx.symtab.addUndefined(symName, this, true);
       std::string fallback = std::string(objSym.getCOFFWeakExternalFallback());
       Symbol *alias = ctx.symtab.addUndefined(saver.save(fallback));
-      checkAndSetWeakAlias(ctx, this, sym, alias);
+      checkAndSetWeakAlias(ctx, this, sym, alias, false);
     } else if (comdatIndex != -1) {
       if (symName == obj->getComdatTable()[comdatIndex].first) {
         sym = comdat[comdatIndex].first;
@@ -1231,7 +1287,8 @@ void BitcodeFile::parseLazy() {
 }
 
 MachineTypes BitcodeFile::getMachineType() const {
-  switch (Triple(obj->getTargetTriple()).getArch()) {
+  Triple t(obj->getTargetTriple());
+  switch (t.getArch()) {
   case Triple::x86_64:
     return AMD64;
   case Triple::x86:
@@ -1240,7 +1297,7 @@ MachineTypes BitcodeFile::getMachineType() const {
   case Triple::thumb:
     return ARMNT;
   case Triple::aarch64:
-    return ARM64;
+    return t.isWindowsArm64EC() ? ARM64EC : ARM64;
   default:
     return IMAGE_FILE_MACHINE_UNKNOWN;
   }
@@ -1272,12 +1329,12 @@ void DLLFile::parse() {
     bin.release();
     coffObj.reset(obj);
   } else {
-    error(toString(this) + " is not a COFF file");
+    Err(ctx) << toString(this) << " is not a COFF file";
     return;
   }
 
   if (!coffObj->getPE32Header() && !coffObj->getPE32PlusHeader()) {
-    error(toString(this) + " is not a PE-COFF executable");
+    Err(ctx) << toString(this) << " is not a PE-COFF executable";
     return;
   }
 

@@ -19,6 +19,13 @@ typedef struct {
   __UINT64_TYPE__ r15;
   __UINTPTR_TYPE__ rsp;
   __UINTPTR_TYPE__ rip;
+#elif defined(__i386__)
+  long ebx;
+  long esi;
+  long edi;
+  long ebp;
+  long esp;
+  long eip;
 #elif defined(__riscv)
   /* Program counter.  */
   long int __pc;

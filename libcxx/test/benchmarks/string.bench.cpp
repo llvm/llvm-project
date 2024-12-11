@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14
+
 #include <cstdint>
+#include <cstdlib>
 #include <new>
 #include <vector>
 
@@ -92,6 +95,7 @@ TEST_ALWAYS_INLINE const char* getSmallString(DiffType D) {
   case DiffType::ChangeLast:
     return "01234567-";
   }
+  __builtin_unreachable();
 }
 
 static constexpr char LargeStringLiteral[] = "012345678901234567890123456789012345678901234567890123456789012";
@@ -109,6 +113,7 @@ TEST_ALWAYS_INLINE const char* getLargeString(DiffType D) {
   case DiffType::ChangeLast:
     return "0" LARGE_STRING_FIRST "1" LARGE_STRING_SECOND "-";
   }
+  __builtin_unreachable();
 }
 
 TEST_ALWAYS_INLINE const char* getHugeString(DiffType D) {
@@ -127,6 +132,7 @@ TEST_ALWAYS_INLINE const char* getHugeString(DiffType D) {
   case DiffType::ChangeLast:
     return "0123456789" HUGE_STRING4 "0123456789" HUGE_STRING4 "012345678-";
   }
+  __builtin_unreachable();
 }
 
 TEST_ALWAYS_INLINE const char* getString(Length L, DiffType D = DiffType::Control) {
@@ -140,6 +146,7 @@ TEST_ALWAYS_INLINE const char* getString(Length L, DiffType D = DiffType::Contro
   case Length::Huge:
     return getHugeString(D);
   }
+  __builtin_unreachable();
 }
 
 TEST_ALWAYS_INLINE std::string makeString(Length L, DiffType D = DiffType::Control, Opacity O = Opacity::Transparent) {
@@ -153,6 +160,7 @@ TEST_ALWAYS_INLINE std::string makeString(Length L, DiffType D = DiffType::Contr
   case Length::Huge:
     return maybeOpaque(getHugeString(D), O == Opacity::Opaque);
   }
+  __builtin_unreachable();
 }
 
 template <class Length, class Opaque>
@@ -170,13 +178,13 @@ template <class Length, bool MeasureCopy, bool MeasureDestroy>
 static void StringCopyAndDestroy(benchmark::State& state) {
   static constexpr size_t NumStrings = 1024;
   auto Orig                          = makeString(Length());
-  std::aligned_storage<sizeof(std::string)>::type Storage[NumStrings];
+  alignas(std::string) char Storage[NumStrings * sizeof(std::string)];
 
   while (state.KeepRunningBatch(NumStrings)) {
     if (!MeasureCopy)
       state.PauseTiming();
     for (size_t I = 0; I < NumStrings; ++I) {
-      ::new (static_cast<void*>(Storage + I)) std::string(Orig);
+      ::new (reinterpret_cast<std::string*>(Storage) + I) std::string(Orig);
     }
     if (!MeasureCopy)
       state.ResumeTiming();
@@ -184,7 +192,7 @@ static void StringCopyAndDestroy(benchmark::State& state) {
       state.PauseTiming();
     for (size_t I = 0; I < NumStrings; ++I) {
       using S = std::string;
-      reinterpret_cast<S*>(Storage + I)->~S();
+      (reinterpret_cast<S*>(Storage) + I)->~S();
     }
     if (!MeasureDestroy)
       state.ResumeTiming();
@@ -209,16 +217,16 @@ template <class Length>
 struct StringMove {
   static void run(benchmark::State& state) {
     // Keep two object locations and move construct back and forth.
-    std::aligned_storage<sizeof(std::string), alignof(std::string)>::type Storage[2];
+    alignas(std::string) char Storage[2 * sizeof(std::string)];
     using S  = std::string;
     size_t I = 0;
-    S* newS  = new (static_cast<void*>(Storage)) std::string(makeString(Length()));
+    S* newS  = new (reinterpret_cast<std::string*>(Storage)) std::string(makeString(Length()));
     for (auto _ : state) {
       // Switch locations.
       I ^= 1;
       benchmark::DoNotOptimize(Storage);
       // Move construct into the new location,
-      S* tmpS = new (static_cast<void*>(Storage + I)) S(std::move(*newS));
+      S* tmpS = new (reinterpret_cast<std::string*>(Storage) + I) S(std::move(*newS));
       // then destroy the old one.
       newS->~S();
       newS = tmpS;
@@ -481,14 +489,14 @@ struct StringRead {
     for (auto _ : state) {
       // Jump long enough to defeat cache locality, and use a value that is
       // coprime with NumStrings to ensure we visit every element.
-      I             = (I + 17) % NumStrings;
-      const auto& V = Values[I];
+      I       = (I + 17) % NumStrings;
+      auto& V = Values[I];
 
       // Read everything first. Escaping data() through DoNotOptimize might
       // cause the compiler to have to recalculate information about `V` due to
       // aliasing.
-      const char* const Data = V.data();
-      const size_t Size      = V.size();
+      char* Data  = V.data();
+      size_t Size = V.size();
       benchmark::DoNotOptimize(Data);
       benchmark::DoNotOptimize(Size);
       if (Depth() == ::Depth::Deep) {

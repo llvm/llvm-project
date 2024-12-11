@@ -16,7 +16,6 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/Allocator.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -306,6 +305,14 @@ const AMDGPUMCExpr *AMDGPUMCExpr::createOccupancy(unsigned InitOcc,
                 Ctx);
 }
 
+bool AMDGPUMCExpr::isSymbolUsedInExpression(const MCSymbol *Sym) const {
+  for (const MCExpr *E : getArgs()) {
+    if (E->isSymbolUsedInExpression(Sym))
+      return true;
+  }
+  return false;
+}
+
 static KnownBits fromOptionalToKnownBits(std::optional<bool> CompareResult) {
   static constexpr unsigned BitWidth = 64;
   const APInt True(BitWidth, 1);
@@ -537,8 +544,12 @@ static void knownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
 
     // Variable value retrieval is not for actual use but only for knownbits
     // analysis.
-    knownBitsMapHelper(Sym.getVariableValue(/*SetUsed=*/false), KBM, Depth + 1);
-    KBM[Expr] = KBM[Sym.getVariableValue(/*SetUsed=*/false)];
+    const MCExpr *SymVal = Sym.getVariableValue(/*setUsed=*/false);
+    knownBitsMapHelper(SymVal, KBM, Depth + 1);
+
+    // Explicitly copy-construct so that there exists a local KnownBits in case
+    // KBM[SymVal] gets invalidated after a potential growth through KBM[Expr].
+    KBM[Expr] = KnownBits(KBM[SymVal]);
     return;
   }
   case MCExpr::ExprKind::Unary: {

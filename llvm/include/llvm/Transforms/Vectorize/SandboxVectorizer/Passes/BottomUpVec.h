@@ -24,16 +24,28 @@ namespace llvm::sandboxir {
 
 class BottomUpVec final : public FunctionPass {
   bool Change = false;
-  LegalityAnalysis Legality;
-  void vectorizeRec(ArrayRef<Value *> Bndl);
-  void tryVectorize(ArrayRef<Value *> Seeds);
+  std::unique_ptr<LegalityAnalysis> Legality;
+  SmallVector<Instruction *> DeadInstrCandidates;
 
-  // The PM containing the pipeline of region passes.
+  /// Creates and returns a vector instruction that replaces the instructions in
+  /// \p Bndl. \p Operands are the already vectorized operands.
+  Value *createVectorInstr(ArrayRef<Value *> Bndl, ArrayRef<Value *> Operands);
+  /// Erases all dead instructions from the dead instruction candidates
+  /// collected during vectorization.
+  void tryEraseDeadInstrs();
+  /// Packs all elements of \p ToPack into a vector and returns that vector.
+  Value *createPack(ArrayRef<Value *> ToPack);
+  /// Recursively try to vectorize \p Bndl and its operands.
+  Value *vectorizeRec(ArrayRef<Value *> Bndl, unsigned Depth);
+  /// Entry point for vectorization starting from \p Seeds.
+  bool tryVectorize(ArrayRef<Value *> Seeds);
+
+  /// The PM containing the pipeline of region passes.
   RegionPassManager RPM;
 
 public:
   BottomUpVec(StringRef Pipeline);
-  bool runOnFunction(Function &F) final;
+  bool runOnFunction(Function &F, const Analyses &A) final;
   void printPipeline(raw_ostream &OS) const final {
     OS << getName() << "\n";
     RPM.printPipeline(OS);

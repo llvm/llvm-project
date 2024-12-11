@@ -44,7 +44,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 31;
+const unsigned VERSION_MAJOR = 34;
 
 /// AST file minor version number supported by this version of
 /// Clang.
@@ -54,7 +54,7 @@ const unsigned VERSION_MAJOR = 31;
 /// for the previous version could still support reading the new
 /// version by ignoring new kinds of subblocks), this number
 /// should be increased.
-const unsigned VERSION_MINOR = 1;
+const unsigned VERSION_MINOR = 0;
 
 /// An ID number that refers to an identifier in an AST file.
 ///
@@ -350,9 +350,8 @@ enum ControlRecordTypes {
   /// and information about the compiler used to build this AST file.
   METADATA = 1,
 
-  /// Record code for the list of other AST files imported by
-  /// this AST file.
-  IMPORTS,
+  /// Record code for another AST file imported by this AST file.
+  IMPORT,
 
   /// Record code for the original file that was used to
   /// generate the AST file, including both its file ID and its
@@ -734,6 +733,13 @@ enum ASTRecordTypes {
   /// Record code for Sema's vector of functions/blocks with effects to
   /// be verified.
   DECLS_WITH_EFFECTS_TO_VERIFY = 72,
+
+  /// Record code for updated specialization
+  UPDATE_SPECIALIZATION = 73,
+
+  CXX_ADDED_TEMPLATE_SPECIALIZATION = 74,
+
+  CXX_ADDED_TEMPLATE_PARTIAL_SPECIALIZATION = 75,
 };
 
 /// Record types used within a source manager block.
@@ -1149,7 +1155,7 @@ enum PredefinedTypeIDs {
 ///
 /// Type IDs for non-predefined types will start at
 /// NUM_PREDEF_TYPE_IDs.
-const unsigned NUM_PREDEF_TYPE_IDS = 509;
+const unsigned NUM_PREDEF_TYPE_IDS = 513;
 
 // Ensure we do not overrun the predefined types we reserved
 // in the enum PredefinedTypeIDs above.
@@ -1502,6 +1508,12 @@ enum DeclCode {
 
   /// An ImplicitConceptSpecializationDecl record.
   DECL_IMPLICIT_CONCEPT_SPECIALIZATION,
+
+  // A decls specilization record.
+  DECL_SPECIALIZATIONS,
+
+  // A decls specilization record.
+  DECL_PARTIAL_SPECIALIZATIONS,
 
   DECL_LAST = DECL_IMPLICIT_CONCEPT_SPECIALIZATION
 };
@@ -2005,6 +2017,7 @@ enum StmtCode {
   // OpenACC Constructs/Exprs
   STMT_OPENACC_COMPUTE_CONSTRUCT,
   STMT_OPENACC_LOOP_CONSTRUCT,
+  STMT_OPENACC_COMBINED_CONSTRUCT,
   EXPR_OPENACC_ASTERISK_SIZE,
 
   // HLSL Constructs

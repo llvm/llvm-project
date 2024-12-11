@@ -55,6 +55,7 @@ struct HeaderDesc {
 #undef HEADER
   } ID;
 
+  constexpr HeaderDesc() : ID() {}
   constexpr HeaderDesc(HeaderID ID) : ID(ID) {}
 
   const char *getName() const;
@@ -68,13 +69,139 @@ enum ID {
   FirstTSBuiltin
 };
 
+// The info used to represent each builtin.
 struct Info {
-  llvm::StringLiteral Name;
-  const char *Type, *Attributes;
-  const char *Features;
+  // Rather than store pointers to the string literals describing these four
+  // aspects of builtins, we store offsets into a common string table.
+  struct StrOffsets {
+    int Name;
+    int Type;
+    int Attributes;
+    int Features;
+  } Offsets;
+
   HeaderDesc Header;
   LanguageID Langs;
 };
+
+// The storage for `N` builtins. This contains a single pointer to the string
+// table used for these builtins and an array of metadata for each builtin.
+template <size_t N> struct Storage {
+  const char *StringTable;
+
+  std::array<Info, N> Infos;
+
+  // A constexpr function to construct the storage for a a given string table in
+  // the first argument and an array in the second argument. This is *only*
+  // expected to be used at compile time, we should mark it `consteval` when
+  // available.
+  //
+  // The `Infos` array is particularly special. This function expects an array
+  // of `Info` structs, where the string offsets of each entry refer to the
+  // *sizes* of those strings rather than their offsets, and for the target
+  // string to be in the provided string table at an offset the sum of all
+  // previous string sizes. This function walks the `Infos` array computing the
+  // running sum and replacing the sizes with the actual offsets in the string
+  // table that should be used. This arrangement is designed to make it easy to
+  // expand `.def` and `.inc` files with X-macros to construct both the string
+  // table and the `Info` structs in the arguments to this function.
+  static constexpr Storage<N> Make(const char *Strings,
+                                   std::array<Info, N> Infos) {
+    // Translate lengths to offsets.
+    int Offset = 0;
+    for (auto &I : Infos) {
+      Info::StrOffsets NewOffsets = {};
+      NewOffsets.Name = Offset;
+      Offset += I.Offsets.Name;
+      NewOffsets.Type = Offset;
+      Offset += I.Offsets.Type;
+      NewOffsets.Attributes = Offset;
+      Offset += I.Offsets.Attributes;
+      NewOffsets.Features = Offset;
+      Offset += I.Offsets.Features;
+      I.Offsets = NewOffsets;
+    }
+    return {Strings, Infos};
+  }
+};
+
+// A detail macro used below to emit a string literal that, after string literal
+// concatenation, ends up triggering the `-Woverlength-strings` warning. While
+// the warning is useful in general to catch accidentally excessive strings,
+// here we are creating them intentionally.
+//
+// This relies on a subtle aspect of `_Pragma`: that the *diagnostic* ones don't
+// turn into actual tokens that would disrupt string literal concatenation.
+#ifdef __clang__
+#define CLANG_BUILTIN_DETAIL_STR_TABLE(S)                                      \
+  _Pragma("clang diagnostic push")                                             \
+      _Pragma("clang diagnostic ignored \"-Woverlength-strings\"")             \
+          S _Pragma("clang diagnostic pop")
+#else
+#define CLANG_BUILTIN_DETAIL_STR_TABLE(S) S
+#endif
+
+// A macro that can be used with `Builtins.def` and similar files as an X-macro
+// to add the string arguments to a builtin string table. This is typically the
+// target for the `BUILTIN`, `LANGBUILTIN`, or `LIBBUILTIN` macros in those
+// files.
+#define CLANG_BUILTIN_STR_TABLE(ID, TYPE, ATTRS)                               \
+  CLANG_BUILTIN_DETAIL_STR_TABLE(#ID "\0" TYPE "\0" ATTRS "\0" /*FEATURE*/ "\0")
+
+// A macro that can be used with target builtin `.def` and `.inc` files as an
+// X-macro to add the string arguments to a builtin string table. this is
+// typically the target for the `TARGET_BUILTIN` macro.
+#define CLANG_TARGET_BUILTIN_STR_TABLE(ID, TYPE, ATTRS, FEATURE)               \
+  CLANG_BUILTIN_DETAIL_STR_TABLE(#ID "\0" TYPE "\0" ATTRS "\0" FEATURE "\0")
+
+// A macro that can be used with target builtin `.def` and `.inc` files as an
+// X-macro to add the string arguments to a builtin string table. this is
+// typically the target for the `TARGET_HEADER_BUILTIN` macro. We can't delegate
+// to `TARGET_BUILTIN` because the `FEATURE` string changes position.
+#define CLANG_TARGET_HEADER_BUILTIN_STR_TABLE(ID, TYPE, ATTRS, HEADER, LANGS,  \
+                                              FEATURE)                         \
+  CLANG_BUILTIN_DETAIL_STR_TABLE(#ID "\0" TYPE "\0" ATTRS "\0" FEATURE "\0")
+
+// A detail macro used internally to compute the desired string table
+// `StrOffsets` struct for arguments to `Storage::Make`.
+#define CLANG_BUILTIN_DETAIL_STR_OFFSETS(ID, TYPE, ATTRS)                      \
+  Builtin::Info::StrOffsets {                                                  \
+    sizeof(#ID), sizeof(TYPE), sizeof(ATTRS), sizeof("")                       \
+  }
+
+// A detail macro used internally to compute the desired string table
+// `StrOffsets` struct for arguments to `Storage::Make`.
+#define CLANG_TARGET_BUILTIN_DETAIL_STR_OFFSETS(ID, TYPE, ATTRS, FEATURE)      \
+  Builtin::Info::StrOffsets {                                                  \
+    sizeof(#ID), sizeof(TYPE), sizeof(ATTRS), sizeof(FEATURE)                  \
+  }
+
+// A set of macros that can be used with builtin `.def' files as an X-macro to
+// create an `Info` struct for a particular builtin. It both computes the
+// `StrOffsets` value for the string table (the lengths here, translated to
+// offsets by the Storage::Make function), and the other metadata for each
+// builtin.
+//
+// There is a corresponding macro for each of `BUILTIN`, `LANGBUILTIN`,
+// `LIBBUILTIN`, `TARGET_BUILTIN`, and `TARGET_HEADER_BUILTIN`.
+#define CLANG_BUILTIN_ENTRY(ID, TYPE, ATTRS)                                   \
+  Builtin::Info{CLANG_BUILTIN_DETAIL_STR_OFFSETS(ID, TYPE, ATTRS),             \
+                HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#define CLANG_LANGBUILTIN_ENTRY(ID, TYPE, ATTRS, LANG)                         \
+  Builtin::Info{CLANG_BUILTIN_DETAIL_STR_OFFSETS(ID, TYPE, ATTRS),             \
+                HeaderDesc::NO_HEADER, LANG},
+#define CLANG_LIBBUILTIN_ENTRY(ID, TYPE, ATTRS, HEADER, LANG)                  \
+  Builtin::Info{CLANG_BUILTIN_DETAIL_STR_OFFSETS(ID, TYPE, ATTRS),             \
+                HeaderDesc::HEADER, LANG},
+#define CLANG_TARGET_BUILTIN_ENTRY(ID, TYPE, ATTRS, FEATURE)                   \
+  Builtin::Info{                                                               \
+      CLANG_TARGET_BUILTIN_DETAIL_STR_OFFSETS(ID, TYPE, ATTRS, FEATURE),       \
+      HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#define CLANG_TARGET_HEADER_BUILTIN_ENTRY(ID, TYPE, ATTRS, HEADER, LANG,       \
+                                          FEATURE)                             \
+  Builtin::Info{                                                               \
+      CLANG_TARGET_BUILTIN_DETAIL_STR_OFFSETS(ID, TYPE, ATTRS, FEATURE),       \
+      HeaderDesc::HEADER, LANG},
 
 /// Holds information about both target-independent and
 /// target-specific builtins, allowing easy queries by clients.
@@ -83,8 +210,11 @@ struct Info {
 /// AuxTSRecords. Their IDs are shifted up by TSRecords.size() and need to
 /// be translated back with getAuxBuiltinID() before use.
 class Context {
-  llvm::ArrayRef<Info> TSRecords;
-  llvm::ArrayRef<Info> AuxTSRecords;
+  const char *TSStrTable = nullptr;
+  const char *AuxTSStrTable = nullptr;
+
+  llvm::ArrayRef<Info> TSInfos;
+  llvm::ArrayRef<Info> AuxTSInfos;
 
 public:
   Context() = default;
@@ -100,12 +230,13 @@ public:
 
   /// Return the identifier name for the specified builtin,
   /// e.g. "__builtin_abs".
-  llvm::StringRef getName(unsigned ID) const { return getRecord(ID).Name; }
+  llvm::StringRef getName(unsigned ID) const;
 
   /// Get the type descriptor string for the specified builtin.
-  const char *getTypeString(unsigned ID) const {
-    return getRecord(ID).Type;
-  }
+  const char *getTypeString(unsigned ID) const;
+
+  /// Get the attributes descriptor string for the specified builtin.
+  const char *getAttributesString(unsigned ID) const;
 
   /// Return true if this function is a target-specific builtin.
   bool isTSBuiltin(unsigned ID) const {
@@ -114,40 +245,40 @@ public:
 
   /// Return true if this function has no side effects.
   bool isPure(unsigned ID) const {
-    return strchr(getRecord(ID).Attributes, 'U') != nullptr;
+    return strchr(getAttributesString(ID), 'U') != nullptr;
   }
 
   /// Return true if this function has no side effects and doesn't
   /// read memory.
   bool isConst(unsigned ID) const {
-    return strchr(getRecord(ID).Attributes, 'c') != nullptr;
+    return strchr(getAttributesString(ID), 'c') != nullptr;
   }
 
   /// Return true if we know this builtin never throws an exception.
   bool isNoThrow(unsigned ID) const {
-    return strchr(getRecord(ID).Attributes, 'n') != nullptr;
+    return strchr(getAttributesString(ID), 'n') != nullptr;
   }
 
   /// Return true if we know this builtin never returns.
   bool isNoReturn(unsigned ID) const {
-    return strchr(getRecord(ID).Attributes, 'r') != nullptr;
+    return strchr(getAttributesString(ID), 'r') != nullptr;
   }
 
   /// Return true if we know this builtin can return twice.
   bool isReturnsTwice(unsigned ID) const {
-    return strchr(getRecord(ID).Attributes, 'j') != nullptr;
+    return strchr(getAttributesString(ID), 'j') != nullptr;
   }
 
   /// Returns true if this builtin does not perform the side-effects
   /// of its arguments.
   bool isUnevaluated(unsigned ID) const {
-    return strchr(getRecord(ID).Attributes, 'u') != nullptr;
+    return strchr(getAttributesString(ID), 'u') != nullptr;
   }
 
   /// Return true if this is a builtin for a libc/libm function,
   /// with a "__builtin_" prefix (e.g. __builtin_abs).
   bool isLibFunction(unsigned ID) const {
-    return strchr(getRecord(ID).Attributes, 'F') != nullptr;
+    return strchr(getAttributesString(ID), 'F') != nullptr;
   }
 
   /// Determines whether this builtin is a predefined libc/libm
@@ -158,21 +289,21 @@ public:
   /// they do not, but they are recognized as builtins once we see
   /// a declaration.
   bool isPredefinedLibFunction(unsigned ID) const {
-    return strchr(getRecord(ID).Attributes, 'f') != nullptr;
+    return strchr(getAttributesString(ID), 'f') != nullptr;
   }
 
   /// Returns true if this builtin requires appropriate header in other
   /// compilers. In Clang it will work even without including it, but we can emit
   /// a warning about missing header.
   bool isHeaderDependentFunction(unsigned ID) const {
-    return strchr(getRecord(ID).Attributes, 'h') != nullptr;
+    return strchr(getAttributesString(ID), 'h') != nullptr;
   }
 
   /// Determines whether this builtin is a predefined compiler-rt/libgcc
   /// function, such as "__clear_cache", where we know the signature a
   /// priori.
   bool isPredefinedRuntimeFunction(unsigned ID) const {
-    return strchr(getRecord(ID).Attributes, 'i') != nullptr;
+    return strchr(getAttributesString(ID), 'i') != nullptr;
   }
 
   /// Determines whether this builtin is a C++ standard library function
@@ -180,7 +311,7 @@ public:
   /// specialization, where the signature is determined by the standard library
   /// declaration.
   bool isInStdNamespace(unsigned ID) const {
-    return strchr(getRecord(ID).Attributes, 'z') != nullptr;
+    return strchr(getAttributesString(ID), 'z') != nullptr;
   }
 
   /// Determines whether this builtin can have its address taken with no
@@ -194,33 +325,33 @@ public:
 
   /// Determines whether this builtin has custom typechecking.
   bool hasCustomTypechecking(unsigned ID) const {
-    return strchr(getRecord(ID).Attributes, 't') != nullptr;
+    return strchr(getAttributesString(ID), 't') != nullptr;
   }
 
   /// Determines whether a declaration of this builtin should be recognized
   /// even if the type doesn't match the specified signature.
   bool allowTypeMismatch(unsigned ID) const {
-    return strchr(getRecord(ID).Attributes, 'T') != nullptr ||
+    return strchr(getAttributesString(ID), 'T') != nullptr ||
            hasCustomTypechecking(ID);
   }
 
   /// Determines whether this builtin has a result or any arguments which
   /// are pointer types.
   bool hasPtrArgsOrResult(unsigned ID) const {
-    return strchr(getRecord(ID).Type, '*') != nullptr;
+    return strchr(getTypeString(ID), '*') != nullptr;
   }
 
   /// Return true if this builtin has a result or any arguments which are
   /// reference types.
   bool hasReferenceArgsOrResult(unsigned ID) const {
-    return strchr(getRecord(ID).Type, '&') != nullptr ||
-           strchr(getRecord(ID).Type, 'A') != nullptr;
+    return strchr(getTypeString(ID), '&') != nullptr ||
+           strchr(getTypeString(ID), 'A') != nullptr;
   }
 
   /// If this is a library function that comes from a specific
   /// header, retrieve that header name.
   const char *getHeaderName(unsigned ID) const {
-    return getRecord(ID).Header.getName();
+    return getInfo(ID).Header.getName();
   }
 
   /// Determine whether this builtin is like printf in its
@@ -245,27 +376,25 @@ public:
   /// Such functions can be const when the MathErrno lang option and FP
   /// exceptions are disabled.
   bool isConstWithoutErrnoAndExceptions(unsigned ID) const {
-    return strchr(getRecord(ID).Attributes, 'e') != nullptr;
+    return strchr(getAttributesString(ID), 'e') != nullptr;
   }
 
   bool isConstWithoutExceptions(unsigned ID) const {
-    return strchr(getRecord(ID).Attributes, 'g') != nullptr;
+    return strchr(getAttributesString(ID), 'g') != nullptr;
   }
 
-  const char *getRequiredFeatures(unsigned ID) const {
-    return getRecord(ID).Features;
-  }
+  const char *getRequiredFeatures(unsigned ID) const;
 
   unsigned getRequiredVectorWidth(unsigned ID) const;
 
   /// Return true if builtin ID belongs to AuxTarget.
   bool isAuxBuiltinID(unsigned ID) const {
-    return ID >= (Builtin::FirstTSBuiltin + TSRecords.size());
+    return ID >= (Builtin::FirstTSBuiltin + TSInfos.size());
   }
 
   /// Return real builtin ID (i.e. ID it would have during compilation
   /// for AuxTarget).
-  unsigned getAuxBuiltinID(unsigned ID) const { return ID - TSRecords.size(); }
+  unsigned getAuxBuiltinID(unsigned ID) const { return ID - TSInfos.size(); }
 
   /// Returns true if this is a libc/libm function without the '__builtin_'
   /// prefix.
@@ -277,16 +406,20 @@ public:
 
   /// Return true if this function can be constant evaluated by Clang frontend.
   bool isConstantEvaluated(unsigned ID) const {
-    return strchr(getRecord(ID).Attributes, 'E') != nullptr;
+    return strchr(getAttributesString(ID), 'E') != nullptr;
   }
 
   /// Returns true if this is an immediate (consteval) function
   bool isImmediate(unsigned ID) const {
-    return strchr(getRecord(ID).Attributes, 'G') != nullptr;
+    return strchr(getAttributesString(ID), 'G') != nullptr;
   }
 
 private:
-  const Info &getRecord(unsigned ID) const;
+  std::pair<const char *, const Info &> getStrTableAndInfo(unsigned ID) const;
+
+  const Info &getInfo(unsigned ID) const {
+    return getStrTableAndInfo(ID).second;
+  }
 
   /// Helper function for isPrintfLike and isScanfLike.
   bool isLike(unsigned ID, unsigned &FormatIdx, bool &HasVAListArg,

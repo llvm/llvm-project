@@ -805,7 +805,7 @@ mlir::scf::replaceAndCastForOpIterArg(RewriterBase &rewriter, scf::ForOp forOp,
   // 3. Inject an incoming cast op at the beginning of the block for the bbArg
   // corresponding to the `replacement` value.
   OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(&newBlock, newBlock.begin());
+  rewriter.setInsertionPointToStart(&newBlock);
   BlockArgument newRegionIterArg = newForOp.getTiedLoopRegionIterArg(
       &newForOp->getOpOperand(operand.getOperandNumber()));
   Value castIn = castFn(rewriter, newForOp.getLoc(), oldType, newRegionIterArg);
@@ -1084,13 +1084,12 @@ struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
         continue;
 
       // Create a new ForOp with that iter operand replaced.
-      ValueTypeCastFnTy castFn = [](OpBuilder &b, Location loc, Type type,
-                                    Value source) {
-        return b.create<tensor::CastOp>(loc, type, source);
-      };
       rewriter.replaceOp(
-          op, replaceAndCastForOpIterArg(rewriter, op, iterOpOperand,
-                                         incomingCast.getSource(), castFn));
+          op, replaceAndCastForOpIterArg(
+                  rewriter, op, iterOpOperand, incomingCast.getSource(),
+                  [](OpBuilder &b, Location loc, Type type, Value source) {
+                    return b.create<tensor::CastOp>(loc, type, source);
+                  }));
       return success();
     }
     return failure();
@@ -1767,6 +1766,31 @@ struct ForallOpSingleOrZeroIterationDimsFolder
   }
 };
 
+/// Replace all induction vars with a single trip count with their lower bound.
+struct ForallOpReplaceConstantInductionVar : public OpRewritePattern<ForallOp> {
+  using OpRewritePattern<ForallOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ForallOp op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    bool changed = false;
+    for (auto [lb, ub, step, iv] :
+         llvm::zip(op.getMixedLowerBound(), op.getMixedUpperBound(),
+                   op.getMixedStep(), op.getInductionVars())) {
+      if (iv.getUses().begin() == iv.getUses().end())
+        continue;
+      auto numIterations = constantTripCount(lb, ub, step);
+      if (!numIterations.has_value() || numIterations.value() != 1) {
+        continue;
+      }
+      rewriter.replaceAllUsesWith(
+          iv, getValueOrCreateConstantIndexOp(rewriter, loc, lb));
+      changed = true;
+    }
+    return success(changed);
+  }
+};
+
 struct FoldTensorCastOfOutputIntoForallOp
     : public OpRewritePattern<scf::ForallOp> {
   using OpRewritePattern<scf::ForallOp>::OpRewritePattern;
@@ -1851,7 +1875,8 @@ void ForallOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
   results.add<DimOfForallOp, FoldTensorCastOfOutputIntoForallOp,
               ForallOpControlOperandsFolder, ForallOpIterArgsFolder,
-              ForallOpSingleOrZeroIterationDimsFolder>(context);
+              ForallOpSingleOrZeroIterationDimsFolder,
+              ForallOpReplaceConstantInductionVar>(context);
 }
 
 /// Given the region at `index`, or the parent operation if `index` is None,

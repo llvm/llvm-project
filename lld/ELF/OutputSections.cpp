@@ -67,10 +67,13 @@ void OutputSection::writeHeaderTo(typename ELFT::Shdr *shdr) {
 
 OutputSection::OutputSection(Ctx &ctx, StringRef name, uint32_t type,
                              uint64_t flags)
-    : SectionBase(Output, ctx.internalFile, name, flags, /*entsize=*/0,
-                  /*addralign=*/1, type,
-                  /*info=*/0, /*link=*/0),
+    : SectionBase(Output, ctx.internalFile, name, type, flags, /*link=*/0,
+                  /*info=*/0, /*addralign=*/1, /*entsize=*/0),
       ctx(ctx) {}
+
+uint64_t OutputSection::getLMA() const {
+  return ptLoad ? addr + ptLoad->lmaOffset : addr;
+}
 
 // We allow sections of types listed below to merged into a
 // single progbits section. This is typically done by linker
@@ -118,9 +121,9 @@ void OutputSection::commitSection(InputSection *isec) {
       type = SHT_CREL;
       if (type == SHT_REL) {
         if (name.consume_front(".rel"))
-          name = saver().save(".crel" + name);
+          name = ctx.saver.save(".crel" + name);
       } else if (name.consume_front(".rela")) {
-        name = saver().save(".crel" + name);
+        name = ctx.saver.save(".crel" + name);
       }
     } else {
       if (typeIsSet || !canMergeToProgbits(ctx, type) ||
@@ -131,11 +134,11 @@ void OutputSection::commitSection(InputSection *isec) {
         // https://github.com/ClangBuiltLinux/linux/issues/1597) rely on the
         // behavior. Other types get an error.
         if (type != SHT_NOBITS) {
-          errorOrWarn("section type mismatch for " + isec->name + "\n>>> " +
-                      toString(isec) + ": " +
-                      getELFSectionTypeName(ctx.arg.emachine, isec->type) +
-                      "\n>>> output section " + name + ": " +
-                      getELFSectionTypeName(ctx.arg.emachine, type));
+          Err(ctx) << "section type mismatch for " << isec->name << "\n>>> "
+                   << isec << ": "
+                   << getELFSectionTypeName(ctx.arg.emachine, isec->type)
+                   << "\n>>> output section " << name << ": "
+                   << getELFSectionTypeName(ctx.arg.emachine, type);
         }
       }
       if (!typeIsSet)
@@ -151,9 +154,10 @@ void OutputSection::commitSection(InputSection *isec) {
   } else {
     // Otherwise, check if new type or flags are compatible with existing ones.
     if ((flags ^ isec->flags) & SHF_TLS)
-      error("incompatible section flags for " + name + "\n>>> " +
-            toString(isec) + ": 0x" + utohexstr(isec->flags) +
-            "\n>>> output section " + name + ": 0x" + utohexstr(flags));
+      ErrAlways(ctx) << "incompatible section flags for " << name << "\n>>> "
+                     << isec << ": 0x" << utohexstr(isec->flags, true)
+                     << "\n>>> output section " << name << ": 0x"
+                     << utohexstr(flags, true);
   }
 
   isec->parent = this;
@@ -249,8 +253,20 @@ void OutputSection::finalizeInputSections() {
     for (InputSection *s : isd->sections)
       commitSection(s);
   }
-  for (auto *ms : mergeSections)
+  for (auto *ms : mergeSections) {
+    // Merging may have increased the alignment of a spillable section. Update
+    // the alignment of potential spill sections and their containing output
+    // sections.
+    if (auto it = script->potentialSpillLists.find(ms);
+        it != script->potentialSpillLists.end()) {
+      for (PotentialSpillSection *s = it->second.head; s; s = s->next) {
+        s->addralign = std::max(s->addralign, ms->addralign);
+        s->parent->addralign = std::max(s->parent->addralign, s->addralign);
+      }
+    }
+
     ms->finalizeContents();
+  }
 }
 
 static void sortByOrder(MutableArrayRef<InputSection *> in,
@@ -307,14 +323,14 @@ static void fill(uint8_t *buf, size_t size,
 }
 
 #if LLVM_ENABLE_ZLIB
-static SmallVector<uint8_t, 0> deflateShard(ArrayRef<uint8_t> in, int level,
-                                            int flush) {
+static SmallVector<uint8_t, 0> deflateShard(Ctx &ctx, ArrayRef<uint8_t> in,
+                                            int level, int flush) {
   // 15 and 8 are default. windowBits=-15 is negative to generate raw deflate
   // data with no zlib header or trailer.
   z_stream s = {};
   auto res = deflateInit2(&s, level, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY);
   if (res != 0) {
-    errorOrWarn("--compress-sections: deflateInit2 returned " + Twine(res));
+    Err(ctx) << "--compress-sections: deflateInit2 returned " << res;
     return {};
   }
   s.next_in = const_cast<uint8_t *>(in.data());
@@ -361,8 +377,8 @@ template <class ELFT> void OutputSection::maybeCompress(Ctx &ctx) {
   if (ctype == DebugCompressionType::None)
     return;
   if (flags & SHF_ALLOC) {
-    errorOrWarn("--compress-sections: section '" + name +
-                "' with the SHF_ALLOC flag cannot be compressed");
+    Err(ctx) << "--compress-sections: section '" << name
+             << "' with the SHF_ALLOC flag cannot be compressed";
     return;
   }
 
@@ -431,7 +447,7 @@ template <class ELFT> void OutputSection::maybeCompress(Ctx &ctx) {
     // concatenated with the next shard.
     auto shardsAdler = std::make_unique<uint32_t[]>(numShards);
     parallelFor(0, numShards, [&](size_t i) {
-      shardsOut[i] = deflateShard(shardsIn[i], level,
+      shardsOut[i] = deflateShard(ctx, shardsIn[i], level,
                                   i != numShards - 1 ? Z_SYNC_FLUSH : Z_FINISH);
       shardsAdler[i] = adler32(1, shardsIn[i].data(), shardsIn[i].size());
     });
@@ -535,7 +551,7 @@ void OutputSection::writeTo(Ctx &ctx, uint8_t *buf, parallel::TaskGroup &tg) {
       // instructions to little-endian, leaving the data big-endian.
       if (ctx.arg.emachine == EM_ARM && !ctx.arg.isLE && ctx.arg.armBe8 &&
           (flags & SHF_EXECINSTR))
-        convertArmInstructionstoBE8(isec, buf + isec->outSecOff);
+        convertArmInstructionstoBE8(ctx, isec, buf + isec->outSecOff);
 
       // Fill gaps between sections.
       if (nonZeroFiller) {
@@ -624,7 +640,7 @@ encodeOneCrel(Ctx &ctx, raw_svector_ostream &os,
     if (d) {
       SectionBase *section = d->section;
       assert(section->isLive());
-      addend = sym.getVA(addend) - section->getOutputSection()->addr;
+      addend = sym.getVA(ctx, addend) - section->getOutputSection()->addr;
     } else {
       // Encode R_*_NONE(symidx=0).
       symidx = type = addend = 0;
@@ -662,7 +678,7 @@ static size_t relToCrel(Ctx &ctx, raw_svector_ostream &os,
   const auto &file = *cast<ELFFileBase>(relSec->file);
   if (relSec->type == SHT_REL) {
     // REL conversion is complex and unsupported yet.
-    errorOrWarn(toString(relSec) + ": REL cannot be converted to CREL");
+    Err(ctx) << relSec << ": REL cannot be converted to CREL";
     return 0;
   }
   auto rels = relSec->getDataAs<typename ELFT::Rela>();
@@ -882,7 +898,11 @@ void OutputSection::checkDynRelAddends(Ctx &ctx) {
     // for input .rel[a].<sec> sections which we simply pass through to the
     // output. We skip over those and only look at the synthetic relocation
     // sections created during linking.
-    const auto *sec = dyn_cast<RelocationBaseSection>(sections[i]);
+    if (!SyntheticSection::classof(sections[i]) ||
+        !is_contained({ELF::SHT_REL, ELF::SHT_RELA, ELF::SHT_RELR},
+                      sections[i]->type))
+      return;
+    const auto *sec = cast<RelocationBaseSection>(sections[i]);
     if (!sec)
       return;
     for (const DynamicReloc &rel : sec->relocs) {
@@ -903,13 +923,12 @@ void OutputSection::checkDynRelAddends(Ctx &ctx) {
               ? 0
               : ctx.target->getImplicitAddend(relocTarget, rel.type);
       if (addend != writtenAddend)
-        internalLinkerError(
-            getErrorLoc(ctx, relocTarget),
-            "wrote incorrect addend value 0x" + utohexstr(writtenAddend) +
-                " instead of 0x" + utohexstr(addend) +
-                " for dynamic relocation " + toString(rel.type) +
-                " at offset 0x" + utohexstr(rel.getOffset()) +
-                (rel.sym ? " against symbol " + toString(*rel.sym) : ""));
+        InternalErr(ctx, relocTarget)
+            << "wrote incorrect addend value 0x" << utohexstr(writtenAddend)
+            << " instead of 0x" << utohexstr(addend)
+            << " for dynamic relocation " << rel.type << " at offset 0x"
+            << utohexstr(rel.getOffset())
+            << (rel.sym ? " against symbol " + rel.sym->getName() : "");
     }
   });
 }

@@ -25,7 +25,7 @@ template <>          struct __libcpp_is_integral<bool>               { enum { va
 template <>          struct __libcpp_is_integral<char>               { enum { value = 1 }; };
 template <>          struct __libcpp_is_integral<signed char>        { enum { value = 1 }; };
 template <>          struct __libcpp_is_integral<unsigned char>      { enum { value = 1 }; };
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>          struct __libcpp_is_integral<wchar_t>            { enum { value = 1 }; };
 #endif
 #if _LIBCPP_HAS_CHAR8_T

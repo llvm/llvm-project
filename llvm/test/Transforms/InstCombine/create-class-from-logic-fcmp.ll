@@ -990,7 +990,8 @@ define i1 @not_isnormalinf_or_inf(half %x) #0 {
 ; -> subnormal | zero | nan
 define i1 @not_isnormalinf_or_uno(half %x) #0 {
 ; CHECK-LABEL: @not_isnormalinf_or_uno(
-; CHECK-NEXT:    [[OR:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 243)
+; CHECK-NEXT:    [[FABS:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    [[OR:%.*]] = fcmp ult half [[FABS]], 0xH0400
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %fabs = call half @llvm.fabs.f16(half %x)
@@ -1003,7 +1004,8 @@ define i1 @not_isnormalinf_or_uno(half %x) #0 {
 ; -> subnormal | zero | nan
 define i1 @not_isnormalinf_or_uno_nofabs(half %x) #0 {
 ; CHECK-LABEL: @not_isnormalinf_or_uno_nofabs(
-; CHECK-NEXT:    [[OR:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 243)
+; CHECK-NEXT:    [[FABS:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    [[OR:%.*]] = fcmp ult half [[FABS]], 0xH0400
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %fabs = call half @llvm.fabs.f16(half %x)
@@ -1779,7 +1781,7 @@ define i1 @not_isfinite_or_zero_f16_daz(half %x) #1 {
 define <2 x i1> @not_isfinite_or_zero_v2f16_daz(<2 x half> %x) #1 {
 ; CHECK-LABEL: @not_isfinite_or_zero_v2f16_daz(
 ; CHECK-NEXT:    [[FABS:%.*]] = call <2 x half> @llvm.fabs.v2f16(<2 x half> [[X:%.*]])
-; CHECK-NEXT:    [[CMPINF:%.*]] = fcmp ueq <2 x half> [[FABS]], <half 0xH7C00, half 0xH7C00>
+; CHECK-NEXT:    [[CMPINF:%.*]] = fcmp ueq <2 x half> [[FABS]], splat (half 0xH7C00)
 ; CHECK-NEXT:    [[CMPZERO:%.*]] = fcmp oeq <2 x half> [[X]], zeroinitializer
 ; CHECK-NEXT:    [[CLASS:%.*]] = or <2 x i1> [[CMPZERO]], [[CMPINF]]
 ; CHECK-NEXT:    ret <2 x i1> [[CLASS]]
@@ -1810,7 +1812,7 @@ define i1 @not_isfinite_or_zero_f16_dynamic(half %x) #2 {
 define <2 x i1> @not_isfinite_or_zero_v2f16_dynamic(<2 x half> %x) #2 {
 ; CHECK-LABEL: @not_isfinite_or_zero_v2f16_dynamic(
 ; CHECK-NEXT:    [[FABS:%.*]] = call <2 x half> @llvm.fabs.v2f16(<2 x half> [[X:%.*]])
-; CHECK-NEXT:    [[CMPINF:%.*]] = fcmp ueq <2 x half> [[FABS]], <half 0xH7C00, half 0xH7C00>
+; CHECK-NEXT:    [[CMPINF:%.*]] = fcmp ueq <2 x half> [[FABS]], splat (half 0xH7C00)
 ; CHECK-NEXT:    [[CMPZERO:%.*]] = fcmp oeq <2 x half> [[X]], zeroinitializer
 ; CHECK-NEXT:    [[CLASS:%.*]] = or <2 x i1> [[CMPZERO]], [[CMPINF]]
 ; CHECK-NEXT:    ret <2 x i1> [[CLASS]]

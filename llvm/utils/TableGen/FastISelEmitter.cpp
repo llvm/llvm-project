@@ -567,7 +567,7 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
           ++DstIndex;
         }
 
-        PhysRegInputs.push_back(PhysReg);
+        PhysRegInputs.push_back(std::move(PhysReg));
       }
 
       if (Op->getName() != "EXTRACT_SUBREG" && DstIndex < Dst.getNumChildren())
@@ -591,7 +591,8 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
 
     // Ok, we found a pattern that we can handle. Remember it.
     InstructionMemo Memo(Pattern.getDstPattern().getOperator()->getName(),
-                         DstRC, SubRegNo, PhysRegInputs, PredicateCheck);
+                         DstRC, std::move(SubRegNo), std::move(PhysRegInputs),
+                         PredicateCheck);
 
     int complexity = Pattern.getPatternComplexity(CGP);
 
@@ -718,19 +719,20 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
             const PredMap &PM = RI.second;
 
             OS << "unsigned fastEmit_" << getLegalCName(Opcode) << "_"
-               << getLegalCName(std::string(getName(VT))) << "_"
-               << getLegalCName(std::string(getName(RetVT))) << "_";
+               << getLegalCName(std::string(getEnumName(VT))) << "_"
+               << getLegalCName(std::string(getEnumName(RetVT))) << "_";
             Operands.PrintManglingSuffix(OS, ImmediatePredicates);
             OS << "(";
             Operands.PrintParameters(OS);
             OS << ") {\n";
 
-            emitInstructionCode(OS, Operands, PM, std::string(getName(RetVT)));
+            emitInstructionCode(OS, Operands, PM,
+                                std::string(getEnumName(RetVT)));
           }
 
           // Emit one function for the type that demultiplexes on return type.
           OS << "unsigned fastEmit_" << getLegalCName(Opcode) << "_"
-             << getLegalCName(std::string(getName(VT))) << "_";
+             << getLegalCName(std::string(getEnumName(VT))) << "_";
           Operands.PrintManglingSuffix(OS, ImmediatePredicates);
           OS << "(MVT RetVT";
           if (!Operands.empty())
@@ -739,10 +741,10 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
           OS << ") {\nswitch (RetVT.SimpleTy) {\n";
           for (const auto &RI : RM) {
             MVT::SimpleValueType RetVT = RI.first;
-            OS << "  case " << getName(RetVT) << ": return fastEmit_"
+            OS << "  case " << getEnumName(RetVT) << ": return fastEmit_"
                << getLegalCName(Opcode) << "_"
-               << getLegalCName(std::string(getName(VT))) << "_"
-               << getLegalCName(std::string(getName(RetVT))) << "_";
+               << getLegalCName(std::string(getEnumName(VT))) << "_"
+               << getLegalCName(std::string(getEnumName(RetVT))) << "_";
             Operands.PrintManglingSuffix(OS, ImmediatePredicates);
             OS << "(";
             Operands.PrintArguments(OS);
@@ -753,7 +755,7 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
         } else {
           // Non-variadic return type.
           OS << "unsigned fastEmit_" << getLegalCName(Opcode) << "_"
-             << getLegalCName(std::string(getName(VT))) << "_";
+             << getLegalCName(std::string(getEnumName(VT))) << "_";
           Operands.PrintManglingSuffix(OS, ImmediatePredicates);
           OS << "(MVT RetVT";
           if (!Operands.empty())
@@ -761,7 +763,7 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
           Operands.PrintParameters(OS);
           OS << ") {\n";
 
-          OS << "  if (RetVT.SimpleTy != " << getName(RM.begin()->first)
+          OS << "  if (RetVT.SimpleTy != " << getEnumName(RM.begin()->first)
              << ")\n    return 0;\n";
 
           const PredMap &PM = RM.begin()->second;
@@ -781,7 +783,7 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
       OS << "  switch (VT.SimpleTy) {\n";
       for (const auto &TI : TM) {
         MVT::SimpleValueType VT = TI.first;
-        std::string TypeName = std::string(getName(VT));
+        std::string TypeName = std::string(getEnumName(VT));
         OS << "  case " << TypeName << ": return fastEmit_"
            << getLegalCName(Opcode) << "_" << getLegalCName(TypeName) << "_";
         Operands.PrintManglingSuffix(OS, ImmediatePredicates);

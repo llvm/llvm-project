@@ -159,12 +159,12 @@ template <class Base> LIBC_INLINE exp_b_reduc_t exp_b_range_reduc(float x) {
   int k = static_cast<int>(kd);
   // hi = floor(kd * 2^(-MID_BITS))
   // exp_hi = shift hi to the exponent field of double precision.
-  int64_t exp_hi = static_cast<int64_t>((k >> Base::MID_BITS))
-                   << fputil::FPBits<double>::FRACTION_LEN;
+  uint64_t exp_hi = static_cast<uint64_t>(k >> Base::MID_BITS)
+                    << fputil::FPBits<double>::FRACTION_LEN;
   // mh = 2^hi * 2^mid
   // mh_bits = bit field of mh
-  int64_t mh_bits = Base::EXP_2_MID[k & Base::MID_MASK] + exp_hi;
-  double mh = fputil::FPBits<double>(uint64_t(mh_bits)).get_val();
+  uint64_t mh_bits = Base::EXP_2_MID[k & Base::MID_MASK] + exp_hi;
+  double mh = fputil::FPBits<double>(mh_bits).get_val();
   // dx = lo = x - (hi + mid) * log(2)
   double dx = fputil::multiply_add(
       kd, Base::M_LOGB_2_LO, fputil::multiply_add(kd, Base::M_LOGB_2_HI, xd));

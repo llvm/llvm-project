@@ -123,6 +123,13 @@ AST_MATCHER(EnumDecl, hasSequentialInitialValues) {
   return !AllEnumeratorsArePowersOfTwo;
 }
 
+std::string getName(const EnumDecl *Decl) {
+  if (!Decl->getDeclName())
+    return "<unnamed>";
+
+  return Decl->getQualifiedNameAsString();
+}
+
 } // namespace
 
 EnumInitialValueCheck::EnumInitialValueCheck(StringRef Name,
@@ -160,10 +167,11 @@ void EnumInitialValueCheck::registerMatchers(MatchFinder *Finder) {
 void EnumInitialValueCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Enum = Result.Nodes.getNodeAs<EnumDecl>("inconsistent")) {
     DiagnosticBuilder Diag =
-        diag(Enum->getBeginLoc(),
-             "initial values in enum %0 are not consistent, consider explicit "
-             "initialization of all, none or only the first enumerator")
-        << Enum;
+        diag(
+            Enum->getBeginLoc(),
+            "initial values in enum '%0' are not consistent, consider explicit "
+            "initialization of all, none or only the first enumerator")
+        << getName(Enum);
     for (const EnumConstantDecl *ECD : Enum->enumerators())
       if (ECD->getInitExpr() == nullptr) {
         const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
@@ -183,16 +191,16 @@ void EnumInitialValueCheck::check(const MatchFinder::MatchResult &Result) {
     if (Loc.isInvalid() || Loc.isMacroID())
       return;
     DiagnosticBuilder Diag = diag(Loc, "zero initial value for the first "
-                                       "enumerator in %0 can be disregarded")
-                             << Enum;
+                                       "enumerator in '%0' can be disregarded")
+                             << getName(Enum);
     cleanInitialValue(Diag, ECD, *Result.SourceManager, getLangOpts());
     return;
   }
   if (const auto *Enum = Result.Nodes.getNodeAs<EnumDecl>("sequential")) {
     DiagnosticBuilder Diag =
         diag(Enum->getBeginLoc(),
-             "sequential initial value in %0 can be ignored")
-        << Enum;
+             "sequential initial value in '%0' can be ignored")
+        << getName(Enum);
     for (const EnumConstantDecl *ECD : llvm::drop_begin(Enum->enumerators()))
       cleanInitialValue(Diag, ECD, *Result.SourceManager, getLangOpts());
     return;

@@ -233,15 +233,19 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
     case Triple::ArchType::mips:
     case Triple::ArchType::mipsel:
     case Triple::ArchType::mips64:
-    case Triple::ArchType::mips64el: {
+    case Triple::ArchType::mips64el:
+    case Triple::ArchType::riscv32:
+    case Triple::ArchType::riscv64: {
       // For the architectures which don't have a single return instruction
       InstrumentationOptions op;
-      op.HandleTailcall = false;
+      // RISC-V supports patching tail calls.
+      op.HandleTailcall = MF.getTarget().getTargetTriple().isRISCV();
       op.HandleAllReturns = true;
       prependRetWithPatchableExit(MF, TII, op);
       break;
     }
-    case Triple::ArchType::ppc64le: {
+    case Triple::ArchType::ppc64le:
+    case Triple::ArchType::systemz: {
       // PPC has conditional returns. Turn them into branch and plain returns.
       InstrumentationOptions op;
       op.HandleTailcall = false;

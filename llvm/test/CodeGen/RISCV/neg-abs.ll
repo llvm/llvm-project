@@ -81,8 +81,8 @@ define i64 @neg_abs64(i64 %x) {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    srai a2, a1, 31
 ; RV32I-NEXT:    xor a0, a0, a2
-; RV32I-NEXT:    sltu a3, a2, a0
 ; RV32I-NEXT:    xor a1, a1, a2
+; RV32I-NEXT:    sltu a3, a2, a0
 ; RV32I-NEXT:    sub a1, a2, a1
 ; RV32I-NEXT:    sub a1, a1, a3
 ; RV32I-NEXT:    sub a0, a2, a0
@@ -92,8 +92,8 @@ define i64 @neg_abs64(i64 %x) {
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    srai a2, a1, 31
 ; RV32ZBB-NEXT:    xor a0, a0, a2
-; RV32ZBB-NEXT:    sltu a3, a2, a0
 ; RV32ZBB-NEXT:    xor a1, a1, a2
+; RV32ZBB-NEXT:    sltu a3, a2, a0
 ; RV32ZBB-NEXT:    sub a1, a2, a1
 ; RV32ZBB-NEXT:    sub a1, a1, a3
 ; RV32ZBB-NEXT:    sub a0, a2, a0
@@ -121,8 +121,8 @@ define i64 @select_neg_abs64(i64 %x) {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    srai a2, a1, 31
 ; RV32I-NEXT:    xor a0, a0, a2
-; RV32I-NEXT:    sltu a3, a2, a0
 ; RV32I-NEXT:    xor a1, a1, a2
+; RV32I-NEXT:    sltu a3, a2, a0
 ; RV32I-NEXT:    sub a1, a2, a1
 ; RV32I-NEXT:    sub a1, a1, a3
 ; RV32I-NEXT:    sub a0, a2, a0
@@ -132,8 +132,8 @@ define i64 @select_neg_abs64(i64 %x) {
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    srai a2, a1, 31
 ; RV32ZBB-NEXT:    xor a0, a0, a2
-; RV32ZBB-NEXT:    sltu a3, a2, a0
 ; RV32ZBB-NEXT:    xor a1, a1, a2
+; RV32ZBB-NEXT:    sltu a3, a2, a0
 ; RV32ZBB-NEXT:    sub a1, a2, a1
 ; RV32ZBB-NEXT:    sub a1, a1, a3
 ; RV32ZBB-NEXT:    sub a0, a2, a0

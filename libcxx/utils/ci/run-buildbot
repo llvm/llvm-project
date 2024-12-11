@@ -187,11 +187,6 @@ function check-abi-list() {
     )
 }
 
-function check-cxx-benchmarks() {
-    step "Running the benchmarks"
-    ${NINJA} -vC "${BUILD_DIR}" check-cxx-benchmarks
-}
-
 function test-armv7m-picolibc() {
     clean
 
@@ -392,15 +387,15 @@ bootstrapping-build)
           -DLLVM_ENABLE_ASSERTIONS=ON \
           -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests"
 
-    step "Running the LLDB libc++ data formatter tests"
-    ${NINJA} -vC "${BUILD_DIR}" lldb-api-test-deps
-    ${BUILD_DIR}/bin/llvm-lit -sv --param dotest-args='--category libc++' "${MONOREPO_ROOT}/lldb/test/API"
-
     step "Running the libc++ and libc++abi tests"
     ${NINJA} -vC "${BUILD_DIR}" check-runtimes
 
     step "Installing libc++ and libc++abi to a fake location"
     ${NINJA} -vC "${BUILD_DIR}" install-runtimes
+
+    step "Running the LLDB libc++ data formatter tests"
+    ${NINJA} -vC "${BUILD_DIR}" lldb-api-test-deps
+    ${BUILD_DIR}/bin/llvm-lit -sv --param dotest-args='--category libc++' "${MONOREPO_ROOT}/lldb/test/API"
 
     ccache -s
 ;;
@@ -639,11 +634,6 @@ apple-system)
 
     step "Running the libunwind tests"
     ${NINJA} -vC "${BUILD_DIR}/unwind" check-unwind
-;;
-benchmarks)
-    clean
-    generate-cmake
-    check-cxx-benchmarks
 ;;
 aarch64)
     clean

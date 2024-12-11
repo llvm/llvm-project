@@ -3,6 +3,7 @@ add_subdirectory(Attributes)
 add_flang_library(CUFDialect
   CUFDialect.cpp
   CUFOps.cpp
+  CUFToLLVMIRTranslation.cpp
 
   DEPENDS
   MLIRIR

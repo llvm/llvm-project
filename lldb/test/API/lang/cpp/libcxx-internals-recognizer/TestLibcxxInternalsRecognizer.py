@@ -3,11 +3,13 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+import re
 
 class LibCxxInternalsRecognizerTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @add_test_categories(["libc++"])
+    @skipIf(compiler="clang", compiler_version=["<", "16.0"])
     def test_frame_recognizer(self):
         """Test that implementation details of libc++ are hidden"""
         self.build()
@@ -21,7 +23,7 @@ class LibCxxInternalsRecognizerTestCase(TestBase):
             # We never hide the frame of the entry-point into the standard library, even
             # if the name starts with `__` which usually indicates an internal function.
             "ranges_sort_less(int, int)": [
-                "ranges::__sort::operator()",
+                re.compile("ranges::__sort::(__fn::)?operator\(\)"),
                 "test_algorithms",
             ],
             # `ranges::views::transform` internally uses `std::invoke`, and that
@@ -57,9 +59,14 @@ class LibCxxInternalsRecognizerTestCase(TestBase):
                 ):
                     frame_id = frame_id + 1
                 # Expect the correct parent frame
-                self.assertIn(
-                    expected_parent, thread.GetFrameAtIndex(frame_id).GetFunctionName()
-                )
+                func_name = thread.GetFrameAtIndex(frame_id).GetFunctionName()
+                if isinstance(expected_parent, re.Pattern):
+                    self.assertTrue(
+                        expected_parent.search(func_name) is not None,
+                        f"'{expected_parent}' not found in '{func_name}'"
+                    )
+                else:
+                    self.assertIn(expected_parent, func_name)
                 frame_id = frame_id + 1
             process.Continue()
 

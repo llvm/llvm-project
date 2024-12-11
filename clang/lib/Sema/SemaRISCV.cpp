@@ -50,7 +50,7 @@ struct RVVIntrinsicDef {
 
 struct RVVOverloadIntrinsicDef {
   // Indexes of RISCVIntrinsicManagerImpl::IntrinsicList.
-  SmallVector<uint16_t, 8> Indexes;
+  SmallVector<uint32_t, 8> Indexes;
 };
 
 } // namespace
@@ -169,7 +169,7 @@ private:
   // List of all RVV intrinsic.
   std::vector<RVVIntrinsicDef> IntrinsicList;
   // Mapping function name to index of IntrinsicList.
-  StringMap<uint16_t> Intrinsics;
+  StringMap<uint32_t> Intrinsics;
   // Mapping function name to RVVOverloadIntrinsicDef.
   StringMap<RVVOverloadIntrinsicDef> OverloadIntrinsics;
 
@@ -282,20 +282,6 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
       if ((BaseTypeI & Record.TypeRangeMask) != BaseTypeI)
         continue;
 
-      // TODO: Remove the check below and use RequiredFeatures in
-      // riscv_vector.td to check the intrinsics instead, the type check should
-      // be done in checkRVVTypeSupport. This check also not able to work on the
-      // intrinsics that have Float16 but the BaseType is not Float16 such as
-      // `vfcvt_f_x_v`.
-      if (BaseType == BasicType::Float16) {
-        if ((Record.RequiredExtensions & RVV_REQ_Zvfhmin) == RVV_REQ_Zvfhmin) {
-          if (!TI.hasFeature("zvfhmin"))
-            continue;
-        } else if (!TI.hasFeature("zvfh")) {
-          continue;
-        }
-      }
-
       // Expanded with different LMUL.
       for (int Log2LMUL = -3; Log2LMUL <= 3; Log2LMUL++) {
         if (!(Record.Log2LMULMask & (1 << (Log2LMUL + 3))))
@@ -399,7 +385,7 @@ void RISCVIntrinsicManagerImpl::InitRVVIntrinsic(
                                      Record.HasFRMRoundModeOp);
 
   // Put into IntrinsicList.
-  uint16_t Index = IntrinsicList.size();
+  uint32_t Index = IntrinsicList.size();
   assert(IntrinsicList.size() == (size_t)Index &&
          "Intrinsics indices overflow.");
   IntrinsicList.push_back({BuiltinName, Signature});

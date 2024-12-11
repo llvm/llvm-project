@@ -993,7 +993,7 @@ ARMDisassembler::AddThumbPredicate(MCInst &MI) const {
     CCI = MI.insert(CCI, MCOperand::createImm(CC));
     ++CCI;
     if (CC == ARMCC::AL)
-      MI.insert(CCI, MCOperand::createReg(0));
+      MI.insert(CCI, MCOperand::createReg(ARM::NoRegister));
     else
       MI.insert(CCI, MCOperand::createReg(ARM::CPSR));
   } else if (CC != ARMCC::AL) {
@@ -1060,7 +1060,7 @@ void ARMDisassembler::UpdateThumbVFPPredicate(
       I->setImm(CC);
       ++I;
       if (CC == ARMCC::AL)
-        I->setReg(0);
+        I->setReg(ARM::NoRegister);
       else
         I->setReg(ARM::CPSR);
       return;
@@ -1648,7 +1648,7 @@ static DecodeStatus DecodePredicateOperand(MCInst &Inst, unsigned Val,
     Check(S, MCDisassembler::SoftFail);
   Inst.addOperand(MCOperand::createImm(Val));
   if (Val == ARMCC::AL) {
-    Inst.addOperand(MCOperand::createReg(0));
+    Inst.addOperand(MCOperand::createReg(ARM::NoRegister));
   } else
     Inst.addOperand(MCOperand::createReg(ARM::CPSR));
   return S;
@@ -1660,7 +1660,7 @@ static DecodeStatus DecodeCCOutOperand(MCInst &Inst, unsigned Val,
   if (Val)
     Inst.addOperand(MCOperand::createReg(ARM::CPSR));
   else
-    Inst.addOperand(MCOperand::createReg(0));
+    Inst.addOperand(MCOperand::createReg(ARM::NoRegister));
   return MCDisassembler::Success;
 }
 
@@ -6686,6 +6686,13 @@ static unsigned FixedRegForVSTRVLDR_SYSREG(unsigned Opcode) {
   case ARM::VLDR_P0_pre:
   case ARM::VLDR_P0_post:
     return ARM::P0;
+  case ARM::VSTR_FPSCR_NZCVQC_off:
+  case ARM::VSTR_FPSCR_NZCVQC_pre:
+  case ARM::VSTR_FPSCR_NZCVQC_post:
+  case ARM::VLDR_FPSCR_NZCVQC_off:
+  case ARM::VLDR_FPSCR_NZCVQC_pre:
+  case ARM::VLDR_FPSCR_NZCVQC_post:
+    return ARM::FPSCR;
   default:
     return 0;
   }

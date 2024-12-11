@@ -910,7 +910,7 @@ public:
   /// current record.
   TreePattern(const Record *TheRec, const ListInit *RawPat, bool isInput,
               CodeGenDAGPatterns &ise);
-  TreePattern(const Record *TheRec, DagInit *Pat, bool isInput,
+  TreePattern(const Record *TheRec, const DagInit *Pat, bool isInput,
               CodeGenDAGPatterns &ise);
   TreePattern(const Record *TheRec, TreePatternNodePtr Pat, bool isInput,
               CodeGenDAGPatterns &ise);
@@ -975,7 +975,7 @@ public:
   void dump() const;
 
 private:
-  TreePatternNodePtr ParseTreePattern(Init *DI, StringRef OpName);
+  TreePatternNodePtr ParseTreePattern(const Init *DI, StringRef OpName);
   void ComputeNamedNodes();
   void ComputeNamedNodes(TreePatternNode &N);
 };
@@ -1055,7 +1055,7 @@ public:
 /// processed to produce isel.
 class PatternToMatch {
   const Record *SrcRecord;       // Originating Record for the pattern.
-  ListInit *Predicates;          // Top level predicate conditions to match.
+  const ListInit *Predicates;    // Top level predicate conditions to match.
   TreePatternNodePtr SrcPattern; // Source pattern to match.
   TreePatternNodePtr DstPattern; // Resulting pattern.
   std::vector<const Record *> Dstregs; // Physical register defs being matched.
@@ -1065,7 +1065,7 @@ class PatternToMatch {
   unsigned ID;            // Unique ID for the record.
 
 public:
-  PatternToMatch(const Record *srcrecord, ListInit *preds,
+  PatternToMatch(const Record *srcrecord, const ListInit *preds,
                  TreePatternNodePtr src, TreePatternNodePtr dst,
                  ArrayRef<const Record *> dstregs, int complexity, unsigned uid,
                  bool ignore, const Twine &hwmodefeatures = "")
@@ -1074,7 +1074,7 @@ public:
         AddedComplexity(complexity), GISelShouldIgnore(ignore), ID(uid) {}
 
   const Record *getSrcRecord() const { return SrcRecord; }
-  ListInit *getPredicates() const { return Predicates; }
+  const ListInit *getPredicates() const { return Predicates; }
   TreePatternNode &getSrcPattern() const { return *SrcPattern; }
   TreePatternNodePtr getSrcPatternShared() const { return SrcPattern; }
   TreePatternNode &getDstPattern() const { return *DstPattern; }

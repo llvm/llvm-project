@@ -14,7 +14,7 @@
 #include "src/errno/libc_errno.h"
 #include "src/stdio/gpu/vfprintf_utils.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, vfprintf,
                    (::FILE *__restrict stream, const char *__restrict format,
@@ -24,4 +24,4 @@ LLVM_LIBC_FUNCTION(int, vfprintf,
   return ret_val;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

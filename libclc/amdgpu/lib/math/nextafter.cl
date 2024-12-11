@@ -1,5 +1,5 @@
 #include <clc/clc.h>
-#include "../lib/clcmacro.h"
+#include <clc/clcmacro.h>
 #include <math/clc_nextafter.h>
 
 _CLC_DEFINE_BINARY_BUILTIN(float, nextafter, __clc_nextafter, float, float)

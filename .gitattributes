@@ -1,10 +1,3 @@
-# Checkout as native, commit as LF except in specific circumstances
-* text=auto
-*.bat text eol=crlf
-*.rc text eol=crlf
-*.sln text eol=crlf
-*.natvis text eol=crlf
-
 libcxx/src/**/*.cpp     merge=libcxx-reformat
 libcxx/include/**/*.h   merge=libcxx-reformat
 

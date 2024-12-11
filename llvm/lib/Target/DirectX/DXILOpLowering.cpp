@@ -17,6 +17,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
@@ -105,8 +106,58 @@ public:
     return false;
   }
 
-  [[nodiscard]]
-  bool replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp) {
+  struct IntrinArgSelect {
+    enum class Type {
+#define DXIL_OP_INTRINSIC_ARG_SELECT_TYPE(name) name,
+#include "DXILOperation.inc"
+    };
+    Type Type;
+    int Value;
+  };
+
+  [[nodiscard]] bool
+  replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp,
+                        ArrayRef<IntrinArgSelect> ArgSelects) {
+    bool IsVectorArgExpansion = isVectorArgExpansion(F);
+    assert(!(IsVectorArgExpansion && ArgSelects.size()) &&
+           "Cann't do vector arg expansion when using arg selects.");
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      OpBuilder.getIRB().SetInsertPoint(CI);
+      SmallVector<Value *> Args;
+      if (ArgSelects.size()) {
+        for (const IntrinArgSelect &A : ArgSelects) {
+          switch (A.Type) {
+          case IntrinArgSelect::Type::Index:
+            Args.push_back(CI->getArgOperand(A.Value));
+            break;
+          case IntrinArgSelect::Type::I8:
+            Args.push_back(OpBuilder.getIRB().getInt8((uint8_t)A.Value));
+            break;
+          case IntrinArgSelect::Type::I32:
+            Args.push_back(OpBuilder.getIRB().getInt32(A.Value));
+            break;
+          }
+        }
+      } else if (IsVectorArgExpansion) {
+        Args = argVectorFlatten(CI, OpBuilder.getIRB());
+      } else {
+        Args.append(CI->arg_begin(), CI->arg_end());
+      }
+
+      Expected<CallInst *> OpCall =
+          OpBuilder.tryCreateOp(DXILOp, Args, CI->getName(), F.getReturnType());
+      if (Error E = OpCall.takeError())
+        return E;
+
+      CI->replaceAllUsesWith(*OpCall);
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
+  [[nodiscard]] bool replaceFunctionWithNamedStructOp(
+      Function &F, dxil::OpCode DXILOp, Type *NewRetTy,
+      llvm::function_ref<Error(CallInst *CI, CallInst *Op)> ReplaceUses) {
     bool IsVectorArgExpansion = isVectorArgExpansion(F);
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       SmallVector<Value *> Args;
@@ -118,12 +169,12 @@ public:
         Args.append(CI->arg_begin(), CI->arg_end());
 
       Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(DXILOp, Args, CI->getName(), F.getReturnType());
+          OpBuilder.tryCreateOp(DXILOp, Args, CI->getName(), NewRetTy);
       if (Error E = OpCall.takeError())
         return E;
+      if (Error E = ReplaceUses(CI, *OpCall))
+        return E;
 
-      CI->replaceAllUsesWith(*OpCall);
-      CI->eraseFromParent();
       return Error::success();
     });
   }
@@ -179,6 +230,25 @@ public:
     CleanupCasts.clear();
   }
 
+  // Remove the resource global associated with the handleFromBinding call
+  // instruction and their uses as they aren't needed anymore.
+  // TODO: We should verify that all the globals get removed.
+  // It's expected we'll need a custom pass in the future that will eliminate
+  // the need for this here.
+  void removeResourceGlobals(CallInst *CI) {
+    for (User *User : make_early_inc_range(CI->users())) {
+      if (StoreInst *Store = dyn_cast<StoreInst>(User)) {
+        Value *V = Store->getOperand(1);
+        Store->eraseFromParent();
+        if (GlobalVariable *GV = dyn_cast<GlobalVariable>(V))
+          if (GV->use_empty()) {
+            GV->removeDeadConstantUsers();
+            GV->eraseFromParent();
+          }
+      }
+    }
+  }
+
   [[nodiscard]] bool lowerToCreateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
@@ -192,9 +262,14 @@ public:
       dxil::ResourceInfo &RI = *It;
       const auto &Binding = RI.getBinding();
 
+      Value *IndexOp = CI->getArgOperand(3);
+      if (Binding.LowerBound != 0)
+        IndexOp = IRB.CreateAdd(IndexOp,
+                                ConstantInt::get(Int32Ty, Binding.LowerBound));
+
       std::array<Value *, 4> Args{
           ConstantInt::get(Int8Ty, llvm::to_underlying(RI.getResourceClass())),
-          ConstantInt::get(Int32Ty, Binding.RecordID), CI->getArgOperand(3),
+          ConstantInt::get(Int32Ty, Binding.RecordID), IndexOp,
           CI->getArgOperand(4)};
       Expected<CallInst *> OpCall =
           OpBuilder.tryCreateOp(OpCode::CreateHandle, Args, CI->getName());
@@ -202,6 +277,8 @@ public:
         return E;
 
       Value *Cast = createTmpHandleCast(*OpCall, CI->getType());
+
+      removeResourceGlobals(CI);
 
       CI->replaceAllUsesWith(Cast);
       CI->eraseFromParent();
@@ -211,6 +288,7 @@ public:
 
   [[nodiscard]] bool lowerToBindAndAnnotateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
 
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
@@ -220,6 +298,12 @@ public:
       dxil::ResourceInfo &RI = *It;
 
       const auto &Binding = RI.getBinding();
+
+      Value *IndexOp = CI->getArgOperand(3);
+      if (Binding.LowerBound != 0)
+        IndexOp = IRB.CreateAdd(IndexOp,
+                                ConstantInt::get(Int32Ty, Binding.LowerBound));
+
       std::pair<uint32_t, uint32_t> Props = RI.getAnnotateProps();
 
       // For `CreateHandleFromBinding` we need the upper bound rather than the
@@ -230,8 +314,7 @@ public:
                                 : Binding.LowerBound + Binding.Size - 1;
       Constant *ResBind = OpBuilder.getResBind(
           Binding.LowerBound, UpperBound, Binding.Space, RI.getResourceClass());
-      std::array<Value *, 3> BindArgs{ResBind, CI->getArgOperand(3),
-                                      CI->getArgOperand(4)};
+      std::array<Value *, 3> BindArgs{ResBind, IndexOp, CI->getArgOperand(4)};
       Expected<CallInst *> OpBind = OpBuilder.tryCreateOp(
           OpCode::CreateHandleFromBinding, BindArgs, CI->getName());
       if (Error E = OpBind.takeError())
@@ -247,6 +330,8 @@ public:
 
       Value *Cast = createTmpHandleCast(*OpAnnotate, CI->getType());
 
+      removeResourceGlobals(CI);
+
       CI->replaceAllUsesWith(Cast);
       CI->eraseFromParent();
 
@@ -261,6 +346,26 @@ public:
     if (TT.getDXILVersion() < VersionTuple(1, 6))
       return lowerToCreateHandle(F);
     return lowerToBindAndAnnotateHandle(F);
+  }
+
+  Error replaceSplitDoubleCallUsages(CallInst *Intrin, CallInst *Op) {
+    for (Use &U : make_early_inc_range(Intrin->uses())) {
+      if (auto *EVI = dyn_cast<ExtractValueInst>(U.getUser())) {
+
+        if (EVI->getNumIndices() != 1)
+          return createStringError(std::errc::invalid_argument,
+                                   "Splitdouble has only 2 elements");
+        EVI->setOperand(0, Op);
+      } else {
+        return make_error<StringError>(
+            "Splitdouble use is not ExtractValueInst",
+            inconvertibleErrorCode());
+      }
+    }
+
+    Intrin->eraseFromParent();
+
+    return Error::success();
   }
 
   /// Replace uses of \c Intrin with the values in the `dx.ResRet` of \c Op.
@@ -418,6 +523,30 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerUpdateCounter(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Op1 = CI->getArgOperand(1);
+
+      std::array<Value *, 2> Args{Handle, Op1};
+
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::UpdateCounter, Args, CI->getName(), Int32Ty);
+
+      if (Error E = OpCall.takeError())
+        return E;
+
+      CI->replaceAllUsesWith(*OpCall);
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   [[nodiscard]] bool lowerTypedBufferStore(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
@@ -439,21 +568,112 @@ public:
         return make_error<StringError>(
             "typedBufferStore data must be a vector of 4 elements",
             inconvertibleErrorCode());
-      Value *Data0 =
-          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 0));
-      Value *Data1 =
-          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 1));
-      Value *Data2 =
-          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 2));
-      Value *Data3 =
-          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 3));
 
-      std::array<Value *, 8> Args{Handle, Index0, Index1, Data0,
-                                  Data1,  Data2,  Data3,  Mask};
+      // Since we're post-scalarizer, we likely have a vector that's constructed
+      // solely for the argument of the store. If so, just use the scalar values
+      // from before they're inserted into the temporary.
+      std::array<Value *, 4> DataElements{nullptr, nullptr, nullptr, nullptr};
+      auto *IEI = dyn_cast<InsertElementInst>(Data);
+      while (IEI) {
+        auto *IndexOp = dyn_cast<ConstantInt>(IEI->getOperand(2));
+        if (!IndexOp)
+          break;
+        size_t IndexVal = IndexOp->getZExtValue();
+        assert(IndexVal < 4 && "Too many elements for buffer store");
+        DataElements[IndexVal] = IEI->getOperand(1);
+        IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
+      }
+
+      // If for some reason we weren't able to forward the arguments from the
+      // scalarizer artifact, then we need to actually extract elements from the
+      // vector.
+      for (int I = 0, E = 4; I != E; ++I)
+        if (DataElements[I] == nullptr)
+          DataElements[I] =
+              IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, I));
+
+      std::array<Value *, 8> Args{
+          Handle,          Index0,          Index1,          DataElements[0],
+          DataElements[1], DataElements[2], DataElements[3], Mask};
       Expected<CallInst *> OpCall =
           OpBuilder.tryCreateOp(OpCode::BufferStore, Args, CI->getName());
       if (Error E = OpCall.takeError())
         return E;
+
+      CI->eraseFromParent();
+      // Clean up any leftover `insertelement`s
+      IEI = dyn_cast<InsertElementInst>(Data);
+      while (IEI && IEI->use_empty()) {
+        InsertElementInst *Tmp = IEI;
+        IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
+        Tmp->eraseFromParent();
+      }
+
+      return Error::success();
+    });
+  }
+
+  [[nodiscard]] bool lowerCtpopToCountBits(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+      SmallVector<Value *> Args;
+      Args.append(CI->arg_begin(), CI->arg_end());
+
+      Type *RetTy = Int32Ty;
+      Type *FRT = F.getReturnType();
+      if (const auto *VT = dyn_cast<VectorType>(FRT))
+        RetTy = VectorType::get(RetTy, VT);
+
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          dxil::OpCode::CountBits, Args, CI->getName(), RetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+
+      // If the result type is 32 bits we can do a direct replacement.
+      if (FRT->isIntOrIntVectorTy(32)) {
+        CI->replaceAllUsesWith(*OpCall);
+        CI->eraseFromParent();
+        return Error::success();
+      }
+
+      unsigned CastOp;
+      unsigned CastOp2;
+      if (FRT->isIntOrIntVectorTy(16)) {
+        CastOp = Instruction::ZExt;
+        CastOp2 = Instruction::SExt;
+      } else { // must be 64 bits
+        assert(FRT->isIntOrIntVectorTy(64) &&
+               "Currently only lowering 16, 32, or 64 bit ctpop to CountBits \
+                is supported.");
+        CastOp = Instruction::Trunc;
+        CastOp2 = Instruction::Trunc;
+      }
+
+      // It is correct to replace the ctpop with the dxil op and
+      // remove all casts to i32
+      bool NeedsCast = false;
+      for (User *User : make_early_inc_range(CI->users())) {
+        Instruction *I = dyn_cast<Instruction>(User);
+        if (I && (I->getOpcode() == CastOp || I->getOpcode() == CastOp2) &&
+            I->getType() == RetTy) {
+          I->replaceAllUsesWith(*OpCall);
+          I->eraseFromParent();
+        } else
+          NeedsCast = true;
+      }
+
+      // It is correct to replace a ctpop with the dxil op and
+      // a cast from i32 to the return type of the ctpop
+      // the cast is emitted here if there is a non-cast to i32
+      // instr which uses the ctpop
+      if (NeedsCast) {
+        Value *Cast =
+            IRB.CreateZExtOrTrunc(*OpCall, F.getReturnType(), "ctpop.cast");
+        CI->replaceAllUsesWith(Cast);
+      }
 
       CI->eraseFromParent();
       return Error::success();
@@ -471,9 +691,10 @@ public:
       switch (ID) {
       default:
         continue;
-#define DXIL_OP_INTRINSIC(OpCode, Intrin)                                      \
+#define DXIL_OP_INTRINSIC(OpCode, Intrin, ...)                                 \
   case Intrin:                                                                 \
-    HasErrors |= replaceFunctionWithOp(F, OpCode);                             \
+    HasErrors |= replaceFunctionWithOp(                                        \
+        F, OpCode, ArrayRef<IntrinArgSelect>{__VA_ARGS__});                    \
     break;
 #include "DXILOperation.inc"
       case Intrinsic::dx_handle_fromBinding:
@@ -487,6 +708,22 @@ public:
         break;
       case Intrinsic::dx_typedBufferStore:
         HasErrors |= lowerTypedBufferStore(F);
+        break;
+      case Intrinsic::dx_bufferUpdateCounter:
+        HasErrors |= lowerUpdateCounter(F);
+        break;
+      // TODO: this can be removed when
+      // https://github.com/llvm/llvm-project/issues/113192 is fixed
+      case Intrinsic::dx_splitdouble:
+        HasErrors |= replaceFunctionWithNamedStructOp(
+            F, OpCode::SplitDouble,
+            OpBuilder.getSplitDoubleType(M.getContext()),
+            [&](CallInst *CI, CallInst *Op) {
+              return replaceSplitDoubleCallUsages(CI, Op);
+            });
+        break;
+      case Intrinsic::ctpop:
+        HasErrors |= lowerCtpopToCountBits(F);
         break;
       }
       Updated = true;

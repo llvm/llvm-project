@@ -119,6 +119,8 @@ public:
   void handleNumThreadsAttr(Decl *D, const ParsedAttr &AL);
   void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL);
+  void handleSV_GroupThreadIDAttr(Decl *D, const ParsedAttr &AL);
+  void handleSV_GroupIDAttr(Decl *D, const ParsedAttr &AL);
   void handlePackOffsetAttr(Decl *D, const ParsedAttr &AL);
   void handleShaderAttr(Decl *D, const ParsedAttr &AL);
   void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
@@ -132,9 +134,12 @@ public:
 
   // HLSL Type trait implementations
   bool IsScalarizedLayoutCompatible(QualType T1, QualType T2) const;
-  bool IsIntangibleType(QualType T1);
+  bool IsTypedResourceElementCompatible(QualType T1);
 
   bool CheckCompatibleParameterABI(FunctionDecl *New, FunctionDecl *Old);
+
+  // Diagnose whether the input ID is uint/unit2/uint3 type.
+  bool diagnoseInputIDType(QualType T, const ParsedAttr &AL);
 
   ExprResult ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg);
 

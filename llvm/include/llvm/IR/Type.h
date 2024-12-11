@@ -206,7 +206,20 @@ public:
   bool isScalableTargetExtTy() const;
 
   /// Return true if this is a type whose size is a known multiple of vscale.
+  bool isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const;
   bool isScalableTy() const;
+
+  /// Return true if this type is or contains a target extension type that
+  /// disallows being used as a global.
+  bool
+  containsNonGlobalTargetExtType(SmallPtrSetImpl<const Type *> &Visited) const;
+  bool containsNonGlobalTargetExtType() const;
+
+  /// Return true if this type is or contains a target extension type that
+  /// disallows being used as a local.
+  bool
+  containsNonLocalTargetExtType(SmallPtrSetImpl<const Type *> &Visited) const;
+  bool containsNonLocalTargetExtType() const;
 
   /// Return true if this is a FP type or a vector of FP.
   bool isFPOrFPVectorTy() const { return getScalarType()->isFloatingPointTy(); }
@@ -471,8 +484,9 @@ public:
   static Type *getWasm_FuncrefTy(LLVMContext &C);
 
   /// Return a pointer to the current type. This is equivalent to
-  /// PointerType::get(Foo, AddrSpace).
+  /// PointerType::get(Ctx, AddrSpace).
   /// TODO: Remove this after opaque pointer transition is complete.
+  LLVM_DEPRECATED("Use PointerType::get instead", "PointerType::get")
   PointerType *getPointerTo(unsigned AddrSpace = 0) const;
 
 private:

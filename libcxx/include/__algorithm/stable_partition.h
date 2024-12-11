@@ -12,6 +12,7 @@
 #include <__algorithm/iterator_operations.h>
 #include <__algorithm/rotate.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__iterator/advance.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>

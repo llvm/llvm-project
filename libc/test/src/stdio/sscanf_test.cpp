@@ -177,13 +177,25 @@ TEST(LlvmLibcSScanfTest, IntConvMaxLengthTests) {
   EXPECT_EQ(ret_val, 1);
   EXPECT_EQ(result, 0);
 
+  result = -999;
+
+  // 0x is a valid prefix, but not a valid number. This should be a matching
+  // failure and should not modify the values.
   ret_val = LIBC_NAMESPACE::sscanf("0x1", "%2i", &result);
-  EXPECT_EQ(ret_val, 1);
-  EXPECT_EQ(result, 0);
+  EXPECT_EQ(ret_val, 0);
+  EXPECT_EQ(result, -999);
 
   ret_val = LIBC_NAMESPACE::sscanf("-0x1", "%3i", &result);
+  EXPECT_EQ(ret_val, 0);
+  EXPECT_EQ(result, -999);
+
+  ret_val = LIBC_NAMESPACE::sscanf("0x1", "%3i", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_EQ(result, 0);
+  EXPECT_EQ(result, 1);
+
+  ret_val = LIBC_NAMESPACE::sscanf("-0x1", "%4i", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_EQ(result, -1);
 
   ret_val = LIBC_NAMESPACE::sscanf("-0x123", "%4i", &result);
   EXPECT_EQ(ret_val, 1);
@@ -212,7 +224,7 @@ TEST(LlvmLibcSScanfTest, IntConvNoWriteTests) {
   EXPECT_EQ(result, 0);
 
   ret_val = LIBC_NAMESPACE::sscanf("0x1", "%*2i", &result);
-  EXPECT_EQ(ret_val, 1);
+  EXPECT_EQ(ret_val, 0);
   EXPECT_EQ(result, 0);
 
   ret_val = LIBC_NAMESPACE::sscanf("a", "%*i", &result);
@@ -679,13 +691,17 @@ TEST(LlvmLibcSScanfTest, CombinedConv) {
   EXPECT_EQ(result, 123);
   ASSERT_STREQ(buffer, "abc");
 
+  result = -1;
+
+  // 0x is a valid prefix, but not a valid number. This should be a matching
+  // failure and should not modify the values.
   ret_val = LIBC_NAMESPACE::sscanf("0xZZZ", "%i%s", &result, buffer);
-  EXPECT_EQ(ret_val, 2);
-  EXPECT_EQ(result, 0);
-  ASSERT_STREQ(buffer, "ZZZ");
+  EXPECT_EQ(ret_val, 0);
+  EXPECT_EQ(result, -1);
+  ASSERT_STREQ(buffer, "abc");
 
   ret_val = LIBC_NAMESPACE::sscanf("0xZZZ", "%X%s", &result, buffer);
-  EXPECT_EQ(ret_val, 2);
-  EXPECT_EQ(result, 0);
-  ASSERT_STREQ(buffer, "ZZZ");
+  EXPECT_EQ(ret_val, 0);
+  EXPECT_EQ(result, -1);
+  ASSERT_STREQ(buffer, "abc");
 }

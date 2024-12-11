@@ -25,18 +25,28 @@ bool llvm::lowerAtomicCmpXchgInst(AtomicCmpXchgInst *CXI) {
   Value *Cmp = CXI->getCompareOperand();
   Value *Val = CXI->getNewValOperand();
 
-  LoadInst *Orig =
-      Builder.CreateAlignedLoad(Val->getType(), Ptr, CXI->getAlign());
-  Value *Equal = Builder.CreateICmpEQ(Orig, Cmp);
-  Value *Res = Builder.CreateSelect(Equal, Val, Orig);
-  Builder.CreateAlignedStore(Res, Ptr, CXI->getAlign());
+  auto [Orig, Equal] =
+      buildCmpXchgValue(Builder, Ptr, Cmp, Val, CXI->getAlign());
 
-  Res = Builder.CreateInsertValue(PoisonValue::get(CXI->getType()), Orig, 0);
+  Value *Res =
+      Builder.CreateInsertValue(PoisonValue::get(CXI->getType()), Orig, 0);
   Res = Builder.CreateInsertValue(Res, Equal, 1);
 
   CXI->replaceAllUsesWith(Res);
   CXI->eraseFromParent();
   return true;
+}
+
+std::pair<Value *, Value *> llvm::buildCmpXchgValue(IRBuilderBase &Builder,
+                                                    Value *Ptr, Value *Cmp,
+                                                    Value *Val,
+                                                    Align Alignment) {
+  LoadInst *Orig = Builder.CreateAlignedLoad(Val->getType(), Ptr, Alignment);
+  Value *Equal = Builder.CreateICmpEQ(Orig, Cmp);
+  Value *Res = Builder.CreateSelect(Equal, Val, Orig);
+  Builder.CreateAlignedStore(Res, Ptr, Alignment);
+
+  return {Orig, Equal};
 }
 
 Value *llvm::buildAtomicRMWValue(AtomicRMWInst::BinOp Op,

@@ -25,6 +25,7 @@
 
 using namespace llvm;
 using namespace llvm::object;
+using namespace llvm::support;
 using namespace llvm::support::endian;
 using namespace llvm::COFF;
 using llvm::support::ulittle32_t;
@@ -570,8 +571,7 @@ void SectionChunk::getBaserels(std::vector<Baserel> *res) {
 // another DLL) This returns the size the relocation is supposed to update,
 // in bits, or 0 if the relocation cannot be handled as a runtime pseudo
 // relocation.
-static int getRuntimePseudoRelocSize(uint16_t type,
-                                     llvm::COFF::MachineTypes machine) {
+static int getRuntimePseudoRelocSize(uint16_t type, Triple::ArchType arch) {
   // Relocations that either contain an absolute address, or a plain
   // relative offset, since the runtime pseudo reloc implementation
   // adds 8/16/32/64 bit values to a memory address.
@@ -597,8 +597,8 @@ static int getRuntimePseudoRelocSize(uint16_t type,
   // the image, or temporarily changed at runtime with VirtualProtect.
   // Since this only operates on direct address values, it doesn't work for
   // ARM/ARM64 relocations, other than the plain ADDR32/ADDR64 relocations.
-  switch (machine) {
-  case AMD64:
+  switch (arch) {
+  case Triple::x86_64:
     switch (type) {
     case IMAGE_REL_AMD64_ADDR64:
       return 64;
@@ -613,7 +613,7 @@ static int getRuntimePseudoRelocSize(uint16_t type,
     default:
       return 0;
     }
-  case I386:
+  case Triple::x86:
     switch (type) {
     case IMAGE_REL_I386_DIR32:
     case IMAGE_REL_I386_REL32:
@@ -621,14 +621,14 @@ static int getRuntimePseudoRelocSize(uint16_t type,
     default:
       return 0;
     }
-  case ARMNT:
+  case Triple::thumb:
     switch (type) {
     case IMAGE_REL_ARM_ADDR32:
       return 32;
     default:
       return 0;
     }
-  case ARM64:
+  case Triple::aarch64:
     switch (type) {
     case IMAGE_REL_ARM64_ADDR64:
       return 64;
@@ -661,8 +661,7 @@ void SectionChunk::getRuntimePseudoRelocs(
     // alive. Thus such dangling references in DWARF sections are expected.
     if (!target->getChunk())
       continue;
-    int sizeInBits =
-        getRuntimePseudoRelocSize(rel.Type, file->ctx.config.machine);
+    int sizeInBits = getRuntimePseudoRelocSize(rel.Type, getArch());
     if (sizeInBits == 0) {
       error("unable to automatically import from " + target->getName() +
             " with relocation type " +
@@ -1085,7 +1084,8 @@ void CHPECodeRangesChunk::writeTo(uint8_t *buf) const {
 }
 
 size_t CHPERedirectionChunk::getSize() const {
-  return exportThunks.size() * sizeof(chpe_redirection_entry);
+  // Add an extra +1 for a terminator entry.
+  return (exportThunks.size() + 1) * sizeof(chpe_redirection_entry);
 }
 
 void CHPERedirectionChunk::writeTo(uint8_t *buf) const {
@@ -1146,6 +1146,83 @@ uint32_t ImportThunkChunkARM64EC::extendRanges() {
   extended = true;
   // The last instruction is replaced with an inline range extension thunk.
   return sizeof(arm64Thunk) - sizeof(uint32_t);
+}
+
+size_t Arm64XDynamicRelocEntry::getSize() const {
+  switch (type) {
+  case IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE:
+    return sizeof(uint16_t) + size; // A header and a payload.
+  case IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA:
+  case IMAGE_DVRT_ARM64X_FIXUP_TYPE_ZEROFILL:
+    llvm_unreachable("unsupported type");
+  }
+}
+
+void Arm64XDynamicRelocEntry::writeTo(uint8_t *buf) const {
+  auto out = reinterpret_cast<ulittle16_t *>(buf);
+  *out = (offset & 0xfff) | (type << 12);
+
+  switch (type) {
+  case IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE:
+    *out |= ((bit_width(size) - 1) << 14); // Encode the size.
+    switch (size) {
+    case 2:
+      out[1] = value;
+      break;
+    case 4:
+      *reinterpret_cast<ulittle32_t *>(out + 1) = value;
+      break;
+    case 8:
+      *reinterpret_cast<ulittle64_t *>(out + 1) = value;
+      break;
+    default:
+      llvm_unreachable("invalid size");
+    }
+    break;
+  case IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA:
+  case IMAGE_DVRT_ARM64X_FIXUP_TYPE_ZEROFILL:
+    llvm_unreachable("unsupported type");
+  }
+}
+
+void DynamicRelocsChunk::finalize() {
+  llvm::stable_sort(arm64xRelocs, [=](const Arm64XDynamicRelocEntry &a,
+                                      const Arm64XDynamicRelocEntry &b) {
+    return a.offset < b.offset;
+  });
+
+  size = sizeof(coff_dynamic_reloc_table) + sizeof(coff_dynamic_relocation64) +
+         sizeof(coff_base_reloc_block_header);
+
+  for (const Arm64XDynamicRelocEntry &entry : arm64xRelocs) {
+    assert(!(entry.offset & ~0xfff)); // Not yet supported.
+    size += entry.getSize();
+  }
+
+  size = alignTo(size, sizeof(uint32_t));
+}
+
+void DynamicRelocsChunk::writeTo(uint8_t *buf) const {
+  auto table = reinterpret_cast<coff_dynamic_reloc_table *>(buf);
+  table->Version = 1;
+  table->Size = sizeof(coff_dynamic_relocation64);
+  buf += sizeof(*table);
+
+  auto header = reinterpret_cast<coff_dynamic_relocation64 *>(buf);
+  header->Symbol = IMAGE_DYNAMIC_RELOCATION_ARM64X;
+  buf += sizeof(*header);
+
+  auto pageHeader = reinterpret_cast<coff_base_reloc_block_header *>(buf);
+  pageHeader->BlockSize = sizeof(*pageHeader);
+  for (const Arm64XDynamicRelocEntry &entry : arm64xRelocs) {
+    entry.writeTo(buf + pageHeader->BlockSize);
+    pageHeader->BlockSize += entry.getSize();
+  }
+  pageHeader->BlockSize = alignTo(pageHeader->BlockSize, sizeof(uint32_t));
+
+  header->BaseRelocSize = pageHeader->BlockSize;
+  table->Size += header->BaseRelocSize;
+  assert(size == sizeof(*table) + sizeof(*header) + header->BaseRelocSize);
 }
 
 } // namespace lld::coff

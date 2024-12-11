@@ -4906,7 +4906,7 @@ let Predicates = [HasMatMulInt8] in {
   }
 
   multiclass SUDOTLane<bit Q, RegisterClass RegTy, ValueType AccumTy, ValueType InputTy, dag RHS>
-        : N3VMixedDotLane<Q, 1, "vsudot", "u8", RegTy, AccumTy, InputTy, null_frag, null_frag> {
+        : N3VMixedDotLane<Q, 1, "vsudot", "u8", RegTy, AccumTy, InputTy, null_frag, (ins)> {
     def : Pat<
       (AccumTy (int_arm_neon_usdot (AccumTy RegTy:$Vd),
                                    (InputTy (bitconvert (AccumTy

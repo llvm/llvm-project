@@ -11,7 +11,7 @@ class Region;
 class NullPass final : public RegionPass {
 public:
   NullPass() : RegionPass("null") {}
-  bool runOnRegion(Region &R) final { return false; }
+  bool runOnRegion(Region &R, const Analyses &A) final { return false; }
 };
 
 } // namespace llvm::sandboxir

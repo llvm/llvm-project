@@ -13,8 +13,6 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/FormatClasses.h"
 #include "lldb/DataFormatters/FormatManager.h"
@@ -52,6 +50,8 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/Utility/StructuredData.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/STLExtras.h"
@@ -410,31 +410,31 @@ static bool DumpAddressAndContent(Stream &s, const SymbolContext *sc,
                                   const Address &addr,
                                   bool print_file_addr_or_load_addr) {
   Target *target = Target::GetTargetFromContexts(exe_ctx, sc);
+
   addr_t vaddr = LLDB_INVALID_ADDRESS;
-  if (exe_ctx && !target->GetSectionLoadList().IsEmpty())
+  if (target && !target->GetSectionLoadList().IsEmpty())
     vaddr = addr.GetLoadAddress(target);
   if (vaddr == LLDB_INVALID_ADDRESS)
     vaddr = addr.GetFileAddress();
+  if (vaddr == LLDB_INVALID_ADDRESS)
+    return false;
 
-  if (vaddr != LLDB_INVALID_ADDRESS) {
-    int addr_width = 0;
-    if (exe_ctx && target) {
-      addr_width = target->GetArchitecture().GetAddressByteSize() * 2;
-    }
-    if (addr_width == 0)
-      addr_width = 16;
-    if (print_file_addr_or_load_addr) {
-      ExecutionContextScope *exe_scope = nullptr;
-      if (exe_ctx)
-        exe_scope = exe_ctx->GetBestExecutionContextScope();
-      addr.Dump(&s, exe_scope, Address::DumpStyleLoadAddress,
-                Address::DumpStyleModuleWithFileAddress, 0);
-    } else {
-      s.Printf("0x%*.*" PRIx64, addr_width, addr_width, vaddr);
-    }
-    return true;
+  int addr_width = 0;
+  if (target)
+    addr_width = target->GetArchitecture().GetAddressByteSize() * 2;
+  if (addr_width == 0)
+    addr_width = 16;
+
+  if (print_file_addr_or_load_addr) {
+    ExecutionContextScope *exe_scope =
+        exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
+    addr.Dump(&s, exe_scope, Address::DumpStyleLoadAddress,
+              Address::DumpStyleModuleWithFileAddress, 0);
+  } else {
+    s.Printf("0x%*.*" PRIx64, addr_width, addr_width, vaddr);
   }
-  return false;
+
+  return true;
 }
 
 static bool DumpAddressOffsetFromFunction(Stream &s, const SymbolContext *sc,
