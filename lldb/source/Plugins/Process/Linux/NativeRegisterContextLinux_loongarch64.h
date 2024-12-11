@@ -87,9 +87,9 @@ private:
 
   const RegisterInfoPOSIX_loongarch64 &GetRegisterInfo() const;
 
-  Status ReadHardwareDebugInfo() override;
+  llvm::Error ReadHardwareDebugInfo() override;
 
-  Status WriteHardwareDebugRegs(DREGType hwbType) override;
+  llvm::Error WriteHardwareDebugRegs(DREGType hwbType) override;
 };
 
 } // namespace process_linux

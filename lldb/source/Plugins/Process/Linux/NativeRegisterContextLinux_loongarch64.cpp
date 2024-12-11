@@ -59,8 +59,7 @@ NativeRegisterContextLinux_loongarch64::NativeRegisterContextLinux_loongarch64(
     std::unique_ptr<RegisterInfoPOSIX_loongarch64> register_info_up)
     : NativeRegisterContextRegisterInfo(native_thread,
                                         register_info_up.release()),
-      NativeRegisterContextLinux(native_thread),
-      NativeRegisterContextDBReg_arm64(/*CTRL_PLV3_ENABLE=*/0x10U) {
+      NativeRegisterContextLinux(native_thread) {
   ::memset(&m_fpr, 0, sizeof(m_fpr));
   ::memset(&m_gpr, 0, sizeof(m_gpr));
 
@@ -349,9 +348,9 @@ NativeRegisterContextLinux_loongarch64::GetExpeditedRegisters(
   return expedited_reg_nums;
 }
 
-Status NativeRegisterContextLinux_loongarch64::ReadHardwareDebugInfo() {
+llvm::Error NativeRegisterContextLinux_loongarch64::ReadHardwareDebugInfo() {
   if (!m_refresh_hwdebug_info)
-    return Status();
+    return llvm::Error::success();
 
   ::pid_t tid = m_thread.GetID();
 
@@ -365,7 +364,7 @@ Status NativeRegisterContextLinux_loongarch64::ReadHardwareDebugInfo() {
   error = NativeProcessLinux::PtraceWrapper(PTRACE_GETREGSET, tid, &regset,
                                             &ioVec, ioVec.iov_len);
   if (error.Fail())
-    return error;
+    return error.ToError();
 
   m_max_hwp_supported = dreg_state.dbg_info & 0x3f;
 
@@ -373,16 +372,16 @@ Status NativeRegisterContextLinux_loongarch64::ReadHardwareDebugInfo() {
   error = NativeProcessLinux::PtraceWrapper(PTRACE_GETREGSET, tid, &regset,
                                             &ioVec, ioVec.iov_len);
   if (error.Fail())
-    return error;
+    return error.ToError();
 
   m_max_hbp_supported = dreg_state.dbg_info & 0x3f;
 
   m_refresh_hwdebug_info = false;
 
-  return error;
+  return llvm::Error::success();
 }
 
-Status NativeRegisterContextLinux_loongarch64::WriteHardwareDebugRegs(
+llvm::Error NativeRegisterContextLinux_loongarch64::WriteHardwareDebugRegs(
     DREGType hwbType) {
   struct iovec ioVec;
   struct user_watch_state dreg_state;
@@ -415,6 +414,7 @@ Status NativeRegisterContextLinux_loongarch64::WriteHardwareDebugRegs(
   }
 
   return NativeProcessLinux::PtraceWrapper(PTRACE_SETREGSET, m_thread.GetID(),
-                                           &regset, &ioVec, ioVec.iov_len);
+                                           &regset, &ioVec, ioVec.iov_len)
+      .ToError();
 }
 #endif // defined(__loongarch__) && __loongarch_grlen == 64

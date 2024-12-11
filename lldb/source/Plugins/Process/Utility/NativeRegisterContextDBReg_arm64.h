@@ -15,8 +15,8 @@ namespace lldb_private {
 
 class NativeRegisterContextDBReg_arm64 : public NativeRegisterContextDBReg {
 public:
-  explicit NativeRegisterContextDBReg_arm64(uint32_t enable_bit)
-      : NativeRegisterContextDBReg(enable_bit) {}
+  NativeRegisterContextDBReg_arm64()
+      : NativeRegisterContextDBReg(/*enable_bit=*/0x1U) {}
 
 private:
   uint32_t GetWatchpointSize(uint32_t wp_index) override;
