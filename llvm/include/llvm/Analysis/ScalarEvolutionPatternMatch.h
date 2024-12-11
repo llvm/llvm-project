@@ -1,5 +1,4 @@
-//===- ScalarEvolutionPatternMatch.h - Match on SCEVs -----------*- C++ -*-===//
-//
+//===----------------------------------------------------------------------===//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -15,7 +14,6 @@
 #define LLVM_ANALYSIS_SCALAREVOLUTIONPATTERNMATCH_H
 
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/IR/PatternMatch.h"
 
 namespace llvm {
 namespace SCEVPatternMatch {
@@ -25,19 +23,39 @@ bool match(const SCEV *S, const Pattern &P) {
   return P.match(S);
 }
 
-struct specific_intval64 : public PatternMatch::specific_intval64<false> {
-  specific_intval64(uint64_t V) : PatternMatch::specific_intval64<false>(V) {}
-
+template <typename Predicate> struct cst_pred_ty : public Predicate {
   bool match(const SCEV *S) {
-    auto *Cast = dyn_cast<SCEVConstant>(S);
-    return Cast &&
-           PatternMatch::specific_intval64<false>::match(Cast->getValue());
+    assert((isa<SCEVCouldNotCompute>(S) || !S->getType()->isVectorTy()) &&
+           "no vector types expected from SCEVs");
+    auto *C = dyn_cast<SCEVConstant>(S);
+    return C && this->isValue(C->getAPInt());
   }
 };
 
-inline specific_intval64 m_scev_Zero() { return specific_intval64(0); }
-inline specific_intval64 m_scev_One() { return specific_intval64(1); }
-inline specific_intval64 m_scev_MinusOne() { return specific_intval64(-1); }
+struct is_zero {
+  template <typename ITy> bool match(ITy *S) {
+    assert((isa<SCEVCouldNotCompute>(S) || !S->getType()->isVectorTy()) &&
+           "no vector types expected from SCEVs");
+    auto *C = dyn_cast<SCEVConstant>(S);
+    return C && C->getValue()->isNullValue();
+  }
+};
+/// Match any null constant.
+inline is_zero m_scev_Zero() { return is_zero(); }
+
+struct is_one {
+  bool isValue(const APInt &C) { return C.isOne(); }
+};
+/// Match an integer 1.
+inline cst_pred_ty<is_one> m_scev_One() { return cst_pred_ty<is_one>(); }
+
+struct is_all_ones {
+  bool isValue(const APInt &C) { return C.isAllOnes(); }
+};
+/// Match an integer with all bits set.
+inline cst_pred_ty<is_all_ones> m_scev_AllOnes() {
+  return cst_pred_ty<is_all_ones>();
+}
 
 } // namespace SCEVPatternMatch
 } // namespace llvm
