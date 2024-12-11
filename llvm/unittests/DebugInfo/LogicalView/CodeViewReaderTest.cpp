@@ -32,7 +32,8 @@ namespace {
 const char *CodeViewClang = "test-codeview-clang.o";
 const char *CodeViewMsvc = "test-codeview-msvc.o";
 const char *CodeViewMsvcLib = "test-codeview-msvc.lib";
-const char *CodeViewMsvcLibContentName = "test-codeview-msvc.lib(test-codeview-msvc.o)";
+const char *CodeViewMsvcLibContentName =
+    "test-codeview-msvc.lib(test-codeview-msvc.o)";
 const char *CodeViewPdbMsvc = "test-codeview-pdb-msvc.o";
 
 // Helper function to get the first scope child from the given parent.
