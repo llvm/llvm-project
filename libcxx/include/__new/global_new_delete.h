@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NEW_OPERATOR_NEW_DELETE_H
-#define _LIBCPP___NEW_OPERATOR_NEW_DELETE_H
+#ifndef _LIBCPP___NEW_GLOBAL_NEW_DELETE_H
+#define _LIBCPP___NEW_GLOBAL_NEW_DELETE_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -84,17 +84,6 @@ _LIBCPP_OVERRIDABLE_FUNC_VIS void operator delete[](void* __p, std::align_val_t,
 _LIBCPP_OVERRIDABLE_FUNC_VIS void operator delete[](void* __p, std::size_t __sz, std::align_val_t) _NOEXCEPT;
 #    endif
 #  endif
-
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void*
-operator new(std::size_t, void* __p) _NOEXCEPT {
-  return __p;
-}
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void*
-operator new[](std::size_t, void* __p) _NOEXCEPT {
-  return __p;
-}
-inline _LIBCPP_HIDE_FROM_ABI void operator delete(void*, void*) _NOEXCEPT {}
-inline _LIBCPP_HIDE_FROM_ABI void operator delete[](void*, void*) _NOEXCEPT {}
 #endif
 
-#endif // _LIBCPP___NEW_OPERATOR_NEW_DELETE_H
+#endif // _LIBCPP___NEW_GLOBAL_NEW_DELETE_H

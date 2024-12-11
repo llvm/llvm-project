@@ -585,11 +585,12 @@ set(files
   __new/allocate.h
   __new/destroying_delete_t.h
   __new/exceptions.h
+  __new/global_new_delete.h
   __new/interference_size.h
   __new/launder.h
   __new/new_handler.h
   __new/nothrow_t.h
-  __new/operator_new_delete.h
+  __new/placement_new_delete.h
   __node_handle
   __numeric/accumulate.h
   __numeric/adjacent_difference.h
