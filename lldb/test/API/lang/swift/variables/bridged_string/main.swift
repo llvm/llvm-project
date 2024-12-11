@@ -19,6 +19,7 @@ func main()
 	let s4 = s2 as NSString
 	let s5 = "abc" as NSString
 	let s6 = String(s5)
+	let s7 = CFRunLoopMode.defaultMode!.rawValue as String
 	print(s1) // Set breakpoint here
         withExtendedLifetime((s2, s3, s4, s5, s6)) {}
 }
