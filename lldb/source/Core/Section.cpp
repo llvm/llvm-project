@@ -149,10 +149,12 @@ const char *Section::GetTypeAsCString() const {
     return "ctf";
   case eSectionTypeLLDBTypeSummaries:
     return "lldb-type-summaries";
-  case eSectionTypeOther:
-    return "regular";
+  case eSectionTypeLLDBFormatters:
+    return "lldb-formatters";
   case eSectionTypeSwiftModules:
     return "swift-modules";
+  case eSectionTypeOther:
+    return "regular";
   }
   return "unknown";
 }
@@ -460,6 +462,7 @@ bool Section::ContainsOnlyDebugInfo() const {
   case eSectionTypeDWARFGNUDebugAltLink:
   case eSectionTypeCTF:
   case eSectionTypeLLDBTypeSummaries:
+  case eSectionTypeLLDBFormatters:
   case eSectionTypeSwiftModules:
     return true;
   }
