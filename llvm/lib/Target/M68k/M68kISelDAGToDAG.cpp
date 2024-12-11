@@ -289,17 +289,17 @@ private:
 
   /// Return a target constant with the specified value of type i8.
   inline SDValue getI8Imm(int64_t Imm, const SDLoc &DL) {
-    return CurDAG->getTargetConstant(Imm, DL, MVT::i8);
+    return CurDAG->getSignedTargetConstant(Imm, DL, MVT::i8);
   }
 
   /// Return a target constant with the specified value of type i8.
   inline SDValue getI16Imm(int64_t Imm, const SDLoc &DL) {
-    return CurDAG->getTargetConstant(Imm, DL, MVT::i16);
+    return CurDAG->getSignedTargetConstant(Imm, DL, MVT::i16);
   }
 
   /// Return a target constant with the specified value, of type i32.
   inline SDValue getI32Imm(int64_t Imm, const SDLoc &DL) {
-    return CurDAG->getTargetConstant(Imm, DL, MVT::i32);
+    return CurDAG->getSignedTargetConstant(Imm, DL, MVT::i32);
   }
 
   /// Return a reference to the TargetInstrInfo, casted to the target-specific
@@ -772,6 +772,20 @@ static bool isAddressBase(const SDValue &N) {
   }
 }
 
+static bool AllowARIIWithZeroDisp(SDNode *Parent) {
+  if (!Parent)
+    return false;
+  switch (Parent->getOpcode()) {
+  case ISD::LOAD:
+  case ISD::STORE:
+  case ISD::ATOMIC_LOAD:
+  case ISD::ATOMIC_STORE:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool M68kDAGToDAGISel::SelectARII(SDNode *Parent, SDValue N, SDValue &Disp,
                                   SDValue &Base, SDValue &Index) {
   M68kISelAddressMode AM(M68kISelAddressMode::AddrType::ARII);
@@ -811,8 +825,7 @@ bool M68kDAGToDAGISel::SelectARII(SDNode *Parent, SDValue N, SDValue &Disp,
   // The idea here is that we want to use AddrType::ARII without displacement
   // only if necessary like memory operations, otherwise this must be lowered
   // into addition
-  if (AM.Disp == 0 && (!Parent || (Parent->getOpcode() != ISD::LOAD &&
-                                   Parent->getOpcode() != ISD::STORE))) {
+  if (AM.Disp == 0 && !AllowARIIWithZeroDisp(Parent)) {
     LLVM_DEBUG(dbgs() << "REJECT: Displacement is Zero\n");
     return false;
   }

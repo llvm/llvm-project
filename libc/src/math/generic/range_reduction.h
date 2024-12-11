@@ -13,8 +13,9 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace generic {
 
@@ -84,6 +85,6 @@ LIBC_INLINE int64_t large_range_reduction(double x, int x_exp, double &y) {
 
 } // namespace generic
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_RANGE_REDUCTION_H

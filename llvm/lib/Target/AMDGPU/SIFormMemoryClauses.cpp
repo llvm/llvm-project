@@ -32,7 +32,7 @@ MaxClause("amdgpu-max-memory-clause", cl::Hidden, cl::init(15),
 namespace {
 
 class SIFormMemoryClauses : public MachineFunctionPass {
-  typedef DenseMap<unsigned, std::pair<unsigned, LaneBitmask>> RegUse;
+  using RegUse = DenseMap<unsigned, std::pair<unsigned, LaneBitmask>>;
 
 public:
   static char ID;
@@ -49,7 +49,7 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LiveIntervals>();
+    AU.addRequired<LiveIntervalsWrapperPass>();
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -81,7 +81,7 @@ private:
 
 INITIALIZE_PASS_BEGIN(SIFormMemoryClauses, DEBUG_TYPE,
                       "SI Form memory clauses", false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_END(SIFormMemoryClauses, DEBUG_TYPE,
                     "SI Form memory clauses", false, false)
 
@@ -227,11 +227,9 @@ void SIFormMemoryClauses::collectRegUses(const MachineInstr &MI,
                            : LaneBitmask::getAll();
     RegUse &Map = MO.isDef() ? Defs : Uses;
 
-    auto Loc = Map.find(Reg);
     unsigned State = getMopState(MO);
-    if (Loc == Map.end()) {
-      Map[Reg] = std::pair(State, Mask);
-    } else {
+    auto [Loc, Inserted] = Map.try_emplace(Reg, State, Mask);
+    if (!Inserted) {
       Loc->second.first |= State;
       Loc->second.second |= Mask;
     }
@@ -266,7 +264,7 @@ bool SIFormMemoryClauses::runOnMachineFunction(MachineFunction &MF) {
   TRI = ST->getRegisterInfo();
   MRI = &MF.getRegInfo();
   MFI = MF.getInfo<SIMachineFunctionInfo>();
-  LiveIntervals *LIS = &getAnalysis<LiveIntervals>();
+  LiveIntervals *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   SlotIndexes *Ind = LIS->getSlotIndexes();
   bool Changed = false;
 

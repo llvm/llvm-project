@@ -52,7 +52,7 @@ protected:
     std::string errMsg;
     raw_string_ostream os(errMsg);
     Error.print("", os);
-    EXPECT_TRUE(M) << os.str();
+    EXPECT_TRUE(M) << errMsg;
 
     return M;
   }
@@ -2481,8 +2481,8 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsAddWithRange) {
 TEST_F(ComputeKnownBitsTest, ComputeKnownBitsUnknownVScale) {
   Module M("", Context);
   IRBuilder<> Builder(Context);
-  Function *TheFn =
-      Intrinsic::getDeclaration(&M, Intrinsic::vscale, {Builder.getInt32Ty()});
+  Function *TheFn = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::vscale,
+                                                      {Builder.getInt32Ty()});
   CallInst *CI = Builder.CreateCall(TheFn, {}, {}, "");
 
   KnownBits Known = computeKnownBits(CI, M.getDataLayout(), /* Depth */ 0);
@@ -2766,11 +2766,11 @@ protected:
 const std::pair<const char *, const char *> IsBytewiseValueTests[] = {
     {
         "i8 0",
-        "i48* null",
+        "ptr null",
     },
     {
         "i8 undef",
-        "i48* undef",
+        "ptr undef",
     },
     {
         "i8 0",
@@ -2849,28 +2849,24 @@ const std::pair<const char *, const char *> IsBytewiseValueTests[] = {
         "double 0xF1F1F1F1F1F1F1F1",
     },
     {
-        "i8 undef",
-        "i16* undef",
-    },
-    {
         "i8 0",
-        "i16* inttoptr (i64 0 to i16*)",
+        "ptr inttoptr (i64 0 to ptr)",
     },
     {
         "i8 -1",
-        "i16* inttoptr (i64 -1 to i16*)",
+        "ptr inttoptr (i64 -1 to ptr)",
     },
     {
         "i8 -86",
-        "i16* inttoptr (i64 -6148914691236517206 to i16*)",
+        "ptr inttoptr (i64 -6148914691236517206 to ptr)",
     },
     {
         "",
-        "i16* inttoptr (i48 -1 to i16*)",
+        "ptr inttoptr (i48 -1 to ptr)",
     },
     {
         "i8 -1",
-        "i16* inttoptr (i96 -1 to i16*)",
+        "ptr inttoptr (i96 -1 to ptr)",
     },
     {
         "i8 undef",
@@ -2980,19 +2976,19 @@ const std::pair<const char *, const char *> IsBytewiseValueTests[] = {
     },
     {
         "i8 0",
-        "{i8, i64, i16*} zeroinitializer",
+        "{i8, i64, ptr} zeroinitializer",
     },
     {
         "i8 undef",
-        "{i8, i64, i16*} undef",
+        "{i8, i64, ptr} undef",
     },
     {
         "i8 -86",
-        "{i8, i64, i16*} {i8 -86, i64 -6148914691236517206, i16* undef}",
+        "{i8, i64, ptr} {i8 -86, i64 -6148914691236517206, ptr undef}",
     },
     {
         "",
-        "{i8, i64, i16*} {i8 86, i64 -6148914691236517206, i16* undef}",
+        "{i8, i64, ptr} {i8 86, i64 -6148914691236517206, ptr undef}",
     },
 };
 
@@ -3007,7 +3003,7 @@ TEST_P(IsBytewiseValueTest, IsBytewiseValue) {
   raw_string_ostream S(Buff);
   if (Actual)
     S << *Actual;
-  EXPECT_EQ(GetParam().first, S.str());
+  EXPECT_EQ(GetParam().first, Buff);
 }
 
 TEST_F(ValueTrackingTest, ComputeConstantRange) {

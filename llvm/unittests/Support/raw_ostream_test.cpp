@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
@@ -174,6 +175,49 @@ TEST(raw_ostreamTest, Justify) {
   EXPECT_EQ("single ",    printToString(center_justify("single", 7), 7));
   EXPECT_EQ("none",    printToString(center_justify("none", 1), 4));
   EXPECT_EQ("none",    printToString(center_justify("none", 1), 1));
+}
+
+TEST(raw_ostreamTest, Indent) {
+  indent Indent(4);
+  auto Spaces = [](int N) { return std::string(N, ' '); };
+  EXPECT_EQ(Spaces(4), printToString(Indent));
+  EXPECT_EQ("", printToString(indent(0)));
+  EXPECT_EQ(Spaces(5), printToString(Indent + 1));
+  EXPECT_EQ(Spaces(3), printToString(Indent - 1));
+  Indent += 1;
+  EXPECT_EQ(Spaces(5), printToString(Indent));
+  Indent -= 1;
+  EXPECT_EQ(Spaces(4), printToString(Indent));
+
+  // Scaled indent.
+  indent Scaled(4, 2);
+  EXPECT_EQ(Spaces(8), printToString(Scaled));
+  EXPECT_EQ(Spaces(10), printToString(Scaled + 1));
+  EXPECT_EQ(Spaces(6), printToString(Scaled - 1));
+  Scaled += 1;
+  EXPECT_EQ(Spaces(10), printToString(Scaled));
+  Scaled -= 1;
+  EXPECT_EQ(Spaces(8), printToString(Scaled));
+
+  // Operators.
+  Indent = 10;
+  EXPECT_EQ(Spaces(10), printToString(Indent));
+
+  indent Temp = Indent++;
+  EXPECT_EQ(Spaces(11), printToString(Indent));
+  EXPECT_EQ(Spaces(10), printToString(Temp));
+
+  Temp = Indent--;
+  EXPECT_EQ(Spaces(10), printToString(Indent));
+  EXPECT_EQ(Spaces(11), printToString(Temp));
+
+  Temp = ++Indent;
+  EXPECT_EQ(Spaces(11), printToString(Indent));
+  EXPECT_EQ(Spaces(11), printToString(Temp));
+
+  Temp = --Indent;
+  EXPECT_EQ(Spaces(10), printToString(Indent));
+  EXPECT_EQ(Spaces(10), printToString(Temp));
 }
 
 TEST(raw_ostreamTest, FormatHex) {  

@@ -11,9 +11,9 @@ add_integration_test(
   SUITE
     stdio-gpu-integration-tests
   SRCS
-    printf.cpp
+    printf_test.cpp
   DEPENDS
-    libc.src.gpu.rpc_fprintf
+    libc.src.stdio.fprintf
     libc.src.stdio.fopen
   LOADER_ARGS
     --threads 32

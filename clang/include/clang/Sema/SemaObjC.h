@@ -13,11 +13,8 @@
 #ifndef LLVM_CLANG_SEMA_SEMAOBJC_H
 #define LLVM_CLANG_SEMA_SEMAOBJC_H
 
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclBase.h"
+#include "clang/AST/ASTFwd.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/Expr.h"
-#include "clang/AST/ExprObjC.h"
 #include "clang/AST/NSAPI.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Type.h"
@@ -27,24 +24,29 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Sema/DeclSpec.h"
-#include "clang/Sema/Lookup.h"
 #include "clang/Sema/ObjCMethodList.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Redeclaration.h"
-#include "clang/Sema/Scope.h"
+#include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include <memory>
 #include <optional>
-#include <type_traits>
 #include <utility>
 
 namespace clang {
 
+class AttributeCommonInfo;
+class AvailabilitySpec;
 enum class CheckedConversionKind;
+class DeclGroupRef;
+class LookupResult;
+struct ObjCDictionaryElement;
 class ParsedAttr;
+class ParsedAttributesView;
+class Scope;
 struct SkipBodyInfo;
 
 class SemaObjC : public SemaBase {
@@ -206,22 +208,8 @@ public:
   /// of -Wselector.
   llvm::MapVector<Selector, SourceLocation> ReferencedSelectors;
 
-  class GlobalMethodPool {
-  public:
-    using Lists = std::pair<ObjCMethodList, ObjCMethodList>;
-    using iterator = llvm::DenseMap<Selector, Lists>::iterator;
-    iterator begin() { return Methods.begin(); }
-    iterator end() { return Methods.end(); }
-    iterator find(Selector Sel) { return Methods.find(Sel); }
-    std::pair<iterator, bool> insert(std::pair<Selector, Lists> &&Val) {
-      return Methods.insert(Val);
-    }
-    int count(Selector Sel) const { return Methods.count(Sel); }
-    bool empty() const { return Methods.empty(); }
-
-  private:
-    llvm::DenseMap<Selector, Lists> Methods;
-  };
+  using GlobalMethodPool =
+      llvm::DenseMap<Selector, std::pair<ObjCMethodList, ObjCMethodList>>;
 
   /// Method Pool - allows efficient lookup when typechecking messages to "id".
   /// We need to maintain a list, since selectors can have differing signatures
@@ -348,8 +336,8 @@ public:
                                         ObjCInterfaceDecl *ID);
 
   Decl *ActOnAtEnd(Scope *S, SourceRange AtEnd,
-                   ArrayRef<Decl *> allMethods = std::nullopt,
-                   ArrayRef<DeclGroupPtrTy> allTUVars = std::nullopt);
+                   ArrayRef<Decl *> allMethods = {},
+                   ArrayRef<DeclGroupPtrTy> allTUVars = {});
 
   struct ObjCArgInfo {
     IdentifierInfo *Name;
@@ -363,6 +351,10 @@ public:
     ParsedAttributesView ArgAttrs;
   };
 
+  ParmVarDecl *ActOnMethodParmDeclaration(Scope *S, ObjCArgInfo &ArgInfo,
+                                          int ParamIndex,
+                                          bool MethodDefinition);
+
   Decl *ActOnMethodDeclaration(
       Scope *S,
       SourceLocation BeginLoc, // location of the + or -.
@@ -371,7 +363,7 @@ public:
       ArrayRef<SourceLocation> SelectorLocs, Selector Sel,
       // optional arguments. The number of types/arguments is obtained
       // from the Sel.getNumArgs().
-      ObjCArgInfo *ArgInfo, DeclaratorChunk::ParamInfo *CParamInfo,
+      ParmVarDecl **ArgInfo, DeclaratorChunk::ParamInfo *CParamInfo,
       unsigned CNumArgs, // c-style args
       const ParsedAttributesView &AttrList, tok::ObjCKeywordKind MethodImplKind,
       bool isVariadic, bool MethodDefinition);

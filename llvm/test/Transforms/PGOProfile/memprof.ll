@@ -63,6 +63,21 @@
 ;; give both memprof and pgo metadata.
 ; RUN: opt < %s -passes='pgo-instr-use,memprof-use<profile-filename=%t.pgomemprofdata>' -pgo-test-profile-file=%t.pgomemprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,PGO
 
+;; Check that the total sizes are reported if requested.
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes 2>&1 | FileCheck %s --check-prefixes=TOTALSIZES
+
+;; Make sure we emit a random hotness seed if requested.
+; RUN: llvm-profdata merge -memprof-random-hotness %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.memprofdatarand 2>&1 | FileCheck %s --check-prefix=RAND
+; RAND: random hotness seed =
+;; Can't check the exact values, but make sure applying the random profile
+;; succeeds with the same stats
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdatarand>' -pgo-warn-missing-function -S -stats 2>&1 | FileCheck %s --check-prefixes=ALL,MEMPROFONLY,MEMPROFSTATS
+
+;; Make sure we use a specific random hotness seed if requested.
+; RUN: llvm-profdata merge -memprof-random-hotness -memprof-random-hotness-seed=1730170724 %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.memprofdatarand2 2>&1 | FileCheck %s --check-prefix=RAND2
+; RAND2: random hotness seed = 1730170724
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdatarand2>' -pgo-warn-missing-function -S -stats 2>&1 | FileCheck %s --check-prefixes=MEMPROFRAND2,ALL,MEMPROFONLY,MEMPROFSTATS
+
 ; MEMPROFMATCHINFO: MemProf notcold context with id 1093248920606587996 has total profiled size 10 is matched
 ; MEMPROFMATCHINFO: MemProf notcold context with id 5725971306423925017 has total profiled size 10 is matched
 ; MEMPROFMATCHINFO: MemProf notcold context with id 6792096022461663180 has total profiled size 10 is matched
@@ -78,7 +93,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: mustprogress noinline optnone uwtable
-; ALL-LABEL: define dso_local noundef ptr @_Z3foov()
+; ALL-LABEL: define dso_local noundef{{.*}}ptr @_Z3foov()
 ; There should be some PGO metadata
 ; PGO: !prof
 define dso_local noundef ptr @_Z3foov() #0 !dbg !10 {
@@ -93,7 +108,7 @@ entry:
 declare noundef nonnull ptr @_Znam(i64 noundef) #1
 
 ; Function Attrs: mustprogress noinline optnone uwtable
-; ALL-LABEL: define dso_local noundef ptr @_Z4foo2v()
+; ALL-LABEL: define dso_local noundef{{.*}}ptr @_Z4foo2v()
 define dso_local noundef ptr @_Z4foo2v() #0 !dbg !15 {
 entry:
   ; MEMPROF: call {{.*}} @_Z3foov{{.*}} !callsite ![[C2:[0-9]+]]
@@ -331,6 +346,25 @@ for.end:                                          ; preds = %for.cond
 ; MEMPROF: ![[C10]] = !{i64 2061451396820446691}
 ; MEMPROF: ![[C11]] = !{i64 1544787832369987002}
 
+;; For non-context sensitive allocations that get attributes we emit a message
+;; with the full allocation context hash, type, and size in bytes.
+; TOTALSIZES: Total size for full allocation context hash 6792096022461663180 and single alloc type notcold: 10
+; TOTALSIZES: Total size for full allocation context hash 15737101490731057601 and single alloc type cold: 10
+;; For context sensitive allocations the full context hash and size in bytes
+;; are in separate metadata nodes included on the MIB metadata.
+; TOTALSIZES: !"cold", ![[CONTEXT1:[0-9]+]]}
+; TOTALSIZES: ![[CONTEXT1]] = !{i64 8525406123785421946, i64 10}
+; TOTALSIZES: !"cold", ![[CONTEXT2:[0-9]+]]}
+; TOTALSIZES: ![[CONTEXT2]] = !{i64 -6732513409544482918, i64 10}
+; TOTALSIZES: !"notcold", ![[CONTEXT3:[0-9]+]]}
+; TOTALSIZES: ![[CONTEXT3]] = !{i64 5725971306423925017, i64 10}
+;; There can be more than one context id / size pair due to context trimming
+;; when we match.
+; TOTALSIZES: !"cold", ![[CONTEXT4:[0-9]+]], ![[CONTEXT5:[0-9]+]]}
+; TOTALSIZES: ![[CONTEXT4]] = !{i64 -2103941543456458045, i64 10}
+; TOTALSIZES: ![[CONTEXT5]] = !{i64 -191931298737547222, i64 10}
+; TOTALSIZES: !"notcold", ![[CONTEXT6:[0-9]+]]}
+; TOTALSIZES: ![[CONTEXT6]] = !{i64 1093248920606587996, i64 10}
 
 ; MEMPROFNOCOLINFO: #[[A1]] = { builtin allocsize(0) "memprof"="notcold" }
 ; MEMPROFNOCOLINFO: #[[A2]] = { builtin allocsize(0) "memprof"="cold" }
@@ -356,6 +390,13 @@ for.end:                                          ; preds = %for.cond
 ; MEMPROFNOCOLINFO: ![[C9]] = !{i64 -962804290746547393}
 ; MEMPROFNOCOLINFO: ![[C10]] = !{i64 -4535090212904553409}
 ; MEMPROFNOCOLINFO: ![[C11]] = !{i64 3577763375057267810}
+
+;; For the specific random seed, this is the expected order of hotness
+; MEMPROFRAND2: !"cold"
+; MEMPROFRAND2: !"cold"
+; MEMPROFRAND2: !"cold"
+; MEMPROFRAND2: !"hot"
+; MEMPROFRAND2: !"hot"
 
 ; MEMPROFSTATS:  8 memprof - Number of alloc contexts in memory profile.
 ; MEMPROFSTATS: 10 memprof - Number of callsites in memory profile.

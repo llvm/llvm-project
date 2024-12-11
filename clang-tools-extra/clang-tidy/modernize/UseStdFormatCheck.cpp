@@ -44,18 +44,16 @@ void UseStdFormatCheck::registerPPCallbacks(const SourceManager &SM,
                                             Preprocessor *PP,
                                             Preprocessor *ModuleExpanderPP) {
   IncludeInserter.registerPreprocessor(PP);
+  this->PP = PP;
 }
 
 void UseStdFormatCheck::registerMatchers(MatchFinder *Finder) {
-  auto CharPointerType =
-      hasType(pointerType(pointee(matchers::isSimpleChar())));
   Finder->addMatcher(
-      callExpr(
-          argumentCountAtLeast(1), hasArgument(0, stringLiteral(isOrdinary())),
-          callee(functionDecl(
-                     unless(cxxMethodDecl()), hasParameter(0, CharPointerType),
-                     matchers::matchesAnyListedName(StrFormatLikeFunctions))
-                     .bind("func_decl")))
+      callExpr(argumentCountAtLeast(1),
+               hasArgument(0, stringLiteral(isOrdinary())),
+               callee(functionDecl(matchers::matchesAnyListedName(
+                                       StrFormatLikeFunctions))
+                          .bind("func_decl")))
           .bind("strformat"),
       this);
 }
@@ -78,9 +76,9 @@ void UseStdFormatCheck::check(const MatchFinder::MatchResult &Result) {
 
   utils::FormatStringConverter::Configuration ConverterConfig;
   ConverterConfig.StrictMode = StrictMode;
-  utils::FormatStringConverter Converter(Result.Context, StrFormat,
-                                         FormatArgOffset, ConverterConfig,
-                                         getLangOpts());
+  utils::FormatStringConverter Converter(
+      Result.Context, StrFormat, FormatArgOffset, ConverterConfig,
+      getLangOpts(), *Result.SourceManager, *PP);
   const Expr *StrFormatCall = StrFormat->getCallee();
   if (!Converter.canApply()) {
     diag(StrFormat->getBeginLoc(),
@@ -95,7 +93,8 @@ void UseStdFormatCheck::check(const MatchFinder::MatchResult &Result) {
       diag(StrFormatCall->getBeginLoc(), "use '%0' instead of %1")
       << ReplacementFormatFunction << OldFunction->getIdentifier();
   Diag << FixItHint::CreateReplacement(
-      CharSourceRange::getTokenRange(StrFormatCall->getSourceRange()),
+      CharSourceRange::getTokenRange(StrFormatCall->getExprLoc(),
+                                     StrFormatCall->getEndLoc()),
       ReplacementFormatFunction);
   Converter.applyFixes(Diag, *Result.SourceManager);
 

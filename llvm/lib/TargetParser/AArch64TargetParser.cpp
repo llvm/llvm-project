@@ -48,6 +48,19 @@ std::optional<AArch64::ArchInfo> AArch64::ArchInfo::findBySubArch(StringRef SubA
   return {};
 }
 
+unsigned AArch64::getFMVPriority(ArrayRef<StringRef> Features) {
+  constexpr unsigned MaxFMVPriority = 1000;
+  unsigned Priority = 0;
+  unsigned NumFeatures = 0;
+  for (StringRef Feature : Features) {
+    if (auto Ext = parseFMVExtension(Feature)) {
+      Priority = std::max(Priority, Ext->Priority);
+      NumFeatures++;
+    }
+  }
+  return Priority + MaxFMVPriority * NumFeatures;
+}
+
 uint64_t AArch64::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
   uint64_t FeaturesMask = 0;
   for (const StringRef &FeatureStr : FeatureStrs) {
@@ -252,6 +265,13 @@ void AArch64::ExtensionSet::disable(ArchExtKind E) {
     disable(AEK_SHA3);
     disable(AEK_SM4);
   }
+
+  // sve2-aes was historically associated with both FEAT_SVE2 and FEAT_SVE_AES,
+  // the latter is now associated with sve-aes and sve2-aes has become shorthand
+  // for +sve2+sve-aes. For backwards compatibility, when we disable sve2-aes we
+  // must also disable sve-aes.
+  if (E == AEK_SVE2AES)
+    disable(AEK_SVEAES);
 
   if (!Enabled.test(E))
     return;

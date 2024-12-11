@@ -9,7 +9,6 @@
 //  This file implements semantic analysis member access expressions.
 //
 //===----------------------------------------------------------------------===//
-#include "clang/AST/ASTLambda.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
@@ -20,7 +19,6 @@
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 
@@ -331,7 +329,8 @@ ExprResult Sema::BuildPossibleImplicitMemberExpr(
     return UnresolvedLookupExpr::Create(
         Context, R.getNamingClass(), SS.getWithLocInContext(Context),
         TemplateKWLoc, R.getLookupNameInfo(), /*RequiresADL=*/false,
-        TemplateArgs, R.begin(), R.end(), /*KnownDependent=*/true);
+        TemplateArgs, R.begin(), R.end(), /*KnownDependent=*/true,
+        /*KnownInstantiationDependent=*/true);
 
   case IMA_Error_StaticOrExplicitContext:
   case IMA_Error_Unrelated:
@@ -378,7 +377,7 @@ CheckExtVectorComponent(Sema &S, QualType baseType, ExprValueKind &VK,
   //
   // FIXME: This logic can be greatly simplified by splitting it along
   // halving/not halving and reworking the component checking.
-  const ExtVectorType *vecType = baseType->getAs<ExtVectorType>();
+  const ExtVectorType *vecType = baseType->castAs<ExtVectorType>();
 
   // The vector accessor can't exceed the number of elements.
   const char *compStr = CompName->getNameStart();
@@ -789,9 +788,6 @@ ExprResult Sema::BuildMemberReferenceExpr(
     ActOnMemberAccessExtraArgs *ExtraArgs) {
   LookupResult R(*this, NameInfo, LookupMemberName);
 
-  if (SS.isInvalid())
-    return ExprError();
-
   // Implicit member accesses.
   if (!Base) {
     TypoExpr *TE = nullptr;
@@ -825,6 +821,11 @@ ExprResult Sema::BuildMemberReferenceExpr(
     // LookupMemberExpr can modify Base, and thus change BaseType
     BaseType = Base->getType();
   }
+
+  // BuildMemberReferenceExpr expects the nested-name-specifier, if any, to be
+  // valid.
+  if (SS.isInvalid())
+    return ExprError();
 
   return BuildMemberReferenceExpr(Base, BaseType,
                                   OpLoc, IsArrow, SS, TemplateKWLoc,
@@ -1745,14 +1746,9 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
 
 ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
                                        SourceLocation OpLoc,
-                                       tok::TokenKind OpKind,
-                                       CXXScopeSpec &SS,
+                                       tok::TokenKind OpKind, CXXScopeSpec &SS,
                                        SourceLocation TemplateKWLoc,
-                                       UnqualifiedId &Id,
-                                       Decl *ObjCImpDecl) {
-  if (SS.isSet() && SS.isInvalid())
-    return ExprError();
-
+                                       UnqualifiedId &Id, Decl *ObjCImpDecl) {
   // Warn about the explicit constructor calls Microsoft extension.
   if (getLangOpts().MicrosoftExt &&
       Id.getKind() == UnqualifiedIdKind::IK_ConstructorName)
@@ -1878,8 +1874,16 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
           Context.getAttributedType(attr::NoDeref, MemberType, MemberType);
   }
 
-  auto *CurMethod = dyn_cast<CXXMethodDecl>(CurContext);
-  if (!(CurMethod && CurMethod->isDefaulted()))
+  auto isDefaultedSpecialMember = [this](const DeclContext *Ctx) {
+    auto *Method = dyn_cast<CXXMethodDecl>(CurContext);
+    if (!Method || !Method->isDefaulted())
+      return false;
+
+    return getDefaultedFunctionKind(Method).isSpecialMember();
+  };
+
+  // Implicit special members should not mark fields as used.
+  if (!isDefaultedSpecialMember(CurContext))
     UnusedPrivateFields.remove(Field);
 
   ExprResult Base = PerformObjectMemberConversion(BaseExpr, SS.getScopeRep(),

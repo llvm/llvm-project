@@ -95,6 +95,10 @@ clang_tablegen("BuiltinsRISCV") {
   args = [ "-gen-clang-builtins" ]
 }
 
+clang_tablegen("BuiltinsX86") {
+  args = [ "-gen-clang-builtins" ]
+}
+
 # ARM CDE, MVE, and NEON.
 
 clang_tablegen("arm_neon") {
@@ -103,6 +107,11 @@ clang_tablegen("arm_neon") {
 
 clang_tablegen("arm_fp16") {
   args = [ "-gen-arm-neon-sema" ]
+}
+
+clang_tablegen("arm_immcheck_types") {
+  args = [ "-gen-arm-immcheck-types" ]
+  td_file = "arm_sve.td"
 }
 
 clang_tablegen("arm_mve_builtins") {

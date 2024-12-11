@@ -68,19 +68,13 @@ struct ExtensionInfo {
 #include "llvm/TargetParser/AArch64TargetParserDef.inc"
 
 struct FMVInfo {
-  StringRef Name;     // The target_version/target_clones spelling.
-  CPUFeatures Bit;    // Index of the bit in the FMV feature bitset.
-  StringRef Features; // List of SubtargetFeatures to enable.
-  unsigned Priority;  // FMV priority.
-  FMVInfo(StringRef Name, CPUFeatures Bit, StringRef Features,
+  StringRef Name;                // The target_version/target_clones spelling.
+  CPUFeatures Bit;               // Index of the bit in the FMV feature bitset.
+  std::optional<ArchExtKind> ID; // The architecture extension to enable.
+  unsigned Priority;             // FMV priority.
+  FMVInfo(StringRef Name, CPUFeatures Bit, std::optional<ArchExtKind> ID,
           unsigned Priority)
-      : Name(Name), Bit(Bit), Features(Features), Priority(Priority){};
-
-  SmallVector<StringRef, 8> getImpliedFeatures() {
-    SmallVector<StringRef, 8> Feats;
-    Features.split(Feats, ',', -1, false); // discard empty strings
-    return Feats;
-  }
+      : Name(Name), Bit(Bit), ID(ID), Priority(Priority) {};
 };
 
 const std::vector<FMVInfo> &getFMVInfo();
@@ -118,9 +112,9 @@ struct ArchInfo {
   // Defines the following partial order, indicating when an architecture is
   // a superset of another:
   //
-  //   v9.5a > v9.4a > v9.3a > v9.2a > v9.1a > v9a;
-  //             v       v       v       v       v
-  //           v8.9a > v8.8a > v8.7a > v8.6a > v8.5a > v8.4a > ... > v8a;
+  // v9.6a > v9.5a > v9.4a > v9.3a > v9.2a > v9.1a > v9a;
+  //                   v       v       v       v       v
+  //                 v8.9a > v8.8a > v8.7a > v8.6a > v8.5a > v8.4a > ... > v8a;
   //
   // v8r has no relation to anything. This is used to determine which
   // features to enable for a given architecture. See
@@ -161,14 +155,10 @@ struct CpuInfo {
   StringRef Name; // Name, as written for -mcpu.
   const ArchInfo &Arch;
   AArch64::ExtensionBitset
-      DefaultExtensions; // Default extensions for this CPU. These will be
-                         // ORd with the architecture defaults.
+      DefaultExtensions; // Default extensions for this CPU.
 
   AArch64::ExtensionBitset getImpliedExtensions() const {
-    AArch64::ExtensionBitset ImpliedExts;
-    ImpliedExts |= DefaultExtensions;
-    ImpliedExts |= Arch.DefaultExts;
-    return ImpliedExts;
+    return DefaultExtensions;
   }
 };
 
@@ -277,6 +267,9 @@ std::optional<CpuInfo> parseCpu(StringRef Name);
 void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values);
 
 bool isX18ReservedByDefault(const Triple &TT);
+
+// Return the priority for a given set of FMV features.
+unsigned getFMVPriority(ArrayRef<StringRef> Features);
 
 // For given feature names, return a bitmask corresponding to the entries of
 // AArch64::CPUFeatures. The values in CPUFeatures are not bitmasks

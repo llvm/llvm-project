@@ -200,7 +200,25 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   // Define __loongarch_arch.
   StringRef ArchName = getCPU();
-  Builder.defineMacro("__loongarch_arch", Twine('"') + ArchName + Twine('"'));
+  if (ArchName == "loongarch64") {
+    if (HasFeatureLSX) {
+      // TODO: As more features of the V1.1 ISA are supported, a unified "v1.1"
+      // arch feature set will be used to include all sub-features belonging to
+      // the V1.1 ISA version.
+      if (HasFeatureFrecipe && HasFeatureLAM_BH && HasFeatureLAMCAS &&
+          HasFeatureLD_SEQ_SA && HasFeatureDiv32)
+        Builder.defineMacro("__loongarch_arch",
+                            Twine('"') + "la64v1.1" + Twine('"'));
+      else
+        Builder.defineMacro("__loongarch_arch",
+                            Twine('"') + "la64v1.0" + Twine('"'));
+    } else {
+      Builder.defineMacro("__loongarch_arch",
+                          Twine('"') + ArchName + Twine('"'));
+    }
+  } else {
+    Builder.defineMacro("__loongarch_arch", Twine('"') + ArchName + Twine('"'));
+  }
 
   // Define __loongarch_tune.
   StringRef TuneCPU = getTargetOpts().TuneCPU;
@@ -208,10 +226,28 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
     TuneCPU = ArchName;
   Builder.defineMacro("__loongarch_tune", Twine('"') + TuneCPU + Twine('"'));
 
-  if (HasFeatureLSX)
+  if (HasFeatureLASX) {
+    Builder.defineMacro("__loongarch_simd_width", "256");
     Builder.defineMacro("__loongarch_sx", Twine(1));
-  if (HasFeatureLASX)
     Builder.defineMacro("__loongarch_asx", Twine(1));
+  } else if (HasFeatureLSX) {
+    Builder.defineMacro("__loongarch_simd_width", "128");
+    Builder.defineMacro("__loongarch_sx", Twine(1));
+  }
+  if (HasFeatureFrecipe)
+    Builder.defineMacro("__loongarch_frecipe", Twine(1));
+
+  if (HasFeatureLAM_BH)
+    Builder.defineMacro("__loongarch_lam_bh", Twine(1));
+
+  if (HasFeatureLAMCAS)
+    Builder.defineMacro("__loongarch_lamcas", Twine(1));
+
+  if (HasFeatureLD_SEQ_SA)
+    Builder.defineMacro("__loongarch_ld_seq_sa", Twine(1));
+
+  if (HasFeatureDiv32)
+    Builder.defineMacro("__loongarch_div32", Twine(1));
 
   StringRef ABI = getABI();
   if (ABI == "lp64d" || ABI == "lp64f" || ABI == "lp64s")
@@ -234,13 +270,18 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
 }
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+static constexpr int NumBuiltins =
+    clang::LoongArch::LastTSBuiltin - Builtin::FirstTSBuiltin;
+
+static constexpr auto BuiltinStorage = Builtin::Storage<NumBuiltins>::Make(
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsLoongArch.def"
-};
+    , {
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsLoongArch.def"
+      });
 
 bool LoongArchTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
@@ -267,9 +308,9 @@ bool LoongArchTargetInfo::hasFeature(StringRef Feature) const {
       .Default(false);
 }
 
-ArrayRef<Builtin::Info> LoongArchTargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfo, clang::LoongArch::LastTSBuiltin -
-                                         Builtin::FirstTSBuiltin);
+std::pair<const char *, ArrayRef<Builtin::Info>>
+LoongArchTargetInfo::getTargetBuiltinStorage() const {
+  return {BuiltinStorage.StringTable, BuiltinStorage.Infos};
 }
 
 bool LoongArchTargetInfo::handleTargetFeatures(
@@ -287,6 +328,16 @@ bool LoongArchTargetInfo::handleTargetFeatures(
       HasFeatureLASX = true;
     else if (Feature == "-ual")
       HasUnalignedAccess = false;
+    else if (Feature == "+frecipe")
+      HasFeatureFrecipe = true;
+    else if (Feature == "+lam-bh")
+      HasFeatureLAM_BH = true;
+    else if (Feature == "+lamcas")
+      HasFeatureLAMCAS = true;
+    else if (Feature == "+ld-seq-sa")
+      HasFeatureLD_SEQ_SA = true;
+    else if (Feature == "+div32")
+      HasFeatureDiv32 = true;
   }
   return true;
 }

@@ -13,9 +13,11 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/big_int.h" // is_big_int_v
+#include "src/__support/ctype_utils.h"
 #include "src/__support/float_to_string.h"
 #include "src/__support/integer_to_string.h"
 #include "src/__support/libc_assert.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/float_inf_nan_converter.h"
@@ -24,7 +26,7 @@
 #include <inttypes.h>
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
 using StorageType = fputil::FPBits<long double>::StorageType;
@@ -586,8 +588,6 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
   int exponent = float_bits.get_explicit_exponent();
   StorageType mantissa = float_bits.get_explicit_mantissa();
 
-  const char a = (to_conv.conv_name & 32) | 'A';
-
   char sign_char = 0;
 
   if (float_bits.is_neg())
@@ -733,7 +733,8 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
   round = get_round_direction(last_digit, truncated, float_bits.sign());
 
   RET_IF_RESULT_NEGATIVE(float_writer.write_last_block(
-      digits, maximum, round, final_exponent, a + 'E' - 'A'));
+      digits, maximum, round, final_exponent,
+      internal::islower(to_conv.conv_name) ? 'e' : 'E'));
 
   RET_IF_RESULT_NEGATIVE(float_writer.right_pad());
   return WRITE_OK;
@@ -1170,6 +1171,6 @@ LIBC_INLINE int convert_float_dec_auto(Writer *writer,
 }
 
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_FLOAT_DEC_CONVERTER_H

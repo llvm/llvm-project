@@ -4,6 +4,11 @@
 Fullbuild Mode
 ==============
 
+.. note:: 
+   Fullbuild requires running headergen, which is a python program that depends on
+   pyyaml. The minimum versions are listed on the :ref:`header_generation`
+   page, as well as additional information.
+
 The *fullbuild* mode of LLVM's libc is the mode in which it is to be used as
 the only libc (as opposed to the :ref:`overlay_mode` in which it is used along
 with the system libc.) In order to use it as the only libc, one will have to

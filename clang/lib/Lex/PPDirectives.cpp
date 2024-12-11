@@ -23,7 +23,6 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/HeaderSearch.h"
-#include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/LexDiagnostic.h"
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/MacroInfo.h"
@@ -38,19 +37,16 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <algorithm>
 #include <cassert>
 #include <cstring>
-#include <new>
 #include <optional>
 #include <string>
 #include <utility>
@@ -1080,8 +1076,8 @@ Preprocessor::LookupEmbedFile(StringRef Filename, bool isAngled, bool OpenFile,
   FileManager &FM = this->getFileManager();
   if (llvm::sys::path::is_absolute(Filename)) {
     // lookup path or immediately fail
-    llvm::Expected<FileEntryRef> ShouldBeEntry =
-        FM.getFileRef(Filename, OpenFile);
+    llvm::Expected<FileEntryRef> ShouldBeEntry = FM.getFileRef(
+        Filename, OpenFile, /*CacheFailure=*/true, /*IsText=*/false);
     return llvm::expectedToOptional(std::move(ShouldBeEntry));
   }
 
@@ -1107,8 +1103,8 @@ Preprocessor::LookupEmbedFile(StringRef Filename, bool isAngled, bool OpenFile,
       StringRef FullFileDir = LookupFromFile->tryGetRealPathName();
       if (!FullFileDir.empty()) {
         SeparateComponents(LookupPath, FullFileDir, Filename, true);
-        llvm::Expected<FileEntryRef> ShouldBeEntry =
-            FM.getFileRef(LookupPath, OpenFile);
+        llvm::Expected<FileEntryRef> ShouldBeEntry = FM.getFileRef(
+            LookupPath, OpenFile, /*CacheFailure=*/true, /*IsText=*/false);
         if (ShouldBeEntry)
           return llvm::expectedToOptional(std::move(ShouldBeEntry));
         llvm::consumeError(ShouldBeEntry.takeError());
@@ -1123,8 +1119,8 @@ Preprocessor::LookupEmbedFile(StringRef Filename, bool isAngled, bool OpenFile,
       StringRef WorkingDir = WorkingDirEntry.getName();
       if (!WorkingDir.empty()) {
         SeparateComponents(LookupPath, WorkingDir, Filename, false);
-        llvm::Expected<FileEntryRef> ShouldBeEntry =
-            FM.getFileRef(LookupPath, OpenFile);
+        llvm::Expected<FileEntryRef> ShouldBeEntry = FM.getFileRef(
+            LookupPath, OpenFile, /*CacheFailure=*/true, /*IsText=*/false);
         if (ShouldBeEntry)
           return llvm::expectedToOptional(std::move(ShouldBeEntry));
         llvm::consumeError(ShouldBeEntry.takeError());
@@ -1135,9 +1131,11 @@ Preprocessor::LookupEmbedFile(StringRef Filename, bool isAngled, bool OpenFile,
   for (const auto &Entry : PPOpts->EmbedEntries) {
     LookupPath.clear();
     SeparateComponents(LookupPath, Entry, Filename, false);
-    llvm::Expected<FileEntryRef> ShouldBeEntry =
-        FM.getFileRef(LookupPath, OpenFile);
-    return llvm::expectedToOptional(std::move(ShouldBeEntry));
+    llvm::Expected<FileEntryRef> ShouldBeEntry = FM.getFileRef(
+        LookupPath, OpenFile, /*CacheFailure=*/true, /*IsText=*/false);
+    if (ShouldBeEntry)
+      return llvm::expectedToOptional(std::move(ShouldBeEntry));
+    llvm::consumeError(ShouldBeEntry.takeError());
   }
   return std::nullopt;
 }
@@ -3624,12 +3622,10 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
   LexEmbedParametersResult Result{};
   SmallVector<Token, 2> ParameterTokens;
   tok::TokenKind EndTokenKind = ForHasEmbed ? tok::r_paren : tok::eod;
-  Result.ParamRange = {CurTok.getLocation(), CurTok.getLocation()};
 
   auto DiagMismatchedBracesAndSkipToEOD =
       [&](tok::TokenKind Expected,
           std::pair<tok::TokenKind, SourceLocation> Matches) {
-        Result.ParamRange.setEnd(CurTok.getEndLoc());
         Diag(CurTok, diag::err_expected) << Expected;
         Diag(Matches.second, diag::note_matching) << Matches.first;
         if (CurTok.isNot(tok::eod))
@@ -3638,7 +3634,6 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
 
   auto ExpectOrDiagAndSkipToEOD = [&](tok::TokenKind Kind) {
     if (CurTok.isNot(Kind)) {
-      Result.ParamRange.setEnd(CurTok.getEndLoc());
       Diag(CurTok, diag::err_expected) << Kind;
       if (CurTok.isNot(tok::eod))
         DiscardUntilEndOfDirective(CurTok);
@@ -3872,7 +3867,6 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       }
     }
   }
-  Result.ParamRange.setEnd(CurTok.getLocation());
   return Result;
 }
 

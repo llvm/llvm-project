@@ -43,7 +43,7 @@ typedef unsigned ID;
 
 // Choose ';' as the delimiter. ':' was used once but it doesn't work well for
 // Objective-C functions which commonly have :'s in their names.
-inline constexpr char kGlobalIdentifierDelimiter = ';';
+inline constexpr char GlobalIdentifierDelimiter = ';';
 
 class GlobalValue : public Constant {
 public:
@@ -77,9 +77,9 @@ public:
   };
 
 protected:
-  GlobalValue(Type *Ty, ValueTy VTy, Use *Ops, unsigned NumOps,
-              LinkageTypes Linkage, const Twine &Name, unsigned AddressSpace)
-      : Constant(PointerType::get(Ty, AddressSpace), VTy, Ops, NumOps),
+  GlobalValue(Type *Ty, ValueTy VTy, AllocInfo AllocInfo, LinkageTypes Linkage,
+              const Twine &Name, unsigned AddressSpace)
+      : Constant(PointerType::get(Ty, AddressSpace), VTy, AllocInfo),
         ValueType(Ty), Visibility(DefaultVisibility),
         UnnamedAddrVal(unsigned(UnnamedAddr::None)),
         DllStorageClass(DefaultStorageClass), ThreadLocal(NotThreadLocal),

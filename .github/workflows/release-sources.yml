@@ -16,6 +16,10 @@ on:
         description: Release Version
         required: true
         type: string
+    secrets:
+      RELEASE_TASKS_USER_TOKEN:
+        description: "Secret used to check user permissions."
+        required: false
   # Run on pull_requests for testing purposes.
   pull_request:
     paths:
@@ -47,7 +51,7 @@ jobs:
     steps:
       - id: inputs
         run: |
-          ref=${{ inputs.release-version || github.sha }}
+          ref=${{ (inputs.release-version && format('llvmorg-{0}', inputs.release-version)) || github.sha }}
           if [ -n "${{ inputs.release-version }}" ]; then
             export_args="-release ${{ inputs.release-version }} -final"
           else

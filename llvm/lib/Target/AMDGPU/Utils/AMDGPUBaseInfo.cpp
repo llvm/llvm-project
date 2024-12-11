@@ -24,7 +24,6 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include <optional>
@@ -153,7 +152,7 @@ inline unsigned getSaSdstBitWidth() { return 1; }
 /// \returns SaSdst bit shift
 inline unsigned getSaSdstBitShift() { return 0; }
 
-} // end namespace anonymous
+} // end anonymous namespace
 
 namespace llvm {
 
@@ -171,7 +170,7 @@ bool isHsaAbi(const MCSubtargetInfo &STI) {
 }
 
 unsigned getAMDHSACodeObjectVersion(const Module &M) {
-  if (auto Ver = mdconst::extract_or_null<ConstantInt>(
+  if (auto *Ver = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("amdhsa_code_object_version"))) {
     return (unsigned)Ver->getZExtValue() / 100;
   }
@@ -379,18 +378,23 @@ struct VOPTrue16Info {
   bool IsTrue16;
 };
 
-struct SingleUseExceptionInfo {
+#define GET_FP8DstByteSelTable_DECL
+#define GET_FP8DstByteSelTable_IMPL
+
+struct DPMACCInstructionInfo {
   uint16_t Opcode;
-  bool IsInvalidSingleUseConsumer;
-  bool IsInvalidSingleUseProducer;
+  bool IsDPMACCInstruction;
+};
+
+struct FP8DstByteSelInfo {
+  uint16_t Opcode;
+  bool HasFP8DstByteSel;
 };
 
 #define GET_MTBUFInfoTable_DECL
 #define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL
 #define GET_MUBUFInfoTable_IMPL
-#define GET_SingleUseExceptionTable_DECL
-#define GET_SingleUseExceptionTable_IMPL
 #define GET_SMInfoTable_DECL
 #define GET_SMInfoTable_IMPL
 #define GET_VOP1InfoTable_DECL
@@ -417,6 +421,11 @@ struct SingleUseExceptionInfo {
 #define GET_WMMAOpcode2AddrMappingTable_IMPL
 #define GET_WMMAOpcode3AddrMappingTable_DECL
 #define GET_WMMAOpcode3AddrMappingTable_IMPL
+#define GET_getMFMA_F8F6F4_WithSize_DECL
+#define GET_getMFMA_F8F6F4_WithSize_IMPL
+#define GET_isMFMA_F8F6F4Table_IMPL
+#define GET_isCvtScaleF32_F32F16ToF8F4Table_IMPL
+
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMTBUFBaseOpcode(unsigned Opc) {
@@ -496,17 +505,17 @@ bool getSMEMIsBuffer(unsigned Opc) {
 
 bool getVOP1IsSingle(unsigned Opc) {
   const VOPInfo *Info = getVOP1OpcodeHelper(Opc);
-  return Info ? Info->IsSingle : false;
+  return Info ? Info->IsSingle : true;
 }
 
 bool getVOP2IsSingle(unsigned Opc) {
   const VOPInfo *Info = getVOP2OpcodeHelper(Opc);
-  return Info ? Info->IsSingle : false;
+  return Info ? Info->IsSingle : true;
 }
 
 bool getVOP3IsSingle(unsigned Opc) {
   const VOPInfo *Info = getVOP3OpcodeHelper(Opc);
-  return Info ? Info->IsSingle : false;
+  return Info ? Info->IsSingle : true;
 }
 
 bool isVOPC64DPP(unsigned Opc) {
@@ -525,6 +534,30 @@ bool getMAIIsGFX940XDL(unsigned Opc) {
   return Info ? Info->is_gfx940_xdl : false;
 }
 
+uint8_t mfmaScaleF8F6F4FormatToNumRegs(unsigned EncodingVal) {
+  switch (EncodingVal) {
+  case MFMAScaleFormats::FP6_E2M3:
+  case MFMAScaleFormats::FP6_E3M2:
+    return 6;
+  case MFMAScaleFormats::FP4_E2M1:
+    return 4;
+  case MFMAScaleFormats::FP8_E4M3:
+  case MFMAScaleFormats::FP8_E5M2:
+  default:
+    return 8;
+  }
+
+  llvm_unreachable("covered switch over mfma scale formats");
+}
+
+const MFMA_F8F6F4_Info *getMFMA_F8F6F4_WithFormatArgs(unsigned CBSZ,
+                                                      unsigned BLGP,
+                                                      unsigned F8F8Opcode) {
+  uint8_t SrcANumRegs = mfmaScaleF8F6F4FormatToNumRegs(CBSZ);
+  uint8_t SrcBNumRegs = mfmaScaleF8F6F4FormatToNumRegs(BLGP);
+  return getMFMA_F8F6F4_InstWithNumRegs(SrcANumRegs, SrcBNumRegs, F8F8Opcode);
+}
+
 unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
   if (ST.hasFeature(AMDGPU::FeatureGFX12Insts))
     return SIEncodingFamily::GFX12;
@@ -537,8 +570,7 @@ CanBeVOPD getCanBeVOPD(unsigned Opc) {
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
   if (Info)
     return {Info->CanBeVOPDX, true};
-  else
-    return {false, false};
+  return {false, false};
 }
 
 unsigned getVOPDOpcode(unsigned Opc) {
@@ -565,9 +597,10 @@ bool isMAC(unsigned Opc) {
          Opc == AMDGPU::V_FMAC_LEGACY_F32_e64_gfx10 ||
          Opc == AMDGPU::V_FMAC_DX9_ZERO_F32_e64_gfx11 ||
          Opc == AMDGPU::V_FMAC_F16_e64_gfx10 ||
-         Opc == AMDGPU::V_FMAC_F16_t16_e64_gfx11 ||
-         Opc == AMDGPU::V_FMAC_F16_t16_e64_gfx12 ||
+         Opc == AMDGPU::V_FMAC_F16_fake16_e64_gfx11 ||
+         Opc == AMDGPU::V_FMAC_F16_fake16_e64_gfx12 ||
          Opc == AMDGPU::V_DOT2C_F32_F16_e64_vi ||
+         Opc == AMDGPU::V_DOT2C_F32_BF16_e64_vi ||
          Opc == AMDGPU::V_DOT2C_I32_I16_e64_vi ||
          Opc == AMDGPU::V_DOT4C_I32_I8_e64_vi ||
          Opc == AMDGPU::V_DOT8C_I32_I4_e64_vi;
@@ -591,8 +624,10 @@ bool isCvt_F32_Fp8_Bf8_e64(unsigned Opc) {
          Opc == AMDGPU::V_CVT_F32_FP8_e64_dpp_gfx12 ||
          Opc == AMDGPU::V_CVT_F32_BF8_e64_dpp8_gfx12 ||
          Opc == AMDGPU::V_CVT_F32_FP8_e64_dpp8_gfx12 ||
-         Opc == AMDGPU::V_CVT_PK_F32_BF8_e64_gfx12 ||
-         Opc == AMDGPU::V_CVT_PK_F32_FP8_e64_gfx12;
+         Opc == AMDGPU::V_CVT_PK_F32_BF8_fake16_e64_gfx12 ||
+         Opc == AMDGPU::V_CVT_PK_F32_FP8_fake16_e64_gfx12 ||
+         Opc == AMDGPU::V_CVT_PK_F32_BF8_t16_e64_gfx12 ||
+         Opc == AMDGPU::V_CVT_PK_F32_FP8_t16_e64_gfx12;
 }
 
 bool isGenericAtomic(unsigned Opc) {
@@ -620,14 +655,9 @@ bool isTrue16Inst(unsigned Opc) {
   return Info ? Info->IsTrue16 : false;
 }
 
-bool isInvalidSingleUseConsumerInst(unsigned Opc) {
-  const SingleUseExceptionInfo *Info = getSingleUseExceptionHelper(Opc);
-  return Info && Info->IsInvalidSingleUseConsumer;
-}
-
-bool isInvalidSingleUseProducerInst(unsigned Opc) {
-  const SingleUseExceptionInfo *Info = getSingleUseExceptionHelper(Opc);
-  return Info && Info->IsInvalidSingleUseProducer;
+bool isFP8DstSelInst(unsigned Opc) {
+  const FP8DstByteSelInfo *Info = getFP8DstByteSelHelper(Opc);
+  return Info ? Info->HasFP8DstByteSel : false;
 }
 
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {
@@ -656,8 +686,8 @@ int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily) {
 std::pair<unsigned, unsigned> getVOPDComponents(unsigned VOPDOpcode) {
   const VOPDInfo *Info = getVOPDOpcodeHelper(VOPDOpcode);
   assert(Info);
-  auto OpX = getVOPDBaseFromComponent(Info->OpX);
-  auto OpY = getVOPDBaseFromComponent(Info->OpY);
+  const auto *OpX = getVOPDBaseFromComponent(Info->OpX);
+  const auto *OpY = getVOPDBaseFromComponent(Info->OpY);
   assert(OpX && OpY);
   return {OpX->BaseVOP, OpY->BaseVOP};
 }
@@ -893,7 +923,6 @@ std::string AMDGPUTargetID::toString() const {
 
   StreamRep << Processor << Features;
 
-  StreamRep.flush();
   return StringRep;
 }
 
@@ -907,11 +936,7 @@ unsigned getWavefrontSize(const MCSubtargetInfo *STI) {
 }
 
 unsigned getLocalMemorySize(const MCSubtargetInfo *STI) {
-  unsigned BytesPerCU = 0;
-  if (STI->getFeatureBits().test(FeatureLocalMemorySize32768))
-    BytesPerCU = 32768;
-  if (STI->getFeatureBits().test(FeatureLocalMemorySize65536))
-    BytesPerCU = 65536;
+  unsigned BytesPerCU = getAddressableLocalMemorySize(STI);
 
   // "Per CU" really means "per whatever functional block the waves of a
   // workgroup must share". So the effective local memory size is doubled in
@@ -923,10 +948,12 @@ unsigned getLocalMemorySize(const MCSubtargetInfo *STI) {
 }
 
 unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
-  if (STI->getFeatureBits().test(FeatureLocalMemorySize32768))
+  if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize32768))
     return 32768;
-  if (STI->getFeatureBits().test(FeatureLocalMemorySize65536))
+  if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
     return 65536;
+  if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize163840))
+    return 163840;
   return 0;
 }
 
@@ -1319,15 +1346,16 @@ getIntegerPairAttribute(const Function &F, StringRef Name,
 }
 
 SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
-                                             unsigned Size) {
+                                             unsigned Size,
+                                             unsigned DefaultVal) {
   assert(Size > 2);
-  SmallVector<unsigned> Default(Size, 0);
+  SmallVector<unsigned> Default(Size, DefaultVal);
 
   Attribute A = F.getFnAttribute(Name);
   if (!A.isStringAttribute())
     return Default;
 
-  SmallVector<unsigned> Vals(Size, 0);
+  SmallVector<unsigned> Vals(Size, DefaultVal);
 
   LLVMContext &Ctx = F.getContext();
 
@@ -1479,11 +1507,10 @@ static unsigned getCombinedCountBitMask(const IsaVersion &Version,
     unsigned Storecnt = getBitMask(getLoadcntStorecntBitShift(Version.Major),
                                    getStorecntBitWidth(Version.Major));
     return Dscnt | Storecnt;
-  } else {
-    unsigned Loadcnt = getBitMask(getLoadcntStorecntBitShift(Version.Major),
-                                  getLoadcntBitWidth(Version.Major));
-    return Dscnt | Loadcnt;
   }
+  unsigned Loadcnt = getBitMask(getLoadcntStorecntBitShift(Version.Major),
+                                getLoadcntBitWidth(Version.Major));
+  return Dscnt | Loadcnt;
 }
 
 Waitcnt decodeLoadcntDscnt(const IsaVersion &Version, unsigned LoadcntDscnt) {
@@ -1802,7 +1829,7 @@ static StringLiteral const *getNfmtLookupTable(const MCSubtargetInfo &STI) {
 }
 
 int64_t getNfmt(const StringRef Name, const MCSubtargetInfo &STI) {
-  auto lookupTable = getNfmtLookupTable(STI);
+  const auto *lookupTable = getNfmtLookupTable(STI);
   for (int Id = NFMT_MIN; Id <= NFMT_MAX; ++Id) {
     if (Name == lookupTable[Id])
       return Id;
@@ -2232,20 +2259,20 @@ int32_t getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR,
   return std::max(ArgNumVGPR, ArgNumAGPR);
 }
 
-bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {
+bool isSGPR(MCRegister Reg, const MCRegisterInfo *TRI) {
   const MCRegisterClass SGPRClass = TRI->getRegClass(AMDGPU::SReg_32RegClassID);
-  const unsigned FirstSubReg = TRI->getSubReg(Reg, AMDGPU::sub0);
+  const MCRegister FirstSubReg = TRI->getSubReg(Reg, AMDGPU::sub0);
   return SGPRClass.contains(FirstSubReg != 0 ? FirstSubReg : Reg) ||
     Reg == AMDGPU::SCC;
 }
 
-bool isHi(unsigned Reg, const MCRegisterInfo &MRI) {
-  return MRI.getEncodingValue(Reg) & AMDGPU::HWEncoding::IS_HI;
+bool isHi16Reg(MCRegister Reg, const MCRegisterInfo &MRI) {
+  return MRI.getEncodingValue(Reg) & AMDGPU::HWEncoding::IS_HI16;
 }
 
 #define MAP_REG2REG \
   using namespace AMDGPU; \
-  switch(Reg) { \
+  switch(Reg.id()) { \
   default: return Reg; \
   CASE_CI_VI(FLAT_SCR) \
   CASE_CI_VI(FLAT_SCR_LO) \
@@ -2300,7 +2327,7 @@ bool isHi(unsigned Reg, const MCRegisterInfo &MRI) {
 #define CASE_GFXPRE11_GFX11PLUS_TO(node, result) \
   case node: return isGFX11Plus(STI) ? result##_gfx11plus : result##_gfxpre11;
 
-unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI) {
+MCRegister getMCReg(MCRegister Reg, const MCSubtargetInfo &STI) {
   if (STI.getTargetTriple().getArch() == Triple::r600)
     return Reg;
   MAP_REG2REG
@@ -2316,9 +2343,7 @@ unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI) {
 #define CASE_GFXPRE11_GFX11PLUS(node) case node##_gfx11plus: case node##_gfxpre11: return node;
 #define CASE_GFXPRE11_GFX11PLUS_TO(node, result)
 
-unsigned mc2PseudoReg(unsigned Reg) {
-  MAP_REG2REG
-}
+MCRegister mc2PseudoReg(MCRegister Reg) { MAP_REG2REG }
 
 bool isInlineValue(unsigned Reg) {
   switch (Reg) {
@@ -2923,6 +2948,7 @@ const AlwaysUniform *lookupAlwaysUniform(unsigned Intr);
 #define GET_Gfx9BufferFormat_IMPL
 #define GET_Gfx10BufferFormat_IMPL
 #define GET_Gfx11PlusBufferFormat_IMPL
+
 #include "AMDGPUGenSearchableTables.inc"
 
 } // end anonymous namespace

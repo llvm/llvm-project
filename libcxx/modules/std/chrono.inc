@@ -37,7 +37,6 @@ export namespace std {
 
     // [time.duration.comparisons], duration comparisons
     using std::chrono::operator==;
-    using std::chrono::operator!=;
     using std::chrono::operator<;
     using std::chrono::operator>;
     using std::chrono::operator<=;
@@ -51,7 +50,7 @@ export namespace std {
     using std::chrono::round;
 
     // [time.duration.io], duration I/O
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#if _LIBCPP_HAS_LOCALIZATION
     using std::chrono::operator<<;
 #endif
     // using std::chrono::from_stream;
@@ -112,7 +111,7 @@ export namespace std {
 
     using std::chrono::file_time;
 
-#ifndef _LIBCPP_HAS_NO_MONOTONIC_CLOCK
+#if _LIBCPP_HAS_MONOTONIC_CLOCK
     // [time.clock.steady], class steady_clock
     using std::chrono::steady_clock;
 #endif
@@ -192,8 +191,7 @@ export namespace std {
 
 #ifdef _LIBCPP_ENABLE_EXPERIMENTAL
 
-#  if !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&                            \
-      !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  if _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
 
     // [time.zone.db], time zone database
     using std::chrono::tzdb;
@@ -209,8 +207,7 @@ export namespace std {
     using std::chrono::reload_tzdb;
     using std::chrono::remote_version;
 
-#  endif //  !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&
-         //  !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  endif //  _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
 
     // [time.zone.exception], exception classes
     using std::chrono::ambiguous_local_time;
@@ -220,8 +217,7 @@ export namespace std {
     using std::chrono::local_info;
     using std::chrono::sys_info;
 
-#  if !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&                            \
-      !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  if _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
 
     // [time.zone.timezone], class time_zone
     using std::chrono::choose;
@@ -230,12 +226,10 @@ export namespace std {
     // [time.zone.zonedtraits], class template zoned_traits
     using std::chrono::zoned_traits;
 
-#    if 0
     // [time.zone.zonedtime], class template zoned_time
     using std::chrono::zoned_time;
 
     using std::chrono::zoned_seconds;
-#    endif // if 0
 
     // [time.zone.leap], leap second support
     using std::chrono::leap_second;
@@ -247,15 +241,14 @@ export namespace std {
     // [time.format], formatting
     using std::chrono::local_time_format;
 #    endif
-#  endif //  !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&
-         //  !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  endif //  _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
 #endif   // _LIBCPP_ENABLE_EXPERIMENTAL
 
   } // namespace chrono
 
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#if _LIBCPP_HAS_LOCALIZATION
   using std::formatter;
-#endif // _LIBCPP_HAS_NO_LOCALIZATION
+#endif
 
   namespace chrono {
     // using std::chrono::parse;

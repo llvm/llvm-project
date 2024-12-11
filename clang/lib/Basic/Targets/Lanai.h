@@ -78,8 +78,9 @@ public:
     return TargetInfo::VoidPtrBuiltinVaList;
   }
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override {
-    return std::nullopt;
+  std::pair<const char *, ArrayRef<Builtin::Info>>
+  getTargetBuiltinStorage() const override {
+    return {nullptr, {}};
   }
 
   bool validateAsmConstraint(const char *&Name,

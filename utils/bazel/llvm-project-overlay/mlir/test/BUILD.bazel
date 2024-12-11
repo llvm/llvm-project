@@ -546,9 +546,16 @@ cc_library(
     deps = [
         ":TestDialect",
         "//llvm:Support",
+        "//mlir:ConvertToSPIRV",
         "//mlir:FuncDialect",
+        "//mlir:GPUToSPIRV",
+        "//mlir:GPUTransforms",
         "//mlir:IR",
+        "//mlir:MemRefTransforms",
         "//mlir:Pass",
+        "//mlir:SPIRVDialect",
+        "//mlir:SPIRVToLLVM",
+        "//mlir:SPIRVTransforms",
         "//mlir:Support",
     ],
 )
@@ -653,6 +660,22 @@ cc_library(
         "//mlir:Transforms",
         "//mlir:VectorDialect",
         "//mlir:VectorToSPIRV",
+    ],
+)
+
+cc_library(
+    name = "TestConvertToSPIRV",
+    srcs = glob(["lib/Conversion/ConvertToSPIRV/*.cpp"]),
+    deps = [
+        "//mlir:ArithDialect",
+        "//mlir:FuncDialect",
+        "//mlir:Pass",
+        "//mlir:SPIRVConversion",
+        "//mlir:SPIRVDialect",
+        "//mlir:TransformUtils",
+        "//mlir:Transforms",
+        "//mlir:VectorDialect",
+        "//mlir:VectorTransforms",
     ],
 )
 
@@ -786,6 +809,7 @@ cc_library(
         "//mlir:FuncToLLVM",
         "//mlir:IR",
         "//mlir:IndexToLLVM",
+        "//mlir:LLVMCommonConversion",
         "//mlir:LLVMDialect",
         "//mlir:LinalgTransforms",
         "//mlir:MathToLLVM",
@@ -794,6 +818,7 @@ cc_library(
         "//mlir:Pass",
         "//mlir:ReconcileUnrealizedCasts",
         "//mlir:SCFToControlFlow",
+        "//mlir:TransformUtils",
         "//mlir:Transforms",
         "//mlir:VectorToLLVM",
         "//mlir:VectorToSCF",

@@ -485,7 +485,8 @@ int SelectedCharKind(const std::string &, int defaultKind);
 std::optional<DynamicType> ComparisonType(
     const DynamicType &, const DynamicType &);
 
-bool IsInteroperableIntrinsicType(const DynamicType &,
+// Returns nullopt for deferred, assumed, and non-constant lengths.
+std::optional<bool> IsInteroperableIntrinsicType(const DynamicType &,
     const common::LanguageFeatureControl * = nullptr,
     bool checkCharLength = true);
 bool IsCUDAIntrinsicType(const DynamicType &);
@@ -493,7 +494,9 @@ bool IsCUDAIntrinsicType(const DynamicType &);
 // Determine whether two derived type specs are sufficiently identical
 // to be considered the "same" type even if declared separately.
 bool AreSameDerivedType(
-    const semantics::DerivedTypeSpec &x, const semantics::DerivedTypeSpec &y);
+    const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
+bool AreSameDerivedTypeIgnoringTypeParameters(
+    const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
 
 // For generating "[extern] template class", &c. boilerplate
 #define EXPAND_FOR_EACH_INTEGER_KIND(M, P, S) \

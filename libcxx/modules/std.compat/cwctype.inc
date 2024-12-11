@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 export {
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
   using ::wctrans_t _LIBCPP_USING_IF_EXISTS;
   using ::wctype_t _LIBCPP_USING_IF_EXISTS;
   using ::wint_t _LIBCPP_USING_IF_EXISTS;
@@ -31,5 +31,5 @@ export {
   using ::towupper _LIBCPP_USING_IF_EXISTS;
   using ::wctrans _LIBCPP_USING_IF_EXISTS;
   using ::wctype _LIBCPP_USING_IF_EXISTS;
-#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#endif // _LIBCPP_HAS_WIDE_CHARACTERS
 } // export

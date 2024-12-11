@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fsanitize=kcfi -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fsanitize=kcfi -o - %s | FileCheck %s --check-prefixes=CHECK,C
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fsanitize=kcfi -x c++ -o - %s | FileCheck %s --check-prefixes=CHECK,MEMBER
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fsanitize=kcfi -fpatchable-function-entry-offset=3 -o - %s | FileCheck %s --check-prefixes=CHECK,OFFSET
 #if !__has_feature(kcfi)
@@ -10,6 +10,9 @@
 // CHECK: module asm ".set __kcfi_typeid_[[F4]], [[#%d,HASH:]]"
 /// Must not __kcfi_typeid symbols for non-address-taken declarations
 // CHECK-NOT: module asm ".weak __kcfi_typeid_{{f6|_Z2f6v}}"
+
+// C: @ifunc1 = ifunc i32 (i32), ptr @resolver1
+// C: @ifunc2 = ifunc i64 (i64), ptr @resolver2
 typedef int (*fn_t)(void);
 
 // CHECK: define dso_local{{.*}} i32 @{{f1|_Z2f1v}}(){{.*}} !kcfi_type ![[#TYPE:]]
@@ -44,6 +47,16 @@ static int f5(void) { return 2; }
 
 // CHECK-DAG: declare !kcfi_type ![[#TYPE]]{{.*}} i32 @{{f6|_Z2f6v}}()
 extern int f6(void);
+
+#ifndef __cplusplus
+// C: define internal ptr @resolver1() #[[#]] !kcfi_type ![[#]] {
+int ifunc1(int) __attribute__((ifunc("resolver1")));
+static void *resolver1(void) { return 0; }
+
+// C: define internal ptr @resolver2() #[[#]] !kcfi_type ![[#]] {
+static void *resolver2(void) { return 0; }
+long ifunc2(long) __attribute__((ifunc("resolver2")));
+#endif
 
 int test(void) {
   return call(f1) +

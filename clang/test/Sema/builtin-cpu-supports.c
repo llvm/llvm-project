@@ -1,5 +1,10 @@
 // RUN: %clang_cc1 -fsyntax-only -triple x86_64-pc-linux-gnu -verify %s
 // RUN: %clang_cc1 -fsyntax-only -triple aarch64-linux-gnu -verify %s
+// RUN: %clang_cc1 -fsyntax-only -triple riscv32-linux-gnu -verify %s
+// RUN: %clang_cc1 -fsyntax-only -triple riscv64-linux-gnu -verify %s
+// RUN: %clang_cc1 -fsyntax-only -triple powerpc64le-unknown-linux -verify %s
+// RUN: %clang_cc1 -fsyntax-only -triple powerpc64-unknown-aix7.2.0.0 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -triple powerpc-unknown-aix7.2.0.0 -verify %s
 
 extern void a(const char *);
 
@@ -26,7 +31,9 @@ int main(void) {
   (void)__builtin_cpu_supports("x86-64-v3");
   (void)__builtin_cpu_supports("x86-64-v4");
   (void)__builtin_cpu_supports("x86-64-v5"); // expected-warning {{invalid cpu feature string for builtin}}
-#else
+#endif
+
+#ifdef __aarch64__
   if (__builtin_cpu_supports("neon")) // expected-warning {{invalid cpu feature string for builtin}}
     a("vsx");
 
@@ -34,6 +41,22 @@ int main(void) {
     a("pwr9");
 
   __builtin_cpu_init(); // expected-error {{builtin is not supported on this target}}
+#endif
+
+#ifdef __riscv
+  if (__builtin_cpu_supports("garbage")) // expected-warning {{invalid cpu feature string for builtin}}
+    a("vsx");
+#endif
+
+#ifdef __powerpc__
+  if (__builtin_cpu_is("garbage")) // expected-error {{invalid cpu name for builtin}}
+    a("vsx");
+
+  if (__builtin_cpu_is("power3")) // expected-error {{invalid cpu name for builtin}}
+    a("vsx");
+
+  if (__builtin_cpu_supports("garbage")) // expected-warning {{invalid cpu feature string for builtin}}
+    a("vsx");
 #endif
 
   return 0;

@@ -60,6 +60,17 @@ public:
   virtual void emitAMDGPULDS(MCSymbol *Symbol, unsigned Size, Align Alignment) {
   }
 
+  virtual void EmitMCResourceInfo(
+      const MCSymbol *NumVGPR, const MCSymbol *NumAGPR,
+      const MCSymbol *NumExplicitSGPR, const MCSymbol *PrivateSegmentSize,
+      const MCSymbol *UsesVCC, const MCSymbol *UsesFlatScratch,
+      const MCSymbol *HasDynamicallySizedStack, const MCSymbol *HasRecursion,
+      const MCSymbol *HasIndirectCall) {};
+
+  virtual void EmitMCResourceMaximums(const MCSymbol *MaxVGPR,
+                                      const MCSymbol *MaxAGPR,
+                                      const MCSymbol *MaxSGPR) {};
+
   /// \returns True on success, false on failure.
   virtual bool EmitISAVersion() { return true; }
 
@@ -135,6 +146,18 @@ public:
   void EmitAMDGPUSymbolType(StringRef SymbolName, unsigned Type) override;
 
   void emitAMDGPULDS(MCSymbol *Sym, unsigned Size, Align Alignment) override;
+
+  void EmitMCResourceInfo(const MCSymbol *NumVGPR, const MCSymbol *NumAGPR,
+                          const MCSymbol *NumExplicitSGPR,
+                          const MCSymbol *PrivateSegmentSize,
+                          const MCSymbol *UsesVCC,
+                          const MCSymbol *UsesFlatScratch,
+                          const MCSymbol *HasDynamicallySizedStack,
+                          const MCSymbol *HasRecursion,
+                          const MCSymbol *HasIndirectCall) override;
+
+  void EmitMCResourceMaximums(const MCSymbol *MaxVGPR, const MCSymbol *MaxAGPR,
+                              const MCSymbol *MaxSGPR) override;
 
   /// \returns True on success, false on failure.
   bool EmitISAVersion() override;

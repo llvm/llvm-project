@@ -338,7 +338,7 @@ void dumpDebugInfo(DWARFContext &DCtx, DWARFYAML::Data &Y) {
 
       NewUnit.Entries.push_back(NewEntry);
     }
-    Y.CompileUnits.push_back(NewUnit);
+    Y.Units.push_back(NewUnit);
   }
 }
 

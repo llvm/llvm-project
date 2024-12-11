@@ -7,15 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
-#include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
-#include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
-#include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/Support/Debug.h"
 #include <optional>
 
 #define DEBUG_TYPE "orc"
@@ -133,7 +129,7 @@ getELFObjectFileSymbolInfo(ExecutionSession &ES,
     if (Sym.getBinding() == ELF::STB_GNU_UNIQUE)
       *SymFlags |= JITSymbolFlags::Weak;
 
-    I.SymbolFlags[ES.intern(*Name)] = std::move(*SymFlags);
+    I.SymbolFlags[ES.intern(std::move(*Name))] = std::move(*SymFlags);
   }
 
   SymbolStringPtr InitSymbol;

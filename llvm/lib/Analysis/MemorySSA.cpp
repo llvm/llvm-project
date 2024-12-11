@@ -2507,45 +2507,22 @@ getInvariantGroupClobberingInstruction(Instruction &I, DominatorTree &DT) {
   if (isa<Constant>(PointerOperand))
     return nullptr;
 
-  // Queue to process all pointers that are equivalent to load operand.
-  SmallVector<const Value *, 8> PointerUsesQueue;
-  PointerUsesQueue.push_back(PointerOperand);
-
   const Instruction *MostDominatingInstruction = &I;
 
-  // FIXME: This loop is O(n^2) because dominates can be O(n) and in worst case
-  // we will see all the instructions. It may not matter in practice. If it
-  // does, we will have to support MemorySSA construction and updates.
-  while (!PointerUsesQueue.empty()) {
-    const Value *Ptr = PointerUsesQueue.pop_back_val();
-    assert(Ptr && !isa<GlobalValue>(Ptr) &&
-           "Null or GlobalValue should not be inserted");
+  for (const User *Us : PointerOperand->users()) {
+    auto *U = dyn_cast<Instruction>(Us);
+    if (!U || U == &I || !DT.dominates(U, MostDominatingInstruction))
+      continue;
 
-    for (const User *Us : Ptr->users()) {
-      auto *U = dyn_cast<Instruction>(Us);
-      if (!U || U == &I || !DT.dominates(U, MostDominatingInstruction))
-        continue;
-
-      // Add bitcasts and zero GEPs to queue.
-      if (isa<BitCastInst>(U)) {
-        PointerUsesQueue.push_back(U);
-        continue;
-      }
-      if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
-        if (GEP->hasAllZeroIndices())
-          PointerUsesQueue.push_back(U);
-        continue;
-      }
-
-      // If we hit a load/store with an invariant.group metadata and the same
-      // pointer operand, we can assume that value pointed to by the pointer
-      // operand didn't change.
-      if (U->hasMetadata(LLVMContext::MD_invariant_group) &&
-          getLoadStorePointerOperand(U) == Ptr && !U->isVolatile()) {
-        MostDominatingInstruction = U;
-      }
+    // If we hit a load/store with an invariant.group metadata and the same
+    // pointer operand, we can assume that value pointed to by the pointer
+    // operand didn't change.
+    if (U->hasMetadata(LLVMContext::MD_invariant_group) &&
+        getLoadStorePointerOperand(U) == PointerOperand && !U->isVolatile()) {
+      MostDominatingInstruction = U;
     }
   }
+
   return MostDominatingInstruction == &I ? nullptr : MostDominatingInstruction;
 }
 

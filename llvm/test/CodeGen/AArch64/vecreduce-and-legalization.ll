@@ -139,11 +139,11 @@ define i32 @test_v3i32(<3 x i32> %a) nounwind {
 define i1 @test_v4i1(<4 x i1> %a) nounwind {
 ; CHECK-LABEL: test_v4i1:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v0.8b, v0.8b
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #15
 ; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
-; CHECK-NEXT:    uminv h0, v0.4h
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    fcmp d0, #0.0
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %b = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> %a)
   ret i1 %b

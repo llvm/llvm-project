@@ -1,4 +1,4 @@
-//===- TestWrapInZeroTripCheck.cpp -- Passes to test SCF zero-trip-check --===//
+//===- TestSCFWrapInZeroTripCheck.cpp -- Pass to test SCF zero-trip-check -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,9 +13,11 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
 
@@ -46,13 +48,19 @@ struct TestWrapWhileLoopInZeroTripCheckPass
     func::FuncOp func = getOperation();
     MLIRContext *context = &getContext();
     IRRewriter rewriter(context);
-    func.walk([&](scf::WhileOp op) {
-      FailureOr<scf::WhileOp> result =
-          scf::wrapWhileLoopInZeroTripCheck(op, rewriter, forceCreateCheck);
-      // Ignore not implemented failure in tests. The expected output should
-      // catch problems (e.g. transformation doesn't happen).
-      (void)result;
-    });
+    if (forceCreateCheck) {
+      func.walk([&](scf::WhileOp op) {
+        FailureOr<scf::WhileOp> result =
+            scf::wrapWhileLoopInZeroTripCheck(op, rewriter, forceCreateCheck);
+        // Ignore not implemented failure in tests. The expected output should
+        // catch problems (e.g. transformation doesn't happen).
+        (void)result;
+      });
+    } else {
+      RewritePatternSet patterns(context);
+      scf::populateSCFRotateWhileLoopPatterns(patterns);
+      (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
+    }
   }
 
   Option<bool> forceCreateCheck{

@@ -116,7 +116,7 @@ void testB1(B *b) {
 // CHECK:    define{{.*}} void @_Z6testB0P1B(ptr
 // CHECK:      [[BVAR:%.*]] = alloca ptr, align 8
 // CHECK:      [[TEMP:%.*]] = alloca [[B0:%.*]], align 8
-// CHECK:      [[X:%.*]] = getelementptr inbounds [[B0]], ptr [[TEMP]], i32 0, i32 0
+// CHECK:      [[X:%.*]] = getelementptr inbounds nuw [[B0]], ptr [[TEMP]], i32 0, i32 0
 // CHECK-NEXT: [[T0:%.*]] = call noundef i32 @_Z9b_makeIntv()
 // CHECK-NEXT: [[T1:%.*]] = sext i32 [[T0]] to i64
 // CHECK-NEXT: store i64 [[T1]], ptr [[X]], align 8

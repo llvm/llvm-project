@@ -13,7 +13,10 @@ tablegen("X86GenDAGISel") {
 }
 
 tablegen("X86GenInstrMapping") {
-  visibility = [ ":LLVMX86CodeGen" ]
+  visibility = [
+    ":LLVMX86CodeGen",
+    "AsmParser",
+  ]
   args = [ "-gen-x86-instr-mapping" ]
   td_file = "X86.td"
 }
@@ -139,6 +142,7 @@ static_library("LLVMX86CodeGen") {
     "X86TileConfig.cpp",
     "X86VZeroUpper.cpp",
     "X86WinEHState.cpp",
+    "X86WinFixupBufferSecurityCheck.cpp",
   ]
 }
 

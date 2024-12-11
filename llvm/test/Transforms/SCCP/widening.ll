@@ -432,10 +432,10 @@ exit:
 ; In the function below, the condition %c.1 results in a range [7, 6), which
 ; can be used as a widening bound. It does not fully contain the range we get
 ; from combining it with the information from %tmp12.
-define void @foo(ptr %arg) {
+define void @foo(ptr %arg, i8 %x) {
 ; SCCP-LABEL: @foo(
 ; SCCP-NEXT:  bb:
-; SCCP-NEXT:    [[TMP:%.*]] = zext i8 undef to i32
+; SCCP-NEXT:    [[TMP:%.*]] = zext i8 [[X:%.*]] to i32
 ; SCCP-NEXT:    [[TMP2:%.*]] = load i64, ptr [[ARG:%.*]], align 8
 ; SCCP-NEXT:    switch i32 [[TMP]], label [[BB20:%.*]] [
 ; SCCP-NEXT:      i32 1, label [[BB3:%.*]]
@@ -472,7 +472,7 @@ define void @foo(ptr %arg) {
 ;
 ; IPSCCP-LABEL: @foo(
 ; IPSCCP-NEXT:  bb:
-; IPSCCP-NEXT:    [[TMP:%.*]] = zext i8 undef to i32
+; IPSCCP-NEXT:    [[TMP:%.*]] = zext i8 [[X:%.*]] to i32
 ; IPSCCP-NEXT:    [[TMP2:%.*]] = load i64, ptr [[ARG:%.*]], align 8
 ; IPSCCP-NEXT:    switch i32 [[TMP]], label [[BB20:%.*]] [
 ; IPSCCP-NEXT:      i32 1, label [[BB3:%.*]]
@@ -508,7 +508,7 @@ define void @foo(ptr %arg) {
 ; IPSCCP-NEXT:    ret void
 ;
 bb:
-  %tmp = zext i8 undef to i32
+  %tmp = zext i8 %x to i32
   %tmp2 = load i64, ptr %arg, align 8
   switch i32 %tmp, label %bb20 [
   i32 1, label %bb3
@@ -566,7 +566,7 @@ declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias
 define linkonce_odr dereferenceable(1) ptr @spam(ptr %arg, i32 %arg1) align 2 {
 ; SCCP-LABEL: @spam(
 ; SCCP-NEXT:  bb:
-; SCCP-NEXT:    [[TMP:%.*]] = getelementptr inbounds [[STRUCT_BAZ_1:%.*]], ptr [[ARG:%.*]], i32 0, i32 3
+; SCCP-NEXT:    [[TMP:%.*]] = getelementptr inbounds nuw [[STRUCT_BAZ_1:%.*]], ptr [[ARG:%.*]], i32 0, i32 3
 ; SCCP-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP]], align 8
 ; SCCP-NEXT:    [[TMP3:%.*]] = sext i32 [[ARG1:%.*]] to i64
 ; SCCP-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 [[TMP3]]
@@ -574,7 +574,7 @@ define linkonce_odr dereferenceable(1) ptr @spam(ptr %arg, i32 %arg1) align 2 {
 ;
 ; IPSCCP-LABEL: @spam(
 ; IPSCCP-NEXT:  bb:
-; IPSCCP-NEXT:    [[TMP:%.*]] = getelementptr inbounds [[STRUCT_BAZ_1:%.*]], ptr [[ARG:%.*]], i32 0, i32 3
+; IPSCCP-NEXT:    [[TMP:%.*]] = getelementptr inbounds nuw [[STRUCT_BAZ_1:%.*]], ptr [[ARG:%.*]], i32 0, i32 3
 ; IPSCCP-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP]], align 8
 ; IPSCCP-NEXT:    [[TMP3:%.*]] = sext i32 [[ARG1:%.*]] to i64
 ; IPSCCP-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 [[TMP3]]
@@ -595,7 +595,7 @@ define ptr @wobble(ptr %arg, i32 %arg1) align 2 {
 ; SCCP-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP]], [[ARG1]]
 ; SCCP-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 65535
 ; SCCP-NEXT:    [[TMP4:%.*]] = mul i32 [[ARG1]], 8
-; SCCP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_BLAM_2:%.*]], ptr [[ARG:%.*]], i32 0, i32 1
+; SCCP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[STRUCT_BLAM_2:%.*]], ptr [[ARG:%.*]], i32 0, i32 1
 ; SCCP-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 8
 ; SCCP-NEXT:    [[TMP7:%.*]] = and i32 [[TMP4]], [[TMP6]]
 ; SCCP-NEXT:    br label [[BB8:%.*]]
@@ -609,7 +609,7 @@ define ptr @wobble(ptr %arg, i32 %arg1) align 2 {
 ; SCCP-NEXT:    [[TMP15:%.*]] = add i32 [[TMP7]], [[TMP11]]
 ; SCCP-NEXT:    [[TMP16:%.*]] = mul i32 [[TMP15]], 4
 ; SCCP-NEXT:    [[TMP17]] = call dereferenceable(1) ptr @spam(ptr [[ARG]], i32 [[TMP16]])
-; SCCP-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[TMP17]], i64 2
+; SCCP-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP17]], i64 2
 ; SCCP-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
 ; SCCP-NEXT:    [[TMP21:%.*]] = zext i8 [[TMP20]] to i32
 ; SCCP-NEXT:    [[TMP22:%.*]] = icmp eq i32 [[TMP21]], 0
@@ -632,7 +632,7 @@ define ptr @wobble(ptr %arg, i32 %arg1) align 2 {
 ; SCCP-NEXT:    [[TMP34:%.*]] = icmp eq i32 [[TMP11]], 0
 ; SCCP-NEXT:    br i1 [[TMP34]], label [[BB35:%.*]], label [[BB37:%.*]]
 ; SCCP:       bb35:
-; SCCP-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i8, ptr [[TMP32]], i64 1
+; SCCP-NEXT:    [[TMP36:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP32]], i64 1
 ; SCCP-NEXT:    br label [[BB66:%.*]]
 ; SCCP:       bb37:
 ; SCCP-NEXT:    [[C_2:%.*]] = icmp eq i32 [[TMP11]], 8
@@ -677,7 +677,7 @@ define ptr @wobble(ptr %arg, i32 %arg1) align 2 {
 ; IPSCCP-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP]], [[ARG1]]
 ; IPSCCP-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 65535
 ; IPSCCP-NEXT:    [[TMP4:%.*]] = mul i32 [[ARG1]], 8
-; IPSCCP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_BLAM_2:%.*]], ptr [[ARG:%.*]], i32 0, i32 1
+; IPSCCP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[STRUCT_BLAM_2:%.*]], ptr [[ARG:%.*]], i32 0, i32 1
 ; IPSCCP-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 8
 ; IPSCCP-NEXT:    [[TMP7:%.*]] = and i32 [[TMP4]], [[TMP6]]
 ; IPSCCP-NEXT:    br label [[BB8:%.*]]
@@ -691,7 +691,7 @@ define ptr @wobble(ptr %arg, i32 %arg1) align 2 {
 ; IPSCCP-NEXT:    [[TMP15:%.*]] = add i32 [[TMP7]], [[TMP11]]
 ; IPSCCP-NEXT:    [[TMP16:%.*]] = mul i32 [[TMP15]], 4
 ; IPSCCP-NEXT:    [[TMP17]] = call dereferenceable(1) ptr @spam(ptr [[ARG]], i32 [[TMP16]])
-; IPSCCP-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[TMP17]], i64 2
+; IPSCCP-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP17]], i64 2
 ; IPSCCP-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
 ; IPSCCP-NEXT:    [[TMP21:%.*]] = zext i8 [[TMP20]] to i32
 ; IPSCCP-NEXT:    [[TMP22:%.*]] = icmp eq i32 [[TMP21]], 0
@@ -714,7 +714,7 @@ define ptr @wobble(ptr %arg, i32 %arg1) align 2 {
 ; IPSCCP-NEXT:    [[TMP34:%.*]] = icmp eq i32 [[TMP11]], 0
 ; IPSCCP-NEXT:    br i1 [[TMP34]], label [[BB35:%.*]], label [[BB37:%.*]]
 ; IPSCCP:       bb35:
-; IPSCCP-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i8, ptr [[TMP32]], i64 1
+; IPSCCP-NEXT:    [[TMP36:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP32]], i64 1
 ; IPSCCP-NEXT:    br label [[BB66:%.*]]
 ; IPSCCP:       bb37:
 ; IPSCCP-NEXT:    [[C_2:%.*]] = icmp eq i32 [[TMP11]], 8
