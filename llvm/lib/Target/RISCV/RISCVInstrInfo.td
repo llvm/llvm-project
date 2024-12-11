@@ -496,8 +496,6 @@ def TrailingOnesMask : PatLeaf<(imm), [{
     if (!MRI.hasOneNonDBGUse(MI.getOperand(0).getReg()))
       return false;
     const auto &MO = MI.getOperand(1);
-    if (!MO.isCImm())
-      return false;
     return !isInt<12>(MO.getCImm()->getSExtValue()) &&
            isMask_64(MO.getCImm()->getZExtValue());
   }];
