@@ -41,9 +41,16 @@ static std::string MakeComment(StringRef in) {
 }
 
 static void ProcessHandle(const HandleRec &H, raw_ostream &OS) {
+  if (!H.getName().ends_with("_handle_t")) {
+    errs() << "Handle type name (" << H.getName()
+           << ") must end with '_handle_t'!\n";
+    exit(1);
+  }
+
+  auto ImplName = H.getName().substr(0, H.getName().size() - 9) + "_impl_t";
   OS << CommentsHeader;
   OS << formatv("/// @brief {0}\n", H.getDesc());
-  OS << formatv("typedef struct {0}_ *{0};\n", H.getName());
+  OS << formatv("typedef struct {0} *{1};\n", ImplName, H.getName());
 }
 
 static void ProcessTypedef(const TypedefRec &T, raw_ostream &OS) {
