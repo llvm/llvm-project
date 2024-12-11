@@ -8732,7 +8732,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
                                    ReuseShuffleIndices);
       if (S.isAltShuffle()) {
-        LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (alternate op).\n");
+        LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (isAltShuffle).\n");
       } else {
         assert(SLPReVec && "Only supported by REVEC.");
         LLVM_DEBUG(
