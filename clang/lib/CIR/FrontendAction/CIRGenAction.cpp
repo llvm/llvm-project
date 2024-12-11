@@ -267,6 +267,8 @@ public:
         // FIXME: we cannot roundtrip prettyForm=true right now.
         mlir::OpPrintingFlags flags;
         flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/false);
+        if (feOptions.ClangIRDisableCIRVerifier)
+          flags.assumeVerified();
         mlirMod->print(*outputStream, flags);
       }
       break;
