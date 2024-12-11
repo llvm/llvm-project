@@ -21,12 +21,12 @@ using LIBC_NAMESPACE::cpp::optional;
 // Inserting or removing blocks too small to be tracked does nothing.
 TEST(LlvmLibcFreeStore, TooSmall) {
   byte mem[1024];
-  optional<Block<> *> maybeBlock = Block<>::init(mem);
+  optional<Block *> maybeBlock = Block::init(mem);
   ASSERT_TRUE(maybeBlock.has_value());
-  Block<> *too_small = *maybeBlock;
-  maybeBlock = too_small->split(sizeof(Block<>::offset_type));
+  Block *too_small = *maybeBlock;
+  maybeBlock = too_small->split(sizeof(size_t));
   ASSERT_TRUE(maybeBlock.has_value());
-  Block<> *remainder = *maybeBlock;
+  Block *remainder = *maybeBlock;
 
   FreeStore store;
   store.set_range({0, 4096});
@@ -39,24 +39,22 @@ TEST(LlvmLibcFreeStore, TooSmall) {
 
 TEST(LlvmLibcFreeStore, RemoveBestFit) {
   byte mem[1024];
-  optional<Block<> *> maybeBlock = Block<>::init(mem);
+  optional<Block *> maybeBlock = Block::init(mem);
   ASSERT_TRUE(maybeBlock.has_value());
 
-  Block<> *smallest = *maybeBlock;
-  maybeBlock =
-      smallest->split(sizeof(FreeList::Node) + sizeof(Block<>::offset_type));
+  Block *smallest = *maybeBlock;
+  maybeBlock = smallest->split(sizeof(FreeList::Node) + sizeof(size_t));
   ASSERT_TRUE(maybeBlock.has_value());
 
-  Block<> *largest_small = *maybeBlock;
-  maybeBlock =
-      largest_small->split(sizeof(FreeTrie::Node) +
-                           sizeof(Block<>::offset_type) - alignof(max_align_t));
+  Block *largest_small = *maybeBlock;
+  maybeBlock = largest_small->split(sizeof(FreeTrie::Node) + sizeof(size_t) -
+                                    alignof(max_align_t));
   ASSERT_TRUE(maybeBlock.has_value());
   if (largest_small->inner_size() == smallest->inner_size())
     largest_small = smallest;
   ASSERT_GE(largest_small->inner_size(), smallest->inner_size());
 
-  Block<> *remainder = *maybeBlock;
+  Block *remainder = *maybeBlock;
 
   FreeStore store;
   store.set_range({0, 4096});
@@ -74,8 +72,7 @@ TEST(LlvmLibcFreeStore, RemoveBestFit) {
   store.insert(largest_small);
 
   // Search small list for best fit.
-  Block<> *next_smallest =
-      largest_small == smallest ? remainder : largest_small;
+  Block *next_smallest = largest_small == smallest ? remainder : largest_small;
   ASSERT_EQ(store.remove_best_fit(smallest->inner_size() + 1), next_smallest);
   store.insert(next_smallest);
 
@@ -85,15 +82,14 @@ TEST(LlvmLibcFreeStore, RemoveBestFit) {
 
 TEST(LlvmLibcFreeStore, Remove) {
   byte mem[1024];
-  optional<Block<> *> maybeBlock = Block<>::init(mem);
+  optional<Block *> maybeBlock = Block::init(mem);
   ASSERT_TRUE(maybeBlock.has_value());
 
-  Block<> *small = *maybeBlock;
-  maybeBlock =
-      small->split(sizeof(FreeList::Node) + sizeof(Block<>::offset_type));
+  Block *small = *maybeBlock;
+  maybeBlock = small->split(sizeof(FreeList::Node) + sizeof(size_t));
   ASSERT_TRUE(maybeBlock.has_value());
 
-  Block<> *remainder = *maybeBlock;
+  Block *remainder = *maybeBlock;
 
   FreeStore store;
   store.set_range({0, 4096});
@@ -102,8 +98,8 @@ TEST(LlvmLibcFreeStore, Remove) {
 
   store.remove(remainder);
   ASSERT_EQ(store.remove_best_fit(remainder->inner_size()),
-            static_cast<Block<> *>(nullptr));
+            static_cast<Block *>(nullptr));
   store.remove(small);
   ASSERT_EQ(store.remove_best_fit(small->inner_size()),
-            static_cast<Block<> *>(nullptr));
+            static_cast<Block *>(nullptr));
 }

@@ -3727,7 +3727,7 @@ def FPPow2ToExponentXForm : SDNodeXForm<fpimm, [{
   const auto &APF = N->getValueAPF();
   int Log2 = APF.getExactLog2Abs();
   assert(Log2 != INT_MIN);
-  return CurDAG->getTargetConstant(Log2, SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(Log2, SDLoc(N), MVT::i32);
 }]>;
 
 // Check if a floating point value is a power of 2 floating-point

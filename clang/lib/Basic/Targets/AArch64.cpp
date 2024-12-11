@@ -26,35 +26,39 @@
 using namespace clang;
 using namespace clang::targets;
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+static constexpr int NumBuiltins =
+    clang::AArch64::LastTSBuiltin - Builtin::FirstTSBuiltin;
+
+static constexpr auto BuiltinStorage = Builtin::Storage<NumBuiltins>::Make(
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsNEON.def"
-
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsSVE.def"
-
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsSME.def"
-
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define LANGBUILTIN(ID, TYPE, ATTRS, LANG)                                     \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, LANG},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsAArch64.def"
-};
+    , {
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsNEON.def"
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsSVE.def"
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsSME.def"
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#define LANGBUILTIN CLANG_LANGBUILTIN_ENTRY
+#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsAArch64.def"
+      });
 
 void AArch64TargetInfo::setArchFeatures() {
   if (*ArchInfo == llvm::AArch64::ARMV8R) {
@@ -232,14 +236,23 @@ bool AArch64TargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
 
 bool AArch64TargetInfo::validateGlobalRegisterVariable(
     StringRef RegName, unsigned RegSize, bool &HasSizeMismatch) const {
-  if ((RegName == "sp") || RegName.starts_with("x")) {
+  if (RegName == "sp") {
     HasSizeMismatch = RegSize != 64;
     return true;
-  } else if (RegName.starts_with("w")) {
-    HasSizeMismatch = RegSize != 32;
-    return true;
   }
-  return false;
+  if (RegName.starts_with("w"))
+    HasSizeMismatch = RegSize != 32;
+  else if (RegName.starts_with("x"))
+    HasSizeMismatch = RegSize != 64;
+  else
+    return false;
+  StringRef RegNum = RegName.drop_front();
+  // Check if the register is reserved. See also
+  // AArch64TargetLowering::getRegisterByName().
+  return RegNum == "0" ||
+         (RegNum == "18" &&
+          llvm::AArch64::isX18ReservedByDefault(getTriple())) ||
+         getTargetOpts().FeatureMap.lookup(("reserve-x" + RegNum).str());
 }
 
 bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
@@ -447,6 +460,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__ARM_FP16_FORMAT_IEEE", "1");
   Builder.defineMacro("__ARM_FP16_ARGS", "1");
 
+  // Clang supports arm_neon_sve_bridge.h
+  Builder.defineMacro("__ARM_NEON_SVE_BRIDGE", "1");
+
   if (Opts.UnsafeFPMath)
     Builder.defineMacro("__ARM_FP_FAST", "1");
 
@@ -463,9 +479,6 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (FPU & SveMode)
     Builder.defineMacro("__ARM_FEATURE_SVE", "1");
-
-  if ((FPU & NeonMode) && (FPU & SveMode))
-    Builder.defineMacro("__ARM_NEON_SVE_BRIDGE", "1");
 
   if (HasSVE2)
     Builder.defineMacro("__ARM_FEATURE_SVE2", "1");
@@ -688,9 +701,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 }
 
-ArrayRef<Builtin::Info> AArch64TargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfo, clang::AArch64::LastTSBuiltin -
-                                         Builtin::FirstTSBuiltin);
+std::pair<const char *, ArrayRef<Builtin::Info>>
+AArch64TargetInfo::getTargetBuiltinStorage() const {
+  return {BuiltinStorage.StringTable, BuiltinStorage.Infos};
 }
 
 std::optional<std::pair<unsigned, unsigned>>
@@ -705,18 +718,8 @@ AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
   return std::nullopt;
 }
 
-unsigned AArch64TargetInfo::multiVersionSortPriority(StringRef Name) const {
-  if (Name == "default")
-    return 0;
-  if (auto Ext = llvm::AArch64::parseFMVExtension(Name))
-    return Ext->Priority;
-  return 0;
-}
-
-unsigned AArch64TargetInfo::multiVersionFeatureCost() const {
-  // Take the maximum priority as per feature cost, so more features win.
-  constexpr unsigned MaxFMVPriority = 1000;
-  return MaxFMVPriority;
+unsigned AArch64TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
+  return llvm::AArch64::getFMVPriority(Features);
 }
 
 bool AArch64TargetInfo::doesFeatureAffectCodeGen(StringRef Name) const {

@@ -52,6 +52,9 @@ static InstrProfKind getProfileKindFromVersion(uint64_t Version) {
   if (Version & VARIANT_MASK_INSTR_ENTRY) {
     ProfileKind |= InstrProfKind::FunctionEntryInstrumentation;
   }
+  if (Version & VARIANT_MASK_INSTR_LOOP_ENTRIES) {
+    ProfileKind |= InstrProfKind::LoopEntriesInstrumentation;
+  }
   if (Version & VARIANT_MASK_BYTE_COVERAGE) {
     ProfileKind |= InstrProfKind::SingleByteCoverage;
   }
@@ -262,6 +265,8 @@ Error TextInstrProfReader::readHeader() {
       ProfileKind |= InstrProfKind::FunctionEntryInstrumentation;
     else if (Str.equals_insensitive("not_entry_first"))
       ProfileKind &= ~InstrProfKind::FunctionEntryInstrumentation;
+    else if (Str.equals_insensitive("instrument_loop_entries"))
+      ProfileKind |= InstrProfKind::LoopEntriesInstrumentation;
     else if (Str.equals_insensitive("single_byte_coverage"))
       ProfileKind |= InstrProfKind::SingleByteCoverage;
     else if (Str.equals_insensitive("temporal_prof_traces")) {
@@ -1345,18 +1350,6 @@ Error IndexedMemProfReader::deserialize(const unsigned char *Start,
     break;
   }
 
-#ifdef EXPENSIVE_CHECKS
-  // Go through all the records and verify that CSId has been correctly
-  // populated.  Do this only under EXPENSIVE_CHECKS.  Otherwise, we
-  // would defeat the purpose of OnDiskIterableChainedHashTable.
-  // Note that we can compare CSId against actual call stacks only for
-  // Version0 and Version1 because IndexedAllocationInfo::CallStack and
-  // IndexedMemProfRecord::CallSites are not populated in Version2.
-  if (Version <= memprof::Version1)
-    for (const auto &Record : MemProfRecordTable->data())
-      verifyIndexedMemProfRecord(Record);
-#endif
-
   return Error::success();
 }
 
@@ -1669,6 +1662,22 @@ IndexedMemProfReader::getMemProfCallerCalleePairs() const {
   }
 
   return Pairs;
+}
+
+memprof::AllMemProfData IndexedMemProfReader::getAllMemProfData() const {
+  memprof::AllMemProfData AllMemProfData;
+  AllMemProfData.HeapProfileRecords.reserve(
+      MemProfRecordTable->getNumEntries());
+  for (uint64_t Key : MemProfRecordTable->keys()) {
+    auto Record = getMemProfRecord(Key);
+    if (Record.takeError())
+      continue;
+    memprof::GUIDMemProfRecordPair Pair;
+    Pair.GUID = Key;
+    Pair.Record = std::move(*Record);
+    AllMemProfData.HeapProfileRecords.push_back(std::move(Pair));
+  }
+  return AllMemProfData;
 }
 
 Error IndexedInstrProfReader::getFunctionCounts(StringRef FuncName,

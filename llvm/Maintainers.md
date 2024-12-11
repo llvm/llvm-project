@@ -95,15 +95,10 @@ chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.co
 
 ### Instrumentation and sanitizers
 
-#### AddressSanitizer, ThreadSanitizer
+#### Sanitizers not covered by someone else
 
-Kostya Serebryany \
-kcc@google.com (email), [kcc](https://github.com/kcc) (GitHub)
-
-#### MemorySanitizer
-
-Evgeniy Stepanov \
-eugenis@google.com (email), [eugenis](https://github.com/eugenis) (GitHub)
+Vitaly Buka \
+vitalybuka@google.com (email), [vitalybuka](https://github.com/vitalybuka) (GitHub)
 
 #### NumericalStabilitySanitizer
 
@@ -121,8 +116,8 @@ david.trevelyan@gmail.com (email), [davidtrevelyan](https://github.com/davidtrev
 
 #### Parts of code generator not covered by someone else
 
-Evan Cheng \
-evan.cheng@apple.com (email)
+Matt Arsenault \
+Matthew.Arsenault@amd.com, arsenm2@gmail.com (email), [arsenm](https://github.com/arsenm) (GitHub)
 
 #### SelectionDAG
 
@@ -180,8 +175,16 @@ marksl@synopsys.com (email), [markschimmel](https://github.com/markschimmel) (Gi
 
 #### ARM backend
 
-Renato Golin \
-rengolin@systemcall.eu (email), [rengolin](https://github.com/rengolin) (GitHub)
+David Green \
+david.green@arm.com (email), [davemgreen](https://github.com/davemgreen) (GitHub) \
+Oliver Stannard (Especially assembly/dissassembly) \
+oliver.stannard@arm.com (email), [ostannard](https://github.com/ostannard) (GitHub) \
+Nashe Mncube \
+nashe.mncube@arm.com (email), [nasherm](https://github.com/nasherm) (GitHub) \
+Peter Smith (Anything ABI) \
+peter.smith@arm.com (email), [smithp35](https://github.com/smithp35) (GitHub) \
+Ties Stuij (GlobalISel and early arch support) \
+ties.stuij@arm.com (email), [stuij](https://github.com/stuij) (GitHub)
 
 #### AVR backend
 
@@ -406,11 +409,6 @@ echristo@gmail.com (email), [echristo](https://github.com/echristo) (GitHub)
 Anton Korobeynikov \
 anton@korobeynikov.info (email), [asl](https://github.com/asl) (GitHub)
 
-#### ARM EABI
-
-Anton Korobeynikov \
-anton@korobeynikov.info (email), [asl](https://github.com/asl) (GitHub)
-
 #### LLVM Buildbot
 
 Galina Kistanova \
@@ -421,39 +419,30 @@ gkistanova@gmail.com (email), [gkistanova](https://github.com/gkistanova) (GitHu
 Some subprojects maintain their own list of per-component maintainers.
 Others only have a lead maintainer listed here.
 
-[Bolt maintainers](https://github.com/llvm/llvm-project/blob/main/bolt/CODE_OWNERS.TXT)
+[Bolt maintainers](https://github.com/llvm/llvm-project/blob/main/bolt/Maintainers.txt)
 
 [Clang maintainers](https://github.com/llvm/llvm-project/blob/main/clang/Maintainers.rst)
 
-[Clang-tools-extra maintainers](https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/CODE_OWNERS.TXT)
+[Clang-tools-extra maintainers](https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/Maintainers.txt)
 
-[Compiler-rt maintainers](https://github.com/llvm/llvm-project/blob/main/compiler-rt/CODE_OWNERS.TXT)
+[Compiler-rt maintainers](https://github.com/llvm/llvm-project/blob/main/compiler-rt/Maintainers.md)
 
 [Flang maintainers](https://github.com/llvm/llvm-project/blob/main/flang/Maintainers.txt)
 
-[LLD maintainers](https://github.com/llvm/llvm-project/blob/main/lld/CODE_OWNERS.TXT)
+[libc++ maintainers](https://github.com/llvm/llvm-project/blob/main/libcxx/Maintainers.md)
+
+[LLD maintainers](https://github.com/llvm/llvm-project/blob/main/lld/Maintainers.md)
 
 [LLDB maintainers](https://github.com/llvm/llvm-project/blob/main/lldb/Maintainers.rst)
 
-#### libc++
+[LLVM OpenMP Library maintainers](https://github.com/llvm/llvm-project/blob/main/openmp/Maintainers.md)
 
-Louis Dionne \
-ldionne.2@gmail.com (email), [ldionne](https://github.com/ldionne) (GitHub)
+[Polly maintainers](https://github.com/llvm/llvm-project/blob/main/polly/Maintainers.md)
 
 #### libclc
 
 Tom Stellard \
 tstellar@redhat.com (email), [tstellar](https://github.com/tstellar) (GitHub)
-
-#### OpenMP (runtime library)
-
-Andrey Churbanov \
-andrey.churbanov@intel.com (email), [AndreyChurbanov](https://github.com/AndreyChurbanov) (GitHub)
-
-#### Polly
-
-Tobias Grosser \
-tobias@grosser.es (email), [tobiasgrosser](https://github.com/tobiasgrosser) (GitHub)
 
 ## Inactive Maintainers
 
@@ -469,7 +458,12 @@ sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattn
 ### Inactive or former component maintainers
 
 Justin Bogner (mail@justinbogner.com, [bogner](https://github.com/bogner)) -- SelectionDAG \
+Evan Cheng (evan.cheng@apple.com) -- Parts of code generator not covered by someone else \
+Renato Golin (rengolin@systemcall.eu, [rengolin](https://github.com/rengolin)) -- ARM backend \
+Anton Korobeynikov (anton@korobeynikov.info, [asl](https://github.com/asl)) -- ARM EABI \
 Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management \
+Kostya Serebryany ([kcc](https://github.com/kcc)) -- Sanitizers \
+Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) -- Sanitizers
 
 ### Former maintainers of removed components
 

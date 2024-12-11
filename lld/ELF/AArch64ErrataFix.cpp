@@ -393,8 +393,8 @@ public:
 };
 
 Patch843419Section::Patch843419Section(Ctx &ctx, InputSection *p, uint64_t off)
-    : SyntheticSection(ctx, SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 4,
-                       ".text.patch"),
+    : SyntheticSection(ctx, ".text.patch", SHT_PROGBITS,
+                       SHF_ALLOC | SHF_EXECINSTR, 4),
       patchee(p), patcheeOffset(off) {
   this->parent = p->getParent();
   patchSym = addSyntheticLocal(

@@ -958,7 +958,9 @@ bool MachineSinking::isWorthBreakingCriticalEdge(
     }
   }
 
-  return false;
+  // Let the target decide if it's worth breaking this
+  // critical edge for a "cheap" instruction.
+  return TII->shouldBreakCriticalEdgeToSink(MI);
 }
 
 bool MachineSinking::isLegalToBreakCriticalEdge(MachineInstr &MI,

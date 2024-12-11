@@ -62,7 +62,8 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  std::pair<const char *, ArrayRef<Builtin::Info>>
+  getTargetBuiltinStorage() const override;
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::VoidPtrBuiltinVaList;
@@ -122,6 +123,7 @@ public:
   void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) const override;
   bool supportsTargetAttributeTune() const override { return true; }
   ParsedTargetAttr parseTargetAttr(StringRef Str) const override;
+  unsigned getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
     return std::make_pair(32, 32);
