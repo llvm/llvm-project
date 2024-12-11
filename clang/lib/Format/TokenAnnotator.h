@@ -22,6 +22,8 @@ namespace format {
 
 enum LineType {
   LT_Invalid,
+  // Contains public/private/protected followed by TT_InheritanceColon.
+  LT_AccessModifier,
   LT_ImportStatement,
   LT_ObjCDecl, // An @interface, @implementation, or @protocol line.
   LT_ObjCMethodDecl,
@@ -34,18 +36,18 @@ enum LineType {
 };
 
 enum ScopeType {
+  // Contained in child block.
+  ST_ChildBlock,
   // Contained in class declaration/definition.
   ST_Class,
-  // Contained within function definition.
-  ST_Function,
-  // Contained within other scope block (loop, if/else, etc).
+  // Contained within other scope block (function, loop, if/else, etc).
   ST_Other,
 };
 
 class AnnotatedLine {
 public:
   AnnotatedLine(const UnwrappedLine &Line)
-      : First(Line.Tokens.front().Tok), Level(Line.Level),
+      : First(Line.Tokens.front().Tok), Type(LT_Other), Level(Line.Level),
         PPLevel(Line.PPLevel),
         MatchingOpeningBlockLineIndex(Line.MatchingOpeningBlockLineIndex),
         MatchingClosingBlockLineIndex(Line.MatchingClosingBlockLineIndex),
@@ -180,6 +182,9 @@ public:
   /// \c True if this line contains a macro call for which an expansion exists.
   bool ContainsMacroCall = false;
 
+  /// \c True if calculateFormattingInformation() has been called on this line.
+  bool Computed = false;
+
   /// \c True if this line should be formatted, i.e. intersects directly or
   /// indirectly with one of the input ranges.
   bool Affected;
@@ -267,7 +272,7 @@ private:
 
   const AdditionalKeywords &Keywords;
 
-  SmallVector<ScopeType> Scopes;
+  SmallVector<ScopeType> Scopes, MacroBodyScopes;
 };
 
 } // end namespace format

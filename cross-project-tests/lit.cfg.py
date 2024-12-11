@@ -4,9 +4,6 @@ import re
 import subprocess
 import sys
 
-# TODO: LooseVersion is undocumented; use something else.
-from distutils.version import LooseVersion
-
 import lit.formats
 import lit.util
 
@@ -279,7 +276,11 @@ dwarf_version_string = get_clang_default_dwarf_version_string(config.host_triple
 gdb_version_string = get_gdb_version_string()
 if dwarf_version_string and gdb_version_string:
     if int(dwarf_version_string) >= 5:
-        if LooseVersion(gdb_version_string) < LooseVersion("10.1"):
+        try:
+            from packaging import version
+        except:
+            lit_config.fatal("Running gdb tests requires the packaging package")
+        if version.parse(gdb_version_string) < version.parse("10.1"):
             # Example for llgdb-tests, which use lldb on darwin but gdb elsewhere:
             # XFAIL: !system-darwin && gdb-clang-incompatibility
             config.available_features.add("gdb-clang-incompatibility")

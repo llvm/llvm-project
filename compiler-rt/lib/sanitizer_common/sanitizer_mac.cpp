@@ -545,9 +545,6 @@ uptr GetTlsSize() {
   return 0;
 }
 
-void InitTlsSize() {
-}
-
 uptr TlsBaseAddr() {
   uptr segbase = 0;
 #if defined(__x86_64__)
@@ -572,21 +569,18 @@ uptr TlsSize() {
 #endif
 }
 
-void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
-                          uptr *tls_addr, uptr *tls_size) {
-#if !SANITIZER_GO
-  uptr stack_top, stack_bottom;
-  GetThreadStackTopAndBottom(main, &stack_top, &stack_bottom);
-  *stk_addr = stack_bottom;
-  *stk_size = stack_top - stack_bottom;
-  *tls_addr = TlsBaseAddr();
-  *tls_size = TlsSize();
-#else
-  *stk_addr = 0;
-  *stk_size = 0;
-  *tls_addr = 0;
-  *tls_size = 0;
-#endif
+void GetThreadStackAndTls(bool main, uptr *stk_begin, uptr *stk_end,
+                          uptr *tls_begin, uptr *tls_end) {
+#  if !SANITIZER_GO
+  GetThreadStackTopAndBottom(main, stk_end, stk_begin);
+  *tls_begin = TlsBaseAddr();
+  *tls_end = *tls_begin + TlsSize();
+#  else
+  *stk_begin = 0;
+  *stk_end = 0;
+  *tls_begin = 0;
+  *tls_end = 0;
+#  endif
 }
 
 void ListOfModules::init() {
@@ -788,7 +782,11 @@ void WriteOneLineToSyslog(const char *s) {
   if (GetMacosAlignedVersion() >= MacosVersion(10, 12)) {
     os_log_error(OS_LOG_DEFAULT, "%{public}s", s);
   } else {
+#pragma clang diagnostic push
+// as_log is deprecated.
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     asl_log(nullptr, nullptr, ASL_LEVEL_ERR, "%s", s);
+#pragma clang diagnostic pop
   }
 #endif
 }
@@ -843,6 +841,9 @@ void LogFullErrorReport(const char *buffer) {
 #if !SANITIZER_GO
   // Log with os_trace. This will make it into the crash log.
 #if SANITIZER_OS_TRACE
+#pragma clang diagnostic push
+// os_trace is deprecated.
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   if (GetMacosAlignedVersion() >= MacosVersion(10, 10)) {
     // os_trace requires the message (format parameter) to be a string literal.
     if (internal_strncmp(SanitizerToolName, "AddressSanitizer",
@@ -860,6 +861,7 @@ void LogFullErrorReport(const char *buffer) {
     if (common_flags()->log_to_syslog)
       os_trace("Consult syslog for more information.");
   }
+#pragma clang diagnostic pop
 #endif
 
   // Log to syslog.
@@ -970,8 +972,9 @@ static const char kDyldInsertLibraries[] = "DYLD_INSERT_LIBRARIES";
 LowLevelAllocator allocator_for_env;
 
 static bool ShouldCheckInterceptors() {
-  // Restrict "interceptors working?" check to ASan and TSan.
-  const char *sanitizer_names[] = {"AddressSanitizer", "ThreadSanitizer"};
+  // Restrict "interceptors working?" check
+  const char *sanitizer_names[] = {"AddressSanitizer", "ThreadSanitizer",
+                                   "RealtimeSanitizer"};
   size_t count = sizeof(sanitizer_names) / sizeof(sanitizer_names[0]);
   for (size_t i = 0; i < count; i++) {
     if (internal_strcmp(sanitizer_names[i], SanitizerToolName) == 0)
@@ -1188,8 +1191,8 @@ uptr GetMaxVirtualAddress() {
 }
 
 uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
-                      uptr min_shadow_base_alignment, uptr &high_mem_end) {
-  const uptr granularity = GetMmapGranularity();
+                      uptr min_shadow_base_alignment, uptr &high_mem_end,
+                      uptr granularity) {
   const uptr alignment =
       Max<uptr>(granularity << shadow_scale, 1ULL << min_shadow_base_alignment);
   const uptr left_padding =
@@ -1372,8 +1375,8 @@ void DumpProcessMap() {
   for (uptr i = 0; i < modules.size(); ++i) {
     char uuid_str[128];
     FormatUUID(uuid_str, sizeof(uuid_str), modules[i].uuid());
-    Printf("0x%zx-0x%zx %s (%s) %s\n", modules[i].base_address(),
-           modules[i].max_address(), modules[i].full_name(),
+    Printf("%p-%p %s (%s) %s\n", (void *)modules[i].base_address(),
+           (void *)modules[i].max_address(), modules[i].full_name(),
            ModuleArchToString(modules[i].arch()), uuid_str);
   }
   Printf("End of module map.\n");

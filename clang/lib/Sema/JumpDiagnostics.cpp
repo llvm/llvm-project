@@ -179,9 +179,9 @@ static ScopePair GetDiagForGotoScopeDecl(Sema &S, const Decl *D) {
       }
     }
 
-    const Expr *Init = VD->getInit();
-    if (S.Context.getLangOpts().CPlusPlus && VD->hasLocalStorage() && Init &&
-        !Init->containsErrors()) {
+    if (const Expr *Init = VD->getInit(); S.Context.getLangOpts().CPlusPlus &&
+                                          VD->hasLocalStorage() && Init &&
+                                          !Init->containsErrors()) {
       // C++11 [stmt.dcl]p3:
       //   A program that jumps from a point where a variable with automatic
       //   storage duration is not in scope to a point where it is in scope
@@ -616,6 +616,16 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     return;
   }
 
+  case Stmt::OpenACCCombinedConstructClass: {
+    unsigned NewParentScope = Scopes.size();
+    OpenACCCombinedConstruct *CC = cast<OpenACCCombinedConstruct>(S);
+    Scopes.push_back(GotoScope(
+        ParentScope, diag::note_acc_branch_into_compute_construct,
+        diag::note_acc_branch_out_of_compute_construct, CC->getBeginLoc()));
+    BuildScopeInformation(CC->getLoop(), NewParentScope);
+    return;
+  }
+
   default:
     if (auto *ED = dyn_cast<OMPExecutableDirective>(S)) {
       if (!ED->isStandaloneDirective()) {
@@ -761,8 +771,7 @@ void JumpScopeChecker::VerifyIndirectJumps() {
       if (CHECK_PERMISSIVE(!LabelAndGotoScopes.count(IG)))
         continue;
       unsigned IGScope = LabelAndGotoScopes[IG];
-      if (!JumpScopesMap.contains(IGScope))
-        JumpScopesMap[IGScope] = IG;
+      JumpScopesMap.try_emplace(IGScope, IG);
     }
     JumpScopes.reserve(JumpScopesMap.size());
     for (auto &Pair : JumpScopesMap)

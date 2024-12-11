@@ -7298,7 +7298,7 @@ define void @truncstore_v8i16_v8i8(<8 x i16> %x, ptr %p, <8 x i16> %mask) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpcmpeqw %xmm2, %xmm1, %xmm1
-; AVX512F-NEXT:    vpternlogq $15, %zmm1, %zmm1, %zmm1
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm1 = ~zmm1
 ; AVX512F-NEXT:    vpmovsxwq %xmm1, %zmm1
 ; AVX512F-NEXT:    vptestmq %zmm1, %zmm1, %k0
 ; AVX512F-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0

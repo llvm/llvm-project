@@ -49,6 +49,35 @@ struct CombinerInfo {
   bool EnableOptSize;
   /// Whether we're optimizing for minsize (-Oz).
   bool EnableMinSize;
+
+  /// The maximum number of times the Combiner will iterate over the
+  /// MachineFunction. Setting this to 0 enables fixed-point iteration.
+  unsigned MaxIterations = 0;
+
+  enum class ObserverLevel {
+    /// Only retry combining created/changed instructions.
+    /// This replicates the legacy default Observer behavior for use with
+    /// fixed-point iteration.
+    Basic,
+    /// Enables Observer-based detection of dead instructions. This can save
+    /// some compile-time if full disabling of fixed-point iteration is not
+    /// desired. If the input IR doesn't contain dead instructions, consider
+    /// disabling \p EnableFullDCE.
+    DCE,
+    /// Enables Observer-based DCE and additional heuristics that retry
+    /// combining defined and used instructions of modified instructions.
+    /// This provides a good balance between compile-time and completeness of
+    /// combining without needing fixed-point iteration.
+    SinglePass,
+  };
+
+  /// Select how the Combiner acts on MIR changes.
+  ObserverLevel ObserverLvl = ObserverLevel::Basic;
+
+  /// Whether dead code elimination is performed before each Combiner iteration.
+  /// If Observer-based DCE is enabled, this controls if a full DCE pass is
+  /// performed before the first Combiner iteration.
+  bool EnableFullDCE = true;
 };
 } // namespace llvm
 

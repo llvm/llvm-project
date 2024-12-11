@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/Function.h"
 
 namespace llvm {
 
@@ -232,7 +231,7 @@ void AVRFrameLowering::emitEpilogue(MachineFunction &MF,
 //
 // Notice that strictly this is not a frame pointer because it contains SP after
 // frame allocation instead of having the original SP in function entry.
-bool AVRFrameLowering::hasFP(const MachineFunction &MF) const {
+bool AVRFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const AVRMachineFunctionInfo *FuncInfo = MF.getInfo<AVRMachineFunctionInfo>();
 
   return (FuncInfo->getHasSpills() || FuncInfo->getHasAllocas() ||

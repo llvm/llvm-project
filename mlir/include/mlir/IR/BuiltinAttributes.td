@@ -701,8 +701,11 @@ def Builtin_IntegerAttr : Builtin_Attr<"Integer", "integer",
         return $_get(type.getContext(), type, apValue);
       }
 
+      // TODO: Avoid implicit trunc?
+      // See https://github.com/llvm/llvm-project/issues/112510.
       IntegerType intTy = ::llvm::cast<IntegerType>(type);
-      APInt apValue(intTy.getWidth(), value, intTy.isSignedInteger());
+      APInt apValue(intTy.getWidth(), value, intTy.isSignedInteger(),
+                    /*implicitTrunc=*/true);
       return $_get(type.getContext(), type, apValue);
     }]>
   ];
@@ -1012,6 +1015,10 @@ def StridedLayoutAttr : Builtin_Attr<"StridedLayout", "strided_layout",
   let extraClassDeclaration = [{
     /// Print the attribute to the given output stream.
     void print(raw_ostream &os) const;
+
+    /// Returns true if this layout is static, i.e. the strides and offset all
+    /// have a known value > 0.
+    bool hasStaticLayout() const;
   }];
 }
 

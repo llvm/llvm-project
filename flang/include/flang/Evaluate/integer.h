@@ -828,9 +828,9 @@ public:
           if (Part ypart{y.LEPart(k)}) {
             BigPart xy{xpart};
             xy *= ypart;
-#if defined __GNUC__ && __GNUC__ < 8
-            // && to < (2 * parts) was added to avoid GCC < 8 build failure on
-            // -Werror=array-bounds. This can be removed if -Werror is disable.
+#if defined __GNUC__ && __GNUC__ < 8 || __GNUC__ >= 12
+            // && to < (2 * parts) was added to avoid GCC build failure on
+            // -Werror=array-bounds. This can be removed if -Werror is disabled.
             for (int to{j + k}; xy != 0 && to < (2 * parts); ++to) {
 #else
             for (int to{j + k}; xy != 0; ++to) {
@@ -1056,8 +1056,9 @@ extern template class Integer<16>;
 extern template class Integer<32>;
 extern template class Integer<64>;
 using X87IntegerContainer =
-    Integer<80, true, 16, std::uint16_t, std::uint32_t, 128>;
-extern template class Integer<80, true, 16, std::uint16_t, std::uint32_t, 128>;
+    Integer<80, isHostLittleEndian, 16, std::uint16_t, std::uint32_t, 128>;
+extern template class Integer<80, isHostLittleEndian, 16, std::uint16_t,
+    std::uint32_t, 128>;
 extern template class Integer<128>;
 } // namespace Fortran::evaluate::value
 #endif // FORTRAN_EVALUATE_INTEGER_H_

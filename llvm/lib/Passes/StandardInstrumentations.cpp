@@ -14,7 +14,6 @@
 
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/ADT/Any.h"
-#include "llvm/ADT/StableHashing.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LazyCallGraph.h"
@@ -22,8 +21,11 @@
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineVerifier.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
@@ -42,6 +44,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/xxhash.h"
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -136,6 +139,11 @@ static cl::opt<std::string> IRDumpDirectory(
              "-print-[before|after]{-all} options will be dumped into "
              "files in this directory rather than written to stderr"),
     cl::Hidden, cl::value_desc("filename"));
+
+static cl::opt<bool>
+    DroppedVarStats("dropped-variable-stats", cl::Hidden,
+                    cl::desc("Dump dropped debug variables stats"),
+                    cl::init(false));
 
 template <typename IRUnitT> static const IRUnitT *unwrapIR(Any IR) {
   const IRUnitT **IRPtr = llvm::any_cast<const IRUnitT *>(&IR);
@@ -750,29 +758,29 @@ PrintIRInstrumentation::~PrintIRInstrumentation() {
 static SmallString<32> getIRFileDisplayName(Any IR) {
   SmallString<32> Result;
   raw_svector_ostream ResultStream(Result);
-  const Module *M = unwrapModule(IR);
-  stable_hash NameHash = stable_hash_combine_string(M->getName());
-  unsigned int MaxHashWidth = sizeof(stable_hash) * 8 / 4;
+  const Module *M = unwrapModule(IR, /*Force=*/true);
+  assert(M && "should have unwrapped module");
+  uint64_t NameHash = xxh3_64bits(M->getName());
+  unsigned MaxHashWidth = sizeof(uint64_t) * 2;
   write_hex(ResultStream, NameHash, HexPrintStyle::Lower, MaxHashWidth);
   if (unwrapIR<Module>(IR)) {
     ResultStream << "-module";
   } else if (const auto *F = unwrapIR<Function>(IR)) {
     ResultStream << "-function-";
-    stable_hash FunctionNameHash = stable_hash_combine_string(F->getName());
+    auto FunctionNameHash = xxh3_64bits(F->getName());
     write_hex(ResultStream, FunctionNameHash, HexPrintStyle::Lower,
               MaxHashWidth);
   } else if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR)) {
     ResultStream << "-scc-";
-    stable_hash SCCNameHash = stable_hash_combine_string(C->getName());
+    auto SCCNameHash = xxh3_64bits(C->getName());
     write_hex(ResultStream, SCCNameHash, HexPrintStyle::Lower, MaxHashWidth);
   } else if (const auto *L = unwrapIR<Loop>(IR)) {
     ResultStream << "-loop-";
-    stable_hash LoopNameHash = stable_hash_combine_string(L->getName());
+    auto LoopNameHash = xxh3_64bits(L->getName());
     write_hex(ResultStream, LoopNameHash, HexPrintStyle::Lower, MaxHashWidth);
   } else if (const auto *MF = unwrapIR<MachineFunction>(IR)) {
     ResultStream << "-machine-function-";
-    stable_hash MachineFunctionNameHash =
-        stable_hash_combine_string(MF->getName());
+    auto MachineFunctionNameHash = xxh3_64bits(MF->getName());
     write_hex(ResultStream, MachineFunctionNameHash, HexPrintStyle::Lower,
               MaxHashWidth);
   } else {
@@ -838,7 +846,7 @@ static int prepareDumpIRFileDescriptor(const StringRef DumpIRFilename) {
   }
   int Result = 0;
   EC = sys::fs::openFile(DumpIRFilename, Result, sys::fs::CD_OpenAlways,
-                         sys::fs::FA_Write, sys::fs::OF_None);
+                         sys::fs::FA_Write, sys::fs::OF_Text);
   if (EC)
     report_fatal_error(Twine("Failed to open ") + DumpIRFilename +
                        " to support -ir-dump-directory: " + EC.message());
@@ -1040,14 +1048,16 @@ void OptNoneInstrumentation::registerCallbacks(
 }
 
 bool OptNoneInstrumentation::shouldRun(StringRef PassID, Any IR) {
-  const auto *F = unwrapIR<Function>(IR);
-  if (!F) {
-    if (const auto *L = unwrapIR<Loop>(IR))
-      F = L->getHeader()->getParent();
-  }
-  bool ShouldRun = !(F && F->hasOptNone());
+  bool ShouldRun = true;
+  if (const auto *F = unwrapIR<Function>(IR))
+    ShouldRun = !F->hasOptNone();
+  else if (const auto *L = unwrapIR<Loop>(IR))
+    ShouldRun = !L->getHeader()->getParent()->hasOptNone();
+  else if (const auto *MF = unwrapIR<MachineFunction>(IR))
+    ShouldRun = !MF->getFunction().hasOptNone();
+
   if (!ShouldRun && DebugLogging) {
-    errs() << "Skipping pass " << PassID << " on " << F->getName()
+    errs() << "Skipping pass " << PassID << " on " << getIRName(IR)
            << " due to optnone attribute\n";
   }
   return ShouldRun;
@@ -1357,7 +1367,7 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
   bool Registered = false;
   PIC.registerBeforeNonSkippedPassCallback([this, &MAM, Registered](
                                                StringRef P, Any IR) mutable {
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     assert(&PassStack.emplace_back(P));
 #endif
     (void)this;
@@ -1386,7 +1396,7 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
 
   PIC.registerAfterPassInvalidatedCallback(
       [this](StringRef P, const PreservedAnalyses &PassPA) {
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
         assert(PassStack.pop_back_val() == P &&
                "Before and After callbacks must correspond");
 #endif
@@ -1395,7 +1405,7 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
 
   PIC.registerAfterPassCallback([this, &MAM](StringRef P, Any IR,
                                              const PreservedAnalyses &PassPA) {
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     assert(PassStack.pop_back_val() == P &&
            "Before and After callbacks must correspond");
 #endif
@@ -1450,10 +1460,10 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
   });
 }
 
-void VerifyInstrumentation::registerCallbacks(
-    PassInstrumentationCallbacks &PIC) {
+void VerifyInstrumentation::registerCallbacks(PassInstrumentationCallbacks &PIC,
+                                              ModuleAnalysisManager *MAM) {
   PIC.registerAfterPassCallback(
-      [this](StringRef P, Any IR, const PreservedAnalyses &PassPA) {
+      [this, MAM](StringRef P, Any IR, const PreservedAnalyses &PassPA) {
         if (isIgnored(P) || P == "VerifierPass")
           return;
         const auto *F = unwrapIR<Function>(IR);
@@ -1487,15 +1497,23 @@ void VerifyInstrumentation::registerCallbacks(
                                          P));
           }
 
-          // TODO: Use complete MachineVerifierPass.
           if (auto *MF = unwrapIR<MachineFunction>(IR)) {
             if (DebugLogging)
               dbgs() << "Verifying machine function " << MF->getName() << '\n';
-            verifyMachineFunction(
+            std::string Banner =
                 formatv("Broken machine function found after pass "
                         "\"{0}\", compilation aborted!",
-                        P),
-                *MF);
+                        P);
+            if (MAM) {
+              Module &M = const_cast<Module &>(*MF->getFunction().getParent());
+              auto &MFAM =
+                  MAM->getResult<MachineFunctionAnalysisManagerModuleProxy>(M)
+                      .getManager();
+              MachineVerifierPass Verifier(Banner);
+              Verifier.run(const_cast<MachineFunction &>(*MF), MFAM);
+            } else {
+              verifyMachineFunction(Banner, *MF);
+            }
           }
         }
       });
@@ -2031,13 +2049,14 @@ DotCfgDiff::DotCfgDiff(StringRef Title, const FuncDataT<DCData> &Before,
     StringRef Colour = E.second;
 
     // Look for an edge from Source to Sink
-    if (EdgeLabels.count(SourceSink) == 0)
-      EdgeLabels.insert({SourceSink, colourize(Value.str(), Colour)});
+    auto [It, Inserted] = EdgeLabels.try_emplace(SourceSink);
+    if (Inserted)
+      It->getValue() = colourize(Value.str(), Colour);
     else {
-      StringRef V = EdgeLabels.find(SourceSink)->getValue();
+      StringRef V = It->getValue();
       std::string NV = colourize(V.str() + " " + Value.str(), Colour);
       Colour = CommonColour;
-      EdgeLabels[SourceSink] = NV;
+      It->getValue() = NV;
     }
     SourceNode.addEdge(SinkNode, Value, Colour);
   }
@@ -2435,8 +2454,7 @@ void DotCfgChangeReporter::registerCallbacks(
 StandardInstrumentations::StandardInstrumentations(
     LLVMContext &Context, bool DebugLogging, bool VerifyEach,
     PrintPassOptions PrintPassOpts)
-    : PrintPass(DebugLogging, PrintPassOpts),
-      OptNone(DebugLogging),
+    : PrintPass(DebugLogging, PrintPassOpts), OptNone(DebugLogging),
       OptPassGate(Context),
       PrintChangedIR(PrintChanged == ChangePrinter::Verbose),
       PrintChangedDiff(PrintChanged == ChangePrinter::DiffVerbose ||
@@ -2444,7 +2462,8 @@ StandardInstrumentations::StandardInstrumentations(
                        PrintChanged == ChangePrinter::ColourDiffVerbose ||
                            PrintChanged == ChangePrinter::ColourDiffQuiet),
       WebsiteChangeReporter(PrintChanged == ChangePrinter::DotCfgVerbose),
-      Verify(DebugLogging), VerifyEach(VerifyEach) {}
+      Verify(DebugLogging), DroppedStats(DroppedVarStats),
+      VerifyEach(VerifyEach) {}
 
 PrintCrashIRInstrumentation *PrintCrashIRInstrumentation::CrashReporter =
     nullptr;
@@ -2504,6 +2523,180 @@ void PrintCrashIRInstrumentation::registerCallbacks(
       });
 }
 
+void DroppedVariableStats::registerCallbacks(
+    PassInstrumentationCallbacks &PIC) {
+  if (!DroppedVarStats)
+    return;
+
+  PIC.registerBeforeNonSkippedPassCallback(
+      [this](StringRef P, Any IR) { return this->runBeforePass(P, IR); });
+  PIC.registerAfterPassCallback(
+      [this](StringRef P, Any IR, const PreservedAnalyses &PA) {
+        return this->runAfterPass(P, IR, PA);
+      });
+  PIC.registerAfterPassInvalidatedCallback(
+      [this](StringRef P, const PreservedAnalyses &PA) {
+        return this->runAfterPassInvalidated(P, PA);
+      });
+}
+
+void DroppedVariableStats::runBeforePass(StringRef PassID, Any IR) {
+  DebugVariablesStack.push_back({DenseMap<const Function *, DebugVariables>()});
+  InlinedAts.push_back({DenseMap<StringRef, DenseMap<VarID, DILocation *>>()});
+  if (auto *M = unwrapIR<Module>(IR))
+    return this->runOnModule(M, true);
+  if (auto *F = unwrapIR<Function>(IR))
+    return this->runOnFunction(F, true);
+}
+
+void DroppedVariableStats::runOnFunction(const Function *F, bool Before) {
+  auto &DebugVariables = DebugVariablesStack.back()[F];
+  auto &VarIDSet = (Before ? DebugVariables.DebugVariablesBefore
+                           : DebugVariables.DebugVariablesAfter);
+  auto &InlinedAtsMap = InlinedAts.back();
+  auto FuncName = F->getName();
+  if (Before)
+    InlinedAtsMap.try_emplace(FuncName, DenseMap<VarID, DILocation *>());
+  VarIDSet = DenseSet<VarID>();
+  for (const auto &I : instructions(F)) {
+    for (DbgRecord &DR : I.getDbgRecordRange()) {
+      if (auto *Dbg = dyn_cast<DbgVariableRecord>(&DR)) {
+        auto *DbgVar = Dbg->getVariable();
+        auto DbgLoc = DR.getDebugLoc();
+        VarID Key{DbgVar->getScope(), DbgLoc->getInlinedAtScope(), DbgVar};
+        VarIDSet.insert(Key);
+        if (Before)
+          InlinedAtsMap[FuncName].try_emplace(Key, DbgLoc.getInlinedAt());
+      }
+    }
+  }
+}
+
+void DroppedVariableStats::runOnModule(const Module *M, bool Before) {
+  for (auto &F : *M)
+    runOnFunction(&F, Before);
+}
+
+void DroppedVariableStats::removeVarFromAllSets(VarID Var, const Function *F) {
+  // Do not remove Var from the last element, it will be popped from the stack.
+  for (auto &DebugVariablesMap : llvm::drop_end(DebugVariablesStack))
+    DebugVariablesMap[F].DebugVariablesBefore.erase(Var);
+}
+
+void DroppedVariableStats::calculateDroppedVarStatsOnModule(
+    const Module *M, StringRef PassID, std::string FuncOrModName,
+    std::string PassLevel) {
+  for (auto &F : *M) {
+    calculateDroppedVarStatsOnFunction(&F, PassID, FuncOrModName, PassLevel);
+  }
+}
+
+void DroppedVariableStats::calculateDroppedVarStatsOnFunction(
+    const Function *F, StringRef PassID, std::string FuncOrModName,
+    std::string PassLevel) {
+  unsigned DroppedCount = 0;
+  StringRef FuncName = F->getName();
+  DebugVariables &DbgVariables = DebugVariablesStack.back()[F];
+  DenseSet<VarID> &DebugVariablesBeforeSet = DbgVariables.DebugVariablesBefore;
+  DenseSet<VarID> &DebugVariablesAfterSet = DbgVariables.DebugVariablesAfter;
+  DenseMap<VarID, DILocation *> &InlinedAtsMap = InlinedAts.back()[FuncName];
+  // Find an Instruction that shares the same scope as the dropped #dbg_value or
+  // has a scope that is the child of the scope of the #dbg_value, and has an
+  // inlinedAt equal to the inlinedAt of the #dbg_value or it's inlinedAt chain
+  // contains the inlinedAt of the #dbg_value, if such an Instruction is found,
+  // debug information is dropped.
+  for (VarID Var : DebugVariablesBeforeSet) {
+    if (DebugVariablesAfterSet.contains(Var))
+      continue;
+    const DIScope *DbgValScope = std::get<0>(Var);
+    for (const auto &I : instructions(F)) {
+      auto *DbgLoc = I.getDebugLoc().get();
+      if (!DbgLoc)
+        continue;
+
+      auto *Scope = DbgLoc->getScope();
+      if (isScopeChildOfOrEqualTo(Scope, DbgValScope)) {
+        if (isInlinedAtChildOfOrEqualTo(DbgLoc->getInlinedAt(),
+                                        InlinedAtsMap[Var])) {
+          // Found another instruction in the variable's scope, so there exists
+          // a break point at which the variable could be observed. Count it as
+          // dropped.
+          DroppedCount++;
+          break;
+        }
+      }
+    }
+    removeVarFromAllSets(Var, F);
+  }
+  if (DroppedCount > 0) {
+    llvm::outs() << PassLevel << ", " << PassID << ", " << DroppedCount << ", "
+                 << FuncOrModName << "\n";
+    PassDroppedVariables = true;
+  } else
+    PassDroppedVariables = false;
+}
+
+void DroppedVariableStats::runAfterPassInvalidated(
+    StringRef PassID, const PreservedAnalyses &PA) {
+  DebugVariablesStack.pop_back();
+  InlinedAts.pop_back();
+}
+
+void DroppedVariableStats::runAfterPass(StringRef PassID, Any IR,
+                                        const PreservedAnalyses &PA) {
+  std::string PassLevel;
+  std::string FuncOrModName;
+  if (auto *M = unwrapIR<Module>(IR)) {
+    this->runOnModule(M, false);
+    PassLevel = "Module";
+    FuncOrModName = M->getName();
+    calculateDroppedVarStatsOnModule(M, PassID, FuncOrModName, PassLevel);
+  } else if (auto *F = unwrapIR<Function>(IR)) {
+    this->runOnFunction(F, false);
+    PassLevel = "Function";
+    FuncOrModName = F->getName();
+    calculateDroppedVarStatsOnFunction(F, PassID, FuncOrModName, PassLevel);
+  }
+
+  DebugVariablesStack.pop_back();
+  InlinedAts.pop_back();
+}
+
+bool DroppedVariableStats::isScopeChildOfOrEqualTo(DIScope *Scope,
+                                                   const DIScope *DbgValScope) {
+  while (Scope != nullptr) {
+    if (VisitedScope.find(Scope) == VisitedScope.end()) {
+      VisitedScope.insert(Scope);
+      if (Scope == DbgValScope) {
+        VisitedScope.clear();
+        return true;
+      }
+      Scope = Scope->getScope();
+    } else {
+      VisitedScope.clear();
+      return false;
+    }
+  }
+  return false;
+}
+
+bool DroppedVariableStats::isInlinedAtChildOfOrEqualTo(
+    const DILocation *InlinedAt, const DILocation *DbgValInlinedAt) {
+  if (DbgValInlinedAt == InlinedAt)
+    return true;
+  if (!DbgValInlinedAt)
+    return false;
+  if (!InlinedAt)
+    return false;
+  auto *IA = InlinedAt;
+  while (IA) {
+    if (IA == DbgValInlinedAt)
+      return true;
+    IA = IA->getInlinedAt();
+  }
+  return false;
+}
+
 void StandardInstrumentations::registerCallbacks(
     PassInstrumentationCallbacks &PIC, ModuleAnalysisManager *MAM) {
   PrintIR.registerCallbacks(PIC);
@@ -2514,11 +2707,12 @@ void StandardInstrumentations::registerCallbacks(
   PrintChangedIR.registerCallbacks(PIC);
   PseudoProbeVerification.registerCallbacks(PIC);
   if (VerifyEach)
-    Verify.registerCallbacks(PIC);
+    Verify.registerCallbacks(PIC, MAM);
   PrintChangedDiff.registerCallbacks(PIC);
   WebsiteChangeReporter.registerCallbacks(PIC);
   ChangeTester.registerCallbacks(PIC);
   PrintCrashIR.registerCallbacks(PIC);
+  DroppedStats.registerCallbacks(PIC);
   if (MAM)
     PreservedCFGChecker.registerCallbacks(PIC, *MAM);
 

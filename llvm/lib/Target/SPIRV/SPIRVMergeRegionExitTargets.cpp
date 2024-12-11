@@ -17,6 +17,8 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/IR/CFG.h"
@@ -71,7 +73,7 @@ public:
   /// terminator will take.
   llvm::Value *createExitVariable(
       BasicBlock *BB,
-      const std::unordered_map<BasicBlock *, ConstantInt *> &TargetToValue) {
+      const DenseMap<BasicBlock *, ConstantInt *> &TargetToValue) {
     auto *T = BB->getTerminator();
     if (isa<ReturnInst>(T))
       return nullptr;
@@ -98,15 +100,15 @@ public:
     }
 
     // TODO: add support for switch cases.
-    assert(false && "Unhandled terminator type.");
+    llvm_unreachable("Unhandled terminator type.");
   }
 
   /// Replaces |BB|'s branch targets present in |ToReplace| with |NewTarget|.
   void replaceBranchTargets(BasicBlock *BB,
-                            const std::unordered_set<BasicBlock *> ToReplace,
+                            const SmallPtrSet<BasicBlock *, 4> &ToReplace,
                             BasicBlock *NewTarget) {
     auto *T = BB->getTerminator();
-    if (auto *RI = dyn_cast<ReturnInst>(T))
+    if (isa<ReturnInst>(T))
       return;
 
     if (auto *BI = dyn_cast<BranchInst>(T)) {
@@ -128,12 +130,19 @@ public:
     assert(false && "Unhandled terminator type.");
   }
 
+  AllocaInst *CreateVariable(Function &F, Type *Type,
+                             BasicBlock::iterator Position) {
+    const DataLayout &DL = F.getDataLayout();
+    return new AllocaInst(Type, DL.getAllocaAddrSpace(), nullptr, "reg",
+                          Position);
+  }
+
   // Run the pass on the given convergence region, ignoring the sub-regions.
   // Returns true if the CFG changed, false otherwise.
   bool runOnConvergenceRegionNoRecurse(LoopInfo &LI,
-                                       const SPIRV::ConvergenceRegion *CR) {
+                                       SPIRV::ConvergenceRegion *CR) {
     // Gather all the exit targets for this region.
-    std::unordered_set<BasicBlock *> ExitTargets;
+    SmallPtrSet<BasicBlock *, 4> ExitTargets;
     for (BasicBlock *Exit : CR->Exits) {
       for (BasicBlock *Target : gatherSuccessors(Exit)) {
         if (CR->Blocks.count(Target) == 0)
@@ -150,6 +159,9 @@ public:
     auto NewExitTarget = BasicBlock::Create(F->getContext(), "new.exit", F);
     IRBuilder<> Builder(NewExitTarget);
 
+    AllocaInst *Variable = CreateVariable(*F, Builder.getInt32Ty(),
+                                          F->begin()->getFirstInsertionPt());
+
     // CodeGen output needs to be stable. Using the set as-is would order
     // the targets differently depending on the allocation pattern.
     // Sorting per basic-block ordering in the function.
@@ -164,36 +176,41 @@ public:
 
     // Creating one constant per distinct exit target. This will be route to the
     // correct target.
-    std::unordered_map<BasicBlock *, ConstantInt *> TargetToValue;
+    DenseMap<BasicBlock *, ConstantInt *> TargetToValue;
     for (BasicBlock *Target : SortedExitTargets)
-      TargetToValue.emplace(Target, Builder.getInt32(TargetToValue.size()));
+      TargetToValue.insert(
+          std::make_pair(Target, Builder.getInt32(TargetToValue.size())));
 
     // Creating one variable per exit node, set to the constant matching the
     // targeted external block.
     std::vector<std::pair<BasicBlock *, Value *>> ExitToVariable;
     for (auto Exit : SortedExits) {
       llvm::Value *Value = createExitVariable(Exit, TargetToValue);
+      IRBuilder<> B2(Exit);
+      B2.SetInsertPoint(Exit->getFirstInsertionPt());
+      B2.CreateStore(Value, Variable);
       ExitToVariable.emplace_back(std::make_pair(Exit, Value));
     }
 
-    // Gather the correct value depending on the exit we came from.
-    llvm::PHINode *node =
-        Builder.CreatePHI(Builder.getInt32Ty(), ExitToVariable.size());
-    for (auto [BB, Value] : ExitToVariable) {
-      node->addIncoming(Value, BB);
-    }
+    llvm::Value *Load = Builder.CreateLoad(Builder.getInt32Ty(), Variable);
 
     // Creating the switch to jump to the correct exit target.
-    std::vector<std::pair<BasicBlock *, ConstantInt *>> CasesList(
-        TargetToValue.begin(), TargetToValue.end());
-    llvm::SwitchInst *Sw =
-        Builder.CreateSwitch(node, CasesList[0].first, CasesList.size() - 1);
-    for (size_t i = 1; i < CasesList.size(); i++)
-      Sw->addCase(CasesList[i].second, CasesList[i].first);
+    llvm::SwitchInst *Sw = Builder.CreateSwitch(Load, SortedExitTargets[0],
+                                                SortedExitTargets.size() - 1);
+    for (size_t i = 1; i < SortedExitTargets.size(); i++) {
+      BasicBlock *BB = SortedExitTargets[i];
+      Sw->addCase(TargetToValue[BB], BB);
+    }
 
     // Fix exit branches to redirect to the new exit.
     for (auto Exit : CR->Exits)
       replaceBranchTargets(Exit, ExitTargets, NewExitTarget);
+
+    CR = CR->Parent;
+    while (CR) {
+      CR->Blocks.insert(NewExitTarget);
+      CR = CR->Parent;
+    }
 
     return true;
   }
@@ -201,8 +218,7 @@ public:
   /// Run the pass on the given convergence region and sub-regions (DFS).
   /// Returns true if a region/sub-region was modified, false otherwise.
   /// This returns as soon as one region/sub-region has been modified.
-  bool runOnConvergenceRegion(LoopInfo &LI,
-                              const SPIRV::ConvergenceRegion *CR) {
+  bool runOnConvergenceRegion(LoopInfo &LI, SPIRV::ConvergenceRegion *CR) {
     for (auto *Child : CR->Children)
       if (runOnConvergenceRegion(LI, Child))
         return true;
@@ -232,10 +248,10 @@ public:
 
   virtual bool runOnFunction(Function &F) override {
     LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    const auto *TopLevelRegion =
+    auto *TopLevelRegion =
         getAnalysis<SPIRVConvergenceRegionAnalysisWrapperPass>()
             .getRegionInfo()
-            .getTopLevelRegion();
+            .getWritableTopLevelRegion();
 
     // FIXME: very inefficient method: each time a region is modified, we bubble
     // back up, and recompute the whole convergence region tree. Once the
@@ -243,9 +259,6 @@ public:
     // to be efficient instead of simple.
     bool modified = false;
     while (runOnConvergenceRegion(LI, TopLevelRegion)) {
-      TopLevelRegion = getAnalysis<SPIRVConvergenceRegionAnalysisWrapperPass>()
-                           .getRegionInfo()
-                           .getTopLevelRegion();
       modified = true;
     }
 
@@ -259,6 +272,8 @@ public:
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<SPIRVConvergenceRegionAnalysisWrapperPass>();
+
+    AU.addPreserved<SPIRVConvergenceRegionAnalysisWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
 };

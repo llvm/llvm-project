@@ -170,9 +170,7 @@ for.end:
 define i64 @constant_folded_previous_value() {
 ; CHECK-VF4UF2-LABEL: @constant_folded_previous_value
 ; CHECK-VF4UF2: vector.body
-; CHECK-VF4UF2: %[[VECTOR_RECUR:.*]] = phi <vscale x 4 x i64> [ %vector.recur.init, %vector.ph ], [ shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer), %vector.body ]
-; CHECK-VF4UF2: %[[SPLICE1:.*]] = call <vscale x 4 x i64> @llvm.vector.splice.nxv4i64(<vscale x 4 x i64> %vector.recur, <vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer), i32 -1)
-; CHECK-VF4UF2: %[[SPLICE2:.*]] = call <vscale x 4 x i64> @llvm.vector.splice.nxv4i64(<vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer), i32 -1)
+; CHECK-VF4UF2: %[[VECTOR_RECUR:.*]] = phi <vscale x 4 x i64> [ %vector.recur.init, %vector.ph ], [ splat (i64 1), %vector.body ]
 ; CHECK-VF4UF2: br i1 {{.*}}, label %middle.block, label %vector.body
 entry:
   br label %scalar.body
@@ -199,7 +197,6 @@ define i32 @extract_second_last_iteration(ptr %cval, i32 %x)  {
 ; CHECK-VF4UF2: vector.ph
 ; CHECK-VF4UF2: call i32 @llvm.vscale.i32()
 ; CHECK-VF4UF2: call i32 @llvm.vscale.i32()
-; CHECK-VF4UF2: call i32 @llvm.vscale.i32()
 ; CHECK-VF4UF2: %[[VSCALE1:.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-VF4UF2: %[[MUL1:.*]] = mul i32 %[[VSCALE1]], 4
 ; CHECK-VF4UF2: %[[SUB1:.*]] = sub i32 %[[MUL1]], 1
@@ -209,7 +206,6 @@ define i32 @extract_second_last_iteration(ptr %cval, i32 %x)  {
 ; ; CHECK-VF4UF2: vector.body
 ; CHECK-VF4UF2: %[[VEC_RECUR:.*]] = phi <vscale x 4 x i32> [ %[[VEC_RECUR_INIT]], %vector.ph ], [ %[[ADD2:.*]], %vector.body ]
 ; CHECK-VF4UF2: %[[ADD1:.*]] = add <vscale x 4 x i32> %{{.*}}, %[[SPLAT1]]
-; CHECK-VF4UF2: %[[ADD2]] = add <vscale x 4 x i32> %{{.*}}, %[[SPLAT1]]
 ; CHECK-VF4UF2: middle.block
 ; CHECK-VF4UF2: %[[VSCALE2:.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-VF4UF2: %[[MUL2:.*]] = mul i32 %[[VSCALE2]], 4

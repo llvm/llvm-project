@@ -139,11 +139,6 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
       case LoongArch::MULH_WU:
       case LoongArch::MULW_D_W:
       case LoongArch::MULW_D_WU:
-      // TODO: {DIV,MOD}.{W,WU} consumes the upper 32 bits before LA664+.
-      // case LoongArch::DIV_W:
-      // case LoongArch::DIV_WU:
-      // case LoongArch::MOD_W:
-      // case LoongArch::MOD_WU:
       case LoongArch::SLL_W:
       case LoongArch::SLLI_W:
       case LoongArch::SRL_W:
@@ -168,6 +163,15 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
       case LoongArch::MOVGR2FRH_W:
       case LoongArch::MOVGR2FR_W_64:
         if (Bits >= 32)
+          break;
+        return false;
+      // {DIV,MOD}.W{U} consumes the upper 32 bits if the div32
+      // feature is not enabled.
+      case LoongArch::DIV_W:
+      case LoongArch::DIV_WU:
+      case LoongArch::MOD_W:
+      case LoongArch::MOD_WU:
+        if (Bits >= 32 && ST.hasDiv32())
           break;
         return false;
       case LoongArch::MOVGR2CF:
@@ -637,6 +641,19 @@ static bool isSignExtendedW(Register SrcReg, const LoongArchSubtarget &ST,
         break;
       }
       return false;
+    // If all incoming values are sign-extended and all users only use
+    // the lower 32 bits, then convert them to W versions.
+    case LoongArch::DIV_D: {
+      if (!AddRegToWorkList(MI->getOperand(1).getReg()))
+        return false;
+      if (!AddRegToWorkList(MI->getOperand(2).getReg()))
+        return false;
+      if (hasAllWUsers(*MI, ST, MRI)) {
+        FixableDef.insert(MI);
+        break;
+      }
+      return false;
+    }
     }
   }
 
@@ -651,6 +668,8 @@ static unsigned getWOp(unsigned Opcode) {
     return LoongArch::ADDI_W;
   case LoongArch::ADD_D:
     return LoongArch::ADD_W;
+  case LoongArch::DIV_D:
+    return LoongArch::DIV_W;
   case LoongArch::LD_D:
   case LoongArch::LD_WU:
     return LoongArch::LD_W;

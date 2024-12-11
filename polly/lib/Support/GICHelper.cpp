@@ -143,11 +143,11 @@ static void replace(std::string &str, StringRef find, StringRef replace) {
 }
 
 static void makeIslCompatible(std::string &str) {
-  replace(str, ".", "_");
-  replace(str, "\"", "_");
-  replace(str, " ", "__");
-  replace(str, "=>", "TO");
-  replace(str, "+", "_");
+  llvm::replace(str, '.', '_');
+  llvm::replace(str, '\"', '_');
+  replace(str, StringRef(" "), StringRef("__"));
+  replace(str, StringRef("=>"), StringRef("TO"));
+  llvm::replace(str, '+', '_');
 }
 
 std::string polly::getIslCompatibleName(const std::string &Prefix,

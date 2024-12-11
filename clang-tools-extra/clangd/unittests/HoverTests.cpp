@@ -1325,7 +1325,7 @@ class Foo final {})cpp";
          HI.LocalScope = "";
          HI.Kind = index::SymbolKind::TypeAlias;
          HI.Definition = "template <typename T> using AA = A<T>";
-         HI.Type = {"A<T>", "type-parameter-0-0"}; // FIXME: should be 'T'
+         HI.Type = {"A<T>", "T"};
          HI.TemplateParameters = {
              {{"typename"}, std::string("T"), std::nullopt}};
        }},
@@ -2284,7 +2284,7 @@ TEST(Hover, All) {
             namespace std
             {
               template<class _E>
-              class initializer_list {};
+              class initializer_list { const _E *a, *b; };
             }
             void foo() {
               ^[[auto]] i = {1,2};

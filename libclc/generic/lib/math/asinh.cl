@@ -21,10 +21,10 @@
  */
 
 #include <clc/clc.h>
+#include <clc/clcmacro.h>
 
 #include "math.h"
 #include "ep_log.h"
-#include "../clcmacro.h"
 
 _CLC_OVERLOAD _CLC_DEF float asinh(float x) {
     uint ux = as_uint(x);
@@ -291,3 +291,5 @@ _CLC_OVERLOAD _CLC_DEF double asinh(double x) {
 _CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, asinh, double)
 
 #endif
+
+_CLC_DEFINE_UNARY_BUILTIN_FP16(asinh)

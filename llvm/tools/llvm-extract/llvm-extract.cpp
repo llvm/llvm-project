@@ -147,7 +147,7 @@ int main(int argc, char **argv) {
   SMDiagnostic Err;
   std::unique_ptr<Module> M = getLazyIRFileModule(InputFilename, Err, Context);
 
-  if (!M.get()) {
+  if (!M) {
     Err.print(argv[0], errs());
     return 1;
   }
@@ -297,9 +297,8 @@ int main(int argc, char **argv) {
           Function *CF = CB->getCalledFunction();
           if (!CF)
             continue;
-          if (CF->isDeclaration() || GVs.count(CF))
+          if (CF->isDeclaration() || !GVs.insert(CF))
             continue;
-          GVs.insert(CF);
           Workqueue.push_back(CF);
         }
       }

@@ -50,9 +50,6 @@ protected:
   bool WriteFPR() override;
 
 private:
-  lldb::DataBufferSP m_gpr_buffer;
-  lldb::DataBufferSP m_fpr_buffer;
-
   lldb_private::DataExtractor m_gpr;
   lldb_private::DataExtractor m_fpr;
 };

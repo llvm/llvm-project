@@ -41,7 +41,6 @@ std::string getMacroStack(SourceLocation Loc, ASTContext &Context) {
     printMacroName(MacroStackStream, Context, Loc);
     Loc = SM.getImmediateMacroCallerLoc(Loc);
   }
-  MacroStackStream.flush();
   return MacroStack;
 }
 

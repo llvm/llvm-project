@@ -20,9 +20,11 @@
 // Effects: Direct-non-list-initializes extents_ with extents_type(), and for all d in the range [0, rank_),
 //          direct-non-list-initializes strides_[d] with layout_right::mapping<extents_type>().stride(d).
 
-#include <mdspan>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
+#include <mdspan>
+#include <span> // dynamic_extent
 
 #include "test_macros.h"
 

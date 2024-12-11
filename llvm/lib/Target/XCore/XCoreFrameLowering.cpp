@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "XCoreFrameLowering.h"
-#include "XCore.h"
 #include "XCoreInstrInfo.h"
 #include "XCoreMachineFunctionInfo.h"
 #include "XCoreSubtarget.h"
@@ -23,7 +22,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetOptions.h"
@@ -215,7 +213,7 @@ XCoreFrameLowering::XCoreFrameLowering(const XCoreSubtarget &sti)
   // Do nothing
 }
 
-bool XCoreFrameLowering::hasFP(const MachineFunction &MF) const {
+bool XCoreFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   return MF.getTarget().Options.DisableFramePointerElim(MF) ||
          MF.getFrameInfo().hasVarSizedObjects();
 }
@@ -225,8 +223,7 @@ void XCoreFrameLowering::emitPrologue(MachineFunction &MF,
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
   MachineBasicBlock::iterator MBBI = MBB.begin();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  MachineModuleInfo *MMI = &MF.getMMI();
-  const MCRegisterInfo *MRI = MMI->getContext().getRegisterInfo();
+  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
   const XCoreInstrInfo &TII = *MF.getSubtarget<XCoreSubtarget>().getInstrInfo();
   XCoreFunctionInfo *XFI = MF.getInfo<XCoreFunctionInfo>();
   // Debug location must be unknown since the first debug location is used

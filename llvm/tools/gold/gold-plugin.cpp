@@ -307,7 +307,8 @@ namespace options {
     } else if (opt.consume_front("opt-remarks-hotness-threshold=")) {
       auto ResultOrErr = remarks::parseHotnessThresholdOption(opt);
       if (!ResultOrErr)
-        message(LDPL_FATAL, "Invalid remarks hotness threshold: %s", opt);
+        message(LDPL_FATAL, "Invalid remarks hotness threshold: %s",
+                opt.data());
       else
         RemarksHotnessThreshold = *ResultOrErr;
     } else if (opt.consume_front("opt-remarks-format=")) {
@@ -319,7 +320,7 @@ namespace options {
     } else if (opt.consume_front("time-trace-granularity=")) {
       unsigned Granularity;
       if (opt.getAsInteger(10, Granularity))
-        message(LDPL_FATAL, "Invalid time trace granularity: %s", opt);
+        message(LDPL_FATAL, "Invalid time trace granularity: %s", opt.data());
       else
         time_trace_granularity = Granularity;
     } else {
@@ -898,7 +899,7 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
     std::string OldPrefix, NewPrefix;
     getThinLTOOldAndNewPrefix(OldPrefix, NewPrefix);
     Backend = createWriteIndexesThinBackend(
-        OldPrefix, NewPrefix,
+        llvm::hardware_concurrency(options::Parallelism), OldPrefix, NewPrefix,
         // TODO: Add support for optional native object path in
         // thinlto_prefix_replace option to match lld.
         /*NativeObjectPrefix=*/"", options::thinlto_emit_imports_files,
@@ -1056,9 +1057,11 @@ static std::vector<std::pair<SmallString<128>, bool>> runLTO() {
   getThinLTOOldAndNewSuffix(OldSuffix, NewSuffix);
 
   for (claimed_file &F : Modules) {
-    if (options::thinlto && !HandleToInputFile.count(F.leader_handle))
-      HandleToInputFile.insert(std::make_pair(
-          F.leader_handle, std::make_unique<PluginInputFile>(F.handle)));
+    if (options::thinlto) {
+      auto [It, Inserted] = HandleToInputFile.try_emplace(F.leader_handle);
+      if (Inserted)
+        It->second = std::make_unique<PluginInputFile>(F.handle);
+    }
     // In case we are thin linking with a minimized bitcode file, ensure
     // the module paths encoded in the index reflect where the backends
     // will locate the full bitcode files for compiling/importing.

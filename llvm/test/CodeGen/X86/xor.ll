@@ -59,7 +59,7 @@ define i32 @test4(i32 %a, i32 %b) nounwind  {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB3_1: # %bb
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    xorl %ecx, %eax
@@ -75,7 +75,7 @@ define i32 @test4(i32 %a, i32 %b) nounwind  {
 ; X64-LIN-LABEL: test4:
 ; X64-LIN:       # %bb.0: # %entry
 ; X64-LIN-NEXT:    movl %edi, %eax
-; X64-LIN-NEXT:    .p2align 4, 0x90
+; X64-LIN-NEXT:    .p2align 4
 ; X64-LIN-NEXT:  .LBB3_1: # %bb
 ; X64-LIN-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-LIN-NEXT:    xorl %esi, %eax
@@ -91,7 +91,7 @@ define i32 @test4(i32 %a, i32 %b) nounwind  {
 ; X64-WIN-LABEL: test4:
 ; X64-WIN:       # %bb.0: # %entry
 ; X64-WIN-NEXT:    movl %ecx, %eax
-; X64-WIN-NEXT:    .p2align 4, 0x90
+; X64-WIN-NEXT:    .p2align 4
 ; X64-WIN-NEXT:  .LBB3_1: # %bb
 ; X64-WIN-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-WIN-NEXT:    xorl %edx, %eax
@@ -123,7 +123,7 @@ define i16 @test5(i16 %a, i16 %b) nounwind  {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB4_1: # %bb
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    xorl %ecx, %eax
@@ -141,7 +141,7 @@ define i16 @test5(i16 %a, i16 %b) nounwind  {
 ; X64-LIN-LABEL: test5:
 ; X64-LIN:       # %bb.0: # %entry
 ; X64-LIN-NEXT:    movl %edi, %eax
-; X64-LIN-NEXT:    .p2align 4, 0x90
+; X64-LIN-NEXT:    .p2align 4
 ; X64-LIN-NEXT:  .LBB4_1: # %bb
 ; X64-LIN-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-LIN-NEXT:    xorl %esi, %eax
@@ -160,7 +160,7 @@ define i16 @test5(i16 %a, i16 %b) nounwind  {
 ; X64-WIN:       # %bb.0: # %entry
 ; X64-WIN-NEXT:    # kill: def $dx killed $dx def $edx
 ; X64-WIN-NEXT:    movl %ecx, %eax
-; X64-WIN-NEXT:    .p2align 4, 0x90
+; X64-WIN-NEXT:    .p2align 4
 ; X64-WIN-NEXT:  .LBB4_1: # %bb
 ; X64-WIN-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-WIN-NEXT:    xorl %edx, %eax
@@ -194,7 +194,7 @@ define i8 @test6(i8 %a, i8 %b) nounwind  {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB5_1: # %bb
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    xorb %cl, %al
@@ -210,7 +210,7 @@ define i8 @test6(i8 %a, i8 %b) nounwind  {
 ; X64-LIN-LABEL: test6:
 ; X64-LIN:       # %bb.0: # %entry
 ; X64-LIN-NEXT:    movl %edi, %eax
-; X64-LIN-NEXT:    .p2align 4, 0x90
+; X64-LIN-NEXT:    .p2align 4
 ; X64-LIN-NEXT:  .LBB5_1: # %bb
 ; X64-LIN-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-LIN-NEXT:    xorb %sil, %al
@@ -227,7 +227,7 @@ define i8 @test6(i8 %a, i8 %b) nounwind  {
 ; X64-WIN-LABEL: test6:
 ; X64-WIN:       # %bb.0: # %entry
 ; X64-WIN-NEXT:    movl %ecx, %eax
-; X64-WIN-NEXT:    .p2align 4, 0x90
+; X64-WIN-NEXT:    .p2align 4
 ; X64-WIN-NEXT:  .LBB5_1: # %bb
 ; X64-WIN-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-WIN-NEXT:    xorb %dl, %al
@@ -259,7 +259,7 @@ define i32 @test7(i32 %a, i32 %b) nounwind  {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB6_1: # %bb
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    xorl %ecx, %eax
@@ -275,7 +275,7 @@ define i32 @test7(i32 %a, i32 %b) nounwind  {
 ; X64-LIN-LABEL: test7:
 ; X64-LIN:       # %bb.0: # %entry
 ; X64-LIN-NEXT:    movl %edi, %eax
-; X64-LIN-NEXT:    .p2align 4, 0x90
+; X64-LIN-NEXT:    .p2align 4
 ; X64-LIN-NEXT:  .LBB6_1: # %bb
 ; X64-LIN-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-LIN-NEXT:    xorl %esi, %eax
@@ -291,7 +291,7 @@ define i32 @test7(i32 %a, i32 %b) nounwind  {
 ; X64-WIN-LABEL: test7:
 ; X64-WIN:       # %bb.0: # %entry
 ; X64-WIN-NEXT:    movl %ecx, %eax
-; X64-WIN-NEXT:    .p2align 4, 0x90
+; X64-WIN-NEXT:    .p2align 4
 ; X64-WIN-NEXT:  .LBB6_1: # %bb
 ; X64-WIN-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-WIN-NEXT:    xorl %edx, %eax

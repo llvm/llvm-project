@@ -17,12 +17,10 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FormattedStream.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
@@ -75,7 +73,7 @@ void RISCVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   printAnnotation(O, Annot);
 }
 
-void RISCVInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) const {
+void RISCVInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) {
   markup(O, Markup::Register) << getRegisterName(Reg);
 }
 
@@ -121,11 +119,14 @@ void RISCVInstPrinter::printCSRSystemRegister(const MCInst *MI, unsigned OpNo,
                                               const MCSubtargetInfo &STI,
                                               raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
-  auto SysReg = RISCVSysReg::lookupSysRegByEncoding(Imm);
-  if (SysReg && SysReg->haveRequiredFeatures(STI.getFeatureBits()))
-    markup(O, Markup::Register) << SysReg->Name;
-  else
-    markup(O, Markup::Register) << formatImm(Imm);
+  auto Range = RISCVSysReg::lookupSysRegByEncoding(Imm);
+  for (auto &Reg : Range) {
+    if (Reg.haveRequiredFeatures(STI.getFeatureBits())) {
+      markup(O, Markup::Register) << Reg.Name;
+      return;
+    }
+  }
+  markup(O, Markup::Register) << formatImm(Imm);
 }
 
 void RISCVInstPrinter::printFenceArg(const MCInst *MI, unsigned OpNo,
@@ -262,8 +263,6 @@ void RISCVInstPrinter::printRegReg(const MCInst *MI, unsigned OpNo,
   const MCOperand &MO = MI->getOperand(OpNo);
 
   assert(MO.isReg() && "printRegReg can only print register operands");
-  if (MO.getReg() == RISCV::NoRegister)
-    return;
   printRegName(O, MO.getReg());
 
   O << "(";

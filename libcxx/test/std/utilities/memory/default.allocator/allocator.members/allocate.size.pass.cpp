@@ -45,7 +45,6 @@ void test()
 int main(int, char**)
 {
     test<double>();
-    LIBCPP_ONLY(test<const double>());
 
   return 0;
 }

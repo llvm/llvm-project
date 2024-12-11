@@ -804,6 +804,17 @@ Example matches X
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('exportDecl0')"><a name="exportDecl0Anchor">exportDecl</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ExportDecl.html">ExportDecl</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="exportDecl0"><pre>Matches any export declaration.
+
+Example matches following declarations.
+  export void foo();
+  export { void foo(); }
+  export namespace { void foo(); }
+  export int v;
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('fieldDecl0')"><a name="fieldDecl0Anchor">fieldDecl</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FieldDecl.html">FieldDecl</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="fieldDecl0"><pre>Matches field declarations.
 
@@ -7239,9 +7250,9 @@ Given
   void z(Y y, X x) { y.m(); x.m(); x.g(); (g()).m(); }
 cxxMemberCallExpr(onImplicitObjectArgument(hasType(
     cxxRecordDecl(hasName("Y")))))
-  matches `y.m()`, `x.m()` and (g()).m(), but not `x.g()`.
+  matches `y.m()`, `x.m()` and (`g()).m()`, but not `x.g()`).
 cxxMemberCallExpr(on(callExpr()))
-  does not match `(g()).m()`, because the parens are not ignored.
+  only matches `(g()).m()` (the parens are ignored).
 
 FIXME: Overload to allow directly matching types?
 </pre></td></tr>

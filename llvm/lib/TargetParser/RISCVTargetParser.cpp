@@ -15,27 +15,28 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
-#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 namespace RISCV {
 
 enum CPUKind : unsigned {
-#define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_UNALIGN) CK_##ENUM,
+#define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_SCALAR_UNALIGN,                   \
+             FAST_VECTOR_UNALIGN, MVENDORID, MARCHID, MIMPID)                  \
+  CK_##ENUM,
 #define TUNE_PROC(ENUM, NAME) CK_##ENUM,
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
 };
 
-struct CPUInfo {
-  StringLiteral Name;
-  StringLiteral DefaultMarch;
-  bool FastUnalignedAccess;
-  bool is64Bit() const { return DefaultMarch.starts_with("rv64"); }
-};
-
 constexpr CPUInfo RISCVCPUInfo[] = {
-#define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_UNALIGN)                          \
-  {NAME, DEFAULT_MARCH, FAST_UNALIGN},
+#define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_SCALAR_UNALIGN,                   \
+             FAST_VECTOR_UNALIGN, MVENDORID, MARCHID, MIMPID)                  \
+  {                                                                            \
+      NAME,                                                                    \
+      DEFAULT_MARCH,                                                           \
+      FAST_SCALAR_UNALIGN,                                                     \
+      FAST_VECTOR_UNALIGN,                                                     \
+      {MVENDORID, MARCHID, MIMPID},                                            \
+  },
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
 };
 
@@ -46,9 +47,26 @@ static const CPUInfo *getCPUInfoByName(StringRef CPU) {
   return nullptr;
 }
 
-bool hasFastUnalignedAccess(StringRef CPU) {
+bool hasFastScalarUnalignedAccess(StringRef CPU) {
   const CPUInfo *Info = getCPUInfoByName(CPU);
-  return Info && Info->FastUnalignedAccess;
+  return Info && Info->FastScalarUnalignedAccess;
+}
+
+bool hasFastVectorUnalignedAccess(StringRef CPU) {
+  const CPUInfo *Info = getCPUInfoByName(CPU);
+  return Info && Info->FastVectorUnalignedAccess;
+}
+
+bool hasValidCPUModel(StringRef CPU) {
+  const CPUModel Model = getCPUModel(CPU);
+  return Model.MVendorID != 0 && Model.MArchID != 0 && Model.MImpID != 0;
+}
+
+CPUModel getCPUModel(StringRef CPU) {
+  const CPUInfo *Info = getCPUInfoByName(CPU);
+  if (!Info)
+    return {0, 0, 0};
+  return Info->Model;
 }
 
 bool parseCPU(StringRef CPU, bool IsRV64) {
@@ -119,6 +137,22 @@ void getFeaturesForCPU(StringRef CPU,
     else
       EnabledFeatures.push_back(F.substr(1));
 }
+
+namespace RISCVExtensionBitmaskTable {
+#define GET_RISCVExtensionBitmaskTable_IMPL
+#include "llvm/TargetParser/RISCVTargetParserDef.inc"
+
+} // namespace RISCVExtensionBitmaskTable
+
+namespace {
+struct LessExtName {
+  bool operator()(const RISCVExtensionBitmaskTable::RISCVExtensionBitmask &LHS,
+                  StringRef RHS) {
+    return StringRef(LHS.Name) < RHS;
+  }
+};
+} // namespace
+
 } // namespace RISCV
 
 namespace RISCVVType {

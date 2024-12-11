@@ -86,6 +86,9 @@ std::string Linux::getMultiarchTriple(const Driver &D,
   case llvm::Triple::aarch64:
     if (IsAndroid)
       return "aarch64-linux-android";
+    if (hasEffectiveTriple() &&
+        getEffectiveTriple().getEnvironment() == llvm::Triple::PAuthTest)
+      return "aarch64-linux-pauthtest";
     return "aarch64-linux-gnu";
   case llvm::Triple::aarch64_be:
     return "aarch64_be-linux-gnu";
@@ -106,13 +109,16 @@ std::string Linux::getMultiarchTriple(const Driver &D,
     default:
       return TargetTriple.str();
     case llvm::Triple::GNUSF:
+    case llvm::Triple::MuslSF:
       FPFlavor = "sf";
       break;
     case llvm::Triple::GNUF32:
+    case llvm::Triple::MuslF32:
       FPFlavor = "f32";
       break;
     case llvm::Triple::GNU:
     case llvm::Triple::GNUF64:
+    case llvm::Triple::Musl:
       // This was going to be "f64" in an earlier Toolchain Conventions
       // revision, but starting from Feb 2023 the F64 ABI variants are
       // unmarked in their canonical forms.
@@ -249,6 +255,24 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
       // Android emulates a 16k page size for app testing on x86_64 machines.
       ExtraOpts.push_back("-z");
       ExtraOpts.push_back("max-page-size=16384");
+    }
+    if (Triple.isAndroidVersionLT(29)) {
+      // https://github.com/android/ndk/issues/1196
+      // The unwinder used by the crash handler on versions of Android prior to
+      // API 29 did not correctly handle binaries built with rosegment, which is
+      // enabled by default for LLD. Android only supports LLD, so it's not an
+      // issue that this flag is not accepted by other linkers.
+      ExtraOpts.push_back("--no-rosegment");
+    }
+    if (!Triple.isAndroidVersionLT(28)) {
+      // Android supports relr packing starting with API 28 and had its own
+      // flavor (--pack-dyn-relocs=android) starting in API 23.
+      // TODO: It's possible to use both with --pack-dyn-relocs=android+relr,
+      // but we need to gather some data on the impact of that form before we
+      // can know if it's a good default.
+      // On the other hand, relr should always be an improvement.
+      ExtraOpts.push_back("--use-android-relr-tags");
+      ExtraOpts.push_back("--pack-dyn-relocs=relr");
     }
   }
 
@@ -505,6 +529,7 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
   case llvm::Triple::thumbeb: {
     const bool HF =
         Triple.getEnvironment() == llvm::Triple::GNUEABIHF ||
+        Triple.getEnvironment() == llvm::Triple::GNUEABIHFT64 ||
         tools::arm::getARMFloatABI(*this, Args) == tools::arm::FloatABI::Hard;
 
     LibDir = "lib";
@@ -568,16 +593,12 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
     Loader =
         (tools::ppc::hasPPCAbiArg(Args, "elfv1")) ? "ld64.so.1" : "ld64.so.2";
     break;
-  case llvm::Triple::riscv32: {
-    StringRef ABIName = tools::riscv::getRISCVABI(Args, Triple);
-    LibDir = "lib";
-    Loader = ("ld-linux-riscv32-" + ABIName + ".so.1").str();
-    break;
-  }
+  case llvm::Triple::riscv32:
   case llvm::Triple::riscv64: {
+    StringRef ArchName = llvm::Triple::getArchTypeName(Arch);
     StringRef ABIName = tools::riscv::getRISCVABI(Args, Triple);
     LibDir = "lib";
-    Loader = ("ld-linux-riscv64-" + ABIName + ".so.1").str();
+    Loader = ("ld-linux-" + ArchName + "-" + ABIName + ".so.1").str();
     break;
   }
   case llvm::Triple::sparc:
@@ -801,6 +822,7 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
+  Res |= SanitizerKind::Realtime;
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;
   Res |= SanitizerKind::KernelAddress;
@@ -815,7 +837,7 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsPowerPC64 || IsSystemZ ||
       IsLoongArch64 || IsRISCV64)
     Res |= SanitizerKind::Thread;
-  if (IsX86_64 || IsSystemZ)
+  if (IsX86_64 || IsSystemZ || IsPowerPC64)
     Res |= SanitizerKind::KernelMemory;
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsX86 || IsMIPS || IsArmArch ||
       IsPowerPC64 || IsHexagon || IsLoongArch64 || IsRISCV64)
@@ -826,6 +848,9 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   if (IsX86_64 || IsAArch64) {
     Res |= SanitizerKind::KernelHWAddress;
   }
+  if (IsX86_64)
+    Res |= SanitizerKind::NumericalStability;
+
   // Work around "Cannot represent a difference across sections".
   if (getTriple().getArch() == llvm::Triple::ppc64)
     Res &= ~SanitizerKind::Function;

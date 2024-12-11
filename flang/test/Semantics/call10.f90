@@ -53,7 +53,7 @@ module m
     real, value :: a ! ok
   end function
   pure real function f03(a) ! C1583
-    !ERROR: non-POINTER dummy argument of pure function must have INTENT() or VALUE attribute
+    !WARNING: non-POINTER dummy argument of pure function must have INTENT() or VALUE attribute
     real :: a
   end function
   pure real function f03a(a)
@@ -78,12 +78,12 @@ module m
     class(t), allocatable :: f07
   end function
   pure function f08() ! C1585
-    !ERROR: Result of pure function may not have polymorphic ALLOCATABLE ultimate component '%a'
+    !ERROR: Result of pure function may not have polymorphic ALLOCATABLE potential component '%a'
     type(polyAlloc) :: f08
   end function
 
   pure subroutine s01(a) ! C1586
-    !ERROR: non-POINTER dummy argument of pure subroutine must have INTENT() or VALUE attribute
+    !WARNING: non-POINTER dummy argument of pure subroutine must have INTENT() or VALUE attribute
     real :: a
   end subroutine
   pure subroutine s01a(a)

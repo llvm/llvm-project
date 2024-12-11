@@ -14,11 +14,13 @@
 #ifndef LLVM_ANALYSIS_FUNCTIONPROPERTIESANALYSIS_H
 #define LLVM_ANALYSIS_FUNCTIONPROPERTIESANALYSIS_H
 
-#include "llvm/ADT/iterator_range.h"
-#include "llvm/IR/InstrTypes.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+class BasicBlock;
+class CallBase;
 class DominatorTree;
 class Function;
 class LoopInfo;
@@ -185,7 +187,12 @@ private:
   static bool isUpdateValid(Function &F, const FunctionPropertiesInfo &FPI,
                             FunctionAnalysisManager &FAM);
 
+  DominatorTree &getUpdatedDominatorTree(FunctionAnalysisManager &FAM) const;
+
   DenseSet<const BasicBlock *> Successors;
+
+  // Edges we might potentially need to remove from the dominator tree.
+  SmallVector<DominatorTree::UpdateType, 2> DomTreeUpdates;
 };
 } // namespace llvm
 #endif // LLVM_ANALYSIS_FUNCTIONPROPERTIESANALYSIS_H

@@ -8,15 +8,21 @@
 
 #include "../assembly.h"
 
+.set FEAT_SVE_BIT, 30
+.set SVCR_PSTATE_SM_BIT, 0
 
 #if !defined(__APPLE__)
 #define TPIDR2_SYMBOL SYMBOL_NAME(__aarch64_has_sme_and_tpidr2_el0)
 #define TPIDR2_SYMBOL_OFFSET :lo12:SYMBOL_NAME(__aarch64_has_sme_and_tpidr2_el0)
+#define CPU_FEATS_SYMBOL SYMBOL_NAME(__aarch64_cpu_features)
+#define CPU_FEATS_SYMBOL_OFFSET :lo12:SYMBOL_NAME(__aarch64_cpu_features)
 #else
 // MachO requires @page/@pageoff directives because the global is defined
 // in a different file. Otherwise this file may fail to build.
 #define TPIDR2_SYMBOL SYMBOL_NAME(__aarch64_has_sme_and_tpidr2_el0)@page
 #define TPIDR2_SYMBOL_OFFSET SYMBOL_NAME(__aarch64_has_sme_and_tpidr2_el0)@pageoff
+#define CPU_FEATS_SYMBOL SYMBOL_NAME(__aarch64_cpu_features)@page
+#define CPU_FEATS_SYMBOL_OFFSET SYMBOL_NAME(__aarch64_cpu_features)@pageoff
 #endif
 
 .arch armv9-a+sme
@@ -106,7 +112,7 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_tpidr2_restore)
 END_COMPILERRT_OUTLINE_FUNCTION(__arm_tpidr2_restore)
 
 DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_tpidr2_save)
-  .variant_pcs __arm_tpidr2_restore
+  .variant_pcs __arm_tpidr2_save
   BTI_C
   // If the current thread does not have access to TPIDR2_EL0, the subroutine
   // does nothing.
@@ -147,7 +153,7 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_tpidr2_save)
 END_COMPILERRT_OUTLINE_FUNCTION(__arm_tpidr2_save)
 
 DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_za_disable)
-  .variant_pcs __arm_tpidr2_restore
+  .variant_pcs __arm_za_disable
   BTI_C
   // If the current thread does not have access to SME, the subroutine does
   // nothing.
@@ -179,6 +185,27 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_za_disable)
 0:
   ret
 END_COMPILERRT_OUTLINE_FUNCTION(__arm_za_disable)
+
+DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_get_current_vg)
+  .variant_pcs __arm_get_current_vg
+  BTI_C
+
+  adrp    x17, CPU_FEATS_SYMBOL
+  ldr     w17, [x17, CPU_FEATS_SYMBOL_OFFSET]
+  tbnz    w17, #FEAT_SVE_BIT, 1f
+  adrp    x17, TPIDR2_SYMBOL
+  ldrb    w17, [x17, TPIDR2_SYMBOL_OFFSET]
+  cbz     x17, 2f
+0:
+  mrs     x17, SVCR
+  tbz     x17, #SVCR_PSTATE_SM_BIT, 2f
+1:
+  cntd    x0
+  ret
+2:
+  mov     x0, xzr
+  ret
+END_COMPILERRT_OUTLINE_FUNCTION(__arm_get_current_vg)
 
 NO_EXEC_STACK_DIRECTIVE
 

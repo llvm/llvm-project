@@ -29,10 +29,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -576,15 +573,6 @@ void TemplateArgument::print(const PrintingPolicy &Policy, raw_ostream &Out,
     break;
   }
 }
-
-void TemplateArgument::dump(raw_ostream &Out) const {
-  LangOptions LO; // FIXME! see also TemplateName::dump().
-  LO.CPlusPlus = true;
-  LO.Bool = true;
-  print(PrintingPolicy(LO), Out, /*IncludeType*/ true);
-}
-
-LLVM_DUMP_METHOD void TemplateArgument::dump() const { dump(llvm::errs()); }
 
 //===----------------------------------------------------------------------===//
 // TemplateArgumentLoc Implementation

@@ -30,6 +30,10 @@ inline constexpr auto unterminatedStatement(const PA &p) {
           maybe(label), space >> p));
 }
 
+constexpr auto atEndOfStmt{space >>
+    withMessage("expected end of statement"_err_en_US, lookAhead(";\n"_ch))};
+constexpr auto checkEndOfKnownStmt{recovery(atEndOfStmt, SkipTo<'\n'>{})};
+
 constexpr auto endOfLine{
     "\n"_ch >> ok || fail("expected end of line"_err_en_US)};
 
@@ -86,9 +90,6 @@ constexpr auto executionPartErrorRecovery{stmtErrorRecoveryStart >>
 // END statement error recovery
 constexpr auto missingOptionalName{pure<std::optional<Name>>()};
 constexpr auto noNameEnd{"END" >> missingOptionalName};
-constexpr auto atEndOfStmt{space >>
-    withMessage("expected end of statement"_err_en_US, lookAhead(";\n"_ch))};
-constexpr auto bareEnd{noNameEnd / recovery(atEndOfStmt, SkipTo<'\n'>{})};
 
 // For unrecognizable construct END statements.  Be sure to not consume
 // a program unit's END statement.

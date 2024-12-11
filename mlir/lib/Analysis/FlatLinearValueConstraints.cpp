@@ -16,7 +16,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -893,8 +892,8 @@ FlatLinearValueConstraints::FlatLinearValueConstraints(IntegerSet set,
                             set.getNumDims() + set.getNumSymbols() + 1,
                             set.getNumDims(), set.getNumSymbols(),
                             /*numLocals=*/0) {
-  assert(operands.empty() ||
-         set.getNumInputs() == operands.size() && "operand count mismatch");
+  assert((operands.empty() || set.getNumInputs() == operands.size()) &&
+         "operand count mismatch");
   // Set the values for the non-local variables.
   for (unsigned i = 0, e = operands.size(); i < e; ++i)
     setValue(i, operands[i]);
@@ -1318,7 +1317,8 @@ mlir::getMultiAffineFunctionFromMap(AffineMap map,
          "AffineMap cannot produce divs without local representation");
 
   // TODO: We shouldn't have to do this conversion.
-  Matrix<MPInt> mat(map.getNumResults(), map.getNumInputs() + divs.getNumDivs() + 1);
+  Matrix<DynamicAPInt> mat(map.getNumResults(),
+                           map.getNumInputs() + divs.getNumDivs() + 1);
   for (unsigned i = 0, e = flattenedExprs.size(); i < e; ++i)
     for (unsigned j = 0, f = flattenedExprs[i].size(); j < f; ++j)
       mat(i, j) = flattenedExprs[i][j];

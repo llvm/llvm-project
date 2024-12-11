@@ -126,8 +126,9 @@ SBInstructionList SBSymbol::GetInstructions(SBTarget target,
         AddressRange symbol_range(symbol_addr, m_opaque_ptr->GetByteSize());
         const bool force_live_memory = true;
         sb_instructions.SetDisassembler(Disassembler::DisassembleRange(
-            module_sp->GetArchitecture(), nullptr, flavor_string, *target_sp,
-            symbol_range, force_live_memory));
+            module_sp->GetArchitecture(), nullptr, flavor_string,
+            target_sp->GetDisassemblyCPU(), target_sp->GetDisassemblyFeatures(),
+            *target_sp, symbol_range, force_live_memory));
       }
     }
   }

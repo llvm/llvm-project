@@ -830,7 +830,7 @@ define float @ldexp_127(float %x) {
 define <2 x float> @ldexp_3_vector(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @ldexp_3_vector
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> [[X]], <2 x i32> <i32 3, i32 3>)
+; CHECK-NEXT:    [[LDEXP:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> [[X]], <2 x i32> splat (i32 3))
 ; CHECK-NEXT:    ret <2 x float> [[LDEXP]]
 ;
   %ldexp = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> %x, <2 x i32> <i32 3, i32 3>)
@@ -870,7 +870,7 @@ define float @ldexp_2_flags(float %x) {
 define float @ldexp_metadata(float %x) {
 ; CHECK-LABEL: define float @ldexp_metadata
 ; CHECK-SAME: (float [[X:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 2), !foo !2
+; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 2), !foo [[META2:![0-9]+]]
 ; CHECK-NEXT:    ret float [[LDEXP]]
 ;
   %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 2), !foo !2
@@ -888,6 +888,132 @@ define float @ldexp_8_contractable(float %x, float %y) {
   %fadd = fadd contract float %ldexp, %y
   ret float %fadd
 }
+
+define float @ldexp_f32_mask_select_0(i1 %cond, float %x, i32 %y) {
+; CHECK-LABEL: define float @ldexp_f32_mask_select_0
+; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 [[Y]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = select i1 [[COND]], float [[TMP1]], float [[X]]
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %select = select i1 %cond, i32 %y, i32 0
+  %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 %select)
+  ret float %ldexp
+}
+
+define float @ldexp_nnan_f32_mask_select_0(i1 %cond, float %x, i32 %y) {
+; CHECK-LABEL: define float @ldexp_nnan_f32_mask_select_0
+; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan float @llvm.ldexp.f32.i32(float [[X]], i32 [[Y]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = select i1 [[COND]], float [[TMP1]], float [[X]]
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %select = select i1 %cond, i32 %y, i32 0
+  %ldexp = call nnan float @llvm.ldexp.f32.i32(float %x, i32 %select)
+  ret float %ldexp
+}
+
+define float @ldexp_flags_f32_mask_select_0(i1 %cond, float %x, i32 %y) {
+; CHECK-LABEL: define float @ldexp_flags_f32_mask_select_0
+; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call ninf nsz float @llvm.ldexp.f32.i32(float [[X]], i32 [[Y]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = select i1 [[COND]], float [[TMP1]], float [[X]]
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %select = select i1 %cond, i32 %y, i32 0
+  %ldexp = call nsz ninf float @llvm.ldexp.f32.i32(float %x, i32 %select)
+  ret float %ldexp
+}
+
+define float @ldexp_f32_mask_select_0_swap(i1 %cond, float %x, i32 %y) {
+; CHECK-LABEL: define float @ldexp_f32_mask_select_0_swap
+; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 [[Y]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = select i1 [[COND]], float [[X]], float [[TMP1]]
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %select = select i1 %cond, i32 0, i32 %y
+  %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 %select)
+  ret float %ldexp
+}
+
+define float @ldexp_f32_mask_select_1(i1 %cond, float %x, i32 %y) {
+; CHECK-LABEL: define float @ldexp_f32_mask_select_1
+; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i32 [[Y]], i32 1
+; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 [[SELECT]])
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %select = select i1 %cond, i32 %y, i32 1
+  %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 %select)
+  ret float %ldexp
+}
+
+define float @ldexp_f32_mask_select_0_multi_use(i1 %cond, float %x, i32 %y, ptr %ptr) {
+; CHECK-LABEL: define float @ldexp_f32_mask_select_0_multi_use
+; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]], i32 [[Y:%.*]], ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i32 [[Y]], i32 0
+; CHECK-NEXT:    store i32 [[SELECT]], ptr [[PTR]], align 4
+; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 [[SELECT]])
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %select = select i1 %cond, i32 %y, i32 0
+  store i32 %select, ptr %ptr
+  %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 %select)
+  ret float %ldexp
+}
+
+define float @ldexp_f32_mask_select_0_swap_multi_use(i1 %cond, float %x, i32 %y, ptr %ptr) {
+; CHECK-LABEL: define float @ldexp_f32_mask_select_0_swap_multi_use
+; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]], i32 [[Y:%.*]], ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i32 0, i32 [[Y]]
+; CHECK-NEXT:    store i32 [[SELECT]], ptr [[PTR]], align 4
+; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 [[SELECT]])
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %select = select i1 %cond, i32 0, i32 %y
+  store i32 %select, ptr %ptr
+  %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 %select)
+  ret float %ldexp
+}
+
+define float @ldexp_f32_mask_select_0_strictfp(i1 %cond, float %x, i32 %y) #0 {
+; CHECK-LABEL: define float @ldexp_f32_mask_select_0_strictfp
+; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i32 [[Y]], i32 0
+; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float [[X]], i32 [[SELECT]], metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %select = select i1 %cond, i32 %y, i32 0
+  %ldexp = call float @llvm.experimental.constrained.ldexp.f32.i32(float %x, i32 %select, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret float %ldexp
+}
+
+define <2 x float> @ldexp_v2f32_mask_select_0(<2 x i1> %cond, <2 x float> %x, <2 x i32> %y) {
+; CHECK-LABEL: define <2 x float> @ldexp_v2f32_mask_select_0
+; CHECK-SAME: (<2 x i1> [[COND:%.*]], <2 x float> [[X:%.*]], <2 x i32> [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> [[X]], <2 x i32> [[Y]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = select <2 x i1> [[COND]], <2 x float> [[TMP1]], <2 x float> [[X]]
+; CHECK-NEXT:    ret <2 x float> [[LDEXP]]
+;
+  %select = select <2 x i1> %cond, <2 x i32> %y, <2 x i32> zeroinitializer
+  %ldexp = call nsz nnan <2 x float> @llvm.ldexp.f32.v2i32(<2 x float> %x, <2 x i32> %select)
+  ret <2 x float> %ldexp
+}
+
+define <2 x float> @ldexp_v2f32_mask_select_0_swap(<2 x i1> %cond, <2 x float> %x, <2 x i32> %y) {
+; CHECK-LABEL: define <2 x float> @ldexp_v2f32_mask_select_0_swap
+; CHECK-SAME: (<2 x i1> [[COND:%.*]], <2 x float> [[X:%.*]], <2 x i32> [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> [[X]], <2 x i32> [[Y]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = select <2 x i1> [[COND]], <2 x float> [[X]], <2 x float> [[TMP1]]
+; CHECK-NEXT:    ret <2 x float> [[LDEXP]]
+;
+  %select = select <2 x i1> %cond, <2 x i32> zeroinitializer, <2 x i32> %y
+  %ldexp = call nsz nnan <2 x float> @llvm.ldexp.f32.v2i32(<2 x float> %x, <2 x i32> %select)
+  ret <2 x float> %ldexp
+}
+
+attributes #0 = { strictfp }
 
 !0 = !{i32 -127, i32 0}
 !1 = !{i32 0, i32 127}

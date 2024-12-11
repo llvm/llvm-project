@@ -53,37 +53,15 @@ namespace llvm {
 namespace orc {
 
 class CompileOnDemandLayer : public IRLayer {
-  friend class PartitioningIRMaterializationUnit;
-
 public:
   /// Builder for IndirectStubsManagers.
   using IndirectStubsManagerBuilder =
       std::function<std::unique_ptr<IndirectStubsManager>()>;
 
-  using GlobalValueSet = std::set<const GlobalValue *>;
-
-  /// Partitioning function.
-  using PartitionFunction =
-      std::function<std::optional<GlobalValueSet>(GlobalValueSet Requested)>;
-
-  /// Off-the-shelf partitioning which compiles all requested symbols (usually
-  /// a single function at a time).
-  static std::optional<GlobalValueSet>
-  compileRequested(GlobalValueSet Requested);
-
-  /// Off-the-shelf partitioning which compiles whole modules whenever any
-  /// symbol in them is requested.
-  static std::optional<GlobalValueSet>
-  compileWholeModule(GlobalValueSet Requested);
-
   /// Construct a CompileOnDemandLayer.
   CompileOnDemandLayer(ExecutionSession &ES, IRLayer &BaseLayer,
-                        LazyCallThroughManager &LCTMgr,
-                        IndirectStubsManagerBuilder BuildIndirectStubsManager);
-
-  /// Sets the partition function.
-  void setPartitionFunction(PartitionFunction Partition);
-
+                       LazyCallThroughManager &LCTMgr,
+                       IndirectStubsManagerBuilder BuildIndirectStubsManager);
   /// Sets the ImplSymbolMap
   void setImplMap(ImplSymbolMap *Imp);
 
@@ -110,22 +88,12 @@ private:
 
   PerDylibResources &getPerDylibResources(JITDylib &TargetD);
 
-  void cleanUpModule(Module &M);
-
-  void expandPartition(GlobalValueSet &Partition);
-
-  void emitPartition(std::unique_ptr<MaterializationResponsibility> R,
-                     ThreadSafeModule TSM,
-                     IRMaterializationUnit::SymbolNameToDefinitionMap Defs);
-
   mutable std::mutex CODLayerMutex;
 
   IRLayer &BaseLayer;
   LazyCallThroughManager &LCTMgr;
   IndirectStubsManagerBuilder BuildIndirectStubsManager;
   PerDylibResourcesMap DylibResources;
-  PartitionFunction Partition = compileRequested;
-  SymbolLinkagePromoter PromoteSymbols;
   ImplSymbolMap *AliaseeImpls = nullptr;
 };
 

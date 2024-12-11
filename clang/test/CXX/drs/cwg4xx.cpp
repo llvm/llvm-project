@@ -170,7 +170,7 @@ namespace cwg407 { // cwg407: 3.8
     {
       typedef struct S S; // #cwg407-typedef-S
       struct S *p;
-      // expected-error@-1 {{typedef 'S' cannot be referenced with a struct specifier}}
+      // expected-error@-1 {{typedef 'S' cannot be referenced with the 'struct' specifier}}
       //   expected-note@#cwg407-typedef-S {{declared here}}
     }
   }
@@ -941,8 +941,10 @@ namespace cwg460 { // cwg460: yes
     // expected-error@-1 {{using declaration requires a qualified name}}
     using cwg460::X;
     // expected-error@-1 {{using declaration cannot refer to a namespace}}
+    // expected-note@-2 {{did you mean 'using namespace'?}}
     using X::Q;
     // expected-error@-1 {{using declaration cannot refer to a namespace}}
+    // expected-note@-2 {{did you mean 'using namespace'?}}
   }
 }
 
@@ -1170,11 +1172,11 @@ namespace cwg480 { // cwg480: yes
 
   int A::*a = &A::n;
   int D::*b = a;
-  // expected-error@-1 {{conversion from pointer to member of class 'cwg480::A' to pointer to member of class 'cwg480::D' via virtual base 'cwg480::B' is not allowed}}
+  // expected-error@-1 {{conversion from pointer to member of class 'A' to pointer to member of class 'D' via virtual base 'cwg480::B' is not allowed}}
 
   extern int D::*c;
   int A::*d = static_cast<int A::*>(c);
-  // expected-error@-1 {{conversion from pointer to member of class 'cwg480::D' to pointer to member of class 'cwg480::A' via virtual base 'cwg480::B' is not allowed}}
+  // expected-error@-1 {{conversion from pointer to member of class 'cwg480::D' to pointer to member of class 'A' via virtual base 'cwg480::B' is not allowed}}
 
   D *e;
   A *f = e;

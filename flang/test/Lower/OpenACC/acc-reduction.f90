@@ -148,44 +148,44 @@
 ! CHECK:   acc.yield %arg0 : !fir.box<!fir.array<?xi32>>
 ! CHECK: }
 
-! CHECK-LABEL: acc.reduction.recipe @reduction_mul_ref_z32 : !fir.ref<!fir.complex<4>> reduction_operator <mul> init {
-! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.complex<4>>):
+! CHECK-LABEL: acc.reduction.recipe @reduction_mul_ref_z32 : !fir.ref<complex<f32>> reduction_operator <mul> init {
+! CHECK: ^bb0(%{{.*}}: !fir.ref<complex<f32>>):
 ! CHECK:   %[[REAL:.*]] = arith.constant 1.000000e+00 : f32
 ! CHECK:   %[[IMAG:.*]] = arith.constant 0.000000e+00 : f32
-! CHECK:   %[[UNDEF:.*]] = fir.undefined !fir.complex<4>
-! CHECK:   %[[UNDEF1:.*]] = fir.insert_value %[[UNDEF]], %[[REAL]], [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-! CHECK:   %[[UNDEF2:.*]] = fir.insert_value %[[UNDEF1]], %[[IMAG]], [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.complex<4>
-! CHECK:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "acc.reduction.init"} : (!fir.ref<!fir.complex<4>>) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
-! CHECK:   fir.store %[[UNDEF2]] to %[[DECLARE]]#0 : !fir.ref<!fir.complex<4>>
-! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.complex<4>>
+! CHECK:   %[[UNDEF:.*]] = fir.undefined complex<f32>
+! CHECK:   %[[UNDEF1:.*]] = fir.insert_value %[[UNDEF]], %[[REAL]], [0 : index] : (complex<f32>, f32) -> complex<f32>
+! CHECK:   %[[UNDEF2:.*]] = fir.insert_value %[[UNDEF1]], %[[IMAG]], [1 : index] : (complex<f32>, f32) -> complex<f32>
+! CHECK:   %[[ALLOCA:.*]] = fir.alloca complex<f32>
+! CHECK:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "acc.reduction.init"} : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+! CHECK:   fir.store %[[UNDEF2]] to %[[DECLARE]]#0 : !fir.ref<complex<f32>>
+! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.ref<complex<f32>>
 ! CHECK: } combiner {
-! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.complex<4>>, %[[ARG1:.*]]: !fir.ref<!fir.complex<4>>):
-! CHECK:   %[[LOAD0:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.complex<4>>
-! CHECK:   %[[LOAD1:.*]] = fir.load %[[ARG1]] : !fir.ref<!fir.complex<4>>
-! CHECK:   %[[COMBINED:.*]] = fir.mulc %[[LOAD0]], %[[LOAD1]] {fastmath = #arith.fastmath<contract>} : !fir.complex<4>
-! CHECK:   fir.store %[[COMBINED]] to %[[ARG0]] : !fir.ref<!fir.complex<4>>
-! CHECK:   acc.yield %[[ARG0]] : !fir.ref<!fir.complex<4>>
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<complex<f32>>, %[[ARG1:.*]]: !fir.ref<complex<f32>>):
+! CHECK:   %[[LOAD0:.*]] = fir.load %[[ARG0]] : !fir.ref<complex<f32>>
+! CHECK:   %[[LOAD1:.*]] = fir.load %[[ARG1]] : !fir.ref<complex<f32>>
+! CHECK:   %[[COMBINED:.*]] = fir.mulc %[[LOAD0]], %[[LOAD1]] {fastmath = #arith.fastmath<contract>} : complex<f32>
+! CHECK:   fir.store %[[COMBINED]] to %[[ARG0]] : !fir.ref<complex<f32>>
+! CHECK:   acc.yield %[[ARG0]] : !fir.ref<complex<f32>>
 ! CHECK: }
 
-! CHECK-LABEL: acc.reduction.recipe @reduction_add_ref_z32 : !fir.ref<!fir.complex<4>> reduction_operator <add> init {
-! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.complex<4>>):
+! CHECK-LABEL: acc.reduction.recipe @reduction_add_ref_z32 : !fir.ref<complex<f32>> reduction_operator <add> init {
+! CHECK: ^bb0(%{{.*}}: !fir.ref<complex<f32>>):
 ! CHECK:   %[[REAL:.*]] = arith.constant 0.000000e+00 : f32
 ! CHECK:   %[[IMAG:.*]] = arith.constant 0.000000e+00 : f32
-! CHECK:   %[[UNDEF:.*]] = fir.undefined !fir.complex<4>
-! CHECK:   %[[UNDEF1:.*]] = fir.insert_value %[[UNDEF]], %[[REAL]], [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-! CHECK:   %[[UNDEF2:.*]] = fir.insert_value %[[UNDEF1]], %[[IMAG]], [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.complex<4>
-! CHECK:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "acc.reduction.init"} : (!fir.ref<!fir.complex<4>>) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
-! CHECK:   fir.store %[[UNDEF2]] to %[[DECLARE]]#0 : !fir.ref<!fir.complex<4>>
-! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.complex<4>>
+! CHECK:   %[[UNDEF:.*]] = fir.undefined complex<f32>
+! CHECK:   %[[UNDEF1:.*]] = fir.insert_value %[[UNDEF]], %[[REAL]], [0 : index] : (complex<f32>, f32) -> complex<f32>
+! CHECK:   %[[UNDEF2:.*]] = fir.insert_value %[[UNDEF1]], %[[IMAG]], [1 : index] : (complex<f32>, f32) -> complex<f32>
+! CHECK:   %[[ALLOCA:.*]] = fir.alloca complex<f32>
+! CHECK:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "acc.reduction.init"} : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+! CHECK:   fir.store %[[UNDEF2]] to %[[DECLARE]]#0 : !fir.ref<complex<f32>>
+! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.ref<complex<f32>>
 ! CHECK: } combiner {
-! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.complex<4>>, %[[ARG1:.*]]: !fir.ref<!fir.complex<4>>):
-! CHECK:   %[[LOAD0:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.complex<4>>
-! CHECK:   %[[LOAD1:.*]] = fir.load %[[ARG1]] : !fir.ref<!fir.complex<4>>
-! CHECK:   %[[COMBINED:.*]] = fir.addc %[[LOAD0]], %[[LOAD1]] {fastmath = #arith.fastmath<contract>} : !fir.complex<4>
-! CHECK:   fir.store %[[COMBINED]] to %[[ARG0]] : !fir.ref<!fir.complex<4>>
-! CHECK:   acc.yield %[[ARG0]] : !fir.ref<!fir.complex<4>>
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<complex<f32>>, %[[ARG1:.*]]: !fir.ref<complex<f32>>):
+! CHECK:   %[[LOAD0:.*]] = fir.load %[[ARG0]] : !fir.ref<complex<f32>>
+! CHECK:   %[[LOAD1:.*]] = fir.load %[[ARG1]] : !fir.ref<complex<f32>>
+! CHECK:   %[[COMBINED:.*]] = fir.addc %[[LOAD0]], %[[LOAD1]] {fastmath = #arith.fastmath<contract>} : complex<f32>
+! CHECK:   fir.store %[[COMBINED]] to %[[ARG0]] : !fir.ref<complex<f32>>
+! CHECK:   acc.yield %[[ARG0]] : !fir.ref<complex<f32>>
 ! CHECK: }
 
 ! CHECK-LABEL: acc.reduction.recipe @reduction_neqv_ref_l32 : !fir.ref<!fir.logical<4>> reduction_operator <neqv> init {
@@ -1071,8 +1071,8 @@ subroutine acc_reduction_add_cmplx()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_cmplx()
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.complex<4>>) -> !fir.ref<!fir.complex<4>> {name = "c"}
-! CHECK: acc.parallel reduction(@reduction_add_ref_z32 -> %[[RED]] : !fir.ref<!fir.complex<4>>)
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<complex<f32>>) -> !fir.ref<complex<f32>> {name = "c"}
+! CHECK: acc.parallel reduction(@reduction_add_ref_z32 -> %[[RED]] : !fir.ref<complex<f32>>)
 
 subroutine acc_reduction_mul_cmplx()
   complex :: c
@@ -1081,8 +1081,8 @@ subroutine acc_reduction_mul_cmplx()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_mul_cmplx()
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.complex<4>>) -> !fir.ref<!fir.complex<4>> {name = "c"}
-! CHECK: acc.parallel reduction(@reduction_mul_ref_z32 -> %[[RED]] : !fir.ref<!fir.complex<4>>)
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<complex<f32>>) -> !fir.ref<complex<f32>> {name = "c"}
+! CHECK: acc.parallel reduction(@reduction_mul_ref_z32 -> %[[RED]] : !fir.ref<complex<f32>>)
 
 subroutine acc_reduction_add_alloc()
   integer, allocatable :: i

@@ -671,7 +671,7 @@ void SystemZDAGToDAGISel::getAddressOperands(const SystemZAddressingMode &AM,
   }
 
   // Lower the displacement to a TargetConstant.
-  Disp = CurDAG->getTargetConstant(AM.Disp, SDLoc(Base), VT);
+  Disp = CurDAG->getSignedTargetConstant(AM.Disp, SDLoc(Base), VT);
 }
 
 void SystemZDAGToDAGISel::getAddressOperands(const SystemZAddressingMode &AM,
@@ -1554,7 +1554,7 @@ bool SystemZDAGToDAGISel::storeLoadIsAligned(SDNode *N) const {
 
       // The alignment of the symbol itself must be at least the store size.
       const GlobalValue *GV = GA->getGlobal();
-      const DataLayout &DL = GV->getParent()->getDataLayout();
+      const DataLayout &DL = GV->getDataLayout();
       if (GV->getPointerAlignment(DL).value() < StoreSize)
         return false;
     }
@@ -2024,8 +2024,9 @@ SDValue SystemZDAGToDAGISel::expandSelectBoolean(SDNode *Node) {
                              CurDAG->getConstant(IPM.XORValue, DL, MVT::i32));
 
   if (IPM.AddValue)
-    Result = CurDAG->getNode(ISD::ADD, DL, MVT::i32, Result,
-                             CurDAG->getConstant(IPM.AddValue, DL, MVT::i32));
+    Result =
+        CurDAG->getNode(ISD::ADD, DL, MVT::i32, Result,
+                        CurDAG->getSignedConstant(IPM.AddValue, DL, MVT::i32));
 
   EVT VT = Node->getValueType(0);
   if (VT == MVT::i32 && IPM.Bit == 31) {

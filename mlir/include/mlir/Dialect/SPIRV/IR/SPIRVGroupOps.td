@@ -661,6 +661,12 @@ def SPIRV_INTELSubgroupBlockReadOp : SPIRV_IntelVendorOp<"SubgroupBlockRead", []
   let results = (outs
     SPIRV_Type:$value
   );
+
+  let hasCustomAssemblyFormat = 0;
+
+  let assemblyFormat = [{
+    $ptr attr-dict `:` type($ptr) `->` type($value)
+  }];
 }
 
 // -----

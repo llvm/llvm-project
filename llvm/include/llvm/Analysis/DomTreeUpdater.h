@@ -14,75 +14,29 @@
 #ifndef LLVM_ANALYSIS_DOMTREEUPDATER_H
 #define LLVM_ANALYSIS_DOMTREEUPDATER_H
 
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/GenericDomTreeUpdater.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Compiler.h"
-#include <cstddef>
 #include <functional>
 #include <vector>
 
 namespace llvm {
+
 class PostDominatorTree;
 
-class DomTreeUpdater {
-public:
-  enum class UpdateStrategy : unsigned char { Eager = 0, Lazy = 1 };
+class DomTreeUpdater
+    : public GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
+                                   PostDominatorTree> {
+  friend GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
+                               PostDominatorTree>;
 
-  explicit DomTreeUpdater(UpdateStrategy Strategy_) : Strategy(Strategy_) {}
-  DomTreeUpdater(DominatorTree &DT_, UpdateStrategy Strategy_)
-      : DT(&DT_), Strategy(Strategy_) {}
-  DomTreeUpdater(DominatorTree *DT_, UpdateStrategy Strategy_)
-      : DT(DT_), Strategy(Strategy_) {}
-  DomTreeUpdater(PostDominatorTree &PDT_, UpdateStrategy Strategy_)
-      : PDT(&PDT_), Strategy(Strategy_) {}
-  DomTreeUpdater(PostDominatorTree *PDT_, UpdateStrategy Strategy_)
-      : PDT(PDT_), Strategy(Strategy_) {}
-  DomTreeUpdater(DominatorTree &DT_, PostDominatorTree &PDT_,
-                 UpdateStrategy Strategy_)
-      : DT(&DT_), PDT(&PDT_), Strategy(Strategy_) {}
-  DomTreeUpdater(DominatorTree *DT_, PostDominatorTree *PDT_,
-                 UpdateStrategy Strategy_)
-      : DT(DT_), PDT(PDT_), Strategy(Strategy_) {}
+public:
+  using Base =
+      GenericDomTreeUpdater<DomTreeUpdater, DominatorTree, PostDominatorTree>;
+  using Base::Base;
 
   ~DomTreeUpdater() { flush(); }
-
-  /// Returns true if the current strategy is Lazy.
-  bool isLazy() const { return Strategy == UpdateStrategy::Lazy; };
-
-  /// Returns true if the current strategy is Eager.
-  bool isEager() const { return Strategy == UpdateStrategy::Eager; };
-
-  /// Returns true if it holds a DominatorTree.
-  bool hasDomTree() const { return DT != nullptr; }
-
-  /// Returns true if it holds a PostDominatorTree.
-  bool hasPostDomTree() const { return PDT != nullptr; }
-
-  /// Returns true if there is BasicBlock awaiting deletion.
-  /// The deletion will only happen until a flush event and
-  /// all available trees are up-to-date.
-  /// Returns false under Eager UpdateStrategy.
-  bool hasPendingDeletedBB() const { return !DeletedBBs.empty(); }
-
-  /// Returns true if DelBB is awaiting deletion.
-  /// Returns false under Eager UpdateStrategy.
-  bool isBBPendingDeletion(BasicBlock *DelBB) const;
-
-  /// Returns true if either of DT or PDT is valid and the tree has at
-  /// least one update pending. If DT or PDT is nullptr it is treated
-  /// as having no pending updates. This function does not check
-  /// whether there is BasicBlock awaiting deletion.
-  /// Returns false under Eager UpdateStrategy.
-  bool hasPendingUpdates() const;
-
-  /// Returns true if there are DominatorTree updates queued.
-  /// Returns false under Eager UpdateStrategy or DT is nullptr.
-  bool hasPendingDomTreeUpdates() const;
-
-  /// Returns true if there are PostDominatorTree updates queued.
-  /// Returns false under Eager UpdateStrategy or PDT is nullptr.
-  bool hasPendingPostDomTreeUpdates() const;
 
   ///@{
   /// \name Mutation APIs
@@ -104,51 +58,6 @@ public:
   ///
   /// Although GenericDomTree provides several update primitives,
   /// it is not encouraged to use these APIs directly.
-
-  /// Submit updates to all available trees.
-  /// The Eager Strategy flushes updates immediately while the Lazy Strategy
-  /// queues the updates.
-  ///
-  /// Note: The "existence" of an edge in a CFG refers to the CFG which DTU is
-  /// in sync with + all updates before that single update.
-  ///
-  /// CAUTION!
-  /// 1. It is required for the state of the LLVM IR to be updated
-  /// *before* submitting the updates because the internal update routine will
-  /// analyze the current state of the CFG to determine whether an update
-  /// is valid.
-  /// 2. It is illegal to submit any update that has already been submitted,
-  /// i.e., you are supposed not to insert an existent edge or delete a
-  /// nonexistent edge.
-  void applyUpdates(ArrayRef<DominatorTree::UpdateType> Updates);
-
-  /// Submit updates to all available trees. It will also
-  /// 1. discard duplicated updates,
-  /// 2. remove invalid updates. (Invalid updates means deletion of an edge that
-  /// still exists or insertion of an edge that does not exist.)
-  /// The Eager Strategy flushes updates immediately while the Lazy Strategy
-  /// queues the updates.
-  ///
-  /// Note: The "existence" of an edge in a CFG refers to the CFG which DTU is
-  /// in sync with + all updates before that single update.
-  ///
-  /// CAUTION!
-  /// 1. It is required for the state of the LLVM IR to be updated
-  /// *before* submitting the updates because the internal update routine will
-  /// analyze the current state of the CFG to determine whether an update
-  /// is valid.
-  /// 2. It is illegal to submit any update that has already been submitted,
-  /// i.e., you are supposed not to insert an existent edge or delete a
-  /// nonexistent edge.
-  /// 3. It is only legal to submit updates to an edge in the order CFG changes
-  /// are made. The order you submit updates on different edges is not
-  /// restricted.
-  void applyUpdatesPermissive(ArrayRef<DominatorTree::UpdateType> Updates);
-
-  /// Notify DTU that the entry block was replaced.
-  /// Recalculate all available trees and flush all BasicBlocks
-  /// awaiting deletion immediately.
-  void recalculate(Function &F);
 
   /// Delete DelBB. DelBB will be removed from its Parent and
   /// erased from available trees if it exists and finally get deleted.
@@ -172,33 +81,6 @@ public:
 
   ///@}
 
-  ///@{
-  /// \name Flush APIs
-  ///
-  /// CAUTION! By the moment these flush APIs are called, the current CFG needs
-  /// to be the same as the CFG which DTU is in sync with + all updates
-  /// submitted.
-
-  /// Flush DomTree updates and return DomTree.
-  /// It flushes Deleted BBs if both trees are up-to-date.
-  /// It must only be called when it has a DomTree.
-  DominatorTree &getDomTree();
-
-  /// Flush PostDomTree updates and return PostDomTree.
-  /// It flushes Deleted BBs if both trees are up-to-date.
-  /// It must only be called when it has a PostDomTree.
-  PostDominatorTree &getPostDomTree();
-
-  /// Apply all pending updates to available trees and flush all BasicBlocks
-  /// awaiting deletion.
-
-  void flush();
-
-  ///@}
-
-  /// Debug method to help view the internal state of this class.
-  LLVM_DUMP_METHOD void dump() const;
-
 private:
   class CallBackOnDeletion final : public CallbackVH {
   public:
@@ -216,16 +98,7 @@ private:
     }
   };
 
-  SmallVector<DominatorTree::UpdateType, 16> PendUpdates;
-  size_t PendDTUpdateIndex = 0;
-  size_t PendPDTUpdateIndex = 0;
-  DominatorTree *DT = nullptr;
-  PostDominatorTree *PDT = nullptr;
-  const UpdateStrategy Strategy;
-  SmallPtrSet<BasicBlock *, 8> DeletedBBs;
   std::vector<CallBackOnDeletion> Callbacks;
-  bool IsRecalculatingDomTree = false;
-  bool IsRecalculatingPostDomTree = false;
 
   /// First remove all the instructions of DelBB and then make sure DelBB has a
   /// valid terminator instruction which is necessary to have when DelBB still
@@ -237,32 +110,16 @@ private:
   /// Returns true if at least one BasicBlock is deleted.
   bool forceFlushDeletedBB();
 
-  /// Helper function to apply all pending DomTree updates.
-  void applyDomTreeUpdates();
-
-  /// Helper function to apply all pending PostDomTree updates.
-  void applyPostDomTreeUpdates();
-
-  /// Helper function to flush deleted BasicBlocks if all available
-  /// trees are up-to-date.
-  void tryFlushDeletedBB();
-
-  /// Drop all updates applied by all available trees and delete BasicBlocks if
-  /// all available trees are up-to-date.
-  void dropOutOfDateUpdates();
-
-  /// Erase Basic Block node that has been unlinked from Function
-  /// in the DomTree and PostDomTree.
-  void eraseDelBBNode(BasicBlock *DelBB);
-
-  /// Returns true if the update appears in the LLVM IR.
-  /// It is used to check whether an update is valid in
-  /// insertEdge/deleteEdge or is unnecessary in the batch update.
-  bool isUpdateValid(DominatorTree::UpdateType Update) const;
-
-  /// Returns true if the update is self dominance.
-  bool isSelfDominance(DominatorTree::UpdateType Update) const;
+  /// Debug method to help view the internal state of this class.
+  LLVM_DUMP_METHOD void dump() const;
 };
+
+extern template class GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
+                                            PostDominatorTree>;
+
+extern template void
+GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
+                      PostDominatorTree>::recalculate(Function &F);
 } // namespace llvm
 
 #endif // LLVM_ANALYSIS_DOMTREEUPDATER_H

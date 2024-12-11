@@ -50,7 +50,7 @@ define dso_local void @predicate_loop_hint(ptr noalias nocapture %A, ptr noalias
 ; CHECK:         %[[WML2:.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0({{.*}}<4 x i1> %active.lane.mask
 ; CHECK:         %[[ADD:.*]] = add nsw <4 x i32> %[[WML2]], %[[WML1]]
 ; CHECK:         call void @llvm.masked.store.v4i32.p0(<4 x i32> %[[ADD]], {{.*}}<4 x i1> %active.lane.mask
-; CHECK:         %index.next = add i64 %index, 4
+; CHECK:         %index.next = add nuw i64 %index, 4
 ; CHECK:         br i1 %{{.*}}, label %{{.*}}, label %vector.body, !llvm.loop [[VEC_LOOP2:![0-9]+]]
 ;
 ; CHECK:         br i1 %{{.*}}, label %{{.*}}, label %for.body, !llvm.loop [[SCALAR_LOOP2:![0-9]+]]

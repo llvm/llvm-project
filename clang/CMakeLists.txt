@@ -350,7 +350,9 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -Wno-long-long")
   endif ()
 
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nested-anon-types" )
+  if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nested-anon-types" )
+  endif ()
 endif ()
 
 # Determine HOST_LINK_VERSION on Darwin.
@@ -848,23 +850,17 @@ if (CLANG_ENABLE_BOOTSTRAP)
     set(CLANG_BOOTSTRAP_TARGETS check-llvm check-clang check-all)
   endif()
   foreach(target ${CLANG_BOOTSTRAP_TARGETS})
-    # Install targets have side effects, so we always want to execute them.
-    # "install" is reserved by CMake and can't be used as a step name for
-    # ExternalProject_Add_Step, so we can match against "^install-" instead of
-    # "^install" to get a tighter match. CMake's installation scripts already
-    # skip up-to-date files, so there's no behavior change if you install to the
-    # same destination multiple times.
-    if(target MATCHES "^install-")
-      set(step_always ON)
-    else()
-      set(step_always OFF)
-    endif()
 
     ExternalProject_Add_Step(${NEXT_CLANG_STAGE} ${target}
       COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target ${target}
       COMMENT "Performing ${target} for '${NEXT_CLANG_STAGE}'"
       DEPENDEES configure
-      ALWAYS ${step_always}
+      # We need to set ALWAYS to ON here, otherwise these targets won't be
+      # built on a second invocation of ninja.  The targets have their own
+      # logic to determine if they should build or not so setting ALWAYS ON
+      # here does not mean the targets will always rebuild it just means that
+      # they will check their dependenices and see if they need to be built.
+      ALWAYS ON
       EXCLUDE_FROM_MAIN ON
       USES_TERMINAL 1
     )
@@ -903,6 +899,7 @@ if (CLANG_BOLT AND NOT LLVM_BUILD_INSTRUMENTED)
         -instrument --instrumentation-file-append-pid
         --instrumentation-file=${BOLT_FDATA}
       COMMENT "Instrumenting clang binary with BOLT"
+      USES_TERMINAL
       VERBATIM
     )
     add_custom_target(clang-bolt-training-deps DEPENDS clang-instrumented)
@@ -911,20 +908,19 @@ if (CLANG_BOLT AND NOT LLVM_BUILD_INSTRUMENTED)
   endif()
 
   # Optimize original (pre-bolt) Clang using the collected profile
-  set(CLANG_OPTIMIZED ${CMAKE_CURRENT_BINARY_DIR}/clang.bolt)
   add_custom_target(clang-bolt
-    DEPENDS ${CLANG_OPTIMIZED}
-  )
-  add_custom_command(OUTPUT ${CLANG_OPTIMIZED}
     DEPENDS clang-bolt-profile
-    COMMAND llvm-bolt ${CLANG_PATH}
-      -o ${CLANG_OPTIMIZED}
+    COMMAND ${CMAKE_COMMAND} -E rename $<TARGET_FILE:clang> ${CLANG_PATH}-prebolt
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ${CLANG_PATH}-prebolt ${CLANG_PATH}++-prebolt
+    COMMAND llvm-bolt ${CLANG_PATH}-prebolt
+      -o $<TARGET_FILE:clang>
       -data ${BOLT_FDATA}
-      -reorder-blocks=ext-tsp -reorder-functions=hfsort+ -split-functions
-      -split-all-cold -split-eh -dyno-stats -icf=1 -use-gnu-stack
+      -reorder-blocks=ext-tsp -reorder-functions=cdsort -split-functions
+      -split-all-cold -split-eh -dyno-stats -use-gnu-stack
+      -update-debug-sections
       ${BOLT_NO_LBR}
-    COMMAND ${CMAKE_COMMAND} -E rename ${CLANG_OPTIMIZED} $<TARGET_FILE:clang>
     COMMENT "Optimizing Clang with BOLT"
+    USES_TERMINAL
     VERBATIM
   )
 endif()

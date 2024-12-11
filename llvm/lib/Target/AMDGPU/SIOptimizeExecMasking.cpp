@@ -84,7 +84,7 @@ public:
 
 INITIALIZE_PASS_BEGIN(SIOptimizeExecMasking, DEBUG_TYPE,
                       "SI optimize exec mask operations", false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_END(SIOptimizeExecMasking, DEBUG_TYPE,
                     "SI optimize exec mask operations", false, false)
 
@@ -503,12 +503,12 @@ bool SIOptimizeExecMasking::optimizeExecSequence() {
           SaveExecInst = &*J;
           LLVM_DEBUG(dbgs() << "Found save exec op: " << *SaveExecInst << '\n');
           continue;
-        } else {
-          LLVM_DEBUG(dbgs()
-                     << "Instruction does not read exec copy: " << *J << '\n');
-          break;
         }
-      } else if (ReadsCopyFromExec && !SaveExecInst) {
+        LLVM_DEBUG(dbgs() << "Instruction does not read exec copy: " << *J
+                          << '\n');
+        break;
+      }
+      if (ReadsCopyFromExec && !SaveExecInst) {
         // Make sure no other instruction is trying to use this copy, before it
         // will be rewritten by the saveexec, i.e. hasOneUse. There may have
         // been another use, such as an inserted spill. For example:

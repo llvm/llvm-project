@@ -15,6 +15,15 @@ def SDTX86FCmp    : SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisFP<1>,
 def SDTX86Ccmp    : SDTypeProfile<1, 5,
                                   [SDTCisVT<3, i8>, SDTCisVT<4, i8>, SDTCisVT<5, i32>]>;
 
+// RES = op PTR, PASSTHRU, COND, EFLAGS
+def SDTX86Cload    : SDTypeProfile<1, 4,
+                                  [SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisSameAs<0, 2>,
+                                   SDTCisVT<3, i8>, SDTCisVT<4, i32>]>;
+// op VAL, PTR, COND, EFLAGS
+def SDTX86Cstore    : SDTypeProfile<0, 4,
+                                  [SDTCisInt<0>, SDTCisPtrTy<1>,
+                                   SDTCisVT<2, i8>, SDTCisVT<3, i32>]>;
+
 def SDTX86Cmov    : SDTypeProfile<1, 4,
                                   [SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>,
                                    SDTCisVT<3, i8>, SDTCisVT<4, i32>]>;
@@ -36,12 +45,7 @@ def SDTBinaryArithWithFlagsInOut : SDTypeProfile<2, 3,
                                              SDTCisInt<0>,
                                              SDTCisVT<1, i32>,
                                              SDTCisVT<4, i32>]>;
-// RES1, RES2, FLAGS = op LHS, RHS
-def SDT2ResultBinaryArithWithFlags : SDTypeProfile<3, 2,
-                                            [SDTCisSameAs<0, 1>,
-                                             SDTCisSameAs<0, 2>,
-                                             SDTCisSameAs<0, 3>,
-                                             SDTCisInt<0>, SDTCisVT<1, i32>]>;
+
 def SDTX86BrCond  : SDTypeProfile<0, 3,
                                   [SDTCisVT<0, OtherVT>,
                                    SDTCisVT<1, i8>, SDTCisVT<2, i32>]>;
@@ -143,6 +147,9 @@ def X86bt      : SDNode<"X86ISD::BT",       SDTX86CmpTest>;
 
 def X86ccmp    : SDNode<"X86ISD::CCMP",     SDTX86Ccmp>;
 def X86ctest   : SDNode<"X86ISD::CTEST",    SDTX86Ccmp>;
+
+def X86cload    : SDNode<"X86ISD::CLOAD",   SDTX86Cload, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def X86cstore   : SDNode<"X86ISD::CSTORE",  SDTX86Cstore, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 def X86cmov    : SDNode<"X86ISD::CMOV",     SDTX86Cmov>;
 def X86brcond  : SDNode<"X86ISD::BRCOND",   SDTX86BrCond,
@@ -254,7 +261,7 @@ def X86add_flag  : SDNode<"X86ISD::ADD",  SDTBinaryArithWithFlags,
 def X86sub_flag  : SDNode<"X86ISD::SUB",  SDTBinaryArithWithFlags>;
 def X86smul_flag : SDNode<"X86ISD::SMUL", SDTBinaryArithWithFlags,
                           [SDNPCommutative]>;
-def X86umul_flag : SDNode<"X86ISD::UMUL", SDT2ResultBinaryArithWithFlags,
+def X86umul_flag : SDNode<"X86ISD::UMUL", SDTBinaryArithWithFlags,
                           [SDNPCommutative]>;
 def X86adc_flag  : SDNode<"X86ISD::ADC",  SDTBinaryArithWithFlagsInOut>;
 def X86sbb_flag  : SDNode<"X86ISD::SBB",  SDTBinaryArithWithFlagsInOut>;

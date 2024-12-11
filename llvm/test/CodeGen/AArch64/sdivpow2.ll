@@ -77,7 +77,7 @@ define i64 @test6(i64 %x) {
 define i64 @test7(i64 %x) {
 ; CHECK-LABEL: test7:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #281474976710655
+; CHECK-NEXT:    mov x8, #281474976710655 // =0xffffffffffff
 ; CHECK-NEXT:    cmp x0, #0
 ; CHECK-NEXT:    add x8, x0, x8
 ; CHECK-NEXT:    csel x8, x8, x0, lt
@@ -90,8 +90,7 @@ define i64 @test7(i64 %x) {
 define i64 @test8(i64 %x) {
 ; ISEL-LABEL: test8:
 ; ISEL:       // %bb.0:
-; ISEL-NEXT:    cmp x0, #0
-; ISEL-NEXT:    cinc x8, x0, lt
+; ISEL-NEXT:    add x8, x0, x0, lsr #63
 ; ISEL-NEXT:    asr x0, x8, #1
 ; ISEL-NEXT:    ret
 ;
@@ -106,3 +105,30 @@ define i64 @test8(i64 %x) {
   ret i64 %div
 }
 
+define i32 @sdiv_int(i32 %begin, i32 %first) #0 {
+; ISEL-LABEL: sdiv_int:
+; ISEL:       // %bb.0:
+; ISEL-NEXT:    sub w8, w0, w1
+; ISEL-NEXT:    add w8, w8, #1
+; ISEL-NEXT:    add w8, w8, w8, lsr #31
+; ISEL-NEXT:    sub w0, w0, w8, asr #1
+; ISEL-NEXT:    ret
+;
+; FAST-LABEL: sdiv_int:
+; FAST:       // %bb.0:
+; FAST-NEXT:    add w8, w0, #1
+; FAST-NEXT:    sub w8, w8, w1
+; FAST-NEXT:    add w9, w8, #1
+; FAST-NEXT:    cmp w8, #0
+; FAST-NEXT:    csel w8, w9, w8, lt
+; FAST-NEXT:    neg w8, w8, asr #1
+; FAST-NEXT:    add w0, w8, w0
+; FAST-NEXT:    ret
+  %sub = add i32 %begin, 1
+  %add = sub i32 %sub, %first
+  %div.neg = sdiv i32 %add, -2
+  %sub1 = add i32 %div.neg, %begin
+  ret i32 %sub1
+}
+
+attributes #0 = { "target-features"="+sve" vscale_range(2,2) }

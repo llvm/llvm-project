@@ -4,7 +4,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128-ni:1"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Make sure that we can compile the test without crash.
-define void @barney() {
+define void @barney(ptr %dst, i1 %arg) {
 
 ; CHECK-LABEL: @barney(
 ; CHECK:       middle.block:
@@ -28,13 +28,13 @@ bb19:                                             ; preds = %bb36, %bb5
   br label %bb50
 
 bb33:                                             ; preds = %bb62
-  br i1 undef, label %bb18, label %bb36
+  br i1 %arg, label %bb18, label %bb36
 
 bb36:                                             ; preds = %bb33
   br label %bb19
 
 bb46:                                             ; preds = %bb50
-  br i1 undef, label %bb48, label %bb59
+  br i1 %arg, label %bb48, label %bb59
 
 bb48:                                             ; preds = %bb46
   %tmp49 = add i32 %tmp52, 14
@@ -43,6 +43,8 @@ bb48:                                             ; preds = %bb46
 bb50:                                             ; preds = %bb50, %bb19
   %tmp52 = phi i32 [ %tmp55, %bb50 ], [ %tmp22, %bb19 ]
   %tmp53 = phi i64 [ %tmp56, %bb50 ], [ 1, %bb19 ]
+  %gep = getelementptr inbounds i8, ptr %dst, i64 %tmp53
+  store i8 1, ptr %gep
   %tmp54 = add i32 %tmp52, 12
   %tmp55 = add i32 %tmp52, 13
   %tmp56 = add nuw nsw i64 %tmp53, 1

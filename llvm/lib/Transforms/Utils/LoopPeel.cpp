@@ -206,13 +206,11 @@ PhiAnalyzer::PhiAnalyzer(const Loop &L, unsigned MaxIterations)
 //   G(%y) = Unknown otherwise (including phi not in header block)
 PhiAnalyzer::PeelCounter PhiAnalyzer::calculate(const Value &V) {
   // If we already know the answer, take it from the map.
-  auto I = IterationsToInvariance.find(&V);
-  if (I != IterationsToInvariance.end())
-    return I->second;
-
-  // Place Unknown to map to avoid infinite recursion. Such
+  // Otherwise, place Unknown to map to avoid infinite recursion. Such
   // cycles can never stop on an invariant.
-  IterationsToInvariance[&V] = Unknown;
+  auto [I, Inserted] = IterationsToInvariance.try_emplace(&V, Unknown);
+  if (!Inserted)
+    return I->second;
 
   if (L.isLoopInvariant(&V))
     // Loop invariant so known at start.
@@ -298,7 +296,7 @@ static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
   BasicBlock *Header = L.getHeader();
   BasicBlock *Latch = L.getLoopLatch();
   SmallPtrSet<Value *, 8> LoadUsers;
-  const DataLayout &DL = L.getHeader()->getModule()->getDataLayout();
+  const DataLayout &DL = L.getHeader()->getDataLayout();
   for (BasicBlock *BB : L.blocks()) {
     for (Instruction &I : *BB) {
       if (I.mayWriteToMemory())
@@ -680,7 +678,7 @@ struct WeightInfo {
 /// To avoid dealing with division rounding we can just multiple both part
 /// of weights to E and use weight as (F - I * E, E).
 static void updateBranchWeights(Instruction *Term, WeightInfo &Info) {
-  setBranchWeights(*Term, Info.Weights);
+  setBranchWeights(*Term, Info.Weights, /*IsExpected=*/false);
   for (auto [Idx, SubWeight] : enumerate(Info.SubWeights))
     if (SubWeight != 0)
       // Don't set the probability of taking the edge from latch to loop header
@@ -859,7 +857,7 @@ static void cloneLoopBlocks(
       if (LatchInst && L->contains(LatchInst))
         LatchVal = VMap[LatchVal];
       PHI.addIncoming(LatchVal, cast<BasicBlock>(VMap[Edge.first]));
-      SE.forgetValue(&PHI);
+      SE.forgetLcssaPhiWithNewPredecessor(L, &PHI);
     }
 
   // LastValueMap is updated with the values for the current loop
@@ -1073,7 +1071,7 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   }
 
   for (const auto &[Term, Info] : Weights) {
-    setBranchWeights(*Term, Info.Weights);
+    setBranchWeights(*Term, Info.Weights, /*IsExpected=*/false);
   }
 
   // Update Metadata for count of peeled off iterations.

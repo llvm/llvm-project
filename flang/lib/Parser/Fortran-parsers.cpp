@@ -460,7 +460,7 @@ TYPE_PARSER(construct<ComponentAttrSpec>(accessSpec) ||
     construct<ComponentAttrSpec>(allocatable) ||
     construct<ComponentAttrSpec>("CODIMENSION" >> coarraySpec) ||
     construct<ComponentAttrSpec>(contiguous) ||
-    construct<ComponentAttrSpec>("DIMENSION" >> Parser<ComponentArraySpec>{}) ||
+    construct<ComponentAttrSpec>("DIMENSION" >> componentArraySpec) ||
     construct<ComponentAttrSpec>(pointer) ||
     extension<LanguageFeature::CUDA>(
         construct<ComponentAttrSpec>(Parser<common::CUDADataAttr>{})) ||
@@ -471,17 +471,23 @@ TYPE_PARSER(construct<ComponentAttrSpec>(accessSpec) ||
 
 // R739 component-decl ->
 //        component-name [( component-array-spec )]
-//        [lbracket coarray-spec rbracket] [* char-length]
-//        [component-initialization]
+//          [lbracket coarray-spec rbracket] [* char-length]
+//          [component-initialization] |
+// (ext.) component-name *char-length [(component-array-spec)]
+//          [lbracket coarray-spec rbracket] [* char-length]
+//          [component-initialization]
 TYPE_CONTEXT_PARSER("component declaration"_en_US,
-    construct<ComponentDecl>(name, maybe(Parser<ComponentArraySpec>{}),
-        maybe(coarraySpec), maybe("*" >> charLength), maybe(initialization)))
+    construct<ComponentDecl>(name, "*" >> charLength, maybe(componentArraySpec),
+        maybe(coarraySpec), maybe(initialization)) ||
+        construct<ComponentDecl>(name, maybe(componentArraySpec),
+            maybe(coarraySpec), maybe("*" >> charLength),
+            maybe(initialization)))
 // The source field of the Name will be replaced with a distinct generated name.
 TYPE_CONTEXT_PARSER("%FILL item"_en_US,
     extension<LanguageFeature::DECStructures>(
         "nonstandard usage: %FILL"_port_en_US,
         construct<FillDecl>(space >> sourced("%FILL" >> construct<Name>()),
-            maybe(Parser<ComponentArraySpec>{}), maybe("*" >> charLength))))
+            maybe(componentArraySpec), maybe("*" >> charLength))))
 TYPE_PARSER(construct<ComponentOrFill>(Parser<ComponentDecl>{}) ||
     construct<ComponentOrFill>(Parser<FillDecl>{}))
 
@@ -658,9 +664,13 @@ TYPE_PARSER(recovery("END ENUM"_tok, constructEndStmtErrorRecovery) >>
 
 // R801 type-declaration-stmt ->
 //        declaration-type-spec [[, attr-spec]... ::] entity-decl-list
-constexpr auto entityDeclWithoutEqInit{construct<EntityDecl>(name,
-    maybe(arraySpec), maybe(coarraySpec), maybe("*" >> charLength),
-    !"="_tok >> maybe(initialization))}; // old-style REAL A/0/ still works
+constexpr auto entityDeclWithoutEqInit{
+    construct<EntityDecl>(name, "*" >> charLength, maybe(arraySpec),
+        maybe(coarraySpec), !"="_tok >> maybe(initialization)) ||
+    construct<EntityDecl>(name, maybe(arraySpec), maybe(coarraySpec),
+        maybe("*" >> charLength),
+        !"="_tok >>
+            maybe(initialization) /* old-style REAL A/0/ still works */)};
 TYPE_PARSER(
     construct<TypeDeclarationStmt>(declarationTypeSpec,
         defaulted("," >> nonemptyList(Parser<AttrSpec>{})) / "::",
@@ -720,9 +730,13 @@ constexpr auto objectName{name};
 // R803 entity-decl ->
 //        object-name [( array-spec )] [lbracket coarray-spec rbracket]
 //          [* char-length] [initialization] |
-//        function-name [* char-length]
-TYPE_PARSER(construct<EntityDecl>(objectName, maybe(arraySpec),
-    maybe(coarraySpec), maybe("*" >> charLength), maybe(initialization)))
+//        function-name [* char-length] |
+// (ext.) object-name *char-length [(array-spec)]
+//          [lbracket coarray-spec rbracket] [initialization]
+TYPE_PARSER(construct<EntityDecl>(objectName, "*" >> charLength,
+                maybe(arraySpec), maybe(coarraySpec), maybe(initialization)) ||
+    construct<EntityDecl>(objectName, maybe(arraySpec), maybe(coarraySpec),
+        maybe("*" >> charLength), maybe(initialization)))
 
 // R806 null-init -> function-reference   ... which must resolve to NULL()
 TYPE_PARSER(lookAhead(name / "( )") >> construct<NullInit>(expr))
@@ -735,7 +749,8 @@ TYPE_PARSER(construct<AccessSpec>("PUBLIC" >> pure(AccessSpec::Kind::Public)) ||
 //        BIND ( C [, NAME = scalar-default-char-constant-expr] )
 // R1528 proc-language-binding-spec -> language-binding-spec
 TYPE_PARSER(construct<LanguageBindingSpec>(
-    "BIND ( C" >> maybe(", NAME =" >> scalarDefaultCharConstantExpr) / ")"))
+    "BIND ( C" >> maybe(", NAME =" >> scalarDefaultCharConstantExpr),
+    (", CDEFINED" >> pure(true) || pure(false)) / ")"))
 
 // R809 coarray-spec -> deferred-coshape-spec-list | explicit-coshape-spec
 // N.B. Bracketed here rather than around references, for consistency with
@@ -1276,10 +1291,13 @@ constexpr auto loopCount{
 constexpr auto assumeAligned{"ASSUME_ALIGNED" >>
     optionalList(construct<CompilerDirective::AssumeAligned>(
         indirect(designator), ":"_tok >> digitString64))};
+constexpr auto vectorAlways{
+    "VECTOR ALWAYS" >> construct<CompilerDirective::VectorAlways>()};
 TYPE_PARSER(beginDirective >> "DIR$ "_tok >>
     sourced((construct<CompilerDirective>(ignore_tkr) ||
                 construct<CompilerDirective>(loopCount) ||
                 construct<CompilerDirective>(assumeAligned) ||
+                construct<CompilerDirective>(vectorAlways) ||
                 construct<CompilerDirective>(
                     many(construct<CompilerDirective::NameValue>(
                         name, maybe(("="_tok || ":"_tok) >> digitString64))))) /
@@ -1300,10 +1318,16 @@ TYPE_PARSER(extension<LanguageFeature::CUDA>(construct<CUDAAttributesStmt>(
     defaulted(
         maybe("::"_tok) >> nonemptyList("expected names"_err_en_US, name)))))
 
-// Subtle: the name includes the surrounding slashes, which avoids
+// Subtle: A structure's name includes the surrounding slashes, which avoids
 // clashes with other uses of the name in the same scope.
-TYPE_PARSER(construct<StructureStmt>(
-    "STRUCTURE" >> maybe(sourced("/" >> name / "/")), optionalList(entityDecl)))
+constexpr auto structureName{maybe(sourced("/" >> name / "/"))};
+
+// Note that Parser<StructureStmt>{} has a mandatory list of entity-decls
+// and is used only by NestedStructureStmt{}.Parse() in user-state.cpp.
+TYPE_PARSER(construct<StructureStmt>("STRUCTURE" >> structureName,
+    localRecovery(
+        "entity declarations are required on a nested structure"_err_en_US,
+        nonemptyList(entityDecl), ok)))
 
 constexpr auto nestedStructureDef{
     CONTEXT_PARSER("nested STRUCTURE definition"_en_US,
@@ -1319,7 +1343,9 @@ TYPE_PARSER(construct<StructureField>(statement(StructureComponents{})) ||
 TYPE_CONTEXT_PARSER("STRUCTURE definition"_en_US,
     extension<LanguageFeature::DECStructures>(
         "nonstandard usage: STRUCTURE"_port_en_US,
-        construct<StructureDef>(statement(Parser<StructureStmt>{}),
+        construct<StructureDef>(
+            statement(construct<StructureStmt>(
+                "STRUCTURE" >> structureName, optionalList(entityDecl))),
             many(Parser<StructureField>{}),
             statement(construct<StructureDef::EndStructureStmt>(
                 "END STRUCTURE"_tok)))))

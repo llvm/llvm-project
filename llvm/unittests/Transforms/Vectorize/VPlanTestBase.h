@@ -68,8 +68,9 @@ protected:
     doAnalysis(F);
 
     Loop *L = LI->getLoopFor(LoopHeader);
-    auto Plan = VPlan::createInitialVPlan(SE->getBackedgeTakenCount(L), *SE,
-                                          L->getLoopPreheader());
+    PredicatedScalarEvolution PSE(*SE, *L);
+    auto Plan = VPlan::createInitialVPlan(IntegerType::get(*Ctx, 64), PSE, true,
+                                          false, L);
     VPlanHCFGBuilder HCFGBuilder(L, LI.get(), *Plan);
     HCFGBuilder.buildHierarchicalCFG();
     return Plan;
@@ -82,8 +83,9 @@ protected:
     doAnalysis(F);
 
     Loop *L = LI->getLoopFor(LoopHeader);
-    auto Plan = VPlan::createInitialVPlan(SE->getBackedgeTakenCount(L), *SE,
-                                          L->getLoopPreheader());
+    PredicatedScalarEvolution PSE(*SE, *L);
+    auto Plan = VPlan::createInitialVPlan(IntegerType::get(*Ctx, 64), PSE, true,
+                                          false, L);
     VPlanHCFGBuilder HCFGBuilder(L, LI.get(), *Plan);
     HCFGBuilder.buildPlainCFG();
     return Plan;

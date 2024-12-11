@@ -771,7 +771,7 @@ TEST(LocateSymbol, All) {
         namespace std
         {
           template<class _E>
-          class [[initializer_list]] {};
+          class [[initializer_list]] { const _E *a, *b; };
         }
 
         ^auto i = {1,2};
@@ -1019,6 +1019,15 @@ TEST(LocateSymbol, All) {
           void *Value;
           void *getPointer() const { return Info::get^Pointer(Value); }
         };
+      )cpp",
+      R"cpp(// Deducing this
+        struct S {
+          int bar(this S&);
+        };
+        void foo() {
+          S [[waldo]];
+          int x = wa^ldo.bar();
+        }
     )cpp"};
   for (const char *Test : Tests) {
     Annotations T(Test);
@@ -1035,6 +1044,7 @@ TEST(LocateSymbol, All) {
     TU.Code = std::string(T.code());
 
     TU.ExtraArgs.push_back("-xobjective-c++");
+    TU.ExtraArgs.push_back("-std=c++23");
 
     auto AST = TU.build();
     auto Results = locateSymbolAt(AST, T.point());
@@ -2173,6 +2183,11 @@ TEST(FindReferences, WithinAST) {
         using $def[[MyTypeD^ef]] = int;
         enum MyEnum : $(MyEnum)[[MyTy^peDef]] { };
       )cpp",
+      // UDL
+      R"cpp(
+        bool $decl[[operator]]"" _u^dl(unsigned long long value);
+        bool x = $(x)[[1_udl]];
+      )cpp",
   };
   for (const char *Test : Tests)
     checkFindRefs(Test);
@@ -2358,7 +2373,13 @@ TEST(FindReferences, UsedSymbolsFromInclude) {
 
       R"cpp([[#in^clude <vector>]]
         std::[[vector]]<int> vec;
-      )cpp"};
+      )cpp",
+
+      R"cpp(
+        [[#include ^"udl_header.h"]]
+        auto x = [[1_b]];
+      )cpp",
+  };
   for (const char *Test : Tests) {
     Annotations T(Test);
     auto TU = TestTU::withCode(T.code());
@@ -2374,6 +2395,9 @@ TEST(FindReferences, UsedSymbolsFromInclude) {
         template<typename>
         class vector{};
       }
+    )cpp");
+    TU.AdditionalFiles["udl_header.h"] = guard(R"cpp(
+      bool operator"" _b(unsigned long long value);
     )cpp");
     TU.ExtraArgs.push_back("-isystem" + testPath("system"));
 

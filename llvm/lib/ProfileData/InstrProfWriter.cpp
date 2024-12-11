@@ -28,6 +28,7 @@
 #include "llvm/Support/OnDiskHashTable.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
+#include <ctime>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -39,9 +40,8 @@ using namespace llvm;
 // A struct to define how the data stream should be patched. For Indexed
 // profiling, only uint64_t data type is needed.
 struct PatchItem {
-  uint64_t Pos; // Where to patch.
-  uint64_t *D;  // Pointer to an array of source data.
-  int N;        // Number of elements in \c D array.
+  uint64_t Pos;         // Where to patch.
+  ArrayRef<uint64_t> D; // An array of source data.
 };
 
 namespace llvm {
@@ -55,7 +55,7 @@ public:
   ProfOStream(raw_string_ostream &STR)
       : IsFDOStream(false), OS(STR), LE(STR, llvm::endianness::little) {}
 
-  uint64_t tell() { return OS.tell(); }
+  [[nodiscard]] uint64_t tell() const { return OS.tell(); }
   void write(uint64_t V) { LE.write<uint64_t>(V); }
   void write32(uint32_t V) { LE.write<uint32_t>(V); }
   void writeByte(uint8_t V) { LE.write<uint8_t>(V); }
@@ -71,8 +71,8 @@ public:
       const uint64_t LastPos = FDOStream.tell();
       for (const auto &K : P) {
         FDOStream.seek(K.Pos);
-        for (int I = 0; I < K.N; I++)
-          write(K.D[I]);
+        for (uint64_t Elem : K.D)
+          write(Elem);
       }
       // Reset the stream to the last position after patching so that users
       // don't accidentally overwrite data. This makes it consistent with
@@ -82,7 +82,7 @@ public:
       raw_string_ostream &SOStream = static_cast<raw_string_ostream &>(OS);
       std::string &Data = SOStream.str(); // with flush
       for (const auto &K : P) {
-        for (int I = 0; I < K.N; I++) {
+        for (int I = 0, E = K.D.size(); I != E; I++) {
           uint64_t Bytes =
               endian::byte_swap<uint64_t, llvm::endianness::little>(K.D[I]);
           Data.replace(K.Pos + I * sizeof(uint64_t), sizeof(uint64_t),
@@ -185,13 +185,25 @@ public:
 InstrProfWriter::InstrProfWriter(
     bool Sparse, uint64_t TemporalProfTraceReservoirSize,
     uint64_t MaxTemporalProfTraceLength, bool WritePrevVersion,
-    memprof::IndexedVersion MemProfVersionRequested, bool MemProfFullSchema)
+    memprof::IndexedVersion MemProfVersionRequested, bool MemProfFullSchema,
+    bool MemprofGenerateRandomHotness,
+    unsigned MemprofGenerateRandomHotnessSeed)
     : Sparse(Sparse), MaxTemporalProfTraceLength(MaxTemporalProfTraceLength),
       TemporalProfTraceReservoirSize(TemporalProfTraceReservoirSize),
       InfoObj(new InstrProfRecordWriterTrait()),
       WritePrevVersion(WritePrevVersion),
       MemProfVersionRequested(MemProfVersionRequested),
-      MemProfFullSchema(MemProfFullSchema) {}
+      MemProfFullSchema(MemProfFullSchema),
+      MemprofGenerateRandomHotness(MemprofGenerateRandomHotness) {
+  // Set up the random number seed if requested.
+  if (MemprofGenerateRandomHotness) {
+    unsigned seed = MemprofGenerateRandomHotnessSeed
+                        ? MemprofGenerateRandomHotnessSeed
+                        : std::time(nullptr);
+    errs() << "random hotness seed = " << seed << "\n";
+    std::srand(seed);
+  }
+}
 
 InstrProfWriter::~InstrProfWriter() { delete InfoObj; }
 
@@ -274,19 +286,40 @@ void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
 
 void InstrProfWriter::addMemProfRecord(
     const Function::GUID Id, const memprof::IndexedMemProfRecord &Record) {
-  auto [Iter, Inserted] = MemProfData.RecordData.insert({Id, Record});
+  auto NewRecord = Record;
+  // Provoke random hotness values if requested. We specify the lifetime access
+  // density and lifetime length that will result in a cold or not cold hotness.
+  // See the logic in getAllocType() in Analysis/MemoryProfileInfo.cpp.
+  if (MemprofGenerateRandomHotness) {
+    for (auto &Alloc : NewRecord.AllocSites) {
+      // To get a not cold context, set the lifetime access density to the
+      // maximum value and the lifetime to 0.
+      uint64_t NewTLAD = std::numeric_limits<uint64_t>::max();
+      uint64_t NewTL = 0;
+      bool IsCold = std::rand() % 2;
+      if (IsCold) {
+        // To get a cold context, set the lifetime access density to 0 and the
+        // lifetime to the maximum value.
+        NewTLAD = 0;
+        NewTL = std::numeric_limits<uint64_t>::max();
+      }
+      Alloc.Info.setTotalLifetimeAccessDensity(NewTLAD);
+      Alloc.Info.setTotalLifetime(NewTL);
+    }
+  }
+  auto [Iter, Inserted] = MemProfData.Records.insert({Id, NewRecord});
   // If we inserted a new record then we are done.
   if (Inserted) {
     return;
   }
   memprof::IndexedMemProfRecord &Existing = Iter->second;
-  Existing.merge(Record);
+  Existing.merge(NewRecord);
 }
 
 bool InstrProfWriter::addMemProfFrame(const memprof::FrameId Id,
                                       const memprof::Frame &Frame,
                                       function_ref<void(Error)> Warn) {
-  auto [Iter, Inserted] = MemProfData.FrameData.insert({Id, Frame});
+  auto [Iter, Inserted] = MemProfData.Frames.insert({Id, Frame});
   // If a mapping already exists for the current frame id and it does not
   // match the new mapping provided then reset the existing contents and bail
   // out. We don't support the merging of memprof data whose Frame -> Id
@@ -303,7 +336,7 @@ bool InstrProfWriter::addMemProfCallStack(
     const memprof::CallStackId CSId,
     const llvm::SmallVector<memprof::FrameId> &CallStack,
     function_ref<void(Error)> Warn) {
-  auto [Iter, Inserted] = MemProfData.CallStackData.insert({CSId, CallStack});
+  auto [Iter, Inserted] = MemProfData.CallStacks.insert({CSId, CallStack});
   // If a mapping already exists for the current call stack id and it does not
   // match the new mapping provided then reset the existing contents and bail
   // out. We don't support the merging of memprof data whose CallStack -> Id
@@ -313,6 +346,41 @@ bool InstrProfWriter::addMemProfCallStack(
                                     "call stack to id mapping mismatch"));
     return false;
   }
+  return true;
+}
+
+bool InstrProfWriter::addMemProfData(memprof::IndexedMemProfData Incoming,
+                                     function_ref<void(Error)> Warn) {
+  // Return immediately if everything is empty.
+  if (Incoming.Frames.empty() && Incoming.CallStacks.empty() &&
+      Incoming.Records.empty())
+    return true;
+
+  // Otherwise, every component must be non-empty.
+  assert(!Incoming.Frames.empty() && !Incoming.CallStacks.empty() &&
+         !Incoming.Records.empty());
+
+  if (MemProfData.Frames.empty())
+    MemProfData.Frames = std::move(Incoming.Frames);
+  else
+    for (const auto &[Id, F] : Incoming.Frames)
+      if (addMemProfFrame(Id, F, Warn))
+        return false;
+
+  if (MemProfData.CallStacks.empty())
+    MemProfData.CallStacks = std::move(Incoming.CallStacks);
+  else
+    for (const auto &[CSId, CS] : Incoming.CallStacks)
+      if (addMemProfCallStack(CSId, CS, Warn))
+        return false;
+
+  // Add one record at a time if randomization is requested.
+  if (MemProfData.Records.empty() && !MemprofGenerateRandomHotness)
+    MemProfData.Records = std::move(Incoming.Records);
+  else
+    for (const auto &[GUID, Record] : Incoming.Records)
+      addMemProfRecord(GUID, Record);
+
   return true;
 }
 
@@ -390,22 +458,22 @@ void InstrProfWriter::mergeRecordsFromWriter(InstrProfWriter &&IPW,
   addTemporalProfileTraces(IPW.TemporalProfTraces,
                            IPW.TemporalProfTraceStreamSize);
 
-  MemProfData.FrameData.reserve(IPW.MemProfData.FrameData.size());
-  for (auto &[FrameId, Frame] : IPW.MemProfData.FrameData) {
+  MemProfData.Frames.reserve(IPW.MemProfData.Frames.size());
+  for (auto &[FrameId, Frame] : IPW.MemProfData.Frames) {
     // If we weren't able to add the frame mappings then it doesn't make sense
     // to try to merge the records from this profile.
     if (!addMemProfFrame(FrameId, Frame, Warn))
       return;
   }
 
-  MemProfData.CallStackData.reserve(IPW.MemProfData.CallStackData.size());
-  for (auto &[CSId, CallStack] : IPW.MemProfData.CallStackData) {
+  MemProfData.CallStacks.reserve(IPW.MemProfData.CallStacks.size());
+  for (auto &[CSId, CallStack] : IPW.MemProfData.CallStacks) {
     if (!addMemProfCallStack(CSId, CallStack, Warn))
       return;
   }
 
-  MemProfData.RecordData.reserve(IPW.MemProfData.RecordData.size());
-  for (auto &[GUID, Record] : IPW.MemProfData.RecordData) {
+  MemProfData.Records.reserve(IPW.MemProfData.Records.size());
+  for (auto &[GUID, Record] : IPW.MemProfData.Records) {
     addMemProfRecord(GUID, Record);
   }
 }
@@ -494,17 +562,40 @@ static uint64_t writeMemProfFrames(
 static llvm::DenseMap<memprof::FrameId, memprof::LinearFrameId>
 writeMemProfFrameArray(
     ProfOStream &OS,
-    llvm::MapVector<memprof::FrameId, memprof::Frame> &MemProfFrameData) {
+    llvm::MapVector<memprof::FrameId, memprof::Frame> &MemProfFrameData,
+    llvm::DenseMap<memprof::FrameId, memprof::FrameStat> &FrameHistogram) {
   // Mappings from FrameIds to array indexes.
   llvm::DenseMap<memprof::FrameId, memprof::LinearFrameId> MemProfFrameIndexes;
 
-  // Sort the FrameIDs for stability.
+  // Compute the order in which we serialize Frames.  The order does not matter
+  // in terms of correctness, but we still compute it for deserialization
+  // performance.  Specifically, if we serialize frequently used Frames one
+  // after another, we have better cache utilization.  For two Frames that
+  // appear equally frequently, we break a tie by serializing the one that tends
+  // to appear earlier in call stacks.  We implement the tie-breaking mechanism
+  // by computing the sum of indexes within call stacks for each Frame.  If we
+  // still have a tie, then we just resort to compare two FrameIds, which is
+  // just for stability of output.
   std::vector<std::pair<memprof::FrameId, const memprof::Frame *>> FrameIdOrder;
   FrameIdOrder.reserve(MemProfFrameData.size());
   for (const auto &[Id, Frame] : MemProfFrameData)
     FrameIdOrder.emplace_back(Id, &Frame);
   assert(MemProfFrameData.size() == FrameIdOrder.size());
-  llvm::sort(FrameIdOrder);
+  llvm::sort(FrameIdOrder,
+             [&](const std::pair<memprof::FrameId, const memprof::Frame *> &L,
+                 const std::pair<memprof::FrameId, const memprof::Frame *> &R) {
+               const auto &SL = FrameHistogram[L.first];
+               const auto &SR = FrameHistogram[R.first];
+               // Popular FrameIds should come first.
+               if (SL.Count != SR.Count)
+                 return SL.Count > SR.Count;
+               // If they are equally popular, then the one that tends to appear
+               // earlier in call stacks should come first.
+               if (SL.PositionSum != SR.PositionSum)
+                 return SL.PositionSum < SR.PositionSum;
+               // Compare their FrameIds for sort stability.
+               return L.first < R.first;
+             });
 
   // Serialize all frames while creating mappings from linear IDs to FrameIds.
   uint64_t Index = 0;
@@ -543,96 +634,24 @@ writeMemProfCallStackArray(
     llvm::MapVector<memprof::CallStackId, llvm::SmallVector<memprof::FrameId>>
         &MemProfCallStackData,
     llvm::DenseMap<memprof::FrameId, memprof::LinearFrameId>
-        &MemProfFrameIndexes) {
+        &MemProfFrameIndexes,
+    llvm::DenseMap<memprof::FrameId, memprof::FrameStat> &FrameHistogram,
+    unsigned &NumElements) {
   llvm::DenseMap<memprof::CallStackId, memprof::LinearCallStackId>
       MemProfCallStackIndexes;
 
-  MemProfCallStackIndexes.reserve(MemProfCallStackData.size());
-  uint64_t CallStackBase = OS.tell();
-  for (const auto &[CSId, CallStack] : MemProfCallStackData) {
-    memprof::LinearCallStackId CallStackIndex =
-        (OS.tell() - CallStackBase) / sizeof(memprof::LinearCallStackId);
-    MemProfCallStackIndexes.insert({CSId, CallStackIndex});
-    const llvm::SmallVector<memprof::FrameId> CS = CallStack;
-    OS.write32(CS.size());
-    for (const auto F : CS) {
-      assert(MemProfFrameIndexes.contains(F));
-      OS.write32(MemProfFrameIndexes[F]);
-    }
-  }
+  memprof::CallStackRadixTreeBuilder<memprof::FrameId> Builder;
+  Builder.build(std::move(MemProfCallStackData), &MemProfFrameIndexes,
+                FrameHistogram);
+  for (auto I : Builder.getRadixArray())
+    OS.write32(I);
+  NumElements = Builder.getRadixArray().size();
+  MemProfCallStackIndexes = Builder.takeCallStackPos();
 
   // Release the memory of this vector as it is no longer needed.
   MemProfCallStackData.clear();
 
   return MemProfCallStackIndexes;
-}
-
-// Write out MemProf Version0 as follows:
-// uint64_t RecordTableOffset = RecordTableGenerator.Emit
-// uint64_t FramePayloadOffset = Offset for the frame payload
-// uint64_t FrameTableOffset = FrameTableGenerator.Emit
-// uint64_t Num schema entries
-// uint64_t Schema entry 0
-// uint64_t Schema entry 1
-// ....
-// uint64_t Schema entry N - 1
-// OnDiskChainedHashTable MemProfRecordData
-// OnDiskChainedHashTable MemProfFrameData
-static Error writeMemProfV0(ProfOStream &OS,
-                            memprof::IndexedMemProfData &MemProfData) {
-  uint64_t HeaderUpdatePos = OS.tell();
-  OS.write(0ULL); // Reserve space for the memprof record table offset.
-  OS.write(0ULL); // Reserve space for the memprof frame payload offset.
-  OS.write(0ULL); // Reserve space for the memprof frame table offset.
-
-  auto Schema = memprof::getFullSchema();
-  writeMemProfSchema(OS, Schema);
-
-  uint64_t RecordTableOffset = writeMemProfRecords(OS, MemProfData.RecordData,
-                                                   &Schema, memprof::Version0);
-
-  uint64_t FramePayloadOffset = OS.tell();
-  uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfData.FrameData);
-
-  uint64_t Header[] = {RecordTableOffset, FramePayloadOffset, FrameTableOffset};
-  OS.patch({{HeaderUpdatePos, Header, std::size(Header)}});
-
-  return Error::success();
-}
-
-// Write out MemProf Version1 as follows:
-// uint64_t Version (NEW in V1)
-// uint64_t RecordTableOffset = RecordTableGenerator.Emit
-// uint64_t FramePayloadOffset = Offset for the frame payload
-// uint64_t FrameTableOffset = FrameTableGenerator.Emit
-// uint64_t Num schema entries
-// uint64_t Schema entry 0
-// uint64_t Schema entry 1
-// ....
-// uint64_t Schema entry N - 1
-// OnDiskChainedHashTable MemProfRecordData
-// OnDiskChainedHashTable MemProfFrameData
-static Error writeMemProfV1(ProfOStream &OS,
-                            memprof::IndexedMemProfData &MemProfData) {
-  OS.write(memprof::Version1);
-  uint64_t HeaderUpdatePos = OS.tell();
-  OS.write(0ULL); // Reserve space for the memprof record table offset.
-  OS.write(0ULL); // Reserve space for the memprof frame payload offset.
-  OS.write(0ULL); // Reserve space for the memprof frame table offset.
-
-  auto Schema = memprof::getFullSchema();
-  writeMemProfSchema(OS, Schema);
-
-  uint64_t RecordTableOffset = writeMemProfRecords(OS, MemProfData.RecordData,
-                                                   &Schema, memprof::Version1);
-
-  uint64_t FramePayloadOffset = OS.tell();
-  uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfData.FrameData);
-
-  uint64_t Header[] = {RecordTableOffset, FramePayloadOffset, FrameTableOffset};
-  OS.patch({{HeaderUpdatePos, Header, std::size(Header)}});
-
-  return Error::success();
 }
 
 // Write out MemProf Version2 as follows:
@@ -666,21 +685,21 @@ static Error writeMemProfV2(ProfOStream &OS,
     Schema = memprof::getFullSchema();
   writeMemProfSchema(OS, Schema);
 
-  uint64_t RecordTableOffset = writeMemProfRecords(OS, MemProfData.RecordData,
-                                                   &Schema, memprof::Version2);
+  uint64_t RecordTableOffset =
+      writeMemProfRecords(OS, MemProfData.Records, &Schema, memprof::Version2);
 
   uint64_t FramePayloadOffset = OS.tell();
-  uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfData.FrameData);
+  uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfData.Frames);
 
   uint64_t CallStackPayloadOffset = OS.tell();
   uint64_t CallStackTableOffset =
-      writeMemProfCallStacks(OS, MemProfData.CallStackData);
+      writeMemProfCallStacks(OS, MemProfData.CallStacks);
 
   uint64_t Header[] = {
       RecordTableOffset,      FramePayloadOffset,   FrameTableOffset,
       CallStackPayloadOffset, CallStackTableOffset,
   };
-  OS.patch({{HeaderUpdatePos, Header, std::size(Header)}});
+  OS.patch({{HeaderUpdatePos, Header}});
 
   return Error::success();
 }
@@ -695,8 +714,8 @@ static Error writeMemProfV2(ProfOStream &OS,
 // uint64_t Schema entry 1
 // ....
 // uint64_t Schema entry N - 1
-// OnDiskChainedHashTable MemProfFrameData
-// OnDiskChainedHashTable MemProfCallStackData
+// Frames serialized one after another
+// Call stacks encoded as a radix tree
 // OnDiskChainedHashTable MemProfRecordData
 static Error writeMemProfV3(ProfOStream &OS,
                             memprof::IndexedMemProfData &MemProfData,
@@ -712,25 +731,40 @@ static Error writeMemProfV3(ProfOStream &OS,
     Schema = memprof::getFullSchema();
   writeMemProfSchema(OS, Schema);
 
+  llvm::DenseMap<memprof::FrameId, memprof::FrameStat> FrameHistogram =
+      memprof::computeFrameHistogram(MemProfData.CallStacks);
+  assert(MemProfData.Frames.size() == FrameHistogram.size());
+
   llvm::DenseMap<memprof::FrameId, memprof::LinearFrameId> MemProfFrameIndexes =
-      writeMemProfFrameArray(OS, MemProfData.FrameData);
+      writeMemProfFrameArray(OS, MemProfData.Frames, FrameHistogram);
 
   uint64_t CallStackPayloadOffset = OS.tell();
+  // The number of elements in the call stack array.
+  unsigned NumElements = 0;
   llvm::DenseMap<memprof::CallStackId, memprof::LinearCallStackId>
-      MemProfCallStackIndexes = writeMemProfCallStackArray(
-          OS, MemProfData.CallStackData, MemProfFrameIndexes);
+      MemProfCallStackIndexes =
+          writeMemProfCallStackArray(OS, MemProfData.CallStacks,
+                                     MemProfFrameIndexes, FrameHistogram,
+                                     NumElements);
 
   uint64_t RecordPayloadOffset = OS.tell();
   uint64_t RecordTableOffset =
-      writeMemProfRecords(OS, MemProfData.RecordData, &Schema,
-                          memprof::Version3, &MemProfCallStackIndexes);
+      writeMemProfRecords(OS, MemProfData.Records, &Schema, memprof::Version3,
+                          &MemProfCallStackIndexes);
+
+  // IndexedMemProfReader::deserializeV3 computes the number of elements in the
+  // call stack array from the difference between CallStackPayloadOffset and
+  // RecordPayloadOffset.  Verify that the computation works.
+  assert(CallStackPayloadOffset +
+             NumElements * sizeof(memprof::LinearFrameId) ==
+         RecordPayloadOffset);
 
   uint64_t Header[] = {
       CallStackPayloadOffset,
       RecordPayloadOffset,
       RecordTableOffset,
   };
-  OS.patch({{HeaderUpdatePos, Header, std::size(Header)}});
+  OS.patch({{HeaderUpdatePos, Header}});
 
   return Error::success();
 }
@@ -741,10 +775,6 @@ static Error writeMemProf(ProfOStream &OS,
                           memprof::IndexedVersion MemProfVersionRequested,
                           bool MemProfFullSchema) {
   switch (MemProfVersionRequested) {
-  case memprof::Version0:
-    return writeMemProfV0(OS, MemProfData);
-  case memprof::Version1:
-    return writeMemProfV1(OS, MemProfData);
   case memprof::Version2:
     return writeMemProfV2(OS, MemProfData, MemProfFullSchema);
   case memprof::Version3:
@@ -778,6 +808,45 @@ uint64_t InstrProfWriter::writeHeader(const IndexedInstrProf::Header &Header,
     OS.write(0); // VTableNamesOffset
 
   return BackPatchStartOffset;
+}
+
+Error InstrProfWriter::writeBinaryIds(ProfOStream &OS) {
+  // BinaryIdSection has two parts:
+  // 1. uint64_t BinaryIdsSectionSize
+  // 2. list of binary ids that consist of:
+  //    a. uint64_t BinaryIdLength
+  //    b. uint8_t  BinaryIdData
+  //    c. uint8_t  Padding (if necessary)
+  // Calculate size of binary section.
+  uint64_t BinaryIdsSectionSize = 0;
+
+  // Remove duplicate binary ids.
+  llvm::sort(BinaryIds);
+  BinaryIds.erase(llvm::unique(BinaryIds), BinaryIds.end());
+
+  for (const auto &BI : BinaryIds) {
+    // Increment by binary id length data type size.
+    BinaryIdsSectionSize += sizeof(uint64_t);
+    // Increment by binary id data length, aligned to 8 bytes.
+    BinaryIdsSectionSize += alignToPowerOf2(BI.size(), sizeof(uint64_t));
+  }
+  // Write binary ids section size.
+  OS.write(BinaryIdsSectionSize);
+
+  for (const auto &BI : BinaryIds) {
+    uint64_t BILen = BI.size();
+    // Write binary id length.
+    OS.write(BILen);
+    // Write binary id data.
+    for (unsigned K = 0; K < BILen; K++)
+      OS.writeByte(BI[K]);
+    // Write padding if necessary.
+    uint64_t PaddingSize = alignToPowerOf2(BILen, sizeof(uint64_t)) - BILen;
+    for (unsigned K = 0; K < PaddingSize; K++)
+      OS.writeByte(0);
+  }
+
+  return Error::success();
 }
 
 Error InstrProfWriter::writeVTableNames(ProfOStream &OS) {
@@ -847,6 +916,9 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   if (static_cast<bool>(ProfileKind &
                         InstrProfKind::FunctionEntryInstrumentation))
     Header.Version |= VARIANT_MASK_INSTR_ENTRY;
+  if (static_cast<bool>(ProfileKind &
+                        InstrProfKind::LoopEntriesInstrumentation))
+    Header.Version |= VARIANT_MASK_INSTR_LOOP_ENTRIES;
   if (static_cast<bool>(ProfileKind & InstrProfKind::SingleByteCoverage))
     Header.Version |= VARIANT_MASK_BYTE_COVERAGE;
   if (static_cast<bool>(ProfileKind & InstrProfKind::FunctionEntryOnly))
@@ -887,42 +959,9 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
       return E;
   }
 
-  // BinaryIdSection has two parts:
-  // 1. uint64_t BinaryIdsSectionSize
-  // 2. list of binary ids that consist of:
-  //    a. uint64_t BinaryIdLength
-  //    b. uint8_t  BinaryIdData
-  //    c. uint8_t  Padding (if necessary)
   uint64_t BinaryIdSectionStart = OS.tell();
-  // Calculate size of binary section.
-  uint64_t BinaryIdsSectionSize = 0;
-
-  // Remove duplicate binary ids.
-  llvm::sort(BinaryIds);
-  BinaryIds.erase(std::unique(BinaryIds.begin(), BinaryIds.end()),
-                  BinaryIds.end());
-
-  for (auto BI : BinaryIds) {
-    // Increment by binary id length data type size.
-    BinaryIdsSectionSize += sizeof(uint64_t);
-    // Increment by binary id data length, aligned to 8 bytes.
-    BinaryIdsSectionSize += alignToPowerOf2(BI.size(), sizeof(uint64_t));
-  }
-  // Write binary ids section size.
-  OS.write(BinaryIdsSectionSize);
-
-  for (auto BI : BinaryIds) {
-    uint64_t BILen = BI.size();
-    // Write binary id length.
-    OS.write(BILen);
-    // Write binary id data.
-    for (unsigned K = 0; K < BILen; K++)
-      OS.writeByte(BI[K]);
-    // Write padding if necessary.
-    uint64_t PaddingSize = alignToPowerOf2(BILen, sizeof(uint64_t)) - BILen;
-    for (unsigned K = 0; K < PaddingSize; K++)
-      OS.writeByte(0);
-  }
+  if (auto E = writeBinaryIds(OS))
+    return E;
 
   uint64_t VTableNamesSectionStart = OS.tell();
 
@@ -969,12 +1008,14 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
 
   PatchItem PatchItems[] = {
       // Patch the Header fields
-      {BackPatchStartOffset, HeaderOffsets.data(), (int)HeaderOffsets.size()},
+      {BackPatchStartOffset, HeaderOffsets},
       // Patch the summary data.
-      {SummaryOffset, reinterpret_cast<uint64_t *>(TheSummary.get()),
-       (int)(SummarySize / sizeof(uint64_t))},
-      {CSSummaryOffset, reinterpret_cast<uint64_t *>(TheCSSummary.get()),
-       (int)CSSummarySize}};
+      {SummaryOffset,
+       ArrayRef<uint64_t>(reinterpret_cast<uint64_t *>(TheSummary.get()),
+                          SummarySize / sizeof(uint64_t))},
+      {CSSummaryOffset,
+       ArrayRef<uint64_t>(reinterpret_cast<uint64_t *>(TheCSSummary.get()),
+                          CSSummarySize)}};
 
   OS.patch(PatchItems);
 
@@ -1014,16 +1055,13 @@ static const char *ValueProfKindStr[] = {
 
 Error InstrProfWriter::validateRecord(const InstrProfRecord &Func) {
   for (uint32_t VK = 0; VK <= IPVK_Last; VK++) {
-    uint32_t NS = Func.getNumValueSites(VK);
-    if (!NS)
+    if (VK == IPVK_IndirectCallTarget || VK == IPVK_VTableTarget)
       continue;
+    uint32_t NS = Func.getNumValueSites(VK);
     for (uint32_t S = 0; S < NS; S++) {
-      uint32_t ND = Func.getNumValueDataForSite(VK, S);
-      std::unique_ptr<InstrProfValueData[]> VD = Func.getValueForSite(VK, S);
       DenseSet<uint64_t> SeenValues;
-      for (uint32_t I = 0; I < ND; I++)
-        if ((VK != IPVK_IndirectCallTarget && VK != IPVK_VTableTarget) &&
-            !SeenValues.insert(VD[I].Value).second)
+      for (const auto &V : Func.getValueArrayForSite(VK, S))
+        if (!SeenValues.insert(V.Value).second)
           return make_error<InstrProfError>(instrprof_error::invalid_prof);
     }
   }
@@ -1067,15 +1105,14 @@ void InstrProfWriter::writeRecordInText(StringRef Name, uint64_t Hash,
     OS << "# ValueKind = " << ValueProfKindStr[VK] << ":\n" << VK << "\n";
     OS << "# NumValueSites:\n" << NS << "\n";
     for (uint32_t S = 0; S < NS; S++) {
-      uint32_t ND = Func.getNumValueDataForSite(VK, S);
-      OS << ND << "\n";
-      std::unique_ptr<InstrProfValueData[]> VD = Func.getValueForSite(VK, S);
-      for (uint32_t I = 0; I < ND; I++) {
+      auto VD = Func.getValueArrayForSite(VK, S);
+      OS << VD.size() << "\n";
+      for (const auto &V : VD) {
         if (VK == IPVK_IndirectCallTarget || VK == IPVK_VTableTarget)
-          OS << Symtab.getFuncOrVarNameIfDefined(VD[I].Value) << ":"
-             << VD[I].Count << "\n";
+          OS << Symtab.getFuncOrVarNameIfDefined(V.Value) << ":" << V.Count
+             << "\n";
         else
-          OS << VD[I].Value << ":" << VD[I].Count << "\n";
+          OS << V.Value << ":" << V.Count << "\n";
       }
     }
   }
@@ -1093,6 +1130,10 @@ Error InstrProfWriter::writeText(raw_fd_ostream &OS) {
   if (static_cast<bool>(ProfileKind &
                         InstrProfKind::FunctionEntryInstrumentation))
     OS << "# Always instrument the function entry block\n:entry_first\n";
+  if (static_cast<bool>(ProfileKind &
+                        InstrProfKind::LoopEntriesInstrumentation))
+    OS << "# Always instrument the loop entry "
+          "blocks\n:instrument_loop_entries\n";
   if (static_cast<bool>(ProfileKind & InstrProfKind::SingleByteCoverage))
     OS << "# Instrument block coverage\n:single_byte_coverage\n";
   InstrProfSymtab Symtab;

@@ -12,6 +12,7 @@
 #include "bolt/Passes/AllocCombiner.h"
 #include "bolt/Passes/AsmDump.h"
 #include "bolt/Passes/CMOVConversion.h"
+#include "bolt/Passes/ContinuityStats.h"
 #include "bolt/Passes/FixRISCVCallsPass.h"
 #include "bolt/Passes/FixRelaxationPass.h"
 #include "bolt/Passes/FrameOptimizer.h"
@@ -263,6 +264,10 @@ static cl::opt<bool> CMOVConversionFlag("cmov-conversion",
                                         cl::ReallyHidden,
                                         cl::cat(BoltOptCategory));
 
+static cl::opt<bool> ShortenInstructions("shorten-instructions",
+                                         cl::desc("shorten instructions"),
+                                         cl::init(true),
+                                         cl::cat(BoltOptCategory));
 } // namespace opts
 
 namespace llvm {
@@ -369,6 +374,8 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   if (opts::PrintProfileStats)
     Manager.registerPass(std::make_unique<PrintProfileStats>(NeverPrint));
 
+  Manager.registerPass(std::make_unique<PrintContinuityStats>(NeverPrint));
+
   Manager.registerPass(std::make_unique<ValidateInternalCalls>(NeverPrint));
 
   Manager.registerPass(std::make_unique<ValidateMemRefs>(NeverPrint));
@@ -378,7 +385,8 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   else if (opts::Hugify)
     Manager.registerPass(std::make_unique<HugePage>(NeverPrint));
 
-  Manager.registerPass(std::make_unique<ShortenInstructions>(NeverPrint));
+  Manager.registerPass(std::make_unique<ShortenInstructions>(NeverPrint),
+                       opts::ShortenInstructions);
 
   Manager.registerPass(std::make_unique<RemoveNops>(NeverPrint),
                        !opts::KeepNops);

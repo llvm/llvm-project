@@ -5,10 +5,10 @@ define void @loads() {
 ; CHECK-LABEL: define void @loads(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x fp128>, ptr null, align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une <2 x fp128> [[TMP0]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x fp128>, ptr null, align 16
+; CHECK-NEXT:    [[TMP3:%.*]] = fcmp une <2 x fp128> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    call void null(i32 0, ptr null, i32 0)
-; CHECK-NEXT:    [[TMP2:%.*]] = fcmp une <2 x fp128> [[TMP0]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp une <2 x fp128> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret void
 ;
 entry:

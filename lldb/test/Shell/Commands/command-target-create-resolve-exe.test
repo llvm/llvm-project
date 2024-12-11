@@ -1,4 +1,4 @@
-# REQUIRES: system-windows
+# REQUIRES: target-windows
 
 ## This checks that when starting lldb (or using `target create`) with a
 ## program name which is on $PATH, or not specify the .exe suffix of a program

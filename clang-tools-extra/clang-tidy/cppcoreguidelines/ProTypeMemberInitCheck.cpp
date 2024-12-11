@@ -474,10 +474,8 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
   // It only includes fields that have not been fixed
   SmallPtrSet<const FieldDecl *, 16> AllFieldsToInit;
   forEachField(ClassDecl, FieldsToInit, [&](const FieldDecl *F) {
-    if (!HasRecordClassMemberSet.contains(F)) {
+    if (HasRecordClassMemberSet.insert(F).second)
       AllFieldsToInit.insert(F);
-      HasRecordClassMemberSet.insert(F);
-    }
   });
   if (FieldsToInit.empty())
     return;

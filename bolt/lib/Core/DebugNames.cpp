@@ -90,7 +90,11 @@ void DWARF5AcceleratorTable::addUnit(DWARFUnit &Unit,
       auto Iter = CUOffsetsToPatch.insert({*DWOID, CUList.size()});
       if (Iter.second)
         CUList.push_back(BADCUOFFSET);
-      ForeignTUList.push_back(cast<DWARFTypeUnit>(&Unit)->getTypeHash());
+      const uint64_t TUHash = cast<DWARFTypeUnit>(&Unit)->getTypeHash();
+      if (!TUHashToIndexMap.count(TUHash)) {
+        TUHashToIndexMap.insert({TUHash, ForeignTUList.size()});
+        ForeignTUList.push_back(TUHash);
+      }
     } else {
       LocalTUList.push_back(CurrentUnitOffset);
     }
@@ -157,6 +161,7 @@ bool static canProcess(const DWARFUnit &Unit, const DIE &Die,
   case dwarf::DW_TAG_structure_type:
   case dwarf::DW_TAG_typedef:
   case dwarf::DW_TAG_unspecified_type:
+  case dwarf::DW_TAG_union_type:
     if (TagsOnly || Die.findAttribute(dwarf::Attribute::DW_AT_name))
       return true;
     return false;
@@ -231,8 +236,13 @@ DWARF5AcceleratorTable::addAccelTableEntry(
     IsTU = Unit.isTypeUnit();
     DieTag = Die.getTag();
     if (IsTU) {
-      if (DWOID)
-        return ForeignTUList.size() - 1;
+      if (DWOID) {
+        const uint64_t TUHash = cast<DWARFTypeUnit>(&Unit)->getTypeHash();
+        auto Iter = TUHashToIndexMap.find(TUHash);
+        assert(Iter != TUHashToIndexMap.end() &&
+               "Could not find TU hash in map");
+        return Iter->second;
+      }
       return LocalTUList.size() - 1;
     }
     return CUList.size() - 1;

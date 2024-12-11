@@ -11,7 +11,7 @@ define void @t1_mergeable_invoke() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t1_mergeable_invoke(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond(), !dbg [[DBG12:![0-9]+]]
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i1 [[C0]], metadata [[META9:![0-9]+]], metadata !DIExpression()), !dbg [[DBG12]]
+; CHECK-NEXT:      #dbg_value(i1 [[C0]], [[META9:![0-9]+]], !DIExpression(), [[DBG12]])
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]], !dbg [[DBG13:![0-9]+]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
@@ -20,7 +20,7 @@ define void @t1_mergeable_invoke() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]], !dbg [[DBG16:![0-9]+]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond(), !dbg [[DBG17:![0-9]+]]
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i1 [[C1]], metadata [[META11:![0-9]+]], metadata !DIExpression()), !dbg [[DBG17]]
+; CHECK-NEXT:      #dbg_value(i1 [[C1]], [[META11:![0-9]+]], !DIExpression(), [[DBG17]])
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]], !dbg [[DBG18:![0-9]+]]
 ; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    invoke void @simple_throw()
@@ -69,7 +69,6 @@ declare void @destructor()
 declare dso_local i32 @__gxx_personality_v0(...)
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { noreturn }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C, file: [[META1:![0-9]+]], producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
 ; CHECK: [[META1]] = !DIFile(filename: "<stdin>", directory: {{.*}})

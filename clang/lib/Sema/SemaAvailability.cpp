@@ -12,7 +12,10 @@
 
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/ExprObjC.h"
+#include "clang/AST/StmtObjC.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
@@ -46,6 +49,10 @@ static const AvailabilityAttr *getAttrForPlatform(ASTContext &Context,
   // Check each AvailabilityAttr to find the one for this platform.
   // For multiple attributes with the same platform try to find one for this
   // environment.
+  // The attribute is always on the FunctionDecl, not on the
+  // FunctionTemplateDecl.
+  if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
+    D = FTD->getTemplatedDecl();
   for (const auto *A : D->attrs()) {
     if (const auto *Avail = dyn_cast<AvailabilityAttr>(A)) {
       // FIXME: this is copied from CheckAvailability. We should try to
@@ -100,6 +107,12 @@ ShouldDiagnoseAvailabilityOfDecl(Sema &S, const NamedDecl *D,
       }
     }
     break;
+  }
+
+  // For alias templates, get the underlying declaration.
+  if (const auto *ADecl = dyn_cast<TypeAliasTemplateDecl>(D)) {
+    D = ADecl->getTemplatedDecl();
+    Result = D->getAvailability(Message);
   }
 
   // Forward class declarations get their attributes from their definition.
@@ -157,6 +170,26 @@ static bool ShouldDiagnoseAvailabilityInContext(
     }
   }
 
+  // In HLSL, skip emitting diagnostic if the diagnostic mode is not set to
+  // strict (-fhlsl-strict-availability), or if the target is library and the
+  // availability is restricted to a specific environment/shader stage.
+  // For libraries the availability will be checked later in
+  // DiagnoseHLSLAvailability class once where the specific environment/shader
+  // stage of the caller is known.
+  if (S.getLangOpts().HLSL) {
+    if (!S.getLangOpts().HLSLStrictAvailability ||
+        (DeclEnv != nullptr &&
+         S.getASTContext().getTargetInfo().getTriple().getEnvironment() ==
+             llvm::Triple::EnvironmentType::Library))
+      return false;
+  }
+
+  if (K == AR_Deprecated) {
+    if (const auto *VD = dyn_cast<VarDecl>(OffendingDecl))
+      if (VD->isLocalVarDeclOrParm() && VD->isDeprecated())
+        return true;
+  }
+
   // Checks if we should emit the availability diagnostic in the context of C.
   auto CheckContext = [&](const Decl *C) {
     if (K == AR_NotYetIntroduced) {
@@ -210,13 +243,16 @@ static bool ShouldDiagnoseAvailabilityInContext(
   return true;
 }
 
-static bool
-shouldDiagnoseAvailabilityByDefault(const ASTContext &Context,
-                                    const VersionTuple &DeploymentVersion,
-                                    const VersionTuple &DeclVersion) {
+static unsigned getAvailabilityDiagnosticKind(
+    const ASTContext &Context, const VersionTuple &DeploymentVersion,
+    const VersionTuple &DeclVersion, bool HasMatchingEnv) {
   const auto &Triple = Context.getTargetInfo().getTriple();
   VersionTuple ForceAvailabilityFromVersion;
   switch (Triple.getOS()) {
+  // For iOS, emit the diagnostic even if -Wunguarded-availability is
+  // not specified for deployment targets >= to iOS 11 or equivalent or
+  // for declarations that were introduced in iOS 11 (macOS 10.13, ...) or
+  // later.
   case llvm::Triple::IOS:
   case llvm::Triple::TvOS:
     ForceAvailabilityFromVersion = VersionTuple(/*Major=*/11);
@@ -228,16 +264,26 @@ shouldDiagnoseAvailabilityByDefault(const ASTContext &Context,
   case llvm::Triple::MacOSX:
     ForceAvailabilityFromVersion = VersionTuple(/*Major=*/10, /*Minor=*/13);
     break;
+  // For HLSL, use diagnostic from HLSLAvailability group which
+  // are reported as errors by default and in strict diagnostic mode
+  // (-fhlsl-strict-availability) and as warnings in relaxed diagnostic
+  // mode (-Wno-error=hlsl-availability)
   case llvm::Triple::ShaderModel:
-    // FIXME: This will be updated when HLSL strict diagnostic mode
-    // is implemented (issue #90096)
-    return false;
+    return HasMatchingEnv ? diag::warn_hlsl_availability
+                          : diag::warn_hlsl_availability_unavailable;
   default:
-    // New targets should always warn about availability.
-    return Triple.getVendor() == llvm::Triple::Apple;
+    // New Apple targets should always warn about availability.
+    ForceAvailabilityFromVersion =
+        (Triple.getVendor() == llvm::Triple::Apple)
+            ? VersionTuple(/*Major=*/0, 0)
+            : VersionTuple(/*Major=*/(unsigned)-1, (unsigned)-1);
   }
-  return DeploymentVersion >= ForceAvailabilityFromVersion ||
-         DeclVersion >= ForceAvailabilityFromVersion;
+  if (DeploymentVersion >= ForceAvailabilityFromVersion ||
+      DeclVersion >= ForceAvailabilityFromVersion)
+    return HasMatchingEnv ? diag::warn_unguarded_availability_new
+                          : diag::warn_unguarded_availability_unavailable_new;
+  return HasMatchingEnv ? diag::warn_unguarded_availability
+                        : diag::warn_unguarded_availability_unavailable;
 }
 
 static NamedDecl *findEnclosingDeclToAnnotate(Decl *OrigCtx) {
@@ -410,26 +456,16 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
     const TargetInfo &TI = S.getASTContext().getTargetInfo();
     std::string PlatformName(
         AvailabilityAttr::getPrettyPlatformName(TI.getPlatformName()));
-    llvm::StringRef TargetEnvironment(AvailabilityAttr::getPrettyEnviromentName(
-        TI.getTriple().getEnvironment()));
+    llvm::StringRef TargetEnvironment(
+        llvm::Triple::getEnvironmentTypeName(TI.getTriple().getEnvironment()));
     llvm::StringRef AttrEnvironment =
-        AA->getEnvironment() ? AvailabilityAttr::getPrettyEnviromentName(
-                                   AvailabilityAttr::getEnvironmentType(
-                                       AA->getEnvironment()->getName()))
-                             : "";
+        AA->getEnvironment() ? AA->getEnvironment()->getName() : "";
     bool UseEnvironment =
         (!AttrEnvironment.empty() && !TargetEnvironment.empty());
 
-    bool UseNewWarning = shouldDiagnoseAvailabilityByDefault(
+    unsigned DiagKind = getAvailabilityDiagnosticKind(
         S.Context, S.Context.getTargetInfo().getPlatformMinVersion(),
-        Introduced);
-
-    unsigned DiagKind =
-        EnvironmentMatchesOrNone
-            ? (UseNewWarning ? diag::warn_unguarded_availability_new
-                             : diag::warn_unguarded_availability)
-            : (UseNewWarning ? diag::warn_unguarded_availability_unavailable_new
-                             : diag::warn_unguarded_availability_unavailable);
+        Introduced, EnvironmentMatchesOrNone);
 
     S.Diag(Loc, DiagKind) << OffendingDecl << PlatformName
                           << Introduced.getAsString() << UseEnvironment
@@ -460,22 +496,41 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
       // Don't offer a fixit for declarations with availability attributes.
       if (Enclosing->hasAttr<AvailabilityAttr>())
         return;
-      if (!S.getPreprocessor().isMacroDefined("API_AVAILABLE"))
+      Preprocessor &PP = S.getPreprocessor();
+      if (!PP.isMacroDefined("API_AVAILABLE"))
         return;
       std::optional<AttributeInsertion> Insertion = createAttributeInsertion(
           Enclosing, S.getSourceManager(), S.getLangOpts());
       if (!Insertion)
         return;
-      std::string PlatformName =
-          AvailabilityAttr::getPlatformNameSourceSpelling(
-              S.getASTContext().getTargetInfo().getPlatformName())
-              .lower();
+      StringRef PlatformName =
+          S.getASTContext().getTargetInfo().getPlatformName();
+
+      // Apple's API_AVAILABLE macro expands roughly like this.
+      // API_AVAILABLE(ios(17.0))
+      // __attribute__((availability(__API_AVAILABLE_PLATFORM_ios(17.0)))
+      // __attribute__((availability(ios,introduced=17.0)))
+      // In order to figure out which platform name to use in the API_AVAILABLE
+      // macro, the associated __API_AVAILABLE_PLATFORM_ macro needs to be
+      // found. The __API_AVAILABLE_PLATFORM_ macros aren't consistent about
+      // using the canonical platform name, source spelling name, or one of the
+      // other supported names (i.e. one of the keys in canonicalizePlatformName
+      // that's neither). Check all of the supported names for a match.
+      std::vector<StringRef> EquivalentPlatforms =
+          AvailabilityAttr::equivalentPlatformNames(PlatformName);
+      llvm::Twine MacroPrefix = "__API_AVAILABLE_PLATFORM_";
+      auto AvailablePlatform =
+          llvm::find_if(EquivalentPlatforms, [&](StringRef EquivalentPlatform) {
+            return PP.isMacroDefined((MacroPrefix + EquivalentPlatform).str());
+          });
+      if (AvailablePlatform == EquivalentPlatforms.end())
+        return;
       std::string Introduced =
           OffendingDecl->getVersionIntroduced().getAsString();
       FixitNoteDiag << FixItHint::CreateInsertion(
           Insertion->Loc,
-          (llvm::Twine(Insertion->Prefix) + "API_AVAILABLE(" + PlatformName +
-           "(" + Introduced + "))" + Insertion->Suffix)
+          (llvm::Twine(Insertion->Prefix) + "API_AVAILABLE(" +
+           *AvailablePlatform + "(" + Introduced + "))" + Insertion->Suffix)
               .str());
     }
     return;
@@ -688,11 +743,11 @@ bool isBodyLikeChildStmt(const Stmt *S, const Stmt *Parent) {
   }
 }
 
-class StmtUSEFinder : public RecursiveASTVisitor<StmtUSEFinder> {
+class StmtUSEFinder : public DynamicRecursiveASTVisitor {
   const Stmt *Target;
 
 public:
-  bool VisitStmt(Stmt *S) { return S != Target; }
+  bool VisitStmt(Stmt *S) override { return S != Target; }
 
   /// Returns true if the given statement is present in the given declaration.
   static bool isContained(const Stmt *Target, const Decl *D) {
@@ -704,11 +759,11 @@ public:
 
 /// Traverses the AST and finds the last statement that used a given
 /// declaration.
-class LastDeclUSEFinder : public RecursiveASTVisitor<LastDeclUSEFinder> {
+class LastDeclUSEFinder : public DynamicRecursiveASTVisitor {
   const Decl *D;
 
 public:
-  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
     if (DRE->getDecl() == D)
       return false;
     return true;
@@ -732,10 +787,7 @@ public:
 /// to a partially available declaration. Whenever we encounter an \c if of the
 /// form: \c if(@available(...)), we use the version from the condition to visit
 /// the then statement.
-class DiagnoseUnguardedAvailability
-    : public RecursiveASTVisitor<DiagnoseUnguardedAvailability> {
-  typedef RecursiveASTVisitor<DiagnoseUnguardedAvailability> Base;
-
+class DiagnoseUnguardedAvailability : public DynamicRecursiveASTVisitor {
   Sema &SemaRef;
   Decl *Ctx;
 
@@ -753,26 +805,26 @@ public:
         SemaRef.Context.getTargetInfo().getPlatformMinVersion());
   }
 
-  bool TraverseStmt(Stmt *S) {
+  bool TraverseStmt(Stmt *S) override {
     if (!S)
       return true;
     StmtStack.push_back(S);
-    bool Result = Base::TraverseStmt(S);
+    bool Result = DynamicRecursiveASTVisitor::TraverseStmt(S);
     StmtStack.pop_back();
     return Result;
   }
 
   void IssueDiagnostics(Stmt *S) { TraverseStmt(S); }
 
-  bool TraverseIfStmt(IfStmt *If);
+  bool TraverseIfStmt(IfStmt *If) override;
 
   // for 'case X:' statements, don't bother looking at the 'X'; it can't lead
   // to any useful diagnostics.
-  bool TraverseCaseStmt(CaseStmt *CS) { return TraverseStmt(CS->getSubStmt()); }
+  bool TraverseCaseStmt(CaseStmt *CS) override {
+    return TraverseStmt(CS->getSubStmt());
+  }
 
-  bool VisitObjCPropertyRefExpr(ObjCPropertyRefExpr *PRE) { return true; }
-
-  bool VisitObjCMessageExpr(ObjCMessageExpr *Msg) {
+  bool VisitObjCMessageExpr(ObjCMessageExpr *Msg) override {
     if (ObjCMethodDecl *D = Msg->getMethodDecl()) {
       ObjCInterfaceDecl *ID = nullptr;
       QualType ReceiverTy = Msg->getClassReceiver();
@@ -785,25 +837,25 @@ public:
     return true;
   }
 
-  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
     DiagnoseDeclAvailability(DRE->getDecl(),
                              SourceRange(DRE->getBeginLoc(), DRE->getEndLoc()));
     return true;
   }
 
-  bool VisitMemberExpr(MemberExpr *ME) {
+  bool VisitMemberExpr(MemberExpr *ME) override {
     DiagnoseDeclAvailability(ME->getMemberDecl(),
                              SourceRange(ME->getBeginLoc(), ME->getEndLoc()));
     return true;
   }
 
-  bool VisitObjCAvailabilityCheckExpr(ObjCAvailabilityCheckExpr *E) {
+  bool VisitObjCAvailabilityCheckExpr(ObjCAvailabilityCheckExpr *E) override {
     SemaRef.Diag(E->getBeginLoc(), diag::warn_at_available_unchecked_use)
         << (!SemaRef.getLangOpts().ObjC);
     return true;
   }
 
-  bool VisitTypeLoc(TypeLoc Ty);
+  bool VisitTypeLoc(TypeLoc Ty) override;
 };
 
 void DiagnoseUnguardedAvailability::DiagnoseDeclAvailability(
@@ -820,6 +872,7 @@ void DiagnoseUnguardedAvailability::DiagnoseDeclAvailability(
 
     const AvailabilityAttr *AA =
       getAttrForPlatform(SemaRef.getASTContext(), OffendingDecl);
+    assert(AA != nullptr && "expecting valid availability attribute");
     bool EnvironmentMatchesOrNone =
         hasMatchingEnvironmentOrNone(SemaRef.getASTContext(), AA);
     VersionTuple Introduced = AA->getIntroduced();
@@ -834,34 +887,19 @@ void DiagnoseUnguardedAvailability::DiagnoseDeclAvailability(
                                              OffendingDecl))
       return;
 
-    // We would like to emit the diagnostic even if -Wunguarded-availability is
-    // not specified for deployment targets >= to iOS 11 or equivalent or
-    // for declarations that were introduced in iOS 11 (macOS 10.13, ...) or
-    // later.
-    bool UseNewDiagKind = shouldDiagnoseAvailabilityByDefault(
-        SemaRef.Context,
-        SemaRef.Context.getTargetInfo().getPlatformMinVersion(), Introduced);
-
     const TargetInfo &TI = SemaRef.getASTContext().getTargetInfo();
     std::string PlatformName(
         AvailabilityAttr::getPrettyPlatformName(TI.getPlatformName()));
-    llvm::StringRef TargetEnvironment(AvailabilityAttr::getPrettyEnviromentName(
-        TI.getTriple().getEnvironment()));
+    llvm::StringRef TargetEnvironment(TI.getTriple().getEnvironmentName());
     llvm::StringRef AttrEnvironment =
-        AA->getEnvironment() ? AvailabilityAttr::getPrettyEnviromentName(
-                                   AvailabilityAttr::getEnvironmentType(
-                                       AA->getEnvironment()->getName()))
-                             : "";
+        AA->getEnvironment() ? AA->getEnvironment()->getName() : "";
     bool UseEnvironment =
         (!AttrEnvironment.empty() && !TargetEnvironment.empty());
 
-    unsigned DiagKind =
-        EnvironmentMatchesOrNone
-            ? (UseNewDiagKind ? diag::warn_unguarded_availability_new
-                              : diag::warn_unguarded_availability)
-            : (UseNewDiagKind
-                   ? diag::warn_unguarded_availability_unavailable_new
-                   : diag::warn_unguarded_availability_unavailable);
+    unsigned DiagKind = getAvailabilityDiagnosticKind(
+        SemaRef.Context,
+        SemaRef.Context.getTargetInfo().getPlatformMinVersion(), Introduced,
+        EnvironmentMatchesOrNone);
 
     SemaRef.Diag(Range.getBegin(), DiagKind)
         << Range << D << PlatformName << Introduced.getAsString()
@@ -972,25 +1010,54 @@ bool DiagnoseUnguardedAvailability::VisitTypeLoc(TypeLoc Ty) {
   return true;
 }
 
-bool DiagnoseUnguardedAvailability::TraverseIfStmt(IfStmt *If) {
-  VersionTuple CondVersion;
-  if (auto *E = dyn_cast<ObjCAvailabilityCheckExpr>(If->getCond())) {
-    CondVersion = E->getVersion();
+struct ExtractedAvailabilityExpr {
+  const ObjCAvailabilityCheckExpr *E = nullptr;
+  bool isNegated = false;
+};
 
-    // If we're using the '*' case here or if this check is redundant, then we
-    // use the enclosing version to check both branches.
-    if (CondVersion.empty() || CondVersion <= AvailabilityStack.back())
-      return TraverseStmt(If->getThen()) && TraverseStmt(If->getElse());
-  } else {
+ExtractedAvailabilityExpr extractAvailabilityExpr(const Expr *IfCond) {
+  const auto *E = IfCond;
+  bool IsNegated = false;
+  while (true) {
+    E = E->IgnoreParens();
+    if (const auto *AE = dyn_cast<ObjCAvailabilityCheckExpr>(E)) {
+      return ExtractedAvailabilityExpr{AE, IsNegated};
+    }
+
+    const auto *UO = dyn_cast<UnaryOperator>(E);
+    if (!UO || UO->getOpcode() != UO_LNot) {
+      return ExtractedAvailabilityExpr{};
+    }
+    E = UO->getSubExpr();
+    IsNegated = !IsNegated;
+  }
+}
+
+bool DiagnoseUnguardedAvailability::TraverseIfStmt(IfStmt *If) {
+  ExtractedAvailabilityExpr IfCond = extractAvailabilityExpr(If->getCond());
+  if (!IfCond.E) {
     // This isn't an availability checking 'if', we can just continue.
-    return Base::TraverseIfStmt(If);
+    return DynamicRecursiveASTVisitor::TraverseIfStmt(If);
+  }
+
+  VersionTuple CondVersion = IfCond.E->getVersion();
+  // If we're using the '*' case here or if this check is redundant, then we
+  // use the enclosing version to check both branches.
+  if (CondVersion.empty() || CondVersion <= AvailabilityStack.back()) {
+    return TraverseStmt(If->getThen()) && TraverseStmt(If->getElse());
+  }
+
+  auto *Guarded = If->getThen();
+  auto *Unguarded = If->getElse();
+  if (IfCond.isNegated) {
+    std::swap(Guarded, Unguarded);
   }
 
   AvailabilityStack.push_back(CondVersion);
-  bool ShouldContinue = TraverseStmt(If->getThen());
+  bool ShouldContinue = TraverseStmt(Guarded);
   AvailabilityStack.pop_back();
 
-  return ShouldContinue && TraverseStmt(If->getElse());
+  return ShouldContinue && TraverseStmt(Unguarded);
 }
 
 } // end anonymous namespace

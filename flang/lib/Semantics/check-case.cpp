@@ -49,10 +49,8 @@ private:
               for (const auto &range : ranges) {
                 auto pair{ComputeBounds(range)};
                 if (pair.first && pair.second && *pair.first > *pair.second) {
-                  if (context_.ShouldWarn(common::UsageWarning::EmptyCase)) {
-                    context_.Say(stmt.source,
-                        "CASE has lower bound greater than upper bound"_warn_en_US);
-                  }
+                  context_.Warn(common::UsageWarning::EmptyCase, stmt.source,
+                      "CASE has lower bound greater than upper bound"_warn_en_US);
                 } else {
                   if constexpr (T::category == TypeCategory::Logical) { // C1148
                     if ((pair.first || pair.second) &&
@@ -95,11 +93,9 @@ private:
               x->v = converted;
               return value;
             } else {
-              if (context_.ShouldWarn(common::UsageWarning::CaseOverflow)) {
-                context_.Say(expr.source,
-                    "CASE value (%s) overflows type (%s) of SELECT CASE expression"_warn_en_US,
-                    folded.AsFortran(), caseExprType_.AsFortran());
-              }
+              context_.Warn(common::UsageWarning::CaseOverflow, expr.source,
+                  "CASE value (%s) overflows type (%s) of SELECT CASE expression"_warn_en_US,
+                  folded.AsFortran(), caseExprType_.AsFortran());
               hasErrors_ = true;
               return std::nullopt;
             }
