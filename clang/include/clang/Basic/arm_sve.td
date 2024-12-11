@@ -2436,6 +2436,12 @@ let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2,fp8" in {
   // Convert from FP8 to deinterleaved half-precision/BFloat16 multi-vector
   def SVF1CVTL_X2 : Inst<"svcvtl1_{d}[_mf8]_x2_fpm",  "2~>", "bh", MergeNone, "aarch64_sve_fp8_cvtl1_x2",  [IsStreaming, SetsFPMR], []>;
   def SVF2CVTL_X2 : Inst<"svcvtl2_{d}[_mf8]_x2_fpm",  "2~>", "bh", MergeNone, "aarch64_sve_fp8_cvtl2_x2",  [IsStreaming, SetsFPMR], []>;
+
+  // Convert from single/half/bfloat multivector to FP8
+  def SVFCVT_X2 : Inst<"svcvt_mf8[_{d}_x2]_fpm", "~2>", "bh", MergeNone, "aarch64_sve_fp8_cvt_x2", [IsStreaming, SetsFPMR], []>;
+  def SVFCVT_X4 : Inst<"svcvt_mf8[_{d}_x4]_fpm", "~4>", "f",  MergeNone, "aarch64_sve_fp8_cvt_x4", [IsOverloadNone, IsStreaming, SetsFPMR], []>;
+  // interleaved
+  def SVFCVTN_X4 : Inst<"svcvtn_mf8[_{d}_x4]_fpm", "~4>", "f", MergeNone, "aarch64_sve_fp8_cvtn_x4", [IsOverloadNone, IsStreaming, SetsFPMR], []>;
 }
 
 let SVETargetGuard = "sve2p1", SMETargetGuard = "sme2" in {
