@@ -29,7 +29,7 @@ public:
   static bool isRequired() { return true; }
 };
 
-/// A marker analyss to determine if extra passes should be run after lowering
+/// A marker analysis to signal if extra passes should be run after lowering
 /// matrix intrinsics.
 struct ShouldRunExtraMatrixPasses
     : public ShouldRunExtraPasses<ShouldRunExtraMatrixPasses>,
