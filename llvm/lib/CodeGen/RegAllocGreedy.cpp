@@ -2749,9 +2749,9 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   ExtraInfo.emplace();
   EvictAdvisor =
       getAnalysis<RegAllocEvictionAdvisorAnalysisLegacy>().getProvider()->getAdvisor(*MF, *this);
-  PriorityAdvisor =
-      getAnalysis<RegAllocPriorityAdvisorAnalysisLegacy>().getAdvisor(*MF,
-                                                                      *this);
+  PriorityAdvisor = getAnalysis<RegAllocPriorityAdvisorAnalysisLegacy>()
+                        .getProvider()
+                        ->getAdvisor(*MF, *this);
 
   VRAI = std::make_unique<VirtRegAuxInfo>(*MF, *LIS, *VRM, *Loops, *MBFI);
   SpillerInstance.reset(createInlineSpiller(*this, *MF, *VRM, *VRAI));

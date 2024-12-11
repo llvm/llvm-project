@@ -78,11 +78,11 @@ private:
     RegAllocPriorityAdvisorAnalysisLegacy::getAnalysisUsage(AU);
   }
 
-  std::unique_ptr<RegAllocPriorityAdvisor>
-  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
+  std::unique_ptr<RegAllocPriorityAdvisorProvider> &getProvider() override {
     Provider->setAnalyses(&getAnalysis<SlotIndexesWrapperPass>().getSI());
-    return Provider->getAdvisor(MF, RA);
+    return Provider;
   }
+
   bool doInitialization(Module &M) override {
     Provider.reset(
         new DefaultPriorityAdvisorProvider(NotAsRequested, M.getContext()));
@@ -90,7 +90,7 @@ private:
   }
 
   const bool NotAsRequested;
-  std::unique_ptr<DefaultPriorityAdvisorProvider> Provider;
+  // std::unique_ptr<DefaultPriorityAdvisorProvider> Provider;
 };
 } // namespace
 
