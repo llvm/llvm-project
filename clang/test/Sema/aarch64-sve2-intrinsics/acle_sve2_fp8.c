@@ -1,6 +1,6 @@
 // REQUIRES: aarch64-registered-target
 
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -verify -emit-llvm %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -verify -emit-llvm -o - %s
 
 #include <arm_sve.h>
 

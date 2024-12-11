@@ -56,16 +56,19 @@ define linkonce_odr void @baz() {
 
 @use_baz = global ptr @baz
 
+;; Test comdat symbols that are prevailing in this module and non-prevailing in the other module.
 define void @ext_and_ext() local_unnamed_addr comdat {
   call void @foo(i64 1)
   ret void
 }
 
+;; linkonce_odr in this module and external in the other module.
 define linkonce_odr void @lo_and_ext() local_unnamed_addr comdat {
   call void @foo(i64 1)
   ret void
 }
 
+;; linkonce_odr in this module and weak_odr in the other module.
 define linkonce_odr void @lo_and_wo() local_unnamed_addr comdat {
   ret void
 }
