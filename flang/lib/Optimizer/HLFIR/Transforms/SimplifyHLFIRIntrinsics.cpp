@@ -17,7 +17,6 @@
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
-#include "flang/Optimizer/OpenMP/Passes.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinDialect.h"
@@ -165,11 +164,11 @@ public:
       // NOTE: the outer elemental operation may be lowered into
       // omp.workshare.loop_wrapper/omp.loop_nest later, so the reduction
       // loop may appear disjoint from the workshare loop nest.
-      bool emitWorkshareLoop =
-          isTotalReduction ? flangomp::shouldUseWorkshareLowering(sum) : false;
-
+      //
+      // TODO: a workshare loop nest can be used for the total reductions,
+      // but a proper reduction clause is required to make it work.
       hlfir::LoopNest loopNest = hlfir::genLoopNest(
-          loc, builder, extents, isUnordered, emitWorkshareLoop);
+          loc, builder, extents, isUnordered, /*emitWorkshareLoop=*/false);
 
       llvm::SmallVector<mlir::Value> indices;
       if (isTotalReduction) {
