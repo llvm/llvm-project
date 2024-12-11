@@ -410,6 +410,8 @@ define void @fn(i1 %cond) {{
   br i1 %cond, ...
 }}
 ```
+
+Please refer to the [Undefined Behavior Manual](https://llvm.org/docs/UndefinedBehavior.html) for more information.
 """
         if args.verbose:
             print(f"error: {self.name} failed")
