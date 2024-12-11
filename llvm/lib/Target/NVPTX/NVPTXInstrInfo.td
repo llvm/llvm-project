@@ -1907,10 +1907,10 @@ defm SET_f64 : SET<"f64", Float64Regs, f64imm>;
 // Data Movement (Load / Store, Move)
 //-----------------------------------
 
-def ADDRri : ComplexPattern<i32, 2, "SelectADDRri", [frameindex],
-                            [SDNPWantRoot]>;
-def ADDRri64 : ComplexPattern<i64, 2, "SelectADDRri64", [frameindex],
-                              [SDNPWantRoot]>;
+let WantsRoot = true in {
+  def ADDRri : ComplexPattern<i32, 2, "SelectADDRri", [frameindex]>;
+  def ADDRri64 : ComplexPattern<i64, 2, "SelectADDRri64", [frameindex]>;
+}
 def ADDRvar : ComplexPattern<iPTR, 1, "SelectDirectAddr", [], []>;
 
 def MEMri : Operand<i32> {
