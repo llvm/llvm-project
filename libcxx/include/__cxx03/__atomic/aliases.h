@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_ALIASES_H
-#define _LIBCPP___ATOMIC_ALIASES_H
+#ifndef _LIBCPP___CXX03___ATOMIC_ALIASES_H
+#define _LIBCPP___CXX03___ATOMIC_ALIASES_H
 
 #include <__cxx03/__atomic/atomic.h>
 #include <__cxx03/__atomic/atomic_lock_free.h>
@@ -107,4 +107,4 @@ using atomic_unsigned_lock_free = atomic<make_unsigned_t<__contention_t_or_large
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ATOMIC_ALIASES_H
+#endif // _LIBCPP___CXX03___ATOMIC_ALIASES_H
