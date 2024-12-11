@@ -489,11 +489,9 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: vsNr_v
     ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
-    ; CHECK-NEXT: %y:gpr = ADDI $x0, 1
-    ; CHECK-NEXT: VS1R_V %x, %y
+    ; CHECK-NEXT: VS1R_V %x, $noreg
     %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
-    %y:gpr = ADDI $x0, 1
-    VS1R_V %x, %y,
+    VS1R_V %x, $noreg
 ...
 # FIXME: We can optimize this
 ---
@@ -502,9 +500,17 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: vsNr_v_eew
     ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
-    ; CHECK-NEXT: %y:gpr = ADDI $x0, 1
-    ; CHECK-NEXT: VS1R_V %x, %y
+    ; CHECK-NEXT: VS1R_V %x, $noreg
     %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
-    %y:gpr = ADDI $x0, 1
-    VS1R_V %x, %y
+    VS1R_V %x, $noreg
+...
+---
+name: vsNr_v_incompatible_emul
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vsNr_v_incompatible_emul
+    ; CHECK: %x:vr = PseudoVADD_VV_MF2 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: VS1R_V %x, $noreg
+    %x:vr = PseudoVADD_VV_MF2 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
+    VS1R_V %x, $noreg
 ...
