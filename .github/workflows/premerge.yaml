@@ -24,3 +24,16 @@ jobs:
           modified_dirs=$(echo "$modified_files" | cut -d'/' -f1 | sort -u)
           echo "$modified_dirs"
 
+          . ./.ci/compute-projects.sh
+
+          all_projects="bolt clang clang-tools-extra compiler-rt cross-project-tests flang libc libclc lld lldb llvm mlir openmp polly pstl"
+          modified_projects="$(keep-modified-projects ${all_projects})"
+
+          linux_projects_to_test=$(exclude-linux $(compute-projects-to-test 0 ${modified_projects}))
+          linux_check_targets=$(check-targets ${linux_projects_to_test} | sort | uniq)
+          linux_projects=$(add-dependencies ${linux_projects_to_test} | sort | uniq)
+
+          linux_runtimes_to_test=$(compute-runtimes-to-test ${linux_projects_to_test})
+          linux_runtime_check_targets=$(check-targets ${linux_runtimes_to_test} | sort | uniq)
+          linux_runtimes=$(echo ${linux_runtimes_to_test} | sort | uniq)
+
