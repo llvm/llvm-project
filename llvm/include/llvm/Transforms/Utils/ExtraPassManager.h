@@ -71,6 +71,8 @@ public:
     PA.abandon<MarkerTy>();
     return PA;
   }
+
+  static bool isRequired() { return true; }
 };
 
 /// A pass manager to run a set of extra loop passes if the MarkerTy analysis is
@@ -94,6 +96,8 @@ public:
     PA.abandon<MarkerTy>();
     return PA;
   }
+
+  static bool isRequired() { return true; }
 };
 
 } // namespace llvm
