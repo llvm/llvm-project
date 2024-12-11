@@ -269,6 +269,7 @@ struct OpenACCRoutineConstruct;
 struct OpenMPConstruct;
 struct OpenMPDeclarativeConstruct;
 struct OmpEndLoopDirective;
+struct OmpMemoryOrderClause;
 struct CUFKernelDoConstruct;
 
 // Cooked character stream locations
@@ -3914,6 +3915,14 @@ struct OmpDeviceTypeClause {
   WRAPPER_CLASS_BOILERPLATE(OmpDeviceTypeClause, DeviceTypeDescription);
 };
 
+// OMP 5.2 15.8.3 extended-atomic, fail-clause ->
+//    FAIL(memory-order)
+struct OmpFailClause {
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpFailClause, common::Indirection<OmpMemoryOrderClause>);
+  CharBlock source;
+};
+
 // Ref: [4.5:107-109], [5.0:176-180], [5.1:205-210], [5.2:167-168]
 //
 // from-clause ->
@@ -4317,11 +4326,12 @@ struct OmpMemoryOrderClause {
 };
 
 // 2.17.7 Atomic construct
-//        atomic-clause -> memory-order-clause | HINT(hint-expression)
+//        atomic-clause -> memory-order-clause | HINT(hint-expression) |
+//        FAIL(memory-order)
 struct OmpAtomicClause {
   UNION_CLASS_BOILERPLATE(OmpAtomicClause);
   CharBlock source;
-  std::variant<OmpMemoryOrderClause, OmpClause> u;
+  std::variant<OmpMemoryOrderClause, OmpFailClause, OmpClause> u;
 };
 
 // atomic-clause-list -> [atomic-clause, [atomic-clause], ...]

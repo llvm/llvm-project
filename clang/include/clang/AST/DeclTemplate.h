@@ -1965,7 +1965,7 @@ public:
             SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
       return PartialSpec->PartialSpecialization;
 
-    return SpecializedTemplate.get<ClassTemplateDecl*>();
+    return cast<ClassTemplateDecl *>(SpecializedTemplate);
   }
 
   /// Retrieve the set of template arguments that should be used
@@ -2013,7 +2013,7 @@ public:
   const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const {
     if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
       return Info->TemplateArgsAsWritten;
-    return ExplicitInfo.get<const ASTTemplateArgumentListInfo *>();
+    return cast<const ASTTemplateArgumentListInfo *>(ExplicitInfo);
   }
 
   /// Set the template argument list as written in the sources.
@@ -2734,7 +2734,7 @@ public:
             SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
       return PartialSpec->PartialSpecialization;
 
-    return SpecializedTemplate.get<VarTemplateDecl *>();
+    return cast<VarTemplateDecl *>(SpecializedTemplate);
   }
 
   /// Retrieve the set of template arguments that should be used
@@ -2782,7 +2782,7 @@ public:
   const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const {
     if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
       return Info->TemplateArgsAsWritten;
-    return ExplicitInfo.get<const ASTTemplateArgumentListInfo *>();
+    return cast<const ASTTemplateArgumentListInfo *>(ExplicitInfo);
   }
 
   /// Set the template argument list as written in the sources.
@@ -3309,7 +3309,7 @@ inline NamedDecl *getAsNamedDecl(TemplateParameter P) {
     return PD;
   if (auto *PD = P.dyn_cast<NonTypeTemplateParmDecl *>())
     return PD;
-  return P.get<TemplateTemplateParmDecl *>();
+  return cast<TemplateTemplateParmDecl *>(P);
 }
 
 inline TemplateDecl *getAsTypeTemplateDecl(Decl *D) {
