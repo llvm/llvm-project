@@ -167,13 +167,17 @@ private:
     RegAllocPriorityAdvisorAnalysisLegacy::getAnalysisUsage(AU);
   }
 
-  std::unique_ptr<RegAllocPriorityAdvisor>
-  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
+  std::unique_ptr<RegAllocPriorityAdvisorProvider> &getProvider() override {
     Provider->setAnalyses(&getAnalysis<SlotIndexesWrapperPass>().getSI());
-    return Provider->getAdvisor(MF, RA);
+    return Provider;
   }
 
-  std::unique_ptr<ReleaseModePriorityAdvisorProvider> Provider;
+  bool doInitialization(Module &M) override {
+    Provider = std::make_unique<ReleaseModePriorityAdvisorProvider>();
+    return false;
+  }
+
+  // std::unique_ptr<ReleaseModePriorityAdvisorProvider> Provider;
 };
 
 // ===================================
@@ -315,13 +319,10 @@ private:
     ;
   }
 
-  std::unique_ptr<RegAllocPriorityAdvisor>
-  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
+  std::unique_ptr<RegAllocPriorityAdvisorProvider> &getProvider() override {
     Provider->setAnalyses(&getAnalysis<SlotIndexesWrapperPass>().getSI());
-    return Provider->getAdvisor(MF, RA);
+    return Provider;
   }
-
-  std::unique_ptr<DevelopmentModePriorityAdvisorProvider> Provider;
 };
 #endif //#ifdef LLVM_HAVE_TFLITE
 

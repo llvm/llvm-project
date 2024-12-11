@@ -139,8 +139,7 @@ public:
   static char ID;
 
   /// Get an advisor for the given context (i.e. machine function, etc)
-  virtual std::unique_ptr<RegAllocPriorityAdvisor>
-  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) = 0;
+  virtual std::unique_ptr<RegAllocPriorityAdvisorProvider> &getProvider() = 0;
   AdvisorMode getAdvisorMode() const { return Mode; }
   virtual void logRewardIfNeeded(const MachineFunction &MF,
                                  llvm::function_ref<float()> GetReward) {};
@@ -151,6 +150,8 @@ protected:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
   }
+
+  std::unique_ptr<RegAllocPriorityAdvisorProvider> Provider;
 
 private:
   StringRef getPassName() const override;
