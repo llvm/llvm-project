@@ -204,7 +204,7 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
     JsonSerializer serializer;
   };
 
-  // This defines a custom TelemetryInfo that has an addition Msg field.
+  // This defines a custom TelemetryInfo that has an additional Msg field.
   struct MyTelemetryInfo : public telemetry::TelemetryInfo {
     std::chrono::time_point<std::chrono::steady_clock> Start;
     std::chrono::time_point<std::chrono::steady_clock> End;
