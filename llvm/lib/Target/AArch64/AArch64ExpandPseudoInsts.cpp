@@ -1155,10 +1155,10 @@ bool AArch64ExpandPseudo::expandFormTuplePseudo(
 
   const TargetRegisterInfo *TRI =
       MBB.getParent()->getSubtarget().getRegisterInfo();
-  for (unsigned i = 0; i < Size; i++) {
-    Register FormTupleOpReg = MI.getOperand(i + 1).getReg();
+  for (unsigned I = 0; I < Size; ++I) {
+    Register FormTupleOpReg = MI.getOperand(I + 1).getReg();
     Register ReturnTupleSubReg =
-        TRI->getSubReg(ReturnTuple, AArch64::zsub0 + i);
+        TRI->getSubReg(ReturnTuple, AArch64::zsub0 + I);
     // Add copies to ensure the subregisters remain in the correct order
     // for any contigious operation they are used by.
     if (FormTupleOpReg != ReturnTupleSubReg)

@@ -8683,10 +8683,8 @@ bool shouldUseFormStridedPseudo(MachineInstr &MI) {
       SubReg = OpSubReg;
 
     MachineOperand *CopySrcOp = MRI.getOneDef(CopySrc.getReg());
-    if (!CopySrcOp || !CopySrcOp->isReg() || OpSubReg != SubReg)
-      return false;
-
-    if (MRI.getRegClass(CopySrcOp->getReg()) != RegClass)
+    if (!CopySrcOp || !CopySrcOp->isReg() || OpSubReg != SubReg ||
+        MRI.getRegClass(CopySrcOp->getReg()) != RegClass)
       return false;
   }
 
@@ -8725,9 +8723,6 @@ void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
     if (shouldUseFormStridedPseudo(MI))
       return;
 
-    static const unsigned SubRegs[] = {AArch64::zsub0, AArch64::zsub1,
-                                       AArch64::zsub2, AArch64::zsub3};
-
     const TargetInstrInfo *TII = Subtarget->getInstrInfo();
     MachineInstrBuilder MIB = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                                       TII->get(TargetOpcode::REG_SEQUENCE),
@@ -8735,7 +8730,7 @@ void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
 
     for (unsigned I = 1; I < MI.getNumOperands(); ++I) {
       MIB.add(MI.getOperand(I));
-      MIB.addImm(SubRegs[I - 1]);
+      MIB.addImm(AArch64::zsub0 + (I - 1));
     }
 
     MI.eraseFromParent();
