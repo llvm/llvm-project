@@ -44,7 +44,7 @@ jobs:
           docker build -t ${{ steps.vars.outputs.container-name-tag }} .
       - name: Save container image
         run: |
-          podman save  ${{ steps.vars.outputs.container-name-tag }} >  ${{ steps.vars.outputs.container-filename }}
+          docker save  ${{ steps.vars.outputs.container-name-tag }} >  ${{ steps.vars.outputs.container-filename }}
       - name: Upload container image
         uses: actions/upload-artifact@v4
         with:
