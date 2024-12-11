@@ -95,10 +95,10 @@ public:
       : RegAllocEvictionAdvisorAnalysisLegacy(AdvisorMode::Default),
         NotAsRequested(NotAsRequested) {}
 
-  std::unique_ptr<RegAllocEvictionAdvisor>
-  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
+  std::unique_ptr<RegAllocEvictionAdvisorProvider>&
+  getProvider() override {
     // MBFI and Loops not required here.
-    return Provider->getAdvisor(MF, RA);
+    return Provider;
   }
 
   bool doInitialization(Module &M) override {
@@ -113,7 +113,6 @@ public:
   }
 
 private:
-  std::unique_ptr<DefaultEvictionAdvisorProvider> Provider;
   const bool NotAsRequested;
 };
 } // namespace

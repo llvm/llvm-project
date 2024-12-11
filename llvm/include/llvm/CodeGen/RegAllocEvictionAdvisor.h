@@ -153,48 +153,6 @@ protected:
   const bool EnableLocalReassign;
 };
 
-/// ImmutableAnalysis abstraction for fetching the Eviction Advisor. We model it
-/// as an analysis to decouple the user from the implementation insofar as
-/// dependencies on other analyses goes. The motivation for it being an
-/// immutable pass is twofold:
-/// - in the ML implementation case, the evaluator is stateless but (especially
-/// in the development mode) expensive to set up. With an immutable pass, we set
-/// it up once.
-/// - in the 'development' mode ML case, we want to capture the training log
-/// during allocation (this is a log of features encountered and decisions
-/// made), and then measure a score, potentially a few steps after allocation
-/// completes. So we need the properties of an immutable pass to keep the logger
-/// state around until we can make that measurement.
-///
-/// Because we need to offer additional services in 'development' mode, the
-/// implementations of this analysis need to implement RTTI support.
-class RegAllocEvictionAdvisorAnalysisLegacy : public ImmutablePass {
-public:
-  enum class AdvisorMode : int { Default, Release, Development };
-
-  RegAllocEvictionAdvisorAnalysisLegacy(AdvisorMode Mode)
-      : ImmutablePass(ID), Mode(Mode) {};
-  static char ID;
-
-  /// Get an advisor for the given context (i.e. machine function, etc)
-  virtual std::unique_ptr<RegAllocEvictionAdvisor>
-  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) = 0;
-  AdvisorMode getAdvisorMode() const { return Mode; }
-  virtual void logRewardIfNeeded(const MachineFunction &MF,
-                                 llvm::function_ref<float()> GetReward) {};
-
-protected:
-  // This analysis preserves everything, and subclasses may have additional
-  // requirements.
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-  }
-
-private:
-  StringRef getPassName() const override;
-  const AdvisorMode Mode;
-};
-
 /// Common provider for legacy and new pass managers.
 /// This keeps the state for logging, and sets up and holds the provider.
 /// The legacy pass itself used to keep the logging state and provider,
@@ -230,6 +188,49 @@ protected:
   MachineLoopInfo *Loops;
 
 private:
+  const AdvisorMode Mode;
+};
+
+/// ImmutableAnalysis abstraction for fetching the Eviction Advisor. We model it
+/// as an analysis to decouple the user from the implementation insofar as
+/// dependencies on other analyses goes. The motivation for it being an
+/// immutable pass is twofold:
+/// - in the ML implementation case, the evaluator is stateless but (especially
+/// in the development mode) expensive to set up. With an immutable pass, we set
+/// it up once.
+/// - in the 'development' mode ML case, we want to capture the training log
+/// during allocation (this is a log of features encountered and decisions
+/// made), and then measure a score, potentially a few steps after allocation
+/// completes. So we need the properties of an immutable pass to keep the logger
+/// state around until we can make that measurement.
+///
+/// Because we need to offer additional services in 'development' mode, the
+/// implementations of this analysis need to implement RTTI support.
+class RegAllocEvictionAdvisorAnalysisLegacy : public ImmutablePass {
+public:
+  enum class AdvisorMode : int { Default, Release, Development };
+
+  RegAllocEvictionAdvisorAnalysisLegacy(AdvisorMode Mode)
+      : ImmutablePass(ID), Mode(Mode) {};
+  static char ID;
+
+  /// Get an advisor for the given context (i.e. machine function, etc)
+  virtual std::unique_ptr<RegAllocEvictionAdvisorProvider>&
+  getProvider() = 0;
+  AdvisorMode getAdvisorMode() const { return Mode; }
+  virtual void logRewardIfNeeded(const MachineFunction &MF,
+                                 llvm::function_ref<float()> GetReward) {};
+
+protected:
+  // This analysis preserves everything, and subclasses may have additional
+  // requirements.
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+  }
+  std::unique_ptr<RegAllocEvictionAdvisorProvider> Provider;
+
+private:
+  StringRef getPassName() const override;
   const AdvisorMode Mode;
 };
 
