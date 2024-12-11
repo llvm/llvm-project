@@ -39,29 +39,67 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 #map = affine_map<() -> ()>
-func.func @negative_no_loops(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<f32> {
-  %1 = linalg.generic {
+func.func @extract_scalar_from_0d_into_0d(%src: tensor<f32>, %init: tensor<f32>) -> tensor<f32> {
+  %res = linalg.generic {
     indexing_maps = [#map],
     iterator_types = []
-  } outs(%arg1 : tensor<f32>) {
-  ^bb0(%arg4: f32):
-    %2 = tensor.extract %arg0[] : tensor<f32>
-    linalg.yield %2 : f32
+  } outs(%init : tensor<f32>) {
+  ^bb0(%in: f32):
+    %1 = tensor.extract %src[] : tensor<f32>
+    linalg.yield %1 : f32
   } -> tensor<f32>
-  return %1 : tensor<f32>
+
+  return %res : tensor<f32>
 }
-// CHECK-LABEL: func.func @negative_no_loops
-// CHECK: tensor.extract
+
+// CHECK-LABEL:   func.func @extract_scalar_from_0d_into_0d(
+// CHECK-SAME:      %[[SRC:.*]]: tensor<f32>,
+// CHECK-SAME:      %[[INIT:.*]]: tensor<f32>) -> tensor<f32> {
+// CHECK:           %[[PAD:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[SRC]][], %[[PAD]] : tensor<f32>, vector<f32>
+// CHECK:           vector.transfer_write %[[READ]], %[[INIT]][] : vector<f32>, tensor<f32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 { vectorize_nd_extract } : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
 
+// -----
+
+#map = affine_map<(n) -> (n)>
+func.func @extract_scalar_from_0d_into_1d(%src: tensor<f32>, %init: tensor<1xf32>) -> tensor<1xf32> {
+  %res = linalg.generic {
+    indexing_maps = [#map],
+    iterator_types = ["parallel"]
+  } outs(%init : tensor<1xf32>) {
+  ^bb0(%in: f32):
+    %1 = tensor.extract %src[] : tensor<f32>
+    linalg.yield %1 : f32
+  } -> tensor<1xf32>
+
+  return %res : tensor<1xf32>
+}
+// CHECK-LABEL:   func.func @extract_scalar_from_0d_into_1d(
+// CHECK-SAME:      %[[SRC:.*]]: tensor<f32>,
+// CHECK-SAME:      %[[INIT:.*]]: tensor<1xf32>) -> tensor<1xf32> {
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[PAD:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[SRC]][], %[[PAD]] : tensor<f32>, vector<f32>
+// CHECK:           %[[READ_BCAST:.*]] = vector.broadcast %[[READ]] : vector<f32> to vector<1xf32>
+// CHECK:           vector.transfer_write %[[READ_BCAST]], %[[INIT]][%[[C0]]] {in_bounds = [true]} : vector<1xf32>, tensor<1xf32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 { vectorize_nd_extract } : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
 
 // -----
 
