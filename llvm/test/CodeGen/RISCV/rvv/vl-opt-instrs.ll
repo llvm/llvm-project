@@ -982,6 +982,107 @@ define <vscale x 4 x i16> @vnsrl_wi(<vscale x 4 x i32> %a, <vscale x 4 x i16> %b
   ret <vscale x 4 x i16> %2
 }
 
+define <vscale x 4 x i16> @vnsrl_wx(<vscale x 4 x i32> %a, <vscale x 4 x i16> %b, iXLen %c, iXLen %vl) {
+; NOVLOPT-LABEL: vnsrl_wx:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a2, zero, e16, m1, ta, ma
+; NOVLOPT-NEXT:    vnsrl.wx v11, v8, a0
+; NOVLOPT-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v11, v10
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vnsrl_wx:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
+; VLOPT-NEXT:    vnsrl.wx v11, v8, a0
+; VLOPT-NEXT:    vadd.vv v8, v11, v10
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i16> @llvm.riscv.vnsrl.nxv4i16.nxv4i32(<vscale x 4 x i16> poison, <vscale x 4 x i32> %a, iXLen %c, iXLen -1)
+  %2 = call <vscale x 4 x i16> @llvm.riscv.vadd.nxv4i16.nxv4i16(<vscale x 4 x i16> poison, <vscale x 4 x i16> %1, <vscale x 4 x i16> %b, iXLen %vl)
+  ret <vscale x 4 x i16> %2
+}
+
+define <vscale x 4 x i16> @vnsrl_wv(<vscale x 4 x i32> %a, <vscale x 4 x i16> %b, <vscale x 4 x i16> %c, iXLen %vl) {
+; NOVLOPT-LABEL: vnsrl_wv:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; NOVLOPT-NEXT:    vnsrl.wv v12, v8, v11
+; NOVLOPT-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v12, v10
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vnsrl_wv:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; VLOPT-NEXT:    vnsrl.wv v12, v8, v11
+; VLOPT-NEXT:    vadd.vv v8, v12, v10
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i16> @llvm.riscv.vnsrl.nxv4i16.nxv4i32.nxv4i16(<vscale x 4 x i16> poison, <vscale x 4 x i32> %a, <vscale x 4 x i16> %c, iXLen -1)
+  %2 = call <vscale x 4 x i16> @llvm.riscv.vadd.nxv4i16.nxv4i16(<vscale x 4 x i16> poison, <vscale x 4 x i16> %1, <vscale x 4 x i16> %b, iXLen %vl)
+  ret <vscale x 4 x i16> %2
+}
+
+define <vscale x 4 x i16> @vnsra_wi(<vscale x 4 x i32> %a, <vscale x 4 x i16> %b, iXLen %vl) {
+; NOVLOPT-LABEL: vnsra_wi:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; NOVLOPT-NEXT:    vnsra.wi v11, v8, 5
+; NOVLOPT-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v11, v10
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vnsra_wi:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; VLOPT-NEXT:    vnsra.wi v11, v8, 5
+; VLOPT-NEXT:    vadd.vv v8, v11, v10
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i16> @llvm.riscv.vnsra.nxv4i16.nxv4i32(<vscale x 4 x i16> poison, <vscale x 4 x i32> %a, iXLen 5, iXLen -1)
+  %2 = call <vscale x 4 x i16> @llvm.riscv.vadd.nxv4i16.nxv4i16(<vscale x 4 x i16> poison, <vscale x 4 x i16> %1, <vscale x 4 x i16> %b, iXLen %vl)
+  ret <vscale x 4 x i16> %2
+}
+
+define <vscale x 4 x i16> @vnsra_wx(<vscale x 4 x i32> %a, <vscale x 4 x i16> %b, iXLen %c, iXLen %vl) {
+; NOVLOPT-LABEL: vnsra_wx:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a2, zero, e16, m1, ta, ma
+; NOVLOPT-NEXT:    vnsra.wx v11, v8, a0
+; NOVLOPT-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v11, v10
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vnsra_wx:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
+; VLOPT-NEXT:    vnsra.wx v11, v8, a0
+; VLOPT-NEXT:    vadd.vv v8, v11, v10
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i16> @llvm.riscv.vnsra.nxv4i16.nxv4i32(<vscale x 4 x i16> poison, <vscale x 4 x i32> %a, iXLen %c, iXLen -1)
+  %2 = call <vscale x 4 x i16> @llvm.riscv.vadd.nxv4i16.nxv4i16(<vscale x 4 x i16> poison, <vscale x 4 x i16> %1, <vscale x 4 x i16> %b, iXLen %vl)
+  ret <vscale x 4 x i16> %2
+}
+
+define <vscale x 4 x i16> @vnsra_wv(<vscale x 4 x i32> %a, <vscale x 4 x i16> %b, <vscale x 4 x i16> %c, iXLen %vl) {
+; NOVLOPT-LABEL: vnsra_wv:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; NOVLOPT-NEXT:    vnsra.wv v12, v8, v11
+; NOVLOPT-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v12, v10
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vnsra_wv:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; VLOPT-NEXT:    vnsra.wv v12, v8, v11
+; VLOPT-NEXT:    vadd.vv v8, v12, v10
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i16> @llvm.riscv.vnsra.nxv4i16.nxv4i32.nxv4i16(<vscale x 4 x i16> poison, <vscale x 4 x i32> %a, <vscale x 4 x i16> %c, iXLen -1)
+  %2 = call <vscale x 4 x i16> @llvm.riscv.vadd.nxv4i16.nxv4i16(<vscale x 4 x i16> poison, <vscale x 4 x i16> %1, <vscale x 4 x i16> %b, iXLen %vl)
+  ret <vscale x 4 x i16> %2
+}
+
+
 define <vscale x 4 x i32> @vminu_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl) {
 ; NOVLOPT-LABEL: vminu_vv:
 ; NOVLOPT:       # %bb.0:
