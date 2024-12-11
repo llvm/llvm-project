@@ -1509,6 +1509,26 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                         *CI, VPID, Ops, TypeInfo.inferScalarType(CInst),
                         CInst->getDebugLoc());
                   })
+              .Case<VPWidenCastRecipe>(
+                  [&](VPWidenCastRecipe *CInst) -> VPRecipeBase * {
+                    auto *CI = dyn_cast<CastInst>(CInst->getUnderlyingInstr());
+                    Intrinsic::ID VPID =
+                        VPIntrinsic::getForOpcode(CI->getOpcode());
+                    assert(VPID != Intrinsic::not_intrinsic &&
+                           "Expected vp.casts Instrinsic");
+
+                    SmallVector<VPValue *> Ops(CInst->operands());
+                    assert(VPIntrinsic::getMaskParamPos(VPID) &&
+                           VPIntrinsic::getVectorLengthParamPos(VPID) &&
+                           "Expected VP intrinsic");
+                    VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(
+                        IntegerType::getInt1Ty(CI->getContext())));
+                    Ops.push_back(Mask);
+                    Ops.push_back(&EVL);
+                    return new VPWidenIntrinsicRecipe(
+                        VPID, Ops, TypeInfo.inferScalarType(CInst),
+                        CInst->getDebugLoc());
+                  })
               .Case<VPWidenSelectRecipe>([&](VPWidenSelectRecipe *Sel) {
                 SmallVector<VPValue *> Ops(Sel->operands());
                 Ops.push_back(&EVL);
@@ -1909,9 +1929,7 @@ static void expandVPMulAcc(VPMulAccRecipe *MulAcc) {
   MulAcc->eraseFromParent();
 }
 
-void VPlanTransforms::prepareToExecute(VPlan &Plan) {
-  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
-      Plan.getVectorLoopRegion());
+void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(VPBB->phis())) {

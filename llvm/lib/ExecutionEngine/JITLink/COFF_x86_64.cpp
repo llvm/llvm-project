@@ -148,6 +148,7 @@ private:
         SectionIdx = getObject().getNumberOfSections() + 1;
       else
         SectionIdx = COFFSymbol.getSectionNumber();
+
       auto *AbsSym = &getGraph().addAbsoluteSymbol(
           "secidx", orc::ExecutorAddr(SectionIdx), 2, Linkage::Strong,
           Scope::Local, false);
@@ -181,14 +182,20 @@ private:
   }
 
 public:
-  COFFLinkGraphBuilder_x86_64(const object::COFFObjectFile &Obj, const Triple T,
-                              const SubtargetFeatures Features)
-      : COFFLinkGraphBuilder(Obj, std::move(T), std::move(Features),
+  COFFLinkGraphBuilder_x86_64(const object::COFFObjectFile &Obj,
+                              std::shared_ptr<orc::SymbolStringPool> SSP,
+                              const Triple T, const SubtargetFeatures Features)
+      : COFFLinkGraphBuilder(Obj, std::move(SSP), std::move(T),
+                             std::move(Features),
                              getCOFFX86RelocationKindName) {}
 };
 
 class COFFLinkGraphLowering_x86_64 {
 public:
+  COFFLinkGraphLowering_x86_64(std::shared_ptr<orc::SymbolStringPool> SSP)
+      : SSP(std::move(SSP)) {
+    ImageBaseName = this->SSP->intern("__ImageBase");
+  }
   // Lowers COFF x86_64 specific edges to generic x86_64 edges.
   Error lowerCOFFRelocationEdges(LinkGraph &G, JITLinkContext &Ctx) {
     for (auto *B : G.blocks()) {
@@ -230,7 +237,9 @@ public:
   }
 
 private:
-  static StringRef getImageBaseSymbolName() { return "__ImageBase"; }
+  const orc::SymbolStringPtr &getImageBaseSymbolName() const {
+    return this->ImageBaseName;
+  }
 
   orc::ExecutorAddr getSectionStart(Section &Sec) {
     if (!SectionStartCache.count(&Sec)) {
@@ -271,12 +280,13 @@ private:
 
   DenseMap<Section *, orc::ExecutorAddr> SectionStartCache;
   orc::ExecutorAddr ImageBase;
+  std::shared_ptr<orc::SymbolStringPool> SSP;
+  orc::SymbolStringPtr ImageBaseName = nullptr;
 };
 
 Error lowerEdges_COFF_x86_64(LinkGraph &G, JITLinkContext *Ctx) {
   LLVM_DEBUG(dbgs() << "Lowering COFF x86_64 edges:\n");
-  COFFLinkGraphLowering_x86_64 GraphLowering;
-
+  COFFLinkGraphLowering_x86_64 GraphLowering(G.getSymbolStringPool());
   if (auto Err = GraphLowering.lowerCOFFRelocationEdges(G, *Ctx))
     return Err;
 
@@ -305,8 +315,8 @@ const char *getCOFFX86RelocationKindName(Edge::Kind R) {
   }
 }
 
-Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromCOFFObject_x86_64(MemoryBufferRef ObjectBuffer) {
+Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromCOFFObject_x86_64(
+    MemoryBufferRef ObjectBuffer, std::shared_ptr<orc::SymbolStringPool> SSP) {
   LLVM_DEBUG({
     dbgs() << "Building jitlink graph for new input "
            << ObjectBuffer.getBufferIdentifier() << "...\n";
@@ -320,7 +330,8 @@ createLinkGraphFromCOFFObject_x86_64(MemoryBufferRef ObjectBuffer) {
   if (!Features)
     return Features.takeError();
 
-  return COFFLinkGraphBuilder_x86_64(**COFFObj, (*COFFObj)->makeTriple(),
+  return COFFLinkGraphBuilder_x86_64(**COFFObj, std::move(SSP),
+                                     (*COFFObj)->makeTriple(),
                                      std::move(*Features))
       .buildGraph();
 }
