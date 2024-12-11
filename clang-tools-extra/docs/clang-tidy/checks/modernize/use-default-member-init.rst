@@ -50,5 +50,4 @@ Options
 
 .. option:: IgnoreMacros
 
-   If this option is set to `true` (default is `true`), the check will not warn
-   about members declared inside macros.
+   See :doc:`global options <clang-tidy/GlobalOptions>`.

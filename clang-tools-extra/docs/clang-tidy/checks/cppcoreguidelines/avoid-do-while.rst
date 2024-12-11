@@ -26,7 +26,8 @@ Options
 
 .. option:: IgnoreMacros
 
-  Ignore the check when analyzing macros. This is useful for safely defining function-like macros:
+  See :doc:`global options <clang-tidy/GlobalOptions>`.
+  This is useful for safely defining function-like macros:
 
   .. code-block:: c++
 

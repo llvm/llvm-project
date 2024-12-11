@@ -29,7 +29,7 @@ Options
 
 .. option:: IgnoreMacros
 
-  If `true` don't diagnose traits defined in macros.
+  See :doc:`global options <clang-tidy/GlobalOptions>`.
 
   Note: Fixes will never be emitted for code inside of macros.
 

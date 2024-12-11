@@ -70,5 +70,4 @@ Options
 
 .. option:: IncludeStyle
 
-   A string specifying which include-style is used, `llvm` or `google`. Default
-   is `llvm`.
+   See :doc:`global options <clang-tidy/GlobalOptions>`.

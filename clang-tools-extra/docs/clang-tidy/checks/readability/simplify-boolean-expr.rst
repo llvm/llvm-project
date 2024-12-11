@@ -84,8 +84,7 @@ Options
 
 .. option:: IgnoreMacros
 
-   If `true`, ignore boolean expressions originating from expanded macros.
-   Default is `false`.
+   See :doc:`global options <clang-tidy/GlobalOptions>`.
 
 .. option:: ChainedConditionalReturn
 

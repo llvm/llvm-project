@@ -54,8 +54,7 @@ the definition or the first declaration seen in a translation unit.
 
 .. option:: IgnoreMacros
 
-   If this option is set to `true` (default is `true`), the check will not warn
-   about names declared inside macros.
+   See :doc:`global options <clang-tidy/GlobalOptions>`.
 
 .. option:: Strict
 

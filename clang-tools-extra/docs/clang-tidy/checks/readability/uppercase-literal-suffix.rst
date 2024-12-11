@@ -52,5 +52,4 @@ Given a list `L;uL`:
 
 .. option:: IgnoreMacros
 
-   If this option is set to `true` (default is `true`), the check will not warn
-   about literal suffixes inside macros.
+   See :doc:`global options <clang-tidy/GlobalOptions>`.

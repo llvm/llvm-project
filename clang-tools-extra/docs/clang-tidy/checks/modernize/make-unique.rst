@@ -41,13 +41,11 @@ Options
 
 .. option:: IncludeStyle
 
-   A string specifying which include-style is used, `llvm` or `google`. Default
-   is `llvm`.
+   See :doc:`global options <clang-tidy/GlobalOptions>`.
 
 .. option:: IgnoreMacros
 
-   If set to `true`, the check will not give warnings inside macros. Default
-   is `true`.
+   See :doc:`global options <clang-tidy/GlobalOptions>`.
 
 .. option:: IgnoreDefaultInitialization
 

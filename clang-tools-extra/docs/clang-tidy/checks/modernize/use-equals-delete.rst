@@ -41,5 +41,4 @@ for manually relocating functions to the ``public`` section.
 
 .. option:: IgnoreMacros
 
-   If this option is set to `true` (default is `true`), the check will not warn
-   about functions declared inside macros.
+  See :doc:`global options <clang-tidy/GlobalOptions>`.

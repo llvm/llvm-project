@@ -24,5 +24,4 @@ Options
 
 .. option:: IgnoreMacros
 
-   If set to `true`, the check will not give warnings inside macros. Default
-   is `true`.
+   See :doc:`global options <clang-tidy/GlobalOptions>`.
