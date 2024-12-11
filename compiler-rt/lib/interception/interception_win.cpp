@@ -634,6 +634,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xD284:  // 84 D2 : test dl,dl
       return 2;
 
+    case 0xEC83:  // 83 EC XX : sub esp, XX
     case 0xC1F6:  // F6 C1 XX : test cl, XX
       return 3;
 
@@ -644,8 +645,6 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
 
   switch (0x00FFFFFF & *(u32*)address) {
     case 0xF8E483:  // 83 E4 F8 : and esp, 0xFFFFFFF8
-    case 0x64EC83:  // 83 EC 64 : sub esp, 64h
-      return 3;
     case 0x24A48D:  // 8D A4 24 XX XX XX XX : lea esp, [esp + XX XX XX XX]
       return 7;
   }
@@ -873,7 +872,6 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x5D8B:  // 8B 5D XX : mov ebx, dword ptr [ebp + XX]
     case 0x7D8B:  // 8B 7D XX : mov edi, dword ptr [ebp + XX]
     case 0x758B:  // 8B 75 XX : mov esi, dword ptr [ebp + XX]
-    case 0xEC83:  // 83 EC XX : sub esp, XX
     case 0x75FF:  // FF 75 XX : push dword ptr [ebp + XX]
       return 3;
     case 0xC1F7:  // F7 C1 XX YY ZZ WW : test ecx, WWZZYYXX

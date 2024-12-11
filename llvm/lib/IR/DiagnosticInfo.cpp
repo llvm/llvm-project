@@ -48,20 +48,6 @@ int llvm::getNextAvailablePluginDiagnosticKind() {
 
 const char *OptimizationRemarkAnalysis::AlwaysPrint = "";
 
-void DiagnosticInfoGeneric::print(DiagnosticPrinter &DP) const {
-  DP << getMsgStr();
-}
-
-void DiagnosticInfoGenericWithLoc::print(DiagnosticPrinter &DP) const {
-  DP << getLocationStr() << ": " << getMsgStr();
-}
-
-DiagnosticInfoInlineAsm::DiagnosticInfoInlineAsm(uint64_t LocCookie,
-                                                 const Twine &MsgStr,
-                                                 DiagnosticSeverity Severity)
-    : DiagnosticInfo(DK_InlineAsm, Severity), LocCookie(LocCookie),
-      MsgStr(MsgStr) {}
-
 DiagnosticInfoInlineAsm::DiagnosticInfoInlineAsm(const Instruction &I,
                                                  const Twine &MsgStr,
                                                  DiagnosticSeverity Severity)
