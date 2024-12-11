@@ -14503,10 +14503,13 @@ TEST_F(FormatTest, PullTrivialFunctionDefinitionsIntoSingleLine) {
   FormatStyle DoNotMergeNoColumnLimit = NoColumnLimit;
   DoNotMergeNoColumnLimit.AllowShortFunctionsOnASingleLine =
       FormatStyle::SFS_None;
-  verifyFormat("A()\n"
-               "    : b(0) {\n"
+  verifyFormat("A() : b(0) {\n"
                "}",
-               "A():b(0){}", DoNotMergeNoColumnLimit);
+               DoNotMergeNoColumnLimit);
+  verifyNoChange("A()\n"
+                 "    : b(0) {\n"
+                 "}",
+                 DoNotMergeNoColumnLimit);
   verifyFormat("A()\n"
                "    : b(0) {\n"
                "}",

@@ -492,7 +492,8 @@ private:
             ProbablyFunctionType && CurrentToken->Next &&
             (CurrentToken->Next->is(tok::l_paren) ||
              (CurrentToken->Next->is(tok::l_square) &&
-              Line.MustBeDeclaration))) {
+              (Line.MustBeDeclaration ||
+               PrevNonComment->isTypeName(LangOpts))))) {
           OpeningParen.setType(OpeningParen.Next->is(tok::caret)
                                    ? TT_ObjCBlockLParen
                                    : TT_FunctionTypeLParen);
