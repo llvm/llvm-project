@@ -2054,7 +2054,7 @@ void RewriteInstance::adjustCommandLineOptions() {
 
   if (!BC->HasRelocations &&
       opts::ICF == IdenticalCodeFolding::ICFLevel::Safe) {
-    BC->errs() << "BOLT-ERROR: Binary built without relocations. Safe ICF is "
+    BC->errs() << "BOLT-ERROR: binary built without relocations. Safe ICF is "
                   "not supported\n";
     exit(1);
   }
