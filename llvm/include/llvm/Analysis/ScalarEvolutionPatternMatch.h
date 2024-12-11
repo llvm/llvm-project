@@ -33,15 +33,10 @@ template <typename Predicate> struct cst_pred_ty : public Predicate {
 };
 
 struct is_zero {
-  template <typename ITy> bool match(ITy *S) {
-    assert((isa<SCEVCouldNotCompute>(S) || !S->getType()->isVectorTy()) &&
-           "no vector types expected from SCEVs");
-    auto *C = dyn_cast<SCEVConstant>(S);
-    return C && C->getValue()->isNullValue();
-  }
+  bool isValue(const APInt &C) { return C.isZero(); }
 };
-/// Match any null constant.
-inline is_zero m_scev_Zero() { return is_zero(); }
+/// Match an integer 0.
+inline cst_pred_ty<is_zero> m_scev_Zero() { return cst_pred_ty<is_zero>(); }
 
 struct is_one {
   bool isValue(const APInt &C) { return C.isOne(); }
