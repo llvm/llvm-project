@@ -822,18 +822,6 @@ inline BinaryOpc_match<LHS, RHS> m_Shuffle(const LHS &v1, const RHS &v2) {
   return BinaryOpc_match<LHS, RHS>(ISD::VECTOR_SHUFFLE, v1, v2);
 }
 
-// template <typename LHS, typename RHS, typename Mask_t>
-// inline TernaryOpc_match<LHS, RHS, Mask_t>
-// m_Shuffle(const LHS &v1, const RHS &v2, const Mask_t &mask) {
-//   return TernaryOpc_match<LHS, RHS, Mask_t>(ISD::VECTOR_SHUFFLE, v1, v2,
-//   mask);
-// }
-// template <typename LHS, typename RHS, typename Mask_t>
-// inline bool
-// m_Shuffle(const LHS &v1, const RHS &v2,const Mask_t &mask) {
-//   return BinaryOpc_match<LHS, RHS>(ISD::VECTOR_SHUFFLE, v1, v2) && true;
-// }
-
 template <typename V1_t, typename V2_t, typename Mask_t>
 inline SDShuffle_match<V1_t, V2_t, Mask_t>
 m_Shuffle(const V1_t &v1, const V2_t &v2, const Mask_t &mask) {
