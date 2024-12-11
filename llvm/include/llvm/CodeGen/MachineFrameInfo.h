@@ -915,11 +915,8 @@ public:
     RestorePoints = std::move(NewRestorePoints);
   }
 
-  void setSavePoint(MachineBasicBlock *MBB, std::vector<Register> &Regs) {
-    if (SavePoints.contains(MBB))
-      SavePoints[MBB] = Regs;
-    else
-      SavePoints.insert(std::make_pair(MBB, Regs));
+  void setSavePoint(MachineBasicBlock *MBB, const std::vector<Register> &Regs) {
+    SavePoints[MBB] = Regs;
   }
 
   static const SaveRestorePoints constructSaveRestorePoints(
@@ -933,10 +930,7 @@ public:
   }
 
   void setRestorePoint(MachineBasicBlock *MBB, std::vector<Register> &Regs) {
-    if (RestorePoints.contains(MBB))
-      RestorePoints[MBB] = Regs;
-    else
-      RestorePoints.insert(std::make_pair(MBB, Regs));
+    RestorePoints[MBB] = Regs;
   }
 
   MachineBasicBlock *getProlog() const { return Prolog; }
