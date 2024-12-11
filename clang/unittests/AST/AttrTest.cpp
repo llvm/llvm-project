@@ -89,6 +89,7 @@ TEST(Attr, AnnotateType) {
 
     // Function Type Attributes
     __attribute__((noreturn)) int f_noreturn();
+    __attribute__((preserve_most)) int f_cc_preserve_most();
   )cpp");
 
   {
@@ -161,7 +162,15 @@ TEST(Attr, AnnotateType) {
     const FunctionTypeLoc FTL = Func->getFunctionTypeLoc();
     const FunctionType *FT = FTL.getTypePtr();
 
-    EXPECT_TRUE(FT->getExtInfo().getNoReturn());
+    EXPECT_TRUE(FT->getNoReturnAttr());
+  }
+
+  {
+    const FunctionDecl *Func = getFunctionNode(AST.get(), "f_cc_preserve_most");
+    const FunctionTypeLoc FTL = Func->getFunctionTypeLoc();
+    const FunctionType *FT = FTL.getTypePtr();
+
+    EXPECT_TRUE(FT->getCallConv() == CC_PreserveMost);
   }
 
   // The following test verifies getFunctionTypeLoc returns a type
@@ -169,7 +178,7 @@ TEST(Attr, AnnotateType) {
   // type).
   //
   // This is hard to do with C/C++ because it seems using a function
-  // type attribute with a C/C++ -function declaration only results
+  // type attribute with a C/C++ function declaration only results
   // with either:
   //
   // 1. It does NOT produce any AttributedType (for example it only
