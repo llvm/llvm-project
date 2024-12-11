@@ -127,7 +127,7 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
       writeHelper(KeyName, json::Value(std::move(Inner)));
     }
 
-    llvm::Error finish() override {
+    Error finish() override {
       if (!started)
         return createStringError("Serializer not currently in use");
       started = false;
