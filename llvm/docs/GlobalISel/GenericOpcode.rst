@@ -60,6 +60,17 @@ The address of a global value.
 
   %0(p0) = G_GLOBAL_VALUE @var_local
 
+G_PTRAUTH_GLOBAL_VALUE
+^^^^^^^^^^^^^^^^^^^^^^
+
+The signed address of a global value. Operands: address to be signed (pointer),
+key (32-bit imm), address for address discrimination (zero if not needed) and
+an extra discriminator (64-bit imm).
+
+.. code-block:: none
+
+  %0:_(p0) = G_PTRAUTH_GLOBAL_VALUE %1:_(p0), s32, %2:_(p0), s64
+
 G_BLOCK_ADDR
 ^^^^^^^^^^^^
 
@@ -337,6 +348,26 @@ G_ICMP
 Perform integer comparison producing non-zero (true) or zero (false). It's
 target specific whether a true value is 1, ~0U, or some other non-zero value.
 
+G_SCMP
+^^^^^^
+
+Perform signed 3-way integer comparison producing -1 (smaller), 0 (equal), or 1 (larger).
+
+.. code-block:: none
+
+  %5:_(s32) = G_SCMP %6, %2
+
+
+G_UCMP
+^^^^^^
+
+Perform unsigned 3-way integer comparison producing -1 (smaller), 0 (equal), or 1 (larger).
+
+.. code-block:: none
+
+  %7:_(s32) = G_UCMP %2, %6
+
+
 G_SELECT
 ^^^^^^^^
 
@@ -443,6 +474,16 @@ undefined.
   %2:_(s33) = G_CTLZ_ZERO_UNDEF %1
   %2:_(s33) = G_CTTZ_ZERO_UNDEF %1
 
+G_ABDS, G_ABDU
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Compute the absolute difference (signed and unsigned), e.g. abs(x-y).
+
+.. code-block:: none
+
+  %0:_(s33) = G_ABDS %2, %3
+  %1:_(s33) = G_ABDU %4, %5
+
 Floating Point Operations
 -------------------------
 
@@ -472,6 +513,11 @@ G_FPTOSI, G_FPTOUI, G_SITOFP, G_UITOFP
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Convert between integer and floating point.
+
+G_FPTOSI_SAT, G_FPTOUI_SAT
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Saturating convert between integer and floating point.
 
 G_FABS
 ^^^^^^
@@ -521,16 +567,32 @@ The return value of (FMAXNUM 0.0, -0.0) could be either 0.0 or -0.0.
 G_FMINNUM_IEEE
 ^^^^^^^^^^^^^^
 
-Perform floating-point minimum on two values, following the IEEE-754 2008
-definition. This differs from FMINNUM in the handling of signaling NaNs. If one
-input is a signaling NaN, returns a quiet NaN.
+Perform floating-point minimum on two values, following IEEE-754
+definitions. This differs from FMINNUM in the handling of signaling
+NaNs.
+
+If one input is a signaling NaN, returns a quiet NaN. This matches
+IEEE-754 2008's minnum/maxnum for signaling NaNs (which differs from
+2019).
+
+These treat -0 as ordered less than +0, matching the behavior of
+IEEE-754 2019's minimumNumber/maximumNumber (which was unspecified in
+2008).
 
 G_FMAXNUM_IEEE
 ^^^^^^^^^^^^^^
 
-Perform floating-point maximum on two values, following the IEEE-754 2008
-definition. This differs from FMAXNUM in the handling of signaling NaNs. If one
-input is a signaling NaN, returns a quiet NaN.
+Perform floating-point maximum on two values, following IEEE-754
+definitions. This differs from FMAXNUM in the handling of signaling
+NaNs.
+
+If one input is a signaling NaN, returns a quiet NaN. This matches
+IEEE-754 2008's minnum/maxnum for signaling NaNs (which differs from
+2019).
+
+These treat -0 as ordered less than +0, matching the behavior of
+IEEE-754 2019's minimumNumber/maximumNumber (which was unspecified in
+2008).
 
 G_FMINIMUM
 ^^^^^^^^^^
@@ -576,10 +638,15 @@ G_FLOG, G_FLOG2, G_FLOG10
 
 Calculate the base-e, base-2, or base-10 respectively.
 
-G_FCEIL, G_FCOS, G_FSIN, G_FSQRT, G_FFLOOR, G_FRINT, G_FNEARBYINT
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+G_FCEIL, G_FSQRT, G_FFLOOR, G_FRINT, G_FNEARBYINT
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 These correspond to the standard C functions of the same name.
+
+G_FCOS, G_FSIN, G_FSINCOS, G_FTAN, G_FACOS, G_FASIN, G_FATAN, G_FATAN2, G_FCOSH, G_FSINH, G_FTANH
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+These correspond to the standard C trigonometry functions of the same name.
 
 G_INTRINSIC_TRUNC
 ^^^^^^^^^^^^^^^^^
@@ -628,7 +695,7 @@ source vector should be inserted into.
 The index must be a constant multiple of the second source vector's minimum
 vector length. If the vectors are scalable, then the index is first scaled by
 the runtime scaling factor. The indices inserted in the source vector must be
-valid indicies of that vector. If this condition cannot be determined statically
+valid indices of that vector. If this condition cannot be determined statically
 but is false at runtime, then the result vector is undefined.
 
 .. code-block:: none
@@ -645,9 +712,11 @@ the source vector.
 The index must be a constant multiple of the source vector's minimum vector
 length. If the source vector is a scalable vector, then the index is first
 scaled by the runtime scaling factor. The indices extracted from the source
-vector must be valid indicies of that vector. If this condition cannot be
+vector must be valid indices of that vector. If this condition cannot be
 determined statically but is false at runtime, then the result vector is
 undefined.
+
+Mixing scalable vectors and fixed vectors are not allowed.
 
 .. code-block:: none
 
@@ -689,6 +758,35 @@ G_SPLAT_VECTOR
 ^^^^^^^^^^^^^^^^
 
 Create a vector where all elements are the scalar from the source operand.
+
+The type of the operand must be equal to or larger than the vector element
+type. If the operand is larger than the vector element type, the scalar is
+implicitly truncated to the vector element type.
+
+G_STEP_VECTOR
+^^^^^^^^^^^^^
+
+Create a scalable vector where all lanes are linear sequences starting at 0
+with a given unsigned step.
+
+The type of the operand must be equal to the vector element type. Arithmetic
+is performed modulo the bitwidth of the element. The step must be > 0.
+Otherwise the vector is zero.
+
+.. code-block::
+
+  %0:_(<vscale x 2 x s64>) = G_STEP_VECTOR i64 4
+
+  %1:_(<vscale x s32>) = G_STEP_VECTOR i32 4
+
+  0, 1*Step, 2*Step, 3*Step, 4*Step, ...
+
+G_VECTOR_COMPRESS
+^^^^^^^^^^^^^^^^^
+
+Given an input vector, a mask vector, and a passthru vector, continuously place
+all selected (i.e., where mask[i] = true) input lanes in an output vector. All
+remaining lanes in the output are taken from passthru, which may be undef.
 
 Vector Reduction Operations
 ---------------------------
@@ -800,7 +898,9 @@ operands.
                                G_ATOMICRMW_MIN, G_ATOMICRMW_UMAX,
                                G_ATOMICRMW_UMIN, G_ATOMICRMW_FADD,
                                G_ATOMICRMW_FSUB, G_ATOMICRMW_FMAX,
-                               G_ATOMICRMW_FMIN
+                               G_ATOMICRMW_FMIN, G_ATOMICRMW_UINC_WRAP,
+			       G_ATOMICRMW_UDEC_WRAP, G_ATOMICRMW_USUB_COND,
+			       G_ATOMICRMW_USUB_SAT
 
 Generic atomicrmw. Expects a MachineMemOperand in addition to explicit
 operands.
@@ -939,6 +1039,25 @@ The _CONVERGENT variant corresponds to an LLVM IR intrinsic marked `convergent`.
   Unlike SelectionDAG, there is no _VOID variant. Both of these are permitted
   to have zero, one, or multiple results.
 
+G_TRAP, G_DEBUGTRAP, G_UBSANTRAP
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Represents :ref:`llvm.trap <llvm.trap>`, :ref:`llvm.debugtrap <llvm.debugtrap>`
+and :ref:`llvm.ubsantrap <llvm.ubsantrap>` that generate a target dependent
+trap instructions.
+
+.. code-block:: none
+
+  G_TRAP
+
+.. code-block:: none
+
+  G_DEBUGTRAP
+
+.. code-block:: none
+
+  G_UBSANTRAP 12
+
 Variadic Arguments
 ------------------
 
@@ -1015,3 +1134,6 @@ G_CONSTANT_FOLD_BARRIER
 This operation is used as an opaque barrier to prevent constant folding. Combines
 and other transformations should not look through this. These have no other
 semantics and can be safely eliminated if a target chooses.
+
+
+Unlisted: G_STACKSAVE, G_STACKRESTORE, G_FSHL, G_FSHR, G_SMULFIX, G_UMULFIX, G_SMULFIXSAT, G_UMULFIXSAT, G_SDIVFIX, G_UDIVFIX, G_SDIVFIXSAT, G_UDIVFIXSAT, G_FPOWI, G_FEXP10, G_FLDEXP, G_FFREXP, G_GET_FPENV, G_SET_FPENV, G_RESET_FPENV, G_GET_FPMODE, G_SET_FPMODE, G_RESET_FPMODE, G_INTRINSIC_FPTRUNC_ROUND, G_INTRINSIC_LRINT, G_INTRINSIC_LLRINT, G_INTRINSIC_ROUNDEVEN, G_READCYCLECOUNTER, G_READSTEADYCOUNTER, G_PREFETCH, G_READ_REGISTER, G_WRITE_REGISTER, G_STRICT_FADD, G_STRICT_FSUB, G_STRICT_FMUL, G_STRICT_FDIV, G_STRICT_FREM, G_STRICT_FMA, G_STRICT_FSQRT, G_STRICT_FLDEXP, G_ASSERT_ALIGN

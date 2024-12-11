@@ -242,7 +242,6 @@ const NamedDecl &findDeclWithTemplateArgs(ParsedAST &AST,
     // Use getNameForDiagnostic() which includes the template
     // arguments in the printed name.
     ND.getNameForDiagnostic(OS, Policy, /*Qualified=*/true);
-    OS.flush();
     return QName == Query;
   });
 }

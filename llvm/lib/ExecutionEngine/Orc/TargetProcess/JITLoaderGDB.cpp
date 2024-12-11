@@ -8,13 +8,11 @@
 
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 
-#include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/Support/BinaryStreamReader.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #include <cstdint>
 #include <mutex>
-#include <utility>
 
 #define DEBUG_TYPE "orc"
 
@@ -26,11 +24,13 @@ extern "C" {
 // We put information about the JITed function in this global, which the
 // debugger reads.  Make sure to specify the version statically, because the
 // debugger checks the version before we can set it during runtime.
+LLVM_ALWAYS_EXPORT
 struct jit_descriptor __jit_debug_descriptor = {JitDescriptorVersion, 0,
                                                 nullptr, nullptr};
 
 // Debuggers that implement the GDB JIT interface put a special breakpoint in
 // this function.
+LLVM_ALWAYS_EXPORT
 LLVM_ATTRIBUTE_NOINLINE void __jit_debug_register_code() {
   // The noinline and the asm prevent calls to this function from being
   // optimized out.

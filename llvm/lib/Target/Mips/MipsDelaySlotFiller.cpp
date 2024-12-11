@@ -13,7 +13,6 @@
 #include "MCTargetDesc/MipsMCNaCl.h"
 #include "Mips.h"
 #include "MipsInstrInfo.h"
-#include "MipsRegisterInfo.h"
 #include "MipsSubtarget.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -236,7 +235,7 @@ namespace {
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineBranchProbabilityInfo>();
+      AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -365,7 +364,8 @@ void RegDefsUses::setCallerSaved(const MachineInstr &MI) {
   // Add RA/RA_64 to Defs to prevent users of RA/RA_64 from going into
   // the delay slot. The reason is that RA/RA_64 must not be changed
   // in the delay slot so that the callee can return to the caller.
-  if (MI.definesRegister(Mips::RA) || MI.definesRegister(Mips::RA_64)) {
+  if (MI.definesRegister(Mips::RA, /*TRI=*/nullptr) ||
+      MI.definesRegister(Mips::RA_64, /*TRI=*/nullptr)) {
     Defs.set(Mips::RA);
     Defs.set(Mips::RA_64);
   }
@@ -743,6 +743,12 @@ bool MipsDelaySlotFiller::searchRange(MachineBasicBlock &MBB, IterTy Begin,
     bool InMicroMipsMode = STI.inMicroMipsMode();
     const MipsInstrInfo *TII = STI.getInstrInfo();
     unsigned Opcode = (*Slot).getOpcode();
+
+    // In mips1-4, should not put mflo into the delay slot for the return.
+    if ((IsMFLOMFHI(CurrI->getOpcode())) &&
+        (!STI.hasMips32() && !STI.hasMips5()))
+      continue;
+
     // This is complicated by the tail call optimization. For non-PIC code
     // there is only a 32bit sized unconditional branch which can be assumed
     // to be able to reach the target. b16 only has a range of +/- 1 KB.
@@ -871,7 +877,7 @@ MipsDelaySlotFiller::selectSuccBB(MachineBasicBlock &B) const {
     return nullptr;
 
   // Select the successor with the larget edge weight.
-  auto &Prob = getAnalysis<MachineBranchProbabilityInfo>();
+  auto &Prob = getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   MachineBasicBlock *S = *std::max_element(
       B.succ_begin(), B.succ_end(),
       [&](const MachineBasicBlock *Dst0, const MachineBasicBlock *Dst1) {

@@ -62,7 +62,7 @@ void TensorDialect::initialize() {
                             ParallelInsertSliceOp>();
   declarePromisedInterfaces<SubsetInsertionOpInterface, InsertSliceOp,
                             ParallelInsertSliceOp>();
-  declarePromisedInterface<ExtractSliceOp, SubsetExtractionOpInterface>();
+  declarePromisedInterface<SubsetExtractionOpInterface, ExtractSliceOp>();
   declarePromisedInterfaces<TilingInterface, PadOp, PackOp, UnPackOp>();
   declarePromisedInterfaces<ValueBoundsOpInterface, CastOp, DimOp, EmptyOp,
                             ExtractSliceOp, PadOp, RankOp>();

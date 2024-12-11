@@ -64,6 +64,23 @@ FunctionPass *llvm::createX86FixupVectorConstants() {
   return new X86FixupVectorConstantsPass();
 }
 
+/// Normally, we only allow poison in vector splats. However, as this is part
+/// of the backend, and working with the DAG representation, which currently
+/// only natively represents undef values, we need to accept undefs here.
+static Constant *getSplatValueAllowUndef(const ConstantVector *C) {
+  Constant *Res = nullptr;
+  for (Value *Op : C->operands()) {
+    Constant *OpC = cast<Constant>(Op);
+    if (isa<UndefValue>(OpC))
+      continue;
+    if (!Res)
+      Res = OpC;
+    else if (Res != OpC)
+      return nullptr;
+  }
+  return Res;
+}
+
 // Attempt to extract the full width of bits data from the constant.
 static std::optional<APInt> extractConstantBits(const Constant *C) {
   unsigned NumBits = C->getType()->getPrimitiveSizeInBits();
@@ -78,7 +95,7 @@ static std::optional<APInt> extractConstantBits(const Constant *C) {
     return CFP->getValue().bitcastToAPInt();
 
   if (auto *CV = dyn_cast<ConstantVector>(C)) {
-    if (auto *CVSplat = CV->getSplatValue(/*AllowUndefs*/ true)) {
+    if (auto *CVSplat = getSplatValueAllowUndef(CV)) {
       if (std::optional<APInt> Bits = extractConstantBits(CVSplat)) {
         assert((NumBits % Bits->getBitWidth()) == 0 && "Illegal splat");
         return APInt::getSplat(NumBits, *Bits);
@@ -422,8 +439,8 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   case X86::VMOVUPSZrm:
     return FixupConstant({{X86::VBROADCASTSSZrm, 1, 32, rebuildSplatCst},
                           {X86::VBROADCASTSDZrm, 1, 64, rebuildSplatCst},
-                          {X86::VBROADCASTF32X4rm, 1, 128, rebuildSplatCst},
-                          {X86::VBROADCASTF64X4rm, 1, 256, rebuildSplatCst}},
+                          {X86::VBROADCASTF32X4Zrm, 1, 128, rebuildSplatCst},
+                          {X86::VBROADCASTF64X4Zrm, 1, 256, rebuildSplatCst}},
                          512, 1);
     /* Integer Loads */
   case X86::MOVDQArm:
@@ -555,12 +572,12 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
         {X86::VPBROADCASTQZrm, 1, 64, rebuildSplatCst},
         {X86::VPMOVSXBQZrm, 8, 8, rebuildSExtCst},
         {X86::VPMOVZXBQZrm, 8, 8, rebuildZExtCst},
-        {X86::VBROADCASTI32X4rm, 1, 128, rebuildSplatCst},
+        {X86::VBROADCASTI32X4Zrm, 1, 128, rebuildSplatCst},
         {X86::VPMOVSXBDZrm, 16, 8, rebuildSExtCst},
         {X86::VPMOVZXBDZrm, 16, 8, rebuildZExtCst},
         {X86::VPMOVSXWQZrm, 8, 16, rebuildSExtCst},
         {X86::VPMOVZXWQZrm, 8, 16, rebuildZExtCst},
-        {X86::VBROADCASTI64X4rm, 1, 256, rebuildSplatCst},
+        {X86::VBROADCASTI64X4Zrm, 1, 256, rebuildSplatCst},
         {HasBWI ? X86::VPMOVSXBWZrm : 0, 32, 8, rebuildSExtCst},
         {HasBWI ? X86::VPMOVZXBWZrm : 0, 32, 8, rebuildZExtCst},
         {X86::VPMOVSXWDZrm, 16, 16, rebuildSExtCst},

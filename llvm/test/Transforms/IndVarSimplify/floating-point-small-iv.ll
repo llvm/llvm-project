@@ -357,7 +357,7 @@ define void @uitofp_fptoui_range_with_negative() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    store i32 100, ptr getelementptr inbounds ([16777219 x i32], ptr @array, i64 0, i64 100), align 4
+; CHECK-NEXT:    store i32 100, ptr getelementptr inbounds nuw (i8, ptr @array, i64 400), align 4
 ; CHECK-NEXT:    br i1 false, label [[FOR_BODY]], label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    ret void
@@ -418,7 +418,7 @@ define void @uitofp_fptosi_range_with_negative () {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    store i32 100, ptr getelementptr inbounds ([16777219 x i32], ptr @array, i64 0, i64 100), align 4
+; CHECK-NEXT:    store i32 100, ptr getelementptr inbounds nuw (i8, ptr @array, i64 400), align 4
 ; CHECK-NEXT:    br i1 false, label [[FOR_BODY]], label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    ret void

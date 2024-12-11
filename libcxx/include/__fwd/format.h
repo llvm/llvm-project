@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___FWD_FORMAT_H
 #define _LIBCPP___FWD_FORMAT_H
 
-#include <__availability>
 #include <__config>
 #include <__iterator/concepts.h>
 
@@ -32,7 +31,7 @@ class _LIBCPP_TEMPLATE_VIS basic_format_context;
 template <class _Tp, class _CharT = char>
 struct _LIBCPP_TEMPLATE_VIS formatter;
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

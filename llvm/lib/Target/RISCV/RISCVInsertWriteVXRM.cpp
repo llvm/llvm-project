@@ -109,6 +109,35 @@ public:
     return VXRMInfo::getUnknown();
   }
 
+  // Calculate the VXRMInfo visible to a block assuming this and Other
+  // are both predecessors. To allow speculatively running WriteVXRM
+  // we will ignore Unknowns if one of this and Other have valid
+  // WriteVXRM. Rationale: WriteVXRM causes a pipeline flush in some
+  // uarchs and moving it outside loops is very important for some
+  // workloads.
+  VXRMInfo intersectAnticipated(const VXRMInfo &Other) const {
+    // If the new value isn't valid, ignore it.
+    if (!Other.isValid())
+      return *this;
+
+    // If this value isn't valid, this must be the first predecessor, use it.
+    if (!isValid())
+      return Other;
+
+    // If either is unknown, the result is the other one.
+    if (isUnknown())
+      return Other;
+    if (Other.isUnknown())
+      return *this;
+
+    // If we have an exact match, return this.
+    if (*this == Other)
+      return *this;
+
+    // Otherwise the result is unknown.
+    return VXRMInfo::getUnknown();
+  }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Support for debugging, callable in GDB: V->dump()
   LLVM_DUMP_METHOD void dump() const {
@@ -187,7 +216,7 @@ public:
 private:
   bool computeVXRMChanges(const MachineBasicBlock &MBB);
   void computeAvailable(const MachineBasicBlock &MBB);
-  void computeAnticipated(const MachineBasicBlock &MBB);
+  void computeAnticipated(const MachineFunction &MF, const MachineBasicBlock &MBB);
   void emitWriteVXRM(MachineBasicBlock &MBB);
 };
 
@@ -225,7 +254,8 @@ bool RISCVInsertWriteVXRM::computeVXRMChanges(const MachineBasicBlock &MBB) {
       continue;
     }
 
-    if (MI.isCall() || MI.isInlineAsm() || MI.modifiesRegister(RISCV::VXRM)) {
+    if (MI.isCall() || MI.isInlineAsm() ||
+        MI.modifiesRegister(RISCV::VXRM, /*TRI=*/nullptr)) {
       if (!BBInfo.VXRMUse.isValid())
         BBInfo.VXRMUse.setUnknown();
 
@@ -278,8 +308,9 @@ void RISCVInsertWriteVXRM::computeAvailable(const MachineBasicBlock &MBB) {
   }
 }
 
-void RISCVInsertWriteVXRM::computeAnticipated(const MachineBasicBlock &MBB) {
+void RISCVInsertWriteVXRM::computeAnticipated(const MachineFunction &MF, const MachineBasicBlock &MBB) {
   BlockData &BBInfo = BlockInfo[MBB.getNumber()];
+  const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
 
   BBInfo.InQueue = false;
 
@@ -288,7 +319,11 @@ void RISCVInsertWriteVXRM::computeAnticipated(const MachineBasicBlock &MBB) {
     Anticipated.setUnknown();
   } else {
     for (const MachineBasicBlock *S : MBB.successors())
-      Anticipated =
+      if (ST.hasVXRMPipelineFlush())
+        Anticipated =
+          Anticipated.intersectAnticipated(BlockInfo[S->getNumber()].AnticipatedIn);
+      else
+        Anticipated =
           Anticipated.intersect(BlockInfo[S->getNumber()].AnticipatedIn);
   }
 
@@ -386,7 +421,8 @@ void RISCVInsertWriteVXRM::emitWriteVXRM(MachineBasicBlock &MBB) {
       continue;
     }
 
-    if (MI.isCall() || MI.isInlineAsm() || MI.modifiesRegister(RISCV::VXRM))
+    if (MI.isCall() || MI.isInlineAsm() ||
+        MI.modifiesRegister(RISCV::VXRM, /*TRI=*/nullptr))
       Info.setUnknown();
   }
 
@@ -451,7 +487,7 @@ bool RISCVInsertWriteVXRM::runOnMachineFunction(MachineFunction &MF) {
   while (!WorkList.empty()) {
     const MachineBasicBlock &MBB = *WorkList.front();
     WorkList.pop();
-    computeAnticipated(MBB);
+    computeAnticipated(MF, MBB);
   }
 
   // Phase 4 - Emit VXRM writes at the earliest place possible.

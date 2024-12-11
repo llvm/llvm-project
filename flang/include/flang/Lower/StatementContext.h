@@ -18,6 +18,15 @@
 #include <functional>
 #include <optional>
 
+namespace mlir {
+class Location;
+class Region;
+} // namespace mlir
+
+namespace fir {
+class FirOpBuilder;
+}
+
 namespace Fortran::lower {
 
 /// When lowering a statement, temporaries for intermediate results may be
@@ -83,10 +92,13 @@ public:
     cufs.back().reset();
   }
 
+  /// Pop the stack top list.
+  void pop() { cufs.pop_back(); }
+
   /// Make cleanup calls. Pop the stack top list.
   void finalizeAndPop() {
     finalizeAndKeep();
-    cufs.pop_back();
+    pop();
   }
 
   bool hasCode() const {
@@ -104,6 +116,11 @@ private:
   // Stack of cleanup function "lists" (nested cleanup function calls).
   llvm::SmallVector<std::optional<CleanupFunction>> cufs;
 };
+
+/// If \p context contains any cleanups, ensure \p region has a block, and
+/// generate the cleanup inside that block.
+void genCleanUpInRegionIfAny(mlir::Location loc, fir::FirOpBuilder &builder,
+                             mlir::Region &region, StatementContext &context);
 
 } // namespace Fortran::lower
 

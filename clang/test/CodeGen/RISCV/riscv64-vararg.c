@@ -47,67 +47,67 @@ int f_va_callee(int, ...);
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL25:%.*]] = alloca [[STRUCT_SMALL]], align 8
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL30:%.*]] = alloca [[STRUCT_SMALL_ALIGNED]], align 16
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL34:%.*]] = alloca [[STRUCT_SMALL]], align 8
-// CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_TINY]], ptr [[DOTCOMPOUNDLITERAL]], i32 0, i32 0
+// CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_TINY]], ptr [[DOTCOMPOUNDLITERAL]], i32 0, i32 0
 // CHECK-NEXT:    store i16 6, ptr [[A]], align 2
-// CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_TINY]], ptr [[DOTCOMPOUNDLITERAL]], i32 0, i32 1
+// CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_TINY]], ptr [[DOTCOMPOUNDLITERAL]], i32 0, i32 1
 // CHECK-NEXT:    store i16 7, ptr [[B]], align 2
-// CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_TINY]], ptr [[DOTCOMPOUNDLITERAL]], i32 0, i32 2
+// CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds nuw [[STRUCT_TINY]], ptr [[DOTCOMPOUNDLITERAL]], i32 0, i32 2
 // CHECK-NEXT:    store i16 8, ptr [[C]], align 2
-// CHECK-NEXT:    [[D:%.*]] = getelementptr inbounds [[STRUCT_TINY]], ptr [[DOTCOMPOUNDLITERAL]], i32 0, i32 3
+// CHECK-NEXT:    [[D:%.*]] = getelementptr inbounds nuw [[STRUCT_TINY]], ptr [[DOTCOMPOUNDLITERAL]], i32 0, i32 3
 // CHECK-NEXT:    store i16 9, ptr [[D]], align 2
-// CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds [[STRUCT_SMALL]], ptr [[DOTCOMPOUNDLITERAL1]], i32 0, i32 0
+// CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds nuw [[STRUCT_SMALL]], ptr [[DOTCOMPOUNDLITERAL1]], i32 0, i32 0
 // CHECK-NEXT:    store i64 10, ptr [[A2]], align 8
-// CHECK-NEXT:    [[B3:%.*]] = getelementptr inbounds [[STRUCT_SMALL]], ptr [[DOTCOMPOUNDLITERAL1]], i32 0, i32 1
+// CHECK-NEXT:    [[B3:%.*]] = getelementptr inbounds nuw [[STRUCT_SMALL]], ptr [[DOTCOMPOUNDLITERAL1]], i32 0, i32 1
 // CHECK-NEXT:    store ptr null, ptr [[B3]], align 8
-// CHECK-NEXT:    [[A5:%.*]] = getelementptr inbounds [[STRUCT_SMALL_ALIGNED]], ptr [[DOTCOMPOUNDLITERAL4]], i32 0, i32 0
+// CHECK-NEXT:    [[A5:%.*]] = getelementptr inbounds nuw [[STRUCT_SMALL_ALIGNED]], ptr [[DOTCOMPOUNDLITERAL4]], i32 0, i32 0
 // CHECK-NEXT:    store i128 11, ptr [[A5]], align 16
-// CHECK-NEXT:    [[A7:%.*]] = getelementptr inbounds [[STRUCT_LARGE]], ptr [[DOTCOMPOUNDLITERAL6]], i32 0, i32 0
+// CHECK-NEXT:    [[A7:%.*]] = getelementptr inbounds nuw [[STRUCT_LARGE]], ptr [[DOTCOMPOUNDLITERAL6]], i32 0, i32 0
 // CHECK-NEXT:    store i64 12, ptr [[A7]], align 8
-// CHECK-NEXT:    [[B8:%.*]] = getelementptr inbounds [[STRUCT_LARGE]], ptr [[DOTCOMPOUNDLITERAL6]], i32 0, i32 1
+// CHECK-NEXT:    [[B8:%.*]] = getelementptr inbounds nuw [[STRUCT_LARGE]], ptr [[DOTCOMPOUNDLITERAL6]], i32 0, i32 1
 // CHECK-NEXT:    store i64 13, ptr [[B8]], align 8
-// CHECK-NEXT:    [[C9:%.*]] = getelementptr inbounds [[STRUCT_LARGE]], ptr [[DOTCOMPOUNDLITERAL6]], i32 0, i32 2
+// CHECK-NEXT:    [[C9:%.*]] = getelementptr inbounds nuw [[STRUCT_LARGE]], ptr [[DOTCOMPOUNDLITERAL6]], i32 0, i32 2
 // CHECK-NEXT:    store i64 14, ptr [[C9]], align 8
-// CHECK-NEXT:    [[D10:%.*]] = getelementptr inbounds [[STRUCT_LARGE]], ptr [[DOTCOMPOUNDLITERAL6]], i32 0, i32 3
+// CHECK-NEXT:    [[D10:%.*]] = getelementptr inbounds nuw [[STRUCT_LARGE]], ptr [[DOTCOMPOUNDLITERAL6]], i32 0, i32 3
 // CHECK-NEXT:    store i64 15, ptr [[D10]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[DOTCOMPOUNDLITERAL]], align 2
 // CHECK-NEXT:    [[TMP1:%.*]] = load [2 x i64], ptr [[DOTCOMPOUNDLITERAL1]], align 8
-// CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds [[STRUCT_SMALL_ALIGNED]], ptr [[DOTCOMPOUNDLITERAL4]], i32 0, i32 0
+// CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SMALL_ALIGNED]], ptr [[DOTCOMPOUNDLITERAL4]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load i128, ptr [[COERCE_DIVE]], align 16
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[BYVAL_TEMP]], ptr align 8 [[DOTCOMPOUNDLITERAL6]], i64 32, i1 false)
 // CHECK-NEXT:    [[CALL:%.*]] = call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i64 noundef 3, double noundef 4.000000e+00, double noundef 5.000000e+00, i64 [[TMP0]], [2 x i64] [[TMP1]], i128 [[TMP2]], ptr noundef [[BYVAL_TEMP]])
 // CHECK-NEXT:    [[CALL11:%.*]] = call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, fp128 noundef 0xL00000000000000004001400000000000, i32 noundef signext 6, i32 noundef signext 7, i32 noundef signext 8, i32 noundef signext 9)
-// CHECK-NEXT:    [[A13:%.*]] = getelementptr inbounds [[STRUCT_SMALL_ALIGNED]], ptr [[DOTCOMPOUNDLITERAL12]], i32 0, i32 0
+// CHECK-NEXT:    [[A13:%.*]] = getelementptr inbounds nuw [[STRUCT_SMALL_ALIGNED]], ptr [[DOTCOMPOUNDLITERAL12]], i32 0, i32 0
 // CHECK-NEXT:    store i128 5, ptr [[A13]], align 16
-// CHECK-NEXT:    [[COERCE_DIVE14:%.*]] = getelementptr inbounds [[STRUCT_SMALL_ALIGNED]], ptr [[DOTCOMPOUNDLITERAL12]], i32 0, i32 0
+// CHECK-NEXT:    [[COERCE_DIVE14:%.*]] = getelementptr inbounds nuw [[STRUCT_SMALL_ALIGNED]], ptr [[DOTCOMPOUNDLITERAL12]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = load i128, ptr [[COERCE_DIVE14]], align 16
 // CHECK-NEXT:    [[CALL15:%.*]] = call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, i128 [[TMP3]], i32 noundef signext 6, i32 noundef signext 7, i32 noundef signext 8, i32 noundef signext 9)
-// CHECK-NEXT:    [[A17:%.*]] = getelementptr inbounds [[STRUCT_SMALL]], ptr [[DOTCOMPOUNDLITERAL16]], i32 0, i32 0
+// CHECK-NEXT:    [[A17:%.*]] = getelementptr inbounds nuw [[STRUCT_SMALL]], ptr [[DOTCOMPOUNDLITERAL16]], i32 0, i32 0
 // CHECK-NEXT:    store i64 5, ptr [[A17]], align 8
-// CHECK-NEXT:    [[B18:%.*]] = getelementptr inbounds [[STRUCT_SMALL]], ptr [[DOTCOMPOUNDLITERAL16]], i32 0, i32 1
+// CHECK-NEXT:    [[B18:%.*]] = getelementptr inbounds nuw [[STRUCT_SMALL]], ptr [[DOTCOMPOUNDLITERAL16]], i32 0, i32 1
 // CHECK-NEXT:    store ptr null, ptr [[B18]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load [2 x i64], ptr [[DOTCOMPOUNDLITERAL16]], align 8
 // CHECK-NEXT:    [[CALL19:%.*]] = call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, [2 x i64] [[TMP4]], i32 noundef signext 6, i32 noundef signext 7, i32 noundef signext 8, i32 noundef signext 9)
 // CHECK-NEXT:    [[CALL20:%.*]] = call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, i32 noundef signext 5, fp128 noundef 0xL00000000000000004001800000000000, i32 noundef signext 7, i32 noundef signext 8, i32 noundef signext 9)
-// CHECK-NEXT:    [[A22:%.*]] = getelementptr inbounds [[STRUCT_SMALL_ALIGNED]], ptr [[DOTCOMPOUNDLITERAL21]], i32 0, i32 0
+// CHECK-NEXT:    [[A22:%.*]] = getelementptr inbounds nuw [[STRUCT_SMALL_ALIGNED]], ptr [[DOTCOMPOUNDLITERAL21]], i32 0, i32 0
 // CHECK-NEXT:    store i128 6, ptr [[A22]], align 16
-// CHECK-NEXT:    [[COERCE_DIVE23:%.*]] = getelementptr inbounds [[STRUCT_SMALL_ALIGNED]], ptr [[DOTCOMPOUNDLITERAL21]], i32 0, i32 0
+// CHECK-NEXT:    [[COERCE_DIVE23:%.*]] = getelementptr inbounds nuw [[STRUCT_SMALL_ALIGNED]], ptr [[DOTCOMPOUNDLITERAL21]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP5:%.*]] = load i128, ptr [[COERCE_DIVE23]], align 16
 // CHECK-NEXT:    [[CALL24:%.*]] = call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, i32 noundef signext 5, i128 [[TMP5]], i32 noundef signext 7, i32 noundef signext 8, i32 noundef signext 9)
-// CHECK-NEXT:    [[A26:%.*]] = getelementptr inbounds [[STRUCT_SMALL]], ptr [[DOTCOMPOUNDLITERAL25]], i32 0, i32 0
+// CHECK-NEXT:    [[A26:%.*]] = getelementptr inbounds nuw [[STRUCT_SMALL]], ptr [[DOTCOMPOUNDLITERAL25]], i32 0, i32 0
 // CHECK-NEXT:    store i64 6, ptr [[A26]], align 8
-// CHECK-NEXT:    [[B27:%.*]] = getelementptr inbounds [[STRUCT_SMALL]], ptr [[DOTCOMPOUNDLITERAL25]], i32 0, i32 1
+// CHECK-NEXT:    [[B27:%.*]] = getelementptr inbounds nuw [[STRUCT_SMALL]], ptr [[DOTCOMPOUNDLITERAL25]], i32 0, i32 1
 // CHECK-NEXT:    store ptr null, ptr [[B27]], align 8
 // CHECK-NEXT:    [[TMP6:%.*]] = load [2 x i64], ptr [[DOTCOMPOUNDLITERAL25]], align 8
 // CHECK-NEXT:    [[CALL28:%.*]] = call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, i32 noundef signext 5, [2 x i64] [[TMP6]], i32 noundef signext 7, i32 noundef signext 8, i32 noundef signext 9)
 // CHECK-NEXT:    [[CALL29:%.*]] = call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, i32 noundef signext 5, i32 noundef signext 6, fp128 noundef 0xL00000000000000004001C00000000000, i32 noundef signext 8, i32 noundef signext 9)
-// CHECK-NEXT:    [[A31:%.*]] = getelementptr inbounds [[STRUCT_SMALL_ALIGNED]], ptr [[DOTCOMPOUNDLITERAL30]], i32 0, i32 0
+// CHECK-NEXT:    [[A31:%.*]] = getelementptr inbounds nuw [[STRUCT_SMALL_ALIGNED]], ptr [[DOTCOMPOUNDLITERAL30]], i32 0, i32 0
 // CHECK-NEXT:    store i128 7, ptr [[A31]], align 16
-// CHECK-NEXT:    [[COERCE_DIVE32:%.*]] = getelementptr inbounds [[STRUCT_SMALL_ALIGNED]], ptr [[DOTCOMPOUNDLITERAL30]], i32 0, i32 0
+// CHECK-NEXT:    [[COERCE_DIVE32:%.*]] = getelementptr inbounds nuw [[STRUCT_SMALL_ALIGNED]], ptr [[DOTCOMPOUNDLITERAL30]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP7:%.*]] = load i128, ptr [[COERCE_DIVE32]], align 16
 // CHECK-NEXT:    [[CALL33:%.*]] = call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, i32 noundef signext 5, i32 noundef signext 6, i128 [[TMP7]], i32 noundef signext 8, i32 noundef signext 9)
-// CHECK-NEXT:    [[A35:%.*]] = getelementptr inbounds [[STRUCT_SMALL]], ptr [[DOTCOMPOUNDLITERAL34]], i32 0, i32 0
+// CHECK-NEXT:    [[A35:%.*]] = getelementptr inbounds nuw [[STRUCT_SMALL]], ptr [[DOTCOMPOUNDLITERAL34]], i32 0, i32 0
 // CHECK-NEXT:    store i64 7, ptr [[A35]], align 8
-// CHECK-NEXT:    [[B36:%.*]] = getelementptr inbounds [[STRUCT_SMALL]], ptr [[DOTCOMPOUNDLITERAL34]], i32 0, i32 1
+// CHECK-NEXT:    [[B36:%.*]] = getelementptr inbounds nuw [[STRUCT_SMALL]], ptr [[DOTCOMPOUNDLITERAL34]], i32 0, i32 1
 // CHECK-NEXT:    store ptr null, ptr [[B36]], align 8
 // CHECK-NEXT:    [[TMP8:%.*]] = load [2 x i64], ptr [[DOTCOMPOUNDLITERAL34]], align 8
 // CHECK-NEXT:    [[CALL37:%.*]] = call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, i32 noundef signext 5, i32 noundef signext 6, [2 x i64] [[TMP8]], i32 noundef signext 8, i32 noundef signext 9)
@@ -135,13 +135,13 @@ void f_va_caller(void) {
 // CHECK-NEXT:    [[VA:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[V:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[FMT]], ptr [[FMT_ADDR]], align 8
-// CHECK-NEXT:    call void @llvm.va_start(ptr [[VA]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[VA]])
 // CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 8
 // CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i64 8
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARGP_CUR]], align 8
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[V]], align 4
-// CHECK-NEXT:    call void @llvm.va_end(ptr [[VA]])
+// CHECK-NEXT:    call void @llvm.va_end.p0(ptr [[VA]])
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[V]], align 4
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
@@ -166,7 +166,7 @@ int f_va_1(char *fmt, ...) {
 // CHECK-NEXT:    [[VA:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[V:%.*]] = alloca fp128, align 16
 // CHECK-NEXT:    store ptr [[FMT]], ptr [[FMT_ADDR]], align 8
-// CHECK-NEXT:    call void @llvm.va_start(ptr [[VA]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[VA]])
 // CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 15
 // CHECK-NEXT:    [[ARGP_CUR_ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[TMP0]], i64 -16)
@@ -174,7 +174,7 @@ int f_va_1(char *fmt, ...) {
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load fp128, ptr [[ARGP_CUR_ALIGNED]], align 16
 // CHECK-NEXT:    store fp128 [[TMP1]], ptr [[V]], align 16
-// CHECK-NEXT:    call void @llvm.va_end(ptr [[VA]])
+// CHECK-NEXT:    call void @llvm.va_end.p0(ptr [[VA]])
 // CHECK-NEXT:    [[TMP2:%.*]] = load fp128, ptr [[V]], align 16
 // CHECK-NEXT:    ret fp128 [[TMP2]]
 //
@@ -199,7 +199,7 @@ long double f_va_2(char *fmt, ...) {
 // CHECK-NEXT:    [[W:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[X:%.*]] = alloca fp128, align 16
 // CHECK-NEXT:    store ptr [[FMT]], ptr [[FMT_ADDR]], align 8
-// CHECK-NEXT:    call void @llvm.va_start(ptr [[VA]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[VA]])
 // CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 15
 // CHECK-NEXT:    [[ARGP_CUR_ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[TMP0]], i64 -16)
@@ -219,7 +219,7 @@ long double f_va_2(char *fmt, ...) {
 // CHECK-NEXT:    store ptr [[ARGP_NEXT4]], ptr [[VA]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load fp128, ptr [[ARGP_CUR3_ALIGNED]], align 16
 // CHECK-NEXT:    store fp128 [[TMP4]], ptr [[X]], align 16
-// CHECK-NEXT:    call void @llvm.va_end(ptr [[VA]])
+// CHECK-NEXT:    call void @llvm.va_end.p0(ptr [[VA]])
 // CHECK-NEXT:    [[TMP5:%.*]] = load fp128, ptr [[V]], align 16
 // CHECK-NEXT:    [[TMP6:%.*]] = load fp128, ptr [[X]], align 16
 // CHECK-NEXT:    [[ADD:%.*]] = fadd fp128 [[TMP5]], [[TMP6]]
@@ -248,7 +248,7 @@ long double f_va_3(char *fmt, ...) {
 // CHECK-NEXT:    [[LS:%.*]] = alloca [[STRUCT_LARGE:%.*]], align 8
 // CHECK-NEXT:    [[RET:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[FMT]], ptr [[FMT_ADDR]], align 8
-// CHECK-NEXT:    call void @llvm.va_start(ptr [[VA]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[VA]])
 // CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 8
 // CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i64 8
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 8
@@ -267,14 +267,14 @@ long double f_va_3(char *fmt, ...) {
 // CHECK-NEXT:    store ptr [[ARGP_NEXT6]], ptr [[VA]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[ARGP_CUR5]], align 8
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[LS]], ptr align 8 [[TMP1]], i64 32, i1 false)
-// CHECK-NEXT:    call void @llvm.va_end(ptr [[VA]])
-// CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_TINY]], ptr [[TS]], i32 0, i32 0
+// CHECK-NEXT:    call void @llvm.va_end.p0(ptr [[VA]])
+// CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_TINY]], ptr [[TS]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[A]], align 2
 // CHECK-NEXT:    [[CONV:%.*]] = zext i16 [[TMP2]] to i64
-// CHECK-NEXT:    [[A7:%.*]] = getelementptr inbounds [[STRUCT_SMALL]], ptr [[SS]], i32 0, i32 0
+// CHECK-NEXT:    [[A7:%.*]] = getelementptr inbounds nuw [[STRUCT_SMALL]], ptr [[SS]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A7]], align 8
 // CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[CONV]], [[TMP3]]
-// CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_LARGE]], ptr [[LS]], i32 0, i32 2
+// CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds nuw [[STRUCT_LARGE]], ptr [[LS]], i32 0, i32 2
 // CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr [[C]], align 8
 // CHECK-NEXT:    [[ADD8:%.*]] = add nsw i64 [[ADD]], [[TMP4]]
 // CHECK-NEXT:    [[CONV9:%.*]] = trunc i64 [[ADD8]] to i32

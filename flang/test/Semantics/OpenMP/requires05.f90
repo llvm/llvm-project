@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=52
 ! OpenMP Version 5.0
 ! 2.4 Requires directive
 ! Target-related clauses in 'requires' directives must come strictly before any

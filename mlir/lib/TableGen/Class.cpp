@@ -369,9 +369,7 @@ void Class::finalize() {
 
 Visibility Class::getLastVisibilityDecl() const {
   auto reverseDecls = llvm::reverse(declarations);
-  auto it = llvm::find_if(reverseDecls, [](auto &decl) {
-    return isa<VisibilityDeclaration>(decl);
-  });
+  auto it = llvm::find_if(reverseDecls, llvm::IsaPred<VisibilityDeclaration>);
   return it == reverseDecls.end()
              ? (isStruct ? Visibility::Public : Visibility::Private)
              : cast<VisibilityDeclaration>(**it).getVisibility();

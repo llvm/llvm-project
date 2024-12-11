@@ -1,4 +1,4 @@
-; RUN: opt %s -passes='function(scalarizer)' -scalarize-load-store -S --experimental-debuginfo-iterators=false | FileCheck %s
+; RUN: opt %s -passes='function(scalarizer<load-store>)' -S --experimental-debuginfo-iterators=false | FileCheck %s
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 ; FIXME: the test output here changes if we use the RemoveDIs non-intrinsic
 ; debug-info format for the test. Specifically, the intrinsics no longer
@@ -21,9 +21,9 @@ define void @f1(ptr nocapture %a, ptr nocapture readonly %b, ptr nocapture reado
 ; CHECK: %b.i1 = getelementptr i32, ptr %b, i32 1
 ; CHECK: %b.i2 = getelementptr i32, ptr %b, i32 2
 ; CHECK: %b.i3 = getelementptr i32, ptr %b, i32 3
-; CHECK: tail call void @llvm.dbg.value(metadata ptr %a, metadata !{{[0-9]+}}, metadata {{.*}}), !dbg !{{[0-9]+}}
-; CHECK: tail call void @llvm.dbg.value(metadata ptr %b, metadata !{{[0-9]+}}, metadata {{.*}}), !dbg !{{[0-9]+}}
-; CHECK: tail call void @llvm.dbg.value(metadata ptr %c, metadata !{{[0-9]+}}, metadata {{.*}}), !dbg !{{[0-9]+}}
+; CHECK: #dbg_value(ptr %a, !{{[0-9]+}}, {{.*}},  !{{[0-9]+}}
+; CHECK: #dbg_value(ptr %b, !{{[0-9]+}}, {{.*}},  !{{[0-9]+}}
+; CHECK: #dbg_value(ptr %c, !{{[0-9]+}}, {{.*}},  !{{[0-9]+}}
 ; CHECK: %bval.i0 = load i32, ptr %b, align 16, !dbg ![[TAG1:[0-9]+]], !tbaa ![[TAG2:[0-9]+]]
 ; CHECK: %bval.i1 = load i32, ptr %b.i1, align 4, !dbg ![[TAG1]], !tbaa ![[TAG2]]
 ; CHECK: %bval.i2 = load i32, ptr %b.i2, align 8, !dbg ![[TAG1]], !tbaa ![[TAG2]]

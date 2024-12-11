@@ -17,7 +17,6 @@
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/CommandLine.h"
@@ -716,6 +715,12 @@ Error SplitFunctions::runOnFunctions(BinaryContext &BC) {
   if (!opts::SplitFunctions)
     return Error::success();
 
+  if (BC.IsLinuxKernel && BC.BOLTReserved.empty()) {
+    BC.errs() << "BOLT-ERROR: split functions require reserved space in the "
+                 "Linux kernel binary\n";
+    exit(1);
+  }
+
   // If split strategy is not CDSplit, then a second run of the pass is not
   // needed after function reordering.
   if (BC.HasFinalizedFunctionOrder &&
@@ -830,6 +835,13 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy &S) {
         }
       }
     }
+
+    // Outlining blocks with dynamic branches is not supported yet.
+    if (BC.IsLinuxKernel) {
+      if (llvm::any_of(
+              *BB, [&](MCInst &Inst) { return BC.MIB->isDynamicBranch(Inst); }))
+        BB->setCanOutline(false);
+    }
   }
 
   BF.getLayout().updateLayoutIndices();
@@ -889,8 +901,47 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy &S) {
   // have to be placed in the same fragment. When we split them, create
   // trampoline landing pads that will redirect the execution to real LPs.
   TrampolineSetType Trampolines;
-  if (!BC.HasFixedLoadAddress && BF.hasEHRanges() && BF.isSplit())
-    Trampolines = createEHTrampolines(BF);
+  if (BF.hasEHRanges() && BF.isSplit()) {
+    // If all landing pads for this fragment are grouped in one (potentially
+    // different) fragment, we can set LPStart to the start of that fragment
+    // and avoid trampoline code.
+    bool NeedsTrampolines = false;
+    for (FunctionFragment &FF : BF.getLayout().fragments()) {
+      // Vector of fragments that contain landing pads for this fragment.
+      SmallVector<FragmentNum, 4> LandingPadFragments;
+      for (const BinaryBasicBlock *BB : FF)
+        for (const BinaryBasicBlock *LPB : BB->landing_pads())
+          LandingPadFragments.push_back(LPB->getFragmentNum());
+
+      // Eliminate duplicate entries from the vector.
+      llvm::sort(LandingPadFragments);
+      auto Last = llvm::unique(LandingPadFragments);
+      LandingPadFragments.erase(Last, LandingPadFragments.end());
+
+      if (LandingPadFragments.size() == 0) {
+        // If the fragment has no landing pads, we can safely set itself as its
+        // landing pad fragment.
+        BF.setLPFragment(FF.getFragmentNum(), FF.getFragmentNum());
+      } else if (LandingPadFragments.size() == 1) {
+        BF.setLPFragment(FF.getFragmentNum(), LandingPadFragments.front());
+      } else {
+        if (!BC.HasFixedLoadAddress) {
+          NeedsTrampolines = true;
+          break;
+        } else {
+          BF.setLPFragment(FF.getFragmentNum(), std::nullopt);
+        }
+      }
+    }
+
+    // Trampolines guarantee that all landing pads for any given fragment will
+    // be contained in the same fragment.
+    if (NeedsTrampolines) {
+      for (FunctionFragment &FF : BF.getLayout().fragments())
+        BF.setLPFragment(FF.getFragmentNum(), FF.getFragmentNum());
+      Trampolines = createEHTrampolines(BF);
+    }
+  }
 
   // Check the new size to see if it's worth splitting the function.
   if (BC.isX86() && LayoutUpdated) {
@@ -920,6 +971,10 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy &S) {
       SplitBytesCold += ColdSize;
     }
   }
+
+  // Restore LP fragment for the main fragment if the splitting was undone.
+  if (BF.hasEHRanges() && !BF.isSplit())
+    BF.setLPFragment(FragmentNum::main(), FragmentNum::main());
 
   // Fix branches if the splitting decision of the pass after function
   // reordering is different from that of the pass before function reordering.

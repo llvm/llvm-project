@@ -52,13 +52,11 @@ static void printName(raw_ostream &OS, StringRef Name) {
 
 void MCSectionELF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                         raw_ostream &OS,
-                                        const MCExpr *Subsection) const {
+                                        uint32_t Subsection) const {
   if (shouldOmitSectionDirective(getName(), MAI)) {
     OS << '\t' << getName();
-    if (Subsection) {
-      OS << '\t';
-      Subsection->print(OS, &MAI);
-    }
+    if (Subsection)
+      OS << '\t' << Subsection;
     OS << '\n';
     return;
   }
@@ -174,9 +172,10 @@ void MCSectionELF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     OS << "llvm_offloading";
   else if (Type == ELF::SHT_LLVM_LTO)
     OS << "llvm_lto";
+  else if (Type == ELF::SHT_LLVM_JT_SIZES)
+    OS << "llvm_jt_sizes";
   else
-    report_fatal_error("unsupported type 0x" + Twine::utohexstr(Type) +
-                       " for section " + getName());
+    OS << "0x" << Twine::utohexstr(Type);
 
   if (EntrySize) {
     assert(Flags & ELF::SHF_MERGE);
@@ -204,18 +203,13 @@ void MCSectionELF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   OS << '\n';
 
   if (Subsection) {
-    OS << "\t.subsection\t";
-    Subsection->print(OS, &MAI);
+    OS << "\t.subsection\t" << Subsection;
     OS << '\n';
   }
 }
 
 bool MCSectionELF::useCodeAlign() const {
   return getFlags() & ELF::SHF_EXECINSTR;
-}
-
-bool MCSectionELF::isVirtualSection() const {
-  return getType() == ELF::SHT_NOBITS;
 }
 
 StringRef MCSectionELF::getVirtualSectionKind() const { return "SHT_NOBITS"; }

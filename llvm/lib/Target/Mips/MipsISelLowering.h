@@ -365,6 +365,8 @@ class TargetRegisterClass;
       return ABI.IsN64() ? Mips::A1_64 : Mips::A1;
     }
 
+    bool softPromoteHalfType() const override { return true; }
+
     bool isJumpTableRelative() const override {
       return getTargetMachine().isPositionIndependent();
     }
@@ -550,6 +552,7 @@ class TargetRegisterClass;
                         bool HasExtractInsert) const;
     SDValue lowerFABS64(SDValue Op, SelectionDAG &DAG,
                         bool HasExtractInsert) const;
+    SDValue lowerFCANONICALIZE(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const;
@@ -620,7 +623,7 @@ class TargetRegisterClass;
     SDValue LowerInterruptReturn(SmallVectorImpl<SDValue> &RetOps,
                                  const SDLoc &DL, SelectionDAG &DAG) const;
 
-    bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const override;
+    bool shouldSignExtendTypeInLibCall(Type *Ty, bool IsSigned) const override;
 
     // Inline asm support
     ConstraintType getConstraintType(StringRef Constraint) const override;

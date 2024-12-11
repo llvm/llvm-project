@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CGCALL_H
 #define LLVM_CLANG_LIB_CODEGEN_CGCALL_H
 
+#include "CGPointerAuthInfo.h"
 #include "CGValue.h"
 #include "EHScopeStack.h"
 #include "clang/AST/ASTFwd.h"
@@ -69,6 +70,10 @@ class CGCallee {
     Last = Virtual
   };
 
+  struct OrdinaryInfoStorage {
+    CGCalleeInfo AbstractInfo;
+    CGPointerAuthInfo PointerAuthInfo;
+  };
   struct BuiltinInfoStorage {
     const FunctionDecl *Decl;
     unsigned ID;
@@ -85,7 +90,7 @@ class CGCallee {
 
   SpecialKind KindOrFunctionPointer;
   union {
-    CGCalleeInfo AbstractInfo;
+    OrdinaryInfoStorage OrdinaryInfo;
     BuiltinInfoStorage BuiltinInfo;
     PseudoDestructorInfoStorage PseudoDestructorInfo;
     VirtualInfoStorage VirtualInfo;
@@ -104,10 +109,13 @@ public:
 
   /// Construct a callee.  Call this constructor directly when this
   /// isn't a direct call.
-  CGCallee(const CGCalleeInfo &abstractInfo, llvm::Value *functionPtr)
+  CGCallee(const CGCalleeInfo &abstractInfo, llvm::Value *functionPtr,
+           /* FIXME: make parameter pointerAuthInfo mandatory */
+           const CGPointerAuthInfo &pointerAuthInfo = CGPointerAuthInfo())
       : KindOrFunctionPointer(
             SpecialKind(reinterpret_cast<uintptr_t>(functionPtr))) {
-    AbstractInfo = abstractInfo;
+    OrdinaryInfo.AbstractInfo = abstractInfo;
+    OrdinaryInfo.PointerAuthInfo = pointerAuthInfo;
     assert(functionPtr && "configuring callee without function pointer");
     assert(functionPtr->getType()->isPointerTy());
   }
@@ -173,7 +181,11 @@ public:
     if (isVirtual())
       return VirtualInfo.MD;
     assert(isOrdinary());
-    return AbstractInfo;
+    return OrdinaryInfo.AbstractInfo;
+  }
+  const CGPointerAuthInfo &getPointerAuthInfo() const {
+    assert(isOrdinary());
+    return OrdinaryInfo.PointerAuthInfo;
   }
   llvm::Value *getFunctionPointer() const {
     assert(isOrdinary());
@@ -183,6 +195,10 @@ public:
     assert(isOrdinary());
     KindOrFunctionPointer =
         SpecialKind(reinterpret_cast<uintptr_t>(functionPtr));
+  }
+  void setPointerAuthInfo(CGPointerAuthInfo PointerAuth) {
+    assert(isOrdinary());
+    OrdinaryInfo.PointerAuthInfo = PointerAuth;
   }
 
   bool isVirtual() const {
@@ -269,6 +285,13 @@ public:
 
     /// A value to "use" after the writeback, or null.
     llvm::Value *ToUse;
+
+    /// An Expression (optional) that performs the writeback with any required
+    /// casting.
+    const Expr *WritebackExpr;
+
+    // Size for optional lifetime end on the temporary.
+    llvm::Value *LifetimeSz;
   };
 
   struct CallArgCleanup {
@@ -300,8 +323,10 @@ public:
       StackBase = other.StackBase;
   }
 
-  void addWriteback(LValue srcLV, Address temporary, llvm::Value *toUse) {
-    Writeback writeback = {srcLV, temporary, toUse};
+  void addWriteback(LValue srcLV, Address temporary, llvm::Value *toUse,
+                    const Expr *writebackExpr = nullptr,
+                    llvm::Value *lifetimeSz = nullptr) {
+    Writeback writeback = {srcLV, temporary, toUse, writebackExpr, lifetimeSz};
     Writebacks.push_back(writeback);
   }
 
@@ -333,6 +358,11 @@ public:
   /// Returns if we're using an inalloca struct to pass arguments in
   /// memory.
   bool isUsingInAlloca() const { return StackBase; }
+
+  // Support reversing writebacks for MSVC ABI.
+  void reverseWritebacks() {
+    std::reverse(Writebacks.begin(), Writebacks.end());
+  }
 
 private:
   SmallVector<Writeback, 1> Writebacks;
@@ -377,6 +407,7 @@ public:
   Address getValue() const { return Addr; }
   bool isUnused() const { return IsUnused; }
   bool isExternallyDestructed() const { return IsExternallyDestructed; }
+  Address getAddress() const { return Addr; }
 };
 
 /// Adds attributes to \p F according to our \p CodeGenOpts and \p LangOpts, as
@@ -419,12 +450,12 @@ inline FnInfoOpts operator&(FnInfoOpts A, FnInfoOpts B) {
                                  llvm::to_underlying(B));
 }
 
-inline FnInfoOpts operator|=(FnInfoOpts A, FnInfoOpts B) {
+inline FnInfoOpts &operator|=(FnInfoOpts &A, FnInfoOpts B) {
   A = A | B;
   return A;
 }
 
-inline FnInfoOpts operator&=(FnInfoOpts A, FnInfoOpts B) {
+inline FnInfoOpts &operator&=(FnInfoOpts &A, FnInfoOpts B) {
   A = A & B;
   return A;
 }

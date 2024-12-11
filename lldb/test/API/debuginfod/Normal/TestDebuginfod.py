@@ -1,30 +1,11 @@
 import os
 import shutil
 import tempfile
-import struct
 
 import lldb
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-
-
-def getUUID(aoutuuid):
-    """
-    Pull the 20 byte UUID out of the .note.gnu.build-id section that was dumped
-    to a file already, as part of the build.
-    """
-    with open(aoutuuid, "rb") as f:
-        data = f.read(36)
-        if len(data) != 36:
-            return None
-        header = struct.unpack_from("<4I", data)
-        if len(header) != 4:
-            return None
-        # 4 element 'prefix', 20 bytes of uuid, 3 byte long string: 'GNU':
-        if header[0] != 4 or header[1] != 20 or header[2] != 3 or header[3] != 0x554E47:
-            return None
-        return data[16:].hex()
 
 
 """
@@ -37,11 +18,11 @@ For no-split-dwarf scenarios, there are 2 variations:
 """
 
 
-@skipUnlessPlatform(["linux", "freebsd"])
 class DebugInfodTests(TestBase):
     # No need to try every flavor of debug inf.
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipUnlessPlatform(["linux", "freebsd"])
     def test_normal_no_symbols(self):
         """
         Validate behavior with no symbols or symbol locator.
@@ -50,6 +31,7 @@ class DebugInfodTests(TestBase):
         test_root = self.config_test(["a.out"])
         self.try_breakpoint(False)
 
+    @skipUnlessPlatform(["linux", "freebsd"])
     def test_normal_default(self):
         """
         Validate behavior with symbols, but no symbol locator.
@@ -58,22 +40,28 @@ class DebugInfodTests(TestBase):
         test_root = self.config_test(["a.out", "a.out.debug"])
         self.try_breakpoint(True)
 
+    @skipIfCurlSupportMissing
+    @skipUnlessPlatform(["linux", "freebsd"])
     def test_debuginfod_symbols(self):
         """
         Test behavior with the full binary available from Debuginfod as
         'debuginfo' from the plug-in.
         """
-        test_root = self.config_test(["a.out"], "a.out.full")
+        test_root = self.config_test(["a.out"], "a.out.unstripped")
         self.try_breakpoint(True)
 
+    @skipIfCurlSupportMissing
+    @skipUnlessPlatform(["linux", "freebsd"])
     def test_debuginfod_executable(self):
         """
         Test behavior with the full binary available from Debuginfod as
         'executable' from the plug-in.
         """
-        test_root = self.config_test(["a.out"], None, "a.out.full")
+        test_root = self.config_test(["a.out"], None, "a.out.unstripped")
         self.try_breakpoint(True)
 
+    @skipIfCurlSupportMissing
+    @skipUnlessPlatform(["linux", "freebsd"])
     def test_debuginfod_okd_symbols(self):
         """
         Test behavior with the 'only-keep-debug' symbols available from Debuginfod.
@@ -135,8 +123,10 @@ class DebugInfodTests(TestBase):
 
         self.build()
 
-        uuid = getUUID(self.getBuildArtifact("a.out.uuid"))
-
+        uuid = self.getUUID("a.out")
+        if not uuid:
+            self.fail("Could not get UUID for a.out")
+            return
         self.main_source_file = lldb.SBFileSpec("main.c")
         self.tmp_dir = tempfile.mkdtemp()
         test_dir = os.path.join(self.tmp_dir, "test")
@@ -183,3 +173,14 @@ class DebugInfodTests(TestBase):
                 "settings insert-before plugin.symbol-locator.debuginfod.server-urls 0 file://%s"
                 % self.tmp_dir
             )
+
+    def getUUID(self, filename):
+        try:
+            spec = lldb.SBModuleSpec()
+            spec.SetFileSpec(lldb.SBFileSpec(self.getBuildArtifact(filename)))
+            module = lldb.SBModule(spec)
+            uuid = module.GetUUIDString().replace("-", "").lower()
+            # Don't want lldb's fake 32 bit CRC's for this one
+            return uuid if len(uuid) > 8 else None
+        except:
+            return None

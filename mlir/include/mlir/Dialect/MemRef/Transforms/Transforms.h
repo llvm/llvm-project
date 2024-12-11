@@ -14,7 +14,7 @@
 #ifndef MLIR_DIALECT_MEMREF_TRANSFORMS_TRANSFORMS_H
 #define MLIR_DIALECT_MEMREF_TRANSFORMS_TRANSFORMS_H
 
-#include "mlir/Support/LogicalResult.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 
 namespace mlir {
@@ -72,7 +72,7 @@ void populateExpandReallocPatterns(RewritePatternSet &patterns,
 /// Appends patterns for emulating wide integer memref operations with ops over
 /// narrower integer types.
 void populateMemRefWideIntEmulationPatterns(
-    arith::WideIntEmulationConverter &typeConverter,
+    const arith::WideIntEmulationConverter &typeConverter,
     RewritePatternSet &patterns);
 
 /// Appends type conversions for emulating wide integer memref operations with
@@ -83,7 +83,7 @@ void populateMemRefWideIntEmulationConversions(
 /// Appends patterns for emulating memref operations over narrow types with ops
 /// over wider types.
 void populateMemRefNarrowTypeEmulationPatterns(
-    arith::NarrowTypeEmulationConverter &typeConverter,
+    const arith::NarrowTypeEmulationConverter &typeConverter,
     RewritePatternSet &patterns);
 
 /// Appends type conversions for emulating memref operations over narrow types

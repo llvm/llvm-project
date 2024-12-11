@@ -10,9 +10,10 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_libs_sve} = -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
 // DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
-// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs_sve}
 //
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
@@ -53,62 +54,86 @@
 module {
 
   func.func @expand_dense(%arg0: tensor<12xf64>) -> tensor<3x4xf64> {
-    %0 = tensor.expand_shape %arg0 [[0, 1]] : tensor<12xf64> into tensor<3x4xf64>
+    %0 = tensor.expand_shape %arg0 [[0, 1]] output_shape [3, 4] : tensor<12xf64> into tensor<3x4xf64>
     return %0 : tensor<3x4xf64>
   }
 
   func.func @expand_from_sparse(%arg0: tensor<12xf64, #SparseVector>) -> tensor<3x4xf64> {
-    %0 = tensor.expand_shape %arg0 [[0, 1]] : tensor<12xf64, #SparseVector> into tensor<3x4xf64>
+    %0 = tensor.expand_shape %arg0 [[0, 1]] output_shape [3, 4] : tensor<12xf64, #SparseVector> into tensor<3x4xf64>
     return %0 : tensor<3x4xf64>
   }
 
   func.func @expand_to_sparse(%arg0: tensor<12xf64>) -> tensor<3x4xf64, #SparseMatrix> {
-    %0 = tensor.expand_shape %arg0 [[0, 1]] : tensor<12xf64> into tensor<3x4xf64, #SparseMatrix>
+    %0 = tensor.expand_shape %arg0 [[0, 1]] output_shape [3, 4] : tensor<12xf64> into tensor<3x4xf64, #SparseMatrix>
     return %0 : tensor<3x4xf64, #SparseMatrix>
   }
 
   func.func @expand_sparse2sparse(%arg0: tensor<12xf64, #SparseVector>) -> tensor<3x4xf64, #SparseMatrix> {
-    %0 = tensor.expand_shape %arg0 [[0, 1]] : tensor<12xf64, #SparseVector> into tensor<3x4xf64, #SparseMatrix>
+    %0 = tensor.expand_shape %arg0 [[0, 1]] output_shape [3, 4] : tensor<12xf64, #SparseVector> into tensor<3x4xf64, #SparseMatrix>
     return %0 : tensor<3x4xf64, #SparseMatrix>
   }
 
   func.func @expand_dense_3x2x2(%arg0: tensor<3x4xf64>) -> tensor<3x2x2xf64> {
-    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] : tensor<3x4xf64> into tensor<3x2x2xf64>
+    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] output_shape [3, 2, 2] : tensor<3x4xf64> into tensor<3x2x2xf64>
     return %0 : tensor<3x2x2xf64>
   }
 
   func.func @expand_from_sparse_3x2x2(%arg0: tensor<3x4xf64, #SparseMatrix>) -> tensor<3x2x2xf64> {
-    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] : tensor<3x4xf64, #SparseMatrix> into tensor<3x2x2xf64>
+    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] output_shape [3, 2, 2] : tensor<3x4xf64, #SparseMatrix> into tensor<3x2x2xf64>
     return %0 : tensor<3x2x2xf64>
   }
 
   func.func @expand_to_sparse_3x2x2(%arg0: tensor<3x4xf64>) -> tensor<3x2x2xf64, #Sparse3dTensor> {
-    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] : tensor<3x4xf64> into tensor<3x2x2xf64, #Sparse3dTensor>
+    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] output_shape [3, 2, 2] : tensor<3x4xf64> into tensor<3x2x2xf64, #Sparse3dTensor>
     return %0 : tensor<3x2x2xf64, #Sparse3dTensor>
   }
 
   func.func @expand_sparse2sparse_3x2x2(%arg0: tensor<3x4xf64, #SparseMatrix>) -> tensor<3x2x2xf64, #Sparse3dTensor> {
-    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] : tensor<3x4xf64, #SparseMatrix> into tensor<3x2x2xf64, #Sparse3dTensor>
+    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] output_shape [3, 2, 2] : tensor<3x4xf64, #SparseMatrix> into tensor<3x2x2xf64, #Sparse3dTensor>
     return %0 : tensor<3x2x2xf64, #Sparse3dTensor>
   }
 
   func.func @expand_dense_dyn(%arg0: tensor<?x?xf64>) -> tensor<?x2x?xf64> {
-    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] : tensor<?x?xf64> into tensor<?x2x?xf64>
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c2 = arith.constant 2 : index
+    %d0 = tensor.dim %arg0, %c0 : tensor<?x?xf64>
+    %d1 = tensor.dim %arg0, %c1 : tensor<?x?xf64>
+    %d2 = arith.divui %d1, %c2 : index
+    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] output_shape [%d0, 2, %d2]  : tensor<?x?xf64> into tensor<?x2x?xf64>
     return %0 : tensor<?x2x?xf64>
   }
 
   func.func @expand_from_sparse_dyn(%arg0: tensor<?x?xf64, #SparseMatrix>) -> tensor<?x2x?xf64> {
-    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] : tensor<?x?xf64, #SparseMatrix> into tensor<?x2x?xf64>
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c2 = arith.constant 2 : index
+    %d0 = tensor.dim %arg0, %c0 : tensor<?x?xf64, #SparseMatrix>
+    %d1 = tensor.dim %arg0, %c1 : tensor<?x?xf64, #SparseMatrix>
+    %d2 = arith.divui %d1, %c2 : index
+    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] output_shape [%d0, 2, %d2]  : tensor<?x?xf64, #SparseMatrix> into tensor<?x2x?xf64>
     return %0 : tensor<?x2x?xf64>
   }
 
   func.func @expand_to_sparse_dyn(%arg0: tensor<?x?xf64>) -> tensor<?x2x?xf64, #Sparse3dTensor> {
-    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] : tensor<?x?xf64> into tensor<?x2x?xf64, #Sparse3dTensor>
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c2 = arith.constant 2 : index
+    %d0 = tensor.dim %arg0, %c0 : tensor<?x?xf64>
+    %d1 = tensor.dim %arg0, %c1 : tensor<?x?xf64>
+    %d2 = arith.divui %d1, %c2 : index
+    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] output_shape [%d0, 2, %d2]  : tensor<?x?xf64> into tensor<?x2x?xf64, #Sparse3dTensor>
     return %0 : tensor<?x2x?xf64, #Sparse3dTensor>
   }
 
   func.func @expand_sparse2sparse_dyn(%arg0: tensor<?x?xf64, #SparseMatrix>) -> tensor<?x2x?xf64, #Sparse3dTensor> {
-    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] : tensor<?x?xf64, #SparseMatrix> into tensor<?x2x?xf64, #Sparse3dTensor>
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c2 = arith.constant 2 : index
+    %d0 = tensor.dim %arg0, %c0 : tensor<?x?xf64, #SparseMatrix>
+    %d1 = tensor.dim %arg0, %c1 : tensor<?x?xf64, #SparseMatrix>
+    %d2 = arith.divui %d1, %c2 : index
+    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] output_shape [%d0, 2, %d2]  : tensor<?x?xf64, #SparseMatrix> into tensor<?x2x?xf64, #Sparse3dTensor>
     return %0 : tensor<?x2x?xf64, #Sparse3dTensor>
   }
 
@@ -176,74 +201,74 @@ module {
     // CHECK-NEXT: nse = 6
     // CHECK-NEXT: dim = ( 3, 4 )
     // CHECK-NEXT: lvl = ( 3, 4 )
-    // CHECK-NEXT: pos[0] : ( 0, 3
-    // CHECK-NEXT: crd[0] : ( 0, 1, 2
-    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 6
-    // CHECK-NEXT: crd[1] : ( 0, 2, 0, 2, 0, 2
-    // CHECK-NEXT: values : ( 1, 3, 5, 7, 9, 11
+    // CHECK-NEXT: pos[0] : ( 0, 3 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 6 )
+    // CHECK-NEXT: crd[1] : ( 0, 2, 0, 2, 0, 2 )
+    // CHECK-NEXT: values : ( 1, 3, 5, 7, 9, 11 )
     // CHECK-NEXT: ----
     //
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 6
     // CHECK-NEXT: dim = ( 3, 4 )
     // CHECK-NEXT: lvl = ( 3, 4 )
-    // CHECK-NEXT: pos[0] : ( 0, 3
-    // CHECK-NEXT: crd[0] : ( 0, 1, 2
-    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 6
-    // CHECK-NEXT: crd[1] : ( 0, 2, 0, 2, 0, 2
-    // CHECK-NEXT: values : ( 1, 3, 5, 7, 9, 11
+    // CHECK-NEXT: pos[0] : ( 0, 3 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 6 )
+    // CHECK-NEXT: crd[1] : ( 0, 2, 0, 2, 0, 2 )
+    // CHECK-NEXT: values : ( 1, 3, 5, 7, 9, 11 )
     // CHECK-NEXT: ----
     //
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 12
     // CHECK-NEXT: dim = ( 3, 2, 2 )
     // CHECK-NEXT: lvl = ( 3, 2, 2 )
-    // CHECK-NEXT: pos[0] : ( 0, 3
-    // CHECK-NEXT: crd[0] : ( 0, 1, 2
-    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 6
-    // CHECK-NEXT: crd[1] : ( 0, 1, 0, 1, 0, 1
-    // CHECK-NEXT: pos[2] : ( 0, 2, 4, 6, 8, 10, 12
-    // CHECK-NEXT: crd[2] : ( 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-    // CHECK-NEXT: values : ( 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4
+    // CHECK-NEXT: pos[0] : ( 0, 3 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 6 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 0, 1, 0, 1 )
+    // CHECK-NEXT: pos[2] : ( 0, 2, 4, 6, 8, 10, 12 )
+    // CHECK-NEXT: crd[2] : ( 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1 )
+    // CHECK-NEXT: values : ( 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4 )
     // CHECK-NEXT: ----
     //
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 12
     // CHECK-NEXT: dim = ( 3, 2, 2 )
     // CHECK-NEXT: lvl = ( 3, 2, 2 )
-    // CHECK-NEXT: pos[0] : ( 0, 3
-    // CHECK-NEXT: crd[0] : ( 0, 1, 2
-    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 6
-    // CHECK-NEXT: crd[1] : ( 0, 1, 0, 1, 0, 1
-    // CHECK-NEXT: pos[2] : ( 0, 2, 4, 6, 8, 10, 12
-    // CHECK-NEXT: crd[2] : ( 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-    // CHECK-NEXT: values : ( 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4
+    // CHECK-NEXT: pos[0] : ( 0, 3 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 6 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 0, 1, 0, 1 )
+    // CHECK-NEXT: pos[2] : ( 0, 2, 4, 6, 8, 10, 12 )
+    // CHECK-NEXT: crd[2] : ( 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1 )
+    // CHECK-NEXT: values : ( 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4 )
     // CHECK-NEXT: ----
     //
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 12
     // CHECK-NEXT: dim = ( 3, 2, 2 )
     // CHECK-NEXT: lvl = ( 3, 2, 2 )
-    // CHECK-NEXT: pos[0] : ( 0, 3
-    // CHECK-NEXT: crd[0] : ( 0, 1, 2
-    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 6
-    // CHECK-NEXT: crd[1] : ( 0, 1, 0, 1, 0, 1
-    // CHECK-NEXT: pos[2] : ( 0, 2, 4, 6, 8, 10, 12
-    // CHECK-NEXT: crd[2] : ( 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-    // CHECK-NEXT: values : ( 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4
+    // CHECK-NEXT: pos[0] : ( 0, 3 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 6 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 0, 1, 0, 1 )
+    // CHECK-NEXT: pos[2] : ( 0, 2, 4, 6, 8, 10, 12 )
+    // CHECK-NEXT: crd[2] : ( 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1 )
+    // CHECK-NEXT: values : ( 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4 )
     // CHECK-NEXT: ----
     //
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 12
     // CHECK-NEXT: dim = ( 3, 2, 2 )
     // CHECK-NEXT: lvl = ( 3, 2, 2 )
-    // CHECK-NEXT: pos[0] : ( 0, 3
-    // CHECK-NEXT: crd[0] : ( 0, 1, 2
-    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 6
-    // CHECK-NEXT: crd[1] : ( 0, 1, 0, 1, 0, 1
-    // CHECK-NEXT: pos[2] : ( 0, 2, 4, 6, 8, 10, 12
-    // CHECK-NEXT: crd[2] : ( 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-    // CHECK-NEXT: values : ( 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4
+    // CHECK-NEXT: pos[0] : ( 0, 3 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 6 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 0, 1, 0, 1 )
+    // CHECK-NEXT: pos[2] : ( 0, 2, 4, 6, 8, 10, 12 )
+    // CHECK-NEXT: crd[2] : ( 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1 )
+    // CHECK-NEXT: values : ( 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %expand2 : tensor<3x4xf64, #SparseMatrix>

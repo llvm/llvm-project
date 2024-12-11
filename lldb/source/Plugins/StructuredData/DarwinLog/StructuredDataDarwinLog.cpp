@@ -197,8 +197,8 @@ public:
     auto map = GetCreationFuncMap();
     auto find_it = map.find(operation);
     if (find_it == map.end()) {
-      error.SetErrorStringWithFormatv("unknown filter operation \"{0}\"",
-                                      operation);
+      error = Status::FromErrorStringWithFormatv(
+          "unknown filter operation \"{0}\"", operation);
       return FilterRuleSP();
     }
 
@@ -281,15 +281,15 @@ private:
                                       Status &error) {
     // We treat the op_arg as a regex.  Validate it.
     if (op_arg.empty()) {
-      error.SetErrorString("regex filter type requires a regex "
-                           "argument");
+      error = Status::FromErrorString("regex filter type requires a regex "
+                                      "argument");
       return FilterRuleSP();
     }
 
     // Instantiate the regex so we can report any errors.
     auto regex = RegularExpression(op_arg);
     if (llvm::Error err = regex.GetError()) {
-      error.SetErrorString(llvm::toString(std::move(err)));
+      error = Status::FromError(std::move(err));
       return FilterRuleSP();
     }
 
@@ -332,9 +332,9 @@ private:
                                       const std::string &op_arg,
                                       Status &error) {
     if (op_arg.empty()) {
-      error.SetErrorString("exact match filter type requires an "
-                           "argument containing the text that must "
-                           "match the specified message attribute.");
+      error = Status::FromErrorString("exact match filter type requires an "
+                                      "argument containing the text that must "
+                                      "match the specified message attribute.");
       return FilterRuleSP();
     }
 
@@ -553,7 +553,8 @@ public:
       break;
 
     default:
-      error.SetErrorStringWithFormat("unsupported option '%c'", short_option);
+      error = Status::FromErrorStringWithFormat("unsupported option '%c'",
+                                                short_option);
     }
     return error;
   }
@@ -635,7 +636,7 @@ private:
     Status error;
 
     if (rule_text.empty()) {
-      error.SetErrorString("invalid rule_text");
+      error = Status::FromErrorString("invalid rule_text");
       return error;
     }
 
@@ -662,9 +663,9 @@ private:
     // Parse action.
     auto action_end_pos = rule_text.find(' ');
     if (action_end_pos == std::string::npos) {
-      error.SetErrorStringWithFormat("could not parse filter rule "
-                                     "action from \"%s\"",
-                                     rule_text.str().c_str());
+      error = Status::FromErrorStringWithFormat("could not parse filter rule "
+                                                "action from \"%s\"",
+                                                rule_text.str().c_str());
       return error;
     }
     auto action = rule_text.substr(0, action_end_pos);
@@ -674,25 +675,27 @@ private:
     else if (action == "reject")
       accept = false;
     else {
-      error.SetErrorString("filter action must be \"accept\" or \"deny\"");
+      error = Status::FromErrorString(
+          "filter action must be \"accept\" or \"deny\"");
       return error;
     }
 
     // parse attribute
     auto attribute_end_pos = rule_text.find(" ", action_end_pos + 1);
     if (attribute_end_pos == std::string::npos) {
-      error.SetErrorStringWithFormat("could not parse filter rule "
-                                     "attribute from \"%s\"",
-                                     rule_text.str().c_str());
+      error = Status::FromErrorStringWithFormat("could not parse filter rule "
+                                                "attribute from \"%s\"",
+                                                rule_text.str().c_str());
       return error;
     }
     auto attribute = rule_text.substr(action_end_pos + 1,
                                       attribute_end_pos - (action_end_pos + 1));
     auto attribute_index = MatchAttributeIndex(attribute);
     if (attribute_index < 0) {
-      error.SetErrorStringWithFormat("filter rule attribute unknown: "
-                                     "%s",
-                                     attribute.str().c_str());
+      error =
+          Status::FromErrorStringWithFormat("filter rule attribute unknown: "
+                                            "%s",
+                                            attribute.str().c_str());
       return error;
     }
 
@@ -783,7 +786,7 @@ protected:
 
     // Now check if we have a running process.  If so, we should instruct the
     // process monitor to enable/disable DarwinLog support now.
-    Target &target = GetSelectedOrDummyTarget();
+    Target &target = GetTarget();
 
     // Grab the active process.
     auto process_sp = target.GetProcessSP();
@@ -865,7 +868,7 @@ protected:
 
     // Figure out if we've got a process.  If so, we can tell if DarwinLog is
     // available for that process.
-    Target &target = GetSelectedOrDummyTarget();
+    Target &target = GetTarget();
     auto process_sp = target.GetProcessSP();
     if (!process_sp) {
       stream.PutCString("Availability: unknown (requires process)\n");
@@ -983,8 +986,8 @@ EnableOptionsSP ParseAutoEnableOptions(Status &error, Debugger &debugger) {
   if (!error.Success())
     return EnableOptionsSP();
   if (!options_property_sp) {
-    error.SetErrorString("failed to find option setting for "
-                         "plugin.structured-data.darwin-log.");
+    error = Status::FromErrorString("failed to find option setting for "
+                                    "plugin.structured-data.darwin-log.");
     return EnableOptionsSP();
   }
 
@@ -1111,7 +1114,7 @@ void StructuredDataDarwinLog::HandleArrivalOfStructuredData(
 static void SetErrorWithJSON(Status &error, const char *message,
                              StructuredData::Object &object) {
   if (!message) {
-    error.SetErrorString("Internal error: message not set.");
+    error = Status::FromErrorString("Internal error: message not set.");
     return;
   }
 
@@ -1119,7 +1122,8 @@ static void SetErrorWithJSON(Status &error, const char *message,
   object.Dump(object_stream);
   object_stream.Flush();
 
-  error.SetErrorStringWithFormat("%s: %s", message, object_stream.GetData());
+  error = Status::FromErrorStringWithFormat("%s: %s", message,
+                                            object_stream.GetData());
 }
 
 Status StructuredDataDarwinLog::GetDescription(
@@ -1127,7 +1131,7 @@ Status StructuredDataDarwinLog::GetDescription(
   Status error;
 
   if (!object_sp) {
-    error.SetErrorString("No structured data.");
+    error = Status::FromErrorString("No structured data.");
     return error;
   }
 
@@ -1406,7 +1410,8 @@ Status StructuredDataDarwinLog::FilterLaunchInfo(ProcessLaunchInfo &launch_info,
     // We really can't do this without a target.  We need to be able to get to
     // the debugger to get the proper options to do this right.
     // TODO log.
-    error.SetErrorString("requires a target to auto-enable DarwinLog.");
+    error =
+        Status::FromErrorString("requires a target to auto-enable DarwinLog.");
     return error;
   }
 

@@ -8,11 +8,13 @@
 # RUN: not ld.lld -z norelro -z max-page-size=4096 -T a.t a.o -o /dev/null --no-merge-exidx-entries 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ERR --implicit-check-not=error:
 
-# ERR:      error: a.t:14: unable to move location counter (0x4104) backward to 0x4070 for section 'code.unused_space'
+# ERR:      error: a.t:9: unable to move location counter (0x1000) backward to 0xf6c for section 'dummy1'
+# ERR-NEXT: error: a.t:10: unable to move location counter (0x2000) backward to 0x1f6c for section 'dummy2'
+# ERR-NEXT: error: a.t:14: unable to move location counter (0x4104) backward to 0x4070 for section 'code.unused_space'
 # ERR-NEXT: error: section '.ARM.exidx' will not fit in region 'CODE': overflowed by 148 bytes
-# ERR-NEXT: error: section dummy1 at 0x1000 of size 0xFFFFFFFFFFFFFF6C exceeds available address space
-# ERR-NEXT: error: section dummy2 at 0x2000 of size 0xFFFFFFFFFFFFFF6C exceeds available address space
-# ERR-NEXT: error: section code.unused_space at 0x4104 of size 0xFFFFFFFFFFFFFF6C exceeds available address space
+# ERR-NEXT: error: section dummy1 at 0x1000 of size 0xffffffffffffff6c exceeds available address space
+# ERR-NEXT: error: section dummy2 at 0x2000 of size 0xffffffffffffff6c exceeds available address space
+# ERR-NEXT: error: section code.unused_space at 0x4104 of size 0xffffffffffffff6c exceeds available address space
 
 ## If we merge adjacent duplicate entries, we will have enough space. Don't report
 ## a spurious error https://github.com/llvm/llvm-project/issues/66836

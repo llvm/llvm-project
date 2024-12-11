@@ -5,8 +5,8 @@
 target triple = "aarch64-unknown-linux-gnu"
 
 ; CHECK-COST: Checking a loop in 'fixed_width'
-; CHECK-COST: Found an estimated cost of 12 for VF 2 For instruction:   store i32 2, ptr %arrayidx1, align 4
-; CHECK-COST: Found an estimated cost of 24 for VF 4 For instruction:   store i32 2, ptr %arrayidx1, align 4
+; CHECK-COST: Cost of 10 for VF 2: WIDEN store vp<%6>, ir<2>, vp<%5>
+; CHECK-COST: Cost of 20 for VF 4: WIDEN store vp<%6>, ir<2>, vp<%5>
 ; CHECK-COST: Selecting VF: 1.
 
 ; We should decide this loop is not worth vectorising using fixed width vectors

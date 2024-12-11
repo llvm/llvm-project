@@ -81,24 +81,22 @@ int hoo(void) {
 //CHECK: @p ={{.*}} constant i32 7, align 4
 //CHECK: @_ZL5fptrs = internal constant [2 x ptr] [ptr @foo, ptr @goo], align {{4|8}} #3
 
-//CHECK: define{{.*}} i32 @foo() #5 {
-//CHECK: define{{.*}} i32 @goo() #6 {
-//CHECK: declare i32 @zoo(ptr noundef, ptr noundef) #7
-//CHECK: define{{.*}} i32 @hoo() #8 {
+//ELF: define{{.*}} i32 @foo(){{.*}} section "my_text.1" {
+//ELF: define{{.*}} i32 @goo(){{.*}} section "my_text.2" {
+//MACHO: define{{.*}} i32 @foo(){{.*}} section "__TEXT,__mytext1" {
+//MACHO: define{{.*}} i32 @goo(){{.*}} section "__TEXT,__mytext2" {
+
+// ensure zoo/hoo don't have a section
+//CHECK: declare i32 @zoo(ptr noundef, ptr noundef) #6{{$}}
+//CHECK: define{{.*}} i32 @hoo() #5 {
 
 //ELF: attributes #0 = { "bss-section"="my_bss.1" "data-section"="my_data.1" "rodata-section"="my_rodata.1" }
 //ELF: attributes #1 = { "data-section"="my_data.1" "rodata-section"="my_rodata.1" }
 //ELF: attributes #2 = { "bss-section"="my_bss.2" "rodata-section"="my_rodata.1" }
 //ELF: attributes #3 = { "bss-section"="my_bss.2" "data-section"="my_data.2" "relro-section"="my_relro.2" "rodata-section"="my_rodata.2" }
 //ELF: attributes #4 = { "relro-section"="my_relro.2" }
-//ELF: attributes #5 = { {{.*"implicit-section-name"="my_text.1".*}} }
-//ELF: attributes #6 = { {{.*"implicit-section-name"="my_text.2".*}} }
 //MACHO: attributes #0 = { "bss-section"="__BSS,__mybss1" "data-section"="__DATA,__mydata1" "rodata-section"="__RODATA,__myrodata1" }
 //MACHO: attributes #1 = { "data-section"="__DATA,__mydata1" "rodata-section"="__RODATA,__myrodata1" }
 //MACHO: attributes #2 = { "bss-section"="__BSS,__mybss2" "rodata-section"="__RODATA,__myrodata1" }
 //MACHO: attributes #3 = { "bss-section"="__BSS,__mybss2" "data-section"="__DATA,__mydata2" "relro-section"="__RELRO,__myrelro2" "rodata-section"="__RODATA,__myrodata2" }
 //MACHO: attributes #4 = { "relro-section"="__RELRO,__myrelro2" }
-//MACHO: attributes #5 = { {{.*"implicit-section-name"="__TEXT,__mytext1".*}} }
-//MACHO: attributes #6 = { {{.*"implicit-section-name"="__TEXT,__mytext2".*}} }
-//CHECK-NOT: attributes #7 = { {{.*"implicit-section-name".*}} }
-//CHECK-NOT: attributes #8 = { {{.*"implicit-section-name".*}} }

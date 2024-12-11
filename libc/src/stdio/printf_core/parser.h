@@ -10,8 +10,11 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PARSER_H
 
 #include "include/llvm-libc-macros/stdfix-macros.h"
+#include "src/__support/CPP/algorithm.h" // max
+#include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/str_to_integer.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_config.h"
@@ -21,8 +24,11 @@
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
 #include "src/__support/fixed_point/fx_rep.h"
 #endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+#ifndef LIBC_COPT_PRINTF_DISABLE_STRERROR
+#include "src/errno/libc_errno.h"
+#endif // LIBC_COPT_PRINTF_DISABLE_STRERROR
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
 template <typename T> struct int_type_of {
@@ -127,7 +133,8 @@ public:
         cur_pos = cur_pos + result.parsed_len;
       }
       if (section.min_width < 0) {
-        section.min_width = -section.min_width;
+        section.min_width =
+            (section.min_width == INT_MIN) ? INT_MAX : -section.min_width;
         section.flags = static_cast<FormatFlags>(section.flags |
                                                  FormatFlags::LEFT_JUSTIFIED);
       }
@@ -150,10 +157,10 @@ public:
         }
       }
 
-      LengthModifier lm = parse_length_modifier(&cur_pos);
-
+      auto [lm, bw] = parse_length_modifier(&cur_pos);
       section.length_modifier = lm;
       section.conv_name = str[cur_pos];
+      section.bit_width = bw;
       switch (str[cur_pos]) {
       case ('%'):
         // Regardless of options, a % conversion is always safe. The standard
@@ -202,6 +209,21 @@ public:
 
           WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, ptrdiff_t, conv_index);
           break;
+
+        case (LengthModifier::w):
+        case (LengthModifier::wf):
+          if (bw == 0) {
+            section.has_conv = false;
+          } else if (bw <= cpp::numeric_limits<unsigned int>::digits) {
+            WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, int, conv_index);
+          } else if (bw <= cpp::numeric_limits<unsigned long>::digits) {
+            WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long, conv_index);
+          } else if (bw <= cpp::numeric_limits<unsigned long long>::digits) {
+            WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long long, conv_index);
+          } else {
+            WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, intmax_t, conv_index);
+          }
+          break;
         }
         break;
 #ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
@@ -239,9 +261,16 @@ public:
         }
         break;
 #endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+#ifndef LIBC_COPT_PRINTF_DISABLE_STRERROR
+      case ('m'):
+        // %m is an odd conversion in that it doesn't consume an argument, it
+        // just takes the current value of errno as its argument.
+        section.conv_val_raw = static_cast<int>(libc_errno);
+        break;
+#endif // LIBC_COPT_PRINTF_DISABLE_STRERROR
 #ifndef LIBC_COPT_PRINTF_DISABLE_WRITE_INT
-      case ('n'):
-#endif // LIBC_COPT_PRINTF_DISABLE_WRITE_INT
+      case ('n'): // Intentional fallthrough
+#endif            // LIBC_COPT_PRINTF_DISABLE_WRITE_INT
       case ('p'):
         WRITE_ARG_VAL_SIMPLEST(section.conv_val_ptr, void *, conv_index);
         break;
@@ -306,38 +335,54 @@ private:
   // assumes that str[*local_pos] is inside a format specifier. It returns a
   // LengthModifier with the length modifier it found. It will advance local_pos
   // after the format specifier if one is found.
-  LIBC_INLINE LengthModifier parse_length_modifier(size_t *local_pos) {
+  LIBC_INLINE LengthSpec parse_length_modifier(size_t *local_pos) {
     switch (str[*local_pos]) {
     case ('l'):
       if (str[*local_pos + 1] == 'l') {
         *local_pos += 2;
-        return LengthModifier::ll;
+        return {LengthModifier::ll, 0};
       } else {
         ++*local_pos;
-        return LengthModifier::l;
+        return {LengthModifier::l, 0};
       }
+    case ('w'): {
+      LengthModifier lm;
+      if (str[*local_pos + 1] == 'f') {
+        *local_pos += 2;
+        lm = LengthModifier::wf;
+      } else {
+        ++*local_pos;
+        lm = LengthModifier::w;
+      }
+      if (internal::isdigit(str[*local_pos])) {
+        const auto result = internal::strtointeger<int>(str + *local_pos, 10);
+        *local_pos += result.parsed_len;
+        return {lm, static_cast<size_t>(cpp::max(0, result.value))};
+      }
+      return {lm, 0};
+    }
     case ('h'):
       if (str[*local_pos + 1] == 'h') {
         *local_pos += 2;
-        return LengthModifier::hh;
+        return {LengthModifier::hh, 0};
       } else {
         ++*local_pos;
-        return LengthModifier::h;
+        return {LengthModifier::h, 0};
       }
     case ('L'):
       ++*local_pos;
-      return LengthModifier::L;
+      return {LengthModifier::L, 0};
     case ('j'):
       ++*local_pos;
-      return LengthModifier::j;
+      return {LengthModifier::j, 0};
     case ('z'):
       ++*local_pos;
-      return LengthModifier::z;
+      return {LengthModifier::z, 0};
     case ('t'):
       ++*local_pos;
-      return LengthModifier::t;
+      return {LengthModifier::t, 0};
     default:
-      return LengthModifier::none;
+      return {LengthModifier::none, 0};
     }
   }
 
@@ -464,7 +509,7 @@ private:
   // the type of index, and returns a TypeDesc describing that type. It does not
   // modify cur_pos.
   LIBC_INLINE TypeDesc get_type_desc(size_t index) {
-    // index mode is assumed, and the indicies start at 1, so an index
+    // index mode is assumed, and the indices start at 1, so an index
     // of 0 is invalid.
     size_t local_pos = 0;
 
@@ -509,7 +554,7 @@ private:
           }
         }
 
-        LengthModifier lm = parse_length_modifier(&local_pos);
+        auto [lm, bw] = parse_length_modifier(&local_pos);
 
         // if we don't have an index for this conversion, then its position is
         // unknown and all this information is irrelevant. The rest of this
@@ -559,6 +604,18 @@ private:
             break;
           case (LengthModifier::t):
             conv_size = type_desc_from_type<ptrdiff_t>();
+            break;
+          case (LengthModifier::w):
+          case (LengthModifier::wf):
+            if (bw <= cpp::numeric_limits<unsigned int>::digits) {
+              conv_size = type_desc_from_type<int>();
+            } else if (bw <= cpp::numeric_limits<unsigned long>::digits) {
+              conv_size = type_desc_from_type<long>();
+            } else if (bw <= cpp::numeric_limits<unsigned long long>::digits) {
+              conv_size = type_desc_from_type<long long>();
+            } else {
+              conv_size = type_desc_from_type<intmax_t>();
+            }
             break;
           }
           break;
@@ -624,6 +681,6 @@ private:
 };
 
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PARSER_H

@@ -10,6 +10,7 @@
 
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 #include "mlir/Dialect/ArmSME/Utils/Utils.h"
+#include "mlir/Dialect/ArmSVE/IR/ArmSVEDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/Support/Casting.h"
@@ -65,19 +66,17 @@ struct TransferReadToArmSMELowering
       return rewriter.notifyMatchFailure(transferReadOp,
                                          "not inbounds transfer read");
 
-    arm_sme::TileSliceLayout layout;
-
-    AffineExpr d0, d1;
-    bindDims(transferReadOp.getContext(), d0, d1);
     AffineMap map = transferReadOp.getPermutationMap();
-    if (map.isIdentity())
-      layout = arm_sme::TileSliceLayout::Horizontal;
-    else if (map == AffineMap::get(map.getNumDims(), 0, {d1, d0},
-                                   transferReadOp.getContext()))
-      layout = arm_sme::TileSliceLayout::Vertical;
-    else
+    if (!map.isPermutation())
       return rewriter.notifyMatchFailure(transferReadOp,
                                          "unsupported permutation map");
+
+    // Note: For 2D vector types the only non-identity permutation is a simple
+    // transpose [1, 0].
+    bool transposed = !map.isIdentity();
+    arm_sme::TileSliceLayout layout =
+        transposed ? arm_sme::TileSliceLayout::Vertical
+                   : arm_sme::TileSliceLayout::Horizontal;
 
     // Padding isn't optional for transfer_read, but is only used in the case
     // of out-of-bounds accesses (not supported here) and/or masking. Mask is
@@ -137,19 +136,17 @@ struct TransferWriteToArmSMELowering
       return rewriter.notifyMatchFailure(writeOp,
                                          "not inbounds transfer write");
 
-    AffineExpr d0, d1;
-    bindDims(writeOp.getContext(), d0, d1);
     AffineMap map = writeOp.getPermutationMap();
-    bool isTranspose = (map == AffineMap::get(map.getNumDims(), 0, {d1, d0},
-                                              writeOp.getContext()));
-
-    if (!map.isIdentity() && !isTranspose)
+    if (!map.isPermutation())
       return rewriter.notifyMatchFailure(writeOp,
                                          "unsupported permutation map");
 
+    // Note: For 2D vector types the only non-identity permutation is a simple
+    // transpose [1, 0].
+    bool transposed = !map.isIdentity();
     arm_sme::TileSliceLayout layout =
-        isTranspose ? arm_sme::TileSliceLayout::Vertical
-                    : arm_sme::TileSliceLayout::Horizontal;
+        transposed ? arm_sme::TileSliceLayout::Vertical
+                   : arm_sme::TileSliceLayout::Horizontal;
 
     rewriter.replaceOpWithNewOp<arm_sme::TileStoreOp>(
         writeOp, writeOp.getVector(), writeOp.getSource(), writeOp.getIndices(),
@@ -202,8 +199,8 @@ struct VectorStoreToArmSMELowering : public OpRewritePattern<vector::StoreOp> {
 ///   %broadcast_to_tile = scf.for %tile_slice_index = %c0 to %num_tile_slices
 ///       step %c1 iter_args(%iter_tile = %init_tile) -> (vector<[4]x[4]xi32>)
 ///   {
-///     %tile_update = arm_sme.move_vector_to_tile_slice
-///        %broadcast_to_1d, %iter_tile, %tile_slice_index :
+///     %tile_update = arm_sme.insert_tile_slice
+///        %broadcast_to_1d, %iter_tile[%tile_slice_index] :
 ///        vector<[4]xi32> into vector<[4]x[4]xi32>
 ///     scf.yield %tile_update : vector<[4]x[4]xi32>
 ///   }
@@ -241,9 +238,9 @@ struct BroadcastOpToArmSMELowering
 
     auto makeLoopBody = [&](OpBuilder &b, Location loc, Value tileSliceIndex,
                             Value currentTile) {
-      // Create 'arm_sme.move_vector_to_tile_slice' to broadcast the value
+      // Create 'arm_sme.insert_tile_slice' to broadcast the value
       // to each tile slice.
-      auto nextTile = b.create<arm_sme::MoveVectorToTileSliceOp>(
+      auto nextTile = b.create<arm_sme::InsertTileSliceOp>(
           loc, tileType, broadcastOp1D, currentTile, tileSliceIndex);
       return nextTile.getResult();
     };
@@ -270,8 +267,8 @@ struct BroadcastOpToArmSMELowering
 ///   %broadcast_to_tile = scf.for %tile_slice_index = %c0 to %num_tile_slices
 ///       step %c1 iter_args(%iter_tile = %init_tile) -> (vector<[4]x[4]xi32>)
 ///   {
-///     %tile_update = arm_sme.move_vector_to_tile_slice
-///        %broadcast_to_1d, %iter_tile, %tile_slice_index :
+///     %tile_update = arm_sme.insert_tile_slice
+///        %broadcast_to_1d, %iter_tile[%tile_slice_index] :
 ///        vector<[4]xi32> into vector<[4]x[4]xi32>
 ///     scf.yield %tile_update : vector<[4]x[4]xi32>
 ///   }
@@ -302,7 +299,7 @@ struct SplatOpToArmSMELowering : public OpRewritePattern<vector::SplatOp> {
 
     auto makeLoopBody = [&](OpBuilder &b, Location loc, Value tileSliceIndex,
                             Value currentTile) {
-      auto nextTile = b.create<arm_sme::MoveVectorToTileSliceOp>(
+      auto nextTile = b.create<arm_sme::InsertTileSliceOp>(
           loc, tileType, broadcastOp1D, currentTile, tileSliceIndex);
       return nextTile.getResult();
     };
@@ -356,6 +353,20 @@ struct TransposeOpToArmSMELowering
       return failure();
 
     auto loc = transposeOp.getLoc();
+    Value input = transposeOp.getVector();
+
+    if (auto xferOp = input.getDefiningOp<vector::TransferReadOp>();
+        xferOp && xferOp->hasOneUse()) {
+      // Fold transpose into transfer_read to enable in-flight transpose when
+      // converting to arm_sme.tile_load.
+      rewriter.modifyOpInPlace(xferOp, [&]() {
+        xferOp->setAttr(xferOp.getPermutationMapAttrName(),
+                        AffineMapAttr::get(AffineMap::getPermutationMap(
+                            permutation, transposeOp.getContext())));
+      });
+      rewriter.replaceOp(transposeOp, xferOp);
+      return success();
+    }
 
     // Allocate buffer to store input tile to.
     Value vscale =
@@ -371,8 +382,6 @@ struct TransposeOpToArmSMELowering
                         tileType.getElementType());
     auto buffer = rewriter.create<memref::AllocaOp>(
         loc, bufferType, ValueRange{numTileSlices, numTileSlices});
-
-    Value input = transposeOp.getVector();
 
     // Store input tile.
     auto tileStoreOp = rewriter.create<arm_sme::TileStoreOp>(
@@ -488,7 +497,7 @@ struct VectorOuterProductToArmSMELowering
   }
 };
 
-/// Lower `vector.extract` using `arm_sme.move_tile_slice_to_vector`.
+/// Lower `vector.extract` using `arm_sme.extract_tile_slice`.
 ///
 /// Example:
 /// ```
@@ -496,7 +505,7 @@ struct VectorOuterProductToArmSMELowering
 /// ```
 /// Becomes:
 /// ```
-/// %slice = arm_sme.move_tile_slice_to_vector %tile[%row]
+/// %slice = arm_sme.extract_tile_slice %tile[%row]
 ///            : vector<[4]xi32> from vector<[4]x[4]xi32>
 /// %el = vector.extract %slice[%col] : i32 from vector<[4]xi32>
 /// ```
@@ -522,27 +531,26 @@ struct VectorExtractToArmSMELowering
     }
 
     Value sliceIndex = vector::getAsValues(rewriter, loc, position[0]).front();
-    auto moveTileSliceToVector =
-        rewriter.create<arm_sme::MoveTileSliceToVectorOp>(loc, sourceVector,
-                                                          sliceIndex);
+    auto extractTileSlice = rewriter.create<arm_sme::ExtractTileSliceOp>(
+        loc, sourceVector, sliceIndex);
 
     if (position.size() == 1) {
       // Single index case: Extracts a 1D slice.
-      rewriter.replaceOp(extractOp, moveTileSliceToVector);
+      rewriter.replaceOp(extractOp, extractTileSlice);
       return success();
     }
 
     // Two indices case: Extracts a single element.
     assert(position.size() == 2);
-    rewriter.replaceOpWithNewOp<vector::ExtractOp>(
-        extractOp, moveTileSliceToVector, position[1]);
+    rewriter.replaceOpWithNewOp<vector::ExtractOp>(extractOp, extractTileSlice,
+                                                   position[1]);
 
     return success();
   }
 };
 
-/// Lower `vector.insert` using `arm_sme.move_vector_to_tile_slice` and
-/// `arm_sme.move_tile_slice_to_vector`.
+/// Lower `vector.insert` using `arm_sme.insert_tile_slice` and
+/// `arm_sme.extract_tile_slice`.
 ///
 /// Example:
 /// ```
@@ -551,10 +559,10 @@ struct VectorExtractToArmSMELowering
 /// ```
 /// Becomes:
 /// ```
-/// %slice = arm_sme.move_tile_slice_to_vector %tile[%row]
+/// %slice = arm_sme.extract_tile_slice %tile[%row]
 ///            : vector<[4]xi32> from vector<[4]x[4]xi32>
 /// %new_slice = vector.insert %el, %slice[%col] : i32 into vector<[4]xi32>
-/// %new_tile = arm_sme.move_vector_to_tile_slice %new_slice, %tile, %row
+/// %new_tile = arm_sme.insert_tile_slice %new_slice, %tile[%row]
 ///               : vector<[4]xi32> into vector<[4]x[4]xi32>
 /// ```
 struct VectorInsertToArmSMELowering
@@ -585,21 +593,21 @@ struct VectorInsertToArmSMELowering
     if (position.size() == 2) {
       // Two indices case: Insert single element into tile.
       // We need to first extract the existing slice and update the element.
-      tileSlice = rewriter.create<arm_sme::MoveTileSliceToVectorOp>(
+      tileSlice = rewriter.create<arm_sme::ExtractTileSliceOp>(
           loc, insertOp.getDest(), sliceIndex);
       tileSlice = rewriter.create<vector::InsertOp>(loc, source, tileSlice,
                                                     position[1]);
     }
 
     // Insert the slice into the destination tile.
-    rewriter.replaceOpWithNewOp<arm_sme::MoveVectorToTileSliceOp>(
+    rewriter.replaceOpWithNewOp<arm_sme::InsertTileSliceOp>(
         insertOp, tileSlice, insertOp.getDest(), sliceIndex);
     return success();
   }
 };
 
 /// Lowers `vector.print` of a tile into a loop over the rows of the tile,
-/// extracting them via `arm_sme.move_tile_slice_to_vector`, then printing with
+/// extracting them via `arm_sme.extract_tile_slice`, then printing with
 /// a 1D `vector.print`.
 ///
 ///  BEFORE:
@@ -614,7 +622,7 @@ struct VectorInsertToArmSMELowering
 ///  %vscale = vector.vscale
 ///  %svl_s = arith.muli %c4, %vscale : index
 ///  scf.for %i = %c0 to %svl_s step %c1 {
-///    %tile_slice = arm_sme.move_tile_slice_to_vector %tile[%i]
+///    %tile_slice = arm_sme.extract_tile_slice %tile[%i]
 ///                     : vector<[4]xf32> from vector<[4]x[4]xf32>
 ///    vector.print %tile_slice : vector<[4]xf32>
 ///  }
@@ -646,7 +654,7 @@ struct VectorPrintToArmSMELowering : public OpRewritePattern<vector::PrintOp> {
       rewriter.setInsertionPointToStart(forOp.getBody());
       // Extract the current row from the tile.
       Value rowIndex = forOp.getInductionVar();
-      auto tileSlice = rewriter.create<arm_sme::MoveTileSliceToVectorOp>(
+      auto tileSlice = rewriter.create<arm_sme::ExtractTileSliceOp>(
           loc, printOp.getSource(), rowIndex);
       // Print the row with a 1D vector.print.
       rewriter.create<vector::PrintOp>(loc, tileSlice,
@@ -654,6 +662,130 @@ struct VectorPrintToArmSMELowering : public OpRewritePattern<vector::PrintOp> {
     }
 
     rewriter.eraseOp(printOp);
+    return success();
+  }
+};
+
+/// Folds a ExtractTileSliceOp + TransferWriteOp to a StoreTileSliceOp.
+///
+///  BEFORE:
+///  ```mlir
+///  %slice = arm_sme.extract_tile_slice %tile[%index]
+///             : vector<[4]xf32> from vector<[4]x[4]xf32>
+///  vector.transfer_write %slice, %memref[%i, %j], %mask {in_bounds = [true]}
+///             : vector<[4]xf32>, memref<?x?xf32>
+///  ```
+///  AFTER:
+///  ```mlir
+///  arm_sme.store_tile_slice %tile, %index, %mask, %memref[%i, %j]
+///             : memref<?x?xf32>, vector<[4]xi1>, vector<[4]x[4]xf32>
+///  ```
+struct FoldTransferWriteOfExtractTileSlice
+    : public OpRewritePattern<vector::TransferWriteOp> {
+  using OpRewritePattern<vector::TransferWriteOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::TransferWriteOp writeOp,
+                                PatternRewriter &rewriter) const final {
+    if (!isa<MemRefType>(writeOp.getSource().getType()))
+      return rewriter.notifyMatchFailure(writeOp, "destination not a memref");
+
+    if (writeOp.hasOutOfBoundsDim())
+      return rewriter.notifyMatchFailure(writeOp,
+                                         "not inbounds transfer write");
+
+    auto extractTileSlice =
+        writeOp.getVector().getDefiningOp<arm_sme::ExtractTileSliceOp>();
+    if (!extractTileSlice)
+      return rewriter.notifyMatchFailure(
+          writeOp, "vector to store not from ExtractTileSliceOp");
+
+    AffineMap map = writeOp.getPermutationMap();
+    if (!map.isMinorIdentity())
+      return rewriter.notifyMatchFailure(writeOp,
+                                         "unsupported permutation map");
+
+    Value mask = writeOp.getMask();
+    if (!mask) {
+      auto maskType = writeOp.getVectorType().clone(rewriter.getI1Type());
+      mask = rewriter.create<arith::ConstantOp>(
+          writeOp.getLoc(), maskType, DenseElementsAttr::get(maskType, true));
+    }
+
+    rewriter.replaceOpWithNewOp<arm_sme::StoreTileSliceOp>(
+        writeOp, extractTileSlice.getTile(),
+        extractTileSlice.getTileSliceIndex(), mask, writeOp.getSource(),
+        writeOp.getIndices(), extractTileSlice.getLayout());
+    return success();
+  }
+};
+
+/// Lower a `vector.extract` from a 2-D scalable `vector.create_mask` to
+/// `arm_sve.psel`. Note: While psel is under ArmSVE it requires SME (or
+/// SVE 2.1), so this is currently the most logical place for this lowering.
+///
+/// Example:
+/// ```mlir
+/// %mask = vector.create_mask %a, %b : vector<[4]x[8]xi1>
+/// %slice = vector.extract %mask[%index]
+///            : vector<[8]xi1> from vector<[4]x[8]xi1>
+/// ```
+/// Becomes:
+/// ```
+/// %mask_rows = vector.create_mask %a : vector<[4]xi1>
+/// %mask_cols = vector.create_mask %b : vector<[8]xi1>
+/// %slice = arm_sve.psel %mask_cols, %mask_rows[%index]
+///            : vector<[8]xi1>, vector<[4]xi1>
+/// ```
+struct ExtractFromCreateMaskToPselLowering
+    : public OpRewritePattern<vector::ExtractOp> {
+  using OpRewritePattern<vector::ExtractOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    if (extractOp.getNumIndices() != 1)
+      return rewriter.notifyMatchFailure(extractOp, "not single extract index");
+
+    auto resultType = extractOp.getResult().getType();
+    auto resultVectorType = dyn_cast<VectorType>(resultType);
+    if (!resultVectorType)
+      return rewriter.notifyMatchFailure(extractOp, "result not VectorType");
+
+    auto createMaskOp =
+        extractOp.getVector().getDefiningOp<vector::CreateMaskOp>();
+    if (!createMaskOp)
+      return rewriter.notifyMatchFailure(extractOp, "source not CreateMaskOp");
+
+    auto maskType = createMaskOp.getVectorType();
+    if (maskType.getRank() != 2 || !maskType.allDimsScalable())
+      return rewriter.notifyMatchFailure(createMaskOp, "not 2-D scalable mask");
+
+    auto isSVEPredicateSize = [](int64_t size) {
+      return size > 0 && size <= 16 && llvm::isPowerOf2_32(uint32_t(size));
+    };
+
+    auto rowsBaseSize = maskType.getDimSize(0);
+    auto colsBaseSize = maskType.getDimSize(1);
+    if (!isSVEPredicateSize(rowsBaseSize) || !isSVEPredicateSize(colsBaseSize))
+      return rewriter.notifyMatchFailure(
+          createMaskOp, "mask dimensions not SVE predicate-sized");
+
+    auto loc = extractOp.getLoc();
+    VectorType rowMaskType = VectorType::Builder(maskType).dropDim(1);
+    VectorType colMaskType = VectorType::Builder(maskType).dropDim(0);
+
+    // Create the two 1-D masks at the location of the 2-D create_mask (which is
+    // usually outside a loop). This prevents the need for later hoisting.
+    rewriter.setInsertionPoint(createMaskOp);
+    auto rowMask = rewriter.create<vector::CreateMaskOp>(
+        loc, rowMaskType, createMaskOp.getOperand(0));
+    auto colMask = rewriter.create<vector::CreateMaskOp>(
+        loc, colMaskType, createMaskOp.getOperand(1));
+
+    rewriter.setInsertionPoint(extractOp);
+    auto position =
+        vector::getAsValues(rewriter, loc, extractOp.getMixedPosition());
+    rewriter.replaceOpWithNewOp<arm_sve::PselOp>(extractOp, colMask, rowMask,
+                                                 position[0]);
     return success();
   }
 };
@@ -667,5 +799,6 @@ void mlir::populateVectorToArmSMEPatterns(RewritePatternSet &patterns,
                TransposeOpToArmSMELowering, VectorLoadToArmSMELowering,
                VectorStoreToArmSMELowering, VectorOuterProductToArmSMELowering,
                VectorExtractToArmSMELowering, VectorInsertToArmSMELowering,
-               VectorPrintToArmSMELowering>(&ctx);
+               VectorPrintToArmSMELowering, FoldTransferWriteOfExtractTileSlice,
+               ExtractFromCreateMaskToPselLowering>(&ctx);
 }

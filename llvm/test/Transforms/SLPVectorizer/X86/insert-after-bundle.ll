@@ -320,52 +320,52 @@ define i32 @foo1() local_unnamed_addr #0 {
 ; SSE-LABEL: @foo1(
 ; SSE-NEXT:  entry:
 ; SSE-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @ib, align 16
-; SSE-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[TMP0]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; SSE-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[TMP0]], splat (i32 -1)
 ; SSE-NEXT:    store <4 x i32> [[TMP1]], ptr @ia, align 16
 ; SSE-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([64 x i32], ptr @ib, i64 0, i64 4), align 16
-; SSE-NEXT:    [[TMP3:%.*]] = xor <4 x i32> [[TMP2]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; SSE-NEXT:    [[TMP3:%.*]] = xor <4 x i32> [[TMP2]], splat (i32 -1)
 ; SSE-NEXT:    store <4 x i32> [[TMP3]], ptr getelementptr inbounds ([64 x i32], ptr @ia, i64 0, i64 4), align 16
 ; SSE-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([64 x i32], ptr @ib, i64 0, i64 8), align 16
-; SSE-NEXT:    [[TMP5:%.*]] = xor <4 x i32> [[TMP4]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; SSE-NEXT:    [[TMP5:%.*]] = xor <4 x i32> [[TMP4]], splat (i32 -1)
 ; SSE-NEXT:    store <4 x i32> [[TMP5]], ptr getelementptr inbounds ([64 x i32], ptr @ia, i64 0, i64 8), align 16
 ; SSE-NEXT:    [[TMP6:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([64 x i32], ptr @ib, i64 0, i64 12), align 16
-; SSE-NEXT:    [[TMP7:%.*]] = xor <4 x i32> [[TMP6]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; SSE-NEXT:    [[TMP7:%.*]] = xor <4 x i32> [[TMP6]], splat (i32 -1)
 ; SSE-NEXT:    store <4 x i32> [[TMP7]], ptr getelementptr inbounds ([64 x i32], ptr @ia, i64 0, i64 12), align 16
 ; SSE-NEXT:    [[TMP8:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([64 x i32], ptr @ib, i64 0, i64 16), align 16
-; SSE-NEXT:    [[TMP9:%.*]] = xor <4 x i32> [[TMP8]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; SSE-NEXT:    [[TMP9:%.*]] = xor <4 x i32> [[TMP8]], splat (i32 -1)
 ; SSE-NEXT:    store <4 x i32> [[TMP9]], ptr getelementptr inbounds ([64 x i32], ptr @ia, i64 0, i64 16), align 16
 ; SSE-NEXT:    [[TMP10:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([64 x i32], ptr @ib, i64 0, i64 20), align 16
-; SSE-NEXT:    [[TMP11:%.*]] = xor <4 x i32> [[TMP10]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; SSE-NEXT:    [[TMP11:%.*]] = xor <4 x i32> [[TMP10]], splat (i32 -1)
 ; SSE-NEXT:    store <4 x i32> [[TMP11]], ptr getelementptr inbounds ([64 x i32], ptr @ia, i64 0, i64 20), align 16
 ; SSE-NEXT:    [[TMP12:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([64 x i32], ptr @ib, i64 0, i64 24), align 16
-; SSE-NEXT:    [[TMP13:%.*]] = xor <4 x i32> [[TMP12]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; SSE-NEXT:    [[TMP13:%.*]] = xor <4 x i32> [[TMP12]], splat (i32 -1)
 ; SSE-NEXT:    store <4 x i32> [[TMP13]], ptr getelementptr inbounds ([64 x i32], ptr @ia, i64 0, i64 24), align 16
 ; SSE-NEXT:    [[TMP14:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([64 x i32], ptr @ib, i64 0, i64 28), align 16
-; SSE-NEXT:    [[TMP15:%.*]] = xor <4 x i32> [[TMP14]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; SSE-NEXT:    [[TMP15:%.*]] = xor <4 x i32> [[TMP14]], splat (i32 -1)
 ; SSE-NEXT:    store <4 x i32> [[TMP15]], ptr getelementptr inbounds ([64 x i32], ptr @ia, i64 0, i64 28), align 16
 ; SSE-NEXT:    [[TMP16:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([64 x i32], ptr @ib, i64 0, i64 32), align 16
-; SSE-NEXT:    [[TMP17:%.*]] = xor <4 x i32> [[TMP16]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; SSE-NEXT:    [[TMP17:%.*]] = xor <4 x i32> [[TMP16]], splat (i32 -1)
 ; SSE-NEXT:    store <4 x i32> [[TMP17]], ptr getelementptr inbounds ([64 x i32], ptr @ia, i64 0, i64 32), align 16
 ; SSE-NEXT:    [[TMP18:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([64 x i32], ptr @ib, i64 0, i64 36), align 16
-; SSE-NEXT:    [[TMP19:%.*]] = xor <4 x i32> [[TMP18]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; SSE-NEXT:    [[TMP19:%.*]] = xor <4 x i32> [[TMP18]], splat (i32 -1)
 ; SSE-NEXT:    store <4 x i32> [[TMP19]], ptr getelementptr inbounds ([64 x i32], ptr @ia, i64 0, i64 36), align 16
 ; SSE-NEXT:    [[TMP20:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([64 x i32], ptr @ib, i64 0, i64 40), align 16
-; SSE-NEXT:    [[TMP21:%.*]] = xor <4 x i32> [[TMP20]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; SSE-NEXT:    [[TMP21:%.*]] = xor <4 x i32> [[TMP20]], splat (i32 -1)
 ; SSE-NEXT:    store <4 x i32> [[TMP21]], ptr getelementptr inbounds ([64 x i32], ptr @ia, i64 0, i64 40), align 16
 ; SSE-NEXT:    [[TMP22:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([64 x i32], ptr @ib, i64 0, i64 44), align 16
-; SSE-NEXT:    [[TMP23:%.*]] = xor <4 x i32> [[TMP22]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; SSE-NEXT:    [[TMP23:%.*]] = xor <4 x i32> [[TMP22]], splat (i32 -1)
 ; SSE-NEXT:    store <4 x i32> [[TMP23]], ptr getelementptr inbounds ([64 x i32], ptr @ia, i64 0, i64 44), align 16
 ; SSE-NEXT:    [[TMP24:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([64 x i32], ptr @ib, i64 0, i64 48), align 16
-; SSE-NEXT:    [[TMP25:%.*]] = xor <4 x i32> [[TMP24]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; SSE-NEXT:    [[TMP25:%.*]] = xor <4 x i32> [[TMP24]], splat (i32 -1)
 ; SSE-NEXT:    store <4 x i32> [[TMP25]], ptr getelementptr inbounds ([64 x i32], ptr @ia, i64 0, i64 48), align 16
 ; SSE-NEXT:    [[TMP26:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([64 x i32], ptr @ib, i64 0, i64 52), align 16
-; SSE-NEXT:    [[TMP27:%.*]] = xor <4 x i32> [[TMP26]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; SSE-NEXT:    [[TMP27:%.*]] = xor <4 x i32> [[TMP26]], splat (i32 -1)
 ; SSE-NEXT:    store <4 x i32> [[TMP27]], ptr getelementptr inbounds ([64 x i32], ptr @ia, i64 0, i64 52), align 16
 ; SSE-NEXT:    [[TMP28:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([64 x i32], ptr @ib, i64 0, i64 56), align 16
-; SSE-NEXT:    [[TMP29:%.*]] = xor <4 x i32> [[TMP28]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; SSE-NEXT:    [[TMP29:%.*]] = xor <4 x i32> [[TMP28]], splat (i32 -1)
 ; SSE-NEXT:    store <4 x i32> [[TMP29]], ptr getelementptr inbounds ([64 x i32], ptr @ia, i64 0, i64 56), align 16
 ; SSE-NEXT:    [[TMP30:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([64 x i32], ptr @ib, i64 0, i64 60), align 16
-; SSE-NEXT:    [[TMP31:%.*]] = xor <4 x i32> [[TMP30]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; SSE-NEXT:    [[TMP31:%.*]] = xor <4 x i32> [[TMP30]], splat (i32 -1)
 ; SSE-NEXT:    store <4 x i32> [[TMP31]], ptr getelementptr inbounds ([64 x i32], ptr @ia, i64 0, i64 60), align 16
 ; SSE-NEXT:    br label [[FOR_BODY5:%.*]]
 ; SSE:       for.cond3:
@@ -390,16 +390,16 @@ define i32 @foo1() local_unnamed_addr #0 {
 ; AVX512-LABEL: @foo1(
 ; AVX512-NEXT:  entry:
 ; AVX512-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr @ib, align 16
-; AVX512-NEXT:    [[TMP1:%.*]] = xor <16 x i32> [[TMP0]], <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+; AVX512-NEXT:    [[TMP1:%.*]] = xor <16 x i32> [[TMP0]], splat (i32 -1)
 ; AVX512-NEXT:    store <16 x i32> [[TMP1]], ptr @ia, align 16
 ; AVX512-NEXT:    [[TMP2:%.*]] = load <16 x i32>, ptr getelementptr inbounds ([64 x i32], ptr @ib, i64 0, i64 16), align 16
-; AVX512-NEXT:    [[TMP3:%.*]] = xor <16 x i32> [[TMP2]], <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+; AVX512-NEXT:    [[TMP3:%.*]] = xor <16 x i32> [[TMP2]], splat (i32 -1)
 ; AVX512-NEXT:    store <16 x i32> [[TMP3]], ptr getelementptr inbounds ([64 x i32], ptr @ia, i64 0, i64 16), align 16
 ; AVX512-NEXT:    [[TMP4:%.*]] = load <16 x i32>, ptr getelementptr inbounds ([64 x i32], ptr @ib, i64 0, i64 32), align 16
-; AVX512-NEXT:    [[TMP5:%.*]] = xor <16 x i32> [[TMP4]], <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+; AVX512-NEXT:    [[TMP5:%.*]] = xor <16 x i32> [[TMP4]], splat (i32 -1)
 ; AVX512-NEXT:    store <16 x i32> [[TMP5]], ptr getelementptr inbounds ([64 x i32], ptr @ia, i64 0, i64 32), align 16
 ; AVX512-NEXT:    [[TMP6:%.*]] = load <16 x i32>, ptr getelementptr inbounds ([64 x i32], ptr @ib, i64 0, i64 48), align 16
-; AVX512-NEXT:    [[TMP7:%.*]] = xor <16 x i32> [[TMP6]], <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+; AVX512-NEXT:    [[TMP7:%.*]] = xor <16 x i32> [[TMP6]], splat (i32 -1)
 ; AVX512-NEXT:    store <16 x i32> [[TMP7]], ptr getelementptr inbounds ([64 x i32], ptr @ia, i64 0, i64 48), align 16
 ; AVX512-NEXT:    br label [[FOR_BODY5:%.*]]
 ; AVX512:       for.cond3:

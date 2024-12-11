@@ -30,6 +30,7 @@
 #include "refactor/Rename.h"
 #include "refactor/Tweak.h"
 #include "support/Cancellation.h"
+#include "support/Context.h"
 #include "support/Logger.h"
 #include "support/MemoryTree.h"
 #include "support/ThreadsafeFS.h"
@@ -112,7 +113,12 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
                  // Index outlives TUScheduler (declared first)
                  FIndex(FIndex),
                  // shared_ptr extends lifetime
-                 Stdlib(Stdlib)]() mutable {
+                 Stdlib(Stdlib),
+                 // We have some FS implementations that rely on information in
+                 // the context.
+                 Ctx(Context::current().clone())]() mutable {
+      // Make sure we install the context into current thread.
+      WithContext C(std::move(Ctx));
       clang::noteBottomOfStack();
       IndexFileIn IF;
       IF.Symbols = indexStandardLibrary(std::move(CI), Loc, *TFS);
@@ -209,7 +215,10 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                            const ThreadsafeFS &TFS, const Options &Opts,
                            Callbacks *Callbacks)
     : FeatureModules(Opts.FeatureModules), CDB(CDB), TFS(TFS),
-      DynamicIdx(Opts.BuildDynamicSymbolIndex ? new FileIndex() : nullptr),
+      DynamicIdx(Opts.BuildDynamicSymbolIndex
+                     ? new FileIndex(Opts.EnableOutgoingCalls)
+                     : nullptr),
+      ModulesManager(Opts.ModulesManager),
       ClangTidyProvider(Opts.ClangTidyProvider),
       UseDirtyHeaders(Opts.UseDirtyHeaders),
       LineFoldingOnly(Opts.LineFoldingOnly),
@@ -249,6 +258,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
         Callbacks->onBackgroundIndexProgress(S);
     };
     BGOpts.ContextProvider = Opts.ContextProvider;
+    BGOpts.SupportContainedRefs = Opts.EnableOutgoingCalls;
     BackgroundIdx = std::make_unique<BackgroundIndex>(
         TFS, CDB,
         BackgroundIndexStorage::createDiskBackedStorageFactory(
@@ -302,6 +312,7 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   Inputs.Index = Index;
   Inputs.ClangTidyProvider = ClangTidyProvider;
   Inputs.FeatureModules = FeatureModules;
+  Inputs.ModulesManager = ModulesManager;
   bool NewFile = WorkScheduler->update(File, Inputs, WantDiags);
   // If we loaded Foo.h, we want to make sure Foo.cpp is indexed.
   if (NewFile && BackgroundIdx)
@@ -443,6 +454,7 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
 
     CodeCompleteOpts.MainFileSignals = IP->Signals;
     CodeCompleteOpts.AllScopes = Config::current().Completion.AllScopes;
+    CodeCompleteOpts.ArgumentLists = Config::current().Completion.ArgumentLists;
     // FIXME(ibiryukov): even if Preamble is non-null, we may want to check
     // both the old and the new version in case only one of them matches.
     CodeCompleteResult Result = clangd::codeComplete(
@@ -901,6 +913,15 @@ void ClangdServer::inlayHints(PathRef File, std::optional<Range> RestrictRange,
     CB(clangd::inlayHints(InpAST->AST, std::move(RestrictRange)));
   };
   WorkScheduler->runWithAST("InlayHints", File, std::move(Action), Transient);
+}
+
+void ClangdServer::outgoingCalls(
+    const CallHierarchyItem &Item,
+    Callback<std::vector<CallHierarchyOutgoingCall>> CB) {
+  WorkScheduler->run("Outgoing Calls", "",
+                     [CB = std::move(CB), Item, this]() mutable {
+                       CB(clangd::outgoingCalls(Item, Index));
+                     });
 }
 
 void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {

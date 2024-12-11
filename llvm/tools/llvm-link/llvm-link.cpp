@@ -135,6 +135,11 @@ static cl::opt<bool> TryUseNewDbgInfoFormat(
     cl::init(false));
 
 extern cl::opt<bool> UseNewDbgInfoFormat;
+extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
+extern cl::opt<bool> WriteNewDbgInfoFormat;
+extern bool WriteNewDbgInfoFormatToBitcode;
+
+extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat;
 
 static ExitOnError ExitOnErr;
 
@@ -226,7 +231,7 @@ static std::unique_ptr<Module> loadArFile(const char *Argv0,
       M = getLazyIRModule(MemoryBuffer::getMemBuffer(MemBuf.get(), false),
                           ParseErr, Context);
 
-    if (!M.get()) {
+    if (!M) {
       errs() << Argv0 << ": ";
       WithColor::error() << " parsing member '" << ChildName
                          << "' of archive library failed'" << ArchiveName
@@ -320,12 +325,13 @@ static bool importFunctions(const char *argv0, Module &DestModule) {
       ExitOnErr(llvm::getModuleSummaryIndexForFile(SummaryIndex));
 
   // Map of Module -> List of globals to import from the Module
-  FunctionImporter::ImportMapTy ImportList;
+  FunctionImporter::ImportIDTable ImportIDs;
+  FunctionImporter::ImportMapTy ImportList(ImportIDs);
 
   auto ModuleLoader = [&DestModule](const char *argv0,
                                     const std::string &Identifier) {
-    std::unique_ptr<MemoryBuffer> Buffer =
-        ExitOnErr(errorOrToExpected(MemoryBuffer::getFileOrSTDIN(Identifier)));
+    std::unique_ptr<MemoryBuffer> Buffer = ExitOnErr(errorOrToExpected(
+        MemoryBuffer::getFileOrSTDIN(Identifier, /*IsText=*/true)));
     return loadFile(argv0, std::move(Buffer), DestModule.getContext(), false);
   };
 
@@ -372,9 +378,12 @@ static bool importFunctions(const char *argv0, Module &DestModule) {
     if (Verbose)
       errs() << "Importing " << FunctionName << " from " << FileName << "\n";
 
-    auto &Entry =
-        ImportList[FileNameStringCache.insert(FileName).first->getKey()];
-    Entry.insert(F->getGUID());
+    // `-import` specifies the `<filename,function-name>` pairs to import as
+    // definition, so make the import type definition directly.
+    // FIXME: A follow-up patch should add test coverage for import declaration
+    // in `llvm-link` CLI (e.g., by introducing a new command line option).
+    ImportList.addDefinition(
+        FileNameStringCache.insert(FileName).first->getKey(), F->getGUID());
   }
   auto CachedModuleLoader = [&](StringRef Identifier) {
     return ModuleLoaderCache.takeModule(std::string(Identifier));
@@ -393,7 +402,7 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
   // Similar to some flags, internalization doesn't apply to the first file.
   bool InternalizeLinkedSymbols = false;
   for (const auto &File : Files) {
-    auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(File);
+    auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(File, /*IsText=*/true);
 
     // When we encounter a missing file, make sure we expose its name.
     if (auto EC = BufferOrErr.getError())
@@ -408,7 +417,7 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
         identify_magic(Buffer->getBuffer()) == file_magic::archive
             ? loadArFile(argv0, std::move(Buffer), Context)
             : loadFile(argv0, std::move(Buffer), Context);
-    if (!M.get()) {
+    if (!M) {
       errs() << argv0 << ": ";
       WithColor::error() << " loading file '" << File << "'\n";
       return false;
@@ -480,12 +489,14 @@ int main(int argc, char **argv) {
   cl::HideUnrelatedOptions({&LinkCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm linker\n");
 
-  // RemoveDIs debug-info transition: tests may request that we /try/ to use the
-  // new debug-info format.
-  if (TryUseNewDbgInfoFormat) {
-    // Turn the new debug-info format on.
-    UseNewDbgInfoFormat = true;
-  }
+  // Load bitcode into the new debug info format by default.
+  if (LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_UNSET)
+    LoadBitcodeIntoNewDbgInfoFormat = cl::boolOrDefault::BOU_TRUE;
+
+  // Since llvm-link collects multiple IR modules together, for simplicity's
+  // sake we disable the "PreserveInputDbgFormat" flag to enforce a single
+  // debug info format.
+  PreserveInputDbgFormat = cl::boolOrDefault::BOU_FALSE;
 
   LLVMContext Context;
   Context.setDiagnosticHandler(std::make_unique<LLVMLinkDiagnosticHandler>(),
@@ -534,10 +545,18 @@ int main(int argc, char **argv) {
 
   if (Verbose)
     errs() << "Writing bitcode...\n";
+  auto SetFormat = [&](bool NewFormat) {
+    Composite->setIsNewDbgInfoFormat(NewFormat);
+    if (NewFormat)
+      Composite->removeDebugIntrinsicDeclarations();
+  };
   if (OutputAssembly) {
+    SetFormat(WriteNewDbgInfoFormat);
     Composite->print(Out.os(), nullptr, PreserveAssemblyUseListOrder);
-  } else if (Force || !CheckBitcodeOutputToConsole(Out.os()))
+  } else if (Force || !CheckBitcodeOutputToConsole(Out.os())) {
+    SetFormat(UseNewDbgInfoFormat && WriteNewDbgInfoFormatToBitcode);
     WriteBitcodeToFile(*Composite, Out.os(), PreserveBitcodeUseListOrder);
+  }
 
   // Declare success.
   Out.keep();

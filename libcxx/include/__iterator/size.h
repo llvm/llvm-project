@@ -11,9 +11,10 @@
 #define _LIBCPP___ITERATOR_SIZE_H
 
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
+#include <__cstddef/size_t.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/make_signed.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -24,7 +25,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 17
 
 template <class _Cont>
-_LIBCPP_HIDE_FROM_ABI constexpr auto size(const _Cont& __c) _NOEXCEPT_(noexcept(__c.size())) -> decltype(__c.size()) {
+_LIBCPP_HIDE_FROM_ABI constexpr auto size(const _Cont& __c) noexcept(noexcept(__c.size())) -> decltype(__c.size()) {
   return __c.size();
 }
 
@@ -35,9 +36,9 @@ _LIBCPP_HIDE_FROM_ABI constexpr size_t size(const _Tp (&)[_Sz]) noexcept {
 
 #  if _LIBCPP_STD_VER >= 20
 template <class _Cont>
-_LIBCPP_HIDE_FROM_ABI constexpr auto ssize(const _Cont& __c)
-    _NOEXCEPT_(noexcept(static_cast<common_type_t<ptrdiff_t, make_signed_t<decltype(__c.size())>>>(__c.size())))
-        -> common_type_t<ptrdiff_t, make_signed_t<decltype(__c.size())>> {
+_LIBCPP_HIDE_FROM_ABI constexpr auto
+ssize(const _Cont& __c) noexcept(noexcept(static_cast<common_type_t<ptrdiff_t, make_signed_t<decltype(__c.size())>>>(
+    __c.size()))) -> common_type_t<ptrdiff_t, make_signed_t<decltype(__c.size())>> {
   return static_cast<common_type_t<ptrdiff_t, make_signed_t<decltype(__c.size())>>>(__c.size());
 }
 

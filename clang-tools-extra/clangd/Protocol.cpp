@@ -504,6 +504,45 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
                   P.field("offsetEncoding")))
       return false;
   }
+
+  if (auto *Experimental = O->getObject("experimental")) {
+    if (auto *TextDocument = Experimental->getObject("textDocument")) {
+      if (auto *Completion = TextDocument->getObject("completion")) {
+        if (auto EditsNearCursor = Completion->getBoolean("editsNearCursor"))
+          R.CompletionFixes |= *EditsNearCursor;
+      }
+      if (auto *References = TextDocument->getObject("references")) {
+        if (auto ContainerSupport = References->getBoolean("container")) {
+          R.ReferenceContainer |= *ContainerSupport;
+        }
+      }
+      if (auto *Diagnostics = TextDocument->getObject("publishDiagnostics")) {
+        if (auto CodeActions = Diagnostics->getBoolean("codeActionsInline")) {
+          R.DiagnosticFixes |= *CodeActions;
+        }
+      }
+      if (auto *InactiveRegions =
+              TextDocument->getObject("inactiveRegionsCapabilities")) {
+        if (auto InactiveRegionsSupport =
+                InactiveRegions->getBoolean("inactiveRegions")) {
+          R.InactiveRegions |= *InactiveRegionsSupport;
+        }
+      }
+    }
+    if (auto *Window = Experimental->getObject("window")) {
+      if (auto Implicit =
+              Window->getBoolean("implicitWorkDoneProgressCreate")) {
+        R.ImplicitProgressCreation |= *Implicit;
+      }
+    }
+    if (auto *OffsetEncoding = Experimental->get("offsetEncoding")) {
+      R.offsetEncoding.emplace();
+      if (!fromJSON(*OffsetEncoding, *R.offsetEncoding,
+                    P.field("offsetEncoding")))
+        return false;
+    }
+  }
+
   return true;
 }
 
@@ -1477,6 +1516,7 @@ llvm::json::Value toJSON(const InlayHintKind &Kind) {
     return 2;
   case InlayHintKind::Designator:
   case InlayHintKind::BlockEnd:
+  case InlayHintKind::DefaultArgument:
     // This is an extension, don't serialize.
     return nullptr;
   }
@@ -1501,6 +1541,10 @@ bool operator<(const InlayHint &A, const InlayHint &B) {
   return std::tie(A.position, A.range, A.kind, A.label) <
          std::tie(B.position, B.range, B.kind, B.label);
 }
+std::string InlayHint::joinLabels() const {
+  return llvm::join(llvm::map_range(label, [](auto &L) { return L.value; }),
+                    "");
+}
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, InlayHintKind Kind) {
   auto ToString = [](InlayHintKind K) {
@@ -1513,10 +1557,39 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, InlayHintKind Kind) {
       return "designator";
     case InlayHintKind::BlockEnd:
       return "block-end";
+    case InlayHintKind::DefaultArgument:
+      return "default-argument";
     }
     llvm_unreachable("Unknown clang.clangd.InlayHintKind");
   };
   return OS << ToString(Kind);
+}
+
+llvm::json::Value toJSON(const InlayHintLabelPart &L) {
+  llvm::json::Object Result{{"value", L.value}};
+  if (L.tooltip)
+    Result["tooltip"] = *L.tooltip;
+  if (L.location)
+    Result["location"] = *L.location;
+  if (L.command)
+    Result["command"] = *L.command;
+  return Result;
+}
+
+bool operator==(const InlayHintLabelPart &LHS, const InlayHintLabelPart &RHS) {
+  return std::tie(LHS.value, LHS.location) == std::tie(RHS.value, RHS.location);
+}
+
+bool operator<(const InlayHintLabelPart &LHS, const InlayHintLabelPart &RHS) {
+  return std::tie(LHS.value, LHS.location) < std::tie(RHS.value, RHS.location);
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const InlayHintLabelPart &L) {
+  OS << L.value;
+  if (L.location)
+    OS << " (" << L.location << ")";
+  return OS;
 }
 
 static const char *toString(OffsetEncoding OE) {

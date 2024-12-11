@@ -17,6 +17,7 @@
 #define LLVM_OBJECT_COFFIMPORTFILE_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolicFile.h"
@@ -44,26 +45,7 @@ public:
 
   void moveSymbolNext(DataRefImpl &Symb) const override { ++Symb.p; }
 
-  Error printSymbolName(raw_ostream &OS, DataRefImpl Symb) const override {
-    switch (Symb.p) {
-    case ImpSymbol:
-      OS << "__imp_";
-      break;
-    case ECAuxSymbol:
-      OS << "__imp_aux_";
-      break;
-    }
-    const char *Name = Data.getBufferStart() + sizeof(coff_import_header);
-    if (Symb.p != ECThunkSymbol && COFF::isArm64EC(getMachine())) {
-      if (std::optional<std::string> DemangledName =
-              getArm64ECDemangledFunctionName(Name)) {
-        OS << StringRef(*DemangledName);
-        return Error::success();
-      }
-    }
-    OS << StringRef(Name);
-    return Error::success();
-  }
+  Error printSymbolName(raw_ostream &OS, DataRefImpl Symb) const override;
 
   Expected<uint32_t> getSymbolFlags(DataRefImpl Symb) const override {
     return SymbolRef::SF_Global;
@@ -116,9 +98,11 @@ struct COFFShortExport {
   /// "/export:foo=bar", this could be "_bar@8" if bar is stdcall.
   std::string SymbolName;
 
-  /// Creates a weak alias. This is the name of the weak aliasee. In a .def
+  /// Creates an import library entry that imports from a DLL export with a
+  /// different name. This is the name of the DLL export that should be
+  /// referenced when linking against this import library entry. In a .def
   /// file, this is "baz" in "EXPORTS\nfoo = bar == baz".
-  std::string AliasTarget;
+  std::string ImportName;
 
   /// Specifies EXPORTAS name. In a .def file, this is "bar" in
   /// "EXPORTS\nfoo EXPORTAS bar".
@@ -151,10 +135,10 @@ struct COFFShortExport {
 /// linking both ARM64EC and pure ARM64 objects, and the linker will pick only
 /// the exports relevant to the target platform. For non-hybrid targets,
 /// the NativeExports parameter should not be used.
-Error writeImportLibrary(
-    StringRef ImportName, StringRef Path, ArrayRef<COFFShortExport> Exports,
-    COFF::MachineTypes Machine, bool MinGW,
-    ArrayRef<COFFShortExport> NativeExports = std::nullopt);
+Error writeImportLibrary(StringRef ImportName, StringRef Path,
+                         ArrayRef<COFFShortExport> Exports,
+                         COFF::MachineTypes Machine, bool MinGW,
+                         ArrayRef<COFFShortExport> NativeExports = {});
 
 } // namespace object
 } // namespace llvm

@@ -644,7 +644,7 @@ static bool checkIVUsers(FlattenInfo &FI) {
 static OverflowResult checkOverflow(FlattenInfo &FI, DominatorTree *DT,
                                     AssumptionCache *AC) {
   Function *F = FI.OuterLoop->getHeader()->getParent();
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
 
   // For debugging/testing.
   if (AssumeNoOverflow)
@@ -783,8 +783,10 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   // Replace the inner loop backedge with an unconditional branch to the exit.
   BasicBlock *InnerExitBlock = FI.InnerLoop->getExitBlock();
   BasicBlock *InnerExitingBlock = FI.InnerLoop->getExitingBlock();
-  InnerExitingBlock->getTerminator()->eraseFromParent();
-  BranchInst::Create(InnerExitBlock, InnerExitingBlock);
+  Instruction *Term = InnerExitingBlock->getTerminator();
+  Instruction *BI = BranchInst::Create(InnerExitBlock, InnerExitingBlock);
+  BI->setDebugLoc(Term->getDebugLoc());
+  Term->eraseFromParent();
 
   // Update the DomTree and MemorySSA.
   DT->deleteEdge(InnerExitingBlock, FI.InnerLoop->getHeader());
@@ -808,8 +810,10 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
       // we need to insert the new GEP where the old GEP was.
       if (!DT->dominates(Base, &*Builder.GetInsertPoint()))
         Builder.SetInsertPoint(cast<Instruction>(V));
-      OuterValue = Builder.CreateGEP(GEP->getSourceElementType(), Base,
-                                     OuterValue, "flatten." + V->getName());
+      OuterValue =
+          Builder.CreateGEP(GEP->getSourceElementType(), Base, OuterValue,
+                            "flatten." + V->getName(),
+                            GEP->isInBounds() && InnerGEP->isInBounds());
     }
 
     LLVM_DEBUG(dbgs() << "Replacing: "; V->dump(); dbgs() << "with:      ";
@@ -974,10 +978,10 @@ static bool FlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
     assert(match(Br->getCondition(), m_Zero()) &&
            "Expected branch condition to be false");
     IRBuilder<> Builder(Br);
-    Function *F = Intrinsic::getDeclaration(M, Intrinsic::umul_with_overflow,
-                                            FI.OuterTripCount->getType());
-    Value *Call = Builder.CreateCall(F, {FI.OuterTripCount, FI.InnerTripCount},
-                                     "flatten.mul");
+    Value *Call = Builder.CreateIntrinsic(
+        Intrinsic::umul_with_overflow, FI.OuterTripCount->getType(),
+        {FI.OuterTripCount, FI.InnerTripCount},
+        /*FMFSource=*/nullptr, "flatten.mul");
     FI.NewTripCount = Builder.CreateExtractValue(Call, 0, "flatten.tripcount");
     Value *Overflow = Builder.CreateExtractValue(Call, 1, "flatten.overflow");
     Br->setCondition(Overflow);
@@ -1005,7 +1009,7 @@ PreservedAnalyses LoopFlattenPass::run(LoopNest &LN, LoopAnalysisManager &LAM,
   // in simplified form, and also needs LCSSA. Running
   // this pass will simplify all loops that contain inner loops,
   // regardless of whether anything ends up being flattened.
-  LoopAccessInfoManager LAIM(AR.SE, AR.AA, AR.DT, AR.LI, nullptr);
+  LoopAccessInfoManager LAIM(AR.SE, AR.AA, AR.DT, AR.LI, &AR.TTI, nullptr);
   for (Loop *InnerLoop : LN.getLoops()) {
     auto *OuterLoop = InnerLoop->getParentLoop();
     if (!OuterLoop)

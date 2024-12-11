@@ -50,7 +50,7 @@ DynTypedNode ParentMapContext::traverseIgnored(const DynTypedNode &N) const {
 }
 
 template <typename T, typename... U>
-std::tuple<bool, DynTypedNodeList, const T *, const U *...>
+static std::tuple<bool, DynTypedNodeList, const T *, const U *...>
 matchParents(const DynTypedNodeList &NodeList,
              ParentMapContext::ParentMap *ParentMap);
 
@@ -61,7 +61,26 @@ class ParentMapContext::ParentMap {
   template <typename, typename...> friend struct ::MatchParents;
 
   /// Contains parents of a node.
-  using ParentVector = llvm::SmallVector<DynTypedNode, 2>;
+  class ParentVector {
+  public:
+    ParentVector() = default;
+    explicit ParentVector(size_t N, const DynTypedNode &Value) {
+      Items.reserve(N);
+      for (; N > 0; --N)
+        push_back(Value);
+    }
+    bool contains(const DynTypedNode &Value) {
+      return Seen.contains(Value);
+    }
+    void push_back(const DynTypedNode &Value) {
+      if (!Value.getMemoizationData() || Seen.insert(Value).second)
+        Items.push_back(Value);
+    }
+    llvm::ArrayRef<DynTypedNode> view() const { return Items; }
+  private:
+    llvm::SmallVector<DynTypedNode, 2> Items;
+    llvm::SmallDenseSet<DynTypedNode, 2> Seen;
+  };
 
   /// Maps from a node to its parents. This is used for nodes that have
   /// pointer identity only, which are more common and we can save space by
@@ -88,7 +107,7 @@ class ParentMapContext::ParentMap {
       return DynTypedNode::create(*D);
     if (const auto *S = U.dyn_cast<const Stmt *>())
       return DynTypedNode::create(*S);
-    return *U.get<DynTypedNode *>();
+    return *cast<DynTypedNode *>(U);
   }
 
   template <typename NodeTy, typename MapTy>
@@ -99,7 +118,7 @@ class ParentMapContext::ParentMap {
       return llvm::ArrayRef<DynTypedNode>();
     }
     if (const auto *V = I->second.template dyn_cast<ParentVector *>()) {
-      return llvm::ArrayRef(*V);
+      return V->view();
     }
     return getSingleDynTypedNodeFromParentMap(I->second);
   }
@@ -108,17 +127,17 @@ public:
   ParentMap(ASTContext &Ctx);
   ~ParentMap() {
     for (const auto &Entry : PointerParents) {
-      if (Entry.second.is<DynTypedNode *>()) {
-        delete Entry.second.get<DynTypedNode *>();
-      } else if (Entry.second.is<ParentVector *>()) {
-        delete Entry.second.get<ParentVector *>();
+      if (auto *DTN = dyn_cast<DynTypedNode *>(Entry.second)) {
+        delete DTN;
+      } else if (auto *PV = dyn_cast<ParentVector *>(Entry.second)) {
+        delete PV;
       }
     }
     for (const auto &Entry : OtherParents) {
-      if (Entry.second.is<DynTypedNode *>()) {
-        delete Entry.second.get<DynTypedNode *>();
-      } else if (Entry.second.is<ParentVector *>()) {
-        delete Entry.second.get<ParentVector *>();
+      if (auto *DTN = dyn_cast<DynTypedNode *>(Entry.second)) {
+        delete DTN;
+      } else if (auto *PV = dyn_cast<ParentVector *>(Entry.second)) {
+        delete PV;
       }
     }
   }
@@ -252,7 +271,7 @@ public:
       const auto *S = It->second.dyn_cast<const Stmt *>();
       if (!S) {
         if (auto *Vec = It->second.dyn_cast<ParentVector *>())
-          return llvm::ArrayRef(*Vec);
+          return Vec->view();
         return getSingleDynTypedNodeFromParentMap(It->second);
       }
       const auto *P = dyn_cast<Expr>(S);
@@ -373,14 +392,14 @@ private:
       else
         NodeOrVector = new DynTypedNode(ParentStack.back());
     } else {
-      if (!NodeOrVector.template is<ParentVector *>()) {
+      if (!isa<ParentVector *>(NodeOrVector)) {
         auto *Vector = new ParentVector(
             1, getSingleDynTypedNodeFromParentMap(NodeOrVector));
         delete NodeOrVector.template dyn_cast<DynTypedNode *>();
         NodeOrVector = Vector;
       }
 
-      auto *Vector = NodeOrVector.template get<ParentVector *>();
+      auto *Vector = cast<ParentVector *>(NodeOrVector);
       // Skip duplicates for types that have memoization data.
       // We must check that the type has memoization data before calling
       // llvm::is_contained() because DynTypedNode::operator== can't compare all

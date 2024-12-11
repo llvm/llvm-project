@@ -298,12 +298,10 @@ DataInitializationCompiler<DSV>::ConvertElement(
   if (context.IsEnabled(common::LanguageFeature::LogicalIntegerAssignment)) {
     if (MaybeExpr converted{evaluate::DataConstantConversionExtension(
             exprAnalyzer_.GetFoldingContext(), type, expr)}) {
-      if (context.ShouldWarn(
-              common::LanguageFeature::LogicalIntegerAssignment)) {
-        context.Say(
-            "nonstandard usage: initialization of %s with %s"_port_en_US,
-            type.AsFortran(), expr.GetType().value().AsFortran());
-      }
+      context.Warn(common::LanguageFeature::LogicalIntegerAssignment,
+          exprAnalyzer_.GetFoldingContext().messages().at(),
+          "nonstandard usage: initialization of %s with %s"_port_en_US,
+          type.AsFortran(), expr.GetType().value().AsFortran());
       return {std::make_pair(std::move(*converted), false)};
     }
   }
@@ -387,7 +385,7 @@ bool DataInitializationCompiler<DSV>::InitElement(
       // nothing to do; rely on zero initialization
       return true;
     } else if (isProcPointer) {
-      if (evaluate::IsProcedure(*expr)) {
+      if (evaluate::IsProcedureDesignator(*expr)) {
         if (CheckPointerAssignment(exprAnalyzer_.context(), designator, *expr,
                 scope,
                 /*isBoundsRemapping=*/false, /*isAssumedRank=*/false)) {
@@ -419,7 +417,7 @@ bool DataInitializationCompiler<DSV>::InitElement(
   } else if (evaluate::IsNullPointer(*expr)) {
     exprAnalyzer_.Say("Initializer for '%s' must not be a pointer"_err_en_US,
         DescribeElement());
-  } else if (evaluate::IsProcedure(*expr)) {
+  } else if (evaluate::IsProcedureDesignator(*expr)) {
     exprAnalyzer_.Say("Initializer for '%s' must not be a procedure"_err_en_US,
         DescribeElement());
   } else if (auto designatorType{designator.GetType()}) {
@@ -434,16 +432,11 @@ bool DataInitializationCompiler<DSV>::InitElement(
       // value non-pointer initialization
       if (IsBOZLiteral(*expr) &&
           designatorType->category() != TypeCategory::Integer) { // 8.6.7(11)
-        if (exprAnalyzer_.context().ShouldWarn(
-                common::LanguageFeature::DataStmtExtensions)) {
-          exprAnalyzer_.Say(
-              "BOZ literal should appear in a DATA statement only as a value for an integer object, but '%s' is '%s'"_port_en_US,
-              DescribeElement(), designatorType->AsFortran());
-        }
-      } else if (converted->second &&
-          exprAnalyzer_.context().ShouldWarn(
-              common::LanguageFeature::DataStmtExtensions)) {
-        exprAnalyzer_.context().Say(
+        exprAnalyzer_.Warn(common::LanguageFeature::DataStmtExtensions,
+            "BOZ literal should appear in a DATA statement only as a value for an integer object, but '%s' is '%s'"_port_en_US,
+            DescribeElement(), designatorType->AsFortran());
+      } else if (converted->second) {
+        exprAnalyzer_.Warn(common::LanguageFeature::DataStmtExtensions,
             "DATA statement value initializes '%s' of type '%s' with CHARACTER"_port_en_US,
             DescribeElement(), designatorType->AsFortran());
       }
@@ -462,7 +455,7 @@ bool DataInitializationCompiler<DSV>::InitElement(
       } else if (status == evaluate::InitialImage::OutOfRange) {
         OutOfRangeError();
       } else if (status == evaluate::InitialImage::LengthMismatch) {
-        exprAnalyzer_.Say(
+        exprAnalyzer_.Warn(common::UsageWarning::DataLength,
             "DATA statement value '%s' for '%s' has the wrong length"_warn_en_US,
             folded.AsFortran(), DescribeElement());
         return true;
@@ -519,11 +512,10 @@ static const DerivedTypeSpec *HasDefaultInitialization(const Symbol &symbol) {
     } else if (!object->isDummy() && object->type()) {
       if (const DerivedTypeSpec * derived{object->type()->AsDerived()}) {
         DirectComponentIterator directs{*derived};
-        if (std::find_if(
-                directs.begin(), directs.end(), [](const Symbol &component) {
-                  return !IsAllocatable(component) &&
-                      HasDeclarationInitializer(component);
-                }) != directs.end()) {
+        if (llvm::any_of(directs, [](const Symbol &component) {
+              return !IsAllocatable(component) &&
+                  HasDeclarationInitializer(component);
+            })) {
           return derived;
         }
       }
@@ -900,7 +892,13 @@ void ConstructInitializer(const Symbol &symbol,
       if (const auto *procDesignator{
               std::get_if<evaluate::ProcedureDesignator>(&expr->u)}) {
         CHECK(!procDesignator->GetComponent());
-        mutableProc.set_init(DEREF(procDesignator->GetSymbol()));
+        if (const auto *intrin{procDesignator->GetSpecificIntrinsic()}) {
+          const Symbol *intrinSymbol{
+              symbol.owner().FindSymbol(SourceName{intrin->name})};
+          mutableProc.set_init(DEREF(intrinSymbol));
+        } else {
+          mutableProc.set_init(DEREF(procDesignator->GetSymbol()));
+        }
       } else {
         CHECK(evaluate::IsNullProcedurePointer(*expr));
         mutableProc.set_init(nullptr);

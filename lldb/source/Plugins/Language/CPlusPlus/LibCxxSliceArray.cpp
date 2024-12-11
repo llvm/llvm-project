@@ -8,8 +8,8 @@
 
 #include "LibCxx.h"
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include <optional>
 
 using namespace lldb;
@@ -73,9 +73,9 @@ private:
   size_t m_size = 0;
   /// slice_array.__stride_.
   size_t m_stride = 0;
-  /// The type of slize_array's template argument T.
+  /// The type of slice_array's template argument T.
   CompilerType m_element_type;
-  /// The sizeof slize_array's template argument T.
+  /// The sizeof slice_array's template argument T.
   uint32_t m_element_size = 0;
 };
 

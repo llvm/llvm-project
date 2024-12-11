@@ -17,6 +17,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstring>
+#include <iterator>
 #include <limits>
 #include <string>
 #include <string_view>
@@ -54,6 +55,9 @@ namespace llvm {
     using iterator = const char *;
     using const_iterator = const char *;
     using size_type = size_t;
+    using value_type = char;
+    using reverse_iterator = std::reverse_iterator<iterator>;
+    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
   private:
     /// The start of the string, in an external buffer.
@@ -81,7 +85,7 @@ namespace llvm {
     StringRef(std::nullptr_t) = delete;
 
     /// Construct a string ref from a cstring.
-    /*implicit*/ constexpr StringRef(const char *Str)
+    /*implicit*/ constexpr StringRef(const char *Str LLVM_LIFETIME_BOUND)
         : Data(Str), Length(Str ?
     // GCC 7 doesn't have constexpr char_traits. Fall back to __builtin_strlen.
 #if defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE < 8
@@ -93,12 +97,13 @@ namespace llvm {
     }
 
     /// Construct a string ref from a pointer and length.
-    /*implicit*/ constexpr StringRef(const char *data, size_t length)
+    /*implicit*/ constexpr StringRef(const char *data LLVM_LIFETIME_BOUND,
+                                     size_t length)
         : Data(data), Length(length) {}
 
     /// Construct a string ref from an std::string.
     /*implicit*/ StringRef(const std::string &Str)
-      : Data(Str.data()), Length(Str.length()) {}
+        : Data(Str.data()), Length(Str.length()) {}
 
     /// Construct a string ref from an std::string_view.
     /*implicit*/ constexpr StringRef(std::string_view Str)
@@ -108,9 +113,17 @@ namespace llvm {
     /// @name Iterators
     /// @{
 
-    iterator begin() const { return Data; }
+    iterator begin() const { return data(); }
 
-    iterator end() const { return Data + Length; }
+    iterator end() const { return data() + size(); }
+
+    reverse_iterator rbegin() const {
+      return std::make_reverse_iterator(end());
+    }
+
+    reverse_iterator rend() const {
+      return std::make_reverse_iterator(begin());
+    }
 
     const unsigned char *bytes_begin() const {
       return reinterpret_cast<const unsigned char *>(begin());
@@ -131,7 +144,7 @@ namespace llvm {
     [[nodiscard]] constexpr const char *data() const { return Data; }
 
     /// empty - Check if the string is empty.
-    [[nodiscard]] constexpr bool empty() const { return Length == 0; }
+    [[nodiscard]] constexpr bool empty() const { return size() == 0; }
 
     /// size - Get the string size.
     [[nodiscard]] constexpr size_t size() const { return Length; }
@@ -139,13 +152,13 @@ namespace llvm {
     /// front - Get the first character in the string.
     [[nodiscard]] char front() const {
       assert(!empty());
-      return Data[0];
+      return data()[0];
     }
 
     /// back - Get the last character in the string.
     [[nodiscard]] char back() const {
       assert(!empty());
-      return Data[Length-1];
+      return data()[size() - 1];
     }
 
     // copy - Allocate copy in Allocator and return StringRef to it.
@@ -154,21 +167,14 @@ namespace llvm {
       // Don't request a length 0 copy from the allocator.
       if (empty())
         return StringRef();
-      char *S = A.template Allocate<char>(Length);
+      char *S = A.template Allocate<char>(size());
       std::copy(begin(), end(), S);
-      return StringRef(S, Length);
-    }
-
-    /// equals - Check for string equality, this is more efficient than
-    /// compare() when the relative ordering of inequal strings isn't needed.
-    [[nodiscard]] bool equals(StringRef RHS) const {
-      return (Length == RHS.Length &&
-              compareMemory(Data, RHS.Data, RHS.Length) == 0);
+      return StringRef(S, size());
     }
 
     /// Check for string equality, ignoring case.
     [[nodiscard]] bool equals_insensitive(StringRef RHS) const {
-      return Length == RHS.Length && compare_insensitive(RHS) == 0;
+      return size() == RHS.size() && compare_insensitive(RHS) == 0;
     }
 
     /// compare - Compare two strings; the result is negative, zero, or positive
@@ -176,13 +182,14 @@ namespace llvm {
     /// the \p RHS.
     [[nodiscard]] int compare(StringRef RHS) const {
       // Check the prefix for a mismatch.
-      if (int Res = compareMemory(Data, RHS.Data, std::min(Length, RHS.Length)))
+      if (int Res =
+              compareMemory(data(), RHS.data(), std::min(size(), RHS.size())))
         return Res < 0 ? -1 : 1;
 
       // Otherwise the prefixes match, so we only need to check the lengths.
-      if (Length == RHS.Length)
+      if (size() == RHS.size())
         return 0;
-      return Length < RHS.Length ? -1 : 1;
+      return size() < RHS.size() ? -1 : 1;
     }
 
     /// Compare two strings, ignoring case.
@@ -220,8 +227,9 @@ namespace llvm {
 
     /// str - Get the contents as an std::string.
     [[nodiscard]] std::string str() const {
-      if (!Data) return std::string();
-      return std::string(Data, Length);
+      if (!data())
+        return std::string();
+      return std::string(data(), size());
     }
 
     /// @}
@@ -229,8 +237,8 @@ namespace llvm {
     /// @{
 
     [[nodiscard]] char operator[](size_t Index) const {
-      assert(Index < Length && "Invalid index!");
-      return Data[Index];
+      assert(Index < size() && "Invalid index!");
+      return data()[Index];
     }
 
     /// Disallow accidental assignment from a temporary std::string.
@@ -255,13 +263,11 @@ namespace llvm {
 
     /// Check if this string starts with the given \p Prefix.
     [[nodiscard]] bool starts_with(StringRef Prefix) const {
-      return Length >= Prefix.Length &&
-             compareMemory(Data, Prefix.Data, Prefix.Length) == 0;
+      return size() >= Prefix.size() &&
+             compareMemory(data(), Prefix.data(), Prefix.size()) == 0;
     }
-    [[nodiscard]] LLVM_DEPRECATED(
-        "Use starts_with instead",
-        "starts_with") bool startswith(StringRef Prefix) const {
-      return starts_with(Prefix);
+    [[nodiscard]] bool starts_with(char Prefix) const {
+      return !empty() && front() == Prefix;
     }
 
     /// Check if this string starts with the given \p Prefix, ignoring case.
@@ -269,14 +275,12 @@ namespace llvm {
 
     /// Check if this string ends with the given \p Suffix.
     [[nodiscard]] bool ends_with(StringRef Suffix) const {
-      return Length >= Suffix.Length &&
-             compareMemory(end() - Suffix.Length, Suffix.Data, Suffix.Length) ==
-                 0;
+      return size() >= Suffix.size() &&
+             compareMemory(end() - Suffix.size(), Suffix.data(),
+                           Suffix.size()) == 0;
     }
-    [[nodiscard]] LLVM_DEPRECATED(
-        "Use ends_with instead",
-        "ends_with") bool endswith(StringRef Suffix) const {
-      return ends_with(Suffix);
+    [[nodiscard]] bool ends_with(char Suffix) const {
+      return !empty() && back() == Suffix;
     }
 
     /// Check if this string ends with the given \p Suffix, ignoring case.
@@ -341,10 +345,10 @@ namespace llvm {
     /// \returns The index of the last occurrence of \p C, or npos if not
     /// found.
     [[nodiscard]] size_t rfind(char C, size_t From = npos) const {
-      size_t I = std::min(From, Length);
+      size_t I = std::min(From, size());
       while (I) {
         --I;
-        if (Data[I] == C)
+        if (data()[I] == C)
           return I;
       }
       return npos;
@@ -446,8 +450,8 @@ namespace llvm {
     /// Return the number of occurrences of \p C in the string.
     [[nodiscard]] size_t count(char C) const {
       size_t Count = 0;
-      for (size_t I = 0; I != Length; ++I)
-        if (Data[I] == C)
+      for (size_t I = 0; I != size(); ++I)
+        if (data()[I] == C)
           ++Count;
       return Count;
     }
@@ -566,8 +570,8 @@ namespace llvm {
     /// suffix (starting with \p Start) will be returned.
     [[nodiscard]] constexpr StringRef substr(size_t Start,
                                              size_t N = npos) const {
-      Start = std::min(Start, Length);
-      return StringRef(Data + Start, std::min(N, Length - Start));
+      Start = std::min(Start, size());
+      return StringRef(data() + Start, std::min(N, size() - Start));
     }
 
     /// Return a StringRef equal to 'this' but with only the first \p N
@@ -678,9 +682,9 @@ namespace llvm {
     /// will be returned. If this is less than \p Start, an empty string will
     /// be returned.
     [[nodiscard]] StringRef slice(size_t Start, size_t End) const {
-      Start = std::min(Start, Length);
-      End = std::clamp(End, Start, Length);
-      return StringRef(Data + Start, End - Start);
+      Start = std::min(Start, size());
+      End = std::clamp(End, Start, size());
+      return StringRef(data() + Start, End - Start);
     }
 
     /// Split into two substrings around the first occurrence of a separator
@@ -712,7 +716,7 @@ namespace llvm {
       size_t Idx = find(Separator);
       if (Idx == npos)
         return std::make_pair(*this, StringRef());
-      return std::make_pair(slice(0, Idx), slice(Idx + Separator.size(), npos));
+      return std::make_pair(slice(0, Idx), substr(Idx + Separator.size()));
     }
 
     /// Split into two substrings around the last occurrence of a separator
@@ -730,7 +734,7 @@ namespace llvm {
       size_t Idx = rfind(Separator);
       if (Idx == npos)
         return std::make_pair(*this, StringRef());
-      return std::make_pair(slice(0, Idx), slice(Idx + Separator.size(), npos));
+      return std::make_pair(slice(0, Idx), substr(Idx + Separator.size()));
     }
 
     /// Split into substrings around the occurrences of a separator string.
@@ -785,25 +789,25 @@ namespace llvm {
     /// Return string with consecutive \p Char characters starting from the
     /// the left removed.
     [[nodiscard]] StringRef ltrim(char Char) const {
-      return drop_front(std::min(Length, find_first_not_of(Char)));
+      return drop_front(std::min(size(), find_first_not_of(Char)));
     }
 
     /// Return string with consecutive characters in \p Chars starting from
     /// the left removed.
     [[nodiscard]] StringRef ltrim(StringRef Chars = " \t\n\v\f\r") const {
-      return drop_front(std::min(Length, find_first_not_of(Chars)));
+      return drop_front(std::min(size(), find_first_not_of(Chars)));
     }
 
     /// Return string with consecutive \p Char characters starting from the
     /// right removed.
     [[nodiscard]] StringRef rtrim(char Char) const {
-      return drop_back(Length - std::min(Length, find_last_not_of(Char) + 1));
+      return drop_back(size() - std::min(size(), find_last_not_of(Char) + 1));
     }
 
     /// Return string with consecutive characters in \p Chars starting from
     /// the right removed.
     [[nodiscard]] StringRef rtrim(StringRef Chars = " \t\n\v\f\r") const {
-      return drop_back(Length - std::min(Length, find_last_not_of(Chars) + 1));
+      return drop_back(size() - std::min(size(), find_last_not_of(Chars) + 1));
     }
 
     /// Return string with consecutive \p Char characters starting from the
@@ -830,9 +834,9 @@ namespace llvm {
         // If there is no carriage return, assume unix
         return "\n";
       }
-      if (Pos + 1 < Length && Data[Pos + 1] == '\n')
+      if (Pos + 1 < size() && data()[Pos + 1] == '\n')
         return "\r\n"; // Windows
-      if (Pos > 0 && Data[Pos - 1] == '\n')
+      if (Pos > 0 && data()[Pos - 1] == '\n')
         return "\n\r"; // You monster!
       return "\r";     // Classic Mac
     }
@@ -875,7 +879,11 @@ namespace llvm {
   /// @{
 
   inline bool operator==(StringRef LHS, StringRef RHS) {
-    return LHS.equals(RHS);
+    if (LHS.size() != RHS.size())
+      return false;
+    if (LHS.empty())
+      return true;
+    return ::memcmp(LHS.data(), RHS.data(), LHS.size()) == 0;
   }
 
   inline bool operator!=(StringRef LHS, StringRef RHS) { return !(LHS == RHS); }

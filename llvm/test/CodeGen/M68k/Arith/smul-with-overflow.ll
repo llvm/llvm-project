@@ -24,7 +24,7 @@ entry:
 define zeroext i8 @smul_i8_no_ovf(i8 signext %a, i8 signext %b) nounwind ssp {
 ; CHECK-LABEL: smul_i8_no_ovf:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    move.l #42, %d0
+; CHECK-NEXT:    moveq #42, %d0
 ; CHECK-NEXT:    rts
 entry:
   %smul = tail call { i8, i1 } @llvm.smul.with.overflow.i8(i8 %a, i8 %b)
@@ -69,16 +69,16 @@ define fastcc i1 @test1(i32 %v1, i32 %v2) nounwind {
 ; CHECK-NEXT:  ; %bb.2: ; %overflow
 ; CHECK-NEXT:    lea (no,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
-; CHECK-NEXT:    jsr printf@PLT
-; CHECK-NEXT:    move.b #0, %d0
+; CHECK-NEXT:    jsr printf
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB3_1: ; %normal
 ; CHECK-NEXT:    move.l %d0, (4,%sp)
 ; CHECK-NEXT:    lea (ok,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
-; CHECK-NEXT:    jsr printf@PLT
-; CHECK-NEXT:    move.b #1, %d0
+; CHECK-NEXT:    jsr printf
+; CHECK-NEXT:    moveq #1, %d0
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
 entry:
@@ -107,16 +107,16 @@ define fastcc i1 @test2(i32 %v1, i32 %v2) nounwind {
 ; CHECK-NEXT:  ; %bb.1: ; %overflow
 ; CHECK-NEXT:    lea (no,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
-; CHECK-NEXT:    jsr printf@PLT
-; CHECK-NEXT:    move.b #0, %d0
+; CHECK-NEXT:    jsr printf
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB4_2: ; %normal
 ; CHECK-NEXT:    move.l %d0, (4,%sp)
 ; CHECK-NEXT:    lea (ok,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
-; CHECK-NEXT:    jsr printf@PLT
-; CHECK-NEXT:    move.b #1, %d0
+; CHECK-NEXT:    jsr printf
+; CHECK-NEXT:    moveq #1, %d0
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
 entry:
@@ -155,7 +155,7 @@ define i32 @test4(i32 %a, i32 %b) nounwind readnone {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    move.l (8,%sp), %d0
 ; CHECK-NEXT:    add.l (4,%sp), %d0
-; CHECK-NEXT:    move.l #4, %d1
+; CHECK-NEXT:    moveq #4, %d1
 ; CHECK-NEXT:    muls.l %d1, %d0
 ; CHECK-NEXT:    rts
 entry:

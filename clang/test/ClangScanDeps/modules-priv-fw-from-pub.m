@@ -42,9 +42,10 @@ module Dependency { header "dependency.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/modules/dependency.h",
-// CHECK-NEXT:         "[[PREFIX]]/modules/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/modules/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/modules/dependency.h"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "Dependency"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -59,9 +60,15 @@ module Dependency { header "dependency.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Headers/FW.h",
 // CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.modulemap",
-// CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.private.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.private.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Headers/FW.h"
+// CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:           "isFramework": true,
+// CHECK-NEXT:           "link-name": "FW"
+// CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "name": "FW"
 // CHECK-NEXT:     },
@@ -81,6 +88,12 @@ module Dependency { header "dependency.h" }
 // CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/PrivateHeaders/FW_Private.h",
 // CHECK-NEXT:         "[[PREFIX]]/modules/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:           "isFramework": true,
+// CHECK-NEXT:           "link-name": "FW"
+// CHECK-NEXT:         }
+// CHECK-NEXT:       ],
 // CHECK-NEXT:       "name": "FW_Private"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],
@@ -97,8 +110,7 @@ module Dependency { header "dependency.h" }
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "command-line": [
 // CHECK:                ],
-// CHECK-NEXT:           "executable": "clang",
-// CHECK-NEXT:           "file-deps": [
+// CHECK:                "file-deps": [
 // CHECK-NEXT:             "[[PREFIX]]/tu.m"
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "input-file": "[[PREFIX]]/tu.m"

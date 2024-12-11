@@ -36,6 +36,9 @@ endif()
 if(omp_gen IN_LIST LLVM_COMMON_DEPENDS)
   list(REMOVE_ITEM LLVM_COMMON_DEPENDS omp_gen)
 endif()
+if(vt_gen IN_LIST LLVM_COMMON_DEPENDS)
+  list(REMOVE_ITEM LLVM_COMMON_DEPENDS vt_gen)
+endif()
 
 #
 # Generate LLVMConfig.cmake for the build tree.

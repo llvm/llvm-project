@@ -1,14 +1,15 @@
 {
   "name": "lldb-dap",
   "displayName": "LLDB DAP",
-  "version": "0.2.0",
-  "publisher": "llvm",
+  "version": "0.2.8",
+  "publisher": "llvm-vs-code-extensions",
   "homepage": "https://lldb.llvm.org",
   "description": "LLDB debugging from VSCode",
   "license": "Apache 2.0 License with LLVM exceptions",
   "repository": {
     "type": "git",
-    "url": "https://github.com/llvm/llvm-project.git"
+    "url": "https://github.com/llvm/llvm-project.git",
+    "directory": "lldb/tools/lldb-dap/"
   },
   "bugs": {
     "url": "https://github.com/llvm/llvm-project/issues"
@@ -42,7 +43,8 @@
     "watch": "tsc -watch -p ./",
     "format": "npx prettier './src-ts/' --write",
     "package": "vsce package --out ./out/lldb-dap.vsix",
-    "vscode-uninstall": "code --uninstall-extension llvm.lldb-dap",
+    "publish": "vsce publish",
+    "vscode-uninstall": "code --uninstall-extension llvm-vs-code-extensions.lldb-dap",
     "vscode-install": "code --install-extension ./out/lldb-dap.vsix"
   },
   "contributes": {
@@ -72,6 +74,20 @@
           "scope": "resource",
           "type": "string",
           "description": "The path to the lldb-dap binary."
+        },
+        "lldb-dap.log-path": {
+          "scope": "resource",
+          "type": "string",
+          "description": "The log path for lldb-dap (if any)"
+        },
+        "lldb-dap.environment": {
+          "scope": "resource",
+          "type": "object",
+          "default": {},
+          "description": "The environment of the lldb-dap process.",
+          "additionalProperties": {
+             "type": "string"
+          }
         }
       }
     },
@@ -125,7 +141,7 @@
     "debuggers": [
       {
         "type": "lldb-dap",
-        "label": "Native LLDB Debugger",
+        "label": "LLDB DAP Debugger",
         "program": "./bin/lldb-dap",
         "windows": {
           "program": "./bin/lldb-dap.exe"
@@ -154,9 +170,27 @@
                 "default": "${workspaceRoot}"
               },
               "env": {
-                "type": "array",
-                "description": "Additional environment variables to set when launching the program. This is an array of strings that contains the variable name followed by an optional '=' character and the environment variable's value.",
-                "default": []
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "description": "Additional environment variables to set when launching the program. E.g. `{ \"FOO\": \"1\" }`",
+                    "patternProperties": {
+                      ".*": {
+                        "type": "string"
+                      }
+                    },
+                    "default": {}
+                  },
+                  {
+                    "type": "array",
+                    "description": "Additional environment variables to set when launching the program. E.g. `[\"FOO=1\", \"BAR\"]`",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^((\\w+=.*)|^\\w+)$"
+                    },
+                    "default": []
+                  }
+                ]
               },
               "stopOnEntry": {
                 "type": "boolean",
@@ -188,9 +222,31 @@
                 "description": "Specify a source path to remap \"./\" to allow full paths to be used when setting breakpoints in binaries that have relative source paths."
               },
               "sourceMap": {
-                "type": "array",
-                "description": "Specify an array of path remappings; each element must itself be a two element array containing a source and destination path name. Overrides sourcePath.",
-                "default": []
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "description": "Specify an object of path remappings; each entry has a key containing the source path and a value containing the destination path. E.g `{ \"/the/source/path\": \"/the/destination/path\" }`. Overrides sourcePath.",
+                    "patternProperties": {
+                      ".*": {
+                        "type": "string"
+                      }
+                    },
+                    "default": {}
+                  },
+                  {
+                    "type": "array",
+                    "description": "Specify an array of path remappings; each element must itself be a two element array containing a source and destination path name. Overrides sourcePath.",
+                    "items": {
+                      "type": "array",
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "default": []
+                  }
+                ]
               },
               "debuggerRoot": {
                 "type": "string",
@@ -231,7 +287,12 @@
               },
               "exitCommands": {
                 "type": "array",
-                "description": "Commands executed at the end of debugging session.",
+                "description": "Commands executed when the program exits.",
+                "default": []
+              },
+              "terminateCommands": {
+                "type": "array",
+                "description": "Commands executed when the debugging session ends.",
                 "default": []
               },
               "runInTerminal": {
@@ -246,6 +307,11 @@
               "enableAutoVariableSummaries": {
                 "type": "boolean",
                 "description": "Enable auto generated summaries for variables when no summaries exist for a given type. This feature can cause performance delays in large projects when viewing variables.",
+                "default": false
+              },
+              "displayExtendedBacktrace": {
+                "type": "boolean",
+                "description": "Enable language specific extended backtraces.",
                 "default": false
               },
               "enableSyntheticChildDebugging": {
@@ -293,9 +359,31 @@
                 "description": "Specify a source path to remap \"./\" to allow full paths to be used when setting breakpoints in binaries that have relative source paths."
               },
               "sourceMap": {
-                "type": "array",
-                "description": "Specify an array of path remappings; each element must itself be a two element array containing a source and destination path name. Overrides sourcePath.",
-                "default": []
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "description": "Specify an object of path remappings; each entry has a key containing the source path and a value containing the destination path. E.g `{ \"/the/source/path\": \"/the/destination/path\" }`. Overrides sourcePath.",
+                    "patternProperties": {
+                      ".*": {
+                        "type": "string"
+                      }
+                    },
+                    "default": {}
+                  },
+                  {
+                    "type": "array",
+                    "description": "Specify an array of path remappings; each element must itself be a two element array containing a source and destination path name. Overrides sourcePath.",
+                    "items": {
+                      "type": "array",
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "default": []
+                  }
+                ]
               },
               "debuggerRoot": {
                 "type": "string",
@@ -336,7 +424,12 @@
               },
               "exitCommands": {
                 "type": "array",
-                "description": "Commands executed at the end of debugging session.",
+                "description": "Commands executed when the program exits.",
+                "default": []
+              },
+              "terminateCommands": {
+                "type": "array",
+                "description": "Commands executed when the debugging session ends.",
                 "default": []
               },
               "coreFile": {
@@ -347,9 +440,25 @@
                 "type": "string",
                 "description": "The time in seconds to wait for a program to stop when attaching using \"attachCommands\". Defaults to 30 seconds."
               },
+              "gdb-remote-port": {
+                "type": [
+                  "number",
+                  "string"
+                ],
+                "description": "TCP/IP port to attach to a remote system. Specifying both pid and port is an error."
+              },
+              "gdb-remote-hostname": {
+                "type": "string",
+                "description": "The hostname to connect to a remote system. The default hostname being used localhost."
+              },
               "enableAutoVariableSummaries": {
                 "type": "boolean",
                 "description": "Enable auto generated summaries for variables when no summaries exist for a given type. This feature can cause performance delays in large projects when viewing variables.",
+                "default": false
+              },
+              "displayExtendedBacktrace": {
+                "type": "boolean",
+                "description": "Enable language specific extended backtraces.",
                 "default": false
               },
               "enableSyntheticChildDebugging": {
@@ -398,6 +507,28 @@
               "args": [],
               "env": [],
               "cwd": "^\"\\${workspaceRoot}\""
+            }
+          },
+          {
+            "label": "LLDB: Attach",
+            "description": "",
+            "body": {
+              "type": "lldb-dap",
+              "request": "attach",
+              "name": "${2:Attach}",
+              "program": "${1:<your program>}",
+              "waitFor": true
+            }
+          },
+          {
+            "label": "LLDB: Load Coredump",
+            "description": "",
+            "body": {
+              "type": "lldb-dap",
+              "request": "attach",
+              "name": "${2:Core}",
+              "program": "${1:<your program>}",
+              "coreFile": "${1:<your program>}.core"
             }
           }
         ]

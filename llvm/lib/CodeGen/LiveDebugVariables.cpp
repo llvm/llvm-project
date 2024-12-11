@@ -18,7 +18,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "LiveDebugVariables.h"
+#include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntervalMap.h"
@@ -38,6 +38,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -74,24 +75,27 @@ EnableLDV("live-debug-variables", cl::init(true),
 STATISTIC(NumInsertedDebugValues, "Number of DBG_VALUEs inserted");
 STATISTIC(NumInsertedDebugLabels, "Number of DBG_LABELs inserted");
 
-char LiveDebugVariables::ID = 0;
+char LiveDebugVariablesWrapperLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(LiveDebugVariables, DEBUG_TYPE,
-                "Debug Variable Analysis", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
-INITIALIZE_PASS_END(LiveDebugVariables, DEBUG_TYPE,
-                "Debug Variable Analysis", false, false)
+INITIALIZE_PASS_BEGIN(LiveDebugVariablesWrapperLegacy, DEBUG_TYPE,
+                      "Debug Variable Analysis", false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
+INITIALIZE_PASS_END(LiveDebugVariablesWrapperLegacy, DEBUG_TYPE,
+                    "Debug Variable Analysis", false, true)
 
-void LiveDebugVariables::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<MachineDominatorTree>();
-  AU.addRequiredTransitive<LiveIntervals>();
+void LiveDebugVariablesWrapperLegacy::getAnalysisUsage(
+    AnalysisUsage &AU) const {
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
+  AU.addRequiredTransitive<LiveIntervalsWrapperPass>();
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-LiveDebugVariables::LiveDebugVariables() : MachineFunctionPass(ID) {
-  initializeLiveDebugVariablesPass(*PassRegistry::getPassRegistry());
+LiveDebugVariablesWrapperLegacy::LiveDebugVariablesWrapperLegacy()
+    : MachineFunctionPass(ID) {
+  initializeLiveDebugVariablesWrapperLegacyPass(
+      *PassRegistry::getPassRegistry());
 }
 
 enum : unsigned { UndefLocNo = ~0U };
@@ -274,8 +278,6 @@ using BlockSkipInstsMap =
 
 namespace {
 
-class LDVImpl;
-
 /// A user value is a part of a debug info user variable.
 ///
 /// A DBG_VALUE instruction notes that (a sub-register of) a virtual register
@@ -285,6 +287,8 @@ class LDVImpl;
 /// user values are related if they are held by the same virtual register. The
 /// equivalence class is the transitive closure of that relation.
 class UserValue {
+  using LDVImpl = LiveDebugVariables::LDVImpl;
+
   const DILocalVariable *Variable; ///< The debug info variable we are part of.
   /// The part of the variable we describe.
   const std::optional<DIExpression::FragmentInfo> Fragment;
@@ -528,9 +532,17 @@ public:
   void print(raw_ostream &, const TargetRegisterInfo *);
 };
 
+} // end anonymous namespace
+
+namespace llvm {
+
 /// Implementation of the LiveDebugVariables pass.
-class LDVImpl {
-  LiveDebugVariables &pass;
+
+LiveDebugVariables::LiveDebugVariables() = default;
+LiveDebugVariables::~LiveDebugVariables() = default;
+LiveDebugVariables::LiveDebugVariables(LiveDebugVariables &&) = default;
+
+class LiveDebugVariables::LDVImpl {
   LocMap::Allocator allocator;
   MachineFunction *MF = nullptr;
   LiveIntervals *LIS;
@@ -634,7 +646,7 @@ class LDVImpl {
   void computeIntervals();
 
 public:
-  LDVImpl(LiveDebugVariables *ps) : pass(*ps) {}
+  LDVImpl(LiveIntervals *LIS) : LIS(LIS) {}
 
   bool runOnMachineFunction(MachineFunction &mf, bool InstrRef);
 
@@ -671,9 +683,8 @@ public:
   void print(raw_ostream&);
 };
 
-} // end anonymous namespace
+} // namespace llvm
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 static void printDebugLoc(const DebugLoc &DL, raw_ostream &CommentOS,
                           const LLVMContext &Ctx) {
   if (!DL)
@@ -753,7 +764,7 @@ void UserLabel::print(raw_ostream &OS, const TargetRegisterInfo *TRI) {
   OS << '\n';
 }
 
-void LDVImpl::print(raw_ostream &OS) {
+void LiveDebugVariables::LDVImpl::print(raw_ostream &OS) {
   OS << "********** DEBUG VARIABLES **********\n";
   for (auto &userValue : userValues)
     userValue->print(OS, TRI);
@@ -761,18 +772,16 @@ void LDVImpl::print(raw_ostream &OS) {
   for (auto &userLabel : userLabels)
     userLabel->print(OS, TRI);
 }
-#endif
 
-void UserValue::mapVirtRegs(LDVImpl *LDV) {
-  for (unsigned i = 0, e = locations.size(); i != e; ++i)
-    if (locations[i].isReg() && locations[i].getReg().isVirtual())
-      LDV->mapVirtReg(locations[i].getReg(), this);
+void UserValue::mapVirtRegs(LiveDebugVariables::LDVImpl *LDV) {
+  for (const MachineOperand &MO : locations)
+    if (MO.isReg() && MO.getReg().isVirtual())
+      LDV->mapVirtReg(MO.getReg(), this);
 }
 
-UserValue *
-LDVImpl::getUserValue(const DILocalVariable *Var,
-                      std::optional<DIExpression::FragmentInfo> Fragment,
-                      const DebugLoc &DL) {
+UserValue *LiveDebugVariables::LDVImpl::getUserValue(
+    const DILocalVariable *Var,
+    std::optional<DIExpression::FragmentInfo> Fragment, const DebugLoc &DL) {
   // FIXME: Handle partially overlapping fragments. See
   // https://reviews.llvm.org/D70121#1849741.
   DebugVariable ID(Var, Fragment, DL->getInlinedAt());
@@ -785,19 +794,20 @@ LDVImpl::getUserValue(const DILocalVariable *Var,
   return UV;
 }
 
-void LDVImpl::mapVirtReg(Register VirtReg, UserValue *EC) {
+void LiveDebugVariables::LDVImpl::mapVirtReg(Register VirtReg, UserValue *EC) {
   assert(VirtReg.isVirtual() && "Only map VirtRegs");
   UserValue *&Leader = virtRegToEqClass[VirtReg];
   Leader = UserValue::merge(Leader, EC);
 }
 
-UserValue *LDVImpl::lookupVirtReg(Register VirtReg) {
+UserValue *LiveDebugVariables::LDVImpl::lookupVirtReg(Register VirtReg) {
   if (UserValue *UV = virtRegToEqClass.lookup(VirtReg))
     return UV->getLeader();
   return nullptr;
 }
 
-bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
+bool LiveDebugVariables::LDVImpl::handleDebugValue(MachineInstr &MI,
+                                                   SlotIndex Idx) {
   // DBG_VALUE loc, offset, variable, expr
   // DBG_VALUE_LIST variable, expr, locs...
   if (!MI.isDebugValue()) {
@@ -873,8 +883,8 @@ bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
   return true;
 }
 
-MachineBasicBlock::iterator LDVImpl::handleDebugInstr(MachineInstr &MI,
-                                                      SlotIndex Idx) {
+MachineBasicBlock::iterator
+LiveDebugVariables::LDVImpl::handleDebugInstr(MachineInstr &MI, SlotIndex Idx) {
   assert(MI.isDebugValueLike() || MI.isDebugPHI());
 
   // In instruction referencing mode, there should be no DBG_VALUE instructions
@@ -894,7 +904,8 @@ MachineBasicBlock::iterator LDVImpl::handleDebugInstr(MachineInstr &MI,
   return NextInst;
 }
 
-bool LDVImpl::handleDebugLabel(MachineInstr &MI, SlotIndex Idx) {
+bool LiveDebugVariables::LDVImpl::handleDebugLabel(MachineInstr &MI,
+                                                   SlotIndex Idx) {
   // DBG_LABEL label
   if (MI.getNumOperands() != 1 || !MI.getOperand(0).isMetadata()) {
     LLVM_DEBUG(dbgs() << "Can't handle " << MI);
@@ -917,7 +928,8 @@ bool LDVImpl::handleDebugLabel(MachineInstr &MI, SlotIndex Idx) {
   return true;
 }
 
-bool LDVImpl::collectDebugValues(MachineFunction &mf, bool InstrRef) {
+bool LiveDebugVariables::LDVImpl::collectDebugValues(MachineFunction &mf,
+                                                     bool InstrRef) {
   bool Changed = false;
   for (MachineBasicBlock &MBB : mf) {
     for (MachineBasicBlock::iterator MBBI = MBB.begin(), MBBE = MBB.end();
@@ -1250,20 +1262,20 @@ void UserValue::computeIntervals(MachineRegisterInfo &MRI,
     I.setStopUnchecked(PrevEnd);
 }
 
-void LDVImpl::computeIntervals() {
+void LiveDebugVariables::LDVImpl::computeIntervals() {
   LexicalScopes LS;
   LS.initialize(*MF);
 
-  for (unsigned i = 0, e = userValues.size(); i != e; ++i) {
-    userValues[i]->computeIntervals(MF->getRegInfo(), *TRI, *LIS, LS);
-    userValues[i]->mapVirtRegs(this);
+  for (const auto &UV : userValues) {
+    UV->computeIntervals(MF->getRegInfo(), *TRI, *LIS, LS);
+    UV->mapVirtRegs(this);
   }
 }
 
-bool LDVImpl::runOnMachineFunction(MachineFunction &mf, bool InstrRef) {
+bool LiveDebugVariables::LDVImpl::runOnMachineFunction(MachineFunction &mf,
+                                                       bool InstrRef) {
   clear();
   MF = &mf;
-  LIS = &pass.getAnalysis<LiveIntervals>();
   TRI = mf.getSubtarget().getRegisterInfo();
   LLVM_DEBUG(dbgs() << "********** COMPUTING LIVE DEBUG VARIABLES: "
                     << mf.getName() << " **********\n");
@@ -1298,31 +1310,65 @@ static void removeDebugInstrs(MachineFunction &mf) {
   }
 }
 
-bool LiveDebugVariables::runOnMachineFunction(MachineFunction &mf) {
-  if (!EnableLDV)
-    return false;
-  if (!mf.getFunction().getSubprogram()) {
-    removeDebugInstrs(mf);
-    return false;
-  }
+bool LiveDebugVariablesWrapperLegacy::runOnMachineFunction(
+    MachineFunction &mf) {
+  auto *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
 
-  // Have we been asked to track variable locations using instruction
-  // referencing?
-  bool InstrRef = mf.useDebugInstrRef();
+  Impl = std::make_unique<LiveDebugVariables>();
+  Impl->analyze(mf, LIS);
+  return false;
+}
 
-  if (!pImpl)
-    pImpl = new LDVImpl(this);
-  return static_cast<LDVImpl *>(pImpl)->runOnMachineFunction(mf, InstrRef);
+AnalysisKey LiveDebugVariablesAnalysis::Key;
+
+LiveDebugVariables
+LiveDebugVariablesAnalysis::run(MachineFunction &MF,
+                                MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+
+  auto *LIS = &MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  LiveDebugVariables LDV;
+  LDV.analyze(MF, LIS);
+  return LDV;
+}
+
+PreservedAnalyses
+LiveDebugVariablesPrinterPass::run(MachineFunction &MF,
+                                   MachineFunctionAnalysisManager &MFAM) {
+  auto &LDV = MFAM.getResult<LiveDebugVariablesAnalysis>(MF);
+  LDV.print(OS);
+  return PreservedAnalyses::all();
 }
 
 void LiveDebugVariables::releaseMemory() {
-  if (pImpl)
-    static_cast<LDVImpl*>(pImpl)->clear();
+  if (PImpl)
+    PImpl->clear();
 }
 
-LiveDebugVariables::~LiveDebugVariables() {
-  if (pImpl)
-    delete static_cast<LDVImpl*>(pImpl);
+bool LiveDebugVariables::invalidate(
+    MachineFunction &, const PreservedAnalyses &PA,
+    MachineFunctionAnalysisManager::Invalidator &) {
+  auto PAC = PA.getChecker<LiveDebugVariablesAnalysis>();
+  // Some architectures split the register allocation into multiple phases based
+  // on register classes. This requires preserving analyses between the phases
+  // by default.
+  return !PAC.preservedWhenStateless();
+}
+
+void LiveDebugVariables::analyze(MachineFunction &MF, LiveIntervals *LIS) {
+  if (!EnableLDV)
+    return;
+  if (!MF.getFunction().getSubprogram()) {
+    removeDebugInstrs(MF);
+    return;
+  }
+
+  PImpl.reset(new LDVImpl(LIS));
+
+  // Have we been asked to track variable locations using instruction
+  // referencing?
+  bool InstrRef = MF.useDebugInstrRef();
+  PImpl->runOnMachineFunction(MF, InstrRef);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1445,7 +1491,8 @@ UserValue::splitRegister(Register OldReg, ArrayRef<Register> NewRegs,
   return DidChange;
 }
 
-void LDVImpl::splitPHIRegister(Register OldReg, ArrayRef<Register> NewRegs) {
+void LiveDebugVariables::LDVImpl::splitPHIRegister(Register OldReg,
+                                                   ArrayRef<Register> NewRegs) {
   auto RegIt = RegToPHIIdx.find(OldReg);
   if (RegIt == RegToPHIIdx.end())
     return;
@@ -1483,7 +1530,8 @@ void LDVImpl::splitPHIRegister(Register OldReg, ArrayRef<Register> NewRegs) {
     RegToPHIIdx[RegAndInstr.first].push_back(RegAndInstr.second);
 }
 
-void LDVImpl::splitRegister(Register OldReg, ArrayRef<Register> NewRegs) {
+void LiveDebugVariables::LDVImpl::splitRegister(Register OldReg,
+                                                ArrayRef<Register> NewRegs) {
   // Consider whether this split range affects any PHI locations.
   splitPHIRegister(OldReg, NewRegs);
 
@@ -1504,8 +1552,8 @@ void LDVImpl::splitRegister(Register OldReg, ArrayRef<Register> NewRegs) {
 
 void LiveDebugVariables::
 splitRegister(Register OldReg, ArrayRef<Register> NewRegs, LiveIntervals &LIS) {
-  if (pImpl)
-    static_cast<LDVImpl*>(pImpl)->splitRegister(OldReg, NewRegs);
+  if (PImpl)
+    PImpl->splitRegister(OldReg, NewRegs);
 }
 
 void UserValue::rewriteLocations(VirtRegMap &VRM, const MachineFunction &MF,
@@ -1529,8 +1577,7 @@ void UserValue::rewriteLocations(VirtRegMap &VRM, const MachineFunction &MF,
     // Only virtual registers are rewritten.
     if (Loc.isReg() && Loc.getReg() && Loc.getReg().isVirtual()) {
       Register VirtReg = Loc.getReg();
-      if (VRM.isAssignedReg(VirtReg) &&
-          Register::isPhysicalRegister(VRM.getPhys(VirtReg))) {
+      if (VRM.isAssignedReg(VirtReg) && VRM.hasPhys(VirtReg)) {
         // This can create a %noreg operand in rare cases when the sub-register
         // index is no longer available. That means the user value is in a
         // non-existent sub-register, and %noreg is exactly what we want.
@@ -1626,8 +1673,9 @@ findInsertLocation(MachineBasicBlock *MBB, SlotIndex Idx, LiveIntervals &LIS,
   }
 
   // Don't insert anything after the first terminator, though.
-  return MI->isTerminator() ? MBB->getFirstTerminator() :
-                              std::next(MachineBasicBlock::iterator(MI));
+  auto It = MI->isTerminator() ? MBB->getFirstTerminator()
+                               : std::next(MachineBasicBlock::iterator(MI));
+  return skipDebugInstructionsForward(It, MBB->end());
 }
 
 /// Find an iterator for inserting the next DBG_VALUE instruction
@@ -1807,7 +1855,7 @@ void UserLabel::emitDebugLabel(LiveIntervals &LIS, const TargetInstrInfo &TII,
   LLVM_DEBUG(dbgs() << '\n');
 }
 
-void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
+void LiveDebugVariables::LDVImpl::emitDebugValues(VirtRegMap *VRM) {
   LLVM_DEBUG(dbgs() << "********** EMITTING LIVE DEBUG VARIABLES **********\n");
   if (!MF)
     return;
@@ -1839,8 +1887,7 @@ void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
     unsigned SubReg = It.second.SubReg;
 
     MachineBasicBlock *OrigMBB = Slots->getMBBFromIndex(Slot);
-    if (VRM->isAssignedReg(Reg) &&
-        Register::isPhysicalRegister(VRM->getPhys(Reg))) {
+    if (VRM->isAssignedReg(Reg) && VRM->hasPhys(Reg)) {
       unsigned PhysReg = VRM->getPhys(Reg);
       if (SubReg != 0)
         PhysReg = TRI->getSubReg(PhysReg, SubReg);
@@ -1875,12 +1922,10 @@ void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
         Builder.addImm(regSizeInBits);
       }
 
-      LLVM_DEBUG(
-      if (SpillOffset != 0) {
-        dbgs() << "DBG_PHI for Vreg " << Reg << " subreg " << SubReg <<
-                  " has nonzero offset\n";
-      }
-      );
+      LLVM_DEBUG(if (SpillOffset != 0) {
+        dbgs() << "DBG_PHI for " << printReg(Reg, TRI, SubReg)
+               << " has nonzero offset\n";
+      });
     }
     // If there was no mapping for a value ID, it's optimized out. Create no
     // DBG_PHI, and any variables using this value will become optimized out.
@@ -1959,13 +2004,15 @@ void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
 }
 
 void LiveDebugVariables::emitDebugValues(VirtRegMap *VRM) {
-  if (pImpl)
-    static_cast<LDVImpl*>(pImpl)->emitDebugValues(VRM);
+  if (PImpl)
+    PImpl->emitDebugValues(VRM);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void LiveDebugVariables::dump() const {
-  if (pImpl)
-    static_cast<LDVImpl*>(pImpl)->print(dbgs());
-}
+LLVM_DUMP_METHOD void LiveDebugVariables::dump() const { print(dbgs()); }
 #endif
+
+void LiveDebugVariables::print(raw_ostream &OS) const {
+  if (PImpl)
+    PImpl->print(OS);
+}

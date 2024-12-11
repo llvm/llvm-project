@@ -1,7 +1,8 @@
 // RUN: %clangxx_tsan %s -o %t && %run %t 2>&1 | FileCheck %s
 // UNSUPPORTED: darwin
 
-// It's very flaky on PPC with COMPILER_RT_DEBUG.
+// FIXME: Very flaky on PPC with COMPILER_RT_DEBUG.
+// https://github.com/google/sanitizers/issues/1792
 // UNSUPPORTED: !compiler-rt-optimized && ppc
 
 // Test case for https://github.com/google/sanitizers/issues/1540
@@ -40,7 +41,7 @@ static void *thr(void *p) {
 int main() {
   struct sigaction act = {};
   act.sa_handler = &handler;
-  if (sigaction(SIGALRM, &act, 0)) {
+  if (sigaction(SIGPROF, &act, 0)) {
     perror("sigaction");
     exit(1);
   }
@@ -49,7 +50,7 @@ int main() {
   t.it_value.tv_sec = 0;
   t.it_value.tv_usec = 10;
   t.it_interval = t.it_value;
-  if (setitimer(ITIMER_REAL, &t, 0)) {
+  if (setitimer(ITIMER_PROF, &t, 0)) {
     perror("setitimer");
     exit(1);
   }

@@ -27,7 +27,9 @@ often use `rm *.mod` to clean up.
 The disadvantage of using the same name as other compilers is that it is not
 clear which compiler created a `.mod` file and files from multiple compilers
 cannot be in the same directory. This could be solved by adding something
-between the module name and extension, e.g. `<modulename>-f18.mod`.
+between the module name and extension, e.g. `<modulename>-f18.mod`.  If this
+is needed, Flang's fc1 accepts the option `-module-suffix` to alter the suffix
+used for the module file.
 
 ## Format
 

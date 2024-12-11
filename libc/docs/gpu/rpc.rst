@@ -231,7 +231,7 @@ but the following example shows how it can be used by a standard user.
   }
 
   // Routines to allocate mapped memory that both the host and the device can
-  // access asychonrously to communicate with eachother.
+  // access asychonrously to communicate with each other.
   void *alloc_host(size_t size, void *) {
     void *sharable_ptr;
     if (cudaError_t err = cudaMallocHost(&sharable_ptr, sizeof(void *)))
@@ -251,14 +251,10 @@ but the following example shows how it can be used by a standard user.
   __global__ void hello() { puts("Hello world!"); }
 
   int main() {
-    int device = 0;
-    // Initialize the RPC server to run on a single device.
-    if (rpc_status_t err = rpc_init(/*num_device=*/1))
-      handle_error(err);
-
     // Initialize the RPC server to run on the given device.
+    rpc_device_t device;
     if (rpc_status_t err =
-            rpc_server_init(device, RPC_MAXIMUM_PORT_COUNT,
+            rpc_server_init(&device, RPC_MAXIMUM_PORT_COUNT,
                             /*warp_size=*/32, alloc_host, /*data=*/nullptr))
       handle_error(err);
 
@@ -277,6 +273,7 @@ but the following example shows how it can be used by a standard user.
     hello<<<1, 1, 0, stream>>>();
 
     // While the kernel is executing, check the RPC server for work to do.
+    // Requires non-blocking CUDA kernels but avoids a separate thread.
     while (cudaStreamQuery(stream) == cudaErrorNotReady)
       if (rpc_status_t err = rpc_handle_server(device))
         handle_error(err);
@@ -284,10 +281,6 @@ but the following example shows how it can be used by a standard user.
     // Shut down the server running on the given device.
     if (rpc_status_t err =
             rpc_server_shutdown(device, free_host, /*data=*/nullptr))
-      handle_error(err);
-
-    // Shut down the entire RPC server interface.
-    if (rpc_status_t err = rpc_shutdown())
       handle_error(err);
 
     return EXIT_SUCCESS;
@@ -300,7 +293,7 @@ associated with relocatable device code linking.
 
 .. code-block:: sh
 
-  $> clang++ -x cuda rpc.cpp --offload-arch=native -fgpu-rdc -lcudart -lcgpu \
+  $> clang++ -x cuda rpc.cpp --offload-arch=native -fgpu-rdc -lcudart -lcgpu-nvptx \
        -I<install-path>include -L<install-path>/lib -lllvmlibc_rpc_server \
        -O3 -foffload-lto -o hello
   $> ./hello
@@ -309,6 +302,6 @@ associated with relocatable device code linking.
 Extensions
 ----------
 
-We describe which operation the RPC server should take with a 16-bit opcode. We
-consider the first 32768 numbers to be reserved while the others are free to
-use.
+The opcode is a 32-bit integer that must be unique to the requested operation. 
+All opcodes used by ``libc`` internally have the character ``c`` in the most 
+significant byte.

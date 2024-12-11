@@ -56,6 +56,11 @@ HANDLE_TARGET_OPCODE(INSERT_SUBREG)
 /// IMPLICIT_DEF - This is the MachineInstr-level equivalent of undef.
 HANDLE_TARGET_OPCODE(IMPLICIT_DEF)
 
+/// Explicit undef initialization used past IMPLICIT_DEF elimination in cases
+/// where an undef operand must be allocated to a different register than an
+/// early-clobber result operand.
+HANDLE_TARGET_OPCODE(INIT_UNDEF)
+
 /// SUBREG_TO_REG - Assert the value of bits in a super register.
 /// The result of this instruction is the value of the second operand inserted
 /// into the subregister specified by the third operand. All other bits are
@@ -217,6 +222,9 @@ HANDLE_TARGET_OPCODE(PATCHABLE_TYPED_EVENT_CALL)
 
 HANDLE_TARGET_OPCODE(ICALL_BRANCH_FUNNEL)
 
+/// Represents a use of the operand but generates no code.
+HANDLE_TARGET_OPCODE(FAKE_USE)
+
 // This is a fence with the singlethread scope. It represents a compiler memory
 // barrier, but does not correspond to any generated instruction.
 HANDLE_TARGET_OPCODE(MEMBARRIER)
@@ -281,6 +289,12 @@ HANDLE_TARGET_OPCODE(G_OR)
 /// Generic bitwise exclusive-or instruction.
 HANDLE_TARGET_OPCODE(G_XOR)
 
+/// Generic absolute difference signed instruction.
+HANDLE_TARGET_OPCODE(G_ABDS)
+
+/// Generic absolute difference unsigned instruction.
+HANDLE_TARGET_OPCODE(G_ABDU)
+
 
 HANDLE_TARGET_OPCODE(G_IMPLICIT_DEF)
 
@@ -293,6 +307,9 @@ HANDLE_TARGET_OPCODE(G_FRAME_INDEX)
 
 /// Generic reference to global value.
 HANDLE_TARGET_OPCODE(G_GLOBAL_VALUE)
+
+/// Generic ptrauth-signed reference to global value.
+HANDLE_TARGET_OPCODE(G_PTRAUTH_GLOBAL_VALUE)
 
 /// Generic instruction to materialize the address of an object in the constant
 /// pool.
@@ -351,6 +368,9 @@ HANDLE_TARGET_OPCODE(G_INTRINSIC_ROUND)
 /// INTRINSIC round to integer intrinsic.
 HANDLE_TARGET_OPCODE(G_INTRINSIC_LRINT)
 
+/// INTRINSIC long round to integer intrinsic.
+HANDLE_TARGET_OPCODE(G_INTRINSIC_LLRINT)
+
 /// INTRINSIC roundeven intrinsic.
 HANDLE_TARGET_OPCODE(G_INTRINSIC_ROUNDEVEN)
 
@@ -408,12 +428,14 @@ HANDLE_TARGET_OPCODE(G_ATOMICRMW_FMAX)
 HANDLE_TARGET_OPCODE(G_ATOMICRMW_FMIN)
 HANDLE_TARGET_OPCODE(G_ATOMICRMW_UINC_WRAP)
 HANDLE_TARGET_OPCODE(G_ATOMICRMW_UDEC_WRAP)
+HANDLE_TARGET_OPCODE(G_ATOMICRMW_USUB_COND)
+HANDLE_TARGET_OPCODE(G_ATOMICRMW_USUB_SAT)
 
 // Marker for start of Generic AtomicRMW opcodes
 HANDLE_TARGET_OPCODE_MARKER(GENERIC_ATOMICRMW_OP_START, G_ATOMICRMW_XCHG)
 
 // Marker for end of Generic AtomicRMW opcodes
-HANDLE_TARGET_OPCODE_MARKER(GENERIC_ATOMICRMW_OP_END, G_ATOMICRMW_UDEC_WRAP)
+HANDLE_TARGET_OPCODE_MARKER(GENERIC_ATOMICRMW_OP_END, G_ATOMICRMW_USUB_SAT)
 
 // Generic atomic fence
 HANDLE_TARGET_OPCODE(G_FENCE)
@@ -496,6 +518,12 @@ HANDLE_TARGET_OPCODE(G_ICMP)
 
 /// Generic floating-point comparison, also applicable to vectors.
 HANDLE_TARGET_OPCODE(G_FCMP)
+
+/// Generic signed 3-way comparison.
+HANDLE_TARGET_OPCODE(G_SCMP)
+
+/// Generic unsigned 3-way comparison.
+HANDLE_TARGET_OPCODE(G_UCMP)
 
 /// Generic select.
 HANDLE_TARGET_OPCODE(G_SELECT)
@@ -662,6 +690,12 @@ HANDLE_TARGET_OPCODE(G_SITOFP)
 /// Generic unsigned-int to float conversion
 HANDLE_TARGET_OPCODE(G_UITOFP)
 
+/// Generic saturating float to signed-int conversion
+HANDLE_TARGET_OPCODE(G_FPTOSI_SAT)
+
+/// Generic saturating float to unsigned-int conversion
+HANDLE_TARGET_OPCODE(G_FPTOUI_SAT)
+
 /// Generic FP absolute value.
 HANDLE_TARGET_OPCODE(G_FABS)
 
@@ -748,6 +782,12 @@ HANDLE_TARGET_OPCODE(G_SHUFFLE_VECTOR)
 /// Generic splatvector.
 HANDLE_TARGET_OPCODE(G_SPLAT_VECTOR)
 
+/// Generic stepvector.
+HANDLE_TARGET_OPCODE(G_STEP_VECTOR)
+
+/// Generic masked compress.
+HANDLE_TARGET_OPCODE(G_VECTOR_COMPRESS)
+
 /// Generic count trailing zeroes.
 HANDLE_TARGET_OPCODE(G_CTTZ)
 
@@ -777,6 +817,33 @@ HANDLE_TARGET_OPCODE(G_FCOS)
 
 /// Floating point sine.
 HANDLE_TARGET_OPCODE(G_FSIN)
+
+/// Floating point combined sine and cosine.
+HANDLE_TARGET_OPCODE(G_FSINCOS)
+
+/// Floating point tangent.
+HANDLE_TARGET_OPCODE(G_FTAN)
+
+/// Floating point arccosine.
+HANDLE_TARGET_OPCODE(G_FACOS)
+
+/// Floating point arcsine.
+HANDLE_TARGET_OPCODE(G_FASIN)
+
+/// Floating point arctangent.
+HANDLE_TARGET_OPCODE(G_FATAN)
+
+/// Floating point arctangent of y/x.
+HANDLE_TARGET_OPCODE(G_FATAN2)
+
+/// Floating point hyperbolic cosine.
+HANDLE_TARGET_OPCODE(G_FCOSH)
+
+/// Floating point hyperbolic sine.
+HANDLE_TARGET_OPCODE(G_FSINH)
+
+/// Floating point hyperbolic tangent.
+HANDLE_TARGET_OPCODE(G_FTANH)
 
 /// Floating point square root.
 HANDLE_TARGET_OPCODE(G_FSQRT)
@@ -836,6 +903,11 @@ HANDLE_TARGET_OPCODE(G_MEMMOVE)
 /// llvm.memset intrinsic
 HANDLE_TARGET_OPCODE(G_MEMSET)
 HANDLE_TARGET_OPCODE(G_BZERO)
+
+/// llvm.trap, llvm.debugtrap and llvm.ubsantrap intrinsics
+HANDLE_TARGET_OPCODE(G_TRAP)
+HANDLE_TARGET_OPCODE(G_DEBUGTRAP)
+HANDLE_TARGET_OPCODE(G_UBSANTRAP)
 
 /// Vector reductions
 HANDLE_TARGET_OPCODE(G_VECREDUCE_SEQ_FADD)

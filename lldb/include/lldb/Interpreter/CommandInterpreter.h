@@ -22,6 +22,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
 
@@ -92,15 +93,20 @@ public:
   /// \param[in] add_to_history
   ///    If \b true add the commands to the command history. If \b false, don't
   ///    add them.
+  /// \param[in] handle_repeats
+  ///    If \b true then treat empty lines as repeat commands even if the
+  ///    interpreter is non-interactive.
   CommandInterpreterRunOptions(LazyBool stop_on_continue,
                                LazyBool stop_on_error, LazyBool stop_on_crash,
                                LazyBool echo_commands, LazyBool echo_comments,
                                LazyBool print_results, LazyBool print_errors,
-                               LazyBool add_to_history)
+                               LazyBool add_to_history,
+                               LazyBool handle_repeats)
       : m_stop_on_continue(stop_on_continue), m_stop_on_error(stop_on_error),
         m_stop_on_crash(stop_on_crash), m_echo_commands(echo_commands),
         m_echo_comment_commands(echo_comments), m_print_results(print_results),
-        m_print_errors(print_errors), m_add_to_history(add_to_history) {}
+        m_print_errors(print_errors), m_add_to_history(add_to_history),
+        m_allow_repeats(handle_repeats) {}
 
   CommandInterpreterRunOptions() = default;
 
@@ -182,6 +188,12 @@ public:
     m_spawn_thread = spawn_thread ? eLazyBoolYes : eLazyBoolNo;
   }
 
+  bool GetAllowRepeats() const { return DefaultToNo(m_allow_repeats); }
+
+  void SetAllowRepeats(bool allow_repeats) {
+    m_allow_repeats = allow_repeats ? eLazyBoolYes : eLazyBoolNo;
+  }
+
   LazyBool m_stop_on_continue = eLazyBoolCalculate;
   LazyBool m_stop_on_error = eLazyBoolCalculate;
   LazyBool m_stop_on_crash = eLazyBoolCalculate;
@@ -192,6 +204,7 @@ public:
   LazyBool m_add_to_history = eLazyBoolCalculate;
   LazyBool m_auto_handle_events;
   LazyBool m_spawn_thread;
+  LazyBool m_allow_repeats = eLazyBoolCalculate;
 
 private:
   static bool DefaultToYes(LazyBool flag) {
@@ -255,9 +268,9 @@ public:
 
   // These two functions fill out the Broadcaster interface:
 
-  static ConstString &GetStaticBroadcasterClass();
+  static llvm::StringRef GetStaticBroadcasterClass();
 
-  ConstString &GetBroadcasterClass() const override {
+  llvm::StringRef GetBroadcasterClass() const override {
     return GetStaticBroadcasterClass();
   }
 
@@ -281,6 +294,10 @@ public:
   CommandObject *GetUserCommandObject(llvm::StringRef cmd,
                                       StringList *matches = nullptr,
                                       StringList *descriptions = nullptr) const;
+
+  CommandObject *
+  GetAliasCommandObject(llvm::StringRef cmd, StringList *matches = nullptr,
+                        StringList *descriptions = nullptr) const;
 
   /// Determine whether a root level, built-in command with this name exists.
   bool CommandExists(llvm::StringRef cmd) const;
@@ -560,6 +577,9 @@ public:
   bool GetPromptOnQuit() const;
   void SetPromptOnQuit(bool enable);
 
+  bool GetSaveTranscript() const;
+  void SetSaveTranscript(bool enable);
+
   bool GetSaveSessionOnQuit() const;
   void SetSaveSessionOnQuit(bool enable);
 
@@ -647,6 +667,7 @@ public:
   }
 
   llvm::json::Value GetStatistics();
+  const StructuredData::Array &GetTranscript() const;
 
 protected:
   friend class Debugger;
@@ -765,7 +786,24 @@ private:
   typedef llvm::StringMap<uint64_t> CommandUsageMap;
   CommandUsageMap m_command_usages;
 
+  /// Turn on settings `interpreter.save-transcript` for LLDB to populate
+  /// this stream. Otherwise this stream is empty.
   StreamString m_transcript_stream;
+
+  /// Contains a list of handled commands and their details. Each element in
+  /// the list is a dictionary with the following keys/values:
+  /// - "command" (string): The command that was given by the user.
+  /// - "commandName" (string): The name of the executed command.
+  /// - "commandArguments" (string): The arguments of the executed command.
+  /// - "output" (string): The output of the command. Empty ("") if no output.
+  /// - "error" (string): The error of the command. Empty ("") if no error.
+  /// - "durationInSeconds" (float): The time it took to execute the command.
+  /// - "timestampInEpochSeconds" (int): The timestamp when the command is
+  ///   executed.
+  ///
+  /// Turn on settings `interpreter.save-transcript` for LLDB to populate
+  /// this list. Otherwise this list is empty.
+  StructuredData::Array m_transcript;
 };
 
 } // namespace lldb_private

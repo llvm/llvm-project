@@ -1,17 +1,15 @@
 ; Test that storage for allocas with disjoint lifetimes is reused with stack
 ; tagging.
 
-; RUN: opt -S -aarch64-stack-tagging -stack-tagging-use-stack-safety=0 %s -o - | \
-; RUN:   llc --mattr=+mte -no-stack-coloring=false -o - | \
+; RUN: llc --mattr=+mte -no-stack-coloring=false -stack-tagging-use-stack-safety=0 -o - %s | \
 ; RUN:   FileCheck %s --check-prefix=COLOR
-; RUN: opt -S -aarch64-stack-tagging %s -stack-tagging-use-stack-safety=0 -o - | \
-; RUN:   llc --mattr=+mte -no-stack-coloring=true -o - | \
+; RUN: llc --mattr=+mte -no-stack-coloring=true -stack-tagging-use-stack-safety=0 -o - %s | \
 ; RUN:   FileCheck %s --check-prefix=NOCOLOR
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64"
 
-; COLOR: sub	sp, sp, #208
+; COLOR: sub	sp, sp, #192
 ; NOCOLOR: sub	sp, sp, #336
 
 define i32 @myCall_w2(i32 %in) sanitize_memtag {

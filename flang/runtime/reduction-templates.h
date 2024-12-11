@@ -53,9 +53,9 @@ inline RT_API_ATTRS void DoTotalReduction(const Descriptor &x, int dim,
   x.GetLowerBounds(xAt);
   if (mask) {
     CheckConformability(x, *mask, terminator, intrinsic, "ARRAY", "MASK");
-    SubscriptValue maskAt[maxRank];
-    mask->GetLowerBounds(maskAt);
     if (mask->rank() > 0) {
+      SubscriptValue maskAt[maxRank];
+      mask->GetLowerBounds(maskAt);
       for (auto elements{x.Elements()}; elements--;
            x.IncrementSubscripts(xAt), mask->IncrementSubscripts(maskAt)) {
         if (IsLogicalElementTrue(*mask, maskAt)) {
@@ -65,7 +65,7 @@ inline RT_API_ATTRS void DoTotalReduction(const Descriptor &x, int dim,
         }
       }
       return;
-    } else if (!IsLogicalElementTrue(*mask, maskAt)) {
+    } else if (!IsLogicalScalarTrue(*mask)) {
       // scalar MASK=.FALSE.: return identity value
       return;
     }
@@ -86,13 +86,22 @@ inline RT_API_ATTRS CppTypeFor<CAT, KIND> GetTotalReduction(const Descriptor &x,
   RUNTIME_CHECK(terminator, TypeCode(CAT, KIND) == x.type());
   using CppType = CppTypeFor<CAT, KIND>;
   DoTotalReduction<CppType>(x, dim, mask, accumulator, intrinsic, terminator);
-  CppType result;
+  if constexpr (std::is_void_v<CppType>) {
+    // Result is returned from accumulator, as in REDUCE() for derived type
 #ifdef _MSC_VER // work around MSVC spurious error
-  accumulator.GetResult(&result);
+    accumulator.GetResult();
 #else
-  accumulator.template GetResult(&result);
+    accumulator.template GetResult<CppType>();
 #endif
-  return result;
+  } else {
+    CppType result;
+#ifdef _MSC_VER // work around MSVC spurious error
+    accumulator.GetResult(&result);
+#else
+    accumulator.template GetResult<CppType>(&result);
+#endif
+    return result;
+  }
 }
 
 // For reductions on a dimension, e.g. SUM(array,DIM=2) where the shape
@@ -132,7 +141,7 @@ inline RT_API_ATTRS void ReduceDimToScalar(const Descriptor &x,
 #ifdef _MSC_VER // work around MSVC spurious error
   accumulator.GetResult(result, zeroBasedDim);
 #else
-  accumulator.template GetResult(result, zeroBasedDim);
+  accumulator.template GetResult<TYPE>(result, zeroBasedDim);
 #endif
 }
 
@@ -160,37 +169,8 @@ inline RT_API_ATTRS void ReduceDimMaskToScalar(const Descriptor &x,
 #ifdef _MSC_VER // work around MSVC spurious error
   accumulator.GetResult(result, zeroBasedDim);
 #else
-  accumulator.template GetResult(result, zeroBasedDim);
+  accumulator.template GetResult<TYPE>(result, zeroBasedDim);
 #endif
-}
-
-// Utility: establishes & allocates the result array for a partial
-// reduction (i.e., one with DIM=).
-static RT_API_ATTRS void CreatePartialReductionResult(Descriptor &result,
-    const Descriptor &x, std::size_t resultElementSize, int dim,
-    Terminator &terminator, const char *intrinsic, TypeCode typeCode) {
-  int xRank{x.rank()};
-  if (dim < 1 || dim > xRank) {
-    terminator.Crash(
-        "%s: bad DIM=%d for ARRAY with rank %d", intrinsic, dim, xRank);
-  }
-  int zeroBasedDim{dim - 1};
-  SubscriptValue resultExtent[maxRank];
-  for (int j{0}; j < zeroBasedDim; ++j) {
-    resultExtent[j] = x.GetDimension(j).Extent();
-  }
-  for (int j{zeroBasedDim + 1}; j < xRank; ++j) {
-    resultExtent[j - 1] = x.GetDimension(j).Extent();
-  }
-  result.Establish(typeCode, resultElementSize, nullptr, xRank - 1,
-      resultExtent, CFI_attribute_allocatable);
-  for (int j{0}; j + 1 < xRank; ++j) {
-    result.GetDimension(j).SetBounds(1, resultExtent[j]);
-  }
-  if (int stat{result.Allocate()}) {
-    terminator.Crash(
-        "%s: could not allocate memory for result; STAT=%d", intrinsic, stat);
-  }
 }
 
 // Partial reductions with DIM=
@@ -208,7 +188,6 @@ inline RT_API_ATTRS void PartialReduction(Descriptor &result,
   using CppType = CppTypeFor<CAT, KIND>;
   if (mask) {
     CheckConformability(x, *mask, terminator, intrinsic, "ARRAY", "MASK");
-    SubscriptValue maskAt[maxRank]; // contents unused
     if (mask->rank() > 0) {
       for (auto n{result.Elements()}; n-- > 0; result.IncrementSubscripts(at)) {
         accumulator.Reinitialize();
@@ -216,7 +195,7 @@ inline RT_API_ATTRS void PartialReduction(Descriptor &result,
             x, dim - 1, at, *mask, result.Element<CppType>(at), accumulator);
       }
       return;
-    } else if (!IsLogicalElementTrue(*mask, maskAt)) {
+    } else if (!IsLogicalScalarTrue(*mask)) {
       // scalar MASK=.FALSE.
       accumulator.Reinitialize();
       for (auto n{result.Elements()}; n-- > 0; result.IncrementSubscripts(at)) {
@@ -261,11 +240,10 @@ inline RT_API_ATTRS void PartialIntegerReduction(Descriptor &result,
       kind, terminator, result, x, dim, mask, terminator, intrinsic);
 }
 
-template <TypeCategory CAT, template <typename> class ACCUM>
+template <TypeCategory CAT, template <typename> class ACCUM, int MIN_KIND>
 struct PartialFloatingReductionHelper {
   template <int KIND> struct Functor {
-    static constexpr int Intermediate{
-        std::max(KIND, 8)}; // use at least "double" for intermediate results
+    static constexpr int Intermediate{std::max(KIND, MIN_KIND)};
     RT_API_ATTRS void operator()(Descriptor &result, const Descriptor &x,
         int dim, const Descriptor *mask, Terminator &terminator,
         const char *intrinsic) const {
@@ -281,7 +259,7 @@ struct PartialFloatingReductionHelper {
 
 template <template <typename> class INTEGER_ACCUM,
     template <typename> class REAL_ACCUM,
-    template <typename> class COMPLEX_ACCUM>
+    template <typename> class COMPLEX_ACCUM, int MIN_REAL_KIND>
 inline RT_API_ATTRS void TypedPartialNumericReduction(Descriptor &result,
     const Descriptor &x, int dim, const char *source, int line,
     const Descriptor *mask, const char *intrinsic) {
@@ -295,13 +273,13 @@ inline RT_API_ATTRS void TypedPartialNumericReduction(Descriptor &result,
     break;
   case TypeCategory::Real:
     ApplyFloatingPointKind<PartialFloatingReductionHelper<TypeCategory::Real,
-                               REAL_ACCUM>::template Functor,
+                               REAL_ACCUM, MIN_REAL_KIND>::template Functor,
         void>(catKind->second, terminator, result, x, dim, mask, terminator,
         intrinsic);
     break;
   case TypeCategory::Complex:
     ApplyFloatingPointKind<PartialFloatingReductionHelper<TypeCategory::Complex,
-                               COMPLEX_ACCUM>::template Functor,
+                               COMPLEX_ACCUM, MIN_REAL_KIND>::template Functor,
         void>(catKind->second, terminator, result, x, dim, mask, terminator,
         intrinsic);
     break;
@@ -340,13 +318,13 @@ RT_VAR_GROUP_BEGIN
 
 // Use at least double precision for accumulators.
 // Don't use __float128, it doesn't work with abs() or sqrt() yet.
-static constexpr RT_CONST_VAR_ATTRS int Norm2LargestLDKind {
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
-  16
-#elif LDBL_MANT_DIG == 64
-  10
+static constexpr RT_CONST_VAR_ATTRS int Norm2LargestLDKind{
+#if HAS_LDBL128 || HAS_FLOAT128
+    16
+#elif HAS_FLOAT80
+    10
 #else
-  8
+    8
 #endif
 };
 

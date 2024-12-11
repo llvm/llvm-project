@@ -60,8 +60,15 @@ Operation *PassExecutionAction::getOp() const {
 void Pass::anchor() {}
 
 /// Attempt to initialize the options of this pass from the given string.
-LogicalResult Pass::initializeOptions(StringRef options) {
-  return passOptions.parseFromString(options);
+LogicalResult Pass::initializeOptions(
+    StringRef options,
+    function_ref<LogicalResult(const Twine &)> errorHandler) {
+  std::string errStr;
+  llvm::raw_string_ostream os(errStr);
+  if (failed(passOptions.parseFromString(options, os))) {
+    return errorHandler(errStr);
+  }
+  return success();
 }
 
 /// Copy the option values from 'other', which is another instance of this
@@ -692,7 +699,7 @@ std::string OpToOpPassAdaptor::getAdaptorName() {
     os << '\'' << pm.getOpAnchorName() << '\'';
   });
   os << ']';
-  return os.str();
+  return name;
 }
 
 void OpToOpPassAdaptor::runOnOperation() {
@@ -725,7 +732,7 @@ void OpToOpPassAdaptor::runOnOperationImpl(bool verifyPasses) {
         unsigned initGeneration = mgr->impl->initializationGeneration;
         if (failed(runPipeline(*mgr, &op, am.nest(&op), verifyPasses,
                                initGeneration, instrumentor, &parentInfo)))
-          return signalPassFailure();
+          signalPassFailure();
       }
     }
   }
@@ -792,7 +799,8 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
   // An atomic failure variable for the async executors.
   std::vector<std::atomic<bool>> activePMs(asyncExecutors.size());
   std::fill(activePMs.begin(), activePMs.end(), false);
-  auto processFn = [&](OpPMInfo &opInfo) {
+  std::atomic<bool> hasFailure = false;
+  parallelForEach(context, opInfos, [&](OpPMInfo &opInfo) {
     // Find an executor for this operation.
     auto it = llvm::find_if(activePMs, [](std::atomic<bool> &isActive) {
       bool expectedInactive = false;
@@ -805,14 +813,15 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
     LogicalResult pipelineResult = runPipeline(
         pm, opInfo.op, opInfo.am, verifyPasses,
         pm.impl->initializationGeneration, instrumentor, &parentInfo);
+    if (failed(pipelineResult))
+      hasFailure.store(true);
 
     // Reset the active bit for this pass manager.
     activePMs[pmIndex].store(false);
-    return pipelineResult;
-  };
+  });
 
   // Signal a failure if any of the executors failed.
-  if (failed(failableParallelForEach(context, opInfos, processFn)))
+  if (hasFailure)
     signalPassFailure();
 }
 
@@ -930,11 +939,9 @@ AnalysisManager AnalysisManager::nestImmediate(Operation *op) {
   assert(impl->getOperation() == op->getParentOp() &&
          "expected immediate child operation");
 
-  auto it = impl->childAnalyses.find(op);
-  if (it == impl->childAnalyses.end())
-    it = impl->childAnalyses
-             .try_emplace(op, std::make_unique<NestedAnalysisMap>(op, impl))
-             .first;
+  auto [it, inserted] = impl->childAnalyses.try_emplace(op);
+  if (inserted)
+    it->second = std::make_unique<NestedAnalysisMap>(op, impl);
   return {it->second.get()};
 }
 

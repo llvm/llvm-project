@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -S -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s
 
 RWBuffer<float> Buffer;
 
@@ -12,5 +12,5 @@ void main(unsigned GI : SV_GroupIndex) {}
 //CHECK-NEXT: entry:
 //CHECK-NEXT:   call void @_GLOBAL__sub_I_GlobalConstructors.hlsl()
 //CHECK-NEXT:   %0 = call i32 @llvm.dx.flattened.thread.id.in.group()
-//CHECK-NEXT:   call void @"?main@@YAXI@Z"(i32 %0)
+//CHECK-NEXT:   call void @_Z4mainj(i32 %0)
 //CHECK-NEXT:   ret void

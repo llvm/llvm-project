@@ -11,16 +11,13 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -125,15 +122,12 @@ struct COFFParser {
   }
 
   unsigned getStringIndex(StringRef Str) {
-    StringMap<unsigned>::iterator i = StringTableMap.find(Str);
-    if (i == StringTableMap.end()) {
-      unsigned Index = StringTable.size();
+    auto [It, Inserted] = StringTableMap.try_emplace(Str, StringTable.size());
+    if (Inserted) {
       StringTable.append(Str.begin(), Str.end());
       StringTable.push_back(0);
-      StringTableMap[Str] = Index;
-      return Index;
     }
-    return i->second;
+    return It->second;
   }
 
   COFFYAML::Object &Obj;
@@ -359,9 +353,9 @@ static uint32_t initializeOptionalHeader(COFFParser &CP, uint16_t Magic,
       SizeOfInitializedData += S.Header.SizeOfRawData;
     if (S.Header.Characteristics & COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA)
       SizeOfUninitializedData += S.Header.SizeOfRawData;
-    if (S.Name.equals(".text"))
+    if (S.Name == ".text")
       Header->BaseOfCode = S.Header.VirtualAddress; // RVA
-    else if (S.Name.equals(".data"))
+    else if (S.Name == ".data")
       BaseOfData = S.Header.VirtualAddress; // RVA
     if (S.Header.VirtualAddress)
       SizeOfImage += alignTo(S.Header.VirtualSize, Header->SectionAlignment);

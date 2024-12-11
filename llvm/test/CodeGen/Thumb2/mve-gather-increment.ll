@@ -542,9 +542,7 @@ define arm_aapcs_vfpcc void @gather_inc_v8i16_simple(ptr noalias nocapture reado
 ; CHECK-NEXT:    .pad #28
 ; CHECK-NEXT:    sub sp, #28
 ; CHECK-NEXT:    cmp r2, #1
-; CHECK-NEXT:    str r1, [sp, #4] @ 4-byte Spill
-; CHECK-NEXT:    mov r1, r2
-; CHECK-NEXT:    str r2, [sp, #8] @ 4-byte Spill
+; CHECK-NEXT:    strd r1, r2, [sp, #4] @ 8-byte Folded Spill
 ; CHECK-NEXT:    blt .LBB11_5
 ; CHECK-NEXT:  @ %bb.1: @ %vector.ph.preheader
 ; CHECK-NEXT:    ldr r1, [sp, #8] @ 4-byte Reload
@@ -661,9 +659,7 @@ define arm_aapcs_vfpcc void @gather_inc_v8i16_complex(ptr noalias nocapture read
 ; CHECK-NEXT:    .pad #136
 ; CHECK-NEXT:    sub sp, #136
 ; CHECK-NEXT:    cmp r2, #1
-; CHECK-NEXT:    str r1, [sp, #64] @ 4-byte Spill
-; CHECK-NEXT:    mov r1, r2
-; CHECK-NEXT:    str r2, [sp, #68] @ 4-byte Spill
+; CHECK-NEXT:    strd r1, r2, [sp, #64] @ 8-byte Folded Spill
 ; CHECK-NEXT:    blt.w .LBB12_5
 ; CHECK-NEXT:  @ %bb.1: @ %vector.ph.preheader
 ; CHECK-NEXT:    ldr r1, [sp, #68] @ 4-byte Reload
@@ -952,11 +948,9 @@ define arm_aapcs_vfpcc void @gather_inc_v16i8_complex(ptr noalias nocapture read
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #152] @ 16-byte Spill
 ; CHECK-NEXT:    vldrw.u32 q1, [sp, #296] @ 16-byte Reload
 ; CHECK-NEXT:    vstrw.32 q0, [sp, #168] @ 16-byte Spill
-; CHECK-NEXT:    vmov q0, q2
-; CHECK-NEXT:    vmov q3, q5
-; CHECK-NEXT:    vadd.i32 q1, q1, r0
 ; CHECK-NEXT:    vldrw.u32 q0, [sp, #248] @ 16-byte Reload
 ; CHECK-NEXT:    vldrw.u32 q3, [sp, #216] @ 16-byte Reload
+; CHECK-NEXT:    vadd.i32 q1, q1, r0
 ; CHECK-NEXT:    vstrw.32 q5, [sp, #120] @ 16-byte Spill
 ; CHECK-NEXT:    vadd.i32 q0, q0, r0
 ; CHECK-NEXT:    subs.w r11, r11, #16
@@ -1243,9 +1237,7 @@ define arm_aapcs_vfpcc void @gather_inc_v16i8_simple(ptr noalias nocapture reado
 ; CHECK-NEXT:    .pad #64
 ; CHECK-NEXT:    sub sp, #64
 ; CHECK-NEXT:    cmp r2, #1
-; CHECK-NEXT:    str r1, [sp, #56] @ 4-byte Spill
-; CHECK-NEXT:    mov r1, r2
-; CHECK-NEXT:    str r2, [sp, #60] @ 4-byte Spill
+; CHECK-NEXT:    strd r1, r2, [sp, #56] @ 8-byte Folded Spill
 ; CHECK-NEXT:    blt.w .LBB14_5
 ; CHECK-NEXT:  @ %bb.1: @ %vector.ph.preheader
 ; CHECK-NEXT:    adr r5, .LCPI14_3

@@ -1,11 +1,11 @@
 // Inline comdat method definition example.
 // The VTable is in a comdat and defined anywhere the inline definition is.
 
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O1 -S -o - -emit-llvm | FileCheck %s
+// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O1 -o - -emit-llvm | FileCheck %s
 
 // CHECK: $_ZTV1A = comdat any
-// CHECK: $_ZTS1A = comdat any
 // CHECK: $_ZTI1A = comdat any
+// CHECK: $_ZTS1A = comdat any
 // CHECK: $_ZTI1A.rtti_proxy = comdat any
 
 // The VTable is linkonce_odr and in a comdat here bc it’s key function is inline defined.

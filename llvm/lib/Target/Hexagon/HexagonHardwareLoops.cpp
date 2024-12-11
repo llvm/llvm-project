@@ -42,7 +42,6 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -118,8 +117,8 @@ namespace {
     StringRef getPassName() const override { return "Hexagon Hardware Loops"; }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineDominatorTree>();
-      AU.addRequired<MachineLoopInfo>();
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
+      AU.addRequired<MachineLoopInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -368,8 +367,8 @@ namespace {
 
 INITIALIZE_PASS_BEGIN(HexagonHardwareLoops, "hwloops",
                       "Hexagon Hardware Loops", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(HexagonHardwareLoops, "hwloops",
                     "Hexagon Hardware Loops", false, false)
 
@@ -384,9 +383,9 @@ bool HexagonHardwareLoops::runOnMachineFunction(MachineFunction &MF) {
 
   bool Changed = false;
 
-  MLI = &getAnalysis<MachineLoopInfo>();
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   MRI = &MF.getRegInfo();
-  MDT = &getAnalysis<MachineDominatorTree>();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   const HexagonSubtarget &HST = MF.getSubtarget<HexagonSubtarget>();
   TII = HST.getInstrInfo();
   TRI = HST.getRegisterInfo();
@@ -1006,8 +1005,7 @@ bool HexagonHardwareLoops::isInvalidLoopOperation(const MachineInstr *MI,
 
   static const Register Regs01[] = { LC0, SA0, LC1, SA1 };
   static const Register Regs1[]  = { LC1, SA1 };
-  auto CheckRegs = IsInnerHWLoop ? ArrayRef(Regs01, std::size(Regs01))
-                                 : ArrayRef(Regs1, std::size(Regs1));
+  auto CheckRegs = IsInnerHWLoop ? ArrayRef(Regs01) : ArrayRef(Regs1);
   for (Register R : CheckRegs)
     if (MI->modifiesRegister(R, TRI))
       return true;
@@ -1972,7 +1970,7 @@ MachineBasicBlock *HexagonHardwareLoops::createPreheaderForLoop(
 
   MachineLoop *ParentLoop = L->getParentLoop();
   if (ParentLoop)
-    ParentLoop->addBasicBlockToLoop(NewPH, MLI->getBase());
+    ParentLoop->addBasicBlockToLoop(NewPH, *MLI);
 
   // Update the dominator information with the new preheader.
   if (MDT) {

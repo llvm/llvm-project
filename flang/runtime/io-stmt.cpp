@@ -21,12 +21,19 @@
 #include <type_traits>
 
 namespace Fortran::runtime::io {
+RT_OFFLOAD_API_GROUP_BEGIN
 
 bool IoStatementBase::Emit(const char *, std::size_t, std::size_t) {
   return false;
 }
 
 std::size_t IoStatementBase::GetNextInputBytes(const char *&p) {
+  p = nullptr;
+  return 0;
+}
+
+std::size_t IoStatementBase::ViewBytesInRecord(
+    const char *&p, bool forward) const {
   p = nullptr;
   return 0;
 }
@@ -44,10 +51,6 @@ Fortran::common::optional<DataEdit> IoStatementBase::GetNextDataEdit(
   return Fortran::common::nullopt;
 }
 
-ExternalFileUnit *IoStatementBase::GetExternalFileUnit() const {
-  return nullptr;
-}
-
 bool IoStatementBase::BeginReadingRecord() { return true; }
 
 void IoStatementBase::FinishReadingRecord() {}
@@ -55,6 +58,12 @@ void IoStatementBase::FinishReadingRecord() {}
 void IoStatementBase::HandleAbsolutePosition(std::int64_t) {}
 
 void IoStatementBase::HandleRelativePosition(std::int64_t) {}
+
+std::int64_t IoStatementBase::InquirePos() { return 0; }
+
+ExternalFileUnit *IoStatementBase::GetExternalFileUnit() const {
+  return nullptr;
+}
 
 bool IoStatementBase::Inquire(InquiryKeywordHash, char *, std::size_t) {
   return false;
@@ -69,8 +78,6 @@ bool IoStatementBase::Inquire(InquiryKeywordHash, std::int64_t, bool &) {
 bool IoStatementBase::Inquire(InquiryKeywordHash, std::int64_t &) {
   return false;
 }
-
-std::int64_t IoStatementBase::InquirePos() { return 0; }
 
 void IoStatementBase::BadInquiryKeywordHashCrash(InquiryKeywordHash inquiry) {
   char buffer[16];
@@ -103,6 +110,8 @@ template <Direction DIR>
 std::size_t InternalIoStatementState<DIR>::GetNextInputBytes(const char *&p) {
   return unit_.GetNextInputBytes(p, *this);
 }
+
+// InternalIoStatementState<DIR>::ViewBytesInRecord() not needed or defined
 
 template <Direction DIR>
 bool InternalIoStatementState<DIR>::AdvanceRecord(int n) {
@@ -142,21 +151,23 @@ std::int64_t InternalIoStatementState<DIR>::InquirePos() {
 }
 
 template <Direction DIR, typename CHAR>
+RT_API_ATTRS
 InternalFormattedIoStatementState<DIR, CHAR>::InternalFormattedIoStatementState(
     Buffer buffer, std::size_t length, const CharType *format,
     std::size_t formatLength, const Descriptor *formatDescriptor,
     const char *sourceFile, int sourceLine)
     : InternalIoStatementState<DIR>{buffer, length, sourceFile, sourceLine},
-      ioStatementState_{*this}, format_{*this, format, formatLength,
-                                    formatDescriptor} {}
+      ioStatementState_{*this},
+      format_{*this, format, formatLength, formatDescriptor} {}
 
 template <Direction DIR, typename CHAR>
+RT_API_ATTRS
 InternalFormattedIoStatementState<DIR, CHAR>::InternalFormattedIoStatementState(
     const Descriptor &d, const CharType *format, std::size_t formatLength,
     const Descriptor *formatDescriptor, const char *sourceFile, int sourceLine)
     : InternalIoStatementState<DIR>{d, sourceFile, sourceLine},
-      ioStatementState_{*this}, format_{*this, format, formatLength,
-                                    formatDescriptor} {}
+      ioStatementState_{*this},
+      format_{*this, format, formatLength, formatDescriptor} {}
 
 template <Direction DIR, typename CHAR>
 void InternalFormattedIoStatementState<DIR, CHAR>::CompleteOperation() {
@@ -217,7 +228,11 @@ ExternalIoStatementBase::ExternalIoStatementBase(
 
 MutableModes &ExternalIoStatementBase::mutableModes() {
   if (const ChildIo * child{unit_.GetChildIo()}) {
+#if !defined(RT_DEVICE_AVOID_RECURSION)
     return child->parent().mutableModes();
+#else
+    ReportUnsupportedChildIo();
+#endif
   }
   return unit_.modes;
 }
@@ -228,7 +243,15 @@ int ExternalIoStatementBase::EndIoStatement() {
   CompleteOperation();
   auto result{IoStatementBase::EndIoStatement()};
 #if !defined(RT_USE_PSEUDO_FILE_UNIT)
+  auto unitNumber{unit_.unitNumber()};
   unit_.EndIoStatement(); // annihilates *this in unit_.u_
+  if (destroy_) {
+    if (ExternalFileUnit *
+        toClose{ExternalFileUnit::LookUpForClose(unitNumber)}) {
+      toClose->Close(CloseStatus::Delete, *this);
+      toClose->DestroyClosed();
+    }
+  }
 #else
   // Fetch the unit pointer before *this disappears.
   ExternalFileUnit *unitPtr{&unit_};
@@ -314,8 +337,7 @@ void OpenStatementState::CompleteOperation() {
   }
   if (!wasExtant_ && InError()) {
     // Release the new unit on failure
-    unit().CloseUnit(CloseStatus::Delete, *this);
-    unit().DestroyClosed();
+    set_destroy();
   }
   IoStatementBase::CompleteOperation();
 }
@@ -404,6 +426,12 @@ bool ExternalIoStatementState<DIR>::Emit(
 template <Direction DIR>
 std::size_t ExternalIoStatementState<DIR>::GetNextInputBytes(const char *&p) {
   return unit().GetNextInputBytes(p, *this);
+}
+
+template <Direction DIR>
+std::size_t ExternalIoStatementState<DIR>::ViewBytesInRecord(
+    const char *&p, bool forward) const {
+  return unit().ViewBytesInRecord(p, forward);
 }
 
 template <Direction DIR>
@@ -888,17 +916,29 @@ ChildIoStatementState<DIR>::ChildIoStatementState(
 
 template <Direction DIR>
 MutableModes &ChildIoStatementState<DIR>::mutableModes() {
+#if !defined(RT_DEVICE_AVOID_RECURSION)
   return child_.parent().mutableModes();
+#else
+  ReportUnsupportedChildIo();
+#endif
 }
 
 template <Direction DIR>
 ConnectionState &ChildIoStatementState<DIR>::GetConnectionState() {
+#if !defined(RT_DEVICE_AVOID_RECURSION)
   return child_.parent().GetConnectionState();
+#else
+  ReportUnsupportedChildIo();
+#endif
 }
 
 template <Direction DIR>
 ExternalFileUnit *ChildIoStatementState<DIR>::GetExternalFileUnit() const {
+#if !defined(RT_DEVICE_AVOID_RECURSION)
   return child_.parent().GetExternalFileUnit();
+#else
+  ReportUnsupportedChildIo();
+#endif
 }
 
 template <Direction DIR> int ChildIoStatementState<DIR>::EndIoStatement() {
@@ -911,22 +951,38 @@ template <Direction DIR> int ChildIoStatementState<DIR>::EndIoStatement() {
 template <Direction DIR>
 bool ChildIoStatementState<DIR>::Emit(
     const char *data, std::size_t bytes, std::size_t elementBytes) {
+#if !defined(RT_DEVICE_AVOID_RECURSION)
   return child_.parent().Emit(data, bytes, elementBytes);
+#else
+  ReportUnsupportedChildIo();
+#endif
 }
 
 template <Direction DIR>
 std::size_t ChildIoStatementState<DIR>::GetNextInputBytes(const char *&p) {
+#if !defined(RT_DEVICE_AVOID_RECURSION)
   return child_.parent().GetNextInputBytes(p);
+#else
+  ReportUnsupportedChildIo();
+#endif
 }
 
 template <Direction DIR>
 void ChildIoStatementState<DIR>::HandleAbsolutePosition(std::int64_t n) {
+#if !defined(RT_DEVICE_AVOID_RECURSION)
   return child_.parent().HandleAbsolutePosition(n);
+#else
+  ReportUnsupportedChildIo();
+#endif
 }
 
 template <Direction DIR>
 void ChildIoStatementState<DIR>::HandleRelativePosition(std::int64_t n) {
+#if !defined(RT_DEVICE_AVOID_RECURSION)
   return child_.parent().HandleRelativePosition(n);
+#else
+  ReportUnsupportedChildIo();
+#endif
 }
 
 template <Direction DIR, typename CHAR>
@@ -954,13 +1010,21 @@ int ChildFormattedIoStatementState<DIR, CHAR>::EndIoStatement() {
 
 template <Direction DIR, typename CHAR>
 bool ChildFormattedIoStatementState<DIR, CHAR>::AdvanceRecord(int n) {
+#if !defined(RT_DEVICE_AVOID_RECURSION)
   return this->child().parent().AdvanceRecord(n);
+#else
+  this->ReportUnsupportedChildIo();
+#endif
 }
 
 template <Direction DIR>
 bool ChildUnformattedIoStatementState<DIR>::Receive(
     char *data, std::size_t bytes, std::size_t elementBytes) {
+#if !defined(RT_DEVICE_AVOID_RECURSION)
   return this->child().parent().Receive(data, bytes, elementBytes);
+#else
+  this->ReportUnsupportedChildIo();
+#endif
 }
 
 template <Direction DIR> int ChildListIoStatementState<DIR>::EndIoStatement() {
@@ -1004,7 +1068,9 @@ void ExternalMiscIoStatementState::CompleteOperation() {
   switch (which_) {
   case Flush:
     ext.FlushOutput(*this);
+#if !defined(RT_DEVICE_COMPILATION)
     std::fflush(nullptr); // flushes C stdio output streams (12.9(2))
+#endif
     break;
   case Backspace:
     ext.BackspaceRecord(*this);
@@ -1508,4 +1574,5 @@ int ErroneousIoStatementState::EndIoStatement() {
   return IoStatementBase::EndIoStatement();
 }
 
+RT_OFFLOAD_API_GROUP_END
 } // namespace Fortran::runtime::io

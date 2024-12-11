@@ -67,14 +67,11 @@ public:
   static bool
   supportedIntrinsicProcReduction(const omp::clause::ProcedureDesignator &pd);
 
-  static const Fortran::semantics::SourceName
-  getRealName(const Fortran::semantics::Symbol *symbol);
+  static const semantics::SourceName
+  getRealName(const semantics::Symbol *symbol);
 
-  static const Fortran::semantics::SourceName
+  static const semantics::SourceName
   getRealName(const omp::clause::ProcedureDesignator &pd);
-
-  static bool
-  doReductionByRef(const llvm::SmallVectorImpl<mlir::Value> &reductionVars);
 
   static std::string getReductionName(llvm::StringRef name,
                                       const fir::KindMapping &kindMap,
@@ -100,6 +97,10 @@ public:
   static mlir::Value getReductionOperation(fir::FirOpBuilder &builder,
                                            mlir::Type type, mlir::Location loc,
                                            mlir::Value op1, mlir::Value op2);
+  template <typename FloatOp, typename IntegerOp, typename ComplexOp>
+  static mlir::Value getReductionOperation(fir::FirOpBuilder &builder,
+                                           mlir::Type type, mlir::Location loc,
+                                           mlir::Value op1, mlir::Value op2);
 
   static mlir::Value createScalarCombiner(fir::FirOpBuilder &builder,
                                           mlir::Location loc,
@@ -120,13 +121,12 @@ public:
   /// Creates a reduction declaration and associates it with an OpenMP block
   /// directive.
   static void addDeclareReduction(
-      mlir::Location currentLocation,
-      Fortran::lower::AbstractConverter &converter,
+      mlir::Location currentLocation, lower::AbstractConverter &converter,
       const omp::clause::Reduction &reduction,
       llvm::SmallVectorImpl<mlir::Value> &reductionVars,
+      llvm::SmallVectorImpl<bool> &reduceVarByRef,
       llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
-      llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
-          *reductionSymbols = nullptr);
+      llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols);
 };
 
 template <typename FloatOp, typename IntegerOp>
@@ -136,10 +136,24 @@ ReductionProcessor::getReductionOperation(fir::FirOpBuilder &builder,
                                           mlir::Value op1, mlir::Value op2) {
   type = fir::unwrapRefType(type);
   assert(type.isIntOrIndexOrFloat() &&
-         "only integer and float types are currently supported");
+         "only integer, float and complex types are currently supported");
   if (type.isIntOrIndex())
     return builder.create<IntegerOp>(loc, op1, op2);
   return builder.create<FloatOp>(loc, op1, op2);
+}
+
+template <typename FloatOp, typename IntegerOp, typename ComplexOp>
+mlir::Value
+ReductionProcessor::getReductionOperation(fir::FirOpBuilder &builder,
+                                          mlir::Type type, mlir::Location loc,
+                                          mlir::Value op1, mlir::Value op2) {
+  assert((type.isIntOrIndexOrFloat() || fir::isa_complex(type)) &&
+         "only integer, float and complex types are currently supported");
+  if (type.isIntOrIndex())
+    return builder.create<IntegerOp>(loc, op1, op2);
+  if (fir::isa_real(type))
+    return builder.create<FloatOp>(loc, op1, op2);
+  return builder.create<ComplexOp>(loc, op1, op2);
 }
 
 } // namespace omp

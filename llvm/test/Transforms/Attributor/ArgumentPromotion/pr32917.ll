@@ -7,8 +7,8 @@
 @a = common local_unnamed_addr global i32 0, align 4
 
 ;.
-; CHECK: @[[B:[a-zA-Z0-9_$"\\.-]+]] = common local_unnamed_addr global i32 0, align 4
-; CHECK: @[[A:[a-zA-Z0-9_$"\\.-]+]] = common local_unnamed_addr global i32 0, align 4
+; CHECK: @b = common local_unnamed_addr global i32 0, align 4
+; CHECK: @a = common local_unnamed_addr global i32 0, align 4
 ;.
 define i32 @fn2() local_unnamed_addr {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn

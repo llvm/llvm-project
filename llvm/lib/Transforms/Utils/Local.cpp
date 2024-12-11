@@ -59,6 +59,7 @@
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
@@ -110,6 +111,12 @@ static cl::opt<unsigned> PHICSENumPHISmallSize(
     cl::desc(
         "When the basic block contains not more than this number of PHI nodes, "
         "perform a (faster!) exhaustive search instead of set-driven one."));
+
+static cl::opt<unsigned> MaxPhiEntriesIncreaseAfterRemovingEmptyBlock(
+    "max-phi-entries-increase-after-removing-empty-block", cl::init(1000),
+    cl::Hidden,
+    cl::desc("Stop removing an empty block if removing it will introduce more "
+             "than this number of phi entries in its successor"));
 
 // Max recursion depth for collectBitParts used when detecting bswap and
 // bitreverse idioms.
@@ -230,7 +237,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
           // Remove weight for this case.
           std::swap(Weights[Idx + 1], Weights.back());
           Weights.pop_back();
-          setBranchWeights(*SI, Weights);
+          setBranchWeights(*SI, Weights, hasBranchWeightOrigin(MD));
         }
         // Remove this entry.
         BasicBlock *ParentBB = SI->getParent();
@@ -473,6 +480,12 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
     // Safe to delete llvm.stacksave and launder.invariant.group if dead.
     if (II->getIntrinsicID() == Intrinsic::stacksave ||
         II->getIntrinsicID() == Intrinsic::launder_invariant_group)
+      return true;
+
+    // Intrinsics declare sideeffects to prevent them from moving, but they are
+    // nops without users.
+    if (II->getIntrinsicID() == Intrinsic::allow_runtime_check ||
+        II->getIntrinsicID() == Intrinsic::allow_ubsan_check)
       return true;
 
     if (II->isLifetimeStartOrEnd()) {
@@ -724,7 +737,7 @@ simplifyAndDCEInstruction(Instruction *I,
 bool llvm::SimplifyInstructionsInBlock(BasicBlock *BB,
                                        const TargetLibraryInfo *TLI) {
   bool MadeChange = false;
-  const DataLayout &DL = BB->getModule()->getDataLayout();
+  const DataLayout &DL = BB->getDataLayout();
 
 #ifndef NDEBUG
   // In debug builds, ensure that the terminator of the block is never replaced
@@ -912,7 +925,7 @@ CanPropagatePredecessorsForPHIs(BasicBlock *BB, BasicBlock *Succ,
 }
 
 using PredBlockVector = SmallVector<BasicBlock *, 16>;
-using IncomingValueMap = DenseMap<BasicBlock *, Value *>;
+using IncomingValueMap = SmallDenseMap<BasicBlock *, Value *, 16>;
 
 /// Determines the value to use as the phi node input for a block.
 ///
@@ -1010,7 +1023,6 @@ static void replaceUndefValuesInPhi(PHINode *PN,
 static bool
 CanRedirectPredsOfEmptyBBToSucc(BasicBlock *BB, BasicBlock *Succ,
                                 const SmallPtrSetImpl<BasicBlock *> &BBPreds,
-                                const SmallPtrSetImpl<BasicBlock *> &SuccPreds,
                                 BasicBlock *&CommonPred) {
 
   // There must be phis in BB, otherwise BB will be merged into Succ directly
@@ -1021,8 +1033,14 @@ CanRedirectPredsOfEmptyBBToSucc(BasicBlock *BB, BasicBlock *Succ,
   if (!BB->hasNPredecessorsOrMore(2))
     return false;
 
-  // Get single common predecessors of both BB and Succ
-  for (BasicBlock *SuccPred : SuccPreds) {
+  if (any_of(BBPreds, [](const BasicBlock *Pred) {
+        return isa<IndirectBrInst>(Pred->getTerminator());
+      }))
+    return false;
+
+  // Get the single common predecessor of both BB and Succ. Return false
+  // when there are more than one common predecessors.
+  for (BasicBlock *SuccPred : predecessors(Succ)) {
     if (BBPreds.count(SuccPred)) {
       if (CommonPred)
         return false;
@@ -1031,6 +1049,33 @@ CanRedirectPredsOfEmptyBBToSucc(BasicBlock *BB, BasicBlock *Succ,
   }
 
   return true;
+}
+
+/// Check whether removing \p BB will make the phis in its \p Succ have too
+/// many incoming entries. This function does not check whether \p BB is
+/// foldable or not.
+static bool introduceTooManyPhiEntries(BasicBlock *BB, BasicBlock *Succ) {
+  // If BB only has one predecessor, then removing it will not introduce more
+  // incoming edges for phis.
+  if (BB->hasNPredecessors(1))
+    return false;
+  unsigned NumPreds = pred_size(BB);
+  unsigned NumChangedPhi = 0;
+  for (auto &Phi : Succ->phis()) {
+    // If the incoming value is a phi and the phi is defined in BB,
+    // then removing BB will not increase the total phi entries of the ir.
+    if (auto *IncomingPhi = dyn_cast<PHINode>(Phi.getIncomingValueForBlock(BB)))
+      if (IncomingPhi->getParent() == BB)
+        continue;
+    // Otherwise, we need to add entries to the phi
+    NumChangedPhi++;
+  }
+  // For every phi that needs to be changed, (NumPreds - 1) new entries will be
+  // added. If the total increase in phi entries exceeds
+  // MaxPhiEntriesIncreaseAfterRemovingEmptyBlock, it will be considered as
+  // introducing too many new phi entries.
+  return (NumPreds - 1) * NumChangedPhi >
+         MaxPhiEntriesIncreaseAfterRemovingEmptyBlock;
 }
 
 /// Replace a value flowing from a block to a phi with
@@ -1088,11 +1133,9 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
       PN->addIncoming(OldValPN->getIncomingValueForBlock(CommonPred), BB);
 
   } else {
-    for (unsigned i = 0, e = BBPreds.size(); i != e; ++i) {
+    for (BasicBlock *PredBB : BBPreds) {
       // Update existing incoming values in PN for this
       // predecessor of BB.
-      BasicBlock *PredBB = BBPreds[i];
-
       if (PredBB == CommonPred)
         continue;
 
@@ -1121,20 +1164,18 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     return false;
 
   SmallPtrSet<BasicBlock *, 16> BBPreds(pred_begin(BB), pred_end(BB));
-  SmallPtrSet<BasicBlock *, 16> SuccPreds(pred_begin(Succ), pred_end(Succ));
 
   // The single common predecessor of BB and Succ when BB cannot be killed
   BasicBlock *CommonPred = nullptr;
 
   bool BBKillable = CanPropagatePredecessorsForPHIs(BB, Succ, BBPreds);
 
-  // Even if we can not fold bB into Succ, we may be able to redirect the
+  // Even if we can not fold BB into Succ, we may be able to redirect the
   // predecessors of BB to Succ.
-  bool BBPhisMergeable =
-      BBKillable ||
-      CanRedirectPredsOfEmptyBBToSucc(BB, Succ, BBPreds, SuccPreds, CommonPred);
+  bool BBPhisMergeable = BBKillable || CanRedirectPredsOfEmptyBBToSucc(
+                                           BB, Succ, BBPreds, CommonPred);
 
-  if (!BBKillable && !BBPhisMergeable)
+  if ((!BBKillable && !BBPhisMergeable) || introduceTooManyPhiEntries(BB, Succ))
     return false;
 
   // Check to see if merging these blocks/phis would cause conflicts for any of
@@ -1257,7 +1298,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     // All predecessors of BB (except the common predecessor) will be moved to
     // Succ.
     Updates.reserve(Updates.size() + 2 * pred_size(BB) + 1);
-
+    SmallPtrSet<BasicBlock *, 16> SuccPreds(pred_begin(Succ), pred_end(Succ));
     for (auto *PredOfBB : predecessors(BB)) {
       // Do not modify those common predecessors of BB and Succ
       if (!SuccPreds.contains(PredOfBB))
@@ -1501,7 +1542,8 @@ Align llvm::tryEnforceAlignment(Value *V, Align PrefAlign,
 
     // If the preferred alignment is greater than the natural stack alignment
     // then don't round up. This avoids dynamic stack realignment.
-    if (DL.exceedsNaturalStackAlignment(PrefAlign))
+    MaybeAlign StackAlign = DL.getStackAlignment();
+    if (StackAlign && PrefAlign > *StackAlign)
       return CurrentAlign;
     AI->setAlignment(PrefAlign);
     return PrefAlign;
@@ -1594,14 +1636,15 @@ static bool PhiHasDebugValue(DILocalVariable *DIVar,
 /// value when doing the comparison. E.g. an i1 value will be identified as
 /// covering an n-bit fragment, if the store size of i1 is at least n bits.
 static bool valueCoversEntireFragment(Type *ValTy, DbgVariableIntrinsic *DII) {
-  const DataLayout &DL = DII->getModule()->getDataLayout();
+  const DataLayout &DL = DII->getDataLayout();
   TypeSize ValueSize = DL.getTypeAllocSizeInBits(ValTy);
-  if (std::optional<uint64_t> FragmentSize = DII->getFragmentSizeInBits())
+  if (std::optional<uint64_t> FragmentSize =
+          DII->getExpression()->getActiveBits(DII->getVariable()))
     return TypeSize::isKnownGE(ValueSize, TypeSize::getFixed(*FragmentSize));
 
   // We can't always calculate the size of the DI variable (e.g. if it is a
   // VLA). Try to use the size of the alloca that the dbg intrinsic describes
-  // intead.
+  // instead.
   if (DII->isAddressOfVariable()) {
     // DII should have exactly 1 location when it is an address.
     assert(DII->getNumVariableLocationOps() == 1 &&
@@ -1622,12 +1665,13 @@ static bool valueCoversEntireFragment(Type *ValTy, DbgVariableIntrinsic *DII) {
 static bool valueCoversEntireFragment(Type *ValTy, DbgVariableRecord *DVR) {
   const DataLayout &DL = DVR->getModule()->getDataLayout();
   TypeSize ValueSize = DL.getTypeAllocSizeInBits(ValTy);
-  if (std::optional<uint64_t> FragmentSize = DVR->getFragmentSizeInBits())
+  if (std::optional<uint64_t> FragmentSize =
+          DVR->getExpression()->getActiveBits(DVR->getVariable()))
     return TypeSize::isKnownGE(ValueSize, TypeSize::getFixed(*FragmentSize));
 
   // We can't always calculate the size of the DI variable (e.g. if it is a
   // VLA). Try to use the size of the alloca that the dbg intrinsic describes
-  // intead.
+  // instead.
   if (DVR->isAddressOfVariable()) {
     // DVR should have exactly 1 location when it is an address.
     assert(DVR->getNumVariableLocationOps() == 1 &&
@@ -1651,7 +1695,7 @@ static void insertDbgValueOrDbgVariableRecord(DIBuilder &Builder, Value *DV,
   if (!UseNewDbgInfoFormat) {
     auto DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
                                                   (Instruction *)nullptr);
-    DbgVal.get<Instruction *>()->insertBefore(Instr);
+    cast<Instruction *>(DbgVal)->insertBefore(Instr);
   } else {
     // RemoveDIs: if we're using the new debug-info format, allocate a
     // DbgVariableRecord directly instead of a dbg.value intrinsic.
@@ -1668,7 +1712,7 @@ static void insertDbgValueOrDbgVariableRecordAfter(
   if (!UseNewDbgInfoFormat) {
     auto DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
                                                   (Instruction *)nullptr);
-    DbgVal.get<Instruction *>()->insertAfter(&*Instr);
+    cast<Instruction *>(DbgVal)->insertAfter(&*Instr);
   } else {
     // RemoveDIs: if we're using the new debug-info format, allocate a
     // DbgVariableRecord directly instead of a dbg.value intrinsic.
@@ -1719,7 +1763,27 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
   // For now, when there is a store to parts of the variable (but we do not
   // know which part) we insert an dbg.value intrinsic to indicate that we
   // know nothing about the variable's content.
-  DV = UndefValue::get(DV->getType());
+  DV = PoisonValue::get(DV->getType());
+  insertDbgValueOrDbgVariableRecord(Builder, DV, DIVar, DIExpr, NewLoc,
+                                    SI->getIterator());
+}
+
+static DIExpression *dropInitialDeref(const DIExpression *DIExpr) {
+  int NumEltDropped = DIExpr->getElements()[0] == dwarf::DW_OP_LLVM_arg ? 3 : 1;
+  return DIExpression::get(DIExpr->getContext(),
+                           DIExpr->getElements().drop_front(NumEltDropped));
+}
+
+void llvm::InsertDebugValueAtStoreLoc(DbgVariableIntrinsic *DII, StoreInst *SI,
+                                      DIBuilder &Builder) {
+  auto *DIVar = DII->getVariable();
+  assert(DIVar && "Missing variable");
+  auto *DIExpr = DII->getExpression();
+  DIExpr = dropInitialDeref(DIExpr);
+  Value *DV = SI->getValueOperand();
+
+  DebugLoc NewLoc = getDebugValueLoc(DII);
+
   insertDbgValueOrDbgVariableRecord(Builder, DV, DIVar, DIExpr, NewLoc,
                                     SI->getIterator());
 }
@@ -1791,11 +1855,25 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
   // For now, when there is a store to parts of the variable (but we do not
   // know which part) we insert an dbg.value intrinsic to indicate that we
   // know nothing about the variable's content.
-  DV = UndefValue::get(DV->getType());
+  DV = PoisonValue::get(DV->getType());
   ValueAsMetadata *DVAM = ValueAsMetadata::get(DV);
   DbgVariableRecord *NewDVR =
       new DbgVariableRecord(DVAM, DIVar, DIExpr, NewLoc.get());
   SI->getParent()->insertDbgRecordBefore(NewDVR, SI->getIterator());
+}
+
+void llvm::InsertDebugValueAtStoreLoc(DbgVariableRecord *DVR, StoreInst *SI,
+                                      DIBuilder &Builder) {
+  auto *DIVar = DVR->getVariable();
+  assert(DIVar && "Missing variable");
+  auto *DIExpr = DVR->getExpression();
+  DIExpr = dropInitialDeref(DIExpr);
+  Value *DV = SI->getValueOperand();
+
+  DebugLoc NewLoc = getDebugValueLoc(DVR);
+
+  insertDbgValueOrDbgVariableRecord(Builder, DV, DIVar, DIExpr, NewLoc,
+                                    SI->getIterator());
 }
 
 /// Inserts a llvm.dbg.value intrinsic after a phi that has an associated
@@ -2099,11 +2177,9 @@ void llvm::insertDebugValuesForPHIs(BasicBlock *BB,
       auto V = DbgValueMap.find(VI);
       if (V != DbgValueMap.end()) {
         auto *DbgII = cast<DbgVariableIntrinsic>(V->second);
-        auto NewDI = NewDbgValueMap.find({Parent, DbgII});
-        if (NewDI == NewDbgValueMap.end()) {
-          auto *NewDbgII = cast<DbgVariableIntrinsic>(DbgII->clone());
-          NewDI = NewDbgValueMap.insert({{Parent, DbgII}, NewDbgII}).first;
-        }
+        auto [NewDI, Inserted] = NewDbgValueMap.try_emplace({Parent, DbgII});
+        if (Inserted)
+          NewDI->second = cast<DbgVariableIntrinsic>(DbgII->clone());
         DbgVariableIntrinsic *NewDbgII = NewDI->second;
         // If PHI contains VI as an operand more than once, we may
         // replaced it in NewDbgII; confirm that it is present.
@@ -2223,6 +2299,8 @@ template <typename T> static void salvageDbgAssignAddress(T *Assign) {
   assert(!SalvagedExpr->getFragmentInfo().has_value() &&
          "address-expression shouldn't have fragment info");
 
+  SalvagedExpr = SalvagedExpr->foldConstantMath();
+
   // Salvage succeeds if no additional values are required.
   if (AdditionalValues.empty()) {
     Assign->setAddress(NewV);
@@ -2283,6 +2361,7 @@ void llvm::salvageDebugInfoForDbgValues(
     if (!Op0)
       break;
 
+    SalvagedExpr = SalvagedExpr->foldConstantMath();
     DII->replaceVariableLocationOp(&I, Op0);
     bool IsValidSalvageExpr = SalvagedExpr->getNumElements() <= MaxExpressionSize;
     if (AdditionalValues.empty() && IsValidSalvageExpr) {
@@ -2344,6 +2423,7 @@ void llvm::salvageDebugInfoForDbgValues(
     if (!Op0)
       break;
 
+    SalvagedExpr = SalvagedExpr->foldConstantMath();
     DVR->replaceVariableLocationOp(&I, Op0);
     bool IsValidSalvageExpr =
         SalvagedExpr->getNumElements() <= MaxExpressionSize;
@@ -2381,7 +2461,7 @@ Value *getSalvageOpsForGEP(GetElementPtrInst *GEP, const DataLayout &DL,
                            SmallVectorImpl<Value *> &AdditionalValues) {
   unsigned BitWidth = DL.getIndexSizeInBits(GEP->getPointerAddressSpace());
   // Rewrite a GEP into a DIExpression.
-  MapVector<Value *, APInt> VariableOffsets;
+  SmallMapVector<Value *, APInt, 4> VariableOffsets;
   APInt ConstantOffset(BitWidth, 0);
   if (!GEP->collectOffset(DL, BitWidth, VariableOffsets, ConstantOffset))
     return nullptr;
@@ -3245,18 +3325,22 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
         K->mergeDIAssignID(J);
         break;
       case LLVMContext::MD_tbaa:
-        K->setMetadata(Kind, MDNode::getMostGenericTBAA(JMD, KMD));
+        if (DoesKMove)
+          K->setMetadata(Kind, MDNode::getMostGenericTBAA(JMD, KMD));
         break;
       case LLVMContext::MD_alias_scope:
-        K->setMetadata(Kind, MDNode::getMostGenericAliasScope(JMD, KMD));
+        if (DoesKMove)
+          K->setMetadata(Kind, MDNode::getMostGenericAliasScope(JMD, KMD));
         break;
       case LLVMContext::MD_noalias:
       case LLVMContext::MD_mem_parallel_loop_access:
-        K->setMetadata(Kind, MDNode::intersect(JMD, KMD));
+        if (DoesKMove)
+          K->setMetadata(Kind, MDNode::intersect(JMD, KMD));
         break;
       case LLVMContext::MD_access_group:
-        K->setMetadata(LLVMContext::MD_access_group,
-                       intersectAccessGroups(K, J));
+        if (DoesKMove)
+          K->setMetadata(LLVMContext::MD_access_group,
+                         intersectAccessGroups(K, J));
         break;
       case LLVMContext::MD_range:
         if (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef))
@@ -3277,6 +3361,9 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
         break;
       case LLVMContext::MD_invariant_group:
         // Preserve !invariant.group in K.
+        break;
+      case LLVMContext::MD_mmra:
+        // Combine MMRAs
         break;
       case LLVMContext::MD_align:
         if (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef))
@@ -3305,6 +3392,11 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
         if (DoesKMove)
           K->setMetadata(Kind, MDNode::getMergedProfMetadata(KMD, JMD, K, J));
         break;
+      case LLVMContext::MD_noalias_addrspace:
+        if (DoesKMove)
+          K->setMetadata(Kind,
+                         MDNode::getMostGenericNoaliasAddrspace(JMD, KMD));
+        break;
     }
   }
   // Set !invariant.group from J if J has it. If both instructions have it
@@ -3316,6 +3408,16 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
   if (auto *JMD = J->getMetadata(LLVMContext::MD_invariant_group))
     if (isa<LoadInst>(K) || isa<StoreInst>(K))
       K->setMetadata(LLVMContext::MD_invariant_group, JMD);
+
+  // Merge MMRAs.
+  // This is handled separately because we also want to handle cases where K
+  // doesn't have tags but J does.
+  auto JMMRA = J->getMetadata(LLVMContext::MD_mmra);
+  auto KMMRA = K->getMetadata(LLVMContext::MD_mmra);
+  if (JMMRA || KMMRA) {
+    K->setMetadata(LLVMContext::MD_mmra,
+                   MMRAMetadata::combine(K->getContext(), JMMRA, KMMRA));
+  }
 }
 
 void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J,
@@ -3335,7 +3437,9 @@ void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J,
                          LLVMContext::MD_preserve_access_index,
                          LLVMContext::MD_prof,
                          LLVMContext::MD_nontemporal,
-                         LLVMContext::MD_noundef};
+                         LLVMContext::MD_noundef,
+                         LLVMContext::MD_mmra,
+                         LLVMContext::MD_noalias_addrspace};
   combineMetadata(K, J, KnownIDs, KDominatesJ);
 }
 
@@ -3344,7 +3448,7 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
   Source.getAllMetadata(MD);
   MDBuilder MDB(Dest.getContext());
   Type *NewType = Dest.getType();
-  const DataLayout &DL = Source.getModule()->getDataLayout();
+  const DataLayout &DL = Source.getDataLayout();
   for (const auto &MDPair : MD) {
     unsigned ID = MDPair.first;
     MDNode *N = MDPair.second;
@@ -3411,6 +3515,17 @@ void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
   else if (!isa<LoadInst>(I))
     ReplInst->andIRFlags(I);
 
+  // Handle attributes.
+  if (auto *CB1 = dyn_cast<CallBase>(ReplInst)) {
+    if (auto *CB2 = dyn_cast<CallBase>(I)) {
+      bool Success = CB1->tryIntersectAttributes(CB2);
+      assert(Success && "We should not be trying to sink callbases "
+                        "with non-intersectable attributes");
+      // For NDEBUG Compile.
+      (void)Success;
+    }
+  }
+
   // FIXME: If both the original and replacement value are part of the
   // same control-flow region (meaning that the execution of one
   // guarantees the execution of the other), then we can combine the
@@ -3423,15 +3538,18 @@ void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
   combineMetadataForCSE(ReplInst, I, false);
 }
 
-template <typename RootType, typename DominatesFn>
+template <typename RootType, typename ShouldReplaceFn>
 static unsigned replaceDominatedUsesWith(Value *From, Value *To,
                                          const RootType &Root,
-                                         const DominatesFn &Dominates) {
+                                         const ShouldReplaceFn &ShouldReplace) {
   assert(From->getType() == To->getType());
 
   unsigned Count = 0;
   for (Use &U : llvm::make_early_inc_range(From->uses())) {
-    if (!Dominates(Root, U))
+    auto *II = dyn_cast<IntrinsicInst>(U.getUser());
+    if (II && II->getIntrinsicID() == Intrinsic::fake_use)
+      continue;
+    if (!ShouldReplace(Root, U))
       continue;
     LLVM_DEBUG(dbgs() << "Replace dominated use of '";
                From->printAsOperand(dbgs());
@@ -3473,6 +3591,26 @@ unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
     return DT.dominates(BB, U);
   };
   return ::replaceDominatedUsesWith(From, To, BB, Dominates);
+}
+
+unsigned llvm::replaceDominatedUsesWithIf(
+    Value *From, Value *To, DominatorTree &DT, const BasicBlockEdge &Root,
+    function_ref<bool(const Use &U, const Value *To)> ShouldReplace) {
+  auto DominatesAndShouldReplace =
+      [&DT, &ShouldReplace, To](const BasicBlockEdge &Root, const Use &U) {
+        return DT.dominates(Root, U) && ShouldReplace(U, To);
+      };
+  return ::replaceDominatedUsesWith(From, To, Root, DominatesAndShouldReplace);
+}
+
+unsigned llvm::replaceDominatedUsesWithIf(
+    Value *From, Value *To, DominatorTree &DT, const BasicBlock *BB,
+    function_ref<bool(const Use &U, const Value *To)> ShouldReplace) {
+  auto DominatesAndShouldReplace = [&DT, &ShouldReplace,
+                                    To](const BasicBlock *BB, const Use &U) {
+    return DT.dominates(BB, U) && ShouldReplace(U, To);
+  };
+  return ::replaceDominatedUsesWith(From, To, BB, DominatesAndShouldReplace);
 }
 
 bool llvm::callsGCLeafFunction(const CallBase *Call,
@@ -3548,7 +3686,7 @@ void llvm::copyRangeMetadata(const DataLayout &DL, const LoadInst &OldLI,
   unsigned BitWidth = DL.getPointerTypeSizeInBits(NewTy);
   if (BitWidth == OldLI.getType()->getScalarSizeInBits() &&
       !getConstantRangeFromMetadata(*N).contains(APInt(BitWidth, 0))) {
-    MDNode *NN = MDNode::get(OldLI.getContext(), std::nullopt);
+    MDNode *NN = MDNode::get(OldLI.getContext(), {});
     NewLI.setMetadata(LLVMContext::MD_nonnull, NN);
   }
 }
@@ -3621,10 +3759,12 @@ DIExpression *llvm::getExpressionForConstant(DIBuilder &DIB, const Constant &C,
     return createIntegerExpression(C);
 
   auto *FP = dyn_cast<ConstantFP>(&C);
-  if (FP && (Ty.isFloatTy() || Ty.isDoubleTy())) {
+  if (FP && Ty.isFloatingPointTy() && Ty.getScalarSizeInBits() <= 64) {
     const APFloat &APF = FP->getValueAPF();
-    return DIB.createConstantValueExpression(
-        APF.bitcastToAPInt().getZExtValue());
+    APInt const &API = APF.bitcastToAPInt();
+    if (auto Temp = API.getZExtValue())
+      return DIB.createConstantValueExpression(static_cast<uint64_t>(Temp));
+    return DIB.createConstantValueExpression(*API.getRawData());
   }
 
   if (!Ty.isPointerTy())
@@ -3640,6 +3780,30 @@ DIExpression *llvm::getExpressionForConstant(DIBuilder &DIB, const Constant &C,
         return createIntegerExpression(*CI);
     }
   return nullptr;
+}
+
+void llvm::remapDebugVariable(ValueToValueMapTy &Mapping, Instruction *Inst) {
+  auto RemapDebugOperands = [&Mapping](auto *DV, auto Set) {
+    for (auto *Op : Set) {
+      auto I = Mapping.find(Op);
+      if (I != Mapping.end())
+        DV->replaceVariableLocationOp(Op, I->second, /*AllowEmpty=*/true);
+    }
+  };
+  auto RemapAssignAddress = [&Mapping](auto *DA) {
+    auto I = Mapping.find(DA->getAddress());
+    if (I != Mapping.end())
+      DA->setAddress(I->second);
+  };
+  if (auto DVI = dyn_cast<DbgVariableIntrinsic>(Inst))
+    RemapDebugOperands(DVI, DVI->location_ops());
+  if (auto DAI = dyn_cast<DbgAssignIntrinsic>(Inst))
+    RemapAssignAddress(DAI);
+  for (DbgVariableRecord &DVR : filterDbgVars(Inst->getDbgRecordRange())) {
+    RemapDebugOperands(&DVR, DVR.location_ops());
+    if (DVR.isDbgAssign())
+      RemapAssignAddress(&DVR);
+  }
 }
 
 namespace {
@@ -3694,11 +3858,11 @@ static const std::optional<BitPart> &
 collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
                 std::map<Value *, std::optional<BitPart>> &BPS, int Depth,
                 bool &FoundRoot) {
-  auto I = BPS.find(V);
-  if (I != BPS.end())
+  auto [I, Inserted] = BPS.try_emplace(V);
+  if (!Inserted)
     return I->second;
 
-  auto &Result = BPS[V] = std::nullopt;
+  auto &Result = I->second;
   auto BitWidth = V->getType()->getScalarSizeInBits();
 
   // Can't do integer/elements > 128 bits.
@@ -3995,7 +4159,8 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
   else
     return false;
 
-  Function *F = Intrinsic::getDeclaration(I->getModule(), Intrin, DemandedTy);
+  Function *F =
+      Intrinsic::getOrInsertDeclaration(I->getModule(), Intrin, DemandedTy);
   Value *Provider = Res->Provider;
 
   // We may need to truncate the provider.

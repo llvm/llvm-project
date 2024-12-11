@@ -7,24 +7,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/time/gettimeofday.h"
-
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "hdr/time_macros.h"
+#include "hdr/types/suseconds_t.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/time/clock_gettime.h"
+#include "src/__support/time/units.h"
 #include "src/errno/libc_errno.h"
-#include "src/time/linux/clockGetTimeImpl.h"
 
-#include <sys/syscall.h> // For syscall numbers.
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // TODO(michaelrj): Move this into time/linux with the other syscalls.
 LLVM_LIBC_FUNCTION(int, gettimeofday,
                    (struct timeval * tv, [[maybe_unused]] void *unused)) {
+  using namespace time_units;
   if (tv == nullptr)
     return 0;
 
   struct timespec ts;
-  auto result = internal::clock_gettimeimpl(CLOCK_REALTIME, &ts);
+  auto result = internal::clock_gettime(CLOCK_REALTIME, &ts);
 
   // A negative return value indicates an error with the magnitude of the
   // value being the error code.
@@ -34,8 +35,8 @@ LLVM_LIBC_FUNCTION(int, gettimeofday,
   }
 
   tv->tv_sec = ts.tv_sec;
-  tv->tv_usec = static_cast<suseconds_t>(ts.tv_nsec / 1000);
+  tv->tv_usec = static_cast<suseconds_t>(ts.tv_nsec / 1_us_ns);
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

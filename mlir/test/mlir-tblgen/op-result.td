@@ -1,4 +1,5 @@
 // RUN: mlir-tblgen -gen-op-defs -I %S/../../include %s | FileCheck %s
+// RUN: mlir-tblgen -gen-op-decls -I %S/../../include %s | FileCheck %s --check-prefix=DECL
 
 include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
@@ -97,11 +98,11 @@ def OpI : NS_Op<"mix_variadic_and_normal_results_op", [SameVariadicResultSize]> 
   let results = (outs Variadic<AnyTensor>:$output1, AnyTensor:$output2, Variadic<AnyTensor>:$output3);
 }
 
-// CHECK-LABEL: ::mlir::Operation::result_range OpI::getOutput1
-// CHECK-NEXT:    return getODSResults(0);
+// DECL-LABEL: ::mlir::Operation::result_range getOutput1
+// DECL-NEXT:    return getODSResults(0);
 
-// CHECK-LABEL: ::mlir::TypedValue<::mlir::TensorType> OpI::getOutput2
-// CHECK-NEXT:    return ::llvm::cast<::mlir::TypedValue<::mlir::TensorType>>(*getODSResults(1).begin());
+// DECL-LABEL: ::mlir::TypedValue<::mlir::TensorType> getOutput2
+// DECL-NEXT:    return ::llvm::cast<::mlir::TypedValue<::mlir::TensorType>>(*getODSResults(1).begin());
 
 // CHECK-LABEL: OpI::build
 // CHECK-NEXT:    odsState.addTypes(output1);
@@ -129,6 +130,8 @@ def OpL1 : NS_Op<"op_with_all_types_constraint",
 
 // CHECK-LABEL: LogicalResult OpL1::inferReturnTypes
 // CHECK-NOT: }
+// CHECK: if (operands.size() <= 0)
+// CHECK-NEXT: return ::mlir::failure();
 // CHECK: ::mlir::Type odsInferredType0 = operands[0].getType();
 // CHECK: inferredReturnTypes[0] = odsInferredType0;
 
@@ -140,6 +143,9 @@ def OpL2 : NS_Op<"op_with_all_types_constraint",
 
 // CHECK-LABEL: LogicalResult OpL2::inferReturnTypes
 // CHECK-NOT: }
+// CHECK: if (operands.size() <= 2)
+// CHECK-NEXT: return ::mlir::failure();
+// CHECK-NOT: if (operands.size() <= 0)
 // CHECK: ::mlir::Type odsInferredType0 = operands[2].getType();
 // CHECK: ::mlir::Type odsInferredType1 = operands[0].getType();
 // CHECK: inferredReturnTypes[0] = odsInferredType0;
@@ -165,6 +171,8 @@ def OpL4 : NS_Op<"two_inference_edges", [
 }
 
 // CHECK-LABEL: LogicalResult OpL4::inferReturnTypes
+// CHECK: if (operands.size() <= 0)
+// CHECK-NEXT: return ::mlir::failure();
 // CHECK: odsInferredType0 = fromInput(operands[0].getType())
 // CHECK: odsInferredType1 = infer0(odsInferredType0)
 // CHECK: odsInferredType2 = infer1(odsInferredType1)

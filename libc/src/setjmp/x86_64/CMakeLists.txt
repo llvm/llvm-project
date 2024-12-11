@@ -5,10 +5,9 @@ add_entrypoint_object(
   HDRS
     ../setjmp_impl.h
   DEPENDS
-    libc.include.setjmp
+    libc.hdr.types.jmp_buf
   COMPILE_OPTIONS
-    -O3
-    -fno-omit-frame-pointer
+    ${libc_opt_high_flag}
 )
 
 add_entrypoint_object(
@@ -18,8 +17,8 @@ add_entrypoint_object(
   HDRS
     ../longjmp.h
   DEPENDS
-    libc.include.setjmp
+    libc.hdr.types.jmp_buf
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
     -fomit-frame-pointer
 )

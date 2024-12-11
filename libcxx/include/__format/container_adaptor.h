@@ -18,11 +18,11 @@
 #include <__format/concepts.h>
 #include <__format/formatter.h>
 #include <__format/range_default_formatter.h>
+#include <__fwd/queue.h>
+#include <__fwd/stack.h>
 #include <__ranges/ref_view.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/maybe_const.h>
-#include <queue>
-#include <stack>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -66,7 +66,7 @@ template <class _CharT, class _Tp, formattable<_CharT> _Container>
 struct _LIBCPP_TEMPLATE_VIS formatter<stack<_Tp, _Container>, _CharT>
     : public __formatter_container_adaptor<stack<_Tp, _Container>, _CharT> {};
 
-#endif //_LIBCPP_STD_VER >= 23
+#endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -28,12 +28,12 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -280,8 +280,7 @@ class CHRScope {
 
  private:
    CHRScope(ArrayRef<RegInfo> RegInfosIn, ArrayRef<CHRScope *> SubsIn)
-       : RegInfos(RegInfosIn.begin(), RegInfosIn.end()),
-         Subs(SubsIn.begin(), SubsIn.end()), BranchInsertPoint(nullptr) {}
+       : RegInfos(RegInfosIn), Subs(SubsIn), BranchInsertPoint(nullptr) {}
 };
 
 class CHR {
@@ -1863,6 +1862,7 @@ void CHR::fixupBranchesAndSelects(CHRScope *Scope,
       ++NumCHRedBranches;
     }
   }
+  assert(NumCHRedBranches > 0);
   Stats.NumBranchesDelta += NumCHRedBranches - 1;
   Stats.WeightedNumBranchesDelta += (NumCHRedBranches - 1) * ProfileCount;
   ORE.emit([&]() {
@@ -1878,7 +1878,7 @@ void CHR::fixupBranchesAndSelects(CHRScope *Scope,
       static_cast<uint32_t>(CHRBranchBias.scale(1000)),
       static_cast<uint32_t>(CHRBranchBias.getCompl().scale(1000)),
   };
-  setBranchWeights(*MergedBR, Weights);
+  setBranchWeights(*MergedBR, Weights, /*IsExpected=*/false);
   CHR_DEBUG(dbgs() << "CHR branch bias " << Weights[0] << ":" << Weights[1]
             << "\n");
 }

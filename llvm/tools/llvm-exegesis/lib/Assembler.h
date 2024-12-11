@@ -89,7 +89,7 @@ using FillFunction = std::function<void(FunctionFiller &)>;
 // epilogue. Once the MachineFunction is ready, it is assembled for TM to
 // AsmStream, the temporary function is eventually discarded.
 Error assembleToStream(const ExegesisTarget &ET,
-                       std::unique_ptr<LLVMTargetMachine> TM,
+                       std::unique_ptr<TargetMachine> TM,
                        ArrayRef<unsigned> LiveIns, const FillFunction &Fill,
                        raw_pwrite_stream &AsmStreamm, const BenchmarkKey &Key,
                        bool GenerateMemoryInstructions);
@@ -107,7 +107,7 @@ object::OwningBinary<object::ObjectFile> getObjectFromFile(StringRef Filename);
 class ExecutableFunction {
 public:
   static Expected<ExecutableFunction>
-  create(std::unique_ptr<LLVMTargetMachine> TM,
+  create(std::unique_ptr<TargetMachine> TM,
          object::OwningBinary<object::ObjectFile> &&ObjectFileHolder);
 
   // Retrieves the function as an array of bytes.
@@ -115,7 +115,7 @@ public:
 
   // Executes the function.
   void operator()(char *Memory) const {
-    ((void (*)(char *))(intptr_t)FunctionBytes.data())(Memory);
+    ((void (*)(char *))(uintptr_t)FunctionBytes.data())(Memory);
   }
 
   StringRef FunctionBytes;

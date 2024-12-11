@@ -105,7 +105,6 @@
 #include "BPFCORE.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -116,6 +115,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsBPF.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -162,7 +162,7 @@ static CallInst *makeIntrinsicCall(Module *M,
                                    ArrayRef<Type *> Types,
                                    ArrayRef<Value *> Args) {
 
-  Function *Fn = Intrinsic::getDeclaration(M, Intrinsic, Types);
+  Function *Fn = Intrinsic::getOrInsertDeclaration(M, Intrinsic, Types);
   return CallInst::Create(Fn, Args);
 }
 
@@ -374,7 +374,7 @@ static bool foldGEPChainAsU8Access(SmallVector<GetElementPtrInst *> &GEPs,
     return false;
 
   GetElementPtrInst *First = GEPs[0];
-  const DataLayout &DL = First->getModule()->getDataLayout();
+  const DataLayout &DL = First->getDataLayout();
   LLVMContext &C = First->getContext();
   Type *PtrTy = First->getType()->getScalarType();
   APInt Offset(DL.getIndexTypeSizeInBits(PtrTy), 0);

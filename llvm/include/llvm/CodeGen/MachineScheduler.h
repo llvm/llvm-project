@@ -219,6 +219,7 @@ public:
                           MachineBasicBlock::iterator End,
                           unsigned NumRegionInstrs) {}
 
+  virtual MachineSchedPolicy getPolicy() const { return {}; }
   virtual void dumpPolicy() const {}
 
   /// Check if pressure tracking is needed before building the DAG and
@@ -807,7 +808,7 @@ public:
   // constructor for empty set
   explicit ResourceSegments(){};
   bool empty() const { return _Intervals.empty(); }
-  explicit ResourceSegments(std::list<IntervalTy> Intervals)
+  explicit ResourceSegments(const std::list<IntervalTy> &Intervals)
       : _Intervals(Intervals) {
     sortAndMerge();
   }
@@ -1167,12 +1168,16 @@ protected:
   const TargetSchedModel *SchedModel = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
 
+  MachineSchedPolicy RegionPolicy;
+
   SchedRemainder Rem;
 
   GenericSchedulerBase(const MachineSchedContext *C) : Context(C) {}
 
   void setPolicy(CandPolicy &Policy, bool IsPostRA, SchedBoundary &CurrZone,
                  SchedBoundary *OtherZone);
+
+  MachineSchedPolicy getPolicy() const override { return RegionPolicy; }
 
 #ifndef NDEBUG
   void traceCandidate(const SchedCandidate &Cand);
@@ -1254,8 +1259,6 @@ public:
 protected:
   ScheduleDAGMILive *DAG = nullptr;
 
-  MachineSchedPolicy RegionPolicy;
-
   // State of the top and bottom scheduled instruction boundaries.
   SchedBoundary Top;
   SchedBoundary Bot;
@@ -1294,7 +1297,11 @@ protected:
   ScheduleDAGMI *DAG = nullptr;
   SchedBoundary Top;
   SchedBoundary Bot;
-  MachineSchedPolicy RegionPolicy;
+
+  /// Candidate last picked from Top boundary.
+  SchedCandidate TopCand;
+  /// Candidate last picked from Bot boundary.
+  SchedCandidate BotCand;
 
 public:
   PostGenericScheduler(const MachineSchedContext *C)
@@ -1316,6 +1323,8 @@ public:
 
   SUnit *pickNode(bool &IsTopNode) override;
 
+  SUnit *pickNodeBidirectional(bool &IsTopNode);
+
   void scheduleTree(unsigned SubtreeID) override {
     llvm_unreachable("PostRA scheduler does not support subtree analysis.");
   }
@@ -1326,12 +1335,14 @@ public:
     if (SU->isScheduled)
       return;
     Top.releaseNode(SU, SU->TopReadyCycle, false);
+    TopCand.SU = nullptr;
   }
 
   void releaseBottomNode(SUnit *SU) override {
     if (SU->isScheduled)
       return;
     Bot.releaseNode(SU, SU->BotReadyCycle, false);
+    BotCand.SU = nullptr;
   }
 
 protected:

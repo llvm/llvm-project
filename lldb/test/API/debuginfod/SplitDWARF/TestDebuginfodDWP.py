@@ -4,30 +4,11 @@ Test support for the DebugInfoD network symbol acquisition protocol.
 import os
 import shutil
 import tempfile
-import struct
 
 import lldb
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-
-
-def getUUID(aoutuuid):
-    """
-    Pull the 20 byte UUID out of the .note.gnu.build-id section that was dumped
-    to a file already, as part of the build.
-    """
-    with open(aoutuuid, "rb") as f:
-        data = f.read(36)
-        if len(data) != 36:
-            return None
-        header = struct.unpack_from("<4I", data)
-        if len(header) != 4:
-            return None
-        # 4 element 'prefix', 20 bytes of uuid, 3 byte long string: 'GNU':
-        if header[0] != 4 or header[1] != 20 or header[2] != 3 or header[3] != 0x554E47:
-            return None
-        return data[16:].hex()
 
 
 """
@@ -40,11 +21,11 @@ This file is for split-dwarf (dwp) scenarios.
 """
 
 
-@skipUnlessPlatform(["linux", "freebsd"])
 class DebugInfodDWPTests(TestBase):
     # No need to try every flavor of debug inf.
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipUnlessPlatform(["linux_freebsd_but_old_dwp_tools_on_build_bots_are_broken"])
     def test_normal_stripped(self):
         """
         Validate behavior with a stripped binary, no symbols or symbol locator.
@@ -52,6 +33,7 @@ class DebugInfodDWPTests(TestBase):
         self.config_test(["a.out"])
         self.try_breakpoint(False)
 
+    @skipUnlessPlatform(["linux_freebsd_but_old_dwp_tools_on_build_bots_are_broken"])
     def test_normal_stripped_split_with_dwp(self):
         """
         Validate behavior with symbols, but no symbol locator.
@@ -59,6 +41,7 @@ class DebugInfodDWPTests(TestBase):
         self.config_test(["a.out", "a.out.debug", "a.out.dwp"])
         self.try_breakpoint(True)
 
+    @skipUnlessPlatform(["linux_freebsd_but_old_dwp_tools_on_build_bots_are_broken"])
     def test_normal_stripped_only_dwp(self):
         """
         Validate behavior *with* dwp symbols only, but missing other symbols,
@@ -68,6 +51,8 @@ class DebugInfodDWPTests(TestBase):
         self.config_test(["a.out", "a.out.dwp"])
         self.try_breakpoint(False)
 
+    @skipIfCurlSupportMissing
+    @skipUnlessPlatform(["linux_freebsd_but_old_dwp_tools_on_build_bots_are_broken"])
     def test_debuginfod_dwp_from_service(self):
         """
         Test behavior with the unstripped binary, and DWP from the service.
@@ -75,14 +60,18 @@ class DebugInfodDWPTests(TestBase):
         self.config_test(["a.out.debug"], "a.out.dwp")
         self.try_breakpoint(True)
 
+    @skipIfCurlSupportMissing
+    @skipUnlessPlatform(["linux_freebsd_but_old_dwp_tools_on_build_bots_are_broken"])
     def test_debuginfod_both_symfiles_from_service(self):
         """
         Test behavior with a stripped binary, with the unstripped binary and
         dwp symbols from Debuginfod.
         """
-        self.config_test(["a.out"], "a.out.dwp", "a.out.full")
+        self.config_test(["a.out"], "a.out.dwp", "a.out.unstripped")
         self.try_breakpoint(True)
 
+    @skipIfCurlSupportMissing
+    @skipUnlessPlatform(["linux_freebsd_but_old_dwp_tools_on_build_bots_are_broken"])
     def test_debuginfod_both_okd_symfiles_from_service(self):
         """
         Test behavior with both the only-keep-debug symbols and the dwp symbols
@@ -145,8 +134,10 @@ class DebugInfodDWPTests(TestBase):
 
         self.build()
 
-        uuid = getUUID(self.getBuildArtifact("a.out.uuid"))
-
+        uuid = self.getUUID("a.out")
+        if not uuid:
+            self.fail("Could not get UUID for a.out")
+            return
         self.main_source_file = lldb.SBFileSpec("main.c")
         self.tmp_dir = tempfile.mkdtemp()
         self.test_dir = os.path.join(self.tmp_dir, "test")
@@ -192,3 +183,14 @@ class DebugInfodDWPTests(TestBase):
                 "settings insert-before plugin.symbol-locator.debuginfod.server-urls 0 file://%s"
                 % self.tmp_dir
             )
+
+    def getUUID(self, filename):
+        try:
+            spec = lldb.SBModuleSpec()
+            spec.SetFileSpec(lldb.SBFileSpec(self.getBuildArtifact(filename)))
+            module = lldb.SBModule(spec)
+            uuid = module.GetUUIDString().replace("-", "").lower()
+            # Don't want lldb's fake 32 bit CRC's for this one
+            return uuid if len(uuid) > 8 else None
+        except:
+            return None

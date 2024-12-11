@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wvla-extension %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wvla-extension %s -fexperimental-new-constant-interpreter
 struct NonPOD {
   NonPOD();
 };

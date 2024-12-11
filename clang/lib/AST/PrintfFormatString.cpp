@@ -146,13 +146,13 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
           if (Warn && (Size == 0 || Size > 8))
             H.handleInvalidMaskType(MaskType);
           FS.setMaskType(MaskType);
-        } else if (MatchedStr.equals("sensitive"))
+        } else if (MatchedStr == "sensitive")
           PrivacyFlags = clang::analyze_os_log::OSLogBufferItem::IsSensitive;
         else if (PrivacyFlags !=
-                 clang::analyze_os_log::OSLogBufferItem::IsSensitive &&
-                 MatchedStr.equals("private"))
+                     clang::analyze_os_log::OSLogBufferItem::IsSensitive &&
+                 MatchedStr == "private")
           PrivacyFlags = clang::analyze_os_log::OSLogBufferItem::IsPrivate;
-        else if (PrivacyFlags == 0 && MatchedStr.equals("public"))
+        else if (PrivacyFlags == 0 && MatchedStr == "public")
           PrivacyFlags = clang::analyze_os_log::OSLogBufferItem::IsPublic;
       } else {
         size_t CommaOrBracePos =
@@ -865,6 +865,10 @@ bool PrintfSpecifier::fixType(QualType QT, const LangOptions &LangOpt,
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
+#include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLIntangibleTypes.def"
 #define SIGNED_TYPE(Id, SingletonId)
 #define UNSIGNED_TYPE(Id, SingletonId)
 #define FLOATING_TYPE(Id, SingletonId)

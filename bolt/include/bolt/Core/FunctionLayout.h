@@ -25,7 +25,6 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include <iterator>
-#include <utility>
 
 namespace llvm {
 namespace bolt {
@@ -124,7 +123,8 @@ public:
   const_iterator begin() const;
   iterator end();
   const_iterator end() const;
-  const BinaryBasicBlock *front() const;
+  BinaryBasicBlock *front() const;
+  BinaryBasicBlock *back() const;
 
   friend class FunctionLayout;
 };
@@ -214,7 +214,8 @@ public:
   void eraseBasicBlocks(const DenseSet<const BinaryBasicBlock *> ToErase);
 
   /// Make sure fragments' and basic blocks' indices match the current layout.
-  void updateLayoutIndices();
+  void updateLayoutIndices() const;
+  void updateLayoutIndices(ArrayRef<BinaryBasicBlock *> Order) const;
 
   /// Replace the current layout with NewLayout. Uses the block's
   /// self-identifying fragment number to assign blocks to infer function

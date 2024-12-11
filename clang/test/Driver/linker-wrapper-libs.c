@@ -44,10 +44,12 @@ int bar() { return weak; }
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --linker-path=/usr/bin/ld %t.o %t.a -o a.out 2>&1 \
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld %t.a %t.o -o a.out 2>&1 \
 // RUN: | FileCheck %s --check-prefix=LIBRARY-RESOLVES
 
+// LIBRARY-RESOLVES: clang{{.*}} -o {{.*}}.img --target=nvptx64-nvidia-cuda -march=sm_70 {{.*}}.o {{.*}}.o
 // LIBRARY-RESOLVES: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx1030 {{.*}}.o {{.*}}.o
-// LIBRARY-RESOLVES: clang{{.*}} -o {{.*}}.img --target=nvptx64-nvidia-cuda -march=sm_70 {{.*}}.s {{.*}}.o
 
 //
 // Check that we extract a static library that defines a global visibile to the
@@ -66,10 +68,12 @@ int bar() { return weak; }
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --linker-path=/usr/bin/ld %t.o %t.a -o a.out 2>&1 \
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld %t.a %t.o -o a.out 2>&1 \
 // RUN: | FileCheck %s --check-prefix=LIBRARY-GLOBAL
 
+// LIBRARY-GLOBAL: clang{{.*}} -o {{.*}}.img --target=nvptx64-nvidia-cuda -march=sm_70 {{.*}}.o {{.*}}.o
 // LIBRARY-GLOBAL: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx1030 {{.*}}.o {{.*}}.o
-// LIBRARY-GLOBAL: clang{{.*}} -o {{.*}}.img --target=nvptx64-nvidia-cuda -march=sm_70 {{.*}}.s {{.*}}.o
 
 //
 // Check that we do not extract a global symbol if the source file was not
@@ -92,7 +96,7 @@ int bar() { return weak; }
 // RUN: | FileCheck %s --check-prefix=LIBRARY-GLOBAL-NONE
 
 // LIBRARY-GLOBAL-NONE-NOT: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx1030 {{.*}}.o {{.*}}.o
-// LIBRARY-GLOBAL-NONE-NOT: clang{{.*}} -o {{.*}}.img --target=nvptx64-nvidia-cuda -march=sm_70 {{.*}}.s {{.*}}.o
+// LIBRARY-GLOBAL-NONE-NOT: clang{{.*}} -o {{.*}}.img --target=nvptx64-nvidia-cuda -march=sm_70 {{.*}}.o {{.*}}.o
 
 //
 // Check that we do not extract an external weak symbol.
@@ -112,9 +116,9 @@ int bar() { return weak; }
 // RUN:   --linker-path=/usr/bin/ld %t.o %t.a -o a.out 2>&1 \
 // RUN: | FileCheck %s --check-prefix=LIBRARY-WEAK
 
-// LIBRARY-WEAK: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx1030
-// LIBRARY-WEAK-NOT: {{.*}}.o {{.*}}.o
 // LIBRARY-WEAK: clang{{.*}} -o {{.*}}.img --target=nvptx64-nvidia-cuda -march=sm_70
+// LIBRARY-WEAK-NOT: {{.*}}.o {{.*}}.o
+// LIBRARY-WEAK: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx1030
 
 //
 // Check that we do not extract an unneeded hidden symbol.
@@ -134,9 +138,9 @@ int bar() { return weak; }
 // RUN:   --linker-path=/usr/bin/ld %t.o %t.a -o a.out 2>&1 \
 // RUN: | FileCheck %s --check-prefix=LIBRARY-HIDDEN
 
-// LIBRARY-HIDDEN: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx1030
-// LIBRARY-HIDDEN-NOT: {{.*}}.o {{.*}}.o
 // LIBRARY-HIDDEN: clang{{.*}} -o {{.*}}.img --target=nvptx64-nvidia-cuda -march=sm_70
+// LIBRARY-HIDDEN-NOT: {{.*}}.o {{.*}}.o
+// LIBRARY-HIDDEN: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx1030
 
 //
 // Check that we do not extract a static library that defines a global visibile
@@ -157,9 +161,9 @@ int bar() { return weak; }
 // RUN:   --linker-path=/usr/bin/ld %t.o %t.a %t.a -o a.out 2>&1 \
 // RUN: | FileCheck %s --check-prefix=LIBRARY-GLOBAL-DEFINED
 
-// LIBRARY-GLOBAL-DEFINED: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx1030 {{.*}}.o {{.*}}.o
+// LIBRARY-GLOBAL-DEFINED: clang{{.*}} -o {{.*}}.img --target=nvptx64-nvidia-cuda -march=sm_70 {{.*}}.o {{.*}}.o
 // LIBRARY-GLOBAL-DEFINED-NOT: {{.*}}gfx1030{{.*}}.o
-// LIBRARY-GLOBAL-DEFINED: clang{{.*}} -o {{.*}}.img --target=nvptx64-nvidia-cuda -march=sm_70 {{.*}}.s {{.*}}.o
+// LIBRARY-GLOBAL-DEFINED: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx1030 {{.*}}.o {{.*}}.o
 
 //
 // Check that we can use --[no-]whole-archive to control extraction.
@@ -181,7 +185,7 @@ int bar() { return weak; }
 // RUN:   --linker-path=/usr/bin/ld %t.o --whole-archive %t.a -o a.out 2>&1 \
 // RUN: | FileCheck %s --check-prefix=LIBRARY-WHOLE-ARCHIVE
 
+// LIBRARY-WHOLE-ARCHIVE: clang{{.*}} -o {{.*}}.img --target=nvptx64-nvidia-cuda -march=sm_70 {{.*}}.o {{.*}}.o
 // LIBRARY-WHOLE-ARCHIVE: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx1030 {{.*}}.o {{.*}}.o
-// LIBRARY-WHOLE-ARCHIVE: clang{{.*}} -o {{.*}}.img --target=nvptx64-nvidia-cuda -march=sm_52 {{.*}}.s
+// LIBRARY-WHOLE-ARCHIVE: clang{{.*}} -o {{.*}}.img --target=nvptx64-nvidia-cuda -march=sm_52 {{.*}}.o
 // LIBRARY-WHOLE-ARCHIVE: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx90a {{.*}}.o
-// LIBRARY-WHOLE-ARCHIVE: clang{{.*}} -o {{.*}}.img --target=nvptx64-nvidia-cuda -march=sm_70 {{.*}}.s {{.*}}.o

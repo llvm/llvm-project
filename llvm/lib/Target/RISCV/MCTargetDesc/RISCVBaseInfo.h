@@ -19,7 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCInstrDesc.h"
-#include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 
@@ -123,6 +123,20 @@ enum {
   // 3 -> widening case
   TargetOverlapConstraintTypeShift = UsesVXRMShift + 1,
   TargetOverlapConstraintTypeMask = 3ULL << TargetOverlapConstraintTypeShift,
+
+  ElementsDependOnVLShift = TargetOverlapConstraintTypeShift + 2,
+  ElementsDependOnVLMask = 1ULL << ElementsDependOnVLShift,
+
+  ElementsDependOnMaskShift = ElementsDependOnVLShift + 1,
+  ElementsDependOnMaskMask = 1ULL << ElementsDependOnMaskShift,
+
+  // Indicates the EEW of a vector instruction's destination operand.
+  // 0 -> 1
+  // 1 -> SEW
+  // 2 -> SEW * 2
+  // 3 -> SEW * 4
+  DestEEWShift = ElementsDependOnMaskShift + 1,
+  DestEEWMask = 3ULL << DestEEWShift,
 };
 
 // Helper functions to read TSFlags.
@@ -171,6 +185,18 @@ static inline bool hasRoundModeOp(uint64_t TSFlags) {
 /// \returns true if this instruction uses vxrm
 static inline bool usesVXRM(uint64_t TSFlags) { return TSFlags & UsesVXRMMask; }
 
+/// \returns true if the elements in the body are affected by VL,
+/// e.g. vslide1down.vx/vredsum.vs/viota.m
+static inline bool elementsDependOnVL(uint64_t TSFlags) {
+  return TSFlags & ElementsDependOnVLMask;
+}
+
+/// \returns true if the elements in the body are affected by the mask,
+/// e.g. vredsum.vs/viota.m
+static inline bool elementsDependOnMask(uint64_t TSFlags) {
+  return TSFlags & ElementsDependOnMaskMask;
+}
+
 static inline unsigned getVLOpNum(const MCInstrDesc &Desc) {
   const uint64_t TSFlags = Desc.TSFlags;
   // This method is only called if we expect to have a VL operand, and all
@@ -180,6 +206,12 @@ static inline unsigned getVLOpNum(const MCInstrDesc &Desc) {
   if (hasVecPolicyOp(TSFlags))
     Offset = 3;
   return Desc.getNumOperands() - Offset;
+}
+
+static inline unsigned getTailExpandUseRegNo(const FeatureBitset &FeatureBits) {
+  // For Zicfilp, PseudoTAIL should be expanded to a software guarded branch.
+  // It means to use t2(x7) as rs1 of JALR to expand PseudoTAIL.
+  return FeatureBits[RISCV::FeatureStdExtZicfilp] ? RISCV::X7 : RISCV::X6;
 }
 
 static inline unsigned getSEWOpNum(const MCInstrDesc &Desc) {
@@ -269,7 +301,9 @@ enum OperandType : unsigned {
   OPERAND_UIMM3,
   OPERAND_UIMM4,
   OPERAND_UIMM5,
+  OPERAND_UIMM5_LSB0,
   OPERAND_UIMM6,
+  OPERAND_UIMM6_LSB0,
   OPERAND_UIMM7,
   OPERAND_UIMM7_LSB00,
   OPERAND_UIMM8_LSB00,
@@ -278,7 +312,12 @@ enum OperandType : unsigned {
   OPERAND_UIMM8_GE32,
   OPERAND_UIMM9_LSB000,
   OPERAND_UIMM10_LSB00_NONZERO,
+  OPERAND_UIMM11,
   OPERAND_UIMM12,
+  OPERAND_UIMM16,
+  OPERAND_UIMM32,
+  OPERAND_UIMM48,
+  OPERAND_UIMM64,
   OPERAND_ZERO,
   OPERAND_SIMM5,
   OPERAND_SIMM5_PLUS1,
@@ -297,7 +336,21 @@ enum OperandType : unsigned {
   OPERAND_RVKRNUM_0_7,
   OPERAND_RVKRNUM_1_10,
   OPERAND_RVKRNUM_2_14,
-  OPERAND_LAST_RISCV_IMM = OPERAND_RVKRNUM_2_14,
+  OPERAND_SPIMM,
+  // Operand is a 3-bit rounding mode, '111' indicates FRM register.
+  // Represents 'frm' argument passing to floating-point operations.
+  OPERAND_FRMARG,
+  // Operand is a 3-bit rounding mode where only RTZ is valid.
+  OPERAND_RTZARG,
+  // Condition code used by select and short forward branch pseudos.
+  OPERAND_COND_CODE,
+  // Vector policy operand.
+  OPERAND_VEC_POLICY,
+  // Vector SEW operand.
+  OPERAND_SEW,
+  // Vector rounding mode for VXRM or FRM.
+  OPERAND_VEC_RM,
+  OPERAND_LAST_RISCV_IMM = OPERAND_VEC_RM,
   // Operand is either a register or uimm5, this is used by V extension pseudo
   // instructions to represent a value that be passed as AVL to either vsetvli
   // or vsetivli.
@@ -371,6 +424,15 @@ inline static bool isValidRoundingMode(unsigned Mode) {
   }
 }
 } // namespace RISCVFPRndMode
+
+namespace RISCVVXRndMode {
+enum RoundingMode {
+  RNU = 0,
+  RNE = 1,
+  RDN = 2,
+  ROD = 3,
+};
+} // namespace RISCVVXRndMode
 
 //===----------------------------------------------------------------------===//
 // Floating-point Immediates
@@ -525,12 +587,9 @@ inline unsigned encodeRlist(MCRegister EndReg, bool IsRV32E = false) {
   }
 }
 
-inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64,
-                                       bool IsEABI) {
+inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64) {
   assert(RlistVal != RLISTENCODE::INVALID_RLIST &&
          "{ra, s0-s10} is not supported, s11 must be included.");
-  if (IsEABI)
-    return 16;
   if (!IsRV64) {
     switch (RlistVal) {
     case RLISTENCODE::RA:
@@ -577,18 +636,20 @@ inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64,
 }
 
 inline static bool getSpimm(unsigned RlistVal, unsigned &SpimmVal,
-                            int64_t StackAdjustment, bool IsRV64, bool IsEABI) {
+                            int64_t StackAdjustment, bool IsRV64) {
   if (RlistVal == RLISTENCODE::INVALID_RLIST)
     return false;
-  unsigned stackAdj = getStackAdjBase(RlistVal, IsRV64, IsEABI);
-  SpimmVal = (StackAdjustment - stackAdj) / 16;
+  unsigned StackAdjBase = getStackAdjBase(RlistVal, IsRV64);
+  StackAdjustment -= StackAdjBase;
+  if (StackAdjustment % 16 != 0)
+    return false;
+  SpimmVal = StackAdjustment / 16;
   if (SpimmVal > 3)
     return false;
   return true;
 }
 
 void printRlist(unsigned SlistEncode, raw_ostream &OS);
-void printSpimm(int64_t Spimm, raw_ostream &OS);
 } // namespace RISCVZC
 
 } // namespace llvm

@@ -17,9 +17,9 @@ define void @_Z3fooi(i32 signext %n) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr @dd, align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr getelementptr inbounds (%"struct.std::complex", ptr @dd, i64 0, i32 0, i32 1), align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr getelementptr inbounds nuw (i8, ptr @dd, i64 4), align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr @dd2, align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr getelementptr inbounds (%"struct.std::complex", ptr @dd2, i64 0, i32 0, i32 1), align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr getelementptr inbounds nuw (i8, ptr @dd2, i64 4), align 4
 ; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[MUL4_I:%.*]] = fmul float [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[SUB_I:%.*]] = fsub float [[MUL_I]], [[MUL4_I]]
@@ -32,7 +32,7 @@ define void @_Z3fooi(i32 signext %n) {
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    store float [[TMP0]], ptr @dd, align 4
-; CHECK-NEXT:    store float [[TMP1]], ptr getelementptr inbounds (%"struct.std::complex", ptr @dd, i64 0, i32 0, i32 1), align 4
+; CHECK-NEXT:    store float [[TMP1]], ptr getelementptr inbounds nuw (i8, ptr @dd, i64 4), align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -84,9 +84,9 @@ define void @multi_phi(i32 signext %n) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr @dd, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr getelementptr inbounds (%"struct.std::complex", ptr @dd, i64 0, i32 0, i32 1), align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr getelementptr inbounds nuw (i8, ptr @dd, i64 4), align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr @dd2, align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr getelementptr inbounds (%"struct.std::complex", ptr @dd2, i64 0, i32 0, i32 1), align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr getelementptr inbounds nuw (i8, ptr @dd2, i64 4), align 4
 ; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[MUL4_I:%.*]] = fmul float [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[SUB_I:%.*]] = fsub float [[MUL_I]], [[MUL4_I]]

@@ -1,9 +1,8 @@
-; RUN: llc --filetype=obj %s -o - | dxil-dis -o - | FileCheck %s
+; RUN: llc --filetype=obj %s -o  - -experimental-debuginfo-iterators=false | dxil-dis -o - | FileCheck %s
 target triple = "dxil-unknown-shadermodel6.7-library"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 ; CHECK: define float @fma(float, float, float) unnamed_addr #0 !dbg [[Fn:[!][0-9]+]]
-; Function Attrs: norecurse nounwind readnone willreturn
 define dso_local float @fma(float %0, float %1, float %2) local_unnamed_addr #0 !dbg !6 {
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata float %0, metadata [[VarX:[!][0-9]+]], metadata [[Expr:[!][0-9]+]]), !dbg [[Line1:[!][0-9]+]]
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata float %1, metadata [[VarY:[!][0-9]+]], metadata [[Expr]]), !dbg [[Line1]]
@@ -18,11 +17,7 @@ define dso_local float @fma(float %0, float %1, float %2) local_unnamed_addr #0 
   ret float %5, !dbg !17
 }
 
-; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
-
-attributes #0 = { norecurse nounwind readnone willreturn }
-attributes #1 = { nofree nosync nounwind readnone speculatable willreturn }
+attributes #0 = { norecurse nounwind readnone willreturn "hlsl.export" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

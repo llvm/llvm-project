@@ -268,10 +268,20 @@ private:
 /// the containing object being added to the JITDylib.
 class StaticLibraryDefinitionGenerator : public DefinitionGenerator {
 public:
-  // Interface builder function for objects loaded from this archive.
+  /// Interface builder function for objects loaded from this archive.
   using GetObjectFileInterface =
       unique_function<Expected<MaterializationUnit::Interface>(
           ExecutionSession &ES, MemoryBufferRef ObjBuffer)>;
+
+  /// Callback for visiting archive members at construction time.
+  /// Con be used to pre-load archive members.
+  using VisitMembersFunction = unique_function<Error(MemoryBufferRef)>;
+
+  /// A VisitMembersFunction that unconditionally loads all object files from
+  /// the archive.
+  /// Archive members that are not valid object files will be skipped.
+  static VisitMembersFunction loadAllObjectFileMembers(ObjectLayer &L,
+                                                       JITDylib &JD);
 
   /// Try to create a StaticLibraryDefinitionGenerator from the given path.
   ///
@@ -280,6 +290,7 @@ public:
   /// with the ExecutionSession's triple. Otherwise it will return an error.
   static Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
   Load(ObjectLayer &L, const char *FileName,
+       VisitMembersFunction VisitMembers = VisitMembersFunction(),
        GetObjectFileInterface GetObjFileInterface = GetObjectFileInterface());
 
   /// Try to create a StaticLibrarySearchGenerator from the given memory buffer
@@ -287,6 +298,7 @@ public:
   static Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
   Create(ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
          std::unique_ptr<object::Archive> Archive,
+         VisitMembersFunction VisitMembers = VisitMembersFunction(),
          GetObjectFileInterface GetObjFileInterface = GetObjectFileInterface());
 
   /// Try to create a StaticLibrarySearchGenerator from the given memory buffer.
@@ -298,11 +310,12 @@ public:
   /// with the ExecutionSession's triple. Otherwise it will return an error.
   static Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
   Create(ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
+         VisitMembersFunction VisitMembers = VisitMembersFunction(),
          GetObjectFileInterface GetObjFileInterface = GetObjectFileInterface());
 
   /// Returns a list of filenames of dynamic libraries that this archive has
   /// imported. This class does not load these libraries by itself. User is
-  /// responsible for making sure these libraries are avaliable to the JITDylib.
+  /// responsible for making sure these libraries are available to the JITDylib.
   const std::set<std::string> &getImportedDynamicLibraries() const {
     return ImportedDynamicLibraries;
   }
@@ -319,15 +332,13 @@ private:
                                    Error &Err);
   Error buildObjectFilesMap();
 
-  static Expected<std::pair<size_t, size_t>>
-  getSliceRangeForArch(object::MachOUniversalBinary &UB, const Triple &TT);
-
   ObjectLayer &L;
   GetObjectFileInterface GetObjFileInterface;
   std::set<std::string> ImportedDynamicLibraries;
   std::unique_ptr<MemoryBuffer> ArchiveBuffer;
   std::unique_ptr<object::Archive> Archive;
   DenseMap<SymbolStringPtr, MemoryBufferRef> ObjectFilesMap;
+  BumpPtrAllocator ObjFileNameStorage;
 };
 
 /// A utility class to create COFF dllimport GOT symbols (__imp_*) and PLT
@@ -352,7 +363,7 @@ private:
       : ES(ES), L(L) {}
 
   static Expected<unsigned> getTargetPointerSize(const Triple &TT);
-  static Expected<llvm::endianness> getTargetEndianness(const Triple &TT);
+  static Expected<llvm::endianness> getEndianness(const Triple &TT);
   Expected<std::unique_ptr<jitlink::LinkGraph>>
   createStubsGraph(const SymbolMap &Resolved);
 

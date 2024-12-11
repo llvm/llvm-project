@@ -51,6 +51,7 @@
 # FULL-NEXT:  vgprForAGPRCopy: ''
 # FULL-NEXT:  sgprForEXECCopy: ''
 # FULL-NEXT:  longBranchReservedReg: ''
+# FULL-NEXT:  hasInitWholeWave: false
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -154,6 +155,7 @@ body:             |
 # FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
+# FULL-NEXT: hasInitWholeWave: false
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -228,6 +230,7 @@ body:             |
 # FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
+# FULL-NEXT: hasInitWholeWave: false
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -303,6 +306,7 @@ body:             |
 # FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
+# FULL-NEXT: hasInitWholeWave: false
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -573,4 +577,19 @@ body:             |
   bb.0:
     SI_RETURN
 
+...
+---
+name: vregs
+# FULL: registers:
+# FULL-NEXT:   - { id: 0, class: vgpr_32, preferred-register: '$vgpr1', flags: [ WWM_REG ] }
+# FULL-NEXT:   - { id: 1, class: sgpr_64, preferred-register: '$sgpr0_sgpr1', flags: [  ] }
+# FULL-NEXT:   - { id: 2, class: sgpr_64, preferred-register: '', flags: [  ] }
+registers:
+  - { id: 0, class: vgpr_32, preferred-register: $vgpr1, flags: [ WWM_REG ]}
+  - { id: 1, class: sgpr_64, preferred-register: $sgpr0_sgpr1 }
+  - { id: 2, class: sgpr_64, flags: [ ] }
+body: |
+  bb.0:
+    %2:sgpr_64 = COPY %1
+    %1:sgpr_64 = COPY %0
 ...

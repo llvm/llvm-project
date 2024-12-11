@@ -72,6 +72,7 @@ struct ShaderHash {
   std::vector<llvm::yaml::Hex8> Digest;
 };
 
+using ResourceFlags = dxbc::PSV::ResourceFlags;
 using ResourceBindInfo = dxbc::PSV::v2::ResourceBindInfo;
 
 struct SignatureElement {
@@ -107,7 +108,7 @@ struct PSVInfo {
   // the format.
   uint32_t Version;
 
-  dxbc::PSV::v2::RuntimeInfo Info;
+  dxbc::PSV::v3::RuntimeInfo Info;
   uint32_t ResourceStride;
   SmallVector<ResourceBindInfo> Resources;
   SmallVector<SignatureElement> SigInputElements;
@@ -121,12 +122,15 @@ struct PSVInfo {
   MaskVector InputPatchMap;
   MaskVector PatchOutputMap;
 
+  StringRef EntryName;
+
   void mapInfoForVersion(yaml::IO &IO);
 
   PSVInfo();
   PSVInfo(const dxbc::PSV::v0::RuntimeInfo *P, uint16_t Stage);
   PSVInfo(const dxbc::PSV::v1::RuntimeInfo *P);
   PSVInfo(const dxbc::PSV::v2::RuntimeInfo *P);
+  PSVInfo(const dxbc::PSV::v3::RuntimeInfo *P, StringRef StringTable);
 };
 
 struct SignatureParameter {
@@ -173,6 +177,8 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureParameter)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::SemanticKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::InterpolationMode)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ResourceType)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ResourceKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::D3DSystemValue)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SigComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SigMinPrecision)
@@ -213,6 +219,10 @@ template <> struct MappingTraits<DXContainerYAML::Part> {
 
 template <> struct MappingTraits<DXContainerYAML::Object> {
   static void mapping(IO &IO, DXContainerYAML::Object &Obj);
+};
+
+template <> struct MappingTraits<DXContainerYAML::ResourceFlags> {
+  static void mapping(IO &IO, DXContainerYAML::ResourceFlags &Flags);
 };
 
 template <> struct MappingTraits<DXContainerYAML::ResourceBindInfo> {

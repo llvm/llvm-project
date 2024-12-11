@@ -96,7 +96,7 @@ Region::iterator getBlockIt(Region &region, unsigned index) {
 template <typename OpTy>
 class SCFToSPIRVPattern : public OpConversionPattern<OpTy> {
 public:
-  SCFToSPIRVPattern(MLIRContext *context, SPIRVTypeConverter &converter,
+  SCFToSPIRVPattern(MLIRContext *context, const SPIRVTypeConverter &converter,
                     ScfToSPIRVContextImpl *scfToSPIRVContext)
       : OpConversionPattern<OpTy>::OpConversionPattern(converter, context),
         scfToSPIRVContext(scfToSPIRVContext), typeConverter(converter) {}
@@ -117,7 +117,7 @@ protected:
   // conversion. There isn't a straightforward way to do that yet, as when
   // converting types, ops aren't taken into consideration. Therefore, we just
   // bypass the framework's type conversion for now.
-  SPIRVTypeConverter &typeConverter;
+  const SPIRVTypeConverter &typeConverter;
 };
 
 //===----------------------------------------------------------------------===//
@@ -162,7 +162,7 @@ struct ForOpConversion final : SCFToSPIRVPattern<scf::ForOp> {
     signatureConverter.remapInput(0, newIndVar);
     for (unsigned i = 1, e = body->getNumArguments(); i < e; i++)
       signatureConverter.remapInput(i, header->getArgument(i));
-    body = rewriter.applySignatureConversion(&forOp.getRegion(),
+    body = rewriter.applySignatureConversion(&forOp.getRegion().front(),
                                              signatureConverter);
 
     // Move the blocks from the forOp into the loopOp. This is the body of the
@@ -436,7 +436,7 @@ struct WhileOpConversion final : SCFToSPIRVPattern<scf::WhileOp> {
 // Public API
 //===----------------------------------------------------------------------===//
 
-void mlir::populateSCFToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+void mlir::populateSCFToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                       ScfToSPIRVContext &scfToSPIRVContext,
                                       RewritePatternSet &patterns) {
   patterns.add<ForOpConversion, IfOpConversion, TerminatorOpConversion,

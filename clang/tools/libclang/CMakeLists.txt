@@ -167,6 +167,10 @@ if(ENABLE_SHARED)
       PROPERTIES
       VERSION ${LIBCLANG_LIBRARY_VERSION}
       DEFINE_SYMBOL _CINDEX_LIB_)
+      # Avoid declaring clang c++ symbols that are statically linked into libclang as dllimport'ed.
+      # If llvm/libclang-cpp dll is also being built for windows clang c++ symbols will still be
+      # implicitly be exported from libclang.
+      target_compile_definitions(libclang PRIVATE CLANG_BUILD_STATIC)
   elseif(APPLE)
     set(LIBCLANG_LINK_FLAGS " -Wl,-compatibility_version -Wl,1")
     set(LIBCLANG_LINK_FLAGS "${LIBCLANG_LINK_FLAGS} -Wl,-current_version -Wl,${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
@@ -190,8 +194,8 @@ if(ENABLE_SHARED)
       include(CheckLinkerFlag)
       # The Solaris 11.4 linker supports a subset of GNU ld version scripts,
       # but requires a special option to enable it.
-      llvm_check_linker_flag(CXX "-Wl,-z,gnu-version-script-compat"
-                             LINKER_SUPPORTS_Z_GNU_VERSION_SCRIPT_COMPAT)
+      check_linker_flag(CXX "-Wl,-z,gnu-version-script-compat"
+                        LINKER_SUPPORTS_Z_GNU_VERSION_SCRIPT_COMPAT)
       # Older Solaris (and illumos) linker does not support GNU ld version scripts
       # and does not support GNU version script compat.
       if (LINKER_SUPPORTS_Z_GNU_VERSION_SCRIPT_COMPAT)
@@ -230,7 +234,7 @@ install(DIRECTORY ../../include/clang-c
 # component and an install-component target, so add a dummy libclang-headers
 # target to allow using it in LLVM_DISTRIBUTION_COMPONENTS.
 add_custom_target(libclang-headers)
-set_target_properties(libclang-headers PROPERTIES FOLDER "Misc")
+set_target_properties(libclang-headers PROPERTIES FOLDER "Clang/Resources")
 
 if (NOT LLVM_ENABLE_IDE)
   add_llvm_install_targets(install-libclang-headers

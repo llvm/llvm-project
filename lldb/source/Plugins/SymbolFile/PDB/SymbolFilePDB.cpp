@@ -28,6 +28,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_DIA_SDK
 #include "llvm/DebugInfo/PDB/ConcreteSymbolEnumerator.h"
 #include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/IPDBDataStream.h"
@@ -309,9 +310,9 @@ SymbolFilePDB::ParseCompileUnitFunctionForPDBFunc(const PDBSymbolFunc &pdb_func,
 
   Mangled mangled = GetMangledForPDBFunc(pdb_func);
 
-  FunctionSP func_sp =
-      std::make_shared<Function>(&comp_unit, pdb_func.getSymIndexId(),
-                                 func_type_uid, mangled, func_type, func_range);
+  FunctionSP func_sp = std::make_shared<Function>(
+      &comp_unit, pdb_func.getSymIndexId(), func_type_uid, mangled, func_type,
+      AddressRanges{func_range});
 
   comp_unit.AddFunction(func_sp);
 
@@ -401,46 +402,32 @@ static size_t ParseFunctionBlocksForPDBSymbol(
   assert(pdb_symbol && parent_block);
 
   size_t num_added = 0;
-  switch (pdb_symbol->getSymTag()) {
-  case PDB_SymType::Block:
-  case PDB_SymType::Function: {
-    Block *block = nullptr;
+
+  if (!is_top_parent) {
+    // Ranges for the top block were parsed together with the function.
+    if (pdb_symbol->getSymTag() != PDB_SymType::Block)
+      return num_added;
+
     auto &raw_sym = pdb_symbol->getRawSymbol();
-    if (auto *pdb_func = llvm::dyn_cast<PDBSymbolFunc>(pdb_symbol)) {
-      if (pdb_func->hasNoInlineAttribute())
-        break;
-      if (is_top_parent)
-        block = parent_block;
-      else
-        break;
-    } else if (llvm::isa<PDBSymbolBlock>(pdb_symbol)) {
-      auto uid = pdb_symbol->getSymIndexId();
-      if (parent_block->FindBlockByID(uid))
-        break;
-      if (raw_sym.getVirtualAddress() < func_file_vm_addr)
-        break;
+    assert(llvm::isa<PDBSymbolBlock>(pdb_symbol));
+    auto uid = pdb_symbol->getSymIndexId();
+    if (parent_block->FindBlockByID(uid))
+      return num_added;
+    if (raw_sym.getVirtualAddress() < func_file_vm_addr)
+      return num_added;
 
-      auto block_sp = std::make_shared<Block>(pdb_symbol->getSymIndexId());
-      parent_block->AddChild(block_sp);
-      block = block_sp.get();
-    } else
-      llvm_unreachable("Unexpected PDB symbol!");
-
+    Block *block = parent_block->CreateChild(pdb_symbol->getSymIndexId()).get();
     block->AddRange(Block::Range(
         raw_sym.getVirtualAddress() - func_file_vm_addr, raw_sym.getLength()));
     block->FinalizeRanges();
-    ++num_added;
+  }
+  auto results_up = pdb_symbol->findAllChildren();
+  if (!results_up)
+    return num_added;
 
-    auto results_up = pdb_symbol->findAllChildren();
-    if (!results_up)
-      break;
-    while (auto symbol_up = results_up->getNext()) {
-      num_added += ParseFunctionBlocksForPDBSymbol(
-          func_file_vm_addr, symbol_up.get(), block, false);
-    }
-  } break;
-  default:
-    break;
+  while (auto symbol_up = results_up->getNext()) {
+    num_added += ParseFunctionBlocksForPDBSymbol(
+        func_file_vm_addr, symbol_up.get(), parent_block, false);
   }
   return num_added;
 }
@@ -1141,8 +1128,8 @@ void SymbolFilePDB::FindGlobalVariables(
     sc.module_sp = m_objfile_sp->GetModule();
     lldbassert(sc.module_sp.get());
 
-    if (!name.GetStringRef().equals(
-            MSVCUndecoratedNameParser::DropScope(pdb_data->getName())))
+    if (name.GetStringRef() !=
+        MSVCUndecoratedNameParser::DropScope(pdb_data->getName()))
       continue;
 
     sc.comp_unit = ParseCompileUnitForUID(GetCompilandId(*pdb_data)).get();
@@ -1294,12 +1281,11 @@ void SymbolFilePDB::CacheFunctionNames() {
         continue;
 
       if (CPlusPlusLanguage::IsCPPMangledName(name.c_str())) {
-        auto vm_addr = pub_sym_up->getVirtualAddress();
-
         // PDB public symbol has mangled name for its associated function.
-        if (vm_addr && addr_ids.find(vm_addr) != addr_ids.end()) {
-          // Cache mangled name.
-          m_func_full_names.Append(ConstString(name), addr_ids[vm_addr]);
+        if (auto vm_addr = pub_sym_up->getVirtualAddress()) {
+          if (auto it = addr_ids.find(vm_addr); it != addr_ids.end())
+            // Cache mangled name.
+            m_func_full_names.Append(ConstString(name), it->second);
         }
       }
     }

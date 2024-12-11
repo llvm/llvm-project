@@ -22,12 +22,6 @@ on:
       - '.github/workflows/libclang-python-tests.yml'
       - '.github/workflows/llvm-project-tests.yml'
 
-concurrency:
-  # Skip intermediate builds: always.
-  # Cancel intermediate builds: only if it is a pull request build.
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
-
 jobs:
   check-clang-python:
     # Build libclang and then run the libclang Python binding's unit tests.
@@ -36,7 +30,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.7", "3.11"]
+        python-version: ["3.8", "3.11"]
     uses: ./.github/workflows/llvm-project-tests.yml
     with:
       build_target: check-clang-python

@@ -1742,7 +1742,7 @@ DWARF - Clang (Linux)
   [003]     3           {Variable} 'Var_1' -> 'int'
   [002]    11         {Function} extern not_inlined 'test' -> 'int'
   [003]    12           {Variable} 'A' -> 'int'
-  [003]    14           {InlinedFunction} inlined 'InlineFunction' -> 'int'
+  [003]    13           {InlinedFunction} inlined 'InlineFunction' -> 'int'
   [004]                   {Block}
   [005]                     {Variable} 'Var_2' -> 'int'
   [004]                   {Parameter} 'Param' -> 'int'
@@ -2266,6 +2266,10 @@ EXIT STATUS
 -----------
 :program:`llvm-debuginfo-analyzer` returns 0 if the input files were
 parsed and printed successfully. Otherwise, it returns 1.
+
+LIMITATIONS AND KNOWN ISSUES
+----------------------------
+See :download:`Limitations <../../tools/llvm-debuginfo-analyzer/README.md>`.
 
 SEE ALSO
 --------

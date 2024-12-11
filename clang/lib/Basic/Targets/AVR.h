@@ -29,6 +29,8 @@ public:
     TLSSupported = false;
     PointerWidth = 16;
     PointerAlign = 8;
+    ShortWidth = 16;
+    ShortAlign = 8;
     IntWidth = 16;
     IntAlign = 8;
     LongWidth = 32;
@@ -61,9 +63,12 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override {
-    return std::nullopt;
+  std::pair<const char *, ArrayRef<Builtin::Info>>
+  getTargetBuiltinStorage() const override {
+    return {nullptr, {}};
   }
+
+  bool allowsLargerPreferedTypeAlignment() const override { return false; }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::VoidPtrBuiltinVaList;
@@ -80,7 +85,7 @@ public:
   }
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return std::nullopt;
+    return {};
   }
 
   ArrayRef<TargetInfo::AddlRegName> getGCCAddlRegNames() const override {
@@ -174,6 +179,10 @@ public:
   bool setCPU(const std::string &Name) override;
   std::optional<std::string> handleAsmEscapedChar(char EscChar) const override;
   StringRef getABI() const override { return ABI; }
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(32, 32);
+  }
 
 protected:
   std::string CPU;

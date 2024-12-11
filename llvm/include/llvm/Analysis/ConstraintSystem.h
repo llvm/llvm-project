@@ -9,7 +9,6 @@
 #ifndef LLVM_ANALYSIS_CONSTRAINTSYSTEM_H
 #define LLVM_ANALYSIS_CONSTRAINTSYSTEM_H
 
-#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
@@ -114,7 +113,9 @@ public:
   static SmallVector<int64_t, 8> negate(SmallVector<int64_t, 8> R) {
     // The negated constraint R is obtained by multiplying by -1 and adding 1 to
     // the constant.
-    R[0] += 1;
+    if (AddOverflow(R[0], int64_t(1), R[0]))
+      return {};
+
     return negateOrEqual(R);
   }
 

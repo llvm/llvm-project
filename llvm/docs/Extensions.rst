@@ -401,7 +401,7 @@ the symbol that belongs to the partition. It may be constructed as follows:
 This section stores the binary address of basic blocks along with other related
 metadata. This information can be used to map binary profiles (like perf
 profiles) directly to machine basic blocks.
-This section is emitted with ``-basic-block-sections=labels`` and will contain
+This section is emitted with ``-basic-block-address-map`` and will contain
 a BB address map table for every function.
 
 The ``SHT_LLVM_BB_ADDR_MAP`` type provides backward compatibility to allow
@@ -553,6 +553,12 @@ This section stores LLVM bitcode used to perform regular LTO or ThinLTO at link
 time. This section is generated when the compiler enables fat LTO. This section
 has the ``SHF_EXCLUDE`` flag so that it is stripped from the final executable
 or shared library.
+
+``SHT_LLVM_JT_SIZES`` Section (Jump table addresses and sizes)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This section stores pairs of (jump table address, number of entries).
+This information is useful for tools that need to statically reconstruct
+the control flow of executables.
 
 CodeView-Dependent
 ------------------

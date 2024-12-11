@@ -121,6 +121,13 @@ LogicalResult SelectObjectAttrImpl::embedBinary(
       new llvm::GlobalVariable(*module, binary->getType(), true,
                                llvm::GlobalValue::LinkageTypes::InternalLinkage,
                                binary, getBinaryIdentifier(op.getName()));
+
+  if (object.getProperties()) {
+    if (auto section = mlir::dyn_cast_or_null<mlir::StringAttr>(
+            object.getProperties().get("section"))) {
+      serializedObj->setSection(section.getValue());
+    }
+  }
   serializedObj->setLinkage(llvm::GlobalValue::LinkageTypes::InternalLinkage);
   serializedObj->setAlignment(llvm::MaybeAlign(8));
   serializedObj->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::None);
@@ -167,7 +174,7 @@ public:
   Value *createKernelArgArray(mlir::gpu::LaunchFuncOp op);
 
   // Create the full kernel launch.
-  mlir::LogicalResult createKernelLaunch(mlir::gpu::LaunchFuncOp op,
+  llvm::LogicalResult createKernelLaunch(mlir::gpu::LaunchFuncOp op,
                                          mlir::gpu::ObjectAttr object);
 
 private:
@@ -345,7 +352,7 @@ llvm::LaunchKernel::createKernelArgArray(mlir::gpu::LaunchFuncOp op) {
 // call %streamSynchronize(%4)
 // call %streamDestroy(%4)
 // call %moduleUnload(%1)
-mlir::LogicalResult
+llvm::LogicalResult
 llvm::LaunchKernel::createKernelLaunch(mlir::gpu::LaunchFuncOp op,
                                        mlir::gpu::ObjectAttr object) {
   auto llvmValue = [&](mlir::Value value) -> Value * {

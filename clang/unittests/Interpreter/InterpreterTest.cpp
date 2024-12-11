@@ -10,29 +10,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Interpreter/Interpreter.h"
+#include "InterpreterTestFixture.h"
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/AST/Mangle.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
+#include "clang/Interpreter/Interpreter.h"
 #include "clang/Interpreter/Value.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
-
-#include "llvm/ExecutionEngine/Orc/LLJIT.h"
-#include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/TargetSelect.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
-
-#if defined(_AIX)
-#define CLANG_INTERPRETER_NO_SUPPORT_EXEC
-#endif
 
 int Global = 42;
 // JIT reports symbol not found on Windows without the visibility attribute.
@@ -40,6 +33,11 @@ REPL_EXTERNAL_VISIBILITY int getGlobal() { return Global; }
 REPL_EXTERNAL_VISIBILITY void setGlobal(int val) { Global = val; }
 
 namespace {
+
+class InterpreterTest : public InterpreterTestBase {
+  // TODO: Collect common variables and utility functions here
+};
+
 using Args = std::vector<const char *>;
 static std::unique_ptr<Interpreter>
 createInterpreter(const Args &ExtraArgs = {},
@@ -58,7 +56,7 @@ static size_t DeclsSize(TranslationUnitDecl *PTUDecl) {
   return std::distance(PTUDecl->decls().begin(), PTUDecl->decls().end());
 }
 
-TEST(InterpreterTest, Sanity) {
+TEST_F(InterpreterTest, Sanity) {
   std::unique_ptr<Interpreter> Interp = createInterpreter();
 
   using PTU = PartialTranslationUnit;
@@ -74,7 +72,7 @@ static std::string DeclToString(Decl *D) {
   return llvm::cast<NamedDecl>(D)->getQualifiedNameAsString();
 }
 
-TEST(InterpreterTest, IncrementalInputTopLevelDecls) {
+TEST_F(InterpreterTest, IncrementalInputTopLevelDecls) {
   std::unique_ptr<Interpreter> Interp = createInterpreter();
   auto R1 = Interp->Parse("int var1 = 42; int f() { return var1; }");
   // gtest doesn't expand into explicit bool conversions.
@@ -91,7 +89,7 @@ TEST(InterpreterTest, IncrementalInputTopLevelDecls) {
   EXPECT_EQ("var2", DeclToString(*R2DeclRange.begin()));
 }
 
-TEST(InterpreterTest, Errors) {
+TEST_F(InterpreterTest, Errors) {
   Args ExtraArgs = {"-Xclang", "-diagnostic-log-file", "-Xclang", "-"};
 
   // Create the diagnostic engine with unowned consumer.
@@ -103,7 +101,7 @@ TEST(InterpreterTest, Errors) {
   auto Interp = createInterpreter(ExtraArgs, DiagPrinter.get());
   auto Err = Interp->Parse("intentional_error v1 = 42; ").takeError();
   using ::testing::HasSubstr;
-  EXPECT_THAT(DiagnosticsOS.str(),
+  EXPECT_THAT(DiagnosticOutput,
               HasSubstr("error: unknown type name 'intentional_error'"));
   EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err)));
 
@@ -114,7 +112,8 @@ TEST(InterpreterTest, Errors) {
 // Here we test whether the user can mix declarations and statements. The
 // interpreter should be smart enough to recognize the declarations from the
 // statements and wrap the latter into a declaration, producing valid code.
-TEST(InterpreterTest, DeclsAndStatements) {
+
+TEST_F(InterpreterTest, DeclsAndStatements) {
   Args ExtraArgs = {"-Xclang", "-diagnostic-log-file", "-Xclang", "-"};
 
   // Create the diagnostic engine with unowned consumer.
@@ -136,7 +135,7 @@ TEST(InterpreterTest, DeclsAndStatements) {
   EXPECT_TRUE(!!R2);
 }
 
-TEST(InterpreterTest, UndoCommand) {
+TEST_F(InterpreterTest, UndoCommand) {
   Args ExtraArgs = {"-Xclang", "-diagnostic-log-file", "-Xclang", "-"};
 
   // Create the diagnostic engine with unowned consumer.
@@ -187,41 +186,15 @@ static std::string MangleName(NamedDecl *ND) {
   std::string mangledName;
   llvm::raw_string_ostream RawStr(mangledName);
   MangleC->mangleName(ND, RawStr);
-  return RawStr.str();
+  return mangledName;
 }
 
-static bool HostSupportsJit() {
-  auto J = llvm::orc::LLJITBuilder().create();
-  if (J)
-    return true;
-  LLVMConsumeError(llvm::wrap(J.takeError()));
-  return false;
-}
-
-struct LLVMInitRAII {
-  LLVMInitRAII() {
-    llvm::InitializeNativeTarget();
-    llvm::InitializeNativeTargetAsmPrinter();
-  }
-  ~LLVMInitRAII() { llvm::llvm_shutdown(); }
-} LLVMInit;
-
-#ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC
-TEST(IncrementalProcessing, DISABLED_FindMangledNameSymbol) {
-#else
-TEST(IncrementalProcessing, FindMangledNameSymbol) {
-#endif
-
+TEST_F(InterpreterTest, FindMangledNameSymbol) {
   std::unique_ptr<Interpreter> Interp = createInterpreter();
 
   auto &PTU(cantFail(Interp->Parse("int f(const char*) {return 0;}")));
   EXPECT_EQ(1U, DeclsSize(PTU.TUPart));
   auto R1DeclRange = PTU.TUPart->decls();
-
-  // We cannot execute on the platform.
-  if (!HostSupportsJit()) {
-    return;
-  }
 
   NamedDecl *FD = cast<FunctionDecl>(*R1DeclRange.begin());
   // Lower the PTU
@@ -270,11 +243,7 @@ static NamedDecl *LookupSingleName(Interpreter &Interp, const char *Name) {
   return R.getFoundDecl();
 }
 
-#ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC
-TEST(IncrementalProcessing, DISABLED_InstantiateTemplate) {
-#else
-TEST(IncrementalProcessing, InstantiateTemplate) {
-#endif
+TEST_F(InterpreterTest, InstantiateTemplate) {
   // FIXME: We cannot yet handle delayed template parsing. If we run with
   // -fdelayed-template-parsing we try adding the newly created decl to the
   // active PTU which causes an assert.
@@ -290,11 +259,6 @@ TEST(IncrementalProcessing, InstantiateTemplate) {
   auto &PTU = llvm::cantFail(Interp->Parse("auto _t = &B::callme<A*>;"));
   auto PTUDeclRange = PTU.TUPart->decls();
   EXPECT_EQ(1, std::distance(PTUDeclRange.begin(), PTUDeclRange.end()));
-
-  // We cannot execute on the platform.
-  if (!HostSupportsJit()) {
-    return;
-  }
 
   // Lower the PTU
   if (llvm::Error Err = Interp->Execute(PTU)) {
@@ -318,16 +282,9 @@ TEST(IncrementalProcessing, InstantiateTemplate) {
   EXPECT_EQ(42, fn(NewA.getPtr()));
 }
 
-#ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC
-TEST(InterpreterTest, DISABLED_Value) {
-#else
-TEST(InterpreterTest, Value) {
-#endif
-  // We cannot execute on the platform.
-  if (!HostSupportsJit())
-    return;
-
-  std::unique_ptr<Interpreter> Interp = createInterpreter();
+TEST_F(InterpreterTest, Value) {
+  std::vector<const char *> Args = {"-fno-sized-deallocation"};
+  std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
 
   Value V1;
   llvm::cantFail(Interp->ParseAndExecute("int x = 42;"));
@@ -339,6 +296,12 @@ TEST(InterpreterTest, Value) {
   EXPECT_TRUE(V1.getType()->isIntegerType());
   EXPECT_EQ(V1.getKind(), Value::K_Int);
   EXPECT_FALSE(V1.isManuallyAlloc());
+
+  Value V1b;
+  llvm::cantFail(Interp->ParseAndExecute("char c = 42;"));
+  llvm::cantFail(Interp->ParseAndExecute("c", &V1b));
+  EXPECT_TRUE(V1b.getKind() == Value::K_Char_S ||
+              V1b.getKind() == Value::K_Char_U);
 
   Value V2;
   llvm::cantFail(Interp->ParseAndExecute("double y = 3.14;"));
@@ -417,4 +380,27 @@ TEST(InterpreterTest, Value) {
   EXPECT_EQ(V9.getKind(), Value::K_PtrOrObj);
   EXPECT_TRUE(V9.isManuallyAlloc());
 }
+
+TEST_F(InterpreterTest, TranslationUnit_CanonicalDecl) {
+  std::vector<const char *> Args;
+  std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
+
+  Sema &sema = Interp->getCompilerInstance()->getSema();
+
+  llvm::cantFail(Interp->ParseAndExecute("int x = 42;"));
+
+  TranslationUnitDecl *TU =
+      sema.getASTContext().getTranslationUnitDecl()->getCanonicalDecl();
+
+  llvm::cantFail(Interp->ParseAndExecute("long y = 84;"));
+
+  EXPECT_EQ(TU,
+            sema.getASTContext().getTranslationUnitDecl()->getCanonicalDecl());
+
+  llvm::cantFail(Interp->ParseAndExecute("char z = 'z';"));
+
+  EXPECT_EQ(TU,
+            sema.getASTContext().getTranslationUnitDecl()->getCanonicalDecl());
+}
+
 } // end anonymous namespace

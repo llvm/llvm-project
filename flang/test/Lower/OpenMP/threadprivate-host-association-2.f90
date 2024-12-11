@@ -5,14 +5,14 @@
 
 !CHECK: func.func @_QQmain() attributes {fir.bindc_name = "main"} {
 !CHECK:   %[[A:.*]] = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFEa"}
-!CHECK:   %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] {uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:   %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:   %[[A_ADDR:.*]] = fir.address_of(@_QFEa) : !fir.ref<i32>
 !CHECK:   %[[TP_A:.*]] = omp.threadprivate %[[A_ADDR]] : !fir.ref<i32> -> !fir.ref<i32>
-!CHECK:   %[[TP_A_DECL:.*]]:2 = hlfir.declare %[[TP_A]] {uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:   %[[TP_A_DECL:.*]]:2 = hlfir.declare %[[TP_A]] {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:   fir.call @_QFPsub() fastmath<contract> : () -> ()
 !CHECK:   return
 !CHECK: }
-!CHECK: func.func private @_QFPsub() attributes {fir.internal_proc, llvm.linkage = #llvm.linkage<internal>} {
+!CHECK: func.func private @_QFPsub() attributes {fir.host_symbol = {{.*}}, llvm.linkage = #llvm.linkage<internal>} {
 !CHECK:   %[[A:.*]] = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFEa"}
 !CHECK:   %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] {uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:   %[[A_ADDR:.*]] = fir.address_of(@_QFEa) : !fir.ref<i32>

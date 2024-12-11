@@ -1,468 +1,193 @@
 // RUN: rm -rf %t
-// RUN: split-file %s %t
-// RUN: sed -e "s@INPUT_DIR@%{/t:regex_replacement}@g" \
-// RUN: %t/reference.output.json.in >> %t/reference.output.json
-// RUN: %clang_cc1 -extract-api --product-name=TypedefChain -triple arm64-apple-macosx \
-// RUN:   -x c-header %t/input.h -o %t/output.json -verify
+// RUN: %clang_cc1 -extract-api --pretty-sgf --emit-sgf-symbol-labels-for-testing \
+// RUN:   --product-name=TypedefChain -triple arm64-apple-macosx -x c-header %s -o %t/typedefchain-c.symbols.json -verify
+// RUN: %clang_cc1 -extract-api --pretty-sgf --emit-sgf-symbol-labels-for-testing \
+// RUN:   --product-name=TypedefChain -triple arm64-apple-macosx -x c++-header %s -o %t/typedefchain-cxx.symbols.json -verify
 
-// Generator version is not consistent across test runs, normalize it.
-// RUN: sed -e "s@\"generator\": \".*\"@\"generator\": \"?\"@g" \
-// RUN: %t/output.json >> %t/output-normalized.json
-// RUN: diff %t/reference.output.json %t/output-normalized.json
-
-//--- input.h
+// RUN: FileCheck %s --input-file %t/typedefchain-c.symbols.json --check-prefix MYSTRUCT
+// RUN: FileCheck %s --input-file %t/typedefchain-cxx.symbols.json --check-prefix MYSTRUCT
 typedef struct { } MyStruct;
-typedef MyStruct MyStructStruct;
-typedef MyStructStruct MyStructStructStruct;
-typedef enum { Case } MyEnum;
-typedef MyEnum MyEnumEnum;
-typedef MyEnumEnum MyEnumEnumEnum;
-// expected-no-diagnostics
+// MYSTRUCT-LABEL: "!testLabel": "c:@SA@MyStruct"
+// MYSTRUCT:      "accessLevel": "public",
+// MYSTRUCT:      "declarationFragments": [
+// MYSTRUCT-NEXT:   {
+// MYSTRUCT-NEXT:     "kind": "keyword",
+// MYSTRUCT-NEXT:     "spelling": "typedef"
+// MYSTRUCT-NEXT:   },
+// MYSTRUCT-NEXT:   {
+// MYSTRUCT-NEXT:     "kind": "text",
+// MYSTRUCT-NEXT:     "spelling": " "
+// MYSTRUCT-NEXT:   },
+// MYSTRUCT-NEXT:   {
+// MYSTRUCT-NEXT:     "kind": "keyword",
+// MYSTRUCT-NEXT:     "spelling": "struct"
+// MYSTRUCT-NEXT:   },
+// MYSTRUCT-NEXT:   {
+// MYSTRUCT-NEXT:     "kind": "text",
+// MYSTRUCT-NEXT:     "spelling": " { ... } "
+// MYSTRUCT-NEXT:   },
+// MYSTRUCT-NEXT:   {
+// MYSTRUCT-NEXT:     "kind": "identifier",
+// MYSTRUCT-NEXT:     "spelling": "MyStruct"
+// MYSTRUCT-NEXT:   },
+// MYSTRUCT-NEXT:   {
+// MYSTRUCT-NEXT:     "kind": "text",
+// MYSTRUCT-NEXT:     "spelling": ";"
+// MYSTRUCT-NEXT:   }
+// MYSTRUCT-NEXT: ]
+// MYSTRUCT:      "kind": {
+// MYSTRUCT-NEXT:   "displayName": "Structure",
+// MYSTRUCT-NEXT:   "identifier": "c{{(\+\+)?}}.struct"
+// MYSTRUCT:           "names": {
+// MYSTRUCT-NEXT:        "navigator": [
+// MYSTRUCT-NEXT:          {
+// MYSTRUCT-NEXT:            "kind": "identifier",
+// MYSTRUCT-NEXT:            "spelling": "MyStruct"
+// MYSTRUCT-NEXT:          }
+// MYSTRUCT-NEXT:        ],
+// MYSTRUCT-NEXT:        "subHeading": [
+// MYSTRUCT-NEXT:          {
+// MYSTRUCT-NEXT:            "kind": "identifier",
+// MYSTRUCT-NEXT:            "spelling": "MyStruct"
+// MYSTRUCT-NEXT:          }
+// MYSTRUCT-NEXT:        ],
+// MYSTRUCT-NEXT:        "title": "MyStruct"
+// MYSTRUCT-NEXT:      },
+// MYSTRUCT:      "pathComponents": [
+// MYSTRUCT-NEXT:    "MyStruct"
+// MYSTRUCT-NEXT:  ]
 
-//--- reference.output.json.in
-{
-  "metadata": {
-    "formatVersion": {
-      "major": 0,
-      "minor": 5,
-      "patch": 3
-    },
-    "generator": "?"
-  },
-  "module": {
-    "name": "TypedefChain",
-    "platform": {
-      "architecture": "arm64",
-      "operatingSystem": {
-        "minimumVersion": {
-          "major": 11,
-          "minor": 0,
-          "patch": 0
-        },
-        "name": "macosx"
-      },
-      "vendor": "apple"
-    }
-  },
-  "relationships": [
-    {
-      "kind": "memberOf",
-      "source": "c:@EA@MyEnum@Case",
-      "target": "c:@EA@MyEnum",
-      "targetFallback": "MyEnum"
-    }
-  ],
-  "symbols": [
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "typedef"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "keyword",
-          "spelling": "enum"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "MyEnum"
-        },
-        {
-          "kind": "text",
-          "spelling": ";"
-        }
-      ],
-      "identifier": {
-        "interfaceLanguage": "c",
-        "precise": "c:@EA@MyEnum"
-      },
-      "kind": {
-        "displayName": "Enumeration",
-        "identifier": "c.enum"
-      },
-      "location": {
-        "position": {
-          "character": 8,
-          "line": 3
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "MyEnum"
-          }
-        ],
-        "title": "MyEnum"
-      },
-      "pathComponents": [
-        "MyEnum"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "identifier",
-          "spelling": "Case"
-        }
-      ],
-      "identifier": {
-        "interfaceLanguage": "c",
-        "precise": "c:@EA@MyEnum@Case"
-      },
-      "kind": {
-        "displayName": "Enumeration Case",
-        "identifier": "c.enum.case"
-      },
-      "location": {
-        "position": {
-          "character": 15,
-          "line": 3
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "Case"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "Case"
-          }
-        ],
-        "title": "Case"
-      },
-      "pathComponents": [
-        "MyEnum",
-        "Case"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "typedef"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "keyword",
-          "spelling": "struct"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "MyStruct"
-        },
-        {
-          "kind": "text",
-          "spelling": ";"
-        }
-      ],
-      "identifier": {
-        "interfaceLanguage": "c",
-        "precise": "c:@SA@MyStruct"
-      },
-      "kind": {
-        "displayName": "Structure",
-        "identifier": "c.struct"
-      },
-      "location": {
-        "position": {
-          "character": 8,
-          "line": 0
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "MyStruct"
-          }
-        ],
-        "title": "MyStruct"
-      },
-      "pathComponents": [
-        "MyStruct"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "typedef"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:@SA@MyStruct",
-          "spelling": "MyStruct"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "MyStructStruct"
-        },
-        {
-          "kind": "text",
-          "spelling": ";"
-        }
-      ],
-      "identifier": {
-        "interfaceLanguage": "c",
-        "precise": "c:input.h@T@MyStructStruct"
-      },
-      "kind": {
-        "displayName": "Type Alias",
-        "identifier": "c.typealias"
-      },
-      "location": {
-        "position": {
-          "character": 17,
-          "line": 1
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "MyStructStruct"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "MyStructStruct"
-          }
-        ],
-        "title": "MyStructStruct"
-      },
-      "pathComponents": [
-        "MyStructStruct"
-      ],
-      "type": "c:@SA@MyStruct"
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "typedef"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:input.h@T@MyStructStruct",
-          "spelling": "MyStructStruct"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "MyStructStructStruct"
-        },
-        {
-          "kind": "text",
-          "spelling": ";"
-        }
-      ],
-      "identifier": {
-        "interfaceLanguage": "c",
-        "precise": "c:input.h@T@MyStructStructStruct"
-      },
-      "kind": {
-        "displayName": "Type Alias",
-        "identifier": "c.typealias"
-      },
-      "location": {
-        "position": {
-          "character": 23,
-          "line": 2
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "MyStructStructStruct"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "MyStructStructStruct"
-          }
-        ],
-        "title": "MyStructStructStruct"
-      },
-      "pathComponents": [
-        "MyStructStructStruct"
-      ],
-      "type": "c:input.h@T@MyStructStruct"
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "typedef"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:@EA@MyEnum",
-          "spelling": "MyEnum"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "MyEnumEnum"
-        },
-        {
-          "kind": "text",
-          "spelling": ";"
-        }
-      ],
-      "identifier": {
-        "interfaceLanguage": "c",
-        "precise": "c:input.h@T@MyEnumEnum"
-      },
-      "kind": {
-        "displayName": "Type Alias",
-        "identifier": "c.typealias"
-      },
-      "location": {
-        "position": {
-          "character": 15,
-          "line": 4
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "MyEnumEnum"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "MyEnumEnum"
-          }
-        ],
-        "title": "MyEnumEnum"
-      },
-      "pathComponents": [
-        "MyEnumEnum"
-      ],
-      "type": "c:@EA@MyEnum"
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "typedef"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:input.h@T@MyEnumEnum",
-          "spelling": "MyEnumEnum"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "MyEnumEnumEnum"
-        },
-        {
-          "kind": "text",
-          "spelling": ";"
-        }
-      ],
-      "identifier": {
-        "interfaceLanguage": "c",
-        "precise": "c:input.h@T@MyEnumEnumEnum"
-      },
-      "kind": {
-        "displayName": "Type Alias",
-        "identifier": "c.typealias"
-      },
-      "location": {
-        "position": {
-          "character": 19,
-          "line": 5
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "MyEnumEnumEnum"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "MyEnumEnumEnum"
-          }
-        ],
-        "title": "MyEnumEnumEnum"
-      },
-      "pathComponents": [
-        "MyEnumEnumEnum"
-      ],
-      "type": "c:input.h@T@MyEnumEnum"
-    }
-  ]
-}
+// RUN: FileCheck %s --input-file %t/typedefchain-c.symbols.json --check-prefix MYSTRUCTSTRUCT
+// RUN: FileCheck %s --input-file %t/typedefchain-cxx.symbols.json --check-prefix MYSTRUCTSTRUCT
+typedef MyStruct MyStructStruct;
+// MYSTRUCTSTRUCT-LABEL: "!testLabel": "c:typedef_anonymous_record.c@T@MyStructStruct"
+// MYSTRUCTSTRUCT: "accessLevel": "public",
+// MYSTRUCTSTRUCT:     "declarationFragments": [
+// MYSTRUCTSTRUCT-NEXT:  {
+// MYSTRUCTSTRUCT-NEXT:    "kind": "keyword",
+// MYSTRUCTSTRUCT-NEXT:    "spelling": "typedef"
+// MYSTRUCTSTRUCT-NEXT:  },
+// MYSTRUCTSTRUCT-NEXT:  {
+// MYSTRUCTSTRUCT-NEXT:    "kind": "text",
+// MYSTRUCTSTRUCT-NEXT:    "spelling": " "
+// MYSTRUCTSTRUCT-NEXT:  },
+// MYSTRUCTSTRUCT-NEXT:  {
+// MYSTRUCTSTRUCT-NEXT:    "kind": "typeIdentifier",
+// MYSTRUCTSTRUCT-NEXT:    "preciseIdentifier": "c:@SA@MyStruct",
+// MYSTRUCTSTRUCT-NEXT:    "spelling": "MyStruct"
+// MYSTRUCTSTRUCT-NEXT:  },
+// MYSTRUCTSTRUCT-NEXT:  {
+// MYSTRUCTSTRUCT-NEXT:    "kind": "text",
+// MYSTRUCTSTRUCT-NEXT:    "spelling": " "
+// MYSTRUCTSTRUCT-NEXT:  },
+// MYSTRUCTSTRUCT-NEXT:  {
+// MYSTRUCTSTRUCT-NEXT:    "kind": "identifier",
+// MYSTRUCTSTRUCT-NEXT:    "spelling": "MyStructStruct"
+// MYSTRUCTSTRUCT-NEXT:  },
+// MYSTRUCTSTRUCT-NEXT:  {
+// MYSTRUCTSTRUCT-NEXT:    "kind": "text",
+// MYSTRUCTSTRUCT-NEXT:    "spelling": ";"
+// MYSTRUCTSTRUCT-NEXT:  }
+// MYSTRUCTSTRUCT-NEXT:],
+// MYSTRUCTSTRUCT:     "kind": {
+// MYSTRUCTSTRUCT-NEXT:  "displayName": "Type Alias",
+// MYSTRUCTSTRUCT-NEXT:  "identifier": "c{{(\+\+)?}}.typealias"
+
+// RUN: FileCheck %s --input-file %t/typedefchain-c.symbols.json --check-prefix MYENUM
+// RUN: FileCheck %s --input-file %t/typedefchain-c.symbols.json --check-prefix CASE
+// RUN: FileCheck %s --input-file %t/typedefchain-cxx.symbols.json --check-prefix MYENUM
+// RUN: FileCheck %s --input-file %t/typedefchain-cxx.symbols.json --check-prefix CASE
+typedef enum { Case } MyEnum;
+// MYENUM: "source": "c:@EA@MyEnum@Case",
+// MYENUM-NEXT: "target": "c:@EA@MyEnum",
+// MYENUM-NEXT: "targetFallback": "MyEnum"
+// MYENUM-LABEL: "!testLabel": "c:@EA@MyEnum"
+// MYENUM:     "declarationFragments": [
+// MYENUM-NEXT:  {
+// MYENUM-NEXT:    "kind": "keyword",
+// MYENUM-NEXT:    "spelling": "typedef"
+// MYENUM-NEXT:  },
+// MYENUM-NEXT:  {
+// MYENUM-NEXT:    "kind": "text",
+// MYENUM-NEXT:    "spelling": " "
+// MYENUM-NEXT:  },
+// MYENUM-NEXT:  {
+// MYENUM-NEXT:    "kind": "keyword",
+// MYENUM-NEXT:    "spelling": "enum"
+// MYENUM-NEXT:  },
+// MYENUM-NEXT:  {
+// MYENUM-NEXT:    "kind": "text",
+// MYENUM-NEXT:    "spelling": " { ... } "
+// MYENUM-NEXT:  },
+// MYENUM-NEXT:  {
+// MYENUM-NEXT:    "kind": "identifier",
+// MYENUM-NEXT:    "spelling": "MyEnum"
+// MYENUM-NEXT:  },
+// MYENUM-NEXT:  {
+// MYENUM-NEXT:    "kind": "text",
+// MYENUM-NEXT:    "spelling": ";"
+// MYENUM-NEXT:  }
+// MYENUM-NEXT:],
+// MYENUM:     "kind": {
+// MYENUM-NEXT:  "displayName": "Enumeration",
+// MYENUM-NEXT:  "identifier": "c{{(\+\+)?}}.enum"
+// MYENUM:           "names": {
+// MYENUM-NEXT:        "navigator": [
+// MYENUM-NEXT:          {
+// MYENUM-NEXT:            "kind": "identifier",
+// MYENUM-NEXT:            "spelling": "MyEnum"
+// MYENUM-NEXT:          }
+// MYENUM-NEXT:        ],
+// MYENUM-NEXT:        "subHeading": [
+// MYENUM-NEXT:          {
+// MYENUM-NEXT:            "kind": "identifier",
+// MYENUM-NEXT:            "spelling": "MyEnum"
+// MYENUM-NEXT:          }
+// MYENUM-NEXT:        ],
+// MYENUM-NEXT:        "title": "MyEnum"
+// MYENUM-NEXT:      },
+
+// CASE-LABEL: "!testLabel": "c:@EA@MyEnum@Case"
+// CASE:      "pathComponents": [
+// CASE-NEXT:   "MyEnum",
+// CASE-NEXT:   "Case"
+// CASE-NEXT: ]
+
+// RUN: FileCheck %s --input-file %t/typedefchain-c.symbols.json --check-prefix MYENUMENUM
+// RUN: FileCheck %s --input-file %t/typedefchain-cxx.symbols.json --check-prefix MYENUMENUM
+typedef MyEnum MyEnumEnum;
+// MYENUMENUM-LABEL: "!testLabel": "c:typedef_anonymous_record.c@T@MyEnumEnum"
+// MYENUMENUM:      "declarationFragments": [
+// MYENUMENUM-NEXT:   {
+// MYENUMENUM-NEXT:     "kind": "keyword",
+// MYENUMENUM-NEXT:     "spelling": "typedef"
+// MYENUMENUM-NEXT:   },
+// MYENUMENUM-NEXT:   {
+// MYENUMENUM-NEXT:     "kind": "text",
+// MYENUMENUM-NEXT:     "spelling": " "
+// MYENUMENUM-NEXT:   },
+// MYENUMENUM-NEXT:   {
+// MYENUMENUM-NEXT:     "kind": "typeIdentifier",
+// MYENUMENUM-NEXT:     "preciseIdentifier": "c:@EA@MyEnum",
+// MYENUMENUM-NEXT:     "spelling": "MyEnum"
+// MYENUMENUM-NEXT:   },
+// MYENUMENUM-NEXT:   {
+// MYENUMENUM-NEXT:     "kind": "text",
+// MYENUMENUM-NEXT:     "spelling": " "
+// MYENUMENUM-NEXT:   },
+// MYENUMENUM-NEXT:   {
+// MYENUMENUM-NEXT:     "kind": "identifier",
+// MYENUMENUM-NEXT:     "spelling": "MyEnumEnum"
+// MYENUMENUM-NEXT:   },
+// MYENUMENUM-NEXT:   {
+// MYENUMENUM-NEXT:     "kind": "text",
+// MYENUMENUM-NEXT:     "spelling": ";"
+// MYENUMENUM-NEXT:   }
+// MYENUMENUM-NEXT: ],
+// MYENUMENUM:      "kind": {
+// MYENUMENUM-NEXT:   "displayName": "Type Alias",
+// MYENUMENUM-NEXT:   "identifier": "c{{(\+\+)?}}.typealias"
+// MYENUMENUM-NEXT: },
+// MYENUMENUM: "title": "MyEnumEnum"
+
+// expected-no-diagnostics

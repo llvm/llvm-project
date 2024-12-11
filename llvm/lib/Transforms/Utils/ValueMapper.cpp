@@ -391,9 +391,8 @@ Value *Mapper::mapValue(const Value *V) {
       // ensures metadata operands only reference defined SSA values.
       return (Flags & RF_IgnoreMissingLocals)
                  ? nullptr
-                 : MetadataAsValue::get(
-                       V->getContext(),
-                       MDTuple::get(V->getContext(), std::nullopt));
+                 : MetadataAsValue::get(V->getContext(),
+                                        MDTuple::get(V->getContext(), {}));
     }
     if (auto *AL = dyn_cast<DIArgList>(MD)) {
       SmallVector<ValueAsMetadata *, 4> MappedArgs;
@@ -538,17 +537,20 @@ Value *Mapper::mapValue(const Value *V) {
 }
 
 void Mapper::remapDbgRecord(DbgRecord &DR) {
+  // Remap DILocations.
+  auto *MappedDILoc = mapMetadata(DR.getDebugLoc());
+  DR.setDebugLoc(DebugLoc(cast<DILocation>(MappedDILoc)));
+
   if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
+    // Remap labels.
     DLR->setLabel(cast<DILabel>(mapMetadata(DLR->getLabel())));
     return;
   }
 
   DbgVariableRecord &V = cast<DbgVariableRecord>(DR);
-  // Remap variables and DILocations.
+  // Remap variables.
   auto *MappedVar = mapMetadata(V.getVariable());
-  auto *MappedDILoc = mapMetadata(V.getDebugLoc());
   V.setVariable(cast<DILocalVariable>(MappedVar));
-  V.setDebugLoc(DebugLoc(cast<DILocation>(MappedDILoc)));
 
   bool IgnoreMissingLocals = Flags & RF_IgnoreMissingLocals;
 
@@ -562,9 +564,8 @@ void Mapper::remapDbgRecord(DbgRecord &DR) {
   }
 
   // Find Value operands and remap those.
-  SmallVector<Value *, 4> Vals, NewVals;
-  for (Value *Val : V.location_ops())
-    Vals.push_back(Val);
+  SmallVector<Value *, 4> Vals(V.location_ops());
+  SmallVector<Value *, 4> NewVals;
   for (Value *Val : Vals)
     NewVals.push_back(mapValue(Val));
 
@@ -573,8 +574,7 @@ void Mapper::remapDbgRecord(DbgRecord &DR) {
     return;
 
   // Otherwise, do some replacement.
-  if (!IgnoreMissingLocals &&
-      llvm::any_of(NewVals, [&](Value *V) { return V == nullptr; })) {
+  if (!IgnoreMissingLocals && llvm::is_contained(NewVals, nullptr)) {
     V.setKillLocation();
   } else {
     // Either we have all non-empty NewVals, or we're permitted to ignore
@@ -1233,14 +1233,14 @@ void ValueMapper::remapInstruction(Instruction &I) {
   FlushingMapper(pImpl)->remapInstruction(&I);
 }
 
-void ValueMapper::remapDbgVariableRecord(Module *M, DbgVariableRecord &V) {
-  FlushingMapper(pImpl)->remapDbgRecord(V);
+void ValueMapper::remapDbgRecord(Module *M, DbgRecord &DR) {
+  FlushingMapper(pImpl)->remapDbgRecord(DR);
 }
 
-void ValueMapper::remapDbgVariableRecordRange(
+void ValueMapper::remapDbgRecordRange(
     Module *M, iterator_range<DbgRecord::self_iterator> Range) {
-  for (DbgVariableRecord &DVR : filterDbgVars(Range)) {
-    remapDbgVariableRecord(M, DVR);
+  for (DbgRecord &DR : Range) {
+    remapDbgRecord(M, DR);
   }
 }
 

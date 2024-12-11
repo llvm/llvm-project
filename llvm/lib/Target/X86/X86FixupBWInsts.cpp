@@ -53,7 +53,6 @@
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/Passes.h"
@@ -113,8 +112,6 @@ public:
   FixupBWInstPass() : MachineFunctionPass(ID) { }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineLoopInfo>(); // Machine loop info is used to
-                                       // guide some heuristics.
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -141,9 +138,6 @@ private:
   /// Local member for function's OptForSize attribute.
   bool OptForSize = false;
 
-  /// Machine loop info used for guiding some heruistics.
-  MachineLoopInfo *MLI = nullptr;
-
   /// Register Liveness information after the current instruction.
   LiveRegUnits LiveUnits;
 
@@ -164,7 +158,6 @@ bool FixupBWInstPass::runOnMachineFunction(MachineFunction &MF) {
   this->MF = &MF;
   TII = MF.getSubtarget<X86Subtarget>().getInstrInfo();
   TRI = MF.getRegInfo().getTargetRegisterInfo();
-  MLI = &getAnalysis<MachineLoopInfo>();
   PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   MBFI = (PSI && PSI->hasProfileSummary()) ?
          &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI() :
@@ -248,7 +241,7 @@ Register FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI) const {
   //   Predecessors according to CFG: %bb.2 %bb.1
   //   %ax = KILL %ax, implicit killed %eax
   //   RET 0, %ax
-  unsigned Opc = OrigMI->getOpcode(); (void)Opc;
+  unsigned Opc = OrigMI->getOpcode();
   // These are the opcodes currently known to work with the code below, if
   // something // else will be added we need to ensure that new opcode has the
   // same properties.
@@ -260,8 +253,6 @@ Register FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI) const {
   for (auto &MO: OrigMI->implicit_operands()) {
     if (!MO.isReg())
       continue;
-
-    assert((MO.isDef() || MO.isUse()) && "Expected Def or Use only!");
 
     if (MO.isDef() && TRI->isSuperRegisterEq(OrigDestReg, MO.getReg()))
       IsDefined = true;
@@ -452,8 +443,7 @@ void FixupBWInstPass::processBasicBlock(MachineFunction &MF,
   // We run after PEI, so we need to AddPristinesAndCSRs.
   LiveUnits.addLiveOuts(MBB);
 
-  OptForSize = MF.getFunction().hasOptSize() ||
-               llvm::shouldOptimizeForSize(&MBB, PSI, MBFI);
+  OptForSize = llvm::shouldOptimizeForSize(&MBB, PSI, MBFI);
 
   for (MachineInstr &MI : llvm::reverse(MBB)) {
     if (MachineInstr *NewMI = tryReplaceInstr(&MI, MBB))

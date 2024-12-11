@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/UInt128.h"
+#include "src/__support/uint128.h"
 #include "src/errno/libc_errno.h"
 #include "src/stdlib/strtold.h"
 
@@ -75,8 +75,9 @@ public:
     //         +-- 15 Exponent Bits
     char *str_end = nullptr;
 
-    LIBC_NAMESPACE::fputil::FPBits<long double> expected_fp =
-        LIBC_NAMESPACE::fputil::FPBits<long double>(expectedRawData);
+    using FPBits = LIBC_NAMESPACE::fputil::FPBits<long double>;
+    FPBits expected_fp =
+        FPBits(static_cast<FPBits::StorageType>(expectedRawData));
     const int expected_errno = expectedErrno;
 
     LIBC_NAMESPACE::libc_errno = 0;

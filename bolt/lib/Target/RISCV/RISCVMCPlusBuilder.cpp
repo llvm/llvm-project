@@ -16,10 +16,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "mcplus"
 
@@ -154,14 +151,14 @@ public:
     }
   }
 
-  bool reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
+  void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
                               MCContext *Ctx) const override {
     auto Opcode = getInvertedBranchOpcode(Inst.getOpcode());
     Inst.setOpcode(Opcode);
-    return replaceBranchTarget(Inst, TBB, Ctx);
+    replaceBranchTarget(Inst, TBB, Ctx);
   }
 
-  bool replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
+  void replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
                            MCContext *Ctx) const override {
     assert((isCall(Inst) || isBranch(Inst)) && !isIndirectBranch(Inst) &&
            "Invalid instruction");
@@ -173,20 +170,20 @@ public:
 
     Inst.getOperand(SymOpIndex) = MCOperand::createExpr(
         MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx));
-    return true;
   }
 
   IndirectBranchType analyzeIndirectBranch(
       MCInst &Instruction, InstructionIterator Begin, InstructionIterator End,
       const unsigned PtrSize, MCInst *&MemLocInstr, unsigned &BaseRegNum,
       unsigned &IndexRegNum, int64_t &DispValue, const MCExpr *&DispExpr,
-      MCInst *&PCRelBaseOut) const override {
+      MCInst *&PCRelBaseOut, MCInst *&FixedEntryLoadInst) const override {
     MemLocInstr = nullptr;
     BaseRegNum = 0;
     IndexRegNum = 0;
     DispValue = 0;
     DispExpr = nullptr;
     PCRelBaseOut = nullptr;
+    FixedEntryLoadInst = nullptr;
 
     // Check for the following long tail call sequence:
     // 1: auipc xi, %pcrel_hi(sym)

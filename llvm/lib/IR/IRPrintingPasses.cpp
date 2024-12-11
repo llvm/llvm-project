@@ -25,8 +25,9 @@ using namespace llvm;
 
 cl::opt<bool> WriteNewDbgInfoFormat(
     "write-experimental-debuginfo",
-    cl::desc("Write debug info in the new non-intrinsic format"),
-    cl::init(false));
+    cl::desc("Write debug info in the new non-intrinsic format. Has no effect "
+             "if --preserve-input-debuginfo-format=true."),
+    cl::init(true));
 
 namespace {
 

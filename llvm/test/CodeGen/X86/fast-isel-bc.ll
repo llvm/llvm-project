@@ -4,7 +4,7 @@
 
 ; PR4684
 
-declare void @func2(x86_mmx)
+declare void @func2(<1 x i64>)
 
 ; This isn't spectacular, but it's MMX code at -O0...
 
@@ -12,7 +12,11 @@ define void @func1() nounwind {
 ; X86-LABEL: func1:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    movq {{\.?LCPI[0-9]+_[0-9]+}}, %mm0 ## mm0 = 0x200000000
+; X86-NEXT:    movl $2, %edx
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    movl %esp, %eax
+; X86-NEXT:    movl %edx, 4(%eax)
+; X86-NEXT:    movl %ecx, (%eax)
 ; X86-NEXT:    calll _func2
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
@@ -20,12 +24,11 @@ define void @func1() nounwind {
 ; X64-LABEL: func1:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    movq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %mm0 ## mm0 = 0x200000000
-; X64-NEXT:    movq2dq %mm0, %xmm0
+; X64-NEXT:    movabsq $8589934592, %rdi ## imm = 0x200000000
 ; X64-NEXT:    callq _func2
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
-  %tmp0 = bitcast <2 x i32> <i32 0, i32 2> to x86_mmx
-  call void @func2(x86_mmx %tmp0)
+  %tmp0 = bitcast <2 x i32> <i32 0, i32 2> to <1 x i64>
+  call void @func2(<1 x i64> %tmp0)
   ret void
 }

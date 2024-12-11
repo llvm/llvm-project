@@ -7,20 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/bit.h"
-#include "src/__support/UInt.h"
+#include "src/__support/big_int.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 #include "test/UnitTest/Test.h"
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE::cpp {
-
-using UnsignedTypesNoBigInt = testing::TypeList<
-#if defined(LIBC_TYPES_HAS_INT128)
-    __uint128_t,
-#endif // LIBC_TYPES_HAS_INT128
-    unsigned char, unsigned short, unsigned int, unsigned long,
-    unsigned long long>;
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 using UnsignedTypes = testing::TypeList<
 #if defined(LIBC_TYPES_HAS_INT128)
@@ -228,11 +223,12 @@ TEST(LlvmLibcBitTest, Rotr) {
             rotr<uint64_t>(0x12345678deadbeefULL, -19));
 }
 
-TYPED_TEST(LlvmLibcBitTest, CountOnes, UnsignedTypesNoBigInt) {
+TYPED_TEST(LlvmLibcBitTest, CountOnes, UnsignedTypes) {
   EXPECT_EQ(popcount(T(0)), 0);
   for (int i = 0; i != cpp::numeric_limits<T>::digits; ++i)
     EXPECT_EQ(popcount<T>(cpp::numeric_limits<T>::max() >> i),
               cpp::numeric_limits<T>::digits - i);
 }
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL

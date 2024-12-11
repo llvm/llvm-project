@@ -1,15 +1,21 @@
 name: "Check code formatting"
-on:
-  pull_request_target:
-    branches:
-      - main
 
 permissions:
-  pull-requests: write
+  contents: read
+
+on:
+  pull_request:
+    branches:
+      - main
+      - 'users/**'
 
 jobs:
   code_formatter:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
     if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Fetch LLVM sources
@@ -31,12 +37,13 @@ jobs:
           separator: ","
           skip_initial_fetch: true
 
-      # We need to make sure that we aren't executing/using any code from the
-      # PR for security reasons as we're using pull_request_target. Checkout
-      # the target branch with the necessary files.
+      # We need to pull the script from the main branch, so that we ensure
+      # we get the latest version of this script.
       - name: Fetch code formatting utils
         uses: actions/checkout@v4
         with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.base_ref }}
           sparse-checkout: |
             llvm/utils/git/requirements_formatting.txt
             llvm/utils/git/code-format-helper.py
@@ -53,10 +60,10 @@ jobs:
       - name: Install clang-format
         uses: aminya/setup-cpp@v1
         with:
-          clangformat: 18.1.1
+          clangformat: 18.1.7
 
       - name: Setup Python env
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -75,10 +82,20 @@ jobs:
         # to take advantage of the new --diff_from_common_commit option
         # explicitly in code-format-helper.py and not have to diff starting at
         # the merge base.
+        # Create an empty comments file so the pr-write job doesn't fail.
         run: |
+          echo "[]" > comments &&
           python ./code-format-tools/llvm/utils/git/code-format-helper.py \
+            --write-comment-to-file \
             --token ${{ secrets.GITHUB_TOKEN }} \
             --issue-number $GITHUB_PR_NUMBER \
             --start-rev $(git merge-base $START_REV $END_REV) \
             --end-rev $END_REV \
             --changed-files "$CHANGED_FILES"
+
+      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+        if: always()
+        with:
+          name: workflow-args
+          path: |
+            comments

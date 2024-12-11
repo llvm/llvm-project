@@ -16,7 +16,6 @@
 
 #include "llvm/CodeGen/ExpandLargeDivRem.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -54,8 +53,32 @@ static bool isSigned(unsigned int Opcode) {
   return Opcode == Instruction::SDiv || Opcode == Instruction::SRem;
 }
 
+static void scalarize(BinaryOperator *BO,
+                      SmallVectorImpl<BinaryOperator *> &Replace) {
+  VectorType *VTy = cast<FixedVectorType>(BO->getType());
+
+  IRBuilder<> Builder(BO);
+
+  unsigned NumElements = VTy->getElementCount().getFixedValue();
+  Value *Result = PoisonValue::get(VTy);
+  for (unsigned Idx = 0; Idx < NumElements; ++Idx) {
+    Value *LHS = Builder.CreateExtractElement(BO->getOperand(0), Idx);
+    Value *RHS = Builder.CreateExtractElement(BO->getOperand(1), Idx);
+    Value *Op = Builder.CreateBinOp(BO->getOpcode(), LHS, RHS);
+    Result = Builder.CreateInsertElement(Result, Op, Idx);
+    if (auto *NewBO = dyn_cast<BinaryOperator>(Op)) {
+      NewBO->copyIRFlags(Op, true);
+      Replace.push_back(NewBO);
+    }
+  }
+  BO->replaceAllUsesWith(Result);
+  BO->dropAllReferences();
+  BO->eraseFromParent();
+}
+
 static bool runImpl(Function &F, const TargetLowering &TLI) {
   SmallVector<BinaryOperator *, 4> Replace;
+  SmallVector<BinaryOperator *, 4> ReplaceVector;
   bool Modified = false;
 
   unsigned MaxLegalDivRemBitWidth = TLI.getMaxDivRemBitWidthSupported();
@@ -71,22 +94,34 @@ static bool runImpl(Function &F, const TargetLowering &TLI) {
     case Instruction::SDiv:
     case Instruction::URem:
     case Instruction::SRem: {
-      // TODO: This doesn't handle vectors.
-      auto *IntTy = dyn_cast<IntegerType>(I.getType());
+      // TODO: This pass doesn't handle scalable vectors.
+      if (I.getOperand(0)->getType()->isScalableTy())
+        continue;
+
+      auto *IntTy = dyn_cast<IntegerType>(I.getType()->getScalarType());
       if (!IntTy || IntTy->getIntegerBitWidth() <= MaxLegalDivRemBitWidth)
         continue;
 
       // The backend has peephole optimizations for powers of two.
+      // TODO: We don't consider vectors here.
       if (isConstantPowerOfTwo(I.getOperand(1), isSigned(I.getOpcode())))
         continue;
 
-      Replace.push_back(&cast<BinaryOperator>(I));
+      if (I.getOperand(0)->getType()->isVectorTy())
+        ReplaceVector.push_back(&cast<BinaryOperator>(I));
+      else
+        Replace.push_back(&cast<BinaryOperator>(I));
       Modified = true;
       break;
     }
     default:
       break;
     }
+  }
+
+  while (!ReplaceVector.empty()) {
+    BinaryOperator *BO = ReplaceVector.pop_back_val();
+    scalarize(BO, Replace);
   }
 
   if (Replace.empty())

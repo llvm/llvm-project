@@ -569,7 +569,8 @@ void PDBLinker::writeSymbolRecord(SectionChunk *debugChunk,
   // Re-map all the type index references.
   TpiSource *source = debugChunk->file->debugTypesObj;
   if (!source->remapTypesInSymbolRecord(recordBytes)) {
-    log("ignoring unknown symbol record with kind 0x" + utohexstr(sym.kind()));
+    Log(ctx) << "ignoring unknown symbol record with kind 0x"
+             << utohexstr(sym.kind());
     replaceWithSkipRecord(recordBytes);
   }
 
@@ -1006,11 +1007,10 @@ static void warnUnusable(InputFile *f, Error e, bool shouldWarn) {
     consumeError(std::move(e));
     return;
   }
-  auto msg = "Cannot use debug info for '" + toString(f) + "' [LNK4099]";
+  auto diag = Warn(f->ctx);
+  diag << "Cannot use debug info for '" << f << "' [LNK4099]";
   if (e)
-    warn(msg + "\n>>> failed to load reference " + toString(std::move(e)));
-  else
-    warn(msg);
+    diag << "\n>>> failed to load reference " << std::move(e);
 }
 
 // Allocate memory for a .debug$S / .debug$F section and relocate it.
@@ -1317,7 +1317,7 @@ void PDBLinker::printStats() {
     printLargeInputTypeRecs("IPI", tMerger.ipiCounts, tMerger.getIDTable());
   }
 
-  message(buffer);
+  Msg(ctx) << buffer;
 }
 
 void PDBLinker::addNatvisFiles() {
@@ -1365,6 +1365,10 @@ static codeview::CPUType toCodeViewMachine(COFF::MachineTypes machine) {
     return codeview::CPUType::ARM7;
   case COFF::IMAGE_FILE_MACHINE_ARM64:
     return codeview::CPUType::ARM64;
+  case COFF::IMAGE_FILE_MACHINE_ARM64EC:
+    return codeview::CPUType::ARM64EC;
+  case COFF::IMAGE_FILE_MACHINE_ARM64X:
+    return codeview::CPUType::ARM64X;
   case COFF::IMAGE_FILE_MACHINE_ARMNT:
     return codeview::CPUType::ARMNT;
   case COFF::IMAGE_FILE_MACHINE_I386:
@@ -1431,7 +1435,13 @@ void PDBLinker::addCommonLinkerModuleSymbols(
   ObjNameSym ons(SymbolRecordKind::ObjNameSym);
   EnvBlockSym ebs(SymbolRecordKind::EnvBlockSym);
   Compile3Sym cs(SymbolRecordKind::Compile3Sym);
-  fillLinkerVerRecord(cs, ctx.config.machine);
+
+  MachineTypes machine = ctx.config.machine;
+  // MSVC uses the ARM64X machine type for ARM64EC targets in the common linker
+  // module record.
+  if (isArm64EC(machine))
+    machine = ARM64X;
+  fillLinkerVerRecord(cs, machine);
 
   ons.Name = "* Linker *";
   ons.Signature = 0;
@@ -1527,8 +1537,8 @@ void PDBLinker::addImportFilesToPDB() {
     if (!file->thunkSym)
       continue;
 
-    if (!file->thunkLive)
-        continue;
+    if (!file->thunkSym->isLive())
+      continue;
 
     std::string dll = StringRef(file->dllName).lower();
     llvm::pdb::DbiModuleDescriptorBuilder *&mod = dllToModuleDbi[dll];
@@ -1715,26 +1725,25 @@ void PDBLinker::commit(codeview::GUID *guid) {
   // the user can see the output of /time and /summary, which is very helpful
   // when trying to figure out why a PDB file is too large.
   if (Error e = builder.commit(ctx.config.pdbPath, guid)) {
-    e = handleErrors(std::move(e),
-        [](const llvm::msf::MSFError &me) {
-          error(me.message());
-          if (me.isPageOverflow())
-            error("try setting a larger /pdbpagesize");
-        });
+    e = handleErrors(std::move(e), [&](const llvm::msf::MSFError &me) {
+      Err(ctx) << me.message();
+      if (me.isPageOverflow())
+        Err(ctx) << "try setting a larger /pdbpagesize";
+    });
     checkError(std::move(e));
-    error("failed to write PDB file " + Twine(ctx.config.pdbPath));
+    Err(ctx) << "failed to write PDB file " << Twine(ctx.config.pdbPath);
   }
 }
 
-static uint32_t getSecrelReloc(llvm::COFF::MachineTypes machine) {
-  switch (machine) {
-  case AMD64:
+static uint32_t getSecrelReloc(Triple::ArchType arch) {
+  switch (arch) {
+  case Triple::x86_64:
     return COFF::IMAGE_REL_AMD64_SECREL;
-  case I386:
+  case Triple::x86:
     return COFF::IMAGE_REL_I386_SECREL;
-  case ARMNT:
+  case Triple::thumb:
     return COFF::IMAGE_REL_ARM_SECREL;
-  case ARM64:
+  case Triple::aarch64:
     return COFF::IMAGE_REL_ARM64_SECREL;
   default:
     llvm_unreachable("unknown machine type");
@@ -1752,7 +1761,7 @@ static bool findLineTable(const SectionChunk *c, uint32_t addr,
                           DebugLinesSubsectionRef &lines,
                           uint32_t &offsetInLinetable) {
   ExitOnError exitOnErr;
-  const uint32_t secrelReloc = getSecrelReloc(c->file->ctx.config.machine);
+  const uint32_t secrelReloc = getSecrelReloc(c->getArch());
 
   for (SectionChunk *dbgC : c->file->getDebugChunks()) {
     if (dbgC->getSectionName() != ".debug$S")

@@ -104,14 +104,16 @@ constexpr bool test() {
   {
     auto it = random_access_iterator<int*>(buffer);
     auto cit = random_access_iterator<const int*>(buffer);
+    auto it_copy = it;
+    auto cit_copy = cit;
 
     auto c1 = std::views::counted(it, 3);
     auto c2 = std::views::counted(std::as_const(it), 3);
-    auto c3 = std::views::counted(std::move(it), 3);
+    auto c3 = std::views::counted(std::move(it_copy), 3);
     auto c4 = std::views::counted(random_access_iterator<int*>(buffer), 3);
     auto c5 = std::views::counted(cit, 3);
     auto c6 = std::views::counted(std::as_const(cit), 3);
-    auto c7 = std::views::counted(std::move(cit), 3);
+    auto c7 = std::views::counted(std::move(cit_copy), 3);
     auto c8 = std::views::counted(random_access_iterator<const int*>(buffer), 3);
 
     ASSERT_SAME_TYPE(decltype(c1), std::ranges::subrange<random_access_iterator<int*>>);
@@ -136,14 +138,16 @@ constexpr bool test() {
   {
     auto it = bidirectional_iterator<int*>(buffer);
     auto cit = bidirectional_iterator<const int*>(buffer);
+    auto it_copy = it;
+    auto cit_copy = cit;
 
     auto c1 = std::views::counted(it, 3);
     auto c2 = std::views::counted(std::as_const(it), 3);
-    auto c3 = std::views::counted(std::move(it), 3);
+    auto c3 = std::views::counted(std::move(it_copy), 3);
     auto c4 = std::views::counted(bidirectional_iterator<int*>(buffer), 3);
     auto c5 = std::views::counted(cit, 3);
     auto c6 = std::views::counted(std::as_const(cit), 3);
-    auto c7 = std::views::counted(std::move(cit), 3);
+    auto c7 = std::views::counted(std::move(cit_copy), 3);
     auto c8 = std::views::counted(bidirectional_iterator<const int*>(buffer), 3);
 
     using Expected = std::ranges::subrange<std::counted_iterator<decltype(it)>, std::default_sentinel_t>;
@@ -170,10 +174,11 @@ constexpr bool test() {
 
   {
     auto it = cpp17_output_iterator<int*>(buffer);
+    auto it_copy = it;
 
     auto c1 = std::views::counted(it, 3);
     auto c2 = std::views::counted(std::as_const(it), 3);
-    auto c3 = std::views::counted(std::move(it), 3);
+    auto c3 = std::views::counted(std::move(it_copy), 3);
     auto c4 = std::views::counted(cpp17_output_iterator<int*>(buffer), 3);
 
     using Expected = std::ranges::subrange<std::counted_iterator<decltype(it)>, std::default_sentinel_t>;
@@ -191,10 +196,11 @@ constexpr bool test() {
 
   {
     auto it = cpp17_input_iterator<int*>(buffer);
+    auto it_copy = it;
 
     auto c1 = std::views::counted(it, 3);
     auto c2 = std::views::counted(std::as_const(it), 3);
-    auto c3 = std::views::counted(std::move(it), 3);
+    auto c3 = std::views::counted(std::move(it_copy), 3);
     auto c4 = std::views::counted(cpp17_input_iterator<int*>(buffer), 3);
 
     using Expected = std::ranges::subrange<std::counted_iterator<decltype(it)>, std::default_sentinel_t>;

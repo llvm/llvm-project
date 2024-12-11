@@ -38,7 +38,6 @@ public:
   explicit SubSection(uint32_t type) : type(type) {}
 
   void writeTo(raw_ostream &to) {
-    os.flush();
     writeUleb128(to, type, "subsection type");
     writeUleb128(to, body.size(), "subsection size");
     to.write(body.data(), body.size());
@@ -139,7 +138,7 @@ void DylinkSection::writeBody() {
 uint32_t TypeSection::registerType(const WasmSignature &sig) {
   auto pair = typeIndices.insert(std::make_pair(sig, types.size()));
   if (pair.second) {
-    LLVM_DEBUG(llvm::dbgs() << "type " << toString(sig) << "\n");
+    LLVM_DEBUG(llvm::dbgs() << "registerType " << toString(sig) << "\n");
     types.push_back(&sig);
   }
   return pair.first->second;
@@ -327,8 +326,9 @@ void TableSection::addTable(InputTable *table) {
       // to assign table number 0 to the indirect function table.
       for (const auto *culprit : out.importSec->importedSymbols) {
         if (isa<UndefinedTable>(culprit)) {
-          error("object file not built with 'reference-types' feature "
-                "conflicts with import of table " +
+          error("object file not built with 'reference-types' or "
+                "'call-indirect-overlong' feature conflicts with import of "
+                "table " +
                 culprit->getName() + " by file " +
                 toString(culprit->getFile()));
           return;
@@ -449,7 +449,7 @@ void GlobalSection::generateRelocationCode(raw_ostream &os, bool TLS) const {
       writeU8(os, opcode_ptr_const, "CONST");
       writeSleb128(os, f->getTableIndex(), "offset");
     } else {
-      assert(isa<UndefinedData>(sym));
+      assert(isa<UndefinedData>(sym) || isa<SharedData>(sym));
       continue;
     }
     writeU8(os, opcode_ptr_add, "ADD");
@@ -515,11 +515,14 @@ void GlobalSection::writeBody() {
     } else {
       WasmInitExpr initExpr;
       if (auto *d = dyn_cast<DefinedData>(sym))
-        initExpr = intConst(d->getVA(), is64);
+        // In the sharedMemory case TLS globals are set during
+        // `__wasm_apply_global_tls_relocs`, but in the non-shared case
+        // we know the absolute value at link time.
+        initExpr = intConst(d->getVA(/*absolute=*/!config->sharedMemory), is64);
       else if (auto *f = dyn_cast<FunctionSymbol>(sym))
         initExpr = intConst(f->isStub ? 0 : f->getTableIndex(), is64);
       else {
-        assert(isa<UndefinedData>(sym));
+        assert(isa<UndefinedData>(sym) || isa<SharedData>(sym));
         initExpr = intConst(0, is64);
       }
       writeInitExpr(os, initExpr);
@@ -584,13 +587,10 @@ void ElemSection::writeBody() {
   initExpr.Extended = false;
   if (ctx.isPic) {
     initExpr.Inst.Opcode = WASM_OPCODE_GLOBAL_GET;
-    initExpr.Inst.Value.Global =
-        (config->is64.value_or(false) ? WasmSym::tableBase32
-                                      : WasmSym::tableBase)
-            ->getGlobalIndex();
+    initExpr.Inst.Value.Global = WasmSym::tableBase->getGlobalIndex();
   } else {
-    initExpr.Inst.Opcode = WASM_OPCODE_I32_CONST;
-    initExpr.Inst.Value.Int32 = config->tableBase;
+    bool is64 = config->is64.value_or(false);
+    initExpr = intConst(config->tableBase, is64);
   }
   writeInitExpr(os, initExpr);
 

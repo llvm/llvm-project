@@ -1,4 +1,4 @@
-# Check for the replacement of calls to identical functions.
+## Check for the replacement of calls to identical functions.
 
 REQUIRES: system-linux
 

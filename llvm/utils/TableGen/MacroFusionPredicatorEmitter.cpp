@@ -38,8 +38,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "CodeGenTarget.h"
-#include "PredicateExpander.h"
+#include "Common/CodeGenTarget.h"
+#include "Common/PredicateExpander.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -52,36 +52,37 @@ using namespace llvm;
 
 namespace {
 class MacroFusionPredicatorEmitter {
-  RecordKeeper &Records;
-  CodeGenTarget Target;
+  const RecordKeeper &Records;
+  const CodeGenTarget Target;
 
-  void emitMacroFusionDecl(std::vector<Record *> Fusions, PredicateExpander &PE,
-                           raw_ostream &OS);
-  void emitMacroFusionImpl(std::vector<Record *> Fusions, PredicateExpander &PE,
-                           raw_ostream &OS);
-  void emitPredicates(std::vector<Record *> &FirstPredicate, bool IsCommutable,
-                      PredicateExpander &PE, raw_ostream &OS);
-  void emitFirstPredicate(Record *SecondPredicate, bool IsCommutable,
-                          PredicateExpander &PE, raw_ostream &OS);
-  void emitSecondPredicate(Record *SecondPredicate, bool IsCommutable,
+  void emitMacroFusionDecl(ArrayRef<const Record *> Fusions,
                            PredicateExpander &PE, raw_ostream &OS);
-  void emitBothPredicate(Record *Predicates, bool IsCommutable,
+  void emitMacroFusionImpl(ArrayRef<const Record *> Fusions,
+                           PredicateExpander &PE, raw_ostream &OS);
+  void emitPredicates(ArrayRef<const Record *> FirstPredicate,
+                      bool IsCommutable, PredicateExpander &PE,
+                      raw_ostream &OS);
+  void emitFirstPredicate(const Record *SecondPredicate, bool IsCommutable,
+                          PredicateExpander &PE, raw_ostream &OS);
+  void emitSecondPredicate(const Record *SecondPredicate, bool IsCommutable,
+                           PredicateExpander &PE, raw_ostream &OS);
+  void emitBothPredicate(const Record *Predicates, bool IsCommutable,
                          PredicateExpander &PE, raw_ostream &OS);
 
 public:
-  MacroFusionPredicatorEmitter(RecordKeeper &R) : Records(R), Target(R) {}
+  MacroFusionPredicatorEmitter(const RecordKeeper &R) : Records(R), Target(R) {}
 
   void run(raw_ostream &OS);
 };
 } // End anonymous namespace.
 
 void MacroFusionPredicatorEmitter::emitMacroFusionDecl(
-    std::vector<Record *> Fusions, PredicateExpander &PE, raw_ostream &OS) {
+    ArrayRef<const Record *> Fusions, PredicateExpander &PE, raw_ostream &OS) {
   OS << "#ifdef GET_" << Target.getName() << "_MACRO_FUSION_PRED_DECL\n";
   OS << "#undef GET_" << Target.getName() << "_MACRO_FUSION_PRED_DECL\n\n";
   OS << "namespace llvm {\n";
 
-  for (Record *Fusion : Fusions) {
+  for (const Record *Fusion : Fusions) {
     OS << "bool is" << Fusion->getName() << "(const TargetInstrInfo &, "
        << "const TargetSubtargetInfo &, "
        << "const MachineInstr *, "
@@ -93,13 +94,13 @@ void MacroFusionPredicatorEmitter::emitMacroFusionDecl(
 }
 
 void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
-    std::vector<Record *> Fusions, PredicateExpander &PE, raw_ostream &OS) {
+    ArrayRef<const Record *> Fusions, PredicateExpander &PE, raw_ostream &OS) {
   OS << "#ifdef GET_" << Target.getName() << "_MACRO_FUSION_PRED_IMPL\n";
   OS << "#undef GET_" << Target.getName() << "_MACRO_FUSION_PRED_IMPL\n\n";
   OS << "namespace llvm {\n";
 
-  for (Record *Fusion : Fusions) {
-    std::vector<Record *> Predicates =
+  for (const Record *Fusion : Fusions) {
+    std::vector<const Record *> Predicates =
         Fusion->getValueAsListOfDefs("Predicates");
     bool IsCommutable = Fusion->getValueAsBit("IsCommutable");
 
@@ -108,7 +109,8 @@ void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
     OS.indent(4) << "const TargetSubtargetInfo &STI,\n";
     OS.indent(4) << "const MachineInstr *FirstMI,\n";
     OS.indent(4) << "const MachineInstr &SecondMI) {\n";
-    OS.indent(2) << "auto &MRI = SecondMI.getMF()->getRegInfo();\n";
+    OS.indent(2)
+        << "[[maybe_unused]] auto &MRI = SecondMI.getMF()->getRegInfo();\n";
 
     emitPredicates(Predicates, IsCommutable, PE, OS);
 
@@ -121,10 +123,10 @@ void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
 }
 
 void MacroFusionPredicatorEmitter::emitPredicates(
-    std::vector<Record *> &Predicates, bool IsCommutable, PredicateExpander &PE,
-    raw_ostream &OS) {
-  for (Record *Predicate : Predicates) {
-    Record *Target = Predicate->getValueAsDef("Target");
+    ArrayRef<const Record *> Predicates, bool IsCommutable,
+    PredicateExpander &PE, raw_ostream &OS) {
+  for (const Record *Predicate : Predicates) {
+    const Record *Target = Predicate->getValueAsDef("Target");
     if (Target->getName() == "first_fusion_target")
       emitFirstPredicate(Predicate, IsCommutable, PE, OS);
     else if (Target->getName() == "second_fusion_target")
@@ -137,7 +139,7 @@ void MacroFusionPredicatorEmitter::emitPredicates(
   }
 }
 
-void MacroFusionPredicatorEmitter::emitFirstPredicate(Record *Predicate,
+void MacroFusionPredicatorEmitter::emitFirstPredicate(const Record *Predicate,
                                                       bool IsCommutable,
                                                       PredicateExpander &PE,
                                                       raw_ostream &OS) {
@@ -158,7 +160,7 @@ void MacroFusionPredicatorEmitter::emitFirstPredicate(Record *Predicate,
     OS.indent(4) << "const MachineInstr *MI = FirstMI;\n";
     OS.indent(4) << "if (";
     PE.setNegatePredicate(true);
-    PE.setIndentLevel(3);
+    PE.getIndent() = 3;
     PE.expandPredicate(OS, Predicate->getValueAsDef("Predicate"));
     OS << ")\n";
     OS.indent(4) << "  return false;\n";
@@ -170,7 +172,7 @@ void MacroFusionPredicatorEmitter::emitFirstPredicate(Record *Predicate,
   }
 }
 
-void MacroFusionPredicatorEmitter::emitSecondPredicate(Record *Predicate,
+void MacroFusionPredicatorEmitter::emitSecondPredicate(const Record *Predicate,
                                                        bool IsCommutable,
                                                        PredicateExpander &PE,
                                                        raw_ostream &OS) {
@@ -179,7 +181,7 @@ void MacroFusionPredicatorEmitter::emitSecondPredicate(Record *Predicate,
     OS.indent(4) << "const MachineInstr *MI = &SecondMI;\n";
     OS.indent(4) << "if (";
     PE.setNegatePredicate(true);
-    PE.setIndentLevel(3);
+    PE.getIndent() = 3;
     PE.expandPredicate(OS, Predicate->getValueAsDef("Predicate"));
     OS << ")\n";
     OS.indent(4) << "  return false;\n";
@@ -221,7 +223,7 @@ void MacroFusionPredicatorEmitter::emitSecondPredicate(Record *Predicate,
   }
 }
 
-void MacroFusionPredicatorEmitter::emitBothPredicate(Record *Predicate,
+void MacroFusionPredicatorEmitter::emitBothPredicate(const Record *Predicate,
                                                      bool IsCommutable,
                                                      PredicateExpander &PE,
                                                      raw_ostream &OS) {
@@ -275,9 +277,7 @@ void MacroFusionPredicatorEmitter::run(raw_ostream &OS) {
   PE.setByRef(false);
   PE.setExpandForMC(false);
 
-  std::vector<Record *> Fusions = Records.getAllDerivedDefinitions("Fusion");
-  // Sort macro fusions by name.
-  sort(Fusions, LessRecord());
+  ArrayRef<const Record *> Fusions = Records.getAllDerivedDefinitions("Fusion");
   emitMacroFusionDecl(Fusions, PE, OS);
   OS << "\n";
   emitMacroFusionImpl(Fusions, PE, OS);

@@ -12,7 +12,5 @@ static_library("Utils") {
     "//llvm/lib/Target/WebAssembly/TargetInfo",
   ]
   include_dirs = [ ".." ]
-  sources = [
-    "WebAssemblyTypeUtilities.cpp",
-  ]
+  sources = [ "WebAssemblyTypeUtilities.cpp" ]
 }

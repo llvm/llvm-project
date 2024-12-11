@@ -81,3 +81,28 @@ The C standard does not specify behavior for ``printf("%s", NULL)``. We will
 print the string literal ``(null)`` unless using the 
 ``LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS`` option described in :ref:`printf 
 behavior<printf_behavior>`.
+
+Unknown Math Rounding Direction
+-------------------------------
+The C23 standard states that if the value of the ``rnd`` argument of the
+``fromfp``, ``ufromfp``, ``fromfpx`` and ``ufromfpx`` functions is not equal to
+the value of a math rounding direction macro, the direction of rounding is
+unspecified. LLVM's libc chooses to use the ``FP_INT_TONEAREST`` rounding
+direction in this case.
+
+Non-const Constant Return Values
+--------------------------------
+Some libc functions, like ``dlerror()``, return ``char *`` instead of ``const char *`` and then tell the caller they promise not to to modify this value. Any modification of this value is undefined behavior.
+
+Unrecognized ``clockid_t`` values for ``pthread_rwlock_clock*`` APIs
+----------------------------------------------------------------------
+POSIX.1-2024 only demands support for ``CLOCK_REALTIME`` and ``CLOCK_MONOTONIC``. Currently,
+as in LLVM libc, if other clock ids are used, they will be treated as monotonic clocks.
+
+PThread SpinLock Destroy
+------------------------
+POSIX.1 Issue 7 updates the spinlock destroy behavior description such that the return code for
+uninitialized spinlock and invalid spinlock is left undefined. We follow the recommendation as in
+POSIX.1-2024, where EINVAL is returned if the spinlock is invalid (here we only check for null pointers) or
+EBUSY is returned if the spinlock is currently locked. The lock is poisoned after a successful destroy. That is,
+subsequent operations on the lock object without any reinitialization will return EINVAL.

@@ -18,6 +18,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 
@@ -704,7 +705,7 @@ TEST_F(MemorySSATest, PartialWalkerCacheWithPhis) {
   BasicBlock *IfThen = BasicBlock::Create(C, "B", F);
   BasicBlock *IfEnd = BasicBlock::Create(C, "C", F);
 
-  B.CreateCondBr(UndefValue::get(Type::getInt1Ty(C)), IfThen, IfEnd);
+  B.CreateCondBr(PoisonValue::get(Type::getInt1Ty(C)), IfThen, IfEnd);
 
   B.SetInsertPoint(IfThen);
   Instruction *FirstStore = B.CreateStore(Zero, AllocA);
@@ -1119,7 +1120,7 @@ TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
   B.CreateStore(B.getInt8(0), Bar);
 
   auto GetLifetimeIntrinsic = [&](Intrinsic::ID ID) {
-    return Intrinsic::getDeclaration(&M, ID, {Foo->getType()});
+    return Intrinsic::getOrInsertDeclaration(&M, ID, {Foo->getType()});
   };
 
   B.CreateCall(GetLifetimeIntrinsic(Intrinsic::lifetime_end),

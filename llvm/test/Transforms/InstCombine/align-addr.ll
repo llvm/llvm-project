@@ -81,7 +81,7 @@ define <16 x i8> @test1_as1(<2 x i64> %x) {
 
 define <16 x i8> @test1_as1_gep(<2 x i64> %x) {
 ; CHECK-LABEL: @test1_as1_gep(
-; CHECK-NEXT:    [[TMP:%.*]] = load <16 x i8>, ptr addrspace(1) getelementptr inbounds ([8 x i32], ptr addrspace(1) @GLOBAL_as1_gep, i32 0, i32 4), align 1
+; CHECK-NEXT:    [[TMP:%.*]] = load <16 x i8>, ptr addrspace(1) getelementptr inbounds nuw (i8, ptr addrspace(1) @GLOBAL_as1_gep, i32 16), align 1
 ; CHECK-NEXT:    ret <16 x i8> [[TMP]]
 ;
   %tmp = load <16 x i8>, ptr addrspace(1) getelementptr ([8 x i32], ptr addrspace(1) @GLOBAL_as1_gep, i16 0, i16 4), align 1

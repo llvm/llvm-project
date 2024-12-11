@@ -45,6 +45,8 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
 
   add_custom_target(CREATE_${project_name}_${target_name}
     DEPENDS ${${project_name}_${target_name}_BUILD})
+  get_subproject_title(subproject_title)
+  set_target_properties(CREATE_${project_name}_${target_name} PROPERTIES FOLDER "${subproject_title}/Native")
 
   # Escape semicolons in the targets list so that cmake doesn't expand
   # them to spaces.
@@ -67,8 +69,8 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
          "-DLLVM_EXTERNAL_${name}_SOURCE_DIR=${LLVM_EXTERNAL_${name}_SOURCE_DIR}")
   endforeach()
 
-  if("libc" IN_LIST LLVM_ENABLE_PROJECTS AND NOT LIBC_HDRGEN_EXE)
-    set(libc_flags -DLLVM_LIBC_FULL_BUILD=ON -DLIBC_HDRGEN_ONLY=ON)
+  if(LLVM_LIBC_GPU_BUILD)
+    set(libc_flags -DLLVM_LIBC_GPU_BUILD=ON)
   endif()
 
   add_custom_command(OUTPUT ${${project_name}_${target_name}_BUILD}/CMakeCache.txt
@@ -98,6 +100,8 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
 
   add_custom_target(CONFIGURE_${project_name}_${target_name}
     DEPENDS ${${project_name}_${target_name}_BUILD}/CMakeCache.txt)
+  get_subproject_title(subproject_title)
+  set_target_properties(CONFIGURE_${project_name}_${target_name} PROPERTIES FOLDER "${subproject_title}/Native")
 
 endfunction()
 

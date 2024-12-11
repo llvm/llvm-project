@@ -27,6 +27,7 @@
 
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Core/BinaryDomTree.h"
 #include "bolt/Core/BinaryLoop.h"
 #include "bolt/Core/BinarySection.h"
 #include "bolt/Core/DebugData.h"
@@ -51,7 +52,6 @@
 #include <iterator>
 #include <limits>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -117,7 +117,6 @@ inline raw_ostream &operator<<(raw_ostream &OS,
     TotalCount += CSP.Count;
     TotalMispreds += CSP.Mispreds;
   }
-  SS.flush();
 
   OS << TotalCount << " (" << TotalMispreds << " misses) :" << TempString;
   return OS;
@@ -266,6 +265,7 @@ private:
   BinaryContext &BC;
 
   std::unique_ptr<BinaryLoopInfo> BLI;
+  std::unique_ptr<BinaryDominatorTree> BDT;
 
   /// All labels in the function that are referenced via relocations from
   /// data objects. Typically these are jump table destinations and computed
@@ -386,6 +386,9 @@ private:
   /// Raw branch count for this function in the profile.
   uint64_t RawBranchCount{0};
 
+  /// Dynamically executed function bytes, used for density computation.
+  uint64_t SampleCountInBytes{0};
+
   /// Indicates the type of profile the function is using.
   uint16_t ProfileFlags{PF_NONE};
 
@@ -414,6 +417,9 @@ private:
   /// Last computed hash value. Note that the value could be recomputed using
   /// different parameters by every pass.
   mutable uint64_t Hash{0};
+
+  /// Function GUID assigned externally.
+  uint64_t GUID{0};
 
   /// For PLT functions it contains a symbol associated with a function
   /// reference. It is nullptr for non-PLT functions.
@@ -520,6 +526,11 @@ private:
   /// Marking for the beginnings of language-specific data areas for each
   /// fragment of the function.
   SmallVector<MCSymbol *, 0> LSDASymbols;
+
+  /// Each function fragment may have another fragment containing all landing
+  /// pads for it. If that's the case, the LP fragment will be stored in the
+  /// vector below with indexing starting with the main fragment.
+  SmallVector<std::optional<FragmentNum>, 0> LPFragments;
 
   /// Map to discover which CFIs are attached to a given instruction offset.
   /// Maps an instruction offset into a FrameInstructions offset.
@@ -834,9 +845,13 @@ public:
   /// them.
   void calculateLoopInfo();
 
-  /// Calculate missed macro-fusion opportunities and update BinaryContext
-  /// stats.
-  void calculateMacroOpFusionStats();
+  /// Returns if BinaryDominatorTree has been constructed for this function.
+  bool hasDomTree() const { return BDT != nullptr; }
+
+  BinaryDominatorTree &getDomTree() { return *BDT.get(); }
+
+  /// Constructs DomTree for this function.
+  void constructDomTree();
 
   /// Returns if loop detection has been run for this function.
   bool hasLoopInfo() const { return BLI != nullptr; }
@@ -898,6 +913,10 @@ public:
     return BB && BB->getOffset() == Offset ? BB : nullptr;
   }
 
+  const BinaryBasicBlock *getBasicBlockAtOffset(uint64_t Offset) const {
+    return const_cast<BinaryFunction *>(this)->getBasicBlockAtOffset(Offset);
+  }
+
   /// Retrieve the landing pad BB associated with invoke instruction \p Invoke
   /// that is in \p BB. Return nullptr if none exists
   BinaryBasicBlock *getLandingPadBBFor(const BinaryBasicBlock &BB,
@@ -920,6 +939,12 @@ public:
   const MCInst *getInstructionAtOffset(uint64_t Offset) const {
     return const_cast<BinaryFunction *>(this)->getInstructionAtOffset(Offset);
   }
+
+  /// When the function is in disassembled state, return an instruction that
+  /// contains the \p Offset.
+  MCInst *getInstructionContainingOffset(uint64_t Offset);
+
+  std::optional<MCInst> disassembleInstructionAtOffset(uint64_t Offset) const;
 
   /// Return offset for the first instruction. If there is data at the
   /// beginning of a function then offset of the first instruction could
@@ -1159,7 +1184,7 @@ public:
   /// Pass an offset of the entry point in the input binary and a corresponding
   /// global symbol to the callback function.
   ///
-  /// Return true of all callbacks returned true, false otherwise.
+  /// Return true if all callbacks returned true, false otherwise.
   bool forEachEntryPoint(EntryPointCallbackTy Callback) const;
 
   /// Return MC symbol associated with the end of the function.
@@ -1393,7 +1418,8 @@ public:
 
   /// Return true if the function has CFI instructions
   bool hasCFI() const {
-    return !FrameInstructions.empty() || !CIEFrameInstructions.empty();
+    return !FrameInstructions.empty() || !CIEFrameInstructions.empty() ||
+           IsInjected;
   }
 
   /// Return unique number associated with the function.
@@ -1677,6 +1703,8 @@ public:
 
   void setPseudo(bool Pseudo) { IsPseudo = Pseudo; }
 
+  void setPreserveNops(bool Value) { PreserveNops = Value; }
+
   BinaryFunction &setUsesGnuArgsSize(bool Uses = true) {
     UsesGnuArgsSize = Uses;
     return *this;
@@ -1778,11 +1806,6 @@ public:
     return ParentFragments.contains(&Other);
   }
 
-  /// Returns if this function is a parent of \p Other function.
-  bool isParentOf(const BinaryFunction &Other) const {
-    return Fragments.contains(&Other);
-  }
-
   /// Return the child fragment form parent function
   iterator_range<FragmentsSetTy::const_iterator> getFragments() const {
     return iterator_range<FragmentsSetTy::const_iterator>(Fragments.begin(),
@@ -1791,11 +1814,6 @@ public:
 
   /// Return the parent function for split function fragments.
   FragmentsSetTy *getParentFragments() { return &ParentFragments; }
-
-  /// Returns if this function is a parent or child of \p Other function.
-  bool isParentOrChildOf(const BinaryFunction &Other) const {
-    return isChildOf(Other) || isParentOf(Other);
-  }
 
   /// Set the profile data for the number of times the function was called.
   BinaryFunction &setExecutionCount(uint64_t Count) {
@@ -1838,6 +1856,9 @@ public:
   /// to this function.
   void setRawBranchCount(uint64_t Count) { RawBranchCount = Count; }
 
+  /// Return the number of dynamically executed bytes, from raw perf data.
+  uint64_t getSampleCountInBytes() const { return SampleCountInBytes; }
+
   /// Return the execution count for functions with known profile.
   /// Return 0 if the function has no profile.
   uint64_t getKnownExecutionCount() const {
@@ -1867,6 +1888,42 @@ public:
     LSDASymbols[F.get()] = BC.Ctx->getOrCreateSymbol(SymbolName);
 
     return LSDASymbols[F.get()];
+  }
+
+  /// If all landing pads for the function fragment \p F are located in fragment
+  /// \p LPF, designate \p LPF as a landing-pad fragment for \p F. Passing
+  /// std::nullopt in LPF, means that landing pads for \p F are located in more
+  /// than one fragment.
+  void setLPFragment(const FragmentNum F, std::optional<FragmentNum> LPF) {
+    if (F.get() >= LPFragments.size())
+      LPFragments.resize(F.get() + 1);
+
+    LPFragments[F.get()] = LPF;
+  }
+
+  /// If function fragment \p F has a designated landing pad fragment, i.e. a
+  /// fragment that contains all landing pads for throwers in \p F, then return
+  /// that landing pad fragment number. If \p F does not need landing pads,
+  /// return \p F. Return nullptr if landing pads for \p F are scattered among
+  /// several function fragments.
+  std::optional<FragmentNum> getLPFragment(const FragmentNum F) {
+    if (!isSplit()) {
+      assert(F == FragmentNum::main() && "Invalid fragment number");
+      return FragmentNum::main();
+    }
+
+    if (F.get() >= LPFragments.size())
+      return std::nullopt;
+
+    return LPFragments[F.get()];
+  }
+
+  /// Return a symbol corresponding to a landing pad fragment for fragment \p F.
+  /// See getLPFragment().
+  MCSymbol *getLPStartSymbol(const FragmentNum F) {
+    if (std::optional<FragmentNum> LPFragment = getLPFragment(F))
+      return getSymbol(*LPFragment);
+    return nullptr;
   }
 
   void setOutputDataAddress(uint64_t Address) { OutputDataOffset = Address; }
@@ -2244,6 +2301,11 @@ public:
   /// Returns the last computed hash value of the function.
   size_t getHash() const { return Hash; }
 
+  /// Returns the function GUID.
+  uint64_t getGUID() const { return GUID; }
+
+  void setGUID(uint64_t Id) { GUID = Id; }
+
   using OperandHashFuncTy =
       function_ref<typename std::string(const MCOperand &)>;
 
@@ -2343,6 +2405,19 @@ inline raw_ostream &operator<<(raw_ostream &OS,
                                const BinaryFunction &Function) {
   OS << Function.getPrintName();
   return OS;
+}
+
+/// Compare function by index if it is valid, fall back to the original address
+/// otherwise.
+inline bool compareBinaryFunctionByIndex(const BinaryFunction *A,
+                                         const BinaryFunction *B) {
+  if (A->hasValidIndex() && B->hasValidIndex())
+    return A->getIndex() < B->getIndex();
+  if (A->hasValidIndex() && !B->hasValidIndex())
+    return true;
+  if (!A->hasValidIndex() && B->hasValidIndex())
+    return false;
+  return A->getAddress() < B->getAddress();
 }
 
 } // namespace bolt

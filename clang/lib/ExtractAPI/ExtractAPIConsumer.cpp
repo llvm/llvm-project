@@ -30,6 +30,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/MultiplexConsumer.h"
+#include "clang/Index/USRGeneration.h"
 #include "clang/InstallAPI/HeaderFile.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/PPCallbacks.h"
@@ -39,6 +40,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -215,8 +217,8 @@ struct LocationFileChecker {
                       SmallVector<std::pair<SmallString<32>, bool>> &KnownFiles)
       : CI(CI), KnownFiles(KnownFiles), ExternalFileEntries() {
     for (const auto &KnownFile : KnownFiles)
-      if (auto FileEntry = CI.getFileManager().getFile(KnownFile.first))
-        KnownFileEntries.insert(*FileEntry);
+      if (auto FE = CI.getFileManager().getOptionalFileRef(KnownFile.first))
+        KnownFileEntries.insert(*FE);
   }
 
 private:
@@ -284,77 +286,59 @@ public:
   MacroCallback(const SourceManager &SM, APISet &API, Preprocessor &PP)
       : SM(SM), API(API), PP(PP) {}
 
-  void MacroDefined(const Token &MacroNameToken,
-                    const MacroDirective *MD) override {
-    auto *MacroInfo = MD->getMacroInfo();
-
-    if (MacroInfo->isBuiltinMacro())
-      return;
-
-    auto SourceLoc = MacroNameToken.getLocation();
-    if (SM.isWrittenInBuiltinFile(SourceLoc) ||
-        SM.isWrittenInCommandLineFile(SourceLoc))
-      return;
-
-    PendingMacros.emplace_back(MacroNameToken, MD);
-  }
-
-  // If a macro gets undefined at some point during preprocessing of the inputs
-  // it means that it isn't an exposed API and we should therefore not add a
-  // macro definition for it.
-  void MacroUndefined(const Token &MacroNameToken, const MacroDefinition &MD,
-                      const MacroDirective *Undef) override {
-    // If this macro wasn't previously defined we don't need to do anything
-    // here.
-    if (!Undef)
-      return;
-
-    llvm::erase_if(PendingMacros, [&MD, this](const PendingMacro &PM) {
-      return MD.getMacroInfo()->isIdenticalTo(*PM.MD->getMacroInfo(), PP,
-                                              /*Syntactically*/ false);
-    });
-  }
-
   void EndOfMainFile() override {
-    for (auto &PM : PendingMacros) {
-      // `isUsedForHeaderGuard` is only set when the preprocessor leaves the
-      // file so check for it here.
-      if (PM.MD->getMacroInfo()->isUsedForHeaderGuard())
+    for (const auto &M : PP.macros()) {
+      auto *II = M.getFirst();
+      auto MD = PP.getMacroDefinition(II);
+      auto *MI = MD.getMacroInfo();
+
+      if (!MI)
         continue;
 
-      if (!shouldMacroBeIncluded(PM))
+      // Ignore header guard macros
+      if (MI->isUsedForHeaderGuard())
         continue;
 
-      StringRef Name = PM.MacroNameToken.getIdentifierInfo()->getName();
-      PresumedLoc Loc = SM.getPresumedLoc(PM.MacroNameToken.getLocation());
-      StringRef USR =
-          API.recordUSRForMacro(Name, PM.MacroNameToken.getLocation(), SM);
+      // Ignore builtin macros and ones defined via the command line.
+      if (MI->isBuiltinMacro())
+        continue;
 
-      API.addMacroDefinition(
-          Name, USR, Loc,
-          DeclarationFragmentsBuilder::getFragmentsForMacro(Name, PM.MD),
+      auto DefLoc = MI->getDefinitionLoc();
+
+      if (SM.isWrittenInBuiltinFile(DefLoc) ||
+          SM.isWrittenInCommandLineFile(DefLoc))
+        continue;
+
+      auto AssociatedModuleMacros = MD.getModuleMacros();
+      StringRef OwningModuleName;
+      if (!AssociatedModuleMacros.empty())
+        OwningModuleName = AssociatedModuleMacros.back()
+                               ->getOwningModule()
+                               ->getTopLevelModuleName();
+
+      if (!shouldMacroBeIncluded(DefLoc, OwningModuleName))
+        continue;
+
+      StringRef Name = II->getName();
+      PresumedLoc Loc = SM.getPresumedLoc(DefLoc);
+      SmallString<128> USR;
+      index::generateUSRForMacro(Name, DefLoc, SM, USR);
+      API.createRecord<extractapi::MacroDefinitionRecord>(
+          USR, Name, SymbolReference(), Loc,
+          DeclarationFragmentsBuilder::getFragmentsForMacro(Name, MI),
           DeclarationFragmentsBuilder::getSubHeadingForMacro(Name),
-          SM.isInSystemHeader(PM.MacroNameToken.getLocation()));
+          SM.isInSystemHeader(DefLoc));
     }
-
-    PendingMacros.clear();
   }
 
-protected:
-  struct PendingMacro {
-    Token MacroNameToken;
-    const MacroDirective *MD;
-
-    PendingMacro(const Token &MacroNameToken, const MacroDirective *MD)
-        : MacroNameToken(MacroNameToken), MD(MD) {}
-  };
-
-  virtual bool shouldMacroBeIncluded(const PendingMacro &PM) { return true; }
+  virtual bool shouldMacroBeIncluded(const SourceLocation &MacroLoc,
+                                     StringRef ModuleName) {
+    return true;
+  }
 
   const SourceManager &SM;
   APISet &API;
   Preprocessor &PP;
-  llvm::SmallVector<PendingMacro> PendingMacros;
 };
 
 class APIMacroCallback : public MacroCallback {
@@ -363,48 +347,66 @@ public:
                    LocationFileChecker &LCF)
       : MacroCallback(SM, API, PP), LCF(LCF) {}
 
-  bool shouldMacroBeIncluded(const PendingMacro &PM) override {
+  bool shouldMacroBeIncluded(const SourceLocation &MacroLoc,
+                             StringRef ModuleName) override {
     // Do not include macros from external files
-    return LCF(PM.MacroNameToken.getLocation());
+    return LCF(MacroLoc);
   }
 
 private:
   LocationFileChecker &LCF;
 };
 
-} // namespace
+std::unique_ptr<llvm::raw_pwrite_stream>
+createAdditionalSymbolGraphFile(CompilerInstance &CI, Twine BaseName) {
+  auto OutputDirectory = CI.getFrontendOpts().SymbolGraphOutputDir;
 
-void ExtractAPIActionBase::ImplEndSourceFileAction() {
-  if (!OS)
-    return;
-
-  // Setup a SymbolGraphSerializer to write out collected API information in
-  // the Symbol Graph format.
-  // FIXME: Make the kind of APISerializer configurable.
-  SymbolGraphSerializer SGSerializer(*API, IgnoresList);
-  SGSerializer.serialize(*OS);
-  OS.reset();
+  SmallString<256> FileName;
+  llvm::sys::path::append(FileName, OutputDirectory,
+                          BaseName + ".symbols.json");
+  return CI.createOutputFile(
+      FileName, /*Binary*/ false, /*RemoveFileOnSignal*/ false,
+      /*UseTemporary*/ true, /*CreateMissingDirectories*/ true);
 }
 
-std::unique_ptr<raw_pwrite_stream>
-ExtractAPIAction::CreateOutputFile(CompilerInstance &CI, StringRef InFile) {
-  std::unique_ptr<raw_pwrite_stream> OS;
-  OS = CI.createDefaultOutputFile(/*Binary=*/false, InFile,
-                                  /*Extension=*/"json",
-                                  /*RemoveFileOnSignal=*/false);
-  if (!OS)
-    return nullptr;
-  return OS;
+} // namespace
+
+void ExtractAPIActionBase::ImplEndSourceFileAction(CompilerInstance &CI) {
+  SymbolGraphSerializerOption SerializationOptions;
+  SerializationOptions.Compact = !CI.getFrontendOpts().EmitPrettySymbolGraphs;
+  SerializationOptions.EmitSymbolLabelsForTesting =
+      CI.getFrontendOpts().EmitSymbolGraphSymbolLabelsForTesting;
+
+  if (CI.getFrontendOpts().EmitExtensionSymbolGraphs) {
+    auto ConstructOutputFile = [&CI](Twine BaseName) {
+      return createAdditionalSymbolGraphFile(CI, BaseName);
+    };
+
+    SymbolGraphSerializer::serializeWithExtensionGraphs(
+        *OS, *API, IgnoresList, ConstructOutputFile, SerializationOptions);
+  } else {
+    SymbolGraphSerializer::serializeMainSymbolGraph(*OS, *API, IgnoresList,
+                                                    SerializationOptions);
+  }
+
+  // Flush the stream and close the main output stream.
+  OS.reset();
 }
 
 std::unique_ptr<ASTConsumer>
 ExtractAPIAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
-  OS = CreateOutputFile(CI, InFile);
+  auto ProductName = CI.getFrontendOpts().ProductName;
+
+  if (CI.getFrontendOpts().SymbolGraphOutputDir.empty())
+    OS = CI.createDefaultOutputFile(/*Binary*/ false, InFile,
+                                    /*Extension*/ "symbols.json",
+                                    /*RemoveFileOnSignal*/ false,
+                                    /*CreateMissingDirectories*/ true);
+  else
+    OS = createAdditionalSymbolGraphFile(CI, ProductName);
 
   if (!OS)
     return nullptr;
-
-  auto ProductName = CI.getFrontendOpts().ProductName;
 
   // Now that we have enough information about the language options and the
   // target triple, let's create the APISet before anyone uses it.
@@ -495,7 +497,9 @@ bool ExtractAPIAction::PrepareToExecuteAction(CompilerInstance &CI) {
   return true;
 }
 
-void ExtractAPIAction::EndSourceFileAction() { ImplEndSourceFileAction(); }
+void ExtractAPIAction::EndSourceFileAction() {
+  ImplEndSourceFileAction(getCompilerInstance());
+}
 
 std::unique_ptr<ASTConsumer>
 WrappingExtractAPIAction::CreateASTConsumer(CompilerInstance &CI,
@@ -506,11 +510,9 @@ WrappingExtractAPIAction::CreateASTConsumer(CompilerInstance &CI,
 
   CreatedASTConsumer = true;
 
-  OS = CreateOutputFile(CI, InFile);
-  if (!OS)
-    return nullptr;
-
-  auto ProductName = CI.getFrontendOpts().ProductName;
+  ProductName = CI.getFrontendOpts().ProductName;
+  auto InputFilename = llvm::sys::path::filename(InFile);
+  OS = createAdditionalSymbolGraphFile(CI, InputFilename);
 
   // Now that we have enough information about the language options and the
   // target triple, let's create the APISet before anyone uses it.
@@ -552,32 +554,6 @@ void WrappingExtractAPIAction::EndSourceFileAction() {
   WrapperFrontendAction::EndSourceFileAction();
 
   if (CreatedASTConsumer) {
-    ImplEndSourceFileAction();
+    ImplEndSourceFileAction(getCompilerInstance());
   }
-}
-
-std::unique_ptr<raw_pwrite_stream>
-WrappingExtractAPIAction::CreateOutputFile(CompilerInstance &CI,
-                                           StringRef InFile) {
-  std::unique_ptr<raw_pwrite_stream> OS;
-  std::string OutputDir = CI.getFrontendOpts().SymbolGraphOutputDir;
-
-  // The symbol graphs need to be generated as a side effect of regular
-  // compilation so the output should be dumped in the directory provided with
-  // the command line option.
-  llvm::SmallString<128> OutFilePath(OutputDir);
-  auto Seperator = llvm::sys::path::get_separator();
-  auto Infilename = llvm::sys::path::filename(InFile);
-  OutFilePath.append({Seperator, Infilename});
-  llvm::sys::path::replace_extension(OutFilePath, "json");
-  // StringRef outputFilePathref = *OutFilePath;
-
-  // don't use the default output file
-  OS = CI.createOutputFile(/*OutputPath=*/OutFilePath, /*Binary=*/false,
-                           /*RemoveFileOnSignal=*/true,
-                           /*UseTemporary=*/true,
-                           /*CreateMissingDirectories=*/true);
-  if (!OS)
-    return nullptr;
-  return OS;
 }

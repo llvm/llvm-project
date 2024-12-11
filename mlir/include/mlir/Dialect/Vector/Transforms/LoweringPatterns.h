@@ -237,6 +237,13 @@ void populateVectorScanLoweringPatterns(RewritePatternSet &patterns,
 
 /// Populate the pattern set with the following patterns:
 ///
+/// [StepToArithConstantOp]
+/// Convert vector.step op into arith ops if not using scalable vectors
+void populateVectorStepLoweringPatterns(RewritePatternSet &patterns,
+                                        PatternBenefit benefit = 1);
+
+/// Populate the pattern set with the following patterns:
+///
 /// [FlattenGather]
 /// Flattens 2 or more dimensional `vector.gather` ops by unrolling the
 /// outermost dimension.
@@ -272,6 +279,18 @@ void populateVectorMaskedLoadStoreEmulationPatterns(RewritePatternSet &patterns,
 void populateVectorInterleaveLoweringPatterns(RewritePatternSet &patterns,
                                               int64_t targetRank = 1,
                                               PatternBenefit benefit = 1);
+
+void populateVectorInterleaveToShufflePatterns(RewritePatternSet &patterns,
+                                               PatternBenefit benefit = 1);
+
+/// Populates the pattern set with the following patterns:
+///
+/// [UnrollBitCastOp]
+/// A one-shot unrolling of BitCastOp to (one or more) ExtractOp +
+/// BitCastOp (of `targetRank`) + InsertOp.
+void populateVectorBitCastLoweringPatterns(RewritePatternSet &patterns,
+                                           int64_t targetRank = 1,
+                                           PatternBenefit benefit = 1);
 
 } // namespace vector
 } // namespace mlir

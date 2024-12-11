@@ -28,8 +28,8 @@
 
 namespace Fortran::runtime::io::descr {
 template <typename A>
-inline A &ExtractElement(IoStatementState &io, const Descriptor &descriptor,
-    const SubscriptValue subscripts[]) {
+inline RT_API_ATTRS A &ExtractElement(IoStatementState &io,
+    const Descriptor &descriptor, const SubscriptValue subscripts[]) {
   A *p{descriptor.Element<A>(subscripts)};
   if (!p) {
     io.GetIoErrorHandler().Crash("Bad address for I/O item -- null base "
@@ -45,7 +45,7 @@ inline A &ExtractElement(IoStatementState &io, const Descriptor &descriptor,
 // NAMELIST array output.
 
 template <int KIND, Direction DIR>
-inline bool FormattedIntegerIO(
+inline RT_API_ATTRS bool FormattedIntegerIO(
     IoStatementState &io, const Descriptor &descriptor) {
   std::size_t numElements{descriptor.Elements()};
   SubscriptValue subscripts[maxRank];
@@ -78,7 +78,7 @@ inline bool FormattedIntegerIO(
 }
 
 template <int KIND, Direction DIR>
-inline bool FormattedRealIO(
+inline RT_API_ATTRS bool FormattedRealIO(
     IoStatementState &io, const Descriptor &descriptor) {
   std::size_t numElements{descriptor.Elements()};
   SubscriptValue subscripts[maxRank];
@@ -111,7 +111,7 @@ inline bool FormattedRealIO(
 }
 
 template <int KIND, Direction DIR>
-inline bool FormattedComplexIO(
+inline RT_API_ATTRS bool FormattedComplexIO(
     IoStatementState &io, const Descriptor &descriptor) {
   std::size_t numElements{descriptor.Elements()};
   SubscriptValue subscripts[maxRank];
@@ -159,7 +159,7 @@ inline bool FormattedComplexIO(
 }
 
 template <typename A, Direction DIR>
-inline bool FormattedCharacterIO(
+inline RT_API_ATTRS bool FormattedCharacterIO(
     IoStatementState &io, const Descriptor &descriptor) {
   std::size_t numElements{descriptor.Elements()};
   SubscriptValue subscripts[maxRank];
@@ -199,7 +199,7 @@ inline bool FormattedCharacterIO(
 }
 
 template <int KIND, Direction DIR>
-inline bool FormattedLogicalIO(
+inline RT_API_ATTRS bool FormattedLogicalIO(
     IoStatementState &io, const Descriptor &descriptor) {
   std::size_t numElements{descriptor.Elements()};
   SubscriptValue subscripts[maxRank];
@@ -241,15 +241,16 @@ inline bool FormattedLogicalIO(
 }
 
 template <Direction DIR>
-static bool DescriptorIO(IoStatementState &, const Descriptor &,
+static RT_API_ATTRS bool DescriptorIO(IoStatementState &, const Descriptor &,
     const NonTbpDefinedIoTable * = nullptr);
 
 // For intrinsic (not defined) derived type I/O, formatted & unformatted
 template <Direction DIR>
-static bool DefaultComponentIO(IoStatementState &io,
+static RT_API_ATTRS bool DefaultComponentIO(IoStatementState &io,
     const typeInfo::Component &component, const Descriptor &origDescriptor,
     const SubscriptValue origSubscripts[], Terminator &terminator,
     const NonTbpDefinedIoTable *table) {
+#if !defined(RT_DEVICE_AVOID_RECURSION)
   if (component.genre() == typeInfo::Component::Genre::Data) {
     // Create a descriptor for the component
     StaticDescriptor<maxRank, true, 16 /*?*/> statDesc;
@@ -266,10 +267,13 @@ static bool DefaultComponentIO(IoStatementState &io,
     const Descriptor &compDesc{*reinterpret_cast<const Descriptor *>(pointer)};
     return DescriptorIO<DIR>(io, compDesc, table);
   }
+#else
+  terminator.Crash("not yet implemented: component IO");
+#endif
 }
 
 template <Direction DIR>
-static bool DefaultComponentwiseFormattedIO(IoStatementState &io,
+static RT_API_ATTRS bool DefaultComponentwiseFormattedIO(IoStatementState &io,
     const Descriptor &descriptor, const typeInfo::DerivedType &type,
     const NonTbpDefinedIoTable *table, const SubscriptValue subscripts[]) {
   IoErrorHandler &handler{io.GetIoErrorHandler()};
@@ -295,7 +299,7 @@ static bool DefaultComponentwiseFormattedIO(IoStatementState &io,
 }
 
 template <Direction DIR>
-static bool DefaultComponentwiseUnformattedIO(IoStatementState &io,
+static RT_API_ATTRS bool DefaultComponentwiseUnformattedIO(IoStatementState &io,
     const Descriptor &descriptor, const typeInfo::DerivedType &type,
     const NonTbpDefinedIoTable *table) {
   IoErrorHandler &handler{io.GetIoErrorHandler()};
@@ -322,12 +326,12 @@ static bool DefaultComponentwiseUnformattedIO(IoStatementState &io,
   return true;
 }
 
-Fortran::common::optional<bool> DefinedFormattedIo(IoStatementState &,
-    const Descriptor &, const typeInfo::DerivedType &,
+RT_API_ATTRS Fortran::common::optional<bool> DefinedFormattedIo(
+    IoStatementState &, const Descriptor &, const typeInfo::DerivedType &,
     const typeInfo::SpecialBinding &, const SubscriptValue[]);
 
 template <Direction DIR>
-static bool FormattedDerivedTypeIO(IoStatementState &io,
+static RT_API_ATTRS bool FormattedDerivedTypeIO(IoStatementState &io,
     const Descriptor &descriptor, const NonTbpDefinedIoTable *table) {
   IoErrorHandler &handler{io.GetIoErrorHandler()};
   // Derived type information must be present for formatted I/O.
@@ -385,12 +389,12 @@ static bool FormattedDerivedTypeIO(IoStatementState &io,
   return true;
 }
 
-bool DefinedUnformattedIo(IoStatementState &, const Descriptor &,
+RT_API_ATTRS bool DefinedUnformattedIo(IoStatementState &, const Descriptor &,
     const typeInfo::DerivedType &, const typeInfo::SpecialBinding &);
 
 // Unformatted I/O
 template <Direction DIR>
-static bool UnformattedDescriptorIO(IoStatementState &io,
+static RT_API_ATTRS bool UnformattedDescriptorIO(IoStatementState &io,
     const Descriptor &descriptor, const NonTbpDefinedIoTable *table = nullptr) {
   IoErrorHandler &handler{io.GetIoErrorHandler()};
   const DescriptorAddendum *addendum{descriptor.Addendum()};
@@ -488,15 +492,14 @@ static bool UnformattedDescriptorIO(IoStatementState &io,
 }
 
 template <Direction DIR>
-static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor,
-    const NonTbpDefinedIoTable *table) {
+static RT_API_ATTRS bool DescriptorIO(IoStatementState &io,
+    const Descriptor &descriptor, const NonTbpDefinedIoTable *table) {
   IoErrorHandler &handler{io.GetIoErrorHandler()};
   if (handler.InError()) {
     return false;
   }
   if (!io.get_if<IoDirectionState<DIR>>()) {
-    io.GetIoErrorHandler().Crash(
-        "DescriptorIO() called for wrong I/O direction");
+    handler.Crash("DescriptorIO() called for wrong I/O direction");
     return false;
   }
   if constexpr (DIR == Direction::Input) {

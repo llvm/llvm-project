@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Vector/IR/ScalableValueBoundsConstraintSet.h"
-
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 
 namespace mlir::vector {
@@ -47,23 +46,47 @@ ScalableValueBoundsConstraintSet::computeScalableBound(
     unsigned vscaleMax, presburger::BoundType boundType, bool closedUB,
     StopConditionFn stopCondition) {
   using namespace presburger;
-
   assert(vscaleMin <= vscaleMax);
-  ScalableValueBoundsConstraintSet scalableCstr(value.getContext(), vscaleMin,
-                                                vscaleMax);
 
-  int64_t pos = scalableCstr.populateConstraintsSet(value, dim, stopCondition);
+  // No stop condition specified: Keep adding constraints until the worklist
+  // is empty.
+  auto defaultStopCondition = [&](Value v, std::optional<int64_t> dim,
+                                  mlir::ValueBoundsConstraintSet &cstr) {
+    return false;
+  };
 
-  // Project out all variables apart from vscale.
-  // This should result in constraints in terms of vscale only.
-  scalableCstr.projectOut(
-      [&](ValueDim p) { return p.first != scalableCstr.getVscaleValue(); });
+  ScalableValueBoundsConstraintSet scalableCstr(
+      value.getContext(), stopCondition ? stopCondition : defaultStopCondition,
+      vscaleMin, vscaleMax);
+  int64_t pos = scalableCstr.insert(value, dim, /*isSymbol=*/false);
+  scalableCstr.processWorklist();
+
+  // Check the resulting constraints set is valid.
+  if (scalableCstr.cstr.isEmpty()) {
+    return failure();
+  }
+
+  // Project out all columns apart from vscale and the starting point
+  // (value/dim). This should result in constraints in terms of vscale only.
+  auto projectOutFn = [&](ValueDim p) {
+    bool isStartingPoint =
+        p.first == value &&
+        p.second == dim.value_or(ValueBoundsConstraintSet::kIndexValue);
+    return p.first != scalableCstr.getVscaleValue() && !isStartingPoint;
+  };
+  scalableCstr.projectOut(projectOutFn);
+  scalableCstr.projectOutAnonymous(/*except=*/pos);
+  // Also project out local variables (these are not tracked by the
+  // ValueBoundsConstraintSet).
+  for (unsigned i = 0, e = scalableCstr.cstr.getNumLocalVars(); i < e; ++i) {
+    scalableCstr.cstr.projectOut(scalableCstr.cstr.getNumDimAndSymbolVars());
+  }
 
   assert(scalableCstr.cstr.getNumDimAndSymbolVars() ==
              scalableCstr.positionToValueDim.size() &&
          "inconsistent mapping state");
 
-  // Check that the only symbols left are vscale.
+  // Check that the only columns left are vscale and the starting point.
   for (int64_t i = 0; i < scalableCstr.cstr.getNumDimAndSymbolVars(); ++i) {
     if (i == pos)
       continue;
@@ -84,7 +107,7 @@ ScalableValueBoundsConstraintSet::computeScalableBound(
 
   AffineMap bound = [&] {
     if (boundType == BoundType::EQ && !invalidBound(lowerBound) &&
-        lowerBound[0] == lowerBound[0]) {
+        lowerBound[0] == upperBound[0]) {
       return lowerBound[0];
     } else if (boundType == BoundType::LB && !invalidBound(lowerBound)) {
       return lowerBound[0];

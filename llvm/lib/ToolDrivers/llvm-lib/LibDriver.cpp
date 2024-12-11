@@ -95,7 +95,8 @@ static std::vector<StringRef> getSearchPaths(opt::InputArgList *Args,
 
 // Opens a file. Path has to be resolved already. (used for def file)
 std::unique_ptr<MemoryBuffer> openFile(const Twine &Path) {
-  ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MB = MemoryBuffer::getFile(Path);
+  ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MB =
+      MemoryBuffer::getFile(Path, /*IsText=*/true);
 
   if (std::error_code EC = MB.getError()) {
     llvm::errs() << "cannot open file " << Path << ": " << EC.message() << "\n";
@@ -144,7 +145,7 @@ static void doList(opt::InputArgList &Args) {
     return;
 
   Error Err = Error::success();
-  object::Archive Archive(B.get()->getMemBufferRef(), Err);
+  object::Archive Archive(B->getMemBufferRef(), Err);
   fatalOpenError(std::move(Err), B->getBufferIdentifier());
 
   std::vector<StringRef> Names;
@@ -311,7 +312,7 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
   StringSaver Saver(Alloc);
 
   // Parse command line arguments.
-  SmallVector<const char *, 20> NewArgs(ArgsArr.begin(), ArgsArr.end());
+  SmallVector<const char *, 20> NewArgs(ArgsArr);
   cl::ExpandResponseFiles(Saver, cl::TokenizeWindowsCommandLine, NewArgs);
   ArgsArr = NewArgs;
 
@@ -418,10 +419,15 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
       OutputFile = std::move(NativeDef->OutputFile);
     }
 
-    return writeImportLibrary(OutputFile, OutputPath, Def->Exports, LibMachine,
-                              /*MinGW=*/false, NativeExports)
-               ? 1
-               : 0;
+    if (Error E =
+            writeImportLibrary(OutputFile, OutputPath, Def->Exports, LibMachine,
+                               /*MinGW=*/false, NativeExports)) {
+      handleAllErrors(std::move(E), [&](const ErrorInfoBase &EI) {
+        llvm::errs() << OutputPath << ": " << EI.message() << "\n";
+      });
+      return 1;
+    }
+    return 0;
   }
 
   // If no input files and not told otherwise, silently do nothing to match

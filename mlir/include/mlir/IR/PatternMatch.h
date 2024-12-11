@@ -15,6 +15,7 @@
 #include "llvm/Support/TypeName.h"
 #include <optional>
 
+using llvm::SmallPtrSetImpl;
 namespace mlir {
 
 class PatternRewriter;
@@ -288,7 +289,7 @@ protected:
   using Pattern::Pattern;
 
 private:
-  /// Trait to check if T provides a `getOperationName` method.
+  /// Trait to check if T provides a `initialize` method.
   template <typename T, typename... Args>
   using has_initialize = decltype(std::declval<T>().initialize());
   template <typename T>
@@ -409,9 +410,9 @@ public:
     /// Notify the listener that the specified operation was modified in-place.
     virtual void notifyOperationModified(Operation *op) {}
 
-    /// Notify the listener that the specified operation is about to be replaced
-    /// with another operation. This is called before the uses of the old
-    /// operation have been changed.
+    /// Notify the listener that all uses of the specified operation's results
+    /// are about to be replaced with the results of another operation. This is
+    /// called before the uses of the old operation have been changed.
     ///
     /// By default, this function calls the "operation replaced with values"
     /// notification.
@@ -420,9 +421,10 @@ public:
       notifyOperationReplaced(op, replacement->getResults());
     }
 
-    /// Notify the listener that the specified operation is about to be replaced
-    /// with the a range of values, potentially produced by other operations.
-    /// This is called before the uses of the operation have been changed.
+    /// Notify the listener that all uses of the specified operation's results
+    /// are about to be replaced with the a range of values, potentially
+    /// produced by other operations. This is called before the uses of the
+    /// operation have been changed.
     virtual void notifyOperationReplaced(Operation *op,
                                          ValueRange replacement) {}
 
@@ -459,54 +461,60 @@ public:
   /// struct can be used as a base to create listener chains, so that multiple
   /// listeners can be notified of IR changes.
   struct ForwardingListener : public RewriterBase::Listener {
-    ForwardingListener(OpBuilder::Listener *listener) : listener(listener) {}
+    ForwardingListener(OpBuilder::Listener *listener)
+        : listener(listener),
+          rewriteListener(
+              dyn_cast_if_present<RewriterBase::Listener>(listener)) {}
 
     void notifyOperationInserted(Operation *op, InsertPoint previous) override {
-      listener->notifyOperationInserted(op, previous);
+      if (listener)
+        listener->notifyOperationInserted(op, previous);
     }
     void notifyBlockInserted(Block *block, Region *previous,
                              Region::iterator previousIt) override {
-      listener->notifyBlockInserted(block, previous, previousIt);
+      if (listener)
+        listener->notifyBlockInserted(block, previous, previousIt);
     }
     void notifyBlockErased(Block *block) override {
-      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+      if (rewriteListener)
         rewriteListener->notifyBlockErased(block);
     }
     void notifyOperationModified(Operation *op) override {
-      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+      if (rewriteListener)
         rewriteListener->notifyOperationModified(op);
     }
     void notifyOperationReplaced(Operation *op, Operation *newOp) override {
-      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+      if (rewriteListener)
         rewriteListener->notifyOperationReplaced(op, newOp);
     }
     void notifyOperationReplaced(Operation *op,
                                  ValueRange replacement) override {
-      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+      if (rewriteListener)
         rewriteListener->notifyOperationReplaced(op, replacement);
     }
     void notifyOperationErased(Operation *op) override {
-      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+      if (rewriteListener)
         rewriteListener->notifyOperationErased(op);
     }
     void notifyPatternBegin(const Pattern &pattern, Operation *op) override {
-      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+      if (rewriteListener)
         rewriteListener->notifyPatternBegin(pattern, op);
     }
     void notifyPatternEnd(const Pattern &pattern,
                           LogicalResult status) override {
-      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+      if (rewriteListener)
         rewriteListener->notifyPatternEnd(pattern, status);
     }
     void notifyMatchFailure(
         Location loc,
         function_ref<void(Diagnostic &)> reasonCallback) override {
-      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+      if (rewriteListener)
         rewriteListener->notifyMatchFailure(loc, reasonCallback);
     }
 
   private:
     OpBuilder::Listener *listener;
+    RewriterBase::Listener *rewriteListener;
   };
 
   /// Move the blocks that belong to "region" before the given position in
@@ -634,11 +642,13 @@ public:
   /// Find uses of `from` and replace them with `to`. Also notify the listener
   /// about every in-place op modification (for every use that was replaced).
   void replaceAllUsesWith(Value from, Value to) {
-    return replaceAllUsesWith(from.getImpl(), to);
+    for (OpOperand &operand : llvm::make_early_inc_range(from.getUses())) {
+      Operation *op = operand.getOwner();
+      modifyOpInPlace(op, [&]() { operand.set(to); });
+    }
   }
-  template <typename OperandType, typename ValueT>
-  void replaceAllUsesWith(IRObjectWithUseList<OperandType> *from, ValueT &&to) {
-    for (OperandType &operand : llvm::make_early_inc_range(from->getUses())) {
+  void replaceAllUsesWith(Block *from, Block *to) {
+    for (BlockOperand &operand : llvm::make_early_inc_range(from->getUses())) {
       Operation *op = operand.getOwner();
       modifyOpInPlace(op, [&]() { operand.set(to); });
     }
@@ -648,12 +658,16 @@ public:
     for (auto it : llvm::zip(from, to))
       replaceAllUsesWith(std::get<0>(it), std::get<1>(it));
   }
-  // Note: This function cannot be called `replaceAllUsesWith` because the
-  // overload resolution, when called with an op that can be implicitly
-  // converted to a Value, would be ambiguous.
-  void replaceAllOpUsesWith(Operation *from, ValueRange to) {
-    replaceAllUsesWith(from->getResults(), to);
-  }
+
+  /// Find uses of `from` and replace them with `to`. Also notify the listener
+  /// about every in-place op modification (for every use that was replaced)
+  /// and that the `from` operation is about to be replaced.
+  ///
+  /// Note: This function cannot be called `replaceAllUsesWith` because the
+  /// overload resolution, when called with an op that can be implicitly
+  /// converted to a Value, would be ambiguous.
+  void replaceAllOpUsesWith(Operation *from, ValueRange to);
+  void replaceAllOpUsesWith(Operation *from, Operation *to);
 
   /// Find uses of `from` and replace them with `to` if the `functor` returns
   /// true. Also notify the listener about every in-place op modification (for
@@ -697,6 +711,8 @@ public:
       return user != exceptedUser;
     });
   }
+  void replaceAllUsesExcept(Value from, Value to,
+                            const SmallPtrSetImpl<Operation *> &preservedUsers);
 
   /// Used to notify the listener that the IR failed to be rewritten because of
   /// a match failure, and provide a callback to populate a diagnostic with the
@@ -774,6 +790,7 @@ public:
 /// place.
 class PatternRewriter : public RewriterBase {
 public:
+  explicit PatternRewriter(MLIRContext *ctx) : RewriterBase(ctx) {}
   using RewriterBase::RewriterBase;
 
   /// A hook used to indicate if the pattern rewriter can recover from failure

@@ -1,0 +1,16 @@
+# RUN: echo quit | %lldb -O "log enable -x" \
+# RUN:   | FileCheck %s --strict-whitespace --check-prefix=CHECK1
+#            (lldb) log enable -x
+# CHECK1:{{^                  \^~}}
+# CHECK1: {{^                  error: unknown or ambiguous option}}
+
+# RUN: echo quit | %lldb -O "    log enable -xxxxxxx" \
+# RUN:   | FileCheck %s --strict-whitespace --check-prefix=CHECK2
+#            (lldb)     log enable -xxxxxxx
+# CHECK2:{{^                      \^~~~~~~~}}
+# CHECK2: {{^                      error: unknown or ambiguous option}}
+# RUN: echo quit | %lldb -O "log enable dwarf all -f dwarf.log -x" \
+# RUN:   | FileCheck %s --strict-whitespace --check-prefix=CHECK3
+#            (lldb) log enable dwarf all -f dwarf.log -x
+# CHECK3:{{^                                         \^~}}
+# CHECK3: {{^                                         error: unknown or ambiguous option}}

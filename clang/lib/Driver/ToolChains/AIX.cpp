@@ -17,6 +17,8 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Path.h"
 
+#include <set>
+
 using AIX = clang::driver::toolchains::AIX;
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -328,7 +330,8 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (D.IsFlangMode()) {
+  if (D.IsFlangMode() &&
+      !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
     addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
     CmdArgs.push_back("-lm");
@@ -360,6 +363,28 @@ AIX::GetHeaderSysroot(const llvm::opt::ArgList &DriverArgs) const {
   return "/";
 }
 
+void AIX::AddOpenMPIncludeArgs(const ArgList &DriverArgs,
+                               ArgStringList &CC1Args) const {
+  // Add OpenMP include paths if -fopenmp is specified.
+  if (DriverArgs.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
+                         options::OPT_fno_openmp, false)) {
+    SmallString<128> PathOpenMP;
+    switch (getDriver().getOpenMPRuntime(DriverArgs)) {
+    case Driver::OMPRT_OMP:
+      PathOpenMP = GetHeaderSysroot(DriverArgs);
+      llvm::sys::path::append(PathOpenMP, "opt/IBM/openxlCSDK", "include",
+                              "openmp");
+      addSystemInclude(DriverArgs, CC1Args, PathOpenMP.str());
+      break;
+    case Driver::OMPRT_IOMP5:
+    case Driver::OMPRT_GOMP:
+    case Driver::OMPRT_Unknown:
+      // Unknown / unsupported include paths.
+      break;
+    }
+  }
+}
+
 void AIX::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                     ArgStringList &CC1Args) const {
   // Return if -nostdinc is specified as a driver option.
@@ -377,6 +402,11 @@ void AIX::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     // Add the Clang builtin headers (<resource>/include)
     addSystemInclude(DriverArgs, CC1Args, path::parent_path(P.str()));
   }
+
+  // Add the include directory containing omp.h. This needs to be before
+  // adding the system include directory because other compilers put their
+  // omp.h in /usr/include.
+  AddOpenMPIncludeArgs(DriverArgs, CC1Args);
 
   // Return if -nostdlibinc is specified as a driver option.
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
@@ -450,14 +480,6 @@ static void addTocDataOptions(const llvm::opt::ArgList &Args,
       return false;
   }();
 
-  // Currently only supported for small code model.
-  if (TOCDataGloballyinEffect &&
-      (Args.getLastArgValue(options::OPT_mcmodel_EQ).equals("large") ||
-       Args.getLastArgValue(options::OPT_mcmodel_EQ).equals("medium"))) {
-    D.Diag(clang::diag::warn_drv_unsupported_tocdata);
-    return;
-  }
-
   enum TOCDataSetting {
     AddressInTOC = 0, // Address of the symbol stored in the TOC.
     DataInTOC = 1     // Symbol defined in the TOC.
@@ -471,7 +493,7 @@ static void addTocDataOptions(const llvm::opt::ArgList &Args,
   // the global setting of tocdata in TOCDataGloballyinEffect.
   // Those that have the opposite setting to TOCDataGloballyinEffect, are added
   // to ExplicitlySpecifiedGlobals.
-  llvm::StringSet<> ExplicitlySpecifiedGlobals;
+  std::set<llvm::StringRef> ExplicitlySpecifiedGlobals;
   for (const auto Arg :
        Args.filtered(options::OPT_mtocdata_EQ, options::OPT_mno_tocdata_EQ)) {
     TOCDataSetting ArgTocDataSetting =
@@ -486,7 +508,7 @@ static void addTocDataOptions(const llvm::opt::ArgList &Args,
         ExplicitlySpecifiedGlobals.erase(Val);
   }
 
-  auto buildExceptionList = [](const llvm::StringSet<> &ExplicitValues,
+  auto buildExceptionList = [](const std::set<llvm::StringRef> &ExplicitValues,
                                const char *OptionSpelling) {
     std::string Option(OptionSpelling);
     bool IsFirst = true;
@@ -495,7 +517,7 @@ static void addTocDataOptions(const llvm::opt::ArgList &Args,
         Option += ",";
 
       IsFirst = false;
-      Option += E.first();
+      Option += E.str();
     }
     return Option;
   };
@@ -527,9 +549,18 @@ void AIX::addClangTargetOptions(
                   options::OPT_mtocdata))
     addTocDataOptions(Args, CC1Args, getDriver());
 
+  if (Args.hasArg(options::OPT_msave_reg_params))
+    CC1Args.push_back("-msave-reg-params");
+
   if (Args.hasFlag(options::OPT_fxl_pragma_pack,
                    options::OPT_fno_xl_pragma_pack, true))
     CC1Args.push_back("-fxl-pragma-pack");
+
+  // Pass "-fno-sized-deallocation" only when the user hasn't manually enabled
+  // or disabled sized deallocations.
+  if (!Args.getLastArgNoClaim(options::OPT_fsized_deallocation,
+                              options::OPT_fno_sized_deallocation))
+    CC1Args.push_back("-fno-sized-deallocation");
 }
 
 void AIX::addProfileRTLibs(const llvm::opt::ArgList &Args,

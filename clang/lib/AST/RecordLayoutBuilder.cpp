@@ -14,10 +14,9 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
-#include "clang/AST/VTableBuilder.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -819,7 +818,7 @@ protected:
   void setSize(CharUnits NewSize) { Size = Context.toBits(NewSize); }
   void setSize(uint64_t NewSize) { Size = NewSize; }
 
-  CharUnits getAligment() const { return Alignment; }
+  CharUnits getAlignment() const { return Alignment; }
 
   CharUnits getDataSize() const {
     assert(DataSize % Context.getCharWidth() == 0);
@@ -2458,6 +2457,11 @@ static bool mustSkipTailPadding(TargetCXXABI ABI, const CXXRecordDecl *RD) {
 }
 
 static bool isMsLayout(const ASTContext &Context) {
+  // Check if it's CUDA device compilation; ensure layout consistency with host.
+  if (Context.getLangOpts().CUDA && Context.getLangOpts().CUDAIsDevice &&
+      Context.getAuxTargetInfo())
+    return Context.getAuxTargetInfo()->getCXXABI().isMicrosoft();
+
   return Context.getTargetInfo().getCXXABI().isMicrosoft();
 }
 

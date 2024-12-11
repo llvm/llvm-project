@@ -13,6 +13,7 @@
 #include "VPlan.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/IRBuilder.h"
 
 namespace llvm {
@@ -20,6 +21,7 @@ namespace llvm {
 class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
 class TargetLibraryInfo;
+struct HistogramInfo;
 
 /// Helper class to create VPRecipies from IR instructions.
 class VPRecipeBuilder {
@@ -52,9 +54,8 @@ class VPRecipeBuilder {
   EdgeMaskCacheTy EdgeMaskCache;
   BlockMaskCacheTy BlockMaskCache;
 
-  // VPlan-VPlan transformations support: Hold a mapping from ingredients to
-  // their recipe. To save on memory, only do so for selected ingredients,
-  // marked by having a nullptr entry in this map.
+  // VPlan construction support: Hold a mapping from ingredients to
+  // their recipe.
   DenseMap<Instruction *, VPRecipeBase *> Ingredient2Recipe;
 
   /// Cross-iteration reduction & first-order recurrence phis for which we need
@@ -70,9 +71,9 @@ class VPRecipeBuilder {
   /// Check if the load or store instruction \p I should widened for \p
   /// Range.Start and potentially masked. Such instructions are handled by a
   /// recipe that takes an additional VPInstruction for the mask.
-  VPWidenMemoryInstructionRecipe *tryToWidenMemory(Instruction *I,
-                                                   ArrayRef<VPValue *> Operands,
-                                                   VFRange &Range);
+  VPWidenMemoryRecipe *tryToWidenMemory(Instruction *I,
+                                        ArrayRef<VPValue *> Operands,
+                                        VFRange &Range);
 
   /// Check if an induction recipe should be constructed for \p Phi. If so build
   /// and return it. If not, return null.
@@ -92,9 +93,9 @@ class VPRecipeBuilder {
   VPBlendRecipe *tryToBlend(PHINode *Phi, ArrayRef<VPValue *> Operands);
 
   /// Handle call instructions. If \p CI can be widened for \p Range.Start,
-  /// return a new VPWidenCallRecipe. Range.End may be decreased to ensure same
-  /// decision from \p Range.Start to \p Range.End.
-  VPWidenCallRecipe *tryToWidenCall(CallInst *CI, ArrayRef<VPValue *> Operands,
+  /// return a new VPWidenCallRecipe or VPWidenIntrinsicRecipe. Range.End may be
+  /// decreased to ensure same decision from \p Range.Start to \p Range.End.
+  VPSingleDefRecipe *tryToWidenCall(CallInst *CI, ArrayRef<VPValue *> Operands,
                                     VFRange &Range);
 
   /// Check if \p I has an opcode that can be widened and return a VPWidenRecipe
@@ -102,6 +103,13 @@ class VPRecipeBuilder {
   /// that widening should be performed.
   VPWidenRecipe *tryToWiden(Instruction *I, ArrayRef<VPValue *> Operands,
                             VPBasicBlock *VPBB);
+
+  /// Makes Histogram count operations safe for vectorization, by emitting a
+  /// llvm.experimental.vector.histogram.add intrinsic in place of the
+  /// Load + Add|Sub + Store operations that perform the histogram in the
+  /// original scalar loop.
+  VPHistogramRecipe *tryToWidenHistogram(const HistogramInfo *HI,
+                                         ArrayRef<VPValue *> Operands);
 
 public:
   VPRecipeBuilder(VPlan &Plan, Loop *OrigLoop, const TargetLibraryInfo *TLI,
@@ -117,13 +125,10 @@ public:
                                        ArrayRef<VPValue *> Operands,
                                        VFRange &Range, VPBasicBlock *VPBB);
 
-  /// Set the recipe created for given ingredient. This operation is a no-op for
-  /// ingredients that were not marked using a nullptr entry in the map.
+  /// Set the recipe created for given ingredient.
   void setRecipe(Instruction *I, VPRecipeBase *R) {
-    if (!Ingredient2Recipe.count(I))
-      return;
-    assert(Ingredient2Recipe[I] == nullptr &&
-           "Recipe already set for ingredient");
+    assert(!Ingredient2Recipe.contains(I) &&
+           "Cannot reset recipe for instruction.");
     Ingredient2Recipe[I] = R;
   }
 
@@ -138,6 +143,9 @@ public:
   /// Returns the *entry* mask for the block \p BB.
   VPValue *getBlockInMask(BasicBlock *BB) const;
 
+  /// Create an edge mask for every destination of cases and/or default.
+  void createSwitchEdgeMasks(SwitchInst *SI);
+
   /// A helper function that computes the predicate of the edge between SRC
   /// and DST.
   VPValue *createEdgeMask(BasicBlock *Src, BasicBlock *Dst);
@@ -145,14 +153,6 @@ public:
   /// A helper that returns the previously computed predicate of the edge
   /// between SRC and DST.
   VPValue *getEdgeMask(BasicBlock *Src, BasicBlock *Dst) const;
-
-  /// Mark given ingredient for recording its recipe once one is created for
-  /// it.
-  void recordRecipeOf(Instruction *I) {
-    assert((!Ingredient2Recipe.count(I) || Ingredient2Recipe[I] == nullptr) &&
-           "Recipe already set for ingredient");
-    Ingredient2Recipe[I] = nullptr;
-  }
 
   /// Return the recipe created for given ingredient.
   VPRecipeBase *getRecipe(Instruction *I) {
@@ -171,6 +171,19 @@ public:
   /// Add the incoming values from the backedge to reduction & first-order
   /// recurrence cross-iteration phis.
   void fixHeaderPhis();
+
+  /// Returns a range mapping the values of the range \p Operands to their
+  /// corresponding VPValues.
+  iterator_range<mapped_iterator<Use *, std::function<VPValue *(Value *)>>>
+  mapToVPValues(User::op_range Operands);
+
+  VPValue *getVPValueOrAddLiveIn(Value *V) {
+    if (auto *I = dyn_cast<Instruction>(V)) {
+      if (auto *R = Ingredient2Recipe.lookup(I))
+        return R->getVPSingleValue();
+    }
+    return Plan.getOrAddLiveIn(V);
+  }
 };
 } // end namespace llvm
 

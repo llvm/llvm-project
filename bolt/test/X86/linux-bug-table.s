@@ -1,6 +1,7 @@
 # REQUIRES: system-linux
 
-## Check that BOLT correctly parses the Linux kernel __bug_table section.
+## Check that BOLT correctly parses and updates the Linux kernel __bug_table
+## section.
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags -nostdlib %t.o -o %t.exe \
@@ -8,7 +9,13 @@
 
 ## Verify bug entry bindings to instructions.
 
-# RUN: llvm-bolt %t.exe --print-normalized -o %t.out | FileCheck %s
+# RUN: llvm-bolt %t.exe --print-normalized --print-only=_start -o %t.out \
+# RUN:   --eliminate-unreachable=1 --bolt-info=0 | FileCheck %s
+
+## Verify bug entry bindings again after unreachable code elimination.
+
+# RUN: llvm-bolt %t.out -o %t.out.1 --print-only=_start --print-normalized \
+# RUN:   2>&1 | FileCheck --check-prefix=CHECK-REOPT %s
 
 # CHECK:      BOLT-INFO: Linux kernel binary detected
 # CHECK:      BOLT-INFO: parsed 2 bug table entries
@@ -17,18 +24,26 @@
   .globl _start
   .type _start, %function
 _start:
-# CHECK: Binary Function "_start"
-  nop
+  jmp .L1
 .L0:
   ud2
 # CHECK:      ud2
 # CHECK-SAME: BugEntry: 1
-  nop
 .L1:
   ud2
 # CHECK:      ud2
 # CHECK-SAME: BugEntry: 2
+
+## Only the second entry should remain after the first pass.
+
+# CHECK-REOPT: ud2
+# CHECK-REOPT-SAME: BugEntry: 2
+
   ret
+## The return instruction is reachable only via preceding ud2. Test that it is
+## treated as a reachable instruction in the Linux kernel mode.
+
+# CHECK-REOPT-NEXT: ret
   .size _start, .-_start
 
 

@@ -13,8 +13,6 @@
 #include "Utils/AMDGPUPALMetadata.h"
 #include "llvm/MC/MCStreamer.h"
 
-struct amd_kernel_code_t;
-
 namespace llvm {
 
 class MCELFStreamer;
@@ -22,14 +20,13 @@ class MCSymbol;
 class formatted_raw_ostream;
 
 namespace AMDGPU {
+
+struct AMDGPUMCKernelCodeT;
+struct MCKernelDescriptor;
 namespace HSAMD {
 struct Metadata;
 }
 } // namespace AMDGPU
-
-namespace amdhsa {
-struct kernel_descriptor_t;
-}
 
 class AMDGPUTargetStreamer : public MCTargetStreamer {
   AMDGPUPALMetadata PALMetadata;
@@ -56,12 +53,23 @@ public:
     CodeObjectVersion = COV;
   }
 
-  virtual void EmitAMDKernelCodeT(const amd_kernel_code_t &Header){};
+  virtual void EmitAMDKernelCodeT(AMDGPU::AMDGPUMCKernelCodeT &Header) {};
 
   virtual void EmitAMDGPUSymbolType(StringRef SymbolName, unsigned Type){};
 
   virtual void emitAMDGPULDS(MCSymbol *Symbol, unsigned Size, Align Alignment) {
   }
+
+  virtual void EmitMCResourceInfo(
+      const MCSymbol *NumVGPR, const MCSymbol *NumAGPR,
+      const MCSymbol *NumExplicitSGPR, const MCSymbol *PrivateSegmentSize,
+      const MCSymbol *UsesVCC, const MCSymbol *UsesFlatScratch,
+      const MCSymbol *HasDynamicallySizedStack, const MCSymbol *HasRecursion,
+      const MCSymbol *HasIndirectCall) {};
+
+  virtual void EmitMCResourceMaximums(const MCSymbol *MaxVGPR,
+                                      const MCSymbol *MaxAGPR,
+                                      const MCSymbol *MaxSGPR) {};
 
   /// \returns True on success, false on failure.
   virtual bool EmitISAVersion() { return true; }
@@ -94,10 +102,12 @@ public:
     return true;
   }
 
-  virtual void EmitAmdhsaKernelDescriptor(
-      const MCSubtargetInfo &STI, StringRef KernelName,
-      const amdhsa::kernel_descriptor_t &KernelDescriptor, uint64_t NextVGPR,
-      uint64_t NextSGPR, bool ReserveVCC, bool ReserveFlatScr) {}
+  virtual void
+  EmitAmdhsaKernelDescriptor(const MCSubtargetInfo &STI, StringRef KernelName,
+                             const AMDGPU::MCKernelDescriptor &KernelDescriptor,
+                             const MCExpr *NextVGPR, const MCExpr *NextSGPR,
+                             const MCExpr *ReserveVCC,
+                             const MCExpr *ReserveFlatScr) {}
 
   static StringRef getArchNameFromElfMach(unsigned ElfMach);
   static unsigned getElfMach(StringRef GPU);
@@ -131,11 +141,23 @@ public:
 
   void EmitDirectiveAMDHSACodeObjectVersion(unsigned COV) override;
 
-  void EmitAMDKernelCodeT(const amd_kernel_code_t &Header) override;
+  void EmitAMDKernelCodeT(AMDGPU::AMDGPUMCKernelCodeT &Header) override;
 
   void EmitAMDGPUSymbolType(StringRef SymbolName, unsigned Type) override;
 
   void emitAMDGPULDS(MCSymbol *Sym, unsigned Size, Align Alignment) override;
+
+  void EmitMCResourceInfo(const MCSymbol *NumVGPR, const MCSymbol *NumAGPR,
+                          const MCSymbol *NumExplicitSGPR,
+                          const MCSymbol *PrivateSegmentSize,
+                          const MCSymbol *UsesVCC,
+                          const MCSymbol *UsesFlatScratch,
+                          const MCSymbol *HasDynamicallySizedStack,
+                          const MCSymbol *HasRecursion,
+                          const MCSymbol *HasIndirectCall) override;
+
+  void EmitMCResourceMaximums(const MCSymbol *MaxVGPR, const MCSymbol *MaxAGPR,
+                              const MCSymbol *MaxSGPR) override;
 
   /// \returns True on success, false on failure.
   bool EmitISAVersion() override;
@@ -150,10 +172,12 @@ public:
   bool EmitKernargPreloadHeader(const MCSubtargetInfo &STI,
                                 bool TrapEnabled) override;
 
-  void EmitAmdhsaKernelDescriptor(
-      const MCSubtargetInfo &STI, StringRef KernelName,
-      const amdhsa::kernel_descriptor_t &KernelDescriptor, uint64_t NextVGPR,
-      uint64_t NextSGPR, bool ReserveVCC, bool ReserveFlatScr) override;
+  void
+  EmitAmdhsaKernelDescriptor(const MCSubtargetInfo &STI, StringRef KernelName,
+                             const AMDGPU::MCKernelDescriptor &KernelDescriptor,
+                             const MCExpr *NextVGPR, const MCExpr *NextSGPR,
+                             const MCExpr *ReserveVCC,
+                             const MCExpr *ReserveFlatScr) override;
 };
 
 class AMDGPUTargetELFStreamer final : public AMDGPUTargetStreamer {
@@ -186,7 +210,7 @@ public:
 
   void EmitDirectiveAMDGCNTarget() override;
 
-  void EmitAMDKernelCodeT(const amd_kernel_code_t &Header) override;
+  void EmitAMDKernelCodeT(AMDGPU::AMDGPUMCKernelCodeT &Header) override;
 
   void EmitAMDGPUSymbolType(StringRef SymbolName, unsigned Type) override;
 
@@ -205,10 +229,12 @@ public:
   bool EmitKernargPreloadHeader(const MCSubtargetInfo &STI,
                                 bool TrapEnabled) override;
 
-  void EmitAmdhsaKernelDescriptor(
-      const MCSubtargetInfo &STI, StringRef KernelName,
-      const amdhsa::kernel_descriptor_t &KernelDescriptor, uint64_t NextVGPR,
-      uint64_t NextSGPR, bool ReserveVCC, bool ReserveFlatScr) override;
+  void
+  EmitAmdhsaKernelDescriptor(const MCSubtargetInfo &STI, StringRef KernelName,
+                             const AMDGPU::MCKernelDescriptor &KernelDescriptor,
+                             const MCExpr *NextVGPR, const MCExpr *NextSGPR,
+                             const MCExpr *ReserveVCC,
+                             const MCExpr *ReserveFlatScr) override;
 };
 }
 #endif

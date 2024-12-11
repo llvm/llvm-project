@@ -7,7 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
+
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
+#include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/Support/Error.h"
+
+#define DEBUG_TYPE "orc"
 
 namespace llvm {
 namespace orc {
@@ -16,7 +21,8 @@ Expected<std::unique_ptr<EPCDynamicLibrarySearchGenerator>>
 EPCDynamicLibrarySearchGenerator::Load(
     ExecutionSession &ES, const char *LibraryPath, SymbolPredicate Allow,
     AddAbsoluteSymbolsFn AddAbsoluteSymbols) {
-  auto Handle = ES.getExecutorProcessControl().loadDylib(LibraryPath);
+  auto Handle =
+      ES.getExecutorProcessControl().getDylibMgr().loadDylib(LibraryPath);
   if (!Handle)
     return Handle.takeError();
 
@@ -31,6 +37,11 @@ Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
   if (Symbols.empty())
     return Error::success();
 
+  LLVM_DEBUG({
+      dbgs() << "EPCDynamicLibrarySearchGenerator trying to generate "
+             << Symbols << "\n";
+    });
+
   SymbolLookupSet LookupSymbols;
 
   for (auto &KV : Symbols) {
@@ -40,12 +51,17 @@ Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
     LookupSymbols.add(KV.first, SymbolLookupFlags::WeaklyReferencedSymbol);
   }
 
-  ExecutorProcessControl::LookupRequest Request(H, LookupSymbols);
+  DylibManager::LookupRequest Request(H, LookupSymbols);
   // Copy-capture LookupSymbols, since LookupRequest keeps a reference.
-  EPC.lookupSymbolsAsync(Request, [this, &JD, LS = std::move(LS),
-                                   LookupSymbols](auto Result) mutable {
-    if (!Result)
+  EPC.getDylibMgr().lookupSymbolsAsync(Request, [this, &JD, LS = std::move(LS),
+                                                 LookupSymbols](
+                                                    auto Result) mutable {
+    if (!Result) {
+      LLVM_DEBUG({
+        dbgs() << "EPCDynamicLibrarySearchGenerator lookup failed due to error";
+      });
       return LS.continueLookup(Result.takeError());
+    }
 
     assert(Result->size() == 1 && "Results for more than one library returned");
     assert(Result->front().size() == LookupSymbols.size() &&
@@ -58,6 +74,11 @@ Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
         NewSymbols[KV.first] = *ResultI;
       ++ResultI;
     }
+
+    LLVM_DEBUG({
+      dbgs() << "EPCDynamicLibrarySearchGenerator lookup returned "
+             << NewSymbols << "\n";
+    });
 
     // If there were no resolved symbols bail out.
     if (NewSymbols.empty())

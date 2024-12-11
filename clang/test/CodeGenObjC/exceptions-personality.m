@@ -32,12 +32,12 @@ void throwing(void) {
     // CHECK-LINUX-GCC: personality ptr @__gnu_objc_personality_v0
     @throw(@"error!");
   }
-  @catch(...) 
+  @catch(...)
   {
     // CHECK-MINGW-OBJC2: call ptr @__cxa_begin_catch
     // CHECK-MINGW-OBJC2: invoke ptr @__cxa_rethrow
     // CHECK-MINGW-OBJC2: invoke void @__cxa_end_catch
-    
+
     // CHECK-MINGW-GCC: call void @objc_exception_throw
 
     // CHECK-MSVC-OBJC2: call void @objc_exception_rethrow
@@ -47,7 +47,7 @@ void throwing(void) {
     // CHECK-LINUX-OBJC2: invoke void @objc_end_catch()
 
     // CHECK-LINUX-GCC: invoke void @objc_exception_throw
-    
+
     @throw;
   }
 }

@@ -77,6 +77,8 @@ private:
       const evaluate::SpecificIntrinsic *specific = nullptr);
   bool LhsOkForUnlimitedPoly() const;
   template <typename... A> parser::Message *Say(A &&...);
+  template <typename FeatureOrUsageWarning, typename... A>
+  parser::Message *Warn(FeatureOrUsageWarning, A &&...);
 
   SemanticsContext &context_;
   evaluate::FoldingContext &foldingContext_{context_.foldingContext()};
@@ -145,8 +147,11 @@ bool PointerAssignmentChecker::CheckLeftHandSide(const SomeExpr &lhs) {
           DefinabilityFlags{DefinabilityFlag::PointerDefinition}, lhs)}) {
     if (auto *msg{Say(
             "The left-hand side of a pointer assignment is not definable"_err_en_US)}) {
-      msg->Attach(std::move(*whyNot));
+      msg->Attach(std::move(whyNot->set_severity(parser::Severity::Because)));
     }
+    return false;
+  } else if (evaluate::IsAssumedRank(lhs)) {
+    Say("The left-hand side of a pointer assignment must not be an assumed-rank dummy argument"_err_en_US);
     return false;
   } else {
     return true;
@@ -212,19 +217,17 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
         Say("CONTIGUOUS pointer may not be associated with a discontiguous target"_err_en_US);
         return false;
       }
-    } else if (context_.ShouldWarn(
-                   common::UsageWarning::PointerToPossibleNoncontiguous)) {
-      Say("Target of CONTIGUOUS pointer association is not known to be contiguous"_warn_en_US);
+    } else {
+      Warn(common::UsageWarning::PointerToPossibleNoncontiguous,
+          "Target of CONTIGUOUS pointer association is not known to be contiguous"_warn_en_US);
     }
   }
   // Warn about undefinable data targets
-  if (context_.ShouldWarn(common::UsageWarning::PointerToUndefinable)) {
-    if (auto because{WhyNotDefinable(
-            foldingContext_.messages().at(), scope_, {}, rhs)}) {
-      if (auto *msg{
-              Say("Pointer target is not a definable variable"_warn_en_US)}) {
-        msg->Attach(std::move(*because));
-      }
+  if (auto because{
+          WhyNotDefinable(foldingContext_.messages().at(), scope_, {}, rhs)}) {
+    if (auto *msg{Warn(common::UsageWarning::PointerToUndefinable,
+            "Pointer target is not a definable variable"_warn_en_US)}) {
+      msg->Attach(std::move(because->set_severity(parser::Severity::Because)));
       return false;
     }
   }
@@ -244,7 +247,8 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
   } else if (const auto *intrinsic{f.proc().GetSpecificIntrinsic()}) {
     funcName = intrinsic->name;
   }
-  auto proc{Procedure::Characterize(f.proc(), foldingContext_)};
+  auto proc{
+      Procedure::Characterize(f.proc(), foldingContext_, /*emitError=*/true)};
   if (!proc) {
     return false;
   }
@@ -265,8 +269,12 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
           " that is a not a pointer"_err_en_US;
   } else if (isContiguous_ &&
       !funcResult->attrs.test(FunctionResult::Attr::Contiguous)) {
-    msg = "CONTIGUOUS %s is associated with the result of reference to"
-          " function '%s' that is not contiguous"_err_en_US;
+    auto restorer{common::ScopedSet(lhs_, symbol)};
+    if (Warn(common::UsageWarning::PointerToPossibleNoncontiguous,
+            "CONTIGUOUS %s is associated with the result of reference to function '%s' that is not known to be contiguous"_warn_en_US,
+            description_, funcName)) {
+      return false;
+    }
   } else if (lhsType_) {
     const auto *frTypeAndShape{funcResult->GetTypeAndShape()};
     CHECK(frTypeAndShape);
@@ -329,8 +337,8 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
 
       } else if (!isBoundsRemapping_ &&
           !lhsType_->attrs().test(TypeAndShape::Attr::AssumedRank)) {
-        int lhsRank{evaluate::GetRank(lhsType_->shape())};
-        int rhsRank{evaluate::GetRank(rhsType->shape())};
+        int lhsRank{lhsType_->Rank()};
+        int rhsRank{rhsType->Rank()};
         if (lhsRank != rhsRank) {
           msg = MessageFormattedText{
               "Pointer has rank %d but target has rank %d"_err_en_US, lhsRank,
@@ -345,13 +353,15 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
       std::string buf;
       llvm::raw_string_ostream ss{buf};
       d.AsFortran(ss);
-      Say(*m, description_, ss.str());
+      Say(*m, description_, buf);
     } else {
       Say(std::get<MessageFormattedText>(*msg));
     }
     return false;
+  } else {
+    context_.NoteDefinedSymbol(*base);
+    return true;
   }
-  return true;
 }
 
 // Common handling for procedure pointer right-hand sides
@@ -367,9 +377,9 @@ bool PointerAssignmentChecker::Check(parser::CharBlock rhsName, bool isCall,
     Say(std::move(*msg), description_, rhsName, whyNot);
     return false;
   }
-  if (context_.ShouldWarn(common::UsageWarning::ProcDummyArgShapes) &&
-      warning) {
-    Say("%s and %s may not be completely compatible procedures: %s"_warn_en_US,
+  if (warning) {
+    Warn(common::UsageWarning::ProcDummyArgShapes,
+        "%s and %s may not be completely compatible procedures: %s"_warn_en_US,
         description_, rhsName, std::move(*warning));
   }
   return true;
@@ -386,14 +396,16 @@ bool PointerAssignmentChecker::Check(const evaluate::ProcedureDesignator &d) {
             symbol->name());
         return false;
       }
-    } else if (symbol->has<ProcBindingDetails>() &&
-        context_.ShouldWarn(common::LanguageFeature::BindingAsProcedure)) {
-      evaluate::SayWithDeclaration(foldingContext_.messages(), *symbol,
-          "Procedure binding '%s' used as target of a pointer assignment"_port_en_US,
-          symbol->name());
+    } else if (symbol->has<ProcBindingDetails>()) {
+      evaluate::AttachDeclaration(
+          Warn(common::LanguageFeature::BindingAsProcedure,
+              "Procedure binding '%s' used as target of a pointer assignment"_port_en_US,
+              symbol->name()),
+          *symbol);
     }
   }
-  if (auto chars{Procedure::Characterize(d, foldingContext_)}) {
+  if (auto chars{
+          Procedure::Characterize(d, foldingContext_, /*emitError=*/true)}) {
     // Disregard the elemental attribute of RHS intrinsics.
     if (symbol && symbol->GetUltimate().attrs().test(Attr::INTRINSIC)) {
       chars->attrs.reset(Procedure::Attr::Elemental);
@@ -425,6 +437,22 @@ bool PointerAssignmentChecker::LhsOkForUnlimitedPoly() const {
 template <typename... A>
 parser::Message *PointerAssignmentChecker::Say(A &&...x) {
   auto *msg{foldingContext_.messages().Say(std::forward<A>(x)...)};
+  if (msg) {
+    if (lhs_) {
+      return evaluate::AttachDeclaration(msg, *lhs_);
+    }
+    if (!source_.empty()) {
+      msg->Attach(source_, "Declaration of %s"_en_US, description_);
+    }
+  }
+  return msg;
+}
+
+template <typename FeatureOrUsageWarning, typename... A>
+parser::Message *PointerAssignmentChecker::Warn(
+    FeatureOrUsageWarning warning, A &&...x) {
+  auto *msg{context_.Warn(
+      warning, foldingContext_.messages().at(), std::forward<A>(x)...)};
   if (msg) {
     if (lhs_) {
       return evaluate::AttachDeclaration(msg, *lhs_);

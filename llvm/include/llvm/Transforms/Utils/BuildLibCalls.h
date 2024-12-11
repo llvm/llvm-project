@@ -62,6 +62,13 @@ namespace llvm {
                      LibFunc TheLibFunc, AttributeList AttributeList,
                      FunctionType *Invalid, ArgsTy... Args) = delete;
 
+  // Handle -mregparm for the given function.
+  // Note that this function is a rough approximation that only works for simple
+  // function signatures; it does not apply other relevant attributes for
+  // function signatures, including sign/zero-extension for arguments and return
+  // values.
+  void markRegisterParameterAttributes(Function *F);
+
   /// Check whether the library function is available on target and also that
   /// it in the current Module is a Function with the right type.
   bool isLibFuncEmittable(const Module *M, const TargetLibraryInfo *TLI,
@@ -239,27 +246,34 @@ namespace llvm {
                     const DataLayout &DL, const TargetLibraryInfo *TLI);
 
   /// Emit a call to the malloc function.
-  Value *emitMalloc(Value *Num, IRBuilderBase &B, const DataLayout &DL,
-                    const TargetLibraryInfo *TLI);
+  Value *emitMalloc(Type *RetTy, Value *Num, IRBuilderBase &B,
+                    const DataLayout &DL, const TargetLibraryInfo *TLI);
 
   /// Emit a call to the calloc function.
-  Value *emitCalloc(Value *Num, Value *Size, IRBuilderBase &B,
+  Value *emitCalloc(Type *RetTy, Value *Num, Value *Size, IRBuilderBase &B,
                     const TargetLibraryInfo &TLI);
 
   /// Emit a call to the hot/cold operator new function.
-  Value *emitHotColdNew(Value *Num, IRBuilderBase &B,
+  Value *emitHotColdNew(Type *RetTy, Value *Num, IRBuilderBase &B,
                         const TargetLibraryInfo *TLI, LibFunc NewFunc,
                         uint8_t HotCold);
-  Value *emitHotColdNewNoThrow(Value *Num, Value *NoThrow, IRBuilderBase &B,
-                               const TargetLibraryInfo *TLI, LibFunc NewFunc,
-                               uint8_t HotCold);
-  Value *emitHotColdNewAligned(Value *Num, Value *Align, IRBuilderBase &B,
-                               const TargetLibraryInfo *TLI, LibFunc NewFunc,
-                               uint8_t HotCold);
-  Value *emitHotColdNewAlignedNoThrow(Value *Num, Value *Align, Value *NoThrow,
-                                      IRBuilderBase &B,
+  Value *emitHotColdNewNoThrow(Type *RetTy, Value *Num, Value *NoThrow,
+                               IRBuilderBase &B, const TargetLibraryInfo *TLI,
+                               LibFunc NewFunc, uint8_t HotCold);
+  Value *emitHotColdNewAligned(Type *RetTy, Value *Num, Value *Align,
+                               IRBuilderBase &B, const TargetLibraryInfo *TLI,
+                               LibFunc NewFunc, uint8_t HotCold);
+  Value *emitHotColdNewAlignedNoThrow(Type *RetTy, Value *Num, Value *Align,
+                                      Value *NoThrow, IRBuilderBase &B,
                                       const TargetLibraryInfo *TLI,
                                       LibFunc NewFunc, uint8_t HotCold);
+  Value *emitHotColdSizeReturningNew(Type *RetTy, Value *Num, IRBuilderBase &B,
+                                     const TargetLibraryInfo *TLI,
+                                     LibFunc NewFunc, uint8_t HotCold);
+  Value *emitHotColdSizeReturningNewAligned(Type *RetTy, Value *Num,
+                                            Value *Align, IRBuilderBase &B,
+                                            const TargetLibraryInfo *TLI,
+                                            LibFunc NewFunc, uint8_t HotCold);
 }
 
 #endif

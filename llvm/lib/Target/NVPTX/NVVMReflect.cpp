@@ -34,14 +34,11 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <algorithm>
-#include <sstream>
-#include <string>
 #define NVVM_REFLECT_FUNCTION "__nvvm_reflect"
 #define NVVM_REFLECT_OCL_FUNCTION "__nvvm_reflect_ocl"
 
@@ -192,7 +189,7 @@ static bool runNVVMReflect(Function &F, unsigned SmVersion) {
   while (!ToSimplify.empty()) {
     Instruction *I = ToSimplify.pop_back_val();
     if (Constant *C =
-            ConstantFoldInstruction(I, F.getParent()->getDataLayout())) {
+            ConstantFoldInstruction(I, F.getDataLayout())) {
       for (User *U : I->users())
         if (Instruction *I = dyn_cast<Instruction>(U))
           ToSimplify.push_back(I);
@@ -209,7 +206,7 @@ static bool runNVVMReflect(Function &F, unsigned SmVersion) {
   // Removing via isInstructionTriviallyDead may add duplicates to the ToRemove
   // array. Filter out the duplicates before starting to erase from parent.
   std::sort(ToRemove.begin(), ToRemove.end());
-  auto NewLastIter = std::unique(ToRemove.begin(), ToRemove.end());
+  auto NewLastIter = llvm::unique(ToRemove);
   ToRemove.erase(NewLastIter, ToRemove.end());
 
   for (Instruction *I : ToRemove)

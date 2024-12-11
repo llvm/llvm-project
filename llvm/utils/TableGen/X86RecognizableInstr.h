@@ -16,7 +16,7 @@
 #ifndef LLVM_UTILS_TABLEGEN_X86RECOGNIZABLEINSTR_H
 #define LLVM_UTILS_TABLEGEN_X86RECOGNIZABLEINSTR_H
 
-#include "CodeGenInstruction.h"
+#include "Common/CodeGenInstruction.h"
 #include "llvm/Support/X86DisassemblerDecoderCommon.h"
 #include <cstdint>
 #include <string>
@@ -214,6 +214,8 @@ struct RecognizableInstrBase {
   bool HasEVEX_KZ;
   /// The hasEVEX_B field from the record
   bool HasEVEX_B;
+  /// The hasEVEX_U field from the record
+  bool HasEVEX_U;
   /// The hasEVEX_NF field from the record
   bool HasEVEX_NF;
   /// The hasTwoConditionalOps field from the record

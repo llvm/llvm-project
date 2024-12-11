@@ -1,5 +1,4 @@
-// RUN: mlir-opt %s -arith-bufferize -split-input-file -verify-diagnostics | FileCheck %s
-// RUN: mlir-opt %s -arith-bufferize=alignment=64 -split-input-file -verify-diagnostics | FileCheck --check-prefix=ALIGNED %s
+// RUN: mlir-opt %s --one-shot-bufferize="dialect-filter=arith,bufferization copy-before-write unknown-type-conversion=identity-layout-map" -split-input-file -verify-diagnostics | FileCheck %s
 
 // CHECK-LABEL:   func @index_cast(
 // CHECK-SAME:  %[[TENSOR:.*]]: tensor<i32>, %[[SCALAR:.*]]: i32
@@ -8,7 +7,7 @@ func.func @index_cast(%tensor: tensor<i32>, %scalar: i32) -> (tensor<index>, ind
   %index_scalar = arith.index_cast %scalar : i32 to index
   return %index_tensor, %index_scalar : tensor<index>, index
 }
-// CHECK:  %[[MEMREF:.*]] = bufferization.to_memref %[[TENSOR]] : memref<i32>
+// CHECK:  %[[MEMREF:.*]] = bufferization.to_memref %[[TENSOR]] : tensor<i32>
 // CHECK-NEXT: %[[INDEX_MEMREF:.*]] = arith.index_cast %[[MEMREF]]
 // CHECK-SAME:   memref<i32> to memref<index>
 // CHECK-NEXT: %[[INDEX_TENSOR:.*]] = bufferization.to_tensor %[[INDEX_MEMREF]]
@@ -22,10 +21,7 @@ func.func @index_cast(%tensor: tensor<i32>, %scalar: i32) -> (tensor<index>, ind
 // The name isn't load-bearing though.
 
 // CHECK: memref.global "private" constant @__constant_3x4xf32 : memref<3x4xf32> = dense<7.000000e+00>
-// CHECK-NOT: alignment
-
-// ALIGNED: memref.global "private" constant @__constant_3x4xf32 : memref<3x4xf32> = dense<7.000000e+00>
-// ALIGNED-SAME: {alignment = 64 : i64}
+// CHECK-SAME: {alignment = 64 : i64}
 
 // CHECK: @basic
 func.func @basic() -> tensor<3x4xf32> {
@@ -87,8 +83,8 @@ func.func @non_tensor() {
 // CHECK-SAME:                 %[[PRED:.*]]: i1,
 // CHECK-SAME:                 %[[TRUE_VAL:.*]]: tensor<f32>,
 // CHECK-SAME:                 %[[FALSE_VAL:.*]]: tensor<f32>) -> tensor<f32> {
-// CHECK-DAG:           %[[TRUE_VAL_MEMREF:.*]] = bufferization.to_memref %[[TRUE_VAL]] : memref<f32>
-// CHECK-DAG:           %[[FALSE_VAL_MEMREF:.*]] = bufferization.to_memref %[[FALSE_VAL]] : memref<f32>
+// CHECK-DAG:           %[[TRUE_VAL_MEMREF:.*]] = bufferization.to_memref %[[TRUE_VAL]] : tensor<f32>
+// CHECK-DAG:           %[[FALSE_VAL_MEMREF:.*]] = bufferization.to_memref %[[FALSE_VAL]] : tensor<f32>
 // CHECK:           %[[RET_MEMREF:.*]] = arith.select %[[PRED]], %[[TRUE_VAL_MEMREF]], %[[FALSE_VAL_MEMREF]] : memref<f32>
 // CHECK:           %[[RET:.*]] = bufferization.to_tensor %[[RET_MEMREF]] : memref<f32>
 // CHECK:           return %[[RET]] : tensor<f32>

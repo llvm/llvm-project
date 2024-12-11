@@ -1,0 +1,11 @@
+# RUN: llvm-mc -triple aarch64 -mattr=+pops -disassemble < %s | FileCheck %s
+
+#------------------------------------------------------------------------------
+# ARMV9.6-A RAS Extensions
+#------------------------------------------------------------------------------
+
+[0xa3,0x7f,0x08,0xd5]
+# CHECK: dc cigdvaps, x3
+
+[0x23,0x7f,0x08,0xd5]
+# CHECK: dc civaps, x3

@@ -13,6 +13,7 @@
 #include "llvm/IR/Type.h"
 #include "LLVMContextImpl.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -22,8 +23,10 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include <cassert>
 #include <utility>
 
@@ -45,7 +48,6 @@ Type *Type::getPrimitiveType(LLVMContext &C, TypeID IDNumber) {
   case PPC_FP128TyID : return getPPC_FP128Ty(C);
   case LabelTyID     : return getLabelTy(C);
   case MetadataTyID  : return getMetadataTy(C);
-  case X86_MMXTyID   : return getX86_MMXTy(C);
   case X86_AMXTyID   : return getX86_AMXTy(C);
   case TokenTyID     : return getTokenTy(C);
   default:
@@ -57,14 +59,49 @@ bool Type::isIntegerTy(unsigned Bitwidth) const {
   return isIntegerTy() && cast<IntegerType>(this)->getBitWidth() == Bitwidth;
 }
 
-bool Type::isScalableTy() const {
+bool Type::isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const {
   if (const auto *ATy = dyn_cast<ArrayType>(this))
-    return ATy->getElementType()->isScalableTy();
-  if (const auto *STy = dyn_cast<StructType>(this)) {
-    SmallPtrSet<Type *, 4> Visited;
-    return STy->containsScalableVectorType(&Visited);
-  }
+    return ATy->getElementType()->isScalableTy(Visited);
+  if (const auto *STy = dyn_cast<StructType>(this))
+    return STy->isScalableTy(Visited);
   return getTypeID() == ScalableVectorTyID || isScalableTargetExtTy();
+}
+
+bool Type::isScalableTy() const {
+  SmallPtrSet<const Type *, 4> Visited;
+  return isScalableTy(Visited);
+}
+
+bool Type::containsNonGlobalTargetExtType(
+    SmallPtrSetImpl<const Type *> &Visited) const {
+  if (const auto *ATy = dyn_cast<ArrayType>(this))
+    return ATy->getElementType()->containsNonGlobalTargetExtType(Visited);
+  if (const auto *STy = dyn_cast<StructType>(this))
+    return STy->containsNonGlobalTargetExtType(Visited);
+  if (auto *TT = dyn_cast<TargetExtType>(this))
+    return !TT->hasProperty(TargetExtType::CanBeGlobal);
+  return false;
+}
+
+bool Type::containsNonGlobalTargetExtType() const {
+  SmallPtrSet<const Type *, 4> Visited;
+  return containsNonGlobalTargetExtType(Visited);
+}
+
+bool Type::containsNonLocalTargetExtType(
+    SmallPtrSetImpl<const Type *> &Visited) const {
+  if (const auto *ATy = dyn_cast<ArrayType>(this))
+    return ATy->getElementType()->containsNonLocalTargetExtType(Visited);
+  if (const auto *STy = dyn_cast<StructType>(this))
+    return STy->containsNonLocalTargetExtType(Visited);
+  if (auto *TT = dyn_cast<TargetExtType>(this))
+    return !TT->hasProperty(TargetExtType::CanBeLocal);
+  return false;
+}
+
+bool Type::containsNonLocalTargetExtType() const {
+  SmallPtrSet<const Type *, 4> Visited;
+  return containsNonLocalTargetExtType(Visited);
 }
 
 const fltSemantics &Type::getFltSemantics() const {
@@ -111,6 +148,13 @@ Type *Type::getFloatingPointTy(LLVMContext &C, const fltSemantics &S) {
   return Ty;
 }
 
+bool Type::isRISCVVectorTupleTy() const {
+  if (!isTargetExtTy())
+    return false;
+
+  return cast<TargetExtType>(this)->getName() == "riscv.vector.tuple";
+}
+
 bool Type::canLosslesslyBitCastTo(Type *Ty) const {
   // Identity cast means no change so return true
   if (this == Ty)
@@ -124,14 +168,6 @@ bool Type::canLosslesslyBitCastTo(Type *Ty) const {
   // have the same size, otherwise not.
   if (isa<VectorType>(this) && isa<VectorType>(Ty))
     return getPrimitiveSizeInBits() == Ty->getPrimitiveSizeInBits();
-
-  //  64-bit fixed width vector types can be losslessly converted to x86mmx.
-  if (((isa<FixedVectorType>(this)) && Ty->isX86_MMXTy()) &&
-      getPrimitiveSizeInBits().getFixedValue() == 64)
-    return true;
-  if ((isX86_MMXTy() && isa<FixedVectorType>(Ty)) &&
-      Ty->getPrimitiveSizeInBits().getFixedValue() == 64)
-    return true;
 
   //  8192-bit fixed width vector types can be losslessly converted to x86amx.
   if (((isa<FixedVectorType>(this)) && Ty->isX86_AMXTy()) &&
@@ -179,8 +215,6 @@ TypeSize Type::getPrimitiveSizeInBits() const {
     return TypeSize::getFixed(128);
   case Type::PPC_FP128TyID:
     return TypeSize::getFixed(128);
-  case Type::X86_MMXTyID:
-    return TypeSize::getFixed(64);
   case Type::X86_AMXTyID:
     return TypeSize::getFixed(8192);
   case Type::IntegerTyID:
@@ -245,7 +279,6 @@ Type *Type::getTokenTy(LLVMContext &C) { return &C.pImpl->TokenTy; }
 Type *Type::getX86_FP80Ty(LLVMContext &C) { return &C.pImpl->X86_FP80Ty; }
 Type *Type::getFP128Ty(LLVMContext &C) { return &C.pImpl->FP128Ty; }
 Type *Type::getPPC_FP128Ty(LLVMContext &C) { return &C.pImpl->PPC_FP128Ty; }
-Type *Type::getX86_MMXTy(LLVMContext &C) { return &C.pImpl->X86_MMXTy; }
 Type *Type::getX86_AMXTy(LLVMContext &C) { return &C.pImpl->X86_AMXTy; }
 
 IntegerType *Type::getInt1Ty(LLVMContext &C) { return &C.pImpl->Int1Ty; }
@@ -352,7 +385,7 @@ FunctionType *FunctionType::get(Type *ReturnType,
 }
 
 FunctionType *FunctionType::get(Type *Result, bool isVarArg) {
-  return get(Result, std::nullopt, isVarArg);
+  return get(Result, {}, isVarArg);
 }
 
 bool FunctionType::isValidReturnType(Type *RetTy) {
@@ -397,29 +430,21 @@ StructType *StructType::get(LLVMContext &Context, ArrayRef<Type*> ETypes,
   return ST;
 }
 
-bool StructType::containsScalableVectorType(
-    SmallPtrSetImpl<Type *> *Visited) const {
+bool StructType::isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const {
   if ((getSubclassData() & SCDB_ContainsScalableVector) != 0)
     return true;
 
   if ((getSubclassData() & SCDB_NotContainsScalableVector) != 0)
     return false;
 
-  if (Visited && !Visited->insert(const_cast<StructType *>(this)).second)
+  if (!Visited.insert(this).second)
     return false;
 
   for (Type *Ty : elements()) {
-    if (isa<ScalableVectorType>(Ty)) {
+    if (Ty->isScalableTy(Visited)) {
       const_cast<StructType *>(this)->setSubclassData(
           getSubclassData() | SCDB_ContainsScalableVector);
       return true;
-    }
-    if (auto *STy = dyn_cast<StructType>(Ty)) {
-      if (STy->containsScalableVectorType(Visited)) {
-        const_cast<StructType *>(this)->setSubclassData(
-            getSubclassData() | SCDB_ContainsScalableVector);
-        return true;
-      }
     }
   }
 
@@ -432,31 +457,105 @@ bool StructType::containsScalableVectorType(
   return false;
 }
 
-bool StructType::containsHomogeneousScalableVectorTypes() const {
-  Type *FirstTy = getNumElements() > 0 ? elements()[0] : nullptr;
-  if (!FirstTy || !isa<ScalableVectorType>(FirstTy))
+bool StructType::containsNonGlobalTargetExtType(
+    SmallPtrSetImpl<const Type *> &Visited) const {
+  if ((getSubclassData() & SCDB_ContainsNonGlobalTargetExtType) != 0)
+    return true;
+
+  if ((getSubclassData() & SCDB_NotContainsNonGlobalTargetExtType) != 0)
     return false;
-  for (Type *Ty : elements())
-    if (Ty != FirstTy)
-      return false;
-  return true;
+
+  if (!Visited.insert(this).second)
+    return false;
+
+  for (Type *Ty : elements()) {
+    if (Ty->containsNonGlobalTargetExtType(Visited)) {
+      const_cast<StructType *>(this)->setSubclassData(
+          getSubclassData() | SCDB_ContainsNonGlobalTargetExtType);
+      return true;
+    }
+  }
+
+  // For structures that are opaque, return false but do not set the
+  // SCDB_NotContainsNonGlobalTargetExtType flag since it may gain non-global
+  // target extension types when it becomes non-opaque.
+  if (!isOpaque())
+    const_cast<StructType *>(this)->setSubclassData(
+        getSubclassData() | SCDB_NotContainsNonGlobalTargetExtType);
+  return false;
+}
+
+bool StructType::containsNonLocalTargetExtType(
+    SmallPtrSetImpl<const Type *> &Visited) const {
+  if ((getSubclassData() & SCDB_ContainsNonLocalTargetExtType) != 0)
+    return true;
+
+  if ((getSubclassData() & SCDB_NotContainsNonLocalTargetExtType) != 0)
+    return false;
+
+  if (!Visited.insert(this).second)
+    return false;
+
+  for (Type *Ty : elements()) {
+    if (Ty->containsNonLocalTargetExtType(Visited)) {
+      const_cast<StructType *>(this)->setSubclassData(
+          getSubclassData() | SCDB_ContainsNonLocalTargetExtType);
+      return true;
+    }
+  }
+
+  // For structures that are opaque, return false but do not set the
+  // SCDB_NotContainsNonLocalTargetExtType flag since it may gain non-local
+  // target extension types when it becomes non-opaque.
+  if (!isOpaque())
+    const_cast<StructType *>(this)->setSubclassData(
+        getSubclassData() | SCDB_NotContainsNonLocalTargetExtType);
+  return false;
+}
+
+bool StructType::containsHomogeneousScalableVectorTypes() const {
+  if (getNumElements() <= 0 || !isa<ScalableVectorType>(elements().front()))
+    return false;
+  return containsHomogeneousTypes();
+}
+
+bool StructType::containsHomogeneousTypes() const {
+  ArrayRef<Type *> ElementTys = elements();
+  return !ElementTys.empty() && all_equal(ElementTys);
 }
 
 void StructType::setBody(ArrayRef<Type*> Elements, bool isPacked) {
+  cantFail(setBodyOrError(Elements, isPacked));
+}
+
+Error StructType::setBodyOrError(ArrayRef<Type *> Elements, bool isPacked) {
   assert(isOpaque() && "Struct body already set!");
+
+  if (auto E = checkBody(Elements))
+    return E;
 
   setSubclassData(getSubclassData() | SCDB_HasBody);
   if (isPacked)
     setSubclassData(getSubclassData() | SCDB_Packed);
 
   NumContainedTys = Elements.size();
+  ContainedTys = Elements.empty()
+                     ? nullptr
+                     : Elements.copy(getContext().pImpl->Alloc).data();
 
-  if (Elements.empty()) {
-    ContainedTys = nullptr;
-    return;
+  return Error::success();
+}
+
+Error StructType::checkBody(ArrayRef<Type *> Elements) {
+  SmallSetVector<Type *, 4> Worklist(Elements.begin(), Elements.end());
+  for (unsigned I = 0; I < Worklist.size(); ++I) {
+    Type *Ty = Worklist[I];
+    if (Ty == this)
+      return createStringError(Twine("identified structure type '") +
+                               getName() + "' is recursive");
+    Worklist.insert(Ty->subtype_begin(), Ty->subtype_end());
   }
-
-  ContainedTys = Elements.copy(getContext().pImpl->Alloc).data();
+  return Error::success();
 }
 
 void StructType::setName(StringRef Name) {
@@ -518,7 +617,7 @@ StructType *StructType::create(LLVMContext &Context, StringRef Name) {
 }
 
 StructType *StructType::get(LLVMContext &Context, bool isPacked) {
-  return get(Context, std::nullopt, isPacked);
+  return get(Context, {}, isPacked);
 }
 
 StructType *StructType::create(LLVMContext &Context, ArrayRef<Type*> Elements,
@@ -796,6 +895,13 @@ TargetExtType::TargetExtType(LLVMContext &C, StringRef Name,
 TargetExtType *TargetExtType::get(LLVMContext &C, StringRef Name,
                                   ArrayRef<Type *> Types,
                                   ArrayRef<unsigned> Ints) {
+  return cantFail(getOrError(C, Name, Types, Ints));
+}
+
+Expected<TargetExtType *> TargetExtType::getOrError(LLVMContext &C,
+                                                    StringRef Name,
+                                                    ArrayRef<Type *> Types,
+                                                    ArrayRef<unsigned> Ints) {
   const TargetExtTypeKeyInfo::KeyTy Key(Name, Types, Ints);
   TargetExtType *TT;
   // Since we only want to allocate a fresh target type in case none is found
@@ -803,8 +909,8 @@ TargetExtType *TargetExtType::get(LLVMContext &C, StringRef Name,
   // one for inserting the newly allocated one), here we instead lookup based on
   // Key and update the reference to the target type in-place to a newly
   // allocated one if not found.
-  auto Insertion = C.pImpl->TargetExtTypes.insert_as(nullptr, Key);
-  if (Insertion.second) {
+  auto [Iter, Inserted] = C.pImpl->TargetExtTypes.insert_as(nullptr, Key);
+  if (Inserted) {
     // The target type was not found. Allocate one and update TargetExtTypes
     // in-place.
     TT = (TargetExtType *)C.pImpl->Alloc.Allocate(
@@ -812,12 +918,37 @@ TargetExtType *TargetExtType::get(LLVMContext &C, StringRef Name,
             sizeof(unsigned) * Ints.size(),
         alignof(TargetExtType));
     new (TT) TargetExtType(C, Name, Types, Ints);
-    *Insertion.first = TT;
-  } else {
-    // The target type was found. Just return it.
-    TT = *Insertion.first;
+    *Iter = TT;
+    return checkParams(TT);
   }
-  return TT;
+
+  // The target type was found. Just return it.
+  return *Iter;
+}
+
+Expected<TargetExtType *> TargetExtType::checkParams(TargetExtType *TTy) {
+  // Opaque types in the AArch64 name space.
+  if (TTy->Name == "aarch64.svcount" &&
+      (TTy->getNumTypeParameters() != 0 || TTy->getNumIntParameters() != 0))
+    return createStringError(
+        "target extension type aarch64.svcount should have no parameters");
+
+  // Opaque types in the RISC-V name space.
+  if (TTy->Name == "riscv.vector.tuple" &&
+      (TTy->getNumTypeParameters() != 1 || TTy->getNumIntParameters() != 1))
+    return createStringError(
+        "target extension type riscv.vector.tuple should have one "
+        "type parameter and one integer parameter");
+
+  // Opaque types in the AMDGPU name space.
+  if (TTy->Name == "amdgcn.named.barrier" &&
+      (TTy->getNumTypeParameters() != 0 || TTy->getNumIntParameters() != 1)) {
+    return createStringError("target extension type amdgcn.named.barrier "
+                             "should have no type parameters "
+                             "and one integer parameter");
+  }
+
+  return TTy;
 }
 
 namespace {
@@ -834,16 +965,44 @@ struct TargetTypeInfo {
 static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   LLVMContext &C = Ty->getContext();
   StringRef Name = Ty->getName();
-  if (Name.equals("spirv.Image"))
-    return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::CanBeGlobal);
+  if (Name == "spirv.Image")
+    return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::CanBeGlobal,
+                          TargetExtType::CanBeLocal);
   if (Name.starts_with("spirv."))
     return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::HasZeroInit,
-                          TargetExtType::CanBeGlobal);
+                          TargetExtType::CanBeGlobal,
+                          TargetExtType::CanBeLocal);
 
   // Opaque types in the AArch64 name space.
   if (Name == "aarch64.svcount")
     return TargetTypeInfo(ScalableVectorType::get(Type::getInt1Ty(C), 16),
-                          TargetExtType::HasZeroInit);
+                          TargetExtType::HasZeroInit,
+                          TargetExtType::CanBeLocal);
+
+  // RISC-V vector tuple type. The layout is represented as the type that needs
+  // the same number of vector registers(VREGS) as this tuple type, represented
+  // as <vscale x (RVVBitsPerBlock * VREGS / 8) x i8>.
+  if (Name == "riscv.vector.tuple") {
+    unsigned TotalNumElts =
+        std::max(cast<ScalableVectorType>(Ty->getTypeParameter(0))
+                     ->getMinNumElements(),
+                 RISCV::RVVBitsPerBlock / 8) *
+        Ty->getIntParameter(0);
+    return TargetTypeInfo(
+        ScalableVectorType::get(Type::getInt8Ty(C), TotalNumElts),
+        TargetExtType::CanBeLocal, TargetExtType::HasZeroInit);
+  }
+
+  // DirectX resources
+  if (Name.starts_with("dx."))
+    return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::CanBeGlobal,
+                          TargetExtType::CanBeLocal);
+
+  // Opaque types in the AMDGPU name space.
+  if (Name == "amdgcn.named.barrier") {
+    return TargetTypeInfo(FixedVectorType::get(Type::getInt32Ty(C), 4),
+                          TargetExtType::CanBeGlobal);
+  }
 
   return TargetTypeInfo(Type::getVoidTy(C));
 }
