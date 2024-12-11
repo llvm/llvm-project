@@ -151,7 +151,6 @@ else()
     add_flangrt_library(${name} ${libtype}
         ${sources}
         ${ARGN}
-        INSTALL_WITH_TOOLCHAIN
         ADDITIONAL_HEADERS ${public_headers} ${private_headers}
       )
 
@@ -168,8 +167,8 @@ else()
     add_dependencies(flang_rt ${name})
   endfunction ()
 
-  add_win_flangrt_library(STATIC static     MultiThreaded)
-  add_win_flangrt_library(STATIC static_dbg MultiThreadedDebug)
+  add_win_flangrt_library(STATIC static     MultiThreaded      INSTALL_WITH_TOOLCHAIN)
+  add_win_flangrt_library(STATIC static_dbg MultiThreadedDebug INSTALL_WITH_TOOLCHAIN)
 
   # unittests link against LLVMSupport which is compiled with /MD
   add_win_flangrt_library(STATIC unittest   MultiThreadedDLL EXCLUDE_FROM_ALL)

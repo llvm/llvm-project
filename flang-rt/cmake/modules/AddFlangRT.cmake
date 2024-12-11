@@ -37,6 +37,13 @@ function (add_flangrt_library name)
     "${multiValueArgs}"
     ${ARGN})
 
+  if (ARG_INSTALL_WITH_TOOLCHAIN AND ARG_EXCLUDE_FROM_ALL)
+     message(SEND_ERROR "add_flangrt_library(${name} ...):
+       INSTALL_WITH_TOOLCHAIN and EXCLUDE_FROM_ALL are in conflict. When
+       installing an artifact it must have been built first in the 'all' target.
+     ")
+  endif ()
+
   # Also add header files to IDEs to list as part of the library
   set_source_files_properties(${ARG_ADDITIONAL_HEADERS} PROPERTIES HEADER_FILE_ONLY ON)
 
