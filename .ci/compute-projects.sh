@@ -110,11 +110,40 @@ function add-dependencies() {
   done
 }
 
+function exclude-linux() {
+  projects=${@}
+  for project in ${projects}; do
+    case ${project} in
+    cross-project-tests) ;; # tests failing
+    openmp)              ;; # https://github.com/google/llvm-premerge-checks/issues/410
+    *)
+      echo "${project}"
+    ;;
+    esac
+  done
+}
+
+function exclude-windows() {
+  projects=${@}
+  for project in ${projects}; do
+    case ${project} in
+    cross-project-tests) ;; # tests failing
+    compiler-rt)         ;; # tests taking too long
+    openmp)              ;; # TODO: having trouble with the Perl installation
+    libc)                ;; # no Windows support
+    lldb)                ;; # custom environment requirements (https://github.com/llvm/llvm-project/pull/94208#issuecomment-2146256857)
+    bolt)                ;; # tests are not supported yet
+    *)
+      echo "${project}"
+    ;;
+    esac
+  done
+}
+
 # Prints only projects that are both present in $modified_dirs and the passed
 # list.
 function keep-modified-projects() {
   projects=${@}
-  modified_dirs=${1}
   for project in ${projects}; do
     if echo "$modified_dirs" | grep -q -E "^${project}$"; then
       echo "${project}"
