@@ -1092,15 +1092,11 @@ define <16 x i32> @shuffle_disjoint_lanes_one_identity(<16 x i32> %v, <16 x i32>
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI71_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI71_0)
-; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; CHECK-NEXT:    vle8.v v16, (a0)
-; CHECK-NEXT:    li a0, 271
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
+; CHECK-NEXT:    vle16.v v16, (a0)
+; CHECK-NEXT:    li a0, -272
 ; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    vmerge.vvm v12, v12, v8, v0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vsext.vf2 v18, v16
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v8, v12, v18
+; CHECK-NEXT:    vrgatherei16.vv v8, v12, v16, v0.t
 ; CHECK-NEXT:    ret
   %out = shufflevector <16 x i32> %v, <16 x i32> %w, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 26, i32 30, i32 22, i32 20, i32 8, i32 31, i32 29, i32 28, i32 27, i32 23, i32 25, i32 22>
   ret <16 x i32> %out

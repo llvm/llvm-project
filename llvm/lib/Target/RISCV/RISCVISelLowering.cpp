@@ -5602,12 +5602,13 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   }
 
   // If the mask indices are disjoint between the two sources, we can lower it
-  // as a vselect + a single source vrgather.vv. Don't do this if the operands
-  // will be splatted since they will be lowered to something cheaper like
-  // vrgather.vi anyway.
+  // as a vselect + a single source vrgather.vv. Don't do this if we think the
+  // operands may end up being lowered to something cheaper than a vrgather.vv.
   if (!DAG.isSplatValue(V2) && !DAG.isSplatValue(V1) &&
       !ShuffleVectorSDNode::isSplatMask(ShuffleMaskLHS.data(), VT) &&
-      !ShuffleVectorSDNode::isSplatMask(ShuffleMaskRHS.data(), VT))
+      !ShuffleVectorSDNode::isSplatMask(ShuffleMaskRHS.data(), VT) &&
+      !ShuffleVectorInst::isIdentityMask(ShuffleMaskLHS, NumElts) &&
+      !ShuffleVectorInst::isIdentityMask(ShuffleMaskRHS, NumElts))
     if (SDValue V = lowerDisjointIndicesShuffle(SVN, DAG, Subtarget))
       return V;
 
