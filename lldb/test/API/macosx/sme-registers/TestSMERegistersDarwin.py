@@ -109,8 +109,8 @@ class TestSMERegistersDarwin(TestBase):
         z0_new_str = '"{'
         for i in range(svl):
             z0_old_values.append(z0.GetChildAtIndex(i).GetValueAsUnsigned())
-            z0_new_values.append(z0.GetChildAtIndex(i).GetValueAsUnsigned() + 5)
-            z0_new_str = z0_new_str + ("0x%02x " % (z0_old_values[i] + 5))
+            z0_new_values.append(z0_old_values[i] + 5)
+            z0_new_str = z0_new_str + ("0x%02x " % z0_new_values[i])
         z0_new_str = z0_new_str + '}"'
         self.runCmd("reg write z0 %s" % z0_new_str)
 
@@ -119,8 +119,8 @@ class TestSMERegistersDarwin(TestBase):
         z31_new_str = '"{'
         for i in range(svl):
             z31_old_values.append(z31.GetChildAtIndex(i).GetValueAsUnsigned())
-            z31_new_values.append(z31.GetChildAtIndex(i).GetValueAsUnsigned() + 3)
-            z31_new_str = z31_new_str + ("0x%02x " % (z31_old_values[i] + 3))
+            z31_new_values.append(z31_old_values[i] + 3)
+            z31_new_str = z31_new_str + ("0x%02x " % z31_new_values[i])
         z31_new_str = z31_new_str + '}"'
         self.runCmd("reg write z31 %s" % z31_new_str)
 
@@ -129,8 +129,8 @@ class TestSMERegistersDarwin(TestBase):
         p0_new_str = '"{'
         for i in range(int(svl / 8)):
             p0_old_values.append(p0.GetChildAtIndex(i).GetValueAsUnsigned())
-            p0_new_values.append(p0.GetChildAtIndex(i).GetValueAsUnsigned() - 5)
-            p0_new_str = p0_new_str + ("0x%02x " % (p0_old_values[i] - 5))
+            p0_new_values.append(p0_old_values[i] - 5)
+            p0_new_str = p0_new_str + ("0x%02x " % p0_new_values[i])
         p0_new_str = p0_new_str + '}"'
         self.runCmd("reg write p0 %s" % p0_new_str)
 
@@ -139,8 +139,8 @@ class TestSMERegistersDarwin(TestBase):
         p15_new_str = '"{'
         for i in range(int(svl / 8)):
             p15_old_values.append(p15.GetChildAtIndex(i).GetValueAsUnsigned())
-            p15_new_values.append(p15.GetChildAtIndex(i).GetValueAsUnsigned() - 8)
-            p15_new_str = p15_new_str + ("0x%02x " % (p15_old_values[i] - 8))
+            p15_new_values.append(p15_old_values[i] - 8)
+            p15_new_str = p15_new_str + ("0x%02x " % p15_new_values[i])
         p15_new_str = p15_new_str + '}"'
         self.runCmd("reg write p15 %s" % p15_new_str)
 
@@ -149,8 +149,8 @@ class TestSMERegistersDarwin(TestBase):
         za_new_str = '"{'
         for i in range(svl * svl):
             za_old_values.append(za.GetChildAtIndex(i).GetValueAsUnsigned())
-            za_new_values.append(za.GetChildAtIndex(i).GetValueAsUnsigned() + 7)
-            za_new_str = za_new_str + ("0x%02x " % (za_old_values[i] + 7))
+            za_new_values.append(za_old_values[i] + 7)
+            za_new_str = za_new_str + ("0x%02x " % za_new_values[i])
         za_new_str = za_new_str + '}"'
         self.runCmd("reg write za %s" % za_new_str)
 
@@ -159,8 +159,8 @@ class TestSMERegistersDarwin(TestBase):
         zt0_new_str = '"{'
         for i in range(64):
             zt0_old_values.append(zt0.GetChildAtIndex(i).GetValueAsUnsigned())
-            zt0_new_values.append(zt0.GetChildAtIndex(i).GetValueAsUnsigned() + 2)
-            zt0_new_str = zt0_new_str + ("0x%02x " % (zt0_old_values[i] + 2))
+            zt0_new_values.append(zt0_old_values[i] + 2)
+            zt0_new_str = zt0_new_str + ("0x%02x " % zt0_new_values[i])
         zt0_new_str = zt0_new_str + '}"'
         self.runCmd("reg write zt0 %s" % zt0_new_str)
 
