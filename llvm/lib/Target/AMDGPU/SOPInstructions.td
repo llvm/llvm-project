@@ -1512,12 +1512,12 @@ def S_ENDPGM_SAVED : SOPP_Pseudo<"s_endpgm_saved", (ins)> {
   let isReturn = 1;
 }
 
-let SubtargetPredicate = isGFX9GFX10 in {
+let SubtargetPredicate = isGFX9GFX10GFX11 in {
   let isBarrier = 1, isReturn = 1, simm16 = 0, fixed_imm = 1 in {
     def S_ENDPGM_ORDERED_PS_DONE :
       SOPP_Pseudo<"s_endpgm_ordered_ps_done", (ins)>;
   } // End isBarrier = 1, isReturn = 1, simm16 = 0, fixed_imm = 1
-} // End SubtargetPredicate = isGFX9GFX10
+} // End SubtargetPredicate = isGFX9GFX10GFX11
 
 let SubtargetPredicate = isGFX10Plus in {
   let isBarrier = 1, isReturn = 1, simm16 = 0, fixed_imm = 1 in {
@@ -2661,6 +2661,7 @@ defm S_CBRANCH_CDBGSYS_OR_USER    : SOPP_Real_With_Relaxation_gfx11<0x029>;
 defm S_CBRANCH_CDBGSYS_AND_USER   : SOPP_Real_With_Relaxation_gfx11<0x02a>;
 defm S_ENDPGM                     : SOPP_Real_32_gfx11_gfx12<0x030>;
 defm S_ENDPGM_SAVED               : SOPP_Real_32_gfx11_gfx12<0x031>;
+defm S_ENDPGM_ORDERED_PS_DONE     : SOPP_Real_32_gfx11<0x032>;
 defm S_WAKEUP                     : SOPP_Real_32_gfx11_gfx12<0x034>;
 defm S_SETPRIO                    : SOPP_Real_32_gfx11_gfx12<0x035>;
 defm S_SENDMSG                    : SOPP_Real_32_gfx11_gfx12<0x036>;

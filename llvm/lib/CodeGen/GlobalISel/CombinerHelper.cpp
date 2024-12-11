@@ -7717,9 +7717,9 @@ bool CombinerHelper::matchShuffleUndefRHS(MachineInstr &MI,
   if (!Changed)
     return false;
 
-  MatchInfo = [&, NewMask](MachineIRBuilder &B) {
+  MatchInfo = [&, NewMask = std::move(NewMask)](MachineIRBuilder &B) {
     B.buildShuffleVector(MI.getOperand(0), MI.getOperand(1), MI.getOperand(2),
-                         NewMask);
+                         std::move(NewMask));
   };
 
   return true;

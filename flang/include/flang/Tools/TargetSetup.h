@@ -29,6 +29,11 @@ namespace Fortran::tools {
     targetCharacteristics.DisableType(
         Fortran::common::TypeCategory::Real, /*kind=*/10);
   }
+  if (targetTriple.getArch() == llvm::Triple::ArchType::x86_64) {
+    targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/3);
+    targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/4);
+    targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/8);
+  }
 
   // Figure out if we can support F128: see
   // flang/runtime/Float128Math/math-entries.h

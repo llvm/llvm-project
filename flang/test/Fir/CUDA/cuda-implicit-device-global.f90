@@ -23,7 +23,7 @@ fir.global linkonce @_QQclX6995815537abaf90e86ce166af128f3a constant : !fir.char
 // CHECK: %[[GLOBAL:.*]] = fir.address_of(@_QQcl[[SYMBOL:.*]]) : !fir.ref<!fir.char<1,32>>
 // CHECK: %[[CONV:.*]] = fir.convert %[[GLOBAL]] : (!fir.ref<!fir.char<1,32>>) -> !fir.ref<i8>
 // CHECK: fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %[[CONV]], %{{.*}}) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
-// CHECK: fir.global linkonce @_QQcl[[SYMBOL]] {data_attr = #cuf.cuda<constant>} constant : !fir.char<1,32>
+// CHECK: fir.global linkonce @_QQcl[[SYMBOL]] constant : !fir.char<1,32>
 
 // CHECK-LABEL: gpu.module @cuda_device_mod
 // CHECK: fir.global linkonce @_QQclX6995815537abaf90e86ce166af128f3a
@@ -99,10 +99,11 @@ fir.global linkonce @_QQclX5465737420504153534544 constant : !fir.char<1,11> {
   fir.has_value %0 : !fir.char<1,11>
 }
 
-// CHECK: fir.global linkonce @_QQclX5465737420504153534544 {data_attr = #cuf.cuda<constant>} constant : !fir.char<1,11>
+// Checking that a constant fir.global that is only used in host code is not copied over to the device
+// CHECK: fir.global linkonce @_QQclX5465737420504153534544 constant : !fir.char<1,11>
 
 // CHECK-LABEL: gpu.module @cuda_device_mod
-// CHECK: fir.global linkonce @_QQclX5465737420504153534544 {data_attr = #cuf.cuda<constant>} constant
+// CHECK-NOT: fir.global linkonce @_QQclX5465737420504153534544
 
 // -----
 
@@ -140,7 +141,53 @@ fir.global linkonce @_QQclX5465737420504153534544 constant : !fir.char<1,11> {
 }
 func.func private @_FortranAioEndIoStatement(!fir.ref<i8>) -> i32 attributes {fir.io, fir.runtime}
 
-// CHECK: fir.global linkonce @_QQclX5465737420504153534544 {data_attr = #cuf.cuda<constant>} constant : !fir.char<1,11>
+// Checking that a constant fir.global that is used in device code is copied over to the device
+// CHECK: fir.global linkonce @_QQclX5465737420504153534544 constant : !fir.char<1,11>
 
 // CHECK-LABEL: gpu.module @cuda_device_mod 
-// CHECK: fir.global linkonce @_QQclX5465737420504153534544 {data_attr = #cuf.cuda<constant>} constant
+// CHECK: fir.global linkonce @_QQclX5465737420504153534544 constant
+
+// -----
+
+func.func @_QQmain() attributes {fir.bindc_name = "cufkernel_global"} {
+  %c10 = arith.constant 10 : index
+  %c5_i32 = arith.constant 5 : i32
+  %c6_i32 = arith.constant 6 : i32
+  %c1 = arith.constant 1 : index
+  %c1_i32 = arith.constant 1 : i32
+  %c10_i32 = arith.constant 10 : i32
+  %0 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
+  %1:2 = hlfir.declare %0 {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  cuf.kernel<<<%c10_i32, %c1_i32>>> (%arg0 : index) = (%c1 : index) to (%c10 : index)  step (%c1 : index) {
+    %2 = fir.convert %arg0 : (index) -> i32
+    fir.store %2 to %1#1 : !fir.ref<i32>
+    %3 = fir.load %1#0 : !fir.ref<i32>
+    %4 = arith.cmpi eq, %3, %c1_i32 : i32
+    cf.cond_br %4, ^bb1, ^bb2
+  ^bb1:  // pred: ^bb0
+    %5 = fir.address_of(@_QQclX91d13f6e74caa2f03965d7a7c6a8fdd5) : !fir.ref<!fir.char<1,50>>
+    %6 = fir.convert %5 : (!fir.ref<!fir.char<1,50>>) -> !fir.ref<i8>
+    %7 = fir.call @_FortranAioBeginExternalListOutput(%c6_i32, %6, %c5_i32) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+    %8 = fir.load %1#0 : !fir.ref<i32>
+    %9 = fir.call @_FortranAioOutputInteger32(%7, %8) fastmath<contract> : (!fir.ref<i8>, i32) -> i1
+    %10 = fir.call @_FortranAioEndIoStatement(%7) fastmath<contract> : (!fir.ref<i8>) -> i32
+    cf.br ^bb2
+  ^bb2:  // 2 preds: ^bb0, ^bb1
+    "fir.end"() : () -> ()
+  }
+  return
+}
+func.func private @_FortranAioBeginExternalListOutput(i32, !fir.ref<i8>, i32) -> !fir.ref<i8> attributes {fir.io, fir.runtime}
+fir.global linkonce @_QQclX91d13f6e74caa2f03965d7a7c6a8fdd5 constant : !fir.char<1,50> {
+  %0 = fir.string_lit "/local/home/vclement/llvm-project/build/dummy.cuf\00"(50) : !fir.char<1,50>
+  fir.has_value %0 : !fir.char<1,50>
+}
+func.func private @_FortranAioOutputInteger32(!fir.ref<i8>, i32) -> i1 attributes {fir.io, fir.runtime}
+func.func private @_FortranAioEndIoStatement(!fir.ref<i8>) -> i32 attributes {fir.io, fir.runtime}
+func.func private @_FortranAProgramStart(i32, !llvm.ptr, !llvm.ptr, !llvm.ptr)
+func.func private @_FortranAProgramEndStatement()
+
+// CHECK-LABEL: func.func @_QQmain()
+// CHECK: fir.global linkonce @_QQclX91d13f6e74caa2f03965d7a7c6a8fdd5 constant : !fir.char<1,50>
+// CHECK: gpu.module @cuda_device_mod
+// CHECK: fir.global linkonce @_QQclX91d13f6e74caa2f03965d7a7c6a8fdd5 constant : !fir.char<1,50>

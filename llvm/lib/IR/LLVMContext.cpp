@@ -219,12 +219,12 @@ void LLVMContext::yield() {
 }
 
 void LLVMContext::emitError(const Twine &ErrorStr) {
-  diagnose(DiagnosticInfoInlineAsm(ErrorStr));
+  diagnose(DiagnosticInfoGeneric(ErrorStr));
 }
 
 void LLVMContext::emitError(const Instruction *I, const Twine &ErrorStr) {
-  assert (I && "Invalid instruction");
-  diagnose(DiagnosticInfoInlineAsm(*I, ErrorStr));
+  assert(I && "Invalid instruction");
+  diagnose(DiagnosticInfoGeneric(I, ErrorStr));
 }
 
 static bool isDiagnosticEnabled(const DiagnosticInfo &DI) {
@@ -281,10 +281,6 @@ void LLVMContext::diagnose(const DiagnosticInfo &DI) {
   errs() << "\n";
   if (DI.getSeverity() == DS_Error)
     exit(1);
-}
-
-void LLVMContext::emitError(uint64_t LocCookie, const Twine &ErrorStr) {
-  diagnose(DiagnosticInfoInlineAsm(LocCookie, ErrorStr));
 }
 
 //===----------------------------------------------------------------------===//

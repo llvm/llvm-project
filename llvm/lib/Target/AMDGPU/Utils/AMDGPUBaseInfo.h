@@ -55,6 +55,8 @@ static constexpr unsigned GFX12 = 1;
 
 enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5, AMDHSA_COV6 = 6 };
 
+enum class FPType { None, FP4, FP8 };
+
 /// \returns True if \p STI is AMDHSA.
 bool isHsaAbi(const MCSubtargetInfo &STI);
 
@@ -103,6 +105,10 @@ struct MFMA_F8F6F4_Info {
   uint8_t NumRegsSrcB;
 };
 
+struct CvtScaleF32_F32F16ToF8F4_Info {
+  unsigned Opcode;
+};
+
 #define GET_MIMGBaseOpcode_DECL
 #define GET_MIMGDim_DECL
 #define GET_MIMGEncoding_DECL
@@ -112,6 +118,7 @@ struct MFMA_F8F6F4_Info {
 #define GET_MAIInstInfoTable_DECL
 #define GET_MAIInstInfoTable_DECL
 #define GET_isMFMA_F8F6F4Table_DECL
+#define GET_isCvtScaleF32_F32F16ToF8F4Table_DECL
 #include "AMDGPUGenSearchableTables.inc"
 
 namespace IsaInfo {
@@ -880,7 +887,7 @@ LLVM_READONLY
 bool isTrue16Inst(unsigned Opc);
 
 LLVM_READONLY
-bool isFP8DstSelInst(unsigned Opc);
+FPType getFPDstSelType(unsigned Opc);
 
 LLVM_READONLY
 bool isInvalidSingleUseConsumerInst(unsigned Opc);

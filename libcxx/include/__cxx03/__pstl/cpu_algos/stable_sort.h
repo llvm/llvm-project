@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___PSTL_CPU_ALGOS_STABLE_SORT_H
-#define _LIBCPP___PSTL_CPU_ALGOS_STABLE_SORT_H
+#ifndef _LIBCPP___CXX03___PSTL_CPU_ALGOS_STABLE_SORT_H
+#define _LIBCPP___CXX03___PSTL_CPU_ALGOS_STABLE_SORT_H
 
 #include <__cxx03/__algorithm/stable_sort.h>
 #include <__cxx03/__config>
@@ -44,4 +44,4 @@ struct __cpu_parallel_stable_sort {
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___PSTL_CPU_ALGOS_STABLE_SORT_H
+#endif // _LIBCPP___CXX03___PSTL_CPU_ALGOS_STABLE_SORT_H

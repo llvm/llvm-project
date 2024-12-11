@@ -263,7 +263,7 @@ public:
       if (tryToFindPtrOrigin(
               Value, /*StopAtFirstRefCountedObj=*/false,
               [&](const clang::Expr *InitArgOrigin, bool IsSafe) {
-                if (!InitArgOrigin)
+                if (!InitArgOrigin || IsSafe)
                   return true;
 
                 if (isa<CXXThisExpr>(InitArgOrigin))

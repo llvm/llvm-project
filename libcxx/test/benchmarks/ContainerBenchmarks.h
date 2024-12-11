@@ -14,8 +14,9 @@
 #include <iterator>
 #include <utility>
 
-#include "Utilities.h"
 #include "benchmark/benchmark.h"
+#include "Utilities.h"
+#include "test_iterators.h"
 
 namespace ContainerBenchmarks {
 
@@ -47,6 +48,19 @@ void BM_Assignment(benchmark::State& st, Container) {
     c1 = c2;
     DoNotOptimizeData(c1);
     DoNotOptimizeData(c2);
+  }
+}
+
+template <std::size_t... sz, typename Container, typename GenInputs>
+void BM_AssignInputIterIter(benchmark::State& st, Container c, GenInputs gen) {
+  auto v = gen(1, sz...);
+  c.resize(st.range(0), v[0]);
+  auto in = gen(st.range(1), sz...);
+  benchmark::DoNotOptimize(&in);
+  benchmark::DoNotOptimize(&c);
+  for (auto _ : st) {
+    c.assign(cpp17_input_iterator(in.begin()), cpp17_input_iterator(in.end()));
+    benchmark::ClobberMemory();
   }
 }
 

@@ -1146,6 +1146,7 @@
   ; GCN-NEXT:    s_waitcnt vmcnt(8)
   ; GCN-NEXT:    ;;#ASMEND
   ; GCN-NEXT:    s_endpgm
+
   attributes #0 = {"amdgpu-flat-work-group-size"="256,256"}
   !0 = !{i64 2862105}
 

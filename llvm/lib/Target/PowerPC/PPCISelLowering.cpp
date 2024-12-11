@@ -198,6 +198,14 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   setOperationAction(ISD::UADDO, RegVT, Custom);
 
+  // On P10, the default lowering generates better code using the
+  // setbc instruction.
+  if (!Subtarget.hasP10Vector()) {
+    setOperationAction(ISD::SSUBO, MVT::i32, Custom);
+    if (isPPC64)
+      setOperationAction(ISD::SSUBO, MVT::i64, Custom);
+  }
+
   // Match BITREVERSE to customized fast code sequence in the td file.
   setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
   setOperationAction(ISD::BITREVERSE, MVT::i64, Legal);
@@ -1630,14 +1638,14 @@ static void getMaxByValAlign(Type *Ty, Align &MaxAlign, Align MaxMaxAlign) {
 
 /// getByValTypeAlignment - Return the desired alignment for ByVal aggregate
 /// function arguments in the caller parameter area.
-uint64_t PPCTargetLowering::getByValTypeAlignment(Type *Ty,
-                                                  const DataLayout &DL) const {
+Align PPCTargetLowering::getByValTypeAlignment(Type *Ty,
+                                               const DataLayout &DL) const {
   // 16byte and wider vectors are passed on 16byte boundary.
   // The rest is 8 on PPC64 and 4 on PPC32 boundary.
   Align Alignment = Subtarget.isPPC64() ? Align(8) : Align(4);
   if (Subtarget.hasAltivec())
     getMaxByValAlign(Ty, Alignment, Align(16));
-  return Alignment.value();
+  return Alignment;
 }
 
 bool PPCTargetLowering::useSoftFloat() const {
@@ -1842,6 +1850,10 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::LXVRZX:          return "PPCISD::LXVRZX";
   case PPCISD::STORE_COND:
     return "PPCISD::STORE_COND";
+  case PPCISD::SETBC:
+    return "PPCISD::SETBC";
+  case PPCISD::SETBCR:
+    return "PPCISD::SETBCR";
   }
   return nullptr;
 }
@@ -2694,7 +2706,7 @@ bool llvm::isIntS34Immediate(SDNode *N, int64_t &Imm) {
   if (!isa<ConstantSDNode>(N))
     return false;
 
-  Imm = (int64_t)N->getAsZExtVal();
+  Imm = (int64_t)cast<ConstantSDNode>(N)->getSExtValue();
   return isInt<34>(Imm);
 }
 bool llvm::isIntS34Immediate(SDValue Op, int64_t &Imm) {
@@ -2916,7 +2928,7 @@ bool PPCTargetLowering::SelectAddressRegImm34(SDValue N, SDValue &Disp,
   if (N.getOpcode() == ISD::ADD) {
     if (!isIntS34Immediate(N.getOperand(1), Imm))
       return false;
-    Disp = DAG.getTargetConstant(Imm, dl, N.getValueType());
+    Disp = DAG.getSignedTargetConstant(Imm, dl, N.getValueType());
     if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(N.getOperand(0)))
       Base = DAG.getTargetFrameIndex(FI->getIndex(), N.getValueType());
     else
@@ -2937,12 +2949,12 @@ bool PPCTargetLowering::SelectAddressRegImm34(SDValue N, SDValue &Disp,
       Base = DAG.getTargetFrameIndex(FI->getIndex(), N.getValueType());
     else
       Base = N.getOperand(0);
-    Disp = DAG.getTargetConstant(Imm, dl, N.getValueType());
+    Disp = DAG.getSignedTargetConstant(Imm, dl, N.getValueType());
     return true;
   }
 
   if (isIntS34Immediate(N, Imm)) { // If the address is a 34-bit const.
-    Disp = DAG.getTargetConstant(Imm, dl, N.getValueType());
+    Disp = DAG.getSignedTargetConstant(Imm, dl, N.getValueType());
     Base = DAG.getRegister(PPC::ZERO8, N.getValueType());
     return true;
   }
@@ -11256,30 +11268,54 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   EVT VTs[] = { Op.getOperand(2).getValueType(), MVT::Glue };
   SDValue CompNode = DAG.getNode(PPCISD::VCMP_rec, dl, VTs, Ops);
 
+  // Unpack the result based on how the target uses it.
+  unsigned BitNo; // Bit # of CR6.
+  bool InvertBit; // Invert result?
+  unsigned Bitx;
+  unsigned SetOp;
+  switch (Op.getConstantOperandVal(1)) {
+  default: // Can't happen, don't crash on invalid number though.
+  case 0:  // Return the value of the EQ bit of CR6.
+    BitNo = 0;
+    InvertBit = false;
+    Bitx = PPC::sub_eq;
+    SetOp = PPCISD::SETBC;
+    break;
+  case 1: // Return the inverted value of the EQ bit of CR6.
+    BitNo = 0;
+    InvertBit = true;
+    Bitx = PPC::sub_eq;
+    SetOp = PPCISD::SETBCR;
+    break;
+  case 2: // Return the value of the LT bit of CR6.
+    BitNo = 2;
+    InvertBit = false;
+    Bitx = PPC::sub_lt;
+    SetOp = PPCISD::SETBC;
+    break;
+  case 3: // Return the inverted value of the LT bit of CR6.
+    BitNo = 2;
+    InvertBit = true;
+    Bitx = PPC::sub_lt;
+    SetOp = PPCISD::SETBCR;
+    break;
+  }
+
+  SDValue GlueOp = CompNode.getValue(1);
+  if (Subtarget.isISA3_1()) {
+    SDValue SubRegIdx = DAG.getTargetConstant(Bitx, dl, MVT::i32);
+    SDValue CR6Reg = DAG.getRegister(PPC::CR6, MVT::i32);
+    SDValue CRBit =
+        SDValue(DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::i1,
+                                   CR6Reg, SubRegIdx, GlueOp),
+                0);
+    return DAG.getNode(SetOp, dl, MVT::i32, CRBit);
+  }
+
   // Now that we have the comparison, emit a copy from the CR to a GPR.
   // This is flagged to the above dot comparison.
   SDValue Flags = DAG.getNode(PPCISD::MFOCRF, dl, MVT::i32,
-                                DAG.getRegister(PPC::CR6, MVT::i32),
-                                CompNode.getValue(1));
-
-  // Unpack the result based on how the target uses it.
-  unsigned BitNo;   // Bit # of CR6.
-  bool InvertBit;   // Invert result?
-  switch (Op.getConstantOperandVal(1)) {
-  default:  // Can't happen, don't crash on invalid number though.
-  case 0:   // Return the value of the EQ bit of CR6.
-    BitNo = 0; InvertBit = false;
-    break;
-  case 1:   // Return the inverted value of the EQ bit of CR6.
-    BitNo = 0; InvertBit = true;
-    break;
-  case 2:   // Return the value of the LT bit of CR6.
-    BitNo = 2; InvertBit = false;
-    break;
-  case 3:   // Return the inverted value of the LT bit of CR6.
-    BitNo = 2; InvertBit = true;
-    break;
-  }
+                              DAG.getRegister(PPC::CR6, MVT::i32), GlueOp);
 
   // Shift the bit into the low position.
   Flags = DAG.getNode(ISD::SRL, dl, MVT::i32, Flags,
@@ -12013,6 +12049,30 @@ SDValue PPCTargetLowering::LowerUaddo(SDValue Op, SelectionDAG &DAG) const {
   return Res;
 }
 
+SDValue PPCTargetLowering::LowerSSUBO(SDValue Op, SelectionDAG &DAG) const {
+
+  SDLoc dl(Op);
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  EVT VT = Op.getNode()->getValueType(0);
+
+  SDValue Sub = DAG.getNode(ISD::SUB, dl, VT, LHS, RHS);
+
+  SDValue Xor1 = DAG.getNode(ISD::XOR, dl, VT, RHS, LHS);
+  SDValue Xor2 = DAG.getNode(ISD::XOR, dl, VT, Sub, LHS);
+
+  SDValue And = DAG.getNode(ISD::AND, dl, VT, Xor1, Xor2);
+
+  SDValue Overflow =
+      DAG.getNode(ISD::SRL, dl, VT, And,
+                  DAG.getConstant(VT.getSizeInBits() - 1, dl, MVT::i32));
+
+  SDValue OverflowTrunc =
+      DAG.getNode(ISD::TRUNCATE, dl, Op.getNode()->getValueType(1), Overflow);
+
+  return DAG.getMergeValues({Sub, OverflowTrunc}, dl);
+}
+
 /// LowerOperation - Provide custom lowering hooks for some operations.
 ///
 SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
@@ -12035,6 +12095,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SETCC:              return LowerSETCC(Op, DAG);
   case ISD::INIT_TRAMPOLINE:    return LowerINIT_TRAMPOLINE(Op, DAG);
   case ISD::ADJUST_TRAMPOLINE:  return LowerADJUST_TRAMPOLINE(Op, DAG);
+  case ISD::SSUBO:
+    return LowerSSUBO(Op, DAG);
 
   case ISD::INLINEASM:
   case ISD::INLINEASM_BR:       return LowerINLINEASM(Op, DAG);
@@ -18772,7 +18834,7 @@ SDValue PPCTargetLowering::lowerToLibCall(const char *LibCallName, SDValue Op,
   Type *RetTy = RetVT.getTypeForEVT(*DAG.getContext());
   SDValue Callee =
       DAG.getExternalSymbol(LibCallName, TLI.getPointerTy(DAG.getDataLayout()));
-  bool SignExtend = TLI.shouldSignExtendTypeInLibCall(RetVT, false);
+  bool SignExtend = TLI.shouldSignExtendTypeInLibCall(RetTy, false);
   TargetLowering::ArgListTy Args;
   TargetLowering::ArgListEntry Entry;
   for (const SDValue &N : Op->op_values()) {
@@ -18780,7 +18842,7 @@ SDValue PPCTargetLowering::lowerToLibCall(const char *LibCallName, SDValue Op,
     Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
     Entry.Node = N;
     Entry.Ty = ArgTy;
-    Entry.IsSExt = TLI.shouldSignExtendTypeInLibCall(ArgVT, SignExtend);
+    Entry.IsSExt = TLI.shouldSignExtendTypeInLibCall(ArgTy, SignExtend);
     Entry.IsZExt = !Entry.IsSExt;
     Args.push_back(Entry);
   }

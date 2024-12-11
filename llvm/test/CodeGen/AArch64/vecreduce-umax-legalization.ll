@@ -202,9 +202,8 @@ define i1 @test_v4i1(<4 x i1> %a) nounwind {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    shl v0.4h, v0.4h, #15
 ; CHECK-SD-NEXT:    cmlt v0.4h, v0.4h, #0
-; CHECK-SD-NEXT:    umaxv h0, v0.4h
-; CHECK-SD-NEXT:    fmov w8, s0
-; CHECK-SD-NEXT:    and w0, w8, #0x1
+; CHECK-SD-NEXT:    fcmp d0, #0.0
+; CHECK-SD-NEXT:    cset w0, ne
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i1:

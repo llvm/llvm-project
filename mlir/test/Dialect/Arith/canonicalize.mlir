@@ -869,6 +869,27 @@ func.func @tripleAddAddOvf2(%arg0: index) -> index {
   return %add2 : index
 }
 
+
+// CHECK-LABEL: @foldSubXX_tensor
+//       CHECK:   %[[c0:.+]] = arith.constant dense<0> : tensor<10xi32> 
+//       CHECK:   %[[sub:.+]] = arith.subi
+//       CHECK:   return %[[c0]], %[[sub]]
+func.func @foldSubXX_tensor(%static : tensor<10xi32>, %dyn : tensor<?x?xi32>) -> (tensor<10xi32>, tensor<?x?xi32>) {
+  %static_sub = arith.subi %static, %static : tensor<10xi32>
+  %dyn_sub = arith.subi %dyn, %dyn : tensor<?x?xi32>
+  return %static_sub, %dyn_sub : tensor<10xi32>, tensor<?x?xi32>
+}
+
+// CHECK-LABEL: @foldSubXX_vector
+//       CHECK-DAG:  %[[c0:.+]] = arith.constant dense<0> : vector<8xi32>
+//       CHECK-DAG:  %[[c0_scalable:.+]] = arith.constant dense<0> : vector<[4]xi32>
+//       CHECK:   return %[[c0]], %[[c0_scalable]]
+func.func @foldSubXX_vector(%static : vector<8xi32>, %dyn : vector<[4]xi32>) -> (vector<8xi32>, vector<[4]xi32>) {
+  %static_sub = arith.subi %static, %static : vector<8xi32>
+  %dyn_sub = arith.subi %dyn, %dyn : vector<[4]xi32>
+  return %static_sub, %dyn_sub : vector<8xi32>, vector<[4]xi32>
+}
+
 // CHECK-LABEL: @tripleAddSub0
 //       CHECK:   %[[cres:.+]] = arith.constant 59 : index
 //       CHECK:   %[[add:.+]] = arith.subi %[[cres]], %arg0 : index
@@ -1917,31 +1938,39 @@ func.func @test_maximumf(%arg0 : f32) -> (f32, f32, f32) {
 // -----
 
 // CHECK-LABEL: @test_minnumf(
-func.func @test_minnumf(%arg0 : f32) -> (f32, f32, f32) {
+func.func @test_minnumf(%arg0 : f32) -> (f32, f32, f32, f32) {
   // CHECK-DAG:   %[[C0:.+]] = arith.constant 0.0
+  // CHECK-DAG:   %[[INF:.+]] = arith.constant
   // CHECK-NEXT:  %[[X:.+]] = arith.minnumf %arg0, %[[C0]]
-  // CHECK-NEXT:  return %[[X]], %arg0, %arg0
+  // CHECK-NEXT:  %[[Y:.+]] = arith.minnumf %arg0, %[[INF]]
+  // CHECK-NEXT:   return %[[X]], %arg0, %[[Y]], %arg0
   %c0 = arith.constant 0.0 : f32
   %inf = arith.constant 0x7F800000 : f32
+  %nan = arith.constant 0x7FC00000 : f32
   %0 = arith.minnumf %c0, %arg0 : f32
   %1 = arith.minnumf %arg0, %arg0 : f32
   %2 = arith.minnumf %inf, %arg0 : f32
-  return %0, %1, %2 : f32, f32, f32
+  %3 = arith.minnumf %nan, %arg0 : f32
+  return %0, %1, %2, %3 : f32, f32, f32, f32
 }
 
 // -----
 
 // CHECK-LABEL: @test_maxnumf(
-func.func @test_maxnumf(%arg0 : f32) -> (f32, f32, f32) {
-  // CHECK-DAG:   %[[C0:.+]] = arith.constant
+func.func @test_maxnumf(%arg0 : f32) -> (f32, f32, f32, f32) {
+  // CHECK-DAG:   %[[C0:.+]] = arith.constant 0.0
+  // CHECK-DAG:   %[[NINF:.+]] = arith.constant
   // CHECK-NEXT:  %[[X:.+]] = arith.maxnumf %arg0, %[[C0]]
-  // CHECK-NEXT:   return %[[X]], %arg0, %arg0
+  // CHECK-NEXT:  %[[Y:.+]] = arith.maxnumf %arg0, %[[NINF]]
+  // CHECK-NEXT:   return %[[X]], %arg0, %[[Y]], %arg0
   %c0 = arith.constant 0.0 : f32
   %-inf = arith.constant 0xFF800000 : f32
+  %nan = arith.constant 0x7FC00000 : f32
   %0 = arith.maxnumf %c0, %arg0 : f32
   %1 = arith.maxnumf %arg0, %arg0 : f32
   %2 = arith.maxnumf %-inf, %arg0 : f32
-  return %0, %1, %2 : f32, f32, f32
+  %3 = arith.maxnumf %nan, %arg0 : f32
+  return %0, %1, %2, %3 : f32, f32, f32, f32
 }
 
 // -----
@@ -3201,26 +3230,3 @@ func.func @bf16_fma(%arg0: vector<32x32x32xbf16>, %arg1: vector<32x32x32xbf16>, 
     }
   }
 #-}
-
-// -----
-
-// CHECK-LABEL: @test_fold_denorm
-// CHECK-SAME: %[[ARG0:.+]]: f32
-func.func @test_fold_denorm(%arg0: f32) -> f32 {
-  // CHECK-NOT: arith.subf
-  // CHECK: return %[[ARG0]] : f32
-  %c_denorm = arith.constant 1.4e-45 : f32
-  %sub = arith.subf %arg0, %c_denorm denormal<positive_zero> : f32
-  return %sub : f32
-}
-
-// -----
-
-// CHECK-LABEL: @test_expect_not_to_fold_denorm
-func.func @test_expect_not_to_fold_denorm(%arg0: f32, %arg1 : f32) -> (f32, f32) {
-  // CHECK-COUNT-2: arith.subf
-  %c_denorm = arith.constant 1.4e-45 : f32
-  %sub = arith.subf %arg0, %c_denorm denormal<ieee> : f32
-  %sub_1 = arith.subf %arg1, %c_denorm denormal<preserve_sign> : f32
-  return %sub, %sub_1 : f32, f32
-}

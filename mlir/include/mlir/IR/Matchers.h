@@ -417,6 +417,11 @@ inline detail::constant_float_predicate_matcher m_OneFloat() {
   }};
 }
 
+/// Matches a constant scalar / vector splat / tensor splat float ones.
+inline detail::constant_float_predicate_matcher m_NaNFloat() {
+  return {[](const APFloat &value) { return value.isNaN(); }};
+}
+
 /// Matches a constant scalar / vector splat / tensor splat float positive
 /// infinity.
 inline detail::constant_float_predicate_matcher m_PosInfFloat() {
@@ -431,12 +436,6 @@ inline detail::constant_float_predicate_matcher m_NegInfFloat() {
   return {[](const APFloat &value) {
     return value.isNegative() && value.isInfinity();
   }};
-}
-
-/// Matches a constant scalar / vector splat / tensor splat with denormal
-/// values.
-inline detail::constant_float_predicate_matcher m_isDenormalFloat() {
-  return {[](const APFloat &value) { return value.isDenormal(); }};
 }
 
 /// Matches a constant scalar / vector splat / tensor splat integer zero.
