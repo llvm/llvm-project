@@ -3205,7 +3205,7 @@ bool ASTReader::isConsumerInterestedIn(Decl *D) {
   // emitted when we import the relevant module.
   if (isPartOfPerModuleInitializer(D)) {
     auto *M = D->getImportedOwningModule();
-    if (M && M->Kind == Module::ModuleMapModule &&
+    if (M && M->isModuleMapModule() &&
         getContext().DeclMustBeEmitted(D))
       return false;
   }
