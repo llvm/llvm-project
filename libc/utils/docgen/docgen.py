@@ -162,7 +162,7 @@ def print_macros_rst(header: Header, macros: Dict):
 
 
 def print_impl_status_rst(header: Header, api: Dict):
-    if (os.sep in header.name):
+    if os.sep in header.name:
         print(".. include:: ../../check.rst\n")
     else:
         print(".. include:: ../check.rst\n")
