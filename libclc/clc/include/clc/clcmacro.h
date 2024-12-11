@@ -191,7 +191,21 @@
 
 #define _CLC_DEFINE_UNARY_BUILTIN(RET_TYPE, FUNCTION, BUILTIN, ARG1_TYPE)      \
   _CLC_DEF _CLC_OVERLOAD RET_TYPE FUNCTION(ARG1_TYPE x) { return BUILTIN(x); } \
-  _CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, RET_TYPE, FUNCTION, ARG1_TYPE)
+  _CLC_DEF _CLC_OVERLOAD RET_TYPE##2 FUNCTION(ARG1_TYPE##2 x) {                \
+    return BUILTIN(x);                                                         \
+  }                                                                            \
+  _CLC_DEF _CLC_OVERLOAD RET_TYPE##3 FUNCTION(ARG1_TYPE##3 x) {                \
+    return BUILTIN(x);                                                         \
+  }                                                                            \
+  _CLC_DEF _CLC_OVERLOAD RET_TYPE##4 FUNCTION(ARG1_TYPE##4 x) {                \
+    return BUILTIN(x);                                                         \
+  }                                                                            \
+  _CLC_DEF _CLC_OVERLOAD RET_TYPE##8 FUNCTION(ARG1_TYPE##8 x) {                \
+    return BUILTIN(x);                                                         \
+  }                                                                            \
+  _CLC_DEF _CLC_OVERLOAD RET_TYPE##16 FUNCTION(ARG1_TYPE##16 x) {              \
+    return BUILTIN(x);                                                         \
+  }
 
 #ifdef cl_khr_fp16
 
