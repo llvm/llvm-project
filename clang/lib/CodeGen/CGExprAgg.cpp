@@ -2201,6 +2201,8 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
     // But note that getTypeInfo returns 0 for a VLA.
     if (auto *VAT = dyn_cast_or_null<VariableArrayType>(
             getContext().getAsArrayType(Ty))) {
+      assert(Ty->isVariableArrayType());
+      EmitVariablyModifiedType(Ty);
       QualType BaseEltTy;
       SizeVal = emitArrayLength(VAT, BaseEltTy, DestPtr);
       TypeInfo = getContext().getTypeInfoInChars(BaseEltTy);
