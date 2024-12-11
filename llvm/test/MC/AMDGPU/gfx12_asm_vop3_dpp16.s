@@ -1442,6 +1442,12 @@ v_cvt_pk_norm_i16_f16_e64_dpp v5, -v1, |v2| row_xmask:0 row_mask:0x1 bank_mask:0
 v_cvt_pk_norm_i16_f16_e64_dpp v255, -|v255|, -|v255| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
 // GFX12: v_cvt_pk_norm_i16_f16_e64_dpp v255, -|v255|, -|v255| row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xff,0x03,0x12,0xd7,0xfa,0xfe,0x03,0x60,0xff,0x6f,0x05,0x30]
 
+v_cvt_pk_norm_i16_f16_e64_dpp v5, -v1.h, |v2.l| row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
+// GFX12: v_cvt_pk_norm_i16_f16_e64_dpp v5, -v1.h, |v2.l| op_sel:[1,0,0] row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 ; encoding: [0x05,0x0a,0x12,0xd7,0xfa,0x04,0x02,0x20,0x01,0x60,0x09,0x13]
+
+v_cvt_pk_norm_i16_f16_e64_dpp v255, -|v255.l|, -|v255.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
+// GFX12: v_cvt_pk_norm_i16_f16_e64_dpp v255, -|v255.l|, -|v255.h| op_sel:[0,1,0] row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xff,0x13,0x12,0xd7,0xfa,0xfe,0x03,0x60,0xff,0x6f,0x05,0x30]
+
 v_cvt_pk_norm_u16_f16_e64_dpp v5, v1, v2 quad_perm:[3,2,1,0]
 // GFX12: v_cvt_pk_norm_u16_f16_e64_dpp v5, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x13,0xd7,0xfa,0x04,0x02,0x00,0x01,0x1b,0x00,0xff]
 
@@ -1483,6 +1489,12 @@ v_cvt_pk_norm_u16_f16_e64_dpp v5, -v1, |v2| row_xmask:0 row_mask:0x1 bank_mask:0
 
 v_cvt_pk_norm_u16_f16_e64_dpp v255, -|v255|, -|v255| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
 // GFX12: v_cvt_pk_norm_u16_f16_e64_dpp v255, -|v255|, -|v255| row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xff,0x03,0x13,0xd7,0xfa,0xfe,0x03,0x60,0xff,0x6f,0x05,0x30]
+
+v_cvt_pk_norm_u16_f16_e64_dpp v5, -v1.h, |v2.l| row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
+// GFX12: v_cvt_pk_norm_u16_f16_e64_dpp v5, -v1.h, |v2.l| op_sel:[1,0,0] row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 ; encoding: [0x05,0x0a,0x13,0xd7,0xfa,0x04,0x02,0x20,0x01,0x60,0x09,0x13]
+
+v_cvt_pk_norm_u16_f16_e64_dpp v255, -|v255.l|, -|v255.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
+// GFX12: v_cvt_pk_norm_u16_f16_e64_dpp v255, -|v255.l|, -|v255.h| op_sel:[0,1,0] row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xff,0x13,0x13,0xd7,0xfa,0xfe,0x03,0x60,0xff,0x6f,0x05,0x30]
 
 v_cvt_pk_u16_f32_e64_dpp v5, v1, v2 quad_perm:[3,2,1,0]
 // GFX12: v_cvt_pk_u16_f32_e64_dpp v5, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x07,0xd7,0xfa,0x04,0x02,0x00,0x01,0x1b,0x00,0xff]
