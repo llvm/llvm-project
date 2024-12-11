@@ -2389,8 +2389,6 @@ void VPExtendedReductionRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " = ";
   getChainOp()->printAsOperand(O, SlotTracker);
   O << " +";
-  if (isa<FPMathOperator>(getUnderlyingInstr()))
-    O << getUnderlyingInstr()->getFastMathFlags();
   O << " reduce." << Instruction::getOpcodeName(RdxDesc.getOpcode()) << " (";
   getVecOp()->printAsOperand(O, SlotTracker);
   O << " extended to " << *getResultType();
@@ -2414,10 +2412,9 @@ void VPMulAccRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " = ";
   getChainOp()->printAsOperand(O, SlotTracker);
   O << " + ";
-  if (isa<FPMathOperator>(getUnderlyingInstr()))
-    O << getUnderlyingInstr()->getFastMathFlags();
   O << "reduce." << Instruction::getOpcodeName(RdxDesc.getOpcode()) << " (";
-  O << "mul ";
+  O << "mul";
+  printFlags(O);
   if (isExtended())
     O << "(";
   getVecOp0()->printAsOperand(O, SlotTracker);

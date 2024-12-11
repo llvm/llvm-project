@@ -1156,12 +1156,12 @@ define i64 @print_extended_reduction(ptr nocapture readonly %x, ptr nocapture re
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%r.09> = phi ir<0>, ir<%add>
+; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%r.09> = phi ir<0>, vp<%5>
 ; CHECK-NEXT:     vp<%3> = SCALAR-STEPS vp<%2>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%x>, vp<%3>
 ; CHECK-NEXT:     vp<%4> = vector-pointer ir<%arrayidx>
 ; CHECK-NEXT:     WIDEN ir<%load0> = load vp<%4>
-; CHECK-NEXT:     EXTENDED-REDUCE ir<%add> = ir<%r.09> + reduce.add (ir<%load0> extended to i64)
+; CHECK-NEXT:     EXTENDED-REDUCE vp<%5> = ir<%r.09> + reduce.add (ir<%load0> extended to i64)
 ; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
 ; CHECK-NEXT:     EMIT branch-on-count vp<%index.next>, vp<%1>
 ; CHECK-NEXT:   No successors
@@ -1169,18 +1169,18 @@ define i64 @print_extended_reduction(ptr nocapture readonly %x, ptr nocapture re
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<%6> = compute-reduction-result ir<%r.09>, ir<%add>
-; CHECK-NEXT:   EMIT vp<%7> = extract-from-end vp<%6>, ir<1>
+; CHECK-NEXT:   EMIT vp<%7> = compute-reduction-result ir<%r.09>, vp<%5>
+; CHECK-NEXT:   EMIT vp<%8> = extract-from-end vp<%7>, ir<1>
 ; CHECK-NEXT:   EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<%1>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT: Successor(s): ir-bb<for.cond.cleanup.loopexit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.cond.cleanup.loopexit>:
-; CHECK-NEXT:   IR   %add.lcssa = phi i64 [ %add, %for.body ] (extra operand: vp<%7> from middle.block)
+; CHECK-NEXT:   IR   %add.lcssa = phi i64 [ %add, %for.body ] (extra operand: vp<%8> from middle.block)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT vp<%bc.merge.rdx> = resume-phi vp<%6>, ir<0>
+; CHECK-NEXT:   EMIT vp<%bc.merge.rdx> = resume-phi vp<%7>, ir<0>
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body>:
@@ -1228,7 +1228,7 @@ define i64 @print_mulacc(ptr nocapture readonly %x, ptr nocapture readonly %y, i
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%r.09> = phi ir<0>, ir<%add>
+; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%r.09> = phi ir<0>, vp<%6>
 ; CHECK-NEXT:     vp<%3> = SCALAR-STEPS vp<%2>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%x>, vp<%3>
 ; CHECK-NEXT:     vp<%4> = vector-pointer ir<%arrayidx>
@@ -1236,7 +1236,7 @@ define i64 @print_mulacc(ptr nocapture readonly %x, ptr nocapture readonly %y, i
 ; CHECK-NEXT:     CLONE ir<%arrayidx1> = getelementptr inbounds ir<%y>, vp<%3>
 ; CHECK-NEXT:     vp<%5> = vector-pointer ir<%arrayidx1>
 ; CHECK-NEXT:     WIDEN ir<%load1> = load vp<%5>
-; CHECK-NEXT:     MULACC-REDUCE ir<%add> = ir<%r.09> + reduce.add (mul ir<%load0>, ir<%load1>)
+; CHECK-NEXT:     MULACC-REDUCE vp<%6> = ir<%r.09> + reduce.add (mul nsw ir<%load0>, ir<%load1>)
 ; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
 ; CHECK-NEXT:     EMIT branch-on-count vp<%index.next>, vp<%1>
 ; CHECK-NEXT:   No successors
@@ -1244,18 +1244,18 @@ define i64 @print_mulacc(ptr nocapture readonly %x, ptr nocapture readonly %y, i
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<%7> = compute-reduction-result ir<%r.09>, ir<%add>
-; CHECK-NEXT:   EMIT vp<%8> = extract-from-end vp<%7>, ir<1>
+; CHECK-NEXT:   EMIT vp<%8> = compute-reduction-result ir<%r.09>, vp<%6>
+; CHECK-NEXT:   EMIT vp<%9> = extract-from-end vp<%8>, ir<1>
 ; CHECK-NEXT:   EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<%1>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT: Successor(s): ir-bb<for.cond.cleanup.loopexit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.cond.cleanup.loopexit>:
-; CHECK-NEXT:   IR   %add.lcssa = phi i64 [ %add, %for.body ] (extra operand: vp<%8> from middle.block)
+; CHECK-NEXT:   IR   %add.lcssa = phi i64 [ %add, %for.body ] (extra operand: vp<%9> from middle.block)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT vp<%bc.merge.rdx> = resume-phi vp<%7>, ir<0>
+; CHECK-NEXT:   EMIT vp<%bc.merge.rdx> = resume-phi vp<%8>, ir<0>
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body>:
@@ -1307,7 +1307,7 @@ define i64 @print_mulacc_extended(ptr nocapture readonly %x, ptr nocapture reado
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%r.09> = phi ir<0>, ir<%add>
+; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%r.09> = phi ir<0>, vp<%6>
 ; CHECK-NEXT:     vp<%3> = SCALAR-STEPS vp<%2>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%x>, vp<%3>
 ; CHECK-NEXT:     vp<%4> = vector-pointer ir<%arrayidx>
@@ -1315,7 +1315,7 @@ define i64 @print_mulacc_extended(ptr nocapture readonly %x, ptr nocapture reado
 ; CHECK-NEXT:     CLONE ir<%arrayidx1> = getelementptr inbounds ir<%y>, vp<%3>
 ; CHECK-NEXT:     vp<%5> = vector-pointer ir<%arrayidx1>
 ; CHECK-NEXT:     WIDEN ir<%load1> = load vp<%5>
-; CHECK-NEXT:     MULACC-REDUCE ir<%add> = ir<%r.09> + reduce.add (mul (ir<%load0> extended to i64), (ir<%load1> extended to i64))
+; CHECK-NEXT:     MULACC-REDUCE vp<%6> = ir<%r.09> + reduce.add (mul nsw (ir<%load0> extended to i64), (ir<%load1> extended to i64))
 ; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
 ; CHECK-NEXT:     EMIT branch-on-count vp<%index.next>, vp<%1>
 ; CHECK-NEXT:   No successors
@@ -1323,18 +1323,18 @@ define i64 @print_mulacc_extended(ptr nocapture readonly %x, ptr nocapture reado
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<%7> = compute-reduction-result ir<%r.09>, ir<%add>
-; CHECK-NEXT:   EMIT vp<%8> = extract-from-end vp<%7>, ir<1>
+; CHECK-NEXT:   EMIT vp<%8> = compute-reduction-result ir<%r.09>, vp<%6>
+; CHECK-NEXT:   EMIT vp<%9> = extract-from-end vp<%8>, ir<1>
 ; CHECK-NEXT:   EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<%1>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT: Successor(s): ir-bb<for.cond.cleanup.loopexit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.cond.cleanup.loopexit>:
-; CHECK-NEXT:   IR   %add.lcssa = phi i64 [ %add, %for.body ] (extra operand: vp<%8> from middle.block)
+; CHECK-NEXT:   IR   %add.lcssa = phi i64 [ %add, %for.body ] (extra operand: vp<%9> from middle.block)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT vp<%bc.merge.rdx> = resume-phi vp<%7>, ir<0>
+; CHECK-NEXT:   EMIT vp<%bc.merge.rdx> = resume-phi vp<%8>, ir<0>
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body>:

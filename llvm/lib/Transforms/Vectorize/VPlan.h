@@ -1075,7 +1075,9 @@ public:
            R->getVPDefID() == VPRecipeBase::VPWidenCastSC ||
            R->getVPDefID() == VPRecipeBase::VPReplicateSC ||
            R->getVPDefID() == VPRecipeBase::VPReverseVectorPointerSC ||
-           R->getVPDefID() == VPRecipeBase::VPVectorPointerSC;
+           R->getVPDefID() == VPRecipeBase::VPVectorPointerSC ||
+           R->getVPDefID() == VPRecipeBase::VPExtendedReductionSC ||
+           R->getVPDefID() == VPRecipeBase::VPMulAccSC;
   }
 
   static inline bool classof(const VPUser *U) {
@@ -2609,7 +2611,7 @@ public:
 /// A recipe to represent inloop reduction operations, performing a reduction on
 /// a vector operand into a scalar value, and adding the result to a chain.
 /// The Operands are {ChainOp, VecOp, [Condition]}.
-class VPReductionRecipe : public VPSingleDefRecipe {
+class VPReductionRecipe : public VPRecipeWithIRFlags {
   /// The recurrence decriptor for the reduction in question.
   const RecurrenceDescriptor &RdxDesc;
   bool IsOrdered;
@@ -2620,7 +2622,45 @@ protected:
   VPReductionRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
                     Instruction *I, ArrayRef<VPValue *> Operands,
                     VPValue *CondOp, bool IsOrdered)
-      : VPSingleDefRecipe(SC, Operands, I), RdxDesc(R), IsOrdered(IsOrdered) {
+      : VPRecipeWithIRFlags(SC, Operands, *I), RdxDesc(R),
+        IsOrdered(IsOrdered) {
+    if (CondOp) {
+      IsConditional = true;
+      addOperand(CondOp);
+    }
+  }
+
+  // For VPExtendedReductionRecipe.
+  // Note that IsNonNeg flag and the debug location are for extend instruction.
+  VPReductionRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
+                    ArrayRef<VPValue *> Operands, VPValue *CondOp,
+                    bool IsOrdered, bool IsNonNeg, DebugLoc DL)
+      : VPRecipeWithIRFlags(SC, Operands, NonNegFlagsTy(IsNonNeg), DL),
+        RdxDesc(R), IsOrdered(IsOrdered) {
+    if (CondOp) {
+      IsConditional = true;
+      addOperand(CondOp);
+    }
+  }
+
+  // For VPMulAccRecipe.
+  // Note that the NUW/NSW and DL are for mul instruction.
+  VPReductionRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
+                    ArrayRef<VPValue *> Operands, VPValue *CondOp,
+                    bool IsOrdered, bool NUW, bool NSW, DebugLoc DL)
+      : VPRecipeWithIRFlags(SC, Operands, WrapFlagsTy(NUW, NSW), DL),
+        RdxDesc(R), IsOrdered(IsOrdered) {
+    if (CondOp) {
+      IsConditional = true;
+      addOperand(CondOp);
+    }
+  }
+
+  VPReductionRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
+                    ArrayRef<VPValue *> Operands, VPValue *CondOp,
+                    bool IsOrdered, DebugLoc DL)
+      : VPRecipeWithIRFlags(SC, Operands, DL), RdxDesc(R),
+        IsOrdered(IsOrdered) {
     if (CondOp) {
       IsConditional = true;
       addOperand(CondOp);
@@ -2635,6 +2675,13 @@ public:
                           ArrayRef<VPValue *>({ChainOp, VecOp}), CondOp,
                           IsOrdered) {}
 
+  VPReductionRecipe(const RecurrenceDescriptor &R, VPValue *ChainOp,
+                    VPValue *VecOp, VPValue *CondOp, bool IsOrdered,
+                    DebugLoc DL)
+      : VPReductionRecipe(VPDef::VPReductionSC, R,
+                          ArrayRef<VPValue *>({ChainOp, VecOp}), CondOp,
+                          IsOrdered, DL) {}
+
   ~VPReductionRecipe() override = default;
 
   VPReductionRecipe *clone() override {
@@ -2644,7 +2691,9 @@ public:
 
   static inline bool classof(const VPRecipeBase *R) {
     return R->getVPDefID() == VPRecipeBase::VPReductionSC ||
-           R->getVPDefID() == VPRecipeBase::VPReductionEVLSC;
+           R->getVPDefID() == VPRecipeBase::VPReductionEVLSC ||
+           R->getVPDefID() == VPRecipeBase::VPExtendedReductionSC ||
+           R->getVPDefID() == VPRecipeBase::VPMulAccSC;
   }
 
   static inline bool classof(const VPUser *U) {
@@ -2725,15 +2774,13 @@ public:
 };
 
 /// A recipe to represent inloop extended reduction operations, performing a
-/// reduction on a vector operand into a scalar value, and adding the result to
-/// a chain. This recipe is high level abstract which will generate
-/// VPReductionRecipe and VPWidenCastRecipe before execution. The Operands are
-/// {ChainOp, VecOp, [Condition]}.
+/// reduction on a extended vector operand into a scalar value, and adding the
+/// result to a chain. This recipe is abstract and needs to be lowered to
+/// concrete recipes before codegen. The Operands are {ChainOp, VecOp,
+/// [Condition]}.
 class VPExtendedReductionRecipe : public VPReductionRecipe {
   Instruction::CastOps ExtOp;
-  DebugLoc ExtDL;
-  /// Non-negative flag for the extended instruction.
-  bool IsNonNeg;
+  DebugLoc RedDL;
 
 protected:
   VPExtendedReductionRecipe(const unsigned char SC,
@@ -2741,9 +2788,9 @@ protected:
                             Instruction::CastOps ExtOp, DebugLoc ExtDL,
                             bool IsNonNeg, VPValue *ChainOp, VPValue *VecOp,
                             VPValue *CondOp, bool IsOrdered)
-      : VPReductionRecipe(SC, R, RedI, ArrayRef<VPValue *>({ChainOp, VecOp}),
-                          CondOp, IsOrdered),
-        ExtOp(ExtOp), ExtDL(ExtDL), IsNonNeg(IsNonNeg) {}
+      : VPReductionRecipe(SC, R, ArrayRef<VPValue *>({ChainOp, VecOp}), CondOp,
+                          IsOrdered, IsNonNeg, ExtDL),
+        ExtOp(ExtOp), RedDL(RedI->getDebugLoc()) {}
 
 public:
   VPExtendedReductionRecipe(const RecurrenceDescriptor &R, Instruction *RedI,
@@ -2787,25 +2834,19 @@ public:
   /// The Opcode of extend instruction.
   Instruction::CastOps getExtOpcode() const { return ExtOp; }
 
-  bool getNonNegFlags() const { return IsNonNeg; }
-
   /// Return the debug location of the extend instruction.
-  DebugLoc getExtDebugLoc() const { return ExtDL; }
+  DebugLoc getExtDebugLoc() const { return getDebugLoc(); }
+
+  /// Return the debug location of the reduction instruction.
+  DebugLoc getRedDebugLoc() const { return RedDL; }
 };
 
-/// A recipe to represent inloop MulAccreduction operations, performing a
-/// reduction on a vector operand into a scalar value, and adding the result to
-/// a chain. This recipe is high level abstract which will generate
-/// VPReductionRecipe VPWidenRecipe(mul) and VPWidenCastRecipes before
-/// execution. The Operands are {ChainOp, VecOp1, VecOp2, [Condition]}.
+/// A recipe to represent inloop MulAccReduction operations, performing a
+/// reduction.add on the result of vector operands (might be extended)
+/// multiplication into a scalar value, and adding the result to a chain. This
+/// recipe is abstract and needs to be lowered to concrete recipes before
+/// codegen. The Operands are {ChainOp, VecOp1, VecOp2, [Condition]}.
 class VPMulAccRecipe : public VPReductionRecipe {
-
-  // WrapFlags (NoUnsignedWraps, NoSignedWraps)
-  bool NUW;
-  bool NSW;
-
-  // Debug location of the mul instruction.
-  DebugLoc MulDL;
   Instruction::CastOps ExtOp;
 
   // Non-neg flag for the extend instruction.
@@ -2814,6 +2855,9 @@ class VPMulAccRecipe : public VPReductionRecipe {
   // Debug location of extend instruction.
   DebugLoc Ext0DL;
   DebugLoc Ext1DL;
+
+  // Debug location of reduction instruction.
+  DebugLoc RedDL;
 
   // Is this mul-acc recipe contains extend recipes?
   bool IsExtended = false;
@@ -2824,12 +2868,12 @@ protected:
                  Instruction::CastOps ExtOp, bool IsNonNeg, DebugLoc Ext0DL,
                  DebugLoc Ext1DL, VPValue *ChainOp, VPValue *VecOp0,
                  VPValue *VecOp1, VPValue *CondOp, bool IsOrdered)
-      : VPReductionRecipe(SC, R, RedI,
-                          ArrayRef<VPValue *>({ChainOp, VecOp0, VecOp1}),
-                          CondOp, IsOrdered),
-        NUW(NUW), NSW(NSW), MulDL(MulDL), ExtOp(ExtOp), IsNonNeg(IsNonNeg),
-        Ext0DL(Ext0DL), Ext1DL(Ext1DL) {
-    assert(R.getOpcode() == Instruction::Add);
+      : VPReductionRecipe(SC, R, ArrayRef<VPValue *>({ChainOp, VecOp0, VecOp1}),
+                          CondOp, IsOrdered, NUW, NSW, MulDL),
+        ExtOp(ExtOp), IsNonNeg(IsNonNeg), Ext0DL(Ext0DL), Ext1DL(Ext1DL),
+        RedDL(RedI->getDebugLoc()) {
+    assert(R.getOpcode() == Instruction::Add &&
+           "The reduction instruction in MulAccRecipe must be Add");
     IsExtended = true;
   }
 
@@ -2837,11 +2881,11 @@ protected:
                  Instruction *RedI, bool NUW, bool NSW, DebugLoc MulDL,
                  VPValue *ChainOp, VPValue *VecOp0, VPValue *VecOp1,
                  VPValue *CondOp, bool IsOrdered)
-      : VPReductionRecipe(SC, R, RedI,
-                          ArrayRef<VPValue *>({ChainOp, VecOp0, VecOp1}),
-                          CondOp, IsOrdered),
-        NUW(NUW), NSW(NSW), MulDL(MulDL) {
-    assert(R.getOpcode() == Instruction::Add);
+      : VPReductionRecipe(SC, R, ArrayRef<VPValue *>({ChainOp, VecOp0, VecOp1}),
+                          CondOp, IsOrdered, NUW, NSW, MulDL),
+        RedDL(RedI->getDebugLoc()) {
+    assert(R.getOpcode() == Instruction::Add &&
+           "The reduction instruction in MulAccRecipe must be Add");
   }
 
 public:
@@ -2903,21 +2947,25 @@ public:
     return ExtOp == Instruction::CastOps::ZExt;
   }
 
-  /// Return the non-neg flag.
-  bool getNonNegFlags() const { return IsNonNeg; }
+  /// Return the non negative flag for the ext instruction.
+  bool isNonNeg() const { return IsNonNeg; }
 
-  /// Return no-unsigned-wrap.
-  bool hasNoUnsignedWrap() const { return NUW; }
-
-  /// Return no-signed-warp.
-  bool hasNoSignedWrap() const { return NSW; }
+  /// Drop flags in this recipe.
+  void dropPoisonGeneratingFlags() {
+    VPRecipeWithIRFlags::dropPoisonGeneratingFlags();
+    // Also drop the extra flags not in VPRecipeWithIRFlags.
+    this->IsNonNeg = false;
+  }
 
   /// Return debug location of mul instruction.
-  DebugLoc getMulDebugLoc() const { return MulDL; }
+  DebugLoc getMulDebugLoc() const { return getDebugLoc(); }
 
   /// Return debug location of extend instructions.
   DebugLoc getExt0DebugLoc() const { return Ext0DL; }
   DebugLoc getExt1DebugLoc() const { return Ext1DL; }
+
+  /// Return the debug location of reduction instruction.
+  DebugLoc getRedDebugLoc() const { return RedDL; }
 };
 
 /// VPReplicateRecipe replicates a given instruction producing multiple scalar

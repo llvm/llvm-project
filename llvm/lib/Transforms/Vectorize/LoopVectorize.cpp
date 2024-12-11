@@ -9266,7 +9266,7 @@ static VPExtendedReductionRecipe *tryToMatchAndCreateExtendedReduction(
   Type *RedTy = RdxDesc.getRecurrenceType();
 
   // Test if the cost of extended-reduction is valid and clamp the range.
-  // Note that reduction-extended is not always valid for all VF and types.
+  // Note that extended-reduction is not always valid for all VF and types.
   auto IsExtendedRedValidAndClampRange = [&](unsigned Opcode, bool isZExt,
                                              Type *SrcTy) -> bool {
     return LoopVectorizationPlanner::getDecisionAndClampRange(

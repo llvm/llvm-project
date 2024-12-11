@@ -934,10 +934,17 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
     if (RK != RecurKind::Add && RK != RecurKind::Mul)
       continue;
 
-    for (VPUser *U : collectUsersRecursively(PhiR))
+    for (VPUser *U : collectUsersRecursively(PhiR)) {
+      // Flags in reduction recipes are control/store by the recurrence
+      // descriptor. Dropping flags for VPExtendedReductionRecipe and
+      // VPMulaccRecipe may drop flags that we don't expect to drop.
+      if (isa<VPReductionRecipe>(U))
+        continue;
+
       if (auto *RecWithFlags = dyn_cast<VPRecipeWithIRFlags>(U)) {
         RecWithFlags->dropPoisonGeneratingFlags();
       }
+    }
   }
 }
 
@@ -1476,6 +1483,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                   return nullptr;
                 return new VPWidenEVLRecipe(*W, EVL);
               })
+              .Case<VPExtendedReductionRecipe, VPMulAccRecipe>(
+                  [](const auto *R) { return nullptr; })
               .Case<VPReductionRecipe>([&](VPReductionRecipe *Red) {
                 VPValue *NewMask = GetNewMask(Red->getCondOp());
                 return new VPReductionEVLRecipe(*Red, EVL, NewMask);
@@ -1826,9 +1835,9 @@ static void expandVPExtendedReduction(VPExtendedReductionRecipe *ExtRed) {
   VPWidenCastRecipe *Ext;
   // Only ZExt contiains non-neg flags.
   if (ExtRed->isZExt())
-    Ext = new VPWidenCastRecipe(
-        ExtRed->getExtOpcode(), ExtRed->getVecOp(), ExtRed->getResultType(),
-        ExtRed->getNonNegFlags(), ExtRed->getExtDebugLoc());
+    Ext = new VPWidenCastRecipe(ExtRed->getExtOpcode(), ExtRed->getVecOp(),
+                                ExtRed->getResultType(), ExtRed->isNonNeg(),
+                                ExtRed->getExtDebugLoc());
   else
     Ext = new VPWidenCastRecipe(ExtRed->getExtOpcode(), ExtRed->getVecOp(),
                                 ExtRed->getResultType(),
@@ -1836,8 +1845,8 @@ static void expandVPExtendedReduction(VPExtendedReductionRecipe *ExtRed) {
 
   // Generate VPreductionRecipe.
   auto *Red = new VPReductionRecipe(
-      ExtRed->getRecurrenceDescriptor(), ExtRed->getUnderlyingInstr(),
-      ExtRed->getChainOp(), Ext, ExtRed->getCondOp(), ExtRed->isOrdered());
+      ExtRed->getRecurrenceDescriptor(), ExtRed->getChainOp(), Ext,
+      ExtRed->getCondOp(), ExtRed->isOrdered(), ExtRed->getRedDebugLoc());
   Ext->insertBefore(ExtRed);
   Red->insertBefore(ExtRed);
   ExtRed->replaceAllUsesWith(Red);
@@ -1856,7 +1865,7 @@ static void expandVPMulAcc(VPMulAccRecipe *MulAcc) {
   if (MulAcc->isExtended()) {
     if (MulAcc->isZExt())
       Op0 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp0(),
-                                  RedTy, MulAcc->getNonNegFlags(),
+                                  RedTy, MulAcc->isNonNeg(),
                                   MulAcc->getExt0DebugLoc());
     else
       Op0 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp0(),
@@ -1869,7 +1878,7 @@ static void expandVPMulAcc(VPMulAccRecipe *MulAcc) {
     } else {
       if (MulAcc->isZExt())
         Op1 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp1(),
-                                    RedTy, MulAcc->getNonNegFlags(),
+                                    RedTy, MulAcc->isNonNeg(),
                                     MulAcc->getExt1DebugLoc());
       else
         Op1 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp1(),
@@ -1892,8 +1901,8 @@ static void expandVPMulAcc(VPMulAccRecipe *MulAcc) {
 
   // Generate VPReductionRecipe.
   auto *Red = new VPReductionRecipe(
-      MulAcc->getRecurrenceDescriptor(), MulAcc->getUnderlyingInstr(),
-      MulAcc->getChainOp(), Mul, MulAcc->getCondOp(), MulAcc->isOrdered());
+      MulAcc->getRecurrenceDescriptor(), MulAcc->getChainOp(), Mul,
+      MulAcc->getCondOp(), MulAcc->isOrdered(), MulAcc->getRedDebugLoc());
   Red->insertBefore(MulAcc);
 
   MulAcc->replaceAllUsesWith(Red);
