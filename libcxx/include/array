@@ -563,6 +563,7 @@ _LIBCPP_POP_MACROS
 #    include <concepts>
 #    include <cstdlib>
 #    include <iterator>
+#    include <new>
 #    include <type_traits>
 #    include <utility>
 #  endif

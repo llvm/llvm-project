@@ -28,7 +28,6 @@ array cwchar
 array cwctype
 array initializer_list
 array limits
-array new
 array stdexcept
 array version
 atomic climits
@@ -43,7 +42,6 @@ barrier cstdint
 barrier cstring
 barrier ctime
 barrier limits
-barrier new
 barrier ratio
 barrier version
 bit cstdint
@@ -102,7 +100,6 @@ charconv cerrno
 charconv cstdint
 charconv initializer_list
 charconv limits
-charconv new
 charconv version
 chrono array
 chrono bitset
@@ -271,7 +268,6 @@ exception version
 execution version
 expected cstdint
 expected initializer_list
-expected new
 expected version
 experimental/iterator bitset
 experimental/iterator cctype
@@ -671,7 +667,6 @@ mdspan cwchar
 mdspan cwctype
 mdspan initializer_list
 mdspan limits
-mdspan new
 mdspan span
 mdspan stdexcept
 mdspan version
@@ -881,7 +876,6 @@ regex version
 scoped_allocator compare
 scoped_allocator cstdint
 scoped_allocator limits
-scoped_allocator new
 scoped_allocator tuple
 scoped_allocator version
 semaphore climits
@@ -1017,7 +1011,6 @@ string_view cwctype
 string_view initializer_list
 string_view iosfwd
 string_view limits
-string_view new
 string_view stdexcept
 string_view version
 strstream bitset
