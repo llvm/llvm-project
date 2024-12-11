@@ -8784,17 +8784,11 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
 static Value *lookThroughCastConst(CmpInst *CmpI, Value *V1, Value *V2,
                                    Instruction::CastOps *CastOp) {
   auto *Cast1 = dyn_cast<CastInst>(V1);
-  if (!Cast1)
-    return nullptr;
+  auto *C = dyn_cast<Constant>(V2);
+  Type *SrcTy = Cast1->getSrcTy();
+  const DataLayout &DL = CmpI->getDataLayout();
 
   *CastOp = Cast1->getOpcode();
-  Type *SrcTy = Cast1->getSrcTy();
-
-  auto *C = dyn_cast<Constant>(V2);
-  if (!C)
-    return nullptr;
-
-  const DataLayout &DL = CmpI->getDataLayout();
   Constant *CastedTo = nullptr;
   switch (*CastOp) {
   case Instruction::ZExt:
