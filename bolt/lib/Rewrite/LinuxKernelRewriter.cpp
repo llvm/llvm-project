@@ -1660,12 +1660,13 @@ Error LinuxKernelRewriter::readStaticKeysJumpTable() {
   DataExtractor::Cursor Cursor(StaticKeysJumpTableAddress - SectionAddress);
   uint32_t EntryID = 0;
   while (Cursor && Cursor.tell() < Stop->getAddress() - SectionAddress) {
+    uint64_t _;
     const uint64_t JumpAddress =
-        SectionAddress + Cursor.tell() + (int32_t)DE.getU32(Cursor);
+        (_ = SectionAddress + Cursor.tell(), _ + (int32_t)DE.getU32(Cursor));
     const uint64_t TargetAddress =
-        SectionAddress + Cursor.tell() + (int32_t)DE.getU32(Cursor);
+        (_ = SectionAddress + Cursor.tell(), _ + (int32_t)DE.getU32(Cursor));
     const uint64_t KeyAddress =
-        SectionAddress + Cursor.tell() + (int64_t)DE.getU64(Cursor);
+        (_ = SectionAddress + Cursor.tell(), _ + (int64_t)DE.getU64(Cursor));
 
     // Consume the status of the cursor.
     if (!Cursor)

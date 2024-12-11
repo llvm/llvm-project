@@ -35,13 +35,13 @@ _start:
 .L0:
   jmp L1
 # CHECK:      jit
-# CHECK-SAME: # ID: 1 {{.*}} # Likely: 0 # InitValue: 1
+# CHECK-SAME: # ID: 1 {{.*}} # Likely: 1 # InitValue: 0
   nop
 L1:
   .nops 5
   jmp .L0
 # CHECK:      jit
-# CHECK-SAME: # ID: 2 {{.*}} # Likely: 1 # InitValue: 1
+# CHECK-SAME: # ID: 2 {{.*}} # Likely: 0 # InitValue: 0
 
 ## Check that a branch profile associated with a NOP is handled properly when
 ## dynamic branch is created.
@@ -65,6 +65,7 @@ foo:
   .rodata
   .globl __start___jump_table
   .type __start___jump_table, %object
+  .align 8
 __start___jump_table:
 
   .long .L0 - . # Jump address
