@@ -40,6 +40,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
+#include <limits>
 #include <optional>
 #include <utility>
 
@@ -60,6 +61,8 @@ STATISTIC(NumUDivURemsNarrowed,
           "Number of udivs/urems whose width was decreased");
 STATISTIC(NumAShrsConverted, "Number of ashr converted to lshr");
 STATISTIC(NumAShrsRemoved, "Number of ashr removed");
+STATISTIC(NumLShrsRemoved, "Number of lshr removed");
+STATISTIC(NumLShrsNarrowed, "Number of lshrs whose width was decreased");
 STATISTIC(NumSRems,     "Number of srem converted to urem");
 STATISTIC(NumSExt,      "Number of sext converted to zext");
 STATISTIC(NumSIToFP,    "Number of sitofp converted to uitofp");
@@ -92,6 +95,10 @@ STATISTIC(NumSMinMax,
 STATISTIC(NumUDivURemsNarrowedExpanded,
           "Number of bound udiv's/urem's expanded");
 STATISTIC(NumNNeg, "Number of zext/uitofp non-negative deductions");
+
+static cl::opt<bool>
+    NarrowLShr("correlated-propagation-narrow-lshr", cl::init(true), cl::Hidden,
+               cl::desc("Enable narrowing of LShr instructions."));
 
 static Constant *getConstantAt(Value *V, Instruction *At, LazyValueInfo *LVI) {
   if (Constant *C = LVI->getConstant(V, At))
@@ -1067,6 +1074,124 @@ static bool processSDivOrSRem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   return narrowSDivOrSRem(Instr, LCR, RCR);
 }
 
+/**
+ * @brief Narrows type of the LShr instruction if the range of the possible
+ * values fits into a smaller type. Since LShr is a relatively cheap
+ * instruction, the narrowing should not happen too frequently. Performance
+ * testing and compatibility with other passes indicate that the narrowing is
+ * beneficial under the following circumstances:
+ *
+ * i) the narrowing occurs only if all the users of the LShr instruction are
+ * already TruncInst;
+ *
+ * ii) the narrowing is carried out to the largest TruncInst following the LShr
+ * instruction.
+ *
+ * Additionally, the function optimizes the cases where the result of the LShr
+ * instruction is guaranteed to vanish or be equal to poison.
+ */
+static bool narrowLShr(BinaryOperator *LShr, LazyValueInfo *LVI) {
+
+  IntegerType *RetTy = dyn_cast<IntegerType>(LShr->getType());
+  if (!RetTy)
+    return false;
+
+  ConstantRange ArgRange = LVI->getConstantRangeAtUse(LShr->getOperandUse(0),
+                                                      /*UndefAllowed*/ false);
+  ConstantRange ShiftRange = LVI->getConstantRangeAtUse(LShr->getOperandUse(1),
+                                                        /*UndefAllowed*/ false);
+
+  unsigned OrigWidth = RetTy->getScalarSizeInBits();
+  unsigned MaxActiveBitsInArg = ArgRange.getActiveBits();
+  uint64_t MinShiftValue64 = ShiftRange.getUnsignedMin().getZExtValue();
+  unsigned MinShiftValue =
+      MinShiftValue64 < std::numeric_limits<unsigned>::max()
+          ? static_cast<unsigned>(MinShiftValue64)
+          : std::numeric_limits<unsigned>::max();
+
+  // First we deal with the cases where the result is guaranteed to vanish or be
+  // equal to posion.
+
+  auto replaceWith = [&](Value *V) -> void {
+    LShr->replaceAllUsesWith(V);
+    LShr->eraseFromParent();
+    ++NumLShrsRemoved;
+  };
+
+  // If the shift is larger or equal to the bit width of the argument,
+  // the instruction returns a poison value.
+  if (MinShiftValue >= OrigWidth) {
+    replaceWith(PoisonValue::get(RetTy));
+    return true;
+  }
+
+  // If we are guaranteed to shift away all bits,
+  // we replace the shift by the null value.
+  // We should not apply the optimization if LShr is exact,
+  // as the result may be poison.
+  if (!LShr->isExact() && MinShiftValue >= MaxActiveBitsInArg) {
+    replaceWith(Constant::getNullValue(RetTy));
+    return true;
+  }
+
+  // That's how many bits we need.
+  unsigned MaxActiveBits =
+      std::max(MaxActiveBitsInArg, ShiftRange.getActiveBits());
+
+  // We could do better, but is it worth it?
+  // With the first argument being the n-bit integer, we may limit the value of
+  // the second argument to be less than n, as larger shifts would lead to a
+  // vanishing result or poison. Thus the number of bits in the second argument
+  // is limited by Log2(n). Unfortunately, this would require an introduction of
+  // a select instruction (or llvm.min) to make sure every argument larger than
+  // n is mapped to n and not just truncated. We do not implement it here.
+
+  // What is the smallest bit width that can accommodate the entire value ranges
+  // of both of the operands? Don't shrink below 8 bits wide.
+  unsigned NewWidth = std::max<unsigned>(PowerOf2Ceil(MaxActiveBits), 8);
+
+  // NewWidth might be greater than OrigWidth if OrigWidth is not a power of
+  // two.
+  if (NewWidth >= OrigWidth)
+    return false;
+
+  // This is the time to check if all the users are TruncInst
+  // and to figure out what the largest user is.
+  for (User *user : LShr->users()) {
+    if (TruncInst *TI = dyn_cast<TruncInst>(user)) {
+      NewWidth = std::max(NewWidth, TI->getDestTy()->getScalarSizeInBits());
+    } else {
+      return false;
+    }
+  }
+
+  // We are ready to truncate.
+  IRBuilder<> B(LShr);
+  Type *TruncTy = RetTy->getWithNewBitWidth(NewWidth);
+  Value *ArgTrunc = B.CreateTruncOrBitCast(LShr->getOperand(0), TruncTy,
+                                           LShr->getName() + ".arg.trunc");
+  Value *ShiftTrunc = B.CreateTruncOrBitCast(LShr->getOperand(1), TruncTy,
+                                             LShr->getName() + ".shift.trunc");
+  Value *LShrTrunc =
+      B.CreateBinOp(LShr->getOpcode(), ArgTrunc, ShiftTrunc, LShr->getName());
+  Value *Zext = B.CreateZExt(LShrTrunc, RetTy, LShr->getName() + ".zext");
+
+  // Should always cast, but better safe than sorry.
+  if (BinaryOperator *LShrTruncBO = dyn_cast<BinaryOperator>(LShrTrunc)) {
+    LShrTruncBO->setDebugLoc(LShr->getDebugLoc());
+    LShrTruncBO->setIsExact(LShr->isExact());
+  }
+  LShr->replaceAllUsesWith(Zext);
+  LShr->eraseFromParent();
+
+  ++NumLShrsNarrowed;
+  return true;
+}
+
+static bool processLShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
+  return NarrowLShr ? narrowLShr(SDI, LVI) : false;
+}
+
 static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
   ConstantRange LRange =
       LVI->getConstantRangeAtUse(SDI->getOperandUse(0), /*UndefAllowed*/ false);
@@ -1092,6 +1217,11 @@ static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
   BO->setIsExact(SDI->isExact());
   SDI->replaceAllUsesWith(BO);
   SDI->eraseFromParent();
+
+  // Check if the new LShr can be narrowed.
+  if (NarrowLShr) {
+    narrowLShr(BO, LVI);
+  }
 
   return true;
 }
@@ -1253,6 +1383,9 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
         break;
       case Instruction::AShr:
         BBChanged |= processAShr(cast<BinaryOperator>(&II), LVI);
+        break;
+      case Instruction::LShr:
+        BBChanged |= processLShr(cast<BinaryOperator>(&II), LVI);
         break;
       case Instruction::SExt:
         BBChanged |= processSExt(cast<SExtInst>(&II), LVI);
