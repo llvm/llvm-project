@@ -2,7 +2,6 @@ set(LLVM_LINK_COMPONENTS
   OrcShared
   OrcTargetProcess
   Support
-  Core
   )
 
 add_llvm_utility(llvm-jitlink-executor

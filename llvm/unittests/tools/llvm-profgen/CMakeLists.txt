@@ -1,6 +1,5 @@
 set(LLVM_LINK_COMPONENTS
   Support
-  Core
   )
 
 add_llvm_unittest(LLVMProfgenTests
