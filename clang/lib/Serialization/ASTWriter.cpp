@@ -4328,8 +4328,8 @@ uint64_t ASTWriter::WriteSpecializationInfoLookupTable(
                                         IsPartial);
 
   uint64_t Offset = Stream.GetCurrentBitNo();
-  RecordData::value_type Record[] = {IsPartial ? DECL_PARTIAL_SPECIALIZATIONS
-                                               : DECL_SPECIALIZATIONS};
+  RecordData::value_type Record[] = {static_cast<RecordData::value_type>(
+      IsPartial ? DECL_PARTIAL_SPECIALIZATIONS : DECL_SPECIALIZATIONS)};
   Stream.EmitRecordWithBlob(IsPartial ? DeclPartialSpecializationsAbbrev
                                       : DeclSpecializationsAbbrev,
                             Record, LookupTable);
@@ -6065,7 +6065,9 @@ void ASTWriter::WriteSpecializationsUpdates(bool IsPartial) {
                                           LookupTable, IsPartial);
 
     // Write the lookup table
-    RecordData::value_type Record[] = {RecordType, getDeclID(D).getRawValue()};
+    RecordData::value_type Record[] = {
+        static_cast<RecordData::value_type>(RecordType),
+        getDeclID(D).getRawValue()};
     Stream.EmitRecordWithBlob(UpdateSpecializationAbbrev, Record, LookupTable);
   }
 }
