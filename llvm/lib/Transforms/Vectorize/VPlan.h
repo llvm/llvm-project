@@ -1240,6 +1240,9 @@ public:
     // operand). Only generates scalar values (either for the first lane only or
     // for all lanes, depending on its uses).
     PtrAdd,
+    // Returns a scalar boolean value, which is true if any lane of its single
+    // operand is true.
+    AnyOf,
   };
 
 private:
@@ -3888,10 +3891,10 @@ public:
   /// whether to execute the scalar tail loop or the exit block from the loop
   /// latch.
   const VPBasicBlock *getMiddleBlock() const {
-    return cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor());
+    return cast<VPBasicBlock>(getScalarPreheader()->getSinglePredecessor());
   }
   VPBasicBlock *getMiddleBlock() {
-    return cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor());
+    return cast<VPBasicBlock>(getScalarPreheader()->getSinglePredecessor());
   }
 
   /// Return the VPBasicBlock for the preheader of the scalar loop.

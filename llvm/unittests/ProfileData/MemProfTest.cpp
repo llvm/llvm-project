@@ -16,6 +16,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ProfileData/MemProfData.inc"
 #include "llvm/ProfileData/MemProfReader.h"
+#include "llvm/ProfileData/MemProfYAML.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -161,9 +162,8 @@ TEST(MemProf, FillsValue) {
                           /*KeepName=*/true);
 
   llvm::DenseMap<llvm::GlobalValue::GUID, MemProfRecord> Records;
-  for (const auto &Pair : Reader) {
+  for (const auto &Pair : Reader)
     Records.insert({Pair.first, Pair.second});
-  }
 
   // Mock program pseudocode and expected memprof record contents.
   //
@@ -396,9 +396,8 @@ TEST(MemProf, SymbolizationFilter) {
   RawMemProfReader Reader(std::move(Symbolizer), Seg, Prof, CSM);
 
   llvm::SmallVector<MemProfRecord, 1> Records;
-  for (const auto &KeyRecordPair : Reader) {
+  for (const auto &KeyRecordPair : Reader)
     Records.push_back(KeyRecordPair.second);
-  }
 
   ASSERT_THAT(Records, SizeIs(1));
   ASSERT_THAT(Records[0].AllocSites, SizeIs(1));
@@ -428,9 +427,8 @@ TEST(MemProf, BaseMemProfReader) {
   MemProfReader Reader(std::move(MemProfData));
 
   llvm::SmallVector<MemProfRecord, 1> Records;
-  for (const auto &KeyRecordPair : Reader) {
+  for (const auto &KeyRecordPair : Reader)
     Records.push_back(KeyRecordPair.second);
-  }
 
   ASSERT_THAT(Records, SizeIs(1));
   ASSERT_THAT(Records[0].AllocSites, SizeIs(1));
@@ -463,9 +461,8 @@ TEST(MemProf, BaseMemProfReaderWithCSIdMap) {
   MemProfReader Reader(std::move(MemProfData));
 
   llvm::SmallVector<MemProfRecord, 1> Records;
-  for (const auto &KeyRecordPair : Reader) {
+  for (const auto &KeyRecordPair : Reader)
     Records.push_back(KeyRecordPair.second);
-  }
 
   ASSERT_THAT(Records, SizeIs(1));
   ASSERT_THAT(Records[0].AllocSites, SizeIs(1));
@@ -748,7 +745,7 @@ HeapProfileRecords:
 
   // Verify the entire contents of MemProfData.Records.
   ASSERT_THAT(MemProfData.Records, SizeIs(1));
-  const auto &[GUID, Record] = *MemProfData.Records.begin();
+  const auto &[GUID, Record] = MemProfData.Records.front();
   EXPECT_EQ(GUID, 0xdeadbeef12345678ULL);
   ASSERT_THAT(Record.AllocSites, SizeIs(2));
   EXPECT_EQ(Record.AllocSites[0].CSId, hashCallStack(CS1));
