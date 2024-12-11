@@ -699,14 +699,7 @@ template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>& vector<bool, _Allocator>::operator=(const vector& __v) {
   if (this != std::addressof(__v)) {
     __copy_assign_alloc(__v);
-    if (__v.__size_) {
-      if (__v.__size_ > capacity()) {
-        __vdeallocate();
-        __vallocate(__v.__size_);
-      }
-      std::copy(__v.__begin_, __v.__begin_ + __external_cap_to_internal(__v.__size_), __begin_);
-    }
-    __size_ = __v.__size_;
+    __assign_with_size(__v.begin(), __v.end(), __v.size());
   }
   return *this;
 }
@@ -754,7 +747,7 @@ vector<bool, _Allocator>::operator=(vector&& __v)
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::__move_assign(vector& __c, false_type) {
   if (__alloc_ != __c.__alloc_)
-    assign(__c.begin(), __c.end());
+    __assign_with_size(__c.begin(), __c.end(), __c.size());
   else
     __move_assign(__c, true_type());
 }
@@ -773,19 +766,14 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::__move_assign(vecto
 
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::assign(size_type __n, const value_type& __x) {
-  __size_ = 0;
   if (__n > 0) {
-    size_type __c = capacity();
-    if (__n <= __c)
-      __size_ = __n;
-    else {
-      vector __v(get_allocator());
-      __v.reserve(__recommend(__n));
-      __v.__size_ = __n;
-      swap(__v);
+    if (__n > capacity()) {
+      __vdeallocate();
+      __vallocate(__n);
     }
     std::fill_n(begin(), __n, __x);
   }
+  this->__size_ = __n;
 }
 
 template <class _Allocator>
@@ -814,17 +802,15 @@ template <class _ForwardIterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
 vector<bool, _Allocator>::__assign_with_size(_ForwardIterator __first, _Sentinel __last, difference_type __ns) {
   _LIBCPP_ASSERT_VALID_INPUT_RANGE(__ns >= 0, "invalid range specified");
-
-  clear();
-
-  const size_t __n = static_cast<size_type>(__ns);
+  const size_type __n = static_cast<size_type>(__ns);
   if (__n) {
     if (__n > capacity()) {
       __vdeallocate();
       __vallocate(__n);
     }
-    __construct_at_end(__first, __last, __n);
+    std::__copy(__first, __last, this->begin());
   }
+  this->__size_ = __n;
 }
 
 template <class _Allocator>
