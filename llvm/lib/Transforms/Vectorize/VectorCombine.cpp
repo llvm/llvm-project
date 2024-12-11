@@ -702,6 +702,7 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
   SmallVector<int> SrcMask;
   if (NeedLenChg) {
     SrcMask.assign(NumElts, PoisonMaskElem);
+    SrcMask[Index] = Index;
     NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
                                   SrcVecTy, SrcMask, CostKind);
   }
@@ -714,7 +715,6 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
   Value *VecFNeg = Builder.CreateFNegFMF(SrcVec, FNeg);
   if (NeedLenChg) {
     // shuffle DestVec, (shuffle (fneg SrcVec), poison, SrcMask), Mask
-    SrcMask[Index] = Index;
     Value *LenChgShuf = Builder.CreateShuffleVector(
         SrcVec, PoisonValue::get(SrcVecTy), SrcMask);
     NewShuf = Builder.CreateShuffleVector(DestVec, LenChgShuf, Mask);
