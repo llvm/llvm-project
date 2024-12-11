@@ -159,6 +159,12 @@ getEMULEqualsEEWDivSEWTimesLMUL(unsigned Log2EEW, const MachineInstr &MI) {
   auto [MILMUL, MILMULIsFractional] = RISCVVType::decodeVLMUL(MIVLMUL);
   unsigned MILog2SEW =
       MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
+
+  // Mask instructions will have 0 as the SEW operand. But the LMUL of these
+  // instructions is calculated is as if the SEW operand was 3 (e8).
+  if (MILog2SEW == 0)
+    MILog2SEW = 3;
+
   unsigned MISEW = 1 << MILog2SEW;
 
   unsigned EEW = 1 << Log2EEW;
