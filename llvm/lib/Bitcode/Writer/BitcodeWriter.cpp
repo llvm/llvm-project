@@ -4900,7 +4900,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
       NameVals.push_back(*ValueId);
       assert(ModuleIdMap.count(VS->modulePath()));
       NameVals.push_back(ModuleIdMap[VS->modulePath()]);
-      NameVals.push_back(getEncodedGVSummaryFlags(VS->flags()));
+      NameVals.push_back(
+          getEncodedGVSummaryFlags(VS->flags(), shouldImportValueAsDecl(VS)));
       NameVals.push_back(getEncodedGVarFlags(VS->varflags()));
       for (auto &RI : VS->refs()) {
         auto RefValueId = getValueId(RI.getGUID());

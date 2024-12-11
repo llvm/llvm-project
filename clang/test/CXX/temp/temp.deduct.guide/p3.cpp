@@ -33,7 +33,7 @@ template<template<typename> typename TT> struct E { // expected-note 2{{template
 };
 
 A(int) -> int; // expected-error {{deduced type 'int' of deduction guide is not a specialization of template 'A'}}
-template <typename T> A(T)->B<T>;
+template <typename T> A(T)->B<T>;         // expected-error {{deduced type 'B<T>' (aka 'A<T>') of deduction guide is not written as a specialization of template 'A'}}
 template<typename T> A(T*) -> const A<T>; // expected-error {{deduced type 'const A<T>' of deduction guide is not a specialization of template 'A'}}
 
 // A deduction-guide shall be declared in the same scope as the corresponding
@@ -70,12 +70,4 @@ namespace WrongScope {
     using WrongScope::Local;
     Local(int) -> Local<int>; // expected-error {{expected}}
   }
-}
-
-namespace GH54909 {
-template <class T> struct A {};
-struct B {};
-
-template <typename T> using C = B;
-template <typename T> A() -> C<T>; // expected-error {{deduced type 'C<T>' (aka 'GH54909::B') of deduction guide is not a specialization of template 'A'}}
 }

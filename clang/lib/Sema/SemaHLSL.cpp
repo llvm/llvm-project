@@ -434,6 +434,7 @@ void SemaHLSL::CheckSemanticAnnotation(
   switch (AnnotationAttr->getKind()) {
   case attr::HLSLSV_DispatchThreadID:
   case attr::HLSLSV_GroupIndex:
+  case attr::HLSLSV_GroupThreadID:
   case attr::HLSLSV_GroupID:
     if (ST == llvm::Triple::Compute)
       return;
@@ -785,6 +786,15 @@ void SemaHLSL::handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL) {
 
   D->addAttr(::new (getASTContext())
                  HLSLSV_DispatchThreadIDAttr(getASTContext(), AL));
+}
+
+void SemaHLSL::handleSV_GroupThreadIDAttr(Decl *D, const ParsedAttr &AL) {
+  auto *VD = cast<ValueDecl>(D);
+  if (!diagnoseInputIDType(VD->getType(), AL))
+    return;
+
+  D->addAttr(::new (getASTContext())
+                 HLSLSV_GroupThreadIDAttr(getASTContext(), AL));
 }
 
 void SemaHLSL::handleSV_GroupIDAttr(Decl *D, const ParsedAttr &AL) {
@@ -1908,7 +1918,7 @@ static bool CheckResourceHandle(
   const HLSLAttributedResourceType *ResTy =
       ArgType.getTypePtr()->getAs<HLSLAttributedResourceType>();
   if (!ResTy) {
-    S->Diag(TheCall->getArg(0)->getBeginLoc(),
+    S->Diag(TheCall->getArg(ArgIndex)->getBeginLoc(),
             diag::err_typecheck_expect_hlsl_resource)
         << ArgType;
     return true;
@@ -1926,6 +1936,22 @@ static bool CheckResourceHandle(
 // returning an ExprError
 bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_resource_getpointer: {
+    if (SemaRef.checkArgCount(TheCall, 2) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
+                            SemaRef.getASTContext().UnsignedIntTy))
+      return true;
+
+    auto *ResourceTy =
+        TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
+    QualType ContainedTy = ResourceTy->getContainedType();
+    // TODO: Map to an hlsl_device address space.
+    TheCall->setType(getASTContext().getPointerType(ContainedTy));
+    TheCall->setValueKind(VK_LValue);
+
+    break;
+  }
   case Builtin::BI__builtin_hlsl_all:
   case Builtin::BI__builtin_hlsl_any: {
     if (SemaRef.checkArgCount(TheCall, 1))

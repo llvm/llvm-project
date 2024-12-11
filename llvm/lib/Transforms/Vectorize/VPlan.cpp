@@ -222,9 +222,10 @@ VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
 VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
                                    ElementCount VF, unsigned UF, LoopInfo *LI,
                                    DominatorTree *DT, IRBuilderBase &Builder,
-                                   InnerLoopVectorizer *ILV, VPlan *Plan)
+                                   InnerLoopVectorizer *ILV, VPlan *Plan,
+                                   Type *CanonicalIVTy)
     : TTI(TTI), VF(VF), CFG(DT), LI(LI), Builder(Builder), ILV(ILV), Plan(Plan),
-      LVer(nullptr), TypeAnalysis(Plan->getCanonicalIV()->getScalarType()) {}
+      LVer(nullptr), TypeAnalysis(CanonicalIVTy) {}
 
 Value *VPTransformState::get(VPValue *Def, const VPLane &Lane) {
   if (Def->isLiveIn())
@@ -927,7 +928,6 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
 }
 
 void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
-                             Value *CanonicalIVStartValue,
                              VPTransformState &State) {
   Type *TCTy = TripCountV->getType();
   // Check if the backedge taken count is needed, and if so build it.
@@ -952,25 +952,6 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
                : RuntimeVF);
   } else {
     VFxUF.setUnderlyingValue(createStepForVF(Builder, TCTy, State.VF, UF));
-  }
-
-  // When vectorizing the epilogue loop, the canonical induction start value
-  // needs to be changed from zero to the value after the main vector loop.
-  // FIXME: Improve modeling for canonical IV start values in the epilogue loop.
-  if (CanonicalIVStartValue) {
-    VPValue *VPV = getOrAddLiveIn(CanonicalIVStartValue);
-    auto *IV = getCanonicalIV();
-    assert(all_of(IV->users(),
-                  [](const VPUser *U) {
-                    return isa<VPScalarIVStepsRecipe>(U) ||
-                           isa<VPScalarCastRecipe>(U) ||
-                           isa<VPDerivedIVRecipe>(U) ||
-                           cast<VPInstruction>(U)->getOpcode() ==
-                               Instruction::Add;
-                  }) &&
-           "the canonical IV should only be used by its increment or "
-           "ScalarIVSteps when resetting the start value");
-    IV->setOperand(0, VPV);
   }
 }
 
@@ -1015,6 +996,11 @@ void VPlan::execute(VPTransformState *State) {
   replaceVPBBWithIRVPBB(getScalarPreheader(), ScalarPh);
   replaceVPBBWithIRVPBB(MiddleVPBB, MiddleBB);
 
+  LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << State->VF
+                    << ", UF=" << getUF() << '\n');
+  setName("Final VPlan");
+  LLVM_DEBUG(dump());
+
   // Disconnect the middle block from its single successor (the scalar loop
   // header) in both the CFG and DT. The branch will be recreated during VPlan
   // execution.
@@ -1028,8 +1014,11 @@ void VPlan::execute(VPTransformState *State) {
   State->CFG.DTU.applyUpdates(
       {{DominatorTree::Delete, ScalarPh, ScalarPh->getSingleSuccessor()}});
 
-  // Generate code in the loop pre-header and body.
-  for (VPBlockBase *Block : vp_depth_first_shallow(Entry))
+  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
+      Entry);
+  // Generate code for the VPlan, in parts of the vector skeleton, loop body and
+  // successor blocks including the middle, exit and scalar preheader blocks.
+  for (VPBlockBase *Block : RPOT)
     Block->execute(State);
 
   VPBasicBlock *LatchVPBB = getVectorLoopRegion()->getExitingBasicBlock();
@@ -1070,10 +1059,9 @@ void VPlan::execute(VPTransformState *State) {
     }
 
     auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
-    bool NeedsScalar =
-        isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(PhiR) ||
-        (isa<VPReductionPHIRecipe>(PhiR) &&
-         cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
+    bool NeedsScalar = isa<VPScalarPHIRecipe>(PhiR) ||
+                       (isa<VPReductionPHIRecipe>(PhiR) &&
+                        cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
     Value *Phi = State->get(PhiR, NeedsScalar);
     Value *Val = State->get(PhiR->getBackedgeValue(), NeedsScalar);
     cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
@@ -1140,7 +1128,9 @@ void VPlan::print(raw_ostream &O) const {
     getPreheader()->print(O, "", SlotTracker);
   }
 
-  for (const VPBlockBase *Block : vp_depth_first_shallow(getEntry())) {
+  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<const VPBlockBase *>>
+      RPOT(getEntry());
+  for (const VPBlockBase *Block : RPOT) {
     O << '\n';
     Block->print(O, "", SlotTracker);
   }

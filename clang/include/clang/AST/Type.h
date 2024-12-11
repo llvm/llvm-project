@@ -3754,6 +3754,8 @@ public:
   static bool classof(const Type *T) {
     return T->getTypeClass() == ArrayParameter;
   }
+
+  QualType getConstantArrayType(const ASTContext &Ctx) const;
 };
 
 /// Represents a C array with an unspecified size.  For example 'int A[]' has
@@ -6551,7 +6553,7 @@ public:
 
 /// Represents a C++11 auto or C++14 decltype(auto) type, possibly constrained
 /// by a type-constraint.
-class AutoType : public DeducedType, public llvm::FoldingSetNode {
+class AutoType : public DeducedType {
   friend class ASTContext; // ASTContext creates these
 
   ConceptDecl *TypeConstraintConcept;

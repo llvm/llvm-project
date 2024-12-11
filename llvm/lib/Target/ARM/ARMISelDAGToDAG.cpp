@@ -3589,7 +3589,11 @@ void ARMDAGToDAGISel::SelectCMPZ(SDNode *N, bool &SwitchEQNEToPLMI) {
     ReplaceNode(And.getNode(), NewN);
   } else if (Range->first == Range->second) {
     //  3. Only one bit is set. We can shift this into the sign bit and use a
-    //     PL/MI comparison.
+    //     PL/MI comparison. This is not safe if CMPZ has multiple uses because
+    //     only one of them (the one currently being selected) will be switched
+    //     to use the new condition code.
+    if (!N->hasOneUse())
+      return;
     NewN = EmitShift(ARM::tLSLri, X, 31 - Range->first);
     ReplaceNode(And.getNode(), NewN);
 
@@ -5212,7 +5216,7 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
       return;
     case Intrinsic::arm_mve_vsbc:
     case Intrinsic::arm_mve_vsbc_predicated:
-      SelectMVE_VADCSBC(N, ARM::MVE_VSBC, ARM::MVE_VSBCI, true,
+      SelectMVE_VADCSBC(N, ARM::MVE_VSBC, ARM::MVE_VSBCI, false,
                         IntNo == Intrinsic::arm_mve_vsbc_predicated);
       return;
     case Intrinsic::arm_mve_vshlc:

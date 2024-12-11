@@ -240,7 +240,8 @@ def m_riscv_Features_Group : OptionGroup<"<riscv features group>">,
 def m_ve_Features_Group : OptionGroup<"<ve features group>">,
                           Group<m_Group>, DocName<"VE">;
 def m_loongarch_Features_Group : OptionGroup<"<loongarch features group>">,
-                                 Group<m_Group>, DocName<"LoongArch">;
+                                 Group<m_Group>, DocName<"LoongArch">,
+                                 Visibility<[ClangOption, CLOption, FlangOption]>;
 
 def m_libc_Group : OptionGroup<"<m libc group>">, Group<m_mips_Features_Group>,
                    Flags<[HelpHidden]>;
@@ -1786,12 +1787,12 @@ defm debug_info_for_profiling : BoolFOption<"debug-info-for-profiling",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Emit extra debug info to make sample profile more accurate">,
   NegFlag<SetFalse>>;
-def fprofile_generate_cold_function_coverage : Flag<["-"], "fprofile-generate-cold-function-coverage">, 
+def fprofile_generate_cold_function_coverage : Flag<["-"], "fprofile-generate-cold-function-coverage">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Generate instrumented code to collect coverage info for cold functions into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;
-def fprofile_generate_cold_function_coverage_EQ : Joined<["-"], "fprofile-generate-cold-function-coverage=">, 
+def fprofile_generate_cold_function_coverage_EQ : Joined<["-"], "fprofile-generate-cold-function-coverage=">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>, MetaVarName<"<directory>">,
-    HelpText<"Generate instrumented code to collect coverage info for cold functions into <directory>/default.profraw (overridden by LLVM_PROFILE_FILE env var)">; 
+    HelpText<"Generate instrumented code to collect coverage info for cold functions into <directory>/default.profraw (overridden by LLVM_PROFILE_FILE env var)">;
 def fprofile_instr_generate : Flag<["-"], "fprofile-instr-generate">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Generate instrumented code to collect execution counts into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;
@@ -3194,10 +3195,13 @@ defm skip_odr_check_in_gmf : BoolOption<"f", "skip-odr-check-in-gmf",
           "Perform ODR checks for decls in the global module fragment.">>,
   Group<f_Group>;
 
-def modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">,
+def modules_reduced_bmi : Flag<["-"], "fmodules-reduced-bmi">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Generate the reduced BMI">,
   MarshallingInfoFlag<FrontendOpts<"GenReducedBMI">>;
+
+def experimental_modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">, 
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>, Alias<modules_reduced_bmi>;
 
 def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,
   Visibility<[ClangOption, CC1Option, CLOption]>,
@@ -4353,6 +4357,7 @@ defm ptrauth_init_fini : OptInCC1FFlag<"ptrauth-init-fini", "Enable signing of f
 defm ptrauth_init_fini_address_discrimination : OptInCC1FFlag<"ptrauth-init-fini-address-discrimination",
   "Enable address discrimination of function pointers in init/fini arrays">;
 defm ptrauth_elf_got : OptInCC1FFlag<"ptrauth-elf-got", "Enable authentication of pointers from GOT (ELF only)">;
+defm aarch64_jump_table_hardening: OptInCC1FFlag<"aarch64-jump-table-hardening", "Use hardened lowering for jump-table dispatch">;
 }
 
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
@@ -5092,6 +5097,10 @@ def matomics : Flag<["-"], "matomics">, Group<m_wasm_Features_Group>;
 def mno_atomics : Flag<["-"], "mno-atomics">, Group<m_wasm_Features_Group>;
 def mbulk_memory : Flag<["-"], "mbulk-memory">, Group<m_wasm_Features_Group>;
 def mno_bulk_memory : Flag<["-"], "mno-bulk-memory">, Group<m_wasm_Features_Group>;
+def mbulk_memory_opt : Flag<["-"], "mbulk-memory-opt">, Group<m_wasm_Features_Group>;
+def mno_bulk_memory_opt : Flag<["-"], "mno-bulk-memory-opt">, Group<m_wasm_Features_Group>;
+def mcall_indirect_overlong : Flag<["-"], "mcall-indirect-overlong">, Group<m_wasm_Features_Group>;
+def mno_call_indirect_overlong : Flag<["-"], "mno-call-indirect-overlong">, Group<m_wasm_Features_Group>;
 def mexception_handing : Flag<["-"], "mexception-handling">, Group<m_wasm_Features_Group>;
 def mno_exception_handing : Flag<["-"], "mno-exception-handling">, Group<m_wasm_Features_Group>;
 def mextended_const : Flag<["-"], "mextended-const">, Group<m_wasm_Features_Group>;
@@ -6831,10 +6840,6 @@ def flang_deprecated_no_hlfir : Flag<["-"], "flang-deprecated-no-hlfir">,
   Flags<[HelpHidden]>, Visibility<[FlangOption, FC1Option]>,
   HelpText<"Do not use HLFIR lowering (deprecated)">;
 
-def flang_experimental_integer_overflow : Flag<["-"], "flang-experimental-integer-overflow">,
-  Flags<[HelpHidden]>, Visibility<[FlangOption, FC1Option]>,
-  HelpText<"Add nsw flag to internal operations such as do-variable increment (experimental)">;
-
 //===----------------------------------------------------------------------===//
 // FLangOption + CoreOption + NoXarchOption
 //===----------------------------------------------------------------------===//
@@ -7383,9 +7388,12 @@ def fuse_register_sized_bitfield_access: Flag<["-"], "fuse-register-sized-bitfie
 def relaxed_aliasing : Flag<["-"], "relaxed-aliasing">,
   HelpText<"Turn off Type Based Alias Analysis">,
   MarshallingInfoFlag<CodeGenOpts<"RelaxedAliasing">>;
-def pointer_tbaa: Flag<["-"], "pointer-tbaa">,
-  HelpText<"Turn on Type Based Alias Analysis for pointer accesses">,
-  MarshallingInfoFlag<CodeGenOpts<"PointerTBAA">>;
+defm pointer_tbaa: BoolOption<"", "pointer-tbaa", CodeGenOpts<"PointerTBAA">, 
+DefaultTrue,
+  PosFlag<SetTrue, [], [ClangOption], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption], " that single precision floating-point divide and sqrt used in ">>
+  ;
 def no_struct_path_tbaa : Flag<["-"], "no-struct-path-tbaa">,
   HelpText<"Turn off struct-path aware Type Based Alias Analysis">,
   MarshallingInfoNegativeFlag<CodeGenOpts<"StructPathTBAA">>;

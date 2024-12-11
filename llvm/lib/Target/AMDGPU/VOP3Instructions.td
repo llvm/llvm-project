@@ -763,6 +763,10 @@ let SubtargetPredicate = isGFX9Plus, True16Predicate = NotHasTrue16BitInsts in {
   def : OpSelBinOpClampPat<saddsat, V_ADD_I16_e64>;
   def : OpSelBinOpClampPat<ssubsat, V_SUB_I16_e64>;
 } // End SubtargetPredicate = isGFX9Plus, True16Predicate = NotHasTrue16BitInsts
+let True16Predicate = UseRealTrue16Insts in {
+  def : OpSelBinOpClampPat<saddsat, V_ADD_I16_t16_e64>;
+  def : OpSelBinOpClampPat<ssubsat, V_SUB_I16_t16_e64>;
+} // End True16Predicate = UseRealTrue16Insts
 let True16Predicate = UseFakeTrue16Insts in {
   def : OpSelBinOpClampPat<saddsat, V_ADD_I16_fake16_e64>;
   def : OpSelBinOpClampPat<ssubsat, V_SUB_I16_fake16_e64>;
@@ -970,11 +974,16 @@ class VOP3_CVT_SCALE_FP4FP8BF8_F32_TiedInput_Profile<VOPProfile P> : VOP3_Profil
   let HasOMod = 0;
 }
 
+class VOP3_CVT_SCALE_FP4_F32_TiedInput_Profile<VOPProfile P> : VOP3_CVT_SCALE_FP4FP8BF8_F32_TiedInput_Profile<P> {
+  let HasFP8DstByteSel = 1;
+}
+
 class VOP3_CVT_SCALE_SR_F8BF8_F16BF16F32_TiedInput_Profile<VOPProfile P> : VOP3_CVT_SCALE_FP4FP8BF8_F32_TiedInput_Profile<P> {
   let InsVOP3OpSel = (ins FP32InputMods:$src0_modifiers, Src0RC64:$src0,
                           Int32InputMods:$src1_modifiers, Src1RC64:$src1,
                           FP32InputMods:$src2_modifiers, Src2RC64:$src2,
                           VGPR_32:$vdst_in, op_sel0:$op_sel);
+  let HasFP8DstByteSel = 1;
 }
 
 
@@ -992,6 +1001,7 @@ class VOP3_CVT_SCALE_FP4_F16BF16_TiedInput_Profile<VOPProfile P> : VOP3_Profile<
                                             HasSrc0FloatMods, HasSrc1FloatMods,
                                             HasSrc2FloatMods>.ret);
   let HasExtVOP3DPP = 0;
+  let HasFP8DstByteSel = 1;
 }
 
 class VOP3_CVT_SCALE_SR_PK_F4_F16BF16_TiedInput_Profile<ValueType Src0Ty> :
@@ -1004,6 +1014,7 @@ class VOP3_CVT_SCALE_SR_PK_F4_F16BF16_TiedInput_Profile<ValueType Src0Ty> :
   let HasExtVOP3DPP = 0;
   let HasOpSel = 1;
   let HasOMod = 0;
+  let HasFP8DstByteSel = 1;
 }
 
 def VOP3_CVT_SCALE_SR_PK_F4_F32_TiedInput_Profile : VOP3_Profile<VOPProfile<[i32, v2f32, i32, f32]>, VOP3_OPSEL> {
@@ -1015,6 +1026,7 @@ def VOP3_CVT_SCALE_SR_PK_F4_F32_TiedInput_Profile : VOP3_Profile<VOPProfile<[i32
   let HasExtVOP3DPP = 0;
   let HasOpSel = 1;
   let HasOMod = 0;
+  let HasFP8DstByteSel = 1;
 }
 
 class VOP3_CVT_SCALE_PK_F16BF16F32_FP4FP8BF8_Profile<ValueType DstTy> : VOP3_Profile<VOPProfile<[DstTy, i32, f32, untyped]>,
@@ -1090,7 +1102,7 @@ let SubtargetPredicate = HasBF8ConversionScaleInsts, mayRaiseFPException = 0 in 
 let SubtargetPredicate = HasFP4ConversionScaleInsts, mayRaiseFPException = 0 in {
   defm V_CVT_SCALEF32_PK_F32_FP4 : VOP3Inst<"v_cvt_scalef32_pk_f32_fp4", VOP3_CVT_SCALE_PK_F16BF16F32_FP4FP8BF8_Profile<v2f32>>;
   let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
-    defm V_CVT_SCALEF32_PK_FP4_F32 : VOP3Inst<"v_cvt_scalef32_pk_fp4_f32", VOP3_CVT_SCALE_FP4FP8BF8_F32_TiedInput_Profile<VOP_I32_F32_F32_F32>>;
+    defm V_CVT_SCALEF32_PK_FP4_F32 : VOP3Inst<"v_cvt_scalef32_pk_fp4_f32", VOP3_CVT_SCALE_FP4_F32_TiedInput_Profile<VOP_I32_F32_F32_F32>>;
     let Constraints = "@earlyclobber $vdst" in {
       defm V_CVT_SCALEF32_SR_PK_FP4_F16:  VOP3Inst<"v_cvt_scalef32_sr_pk_fp4_f16", VOP3_CVT_SCALE_SR_PK_F4_F16BF16_TiedInput_Profile<v2f16>>;
       defm V_CVT_SCALEF32_SR_PK_FP4_BF16: VOP3Inst<"v_cvt_scalef32_sr_pk_fp4_bf16", VOP3_CVT_SCALE_SR_PK_F4_F16BF16_TiedInput_Profile<v2bf16>>;
@@ -1133,6 +1145,21 @@ let SubtargetPredicate = HasF16BF16ToFP6BF6ConversionScaleInsts, mayRaiseFPExcep
 let SubtargetPredicate = HasGFX950Insts, mayRaiseFPException = 0 in {
   defm V_CVT_SCALEF32_2XPK16_FP6_F32 : VOP3Inst<"v_cvt_scalef32_2xpk16_fp6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V16F32_V16F32_F32>,  int_amdgcn_cvt_scalef32_2xpk16_fp6_f32>;
   defm V_CVT_SCALEF32_2XPK16_BF6_F32 : VOP3Inst<"v_cvt_scalef32_2xpk16_bf6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V16F32_V16F32_F32>,  int_amdgcn_cvt_scalef32_2xpk16_bf6_f32>;
+}
+
+let SubtargetPredicate = HasCvtPkF16F32Inst in {
+  let ReadsModeReg = 0 in {
+    defm V_CVT_PK_F16_F32 : VOP3Inst<"v_cvt_pk_f16_f32", VOP3_Profile<VOP_V2F16_F32_F32>>;
+  }
+
+  def : GCNPat<(v2f16 (fpround v2f32:$src)),
+               (V_CVT_PK_F16_F32_e64 0, (EXTRACT_SUBREG VReg_64:$src, sub0), 0, (EXTRACT_SUBREG VReg_64:$src, sub1))>;
+  def : GCNPat<(v2f16 (fpround v2f64:$src)),
+               (V_CVT_PK_F16_F32_e64 0, (V_CVT_F32_F64_e64 0, (EXTRACT_SUBREG VReg_128:$src, sub0_sub1)),
+                                     0, (V_CVT_F32_F64_e64 0, (EXTRACT_SUBREG VReg_128:$src, sub2_sub3)))>;
+  def : GCNPat<(v2f16 (build_vector (f16 (fpround (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
+                                    (f16 (fpround (f32 (VOP3Mods f32:$src1, i32:$src1_modifiers)))))),
+               (V_CVT_PK_F16_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1)>;
 }
 
 class Cvt_Scale_FP4FP8BF8ToF16F32_Pat<SDPatternOperator node, VOP3_Pseudo inst, ValueType DstTy> : GCNPat<
@@ -1241,6 +1268,11 @@ let True16Predicate = NotHasTrue16BitInsts, SubtargetPredicate = isGFX10Plus in 
    >;
 } // End True16Predicate = NotHasTrue16BitInsts, SubtargetPredicate = isGFX10Plus
 
+let True16Predicate = UseRealTrue16Insts in {
+  def : OpSelBinOpClampPat<uaddsat, V_ADD_NC_U16_t16_e64>;
+  def : OpSelBinOpClampPat<usubsat, V_SUB_NC_U16_t16_e64>;
+} // End OtherPredicates = [UseRealTrue16Insts]
+
 let True16Predicate = UseFakeTrue16Insts in {
    def : OpSelBinOpClampPat<uaddsat, V_ADD_NC_U16_fake16_e64>;
    def : OpSelBinOpClampPat<usubsat, V_SUB_NC_U16_fake16_e64>;
@@ -1264,28 +1296,28 @@ let SubtargetPredicate = isGFX12Plus in {
 let SubtargetPredicate = HasBitOp3Insts  in {
   let isReMaterializable = 1 in {
     defm V_BITOP3_B16 : VOP3Inst <"v_bitop3_b16",
-                                  VOP3_BITOP3_Profile<VOPProfile_True16<VOPProfile <[i16, i16, i16, i16, i8]>>,
+                                  VOP3_BITOP3_Profile<VOPProfile_True16<VOPProfile <[i16, i16, i16, i16, i32]>>,
                                                       VOP3_OPSEL>>;
     defm V_BITOP3_B32 : VOP3Inst <"v_bitop3_b32",
-                                  VOP3_BITOP3_Profile<VOPProfile <[i32, i32, i32, i32, i8]>, VOP3_REGULAR>>;
+                                  VOP3_BITOP3_Profile<VOPProfile <[i32, i32, i32, i32, i32]>, VOP3_REGULAR>>;
   }
   def : GCNPat<
-    (i32 (int_amdgcn_bitop3 i32:$src0, i32:$src1, i32:$src2, i8:$bitop3)),
+    (i32 (int_amdgcn_bitop3 i32:$src0, i32:$src1, i32:$src2, i32:$bitop3)),
     (i32 (V_BITOP3_B32_e64 VSrc_b32:$src0, VSrc_b32:$src1, VSrc_b32:$src2, timm:$bitop3))
   >;
 
   def : GCNPat<
-    (i16 (int_amdgcn_bitop3 i16:$src0, i16:$src1, i16:$src2, i8:$bitop3)),
+    (i16 (int_amdgcn_bitop3 i16:$src0, i16:$src1, i16:$src2, i32:$bitop3)),
     (i16 (V_BITOP3_B16_e64 0, VSrc_b16:$src0, 0, VSrc_b16:$src1, 0, VSrc_b16:$src2, timm:$bitop3, 0))
   >;
 
   def : GCNPat<
-    (i32 (BITOP3_32 i32:$src0, i32:$src1, i32:$src2, i8:$bitop3)),
+    (i32 (BITOP3_32 i32:$src0, i32:$src1, i32:$src2, i32:$bitop3)),
     (i32 (V_BITOP3_B32_e64 VSrc_b32:$src0, VSrc_b32:$src1, VSrc_b32:$src2, timm:$bitop3))
   >;
 
   def : GCNPat<
-    (i16 (BITOP3_16 i16:$src0, i16:$src1, i16:$src2, i8:$bitop3)),
+    (i16 (BITOP3_16 i16:$src0, i16:$src1, i16:$src2, i32:$bitop3)),
     (i16 (V_BITOP3_B16_e64 0, VSrc_b16:$src0, 0, VSrc_b16:$src1, 0, VSrc_b16:$src2, timm:$bitop3, 0))
   >;
 } // End SubtargetPredicate = HasBitOp3Insts
@@ -1311,6 +1343,30 @@ def : DivFmasPat<f64, V_DIV_FMAS_F64_e64, VCC_LO>;
 class VOP3_DOT_Profile<VOPProfile P> : VOP3_Profile<P, VOP3_OPSEL> {
   let HasClamp = 0;
   let HasOMod = 0;
+}
+
+class VOP3_DOT_Profile_t16<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOP3_Profile_True16<P, Features> {
+  let HasClamp = 0;
+  let HasOMod = 0;
+  // Override modifiers for bf16(i16) (same as float modifiers).
+  let HasSrc0Mods = 1;
+  let HasSrc1Mods = 1;
+  let HasSrc2Mods = 1;
+  let Src0ModVOP3DPP = FPVRegInputMods;
+  let Src1ModVOP3DPP = FP32VCSrcInputMods;
+  let Src2ModVOP3DPP = FPT16VCSrcInputMods</*IsFake16*/0>;
+}
+
+class VOP3_DOT_Profile_fake16<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOP3_Profile_Fake16<P, Features> {
+  let HasClamp = 0;
+  let HasOMod = 0;
+  // Override modifiers for bf16(i16) (same as float modifiers).
+  let HasSrc0Mods = 1;
+  let HasSrc1Mods = 1;
+  let HasSrc2Mods = 1;
+  let AsmVOP3Base = getAsmVOP3Base<NumSrcArgs, HasDst, HasClamp,
+   HasOpSel, HasOMod, IsVOP3P, HasModifiers, 1/*HasSrc0Mods*/, 1/*HasSrc1Mods*/,
+   1/*HasSrc2Mods*/, DstVT>.ret;
 }
 
 let SubtargetPredicate = isGFX11Plus in {
@@ -1377,9 +1433,15 @@ let SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0 in {
   defm V_MINIMUMMAXIMUM_F16 : VOP3Inst<"v_minimummaximum_f16", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>>;
 } // End SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0
 
-let OtherPredicates = [HasDot9Insts], IsDOT=1 in {
-  defm V_DOT2_F16_F16 :   VOP3Inst<"v_dot2_f16_f16",   VOP3_DOT_Profile<VOP_F16_V2F16_V2F16_F16>, int_amdgcn_fdot2_f16_f16>;
-  defm V_DOT2_BF16_BF16 : VOP3Inst<"v_dot2_bf16_bf16", VOP3_DOT_Profile<VOP_BF16_V2BF16_V2BF16_BF16>, int_amdgcn_fdot2_bf16_bf16>;
+let SubtargetPredicate = HasDot9Insts, IsDOT=1 in {
+  defm V_DOT2_F16_F16 :   VOP3Inst_t16_with_profiles<"v_dot2_f16_f16", VOP3_DOT_Profile<VOP_F16_V2F16_V2F16_F16>,
+                                                      VOP3_DOT_Profile_t16<VOP_F16_V2F16_V2F16_F16>,
+                                                      VOP3_DOT_Profile_fake16<VOP_F16_V2F16_V2F16_F16>,
+                                                      int_amdgcn_fdot2_f16_f16>;
+  defm V_DOT2_BF16_BF16 : VOP3Inst_t16_with_profiles<"v_dot2_bf16_bf16", VOP3_DOT_Profile<VOP_BF16_V2BF16_V2BF16_BF16>,
+                                                      VOP3_DOT_Profile_t16<VOP_BF16_V2BF16_V2BF16_BF16>,
+                                                      VOP3_DOT_Profile_fake16<VOP_BF16_V2BF16_V2BF16_BF16>,
+                                                      int_amdgcn_fdot2_bf16_bf16>;
 }
 
 class VOP_Pseudo_Scalar<RegisterClass Dst, RegisterOperand SrcOp,
@@ -1429,6 +1491,23 @@ let SubtargetPredicate = HasAshrPkInsts, isReMaterializable = 1 in {
   defm V_ASHR_PK_I8_I32 : VOP3Inst<"v_ashr_pk_i8_i32", VOP3_Profile<VOP_I16_I32_I32_I32, VOP3_OPSEL_ONLY>, int_amdgcn_ashr_pk_i8_i32>;
   defm V_ASHR_PK_U8_I32 : VOP3Inst<"v_ashr_pk_u8_i32", VOP3_Profile<VOP_I16_I32_I32_I32, VOP3_OPSEL_ONLY>, int_amdgcn_ashr_pk_u8_i32>;
 } // End SubtargetPredicate = HasAshrPkInsts, isReMaterializable = 1
+
+class AshrPkI8Pat<VOP3_Pseudo inst, int lo, int hi>: GCNPat<
+    (i16 (or (i16 (shl (i16 (trunc (i32 (AMDGPUsmed3 (i32 (sra i32:$src1, i32:$src2)), (i32 lo), (i32 hi))))), (i16 8))),
+             (i16 (and (i16 (trunc (i32 (AMDGPUsmed3 (i32 (sra i32:$src0, i32:$src2)), (i32 lo), (i32 hi))))), (i16 255))))),
+    (inst 0, VSrc_b32:$src0, 0,  VSrc_b32:$src1, 0, VSrc_b32:$src2, 0 )
+>;
+
+class AshrPkU8Pat<VOP3_Pseudo inst, int lo, int hi>: GCNPat<
+    (i16 (or (i16 (shl (i16 (trunc (i32 (AMDGPUsmed3 (i32 (sra i32:$src1, i32:$src2)), (i32 lo), (i32 hi))))), (i16 8))),
+             (i16 (trunc (i32 (AMDGPUsmed3 (i32 (sra i32:$src0, i32:$src2)), (i32 lo), (i32 hi))))))),
+    (inst 0, VSrc_b32:$src0, 0,  VSrc_b32:$src1, 0, VSrc_b32:$src2, 0 )
+>;
+
+let SubtargetPredicate = HasAshrPkInsts in {
+  def : AshrPkI8Pat<V_ASHR_PK_I8_I32_e64, -128, 127>;
+  def : AshrPkU8Pat<V_ASHR_PK_U8_I32_e64, 0, 255>;
+}
 
 //===----------------------------------------------------------------------===//
 // Integer Clamp Patterns
@@ -1560,8 +1639,10 @@ multiclass VOP3_Realtriple_with_name_gfx11_gfx12<bits<10> op, string opName,
   VOP3_Realtriple_with_name<GFX11Gen, op, opName, asmName>,
   VOP3_Realtriple_with_name<GFX12Gen, op, opName, asmName>;
 
-multiclass VOP3Dot_Realtriple_gfx11_gfx12<bits<10> op> :
-  VOP3Dot_Realtriple<GFX11Gen, op>, VOP3Dot_Realtriple<GFX12Gen, op>;
+multiclass VOP3Dot_Realtriple_t16_and_fake16_gfx11_gfx12<bits<10> op, string asmName, string opName = NAME> {
+  defm _t16: VOP3Dot_Realtriple_gfx11_gfx12<op, asmName, 0, opName#"_t16">;
+  defm _fake16: VOP3Dot_Realtriple_gfx11_gfx12<op, asmName, 0, opName#"_fake16">;
+}
 
 multiclass VOP3_Realtriple_t16_gfx11_gfx12<bits<10> op, string asmName, string opName = NAME,
                                            string pseudo_mnemonic = "", bit isSingle = 0> :
@@ -1653,8 +1734,8 @@ defm V_MAXMIN_U32          : VOP3_Realtriple_gfx11_gfx12<0x262>;
 defm V_MINMAX_U32          : VOP3_Realtriple_gfx11_gfx12<0x263>;
 defm V_MAXMIN_I32          : VOP3_Realtriple_gfx11_gfx12<0x264>;
 defm V_MINMAX_I32          : VOP3_Realtriple_gfx11_gfx12<0x265>;
-defm V_DOT2_F16_F16        : VOP3Dot_Realtriple_gfx11_gfx12<0x266>;
-defm V_DOT2_BF16_BF16      : VOP3Dot_Realtriple_gfx11_gfx12<0x267>;
+defm V_DOT2_F16_F16        : VOP3Dot_Realtriple_t16_and_fake16_gfx11_gfx12<0x266, "v_dot2_f16_f16">;
+defm V_DOT2_BF16_BF16      : VOP3Dot_Realtriple_t16_and_fake16_gfx11_gfx12<0x267, "v_dot2_bf16_bf16">;
 defm V_DIV_SCALE_F32       : VOP3be_Real_gfx11_gfx12<0x2fc, "V_DIV_SCALE_F32", "v_div_scale_f32">;
 defm V_DIV_SCALE_F64       : VOP3be_Real_gfx11_gfx12<0x2fd, "V_DIV_SCALE_F64", "v_div_scale_f64">;
 defm V_MAD_U64_U32_gfx11   : VOP3be_Real_gfx11<0x2fe, "V_MAD_U64_U32_gfx11", "v_mad_u64_u32">;
@@ -1700,6 +1781,11 @@ defm V_OR_B16_t16          : VOP3Only_Realtriple_t16_gfx11_gfx12<0x363, "v_or_b1
 defm V_OR_B16_fake16       : VOP3Only_Realtriple_t16_gfx11_gfx12<0x363, "v_or_b16">;
 defm V_XOR_B16_t16         : VOP3Only_Realtriple_t16_gfx11_gfx12<0x364, "v_xor_b16">;
 defm V_XOR_B16_fake16      : VOP3Only_Realtriple_t16_gfx11_gfx12<0x364, "v_xor_b16">;
+
+let AssemblerPredicate = isGFX11Plus in {
+  def : AMDGPUMnemonicAlias<"v_add3_nc_u32", "v_add3_u32">;
+  def : AMDGPUMnemonicAlias<"v_xor_add_u32", "v_xad_u32">;
+}
 
 //===----------------------------------------------------------------------===//
 // GFX10.
@@ -2047,6 +2133,7 @@ multiclass VOP3_Real_BITOP3_gfx9<bits<10> op, string AsmName, bit isSingle = 0> 
     }
   }
 }
+
 } // End AssemblerPredicate = isGFX9Only, DecoderNamespace = "GFX9"
 
 defm V_MAD_U64_U32      : VOP3be_Real_vi <0x1E8>;
@@ -2261,6 +2348,9 @@ defm V_CVT_SR_BF16_F32: VOP3OpSel_Real_gfx9 <0x2a7>;
 
 defm V_ASHR_PK_I8_I32 : VOP3OpSel_Real_gfx9 <0x265>;
 defm V_ASHR_PK_U8_I32 : VOP3OpSel_Real_gfx9 <0x266>;
+let OtherPredicates = [HasCvtPkF16F32Inst] in {
+defm V_CVT_PK_F16_F32 : VOP3_Real_gfx9<0x267, "v_cvt_pk_f16_f32">;
+}
 
 defm V_CVT_SCALEF32_2XPK16_FP6_F32 : VOP3_Real_gfx9<0x252, "v_cvt_scalef32_2xpk16_fp6_f32">;
 defm V_CVT_SCALEF32_2XPK16_BF6_F32 : VOP3_Real_gfx9<0x253, "v_cvt_scalef32_2xpk16_bf6_f32">;

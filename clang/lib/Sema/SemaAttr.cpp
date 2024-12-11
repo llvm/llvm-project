@@ -270,34 +270,48 @@ void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
 }
 
 void Sema::inferLifetimeCaptureByAttribute(FunctionDecl *FD) {
-  if (!FD)
+  auto *MD = dyn_cast_if_present<CXXMethodDecl>(FD);
+  if (!MD || !MD->getParent()->isInStdNamespace())
     return;
-  auto *MD = dyn_cast<CXXMethodDecl>(FD);
-  if (!MD || !MD->getIdentifier() || !MD->getParent()->isInStdNamespace())
+  auto Annotate = [this](const FunctionDecl *MD) {
+    // Do not infer if any parameter is explicitly annotated.
+    for (ParmVarDecl *PVD : MD->parameters())
+      if (PVD->hasAttr<LifetimeCaptureByAttr>())
+        return;
+    for (ParmVarDecl *PVD : MD->parameters()) {
+      // Methods in standard containers that capture values typically accept
+      // reference-type parameters, e.g., `void push_back(const T& value)`.
+      // We only apply the lifetime_capture_by attribute to parameters of
+      // pointer-like reference types (`const T&`, `T&&`).
+      if (PVD->getType()->isReferenceType() &&
+          sema::isPointerLikeType(PVD->getType().getNonReferenceType())) {
+        int CaptureByThis[] = {LifetimeCaptureByAttr::THIS};
+        PVD->addAttr(
+            LifetimeCaptureByAttr::CreateImplicit(Context, CaptureByThis, 1));
+      }
+    }
+  };
+
+  if (!MD->getIdentifier()) {
+    static const llvm::StringSet<> MapLikeContainer{
+        "map",
+        "multimap",
+        "unordered_map",
+        "unordered_multimap",
+    };
+    // Infer for the map's operator []:
+    //    std::map<string_view, ...> m;
+    //    m[ReturnString(..)] = ...; // !dangling references in m.
+    if (MD->getOverloadedOperator() == OO_Subscript &&
+        MapLikeContainer.contains(MD->getParent()->getName()))
+      Annotate(MD);
     return;
-  // FIXME: Infer for operator[] for map-like containers. For example:
-  //    std::map<string_view, ...> m;
-  //    m[ReturnString(..)] = ...;
+  }
   static const llvm::StringSet<> CapturingMethods{"insert", "push",
                                                   "push_front", "push_back"};
   if (!CapturingMethods.contains(MD->getName()))
     return;
-  // Do not infer if any parameter is explicitly annotated.
-  for (ParmVarDecl *PVD : MD->parameters())
-    if (PVD->hasAttr<LifetimeCaptureByAttr>())
-      return;
-  for (ParmVarDecl *PVD : MD->parameters()) {
-    // Methods in standard containers that capture values typically accept
-    // reference-type parameters, e.g., `void push_back(const T& value)`.
-    // We only apply the lifetime_capture_by attribute to parameters of
-    // pointer-like reference types (`const T&`, `T&&`).
-    if (PVD->getType()->isReferenceType() &&
-        sema::isPointerLikeType(PVD->getType().getNonReferenceType())) {
-      int CaptureByThis[] = {LifetimeCaptureByAttr::THIS};
-      PVD->addAttr(
-          LifetimeCaptureByAttr::CreateImplicit(Context, CaptureByThis, 1));
-    }
-  }
+  Annotate(MD);
 }
 
 void Sema::inferNullableClassAttribute(CXXRecordDecl *CRD) {

@@ -81,12 +81,8 @@ genAllocateClause(lower::AbstractConverter &converter,
   // Check if allocate clause has allocator specified. If so, add it
   // to list of allocators, otherwise, add default allocator to
   // list of allocators.
-  using SimpleModifier = Allocate::AllocatorSimpleModifier;
   using ComplexModifier = Allocate::AllocatorComplexModifier;
-  if (auto &mod = std::get<std::optional<SimpleModifier>>(clause.t)) {
-    mlir::Value operand = fir::getBase(converter.genExprValue(*mod, stmtCtx));
-    allocatorOperands.append(objects.size(), operand);
-  } else if (auto &mod = std::get<std::optional<ComplexModifier>>(clause.t)) {
+  if (auto &mod = std::get<std::optional<ComplexModifier>>(clause.t)) {
     mlir::Value operand = fir::getBase(converter.genExprValue(mod->v, stmtCtx));
     allocatorOperands.append(objects.size(), operand);
   } else {
@@ -457,6 +453,16 @@ bool ClauseProcessor::processPriority(
     mlir::omp::PriorityClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Priority>()) {
     result.priority = fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    return true;
+  }
+  return false;
+}
+
+bool ClauseProcessor::processDetach(mlir::omp::DetachClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Detach>()) {
+    semantics::Symbol *sym = clause->v.sym();
+    mlir::Value symVal = converter.getSymbolAddress(*sym);
+    result.eventHandle = symVal;
     return true;
   }
   return false;

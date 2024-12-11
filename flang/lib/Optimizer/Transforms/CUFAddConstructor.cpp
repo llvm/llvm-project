@@ -145,8 +145,6 @@ struct CUFAddConstructor
         default:
           break;
         }
-        if (!func)
-          continue;
       }
     }
     builder.create<mlir::LLVM::ReturnOp>(loc, mlir::ValueRange{});
