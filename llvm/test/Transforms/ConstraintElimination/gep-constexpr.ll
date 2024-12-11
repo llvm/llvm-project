@@ -41,3 +41,123 @@ entry:
   %c.1 = icmp ult ptr %upper, getelementptr inbounds ([3 x i16], ptr @arr1, i64 0, i64 2)
   ret i1 %c.1
 }
+
+define noundef i1 @gep_constexpr_index_lt_upper_no_inbounds(i32 noundef %i) {
+; CHECK-LABEL: @gep_constexpr_index_lt_upper_no_inbounds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[I:%.*]], 3
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[I]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr i16, ptr @arr1, i64 [[IDXPROM]]
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %cmp = icmp ult i32 %i, 3
+  call void @llvm.assume(i1 %cmp)
+  %idxprom = zext i32 %i to i64
+  %upper = getelementptr i16, ptr @arr1, i64 %idxprom
+  %c.1 = icmp ult ptr %upper, getelementptr inbounds ([3 x i16], ptr @arr1, i64 1, i64 0)
+  ret i1 %c.1
+}
+
+define i1 @gep_constexpr_index_lt_upper_no_inbounds_not_noundef(i32 noundef %i) {
+; CHECK-LABEL: @gep_constexpr_index_lt_upper_no_inbounds_not_noundef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[I:%.*]], 3
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[I]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr i16, ptr @arr1, i64 [[IDXPROM]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult ptr [[UPPER]], getelementptr inbounds ([3 x i16], ptr @arr1, i64 1, i64 0)
+; CHECK-NEXT:    ret i1 [[C_1]]
+;
+entry:
+  %cmp = icmp ult i32 %i, 3
+  call void @llvm.assume(i1 %cmp)
+  %idxprom = zext i32 %i to i64
+  %upper = getelementptr i16, ptr @arr1, i64 %idxprom
+  %c.1 = icmp ult ptr %upper, getelementptr inbounds ([3 x i16], ptr @arr1, i64 1, i64 0)
+  ret i1 %c.1
+}
+
+declare void @use(i1)
+
+define noundef i1 @gep_constexpr_index_lt_upper_no_inbounds_(i32 noundef %i) {
+; CHECK-LABEL: @gep_constexpr_index_lt_upper_no_inbounds_(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i16, ptr @arr1, i64 1
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ule ptr @arr1, [[GEP_1]]
+; CHECK-NEXT:    call void @use(i1 [[C_1]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[I:%.*]], 3
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[I]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr i16, ptr @arr1, i64 [[IDXPROM]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ult ptr [[UPPER]], getelementptr inbounds ([3 x i16], ptr @arr1, i64 1, i64 0)
+; CHECK-NEXT:    ret i1 [[C_2]]
+;
+entry:
+  %gep.1 = getelementptr i16, ptr @arr1, i64 1
+  %c.1 = icmp ule ptr @arr1, %gep.1
+  call void @use(i1 %c.1)
+  %cmp = icmp ult i32 %i, 3
+  call void @llvm.assume(i1 %cmp)
+  %idxprom = zext i32 %i to i64
+  %upper = getelementptr i16, ptr @arr1, i64 %idxprom
+  %c.2 = icmp ult ptr %upper, getelementptr inbounds ([3 x i16], ptr @arr1, i64 1, i64 0)
+  ret i1 %c.2
+}
+
+define noundef i1 @gep_constexpr_index_may_be_gt_upper_no_inbounds(i32 noundef %i) {
+; CHECK-LABEL: @gep_constexpr_index_may_be_gt_upper_no_inbounds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[I:%.*]], 3
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[I]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i16, ptr @arr1, i64 [[IDXPROM]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult ptr [[UPPER]], getelementptr inbounds ([3 x i16], ptr @arr1, i64 0, i64 2)
+; CHECK-NEXT:    ret i1 [[C_1]]
+;
+entry:
+  %cmp = icmp ult i32 %i, 3
+  call void @llvm.assume(i1 %cmp)
+  %idxprom = zext i32 %i to i64
+  %upper = getelementptr inbounds i16, ptr @arr1, i64 %idxprom
+  %c.1 = icmp ult ptr %upper, getelementptr inbounds ([3 x i16], ptr @arr1, i64 0, i64 2)
+  ret i1 %c.1
+}
+
+define noundef i1 @gep_constexpr_index_lt_upper_no_inbounds_i8_gep(i32 noundef %i) {
+; CHECK-LABEL: @gep_constexpr_index_lt_upper_no_inbounds_i8_gep(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[I:%.*]], 6
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[I]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr i8, ptr @arr1, i64 [[IDXPROM]]
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %cmp = icmp ult i32 %i, 6
+  call void @llvm.assume(i1 %cmp)
+  %idxprom = zext i32 %i to i64
+  %upper = getelementptr i8, ptr @arr1, i64 %idxprom
+  %c.1 = icmp ult ptr %upper, getelementptr inbounds ([3 x i16], ptr @arr1, i64 1, i64 0)
+  ret i1 %c.1
+}
+
+define noundef i1 @gep_constexpr_index_may_be_gt_upper_no_inbounds_i8_gep(i32 noundef %i) {
+; CHECK-LABEL: @gep_constexpr_index_may_be_gt_upper_no_inbounds_i8_gep(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[I:%.*]], 7
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[I]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr i8, ptr @arr1, i64 [[IDXPROM]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult ptr [[UPPER]], getelementptr inbounds ([3 x i16], ptr @arr1, i64 1, i64 0)
+; CHECK-NEXT:    ret i1 [[C_1]]
+;
+entry:
+  %cmp = icmp ult i32 %i, 7
+  call void @llvm.assume(i1 %cmp)
+  %idxprom = zext i32 %i to i64
+  %upper = getelementptr i8, ptr @arr1, i64 %idxprom
+  %c.1 = icmp ult ptr %upper, getelementptr inbounds ([3 x i16], ptr @arr1, i64 1, i64 0)
+  ret i1 %c.1
+}

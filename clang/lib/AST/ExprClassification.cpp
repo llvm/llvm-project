@@ -217,7 +217,15 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::SourceLocExprClass:
   case Expr::ConceptSpecializationExprClass:
   case Expr::RequiresExprClass:
+  case Expr::BoundsSafetyPointerPromotionExprClass:
+  case Expr::ForgePtrExprClass:
+  case Expr::GetBoundExprClass:
+  case Expr::TerminatedByToIndexableExprClass:
+  case Expr::TerminatedByFromIndexableExprClass:
     return Cl::CL_PRValue;
+
+  case Expr::AssumptionExprClass:
+    return ClassifyInternal(Ctx, cast<AssumptionExpr>(E)->getWrappedExpr());
 
   case Expr::EmbedExprClass:
     // Nominally, this just goes through as a PRValue until we actually expand
@@ -271,6 +279,18 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
       return isa<FunctionDecl>(cast<DeclRefExpr>(E)->getDecl())
                ? Cl::CL_PRValue : Cl::CL_LValue;
     return ClassifyDecl(Ctx, cast<DeclRefExpr>(E)->getDecl());
+
+  case Expr::BoundsCheckExprClass:
+    // Simply look through.
+    return ClassifyInternal(Ctx, cast<BoundsCheckExpr>(E)->getGuardedExpr());
+
+  case Expr::PredefinedBoundsCheckExprClass:
+    // Simply look through.
+    return ClassifyInternal(Ctx, cast<PredefinedBoundsCheckExpr>(E)->getGuardedExpr());
+
+    // Simply look through.
+  case Expr::MaterializeSequenceExprClass:
+    return ClassifyInternal(Ctx, cast<MaterializeSequenceExpr>(E)->getWrappedExpr());
 
     // Member access is complex.
   case Expr::MemberExprClass:

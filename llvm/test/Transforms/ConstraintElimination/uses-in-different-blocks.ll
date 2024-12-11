@@ -25,7 +25,6 @@ else:
   ret i1 %c.2
 }
 
-
 define i1 @test_conds_single_use_in_different_blocks_2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @test_conds_single_use_in_different_blocks_2(
 ; CHECK-NEXT:  entry:

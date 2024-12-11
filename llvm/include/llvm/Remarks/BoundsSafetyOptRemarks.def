@@ -1,0 +1,58 @@
+//===- BoundsSafetyOptRemarks.def ----------------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+// This file declares the different types of BoundsSafety missed remarks
+//===----------------------------------------------------------------------===//
+
+/* TO_UPSTREAM(BoundsSafety) ON*/
+#ifndef BOUNDS_SAFETY_MISSED_REMARK
+#error BOUNDS_SAFETY_MISSED_REMARK must be defined
+#endif
+
+// BOUNDS_SAFETY_MISSED_REMARK(
+//  <enum suffix>,
+//  <opt remark annotation string>,
+//  <opt remark annotation actionable string>)
+//
+// <enum suffix> - This should be a valid enum identifier. The name of this
+// field indicates the type of missed optimization opportunity.
+//
+// <opt remark annotation string> - First part of the tuple to annotate an
+// instruction. Represents the type of missed optimization opportunity and has
+// the same value as <enum field missed remark type>.
+//
+//  <opt remark annotation actionable string> - Second part of the tuple to
+//  annotate an instruction. It is an explanation to the -fbounds-safety adopters to
+//  rewrite their code to optimize the checks away.
+
+BOUNDS_SAFETY_MISSED_REMARK(
+    PHI_DIRECTION, "bounds-safety-missed-optimization-phi-direction",
+    "Cannot remove bounds checks because the pointer induction variable and "
+    "loop counter are not stepping in the same direction. Consider rewriting "
+    "the loop counter to step in the same direction as the pointer induction "
+    "variable to help the optimizer remove the access bound checks.")
+
+BOUNDS_SAFETY_MISSED_REMARK(
+    PHI_STEP_SIZE, "bounds-safety-missed-optimization-phi-step-size",
+    "Cannot remove bound checks because the pointer induction variable and "
+    "loop counter don't have the same step size. Consider rewriting the loop "
+    "counter to have the same step size as the pointer induction variable to "
+    "help the optimizer remove the access bound checks")
+
+BOUNDS_SAFETY_MISSED_REMARK(
+    MISS_NUW_FLAG, "bounds-safety-missed-optimization-nuw",
+    "Check can not be removed because the arithmetic operation might wrap in "
+    "the unsigned sense. Optimize the check by adding conditions to check for "
+    "overflow before doing the operation")
+
+BOUNDS_SAFETY_MISSED_REMARK(
+    MISS_NSW_FLAG, "bounds-safety-missed-optimization-nsw",
+    "Check can not be removed because the arithmetic operation might wrap in "
+    "the signed sense. Optimize the check by adding conditions to check for "
+    "overflow before doing the operation")
+
+/* TO_UPSTREAM(BoundsSafety) OFF*/

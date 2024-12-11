@@ -342,9 +342,10 @@ bool X86_32ABIInfo::shouldReturnTypeInRegister(QualType Ty,
 
   // If this is a builtin, pointer, enum, complex type, member pointer, or
   // member function pointer it is ok.
-  if (Ty->getAs<BuiltinType>() || Ty->hasPointerRepresentation() ||
-      Ty->isAnyComplexType() || Ty->isEnumeralType() ||
-      Ty->isBlockPointerType() || Ty->isMemberPointerType())
+  if ((Ty->getAs<BuiltinType>() || Ty->hasPointerRepresentation() ||
+       Ty->isAnyComplexType() || Ty->isEnumeralType() ||
+       Ty->isBlockPointerType() || Ty->isMemberPointerType()) &&
+      !Ty->isPointerTypeWithBounds())
     return true;
 
   // Arrays are treated like records.
@@ -1832,6 +1833,28 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
   if (const EnumType *ET = Ty->getAs<EnumType>()) {
     // Classify the underlying integer type.
     classify(ET->getDecl()->getIntegerType(), OffsetBase, Lo, Hi, isNamedArg);
+    return;
+  }
+
+  // BoundsSafety wide pointers.
+  if (Ty->isPointerTypeWithBounds()) {
+    uint64_t Size = getContext().getTypeSize(Ty);
+    // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger
+    // than eight eightbytes, ..., it has class MEMORY.
+    assert(Size <= 512 && "Wide pointers won't be larger than 512 bytes.");
+
+    // This is a summarized version of the RecordType routine such that the
+    // result be equivalent to having RecordDecl for a wide pointer.
+    // In effect, '__indexable' which only has an upper bound will be passed
+    // in register, while '__bidi_indexable' which has both upper and lower
+    // bounds will be passed in memory.
+    if (Size > 128) {
+      Lo = Memory;
+    } else {
+      Lo = Integer;
+      Hi = Integer;
+    }
+    postMerge(Size, Lo, Hi);
     return;
   }
 

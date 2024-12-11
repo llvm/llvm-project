@@ -166,6 +166,194 @@ namespace {
       SrcExpr = src;
     }
 
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    void checkBoundsSafetyConversion(Sema &Self) {
+      if (SrcExpr.isInvalid())
+        return;
+
+      QualType SrcType = SrcExpr.get()->getType();
+
+      auto const *DestPTy = DestType->getAs<PointerType>();
+      auto const *SrcPTy = SrcType->getAs<PointerType>();
+
+      bool SrcIsNull = false;
+      bool IsDstNullTerm = false;
+      bool IsSrcNullTerm = false;
+
+      if (DestPTy && Self.getLangOpts().BoundsSafety) {
+        // Diagnose int to ptr cast.
+        // Without -fbounds-safety, int to wide ptr works as unsafe hatch is
+        // inserted.
+        Expr::EvalResult R;
+        SrcIsNull = SrcExpr.get()->isNullPointerConstant(Self.Context,
+            Expr::NPC_ValueDependentIsNotNull);
+        if (DestPTy->isSafePointer() && !SrcPTy &&
+            !DestPTy->getPointeeType().isVolatileQualified() &&
+            !SrcIsNull) {
+          Self.Diag(OpRange.getBegin(), diag::err_bounds_safety_non_to_pointer);
+          SrcExpr = ExprError();
+          return;
+        }
+      }
+      if (!DestPTy || !SrcPTy)
+        return;
+
+      /// BoundsSafety: Such case should be handled as BoundsSafetyPointerCast.
+      /// \code
+      /// int *__bidi_indexable p1;
+      /// int *__indexable p2 = (int *__indexable)p1;
+      /// \endcode
+      if (Self.getLangOpts().BoundsSafety) {
+        unsigned DiagKind = 0;
+        bool isInvalid = false;
+        // The type error may be nested, so any pointer can result in VT errors
+        Sema::AssignConvertType ConvertTy =
+            Self.CheckValueTerminatedAssignmentConstraints(DestType,
+                                                           SrcExpr.get());
+        switch (ConvertTy) {
+        default:
+          assert(ConvertTy == Sema::Compatible);
+          break;
+        case Sema::IncompatibleStringLiteralToValueTerminatedPointer:
+          DiagKind =
+              diag::err_bounds_safety_incompatible_string_literal_to_terminated_by;
+          isInvalid = true;
+          break;
+        case Sema::IncompatibleValueTerminatedTerminators:
+          DiagKind = diag::err_bounds_safety_incompatible_terminated_by_terminators;
+          isInvalid = true;
+          break;
+        case Sema::IncompatibleValueTerminatedToNonValueTerminatedPointer: {
+          const auto *SrcPointerType = SrcType->getAs<ValueTerminatedType>();
+          IsSrcNullTerm =
+              SrcPointerType->getTerminatorValue(Self.Context).isZero();
+          DiagKind = diag::
+              err_bounds_safety_incompatible_terminated_by_to_non_terminated_by;
+          isInvalid = true;
+          break;
+        }
+        case Sema::IncompatibleNonValueTerminatedToValueTerminatedPointer: {
+          const auto *DstPointerType = DestType->getAs<ValueTerminatedType>();
+          IsDstNullTerm =
+              DstPointerType->getTerminatorValue(Self.Context).isZero();
+          if (Self.getLangOpts().BoundsSafetyRelaxedSystemHeaders) {
+            DiagKind = diag::
+                warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by;
+            isInvalid = false;
+          } else {
+            DiagKind = diag::
+                err_bounds_safety_incompatible_non_terminated_by_to_terminated_by;
+            isInvalid = true;
+          }
+          break;
+        }
+        case Sema::IncompatibleNestedValueTerminatedToNonValueTerminatedPointer:
+          DiagKind = diag::
+              err_bounds_safety_incompatible_terminated_by_to_non_terminated_by_mismatch;
+          isInvalid = true;
+          break;
+        case Sema::IncompatibleNestedNonValueTerminatedToValueTerminatedPointer:
+          if (Self.getLangOpts().BoundsSafetyRelaxedSystemHeaders) {
+            DiagKind = diag::
+                warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by_mismatch;
+            isInvalid = false;
+          } else {
+            DiagKind = diag::
+                err_bounds_safety_incompatible_non_terminated_by_to_terminated_by_mismatch;
+            isInvalid = true;
+          }
+          break;
+        }
+        if (DiagKind) {
+          if (DiagKind ==
+              diag::
+                  err_bounds_safety_incompatible_terminated_by_to_non_terminated_by) {
+            auto FDiag = Self.Diag(OpRange.getBegin(), DiagKind)
+                         << SrcType << DestType << AssignmentAction::Casting
+                         << (IsSrcNullTerm ? /*null_terminated*/ 1
+                                           : /*terminated_by*/ 0);
+          } else if (
+              DiagKind ==
+                  diag::
+                      err_bounds_safety_incompatible_non_terminated_by_to_terminated_by ||
+              DiagKind ==
+                  diag::
+                      warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by) {
+            auto FDiag = Self.Diag(OpRange.getBegin(), DiagKind)
+                         << SrcType << DestType << AssignmentAction::Casting
+                         << (IsDstNullTerm ? /*null_terminated*/ 1
+                                           : /*terminated_by*/ 0);
+          } else {
+            Self.Diag(OpRange.getBegin(), DiagKind)
+                << SrcType << DestType << AssignmentAction::Casting;
+          }
+
+          Self.TryFixAssigningNullTerminatedToBidiIndexableExpr(SrcExpr.get(),
+                                                                  DestType);
+
+          Self.TryFixAssigningImplicitBidiIndexableToNullTerminatedPtr(
+                SrcExpr.get(), DestType);
+
+          Self.TryFixAssigningBidiIndexableExprToNullTerminated(SrcExpr.get(),
+                                                                  DestType);
+
+          if (isInvalid) {
+            SrcExpr = ExprError();
+            return;
+          }
+        }
+
+        if (DestPTy->isSafePointer() && !SrcPTy->isSafePointer() &&
+            !SrcIsNull) {
+          if (!SrcPTy->isUnsafeIndexable()) {
+            // Ensure that the diagnostic says "unsafe indexable" somewhere.
+            SrcType = Self.Context.getBoundsSafetyPointerType(
+                SrcType, BoundsSafetyPointerAttributes::unsafeIndexable());
+          }
+          Self.Diag(OpRange.getBegin(), diag::err_bounds_safety_unsafe_to_safe)
+              << SrcType << DestType << AssignmentAction::Casting;
+          SrcExpr = ExprError();
+          return;
+        }
+
+        if (!SrcIsNull && DestPTy->isPointerTypeWithBounds() &&
+            SrcPTy->isSingle() && !SrcType->isBoundsAttributedType()) {
+          if (SrcPTy->getPointeeType()->isIncompleteOrSizelessType()) {
+            Self.Diag(OpRange.getBegin(),
+                      diag::err_bounds_safety_incomplete_single_to_indexable)
+                << SrcType << DestType << AssignmentAction::Casting;
+          } else {
+            Self.DiagnoseSingleToWideLosingBounds(DestType, SrcType, SrcExpr.get());
+          }
+        }
+      }
+
+      ResultType = Self.deduceCastPointerAttributes(ResultType, SrcType);
+      // Retake the pointer type since DestType has been updated.
+      const auto *ResultPTy = ResultType->getAs<PointerType>();
+      assert(ResultPTy);
+      // Check if we need BoundsSafetyPointerCast by checking the outermost pointer
+      // attributes.
+      if (ResultPTy->getPointerAttributes() != SrcPTy->getPointerAttributes()) {
+        /// We also want to insert BoundsSafetyPointerCast in the cases like below:
+        /// \code
+        /// int *__indexable pi;
+        /// (char *__bidi_indexable) pi;
+        /// \endcode
+        bool SkipNoOp = Kind == CK_NoOp &&
+                        Self.Context.hasSameType(ResultPTy->getPointeeType(),
+                                                 SrcPTy->getPointeeType());
+        if (!SkipNoOp) {
+          QualType Ty = Self.Context.getPointerType(
+              ResultPTy->getPointeeType(), SrcPTy->getPointerAttributes());
+          SrcExpr = Self.ImpCastExprToType(SrcExpr.get(), Ty, Kind,
+                                           SrcExpr.get()->getValueKind());
+        }
+        Kind = CK_BoundsSafetyPointerCast;
+      }
+    }
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
+
     void checkQualifiedDestType() {
       // Destination type may not be qualified with __ptrauth.
       if (DestType.getPointerAuth()) {
@@ -210,6 +398,75 @@ namespace {
     CastOperation &Op;
   };
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON*/
+QualType
+Sema::deduceCastPointerAttributes(QualType ResultType, QualType SrcType) {
+  if (Context.hasSameBoundsSafetyPointerLayout(ResultType, SrcType))
+    return ResultType;
+
+  // We apply the following type attribute inheritance rules.
+  // If a pointer attribute for the cast type is unspecified, the cast
+  // type automatically inherits the source pointer attribute. For example,
+  // in the cases like below, '(int*)val' becomes '(int *__bidi_indexable)val'
+  // because val is 'int *__bidi_indexable'.
+  //  int *val; // auto bound
+  //  int *val2 = (int*)val;
+  // If the source is not a pointer, the cast type inherits the default ABI
+  // visible pointer attribute.
+  std::function<QualType(QualType, QualType, QualType, QualType)>
+      applyAttrToDestTy = [&](QualType DstTy, QualType SrcTy,
+                              QualType MergePointeeTy,
+                              QualType OrigDstTy) -> QualType {
+    const auto *DPTy = DstTy->getAs<PointerType>();
+    if (DPTy->isUnspecified() || MergePointeeTy != DstTy->getPointeeType()) {
+      const auto *DVTT = DstTy->getAs<ValueTerminatedType>();
+
+      const PointerType *SPTy = nullptr;
+      const ValueTerminatedType *SVTT = nullptr;
+      if (!SrcTy.isNull()) {
+        SPTy = SrcTy->getAs<PointerType>();
+        SVTT = SrcTy->getAs<ValueTerminatedType>();
+      }
+
+      if (DVTT) {
+        // DstTy is __terminated_by(), update only the pointee.
+        QualType Ty = Context.getPointerType(
+            MergePointeeTy, BoundsSafetyPointerAttributes::single());
+        return Context.getValueTerminatedType(Ty, DVTT->getTerminatorExpr());
+      }
+
+      if (DPTy->isUnspecified() && SVTT &&
+          Context.hasSameUnqualifiedType(SPTy->getPointeeType(),
+                                         MergePointeeTy)) {
+        // SrcTy is __terminated_by(), update the pointee and inherit the
+        // __terminated_by().
+        assert(!DVTT && SPTy->isSingle());
+        QualType Ty = Context.getPointerType(
+            MergePointeeTy, BoundsSafetyPointerAttributes::single());
+        return Context.getValueTerminatedType(Ty, SVTT->getTerminatorExpr());
+      }
+
+      // Update the pointee and get a new attribute if unspecified.
+      BoundsSafetyPointerAttributes DstAttr;
+      if (!DPTy->isUnspecified()) {
+        DstAttr = DPTy->getPointerAttributes();
+      } else if (SPTy) {
+        DstAttr = SPTy->getPointerAttributes();
+      } else {
+        DstAttr = CurPointerAbi;
+      }
+      return Context.getPointerType(MergePointeeTy, DstAttr);
+    }
+
+    return DstTy;
+  };
+
+  // Update Op.ResultType as it is used to create the cast expression.
+  return Context.mergeBoundsSafetyPointerTypes(
+      ResultType, SrcType, applyAttrToDestTy);
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
 
 static void DiagnoseCastQual(Sema &Self, const ExprResult &SrcExpr,
                              QualType DestType);
@@ -3188,6 +3445,11 @@ void CastOperation::CheckCStyleCast() {
 
     if ((Self.Context.getTypeSize(SrcType) >
          Self.Context.getTypeSize(DestType)) &&
+        /* TO_UPSTREAM(BoundsSafety) ON*/
+        (!SrcType->isPointerTypeWithBounds() ||
+         Self.Context.getTypeSize(Self.Context.getIntPtrType()) >
+             Self.Context.getTypeSize(DestType)) &&
+        /* TO_UPSTREAM(BoundsSafety) OFF*/
         !DestType->isBooleanType()) {
       // C 6.3.2.3p6: Any pointer type may be converted to an integer type.
       // Except as previously specified, the result is implementation-defined.
@@ -3372,6 +3634,10 @@ ExprResult Sema::BuildCStyleCastExpr(SourceLocation LPLoc,
   } else {
     Op.CheckCStyleCast();
   }
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  Op.checkBoundsSafetyConversion(*this);
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   if (Op.SrcExpr.isInvalid())
     return ExprError();

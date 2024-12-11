@@ -1970,6 +1970,50 @@ struct PragmaAssumeNonNullHandler : public PragmaHandler {
   }
 };
 
+/* TO_UPSTREAM(BoundsSafety) ON*/
+struct PragmaAbiPointerAttributesHandler : public PragmaHandler {
+  PragmaAbiPointerAttributesHandler() : PragmaHandler("abi_ptr_attr") {}
+
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &NameTok) override {
+    SourceLocation Loc = NameTok.getLocation();
+    PPCallbacks *Callbacks = PP.getPPCallbacks();
+    Token Tok;
+
+    // Lex the mode.
+    PP.LexUnexpandedToken(Tok);
+    const IdentifierInfo *Mode = Tok.getIdentifierInfo();
+    if (!Mode || !Mode->isStr("set")) {
+      PP.Diag(Tok.getLocation(), diag::err_pp_abi_ptr_attr_set_syntax);
+      return;
+    }
+
+    // Parse '(', arbitrary list of identifiers, ')'
+    PP.LexUnexpandedToken(Tok);
+    if (Tok.isNot(tok::l_paren)) {
+      PP.Diag(Tok.getLocation(), diag::err_pp_abi_ptr_attr_set_syntax);
+      return;
+    }
+
+    SmallVector<const IdentifierInfo *, 2> Attributes;
+    for (PP.LexUnexpandedToken(Tok);
+         const IdentifierInfo *II = Tok.getIdentifierInfo();
+         PP.LexUnexpandedToken(Tok))
+      Attributes.push_back(II);
+
+    if (Tok.isNot(tok::r_paren)) {
+      PP.Diag(Tok.getLocation(), diag::err_pp_abi_ptr_attr_set_syntax);
+      return;
+    }
+
+    PP.LexUnexpandedToken(Tok);
+    if (Tok.isNot(tok::eod))
+      PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol) << "pragma";
+    Callbacks->PragmaAbiPointerAttributesSet(Loc, Attributes);
+  }
+};
+/* TO_UPSTREAM(BoundsSafety) OFF*/
+
 /// Handle "\#pragma region [...]"
 ///
 /// The syntax is
@@ -2150,6 +2194,9 @@ void Preprocessor::RegisterBuiltinPragmas() {
   AddPragmaHandler("clang", new PragmaDiagnosticHandler("clang"));
   AddPragmaHandler("clang", new PragmaARCCFCodeAuditedHandler());
   AddPragmaHandler("clang", new PragmaAssumeNonNullHandler());
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  AddPragmaHandler("clang", new PragmaAbiPointerAttributesHandler());
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
   AddPragmaHandler("clang", new PragmaDeprecatedHandler());
   AddPragmaHandler("clang", new PragmaRestrictExpansionHandler());
   AddPragmaHandler("clang", new PragmaFinalHandler());

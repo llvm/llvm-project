@@ -2455,6 +2455,10 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::BitInt:
   case Type::DependentBitInt:
   case Type::CountAttributed:
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  case Type::DynamicRangePointer:
+  case Type::ValueTerminated:
+  /* TO_UPSTREAM(BoundsSafety) OFF */
     llvm_unreachable("type is illegal as a nested name specifier");
 
   case Type::SubstTemplateTypeParmPack:
@@ -3857,6 +3861,7 @@ void CXXNameMangler::mangleType(const SubstTemplateTypeParmPackType *T) {
 
 // <type> ::= P <type>   # pointer-to
 void CXXNameMangler::mangleType(const PointerType *T) {
+  // FIXME: add a mangling rule for BoundsSafetyPointerKind.
   Out << 'P';
   mangleType(T->getPointeeType());
 }
@@ -4929,7 +4934,15 @@ recurse:
   case Expr::SourceLocExprClass:
   case Expr::EmbedExprClass:
   case Expr::BuiltinBitCastExprClass:
-  {
+  case Expr::BoundsSafetyPointerPromotionExprClass:
+  case Expr::AssumptionExprClass:
+  case Expr::ForgePtrExprClass:
+  case Expr::GetBoundExprClass:
+  case Expr::PredefinedBoundsCheckExprClass:
+  case Expr::BoundsCheckExprClass:
+  case Expr::MaterializeSequenceExprClass:
+  case Expr::TerminatedByToIndexableExprClass:
+  case Expr::TerminatedByFromIndexableExprClass: {
     NotPrimaryExpr();
     if (!NullOut) {
       // As bad as this diagnostic is, it's better than crashing.

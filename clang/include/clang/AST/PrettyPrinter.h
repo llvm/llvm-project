@@ -80,7 +80,17 @@ struct PrintingPolicy {
         PrintCanonicalTypes(false), PrintInjectedClassNameWithArguments(true),
         UsePreferredNames(true), AlwaysIncludeTypeForTemplateArgument(false),
         CleanUglifiedParameters(false), EntireContentsOfLargeArray(true),
-        UseEnumerators(true), UseHLSLTypes(LO.HLSL) {}
+        UseEnumerators(true), UseHLSLTypes(LO.HLSL),
+    /* TO_UPSTREAM(BoundsSafety) ON */
+        CountedByInArrayBracket(false), DelayedArrayQual() {
+    // GNU Attributes cannot be placed inside the array bracket, hence 'counted_by'
+    // attribute in the upstream is printed after the array bracket. Internally,
+    // 'counted_by' can be either inside or outside the bracket, while the inside
+    // has been the primary style. For now, we print it inside the bracket when
+    // -fbounds-safety is enabled, and outside the bracket otherwise.
+    CountedByInArrayBracket = LO.BoundsSafety;
+    /* TO_UPSTREAM(BoundsSafety) OFF */
+  }
 
   /// Adjust this printing policy for cases where it's known that we're
   /// printing C++ code (for instance, if AST dumping reaches a C++-only
@@ -359,8 +369,14 @@ struct PrintingPolicy {
   LLVM_PREFERRED_TYPE(bool)
   unsigned UseHLSLTypes : 1;
 
+  /// Whether to print 'counted_by' attribute inside the array bracket.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned CountedByInArrayBracket : 1;
+
   /// Callbacks to use to allow the behavior of printing to be customized.
   const PrintingCallbacks *Callbacks = nullptr;
+
+  std::string DelayedArrayQual;
 };
 
 } // end namespace clang

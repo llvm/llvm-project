@@ -184,6 +184,11 @@ public:
   void PragmaAssumeNonNullBegin(SourceLocation Loc) override;
   void PragmaAssumeNonNullEnd(SourceLocation Loc) override;
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  void PragmaAbiPointerAttributesSet(
+    SourceLocation Loc, ArrayRef<const IdentifierInfo *> Spec) override;
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   /// Insert whitespace before emitting the next token.
   ///
   /// @param Tok             Next token to be emitted.
@@ -751,6 +756,25 @@ PragmaAssumeNonNullEnd(SourceLocation Loc) {
   *OS << "#pragma clang assume_nonnull end";
   setEmittedDirectiveOnThisLine();
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON */
+void PrintPPOutputPPCallbacks::
+PragmaAbiPointerAttributesSet(SourceLocation Loc,
+                              ArrayRef<const IdentifierInfo *> Spec) {
+  startNewLineIfNeeded();
+  MoveToLine(Loc, /*RequireStartOfLine=*/true);
+  *OS << "#pragma clang abi_ptr_attr set(";
+  bool IsFirst = true;
+  for (const IdentifierInfo *Str : Spec) {
+    if (!IsFirst)
+      *OS << ' ';
+    *OS << Str->getName();
+    IsFirst = false;
+  }
+  *OS << ')';
+  setEmittedDirectiveOnThisLine();
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
 
 void PrintPPOutputPPCallbacks::HandleWhitespaceBeforeTok(const Token &Tok,
                                                          bool RequireSpace,

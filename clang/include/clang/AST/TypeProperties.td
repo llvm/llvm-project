@@ -22,7 +22,13 @@ let Class = PointerType in {
     let Read = [{ node->getPointeeType() }];
   }
 
-  def : Creator<[{ return ctx.getPointerType(pointeeType); }]>;
+  // TO_UPSTREAM(BoundsSafety) ON
+  def : Property<"pointerAttributes", BoundsSafetyPointerAttributes> {
+    let Read = [{ node->getPointerAttributes() }];
+  }
+
+  def : Creator<[{ return ctx.getPointerType(pointeeType, pointerAttributes); }]>;
+  // TO_UPSTREAM(BoundsSafety) OFF
 }
 
 let Class = CountAttributedType in {
@@ -43,6 +49,40 @@ let Class = CountAttributedType in {
   }
   def : Creator<[{ return ctx.getCountAttributedType(WrappedTy, CountExpr, CountInBytes, OrNull, CoupledDecls); }]>;
 }
+
+// TO_UPSTREAM(BoundsSafety) ON
+let Class = DynamicRangePointerType in {
+  def : Property<"PointerTy", QualType> {
+    let Read = [{ node->desugar() }];
+  }
+  def : Property<"StartPtr", ExprRef> {
+    let Read = [{ node->getStartPointer() }];
+  }
+  def : Property<"EndPtr", ExprRef> {
+    let Read = [{ node->getEndPointer() }];
+  }
+  def : Property<"StartPtrDecls", Array<TypeCoupledDeclRefInfo>> {
+    let Read = [{ node->getStartPtrDecls() }];
+  }
+  def : Property<"EndPtrDecls", Array<TypeCoupledDeclRefInfo>> {
+    let Read = [{ node->getEndPtrDecls() }];
+  }
+  def : Creator<[{ return ctx.getDynamicRangePointerType(PointerTy, StartPtr, EndPtr,
+                                                         StartPtrDecls, EndPtrDecls); }]>;
+}
+
+let Class = ValueTerminatedType in {
+  def : Property<"originalType", QualType> {
+    let Read = [{ node->desugar() }];
+  }
+  def : Property<"terminatorExpr", ExprRef> {
+    let Read = [{ node->getTerminatorExpr() }];
+  }
+  def : Creator<[{
+    return ctx.getValueTerminatedType(originalType, terminatorExpr);
+  }]>;
+}
+// TO_UPSTREAM(BoundsSafety) OFF
 
 let Class = AdjustedType in {
   def : Property<"originalType", QualType> {

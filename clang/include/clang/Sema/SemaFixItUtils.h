@@ -86,5 +86,80 @@ struct ConversionFixItGenerator {
   }
 };
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+class BoundsSafetyFixItUtils {
+public:
+  /// Try to find the SourceLocation where a bounds-safety attribute could
+  /// be inserted on a pointer. Note this method does not check if there is an
+  /// attribute already present. Clients should handle this themselves.
+  ///
+  ///
+  /// \param TL - TypeLoc that the attribute could be added to
+  /// \param S - Sema instance
+  ///
+  /// \return a tuple of the SourceLocation where insertion could be performed
+  /// and a boolean that is true iff a space should be inserted after the
+  /// inserted attribute. If the returned SourceLocation is invalid no insertion
+  /// point could be found.
+  static std::tuple<SourceLocation, bool>
+  FindPointerAttrInsertPoint(const TypeLoc TL, Sema &S);
+
+  /// Try to create a FixItHint that adds the provided bounds-safety attribute
+  /// as a new attribute to the variable declaration. Note this method does
+  /// not check for existing attributes. Clients should have this themselves.
+  ///
+  /// \param VD - Variable Declaration to suggest FixIt for. This Variable
+  /// should have a pointer type.
+  /// \param Attribute - The string representation of the Attribute to add.
+  /// \param S - Sema instance
+  ///
+  /// \return A FixIt hint that adds the supplied Attribute to the type
+  /// specifier on the variable declaration. If creating the FixIt fails the
+  /// returned FixIt will be invalid.
+  static FixItHint
+  CreateAnnotatePointerDeclFixIt(const VarDecl *VD,
+                                 const llvm::StringRef Attribute, Sema &S);
+
+  /// Try to create a FixItHint that adds the provided bounds-safety attribute
+  /// as a new attribute to the field declaration. Note this method does
+  /// not check for existing attributes. Clients should have this themselves.
+  ///
+  /// \param VD - Field Declaration to suggest FixIt for. This field
+  /// should have a pointer type.
+  /// \param Attribute - The string representation of the Attribute to add.
+  /// \param S - Sema instance
+  ///
+  /// \return A FixIt hint that adds the supplied Attribute to the type
+  /// specifier on the field declaration. If creating the FixIt fails the
+  /// returned FixIt will be invalid.
+  static FixItHint
+  CreateAnnotatePointerDeclFixIt(const FieldDecl *FD,
+                                 const llvm::StringRef Attribute, Sema &S);
+
+  /// Try to create a FixItHint that adds the provided bounds-safety attribute
+  /// as a new attribute to the variable declaration and all of its previous
+  /// declarations. Note only global variables may have previous declarations.
+  /// Note this method does not check for existing attributes.
+  /// Clients should have this themselves.
+  ///
+  /// \param VD - Variable Declaration to suggest FixIt for. This Variable
+  /// should have a pointer type.
+  /// \param Attribute - The string representation of the Attribute to add.
+  /// \param S - Sema instance
+  /// \param FixIts - A SmallVector of (FixIts hint, VarDecl) tuples. Every
+  /// valid FixHit that can be created will be added to this SmallVector. Each
+  /// FixIt hint adds the supplied Attribute to the type specifier on each of
+  /// the variable declarations.
+  static void CreateAnnotateAllPointerDeclsFixIts(
+      const VarDecl *VD, const llvm::StringRef Attribute, Sema &S,
+      llvm::SmallVectorImpl<std::tuple<FixItHint, const DeclaratorDecl *>>
+          &FixIts);
+
+private:
+  static FixItHint CreateAnnotateVarDeclOrFieldDeclFixIt(
+      const DeclaratorDecl *VD, const llvm::StringRef Attribute, Sema &S);
+};
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 } // endof namespace clang
 #endif

@@ -171,13 +171,14 @@ struct on_member_pointer_fn_ptr_ty_ty_pos {
   int count;
 };
 
+/* TO_UPSTREAM(BoundsSafety) ON */
 struct on_member_pointer_fn_ptr_ty_typedef_ty_pos {
-  // TODO: This should fail because the attribute is
-  // on a pointer with the pointee being a function type.
-  // expected-error@+1{{use of undeclared identifier 'count'}}
+  // disabled-expected-error@+1{{use of undeclared identifier 'count'}}
+  // expected-error@+1{{'counted_by' cannot be applied to a pointer with pointee of unknown size because 'void (void)' is a function type}}
   fn_ptr_ty __counted_by(count) fn_ptr;
   int count;
 };
+/* TO_UPSTREAM(BoundsSafety) OFF */
 
 struct on_member_pointer_fn_ptr_ty_ty_pos_inner {
   // TODO: This should fail because the attribute is

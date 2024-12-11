@@ -691,6 +691,14 @@ public:
   /// can be captured.
   bool isInitCapture() const;
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  /// Whether this decl is a dependent parameter referred to by the return type
+  /// that is a bounds-attributed type.
+  bool isDependentParamOfReturnType(
+      const BoundsAttributedType **RetType = nullptr,
+      const TypeCoupledDeclRefInfo **Info = nullptr) const;
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   // If this is a VarDecl, or a BindindDecl with an
   // associated decomposed VarDecl, return that VarDecl.
   VarDecl *getPotentiallyDecomposedVarDecl();
@@ -4347,6 +4355,9 @@ public:
   /// leaks.
   bool isOrContainsUnion() const;
 
+  // TO_UPSTREAM(BoundsSafety)
+  bool isParentStructOf(const Decl *D) const;
+
   // Iterator access to field members. The field iterator only visits
   // the non-static data members of this class, ignoring any static
   // data members, functions, constructors, destructors, etc.
@@ -5011,6 +5022,12 @@ void Redeclarable<decl_type>::setPreviousDecl(decl_type *PrevDecl) {
   assert(!isa<NamedDecl>(static_cast<decl_type*>(this)) ||
          cast<NamedDecl>(static_cast<decl_type*>(this))->isLinkageValid());
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON */
+// A BoundsSafety helper function.
+/// Return `true` if \p D is const qualified or attributed as immutable.
+bool IsConstOrLateConst(const Decl *D);
+/* TO_UPSTREAM(BoundsSafety) OFF */
 
 // Inline function definitions.
 

@@ -1787,6 +1787,17 @@ bool CursorVisitor::VisitCountAttributedTypeLoc(CountAttributedTypeLoc TL) {
   return Visit(TL.getInnerLoc());
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+bool CursorVisitor::VisitDynamicRangePointerTypeLoc(
+    DynamicRangePointerTypeLoc TL) {
+  return Visit(TL.getInnerLoc());
+}
+
+bool CursorVisitor::VisitValueTerminatedTypeLoc(ValueTerminatedTypeLoc TL) {
+  return Visit(TL.getOriginalLoc());
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 bool CursorVisitor::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
   return Visit(TL.getWrappedLoc());
 }
@@ -5959,6 +5970,10 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("ObjCMessageExpr");
   case CXCursor_BuiltinBitCastExpr:
     return cxstring::createRef("BuiltinBitCastExpr");
+  case CXCursor_ForgePtrExpr:
+    return cxstring::createRef("ForgePtrExpr");
+  case CXCursor_GetBoundExpr:
+    return cxstring::createRef("GetBoundExpr");
   case CXCursor_ConceptSpecializationExpr:
     return cxstring::createRef("ConceptSpecializationExpr");
   case CXCursor_RequiresExpr:

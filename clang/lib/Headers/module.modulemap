@@ -326,3 +326,10 @@ module ptrauth {
   header "ptrauth.h"
   export *
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON */
+module ptrcheck {
+  header "ptrcheck.h"
+  export *
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */

@@ -4342,6 +4342,16 @@ def note_reference_is_return_value : Note<"%0 returns a reference">;
 
 def note_pointer_declared_here : Note<
   "pointer %0 declared here">;
+/* TO_UPSTREAM(BoundsSafety) ON */
+def note_pointer_declared_here_quoted : Note<
+  "pointer '%0' declared here">;
+def note_pointer_initialized_here : Note<
+  "pointer %0 initialized here">;
+def note_pointer_assigned_here : Note<
+  "pointer %0 assigned here">;
+def note_unnamed_pointer_declared_here : Note<
+  "pointer declared here">;
+/* TO_UPSTREAM(BoundsSafety) OFF */
 def warn_division_sizeof_ptr : Warning<
   "'%0' will return the size of the pointer, not the array itself">,
   InGroup<DiagGroup<"sizeof-pointer-div">>;
@@ -4435,6 +4445,8 @@ def err_mismatched_visibility: Error<"visibility does not match previous declara
 def note_previous_attribute : Note<"previous attribute is here">;
 def note_conflicting_attribute : Note<"conflicting attribute is here">;
 def note_attribute : Note<"attribute is here">;
+// TO_UPSTREAM(BoundsSafety)
+def note_named_attribute : Note<"%0 attribute is here">;
 def err_mismatched_ms_inheritance : Error<
   "inheritance model does not match %select{definition|previous declaration}0">;
 def warn_ignored_ms_inheritance : Warning<
@@ -12341,6 +12353,838 @@ def warn_target_clone_no_impact_options
     : Warning<"version list contains entries that don't impact code generation">,
       InGroup<FunctionMultiVersioning>;
 
+// TO_UPSTREAM(BoundsSafety) ON
+let CategoryName = "BoundsSafety Pointer Attributes Issue" in {
+
+def err_bounds_safety_conflicting_pointer_attributes : Error<
+  "%select{array|pointer}0 cannot have more than one %select{bound|type|count|end|terminator}1 attribute">;
+def note_bounds_safety_conflicting_pointer_attribute_args : Note<
+  "conflicting arguments for %select{count|end|terminator}0 were '%1' and '%2'">;
+def warn_bounds_safety_duplicate_pointer_attributes : Warning<
+  "%select{array|pointer}0 annotated with %select{__unsafe_indexable|__bidi_indexable|__indexable|__single|__terminated_by}1 "
+  "multiple times. Annotate only once to remove this warning">, InGroup<BoundsSafetyRedundantAttribute>;
+def err_bounds_safety_complete_array_with_count : Error<
+  "arrays with an explicit size decay to counted pointers and cannot also have "
+  "a count attribute">;
+def warn_bounds_safety_promoting_incomplete_array_without_count : Warning<
+  "accessing elements of an unannotated incomplete array always fails at runtime">, InGroup<BoundsSafetyIncompleteArray>;
+def err_bounds_safety_conflicting_count_bound_attributes : Error<
+  "pointer cannot be %0 and '__%select{bidi_indexable|indexable}1' at the same time">;
+def err_bounds_safety_end_pointer_single : Error<
+  "end-pointer must be '__single'">;
+def err_bounds_safety_conflicting_count_range_attributes : Error<
+  "pointer cannot have count and range at the same time">;
+def err_flexible_array_member_passed_by_copy : Error<
+  "-fbounds-safety forbids passing %0 by copy because it has a flexible array "
+  "member">;
+def err_bounds_safety_dynamic_count_function_call : Error<
+  "argument of '%select{__counted_by|__sized_by|__counted_by_or_null|__sized_by_or_null}0' attribute can only reference "
+	"function with 'const' attribute">;
+def err_bounds_safety_dynamic_count_function_call_argument : Error<
+  "argument of function call '%0' in '%select{__counted_by|__sized_by|__counted_by_or_null|__sized_by_or_null}1' attribute is not a constant expression">;
+def err_attribute_invalid_argument_expression_for_pointer_bounds_attribute : Error<
+  "invalid argument expression to bounds attribute">;
+def err_invalid_decl_kind_bounds_safety_dynamic_count : Error<
+  "count expression %select{on struct field|in function declaration}0 may only "
+  "reference %select{other fields of the same struct|parameters of that function}0">;
+def err_invalid_decl_kind_bounds_safety_union_count : Error<
+  "cannot use %0 on union fields">;
+def err_multiple_coupled_decls_in_bounds_safety_dynamic_count : Error<
+  "multiple coupled declarations in a -fbounds-safety attribute are not supported yet">;
+def err_attribute_argument_type_for_bounds_safety_count : Error<
+  "%0 attribute requires an integer type argument">;
+def err_attribute_argument_type_for_bounds_safety_range : Error<
+  "%0 attribute requires a pointer type argument">;
+def err_bounds_safety_function_pointers_cannot_be_indexable : Error<
+  "function pointers cannot be indexable">;
+def err_bounds_safety_voidptr_must_use_byte_count : Error<
+  "void pointers must use a byte count attribute instead of an item count">;
+def err_bounds_safety_array_decay_to_single : Error<
+  "parameter of array type %0 decays to a __single pointer, and will not allow "
+  "arithmetic">;
+def note_bounds_safety_array_decay_use_count_annotation : Note<
+  "add a count attribute within the declarator brackets or convert the "
+  "parameter to a pointer with a count or size attribute">;
+def err_nested_bounds_safety_pointer_attribute_mismatch : Error<
+  "%select{%diff{assigning to $ from $|assigning to incompatible nested pointer type}0,1"
+  "|%diff{passing $ to parameter of incompatible nested pointer type $|"
+  "passing to parameter of incompatible nested pointer type}0,1"
+  "|%diff{returning $ from a function with result of incompatible nested pointer type $|"
+  "returning from function with return of incompatible nested pointer type}0,1"
+  "|%diff{converting $ to incompatible nested pointer type $|"
+  "converting between incompatible nested pointer types}0,1"
+  "|%diff{initializing $ with an expression of incompatible nested pointer type $|"
+  "initializing with expression of incompatible nested pointer type}0,1"
+  "|%diff{sending $ to parameter of incompatible nested pointer type $|"
+  "sending to parameter of incompatible nested pointer type}0,1"
+  "|%diff{casting $ to incompatible nested pointer type $|"
+  "casting between incompatible nested pointer types}0,1}2; "
+  "use explicit cast to perform this conversion">;
+def err_cond_expr_nested_bounds_safety_pointer_attribute_mismatch : Error<
+  "conditional expression evaluates %select{values with incompatible nested pointer types"
+  "|functions with incompatible bound attributes|values with mismatching __terminated_by attributes}2"
+  "%diff{ $ and $|}0,1">;
+def err_typecheck_cond_incompatible_pointers : Error<
+  "conditional expression evaluates values with incompatible pointee types"
+  "%diff{ $ and $|}0,1; use explicit casts to perform this conversion">;
+def err_bounds_safety_non_to_pointer : Error<
+  "non-pointer to safe pointer conversion is not allowed with -fbounds-safety; use "
+  "'__unsafe_forge_single' or '__unsafe_forge_bidi_indexable'">;
+def err_incompatible_bounds_safety_function_pointer : Error<
+  "conversion between pointers to functions with incompatible bound attributes">;
+def err_bounds_safety_unsafe_to_safe : Error<
+  "%select{"
+    "%diff{assigning to $ from incompatible type $|"
+          "assigning type from incompatible type}0,1|"
+    "%diff{passing $ to parameter of incompatible type $|"
+          "passing type to parameter of incompatible type}0,1|"
+    "%diff{returning $ from a function with incompatible result type $|"
+          "returning type from a function with incompatible result type}0,1|"
+    "%diff{converting $ to incompatible type $|"
+          "converting type to incompatible type}0,1|"
+    "%diff{initializing $ with an expression of incompatible type $|"
+          "initializing type with an expression of incompatible type}0,1|"
+    "%diff{sending $ to parameter of incompatible type $|"
+          "sending type to parameter of incompatible type}0,1|"
+    "%diff{casting $ to incompatible type $|"
+          "casting type to incompatible type}0,1|"
+  "}2 casts away '__unsafe_indexable' qualifier; use '__unsafe_forge_single' "
+  "or '__unsafe_forge_bidi_indexable' to perform this conversion">;
+// %2 is AssignmentAction enum
+def err_bounds_safety_incomplete_single_to_indexable : Error<
+  "cannot %select{"
+  "assign to indexable pointer with type %0 from __single pointer to incomplete type %1%select{|; consider declaring pointer '%3' as '__single'}4|"           // assign
+  "pass __single pointer to incomplete type argument %0 when parameter is an indexable pointer %1; consider making the%select{| '%3'}4 parameter '__single'|" // pass
+  "return __single pointer to incomplete type %0 when return type is an indexable pointer %1; consider making the return type '__single'|"                    // return
+  "convert __single pointer to incomplete type %0 to indexable pointer %1; consider making the destination '__single'|"                                       // convert
+  "initialize indexable pointer with type %0 from __single pointer to incomplete type %1%select{|; consider declaring pointer '%3' as '__single'}4|"          // initialize
+  "send __single to incomplete type %0 to indexable pointer %1; consider making the destination '__single'|"                                                  // send
+  "cast from __single pointer to incomplete type %0 to indexable pointer type %1"                                                                             // cast
+  "}2">;
+def warn_bounds_safety_implicit_conv_single_to_explicit_indexable : Warning<
+  "%select{"
+    "%diff{assigning to%select{ __indexable| __bidi_indexable|}3 type $ from%select{ __single|}4 type $|"
+          "assigning%select{ __indexable| __bidi_indexable|}3 type from%select{ __single|}4 type}0,1|"
+    "%diff{passing%select{ __single|}4 type $ to parameter of%select{ __indexable| __bidi_indexable|}3 type $|"
+          "passing%select{ __single|}4 type to parameter of%select{ __indexable| __bidi_indexable|}3 type}0,1|"
+    "%diff{returning%select{ __single|}4 type $ from a function with%select{ __indexable| __bidi_indexable|}3 result type $|"
+          "returning%select{ __single|}4 type from a function with%select{ __indexable| __bidi_indexable|}3 result type}0,1|"
+    "%diff{converting%select{ __single|}4 type $ to%select{ __indexable| __bidi_indexable|}3 type $|"
+          "converting%select{ __single|}4 type to%select{ __indexable| __bidi_indexable|}3 type}0,1|"
+    "%diff{initializing%select{ __indexable| __bidi_indexable|}3 type $ with an expression of%select{ __single|}4 type $|"
+          "initializing%select{ __indexable| __bidi_indexable|}3 type with an expression of%select{ __single|}4 type}0,1|"
+    "%diff{sending%select{ __single|}4 type $ to parameter of%select{ __indexable| __bidi_indexable|}3 type $|"
+          "sending%select{ __single|}4 type to parameter of%select{ __indexable| __bidi_indexable|}3 type}0,1|"
+    "%diff{casting%select{ __single|}4 type $ to%select{ __indexable| __bidi_indexable|}3 type $|"
+          "casting%select{ __single|}4 type to%select{ __indexable| __bidi_indexable|}3 type}0,1|"
+  "}2 results in %select{an __indexable|a __bidi_indexable}5 pointer that will trap if a non-zero offset "
+  "is dereferenced%select{|. consider adding '__counted_by' to '%7'}6">,
+  InGroup<BoundsAttributesImplicitConvSingleToExplicitIndexable>;
+def warn_bounds_safety_conv_single_to_implicit_indexable : Warning<
+  "%select{indexing into|pointer arithmetic over}1 a __bidi_indexable local "
+  "variable %2 %select{assigned|initialized}3 from __single %select{"
+  "parameter|" // AssignmentSourceKind::Parameter
+  "global|" // AssignmentSourceKind::GlobalVar
+  "local variable|" // AssignmentSourceKind::LocalVar
+  "return value from call to|" // AssignmentSourceKind::FunctionCallReturnValue
+  "element from array|" // AssignmentSourceKind::ArrayElement
+  "struct member|" // AssignmentSourceKind::StructMember
+  "union member" // AssignmentSourceKind::UnionMember
+  "}0 %4 results in %select{"
+    "a trap|" // UnsafeOpKind::Index
+    "an out-of-bounds pointer"     // UnsafeOpKind::Arithmetic
+  "}1"
+  "%select{"
+    "|" // PtrArithOOBKind:::ALWAYS_OOB_BASE_OOB
+    "|" // PtrArithOOBKind::ALWAYS_OOB_CONSTANT_OFFSET
+    " if the %select{index expression|offset}1 is >= %6|" // PtrArithOOBKind::OOB_IF_EFFECTIVE_OFFSET_GTE_MINIMUM_OOB_POSITIVE_OFFSET
+    " if the %select{index expression|offset}1 is >= %6 or < 0|" // PtrArithOOBKind::OOB_IF_EFFECTIVE_OFFSET_GTE_MINIMUM_OOB_POSITIVE_OFFSET_OR_LT_ZERO
+    " if the %select{index expression|offset}1 is < 0" // PtrArithOOBKind::OOB_IF_EFFECTIVE_OFFSET_LT_ZERO
+  "}5">,
+  InGroup<BoundsSafetyConvSingleToImplicitIndexable>;
+
+def warn_bounds_safety_conv_single_to_implicit_indexable_multiple_assignments : 
+  Warning< "%select{indexing into|pointer arithmetic over}0 __bidi_indexable "
+  "local variable %1 that is assigned from a __single pointer results in "
+  "%select{"
+    "a trap|" // UnsafeOpKind::Index
+    "an out-of-bounds pointer" // UnsafeOpKind::Arithmetic
+  "}0"
+  "%select{"
+      "|" // PtrArithOOBKind:::ALWAYS_OOB_BASE_OOB
+      "|" // PtrArithOOBKind::ALWAYS_OOB_CONSTANT_OFFSET
+      " if the %select{index expression|offset}0 is >= %3|" // PtrArithOOBKind::OOB_IF_EFFECTIVE_OFFSET_GTE_MINIMUM_OOB_POSITIVE_OFFSET
+      " if the %select{index expression|offset}0 is >= %3 or < 0|" // PtrArithOOBKind::OOB_IF_EFFECTIVE_OFFSET_GTE_MINIMUM_OOB_POSITIVE_OFFSET_OR_LT_ZERO
+      " if the %select{index expression|offset}0 is < 0" // PtrArithOOBKind::OOB_IF_EFFECTIVE_OFFSET_LT_ZERO
+  "}2">,
+  InGroup<BoundsSafetyConvSingleToImplicitIndexable>;
+def note_single_entity_assigned_here : Note<
+  "__single %select{"
+  "parameter|" // AssignmentSourceKind::Parameter
+  "global|" // AssignmentSourceKind::GlobalVar
+  "local variable|" // AssignmentSourceKind::LocalVar
+  "return value from call to|" // AssignmentSourceKind::FunctionCallReturnValue
+  "element from array|" // AssignmentSourceKind::ArrayElement
+  "struct member|" // AssignmentSourceKind::StructMember
+  "union member" // AssignmentSourceKind::UnionMember
+  "}0 %1 assigned to %2 here">;
+
+def warn_bounds_safety_conv_single_to_implicit_indexable_unsafe_zeroth_element :
+  Warning<"%select{"
+      "indexing|" // UnsafeOpKind::Index
+      "UNUSED|" // UnsafeOpKind::Arithmetic
+      "dereferencing|" // UnsafeOpKind::Deref
+      "accessing field %5 through|" // UnsafeOpKind::MemberAccess
+      "assigning from|" // UnsafeOpKind::Assignment
+      "returning|" // UnsafeOpKind::Return
+      "passing|" // UnsafeOpKind::CallArg
+      "UNUSED" // UnsafeOpKind::Cast
+    "}0 __bidi_indexable '%1'"
+  "%select{"
+    " at any index|||||||}0 "
+  "will %select{"
+      "access out-of-bounds memory and will trap in a future compiler version|" // UnsafeOpKind::Index
+      "UNUSED|" // UnsafeOpKind::Arithmetic
+      "access out-of-bounds memory and will trap in a future compiler version|" // UnsafeOpKind::Deref
+      "always trap|" // UnsafeOpKind::MemberAccess
+      "propagate an out-of-bounds pointer|" // UnsafeOpKind::Assignment
+      "return an out-of-bounds pointer|" // UnsafeOpKind::Return
+      "pass an out-of-bounds pointer|" // UnsafeOpKind::CallArg
+      "UNUSED" // UnsafeOpKind::Cast
+  "}0. At runtime %4 is assigned a __single pointer that"
+  " results in '%1' having bounds smaller than a single %2 (%3 byte%s3)">,
+  InGroup<BoundsSafetyConvSingleToImplicitIndexableThenConvertToLargerType>;
+
+def warn_bounds_safety_conv_single_to_implicit_indexable_unsafely_cast :
+  Warning<
+   "%select{explicit|implicit}0 cast of __bidi_indexable %1 to a larger pointee"
+   " type creates an out-of-bounds pointer. Later uses of the result may trap">,
+  InGroup<BoundsSafetyConvSingleToImplicitIndexableThenConvertToLargerType>;
+
+def warn_bounds_safety_conv_single_to_implicit_indexable_unsafely_cast_to_single_trap :
+  Warning<
+   "%select{explicit|implicit}0 cast of out-of-bounds __bidi_indexable to "
+   "__single will trap in a future compiler version due to the bounds of %1 "
+   "being too small to access a single element of type %2">,
+  InGroup<BoundsSafetyConvSingleToImplicitIndexableThenConvertToLargerType>;
+
+def note_single_entity_assigned_here_with_pointee_sizes : Note<
+  "__single %select{"
+  "parameter|" // AssignmentSourceKind::Parameter
+  "global|" // AssignmentSourceKind::GlobalVar
+  "local variable|" // AssignmentSourceKind::LocalVar
+  "return value from call to|" // AssignmentSourceKind::FunctionCallReturnValue
+  "element from array|" // AssignmentSourceKind::ArrayElement
+  "struct member|" // AssignmentSourceKind::StructMember
+  "union member" // AssignmentSourceKind::UnionMember
+  "}0 %1 %select{assigned to|used to initialize}9 %2 here results in %2 having the bounds of a single %3 "
+  "(%4 bytes) but %select{'%8'|cast of %2 to %8}7 has pointee type %5 (%6 bytes)">;
+
+def warn_bounds_safety_conv_single_to_implicit_indexable_dynamic_count_conversion :
+  Warning<
+  "%select{"
+    "UNUSED|" // UnsafeOpKind::Index
+    "UNUSED|" // UnsafeOpKind::Arithmetic
+    "UNUSED|" // UnsafeOpKind::Deref
+    "UNUSED|" // UnsafeOpKind::MemberAccess
+    "assigning from|" // UnsafeOpKind::Assignment
+    "returning|" // UnsafeOpKind::Return
+    "passing|" // UnsafeOpKind::CallArg
+    "casting" // // UnsafeOpKind::Cast
+  "}0 __bidi_indexable local variable %1 will %select{"
+    "UNUSED|" // WillTrapKind::NoTrap
+    "likely trap|" // WillTrapKind::Unknown
+    "trap|" // WillTrapKind::Trap
+    "trap (unless %1 is null)|" // WillTrapKind::TrapIffPtrNotNull
+    "UNUSED" // WillTrapKind::TrapIffPtrNull
+  "}2%select{"
+    " |"
+    " in a future compiler version "
+  "}6"
+  "when converting to %3 due to %1 having the bounds of a __single pointer"
+  "%select{"
+    // Non-constant count
+    ". If %1 is non-null then any %select{"
+      "count|" // __counted_by(or_null)
+      "size" // __sized_by(or_null)
+    "}7 > %8 will trap"
+    "%select{"
+       // __counted_by/__sized_by
+      ". If %1 is null then any %select{count|size}7 != 0 will trap|"
+      // __counted_by_or_null/__sized_by_or_null
+      ""
+    "}5|"
+    // Constant count
+    ""
+  "}4">, 
+  InGroup<BoundsSafetyConvSingleToImplicitIndexableThenConvertToDynamicCountPtr>;
+
+
+def note_single_entity_assigned_here_with_dyn_count_conversion: Note<
+  "__single %select{"
+  "parameter|" // AssignmentSourceKind::Parameter
+  "global|" // AssignmentSourceKind::GlobalVar
+  "local variable|" // AssignmentSourceKind::LocalVar
+  "return value from call to|" // AssignmentSourceKind::FunctionCallReturnValue
+  "element from array|" // AssignmentSourceKind::ArrayElement
+  "struct member|" // AssignmentSourceKind::StructMember
+  "union member" // AssignmentSourceKind::UnionMember
+  "}0 %1 assigned to %2 here results in %2 having the bounds of a single %3 "
+  "(%4 bytes)"
+  "%select{"
+    // non-constant count
+    "|"
+    // constant count
+    " but conversion of %2 to %6 requires %7 bytes or more"
+  "}5">;
+
+def err_bounds_safety_dynamic_bound_redeclaration : Error<
+  "conflicting '%select{__counted_by|__sized_by|__counted_by_or_null|__sized_by_or_null|__ended_by|__terminated_by}0' "
+  "attribute with the previous %select{function|variable}1 declaration">;
+def err_bounds_safety_nullable_fam : Error<
+  "%select{array objects|flexible array members}1 cannot be null; did you mean %select{__counted_by|__sized_by}0 instead?">;
+def warn_bounds_safety_nullable_dynamic_count_nonnullable : Warning<
+  "combining %select{'__counted_by_or_null'|'__sized_by_or_null'}0 and '_Nonnull'; did you mean %select{'__counted_by'|'__sized_by'}0 instead?">, InGroup<BoundsSafetyNullability>;
+def warn_bounds_safety_nonnullable_dynamic_count_nullable : Warning<
+  "combining %select{'__counted_by'|'__sized_by'}0 with non-zero %select{count|size}0 (which cannot be null) and '_Nullable'; did you mean %select{'__counted_by_or_null'|'__sized_by_or_null'}0 instead?">, InGroup<BoundsSafetyNullability>;
+def err_bounds_safety_nullable_dynamic_count_nonnullable : Error<
+  "cannot combine %select{'__counted_by_or_null'|'__sized_by_or_null'}0 and %1; did you mean %select{'__counted_by'|'__sized_by'}0 instead?">;
+
+def warn_bounds_safety_single_bitcast_lose_bounds : Warning<
+  "casting %0 to %1 creates a '%select{__indexable|__bidi_indexable}2' pointer "
+  "%select{with bounds containing only one %3|with zero length due to %3 having unknown size)}4">,
+  InGroup<BoundsSafetyConvertSingleToIndexableBoundsTruncated>;
+
+def note_bounds_safety_single_bitcast_lose_bounds_keep_bound : Note<
+  "cast to %0 first to keep bounds of %1">;
+
+def note_bounds_safety_single_bitcast_lose_bounds_silence : Note<
+  "silence by making the destination '__single'">;
+
+def err_bounds_safety_atomic_unsupported_attribute : Error<
+  "_Atomic on "
+  "'%select{__indexable|__bidi_indexable|__counted_by|__sized_by|__counted_by_or_null|__sized_by_or_null|__ended_by|__terminated_by|end}0' "
+  "pointer is not yet supported">;
+def err_bounds_safety_atomic_op_unsupported_attribute : Error<
+  "atomic operation on "
+  "'%select{__indexable|__bidi_indexable|__counted_by|__sized_by|__counted_by_or_null|__sized_by_or_null|__ended_by}0' "
+  "pointer is not yet supported">;
+def err_bounds_safety_atomic_op_arithmetic_needs_unsafe_pointer : Error<
+  "address argument to atomic arithmetic operation must be a pointer to "
+  "'__unsafe_indexable' pointer (%0 invalid)">;
+
+def err_bounds_safety_typeof_dbpt : Error<
+  "__typeof__ on an expression of type %0 is not yet supported">;
+
+def err_bounds_safety_single_pointer_arithmetic : Error<
+  "pointer arithmetic on single pointer '%0' is out of bounds%select{|; consider adding '__counted_by' to '%2'}1">;
+def err_bounds_safety_flexible_array_member_record_pointer_arithmetic : Error<
+  "-fbounds-safety forbids arithmetic on pointers to types with a flexible array "
+  "member">;
+def err_bounds_safety_member_reference_null_base : Error<
+  "base of member reference is a null pointer">;
+def err_bounds_safety_counted_by_without_size : Error<
+  "cannot apply '__counted_by%select{|_or_null}2' attribute to %0 because %1 has unknown size"
+  "%select{|; did you mean to use '__sized_by%select{|_or_null}2' instead?}3">;
+def err_bounds_safety_counted_by_on_incomplete_type_on_use : Error <
+  "cannot %select{"
+    "use '%1'|" // Generic expr
+    "call '%1'" // CallExpr
+  "}0 with%select{"
+    "|"       // Generic expr
+    " return" // CallExpr
+  "}0 type %2 because the pointee type %3 is incomplete "
+  "and the '%4' attribute requires the pointee type be complete in this context; "
+  "consider providing a complete definition for %3 or using the "
+  "'__sized_by%select{|_or_null}5' attribute"
+>;
+
+def err_bounds_safety_counted_by_on_incomplete_type_on_assign : Error <
+  "cannot %select{"
+    "assign to %select{object|'%1'}2 that has|" // AssignmentAction::Assigning,
+    "pass argument to %select{parameter|parameter '%1'}2 that has|" // AssignmentAction::Passing,
+    "return|" // AssignmentAction::Returning,
+    "convert to|" // AssignmentAction::Converting (UNUSED)
+    "%select{|implicitly }3initialize %select{object|'%1'}2 that has|" // AssignmentAction::Initializing,
+    "pass argument to parameter that has|" // AssignmentAction::Sending (UNUSED)
+    "cast to|" // AssignmentAction::Casting (UNUSED)
+    "pass argument to parameter that has" // AssignmentAction::Passing_CFAudited (UNUSED)
+  "}0 type %4 because the pointee type %6 is incomplete and the '%5' attribute "
+  "requires the pointee type be complete when %select{"
+    "assigning|" // AssignmentAction::Assigning,
+    "passing|" // AssignmentAction::Passing,
+    "returning|" // AssignmentAction::Returning,
+    "converting|" // AssignmentAction::Converting (UNUSED)
+    "initializing|" // AssignmentAction::Initializing,
+    "passing|" // AssignmentAction::Sending (UNUSED)
+    "casting|" // AssignmentAction::Casting (UNUSED)
+    "passing" // AssignmentAction::Passing_CFAudited (UNUSED)
+  "}0; "
+  "consider providing a complete definition for %6 or using the "
+  "'__sized_by%select{|_or_null}7' attribute"
+>;
+
+def err_bounds_safety_counted_by_on_incomplete_type_on_func_def : Error<
+  "cannot apply '%0' attribute to %select{"
+    "return|" // return type
+    "parameter%select{" // parameter type
+      "|" // unnamed parameter
+      " '%3'" // named parameter
+    "}2 with"
+  "}1 type %4 on a function definition because the pointee type %5 is "
+  "incomplete; consider providing a complete definition for %5 before the "
+  "function body or using the '__sized_by%select{|_or_null}6' attribute"
+>;
+
+def err_bounds_safety_counted_by_on_incomplete_type_on_var_decl : Error<
+  "cannot apply '%0' attribute to%select{| tentative}1 variable definition "
+  "'%2' with type %3 because the pointee type %4 is "
+  "incomplete; consider providing a complete definition for %4 before this "
+  "definition or using the '__sized_by%select{|_or_null}5' attribute"
+>;
+
+def err_bounds_safety_pointer_subscript : Error<
+  "array subscript on %select{single|'__terminated_by'}0 pointer '%1' "
+  "%select{must use a constant index of 0 to be in bounds|is not allowed}0">;
+def err_bounds_safety_indexable_pointer_arithmetic : Error<
+  "decremented indexable pointer '%0' is out of bounds">;
+def err_bounds_safety_indexable_pointer_subscript : Error<
+  "array subscript with a negative index on indexable pointer '%0' is out of bounds">;
+def err_bounds_safety_terminated_by_pointer_arithmetic_dec : Error<
+  "cannot decrement '__terminated_by' pointer '%0'">;
+def err_bounds_safety_terminated_by_pointer_arithmetic : Error<
+  "pointer arithmetic on '__terminated_by' pointer '%0' can only increase the "
+  "value by one">;
+
+def err_bounds_safety_dynamic_bound_pointer_unary_arithmetic : Error<
+  "%select{negative|positive}0 pointer arithmetic on "
+  "%select{'__counted_by' |'__sized_by' |'__counted_by_or_null' |'__sized_by_or_null' |end |}1pointer"
+  "%select{||||| that starts the '__ended_by' chain}1 always traps">;
+
+// TODO: This should be an Error, not a Warning (rdar://138902282)
+def warn_bounds_safety_count_attr_pointer_unary_arithmetic_constant_count : Warning<
+  "%select{negative|positive}0 pointer arithmetic on "
+  "'%1' attributed pointer with constant %select{count|size}2 "
+  "%select{of %4|%4}3 always traps">,
+  InGroup<BoundsSafetyCountAttrArithConstantCount>, DefaultError;
+
+// TODO: This should be an Error, not a Warning (rdar://138902282)
+def warn_bounds_safety_count_attr_pointer_binary_assign_constant_count : Warning<
+  "compound %select{subtraction|addition}0-assignment on "
+  "'%1' attributed pointer with constant %select{count|size}2 "
+  "%select{of %4|%4}3 always traps">,
+  InGroup<BoundsSafetyCountAttrArithConstantCount>, DefaultError;
+
+def err_bounds_safety_dependent_vars_assign_side_effect : Error<
+  "assignments to dependent variables should not have side effects between them">;
+def err_bounds_safety_missing_dependent_var_assignment : Error<
+  "assignment to %select{%2 |}3'%0' requires corresponding assignment to %select{|%2 }3'%1'; "
+  "add self assignment '%1 = %1' if the value has not changed">;
+def err_bounds_safety_no_preceding_fam_base_assignment : Error<
+  "assignment to '%0' requires an %select{|immediately preceding }2assignment to '%1' with a wide pointer%select{ immediately preceding the group of dependent field assignments|}2">;
+def note_bounds_safety_flex_base_assign : Note<
+  "'%0' is initialized with a '__single' pointer">;
+def note_bounds_safety_first_dep_assign: Note<
+  "group of dependent field assignments starts here, place assignment to '%0' before it">;
+def err_bounds_safety_multiple_assignments_to_dynamic_bound_decl : Error<
+  "multiple consecutive assignments to a %select{dynamic count|dynamic count pointer|ranged pointer}0 %1 "
+  "must be simplified; keep only one of the assignments">;
+def note_bounds_safety_previous_assignment : Note<
+  "previously assigned here">;
+def err_bounds_safety_non_adjacent_dependent_var_decl : Error<
+  "local variable %0 must be declared right next to its dependent decl">;
+def err_bounds_safety_dependent_out_count_assign : Error<
+  "not allowed to change out parameter used as dependent count expression of other parameter or return type">;
+def err_bounds_safety_dependent_out_count_buf_assign : Error<
+  "not allowed to change out parameter with dependent count">;
+def err_bounds_safety_read_only_dynamic_count_pointer : Error<
+  "parameter '%0' with '%select{__counted_by|__sized_by|__counted_by_or_null|__sized_by_or_null}1' attribute depending "
+  "on an indirect count is implicitly read-only">;
+def err_bounds_safety_read_only_dynamic_range_pointer : Error<
+  "parameter '%0' %select{with '__ended_by' attribute depending "
+  "on an indirect end pointer|referred to by an indirect '__ended_by' pointer}1 "
+  "is implicitly read-only">;
+def err_bounds_safety_read_only_dependent_param_in_return : Error<
+  "parameter '%0' is implicitly read-only due to being used by the "
+  "'%select{__counted_by|__sized_by|__counted_by_or_null|__sized_by_or_null|__ended_by}1' "
+  "attribute in the return type of '%2' (%3)">;
+def err_bounds_safety_cannot_pass_read_only_dynamic_bound_pointer : Error<
+  "parameter '%0' with '%select{__counted_by|__sized_by|__counted_by_or_null|__sized_by_or_null|__ended_by}1' attribute "
+  "depending on an indirect count is implicitly read-only and cannot be passed "
+  "as an indirect argument">;
+def err_bounds_safety_cannot_pass_read_only_dependent_param_in_return : Error<
+  "parameter '%0' is implicitly read-only and cannot be passed as an indirect "
+  "argument due to being used by the "
+  "'%select{__counted_by|__sized_by|__counted_by_or_null|__sized_by_or_null|__ended_by}1' "
+  "attribute in the return type of '%2' (%3)">;
+def err_deref_in_bounds_safety_count_non_parm_decl : Error<
+  "dereference operator in '%select{__counted_by|__sized_by|__counted_by_or_null|__sized_by_or_null|__ended_by}0' is only allowed for function parameters">;
+def err_bounds_safety_dynamic_bound_arg_different_scope : Error<
+  "argument of '%select{__counted_by|__sized_by|__counted_by_or_null|__sized_by_or_null|__ended_by}0' attribute cannot "
+  "refer to declaration from a different scope">;
+def err_bounds_safety_dynamic_bound_arg_different_lifetime : Error<
+  "argument of '%select{__counted_by|__sized_by|__counted_by_or_null|__sized_by_or_null|__ended_by}0' attribute cannot "
+  "refer to declaration of a different lifetime">;
+def err_bounds_safety_global_dynamic_bound : Error<
+  "pointer with '%select{__counted_by|__sized_by|__counted_by_or_null|__sized_by_or_null|__ended_by}0' "
+  "and the argument of the attribute must be defined in the same translation unit">;
+def warn_bounds_safety_extern_array_dynamic_count : Warning<
+  "array with '%select{__counted_by|__sized_by}0' "
+  "and the argument of the attribute should be defined in the same translation unit">,
+  InGroup<BoundsAttributesExternArrayCount>;
+def err_bounds_safety_local_dependent_count_block : Error<
+  "local dependent count decl should be declared side by side to its dependent pointer">;
+def err_bounds_safety_external_bound_share : Error<
+  "%select{variable|field}1 %0 referred to by %select{%select{__counted_by|__sized_by|__counted_by_or_null|__sized_by_or_null|__ended_by}2 variable|flexible array member}1 cannot be used in other dynamic bounds attributes">;
+def err_bounds_safety_nested_dynamic_bound : Error<
+  "%0 attribute on nested pointer type is only allowed on indirect parameters">;
+def err_bounds_safety_nested_dynamic_range : Error<
+  "%0 is not allowed for nested pointers">;
+def err_bounds_safety_increment_dynamic_count : Error<
+  "incrementing '%0' without updating '%1' always traps">;
+def err_bounds_safety_increment_dynamic_count_nodep : Error<
+  "incrementing '%0' always traps">;
+def err_bounds_safety_dynamic_bound_pointer_compound_assign_side_effect : Error<
+  "compound assignment on dynamic bound pointer type %0 with side effects is not yet supported;"
+  "instead, use seperate assignment and binary expressions">;
+def err_bounds_safety_dependent_assignments_order : Error<
+  "cannot reference '%0' after it is changed during consecutive assignments">;
+def note_bounds_safety_decl_assignment : Note<
+  "'%0' has been assigned here">;
+def err_bounds_safety_dependent_struct_assignment : Error<
+  "cannot assign '%0' because it contains field %1 referred to by flexible array member %2">;
+def note_bounds_safety_count_param_loc : Note<
+  "referred to by count parameter here">;
+def err_bounds_safety_dependent_field_duplicates : Error<
+  "cannot depend on nested field %0 because it exists in multiple instances in struct %1">;
+def note_bounds_safety_struct_fields_only_in_fam : Note<
+  "nested struct member in count parameter only supported for flexible array members">;
+def error_bounds_safety_no_arrow_members : Error<
+  "arrow notation not allowed for struct member in count parameter">;
+def error_bounds_safety_no_count_in_unions : Error<
+  "count parameter refers to union '%0' of type %1">;
+
+def err_bounds_safety_taking_address_dynamic_bound_dependent : Error<
+  "%select{variable|field}1 referred to by '%select{__counted_by|__sized_by|__counted_by_or_null|__sized_by_or_null|__ended_by}0' "
+  "cannot be pointed to by any other variable; exception is when the pointer "
+  "is passed as a compatible argument to a function">;
+def err_bounds_safety_taking_address_dynamic_bound_pointer : Error<
+  "%select{pointer|array}1 with '%select{__counted_by|__sized_by|__counted_by_or_null|__sized_by_or_null|__ended_by}0' cannot be "
+  "pointed to by any other variable; exception is when the variable is passed "
+  "as a compatible argument to a function">;
+
+def err_bounds_safety_incompatible_dynamic_count_argument: Error<
+  "incompatible dynamic count pointer argument to parameter of type %0">;
+def err_bounds_safety_incompatible_indirect_count_parameter: Error<
+  "passing%select{| address of}1 %0 referred to by "
+  "'%select{__counted_by|__sized_by|__counted_by_or_null|__sized_by_or_null}2' to a parameter that is not referred to "
+  "by the same attribute">;
+def err_bounds_safety_incompatible_dynamic_bound_argument: Error<
+  "type of %0, %1, is incompatible with parameter of type %2">;
+def err_bounds_safety_mismatching_count_type_argument: Error<
+  "incompatible pointer types assigning %0 with an expression with mismatching size attributes %1">;
+def err_bounds_safety_incompatible_count_expression: Error<
+  "incompatible count expression (%0) vs. (%1) in argument to function">;
+def err_bounds_safety_unsynchronized_indirect_param: Error<
+  "passing%select{| address of}1 %0 as an indirect parameter; "
+  "must also pass %2 %select{|or its address }3because the type of %select{%0|%2}4, "
+  "%5, refers to %select{%2|%0}4">;
+
+def err_bounds_safety_dynamic_count_negative : Error<
+  "negative %select{count|size}1 value of %2 for%select{| '%4' of type}3 %0">;
+def err_bounds_safety_dynamic_count_from_array_bad_size : Error<
+  "%select{"
+    "assigning to%select{| '%7' of type}6 %1 with %select{count|size}2 value of %4 from array %3 (which has %5 %select{elements|bytes}2)|"
+    "passing array %3 (which has %5 %select{elements|bytes}2) to parameter%select{| '%7'}6 of type %1 with %select{count|size}2 value of %4|"
+    "returning array %3 (which has %5 %select{elements|bytes}2) from a function with result type %1 and %select{count|size}2 value of %4|"
+    "converting array %3 (which has %5 %select{elements|bytes}2) to type %1 with %select{count|size}2 value of %4|"
+    "initializing%select{| '%7' of type}6 %1 and %select{count|size}2 value of %4 with array %3 (which has %5 %select{elements|bytes}2)|"
+    "sending array %3 (which has %5 %select{elements|bytes}2) to parameter%select{| '%7'}6 of type %1 with %select{count|size}2 value of %4|"
+    "casting array %3 (which has %5 %select{elements|bytes}2) to type %1 with %select{count|size}2 value of %4"
+  "}0 always fails">;
+def err_bounds_safety_dynamic_count_from_unbounded_bad_size : Error<
+  "%select{"
+    "assigning to%select{| '%7' of type}6 %1 with %select{count|size}2 value of %4 from %3%select{| with pointee of size %5}2|"
+    "passing %3%select{| with pointee of size %5}2 to parameter%select{| '%7'}6 of type %1 with %select{count|size}2 value of %4|"
+    "returning %3%select{| with pointee of size %5}2 from a function with result type %1 and %select{count|size}2 value of %4|"
+    "converting %3%select{| with pointee of size %5}2 to type %1 with %select{count|size}2 value of %4|"
+    "initializing%select{| '%7' of type}6 %1 and %select{count|size}2 value of %4 with %3%select{| and pointee of size %5}2|"
+    "sending %3%select{| with pointee of size %5}2 to parameter%select{| '%7'}6 of type %1 with %select{count|size}2 value of %4|"
+    "casting %3%select{| with pointee of size %5}2 to type %1 with %select{count|size}2 value of %4"
+  "}0 always fails">;
+def err_bounds_safety_dynamic_count_from_null_nonzero_count : Error<
+  "%select{"
+    "assigning null to%select{| '%5' of type}4 %1 with %select{count|size}2 value of %3|"
+    "passing null to parameter%select{| '%5'}4 of type %1 with %select{count|size}2 value of %3|"
+    "returning null from a function with result type %1 and %select{count|size}2 value of %3|"
+    "converting null to type %1 with %select{count|size}2 value of %3|"
+    "%select{|implicitly }6initializing%select{| '%5' of type}4 %1 and %select{count|size}2 value of %3 with null|"
+    "sending null to parameter%select{| '%5'}4 of type %1 with %select{count|size}2 value of %3|"
+    "casting null to type %1 with %select{count|size}2 value of %3"
+  "}0 always fails">;
+
+def warn_bounds_safety_dynamic_count_from_nonnull_implicit_zero_count : Warning<
+  "possibly %select{"
+    "assigning non-null to%select{| '%4' of type}3 %1 with implicit %select{count|size}2 value of 0|"
+    "passing non-null to parameter%select{| '%4'}3 of type %1 with implicit %select{count|size}2 value of 0|"
+    "returning non-null from a function with result type %1 and implicit %select{count|size}2 value of 0|"
+    "converting non-null to type %1 with implicit %select{count|size}2 value of 0|"
+    "initializing%select{| '%4' of type}3 %1 and implicit %select{count|size}2 value of 0 with non-null|"
+    "sending non-null to parameter%select{| '%4'}3 of type %1 with implicit %select{count|size}2 value of 0|"
+    "casting non-null to type %1 with implicit %select{count|size}2 value of 0"
+  "}0, which creates a non-dereferenceable pointer; "
+  "explicitly set %select{count|size}2 value to 0 to remove this warning">,
+  InGroup<BoundsSafetyInitList>;
+def warn_bounds_safety_dynamic_count_from_nonnull_negative_count : Warning<
+  "possibly %select{"
+    "assigning non-null to%select{| '%5' of type}4 %1 with %select{count|size}2 value of %3|"
+    "passing non-null to parameter%select{| '%5'}4 of type %1 with %select{count|size}2 value of %3|"
+    "returning non-null from a function with result type %1 with %select{count|size}2 value of %3|"
+    "converting non-null to type %1 with %select{count|size}2 value of %3|"
+    "initializing%select{| '%5' of type}4 %1 and %select{count|size}2 value of %3 with non-null|"
+    "sending non-null to parameter%select{| '%5'}4 of type %1 with %select{count|size}2 value of %3|"
+    "casting non-null to type %1 with %select{count|size}2 value of %3"
+  "}0; explicitly %select{assign|pass|return|convert|initialize|send|cast}0 null to remove this warning">,
+  InGroup<BoundsSafetyInitList>, DefaultError;
+
+def warn_bounds_safety_dynamic_count_from_unbounded : Warning<
+  "%select{count|size}2 value is not statically known: "
+  "%select{"
+    "assigning to%select{| '%6' of type}5 %1 from %4|"
+    "passing %4 to parameter%select{| '%6'}5 of type %1|"
+    "returning %4 from a function with result type %1|"
+    "converting %4 to type %1|"
+    "initializing%select{| '%6' of type}5 %1 with %4|"
+    "sending %4 to parameter%select{| '%6'}5 of type %1|"
+    "casting %4 to type %1"
+  "}0 is invalid for any %select{count other than 0 or 1|size greater than %7}2"
+  "%select{| unless the pointer is null}3">,
+  InGroup<BoundsSafetySingleToCount>;
+def note_bounds_safety_dynamic_count_from_unbounded_count_location : Note<
+  "%select{count|size}1 %select{assigned|passed|returned|converted|initialized|sent|cast}0 here">;
+def note_bounds_safety_consider_adding_to : Note<
+  "consider adding '%1' to '%0'">;
+def note_bounds_safety_consider_adding_to_return : Note<
+  "consider adding '%1' to %0 return type of '%2'">;
+
+def warn_bounds_safety_initlist_range_partial_null : Warning<
+  "%select{|implicitly }0initializing field %1 of type %2 to NULL while "
+  "'%3' is initialized with a value rarely succeeds">, InGroup<BoundsSafetyInitListPartialNull>;
+
+def err_bounds_safety_dynamic_bound_init_side_effect : Error<
+  "initalizer for %select{count|size|'__counted_by' pointer|'__sized_by' pointer|'__counted_by_or_null' pointer|'__sized_by_or_null' pointer|'__ended_by' pointer|end pointer}0 with side effects is not yet supported">;
+
+def warn_bounds_safety_struct_init_side_effect : Warning<
+  "initializer %0 has a side effect; this may lead to an unexpected result "
+  "because the evaluation order of initialization list expressions is "
+  "indeterminate">, InGroup<BoundsAttributesInitSideEffect>;
+
+def err_bounds_safety_flexible_global_wrong_count : Error<
+  "flexible array member is initialized with %0 element%select{|s}2, but count value is "
+  "initialized to %1">;
+def err_bounds_safety_flexible_global_not_counted : Error<
+  "flexible array member is initialized without a count">;
+def err_bounds_safety_flexible_global_non_int_count_init : Error<
+  "count '%0' has non-integer value '%1' of type %2">;
+
+def err_bounds_safety_local_external_dynamic_count : Error<
+  "attribute %0 is not allowed for local variables with external storage">;
+def err_bounds_safety_scope_dynamic_range : Error<
+  "attribute %0 is only allowed for struct fields or function parameters">;
+def err_bounds_safety_typedef_dynamic_bound : Error<
+  "%0 inside typedef is only allowed for function type">;
+def err_bounds_safety_sized_by_array : Error<
+  "%0 cannot apply to arrays: use 'counted_by' instead">;
+def err_bounds_safety_forge_addr_type : Error<
+  "'__unsafe_forge_%select{bidi_indexable|single|terminated_by}0' requires a pointer, array "
+  "or integer address argument">;
+def err_bounds_safety_forge_bidi_size_type : Error<
+  "'__unsafe_forge_bidi_indexable' requires an integer size argument">;
+def err_bounds_safety_forge_negative : Error<
+  "negative %select{address|size}0 argument to '__unsafe_forge_"
+  "%select{bidi_indexable|single|terminated_by}1'">;
+
+def err_bounds_safety_abi_ptr_attr_invalid : Error<
+  "%0 cannot be set as a default pointer attribute">;
+
+def err_bounds_safety_no_bounds : Error<
+  "cannot extract the %select{lower|upper}0 bound of %1 because %select{"
+  "it is not a pointer|it has no bounds specification|"
+  "its bounds are not contained within the pointer}2">;
+
+def err_bounds_safety_ptr_with_bounds_in_assembly : Error<
+  "pointer with bounds cannot be used with inline assembly">;
+def err_bounds_safety_dyn_count_in_assembly : Error<
+  "external count of a pointer cannot be used with inline assembly">;
+
+def err_bounds_safety_ptrauth_on_indexable_pointer : Error<
+  "pointer authentication is currently unsupported on indexable pointers">;
+
+def err_bounds_safety_auto_dynamic_bound : Error<
+  "passing %select{'__counted_by'|'__sized_by'|'__counted_by_or_null'|'__sized_by_or_null'|'__ended_by'|end}0 pointer "
+  "as __auto_type initializer is not yet supported">;
+
+def err_bounds_safety_unsupported_address_of_incomplete_array : Error<
+  "cannot take address of incomplete __counted_by array">;
+def note_bounds_safety_remove_address_of_operator : Note<
+  "remove '&' to get address as %0 instead of %1">;
+def err_bounds_safety_unsupported_address_of_incomplete_array_type : Error<
+  "pointer to incomplete __counted_by array type %0 not allowed; "
+  "did you mean to use a nested pointer type?">;
+def err_bounds_safety_unsupported_address_of_incomplete_array_count : Error<
+  "cannot take address of field referred to by __counted_by on a flexible array member">;
+
+def err_bounds_safety_terminated_by_wrong_type : Error<
+  "'__terminated_by' attribute can be applied to pointers, constant-length "
+  "arrays or incomplete arrays">;
+def err_bounds_safety_terminated_by_wrong_pointer_type : Error<
+  "'__terminated_by' attribute currently can be applied only to '__single' "
+  "pointers">;
+def err_bounds_safety_terminated_by_wrong_elem_or_pointee_type : Error<
+  "%select{element|pointee}0 type of %select{array|pointer}0 with "
+  "'__terminated_by' attribute must be an integer or a non-wide pointer">;
+def err_bounds_safety_terminated_by_empty_array : Error<
+  "'__terminated_by' attribute cannot be applied to empty arrays">;
+
+def err_bounds_safety_terminated_by_terminator_must_be_const : Error<
+  "terminator value is not a constant expression">;
+
+def err_bounds_safety_terminated_by_to_indexable_wrong_ptr_type : Error<
+  "pointer argument must be a '__terminated_by' pointer (%0 invalid)">;
+def err_bounds_safety_terminated_by_to_indexable_wrong_terminator : Error<
+  "pointer argument must be terminated by %0 (got %1)">;
+
+def err_bounds_safety_terminated_by_from_indexable_wrong_ptr_type : Error<
+  "pointer argument must be a safe pointer (%0 invalid)">;
+def err_bounds_safety_terminated_by_from_indexable_wrong_pointee_type : Error<
+  "pointee type of the pointer argument must be an integer or a non-wide "
+  "pointer">;
+def err_bounds_safety_terminated_by_from_indexable_wrong_ptr_to_term_type : Error<
+  "pointer to terminator argument must be a pointer (%0 invalid)">;
+def err_bounds_safety_terminated_by_from_indexable_pointee_mismatch : Error<
+  "pointee types of the pointer and pointer to terminator arguments must be "
+  "the same">;
+
+def err_bounds_safety_incompatible_string_literal_to_terminated_by : Error<
+  "'__terminated_by' pointer converted from a string literal must be "
+  "NUL-terminated">;
+
+def note_fixit_null_terminated_to_indexable: Note<"consider using '%select{__null_terminated_to_indexable|__unsafe_null_terminated_to_indexable}0()' to perform this conversion. Note this conversion requires a linear scan of memory to find the null terminator and the resulting upper bound %select{excludes|includes}0 the null terminator">;
+def note_fixit_unsafe_null_terminated_from_indexable : Note<"consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator">;
+def note_fixit_unsafe_null_terminated_from_indexable_ptr : Note<"consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time">;
+
+def err_bounds_safety_incompatible_terminated_by_terminators : Error<
+  "pointers with incompatible terminators "
+  "%select{"
+    "%diff{assigning to $ from incompatible type $|"
+          "assigning type from incompatible type}0,1|"
+    "%diff{passing $ to parameter of incompatible type $|"
+          "passing type to parameter of incompatible type}0,1|"
+    "%diff{returning $ from a function with incompatible result type $|"
+          "returning type from a function with incompatible result type}0,1|"
+    "%diff{converting $ to incompatible type $|"
+          "converting type to incompatible type}0,1|"
+    "%diff{initializing $ with an expression of incompatible type $|"
+          "initializing type with an expression of incompatible type}0,1|"
+    "%diff{sending $ to parameter of incompatible type $|"
+          "sending type to parameter of incompatible type}0,1|"
+    "%diff{casting $ to incompatible type $|"
+          "casting type to incompatible type}0,1|"
+  "}2">;
+def err_bounds_safety_incompatible_terminated_by_to_non_terminated_by : Error<
+  "%select{"
+    "%diff{assigning to $ from incompatible type $|"
+          "assigning type from incompatible type}0,1|"
+    "%diff{passing $ to parameter of incompatible type $|"
+          "passing type to parameter of incompatible type}0,1|"
+    "%diff{returning $ from a function with incompatible result type $|"
+          "returning type from a function with incompatible result type}0,1|"
+    "%diff{converting $ to incompatible type $|"
+          "converting type to incompatible type}0,1|"
+    "%diff{initializing $ with an expression of incompatible type $|"
+          "initializing type with an expression of incompatible type}0,1|"
+    "%diff{sending $ to parameter of incompatible type $|"
+          "sending type to parameter of incompatible type}0,1|"
+    "%diff{casting $ to incompatible type $|"
+          "casting type to incompatible type}0,1|"
+  "}2 requires a linear search for the terminator; use "
+  "'%select{__terminated_by_to_indexable|__null_terminated_to_indexable}3()' to perform this conversion explicitly">;
+def warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by : Warning<
+  "%select{"
+    "%diff{assigning to $ from incompatible type $|"
+          "assigning type from incompatible type}0,1|"
+    "%diff{passing $ to parameter of incompatible type $|"
+          "passing type to parameter of incompatible type}0,1|"
+    "%diff{returning $ from a function with incompatible result type $|"
+          "returning type from a function with incompatible result type}0,1|"
+    "%diff{converting $ to incompatible type $|"
+          "converting type to incompatible type}0,1|"
+    "%diff{initializing $ with an expression of incompatible type $|"
+          "initializing type with an expression of incompatible type}0,1|"
+    "%diff{sending $ to parameter of incompatible type $|"
+          "sending type to parameter of incompatible type}0,1|"
+    "%diff{casting $ to incompatible type $|"
+          "casting type to incompatible type}0,1|"
+  "}2 is an unsafe operation; use '%select{__unsafe_terminated_by_from_indexable|__unsafe_null_terminated_from_indexable}3()' "
+  "or '%select{__unsafe_forge_terminated_by|__unsafe_forge_null_terminated}3()' to perform this conversion">, InGroup<BoundsSafetyStrictTerminatedByCast>, DefaultError;
+def err_bounds_safety_incompatible_non_terminated_by_to_terminated_by : Error<warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by.Summary>;
+def err_bounds_safety_incompatible_terminated_by_to_non_terminated_by_mismatch : Error<
+  "%select{"
+    "%diff{assigning to $ from incompatible type $|"
+          "assigning type from incompatible type}0,1|"
+    "%diff{passing $ to parameter of incompatible type $|"
+          "passing type to parameter of incompatible type}0,1|"
+    "%diff{returning $ from a function with incompatible result type $|"
+          "returning type from a function with incompatible result type}0,1|"
+    "%diff{converting $ to incompatible type $|"
+          "converting type to incompatible type}0,1|"
+    "%diff{initializing $ with an expression of incompatible type $|"
+          "initializing type with an expression of incompatible type}0,1|"
+    "%diff{sending $ to parameter of incompatible type $|"
+          "sending type to parameter of incompatible type}0,1|"
+    "%diff{casting $ to incompatible type $|"
+          "casting type to incompatible type}0,1|"
+  "}2 that discards '__terminated_by' attribute is not allowed">;
+def warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by_mismatch : Warning<
+  "%select{"
+    "%diff{assigning to $ from incompatible type $|"
+          "assigning type from incompatible type}0,1|"
+    "%diff{passing $ to parameter of incompatible type $|"
+          "passing type to parameter of incompatible type}0,1|"
+    "%diff{returning $ from a function with incompatible result type $|"
+          "returning type from a function with incompatible result type}0,1|"
+    "%diff{converting $ to incompatible type $|"
+          "converting type to incompatible type}0,1|"
+    "%diff{initializing $ with an expression of incompatible type $|"
+          "initializing type with an expression of incompatible type}0,1|"
+    "%diff{sending $ to parameter of incompatible type $|"
+          "sending type to parameter of incompatible type}0,1|"
+    "%diff{casting $ to incompatible type $|"
+          "casting type to incompatible type}0,1|"
+  "}2 that adds '__terminated_by' attribute is not allowed">, InGroup<BoundsSafetyStrictTerminatedByCast>, DefaultError;
+def err_bounds_safety_incompatible_non_terminated_by_to_terminated_by_mismatch : Error<warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by_mismatch.Summary>;
+
+def err_bounds_safety_terminated_by_uninitialized : Error<
+  "array '%0' with '__terminated_by' attribute must be initialized">;
+def err_bounds_safety_terminated_by_incomplete_array_empty_init : Error<
+  "incomplete array '%0' with '__terminated_by' attribute must be initialized "
+  "with at least one element">;
+def err_bounds_safety_terminated_by_terminator_in_array_must_be_const : Error<
+  "terminator in array '%0' must be a compile-time constant">;
+def err_bounds_safety_terminated_by_wrong_initializer_kind : Error<
+  "array '%0' with '__terminated_by' attribute must be initialized with a "
+  "string literal or an initializer list">;
+def err_bounds_safety_terminated_by_terminator_mismatch : Error<
+  "array '%0' with '__terminated_by' attribute is initialized with an "
+  "incorrect terminator (expected: %1; got %2)">;
+
+def err_bounds_safety_irrecoverable_attr : Error<
+  "bounds attribute '%select{__bidi_indexable|__indexable|__single|__unsafe_indexable}0' cannot be applied to attributed type %1 in this context%select{| due to the surrounding 'typeof' specifier}2">;
+def err_bounds_safety_undeduced : Error<
+  "bounds attribute '%select{__bidi_indexable|__indexable|__single|__unsafe_indexable}0' cannot be applied to an undeduced type">;
+} // End of CategoryName = "BoundsSafety Pointer Attributes Issue"
+// TO_UPSTREAM(BoundsSafety) OFF
+
 // three-way comparison operator diagnostics
 def err_implied_comparison_category_type_not_found : Error<
   "cannot %select{use builtin operator '<=>'|default 'operator<=>'}1 "
@@ -12643,6 +13487,13 @@ def note_safe_buffer_usage_suggestions_disabled : Note<
 def warn_unsafe_buffer_usage_in_container : Warning<
   "the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information">,
   InGroup<UnsafeBufferUsageInContainer>, DefaultIgnore;
+def warn_unsafe_count_attributed_pointer_argument : Warning<
+  "unsafe assignment to function parameter of count-attributed type">,
+  InGroup<UnsafeBufferUsage>, DefaultIgnore;
+def note_unsafe_count_attributed_pointer_argument : Note<
+  "consider using %select{|a safe container and passing '.data()' to the "
+  "parameter%select{| '%3'}2 and '.size()' to its dependent parameter '%4' or }0"
+  "'std::span' and passing '.first(...).data()' to the parameter%select{| '%3'}2">;
 #ifndef NDEBUG
 // Not a user-facing diagnostic. Useful for debugging false negatives in
 // -fsafe-buffer-usage-suggestions (i.e. lack of -Wunsafe-buffer-usage fixits).

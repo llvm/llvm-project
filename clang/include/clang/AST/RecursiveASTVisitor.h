@@ -1145,6 +1145,16 @@ DEF_TRAVERSE_TYPE(CountAttributedType, {
   TRY_TO(TraverseType(T->desugar()));
 })
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+DEF_TRAVERSE_TYPE(DynamicRangePointerType, {
+  if (auto *EndPtr = T->getEndPointer())
+    TRY_TO(TraverseStmt(EndPtr));
+  TRY_TO(TraverseType(T->desugar()));
+})
+
+DEF_TRAVERSE_TYPE(ValueTerminatedType, { TRY_TO(TraverseType(T->desugar())); })
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 DEF_TRAVERSE_TYPE(BTFTagAttributedType,
                   { TRY_TO(TraverseType(T->getWrappedType())); })
 
@@ -1446,6 +1456,14 @@ DEF_TRAVERSE_TYPELOC(AttributedType,
 
 DEF_TRAVERSE_TYPELOC(CountAttributedType,
                      { TRY_TO(TraverseTypeLoc(TL.getInnerLoc())); })
+
+/* TO_UPSTREAM(BoundsSafety) ON */
+DEF_TRAVERSE_TYPELOC(DynamicRangePointerType,
+                     { TRY_TO(TraverseTypeLoc(TL.getInnerLoc())); })
+
+DEF_TRAVERSE_TYPELOC(ValueTerminatedType,
+                     { TRY_TO(TraverseTypeLoc(TL.getOriginalLoc())); })
+/* TO_UPSTREAM(BoundsSafety) OFF */
 
 DEF_TRAVERSE_TYPELOC(BTFTagAttributedType,
                      { TRY_TO(TraverseTypeLoc(TL.getWrappedLoc())); })
@@ -2544,6 +2562,24 @@ DEF_TRAVERSE_STMT(CXXStaticCastExpr, {
 DEF_TRAVERSE_STMT(BuiltinBitCastExpr, {
   TRY_TO(TraverseTypeLoc(S->getTypeInfoAsWritten()->getTypeLoc()));
 })
+
+DEF_TRAVERSE_STMT(BoundsSafetyPointerPromotionExpr, {})
+DEF_TRAVERSE_STMT(AssumptionExpr, {})
+DEF_TRAVERSE_STMT(ForgePtrExpr, {})
+DEF_TRAVERSE_STMT(GetBoundExpr, {})
+DEF_TRAVERSE_STMT(PredefinedBoundsCheckExpr, {})
+DEF_TRAVERSE_STMT(BoundsCheckExpr, {})
+DEF_TRAVERSE_STMT(MaterializeSequenceExpr, {
+  if (!S->isUnbinding()) {
+    for (auto *OVE : S->opaquevalues()) {
+      TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(OVE->getSourceExpr());
+    }
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getWrappedExpr());
+    ShouldVisitChildren = false;
+  }
+})
+DEF_TRAVERSE_STMT(TerminatedByToIndexableExpr, {})
+DEF_TRAVERSE_STMT(TerminatedByFromIndexableExpr, {})
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::TraverseSynOrSemInitListExpr(

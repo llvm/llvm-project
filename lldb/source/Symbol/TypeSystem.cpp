@@ -117,6 +117,23 @@ TypeSystem::AddRestrictModifier(lldb::opaque_compiler_type_t type) {
   return CompilerType();
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+CompilerType
+TypeSystem::AddBoundsSafetyIndexableAttribute(lldb::opaque_compiler_type_t type) {
+  return CompilerType();
+}
+
+CompilerType
+TypeSystem::AddBoundsSafetyBidiIndexableAttribute(lldb::opaque_compiler_type_t type) {
+  return CompilerType();
+}
+
+CompilerType
+TypeSystem::AddBoundsSafetyUnspecifiedAttribute(lldb::opaque_compiler_type_t type) {
+  return CompilerType();
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 CompilerType TypeSystem::CreateTypedef(lldb::opaque_compiler_type_t type,
                                        const char *name,
                                        const CompilerDeclContext &decl_ctx,

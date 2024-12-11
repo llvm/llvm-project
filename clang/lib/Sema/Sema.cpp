@@ -154,11 +154,44 @@ namespace clang {
 namespace sema {
 
 class SemaPPCallbacks : public PPCallbacks {
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  struct Include {
+    SourceLocation FileLoc;
+    BoundsSafetyPointerAttributes FAttr;
+
+    Include(SourceLocation FileLoc) : FileLoc(FileLoc) {}
+  };
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
+
   Sema *S = nullptr;
-  llvm::SmallVector<SourceLocation, 8> IncludeStack;
+  // TO_UPSTREAM(BoundsSafety): SourceLocation -> Include
+  llvm::SmallVector<Include, 8> IncludeStack;
   llvm::SmallVector<llvm::TimeTraceProfilerEntry *, 8> ProfilerStack;
+  // TO_UPSTREAM(BoundsSafety)
+  BoundsSafetyPointerAttributes RootFAttr;
+
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  void PushInclude(SourceLocation IncludeLoc, SourceLocation FileLoc) {
+    IncludeStack.push_back(Include(IncludeLoc));
+    if (S->getSourceManager().isInSystemHeader(FileLoc)) {
+      IncludeStack.back().FAttr = SystemHeaderAttributes();
+    } else {
+      IncludeStack.back().FAttr = S->CurPointerAbi;
+    }
+  }
+
+  SourceLocation PopInclude() {
+    return IncludeStack.pop_back_val().FileLoc;
+  }
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
 
 public:
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  SemaPPCallbacks() {
+    RootFAttr.setSingle();
+  }
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
+
   void set(Sema &S) { this->S = &S; }
 
   void reset() { S = nullptr; }
@@ -171,15 +204,26 @@ public:
     switch (Reason) {
     case EnterFile: {
       SourceManager &SM = S->getSourceManager();
-      SourceLocation IncludeLoc = SM.getIncludeLoc(SM.getFileID(Loc));
+      FileID FID = SM.getFileID(Loc);
+      SourceLocation IncludeLoc = SM.getIncludeLoc(FID);
+      /* TO_UPSTREAM(BoundsSafety) ON*/
+      StringRef Filename("<unknown>");
+      // IncludeLoc may be invalid because of #line pragma. Retry with `PresumedLoc` which contains the location modified by #line.
+      if (IncludeLoc.isInvalid()) {
+        auto PresumedLoc = SM.getPresumedLoc(Loc);
+        IncludeLoc = PresumedLoc.getIncludeLoc();
+        Filename = PresumedLoc.getFilename();
+      }
+      /* TO_UPSTREAM(BoundsSafety) OFF*/
       if (IncludeLoc.isValid()) {
         if (llvm::timeTraceProfilerEnabled()) {
-          OptionalFileEntryRef FE = SM.getFileEntryRefForID(SM.getFileID(Loc));
+          OptionalFileEntryRef FE = SM.getFileEntryRefForID(FID);
           ProfilerStack.push_back(llvm::timeTraceAsyncProfilerBegin(
-              "Source", FE ? FE->getName() : StringRef("<unknown>")));
+              "Source", FE ? FE->getName() : Filename));
         }
 
-        IncludeStack.push_back(IncludeLoc);
+        // TO_UPSTREAM(BoundsSafety)
+        PushInclude(IncludeLoc, Loc);
         S->DiagnoseNonDefaultPragmaAlignPack(
             Sema::PragmaAlignPackDiagnoseKind::NonDefaultStateAtInclude,
             IncludeLoc);
@@ -193,13 +237,67 @@ public:
 
         S->DiagnoseNonDefaultPragmaAlignPack(
             Sema::PragmaAlignPackDiagnoseKind::ChangedStateAtExit,
-            IncludeStack.pop_back_val());
+            PopInclude());
       }
       break;
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    case SystemHeaderPragma:
+      IncludeStack.back().FAttr = SystemHeaderAttributes();
+      break;
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
     default:
       break;
     }
+
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    S->CurPointerAbi =
+      IncludeStack.empty() ? RootFAttr : IncludeStack.back().FAttr;
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
   }
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  void PragmaAbiPointerAttributesSet(SourceLocation Loc,
+                                     ArrayRef<const IdentifierInfo *> Spec)
+                                    override {
+    if (!S)
+      return;
+    BoundsSafetyPointerAttributes FAttr;
+    auto GNU = AttributeCommonInfo::AS_GNU;
+    for (const IdentifierInfo *II : Spec) {
+      auto Kind = AttributeCommonInfo::getParsedKind(II, /*ScopeName=*/nullptr,
+                                                     GNU);
+      auto BoundsAttrPrev = FAttr.getBoundsAttr();
+      switch (Kind) {
+      case AttributeCommonInfo::AT_PtrBidiIndexable:
+        FAttr.setBidiIndexable();
+        break;
+      case AttributeCommonInfo::AT_PtrIndexable:
+        FAttr.setIndexable();
+        break;
+      case AttributeCommonInfo::AT_PtrUnsafeIndexable:
+        FAttr.setUnsafeIndexable();
+        break;
+      case AttributeCommonInfo::AT_PtrSingle:
+        FAttr.setSingle();
+        break;
+      default:
+        S->Diag(Loc, diag::err_bounds_safety_abi_ptr_attr_invalid) << II;
+        break;
+      }
+      if (BoundsAttrPrev && BoundsAttrPrev != FAttr.getBoundsAttr()) {
+        S->Diag(Loc, diag::err_bounds_safety_conflicting_pointer_attributes)
+            << /* pointer */ 1 << /* bound */ 0;
+        continue;
+      }
+    }
+    (IncludeStack.empty() ? RootFAttr : IncludeStack.back().FAttr) = FAttr;
+    S->CurPointerAbi = FAttr;
+  }
+
+  BoundsSafetyPointerAttributes SystemHeaderAttributes() const {
+    return BoundsSafetyPointerAttributes();
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 };
 
 } // end namespace sema
@@ -293,6 +391,10 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
   SemaPPCallbackHandler = Callbacks.get();
   PP.addPPCallbacks(std::move(Callbacks));
   SemaPPCallbackHandler->set(*this);
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  CurPointerAbi.setSingle();
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   CurFPFeatures.setFPEvalMethod(PP.getCurrentFPEvalMethod());
 }
@@ -687,10 +789,11 @@ void Sema::diagnoseZeroToNullptrConversion(CastKind Kind, const Expr *E) {
 /// ImpCastExprToType - If Expr is not of type 'Type', insert an implicit cast.
 /// If there is already an implicit cast, merge into the existing one.
 /// The result is of the given category.
-ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
-                                   CastKind Kind, ExprValueKind VK,
-                                   const CXXCastPath *BasePath,
-                                   CheckedConversionKind CCK) {
+ExprResult
+Sema::ImpCastExprToType(Expr *E, QualType Ty, CastKind Kind, ExprValueKind VK,
+                        const CXXCastPath *BasePath, CheckedConversionKind CCK,
+                        //TO_UPSTREAM(BoundsSafety)
+                        bool DiagnoseBoundsSafetyIncompleteArrayPromotion) {
 #ifndef NDEBUG
   if (VK == VK_PRValue && !E->isPRValue()) {
     switch (Kind) {
@@ -732,7 +835,10 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
     return ImplicitCastExpr::Create(Context, Ty, Kind, E, BasePath, VK,
                                     CurFPFeatureOverrides());
 
-  if (ExprTy == TypeTy)
+  // BoundsSafety: Even if source and destination have the same canonical type,
+  // we still insert ImplicitCastExpr for types with different -fbounds-safety pointer
+  // attributes.
+  if (ExprTy == TypeTy && Kind != CK_BoundsSafetyPointerCast)
     return E;
 
   if (Kind == CK_ArrayToPointerDecay) {
@@ -767,8 +873,94 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
     }
   }
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  // BoundsSafety: a reference to array decays into a bound pointer.
+  // FIXME: This should also be supported without '-fbounds-safety' when destination
+  // of this expression is annotated with '__bidi_indexable' or '__indexable'
+  // (rdar://70018442).
+  // XXX: We don't promote builtin va_list to bound type for now to preserve the
+  // compatibility with the builtin function prototype
+  auto PreservingAttributes = [=](QualType QT, auto Callback) -> QualType {
+    SmallVector<AttributedType::Kind, 1> AttrKinds;
+    while (auto AT = QT->getAs<AttributedType>()) {
+      AttrKinds.push_back(AT->getAttrKind());
+      QT = AT->getModifiedType();
+    }
+
+    QT = Callback(QT);
+
+    QualType EquivQT = QT;
+    for (auto I = AttrKinds.rbegin(), E = AttrKinds.rend(); I != E; ++I)
+      QT = Context.getAttributedType(*I, QT, EquivQT);
+    return QT;
+  };
+
+  if (getLangOpts().BoundsSafety) {
+    switch (Kind) {
+    case CK_ArrayToPointerDecay: {
+      if (!Context.hasSameUnqualifiedType(
+              ExprTy, Context.getBuiltinVaListType())) {
+        if (const auto *VTT = E->getType()->getAs<ValueTerminatedType>()) {
+          Ty = PreservingAttributes(Ty, [=](QualType QT) {
+            QualType PT = Context.getPointerType(
+                QT->getPointeeType(), BoundsSafetyPointerAttributes::single());
+            return Context.getValueTerminatedType(PT, VTT->getTerminatorExpr());
+          });
+          break;
+        }
+        if (E->getType()->isIncompleteArrayType() &&
+            !E->getType()->isCountAttributedType() &&
+            DiagnoseBoundsSafetyIncompleteArrayPromotion) {
+          Diag(E->getExprLoc(),
+               diag::warn_bounds_safety_promoting_incomplete_array_without_count);
+        }
+        Ty = PreservingAttributes(Ty, [=](QualType QT) {
+          auto PT = QT->getAs<PointerType>();
+          BoundsSafetyPointerAttributes FA;
+          FA.setBidiIndexable();
+          return Context.getPointerType(PT->getPointeeType(), FA);
+        });
+      }
+      break;
+    }
+
+    case CK_FunctionToPointerDecay: {
+      Ty = PreservingAttributes(Ty, [=](QualType QT) {
+        BoundsSafetyPointerAttributes FA;
+        FA.setSingle();
+        auto PT = Ty->getAs<PointerType>();
+        return Context.getPointerType(PT->getPointeeType(), FA);
+      });
+      break;
+    }
+
+    default:
+      break;
+    }
+  } else if (getLangOpts().DebuggerSupport &&
+             (Kind == CK_BitCast || Kind == CK_NoOp) &&
+             E->getType()->isPointerType() && Ty->isPointerType()) {
+    auto SrcPTy = E->getType()->getAs<PointerType>();
+    auto DstPTy = Ty->getAs<PointerType>();
+
+    if (SrcPTy->getPointerAttributes() != DstPTy->getPointerAttributes()) {
+      if (Kind == CK_BitCast) {
+        QualType BridgeDstTy = PreservingAttributes(Ty, [&](QualType QT) {
+          return Context.getPointerType(SrcPTy->getPointeeType(),
+                                        DstPTy->getPointerAttributes());
+        });
+        E = ImplicitCastExpr::Create(Context, BridgeDstTy, CK_BoundsSafetyPointerCast, E, BasePath, VK,
+                                     CurFPFeatureOverrides());
+      } else {
+        Kind = CK_BoundsSafetyPointerCast;
+      }
+    }
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
   if (ImplicitCastExpr *ImpCast = dyn_cast<ImplicitCastExpr>(E)) {
-    if (ImpCast->getCastKind() == Kind && (!BasePath || BasePath->empty())) {
+    if (ImpCast->getCastKind() == Kind && (!BasePath || BasePath->empty()) &&
+        Kind != CK_BoundsSafetyPointerCast) {
       ImpCast->setType(Ty);
       ImpCast->setValueKind(VK);
       return E;
@@ -1401,6 +1593,14 @@ void Sema::ActOnEndOfTranslationUnit() {
     } else if (RequireCompleteType(VD->getLocation(), VD->getType(),
                                    diag::err_tentative_def_incomplete_type))
       VD->setInvalidDecl();
+
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    // Now perform VarDecl checks for tentative definitions. Non-tentative
+    // definitions were already handled earlier in
+    // `Sema::FinalizeDeclaratorGroup()`.
+    if (!BoundsSafetyCheckVarDecl(VD, /*CheckTentativeDefinitions=*/true))
+      VD->setInvalidDecl();
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
 
     // No initialization is performed for a tentative definition.
     CheckCompleteVariableDeclaration(VD);
@@ -2780,6 +2980,21 @@ bool Sema::isDeclaratorFunctionLike(Declarator &D) {
   });
   return Result;
 }
+
+/*TO_UPSTREAM(BoundsSafety) ON*/
+bool Sema::BoundsSafetyFixItWasEmittedFor(const DeclaratorDecl *DD, bool Set) {
+  assert(DD);
+  assert(isa<VarDecl>(DD) || isa<FieldDecl>(DD));
+  if (Set) {
+    // Record the Decl
+    BoundsSafetyDeclsWithFixIts.insert(DD);
+    return true;
+  }
+
+  // Retrieve whether a FixIt was emitted for this VarDecl.
+  return BoundsSafetyDeclsWithFixIts.contains(DD);
+}
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
 
 Attr *Sema::CreateAnnotationAttr(const AttributeCommonInfo &CI, StringRef Annot,
                                  MutableArrayRef<Expr *> Args) {

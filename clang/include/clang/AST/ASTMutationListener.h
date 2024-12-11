@@ -149,6 +149,17 @@ public:
   virtual void AddedAttributeToRecord(const Attr *Attr,
                                       const RecordDecl *Record) {}
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  /// An attribute to a Decl to write in a separate record because the attribute
+  /// and the Decl create a cycle during deserialization.
+  ///
+  /// \param Attr The attribute to the Decl
+  ///
+  /// \param Record The Decl owns the attribute
+  virtual void LazyAttributeToDecl(const Attr *Attr,
+                                   const Decl *D) {}
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
   /// The parser find the named module declaration.
   virtual void EnteringModulePurview() {}
 

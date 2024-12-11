@@ -21,6 +21,7 @@ Subcommands
   * :ref:`yaml2bitstream_subcommand` - Reserialize YAML remarks to bitstream.
   * :ref:`instruction-count_subcommand` - Output function instruction counts.
   * :ref:`annotation-count_subcommand` - Output remark type count from annotation remarks.
+  * :ref:`bounds-safety-count_subcommand` - Output the total count of -fbounds-safety checks for the given binary.
   * :ref:`size-diff_subcommand` - Compute diff in size remarks.
 
 .. _bitstream2yaml_subcommand:
@@ -203,6 +204,39 @@ Options
   * ``analysis-fp-commute``
   * ``analysis-aliasing``
   * ``failure``
+
+
+.. _bounds-safety-count_subcommand:
+
+bounds-safety-count
+~~~~~~~~~~~~~~~~~
+
+.. program:: llvm-remarkutil bounds-safety-count
+
+USAGE: :program:`llvm-remarkutil` bounds-safety-count <input file> --parser=<bitstream|yaml> [--collect-per-source] -o <output file>
+
+Summary
+^^^^^^^
+
+Outputs the total -fbounds-safety remarks count for the given binary using `bounds-safety-total-summary` remark information. 
+If `collect-per-source` flag is provided the count will be broken down by `source` utilizing DebugLoc information.
+bounds-safety-total-summary require bounds-safety-xxx remarks.
+
+CSV format is as follows:
+
+Collecting count for the binary
+
+::
+  Count 
+  123
+
+Using `collect-per-source`
+
+::
+  Source, Count
+  /path/to/file1, 123
+  /path/to/file2 233
+  
 
 .. _size-diff_subcommand:
 

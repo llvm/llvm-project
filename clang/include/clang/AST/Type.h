@@ -2283,6 +2283,17 @@ protected:
   };
   static_assert(sizeof(CountAttributedTypeBitfields) <= sizeof(unsigned));
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  class DynamicRangePointerTypeBitfields {
+    friend class DynamicRangePointerType;
+
+    unsigned : NumTypeBits;
+
+    unsigned NumEndPtrDecls : 16;
+    unsigned NumStartPtrDecls : 16;
+  };
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   union {
     TypeBitfields TypeBits;
     ArrayTypeBitfields ArrayTypeBits;
@@ -2307,6 +2318,9 @@ protected:
       DependentTemplateSpecializationTypeBits;
     PackExpansionTypeBitfields PackExpansionTypeBits;
     CountAttributedTypeBitfields CountAttributedTypeBits;
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    DynamicRangePointerTypeBitfields DynamicRangePointerTypeBits;
+    /* TO_UPSTREAM(BoundsSafety) OFF */
   };
 
 private:
@@ -2454,11 +2468,47 @@ public:
   /// class), will be set to the declaration.
   bool isIncompleteType(NamedDecl **Def = nullptr) const;
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  /// Return true if the size of this type is "meaningless". For a meaninglessly
+  /// sized type T, sizeof(T) is either ill-formed or has a useless or
+  /// misleading result. This could be because the type is a function type, is a
+  /// void type, is a sizeless type, is an incomplete type (including an
+  /// incomplete array type), or is a record type with a flexible array member.
+  bool isSizeMeaningless() const;
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
   /// Return true if this is an incomplete or object
   /// type, in other words, not a function type.
   bool isIncompleteOrObjectType() const {
     return !isFunctionType();
   }
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  /// Return true if this is an incomplete or sizeless type including a function type.
+  bool isIncompleteOrSizelessType() const {
+    return isIncompleteType() || isSizelessType() || isFunctionType();
+  }
+
+  /// \returns True if the type is incomplete and it is also a type that
+  /// cannot be completed by a later type definition.
+  ///
+  /// E.g. For `void` this is true but for `struct ForwardDecl;` this is false
+  /// because a definition for `ForwardDecl` could be provided later on in the
+  /// translation unit.
+  ///
+  /// Note even for types that this function returns true for it is still
+  /// possible for the declarations that contain this type to later have a
+  /// complete type in a translation unit. E.g.:
+  ///
+  /// \code{.c}
+  /// // This decl has type 'char[]' which is incomplete and cannot be later
+  /// // completed by another by another type declaration.
+  /// extern char foo[];
+  /// // This decl how has complete type 'char[5]'.
+  /// char foo[5]; // foo has a complete type
+  /// \endcode
+  bool isIncompletableIncompleteType() const;
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   /// Determine whether this type is an object type.
   bool isObjectType() const {
@@ -2554,8 +2604,23 @@ public:
   bool isPointerType() const;
   bool isPointerOrReferenceType() const;
   bool isSignableType() const;
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  bool isUnsafeIndexablePointerType() const;
+  bool isSinglePointerType() const;
+  bool isIndexablePointerType() const;
+  bool isBidiIndexablePointerType() const;
+  bool isUnspecifiedPointerType() const;
+  bool isSafePointerType() const;
+  /* TO_UPSTREAM(BoundsSafety) OFF */
   bool isAnyPointerType() const;   // Any C pointer or ObjC object pointer
   bool isCountAttributedType() const;
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  bool isAnyVaListType(ASTContext &) const;
+  bool isDynamicRangePointerType() const;
+  bool isBoundsAttributedType() const;
+  bool isValueTerminatedType() const;
+  bool isImplicitlyNullTerminatedType(const ASTContext &) const;
+  /* TO_UPSTREAM(BoundsSafety) OFF */
   bool isBlockPointerType() const;
   bool isVoidPointerType() const;
   bool isReferenceType() const;
@@ -2648,6 +2713,8 @@ public:
   bool isAtomicType() const;                    // C11 _Atomic()
   bool isUndeducedAutoType() const;             // C++11 auto or
                                                 // C++14 decltype(auto)
+  // TO_UPSTREAM(BoundsSafety)
+  bool isPointerTypeWithBounds() const;         // BoundsSafety __indexable or __bidi_indexable
   bool isTypedefNameType() const;               // typedef or alias template
 
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
@@ -3035,6 +3102,16 @@ template <> const BoundsAttributedType *Type::getAs() const;
 /// sugar until it reaches an CountAttributedType or a non-sugared type.
 template <> const CountAttributedType *Type::getAs() const;
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+/// This will check for a DynamicRangePointerType by removing any existing
+/// sugar until it reaches an DynamicRangePointerType or a non-sugared type.
+template <> const DynamicRangePointerType *Type::getAs() const;
+
+/// This will check for a ValueTerminatedType by removing any existing sugar
+/// until it reaches a ValueTerminatedType or a non-sugared type.
+template <> const ValueTerminatedType *Type::getAs() const;
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 // We can do canonical leaf types faster, because we don't have to
 // worry about preserving child type decoration.
 #define TYPE(Class, Base)
@@ -3212,28 +3289,253 @@ public:
   static bool classof(const Type *T) { return T->getTypeClass() == Paren; }
 };
 
+class BoundsSafetyPointerAttributes {
+public:
+  // This ordering of attributes also serves as precedence to create a composite
+  // type between two pointer types. We currently use the precedence for conditional
+  // operators for which '__unsafe_indexable' has the highest precedence while
+  // '__single' being the lowest.
+  enum BK {
+    Unspecified = 0,
+    UnsafeIndexable = 1,
+    BidiIndexable = 2,
+    Indexable = 3,
+    Single = 4,
+    BoundsWidth = 3,
+    BoundsMask = (1 << BoundsWidth) - 1
+  };
+
+  enum TK {
+    UnsafeCastable = 1,
+    NoCastable = 2,
+    Castable = 3,
+    TypeWidth = 2,
+    TypeMask = (1 << TypeWidth) - 1,
+    ShiftedTypeMask = TypeMask << BoundsWidth
+  };
+
+  static BoundsSafetyPointerAttributes unsafeIndexable() {
+    BoundsSafetyPointerAttributes FA;
+    FA.setUnsafeIndexable();
+    return FA;
+  }
+
+  static BoundsSafetyPointerAttributes bidiIndexable() {
+    BoundsSafetyPointerAttributes FA;
+    FA.setBidiIndexable();
+    return FA;
+  }
+
+  static BoundsSafetyPointerAttributes indexable() {
+    BoundsSafetyPointerAttributes FA;
+    FA.setIndexable();
+    return FA;
+  }
+
+  static BoundsSafetyPointerAttributes single() {
+    BoundsSafetyPointerAttributes FA;
+    FA.setSingle();
+    return FA;
+  }
+
+  static BoundsSafetyPointerAttributes unspecified() {
+    BoundsSafetyPointerAttributes FA;
+    return FA;
+  }
+
+  uint32_t getBoundsAttr() const { return BoundsAttr; }
+
+  uint32_t getTypeAttr() const { return TypeAttr; }
+
+  uint32_t getAsOpaqueValue() const {
+    return (TypeAttr << BoundsWidth) | BoundsAttr;
+  }
+
+  bool isUnspecified() const { return getBoundsAttr() == Unspecified; }
+  bool isUnsafeIndexable() const { return getBoundsAttr() == UnsafeIndexable; }
+  bool isSingle() const { return getBoundsAttr() == Single; }
+  bool isIndexable() const { return getBoundsAttr() == Indexable; }
+  bool isBidiIndexable() const { return getBoundsAttr() == BidiIndexable; }
+  bool isUnsafeOrUnspecified() const { return isUnsafeIndexable() || isUnspecified(); }
+
+  void setUnspecified() { setBoundsAttr(Unspecified); }
+  void setUnsafeIndexable() { setBoundsAttr(UnsafeIndexable); }
+  void setSingle() { setBoundsAttr(Single); }
+  void setIndexable() { setBoundsAttr(Indexable); }
+  void setBidiIndexable() { setBoundsAttr(BidiIndexable); }
+  void copyBoundsAttr(BoundsSafetyPointerAttributes FAttr) {
+    setBoundsAttr(FAttr.getBoundsAttr());
+  }
+  
+  void copyTypeAttr(BoundsSafetyPointerAttributes FAttr) {
+    setTypeAttr(FAttr.getTypeAttr());
+  }
+
+  BoundsSafetyPointerAttributes(uint32_t value = 0)
+      : BoundsAttr(value & BoundsMask),
+        TypeAttr((value & ShiftedTypeMask) >> BoundsWidth) {}
+
+  void print(raw_ostream &OS) const {
+    switch (getBoundsAttr()) {
+    case Unspecified:
+      break;
+    case UnsafeIndexable:
+      OS << "__unsafe_indexable";
+      break;
+    case Single:
+      OS << "__single";
+      break;
+    case Indexable:
+      OS << "__indexable";
+      break;
+    case BidiIndexable:
+      OS << "__bidi_indexable";
+      break;
+    default:
+      llvm_unreachable("Unknown -fbounds-safety bounds only attributes");
+    }
+
+    switch (getTypeAttr()) {
+    case Unspecified:
+      break;
+    default:
+      llvm_unreachable("Unknown -fbounds-safety type attributes");
+    }
+  }
+
+  bool operator==(BoundsSafetyPointerAttributes other) const {
+    return getAsOpaqueValue() == other.getAsOpaqueValue();
+  }
+
+  bool operator!=(BoundsSafetyPointerAttributes other) const {
+    return !(*this == other);
+  }
+
+  bool hasRawPointerLayout() const {
+    return isUnspecified() || isSingle() || isUnsafeIndexable();
+  }
+
+  bool hasLowerBound() const { return isBidiIndexable(); }
+
+  bool hasUpperBound() const { return isBidiIndexable() || isIndexable(); }
+
+  void takeBoundsAttr(BoundsSafetyPointerAttributes Other) {
+    setBoundsAttr(Other.getBoundsAttr());
+  }
+
+  static bool areEquivalentLayouts(BoundsSafetyPointerAttributes A1,
+                                   BoundsSafetyPointerAttributes A2) {
+    if (A1 == A2)
+      return true;
+
+    if (A1.getTypeAttr() != A2.getTypeAttr())
+      return false;
+
+    // Single and unsafe have equivalent layout.
+    if ((A1.isUnsafeOrUnspecified() && A2.hasRawPointerLayout()) ||
+        (A1.hasRawPointerLayout() && A2.isUnsafeOrUnspecified()))
+      return true;
+
+    return false;
+  }
+
+
+  static bool areCompatible(BoundsSafetyPointerAttributes Left,
+                            BoundsSafetyPointerAttributes Right) {
+    if (Left == Right)
+      return true;
+
+    // Allow unspecified pointer attributes to merge with either of
+    // unsafe_indexable and single.
+    if (Left.isUnspecified())
+      return Right.hasRawPointerLayout();
+    if (Right.isUnspecified())
+      return Left.hasRawPointerLayout();
+
+    return false;
+  }
+
+  static BoundsSafetyPointerAttributes fromOpaqueValue(uint32_t value) {
+    return BoundsSafetyPointerAttributes(value);
+  }
+
+  // BoundsSafetyPointerAttributes precedence in conditional operator
+  // conversion (bounds only):
+  // 1) __unsafe_indexable or unspecified
+  // 2) __bidi_indexable
+  // 3) __indexable
+  // 4) __single
+  static BoundsSafetyPointerAttributes merge(BoundsSafetyPointerAttributes A1,
+                                          BoundsSafetyPointerAttributes A2) {
+    uint32_t NewBoundsAtt = A1.getBoundsAttr() > A2.getBoundsAttr()
+                                ? A2.getBoundsAttr()
+                                : A1.getBoundsAttr();
+
+    uint32_t NewTypeAtt = A1.getTypeAttr() > A2.getTypeAttr()
+                              ? A2.getTypeAttr()
+                              : A1.getTypeAttr();
+
+    BoundsSafetyPointerAttributes NewAtt;
+    NewAtt.setBoundsAttr(NewBoundsAtt);
+    NewAtt.setTypeAttr(NewTypeAtt);
+    return NewAtt;
+  }
+
+private:
+  void setBoundsAttr(uint32_t attr) {
+    assert(!(attr & ~BoundsMask) && "attr contains non-bounds bits");
+    BoundsAttr = attr;
+  }
+  void setTypeAttr(uint32_t attr) {
+    assert(!(attr & ~TypeMask) && "attr contains non-type bits");
+    TypeAttr = attr;
+  }
+
+private:
+  //  |0 .. 2|3 .. 4|5 .. 31|
+  //  |Bounds|Type  |Reserved|
+  uint32_t BoundsAttr : 3;
+  uint32_t TypeAttr : 2;
+};
+
 /// PointerType - C99 6.7.5.1 - Pointer Declarators.
 class PointerType : public Type, public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these.
 
-  QualType PointeeType;
+  using FA = BoundsSafetyPointerAttributes;
 
-  PointerType(QualType Pointee, QualType CanonicalPtr)
+  QualType PointeeType;
+  FA FAttr;
+
+  PointerType(QualType Pointee, QualType CanonicalPtr, FA FAttr)
       : Type(Pointer, CanonicalPtr, Pointee->getDependence()),
-        PointeeType(Pointee) {}
+        PointeeType(Pointee), FAttr(FAttr) {}
 
 public:
   QualType getPointeeType() const { return PointeeType; }
+  FA getPointerAttributes() const { return FAttr; }
 
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getPointeeType());
+  bool hasRawPointerLayout() const { return FAttr.hasRawPointerLayout(); }
+  bool isSafePointer() const {
+    return !(FAttr.isUnsafeIndexable() || FAttr.isUnspecified());
   }
 
-  static void Profile(llvm::FoldingSetNodeID &ID, QualType Pointee) {
+  bool isSingle() const { return FAttr.isSingle(); }
+  bool isIndexable() const { return FAttr.isIndexable(); }
+  bool isBidiIndexable() const { return FAttr.isBidiIndexable(); }
+  bool isUnsafeIndexable() const { return FAttr.isUnsafeIndexable(); }
+  bool isUnspecified() const { return FAttr.isUnspecified(); }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, getPointeeType(), getPointerAttributes());
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, QualType Pointee, FA FAttr) {
     ID.AddPointer(Pointee.getAsOpaquePtr());
+    ID.AddInteger(FAttr.getAsOpaqueValue());
   }
 
   static bool classof(const Type *T) { return T->getTypeClass() == Pointer; }
@@ -3243,12 +3545,16 @@ public:
 /// arguments of the `counted_by` attribute and the likes.
 class TypeCoupledDeclRefInfo {
 public:
-  using BaseTy = llvm::PointerIntPair<ValueDecl *, 1, unsigned>;
+  using BaseTy = llvm::PointerIntPair<ValueDecl *, 2, unsigned>;
 
 private:
   enum {
     DerefShift = 0,
     DerefMask = 1,
+    /*TO_UPSTREAM(BoundsSafety) ON*/
+    MemberShift = 1,
+    MemberMask = 1,
+    /*TO_UPSTREAM(BoundsSafety) OFF*/
   };
   BaseTy Data;
 
@@ -3256,9 +3562,17 @@ public:
   /// \p D is to a declaration referenced by the argument of attribute. \p Deref
   /// indicates whether \p D is referenced as a dereferenced form, e.g., \p
   /// Deref is true for `*n` in `int *__counted_by(*n)`.
-  TypeCoupledDeclRefInfo(ValueDecl *D = nullptr, bool Deref = false);
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  /// \p Member indicates that \p D is referenced as the member for a struct,
+  /// e.g __counted_by(hdr.len) `hdr`, although a FieldDecl is referred to by
+  /// a DeclRefExpr, while `len` is referred to by a MemberExpr. In this
+  /// example `Member` is false for `hdr` and true for `len`.
+  TypeCoupledDeclRefInfo(ValueDecl *D = nullptr, bool Deref = false,
+                         bool Member = false);
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   bool isDeref() const;
+  bool isMember() const;
   ValueDecl *getDecl() const;
   unsigned getInt() const;
   void *getOpaqueValue() const;
@@ -3282,6 +3596,16 @@ protected:
   BoundsAttributedType(TypeClass TC, QualType Wrapped, QualType Canon);
 
 public:
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  enum BoundsAttrKind {
+    CountedBy = 0,
+    SizedBy,
+    CountedByOrNull,
+    SizedByOrNull,
+    EndedBy
+  };
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
   bool isSugared() const { return true; }
   QualType desugar() const { return WrappedTy; }
 
@@ -3309,6 +3633,9 @@ public:
     // annotations.
     switch (T->getTypeClass()) {
     case CountAttributed:
+/* TO_UPSTREAM(BoundsSafety) ON */
+    case DynamicRangePointer:
+/* TO_UPSTREAM(BoundsSafety) OFF */
       return true;
     default:
       return false;
@@ -3340,22 +3667,17 @@ class CountAttributedType final
   }
 
 public:
-  enum DynamicCountPointerKind {
-    CountedBy = 0,
-    SizedBy,
-    CountedByOrNull,
-    SizedByOrNull,
-  };
-
   Expr *getCountExpr() const { return CountExpr; }
   bool isCountInBytes() const { return CountAttributedTypeBits.CountInBytes; }
   bool isOrNull() const { return CountAttributedTypeBits.OrNull; }
 
-  DynamicCountPointerKind getKind() const {
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  BoundsAttrKind getKind() const {
     if (isOrNull())
       return isCountInBytes() ? SizedByOrNull : CountedByOrNull;
     return isCountInBytes() ? SizedBy : CountedBy;
   }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   void Profile(llvm::FoldingSetNodeID &ID) {
     Profile(ID, desugar(), CountExpr, isCountInBytes(), isOrNull());
@@ -3367,7 +3689,124 @@ public:
   static bool classof(const Type *T) {
     return T->getTypeClass() == CountAttributed;
   }
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  StringRef GetAttributeName(bool WithMacroPrefix) const;
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 };
+
+/* TO_UPSTREAM(BoundsSafety) ON */
+class DynamicRangePointerType final
+    : public BoundsAttributedType,
+      public llvm::TrailingObjects<DynamicRangePointerType,
+                                   TypeCoupledDeclRefInfo> {
+  friend class ASTContext;
+
+  // We have 0 or 1 primary start and end pointer expressions and 0 or more
+  // start and end declarations that are associated with the type.
+  Expr *StartPtr;
+  Expr *EndPtr;
+  DynamicRangePointerType(QualType PointerTy, QualType CanPointerTy,
+                          Expr *StartPtr, Expr *EndPtr,
+                          ArrayRef<TypeCoupledDeclRefInfo> StartPtrDecls,
+                          ArrayRef<TypeCoupledDeclRefInfo> EndPtrDecls);
+
+  unsigned numTrailingObjects(OverloadToken<TypeCoupledDeclRefInfo>) const {
+    return DynamicRangePointerTypeBits.NumEndPtrDecls +
+           DynamicRangePointerTypeBits.NumStartPtrDecls;
+  }
+
+public:
+  BoundsAttrKind getKind() const { return EndedBy; }
+
+  Expr *getStartPointer() const { return StartPtr; }
+  Expr *getEndPointer() const { return EndPtr; }
+
+  unsigned getNumStartPtrDecls() const {
+    return DynamicRangePointerTypeBits.NumStartPtrDecls;
+  }
+
+  unsigned getNumEndPtrDecls() const {
+    return DynamicRangePointerTypeBits.NumEndPtrDecls;
+  }
+
+  decl_iterator startptr_decl_begin() const {
+    return getTrailingObjects<TypeCoupledDeclRefInfo>();
+  }
+
+  decl_iterator startptr_decl_end() const {
+    return startptr_decl_begin() + getNumStartPtrDecls();
+  }
+
+  decl_range startptr_decls() const {
+    return decl_range(startptr_decl_begin(), startptr_decl_end());
+  }
+
+  ArrayRef<TypeCoupledDeclRefInfo> getStartPtrDecls() const {
+    return {startptr_decl_begin(), startptr_decl_end()};
+  }
+
+  decl_iterator endptr_decl_begin() const {
+    return startptr_decl_end();
+  }
+
+  decl_iterator endptr_decl_end() const {
+    return endptr_decl_begin() + getNumEndPtrDecls();
+  }
+
+  decl_range endptr_decls() const {
+    return decl_range(endptr_decl_begin(), endptr_decl_end());
+  }
+
+  ArrayRef<TypeCoupledDeclRefInfo> getEndPtrDecls() const {
+    return {endptr_decl_begin(), endptr_decl_end()};
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, desugar(), StartPtr, EndPtr, getNumStartPtrDecls(),
+            getNumEndPtrDecls());
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, QualType PointerTy,
+                      Expr *StartPtr, Expr *EndPtr, unsigned NumStartDecls,
+                      unsigned NumEndDecls);
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == DynamicRangePointer;
+  }
+};
+
+class ValueTerminatedType final : public Type, public llvm::FoldingSetNode {
+  friend class ASTContext;
+
+  QualType OriginalTy;
+  Expr *TerminatorExpr;
+
+  explicit ValueTerminatedType(QualType OriginalTy, QualType CanOriginalTy,
+                               Expr *TerminatorExpr)
+      : Type(ValueTerminated, CanOriginalTy, OriginalTy->getDependence()),
+        OriginalTy(OriginalTy), TerminatorExpr(TerminatorExpr) {}
+
+public:
+  bool isSugared() const { return true; }
+  QualType desugar() const { return OriginalTy; }
+
+  Expr *getTerminatorExpr() const { return TerminatorExpr; }
+
+  llvm::APSInt getTerminatorValue(const ASTContext &Ctx) const;
+
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx) const {
+    Profile(ID, Ctx, OriginalTy, TerminatorExpr);
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx,
+                      QualType OriginalTy, const Expr *TerminatorExpr);
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == ValueTerminated;
+  }
+};
+/* TO_UPSTREAM(BoundsSafety) OFF */
 
 /// Represents a type which was implicitly adjusted by the semantic
 /// engine for arbitrary reasons.  For example, array and function types can
@@ -8214,6 +8653,59 @@ inline bool Type::isAnyPointerType() const {
 }
 
 inline bool Type::isSignableType() const { return isPointerType(); }
+
+/* TO_UPSTREAM(BoundsSafety) ON */
+inline bool Type::isUnsafeIndexablePointerType() const {
+  const auto *PT = dyn_cast<PointerType>(CanonicalType);
+  if (!PT)
+    return false;
+  if (PT->isUnsafeIndexable())
+    return true;
+  if (PT->isUnspecified() && hasAttr(attr::PtrUnsafeIndexable))
+    return true;
+  return false;
+}
+
+inline bool Type::isSinglePointerType() const {
+  const auto *PT = dyn_cast<PointerType>(CanonicalType);
+  if (!PT)
+    return false;
+  if (PT->isSingle())
+    return true;
+  if (PT->isUnspecified() && hasAttr(attr::PtrSingle))
+    return true;
+  return false;
+}
+
+inline bool Type::isBidiIndexablePointerType() const {
+  const auto *PT = dyn_cast<PointerType>(CanonicalType);
+  return PT && PT->isBidiIndexable();
+}
+
+inline bool Type::isIndexablePointerType() const {
+  const auto *PT = dyn_cast<PointerType>(CanonicalType);
+  return PT && PT->isIndexable();
+}
+
+inline bool Type::isUnspecifiedPointerType() const {
+  return isPointerType() &&
+         !(isUnsafeIndexablePointerType() || isSinglePointerType() ||
+           isBidiIndexablePointerType() || isIndexablePointerType() ||
+           isBoundsAttributedType() || isValueTerminatedType());
+}
+
+inline bool Type::isSafePointerType() const {
+  return isPointerType() &&
+         (isSinglePointerType() || isBidiIndexablePointerType() ||
+          isIndexablePointerType() || isBoundsAttributedType() ||
+          isValueTerminatedType());
+}
+
+inline bool Type::isPointerTypeWithBounds() const {
+  const auto *PT = dyn_cast<PointerType>(CanonicalType);
+  return PT && PT->getPointerAttributes().hasUpperBound();
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
 
 inline bool Type::isBlockPointerType() const {
   return isa<BlockPointerType>(CanonicalType);

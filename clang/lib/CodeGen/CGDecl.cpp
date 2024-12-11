@@ -16,6 +16,7 @@
 #include "CGDebugInfo.h"
 #include "CGOpenCLRuntime.h"
 #include "CGOpenMPRuntime.h"
+#include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
@@ -743,12 +744,13 @@ static void drillIntoBlockVariable(CodeGenFunction &CGF,
   lvalue.setAddress(CGF.emitBlockByrefAddress(lvalue.getAddress(), var));
 }
 
-void CodeGenFunction::EmitNullabilityCheck(LValue LHS, llvm::Value *RHS,
+// TO_UPSTREAM(BoundsSafety): LHSQTy
+void CodeGenFunction::EmitNullabilityCheck(QualType LHSQTy, llvm::Value *RHS,
                                            SourceLocation Loc) {
   if (!SanOpts.has(SanitizerKind::NullabilityAssign))
     return;
 
-  auto Nullability = LHS.getType()->getNullability();
+  auto Nullability = LHSQTy->getNullability();
   if (!Nullability || *Nullability != NullabilityKind::NonNull)
     return;
 
@@ -757,12 +759,19 @@ void CodeGenFunction::EmitNullabilityCheck(LValue LHS, llvm::Value *RHS,
   SanitizerScope SanScope(this);
   llvm::Value *IsNotNull = Builder.CreateIsNotNull(RHS);
   llvm::Constant *StaticData[] = {
-      EmitCheckSourceLocation(Loc), EmitCheckTypeDescriptor(LHS.getType()),
+      EmitCheckSourceLocation(Loc), EmitCheckTypeDescriptor(LHSQTy),
       llvm::ConstantInt::get(Int8Ty, 0), // The LogAlignment info is unused.
       llvm::ConstantInt::get(Int8Ty, TCK_NonnullAssign)};
   EmitCheck({{IsNotNull, SanitizerKind::NullabilityAssign}},
             SanitizerHandler::TypeMismatch, StaticData, RHS);
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON */
+void CodeGenFunction::EmitNullabilityCheck(LValue LHS, llvm::Value *RHS,
+                                           SourceLocation Loc) {
+  EmitNullabilityCheck(LHS.getType(), RHS, Loc);
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
 
 void CodeGenFunction::EmitScalarInit(const Expr *init, const ValueDecl *D,
                                      LValue lvalue, bool capturedByInit) {
@@ -1858,6 +1867,119 @@ void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
   }
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+static void boundsSafetyZeroInit(CodeGenFunction &CGF, const Address Addr,
+                              const bool IsVolatileQualified) {
+  llvm::Type *ElTy = Addr.getElementType();
+  llvm::Constant *constant = constWithPadding(
+      CGF.CGM, IsPattern::No, llvm::Constant::getNullValue(ElTy));
+
+  auto *Ty = constant->getType();
+  uint64_t ConstantSize = CGF.CGM.getDataLayout().getTypeAllocSize(Ty);
+  if (!ConstantSize)
+    return;
+
+  bool canDoSingleStore = Ty->isIntOrIntVectorTy() ||
+                          Ty->isPtrOrPtrVectorTy() || Ty->isFPOrFPVectorTy();
+  if (canDoSingleStore) {
+    auto *I = CGF.Builder.CreateStore(constant, Addr, IsVolatileQualified);
+    I->addAnnotationMetadata("bounds-safety-zero-init");
+  } else {
+    auto *SizeVal = llvm::ConstantInt::get(CGF.CGM.IntPtrTy, ConstantSize);
+    auto *I = CGF.Builder.CreateMemSet(
+        Addr, llvm::ConstantInt::get(CGF.CGM.Int8Ty, 0), SizeVal,
+        IsVolatileQualified);
+    I->addAnnotationMetadata("bounds-safety-zero-init");
+  }
+}
+
+template <typename T>
+static auto makeCachingAddressInitializer(T &Action, std::optional<Address> &Addr) {
+  return [&]() {
+    if (!Addr) {
+      Addr = Action();
+    }
+    return *Addr;
+  };
+}
+
+static void boundsSafetyRecursiveInit(CodeGenFunction &CGF, const Decl *D,
+                                   const QualType Ty, bool IsVolatileQualified,
+                                   std::function<Address()> BaseAddrGen) {
+  const DependerDeclsAttr *Att = D ? D->getAttr<DependerDeclsAttr>() : nullptr;
+  auto ShouldInitializeType = [](QualType Ty) -> bool {
+    return Ty->isSafePointerType() || Ty->isCountAttributedType() ||
+           Ty->isDynamicRangePointerType() || Ty->isValueTerminatedType();
+  };
+  // declarations referred to from _sized_by etc attributes
+  if (Att && Att->dependerDecls_size() > 0) {
+    boundsSafetyZeroInit(CGF, BaseAddrGen(), IsVolatileQualified);
+  } else if (ShouldInitializeType(Ty)) {
+    boundsSafetyZeroInit(CGF, BaseAddrGen(), IsVolatileQualified);
+  } else if (auto RTy = Ty->getAs<RecordType>()) {
+    auto RD = RTy->getDecl();
+    assert(RD);
+    if (RD->isUnion()) {
+      for (auto F : RD->fields()) {
+        auto FTy = F->getType();
+        if (ShouldInitializeType(FTy)) {
+          // zero-init the whole record
+          boundsSafetyZeroInit(CGF, BaseAddrGen(), IsVolatileQualified);
+          break;
+        }
+      }
+    } else {
+      for (auto F : RD->fields()) {
+        if (F->isZeroSize(CGF.getContext()))
+          continue;
+
+        std::optional<Address> NewBase;
+        auto FieldAddrGenAction = [&]() {
+          const unsigned FieldIdx =
+              CGF.CGM.getTypes().getCGRecordLayout(RD).getLLVMFieldNo(F);
+          return CGF.Builder.CreateStructGEP(
+              BaseAddrGen(), FieldIdx, F->getName());
+        };
+        auto FieldAddrGen =
+            makeCachingAddressInitializer(FieldAddrGenAction, NewBase);
+        boundsSafetyRecursiveInit(CGF, F, F->getType(),
+                      IsVolatileQualified || F->getType().isVolatileQualified(),
+                      FieldAddrGen);
+      }
+    }
+  } else if (auto CATy = dyn_cast<ConstantArrayType>(Ty)) {
+    auto ElemTy = CATy->getElementType();
+    if (ShouldInitializeType(ElemTy)) {
+      boundsSafetyZeroInit(CGF, BaseAddrGen(),
+                        IsVolatileQualified || ElemTy.isVolatileQualified());
+    } else {
+      const uint64_t Size = CATy->getSize().getZExtValue();
+      llvm::Constant *ZeroIdx = llvm::ConstantInt::get(CGF.IntTy, 0);
+
+      for (uint64_t Idx = 0; Idx < Size; ++Idx) {
+        std::optional<Address> NewBase;
+        auto ElemAddrGenAction = [&]() {
+          Address BaseAddr = BaseAddrGen();
+          auto *CIIdx = llvm::ConstantInt::get(CGF.IntPtrTy, Idx);
+          CharUnits offset = dyn_cast<llvm::ConstantInt>(CIIdx)->getZExtValue() *
+                            CGF.getContext().getTypeSizeInChars(ElemTy);
+          CharUnits ElemAlignment =
+              BaseAddr.getAlignment().alignmentAtOffset(offset);
+          return CGF.Builder.CreateGEP(BaseAddr, {ZeroIdx, CIIdx},
+                                       CGF.ConvertTypeForMem(ElemTy),
+                                       ElemAlignment, "");
+        };
+        auto ElemAddrGen =
+            makeCachingAddressInitializer(ElemAddrGenAction, NewBase);
+        boundsSafetyRecursiveInit(CGF, nullptr, ElemTy,
+                      IsVolatileQualified || ElemTy.isVolatileQualified(),
+                      ElemAddrGen);
+      }
+    }
+  }
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   assert(emission.Variable && "emission was not valid!");
 
@@ -1904,6 +2026,14 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   bool locIsByrefHeader = !capturedByInit;
   const Address Loc =
       locIsByrefHeader ? emission.getObjectAddress(*this) : emission.Addr;
+
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  if (!Init && CGM.getLangOpts().BoundsSafety) {
+    auto ReturnLoc = [&]() { return Loc; };
+    boundsSafetyRecursiveInit(*this, &D, D.getType(),
+                           D.getType().isVolatileQualified(), ReturnLoc);
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   auto hasNoTrivialAutoVarInitAttr = [&](const Decl *D) {
     return D && D->hasAttr<NoTrivialAutoVarInitAttr>();

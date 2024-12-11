@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_tool(llvm-remarkutil
+  BoundsSafetyCount.cpp
   RemarkConvert.cpp
   RemarkCount.cpp
   RemarkCounter.cpp

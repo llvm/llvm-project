@@ -13,6 +13,7 @@
 #include "clang/Basic/AlignedAllocation.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/BoundsSafetyArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"

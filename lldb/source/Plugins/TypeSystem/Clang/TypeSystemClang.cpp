@@ -3833,6 +3833,34 @@ bool TypeSystemClang::SupportsLanguage(lldb::LanguageType language) {
   return TypeSystemClangSupportsLanguage(language);
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+bool TypeSystemClang::IsBoundsSafetyIndexable(lldb::opaque_compiler_type_t type) {
+  clang::QualType qual_type(GetCanonicalQualType(type));
+
+  if (qual_type->isPointerType()) {
+    const PointerType *pointer_type = qual_type->getAs<PointerType>();
+
+    if (pointer_type)
+      return pointer_type->getPointerAttributes().isIndexable();
+  }
+
+  return false;
+}
+
+bool TypeSystemClang::IsBoundsSafetyBidiIndexable(lldb::opaque_compiler_type_t type) {
+  clang::QualType qual_type(GetCanonicalQualType(type));
+
+  if (qual_type->isPointerType()) {
+    const PointerType *pointer_type = qual_type->getAs<PointerType>();
+
+    if (pointer_type)
+      return pointer_type->getPointerAttributes().isBidiIndexable();
+  }
+
+  return false;
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 std::optional<std::string>
 TypeSystemClang::GetCXXClassName(const CompilerType &type) {
   if (!type)
@@ -4774,6 +4802,56 @@ TypeSystemClang::AddRestrictModifier(lldb::opaque_compiler_type_t type) {
   }
   return CompilerType();
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON */
+CompilerType
+TypeSystemClang::AddBoundsSafetyIndexableAttribute(lldb::opaque_compiler_type_t type) {
+  if (type) {
+    clang::QualType result(GetQualType(type));
+
+    if (result->isPointerType())
+      if (const PointerType *PT = result->getAs<PointerType>()) {
+        BoundsSafetyPointerAttributes Attr = PT->getPointerAttributes();
+        Attr.setIndexable();
+        QualType PointeeTy = result->getPointeeType();
+        return GetType(getASTContext().getPointerType(PointeeTy, Attr));
+      }
+  }
+  return CompilerType();
+}
+
+CompilerType
+TypeSystemClang::AddBoundsSafetyBidiIndexableAttribute(lldb::opaque_compiler_type_t type) {
+  if (type) {
+    clang::QualType result(GetQualType(type));
+
+    if (result->isPointerType())
+      if (const PointerType *PT = result->getAs<PointerType>()) {
+        BoundsSafetyPointerAttributes Attr = PT->getPointerAttributes();
+        Attr.setBidiIndexable();
+        QualType PointeeTy = result->getPointeeType();
+        return GetType(getASTContext().getPointerType(PointeeTy, Attr));
+      }
+  }
+  return CompilerType();
+}
+
+CompilerType
+TypeSystemClang::AddBoundsSafetyUnspecifiedAttribute(lldb::opaque_compiler_type_t type) {
+  if (type) {
+    clang::QualType result(GetQualType(type));
+
+    if (result->isPointerType())
+      if (const PointerType *PT = result->getAs<PointerType>()) {
+        BoundsSafetyPointerAttributes Attr = PT->getPointerAttributes();
+        Attr.setUnspecified();
+        QualType PointeeTy = result->getPointeeType();
+        return GetType(getASTContext().getPointerType(PointeeTy, Attr));
+      }
+  }
+  return CompilerType();
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
 
 CompilerType TypeSystemClang::CreateTypedef(
     lldb::opaque_compiler_type_t type, const char *typedef_name,

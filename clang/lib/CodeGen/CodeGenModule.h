@@ -634,6 +634,9 @@ private:
   std::optional<PointerAuthQualifier>
   computeVTPointerAuthentication(const CXXRecordDecl *ThisClass);
 
+  // TO_UPSTREAM(BoundsSafety)
+  uint64_t UniqueTrapCount = 0;
+
 public:
   CodeGenModule(ASTContext &C, IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                 const HeaderSearchOptions &headersearchopts,
@@ -1093,6 +1096,11 @@ public:
 
   /// Fetches the global unique block count.
   int getUniqueBlockCount() { return ++Block.GlobalUniqueCount; }
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  /// Fetches and increments unique trap count
+  uint64_t getAndIncrementUniqueTrapCount() { return UniqueTrapCount++; }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   /// Fetches the type of a generic block descriptor.
   llvm::Type *getBlockDescriptorType();

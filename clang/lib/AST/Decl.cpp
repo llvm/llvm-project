@@ -202,6 +202,22 @@ static bool isExplicitMemberSpecialization(const RedeclarableTemplateDecl *D) {
   return D->isMemberSpecialization();
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON*/
+// A BoundsSafety helper function.
+bool clang::IsConstOrLateConst(const Decl *D) {
+  if (D->hasAttr<UnsafeLateConstAttr>())
+    return true;
+
+  auto const *VD = dyn_cast<ValueDecl>(D);
+  if (!VD)
+    return false;
+
+  if (VD->getType().isConstQualified())
+    return true;
+  return false;
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
+
 /// Given a visibility attribute, return the explicit visibility
 /// associated with it.
 template <class T>
@@ -5090,6 +5106,21 @@ bool RecordDecl::isOrContainsUnion() const {
   return false;
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON*/
+bool RecordDecl::isParentStructOf(const Decl *Inner) const {
+  auto DeclCtx = Inner->getDeclContext();
+  if (DeclCtx == this)
+    return true;
+  for (auto FD : fields()) {
+    if (auto InnerStructTy = FD->getType()->getAs<RecordType>()) {
+      if (cast<RecordDecl>(InnerStructTy->getDecl())->isParentStructOf(Inner))
+        return true;
+    }
+  }
+  return false;
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
+
 RecordDecl::field_iterator RecordDecl::field_begin() const {
   if (hasExternalLexicalStorage() && !hasLoadedFieldsFromExternalStorage())
     LoadFieldsFromExternalStorage();
@@ -5397,6 +5428,36 @@ bool ValueDecl::isInitCapture() const {
     return Var->isInitCapture();
   return false;
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON */
+bool ValueDecl::isDependentParamOfReturnType(
+    const BoundsAttributedType **RetType,
+    const TypeCoupledDeclRefInfo **Info) const {
+  const auto *PVD = dyn_cast<ParmVarDecl>(this);
+  if (!PVD)
+    return false;
+
+  const auto *FD = dyn_cast<FunctionDecl>(PVD->getDeclContext());
+  if (!FD)
+    return false;
+
+  const auto *BATy = FD->getReturnType()->getAs<BoundsAttributedType>();
+  if (!BATy)
+    return false;
+
+  auto *It = std::find_if(
+      BATy->dependent_decl_begin(), BATy->dependent_decl_end(),
+      [PVD](const TypeCoupledDeclRefInfo &I) { return I.getDecl() == PVD; });
+  if (It == BATy->dependent_decl_end())
+    return false;
+
+  if (RetType)
+    *RetType = BATy;
+  if (Info)
+    *Info = &*It;
+  return true;
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
 
 void ImplicitParamDecl::anchor() {}
 

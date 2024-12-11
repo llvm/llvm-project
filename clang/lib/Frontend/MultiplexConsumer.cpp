@@ -123,6 +123,10 @@ public:
   void RedefinedHiddenDefinition(const NamedDecl *D, Module *M) override;
   void AddedAttributeToRecord(const Attr *Attr,
                               const RecordDecl *Record) override;
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  void LazyAttributeToDecl(const Attr *Attr,
+                           const Decl *D) override;
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
   void EnteringModulePurview() override;
   void AddedManglingNumber(const Decl *D, unsigned) override;
   void AddedStaticLocalNumbers(const Decl *D, unsigned) override;
@@ -250,6 +254,14 @@ void MultiplexASTMutationListener::AddedAttributeToRecord(
   for (auto *L : Listeners)
     L->AddedAttributeToRecord(Attr, Record);
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON*/
+void MultiplexASTMutationListener::LazyAttributeToDecl(const Attr *Attr,
+                                                       const Decl *D) {
+  for (auto *L : Listeners)
+    L->LazyAttributeToDecl(Attr, D);
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
 
 void MultiplexASTMutationListener::EnteringModulePurview() {
   for (auto *L : Listeners)

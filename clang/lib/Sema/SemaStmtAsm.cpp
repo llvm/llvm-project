@@ -233,6 +233,38 @@ getClobberConflictLocation(MultiExprArg Exprs, StringLiteral **Constraints,
   return SourceLocation();
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+/// Returns true if given expression has bounded pointer type that cannot be used as inline assembly argument; false otherwise.
+static bool checkAsmArgumentsWithBounds(Sema &S, Expr *E) {
+  if (E->getType()->isBoundsAttributedType()) {
+    S.Diag(E->getBeginLoc(), diag::err_bounds_safety_ptr_with_bounds_in_assembly);
+    return true;
+  } else if (auto PT = E->getType()->getAs<PointerType>()) {
+    if (!PT->hasRawPointerLayout()) {
+      S.Diag(E->getBeginLoc(), diag::err_bounds_safety_ptr_with_bounds_in_assembly);
+      return true;
+    }
+  }
+  const Expr* const Base = E->IgnoreParenCasts();
+  if (auto DRE = dyn_cast_or_null<DeclRefExpr>(Base)) {
+    if (auto ReferredVar = dyn_cast_or_null<VarDecl>(DRE->getDecl())) {
+      if (ReferredVar->hasAttr<DependerDeclsAttr>()) {
+        S.Diag(E->getBeginLoc(), diag::err_bounds_safety_dyn_count_in_assembly);
+        return true;
+      }
+    }
+  } else if (auto DRE = dyn_cast_or_null<MemberExpr>(Base)) {
+    if (auto ReferredField = dyn_cast_or_null<FieldDecl>(DRE->getMemberDecl())) {
+      if (ReferredField->hasAttr<DependerDeclsAttr>()) {
+        S.Diag(E->getBeginLoc(), diag::err_bounds_safety_dyn_count_in_assembly);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
                                  bool IsVolatile, unsigned NumOutputs,
                                  unsigned NumInputs, IdentifierInfo **Names,
@@ -299,6 +331,13 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
           Diag(OutputExpr->getBeginLoc(), diag::err_asm_invalid_type)
           << OutputExpr->getType() << 0 /*Input*/
           << OutputExpr->getSourceRange());
+
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    if (getLangOpts().BoundsSafety) {
+      if (checkAsmArgumentsWithBounds(*this, OutputExpr))
+        return StmtError();
+    }
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
 
     OutputConstraintInfos.push_back(Info);
 
@@ -398,6 +437,22 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
       ExprResult Result = DefaultFunctionArrayLvalueConversion(Exprs[i]);
       if (Result.isInvalid())
         return StmtError();
+
+      /* TO_UPSTREAM(BoundsSafety) ON*/
+      if (getLangOpts().BoundsSafety) {
+        if (checkAsmArgumentsWithBounds(*this, Result.get()->IgnoreImpCasts()))
+          return StmtError();
+      }
+      // BoundsSafety: non-lvalue internal bounds pointers shall cast to a raw pointer
+      // to pass as the inline assembly input.
+      auto *PTy = Result.get()->getType()->getAs<PointerType>();
+      if (PTy && !PTy->hasRawPointerLayout()) {
+        QualType RawPTy = Context.getPointerType(PTy->getPointeeType());
+        Result = ImpCastExprToType(Result.get(), RawPTy, CK_BoundsSafetyPointerCast);
+        if (Result.isInvalid())
+          return StmtError();
+      }
+      /* TO_UPSTREAM(BoundsSafety) OFF*/
 
       InputExpr = Exprs[i] = Result.get();
 

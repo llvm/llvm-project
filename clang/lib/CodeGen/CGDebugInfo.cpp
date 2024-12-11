@@ -1126,6 +1126,30 @@ llvm::DIType *CGDebugInfo::CreateType(const ObjCObjectPointerType *Ty,
 
 llvm::DIType *CGDebugInfo::CreateType(const PointerType *Ty,
                                       llvm::DIFile *Unit) {
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  // If we heve a -fbounds-safety pointer then we should grab the wide_ptr it
+  // maps to from the ASTContext and generate that.
+  if (!Ty->hasRawPointerLayout()) {
+    llvm::StructType *StructTy =
+        cast<llvm::StructType>(convertTypeForMemory(CGM, QualType(Ty, 0)));
+    SmallVector<llvm::Metadata *, 3> EltTys;
+    QualType ElemQTy = CGM.getContext().getPointerType(Ty->getPointeeType());
+    std::string MemberNames[] = {"ptr", "ub", "lb"};
+    uint64_t FieldOffset = 0;
+    assert(StructTy->getNumElements() < 4 && "Unknown wide pointer layout");
+    for (unsigned i = 0; i < StructTy->getNumElements(); ++i) {
+      llvm::DIType *DElemTy = CreateMemberType(Unit, ElemQTy, MemberNames[i], &FieldOffset);
+      EltTys.push_back(DElemTy);
+    }
+
+    llvm::DICompositeType *DStructTy = DBuilder.createStructType(
+        Unit, StructTy->getName(), nullptr, 0, CGM.getContext().getTypeSize(Ty),
+        CGM.getContext().getTypeAlign(Ty), llvm::DINode::FlagZero, nullptr,
+        DBuilder.getOrCreateArray(EltTys));
+
+    return DStructTy;
+  } else
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
   return CreatePointerLikeType(llvm::dwarf::DW_TAG_pointer_type, Ty,
                                Ty->getPointeeType(), Unit);
 }
@@ -1533,6 +1557,53 @@ static llvm::DINode::DIFlags getAccessFlag(AccessSpecifier Access,
   }
   llvm_unreachable("unexpected access enumerator");
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON*/
+llvm::DIType *CGDebugInfo::CreateType(const CountAttributedType *Ty,
+                                      llvm::DIFile *Unit) {
+  QualType DesugaredTy = Ty->desugar();
+  llvm::DIType *DesugaredDITy = getOrCreateType(DesugaredTy, Unit);
+  SourceLocation Loc;
+
+  // Map the pointer type into a typedef with a recognizable name so that
+  // debuggers may provide special formatters for them.
+  std::string TypedefName;
+  if (Ty->isCountInBytes() && Ty->isOrNull())
+    TypedefName = "__bounds_safety::sized_by_or_null::";
+  else if (Ty->isCountInBytes())
+    TypedefName = "__bounds_safety::sized_by::";
+  else if (Ty->isOrNull())
+    TypedefName = "__bounds_safety::counted_by_or_null::";
+  else
+    TypedefName = "__bounds_safety::counted_by::";
+  llvm::raw_string_ostream ExprStream(TypedefName);
+  Ty->getCountExpr()->printPretty(
+      ExprStream, nullptr, PrintingPolicy(CGM.getContext().getLangOpts()));
+  return DBuilder.createTypedef(DesugaredDITy, TypedefName, Unit,
+                                getLineNumber(Loc), Unit);
+}
+
+llvm::DIType *CGDebugInfo::CreateType(const DynamicRangePointerType *Ty,
+                                      llvm::DIFile *Unit) {
+  QualType DesugaredTy = Ty->desugar();
+  llvm::DIType *DesugaredDITy = getOrCreateType(DesugaredTy, Unit);
+  SourceLocation Loc;
+
+  // Map the pointer type into a typedef with a recognizable name so that
+  // debuggers may provide special formatters for them.
+  std::string TypedefName = "__bounds_safety::dynamic_range::";
+  llvm::raw_string_ostream ExprStream(TypedefName);
+  if (auto *StartExpr = Ty->getStartPointer())
+    StartExpr->printPretty(ExprStream, nullptr,
+                           PrintingPolicy(CGM.getContext().getLangOpts()));
+  ExprStream << "::";
+  if (auto *ExndExpr = Ty->getEndPointer())
+    ExndExpr->printPretty(ExprStream, nullptr,
+                          PrintingPolicy(CGM.getContext().getLangOpts()));
+  return DBuilder.createTypedef(DesugaredDITy, TypedefName, Unit,
+                                getLineNumber(Loc), Unit);
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
 
 llvm::DIType *CGDebugInfo::CreateType(const TypedefType *Ty,
                                       llvm::DIFile *Unit) {
@@ -3669,10 +3740,17 @@ static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
     case Type::Attributed:
       T = cast<AttributedType>(T)->getEquivalentType();
       break;
+    case Type::ValueTerminated:
+      T = cast<ValueTerminatedType>(T)->desugar();
+      break;
     case Type::BTFTagAttributed:
       T = cast<BTFTagAttributedType>(T)->getWrappedType();
       break;
     case Type::CountAttributed:
+      /* TO_UPSTREAM(BoundsSafety) ON*/
+      if (C.getLangOpts().BoundsSafety)
+        return C.getQualifiedType(T.getTypePtr(), Quals);
+      /* TO_UPSTREAM(BoundsSafety) OFF*/
       T = cast<CountAttributedType>(T)->desugar();
       break;
     case Type::Elaborated:
@@ -3871,7 +3949,14 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
   case Type::TemplateSpecialization:
     return CreateType(cast<TemplateSpecializationType>(Ty), Unit);
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
   case Type::CountAttributed:
+    if (CGM.getLangOpts().BoundsSafety)
+      return CreateType(cast<CountAttributedType>(Ty), Unit);
+    break;
+  case Type::DynamicRangePointer:
+    return CreateType(cast<DynamicRangePointerType>(Ty), Unit);
+  /* TO_UPSTREAM(BoundsSafety) OFF */
   case Type::Auto:
   case Type::Attributed:
   case Type::BTFTagAttributed:
@@ -3889,6 +3974,7 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
   case Type::Decltype:
   case Type::PackIndexing:
   case Type::UnaryTransform:
+  case Type::ValueTerminated:
     break;
   }
 

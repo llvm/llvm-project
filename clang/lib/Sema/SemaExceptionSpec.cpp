@@ -1277,6 +1277,15 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::StmtExprClass:
   case Expr::ConvertVectorExprClass:
   case Expr::VAArgExprClass:
+  case Expr::BoundsSafetyPointerPromotionExprClass:
+  case Expr::AssumptionExprClass:
+  case Expr::ForgePtrExprClass:
+  case Expr::GetBoundExprClass:
+  case Expr::PredefinedBoundsCheckExprClass:
+  case Expr::BoundsCheckExprClass:
+  case Expr::MaterializeSequenceExprClass:
+  case Expr::TerminatedByToIndexableExprClass:
+  case Expr::TerminatedByFromIndexableExprClass:
   case Expr::CXXParenListInitExprClass:
     return canSubStmtsThrow(*this, S);
 

@@ -2385,6 +2385,101 @@ void ASTStmtReader::VisitAsTypeExpr(AsTypeExpr *E) {
 }
 
 //===----------------------------------------------------------------------===//
+// BoundsSafety Expressions and Statements.
+//===----------------------------------------------------------------------===//
+void ASTStmtReader::VisitBoundsSafetyPointerPromotionExpr(
+    BoundsSafetyPointerPromotionExpr *E) {
+  VisitExpr(E);
+  switch (Record.readInt()) {
+  case 3: E->setLowerBound(Record.readSubExpr()); [[clang::fallthrough]];
+  case 2: E->setUpperBound(Record.readSubExpr()); [[clang::fallthrough]];
+  case 1: E->setPointer(Record.readSubExpr()); break;
+  default: llvm_unreachable("incorrect number of child nodes");
+  }
+}
+
+void ASTStmtReader::VisitAssumptionExpr(AssumptionExpr *E) {
+  VisitExpr(E);
+  unsigned NumExprs = Record.readInt();
+  assert(NumExprs == E->AssumptionExprBits.NumExprs);
+  for (unsigned I = 0; I < NumExprs; ++I) {
+    E->setSubExpr(I, Record.readSubExpr());
+  }
+}
+
+void ASTStmtReader::VisitForgePtrExpr(ForgePtrExpr *E) {
+  VisitExpr(E);
+  E->setAddr(Record.readSubExpr());
+  E->setSize(Record.readSubExpr());
+  E->setBeginLoc(readSourceLocation());
+  E->setEndLoc(readSourceLocation());
+}
+
+void ASTStmtReader::VisitGetBoundExpr(GetBoundExpr *E) {
+  VisitExpr(E);
+  E->setSubExpr(Record.readSubExpr());
+  E->setBoundKind((GetBoundExpr::BoundKind)Record.readInt());
+  E->setBuiltinLoc(readSourceLocation());
+  E->setRParenLoc(readSourceLocation());
+}
+
+void ASTStmtReader::VisitPredefinedBoundsCheckExpr(
+    PredefinedBoundsCheckExpr *E) {
+  VisitExpr(E);
+  unsigned NumExprs = Record.readInt();
+#ifndef NDEBUG
+  BoundsCheckKind Kind = static_cast<BoundsCheckKind>(Record.readInt());
+  assert(Kind == E->getKind() && NumExprs == E->getNumSubExprs());
+#endif
+  for (unsigned I = 0; I < NumExprs; ++I) {
+    E->setSubExpr(I, Record.readSubExpr());
+  }
+}
+
+void ASTStmtReader::VisitBoundsCheckExpr(BoundsCheckExpr *E) {
+  VisitExpr(E);
+  unsigned NumExprs = Record.readInt();
+  assert(NumExprs == E->BoundsCheckExprBits.NumChildren);
+  for (unsigned I = 0; I < NumExprs; ++I) {
+    E->setSubExpr(I, Record.readSubExpr());
+  }
+}
+
+void ASTStmtReader::VisitMaterializeSequenceExpr(MaterializeSequenceExpr *E) {
+  VisitExpr(E);
+  unsigned numExprs = Record.readInt();
+  assert(numExprs == E->MaterializeSequenceExprBits.NumExprs);
+  E->MaterializeSequenceExprBits.Unbind = Record.readInt();
+
+  for (unsigned i = 0; i != numExprs; ++i) {
+    E->getSubExprs()[i] = Record.readSubExpr();
+  }
+}
+
+void ASTStmtReader::VisitTerminatedByToIndexableExpr(
+    TerminatedByToIndexableExpr *E) {
+  VisitExpr(E);
+  E->setPointer(Record.readSubExpr());
+  bool HasTerm = Record.readInt();
+  if (HasTerm)
+    E->setTerminator(Record.readSubExpr());
+  E->setIncludeTerminator(Record.readInt());
+  E->setBuiltinLoc(readSourceLocation());
+  E->setRParenLoc(readSourceLocation());
+}
+
+void ASTStmtReader::VisitTerminatedByFromIndexableExpr(
+    TerminatedByFromIndexableExpr *E) {
+  VisitExpr(E);
+  E->setPointer(Record.readSubExpr());
+  bool HasPtrToTerm = Record.readInt();
+  if (HasPtrToTerm)
+    E->setPointerToTerminator(Record.readSubExpr());
+  E->setBuiltinLoc(readSourceLocation());
+  E->setRParenLoc(readSourceLocation());
+}
+
+//===----------------------------------------------------------------------===//
 // OpenMP Directives.
 //===----------------------------------------------------------------------===//
 
@@ -4039,6 +4134,48 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = new (Context) BuiltinBitCastExpr(Empty);
       break;
     }
+
+    case EXPR_BOUNDS_SAFETY_POINTER_PROMOTION:
+      S = BoundsSafetyPointerPromotionExpr::CreateEmpty(
+          Context, Record[ASTStmtReader::NumExprFields]);
+      break;
+
+    case EXPR_ASSUMPTION:
+      S = AssumptionExpr::CreateEmpty(Context,
+          Record[ASTStmtReader::NumExprFields]);
+      break;
+
+    case EXPR_FORGE_PTR:
+      S = new (Context) ForgePtrExpr(Empty);
+      break;
+
+    case EXPR_GET_BOUND:
+      S = new (Context) GetBoundExpr(Empty);
+      break;
+
+    case EXPR_PREDEFINED_BOUNDS_CHECK:
+      S = PredefinedBoundsCheckExpr::CreateEmpty(
+          Context,
+          /*NumChildren*/ Record[ASTStmtReader::NumExprFields + 1]);
+      break;
+
+    case EXPR_BOUNDS_CHECK:
+      S = BoundsCheckExpr::CreateEmpty(Context,
+          /*NumChildren*/Record[ASTStmtReader::NumExprFields]);
+      break;
+
+    case EXPR_MATERIALIZE_SEQUENCE:
+      S = MaterializeSequenceExpr::CreateEmpty(Context,
+          /*NumExprs*/Record[ASTStmtReader::NumExprFields]);
+      break;
+
+    case EXPR_TERMINATED_BY_TO_INDEXABLE:
+      S = new (Context) TerminatedByToIndexableExpr(Empty);
+      break;
+
+    case EXPR_TERMINATED_BY_FROM_INDEXABLE:
+      S = new (Context) TerminatedByFromIndexableExpr(Empty);
+      break;
 
     case EXPR_USER_DEFINED_LITERAL: {
       auto NumArgs = Record[ASTStmtReader::NumExprFields];

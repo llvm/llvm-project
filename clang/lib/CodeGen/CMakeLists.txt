@@ -103,6 +103,8 @@ add_clang_library(clangCodeGen
   CodeGenPGO.cpp
   CodeGenTBAA.cpp
   CodeGenTypes.cpp
+  BoundsSafetyOptRemarks.cpp
+  BoundsSafetyTraps.cpp
   ConstantInitBuilder.cpp
   CoverageMappingGen.cpp
   ItaniumCXXABI.cpp

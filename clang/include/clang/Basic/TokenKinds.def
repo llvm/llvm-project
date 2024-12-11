@@ -804,6 +804,17 @@ KEYWORD(__builtin_sycl_unique_stable_name, KEYSYCL)
 // Clang-specific keywords enabled only in testing.
 TESTING_KEYWORD(__unknown_anytype , KEYALL)
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+// Bounds-safety extensions.
+KEYWORD(__builtin_unsafe_forge_bidi_indexable        , KEYBOUNDSSAFETY)
+KEYWORD(__builtin_unsafe_forge_single                , KEYBOUNDSSAFETYATTRIBUTES)
+KEYWORD(__builtin_unsafe_forge_terminated_by         , KEYBOUNDSSAFETYATTRIBUTES)
+KEYWORD(__builtin_get_pointer_lower_bound            , KEYBOUNDSSAFETY)
+KEYWORD(__builtin_get_pointer_upper_bound            , KEYBOUNDSSAFETY)
+KEYWORD(__builtin_terminated_by_to_indexable         , KEYBOUNDSSAFETY)
+KEYWORD(__builtin_unsafe_terminated_by_to_indexable  , KEYBOUNDSSAFETY)
+KEYWORD(__builtin_unsafe_terminated_by_from_indexable, KEYBOUNDSSAFETY)
+/* TO_UPSTREAM(BoundsSafety) OFF */
 
 //===----------------------------------------------------------------------===//
 // Objective-C @-preceded keywords.

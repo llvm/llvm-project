@@ -135,6 +135,7 @@ def QualType : DefaultValuePropertyType;
 def RefQualifierKind : EnumPropertyType;
 def Selector : PropertyType;
 def SourceLocation : PropertyType;
+def BoundsSafetyPointerAttributes : PropertyType;
 def StmtRef : RefPropertyType<"Stmt"> { let ConstWhenWriting = 1; }
   def ExprRef : SubclassPropertyType<"Expr", StmtRef>;
 def SubstTemplateTypeParmTypeFlag : EnumPropertyType;

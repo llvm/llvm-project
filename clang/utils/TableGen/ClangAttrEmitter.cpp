@@ -1368,6 +1368,12 @@ namespace {
     {}
   };
 
+  class VariadicDeclArgument : public VariadicArgument {
+  public:
+    VariadicDeclArgument(const Record &Arg, StringRef Attr)
+        : VariadicArgument(Arg, Attr, "Decl *") {}
+  };
+
   class VariadicStringArgument : public VariadicArgument {
   public:
     VariadicStringArgument(const Record &Arg, StringRef Attr)
@@ -1507,6 +1513,8 @@ createArgument(const Record &Arg, StringRef Attr,
     Ptr = std::make_unique<SimpleArgument>(Arg, Attr, "ParamIdx");
   else if (ArgName == "VariadicIdentifierArgument")
     Ptr = std::make_unique<VariadicIdentifierArgument>(Arg, Attr);
+  else if (ArgName == "VariadicDeclArgument")
+    Ptr = std::make_unique<VariadicDeclArgument>(Arg, Attr);
   else if (ArgName == "VersionArgument")
     Ptr = std::make_unique<VersionArgument>(Arg, Attr);
   else if (ArgName == "WrappedAttr")

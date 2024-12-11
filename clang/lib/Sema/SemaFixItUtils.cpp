@@ -223,3 +223,107 @@ std::string
 Sema::getFixItZeroLiteralForType(QualType T, SourceLocation Loc) const {
   return getScalarZeroExpressionForType(*T, Loc, *this);
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON */
+std::tuple<SourceLocation, bool>
+BoundsSafetyFixItUtils::FindPointerAttrInsertPoint(const TypeLoc TL, Sema &S) {
+  SourceLocation FixitLoc;
+  if (!TL) {
+    return std::make_tuple(SourceLocation(), false);
+  }
+
+  // The default is false because we don't want to add spaces unnecessarily.
+  // E.g.
+  //
+  // foo(int*)
+  //
+  // should be transformed to
+  //
+  // foo(int* __attribute)
+  //
+  // not
+  //
+  // foo(int* __attribute )
+  //
+  // The later would likely break the style guide of existing projects
+  bool SpaceNeededAfterAttribute = false;
+  if (auto PTL = TL.getAs<PointerTypeLoc>()) {
+    SourceLocation StarLoc = PTL.getStarLoc();
+    if (StarLoc.isInvalid()) {
+      return std::make_tuple(StarLoc, false);
+    }
+
+    if (auto TK = Lexer::findNextToken(StarLoc, S.SourceMgr, S.getLangOpts())) {
+      FixitLoc = TK->getLocation();
+      // For identifiers that follow the type we need to do
+      // foo(int * __attribute param)
+      // not
+      // foo(int * __attributeparam)
+      //
+      // FIXME: Explain the macro check
+      if (StarLoc.isMacroID() || TK->isAnyIdentifier()) {
+        SpaceNeededAfterAttribute = true;
+      }
+    }
+  } else {
+    // a typedef or somesuch
+    FixitLoc = Lexer::findNextTokenLocationAfterTokenAt(
+        TL.getEndLoc(), S.SourceMgr, S.getLangOpts());
+    SpaceNeededAfterAttribute = true; // Correct?
+  }
+  return std::make_tuple(FixitLoc, SpaceNeededAfterAttribute);
+}
+
+FixItHint BoundsSafetyFixItUtils::CreateAnnotatePointerDeclFixIt(
+    const VarDecl *VD, const llvm::StringRef Attribute, Sema &S) {
+  return CreateAnnotateVarDeclOrFieldDeclFixIt(VD, Attribute, S);
+}
+
+FixItHint BoundsSafetyFixItUtils::CreateAnnotatePointerDeclFixIt(
+    const FieldDecl *FD, const llvm::StringRef Attribute, Sema &S) {
+  return CreateAnnotateVarDeclOrFieldDeclFixIt(FD, Attribute, S);
+}
+
+FixItHint BoundsSafetyFixItUtils::CreateAnnotateVarDeclOrFieldDeclFixIt(
+    const DeclaratorDecl *DD, const llvm::StringRef Attribute, Sema &S) {
+  assert(isa<VarDecl>(DD) || isa<FieldDecl>(DD));
+  auto AssignedVarTL = DD->getTypeSourceInfo()->getTypeLoc();
+  SourceLocation InsertionPoint;
+  bool NeedsSpace = false;
+
+#ifndef NDEBUG
+  // The current implementation assumes that there isn't an existing attribute
+  // on the VarDecl/FieldDecl. This restriction could be lifted in the future.
+  // It requires that the fixit delete the old attribute. rdar://114478465
+  auto DeclTy = DD->getType();
+  assert(DeclTy->isPointerType());
+  assert(DeclTy->hasAttr(attr::PtrAutoAttr));
+#endif
+
+  std::tie(InsertionPoint, NeedsSpace) =
+      BoundsSafetyFixItUtils::FindPointerAttrInsertPoint(AssignedVarTL, S);
+
+  if (InsertionPoint.isInvalid())
+    return FixItHint();
+
+  std::string AttrStr(Attribute);
+  if (NeedsSpace)
+    AttrStr += " ";
+  return FixItHint::CreateInsertion(InsertionPoint, AttrStr);
+}
+
+void BoundsSafetyFixItUtils::CreateAnnotateAllPointerDeclsFixIts(
+    const VarDecl *VD, const llvm::StringRef Attribute, Sema &S,
+    llvm::SmallVectorImpl<std::tuple<FixItHint, const DeclaratorDecl *>>
+        &FixIts) {
+
+  const VarDecl *CurrentDecl = VD;
+  while (CurrentDecl) {
+    auto FixIt = CreateAnnotatePointerDeclFixIt(CurrentDecl, Attribute, S);
+    if (!FixIt.isNull())
+      FixIts.emplace_back(std::make_tuple(
+          FixIt, static_cast<const DeclaratorDecl *>(CurrentDecl)));
+    CurrentDecl = CurrentDecl->getPreviousDecl();
+  }
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */

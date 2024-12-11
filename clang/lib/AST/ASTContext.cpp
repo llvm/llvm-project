@@ -45,6 +45,7 @@
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/AST/TypeVisitor.h"
 #include "clang/AST/UnresolvedSet.h"
 #include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/AddressSpaces.h"
@@ -86,6 +87,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/SipHash.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
@@ -924,7 +926,8 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       DependentTypeOfExprTypes(this_()), DependentDecltypeTypes(this_()),
       TemplateSpecializationTypes(this_()),
       DependentTemplateSpecializationTypes(this_()),
-      DependentBitIntTypes(this_()), SubstTemplateTemplateParmPacks(this_()),
+      DependentBitIntTypes(this_()), ValueTerminatedTypes(this_()),
+      SubstTemplateTemplateParmPacks(this_()),
       DeducedTemplates(this_()), ArrayParameterTypes(this_()),
       CanonTemplateTemplateParms(this_()), SourceMgr(SM), LangOpts(LOpts),
       NoSanitizeL(new NoSanitizeList(LangOpts.NoSanitizeFiles, SM)),
@@ -2333,11 +2336,17 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Width = Target->getPointerWidth(AS);
     Align = Target->getPointerAlign(AS);
     break;
-  case Type::Pointer:
-    AS = cast<PointerType>(T)->getPointeeType().getAddressSpace();
-    Width = Target->getPointerWidth(AS);
+  case Type::Pointer: {
+    const auto *PT = cast<PointerType>(T);
+    AS = PT->getPointeeType().getAddressSpace();
+    uint64_t RawPtrWidth = Width = Target->getPointerWidth(AS);
     Align = Target->getPointerAlign(AS);
+    if (PT->getPointerAttributes().hasUpperBound())
+      Width += RawPtrWidth;
+    if (PT->getPointerAttributes().hasLowerBound())
+      Width += RawPtrWidth;
     break;
+  }
   case Type::MemberPointer: {
     const auto *MPT = cast<MemberPointerType>(T);
     CXXABI::MemberPointerInfo MPI = ABI->getMemberPointerInfo(MPT);
@@ -2459,6 +2468,15 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
 
   case Type::CountAttributed:
     return getTypeInfo(cast<CountAttributedType>(T)->desugar().getTypePtr());
+
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  case Type::DynamicRangePointer:
+    return getTypeInfo(
+        cast<DynamicRangePointerType>(T)->desugar().getTypePtr());
+
+  case Type::ValueTerminated:
+    return getTypeInfo(cast<ValueTerminatedType>(T)->desugar().getTypePtr());
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   case Type::BTFTagAttributed:
     return getTypeInfo(
@@ -3540,11 +3558,497 @@ QualType ASTContext::getObjCGCQualType(QualType T,
   return getExtQualType(TypeNode, Quals);
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+QualType ASTContext::getDynamicRangePointerType(
+    QualType PointerTy, Expr *StartPtr, Expr *EndPtr,
+    ArrayRef<TypeCoupledDeclRefInfo> StartPtrDecls,
+    ArrayRef<TypeCoupledDeclRefInfo> EndPtrDecls) const {
+  assert(PointerTy->isPointerType());
+
+  llvm::FoldingSetNodeID ID;
+  DynamicRangePointerType::Profile(ID, PointerTy, StartPtr, EndPtr,
+                                   StartPtrDecls.size(), EndPtrDecls.size());
+
+  void *InsertPos = nullptr;
+  DynamicRangePointerType *DRPTy =
+      DynamicRangePointerTypes.FindNodeOrInsertPos(ID, InsertPos);
+  if (DRPTy)
+    return QualType(DRPTy, 0);
+
+  QualType CanonPTy = getCanonicalType(PointerTy);
+  size_t Size =
+      DynamicRangePointerType::totalSizeToAlloc<TypeCoupledDeclRefInfo>(
+          EndPtrDecls.size() + StartPtrDecls.size());
+  DRPTy = (DynamicRangePointerType *)Allocate(Size, TypeAlignment);
+  new (DRPTy) DynamicRangePointerType(PointerTy, CanonPTy, StartPtr, EndPtr,
+                                      StartPtrDecls, EndPtrDecls);
+  Types.push_back(DRPTy);
+  DynamicRangePointerTypes.InsertNode(DRPTy, InsertPos);
+
+  return QualType(DRPTy, 0);
+}
+
+QualType ASTContext::getValueTerminatedType(QualType T,
+                                            Expr *TerminatorExpr) const {
+  assert(T->isConstantArrayType() || T->isIncompleteArrayType() ||
+         T->isPointerType());
+  assert(!T->isValueTerminatedType());
+
+  SplitQualType Split = T.getSplitUnqualifiedType();
+
+  llvm::FoldingSetNodeID ID;
+  ValueTerminatedType::Profile(ID, *this, QualType(Split.Ty, 0),
+                               TerminatorExpr);
+
+  void *InsertPos = nullptr;
+  ValueTerminatedType *VTT =
+      ValueTerminatedTypes.FindNodeOrInsertPos(ID, InsertPos);
+  if (VTT)
+    return getQualifiedType(VTT, Split.Quals);
+
+  QualType CanonTy = Split.Ty->getCanonicalTypeInternal();
+  VTT = new (*this, TypeAlignment)
+      ValueTerminatedType(QualType(Split.Ty, 0), CanonTy, TerminatorExpr);
+  Types.push_back(VTT);
+  ValueTerminatedTypes.InsertNode(VTT, InsertPos);
+
+  return getQualifiedType(VTT, Split.Quals);
+}
+
+QualType ASTContext::getBoundsSafetyPointerType(QualType PointerTy,
+                                             BoundsSafetyPointerAttributes Attr) {
+  const auto *PTy = PointerTy->getAs<PointerType>();
+  if (!PTy || PTy->getPointerAttributes() == Attr ||
+      PointerTy->isBoundsAttributedType())
+    return PointerTy;
+
+  std::function<QualType(QualType)>
+  getBoundsSafetyPointerTypeRecurse = [&](QualType Ty) -> QualType {
+    if (const auto *AT = Ty->getAs<AttributedType>()) {
+      auto ModifiedTy =
+          getBoundsSafetyPointerTypeRecurse(AT->getModifiedType());
+      auto EquivalentTy =
+          getBoundsSafetyPointerTypeRecurse(AT->getEquivalentType());
+
+      auto QualsOnT = Ty.getQualifiers();
+      auto QualsOnModifTy = AT->getModifiedType().getQualifiers();
+      Ty = getAttributedType(AT->getAttrKind(), ModifiedTy,
+                             EquivalentTy);
+
+      Qualifiers::removeCommonQualifiers(QualsOnT, QualsOnModifTy);
+      if (!QualsOnT.empty()) {
+        QualifierCollector QC(QualsOnT);
+        Ty = QC.apply(*this, Ty);
+      }
+      return Ty;
+    }
+    assert(PointerTy->isPointerType());
+    auto QualsOnT = PointerTy.getQualifiers();
+    Ty = getPointerType(PointerTy->getPointeeType(), Attr);
+    if (!QualsOnT.empty()) {
+      QualifierCollector QC(QualsOnT);
+      Ty = QC.apply(*this, Ty);
+    }
+    return Ty;
+  };
+
+  return getBoundsSafetyPointerTypeRecurse(PointerTy);
+}
+
+/// Copies bounds Type node from \c SrcTy to \c DestTy if it does
+/// not already have the corresponding Type.
+static QualType assureMandatorySugarTypesRemain(ASTContext &Ctx,
+                                                QualType DestTy,
+                                                QualType SrcTy) {
+  if (auto VTT = SrcTy->getAs<ValueTerminatedType>()) {
+    if (!DestTy->getAs<ValueTerminatedType>()) {
+      return Ctx.getValueTerminatedType(DestTy, VTT->getTerminatorExpr());
+    }
+  } else if (auto DCPT = SrcTy->getAs<CountAttributedType>()) {
+    if (!DestTy->getAs<CountAttributedType>()) {
+      return Ctx.getCountAttributedType(DestTy, DCPT->getCountExpr(),
+                                            DCPT->isCountInBytes(), DCPT->isOrNull(),
+                                            DCPT->getCoupledDecls());
+    }
+  } else if (auto DRPT = SrcTy->getAs<DynamicRangePointerType>()) {
+    if (!DestTy->getAs<DynamicRangePointerType>()) {
+      return Ctx.getDynamicRangePointerType(
+          DestTy, DRPT->getStartPointer(), DRPT->getEndPointer(),
+          DRPT->getStartPtrDecls(), DRPT->getEndPtrDecls());
+    }
+  }
+
+  return DestTy;
+}
+
+QualType ASTContext::mergeBoundsSafetyPointerTypes(
+    QualType DstTy, QualType SrcTy,
+    std::function<QualType(QualType /* DstTy */, QualType /* SrcTy */,
+                           QualType /* MergePointeeTy */,
+                           QualType /* OrigDstTy */)> &MergeFunctor,
+    QualType OrigDstTy) {
+  if (!DstTy->isPointerType())
+    return DstTy;
+
+  if (OrigDstTy.isNull())
+    OrigDstTy = DstTy;
+
+  // FIXME: a brittle hack to avoid skipping ValueTerminatedType outside
+  // this PtrAutoAttr AttributedType.
+  bool RecoverPtrAuto = false;
+  if (const auto *VT = dyn_cast<ValueTerminatedType>(DstTy)) {
+    const auto *AT = DstTy->getAs<AttributedType>();
+    if (AT && VT->hasAttr(attr::PtrAutoAttr)) {
+      RecoverPtrAuto = true;
+    }
+  }
+
+  const auto *AT = DstTy->getAs<AttributedType>();
+  if (AT && !RecoverPtrAuto) {
+    auto ModifiedTy = mergeBoundsSafetyPointerTypes(
+        AT->getModifiedType(), SrcTy, MergeFunctor, OrigDstTy);
+    if (ModifiedTy.isNull())
+      return QualType();
+    auto EquivalentTy = mergeBoundsSafetyPointerTypes(
+        AT->getEquivalentType(), SrcTy, MergeFunctor, OrigDstTy);
+
+    auto QualsOnT = DstTy.getQualifiers();
+    auto QualsOnModifTy = AT->getModifiedType().getQualifiers();
+    auto NewDstTy =
+        getAttributedType(AT->getAttrKind(), ModifiedTy, EquivalentTy);
+
+    Qualifiers::removeCommonQualifiers(QualsOnT, QualsOnModifTy);
+    if (!QualsOnT.empty()) {
+      QualifierCollector QC(QualsOnT);
+      NewDstTy = QC.apply(*this, NewDstTy);
+    }
+    // Make sure we don't lose ValueTerminatedType
+    NewDstTy = assureMandatorySugarTypesRemain(*this, NewDstTy, DstTy);
+    return NewDstTy;
+  }
+
+  QualType DstPointeeTy = DstTy->getPointeeType();
+  QualType SrcPointeeTy =
+      !SrcTy.isNull() ? SrcTy->getPointeeType() : QualType();
+  QualType MergePointeeTy =
+      mergeBoundsSafetyPointerTypes(DstPointeeTy, SrcPointeeTy, MergeFunctor);
+  QualType MergeTy = MergeFunctor(DstTy, SrcTy, MergePointeeTy, OrigDstTy);
+  if (DstTy != MergeTy && !MergeTy.isNull()) {
+    if (RecoverPtrAuto) {
+      MergeTy = getAttributedType(attr::PtrAutoAttr, MergeTy, MergeTy);
+    }
+    auto QualsOnT = DstTy.getQualifiers();
+    if (!QualsOnT.empty()) {
+      QualifierCollector QC(QualsOnT);
+      MergeTy = QC.apply(*this, MergeTy);
+    }
+  }
+  return MergeTy;
+}
+
+namespace {
+
+class MakeAutoPointer final
+    : public TypeVisitor<MakeAutoPointer, std::pair<QualType, bool>> {
+private:
+  using RetTy = std::pair<QualType, bool>;
+  using BaseClass = TypeVisitor<MakeAutoPointer, RetTy>;
+
+  ASTContext &Ctx;
+  const BoundsSafetyPointerAttributes AbiFAttr;
+  std::optional<BoundsSafetyPointerAttributes> AutoPtrAttr;
+  bool IsInsideValueTerminated = false;
+
+  QualType copyQuals(QualType OldTy, QualType NewTy) const {
+    Qualifiers Qs = OldTy.getLocalQualifiers();
+    if (const auto *AT = OldTy->getAs<AttributedType>()) {
+      Qualifiers ModifiedTyQs = AT->getModifiedType().getQualifiers();
+      Qualifiers::removeCommonQualifiers(Qs, ModifiedTyQs);
+    }
+    QualifierCollector QC(Qs);
+    return QC.apply(Ctx, NewTy);
+  }
+
+public:
+  explicit MakeAutoPointer(
+      ASTContext &Ctx, BoundsSafetyPointerAttributes AbiFAttr,
+      std::optional<BoundsSafetyPointerAttributes> AutoPtrAttr)
+      : Ctx(Ctx), AbiFAttr(AbiFAttr), AutoPtrAttr(AutoPtrAttr) {}
+
+  QualType Visit(QualType T) {
+    // We don't apply an implicit -fbounds-safety attribute for va_list,
+    // leaving it unsafe.
+    if (T->isAnyVaListType(Ctx))
+      return T;
+
+    QualType NewTy;
+    bool AddPtrAutoAttr;
+    std::tie(NewTy, AddPtrAutoAttr) = BaseClass::Visit(T.getTypePtr());
+
+    if (NewTy.isNull())
+      return QualType();
+
+    NewTy = copyQuals(T, NewTy);
+
+    if (AddPtrAutoAttr)
+      NewTy = Ctx.getAttributedType(attr::PtrAutoAttr, NewTy, NewTy);
+
+    return NewTy;
+  }
+
+  RetTy VisitType(const Type *T) {
+    QualType NewTy(T, 0);
+    return {NewTy, false};
+  }
+
+  RetTy VisitParenType(const ParenType *T) {
+    QualType InnerTy = Visit(T->getInnerType());
+    QualType NewTy = Ctx.getParenType(InnerTy);
+    return {NewTy, false};
+  }
+
+  RetTy VisitAtomicType(const AtomicType *T) {
+    QualType ValueTy = Visit(T->getValueType());
+    QualType NewTy = Ctx.getAtomicType(ValueTy);
+    return {NewTy, false};
+  }
+
+  RetTy VisitAttributedType(const AttributedType *T) {
+    auto SavedAutoPtrAttr = AutoPtrAttr;
+    QualType ModifiedTy = Visit(T->getModifiedType());
+    AutoPtrAttr = SavedAutoPtrAttr;
+    QualType EquivalentTy = Visit(T->getEquivalentType());
+    QualType NewTy =
+        Ctx.getAttributedType(T->getAttrKind(), ModifiedTy, EquivalentTy);
+    return {NewTy, false};
+  }
+
+  RetTy VisitTypedefType(const TypedefType *T) {
+    // If the underlying type after auto-bounding doesn't change, we retain the
+    // typedef type. However, if auto-bounding adds an attribute to the
+    // underlying type, we drop the typedef type, since otherwise we would have
+    // multiple inconsistent definitions of the typedef.
+    QualType UnderlyingTy = T->desugar();
+    QualType NewUnderlyingTy = Visit(UnderlyingTy);
+    if (NewUnderlyingTy == UnderlyingTy) {
+      QualType NewTy = Ctx.getTypedefType(T->getDecl(), UnderlyingTy);
+      return {NewTy, false};
+    }
+    return {NewUnderlyingTy, false};
+  }
+
+  RetTy VisitMacroQualifiedType(const MacroQualifiedType *T) {
+    QualType UnderlyingTy = T->desugar();
+    QualType NewUnderlyingTy = Visit(UnderlyingTy);
+    QualType NewTy =
+        Ctx.getMacroQualifiedType(NewUnderlyingTy, T->getMacroIdentifier());
+    return {NewTy, false};
+  }
+
+  RetTy VisitElaboratedType(const ElaboratedType *T) {
+    QualType NamedTy = T->getNamedType();
+    QualType NewNamedTy = Visit(NamedTy);
+    if (NewNamedTy == NamedTy) {
+      return {QualType(T, 0), false};
+    }
+    return {NewNamedTy, false};
+  }
+
+  RetTy VisitDecayedType(const DecayedType *T) {
+    // Replace the decayed type by an equivalent pointer type.
+    // TODO(pstefanski): We could retain the decayed type after some
+    // modifications to ASTContext.
+    auto SavedAutoPtrAttr = AutoPtrAttr;
+    AutoPtrAttr = std::nullopt;
+    QualType PointeeTy = Visit(T->getPointeeType());
+    const auto *PtrTy =
+        cast<PointerType>(Ctx.getPointerType(PointeeTy).getTypePtr());
+    AutoPtrAttr = SavedAutoPtrAttr;
+    return VisitPointerType(PtrTy);
+  }
+
+  RetTy VisitConstantArrayType(const ConstantArrayType *T) {
+    AutoPtrAttr = std::nullopt;
+    QualType EltTy = Visit(T->getElementType());
+    QualType NewTy = Ctx.getConstantArrayType(
+        EltTy, T->getSize(), T->getSizeExpr(), T->getSizeModifier(),
+        T->getIndexTypeCVRQualifiers());
+    return {NewTy, false};
+  }
+
+  RetTy VisitDependentSizedArrayType(const DependentSizedArrayType *T) {
+    AutoPtrAttr = std::nullopt;
+    QualType EltTy = Visit(T->getElementType());
+    QualType NewTy = Ctx.getDependentSizedArrayType(
+        EltTy, T->getSizeExpr(), T->getSizeModifier(),
+        T->getIndexTypeCVRQualifiers(), T->getBracketsRange());
+    return {NewTy, false};
+  }
+
+  RetTy VisitIncompleteArrayType(const IncompleteArrayType *T) {
+    AutoPtrAttr = std::nullopt;
+    QualType EltTy = Visit(T->getElementType());
+    QualType NewTy = Ctx.getIncompleteArrayType(EltTy, T->getSizeModifier(),
+                                                T->getIndexTypeCVRQualifiers());
+    return {NewTy, false};
+  }
+
+  RetTy VisitVariableArrayType(const VariableArrayType *T) {
+    AutoPtrAttr = std::nullopt;
+    QualType EltTy = Visit(T->getElementType());
+    QualType NewTy = Ctx.getVariableArrayType(
+        EltTy, T->getSizeExpr(), T->getSizeModifier(),
+        T->getIndexTypeCVRQualifiers(), T->getBracketsRange());
+    return {NewTy, false};
+  }
+
+  RetTy VisitPointerType(const PointerType *T) {
+    // Should we add PtrAutoAttr to this pointer upon returning?
+    bool AddPtrAutoAttr = false;
+
+    auto PtrAttr = AutoPtrAttr;
+
+    QualType PointeeTy;
+    {
+      AutoPtrAttr = std::nullopt;
+      llvm::SaveAndRestore<bool> IsInsideValueTerminatedSAR(
+          IsInsideValueTerminated, false);
+      PointeeTy = Visit(T->getPointeeType());
+    }
+
+    BoundsSafetyPointerAttributes Attr = T->getPointerAttributes();
+    if (Attr.isUnspecified()) {
+      AddPtrAutoAttr = true;
+      // The following rules are to make function pointers and non-ABI visible
+      // pointers to have appropriate safe pointers (i.e., __single and
+      // __bidi_indexable, respectively). However, we shouldn't apply this rule
+      // when the default ABI-visible attribute is unsafe, as that can
+      // automatically create both unsafe and safe pointers in the same
+      // function, which are not compatible, leading to undesirable diagnostic
+      // errors on the pointer casts. Therefore, when the default ABI-visible
+      // pointer attribute is unsafe, we apply the same attribute to non-ABI
+      // visible pointers.
+      //
+      // Function pointers, which don't have a size, are unconditionally
+      // __single.
+      if (PointeeTy->isFunctionType() && !AbiFAttr.isUnsafeOrUnspecified())
+        Attr.setSingle();
+      else if (PtrAttr.has_value() &&
+               (IsInsideValueTerminated || !AbiFAttr.isUnsafeOrUnspecified())) {
+        // Auto-bounding the outer-most pointer types that are not ABI-visible.
+        // FIXME: Should be set to AutoBound when we unlock the tree transform
+        // for escaping locals to implicitly transform them to __single.
+        // rdar://69452444
+        Attr = *PtrAttr;
+      } else {
+        // ABI-visible pointers get the default ABI-visible BoundsSafety
+        // attributes. This is unsafe indexable in system headers and single
+        // otherwise.
+        Attr.copyBoundsAttr(AbiFAttr);
+      }
+    }
+
+    QualType NewTy = Ctx.getPointerType(PointeeTy, Attr);
+
+    bool IsPointeeChar = PointeeTy.getTypePtr() == Ctx.CharTy.getTypePtr();
+    bool IsPointeeWChar = false;
+    if (const auto *TT = PointeeTy->getAs<TypedefType>())
+      IsPointeeWChar = TT->getDecl()->getName() == "wchar_t";
+    if (AddPtrAutoAttr && Attr.isSingle() && PointeeTy.isConstQualified() &&
+        (IsPointeeChar || IsPointeeWChar) && !IsInsideValueTerminated) {
+      unsigned IntSize = Ctx.getTargetInfo().getIntWidth();
+      auto *ZeroLit = IntegerLiteral::Create(Ctx, llvm::APInt(IntSize, 0),
+                                             Ctx.IntTy, SourceLocation());
+      auto *TermExpr = ImplicitCastExpr::Create(
+          Ctx, PointeeTy, CK_IntegralCast, ZeroLit,
+          /*BasePath=*/nullptr, VK_PRValue, FPOptionsOverride());
+      NewTy = Ctx.getValueTerminatedType(NewTy, TermExpr);
+      NewTy =
+          Ctx.getAttributedType(attr::PtrAutoNullTerminatedAttr, NewTy, NewTy);
+    }
+
+    return {NewTy, AddPtrAutoAttr};
+  }
+
+  RetTy VisitBoundsAttributedType(const BoundsAttributedType *T) {
+    AutoPtrAttr = std::nullopt;
+    QualType DesugaredTy = T->desugar();
+    QualType PtrTy = Visit(DesugaredTy);
+    if (PtrTy == DesugaredTy)
+      return {QualType(T, 0), false};
+    QualType NewTy;
+    if (const auto *DCPT = dyn_cast<CountAttributedType>(T)) {
+      NewTy = Ctx.getCountAttributedType(
+          PtrTy, DCPT->getCountExpr(), DCPT->isCountInBytes(), DCPT->isOrNull(),
+          DCPT->getCoupledDecls());
+    } else if (const auto *DRPT = dyn_cast<DynamicRangePointerType>(T)) {
+      NewTy = Ctx.getDynamicRangePointerType(
+          PtrTy, DRPT->getStartPointer(), DRPT->getEndPointer(),
+          DRPT->getStartPtrDecls(), DRPT->getEndPtrDecls());
+    } else {
+      llvm_unreachable("Unknown BoundsAttributedType");
+    }
+    return {NewTy, false};
+  }
+
+  RetTy VisitValueTerminatedType(const ValueTerminatedType *T) {
+    // Make value-terminated pointers __single by default.
+    AutoPtrAttr = BoundsSafetyPointerAttributes::single();
+    llvm::SaveAndRestore<bool> IsInsideValueTerminatedSAR(
+        IsInsideValueTerminated, true);
+    QualType DesugaredTy = T->desugar();
+    // There shouldn't be nested value-terminated types.
+    assert(!DesugaredTy->getAs<ValueTerminatedType>());
+    QualType NewDesugaredTy = Visit(DesugaredTy);
+    assert(!NewDesugaredTy->getAs<ValueTerminatedType>());
+    QualType NewTy =
+        Ctx.getValueTerminatedType(NewDesugaredTy, T->getTerminatorExpr());
+    return {NewTy, false};
+  }
+
+  RetTy VisitFunctionProtoType(const FunctionProtoType *T) {
+    AutoPtrAttr = std::nullopt;
+    QualType ReturnTy = Visit(T->getReturnType());
+    SmallVector<QualType, 16> ParamTypes;
+    ParamTypes.reserve(T->getNumParams());
+    for (QualType ParamTy : T->getParamTypes())
+      ParamTypes.push_back(Visit(ParamTy));
+    QualType NewTy =
+        Ctx.getFunctionType(ReturnTy, ParamTypes, T->getExtProtoInfo());
+    return {NewTy, false};
+  }
+
+  RetTy VisitFunctionNoProtoType(const FunctionNoProtoType *T) {
+    AutoPtrAttr = std::nullopt;
+    QualType ReturnTy = Visit(T->getReturnType());
+    QualType NewTy = Ctx.getFunctionNoProtoType(ReturnTy, T->getExtInfo());
+    return {NewTy, false};
+  }
+};
+
+} // namespace
+
+QualType ASTContext::getBoundsSafetyAutoPointerType(
+    QualType T, BoundsSafetyPointerAttributes AbiFAttr, bool ShouldAutoBound) {
+  // XXX: We don't apply an implicit -fbounds-safety attribute for va_list, which
+  // leaves va_list unsafe
+  if (T->isAnyVaListType(*this))
+    return T;
+
+  std::optional<BoundsSafetyPointerAttributes> AutoPtrAttr;
+  if (ShouldAutoBound)
+    AutoPtrAttr = BoundsSafetyPointerAttributes::bidiIndexable();
+  MakeAutoPointer MAP(*this, AbiFAttr, AutoPtrAttr);
+  return MAP.Visit(T);
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 QualType ASTContext::removePtrSizeAddrSpace(QualType T) const {
   if (const PointerType *Ptr = T->getAs<PointerType>()) {
     QualType Pointee = Ptr->getPointeeType();
     if (isPtrSizeAddressSpace(Pointee.getAddressSpace())) {
-      return getPointerType(removeAddrSpaceQualType(Pointee));
+      return getPointerType(removeAddrSpaceQualType(Pointee),
+                            Ptr->getPointerAttributes());
     }
   }
   return T;
@@ -3782,11 +4286,12 @@ QualType ASTContext::getComplexType(QualType T) const {
 
 /// getPointerType - Return the uniqued reference to the type for a pointer to
 /// the specified type.
-QualType ASTContext::getPointerType(QualType T) const {
+QualType ASTContext::getPointerType(QualType T,
+                                    BoundsSafetyPointerAttributes A) const {
   // Unique pointers, to guarantee there is only one pointer of a particular
   // structure.
   llvm::FoldingSetNodeID ID;
-  PointerType::Profile(ID, T);
+  PointerType::Profile(ID, T, A);
 
   void *InsertPos = nullptr;
   if (PointerType *PT = PointerTypes.FindNodeOrInsertPos(ID, InsertPos))
@@ -3796,13 +4301,13 @@ QualType ASTContext::getPointerType(QualType T) const {
   // so fill in the canonical type field.
   QualType Canonical;
   if (!T.isCanonical()) {
-    Canonical = getPointerType(getCanonicalType(T));
+    Canonical = getPointerType(getCanonicalType(T), A);
 
     // Get the new insert position for the node we care about.
     PointerType *NewIP = PointerTypes.FindNodeOrInsertPos(ID, InsertPos);
     assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
   }
-  auto *New = new (*this, alignof(PointerType)) PointerType(T, Canonical);
+  auto *New = new (*this, alignof(PointerType)) PointerType(T, Canonical, A);
   Types.push_back(New);
   PointerTypes.InsertNode(New, InsertPos);
   return QualType(New, 0);
@@ -6755,6 +7260,53 @@ bool ASTContext::hasCvrSimilarType(QualType T1, QualType T2) {
 
     if (!UnwrapSimilarTypes(T1, T2, /*AllowPiMismatch*/ false))
       return false;
+  }
+}
+
+bool ASTContext::hasSameBoundsSafetyPointerLayout(QualType T1, QualType T2) {
+  return hasCompatibleBoundsSafetyPointerLayout(T1, T2, /*ExactCheck*/ true);
+}
+
+bool ASTContext::hasCompatibleBoundsSafetyPointerLayout(QualType T1, QualType T2,
+                                                     bool ExactCheck) {
+  while (true) {
+    if (ExactCheck && (T1->getAs<BoundsAttributedType>()
+                       != T2->getAs<BoundsAttributedType>()))
+      return false;
+    Qualifiers Quals;
+    T1 = getUnqualifiedArrayType(T1, Quals);
+    T2 = getUnqualifiedArrayType(T2, Quals);
+
+    if (hasSameType(T1, T2))
+      return true;
+
+    const auto *PT1 = T1->getBaseElementTypeUnsafe()->getAs<PointerType>();
+    const auto *PT2 = T2->getBaseElementTypeUnsafe()->getAs<PointerType>();
+
+    if (!PT1 && !PT2)
+      return true;
+
+    if (PT1 && PT2) {
+      if (!ExactCheck) {
+        if (!BoundsSafetyPointerAttributes::areCompatible(
+                PT1->getPointerAttributes(), PT2->getPointerAttributes()))
+          return false;
+      } else if (PT1->getPointerAttributes() != PT2->getPointerAttributes())
+        return false;
+    }
+
+    if (PT1) {
+      if (!PT2 && PT1->isSafePointer())
+        return false;
+
+      T1 = PT1->getPointeeType();
+    }
+
+    if (PT2) {
+      if (!PT1 && PT2->isSafePointer())
+        return false;
+      T2 = PT2->getPointeeType();
+    }
   }
 }
 
@@ -11401,6 +11953,15 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
   if (LHSRefTy || RHSRefTy)
     return {};
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  if (const auto *RProto = RHS->getAs<FunctionProtoType>()) {
+    // Do not merge bounds attributed return types since they are referring to
+    // different decls.
+    if (RProto->getReturnType()->isBoundsAttributedType())
+      return {};
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
   if (Unqualified) {
     LHS = LHS.getUnqualifiedType();
     RHS = RHS.getUnqualifiedType();
@@ -11528,8 +12089,18 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
   case Type::Pointer:
   {
     // Merge two pointer types, while trying to preserve typedef info
-    QualType LHSPointee = LHS->castAs<PointerType>()->getPointeeType();
-    QualType RHSPointee = RHS->castAs<PointerType>()->getPointeeType();
+    const PointerType *LHSPointer = LHS->castAs<PointerType>();
+    const PointerType *RHSPointer = RHS->castAs<PointerType>();
+    BoundsSafetyPointerAttributes LHSFA = LHSPointer->getPointerAttributes();
+    BoundsSafetyPointerAttributes RHSFA = RHSPointer->getPointerAttributes();
+    if (!BoundsSafetyPointerAttributes::areCompatible(LHSFA, RHSFA))
+      return {};
+    BoundsSafetyPointerAttributes BestFA = LHSFA;
+    if (BestFA.isUnspecified())
+      BestFA = RHSFA;
+
+    QualType LHSPointee = LHSPointer->getPointeeType();
+    QualType RHSPointee = RHSPointer->getPointeeType();
     if (Unqualified) {
       LHSPointee = LHSPointee.getUnqualifiedType();
       RHSPointee = RHSPointee.getUnqualifiedType();
@@ -11538,11 +12109,16 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
                                      Unqualified);
     if (ResultType.isNull())
       return {};
+    QualType BestType;
     if (getCanonicalType(LHSPointee) == getCanonicalType(ResultType))
-      return LHS;
-    if (getCanonicalType(RHSPointee) == getCanonicalType(ResultType))
-      return RHS;
-    return getPointerType(ResultType);
+      BestType = LHS;
+    else if (getCanonicalType(RHSPointee) == getCanonicalType(ResultType))
+      BestType = RHS;
+    else
+      BestType = getPointerType(ResultType, BestFA);
+    if (BestType->getAs<PointerType>()->getPointerAttributes() != BestFA)
+      BestType = getBoundsSafetyPointerType(BestType, BestFA);
+    return BestType;
   }
   case Type::BlockPointer:
   {
@@ -13668,7 +14244,15 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
   }
   case Type::Pointer: {
     const auto *PX = cast<PointerType>(X), *PY = cast<PointerType>(Y);
-    return Ctx.getPointerType(getCommonPointeeType(Ctx, PX, PY));
+    // Bounds safety: pointer attributes are not sugar but they are part of
+    // canonical types. Hence, the attributes must be same and this function
+    // must preserve them.
+    auto PXFAttr = PX->getPointerAttributes();
+    auto PYFAttr = PY->getPointerAttributes();
+    (void)PYFAttr;
+    assert(PXFAttr == PYFAttr ||
+           PXFAttr.isUnsafeOrUnspecified() == PYFAttr.isUnsafeOrUnspecified());
+    return Ctx.getPointerType(getCommonPointeeType(Ctx, PX, PY), PXFAttr);
   }
   case Type::BlockPointer: {
     const auto *PX = cast<BlockPointerType>(X), *PY = cast<BlockPointerType>(Y);
@@ -14119,18 +14703,47 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
       return Ctx.getCountAttributedType(Ctx.getQualifiedType(Underlying), CEX,
                                         DX->isCountInBytes(), DX->isOrNull(),
                                         CDX);
+    /* TO_UPSTREAM(BoundsSafety) ON */
     if (!CEX->isIntegerConstantExpr(Ctx) || !CEY->isIntegerConstantExpr(Ctx))
-      return QualType();
+      llvm_unreachable("this should have been caught by canMergeTypeBounds");
+    /* TO_UPSTREAM(BoundsSafety) OFF */
+
     // Two declarations with the same integer constant may still differ in their
     // expression pointers, so we need to evaluate them.
     llvm::APSInt VX = *CEX->getIntegerConstantExpr(Ctx);
     llvm::APSInt VY = *CEY->getIntegerConstantExpr(Ctx);
+    /* TO_UPSTREAM(BoundsSafety) ON */
     if (VX != VY)
-      return QualType();
+      llvm_unreachable("this should have been caught by canMergeTypeBounds");
+    /* TO_UPSTREAM(BoundsSafety) OFF */
+
     return Ctx.getCountAttributedType(Ctx.getQualifiedType(Underlying), CEX,
                                       DX->isCountInBytes(), DX->isOrNull(),
                                       CDX);
   }
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  case Type::DynamicRangePointer: {
+    const auto *DX = cast<DynamicRangePointerType>(X),
+               *DY = cast<DynamicRangePointerType>(Y);
+    if (!Ctx.hasSameExpr(DX->getStartPointer(), DY->getStartPointer()) ||
+        !Ctx.hasSameExpr(DX->getEndPointer(), DY->getEndPointer()))
+      llvm_unreachable("this should have been caught by canMergeTypeBounds");
+    assert(DX->getNumStartPtrDecls() == DY->getNumStartPtrDecls());
+    assert(DX->getNumEndPtrDecls() == DY->getNumEndPtrDecls());
+    return Ctx.getDynamicRangePointerType(
+        Ctx.getQualifiedType(Underlying), DX->getStartPointer(),
+        DX->getEndPointer(), DX->getStartPtrDecls(), DX->getEndPtrDecls());
+  }
+  case Type::ValueTerminated: {
+    const auto *VX = cast<ValueTerminatedType>(X),
+               *VY = cast<ValueTerminatedType>(Y);
+    if (!Ctx.hasSameExpr(VX->getTerminatorExpr(), VY->getTerminatorExpr()) &&
+        VX->getTerminatorValue(Ctx) != VY->getTerminatorValue(Ctx))
+      llvm_unreachable("this should have been caught by canMergeTypeBounds");
+    return Ctx.getValueTerminatedType(Ctx.getQualifiedType(Underlying),
+                                      VX->getTerminatorExpr());
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
   }
   llvm_unreachable("Unhandled Type Class");
 }
@@ -14148,9 +14761,167 @@ static auto unwrapSugar(SplitQualType &T, Qualifiers &QTotal) {
   return R;
 }
 
+ASTContext::BoundsSafePointerTypeMergeKind
+ASTContext::canMergeFunctionTypeBounds(const FunctionProtoType *LHSTy,
+                                       const FunctionProtoType *RHSTy) const{
+  if (LHSTy->getNumParams() != RHSTy->getNumParams())
+    return ASTContext::BSPTMK_FunctionTypeMismatch;
+  for (unsigned i = 0; i < LHSTy->getNumParams(); i++) {
+    if (!canMergeInnerTypeBounds(LHSTy->getParamTypes()[i],
+                                 RHSTy->getParamTypes()[i]))
+      return ASTContext::BSPTMK_FunctionTypeMismatch;
+  }
+  if (canMergeInnerTypeBounds(LHSTy->getReturnType(), RHSTy->getReturnType()) !=
+      ASTContext::BSPTMK_CanMerge)
+    return ASTContext::BSPTMK_FunctionTypeMismatch;
+  return ASTContext::BSPTMK_CanMerge;
+}
+
+ASTContext::BoundsSafePointerTypeMergeKind
+ASTContext::canMergeInnerTypeBounds(QualType LHSTy, QualType RHSTy) const {
+  assert(!!LHSTy->getAs<PointerType>() == !!RHSTy->getAs<PointerType>());
+
+  if (LHSTy->isFunctionProtoType()) {
+    return canMergeFunctionTypeBounds(LHSTy->getAs<FunctionProtoType>(),
+                                      RHSTy->getAs<FunctionProtoType>());
+  }
+
+  if (!LHSTy->getAs<PointerType>())
+    return ASTContext::BSPTMK_CanMerge;
+
+  while (LHSTy->getTypeClass() != Type::Pointer) {
+    switch (LHSTy->getTypeClass()) {
+    case Type::CountAttributed: {
+      auto LTy = cast<CountAttributedType>(LHSTy);
+      auto RTy = RHSTy->getAs<CountAttributedType>();
+      if (!RTy)
+        return ASTContext::BSPTMK_NestedBoundsMismatch;
+      if (LTy->isCountInBytes() != RTy->isCountInBytes())
+        return ASTContext::BSPTMK_NestedBoundsMismatch;
+      if (LTy->isOrNull() != RTy->isOrNull())
+        return ASTContext::BSPTMK_NestedBoundsMismatch;
+      const auto CEL = LTy->getCountExpr();
+      const auto CER = RTy->getCountExpr();
+      if (!hasSameExpr(CEL, CER) && (!CEL->isIntegerConstantExpr(*this) ||
+                                     !CER->isIntegerConstantExpr(*this) ||
+                                     CEL->getIntegerConstantExpr(*this) !=
+                                         CER->getIntegerConstantExpr(*this)))
+        return ASTContext::BSPTMK_NestedBoundsMismatch;
+      break;
+    }
+    case Type::DynamicRangePointer: {
+      auto LTy = cast<DynamicRangePointerType>(LHSTy);
+      auto RTy = RHSTy->getAs<DynamicRangePointerType>();
+      if (!RTy)
+        return ASTContext::BSPTMK_NestedBoundsMismatch;
+      if (!hasSameExpr(LTy->getStartPointer(), RTy->getStartPointer()) ||
+          !hasSameExpr(LTy->getEndPointer(), RTy->getEndPointer()))
+        return ASTContext::BSPTMK_NestedBoundsMismatch;
+      break;
+    }
+    case Type::ValueTerminated: {
+      if (checkTerminatedByMismatch(LHSTy, RHSTy) != BSPTMK_CanMerge)
+        return ASTContext::BSPTMK_NestedBoundsMismatch;
+      break;
+    }
+    default:
+      // Non-bounds sugar: don't iterate RHS
+      auto LHSNext = LHSTy->getLocallyUnqualifiedSingleStepDesugaredType();
+      assert(LHSNext != LHSTy);
+      LHSTy = LHSNext;
+      continue;
+    }
+    auto LHSNext = LHSTy->getLocallyUnqualifiedSingleStepDesugaredType();
+    assert(LHSNext != LHSTy);
+    auto CurrentTypeClass = LHSTy->getTypeClass();
+    LHSTy = LHSNext;
+
+    auto RHSNext = RHSTy->getLocallyUnqualifiedSingleStepDesugaredType();
+    // Iterate until the RHSTy is at the same bounds sugar type as the
+    // LHS was, and then once more to match in the next iteration
+    while (RHSTy->getTypeClass() != CurrentTypeClass) {
+      assert(RHSNext != RHSTy);
+      auto RHSTypeClass = RHSTy->getTypeClass();
+      if (RHSTypeClass == Type::CountAttributed ||
+          RHSTypeClass == Type::DynamicRangePointer ||
+          RHSTypeClass == Type::ValueTerminated)
+        return ASTContext::BSPTMK_NestedBoundsMismatch; // We found bounds
+                                                        // sugar on the RHS that
+                                                        // we haven't seen on
+                                                        // the LHS
+      RHSTy = RHSNext;
+      RHSNext = RHSTy->getLocallyUnqualifiedSingleStepDesugaredType();
+    }
+    RHSTy = RHSNext;
+  }
+
+  // We reached the LHS raw pointer type without reaching any mismatching
+  // bounds sugar nodes. Make sure the RHS doesn't have any bounds sugar
+  // left.
+  while (RHSTy->getTypeClass() != Type::Pointer) {
+    switch (RHSTy->getTypeClass()) {
+    case Type::CountAttributed:
+    case Type::DynamicRangePointer:
+    case Type::ValueTerminated:
+      return ASTContext::BSPTMK_NestedBoundsMismatch;
+    default:
+      auto Next = RHSTy->getLocallyUnqualifiedSingleStepDesugaredType();
+      assert(Next != RHSTy);
+      RHSTy = Next;
+    }
+  }
+
+  // Check next layer in case of deeply nested pointer types
+  return canMergeInnerTypeBounds(cast<PointerType>(LHSTy)->getPointeeType(),
+                                 cast<PointerType>(RHSTy)->getPointeeType());
+}
+
+ASTContext::BoundsSafePointerTypeMergeKind
+ASTContext::checkTerminatedByMismatch(QualType LHSTy, QualType RHSTy) const {
+  auto LVTTy = LHSTy->getAs<ValueTerminatedType>();
+  auto RVTTy = RHSTy->getAs<ValueTerminatedType>();
+  if (!!LVTTy != !!RVTTy)
+    return ASTContext::BSPTMK_TerminatedByMismatch;
+
+  if (LVTTy && RVTTy) {
+    if (LVTTy->getTerminatorValue(*this) != RVTTy->getTerminatorValue(*this))
+      return ASTContext::BSPTMK_TerminatedByMismatch;
+  }
+
+  return BSPTMK_CanMerge;
+}
+
+ASTContext::BoundsSafePointerTypeMergeKind
+ASTContext::canMergeTypeBounds(QualType LHSTy, QualType RHSTy) const {
+  assert(getCanonicalType(LHSTy).getUnqualifiedType() ==
+         getCanonicalType(RHSTy).getUnqualifiedType());
+  assert(getLangOpts().BoundsSafety);
+
+  auto TermCheck = checkTerminatedByMismatch(LHSTy, RHSTy);
+  if (TermCheck != BSPTMK_CanMerge)
+    return TermCheck;
+
+  auto LHSPointerTy = LHSTy->getAs<PointerType>();
+  auto RHSPointerTy = RHSTy->getAs<PointerType>();
+  assert(!!LHSPointerTy == !!RHSPointerTy);
+  if (LHSPointerTy) {
+    // We don't need to handle outermost layer of pointer type annotations;
+    // they may be bounds checked dynamically while this is only for static type
+    // merging.
+    LHSTy = LHSPointerTy->getPointeeType();
+    RHSTy = RHSPointerTy->getPointeeType();
+  }
+
+  return canMergeInnerTypeBounds(LHSTy, RHSTy);
+}
+
 QualType ASTContext::getCommonSugaredType(QualType X, QualType Y,
                                           bool Unqualified) {
   assert(Unqualified ? hasSameUnqualifiedType(X, Y) : hasSameType(X, Y));
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  assert(Unqualified || !getLangOpts().BoundsSafety ||
+         canMergeTypeBounds(X, Y) == ASTContext::BSPTMK_CanMerge);
+  /* TO_UPSTREAM(BoundsSafety) OFF */
   if (X == Y)
     return X;
   if (!Unqualified) {
@@ -14208,6 +14979,14 @@ QualType ASTContext::getCommonSugaredType(QualType X, QualType Y,
   // with the sugar nodes we could not unify.
   QualType R = getQualifiedType(SX.Ty, QX);
   assert(Unqualified ? hasSameUnqualifiedType(R, X) : hasSameType(R, X));
+
+  // Other sugar types failing to unify can prevent bounds safety sugar from
+  // unifying also. Losing this sugar affects semantics, so force it back on.
+  R = assureMandatorySugarTypesRemain(*this, R, X);
+  assert(R->isValueTerminatedType() == Y->isValueTerminatedType());
+  assert(R->isCountAttributedType() == Y->isCountAttributedType());
+  assert(R->isDynamicRangePointerType() == Y->isDynamicRangePointerType());
+
   return R;
 }
 

@@ -196,6 +196,10 @@ class CGDebugInfo {
   llvm::DIType *CreateType(const PointerType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const BlockPointerType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const FunctionType *Ty, llvm::DIFile *F);
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  llvm::DIType *CreateType(const CountAttributedType *Ty, llvm::DIFile *F);
+  llvm::DIType *CreateType(const DynamicRangePointerType *Ty, llvm::DIFile *F);
+  /* TO_UPSTREAM(BoundsSafety) OFF */
   /// Get structure or union type.
   llvm::DIType *CreateType(const RecordType *Tyg);
 

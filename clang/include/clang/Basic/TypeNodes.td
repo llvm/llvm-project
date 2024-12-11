@@ -112,6 +112,10 @@ def ObjCInterfaceType : TypeNode<ObjCObjectType>, LeafType;
 def ObjCObjectPointerType : TypeNode<Type>;
 def BoundsAttributedType : TypeNode<Type, 1>;
 def CountAttributedType : TypeNode<BoundsAttributedType>, NeverCanonical;
+// TO_UPSTREAM(BoundsSafety) ON
+def DynamicRangePointerType : TypeNode<BoundsAttributedType>, NeverCanonical;
+def ValueTerminatedType : TypeNode<Type>, NeverCanonical;
+// TO_UPSTREAM(BoundsSafety) OFF
 def PipeType : TypeNode<Type>;
 def AtomicType : TypeNode<Type>;
 def BitIntType : TypeNode<Type>;

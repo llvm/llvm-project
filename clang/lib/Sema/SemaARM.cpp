@@ -764,8 +764,8 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
   if (PtrArgNum >= 0) {
     // Check that pointer arguments have the specified type.
     Expr *Arg = TheCall->getArg(PtrArgNum);
-    if (ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(Arg))
-      Arg = ICE->getSubExpr();
+    // TO_UPSTREAM(BoundsSafety)
+    Arg = Arg->IgnoreImpCasts();
     ExprResult RHS = SemaRef.DefaultFunctionArrayLvalueConversion(Arg);
     QualType RHSTy = RHS.get()->getType();
 
@@ -780,7 +780,11 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
       EltTy = EltTy.withConst();
     QualType LHSTy = getASTContext().getPointerType(EltTy);
     Sema::AssignConvertType ConvTy;
-    ConvTy = SemaRef.CheckSingleAssignmentConstraints(LHSTy, RHS);
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    ConvTy = SemaRef.CheckSingleAssignmentConstraints(
+        LHSTy, RHS, /*Diagnose=*/true, /*DiagnoseCFA=*/false,
+        /*ConvertRHS=*/true);
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
     if (RHS.isInvalid())
       return true;
     if (SemaRef.DiagnoseAssignmentResult(ConvTy, Arg->getBeginLoc(), LHSTy,

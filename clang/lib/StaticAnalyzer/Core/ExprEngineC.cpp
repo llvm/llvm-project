@@ -533,6 +533,16 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
         Bldr.generateNode(CastE, Pred, state);
         continue;
       }
+      /* TO_UPSTREAM(BoundsSafety) ON*/
+      case CK_BoundsSafetyPointerCast: {
+        SVal V = state->getSVal(Ex, LCtx);
+        SVal CastedV =
+            svalBuilder.evalCast(V, CastE->getType(), Ex->getType());
+        state = state->BindExpr(CastE, LCtx, CastedV);
+        Bldr.generateNode(CastE, Pred, state);
+        continue;
+      }
+      /* TO_UPSTREAM(BoundsSafety) OFF*/
     }
   }
 }

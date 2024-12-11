@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/AnalysisBasedWarnings.h"
+// TO_UPSTREAM(BoundsSafety)
+#include "clang/Sema/BoundsSafetySuggestions.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -2348,6 +2350,44 @@ public:
     }
   }
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  void handleUnsafeCountAttributedPointerArgument(const CallExpr *Call,
+                                                  const Expr *Arg,
+                                                  bool IsRelatedToDecl,
+                                                  ASTContext &Ctx) override {
+    const FunctionDecl *FD = Call->getDirectCallee();
+    const auto *FPT = FD->getType()->getAs<FunctionProtoType>();
+
+    const auto ArgIt = std::find(Call->arg_begin(), Call->arg_end(), Arg);
+    assert(ArgIt != Call->arg_end());
+    const unsigned ArgIndex = ArgIt - Call->arg_begin();
+
+    const auto *CATy =
+        FPT->getParamType(ArgIndex)->getAs<CountAttributedType>();
+
+    // For __counted_by(C) where C is just a DRE, we recommend passing '.data()'
+    // to the pointer and '.size()' to the count parameter. For other C, don't
+    // recommend it.
+    bool IsSimpleCount =
+        CATy->getNumCoupledDecls() == 1 &&
+        isa<DeclRefExpr>(CATy->getCountExpr()->IgnoreParenImpCasts());
+
+    const ParmVarDecl *PVD = FD->getParamDecl(ArgIndex);
+
+    StringRef PtrParamName = PVD->getName();
+    StringRef CountParamName =
+        IsSimpleCount ? CATy->dependent_decls().begin()->getDecl()->getName()
+                      : "";
+
+    S.Diag(Arg->getBeginLoc(),
+           diag::warn_unsafe_count_attributed_pointer_argument);
+    S.Diag(PVD->getBeginLoc(),
+           diag::note_unsafe_count_attributed_pointer_argument)
+        << IsSimpleCount << QualType(CATy, 0) << !PtrParamName.empty()
+        << PtrParamName << CountParamName;
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   void handleUnsafeVariableGroup(const VarDecl *Variable,
                                  const VariableGroupsManager &VarGrpMgr,
                                  FixItList &&Fixes, const Decl *D,
@@ -2436,6 +2476,577 @@ public:
   }
 };
 } // namespace
+
+/* TO_UPSTREAM(BoundsSafety) ON*/
+//===----------------------------------------------------------------------===//
+// -fbounds-safety suggestions.
+//===----------------------------------------------------------------------===//
+
+class BoundsSafetySuggestionReporter : public BoundsSafetySuggestionHandler {
+public:
+  BoundsSafetySuggestionReporter(Sema &S) : S(S) {}
+
+private:
+  Sema &S;
+
+  int UnsafeOpToSelectIndex(UnsafeOpKind Kind) {
+    // Don't trust the enum to stay in sync with our %select (layering).
+    switch (Kind) {
+    case UnsafeOpKind::Index:
+      return 0;
+    case UnsafeOpKind::Arithmetic:
+      return 1;
+    case UnsafeOpKind::Deref:
+      return 2;
+    case UnsafeOpKind::MemberAccess:
+      return 3;
+    case UnsafeOpKind::Assignment:
+      return 4;
+    case UnsafeOpKind::Return:
+      return 5;
+    case UnsafeOpKind::CallArg:
+      return 6;
+    case UnsafeOpKind::Cast:
+      return 7;
+    }
+    llvm_unreachable("Unhandled UnsafeOpKind");
+  }
+
+  int WillTrapKindSelectIndex(WillTrapKind Kind) {
+    switch (Kind) {
+    case WillTrapKind::NoTrap:
+      return 0;
+    case WillTrapKind::Unknown:
+      return 1;
+    case WillTrapKind::Trap:
+      return 2;
+    case WillTrapKind::TrapIffPtrNotNull:
+      return 3;
+    case WillTrapKind::TrapIffPtrNull:
+      return 4;
+    }
+    llvm_unreachable("Unhandled WillTrapKind");
+  }
+
+  int PtrArithOOBKindSelectIndex(PtrArithOOBKind Kind) {
+    switch (Kind) {
+    case PtrArithOOBKind::ALWAYS_OOB_BASE_OOB:
+      return 0;
+    case PtrArithOOBKind::ALWAYS_OOB_CONSTANT_OFFSET:
+      return 1;
+    case PtrArithOOBKind::
+        OOB_IF_EFFECTIVE_OFFSET_GTE_MINIMUM_OOB_POSITIVE_OFFSET:
+      return 2;
+    case PtrArithOOBKind::
+        OOB_IF_EFFECTIVE_OFFSET_GTE_MINIMUM_OOB_POSITIVE_OFFSET_OR_LT_ZERO:
+      return 3;
+    case PtrArithOOBKind::OOB_IF_EFFECTIVE_OFFSET_LT_ZERO:
+      return 4;
+    case PtrArithOOBKind::UNKNOWN:
+    case PtrArithOOBKind::NEVER_OOB:
+      llvm_unreachable("Should not emit diagnostic with this kind");
+    }
+    llvm_unreachable("Unhandled PtrArithOOBKind");
+  }
+
+  int AssignmentExprToSelectIndex(const Expr *AssignmentExpr) {
+    if (AssignmentExpr) {
+      return 0; // "assigned"
+    }
+    return 1; // "initialized"
+  }
+
+  void emitSingleEntityDeclaredHereNote(const SingleEntity Entity) {
+    switch (Entity.Kind) {
+    case AssignmentSourceKind::Parameter:
+    case AssignmentSourceKind::GlobalVar:
+    case AssignmentSourceKind::LocalVar:
+      S.Diag(Entity.Entity->getBeginLoc(), diag::note_pointer_declared_here)
+          << Entity.Entity;
+      break;
+    case AssignmentSourceKind::FunctionCallReturnValue:
+    case AssignmentSourceKind::ArrayElement:
+      S.Diag(Entity.Entity->getBeginLoc(), diag::note_entity_declared_at)
+          << Entity.Entity;
+      break;
+    case AssignmentSourceKind::StructMember:
+    case AssignmentSourceKind::UnionMember:
+      // Use qualified name so diagnostic consumer knowns which struct the
+      // member came from.
+      S.Diag(Entity.Entity->getBeginLoc(), diag::note_entity_declared_at)
+          << Entity.Entity->getQualifiedNameAsString();
+      break;
+    }
+  }
+
+  void EmitSingleEntityAssignedToPointerHereNote(
+      const SingleEntity &Entity, const VarDecl *IndexableLocalVar,
+      const Stmt *UnsafeOp, UnsafeOpKind Kind, const Expr *AssignmentExpr,
+      const QualType UnsafeOpPointerTy, bool IdentifyEntityKind) {
+
+    bool IsInit = AssignmentExpr == IndexableLocalVar->getInit();
+
+    // Check if the pointee type sizes match. If they don't we'll want to emit
+    // a different diagnostic that notes the type sizes.
+    const auto UnsafeOpPointeeTy = UnsafeOpPointerTy->getPointeeType();
+    const auto IndexableLocalVarPointeeTy =
+        IndexableLocalVar->getType()->getAs<PointerType>()->getPointeeType();
+
+    bool PointeeTypesSizesMatch =
+        S.getASTContext().getTypeSizeOrNull(IndexableLocalVarPointeeTy) ==
+        S.getASTContext().getTypeSizeOrNull(UnsafeOpPointeeTy);
+
+    if (PointeeTypesSizesMatch) {
+      if (IdentifyEntityKind) {
+        // TODO(dliew): We should make a distinction between initialization
+        // and assignment here (rdar://122940682).
+        S.Diag(AssignmentExpr->getBeginLoc(),
+               diag::note_single_entity_assigned_here)
+            << Entity.Kind << Entity.Entity << IndexableLocalVar
+            << AssignmentExpr->getSourceRange();
+        return;
+      }
+      S.Diag(AssignmentExpr->getBeginLoc(),
+             IsInit ? diag::note_pointer_initialized_here
+                    : diag::note_pointer_assigned_here)
+          << IndexableLocalVar;
+      return;
+    }
+
+    // The Pointee sizes don't match. Use a diagnostic that explicitly states
+    // the size of the different pointee types in bytes.
+    // The diagnostic text will mention the type of the cast. We make the
+    // assumption that if the pointee sizes are different that there must be a
+    // cast somewhere.
+    int IsInitSelect = IsInit ? 1 : 0;
+
+    S.Diag(AssignmentExpr->getBeginLoc(),
+           diag::note_single_entity_assigned_here_with_pointee_sizes)
+        << /*0*/ Entity.Kind << /*1*/ Entity.Entity << /*2*/ IndexableLocalVar
+        << /*3*/ Entity.SinglePointeeTy
+        << /*4*/ S.getASTContext()
+               .getTypeSizeInChars(Entity.SinglePointeeTy)
+               .getQuantity()
+        << /*5*/ UnsafeOpPointeeTy << /*6*/ S.getASTContext()
+                                          .getTypeSizeInChars(UnsafeOpPointeeTy)
+                                          .getQuantity()
+        << /*7*/ 1 /*Cast of IndexableLocalVar has UnsafeOpPointerTy type*/
+        << /*8*/ UnsafeOpPointerTy << /*9*/ IsInitSelect
+        << AssignmentExpr->getSourceRange();
+  }
+
+  void handleSingleEntityFlowingToIndexableVariable(
+      const SingleEntity Entity, const VarDecl *IndexableLocalVar,
+      const Stmt *UnsafeOp, UnsafeOpKind Kind, const QualType UnsafeOpPtrTy,
+      PtrArithOOBKind PtrArithIsOOB = PtrArithOOBKind::UNKNOWN,
+      size_t MinimumPtrArithOOBOffset = 0) {
+    const Expr *AssignmentExpr = Entity.AssignmentExpr;
+    int OpSelect = UnsafeOpToSelectIndex(Kind);
+    int IsInitialization = AssignmentExprToSelectIndex(AssignmentExpr);
+    int PtrArithOOBSelect = PtrArithOOBKindSelectIndex(PtrArithIsOOB);
+
+    if (Kind == UnsafeOpKind::Index &&
+        PtrArithIsOOB == PtrArithOOBKind::ALWAYS_OOB_BASE_OOB) {
+      // This case is handled by
+      // `handleSingleEntitiesFlowingToIndexableVariableWithEltZeroOOB`
+      llvm_unreachable("This method should not handle this case");
+    }
+
+    S.Diag(UnsafeOp->getBeginLoc(),
+           diag::warn_bounds_safety_conv_single_to_implicit_indexable)
+        << Entity.Kind << OpSelect << IndexableLocalVar << IsInitialization
+        << Entity.Entity << PtrArithOOBSelect << MinimumPtrArithOOBOffset
+        << UnsafeOp->getSourceRange();
+
+    if (AssignmentExpr) {
+      // Pointer is assigned to. Report the assignment location and where
+      // the pointer is declared.
+      EmitSingleEntityAssignedToPointerHereNote(
+          Entity, IndexableLocalVar, UnsafeOp, Kind, AssignmentExpr,
+          UnsafeOpPtrTy, /*IdentifyEntityKind=*/false);
+
+      S.Diag(IndexableLocalVar->getBeginLoc(), diag::note_pointer_declared_here)
+          << IndexableLocalVar;
+    } else {
+      // The pointer was initialized.
+      EmitSingleEntityAssignedToPointerHereNote(
+          Entity, IndexableLocalVar, UnsafeOp, Kind,
+          IndexableLocalVar->getInit(), UnsafeOpPtrTy,
+          /*IdentifyEntityKind=*/false);
+
+      // Don't report diag::note_pointer_declared_here because the
+      // initialization and declaration location will be very similar
+    }
+
+    emitSingleEntityDeclaredHereNote(Entity);
+  }
+
+  void handleSingleEntitiesFlowingToIndexableVariableImpl(
+      const llvm::ArrayRef<SingleEntity> Entities,
+      const VarDecl *IndexableLocalVar, const Stmt *UnsafeOp, UnsafeOpKind Kind,
+      const QualType UnsafeOpPtrTy,
+      PtrArithOOBKind PtrArithIsOOB = PtrArithOOBKind::UNKNOWN,
+      size_t MinimumPtrArithOOBOffset = 0) {
+    int OpSelect = UnsafeOpToSelectIndex(Kind);
+    int PtrArithOOBSelect = PtrArithOOBKindSelectIndex(PtrArithIsOOB);
+
+    if (Kind == UnsafeOpKind::Index &&
+        PtrArithIsOOB == PtrArithOOBKind::ALWAYS_OOB_BASE_OOB) {
+      // This case is handled by
+      // `handleSingleEntitiesFlowingToIndexableVariableWithEltZeroOOB`
+      llvm_unreachable("This method should not handle this case");
+    }
+
+    S.Diag(
+        UnsafeOp->getBeginLoc(),
+        diag::
+            warn_bounds_safety_conv_single_to_implicit_indexable_multiple_assignments)
+        << OpSelect << IndexableLocalVar << PtrArithOOBSelect
+        << MinimumPtrArithOOBOffset << UnsafeOp->getSourceRange();
+
+    // Note where the __bidi_indexable local var is declared.
+    S.Diag(IndexableLocalVar->getBeginLoc(), diag::note_pointer_declared_here)
+        << IndexableLocalVar;
+
+    // Emit a note for each assignment to the __bidi_indexable variable.
+    // Currently `UnsafeOperationVisitor` doesn't use happens-before so
+    // some of the assignments noted here might be false positives. The warning
+    // diagnostic itself is much less likely to be a false positive because
+    // all the assignments are __single.
+    for (const auto &Entity : Entities) {
+      // Get the expression representing the assignment/initialization.
+      const Expr *AssignmentExpr = Entity.AssignmentExpr;
+      if (!AssignmentExpr) {
+        // The assignment is from the variable initializer
+        AssignmentExpr = IndexableLocalVar->getInit();
+      }
+      assert(AssignmentExpr);
+
+      EmitSingleEntityAssignedToPointerHereNote(
+          Entity, IndexableLocalVar, UnsafeOp, Kind, AssignmentExpr,
+          UnsafeOpPtrTy, /*IdentifyEntityKind=*/true);
+
+      emitSingleEntityDeclaredHereNote(Entity);
+    }
+  }
+  bool IsReallySinglePtr(const QualType Ty) const {
+    if (!Ty->isSinglePointerType())
+      return false;
+
+    // Unfortunately __counted_by and friends, and __terminated_by use sugar
+    // types wrapping a __single so we need to check for those explicitly and
+    // bail in those cases.
+    if (Ty->isBoundsAttributedType() || Ty->isValueTerminatedType())
+      return false;
+
+    return true;
+  };
+
+public:
+  void handleSingleEntitiesFlowingToIndexableVariableIndexOrPtrArith(
+      const llvm::ArrayRef<SingleEntity> Entities,
+      const VarDecl *IndexableLocalVar, const Stmt *UnsafeOp, UnsafeOpKind Kind,
+      PtrArithOOBKind IsOOB, size_t MinimumPtrArithOOBOffset) override {
+    assert(Entities.size() > 0);
+
+    QualType UnsafeOpPtrTy;
+    // This method handles both indexing and pointer arithmetic
+    switch (Kind) {
+    case UnsafeOpKind::Index:
+      UnsafeOpPtrTy = cast<ArraySubscriptExpr>(UnsafeOp)->getBase()->getType();
+      break;
+    case UnsafeOpKind::Arithmetic:
+      UnsafeOpPtrTy = cast<Expr>(UnsafeOp)->getType();
+      break;
+    default:
+      llvm_unreachable("Unhandled UnsafeOpKind");
+    }
+
+    if (Entities.size() == 1) {
+      // When there is only one __single entity reaching the __bidi_indexable
+      // variable produce a specialized diagnostic
+      handleSingleEntityFlowingToIndexableVariable(
+          Entities[0], IndexableLocalVar, UnsafeOp, Kind, UnsafeOpPtrTy, IsOOB,
+          MinimumPtrArithOOBOffset);
+    } else
+      handleSingleEntitiesFlowingToIndexableVariableImpl(
+          Entities, IndexableLocalVar, UnsafeOp, Kind, UnsafeOpPtrTy, IsOOB,
+          MinimumPtrArithOOBOffset);
+  }
+
+  void handleSingleEntitiesFlowingToIndexableVariableWithEltZeroOOB(
+      const llvm::ArrayRef<SingleEntity> Entities,
+      const VarDecl *IndexableLocalVar, const Stmt *UnsafeOp,
+      const Expr *Operand, UnsafeOpKind Kind) override {
+    int OpSelect = UnsafeOpToSelectIndex(Kind);
+
+    auto RealPointeeTy =
+        Operand->getType()->getAs<PointerType>()->getPointeeType();
+    assert(!RealPointeeTy->isIncompleteType());
+    // This is rather subtle but we **also** have to determine the pointee type
+    // with implicit casts stripped. This is because when `Operand` is printed
+    // it may contain implicit casts which do not show up when printing the
+    // expression. This could cause very confusing diagnostics that claim the
+    // the type of an expression is different to what the user would deduce by
+    // reading the printed expression. To avoid this we determine the
+    // `PerceivedPointeeTy` which is the type the user would expect from the
+    // printed form of `Operand`.
+    const auto *OperandNoParenImpCasts = Operand->IgnoreParenImpCasts();
+    assert(OperandNoParenImpCasts->getType()->isPointerType());
+    auto PerceivedPointeeTy = OperandNoParenImpCasts->getType()
+                                  ->getAs<PointerType>()
+                                  ->getPointeeType();
+    assert(!PerceivedPointeeTy->isIncompleteType());
+
+    std::string FieldName("");
+    if (Kind == UnsafeOpKind::MemberAccess) {
+      auto *ME = cast<MemberExpr>(UnsafeOp);
+      const auto *FD = cast<FieldDecl>(ME->getMemberDecl());
+      if (FD->getType()->isIncompleteArrayType() &&
+          !FD->getType()->isCountAttributedType()) {
+        // Suppress the warning for incomplete array types because the
+        // warn_bounds_safety_promoting_incomplete_array_without_count warning
+        // already handles this. E.g.:
+        //
+        // ```
+        // struct Foo {
+        //   int member;
+        //   int* buffer[]; // Size of array is "incomplete"
+        // };
+        // ```
+        return;
+      }
+      FieldName = FD->getQualifiedNameAsString();
+    }
+
+    auto UnsafeOpLoc = UnsafeOp->getBeginLoc();
+    if (const auto* ILE = dyn_cast<InitListExpr>(UnsafeOp)) {
+      // Initializer lists don't have a location for assignment in
+      // the list so use `Operand` which is the expression used for
+      // the assignment instead.
+      assert(std::any_of(
+          ILE->begin(), ILE->end(),
+          [&Operand](const Stmt *InitStmt) { return InitStmt == Operand; }));
+      UnsafeOpLoc = Operand->getBeginLoc();
+    }
+
+    const auto RealPointeeTySizeInBytes =
+        S.getASTContext().getTypeSizeInChars(RealPointeeTy).getQuantity();
+    const auto PerceivedPointeeTySizeInBytes =
+        S.getASTContext().getTypeSizeInChars(PerceivedPointeeTy).getQuantity();
+
+    S.Diag(
+        UnsafeOpLoc,
+        diag::
+            warn_bounds_safety_conv_single_to_implicit_indexable_unsafe_zeroth_element)
+        << /*0*/ OpSelect << /*1*/ const_cast<Expr *>(Operand)
+        << /*2*/ RealPointeeTy << /*3*/ RealPointeeTySizeInBytes
+        << /*4*/ IndexableLocalVar << /*5*/ FieldName
+        << UnsafeOp->getSourceRange();
+
+    // Note where the __bidi_indexable local var is declared.
+    S.Diag(IndexableLocalVar->getBeginLoc(), diag::note_pointer_declared_here)
+        << IndexableLocalVar;
+
+    // Emit a note for each assignment to the __bidi_indexable variable.
+    // Currently `UnsafeOperationVisitor` doesn't use happens-before so
+    // some of the assignments noted here might be false positives. The warning
+    // diagnostic itself is much less likely to be a false positive because
+    // all the assignments are __single.
+    for (const auto &Entity : Entities) {
+      // Get the expression representing the assignment/initialization.
+      const Expr *AssignmentExpr = Entity.AssignmentExpr;
+      int IsInitSelect = 0;
+      if (!AssignmentExpr) {
+        // The assignment is from the variable initializer
+        AssignmentExpr = IndexableLocalVar->getInit();
+        IsInitSelect = 1;
+      }
+      assert(AssignmentExpr);
+      assert(!Entity.SinglePointeeTy->isIncompleteType());
+
+      S.Diag(AssignmentExpr->getBeginLoc(),
+             diag::note_single_entity_assigned_here_with_pointee_sizes)
+          << /*0*/ Entity.Kind << /*1*/ Entity.Entity << /*2*/ IndexableLocalVar
+          << /*3*/ Entity.SinglePointeeTy
+          << /*4*/ S.getASTContext()
+                 .getTypeSizeInChars(Entity.SinglePointeeTy)
+                 .getQuantity()
+          << /*5*/ PerceivedPointeeTy << /*6*/ PerceivedPointeeTySizeInBytes
+          << /*7*/ 0 /* Operand has element type*/
+          << /*8*/ const_cast<Expr *>(Operand) << /*9*/ IsInitSelect
+          << AssignmentExpr->getSourceRange();
+
+      emitSingleEntityDeclaredHereNote(Entity);
+    }
+  }
+
+  void handleSingleEntitiesFlowingToIndexableVariableUnsafelyCasted(
+      const llvm::ArrayRef<SingleEntity> Entities,
+      const VarDecl *IndexableLocalVar, const Stmt *UnsafeOp, UnsafeOpKind Kind,
+      const Expr *Operand) override {
+
+    const auto OperandTy = Operand->getType();
+    assert(OperandTy->isPointerTypeWithBounds() ||
+           IsReallySinglePtr(OperandTy));
+
+    assert(Kind == UnsafeOpKind::Cast);
+    const auto *CE = cast<CastExpr>(UnsafeOp);
+
+    assert(CE->getSubExpr()->getType()->isPointerTypeWithBounds());
+    auto CastPointeeTy = CE->getType()->getAs<PointerType>()->getPointeeType();
+
+    if (CE->getType()->isPointerTypeWithBounds() &&
+        CE->getCastKind() == clang::CK_BitCast) {
+      // Unsafe bitcast on __bidi_indexable/__indexable
+      S.Diag(
+          CE->getBeginLoc(),
+          diag::warn_bounds_safety_conv_single_to_implicit_indexable_unsafely_cast)
+          << ((isa<ImplicitCastExpr>(CE)) ? 1 : 0) << IndexableLocalVar
+          << CE->getSourceRange();
+    } else if (IsReallySinglePtr(CE->getType()) &&
+               CE->getCastKind() == clang::CK_BoundsSafetyPointerCast) {
+      // __bidi_indexable/__indexable -> __single that traps
+      S.Diag(
+          CE->getBeginLoc(),
+          diag::
+              warn_bounds_safety_conv_single_to_implicit_indexable_unsafely_cast_to_single_trap)
+          << ((isa<ImplicitCastExpr>(CE)) ? 1 : 0) << IndexableLocalVar
+          << CastPointeeTy << CE->getSourceRange();
+    } else {
+      llvm_unreachable("Unhandled cast type");
+    }
+
+    // Note where the __bidi_indexable local var is declared.
+    S.Diag(IndexableLocalVar->getBeginLoc(), diag::note_pointer_declared_here)
+        << IndexableLocalVar;
+
+    // Emit a note for each assignment to the __bidi_indexable variable.
+    // Currently `UnsafeOperationVisitor` doesn't use happens-before so
+    // some of the assignments noted here might be false positives. The warning
+    // diagnostic itself is much less likely to be a false positive because
+    // all the assignments are __single.
+    for (const auto &Entity : Entities) {
+      // Get the expression representing the assignment/initialization.
+      const Expr *AssignmentExpr = Entity.AssignmentExpr;
+      int IsInitSelect = 0;
+      if (!AssignmentExpr) {
+        // The assignment is from the variable initializer
+        AssignmentExpr = IndexableLocalVar->getInit();
+        IsInitSelect = 1;
+      }
+      assert(AssignmentExpr);
+      assert(!Entity.SinglePointeeTy->isIncompleteType());
+
+      S.Diag(AssignmentExpr->getBeginLoc(),
+             diag::note_single_entity_assigned_here_with_pointee_sizes)
+          << /*0*/ Entity.Kind << /*1*/ Entity.Entity << /*2*/ IndexableLocalVar
+          << /*3*/ Entity.SinglePointeeTy
+          << /*4*/ S.getASTContext()
+                 .getTypeSizeInChars(Entity.SinglePointeeTy)
+                 .getQuantity()
+          << /*5*/ CastPointeeTy << /*6*/ S.getASTContext()
+                                        .getTypeSizeInChars(CastPointeeTy)
+                                        .getQuantity()
+          << /*7*/ 1 /*Cast of IndexableLocalVar has UnsafeBitCast type*/
+          << /*8*/ CE->getType() << /*9*/ IsInitSelect
+          << AssignmentExpr->getSourceRange();
+
+      emitSingleEntityDeclaredHereNote(Entity);
+    }
+  }
+
+  void handleSingleEntitiesFlowingToIndexableDynamicCountConversion(
+      const llvm::ArrayRef<SingleEntity> Entities,
+      const VarDecl *IndexableLocalVar, const Stmt *UnsafeOp, UnsafeOpKind Kind,
+      const Expr *Operand, const QualType DCPT, WillTrapKind WillTrap,
+      std::optional<llvm::APInt> ConstantCount,
+      size_t MaxSafeSizeOrCount) override {
+    const auto OperandTy = Operand->getType();
+    assert(OperandTy->isPointerTypeWithBounds() ||
+           IsReallySinglePtr(OperandTy));
+
+    assert(Kind == UnsafeOpKind::Cast || Kind == UnsafeOpKind::CallArg ||
+           Kind == UnsafeOpKind::Return || Kind == UnsafeOpKind::Assignment);
+    const auto *CE = cast<CastExpr>(UnsafeOp);
+
+    assert(CE->getType()->isCountAttributedType());
+
+    int OpSelect = UnsafeOpToSelectIndex(Kind);
+    int WillTrapSelect = WillTrapKindSelectIndex(WillTrap);
+    assert(DCPT->isCountAttributedType());
+    int OrNullSelect =
+        DCPT->getAs<CountAttributedType>()->isOrNull() ? 1 : 0;
+    int SizedInBytesSelect =
+        DCPT->getAs<CountAttributedType>()->isCountInBytes() ? 1 : 0;
+
+    auto DCPTPointeeTy = DCPT->getAs<PointerType>()->getPointeeType();
+
+    int ConstantCountSelect = ConstantCount ? 1 : 0;
+    size_t ConstantCountInBytes = 0;
+    if (ConstantCount) {
+      if (DCPT->getAs<CountAttributedType>()->isCountInBytes()) {
+        // __sized_by/__sized_by_or_null
+        ConstantCountInBytes = ConstantCount->getZExtValue();
+      } else {
+        // __counted_by/__counted_by_or_null
+        auto PointeeTySizeInBytes =
+            S.getASTContext().getTypeSizeInChars(DCPTPointeeTy).getQuantity();
+        auto PointeeTySizeInBytesAP =
+            llvm::APInt(ConstantCount->getBitWidth(), PointeeTySizeInBytes);
+        auto ConstantCountInBytesAP =
+            ((*ConstantCount) * PointeeTySizeInBytesAP);
+        ConstantCountInBytes = ConstantCountInBytesAP.getZExtValue();
+      }
+    }
+
+    // Due to a bug (rdar://83900556) checks are not emitted when returning
+    // a __counted_by(or_null)/__sized_by(or_null) pointer.
+    int TrapInFutureCompilerVersion = (Kind == UnsafeOpKind::Return) ? 1 : 0;
+
+    S.Diag(
+        UnsafeOp->getBeginLoc(),
+        diag::
+            warn_bounds_safety_conv_single_to_implicit_indexable_dynamic_count_conversion)
+        << /*0*/ OpSelect << /*1*/ IndexableLocalVar << /*2*/ WillTrapSelect
+        << /*3*/ DCPT << /*4*/ ConstantCountSelect << /*5*/ OrNullSelect
+        << /*6*/ TrapInFutureCompilerVersion << /*7*/ SizedInBytesSelect
+        << /*8*/ MaxSafeSizeOrCount << UnsafeOp->getSourceRange();
+
+    // Note where the __bidi_indexable local var is declared.
+    S.Diag(IndexableLocalVar->getBeginLoc(), diag::note_pointer_declared_here)
+        << IndexableLocalVar;
+
+    // Emit a note for each assignment to the __bidi_indexable variable.
+    // Currently `UnsafeOperationVisitor` doesn't use happens-before so
+    // some of the assignments noted here might be false positives. The warning
+    // diagnostic itself is much less likely to be a false positive because
+    // all the assignments are __single.
+    for (const auto &Entity : Entities) {
+      // Get the expression representing the assignment/initialization.
+      const Expr *AssignmentExpr = Entity.AssignmentExpr;
+      if (!AssignmentExpr) {
+        // The assignment is from the variable initializer
+        AssignmentExpr = IndexableLocalVar->getInit();
+      }
+      assert(AssignmentExpr);
+      assert(!Entity.SinglePointeeTy->isIncompleteType());
+
+      S.Diag(AssignmentExpr->getBeginLoc(),
+             diag::note_single_entity_assigned_here_with_dyn_count_conversion)
+          << /*0*/ Entity.Kind << /*1*/ Entity.Entity << /*2*/ IndexableLocalVar
+          << /*3*/ Entity.SinglePointeeTy
+          << /*4*/ S.getASTContext()
+                 .getTypeSizeInChars(Entity.SinglePointeeTy)
+                 .getQuantity()
+          << /*5*/ ConstantCountSelect << /*6*/ DCPT
+          << /*7*/ ConstantCountInBytes << AssignmentExpr->getSourceRange();
+
+      emitSingleEntityDeclaredHereNote(Entity);
+    }
+  }
+};
+/* TO_UPSTREAM(BoundsSafety) OFF*/
 
 //===----------------------------------------------------------------------===//
 // AnalysisBasedWarnings - Worker object used by Sema to execute analysis-based
@@ -2824,6 +3435,15 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
       if (S.getLangOpts().CPlusPlus && !fscope->isCoroutine() && isNoexcept(FD))
         checkThrowInNonThrowingFunc(S, FD, AC);
+
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  if (S.getLangOpts().BoundsSafety &&
+      !Diags.isIgnored(diag::warn_bounds_safety_conv_single_to_implicit_indexable,
+                       D->getBeginLoc())) {
+    BoundsSafetySuggestionReporter Reporter(S);
+    checkBoundsSafetySuggestions(D, Reporter, S);
+  }
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
 
   // If none of the previous checks caused a CFG build, trigger one here
   // for the logical error handler.

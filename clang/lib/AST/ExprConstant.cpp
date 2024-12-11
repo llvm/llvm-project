@@ -76,6 +76,11 @@ using llvm::APSInt;
 using llvm::APFloat;
 using llvm::FixedPointSemantics;
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+static uint64_t evaluateIncompleteArraySize(const ASTContext &C,
+                                            QualType T);
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 namespace {
   struct LValue;
   class CallStackFrame;
@@ -182,6 +187,13 @@ namespace {
     llvm_unreachable("unknown ConstantExprKind");
   }
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  static CharUnits getTypeSizeWithUnknownAsOne(const ASTContext &Ctx,
+                                               QualType Ty) {
+    return Ctx.getTypeSizeInCharsIfKnown(Ty).value_or(CharUnits::One());
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   /// The bound to claim that an array of unknown bound has.
   /// The value in MostDerivedArraySize is undefined in this case. So, set it
   /// to an arbitrary value that's likely to loudly break things if it's used.
@@ -213,6 +225,10 @@ namespace {
 
         if (auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
           ArraySize = CAT->getZExtSize();
+        /* TO_UPSTREAM(BoundsSafety) ON */
+        } else if (auto NumElts = evaluateIncompleteArraySize(Ctx, Type)) {
+          ArraySize = NumElts;
+        /* TO_UPSTREAM(BoundsSafety) OFF */
         } else {
           assert(I == 0 && "unexpected unsized array designator");
           FirstEntryIsUnsizedArray = true;
@@ -448,6 +464,35 @@ namespace {
       MostDerivedArraySize = 2;
       MostDerivedPathLength = Entries.size();
     }
+
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    /// Adjust type of forged pointer and scale up/down the array size and index.
+    void adjustForgedObjectTypeAndSize(QualType NewElemTy,
+                                       uint64_t OldElemSize, uint64_t NewElemSize) {
+      if (Invalid)
+        return;
+      assert(MostDerivedIsArrayElement &&
+             MostDerivedPathLength == Entries.size());
+      MostDerivedType = NewElemTy;
+      if (OldElemSize == NewElemSize)
+        return;
+
+      const unsigned numBits = sizeof(uint64_t) * CHAR_BIT;
+      APInt APArraySize(numBits, MostDerivedArraySize);
+      APInt APOldElemSize(numBits, OldElemSize);
+      bool Overflow = false;
+      APArraySize = APArraySize.umul_ov(APOldElemSize, Overflow);
+      assert(!Overflow);
+      assert(NewElemSize != 0);
+      MostDerivedArraySize = APArraySize.getZExtValue() / NewElemSize;
+
+      APInt APArrayIndex(numBits, Entries.back().getAsArrayIndex());
+      APArrayIndex = APArrayIndex.umul_ov(APOldElemSize, Overflow);
+      assert(!Overflow);
+      uint64_t ArrayIndex = APArrayIndex.getZExtValue() / NewElemSize;
+      Entries.back() = PathEntry::ArrayIndex(ArrayIndex);
+    }
+    /* TO_UPSTREAM(BoundsSafety) OFF */
 
     void addVectorElementUnchecked(QualType EltTy, uint64_t Size,
                                    uint64_t Idx) {
@@ -1628,8 +1673,13 @@ namespace {
     APValue::LValueBase Base;
     CharUnits Offset;
     SubobjectDesignator Designator;
+    CharUnits ForgedSize;
+    CharUnits ForgedOffset;
     bool IsNullPtr : 1;
     bool InvalidBase : 1;
+    bool IsForgeBidi : 1;
+    bool IsForgeSingle : 1;
+    bool IsForgeTerminatedBy : 1;
 
     const APValue::LValueBase getLValueBase() const { return Base; }
     CharUnits &getLValueOffset() { return Offset; }
@@ -1637,6 +1687,18 @@ namespace {
     SubobjectDesignator &getLValueDesignator() { return Designator; }
     const SubobjectDesignator &getLValueDesignator() const { return Designator;}
     bool isNullPointer() const { return IsNullPtr;}
+    bool isForgeBidi() const { return IsForgeBidi; }
+    bool isForgeSingle() const { return IsForgeSingle; }
+    bool isForgeTerminatedBy() const { return IsForgeTerminatedBy; }
+    CharUnits getLValueForgedSize() { return ForgedSize; }
+    const CharUnits &getLValueForgedSize() const { return ForgedSize; }
+    CharUnits getLValueForgedOffset() { return ForgedOffset; }
+    const CharUnits &getLValueForgedOffset() const { return ForgedOffset; }
+    CharUnits getUnwrappedLValueOffset() const {
+      if (isForgeBidi() || isForgeSingle() || isForgeTerminatedBy())
+        return Offset + ForgedOffset;
+      return Offset;
+    }
 
     unsigned getLValueCallIndex() const { return Base.getCallIndex(); }
     unsigned getLValueVersion() const { return Base.getVersion(); }
@@ -1649,6 +1711,12 @@ namespace {
         V = APValue(Base, Offset, Designator.Entries,
                     Designator.IsOnePastTheEnd, IsNullPtr);
       }
+      if (IsForgeBidi)
+        V.setLValueForgedBidi(ForgedSize, ForgedOffset);
+      if (IsForgeSingle)
+        V.setLValueForgedSingle(ForgedOffset);
+      if (IsForgeTerminatedBy)
+        V.setLValueForgedTerminatedBy(ForgedOffset);
     }
     void setFrom(ASTContext &Ctx, const APValue &V) {
       assert(V.isLValue() && "Setting LValue from a non-LValue?");
@@ -1657,6 +1725,11 @@ namespace {
       InvalidBase = false;
       Designator = SubobjectDesignator(Ctx, V);
       IsNullPtr = V.isNullPointer();
+      IsForgeBidi = V.isLValueForgeBidi();
+      ForgedSize = V.getLValueForgedSize();
+      ForgedOffset = V.getLValueForgedOffset();
+      IsForgeSingle = V.isLValueForgeSingle();
+      IsForgeTerminatedBy = V.isLValueForgeTerminatedBy();
     }
 
     void set(APValue::LValueBase B, bool BInvalid = false) {
@@ -1674,6 +1747,11 @@ namespace {
       InvalidBase = BInvalid;
       Designator = SubobjectDesignator(getType(B));
       IsNullPtr = false;
+      IsForgeBidi = false;
+      IsForgeSingle = false;
+      IsForgeTerminatedBy = false;
+      ForgedSize = CharUnits::Zero();
+      ForgedOffset = CharUnits::Zero();
     }
 
     void setNull(ASTContext &Ctx, QualType PointerTy) {
@@ -1683,6 +1761,25 @@ namespace {
       InvalidBase = false;
       Designator = SubobjectDesignator(PointerTy->getPointeeType());
       IsNullPtr = true;
+      IsForgeBidi = false;
+      IsForgeSingle = false;
+      IsForgeTerminatedBy = false;
+      ForgedSize = CharUnits::Zero();
+      ForgedOffset = CharUnits::Zero();
+    }
+
+    void setForgedBidi(APValue::LValueBase B, QualType T, CharUnits Size,
+                       CharUnits ForgedOfs, bool IsNullP) {
+      if (B.is<const ValueDecl *>() || B.is<ForgedPtrLValue>()) {
+        ForgedPtrLValue FP(B.getValueDecl());
+        set(APValue::LValueBase::getForgedPtr(FP, T));
+      } else {
+        Designator.setInvalid();
+      }
+      IsForgeBidi = true;
+      ForgedSize = Size;
+      ForgedOffset = ForgedOfs;
+      IsNullPtr = IsNullP;
     }
 
     void setInvalid(APValue::LValueBase B, unsigned I = 0) {
@@ -1732,6 +1829,38 @@ namespace {
              Designator.checkSubobject(Info, E, CSK);
     }
 
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    CharUnits getLValueSize(const ASTContext &Ctx) const {
+      if (IsForgeBidi)
+        return ForgedSize;
+
+      if (IsForgeSingle || IsForgeTerminatedBy) {
+        QualType Ty = getType(Base);
+        // When forging a pointer from a constant there's no ValueDecl to
+        // provide an actual pointee type in consteval context. Since we cannot
+        // dereference a constant during consteval, the element size is
+        // effectively 0 (the only caller is validUpperAdjustment()).
+        if (!Ty.isNull())
+          return getTypeSizeWithUnknownAsOne(
+              Ctx, QualType(Ty->getPointeeOrArrayElementType(), 0));
+      }
+
+      if (const auto *VD = Base.dyn_cast<const ValueDecl *>()) {
+        assert(!VD->getType()->isVoidType());
+        return Ctx.getTypeSizeInChars(VD->getType());
+      }
+      return CharUnits::Zero();
+    }
+
+    // Return the remaining lvalue object size. This is similar to
+    // SubobjectDesignator::validIndexAdjustments() but we can't always
+    // rely on it because SubobjectDesignator is easy to be invalid
+    // (due to bitcast, etc.). LValueOffset is more reliable.
+    CharUnits validUpperAdjustment(const ASTContext &Ctx) const {
+      return getLValueSize(Ctx) - getLValueOffset();
+    }
+    /* TO_UPSTREAM(BoundsSafety) OFF */
+
     void addDecl(EvalInfo &Info, const Expr *E,
                  const Decl *D, bool Virtual = false) {
       if (checkSubobject(Info, E, isa<FieldDecl>(D) ? CSK_Field : CSK_Base))
@@ -1756,6 +1885,28 @@ namespace {
     void addComplex(EvalInfo &Info, const Expr *E, QualType EltTy, bool Imag) {
       if (checkSubobject(Info, E, Imag ? CSK_Imag : CSK_Real))
         Designator.addComplexUnchecked(EltTy, Imag);
+    }
+    void adjustForgedObjectTypeAndSize(const ASTContext &Ctx,
+                                       QualType NewElemTy) {
+      ForgedPtrLValue FP = Base.get<ForgedPtrLValue>();
+      const auto *CAT =
+          Ctx.getAsConstantArrayType(Base.getForgedPtrAsArrayType());
+      assert(CAT);
+      QualType OldElemTy = CAT->getElementType();
+      uint64_t OldElemSize =
+          getTypeSizeWithUnknownAsOne(Ctx, OldElemTy).getQuantity();
+      uint64_t NewElemSize =
+          getTypeSizeWithUnknownAsOne(Ctx, NewElemTy).getQuantity();
+
+      bool Overflow = false;
+      APInt APOldElemSize(CAT->getSize().getBitWidth(), OldElemSize);
+      APInt APNewArraySize = CAT->getSize().umul_ov(APOldElemSize, Overflow);
+      assert(!Overflow);
+      APNewArraySize = APNewArraySize.udiv(NewElemSize);
+      Base = APValue::LValueBase::getForgedPtr(
+          FP, Ctx.getConstantArrayType(NewElemTy, APNewArraySize, nullptr,
+                                       ArraySizeModifier::Normal, 0));
+      Designator.adjustForgedObjectTypeAndSize(NewElemTy, OldElemSize, NewElemSize);
     }
     void addVectorElement(EvalInfo &Info, const Expr *E, QualType EltTy,
                           uint64_t Size, uint64_t Idx) {
@@ -1912,6 +2063,8 @@ static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result);
 static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
                                   EvalInfo &Info,
                                   std::string *StringResult = nullptr);
+static bool EvaluateTerminatorElement(const Expr *E, APValue &Result,
+                                      EvalInfo &Info);
 
 /// Evaluate an integer or fixed point expression into an APResult.
 static bool EvaluateFixedPointOrInteger(const Expr *E, APFixedPoint &Result,
@@ -1934,6 +2087,28 @@ static void negateAsSigned(APSInt &Int) {
   }
   Int = -Int;
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON*/
+static uint64_t evaluateIncompleteArraySize(const ASTContext &C, QualType T) {
+  if (!C.getLangOpts().BoundsSafety)
+    return 0;
+
+  const auto *DCPT = T->getAs<CountAttributedType>();
+  if (!T->isIncompleteArrayType() || !DCPT)
+    return 0;
+
+  APSInt Result;
+  Expr::EvalStatus Status;
+  EvalInfo Info(C, Status, EvalInfo::EM_ConstantExpression);
+  if (!EvaluateInteger(DCPT->getCountExpr(), Result, Info))
+    return 0;
+
+  if (Result.isNegative() || Result.ugt(std::numeric_limits<uint64_t>::max()))
+    return 0;
+
+  return Result.getLimitedValue();
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
 
 template<typename KeyT>
 APValue &CallStackFrame::createTemporary(const KeyT *Key, QualType T,
@@ -2087,7 +2262,8 @@ static bool IsGlobalLValue(APValue::LValueBase B) {
   if (!B)
     return true;
 
-  if (const ValueDecl *D = B.dyn_cast<const ValueDecl*>()) {
+  // TO_UPSTREAM(BoundsSafety): getValueDecl
+  if (const ValueDecl *D = B.getValueDecl()) {
     // ... the address of an object with static storage duration,
     if (const VarDecl *VD = dyn_cast<VarDecl>(D))
       return VD->hasGlobalStorage();
@@ -7993,6 +8169,30 @@ public:
     return static_cast<Derived*>(this)->VisitCastExpr(E);
   }
 
+  bool VisitForgePtrExpr(const ForgePtrExpr *E) {
+    if (!StmtVisitorTy::Visit(E->getAddr()))
+      return false;
+
+    if (E->ForgesBidiIndexablePointer())
+      return StmtVisitorTy::Visit(E->getSize());
+    if (E->ForgesTerminatedByPointer())
+      assert(StmtVisitorTy::Visit(E->getTerminator()));
+    return true;
+  }
+
+  bool VisitAssumptionExpr(const AssumptionExpr *E) {
+    return StmtVisitorTy::Visit(E->getWrappedExpr());
+  }
+
+  bool VisitGetBoundExpr(const GetBoundExpr *E) {
+    return static_cast<Derived*>(this)->Visit(E->getSubExpr());
+  }
+
+  bool VisitBoundsCheckExpr(const BoundsCheckExpr *E) {
+    // FIXME: C++ support
+    return false;
+  }
+
   bool VisitBinaryOperator(const BinaryOperator *E) {
     switch (E->getOpcode()) {
     default:
@@ -8020,6 +8220,13 @@ public:
   }
 
   bool VisitBinaryConditionalOperator(const BinaryConditionalOperator *E) {
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    // The same binary conditional operator might occur multiple times in one
+    // bounds check expression. Don't create a temporary if it already exists.
+    if (Info.CurrentCall->getCurrentTemporary(E->getOpaqueValue()))
+      return HandleConditionalOperator(E);
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
+
     // Evaluate and cache the common expression. We treat it as a temporary,
     // even though it's not quite the same thing.
     LValue CommonLV;
@@ -9330,6 +9537,8 @@ public:
   bool VisitBinaryOperator(const BinaryOperator *E);
   bool VisitCastExpr(const CastExpr* E);
   bool VisitUnaryAddrOf(const UnaryOperator *E);
+  bool VisitGetBoundExpr(const GetBoundExpr *E);
+  bool VisitForgePtrExpr(const ForgePtrExpr *E);
   bool VisitObjCStringLiteral(const ObjCStringLiteral *E)
       { return Success(E); }
   bool VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
@@ -9466,6 +9675,82 @@ bool PointerExprEvaluator::VisitUnaryAddrOf(const UnaryOperator *E) {
   return evaluateLValue(E->getSubExpr(), Result);
 }
 
+bool PointerExprEvaluator::VisitGetBoundExpr(const GetBoundExpr *E) {
+  bool Res = evaluatePointer(E->getSubExpr(), Result);
+  if (!Res)
+    return false;
+
+  auto &SubObj = Result.getLValueDesignator();
+  auto maxAdjustments = SubObj.validIndexAdjustments();
+  if (maxAdjustments.first == 0 && maxAdjustments.second == 0) {
+    Info.CCEDiag(E, diag::err_bounds_safety_evaluate_no_bounds)
+      << (int)E->getBoundKind();
+    return false;
+  }
+
+  APSInt Adjustment(64, true); // defaults to 0
+  if (E->getBoundKind() == GetBoundExpr::BK_Lower)
+    (APInt &)Adjustment -= maxAdjustments.first;
+  else
+    (APInt &)Adjustment += maxAdjustments.second;
+
+  // `E->getType()->getPointeeType() != MostDerivedType` when it's bitcast to
+  // `void *` and `Offset` must be calculated based on `MostDerivedType` of
+  // `LValueDesignator`.
+  return HandleLValueArrayAdjustment(
+      Info, E, Result, SubObj.MostDerivedType,
+      Adjustment);
+}
+
+bool PointerExprEvaluator::VisitForgePtrExpr(const ForgePtrExpr *E) {
+  const ASTContext &Ctx = Info.Ctx;
+  const Expr *Addr = E->getAddr();
+  if (Addr->getType()->isPointerType()) {
+    if (!evaluatePointer(Addr, Result))
+      return false;
+  } else {
+    APSInt Value;
+    if (!EvaluateInteger(Addr, Value, Info))
+      return false;
+
+    unsigned TypeSize = Ctx.getTypeSize(E->getType());
+    uint64_t Offset = Value.extOrTrunc(TypeSize).getZExtValue();
+    Result.Base = (const ValueDecl *)nullptr;
+    Result.InvalidBase = false;
+    Result.Offset = CharUnits::fromQuantity(Offset);
+    Result.Designator.setInvalid();
+    Result.IsNullPtr = Value.isZero();
+  }
+
+  if (E->ForgesBidiIndexablePointer()) {
+    APSInt Size;
+    if (!EvaluateInteger(E->getSize(), Size, Info))
+      return false;
+
+    QualType T = Ctx.getConstantArrayType(Ctx.UnsignedCharTy, Size, nullptr,
+                                          ArraySizeModifier::Normal, 0);
+
+    // We keep the base offset since the forged pointer starts from there, yet
+    // the designator index shall start from 0.
+    // Pretend the value isn't NULL when the size isn't 0. This allows various
+    // constant operations to work on a forged NULL pointer.
+    auto CUSize = CharUnits::fromQuantity(Size.getZExtValue());
+    Result.setForgedBidi(Result.getLValueBase(), T, CUSize,
+                         Result.getUnwrappedLValueOffset(),
+                         Result.IsNullPtr && CUSize.isZero());
+    Result.addArray(Info, E, cast<ConstantArrayType>(T));
+  } else {
+    assert(E->ForgesSinglePointer() != E->ForgesTerminatedByPointer());
+    Result.IsForgeBidi = false;
+    Result.IsForgeSingle = E->ForgesSinglePointer();
+    Result.IsForgeTerminatedBy = E->ForgesTerminatedByPointer();
+    Result.ForgedOffset = Result.getUnwrappedLValueOffset();
+    Result.Offset = CharUnits::Zero();
+  }
+
+  return true;
+}
+
 // Is the provided decl 'std::source_location::current'?
 static bool IsDeclSourceLocationCurrent(const FunctionDecl *FD) {
   if (!FD)
@@ -9495,10 +9780,24 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_AddressSpaceConversion:
     if (!Visit(SubExpr))
       return false;
-    // Bitcasts to cv void* are static_casts, not reinterpret_casts, so are
-    // permitted in constant expressions in C++11. Bitcasts from cv void* are
-    // also static_casts, but we disallow them as a resolution to DR1312.
-    if (!E->getType()->isVoidPointerType()) {
+
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    // BoundsSafety: __builtin_unsafe_forge_* always returns void *, leading to
+    // a bitcast from void* to the assignee type. We special case such
+    // bitcasts so it doesn't invalidate the SubobjectDesignator.
+    if (!E->getType()->isVoidPointerType() && E->getCastKind() == CK_BitCast &&
+        !Result.InvalidBase && !Result.Designator.Invalid &&
+        (Result.IsForgeSingle || Result.IsForgeTerminatedBy ||
+         Result.IsForgeBidi) &&
+        SubExpr->getType()->isVoidPointerType()) {
+      if (Result.IsForgeBidi)
+        Result.adjustForgedObjectTypeAndSize(Info.Ctx,
+                                             E->getType()->getPointeeType());
+    /* TO_UPSTREAM(BoundsSafety) OFF */
+    } else if (!E->getType()->isVoidPointerType()) {
+      // Bitcasts to cv void* are static_casts, not reinterpret_casts, so are
+      // permitted in constant expressions in C++11. Bitcasts from cv void* are
+      // also static_casts, but we disallow them as a resolution to DR1312.
       // In some circumstances, we permit casting from void* to cv1 T*, when the
       // actual pointee object is actually a cv2 T.
       bool HasValidResult = !Result.InvalidBase && !Result.Designator.Invalid &&
@@ -9537,6 +9836,22 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
         Result.Designator.setInvalid();
       }
     }
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    // BoundsSafety: Conversion from 'void *__single' to 'T *__single' is allowed
+    // in the bounds-only profile.
+    // FIXME: check '__counted_by' and friends.
+    if (E->getCastKind() == CK_BitCast && E->getType()->isSinglePointerType() &&
+        SubExpr->getType()->isSinglePointerType() &&
+        !SubExpr->getType()->getPointeeType()->isIncompleteOrSizelessType()) {
+      auto DstElemSize =
+          Info.Ctx.getTypeSizeInChars(E->getType()->getPointeeType());
+      auto SrcElemSize =
+          Info.Ctx.getTypeSizeInChars(SubExpr->getType()->getPointeeType());
+      if (SrcElemSize < DstElemSize)
+        return false;
+    }
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
+
     if (E->getCastKind() == CK_AddressSpaceConversion && Result.IsNullPtr)
       ZeroInitialization(E);
     return true;
@@ -9601,6 +9916,98 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
     }
   }
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  case CK_BoundsSafetyPointerCast: {
+    // XXX: instead BoundsSafetyPointerCast doing heroics, we should constant-
+    // evaluate BoundsCheckExpr and fail if the bounds check fails or isn't
+    // constant.
+
+    // Conversion rules. YES: always converts, CHECK: converts if static check
+    // passes, NO: never converts
+    //
+    //        To | Bidi | Indexable | Single | Counted | Unsafe
+    // From -----+------+-----------+--------+---------+-------
+    // ----------+------+-----------+--------+---------+-------
+    //      Bidi | YES  | CHECK     | CHECK  | CHECK   | YES
+    // Indexable | YES  | YES       | CHECK  | CHECK   | YES
+    //    Single | YES  | YES       | CHECK  | CHECK   | YES
+    //    Unsafe | NO   | NO        | NO     | NO      | YES
+    //
+    // In other words: "to unsafe" always works; else "from unsafe" never works;
+    // else "to counted" needs a check; else it works. ("To single" is a special
+    // case of "to counted" where the count is 1.)
+    // There never is a case where you convert from a counted pointer to
+    // something else because no lvalue turns into a counted pointer.
+
+    auto ResultPtrTy = E->getType()->getAs<PointerType>();
+    auto ResultFA = ResultPtrTy->getPointerAttributes();
+
+    // Evaluate the sub-expression and bail out if that didn't work. We do
+    // this first because NULL pointers are always valid constants.
+    if (!evaluatePointer(E->getSubExpr(), Result))
+      return false;
+
+    auto &SubObj = Result.getLValueDesignator();
+    // "from unsafe or unspecified" only works if the destination is also
+    // unsafe; we can bail out early if that's not the case
+    auto InputPtrTy = E->getSubExpr()->getType()->getAs<PointerType>();
+    auto InputFA = InputPtrTy->getPointerAttributes();
+    auto InputIsUnsafe = InputFA.isUnsafeOrUnspecified() && !Result.IsNullPtr;
+    if (InputIsUnsafe && !ResultFA.isUnsafeOrUnspecified())
+      return false;
+
+    // "to unsafe" and "to bidi indexable" require no other checks.
+    if (ResultFA.isUnsafeOrUnspecified() || ResultFA.isBidiIndexable())
+      return true;
+
+    // "to indexable" requires that the pointer value is not less than the lower
+    // bound. Since a pointer's value cannot be reduced, a pointer above its
+    // upper bound is useless. This gives us a good reason to reject it, which
+    // makes the test easy: if the sub-object is invalid, prevent constant
+    // evaluation.
+    if (ResultFA.isIndexable()) {
+      return Result.IsNullPtr || SubObj.isValidSubobject();
+    }
+
+    if (E->getType()->isDynamicRangePointerType()) {
+      // rdar://81135826
+      return false;
+    }
+
+    // Otherwise, this is a __counted_by pointer or a plain __single pointer.
+    // A __single pointer tolerates NULL as a sentinel value; otherwise, it's
+    // the same as a __counted_by pointer with a length of 1.
+    APSInt ItemCount;
+    if (auto DCP = E->getType()->getAs<CountAttributedType>()) {
+      if (DCP->isOrNull() && Result.IsNullPtr)
+        return true;
+      if (!EvaluateInteger(DCP->getCountExpr(), ItemCount, Info)) {
+        return false;
+      }
+    } else {
+      // Plain __single pointer. NULL always works.
+      if (Result.IsNullPtr)
+        return true;
+
+      QualType PointeeTy = ResultPtrTy->getPointeeType();
+
+      if (PointeeTy->isIncompleteType())
+        return true;
+
+      // To zero-sized type also always works.
+      auto ObjSize = Info.Ctx.getTypeSizeInChars(PointeeTy);
+      if (ObjSize.getQuantity() == 0)
+        return true;
+
+      ItemCount = APInt(64, 1);
+    }
+
+    // ensure that there is room for at least that many elements
+    auto MaxAdjustment = SubObj.validIndexAdjustments().second;
+    return ItemCount <= MaxAdjustment;
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   case CK_ArrayToPointerDecay: {
     if (SubExpr->isGLValue()) {
       if (!evaluateLValue(SubExpr, Result))
@@ -9613,9 +10020,15 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
     }
     // The result is a pointer to the first element of the array.
     auto *AT = Info.Ctx.getAsArrayType(SubExpr->getType());
-    if (auto *CAT = dyn_cast<ConstantArrayType>(AT))
+    if (auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
       Result.addArray(Info, E, CAT);
-    else
+    } else if (uint64_t IATEltCount = evaluateIncompleteArraySize(Info.Ctx, SubExpr->getType())) {
+      llvm::APInt EltCount(64, IATEltCount);
+      QualType CAT =
+          Info.Ctx.getConstantArrayType(AT->getElementType(), EltCount, nullptr,
+                                        ArraySizeModifier::Normal, 0);
+      Result.addArray(Info, E, cast<ConstantArrayType>(CAT));
+    } else
       Result.addUnsizedArray(Info, E, AT->getElementType());
     return true;
   }
@@ -12381,6 +12794,8 @@ static QualType getObjectType(APValue::LValueBase B) {
     return B.getTypeInfoType();
   } else if (B.is<DynamicAllocLValue>()) {
     return B.getDynamicAllocType();
+  } else if (B.is<ForgedPtrLValue>()) {
+    return B.getForgedPtrAsArrayType();
   }
 
   return QualType();
@@ -14888,6 +15303,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_FixedPointCast:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
+  case CK_BoundsSafetyPointerCast:
     llvm_unreachable("invalid cast kind for integral value");
 
   case CK_BitCast:
@@ -15026,7 +15442,13 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
       // FIXME: Allow a larger integer size than the pointer size, and allow
       // narrowing back down to pointer width in subsequent integral casts.
       // FIXME: Check integer type's active bits, not its type size.
-      if (Info.Ctx.getTypeSize(DestType) != Info.Ctx.getTypeSize(SrcType))
+      if (Info.Ctx.getTypeSize(DestType) != Info.Ctx.getTypeSize(SrcType)
+          /* TO_UPSTREAM(BoundsSafety) ON */
+          && (!SrcType->isPointerTypeWithBounds() ||
+              Info.Ctx.getTypeSize(DestType) !=
+                  Info.Ctx.getTypeSize(Info.Ctx.getIntPtrType()))
+          /* TO_UPSTREAM(BoundsSafety) OFF */
+      )
         return Error(E);
 
       LV.Designator.setInvalid();
@@ -15763,6 +16185,7 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_FixedPointToIntegral:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
+  case CK_BoundsSafetyPointerCast:
   case CK_HLSLVectorTruncation:
     llvm_unreachable("invalid cast kind for complex value");
 
@@ -17109,10 +17532,21 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::CoawaitExprClass:
   case Expr::DependentCoawaitExprClass:
   case Expr::CoyieldExprClass:
+  case Expr::BoundsSafetyPointerPromotionExprClass:
+  case Expr::ForgePtrExprClass:
+  case Expr::GetBoundExprClass:
+  case Expr::PredefinedBoundsCheckExprClass:
+  case Expr::BoundsCheckExprClass:
+  case Expr::MaterializeSequenceExprClass:
+  case Expr::TerminatedByToIndexableExprClass:
+  case Expr::TerminatedByFromIndexableExprClass:
   case Expr::SYCLUniqueStableNameExprClass:
   case Expr::CXXParenListInitExprClass:
   case Expr::HLSLOutArgExprClass:
     return ICEDiag(IK_NotICE, E->getBeginLoc());
+
+  case Expr::AssumptionExprClass:
+    return CheckICE(cast<AssumptionExpr>(E)->getWrappedExpr(), Ctx);
 
   case Expr::InitListExprClass: {
     // C++03 [dcl.init]p13: If T is a scalar type, then a declaration of the
@@ -17803,6 +18237,107 @@ bool Expr::tryEvaluateStrLen(uint64_t &Result, ASTContext &Ctx) const {
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantFold);
   return EvaluateBuiltinStrLen(this, Result, Info);
+}
+
+static bool
+EvaluateTerminatorElementFromCondOpIgnoringCond(const Expr *E, APValue &Result,
+                                                const ASTContext &Ctx) {
+  const auto *CondOp = dyn_cast<AbstractConditionalOperator>(E);
+  if (!CondOp)
+    return false;
+
+  const auto *TrueE = CondOp->getTrueExpr();
+  const auto *FalseE = CondOp->getFalseExpr();
+
+  Expr::EvalResult TrueRes;
+  if (!TrueE->tryEvaluateTerminatorElement(TrueRes, Ctx) ||
+      !TrueRes.Val.isInt())
+    return false;
+
+  Expr::EvalResult FalseRes;
+  if (!FalseE->tryEvaluateTerminatorElement(FalseRes, Ctx) ||
+      !FalseRes.Val.isInt())
+    return false;
+
+  if (!llvm::APSInt::isSameValue(TrueRes.Val.getInt(), FalseRes.Val.getInt()))
+    return false;
+
+  Result = TrueRes.Val;
+  return true;
+}
+
+static bool EvaluateTerminatorElement(const Expr *E, APValue &Result,
+                                      EvalInfo &Info) {
+  if (!E->getType()->hasPointerRepresentation())
+    return false;
+
+  QualType PointeeTy = E->getType()->getPointeeType();
+  for (;;) {
+    E = E->IgnoreParens();
+    const auto *ICE = dyn_cast<ImplicitCastExpr>(E);
+    if (!ICE)
+      break;
+    CastKind K = ICE->getCastKind();
+    if (!(K == CK_BitCast || K == CK_BoundsSafetyPointerCast))
+      break;
+    const auto *SubE = ICE->getSubExpr();
+    if (!Info.Ctx.hasSameType(SubE->getType()->getPointeeType(), PointeeTy))
+      break;
+    E = SubE;
+  }
+
+  if (const auto *VTT = E->getType()->getAs<ValueTerminatedType>()) {
+    Result = APValue(VTT->getTerminatorValue(Info.Ctx));
+    return true;
+  }
+
+  if (EvaluateTerminatorElementFromCondOpIgnoringCond(E, Result, Info.Ctx))
+    return true;
+
+  LValue Array;
+  if (!EvaluatePointer(E, Array, Info))
+    return false;
+
+  QualType EltTy = E->getType()->getPointeeType();
+  CharUnits EltSz;
+  if (!HandleSizeof(Info, E->getExprLoc(), EltTy, EltSz))
+    return false;
+
+  size_t MaxIndex = Array.Designator.validIndexAdjustments().second;
+  if (MaxIndex == 0)
+    return false;
+
+  size_t LastIndex = MaxIndex - 1;
+  if (!HandleLValueArrayAdjustment(Info, E, Array, EltTy, LastIndex))
+    return false;
+
+  return handleLValueToRValueConversion(Info, E, EltTy, Array, Result);
+}
+
+bool Expr::tryEvaluateTerminatorElement(EvalResult &Result,
+                                        const ASTContext &Ctx) const {
+  Expr::EvalStatus Status;
+  EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantFold);
+  return EvaluateTerminatorElement(this, Result.Val, Info);
+}
+
+bool Expr::EvaluateAsTerminatorValue(
+    llvm::APSInt &Result, const ASTContext &Ctx,
+    Expr::SideEffectsKind AllowSideEffects) const {
+  assert(!isValueDependent() &&
+         "Expression evaluator can't be called on a dependent expression.");
+
+  QualType Ty = getType();
+  if (!Ty->isIntegralOrEnumerationType() && !Ty->isPointerType())
+    return false;
+
+  EvalResult ExprResult;
+  if (!EvaluateAsRValue(ExprResult, Ctx) ||
+      hasUnacceptableSideEffect(ExprResult, AllowSideEffects)) {
+    return false;
+  }
+
+  return ExprResult.Val.toIntegralConstant(Result, Ty, Ctx);
 }
 
 namespace {

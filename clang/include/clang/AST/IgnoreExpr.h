@@ -45,6 +45,35 @@ const Expr *IgnoreExprNodes(const Expr *E, FnTys &&...Fns) {
   return IgnoreExprNodes(const_cast<Expr *>(E), std::forward<FnTys>(Fns)...);
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+inline Expr *IgnoreBoundsSafetyImplicitImpl(
+    Expr *E, llvm::SmallPtrSetImpl<const OpaqueValueExpr *> &BoundValues) {
+
+  if (auto *FPPE = dyn_cast<BoundsSafetyPointerPromotionExpr>(E))
+    return FPPE->getSubExpr();
+
+  if (auto *AE = dyn_cast<AssumptionExpr>(E))
+    return AE->getWrappedExpr();
+
+  if (auto *MSE = dyn_cast<MaterializeSequenceExpr>(E)) {
+    if (!MSE->isUnbinding())
+      BoundValues.insert(MSE->opaquevalues_begin(), MSE->opaquevalues_end());
+    return MSE->getWrappedExpr();
+  }
+
+  if (auto *BCE = dyn_cast<BoundsCheckExpr>(E)) {
+    BoundValues.insert(BCE->opaquevalues_begin(), BCE->opaquevalues_end());
+    return BCE->getGuardedExpr();
+  }
+
+  if (auto *Opaque = dyn_cast<OpaqueValueExpr>(E))
+    if (BoundValues.count(Opaque))
+      return Opaque->getSourceExpr();
+
+  return E;
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 inline Expr *IgnoreImplicitCastsSingleStep(Expr *E) {
   if (auto *ICE = dyn_cast<ImplicitCastExpr>(E))
     return ICE->getSubExpr();

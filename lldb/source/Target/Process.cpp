@@ -43,6 +43,9 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/AssertFrameRecognizer.h"
 #include "lldb/Target/DynamicLoader.h"
+/* TO_UPSTREAM(BoundsSafety) ON */
+#include "lldb/Target/BoundsSafetyTrapFrameRecognizer.h"
+/* TO_UPSTREAM(BoundsSafety) OFF */
 #include "lldb/Target/InstrumentationRuntime.h"
 #include "lldb/Target/JITLoader.h"
 #include "lldb/Target/JITLoaderList.h"
@@ -518,6 +521,9 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
   // common C LanguageRuntime plugin.
   RegisterAssertFrameRecognizer(this);
   RegisterVerboseTrapFrameRecognizer(*this);
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  RegisterBoundsSafetyTrapFrameRecognizer(*this);
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 }
 
 Process::~Process() {

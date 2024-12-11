@@ -3442,6 +3442,12 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
 
         for (unsigned i = 0, ni = LateParsedAttrs.size(); i < ni; ++i)
           LateParsedAttrs[i]->addDecl(ThisDecl);
+
+        LateParsedAttrList LateCAttrs;
+
+        DistributeCLateParsedAttrs(DeclaratorInfo, ThisDecl, &LateCAttrs);
+        for (auto *LCA : LateCAttrs)
+          getCurrentClass().LateParsedDeclarations.push_back(LCA);
       }
       Actions.FinalizeDeclaration(ThisDecl);
       DeclsInGroup.push_back(ThisDecl);
@@ -3750,7 +3756,8 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclarationWithPragmas(
       return nullptr;
     }
     ParsedTemplateInfo TemplateInfo;
-    return ParseCXXClassMemberDeclaration(AS, AccessAttrs, TemplateInfo);
+    return ParseCXXClassMemberDeclaration(AS, AccessAttrs, TemplateInfo,
+                                          /*TemplateDiags=*/nullptr);
   }
 }
 
@@ -3971,7 +3978,6 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
     Actions.ActOnFinishCXXMemberSpecification(getCurScope(), RecordLoc, TagDecl,
                                               T.getOpenLocation(),
                                               T.getCloseLocation(), attrs);
-
   // C++11 [class.mem]p2:
   //   Within the class member-specification, the class is regarded as complete
   //   within function bodies, default arguments, exception-specifications, and

@@ -322,5 +322,12 @@ FEATURE(cxx_abi_relative_vtable, LangOpts.CPlusPlus && LangOpts.RelativeCXXABIVT
 FEATURE(cuda_noinline_keyword, LangOpts.CUDA)
 EXTENSION(cuda_implicit_host_device_templates, LangOpts.CUDA && LangOpts.OffloadImplicitHostDeviceTemplates)
 
+// TODO(BoundsSafety): Deprecate this feature name
+FEATURE(bounds_attributes, LangOpts.BoundsSafety)
+/* TO_UPSTREAM(BoundsSafety) ON*/
+FEATURE(bounds_safety, LangOpts.BoundsSafety)
+FEATURE(bounds_safety_attributes, LangOpts.BoundsSafetyAttributes)
+/* TO_UPSTREAM(BoundsSafety) OFF*/
+
 #undef EXTENSION
 #undef FEATURE

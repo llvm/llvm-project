@@ -4281,6 +4281,19 @@ static bool AdjustFunctionParmAndArgTypesForDeduction(
             ArgType, S.Context.getDefaultOpenCLPointeeAddrSpace());
       ArgType = S.Context.getLValueReferenceType(ArgType);
     }
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  } else if (S.getLangOpts().BoundsSafety) {
+    if (ArgType->isArrayType()) {
+      ArgType = S.Context.getArrayDecayedType(ArgType);
+      ArgType = S.Context.getBoundsSafetyPointerType(
+          ArgType, BoundsSafetyPointerAttributes::bidiIndexable());
+    } else if (ArgType->isFunctionType()) {
+      ArgType = S.Context.getPointerType(ArgType,
+                                         BoundsSafetyPointerAttributes::single());
+    } else {
+      ArgType = ArgType.getUnqualifiedType();
+    }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
   } else {
     // C++ [temp.deduct.call]p2:
     //   If P is not a reference type:
@@ -5283,6 +5296,23 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
         return DeductionFailed(TDK);
     }
 
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    if (getLangOpts().BoundsSafetyAttributes &&
+        Init->getType()->isBoundsAttributedType()) {
+      unsigned ErrIdx;
+      QualType Ty = Init->getType();
+      if (auto *DCPTy = Ty->getAs<CountAttributedType>()) {
+        ErrIdx = DCPTy->getKind();
+      } else {
+        auto *DRPTy = Ty->getAs<DynamicRangePointerType>();
+        assert(DRPTy);
+        ErrIdx = DRPTy->getEndPointer() ? 4 : 5;
+      }
+      Diag(Loc, diag::err_bounds_safety_auto_dynamic_bound) << ErrIdx;
+      return DeductionFailed(TemplateDeductionResult::AlreadyDiagnosed);
+    }
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
+
     // Could be null if somehow 'auto' appears in a non-deduced context.
     if (Deduced[0].getKind() != TemplateArgument::Type)
       return DeductionFailed(TemplateDeductionResult::Incomplete);
@@ -5296,7 +5326,13 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
   }
 
   if (!Result.isNull()) {
-    if (!Context.hasSameType(DeducedType, Result)) {
+    if (!Context.hasSameType(DeducedType, Result)
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+        || (Context.getLangOpts().BoundsSafety &&
+            Context.canMergeTypeBounds(DeducedType, Result) !=
+                ASTContext::BSPTMK_CanMerge)
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
+    ) {
       Info.FirstArg = Result;
       Info.SecondArg = DeducedType;
       return DeductionFailed(TemplateDeductionResult::Inconsistent);

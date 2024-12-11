@@ -19,6 +19,7 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
+#include "BoundsSafetyTraps.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
@@ -391,6 +392,9 @@ public:
                        SourceLocation Loc,
                        ScalarConversionOpts Opts = ScalarConversionOpts());
 
+  // TO_UPSTREAM(BoundsSafety)
+  Value *EmitBoundsSafetyPointerConversion(CastExpr *E);
+
   /// Convert between either a fixed point and other fixed point or fixed point
   /// and an integer.
   Value *EmitFixedPointConversion(Value *Src, QualType SrcTy, QualType DstTy,
@@ -688,6 +692,35 @@ public:
     return Visit(E->getSubExpr());
   }
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  Value *VisitForgePtrExpr(const ForgePtrExpr *E) {
+    assert((E->ForgesSinglePointer() || E->ForgesTerminatedByPointer()) &&
+           !E->getSize());
+    RValue AddrRV = CGF.EmitAnyExpr(E->getAddr());
+    llvm::Value *Ptr;
+    if (AddrRV.isScalar()) {
+      Ptr = AddrRV.getScalarVal();
+    } else {
+      assert(AddrRV.isAggregate());
+      Ptr = CGF.GetWidePointerElement(AddrRV.getAggregateAddress(),
+                                      WPIndex::Pointer);
+    }
+
+    llvm::Type *RawPtrTy = CGF.ConvertType(E->getType());
+    if (Ptr->getType() != RawPtrTy) {
+      Ptr = Builder.CreateBitOrPointerCast(Ptr, RawPtrTy);
+    }
+    // __builtin_unsafe_forge_* always returns `void *`, regardless of the type
+    // of the address argument. This is semantically similar to an explicit cast
+    // to `void *` (i.e., `(void*)addr`), which may require a ptrauth resign to
+    // match the discriminator for `(void *)` if `addr` was a function pointer
+    // type or type with a different key and/or discriminator.
+    // `AuthPointerToPointerCast` skips resign when it's not necessary.
+    return CGF.authPointerToPointerCast(Ptr, E->getAddr()->getType(),
+                                        E->getType());
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   // C++
   Value *VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *E) {
     return EmitLoadOfLValue(E);
@@ -955,6 +988,76 @@ public:
   Value *VisitPackIndexingExpr(PackIndexingExpr *E) {
     return Visit(E->getSelectedExpr());
   }
+
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  Value *VisitBoundsCheckExpr(BoundsCheckExpr *BCE) {
+    typedef CodeGenFunction::OpaqueValueMappingData OVMD;
+    SmallVector<OVMD, 4> bindings;
+    for (auto *Common : BCE->opaquevalues()) {
+      const OpaqueValueExpr *ov = cast<OpaqueValueExpr>(Common);
+      OVMD opaqueData = OVMD::bind(CGF, ov, ov->getSourceExpr());
+      bindings.push_back(opaqueData);
+    }
+    {
+      RAIIDisableUBSanChecks DisableChecks(CGF);
+      // TODO(dliew): We should have a more specific opt-remark.
+      CodeGenFunction::BoundsSafetyOptRemarkScope Scope(CGF, BNS_OR_GENERAL);
+      // TODO(dliew): We should have a more specific trap reason.
+      CGF.EmitBoundsSafetyTrapCheck(BCE->getCond(), BNS_TRAP_GENERAL);
+    }
+    Value *Res = Visit(BCE->getGuardedExpr());
+    for (auto &opaqueData : bindings) {
+      opaqueData.unbind(CGF);
+    }
+    return Res;
+  }
+
+  Value *VisitPredefinedBoundsCheckExpr(PredefinedBoundsCheckExpr *BCE) {
+    CGF.EmitFlexibleArrayCountCheck(BCE);
+    return Visit(BCE->getGuardedExpr());
+  }
+
+  Value *VisitAssumptionExpr(AssumptionExpr *AE) {
+    llvm::Function *FnAssume = CGF.CGM.getIntrinsic(llvm::Intrinsic::assume);
+    for (Expr *Assumption : AE->assumptions()) {
+      Builder.CreateCall(FnAssume, CGF.EvaluateExprAsBool(Assumption));
+    }
+    return Visit(AE->getWrappedExpr());
+  }
+
+  Value *VisitGetBoundExpr(GetBoundExpr *E) {
+    RValue RV = CGF.EmitAnyExpr(E->getSubExpr());
+    if (RV.isScalar())
+      return RV.getScalarVal();
+
+    Address Addr = RV.getAggregateAddress();
+    WPIndex SrcIndex = E->getBoundKind() == GetBoundExpr::BK_Lower
+        ? WPIndex::Lower : WPIndex::Upper;
+    return CGF.GetWidePointerElement(Addr, SrcIndex);
+  }
+
+  Value *VisitMaterializeSequenceExpr(MaterializeSequenceExpr *MSE) {
+    if (MSE->isUnbinding()) {
+      Value *Result = Visit(MSE->getWrappedExpr());
+      for (auto *OVE : MSE->opaquevalues())
+        CodeGenFunction::OpaqueValueMappingData::unbind(CGF, OVE);
+      return Result;
+    }
+
+    for (auto *OVE : MSE->opaquevalues()) {
+      if (OVE->getType()->isPointerTypeWithBounds()) {
+        RValue PtrRV = CGF.EmitAnyExpr(OVE->getSourceExpr());
+        LValue LV = CGF.MakeAddrLValue(PtrRV.getAggregateAddress(), OVE->getType());
+        CodeGenFunction::OpaqueValueMappingData::bind(CGF, OVE, LV);
+      } else {
+        CodeGenFunction::OpaqueValueMappingData::bind(CGF, OVE, OVE->getSourceExpr());
+      }
+    }
+    return Visit(MSE->getWrappedExpr());
+  }
+
+  Value *VisitTerminatedByFromIndexableExpr(TerminatedByFromIndexableExpr *E);
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 };
 }  // end anonymous namespace.
 
@@ -1299,6 +1402,27 @@ void ScalarExprEmitter::EmitIntegerSignChangeCheck(Value *Src, QualType SrcType,
   CGF.EmitCheck(Checks, SanitizerHandler::ImplicitConversion, StaticArgs,
                 {Src, Dst});
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON */
+Value *ScalarExprEmitter::EmitBoundsSafetyPointerConversion(CastExpr *E) {
+    QualType DstTy = E->getType();
+    QualType SrcTy = E->getSubExpr()->getType();
+    assert(!DstTy->isPointerTypeWithBounds());
+
+    if (SrcTy->isPointerTypeWithBounds()) {
+        bool NeedBoundsCheck =
+        DstTy->isSinglePointerType() && !DstTy->isBoundsAttributedType();
+        bool TrackSize = false;
+        return CGF.EmitWideToRawPtr(
+                                    E->getSubExpr(), /*BoundsCheck=*/NeedBoundsCheck,
+                                    /*TrapCtx=*/BoundsSafetyTrapCtx::CAST, /*LowerOnlyCheck=*/TrackSize,
+                                    /*UpperPtr=*/nullptr, /*LowerPtr=*/nullptr,
+                                    /*IsNullAllowed=*/DstTy->isSinglePointerType());
+    }
+    // No additional check is needed between single and unsafe pointers.
+    return Visit(E->getSubExpr());
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
 
 // Should be called within CodeGenFunction::SanitizerScope RAII scope.
 // Returns 'i1 false' when the truncation Src -> Dst was lossy.
@@ -2505,6 +2629,11 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
                                               : Visit(const_cast<Expr *>(E));
   }
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  case CK_BoundsSafetyPointerCast:
+    return EmitBoundsSafetyPointerConversion(CE);
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   case CK_BaseToDerived: {
     const CXXRecordDecl *DerivedClassDecl = DestTy->getPointeeCXXRecordDecl();
     assert(DerivedClassDecl && "BaseToDerived arg isn't a C++ object pointer!");
@@ -2631,7 +2760,10 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   }
   case CK_PointerToIntegral: {
     assert(!DestTy->isBooleanType() && "bool should use PointerToBool");
-    auto *PtrExpr = Visit(E);
+    /*TO_UPSTREAM(BoundsSafety) ON*/
+    Value *PtrExpr = E->getType()->isPointerTypeWithBounds() ?
+      CGF.EmitWideToRawPtr(E) : Visit(E);
+    /*TO_UPSTREAM(BoundsSafety) OFF*/
 
     if (CGF.CGM.getCodeGenOpts().StrictVTablePointers) {
       const QualType SrcType = E->getType();
@@ -2755,8 +2887,19 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   }
   case CK_IntegralToBoolean:
     return EmitIntToBoolConversion(Visit(E));
-  case CK_PointerToBoolean:
-    return EmitPointerToBoolConversion(Visit(E), E->getType());
+  case CK_PointerToBoolean: {
+    /*TO_UPSTREAM(BoundsSafety) ON*/
+    Value *PtrExpr;
+    QualType PtrTy = E->getType();
+    if (E->getType()->isPointerTypeWithBounds()) {
+      PtrExpr = CGF.EmitWideToRawPtr(E);
+      PtrTy = CGF.getContext().getPointerType(PtrTy->getPointeeType()).
+                                  withCVRQualifiers(PtrTy.getCVRQualifiers());
+    } else
+      PtrExpr = Visit(E);
+    /*TO_UPSTREAM(BoundsSafety) OFF*/
+    return EmitPointerToBoolConversion(PtrExpr, PtrTy);
+  }
   case CK_FloatingToBoolean: {
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, CE);
     return EmitFloatToBoolConversion(Visit(E));
@@ -3082,6 +3225,14 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
   // Next most common: pointer increment.
   } else if (const PointerType *ptr = type->getAs<PointerType>()) {
     QualType type = ptr->getPointeeType();
+
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    if (E->getSubExpr()->getType()->isValueTerminatedType()) {
+      assert(isInc);
+      CGF.EmitValueTerminatedPointerArithmeticCheck(E->getSubExpr()->getType(),
+                                                    value);
+    }
+    /* TO_UPSTREAM(BoundsSafety) OFF */
 
     // VLA types don't have constant size.
     if (const VariableArrayType *vla
@@ -3674,6 +3825,11 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
   // Load/convert the LHS.
   LValue LHSLV = EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  if (CGF.getLangOpts().BoundsSafety)
+    CGF.EmitValueTerminatedAssignmentCheck(E, LHSLV);
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   llvm::PHINode *atomicPHI = nullptr;
   if (const AtomicType *atomicTy = LHSTy->getAs<AtomicType>()) {
     QualType type = atomicTy->getValueType();
@@ -4047,6 +4203,20 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
     std::swap(pointer, index);
     std::swap(pointerOperand, indexOperand);
   }
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  if (pointerOperand->getType()->isValueTerminatedType()) {
+    // The index should be an ICE, since it was checked in Sema.
+    llvm::APSInt IndexVal =
+        indexOperand->getIntegerConstantExpr(CGF.getContext()).value();
+    if (!IndexVal.isZero()) {
+      assert((!isSubtraction && IndexVal.isOne()) ||
+             (isSubtraction && IndexVal.isNegative() && IndexVal.isAllOnes()));
+      CGF.EmitValueTerminatedPointerArithmeticCheck(pointerOperand->getType(),
+                                                    pointer);
+    }
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   bool isSigned = indexOperand->getType()->isSignedIntegerOrEnumerationType();
 
@@ -4940,6 +5110,12 @@ Value *ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
     llvm::Value *RV = CGF.EmitPointerAuthQualify(ptrauth, E->getRHS(),
                                                  LV.getAddress());
     CGF.EmitNullabilityCheck(LV, RV, E->getExprLoc());
+
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    if (CGF.getLangOpts().BoundsSafety)
+      CGF.EmitValueTerminatedAssignmentCheck(E, LV);
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
+
     CGF.EmitStoreThroughLValue(RValue::get(RV), LV);
 
     if (Ignore) return nullptr;
@@ -4981,6 +5157,11 @@ Value *ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
       RHS = Visit(E->getRHS());
 
     LHS = EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
+
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    if (CGF.getLangOpts().BoundsSafety)
+      CGF.EmitValueTerminatedAssignmentCheck(E, LHS);
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
 
     // Store the value into the LHS.  Bit-fields are handled specially
     // because the result is altered by the store, i.e., [C99 6.5.16p1]
@@ -6001,3 +6182,164 @@ Address CodeGenFunction::EmitCheckedInBoundsGEP(
                              IdxList, SignedIndices, IsSubtraction, Loc, Name),
       elementType, Align);
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON */
+static llvm::Value *EmitTerminatedByFromIndexable(CodeGenFunction &CGF,
+                                                  const Expr *PtrExpr,
+                                                  const llvm::APSInt &TermVal) {
+  auto &Builder = CGF.Builder;
+
+  llvm::Value *Upper = nullptr;
+  Address PtrAddr = CGF.EmitPointerWithAlignment(PtrExpr, /*BaseInfo=*/nullptr,
+                                                 /*TBAAInfo=*/nullptr, &Upper);
+  assert(Upper);
+  llvm::Value *Ptr = PtrAddr.getBasePointer();
+  llvm::Type *ElemTy = PtrAddr.getElementType();
+
+  // Emit a loop to find the terminator.
+
+  llvm::BasicBlock *Cond = CGF.createBasicBlock("terminated_by.loop_cond");
+  llvm::BasicBlock *Cont = CGF.createBasicBlock("terminated_by.loop_cont");
+  llvm::BasicBlock *End = CGF.createBasicBlock("terminated_by.loop_end");
+
+  // Ensure that Ptr < Upper.
+  CGF.EmitBoundsSafetyBoundsCheck(ElemTy, Ptr, Upper, /*Lower=*/nullptr,
+                               /*AcceptPtrAndUpperNull=*/false,
+                               BoundsSafetyTrapCtx::TERMINATED_BY_FROM_INDEXABLE);
+
+  RawAddress CurAllocaAddr =
+      CGF.CreateDefaultAlignTempAlloca(Ptr->getType(), "terminated_by.cur");
+  Builder.CreateStore(Ptr, CurAllocaAddr);
+
+  CGF.EmitBlock(Cond);
+
+  // Ensure that Cur+1 <= Upper. The initial value of Cur is Ptr, and thus
+  // smaller than Upper. We assume that Cur+1 won't overflow (this can only
+  // happen if (void*)Upper+sizeof(ElemTy) overflows).
+  llvm::Constant *One = llvm::ConstantInt::get(CGF.SizeTy, 1);
+  llvm::Value *Cur = nullptr;
+  llvm::Value *OnePastCur = nullptr;
+  llvm::Value *AccessCheck = nullptr;
+  {
+    CodeGenFunction::BoundsSafetyOptRemarkScope Scope(
+        CGF, BNS_OR_TERMINATED_BY_FROM_INDEXABLE_TERM);
+    Cur = Builder.CreateLoad(CurAllocaAddr, "terminated_by.cur");
+
+    OnePastCur = Builder.CreateInBoundsGEP(ElemTy, Cur, One,
+                                           "terminated_by.one_past_cur");
+    AccessCheck =
+        Builder.CreateICmpULE(OnePastCur, Upper, "terminated_by.check_access");
+    CGF.EmitBoundsSafetyTrapCheck(AccessCheck,
+                               BNS_TRAP_TERMINATED_BY_FROM_INDEXABLE_TERM);
+  }
+
+  // Check terminator.
+  Address ElemAddr = Address(Cur, ElemTy, PtrAddr.getAlignment());
+  llvm::Value *Elem = Builder.CreateLoad(ElemAddr);
+  llvm::Value *Term = CGF.EmitTerminator(TermVal, ElemTy);
+  llvm::Value *TermCheck =
+      Builder.CreateICmpEQ(Elem, Term, "terminated_by.check_terminator");
+  Builder.CreateCondBr(TermCheck, End, Cont);
+
+  CGF.EmitBlock(Cont);
+
+  Builder.CreateStore(OnePastCur, CurAllocaAddr);
+  Builder.CreateBr(Cond);
+
+  CGF.EmitBlock(End);
+
+  return Ptr;
+}
+
+static llvm::Value *EmitTerminatedByFromIndexableWithPtrToTerm(
+    CodeGenFunction &CGF, const Expr *PtrExpr, const Expr *PtrToTermExpr,
+    const llvm::APSInt &TermVal) {
+  auto &Builder = CGF.Builder;
+
+  llvm::Value *Upper = nullptr;
+  Address PtrAddr = CGF.EmitPointerWithAlignment(PtrExpr, /*BaseInfo=*/nullptr,
+                                                 /*TBAAInfo=*/nullptr, &Upper);
+  assert(Upper);
+  llvm::Value *Ptr = PtrAddr.getBasePointer();
+  llvm::Type *ElemTy = PtrAddr.getElementType();
+
+  Address PtrToTermAddr = CGF.EmitPointerWithAlignment(PtrToTermExpr);
+  llvm::Value *PtrToTerm = PtrToTermAddr.getBasePointer();
+
+  // Ptr <= PtrToTerm
+  llvm::Value *PtrCheck = nullptr;
+  {
+    CodeGenFunction::BoundsSafetyOptRemarkScope Scope(
+        &CGF, BNS_OR_TERMINATED_BY_FROM_INDEXABLE_PTR_GT_TERM_PTR);
+
+    PtrCheck = Builder.CreateICmpULE(Ptr, PtrToTerm,
+                                     "terminated_by.check_ptr_le_term_ptr");
+    CGF.EmitBoundsSafetyTrapCheck(
+      PtrCheck, BNS_TRAP_TERMINATED_BY_FROM_INDEXABLE_PTR_GT_TERM_PTR);
+  }
+
+  // PtrToTerm+sizeof(ElemTy) does not overflow
+  llvm::Value *DidNotOverflow = nullptr;
+  llvm::Value *OnePastPtrToTerm = nullptr;
+  {
+    CodeGenFunction::BoundsSafetyOptRemarkScope Scope(
+        &CGF, BNS_OR_TERMINATED_BY_FROM_INDEXABLE_TERM_PTR_OVERFLOW);
+
+    llvm::Constant *One = llvm::ConstantInt::get(CGF.SizeTy, 1);
+    OnePastPtrToTerm = Builder.CreateGEP(ElemTy, PtrToTerm, One,
+                                         "terminated_by.one_past_term_ptr");
+
+    DidNotOverflow =
+        Builder.CreateICmpUGT(OnePastPtrToTerm, PtrToTerm,
+                              "terminated_by.check_one_past_term_ptr_overflow");
+    CGF.EmitBoundsSafetyTrapCheck(
+      DidNotOverflow, BNS_TRAP_TERMINATED_BY_FROM_INDEXABLE_TERM_PTR_OVERFLOW);
+  }
+
+  // PtrToTerm+sizeof(ElemTy) <= Upper
+  llvm::Value *OnePastPtrToTermCheck = nullptr;
+  {
+    CodeGenFunction::BoundsSafetyOptRemarkScope Scope(
+        &CGF,
+        BNS_OR_TERMINATED_BY_FROM_INDEXABLE_TERM_PTR_PLUS_ONE_GT_UPPER_BOUND);
+
+    OnePastPtrToTermCheck =
+        Builder.CreateICmpULE(OnePastPtrToTerm, Upper,
+                              "terminated_by.check_one_past_term_ptr_le_upper");
+    CGF.EmitBoundsSafetyTrapCheck(
+        OnePastPtrToTermCheck,
+        BNS_TRAP_TERMINATED_BY_FROM_INDEXABLE_TERM_PTR_PLUS_ONE_GT_UPPER_BOUND);
+  }
+
+  // Check terminator.
+  llvm::Value *TermCheck = nullptr;
+  {
+    CodeGenFunction::BoundsSafetyOptRemarkScope Scope(
+        &CGF, BNS_OR_TERMINATED_BY_FROM_INDEXABLE_TERM);
+
+    llvm::Value *Elem = Builder.CreateLoad(PtrToTermAddr);
+    llvm::Value *Term = CGF.EmitTerminator(TermVal, ElemTy);
+    TermCheck =
+        Builder.CreateICmpEQ(Elem, Term, "terminated_by.check_terminator");
+    CGF.EmitBoundsSafetyTrapCheck(TermCheck,
+                               BNS_TRAP_TERMINATED_BY_FROM_INDEXABLE_TERM);
+  }
+
+  return Ptr;
+}
+
+Value *ScalarExprEmitter::VisitTerminatedByFromIndexableExpr(
+    TerminatedByFromIndexableExpr *E) {
+  // The pointer should have been cast to an __indexable pointer in Sema.
+  assert(E->getPointer()->getType()->isIndexablePointerType());
+
+  const auto *VTT = E->getType()->getAs<ValueTerminatedType>();
+  llvm::APSInt TermVal = VTT->getTerminatorValue(CGF.getContext());
+
+  if (const auto *PtrToTermExpr = E->getPointerToTerminator()) {
+    return EmitTerminatedByFromIndexableWithPtrToTerm(CGF, E->getPointer(),
+                                                      PtrToTermExpr, TermVal);
+  }
+  return EmitTerminatedByFromIndexable(CGF, E->getPointer(), TermVal);
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */

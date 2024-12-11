@@ -3394,6 +3394,7 @@ void MicrosoftCXXNameMangler::mangleType(const SubstTemplateTypeParmPackType *T,
 //                       # the E is required for 64-bit non-static pointers
 void MicrosoftCXXNameMangler::mangleType(const PointerType *T, Qualifiers Quals,
                                          SourceRange Range) {
+  // FIXME: implement a mangling for BoundsSafetyPointerKind
   QualType PointeeType = T->getPointeeType();
   manglePointerCVQualifiers(Quals);
   manglePointerExtQualifiers(Quals, PointeeType);

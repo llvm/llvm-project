@@ -20,6 +20,8 @@
 #include "CodeGenModule.h"
 #include "CodeGenPGO.h"
 #include "EHScopeStack.h"
+#include "BoundsSafetyOptRemarks.h"
+#include "BoundsSafetyTraps.h"
 #include "VarBypassDetector.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/CurrentSourceLocExprScope.h"
@@ -112,6 +114,8 @@ enum TypeEvaluationKind {
   TEK_Aggregate
 };
 
+/// TODO: Add -fbounds-safety trap kinds
+
 #define LIST_SANITIZER_CHECKS                                                  \
   SANITIZER_CHECK(AddOverflow, add_overflow, 0)                                \
   SANITIZER_CHECK(BuiltinUnreachable, builtin_unreachable, 0)                  \
@@ -145,6 +149,14 @@ enum SanitizerHandler {
   LIST_SANITIZER_CHECKS
 #undef SANITIZER_CHECK
 };
+
+/* TO_UPSTREAM(BoundsSafety) ON */
+enum class WPIndex {
+  Pointer = 0,
+  Upper = 1,
+  Lower = 2,
+};
+/* TO_UPSTREAM(BoundsSafety) OFF */
 
 /// Helper class with most of the code for saving a value for a
 /// conditional expression cleanup.
@@ -581,6 +593,28 @@ public:
     SanitizerScope(CodeGenFunction *CGF);
     ~SanitizerScope();
   };
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  /// RAII object that automatically adds BoundsSafety opt-remarks to instructions
+  /// created with `Builder` while in scope. Multiple instances of this class
+  /// are allowed to be in scope, but only if they each use distinct
+  /// opt-remarks.
+  class BoundsSafetyOptRemarkScope {
+    CodeGenFunction *CGF;
+    BoundsSafetyOptRemarkKind Kind;
+  public:
+    BoundsSafetyOptRemarkScope(CodeGenFunction *CGF, BoundsSafetyOptRemarkKind Kind);
+    BoundsSafetyOptRemarkScope(CodeGenFunction &CGF, BoundsSafetyOptRemarkKind Kind)
+        : BoundsSafetyOptRemarkScope(&CGF, Kind){};
+    ~BoundsSafetyOptRemarkScope();
+    void Annotate(llvm::Instruction *I);
+    BoundsSafetyOptRemarkKind GetKind() const { return Kind; }
+    static bool InScope(const CodeGenFunction *CGF,
+                        BoundsSafetyOptRemarkKind Kind);
+  };
+
+  llvm::SmallVector<BoundsSafetyOptRemarkScope *, 4> BoundsSafetyOptRemarkScopes;
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   /// In C++, whether we are code generating a thunk.  This controls whether we
   /// should emit cleanups.
@@ -1404,6 +1438,17 @@ public:
 
       return data;
     }
+
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    // FIXME: This can't do 'unprotectFromPeepholes'. We need another
+    // mechanism to handle OpaqueValueExpr inserted by -fbounds-safety.
+    static void unbind(CodeGenFunction &CGF, const OpaqueValueExpr *ov) {
+      if (shouldBindAsLValue(ov))
+        CGF.OpaqueLValues.erase(ov);
+      else
+        CGF.OpaqueRValues.erase(ov);
+    }
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
 
     bool isValid() const { return OpaqueValue != nullptr; }
     void clear() { OpaqueValue = nullptr; }
@@ -2604,6 +2649,13 @@ public:
     return llvm::BasicBlock::Create(getLLVMContext(), name, parent, before);
   }
 
+  /* TO_UPSTREM(BoundsSafety) ON*/
+  llvm::BasicBlock *
+  createUnmergeableBasicBlock(const Twine &name = "",
+                              llvm::Function *parent = nullptr,
+                              llvm::BasicBlock *before = nullptr);
+  /* TO_UPSTREM(BoundsSafety) OFF*/
+
   /// getBasicBlockForLabel - Return the LLVM basicblock that the specified
   /// label maps to.
   JumpDest getJumpDestForLabel(const LabelDecl *S);
@@ -2868,6 +2920,36 @@ public:
         AggValueSlot::IsNotDestructed, AggValueSlot::DoesNotNeedGCBarriers,
         AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap);
   }
+
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  llvm::Value *GetWidePointerElement(Address Addr, WPIndex Index);
+  /// Emit a raw pointer extraction from wide pointer.
+  llvm::Value *EmitWideToRawPtr(
+      const Expr *E, bool BoundsCheck = false,
+      BoundsSafetyTrapCtx::Kind TrapCtx = BoundsSafetyTrapCtx::UNKNOWN,
+      bool LowerOnlyCheck = false, llvm::Value **UpperPtr = nullptr,
+      llvm::Value **LowerPtr = nullptr, bool IsNullAllowed = false);
+
+  void EmitPtrCastLECheck(
+      llvm::Value *LHS, llvm::Value *RHS, BoundsSafetyTrapKind TrapKind,
+      BoundsSafetyTrapCtx::Kind TrapCtx = BoundsSafetyTrapCtx::UNKNOWN);
+  void EmitBoundsSafetyBoundsCheck(
+      llvm::Type *ElemTy, llvm::Value *Ptr, llvm::Value *Upper,
+      llvm::Value *Lower, bool AcceptNullPt = false,
+      BoundsSafetyTrapCtx::Kind TrapCtx = BoundsSafetyTrapCtx::UNKNOWN);
+  void EmitBoundsSafetyRangeCheck(
+      llvm::Value *LowerBound, llvm::Value *LowerAccess,
+      llvm::Value *UpperAccess, llvm::Value *UpperBound,
+      BoundsSafetyTrapCtx::Kind TrapCtx = BoundsSafetyTrapCtx::UNKNOWN);
+  LValue EmitWidePtrArraySubscriptExpr(const ArraySubscriptExpr *E,
+                                       bool Accessed = true);
+
+  llvm::Value *EmitTerminator(const llvm::APSInt &Terminator, llvm::Type *Ty);
+  void EmitValueTerminatedPointerArithmeticCheck(QualType PointerType,
+                                                 llvm::Value *Ptr);
+  void EmitValueTerminatedAssignmentCheck(const BinaryOperator *E,
+                                          LValue Value);
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   /// EvaluateExprAsBool - Perform the usual unary conversions on the specified
   /// expression and compare the result against zero, returning an Int1Ty value.
@@ -3313,6 +3395,21 @@ public:
   llvm::Value *EmitLoadOfCountedByField(const Expr *Base,
                                         const FieldDecl *FAMDecl,
                                         const FieldDecl *CountDecl);
+
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  /// Emit a check for the boolean expression \p E. The emitted code checks
+  /// if \p E is false. If this is the case the emitted code will call the trap
+  /// intrisic for -fbounds-safety.
+  ///
+  /// A BoundsSafetyOptRemarkScope using the opt-remark that corresponds to \p kind
+  /// must be in scope when this method is called.
+  void EmitBoundsSafetyTrapCheck(const Expr *E, BoundsSafetyTrapKind kind);
+
+  void EmitFlexibleArrayCountCheck(const PredefinedBoundsCheckExpr *E);
+
+  /// Emit a trap if any of \p Conds doesn't hold \c true.
+  void EmitSequentialTrapCheck(llvm::ArrayRef<const Expr *> Conds);
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
 
   llvm::Value *EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
                                        bool isInc, bool isPre);
@@ -4319,7 +4416,16 @@ public:
 
   Address EmitArrayToPointerDecay(const Expr *Array,
                                   LValueBaseInfo *BaseInfo = nullptr,
-                                  TBAAAccessInfo *TBAAInfo = nullptr);
+                                  TBAAAccessInfo *TBAAInfo = nullptr,
+                                  // TO_UPSTREAM(BoundsSafety)
+                                  TBAAAccessInfo *EltTBAAInfo = nullptr);
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  Address EmitArrayToWidePointerDecay(const Expr *Array, llvm::Value *&Upper,
+                                      LValueBaseInfo *BaseInfo = nullptr,
+                                      TBAAAccessInfo *TBAAInfo = nullptr,
+                                      TBAAAccessInfo *EltTBAAInfo = nullptr);
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   class ConstantEmission {
     llvm::PointerIntPair<llvm::Constant*, 1, bool> ValueAndIsReference;
@@ -4382,6 +4488,17 @@ public:
   LValue EmitCXXBindTemporaryLValue(const CXXBindTemporaryExpr *E);
   LValue EmitCXXTypeidLValue(const CXXTypeidExpr *E);
   LValue EmitCXXUuidofLValue(const CXXUuidofExpr *E);
+
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  LValue EmitBoundsCheckExprLValue(const BoundsCheckExpr *E);
+  LValue
+  EmitPredefinedBoundsCheckExprLValue(const PredefinedBoundsCheckExpr *E);
+  LValue EmitMaterializeSequenceExprLValue(const MaterializeSequenceExpr *E);
+  LValue EmitBoundsSafetyPointerPromotionExprLValue(
+                                        const BoundsSafetyPointerPromotionExpr *E);
+  LValue EmitForgePtrExprLValue(const ForgePtrExpr *E);
+  LValue EmitAssumptionExprLValue(const AssumptionExpr *E);
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
 
   LValue EmitObjCMessageExprLValue(const ObjCMessageExpr *E);
   LValue EmitObjCIvarRefLValue(const ObjCIvarRefExpr *E);
@@ -5092,6 +5209,12 @@ public:
   /// nonnull, if \p LHS is marked _Nonnull.
   void EmitNullabilityCheck(LValue LHS, llvm::Value *RHS, SourceLocation Loc);
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  /// Given an assignment `*LHS = RHS`, emit a test that checks if \p RHS is
+  /// nonnull, if \p LHS is marked _Nonnull.
+  void EmitNullabilityCheck(QualType LHSQTy, llvm::Value *RHS, SourceLocation Loc);
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
   /// An enumeration which makes it easier to specify whether or not an
   /// operation is a subtraction.
   enum { NotSubtraction = false, IsSubtraction = true };
@@ -5163,7 +5286,19 @@ public:
 
   /// Create a basic block that will call the trap intrinsic, and emit a
   /// conditional branch to it, for the -ftrapv checks.
-  void EmitTrapCheck(llvm::Value *Checked, SanitizerHandler CheckHandlerID);
+  void EmitTrapCheck(llvm::Value *Checked, SanitizerHandler CheckHandlerID,
+                     StringRef Annotation = "", StringRef TrapMessage = "");
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  /// Create a basic block that will call the trap intrinsic for -fbounds-safety, and
+  /// emit a conditional branch to it.
+  ///
+  /// A BoundsSafetyOptRemarkScope using the opt-remark that corresponds to \p kind
+  /// must be in scope when this method is called.
+  void EmitBoundsSafetyTrapCheck(
+      llvm::Value *Checked, BoundsSafetyTrapKind kind,
+      BoundsSafetyTrapCtx::Kind TrapCtx = BoundsSafetyTrapCtx::UNKNOWN);
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   /// Emit a call to trap or debugtrap and attach function attribute
   /// "trap-func-name" if specified.
@@ -5343,9 +5478,17 @@ public:
   /// into the address of a local variable.  In such a case, it's quite
   /// reasonable to just ignore the returned alignment when it isn't from an
   /// explicit source.
+  ///
+  /// TO_UPSTREAM(BoundsSafety)
+  /// BoundsSafety: Extract bounds information when loading a pointer from
+  /// wide pointer.
   Address
   EmitPointerWithAlignment(const Expr *Addr, LValueBaseInfo *BaseInfo = nullptr,
                            TBAAAccessInfo *TBAAInfo = nullptr,
+                           /* TO_UPSTREAM(BoundsSafety) ON*/
+                           llvm::Value **UpperPtr = nullptr,
+                           llvm::Value **LowerPtr = nullptr,
+                           /* TO_UPSTREAM(BoundsSafety) OFF*/
                            KnownNonNull_t IsKnownNonNull = NotKnownNonNull);
 
   /// If \p E references a parameter with pass_object_size info or a constant
@@ -5400,6 +5543,23 @@ private:
   llvm::Value *EmitAArch64CpuSupports(const CallExpr *E);
   llvm::Value *EmitAArch64CpuSupports(ArrayRef<StringRef> FeatureStrs);
 };
+
+/* TO_UPSTREAM(BoundsSafety) ON*/
+class RAIIDisableUBSanChecks {
+public:
+  explicit RAIIDisableUBSanChecks(CodeGenFunction &CGF)
+      : CGF(CGF), OldSanOpts(CGF.SanOpts) {
+    CGF.SanOpts.clear(SanitizerKind::Undefined |
+                      SanitizerKind::Integer |
+                      SanitizerKind::ImplicitConversion);
+  }
+  ~RAIIDisableUBSanChecks() { CGF.SanOpts = OldSanOpts; }
+
+private:
+  CodeGenFunction &CGF;
+  SanitizerSet OldSanOpts;
+};
+/* TO_UPSTREAM(BoundsSafety) OFF*/
 
 inline DominatingLLVMValue::saved_type
 DominatingLLVMValue::save(CodeGenFunction &CGF, llvm::Value *value) {

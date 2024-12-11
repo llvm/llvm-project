@@ -1,0 +1,26 @@
+//===- BoundsSafetyOptRemarks.def ----------------------------------0----*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+// This file declares the different types of BoundsSafety opt-remarks that can
+// emitted. The opt-remarks added here should be independent of any BoundsSafety
+// trap. If the opt-remark is tied to a particular trap you should declare it
+// in `BoundsSafetyTraps.def` instead.
+//===----------------------------------------------------------------------===//
+#ifndef BOUNDS_SAFETY_OR
+#error BOUNDS_SAFETY_OR must be defined
+#endif
+
+// BOUNDS_SAFETY_OR(<enum field suffix>, <opt-remark annotation string>)
+
+BOUNDS_SAFETY_OR(PTR_NEQ_NULL, "bounds-safety-check-ptr-neq-null")
+
+// Include opt-remarks from BoundsSafety traps
+#define BOUNDS_SAFETY_TRAP_CTX(SUFFIX, ANNOTATION_STR) BOUNDS_SAFETY_OR(SUFFIX, ANNOTATION_STR)
+#define BOUNDS_SAFETY_TRAP(SUFFIX, ANNOTATION_STR, _) BOUNDS_SAFETY_OR(SUFFIX, ANNOTATION_STR)
+#include "BoundsSafetyTraps.def"
+#undef BOUNDS_SAFETY_TRAP
+#undef BOUNDS_SAFETY_TRAP_CTX

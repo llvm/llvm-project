@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_APVALUE_H
 #define LLVM_CLANG_AST_APVALUE_H
 
+#include "clang/AST/CharUnits.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/APFloat.h"
@@ -29,7 +30,6 @@ template <typename T> class BasicReaderBase;
 
   class AddrLabelExpr;
   class ASTContext;
-  class CharUnits;
   class CXXRecordDecl;
   class Decl;
   class DiagnosticBuilder;
@@ -88,6 +88,59 @@ public:
 
   static constexpr int NumLowBitsAvailable = 3;
 };
+
+/* TO_UPSTREAM(BoundsSafety) ON*/
+/// Symbolic representation of a size forged pointer
+class ForgedPtrLValue {
+  const ValueDecl *Base;
+
+public:
+  ForgedPtrLValue() : Base(nullptr) {}
+  explicit ForgedPtrLValue(const ValueDecl *Base) : Base(Base) {}
+  explicit operator bool() const { return Base; }
+
+  const ValueDecl *getBaseValueDecl() const { return Base; }
+
+  void *getOpaqueValue() { return const_cast<ValueDecl *>(Base); }
+  static ForgedPtrLValue getFromOpaqueValue(void *Value) {
+    ForgedPtrLValue V;
+    V.Base = reinterpret_cast<ValueDecl *>(Value);
+    return V;
+  }
+};
+
+/// This represents a pointer union that is either DynamicAllocLValue or
+/// ForgedPtrLValue.
+///
+/// This is a hack to be able to add ForgedPtrLValue as another pointer member
+/// to the pointer union of APValue::LValueBase because it already has the
+/// maximum number of members for the available low bits, i.e., 2.
+/// DynamicAllocLValue and ValueDecl* have 3 low bits available and thus we can
+/// use this one more remaining bit to encode ForgedPtrLValue.
+class DynamicAllocOrForgedPtrLValue
+    : public llvm::PointerUnion<DynamicAllocLValue, ForgedPtrLValue> {
+
+  using BaseTy = llvm::PointerUnion<DynamicAllocLValue, ForgedPtrLValue>;
+
+public:
+  DynamicAllocOrForgedPtrLValue() = default;
+  DynamicAllocOrForgedPtrLValue(DynamicAllocLValue LV) : BaseTy(LV) {}
+  DynamicAllocOrForgedPtrLValue(ForgedPtrLValue LV) : BaseTy(LV) {}
+
+  explicit operator bool() const {
+    if (is<DynamicAllocLValue>()) {
+      return static_cast<bool>(get<DynamicAllocLValue>());
+    }
+    return static_cast<bool>(get<ForgedPtrLValue>());
+  }
+
+  static DynamicAllocOrForgedPtrLValue getFromOpaqueValue(void *Value) {
+    DynamicAllocOrForgedPtrLValue V;
+    V.Val.setFromOpaqueValue(Value);
+    return V;
+  }
+};
+/* TO_UPSTREAM(BoundsSafety) OFF*/
 }
 
 namespace llvm {
@@ -113,6 +166,28 @@ template<> struct PointerLikeTypeTraits<clang::DynamicAllocLValue> {
   static constexpr int NumLowBitsAvailable =
       clang::DynamicAllocLValue::NumLowBitsAvailable;
 };
+
+/* TO_UPSTREAM(BoundsSafety) ON*/
+template <> struct PointerLikeTypeTraits<clang::ForgedPtrLValue> {
+  static void *getAsVoidPointer(clang::ForgedPtrLValue V) {
+    return V.getOpaqueValue();
+  }
+  static clang::ForgedPtrLValue getFromVoidPointer(void *P) {
+    return clang::ForgedPtrLValue::getFromOpaqueValue(P);
+  }
+  static constexpr int NumLowBitsAvailable = 3;
+};
+
+template <> struct PointerLikeTypeTraits<clang::DynamicAllocOrForgedPtrLValue> {
+  static void *getAsVoidPointer(clang::DynamicAllocOrForgedPtrLValue V) {
+    return V.getOpaqueValue();
+  }
+  static clang::DynamicAllocOrForgedPtrLValue getFromVoidPointer(void *P) {
+    return clang::DynamicAllocOrForgedPtrLValue::getFromOpaqueValue(P);
+  }
+  static constexpr int NumLowBitsAvailable = 2;
+};
+/* TO_UPSTREAM(BoundsSafety) OFF*/
 }
 
 namespace clang {
@@ -145,8 +220,21 @@ public:
 
   class LValueBase {
     typedef llvm::PointerUnion<const ValueDecl *, const Expr *, TypeInfoLValue,
-                               DynamicAllocLValue>
+                               DynamicAllocOrForgedPtrLValue>
         PtrTy;
+
+    template <class T>
+    static constexpr bool IsDAOrForgedV =
+        std::is_same<T, DynamicAllocLValue>::value ||
+        std::is_same<T, ForgedPtrLValue>::value;
+
+    template <class T, class U = T>
+    using EnableIfDAOrForged =
+        typename std::enable_if<IsDAOrForgedV<T>, U>::type;
+
+    template <class T, class U = T>
+    using EnableIfNotDANorForged =
+        typename std::enable_if<!IsDAOrForgedV<T>, U>::type;
 
   public:
     LValueBase() : Local{} {}
@@ -154,19 +242,42 @@ public:
     LValueBase(const Expr *P, unsigned I = 0, unsigned V = 0);
     static LValueBase getDynamicAlloc(DynamicAllocLValue LV, QualType Type);
     static LValueBase getTypeInfo(TypeInfoLValue LV, QualType TypeInfo);
+    static LValueBase getForgedPtr(ForgedPtrLValue LV, QualType Type);
 
     void Profile(llvm::FoldingSetNodeID &ID) const;
 
-    template <class T>
-    bool is() const { return Ptr.is<T>(); }
+    template <class T> EnableIfNotDANorForged<T, bool> is() const {
+      return Ptr.is<T>();
+    }
 
-    template <class T>
-    T get() const { return Ptr.get<T>(); }
+    template <class T> EnableIfDAOrForged<T, bool> is() const {
+      if (!Ptr.is<DynamicAllocOrForgedPtrLValue>())
+        return false;
+      return Ptr.get<DynamicAllocOrForgedPtrLValue>().is<T>();
+    }
 
-    template <class T>
-    T dyn_cast() const { return Ptr.dyn_cast<T>(); }
+    template <class T> EnableIfNotDANorForged<T> get() const {
+      return Ptr.get<T>();
+    }
+
+    template <class T> EnableIfDAOrForged<T> get() const {
+      assert(is<T>() && "Invalid accessor called");
+      return Ptr.get<DynamicAllocOrForgedPtrLValue>().get<T>();
+    }
+
+    template <class T> EnableIfNotDANorForged<T> dyn_cast() const {
+      return Ptr.dyn_cast<T>();
+    }
+
+    template <class T> EnableIfDAOrForged<T> dyn_cast() const {
+      if (is<T>())
+        return Ptr.get<DynamicAllocOrForgedPtrLValue>().dyn_cast<T>();
+      return T();
+    }
 
     void *getOpaqueValue() const;
+    // TO_UPSTREAM(BoundsSafety)
+    const ValueDecl *getValueDecl() const;
 
     bool isNull() const;
 
@@ -176,6 +287,7 @@ public:
     unsigned getVersion() const;
     QualType getTypeInfoType() const;
     QualType getDynamicAllocType() const;
+    QualType getForgedPtrAsArrayType() const;
 
     QualType getType() const;
 
@@ -197,6 +309,8 @@ public:
       void *TypeInfoType;
       /// The QualType, if this is a DynamicAllocLValue.
       void *DynamicAllocType;
+      /// The QualType, if this is a ForgedPtrLValue.
+      void *ForgedPtrAsArrayType;
     };
   };
 
@@ -305,10 +419,45 @@ private:
   };
   struct MemberPointerData;
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  struct LVBase {
+    APValue::LValueBase Base;
+    CharUnits Offset;
+    // BoundsSafety : While the base also holds a corresponding constant array type
+    // for forged pointer, we still keep track of forged size because the array
+    // size will be different from the actual forged size if it is not a multiple
+    // of element type size after a bitcast. The codegen doesn't round up/down
+    // the bounds to be a type-size multiple, we should keep it the same for
+    // constant emission. Once __builtin_forge_* has a type as an argument, we
+    // may consider round down the size with the element type size.
+    CharUnits ForgedSize;
+    // While 'Offset' is the offset within the LValue, 'ForgedOffset' is the
+    // offset of the base pointer of __builtin_unsafe_forge*. For example, in
+    // the following,
+    // '__bidi_indexable_unsafe_forge_bidi_indexable(base + N) + M'
+    // 'N' should be 'ForgedOffset' and 'M' should be 'Offset'. This way, the
+    // forged pointer itself becomes an LValue starting at base + 'ForgedOffset'.
+    CharUnits ForgedOffset;
+    unsigned PathLength;
+    bool IsNullPtr : 1;
+    bool IsOnePastTheEnd : 1;
+    bool IsForgeBidi : 1;
+    bool IsForgeSingle : 1;
+    bool IsForgeTerminatedBy : 1;
+  };
+
+  struct LVPlaceHolder {
+    LVBase Base;
+    LValuePathEntry Path[1];
+  };
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   // We ensure elsewhere that Data is big enough for LV and MemberPointerData.
   typedef llvm::AlignedCharArrayUnion<void *, APSInt, APFloat, ComplexAPSInt,
                                       ComplexAPFloat, Vec, Arr, StructData,
-                                      UnionData, AddrLabelDiffData> DataType;
+                                      UnionData, AddrLabelDiffData,
+                                      // TO_UPSTREAM(BoundsSafety)
+                                      LVPlaceHolder> DataType;
   static const size_t DataSize = sizeof(DataType);
 
   DataType Data;
@@ -531,12 +680,33 @@ public:
   const CharUnits &getLValueOffset() const {
     return const_cast<APValue*>(this)->getLValueOffset();
   }
+
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  CharUnits &getLValueForgedSize();
+  const CharUnits &getLValueForgedSize() const {
+    return const_cast<APValue *>(this)->getLValueForgedSize();
+  }
+
+  CharUnits &getLValueForgedOffset();
+  const CharUnits &getLValueForgedOffset() const {
+    return const_cast<APValue *>(this)->getLValueForgedOffset();
+  }
+
+  CharUnits getUnwrappedLValueOffset() const;
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   bool isLValueOnePastTheEnd() const;
   bool hasLValuePath() const;
   ArrayRef<LValuePathEntry> getLValuePath() const;
   unsigned getLValueCallIndex() const;
   unsigned getLValueVersion() const;
   bool isNullPointer() const;
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  bool isLValueForgeBidi() const;
+  bool isLValueForgeSingle() const;
+  bool isLValueForgeTerminatedBy() const;
+  bool isLValueForge() const;
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   APValue &getVectorElt(unsigned I) {
     assert(isVector() && "Invalid accessor");
@@ -671,6 +841,12 @@ public:
     ((AddrLabelDiffData *)(char *)&Data)->LHSExpr = LHSExpr;
     ((AddrLabelDiffData *)(char *)&Data)->RHSExpr = RHSExpr;
   }
+
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  void setLValueForgedBidi(const CharUnits &Size, const CharUnits &Offset);
+  void setLValueForgedSingle(const CharUnits &Offset);
+  void setLValueForgedTerminatedBy(const CharUnits &Offset);
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
 private:
   void DestroyDataAndMakeUninit();

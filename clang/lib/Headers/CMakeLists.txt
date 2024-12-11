@@ -322,6 +322,9 @@ set(files
   ${utility_files}
   )
 
+# TO_UPSTREAM(BoundsSafety)
+list(APPEND files ptrcheck.h)
+
 set(cuda_wrapper_files
   cuda_wrappers/algorithm
   cuda_wrappers/cmath

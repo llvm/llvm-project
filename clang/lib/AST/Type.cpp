@@ -454,6 +454,41 @@ void CountAttributedType::Profile(llvm::FoldingSetNodeID &ID,
   ID.AddPointer(CountExpr);
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+void DynamicRangePointerType::Profile(llvm::FoldingSetNodeID &ID,
+                                      QualType PointerTy,
+                                      Expr *StartPtr,
+                                      Expr *EndPtr,
+                                      unsigned NumStartDecls,
+                                      unsigned NumEndDecls) {
+  ID.AddPointer(PointerTy.getAsOpaquePtr());
+  // We profile it as a pointer as the StmtProfiler considers parameter
+  // expressions on function declaration and function definition as the
+  // same, resulting in count expression being evaluated with ParamDecl
+  // not in the function scope.
+  ID.AddPointer(StartPtr);
+  ID.AddPointer(EndPtr);
+  ID.AddInteger(NumStartDecls);
+  ID.AddInteger(NumEndDecls);
+}
+
+llvm::APSInt
+ValueTerminatedType::getTerminatorValue(const ASTContext &Ctx) const {
+  llvm::APSInt Result;
+  bool Ok = TerminatorExpr->EvaluateAsTerminatorValue(Result, Ctx);
+  (void)Ok;
+  assert(Ok);
+  return Result;
+}
+
+void ValueTerminatedType::Profile(llvm::FoldingSetNodeID &ID,
+                                  const ASTContext &Ctx, QualType OriginalTy,
+                                  const Expr *TerminatorExpr) {
+  ID.AddPointer(OriginalTy.getAsOpaquePtr());
+  TerminatorExpr->Profile(ID, Ctx, true);
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 /// getArrayElementTypeNoTypeQual - If this is an array type, return the
 /// element type of the array, potentially with type qualifiers missing.
 /// This method should never be used when type qualifiers are meaningful.
@@ -632,6 +667,16 @@ template <> const CountAttributedType *Type::getAs() const {
   return getAsSugar<CountAttributedType>(this);
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+template <> const DynamicRangePointerType *Type::getAs() const {
+  return getAsSugar<DynamicRangePointerType>(this);
+}
+
+template <> const ValueTerminatedType *Type::getAs() const {
+  return getAsSugar<ValueTerminatedType>(this);
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 /// getUnqualifiedDesugaredType - Pull any qualifiers and syntactic
 /// sugar off the given type.  This should produce an object of the
 /// same dynamic type as the canonical type.
@@ -727,6 +772,66 @@ bool Type::isScopedEnumeralType() const {
 bool Type::isCountAttributedType() const {
   return getAs<CountAttributedType>();
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON */
+bool Type::isAnyVaListType(ASTContext &Ctx) const {
+  bool MaybeMS = (Ctx.getTargetInfo().hasBuiltinMSVaList() &&
+      Ctx.getTargetInfo().getBuiltinVaListKind() != TargetInfo::CharPtrBuiltinVaList);
+
+  const Type *VaListType = Ctx.getBuiltinVaListType().getTypePtr();
+  const Type *MSVaListType = MaybeMS ? Ctx.getBuiltinMSVaListType().getTypePtr() : nullptr;
+
+  auto isVaListTypeSingle = [&](const Type *T) -> bool {
+    return T == VaListType || (MaybeMS && T == MSVaListType);
+  };
+
+  const Type *Cur = this;
+  if (const auto *AT = dyn_cast<DecayedType>(this)) {
+    Cur = AT->getOriginalType().getTypePtr();
+  }
+  if (!Ctx.hasSameType(VaListType, Cur) &&
+      MaybeMS && !Ctx.hasSameType(MSVaListType, Cur))
+    return false;
+
+  while (true) {
+    if (isVaListTypeSingle(Cur))
+      return true;
+    switch (Cur->getTypeClass()) {
+#define ABSTRACT_TYPE(Class, Parent)
+#define TYPE(Class, Parent)                                                    \
+  case Type::Class: {                                                          \
+    const auto *Ty = cast<Class##Type>(Cur);                                   \
+    if (!Ty->isSugared())                                                      \
+      return 0;                                                                \
+    Cur = Ty->desugar().getTypePtr();                                          \
+    break;                                                                     \
+  }
+#include "clang/AST/TypeNodes.inc"
+    }
+  }
+  return false;
+}
+
+bool Type::isDynamicRangePointerType() const {
+  return getAs<DynamicRangePointerType>();
+}
+
+bool Type::isBoundsAttributedType() const {
+  return getAs<BoundsAttributedType>();
+}
+
+bool Type::isValueTerminatedType() const {
+  return getAs<ValueTerminatedType>();
+}
+
+bool Type::isImplicitlyNullTerminatedType(const ASTContext &Ctx) const {
+  const auto *VT = getAs<ValueTerminatedType>();
+  if (!VT || !VT->getTerminatorValue(Ctx).isZero())
+    return false;
+  return hasAttr(attr::PtrAutoNullTerminatedAttr);
+}
+
+/* TO_UPSTREAM(BoundsSafety) OFF */
 
 const ComplexType *Type::getAsComplexIntegerType() const {
   if (const auto *Complex = getAs<ComplexType>())
@@ -2573,6 +2678,37 @@ bool Type::isSveVLSBuiltinType() const {
   return false;
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON*/
+bool Type::isSizeMeaningless() const {
+  if (isIncompleteType())
+    return true;
+  if (isSizelessType())
+    return true;
+  if (isFunctionType())
+    return true;
+  if (auto *RT = getAs<RecordType>())
+    if (RT->getDecl()->hasFlexibleArrayMember())
+      return true;
+  return false;
+}
+
+bool Type::isIncompletableIncompleteType() const {
+  if (!isIncompleteType())
+    return false;
+
+  // Forward declarations of structs, classes, enums, and unions could be later
+  // completed in a compilation unit by providing a definition.
+  if (isStructureOrClassType() || isEnumeralType() || isUnionType())
+    return false;
+
+  // Other types are incompletable.
+  //
+  // E.g. `char[]` and `void`. The type is incomplete and no future
+  // type declarations can make the type complete.
+  return true;
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
+
 QualType Type::getSizelessVectorEltType(const ASTContext &Ctx) const {
   assert(isSizelessVectorType() && "Must be sizeless vector type");
   // Currently supports SVE and RVV
@@ -3867,12 +4003,19 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID,
           getExtProtoInfo(), Ctx, isCanonicalUnqualified());
 }
 
-TypeCoupledDeclRefInfo::TypeCoupledDeclRefInfo(ValueDecl *D, bool Deref)
-    : Data(D, Deref << DerefShift) {}
+TypeCoupledDeclRefInfo::TypeCoupledDeclRefInfo(ValueDecl *D, bool Deref,
+                                               // TO_UPSTREAM(BoundsSafety)
+                                               bool Member)
+    : Data(D, (Deref << DerefShift) | (Member << MemberShift)) {}
 
+/* TO_UPSTREAM(BoundsSafety) ON*/
 bool TypeCoupledDeclRefInfo::isDeref() const {
-  return Data.getInt() & DerefMask;
+  return (Data.getInt() >> DerefShift) & DerefMask;
 }
+bool TypeCoupledDeclRefInfo::isMember() const {
+  return (Data.getInt() >> MemberShift) & MemberMask;
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
 ValueDecl *TypeCoupledDeclRefInfo::getDecl() const { return Data.getPointer(); }
 unsigned TypeCoupledDeclRefInfo::getInt() const { return Data.getInt(); }
 void *TypeCoupledDeclRefInfo::getOpaqueValue() const {
@@ -3903,6 +4046,48 @@ CountAttributedType::CountAttributedType(
   for (unsigned i = 0; i != CoupledDecls.size(); ++i)
     DeclSlot[i] = CoupledDecls[i];
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON*/
+StringRef CountAttributedType::GetAttributeName(bool WithMacroPrefix) const {
+#define ENUMERATE_ATTRS(PREFIX)                                                \
+  do {                                                                         \
+    if (isCountInBytes()) {                                                    \
+      if (isOrNull())                                                          \
+        return PREFIX "sized_by_or_null";                                      \
+      return PREFIX "sized_by";                                                \
+    }                                                                          \
+    if (isOrNull())                                                            \
+      return PREFIX "counted_by_or_null";                                      \
+    return PREFIX "counted_by";                                                \
+  } while (0)
+
+  if (WithMacroPrefix)
+    ENUMERATE_ATTRS("__");
+  else
+    ENUMERATE_ATTRS("");
+
+#undef ENUMERATE_ATTRS
+}
+
+DynamicRangePointerType::DynamicRangePointerType(
+    QualType PointerTy, QualType CanPointerTy, Expr *StartPtr, Expr *EndPtr,
+    ArrayRef<TypeCoupledDeclRefInfo> StartPtrDecls,
+    ArrayRef<TypeCoupledDeclRefInfo> EndPtrDecls)
+    : BoundsAttributedType(DynamicRangePointer, PointerTy, CanPointerTy),
+      StartPtr(StartPtr), EndPtr(EndPtr) {
+  assert(EndPtrDecls.size() < (1 << 16));
+  assert(StartPtrDecls.size() < (1 << 16));
+  DynamicRangePointerTypeBits.NumEndPtrDecls = EndPtrDecls.size();
+  DynamicRangePointerTypeBits.NumStartPtrDecls = StartPtrDecls.size();
+  auto *DeclSlot = getTrailingObjects<TypeCoupledDeclRefInfo>();
+  Decls = llvm::ArrayRef(DeclSlot,
+                         EndPtrDecls.size() + StartPtrDecls.size());
+  for (unsigned i = 0; i != StartPtrDecls.size(); ++i)
+    *(DeclSlot++) = StartPtrDecls[i];
+  for (unsigned i = 0; i != EndPtrDecls.size(); ++i)
+    *(DeclSlot++) = EndPtrDecls[i];
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
 
 TypedefType::TypedefType(TypeClass tc, const TypedefNameDecl *D,
                          QualType Underlying, QualType can)

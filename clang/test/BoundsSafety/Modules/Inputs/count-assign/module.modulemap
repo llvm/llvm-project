@@ -1,0 +1,2 @@
+module ca { header "count-assign-module.h" export *  }
+

@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TreeTransform.h"
 #include "TypeLocBuilder.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -22,6 +23,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/LocInfoType.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeLocVisitor.h"
@@ -47,6 +49,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include <bitset>
 #include <optional>
 
@@ -179,6 +182,15 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_TypeNullableResult:                                      \
   case ParsedAttr::AT_TypeNullUnspecified
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+// BoundsSafety type qualifiers.
+#define BOUNDS_SAFETY_POINTER_TYPE_ATTRS_CASELIST                              \
+  case ParsedAttr::AT_PtrBidiIndexable:                                        \
+  case ParsedAttr::AT_PtrSingle:                                               \
+  case ParsedAttr::AT_PtrIndexable:                                            \
+  case ParsedAttr::AT_PtrUnsafeIndexable
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 namespace {
   /// An object which stores processing state for the entire
   /// GetTypeForDeclarator process.
@@ -281,7 +293,8 @@ namespace {
 
     /// Get an attributed type for the given attribute, and remember the Attr
     /// object so that we can attach it to the AttributedTypeLoc.
-    QualType getAttributedType(Attr *A, QualType ModifiedType,
+    // TO_UPSTREAM(BoundsSafety): In upstream Attr *A is not `const`.
+    QualType getAttributedType(const Attr *A, QualType ModifiedType,
                                QualType EquivType) {
       QualType T =
           sema.Context.getAttributedType(A, ModifiedType, EquivType);
@@ -335,6 +348,31 @@ namespace {
 
       llvm_unreachable("no Attr* for AttributedType*");
     }
+
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    /// Get the Attr* for a given attributed type.
+    const Attr *getAttrForAttributedType(const AttributedType *AT) {
+      if (!AttrsForTypesSorted) {
+        llvm::stable_sort(AttrsForTypes, llvm::less_first());
+        AttrsForTypesSorted = true;
+      }
+
+      // FIXME: This is quadratic if we have lots of reuses of the same
+      // attributed type.
+      for (auto It = std::partition_point(
+               AttrsForTypes.begin(), AttrsForTypes.end(),
+               [=](const TypeAttrPair &A) { return A.first < AT; });
+           It != AttrsForTypes.end() && It->first == AT; ++It) {
+        if (It->second) {
+          return It->second;
+        }
+      }
+
+      // If the AttributedType was created in another Decl it will have been
+      // removed already
+      return nullptr;
+    }
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
 
     SourceLocation
     getExpansionLocForMacroQualifiedType(const MacroQualifiedType *MQT) const {
@@ -734,6 +772,12 @@ static void distributeTypeAttrsFromDeclarator(TypeProcessingState &state,
     MS_TYPE_ATTRS_CASELIST:
       // Microsoft type attributes cannot go after the declarator-id.
       continue;
+
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    BOUNDS_SAFETY_POINTER_TYPE_ATTRS_CASELIST:
+      // BoundsSafety pointer type attributes cannot go after the declarator-id.
+      continue;
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
 
     NULLABILITY_TYPE_ATTRS_CASELIST:
       // Nullability specifiers cannot go after the declarator-id.
@@ -1801,7 +1845,8 @@ static QualType deduceOpenCLPointeeAddrSpace(Sema &S, QualType PointeeType) {
   return PointeeType;
 }
 
-QualType Sema::BuildPointerType(QualType T,
+// TO_UPSTREAM(BoundsSafety): Add `BoundsSafetyPointerAttributes A`
+QualType Sema::BuildPointerType(QualType T, BoundsSafetyPointerAttributes A,
                                 SourceLocation Loc, DeclarationName Entity) {
   if (T->isReferenceType()) {
     // C++ 8.3.2p4: There shall be no ... pointers to references ...
@@ -1850,7 +1895,8 @@ QualType Sema::BuildPointerType(QualType T,
   }
 
   // Build the pointer type.
-  return Context.getPointerType(T);
+  // TO_UPSTREAM(BoundsSafety): Pass `A`
+  return Context.getPointerType(T, A);
 }
 
 QualType Sema::BuildReferenceType(QualType T, bool SpelledAsLValue,
@@ -2557,6 +2603,18 @@ bool Sema::CheckFunctionReturnType(QualType T, SourceLocation Loc) {
   //   A volatile-qualified return type is deprecated
   if (T.isVolatileQualified() && getLangOpts().CPlusPlus20)
     Diag(Loc, diag::warn_deprecated_volatile_return) << T;
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  // BoundsSafety does not allow you to return a type with a flexible array member
+  // by value.
+  if (getLangOpts().BoundsSafety) {
+    auto *RecordTy = T->getAs<RecordType>();
+    if (RecordTy && RecordTy->getDecl()->hasFlexibleArrayMember()) {
+      Diag(Loc, diag::err_flexible_array_member_passed_by_copy) << T;
+      return true;
+    }
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   if (T.getAddressSpace() != LangAS::Default && getLangOpts().HLSL)
     return true;
@@ -4687,8 +4745,13 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           D.setInvalidType(true);
         }
       }
-
-      T = S.BuildPointerType(T, DeclType.Loc, Name);
+      /* TO_UPSTREAM(BoundsSafety) ON */
+      // Declare and pass `BoundsSafetyPointerAttributes A`.
+      {
+        BoundsSafetyPointerAttributes A;
+        T = S.BuildPointerType(T, A, DeclType.Loc, Name);
+      }
+      /* TO_UPSTREAM(BoundsSafety) OFF */
       if (DeclType.Ptr.TypeQuals)
         T = S.BuildQualifiedType(T, DeclType.Loc, DeclType.Ptr.TypeQuals);
       break;
@@ -5024,6 +5087,24 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
         D.setInvalidType(true);
       }
+
+      /* TO_UPSTREAM(BoundsSafety) ON*/
+      // BoundsSafety does not allow you to return a type with a flexible array
+      // member by value.
+      if (S.getLangOpts().BoundsSafety) {
+        SourceLocation DiagLoc;
+        auto *RecordTy = T->getAs<RecordType>();
+        if (RecordTy && RecordTy->getDecl()->hasFlexibleArrayMember()) {
+          if (TInfo) {
+            DiagLoc = TInfo->getTypeLoc().getBeginLoc();
+          } else {
+            DiagLoc = D.getDeclSpec().getTypeSpecTypeLoc();
+          }
+          S.Diag(DiagLoc, diag::err_flexible_array_member_passed_by_copy) << T;
+          D.setInvalidType(true);
+        }
+      }
+      /* TO_UPSTREAM(BoundsSafety) OFF*/
 
       // cv-qualifiers on return types are pointless except when the type is a
       // class type in C++.
@@ -6103,7 +6184,8 @@ namespace {
         TypeSourceInfo *TInfo = nullptr;
         Sema::GetTypeFromParser(DS.getRepAsType(), &TInfo);
         assert(TInfo);
-        TL.getValueLoc().initializeFullCopy(TInfo->getTypeLoc());
+        // TO_UPSTREAM(BoundsSafety): initializeFullCopy -> copy
+        TL.getValueLoc().copy(TInfo->getTypeLoc());
       } else {
         TL.setKWLoc(DS.getAtomicSpecLoc());
         // No parens, to indicate this was spelled as an _Atomic qualifier.
@@ -6150,6 +6232,12 @@ namespace {
     void VisitDecayedTypeLoc(DecayedTypeLoc TL) {
       llvm_unreachable("decayed type locs not expected here!");
     }
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    void VisitValueTerminatedTypeLoc(ValueTerminatedTypeLoc TL) {
+      llvm_unreachable("value terminated type locs not expected here!");
+    }
+    /* TO_UPSTREAM(BoundsSafety) OFF */
+
     void VisitArrayParameterTypeLoc(ArrayParameterTypeLoc TL) {
       llvm_unreachable("array parameter type locs not expected here!");
     }
@@ -6349,6 +6437,14 @@ GetTypeSourceInfoForDeclarator(TypeProcessingState &State,
     bool HasDesugaredTypeLoc = true;
     while (HasDesugaredTypeLoc) {
       switch (CurrTL.getTypeLocClass()) {
+      /* TO_UPSTREAM(BoundsSafety) ON*/
+      case TypeLoc::Atomic: {
+          auto TL = CurrTL.castAs<AtomicTypeLoc>();
+          fillAtomicQualLoc(TL, D.getTypeObject(i));
+          CurrTL = TL.getValueLoc().getUnqualifiedLoc();
+          break;
+      }
+      /* TO_UPSTREAM(BoundsSafety) OFF*/
       case TypeLoc::MacroQualified: {
         auto TL = CurrTL.castAs<MacroQualifiedTypeLoc>();
         TL.setExpansionLoc(
@@ -6365,6 +6461,9 @@ GetTypeSourceInfoForDeclarator(TypeProcessingState &State,
       }
 
       case TypeLoc::Adjusted:
+      /* TO_UPSTREAM(BoundsSafety) ON*/
+      case TypeLoc::ValueTerminated:
+      /* TO_UPSTREAM(BoundsSafety) OFF*/
       case TypeLoc::BTFTagAttributed: {
         CurrTL = CurrTL.getNextTypeLoc().getUnqualifiedLoc();
         break;
@@ -8370,6 +8469,13 @@ static void HandlePtrAuthQualifier(QualType &type, const ParsedAttr &attr,
     return;
   }
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  if (type->isIndexablePointerType() || type->isBidiIndexablePointerType()) {
+    attr.setInvalid();
+    S.Diag(attr.getLoc(), diag::err_bounds_safety_ptrauth_on_indexable_pointer);
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   Expr *keyArg =
     attr.getArgAsExpr(0);
   Expr *isAddressDiscriminatedArg =
@@ -8611,6 +8717,797 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
 
   CurType = S.Context.getVectorType(EltType, NumElts, VecKind);
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON*/
+/// @brief __single, __bidi_indexable and friends are macros declared in
+/// ptrcheck.h. Treat them as if they were the actual token to get the spelling
+/// location of.
+static SourceLocation
+getActualBoundsSafetyAttributeLocation(SourceManager &SrcMan,
+                                    SourceLocation AttrLoc) {
+  // Handles case of being passed as macro argument.
+  AttrLoc = SrcMan.getTopMacroCallerLoc(AttrLoc);
+  // Escapes ptrcheck.h macro. Loop needed for __null_terminated.
+  while (SrcMan.getFilename(SrcMan.getSpellingLoc(AttrLoc))
+             .ends_with("ptrcheck.h")) {
+    AttrLoc =
+        SrcMan.getImmediateExpansionRange(AttrLoc).getAsRange().getBegin();
+  }
+  // Handles case of being part of a macro body, making sure we get a location
+  // inside the macro.
+  AttrLoc = SrcMan.getSpellingLoc(AttrLoc);
+  return AttrLoc;
+}
+
+/// @brief Checks whether there is a previous redundant -fbounds-safety attribute
+/// that is part of the same declaration. We don't want to warn about redundant
+/// attributes when the first occurrence is part of a typedef or macro body,
+/// while the other is not.
+static bool
+shouldWarnRedundantBoundsSafetyAttribute(const TypeProcessingState &state,
+                                      const ParsedAttr &CurrAttr) {
+  auto &SrcMan = state.getSema().getSourceManager();
+
+  // If the declaration is part of a macro body, use the macro call site
+  // as the location of the declaration.
+  auto DeclLoc = SrcMan.getExpansionLoc(state.getDeclarator().getBeginLoc());
+  auto CurrLoc = getActualBoundsSafetyAttributeLocation(SrcMan, CurrAttr.getLoc());
+
+  // Check whether the attribute is spelled out inside the declarator range.
+  // The attribute being spelled out outside the declarator range implies that
+  // it's added by a macro or typedef, and vice versa.
+  // We cannot use the declarator range and fullyContains() here because the
+  // declarator end location may not be set yet. Just comparing against the
+  // begin loc still works for this purpose, since macros and typedefs cannot be
+  // forward referenced. If the attribute location is after the start of the
+  // declaration it is inside the declarator range.
+  if (SrcMan.isBeforeInTranslationUnit(DeclLoc, CurrLoc)) {
+    for (auto &OtherAttr : state.getCurrentAttributes()) {
+      if (OtherAttr.getKind() != CurrAttr.getKind())
+        continue;
+      SourceLocation OtherLoc =
+          getActualBoundsSafetyAttributeLocation(SrcMan, OtherAttr.getLoc());
+      if (SrcMan.isBeforeInTranslationUnit(DeclLoc, OtherLoc) &&
+          SrcMan.isBeforeInTranslationUnit(OtherLoc, CurrLoc)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/// Unpeel types until a PointerType is encountered and apply a bounds attribute
+/// to it. Then rewrap it with the previous outer types. Uses TypeLoc when
+/// possible to enable fetching the Attr* of AttributedTypes created in a
+/// different DeclSpec than the one currently being processed. In theory
+/// AttributedType can be created with raw attr::Kind instead Attr*, but while
+/// processing decls we need to save the (AttributedType,Attr*) pair for later
+/// TypeSourceInfo processing. When the TypeLoc isn't accessible a dummy
+/// TypeLoc is created from the Type.
+class ConstructBoundsSafetyPointerType
+    : public TypeLocVisitor<ConstructBoundsSafetyPointerType, QualType> {
+  using BaseClass = TypeLocVisitor<ConstructBoundsSafetyPointerType, QualType>;
+
+protected:
+  enum DiagBoundKind {
+    Bidi = 0,
+    Indexable = 1,
+    Single = 2,
+    Unsafe = 3,
+  };
+
+  TypeProcessingState &state;
+  Sema &S;
+  ASTContext &Ctx;
+  ParsedAttr &PAttr;
+  // Save type that was involved in removing context for rebuilding
+  // AttributedType
+  QualType ProblematicTy;
+  DiagBoundKind DiagIndex;
+  // Whether the current TypeLoc being processed is created by this class, or
+  // fetched from TypeSourceInfo. If true, the TypeLoc doesn't contain
+  // ExtraLocalData (i.e. Attr* for AttributedTypeLoc).
+  bool TypeLocIsForged = false;
+  // Errors related to the PointerType already having a bounds attribute should
+  // only be emitted if that attribute was explicitly added.
+  bool AutoBounded = false;
+  // Prevent the same atomics type error from being emitted twice if nested
+  // inside AttributedType
+  bool EmittedAtomicError = false;
+  BoundsSafetyPointerAttributes FAttrFromAttributedType;
+
+  QualType copyQualifiers(QualType OldTy, QualType NewTy) const {
+    Qualifiers Qs = OldTy.getLocalQualifiers();
+    if (const auto *AT = OldTy->getAs<AttributedType>()) {
+      Qualifiers ModifiedTyQs = AT->getModifiedType().getQualifiers();
+      Qualifiers::removeCommonQualifiers(Qs, ModifiedTyQs);
+    }
+    QualifierCollector QC(Qs);
+    return QC.apply(Ctx, NewTy);
+  }
+
+public:
+  explicit ConstructBoundsSafetyPointerType(TypeProcessingState &state,
+                                         ParsedAttr &PAttr)
+      : state(state), S(state.getSema()), Ctx(state.getSema().getASTContext()),
+        PAttr(PAttr) {
+    switch (PAttr.getKind()) {
+    case ParsedAttr::AT_PtrBidiIndexable:
+      DiagIndex = Bidi;
+      break;
+    case ParsedAttr::AT_PtrIndexable:
+      DiagIndex = Indexable;
+      break;
+    case ParsedAttr::AT_PtrSingle:
+      DiagIndex = Single;
+      break;
+    default:
+      assert(PAttr.getKind() == ParsedAttr::AT_PtrUnsafeIndexable);
+      DiagIndex = Unsafe;
+    }
+  }
+
+  QualType Visit(const TypeLoc TL) {
+    QualType NewTy = BaseClass::Visit(TL);
+    return copyQualifiers(TL.getType(), NewTy);
+  }
+
+  QualType VisitType(QualType T) {
+    assert(!isa<LocInfoType>(T));
+    const DeclSpec &DS = state.getDeclarator().getDeclSpec();
+    if (DS.isTypeRep())
+      if (auto LIT = DS.getRepAsType().get()->getAs<LocInfoType>())
+        if (LIT->getType().getAsOpaquePtr() == T.getAsOpaquePtr()) {
+          // This case is relevant for typeof(T) and _Atomic(type). When these
+          // declspecs have been parsed any Attrs inside the parentheses are
+          // cleared from the TypeProcessingState, but the inner TSI is saved in
+          // the TypeRep allowing us to fetch it again here.
+          SaveAndRestore<bool> FakeTLStatus(TypeLocIsForged);
+          TypeLocIsForged = false;
+          return Visit(LIT->getTypeSourceInfo()->getTypeLoc());
+        }
+    // Create dummy TypeLoc when none is available to avoid duplicating visitors
+    TypeLoc TL(T, nullptr);
+    SaveAndRestore<bool> FakeTLStatus(TypeLocIsForged);
+    TypeLocIsForged = true;
+    return Visit(TL);
+  }
+
+  QualType VisitTypeLoc(const TypeLoc TL) {
+    TypeLoc Next = TL.getNextTypeLoc();
+    if (Next.isNull()) {
+      return {};
+    }
+    return Visit(Next);
+  }
+
+// Given both TypeLoc and QualType, pick best option to visit.
+// This is a macro so that expressions that would result in segfaults if
+// evaluated can be passed. We detect cases where that could happen with
+// TypeLocIsForged, preventing the evaluation.
+#define VisitEither(TL, T)                                                     \
+  (TypeLocIsForged ? VisitType(T) : VisitEitherImpl(TL, T))
+
+  // Keeping the rest of the implementation in this function prevents the
+  // parameters from being evaluated multiple times.
+  QualType VisitEitherImpl(TypeLoc TL, QualType T) {
+    assert(!TypeLocIsForged);
+    // The TypeLoc for an __auto_type can still contain the undeduced type even
+    // after the type has been deduced -> visit the correct type instead.
+    // Otherwise visit the TypeLoc if it is the real TypeLoc for the type.
+    if (TL.getTypePtr()->isUndeducedType() && !T->isUndeducedType())
+      return VisitType(T);
+    return Visit(TL);
+  }
+
+  QualType VisitAutoTypeLoc(const AutoTypeLoc TL) {
+    const AutoType *ATy = TL.getTypePtr();
+    QualType DTy = ATy->getDeducedType();
+    if (DTy.isNull()) {
+      S.Diag(PAttr.getLoc(), diag::err_bounds_safety_undeduced) << DiagIndex;
+      return {};
+    }
+
+    QualType Res = VisitEither(TL.getNextTypeLoc(), DTy);
+    if (Res.isNull())
+      return {};
+    auto TST = state.getDeclarator().getDeclSpec().getTypeSpecType();
+    if (TST == TST_auto || TST == TST_decltype_auto || TST == TST_auto_type ||
+        TST == TST_unspecified)
+      Res = Ctx.getAutoType(Res, TL.getAutoKeyword(), false);
+    return Res;
+  }
+
+  QualType VisitTypeOfTypeLoc(const TypeOfTypeLoc TL) {
+    QualType Res = VisitEither(TL.getUnmodifiedTInfo()->getTypeLoc(),
+                               TL.getUnmodifiedType());
+    if (Res.isNull())
+      return {};
+
+    // We don't want to actually wrap the modified type in typeof() since
+    // it's misleading, but if this is the current declspec we need the type
+    // to match the TST.
+    auto TST = state.getDeclarator().getDeclSpec().getTypeSpecType();
+    if (TST == DeclSpec::TST_typeofType ||
+        TST == DeclSpec::TST_typeof_unqualType)
+      Res = Ctx.getTypeOfType(Res, TL.getTypePtr()->getKind());
+    return Res;
+  }
+
+  QualType VisitTypeOfExprTypeLoc(const TypeOfExprTypeLoc TL) {
+    const TypeOfExprType *T = TL.getTypePtr();
+    const Expr *E = T->getUnderlyingExpr()->IgnoreParens();
+
+    if (auto AddrOfE = dyn_cast<UnaryOperator>(E);
+        AddrOfE && AddrOfE->getOpcode() == UO_AddrOf) {
+      if (auto DerefE = dyn_cast<UnaryOperator>(AddrOfE->getSubExpr());
+          DerefE && DerefE->getOpcode() == UO_Deref) {
+        E = DerefE->getSubExpr();
+      }
+    }
+
+    E = E->IgnoreParenLValueCasts();
+
+    // Finding an appropriate decl so we can get the TypeSourceInfo is not
+    // always possible, but this should cover the basic cases. The TSI is
+    // only needed for reconstructing AttributedType. Unlike some other types
+    // TypeOfExprType doesn't crash when attributes are missing, luckily.
+    const DeclaratorDecl *DDecl = nullptr;
+    if (auto DRE = dyn_cast<DeclRefExpr>(E))
+      DDecl = dyn_cast<DeclaratorDecl>(DRE->getDecl());
+    else if (auto CallE = dyn_cast<CallExpr>(E))
+      DDecl = dyn_cast<DeclaratorDecl>(CallE->getCalleeDecl());
+    else if (auto ME = dyn_cast<MemberExpr>(E))
+      DDecl = dyn_cast<DeclaratorDecl>(ME->getMemberDecl());
+
+    TypeSourceInfo *TSI = nullptr;
+    if (DDecl)
+      TSI = DDecl->getTypeSourceInfo();
+    else if (auto CE = dyn_cast<CStyleCastExpr>(E))
+      TSI = CE->getTypeInfoAsWritten();
+
+    SaveAndRestore<bool> FakeTLStatus(TypeLocIsForged);
+    TypeLocIsForged = TSI == nullptr;
+
+    QualType Res = VisitEither(TSI->getTypeLoc(),
+                               TL.getType().getSingleStepDesugaredType(Ctx));
+    if (Res.isNull())
+      return {};
+    // We don't want to actually wrap the modified type in typeof() since
+    // it's misleading, but if this is the current declspec we need the type
+    // to match the TST.
+    auto TST = state.getDeclarator().getDeclSpec().getTypeSpecType();
+    if (TST == DeclSpec::TST_typeofExpr ||
+        TST == DeclSpec::TST_typeof_unqualExpr) {
+      Expr *DummyExpr = ImplicitCastExpr::Create(
+          Ctx, Res, CK_BoundsSafetyPointerCast, T->getUnderlyingExpr(),
+          /*BasePath=*/nullptr, Expr::getValueKindForType(Res),
+          FPOptionsOverride());
+      Res = Ctx.getTypeOfExprType(DummyExpr, TL.getTypePtr()->getKind());
+    }
+    return Res;
+  }
+
+  // If we reach a function type we arrived via typeof(call_expr()) and want the
+  // return type
+  QualType VisitFunctionProtoTypeLoc(const FunctionProtoTypeLoc FPTL) {
+    assert(!TypeLocIsForged);
+    return Visit(FPTL.getReturnLoc());
+  }
+
+  QualType VisitFunctionNoProtoTypeLoc(const FunctionNoProtoTypeLoc FPTL) {
+    assert(!TypeLocIsForged);
+    return Visit(FPTL.getReturnLoc());
+  }
+
+  QualType VisitParenTypeLoc(const ParenTypeLoc TL) {
+    QualType InnerTy = VisitEither(
+        TL.getInnerLoc(), TL.getType().getSingleStepDesugaredType(Ctx));
+    return S.Context.getParenType(InnerTy);
+  }
+
+  QualType VisitPointerTypeLoc(const PointerTypeLoc TL) {
+    QualType PTy = TL.getType();
+
+    BoundsSafetyPointerAttributes FAttr = TL.getPointerAttributes();
+    auto BoundsAttrPrev = FAttr.getBoundsAttr();
+
+    const auto Kind = PAttr.getKind();
+
+    switch (Kind) {
+    case ParsedAttr::AT_PtrBidiIndexable:
+      FAttr.setBidiIndexable();
+      break;
+    case ParsedAttr::AT_PtrSingle:
+      FAttr.setSingle();
+      break;
+    case ParsedAttr::AT_PtrIndexable:
+      FAttr.setIndexable();
+      break;
+    case ParsedAttr::AT_PtrUnsafeIndexable:
+      FAttr.setUnsafeIndexable();
+      break;
+    default:
+      assert(0 && "Expected BoundsSafety Pointer Type Attr");
+      return {};
+    }
+
+    if (!AutoBounded && (BoundsAttrPrev || FAttrFromAttributedType.getBoundsAttr())) {
+      if ((BoundsAttrPrev && BoundsAttrPrev != FAttr.getBoundsAttr()) ||
+          (FAttrFromAttributedType.getBoundsAttr() &&
+           FAttrFromAttributedType.getBoundsAttr() != FAttr.getBoundsAttr())) {
+        S.Diag(PAttr.getLoc(),
+               diag::err_bounds_safety_conflicting_pointer_attributes)
+            << /* pointer */ 1 << /* bound */ 0;
+      } else if (shouldWarnRedundantBoundsSafetyAttribute(state, PAttr)) {
+        S.Diag(PAttr.getLoc(),
+               diag::warn_bounds_safety_duplicate_pointer_attributes)
+            << 1 << BoundsAttrPrev - 1;
+      }
+      return {};
+    }
+
+    if (FAttr.hasUpperBound()) {
+      if (PTy->isFunctionPointerType()) {
+        S.Diag(PAttr.getLoc(),
+               diag::err_bounds_safety_function_pointers_cannot_be_indexable);
+        return {};
+      }
+    }
+
+    // In attribute-only mode, represent __single and __unsafe_indexable as
+    // sugars.
+    if (S.getLangOpts().BoundsSafetyAttributes &&
+        !S.getLangOpts().BoundsSafety &&
+        (Kind == ParsedAttr::AT_PtrSingle ||
+         Kind == ParsedAttr::AT_PtrUnsafeIndexable)) {
+      const Attr *A;
+      if (Kind == ParsedAttr::AT_PtrSingle)
+        A = createSimpleAttr<PtrSingleAttr>(Ctx, PAttr);
+      else
+        A = createSimpleAttr<PtrUnsafeIndexableAttr>(Ctx, PAttr);
+      return state.getAttributedType(A, PTy, PTy);
+    }
+
+    return Ctx.getPointerType(PTy->getPointeeType(), FAttr);
+  }
+
+  QualType
+  VisitCountAttributedTypeLoc(const CountAttributedTypeLoc TL) {
+    if (DiagIndex < Single) {
+      S.Diag(PAttr.getLoc(),
+             diag::err_bounds_safety_conflicting_count_bound_attributes)
+          << PAttr << DiagIndex;
+      return TL.getType();
+    }
+
+    auto InnerTy = VisitEither(TL.getInnerLoc(),
+                               TL.getType().getSingleStepDesugaredType(Ctx));
+    const CountAttributedType *DCPT = TL.getTypePtr();
+
+    return Ctx.getCountAttributedType(
+        InnerTy, DCPT->getCountExpr(), DCPT->isCountInBytes(), DCPT->isOrNull(),
+        DCPT->getCoupledDecls());
+  }
+
+  QualType
+  VisitDynamicRangePointerTypeLoc(const DynamicRangePointerTypeLoc TL) {
+    if (DiagIndex < Single) {
+      S.Diag(PAttr.getLoc(),
+             diag::err_bounds_safety_conflicting_count_bound_attributes)
+          << PAttr << DiagIndex;
+      return TL.getType();
+    }
+
+    auto InnerTy = VisitEither(TL.getInnerLoc(),
+                               TL.getType().getSingleStepDesugaredType(Ctx));
+
+    const DynamicRangePointerType *DRPT = TL.getTypePtr();
+    return Ctx.getDynamicRangePointerType(
+        InnerTy, DRPT->getStartPointer(), DRPT->getEndPointer(),
+        DRPT->getStartPtrDecls(), DRPT->getEndPtrDecls());
+  }
+
+  QualType VisitMacroQualifiedTypeLoc(const MacroQualifiedTypeLoc TL) {
+    QualType NewTy = VisitEither(TL.getInnerLoc(),
+                                 TL.getType().getSingleStepDesugaredType(Ctx));
+    return S.Context.getMacroQualifiedType(
+        NewTy, TL.getTypePtr()->getMacroIdentifier());
+  }
+
+  /// Typedef is a different declarator, so we won't have Attrs for their
+  /// AttributedType. Fetch the TypeLoc from the Decl in case we need to fetch
+  /// the Attr from the AttributedTypeLoc.
+  QualType VisitTypedefTypeLoc(const TypedefTypeLoc TL) {
+    TypeLoc ActualTypeLoc =
+        TL.getTypedefNameDecl()->getTypeSourceInfo()->getTypeLoc();
+
+    SaveAndRestore<bool> FakeTLStatus(TypeLocIsForged);
+    TypeLocIsForged = false;
+    QualType Res = VisitEither(ActualTypeLoc,
+                               TL.getType().getSingleStepDesugaredType(Ctx));
+
+    if (Res.isNull())
+      return {};
+
+    // We don't want to actually wrap the modified type in typedef() since it's
+    // misleading, but if this is the current declspec we need the type to match
+    // the TST.
+    if (state.getDeclarator().getDeclSpec().getTypeSpecType() ==
+        DeclSpec::TST_typename) {
+      const char *Suffix;
+      switch (DiagIndex) {
+      case Bidi:
+        Suffix = " __bidi_indexable";
+        break;
+      case Indexable:
+        Suffix = " __indexable";
+        break;
+      case Single:
+        Suffix = " __single";
+        break;
+      case Unsafe:
+        Suffix = " __unsafe_indexable";
+        break;
+      }
+      // Create a dummy typedef with the new bounds. The bounds suffix is used
+      // to avoid clashing in case the same typedef is used multiple times with
+      // different bounds. The " " in the name makes it print as if the bounds
+      // were outside the typedef. This also has the nice side-effect that it
+      // cannot clash with typenames from source code.
+      DeclarationName DN(&Ctx.Idents.get(
+          (TL.getTypePtr()->getDecl()->getName() + Suffix).str()));
+      LookupResult Result(S, DN, PAttr.getLoc(), Sema::LookupOrdinaryName);
+      ;
+      if (S.LookupName(Result, S.TUScope, /*AllowBuiltinCreation=*/true)) {
+        NamedDecl *ND = Result.getFoundDecl();
+        if (TypedefNameDecl *TD = dyn_cast<TypedefNameDecl>(ND))
+          if (TD->getUnderlyingType() == Res)
+            return S.Context.getTypedefType(TD);
+      }
+      TypedefDecl *NewTypedef = Ctx.buildImplicitTypedef(Res, DN.getAsString());
+      S.IdResolver.AddDecl(NewTypedef);
+      Res = Ctx.getTypedefType(NewTypedef, Res);
+    }
+    return Res;
+  }
+
+  QualType VisitAttributedTypeLoc(const AttributedTypeLoc TL) {
+    const AttributedType *T = TL.getTypePtr();
+
+    SaveAndRestore<bool> SARAutoBounded(AutoBounded);
+    AutoBounded |= T->getAttrKind() == attr::PtrAutoAttr;
+
+    SaveAndRestore<BoundsSafetyPointerAttributes> SARFAttrFromAttributedtype(
+        FAttrFromAttributedType);
+    if (T->getAttrKind() == attr::PtrSingle)
+      FAttrFromAttributedType = BoundsSafetyPointerAttributes::single();
+    else if (T->getAttrKind() == attr::PtrUnsafeIndexable)
+      FAttrFromAttributedType = BoundsSafetyPointerAttributes::unsafeIndexable();
+
+    QualType NewEqTy = VisitType(T->getEquivalentType());
+
+    // Early exit so that Visit(ModifiedLoc) doesn't emit the same error
+    if (NewEqTy.isNull())
+      return {};
+
+    if (T->getAttrKind() == attr::PtrAutoAttr)
+      return NewEqTy;
+
+    const Attr *attr = TypeLocIsForged
+                           ? state.getAttrForAttributedType(TL.getTypePtr())
+                           : TL.getAttr();
+    // If we create an AttributedType without the corresponding Attr we'll run
+    // into problems when TypLocs are created, however there are cases when
+    // dropping the AttributedType would also cause a crash during later TypeLoc
+    // processing. Emit an error to prevent the crash in the rare case that we
+    // cannot recover the Attr.
+    if (!attr) {
+      auto TST = state.getDeclarator().getDeclSpec().getTypeSpecType();
+      S.Diag(PAttr.getLoc(), diag::err_bounds_safety_irrecoverable_attr)
+          << DiagIndex << TL.getType()
+          << (TST == TST_typeofExpr || TST == TST_typeof_unqualExpr);
+      return {};
+    }
+
+    if (T->getModifiedType().getAsOpaquePtr() ==
+        T->getEquivalentType().getAsOpaquePtr())
+      return state.getAttributedType(attr, NewEqTy, NewEqTy);
+
+    QualType NewModTy =
+        VisitEither(TL.getModifiedLoc(), TL.getTypePtr()->getModifiedType());
+    if (NewModTy.isNull())
+      return {};
+    return state.getAttributedType(attr, NewModTy, NewEqTy);
+  }
+
+  QualType VisitAtomicTypeLoc(const AtomicTypeLoc TL) {
+    if (DiagIndex < Single && !EmittedAtomicError) {
+      S.Diag(PAttr.getLoc(), diag::err_bounds_safety_atomic_unsupported_attribute)
+          << (DiagIndex == Bidi ? 1 : 0);
+      // Not marking the bounds as explicit (preventing
+      // PtrAutoAttr) will cause the error to be emitted a second time for local
+      // variables when the default __bidi_indexable bounds are applied, so go
+      // on and apply the bounds despite the error.
+      EmittedAtomicError = true;
+    }
+
+    QualType VT =
+        VisitEither(TL.getValueLoc(), TL.getTypePtr()->getValueType());
+
+    if (VT.isNull())
+      return {};
+
+    return Ctx.getAtomicType(VT);
+  }
+
+  QualType VisitValueTerminatedTypeLoc(const ValueTerminatedTypeLoc TL) {
+    if (DiagIndex != Single) {
+      S.Diag(PAttr.getLoc(),
+             diag::err_bounds_safety_terminated_by_wrong_pointer_type);
+      return TL.getType();
+    }
+
+    QualType T = VisitEither(TL.getNextTypeLoc(), TL.getTypePtr()->desugar());
+
+    if (T.isNull())
+      return {};
+
+    return Ctx.getValueTerminatedType(T, TL.getTypePtr()->getTerminatorExpr());
+  }
+#undef VisitEither
+};
+
+/// Handle BoundsSafety pointer type attributes -
+/// bidi_indexable, single, indexable, unsafe_indexable.
+static void HandleBoundsSafetyPointerTypeAttr(TypeProcessingState &state,
+                                           ParsedAttr &PAttr, QualType &type) {
+  Sema &S = state.getSema();
+
+  bool AttrSupported = false;
+  if (S.getLangOpts().BoundsSafety) {
+    AttrSupported = true;
+  } else if (S.getLangOpts().BoundsSafetyAttributes) {
+    auto K = PAttr.getKind();
+    AttrSupported =
+        K == ParsedAttr::AT_PtrSingle || K == ParsedAttr::AT_PtrUnsafeIndexable;
+  }
+
+  /// Unlike DeclAttrs which are by default skipped with unsupported LangOpts,
+  /// TypeAttrs require manual code to ignore unsupported attribute.
+  if (!AttrSupported) {
+    S.Diag(PAttr.getLoc(), diag::warn_attribute_ignored) << PAttr;
+    PAttr.setInvalid();
+    return;
+  }
+
+  QualType T = type;
+  if (auto AT = T->getAs<AtomicType>())
+    T = AT->getValueType();
+
+  if (!T->isPointerType() && !T->getAs<AutoType>()) {
+    S.Diag(PAttr.getLoc(), diag::err_attribute_pointers_only) << PAttr << 0;
+    PAttr.setInvalid();
+    return;
+  }
+
+  switch (PAttr.getKind()) {
+  case ParsedAttr::AT_PtrBidiIndexable:
+  case ParsedAttr::AT_PtrIndexable:
+    if (type.getPointerAuth()) {
+      PAttr.setInvalid();
+      S.Diag(PAttr.getLoc(), diag::err_bounds_safety_ptrauth_on_indexable_pointer);
+    }
+    break;
+  default:
+    break;
+  }
+
+  QualType NewTy = ConstructBoundsSafetyPointerType(state, PAttr).VisitType(type);
+  if (!NewTy.isNull())
+    type = NewTy;
+  else
+    PAttr.setInvalid();
+}
+
+static bool HandlePtrTerminatedByTypeAttr(TypeProcessingState &state,
+                                          const ParsedAttr &PAttr,
+                                          QualType &type) {
+  Sema &S = state.getSema();
+  QualType T = type;
+
+  if (auto AT = type->getAs<AttributedType>()) {
+    auto ModifiedPlusVT = AT->getModifiedType();
+    if (!HandlePtrTerminatedByTypeAttr(state, PAttr, ModifiedPlusVT))
+      return false; // Avoid emitting errors twice
+
+    auto EquivalentPlusVT = AT->getEquivalentType();
+    if (!HandlePtrTerminatedByTypeAttr(state, PAttr, EquivalentPlusVT))
+      return false;
+
+    auto QualsOnT = type.getQualifiers();
+    auto QualsOnModifTy = AT->getModifiedType().getQualifiers();
+
+    const Attr *attr = nullptr;
+    if (auto TDT = type->getAs<TypedefType>()) {
+      // Make sure the AttributedType is inside the TypedefType and not vice
+      // versa.
+      if (TDT->getAs<AttributedType>() == AT) {
+        auto ATLoc = TDT->getDecl()
+                         ->getTypeSourceInfo()
+                         ->getTypeLoc()
+                         .getAsAdjusted<AttributedTypeLoc>();
+        attr = ATLoc.getAttr();
+      }
+    }
+    if (!attr)
+      attr = state.getAttrForAttributedType(AT);
+    type = state.getAttributedType(attr, ModifiedPlusVT, EquivalentPlusVT);
+
+    Qualifiers::removeCommonQualifiers(QualsOnT, QualsOnModifTy);
+    if (!QualsOnT.empty()) {
+      QualifierCollector QC(QualsOnT);
+      type = QC.apply(state.getSema().Context, type);
+    }
+    return true;
+  }
+
+  if (!S.getLangOpts().BoundsSafetyAttributes) {
+    S.Diag(PAttr.getLoc(), diag::warn_attribute_ignored) << PAttr;
+    PAttr.setInvalid();
+    return false;
+  }
+
+  if (PAttr.getNumArgs() != 1) {
+    S.Diag(PAttr.getLoc(), diag::err_attribute_wrong_number_arguments)
+        << PAttr << 1;
+    PAttr.setInvalid();
+    return false;
+  }
+
+  auto *TerminatorExpr = PAttr.getArgAsExpr(0);
+
+  // The terminator must be an ICE.
+  llvm::APSInt Terminator;
+  if (!verifyValidIntegerConstantExpr(S, PAttr, Terminator)) {
+    PAttr.setInvalid();
+    return false;
+  }
+
+  const auto *VT = T->getAs<ValueTerminatedType>();
+  if (VT) {
+    llvm::APSInt TermVal = VT->getTerminatorValue(S.Context);
+    if (!llvm::APSInt::isSameValue(TermVal, Terminator)) {
+      assert(T->isPointerType() || T->isArrayType());
+      S.Diag(PAttr.getLoc(), diag::err_bounds_safety_conflicting_pointer_attributes)
+          << T->isPointerType() << /* terminator */ 4;
+      S.Diag(PAttr.getLoc(),
+             diag::note_bounds_safety_conflicting_pointer_attribute_args)
+          << /* terminator */ 2 << VT->getTerminatorExpr() << TerminatorExpr;
+      PAttr.setInvalid();
+      return false;
+    }
+
+    if (shouldWarnRedundantBoundsSafetyAttribute(state, PAttr)) {
+      S.Diag(PAttr.getLoc(), diag::warn_bounds_safety_duplicate_pointer_attributes)
+          << T->isPointerType() << 4;
+      PAttr.setInvalid();
+      return false;
+    }
+
+    SplitQualType Split = T.getSplitUnqualifiedType();
+    T = S.Context.getQualifiedType(VT->desugar(), Split.Quals);
+  }
+
+  if (!T->isConstantArrayType() && !T->isIncompleteArrayType() &&
+      !T->isPointerType()) {
+    if (T->isAtomicType()) {
+      S.Diag(PAttr.getLoc(), diag::err_bounds_safety_atomic_unsupported_attribute)
+          << /*terminated_by*/ 7;
+    } else {
+      S.Diag(PAttr.getLoc(), diag::err_bounds_safety_terminated_by_wrong_type);
+    }
+    PAttr.setInvalid();
+    return false;
+  }
+
+  QualType PET;
+
+  if (const auto *AT = S.Context.getAsArrayType(T)) {
+    // Constant arrays cannot be empty. We will check incomplete arrays during
+    // initialization.
+    if (const auto *CAT = S.Context.getAsConstantArrayType(T)) {
+      if (CAT->getSize().isZero()) {
+        S.Diag(PAttr.getLoc(), diag::err_bounds_safety_terminated_by_empty_array);
+        PAttr.setInvalid();
+        return false;
+      }
+    }
+    PET = AT->getElementType();
+  }
+
+  if (const auto *PT = T->getAs<PointerType>()) {
+    // Pointers with dynamic bounds are normally handled later, but they
+    // can surface when using __typeof__, or probably typedefs eventually.
+    if (T->isBoundsAttributedType()) {
+      S.Diag(PAttr.getLoc(),
+             diag::err_bounds_safety_terminated_by_wrong_pointer_type);
+      PAttr.setInvalid();
+      return false;
+    }
+
+    // If the pointer is unspecified, we will add __single attribute later in
+    // MakeAutoPointer.
+    if (!PT->isUnspecified() && !PT->isSingle()) {
+      S.Diag(PAttr.getLoc(),
+             diag::err_bounds_safety_terminated_by_wrong_pointer_type);
+      PAttr.setInvalid();
+      return false;
+    }
+    PET = PT->getPointeeType();
+  }
+
+  // The pointee must be an integer or a thin pointer.
+  if (!(PET->isIntegralOrEnumerationType() ||
+        (PET->isPointerType() && !PET->isPointerTypeWithBounds()))) {
+    S.Diag(PAttr.getLoc(),
+           diag::err_bounds_safety_terminated_by_wrong_elem_or_pointee_type)
+        << T->isPointerType();
+    PAttr.setInvalid();
+    return false;
+  }
+
+  ExprResult Res(TerminatorExpr);
+  CastKind Kind = S.PrepareScalarCast(Res, PET);
+  Res = S.ImpCastExprToType(TerminatorExpr, PET, Kind);
+  if (!Res.get()) {
+    PAttr.setInvalid();
+    return false;
+  }
+  TerminatorExpr = Res.get();
+
+  type = S.Context.getValueTerminatedType(T, TerminatorExpr);
+
+#ifndef NDEBUG
+  if (VT) {
+    llvm::FoldingSetNodeID NewID;
+    llvm::FoldingSetNodeID OldID;
+    VT->Profile(OldID, S.Context);
+    type->getAs<ValueTerminatedType>()->Profile(NewID, S.Context);
+    if (OldID != NewID) {
+      VT->dump();
+      type->dump();
+    }
+    assert(OldID == NewID);
+  }
+#endif
+
+  return true;
+}
+
+static void HandleArrayDecayDiscardsCountInParametersAttr(
+    TypeProcessingState &state, ParsedAttr &Attr, QualType &type) {
+  // only valid with -fbounds-safety enabled
+  if (!state.getSema().getLangOpts().BoundsSafetyAttributes) {
+    state.getSema().Diag(Attr.getLoc(), diag::warn_attribute_ignored) << Attr;
+    Attr.setInvalid();
+    return;
+  }
+
+  ASTContext &Context = state.getSema().Context;
+  // only valid on array types
+  if (!Context.getAsArrayType(type)) {
+    state.getSema().Diag(Attr.getLoc(), diag::warn_attribute_ignored) << Attr;
+    Attr.setInvalid();
+    return;
+  }
+
+  type = state.getAttributedType(
+      createSimpleAttr<ArrayDecayDiscardsCountInParametersAttr>(Context, Attr),
+      type, type);
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
 
 /// Handle OpenCL Access Qualifier Attribute.
 static void HandleOpenCLAccessAttr(QualType &CurType, const ParsedAttr &Attr,
@@ -8950,6 +9847,22 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
         attr.setUsedAsTypeAttr();
       break;
 
+    /*TO_UPSTREAM(BoundsSafet) ON*/
+    BOUNDS_SAFETY_POINTER_TYPE_ATTRS_CASELIST:
+      HandleBoundsSafetyPointerTypeAttr(state, attr, type);
+      attr.setUsedAsTypeAttr();
+      break;
+
+    case ParsedAttr::AT_PtrTerminatedBy:
+      HandlePtrTerminatedByTypeAttr(state, attr, type);
+      attr.setUsedAsTypeAttr();
+      break;
+
+    case ParsedAttr::AT_ArrayDecayDiscardsCountInParameters:
+      HandleArrayDecayDiscardsCountInParametersAttr(state, attr, type);
+      attr.setUsedAsTypeAttr();
+      break;
+    /*TO_UPSTREAM(BoundsSafet) OFF*/
 
     NULLABILITY_TYPE_ATTRS_CASELIST:
       // Either add nullability here or try to distribute it.  We
@@ -9070,14 +9983,28 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     // applied to ObjC builtin attributes.
     if (isa<AttributedType>(type) && attr.hasMacroIdentifier() &&
         !type.getQualifiers().hasObjCLifetime() &&
-        !type.getQualifiers().hasObjCGCAttr() &&
-        attr.getKind() != ParsedAttr::AT_ObjCGC &&
-        attr.getKind() != ParsedAttr::AT_ObjCOwnership) {
-      const IdentifierInfo *MacroII = attr.getMacroIdentifier();
-      type = state.getSema().Context.getMacroQualifiedType(type, MacroII);
-      state.setExpansionLocForMacroQualifiedType(
-          cast<MacroQualifiedType>(type.getTypePtr()),
-          attr.getMacroExpansionLoc());
+        !type.getQualifiers().hasObjCGCAttr()) {
+
+        switch(attr.getKind()) {
+          case ParsedAttr::AT_ObjCGC:
+          case ParsedAttr::AT_ObjCOwnership:
+          /* TO_UPSTREAM(BoundsSafety) ON*/
+          case ParsedAttr::AT_CountedBy:
+          case ParsedAttr::AT_SizedBy:
+          case ParsedAttr::AT_CountedByOrNull:
+          case ParsedAttr::AT_SizedByOrNull:
+          case ParsedAttr::AT_PtrEndedBy:
+          case ParsedAttr::AT_PtrTerminatedBy:
+          BOUNDS_SAFETY_POINTER_TYPE_ATTRS_CASELIST:
+          /* TO_UPSTREAM(BoundsSafety) OFF*/
+            break;
+          default:
+            const IdentifierInfo *MacroII = attr.getMacroIdentifier();
+            type = state.getSema().Context.getMacroQualifiedType(type, MacroII);
+            state.setExpansionLocForMacroQualifiedType(
+                cast<MacroQualifiedType>(type.getTypePtr()),
+                attr.getMacroExpansionLoc());
+        };
     }
   }
 }
@@ -9649,8 +10576,517 @@ QualType Sema::BuildTypeofExprType(Expr *E, TypeOfKind Kind) {
     if (const TagType *TT = T->getAs<TagType>())
       DiagnoseUseOfDecl(TT->getDecl(), E->getExprLoc());
   }
+
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  // We don't have enough context to create a DBPT with coupled declarations
+  // from here as we need to know the scope of the new declaration (if this is
+  // for a new declaration). Error out unless `getNumCoupledDecls()` is 0,
+  // as DBPTs without coupled decls are not scope-dependent.
+  if (auto DBPT = E->getType()->getAs<BoundsAttributedType>()) {
+    if (DBPT->getNumCoupledDecls() != 0) {
+      Diag(E->getExprLoc(), diag::err_bounds_safety_typeof_dbpt) << E->getType();
+      // return a bare pointer for recovery purposes
+      return QualType(E->getType()->getAs<PointerType>(), 0);
+    }
+  }
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
   return Context.getTypeOfExprType(E, Kind);
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON */
+namespace {
+
+Expr *UnwrapDerefAddrOfPairs(Expr *E) {
+  UnaryOperator *UO = dyn_cast<UnaryOperator>(E);
+  if (!UO)
+    return E;
+  switch (UO->getOpcode()) {
+  case UO_Deref:
+    UO = dyn_cast<UnaryOperator>(UO->getSubExpr()->IgnoreParens());
+    if (!UO || UO->getOpcode() != UO_AddrOf)
+      return E;
+    break;
+  case UO_AddrOf:
+    UO = dyn_cast<UnaryOperator>(UO->getSubExpr()->IgnoreParens());
+    if (!UO || UO->getOpcode() != UO_Deref)
+      return E;
+    break;
+  default:
+    return E;
+  }
+  /// XXX: This way we are leaving out '*((int *)&ch)'.
+  return UnwrapDerefAddrOfPairs(UO->getSubExpr()->IgnoreParens());
+}
+
+/// CountArgChecker - performs sanity checks for an argument in
+/// '__counted_by()' or '__sized_by()', and returns a constant-folded
+/// count expression if feasible.
+class CountArgChecker : public TreeTransform<CountArgChecker> {
+  using BaseTransform = TreeTransform<CountArgChecker>;
+  using DeclList = llvm::SmallVector<TypeCoupledDeclRefInfo, 1>;
+  using DeclSet = llvm::SmallSet<Decl *, 1>;
+  DeclList &Dependees;
+  bool CountInBytes : 1;
+  bool OrNull : 1;
+  bool ScopeCheck : 1;
+  bool IsArray : 1;
+  DeclSet Visited;
+  bool InDeref = false;
+  BinaryOperator *VisitedBinOp = nullptr;
+
+private:
+  ExprResult Fallback(Expr *E) {
+    if (auto CF = ConstantFoldOrNull(E))
+      return CF;
+    SemaRef.Diag(
+        E->getExprLoc(),
+        diag::
+            err_attribute_invalid_argument_expression_for_pointer_bounds_attribute);
+    return ExprError();
+  }
+
+  IntegerLiteral *ConstantFoldOrNull(Expr *E) {
+    if (E->isValueDependent())
+      return nullptr;
+
+    Expr::EvalResult Eval;
+    /// EvaluateAsInt is enough because nodes are visited in-order and
+    /// we require the final results be integer. Hence, cases like
+    /// '(int)(float)f' should work.
+    if (E->EvaluateAsInt(Eval, SemaRef.Context))
+      return IntegerLiteral::Create(SemaRef.Context, Eval.Val.getInt(),
+                                    E->getType(), E->getExprLoc());
+    return nullptr;
+  }
+
+  BoundsAttributedType::BoundsAttrKind getDynamicCountKind() {
+    return CountInBytes ? (OrNull ? CountAttributedType::SizedByOrNull
+                                  : CountAttributedType::SizedBy)
+                        : (OrNull ? CountAttributedType::CountedByOrNull
+                                  : CountAttributedType::CountedBy);
+  }
+
+public:
+  explicit CountArgChecker(Sema &S, DeclList &DList, bool CountInBytes,
+                           bool OrNull, bool ScopeCheck, bool IsArray)
+      : BaseTransform(S), Dependees(DList), CountInBytes(CountInBytes),
+        OrNull(OrNull), ScopeCheck(ScopeCheck), IsArray(IsArray) {}
+
+  ExprResult TransformExpr(Expr *E) {
+    switch (E->getStmtClass()) {
+
+#define TRANSFORM_EXPR(Node)                                                   \
+  case Stmt::Node##Class:                                                      \
+    return Transform##Node(cast<Node>(E));
+
+#define FORWARD_EXPR(Node)                                                     \
+  case Stmt::Node##Class:                                                      \
+    return E;
+
+      TRANSFORM_EXPR(CallExpr)
+      TRANSFORM_EXPR(ImplicitCastExpr)
+      TRANSFORM_EXPR(CStyleCastExpr)
+      TRANSFORM_EXPR(ParenExpr)
+      TRANSFORM_EXPR(BinaryOperator)
+      TRANSFORM_EXPR(UnaryOperator)
+      TRANSFORM_EXPR(DeclRefExpr)
+      TRANSFORM_EXPR(MemberExpr)
+      FORWARD_EXPR(IntegerLiteral)
+      FORWARD_EXPR(FloatingLiteral)
+      FORWARD_EXPR(FixedPointLiteral)
+
+#undef TRANSFORM_EXPR
+#undef FORWARD_EXPR
+    default:
+      break;
+    }
+    return Fallback(E);
+  }
+
+  ExprResult TransformCallExpr(CallExpr *E) {
+    const auto *Callee = E->getDirectCallee();
+    if (Callee && Callee->hasAttr<ConstAttr>()) {
+      for (auto *Arg : E->arguments()) {
+        if (!Arg->isEvaluatable(SemaRef.Context)) {
+          SemaRef.Diag(E->getExprLoc(),
+                       diag::err_bounds_safety_dynamic_count_function_call_argument)
+              << E << getDynamicCountKind();
+          return ExprError();
+        }
+      }
+      return E;
+    }
+    SemaRef.Diag(E->getExprLoc(),
+                 diag::err_bounds_safety_dynamic_count_function_call)
+        << getDynamicCountKind();
+    if (Callee) {
+      SemaRef.Diag(Callee->getLocation(), diag::note_callee_decl) << Callee;
+    }
+    return ExprError();
+  }
+
+  ExprResult TransformImplicitCastExpr(ImplicitCastExpr *E) {
+    return BaseTransform::TransformImplicitCastExpr(E);
+  }
+
+  ExprResult TransformCStyleCastExpr(CStyleCastExpr *E) {
+    Expr::EvalResult Eval;
+    /// EvaluateAsInt is enough because nodes are visited in-order and
+    /// we require the final results be integer. Hence, cases like
+    /// '(int)(float)f' should work.
+    if (!E->EvaluateAsInt(Eval, SemaRef.Context))
+      return BaseTransform::TransformCStyleCastExpr(E);
+    return IntegerLiteral::Create(SemaRef.Context, Eval.Val.getInt(),
+                                  E->getType(), E->getExprLoc());
+    ;
+  }
+
+  ExprResult TransformParenExpr(ParenExpr *E) {
+    if (auto CF = ConstantFoldOrNull(E))
+      return CF;
+    return BaseTransform::TransformParenExpr(E);
+  }
+
+  ExprResult TransformBinaryOperator(BinaryOperator *E) {
+    VisitedBinOp = E;
+    if (auto CF = ConstantFoldOrNull(E))
+      return CF;
+    return BaseTransform::TransformBinaryOperator(E);
+  }
+
+  /// Add support for UO_Deref in particular to support out parameters.
+  /// e.g., 'void foo(int *__counted_by(len)* out_buf, int len)'
+  ExprResult TransformUnaryOperator(UnaryOperator *E) {
+    if (auto CF = ConstantFoldOrNull(E))
+      return CF;
+
+    Expr *UnwrappedExpr = UnwrapDerefAddrOfPairs(E);
+    E = dyn_cast<UnaryOperator>(UnwrappedExpr);
+    if (!E)
+      return TransformExpr(UnwrappedExpr);
+
+    if (E->getOpcode() == UO_Deref && !InDeref) {
+      if (VisitedBinOp)
+        return Fallback(E);
+      SaveAndRestore<bool> InDerefLocal(InDeref, true);
+      Expr *SubExpr = E->getSubExpr()->IgnoreParenCasts();
+      if (auto *DR = dyn_cast<DeclRefExpr>(SubExpr)) {
+        if (!isa<ParmVarDecl>(DR->getDecl()) || ScopeCheck) {
+          SemaRef.Diag(E->getExprLoc(),
+                       diag::err_deref_in_bounds_safety_count_non_parm_decl)
+              << getDynamicCountKind();
+          return E;
+        }
+        return BaseTransform::TransformUnaryOperator(E);
+      }
+      return Fallback(E);
+    }
+    if (E->isArithmeticOp())
+      return BaseTransform::TransformUnaryOperator(E);
+
+    return Fallback(E);
+  }
+
+  ExprResult TransformDeclRefExpr(DeclRefExpr *E) {
+    if (auto CF = ConstantFoldOrNull(E))
+      return CF;
+
+    ValueDecl *VD = E->getDecl();
+    bool IsNewVD = Visited.insert(VD).second;
+    if (IsNewVD) {
+      Dependees.push_back(TypeCoupledDeclRefInfo(VD, InDeref));
+    }
+    return E;
+  }
+
+  ExprResult TransformMemberExpr(MemberExpr *E) {
+    if (auto CF = ConstantFoldOrNull(E))
+      return CF;
+
+    // For structs/classes in C++, referring to a field creates a MemberExpr
+    // instead of DeclRefExpr. To support other parts of bounds-safety logic,
+    // replace the MemberExpr by DeclRefExpr.
+    // TODO: Check if this works for FAMs.
+    // TODO: Add support for MemberExpr (rdar://134311605).
+    if (!IsArray && SemaRef.getLangOpts().CPlusPlus) {
+      ValueDecl *VD = E->getMemberDecl();
+      bool IsNewVD = Visited.insert(VD).second;
+      if (IsNewVD)
+        Dependees.push_back(TypeCoupledDeclRefInfo(VD, InDeref));
+      Expr *DRE = DeclRefExpr::Create(
+          SemaRef.Context, NestedNameSpecifierLoc{}, SourceLocation{}, VD,
+          false, DeclarationNameInfo{VD->getDeclName(), VD->getLocation()},
+          VD->getType(), VK_LValue);
+      return DRE;
+    }
+
+    if (!IsArray) {
+      SemaRef.Diag(
+          E->getExprLoc(),
+          diag::
+              err_attribute_invalid_argument_expression_for_pointer_bounds_attribute);
+      SemaRef.Diag(E->getOperatorLoc(),
+                   diag::note_bounds_safety_struct_fields_only_in_fam);
+      return ExprError();
+    }
+
+    if (E->isArrow()) {
+      SemaRef.Diag(E->getExprLoc(), diag::error_bounds_safety_no_arrow_members);
+      return ExprError();
+    }
+
+    // Recursive call adds base decls to Dependees, i.e. for `a.b.c` it adds `a`
+    // and `b`. `c` is added by the call to Dependees.push_back() further down.
+    ExprResult BaseRes = TransformExpr(E->getBase());
+    if (BaseRes.isInvalid())
+      return ExprError();
+
+    if (BaseRes.get()->getType()->isUnionType()) {
+      SemaRef.Diag(E->getExprLoc(), diag::error_bounds_safety_no_count_in_unions)
+          << BaseRes.get() << BaseRes.get()->getType();
+      return ExprError();
+    }
+
+    ValueDecl *VD = E->getMemberDecl();
+    bool IsNewVD = Visited.insert(VD).second;
+    if (IsNewVD) {
+      Dependees.push_back(
+          TypeCoupledDeclRefInfo(VD, InDeref, /* Member */ true));
+    }
+
+    return E;
+  }
+};
+
+/// RangeArgChecker - performs sanity checks for an argument in '__ended_by()'.
+/// Moreover, this checker extracts the dependent decl in the 'end' expression
+/// of '__ended_by(end)'.
+class RangeArgChecker : public TreeTransform<RangeArgChecker> {
+  using BaseTransform = TreeTransform<RangeArgChecker>;
+  std::optional<TypeCoupledDeclRefInfo> DependeeInfo;
+  bool ScopeCheck;
+  bool InDeref = false;
+
+  void setDependeeInfo(ValueDecl *VD, bool Deref) {
+    assert(!DependeeInfo.has_value());
+    DependeeInfo = TypeCoupledDeclRefInfo(VD, Deref);
+  }
+
+public:
+  explicit RangeArgChecker(Sema &SemaRef, bool ScopeCheck)
+      : BaseTransform(SemaRef), ScopeCheck(ScopeCheck) {}
+
+  ExprResult TransformExpr(Expr *E) {
+    switch (E->getStmtClass()) {
+
+#define TRANSFORM_EXPR(Node)                                                   \
+  case Stmt::Node##Class:                                                      \
+    return Transform##Node(cast<Node>(E));
+
+      TRANSFORM_EXPR(ImplicitCastExpr)
+      TRANSFORM_EXPR(ParenExpr)
+      TRANSFORM_EXPR(UnaryOperator)
+      TRANSFORM_EXPR(DeclRefExpr)
+      TRANSFORM_EXPR(MemberExpr)
+
+#undef TRANSFORM_EXPR
+    default:
+      break;
+    }
+
+    return HandleInvalidExpr(E);
+  }
+
+  ExprResult HandleInvalidExpr(Expr *E) {
+    SemaRef.Diag(
+        E->getExprLoc(),
+        diag::
+            err_attribute_invalid_argument_expression_for_pointer_bounds_attribute);
+    return ExprError();
+  }
+
+  ExprResult TransformImplicitCastExpr(ImplicitCastExpr *E) {
+    return BaseTransform::TransformImplicitCastExpr(E);
+  }
+
+  ExprResult TransformParenExpr(ParenExpr *E) {
+    return BaseTransform::TransformParenExpr(E);
+  }
+
+  ExprResult TransformUnaryOperator(UnaryOperator *E) {
+    Expr *UnwrappedExpr = UnwrapDerefAddrOfPairs(E);
+    E = dyn_cast<UnaryOperator>(UnwrappedExpr);
+    if (!E)
+      return TransformExpr(UnwrappedExpr);
+
+    // No support for unary operators other than UO_Deref nor multiple UO_Deref.
+    if (E->getOpcode() != UO_Deref || InDeref)
+      return HandleInvalidExpr(E);
+
+    if (ScopeCheck) {
+      // We support deref operator for parameters, check if the `end` decl is
+      // also a parameter.
+      const auto *DRE =
+          dyn_cast<DeclRefExpr>(E->getSubExpr()->IgnoreParenCasts());
+      if (!DRE || !isa<ParmVarDecl>(DRE->getDecl())) {
+        SemaRef.Diag(E->getExprLoc(),
+                     diag::err_deref_in_bounds_safety_count_non_parm_decl)
+            << 4 /* __ended_by */;
+        // Return ExprError() instead of calling HandleInvalidExpr(E) to avoid
+        // emitting another error.
+        return ExprError();
+      }
+    }
+
+    SaveAndRestore<bool> InDerefLocal(InDeref, true);
+    return BaseTransform::TransformUnaryOperator(E);
+  }
+
+  ExprResult TransformDeclRefExpr(DeclRefExpr *E) {
+    // If the end pointer is not __single because of our implicit pointer
+    // annotation, we fix that during rebuilding the type of the end pointer.
+    QualType Ty = E->getType();
+    if (!Ty->isSinglePointerType() && !Ty->isUnspecifiedPointerType() &&
+        !Ty->isDynamicRangePointerType() && !Ty->hasAttr(attr::PtrAutoAttr)) {
+      SemaRef.Diag(E->getExprLoc(), diag::err_bounds_safety_end_pointer_single);
+      return ExprError();
+    }
+
+    setDependeeInfo(E->getDecl(), InDeref);
+    return E;
+  }
+
+  ExprResult TransformMemberExpr(MemberExpr *E) {
+    // Using `__ended_by(end)` annotation on a struct/class member where `end`
+    // refers to another member creates a MemberExpr with an implicit this in
+    // C++. We don't support MemberExpr in general, so here we replace the
+    // MemberExpr with an implicit this by a DeclRefExpr to the field in order
+    // to have the same representation as in C.
+
+    if (!E->isImplicitAccess())
+      return HandleInvalidExpr(E);
+
+    ValueDecl *VD = E->getMemberDecl();
+    setDependeeInfo(VD, InDeref);
+    Expr *DRE = DeclRefExpr::Create(
+        SemaRef.Context, NestedNameSpecifierLoc{}, SourceLocation{}, VD, false,
+        DeclarationNameInfo{VD->getDeclName(), VD->getLocation()},
+        VD->getType(), VK_LValue);
+    return DRE;
+  }
+
+  TypeCoupledDeclRefInfo getDependeeInfo() const {
+    return DependeeInfo.value();
+  }
+};
+
+} // end anonymous namespace
+
+QualType Sema::BuildCountAttributedType(QualType PointerTy, Expr *CountExpr,
+                                        bool CountInBytes, bool OrNull,
+                                        bool ScopeCheck) {
+
+  llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
+  ExprResult R = CountArgChecker(*this, Decls, CountInBytes, OrNull, ScopeCheck,
+                                 PointerTy->isArrayType())
+                     .TransformExpr(CountExpr);
+  /// When the resulting expression is invalid, we still create the AST using
+  /// the original count expression for the sake of AST dump.
+  if (!R.isInvalid())
+    CountExpr = R.get();
+  R = DefaultLvalueConversion(CountExpr);
+  if (!R.isInvalid())
+    CountExpr = R.get();
+
+  if (!getLangOpts().isBoundsSafetyAttributeOnlyMode() &&
+      !PointerTy->isSinglePointerType()) {
+    PointerTy = Context.getBoundsSafetyPointerType(
+        PointerTy, BoundsSafetyPointerAttributes::single());
+  }
+
+  return Context.getCountAttributedType(
+      PointerTy, CountExpr, CountInBytes, OrNull,
+      llvm::ArrayRef(Decls.begin(), Decls.end()));
+}
+
+namespace {
+
+QualType DropAutoNullTerminated(ASTContext &Ctx, QualType T) {
+  if (!T->isImplicitlyNullTerminatedType(Ctx))
+    return T;
+
+  std::function<QualType(QualType)> DropPtrAutoNullTerminatedAttr;
+  DropPtrAutoNullTerminatedAttr = [&](QualType T) -> QualType {
+    const auto *AT = T->getAs<AttributedType>();
+    if (!AT) {
+      auto *VTT = T->getAs<ValueTerminatedType>();
+      assert(VTT);
+      return VTT->desugar();
+    }
+
+    QualType ModifiedTy = DropPtrAutoNullTerminatedAttr(AT->getModifiedType());
+    if (AT->getAttrKind() == attr::PtrAutoNullTerminatedAttr) {
+      return ModifiedTy;
+    }
+    QualType EquivalentTy =
+        DropPtrAutoNullTerminatedAttr(AT->getEquivalentType());
+    return Ctx.getAttributedType(AT->getAttrKind(), ModifiedTy, EquivalentTy);
+  };
+
+  return DropPtrAutoNullTerminatedAttr(T);
+}
+
+} // namespace
+
+QualType Sema::BuildDynamicRangePointerType(QualType PointerTy, Expr *StartPtr,
+                                            Expr *EndPtr, bool ScopeCheck) {
+  std::optional<TypeCoupledDeclRefInfo> StartDecl, EndDecl;
+
+  if (StartPtr) {
+    RangeArgChecker RAC(*this, ScopeCheck);
+    ExprResult Res = RAC.TransformExpr(StartPtr);
+    if (Res.isInvalid())
+      return QualType();
+    StartPtr = Res.get();
+    StartDecl = RAC.getDependeeInfo();
+  }
+
+  if (EndPtr) {
+    RangeArgChecker RAC(*this, ScopeCheck);
+    ExprResult Res = RAC.TransformExpr(EndPtr);
+    if (Res.isInvalid())
+      return QualType();
+    EndPtr = Res.get();
+    EndDecl = RAC.getDependeeInfo();
+  }
+
+  if (!getLangOpts().isBoundsSafetyAttributeOnlyMode() &&
+      !PointerTy->isSinglePointerType()) {
+    PointerTy = Context.getBoundsSafetyPointerType(
+        PointerTy, BoundsSafetyPointerAttributes::single());
+  }
+
+  if (EndDecl.has_value()) {
+    ValueDecl *VD = EndDecl->getDecl();
+    QualType Ty = VD->getType();
+    if (Ty->hasAttr(attr::PtrAutoNullTerminatedAttr) &&
+        Ty->isValueTerminatedType()) {
+      assert(Ty->getAs<ValueTerminatedType>()
+                 ->getTerminatorValue(Context)
+                 .isZero());
+      QualType NewTy = DropAutoNullTerminated(Context, Ty);
+      VD->setType(NewTy);
+    }
+  }
+
+  return Context.getDynamicRangePointerType(
+      PointerTy, StartPtr, EndPtr,
+      StartDecl.has_value() ? ArrayRef(*StartDecl)
+                            : ArrayRef<TypeCoupledDeclRefInfo>(),
+      EndDecl.has_value() ? ArrayRef(*EndDecl)
+                          : ArrayRef<TypeCoupledDeclRefInfo>());
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
 
 static void
 BuildTypeCoupledDecls(Expr *E,
@@ -9846,10 +11282,14 @@ QualType Sema::BuiltinEnumUnderlyingType(QualType BaseType,
 }
 
 QualType Sema::BuiltinAddPointer(QualType BaseType, SourceLocation Loc) {
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  // Declare and pass `BoundsSafetyPointerAttributes A`
+  BoundsSafetyPointerAttributes A;
   QualType Pointer = BaseType.isReferenceable() || BaseType->isVoidType()
-                         ? BuildPointerType(BaseType.getNonReferenceType(), Loc,
-                                            DeclarationName())
+                         ? BuildPointerType(BaseType.getNonReferenceType(), A,
+                                            Loc, DeclarationName())
                          : BaseType;
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   return Pointer.isNull() ? QualType() : Pointer;
 }
@@ -10098,6 +11538,28 @@ QualType Sema::BuildAtomicType(QualType T, SourceLocation Loc) {
       Diag(Loc, diag::err_atomic_specifier_bad_type) << DisallowedKind << T;
       return QualType();
     }
+
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    if (LangOpts.BoundsSafety) {
+      assert(!T->isBoundsAttributedType());
+      int DiagIndex = -1;
+      if (T->isValueTerminatedType()) {
+        DiagIndex = 7;
+      } else if (const auto *PT = T->getAs<PointerType>()) {
+        BoundsSafetyPointerAttributes FAttr = PT->getPointerAttributes();
+        if (!FAttr.isUnspecified() && !FAttr.isSingle() &&
+            !FAttr.isUnsafeIndexable()) {
+          assert(FAttr.isIndexable() || FAttr.isBidiIndexable());
+          DiagIndex = FAttr.isIndexable() ? 0 : 1;
+        }
+      }
+      if (DiagIndex != -1) {
+        Diag(Loc, diag::err_bounds_safety_atomic_unsupported_attribute)
+            << DiagIndex;
+        return QualType();
+      }
+    }
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
 
     // FIXME: Do we need any handling for ARC here?
   }

@@ -216,6 +216,19 @@ def SEHFinallyStmt : StmtNode<Stmt>;
 def SEHLeaveStmt : StmtNode<Stmt>;
 def MSDependentExistsStmt : StmtNode<Stmt>;
 
+// TO_UPSTREAM(BoundsSafety) ON
+// BoundsSafety Extensions.
+def AssumptionExpr : StmtNode<Expr>;
+def BoundsSafetyPointerPromotionExpr : StmtNode<Expr>;
+def ForgePtrExpr : StmtNode<Expr>;
+def GetBoundExpr : StmtNode<Expr>;
+def PredefinedBoundsCheckExpr : StmtNode<Expr>;
+def BoundsCheckExpr : StmtNode<Expr>;
+def MaterializeSequenceExpr : StmtNode<Expr>;
+def TerminatedByToIndexableExpr : StmtNode<Expr>;
+def TerminatedByFromIndexableExpr : StmtNode<Expr>;
+// TO_UPSTREAM(BoundsSafety) OFF
+
 // OpenCL Extensions.
 def AsTypeExpr : StmtNode<Expr>;
 

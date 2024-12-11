@@ -3,7 +3,7 @@
 
 declare void @use(i1)
 
-define void @test_or_ule(i4 %x, i4 %y, i4 %z, i4 %a) {
+define i1 @test_or_ule(i4 %x, i4 %y, i4 %z, i4 %a) {
 ; CHECK-LABEL: @test_or_ule(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i4 [[X:%.*]], [[Y:%.*]]
@@ -12,18 +12,16 @@ define void @test_or_ule(i4 %x, i4 %y, i4 %z, i4 %a) {
 ; CHECK-NEXT:    br i1 [[OR]], label [[BB1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ule i4 [[X]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[C_3]])
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp ule i4 [[X]], [[A:%.*]]
-; CHECK-NEXT:    call void @use(i1 [[C_4]])
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[R_1:%.*]] = xor i1 [[C_3]], [[C_4]]
+; CHECK-NEXT:    ret i1 [[R_1]]
 ; CHECK:       exit:
-; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i4 [[X]], [[A]]
-; CHECK-NEXT:    call void @use(i1 [[C_5]])
-; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[R_2:%.*]] = xor i1 false, [[C_5]]
+; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], true
+; CHECK-NEXT:    [[R_4:%.*]] = xor i1 [[R_3]], true
+; CHECK-NEXT:    [[R_5:%.*]] = xor i1 [[R_4]], true
+; CHECK-NEXT:    ret i1 [[R_5]]
 ;
 entry:
   %c.1 = icmp ule i4 %x, %y
@@ -33,34 +31,30 @@ entry:
 
 bb1:
   %c.3 = icmp ule i4 %x, %z
-  call void @use(i1 %c.3)
-
   %c.4 = icmp ule i4 %x, %a
-  call void @use(i1 %c.4)
+  %r.1 = xor i1 %c.3, %c.4
 
-  ret void
+  ret i1 %r.1
 
 exit:
   %f.1 = icmp ule i4 %x, %z
-  call void @use(i1 %f.1)
-
   %c.5 = icmp ule i4 %x, %a
-  call void @use(i1 %c.5)
+  %r.2 = xor i1 %f.1, %c.5
 
   %t.1 = icmp ugt i4 %y, %z
-  call void @use(i1 %t.1)
+  %r.3 = xor i1 %r.2, %t.1
 
   %t.2 = icmp ugt i4 %x, %y
-  call void @use(i1 %t.2)
+  %r.4 = xor i1 %r.3, %t.2
 
   %t.3 = icmp ugt i4 %x, %z
-  call void @use(i1 %t.3)
+  %r.5 = xor i1 %r.4, %t.3
 
-  ret void
+  ret i1 %r.5
 }
 
 ; The result of test_or_ule and test_or_select_ule should be same
-define void @test_or_select_ule(i4 %x, i4 %y, i4 %z, i4 %a) {
+define i1 @test_or_select_ule(i4 %x, i4 %y, i4 %z, i4 %a) {
 ; CHECK-LABEL: @test_or_select_ule(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i4 [[X:%.*]], [[Y:%.*]]
@@ -69,18 +63,16 @@ define void @test_or_select_ule(i4 %x, i4 %y, i4 %z, i4 %a) {
 ; CHECK-NEXT:    br i1 [[OR]], label [[BB1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ule i4 [[X]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[C_3]])
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp ule i4 [[X]], [[A:%.*]]
-; CHECK-NEXT:    call void @use(i1 [[C_4]])
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[R_1:%.*]] = xor i1 [[C_3]], [[C_4]]
+; CHECK-NEXT:    ret i1 [[R_1]]
 ; CHECK:       exit:
-; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i4 [[X]], [[A]]
-; CHECK-NEXT:    call void @use(i1 [[C_5]])
-; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[R_2:%.*]] = xor i1 false, [[C_5]]
+; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], true
+; CHECK-NEXT:    [[R_4:%.*]] = xor i1 [[R_3]], true
+; CHECK-NEXT:    [[R_5:%.*]] = xor i1 [[R_4]], true
+; CHECK-NEXT:    ret i1 [[R_5]]
 ;
 entry:
   %c.1 = icmp ule i4 %x, %y
@@ -90,30 +82,25 @@ entry:
 
 bb1:
   %c.3 = icmp ule i4 %x, %z
-  call void @use(i1 %c.3)
-
   %c.4 = icmp ule i4 %x, %a
-  call void @use(i1 %c.4)
-
-  ret void
+  %r.1 = xor i1 %c.3, %c.4
+  ret i1 %r.1
 
 exit:
   %f.1 = icmp ule i4 %x, %z
-  call void @use(i1 %f.1)
-
   %c.5 = icmp ule i4 %x, %a
-  call void @use(i1 %c.5)
+  %r.2 = xor i1 %f.1, %c.5
 
   %t.1 = icmp ugt i4 %y, %z
-  call void @use(i1 %t.1)
+  %r.3 = xor i1 %r.2, %t.1
 
   %t.2 = icmp ugt i4 %x, %y
-  call void @use(i1 %t.2)
+  %r.4 = xor i1 %r.3, %t.2
 
   %t.3 = icmp ugt i4 %x, %z
-  call void @use(i1 %t.3)
+  %r.5 = xor i1 %r.4, %t.3
 
-  ret void
+  ret i1 %r.5
 }
 
 define i1 @test_or_chain_ule_1(i4 %x, i4 %y, i4 %z, i4 %a, i4 %b) {

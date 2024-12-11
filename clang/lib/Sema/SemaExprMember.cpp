@@ -21,6 +21,8 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "DynamicCountPointerAssignmentAnalysis.h"
+#include "TreeTransform.h"
 
 using namespace clang;
 using namespace sema;
@@ -1274,7 +1276,13 @@ static bool isPointerToRecordType(QualType T) {
 ExprResult
 Sema::PerformMemberExprBaseConversion(Expr *Base, bool IsArrow) {
   if (IsArrow && !Base->getType()->isFunctionType())
-    return DefaultFunctionArrayLvalueConversion(Base);
+    return DefaultFunctionArrayLvalueConversion(
+        Base,
+        /* TO_UPSTREAM(BoundsSafety) ON */
+        /*Diagnose*/ true,
+        /*DiagnoseBoundsSafetyIncompleteArrayPromotion*/ true,
+        /*DisableFlexibleArrayPromotion*/ true);
+        /* TO_UPSTREAM(BoundsSafety) OFF */
 
   return CheckPlaceholderExpr(Base);
 }
@@ -1824,6 +1832,60 @@ void Sema::CheckMemberAccessOfNoDeref(const MemberExpr *E) {
     }
   }
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON */
+/// BoundsSafety: When dynamic count pointer type is created for FieldDecl,
+/// the argument expression is created as DeclRefExpr of the FieldDecl.
+///
+/// \code
+/// struct S { int *__counted_by(len+1) ptr; int len; };
+/// struct S s;
+/// \endcode
+///
+/// After a struct is instantiated, the argument expression of __counted_by()
+/// should also be instantiated so that the expression reference the field
+/// as MemberExpr instead of DeclRefExpr of FieldDecl. After transformation,
+/// The type of 's.ptr' will be represented as 'int *__counted_by(s.len+1)'.
+class TransformDeclRefField : public TreeTransform<TransformDeclRefField> {
+  typedef TreeTransform<TransformDeclRefField> BaseTransform;
+  Expr *BaseExpr;
+  bool IsArrow;
+  ExprValueKind VK;
+
+public:
+  TransformDeclRefField(Sema &SemaRef, Expr *BaseExpr, bool IsArrow)
+      : BaseTransform(SemaRef), BaseExpr(BaseExpr), IsArrow(IsArrow) {
+    if (!IsArrow) {
+      if (BaseExpr->getObjectKind() == OK_Ordinary)
+        VK = BaseExpr->getValueKind();
+      else
+        VK = VK_PRValue;
+    } else {
+      VK = VK_LValue;
+    }
+  }
+
+  ExprResult TransformDeclRefExpr(DeclRefExpr *E) {
+    FieldDecl *Field = dyn_cast<FieldDecl>(E->getDecl());
+    if (!Field)
+      return Owned(E);
+
+    ExprValueKind FieldVK = Field->getType()->isReferenceType() ? VK_LValue : VK;
+    // Using RebuildMemberExpr in this context can cause recursion.
+    return MemberExpr::CreateImplicit(SemaRef.Context, BaseExpr, IsArrow, Field, Field->getType(),
+                                      FieldVK, OK_Ordinary);
+  }
+};
+
+ExprResult Sema::InstantiateDeclRefField(Expr *BaseExpr, bool IsArrow,
+                                         Expr *FieldRef) {
+  // FieldRef can be a MemberExpr, but TransformDeclRefField will recurse
+  // until it reaches the final MemberExpr where the base is a DeclRef of a
+  // FieldDecl, and transform that.
+  return TransformDeclRefField(*this, BaseExpr, IsArrow)
+      .TransformExpr(FieldRef);
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
 
 ExprResult
 Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,

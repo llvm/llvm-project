@@ -223,6 +223,10 @@ public:
   // with this type system. For such cases, languages can check and return
   // an error.
   virtual Status IsCompatible();
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  virtual bool IsBoundsSafetyIndexable(lldb::opaque_compiler_type_t type) = 0;
+  virtual bool IsBoundsSafetyBidiIndexable(lldb::opaque_compiler_type_t type) = 0;
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   static bool SupportsLanguageStatic(lldb::LanguageType language);
   // Type Completion
@@ -316,6 +320,12 @@ public:
   virtual CompilerType AddVolatileModifier(lldb::opaque_compiler_type_t type);
 
   virtual CompilerType AddRestrictModifier(lldb::opaque_compiler_type_t type);
+
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  virtual CompilerType AddBoundsSafetyIndexableAttribute(lldb::opaque_compiler_type_t type);
+  virtual CompilerType AddBoundsSafetyBidiIndexableAttribute(lldb::opaque_compiler_type_t type);
+  virtual CompilerType AddBoundsSafetyUnspecifiedAttribute(lldb::opaque_compiler_type_t type);
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   virtual CompilerType AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
                                           uint32_t payload);

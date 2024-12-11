@@ -2820,6 +2820,84 @@ void StmtPrinter::VisitAsTypeExpr(AsTypeExpr *Node) {
   OS << ")";
 }
 
+void StmtPrinter::VisitGetBoundExpr(GetBoundExpr *Node) {
+  OS << "__builtin_get_pointer_";
+  OS << (Node->getBoundKind() == GetBoundExpr::BK_Lower ? "lower" : "upper");
+  OS << "_bound(";
+  PrintExpr(Node->getSubExpr());
+  OS << ")";
+}
+
+void StmtPrinter::VisitBoundsSafetyPointerPromotionExpr(
+    BoundsSafetyPointerPromotionExpr *Node) {
+  PrintExpr(Node->getPointer());
+}
+
+void StmtPrinter::VisitAssumptionExpr(AssumptionExpr *E) {
+  PrintExpr(E->getWrappedExpr());
+}
+
+void StmtPrinter::VisitForgePtrExpr(ForgePtrExpr *Node) {
+  if (Node->ForgesBidiIndexablePointer()) {
+    OS << "__builtin_unsafe_forge_bidi_indexable(";
+    PrintExpr(Node->getAddr());
+    OS << ", ";
+    PrintExpr(Node->getSize());
+    OS << ")";
+  } else if (Node->ForgesTerminatedByPointer()) {
+    OS << "__builtin_unsafe_forge_terminated_by(";
+    PrintExpr(Node->getAddr());
+    OS << ", ";
+    PrintExpr(Node->getTerminator());
+    OS << ")";
+  } else {
+    OS << "__builtin_unsafe_forge_single(";
+    PrintExpr(Node->getAddr());
+    OS << ")";
+  }
+}
+
+void StmtPrinter::VisitBoundsCheckExpr(BoundsCheckExpr *Node) {
+  PrintExpr(Node->getGuardedExpr());
+}
+
+void StmtPrinter::VisitPredefinedBoundsCheckExpr(
+    PredefinedBoundsCheckExpr *Node) {
+  PrintExpr(Node->getGuardedExpr());
+}
+
+void StmtPrinter::VisitMaterializeSequenceExpr(MaterializeSequenceExpr *Node) {
+  PrintExpr(Node->getWrappedExpr());
+}
+
+void StmtPrinter::VisitTerminatedByToIndexableExpr(
+    TerminatedByToIndexableExpr *Node) {
+  const char *Name = Node->includesTerminator()
+                         ? "__builtin_unsafe_terminated_by_to_indexable"
+                         : "__builtin_terminated_by_to_indexable";
+  OS << Name << '(';
+  PrintExpr(Node->getPointer());
+  if (auto *Terminator = Node->getTerminator()) {
+    OS << ", ";
+    PrintExpr(Terminator);
+  }
+  OS << ")";
+}
+
+void StmtPrinter::VisitTerminatedByFromIndexableExpr(
+    TerminatedByFromIndexableExpr *Node) {
+  const auto *VTT = cast<ValueTerminatedType>(Node->getType());
+  OS << "__builtin_unsafe_terminated_by_from_indexable(";
+  PrintExpr(VTT->getTerminatorExpr());
+  OS << ", ";
+  PrintExpr(Node->getPointer());
+  if (auto *PointerToTerminator = Node->getPointerToTerminator()) {
+    OS << ", ";
+    PrintExpr(PointerToTerminator);
+  }
+  OS << ")";
+}
+
 void StmtPrinter::VisitHLSLOutArgExpr(HLSLOutArgExpr *Node) {
   PrintExpr(Node->getArgLValue());
 }

@@ -13,6 +13,7 @@ add_lldb_library(lldbTarget
   DynamicRegisterInfo.cpp
   CoreFileMemoryRanges.cpp
   ExecutionContext.cpp
+  BoundsSafetyTrapFrameRecognizer.cpp
   InstrumentationRuntime.cpp
   InstrumentationRuntimeStopInfo.cpp
   JITLoader.cpp

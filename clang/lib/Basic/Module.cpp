@@ -311,6 +311,13 @@ bool Module::directlyUses(const Module *Requested) {
   if (!Requested->Parent && Requested->Name == "ptrauth")
     return true;
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  // Darwin is allowed is to use our builtin 'ptrcheck.h' and its accompanying
+  // module.
+  if (!Requested->Parent && Requested->Name == "ptrcheck")
+    return true;
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
   if (NoUndeclaredIncludes)
     UndeclaredUses.insert(Requested);
 

@@ -3,242 +3,344 @@
 
 declare void @use(i1)
 
-define void @test_1_variable_constraint(i32 %x, i32 %y, i32 %z) {
+define i1 @test_1_variable_constraint(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @test_1_variable_constraint(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i32 [[X]], 10
-; CHECK-NEXT:    call void @use(i1 [[C_2]])
-; CHECK-NEXT:    [[C_3:%.*]] = icmp sge i32 [[Y]], [[X]]
-; CHECK-NEXT:    call void @use(i1 [[C_3]])
-; CHECK-NEXT:    [[C_4:%.*]] = icmp sge i32 10, [[X]]
-; CHECK-NEXT:    call void @use(i1 [[C_4]])
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i8 [[X]], 10
+; CHECK-NEXT:    [[R_1:%.*]] = xor i1 true, [[C_2]]
+; CHECK-NEXT:    [[C_3:%.*]] = icmp sge i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[R_2:%.*]] = xor i1 [[R_1]], [[C_3]]
+; CHECK-NEXT:    [[C_4:%.*]] = icmp sge i8 10, [[X]]
+; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], [[C_4]]
+; CHECK-NEXT:    ret i1 [[R_3]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[C_5:%.*]] = icmp sge i32 [[X]], 10
-; CHECK-NEXT:    call void @use(i1 [[C_5]])
-; CHECK-NEXT:    [[C_6:%.*]] = icmp sge i32 10, [[X]]
-; CHECK-NEXT:    call void @use(i1 [[C_6]])
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[R_4:%.*]] = xor i1 true, false
+; CHECK-NEXT:    [[C_5:%.*]] = icmp sge i8 [[X]], 10
+; CHECK-NEXT:    [[R_5:%.*]] = xor i1 [[R_4]], [[C_5]]
+; CHECK-NEXT:    [[C_6:%.*]] = icmp sge i8 10, [[X]]
+; CHECK-NEXT:    [[R_6:%.*]] = xor i1 [[R_5]], [[C_6]]
+; CHECK-NEXT:    ret i1 [[R_6]]
 ;
 entry:
-  %c.1 = icmp sge i32 %x, %y
+  %c.1 = icmp sge i8 %x, %y
   br i1 %c.1, label %bb1, label %bb2
 
 bb1:
-  %t.1 = icmp sge i32 %x, %y
-  call void @use(i1 %t.1)
-  %c.2 = icmp sge i32 %x, 10
-  call void @use(i1 %c.2)
-  %c.3 = icmp sge i32 %y, %x
-  call void @use(i1 %c.3)
-  %c.4 = icmp sge i32 10, %x
-  call void @use(i1 %c.4)
-  ret void
+  %t.1 = icmp sge i8 %x, %y
+  %c.2 = icmp sge i8 %x, 10
+  %r.1 = xor i1 %t.1, %c.2
+
+  %c.3 = icmp sge i8 %y, %x
+  %r.2 = xor i1 %r.1, %c.3
+
+  %c.4 = icmp sge i8 10, %x
+  %r.3 = xor i1 %r.2, %c.4
+  ret i1 %r.3
 
 bb2:
-  %t.2 = icmp sge i32 %y, %x
-  call void @use(i1 %t.2)
-  %f.1 = icmp sge i32 %x, %y
-  call void @use(i1 %f.1)
-  %c.5 = icmp sge i32 %x, 10
-  call void @use(i1 %c.5)
-  %c.6 = icmp sge i32 10, %x
-  call void @use(i1 %c.6)
-  ret void
+  %t.2 = icmp sge i8 %y, %x
+  %f.1 = icmp sge i8 %x, %y
+  %r.4 = xor i1 %t.2, %f.1
+
+  %c.5 = icmp sge i8 %x, 10
+  %r.5 = xor i1 %r.4, %c.5
+
+  %c.6 = icmp sge i8 10, %x
+  %r.6 = xor i1 %r.5, %c.6
+  ret i1 %r.6
 }
 
-define void @test_1_constant_constraint(i32 %x) {
+define void @test_1_constant_constraint(i8 %x) {
 ; CHECK-LABEL: @test_1_constant_constraint(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i32 [[X:%.*]], 10
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i8 [[X:%.*]], 10
 ; CHECK-NEXT:    br i1 [[C_1]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i32 [[X]], 11
+; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i8 [[X]], 11
 ; CHECK-NEXT:    call void @use(i1 [[C_2]])
-; CHECK-NEXT:    [[C_4:%.*]] = icmp sge i32 10, [[X]]
+; CHECK-NEXT:    [[C_4:%.*]] = icmp sge i8 10, [[X]]
 ; CHECK-NEXT:    call void @use(i1 [[C_4]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb2:
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[C_5:%.*]] = icmp sge i32 [[X]], 9
+; CHECK-NEXT:    [[C_5:%.*]] = icmp sge i8 [[X]], 9
 ; CHECK-NEXT:    call void @use(i1 [[C_5]])
-; CHECK-NEXT:    [[C_6:%.*]] = icmp sge i32 1, [[X]]
+; CHECK-NEXT:    [[C_6:%.*]] = icmp sge i8 1, [[X]]
 ; CHECK-NEXT:    call void @use(i1 [[C_6]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %c.1 = icmp sge i32 %x, 10
+  %c.1 = icmp sge i8 %x, 10
   br i1 %c.1, label %bb1, label %bb2
 
 bb1:
-  %t.1 = icmp sge i32 %x, 10
+  %t.1 = icmp sge i8 %x, 10
   call void @use(i1 %t.1)
-  %t.2 = icmp sge i32 %x, 9
+  %t.2 = icmp sge i8 %x, 9
   call void @use(i1 %t.2)
-  %c.2 = icmp sge i32 %x, 11
+  %c.2 = icmp sge i8 %x, 11
   call void @use(i1 %c.2)
-  %c.4 = icmp sge i32 10, %x
+  %c.4 = icmp sge i8 10, %x
   call void @use(i1 %c.4)
   ret void
 
 bb2:
-  %t.3 = icmp sge i32 11, %x
+  %t.3 = icmp sge i8 11, %x
   call void @use(i1 %t.3)
-  %f.1 = icmp sge i32 %x, 10
+  %f.1 = icmp sge i8 %x, 10
   call void @use(i1 %f.1)
 
 
-  %f.1.1 = icmp sge i32 %x, 10
+  %f.1.1 = icmp sge i8 %x, 10
   call void @use(i1 %f.1.1)
-  %c.5 = icmp sge i32 %x, 9
+  %c.5 = icmp sge i8 %x, 9
   call void @use(i1 %c.5)
-  %c.6 = icmp sge i32 1, %x
+  %c.6 = icmp sge i8 1, %x
   call void @use(i1 %c.6)
   ret void
 }
 
-define i32 @test1(i32 %x, i32 %y, i32 %z) {
+define i8 @test1(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[BB1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i32 [[Y]], [[Z:%.*]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i8 [[Y]], [[Z:%.*]]
 ; CHECK-NEXT:    br i1 [[C_2]], label [[BB2:%.*]], label [[EXIT]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br i1 true, label [[BB3:%.*]], label [[EXIT]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    ret i32 10
+; CHECK-NEXT:    ret i8 10
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i32 20
+; CHECK-NEXT:    ret i8 20
 ;
 entry:
-  %c.1 = icmp sge i32 %x, %y
+  %c.1 = icmp sge i8 %x, %y
   br i1 %c.1, label %bb1, label %exit
 
 bb1:
-  %c.2 = icmp sge i32 %y, %z
+  %c.2 = icmp sge i8 %y, %z
   br i1 %c.2, label %bb2, label %exit
 
 bb2:
-  %c.3 = icmp sge i32 %x, %z
+  %c.3 = icmp sge i8 %x, %z
   br i1 %c.3, label %bb3, label %exit
 
 bb3:
-  ret i32 10
+  ret i8 10
 
 exit:
-  ret i32 20
+  ret i8 20
 }
 
-define i32 @test2(i32 %x, i32 %y, i32 %z, i32 %a) {
+define i8 @test2(i8 %x, i8 %y, i8 %z, i8 %a) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[BB1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i32 [[Y]], [[Z:%.*]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i8 [[Y]], [[Z:%.*]]
 ; CHECK-NEXT:    br i1 [[C_2]], label [[BB2:%.*]], label [[EXIT]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[C_3:%.*]] = icmp sge i32 [[X]], [[A:%.*]]
+; CHECK-NEXT:    [[C_3:%.*]] = icmp sge i8 [[X]], [[A:%.*]]
 ; CHECK-NEXT:    br i1 [[C_3]], label [[BB3:%.*]], label [[EXIT]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    ret i32 10
+; CHECK-NEXT:    ret i8 10
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i32 20
+; CHECK-NEXT:    ret i8 20
 ;
 entry:
-  %c.1 = icmp sge i32 %x, %y
+  %c.1 = icmp sge i8 %x, %y
   br i1 %c.1, label %bb1, label %exit
 
 bb1:
-  %c.2 = icmp sge i32 %y, %z
+  %c.2 = icmp sge i8 %y, %z
   br i1 %c.2, label %bb2, label %exit
 
 bb2:
-  %c.3 = icmp sge i32 %x, %a
+  %c.3 = icmp sge i8 %x, %a
   br i1 %c.3, label %bb3, label %exit
 
 bb3:
-  ret i32 10
+  ret i8 10
 
 exit:
-  ret i32 20
+  ret i8 20
 }
 
 
-define i32 @test3(i32 %x, i32 %y) {
+define i8 @test3(i8 %x, i8 %y) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i32 [[X:%.*]], 10
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i8 [[X:%.*]], 10
 ; CHECK-NEXT:    br i1 [[C_1]], label [[BB1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i32 [[Y:%.*]], 20
+; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i8 [[Y:%.*]], 20
 ; CHECK-NEXT:    br i1 [[C_2]], label [[BB2:%.*]], label [[EXIT]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    ret i32 10
+; CHECK-NEXT:    ret i8 10
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i32 20
+; CHECK-NEXT:    ret i8 20
 ;
 entry:
-  %c.1 = icmp sge i32 %x, 10
+  %c.1 = icmp sge i8 %x, 10
   br i1 %c.1, label %bb1, label %exit
 
 bb1:
-  %c.2 = icmp sge i32 %y, 20
+  %c.2 = icmp sge i8 %y, 20
   br i1 %c.2, label %bb2, label %exit
 
 bb2:
-  ret i32 10
+  ret i8 10
 
 exit:
-  ret i32 20
+  ret i8 20
 }
 
-define i32 @test4(i32 %x, i32 %y, i32 %z) {
+define i8 @test4(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[BB1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i32 [[Y]], [[Z:%.*]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i8 [[Y]], [[Z:%.*]]
 ; CHECK-NEXT:    br i1 [[C_2]], label [[BB2:%.*]], label [[EXIT]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[U_1:%.*]] = icmp eq i32 [[X]], [[Z]]
+; CHECK-NEXT:    [[U_1:%.*]] = icmp eq i8 [[X]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[U_1]])
-; CHECK-NEXT:    ret i32 10
+; CHECK-NEXT:    ret i8 10
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i32 20
+; CHECK-NEXT:    ret i8 20
 ;
 entry:
-  %c.1 = icmp sge i32 %x, %y
+  %c.1 = icmp sge i8 %x, %y
   br i1 %c.1, label %bb1, label %exit
 
 bb1:
-  %c.2 = icmp sge i32 %y, %z
+  %c.2 = icmp sge i8 %y, %z
   br i1 %c.2, label %bb2, label %exit
 
 bb2:
-  %t.1 = icmp sge i32 %x, %z
+  %t.1 = icmp sge i8 %x, %z
   call void @use(i1 %t.1)
-  %u.1 = icmp eq i32 %x, %z
+  %u.1 = icmp eq i8 %x, %z
   call void @use(i1 %u.1)
-  ret i32 10
+  ret i8 10
 
 
 exit:
-  ret i32 20
+  ret i8 20
+}
+
+
+define i1 @test_1_variable_constraint_negative_constants(i8 %x) {
+; CHECK-LABEL: @test_1_variable_constraint_negative_constants(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i8 [[X:%.*]], -10
+; CHECK-NEXT:    br i1 [[C_1]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[R_1:%.*]] = xor i1 true, true
+; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i8 [[X]], -9
+; CHECK-NEXT:    [[R_2:%.*]] = xor i1 [[R_1]], [[C_2]]
+; CHECK-NEXT:    ret i1 [[R_2]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[R_3:%.*]] = xor i1 false, true
+; CHECK-NEXT:    [[R_4:%.*]] = xor i1 [[R_3]], true
+; CHECK-NEXT:    [[C_4:%.*]] = icmp sge i8 [[X]], -11
+; CHECK-NEXT:    [[R_5:%.*]] = xor i1 [[R_4]], [[C_4]]
+; CHECK-NEXT:    ret i1 [[R_5]]
+;
+entry:
+  %c.1 = icmp sge i8 %x, -10
+  br i1 %c.1, label %bb1, label %bb2
+
+bb1:
+  %t.1 = icmp sge i8 %x, -11
+  %t.2 = icmp sge i8 %x, -10
+  %r.1 = xor i1 %t.1, %t.2
+
+  %c.2 = icmp sge i8 %x, -9
+  %r.2 = xor i1 %r.1, %c.2
+  ret i1 %r.2
+
+bb2:
+  %f.1 = icmp sge i8 %x, -10
+  %t.3 = icmp slt i8 %x, -10
+  %r.3 = xor i1 %f.1, %t.3
+
+  %t.4 = icmp slt i8 %x, -9
+  %r.4 = xor i1 %r.3, %t.4
+
+  %c.4 = icmp sge i8 %x, -11
+  %r.5 = xor i1 %r.4, %c.4
+  ret i1 %r.5
+}
+
+define i1 @test_1_variable_2_constraints_negative_constants(i8 %x, i8 %y) {
+; CHECK-LABEL: @test_1_variable_2_constraints_negative_constants(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i8 [[X]], -10
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    br i1 [[AND]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[R_1:%.*]] = xor i1 true, true
+; CHECK-NEXT:    [[R_2:%.*]] = xor i1 [[R_1]], true
+; CHECK-NEXT:    [[C_3:%.*]] = icmp sge i8 [[X]], -9
+; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], [[C_3]]
+; CHECK-NEXT:    [[R_4:%.*]] = xor i1 [[R_3]], true
+; CHECK-NEXT:    [[T_5:%.*]] = icmp sge i8 [[Y]], -9
+; CHECK-NEXT:    [[R_5:%.*]] = xor i1 [[R_4]], [[T_5]]
+; CHECK-NEXT:    ret i1 [[R_5]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[C_4:%.*]] = icmp sge i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[C_5:%.*]] = icmp sge i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[R_6:%.*]] = xor i1 [[C_4]], [[C_5]]
+; CHECK-NEXT:    [[C_6:%.*]] = icmp sge i8 [[X]], -11
+; CHECK-NEXT:    [[R_7:%.*]] = xor i1 [[R_6]], [[C_5]]
+; CHECK-NEXT:    ret i1 [[R_7]]
+;
+entry:
+  %c.1 = icmp sge i8 %x, %y
+  %c.2 = icmp sge i8 %x, -10
+  %and = and i1 %c.1, %c.2
+  br i1 %and, label %bb1, label %bb2
+
+bb1:
+  %t.1 = icmp sge i8 %x, %y
+  %t.2 = icmp sge i8 %x, -10
+  %r.1 = xor i1 %t.1, %t.2
+
+  %t.3 = icmp sge i8 %x, -10
+  %r.2 = xor i1 %r.1, %t.3
+
+  %c.3 = icmp sge i8 %x, -9
+  %r.3 = xor i1 %r.2, %c.3
+
+  %t.4 = icmp sge i8 %x, -11
+  %r.4 = xor i1 %r.3, %t.4
+
+  %t.5 = icmp sge i8 %y, -9
+  %r.5 = xor i1 %r.4, %t.5
+  ret i1 %r.5
+
+bb2:
+  %c.4 = icmp sge i8 %y, %x
+  %c.5 = icmp sge i8 %x, %y
+  %r.6 = xor i1 %c.4, %c.5
+
+  %c.6 = icmp sge i8 %x, -11
+  %r.7 = xor i1 %r.6, %c.5
+  ret i1 %r.7
 }
 
 define i1 @sge_sgt(i32 %x, i32 %y, i32 %z) {

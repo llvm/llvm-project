@@ -318,6 +318,10 @@ public:
   void VisitObjCSubscriptRefExpr(const ObjCSubscriptRefExpr *Node);
   void VisitObjCIvarRefExpr(const ObjCIvarRefExpr *Node);
   void VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *Node);
+  void VisitMaterializeSequenceExpr(const MaterializeSequenceExpr *Node);
+  void VisitBoundsCheckExpr(const BoundsCheckExpr *Node);
+  void VisitPredefinedBoundsCheckExpr(const PredefinedBoundsCheckExpr *Node);
+  void VisitGetBoundExpr(const GetBoundExpr *Node);
   void VisitOMPIteratorExpr(const OMPIteratorExpr *Node);
   void VisitConceptSpecializationExpr(const ConceptSpecializationExpr *Node);
   void VisitRequiresExpr(const RequiresExpr *Node);

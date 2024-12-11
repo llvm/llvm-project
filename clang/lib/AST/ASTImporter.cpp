@@ -1205,7 +1205,8 @@ ExpectedType ASTNodeImporter::VisitPointerType(const PointerType *T) {
   if (!ToPointeeTypeOrErr)
     return ToPointeeTypeOrErr.takeError();
 
-  return Importer.getToContext().getPointerType(*ToPointeeTypeOrErr);
+  return Importer.getToContext().getPointerType(*ToPointeeTypeOrErr,
+                                                T->getPointerAttributes());
 }
 
 ExpectedType ASTNodeImporter::VisitBlockPointerType(const BlockPointerType *T) {
@@ -1607,6 +1608,20 @@ ASTNodeImporter::VisitCountAttributedType(const CountAttributedType *T) {
       *ToWrappedTypeOrErr, CountExpr, T->isCountInBytes(), T->isOrNull(),
       ArrayRef(CoupledDecls.data(), CoupledDecls.size()));
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON */
+ExpectedType clang::ASTNodeImporter::VisitDynamicRangePointerType(
+    const clang::DynamicRangePointerType *T) {
+  // FIXME: Unsupported AST node.
+  return VisitType(T);
+}
+
+ExpectedType clang::ASTNodeImporter::VisitValueTerminatedType(
+    const clang::ValueTerminatedType *T) {
+  // FIXME: Unsupported AST node.
+  return VisitType(T);
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
 
 ExpectedType ASTNodeImporter::VisitTemplateTypeParmType(
     const TemplateTypeParmType *T) {

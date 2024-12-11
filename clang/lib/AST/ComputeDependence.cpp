@@ -21,6 +21,20 @@
 
 using namespace clang;
 
+/* TO_UPSTREAM(BoundsSafety) ON*/
+namespace {
+  template<typename Range>
+  ExprDependence SumDependence(Range R) {
+    auto Result = ExprDependence::None;
+    for (const auto *E : R) {
+      if (E)
+        Result |= cast<Expr>(E)->getDependence();
+    }
+    return Result;
+  }
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
+
 ExprDependence clang::computeDependence(FullExpr *E) {
   return E->getSubExpr()->getDependence();
 }
@@ -883,6 +897,37 @@ ExprDependence clang::computeDependence(CXXDependentScopeMemberExpr *E) {
 
 ExprDependence clang::computeDependence(MaterializeTemporaryExpr *E) {
   return E->getSubExpr()->getDependence();
+}
+
+ExprDependence clang::computeDependence(MaterializeSequenceExpr *E) {
+  // All opaque values managed by MaterializeSequenceExpr should be used by the
+  // main sub-expression, therefore it is the only visitation root we need to
+  // respect.
+  return E->getWrappedExpr()->getDependence();
+}
+
+ExprDependence clang::computeDependence(PredefinedBoundsCheckExpr *E) {
+  return SumDependence(E->children());
+}
+
+ExprDependence clang::computeDependence(BoundsCheckExpr *E) {
+  return SumDependence(E->children());
+}
+
+ExprDependence clang::computeDependence(AssumptionExpr *E) {
+  return SumDependence(E->children());
+}
+
+ExprDependence clang::computeDependence(BoundsSafetyPointerPromotionExpr *E) {
+  return SumDependence(E->children());
+}
+
+ExprDependence clang::computeDependence(GetBoundExpr *E) {
+  return E->getSubExpr()->getDependence();
+}
+
+ExprDependence clang::computeDependence(ForgePtrExpr *E) {
+  return SumDependence(E->children());
 }
 
 ExprDependence clang::computeDependence(CXXFoldExpr *E) {

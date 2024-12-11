@@ -329,6 +329,13 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::SourceLocExprClass:
   case Stmt::ConvertVectorExprClass:
   case Stmt::VAArgExprClass:
+  case Stmt::BoundsCheckExprClass:
+  case Stmt::PredefinedBoundsCheckExprClass:
+  case Stmt::AssumptionExprClass:
+  case Stmt::BoundsSafetyPointerPromotionExprClass:
+  case Stmt::MaterializeSequenceExprClass:
+  case Stmt::TerminatedByToIndexableExprClass:
+  case Stmt::TerminatedByFromIndexableExprClass:
   case Stmt::ObjCArrayLiteralClass:
   case Stmt::ObjCDictionaryLiteralClass:
   case Stmt::ObjCBoxedExprClass:
@@ -641,6 +648,13 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     CXCursor C = {K, 0, {Parent, S, TU}};
     return getSelectorIdentifierCursor(SelectorIdIndex, C);
   }
+
+  case Stmt::ForgePtrExprClass:
+    K = CXCursor_ForgePtrExpr;
+    break;
+  case Stmt::GetBoundExprClass:
+    K = CXCursor_GetBoundExpr;
+    break;
 
   case Stmt::ConceptSpecializationExprClass:
     K = CXCursor_ConceptSpecializationExpr;

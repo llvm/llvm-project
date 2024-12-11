@@ -7164,6 +7164,20 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
   }
 
   Args.AddLastArg(CmdArgs, options::OPT_ftrap_function_EQ);
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  if (Arg *A = Args.getLastArg(options::OPT_ftrap_function_returns,
+                               options::OPT_fno_trap_function_returns))
+    if (A->getOption().matches(options::OPT_ftrap_function_returns)) {
+      if (Args.getLastArg(options::OPT_ftrap_function_EQ))
+        CmdArgs.push_back("-ftrap-function-returns");
+      else
+        D.Diag(diag::err_drv_option_requires_option)
+          << "-ftrap-function-returns" << "-ftrap-function=";
+    }
+
+  Args.addOptInFlag(CmdArgs, options::OPT_funique_traps,
+                    options::OPT_fno_unique_traps);
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   // Handle -f[no-]wrapv and -f[no-]strict-overflow, which are used by both
   // clang and flang.
@@ -7638,6 +7652,58 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
   // C++ "sane" operator new.
   Args.addOptOutFlag(CmdArgs, options::OPT_fassume_sane_operator_new,
                      options::OPT_fno_assume_sane_operator_new);
+
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  // -fbounds-safety is off by default.
+  if (Arg *A = Args.getLastArg(options::OPT_fbounds_safety,
+                               options::OPT_fno_bounds_safety)) {
+    if (A->getOption().matches(options::OPT_fbounds_safety)) {
+      CmdArgs.push_back("-fbounds-safety");
+      auto Iter = Args.filtered(options::OPT_mllvm);
+      bool HasBoundsCheckOpt = std::any_of(Iter.begin(), Iter.end(), [](const Arg *A) {
+        return StringRef(A->getValue(0)).starts_with("-enable-constraint-elimination");
+      });
+      // Turn on constraint-elimination pass when -fbounds-safety is enabled when the
+      // pass is not explicitly enabled or disabled.
+      if (!HasBoundsCheckOpt) {
+        CmdArgs.push_back("-mllvm");
+        CmdArgs.push_back("-enable-constraint-elimination");
+      }
+
+      // This is inside the -fbounds-safety flag checking, such that the flag
+      // will be ignored with -Wunused-command-line-argument being triggered.
+      Args.addAllArgs(
+          CmdArgs, {options::OPT_fbounds_safety_bringup_missing_checks_EQ,
+                    options::OPT_fno_bounds_safety_bringup_missing_checks_EQ});
+    }
+  }
+
+  if (Args.hasFlag(options::OPT_fexperimental_bounds_safety_attributes,
+                   options::OPT_fno_experimental_bounds_safety_attributes,
+                   false)) {
+    CmdArgs.push_back("-fexperimental-bounds-safety-attributes");
+  }
+
+  if (Args.hasFlag(options::OPT_fbounds_attributes_cxx_experimental,
+                   options::OPT_fno_bounds_attributes_cxx_experimental,
+                   false)) {
+    CmdArgs.push_back("-fbounds-attributes-cxx-experimental");
+  }
+
+  if (Args.hasFlag(options::OPT_fbounds_attributes_objc_experimental,
+                   options::OPT_fno_bounds_attributes_objc_experimental,
+                   false)) {
+    CmdArgs.push_back("-fbounds-attributes-objc-experimental");
+  }
+
+  // -fbounds-safety-relaxed-system-headers is on by default
+  Args.addOptOutFlag(CmdArgs,
+                     options::OPT_fbounds_safety_relaxed_system_headers,
+                     options::OPT_fno_bounds_safety_relaxed_system_headers);
+
+  Args.addOptInFlag(CmdArgs, options::OPT_fbounds_safety_adoption_mode,
+                    options::OPT_fno_bounds_safety_adoption_mode);
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
 
   // -fassume-unique-vtables is on by default.
   Args.addOptOutFlag(CmdArgs, options::OPT_fassume_unique_vtables,

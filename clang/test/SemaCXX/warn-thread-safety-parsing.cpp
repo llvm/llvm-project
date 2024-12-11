@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety %s
-// RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety -std=c++98 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety -std=c++11 %s -D CPP11
+// RUN: %clang_cc1 -fsyntax-only -I%S/Inputs -verify -Wthread-safety %s
+// RUN: %clang_cc1 -fsyntax-only -I%S/Inputs -verify -Wthread-safety -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -I%S/Inputs -verify -Wthread-safety -std=c++11 %s -D CPP11
+
+#include <warn-thread-safety-parsing.h>
 
 #define LOCKABLE            __attribute__ ((lockable))
 #define SCOPED_LOCKABLE     __attribute__ ((scoped_lockable))
@@ -339,6 +341,19 @@ int gb_testfn(int y){
     // expected-warning {{'guarded_by' attribute only applies to}}
   return x;
 }
+
+void gb_function_sys_macro() _SYS_GUARDED_BY(mu1); // \
+  // expected-warning {{'_SYS_GUARDED_BY' attribute only applies to}}
+
+void gb_function_params_sys_macro(int gv_lvar _SYS_GUARDED_BY(mu1)); // \
+  // expected-warning {{'_SYS_GUARDED_BY' attribute only applies to}}
+
+int gb_testfn_sys_macro(int y){
+  int x _SYS_GUARDED_BY(mu1) = y; // \
+    // expected-warning {{'_SYS_GUARDED_BY' attribute only applies to}}
+  return x;
+}
+
 
 //2. Check argument parsing.
 

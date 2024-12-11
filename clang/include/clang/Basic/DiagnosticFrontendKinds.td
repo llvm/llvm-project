@@ -363,6 +363,38 @@ def warn_alias_with_section : Warning<
   "as the %select{aliasee|resolver}2">,
   InGroup<IgnoredAttributes>;
 
+// TO_UPSTREAM(BoundsSafety) ON
+def error_bounds_safety_lang_not_supported : Error<
+  "-fbounds-safety is supported only for C language">;
+
+def err_bounds_safety_attributes_cannot_be_disabled : Error<
+  "-fexperimental-bounds-safety-attributes cannot be disabled when "
+  "-fbounds-safety is enabled">;
+
+def err_bounds_safety_initializer_out_of_range : Error<
+  "initializing value is out of valid range">;
+
+def warn_bounds_attributes_cxx_experimental_ignored : Warning<
+  "-fbounds-attributes-cxx-experimental without -fbounds-attributes is "
+  "ignored">,
+  InGroup<BoundsAttributesCXXExperimentalIgnored>;
+
+def warn_bounds_attributes_objc_experimental_ignored : Warning<
+  "-fbounds-attributes-objc-experimental without -fbounds-attributes is "
+  "ignored">,
+  InGroup<BoundsAttributesObjCExperimentalIgnored>;
+
+def warn_bounds_safety_relaxed_system_headers_ignored : Warning<
+  "-fno-bounds-safety-relaxed-system-headers without -fbounds-safety is "
+  "ignored">,
+  InGroup<BoundsSafetyRelaxedSystemHeadersIgnored>;
+
+def warn_bounds_safety_adoption_mode_ignored : Warning<
+  "-fbounds-safety-adoption-mode without -fbounds-safety is "
+  "ignored">,
+  InGroup<BoundsSafetyAdoptionModeIgnored>;
+// TO_UPSTREAM(BoundsSafety) OFF
+
 let CategoryName = "Instrumentation Issue" in {
 def warn_profile_data_out_of_date : Warning<
   "profile data may be out of date: of %0 function%s0, %1 %plural{1:has|:have}1"

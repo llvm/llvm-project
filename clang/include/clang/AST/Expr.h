@@ -31,6 +31,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -262,6 +263,12 @@ public:
   bool isUnusedResultAWarning(const Expr *&WarnExpr, SourceLocation &Loc,
                               SourceRange &R1, SourceRange &R2,
                               ASTContext &Ctx) const;
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  bool isUnusedResultAWarning(const Expr *&WarnExpr, SourceLocation &Loc,
+                              SourceRange &R1, SourceRange &R2,
+                              ASTContext &Ctx,
+                              llvm::SmallPtrSetImpl<const OpaqueValueExpr *> &B) const;
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   /// isLValue - True if this expression is an "l-value" according to
   /// the rules of the current language.  C and C++ give somewhat
@@ -782,6 +789,18 @@ public:
   /// strlen, false otherwise.
   bool tryEvaluateStrLen(uint64_t &Result, ASTContext &Ctx) const;
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  /// If the current Expr is an array or a pointer to an array element, this
+  /// will try to statically determine the value of the last element of that
+  /// array.
+  bool tryEvaluateTerminatorElement(EvalResult &Result,
+                                    const ASTContext &Ctx) const;
+
+  bool EvaluateAsTerminatorValue(
+      llvm::APSInt &Result, const ASTContext &Ctx,
+      SideEffectsKind AllowSideEffects = SE_NoSideEffects) const;
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
   bool EvaluateCharRangeAsString(std::string &Result,
                                  const Expr *SizeExpression,
                                  const Expr *PtrExpression, ASTContext &Ctx,
@@ -836,6 +855,11 @@ public:
   NullPointerConstantKind isNullPointerConstant(
       ASTContext &Ctx,
       NullPointerConstantValueDependence NPC) const;
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  NullPointerConstantKind isNullPointerConstantIgnoreCastsAndOVEs(
+      ASTContext &Ctx, NullPointerConstantValueDependence NPC) const;
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   /// isOBJCGCCandidate - Return true if this expression may be used in a read/
   /// write barrier.
@@ -919,6 +943,8 @@ public:
   /// * What IgnoreImpCasts() skips
   /// * MaterializeTemporaryExpr
   /// * SubstNonTypeTemplateParmExpr
+  // TO_UPSTREAM(BoundsSafety)
+  Expr *IgnoreParenImpCasts(llvm::SmallPtrSetImpl<const OpaqueValueExpr *> &BoundValues) LLVM_READONLY;
   Expr *IgnoreParenImpCasts() LLVM_READONLY;
   const Expr *IgnoreParenImpCasts() const {
     return const_cast<Expr *>(this)->IgnoreParenImpCasts();
@@ -1175,6 +1201,13 @@ class OpaqueValueExpr : public Expr {
   Expr *SourceExpr;
 
 public:
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  static OpaqueValueExpr *Wrap(const ASTContext &Context, Expr *E);
+  static OpaqueValueExpr *EnsureWrapped(
+      const ASTContext &Context, Expr *E,
+      SmallVectorImpl<OpaqueValueExpr *> &OVEs);
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
+
   OpaqueValueExpr(SourceLocation Loc, QualType T, ExprValueKind VK,
                   ExprObjectKind OK = OK_Ordinary, Expr *SourceExpr = nullptr)
       : Expr(OpaqueValueExprClass, T, VK, OK), SourceExpr(SourceExpr) {
@@ -3888,6 +3921,832 @@ public:
   friend class CastExpr;
 };
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+// Attaches one or more assumptions to an expression. The assumptions are each
+// codegen'd like they were the parameter of `__builtin_assume`.
+class AssumptionExpr final
+    : public Expr,
+      private llvm::TrailingObjects<AssumptionExpr, Expr *> {
+  friend TrailingObjects;
+  friend class ASTStmtWriter;
+
+  Expr **getTrailingExprs() {
+    return const_cast<Expr **>(getTrailingObjects<Expr *>());
+  }
+
+  Expr *const *getTrailingExprs() const {
+    return getTrailingObjects<Expr *>();
+  }
+
+  AssumptionExpr(EmptyShell Empty, unsigned NumExprs)
+      : Expr(AssumptionExprClass, Empty) {
+    AssumptionExprBits.NumExprs = NumExprs;
+  }
+
+  AssumptionExpr(Expr *ResultExpr, llvm::ArrayRef<Expr *> Assumptions);
+
+public:
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == AssumptionExprClass;
+  }
+
+  static AssumptionExpr *Create(const ASTContext &Ctx, Expr *Result,
+                                llvm::ArrayRef<Expr *> Assumptions);
+
+  static AssumptionExpr *CreateEmpty(const ASTContext &Ctx, unsigned NumExprs);
+
+  Expr *getWrappedExpr() { return getTrailingExprs()[0]; }
+  const Expr *getWrappedExpr() const { return getTrailingExprs()[0]; }
+
+  void setWrappedExpr(Expr *E) {
+    if (E) {
+      getTrailingExprs()[0] = E;
+      setType(E->getType());
+      setValueKind(E->getValueKind());
+      setObjectKind(E->getObjectKind());
+    } else {
+      setType(QualType());
+    }
+  }
+
+  unsigned getNumSubExprs() const { return AssumptionExprBits.NumExprs; }
+  Expr *getSubExpr(unsigned I) { return getTrailingExprs()[I]; }
+  const Expr *getSubExpr(unsigned I) const { return getTrailingExprs()[I]; }
+  void setSubExpr(unsigned I, Expr *E) {
+    if (I == 0)
+      setWrappedExpr(E);
+    else
+      getTrailingExprs()[I] = E;
+  }
+
+  unsigned getNumAssumptions() const { return getNumSubExprs() - 1; }
+  Expr *getAssumption(unsigned I) { return getSubExpr(I + 1); }
+  const Expr *getAssumption(unsigned I) const { return getSubExpr(I + 1); }
+  void setAssumption(unsigned I, Expr *E) { setSubExpr(I + 1, E); }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return getWrappedExpr()->getBeginLoc();
+  }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return getWrappedExpr()->getEndLoc();
+  }
+
+  typedef Expr * const * assumption_iterator;
+  typedef const Expr * const * const_assumption_iterator;
+
+  assumption_iterator assumptions_begin() {
+    return reinterpret_cast<Expr * const *> (getTrailingExprs()) + 1;
+  }
+  const_assumption_iterator assumptions_begin() const {
+    return reinterpret_cast<const Expr * const *> (getTrailingExprs()) + 1;
+  }
+  assumption_iterator assumptions_end() {
+    return assumptions_begin() + getNumAssumptions();
+  }
+  const_assumption_iterator assumptions_end() const {
+    return assumptions_begin() + getNumAssumptions();
+  }
+
+  llvm::iterator_range<assumption_iterator> assumptions() {
+    return llvm::make_range(assumptions_begin(), assumptions_end());
+  }
+  llvm::iterator_range<const_assumption_iterator> assumptions() const {
+    return llvm::make_range(assumptions_begin(), assumptions_end());
+  }
+
+  child_range children() {
+    Stmt **begin = reinterpret_cast<Stmt **>(getTrailingExprs());
+    return child_range(begin, begin + getNumSubExprs());
+  }
+
+  const_child_range children() const {
+    Stmt *const *begin = reinterpret_cast<Stmt *const *>(getTrailingExprs());
+    return const_child_range(begin, begin + getNumSubExprs());
+  }
+};
+
+// Implicitly promote a pointer with external bounds to a wide pointer. Although
+// this expression doesn't belong to the CastExpr family, it should usually be
+// treated as such.
+class BoundsSafetyPointerPromotionExpr final
+    : public Expr,
+      private llvm::TrailingObjects<BoundsSafetyPointerPromotionExpr, Stmt *> {
+  friend TrailingObjects;
+  friend class ASTStmtWriter;
+
+  BoundsSafetyPointerPromotionExpr(EmptyShell Empty)
+    : Expr(BoundsSafetyPointerPromotionExprClass, Empty) {
+    setPointer(nullptr);
+    setNullCheck(false);
+  }
+
+  BoundsSafetyPointerPromotionExpr(QualType QT, Expr *Ptr, Expr *UpperBound,
+                                Expr *LowerBound, bool NullCheck = false)
+      : Expr(BoundsSafetyPointerPromotionExprClass, QT, VK_PRValue, OK_Ordinary) {
+    setPointer(Ptr);
+    setNullCheck(NullCheck);
+    if (Stmt **lowerPtr = getLowerBoundPtr())
+      *lowerPtr = LowerBound;
+    if (Stmt **upperPtr = getUpperBoundPtr())
+      *upperPtr = UpperBound;
+    setDependence(computeDependence(this));
+  }
+
+  BoundsSafetyPointerPromotionExpr *unconst() const {
+    return const_cast<BoundsSafetyPointerPromotionExpr *>(this);
+  }
+
+  Stmt **getPointerPtr();
+  Stmt **getLowerBoundPtr();
+  Stmt **getUpperBoundPtr();
+
+public:
+  static BoundsSafetyPointerPromotionExpr *
+  Create(const ASTContext &Context, QualType QT, Expr *Ptr, Expr *UpperBound,
+         Expr *LowerBound = nullptr, bool NullCheck = false);
+
+  static BoundsSafetyPointerPromotionExpr *CreateEmpty(const ASTContext &Context,
+                                                    unsigned SubExprCount);
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return getPointer()->getBeginLoc();
+  }
+
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return getPointer()->getEndLoc();
+  }
+
+  Expr *getSubExprAsWritten();
+  Expr *getPointer() { return cast_or_null<Expr>(*getPointerPtr()); }
+  Expr *getLowerBound() { return cast_or_null<Expr>(*getLowerBoundPtr()); }
+  Expr *getUpperBound() { return cast_or_null<Expr>(*getUpperBoundPtr()); }
+  const Expr *getSubExpr() const { return getPointer(); }
+  const Expr *getPointer() const { return unconst()->getPointer(); }
+  const Expr *getLowerBound() const { return unconst()->getLowerBound(); }
+  const Expr *getUpperBound() const { return unconst()->getUpperBound(); }
+  bool getNullCheck() const {
+    return BoundsSafetyPointerPromotionExprBits.NullCheck;
+  }
+
+  Expr *getSubExpr() { return getPointer(); }
+  const Expr *getSubExprAsWritten() const {
+    return unconst()->getSubExprAsWritten();
+  }
+
+  void setPointer(Expr *newValue) { *getPointerPtr() = newValue; }
+  void setLowerBound(Expr *newValue) { *getLowerBoundPtr() = newValue; }
+  void setUpperBound(Expr *newValue) { *getUpperBoundPtr() = newValue; }
+  void setNullCheck(bool NullCheck) {
+    BoundsSafetyPointerPromotionExprBits.NullCheck = NullCheck;
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == BoundsSafetyPointerPromotionExprClass;
+  }
+
+  unsigned getNumChildren() const {
+    return unconst()->getLowerBoundPtr() ? 3 : 2;
+  }
+
+  child_range children() {
+    return child_range(getPointerPtr(), getPointerPtr() + getNumChildren());
+  }
+
+  const_child_range children() const {
+    auto Range = unconst()->children();
+    return const_child_range(Range.begin(), Range.end());
+  }
+};
+
+/// __unsafe_forge_bidi_indexable(addr, size)
+/// __unsafe_forge_single(addr)
+/// __unsafe_forge_terminated_by(addr, terminator)
+class ForgePtrExpr final : public Expr {
+  enum { ADDR, SIZE, TERMINATOR, NUM_SUBEXPRS };
+
+  Stmt *SubExprs[NUM_SUBEXPRS];
+
+  SourceLocation KWLoc;
+  SourceLocation RParenLoc;
+
+public:
+  ForgePtrExpr(QualType T, ExprValueKind VK, Expr *AddrExpr, Expr *SizeExpr,
+               Expr *TermExpr, SourceLocation KWLoc, SourceLocation RParenLoc)
+      : Expr(ForgePtrExprClass, T, VK, OK_Ordinary), KWLoc(KWLoc),
+        RParenLoc(RParenLoc) {
+    SubExprs[ADDR] = AddrExpr;
+    SubExprs[SIZE] = SizeExpr;
+    SubExprs[TERMINATOR] = TermExpr;
+    setDependence(computeDependence(this));
+  }
+
+  explicit ForgePtrExpr(EmptyShell Empty)
+      : Expr(ForgePtrExprClass, Empty) {
+    SubExprs[ADDR] = nullptr;
+    SubExprs[SIZE] = nullptr;
+    SubExprs[TERMINATOR] = nullptr;
+  }
+
+  bool ForgesBidiIndexablePointer() const {
+    return !ForgesSinglePointer() && !ForgesTerminatedByPointer();
+  }
+  bool ForgesSinglePointer() const {
+    auto BaseFA = getType()->getAs<PointerType>()->getPointerAttributes();
+    return !BaseFA.hasUpperBound() && !ForgesTerminatedByPointer();
+  }
+  bool ForgesTerminatedByPointer() const {
+    return getType()->isValueTerminatedType();
+  }
+
+  Expr *getAddr() const { return cast<Expr>(SubExprs[ADDR]); }
+  void setAddr(Expr *E) { SubExprs[ADDR] = E; }
+  Expr *getSize() const { return cast_or_null<Expr>(SubExprs[SIZE]); }
+  void setSize(Expr *E) { SubExprs[SIZE] = E; }
+  Expr *getTerminator() const {
+    return cast_or_null<Expr>(SubExprs[TERMINATOR]);
+  }
+  void setTerminator(Expr *E) { SubExprs[TERMINATOR] = E; }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY { return KWLoc; }
+  void setBeginLoc(SourceLocation Loc) { KWLoc = Loc; }
+  SourceLocation getEndLoc() const LLVM_READONLY { return RParenLoc; }
+  void setEndLoc(SourceLocation Loc) { RParenLoc = Loc; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == ForgePtrExprClass;
+  }
+
+  // Iterators
+  child_range children() {
+    return child_range(&SubExprs[0], &SubExprs[0] + NUM_SUBEXPRS);
+  }
+  const_child_range children() const {
+    return const_child_range(&SubExprs[0], &SubExprs[0] + NUM_SUBEXPRS);
+  }
+};
+
+/// GetBoundExpr - get the lower or upper bound of a pointer expression.
+/// This would be a builtin if it wasn't easier to create an entirely new
+/// expression subclass than to instantiate a call to a builtin from Sema.
+/// Most GetBoundExpr are synthetic, and their source locations default to
+class GetBoundExpr final : public Expr {
+public:
+  enum BoundKind { BK_Lower, BK_Upper };
+
+private:
+  Stmt *SubExpr;
+  BoundKind Kind;
+  SourceLocation BuiltinLoc, RParenLoc;
+
+public:
+  GetBoundExpr(SourceLocation BuiltinLoc, SourceLocation RParenLoc,
+               Expr *SubExpr, BoundKind Kind, QualType ResultType)
+    : Expr(GetBoundExprClass, ResultType, VK_PRValue, OK_Ordinary),
+      SubExpr(SubExpr), Kind(Kind), BuiltinLoc(BuiltinLoc), RParenLoc(RParenLoc)
+  {
+    setDependence(computeDependence(this));
+  }
+
+  GetBoundExpr(Expr *SubExpr, BoundKind Kind, QualType ResultType)
+    : GetBoundExpr(SourceLocation(), SourceLocation(), SubExpr, Kind,
+                   ResultType)
+  { }
+
+  explicit GetBoundExpr(EmptyShell Empty)
+      : Expr(GetBoundExprClass, Empty), SubExpr(nullptr), Kind(BK_Lower) {
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == GetBoundExprClass;
+  }
+
+  SourceLocation getBuiltinLoc() const LLVM_READONLY { return BuiltinLoc; }
+  void setBuiltinLoc(SourceLocation Loc) { BuiltinLoc = Loc; }
+
+  SourceLocation getRParenLoc() const LLVM_READONLY { return RParenLoc; }
+  void setRParenLoc(SourceLocation Loc) { RParenLoc = Loc; }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return BuiltinLoc.isInvalid() ? getSubExpr()->getBeginLoc() : BuiltinLoc;
+  }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return RParenLoc.isInvalid() ? getSubExpr()->getEndLoc() : RParenLoc;
+  }
+
+  child_range children() {
+    return child_range(&SubExpr, &SubExpr + 1);
+  }
+
+  const_child_range children() const {
+    return const_child_range(&SubExpr, &SubExpr + 1);
+  }
+
+  Expr *getSubExpr() { return cast<Expr>(SubExpr); }
+  const Expr *getSubExpr() const { return cast<Expr>(SubExpr); }
+  void setSubExpr(Expr *NewValue) { SubExpr = NewValue; }
+
+  BoundKind getBoundKind() const { return Kind; }
+  void setBoundKind(BoundKind K) { Kind = K; }
+};
+
+enum class BoundsCheckKind : unsigned {
+  FlexibleArrayCountAssign,
+  FlexibleArrayCountCast,
+  FlexibleArrayCountDeref
+};
+
+/// PredefinedBoundsCheckExpr - AST representation of bounds checks that
+/// BoundsSafety added. This is a wrapper expression to wrap the expression
+/// (GuardedExpr) that will be executed if the bounds check succeeds. The
+/// subexpressions except the first one (GuardedExpr) are used for bounds check
+/// whose semantics is determined by the kind of bounds check (BoundsCheckKind).
+/// Most subexpressions are likely to be OpaqueValueExpr to avoid re-evaluating
+/// expressions. As bounds checks are necessarily implicit, the expression uses
+/// the source location of the wrapped expression.
+class PredefinedBoundsCheckExpr final
+    : public Expr,
+      public llvm::TrailingObjects<PredefinedBoundsCheckExpr, Stmt *> {
+  static constexpr unsigned CheckArgsOffset = 1;
+
+  PredefinedBoundsCheckExpr(Expr *GuardedExpr, BoundsCheckKind Kind,
+                            ArrayRef<Expr *> CheckArgs);
+  PredefinedBoundsCheckExpr(EmptyShell Empty, unsigned NumChildren)
+      : Expr(PredefinedBoundsCheckExprClass, Empty) {
+    PredefinedBoundsCheckExprBits.NumChildren = NumChildren;
+  }
+
+  Stmt **getTrailingStmts() {
+    return const_cast<Stmt **>(getTrailingObjects<Stmt *>());
+  }
+
+  Stmt *const *getTrailingStmts() const { return getTrailingObjects<Stmt *>(); }
+
+  Expr **getSubExprs() { return reinterpret_cast<Expr **>(getTrailingStmts()); }
+
+  Expr *const *getSubExprs() const {
+    return reinterpret_cast<Expr *const *>(getTrailingStmts());
+  }
+
+public:
+  static PredefinedBoundsCheckExpr *Create(ASTContext &Ctx, Expr *GuardedExpr,
+                                           BoundsCheckKind Kind,
+                                           ArrayRef<Expr *> CheckArgs);
+
+  static PredefinedBoundsCheckExpr *CreateEmpty(ASTContext &Ctx,
+                                                unsigned NumChildren);
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == PredefinedBoundsCheckExprClass;
+  }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return getGuardedExpr()->getBeginLoc();
+  }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return getGuardedExpr()->getEndLoc();
+  }
+
+  unsigned getNumSubExprs() const {
+    return PredefinedBoundsCheckExprBits.NumChildren;
+  }
+
+  unsigned getNumCheckArgs() const {
+    assert(getNumSubExprs() >= CheckArgsOffset);
+    return getNumSubExprs() - CheckArgsOffset;
+  }
+
+  static constexpr unsigned getCheckArgsOffset() { return CheckArgsOffset; }
+
+  typedef Expr *const *checkargs_iterator;
+  typedef const Expr *const *const_checkargs_iterator;
+
+  checkargs_iterator checkargs_begin() {
+    return reinterpret_cast<Expr *const *>(getSubExprs() +
+                                           getCheckArgsOffset());
+  }
+  const_checkargs_iterator checkargs_begin() const {
+    return reinterpret_cast<const Expr *const *>(getSubExprs() +
+                                                 getCheckArgsOffset());
+  }
+  checkargs_iterator checkargs_end() {
+    return checkargs_begin() + getNumCheckArgs();
+  }
+  const_checkargs_iterator checkargs_end() const {
+    return checkargs_begin() + getNumCheckArgs();
+  }
+
+  llvm::iterator_range<checkargs_iterator> checkargs() {
+    return llvm::make_range(checkargs_begin(), checkargs_end());
+  }
+  llvm::iterator_range<const_checkargs_iterator> checkargs() const {
+    return llvm::make_range(checkargs_begin(), checkargs_end());
+  }
+
+  child_range children() {
+    Stmt **begin = getTrailingStmts();
+    return child_range(begin, begin + getNumSubExprs());
+  }
+
+  const_child_range children() const {
+    Stmt *const *begin = getTrailingStmts();
+    return const_child_range(begin, begin + getNumSubExprs());
+  }
+
+  BoundsCheckKind getKind() const {
+    return static_cast<BoundsCheckKind>(PredefinedBoundsCheckExprBits.Kind);
+  }
+
+  StringRef getKindName() const;
+
+  Expr *getGuardedExpr() { return getSubExpr(0); }
+  const Expr *getGuardedExpr() const { return getSubExpr(0); }
+  void setGuardedExpr(Expr *NewValue) { setSubExpr(0, NewValue); }
+
+  Expr *getSubExpr(unsigned i) {
+    assert(i < getNumSubExprs());
+    return cast<Expr>(getTrailingStmts()[i]);
+  }
+
+  const Expr *getSubExpr(unsigned i) const {
+    assert(i < getNumSubExprs());
+    return cast<Expr>(getTrailingStmts()[i]);
+  }
+
+  // This returns the pointer to the base struct with flexible array member.
+  const Expr *getFamBasePtr() const {
+    switch (getKind()) {
+    case BoundsCheckKind::FlexibleArrayCountAssign:
+    case BoundsCheckKind::FlexibleArrayCountCast:
+    case BoundsCheckKind::FlexibleArrayCountDeref:
+      return getSubExpr(CheckArgsOffset);
+    }
+    llvm_unreachable("Unsupported BoundsCheckKind");
+  }
+
+  const Expr *getFamPtr() const {
+    switch (getKind()) {
+    case BoundsCheckKind::FlexibleArrayCountAssign:
+    case BoundsCheckKind::FlexibleArrayCountCast:
+    case BoundsCheckKind::FlexibleArrayCountDeref:
+      return getSubExpr(CheckArgsOffset + 1);
+    }
+    llvm_unreachable("Unsupported BoundsCheckKind");
+  }
+
+  const Expr *getFamCount() const {
+    switch (getKind()) {
+    case BoundsCheckKind::FlexibleArrayCountAssign:
+    case BoundsCheckKind::FlexibleArrayCountCast:
+    case BoundsCheckKind::FlexibleArrayCountDeref:
+      return getSubExpr(CheckArgsOffset + 2);
+    }
+    llvm_unreachable("Unsupported BoundsCheckKind");
+  }
+
+  void setSubExpr(unsigned i, Expr *E) {
+    assert(i < getNumSubExprs());
+    getTrailingStmts()[i] = E;
+  }
+};
+
+/// BoundsCheckExpr - AST representation of a bounds check that BoundsSafety added.
+/// This wraps the expression that will be evaluated if the bounds check
+/// succeeds or evaluated before the bounds checks if PostGuard is true. The object
+/// also holds all the bounds to check. Many operands are
+/// likely to be OpaqueValueExpr to avoid re-evaluating expressions. As bounds
+/// checks are necessarily implicit, they never have a source location.
+class BoundsCheckExpr final :
+    public Expr, public llvm::TrailingObjects<BoundsCheckExpr, Stmt *> {
+  BoundsCheckExpr(Expr *GuardedExpr, Expr *Cond,
+                  ArrayRef<OpaqueValueExpr *> CommonExprs);
+  BoundsCheckExpr(EmptyShell Empty, unsigned NumChildren)
+      : Expr(BoundsCheckExprClass, Empty) {
+    BoundsCheckExprBits.NumChildren = NumChildren;
+  }
+
+  Stmt **getTrailingStmts() {
+    return const_cast<Stmt **>(getTrailingObjects<Stmt *>());
+  }
+
+  Stmt *const *getTrailingStmts() const {
+    return getTrailingObjects<Stmt *>();
+  }
+
+  Expr **getSubExprs() {
+    return reinterpret_cast<Expr **>(getTrailingStmts());
+  }
+
+  Expr *const *getSubExprs() const {
+    return reinterpret_cast<Expr *const *>(getTrailingStmts());
+  }
+
+public:
+  static BoundsCheckExpr *Create(ASTContext &Ctx, Expr *GuardedExpr,
+                                 Expr *Cond, ArrayRef<OpaqueValueExpr *> CommonExprs);
+
+  static BoundsCheckExpr *CreateEmpty(ASTContext &Ctx, unsigned NumChildren);
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == BoundsCheckExprClass;
+  }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return getGuardedExpr()->getBeginLoc();
+  }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return getGuardedExpr()->getEndLoc();
+  }
+
+  unsigned getNumSubExprs() const { return BoundsCheckExprBits.NumChildren; }
+  unsigned getNumCommonExprs() const {
+    assert(getNumSubExprs() >= 2);
+    return getNumSubExprs() - 2;
+  }
+
+  typedef OpaqueValueExpr * const * opaquevalues_iterator;
+  typedef const OpaqueValueExpr * const * const_opaquevalues_iterator;
+
+  opaquevalues_iterator opaquevalues_begin() {
+    return reinterpret_cast<OpaqueValueExpr * const *> (getSubExprs() + 2);
+  }
+  const_opaquevalues_iterator opaquevalues_begin() const {
+    return reinterpret_cast<const OpaqueValueExpr * const *> (getSubExprs() + 2);
+  }
+  opaquevalues_iterator opaquevalues_end() {
+    return opaquevalues_begin() + getNumCommonExprs();
+  }
+  const_opaquevalues_iterator opaquevalues_end() const {
+    return opaquevalues_begin() + getNumCommonExprs();
+  }
+
+  llvm::iterator_range<opaquevalues_iterator> opaquevalues() {
+    return llvm::make_range(opaquevalues_begin(), opaquevalues_end());
+  }
+  llvm::iterator_range<const_opaquevalues_iterator> opaquevalues() const {
+    return llvm::make_range(opaquevalues_begin(), opaquevalues_end());
+  }
+
+  child_range children() {
+    Stmt **begin = getTrailingStmts();
+    return child_range(begin, begin + getNumSubExprs());
+  }
+
+  const_child_range children() const {
+    Stmt *const *begin = getTrailingStmts();
+    return const_child_range(begin, begin + getNumSubExprs());
+  }
+
+  Expr *getGuardedExpr() { return getSubExpr(0); }
+  const Expr *getGuardedExpr() const { return getSubExpr(0); }
+  void setGuardedExpr(Expr *NewValue) { setSubExpr(0, NewValue); }
+
+  Expr *getCond() { return getSubExpr(1); }
+  const Expr *getCond() const { return getSubExpr(1); }
+  void setCond(Expr *Cond) { setSubExpr(1, Cond); }
+
+  Expr *getSubExpr(unsigned i) {
+    assert(i < getNumSubExprs());
+    return cast<Expr>(getTrailingStmts()[i]);
+  }
+
+  const Expr *getSubExpr(unsigned i) const {
+    assert(i < getNumSubExprs());
+    return cast<Expr>(getTrailingStmts()[i]);
+  }
+
+  void setSubExpr(unsigned i, Expr *E) {
+    assert(i < getNumSubExprs());
+    getTrailingStmts()[i] = E;
+  }
+};
+
+class MaterializeSequenceExpr final :
+    public Expr, public llvm::TrailingObjects<MaterializeSequenceExpr, Expr *> {
+
+  MaterializeSequenceExpr(Expr *WrappedExpr, ArrayRef<OpaqueValueExpr *> Values, bool Unbind)
+    : Expr(MaterializeSequenceExprClass, WrappedExpr->getType(),
+    WrappedExpr->getValueKind(),
+    WrappedExpr->getObjectKind()) {
+    MaterializeSequenceExprBits.NumExprs = Values.size() + 1;
+    MaterializeSequenceExprBits.Unbind = Unbind;
+    getSubExprs()[0] = WrappedExpr;
+    std::copy(Values.begin(), Values.end(), getSubExprs() + 1);
+    setDependence(computeDependence(this));
+  }
+
+  MaterializeSequenceExpr(EmptyShell Empty, unsigned NumExprs)
+      : Expr(MaterializeSequenceExprClass, Empty) {
+    MaterializeSequenceExprBits.NumExprs = NumExprs;
+  }
+
+  Expr **getSubExprs() {
+    return getTrailingObjects<Expr *>();
+  }
+
+  Expr *const *getSubExprs() const {
+    return getTrailingObjects<Expr *>();
+  }
+
+  friend class ASTStmtReader;
+public:
+  static MaterializeSequenceExpr *Create(const ASTContext &Ctx, Expr *WrappedExpr,
+                                         ArrayRef<OpaqueValueExpr *> Values,
+                                         bool Unbind = false);
+
+  static MaterializeSequenceExpr *CreateEmpty(const ASTContext &Ctx, unsigned NumExprs);
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == MaterializeSequenceExprClass;
+  }
+
+  unsigned getNumSubExprs() const {
+    return MaterializeSequenceExprBits.NumExprs;
+  }
+
+  bool isBinding() const {
+    return !isUnbinding();
+  }
+
+  bool isUnbinding() const {
+    return MaterializeSequenceExprBits.Unbind;
+  }
+
+  unsigned getNumOpaqueValueExprs() const {
+    assert(getNumSubExprs() > 1);
+    return getNumSubExprs() - 1;
+  }
+
+  Expr *getWrappedExpr() const {
+    assert(getNumSubExprs() > 0);
+    return getSubExprs()[0];
+  }
+
+  typedef OpaqueValueExpr * const * opaquevalues_iterator;
+  typedef const OpaqueValueExpr * const * const_opaquevalues_iterator;
+
+  opaquevalues_iterator opaquevalues_begin() {
+    return reinterpret_cast<OpaqueValueExpr * const *> (getSubExprs() + 1);
+  }
+  const_opaquevalues_iterator opaquevalues_begin() const {
+    return reinterpret_cast<const OpaqueValueExpr * const *> (getSubExprs() + 1);
+  }
+  opaquevalues_iterator opaquevalues_end() {
+    return opaquevalues_begin() + getNumOpaqueValueExprs();
+  }
+  const_opaquevalues_iterator opaquevalues_end() const {
+    return opaquevalues_begin() + getNumOpaqueValueExprs();
+  }
+
+  llvm::iterator_range<opaquevalues_iterator> opaquevalues() {
+    return llvm::make_range(opaquevalues_begin(), opaquevalues_end());
+  }
+  llvm::iterator_range<const_opaquevalues_iterator> opaquevalues() const {
+    return llvm::make_range(opaquevalues_begin(), opaquevalues_end());
+  }
+
+  SourceLocation getBeginLoc() const {
+    return getWrappedExpr()->getBeginLoc();
+  }
+
+  SourceLocation getEndLoc() const {
+    return getWrappedExpr()->getEndLoc();
+  }
+
+  child_range children() {
+    Stmt **begin = reinterpret_cast<Stmt **>(getSubExprs());
+    return child_range(begin,
+                       begin + getNumSubExprs());
+  }
+
+  const_child_range children() const {
+    Stmt *const *begin = reinterpret_cast<Stmt *const *>(getSubExprs());
+    return const_child_range(begin,
+                             begin + getNumSubExprs());
+  }
+};
+
+/// TerminatedByToIndexableExpr - The AST representation of
+/// __builtin_terminated_by_to_indexable() and
+/// __builtin_unsafe_terminated_by_to_indexable().
+class TerminatedByToIndexableExpr final : public Expr {
+private:
+  enum { POINTER, TERMINATOR, END_EXPR };
+  Stmt *SubExprs[END_EXPR];
+  bool IncludeTerminator;
+  SourceLocation BuiltinLoc, RParenLoc;
+
+public:
+  TerminatedByToIndexableExpr(SourceLocation BuiltinLoc,
+                              SourceLocation RParenLoc, Expr *Pointer,
+                              Expr *Terminator, bool IncludeTerminator,
+                              QualType ResultType)
+      : Expr(TerminatedByToIndexableExprClass, ResultType, VK_PRValue,
+             OK_Ordinary),
+        SubExprs{Pointer, Terminator}, IncludeTerminator(IncludeTerminator),
+        BuiltinLoc(BuiltinLoc), RParenLoc(RParenLoc) {}
+
+  TerminatedByToIndexableExpr(Expr *Pointer, Expr *Terminator,
+                              QualType ResultType)
+      : TerminatedByToIndexableExpr(SourceLocation(), SourceLocation(), Pointer,
+                                    Terminator, false, ResultType) {}
+
+  explicit TerminatedByToIndexableExpr(EmptyShell Empty)
+      : Expr(TerminatedByToIndexableExprClass, Empty), SubExprs{},
+        IncludeTerminator(false) {}
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == TerminatedByToIndexableExprClass;
+  }
+
+  SourceLocation getBuiltinLoc() const LLVM_READONLY { return BuiltinLoc; }
+  void setBuiltinLoc(SourceLocation Loc) { BuiltinLoc = Loc; }
+
+  SourceLocation getRParenLoc() const LLVM_READONLY { return RParenLoc; }
+  void setRParenLoc(SourceLocation Loc) { RParenLoc = Loc; }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return BuiltinLoc.isInvalid() ? getPointer()->getBeginLoc() : BuiltinLoc;
+  }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return RParenLoc.isInvalid() ? getPointer()->getEndLoc() : RParenLoc;
+  }
+
+  child_range children() { return child_range(SubExprs, SubExprs + END_EXPR); }
+
+  const_child_range children() const {
+    return const_child_range(SubExprs, SubExprs + END_EXPR);
+  }
+
+  Expr *getPointer() const { return cast<Expr>(SubExprs[POINTER]); }
+  void setPointer(Expr *E) { SubExprs[POINTER] = E; }
+  Expr *getTerminator() const { return cast<Expr>(SubExprs[TERMINATOR]); }
+  void setTerminator(Expr *E) { SubExprs[TERMINATOR] = E; }
+
+  bool includesTerminator() const { return IncludeTerminator; }
+  void setIncludeTerminator(bool Include) { IncludeTerminator = Include; }
+};
+
+/// TerminatedByFromIndexableExpr - The AST representation of
+/// __builtin_unsafe_terminated_by_from_indexable().
+class TerminatedByFromIndexableExpr final : public Expr {
+private:
+  enum { POINTER, POINTER_TO_TERMINATOR, END_EXPR };
+  Stmt *SubExprs[END_EXPR];
+  SourceLocation BuiltinLoc, RParenLoc;
+
+public:
+  TerminatedByFromIndexableExpr(SourceLocation BuiltinLoc,
+                                SourceLocation RParenLoc, Expr *Pointer,
+                                Expr *PointerToTerminator, QualType ResultType)
+      : Expr(TerminatedByFromIndexableExprClass, ResultType, VK_PRValue,
+             OK_Ordinary),
+        SubExprs{Pointer, PointerToTerminator}, BuiltinLoc(BuiltinLoc),
+        RParenLoc(RParenLoc) {}
+
+  TerminatedByFromIndexableExpr(Expr *Pointer, Expr *PointerToTerminator,
+                                QualType ResultType)
+      : TerminatedByFromIndexableExpr(SourceLocation(), SourceLocation(),
+                                      Pointer, PointerToTerminator,
+                                      ResultType) {}
+
+  explicit TerminatedByFromIndexableExpr(EmptyShell Empty)
+      : Expr(TerminatedByFromIndexableExprClass, Empty), SubExprs{} {}
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == TerminatedByFromIndexableExprClass;
+  }
+
+  SourceLocation getBuiltinLoc() const LLVM_READONLY { return BuiltinLoc; }
+  void setBuiltinLoc(SourceLocation Loc) { BuiltinLoc = Loc; }
+
+  SourceLocation getRParenLoc() const LLVM_READONLY { return RParenLoc; }
+  void setRParenLoc(SourceLocation Loc) { RParenLoc = Loc; }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return BuiltinLoc.isInvalid() ? getPointer()->getBeginLoc() : BuiltinLoc;
+  }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    if (RParenLoc.isValid())
+      return RParenLoc;
+    return getPointerToTerminator() ? getPointerToTerminator()->getEndLoc()
+                                    : SourceLocation();
+  }
+
+  child_range children() { return child_range(SubExprs, SubExprs + END_EXPR); }
+
+  const_child_range children() const {
+    return const_child_range(SubExprs, SubExprs + END_EXPR);
+  }
+
+  Expr *getPointer() const { return cast<Expr>(SubExprs[POINTER]); }
+  void setPointer(Expr *E) { SubExprs[POINTER] = E; }
+  Expr *getPointerToTerminator() const {
+    return cast_or_null<Expr>(SubExprs[POINTER_TO_TERMINATOR]);
+  }
+  void setPointerToTerminator(Expr *E) { SubExprs[POINTER_TO_TERMINATOR] = E; }
+};
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 /// A builtin binary operation expression such as "x + y" or "x <= y".
 ///
 /// This expression node kind describes a builtin binary operation,
@@ -5140,6 +5999,28 @@ public:
     assert(Init < getNumInits() && "Initializer access out of range!");
     return cast_or_null<Expr>(InitExprs[Init]);
   }
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  Expr *getInitForField(const ValueDecl *VD) {
+    assert(isSemanticForm());
+    if (auto FD = dyn_cast<FieldDecl>(VD)) {
+      unsigned FieldIdx = 0;
+      for (FieldDecl *Sibling : FD->getParent()->fields()) {
+        if (Sibling->isUnnamedBitField())
+          continue;
+        if (Sibling == FD)
+          break;
+        ++FieldIdx;
+      }
+      if (FieldIdx >= getNumInits())
+        return nullptr;
+      return getInit(FieldIdx);
+    }
+
+    auto IFD = cast<IndirectFieldDecl>(VD);
+    return getInitForField(IFD->getAnonField());
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   void setInit(unsigned Init, Expr *expr) {
     assert(Init < getNumInits() && "Initializer access out of range!");

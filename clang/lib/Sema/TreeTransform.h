@@ -136,6 +136,12 @@ protected:
   /// rather than in the subclass (e.g., lambda closure types).
   llvm::DenseMap<Decl *, Decl *> TransformedLocalDecls;
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  /// When MaterializeSequenceExpr is stripped, its children OpaqueValueExprs
+  /// should also be removed and all the subexpressions of the OVEs should
+  /// also be unwrapped.
+  llvm::SmallPtrSet<OpaqueValueExpr *, 2> RemovedOVEs;
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 public:
   /// Initializes a new tree transformer.
   TreeTransform(Sema &SemaRef) : SemaRef(SemaRef) { }
@@ -837,7 +843,9 @@ public:
   ///
   /// By default, performs semantic analysis when building the pointer type.
   /// Subclasses may override this routine to provide different behavior.
-  QualType RebuildPointerType(QualType PointeeType, SourceLocation Sigil);
+  QualType RebuildPointerType(QualType PointeeType,
+                              BoundsSafetyPointerAttributes Attr,
+                              SourceLocation Sigil);
 
   /// Build a new block pointer type given its pointee type.
   ///
@@ -3017,9 +3025,13 @@ public:
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
   ExprResult RebuildCompoundLiteralExpr(SourceLocation LParenLoc,
-                                              TypeSourceInfo *TInfo,
-                                              SourceLocation RParenLoc,
-                                              Expr *Init) {
+                                        TypeSourceInfo *TInfo,
+                                        SourceLocation RParenLoc, Expr *Init,
+                                        /*TO_UPSTREAM(BoundsSafety) ON */
+                                        bool IsFileScope
+                                        /*TO_UPSTREAM(BoundsSafety) OFF */
+  ) {
+
     return getSema().BuildCompoundLiteralExpr(LParenLoc, TInfo, RParenLoc,
                                               Init);
   }
@@ -4079,6 +4091,59 @@ public:
   ExprResult RebuildRecoveryExpr(SourceLocation BeginLoc, SourceLocation EndLoc,
                                  ArrayRef<Expr *> SubExprs, QualType Type) {
     return getSema().CreateRecoveryExpr(BeginLoc, EndLoc, SubExprs, Type);
+  }
+
+  /// Build a BoundsSafety '__builtin_unsafe_forge_bidi_indexable' or
+  /// '__builtin_forge_single' expression.
+  ExprResult RebuildForgePtrExpr(SourceLocation KWLoc, QualType ResultType,
+                                 Expr *Addr, Expr *Size,
+                                 SourceLocation RParenLoc) {
+    return getSema().BuildForgePtrExpr(KWLoc, RParenLoc, ResultType, Addr,
+                                       Size);
+  }
+
+  /// Build a BoundsSafety '__builtin_get_pointer_{lower,upper}_bound' expression.
+  ExprResult RebuildGetBoundExpr(SourceLocation BeginLoc, SourceLocation EndLoc,
+                                 Expr *SubExpr, GetBoundExpr::BoundKind Kind,
+                                 bool RawPointer) {
+    return Kind == GetBoundExpr::BK_Lower
+        ? getSema().BuildLowerBoundExpr(SubExpr, BeginLoc, EndLoc, RawPointer)
+        : getSema().BuildUpperBoundExpr(SubExpr, BeginLoc, EndLoc, RawPointer);
+  }
+
+  ExprResult
+  RebuildPredefinedBoundsCheckExpr(Expr *GuardedExpr, BoundsCheckKind Kind,
+                                   llvm::ArrayRef<Expr *> CheckArgs) {
+    return getSema().BuildPredefinedBoundsCheckExpr(GuardedExpr, Kind,
+                                                    CheckArgs);
+  }
+
+  /// Build a BoundsSafety bounds check expression.
+  ExprResult
+  RebuildBoundsCheckExpr(Expr *GuardedExpr, Expr *Cond,
+                         llvm::ArrayRef<OpaqueValueExpr *> CommonExprs) {
+    return getSema().BuildBoundsCheckExpr(GuardedExpr, Cond, CommonExprs);
+  }
+
+  ExprResult RebuildMaterializeSequenceExpr(Expr *Wrapped,
+                                            ArrayRef<OpaqueValueExpr *> Values) {
+    return getSema().BuildMaterializeSequenceExpr(Wrapped, Values);
+  }
+
+  ExprResult RebuildTerminatedByToIndexableExpr(SourceLocation BeginLoc,
+                                                SourceLocation EndLoc,
+                                                Expr *PointerExpr,
+                                                Expr *TerminatorExpr,
+                                                bool IncludeTerminator) {
+    return getSema().BuildTerminatedByToIndexableExpr(
+        PointerExpr, TerminatorExpr, IncludeTerminator, BeginLoc, EndLoc);
+  }
+
+  ExprResult RebuildTerminatedByFromIndexableExpr(
+      SourceLocation BeginLoc, SourceLocation EndLoc, Expr *TerminatorExpr,
+      Expr *PointerExpr, Expr *PointerToTerminatorExpr) {
+    return getSema().BuildTerminatedByFromIndexableExpr(
+        TerminatorExpr, PointerExpr, PointerToTerminatorExpr, BeginLoc, EndLoc);
   }
 
   StmtResult RebuildOpenACCComputeConstruct(OpenACCDirectiveKind K,
@@ -5384,7 +5449,8 @@ QualType TreeTransform<Derived>::TransformPointerType(TypeLocBuilder &TLB,
 
   if (getDerived().AlwaysRebuild() ||
       PointeeType != TL.getPointeeLoc().getType()) {
-    Result = getDerived().RebuildPointerType(PointeeType, TL.getSigilLoc());
+    Result = getDerived().RebuildPointerType(
+        PointeeType, TL.getPointerAttributes(), TL.getSigilLoc());
     if (Result.isNull())
       return QualType();
   }
@@ -7477,14 +7543,118 @@ QualType TreeTransform<Derived>::TransformCountAttributedType(
   QualType Result = TL.getType();
   if (getDerived().AlwaysRebuild() || InnerTy != OldTy->desugar() ||
       OldCount != NewCount) {
-    // Currently, CountAttributedType can only wrap incomplete array types.
-    Result = SemaRef.BuildCountAttributedArrayOrPointerType(
-        InnerTy, NewCount, OldTy->isCountInBytes(), OldTy->isOrNull());
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    if (SemaRef.getLangOpts().hasBoundsSafety()) {
+      Result = SemaRef.BuildCountAttributedType(
+          InnerTy, NewCount, OldTy->isCountInBytes(), OldTy->isOrNull());
+    } else {
+    /* TO_UPSTREAM(BoundsSafety) OFF */
+      // Currently, CountAttributedType can only wrap incomplete array types.
+      Result = SemaRef.BuildCountAttributedArrayOrPointerType(
+          InnerTy, NewCount, OldTy->isCountInBytes(), OldTy->isOrNull());
+    }
   }
 
   TLB.push<CountAttributedTypeLoc>(Result);
   return Result;
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON */
+template <typename Derived>
+QualType TreeTransform<Derived>::TransformDynamicRangePointerType(
+    TypeLocBuilder &TLB, DynamicRangePointerTypeLoc TL) {
+  const DynamicRangePointerType *OldTy = TL.getTypePtr();
+  QualType PointerTy = getDerived().TransformType(TLB, TL.getInnerLoc());
+  if (PointerTy.isNull())
+    return QualType();
+
+  Expr *OldStartPtr = TL.getStartPointer();
+  Expr *NewStartPtr = nullptr;
+  if (OldStartPtr) {
+    using ExpressionKind =
+        Sema::ExpressionEvaluationContextRecord::ExpressionKind;
+    EnterExpressionEvaluationContext EC(
+        SemaRef, Sema::ExpressionEvaluationContext::PotentiallyEvaluated,
+        nullptr, ExpressionKind::EK_AttrArgument);
+
+    ExprResult StartPtrResult = getDerived().TransformExpr(OldStartPtr);
+    if (StartPtrResult.isInvalid())
+      return QualType();
+    NewStartPtr = StartPtrResult.get();
+  }
+
+  Expr *OldEndPtr = TL.getEndPointer();
+  Expr *NewEndPtr = nullptr;
+  if (OldEndPtr) {
+    using ExpressionKind =
+        Sema::ExpressionEvaluationContextRecord::ExpressionKind;
+    EnterExpressionEvaluationContext EC(
+        SemaRef, Sema::ExpressionEvaluationContext::PotentiallyEvaluated,
+        nullptr, ExpressionKind::EK_AttrArgument);
+
+    ExprResult EndPtrResult = getDerived().TransformExpr(OldEndPtr);
+    if (EndPtrResult.isInvalid())
+      return QualType();
+    NewEndPtr = EndPtrResult.get();
+  }
+
+  QualType Result = TL.getType();
+  if (getDerived().AlwaysRebuild() || PointerTy != OldTy->desugar() ||
+      OldStartPtr != NewStartPtr || OldEndPtr != NewEndPtr) {
+    Result =
+        SemaRef.BuildDynamicRangePointerType(PointerTy, NewStartPtr, NewEndPtr);
+    if (Result.isNull())
+      return QualType();
+  }
+
+  TLB.push<DynamicRangePointerTypeLoc>(Result);
+  return Result;
+}
+
+template <typename Derived>
+QualType TreeTransform<Derived>::TransformValueTerminatedType(
+    TypeLocBuilder &TLB, ValueTerminatedTypeLoc TL) {
+  const ValueTerminatedType *OldTy = TL.getTypePtr();
+  QualType OriginalTy = getDerived().TransformType(TLB, TL.getOriginalLoc());
+  if (OriginalTy.isNull() ||
+      !(OriginalTy->isConstantArrayType() ||
+        OriginalTy->isIncompleteArrayType() || OriginalTy->isPointerType()) ||
+      OriginalTy->isValueTerminatedType()) {
+    return QualType();
+  }
+
+  Expr *OldTerminator = TL.getTerminatorExpr();
+  Expr *NewTerminator = nullptr;
+  if (OldTerminator) {
+    ExprResult TransformRes = getDerived().TransformExpr(OldTerminator);
+    if (!TransformRes.get())
+      return QualType();
+    NewTerminator = TransformRes.get();
+
+    QualType PET;
+    if (const auto *PT = OriginalTy->getAs<PointerType>())
+      PET = PT->getPointeeType();
+    else
+      PET = SemaRef.Context.getAsArrayType(OriginalTy)->getElementType();
+
+    ExprResult CastRes(NewTerminator);
+    CastKind Kind = SemaRef.PrepareScalarCast(CastRes, PET);
+    CastRes = SemaRef.ImpCastExprToType(NewTerminator, PET, Kind);
+    if (!CastRes.get())
+      return QualType();
+    NewTerminator = CastRes.get();
+  }
+
+  QualType Result = TL.getType();
+  if (getDerived().AlwaysRebuild() || OriginalTy != OldTy->desugar() ||
+      OldTerminator != NewTerminator) {
+    Result = SemaRef.Context.getValueTerminatedType(OriginalTy, NewTerminator);
+  }
+
+  TLB.push<ValueTerminatedTypeLoc>(Result);
+  return Result;
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
 
 template <typename Derived>
 QualType TreeTransform<Derived>::TransformBTFTagAttributedType(
@@ -13067,10 +13237,12 @@ TreeTransform<Derived>::TransformCompoundLiteralExpr(CompoundLiteralExpr *E) {
   // Note: the expression type doesn't necessarily match the
   // type-as-written, but that's okay, because it should always be
   // derivable from the initializer.
-
+  /* TO_UPSTREAM(BoundsSafety) ON */
   return getDerived().RebuildCompoundLiteralExpr(
       E->getLParenLoc(), NewT,
-      /*FIXME:*/ E->getInitializer()->getEndLoc(), Init.get());
+      /*FIXME:*/ E->getInitializer()->getEndLoc(), Init.get(),
+      E->isFileScope());
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 }
 
 template<typename Derived>
@@ -16412,14 +16584,147 @@ TreeTransform<Derived>::TransformAtomicExpr(AtomicExpr *E) {
                                         E->getOp(), E->getRParenLoc());
 }
 
+template<typename Derived>
+ExprResult
+TreeTransform<Derived>::TransformBoundsSafetyPointerPromotionExpr(BoundsSafetyPointerPromotionExpr *E) {
+  // Pointer promotion expressions, like implicit casts, are eliminated during
+  // transformation, since they will be recomputed by semantic analysis after
+  // transformation.
+  return getDerived().TransformExpr(E->getSubExprAsWritten());
+}
+
+template<typename Derived>
+ExprResult
+TreeTransform<Derived>::TransformAssumptionExpr(AssumptionExpr *E) {
+  // Assumption expressions, like implicit casts, are eliminated during
+  // transformation, since they will be recomputed by semantic analysis after
+  // transformation.
+  return getDerived().TransformExpr(E->getWrappedExpr());
+}
+
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformForgePtrExpr(ForgePtrExpr *E) {
+  ExprResult Addr = getDerived().TransformExpr(E->getAddr());
+  if (Addr.isInvalid())
+    return ExprError();
+
+  ExprResult Size = ExprEmpty();
+  if (Expr *OldSize = E->getSize()) {
+    Size = getDerived().TransformExpr(OldSize);
+    if (Size.isInvalid())
+      return ExprError();
+  }
+
+  if (Addr.get() == E->getAddr() && Size.get() == E->getSize())
+    return E;
+
+  return getDerived().RebuildForgePtrExpr(E->getBeginLoc(), E->getType(),
+                                          Addr.get(), Size.get(),
+                                          E->getEndLoc());
+}
+
+template<typename Derived>
+ExprResult TreeTransform<Derived>::TransformGetBoundExpr(GetBoundExpr *E) {
+  ExprResult Addr = getDerived().TransformExpr(E->getSubExpr());
+  if (Addr.isInvalid())
+    return ExprError();
+
+  return getDerived().RebuildGetBoundExpr(E->getBeginLoc(), E->getEndLoc(),
+                                          Addr.get(), E->getBoundKind(),
+                                          !E->getType()->isPointerTypeWithBounds());
+}
+
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformPredefinedBoundsCheckExpr(
+    PredefinedBoundsCheckExpr *E) {
+  return getDerived().TransformExpr(E->getGuardedExpr());
+}
+
+template <typename Derived>
+ExprResult
+TreeTransform<Derived>::TransformBoundsCheckExpr(BoundsCheckExpr *E) {
+  for (auto *OVE : E->opaquevalues()) {
+    RemovedOVEs.insert(OVE);
+  }
+
+  ExprResult NewGuarded = getDerived().TransformExpr(E->getGuardedExpr());
+
+  for (auto *OVE : E->opaquevalues()) {
+    RemovedOVEs.erase(OVE);
+  }
+  return NewGuarded;
+}
+
+template <typename Derived>
+ExprResult
+TreeTransform<Derived>::TransformMaterializeSequenceExpr(MaterializeSequenceExpr *E) {
+  if (E->isBinding()) {
+    for (auto *OVE : E->opaquevalues()) {
+      RemovedOVEs.insert(OVE);
+    }
+  }
+  ExprResult NewWrap = getDerived().TransformExpr(E->getWrappedExpr());
+
+  if (E->isUnbinding()) {
+    for (auto *OVE : E->opaquevalues()) {
+      RemovedOVEs.erase(OVE);
+    }
+  }
+  return NewWrap;
+}
+
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformTerminatedByToIndexableExpr(
+    TerminatedByToIndexableExpr *E) {
+  ExprResult Pointer = getDerived().TransformExpr(E->getPointer());
+  if (Pointer.isInvalid())
+    return ExprError();
+
+  Expr *Terminator = E->getTerminator();
+  if (Terminator) {
+    ExprResult Res = getDerived().TransformExpr(Terminator);
+    if (Res.isInvalid())
+      return ExprError();
+    Terminator = Res.get();
+  }
+
+  return getDerived().RebuildTerminatedByToIndexableExpr(
+      E->getBeginLoc(), E->getEndLoc(), Pointer.get(), Terminator,
+      E->includesTerminator());
+}
+
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformTerminatedByFromIndexableExpr(
+    TerminatedByFromIndexableExpr *E) {
+  const auto *VTT = cast<ValueTerminatedType>(E->getType());
+
+  ExprResult Pointer = getDerived().TransformExpr(E->getPointer());
+  if (Pointer.isInvalid())
+    return ExprError();
+
+  Expr *PointerToTerminator = E->getPointerToTerminator();
+  if (PointerToTerminator) {
+    ExprResult Res = getDerived().TransformExpr(PointerToTerminator);
+    if (Res.isInvalid())
+      return ExprError();
+    PointerToTerminator = Res.get();
+  }
+
+  return getDerived().RebuildTerminatedByFromIndexableExpr(
+      E->getBeginLoc(), E->getEndLoc(), VTT->getTerminatorExpr(), Pointer.get(),
+      PointerToTerminator);
+}
+
 //===----------------------------------------------------------------------===//
 // Type reconstruction
 //===----------------------------------------------------------------------===//
 
-template<typename Derived>
-QualType TreeTransform<Derived>::RebuildPointerType(QualType PointeeType,
-                                                    SourceLocation Star) {
-  return SemaRef.BuildPointerType(PointeeType, Star,
+template <typename Derived>
+QualType
+TreeTransform<Derived>::RebuildPointerType(QualType PointeeType,
+                                           BoundsSafetyPointerAttributes Attr,
+                                           SourceLocation Star) {
+  return SemaRef.BuildPointerType(PointeeType, Attr, Star,
                                   getDerived().getBaseEntity());
 }
 

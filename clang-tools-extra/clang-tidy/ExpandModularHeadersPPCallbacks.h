@@ -99,6 +99,10 @@ private:
   void PragmaWarningPop(SourceLocation Loc) override;
   void PragmaAssumeNonNullBegin(SourceLocation Loc) override;
   void PragmaAssumeNonNullEnd(SourceLocation Loc) override;
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  void PragmaAbiPointerAttributesSet(SourceLocation Loc,
+                                     ArrayRef<const IdentifierInfo *>) override;
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
   void MacroExpands(const Token &MacroNameTok, const MacroDefinition &,
                     SourceRange Range, const MacroArgs *) override;
   void MacroDefined(const Token &MacroNameTok,

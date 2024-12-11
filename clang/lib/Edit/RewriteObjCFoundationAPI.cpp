@@ -1081,6 +1081,11 @@ static bool rewriteToNumericBoxedExpression(const ObjCMessageExpr *Msg,
     case CK_MatrixCast:
       return false;
 
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    case CK_BoundsSafetyPointerCast:
+      llvm_unreachable("BoundsSafety extension is disabled for Objective-C");
+    /* TO_UPSTREAM(BoundsSafety) OFF */
+
     case CK_BooleanToSignedIntegral:
       llvm_unreachable("OpenCL-specific cast in Objective-C?");
 

@@ -111,10 +111,14 @@ enum TokenKey : unsigned {
   KEYNOZOS = 0x4000000,
   KEYHLSL = 0x8000000,
   KEYFIXEDPOINT = 0x10000000,
-  KEYMAX = KEYFIXEDPOINT, // The maximum key
+  KEYBOUNDSSAFETY = 0x20000000,
+  KEYBOUNDSSAFETYATTRIBUTES = 0x40000000,
+  KEYMAX = KEYBOUNDSSAFETYATTRIBUTES, // The maximum key
   KEYALLCXX = KEYCXX | KEYCXX11 | KEYCXX20,
   KEYALL = (KEYMAX | (KEYMAX - 1)) & ~KEYNOMS18 & ~KEYNOOPENCL &
            ~KEYNOZOS // KEYNOMS18, KEYNOOPENCL, KEYNOZOS are excluded.
+           // Exclude bounds-safety.
+           & ~KEYBOUNDSSAFETY & ~KEYBOUNDSSAFETYATTRIBUTES
 };
 
 /// How a keyword is treated in the selected standard. This enum is ordered
@@ -216,6 +220,12 @@ static KeywordStatus getKeywordStatusHelper(const LangOptions &LangOpts,
     return KS_Unknown;
   case KEYFIXEDPOINT:
     return LangOpts.FixedPoint ? KS_Enabled : KS_Disabled;
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  case KEYBOUNDSSAFETY:
+    return LangOpts.BoundsSafety ? KS_Enabled : KS_Unknown;
+  case KEYBOUNDSSAFETYATTRIBUTES:
+    return LangOpts.BoundsSafetyAttributes ? KS_Enabled : KS_Unknown;
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
   default:
     llvm_unreachable("Unknown KeywordStatus flag");
   }

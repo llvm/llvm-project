@@ -109,6 +109,21 @@ public:
   }
 };
 
+class DelayedArrayQualPolicyRAII {
+  PrintingPolicy &Policy;
+  std::string DelayedArrayQual;
+
+public:
+  explicit DelayedArrayQualPolicyRAII(PrintingPolicy &Policy, const std::string &Qual) : Policy(Policy) {
+    DelayedArrayQual = Policy.DelayedArrayQual;
+    Policy.DelayedArrayQual = Qual;
+  }
+
+  ~DelayedArrayQualPolicyRAII() {
+    Policy.DelayedArrayQual = std::move(DelayedArrayQual);
+  }
+};
+
 class TypePrinter {
   PrintingPolicy Policy;
   unsigned Indentation;
@@ -289,6 +304,10 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::SubstTemplateTypeParm:
     case Type::MacroQualified:
     case Type::CountAttributed:
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    case Type::DynamicRangePointer:
+    case Type::ValueTerminated:
+    /* TO_UPSTREAM(BoundsSafety) OFF */
       CanPrefixQualifiers = false;
       break;
 
@@ -402,15 +421,30 @@ void TypePrinter::printComplexAfter(const ComplexType *T, raw_ostream &OS) {
   printAfter(T->getElementType(), OS);
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON*/
+static bool shouldPrintParenForPointer(const PointerType *T) {
+  QualType PointeeTy = T->getPointeeType();
+  if (auto *DCPTy = PointeeTy->getAs<CountAttributedType>())
+    PointeeTy = DCPTy->desugar();
+
+  return isa<ArrayType>(PointeeTy);
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
+
 void TypePrinter::printPointerBefore(const PointerType *T, raw_ostream &OS) {
   IncludeStrongLifetimeRAII Strong(Policy);
   SaveAndRestore NonEmptyPH(HasEmptyPlaceHolder, false);
   printBefore(T->getPointeeType(), OS);
   // Handle things like 'int (*A)[4];' correctly.
   // FIXME: this should include vectors, but vectors use attributes I guess.
-  if (isa<ArrayType>(T->getPointeeType()))
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  // It checks `isa<ArrayType>(T->getPointeeType())` in upstream.
+  if (shouldPrintParenForPointer(T))
+  /* TO_UPSTREAM(BoundsSafety) OFF */
     OS << '(';
   OS << '*';
+
+  T->getPointerAttributes().print(OS);
 }
 
 void TypePrinter::printPointerAfter(const PointerType *T, raw_ostream &OS) {
@@ -418,7 +452,10 @@ void TypePrinter::printPointerAfter(const PointerType *T, raw_ostream &OS) {
   SaveAndRestore NonEmptyPH(HasEmptyPlaceHolder, false);
   // Handle things like 'int (*A)[4];' correctly.
   // FIXME: this should include vectors, but vectors use attributes I guess.
-  if (isa<ArrayType>(T->getPointeeType()))
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  // It checks `isa<ArrayType>(T->getPointeeType())` in upstream.
+  if (shouldPrintParenForPointer(T))
+  /* TO_UPSTREAM(BoundsSafety) OFF */
     OS << ')';
   printAfter(T->getPointeeType(), OS);
 }
@@ -552,7 +589,7 @@ void TypePrinter::printIncompleteArrayBefore(const IncompleteArrayType *T,
 
 void TypePrinter::printIncompleteArrayAfter(const IncompleteArrayType *T,
                                             raw_ostream &OS) {
-  OS << "[]";
+  OS << '[' << Policy.DelayedArrayQual << ']';
   printAfter(T->getElementType(), OS);
 }
 
@@ -1214,6 +1251,14 @@ void TypePrinter::printUsingBefore(const UsingType *T, raw_ostream &OS) {
 void TypePrinter::printUsingAfter(const UsingType *T, raw_ostream &OS) {}
 
 void TypePrinter::printTypedefBefore(const TypedefType *T, raw_ostream &OS) {
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  if (StringRef MaybeBoundsSafetyName = T->getDecl()->getName();
+      MaybeBoundsSafetyName.starts_with("__bounds_safety")) {
+    this->print(T->desugar(), OS, "");
+    return;
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
   printTypeSpec(T->getDecl(), OS);
 }
 
@@ -1809,7 +1854,13 @@ void TypePrinter::printPackExpansionAfter(const PackExpansionType *T,
 static void printCountAttributedImpl(const CountAttributedType *T,
                                      raw_ostream &OS,
                                      const PrintingPolicy &Policy) {
-  OS << ' ';
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  // FIXME: The upstream version doesn't have this conditional check for adding
+  // a leading space and instead always adds it.
+  if (!T->isArrayType() || !Policy.CountedByInArrayBracket)
+    OS << ' ';
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   if (T->isCountInBytes() && T->isOrNull())
     OS << "__sized_by_or_null(";
   else if (T->isCountInBytes())
@@ -1832,10 +1883,84 @@ void TypePrinter::printCountAttributedBefore(const CountAttributedType *T,
 
 void TypePrinter::printCountAttributedAfter(const CountAttributedType *T,
                                             raw_ostream &OS) {
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  if (Policy.CountedByInArrayBracket && T->isArrayType()) {
+    std::string DelayedQual;
+    llvm::raw_string_ostream DOS(DelayedQual);
+    printCountAttributedImpl(T, DOS, Policy);
+    DelayedArrayQualPolicyRAII DP(Policy, DOS.str());
+    printAfter(T->desugar(), OS);
+    return;
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   printAfter(T->desugar(), OS);
   if (T->isArrayType())
     printCountAttributedImpl(T, OS, Policy);
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON */
+void TypePrinter::printDynamicRangePointerBefore(
+    const DynamicRangePointerType *T, raw_ostream &OS) {
+  printBefore(T->desugar(), OS);
+  const Expr *StartPtr = T->getStartPointer();
+  const Expr *EndPtr = T->getEndPointer();
+  if (EndPtr) {
+    OS << " __ended_by(";
+    EndPtr->printPretty(OS, nullptr, Policy);
+    OS << ')';
+  }
+
+  if (StartPtr) {
+    OS << " /* __started_by(";
+    StartPtr->printPretty(OS, nullptr, Policy);
+    OS << ") */ ";
+  }
+}
+
+void TypePrinter::printDynamicRangePointerAfter(
+    const DynamicRangePointerType *T, raw_ostream &OS) {
+  printAfter(T->desugar(), OS);
+}
+
+static void printTerminatedByAttr(const ValueTerminatedType *T, raw_ostream &OS,
+                                  const PrintingPolicy &Policy) {
+  OS << "__terminated_by(";
+  T->getTerminatorExpr()->printPretty(OS, nullptr, Policy);
+  OS << ')';
+}
+
+void TypePrinter::printValueTerminatedBefore(const ValueTerminatedType *T,
+                                             raw_ostream &OS) {
+  QualType DesugaredTy = T->desugar();
+  assert(DesugaredTy->isArrayType() || DesugaredTy->isPointerType());
+  printBefore(DesugaredTy, OS);
+  if (DesugaredTy->isPointerType()) {
+    OS << ' ';
+    printTerminatedByAttr(T, OS, Policy);
+  }
+}
+
+void TypePrinter::printValueTerminatedAfter(const ValueTerminatedType *T,
+                                            raw_ostream &OS) {
+  QualType DesugaredTy = T->desugar();
+  if (DesugaredTy->isPointerType()) {
+    printAfter(DesugaredTy, OS);
+  } else {
+    assert(DesugaredTy->isArrayType());
+    std::string Str;
+    llvm::raw_string_ostream SS(Str);
+    printAfter(DesugaredTy, SS);
+    SS.flush();
+    assert(Str.size() >= 2 && Str[0] == '[');
+    OS << '[';
+    printTerminatedByAttr(T, OS, Policy);
+    if (Str[1] != ']')
+      OS << ' ';
+    OS << Str.c_str() + 1;
+  }
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
 
 void TypePrinter::printAttributedBefore(const AttributedType *T,
                                         raw_ostream &OS) {
@@ -1928,6 +2053,23 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     return;
   }
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  // Don't print implicit type attribute PtrAutoAttr
+  if (T->getAttrKind() == attr::PtrAutoAttr)
+    return;
+  if (T->getAttrKind() == attr::PtrAutoNullTerminatedAttr)
+    return;
+
+  if (T->getAttrKind() == attr::PtrSingle) {
+    OS << "__single";
+    return;
+  }
+  if (T->getAttrKind() == attr::PtrUnsafeIndexable) {
+    OS << "__unsafe_indexable";
+    return;
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
   // The printing of the address_space attribute is handled by the qualifier
   // since it is still stored in the qualifier. Return early to prevent printing
   // this twice.
@@ -1989,6 +2131,19 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     // AttributedType nodes for them.
     break;
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  case attr::ArrayDecayDiscardsCountInParameters:
+    OS << "decay_discards_count_in_parameters";
+    break;
+
+  case attr::PtrBidiIndexable:
+  case attr::PtrSingle:
+  case attr::PtrIndexable:
+  case attr::PtrUnsafeIndexable:
+  case attr::PtrEndedBy:
+  case attr::PtrTerminatedBy:
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   case attr::CountedBy:
   case attr::CountedByOrNull:
   case attr::SizedBy:
@@ -1999,6 +2154,8 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::TypeNullable:
   case attr::TypeNullableResult:
   case attr::TypeNullUnspecified:
+  case attr::PtrAutoAttr:
+  case attr::PtrAutoNullTerminatedAttr:
   case attr::ObjCGC:
   case attr::ObjCInertUnsafeUnretained:
   case attr::ObjCKindOf:

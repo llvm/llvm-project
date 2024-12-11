@@ -190,6 +190,8 @@ class TypoCorrectionConsumer;
 class UnresolvedSetImpl;
 class UnresolvedSetIterator;
 class VisibleDeclConsumer;
+// TO_UPSTREAM(BoundsSafety)
+class CopyExpr;
 
 namespace sema {
 class BlockScopeInfo;
@@ -343,6 +345,145 @@ private:
   /// if Type is null.
   llvm::function_ref<QualType()> ComputeType;
 };
+
+/* TO_UPSTREAM(BoundsSafety) ON */
+/// Groups together the parameters to emit a bounds check.
+class BoundsCheckBuilder {
+  // (the larger pointer we are slicing)
+  /// The wide pointer representing the range that is being sliced into. Either
+  /// it or both of WideLowerBound and WideUpperBound must be set.
+  Expr *WidePointerExpr;
+
+  /// The lower bound of the range that is being sliced into. Either it and
+  /// WideUpperBound must be set, or WidePointerExpr must be set.
+  Expr *WideLowerBound;
+
+  /// The upper bound of the range that is being sliced into. Either it and
+  /// WideLowerBound must be set, or WidePointerExpr must be set.
+  Expr *WideUpperBound;
+
+  /// An index from the lower bound that is being accessed. At most one of it or
+  /// AccessStartIndex must be set. If neither is set, this is assumed to be
+  /// dereferencing the wide pointer.
+  Expr *AccessStartIndex;
+
+  /// The start of the range being accessed and that is presumed to lie within
+  /// the wide pointer. At most one of it or AccessStartIndex must be set. If
+  /// neither is set, this is assumed to be dereferencing the wide pointer.
+  Expr *AccessLowerBound;
+
+  /// The end of the range being accessed and that is presumed to lie within
+  /// the wide pointer. At most one of it or AccessCount must be set. If neither
+  /// is set, behaves as if AccessCount was the integer literal 1.
+  Expr *AccessUpperBound;
+
+  /// The number of items being accessed, starting from AccessLowerBound. At
+  /// most one of it or AccessUpperBound must be set. If neither is set, behaves
+  /// as if AccessCount was the integer literal 1.
+  Expr *AccessCount;
+
+  llvm::SmallVectorImpl<OpaqueValueExpr *> &OVEs;
+
+  /// If set to 1, AccessCount is a byte count. Must be 0 if AccessUpperBound is
+  /// set.
+  unsigned CountInBytes : 1;
+  /// If set to 1, the accessed bounds may be wider than the sliced bounds
+  /// (which are typically 0 when the sliced pointer is null).
+  unsigned OrNull : 1;
+
+  OpaqueValueExpr *OpaqueWrap(Sema &S, Expr *E);
+  bool BuildIndexBounds(Sema &S, Expr *Min, Expr *Max,
+                        llvm::SmallVectorImpl<Expr *> &Result);
+  bool BuildPtrBounds(Sema &S, Expr *Min, Expr *Max,
+                      llvm::SmallVectorImpl<Expr *> &Result);
+
+public:
+  BoundsCheckBuilder(llvm::SmallVectorImpl<OpaqueValueExpr *> &OVEs)
+      : WidePointerExpr(), WideLowerBound(), WideUpperBound(),
+        AccessStartIndex(), AccessLowerBound(), AccessUpperBound(),
+        AccessCount(), OVEs(OVEs), CountInBytes(0), OrNull(0) {}
+
+  Expr *getWidePointer() { return WidePointerExpr; }
+  std::pair<Expr *, Expr *> getWidePointerBounds() {
+    assert(!WideLowerBound == !WideUpperBound);
+    return std::make_pair(WideLowerBound, WideUpperBound);
+  }
+
+  Expr *getAccessStartIndex() { return AccessStartIndex; }
+  Expr *getAccessLowerBound() { return AccessLowerBound; }
+  Expr *getAccessUpperBound() { return AccessUpperBound; }
+  Expr *getAccessCount() { return AccessCount; }
+  bool isCountInBytes() { assert(AccessCount); return CountInBytes; }
+  bool isOrNull() { return OrNull; }
+
+  void setWidePointer(Expr *Wide) {
+    WidePointerExpr = Wide;
+    WideLowerBound = nullptr;
+    WideUpperBound = nullptr;
+  }
+
+  void setWidePointer(Expr *Lower, Expr *Upper) {
+    WideLowerBound = Lower;
+    WideUpperBound = Upper;
+    WidePointerExpr = nullptr;
+  }
+
+  void setAccessStartIndex(Expr *StartIndex) {
+    AccessStartIndex = StartIndex;
+    AccessLowerBound = nullptr;
+  }
+
+  void setAccessLowerBound(Expr *Lower) {
+    AccessLowerBound = Lower;
+    AccessStartIndex = nullptr;
+  }
+
+  void setAccessUpperBound(Expr *Upper) {
+    AccessUpperBound = Upper;
+    AccessCount = nullptr;
+    CountInBytes = 0;
+    OrNull = 0;
+  }
+
+  void setAccessCount(Expr *Count, bool IsByteCount, bool IsOrNull) {
+    AccessCount = Count;
+    CountInBytes = IsByteCount;
+    OrNull = IsOrNull;
+    AccessUpperBound = nullptr;
+  }
+
+  /// Create the bounds check expression. The value the bounds check evaluates
+  /// to when it succeeds will be GuardedValue.
+  ExprResult Build(Sema &S, Expr *GuardedValue);
+
+  /// Create the bounds check expression to emit inequality `<=` checks with elements of \p Bounds  in the order.
+  /// The function materializes elements of \p Bounds when they are reused and add the materialized values to
+  /// \p OVEs.
+  static ExprResult BuildLEChecks(Sema &S, SourceLocation Loc,
+                                  ArrayRef<Expr *> Bounds,
+                                  SmallVectorImpl<OpaqueValueExpr *> &OVEs);
+
+  /// Create the bounds check expression that verifies that the flexible array
+  /// member does not exceed the bounds of the enclosing pointer.
+  static ExprResult
+  CheckFlexibleArrayMemberSize(Sema &S, SourceLocation Loc, BoundsCheckKind BCK,
+                               Expr *FAMPtr, CopyExpr *DeclReplacer = nullptr);
+  static ExprResult
+  CheckFlexibleArrayMemberSizeWithOVEs(Sema &S, SourceLocation Loc,
+                                       BoundsCheckKind BCK, Expr *FAMPtr,
+                                       SmallVectorImpl<OpaqueValueExpr *> &OVEs,
+                                       CopyExpr *DeclReplacer = nullptr);
+
+private:
+  static ExprResult
+  CheckFlexibleArrayMemberSizeImpl(Sema &S, SourceLocation Loc,
+                                   BoundsCheckKind BCK, Expr *FAMPtr,
+                                   SmallVectorImpl<OpaqueValueExpr *> &OVEs,
+                                   Expr *GuardedValue, CopyExpr *DeclReplacer);
+
+  ExprResult BuildImplicitPointerArith(Sema &S, BinaryOperatorKind Opc, Expr *LHS, Expr *RHS);
+};
+/* TO_UPSTREAM(BoundsSafety) OFF */
 
 struct SkipBodyInfo {
   SkipBodyInfo() = default;
@@ -768,7 +909,9 @@ public:
   ExprResult ImpCastExprToType(
       Expr *E, QualType Type, CastKind CK, ExprValueKind VK = VK_PRValue,
       const CXXCastPath *BasePath = nullptr,
-      CheckedConversionKind CCK = CheckedConversionKind::Implicit);
+      CheckedConversionKind CCK = CheckedConversionKind::Implicit,
+      // TO_UPSTREAM(BoundsSafety)
+      bool DiagnoseBoundsSafetyIncompleteArrayPromotion = true);
 
   /// ScalarTypeToBooleanCastKind - Returns the cast kind corresponding
   /// to the conversion from scalar type ScalarTy to the Boolean type.
@@ -1402,6 +1545,14 @@ public:
 
   /// Source location for newly created implicit MSInheritanceAttrs
   SourceLocation ImplicitMSInheritanceAttrLoc;
+
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  /// Default BoundsSafety pointer attributes for ABI-visible pointers. Applied to
+  /// ABI-visible pointers which do not have explicit BoundsSafety attributes. Can
+  /// be controlled with \#pragma clang abi_ptr_attr set(*ATTR*). Defaults to
+  /// __single in user code and __unsafe_indexable in system headers.
+  BoundsSafetyPointerAttributes CurPointerAbi;
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   /// pragma clang section kind
   enum PragmaClangSectionKind {
@@ -2061,6 +2212,141 @@ public:
   bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
                                  bool OrNull);
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  /// Perform Bounds Safety Semantic checks for assigning to a `__counted_by` or
+  /// `__counted_by_or_null` pointer type \param LHSTy.
+  ///
+  /// \param LHSTy The type being assigned to. Checks will only be performed if
+  ///              the type is a `counted_by` or `counted_by_or_null ` pointer.
+  /// \param RHSExpr The expression being assigned from.
+  /// \param Action The type assignment being performed
+  /// \param Loc The SourceLocation to use for error diagnostics
+  /// \param ComputeAssignee If provided this function will be called before
+  ///        emitting a diagnostic. The function should return the name of
+  ///        entity being assigned to or an empty string if this cannot be
+  ///        determined.
+  ///
+  /// \returns True iff no diagnostic where emitted, false otherwise.
+  bool BoundsSafetyCheckAssignmentToCountAttrPtr(
+      QualType LHSTy, Expr *RHSExpr, AssignmentAction Action,
+      SourceLocation Loc,
+      std::function<std::string()> ComputeAssignee = nullptr);
+
+  /// Perform Checks for assigning to a `__counted_by` or
+  /// `__counted_by_or_null` pointer type \param LHSTy where the pointee type
+  /// is incomplete which is invalid.
+  ///
+  /// \param LHSTy The type being assigned to. Checks will only be performed if
+  ///              the type is a `counted_by` or `counted_by_or_null ` pointer.
+  /// \param RHSExpr The expression being assigned from.
+  /// \param Action The type assignment being performed
+  /// \param Loc The SourceLocation to use for error diagnostics
+  /// \param ComputeAssignee If provided this function will be called before
+  ///        emitting a diagnostic. The function should return the name of
+  ///        entity being assigned to or an empty string if this cannot be
+  ///        determined.
+  ///
+  /// \returns True iff no diagnostic where emitted, false otherwise.
+  bool BoundsSafetyCheckAssignmentToCountAttrPtrWithIncompletePointeeTy(
+      QualType LHSTy, Expr *RHSExpr, AssignmentAction Action,
+      SourceLocation Loc, std::function<std::string()> ComputeAssignee);
+
+  /// Perform Bounds Safety Semantic checks for initializing a Bounds Safety
+  /// pointer.
+  ///
+  /// \param Entity The entity being initialized
+  /// \param Kind The kind of initialization being performed
+  /// \param Action The type assignment being performed
+  /// \param LHSTy The type being assigned to. Checks will only be performed if
+  ///              the type is a `counted_by` or `counted_by_or_null ` pointer.
+  /// \param RHSExpr The expression being used for initialization.
+  ///
+  /// \returns True iff no diagnostic where emitted, false otherwise.
+  bool BoundsSafetyCheckInitialization(const InitializedEntity &Entity,
+                                       const InitializationKind &Kind,
+                                       AssignmentAction Action,
+                                       QualType LHSType, Expr *RHSExpr);
+
+  /// Perform Bounds Safety semantic checks on function parameters on a function
+  /// definition. This only performs checks that can be made by looking at
+  /// \param PVD in isolation (i.e. not looking at other parameters in the
+  /// function definition).
+  ///
+  ///  \returns True iff no diagnostic where emitted, false otherwise.
+  bool BoundsSafetyCheckParamForFunctionDef(const ParmVarDecl *PVD);
+
+  /// Perform Bounds Safety semantic check for CallExpr \param Call.
+  ///
+  /// \param FDecl For direct calls this should be the Function being called
+  ///              by \param Call. This can be null.
+  /// \param Call The CallExpr to be checked. This cannot be null.
+  /// \param ProtoType For indirect calls this should be the FunctionProtoType
+  ///                  used to type check the call. This can be null.
+  ///
+  /// \returns True iff no diagnostic where emitted, false otherwise.
+  bool BoundsSafetyCheckResolvedCall(FunctionDecl *FDecl, CallExpr *Call,
+                                     const FunctionProtoType *ProtoType);
+
+  /// Perform Bounds Safety semantic checks on a function definition's return
+  /// type.
+  ///
+  /// \param FD The FunctionDecl whose return type will be checked.
+  ///
+  ///  \returns True iff no diagnostic where emitted, false otherwise.
+  bool BoundsSafetyCheckReturnTyForFunctionDef(FunctionDecl *FD);
+
+  /// Perform Bounds Safety semantic checks for uses of invalid uses counted_by
+  /// or counted_by_or_null pointers in \param E.
+  ///
+  /// \param E the expression to check
+  ///
+  /// \returns True iff no diagnostic where emitted, false otherwise.
+  bool BoundsSafetyCheckUseOfCountAttrPtr(Expr *E);
+
+  /// Perform Bounds Safety semantic checks on variable declaration \param VD.
+  ///
+  ///  \param VD The VarDecl to check
+  ///  \param CheckTentativeDefinitions If false and \param VD is a tentative
+  ///                                   definition then checking is skipping and
+  ///                                   the function returns true. If true then
+  ///                                   checking of tentative definitions will
+  ///                                   not be skipped.
+  ///
+  ///  \returns True iff no diagnostic where emitted, false otherwise.
+  bool BoundsSafetyCheckVarDecl(const VarDecl *VD,
+                                bool CheckTentativeDefinitions);
+
+  // TODO: This can be moved back into SemaExpr.cpp as a static function once
+  // support for -fno-bounds-safety-bringup-missing-checks=indirect_count_update
+  // is removed (rdar://135833598).
+  bool BoundsSafetyCheckCountAttributedTypeHasConstantCountForAssignmentOp(
+      const CountAttributedType *CATTy, Expr *Operand,
+      std::variant<bool, BinaryOperatorKind> OpInfo);
+
+
+  /// Used to record or retrieve if a VarDecl/FieldDecl has a BoundsSafety FixIt
+  /// emitted on it. The primary use case for this is preventing emitting
+  /// multiple FixIts on the same VarDecl/FieldDecl which can result in invalid
+  /// code.
+  ///
+  /// Note: This is not linked to the DiagnosticEngine in anyway. So callers
+  /// are required to manually maintain this information.
+  ///
+  /// \param DD - the VarDecl/FieldDecl to record or retrieve information about.
+  /// \param Set - If `Set` is `false` then this is a retrieval operation. The
+  /// method will return `true` if the `DD` already had a FixIt emitted and
+  /// `false` otherwise.. If `Set` is `true` then this is method records that
+  /// the `DD` had a FixIt emitted against it. The returned value will
+  /// always be `true` in this case.
+  ///
+  /// \returns `true` iff it was recorded that a FixIt was emitted for the
+  /// VarDecl `VD`.
+  ///
+  bool BoundsSafetyFixItWasEmittedFor(const DeclaratorDecl *DD,
+                                      bool Set = false);
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
+
   ///@}
 
   //
@@ -2096,8 +2382,85 @@ public:
                                      ExprResult Operand,
                                      SourceLocation RParenLoc);
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
   ExprResult BuildBuiltinBitCastExpr(SourceLocation KWLoc, TypeSourceInfo *TSI,
                                      Expr *Operand, SourceLocation RParenLoc);
+
+  ExprResult ActOnForgeBidiIndexable(SourceLocation KWLoc, Expr *Addr,
+                                     Expr *Size, SourceLocation RParenLoc);
+
+  ExprResult ActOnForgeSingle(SourceLocation KWLoc, Expr *Addr,
+                              SourceLocation RParenLoc);
+
+  ExprResult ActOnForgeTerminatedBy(SourceLocation KWLoc, Expr *Addr,
+                                    Expr *Terminator, SourceLocation RParenLoc);
+
+  ExprResult ActOnBoundsSafetyCall(ExprResult Call);
+
+  ExprResult BuildForgePtrExpr(SourceLocation KWLoc, SourceLocation RParenLoc,
+                               QualType ResultType, Expr *Addr,
+                               Expr *Size = nullptr, Expr *Term = nullptr);
+
+  /// Build a bounds check based on individual components. Each value of
+  /// Bounds is sequentially compared to be <= the next one.
+  ExprResult BuildBoundsCheckExpr(Expr *GuardedExpr, Expr *Cond,
+                                  ArrayRef<OpaqueValueExpr *> CommonExprs);
+
+  ExprResult BuildPredefinedBoundsCheckExpr(Expr *GuardedExpr,
+                                            BoundsCheckKind Kind,
+                                            ArrayRef<Expr *> CheckArgs);
+
+  /// Build an expression that resolves to the lower bound of the pointer
+  /// represented by SubExpr.
+  ExprResult BuildLowerBoundExpr(Expr *SubExpr,
+                                 SourceLocation BuiltinLoc,
+                                 SourceLocation RParenLoc = SourceLocation(),
+                                 bool RawPointer = false);
+
+  ExprResult ActOnGetLowerBound(Expr *SubExpr, SourceLocation BuiltinLoc,
+                                SourceLocation RParenLoc);
+
+  /// Build an expression that resolves to the upper bound of the pointer
+  /// represented by SubExpr.
+  ExprResult BuildUpperBoundExpr(Expr *SubExpr,
+                                 SourceLocation BuiltinLoc,
+                                 SourceLocation RParenLoc = SourceLocation(),
+                                 bool RawPointer = false);
+
+  ExprResult ActOnGetUpperBound(Expr *SubExpr, SourceLocation BuiltinLoc,
+                                SourceLocation RParenLoc);
+
+  ExprResult BuildMaterializeSequenceExpr(Expr *WrappedExpr,
+                                          ArrayRef<OpaqueValueExpr*> Values);
+
+  ExprResult BuildTerminatedByToIndexableExpr(Expr *PointerExpr,
+                                              Expr *TerminatorExpr,
+                                              bool IncludeTerminator,
+                                              SourceLocation BuiltinLoc,
+                                              SourceLocation RParenLoc);
+
+  ExprResult ActOnTerminatedByToIndexable(Expr *PointerExpr,
+                                          Expr *TerminatorExpr,
+                                          SourceLocation BuiltinLoc,
+                                          SourceLocation RParenLoc);
+
+  ExprResult ActOnUnsafeTerminatedByToIndexable(Expr *PointerExpr,
+                                                Expr *TerminatorExpr,
+                                                SourceLocation BuiltinLoc,
+                                                SourceLocation RParenLoc);
+
+  ExprResult BuildTerminatedByFromIndexableExpr(Expr *TerminatorExpr,
+                                                Expr *PointerExpr,
+                                                Expr *PointerToTerminatorExpr,
+                                                SourceLocation BuiltinLoc,
+                                                SourceLocation RParenLoc);
+
+  ExprResult ActOnUnsafeTerminatedByFromIndexable(Expr *TerminatorExpr,
+                                                  Expr *PointerExpr,
+                                                  Expr *PointerToTerminatorExpr,
+                                                  SourceLocation BuiltinLoc,
+                                                  SourceLocation RParenLoc);
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   // Checks that reinterpret casts don't have undefined behavior.
   void CheckCompatibleReinterpretCast(QualType SrcType, QualType DestType,
@@ -2658,6 +3021,9 @@ private:
   /// Adds an expression to the set of gathered misaligned members.
   void AddPotentialMisalignedMembers(Expr *E, RecordDecl *RD, ValueDecl *MD,
                                      CharUnits Alignment);
+
+  // TO_UPSTREAM(BoundsSafety)
+  llvm::SmallPtrSet<const DeclaratorDecl *, 8> BoundsSafetyDeclsWithFixIts;
   ///@}
 
   //
@@ -4223,6 +4589,13 @@ public:
   NamedDecl *findLocallyScopedExternCDecl(DeclarationName Name);
 
   void deduceOpenCLAddressSpace(ValueDecl *decl);
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  void deduceBoundsSafetyPointerTypes(ValueDecl *decl);
+  void deduceBoundsSafetyFunctionTypes(FunctionDecl *decl);
+
+  QualType deduceCastPointerAttributes(QualType OrigTy, QualType OpTy);
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   /// Adjust the \c DeclContext for a function or variable that might be a
   /// function-local external declaration.
@@ -6755,6 +7128,11 @@ public:
   bool UseArgumentDependentLookup(const CXXScopeSpec &SS, const LookupResult &R,
                                   bool HasTrailingLParen);
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  ExprResult InstantiateDeclRefField(Expr *BaseExpr, bool IsArrow,
+                                     Expr *FieldRef);
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
   /// BuildQualifiedDeclarationNameExpr - Build a C++ qualified
   /// declaration name, generally during template instantiation.
   /// There's a large number of things which don't need to be done along
@@ -7501,18 +7879,30 @@ public:
 
   // DefaultFunctionArrayConversion - converts functions and arrays
   // to their respective pointers (C99 6.3.2.1).
-  ExprResult DefaultFunctionArrayConversion(Expr *E, bool Diagnose = true);
+  ExprResult DefaultFunctionArrayConversion(
+      Expr *E, bool Diagnose = true,
+  /* TO_UPSTREAM(BoundsSafety) ON */
+      bool DiagnoseBoundsSafetyIncompleteArrayPromotion = true,
+      bool DisableFlexibleArrayPromotion = false);
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   // DefaultFunctionArrayLvalueConversion - converts functions and
   // arrays to their respective pointers and performs the
   // lvalue-to-rvalue conversion.
-  ExprResult DefaultFunctionArrayLvalueConversion(Expr *E,
-                                                  bool Diagnose = true);
+  ExprResult DefaultFunctionArrayLvalueConversion(
+      Expr *E, bool Diagnose = true,
+  /* TO_UPSTREAM(BoundsSafety) ON */
+      bool DiagnoseBoundsSafetyIncompleteArrayPromotion = true,
+      bool DisableFlexibleArrayPromotion = false);
+  /* TO_UPSTREAM(BoundsSafety) ON */
 
   // DefaultLvalueConversion - performs lvalue-to-rvalue conversion on
   // the operand. This function is a no-op if the operand has a function type
   // or an array type.
-  ExprResult DefaultLvalueConversion(Expr *E);
+  ExprResult
+  DefaultLvalueConversion(Expr *E,
+                          // TO_UPSTREAM(BoundsSafety)
+                          bool DisableFlexibleArrayPromotion = false);
 
   // DefaultArgumentPromotion (C99 6.5.2.2p6). Used for function calls that
   // do not have a prototype. Integer promotions are performed on each
@@ -7582,6 +7972,66 @@ public:
     /// accept as an extension.
     IntToPointer,
 
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    /// IncompatibleIntToSafePointer - The assignment converts an int to a
+    /// -fbounds-safety safe pointer, which is not permitted by -fbounds-safety.
+    IncompatibleIntToSafePointer,
+
+    /// IncompatibleUnsafeToSafePointer - The assignment converts an unsafe
+    /// pointer to a safe pointer (single or counted_by), which -fbounds-safety
+    /// doesn't allow.
+    IncompatibleUnsafeToSafePointer,
+
+    /// IncompatibleUnsafeToIndexablePointer - The assignment converts an unsafe
+    /// pointer to an indexable pointer (indexable or bidi_indexable),
+    /// which -fbounds-safety doesn't allow and may not know how to create an upper
+    /// bound for.
+    IncompatibleUnsafeToIndexablePointer,
+
+    // FIXME: Turn it into an error (rdar://85587619)
+    /// IncompleteSingleToIndexablePointer - The assignment converts an single
+    /// pointer with opaque element type to an indexable pointer, for which
+    /// -fbounds-safety
+    /// doesn't know how to create an upper bound.
+    IncompleteSingleToIndexablePointer,
+
+    // CompatibleSingleToIndexablePointer - The assignment converts a single
+    // pointer to an explicitly indexable pointer. This is allowed but is likely
+    // a mistake.
+    CompatibleSingleToExplicitIndexablePointer,
+
+    /// IncompatibleStringLiteralToValueTerminatedPointer - The assignment of a
+    /// string literal to value-terminated pointer with a terminator different
+    /// than NUL.
+    IncompatibleStringLiteralToValueTerminatedPointer,
+
+    /// IncompatibleValueTerminatedTerminators - The assignment is between
+    /// value terminated pointers with incompatible terminators.
+    IncompatibleValueTerminatedTerminators,
+
+    /// IncompatibleValueTerminatedToNonValueTerminatedPointer - The assignment
+    /// of a value-terminated pointer to a non-value-terminated pointer.
+    /// BoundsSafety doesn't allow it, __terminated_by_to_indexable() should be
+    /// used instead.
+    IncompatibleValueTerminatedToNonValueTerminatedPointer,
+
+    /// IncompatibleNonValueTerminatedToValueTerminatedPointer - The assignment
+    /// of a non-value-terminated pointer to a value-terminated pointer.
+    /// BoundsSafety doesn't allow it, __unsafe_terminated_by_from_wide() should
+    /// be used instead.
+    IncompatibleNonValueTerminatedToValueTerminatedPointer,
+
+    /// IncompatibleNestedValueTerminatedToNonValueTerminatedPointer - The
+    /// assignment is between two nested pointer types, where at a nested
+    /// level the source is value-terminated type, but the destination isn't.
+    IncompatibleNestedValueTerminatedToNonValueTerminatedPointer,
+
+    /// IncompatibleNestedNonValueTerminatedToValueTerminatedPointer - The
+    /// assignment is between two nested pointer types, where at a nested
+    /// level the destination is value-terminated type, but the source isn't.
+    IncompatibleNestedNonValueTerminatedToValueTerminatedPointer,
+    /* TO_UPSTREAM(BoundsSafety) OFF */
+
     /// FunctionVoidPointer - The assignment is between a function pointer and
     /// void*, which the standard doesn't allow, but we accept as an extension.
     FunctionVoidPointer,
@@ -7628,6 +8078,18 @@ public:
     /// extension.
     IncompatibleNestedPointerQualifiers,
 
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    /// IncompatibleNestedBoundsSafetyPointerAttributes - The assignment is
+    /// between two nested pointer types with different -fbounds-safety pointer
+    /// attributes.
+    IncompatibleNestedBoundsSafetyPointerAttributes,
+
+    /// IncompatibleBoundsSafetyFunctionPointer - The assignment is
+    /// between two function pointer types with incompatible -fbounds-safety pointer
+    /// attributes.
+    IncompatibleBoundsSafetyFunctionPointer,
+    /* TO_UPSTREAM(BoundsSafety) OFF */
+
     /// IncompatibleVectors - The assignment is between two vector types that
     /// have the same size, which we accept as an extension.
     IncompatibleVectors,
@@ -7654,13 +8116,78 @@ public:
     Incompatible
   };
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  /// @brief Check whether it's ABI safe to convert between two types that would
+  /// otherwise be forbidden by -fbounds-safety. Returns false if \c ConvTy ...
+  ///  - is not an incompatibility
+  ///  - is not a -fbounds-safety specific incompatibility
+  ///  - represents an incompatible conversion between pointers of different
+  ///  widths
+  /// Otherwise returns true.
+  bool isCompatibleBoundsUnsafeAssignment(AssignConvertType ConvTy) const;
+
+  /// @brief Check whether the conditions justify making an exception to
+  /// -fbounds-safety safety rules in system headers (since the threshold to fixing
+  /// errors is much higher there). In short the error should be in a system
+  /// header that hasn't (fully) adopted -fbounds-safety. NB:
+  /// If using this function to make the actual decision of ignoring the type
+  /// clash then \c isCompatibleBoundsUnsafeAssignment should be called first.
+  /// If using this function after type checking (e.g. to determine whether to
+  /// skip bounds checks) the only remaining cases where it returns true are
+  /// then ones that have previously passed \c
+  /// isCompatibleBoundsUnsafeAssignment during type checking, so that need not
+  /// be called again.
+  /// @param DestTy Type declared at LHS of variable assignment or function to
+  /// be called
+  /// @param SourceValue RHS of variable assignment, or function argument
+  /// @param AssignmentLoc Location of the actual assignment or function call
+  /// @return true when the -fbounds-safety rules can be skipped
+  bool allowBoundsUnsafePointerAssignment(const QualType DestTy,
+                                          const Expr *SourceValue,
+                                          SourceLocation AssignmentLoc) const;
+
+  /// @brief Helper function wrapping allowBoundsUnsafePointerAssignment.
+  /// Only for function calls, not for assignments or returns.
+  bool allowBoundsUnsafeFunctionArg(const CallExpr *CallE,
+                                    unsigned ParamIdx) const;
+
+  /// @brief Check whether the conditions justify making an exception to
+  /// -fbounds-safety safety rules in system headers (since the threshold to fixing
+  /// errors is much higher there). In short the error should be in a system
+  /// header that hasn't (fully) adopted -fbounds-safety. NB:
+  /// If determining whether a pointer assignment should be allowed, use \c
+  /// allowBoundsUnsafePointerAssignment (which will call this function, in
+  /// addition to other checks). This function can be called directly for
+  /// determining whether unsafe count parameter assignments should be allowed.
+  /// @param AssignmentLoc Location of an expression assigning a new value to
+  /// a bounds safe variable.
+  bool allowBoundsUnsafeAssignment(SourceLocation AssignmentLoc) const;
+
+  void TryFixAssigningNullTerminatedToImplicitBidiIndexablePtr(
+      const ValueDecl *Assignee, Expr *SrcExpr, QualType DstType, AssignmentAction Action);
+  void
+  TryFixAssigningImplicitBidiIndexableToNullTerminatedPtr(Expr *SrcExpr,
+                                                          QualType DstType);
+  void TryFixAssigningBidiIndexableExprToNullTerminated(Expr *SrcExpr,
+                                                        QualType DstType);
+  void TryFixAssigningNullTerminatedToBidiIndexableExpr(Expr *SrcExpr,
+                                                        QualType DstType);
+  void TryFixAssigningSinglePtrToNullTerminated(Expr *SrcExpr, QualType SrcType,
+                                                QualType DstType);
+  void TryFixAssigningConstArrayToNullTerminated(const Expr *SrcExpr,
+                                                 QualType SrcType,
+                                                 QualType DstType);
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
   /// DiagnoseAssignmentResult - Emit a diagnostic, if required, for the
   /// assignment conversion type specified by ConvTy.  This returns true if the
   /// conversion was invalid or false if the conversion was accepted.
   bool DiagnoseAssignmentResult(AssignConvertType ConvTy, SourceLocation Loc,
                                 QualType DstType, QualType SrcType,
                                 Expr *SrcExpr, AssignmentAction Action,
-                                bool *Complained = nullptr);
+                                bool *Complained = nullptr,
+                                // TO_UPSTREAM(BoundsSafety)
+                                const ValueDecl *Assignee = nullptr);
 
   /// CheckAssignmentConstraints - Perform type checking for assignment,
   /// argument passing, variable initialization, and function return values.
@@ -7699,6 +8226,25 @@ public:
   AssignConvertType CheckTransparentUnionArgumentConstraints(QualType ArgType,
                                                              ExprResult &RHS);
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  bool CheckDynamicBoundVariableEscape(QualType LHSType, Expr *RHSExp);
+
+  using DependentValuesMap =
+      llvm::DenseMap<const ValueDecl *, std::pair<Expr *, /*level*/ unsigned>>;
+  bool CheckDynamicCountSizeForAssignment(QualType LHSTy, Expr *RHSExpr,
+                                          AssignmentAction Action,
+                                          SourceLocation Loc,
+                                          const Twine &Designator,
+                                          DependentValuesMap &DependentValues,
+                                          Expr *LHSMemberBase = nullptr);
+
+  void DiagnoseSingleToWideLosingBounds(QualType LHSType, QualType RHSType,
+                                       const Expr *RHSExp);
+  bool DiagnoseDynamicCountVarZeroInit(VarDecl *VD);
+  Sema::AssignConvertType
+  CheckValueTerminatedAssignmentConstraints(QualType LHSType, Expr *RHSExpr);
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
   /// the following "Check" methods will return a valid/converted QualType
   /// or a null QualType (indicating an error diagnostic was issued).
 
@@ -7723,6 +8269,9 @@ public:
       BinaryOperatorKind Opc, QualType *CompLHSTy = nullptr);
   QualType CheckSubtractionOperands( // C99 6.5.6
       ExprResult &LHS, ExprResult &RHS, SourceLocation Loc,
+      /*TO_UPSTREAM(BoundsSafety) ON*/
+      BinaryOperatorKind Opc,
+      /*TO_UPSTREAM(BoundsSafety) OFF*/
       QualType *CompLHSTy = nullptr);
   QualType CheckShiftOperands( // C99 6.5.7
       ExprResult &LHS, ExprResult &RHS, SourceLocation Loc,
@@ -12145,6 +12694,10 @@ public:
   /// \param A the argument type.
   bool isSameOrCompatibleFunctionType(QualType Param, QualType Arg);
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  void CheckValueTerminatedUninitialized(const VarDecl *VD);
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
   /// Allocate a TemplateArgumentLoc where all locations have
   /// been initialized to the given location.
   ///
@@ -14597,8 +15150,8 @@ public:
   ///
   /// \returns A suitable pointer type, if there are no
   /// errors. Otherwise, returns a NULL type.
-  QualType BuildPointerType(QualType T, SourceLocation Loc,
-                            DeclarationName Entity);
+  QualType BuildPointerType(QualType T, BoundsSafetyPointerAttributes A,
+                            SourceLocation Loc, DeclarationName Entity);
 
   /// Build a reference type.
   ///
@@ -14900,6 +15453,54 @@ public:
                                       SourceLocation Loc);
   QualType BuiltinChangeSignedness(QualType BaseType, UTTKind UKind,
                                    SourceLocation Loc);
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  // Lifetime check for variables with function scope.
+  enum class LifetimeCheckKind {
+    // Do not check.
+    None,
+
+    // Dependent variable must be a non-static local variable.
+    NonStaticLocal,
+
+    // Dependent variable must be a static local variable.
+    StaticLocal,
+
+    // Dependent variable must be an extern variable including extern local
+    // variable declaration.
+    Extern,
+
+    // Dependent variable must be a private extern variable.
+    PrivateExtern,
+
+    // Dependent variable must be a static global variable.
+    StaticGlobal,
+
+    // Dependent variable must be a global variable definition.
+    // Technically, this doesn't tell the lifetime difference compared to
+    // Extern,
+    // but we keep this kind to track globals defined in this translation unit.
+    GlobalDefinition,
+  };
+
+  static LifetimeCheckKind getLifetimeCheckKind(const VarDecl *VD);
+
+  /// Attach \c DependerDeclsAttr to declarations referred to by \c counted_by
+  /// or \c sized_by attributes. This doesn't apply to \c ended_by because it
+  /// adds a type sugar (i.e., \c DynamicRangePointerType) instead for its
+  /// dependent declaration.
+  void AttachDependerDeclsAttr(ValueDecl *NewDepender,
+                               const CountAttributedType *NewDependerCountTy,
+                               unsigned Level);
+
+  QualType BuildCountAttributedType(QualType PointerTy, Expr *CountExpr,
+                                    bool CountInBytes = false,
+                                    bool OrNull = false,
+                                    bool ScopeCheck = false);
+
+  QualType BuildDynamicRangePointerType(QualType PointerTy, Expr *StartPtr,
+                                        Expr *EndPtr, bool ScopeCheck = false);
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   /// Ensure that the type T is a literal type.
   ///

@@ -1485,6 +1485,46 @@ def FunctionMultiVersioning
 
 def NoDeref : DiagGroup<"noderef">;
 
+// TO_UPSTREAM(BoundsSafety) ON
+def BoundsSafetyIncompleteArray : DiagGroup<"bounds-safety-incomplete-array">;
+def BoundsSafetySingleToCount : DiagGroup<"bounds-safety-single-to-count">;
+def BoundsSafetyInitListPartialNull : DiagGroup<"bounds-safety-init-list-partial-null">;
+def BoundsSafetyInitList : DiagGroup<"bounds-safety-init-list">;
+def BoundsAttributesExternArrayCount : DiagGroup<"bounds-attributes-extern-array-count">;
+def BoundsAttributesInitSideEffect
+    : DiagGroup<"bounds-attributes-init-list-side-effect">;
+def BoundsAttributesCXXExperimentalIgnored
+    : DiagGroup<"bounds-attributes-cxx-experimental-ignored">;
+def BoundsAttributesObjCExperimentalIgnored
+    : DiagGroup<"bounds-attributes-objc-experimental-ignored">;
+def BoundsSafetyRelaxedSystemHeadersIgnored
+    : DiagGroup<"bounds-safety-relaxed-system-headers-ignore">;
+def BoundsAttributesImplicitConvSingleToExplicitIndexable :
+    DiagGroup<
+        "bounds-attributes-implicit-conversion-single-to-explicit-indexable">;
+def BoundsSafetyConvSingleToImplicitIndexable :
+    DiagGroup<
+        "bounds-safety-conversion-single-to-implicit-indexable">;
+def BoundsSafetyConvSingleToImplicitIndexableThenConvertToLargerType :
+    DiagGroup<
+        "bounds-safety-conversion-single-to-implicit-indexable-then-convert-to-larger-type">;
+// FIXME: This name is wrong but we have to keep it because that's what XNU's
+// build system currently expects (see rdar://119832922).
+def BoundsSafetyConvSingleToImplicitIndexableThenConvertToDynamicCountPtr :
+    DiagGroup<
+        "bounds-safety-conversion-single-to-implicit-indexable-then-convert-at-call-site">;
+def BoundsSafetyConvertSingleToIndexableBoundsTruncated
+    : DiagGroup<"bounds-safety-single-to-indexable-bounds-truncated">;
+def BoundsSafetyRedundantAttribute : DiagGroup<"bounds-attributes-redundant">;
+def BoundsSafetyNullability : DiagGroup<"bounds-safety-nullability">;
+def BoundsSafetyAdoptionModeIgnored
+    : DiagGroup<"bounds-safety-adoption-mode-ignored">;
+def BoundsSafetyStrictTerminatedByCast
+    : DiagGroup<"bounds-safety-strict-terminated-by-cast">;
+def BoundsSafetyCountAttrArithConstantCount :
+  DiagGroup<"bounds-safety-externally-counted-ptr-arith-constant-count">;
+// TO_UPSTREAM(BoundsSafety) OFF
+
 // -fbounds-safety and bounds annotation related warnings
 def BoundsSafetyCountedByEltTyUnknownSize :
   DiagGroup<"bounds-safety-counted-by-elt-type-unknown-size">;

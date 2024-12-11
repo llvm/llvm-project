@@ -287,6 +287,8 @@ else:
   ret i1 1
 }
 
+; Even though %cnt is not known signed positive %cmp can be simplified
+; because %add.ptr uses it zero-extended.
 define i1 @cnt_not_known_positive_sgt_against_base_with_zext(ptr %p, i32 %cnt) {
 ; CHECK-LABEL: @cnt_not_known_positive_sgt_against_base_with_zext(
 ; CHECK-NEXT:  entry:
@@ -315,6 +317,8 @@ else:
   ret i1 1
 }
 
+; Even though %cnt is not known signed positive %cmp can be simplified
+; because %add.ptr uses it zero-extended.
 define i1 @cnt_not_known_positive_sge_against_base_with_zext(ptr %p, i32 %cnt) {
 ; CHECK-LABEL: @cnt_not_known_positive_sge_against_base_with_zext(
 ; CHECK-NEXT:  entry:

@@ -593,6 +593,17 @@ void TypeLocWriter::VisitCountAttributedTypeLoc(CountAttributedTypeLoc TL) {
   // Nothing to do
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+void TypeLocWriter::VisitDynamicRangePointerTypeLoc(
+    DynamicRangePointerTypeLoc TL) {
+  // nothing to do
+}
+
+void TypeLocWriter::VisitValueTerminatedTypeLoc(ValueTerminatedTypeLoc TL) {
+  // nothing to do
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 void TypeLocWriter::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
   // Nothing to do.
 }
@@ -7148,6 +7159,20 @@ void ASTWriter::AddedAttributeToRecord(const Attr *Attr,
     return;
   DeclUpdates[Record].push_back(DeclUpdate(UPD_ADDED_ATTR_TO_RECORD, Attr));
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON*/
+// This function uses DeclUpdates to store the attribute in a separate record,
+// so as to avoid deserialization cycle between the attribute and the Decl.
+// Thus, this will be called during 'WritingAST' and should cover Decl either
+// from parsing or an AST file.
+void ASTWriter::LazyAttributeToDecl(const Attr *Attr,
+                                     const Decl *D) {
+  if (Chain && Chain->isProcessingUpdateRecords()) return;
+  // Reuse UPD_ADDED_ATTR_TO_RECORD to share its functionality to write and
+  // read the attribute for Decl.
+  DeclUpdates[D].push_back(DeclUpdate(UPD_ADDED_ATTR_TO_RECORD, Attr));
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
 
 void ASTWriter::AddedCXXTemplateSpecialization(
     const ClassTemplateDecl *TD, const ClassTemplateSpecializationDecl *D) {

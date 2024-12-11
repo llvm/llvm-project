@@ -20,6 +20,15 @@
 
 namespace lldb_private {
 namespace formatters {
+
+/* TO_UPSTREAM(BoundsSafety) ON */
+bool FormatBoundsSafetyPointer(ValueObject &valobj, Stream &stream, const TypeSummaryOptions &);
+bool FormatBoundsSafetyAttrPointer(ValueObject &valobj, Stream &stream,
+                                const TypeSummaryOptions &);
+bool FormatBoundsSafetyDynamicRangeAttrPointer(ValueObject &valobj, Stream &stream,
+                                            const TypeSummaryOptions &);
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 void AddFormat(TypeCategoryImpl::SharedPointer category_sp, lldb::Format format,
                llvm::StringRef type_name, TypeFormatImpl::Flags flags,
                bool regex = false);

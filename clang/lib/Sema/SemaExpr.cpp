@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "DynamicCountPointerAssignmentAnalysis.h"
 #include "CheckExprLifetime.h"
 #include "TreeTransform.h"
 #include "UsedDeclVisitor.h"
@@ -30,6 +31,7 @@
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/AST/TypeVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/PartialDiagnostic.h"
@@ -512,8 +514,245 @@ SourceRange Sema::getExprRange(Expr *E) const {
 //  Standard Promotions and Conversions
 //===----------------------------------------------------------------------===//
 
+/*TO_UPSTREAM(BoundsSafety) ON*/
+static ExprResult CastToCharPointer(Sema &S, Expr *PointerToCast,
+                                    BoundsSafetyPointerAttributes FA) {
+  SourceLocation Loc = PointerToCast->getBeginLoc();
+  auto SQT = PointerToCast->getType()->getPointeeType().split();
+  SQT.Ty = S.Context.CharTy.getTypePtr();
+  QualType QualifiedChar = S.Context.getQualifiedType(SQT);
+  QualType CharPtrTy = S.Context.getPointerType(QualifiedChar, FA);
+  return S.BuildCStyleCastExpr(
+      Loc, S.Context.getTrivialTypeSourceInfo(CharPtrTy), Loc, PointerToCast);
+}
+
+static ExprResult CastToCharPointer(Sema &S, Expr *PointerToCast) {
+  return CastToCharPointer(S, PointerToCast,
+                           BoundsSafetyPointerAttributes::bidiIndexable());
+}
+
+static bool ShouldAssumeSGTZero(Sema &S, Expr *ValueToTest) {
+  QualType CountT = ValueToTest->getType();
+  if (!CountT->isUnsignedIntegerOrEnumerationType())
+    return false;
+  return S.Context.getTypeSize(CountT) >= S.Context.getTypeSize(
+      S.Context.getSignedSizeType());
+}
+
+static ExprResult AssumeSGTZero(Sema &S, Expr *ValueToTest, Expr *ValueToWrap) {
+  // If the count is unsigned and the same size as size_t, assume that it is
+  // signed-positive.
+  QualType CountT = ValueToTest->getType();
+  CountT = S.Context.getCorrespondingSignedType(CountT);
+  ExprResult Cast = S.ImpCastExprToType(
+      ValueToTest, CountT, CK_IntegralCast);
+  if (!(ValueToTest = Cast.get()))
+    return ExprError();
+  ExprResult Zero = S.ActOnIntegerConstant(ValueToTest->getBeginLoc(), 0);
+  ExprResult Comparison = S.CreateBuiltinBinOp(
+      ValueToTest->getBeginLoc(), BO_GE, ValueToTest, Zero.get());
+  if (!Comparison.get())
+    return ExprError();
+  return AssumptionExpr::Create(
+      S.Context, ValueToWrap, Comparison.get());
+}
+
+static ExprResult PromoteBoundsSafetyPointerWithCount(Sema &S,
+                                                   OpaqueValueExpr *BasePtr,
+                                                   OpaqueValueExpr *Count,
+                                                   bool IsCountInBytes,
+                                                   bool NullCheck) {
+  QualType T = BasePtr->getType();
+
+  ExprResult PtrVal = BasePtr;
+  ExprResult Upper = BasePtr;
+
+  auto TFA = T->getAs<PointerType>()->getPointerAttributes();
+  if (!TFA.isUnsafeOrUnspecified()) {
+    T = S.Context.getPointerType(
+        T->getPointeeType(), BoundsSafetyPointerAttributes::unspecified());
+    Upper = ImplicitCastExpr::Create(
+        S.Context, T, CK_BoundsSafetyPointerCast, Upper.get(), nullptr,
+        VK_PRValue, S.CurFPFeatureOverrides());
+  }
+
+  bool CastToChar =
+      IsCountInBytes && S.Context.getTypeSizeInCharsIfKnown(T->getPointeeType())
+                                .value_or(CharUnits::Zero())
+                                .getQuantity() != 1;
+  if (CastToChar) {
+    Upper = CastToCharPointer(S, Upper.get(),
+                              T->getAs<PointerType>()->getPointerAttributes());
+    if (!Upper.get())
+      return ExprError();
+  }
+
+  Expr *CountE = Count;
+  if (ShouldAssumeSGTZero(S, CountE)) {
+    ExprResult Assumed = AssumeSGTZero(S, CountE, CountE);
+    if (!(CountE = Assumed.get()))
+      return ExprError();
+  }
+  Upper = S.CreateBuiltinBinOp(
+      Upper.get()->getBeginLoc(), BO_Add, Upper.get(), CountE);
+  if (!Upper.get())
+    return ExprError();
+
+  if (CastToChar) {
+    Upper = ImplicitCastExpr::Create(
+        S.Context, T, CK_BitCast, Upper.get(), nullptr, VK_PRValue,
+        S.CurFPFeatureOverrides());
+  }
+
+  QualType FPtrTy = S.Context.getPointerType(
+      T->getPointeeType(), BoundsSafetyPointerAttributes::bidiIndexable());
+  return BoundsSafetyPointerPromotionExpr::Create(S.Context, FPtrTy, PtrVal.get(),
+                                               Upper.get(), nullptr, NullCheck);
+}
+
+static ExprResult
+PromoteBoundsSafetyPointerToFlexibleArrayMember(Sema &S, RecordDecl *RD, Expr *E,
+                                             bool NullCheck = true) {
+  FlexibleArrayMemberUtils FlexUtils(S);
+  SmallVector<FieldDecl *, 1> PathToFlex;
+  ArrayRef<TypeCoupledDeclRefInfo> CountDecls;
+  if (!FlexUtils.Find(RD, PathToFlex, CountDecls)) {
+    // cannot promote; return original expression. this will be diagnosed
+    // elsewhere
+    return E;
+  }
+
+  SmallVector<OpaqueValueExpr *, 2> OVEs;
+
+  auto *OE = OpaqueValueExpr::EnsureWrapped(S.Context, E, OVEs);
+  Expr *FlexibleObj = FlexUtils.SelectFlexibleObject(PathToFlex, OE);
+  ExprResult CountExpr = FlexUtils.BuildCountExpr(
+      PathToFlex.back(), CountDecls, FlexibleObj, OVEs);
+  if (!CountExpr.get())
+    return ExprError();
+
+  CopyExpr Copier(S);
+  Expr *Count = CountExpr.get();
+  if (ShouldAssumeSGTZero(S, Count)) {
+    Expr *ClonedCount =  S.DefaultLvalueConversion(Copier.TransformExpr(Count).get()).get();
+    ExprResult Assumed =
+        AssumeSGTZero(S, ClonedCount, Count);
+    if (!(Count = Assumed.get()))
+      return ExprError();
+  }
+
+  // build end address
+  QualType FlexType = PathToFlex.back()->getType();
+  Expr *AnyStructBase = FlexibleObj;
+  if (AnyStructBase->getType()->isPointerType() && !AnyStructBase->isPRValue())
+    AnyStructBase = ImplicitCastExpr::Create(
+        S.Context, AnyStructBase->getType(), CK_LValueToRValue,
+        AnyStructBase, nullptr, VK_PRValue, S.CurFPFeatureOverrides());
+  Expr *ObjEnd = MemberExpr::CreateImplicit(
+      S.Context, AnyStructBase, /*IsArrow*/ AnyStructBase->getType()->isPointerType(),
+      PathToFlex.back(), FlexType, VK_LValue, OK_Ordinary);
+  // Ensure that the pointer isn't __bidi_indexable, as that would be
+  // problematic; we're currently trying to compute what the bounds of that
+  // pointer should be.
+  QualType DecayedTy = S.Context.getArrayDecayedType(FlexType);
+  DecayedTy = S.Context.getBoundsSafetyPointerType(DecayedTy, {});
+  ExprResult Res = S.ImpCastExprToType(
+      ObjEnd, DecayedTy, CK_ArrayToPointerDecay, VK_PRValue);
+  if (!(ObjEnd = Res.get()))
+    return ExprError();
+
+  // ArrayToPointerDecay overrides the pointer attributes to be bidi_indexable,
+  // force it to be unspecified.
+  ObjEnd->setType(DecayedTy);
+
+  Res = S.CreateBuiltinBinOp(E->getBeginLoc(), BO_Add, ObjEnd, Count);
+  if (!(ObjEnd = Res.get()))
+    return ExprError();
+
+  // build FPPE and materializing expressions around it
+  auto Bidi = BoundsSafetyPointerAttributes::bidiIndexable();
+  QualType FPtrTy = S.Context.getPointerType(
+      E->getType()->getPointeeType(), Bidi);
+
+  // Promoting a pointer to struct with flexible array member to a wide
+  // pointer requires implicit count member access to the pointer. If the
+  // pointer is null, this will cause an uninteded null pointer dereference.
+  // To avoid this, we skip the evaluation of the bounds of the promotion
+  // expression if the base pointer is null. We control this by adding a
+  // 'NullCheck' member to `BoundsSafetyPointerPromotionExpr`. This is effectively
+  // same as adding this conditional operator (`OE ? Result : 0`). However, we
+  // don't add such an expression in the AST because the conditional operator
+  // will interfere our CFG analysis for dynamic count assignments. Also, we
+  // don't have a good way to remove the conditional operator along with the
+  // functionality to ignore implicit casts. A materialization expr wraps the
+  // promotion with null check and if the materialization expr materializes an
+  // OVE containing member access first, it will still introduce an unintended
+  // null pointer dereference. We prevent this by not wrapping the count member
+  // access in OVE but ensuring it's rebuilt for every reuse.
+  Expr *Result = BoundsSafetyPointerPromotionExpr::Create(
+      S.Context, FPtrTy, OE, ObjEnd, /*LowerBound*/ nullptr, NullCheck);
+
+  if (!OVEs.empty()) {
+    Result = MaterializeSequenceExpr::Create(S.Context, Result, OVEs);
+    Result = MaterializeSequenceExpr::Create(S.Context, Result, OVEs, true);
+  }
+  return Result;
+}
+
+static ExprResult
+PromoteBoundsSafetyFlexibleArrayMember(Sema &S, MemberExpr *M, Expr *ArrayBase) {
+  SmallVector<OpaqueValueExpr *, 1> OVEs;
+  Expr *BasePtr = OpaqueValueExpr::EnsureWrapped(S.Context, M->getBase(), OVEs);
+  M->setBase(BasePtr);
+
+  if (auto *PT = BasePtr->getType()->getAs<PointerType>()) {
+    if (!PT->getPointerAttributes().hasUpperBound()) {
+      auto *RecordPointee = PT->getPointeeType()->getAs<RecordType>();
+      auto *RD = RecordPointee->getDecl();
+      assert(RD->hasFlexibleArrayMember() &&
+             RD->getTagKind() != TagTypeKind::Union);
+      // Skipping the null check for the struct base because it must have been
+      // explicitly dereferenced (e.g., base->array) to get here.
+      ExprResult Promoted = PromoteBoundsSafetyPointerToFlexibleArrayMember(
+          S, RD, BasePtr, /*NullCheck*/ false);
+      if (!(BasePtr = Promoted.get()))
+        return ExprError();
+    }
+  } else {
+    assert(BasePtr->isLValue());
+    // Using '&' on an object with a flexible array member will give us a
+    // properly promoted pointer to it.
+    ExprResult AddrOf = S.CreateBuiltinUnaryOp(
+        BasePtr->getBeginLoc(), UO_AddrOf, BasePtr);
+    if (!(BasePtr = AddrOf.get()))
+      return ExprError();
+  }
+
+  ExprResult Upper = S.BuildUpperBoundExpr(
+      BasePtr, ArrayBase->getBeginLoc(), SourceLocation());
+  if (!Upper.get())
+    return ExprError();
+
+  QualType FPtrTy = S.Context.getBoundsSafetyPointerType(
+      ArrayBase->getType(), BoundsSafetyPointerAttributes::bidiIndexable());
+  Expr *Result = BoundsSafetyPointerPromotionExpr::Create(
+      S.Context, FPtrTy, ArrayBase, Upper.get());
+
+  if (!OVEs.empty()) {
+    Result = MaterializeSequenceExpr::Create(S.Context, Result, OVEs);
+    Result = MaterializeSequenceExpr::Create(S.Context, Result, OVEs, true);
+  }
+  return Result;
+}
+/*TO_UPSTREAM(BoundsSafety) OFF*/
+
 /// DefaultFunctionArrayConversion (C99 6.3.2.1p3, C99 6.3.2.1p4).
-ExprResult Sema::DefaultFunctionArrayConversion(Expr *E, bool Diagnose) {
+ExprResult Sema::DefaultFunctionArrayConversion(
+    Expr *E, bool Diagnose,
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    bool DiagnoseBoundsSafetyIncompleteArrayPromotion,
+    bool DisableFlexibleArrayPromotion) {
+    /* TO_UPSTREAM(BoundsSafety) OFF */
   // Handle any placeholder expressions which made it here.
   if (E->hasPlaceholderType()) {
     ExprResult result = CheckPlaceholderExpr(E);
@@ -530,7 +769,12 @@ ExprResult Sema::DefaultFunctionArrayConversion(Expr *E, bool Diagnose) {
         if (!checkAddressOfFunctionIsAvailable(FD, Diagnose, E->getExprLoc()))
           return ExprError();
 
-    E = ImpCastExprToType(E, Context.getPointerType(Ty),
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    BoundsSafetyPointerAttributes FA;
+    if (getLangOpts().BoundsSafety)
+      FA.setSingle();
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
+    E = ImpCastExprToType(E, Context.getPointerType(Ty, FA),
                           CK_FunctionToPointerDecay).get();
   } else if (Ty->isArrayType()) {
     // In C90 mode, arrays only promote to pointers if the array expression is
@@ -546,9 +790,28 @@ ExprResult Sema::DefaultFunctionArrayConversion(Expr *E, bool Diagnose) {
     //
     if (getLangOpts().C99 || getLangOpts().CPlusPlus || E->isLValue()) {
       ExprResult Res = ImpCastExprToType(E, Context.getArrayDecayedType(Ty),
-                                         CK_ArrayToPointerDecay);
+                            CK_ArrayToPointerDecay, VK_PRValue, nullptr,
+                            CheckedConversionKind::Implicit,
+                            // TO_UPSTREAM(BoundsSafety)
+                            DiagnoseBoundsSafetyIncompleteArrayPromotion);
       if (Res.isInvalid())
         return ExprError();
+
+      /*TO_UPSTREAM(BoundsSafety) ON*/
+      // BoundsSafety: if decaying a member access and that member has a flexible
+      // array member, we must wrap it in the appropriate promotion legalese.
+      if (getLangOpts().BoundsSafety && !DisableFlexibleArrayPromotion) {
+        if (Ty->isIncompleteArrayType() && Ty->isCountAttributedType()) {
+          if (auto *Member = dyn_cast<MemberExpr>(E->IgnoreParens())) {
+            Res.get()->setType(Context.getArrayDecayedType(Ty));
+            Res =
+                PromoteBoundsSafetyFlexibleArrayMember(*this, Member, Res.get());
+            if (Res.isInvalid())
+              return ExprError();
+          }
+        }
+      }
+      /*TO_UPSTREAM(BoundsSafety) OFF*/
       E = Res.get();
     }
   }
@@ -637,7 +900,25 @@ static void DiagnoseDirectIsaAccess(Sema &S, const ObjCIvarRefExpr *OIRE,
     }
 }
 
-ExprResult Sema::DefaultLvalueConversion(Expr *E) {
+/*TO_UPSTREAM(BoundsSafety) ON*/
+static RecordDecl *getImmediateDeclForFlexibleArrayPromotion(QualType T) {
+  if (T->isSinglePointerType() && !T->isBoundsAttributedType()) {
+    auto *PT = T->getAs<PointerType>();
+    if (auto *RecordPointee = PT->getPointeeType()->getAs<RecordType>()) {
+      auto *RD = RecordPointee->getDecl();
+      if (RD->hasFlexibleArrayMember() &&
+          RD->getTagKind() != TagTypeKind::Union) {
+        return RD;
+      }
+    }
+  }
+  return nullptr;
+}
+/*TO_UPSTREAM(BoundsSafety) OFF*/
+
+ExprResult Sema::DefaultLvalueConversion(Expr *E,
+                                         // TO_UPSTREAM(BoundsSafety)
+                                         bool DisableFlexibleArrayPromotion) {
   // Handle any placeholder expressions which made it here.
   if (E->hasPlaceholderType()) {
     ExprResult result = CheckPlaceholderExpr(E);
@@ -731,6 +1012,132 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
   if (E->getType().isDestructedType() == QualType::DK_nontrivial_c_struct)
     Cleanup.setExprNeedsCleanups(true);
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  // BoundsSafety: rvalue of pointers with dynamic count or range will
+  // automatically form wide pointers.
+  auto *DBPT = T->getAs<BoundsAttributedType>();
+  if (getLangOpts().BoundsSafety && DBPT) {
+    CopyExpr Copy(*this);
+    SmallVector<OpaqueValueExpr *, 2> OpaqueValues;
+    // if the lvalue was a member access, it's possible its base expression
+    // has side effects, in which case we need to wrap it in an opaque value
+    // expression.
+    auto *UnwrappedExp = E;
+    bool IsMemberOVE = false;
+    if (const auto *MemberOVE = dyn_cast<OpaqueValueExpr>(UnwrappedExp)) {
+      UnwrappedExp = MemberOVE->getSourceExpr();
+      IsMemberOVE = true;
+    }
+    auto *Member = dyn_cast<MemberExpr>(UnwrappedExp->IgnoreParenCasts());
+    if (DBPT->referencesFieldDecls() && Member) {
+      auto *MemberBase = Member->getBase();
+      if (!isa<OpaqueValueExpr>(MemberBase)) {
+        // When a MemberExpr is materialized, the base should also be.
+        (void)IsMemberOVE;
+        assert(!IsMemberOVE);
+        MemberBase = OpaqueValueExpr::EnsureWrapped(
+            Context, MemberBase, OpaqueValues);
+        // Rebuild the member expr with the new base so that when
+        // the caller of LvalueConversion throw away the result,
+        // the OVE also goes away. An example is 'rewriteBuiltinFunctionDecl()'
+        // which calls LvalueConversion just to check the resulting type.
+        Res = MemberExpr::Create(
+            Context, MemberBase, Member->isArrow(), Member->getOperatorLoc(),
+            Member->getQualifierLoc(), Member->getTemplateKeywordLoc(),
+            Member->getMemberDecl(), Member->getFoundDecl(),
+            Member->getMemberNameInfo(), /*CopiedTemplateArgs(Member)*/ nullptr,
+            Member->getType(), Member->getValueKind(), Member->getObjectKind(),
+            Member->isNonOdrUse());
+      }
+      for (const auto &DeclRefInfo : DBPT->dependent_decls()) {
+        auto *Decl = DeclRefInfo.getDecl();
+        ExprObjectKind OK = OK_Ordinary;
+        if (auto *FD = dyn_cast<FieldDecl>(Decl)) {
+          OK = FD->isBitField() ? OK_BitField : OK_Ordinary;
+        }
+        auto *NewMember = MemberExpr::CreateImplicit(
+            Context, MemberBase, Member->isArrow(), Decl, Decl->getType(),
+            VK_LValue, OK);
+        ExprResult Lvalue = ImplicitCastExpr::Create(
+            Context, NewMember->getType(), CK_LValueToRValue, NewMember,
+            nullptr, VK_PRValue, CurFPFeatureOverrides());
+        if (!Lvalue.get())
+          return ExprError();
+        auto *OVE = OpaqueValueExpr::EnsureWrapped(
+            Context, Lvalue.get(), OpaqueValues);
+        Copy.AddDeclSubstitution(Decl, OVE);
+      }
+    }
+
+    CastKind CK = T->isNullPtrType() ? CK_NullToPointer : CK_LValueToRValue;
+    Res = ImplicitCastExpr::Create(Context, T, CK, Res.get(), nullptr,
+                                   VK_PRValue, CurFPFeatureOverrides());
+
+    if (auto *DCPT = dyn_cast<CountAttributedType>(DBPT)) {
+      ExprResult Count = Copy.TransformExpr(DCPT->getCountExpr());
+      if (!Count.get())
+        return ExprError();
+      Count = DefaultLvalueConversion(Count.get());
+      if (!Count.get())
+        return ExprError();
+
+      if (!BoundsSafetyCheckUseOfCountAttrPtr(Res.get()))
+        return ExprError();
+
+      // Need to transform the base value so that
+      // PromoteBoundsSafetyPointerWithCount can reuse it with impunity
+      auto *PtrOVE = OpaqueValueExpr::EnsureWrapped(
+          Context, Res.get(), OpaqueValues);
+      auto *CountOVE = OpaqueValueExpr::EnsureWrapped(
+          Context, Count.get(), OpaqueValues);
+      Res = PromoteBoundsSafetyPointerWithCount(
+          *this, PtrOVE, CountOVE, DCPT->isCountInBytes(), DCPT->isOrNull());
+      if (!Res.get())
+        return ExprError();
+    } else {
+      auto *DRPT = cast<DynamicRangePointerType>(DBPT);
+      // XXX: we would prefer to call DefaultLvalueConversion for Lower and
+      // Upper here, but sadly this would infinitely recurse.
+      ExprResult Lower;
+      if (auto *StartExpr = DRPT->getStartPointer())
+        Lower = Copy.TransformExpr(StartExpr);
+      else
+        Lower = Copy.TransformExpr(E);
+      if (!Lower.get())
+        return ExprError();
+
+      ExprResult Upper;
+      if (auto *EndExpr = DRPT->getEndPointer())
+        Upper = Copy.TransformExpr(EndExpr);
+      else
+        Upper = Copy.TransformExpr(E);
+      if (!Upper.get())
+        return ExprError();
+
+      if (Lower.get()->isGLValue())
+        Lower = ImplicitCastExpr::Create(
+            Context, Lower.get()->getType(), CK_LValueToRValue, Lower.get(),
+            nullptr, VK_PRValue, CurFPFeatureOverrides());
+      if (Upper.get()->isGLValue())
+        Upper = ImplicitCastExpr::Create(
+            Context, Upper.get()->getType(), CK_LValueToRValue, Upper.get(),
+            nullptr, VK_PRValue, CurFPFeatureOverrides());
+
+      BoundsSafetyPointerAttributes AT;
+      AT.setBidiIndexable();
+      QualType FPtrTy = Context.getPointerType(T->getPointeeType(), AT);
+      Res = BoundsSafetyPointerPromotionExpr::Create(
+          Context, FPtrTy, E, Upper.get(), Lower.get());
+    }
+
+    if (!OpaqueValues.empty()) {
+      Res = MaterializeSequenceExpr::Create(Context, Res.get(), OpaqueValues);
+      Res = MaterializeSequenceExpr::Create(Context, Res.get(), OpaqueValues, true);
+    }
+    return Res;
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
   // C++ [conv.lval]p3:
   //   If T is cv std::nullptr_t, the result is a null pointer constant.
   CastKind CK = T->isNullPtrType() ? CK_NullToPointer : CK_LValueToRValue;
@@ -746,14 +1153,37 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
                                    nullptr, VK_PRValue, FPOptionsOverride());
   }
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  // Promote a single pointer to struct with flexible array member. We do not
+  // promote unsafe_indexable here but if its flexible array member is
+  // annotated with counted_by, the checks will still be performed based on the
+  // count value when the member is dereferenced.
+  // `DisableFlexibleArrayPromotion` allows us to skip the promotion for a base
+  // of member expression as it can create a problem of incorrect bounds while
+  // the member is being updated and it is redundant. When the base is a
+  // single pointer to struct with flexible array member, other members are safe
+  // to access without extra checks just like any other single pointers.
+  // Directly accessing the flexible array member will still be promoted to
+  // bidi_indexable and will be safely handled.
+  if (getLangOpts().BoundsSafety && !DisableFlexibleArrayPromotion) {
+    if (auto *RD = getImmediateDeclForFlexibleArrayPromotion(T)) {
+        Res = PromoteBoundsSafetyPointerToFlexibleArrayMember(*this, RD, Res.get());
+    }
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
   return Res;
 }
 
-ExprResult Sema::DefaultFunctionArrayLvalueConversion(Expr *E, bool Diagnose) {
-  ExprResult Res = DefaultFunctionArrayConversion(E, Diagnose);
+ExprResult Sema::DefaultFunctionArrayLvalueConversion(
+    Expr *E, bool Diagnose, bool DiagnoseBoundsSafetyIncompleteArrayPromotion,
+    bool DisableFlexibleArrayPromotion) {
+  ExprResult Res = DefaultFunctionArrayConversion(
+      E, Diagnose, DiagnoseBoundsSafetyIncompleteArrayPromotion,
+      DisableFlexibleArrayPromotion);
   if (Res.isInvalid())
     return ExprError();
-  Res = DefaultLvalueConversion(Res.get());
+  Res = DefaultLvalueConversion(Res.get(), DisableFlexibleArrayPromotion);
   if (Res.isInvalid())
     return ExprError();
   return Res;
@@ -872,6 +1302,22 @@ ExprResult Sema::DefaultArgumentPromotion(Expr *E) {
   if (Res.isInvalid())
     return ExprError();
   E = Res.get();
+
+  // The argument we are processing is for a function without a prototype
+  // or a varargs argument. Passing a pointer with bounds will very likely lead
+  // to an ABI mismatch because there's a good chance the implementing function
+  // isn't using -fbounds-safety. Avoid this potential ABI mismatch by not allowing a
+  // pointer with bounds to passed by casting to an unsafeIndexable pointer
+  // which is ABI compatible with normal pointers.
+  if (E->getType()->isPointerTypeWithBounds()) {
+    QualType UnsafePointerTy = Context.getBoundsSafetyPointerType(
+        E->getType(), BoundsSafetyPointerAttributes::unsafeIndexable());
+    ExprResult ExprRes =
+        ImpCastExprToType(E, UnsafePointerTy, CK_BoundsSafetyPointerCast);
+    if (ExprRes.isInvalid())
+      return ExprError();
+    E = ExprRes.get();
+  }
 
   // If this is a 'float'  or '__fp16' (CVR qualified or typedef)
   // promote to double.
@@ -1574,12 +2020,31 @@ QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
   QualType LHSType = LHS.get()->getType().getUnqualifiedType();
   QualType RHSType = RHS.get()->getType().getUnqualifiedType();
 
+  // BoundsSafety: "pointer" op "pointer" -> cast it to raw pointer.
+  auto *LPTy = LHSType->getAs<PointerType>();
+  auto *RPTy = RHSType->getAs<PointerType>();
+  if (ACK != ACK_Conditional && LPTy && RPTy &&
+      (!LPTy->hasRawPointerLayout() || !RPTy->hasRawPointerLayout())) {
+    if (!LPTy->hasRawPointerLayout())
+      LHS = ImpCastExprToType(LHS.get(),
+          Context.getPointerType(LPTy->getPointeeType()), CK_BoundsSafetyPointerCast);
+    if (!RPTy->hasRawPointerLayout())
+      RHS = ImpCastExprToType(RHS.get(),
+          Context.getPointerType(RPTy->getPointeeType()), CK_BoundsSafetyPointerCast);
+  }
+
   // For conversion purposes, we ignore any atomic qualifier on the LHS.
   if (const AtomicType *AtomicLHS = LHSType->getAs<AtomicType>())
     LHSType = AtomicLHS->getValueType();
 
   // If both types are identical, no conversion is needed.
-  if (Context.hasSameType(LHSType, RHSType))
+  if (Context.hasSameType(LHSType, RHSType)
+      /* TO_UPSTREAM(BoundsSafety) ON*/
+      && (!Context.getLangOpts().BoundsSafety ||
+          Context.canMergeTypeBounds(LHSType, RHSType) ==
+              ASTContext::BSPTMK_CanMerge)
+      /* TO_UPSTREAM(BoundsSafety) OFF*/
+  )
     return Context.getCommonSugaredType(LHSType, RHSType);
 
   // If either side is a non-arithmetic type (e.g. a pointer), we are done.
@@ -1598,7 +2063,13 @@ QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
     LHS = ImpCastExprToType(LHS.get(), LHSType, CK_IntegralCast);
 
   // If both types are identical, no conversion is needed.
-  if (Context.hasSameType(LHSType, RHSType))
+  if (Context.hasSameType(LHSType, RHSType)
+      /* TO_UPSTREAM(BoundsSafety) ON*/
+      && (!Context.getLangOpts().BoundsSafety ||
+          Context.canMergeTypeBounds(LHSType, RHSType) ==
+              ASTContext::BSPTMK_CanMerge)
+      /* TO_UPSTREAM(BoundsSafety) OFF*/
+  )
     return Context.getCommonSugaredType(LHSType, RHSType);
 
   // At this point, we have two different arithmetic types.
@@ -4493,6 +4964,10 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
     case Type::SubstTemplateTypeParm:
     case Type::MacroQualified:
     case Type::CountAttributed:
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    case Type::DynamicRangePointer:
+    case Type::ValueTerminated:
+    /* TO_UPSTREAM(BoundsSafety) OFF */
       // Keep walking after single level desugaring.
       T = T.getSingleStepDesugaredType(Context);
       break;
@@ -5161,6 +5636,45 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
   // and index from the expression types.
   Expr *BaseExpr, *IndexExpr;
   QualType ResultType;
+
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  auto diagnoseBoundsSafetyPointerSubscript = [&](QualType Ty) -> bool {
+    const PointerType *PTy = Ty->getAs<PointerType>();
+    // If the base of the array subscript expression is 'counted_by', it should
+    // have been promoted to __bidi_indexable.
+    assert(!Ty->isBoundsAttributedType());
+    if (PTy->isSingle()) {
+      Expr::EvalResult RInt;
+      if (!RHSExp->EvaluateAsInt(RInt, Context) || RInt.Val.getInt() != 0) {
+        Diag(LLoc, diag::err_bounds_safety_pointer_subscript)
+            << Ty->isValueTerminatedType() << BaseExpr
+            << SourceRange(LHSExp->getBeginLoc(), RHSExp->getEndLoc());
+        return false;
+      }
+    } else if (PTy->isIndexable() &&
+               !IndexExpr->getType()->isUnsignedIntegerType()) {
+      Expr::EvalResult RInt;
+      // Runtime check will be inserted for the indices whose negativity can't
+      // be known statically.
+      if (RHSExp->EvaluateAsInt(RInt, Context) && RInt.Val.getInt() < 0) {
+        Diag(LLoc, diag::err_bounds_safety_indexable_pointer_subscript)
+            << BaseExpr
+            << SourceRange(LHSExp->getBeginLoc(), RHSExp->getEndLoc());
+        return false;
+      }
+    }
+    return true;
+  };
+
+  auto castIndexableToBidiIndexable = [&](Expr *BaseExpr) -> Expr * {
+    if (!BaseExpr->getType()->isIndexablePointerType())
+      return BaseExpr;
+    QualType Ty = Context.getBoundsSafetyPointerType(
+        BaseExpr->getType(), BoundsSafetyPointerAttributes::bidiIndexable());
+    return ImpCastExprToType(BaseExpr, Ty, CK_BoundsSafetyPointerCast).get();
+  };
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
+
   if (LHSTy->isDependentType() || RHSTy->isDependentType()) {
     BaseExpr = LHSExp;
     IndexExpr = RHSExp;
@@ -5170,6 +5684,13 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
     BaseExpr = LHSExp;
     IndexExpr = RHSExp;
     ResultType = PTy->getPointeeType();
+    /*TO_UPSTREAM(BoundsSafety) ON*/
+    if (LangOpts.BoundsSafety && !diagnoseBoundsSafetyPointerSubscript(LHSTy))
+      return ExprError();
+    LHSExp = castIndexableToBidiIndexable(BaseExpr);
+    LHSTy = LHSExp->getType();
+    BaseExpr = LHSExp;
+    /*TO_UPSTREAM(BoundsSafety) OFF*/
   } else if (const ObjCObjectPointerType *PTy =
                LHSTy->getAs<ObjCObjectPointerType>()) {
     BaseExpr = LHSExp;
@@ -5187,6 +5708,13 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
     BaseExpr = RHSExp;
     IndexExpr = LHSExp;
     ResultType = PTy->getPointeeType();
+    /*TO_UPSTREAM(BoundsSafety) ON*/
+    if (LangOpts.BoundsSafety && !diagnoseBoundsSafetyPointerSubscript(RHSTy))
+      return ExprError();
+    RHSExp = castIndexableToBidiIndexable(BaseExpr);
+    RHSTy = RHSExp->getType();
+    BaseExpr = RHSExp;
+    /*TO_UPSTREAM(BoundsSafety) OFF*/
   } else if (const ObjCObjectPointerType *PTy =
                RHSTy->getAs<ObjCObjectPointerType>()) {
      // Handle the uncommon case of "123[Ptr]".
@@ -5757,6 +6285,50 @@ private:
 };
 }
 
+namespace {
+class ContainsBoundsAttributedType final
+    : public TypeVisitor<ContainsBoundsAttributedType, bool> {
+
+public:
+  static bool check(QualType QT) {
+    return ContainsBoundsAttributedType().Visit(QT.getTypePtr());
+  }
+
+  bool VisitType(const Type *T) {
+    QualType Desugared = T->getLocallyUnqualifiedSingleStepDesugaredType();
+    return Desugared.getTypePtr() == T ? false : Visit(Desugared.getTypePtr());
+  }
+
+  bool VisitPointerType(const PointerType *T) {
+    if (getImmediateDeclForFlexibleArrayPromotion(QualType(T,0)))
+      return true;
+    auto Pointee = T->getPointeeType();
+    if (!Pointee->isIncompleteOrObjectType())
+      return false;
+    return Visit(Pointee.getTypePtr());
+  }
+
+  bool VisitFunctionType(const FunctionType *T) {
+    return Visit(T->getReturnType().getTypePtr());
+  }
+
+  bool VisitFunctionProtoType(const FunctionProtoType *T) {
+    if (VisitFunctionType(T))
+      return true;
+    for (QualType PT : T->getParamTypes())
+      if (Visit(PT.getTypePtr()))
+        return true;
+    return false;
+  }
+
+  bool VisitBoundsAttributedType(const BoundsAttributedType *T) {
+    return true;
+  }
+};
+
+
+}
+
 static TypoCorrection TryTypoCorrectionForCall(Sema &S, Expr *Fn,
                                                FunctionDecl *FDecl,
                                                ArrayRef<Expr *> Args) {
@@ -5973,6 +6545,17 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
     ParmVarDecl *Param = FDecl ? FDecl->getParamDecl(i) : nullptr;
     if (ArgIx < Args.size()) {
       Arg = Args[ArgIx++];
+
+      /*TO_UPSTREAM(BoundsSafety) ON*/
+      // It's not useful to throw type errors based on the type of most
+      // expressions with errors. Make an exception for DeclRefExprs since the
+      // type of the Decl is explicit. The type of casts would be explicit also,
+      // but the bounds type can be implicit in -fbounds-safety, which is the
+      // target of this (normal C is way more lax with type errors)
+      if (getLangOpts().BoundsSafety && Arg->containsErrors() &&
+          !isa<DeclRefExpr>(Arg->IgnoreParenCasts()))
+        continue;
+      /*TO_UPSTREAM(BoundsSafety) OFF*/
 
       if (RequireCompleteType(Arg->getBeginLoc(), ProtoArgType,
                               diag::err_call_incomplete_argument, Arg))
@@ -6245,8 +6828,10 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
   for (QualType ParamType : FT->param_types()) {
 
     // Convert array arguments to pointer to simplify type lookup.
-    ExprResult ArgRes =
-        Sema->DefaultFunctionArrayLvalueConversion(ArgExprs[i++]);
+    ExprResult ArgRes = Sema->DefaultFunctionArrayLvalueConversion(
+        ArgExprs[i++], /*Diagnose=*/true,
+        /*DiagnoseBoundsSafetyIncompleteArrayPromotion=*/true,
+        /*DisableFlexibleArrayPromotion=*/true);
     if (ArgRes.isInvalid())
       return nullptr;
     Expr *Arg = ArgRes.get();
@@ -6463,6 +7048,12 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   if (LangOpts.OpenMP)
     Call = OpenMP().ActOnOpenMPCall(Call, Scope, LParenLoc, ArgExprs, RParenLoc,
                                     ExecConfig);
+
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  if (LangOpts.BoundsSafety)
+    Call = ActOnBoundsSafetyCall(Call);
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
+
   if (LangOpts.CPlusPlus) {
     if (const auto *CE = dyn_cast<CallExpr>(Call.get()))
       DiagnosedUnqualifiedCallsToStdFunctions(*this, CE);
@@ -6735,6 +7326,1305 @@ ExprResult Sema::ActOnConvertVectorExpr(Expr *E, ParsedType ParsedDestTy,
   return ConvertVectorExpr(E, TInfo, BuiltinLoc, RParenLoc);
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON*/
+static const ValueDecl *findValueDecl(const Expr *E, int *AddrOfDerefDiff) {
+  if (AddrOfDerefDiff)
+    *AddrOfDerefDiff = 0;
+  E = E->IgnoreParenCasts();
+  int AddrOfDiff = 0;
+  while (auto UO = dyn_cast<UnaryOperator>(E)) {
+    switch (UO->getOpcode()) {
+    case UO_AddrOf:
+      AddrOfDiff++;
+      break;
+    case UO_Deref:
+      AddrOfDiff--;
+      break;
+    default:
+      return nullptr;
+    }
+    E = UO->getSubExpr()->IgnoreParenCasts();
+  }
+  /// Not supported as dynamic count or pointer arguments.
+  if (AddrOfDiff > 1 || AddrOfDiff < -1)
+    return nullptr;
+
+  if (AddrOfDerefDiff)
+    *AddrOfDerefDiff = AddrOfDiff;
+
+  if (auto ME = dyn_cast<MemberExpr>(E))
+    return ME->getMemberDecl();
+  if (auto DRE = dyn_cast<DeclRefExpr>(E))
+    return DRE->getDecl();
+  return nullptr;
+}
+
+static const RecordDecl *findBaseRecordDecl(const Expr *E) {
+  E = E->IgnoreParenCasts();
+  while (auto UO = dyn_cast<UnaryOperator>(E)) {
+    switch (UO->getOpcode()) {
+    case UO_AddrOf:
+    case UO_Deref:
+      break;
+    default:
+      return nullptr;
+    }
+    E = UO->getSubExpr()->IgnoreParenCasts();
+  }
+
+  RecordDecl *BaseRecord = nullptr;
+  while (auto ME = dyn_cast<MemberExpr>(E)) {
+    E = ME->getBase()->IgnoreParenCasts();
+    const Type *BaseTy = E->getType().getTypePtr();
+    if (ME->isArrow())
+      BaseTy = BaseTy->getPointeeOrArrayElementType();
+    BaseRecord = BaseTy->getAsRecordDecl();
+  }
+  return BaseRecord;
+}
+
+static const ValueDecl *findValueDecl(const Expr *E, bool *AsAddrOf = nullptr,
+                                      bool *AsDeref = nullptr) {
+  int AddrOfDerefDiff = 0;
+  const auto *VD = findValueDecl(E, &AddrOfDerefDiff);
+  if (AsAddrOf)
+    *AsAddrOf = AddrOfDerefDiff == 1;
+  if (AsDeref)
+    *AsDeref = AddrOfDerefDiff == -1;
+  return VD;
+}
+
+namespace {
+class DynamicCountExprProfiler : public ConstStmtVisitor<DynamicCountExprProfiler> {
+  llvm::FoldingSetNodeID &ID;
+  const ASTContext &Context;
+public:
+  DynamicCountExprProfiler(llvm::FoldingSetNodeID &ID, const ASTContext &Context)
+    : ID(ID), Context(Context) {}
+
+  void VisitCastExpr(const CastExpr *E) {
+    Visit(E->getSubExpr());
+  }
+
+  void VisitStmt(const Stmt *S) {
+    assert(S && "Requires non-null Stmt pointer");
+
+    HandleStmtClass(S->getStmtClass());
+
+    for (const Stmt *SubStmt : S->children()) {
+      if (SubStmt)
+        Visit(SubStmt);
+      else
+        ID.AddInteger(0);
+    }
+  }
+
+  void HandleStmtClass(Stmt::StmtClass SC) {
+    ID.AddInteger(SC);
+  }
+
+  void HandleDeclReference(const Expr *E) {
+    ID.AddInteger(Stmt::DeclRefExprClass);
+    VisitType(E->getType());
+  }
+
+  void VisitType(QualType T) {
+    if (!T.isNull())
+      T = Context.getCanonicalType(T);
+
+    ID.AddPointer(T.getAsOpaquePtr());
+  }
+
+  void VisitIdentifierInfo(IdentifierInfo *II) {
+    ID.AddPointer(II);
+  }
+  void VisitDeclRefExpr(const DeclRefExpr *E) {
+    HandleDeclReference(E);
+  }
+  void VisitMemberExpr(const MemberExpr *E) {
+    HandleDeclReference(E);
+  }
+  void VisitUnaryOperator(const UnaryOperator *E) {
+    if (E->getOpcode() == UO_Deref) {
+      HandleDeclReference(E);
+      return;
+    }
+    VisitStmt(E);
+  }
+};
+}
+
+static bool compatibleDynamicCountExprs(const ASTContext &Context, Expr *LHS, Expr *RHS) {
+  llvm::FoldingSetNodeID LID;
+  llvm::FoldingSetNodeID RID;
+  DynamicCountExprProfiler(LID, Context).Visit(LHS);
+  DynamicCountExprProfiler(RID, Context).Visit(RHS);
+  return LID == RID;
+}
+
+namespace {
+
+struct CheckSubstitutedCountExpr
+    : public ConstStmtVisitor<CheckSubstitutedCountExpr, bool> {
+  using BaseVisitor = ConstStmtVisitor<CheckSubstitutedCountExpr, bool>;
+  const ParmVarDecl *ArgPtrParmDecl;
+  const MemberExpr *ArgPtrMemberExpr;
+
+  explicit CheckSubstitutedCountExpr(const ParmVarDecl *PtrParmDecl,
+                                     const MemberExpr *PtrMemberExpr)
+      : ArgPtrParmDecl(PtrParmDecl), ArgPtrMemberExpr(PtrMemberExpr){};
+
+  bool VisitStmt(const Stmt *S) { return false; }
+
+  bool VisitImplicitCastExpr(const ImplicitCastExpr *E) {
+    return Visit(E->getSubExpr());
+  }
+
+  bool VisitParenExpr(const ParenExpr *E) { return Visit(E->getSubExpr()); }
+
+  bool VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
+    return Visit(E->getSourceExpr());
+  }
+
+  bool VisitIntegerLiteral(const IntegerLiteral *E) { return true; }
+
+  bool VisitUnaryOperator(const UnaryOperator *E) {
+    switch (E->getOpcode()) {
+    case UO_AddrOf:
+    case UO_Deref:
+      return Visit(E->getSubExpr());
+    default:
+      // An invalid opcode.
+      return false;
+    }
+  }
+
+  bool VisitBinaryOperator(const BinaryOperator *E) {
+    // TODO: This blocks any binary operator. This is done on purpose, since we
+    // don't have CodeGen tests with complex count expressions. Once we have
+    // them, we can use the commented out code below.
+    // rdar://119737451
+    return false;
+
+    /*
+    const Expr *LHS = E->getLHS();
+    const Expr *RHS = E->getRHS();
+    if (!LHS->getType()->isIntegerType() || !RHS->getType()->isIntegerType())
+      return false;
+    if (!Visit(LHS))
+      return false;
+    return Visit(RHS);
+    */
+  }
+
+  // Check if the decls in the count argument are parameters of the same
+  // function as the pointer argument.
+  bool VisitDeclRefExpr(const DeclRefExpr *E) {
+    if (!ArgPtrParmDecl)
+      return false;
+    const auto *PVD = dyn_cast<ParmVarDecl>(E->getDecl());
+    if (!PVD || PVD->getDeclContext() != ArgPtrParmDecl->getDeclContext())
+      return false;
+    return true;
+  }
+
+  // Check if the member expressions in the count argument have the same base as
+  // the pointer argument.
+  bool VisitMemberExpr(const MemberExpr *E) {
+    if (!ArgPtrMemberExpr)
+      return false;
+
+    const auto *Ptr = ArgPtrMemberExpr->getBase();
+    const auto *Count = E->getBase();
+    for (;;) {
+      if (Ptr == Count)
+        return true;
+      const auto *PtrICE = dyn_cast<ImplicitCastExpr>(Ptr);
+      const auto *CountICE = dyn_cast<ImplicitCastExpr>(Count);
+      if (PtrICE && CountICE && PtrICE->getCastKind() == CK_LValueToRValue &&
+          CountICE->getCastKind() == CK_LValueToRValue) {
+        Ptr = PtrICE->getSubExpr();
+        Count = CountICE->getSubExpr();
+      }
+      const auto *PtrDRE = dyn_cast<DeclRefExpr>(Ptr);
+      const auto *CountDRE = dyn_cast<DeclRefExpr>(Count);
+      if (PtrDRE && CountDRE)
+        return PtrDRE->getDecl() == CountDRE->getDecl();
+      const auto *PtrME = dyn_cast<MemberExpr>(Ptr);
+      const auto *CountME = dyn_cast<MemberExpr>(Count);
+      if (!PtrME || !CountME)
+        return false;
+      if (PtrME->getMemberDecl() != CountME->getMemberDecl())
+        return false;
+      Ptr = PtrME->getBase();
+      Count = CountME->getBase();
+    }
+  }
+};
+
+struct SubstitutedCountExprPrinterHelper : public PrinterHelper {
+  const PrintingPolicy &Policy;
+  const llvm::SmallPtrSetImpl<const Expr *> *ExprsNeedingParens;
+
+  explicit SubstitutedCountExprPrinterHelper(
+      const PrintingPolicy &Policy,
+      const llvm::SmallPtrSetImpl<const Expr *> *ExprsNeedingParens)
+      : Policy(Policy), ExprsNeedingParens(ExprsNeedingParens) {}
+
+  bool handledStmt(Stmt *S, raw_ostream &OS) override {
+    // Print the field decl.
+    if (const auto *ME = dyn_cast<MemberExpr>(S)) {
+      ME->getMemberDecl()->printName(OS);
+      return true;
+    }
+
+    // Simplify *&decl.
+    if (const auto *Outer = dyn_cast<UnaryOperator>(S);
+        Outer && Outer->getOpcode() == UO_Deref) {
+      if (const auto *Inner = dyn_cast<UnaryOperator>(
+              Outer->getSubExpr()->IgnoreParenImpCasts());
+          Inner && Inner->getOpcode() == UO_AddrOf) {
+        if (const auto *DRE = dyn_cast<DeclRefExpr>(
+                Inner->getSubExpr()->IgnoreParenImpCasts())) {
+          DRE->getDecl()->printName(OS);
+          return true;
+        }
+      }
+    }
+
+    // Wrap in parentheses if needed.
+    if (ExprsNeedingParens) {
+      const auto *E = dyn_cast<Expr>(S);
+      if (ExprsNeedingParens->contains(E)) {
+        OS << '(';
+        SubstitutedCountExprPrinterHelper Helper(Policy, nullptr);
+        E->printPretty(OS, &Helper, Policy);
+        OS << ')';
+        return true;
+      }
+    }
+
+    // Print normally.
+    return false;
+  }
+};
+
+// Try to emit a fixit when an implicit __single pointer is assigned to a
+// dynamic count pointer. The fixit should contain an appropriate dynamic bound
+// annotation that can be attached to the implicit __single pointer.
+void TryFixSingleToDynamicCount(
+    Sema &S, const CountAttributedType *ParmPtrTy, const Expr *ArgPtrExpr,
+    const Expr *CountExpr,
+    const llvm::SmallPtrSetImpl<const Expr *> &ReplacingValues) {
+  // Extract the decl from the pointer argument passed to dynamic count pointer
+  // param.
+  const ParmVarDecl *ArgPtrParmDecl = nullptr;
+  const MemberExpr *ArgPtrMemberExpr = nullptr;
+  const DeclaratorDecl *ArgPtrDecl = nullptr;
+  const Expr *P = ArgPtrExpr->IgnoreParenImpCasts();
+  if (const auto *ME = dyn_cast<MemberExpr>(P)) {
+    ArgPtrMemberExpr = ME;
+    ArgPtrDecl = dyn_cast<FieldDecl>(ME->getMemberDecl());
+  } else if (const auto *DRE = dyn_cast<DeclRefExpr>(P)) {
+    ArgPtrDecl = ArgPtrParmDecl = dyn_cast<ParmVarDecl>(DRE->getDecl());
+  }
+  if (!ArgPtrDecl)
+    return;
+
+  QualType ArgPtrTy = ArgPtrDecl->getType();
+  // This should be called only if the pointer argument is 'unbounded'.
+  assert(ArgPtrTy->isSinglePointerType() &&
+         !ArgPtrTy->isBoundsAttributedType() &&
+         !ArgPtrTy->isValueTerminatedType());
+
+  // Don't emit a fixit if the decl has an explicit attr.
+  if (!ArgPtrTy->hasAttr(attr::PtrAutoAttr))
+    return;
+
+  // Don't emit a fixit for __counted_by() when the argument pointer has a
+  // different pointee.
+  if (!ParmPtrTy->isCountInBytes() &&
+      !S.Context.hasSameUnqualifiedType(ArgPtrTy->getPointeeType(),
+                                        ParmPtrTy->getPointeeType()))
+    return;
+
+  // Check if the count argument is valid.
+  CheckSubstitutedCountExpr Check(ArgPtrParmDecl, ArgPtrMemberExpr);
+  bool Valid = Check.Visit(CountExpr);
+  if (!Valid)
+    return;
+
+  // Wrap each count argument in parentheses if the callee's __counted_by()
+  // expression and the passed argument are not simple enough.
+  llvm::SmallPtrSet<const Expr *, 4> ExprsNeedingParens;
+  if (!isa<DeclRefExpr>(ParmPtrTy->getCountExpr()->IgnoreImpCasts())) {
+    for (const auto *Expr : ReplacingValues) {
+      const auto *E = Expr->IgnoreParenImpCasts();
+      bool NeedsParens = true;
+      if (isa<DeclRefExpr>(E) || isa<MemberExpr>(E)) {
+        NeedsParens = false;
+      } else if (const auto *UO = dyn_cast<UnaryOperator>(E)) {
+        NeedsParens = !(UO->getOpcode() == UO_AddrOf &&
+                        isa<DeclRefExpr>(UO->getSubExpr()));
+      }
+      if (NeedsParens)
+        ExprsNeedingParens.insert(Expr);
+    }
+  }
+
+  PrintingPolicy Policy(S.getLangOpts());
+  SubstitutedCountExprPrinterHelper Helper(Policy, &ExprsNeedingParens);
+
+  llvm::SmallString<32> Code;
+  llvm::raw_svector_ostream OS(Code);
+  OS << "__"
+     << (ParmPtrTy->isCountInBytes()
+             ? (ParmPtrTy->isOrNull() ? "sized_by_or_null" : "sized_by")
+             : (ParmPtrTy->isOrNull() ? "counted_by_or_null" : "counted_by"))
+     << '(';
+  CountExpr->printPretty(OS, &Helper, Policy);
+  OS << ") ";
+  StringRef FixIt = OS.str();
+  StringRef Attr = FixIt.drop_back();
+
+  auto [FixItLoc, NeedsSpaceAfterAttr] =
+      BoundsSafetyFixItUtils::FindPointerAttrInsertPoint(
+          ArgPtrDecl->getTypeSourceInfo()->getTypeLoc(), S);
+  if (FixItLoc.isInvalid())
+    return;
+  if (!NeedsSpaceAfterAttr)
+    FixIt = FixIt.drop_back();
+
+  S.Diag(ArgPtrDecl->getLocation(), diag::note_bounds_safety_consider_adding_to)
+      << ArgPtrDecl->getName() << Attr
+      << FixItHint::CreateInsertion(FixItLoc, FixIt);
+}
+
+bool checkDynamicCountSizeForAssignmentWithUnknownCount(
+    Sema &S, QualType LHSTy, const Expr *RHSExpr, AssignmentAction Action,
+    SourceLocation Loc, const Twine &Designator, bool UnboundedRHS,
+    const Expr *CountExpr,
+    const llvm::SmallPtrSetImpl<const Expr *> &ReplacingValues) {
+  if (!UnboundedRHS)
+    return true;
+
+  const auto *LDCPTy = LHSTy->getAs<CountAttributedType>();
+  QualType RHSTy = RHSExpr->getType();
+
+  QualType RHSElemTy = RHSTy->getPointeeType();
+  int64_t ElementByteSize = S.Context.getTypeSizeInCharsIfKnown(RHSElemTy)
+                                .value_or(CharUnits::Zero())
+                                .getQuantity();
+  assert(ElementByteSize >= 0);
+  auto DesignatorStr = Designator.str();
+  S.Diag(Loc, diag::warn_bounds_safety_dynamic_count_from_unbounded)
+      << Action << LHSTy << LDCPTy->isCountInBytes() << LDCPTy->isOrNull()
+      << RHSTy << !DesignatorStr.empty() << DesignatorStr << ElementByteSize
+      << CountExpr->getSourceRange();
+
+  // The count is not returned, don't say 'count returned here'.
+  if (Action != AssignmentAction::Returning) {
+    S.Diag(CountExpr->getBeginLoc(),
+           diag::note_bounds_safety_dynamic_count_from_unbounded_count_location)
+        << Action << LDCPTy->isCountInBytes();
+  }
+
+  TryFixSingleToDynamicCount(S, LDCPTy, RHSExpr, CountExpr, ReplacingValues);
+  return true;
+}
+
+bool checkDynamicCountSizeForAssignmentWithKnownCount(
+    Sema &S, QualType LHSTy, const Expr *RHSExpr, AssignmentAction Action,
+    SourceLocation Loc, const Twine &Designator,
+    const Sema::DependentValuesMap &DependentValues, bool UnboundedRHS,
+    const Expr *CountExpr, const llvm::APSInt &CountVal,
+    const llvm::SmallPtrSetImpl<const Expr *> &ReplacingValues) {
+  QualType RHSTy = RHSExpr->getType();
+  const auto *LDCPTy = LHSTy->getAs<CountAttributedType>();
+  const bool IsOrNull = LDCPTy->isOrNull();
+
+  const auto *DRE = dyn_cast<DeclRefExpr>(RHSExpr->IgnoreParenCasts());
+  const ConstantArrayType *CAT = nullptr;
+  if (DRE)
+    CAT = S.Context.getAsConstantArrayType(DRE->getDecl()->getType());
+
+  const bool IsImplicitInitExpr = isa<ImplicitValueInitExpr>(RHSExpr);
+  const bool IsNull =
+      IsImplicitInitExpr || RHSExpr->isNullPointerConstant(
+                                S.Context, Expr::NPC_ValueDependentIsNotNull);
+  const bool IsNonnull = CAT; // Array decays to nonnull pointer.
+
+  // If the count is negative, always emit an error for __counted_by(). In
+  // addition, emit this error for __counted_by_or_null() if the RHS is known to
+  // be nonnull pointer.
+  if (CountVal < 0 && (!IsOrNull || IsNonnull)) {
+    auto DesignatorStr = Designator.str();
+    S.Diag(Loc, diag::err_bounds_safety_dynamic_count_negative)
+        << LHSTy << LDCPTy->isCountInBytes() << CountVal.getSExtValue()
+        << !DesignatorStr.empty() << DesignatorStr
+        << CountExpr->getSourceRange();
+    return false;
+  }
+
+  if (CountVal > 0) {
+    const uint64_t LHSCount = CountVal.getZExtValue();
+    uint64_t LHSSize = LHSCount;
+    if (!LDCPTy->isCountInBytes()) {
+      LHSSize *= S.Context.getTypeSizeInCharsIfKnown(LDCPTy->getPointeeType())
+                     .value_or(CharUnits::Zero())
+                     .getQuantity();
+    }
+
+    // The RHS is a constant array, check the count.
+    if (CAT) {
+      bool InBytes = LDCPTy->isCountInBytes() ||
+                     !S.Context.hasSameUnqualifiedType(LDCPTy->getPointeeType(),
+                                                       CAT->getElementType());
+      uint64_t NumLHS = LHSCount;
+      uint64_t NumRHS = CAT->getSize().getZExtValue();
+      if (InBytes) {
+        NumLHS = LHSSize;
+        NumRHS *=
+            S.Context.getTypeSizeInChars(CAT->getElementType()).getQuantity();
+      }
+      if (NumRHS < NumLHS) {
+        auto DesignatorStr = Designator.str();
+        S.Diag(Loc, diag::err_bounds_safety_dynamic_count_from_array_bad_size)
+            << Action << LHSTy << InBytes << DRE->getDecl() << NumLHS << NumRHS
+            << !DesignatorStr.empty() << DesignatorStr
+            << CountExpr->getSourceRange();
+        S.Diag(DRE->getDecl()->getLocation(), diag::note_entity_declared_at)
+            << DRE->getDecl();
+        return false;
+      }
+    }
+
+    // __single to __counted_by()/__sized_by(), check the pointee size. Don't
+    // emit an error for *_or_null(), since the RHS might be null.
+    if (UnboundedRHS && !IsOrNull) {
+      QualType RHSElemTy = RHSTy->getPointeeType();
+      bool InBytes = LDCPTy->isCountInBytes() ||
+                     !S.Context.hasSameUnqualifiedType(LDCPTy->getPointeeType(),
+                                                       RHSElemTy);
+      uint64_t NumLHS = LHSCount;
+      uint64_t NumRHS = 1;
+      if (InBytes) {
+        NumLHS = LHSSize;
+        // For types with unknown size (e.g., opaque types) we assume their size
+        // is 0 and emit an error right now rather than trapping at runtime
+        // (CodeGen would use 0 as their size anyway and this assignment would
+        // fail for any __sized_by() type with positive count).
+        CharUnits RHSElemSize =
+            S.Context.getTypeSizeInCharsIfKnown(RHSElemTy).value_or(
+                CharUnits::Zero());
+        NumRHS *= RHSElemSize.getQuantity();
+      }
+      if (NumRHS < NumLHS) {
+        auto DesignatorStr = Designator.str();
+        S.Diag(Loc, diag::err_bounds_safety_dynamic_count_from_unbounded_bad_size)
+            << Action << LHSTy << InBytes << RHSTy << NumLHS << NumRHS
+            << !DesignatorStr.empty() << DesignatorStr
+            << CountExpr->getSourceRange();
+        TryFixSingleToDynamicCount(S, LDCPTy, RHSExpr, CountExpr,
+                                   ReplacingValues);
+        return false;
+      }
+    }
+
+    // NULL to __counted_by()/__sized_by() with a positive count.
+    if (IsNull && !IsOrNull) {
+      auto DesignatorStr = Designator.str();
+      S.Diag(Loc, diag::err_bounds_safety_dynamic_count_from_null_nonzero_count)
+          << Action << LHSTy << LDCPTy->isCountInBytes()
+          << CountVal.getZExtValue() << !DesignatorStr.empty() << DesignatorStr
+          << IsImplicitInitExpr << CountExpr->getSourceRange();
+      return false;
+    }
+  }
+
+  // The pointer is set to some value, but the count is implicitly initialized
+  // to 0 (e.g., in struct initializer). This is likely to be a user's mistake,
+  // thus we emit a warning.
+  bool ImplicitCount = std::any_of(DependentValues.begin(),
+                                   DependentValues.end(), [](const auto &Item) {
+                                     const Expr *E = Item.second.first;
+                                     return isa<ImplicitValueInitExpr>(E);
+                                   });
+  if (CountVal == 0 && !IsNull && ImplicitCount) {
+    auto DesignatorStr = Designator.str();
+    S.Diag(Loc,
+           diag::warn_bounds_safety_dynamic_count_from_nonnull_implicit_zero_count)
+        << Action << LHSTy << LDCPTy->isCountInBytes() << !DesignatorStr.empty()
+        << DesignatorStr << CountExpr->getSourceRange();
+  }
+
+  // The __counted_by_or_null()/__sized_by_or_null() pointer is set to some
+  // unknown value with a negative count/size. Emit a warning, since this is
+  // likely a mistake.
+  if (CountVal < 0 && !IsNull && IsOrNull) {
+    auto DesignatorStr = Designator.str();
+    S.Diag(Loc, diag::warn_bounds_safety_dynamic_count_from_nonnull_negative_count)
+        << Action << LHSTy << LDCPTy->isCountInBytes()
+        << CountVal.getSExtValue() << !DesignatorStr.empty() << DesignatorStr
+        << CountExpr->getSourceRange();
+  }
+
+  return true;
+}
+
+} // namespace
+
+// Check dynamic count pointer assignment constrains.
+//
+// RHSExpr is the RHS of the assignment to the dynamic count pointer. RHSExpr
+// can be an ImplicitValueInitExpr if the dynamic count pointer is implicitly
+// initialized to null.
+//
+// Loc is the location where the diagnostic should be emitted. It points to the
+// assign op for assignments, and dynamic count pointer argument for function
+// calls. For initialization, it might point to the initializer or the '}' in
+// the parent initializer if the initialization is implicit.
+//
+// DependentValues denotes the values assigned to dependent variables used in
+// the dynamic count pointer's count expression. If the values cannot be
+// inferred from the context, the map can be left empty, but the warnings will
+// be less precise.
+bool Sema::CheckDynamicCountSizeForAssignment(
+    QualType LHSTy, Expr *RHSExpr, AssignmentAction Action,
+    SourceLocation Loc, const Twine &Designator,
+    DependentValuesMap &DependentValues, Expr *LHSMemberBase) {
+  const auto *LDCPTy = LHSTy->getAs<CountAttributedType>();
+  // RHS may be a function or an array type.
+  // Do not diagnose here. It must be the second time to visit this conversion.
+  ExprResult RHS = DefaultFunctionArrayLvalueConversion(
+      RHSExpr, /*Diagnose*/ false,
+      /*DiagnoseBoundsSafetyIncompleteArrayPromotion*/ false);
+  if (RHS.isInvalid())
+    return false;
+  RHSExpr = RHS.get();
+
+  QualType RHSTy = RHSExpr->getType();
+  if (!LDCPTy)
+    return true;
+
+  Expr *CountExpr = LDCPTy->getCountExpr()->IgnoreParenCasts();
+	if (CountExpr->isValueDependent())
+		return false;
+
+  auto *RHSPTy = RHSTy->getAs<PointerType>();
+  auto FA =
+      RHSPTy ? RHSPTy->getPointerAttributes() : BoundsSafetyPointerAttributes();
+  // unsafe/unspecified counts as "bounded" because there shouldn't be a warning
+  // in manual adoption mode, else no one would be able to use it. In regular
+  // -fbounds-safety mode, some other part of Sema should have already have
+  // complained.
+  const auto *RDRPTy = RHSTy->getAs<DynamicRangePointerType>();
+  bool UnboundedRHS = !RHSTy->isCountAttributedType() &&
+                      (!RDRPTy || !RDRPTy->getEndPointer()) &&
+                      !FA.hasUpperBound() && !FA.isUnsafeOrUnspecified();
+  if (UnboundedRHS)
+    // It might still have a flexible array member
+    if (auto *RT = RHSTy->getPointeeType()->getAs<RecordType>())
+      UnboundedRHS = !RT->getDecl()->hasFlexibleArrayMember();
+
+  ReplaceDeclRefWithRHS Transform(*this, DependentValues);
+  if (!DependentValues.empty()) {
+    if (LHSMemberBase)
+      Transform.MemberBase = LHSMemberBase;
+    ExprResult CountExprRes = Transform.TransformBoundsAttrExpr(CountExpr);
+    if (CountExprRes.isInvalid())
+      return false;
+    CountExpr = CountExprRes.get();
+
+    // The count expression might be valid, but the new value assigned may not
+    // be, so check again after transforming
+    if (CountExpr->isValueDependent())
+      return false;
+  }
+  const auto &ReplacingValues = Transform.GetReplacingValues();
+
+  Expr::EvalResult Res;
+  if (CountExpr->EvaluateAsInt(Res, Context)) {
+    const llvm::APSInt &CountVal = Res.Val.getInt();
+    return checkDynamicCountSizeForAssignmentWithKnownCount(
+        *this, LHSTy, RHSExpr, Action, Loc, Designator, DependentValues,
+        UnboundedRHS, CountExpr, CountVal, ReplacingValues);
+  }
+
+  return checkDynamicCountSizeForAssignmentWithUnknownCount(
+      *this, LHSTy, RHSExpr, Action, Loc, Designator, UnboundedRHS, CountExpr,
+      ReplacingValues);
+}
+
+enum class DAIKind { START_PTR, END_PTR, COUNT_PTR, COUNT };
+
+// Information of declarations dependent on function argument or parameter.
+struct DepArgInfo {
+  const ValueDecl *VD;
+  DAIKind Kind;
+  // Argument or Parameter index
+  unsigned Index;
+  // For COUNT_PTR/OUT_START `IsDeref` is the nested level at which the count
+  // attribute is added.
+  // In the following example, `IsDeref` is `true` for `out_buf` as `VD`.
+  //  `void f(int *__counted_by(*out_len) *out_buf, int *out_len)`
+  // For COUNT/END_PTR, this is whether the value is dereferenced
+  // in the expression of the bounds attribute. Since `out_len` is dereferenced
+  // in `__counted_by` above, `IsDeref` is true for `out_len`.
+  bool IsDeref;
+  // This indicates a decl that has dependency with an argument/param but is not
+  // actually used for the function decl or the function call.
+  bool Unlisted;
+
+  explicit DepArgInfo(const ValueDecl *VD, DAIKind Kind, unsigned Index,
+                      bool IsDeref, bool Unlisted)
+      : VD(VD), Kind(Kind), Index(Index), IsDeref(IsDeref), Unlisted(Unlisted) {
+  }
+
+  bool matches(const DepArgInfo &Other) const {
+    return Kind == Other.Kind && Index == Other.Index &&
+           Unlisted == Other.Unlisted;
+  }
+
+  const ValueDecl *getDecl() const { return VD; }
+
+  bool isDeref() const { return IsDeref; }
+  bool isParam() const { return VD && isa<ParmVarDecl>(VD); }
+  bool isCountPointer() const { return Kind == DAIKind::COUNT_PTR; }
+  const CountAttributedType *getCountAttributedType() const {
+    if (!isCountPointer())
+      return nullptr;
+    QualType Ty = getDecl()->getType();
+    if (IsDeref) {
+      Ty = Ty->getPointeeType();
+    }
+    return Ty->getAs<CountAttributedType>();
+  }
+};
+
+// Argument/parameter information necessary for out parameter analysis.
+class DynamicBoundArgumentInfo {
+
+  const BoundsAttributedType *DBPTy;
+  const ValueDecl *BaseDecl;
+
+  unsigned Level;
+  bool IsAddrOf : 1;
+
+  // IsCount is true iff there exists a pointer param that depends on this
+  // count. IsCountInRet/IsEndInRet is true iff the return type depends on this
+  // count/end. Example values for the len param:
+  //   void f(int *__counted_by(len) p, int len):
+  //     IsCountInParam=1 IsCountInRet=0
+  //
+  //   int *__counted_by(len) f(int len):
+  //     IsCountInParam=0 IsCountInRet=1
+  //
+  //   int *__counted_by(len) f(int *__counted_by(len) p, int len):
+  //     IsCountInParam=1 IsCountInRet=1
+  bool IsCountInParam : 1;
+  bool IsCountInRet : 1;
+  bool IsEndInRet : 1;
+
+  // DepArgInfos for call arguments are produced after the constructor. This is
+  // to keep this state.
+  bool HasValidDepInfo : 1;
+  SmallVector<DepArgInfo, 1> DepArgInfos;
+
+  void processDependentParamOfReturnType() {
+    IsCountInRet = false;
+    IsEndInRet = false;
+
+    const BoundsAttributedType *RetType = nullptr;
+    const TypeCoupledDeclRefInfo *Info = nullptr;
+    if (BaseDecl && BaseDecl->isDependentParamOfReturnType(&RetType, &Info)) {
+      bool IsCAT = isa<CountAttributedType>(RetType);
+      IsCountInRet = IsCAT;
+      IsEndInRet = !IsCAT;
+      assert(!IsEndInRet || isa<DynamicRangePointerType>(RetType));
+      assert(!IsCountInParam || Level == Info->isDeref());
+      Level = Info->isDeref();
+    }
+  }
+
+public:
+  using DeclIndexMapTy =
+      llvm::DenseMap<const ValueDecl *, llvm::SmallVector<unsigned, 1>>;
+
+  DynamicBoundArgumentInfo(ASTContext &Ctx, Expr *Arg)
+      : Level(0), HasValidDepInfo(false) {
+    Expr *E = Arg->IgnoreImpCasts();
+    QualType ArgTy = E->getType();
+
+    bool LocalIsAddrOf = false;
+    bool LocalIsDeref = false;
+    BaseDecl = findValueDecl(E, &LocalIsAddrOf, &LocalIsDeref);
+    IsAddrOf = LocalIsAddrOf;
+
+    DBPTy = ArgTy->getAs<BoundsAttributedType>();
+    if (!DBPTy && ArgTy->isPointerType() &&
+        (DBPTy = ArgTy->getPointeeType()->getAs<BoundsAttributedType>())) {
+      Level++;
+    }
+    if (BaseDecl && BaseDecl->hasAttr<DependerDeclsAttr>()) {
+      IsCountInParam = true;
+      if (BaseDecl->getType()->isPointerType() && !LocalIsDeref)
+        Level = 1;
+    } else {
+      IsCountInParam = false;
+    }
+
+    processDependentParamOfReturnType();
+
+    // Fill out DepArgInfos later via processDepArgInfos() after
+    // the declaration to argument index map has been produced.
+  }
+
+  DynamicBoundArgumentInfo(const ParmVarDecl *BaseDecl)
+      : BaseDecl(BaseDecl), Level(0), IsAddrOf(false), HasValidDepInfo(true) {
+    QualType ParmTy = BaseDecl->getType();
+    DBPTy = ParmTy->getAs<BoundsAttributedType>();
+    if (!DBPTy && ParmTy->isPointerType() &&
+        (DBPTy = ParmTy->getPointeeType()->getAs<BoundsAttributedType>())) {
+      Level++;
+    }
+
+    if (BaseDecl->hasAttr<DependerDeclsAttr>()) {
+      IsCountInParam = true;
+      if (BaseDecl->getType()->isPointerType())
+        Level = 1;
+    } else {
+      IsCountInParam = false;
+    }
+
+    processDependentParamOfReturnType();
+
+    auto processDepInfo = [&](const Decl *D, bool IsDeref, DAIKind Kind) {
+      const auto *VD = cast<ValueDecl>(D);
+      unsigned Index = 0;
+      bool Unlisted = false;
+      if (const auto *PVD = dyn_cast<ParmVarDecl>(VD)) {
+        Index = PVD->getFunctionScopeIndex();
+      } else {
+        Unlisted = true;
+      }
+
+      DepArgInfos.emplace_back(VD, Kind, Index, IsDeref, Unlisted);
+    };
+
+    if (isCountInParam()) {
+      if (const auto *Att = BaseDecl->getAttr<DependerDeclsAttr>()) {
+        processCountDepInfo(Att, processDepInfo);
+      }
+      return;
+    }
+
+    if (!DBPTy)
+      return;
+
+    if (const auto *DCPTy = dyn_cast<CountAttributedType>(DBPTy)) {
+      for (const auto &DI : DCPTy->dependent_decls()) {
+        processDepInfo(DI.getDecl(), DI.isDeref(), DAIKind::COUNT);
+      }
+      return;
+    }
+
+    if (const auto *DRPTy = dyn_cast<DynamicRangePointerType>(DBPTy)) {
+      for (const auto &DI : DRPTy->startptr_decls()) {
+        processDepInfo(DI.getDecl(), DI.isDeref(), DAIKind::START_PTR);
+      }
+      for (const auto &DI : DRPTy->endptr_decls()) {
+        processDepInfo(DI.getDecl(), DI.isDeref(), DAIKind::END_PTR);
+      }
+      return;
+    }
+  }
+
+  const SmallVectorImpl<DepArgInfo> &getDepArgInfos() const {
+    return DepArgInfos;
+  }
+
+  SmallVectorImpl<DepArgInfo>::iterator depinfo_begin() {
+    return DepArgInfos.begin();
+  }
+
+  SmallVectorImpl<DepArgInfo>::iterator depinfo_end() {
+    return DepArgInfos.end();
+  }
+
+  SmallVectorImpl<DepArgInfo>::const_iterator depinfo_begin() const {
+    return DepArgInfos.begin();
+  }
+
+  SmallVectorImpl<DepArgInfo>::const_iterator depinfo_end() const {
+    return DepArgInfos.end();
+  }
+
+  unsigned getLevel() const { return Level; }
+
+  bool isBoundsAttributedType() const { return !!DBPTy; }
+
+  bool isDynamicRangePointerType() const {
+    return DBPTy && isa<DynamicRangePointerType>(DBPTy);
+  }
+
+  bool isCountInParam() const { return IsCountInParam; }
+
+  bool isCountInRet() const { return IsCountInRet; }
+
+  bool isEndInRet() const { return IsEndInRet; }
+
+  bool isCountInParamOrCountPointer() const {
+    return IsCountInParam || isCountAttributedType();
+  }
+
+  bool isCountAttributedType() const {
+    return DBPTy && isa<CountAttributedType>(DBPTy);
+  }
+
+  const CountAttributedType *getCountAttributedType() const {
+    return dyn_cast_or_null<CountAttributedType>(DBPTy);
+  }
+
+  bool isOutParameter() const { return Level != 0 || IsAddrOf; }
+
+  bool isOutRangePointer() const {
+    return isDynamicRangePointerType() && isOutParameter();
+  }
+
+  bool isOutCountPointer() const {
+    return isCountAttributedType() && isOutParameter();
+  }
+
+  bool isIncompleteArray() const { return DBPTy->isIncompleteArrayType(); }
+
+  bool isInOutCountPointer() const {
+    if (!isCountAttributedType() || isOutParameter())
+      return false;
+    return std::any_of(depinfo_begin(), depinfo_end(),
+                       [](auto &DepInfo) { return DepInfo.isDeref(); });
+  }
+
+  bool isOutCountInParam() const { return IsCountInParam && isOutParameter(); }
+
+  bool isOutCountInParamOrPointer() const {
+    return isOutCountInParam() || isOutCountPointer();
+  }
+
+  bool isParmDecl() const { return BaseDecl && isa<ParmVarDecl>(BaseDecl); }
+
+  bool isAddrOf() const { return IsAddrOf; }
+
+  bool isAddrOfInBufParam() const {
+    return isBoundsAttributedType() && isParmDecl() && isAddrOf() &&
+           Level == 1;
+  }
+
+  QualType getType() const { return QualType(DBPTy, 0); }
+
+  const ValueDecl *getDecl() const { return BaseDecl; }
+
+  void processCountDepInfo(
+      const DependerDeclsAttr *Att,
+      const std::function<void(const Decl *, bool, DAIKind)> &processDepInfo) {
+    for (unsigned i = 0; i < Att->dependerDecls_size(); ++i) {
+      const auto *D = Att->dependerDecls_begin()[i];
+      unsigned DependerLevel = Att->dependerLevels_begin()[i];
+      assert(DependerLevel < 2 &&
+             "External bounds attributes can only be added to"
+             "a pointer which is one-level nested at most");
+      bool IsDeref = DependerLevel;
+      processDepInfo(D, IsDeref, DAIKind::COUNT_PTR);
+    }
+  }
+
+  /// \p DeclIndexMap is a map from a decl used in an argument expression to the
+  /// call argument index.
+  void processDepArgInfos(const DeclIndexMapTy &DeclIndexMap) {
+    HasValidDepInfo = true;
+
+    auto processDepInfo = [&](const Decl *D, bool IsDeref, DAIKind Kind) {
+      const auto *VD = cast<ValueDecl>(D);
+      auto I = DeclIndexMap.find(VD);
+      if (I == DeclIndexMap.end()) {
+        DepArgInfos.emplace_back(VD, Kind, 0, IsDeref, /*Unlisted*/true);
+        return;
+      }
+      for (auto Index : I->second) {
+        DepArgInfos.emplace_back(VD, Kind, Index, IsDeref, /*Unlisted*/false);
+      }
+    };
+
+    if (isCountInParam()) {
+      if (const auto *Att = getDecl()->getAttr<DependerDeclsAttr>()) {
+        processCountDepInfo(Att, processDepInfo);
+      }
+      return;
+    }
+
+    if (!DBPTy)
+      return;
+
+    if (const auto *DCPTy = dyn_cast<CountAttributedType>(DBPTy)) {
+      for (const auto &DI : DCPTy->dependent_decls()) {
+        processDepInfo(DI.getDecl(), DI.isDeref(), DAIKind::COUNT);
+      }
+      return;
+    }
+
+    if (const auto *DRPTy = dyn_cast<DynamicRangePointerType>(DBPTy)) {
+      for (const auto &DI : DRPTy->startptr_decls()) {
+        processDepInfo(DI.getDecl(), DI.isDeref(), DAIKind::START_PTR);
+      }
+      for (const auto &DI : DRPTy->endptr_decls()) {
+        processDepInfo(DI.getDecl(), DI.isDeref(), DAIKind::END_PTR);
+      }
+      return;
+    }
+  }
+};
+
+static bool checkDynamicCountPointerAsParameter(Sema &S, FunctionDecl *FDecl,
+                                                CallExpr *Call) {
+  if (Call->containsErrors())
+    return false;
+  // Initialize argument/parameter information
+  llvm::SmallPtrSet<const ValueDecl *, 2> OutCountDecls;
+  using PointerOutPair = llvm::PointerIntPair<const ValueDecl *, 1>;
+  llvm::SmallPtrSet<PointerOutPair, 2> PointerDecls;
+
+  llvm::SmallVector<DynamicBoundArgumentInfo, 2> CallArgInfos;
+  DynamicBoundArgumentInfo::DeclIndexMapTy DeclIndexMap;
+
+  for (unsigned i = 0; i < Call->getNumArgs(); ++i) {
+    CallArgInfos.emplace_back(S.Context, Call->getArg(i));
+    if (auto *D = CallArgInfos.back().getDecl())
+      DeclIndexMap[D].push_back(i);
+  }
+
+  for (auto &ArgInfo : CallArgInfos) {
+    ArgInfo.processDepArgInfos(DeclIndexMap);
+  }
+
+  llvm::SmallVector<DynamicBoundArgumentInfo, 2> FuncParmInfos;
+  for (unsigned i = 0; i < FDecl->getNumParams(); ++i) {
+    FuncParmInfos.emplace_back(FDecl->getParamDecl(i));
+  }
+
+  unsigned MinNumArgs = std::min(Call->getNumArgs(), FDecl->getNumParams());
+
+  Sema::DependentValuesMap DependentValues;
+  for (unsigned i = 0; i < MinNumArgs; ++i) {
+    const ParmVarDecl *D = FDecl->getParamDecl(i);
+    Expr *Arg = Call->getArg(i);
+    DependentValues[D] = {Arg, /*Level=*/0};
+  }
+
+  // FIXME: Report an error when a pointer to dynamic count or a pointer to
+  // count pointer is passed as va_arg (rdar://97041755).
+  for (unsigned i = 0; i < MinNumArgs; ++i) {
+    const auto &ArgInfo = CallArgInfos[i];
+    const auto &ParmInfo = FuncParmInfos[i];
+    Expr *ActualArgExp = Call->getArg(i)->IgnoreImpCasts();
+    SourceLocation ArgLoc = ActualArgExp->getExprLoc();
+    assert(!ActualArgExp->isValueDependent());
+
+    if (!ArgInfo.isCountInParamOrCountPointer() && !ArgInfo.isCountInRet() &&
+        !ParmInfo.isCountInParamOrCountPointer() && !ParmInfo.isCountInRet())
+      continue;
+
+    if (ParmInfo.isCountAttributedType() && !ParmInfo.isOutCountPointer() &&
+        !S.CheckDynamicCountSizeForAssignment(
+            ParmInfo.getType(), ActualArgExp, AssignmentAction::Passing,
+            ActualArgExp->getBeginLoc(), ParmInfo.getDecl()->getName(),
+            DependentValues) &&
+        !S.allowBoundsUnsafeFunctionArg(Call, i)) {
+      return false;
+    }
+
+    if (ParmInfo.isOutCountPointer() && !ArgInfo.isOutCountPointer()) {
+      S.Diag(ArgLoc, diag::err_bounds_safety_incompatible_dynamic_count_argument)
+          << ParmInfo.getDecl()->getType() << Call->getSourceRange();
+      return false;
+    }
+
+    if (!ParmInfo.isOutCountPointer() && ArgInfo.isOutCountPointer()) {
+      S.Diag(ArgLoc, diag::err_bounds_safety_incompatible_dynamic_count_argument)
+          << ParmInfo.getDecl()->getType() << Call->getSourceRange();
+      return false;
+    }
+
+    // TODO: This diagnostic check should always be performed
+    // (rdar://138982703). The check is currently guarded to avoid potentially
+    // breaking the build.
+    if (ArgInfo.isCountInRet() && S.getLangOpts().hasNewBoundsSafetyCheck(
+                                      LangOptions::BS_CHK_ReturnSize)) {
+      bool IsIndirect = ActualArgExp->getType()->isPointerType();
+      bool IsOutCountInRetToOutCountInRet =
+          ArgInfo.getLevel() != 0 && ParmInfo.isCountInRet() &&
+          ParmInfo.getLevel() != 0 && !ParmInfo.isOutCountInParam();
+      bool IsOutCountInRetToInoutCount =
+          ArgInfo.getLevel() != 0 && ParmInfo.isOutCountInParam() &&
+          std::none_of(ParmInfo.depinfo_begin(), ParmInfo.depinfo_end(),
+                       [](const DepArgInfo &ParmDepInfo) {
+                         return ParmDepInfo.isDeref();
+                       });
+      if (!(!IsIndirect || IsOutCountInRetToOutCountInRet ||
+            IsOutCountInRetToInoutCount)) {
+        const auto *ArgPVD = cast<ParmVarDecl>(ArgInfo.getDecl());
+        const auto *Caller = cast<FunctionDecl>(ArgPVD->getDeclContext());
+        const auto *RetCATy =
+            Caller->getReturnType()->getAs<CountAttributedType>();
+        S.Diag(
+            ArgLoc,
+            diag::err_bounds_safety_cannot_pass_read_only_dependent_param_in_return)
+            << ArgPVD->getName() << RetCATy->getKind() << Caller->getName()
+            << Caller->getReturnType();
+        return false;
+      }
+    }
+
+    if (ParmInfo.isOutCountInParam() && !ArgInfo.isOutCountInParam()) {
+      if (std::none_of(ParmInfo.depinfo_begin(), ParmInfo.depinfo_end(),
+                       [](const DepArgInfo &ParmDepInfo) {
+        return ParmDepInfo.isDeref(); })) {
+        continue;
+      }
+      S.Diag(ArgLoc, diag::err_bounds_safety_incompatible_dynamic_count_argument)
+          << ParmInfo.getDecl()->getType() << Call->getSourceRange();
+      return false;
+    }
+
+    if (!ParmInfo.isOutCountInParam() && ArgInfo.isOutCountInParam()) {
+      const CountAttributedType *DCPTy = nullptr;
+      for (const auto &ArgDepInfo : ArgInfo.getDepArgInfos()) {
+        if (ArgDepInfo.isCountPointer()) {
+          DCPTy = ArgDepInfo.getCountAttributedType();
+          break;
+        }
+      }
+      assert(DCPTy);
+      S.Diag(ArgLoc, diag::err_bounds_safety_incompatible_indirect_count_parameter)
+          << ArgInfo.getDecl() << ArgInfo.isAddrOf() << DCPTy->getKind()
+          << Call->getSourceRange();
+      return false;
+    }
+
+    if (ArgInfo.isAddrOfInBufParam()) {
+      // This is to handle the code like below:
+      // void foo(int *__counted_by(*len) buf, size_t *len) {
+      //   bar(&buf, len);
+      // }
+      // `buf` is read-only so it should not be passed as an out parameter.
+      for (const auto &DI : ArgInfo.getDepArgInfos()) {
+        if (DI.Unlisted)
+          continue;
+        const auto &CallArgInfo = CallArgInfos[DI.Index];
+        if (CallArgInfo.isOutCountInParam() && CallArgInfo.isParmDecl()) {
+          const auto *DCPTy = ArgInfo.getCountAttributedType();
+          S.Diag(
+              ArgLoc,
+              diag::err_bounds_safety_cannot_pass_read_only_dynamic_bound_pointer)
+              << ArgInfo.getDecl()->getName() << DCPTy->getKind();
+          return false;
+        }
+      }
+    }
+
+    auto reportIncompatibleCountExprs = [&]() {
+      const auto *ParmDCPTy = ParmInfo.getCountAttributedType();
+      const auto *ArgDCPTy = ArgInfo.getCountAttributedType();
+      if (ParmDCPTy->isCountInBytes() != ArgDCPTy->isCountInBytes() ||
+          !compatibleDynamicCountExprs(S.Context, ParmDCPTy->getCountExpr(),
+                                       ArgDCPTy->getCountExpr())) {
+        S.Diag(ActualArgExp->getExprLoc(),
+               diag::err_bounds_safety_incompatible_count_expression)
+            << ParmDCPTy->getCountExpr() << ArgDCPTy->getCountExpr();
+      }
+    };
+
+    // check parameter relationship!
+    if (ParmInfo.isOutCountPointer()) {
+      assert(ArgInfo.isOutCountPointer());
+      reportIncompatibleCountExprs();
+    }
+
+    // Should check compatibility of count expressions as well if this is a
+    // direct parameter using out count.
+    if (ParmInfo.isInOutCountPointer() &&
+        ArgInfo.getCountAttributedType()) {
+      reportIncompatibleCountExprs();
+    }
+
+    if ((ParmInfo.isOutCountPointer() && !ParmInfo.isIncompleteArray()) ||
+        ParmInfo.isOutCountInParam()) {
+      for (const auto &ArgDepInfo : ArgInfo.getDepArgInfos()) {
+        if (ArgDepInfo.Unlisted ||
+            (ArgInfo.isOutCountPointer() &&
+             !CallArgInfos[ArgDepInfo.Index].isOutCountInParam())) {
+          unsigned IsDependent = 0;
+
+          QualType DiagTy = ArgInfo.getType();
+          if (ArgInfo.isCountInParam()) {
+            IsDependent = 1;
+            DiagTy = ArgDepInfo.getDecl()->getType();
+          }
+
+          S.Diag(Call->getExprLoc(),
+                 diag::err_bounds_safety_unsynchronized_indirect_param)
+              << ArgInfo.getDecl() << ArgInfo.isAddrOf() << ArgDepInfo.getDecl()
+              << !ArgDepInfo.isDeref() << IsDependent << DiagTy;
+          return false;
+        }
+      }
+
+      for (const auto &ParmDepInfo : ParmInfo.getDepArgInfos()) {
+        if (std::none_of(ArgInfo.depinfo_begin(), ArgInfo.depinfo_end(),
+                         [&ParmDepInfo](const DepArgInfo &ArgDepInfo) {
+                           return ParmDepInfo.matches(ArgDepInfo);
+                         })) {
+          S.Diag(ArgLoc,
+                 diag::err_bounds_safety_incompatible_dynamic_count_argument)
+              << ParmInfo.getDecl()->getType() << Call->getSourceRange();
+          return false;
+        }
+      }
+    }
+  } // End for loop
+
+  return true;
+}
+
+static bool checkDynamicRangePointerAsParameter(Sema &S, FunctionDecl *FDecl,
+                                                CallExpr *Call) {
+  llvm::SmallPtrSet<const ValueDecl *, 2> OutPointerDecls;
+
+  llvm::SmallVector<DynamicBoundArgumentInfo, 2> CallArgInfos;
+  DynamicBoundArgumentInfo::DeclIndexMapTy DeclIndexMap;
+
+  for (unsigned i = 0; i < Call->getNumArgs(); ++i) {
+    CallArgInfos.emplace_back(S.Context, Call->getArg(i));
+    DeclIndexMap[CallArgInfos.back().getDecl()].push_back(i);
+  }
+
+  for (auto &ArgInfo : CallArgInfos) {
+    ArgInfo.processDepArgInfos(DeclIndexMap);
+  }
+
+  llvm::SmallVector<DynamicBoundArgumentInfo, 2> FuncParmInfos;
+  for (unsigned i = 0; i < FDecl->getNumParams(); ++i) {
+    FuncParmInfos.emplace_back(FDecl->getParamDecl(i));
+  }
+
+  unsigned MinNumArgs = std::min(Call->getNumArgs(), FDecl->getNumParams());
+  // TODO: Report an error when a pointer to __ended_by is passed as va_arg
+  // (rdar://97041755).
+  for (unsigned i = 0; i < MinNumArgs; ++i) {
+    const auto &ArgInfo = CallArgInfos[i];
+    const auto &ParmInfo = FuncParmInfos[i];
+    Expr *ArgExp = Call->getArg(i)->IgnoreImpCasts();
+    SourceLocation ArgLoc = ArgExp->getExprLoc();
+
+    if (ParmInfo.isOutRangePointer() && !ArgInfo.isOutRangePointer()) {
+      S.Diag(ArgLoc, diag::err_bounds_safety_incompatible_dynamic_bound_argument)
+          << ArgInfo.getDecl() << ArgInfo.getDecl()->getType()
+          << ParmInfo.getType() << Call->getSourceRange();
+      return false;
+    }
+
+    if (!ParmInfo.isOutRangePointer() && ArgInfo.isOutRangePointer()) {
+      S.Diag(ArgLoc, diag::err_bounds_safety_incompatible_dynamic_bound_argument)
+          << ArgInfo.getDecl() << ArgInfo.getType()
+          << ParmInfo.getDecl()->getType() << Call->getSourceRange();
+      return false;
+    }
+
+    if (ArgInfo.isAddrOfInBufParam()) {
+      bool HasInOutRange = false;
+      for (const auto &DI : ArgInfo.getDepArgInfos()) {
+        if (DI.Unlisted)
+          continue;
+        if (CallArgInfos[DI.Index].isOutRangePointer()) {
+          HasInOutRange = true;
+          break;
+        }
+      }
+
+      if (HasInOutRange) {
+        S.Diag(ArgLoc,
+               diag::err_bounds_safety_cannot_pass_read_only_dynamic_bound_pointer)
+            << ArgInfo.getDecl()->getName() << /*ended_by*/ 4;
+        return false;
+      }
+    }
+
+    // TODO: This diagnostic check should always be performed
+    // (rdar://138982703). The check is currently guarded to avoid potentially
+    // breaking the build.
+    if (ArgInfo.isEndInRet() && S.getLangOpts().hasNewBoundsSafetyCheck(
+                                    LangOptions::BS_CHK_ReturnSize)) {
+      // Keep it simple for now and disallow passing by out parameter.
+      QualType Ty = ArgExp->getType();
+      bool IsIndirect =
+          Ty->isPointerType() && Ty->getPointeeType()->isPointerType();
+      if (IsIndirect) {
+        const auto *ArgPVD = cast<ParmVarDecl>(ArgInfo.getDecl());
+        const auto *Caller = cast<FunctionDecl>(ArgPVD->getDeclContext());
+        S.Diag(
+            ArgLoc,
+            diag::err_bounds_safety_cannot_pass_read_only_dependent_param_in_return)
+            << ArgPVD->getName() << /* __ended_by() */ 4 << Caller->getName()
+            << Caller->getReturnType();
+        return false;
+      }
+    }
+
+    // check parameter relationship
+    if (ParmInfo.isOutRangePointer()) {
+      assert(ArgInfo.isOutRangePointer());
+      if (ParmInfo.getDepArgInfos().size() != ArgInfo.getDepArgInfos().size()) {
+        S.Diag(ArgLoc, diag::err_bounds_safety_incompatible_dynamic_bound_argument)
+            << ArgInfo.getDecl() << ArgInfo.getType() << ParmInfo.getType()
+            << Call->getSourceRange();
+        return false;
+      }
+
+      for (unsigned j = 0; j < ParmInfo.getDepArgInfos().size(); ++j) {
+        const auto &ArgDepInfo = ArgInfo.getDepArgInfos()[j];
+        const auto &ParmDepInfo = ParmInfo.getDepArgInfos()[j];
+        if (ArgDepInfo.Unlisted) {
+          const auto *DRPTy =
+              ArgInfo.getType()->getAs<DynamicRangePointerType>();
+          assert(DRPTy);
+          unsigned IsDependent = 0;
+
+          QualType DiagTy = ArgInfo.getType();
+          if (!DRPTy->getEndPointer()) {
+            IsDependent = 1;
+            DiagTy = ArgDepInfo.getDecl()->getType();
+          }
+
+          S.Diag(Call->getExprLoc(),
+                 diag::err_bounds_safety_unsynchronized_indirect_param)
+              << ArgInfo.getDecl() << ArgInfo.isAddrOf() << ArgDepInfo.getDecl()
+              << !ArgDepInfo.isDeref() << IsDependent << DiagTy;
+          return false;
+        }
+        if (!ParmDepInfo.matches(ArgDepInfo)) {
+          S.Diag(ArgLoc,
+                 diag::err_bounds_safety_incompatible_dynamic_bound_argument)
+              << ArgInfo.getDecl() << ArgInfo.getType() << ParmInfo.getType()
+              << Call->getSourceRange();
+          return false;
+        }
+      }
+    }
+  } // End for loop
+
+  return true;
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
+
 ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
                                        SourceLocation LParenLoc,
                                        ArrayRef<Expr *> Args,
@@ -7001,6 +8891,17 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
     TheCall->computeDependence();
   }
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  if (getLangOpts().BoundsSafety && FDecl) {
+    // FIXME: We need to support function pointers and blocks that don't have
+    // function decl.
+    if (!checkDynamicCountPointerAsParameter(*this, FDecl, TheCall))
+      return ExprError();
+    if (!checkDynamicRangePointerAsParameter(*this, FDecl, TheCall))
+      return ExprError();
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
   if (CXXMethodDecl *Method = dyn_cast_or_null<CXXMethodDecl>(FDecl))
     if (Method->isImplicitObjectMemberFunction())
       return ExprError(Diag(LParenLoc, diag::err_member_call_without_object)
@@ -7039,6 +8940,11 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
       return ExprError();
   }
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  if (!BoundsSafetyCheckResolvedCall(FDecl, TheCall, Proto))
+    return ExprError();
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
   return CheckForImmediateInvocation(MaybeBindToTemporary(TheCall), FDecl);
 }
 
@@ -7060,6 +8966,33 @@ ExprResult
 Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
                                SourceLocation RParenLoc, Expr *LiteralExpr) {
   QualType literalType = TInfo->getType();
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  // XXX: as a hack, with -fbounds-safety enabled, we try to peek into the type of
+  // the expression being used in the initializer list. Clang's initialization
+  // system doesn't have hooks that allow inference to work, the type that we're
+  // going to pass here will be piped through deeply; type deduction is generally
+  // not possible.
+  if (getLangOpts().BoundsSafety && literalType->isPointerType()) {
+    bool InferredTypeFromInitList = false;
+    if (auto *InitList = dyn_cast<InitListExpr>(LiteralExpr)) {
+      if (InitList->getNumInits() > 0) {
+        QualType InitTy = InitList->getInit(0)->getType();
+        if (InitTy->isPointerType() && !InitTy->isBoundsAttributedType()) {
+          literalType = deduceCastPointerAttributes(
+              literalType, InitList->getInit(0)->getType());
+          InferredTypeFromInitList = true;
+        }
+      }
+    }
+    // If we don't find anything to start from, assume __bidi_indexable.
+    if (!InferredTypeFromInitList) {
+      literalType = Context.getBoundsSafetyPointerType(
+          literalType, BoundsSafetyPointerAttributes::bidiIndexable());
+    }
+    TInfo->overrideType(literalType);
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   if (literalType->isArrayType()) {
     if (RequireCompleteSizedType(
@@ -7998,11 +9931,26 @@ static QualType checkConditionalPointerCompatibility(Sema &S, ExprResult &LHS,
   QualType RHSTy = RHS.get()->getType();
 
   if (S.Context.hasSameType(LHSTy, RHSTy)) {
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    if (S.Context.getLangOpts().BoundsSafety) {
+      auto MergeResult = S.Context.canMergeTypeBounds(LHSTy, RHSTy);
+      if (MergeResult != ASTContext::BSPTMK_CanMerge) {
+          S.Diag(
+              Loc,
+              diag::err_cond_expr_nested_bounds_safety_pointer_attribute_mismatch)
+              << LHSTy << RHSTy << MergeResult << LHS.get()->getSourceRange()
+              << RHS.get()->getSourceRange();
+          return QualType();
+      }
+    }
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
     // Two identical pointers types are always compatible.
     return S.Context.getCommonSugaredType(LHSTy, RHSTy);
   }
 
   QualType lhptee, rhptee;
+
+  BoundsSafetyPointerAttributes CompositeFPAttr;
 
   // Get the pointee types.
   bool IsBlockPointer = false;
@@ -8013,6 +9961,21 @@ static QualType checkConditionalPointerCompatibility(Sema &S, ExprResult &LHS,
   } else {
     lhptee = LHSTy->castAs<PointerType>()->getPointeeType();
     rhptee = RHSTy->castAs<PointerType>()->getPointeeType();
+
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    // BoundsSafety: If LHS and RHS have different -fbounds-safety pointer attributes,
+    // take the attribute with higher precedence and convert the other into it.
+    // The bounds-only attributes have precedence in the following order:
+    // 1) __unsafe_indexable or unspecified
+    // 2) __bidi_indexable
+    // 3) __indexable
+    // 4) __single
+    // The operands are considered incompatible if an operand has unsafe pointer
+    // type and the other has bounds.
+    auto lFPAttr = LHSTy->castAs<PointerType>()->getPointerAttributes();
+    auto rFPAttr = RHSTy->castAs<PointerType>()->getPointerAttributes();
+    CompositeFPAttr = BoundsSafetyPointerAttributes::merge(lFPAttr, rFPAttr);
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
   }
 
   // C99 6.5.15p6: If both operands are pointers to compatible types or to
@@ -8087,9 +10050,23 @@ static QualType checkConditionalPointerCompatibility(Sema &S, ExprResult &LHS,
     // to get a consistent AST.
     QualType incompatTy;
     incompatTy = S.Context.getPointerType(
-        S.Context.getAddrSpaceQualType(S.Context.VoidTy, ResultAddrSpace));
+        S.Context.getAddrSpaceQualType(S.Context.VoidTy, ResultAddrSpace),
+                                       CompositeFPAttr);
+
     LHS = S.ImpCastExprToType(LHS.get(), incompatTy, LHSCastKind);
     RHS = S.ImpCastExprToType(RHS.get(), incompatTy, RHSCastKind);
+
+    /*TO_UPSTREAM(BoundsSafety) ON*/
+    if (S.getLangOpts().BoundsSafety) {
+      // Although -fbounds-safety makes no type safety guarantees,
+      // this is a likely footgun and is troublesome when comparing
+      // terminator values for __terminated_by of e.g. signed and unsigned.
+      S.Diag(Loc, diag::err_typecheck_cond_incompatible_pointers)
+          << LHSTy << RHSTy << LHS.get()->getSourceRange()
+          << RHS.get()->getSourceRange();
+      return QualType();
+    }
+    /*TO_UPSTREAM(BoundsSafety) OFF*/
 
     // FIXME: For OpenCL the warning emission and cast to void* leaves a room
     // for casts between types with incompatible address space qualifiers.
@@ -8122,7 +10099,23 @@ static QualType checkConditionalPointerCompatibility(Sema &S, ExprResult &LHS,
   if (IsBlockPointer)
     ResultTy = S.Context.getBlockPointerType(ResultTy);
   else
-    ResultTy = S.Context.getPointerType(ResultTy);
+    ResultTy = S.Context.getPointerType(ResultTy, CompositeFPAttr);
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  if (S.Context.checkTerminatedByMismatch(LHSTy, RHSTy) !=
+      ASTContext::BSPTMK_CanMerge) {
+    S.Diag(Loc, diag::err_cond_expr_nested_bounds_safety_pointer_attribute_mismatch)
+        << LHSTy << RHSTy << ASTContext::BSPTMK_TerminatedByMismatch
+        << LHS.get()->getSourceRange() << RHS.get()->getSourceRange();
+    return QualType();
+  }
+
+  if (auto LVTTy = LHSTy->getAs<ValueTerminatedType>()) {
+    assert(RHSTy->getAs<ValueTerminatedType>());
+    ResultTy =
+        S.Context.getValueTerminatedType(ResultTy, LVTTy->getTerminatorExpr());
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   LHS = S.ImpCastExprToType(LHS.get(), ResultTy, LHSCastKind);
   RHS = S.ImpCastExprToType(RHS.get(), ResultTy, RHSCastKind);
@@ -8154,6 +10147,21 @@ static QualType checkConditionalBlockPointerCompatibility(Sema &S,
   return checkConditionalPointerCompatibility(S, LHS, RHS, Loc);
 }
 
+static bool haveCommonTerminator(const ASTContext &Ctx, const Expr *LHS,
+                                 const Expr *RHS) {
+  assert(LHS->getType()->isValueTerminatedType() ||
+         RHS->getType()->isValueTerminatedType());
+  Expr::EvalResult LHSRes;
+  if (!LHS->tryEvaluateTerminatorElement(LHSRes, Ctx) || !LHSRes.Val.isInt())
+    return false;
+
+  Expr::EvalResult RHSRes;
+  if (!RHS->tryEvaluateTerminatorElement(RHSRes, Ctx) || !RHSRes.Val.isInt())
+    return false;
+
+  return llvm::APSInt::isSameValue(LHSRes.Val.getInt(), RHSRes.Val.getInt());
+}
+
 /// Return the resulting type when the operands are both pointers.
 static QualType
 checkConditionalObjectPointersCompatibility(Sema &S, ExprResult &LHS,
@@ -8167,13 +10175,90 @@ checkConditionalObjectPointersCompatibility(Sema &S, ExprResult &LHS,
   QualType lhptee = LHSTy->castAs<PointerType>()->getPointeeType();
   QualType rhptee = RHSTy->castAs<PointerType>()->getPointeeType();
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  BoundsSafetyPointerAttributes destFPAttr;
+  // Do -fbounds-safety pointer conversions ahead of any other conversions; otherwise
+  // we risk doing a BitCast across pointer attributes, which is bad.
+  BoundsSafetyPointerAttributes lFPAttr =
+      LHSTy->castAs<PointerType>()->getPointerAttributes();
+  BoundsSafetyPointerAttributes rFPAttr =
+      RHSTy->castAs<PointerType>()->getPointerAttributes();
+  destFPAttr = BoundsSafetyPointerAttributes::merge(lFPAttr, rFPAttr);
+
+  // If either type is value terminated, the other also needs to be, meaning
+  // they will both be __single pointers. A VTT and a non-single pointer is
+  // always a mismatch. Exception: if a constant array or string literal
+  // can be evaluated and is terminated with the right value.
+  if (LHSTy->isValueTerminatedType() != RHSTy->isValueTerminatedType()) {
+    destFPAttr.setSingle();
+  }
+
+  if (lFPAttr != destFPAttr) {
+    QualType destType = S.Context.getPointerType(lhptee, destFPAttr);
+    SplitQualType Split = LHSTy.getSplitUnqualifiedType();
+    destType = S.Context.getQualifiedType(destType, Split.Quals);
+
+    if (auto RHSVTTy = RHSTy->getAs<ValueTerminatedType>()) {
+      // The other type is value terminated. Try to cast this to VTT also.
+      destType = S.Context.getValueTerminatedType(destType,
+                                                  RHSVTTy->getTerminatorExpr());
+      if (!haveCommonTerminator(S.Context, LHS.get(), RHS.get())) {
+        const auto *DstPointerType = destType->getAs<ValueTerminatedType>();
+        int SelectIsNullTerm =
+            DstPointerType->getTerminatorValue(S.getASTContext()).isZero()
+                ? /*null_terminated*/ 1
+                : /*terminated_by*/ 0;
+        S.Diag(
+            Loc,
+            diag::err_bounds_safety_incompatible_non_terminated_by_to_terminated_by)
+            << LHSTy << destType << /*converting*/ 3
+            << LHS.get()->getSourceRange() << SelectIsNullTerm;
+        S.TryFixAssigningImplicitBidiIndexableToNullTerminatedPtr(LHS.get(),
+                                                                  destType);
+        S.TryFixAssigningBidiIndexableExprToNullTerminated(LHS.get(), destType);
+        return QualType();
+      }
+    }
+    LHS = S.ImpCastExprToType(LHS.get(), destType, CK_BoundsSafetyPointerCast);
+  }
+
+  if (rFPAttr != destFPAttr) {
+    QualType destType = S.Context.getPointerType(rhptee, destFPAttr);
+    SplitQualType Split = RHSTy.getSplitUnqualifiedType();
+    destType = S.Context.getQualifiedType(destType, Split.Quals);
+
+    if (auto LHSVTTy = LHSTy->getAs<ValueTerminatedType>()) {
+      // The other type is value terminated. Try to cast this to VTT also.
+      destType = S.Context.getValueTerminatedType(destType,
+                                                  LHSVTTy->getTerminatorExpr());
+      if (!haveCommonTerminator(S.Context, LHS.get(), RHS.get())) {
+        const auto *DstPointerType = destType->getAs<ValueTerminatedType>();
+        int SelectIsNullTerm =
+            DstPointerType->getTerminatorValue(S.getASTContext()).isZero()
+                ? /*null_terminated*/ 1
+                : /*terminated_by*/ 0;
+        S.Diag(
+            Loc,
+            diag::err_bounds_safety_incompatible_non_terminated_by_to_terminated_by)
+            << RHSTy << destType << /*converting*/ 3
+            << RHS.get()->getSourceRange() << SelectIsNullTerm;
+
+        S.TryFixAssigningImplicitBidiIndexableToNullTerminatedPtr(RHS.get(), destType);
+        S.TryFixAssigningBidiIndexableExprToNullTerminated(RHS.get(), destType);
+        return QualType();
+      }
+    }
+    RHS = S.ImpCastExprToType(RHS.get(), destType, CK_BoundsSafetyPointerCast);
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
   // ignore qualifiers on void (C99 6.5.15p3, clause 6)
   if (lhptee->isVoidType() && rhptee->isIncompleteOrObjectType()) {
     // Figure out necessary qualifiers (C99 6.5.15p6)
     QualType destPointee
       = S.Context.getQualifiedType(lhptee, rhptee.getQualifiers());
-    QualType destType = S.Context.getPointerType(destPointee);
-    // Add qualifiers if necessary.
+    QualType destType = S.Context.getPointerType(destPointee, destFPAttr);
+    // Add qualifiers or pointer attributes if necessary.
     LHS = S.ImpCastExprToType(LHS.get(), destType, CK_NoOp);
     // Promote to void*.
     RHS = S.ImpCastExprToType(RHS.get(), destType, CK_BitCast);
@@ -8182,8 +10267,8 @@ checkConditionalObjectPointersCompatibility(Sema &S, ExprResult &LHS,
   if (rhptee->isVoidType() && lhptee->isIncompleteOrObjectType()) {
     QualType destPointee
       = S.Context.getQualifiedType(rhptee, lhptee.getQualifiers());
-    QualType destType = S.Context.getPointerType(destPointee);
-    // Add qualifiers if necessary.
+    QualType destType = S.Context.getPointerType(destPointee, destFPAttr);
+    // Add qualifiers or pointer attributes if necessary.
     RHS = S.ImpCastExprToType(RHS.get(), destType, CK_NoOp);
     // Promote to void*.
     LHS = S.ImpCastExprToType(LHS.get(), destType, CK_BitCast);
@@ -8922,6 +11007,78 @@ static bool IsInvalidCmseNSCallConversion(Sema &S, QualType FromType,
   return false;
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON*/
+static bool checkBoundsSafetyFunctionPointerForAssignment(Sema &S,
+                                                       QualType LHSType,
+                                                       QualType RHSType) {
+
+  auto GetFunctionBaseAndProto = [](QualType Ty, const FunctionType *&Base,
+                                    const FunctionProtoType *&Proto) {
+    if (!Ty->isFunctionPointerType()) {
+      Base = nullptr;
+      Proto = nullptr;
+      return;
+    }
+    auto PTy = Ty->getAs<PointerType>();
+    Base = PTy->getPointeeType()->getAs<FunctionType>();
+    Proto = dyn_cast<FunctionProtoType>(Base);
+  };
+
+  const FunctionType *LBase;
+  const FunctionType *RBase;
+  const FunctionProtoType *LProto;
+  const FunctionProtoType *RProto;
+
+  GetFunctionBaseAndProto(LHSType, LBase, LProto);
+  GetFunctionBaseAndProto(RHSType, RBase, RProto);
+
+  if (!LBase || !RBase)
+    return true;
+
+  // Check return types
+  // Return types are covariant.
+  if (!S.getASTContext().hasCompatibleBoundsSafetyPointerLayout(
+          LBase->getReturnType(), RBase->getReturnType()))
+    return false;
+
+  // Check parameter types
+  unsigned LNumParams = LProto ? LProto->getNumParams() : 0;
+  unsigned RNumParams = RProto ? RProto->getNumParams() : 0;
+  unsigned MinNumParams = LNumParams <= RNumParams ? LNumParams : RNumParams;
+
+  for (unsigned i = 0; i < MinNumParams; ++i) {
+    // We switch left and right for the compatibility check because
+    // function parameters are contravariant.
+    // I.e., if R -> L  then 'f(L)' -> 'f(R)'
+    if (!S.getASTContext().hasCompatibleBoundsSafetyPointerLayout(
+            RProto->getParamType(i), LProto->getParamType(i)))
+      return false;
+  }
+
+  auto CheckRemaningParams = [MinNumParams](const FunctionProtoType *Proto) {
+    if (!Proto || Proto->getNumParams() == MinNumParams)
+      return true;
+
+    auto HasBoundsSafetyAttributeRecursive = [](QualType Ty) {
+      auto PT = Ty->getAs<PointerType>();
+      while (PT) {
+        if (!PT->hasRawPointerLayout())
+          return true;
+        PT = PT->getPointeeType()->getAs<PointerType>();
+      }
+      return false;
+    };
+
+    for (unsigned i = MinNumParams; i < Proto->getNumParams(); ++i)
+      if (HasBoundsSafetyAttributeRecursive(Proto->getParamType(i)))
+        return false;
+    return true;
+  };
+
+  return CheckRemaningParams(LProto) || CheckRemaningParams(RProto);
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
+
 // checkPointerTypesForAssignment - This is a very tricky routine (despite
 // being closely modeled after the C99 spec:-). The odd characteristic of this
 // routine is it effectively iqnores the qualifiers on the top level pointee.
@@ -9012,7 +11169,9 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType,
   // C99 6.5.16.1p1 (constraint 3): both operands are pointers to qualified or
   // unqualified versions of compatible types, ...
   QualType ltrans = QualType(lhptee, 0), rtrans = QualType(rhptee, 0);
-  if (!S.Context.typesAreCompatible(ltrans, rtrans)) {
+  if (!S.Context.typesAreCompatible(ltrans, rtrans,
+                                    // TO_UPSTREAM(BoundsSafety)
+                                    /*CompareUnqualified=*/false)) {
     // Check if the pointee types are compatible ignoring the sign.
     // We explicitly check for char so that we catch "char" vs
     // "unsigned char" on systems where "char" is unsigned.
@@ -9035,6 +11194,40 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType,
 
       return Sema::IncompatiblePointerSign;
     }
+
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    const Type *lht = lhptee;
+    const Type *rht = rhptee;
+    for (;;) {
+      const auto *lhpt = dyn_cast<PointerType>(lht->getBaseElementTypeUnsafe());
+      const auto *rhpt = dyn_cast<PointerType>(rht->getBaseElementTypeUnsafe());
+      if (!lhpt || !rhpt)
+        break;
+      if (!BoundsSafetyPointerAttributes::areCompatible(
+              lhpt->getPointerAttributes(), rhpt->getPointerAttributes())) {
+        return Sema::IncompatibleNestedBoundsSafetyPointerAttributes;
+      }
+      lht = lhpt->getPointeeType().getTypePtr();
+      rht = rhpt->getPointeeType().getTypePtr();
+    }
+
+    auto hasNestedBoundsSafetyAttribute = [](const Type *ptee) -> bool {
+      while (const auto *pt =
+                 dyn_cast<PointerType>(ptee->getBaseElementTypeUnsafe())) {
+        // FIXME: Should not trigger an error for auto-bound type yet this will
+        // be relevant once we have a tree transform to fix auto bound types.
+        // rdar://71269324
+        if (!pt->hasRawPointerLayout())
+          return true;
+        ptee = pt->getPointeeType().getTypePtr();
+      }
+      return false;
+    };
+    if (S.getLangOpts().BoundsSafety && (hasNestedBoundsSafetyAttribute(lht) ||
+                                         hasNestedBoundsSafetyAttribute(rht))) {
+      return Sema::IncompatibleNestedBoundsSafetyPointerAttributes;
+    }
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
 
     // If we are a multi-level pointer, it's possible that our issue is simply
     // one of qualification - e.g. char ** -> const char ** is not allowed. If
@@ -9065,8 +11258,14 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType,
     }
 
     // General pointer incompatibility takes priority over qualifiers.
-    if (RHSType->isFunctionPointerType() && LHSType->isFunctionPointerType())
+    if (RHSType->isFunctionPointerType() && LHSType->isFunctionPointerType()) {
+      /*TO_UPSTREAM(BoundsSafety) ON*/
+      if (S.getLangOpts().BoundsSafety &&
+          !checkBoundsSafetyFunctionPointerForAssignment(S, LHSType, RHSType))
+        return Sema::IncompatibleBoundsSafetyFunctionPointer;
+      /*TO_UPSTREAM(BoundsSafety) OFF*/
       return Sema::IncompatibleFunctionPointer;
+    }
     return Sema::IncompatiblePointer;
   }
   if (!S.getLangOpts().CPlusPlus &&
@@ -9221,7 +11420,14 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
   // Common case: no conversion required.
   if (LHSType == RHSType) {
     Kind = CK_NoOp;
-    return Compatible;
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    if (getLangOpts().BoundsSafety &&
+        !Context.canMergeTypeBounds(OrigLHSType, RHS.get()->getType())) {
+      Kind = CK_BoundsSafetyPointerCast;
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
+    } else {
+      return Compatible;
+    }
   }
 
   // If the LHS has an __auto_type, there are no additional type constraints
@@ -9367,10 +11573,94 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
   // Conversions to normal pointers.
   if (const PointerType *LHSPointer = dyn_cast<PointerType>(LHSType)) {
     // U* -> T*
-    if (isa<PointerType>(RHSType)) {
+    if (const PointerType *RHSPointer = dyn_cast<PointerType>(RHSType)) {
       LangAS AddrSpaceL = LHSPointer->getPointeeType().getAddressSpace();
-      LangAS AddrSpaceR = RHSType->getPointeeType().getAddressSpace();
-      if (AddrSpaceL != AddrSpaceR)
+      LangAS AddrSpaceR = RHSPointer->getPointeeType().getAddressSpace();
+      /*TO_UPSTREAM(BoundsSafety) ON*/
+      if (getLangOpts().BoundsSafety) {
+        bool IsSrcNull = RHS.get()->IgnoreParenCasts()->isNullPointerConstant(Context, Expr::NPC_ValueDependentIsNotNull);
+        if (!IsSrcNull && !RHSType->isSafePointerType() &&
+            !RHS.get()->getType()->isBoundsAttributedType() &&
+            LHSType->isSafePointerType() &&
+            !OrigLHSType->isValueTerminatedType()) {
+          return LHSPointer->isSingle() ? IncompatibleUnsafeToSafePointer
+                                        : IncompatibleUnsafeToIndexablePointer;
+        }
+        if (!IsSrcNull && RHSPointer->isSingle() &&
+            LHSType->isPointerTypeWithBounds() &&
+            !RHS.get()->getType()->isBoundsAttributedType()) {
+          if (RHSPointer->getPointeeType()->isIncompleteOrSizelessType())
+            return IncompleteSingleToIndexablePointer;
+
+          DiagnoseSingleToWideLosingBounds(LHSType, RHSType, RHS.get());
+        }
+      }
+
+      auto RHSFA = RHSPointer->getPointerAttributes();
+      if (LHSPointer->getPointerAttributes() != RHSFA) {
+        // First convert with the left-hand type taking the -fbounds-safety
+        // attributes of the right hand type, and then do a
+        // BoundsSafetyPointerCast from the result of that to the left-hand type.
+        // This ensures that places that need two implicit casts (like
+        // `int *__single = (char *__bidi)x`) will first BitCast to
+        // `int *__bidi` and then FPC to `int *__single`, which will CodeGen
+        // the bounds check correctly.
+        auto LHSIntermediateType = Context.getPointerType(
+            LHSPointer->getPointeeType(), RHSFA);
+        auto Result = CheckAssignmentConstraints(LHSIntermediateType, RHS,
+                                                 Kind, ConvertRHS);
+        bool SkipNoOp = Kind == CK_NoOp &&
+                        Context.hasSameType(LHSPointer->getPointeeType(),
+                                            RHSPointer->getPointeeType());
+        if (ConvertRHS && !SkipNoOp)
+          RHS = ImpCastExprToType(RHS.get(), LHSIntermediateType, Kind);
+        Kind = CK_BoundsSafetyPointerCast;
+
+        // Look for cases where a __single pointer is implicitly converted to an
+        // explicitly indexable pointer. We do this here rather than earlier in
+        // the function because returning earlier would cause the extra implicit
+        // cast logic above to be missed which would change the generated AST.
+        bool IsSrcNull = RHS.get()->IgnoreParenCasts()->isNullPointerConstant(
+            Context, Expr::NPC_ValueDependentIsNotNull);
+        if (!IsSrcNull && RHSPointer->isSingle() &&
+            !RHS.get()->getType()->isBoundsAttributedType()) {
+          bool IsExplicitlyBoundedPointer = LHSType->isPointerTypeWithBounds();
+          if (OrigLHSType->hasAttr(attr::PtrAutoAttr)) {
+            // We avoid implicitly indexable (i.e. implicit __bidi_indexable
+            // local vars) because warning about these would likely be too
+            // noisy.
+            IsExplicitlyBoundedPointer = false;
+          }
+          if (IsExplicitlyBoundedPointer) {
+            assert(Kind == CK_BoundsSafetyPointerCast);
+            // Return this for the purposes of later emitting a warning.
+            return CompatibleSingleToExplicitIndexablePointer;
+          }
+        }
+
+        if (Result != Compatible)
+          return Result;
+      } else if (OrigLHSType->isBoundsAttributedType() &&
+                 RHSType->isSinglePointerType()) {
+        // Single to dynamic bounds pointer should first create an implicit cast
+        // to `__bidi_indexable` and then create any necessary cast such as
+        // bitcast in the following example. `void *__sized_by(len) dst = (int
+        // *__single)src`
+        assert(!RHS.get()->getType()->isBoundsAttributedType());
+        if (ConvertRHS) {
+          QualType BidiRTy = Context.getPointerType(
+              RHSPointer->getPointeeType(),
+              BoundsSafetyPointerAttributes::bidiIndexable());
+          RHS = ImpCastExprToType(RHS.get(), BidiRTy, CK_BoundsSafetyPointerCast);
+          auto Result =
+              CheckAssignmentConstraints(OrigLHSType, RHS, Kind, ConvertRHS);
+          if (Result != Compatible)
+            return Result;
+        } else {
+          Kind = CK_BitCast;
+        }
+      /*TO_UPSTREAM(BoundsSafety) OFF*/
+      } else if (AddrSpaceL != AddrSpaceR)
         Kind = CK_AddressSpaceConversion;
       else if (Context.hasCvrSimilarType(RHSType, LHSType))
         Kind = CK_NoOp;
@@ -9383,7 +11673,8 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
     // int -> T*
     if (RHSType->isIntegerType()) {
       Kind = CK_IntegralToPointer; // FIXME: null?
-      return IntToPointer;
+      return LHSPointer->isSafePointer()
+             ? IncompatibleIntToSafePointer : IntToPointer;
     }
 
     // C pointers are not compatible with ObjC object pointers,
@@ -9570,6 +11861,57 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
   return Incompatible;
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON*/
+void Sema::DiagnoseSingleToWideLosingBounds(QualType LHSType,
+                                            QualType RHSType,
+                                            const Expr *RHSExp) {
+  assert(LHSType->isPointerType() && RHSType->isPointerType());
+  // We don't need to specialize it for structs with flexible array
+  // members because when LHSType is a flexible array member smaller
+  // than the source type, that is still a problem.
+  auto LHSSize = Context.getTypeSizeOrNull(LHSType->getPointeeType());
+  auto RHSSize = Context.getTypeSizeOrNull(RHSType->getPointeeType());
+
+  if (LHSSize >= RHSSize)
+    return;
+
+  const auto *LHSPointer = LHSType->getAs<PointerType>();
+  QualType LHSPointeeTy = LHSPointer->getPointeeType();
+  Diag(RHSExp->getExprLoc(),
+       diag::warn_bounds_safety_single_bitcast_lose_bounds)
+      << RHSType << LHSType << LHSPointer->isBidiIndexable()
+      << LHSPointeeTy << LHSPointeeTy->isIncompleteType();
+
+  QualType RHSTyBidi = Context.getBoundsSafetyPointerType(RHSType,
+                                                       BoundsSafetyPointerAttributes::bidiIndexable());
+  std::string RHSTyBidiStr = "(" + RHSTyBidi.getAsString() + ")";
+
+  CharSourceRange ExprRange =
+      CharSourceRange::getCharRange(RHSExp->getBeginLoc(),
+                                    getLocForEndOfToken(RHSExp->getExprLoc()));
+
+  std::string ExprStr = "'" +
+      std::string(Lexer::getSourceText(ExprRange, getSourceManager(), getLangOpts()))
+    + "'";
+
+  Diag(RHSExp->getExprLoc(),
+       diag::note_bounds_safety_single_bitcast_lose_bounds_keep_bound)
+      << RHSTyBidi << ExprStr
+      << FixItHint::CreateInsertion(RHSExp->getBeginLoc(), RHSTyBidiStr);
+
+  auto PD = PDiag(diag::note_bounds_safety_single_bitcast_lose_bounds_silence);
+
+  if (!LHSType->getPointeeType()->isSizeMeaningless()) {
+
+    QualType LHSTySingle = Context.getBoundsSafetyPointerType(LHSType,
+                                                           BoundsSafetyPointerAttributes::single());
+    std::string LHSTySingleStr = "(" + LHSTySingle.getAsString() + ")";
+    PD << FixItHint::CreateInsertion(RHSExp->getBeginLoc(), LHSTySingleStr);
+  }
+  Diag(RHSExp->getExprLoc(), PD);
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
+
 /// Constructs a transparent union from an expression that is
 /// used to initialize the transparent union.
 static void ConstructTransparentUnion(Sema &S, ASTContext &C,
@@ -9641,6 +11983,317 @@ Sema::CheckTransparentUnionArgumentConstraints(QualType ArgType,
   ConstructTransparentUnion(*this, Context, RHS, ArgType, InitField);
   return Compatible;
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON*/
+// Check dependent variables that are used in a return type. Those variables
+// don't have DependerDeclsAttr or __started_by() type, since currently we
+// cannot express referring to function return (e.g., we cannot create
+// __started_by(func ret)).
+static bool checkDynamicBoundVariableEscapeInRetType(Sema &S,
+                                                     const Expr *RHSExp,
+                                                     const ValueDecl *VD,
+                                                     const int ExpAddrOfLevel) {
+  const BoundsAttributedType *RetType = nullptr;
+  const TypeCoupledDeclRefInfo *Info = nullptr;
+  if (!VD->isDependentParamOfReturnType(&RetType, &Info))
+    return true;
+
+  int AttAddrOfLevel = Info->isDeref() ? -1 : 0;
+  if (ExpAddrOfLevel <= AttAddrOfLevel)
+    return true;
+
+  const auto *CATy = dyn_cast<CountAttributedType>(RetType);
+  BoundsAttributedType::BoundsAttrKind Kind =
+      CATy ? CATy->getKind() : BoundsAttributedType::BoundsAttrKind::EndedBy;
+  S.Diag(RHSExp->getExprLoc(),
+         diag::err_bounds_safety_taking_address_dynamic_bound_dependent)
+      << Kind << /*variable*/ 0 << RHSExp->getSourceRange();
+  return false;
+}
+
+// BoundsSafety: a dynamic count variable cannot be pointed to by any other
+// variable. Exception is when the variable is passed as a compatible argument
+// to a function.
+bool Sema::CheckDynamicBoundVariableEscape(QualType LHSType, Expr *RHSExp) {
+  RHSExp = RHSExp->IgnoreParenCasts();
+  int ExpAddrOfLevel = 0;
+  auto VD = findValueDecl(RHSExp, &ExpAddrOfLevel);
+  auto BaseRecord = findBaseRecordDecl(RHSExp);
+  if (!VD)
+    return true;
+
+  if (const auto *Att = VD->getAttr<DependerDeclsAttr>()) {
+    int AttAddrOfLevel = Att->getIsDeref() ? -1 : 0;
+    if (ExpAddrOfLevel > AttAddrOfLevel) {
+      assert(Att->dependerDecls_size() > 0);
+      for (const auto DepDecl : Att->dependerDecls()) {
+        /// If DepDecl is part of a count expression through a nested struct we
+        /// need to check whether the FAM exists in the current context.
+        /// Example of irrelevant dep decl (SimpleOuter::fam):
+        /// \code
+        /// struct SimpleInner {
+        ///     int dummy;
+        ///     int len;
+        /// };
+        /// struct SimpleOuter {
+        ///     struct SimpleInner hdr;
+        ///     char fam[__counted_by(hdr.len)];
+        /// };
+        /// void set_len(struct SimpleInner * p) {
+        ///     // struct SimpleInner doesn't contain any FAMs, so not checked
+        ///     // -fbounds-safety doesn't allow taking address of
+        ///     // SimpleOuter::hdr though, so this is never referred to by a
+        ///     // FAM and thus safe
+        ///     p->len = 2;
+        /// }
+        /// \endcode
+        if (BaseRecord && !BaseRecord->isParentStructOf(DepDecl))
+          continue;
+        QualType DepTy = cast<ValueDecl>(DepDecl)->getType();
+        auto *DCPTy = DepTy->getAs<CountAttributedType>();
+        if (!DCPTy)
+          DCPTy = DepTy->getPointeeType()->getAs<CountAttributedType>();
+        assert(DCPTy);
+        // Error has already been emitted for simply taking the address of the
+        // count field
+        if (BaseRecord && DCPTy->isIncompleteArrayType())
+          continue;
+        Diag(RHSExp->getExprLoc(),
+             diag::err_bounds_safety_taking_address_dynamic_bound_dependent)
+            << DCPTy->getKind() << isa<FieldDecl>(VD)
+            << RHSExp->getSourceRange();
+        return false;
+      }
+    }
+  }
+
+  QualType Ty = RHSExp->getType();
+  while (Ty->isPointerType()) {
+    Ty = Ty->getPointeeType();
+    if (!Ty->isBoundsAttributedType())
+      continue;
+    if (BaseRecord && Ty->isIncompleteArrayType())
+      break;
+    if (const auto *DCPT = Ty->getAs<CountAttributedType>()) {
+      Diag(RHSExp->getExprLoc(),
+           diag::err_bounds_safety_taking_address_dynamic_bound_pointer)
+          << DCPT->getKind() << DCPT->isArrayType() << RHSExp->getSourceRange();
+      return false;
+    } else {
+      const auto *DRPTy = Ty->getAs<DynamicRangePointerType>();
+      assert(DRPTy);
+      if (!DRPTy->getEndPointer())
+        Diag(RHSExp->getExprLoc(),
+             diag::err_bounds_safety_taking_address_dynamic_bound_dependent)
+            << /*ended_by*/ 4 << isa<FieldDecl>(VD) << RHSExp->getSourceRange();
+      else
+        Diag(RHSExp->getExprLoc(),
+             diag::err_bounds_safety_taking_address_dynamic_bound_pointer)
+            << /*ended_by*/ 4 << /*pointer*/ 0 << RHSExp->getSourceRange();
+      return false;
+    }
+  }
+
+  return checkDynamicBoundVariableEscapeInRetType(*this, RHSExp, VD,
+                                                  ExpAddrOfLevel);
+}
+
+Sema::AssignConvertType
+Sema::CheckValueTerminatedAssignmentConstraints(QualType LHSType,
+                                                Expr *RHSExpr) {
+  const auto *LVTT = LHSType->getAs<ValueTerminatedType>();
+  if (LVTT && LVTT->isPointerType()) {
+    const auto *SL = dyn_cast<StringLiteral>(RHSExpr->IgnoreParenImpCasts());
+    if (!SL) {
+      if (const auto *PDE =
+          dyn_cast<PredefinedExpr>(RHSExpr->IgnoreParenImpCasts())) {
+        SL = PDE->getFunctionName();
+      }
+    }
+    if (SL) {
+      QualType CharT = Context.getAsArrayType(SL->getType())->getElementType();
+      if (Context.hasSameUnqualifiedType(LVTT->getPointeeType(), CharT)) {
+        return LVTT->getTerminatorValue(Context).isZero()
+                   ? Sema::Compatible
+                   : Sema::IncompatibleStringLiteralToValueTerminatedPointer;
+      }
+    }
+  }
+
+  QualType L = LHSType;
+  QualType R = RHSExpr->getType();
+  bool Nested = false;
+  while (L->isPointerType() && R->isPointerType()) {
+    QualType LPointee = L->getPointeeType();
+    QualType RPointee = R->getPointeeType();
+    const auto *LVTT = L->getAs<ValueTerminatedType>();
+    const auto *RVTT = R->getAs<ValueTerminatedType>();
+    if (LVTT && RVTT) {
+      if (LVTT != RVTT &&
+          !llvm::APSInt::isSameValue(LVTT->getTerminatorValue(Context),
+                                     RVTT->getTerminatorValue(Context))) {
+        return Sema::IncompatibleValueTerminatedTerminators;
+      }
+    } else if (!LVTT && RVTT && L->isSafePointerType()) {
+      return Nested
+                 ? Sema::
+                       IncompatibleNestedValueTerminatedToNonValueTerminatedPointer
+                 : Sema::IncompatibleValueTerminatedToNonValueTerminatedPointer;
+    } else if (LVTT && !RVTT) {
+      // If the expression is a constant expression, try to redeem it by
+      // checking if it is terminated with the right value.
+      // Don't try to evaluate the terminator for nested pointers, since
+      // RHSExpr matches the assignment only for the first level pointers (we
+      // don't have an expression for nested pointers).
+      // Ensure that the pointees are compatible (including sugar types),
+      // since we return Sema::Compatible here immediately without iterating
+      // nested levels.
+      if (!Nested) {
+        Expr::EvalResult Evald;
+        bool CompatiblePointees =
+            (Context.hasSameUnqualifiedType(LPointee, RPointee) &&
+             Context.canMergeInnerTypeBounds(LPointee, RPointee)) ||
+            (LPointee->isIntegerType() && RPointee->isIntegerType() &&
+             Context.hasSameUnqualifiedType(
+                 Context.getCorrespondingSignedType(LPointee),
+                 Context.getCorrespondingSignedType(RPointee)));
+        if (CompatiblePointees &&
+            RHSExpr->tryEvaluateTerminatorElement(Evald, Context) &&
+            Evald.Val.isInt() &&
+            llvm::APSInt::isSameValue(LVTT->getTerminatorValue(Context),
+                                      Evald.Val.getInt())) {
+          return Sema::Compatible;
+        }
+      }
+      return Nested
+                 ? Sema::
+                       IncompatibleNestedNonValueTerminatedToValueTerminatedPointer
+                 : Sema::
+                       IncompatibleNonValueTerminatedToValueTerminatedPointer;
+    }
+    L = LPointee;
+    R = RPointee;
+    Nested = true;
+  }
+
+  return Sema::Compatible;
+}
+
+bool Sema::isCompatibleBoundsUnsafeAssignment(
+    Sema::AssignConvertType ConvTy) const {
+  // This switch intentionally has no default case so that it emits
+  // a warning if a new AssignConvertType is added without being checked here.
+  switch (ConvTy) {
+  case IncompatibleIntToSafePointer:
+  case IncompatibleStringLiteralToValueTerminatedPointer:
+  case IncompatibleValueTerminatedTerminators:
+  case IncompatibleValueTerminatedToNonValueTerminatedPointer:
+  case IncompatibleNonValueTerminatedToValueTerminatedPointer:
+  case IncompatibleNestedValueTerminatedToNonValueTerminatedPointer:
+  case IncompatibleNestedNonValueTerminatedToValueTerminatedPointer:
+  case IncompatibleBoundsSafetyFunctionPointer:
+  case IncompatibleUnsafeToSafePointer:
+    return true;
+
+  // These -fbounds-safety errors shouldn't be ignored because of ABI mismatch.
+  // Codegen support has not been tested.
+  case IncompatibleUnsafeToIndexablePointer:
+  case IncompleteSingleToIndexablePointer:
+  case IncompatibleNestedBoundsSafetyPointerAttributes:
+  // Non bounds-safety errors
+  case IncompatibleVectors:
+  case IntToBlockPointer:
+  case IncompatibleBlockPointer:
+  case IncompatibleObjCQualifiedId:
+  case IncompatibleObjCWeakRef:
+  case FunctionVoidPointer:
+  case IncompatiblePointer:
+  case IncompatibleFunctionPointer:
+  case IncompatibleFunctionPointerStrict:
+  case IncompatiblePointerSign:
+  case CompatiblePointerDiscardsQualifiers:
+  case IncompatiblePointerDiscardsQualifiers:
+  case IncompatibleNestedPointerAddressSpaceMismatch:
+  case IncompatibleNestedPointerQualifiers:
+  case PointerToInt:
+  case IntToPointer:
+  case Incompatible:
+  // Not errors
+  case CompatibleSingleToExplicitIndexablePointer:
+  case Compatible:
+    return false;
+  }
+  llvm_unreachable("Unhandled Sema::AssignConvertType");
+}
+
+bool Sema::allowBoundsUnsafeFunctionArg(const CallExpr *CallE,
+                                                   unsigned ParamIdx) const {
+  const auto *Callee = CallE->getCallee();
+
+  QualType CalleeTy = Callee->getType();
+  if (CalleeTy->isFunctionPointerType() || CalleeTy->isFunctionReferenceType())
+    CalleeTy = CalleeTy->getPointeeType();
+
+  const auto *FuncTy = CalleeTy->getAs<FunctionProtoType>();
+  if (!FuncTy)
+    return false;
+
+  return allowBoundsUnsafePointerAssignment(FuncTy->getParamType(ParamIdx),
+                                            CallE->getArg(ParamIdx),
+                                            CallE->getExprLoc());
+}
+
+bool Sema::allowBoundsUnsafePointerAssignment(
+    const QualType DestTy, const Expr *SourceValue,
+    SourceLocation AssignmentLoc) const {
+
+  SourceValue = SourceValue->IgnoreParenImpCasts();
+
+  // Integer to pointer conversions are ABI compatible, but make no exception
+  // to allow them for now. This may change later if a use case is found.
+  auto DestPtrTy = DestTy->getAs<PointerType>();
+  if (!DestPtrTy)
+    return false;
+  auto SourcePtrTy = SourceValue->getType()->getAs<PointerType>();
+  if (!SourcePtrTy)
+    return false;
+
+  bool DestSafe = DestPtrTy->isSafePointer();
+  bool SourceSafe = SourcePtrTy->isSafePointer();
+  // Assignments between unsafe pointers will be allowed regardless, no need to
+  // make an exception.
+  if (!DestSafe && !SourceSafe)
+    return false;
+
+  // All safe pointers ABI compatible with unsafe pointers (and each other) are
+  // __single pointers. Make no exception for ABI incompatible pointer type
+  // mismatch.
+  if (!DestPtrTy->isSingle() && DestSafe)
+    return false;
+  if (!SourcePtrTy->isSingle() && SourceSafe)
+    return false;
+
+  return allowBoundsUnsafeAssignment(AssignmentLoc);
+}
+
+bool Sema::allowBoundsUnsafeAssignment(SourceLocation AssignmentLoc) const {
+  // System headers are excepted from respecting bounds safety rules
+  // since they are external to the main project (and outside of its control)
+  // and may not have adopted -fbounds-safety even when the main project and/or
+  // transitive dependencies have done so. Code in system headers without
+  // -fbounds-safety adoption is compiled as if -fbounds-safety was disabled.
+  if (!SourceMgr.isInSystemHeader(AssignmentLoc))
+    return false;
+
+  // If the default pointer ABI in the header is not unsafe_indexable or
+  // unspecified the header has adopted -fbounds-safety and making exceptions to the
+  // safety rules would be counter-productive.
+  if (!CurPointerAbi.isUnsafeOrUnspecified())
+    return false;
+
+  return getLangOpts().BoundsSafetyRelaxedSystemHeaders;
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
 
 Sema::AssignConvertType
 Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
@@ -9791,9 +12444,15 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
     }
   }
 
-  CastKind Kind;
-  Sema::AssignConvertType result =
-    CheckAssignmentConstraints(LHSType, RHS, Kind, ConvertRHS);
+  Sema::AssignConvertType result = Compatible;
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  if (LangOpts.BoundsSafety)
+    result = CheckValueTerminatedAssignmentConstraints(LHSType, RHS.get());
+
+  CastKind Kind = CK_NoOp;
+  if (result == Compatible)
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
+    result = CheckAssignmentConstraints(LHSType, RHS, Kind, ConvertRHS);
 
   // C99 6.5.16.1p2: The value of the right operand is converted to the
   // type of the assignment expression.
@@ -9826,6 +12485,18 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
       RHS = E;
       return Compatible;
     }
+
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    if (getLangOpts().BoundsSafety &&
+        isCompatibleBoundsUnsafeAssignment(result)) {
+      // Leave the AST intact and let the caller decide how to handle the error
+      if (ConvertRHS && !E->getType()->isPointerType())
+        E = ImpCastExprToType(E, QualType(Ty->getUnqualifiedDesugaredType(), 0),
+                              CK_IntegralToPointer)
+                .get();
+      Kind = CK_BoundsSafetyPointerCast;
+    }
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
 
     if (ConvertRHS)
       RHS = ImpCastExprToType(E, Ty, Kind);
@@ -10778,6 +13449,234 @@ static bool checkArithmeticIncompletePointerType(Sema &S, SourceLocation Loc,
       Operand->getSourceRange());
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON*/
+// Looks at the expression and determine if it's a declaration that we
+// could suggest adding `__counted_by` too.
+//
+// Returns a tuple of pointers that will be non null if
+// the attribute should be suggested.
+static std::tuple<ValueDecl *, Expr *>
+shouldSuggestBoundsSafetyCountedBy(Expr *E) {
+  ValueDecl *decl = nullptr;
+  Expr *declRef = nullptr;
+  if (auto asDeclRefExpr = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts())) {
+    declRef = asDeclRefExpr;
+    decl = asDeclRefExpr->getDecl();
+  } else if (auto asMemberExpr =
+                 dyn_cast<MemberExpr>(E->IgnoreParenImpCasts())) {
+    // Reference to a struct member
+    declRef = asMemberExpr;
+    decl = asMemberExpr->getMemberDecl();
+  }
+
+  if (declRef && declRef->getType()->isAtomicType()) {
+    // We don't suggest for atomic decls because they don't support the
+    // `__counted_by` attribute.
+    declRef = nullptr;
+    decl = nullptr;
+  }
+  return std::make_tuple(decl, declRef);
+}
+
+static void emitBoundsSafetySinglePointerArithmeticError(Sema &S, Expr *Operand) {
+  // Try to find a declaration that we can suggest adding `__counted_by` too.
+  ValueDecl *decl = nullptr;
+  Expr *declRef = nullptr;
+  std::tie(decl, declRef) = shouldSuggestBoundsSafetyCountedBy(Operand);
+
+  if (!declRef) {
+    // Didn't find a suitable a decl so emit error without suggesting the
+    // attribute.
+    S.Diag(Operand->getExprLoc(), diag::err_bounds_safety_single_pointer_arithmetic)
+        << Operand << /* %2 */ 0 << Operand->getSourceRange();
+    return;
+  }
+
+  // Emit error suggesting the attribute.
+  assert(declRef->getType()->isPointerType());
+  auto qualifiedName = decl->getQualifiedNameAsString();
+  S.Diag(Operand->getExprLoc(), diag::err_bounds_safety_single_pointer_arithmetic)
+      << Operand << /* %2 */ 1 << qualifiedName << Operand->getSourceRange();
+
+  // Emit note about where the decl is declared.
+  S.Diag(decl->getBeginLoc(), diag::note_pointer_declared_here_quoted)
+      << qualifiedName << decl->getSourceRange();
+}
+
+/// Check the validity of -fbounds-safety pointer arithmetic on increment/decrement.
+static bool checkArithmeticUnaryOpBoundsSafetyPointer(Sema &S, Expr *Operand, bool IsInc) {
+  QualType ResType = Operand->getType();
+  if (const AtomicType *ResAtomicType = ResType->getAs<AtomicType>())
+    ResType = ResAtomicType->getValueType();
+
+  if (!ResType->isAnyPointerType())
+    return true;
+
+  if (ResType->isBoundsAttributedType()) {
+    if (const auto *DCPTy = ResType->getAs<CountAttributedType>()) {
+      if (!IsInc) {
+        S.Diag(Operand->getExprLoc(),
+               diag::err_bounds_safety_dynamic_bound_pointer_unary_arithmetic)
+            << IsInc << DCPTy->getKind() << Operand->getSourceRange();
+        return false;
+      }
+
+      // Note when the new bounds check is off the check is handled in
+      // `CheckCountAttributedDeclAssignments::TraverseUnaryOperator`.
+      if (S.getLangOpts().hasNewBoundsSafetyCheck(
+              LangOptions::BS_CHK_IndirectCountUpdate)) {
+        // TODO: When the diagnostic emitted by
+        // `BoundsSafetyCheckCountAttributedTypeHasConstantCountForAssignmentOp`
+        // is a hard error we can return false here. However, we can't do that
+        // right now because the diagnostic is a warning which can be ignored.
+        // So even if the a warning was issued we need to generate a valid AST.
+        S.BoundsSafetyCheckCountAttributedTypeHasConstantCountForAssignmentOp(
+            DCPTy, Operand, IsInc);
+      }
+
+    } else if (const auto *DRPTy = ResType->getAs<DynamicRangePointerType>()) {
+      if (!IsInc && !DRPTy->getStartPointer()) {
+        S.Diag(Operand->getExprLoc(),
+               diag::err_bounds_safety_dynamic_bound_pointer_unary_arithmetic)
+            << IsInc << /*ended_by*/ 5 << Operand->getSourceRange();
+        return false;
+      }
+      if (IsInc && !DRPTy->getEndPointer()) {
+        S.Diag(Operand->getExprLoc(),
+               diag::err_bounds_safety_dynamic_bound_pointer_unary_arithmetic)
+            << IsInc << /*end*/ 4 << Operand->getSourceRange();
+        return false;
+      }
+    }
+    return true;
+  }
+
+  if (ResType->isValueTerminatedType()) {
+    if (IsInc)
+      return true;
+    S.Diag(Operand->getExprLoc(),
+           diag::err_bounds_safety_terminated_by_pointer_arithmetic_dec)
+        << Operand << Operand->getSourceRange();
+    return false;
+  }
+
+  if (ResType->isSinglePointerType()) {
+    emitBoundsSafetySinglePointerArithmeticError(S, Operand);
+    return false;
+  }
+
+  if (auto *RD = ResType->getPointeeType()->getAs<RecordType>()) {
+    if (RD->getDecl()->hasFlexibleArrayMember()) {
+      S.Diag(Operand->getExprLoc(),
+        diag::err_bounds_safety_flexible_array_member_record_pointer_arithmetic);
+      return false;
+    }
+  }
+
+  if (!IsInc && ResType->isIndexablePointerType()) {
+    S.Diag(Operand->getExprLoc(), diag::err_bounds_safety_indexable_pointer_arithmetic)
+        << Operand << Operand->getSourceRange();
+    return false;
+  }
+  return true;
+}
+
+/// Check the validity of -fbounds-safety pointer arithmetic.
+static bool checkArithmeticBinOpBoundsSafetyPointer(Sema &S, Expr *Base,
+                                                 Expr *Index, bool IndexNegated,
+                                                 BinaryOperatorKind OpKind,
+                                                 SourceLocation OpLoc) {
+  QualType BaseType = Base->getType();
+  QualType IndexType = Index->getType();
+  SourceLocation Loc = Base->getEndLoc();
+
+  assert((!BaseType->isAtomicType() ||
+          !BaseType->getAs<AtomicType>()->getValueType()->isPointerType()) &&
+         "Should have been checked before");
+  assert(IndexType->isIntegerType() && "Should have been checked before");
+
+  auto PT = BaseType->getAs<PointerType>();
+  if (!PT)
+    return true;
+
+  if (BaseType->isValueTerminatedType()) {
+    Expr::EvalResult Result;
+    if (Index->EvaluateAsInt(Result, S.Context, Expr::SE_AllowSideEffects)) {
+      llvm::APSInt index = Result.Val.getInt();
+      if (IndexNegated)
+        index = -index;
+      if (index.isZero() || index.isOne())
+        return true;
+    }
+    S.Diag(Loc, diag::err_bounds_safety_terminated_by_pointer_arithmetic)
+        << Base << SourceRange(Base->getBeginLoc(), Index->getEndLoc());
+    return false;
+  }
+
+  if (PT->isSingle() && !BaseType->isBoundsAttributedType()) {
+    emitBoundsSafetySinglePointerArithmeticError(S, Base);
+    return false;
+  }
+
+  // Note when the new bounds check is off the check is handled in
+  // `CheckCountAttributedDeclAssignments::TraverseBinaryOperator`.
+  if (const auto *CATTy = BaseType->getAs<CountAttributedType>()) {
+    if (S.getLangOpts().hasNewBoundsSafetyCheck(
+            LangOptions::BS_CHK_IndirectCountUpdate)) {
+      // TODO: When the diagnostic emitted by
+      // `BoundsSafetyCheckCountAttributedTypeHasConstantCountForAssignmentOp`
+      // is a hard error we can return false here. However, we can't do that
+      // right now because the diagnostic is a warning which can be ignored. So
+      // even if the a warning was issued we need to generate a valid AST.
+      S.BoundsSafetyCheckCountAttributedTypeHasConstantCountForAssignmentOp(
+          CATTy, Base, OpKind);
+    }
+  }
+
+  if (auto *RD = PT->getPointeeType()->getAs<RecordType>()) {
+    if (RD->getDecl()->hasFlexibleArrayMember()) {
+      S.Diag(Base->getExprLoc(),
+        diag::err_bounds_safety_flexible_array_member_record_pointer_arithmetic);
+      return false;
+    }
+  }
+
+  Index = Index->IgnoreParenImpCasts();
+  if (Index->isValueDependent())
+    return true;
+
+  if (!PT->isIndexable())
+    return true;
+
+  if (IndexNegated) {
+    auto *RHSBInTy = dyn_cast<BuiltinType>(IndexType);
+    if (RHSBInTy && RHSBInTy->isUnsignedInteger()) {
+      S.Diag(Loc, diag::err_bounds_safety_indexable_pointer_arithmetic)
+          << Base << SourceRange(Base->getBeginLoc(), Index->getEndLoc());
+      return false;
+    }
+  }
+
+  Expr::EvalResult Result;
+  if (!Index->EvaluateAsInt(Result, S.getASTContext(),
+                            Expr::SE_AllowSideEffects))
+    // Render it to a runtime check.
+    return true;
+
+  llvm::APSInt index = Result.Val.getInt();
+  if (IndexNegated)
+    index = -index;
+
+  if (index.isNegative()) {
+    S.Diag(Loc, diag::err_bounds_safety_indexable_pointer_arithmetic)
+        << Base << SourceRange(Base->getBeginLoc(), Index->getEndLoc());
+    return false;
+  }
+
+  return true;
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
+
 /// Check the validity of an arithmetic pointer operand.
 ///
 /// If the operand has pointer type, this code will check for pointer types
@@ -11061,6 +13960,25 @@ QualType Sema::CheckAdditionOperands(ExprResult &LHS, ExprResult &RHS,
   if (isObjCPointer && checkArithmeticOnObjCPointer(*this, Loc, PExp))
     return QualType();
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  if (LangOpts.BoundsSafety &&
+      !checkArithmeticBinOpBoundsSafetyPointer(*this, PExp, IExp,
+                                            /*IndexNegated*/ false, Opc, Loc))
+    return QualType();
+  // Cast __indexable to __bidi_indexable pointers for non-assignment
+  // addition.
+  if (Opc == BO_Add && PExp->getType()->isIndexablePointerType()) {
+    QualType Ty = Context.getBoundsSafetyPointerType(
+        PExp->getType(), BoundsSafetyPointerAttributes::bidiIndexable());
+    ExprResult Res = ImpCastExprToType(PExp, Ty, CK_BoundsSafetyPointerCast);
+    if (PExp == LHS.get())
+      LHS = Res;
+    else
+      RHS = Res;
+    PExp = Res.get();
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
   // Arithmetic on label addresses is normally allowed, except when we add
   // a ptrauth signature to the addresses.
   if (isa<AddrLabelExpr>(PExp) && getLangOpts().PointerAuthIndirectGotos) {
@@ -11086,9 +14004,12 @@ QualType Sema::CheckAdditionOperands(ExprResult &LHS, ExprResult &RHS,
 }
 
 // C99 6.5.6
-QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
-                                        SourceLocation Loc,
-                                        QualType* CompLHSTy) {
+QualType Sema::CheckSubtractionOperands(
+    ExprResult &LHS, ExprResult &RHS, SourceLocation Loc,
+    /*TO_UPSTREAM(BoundsSafety) ON*/
+    BinaryOperatorKind Opc,
+    /*TO_UPSTREAM(BoundsSafety) OFF*/
+    QualType *CompLHSTy) {
   checkArithmeticNull(*this, LHS, RHS, Loc, /*IsCompare=*/false);
 
   if (LHS.get()->getType()->isVectorType() ||
@@ -11175,6 +14096,22 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
       // Check array bounds for pointer arithemtic
       CheckArrayAccess(LHS.get(), RHS.get(), /*ArraySubscriptExpr*/nullptr,
                        /*AllowOnePastEnd*/true, /*IndexNegated*/true);
+
+      /* TO_UPSTREAM(BoundsSafety) ON*/
+      if (LangOpts.BoundsSafety && !checkArithmeticBinOpBoundsSafetyPointer(
+                                       *this, LHS.get(), RHS.get(),
+                                       /*IndexNegated*/ true, Opc, Loc))
+        return QualType();
+      // If the pointer in pointer-int substractions is __indexable, cast it
+      // to __bidi_indexable. Ignore pointer-pointer substractions here.
+      bool IsSubAssign = CompLHSTy;
+      if (!IsSubAssign && LHS.get()->getType()->isIndexablePointerType() &&
+          !RHS.get()->getType()->isPointerType()) {
+        QualType Ty = Context.getBoundsSafetyPointerType(
+            LHS.get()->getType(), BoundsSafetyPointerAttributes::bidiIndexable());
+        LHS = ImpCastExprToType(LHS.get(), Ty, CK_BoundsSafetyPointerCast);
+      }
+      /* TO_UPSTREAM(BoundsSafety) OFF*/
 
       if (CompLHSTy) *CompLHSTy = LHS.get()->getType();
       return LHS.get()->getType();
@@ -12198,6 +15135,19 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
     if (RHS.isInvalid())
       return QualType();
   }
+
+  auto ConvertWideToRawPointer = [&](ExprResult E) -> ExprResult {
+    QualType Ty = E.get()->getType();
+    auto *PT = Ty->getAs<PointerType>();
+    if (!PT || PT->hasRawPointerLayout())
+      return E;
+    return ImpCastExprToType(E.get(),
+                             Context.getPointerType(PT->getPointeeType()),
+                             CK_BoundsSafetyPointerCast);
+  };
+
+  LHS = ConvertWideToRawPointer(LHS);
+  RHS = ConvertWideToRawPointer(RHS);
 
   checkArithmeticNull(*this, LHS, RHS, Loc, /*IsCompare=*/true);
   if (!getLangOpts().CPlusPlus && BinaryOperator::isEqualityOp(Opc)) {
@@ -13691,6 +16641,41 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
   QualType LHSType = LHSExpr->getType();
   QualType RHSType = CompoundType.isNull() ? RHS.get()->getType() :
                                              CompoundType;
+
+/* TO_UPSTREAM(BoundsSafety) ON*/
+  if (getLangOpts().BoundsSafety) {
+    auto *RecordTy = RHSType->getAs<RecordType>();
+    if (RecordTy && RecordTy->getDecl()->hasFlexibleArrayMember()) {
+      // BoundsSafety prevents passing flexible array members by copy.
+      QualType DisplayType = CompoundType.isNull()
+          ? RHS.get()->IgnoreParenImpCasts()->getType() : CompoundType;
+      Diag(Loc, diag::err_flexible_array_member_passed_by_copy)
+          << DisplayType;
+      // recovery by continuing as if this worked
+    }
+  }
+
+  if (getLangOpts().hasBoundsSafety() && RHS.isUsable()) {
+    // Even if this check fails don't return early to allow the best
+    // possible error recovery and to allow any subsequent diagnostics to
+    // work.
+    (void)BoundsSafetyCheckAssignmentToCountAttrPtr(
+        LHSType, RHS.get(), AssignmentAction::Assigning, Loc,
+        [&LHSExpr]() -> std::string {
+          // In simple cases describe what is being assigned to
+          if (auto *DR = dyn_cast<DeclRefExpr>(LHSExpr->IgnoreParenCasts())) {
+            auto *II = DR->getDecl()->getDeclName().getAsIdentifierInfo();
+            if (II)
+              return II->getName().str();
+          } else if (auto *ME =
+                         dyn_cast<MemberExpr>(LHSExpr->IgnoreParenCasts())) {
+            return ME->getMemberDecl()->getQualifiedNameAsString();
+          }
+          return "";
+        });
+  }
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
   // OpenCL v1.2 s6.1.1.1 p2:
   // The half data type can only be used to declare a pointer to a buffer that
   // contains half values
@@ -13730,6 +16715,19 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
         LHSType->isObjCObjectType())
         Diag(Loc, diag::err_objc_object_assignment)
           << LHSType;
+
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    if (getLangOpts().BoundsSafety) {
+      if (isCompatibleBoundsUnsafeAssignment(ConvTy) &&
+          allowBoundsUnsafePointerAssignment(LHSExpr->getType(), RHS.get(),
+                                             Loc))
+        ConvTy = Compatible;
+      if (!CheckDynamicBoundVariableEscape(LHSTy, RHS.get()) &&
+          !allowBoundsUnsafePointerAssignment(LHSExpr->getType(), RHS.get(),
+                                              Loc))
+        return QualType();
+    }
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
 
     // If the RHS is a unary plus or minus, check to see if they = and + are
     // right next to each other.  If so, the user may have typo'd "x =+ 4"
@@ -13786,8 +16784,26 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
     ConvTy = CheckAssignmentConstraints(Loc, LHSType, RHSType);
   }
 
+  const ValueDecl *Assignee = nullptr;
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  // Currently the Assignee is only needed for bounds-safety diagnostics
+  // so guard passing this information along in this mode.
+  if (LangOpts.BoundsSafety) {
+    // LHS is allowed to have parentheses so drop them before casting.
+    if (auto *DRE = dyn_cast<DeclRefExpr>(LHSExpr->IgnoreParens())) {
+      Assignee = DRE->getDecl();
+    } else if (auto *ME = dyn_cast<MemberExpr>(LHSExpr->IgnoreParens())) {
+      Assignee = ME->getMemberDecl();
+    }
+    // TODO(dliew): Support ArraySubscriptExpr here (rdar://115201001)
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  // Upstream doesn't have `Assignee`.
   if (DiagnoseAssignmentResult(ConvTy, Loc, LHSType, RHSType, RHS.get(),
-                               AssignmentAction::Assigning))
+                               AssignmentAction::Assigning, nullptr, Assignee))
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
     return QualType();
 
   CheckForNullPointerDereference(*this, LHSExpr);
@@ -13958,6 +16974,11 @@ static QualType CheckIncrementDecrementOperand(Sema &S, Expr *Op,
     // C99 6.5.2.4p2, 6.5.6p2
     if (!checkArithmeticOpPointerOperand(S, OpLoc, Op))
       return QualType();
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    if (S.getLangOpts().BoundsSafety &&
+        !checkArithmeticUnaryOpBoundsSafetyPointer(S, Op, IsInc))
+      return QualType();
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
   } else if (ResType->isObjCObjectPointerType()) {
     // On modern runtimes, ObjC pointer arithmetic is forbidden.
     // Otherwise, we just need a complete type.
@@ -14373,6 +17394,92 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
 
   CheckAddressOfPackedMember(op);
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  if (getLangOpts().BoundsSafety) {
+    if (auto ME = dyn_cast<MemberExpr>(op)) {
+      auto FD = ME->getMemberDecl();
+      if (auto *Att = FD->getAttr<DependerDeclsAttr>()) {
+        assert(Att->dependerDecls_size() > 0);
+        const RecordDecl *FlexBase =
+            DynamicCountPointerAssignmentAnalysis::computeFlexBaseKey(
+                op, /*OS*/ nullptr);
+        if (FlexBase) {
+          for (auto DepDecl : Att->dependerDecls()) {
+            // Only emit error if this field is being accessed from a struct
+            // with a flexible array member. If this is a nested struct field,
+            // it could be used separately in a context without FAMs, and in
+            // that case we should allow taking its address.
+            if (!FlexBase->isParentStructOf(DepDecl))
+              continue;
+            ValueDecl *FAMDecl = cast<ValueDecl>(DepDecl);
+            if (auto DCPTy = FAMDecl->getType()->getAs<CountAttributedType>()) {
+              assert(DCPTy->isIncompleteArrayType() &&
+                     "expected flexible array member");
+              Diag(
+                  OpLoc,
+                  diag::
+                      err_bounds_safety_unsupported_address_of_incomplete_array_count)
+                  << op->getSourceRange();
+              auto CountExpr = DCPTy->getCountExpr();
+              Diag(CountExpr->getExprLoc(),
+                   diag::note_bounds_safety_count_param_loc)
+                  << CountExpr->getSourceRange();
+              // This results in RecoveryExpr, preventing double errors when the
+              // expression is reconstructed
+              return QualType();
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // BoundsSafety: taking an address returns a bound pointer to allow bounds to be
+  // propagated in case the target has bounds, this can be the case with or
+  // without auto-typing of variables.
+  auto GetPointerBoundAttributes = [&](Expr *E) -> BoundsSafetyPointerAttributes {
+    BoundsSafetyPointerAttributes FA;
+    if (auto ASE = dyn_cast<ArraySubscriptExpr>(E)) {
+      if (auto PT = ASE->getBase()->getType()->getAs<PointerType>()) {
+        FA = PT->getPointerAttributes();
+      }
+    } else if (getLangOpts().BoundsSafety) {
+      // Taking the address of an object with a meaningless size results in a
+      // __single pointer.
+      if (E->getType()->isSizeMeaningless()) {
+        FA.setSingle();
+      } else {
+        FA.setBidiIndexable();
+      }
+    }
+    if (E->getType()->isCountAttributedType()) {
+      if (const auto *AT = Context.getAsIncompleteArrayType(E->getType())) {
+        Diag(OpLoc, diag::err_bounds_safety_unsupported_address_of_incomplete_array)
+            << op->getSourceRange();
+        Diag(OpLoc, diag::note_bounds_safety_remove_address_of_operator)
+            << Context.getPointerType(AT->getElementType())
+            << Context.getPointerType(OrigOp.get()->getType())
+            << FixItHint::CreateRemoval(op->getSourceRange());
+        // recover by using __bidi_indexable bounds, which are less likely
+        // to cause spurious warnings
+        FA.setBidiIndexable();
+      }
+    }
+    return FA;
+  };
+  BoundsSafetyPointerAttributes FA = GetPointerBoundAttributes(op);
+  QualType PT = Context.getPointerType(op->getType(), FA);
+  if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(op)) {
+    if (const auto *VTT =
+            ASE->getBase()->getType()->getAs<ValueTerminatedType>()) {
+      return Context.getValueTerminatedType(PT, VTT->getTerminatorExpr());
+    }
+  } else if (getLangOpts().BoundsSafety) {
+    PT = Context.getAttributedType(attr::PtrAutoAttr, PT, PT);
+  }
+  return PT;
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
   return Context.getPointerType(op->getType());
 }
 
@@ -14576,6 +17683,14 @@ static void DiagnoseSelfAssignment(Sema &S, Expr *LHSExpr, Expr *RHSExpr,
     return;
   if (const ReferenceType *RefTy = LHSDecl->getType()->getAs<ReferenceType>())
     if (RefTy->getPointeeType().isVolatileQualified())
+      return;
+
+  // Do not warn about self-assignments for dynamic-range pointer types, or
+  // for declarations that they depend on.
+  if (LHSDecl->getType()->isBoundsAttributedType())
+    return;
+  if (auto *Attr = LHSDecl->getAttr<DependerDeclsAttr>())
+    if (!Attr->getIsDeref())
       return;
 
   auto Diag = S.Diag(OpLoc, IsBuiltin ? diag::warn_self_assignment_builtin
@@ -14847,7 +17962,9 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     break;
   case BO_Sub:
     ConvertHalfVec = true;
-    ResultTy = CheckSubtractionOperands(LHS, RHS, OpLoc);
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    ResultTy = CheckSubtractionOperands(LHS, RHS, OpLoc, Opc);
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
     break;
   case BO_Shl:
   case BO_Shr:
@@ -14913,7 +18030,9 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     break;
   case BO_SubAssign:
     ConvertHalfVec = true;
-    CompResultTy = CheckSubtractionOperands(LHS, RHS, OpLoc, &CompLHSTy);
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    CompResultTy = CheckSubtractionOperands(LHS, RHS, OpLoc, Opc, &CompLHSTy);
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
     if (!CompResultTy.isNull() && !LHS.isInvalid() && !RHS.isInvalid())
       ResultTy =
           CheckAssignmentOperands(LHS.get(), RHS, OpLoc, CompResultTy, Opc);
@@ -15693,6 +18812,51 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
       !isa<ArrayType>(UO->getType().getDesugaredType(Context)) &&
       !isUnevaluatedContext())
     ExprEvalContexts.back().PossibleDerefs.insert(UO);
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  if (getLangOpts().BoundsSafety) {
+    FlexibleArrayMemberUtils FlexUtils(*this);
+    if (Opc == UO_AddrOf) {
+      // when taking the address of an lvalue with a flexible array member,
+      // return a promoted pointer to it
+      if (auto *RD = FlexUtils.GetFlexibleRecord(Input.get()->getType())) {
+        // Skipping the null check for the struct base because 'address of' is
+        // never null.
+        return PromoteBoundsSafetyPointerToFlexibleArrayMember(
+            *this, RD, UO, /*NullCheck*/ false);
+      }
+    } else if (Opc == UO_Deref) {
+      // when dereferencing a flexible array member struct, do a bounds check
+      // to verify that the number of elements fits the size of the pointer
+      auto PtrTy = Input.get()->getType()->getAs<PointerType>();
+      if (PtrTy && PtrTy->getPointerAttributes().hasUpperBound()) {
+        if (auto *RD = FlexUtils.GetFlexibleRecord(PtrTy->getPointeeType())) {
+          // Check if this has been promoted from a __single pointer to flexible
+          // array member struct. If so, we skip the check since being __single
+          // should mean the count value is already valid.
+          bool SkipCheck = false;
+          auto InnerTy = Input.get()->IgnoreImpCasts()->getType();
+          if (InnerTy->isSinglePointerType() &&
+              !InnerTy->isBoundsAttributedType()) {
+            auto *InnerRD =
+                FlexUtils.GetFlexibleRecord(InnerTy->getPointeeType());
+            if (InnerRD == RD)
+              SkipCheck = true;
+          }
+
+          if (!SkipCheck) {
+            ExprResult Ckd = BoundsCheckBuilder::CheckFlexibleArrayMemberSize(
+                *this, UO->getBeginLoc(),
+                BoundsCheckKind::FlexibleArrayCountDeref, Input.get());
+            if (!Ckd.get())
+              return ExprError();
+            UO->setSubExpr(Ckd.get());
+          }
+        }
+      }
+    }
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   // Convert the result back to a half vector.
   if (ConvertHalfVec)
@@ -16753,6 +19917,83 @@ ExprResult Sema::ActOnEmbedExpr(SourceLocation EmbedKeywordLoc,
                 Data->getDataElementCount());
 }
 
+// Emits the
+// `diag::warn_bounds_safety_implicit_conv_single_to_explicit_indexable` diagnostic.
+//
+// If the `__single` expression is a `DeclRefExpr` then a pointer to the
+// corresponding Decl is returned, otherwise a nullptr is returned.
+static ValueDecl *
+DiagnoseBoundsSafetyImplicitConversionFromSingleToExplicitIndexable(
+    QualType DstType, QualType SrcType, Expr *SrcExpr,
+    AssignmentAction ActionForDiag, QualType FirstType,
+    QualType SecondType, PartialDiagnostic &FDiag) {
+  // We emit that a type is `__indexable` or
+  // `__bidi_indexable` only when necesary.
+  // 0 - emit `__indexable`
+  // 1 - emit `__bidi_indexable`
+  // 2 - Don't emit (DiagDstTypeMaybeEmpty only)
+  int DiagDstType = 0;
+  int DiagDstTypeMaybeEmpty = 0;
+
+  // Walk through `AttributedType` to get to the underlying `PointerType`.
+  const auto *DstTypePtr = DstType->getUnqualifiedDesugaredType();
+  const auto *DstPointerType = dyn_cast<PointerType>(DstTypePtr);
+  if (!DstPointerType)
+    llvm_unreachable("DstTypePtr should be a PointerType");
+
+  if (DstPointerType->isIndexable())
+    DiagDstType = 0;
+  else if (DstPointerType->isBidiIndexable())
+    DiagDstType = 1;
+  else
+    llvm_unreachable("DstPointerType has unexpected type");
+
+  auto IsNestedPtrType = [](const Type *Ty) -> bool {
+    if (const auto PtrType =
+            dyn_cast<PointerType>(Ty->getUnqualifiedDesugaredType())) {
+      if (isa<PointerType>(
+              PtrType->getPointeeType()->getUnqualifiedDesugaredType()))
+        return true;
+    }
+    return false;
+  };
+
+  if (IsNestedPtrType(DstPointerType)) {
+    // Nested Pointer. In this case explicitly state that it's
+    // an indexable type in the diagnostic to make this more obvious
+    // to the developer.
+    DiagDstTypeMaybeEmpty = DiagDstType;
+  } else {
+    // Don't emphasise the pointer type in the diagnostic to make
+    // it shorter.
+    DiagDstTypeMaybeEmpty = 2;
+  }
+
+  // 0 - emit `__single`
+  // 1 - Don't emit
+  // Decide whether or not to emphaise that the pointer type is `__single`.
+  int DiagSrcTypeMaybeEmpty = IsNestedPtrType(SrcType.getTypePtr()) ? 0 : 1;
+
+  FDiag << FirstType << SecondType << ActionForDiag << DiagDstTypeMaybeEmpty
+        << DiagSrcTypeMaybeEmpty << DiagDstType << SrcExpr->getSourceRange();
+
+  // Look at the __single pointer and see if it's a DeclRefExpr. In that case
+  // we can suggest to the developer to use `__counted_by`.
+  // TODO(dliew): We should also look for function calls that return `__single`.
+  // In that case we could suggest adding `__counted_by` to return type
+  // (rdar://91928583).
+  ValueDecl *SrcDecl = nullptr;
+  std::tie(SrcDecl, std::ignore) = shouldSuggestBoundsSafetyCountedBy(SrcExpr);
+
+  // Decide whether or not to suggest using __counted_by.
+  if (SrcDecl) {
+    FDiag << 1 << SrcDecl->getQualifiedNameAsString();
+  } else {
+    FDiag << 0;
+  }
+  return SrcDecl;
+}
+
 static bool maybeDiagnoseAssignmentToFunction(Sema &S, QualType DstType,
                                               const Expr *SrcExpr) {
   if (!DstType->isFunctionPointerType() ||
@@ -16772,11 +20013,564 @@ static bool maybeDiagnoseAssignmentToFunction(Sema &S, QualType DstType,
                                               SrcExpr->getBeginLoc());
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON*/
+static void TryFixAssigningSingleOpaquePtrToImplicitIndexablePtr(
+    const ValueDecl *Assignee, QualType DstType, QualType SrcType, Sema &S,
+    llvm::SmallVectorImpl<std::tuple<FixItHint, const DeclaratorDecl *>>
+        &FixIts) {
+  // If a local bidi_indexable or global __bidi_indexable/__indexable pointer is
+  // being initialized from an opaque pointer suggest making it __single. This
+  // is the only sensible attribute because opaque types cannot be indexed.
+
+  // Is the pointer attribute on the destination implicit?
+  bool IsAutoBoundPtr = DstType->hasAttr(attr::PtrAutoAttr);
+
+  // TODO: rdar://114478465
+  if (!IsAutoBoundPtr)
+    return;
+
+  // Walk through `AttributedType` to get to the underlying `PointerType`.
+  const auto *DstPointerType = DstType->getAs<PointerType>();
+  assert(DstPointerType->isIndexable() || DstPointerType->isBidiIndexable());
+  assert(SrcType->isSinglePointerType());
+
+  // Check if source is a pointer to an opaque type.
+  // Walk through `AttributedType` to get to the underlying `PointerType`.
+  const auto *SrcPointerType = SrcType->getAs<PointerType>();
+  if (!SrcPointerType->getPointeeType()->isIncompleteType())
+    return;
+
+  if (auto *AssignedVar = dyn_cast<VarDecl>(Assignee)) {
+    // There may be multiple variable decls in the case of globals so we try
+    // to annotate all of them.
+    BoundsSafetyFixItUtils::CreateAnnotateAllPointerDeclsFixIts(
+        AssignedVar, "__single", S, FixIts);
+  } else if (auto *AssignedFieldDecl = dyn_cast<FieldDecl>(Assignee)) {
+    auto FixIt = BoundsSafetyFixItUtils::CreateAnnotatePointerDeclFixIt(
+        AssignedFieldDecl, "__single", S);
+    if (!FixIt.isNull())
+      FixIts.emplace_back(std::make_tuple(FixIt, AssignedFieldDecl));
+  } else {
+    llvm_unreachable("Unexpected ValueDecl sub type");
+  }
+}
+
+void Sema::TryFixAssigningNullTerminatedToImplicitBidiIndexablePtr(
+    const ValueDecl *Assignee, Expr *SrcExpr, QualType DstType, AssignmentAction Action) {
+  // If a bidi_indexable pointer is being assigned from a null
+  // terminated pointer suggest making the local __bidi_indexable
+  // __null_terminated.
+
+  // Is the pointer attribute on the destination implicit?
+  bool IsAutoBoundPtr = DstType->hasAttr(attr::PtrAutoAttr);
+  // Walk through `AttributedType` to get to the underlying `PointerType`.
+  const auto *DstPointerType = DstType->getAs<PointerType>();
+
+  if (!IsAutoBoundPtr || !DstPointerType->isBidiIndexable())
+    return;
+
+  const auto *SrcPointerType =
+      SrcExpr->IgnoreParenImpCasts()->getType()->getAs<ValueTerminatedType>();
+  if (!SrcPointerType->isValueTerminatedType())
+    return;
+  if (!SrcPointerType->getTerminatorValue(getASTContext()).isZero())
+    return;
+
+  // If the function return type is an implicit __bidi_indexable and the
+  // returned pointer is __null_terminated, suggest adding the attribute
+  // __null_terminated to the function return type.
+  if (Action == AssignmentAction::Returning) {
+    auto *Caller = getCurFunctionDecl();
+    if (!Caller)
+      return;
+    auto FnLoc = Caller->getReturnTypeSourceRange();
+    if (FnLoc.isInvalid())
+      return;
+    for (auto *I : Caller->redecls()) {
+      if (!I->getReturnType()->hasAttr(attr::PtrAutoAttr))
+        return;
+    }
+
+    auto RetLoc = FnLoc.getEnd().getLocWithOffset(1);
+    auto FixitDiag = Diag(RetLoc, diag::note_bounds_safety_consider_adding_to_return);
+    // FIXME: rdar://125936876
+    for (auto *I : Caller->redecls()) {
+      auto IFnLoc = I->getNameInfo().getSourceRange();
+      auto IRetLoc = IFnLoc.getBegin();
+      auto FixIt = FixItHint::CreateInsertion(IRetLoc, "__null_terminated ");
+      FixitDiag << I->getDeclaredReturnType();
+      FixitDiag << "__null_terminated";
+      FixitDiag << I->getName().str();
+      FixitDiag << FixIt;
+    }
+    return;
+  }
+
+
+  auto *AssignedVar = dyn_cast_or_null<VarDecl>(Assignee);
+  if (!AssignedVar)
+    return;
+  auto FixIt = BoundsSafetyFixItUtils::CreateAnnotatePointerDeclFixIt(
+      AssignedVar, "__null_terminated", *this);
+  if (FixIt.isNull())
+    return;
+
+  // Emit a note about where the variable that a fix is suggested for is
+  // declared.
+  auto FixitDiag = Diag(AssignedVar->getInnerLocStart(),
+                        diag::note_bounds_safety_consider_adding_to);
+  FixitDiag << AssignedVar->getName();
+  FixitDiag << "__null_terminated";
+  FixitDiag << FixIt;
+
+  // FIXME: rdar://122434039
+}
+
+void Sema::TryFixAssigningImplicitBidiIndexableToNullTerminatedPtr(
+    Expr *SrcExpr, QualType DstType) {
+
+  // Walk through `AttributedType` to get to the underlying `PointerType`.
+  const auto *DstPointerType = DstType->getAs<ValueTerminatedType>();
+
+  if (!DstPointerType ||
+      !DstPointerType->getTerminatorValue(getASTContext()).isZero())
+    return;
+
+  auto IsLocalBidi = [](VarDecl *VD) {
+    if (!VD || !VD->isLocalVarDecl())
+      return false;
+    auto SrcVarType = VD->getType();
+    auto SrcPtr = SrcVarType->getAs<PointerType>();
+    // We only support implicit __bidi_indexable to:
+    // 1. Make writing the fixit easier (it's purely additive).
+    //    If there ways already an attribute in source code we'd need to
+    //    remove it.
+    // 2. If the __bidi_indexable attribute is explicit someone probably
+    //    added deliberately and that's a hint that we should respect their choice.
+    if (!SrcPtr || !SrcVarType->hasAttr(attr::PtrAutoAttr))
+      return false;
+    if(!SrcPtr->isBidiIndexable())
+      return false;
+    return true;
+  };
+
+  auto EmitFixitDiag = [&](FixItHint FixIt, DeclaratorDecl *SrcVar) {
+    if (FixIt.isNull())
+      return;
+    auto FixitDiag = Diag(SrcVar->getInnerLocStart(),
+                          diag::note_bounds_safety_consider_adding_to);
+    FixitDiag << SrcVar->getName();
+    FixitDiag << "__null_terminated";
+    FixitDiag << FixIt;
+  };
+
+  // If a local bidi_indexable pointer is being assigned to a null
+  // terminated pointer suggest changing the local __bidi_indexable
+  // to be __null_terminated.
+  if (auto *SrcDRE = dyn_cast<DeclRefExpr>(SrcExpr->IgnoreParens())) {
+    auto *SrcVD = SrcDRE->getDecl();
+    auto *SrcVar = dyn_cast<VarDecl>(SrcVD);
+    if (!IsLocalBidi(SrcVar))
+      return;
+    auto FixIt = BoundsSafetyFixItUtils::CreateAnnotatePointerDeclFixIt(
+        SrcVar, "__null_terminated", *this);
+    EmitFixitDiag(FixIt, SrcVar);
+    return;
+  }
+
+  // If a bidi_indexable const array in struct is being assigned to a null
+  // terminated pointer suggest changing the __bidi_indexable to be
+  // __null_terminated.
+  if (auto *SrcME = dyn_cast<MemberExpr>(SrcExpr->IgnoreParens())) {
+    auto *SrcVar = dyn_cast<FieldDecl>(SrcME->getMemberDecl());
+    if (!SrcVar || !SrcVar->getType()->isConstantArrayType())
+      return;
+    auto SrcArr = SrcVar->getTypeSourceInfo()->getTypeLoc()
+      .getAs<ArrayTypeLoc>();
+    if (!SrcArr)
+      return;
+    auto FixIt = FixItHint::CreateInsertion(SrcArr.getLBracketLoc()
+                                            .getLocWithOffset(1), "__null_terminated ");
+    EmitFixitDiag(FixIt, SrcVar);
+    return;
+  }
+
+  if (auto *SrcCastExpr = dyn_cast<CStyleCastExpr>(SrcExpr->IgnoreParens())) {
+    if (SrcCastExpr->getCastKind() != clang::CK_BitCast
+        && SrcCastExpr->getCastKind() != clang::CK_NoOp)
+      return;
+    auto *SrcSE = SrcCastExpr->getSubExpr();
+    if (!SrcSE)
+      return;
+    auto *SrcD = dyn_cast<DeclRefExpr>(SrcSE->IgnoreCasts());
+    if (!SrcD)
+      return;
+    auto *SrcVar = dyn_cast<VarDecl>(SrcD->getDecl());
+    if (!IsLocalBidi(SrcVar))
+      return;
+    auto FixIt = BoundsSafetyFixItUtils::CreateAnnotatePointerDeclFixIt(
+        SrcVar, "__null_terminated", *this);
+    EmitFixitDiag(FixIt, SrcVar);
+  }
+
+  // FIXME: rdar://122434039
+}
+
+void Sema::TryFixAssigningBidiIndexableExprToNullTerminated(Expr *SrcExpr,
+                                                            QualType DstType) {
+  // If a source expression with  __bidi_indexable pointer type
+  // is being assigned to something with a __null_terminated pointer
+  // type suggest the __unsafe_null_terminated_from_indexable
+  // builtin to allow the conversion.
+
+  // Walk through `AttributedType` to get to the underlying `PointerType`.
+  const auto *DstPointerType = DstType->getAs<ValueTerminatedType>();
+
+  if (!DstPointerType ||
+      !DstPointerType->getTerminatorValue(getASTContext()).isZero())
+    return;
+
+  QualType SrcType = SrcExpr->IgnoreParenImpCasts()->getType();
+  if (!SrcType->isPointerTypeWithBounds() && !SrcType->isConstantArrayType())
+    return;
+
+  auto FixIt = FixItHint::CreateInsertion(SrcExpr->getBeginLoc(), "__unsafe_null_terminated_from_indexable(");
+  if (FixIt.isNull())
+    return;
+
+  unsigned TkLen = Lexer::MeasureTokenLength(SrcExpr->getEndLoc(),
+                                             getSourceManager(), LangOpts);
+  {
+    auto FixitDiag =
+        Diag(SrcExpr->getBeginLoc(),
+             diag::note_fixit_unsafe_null_terminated_from_indexable);
+    FixitDiag << FixIt;
+
+    FixitDiag << FixItHint::CreateInsertion(SrcExpr->getEndLoc()
+                                            .getLocWithOffset(TkLen), ")");
+  }
+
+  {
+    auto FixitDiag =
+        Diag(SrcExpr->getBeginLoc(),
+             diag::note_fixit_unsafe_null_terminated_from_indexable_ptr);
+    FixitDiag << FixIt;
+    FixitDiag << FixItHint::CreateInsertion(SrcExpr->getEndLoc().getLocWithOffset(TkLen),
+                                            ", <# pointer to null terminator #>)");
+  }
+
+  // FIXME: rdar://122434039
+}
+
+void Sema::TryFixAssigningNullTerminatedToBidiIndexableExpr(Expr *SrcExpr,
+                                                            QualType DstType) {
+
+  // Walk through `AttributedType` to get to the underlying `PointerType`.
+  const auto *DstPointerType = DstType->getAs<PointerType>();
+  if(!DstPointerType->isPointerTypeWithBounds())
+    return;
+
+  const auto *SrcPointerType =
+      SrcExpr->IgnoreParenImpCasts()->getType()->getAs<ValueTerminatedType>();
+  if (!SrcPointerType || !SrcPointerType->isValueTerminatedType())
+    return;
+
+  if (!SrcPointerType->getTerminatorValue(getASTContext()).isZero())
+    return;
+  auto EmitFixitDiag = [&](StringRef Code, unsigned DiagID,
+                           int SelectFixitNote) {
+    assert(Code.ends_with("("));
+    auto FixitDiag = Diag(SrcExpr->getBeginLoc(), DiagID) << SelectFixitNote;
+    auto FixIt = FixItHint::CreateInsertion(SrcExpr->getBeginLoc(), Code);
+    if (FixIt.isNull())
+      return;
+    FixitDiag << FixIt;
+    unsigned TkLen = Lexer::MeasureTokenLength(SrcExpr->getEndLoc(),
+                                               getSourceManager(), LangOpts);
+    FixitDiag << FixItHint::CreateInsertion(
+        SrcExpr->getEndLoc().getLocWithOffset(TkLen), ")");
+  };
+  EmitFixitDiag("__null_terminated_to_indexable(",
+                diag::note_fixit_null_terminated_to_indexable, 0);
+  EmitFixitDiag("__unsafe_null_terminated_to_indexable(",
+                diag::note_fixit_null_terminated_to_indexable, 1);
+
+  return;
+  // FIXME: rdar://122434039
+}
+
+static std::tuple<FixItHint, VarDecl *>
+TryFixNestedBoundsSafetyPointerAttributeMismatch(Expr *SrcExpr,
+                                                 QualType DstType,
+                                                 ASTContext &Context, Sema &S) {
+  //  If taking the address of a local variable, suggest adding pointer
+  //  attributes to match the destination. Only suggest if the source's
+  //  pointer attributes were automatically set and the destination has
+  //  internal bounds.
+  auto LocalPointerThatHasAddressTaken = [](Expr *E) -> VarDecl * {
+    auto *AddrOf = dyn_cast<UnaryOperator>(E->IgnoreParenImpCasts());
+    if (!AddrOf || AddrOf->getOpcode() != UO_AddrOf)
+      return nullptr;
+
+    auto *AddrOfOperand =
+        dyn_cast<DeclRefExpr>(AddrOf->getSubExpr()->IgnoreParenImpCasts());
+    if (!AddrOfOperand)
+      return nullptr;
+
+    auto *VD = dyn_cast<VarDecl>(AddrOfOperand->getDecl());
+    if (!VD || !VD->hasLocalStorage())
+      return nullptr;
+
+    if (!VD->getType()->hasAttr(attr::PtrAutoAttr))
+      return nullptr;
+
+    return VD;
+  };
+
+  auto NestedPointer = [](QualType QT) {
+    auto PPTy = QT->getAs<PointerType>();
+    if (!PPTy)
+      return QualType();
+
+    auto PQTy = PPTy->getPointeeType();
+    if (PQTy->getAs<BoundsAttributedType>())
+      return QualType();
+
+    if (!PQTy->getAs<PointerType>())
+      return QualType();
+
+    return PQTy;
+  };
+
+  auto *VD = LocalPointerThatHasAddressTaken(SrcExpr);
+
+  if (!VD)
+    return std::make_tuple(FixItHint(), nullptr);
+  auto InnerTy = NestedPointer(DstType);
+  if (InnerTy.isNull())
+    return std::make_tuple(FixItHint(), nullptr);
+
+  auto InnerAttrs = InnerTy->getAs<PointerType>()->getPointerAttributes();
+  auto Corrected = Context.getBoundsSafetyPointerType(VD->getType(), InnerAttrs);
+  auto PtrToCorrected = Context.getPointerType(
+      Corrected, DstType->getAs<PointerType>()->getPointerAttributes());
+  auto AssignType =
+      S.CheckAssignmentConstraints(SourceLocation(), DstType, PtrToCorrected);
+
+  if (AssignType != Sema::Compatible)
+    return std::make_tuple(FixItHint(), nullptr);
+
+  bool NeedsSpaceAfterKeyword;
+  SourceLocation FixItLoc;
+  std::tie(FixItLoc, NeedsSpaceAfterKeyword) =
+      BoundsSafetyFixItUtils::FindPointerAttrInsertPoint(
+          VD->getTypeSourceInfo()->getTypeLoc(), S);
+
+  if (FixItLoc.isInvalid())
+    return std::make_tuple(FixItHint(), nullptr);
+
+  StringRef Keyword;
+  if (InnerAttrs.isSingle())
+    Keyword = "__single ";
+  else if (InnerAttrs.isIndexable())
+    Keyword = "__indexable ";
+  else if (InnerAttrs.isBidiIndexable())
+    Keyword = "__bidi_indexable ";
+  else if (InnerAttrs.isUnsafeIndexable())
+    Keyword = "__unsafe_indexable ";
+
+  if (Keyword.empty())
+    return std::make_tuple(FixItHint(), nullptr);
+
+  StringRef NoSpace = Keyword.drop_back();
+  if (!NeedsSpaceAfterKeyword)
+    Keyword = NoSpace;
+  if (!S.PP.isMacroDefined(NoSpace))
+    return std::make_tuple(FixItHint(), nullptr);
+
+  return std::make_tuple(FixItHint::CreateInsertion(FixItLoc, Keyword), VD);
+}
+
+static const ValueDecl *ReferencedValueDecl(const Expr *E) {
+  const DeclRefExpr *DRef = nullptr;
+
+  if (auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts())) {
+    DRef = DRE;
+  } else if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+    return dyn_cast<ValueDecl>(ME->getMemberDecl());
+  } else if (const auto *AE =
+                 dyn_cast<ArraySubscriptExpr>(E->IgnoreParenImpCasts())) {
+    const auto *BaseExpr = AE->getBase()->IgnoreParenImpCasts();
+    if (const auto *ME = dyn_cast<MemberExpr>(BaseExpr))
+      return dyn_cast<ValueDecl>(ME->getMemberDecl());
+    DRef = dyn_cast<DeclRefExpr>(BaseExpr);
+  }
+
+  if (!DRef)
+    return nullptr;
+
+  return dyn_cast<ValueDecl>(DRef->getDecl());
+}
+
+void Sema::TryFixAssigningConstArrayToNullTerminated(const Expr *SrcExpr,
+                                                     QualType SrcType,
+                                                     QualType DstType) {
+  const auto *DstPointerType = DstType->getAs<ValueTerminatedType>();
+
+  if (!DstPointerType ||
+      !DstPointerType->getTerminatorValue(getASTContext()).isZero())
+    return;
+
+  // Check if this is a constant sized array.
+  if (!SrcType->isConstantArrayType())
+    return;
+
+  const auto *Decl = ReferencedValueDecl(SrcExpr);
+
+  if (!Decl)
+    return;
+
+  const VarDecl *VD = dyn_cast<VarDecl>(Decl);
+
+  if (!VD)
+    return;
+
+  bool InitializerTerminatedWithNull = false;
+
+  if (VD->hasInit()) {
+    const Expr *e = VD->getInit()->IgnoreParenImpCasts();
+    if (const auto InitExpr = dyn_cast<InitListExpr>(e)) {
+      // Check if the intializer end with a null pointer constant. If yes,
+      // suggest adding appropriate attribute to the decl.
+      bool isInitExprEmpty = InitExpr->inits().empty();
+      if (!isInitExprEmpty &&
+          !InitExpr->inits().back()->isNullPointerConstant(
+              getASTContext(), Expr::NPC_ValueDependentIsNull))
+        return;
+      InitializerTerminatedWithNull = true;
+    } else if (const auto StrLiteral = dyn_cast<StringLiteral>(e)) {
+      const auto *SrcArrayType = Context.getAsConstantArrayType(SrcType);
+      // The initializations via StringLiterals are always terminated by if the
+      // intializer length is smaller than the size of the array being
+      // initialized
+      if (SrcArrayType->getSize().ule(StrLiteral->getLength()))
+        return;
+      InitializerTerminatedWithNull = true;
+    } else
+      return;
+    }
+
+    SourceLocation FixItLoc = VD->getLocation();
+    FixItHint NonTerminatedByToTerminatedByFixIt;
+
+    // Suggest adding const qualifier to local arrays that are initialized with
+    // a null terminator. Adding const to such arrays allows them to be
+    // implicitly converted to a __null_terminated pointer. In all other cases
+    // implicit conversion is forbidden. This suggestion is only made for local
+    // arrays because suggesting it other locations (e.g. function parameters
+    // and global variables) has a higher chance of breaking compilation,
+    // especially for non bounds-safety code where adding const changes semantics
+    // but __null_terminated doesn't change semantics of non fbounds-safety code.
+    if (InitializerTerminatedWithNull && VD->hasLocalStorage() &&
+        DstType->getPointeeType().isConstQualified()) {
+      FixItLoc = VD->getBeginLoc();
+      NonTerminatedByToTerminatedByFixIt =
+          FixItHint::CreateInsertion(FixItLoc, "const ");
+    } else {
+      std::string Token = "__null_terminated";
+      TypeLoc TL = VD->getTypeSourceInfo()->getTypeLoc();
+      if (ArrayTypeLoc ATL = TL.getAs<ArrayTypeLoc>()) {
+        FixItLoc = ATL.getLBracketLoc().getLocWithOffset(1);
+        // Add space if there is a size expression
+        if (ATL.getSizeExpr())
+          Token += " ";
+      } else if(SrcType->isTypedefNameType()) {
+        Token += " ";
+      }
+      NonTerminatedByToTerminatedByFixIt =
+          FixItHint::CreateInsertion(FixItLoc, Token);
+    }
+
+    if (NonTerminatedByToTerminatedByFixIt.isNull())
+      return;
+
+    auto FixitDiag =
+        Diag(VD->getBeginLoc(), diag::note_bounds_safety_consider_adding_to);
+    auto AddedAttr =
+        llvm::StringRef(NonTerminatedByToTerminatedByFixIt.CodeToInsert).trim();
+    FixitDiag << VD->getName() << AddedAttr;
+    FixitDiag << NonTerminatedByToTerminatedByFixIt;
+}
+
+void Sema::TryFixAssigningSinglePtrToNullTerminated(Expr *SrcExpr,
+                                                    QualType SrcType,
+                                                    QualType DstType) {
+  auto *VD = ReferencedValueDecl(SrcExpr);
+
+  if (!VD)
+    return;
+
+  auto IsReallySinglePointer = [](const QualType Ty) -> bool {
+    if (!Ty->isSinglePointerType())
+      return false;
+
+    if (Ty->isBoundsAttributedType() || Ty->isValueTerminatedType())
+      return false;
+
+    return true;
+  };
+
+  if (!IsReallySinglePointer(SrcType))
+    return;
+
+  // If the `__single` is explicit don't suggest a fix-it because
+  // the user manually added this attribute which is a hint that
+  // they know what they are doing.
+  if (!SrcType->hasAttr(attr::PtrAutoAttr))
+    return;
+
+  // TODO: This should be handled by
+  // BoundsSafetyFixItUtils::FindPointerAttrInsertPoint rdar://123659361
+  SourceLocation FixItLoc;
+
+  FixItHint NonTerminatedByToTerminatedByFixIt;
+
+  if (auto *VTT = dyn_cast<ValueTerminatedType>(DstType))
+    if (!VTT->getPointeeType()->isAnyCharacterType() ||
+        !VTT->getTerminatorValue(Context).isZero())
+      return;
+
+  // If the destination type is a pointer to a const qualified type, then
+  // suggest making the type pointed by SrcType const qualified. Otherwise,
+  // suggest qualifying SrcType with __null_terminated.
+  if (DstType->getPointeeType().isConstQualified()) {
+    FixItLoc = VD->getBeginLoc();
+    NonTerminatedByToTerminatedByFixIt =
+        FixItHint::CreateInsertion(FixItLoc, "const ");
+  } else {
+    FixItLoc = VD->getLocation();
+    NonTerminatedByToTerminatedByFixIt =
+        FixItHint::CreateInsertion(FixItLoc, "__null_terminated ");
+  }
+
+  if (VD && !NonTerminatedByToTerminatedByFixIt.isNull()) {
+    auto FixitDiag =
+        Diag(VD->getBeginLoc(), diag::note_bounds_safety_consider_adding_to);
+    auto AddedAttr =
+        llvm::StringRef(NonTerminatedByToTerminatedByFixIt.CodeToInsert).trim();
+    FixitDiag << VD->getName() << AddedAttr;
+    FixitDiag << NonTerminatedByToTerminatedByFixIt;
+  }
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
+
 bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
                                     SourceLocation Loc,
                                     QualType DstType, QualType SrcType,
                                     Expr *SrcExpr, AssignmentAction Action,
-                                    bool *Complained) {
+                                    bool *Complained,
+                                    // TO_UPSTREAM(BoundsSafety)
+                                    const ValueDecl *Assignee) {
   if (Complained)
     *Complained = false;
 
@@ -16787,8 +20581,17 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   ConversionFixItGenerator ConvHints;
   bool MayHaveConvFixit = false;
   bool MayHaveFunctionDiff = false;
+  bool IsSrcNullTerm = false;
+  bool IsDstNullTerm = false;
   const ObjCInterfaceDecl *IFace = nullptr;
   const ObjCProtocolDecl *PDecl = nullptr;
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  llvm::SmallVector<std::tuple<FixItHint, const DeclaratorDecl *>, 1>
+      AssignedVarFixIts;
+  VarDecl *BoundsSafetyIncompatNestedPtrLocalVarToFix = nullptr;
+  FixItHint BoundsSafetyIncompatNestedPtrFixIt;
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
+
 
   switch (ConvTy) {
   case Compatible:
@@ -16805,6 +20608,105 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     ConvHints.tryToFixConversion(SrcExpr, SrcType, DstType, *this);
     MayHaveConvFixit = true;
     break;
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  case IncompatibleIntToSafePointer:
+    DiagKind = diag::err_bounds_safety_non_to_pointer;
+    isInvalid = true;
+    ConvHints.tryToFixConversion(SrcExpr, SrcType, DstType, *this);
+    MayHaveConvFixit = true;
+    break;
+  case IncompatibleUnsafeToIndexablePointer: {
+    DiagKind = diag::err_bounds_safety_unsafe_to_safe;
+    isInvalid = true;
+    ConvHints.tryToFixConversion(SrcExpr, SrcType, DstType, *this);
+    MayHaveConvFixit = false;
+    // Fix up SrcType to show __unsafe_indexable
+    auto SrcPTy = SrcType->getAs<PointerType>();
+    if (SrcPTy && !SrcPTy->isUnsafeIndexable()) {
+      SrcType = Context.getPointerType(
+        SrcPTy->getPointeeType(),
+        BoundsSafetyPointerAttributes::unsafeIndexable());
+    }
+    break;
+  }
+  case IncompatibleUnsafeToSafePointer: {
+    DiagKind = diag::err_bounds_safety_unsafe_to_safe;
+    isInvalid = true;
+    ConvHints.tryToFixConversion(SrcExpr, SrcType, DstType, *this);
+    MayHaveConvFixit = false;
+    break;
+  }
+  case IncompleteSingleToIndexablePointer: {
+    DiagKind = diag::err_bounds_safety_incomplete_single_to_indexable;
+    isInvalid = true;
+    // Can these FixIts ever fire?
+    bool ConvFixitEmitted =
+        ConvHints.tryToFixConversion(SrcExpr, SrcType, DstType, *this);
+    MayHaveConvFixit = false;
+
+    // Guard with `!ConvFixitEmitted` because we probably don't want these
+    // FixIts interacting.
+    if (!ConvFixitEmitted && Assignee) {
+      TryFixAssigningSingleOpaquePtrToImplicitIndexablePtr(
+          Assignee, DstType, SrcType, *this, AssignedVarFixIts);
+    }
+    break;
+  }
+  case CompatibleSingleToExplicitIndexablePointer: {
+    DiagKind = diag::warn_bounds_safety_implicit_conv_single_to_explicit_indexable;
+    isInvalid = false;
+    MayHaveConvFixit = false;
+    break;
+  }
+  case IncompatibleStringLiteralToValueTerminatedPointer:
+    DiagKind = diag::err_bounds_safety_incompatible_string_literal_to_terminated_by;
+    isInvalid = true;
+    break;
+  case IncompatibleValueTerminatedTerminators:
+    DiagKind = diag::err_bounds_safety_incompatible_terminated_by_terminators;
+    isInvalid = true;
+    break;
+  case IncompatibleValueTerminatedToNonValueTerminatedPointer: {
+    const auto *SrcPointerType = SrcType->getAs<ValueTerminatedType>();
+    IsSrcNullTerm =
+        SrcPointerType->getTerminatorValue(getASTContext()).isZero();
+    DiagKind =
+        diag::err_bounds_safety_incompatible_terminated_by_to_non_terminated_by;
+    isInvalid = true;
+    break;
+  }
+  case IncompatibleNonValueTerminatedToValueTerminatedPointer: {
+    const auto *DstPointerType = DstType->getAs<ValueTerminatedType>();
+    IsDstNullTerm =
+        DstPointerType->getTerminatorValue(getASTContext()).isZero();
+    if (getLangOpts().BoundsSafetyRelaxedSystemHeaders) {
+      DiagKind =
+          diag::warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by;
+      isInvalid = false;
+    } else {
+      DiagKind =
+          diag::err_bounds_safety_incompatible_non_terminated_by_to_terminated_by;
+      isInvalid = true;
+    }
+    break;
+  }
+  case IncompatibleNestedValueTerminatedToNonValueTerminatedPointer:
+    DiagKind = diag::
+        err_bounds_safety_incompatible_terminated_by_to_non_terminated_by_mismatch;
+    isInvalid = true;
+    break;
+  case IncompatibleNestedNonValueTerminatedToValueTerminatedPointer:
+    if (getLangOpts().BoundsSafetyRelaxedSystemHeaders) {
+      DiagKind = diag::
+          warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by_mismatch;
+      isInvalid = false;
+    } else {
+      DiagKind = diag::
+          err_bounds_safety_incompatible_non_terminated_by_to_terminated_by_mismatch;
+      isInvalid = true;
+    }
+    break;
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
   case IntToPointer:
     if (getLangOpts().CPlusPlus) {
       DiagKind = diag::err_typecheck_convert_int_pointer;
@@ -16917,6 +20819,22 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
       DiagKind = diag::ext_nested_pointer_qualifier_mismatch;
     }
     break;
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  case IncompatibleNestedBoundsSafetyPointerAttributes: {
+    DiagKind = diag::err_nested_bounds_safety_pointer_attribute_mismatch;
+    isInvalid = true;
+
+    std::tie(BoundsSafetyIncompatNestedPtrFixIt,
+             BoundsSafetyIncompatNestedPtrLocalVarToFix) =
+        TryFixNestedBoundsSafetyPointerAttributeMismatch(SrcExpr, DstType,
+                                                         Context, *this);
+    break;
+  }
+  case IncompatibleBoundsSafetyFunctionPointer:
+    DiagKind = diag::err_incompatible_bounds_safety_function_pointer;
+    isInvalid = true;
+    break;
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
   case IncompatibleNestedPointerAddressSpaceMismatch:
     DiagKind = diag::err_typecheck_incompatible_nested_address_space;
     isInvalid = true;
@@ -17008,13 +20926,44 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     break;
   }
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
   PartialDiagnostic FDiag = PDiag(DiagKind);
   AssignmentAction ActionForDiag = Action;
   if (Action == AssignmentAction::Passing_CFAudited)
     ActionForDiag = AssignmentAction::Passing;
 
-  FDiag << FirstType << SecondType << ActionForDiag
-        << SrcExpr->getSourceRange();
+  ValueDecl *SrcDecl = nullptr;
+  if (DiagKind == diag::err_bounds_safety_incomplete_single_to_indexable) {
+    std::string AssigneeName("");
+    if (Assignee)
+      AssigneeName = Assignee->getQualifiedNameAsString();
+    FDiag << FirstType << SecondType << ActionForDiag << AssigneeName
+          << /* NonEmptyName */ (AssigneeName.size() > 0)
+          << SrcExpr->getSourceRange();
+  } else if (DiagKind ==
+             diag::warn_bounds_safety_implicit_conv_single_to_explicit_indexable) {
+    SrcDecl = DiagnoseBoundsSafetyImplicitConversionFromSingleToExplicitIndexable(
+        DstType, SrcType, SrcExpr, ActionForDiag, FirstType, SecondType, FDiag);
+  } else if (
+      DiagKind ==
+      diag::err_bounds_safety_incompatible_terminated_by_to_non_terminated_by) {
+    FDiag << FirstType << SecondType << ActionForDiag
+          << SrcExpr->getSourceRange()
+          << (IsSrcNullTerm ? /*null_terminated*/ 1 : /*terminated_by*/ 0);
+  } else if (
+      DiagKind ==
+          diag::err_bounds_safety_incompatible_non_terminated_by_to_terminated_by ||
+      DiagKind ==
+          diag::
+              warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by) {
+    FDiag << FirstType << SecondType << ActionForDiag
+          << SrcExpr->getSourceRange() << 
+          (IsDstNullTerm ? /*null_terminated*/ 1 : /*terminated_by*/ 0);
+  } else {
+    FDiag << FirstType << SecondType << ActionForDiag
+          << SrcExpr->getSourceRange();
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   if (DiagKind == diag::ext_typecheck_convert_incompatible_pointer_sign ||
       DiagKind == diag::err_typecheck_convert_incompatible_pointer_sign) {
@@ -17032,6 +20981,56 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
       FDiag << H;
   }
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  // Add FixIts to the error diagnostic if FixIts for this VarDecl haven't been
+  // emitted before.
+  bool AssignedVarFixItGoesOnError = false;
+  if (Assignee) {
+    AssignedVarFixItGoesOnError =
+        !AssignedVarFixIts.empty() &&
+        !BoundsSafetyFixItWasEmittedFor(cast<DeclaratorDecl>(Assignee));
+    if (AssignedVarFixItGoesOnError) {
+      bool AssignedVarFixItsContainedAssignee = false;
+      for (auto &HintPair : AssignedVarFixIts) {
+        auto *VarToFix = std::get<const DeclaratorDecl *>(HintPair);
+        // The FixIts we receive might actually fix multiple variables
+        // so we have to check for each one if a FixIt was already emitted
+        if (!BoundsSafetyFixItWasEmittedFor(VarToFix)) {
+          FDiag << std::get<FixItHint>(HintPair);
+          // Record that a FixIt was emitted so that if another diagnostic is
+          // emitted we avoid trying to fix it again. Applying the same FixIt
+          // multiple times (i.e. with `-Xclang -fixit`) will result in invalid
+          // code.
+          BoundsSafetyFixItWasEmittedFor(VarToFix,
+                                         /*Set=*/true);
+        }
+        if (VarToFix == Assignee)
+          AssignedVarFixItsContainedAssignee = true;
+      }
+      assert(AssignedVarFixItsContainedAssignee);
+      (void)AssignedVarFixItsContainedAssignee;
+    }
+  }
+
+  // Add Fixits to the error diagnostic for a local var that can be fixed.
+  bool BoundsSafetyIncompatNestedPtrFixItGoesOnError = false;
+  if (BoundsSafetyIncompatNestedPtrLocalVarToFix) {
+    BoundsSafetyIncompatNestedPtrFixItGoesOnError =
+        !BoundsSafetyIncompatNestedPtrFixIt.isNull() &&
+        !BoundsSafetyFixItWasEmittedFor(
+            BoundsSafetyIncompatNestedPtrLocalVarToFix);
+    if (BoundsSafetyIncompatNestedPtrFixItGoesOnError) {
+      FDiag << BoundsSafetyIncompatNestedPtrFixIt;
+      // Record that a FixIt was emitted so that if another diagnostic is
+      // emitted we avoid trying to fix it again. Applying the same FixIt
+      // multiple times (i.e. with `-Xclang -fixit`) will result in invalid
+      // code.
+      BoundsSafetyFixItWasEmittedFor(BoundsSafetyIncompatNestedPtrLocalVarToFix,
+                                     /*Set=*/true);
+    }
+  }
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
+
   if (MayHaveConvFixit) { FDiag << (unsigned) (ConvHints.Kind); }
 
   if (MayHaveFunctionDiff)
@@ -17043,6 +21042,95 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
       PDecl && IFace && !IFace->hasDefinition())
     Diag(IFace->getLocation(), diag::note_incomplete_class_and_qualified_id)
         << IFace << PDecl;
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  if (DiagKind ==
+          diag::warn_bounds_safety_implicit_conv_single_to_explicit_indexable &&
+      SrcDecl) {
+    // Note where declaration of __single pointer is declared.
+    Diag(SrcDecl->getBeginLoc(), diag::note_pointer_declared_here_quoted)
+        << SrcDecl->getQualifiedNameAsString() << SrcDecl->getSourceRange();
+
+    // TODO(dliew): We should note when the __single pointer is implicitly
+    // __single (rdar://91928812).
+  }
+
+  if (DiagKind == diag::err_bounds_safety_incomplete_single_to_indexable &&
+      Assignee) {
+    // Emit a note telling the user where the assigned pointer is declared.
+    const NamedDecl *AssignedVar = cast<NamedDecl>(Assignee);
+    std::string AssigneeName = AssignedVar->getQualifiedNameAsString();
+    // We try to omit the note when the VarDecl being assigned to is
+    // a function parameter because the `diag::note_parameter_named_here`
+    // is already emitted for it. An exception is made if there are FixIts
+    // available that need to go on a note.
+    if (Action != AssignmentAction::Passing ||
+        (Action == AssignmentAction::Passing && AssignedVarFixIts.size() > 0 &&
+         !AssignedVarFixItGoesOnError)) {
+      auto NoteDiag = Diag(AssignedVar->getBeginLoc(),
+                           AssigneeName.size() > 0
+                               ? diag::note_pointer_declared_here_quoted
+                               : diag::note_unnamed_pointer_declared_here);
+      if (AssigneeName.size() > 0)
+        NoteDiag << AssigneeName;
+
+      NoteDiag << AssignedVar->getSourceRange();
+
+      if (!AssignedVarFixItGoesOnError) {
+        // Emit the FixIts on a note instead because a diagnostic with a FixIt
+        // for the this VarDecl was already emitted on an error diagnostic.
+        //
+        // The are several reasons for emitting the FixIts on a note:
+        //
+        // 1. Using `-Xclang -fixit` will only apply the fix to VarDecl once
+        // because only the first error diagnostic has the FixIt attached
+        // directly to it. Applying it multiple times would have resulted in
+        // broken code.
+        // 2. In interactive use cases (e.g. in an IDE) if the user is not
+        // looking at the first error diagnostic then they can still apply the
+        // FixIt by applying the FixIt attached to the note that is attached to
+        // the error diagnostic.
+        for (auto &HintPair : AssignedVarFixIts)
+          NoteDiag << std::get<FixItHint>(HintPair);
+      }
+    }
+  }
+
+  if (DiagKind == diag::err_nested_bounds_safety_pointer_attribute_mismatch) {
+    if (!BoundsSafetyIncompatNestedPtrFixIt.isNull()) {
+      // Emit a note about where the variable that a fix is suggested for is
+      // declared.
+      assert(BoundsSafetyIncompatNestedPtrLocalVarToFix);
+      auto FixitDiag =
+          Diag(BoundsSafetyIncompatNestedPtrLocalVarToFix->getInnerLocStart(),
+               diag::note_entity_declared_at);
+      FixitDiag << BoundsSafetyIncompatNestedPtrLocalVarToFix->getDeclName();
+
+      if (!BoundsSafetyIncompatNestedPtrFixItGoesOnError) {
+        // Emit the FixIts on a note instead because a diagnostic with a FixIt
+        // for the this VarDecl was already emitted on an error diagnostic.
+        FixitDiag << BoundsSafetyIncompatNestedPtrFixIt;
+      }
+    }
+  }
+
+  if (IsSrcNullTerm) {
+    TryFixAssigningNullTerminatedToImplicitBidiIndexablePtr(Assignee, SrcExpr,
+                                                            DstType, Action);
+
+    TryFixAssigningNullTerminatedToBidiIndexableExpr(SrcExpr, DstType);
+  }
+
+  if (IsDstNullTerm) {
+    TryFixAssigningImplicitBidiIndexableToNullTerminatedPtr(SrcExpr, DstType);
+
+    TryFixAssigningBidiIndexableExprToNullTerminated(SrcExpr, DstType);
+
+    TryFixAssigningSinglePtrToNullTerminated(SrcExpr, SrcType, DstType);
+
+    TryFixAssigningConstArrayToNullTerminated(SrcExpr, SrcType, DstType);
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   if (SecondType == Context.OverloadTy)
     NoteAllOverloadCandidates(OverloadExpr::find(SrcExpr).Expression,
@@ -18419,6 +22507,14 @@ void diagnoseUncapturableValueReferenceOrBinding(Sema &S, SourceLocation loc,
   // for a member of a local class, but the correct predicate is not obvious.
   if (!S.getLangOpts().CPlusPlus && !S.CurContext->isFunctionOrMethod())
     return;
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  if (S.getLangOpts().BoundsSafety) {
+    // Allow capturing variables/fields in bounds attr expr context.
+    if (S.isAttrContext() && (isa<VarDecl>(var) || isa<FieldDecl>(var)))
+      return;
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   unsigned ValueKind = isa<BindingDecl>(var) ? 1 : 0;
   unsigned ContextKind = 3; // unknown
@@ -21137,3 +25233,978 @@ ExprResult Sema::CreateRecoveryExpr(SourceLocation Begin, SourceLocation End,
 
   return RecoveryExpr::Create(Context, T, Begin, End, SubExprs);
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON*/
+ExprResult Sema::ActOnForgeBidiIndexable(SourceLocation KWLoc,
+                                         Expr *Addr, Expr *Size,
+                                         SourceLocation RParenLoc) {
+  BoundsSafetyPointerAttributes Att;
+  Att.setBidiIndexable();
+  QualType ResultType = Context.getPointerType(Context.VoidTy, Att);
+  return BuildForgePtrExpr(KWLoc, RParenLoc, ResultType, Addr, Size);
+}
+
+ExprResult Sema::ActOnForgeSingle(SourceLocation KWLoc, Expr *Addr,
+                                  SourceLocation RParenLoc) {
+  QualType ResultType;
+  if (getLangOpts().isBoundsSafetyAttributeOnlyMode()) {
+    ResultType = Context.getAttributedType(attr::PtrSingle, Context.VoidPtrTy,
+                                           Context.VoidPtrTy);
+  } else
+    ResultType = Context.getPointerType(Context.VoidTy,
+                                        BoundsSafetyPointerAttributes::single());
+  return BuildForgePtrExpr(KWLoc, RParenLoc, ResultType, Addr);
+}
+
+ExprResult Sema::ActOnForgeTerminatedBy(SourceLocation KWLoc, Expr *Addr,
+                                        Expr *Term, SourceLocation RParenLoc) {
+  BoundsSafetyPointerAttributes Att;
+  if (!getLangOpts().isBoundsSafetyAttributeOnlyMode())
+    Att.setSingle();
+  QualType ResultType = Context.getPointerType(Context.VoidTy, Att);
+  ResultType = Context.getValueTerminatedType(ResultType, Term);
+  return BuildForgePtrExpr(KWLoc, RParenLoc, ResultType, Addr, /*Size*/ nullptr,
+                           Term);
+}
+
+ExprResult Sema::ActOnBoundsSafetyCall(ExprResult Call) {
+  CallExpr *CallE = dyn_cast_or_null<CallExpr>(Call.get());
+  if (!CallE || CallE->containsErrors())
+    return Call;
+
+  // Bail out early if there's nothing to do. (There is something to do if
+  // there's a dynamic bound pointer type in this function prototype, or if
+  // it's annotated with `alloc_size`, in which case we can derive the
+  // equivalent.)
+  QualType FT = CallE->getCallee()->getType();
+  if (auto PointerTy = FT->getAs<PointerType>())
+    FT = PointerTy->getPointeeType();
+  if (!ContainsBoundsAttributedType::check(FT)) {
+    auto *FDecl = CallE->getDirectCallee();
+    if (!FDecl || !FDecl->getAttr<AllocSizeAttr>())
+      return CallE;
+  }
+
+  Expr *ResultExpr = CallE;
+  SmallVector<OpaqueValueExpr *, 8> OVEs;
+
+  llvm::DenseMap<const ValueDecl *, std::pair<Expr *, /*level*/ unsigned>>
+      DependentValues;
+  auto AddDependentParams = [&](const BoundsAttributedType *DBPT) {
+    for (const auto &DI : DBPT->dependent_decls()) {
+      if (const auto *PVD = dyn_cast<ParmVarDecl>(DI.getDecl())) {
+        unsigned Index = PVD->getFunctionScopeIndex();
+        assert(Index < OVEs.size());
+        Expr *Arg = OVEs[Index];
+        DependentValues[PVD] = {Arg, /*Level=*/0};
+      }
+    }
+  };
+
+  ReplaceDeclRefWithRHS Transform(*this, DependentValues);
+
+  if (const FunctionProtoType *FPT = FT->getAs<FunctionProtoType>()) {
+    // Move function arguments into opaque value expressions so that we can
+    // refer to them without funny reordered/duplicated side effects business.
+    // Since there's an implicit cast to __single bounds wherever we use a
+    // dynamic bound pointer type, we pull the inner value of the -fbounds-safety
+    // pointer cast into the OVE only (and replace the -fbounds-safety pointer cast
+    // operand with the new OVE).
+    for (unsigned I = 0; I < CallE->getNumArgs(); ++I) {
+      Expr *Arg = CallE->getArg(I);
+      ImplicitCastExpr *IC = nullptr;
+      do {
+        auto *Cast = dyn_cast<ImplicitCastExpr>(Arg);
+        if (Cast && Cast->getCastKind() == CK_BoundsSafetyPointerCast) {
+          IC = Cast;
+          Arg = IC->getSubExpr();
+        } else {
+          break;
+        }
+      } while (true);
+      auto *OVE = OpaqueValueExpr::EnsureWrapped(Context, Arg, OVEs);
+      if (IC)
+        IC->setSubExpr(OVE);
+      else
+        CallE->setArg(I, OVE);
+    }
+
+    // Do we need to make any adjustments to arguments?
+    auto ParamTypes = FPT->getParamTypes();
+    // (there are more arguments than parameters in the case of variadic
+    // functions, however variadic arguments are never passed as dynamic-bound
+    // pointers.)
+    assert(ParamTypes.size() <= OVEs.size());
+
+    for (QualType ParamType : ParamTypes) {
+      if (const auto *DBPT = ParamType->getAs<BoundsAttributedType>())
+        AddDependentParams(DBPT);
+    }
+    if (const auto *DBPT =
+            ResultExpr->getType()->getAs<BoundsAttributedType>())
+      AddDependentParams(DBPT);
+
+    for (unsigned I = 0; I < ParamTypes.size(); ++I) {
+      if (allowBoundsUnsafeFunctionArg(CallE, I)) {
+        assert(
+            SourceMgr.isInSystemHeader(OVEs[I]->getSourceExpr()->getExprLoc()));
+        continue;
+      }
+      QualType ParamType = ParamTypes[I];
+      BoundsCheckBuilder Builder(OVEs);
+      if (auto *DCPT = ParamType->getAs<CountAttributedType>()) {
+        ExprResult CountExpr =
+            Transform.TransformBoundsAttrExpr(DCPT->getCountExpr());
+        if (!CountExpr.get())
+          return ExprError();
+        Builder.setAccessCount(CountExpr.get(), DCPT->isCountInBytes(),
+                               DCPT->isOrNull());
+      } else if (auto DRPT = ParamType->getAs<DynamicRangePointerType>()) {
+        // The end pointer itself may be a dynamic range pointer type, but it
+        // will not have an end pointer, just a start pointer. The start pointer
+        // will generate the entire breadth of required checks.
+        if (auto *EndPtr = DRPT->getEndPointer()) {
+          ExprResult Upper = Transform.TransformBoundsAttrExpr(EndPtr);
+          if (!Upper.get())
+            return ExprError();
+          Builder.setAccessLowerBound(OVEs[I]);
+          Builder.setAccessUpperBound(Upper.get());
+        } else {
+          continue;
+        }
+      } else {
+        continue;
+      }
+      Builder.setWidePointer(OVEs[I]);
+      ExprResult R = Builder.Build(*this, ResultExpr);
+      if (!(ResultExpr = R.get()))
+        return ExprError();
+    }
+  }
+
+  // Do we need to make any adjustments to the return value? This needs to also
+  // account for attributes on the function which specify that the function
+  // allocated memory (in addition to common dynamic bound pointer types), and
+  // for flexible array member pointers.
+  QualType ResultTy = ResultExpr->getType();
+  if (auto *DCPT = ResultTy->getAs<CountAttributedType>()) {
+    ExprResult ReturnCount =
+        Transform.TransformBoundsAttrExpr(DCPT->getCountExpr());
+    if (!ReturnCount.get())
+      return ExprError();
+    ReturnCount = DefaultLvalueConversion(ReturnCount.get());
+    if (!ReturnCount.get())
+      return ExprError();
+    auto *PtrOVE = OpaqueValueExpr::EnsureWrapped(
+        Context, ResultExpr, OVEs);
+    auto *CountOVE = OpaqueValueExpr::EnsureWrapped(
+        Context, ReturnCount.get(), OVEs);
+    ExprResult Promoted = PromoteBoundsSafetyPointerWithCount(
+        *this, PtrOVE, CountOVE, DCPT->isCountInBytes(), DCPT->isOrNull());
+    if (!(ResultExpr = Promoted.get()))
+      return ExprError();
+  } else if (auto *DRPT = ResultTy->getAs<DynamicRangePointerType>()) {
+    ExprResult Upper = Transform.TransformBoundsAttrExpr(DRPT->getEndPointer());
+    if (!Upper.get())
+      return ExprError();
+    auto FA = BoundsSafetyPointerAttributes::bidiIndexable();
+    QualType FPtrTy = Context.getPointerType(DRPT->getPointeeType(), FA);
+    ExprResult Promoted = BoundsSafetyPointerPromotionExpr::Create(
+      Context, FPtrTy, ResultExpr, Upper.get());
+    if (!(ResultExpr = Promoted.get()))
+      return ExprError();
+  } else if (auto *RD = getImmediateDeclForFlexibleArrayPromotion(ResultTy)) {
+    ExprResult Promoted = PromoteBoundsSafetyPointerToFlexibleArrayMember(
+        *this, RD, ResultExpr);
+    if (!(ResultExpr = Promoted.get()))
+      return ExprError();
+  } else if (auto *FDecl = CallE->getDirectCallee()) {
+    if (auto Att = FDecl->getAttr<AllocSizeAttr>()) {
+      if (Att->getElemSizeParam().isValid()) {
+        Expr *SizeExpr = OVEs[Att->getElemSizeParam().getASTIndex()];
+        if (Att->getNumElemsParam().isValid()) {
+          Expr *CountExpr = OVEs[Att->getNumElemsParam().getASTIndex()];
+          ExprResult Product = CreateBuiltinBinOp(
+              CallE->getBeginLoc(), BO_Mul, SizeExpr, CountExpr);
+          if (!(SizeExpr = Product.get()))
+            return ExprError();
+        }
+
+        ExprResult SizeRValue = DefaultLvalueConversion(SizeExpr);
+        if (!SizeRValue.get())
+          return ExprError();
+
+        auto *PtrOVE = OpaqueValueExpr::EnsureWrapped(
+            Context, ResultExpr, OVEs);
+        auto *SizeOVE = OpaqueValueExpr::EnsureWrapped(
+            Context, SizeRValue.get(), OVEs);
+        ExprResult Promoted = PromoteBoundsSafetyPointerWithCount(
+            *this, PtrOVE, SizeOVE, true, true);
+        if (!(ResultExpr = Promoted.get()))
+          return ExprError();
+      }
+    }
+  }
+
+  if (!OVEs.empty()) {
+    // Put opaque value expressions in materialize expressions and return that.
+    ResultExpr = MaterializeSequenceExpr::Create(Context, ResultExpr, OVEs);
+    ResultExpr = MaterializeSequenceExpr::Create(Context, ResultExpr, OVEs, true);
+  }
+  return ResultExpr;
+}
+
+ExprResult Sema::BuildForgePtrExpr(SourceLocation KWLoc,
+                                   SourceLocation RParenLoc,
+                                   QualType ResultType, Expr *Addr, Expr *Size,
+                                   Expr *Terminator) {
+  BoundsSafetyPointerAttributes Att =
+      ResultType->getAs<PointerType>()->getPointerAttributes();
+  unsigned IsForgeTerminated = ResultType->isValueTerminatedType();
+  unsigned IsForgeSingle = !Att.hasUpperBound() && !IsForgeTerminated;
+  // Ensure that there is a size if we're forging a bidi pointer, and that
+  // there isn't one otherwise. In the same way there should be a terminator
+  // value iff the type is __terminated_by.
+  assert(IsForgeTerminated == (Terminator != nullptr));
+  assert(IsForgeSingle == ((Size == nullptr) && !IsForgeTerminated));
+
+  ExprResult RvalueAddr =
+      DefaultFunctionArrayLvalueConversion(Addr, true, false);
+  if (RvalueAddr.isInvalid())
+    return ExprError();
+  Addr = RvalueAddr.get();
+
+  if (!Addr->isTypeDependent()) {
+    unsigned ForgeType = 0; // ForgeBidi
+    if (IsForgeSingle)
+      ForgeType = 1;
+    else if (IsForgeTerminated)
+      ForgeType = 2;
+
+    if (Addr->getType()->isIntegralType(Context)) {
+      Expr::EvalResult EvalAddr;
+      if (Addr->EvaluateAsInt(EvalAddr, Context, Expr::SE_AllowSideEffects) &&
+          EvalAddr.Val.getInt() < 0) {
+        Diag(Addr->getBeginLoc(), diag::err_bounds_safety_forge_negative)
+            << 0 << ForgeType;
+        return ExprError();
+        }
+    } else if (!Addr->getType()->isPointerType()) {
+        Diag(Addr->getBeginLoc(), diag::err_bounds_safety_forge_addr_type)
+            << ForgeType;
+        return ExprError();
+    }
+  }
+
+  ExprResult RvalueSize = ExprEmpty();
+  if (Size) {
+    RvalueSize = DefaultLvalueConversion(Size);
+    if (RvalueSize.isInvalid())
+      return ExprError();
+
+    if (!RvalueSize.get()->getType()->isIntegralType(Context)) {
+      Diag(Size->getBeginLoc(), diag::err_bounds_safety_forge_bidi_size_type);
+      return ExprError();
+    }
+
+    // The size value is treated as signed in CodeGen regardless of type. By casting
+    // values to a wider type if possible we avoid the issue of the upper half of the range
+    // of unsigned types being interpreted as negative values.
+    RvalueSize = ImpCastExprToType(RvalueSize.get(), Context.getSizeType(), clang::CK_IntegralCast);
+    if (RvalueSize.isInvalid())
+      return ExprError();
+
+    Expr::EvalResult EvalSize;
+    if (RvalueSize.get()->EvaluateAsInt(EvalSize, Context,
+                                        Expr::SE_AllowSideEffects) &&
+        EvalSize.Val.getInt().APInt::isNegative()) {
+      // An unsigned value that is bigger than SIZE_MAX/2 ultimately
+      // becomes a negative integer in CodeGen. Thus, we prevent it as
+      // a negative size.
+      Diag(Size->getBeginLoc(), diag::err_bounds_safety_forge_negative)
+        << 1 << IsForgeSingle;
+      return ExprError();
+    }
+  }
+
+  ExprResult RvalueTerm = ExprEmpty();
+  if (Terminator) {
+    RvalueTerm = DefaultLvalueConversion(Terminator);
+    if (RvalueTerm.isInvalid())
+      return ExprError();
+  }
+
+  ExprValueKind VK = Expr::getValueKindForType(ResultType);
+  return new (Context)
+      ForgePtrExpr(ResultType, VK, RvalueAddr.get(), RvalueSize.get(),
+                   RvalueTerm.get(), KWLoc, RParenLoc);
+}
+
+static ExprResult makeBoundExpr(Sema& S, Expr *SubExpr,
+                                GetBoundExpr::BoundKind BK,
+                                SourceLocation BuiltinLoc,
+                                SourceLocation RParenLoc,
+                                bool RawPointer) {
+  // make sure the expression is an rvalue
+  ExprResult RValue = S.DefaultFunctionArrayLvalueConversion(SubExpr);
+  if (RValue.isInvalid())
+    return ExprError();
+  SubExpr = RValue.get();
+
+  // result type is __bidi_indexable
+  QualType T = SubExpr->getType();
+  if (T->isDependentType())
+    return ExprError();
+
+  int Reason = -1;
+  const PointerType *PT = T->getAs<PointerType>();
+  if (!PT) {
+    Reason = 0;
+  } else if (PT->getPointerAttributes().isUnsafeOrUnspecified()) {
+    Reason = 1;
+  }
+
+  if (Reason >= 0) {
+    S.Diag(BuiltinLoc, diag::err_bounds_safety_no_bounds) << BK << T << Reason;
+    return ExprError();
+  }
+
+  auto FA = BoundsSafetyPointerAttributes::bidiIndexable();
+  QualType RT = S.Context.getPointerType(PT->getPointeeType(), FA);
+
+  // must implicitly cast original to bidi_indexable if needed
+  if (PT->getPointerAttributes() != FA) {
+    if (!PT->isSafePointerType())
+      return ExprError();
+    ExprResult ImpCast = S.ImpCastExprToType(
+        SubExpr, RT, CK_BoundsSafetyPointerCast);
+    if (ImpCast.isInvalid())
+      return ExprError();
+    SubExpr = ImpCast.get();
+  }
+
+  auto &Ctx = S.Context;
+  QualType DstTy = RawPointer ? Ctx.getPointerType(PT->getPointeeType()) : RT;
+  return new (Ctx) GetBoundExpr(BuiltinLoc, RParenLoc, SubExpr, BK, DstTy);
+}
+
+ExprResult Sema::BuildLowerBoundExpr(Expr *SubExpr, SourceLocation BuiltinLoc,
+                                     SourceLocation RParenLoc, bool RawPointer) {
+  return makeBoundExpr(*this, SubExpr, GetBoundExpr::BK_Lower, BuiltinLoc,
+                       RParenLoc, RawPointer);
+}
+
+ExprResult Sema::ActOnGetLowerBound(Expr *SubExpr, SourceLocation BuiltinLoc,
+                                    SourceLocation RParenLoc) {
+  return BuildLowerBoundExpr(SubExpr, BuiltinLoc, RParenLoc);
+}
+
+ExprResult Sema::BuildUpperBoundExpr(Expr *SubExpr, SourceLocation BuiltinLoc,
+                                     SourceLocation RParenLoc, bool RawPointer) {
+  return makeBoundExpr(*this, SubExpr, GetBoundExpr::BK_Upper, BuiltinLoc,
+                       RParenLoc, RawPointer);
+}
+
+ExprResult Sema::ActOnGetUpperBound(Expr *SubExpr, SourceLocation BuiltinLoc,
+                                    SourceLocation RParenLoc) {
+  return BuildUpperBoundExpr(SubExpr, BuiltinLoc, RParenLoc);
+}
+
+ExprResult Sema::BuildPredefinedBoundsCheckExpr(Expr *SubExpr,
+                                                BoundsCheckKind Kind,
+                                                ArrayRef<Expr *> CheckArgs) {
+  return PredefinedBoundsCheckExpr::Create(Context, SubExpr, Kind, CheckArgs);
+}
+
+ExprResult Sema::BuildBoundsCheckExpr(Expr *SubExpr, Expr *Cond,
+                                      ArrayRef<OpaqueValueExpr *> CommonExprs) {
+  // FIXME: Bounds expressions would better have implicit casts similar to
+  // what we would get from Sema::CheckCompareOperands(). This, however,
+  // would insert implicit casts of wide pointer to raw pointer. This might not
+  // be matching what GetBoundsExpr CodeGen currently expects.
+  return BoundsCheckExpr::Create(Context, SubExpr, Cond, CommonExprs);
+}
+
+ExprResult Sema::BuildMaterializeSequenceExpr(Expr *WrappedExpr,
+                                              ArrayRef<OpaqueValueExpr *> Values) {
+  return MaterializeSequenceExpr::Create(Context, WrappedExpr, Values);
+}
+
+ExprResult BoundsCheckBuilder::BuildImplicitPointerArith(Sema &S,
+                                                         BinaryOperatorKind Opc,
+                                                         Expr *LHS, Expr *RHS) {
+  QualType PointerTy = LHS->getType();
+  assert(Opc == BO_Add || Opc == BO_Sub);
+  assert(PointerTy->isPointerType() &&
+         RHS->getType()->isIntegralOrEnumerationType());
+
+  Expr *Pointer = LHS;
+
+  if (PointerTy->isSinglePointerType() && !PointerTy->isBoundsAttributedType()) {
+    BoundsSafetyPointerAttributes UnsafeAttr;
+    UnsafeAttr.setUnsafeIndexable();
+    QualType UnsafePointerTy = S.Context.getBoundsSafetyPointerType(PointerTy, UnsafeAttr);
+    ExprResult CastResult = S.BuildCStyleCastExpr(SourceLocation(), S.Context.getTrivialTypeSourceInfo(UnsafePointerTy), SourceLocation(), Pointer);
+    if (CastResult.isInvalid())
+      return ExprError();
+
+    Pointer = CastResult.get();
+  }
+
+  return S.CreateBuiltinBinOp(SourceLocation(), Opc, Pointer, RHS);
+}
+
+OpaqueValueExpr *BoundsCheckBuilder::OpaqueWrap(Sema &S, Expr *E) {
+  return OpaqueValueExpr::EnsureWrapped(S.Context, E, OVEs);
+}
+
+bool BoundsCheckBuilder::BuildIndexBounds(Sema &S, Expr *Min, Expr *Max,
+                                          llvm::SmallVectorImpl<Expr *> &R) {
+  if (isCountInBytes()) {
+    ExprResult Lower =
+        CastToCharPointer(S, Min, BoundsSafetyPointerAttributes::unspecified());
+    if (!(Min = Lower.get()))
+      return false;
+    ExprResult Upper =
+        CastToCharPointer(S, Max, BoundsSafetyPointerAttributes::unspecified());
+    if (!(Max = Upper.get()))
+      return false;
+  }
+  ExprResult Count = S.CreateBuiltinBinOp(Max->getBeginLoc(), BO_Sub, Max, Min);
+  if (!Count.get())
+    return false;
+
+  bool IsSigned = false;
+
+  Expr *AccessCount;
+  QualType SizeT = S.Context.getSizeType();
+  if (auto *Idx = getAccessCount()) {
+    AccessCount = Idx;
+    IsSigned |= AccessCount->getType()->isSignedIntegerOrEnumerationType();
+  } else {
+    Expr *One = S.ActOnIntegerConstant(Min->getBeginLoc(), 1).get();
+    ExprResult R = S.ImpCastExprToType(One, SizeT, CK_IntegralCast);
+    if (!(AccessCount = R.get()))
+      return false;
+  }
+
+  if (auto *StartIndex = getAccessStartIndex()) {
+    Expr *OpaqueStart = OpaqueWrap(S, StartIndex);
+    R.push_back(OpaqueStart);
+    IsSigned |= OpaqueStart->getType()->isSignedIntegerOrEnumerationType();
+    ExprResult CountTotal = S.CreateBuiltinBinOp(
+        OpaqueStart->getBeginLoc(), BO_Add, OpaqueStart, AccessCount);
+    if (!(AccessCount = CountTotal.get()))
+      return false;
+  }
+  R.push_back(AccessCount);
+
+  if (IsSigned) {
+    // If any value in R is signed, cast all of them to signed values and
+    // add a check for zero at first.
+    for (size_t I = 0; I < R.size(); ++I) {
+      Expr *&Elem = R[I];
+      QualType Ty = Elem->getType();
+      if (!Ty->isSignedIntegerOrEnumerationType()) {
+        QualType SignedType = S.Context.getCorrespondingSignedType(Ty);
+        ExprResult R = S.ImpCastExprToType(Elem, SignedType, CK_IntegralCast);
+        if (!(Elem = R.get()))
+          return false;
+      }
+    }
+
+    Expr *Zero = S.ActOnIntegerConstant(Min->getBeginLoc(), 0).get();
+    R.insert(R.begin(), Zero);
+    R.push_back(Count.get());
+  } else {
+    auto SizeTCount = S.ImpCastExprToType(Count.get(), SizeT, CK_IntegralCast);
+    if (Expr *C = SizeTCount.get())
+      R.push_back(C);
+    else
+      return false;
+  }
+  return true;
+}
+
+bool BoundsCheckBuilder::BuildPtrBounds(Sema &S, Expr *Min, Expr *Max,
+                                        llvm::SmallVectorImpl<Expr *> &R) {
+  // second, expand the accessed lower bound
+  Expr *TestedLowerBound;
+  if (auto *Lower = getAccessLowerBound()) {
+    TestedLowerBound = Lower;
+  } else {
+    Min = OpaqueWrap(S, Min);
+    Expr *LowerBound = Min;
+    if (auto *StartIndex = getAccessStartIndex()) {
+      ExprResult TLBResult = BuildImplicitPointerArith(
+          S, BO_Add, LowerBound, StartIndex);
+      if (TLBResult.isInvalid())
+        return false;
+
+      TestedLowerBound = TLBResult.get();
+    } else {
+      Min = OpaqueWrap(S, Min);
+      TestedLowerBound = Min;
+    }
+  }
+
+  // next, expand the accessed upper bound
+  Expr *TestedUpperBound;
+  if (auto *Upper = getAccessUpperBound()) {
+    TestedUpperBound = Upper;
+  } else {
+    TestedLowerBound = OpaqueWrap(S, TestedLowerBound);
+    ExprResult TLB = TestedLowerBound;
+    ExprResult TUB;
+    if (auto *Count = getAccessCount()) {
+      // If OrigPtrTy is set, it means that we must do pointer arithmetic over a
+      // character type instead of the original type (and that the result must
+      // be cast back t OrigPtrTy).
+      QualType OrigPtrTy;
+      if (isCountInBytes()) {
+        QualType PtrTy = TestedLowerBound->getType();
+        QualType Pointee = PtrTy->getPointeeType();
+        if (S.Context.getTypeSizeInChars(Pointee).getQuantity() != 1) {
+          OrigPtrTy = PtrTy;
+        }
+      }
+
+      if (!OrigPtrTy.isNull()) {
+        TLB = CastToCharPointer(S, TLB.get());
+        if (!TLB.get())
+          return false;
+      }
+      TUB = BuildImplicitPointerArith(S, BO_Add, TLB.get(), Count);
+      if (!OrigPtrTy.isNull()) {
+        SourceLocation Loc = TUB.get()->getBeginLoc();
+        TUB = S.BuildCStyleCastExpr(
+            Loc, S.Context.getTrivialTypeSourceInfo(OrigPtrTy), Loc, TUB.get());
+      }
+    } else {
+      // Assume count is 1.
+      Expr *One = S.ActOnIntegerConstant(TLB.get()->getBeginLoc(), 1).get();
+      TUB = BuildImplicitPointerArith(S, BO_Add, TLB.get(), One);
+    }
+    if (TUB.isInvalid())
+      return false;
+
+    TestedUpperBound = TUB.get();
+  }
+
+  R.push_back(Min);
+  if (Min != TestedLowerBound)
+    R.push_back(TestedLowerBound);
+  if (TestedLowerBound != TestedUpperBound)
+    R.push_back(TestedUpperBound);
+  if (TestedUpperBound != Max)
+    R.push_back(Max);
+  return true;
+}
+
+ExprResult BoundsCheckBuilder::Build(Sema &S, Expr *GuardedValue) {
+  // first, expand base pointer
+  Expr *BasePtr, *UpperBound, *LowerBound;
+  if (auto *Wide = getWidePointer()) {
+    BasePtr = OpaqueWrap(S, Wide);
+    if (Wide->isNullPointerConstantIgnoreCastsAndOVEs(
+            S.Context, Expr::NPC_NeverValueDependent) != Expr::NPCK_NotNull) {
+      UpperBound = BasePtr;
+      LowerBound = BasePtr;
+    } else {
+      ExprResult Upper = S.BuildUpperBoundExpr(BasePtr, BasePtr->getExprLoc());
+      if (!(UpperBound = Upper.get()))
+        return ExprError();
+      ExprResult Lower = S.BuildLowerBoundExpr(BasePtr, BasePtr->getExprLoc());
+      if (!(LowerBound = Lower.get()))
+        return ExprError();
+    }
+  } else {
+    auto Pair = getWidePointerBounds();
+    if (Pair.first == nullptr || Pair.second == nullptr)
+      return ExprError();
+
+    BasePtr = OpaqueWrap(S, Pair.first);
+    UpperBound = Pair.second;
+    LowerBound = Pair.first;
+  }
+
+  bool IsIndexCheck = !AccessLowerBound && !AccessUpperBound;
+  SmallVector<Expr *, 4> Bounds;
+  if (IsIndexCheck) {
+    // If access bounds are indices, we can generate an int range check instead
+    // of a pointer range check. Generating an int range check has vastly
+    // superior codegen outcomes: since -fbounds-safety pointer arithmetic does not
+    // use inbounds GEPs, clang is unable to reduce an expression like
+    // `ptr[A] < ptr[B]` to `A < B` (as the non-inbounds GEP carries a risk of
+    // arithmetic overflow). Directly expressing `A < B` works around this
+    // issue.
+    // A full check would usually be
+    //  `Lower <= AccessLower <= AccessUpper <= Upper`,
+    // where Lower/Upper are the accessed pointer's lower and upper bounds, and
+    // AccessLower/AccessUpper are the region that needs to be accessible.
+    // For instance, ptr[5] has:
+    //  * Lower = ptr + 0
+    //  * AccessLower = ptr + 5
+    //  * AccessUpper = ptr + 6
+    //  * Upper = upper_bound(ptr)
+    // Translating to indices, we get something like
+    //  `0 <= 5 <= 6 <= upper_bound(ptr) - &ptr[0]`.
+    // This optimizes very nicely to `6 <= (upper-&ptr[0])`. GEPs that calculate
+    // the upper bound and the lower bound of a pointer are inherently inbounds,
+    // so arithmetic on them isn't penalized, so the whole thing is about as
+    // good as we could make it. This is better even though it requires us to do
+    // a full bounds check on `ptr` (lower(ptr) <= ptr <= upper(ptr)) before we
+    // can do index-based comparisons.
+    // XXX: picking AST patterns for their codegen-ability is crummy. :(
+    if (!BuildIndexBounds(S, BasePtr, UpperBound, Bounds))
+      return ExprError();
+  } else {
+    Expr *MinExpr = BasePtr;
+    if (S.getLangOpts().hasNewBoundsSafetyCheck(
+            LangOptions::BS_CHK_EndedByLowerBound)) {
+      MinExpr = LowerBound;
+    }
+    if (!BuildPtrBounds(S, MinExpr, UpperBound, Bounds))
+      return ExprError();
+  }
+
+  SourceLocation Loc = GuardedValue->getExprLoc();
+  ExprResult Cond = BuildLEChecks(S, Loc, Bounds, OVEs);
+  if (Cond.isInvalid())
+    return ExprError();
+
+  if (isOrNull()) {
+    ExprResult NullCheck = S.CreateBuiltinUnaryOp(Loc, UO_LNot, BasePtr);
+    if (NullCheck.isInvalid())
+      return ExprError();
+    // !Ptr || 0 <= Count <= (Upper - Ptr)
+    Cond = S.CreateBuiltinBinOp(Loc, BO_LOr, NullCheck.get(), Cond.get());
+    if (Cond.isInvalid())
+      return ExprError();
+  }
+
+  if (IsIndexCheck) {
+    // Index checks do the blissful assumption that lower <= ptr <= upper to
+    // use numbers in comparisons, but in fact, both of these conditions can be
+    // false, so they need to be checked separately.
+    Expr *Bounds[] = {LowerBound, BasePtr, UpperBound};
+    // Check that pointer argument being passed is in range
+    // Lower <= Ptr <= Upper
+    ExprResult BasePtrBoundsCheck = BuildLEChecks(S, Loc, Bounds, OVEs);
+    if (!BasePtrBoundsCheck.get())
+      return ExprError();
+    Cond = S.CreateBuiltinBinOp(
+        Loc, BO_LAnd, BasePtrBoundsCheck.get(), Cond.get());
+    if (!Cond.get())
+      return ExprError();
+  }
+
+  return S.BuildBoundsCheckExpr(GuardedValue, Cond.get(), {});
+}
+
+ExprResult BoundsCheckBuilder::BuildLEChecks(
+    Sema &S, SourceLocation Loc, ArrayRef<Expr *> Bounds,
+    SmallVectorImpl<OpaqueValueExpr *> &OVEs) {
+  assert(Bounds.size() >= 2);
+  Expr *CondAccum = nullptr;
+  Expr *Next = Bounds[Bounds.size()-1];
+
+  // Reverse it to check the upper bound first. Upper bounds of `__counted_by`
+  // pointers are calculated using gep `inbounds`; Checking such `inbounds`
+  // pointer arithmetic first will help to optimize the same pointer arithmetic
+  // that doesn't have `inbounds`.
+  for (unsigned i = Bounds.size() - 1; i--;) {
+    Expr *Bound = Bounds[i]->IgnoreImpCasts();
+    bool IsOpaqueValue = isa<OpaqueValueExpr>(Bound);
+
+    // Make sure that comparison types are compatible before we wrap expressions
+    // in opaque values.
+    ExprResult NextResult = Next;
+    ExprResult BoundResult = Bound;
+    auto CmpTy = S.CheckCompareOperands(BoundResult, NextResult, Loc, BO_LE);
+    if (CmpTy.isNull() || !(Next = NextResult.get())
+        || !(Bound = BoundResult.get()))
+      return ExprError();
+
+    if (i != 0 && !IsOpaqueValue) {
+      // Bound will be reused in 'Prev <= Bound && Bound <= Next' thus materialize
+      // it. If the value was originally an opaque value, it doesn't need to be
+      // wrapped in a new one just because of implicit casts.
+      OVEs.push_back(OpaqueValueExpr::Wrap(S.Context, Bound));
+      Bound = OVEs.back();
+    }
+
+    ExprResult LEBounds = S.CreateBuiltinBinOp(Loc, BO_LE, Bound, Next);
+    if (LEBounds.isInvalid())
+      return ExprError();
+
+    if (!CondAccum) {
+      CondAccum = LEBounds.get();
+    } else {
+      ExprResult CondAnd = S.CreateBuiltinBinOp(Loc, BO_LAnd,
+                                                CondAccum, LEBounds.get());
+      if (CondAnd.isInvalid())
+        return ExprError();
+      CondAccum = CondAnd.get();
+    }
+
+    // Make sure an implicit cast is not reused in a different node. This
+    // may result in an unexpected expression type change since implicit
+    // casts are allowed to change their result types during Sema.
+    Next = Bound->IgnoreImpCasts();
+  }
+
+  return CondAccum;
+}
+
+ExprResult BoundsCheckBuilder::CheckFlexibleArrayMemberSize(
+    Sema &S, SourceLocation Loc, BoundsCheckKind BCK, Expr *FAMPtr,
+    CopyExpr *DeclReplacer) {
+  SmallVector<OpaqueValueExpr *, 1> OVEs;
+  auto *OpaqueRoot = OpaqueValueExpr::EnsureWrapped(S.Context, FAMPtr, OVEs);
+  Expr *Result = CheckFlexibleArrayMemberSizeImpl(S, Loc, BCK, OpaqueRoot, OVEs,
+                                                  OpaqueRoot, DeclReplacer)
+                     .get();
+  if (!Result)
+    return ExprError();
+
+  // Materialize OpaqueValues
+  if (!OVEs.empty()) {
+    Result = MaterializeSequenceExpr::Create(S.Context, Result, OVEs);
+
+    // Unbind everything.
+    Result = MaterializeSequenceExpr::Create(S.Context, Result, OVEs, true);
+  }
+  return Result;
+}
+
+ExprResult BoundsCheckBuilder::CheckFlexibleArrayMemberSizeWithOVEs(
+    Sema &S, SourceLocation Loc, BoundsCheckKind BCK, Expr *FAMPtr,
+    SmallVectorImpl<OpaqueValueExpr *> &OVEs, CopyExpr *DeclReplacer) {
+  return CheckFlexibleArrayMemberSizeImpl(S, Loc, BCK, FAMPtr, OVEs, FAMPtr,
+                                          DeclReplacer);
+}
+ExprResult BoundsCheckBuilder::CheckFlexibleArrayMemberSizeImpl(
+    Sema &S, SourceLocation Loc, BoundsCheckKind BCK, Expr *FAMPtr,
+    SmallVectorImpl<OpaqueValueExpr *> &OVEs, Expr *GuardedValue,
+    CopyExpr *DeclReplacer) {
+
+  FlexibleArrayMemberUtils FlexUtils(S);
+
+  // The base address must be opaque since it will be used in multiple places.
+  auto *OpaqueRoot = dyn_cast<OpaqueValueExpr>(FAMPtr);
+  if (!OpaqueRoot) {
+    OVEs.push_back(OpaqueValueExpr::Wrap(S.Context, FAMPtr));
+    OpaqueRoot = OVEs.back();
+  }
+
+  if (!GuardedValue)
+    GuardedValue = OpaqueRoot;
+
+  SmallVector<FieldDecl *, 1> PathToFlex;
+  ArrayRef<TypeCoupledDeclRefInfo> CountDecls;
+  auto *RT = FAMPtr->getType()->getPointeeType()->getAs<RecordType>();
+  bool Found = FlexUtils.Find(RT->getDecl(), PathToFlex, CountDecls);
+  assert(Found); (void)Found;
+
+  Expr *FlexibleObj = FlexUtils.SelectFlexibleObject(PathToFlex, OpaqueRoot);
+
+  // Create count expression
+  FieldDecl *FlexibleField = PathToFlex.back();
+  ExprResult CountExpr = FlexUtils.BuildCountExpr(
+      FlexibleField, CountDecls, FlexibleObj, OVEs, DeclReplacer);
+  if (!CountExpr.get())
+    return ExprError();
+
+  // Create array base address
+  QualType FlexType = PathToFlex.back()->getType();
+  Expr *ArrayBase = MemberExpr::CreateImplicit(
+        S.Context, FlexibleObj, FlexibleObj->getType()->isPointerType(),
+        PathToFlex.back(), FlexType, VK_LValue, OK_Ordinary);
+  // Ensure that the pointer isn't __bidi_indexable, as that would be
+  // problematic.
+  QualType DecayedTy = S.Context.getArrayDecayedType(FlexType);
+  DecayedTy = S.Context.getBoundsSafetyPointerType(DecayedTy, {});
+  ExprResult DecayedArrayBase = S.ImpCastExprToType(
+      ArrayBase, DecayedTy, CK_ArrayToPointerDecay, VK_PRValue);
+  if (!DecayedArrayBase.get())
+    return ExprError();
+
+  // ArrayToPointerDecay overrides the pointer attributes to be bidi_indexable,
+  // force it to be unspecified.
+  DecayedArrayBase.get()->setType(DecayedTy);
+
+  SmallVector<Expr *, 4> CheckArgs{OpaqueRoot, DecayedArrayBase.get(),
+                                   CountExpr.get()};
+
+  // Create bounds check expression.
+  return PredefinedBoundsCheckExpr::Create(S.Context, GuardedValue, BCK,
+                                           CheckArgs);
+}
+
+ExprResult Sema::BuildTerminatedByToIndexableExpr(Expr *PointerExpr,
+                                                  Expr *TerminatorExpr,
+                                                  bool IncludeTerminator,
+                                                  SourceLocation BuiltinLoc,
+                                                  SourceLocation RParenLoc) {
+  // TODO: Add C++ support.
+  assert(!PointerExpr->getType()->isDependentType() &&
+         "BoundsSafety does not support C++ yet");
+
+  ExprResult RValue = DefaultFunctionArrayLvalueConversion(PointerExpr);
+  if (RValue.isInvalid())
+    return ExprError();
+  PointerExpr = RValue.get();
+
+  QualType PtrTy = PointerExpr->getType();
+  const auto *PtrVTT = PtrTy->getAs<ValueTerminatedType>();
+
+  if (!PtrVTT) {
+    Diag(PointerExpr->getBeginLoc(),
+         diag::err_bounds_safety_terminated_by_to_indexable_wrong_ptr_type)
+        << PtrTy;
+    return ExprError();
+  }
+
+  // __terminated_by() applies only to arrays and __single pointers, but since
+  // we decay arrays, we expect a __single pointer here.
+  assert(PtrTy->isSinglePointerType());
+
+  if (TerminatorExpr && TerminatorExpr != PtrVTT->getTerminatorExpr()) {
+    // The terminator must be an ICE.
+    std::optional<llvm::APSInt> TermVal =
+        TerminatorExpr->getIntegerConstantExpr(Context);
+    if (!TermVal.has_value()) {
+      Diag(TerminatorExpr->getBeginLoc(),
+           diag::err_bounds_safety_terminated_by_terminator_must_be_const);
+      return ExprError();
+    }
+
+    llvm::APSInt PtrTermVal = PtrVTT->getTerminatorValue(Context);
+    if (!llvm::APSInt::isSameValue(*TermVal, PtrTermVal)) {
+      Diag(PointerExpr->getBeginLoc(),
+           diag::err_bounds_safety_terminated_by_to_indexable_wrong_terminator)
+          << TerminatorExpr << PtrVTT->getTerminatorExpr();
+      return ExprError();
+    }
+  }
+
+  QualType RetTy = Context.getBoundsSafetyPointerType(
+      PtrTy, BoundsSafetyPointerAttributes::indexable());
+  return new (Context)
+      TerminatedByToIndexableExpr(BuiltinLoc, RParenLoc, PointerExpr,
+                                  TerminatorExpr, IncludeTerminator, RetTy);
+}
+
+ExprResult Sema::ActOnTerminatedByToIndexable(Expr *PointerExpr,
+                                              Expr *TerminatorExpr,
+                                              SourceLocation BuiltinLoc,
+                                              SourceLocation RParenLoc) {
+  return BuildTerminatedByToIndexableExpr(PointerExpr, TerminatorExpr,
+                                          /*IncludeTerminator=*/false,
+                                          BuiltinLoc, RParenLoc);
+}
+
+ExprResult Sema::ActOnUnsafeTerminatedByToIndexable(Expr *PointerExpr,
+                                                    Expr *TerminatorExpr,
+                                                    SourceLocation BuiltinLoc,
+                                                    SourceLocation RParenLoc) {
+  return BuildTerminatedByToIndexableExpr(PointerExpr, TerminatorExpr,
+                                          /*IncludeTerminator=*/true,
+                                          BuiltinLoc, RParenLoc);
+}
+
+ExprResult Sema::BuildTerminatedByFromIndexableExpr(
+    Expr *TerminatorExpr, Expr *PointerExpr, Expr *PointerToTerminatorExpr,
+    SourceLocation BuiltinLoc, SourceLocation RParenLoc) {
+  // TODO: Add C++ support.
+  assert(!PointerExpr->getType()->isDependentType() &&
+         "BoundsSafety does not support C++ yet");
+
+  // The terminator must be an ICE.
+  if (!TerminatorExpr->getIntegerConstantExpr(Context).has_value()) {
+    Diag(TerminatorExpr->getBeginLoc(),
+         diag::err_bounds_safety_terminated_by_terminator_must_be_const);
+    return ExprError();
+  }
+
+  ExprResult RValue = DefaultFunctionArrayLvalueConversion(PointerExpr);
+  if (RValue.isInvalid())
+    return ExprError();
+  PointerExpr = RValue.get();
+
+  QualType PtrTy = PointerExpr->getType();
+  if (!PtrTy->isSafePointerType()) {
+    Diag(PointerExpr->getBeginLoc(),
+         diag::err_bounds_safety_terminated_by_from_indexable_wrong_ptr_type)
+        << PtrTy;
+    return ExprError();
+  }
+
+  // The pointee must be an integer or a thin pointer.
+  QualType PointeeTy = PtrTy->getPointeeType();
+  if (!(PointeeTy->isIntegralOrEnumerationType() ||
+        (PointeeTy->isPointerType() &&
+         !PointeeTy->isPointerTypeWithBounds()))) {
+    Diag(PointerExpr->getBeginLoc(),
+         diag::err_bounds_safety_terminated_by_from_indexable_wrong_pointee_type);
+    return ExprError();
+  }
+
+  if (PointerToTerminatorExpr) {
+    ExprResult RValue =
+        DefaultFunctionArrayLvalueConversion(PointerToTerminatorExpr);
+    if (RValue.isInvalid())
+      return ExprError();
+    PointerToTerminatorExpr = RValue.get();
+
+    QualType PtrToTermTy = PointerToTerminatorExpr->getType();
+    if (!PtrToTermTy->isPointerType()) {
+      Diag(
+          PointerToTerminatorExpr->getBeginLoc(),
+          diag::
+              err_bounds_safety_terminated_by_from_indexable_wrong_ptr_to_term_type)
+          << PointerToTerminatorExpr->getType();
+      return ExprError();
+    }
+
+    if (!Context.hasSameUnqualifiedType(PtrToTermTy->getPointeeType(),
+                                        PointeeTy)) {
+      Diag(PointerToTerminatorExpr->getBeginLoc(),
+           diag::err_bounds_safety_terminated_by_from_indexable_pointee_mismatch);
+      return ExprError();
+    }
+  }
+
+  ExprResult TermCastRes(TerminatorExpr);
+  CastKind Kind = PrepareScalarCast(TermCastRes, PointeeTy);
+  TermCastRes = ImpCastExprToType(TerminatorExpr, PointeeTy, Kind);
+  if (!TermCastRes.get())
+    return ExprError();
+  TerminatorExpr = TermCastRes.get();
+
+  if (!PtrTy->isIndexablePointerType()) {
+    PtrTy = Context.getBoundsSafetyPointerType(
+        PtrTy, BoundsSafetyPointerAttributes::indexable());
+    ExprResult PtrCastRes =
+        ImpCastExprToType(PointerExpr, PtrTy, CK_BoundsSafetyPointerCast);
+    if (!PtrCastRes.get())
+      return ExprError();
+    PointerExpr = PtrCastRes.get();
+  }
+
+  QualType SinglePtrTy = Context.getBoundsSafetyPointerType(
+      PtrTy, BoundsSafetyPointerAttributes::single());
+  QualType RetTy = Context.getValueTerminatedType(SinglePtrTy, TerminatorExpr);
+  return new (Context) TerminatedByFromIndexableExpr(
+      BuiltinLoc, RParenLoc, PointerExpr, PointerToTerminatorExpr, RetTy);
+}
+
+ExprResult Sema::ActOnUnsafeTerminatedByFromIndexable(
+    Expr *TerminatorExpr, Expr *PointerExpr, Expr *PointerToTerminatorExpr,
+    SourceLocation BuiltinLoc, SourceLocation RParenLoc) {
+  return BuildTerminatedByFromIndexableExpr(TerminatorExpr, PointerExpr,
+                                            PointerToTerminatorExpr, BuiltinLoc,
+                                            RParenLoc);
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/

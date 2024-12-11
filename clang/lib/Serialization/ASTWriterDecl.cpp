@@ -358,6 +358,19 @@ void ASTDeclWriter::Visit(Decl *D) {
 }
 
 void ASTDeclWriter::VisitDecl(Decl *D) {
+  /// BoundsSafety: Workaround to avoid a cycle during deserialization.
+  /// \code
+  /// int len;
+  /// int *__counted_by(len) ptr;
+  /// \endcode
+  /// In the above example, DependerDeclsAttr referencing 'ptr' is attached
+  /// to 'len' as a Decl attribute. To workaround the issue, we serialize
+  /// DependerDeclsAttr separately, creating a map between Decl and Attribute.
+  if (DependerDeclsAttr *DDA = D->getAttr<DependerDeclsAttr>()) {
+    Writer.LazyAttributeToDecl(DDA, D);
+    D->dropAttr<DependerDeclsAttr>();
+  }
+
   BitsPacker DeclBits;
 
   // The order matters here. It will be better to put the bit with higher

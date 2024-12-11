@@ -7045,6 +7045,18 @@ QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
     return QualType();
   }
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  if (Context.hasSameType(LTy, RTy) && Context.getLangOpts().BoundsSafety) {
+    auto MergeResult = Context.canMergeTypeBounds(LTy, RTy);
+    if (MergeResult != ASTContext::BSPTMK_CanMerge)
+      Diag(QuestionLoc,
+           diag::err_cond_expr_nested_bounds_safety_pointer_attribute_mismatch)
+          << LTy << RTy << LHS.get()->getSourceRange()
+          << RHS.get()->getSourceRange() << MergeResult;
+    return QualType();
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
   // Neither is void.
   if (IsVectorConditional)
     return CheckVectorConditionalTypes(Cond, LHS, RHS, QuestionLoc);

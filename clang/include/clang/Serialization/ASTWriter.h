@@ -920,6 +920,10 @@ private:
   void RedefinedHiddenDefinition(const NamedDecl *D, Module *M) override;
   void AddedAttributeToRecord(const Attr *Attr,
                               const RecordDecl *Record) override;
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  void LazyAttributeToDecl(const Attr *Attr,
+                           const Decl *D) override;
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
   void EnteringModulePurview() override;
   void AddedManglingNumber(const Decl *D, unsigned) override;
   void AddedStaticLocalNumbers(const Decl *D, unsigned) override;

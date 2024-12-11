@@ -70,6 +70,11 @@ class CodeGenTypes {
   /// Contains the LLVM IR type for any converted RecordDecl.
   llvm::DenseMap<const Type*, llvm::StructType *> RecordDeclTypes;
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  /// Contains the LLVM IR type for any converted wide pointer type.
+  llvm::DenseMap<const Type*, llvm::StructType *> WidePointerTypes;
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   /// Hold memoized CGFunctionInfo results.
   llvm::FoldingSet<CGFunctionInfo> FunctionInfos{FunctionInfosLog2InitSize};
 
@@ -144,6 +149,10 @@ public:
   /// recomputed in common cases where the value type and
   /// load/store type are the same.
   llvm::Type *convertTypeForLoadStore(QualType T, llvm::Type *LLVMTy = nullptr);
+
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  llvm::Type *ConvertBoundsSafetyPointerType(const PointerType *PT);
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   /// GetFunctionType - Get the LLVM function type for \arg Info.
   llvm::FunctionType *GetFunctionType(const CGFunctionInfo &Info);

@@ -1,0 +1,102 @@
+//===- BoundsSafetyTraps.def ----------------------------------0----*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+// This file declares the different types of BoundsSafety traps that can emitted
+// along with properties of the trap
+//===----------------------------------------------------------------------===//
+
+#ifndef BOUNDS_SAFETY_TRAP
+#error BOUNDS_SAFETY_TRAP must be defined
+#endif
+#ifndef BOUNDS_SAFETY_TRAP_CTX
+#error BOUNDS_SAFETY_TRAP_CTX must be defined
+#endif
+
+// BOUNDS_SAFETY_TRAP(
+//   <enum field suffix>,
+//   <opt remarks annotation string>,
+//   <trap message>)
+//
+// <enum field suffix> - The name of the enum field (without the prefix). This
+// should be a valid enum identifier. The name of this field should indicate (if
+// possible) the condition that is true when the trap fires.
+//
+// <opt remarks annotation string> - The string is used to annotate instructions
+// (that might lead to the trap) with opt remarks. The naming convention
+// used here is that the string should (if possible) describe the condition
+// that the annotated branch instruction checks. More specifically it is the
+// condition that is true when execution should continue (i.e. not trap).
+// NOTE THIS NAMING CONVENTION IS THE OPPOSITE TO WHAT IS USED FOR THE OTHER
+// FIELDS. It is setup this way for historical reasons.
+//
+// <trap message> - The string used to describe the type of trap to the user. If
+// possible the string should describe the condition that was checked for, but
+// failed to hold.
+//
+// -----------------------------------------------------------------------------
+//
+// BOUNDS_SAFETY_TRAP_CTX(<enum field suffix>, <opt remarks annotation string>)
+// 
+// Same as `BOUNDS_SAFETY_TRAP` but does not take a `<trap message>` because the
+// message depends on context so it is specified elsewhere.
+
+// The general trap message is deliberately empty because we have nothing useful
+// to tell the user other that it's a BoundsSafety trap which is already handled by
+// the prefix (`GetBoundsSafetyTrapMessagePrefix()`) that is emitted for all
+// BoundsSafety traps.
+BOUNDS_SAFETY_TRAP(
+    GENERAL, "bounds-safety-generic", "")
+
+BOUNDS_SAFETY_TRAP_CTX(PTR_GT_UPPER_BOUND, "bounds-safety-check-ptr-le-upper-bound")
+BOUNDS_SAFETY_TRAP_CTX(PTR_GE_UPPER_BOUND, "bounds-safety-check-ptr-lt-upper-bound")
+BOUNDS_SAFETY_TRAP_CTX(PTR_LT_LOWER_BOUND, "bounds-safety-check-ptr-ge-lower-bound")
+
+BOUNDS_SAFETY_TRAP(
+    BIDI_TO_INDEXABLE_PTR_LT_LOWER_BOUND,
+    "bounds-safety-check-bidi-to-indexable-ptr-ge-lower-bound",
+    "Converted __indexable pointer is below bounds")
+BOUNDS_SAFETY_TRAP(
+    TERMINATED_BY_PTR_ARITH, "bounds-safety-check-terminated-by-ptr-arith",
+    "Arithmetic on __terminated_by pointer one-past-the-end of the terminator")
+BOUNDS_SAFETY_TRAP(
+    TERMINATED_BY_TERM_ASSIGN, "bounds-safety-check-terminated-by-term-assign",
+    "The terminator cannot be assigned")
+
+BOUNDS_SAFETY_TRAP(TERMINATED_BY_FROM_INDEXABLE_PTR_GT_TERM_PTR,
+    "bounds-safety-check-terminated-by-from-indexable-ptr-le-term-ptr",
+    "Terminator pointer below bounds"
+)
+BOUNDS_SAFETY_TRAP(TERMINATED_BY_FROM_INDEXABLE_TERM_PTR_OVERFLOW,
+    "bounds-safety-check-terminated-by-from-indexable-term-ptr-no-overflow",
+    "Terminator pointer overflows address space"
+)
+BOUNDS_SAFETY_TRAP(TERMINATED_BY_FROM_INDEXABLE_TERM_PTR_PLUS_ONE_GT_UPPER_BOUND,
+    "bounds-safety-check-terminated-by-from-indexable-term-ptr-plus-one-le-upper-bound",
+    "Terminator pointer above bounds"
+)
+
+BOUNDS_SAFETY_TRAP(
+    TERMINATED_BY_FROM_INDEXABLE_TERM,
+    "bounds-safety-check-terminated-by-from-indexable-term",
+    "Cannot find the terminator when converting to __terminated_by pointer from an __indexable pointer")
+BOUNDS_SAFETY_TRAP(
+    INDEXABLE_PTR_NEW_LT_OLD,
+    "bounds-safety-check-new-indexable-ptr-ge-old",
+    "New lower bound less than old lower bound"
+)
+BOUNDS_SAFETY_TRAP(
+    COUNT_NEGATIVE,
+    "bounds-safety-check-count-negative",
+    "Count is negative")
+BOUNDS_SAFETY_TRAP(
+    FLEX_COUNT_GT_BOUNDS,
+    "bounds-safety-check-flexible-count-gt-bounds",
+    "Count for flexible array member is too big")
+BOUNDS_SAFETY_TRAP(
+    PTR_PAST_END_OVERFLOW,
+    "bounds-safety-check-one-past-end-overflow",
+    "Pointer to one past the end overflows address space")

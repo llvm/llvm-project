@@ -361,6 +361,9 @@ CAST_OPERATION(AddressSpaceConversion)
 // Convert an integer initializer to an OpenCL sampler.
 CAST_OPERATION(IntToOCLSampler)
 
+// BoundsSafety: Casting between pointer types with different -fbounds-safety attributes
+CAST_OPERATION(BoundsSafetyPointerCast)
+
 // Truncate a vector type by dropping elements from the end (HLSL only).
 CAST_OPERATION(HLSLVectorTruncation)
 

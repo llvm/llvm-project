@@ -436,6 +436,26 @@ public:
     IncompleteOnly = 3,
   };
 
+  /* TODO(BoundsSafety) Deprecate the flag  */
+  enum BoundsSafetyNewChecksMask {
+    BS_CHK_None = 0,
+
+    BS_CHK_AccessSize = 1 << 0,          // rdar://72252593
+    BS_CHK_IndirectCountUpdate = 1 << 1, // rdar://98749526
+    BS_CHK_ReturnSize = 1 << 2,          // rdar://83900556
+    BS_CHK_EndedByLowerBound = 1 << 3,   // rdar://91596663
+    BS_CHK_CompoundLiteralInit = 1 << 4, // rdar://110871666
+    BS_CHK_LibCAttributes = 1 << 5,      // rdar://84733153
+
+    BS_CHK_All = BS_CHK_AccessSize | BS_CHK_IndirectCountUpdate |
+                 BS_CHK_ReturnSize | BS_CHK_EndedByLowerBound |
+                 BS_CHK_CompoundLiteralInit | BS_CHK_LibCAttributes,
+
+    // This sets the default value assumed by clang if no
+    // `-fbounds-safety-bringup-missing-checks` flags are passed to clang.
+    BS_CHK_Default = BS_CHK_None,
+  };
+
   /// Controls the various implementations for complex multiplication and
   // division.
   enum ComplexRangeKind {
@@ -819,6 +839,36 @@ public:
       return FPExceptionModeKind::FPE_Ignore;
     return EM;
   }
+
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  // Returns true iff -fbounds-safety is enabled. This is a convenience function
+  // that can be called from Xcode disclosed clang without hitting a compilation
+  // error (unlike directly accessing the `BoundsSafety` field).
+  bool hasBoundsSafety() const {
+    return BoundsSafety;
+  }
+
+  // Returns true iff -fbounds-safety-attributes is enabled. This is a
+  // convenience function that can be called from Xcode disclosed clang without
+  // hitting a compilation error (unlike directly accessing the
+  // `BoundsSafetyAttributes` field).
+  bool hasBoundsSafetyAttributes() const {
+    return BoundsSafetyAttributes;
+  }
+
+  // Returns true iff we are compiling in bounds-safety's attribute-only mode.
+  bool isBoundsSafetyAttributeOnlyMode() const {
+    return hasBoundsSafetyAttributes() && !hasBoundsSafety();
+  }
+
+  // Take `enum BoundsSafetyNewChecksMask` value as input and return true if
+  // the mask is set. New -fbounds-safety run-time checks should use this helper
+  // to decide whether to enable/disable the checks.
+  bool hasNewBoundsSafetyCheck(BoundsSafetyNewChecksMask ChkMask) const {
+    return (BoundsSafetyBringUpMissingChecks & ChkMask) != 0;
+  }
+
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 };
 
 /// Floating point control options

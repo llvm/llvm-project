@@ -143,6 +143,16 @@ public:
 
   bool IsDefined() const;
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  /// If the CompilerType is a PointerType and BoundsSafety PointerAttribute
+  /// Indexable set returns true otherwise returns false.
+  bool IsBoundsSafetyIndexable() const;
+
+  /// If the CompilerType is a PointerType and BoundsSafety PointerAttribute
+  /// BidiIndexable set returns true otherwise returns false.
+  bool IsBoundsSafetyBidiIndexable() const;
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   bool IsFloatingPointType(uint32_t &count, bool &is_complex) const;
 
   bool IsFunctionType() const;
@@ -354,6 +364,23 @@ public:
   /// type is valid and the type system supports volatile modifiers, else return
   /// an invalid type.
   CompilerType AddVolatileModifier() const;
+
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  /// If this is a PointerType return a new CompilerType that has the
+  /// BoundsSafetyPointerAttributes Indexable added to this type
+  /// otherwise return an invalid type.
+  CompilerType AddBoundsSafetyIndexableAttribute() const;
+
+  /// If this is a PointerType return a new CompilerType that has the
+  /// BoundsSafetyPointerAttributes BidiIndexable added to this type
+  /// otherwise return an invalid type.
+  CompilerType AddBoundsSafetyBidiIndexableAttribute() const;
+
+  /// If this is a PointerType return a new CompilerType that has the
+  /// BoundsSafetyPointerAttributes UnsafeIndexable added to this type
+  /// otherwise return an invalid type.
+  CompilerType AddBoundsSafetyUnspecifiedAttribute() const;
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   /// Return a new CompilerType that is the atomic type of this type. If this
   /// type is not valid or the type system doesn't support atomic types, this

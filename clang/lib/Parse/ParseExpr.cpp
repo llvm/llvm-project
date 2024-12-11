@@ -1563,6 +1563,44 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
       *NotPrimaryExpression = true;
     Res = ParseBuiltinBitCast();
     break;
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  case tok::kw___builtin_unsafe_forge_bidi_indexable:
+    if (NotPrimaryExpression)
+      *NotPrimaryExpression = true;
+    Res = ParseUnsafeForgeBidiIndexable();
+    break;
+  case tok::kw___builtin_unsafe_forge_single:
+    if (NotPrimaryExpression)
+      *NotPrimaryExpression = true;
+    Res = ParseUnsafeForgeSingle();
+    break;
+  case tok::kw___builtin_unsafe_forge_terminated_by:
+    if (NotPrimaryExpression)
+      *NotPrimaryExpression = true;
+    Res = ParseUnsafeForgeTerminatedBy();
+    break;
+  case tok::kw___builtin_get_pointer_lower_bound:
+  case tok::kw___builtin_get_pointer_upper_bound:
+    if (NotPrimaryExpression)
+      *NotPrimaryExpression = true;
+    Res = ParseGetPointerBound(
+        SavedKind == tok::kw___builtin_get_pointer_lower_bound
+        ? PBK_Lower : PBK_Upper);
+    break;
+  case tok::kw___builtin_terminated_by_to_indexable:
+  case tok::kw___builtin_unsafe_terminated_by_to_indexable:
+    if (NotPrimaryExpression)
+      *NotPrimaryExpression = true;
+    Res = ParseTerminatedByToIndexable(
+        /*Unsafe=*/SavedKind ==
+        tok::kw___builtin_unsafe_terminated_by_to_indexable);
+    break;
+  case tok::kw___builtin_unsafe_terminated_by_from_indexable:
+    if (NotPrimaryExpression)
+      *NotPrimaryExpression = true;
+    Res = ParseUnsafeTerminatedByFromIndexable();
+    break;
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
   case tok::kw_typeid:
     if (NotPrimaryExpression)
       *NotPrimaryExpression = true;
@@ -4027,3 +4065,188 @@ ExprResult Parser::ParseAvailabilityCheckExpr(SourceLocation BeginLoc) {
   return Actions.ObjC().ActOnObjCAvailabilityCheckExpr(
       AvailSpecs, BeginLoc, Parens.getCloseLocation());
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON*/
+/// BoundsSafety: Parse __builtin_unsafe_forge_bidi_indexable(ptr, size).
+ExprResult Parser::ParseUnsafeForgeBidiIndexable() {
+  SourceLocation KWLoc = ConsumeToken();
+
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.expectAndConsume(diag::err_expected_lparen_after, "__builtin_unsafe_forge_bidi_indexable"))
+    return ExprError();
+
+  ExprResult Addr = ParseAssignmentExpression();
+  if (Addr.isInvalid())
+    return ExprError();
+
+  if (ExpectAndConsume(tok::comma)) {
+    Diag(Tok.getLocation(), diag::err_expected) << tok::comma;
+    SkipUntil(tok::r_paren, StopAtSemi);
+    return ExprError();
+  }
+
+  ExprResult Size = ParseAssignmentExpression();
+  if (Size.isInvalid())
+    return ExprError();
+
+  if (T.consumeClose())
+    return ExprError();
+
+  return Actions.ActOnForgeBidiIndexable(KWLoc, Addr.get(), Size.get(),
+                                   T.getCloseLocation());
+}
+
+/// BoundsSafety: Parse __builtin_unsafe_single(ptr).
+ExprResult Parser::ParseUnsafeForgeSingle() {
+  SourceLocation KWLoc = ConsumeToken();
+
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.expectAndConsume(diag::err_expected_lparen_after, "__builtin_unsafe_forge_single"))
+    return ExprError();
+
+  ExprResult Addr = ParseAssignmentExpression();
+  if (Addr.isInvalid())
+    return ExprError();
+
+  if (T.consumeClose())
+    return ExprError();
+
+  return Actions.ActOnForgeSingle(KWLoc, Addr.get(), T.getCloseLocation());
+}
+
+/// BoundsSafety: Parse __builtin_unsafe_forge_terminated_by(ptr, terminator).
+ExprResult Parser::ParseUnsafeForgeTerminatedBy() {
+  SourceLocation KWLoc = ConsumeToken();
+
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.expectAndConsume(diag::err_expected_lparen_after,
+                         "__builtin_unsafe_forge_terminated_by"))
+    return ExprError();
+
+  ExprResult Addr = ParseAssignmentExpression();
+  if (Addr.isInvalid())
+    return ExprError();
+
+  if (ExpectAndConsume(tok::comma)) {
+    Diag(Tok.getLocation(), diag::err_expected) << tok::comma;
+    SkipUntil(tok::r_paren, StopAtSemi);
+    return ExprError();
+  }
+
+  ExprResult Term = ParseConstantExpression();
+  if (Term.isInvalid())
+    return ExprError();
+
+  if (T.consumeClose())
+    return ExprError();
+
+  return Actions.ActOnForgeTerminatedBy(KWLoc, Addr.get(), Term.get(),
+                                        T.getCloseLocation());
+}
+
+ExprResult Parser::ParseGetPointerBound(PointerBoundKind K) {
+  SourceLocation KWLoc = ConsumeToken();
+  ExprResult (Sema::*ActOnBoundExpr)(Expr *, SourceLocation, SourceLocation);
+  const char *ExpectName;
+
+  if (K == PBK_Lower) {
+    ExpectName = "__builtin_get_pointer_lower_bound";
+    ActOnBoundExpr = &Sema::ActOnGetLowerBound;
+  } else {
+    ExpectName = "__builtin_get_pointer_upper_bound";
+    ActOnBoundExpr = &Sema::ActOnGetUpperBound;
+  }
+
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.expectAndConsume(diag::err_expected_lparen_after, ExpectName))
+    return ExprError();
+
+  ExprResult Pointer = ParseAssignmentExpression();
+  if (Pointer.isInvalid())
+    return ExprError();
+
+  if (T.consumeClose())
+    return ExprError();
+
+  return (Actions.*ActOnBoundExpr)(Pointer.get(), KWLoc, T.getCloseLocation());
+}
+
+/// BoundsSafety:
+/// __builtin_terminated_by_to_indexable(pointer [, terminator])
+/// __builtin_unsafe_terminated_by_to_indexable(pointer [, terminator])
+ExprResult Parser::ParseTerminatedByToIndexable(bool Unsafe) {
+  SourceLocation KWLoc = ConsumeToken();
+
+  const char *ExpectName;
+  ExprResult (Sema::*Act)(Expr * PointerExpr, Expr * TerminatorExpr,
+                          SourceLocation BuiltinLoc, SourceLocation RParenLoc);
+  if (Unsafe) {
+    ExpectName = "__builtin_unsafe_terminated_by_to_indexable";
+    Act = &Sema::ActOnUnsafeTerminatedByToIndexable;
+  } else {
+    ExpectName = "__builtin_terminated_by_to_indexable";
+    Act = &Sema::ActOnTerminatedByToIndexable;
+  }
+
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.expectAndConsume(diag::err_expected_lparen_after, ExpectName))
+    return ExprError();
+
+  ExprResult Pointer = ParseAssignmentExpression();
+  if (Pointer.isInvalid())
+    return ExprError();
+
+  Expr *Terminator = nullptr;
+  if (TryConsumeToken(tok::comma)) {
+    ExprResult Res = ParseAssignmentExpression();
+    if (Res.isInvalid())
+      return ExprError();
+    Terminator = Res.get();
+  }
+
+  if (T.consumeClose())
+    return ExprError();
+
+  return (Actions.*Act)(Pointer.get(), Terminator, KWLoc, T.getCloseLocation());
+}
+
+/// BoundsSafety: Parse __builtin_unsafe_terminated_by_from_indexable(terminator,
+/// pointer [, pointer-to-terminator]).
+ExprResult Parser::ParseUnsafeTerminatedByFromIndexable() {
+  SourceLocation KWLoc = ConsumeToken();
+
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.expectAndConsume(diag::err_expected_lparen_after,
+                         "__builtin_unsafe_terminated_by_from_indexable"))
+    return ExprError();
+
+  ExprResult Terminator = ParseAssignmentExpression();
+  if (Terminator.isInvalid())
+    return ExprError();
+
+  if (ExpectAndConsume(tok::comma)) {
+    Diag(Tok.getLocation(), diag::err_expected) << tok::comma;
+    SkipUntil(tok::r_paren, StopAtSemi);
+    return ExprError();
+  }
+
+  ExprResult Pointer = ParseAssignmentExpression();
+  if (Pointer.isInvalid())
+    return ExprError();
+
+  Expr *PointerToTerminator = nullptr;
+  if (TryConsumeToken(tok::comma)) {
+    ExprResult Res = ParseAssignmentExpression();
+    if (Res.isInvalid())
+      return ExprError();
+    PointerToTerminator = Res.get();
+  }
+
+  if (T.consumeClose())
+    return ExprError();
+
+  return Actions.ActOnUnsafeTerminatedByFromIndexable(
+      Terminator.get(), Pointer.get(), PointerToTerminator, KWLoc,
+      T.getCloseLocation());
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/

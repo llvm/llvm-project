@@ -835,6 +835,16 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LA,
     Diag(Tok, diag::warn_attribute_on_function_definition)
       << &LA.AttrName;
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  if (LA.MacroII) {
+    const auto &SM = PP.getSourceManager();
+    CharSourceRange ExpansionRange = SM.getExpansionRange(LA.AttrNameLoc);
+    for (unsigned i = 0; i < Attrs.size(); ++i)
+      Attrs[i].setMacroIdentifier(LA.MacroII, ExpansionRange.getBegin(),
+                                  SM.isInSystemMacro(LA.AttrNameLoc));
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   for (unsigned i = 0, ni = LA.Decls.size(); i < ni; ++i)
     Actions.ActOnFinishDelayedAttribute(getCurScope(), LA.Decls[i], Attrs);
 

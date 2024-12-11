@@ -269,6 +269,10 @@ def err_drv_cannot_read_config_file : Error<
   "cannot read configuration file '%0': %1">;
 def err_drv_arg_requires_bitcode_input: Error<
   "option '%0' requires input to be LLVM bitcode">;
+/* TO_UPSTREAM(BoundsSafety) ON*/
+def err_drv_option_requires_option: Error<
+  "cannot use '%0' without using '%1'">;
+/* TO_UPSTREAM(BoundsSafety) OFF*/
 
 def err_target_unsupported_arch
   : Error<"the target architecture '%0' is not supported by the target '%1'">;
@@ -304,6 +308,10 @@ def err_drv_invalid_value : Error<"invalid value '%1' in '%0'">;
 def err_drv_invalid_int_value : Error<"invalid integral value '%1' in '%0'">;
 def err_drv_invalid_value_with_suggestion : Error<
     "invalid value '%1' in '%0', expected one of: %2">;
+/* TO_UPSTREAM(BoundsSafety) ON*/
+def err_drv_invalid_value_with_flag_suggestion : Error<
+    "invalid value '%1' in '%0'; did you mean '%2'?">;
+/* TO_UPSTREAM(BoundsSafety) OFF*/
 def err_drv_alignment_not_power_of_two : Error<"alignment is not a power of 2 in '%0'">;
 def err_drv_invalid_remap_file : Error<
     "invalid option '%0' not of the form <from-file>;<to-file>">;

@@ -98,6 +98,8 @@ VALUE_DIAGOPT(TabStop, 32, DefaultTabStop) /// The distance between tab stops.
 VALUE_DIAGOPT(MessageLength, 32, 0)
 
 DIAGOPT(ShowSafeBufferUsageSuggestions, 1, 0)
+// TO_UPSTREAM(BoundsSafety)
+DIAGOPT(BoundsSafetyAdoptionMode, 1, 0)
 
 #undef DIAGOPT
 #undef ENUM_DIAGOPT

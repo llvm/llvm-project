@@ -744,6 +744,55 @@ protected:
     unsigned TemplateDepth;
   };
 
+  class AssumptionExprBitfields {
+    friend class ASTStmtReader;
+    friend class AssumptionExpr;
+
+    unsigned : NumExprBits;
+    unsigned NumExprs : 4;
+  };
+
+  class PredefinedBoundsCheckExprBitfields {
+    friend class ASTStmtReader;
+    friend class PredefinedBoundsCheckExpr;
+
+    unsigned : NumExprBits;
+
+    unsigned Kind : 6;
+    unsigned NumChildren;
+  };
+
+  class BoundsCheckExprBitfields {
+    friend class ASTStmtReader;
+    friend class BoundsCheckExpr;
+
+    unsigned : NumExprBits;
+
+    unsigned NumChildren : 31;
+  };
+
+  class BoundsSafetyPointerPromotionExprBitfields {
+    friend class ASTStmtReader;
+    friend class BoundsSafetyPointerPromotionExpr;
+
+    unsigned : NumExprBits;
+
+    /// If this field is is set, CodeGen should perform a null check on the
+    /// pointer and skip evaluating the bounds to avoid introducing unexpected
+    /// null dereference.
+    unsigned NullCheck : 1;
+  };
+
+  class MaterializeSequenceExprBitfields {
+    friend class ASTStmtReader;
+    friend class MaterializeSequenceExpr;
+
+    unsigned : NumExprBits;
+
+    unsigned NumExprs : 32 - 1;
+    unsigned Unbind : 1;
+  };
+
   //===--- C++ Expression bitfields classes ---===//
 
   class CXXOperatorCallExprBitfields {
@@ -1257,6 +1306,13 @@ protected:
 
     // GNU Extensions.
     StmtExprBitfields StmtExprBits;
+
+    // BoundsSafety Expression
+    AssumptionExprBitfields AssumptionExprBits;
+    PredefinedBoundsCheckExprBitfields PredefinedBoundsCheckExprBits;
+    BoundsCheckExprBitfields BoundsCheckExprBits;
+    BoundsSafetyPointerPromotionExprBitfields BoundsSafetyPointerPromotionExprBits;
+    MaterializeSequenceExprBitfields MaterializeSequenceExprBits;
 
     // C++ Expressions
     CXXOperatorCallExprBitfields CXXOperatorCallExprBits;

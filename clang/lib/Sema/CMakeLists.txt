@@ -15,10 +15,17 @@ clang_tablegen(OpenCLBuiltins.inc -gen-clang-opencl-builtins
 
 add_clang_library(clangSema
   AnalysisBasedWarnings.cpp
+  # TO_UPSTREAM(BoundsSafety) ON
+  BoundsSafetySuggestions.cpp
+  # TO_UPSTREAM(BoundsSafety) OFF
   CheckExprLifetime.cpp
   CodeCompleteConsumer.cpp
   DeclSpec.cpp
   DelayedDiagnostic.cpp
+  # TO_UPSTREAM(BoundsSafety) ON
+  DynamicCountPointerAssignmentAnalysis.cpp
+  DynamicCountPointerAssignmentAnalysisExported.cpp
+  # TO_UPSTREAM(BoundsSafety) OFF
   HLSLExternalSemaSource.cpp
   IdentifierResolver.cpp
   JumpDiagnostics.cpp

@@ -1979,6 +1979,77 @@ defm bounds_safety : BoolFOption<
   BothFlags<[], [CC1Option],
           " experimental bounds safety extension for C">>;
 
+// TO_UPSTREAM(BoundsSafety) ON
+// Apple internal clients currently use `-fbounds-safety` so provide
+// aliases to upstream's `-fexperimental-bounds-safety` flag. When
+// upstream eventually drops the `experimental-` prefix these aliases
+// can be removed.
+def : Flag<["-"], "fbounds-safety">, Visibility<[ClangOption, CC1Option]>,
+  Alias<fbounds_safety>, HelpText<"Enable bounds safety extension for C">;
+def : Flag<["-"], "fno-bounds-safety">, Visibility<[ClangOption, CC1Option]>,
+  Alias<fno_bounds_safety>, HelpText<"Disable bounds safety extension for C">;
+
+// Aliases for -fbounds-safety to remove once these are stripped from adopters
+def : Flag<["-"], "fbounds-attributes">, Visibility<[ClangOption, CC1Option]>,
+  Alias<fbounds_safety>;
+def : Flag<["-"], "fno-bounds-attributes">, Visibility<[ClangOption, CC1Option]>,
+  Alias<fno_bounds_safety>;
+defm experimental_bounds_safety_attributes : BoolFOption<
+  "experimental-bounds-safety-attributes",
+  LangOpts<"BoundsSafetyAttributes">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption, CC1Option], " experimental attributes">>;
+defm bounds_attributes_cxx_experimental : BoolFOption<
+  "bounds-attributes-cxx-experimental",
+  LangOpts<"BoundsAttributesCXXExperimental">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption, CC1Option],
+          " experimental bounds attributes for C++">>;
+defm bounds_attributes_objc_experimental : BoolFOption<
+  "bounds-attributes-objc-experimental",
+  LangOpts<"BoundsAttributesObjCExperimental">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption, CC1Option],
+          " experimental bounds attributes for ObjC">>;
+defm bounds_safety_relaxed_system_headers : BoolFOption<
+  "bounds-safety-relaxed-system-headers",
+  LangOpts<"BoundsSafetyRelaxedSystemHeaders">, DefaultTrue,
+  PosFlag<SetTrue, [], [ClangOption], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption, CC1Option],
+          " relaxed bounds safety rules for code in system headers">>;
+defm bounds_safety_adoption_mode : BoolFOption<"bounds-safety-adoption-mode",
+  DiagnosticOpts<"BoundsSafetyAdoptionMode">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption, CC1Option],
+          " generating improved -fbounds-safety diagnostics to aid engineers "
+          "adopting -fbounds-safety. This is off by default to avoid impacting "
+          "compile times">>;
+
+def fbounds_safety_bringup_missing_checks_EQ : CommaJoined<["-"], "fbounds-safety-bringup-missing-checks=">, Group<f_Group>,
+  MetaVarName<"<check>">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Enable a set of new -fbounds-safety run-time checks, (option: access_size, indirect_count_update, return_size, ended_by_lower_bound, compound_literal_init, libc_attributes, all)">;
+
+def fno_bounds_safety_bringup_missing_checks_EQ : CommaJoined<["-"], "fno-bounds-safety-bringup-missing-checks=">, Group<f_Group>,
+  MetaVarName<"<check>">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Disable a set of new -fbounds-safety run-time checks, (option: access_size, indirect_count_update, return_size, ended_by_lower_bound, compound_literal_init, libc_attributes, all)">;
+
+def fbounds_safety_bringup_missing_checks : Flag<["-"], "fbounds-safety-bringup-missing-checks">, Group<f_Group>,
+  Visibility<[ClangOption]>,
+  Alias<fbounds_safety_bringup_missing_checks_EQ>, AliasArgs<["all"]>,
+  HelpText<"Enable new -fbounds-safety run-time checks">;
+
+def fno_bounds_safety_bringup_missing_checks : Flag<["-"], "fno-bounds-safety-bringup-missing-checks">, Group<f_Group>,
+  Visibility<[ClangOption]>,
+  Alias<fno_bounds_safety_bringup_missing_checks_EQ>, AliasArgs<["all"]>,
+  HelpText<"Disable new -fbounds-safety run-time checks">;
+
 defm addrsig : BoolFOption<"addrsig",
   CodeGenOpts<"Addrsig">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Emit">,
@@ -4159,6 +4230,24 @@ def ftrap_function_EQ : Joined<["-"], "ftrap-function=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Issue call to specified function rather than a trap instruction">,
   MarshallingInfoString<CodeGenOpts<"TrapFuncName">>;
+/* TO_UPSTREAM(BoundsSafety) ON */
+defm trap_function_returns : BoolFOption<"trap-function-returns",
+  CodeGenOpts<"TrapFuncReturns">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "The trap function specified by -ftrap-function may return normally">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option],
+          "The trap function specified by -ftrap-function never returns">>;
+defm unique_traps : BoolFOption<"unique-traps",
+  CodeGenOpts<"UniqueTrapBlocks">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option],
+    "Make trap instructions unique by preventing traps from being merged by the"
+    " optimizer. This is useful for preserving the debug information on traps "
+    "in optimized code. This makes it easier to debug programs at the cost of "
+    "increased code size">,
+  NegFlag<SetFalse, [], [CC1Option],
+    "Don't try to make trap instructions unique. This allows trap instructions "
+    "to be merged by the optimizer.">>;
+/* TO_UPSTREAM(BoundsSafety) OFF */
 def funroll_loops : Flag<["-"], "funroll-loops">, Group<f_Group>,
   HelpText<"Turn on loop unroller">, Visibility<[ClangOption, CC1Option]>;
 def fno_unroll_loops : Flag<["-"], "fno-unroll-loops">, Group<f_Group>,

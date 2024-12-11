@@ -12,8 +12,7 @@ define i1 @overflow_check_1(ptr %dst) {
 ; CHECK-NEXT:    br i1 [[DST_5_UGE]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[DST_4:%.*]] = getelementptr i32, ptr [[DST]], i64 4
-; CHECK-NEXT:    [[TRUE_DST_4_UGE:%.*]] = icmp uge ptr [[DST_4]], [[DST]]
-; CHECK-NEXT:    ret i1 [[TRUE_DST_4_UGE]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -40,8 +39,7 @@ define i1 @overflow_check_2_and(ptr %dst) {
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[DST_4:%.*]] = getelementptr i32, ptr [[DST]], i64 4
-; CHECK-NEXT:    [[TRUE_DST_4_UGE:%.*]] = icmp uge ptr [[DST_4]], [[DST]]
-; CHECK-NEXT:    ret i1 [[TRUE_DST_4_UGE]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -69,8 +67,7 @@ define i1 @overflow_check_3_and(ptr %dst) {
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[DST_4:%.*]] = getelementptr i32, ptr [[DST]], i64 4
-; CHECK-NEXT:    [[DST_4_UGE:%.*]] = icmp uge ptr [[DST_4]], [[DST]]
-; CHECK-NEXT:    ret i1 [[DST_4_UGE]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    [[ELSE_DST_4:%.*]] = getelementptr i32, ptr [[DST]], i64 4
 ; CHECK-NEXT:    [[ELSE_DST_4_UGE:%.*]] = icmp uge ptr [[ELSE_DST_4]], [[DST]]
@@ -102,10 +99,8 @@ define i1 @overflow_check_4_and(ptr %dst) {
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[DST_4:%.*]] = getelementptr i32, ptr [[DST]], i64 4
-; CHECK-NEXT:    [[TRUE_DST_4_UGE:%.*]] = icmp uge ptr [[DST_4]], [[DST]]
 ; CHECK-NEXT:    [[DST_5_2:%.*]] = getelementptr i32, ptr [[DST]], i64 5
-; CHECK-NEXT:    [[TRUE_DST_5_UGE:%.*]] = icmp uge ptr [[DST_5_2]], [[DST]]
-; CHECK-NEXT:    [[RES_0:%.*]] = xor i1 [[TRUE_DST_4_UGE]], [[TRUE_DST_5_UGE]]
+; CHECK-NEXT:    [[RES_0:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[DST_6:%.*]] = getelementptr i32, ptr [[DST]], i64 6
 ; CHECK-NEXT:    [[C_DST_6_UGE:%.*]] = icmp uge ptr [[DST_6]], [[DST]]
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[RES_0]], [[C_DST_6_UGE]]
@@ -188,9 +183,7 @@ define i1 @upper_and_lower_checks_1(ptr %dst, i32 %n) {
 ; CHECK-NEXT:    br i1 [[AND_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[DST_4:%.*]] = getelementptr i32, ptr [[DST]], i64 4
-; CHECK-NEXT:    [[TRUE_DST_4_ULT:%.*]] = icmp ult ptr [[DST_4]], [[UPPER]]
-; CHECK-NEXT:    [[TRUE_DST_4_UGE:%.*]] = icmp uge ptr [[DST_4]], [[DST]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[TRUE_DST_4_ULT]], [[TRUE_DST_4_UGE]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 true, true
 ; CHECK-NEXT:    ret i1 [[AND]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
@@ -304,10 +297,9 @@ define i1 @upper_and_lower_checks_lt(ptr %dst, i32 %n) {
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[DST_3:%.*]] = getelementptr i32, ptr [[DST]], i64 3
-; CHECK-NEXT:    [[TRUE_DST_3_UGE:%.*]] = icmp uge ptr [[DST_3]], [[DST]]
 ; CHECK-NEXT:    [[DST_4:%.*]] = getelementptr i32, ptr [[DST]], i64 4
 ; CHECK-NEXT:    [[C_DST_4_UGE:%.*]] = icmp uge ptr [[DST_4]], [[DST]]
-; CHECK-NEXT:    [[RES_0:%.*]] = xor i1 [[TRUE_DST_3_UGE]], [[C_DST_4_UGE]]
+; CHECK-NEXT:    [[RES_0:%.*]] = xor i1 true, [[C_DST_4_UGE]]
 ; CHECK-NEXT:    ret i1 [[RES_0]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
@@ -331,3 +323,345 @@ then:
 else:
   ret i1 0
 }
+
+; The bitcasts in the function are no-ops and %dst.4 can be treated as nuw.
+define i1 @overflow_check_with_bitcast_1(i32* %dst) {
+; CHECK-LABEL: @overflow_check_with_bitcast_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DST_CAST:%.*]] = bitcast ptr [[DST:%.*]] to ptr
+; CHECK-NEXT:    [[DST_5:%.*]] = getelementptr i32, ptr [[DST]], i64 5
+; CHECK-NEXT:    [[DST_5_CAST:%.*]] = bitcast ptr [[DST_5]] to ptr
+; CHECK-NEXT:    [[DST_5_UGE:%.*]] = icmp uge ptr [[DST_5_CAST]], [[DST_CAST]]
+; CHECK-NEXT:    br i1 [[DST_5_UGE]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[DST_4:%.*]] = getelementptr i32, ptr [[DST]], i64 4
+; CHECK-NEXT:    ret i1 true
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %dst.cast = bitcast i32* %dst to i8*
+  %dst.5 = getelementptr i32, i32* %dst, i64 5
+  %dst.5.cast = bitcast i32* %dst.5 to i8*
+  %dst.5.uge = icmp uge i8* %dst.5.cast, %dst.cast
+  br i1 %dst.5.uge, label %then, label %else
+
+then:
+  %dst.4 = getelementptr i32, i32* %dst, i64 4
+  %true.dst.4.uge = icmp uge i32* %dst.4, %dst
+  ret i1 %true.dst.4.uge
+
+else:
+  ret i1 0
+}
+
+; The bitcasts in the function are no-ops, but %dst.5 cannot be treated as nuw,
+; because its index (6) exceeds the known-safe one (5).
+define i1 @overflow_check_with_bitcast_2(i32* %dst) {
+; CHECK-LABEL: @overflow_check_with_bitcast_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DST_CAST:%.*]] = bitcast ptr [[DST:%.*]] to ptr
+; CHECK-NEXT:    [[DST_5:%.*]] = getelementptr i32, ptr [[DST]], i64 5
+; CHECK-NEXT:    [[DST_5_CAST:%.*]] = bitcast ptr [[DST_5]] to ptr
+; CHECK-NEXT:    [[DST_5_UGE:%.*]] = icmp uge ptr [[DST_5_CAST]], [[DST_CAST]]
+; CHECK-NEXT:    br i1 [[DST_5_UGE]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[DST_6:%.*]] = getelementptr i32, ptr [[DST]], i64 6
+; CHECK-NEXT:    [[DST_6_UGE:%.*]] = icmp uge ptr [[DST_6]], [[DST]]
+; CHECK-NEXT:    ret i1 [[DST_6_UGE]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %dst.cast = bitcast i32* %dst to i8*
+  %dst.5 = getelementptr i32, i32* %dst, i64 5
+  %dst.5.cast = bitcast i32* %dst.5 to i8*
+  %dst.5.uge = icmp uge i8* %dst.5.cast, %dst.cast
+  br i1 %dst.5.uge, label %then, label %else
+
+then:
+  %dst.6 = getelementptr i32, i32* %dst, i64 6
+  %dst.6.uge = icmp uge i32* %dst.6, %dst
+  ret i1 %dst.6.uge
+
+else:
+  ret i1 0
+}
+
+; addrspacecast may modify the address value. Do not look through them to
+; determine safe bounds for GEPs.
+define i1 @overflow_check_with_addrspacecast_1(i32* %dst) {
+; CHECK-LABEL: @overflow_check_with_addrspacecast_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DST_CAST:%.*]] = addrspacecast ptr [[DST:%.*]] to ptr addrspace(1)
+; CHECK-NEXT:    [[DST_5:%.*]] = getelementptr i32, ptr [[DST]], i64 5
+; CHECK-NEXT:    [[DST_5_CAST:%.*]] = addrspacecast ptr [[DST_5]] to ptr addrspace(1)
+; CHECK-NEXT:    [[DST_5_UGE:%.*]] = icmp uge ptr addrspace(1) [[DST_5_CAST]], [[DST_CAST]]
+; CHECK-NEXT:    br i1 [[DST_5_UGE]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[DST_4:%.*]] = getelementptr i32, ptr [[DST]], i64 4
+; CHECK-NEXT:    [[DST_4_UGE:%.*]] = icmp uge ptr [[DST_4]], [[DST]]
+; CHECK-NEXT:    ret i1 [[DST_4_UGE]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %dst.cast = addrspacecast i32* %dst to i8 addrspace(1) *
+  %dst.5 = getelementptr i32, i32* %dst, i64 5
+  %dst.5.cast = addrspacecast i32* %dst.5 to i8 addrspace(1) *
+  %dst.5.uge = icmp uge i8 addrspace(1)* %dst.5.cast, %dst.cast
+  br i1 %dst.5.uge, label %then, label %else
+
+then:
+  %dst.4 = getelementptr i32, i32* %dst, i64 4
+  %dst.4.uge = icmp uge i32* %dst.4, %dst
+  ret i1 %dst.4.uge
+
+else:
+  ret i1 0
+}
+
+; addrspacecast may modify the address value. Do not look through them to
+; determine safe bounds for GEPs.
+define i1 @overflow_check_with_addrspacecast_2(i32* %dst) {
+; CHECK-LABEL: @overflow_check_with_addrspacecast_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DST_CAST:%.*]] = addrspacecast ptr [[DST:%.*]] to ptr addrspace(1)
+; CHECK-NEXT:    [[DST_5:%.*]] = getelementptr i32, ptr [[DST]], i64 5
+; CHECK-NEXT:    [[DST_5_CAST:%.*]] = addrspacecast ptr [[DST_5]] to ptr addrspace(1)
+; CHECK-NEXT:    [[DST_5_UGE:%.*]] = icmp uge ptr addrspace(1) [[DST_5_CAST]], [[DST_CAST]]
+; CHECK-NEXT:    br i1 [[DST_5_UGE]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[DST_6:%.*]] = getelementptr i32, ptr [[DST]], i64 6
+; CHECK-NEXT:    [[DST_6_UGE:%.*]] = icmp uge ptr [[DST_6]], [[DST]]
+; CHECK-NEXT:    ret i1 [[DST_6_UGE]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %dst.cast = addrspacecast i32* %dst to i8 addrspace(1) *
+  %dst.5 = getelementptr i32, i32* %dst, i64 5
+  %dst.5.cast = addrspacecast i32* %dst.5 to i8 addrspace(1) *
+  %dst.5.uge = icmp uge i8 addrspace(1)* %dst.5.cast, %dst.cast
+  br i1 %dst.5.uge, label %then, label %else
+
+then:
+  %dst.6 = getelementptr i32, i32* %dst, i64 6
+  %dst.6.uge = icmp uge i32* %dst.6, %dst
+  ret i1 %dst.6.uge
+
+else:
+  ret i1 0
+}
+
+
+%struct.1 = type { i32, i64, i8 }
+
+define i1 @gep_2d_known_inbounds(%struct.1* %start, i32 %idx) {
+; CHECK-LABEL: @gep_2d_known_inbounds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr [[STRUCT_1:%.*]], ptr [[START:%.*]], i64 6, i32 1
+; CHECK-NEXT:    [[ADD_PTR_CAST:%.*]] = bitcast ptr [[ADD_PTR]] to ptr
+; CHECK-NEXT:    [[START_CAST:%.*]] = bitcast ptr [[START]] to ptr
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge ptr [[ADD_PTR_CAST]], [[START_CAST]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[IDX:%.*]] to i64
+; CHECK-NEXT:    [[START_0:%.*]] = getelementptr [[STRUCT_1]], ptr [[START]], i64 4, i32 1
+; CHECK-NEXT:    [[START_0_CAST:%.*]] = bitcast ptr [[START_0]] to ptr
+; CHECK-NEXT:    ret i1 true
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %add.ptr = getelementptr %struct.1, %struct.1* %start, i64 6, i32 1
+  %add.ptr.cast = bitcast i64* %add.ptr to i8*
+  %start.cast = bitcast %struct.1* %start to i8*
+  %c.1 = icmp uge i8* %add.ptr.cast, %start.cast
+  br i1 %c.1, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %idx.ext = zext i32 %idx to i64
+  %start.0 = getelementptr %struct.1, %struct.1* %start, i64 4, i32 1
+  %start.0.cast = bitcast i64* %start.0 to i8*
+  %c.0 = icmp uge i8* %start.0.cast, %start.cast
+  ret i1 %c.0
+
+if.end:                                           ; preds = %entry
+  ret i1 1
+}
+
+define i1 @gep_2d_known_first_dimension_not_inbounds(%struct.1* %start, i32 %idx) {
+; CHECK-LABEL: @gep_2d_known_first_dimension_not_inbounds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr [[STRUCT_1:%.*]], ptr [[START:%.*]], i64 6, i32 1
+; CHECK-NEXT:    [[ADD_PTR_CAST:%.*]] = bitcast ptr [[ADD_PTR]] to ptr
+; CHECK-NEXT:    [[START_CAST:%.*]] = bitcast ptr [[START]] to ptr
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge ptr [[ADD_PTR_CAST]], [[START_CAST]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[IDX:%.*]] to i64
+; CHECK-NEXT:    [[START_0:%.*]] = getelementptr [[STRUCT_1]], ptr [[START]], i64 8, i32 1
+; CHECK-NEXT:    [[START_0_CAST:%.*]] = bitcast ptr [[START_0]] to ptr
+; CHECK-NEXT:    [[C_0:%.*]] = icmp uge ptr [[START_0_CAST]], [[START_CAST]]
+; CHECK-NEXT:    ret i1 [[C_0]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %add.ptr = getelementptr %struct.1, %struct.1* %start, i64 6, i32 1
+  %add.ptr.cast = bitcast i64* %add.ptr to i8*
+  %start.cast = bitcast %struct.1* %start to i8*
+  %c.1 = icmp uge i8* %add.ptr.cast, %start.cast
+  br i1 %c.1, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %idx.ext = zext i32 %idx to i64
+  %start.0 = getelementptr %struct.1, %struct.1* %start, i64 8, i32 1
+  %start.0.cast = bitcast i64* %start.0 to i8*
+  %c.0 = icmp uge i8* %start.0.cast, %start.cast
+  ret i1 %c.0
+
+if.end:                                           ; preds = %entry
+  ret i1 1
+}
+
+%struct.2 = type { i32, [20 x i64], i8 }
+
+; TODO: Should keep and use multiple upper bounds.
+define i1 @geps_2d_all_dimensions_inbounds(%struct.2* %start, i32 %idx) {
+; CHECK-LABEL: @geps_2d_all_dimensions_inbounds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr [[STRUCT_2:%.*]], ptr [[START:%.*]], i64 6, i32 1, i64 5
+; CHECK-NEXT:    [[ADD_PTR_CAST:%.*]] = bitcast ptr [[ADD_PTR]] to ptr
+; CHECK-NEXT:    [[START_CAST:%.*]] = bitcast ptr [[START]] to ptr
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge ptr [[ADD_PTR_CAST]], [[START_CAST]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[IDX:%.*]] to i64
+; CHECK-NEXT:    [[START_0:%.*]] = getelementptr [[STRUCT_2]], ptr [[START]], i64 5, i32 1, i64 4
+; CHECK-NEXT:    [[START_0_CAST:%.*]] = bitcast ptr [[START_0]] to ptr
+; CHECK-NEXT:    ret i1 true
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %add.ptr = getelementptr %struct.2, %struct.2* %start, i64 6, i32 1, i64 5
+  %add.ptr.cast = bitcast i64* %add.ptr to i8*
+  %start.cast = bitcast %struct.2* %start to i8*
+  %c.1 = icmp uge i8* %add.ptr.cast, %start.cast
+  br i1 %c.1, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %idx.ext = zext i32 %idx to i64
+  %start.0 = getelementptr %struct.2, %struct.2* %start, i64 5, i32 1, i64 4
+  %start.0.cast = bitcast i64* %start.0 to i8*
+  %c.0 = icmp uge i8* %start.0.cast, %start.cast
+  ret i1 %c.0
+
+if.end:                                           ; preds = %entry
+  ret i1 1
+}
+
+define i1 @geps_2d_first_dimension_may_not_be_inbounds(%struct.2* %start, i32 %idx) {
+; CHECK-LABEL: @geps_2d_first_dimension_may_not_be_inbounds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr [[STRUCT_2:%.*]], ptr [[START:%.*]], i64 6, i32 1, i64 3
+; CHECK-NEXT:    [[ADD_PTR_CAST:%.*]] = bitcast ptr [[ADD_PTR]] to ptr
+; CHECK-NEXT:    [[START_CAST:%.*]] = bitcast ptr [[START]] to ptr
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge ptr [[ADD_PTR_CAST]], [[START_CAST]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[IDX:%.*]] to i64
+; CHECK-NEXT:    [[START_0:%.*]] = getelementptr [[STRUCT_2]], ptr [[START]], i64 6, i32 1, i64 5
+; CHECK-NEXT:    [[START_0_CAST:%.*]] = bitcast ptr [[START_0]] to ptr
+; CHECK-NEXT:    [[C_0:%.*]] = icmp uge ptr [[START_0_CAST]], [[START_CAST]]
+; CHECK-NEXT:    ret i1 [[C_0]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %add.ptr = getelementptr %struct.2, %struct.2* %start, i64 6, i32 1, i64 3
+  %add.ptr.cast = bitcast i64* %add.ptr to i8*
+  %start.cast = bitcast %struct.2* %start to i8*
+  %c.1 = icmp uge i8* %add.ptr.cast, %start.cast
+  br i1 %c.1, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %idx.ext = zext i32 %idx to i64
+  %start.0 = getelementptr %struct.2, %struct.2* %start, i64 6, i32 1, i64 5
+  %start.0.cast = bitcast i64* %start.0 to i8*
+  %c.0 = icmp uge i8* %start.0.cast, %start.cast
+  ret i1 %c.0
+
+if.end:                                           ; preds = %entry
+  ret i1 1
+}
+
+define i1 @geps_2d_third_dimension_may_not_be_inbounds(%struct.2* %start, i32 %idx) {
+; CHECK-LABEL: @geps_2d_third_dimension_may_not_be_inbounds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr [[STRUCT_2:%.*]], ptr [[START:%.*]], i64 6, i32 1, i64 3
+; CHECK-NEXT:    [[ADD_PTR_CAST:%.*]] = bitcast ptr [[ADD_PTR]] to ptr
+; CHECK-NEXT:    [[START_CAST:%.*]] = bitcast ptr [[START]] to ptr
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge ptr [[ADD_PTR_CAST]], [[START_CAST]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[IDX:%.*]] to i64
+; CHECK-NEXT:    [[START_0:%.*]] = getelementptr [[STRUCT_2]], ptr [[START]], i64 6, i32 1, i64 5
+; CHECK-NEXT:    [[START_0_CAST:%.*]] = bitcast ptr [[START_0]] to ptr
+; CHECK-NEXT:    [[C_0:%.*]] = icmp uge ptr [[START_0_CAST]], [[START_CAST]]
+; CHECK-NEXT:    ret i1 [[C_0]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %add.ptr = getelementptr %struct.2, %struct.2* %start, i64 6, i32 1, i64 3
+  %add.ptr.cast = bitcast i64* %add.ptr to i8*
+  %start.cast = bitcast %struct.2* %start to i8*
+  %c.1 = icmp uge i8* %add.ptr.cast, %start.cast
+  br i1 %c.1, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %idx.ext = zext i32 %idx to i64
+  %start.0 = getelementptr %struct.2, %struct.2* %start, i64 6, i32 1, i64 5
+  %start.0.cast = bitcast i64* %start.0 to i8*
+  %c.0 = icmp uge i8* %start.0.cast, %start.cast
+  ret i1 %c.0
+
+if.end:                                           ; preds = %entry
+  ret i1 1
+}
+
+; The information from the inbounds GEP %upper cannot be used, because %n is
+; not known non-negative. Conditions that do not require GEP decomposition to
+; simplify are still handled.
+define i1 @information_from_inbounds_cannot_be_used_as_offset_is_not_known_non_negative(i32* %dst, i32 %n, i8 %idx, i32* %ptr) {
+; CHECK-LABEL: @information_from_inbounds_cannot_be_used_as_offset_is_not_known_non_negative(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i32 [[N:%.*]]
+; CHECK-NEXT:    call void @noundef(ptr noundef [[UPPER]])
+; CHECK-NEXT:    [[GEP_IDX:%.*]] = getelementptr i32, ptr [[DST]], i8 [[IDX:%.*]]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp uge ptr [[GEP_IDX]], [[PTR:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %upper = getelementptr inbounds i32, i32* %dst, i32 %n
+  call void @noundef(i32* noundef %upper)
+  %gep.idx = getelementptr i32, i32* %dst, i8 %idx
+  %cmp.1 = icmp uge i32* %gep.idx, %ptr
+  br i1 %cmp.1, label %then, label %else
+
+then:
+  %cmp.2 = icmp uge i32* %gep.idx, %ptr
+  ret i1 %cmp.2
+
+else:
+  ret i1 0
+}
+
+declare void @noundef(i32* noundef)

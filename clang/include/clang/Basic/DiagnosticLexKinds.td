@@ -1007,6 +1007,15 @@ def err_pp_eof_in_assume_nonnull : Error<
 
 }
 
+// TO_UPSTREAM(BoundsSafety) ON
+let CategoryName = "BoundsSafety Pointer Attributes Issue" in {
+
+def err_pp_abi_ptr_attr_set_syntax : Error<
+  "expected 'set(attr1 [attr2 ...])'">;
+
+}
+// TO_UPSTREAM(BoundsSafety) OFF
+
 let CategoryName = "Dependency Directive Source Scanner Issue" in {
 
 def err_dep_source_scanner_missing_semi_after_at_import : Error<

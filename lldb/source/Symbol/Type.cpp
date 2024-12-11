@@ -728,6 +728,21 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
     }
   }
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  if (m_name.GetStringRef().starts_with("__bounds_safety::wide_ptr")) {
+    std::string name;
+    m_compiler_type = m_compiler_type.GetFieldAtIndex(0, name, nullptr, nullptr, nullptr);
+    m_symbol_file->CompleteType(m_compiler_type);
+
+    if (m_name.GetStringRef().contains("bidi_indexable"))
+      m_compiler_type = m_compiler_type.AddBoundsSafetyBidiIndexableAttribute();
+    else
+      m_compiler_type = m_compiler_type.AddBoundsSafetyIndexableAttribute();
+
+    m_name = m_compiler_type.GetTypeName();
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   // If we have an encoding type, then we need to make sure it is resolved
   // appropriately.
   if (m_encoding_uid != LLDB_INVALID_UID) {

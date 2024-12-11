@@ -21,8 +21,7 @@ define i1 @inbounds_poison_is_ub_in_use_block_1(ptr %src, i32 %n, i32 %idx) {
 ; CHECK-NEXT:    br i1 [[CMP_IDX]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    call void @noundef(ptr [[UPPER]])
-; CHECK-NEXT:    [[CMP_UPPER_1:%.*]] = icmp ule ptr [[SRC_IDX]], [[UPPER]]
-; CHECK-NEXT:    ret i1 [[CMP_UPPER_1]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    [[CMP_UPPER_2:%.*]] = icmp ule ptr [[SRC_IDX]], [[UPPER]]
 ; CHECK-NEXT:    ret i1 [[CMP_UPPER_2]]
@@ -55,9 +54,8 @@ define i1 @inbounds_poison_is_ub_in_use_block_2(ptr %src, i32 %n, i32 %idx, i1 %
 ; CHECK-NEXT:    [[SRC_IDX:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    br i1 [[CMP_IDX]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[CMP_UPPER_1:%.*]] = icmp ule ptr [[SRC_IDX]], [[UPPER]]
 ; CHECK-NEXT:    call void @noundef(ptr [[UPPER]])
-; CHECK-NEXT:    ret i1 [[CMP_UPPER_1]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    [[CMP_UPPER_2:%.*]] = icmp ule ptr [[SRC_IDX]], [[UPPER]]
 ; CHECK-NEXT:    ret i1 [[CMP_UPPER_2]]
@@ -96,8 +94,7 @@ define i1 @inbounds_poison_is_ub_in_use_block_by_assume(ptr %src, i32 %n, i32 %i
 ; CHECK:       then:
 ; CHECK-NEXT:    [[CMP_NE:%.*]] = icmp ule ptr null, [[UPPER]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_NE]])
-; CHECK-NEXT:    [[CMP_UPPER_1:%.*]] = icmp ule ptr [[SRC_IDX]], [[UPPER]]
-; CHECK-NEXT:    ret i1 [[CMP_UPPER_1]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    [[CMP_UPPER_2:%.*]] = icmp ule ptr [[SRC_IDX]], [[UPPER]]
 ; CHECK-NEXT:    ret i1 [[CMP_UPPER_2]]
@@ -138,8 +135,7 @@ define i1 @inbounds_poison_is_ub_in_in_multiple_use_blocks_1(ptr %src, i32 %n, i
 ; CHECK-NEXT:    br i1 [[CMP_IDX]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    call void @noundef(ptr [[UPPER]])
-; CHECK-NEXT:    [[CMP_UPPER_1:%.*]] = icmp ule ptr [[SRC_IDX]], [[UPPER]]
-; CHECK-NEXT:    ret i1 [[CMP_UPPER_1]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    [[CMP_UPPER_2:%.*]] = icmp ule ptr [[SRC_IDX]], [[UPPER]]
 ; CHECK-NEXT:    ret i1 [[CMP_UPPER_2]]
@@ -278,4 +274,26 @@ else:
   call void @llvm.assume(i1 %cmp.ne)
   %cmp.upper.2 = icmp ule ptr %src.idx, %upper
   ret i1 %cmp.upper.2
+}
+
+define i1 @test_use_in_unreachable_block(i32* nocapture %y) {
+; CHECK-LABEL: @test_use_in_unreachable_block(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[Y:%.*]], i64 3
+; CHECK-NEXT:    ret i1 false
+; CHECK:       unreachable.bb:
+; CHECK-NEXT:    call void @noundef(ptr [[UPPER]])
+; CHECK-NEXT:    [[Y_1:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule ptr [[Y_1]], [[UPPER]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %upper = getelementptr inbounds i32, i32* %y, i64 3
+  ret i1 false
+
+unreachable.bb:
+  call void @noundef(i32* %upper)
+  %y.1 = getelementptr inbounds i32, i32* %y, i64 1
+  %cmp = icmp ule i32* %y.1, %upper
+  ret i1 %cmp
 }

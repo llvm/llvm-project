@@ -1021,6 +1021,11 @@ def warn_unpacked_field
       InGroup<PackedNonPod>,
       DefaultIgnore;
 
+// TO_UPSTREAM(BoundsSafety) ON
+def err_bounds_safety_evaluate_no_bounds : Error<
+  "cannot get %select{lower,upper}0 bound because object size is unknown">;
+// TO_UPSTREAM(BoundsSafety) OFF
+
 // -Wunaligned-access
 def warn_unaligned_access : Warning<
   "field %1 within %0 is less aligned than %2 and is usually due to %0 being "

@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "DynamicCountPointerAssignmentAnalysis.h"
+#include "TreeTransform.h"
 #include "TypeLocBuilder.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -2314,13 +2316,67 @@ FunctionDecl *Sema::CreateBuiltin(IdentifierInfo *II, QualType Type,
   // FunctionDecl.
   if (const FunctionProtoType *FT = dyn_cast<FunctionProtoType>(Type)) {
     SmallVector<ParmVarDecl *, 16> Params;
+    // TO_UPSTREAM(BoundsSafety)
+    SmallVector<QualType, 16> NewParamTypes;
     for (unsigned i = 0, e = FT->getNumParams(); i != e; ++i) {
       ParmVarDecl *parm = ParmVarDecl::Create(
           Context, New, SourceLocation(), SourceLocation(), nullptr,
           FT->getParamType(i), /*TInfo=*/nullptr, SC_None, nullptr);
       parm->setScopeInfo(0, i);
       Params.push_back(parm);
+      // TO_UPSTREAM(BoundsSafety)
+      NewParamTypes.push_back(FT->getParamType(i));
     }
+
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    if (getLangOpts().BoundsSafety) {
+      // We add size annotations for builtin memory manipulation functions
+      // such that there is a semantic and runtime checks for pointer arguments
+      // with sizes.
+      unsigned MemFnKind = New->getMemoryFunctionKind();
+      bool NeedReturnSize =  MemFnKind == Builtin::BImemcpy ||
+                            MemFnKind == Builtin::BImemset ||
+                            MemFnKind == Builtin::BImemmove;
+      bool NeedDestSize = MemFnKind == Builtin::BImemcpy ||
+                          MemFnKind == Builtin::BImempcpy ||
+                          MemFnKind == Builtin::BImemset ||
+                          MemFnKind == Builtin::BImemmove;
+      bool NeedSrcSize = MemFnKind == Builtin::BImemcpy ||
+                          MemFnKind == Builtin::BImempcpy ||
+                          MemFnKind == Builtin::BImemmove;
+
+      auto BuildNewDynamicSizeType = [&](QualType Ty) {
+        auto NewSizeRef = DeclRefExpr::Create(Context, Params[2]->getQualifierLoc(),
+            SourceLocation(), Params[2], true, SourceLocation(), Params[2]->getType(), VK_LValue, Params[2]);
+        return BuildCountAttributedType(Ty, NewSizeRef, /*CountInBytes*/true);
+      };
+      if (NeedReturnSize || NeedDestSize || NeedSrcSize) {
+        assert(FT->getNumParams() >= 3);
+        if (NeedDestSize) {
+          QualType NewParmTy = BuildNewDynamicSizeType(Params[0]->getType());
+          Params[0]->setType(NewParmTy);
+          NewParamTypes[0] = Params[0]->getType();
+          const auto *CATy = NewParmTy->getAs<CountAttributedType>();
+          AttachDependerDeclsAttr(Params[0], CATy, /*Level*/ 0);
+        }
+        if (NeedSrcSize) {
+          QualType NewParmTy = BuildNewDynamicSizeType(Params[1]->getType());
+          Params[1]->setType(NewParmTy);
+          NewParamTypes[1] = Params[1]->getType();
+          const auto *CATy = NewParmTy->getAs<CountAttributedType>();
+          AttachDependerDeclsAttr(Params[1], CATy, /*Level*/ 0);
+        }
+        QualType NewReturnType = FT->getReturnType();
+        if (NeedReturnSize) {
+          NewReturnType = BuildNewDynamicSizeType(NewReturnType);
+        }
+        QualType NewFuncType = Context.getFunctionType(NewReturnType,
+            NewParamTypes, FT->getExtProtoInfo());
+        New->setType(NewFuncType);
+      }
+    }
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
+
     New->setParams(Params);
   }
 
@@ -3518,6 +3574,618 @@ static void adjustDeclContextForDeclaratorDecl(DeclaratorDecl *NewD,
     FixSemaDC(VD->getDescribedVarTemplate());
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON*/
+struct TransposeDynamicBoundsExpr
+    : public TreeTransform<TransposeDynamicBoundsExpr> {
+  using BaseClass = TreeTransform<TransposeDynamicBoundsExpr>;
+
+  FunctionDecl *NewFD;
+  bool Success = true;
+
+  static bool Rewrite(Sema &SemaRef, FunctionDecl *NewFD, Expr *E,
+                      std::string &Result) {
+    bool Invalid;
+    auto TokRange = CharSourceRange::getTokenRange(E->getSourceRange());
+    Result = Lexer::getSourceText(TokRange, SemaRef.SourceMgr,
+                                  SemaRef.getLangOpts(), &Invalid);
+    if (Invalid)
+      return false;
+
+    TransposeDynamicBoundsExpr Rewriter(SemaRef, NewFD);
+    Rewriter.TransformExpr(E);
+    return Rewriter.Success;
+  }
+
+  TransposeDynamicBoundsExpr(Sema &SemaRef, FunctionDecl *NewFD)
+      : BaseClass(SemaRef), NewFD(NewFD) {}
+
+  ExprResult TransformDeclRefExpr(DeclRefExpr *E) {
+    assert(isa<ParmVarDecl>(E->getDecl()));
+    auto *OldParm = cast<ParmVarDecl>(E->getDecl());
+    auto OldName = OldParm->getDeclName();
+    auto *NewParm = NewFD->getParamDecl(OldParm->getFunctionScopeIndex());
+    auto NewName = NewParm->getDeclName();
+    // Parameter names have to match because we don't know if the only
+    // difference between the two prototypes are the pointer attributes. A
+    // developer can make other changes at the same time, like swapping
+    // arguments. It's also possible/common that the prototype in the header
+    // just doesn't have parameter names at all, in which case it's reckless to
+    // make them up–the header could be included by files that use macros with
+    // the same name as the parameter names we would like to use.
+    Success &= OldName == NewName;
+    return E;
+  }
+};
+
+static TypeLoc getPointeeTypeLoc(TypeLoc TL) {
+  if (TL) {
+    TL = TL.getAsAdjusted<TypeLoc>();
+
+    if (auto DCPTL = TL.getAs<CountAttributedTypeLoc>())
+      return getPointeeTypeLoc(DCPTL.getInnerLoc());
+    if (auto DRPTL = TL.getAs<DynamicRangePointerTypeLoc>())
+      return getPointeeTypeLoc(DRPTL.getInnerLoc());
+    if (auto PTL = TL.getAs<PointerTypeLoc>())
+      return PTL.getPointeeLoc();
+  }
+  return TypeLoc();
+}
+
+/// fixBoundsSafetyTypeLocs - emit fixits on diagnostic D to adjust type B/QB to
+/// match the bounds indicated on type A/QA. A/QA is not reciprocally adjusted
+/// if B/QB has qualifiers; this function needs to be called once for each
+/// direction.
+static void fixBoundsSafetyTypeLocs(Sema &S, Sema::SemaDiagnosticBuilder &D,
+                                 TypeLoc A, TypeLoc B, QualType QA, QualType QB,
+                                 FunctionDecl *ADecl, FunctionDecl *BDecl) {
+  if (ADecl->getNumParams() != BDecl->getNumParams())
+    return;
+
+  auto *PA = QA->getAs<PointerType>();
+  auto *PB = QB->getAs<PointerType>();
+  if (!PA || !PB)
+    return;
+
+  // check inner pointer dimensions
+  TypeLoc APointee = getPointeeTypeLoc(A);
+  TypeLoc BPointee = getPointeeTypeLoc(B);
+  if (APointee && BPointee) {
+    fixBoundsSafetyTypeLocs(S, D, APointee, BPointee, PA->getPointeeType(),
+                         PB->getPointeeType(), ADecl, BDecl);
+  }
+
+  // And then try to adjust this pointer. No adjustments to make if B already
+  // has attributes.
+  // We do not touch the pointer if is __single or __unsafe_indexable, because
+  // PointerTypeLoc cannot tell us whether this was added implicitly or
+  // explicitly. when it is added explicitly, the fixit could suggest incorrect
+  // code, like `T *__bidi_indexable __single`. It's also technically a
+  // possibility for __indexable and __bidi_indexable, but using those as the
+  // default pointer attribute is not currently a common use case (although we
+  // think this could change).
+  if (QB->getAs<BoundsAttributedType>() ||
+      QB->getAs<ValueTerminatedType>() ||
+      !PB->getPointerAttributes().hasRawPointerLayout())
+    return;
+
+  auto GetEndPointer = [](QualType QT) -> Expr * {
+    if (auto DRPT = QT->getAs<DynamicRangePointerType>())
+      return DRPT->getEndPointer();
+    return nullptr;
+  };
+
+  std::string BoundsAnnotation;
+  llvm::raw_string_ostream KS(BoundsAnnotation);
+  if (PA->getPointerAttributes().isIndexable()) {
+    KS << "__indexable";
+  } else if (PA->getPointerAttributes().isBidiIndexable()) {
+    KS << "__bidi_indexable";
+  } else if (auto DCPTA = QA->getAs<CountAttributedType>()) {
+    std::string Rewritten;
+    if (!TransposeDynamicBoundsExpr::Rewrite(S, BDecl, DCPTA->getCountExpr(),
+                                             Rewritten))
+      return;
+    const char *Keyword =
+        DCPTA->isCountInBytes() ? "__sized_by" : "__counted_by";
+    KS << Keyword;
+    if (DCPTA->isOrNull())
+      KS << "_or_null";
+    KS << '(' << Rewritten << ')';
+  } else if (auto EndPointer = GetEndPointer(QA)) {
+    std::string Rewritten;
+    if (!TransposeDynamicBoundsExpr::Rewrite(S, BDecl, EndPointer, Rewritten))
+      return;
+    KS << "__ended_by(" << Rewritten << ')';
+  } else {
+    return;
+  }
+
+  SourceLocation FixItLoc;
+  bool AddSpace = false;
+  std::tie(FixItLoc, AddSpace) =
+      BoundsSafetyFixItUtils::FindPointerAttrInsertPoint(B, S);
+  if (FixItLoc.isInvalid())
+    return;
+
+  if (AddSpace)
+    KS << " ";
+
+  KS.flush();
+  D << FixItHint::CreateInsertion(FixItLoc, BoundsAnnotation);
+}
+
+static void fixBoundsSafetyFunctionDecl(Sema &S, Sema::SemaDiagnosticBuilder &D,
+                                     FunctionDecl *FromDecl,
+                                     FunctionDecl *ToDecl) {
+  if (FromDecl->getNumParams() != ToDecl->getNumParams())
+    return;
+
+  auto FromTL = FromDecl->getFunctionTypeLoc();
+  auto ToTL = ToDecl->getFunctionTypeLoc();
+  if (!FromTL || !ToTL)
+    return;
+
+  fixBoundsSafetyTypeLocs(S, D, ToTL.getReturnLoc(), FromTL.getReturnLoc(),
+                       ToDecl->getReturnType(), FromDecl->getReturnType(),
+                       ToDecl, FromDecl);
+  for (unsigned I = 0; I < FromTL.getNumParams(); ++I) {
+    auto FromParam = FromTL.getParam(I);
+    auto ToParam = ToTL.getParam(I);
+    auto FromParamTL = FromParam->getTypeSourceInfo()->getTypeLoc();
+    auto ToParamTL = ToParam->getTypeSourceInfo()->getTypeLoc();
+    fixBoundsSafetyTypeLocs(S, D, ToParamTL, FromParamTL, ToParam->getType(),
+                         FromParam->getType(), ToDecl, FromDecl);
+  }
+}
+
+/// diagnoseFunctionConflictWithDynamicBoundTypes - diagnose if \p New
+/// and \p Old have conflicting return or parameter types with repect to
+/// '__counted_by', '__sized_by', or '__ended_by' attributes.
+static bool diagnoseFunctionConflictWithDynamicBoundTypes(FunctionDecl *New,
+                                                          FunctionDecl *Old,
+                                                          Sema &Self) {
+  std::function<bool(const Expr*, const Expr*)> checkCompatibleBoundExprs;
+  checkCompatibleBoundExprs = [&](const Expr *NewExpr, const Expr *OldExpr) -> bool {
+    llvm::FoldingSetNodeID NewID;
+    llvm::FoldingSetNodeID OldID;
+    if (NewExpr)
+      NewExpr->Profile(NewID, Self.Context, /*Canonical*/ true);
+    if (OldExpr)
+      OldExpr->Profile(OldID, Self.Context, /*Canonical*/ true);
+    if (NewID == OldID)
+      return true;
+    return false;
+  };
+  std::unique_ptr<Sema::SemaDiagnosticBuilder> D;
+  std::function<bool(QualType, QualType, TypeLoc, TypeLoc, SourceLocation,
+                     SourceLocation)>
+      checkCompatibleDynamicBoundTypes =
+          [&](QualType NewTy, QualType OldTy, TypeLoc NewTL, TypeLoc OldTL,
+              SourceLocation NewLoc, SourceLocation OldLoc) -> bool {
+    if (!NewTy->isPointerType() || !OldTy->isPointerType())
+      return true;
+    const auto *NewDCPTy = NewTy->getAs<CountAttributedType>();
+    const auto *OldDCPTy = OldTy->getAs<CountAttributedType>();
+    const auto *NewDRPTy = NewTy->getAs<DynamicRangePointerType>();
+    const auto *OldDRPTy = OldTy->getAs<DynamicRangePointerType>();
+    const auto *NewVTTy = NewTy->getAs<ValueTerminatedType>();
+    const auto *OldVTTy = OldTy->getAs<ValueTerminatedType>();
+    const unsigned CountDiagIndex = 0;
+    const unsigned SizeDiagIndex = 1;
+    const unsigned CountOrNullDiagIndex = 2;
+    const unsigned SizeOrNullDiagIndex = 3;
+    const unsigned RangeDiagIndex = 4;
+    const unsigned TermDiagIndex = 5;
+
+    auto ReportConflict = [&](const unsigned Index) {
+      {
+        if (!D)
+          D.reset(new Sema::SemaDiagnosticBuilder(
+            Self.Diag(NewLoc, diag::err_bounds_safety_dynamic_bound_redeclaration)
+            << Index << 0));
+        fixBoundsSafetyTypeLocs(Self, *D, NewTL, OldTL, NewTy, OldTy, New, Old);
+        fixBoundsSafetyTypeLocs(Self, *D, OldTL, NewTL, OldTy, NewTy, Old, New);
+      }
+    };
+    auto ReportCountConflict = [&](const CountAttributedType *DCPTy) {
+      unsigned Index;
+      switch (DCPTy->getKind()) {
+      case CountAttributedType::CountedBy:
+        Index = CountDiagIndex;
+        break;
+      case CountAttributedType::CountedByOrNull:
+        Index = CountOrNullDiagIndex;
+        break;
+      case CountAttributedType::SizedBy:
+        Index = SizeDiagIndex;
+        break;
+      case CountAttributedType::SizedByOrNull:
+        Index = SizeOrNullDiagIndex;
+        break;
+      default:
+        llvm_unreachable("Unexpected BoundsAttrKind");
+      }
+      ReportConflict(Index);
+    };
+
+    if (NewDCPTy && !OldDCPTy) {
+      ReportCountConflict(NewDCPTy);
+      return false;
+    }
+
+    if (NewDRPTy && !OldDRPTy) {
+      ReportConflict(RangeDiagIndex);
+      return false;
+    }
+
+    if (NewVTTy && !OldVTTy &&
+        !OldTy->isUnspecifiedPointerType()) {
+      ReportConflict(TermDiagIndex);
+      return false;
+    }
+
+    if (!NewDCPTy && OldDCPTy) {
+      ReportCountConflict(OldDCPTy);
+      return false;
+    }
+    // Implicit __started_by attributes have not yet been added to NewTy, so
+    // don't diagnose that.
+    if (!NewDRPTy && OldDRPTy && OldDRPTy->getEndPointer()) {
+      ReportConflict(RangeDiagIndex);
+      return false;
+    }
+
+    if (!NewVTTy && OldVTTy) {
+      ReportConflict(TermDiagIndex);
+      return false;
+    }
+
+    if (NewDCPTy && OldDCPTy) {
+      if (!checkCompatibleBoundExprs(NewDCPTy->getCountExpr(), OldDCPTy->getCountExpr())) {
+        ReportCountConflict(NewDCPTy);
+        return false;
+      }
+      // '__sized_by' and '__counted_by'
+      if (NewDCPTy->isCountInBytes() != OldDCPTy->isCountInBytes()) {
+        CharUnits NewPointeeSize = Self.Context.getTypeSizeInChars(NewDCPTy->getPointeeType());
+        if (!NewPointeeSize.isOne() && !NewDCPTy->isVoidPointerType()) {
+          ReportCountConflict(NewDCPTy);
+          return false;
+        }
+      }
+      // '__counted_by_or_null' and '__counted_by'
+      if (NewDCPTy->isOrNull() != OldDCPTy->isOrNull()) {
+        ReportCountConflict(NewDCPTy);
+        return false;
+      }
+    }
+    if (NewDRPTy && OldDRPTy) {
+      // Start pointers are implicit so we don't check it here.
+      if (!checkCompatibleBoundExprs(NewDRPTy->getEndPointer(), OldDRPTy->getEndPointer())) {
+        ReportConflict(RangeDiagIndex);
+        return false;
+      }
+    }
+    if (NewVTTy && OldVTTy &&
+        !llvm::APSInt::isSameValue(NewVTTy->getTerminatorValue(Self.Context),
+                                   OldVTTy->getTerminatorValue(Self.Context))) {
+      ReportConflict(TermDiagIndex);
+      return false;
+    }
+    TypeLoc NewSubTL, OldSubTL;
+    if (NewTL && OldTL) {
+      auto NewPTL = NewTL.getAs<PointerTypeLoc>();
+      auto OldPTL = OldTL.getAs<PointerTypeLoc>();
+      if (NewPTL && OldPTL) {
+        NewSubTL = NewPTL.getPointeeLoc();
+        OldSubTL = OldPTL.getPointeeLoc();
+      }
+    }
+    return checkCompatibleDynamicBoundTypes(NewTy->getPointeeType(),
+                                            OldTy->getPointeeType(), NewSubTL,
+                                            OldSubTL, NewLoc, OldLoc);
+  };
+
+  TypeLoc OldReturnTL, NewReturnTL;
+  // OldTL or NewTL will be missing if the function was declared without using
+  // function syntax, for instance with `typeof(snprintf) mysnprintf;`.
+  if (auto OldTL = Old->getFunctionTypeLoc())
+    OldReturnTL = OldTL.getReturnLoc();
+  if (auto NewTL = New->getFunctionTypeLoc())
+    NewReturnTL = NewTL.getReturnLoc();
+  bool Compatible = checkCompatibleDynamicBoundTypes(
+          New->getReturnType(), Old->getReturnType(), NewReturnTL, OldReturnTL,
+          New->getBeginLoc(), Old->getBeginLoc());
+
+  auto MinNumParams = std::min(New->getNumParams(), Old->getNumParams());
+  for (unsigned i = 0; i < MinNumParams; ++i) {
+    auto *OldParam = Old->getParamDecl(i);
+    auto *NewParam = New->getParamDecl(i);
+    Compatible &= checkCompatibleDynamicBoundTypes(
+            NewParam->getType(), OldParam->getType(),
+            NewParam->getTypeSourceInfo()->getTypeLoc(),
+            OldParam->getTypeSourceInfo()->getTypeLoc(),
+            NewParam->getBeginLoc(), OldParam->getBeginLoc());
+  }
+
+  if (D) {
+    D.reset();
+    Self.Diag(Old->getBeginLoc(), diag::note_previous_declaration);
+  }
+
+  // New->getNumParams() != Old->getNumParams() should be handled in the other logic.
+  return Compatible;
+}
+
+struct RebuildDynamicBoundsExpr
+    : public TreeTransform<RebuildDynamicBoundsExpr> {
+  using BaseClass = TreeTransform<RebuildDynamicBoundsExpr>;
+  FunctionDecl *New;
+  RebuildDynamicBoundsExpr(Sema &SemaRef, FunctionDecl *New)
+      : BaseClass(SemaRef), New(New) {}
+  bool AlwaysRebuild() const { return true; }
+
+  ExprResult TransformDeclRefExpr(DeclRefExpr *E) {
+    assert(isa<ParmVarDecl>(E->getDecl()));
+    auto *OldParm = cast<ParmVarDecl>(E->getDecl());
+    auto *NewParm = New->getParamDecl(OldParm->getFunctionScopeIndex());
+    DeclarationNameInfo NewNameInfo;
+    NewNameInfo.setName(NewParm->getDeclName());
+    assert(!E->hasExplicitTemplateArgs());
+
+    // Temporarily put parameter variables in the translation unit, not the
+    // enclosing context. This is what Sema::ActOnParamDeclarator() already
+    // does when declaring a function. In BoundsSafety, we do it to allow
+    // creating references to the parameters when rebuilding the count
+    // expression.  Otherwise, creating such references triggers an error.
+    // TODO: Check how this works for C++ methods and such.
+    DeclContext *DC = NewParm->getDeclContext();
+    if (isa<FunctionDecl>(DC))
+      NewParm->setDeclContext(SemaRef.Context.getTranslationUnitDecl());
+    ExprResult Res = RebuildDeclRefExpr(NewParm->getQualifierLoc(), NewParm,
+                                        NewNameInfo, NewParm, nullptr);
+    NewParm->setDeclContext(DC);
+
+    return Res;
+  }
+};
+
+/// mergeFunctionDeclBoundsAttributes - merges
+/// '__counted_by/__sized_by/__ended_by' attributes in \p Old to \p New. Returns
+/// true if \p New has been updated. This doesn't diagnose conflicting
+/// attributes but it merges those attributes on a best efforts basis. If the
+/// merge was unsuccessful, the function declarations will remain incompatible
+/// so they will be caught by following diagnostics in Sema::MergeFunctionDecl.
+static bool mergeFunctionDeclBoundsAttributes(FunctionDecl *New,
+                                              FunctionDecl *Old, Sema &Self) {
+  if (New->getNumParams() != Old->getNumParams())
+    return false;
+
+  RebuildDynamicBoundsExpr ExprBuilder(Self, New);
+  std::function<QualType(QualType, QualType, QualType, QualType)>
+      mergeBoundsAttributes;
+  mergeBoundsAttributes = [&](QualType NewTy, QualType OldTy,
+                              QualType MergePointeeTy,
+                              QualType OrigNewTy) -> QualType {
+    if (OldTy.isNull())
+      return QualType();
+    if (MergePointeeTy.isNull())
+      return QualType();
+    if (NewTy->isBoundsAttributedType() || NewTy->isValueTerminatedType())
+      return QualType();
+
+    // mergeBoundsSafetyPointerTypes removes any AttributedTypes from NewTy,
+    // calls mergeBoundsAttributes to merge the attributes at each level, and
+    // then reapplies the AttributedTypes to the merged type. OrigNewTy is the
+    // same as NewTy but without dropping the AttributedTypes. This allows us
+    // to check if the pointer has any attributes at all (such as __single
+    // applied using AttributedType).
+    if (Self.getLangOpts().isBoundsSafetyAttributeOnlyMode() &&
+        !OrigNewTy->isUnspecifiedPointerType())
+      return QualType();
+
+    BoundsSafetyPointerAttributes Attributes;
+    if (auto *NewPTy = NewTy->getAs<PointerType>())
+      Attributes = NewPTy->getPointerAttributes();
+    if (Attributes.isUnspecified())
+      if (auto *OldPTy = NewTy->getAs<PointerType>())
+        Attributes = OldPTy->getPointerAttributes();
+
+    QualType MergeTy = Self.Context.getPointerType(MergePointeeTy, Attributes);
+    if (auto *OldDCPTy = OldTy->getAs<CountAttributedType>()) {
+      ExprResult NewCount = ExprBuilder.TransformExpr(OldDCPTy->getCountExpr());
+      if (NewCount.isInvalid())
+        return QualType();
+      return Self.BuildCountAttributedType(MergeTy, NewCount.get(),
+                                               OldDCPTy->isCountInBytes(),
+                                               OldDCPTy->isOrNull());
+    }
+    if (auto *OldDRPTy = OldTy->getAs<DynamicRangePointerType>()) {
+      Expr *StartPtr = OldDRPTy->getStartPointer();
+      Expr *EndPtr = OldDRPTy->getEndPointer();
+      if (StartPtr) {
+        ExprResult NewStart = ExprBuilder.TransformExpr(StartPtr);
+        if (NewStart.isInvalid())
+          return QualType();
+        StartPtr = NewStart.get();
+      }
+      if (EndPtr) {
+        ExprResult NewEnd =
+            ExprBuilder.TransformExpr(OldDRPTy->getEndPointer());
+        if (NewEnd.isInvalid())
+          return QualType();
+        EndPtr = NewEnd.get();
+      }
+      return Self.BuildDynamicRangePointerType(MergeTy, StartPtr, EndPtr);
+    }
+    return MergeTy;
+  };
+  QualType NewRetTy = New->getReturnType();
+  if (NewRetTy->isBoundsAttributedType() ||
+      NewRetTy->isValueTerminatedType())
+    return false;
+  QualType MergeRetTy = Self.Context.mergeBoundsSafetyPointerTypes(
+      New->getReturnType(), Old->getReturnType(), mergeBoundsAttributes);
+  if (MergeRetTy.isNull())
+    return false;
+
+  llvm::SmallVector<QualType, 2> MergeParamTys;
+  for (unsigned i = 0; i < New->getNumParams(); ++i) {
+    QualType NewParmTy = New->getParamDecl(i)->getType();
+    if (NewParmTy->isBoundsAttributedType() ||
+        NewParmTy->isValueTerminatedType())
+      return false;
+    QualType MergeParamTy = Self.Context.mergeBoundsSafetyPointerTypes(
+        NewParmTy, Old->getParamDecl(i)->getType(),
+        mergeBoundsAttributes);
+    if (MergeParamTy.isNull())
+      return false;
+    if (const auto *CATy = MergeParamTy->getAs<CountAttributedType>()) {
+      Self.AttachDependerDeclsAttr(New->getParamDecl(i), CATy, /*Level*/ 0);
+    }
+    MergeParamTys.push_back(MergeParamTy);
+  }
+  bool Updated = MergeRetTy != New->getReturnType();
+  for (unsigned i = 0; i < New->getNumParams(); ++i) {
+    auto *NewParm = New->getParamDecl(i);
+    if (NewParm->getType() != MergeParamTys[i]) {
+      New->getParamDecl(i)->setType(MergeParamTys[i]);
+      Updated = true;
+    }
+  }
+  if (Updated) {
+    if (auto *FT = New->getType()->getAs<FunctionProtoType>()) {
+      QualType NewFuncTy = Self.Context.getFunctionType(
+          MergeRetTy, MergeParamTys, FT->getExtProtoInfo());
+      New->setType(NewFuncTy);
+    } else if (New->getType()->getAs<FunctionNoProtoType>()) {
+      QualType NewFuncTy = Self.Context.getFunctionNoProtoType(MergeRetTy);
+      New->setType(NewFuncTy);
+    }
+  }
+  return Updated;
+}
+
+static bool mergeFunctionDeclTerminatedByAttribute(FunctionDecl *New,
+                                                   FunctionDecl *Old, Sema &Self) {
+  if (New->getNumParams() != Old->getNumParams())
+    return false;
+
+  ASTContext &Ctx = Self.Context;
+  SourceLocation NewLoc = New->getLocation();
+  SourceLocation OldLoc = Old->getLocation();
+  auto ReportConflict = [&]() {
+    Self.Diag(NewLoc, diag::err_bounds_safety_dynamic_bound_redeclaration)
+        << /*terminated_by_*/ 5 << 0;
+    Self.Diag(OldLoc, diag::note_previous_declaration);
+  };
+
+  std::function<QualType(QualType, QualType, QualType, QualType)>
+      mergeTerminatedByAttributes = [&](QualType NewTy, QualType OldTy,
+                                        QualType MergePointeeTy,
+                                        QualType OrigNewTy) -> QualType {
+    if (OldTy.isNull())
+      return QualType();
+    if (MergePointeeTy.isNull())
+      return QualType();
+    if (NewTy->isBoundsAttributedType() ||
+        OldTy->isBoundsAttributedType())
+      return QualType();
+
+    BoundsSafetyPointerAttributes Attributes;
+    const auto *NewVTTy = NewTy->getAs<ValueTerminatedType>();
+    const auto *OldVTTy = OldTy->getAs<ValueTerminatedType>();
+    if (NewVTTy && !OldVTTy) {
+      // Take the new type attribute
+      if (OldTy->isUnspecifiedPointerType()) {
+        Attributes = NewTy->getAs<PointerType>()->getPointerAttributes();
+        QualType MergeTy = Ctx.getPointerType(MergePointeeTy, Attributes);
+        return Ctx.getValueTerminatedType(MergeTy,
+                                          NewVTTy->getTerminatorExpr());
+      }
+
+      ReportConflict();
+      return QualType();
+    }
+
+    if (!NewVTTy && OldVTTy) {
+      // Take the old type attribute
+      if (NewTy->isUnspecifiedPointerType()) {
+        Attributes = OldTy->getAs<PointerType>()->getPointerAttributes();
+        QualType MergeTy = Ctx.getPointerType(MergePointeeTy, Attributes);
+        return Ctx.getValueTerminatedType(MergeTy,
+                                          OldVTTy->getTerminatorExpr());
+      }
+
+      ReportConflict();
+      return QualType();
+    }
+
+    if (NewVTTy && OldVTTy) {
+      if (llvm::APSInt::isSameValue(NewVTTy->getTerminatorValue(Ctx),
+                                    OldVTTy->getTerminatorValue(Ctx))) {
+        Attributes = NewTy->getAs<PointerType>()->getPointerAttributes();
+        QualType MergeTy = Ctx.getPointerType(MergePointeeTy, Attributes);
+        return Ctx.getValueTerminatedType(MergeTy,
+                                          NewVTTy->getTerminatorExpr());
+      }
+
+      ReportConflict();
+      return QualType();
+    }
+
+    if (auto *NewPTy = NewTy->getAs<PointerType>())
+      Attributes = NewPTy->getPointerAttributes();
+    if (Attributes.isUnspecified())
+      if (auto *OldPTy = OldTy->getAs<PointerType>())
+        Attributes = OldPTy->getPointerAttributes();
+
+    return Ctx.getPointerType(MergePointeeTy, Attributes);
+  };
+
+  if (New->getReturnType()->isBoundsAttributedType())
+    return false;
+  QualType MergeRetTy = Ctx.mergeBoundsSafetyPointerTypes(
+      New->getReturnType(), Old->getReturnType(), mergeTerminatedByAttributes);
+  if (MergeRetTy.isNull())
+    return false;
+
+  llvm::SmallVector<QualType, 2> MergeParamTys;
+  for (unsigned i = 0; i < New->getNumParams(); ++i) {
+    NewLoc = New->getParamDecl(i)->getLocation();
+    OldLoc = Old->getParamDecl(i)->getLocation();
+    QualType NewParmTy = New->getParamDecl(i)->getType();
+    if (NewParmTy->isBoundsAttributedType())
+      return false;
+    QualType MergeParamTy = Self.Context.mergeBoundsSafetyPointerTypes(
+        NewParmTy, Old->getParamDecl(i)->getType(),
+        mergeTerminatedByAttributes);
+    if (MergeParamTy.isNull())
+      return false;
+    MergeParamTys.push_back(MergeParamTy);
+  }
+  bool Updated = MergeRetTy != New->getReturnType();
+  for (unsigned i = 0; i < New->getNumParams(); ++i) {
+    auto *NewParm = New->getParamDecl(i);
+    if (NewParm->getType() != MergeParamTys[i]) {
+      New->getParamDecl(i)->setType(MergeParamTys[i]);
+      Updated = true;
+    }
+  }
+  if (Updated) {
+    if (auto *FT = New->getType()->getAs<FunctionProtoType>()) {
+      QualType NewFuncTy = Self.Context.getFunctionType(
+          MergeRetTy, MergeParamTys, FT->getExtProtoInfo());
+      New->setType(NewFuncTy);
+    } else if (auto *FT = New->getType()->getAs<FunctionNoProtoType>()) {
+      QualType NewFuncTy = Self.Context.getFunctionNoProtoType(MergeRetTy);
+      New->setType(NewFuncTy);
+    }
+  }
+  return Updated;
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
+
 bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
                              bool MergeTypeWithOld, bool NewDeclIsDefn) {
   // Verify the old decl was also a function.
@@ -3798,6 +4466,29 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     Diag(OldLocation, PrevDiag) << Old << Old->getType();
     return true;
   }
+
+  /*TO_UPSTREAM(BoundsSafety) ON */
+  if (getLangOpts().BoundsSafetyAttributes) {
+    // This is the same logic to suppress warnings in system headers.
+    // In case of system functions, we want to inherit counted_by attributes
+    // from the old declaration.
+    if (!Old->isImplicit() &&
+        !getSourceManager().isInSystemHeader(New->getLocation()) &&
+        !getSourceManager().isInSystemHeader(Old->getLocation())) {
+      if (!diagnoseFunctionConflictWithDynamicBoundTypes(New, Old, *this))
+        return true;
+    } else if (mergeFunctionDeclBoundsAttributes(New, Old, *this)) {
+      NewQType = New->getType();
+    }
+  }
+
+  if (getLangOpts().BoundsSafety &&
+      mergeFunctionDeclTerminatedByAttribute(New, Old, *this)) {
+    // TODO: Merge __terminated_by() attributes in attribute-only mode.
+    // rdar://137984921
+    NewQType = New->getType();
+  }
+  /*TO_UPSTREAM(BoundsSafety) OFF */
 
   QualType OldQTypeForComparison = OldQType;
   if (Context.hasAnyFunctionEffects()) {
@@ -4272,7 +4963,16 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     PrevDiag = diag::note_previous_builtin_declaration;
   }
 
-  Diag(New->getLocation(), diag::err_conflicting_types) << New->getDeclName();
+  {
+    auto ConflictDiag = Diag(New->getLocation(), diag::err_conflicting_types)
+              << New->getDeclName();
+    /*TO_UPSTREAM(BoundsSafety) ON*/
+    if (getLangOpts().BoundsSafety) {
+      fixBoundsSafetyFunctionDecl(*this, ConflictDiag, New, Old);
+      fixBoundsSafetyFunctionDecl(*this, ConflictDiag, Old, New);
+    }
+    /*TO_UPSTREAM(BoundsSafety) OFF*/
+  }
   Diag(OldLocation, PrevDiag) << Old << Old->getType();
   return true;
 }
@@ -6869,6 +7569,53 @@ void Sema::deduceOpenCLAddressSpace(ValueDecl *Decl) {
   }
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON*/
+void Sema::deduceBoundsSafetyPointerTypes(ValueDecl *Decl) {
+  bool ShouldAutoBound = false;
+  if (VarDecl *Var = dyn_cast<VarDecl>(Decl)) {
+    // Bound automatically only the local variables that have local storage.
+    // Unspecified local variables with global storage (e.g. static local)
+    // should get the default ABI attributes.
+    ShouldAutoBound = Var->isLocalVarDecl() && Var->hasLocalStorage();
+  }
+  Decl->setType(Context.getBoundsSafetyAutoPointerType(
+      Decl->getType(), CurPointerAbi, ShouldAutoBound));
+}
+
+static QualType deduceBoundsSafetyFuncType(Sema &S, const FunctionDecl *Decl,
+                                        QualType Ty) {
+  if (const auto *AttrTy = Ty->getAs<AttributedType>()) {
+    QualType ModTy =
+        deduceBoundsSafetyFuncType(S, Decl, AttrTy->getModifiedType());
+    QualType EquivTy =
+        deduceBoundsSafetyFuncType(S, Decl, AttrTy->getEquivalentType());
+    return S.Context.getAttributedType(AttrTy->getAttrKind(), ModTy, EquivTy);
+  }
+
+  QualType NewRetTy = S.Context.getBoundsSafetyAutoPointerType(
+      Decl->getReturnType(), S.CurPointerAbi,
+      /*ShouldAutoBound=*/false);
+
+  if (NewRetTy == Decl->getReturnType())
+    return Ty;
+
+  const FunctionType *FuncTy = Decl->getFunctionType();
+
+  if (const auto *FuncNoProtoTy = dyn_cast<FunctionNoProtoType>(FuncTy))
+    return S.Context.getFunctionNoProtoType(NewRetTy,
+                                            FuncNoProtoTy->getExtInfo());
+
+  const auto *FuncProtoTy = cast<FunctionProtoType>(FuncTy);
+  return S.Context.getFunctionType(NewRetTy, FuncProtoTy->getParamTypes(),
+                                   FuncProtoTy->getExtProtoInfo());
+}
+
+void Sema::deduceBoundsSafetyFunctionTypes(FunctionDecl *Decl) {
+  QualType NewTy = deduceBoundsSafetyFuncType(*this, Decl, Decl->getType());
+  Decl->setType(NewTy);
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
+
 static void checkWeakAttr(Sema &S, NamedDecl &ND) {
   // 'weak' only applies to declarations with external linkage.
   if (WeakAttr *Attr = ND.getAttr<WeakAttr>()) {
@@ -7158,6 +7905,50 @@ static void checkDLLAttributeRedeclaration(Sema &S, NamedDecl *OldDecl,
       }
     }
   }
+}
+
+static void checkExternalBoundsRedeclaration(Sema &S, Decl *D) {
+  VarDecl *NewVD = dyn_cast<VarDecl>(D);
+  if (!NewVD || NewVD->isFirstDecl())
+    return;
+
+  if (NewVD->isFirstDecl())
+    return;
+  VarDecl *PrevVD = NewVD->getFirstDecl();
+
+  const auto *PrevTy = PrevVD->getType()->getAs<CountAttributedType>();
+  const auto *NewTy = NewVD->getType()->getAs<CountAttributedType>();
+
+  if (!PrevTy && !NewTy)
+    return;
+
+  auto DiagConflict = [&](unsigned Kind) {
+    S.Diag(NewVD->getLocation(),
+           diag::err_bounds_safety_dynamic_bound_redeclaration)
+        << Kind << 1;
+    S.Diag(PrevVD->getLocation(), diag::note_previous_decl) << PrevVD;
+  };
+
+  if (PrevTy && !NewTy && PrevVD->hasExternalStorage() &&
+      NewVD->getType()->isConstantArrayType()) {
+    return; // rdar://129246717: remove this workaround
+  }
+
+  if ((bool)PrevTy != (bool)NewTy) {
+    unsigned Kind = NewTy ? NewTy->getKind() : PrevTy->getKind();
+    return DiagConflict(Kind);
+  }
+
+  assert(PrevTy && NewTy);
+  if (PrevTy->getKind() != NewTy->getKind())
+    return DiagConflict(NewTy->getKind());
+
+  llvm::FoldingSetNodeID PrevID;
+  llvm::FoldingSetNodeID NewID;
+  PrevTy->getCountExpr()->Profile(PrevID, S.Context, /*Canonical*/ true);
+  NewTy->getCountExpr()->Profile(NewID, S.Context, /*Canonical*/ true);
+  if (PrevID != NewID)
+    return DiagConflict(NewTy->getKind());
 }
 
 /// Given that we are within the definition of the given function,
@@ -7904,6 +8695,11 @@ NamedDecl *Sema::ActOnVariableDeclarator(
       NewVD->setInvalidDecl();
     }
   }
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  if (getLangOpts().BoundsSafety)
+    deduceBoundsSafetyPointerTypes(NewVD);
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   // WebAssembly tables are always in address space 1 (wasm_var). Don't apply
   // address space if the table has local storage (semantic checks elsewhere
@@ -10348,6 +11144,32 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   // Finally, we know we have the right number of parameters, install them.
   NewFD->setParams(Params);
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  if (getLangOpts().BoundsSafety) {
+    // This is a good place to make sure that no array parameter has decayed
+    // to a __single pointer. Annoyingly, we can't do this when parameters are
+    // created because BoundsSafety count attributes are late-parsed and applied
+    // after.
+    for (ParmVarDecl *Param : Params) {
+      auto *TSInfo = Param->getTypeSourceInfo();
+      QualType TST = TSInfo->getType();
+      if (!Context.getAsArrayType(TST) ||
+          TST->hasAttr(attr::ArrayDecayDiscardsCountInParameters))
+        continue; // nothing to check
+      if (Param->getType()->isCountAttributedType() ||
+          Param->getType()->isDynamicRangePointerType())
+        continue; // has a dynamic count, no problem
+      auto FA = Param->getType()->getAs<PointerType>()->getPointerAttributes();
+      if (FA.isSingle()) {
+        Diag(TSInfo->getTypeLoc().getBeginLoc(),
+            diag::err_bounds_safety_array_decay_to_single) << TST;
+        Diag(TSInfo->getTypeLoc().getBeginLoc(),
+            diag::note_bounds_safety_array_decay_use_count_annotation);
+      }
+    }
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
   if (D.getDeclSpec().isNoreturnSpecified())
     NewFD->addAttr(
         C11NoReturnAttr::Create(Context, D.getDeclSpec().getNoreturnSpecLoc()));
@@ -10419,6 +11241,11 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       NewFD->setInvalidDecl();
     }
   }
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  if (getLangOpts().BoundsSafety)
+    deduceBoundsSafetyFunctionTypes(NewFD);
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   if (!getLangOpts().CPlusPlus) {
     // Perform semantic checking on the function declaration.
@@ -13712,6 +14539,22 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   }
   Init = Result.get();
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  // BoundsSafety prevents passing flexible array members by copy. We still allow
+  // initializer lists (and no initializers), but that's it.
+  if (Init && getLangOpts().BoundsSafety && VDecl->hasLocalStorage()) {
+    auto *RecordT = VDecl->getType()->getAs<RecordType>();
+    if (RecordT && RecordT->getDecl()->hasFlexibleArrayMember()) {
+      if (!isa<InitListExpr>(Init->IgnoreParenImpCasts())) {
+        Diag(
+            Init->getBeginLoc(), diag::err_flexible_array_member_passed_by_copy)
+            << Init->IgnoreParenImpCasts()->getType();
+        // Recover by pretending this worked
+      }
+    }
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
   // Attach the initializer to the decl.
   VDecl->setInit(Init);
 
@@ -13961,6 +14804,11 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
 
   if (VarDecl *Var = dyn_cast<VarDecl>(RealDecl)) {
     QualType Type = Var->getType();
+
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    if (getLangOpts().BoundsSafety)
+      CheckValueTerminatedUninitialized(Var);
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
 
     // C++1z [dcl.dcl]p1 grammar implies that an initializer is mandatory.
     if (isa<DecompositionDecl>(RealDecl)) {
@@ -14843,6 +15691,39 @@ static bool hasDeducedAuto(DeclaratorDecl *DD) {
   return VD && !VD->getType()->hasAutoForTrailingReturnType();
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON*/
+static void checkAtomicAutoPointerAttrs(Sema &S, const Decl *D) {
+  const auto *VD = dyn_cast<ValueDecl>(D);
+  if (!VD)
+    return;
+  QualType Ty = VD->getType();
+  for (;;) {
+    // If we auto bound an atomic pointer, we should have:
+    // AtomicType -> AttributedType -> PointerType.
+    bool HasAutoAttr = false;
+    if (const auto *AtomTy = Ty->getAs<AtomicType>()) {
+      Ty = AtomTy->getValueType();
+      if (const auto *AttrTy = Ty->getAs<AttributedType>()) {
+        if (AttrTy->getAttrKind() == attr::PtrAutoAttr)
+          HasAutoAttr = true;
+        Ty = AttrTy->getModifiedType();
+      }
+    }
+    const auto *PtrTy = Ty->getAs<PointerType>();
+    if (!PtrTy)
+      break;
+    if (HasAutoAttr && !PtrTy->isUnspecified() && !PtrTy->isUnsafeIndexable() &&
+        !PtrTy->isSingle()) {
+      assert(PtrTy->isIndexable() || PtrTy->isBidiIndexable());
+      unsigned DiagIndex = PtrTy->isIndexable() ? 0 : 1;
+      S.Diag(D->getBeginLoc(), diag::err_bounds_safety_atomic_unsupported_attribute)
+          << DiagIndex;
+    }
+    Ty = PtrTy->getPointeeType();
+  }
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
+
 Sema::DeclGroupPtrTy Sema::FinalizeDeclaratorGroup(Scope *S, const DeclSpec &DS,
                                                    ArrayRef<Decl *> Group) {
   SmallVector<Decl*, 8> Decls;
@@ -14901,6 +15782,33 @@ Sema::DeclGroupPtrTy Sema::FinalizeDeclaratorGroup(Scope *S, const DeclSpec &DS,
         }
       }
     }
+
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    if (getLangOpts().BoundsSafetyAttributes)
+      checkExternalBoundsRedeclaration(*this, D);
+    // Check if an atomic pointer was auto bound to __bidi_indexable, and if
+    // so, emit an error, as atomic __bidi_indexable pointers are currently
+    // not supported. We must perform this check after handling dynamic bound
+    // pointers, since their construction can replace pointer attributes.
+    if (getLangOpts().BoundsSafety) {
+      checkAtomicAutoPointerAttrs(*this, D);
+      if (auto Var = dyn_cast<VarDecl>(D)) {
+        DiagnoseDynamicCountVarZeroInit(Var);
+
+        // This check is done now and not earlier in
+        // `Sema::ActOnVariableDeclarator()` because in that method attributes
+        // haven't yet been applied due to late parsing.
+        //
+        // Tentative definitions are skipped because it isn't known if
+        // the VarDecl is a definition until the end of the translation unit.
+        // Tentative definitions are instead checked in
+        // `Sema::ActOnEndOfTranslationUnit()`.
+        if (!BoundsSafetyCheckVarDecl(Var,
+                                      /*CheckTentativeDefinitions=*/false))
+          Var->setInvalidDecl();
+      }
+    }
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
 
     Decls.push_back(D);
   }
@@ -15141,6 +16049,13 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
       CheckParameter(Context.getTranslationUnitDecl(), D.getBeginLoc(),
                      D.getIdentifierLoc(), II, parmDeclType, TInfo, SC);
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  // We reuse the same function 'deduceBoundsSafetyPointerTypes' that deduces
+  // -fbounds-safety pointer types of Fields and VarDecl.
+  if (getLangOpts().BoundsSafety)
+    deduceBoundsSafetyPointerTypes(New);
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
   if (D.isInvalidType())
     New->setInvalidDecl();
 
@@ -15234,10 +16149,52 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
                                   TypeSourceInfo *TSInfo, StorageClass SC) {
   // Perform Objective-C ARC adjustments.
   T = ObjC().AdjustParameterTypeForObjCAutoRefCount(T, NameLoc, TSInfo);
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  QualType Adjusted = Context.getAdjustedParameterType(T);
+
+  // Perform -fbounds-safety pointer type adjustments.
+  if (getLangOpts().BoundsSafety) {
+    auto *AT = Context.getAsArrayType(T);
+    if (AT && !T->isAnyVaListType(Context)) {
+      Expr *Count = nullptr;
+      if (!T->hasAttr(attr::ArrayDecayDiscardsCountInParameters)) {
+        if (auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
+          ArrayTypeLoc ATL = TSInfo->getTypeLoc().getAsAdjusted<ArrayTypeLoc>();
+          Count = ATL.isNull()
+            ? new (Context) IntegerLiteral(Context, CAT->getSize(),
+                                          Context.getSizeType(),
+                                          SourceLocation())
+            : ATL.getSizeExpr();
+        } else if (auto *VAT = dyn_cast<VariableArrayType>(AT)) {
+          Count = VAT->getSizeExpr();
+        } else if (auto *DAT = dyn_cast<DependentSizedArrayType>(AT)) {
+          Count = DAT->getSizeExpr();
+        }
+      }
+      if (Count) {
+        Adjusted = BuildCountAttributedType(Adjusted, Count, false);
+      }
+    }
+
+    auto *RecordT = T->getAs<RecordType>();
+    if (RecordT && RecordT->getDecl()->hasFlexibleArrayMember()) {
+      // BoundsSafety prevents passing flexible array members by copy.
+      Diag(TSInfo->getTypeLoc().getBeginLoc(),
+           diag::err_flexible_array_member_passed_by_copy) << TSInfo->getType();
+    }
+  }
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
 
   ParmVarDecl *New = ParmVarDecl::Create(Context, DC, StartLoc, NameLoc, Name,
-                                         Context.getAdjustedParameterType(T),
-                                         TSInfo, SC, nullptr);
+                                         Adjusted, TSInfo, SC, nullptr);
+
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  if (getLangOpts().BoundsSafetyAttributes) {
+    if (const auto *CATy = New->getType()->getAs<CountAttributedType>()) {
+      AttachDependerDeclsAttr(New, CATy, /*Level*/ 0);
+    }
+  }
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
 
   // Make a note if we created a new pack in the scope of a lambda, so that
   // we know that references to that pack must also be expanded within the
@@ -15711,6 +16668,15 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
                               diag::err_abstract_type_in_decl,
                               AbstractReturnType)))
     FD->setInvalidDecl();
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  if (!FD->isInvalidDecl()) {
+    // Note if the checks fail we don't make the decl invalid,
+    // otherwise we would stop diagnosing calls to this functions from other
+    // functions.
+    BoundsSafetyCheckReturnTyForFunctionDef(FD);
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   if (FnBodyScope)
     PushDeclContext(FnBodyScope, FD);
@@ -16387,6 +17353,11 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
 
   if (FD && !FD->isDeleted())
     checkTypeSupport(FD->getType(), FD->getLocation(), FD);
+
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  if (LangOpts.BoundsSafety)
+    DynamicCountPointerAssignmentAnalysis(*this, dcl).run();
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
 
   return dcl;
 }
@@ -18669,6 +19640,11 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
   if (Context.getTargetInfo().getTriple().isPPC64() &&
       PPC().CheckPPCMMAType(T, NewFD->getLocation()))
     NewFD->setInvalidDecl();
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  if (getLangOpts().BoundsSafety)
+    deduceBoundsSafetyPointerTypes(NewFD);
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   NewFD->setAccess(AS);
   return NewFD;

@@ -2499,6 +2499,51 @@ void StmtProfiler::VisitTemplateArgument(const TemplateArgument &Arg) {
   }
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+void StmtProfiler::VisitBoundsSafetyPointerPromotionExpr(
+    const BoundsSafetyPointerPromotionExpr *S) {
+  VisitExpr(S);
+}
+
+void StmtProfiler::VisitAssumptionExpr(const AssumptionExpr *S) {
+  VisitExpr(S);
+}
+
+void StmtProfiler::VisitForgePtrExpr(const ForgePtrExpr *S) {
+  VisitExpr(S);
+}
+
+void StmtProfiler::VisitGetBoundExpr(const GetBoundExpr *S) {
+  VisitExpr(S);
+  ID.AddInteger(S->getBoundKind());
+}
+
+void StmtProfiler::VisitBoundsCheckExpr(const BoundsCheckExpr *S) {
+  VisitExpr(S);
+}
+
+void StmtProfiler::VisitPredefinedBoundsCheckExpr(
+    const PredefinedBoundsCheckExpr *S) {
+  VisitExpr(S);
+}
+
+void StmtProfiler::VisitMaterializeSequenceExpr(const MaterializeSequenceExpr *S) {
+  VisitExpr(S);
+  ID.AddBoolean(S->isUnbinding());
+}
+
+void StmtProfiler::VisitTerminatedByToIndexableExpr(
+    const TerminatedByToIndexableExpr *S) {
+  VisitExpr(S);
+  ID.AddBoolean(S->includesTerminator());
+}
+
+void StmtProfiler::VisitTerminatedByFromIndexableExpr(
+    const TerminatedByFromIndexableExpr *S) {
+  VisitExpr(S);
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 namespace {
 class OpenACCClauseProfiler
     : public OpenACCClauseVisitor<OpenACCClauseProfiler> {

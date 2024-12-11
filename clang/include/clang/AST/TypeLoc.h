@@ -1177,6 +1177,40 @@ public:
   SourceRange getLocalSourceRange() const;
 };
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+class DynamicRangePointerTypeLoc final
+    : public InheritingConcreteTypeLoc<BoundsAttributedTypeLoc,
+                                       DynamicRangePointerTypeLoc,
+                                       DynamicRangePointerType> {
+public:
+  Expr *getStartPointer() const { return getTypePtr()->getStartPointer(); }
+  Expr *getEndPointer() const { return getTypePtr()->getEndPointer(); }
+
+  SourceRange getLocalSourceRange() const;
+};
+
+struct ValueTerminatedTypeLocInfo {};
+
+class ValueTerminatedTypeLoc final
+    : public ConcreteTypeLoc<UnqualTypeLoc, ValueTerminatedTypeLoc,
+                             ValueTerminatedType, ValueTerminatedTypeLocInfo> {
+public:
+  TypeLoc getOriginalLoc() const { return getInnerTypeLoc(); }
+
+  void initializeLocal(ASTContext &Context, SourceLocation Loc) {
+    // do nothing
+  }
+
+  QualType getInnerType() const { return getTypePtr()->desugar(); }
+
+  SourceRange getLocalSourceRange() const { return {}; }
+
+  unsigned getLocalDataSize() const { return 0; }
+
+  Expr *getTerminatorExpr() const { return getTypePtr()->getTerminatorExpr(); }
+};
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 struct MacroQualifiedLocInfo {
   SourceLocation ExpansionLoc;
 };
@@ -1337,6 +1371,10 @@ public:
 
   void setStarLoc(SourceLocation Loc) {
     setSigilLoc(Loc);
+  }
+
+  BoundsSafetyPointerAttributes getPointerAttributes() const {
+    return this->getTypePtr()->getPointerAttributes();
   }
 };
 

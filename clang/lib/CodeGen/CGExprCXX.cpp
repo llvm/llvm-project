@@ -459,7 +459,8 @@ CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
   // Emit the 'this' pointer.
   Address This = Address::invalid();
   if (BO->getOpcode() == BO_PtrMemI)
-    This = EmitPointerWithAlignment(BaseExpr, nullptr, nullptr, KnownNonNull);
+    This = EmitPointerWithAlignment(BaseExpr, nullptr, nullptr, nullptr,
+                                    nullptr, KnownNonNull);
   else
     This = EmitLValue(BaseExpr, KnownNonNull).getAddress();
 

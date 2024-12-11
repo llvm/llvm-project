@@ -285,10 +285,8 @@ define i1 @gep_add_1_ult_var_idx_only_inner_inbounds(ptr %dst, ptr %upper, i8 %l
 ; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i8 [[IDX]] to i16
 ; CHECK-NEXT:    [[DST_ADD_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i16 [[IDX_EXT]]
 ; CHECK-NEXT:    [[DST_ADD_IDX_1:%.*]] = getelementptr i8, ptr [[DST_ADD_IDX]], i64 1
-; CHECK-NEXT:    [[CMP_IDX_1:%.*]] = icmp ult ptr [[DST_ADD_IDX_1]], [[UPPER]]
 ; CHECK-NEXT:    [[DST_ADD_IDX_2:%.*]] = getelementptr i8, ptr [[DST_ADD_IDX]], i64 2
-; CHECK-NEXT:    [[CMP_IDX_2:%.*]] = icmp ult ptr [[DST_ADD_IDX_2]], [[UPPER]]
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[CMP_IDX_1]], [[CMP_IDX_2]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[DST_ADD_IDX_3:%.*]] = getelementptr i8, ptr [[DST_ADD_IDX]], i64 3
 ; CHECK-NEXT:    [[CMP_IDX_3:%.*]] = icmp ult ptr [[DST_ADD_IDX_3]], [[UPPER]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[CMP_IDX_3]]

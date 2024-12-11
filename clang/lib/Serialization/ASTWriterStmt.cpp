@@ -2322,6 +2322,106 @@ void ASTStmtWriter::VisitAsTypeExpr(AsTypeExpr *E) {
 }
 
 //===----------------------------------------------------------------------===//
+// BoundsSafety Expressions and Statements.
+//===----------------------------------------------------------------------===//
+void ASTStmtWriter::VisitBoundsSafetyPointerPromotionExpr(
+    BoundsSafetyPointerPromotionExpr *E) {
+  VisitExpr(E);
+  Record.push_back(E->getNumChildren());
+  switch (E->getNumChildren()) {
+  case 3: Record.AddStmt(E->getLowerBound()); [[clang::fallthrough]];
+  case 2: Record.AddStmt(E->getUpperBound()); [[clang::fallthrough]];
+  case 1: Record.AddStmt(E->getPointer()); break;
+  default: llvm_unreachable("incorrect number of child nodes");
+  }
+  Code = serialization::EXPR_BOUNDS_SAFETY_POINTER_PROMOTION;
+}
+
+void ASTStmtWriter::VisitAssumptionExpr(AssumptionExpr *E) {
+  VisitExpr(E);
+  Record.push_back(E->getNumSubExprs());
+  for (Stmt *Sub : E->children()) {
+    Record.AddStmt(Sub);
+  }
+  Code = serialization::EXPR_ASSUMPTION;
+}
+
+void ASTStmtWriter::VisitForgePtrExpr(ForgePtrExpr *E) {
+  VisitExpr(E);
+  Record.AddStmt(E->getAddr());
+  Record.AddStmt(E->getSize());
+  Record.AddSourceLocation(E->getBeginLoc());
+  Record.AddSourceLocation(E->getEndLoc());
+  Code = serialization::EXPR_FORGE_PTR;
+}
+
+void ASTStmtWriter::VisitGetBoundExpr(GetBoundExpr *E) {
+  VisitExpr(E);
+  Record.AddStmt(E->getSubExpr());
+  Record.push_back((int)E->getBoundKind());
+  Record.AddSourceLocation(E->getBuiltinLoc());
+  Record.AddSourceLocation(E->getRParenLoc());
+  Code = serialization::EXPR_GET_BOUND;
+}
+
+void ASTStmtWriter::VisitPredefinedBoundsCheckExpr(
+    PredefinedBoundsCheckExpr *E) {
+  VisitExpr(E);
+  Record.push_back(static_cast<unsigned>(E->getKind()));
+  Record.push_back(E->getNumSubExprs());
+  for (Stmt *Sub : E->children()) {
+    Record.AddStmt(Sub);
+  }
+  Code = serialization::EXPR_PREDEFINED_BOUNDS_CHECK;
+}
+
+void ASTStmtWriter::VisitBoundsCheckExpr(BoundsCheckExpr *E) {
+  VisitExpr(E);
+  Record.push_back(E->getNumSubExprs());
+  for (Stmt *Sub : E->children()) {
+    Record.AddStmt(Sub);
+  }
+  Code = serialization::EXPR_BOUNDS_CHECK;
+}
+
+void ASTStmtWriter::VisitMaterializeSequenceExpr(MaterializeSequenceExpr *E) {
+  VisitExpr(E);
+  Record.push_back(E->getNumSubExprs());
+  Record.push_back(E->isUnbinding());
+  for (Stmt *Sub : E->children()) {
+    Record.AddStmt(Sub);
+  }
+  Code = serialization::EXPR_MATERIALIZE_SEQUENCE;
+}
+
+void ASTStmtWriter::VisitTerminatedByToIndexableExpr(
+    TerminatedByToIndexableExpr *E) {
+  VisitExpr(E);
+  Record.AddStmt(E->getPointer());
+  bool HasTerm = E->getTerminator() != nullptr;
+  Record.push_back(HasTerm);
+  if (HasTerm)
+    Record.AddStmt(E->getTerminator());
+  Record.push_back(E->includesTerminator());
+  Record.AddSourceLocation(E->getBuiltinLoc());
+  Record.AddSourceLocation(E->getRParenLoc());
+  Code = serialization::EXPR_TERMINATED_BY_TO_INDEXABLE;
+}
+
+void ASTStmtWriter::VisitTerminatedByFromIndexableExpr(
+    TerminatedByFromIndexableExpr *E) {
+  VisitExpr(E);
+  Record.AddStmt(E->getPointer());
+  bool HasPtrToTerm = E->getPointerToTerminator() != nullptr;
+  Record.push_back(HasPtrToTerm);
+  if (HasPtrToTerm)
+    Record.AddStmt(E->getPointerToTerminator());
+  Record.AddSourceLocation(E->getBuiltinLoc());
+  Record.AddSourceLocation(E->getRParenLoc());
+  Code = serialization::EXPR_TERMINATED_BY_FROM_INDEXABLE;
+}
+
+//===----------------------------------------------------------------------===//
 // Microsoft Expressions and Statements.
 //===----------------------------------------------------------------------===//
 void ASTStmtWriter::VisitMSPropertyRefExpr(MSPropertyRefExpr *E) {

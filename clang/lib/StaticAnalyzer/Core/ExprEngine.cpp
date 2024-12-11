@@ -1717,6 +1717,16 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
   assert(!isa<Expr>(S) || S == cast<Expr>(S)->IgnoreParens());
 
   switch (S->getStmtClass()) {
+    // BoundsSafety expressions are not supported yet.
+    case Stmt::AssumptionExprClass:
+    case Stmt::BoundsSafetyPointerPromotionExprClass:
+    case Stmt::ForgePtrExprClass:
+    case Stmt::GetBoundExprClass:
+    case Stmt::PredefinedBoundsCheckExprClass:
+    case Stmt::BoundsCheckExprClass:
+    case Stmt::MaterializeSequenceExprClass:
+    case Stmt::TerminatedByToIndexableExprClass:
+    case Stmt::TerminatedByFromIndexableExprClass:
     // C++, OpenMP and ARC stuff we don't support yet.
     case Stmt::CXXDependentScopeMemberExprClass:
     case Stmt::CXXTryStmtClass:

@@ -628,6 +628,15 @@ private:
   CFGBlock *VisitUnaryOperator(UnaryOperator *U, AddStmtChoice asc);
   CFGBlock *VisitWhileStmt(WhileStmt *W);
   CFGBlock *VisitArrayInitLoopExpr(ArrayInitLoopExpr *A, AddStmtChoice asc);
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  CFGBlock *VisitBoundsCheckExpr(BoundsCheckExpr *BCE, AddStmtChoice asc);
+  CFGBlock *VisitPredefinedBoundsCheckExpr(PredefinedBoundsCheckExpr *BCE,
+                                           AddStmtChoice asc);
+  CFGBlock *VisitMaterializeSequenceExpr(MaterializeSequenceExpr *MSE,
+                                         AddStmtChoice asc);
+  CFGBlock *VisitBoundsSafetyPointerPromotionExpr(BoundsSafetyPointerPromotionExpr *E,
+                                               AddStmtChoice asc);
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   CFGBlock *Visit(Stmt *S, AddStmtChoice asc = AddStmtChoice::NotAlwaysAdd,
                   bool ExternallyDestructed = false);
@@ -2371,6 +2380,23 @@ CFGBlock *CFGBuilder::Visit(Stmt * S, AddStmtChoice asc,
 
     case Stmt::OpaqueValueExprClass:
       return Block;
+
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    case Stmt::MaterializeSequenceExprClass:
+      return VisitMaterializeSequenceExpr(cast<MaterializeSequenceExpr>(S),
+                                          asc);
+
+    case Stmt::BoundsCheckExprClass:
+      return VisitBoundsCheckExpr(cast<BoundsCheckExpr>(S), asc);
+
+    case Stmt::PredefinedBoundsCheckExprClass:
+      return VisitPredefinedBoundsCheckExpr(cast<PredefinedBoundsCheckExpr>(S),
+                                            asc);
+
+    case Stmt::BoundsSafetyPointerPromotionExprClass:
+      return VisitBoundsSafetyPointerPromotionExpr(
+                cast<BoundsSafetyPointerPromotionExpr>(S), asc);
+    /* TO_UPSTREAM(BoundsSafety) OFF */
 
     case Stmt::PseudoObjectExprClass:
       return VisitPseudoObjectExpr(cast<PseudoObjectExpr>(S));
@@ -4921,6 +4947,48 @@ CFGBlock *CFGBuilder::VisitImplicitCastExpr(ImplicitCastExpr *E,
   return Visit(E->getSubExpr(), AddStmtChoice());
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+CFGBlock *CFGBuilder::VisitBoundsCheckExpr(BoundsCheckExpr *E,
+                                           AddStmtChoice asc) {
+  CFGBlock *Ret = Visit(E->getGuardedExpr(), asc);
+
+  for (Expr *subExpr : llvm::reverse(E->opaquevalues())) {
+    auto *ove = cast<OpaqueValueExpr>(subExpr);
+    Ret = Visit(ove->getSourceExpr(), asc);
+  }
+  return Ret;
+}
+
+CFGBlock *
+CFGBuilder::VisitPredefinedBoundsCheckExpr(PredefinedBoundsCheckExpr *E,
+                                           AddStmtChoice asc) {
+  return Visit(E->getGuardedExpr(), asc);
+}
+
+CFGBlock *CFGBuilder::VisitMaterializeSequenceExpr(MaterializeSequenceExpr *E,
+                                                   AddStmtChoice asc) {
+  CFGBlock *Ret = Visit(E->getWrappedExpr(), asc);
+
+  if (E->isBinding()) {
+    for (Expr *subExpr : llvm::reverse(E->opaquevalues())) {
+      auto *ove = cast<OpaqueValueExpr>(subExpr);
+      Ret = Visit(ove->getSourceExpr(), asc);
+    }
+  }
+  return Ret;
+}
+
+CFGBlock *CFGBuilder::VisitBoundsSafetyPointerPromotionExpr(
+                                        BoundsSafetyPointerPromotionExpr *E,
+                                        AddStmtChoice asc) {
+  if (asc.alwaysAdd(*this, E)) {
+    autoCreateBlock();
+    appendStmt(Block, E);
+  }
+  return Visit(E->getSubExpr(), asc);
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 CFGBlock *CFGBuilder::VisitConstantExpr(ConstantExpr *E, AddStmtChoice asc) {
   return Visit(E->getSubExpr(), AddStmtChoice());
 }
@@ -5818,6 +5886,10 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
     } else if (const CastExpr *CE = dyn_cast<CastExpr>(S)) {
       OS << " (" << CE->getStmtClassName() << ", " << CE->getCastKindName()
          << ", " << CE->getType() << ")";
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    } else if (const auto *PE = dyn_cast<BoundsSafetyPointerPromotionExpr>(S)) {
+      OS << " (" << PE->getStmtClassName() << ", " << PE->getType() << ")";
+    /* TO_UPSTREAM(BoundsSafety) OFF */
     }
 
     // Expressions need a newline.

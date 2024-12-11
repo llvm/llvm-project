@@ -1,0 +1,15 @@
+
+
+// RUN: %clang_cc1 -S -fbounds-safety -O0 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -S -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -O0 %s -o - | FileCheck %s
+
+#include <ptrcheck.h>
+
+int array10[10];
+
+int *__attribute__((bidi_indexable)) bidi0 = array10 + 10;
+
+// CHECK: _bidi0:
+// CHECK: 	.quad	_array10+40
+// CHECK: 	.quad	_array10+40
+// CHECK: 	.quad	_array10

@@ -525,6 +525,12 @@ SourceRange CountAttributedTypeLoc::getLocalSourceRange() const {
   return getCountExpr() ? getCountExpr()->getSourceRange() : SourceRange();
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+SourceRange DynamicRangePointerTypeLoc::getLocalSourceRange() const {
+  return getEndPointer() ? getEndPointer()->getSourceRange() : SourceRange();
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 SourceRange BTFTagAttributedTypeLoc::getLocalSourceRange() const {
   return getAttr() ? getAttr()->getRange() : SourceRange();
 }

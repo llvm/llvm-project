@@ -1863,6 +1863,11 @@ bool CastExpr::CastConsistency() const {
     }
     goto CheckNoBasePath;
 
+  case CK_BoundsSafetyPointerCast:
+    assert(getType()->isPointerType());
+    assert(getSubExpr()->getType()->isPointerType());
+    goto CheckNoBasePath;
+
   case CK_AnyPointerToBlockPointerCast:
     assert(getType()->isBlockPointerType());
     assert(getSubExpr()->getType()->isAnyPointerType() &&
@@ -1966,6 +1971,53 @@ const char *CastExpr::getCastKindName(CastKind CK) {
 }
 
 namespace {
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  const Expr *skipImplicitTemporary(
+      const Expr *E,
+      llvm::SmallPtrSetImpl<const OpaqueValueExpr *> &BoundValues) {
+    const Expr *Prev;
+    do {
+      Prev = E;
+      // Skip through reference binding to temporary.
+      if (auto *Materialize = dyn_cast<MaterializeTemporaryExpr>(E))
+        E = Materialize->getSubExpr();
+
+      // Skip any temporary bindings; they're implicit.
+      if (auto *Binder = dyn_cast<CXXBindTemporaryExpr>(E))
+        E = Binder->getSubExpr();
+
+      if (auto *MSE = dyn_cast<MaterializeSequenceExpr>(E)) {
+        if (!MSE->isUnbinding()) {
+          BoundValues.insert(MSE->opaquevalues_begin(),
+                             MSE->opaquevalues_end());
+        }
+        E = MSE->getWrappedExpr();
+      }
+
+      if (auto *Opaque = dyn_cast<OpaqueValueExpr>(E))
+        if (BoundValues.count(Opaque) != 0)
+          E = Opaque->getSourceExpr();
+
+      if (auto *BCE = dyn_cast<BoundsCheckExpr>(E)) {
+        BoundValues.insert(BCE->opaquevalues_begin(), BCE->opaquevalues_end());
+        E = BCE->getGuardedExpr();
+      }
+
+      if (auto *FPPE = dyn_cast<BoundsSafetyPointerPromotionExpr>(E))
+        E = FPPE->getSubExpr();
+
+      if (auto *AE = dyn_cast<AssumptionExpr>(E))
+        E = AE->getWrappedExpr();
+    } while (Prev != E);
+    return E;
+  }
+
+  const Expr *skipImplicitTemporary(const Expr *E) {
+    llvm::SmallPtrSet<const OpaqueValueExpr *, 8> BoundValues;
+    return skipImplicitTemporary(E, BoundValues);
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
 // Skip over implicit nodes produced as part of semantic analysis.
 // Designed for use with IgnoreExprNodes.
 static Expr *ignoreImplicitSemaNodes(Expr *E) {
@@ -2135,6 +2187,175 @@ CStyleCastExpr *CStyleCastExpr::CreateEmpty(const ASTContext &C,
       C.Allocate(totalSizeToAlloc<CXXBaseSpecifier *, FPOptionsOverride>(
           PathSize, HasFPFeatures));
   return new (Buffer) CStyleCastExpr(EmptyShell(), PathSize, HasFPFeatures);
+}
+
+AssumptionExpr::AssumptionExpr(Expr *ResultExpr,
+                               llvm::ArrayRef<Expr *> Assumptions)
+    : Expr(AssumptionExprClass, ResultExpr->getType(),
+           ResultExpr->getValueKind(), ResultExpr->getObjectKind()) {
+  AssumptionExprBits.NumExprs = Assumptions.size() + 1;
+  auto ExprPtr = getTrailingExprs();
+  *ExprPtr = ResultExpr;
+  for (Expr *E : Assumptions) {
+    ++ExprPtr;
+    *ExprPtr = E;
+  }
+  setDependence(computeDependence(this));
+}
+
+AssumptionExpr *AssumptionExpr::Create(const ASTContext &Ctx, Expr *Result,
+                                       ArrayRef<Expr *> Assumptions) {
+  const unsigned NumExprs = Assumptions.size() + 1;
+  void *Mem = Ctx.Allocate(totalSizeToAlloc<Expr*>(NumExprs),
+                           alignof(AssumptionExpr));
+  return new (Mem) AssumptionExpr(Result, Assumptions);
+}
+
+AssumptionExpr *AssumptionExpr::CreateEmpty(const ASTContext &Ctx,
+                                            unsigned NumExprs) {
+  void *Mem = Ctx.Allocate(totalSizeToAlloc<Expr*>(NumExprs),
+                           alignof(AssumptionExpr));
+  return new (Mem) AssumptionExpr(EmptyShell(), NumExprs);
+}
+
+Stmt **BoundsSafetyPointerPromotionExpr::getPointerPtr() {
+  return getTrailingObjects<Stmt *>();
+}
+
+Stmt **BoundsSafetyPointerPromotionExpr::getLowerBoundPtr() {
+  auto FA = getType()->getAs<PointerType>()->getPointerAttributes();
+  if (!FA.hasLowerBound())
+    return nullptr;
+  return getPointerPtr() + 2;
+}
+
+Stmt **BoundsSafetyPointerPromotionExpr::getUpperBoundPtr() {
+  return getPointerPtr() + 1;
+}
+
+BoundsSafetyPointerPromotionExpr *BoundsSafetyPointerPromotionExpr::CreateEmpty(
+    const ASTContext &Context, unsigned SubExprCount) {
+  assert(SubExprCount >= 1 && "Missing Ptr SubExpr");
+  void *Buffer = Context.Allocate(totalSizeToAlloc<Stmt *>(SubExprCount),
+                                  alignof(BoundsSafetyPointerPromotionExpr));
+  auto *FPPE = new (Buffer) BoundsSafetyPointerPromotionExpr(EmptyShell());
+  return FPPE;
+}
+
+BoundsSafetyPointerPromotionExpr *
+BoundsSafetyPointerPromotionExpr::Create(const ASTContext &Context, QualType QT,
+                                      Expr *Ptr, Expr *UpperBound,
+                                      Expr *LowerBound, bool NullCheck) {
+  auto PtrTy = QT->getAs<PointerType>();
+  auto FA = PtrTy->getPointerAttributes();
+  assert(FA.hasUpperBound());
+  unsigned Count = 1 + FA.hasLowerBound() + FA.hasUpperBound();
+  void *Buffer = Context.Allocate(totalSizeToAlloc<Stmt *>(Count),
+                                  alignof(BoundsSafetyPointerPromotionExpr));
+  auto *FPPE = new (Buffer)
+      BoundsSafetyPointerPromotionExpr(QT, Ptr, UpperBound, LowerBound, NullCheck);
+  return FPPE;
+}
+
+Expr *BoundsSafetyPointerPromotionExpr::getSubExprAsWritten() {
+  const Expr *SubExpr = skipImplicitTemporary(getSubExpr());
+  while (const auto *E = dyn_cast<ImplicitCastExpr>(SubExpr)) {
+    SubExpr = skipImplicitTemporary(E->getSubExpr());
+  }
+  return const_cast<Expr*>(SubExpr);
+}
+
+PredefinedBoundsCheckExpr::PredefinedBoundsCheckExpr(Expr *GuardedExpr,
+                                                     BoundsCheckKind Kind,
+                                                     ArrayRef<Expr *> CheckArgs)
+    : Expr(PredefinedBoundsCheckExprClass, GuardedExpr->getType(),
+           GuardedExpr->getValueKind(), GuardedExpr->getObjectKind()) {
+  PredefinedBoundsCheckExprBits.Kind = static_cast<unsigned>(Kind);
+  PredefinedBoundsCheckExprBits.NumChildren =
+      CheckArgs.size() + PredefinedBoundsCheckExpr::getCheckArgsOffset();
+
+  setGuardedExpr(GuardedExpr);
+  std::copy(CheckArgs.begin(), CheckArgs.end(),
+            getSubExprs() + PredefinedBoundsCheckExpr::getCheckArgsOffset());
+  setDependence(computeDependence(this));
+}
+
+PredefinedBoundsCheckExpr *
+PredefinedBoundsCheckExpr::Create(ASTContext &Ctx, Expr *GuardedExpr,
+                                  BoundsCheckKind Kind,
+                                  ArrayRef<Expr *> CheckArgs) {
+  const unsigned NumExprs = CheckArgs.size() + getCheckArgsOffset();
+  void *Mem = Ctx.Allocate(totalSizeToAlloc<Stmt *>(NumExprs),
+                           alignof(PredefinedBoundsCheckExpr));
+  return new (Mem) PredefinedBoundsCheckExpr(GuardedExpr, Kind, CheckArgs);
+}
+
+PredefinedBoundsCheckExpr *
+PredefinedBoundsCheckExpr::CreateEmpty(ASTContext &Ctx, unsigned NumChildren) {
+  void *Mem = Ctx.Allocate(totalSizeToAlloc<Stmt *>(NumChildren),
+                           alignof(PredefinedBoundsCheckExpr));
+  return new (Mem) PredefinedBoundsCheckExpr(EmptyShell(), NumChildren);
+}
+
+StringRef PredefinedBoundsCheckExpr::getKindName() const {
+  switch (getKind()) {
+  case BoundsCheckKind::FlexibleArrayCountDeref:
+    return "FlexibleArrayCountDeref(BasePtr, FamPtr, Count)";
+  case BoundsCheckKind::FlexibleArrayCountCast:
+    return "FlexibleArrayCountCast(BasePtr, FamPtr, Count)";
+  case BoundsCheckKind::FlexibleArrayCountAssign:
+    return "FlexibleArrayCountAssign(BasePtr, FamPtr, Count)";
+  }
+  llvm_unreachable("Unexpected PredefinedBoundsCheckKind");
+}
+
+BoundsCheckExpr::BoundsCheckExpr(Expr *GuardedExpr, Expr *Cond,
+                                 ArrayRef<OpaqueValueExpr *> CommonExprs)
+    : Expr(BoundsCheckExprClass, GuardedExpr->getType(),
+           GuardedExpr->getValueKind(), GuardedExpr->getObjectKind()) {
+  BoundsCheckExprBits.NumChildren = CommonExprs.size() + 2;
+
+  setGuardedExpr(GuardedExpr);
+  setCond(Cond);
+  std::copy(CommonExprs.begin(), CommonExprs.end(), getSubExprs() + 2);
+  setDependence(computeDependence(this));
+}
+
+BoundsCheckExpr *BoundsCheckExpr::Create(ASTContext &Ctx, Expr *GuardedExpr,
+                                         Expr *Cond,
+                                         ArrayRef<OpaqueValueExpr *> CommonExprs) {
+  const unsigned NumExprs = CommonExprs.size() + 2;
+  void *Mem = Ctx.Allocate(totalSizeToAlloc<Stmt*>(NumExprs),
+                           alignof(BoundsCheckExpr));
+  return new (Mem) BoundsCheckExpr(GuardedExpr, Cond, CommonExprs);
+}
+
+BoundsCheckExpr *BoundsCheckExpr::CreateEmpty(ASTContext &Ctx,
+                                              unsigned NumChildren) {
+  unsigned SizeOfTrailingObjects = NumChildren * sizeof(Stmt *);
+  void *Mem = Ctx.Allocate(sizeof(BoundsCheckExpr) + SizeOfTrailingObjects,
+                           alignof(BoundsCheckExpr));
+  return new (Mem) BoundsCheckExpr(EmptyShell(), NumChildren);
+}
+
+MaterializeSequenceExpr *MaterializeSequenceExpr::CreateEmpty(const ASTContext &Ctx,
+                                                              unsigned NumExprs) {
+  void *Mem = Ctx.Allocate(totalSizeToAlloc<Expr*>(NumExprs),
+  alignof(MaterializeSequenceExpr));
+
+  return new (Mem) MaterializeSequenceExpr(EmptyShell(), NumExprs);
+}
+
+MaterializeSequenceExpr *MaterializeSequenceExpr::Create(const ASTContext &Ctx,
+                                                         Expr *WrappedExpr,
+                                                         ArrayRef<OpaqueValueExpr *> Values,
+                                                         bool Unbind) {
+  const unsigned NumExprs = Values.size() + 1;
+
+  void *Mem = Ctx.Allocate(totalSizeToAlloc<Expr*>(NumExprs),
+  alignof(MaterializeSequenceExpr));
+
+  return new (Mem) MaterializeSequenceExpr(WrappedExpr, Values, Unbind);
 }
 
 /// getOpcodeStr - Turn an Opcode enum value into the punctuation char it
@@ -2614,15 +2835,36 @@ bool Expr::isReadIfDiscardedInCPlusPlus11() const {
 /// be warned about if the result is unused.  If so, fill in Loc and Ranges
 /// with location to warn on and the source range[s] to report with the
 /// warning.
+/* TO_UPSTREAM(BoundsSafety) ON*/
 bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
                                   SourceRange &R1, SourceRange &R2,
                                   ASTContext &Ctx) const {
+  llvm::SmallPtrSet<const OpaqueValueExpr *, 24> BoundExprs;
+  return isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx, BoundExprs);
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
+
+bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
+                                  SourceRange &R1, SourceRange &R2,
+                                  ASTContext &Ctx,
+                                  // TO_UPSTREAM(BoundsSafety)
+                                  llvm::SmallPtrSetImpl<const OpaqueValueExpr *> &BoundExprs) const {
   // Don't warn if the expr is type dependent. The type could end up
   // instantiating to void.
   if (isTypeDependent())
     return false;
 
   switch (getStmtClass()) {
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  case OpaqueValueExprClass: {
+    const auto *OVE = cast<OpaqueValueExpr>(this);
+    if (BoundExprs.find(OVE) != BoundExprs.end()) {
+      return OVE->getSourceExpr()->isUnusedResultAWarning(
+          WarnE, Loc, R1, R2, Ctx, BoundExprs);
+    }
+    LLVM_FALLTHROUGH;
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
   default:
     if (getType()->isVoidType())
       return false;
@@ -2632,17 +2874,17 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
     return true;
   case ParenExprClass:
     return cast<ParenExpr>(this)->getSubExpr()->
-      isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+      isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx, BoundExprs);
   case GenericSelectionExprClass:
     return cast<GenericSelectionExpr>(this)->getResultExpr()->
-      isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+      isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx, BoundExprs);
   case CoawaitExprClass:
   case CoyieldExprClass:
     return cast<CoroutineSuspendExpr>(this)->getResumeExpr()->
-      isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+      isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx, BoundExprs);
   case ChooseExprClass:
     return cast<ChooseExpr>(this)->getChosenSubExpr()->
-      isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+      isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx, BoundExprs);
   case UnaryOperatorClass: {
     const UnaryOperator *UO = cast<UnaryOperator>(this);
 
@@ -2670,7 +2912,8 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
         return false;
       break;
     case UO_Extension:
-      return UO->getSubExpr()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+      return UO->getSubExpr()->isUnusedResultAWarning(
+          WarnE, Loc, R1, R2, Ctx, BoundExprs);
     }
     WarnE = this;
     Loc = UO->getOperatorLoc();
@@ -2691,12 +2934,15 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
               dyn_cast<IntegerLiteral>(BO->getRHS()->IgnoreParens()))
           if (IE->getValue() == 0)
             return false;
-        return BO->getRHS()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+        return BO->getRHS()->isUnusedResultAWarning(
+            WarnE, Loc, R1, R2, Ctx, BoundExprs);
       // Consider '||', '&&' to have side effects if the LHS or RHS does.
       case BO_LAnd:
       case BO_LOr:
-        if (!BO->getLHS()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx) ||
-            !BO->getRHS()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx))
+        if (!BO->getLHS()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx,
+                                                  BoundExprs) ||
+            !BO->getRHS()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx,
+                                                  BoundExprs))
           return false;
         break;
     }
@@ -2718,12 +2964,15 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
     // be being used for control flow. Only warn if both the LHS and
     // RHS are warnings.
     const auto *Exp = cast<ConditionalOperator>(this);
-    return Exp->getLHS()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx) &&
-           Exp->getRHS()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+    return Exp->getLHS()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx,
+                                                 BoundExprs) &&
+           Exp->getRHS()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx,
+                                                 BoundExprs);
   }
   case BinaryConditionalOperatorClass: {
     const auto *Exp = cast<BinaryConditionalOperator>(this);
-    return Exp->getFalseExpr()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+    return Exp->getFalseExpr()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx,
+                                                       BoundExprs);
   }
 
   case MemberExprClass:
@@ -2895,10 +3144,10 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
     const CompoundStmt *CS = cast<StmtExpr>(this)->getSubStmt();
     if (!CS->body_empty()) {
       if (const Expr *E = dyn_cast<Expr>(CS->body_back()))
-        return E->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+        return E->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx, BoundExprs);
       if (const LabelStmt *Label = dyn_cast<LabelStmt>(CS->body_back()))
         if (const Expr *E = dyn_cast<Expr>(Label->getSubStmt()))
-          return E->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+          return E->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx, BoundExprs);
     }
 
     if (getType()->isVoidType())
@@ -2934,7 +3183,8 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
         if (SubE->getType()->isArrayType())
           return false;
 
-        return SubE->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+        return SubE->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx,
+                                            BoundExprs);
       }
       return false;
     }
@@ -2942,7 +3192,8 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
     // If this is a cast to a constructor conversion, check the operand.
     // Otherwise, the result of the cast is unused.
     if (CE->getCastKind() == CK_ConstructorConversion)
-      return CE->getSubExpr()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+      return CE->getSubExpr()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx,
+                                                      BoundExprs);
     if (CE->getCastKind() == CK_Dependent)
       return false;
 
@@ -2958,6 +3209,27 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
     }
     return true;
   }
+  case BoundsSafetyPointerPromotionExprClass:
+    return cast<BoundsSafetyPointerPromotionExpr>(this)
+        ->getPointer()
+        ->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx, BoundExprs);
+  case AssumptionExprClass:
+    return cast<AssumptionExpr>(this)
+      ->getWrappedExpr()
+      ->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx, BoundExprs);
+  case BoundsCheckExprClass: {
+    const auto *BCE = cast<BoundsCheckExpr>(this);
+    BoundExprs.insert(BCE->opaquevalues_begin(), BCE->opaquevalues_end());
+    return BCE->getGuardedExpr()->isUnusedResultAWarning(WarnE, Loc, R1, R2,
+                                                         Ctx, BoundExprs);
+  }
+  case MaterializeSequenceExprClass: {
+    const auto *MSE = cast<MaterializeSequenceExpr>(this);
+    if (!MSE->isUnbinding())
+      BoundExprs.insert(MSE->opaquevalues_begin(), MSE->opaquevalues_end());
+    return MSE->getWrappedExpr()->isUnusedResultAWarning(WarnE, Loc, R1, R2,
+                                                         Ctx, BoundExprs);
+  }
   case ImplicitCastExprClass: {
     const CastExpr *ICE = cast<ImplicitCastExpr>(this);
 
@@ -2966,14 +3238,17 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
         ICE->getSubExpr()->getType().isVolatileQualified())
       return false;
 
-    return ICE->getSubExpr()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+    return ICE->getSubExpr()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx,
+                                                     BoundExprs);
   }
   case CXXDefaultArgExprClass:
     return (cast<CXXDefaultArgExpr>(this)
-            ->getExpr()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx));
+            ->getExpr()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx,
+                                                BoundExprs));
   case CXXDefaultInitExprClass:
     return (cast<CXXDefaultInitExpr>(this)
-            ->getExpr()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx));
+            ->getExpr()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx,
+                                                BoundExprs));
 
   case CXXNewExprClass:
     // FIXME: In theory, there might be new expressions that don't have side
@@ -2983,13 +3258,13 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
   case MaterializeTemporaryExprClass:
     return cast<MaterializeTemporaryExpr>(this)
         ->getSubExpr()
-        ->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+        ->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx, BoundExprs);
   case CXXBindTemporaryExprClass:
     return cast<CXXBindTemporaryExpr>(this)->getSubExpr()
-               ->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+               ->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx, BoundExprs);
   case ExprWithCleanupsClass:
     return cast<ExprWithCleanups>(this)->getSubExpr()
-               ->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+               ->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx, BoundExprs);
   }
 }
 
@@ -3065,32 +3340,65 @@ QualType Expr::findBoundMemberType(const Expr *expr) {
 }
 
 Expr *Expr::IgnoreImpCasts() {
-  return IgnoreExprNodes(this, IgnoreImplicitCastsSingleStep);
+  llvm::SmallPtrSet<const OpaqueValueExpr *, 8> BoundValues;
+  auto IgnoreBoundsSafetyImplicit = [&](Expr *E) {
+    return IgnoreBoundsSafetyImplicitImpl(E, BoundValues);
+  };
+  return IgnoreExprNodes(this, IgnoreImplicitCastsSingleStep,
+                         IgnoreBoundsSafetyImplicit);
 }
 
 Expr *Expr::IgnoreCasts() {
-  return IgnoreExprNodes(this, IgnoreCastsSingleStep);
+  llvm::SmallPtrSet<const OpaqueValueExpr *, 8> BoundValues;
+  auto IgnoreBoundsSafetyImplicit = [&](Expr *E) {
+    return IgnoreBoundsSafetyImplicitImpl(E, BoundValues);
+  };
+  return IgnoreExprNodes(this, IgnoreCastsSingleStep, IgnoreBoundsSafetyImplicit);
 }
 
 Expr *Expr::IgnoreImplicit() {
-  return IgnoreExprNodes(this, IgnoreImplicitSingleStep);
+  llvm::SmallPtrSet<const OpaqueValueExpr *, 8> BoundValues;
+  auto IgnoreBoundsSafetyImplicit = [&](Expr *E) {
+    return IgnoreBoundsSafetyImplicitImpl(E, BoundValues);
+  };
+  return IgnoreExprNodes(this, IgnoreImplicitSingleStep,
+                         IgnoreBoundsSafetyImplicit);
 }
 
 Expr *Expr::IgnoreImplicitAsWritten() {
-  return IgnoreExprNodes(this, IgnoreImplicitAsWrittenSingleStep);
+  llvm::SmallPtrSet<const OpaqueValueExpr *, 8> BoundValues;
+  auto IgnoreBoundsSafetyImplicit = [&](Expr *E) {
+    return IgnoreBoundsSafetyImplicitImpl(E, BoundValues);
+  };
+  return IgnoreExprNodes(this, IgnoreImplicitAsWrittenSingleStep,
+                         IgnoreBoundsSafetyImplicit);
 }
 
 Expr *Expr::IgnoreParens() {
   return IgnoreExprNodes(this, IgnoreParensSingleStep);
 }
 
-Expr *Expr::IgnoreParenImpCasts() {
+Expr *Expr::IgnoreParenImpCasts(llvm::SmallPtrSetImpl<const OpaqueValueExpr *> &BoundValues) {
+  auto IgnoreBoundsSafetyImplicit = [&](Expr *E) {
+    return IgnoreBoundsSafetyImplicitImpl(E, BoundValues);
+  };
   return IgnoreExprNodes(this, IgnoreParensSingleStep,
-                         IgnoreImplicitCastsExtraSingleStep);
+                         IgnoreImplicitCastsExtraSingleStep,
+                         IgnoreBoundsSafetyImplicit);
+}
+
+Expr *Expr::IgnoreParenImpCasts() {
+  llvm::SmallPtrSet<const OpaqueValueExpr *, 8> BoundValues;
+  return IgnoreParenImpCasts(BoundValues);
 }
 
 Expr *Expr::IgnoreParenCasts() {
-  return IgnoreExprNodes(this, IgnoreParensSingleStep, IgnoreCastsSingleStep);
+  llvm::SmallPtrSet<const OpaqueValueExpr *, 8> BoundValues;
+  auto IgnoreBoundsSafetyImplicit = [&](Expr *E) {
+    return IgnoreBoundsSafetyImplicitImpl(E, BoundValues);
+  };
+  return IgnoreExprNodes(this, IgnoreParensSingleStep, IgnoreCastsSingleStep,
+                         IgnoreBoundsSafetyImplicit);
 }
 
 Expr *Expr::IgnoreConversionOperatorSingleStep() {
@@ -3102,8 +3410,13 @@ Expr *Expr::IgnoreConversionOperatorSingleStep() {
 }
 
 Expr *Expr::IgnoreParenLValueCasts() {
+  llvm::SmallPtrSet<const OpaqueValueExpr *, 8> BoundValues;
+  auto IgnoreBoundsSafetyImplicit = [&](Expr *E) {
+    return IgnoreBoundsSafetyImplicitImpl(E, BoundValues);
+  };
   return IgnoreExprNodes(this, IgnoreParensSingleStep,
-                         IgnoreLValueCastsSingleStep);
+                         IgnoreLValueCastsSingleStep,
+                         IgnoreBoundsSafetyImplicit);
 }
 
 Expr *Expr::IgnoreParenBaseCasts() {
@@ -3138,6 +3451,10 @@ Expr *Expr::IgnoreParenNoopCasts(const ASTContext &Ctx) {
 }
 
 Expr *Expr::IgnoreUnlessSpelledInSource() {
+  llvm::SmallPtrSet<const OpaqueValueExpr *, 8> BoundValues;
+  auto IgnoreBoundsSafetyImplicit = [&](Expr *E) {
+    return IgnoreBoundsSafetyImplicitImpl(E, BoundValues);
+  };
   auto IgnoreImplicitConstructorSingleStep = [](Expr *E) {
     if (auto *Cast = dyn_cast<CXXFunctionalCastExpr>(E)) {
       auto *SE = Cast->getSubExpr();
@@ -3176,7 +3493,7 @@ Expr *Expr::IgnoreUnlessSpelledInSource() {
   return IgnoreExprNodes(
       this, IgnoreImplicitSingleStep, IgnoreImplicitCastsExtraSingleStep,
       IgnoreParensOnlySingleStep, IgnoreImplicitConstructorSingleStep,
-      IgnoreImplicitMemberCallSingleStep);
+      IgnoreImplicitMemberCallSingleStep, IgnoreBoundsSafetyImplicit);
 }
 
 bool Expr::isDefaultArgument() const {
@@ -3312,6 +3629,17 @@ bool Expr::hasAnyTypeDependentArguments(ArrayRef<Expr *> Exprs) {
   return false;
 }
 
+namespace {
+const ValueDecl *getUnderlyingDecl(ASTContext &Ctx, const Expr *E) {
+  E = E->IgnoreParenCasts();
+  if (const auto *ME = dyn_cast<MemberExpr>(E))
+    return ME->getMemberDecl();
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+    return DRE->getDecl();
+  return nullptr;
+}
+} // namespace
+
 bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
                                  const Expr **Culprit) const {
   assert(!isValueDependent() &&
@@ -3381,6 +3709,16 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
     return DIUE->getBase()->isConstantInitializer(Ctx, false, Culprit) &&
            DIUE->getUpdater()->isConstantInitializer(Ctx, false, Culprit);
   }
+  case ForgePtrExprClass: {
+    const ForgePtrExpr *FPE = cast<ForgePtrExpr>(this);
+    if (!FPE->getAddr()->isConstantInitializer(Ctx, false, Culprit))
+      return false;
+    if (FPE->ForgesBidiIndexablePointer())
+      return FPE->getSize()->isConstantInitializer(Ctx, false, Culprit);
+    if (FPE->ForgesTerminatedByPointer())
+      assert(FPE->getTerminator()->isConstantInitializer(Ctx, false, Culprit));
+    return true;
+  }
   case InitListExprClass: {
     // C++ [dcl.init.aggr]p2:
     //   The elements of an aggregate are:
@@ -3435,6 +3773,32 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
               return false;
             }
           } else {
+            // BoundsSafety : Check if a static initializer for RecordType with
+            // dynamic count fields can be statically evaluated without runtime checks.
+            if (Field->getType()->isCountAttributedType()) {
+              auto Dcl = getUnderlyingDecl(Ctx, Elt);
+              if (Dcl && Dcl->getType()->isConstantArrayType()) {
+                if (Ctx.getTypeSizeInCharsIfKnown(Dcl->getType()).has_value()) {
+                  // Strip the pointer cast and let it fall through.
+                  Elt = Elt->IgnoreParens();
+                  if (auto ICE = dyn_cast<ImplicitCastExpr>(Elt)) {
+                    if (ICE->getCastKind() == CK_BoundsSafetyPointerCast)
+                      Elt = ICE->getSubExpr();
+                  } else if (auto FPPE =
+                      dyn_cast<BoundsSafetyPointerPromotionExpr>(Elt)) {
+                    Elt = FPPE->getPointer();
+                  }
+                }
+              }
+            }
+
+            // FIXME: rdar://81135826
+            if (Field->getType()->isDynamicRangePointerType()) {
+              if (Culprit)
+                *Culprit = Elt;
+              return false;
+            }
+
             bool RefType = Field->getType()->isReferenceType();
             if (!Elt->isConstantInitializer(Ctx, RefType, Culprit))
               return false;
@@ -3729,6 +4093,15 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case ShuffleVectorExprClass:
   case ConvertVectorExprClass:
   case AsTypeExprClass:
+  case BoundsSafetyPointerPromotionExprClass:
+  case AssumptionExprClass:
+  case ForgePtrExprClass:
+  case GetBoundExprClass:
+  case PredefinedBoundsCheckExprClass:
+  case BoundsCheckExprClass:
+  case MaterializeSequenceExprClass:
+  case TerminatedByToIndexableExprClass:
+  case TerminatedByFromIndexableExprClass:
   case CXXParenListInitExprClass:
     // These have a side-effect if any subexpression does.
     break;
@@ -3950,6 +4323,30 @@ bool Expr::hasNonTrivialCall(const ASTContext &Ctx) const {
   Finder.Visit(this);
   return Finder.hasNonTrivialCall();
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON*/
+Expr::NullPointerConstantKind Expr::isNullPointerConstantIgnoreCastsAndOVEs(
+    ASTContext &Ctx, NullPointerConstantValueDependence NPC) const {
+  // Expr::isNullPointerConstant only handles explict `(void*)` casts so it
+  // won't detect something like `(int*)0` as a null pointer constant. Try to
+  // compensate for that here.
+
+  const Expr *EPrevious = nullptr;
+  const Expr *ECurrent = this;
+  while (EPrevious != ECurrent) {
+    EPrevious = ECurrent;
+
+    // Walk through parens and implicit/explicit casts
+    ECurrent = ECurrent->IgnoreParenCasts();
+
+    // Walk through OVEs
+    if (const auto *OVE = dyn_cast<OpaqueValueExpr>(ECurrent)) {
+      ECurrent = OVE->getSourceExpr();
+    }
+  }
+  return ECurrent->isNullPointerConstant(Ctx, NPC);
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
 
 /// isNullPointerConstant - C99 6.3.2.3p3 - Return whether this is a null
 /// pointer constant or not, as well as the specific kind of constant detected.
@@ -4957,6 +5354,24 @@ UnaryOperator *UnaryOperator::Create(const ASTContext &C, Expr *input,
   return new (Mem)
       UnaryOperator(C, input, opc, type, VK, OK, l, CanOverflow, FPFeatures);
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON*/
+OpaqueValueExpr *OpaqueValueExpr::Wrap(const ASTContext &Context, Expr *E) {
+  assert(!isa<OpaqueValueExpr>(E));
+  return new (Context) OpaqueValueExpr(
+      E->getExprLoc(), E->getType(), E->getValueKind(), E->getObjectKind(), E);
+}
+
+OpaqueValueExpr *OpaqueValueExpr::EnsureWrapped(
+    const ASTContext &Ctx, Expr *E, SmallVectorImpl<OpaqueValueExpr *> &OVEs) {
+  auto *OVE = dyn_cast<OpaqueValueExpr>(E);
+  if (!OVE) {
+    OVE = Wrap(Ctx, E);
+    OVEs.push_back(OVE);
+  }
+  return OVE;
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
 
 const OpaqueValueExpr *OpaqueValueExpr::findInCopyConstruct(const Expr *e) {
   if (const ExprWithCleanups *ewc = dyn_cast<ExprWithCleanups>(e))

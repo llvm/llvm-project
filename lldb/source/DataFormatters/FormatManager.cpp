@@ -766,6 +766,64 @@ void FormatManager::LoadSystemFormatters() {
   sys_category_sp->AddTypeSummary(R"(^(unsigned )?char ?(\*|\[\])$)",
                                   eFormatterMatchRegex, string_format);
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  TypeSummaryImpl::Flags bounds_safety_flags;
+  bounds_safety_flags.SetCascades(true)
+      .SetSkipPointers(true)
+      .SetSkipReferences(false)
+      .SetDontShowChildren(true)
+      .SetDontShowValue(true)
+      .SetShowMembersOneLiner(false)
+      .SetHideItemNames(false);
+
+  // Since we have exact match summeries for char* and unsigned char* in order
+  // to have BoundsSafety summeries choosen before those for char* and unsinged
+  // char* they must be:
+  //  - exact matches as well
+  //  - added afterward since they will be searched in reverse order of
+  //    addition
+  AddCXXSummary(sys_category_sp,
+                lldb_private::formatters::FormatBoundsSafetyPointer,
+                "BoundsSafety __bidi_indexable summary provider",
+                ConstString("char *__bidi_indexable"), bounds_safety_flags);
+  AddCXXSummary(sys_category_sp,
+                lldb_private::formatters::FormatBoundsSafetyPointer,
+                "BoundsSafety __indexable summary provider",
+                ConstString("char *__indexable"), bounds_safety_flags);
+
+  AddCXXSummary(
+      sys_category_sp, lldb_private::formatters::FormatBoundsSafetyPointer,
+      "BoundsSafety __bidi_indexable summary provider",
+      ConstString("unsigned char *__bidi_indexable"), bounds_safety_flags);
+  AddCXXSummary(sys_category_sp,
+                lldb_private::formatters::FormatBoundsSafetyPointer,
+                "BoundsSafety __indexable summary provider",
+                ConstString("unsigned char *__indexable"), bounds_safety_flags);
+
+  // These will catch everything else for BoundsSafety pointers.
+  AddCXXSummary(sys_category_sp,
+                lldb_private::formatters::FormatBoundsSafetyPointer,
+                "BoundsSafety __bidi_indexable summary provider",
+                ConstString("__bidi_indexable"), bounds_safety_flags, true);
+  AddCXXSummary(sys_category_sp,
+                lldb_private::formatters::FormatBoundsSafetyPointer,
+                "BoundsSafety __indexable summary provider",
+                ConstString("__indexable"), bounds_safety_flags, true);
+  AddCXXSummary(sys_category_sp,
+                lldb_private::formatters::FormatBoundsSafetyAttrPointer,
+                "BoundsSafety counted_by summary provider",
+                ConstString("__bounds_safety::counted_by"), bounds_safety_flags, true);
+  AddCXXSummary(sys_category_sp,
+                lldb_private::formatters::FormatBoundsSafetyAttrPointer,
+                "BoundsSafety sized_by summary provider",
+                ConstString("__bounds_safety::sized_by"), bounds_safety_flags, true);
+  AddCXXSummary(
+      sys_category_sp,
+      lldb_private::formatters::FormatBoundsSafetyDynamicRangeAttrPointer,
+      "BoundsSafety dynamic range summary provider",
+      ConstString("__bounds_safety::dynamic_range"), bounds_safety_flags, true);
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   sys_category_sp->AddTypeSummary(R"(^((un)?signed )?char ?\[[0-9]+\]$)",
                                   eFormatterMatchRegex, string_array_format);
 

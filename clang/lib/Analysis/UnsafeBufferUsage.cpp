@@ -12,6 +12,7 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/FormatString.h"
+#include "clang/AST/OperationKinds.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
@@ -24,6 +25,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
+#include <algorithm>
 #include <memory>
 #include <optional>
 #include <queue>
@@ -220,6 +222,10 @@ static auto hasPointerType() {
 
 static auto hasArrayType() { return hasType(hasCanonicalType(arrayType())); }
 
+AST_MATCHER(QualType, isCountAttributedType) {
+  return Node->isCountAttributedType();
+}
+
 AST_MATCHER_P(Stmt, forEachDescendantEvaluatedStmt, internal::Matcher<Stmt>,
               innerMatcher) {
   const DynTypedMatcher &DTM = static_cast<DynTypedMatcher>(innerMatcher);
@@ -353,6 +359,480 @@ isInUnspecifiedUntypedContext(internal::Matcher<Stmt> InnerMatcher) {
   return stmt(anyOf(CompStmt, IfStmtThen, IfStmtElse));
 }
 
+namespace {
+
+// Finds the argument that is passed as dependent count.
+const Expr *findCountArg(const Expr *Count, const CallExpr *Call) {
+  const auto *DRE = dyn_cast<DeclRefExpr>(Count->IgnoreParenImpCasts());
+  if (!DRE)
+    return nullptr;
+
+  const auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl());
+  if (!PVD)
+    return nullptr;
+
+  unsigned Index = PVD->getFunctionScopeIndex();
+  if (Index >= Call->getNumArgs())
+    return nullptr;
+
+  return Call->getArg(Index);
+}
+
+// Mapping: dependent decl -> value.
+using DependentValuesTy = llvm::DenseMap<const ValueDecl *, const Expr *>;
+
+// Given the call expr, find the mapping from the dependent parameter to the
+// argument that is passed to that parameter.
+std::optional<DependentValuesTy>
+getDependentValuesFromCall(const CountAttributedType *CAT,
+                           const CallExpr *Call) {
+  DependentValuesTy Values;
+  for (const auto &DI : CAT->dependent_decls()) {
+    const auto *PVD = dyn_cast<ParmVarDecl>(DI.getDecl());
+    if (!PVD)
+      return std::nullopt;
+
+    unsigned Index = PVD->getFunctionScopeIndex();
+    if (Index >= Call->getNumArgs())
+      return std::nullopt;
+
+    const Expr *Arg = Call->getArg(Index);
+    [[maybe_unused]] bool Inserted = Values.insert({PVD, Arg}).second;
+    assert(Inserted);
+  }
+  return {std::move(Values)};
+}
+
+// Checks if Self and Other are the same member bases. This supports only very
+// simple forms of member bases.
+bool isSameMemberBase(const Expr *Self, const Expr *Other) {
+  for (;;) {
+    if (Self == Other)
+      return true;
+
+    const auto *SelfICE = dyn_cast<ImplicitCastExpr>(Self);
+    const auto *OtherICE = dyn_cast<ImplicitCastExpr>(Other);
+    if (SelfICE && OtherICE &&
+        SelfICE->getCastKind() == OtherICE->getCastKind() &&
+        (SelfICE->getCastKind() == CK_LValueToRValue ||
+         SelfICE->getCastKind() == CK_UncheckedDerivedToBase)) {
+      Self = SelfICE->getSubExpr();
+      Other = OtherICE->getSubExpr();
+    }
+
+    const auto *SelfDRE = dyn_cast<DeclRefExpr>(Self);
+    const auto *OtherDRE = dyn_cast<DeclRefExpr>(Other);
+    if (SelfDRE && OtherDRE)
+      return SelfDRE->getDecl() == OtherDRE->getDecl();
+
+    if (isa<CXXThisExpr>(Self) && isa<CXXThisExpr>(Other)) {
+      // `Self` and `Other` should be evaluated at the same state so `this` must
+      // mean the same thing for both:
+      return true;
+    }
+
+    const auto *SelfME = dyn_cast<MemberExpr>(Self);
+    const auto *OtherME = dyn_cast<MemberExpr>(Other);
+    if (!SelfME || !OtherME ||
+        SelfME->getMemberDecl() != OtherME->getMemberDecl()) {
+      return false;
+    }
+
+    Self = SelfME->getBase();
+    Other = OtherME->getBase();
+  }
+}
+
+// Impl of `isCompatibleWithCountExpr`.  See `isCompatibleWithCountExpr` for
+// document.
+struct CompatibleCountExprVisitor
+    : public ConstStmtVisitor<CompatibleCountExprVisitor, bool, const Expr *> {
+  using BaseVisitor =
+      ConstStmtVisitor<CompatibleCountExprVisitor, bool, const Expr *>;
+
+  const Expr *MemberBase;
+  const DependentValuesTy *DependentValues;
+  ASTContext &Ctx;
+
+  // If `Deref` has the form `*&e`, return `e`; otherwise return nullptr.
+  const Expr *trySimplifyDerefAddressof(const UnaryOperator *Deref) {
+    const Expr *DerefOperand = Deref->getSubExpr()->IgnoreParenImpCasts();
+
+    if (const auto *UO = dyn_cast<UnaryOperator>(DerefOperand))
+      if (UO->getOpcode() == UO_AddrOf)
+        return UO->getSubExpr();
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(DerefOperand)) {
+      if (!DependentValues)
+        return nullptr;
+
+      auto I = DependentValues->find(DRE->getDecl());
+
+      if (I != DependentValues->end())
+        if (const auto *UO = dyn_cast<UnaryOperator>(I->getSecond()))
+          if (UO->getOpcode() == UO_AddrOf)
+            return UO->getSubExpr();
+    }
+    return nullptr;
+  }
+
+  explicit CompatibleCountExprVisitor(const Expr *MemberBase,
+                                      const DependentValuesTy *DependentValues,
+                                      ASTContext &Ctx)
+      : MemberBase(MemberBase), DependentValues(DependentValues), Ctx(Ctx) {}
+
+  bool VisitStmt(const Stmt *S, const Expr *E) { return false; }
+
+  bool VisitImplicitCastExpr(const ImplicitCastExpr *SelfICE,
+                             const Expr *Other) {
+    return Visit(SelfICE->getSubExpr(), Other);
+  }
+
+  bool VisitParenExpr(const ParenExpr *SelfPE, const Expr *Other) {
+    return Visit(SelfPE->getSubExpr(), Other);
+  }
+
+  bool VisitIntegerLiteral(const IntegerLiteral *SelfIL, const Expr *Other) {
+    if (const auto *IntLit =
+            dyn_cast<IntegerLiteral>(Other->IgnoreParenImpCasts())) {
+      return SelfIL == IntLit ||
+             llvm::APInt::isSameValue(SelfIL->getValue(), IntLit->getValue());
+    }
+    return false;
+  }
+
+  bool VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Self,
+                                     const Expr *Other) {
+    // If `Self` is a `sizeof` expression, try to evaluate and compare the two
+    // expressions as constants:
+    if (Self->getKind() == UnaryExprOrTypeTrait::UETT_SizeOf) {
+      Expr::EvalResult ER;
+
+      if (Self->EvaluateAsConstantExpr(ER, Ctx)) {
+        APInt SelfVal = ER.Val.getInt();
+
+        if (Other->getType()->isIntegerType())
+          if (Other->EvaluateAsConstantExpr(ER, Ctx))
+            return APInt::isSameValue(SelfVal, ER.Val.getInt());
+      }
+    }
+    return false;
+  }
+
+  bool VisitDeclRefExpr(const DeclRefExpr *SelfDRE, const Expr *Other) {
+    const ValueDecl *SelfVD = SelfDRE->getDecl();
+
+    if (DependentValues) {
+      const auto It = DependentValues->find(SelfVD);
+      if (It != DependentValues->end())
+        return Visit(It->second, Other);
+    }
+
+    const auto *O = Other->IgnoreParenImpCasts();
+
+    if (const auto *OtherDRE = dyn_cast<DeclRefExpr>(O)) {
+      // Both SelfDRE and OtherDRE can be transformed from member expressions:
+      if (OtherDRE->getDecl() == SelfVD)
+        return true;
+      return false;
+    }
+
+    const auto *OtherME = dyn_cast<MemberExpr>(O);
+    if (MemberBase && OtherME) {
+      return OtherME->getMemberDecl() == SelfVD &&
+             isSameMemberBase(OtherME->getBase(), MemberBase);
+    }
+
+    return false;
+  }
+
+  bool VisitMemberExpr(const MemberExpr *Self, const Expr *Other) {
+    // Even though we don't support member expression in counted-by, actual
+    // arguments can be member expressions.
+    if (Self == Other)
+      return true;
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(Other->IgnoreParenImpCasts()))
+      return MemberBase && Self->getMemberDecl() == DRE->getDecl() &&
+             isSameMemberBase(Self->getBase(), MemberBase);
+    return false;
+  }
+
+  bool VisitUnaryOperator(const UnaryOperator *SelfUO, const Expr *Other) {
+    if (SelfUO->getOpcode() != UO_Deref)
+      return false; // We don't support any other unary operator
+
+    if (const auto *OtherUO =
+            dyn_cast<UnaryOperator>(Other->IgnoreParenImpCasts())) {
+      if (SelfUO->getOpcode() == OtherUO->getOpcode())
+        return Visit(SelfUO->getSubExpr(), OtherUO->getSubExpr());
+    }
+    // If `Other` is not a dereference expression, try to simplify `SelfUO`:
+    if (const auto *SimplifiedSelf = trySimplifyDerefAddressof(SelfUO)) {
+      return Visit(SimplifiedSelf, Other);
+    }
+    return false;
+  }
+
+  bool VisitBinaryOperator(const BinaryOperator *SelfBO, const Expr *Other) {
+    const auto *OtherBO =
+        dyn_cast<BinaryOperator>(Other->IgnoreParenImpCasts());
+    if (OtherBO && OtherBO->getOpcode() == SelfBO->getOpcode()) {
+      return Visit(SelfBO->getLHS(), OtherBO->getLHS()) &&
+             Visit(SelfBO->getRHS(), OtherBO->getRHS());
+    }
+
+    return false;
+  }
+};
+
+// TL'DR:
+// Checks if `E` is the same as `ExpectedCountExpr` modulo implicit casts and
+// parens.
+//
+// Lengthy description:
+// `E`:                 represents the actual count/size associated to a
+//                      pointer.
+// `ExpectedCountExpr`: represents the counted-by expression of a counted-by
+//                      type attribute.
+// `MemberBase`:        represents "this" member base.  A MemberExpr
+//                      representing `this->f` in both `E` and
+//                      `ExpectedCountExpr` may be transformed to a DRE
+//                      representing just `f`.  Therefore we need to keep track
+//                      of the base for them in that case.
+// `DependentValues`:   is a mapping from parameter DREs to actual argument
+//                      expressions.  It serves as a "state" where
+//                      `ExpectedCountExpr` is "interpreted".
+//
+// This function then checks for a pointer with a known count `E` that `E` is
+// equivalent to the count `ExpectedCountExpr` of a counted-by type attribute at
+// the state `DependentValues`.
+//
+// For example, suppose there is a call to a function `foo(int *__counted_by(n)
+// p, size_t n)`:
+//
+//    foo(x, y+z);
+//
+// We check that the count associated to the pointer 'x' is same as the
+// expected count expression 'n' with the mapping (state) '{n -> y+z}'.  The
+// count of 'x' is determined by pre-defined knowledge, e.g., if 'x' has the
+// form of 'span.data()', its' count is 'span.size()', etc.  At this point, we
+// already know that `E` is the count of 'x'.  So we just need to compare `E`
+// to 'n' with 'n' being interpreted under '{n -> y+z}'.  That is, this function
+// will return true iff `E` is same as 'y+z'.
+bool isCompatibleWithCountExpr(const Expr *E, const Expr *ExpectedCountExpr,
+                               const Expr *MemberBase,
+                               const DependentValuesTy *DependentValues,
+                               ASTContext &Ctx) {
+  CompatibleCountExprVisitor Visitor(MemberBase, DependentValues, Ctx);
+  return Visitor.Visit(ExpectedCountExpr, E);
+}
+
+// Returns if a pair of expressions contain method calls to .data()/.c_str() and
+// .size()/.size_bytes()/.length() that form a valid range.
+bool isValidContainerRange(ASTContext &Context, const Expr *Data,
+                           const Expr *Size, bool ArgInBytes,
+                           bool ParamInBytes) {
+  auto MethodMatcher = [](StringRef ClassName, StringRef MethodName) {
+    return callee(
+        cxxMethodDecl(hasName(MethodName), ofClass(hasName(ClassName))));
+  };
+
+  const auto *DataCall = selectFirst<const CXXMemberCallExpr>(
+      "e",
+      match(expr(ignoringParenImpCasts(
+                cxxMemberCallExpr(
+                    anyOf(MethodMatcher("::std::array", "data"),
+                          MethodMatcher("::std::basic_string", "c_str"),
+                          MethodMatcher("::std::basic_string", "data"),
+                          MethodMatcher("::std::basic_string_view", "data"),
+                          MethodMatcher("::std::span", "data"),
+                          MethodMatcher("::std::vector", "data")))
+                    .bind("e"))),
+            *Data, Context));
+  if (!DataCall)
+    return false;
+
+  const auto *SizeCall = selectFirst<const CXXMemberCallExpr>(
+      "e",
+      match(expr(ignoringParenImpCasts(
+                cxxMemberCallExpr(
+                    anyOf(MethodMatcher("::std::array", "size"),
+                          MethodMatcher("::std::basic_string", "length"),
+                          MethodMatcher("::std::basic_string", "size"),
+                          MethodMatcher("::std::basic_string_view", "length"),
+                          MethodMatcher("::std::basic_string_view", "size"),
+                          MethodMatcher("::std::span", "size"),
+                          MethodMatcher("::std::span", "size_bytes"),
+                          MethodMatcher("::std::vector", "size")))
+                    .bind("e"))),
+            *Size, Context));
+  if (!SizeCall)
+    return false;
+
+  const Expr *DataObj = DataCall->getImplicitObjectArgument();
+  const Expr *SizeObj = SizeCall->getImplicitObjectArgument();
+  if (!DataObj || !SizeObj)
+    return false;
+
+  bool AllowSizeBytes = ParamInBytes;
+  bool RequireSizeBytes = !ArgInBytes && ParamInBytes;
+  bool IsSizeBytes = SizeCall->getDirectCallee()->getName() == "size_bytes";
+  if (!AllowSizeBytes && IsSizeBytes)
+    return false;
+  if (RequireSizeBytes && !IsSizeBytes)
+    return false;
+
+  // Check if the base of data and size is the same.
+  const auto *DataDRE = dyn_cast<DeclRefExpr>(DataObj->IgnoreImpCasts());
+  const auto *SizeDRE = dyn_cast<DeclRefExpr>(SizeObj->IgnoreImpCasts());
+  return DataDRE && SizeDRE && DataDRE->getDecl() == SizeDRE->getDecl();
+}
+
+// Extract the extent `X` from `sp.first(X).data()` and friends.
+const Expr *extractExtentFromSubviewDataCall(ASTContext &Context,
+                                             const Expr *E) {
+  auto ExtentMatcher = [](StringRef Name, unsigned N) {
+    return cxxMemberCallExpr(
+        callee(cxxMethodDecl(hasName(Name), ofClass(hasName("::std::span")))),
+        hasArgument(N, expr().bind("extent")));
+  };
+  auto SpanSubviewMatcher =
+      anyOf(ExtentMatcher("first", 0), ExtentMatcher("last", 0),
+            ExtentMatcher("subspan", 1));
+  auto SpanDataMatcher = cxxMemberCallExpr(
+      callee(cxxMethodDecl(hasName("data"), ofClass(hasName("::std::span")))),
+      on(SpanSubviewMatcher));
+  return selectFirst<const Expr>(
+      "extent",
+      match(expr(ignoringParenImpCasts(SpanDataMatcher)), *E, Context));
+}
+
+// Returns true iff `E` evaluates to `Val`.
+static bool hasIntegeralConstant(const Expr *E, uint64_t Val, ASTContext &Ctx) {
+  Expr::EvalResult ER;
+
+  if (E->EvaluateAsConstantExpr(ER, Ctx)) {
+    APInt Eval = ER.Val.getInt();
+
+    return APInt::isSameValue(Eval, APInt(Eval.getBitWidth(), Val));
+  }
+  return false;
+}
+
+// Checks if the argument passed to count-attributed pointer is one of the
+// following forms:
+// 0. `NULL/nullptr`, if the argument to dependent count/size is `0`.
+// 1. `&var`, if `var` is a variable identifier and the dependent count is `1`.
+// 2. `&var`, if `var` is a variable identifier and the dependent size is
+//     equivalent to `sizeof(var)`.
+// 3. `sp.data()` if the argument to dependent count is `sp.size()`.
+// 4. `sp.first(extent).data()` if `extent` is compatible with the `count`.
+// 5. `p` if `p` is __counted_by(c) pointer and `c` is compatible with the
+//    `count` of the param type.
+// 6. `constant-array` if the argument to dependent count is the length of
+//    `constant-array`.
+// 7. `(T*) constant-array` if the size of `T` equals to one byte and the
+//    argument to dependent size is equivalent to `sizeof(constant-array)`.
+bool isCountAttributedPointerArgumentSafe(ASTContext &Context,
+                                          const CountAttributedType *CAT,
+                                          const CallExpr *Call,
+                                          const Expr *Arg) {
+  const Expr *ArgNoImp = Arg->IgnoreParenImpCasts();
+
+  // check form 0:
+  if (ArgNoImp->getType()->isNullPtrType()) {
+    if (const auto *CountArg = findCountArg(CAT->getCountExpr(), Call))
+      return hasIntegeralConstant(CountArg, 0, Context);
+    return false;
+  }
+
+  // check form 1-2:
+  auto AddressofDRE = expr(unaryOperator(
+      hasOperatorName("&"),
+      hasUnaryOperand(ignoringParenImpCasts(declRefExpr().bind("VarIdent")))));
+
+  if (auto *DRE = selectFirst<const DeclRefExpr>(
+          "VarIdent", match(AddressofDRE, *ArgNoImp, Context))) {
+    if (const auto *CountArg = findCountArg(CAT->getCountExpr(), Call)) {
+      if (!CAT->isCountInBytes()) // form 1:
+        return hasIntegeralConstant(CountArg, 1, Context);
+      // form 2:
+      if (auto TySize = Context.getTypeSizeInCharsIfKnown(DRE->getType()))
+        return hasIntegeralConstant(CountArg, TySize->getQuantity(), Context);
+    }
+    return false;
+  }
+
+  auto getTypeSize = [&](QualType Ty) -> std::optional<CharUnits> {
+    if (Context.hasSameUnqualifiedType(Ty, Context.VoidTy))
+      return {CharUnits::One()};
+    return Context.getTypeSizeInCharsIfKnown(Ty);
+  };
+
+  std::optional<CharUnits> ArgTypeSize = getTypeSize(
+      QualType(ArgNoImp->getType()->getPointeeOrArrayElementType(), 0));
+  std::optional<CharUnits> ParamTypeSize = getTypeSize(CAT->getPointeeType());
+
+  bool ArgInBytes = ArgTypeSize.has_value() && ArgTypeSize->isOne();
+  bool ParamInBytes = CAT->isCountInBytes() ||
+                      (ParamTypeSize.has_value() && ParamTypeSize->isOne());
+
+  // If there is only one dependent count, check for the form 3.
+  if (const auto *CountArg = findCountArg(CAT->getCountExpr(), Call)) {
+    if (isValidContainerRange(Context, Arg, CountArg, ArgInBytes, ParamInBytes))
+      return true;
+  }
+
+  // Check forms 4-7.
+
+  if (ArgInBytes != ParamInBytes)
+    return false;
+
+  auto ValuesOpt = getDependentValuesFromCall(CAT, Call);
+  if (!ValuesOpt.has_value())
+    return false;
+
+  const Expr *ArgCount = nullptr;
+  const Expr *MemberBase = nullptr;
+
+  if (const auto *ME = dyn_cast<MemberExpr>(ArgNoImp))
+    MemberBase = ME->getBase();
+
+  if (const Expr *ExtentExpr = extractExtentFromSubviewDataCall(Context, Arg)) {
+    // Form 4.
+    ArgCount = ExtentExpr;
+  } else if (const auto *ArgCAT =
+                 ArgNoImp->getType()->getAs<CountAttributedType>()) {
+    // Form 5.
+    if (ArgCAT->isOrNull() == CAT->isOrNull())
+      ArgCount = ArgCAT->getCountExpr();
+  } else {
+    // Form 6-7.
+    const Expr *ArrArg = ArgNoImp;
+
+    if (ArgInBytes)
+      if (auto *CE = dyn_cast<CastExpr>(ArrArg))
+        // In case of ArgInBytes, we know the destination type is a pointer to
+        // char:
+        ArrArg = CE->getSubExpr()->IgnoreParenImpCasts();
+    if (const auto *ATy = Context.getAsConstantArrayType(ArrArg->getType())) {
+      APInt TySize = ATy->getSize();
+
+      if (CAT->isCountInBytes())
+        if (auto TySizeInChar = Context.getTypeSizeInCharsIfKnown(ATy))
+          TySize = APInt(TySize.getBitWidth(), TySizeInChar->getQuantity());
+      ArgCount = IntegerLiteral::Create(Context, TySize, Context.getSizeType(),
+                                        SourceLocation());
+    }
+  }
+  if (!ArgCount)
+    return false;
+
+  return isCompatibleWithCountExpr(ArgCount, CAT->getCountExpr(), MemberBase,
+                                   &*ValuesOpt, Context);
+}
+
+} // namespace
+
 // Given a two-param std::span construct call, matches iff the call has the
 // following forms:
 //   1. `std::span<T>{new T[n], n}`, where `n` is a literal or a DRE
@@ -362,6 +842,9 @@ isInUnspecifiedUntypedContext(internal::Matcher<Stmt> InnerMatcher) {
 //   `n`
 //   5. `std::span<T>{any, 0}`
 //   6. `std::span<T>{std::addressof(...), 1}`
+//   7. `std::span<T>{p, n}`, where `p` is a __counted_by(`n`)/__sized_by(`n`)
+//   pointer.
+
 AST_MATCHER(CXXConstructExpr, isSafeSpanTwoParamConstruct) {
   assert(Node.getNumArgs() == 2 &&
          "expecting a two-parameter std::span constructor");
@@ -428,6 +911,35 @@ AST_MATCHER(CXXConstructExpr, isSafeSpanTwoParamConstruct) {
     // Check form 4:
     return Arg1CV && APSInt::compareValues(ConstArrSize, *Arg1CV) == 0;
   }
+
+  // Check form 6:
+  if (const auto *CAT = Arg0Ty->getAs<CountAttributedType>()) {
+    // Accept __sized_by() if the size of the pointee type is 1.
+    if (CAT->isCountInBytes()) {
+      std::optional<CharUnits> SizeOpt =
+          Finder->getASTContext().getTypeSizeInCharsIfKnown(
+              CAT->getPointeeType());
+      if (!SizeOpt.has_value() || !SizeOpt->isOne())
+        return false;
+    }
+
+    const Expr *MemberBase = nullptr;
+    if (const auto *ME = dyn_cast<MemberExpr>(Arg0))
+      MemberBase = ME->getBase();
+
+    if (const auto *Call = dyn_cast<CallExpr>(Arg0)) {
+      auto ValuesOpt = getDependentValuesFromCall(CAT, Call);
+      if (!ValuesOpt.has_value())
+        return false;
+      return isCompatibleWithCountExpr(Arg1, CAT->getCountExpr(), MemberBase,
+                                       &*ValuesOpt, Finder->getASTContext());
+    }
+
+    return isCompatibleWithCountExpr(Arg1, CAT->getCountExpr(), MemberBase,
+                                     /*DependentValues=*/nullptr,
+                                     Finder->getASTContext());
+  }
+
   return false;
 }
 
@@ -476,6 +988,18 @@ AST_MATCHER_P(CallExpr, hasNumArgs, unsigned, Num) {
   return Node.getNumArgs() == Num;
 }
 
+// Matches a function declaration if any parameter type or return type has
+// bounds attributes.
+AST_MATCHER(FunctionDecl, hasAnyBoundsAttributes) {
+  bool RetTyHasBoundsAttr = Node.getReturnType()->isBoundsAttributedType() ||
+                            Node.getReturnType()->isValueTerminatedType();
+  return RetTyHasBoundsAttr ||
+         llvm::any_of(Node.parameters(), [](const ParmVarDecl *PVD) {
+           return PVD->getType()->isBoundsAttributedType() ||
+                  PVD->getType()->isValueTerminatedType();
+         });
+}
+
 namespace libc_func_matchers {
 // Under `libc_func_matchers`, define a set of matchers that match unsafe
 // functions in libc and unsafe calls to them.
@@ -521,9 +1045,11 @@ struct LibcFunNamePrefixSuffixParser {
   }
 };
 
-// A pointer type expression is known to be null-terminated, if it has the
-// form: E.c_str(), for any expression E of `std::string` type.
-static bool isNullTermPointer(const Expr *Ptr) {
+// A pointer type expression is known to be null-terminated, if
+//  1. it is a string literal or `PredefinedExpr` (e.g., `__func__`);
+//  2. it has the form: E.c_str(), for any expression E of `std::string` type;
+//  3. it has `__null_terminated` type
+static bool isNullTermPointer(const Expr *Ptr, ASTContext &Ctx) {
   if (isa<StringLiteral>(Ptr->IgnoreParenImpCasts()))
     return true;
   if (isa<PredefinedExpr>(Ptr->IgnoreParenImpCasts()))
@@ -535,6 +1061,9 @@ static bool isNullTermPointer(const Expr *Ptr) {
     if (MD && RD && RD->isInStdNamespace())
       if (MD->getName() == "c_str" && RD->getName() == "basic_string")
         return true;
+  }
+  if (auto *VTT = Ptr->getType().getTypePtr()->getAs<ValueTerminatedType>()) {
+    return VTT->getTerminatorValue(Ctx).isZero();
   }
   return false;
 }
@@ -555,11 +1084,12 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
     const CallExpr *Call;
     unsigned FmtArgIdx;
     const Expr *&UnsafeArg;
+    ASTContext &Ctx;
 
   public:
     StringFormatStringHandler(const CallExpr *Call, unsigned FmtArgIdx,
-                              const Expr *&UnsafeArg)
-        : Call(Call), FmtArgIdx(FmtArgIdx), UnsafeArg(UnsafeArg) {}
+                              const Expr *&UnsafeArg, ASTContext &Ctx)
+        : Call(Call), FmtArgIdx(FmtArgIdx), UnsafeArg(UnsafeArg), Ctx(Ctx) {}
 
     bool HandlePrintfSpecifier(const analyze_printf::PrintfSpecifier &FS,
                                const char *startSpecifier,
@@ -570,7 +1100,7 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
         unsigned ArgIdx = FS.getPositionalArgIndex() + FmtArgIdx;
 
         if (0 < ArgIdx && ArgIdx < Call->getNumArgs())
-          if (!isNullTermPointer(Call->getArg(ArgIdx))) {
+          if (!isNullTermPointer(Call->getArg(ArgIdx), Ctx)) {
             UnsafeArg = Call->getArg(ArgIdx); // output
             // returning false stops parsing immediately
             return false;
@@ -592,7 +1122,7 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
     else
       goto CHECK_UNSAFE_PTR;
 
-    StringFormatStringHandler Handler(Call, FmtArgIdx, UnsafeArg);
+    StringFormatStringHandler Handler(Call, FmtArgIdx, UnsafeArg, Ctx);
 
     return analyze_format_string::ParsePrintfString(
         Handler, FmtStr.begin(), FmtStr.end(), Ctx.getLangOpts(),
@@ -604,8 +1134,8 @@ CHECK_UNSAFE_PTR:
   // (including the format argument) is unsafe pointer.
   return llvm::any_of(
       llvm::make_range(Call->arg_begin() + FmtArgIdx, Call->arg_end()),
-      [&UnsafeArg](const Expr *Arg) -> bool {
-        if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg)) {
+      [&UnsafeArg, &Ctx](const Expr *Arg) -> bool {
+        if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg, Ctx)) {
           UnsafeArg = Arg;
           return true;
         }
@@ -852,8 +1382,8 @@ AST_MATCHER_P(CallExpr, hasUnsafePrintfStringArg,
   }
   // We don't really recognize this "normal" printf, the only thing we
   // can do is to require all pointers to be null-terminated:
-  for (auto Arg : Node.arguments())
-    if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg))
+  for (auto *Arg : Node.arguments())
+    if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg, Ctx))
       if (UnsafeStringArgMatcher.matches(*Arg, Finder, Builder))
         return true;
   return false;
@@ -946,6 +1476,45 @@ AST_MATCHER(CallExpr, hasUnsafeSnprintfBuffer) {
   return true; // ptr and size are not in safe pattern
 }
 } // namespace libc_func_matchers
+
+// Matches each argument passed to a `__counted_by(count)` pointer that is
+// unsafe, i.e. that is NOT in one of the following forms:
+// 1. `sp.data()` if the argument to dependent count is `sp.size()`.
+// 2. `sp.first(extent).data()` if `extent` is compatible with the `count`.
+AST_MATCHER_P(CallExpr, forEachUnsafeCountAttributedPointerArgument,
+              internal::Matcher<Expr>, ArgMatcher) {
+  ASTContext &Context = Finder->getASTContext();
+  const CallExpr *Call = &Node;
+
+  const FunctionDecl *FD = Call->getDirectCallee();
+  if (!FD)
+    return false;
+
+  const auto *FPT = FD->getType()->getAs<FunctionProtoType>();
+  if (!FPT)
+    return false;
+
+  const unsigned Num = std::min(Call->getNumArgs(), FPT->getNumParams());
+
+  bool Matched = false;
+  for (unsigned I = 0; I < Num; ++I) {
+    const auto *CAT = FPT->getParamType(I)->getAs<CountAttributedType>();
+    if (!CAT)
+      continue;
+
+    const Expr *Arg = Call->getArg(I);
+    if (!isCountAttributedPointerArgumentSafe(Context, CAT, Call, Arg)) {
+      BoundNodesTreeBuilder ArgMatches(*Builder);
+      if (ArgMatcher.matches(*Arg, Finder, &ArgMatches)) {
+        Builder->addMatch(ArgMatches);
+        Matched = true;
+      }
+    }
+  }
+
+  return Matched;
+}
+
 } // namespace clang::ast_matchers
 
 namespace {
@@ -1583,13 +2152,21 @@ public:
   }
 
   static Matcher matcher(const UnsafeBufferUsageHandler *Handler) {
+    // When this warning interops with bounds attributes, we suppress the
+    // warning for most of the libc functions except for
+    // 1. "normal printf" (see `libc_func_matchers::isNormalPrintfFunc`),
+    //    because we still can check its string arguments and take advantage of
+    //    the '__null_terminated' attribute;
+    // 2. `v*printf/sprintf` functions because these functions cannot be
+    //    completely safe even with bounds attributes
     return stmt(unless(ignoreUnsafeLibcCall(Handler)),
       anyOf(
         callExpr(
             callee(functionDecl(anyOf(
                 // Match a predefined unsafe libc
                 // function:
-                functionDecl(libc_func_matchers::isPredefinedUnsafeLibcFunc()),
+                functionDecl(unless(hasAnyBoundsAttributes()),
+                  libc_func_matchers::isPredefinedUnsafeLibcFunc()),
                 // Match a call to one of the `v*printf` functions
                 // taking va-list, which cannot be checked at
                 // compile-time:
@@ -1609,7 +2186,10 @@ public:
         // Match a call to an `snprintf` function. And first two
         // arguments of the call (that describe a buffer) are not in
         // safe patterns:
-        callExpr(callee(functionDecl(libc_func_matchers::isNormalPrintfFunc())),
+        callExpr(callee(functionDecl(
+           // we do not warn about the write buffer of snprintf if it has bounds attributes:
+          unless(hasAnyBoundsAttributes()),
+          libc_func_matchers::isNormalPrintfFunc())),
                  libc_func_matchers::hasUnsafeSnprintfBuffer())
             .bind(UnsafeSizedByTag),
         // Match a call to a `printf` function, which can be safe if
@@ -1989,6 +2569,53 @@ public:
 
   virtual DeclUseList getClaimedVarUseSites() const final {
     return {BaseDeclRefExpr};
+  }
+};
+
+// Represents an argument that is being passed to a __counted_by() pointer.
+class CountAttributedPointerArgumentGadget : public WarningGadget {
+private:
+  static constexpr const char *const CallTag =
+      "CountAttributedPointerArgument_Call";
+  static constexpr const char *const ArgTag =
+      "CountAttributedPointerArgument_Arg";
+  const CallExpr *Call;
+  const Expr *Arg;
+
+public:
+  explicit CountAttributedPointerArgumentGadget(
+      const MatchFinder::MatchResult &Result)
+      : WarningGadget(Kind::CountAttributedPointerArgument),
+        Call(Result.Nodes.getNodeAs<CallExpr>(CallTag)),
+        Arg(Result.Nodes.getNodeAs<Expr>(ArgTag)) {
+    assert(Call != nullptr && "Expecting a non-null matching result");
+    assert(Arg != nullptr && "Expecting a non-null matching result");
+  }
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::CountAttributedPointerArgument;
+  }
+
+  static Matcher matcher() {
+    return stmt(callExpr(forEachUnsafeCountAttributedPointerArgument(
+                             expr().bind(ArgTag)))
+                    .bind(CallTag));
+  }
+
+  void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
+                             bool IsRelatedToDecl,
+                             ASTContext &Ctx) const override {
+    Handler.handleUnsafeCountAttributedPointerArgument(Call, Arg,
+                                                       IsRelatedToDecl, Ctx);
+  }
+
+  SourceLocation getSourceLoc() const override { return Arg->getBeginLoc(); }
+
+  virtual DeclUseList getClaimedVarUseSites() const override {
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(Arg)) {
+      return {DRE};
+    }
+    return {};
   }
 };
 

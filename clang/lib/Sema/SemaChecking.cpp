@@ -3992,6 +3992,43 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     return ExprError();
   }
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  if (LangOpts.BoundsSafety) {
+    const auto *PtrTy = ValType->getAs<PointerType>();
+    bool IsDBP = ValType->isBoundsAttributedType();
+    if (PtrTy || IsDBP) {
+      // Check if an AddSub op uses a pointer to __unsafe_indexable pointer.
+      if (Form == Arithmetic && (IsDBP || PtrTy->isSafePointer())) {
+        // Non-AddSub ops require a pointer to an integer, they should have been
+        // handled.
+        Diag(ExprRange.getBegin(),
+             diag::err_bounds_safety_atomic_op_arithmetic_needs_unsafe_pointer)
+            << Ptr->getType() << Ptr->getSourceRange();
+        return ExprError();
+      }
+      // Non-arithmetic ops require a pointer to __unsafe_indexable or __single
+      // pointer.
+      if (IsDBP || (PtrTy->isSafePointer() && !PtrTy->isSingle())) {
+        unsigned DiagIndex;
+        if (PtrTy->isIndexable())
+          DiagIndex = 0;
+        else if (PtrTy->isBidiIndexable())
+          DiagIndex = 1;
+        else if (const auto *DCPTy = ValType->getAs<CountAttributedType>())
+          DiagIndex = DCPTy->getKind() + 2;
+        else if (ValType->isDynamicRangePointerType())
+          DiagIndex = 6;
+        else
+          llvm_unreachable("Unknown pointer");
+        Diag(ExprRange.getBegin(),
+             diag::err_bounds_safety_atomic_op_unsupported_attribute)
+            << DiagIndex << Ptr->getSourceRange();
+        return ExprError();
+      }
+    }
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
   // All atomic operations have an overload which takes a pointer to a volatile
   // 'A'.  We shouldn't let the volatile-ness of the pointee-type inject itself
   // into the result or the other operands. Similarly atomic_load takes a
@@ -6295,6 +6332,9 @@ bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
   }
 
   const Expr *OrigFormatExpr = Args[format_idx]->IgnoreParenCasts();
+  if (auto Forge = dyn_cast<ForgePtrExpr>(OrigFormatExpr)) {
+    OrigFormatExpr = Forge->getAddr()->IgnoreParenCasts();
+  }
 
   // CHECK: format string is not a string literal.
   //
@@ -9448,6 +9488,30 @@ Sema::CheckReturnValExpr(Expr *RetValExp, QualType lhsType,
   // here prevent the user from using a PPC MMA type as trailing return type.
   if (Context.getTargetInfo().getTriple().isPPC64())
     PPC().CheckPPCMMAType(RetValExp->getType(), ReturnLoc);
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  BoundsSafetyCheckAssignmentToCountAttrPtr(
+      lhsType, RetValExp, AssignmentAction::Returning,
+      RetValExp->getBeginLoc());
+
+  // For a count-attributed return type, its dependent count variables can be
+  // assigned in arbitrary places. Don't try to find the assigned values, just
+  // assume we don't know them and pass an empty map.
+  // Pass an empty designator, since it won't be used in diagnostics for
+  // returning action.
+  //
+  // TODO: This diagnostic check should always be performed (rdar://138982703).
+  // The check is currently guarded because if it's always on several projects
+  // fail to build (rdar://138798562&138804573&138808353&138855224).
+  if (getLangOpts().BoundsSafety &&
+      getLangOpts().hasNewBoundsSafetyCheck(LangOptions::BS_CHK_ReturnSize)) {
+    DependentValuesMap DependentValues;
+    CheckDynamicCountSizeForAssignment(
+        lhsType, RetValExp->IgnoreParenImpCasts(), AssignmentAction::Returning,
+        RetValExp->getBeginLoc(),
+        /*Designator=*/"", DependentValues);
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 }
 
 void Sema::CheckFloatComparison(SourceLocation Loc, Expr *LHS, Expr *RHS,
@@ -11617,7 +11681,8 @@ static void AnalyzeImplicitConversions(
   SourceLocation CC = Item.CC;
 
   QualType T = OrigE->getType();
-  Expr *E = OrigE->IgnoreParenImpCasts();
+  llvm::SmallPtrSet<const OpaqueValueExpr *, 8> BoundValues;
+  Expr *E = OrigE->IgnoreParenImpCasts(BoundValues);
 
   // Propagate whether we are in a C++ list initialization expression.
   // If so, we do not issue warnings for implicit int-float conversion
@@ -11751,6 +11816,9 @@ static void AnalyzeImplicitConversions(
     Expr *ChildExpr = dyn_cast_or_null<Expr>(SubStmt);
     if (!ChildExpr)
       continue;
+    if (auto *OVE = dyn_cast<OpaqueValueExpr>(ChildExpr))
+        if (BoundValues.count(OVE))
+            ChildExpr = OVE->getSourceExpr();
 
     if (auto *CSE = dyn_cast<CoroutineSuspendExpr>(E))
       if (ChildExpr == CSE->getOperand())
@@ -13118,6 +13186,13 @@ bool Sema::CheckParmsForFunctionDef(ArrayRef<ParmVarDecl *> Parameters,
       HasInvalidParm = true;
       Diag(Param->getLocation(), diag::err_wasm_table_as_function_parameter);
     }
+
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    if (!Param->isInvalidDecl() &&
+        !BoundsSafetyCheckParamForFunctionDef(Param)) {
+      Param->setInvalidDecl();
+    }
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
   }
 
   return HasInvalidParm;
@@ -14459,6 +14534,13 @@ void Sema::DiagnoseMisalignedMembers() {
 
 void Sema::DiscardMisalignedMemberAddress(const Type *T, Expr *E) {
   E = E->IgnoreParens();
+
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  if (E->getType()->isSafePointerType()) {
+    E = E->IgnoreParenImpCasts();
+  }
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
+
   if (!T->isPointerType() && !T->isIntegerType() && !T->isDependentType())
     return;
   if (isa<UnaryOperator>(E) &&

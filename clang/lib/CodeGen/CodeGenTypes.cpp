@@ -602,7 +602,12 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     const PointerType *PTy = cast<PointerType>(Ty);
     QualType ETy = PTy->getPointeeType();
     unsigned AS = getTargetAddressSpace(ETy);
-    ResultType = llvm::PointerType::get(getLLVMContext(), AS);
+    if (PTy->hasRawPointerLayout())
+      ResultType = llvm::PointerType::get(getLLVMContext(), AS);
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    else
+      ResultType = ConvertBoundsSafetyPointerType(PTy);
+    /* TO_UPSTREAM(BoundsSafety) OFF */
     break;
   }
 
@@ -769,6 +774,35 @@ bool CodeGenModule::isPaddedAtomicType(QualType type) {
 bool CodeGenModule::isPaddedAtomicType(const AtomicType *type) {
   return Context.getTypeSize(type) != Context.getTypeSize(type->getValueType());
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON */
+llvm::Type *CodeGenTypes::ConvertBoundsSafetyPointerType(const PointerType *PT) {
+  assert(!PT->hasRawPointerLayout());
+  llvm::StructType *&Entry = WidePointerTypes[PT];
+  if (Entry)
+    return Entry;
+
+  SmallString<256> TypeName;
+  llvm::raw_svector_ostream OS(TypeName);
+  OS << "__bounds_safety::wide_ptr.";
+  if (PT->isBidiIndexable())
+    OS << "bidi_indexable";
+  else if (PT->isIndexable())
+    OS << "indexable";
+
+  QualType RawQTy = Context.getPointerType(PT->getPointeeType());
+  llvm::Type *RawTy = ConvertType(RawQTy);
+  llvm::SmallVector<llvm::Type *, 3> Elems;
+  Elems.push_back(RawTy);
+  if (PT->getPointerAttributes().hasUpperBound())
+    Elems.push_back(RawTy);
+  if (PT->getPointerAttributes().hasLowerBound())
+    Elems.push_back(RawTy);
+
+  Entry = llvm::StructType::create(getLLVMContext(), Elems, OS.str());
+  return Entry;
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
 
 /// ConvertRecordDeclType - Lay out a tagged decl type like struct or union.
 llvm::StructType *CodeGenTypes::ConvertRecordDeclType(const RecordDecl *RD) {

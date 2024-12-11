@@ -2,6 +2,9 @@
 
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
+
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+
 declare void @use(i1)
 
 declare void @llvm.assume(i1)
@@ -166,7 +169,16 @@ declare void @noundef(ptr noundef)
 
 ; Currently this fails decomposition. No reproducer should be generated.
 define i1 @test_inbounds_precondition(ptr %src, i32 %n, i32 %idx) {
-; CHECK-NOT: test_inbounds_precondition
+; CHECK-LABEL: define i1 @"{{.*}}test_inbounds_preconditionrepro"(i64 %ub, ptr %src) {
+; CHECK-NEXT: entry:
+; CHECK-NEXT:   %0 = icmp uge i64 %ub, 20
+; CHECK-NEXT:   call void @llvm.assume(i1 %0)
+; CHECK-NEXT:   %upper = getelementptr inbounds i32, ptr %src, i64 5
+; CHECK-NEXT:   %src.idx.4 = getelementptr i32, ptr %src, i64 4
+; CHECK-NEXT:   %cmp.upper.4 = icmp ule ptr %src.idx.4, %upper
+; CHECK-NEXT:   ret i1 %cmp.upper.4
+; CHECK-NEXT: }
+;
 entry:
   %upper = getelementptr inbounds i32, ptr %src, i64 5
   %src.idx.4 = getelementptr i32, ptr %src, i64 4

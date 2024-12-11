@@ -1377,10 +1377,12 @@ private:
     IdentifierInfo *MacroII = nullptr;
     SourceLocation AttrNameLoc;
     SmallVector<Decl*, 2> Decls;
+    // TO_UPSTREAM(BoundsSafety)
+    unsigned NestedTypeLevel;
 
     explicit LateParsedAttribute(Parser *P, IdentifierInfo &Name,
-                                 SourceLocation Loc)
-      : Self(P), AttrName(Name), AttrNameLoc(Loc) {}
+                                 SourceLocation Loc, unsigned Level = 0)
+      : Self(P), AttrName(Name), AttrNameLoc(Loc), NestedTypeLevel(Level) {}
 
     void ParseLexedAttributes() override;
 
@@ -1700,7 +1702,9 @@ private:
   void SkipFunctionBody();
   Decl *ParseFunctionDefinition(ParsingDeclarator &D,
                  const ParsedTemplateInfo &TemplateInfo = ParsedTemplateInfo(),
-                 LateParsedAttrList *LateParsedAttrs = nullptr);
+                 LateParsedAttrList *LateParsedAttrs = nullptr,
+                 // TO_UPSTREAM(BoundsSafety)
+                 LateParsedAttrList *BoundsSafetyLateAttrs = nullptr);
   void ParseKNRParamDeclarations(Declarator &D);
   // EndLoc is filled with the location of the last token of the simple-asm.
   ExprResult ParseSimpleAsm(bool ForAsmLabel, SourceLocation *EndLoc);
@@ -2022,6 +2026,36 @@ private:
 
   /// Parse a __builtin_bit_cast(T, E), used to implement C++2a std::bit_cast.
   ExprResult ParseBuiltinBitCast();
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  //===--------------------------------------------------------------------===//
+  /// BoundsSafety: __builtin_unsafe_forge_bidi_indexable(expr, size)
+  ExprResult ParseUnsafeForgeBidiIndexable();
+
+  //===--------------------------------------------------------------------===//
+  /// BoundsSafety: __builtin_unsafe_forge_single(expr)
+  ExprResult ParseUnsafeForgeSingle();
+
+  //===--------------------------------------------------------------------===//
+  /// BoundsSafety: __builtin_unsafe_forge_terminated_by(expr, terminator)
+  ExprResult ParseUnsafeForgeTerminatedBy();
+
+  //===--------------------------------------------------------------------===//
+  /// BoundsSafety: __builtin_get_pointer_lower_bound(expr)
+  enum PointerBoundKind { PBK_Lower, PBK_Upper };
+  ExprResult ParseGetPointerBound(PointerBoundKind K);
+
+  //===--------------------------------------------------------------------===//
+  /// BoundsSafety:
+  /// __builtin_terminated_by_to_indexable(pointer [, terminator])
+  /// __builtin_unsafe_terminated_by_to_indexable(pointer [, terminator])
+  ExprResult ParseTerminatedByToIndexable(bool Unsafe);
+
+  //===--------------------------------------------------------------------===//
+  /// BoundsSafety: __builtin_unsafe_terminated_by_from_indexable(terminator,
+  /// pointer [, pointer-to-terminator])
+  ExprResult ParseUnsafeTerminatedByFromIndexable();
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   //===--------------------------------------------------------------------===//
   // C++ 5.2p1: C++ Type Identification
@@ -2485,7 +2519,8 @@ private:
                                 ParsedAttributes &Attrs,
                                 ParsedTemplateInfo &TemplateInfo,
                                 SourceLocation *DeclEnd = nullptr,
-                                ForRangeInit *FRI = nullptr);
+                                ForRangeInit *FRI = nullptr,
+                                LateParsedAttrList *BoundsSafetyLateAttrs = nullptr);
   Decl *ParseDeclarationAfterDeclarator(Declarator &D,
                const ParsedTemplateInfo &TemplateInfo = ParsedTemplateInfo());
   bool ParseAsmAttributesAfterDeclarator(Declarator &D);
@@ -2532,14 +2567,19 @@ private:
 
   void ParseSpecifierQualifierList(
       DeclSpec &DS, AccessSpecifier AS = AS_none,
-      DeclSpecContext DSC = DeclSpecContext::DSC_normal) {
-    ParseSpecifierQualifierList(DS, getImplicitTypenameContext(DSC), AS, DSC);
+      DeclSpecContext DSC = DeclSpecContext::DSC_normal,
+      // TO_UPSTREAM(BoundsSafety)
+      LateParsedAttrList *LateAttrs = nullptr) {
+    ParseSpecifierQualifierList(DS, getImplicitTypenameContext(DSC), AS, DSC,
+                                LateAttrs);
   }
 
   void ParseSpecifierQualifierList(
       DeclSpec &DS, ImplicitTypenameContext AllowImplicitTypename,
       AccessSpecifier AS = AS_none,
-      DeclSpecContext DSC = DeclSpecContext::DSC_normal);
+      DeclSpecContext DSC = DeclSpecContext::DSC_normal,
+      // TO_UPSTREAM(BoundsSafety)
+      LateParsedAttrList *LateAttrs = nullptr);
 
   void ParseObjCTypeQualifierList(ObjCDeclSpec &DS,
                                   DeclaratorContext Context);
@@ -2796,7 +2836,9 @@ public:
   ParseTypeName(SourceRange *Range = nullptr,
                 DeclaratorContext Context = DeclaratorContext::TypeName,
                 AccessSpecifier AS = AS_none, Decl **OwnedType = nullptr,
-                ParsedAttributes *Attrs = nullptr);
+                ParsedAttributes *Attrs = nullptr,
+                // TO_UPSTREAM(BoundsSafety)
+                LateParsedAttrList *LateAttrs = nullptr);
 
 private:
   void ParseBlockId(SourceLocation CaretLoc);
@@ -2954,11 +2996,15 @@ private:
   void ParseGNUAttributes(ParsedAttributes &Attrs,
                           LateParsedAttrList *LateAttrs = nullptr,
                           Declarator *D = nullptr);
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  // NestedTypeLevel is not a parameter in upstream
   void ParseGNUAttributeArgs(IdentifierInfo *AttrName,
                              SourceLocation AttrNameLoc,
                              ParsedAttributes &Attrs, SourceLocation *EndLoc,
                              IdentifierInfo *ScopeName, SourceLocation ScopeLoc,
-                             ParsedAttr::Form Form, Declarator *D);
+                             ParsedAttr::Form Form, Declarator *D,
+                             size_t NestedTypeLevel=0);
+  /* TO_UPSTREAM(BoundsSafety) OFF */
   IdentifierLoc *ParseIdentifierLoc();
 
   unsigned
@@ -3086,6 +3132,8 @@ private:
   void ParseOpenCLQualifiers(ParsedAttributes &Attrs);
   void ParseNullabilityTypeSpecifiers(ParsedAttributes &attrs);
   void ParseCUDAFunctionAttributes(ParsedAttributes &attrs);
+  // TO_UPSTREAM(BoundsSafety)
+  void ParseBoundsSafetyTypeSpecifiers(ParsedAttributes &attrs);
   bool isHLSLQualifier(const Token &Tok) const;
   void ParseHLSLQualifiers(ParsedAttributes &Attrs);
 
@@ -3140,19 +3188,27 @@ private:
                                  SourceLocation ScopeLoc,
                                  ParsedAttr::Form Form);
 
-  void DistributeCLateParsedAttrs(Decl *Dcl, LateParsedAttrList *LateAttrs);
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  // Upstream doesn't have the `Declarator` parameter
+  void DistributeCLateParsedAttrs(Declarator &D, Decl *Dcl,
+                                  LateParsedAttrList *LateAttrs);
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   void ParseBoundsAttribute(IdentifierInfo &AttrName,
                             SourceLocation AttrNameLoc, ParsedAttributes &Attrs,
                             IdentifierInfo *ScopeName, SourceLocation ScopeLoc,
-                            ParsedAttr::Form Form);
+                            ParsedAttr::Form Form,
+                            // TO_UPSTREAM(BoundsSafety)
+                            unsigned NestedTypeLevel = 0);
 
   void ParseTypeofSpecifier(DeclSpec &DS);
   SourceLocation ParseDecltypeSpecifier(DeclSpec &DS);
   void AnnotateExistingDecltypeSpecifier(const DeclSpec &DS,
                                          SourceLocation StartLoc,
                                          SourceLocation EndLoc);
-  void ParseAtomicSpecifier(DeclSpec &DS);
+  void ParseAtomicSpecifier(DeclSpec &DS,
+                            // TO_UPSTREAM(BoundsSafety)
+                            LateParsedAttrList *LateAttrs = nullptr);
 
   ExprResult ParseAlignArgument(StringRef KWName, SourceLocation Start,
                                 SourceLocation &EllipsisLoc, bool &IsType,
@@ -3230,7 +3286,9 @@ private:
       DeclSpec &DS, unsigned AttrReqs = AR_AllAttributesParsed,
       bool AtomicAllowed = true, bool IdentifierRequired = false,
       std::optional<llvm::function_ref<void()>> CodeCompletionHandler =
-          std::nullopt);
+          std::nullopt,
+      // TO_UPSTREAM(BoundsSafety)
+      LateParsedAttrList *LateAttrs = nullptr);
   void ParseDirectDeclarator(Declarator &D);
   void ParseDecompositionDeclarator(Declarator &D);
   void ParseParenDeclarator(Declarator &D);
@@ -3249,16 +3307,21 @@ private:
   void ParseParameterDeclarationClause(
       Declarator &D, ParsedAttributes &attrs,
       SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-      SourceLocation &EllipsisLoc) {
+      SourceLocation &EllipsisLoc,
+      // TO_UPSTREAM(BoundsSafety)
+      LateParsedAttrList *LateParamAttrs = nullptr) {
     return ParseParameterDeclarationClause(
         D.getContext(), attrs, ParamInfo, EllipsisLoc,
         D.getCXXScopeSpec().isSet() &&
-            D.isFunctionDeclaratorAFunctionDeclaration());
+            D.isFunctionDeclaratorAFunctionDeclaration(),
+        LateParamAttrs);
   }
   void ParseParameterDeclarationClause(
       DeclaratorContext DeclaratorContext, ParsedAttributes &attrs,
       SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-      SourceLocation &EllipsisLoc, bool IsACXXFunctionDeclaration = false);
+      SourceLocation &EllipsisLoc, bool IsACXXFunctionDeclaration = false,
+      // TO_UPSTREAM(BoundsSafety)
+      LateParsedAttrList *LateParamAttrs = nullptr);
 
   void ParseBracketDeclarator(Declarator &D);
   void ParseMisplacedBracketDeclarator(Declarator &D);
@@ -3368,10 +3431,9 @@ private:
       AccessSpecifier AS, ParsedAttributes &Attr,
       ParsedTemplateInfo &TemplateInfo,
       ParsingDeclRAIIObject *DiagsFromTParams = nullptr);
-  DeclGroupPtrTy
-  ParseCXXClassMemberDeclarationWithPragmas(AccessSpecifier &AS,
-                                            ParsedAttributes &AccessAttrs,
-                                            DeclSpec::TST TagType, Decl *Tag);
+  DeclGroupPtrTy ParseCXXClassMemberDeclarationWithPragmas(
+      AccessSpecifier &AS, ParsedAttributes &AccessAttrs, DeclSpec::TST TagType,
+      Decl *Tag);
   void ParseConstructorInitializer(Decl *ConstructorDecl);
   MemInitResult ParseMemInitializer(Decl *ConstructorDecl);
   void HandleMemberFunctionDeclDelays(Declarator& DeclaratorInfo,

@@ -107,15 +107,12 @@ define i32 @loop_header_dom_successors_flipped(i32 %y, i1 %c) {
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP_HEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i32 [[X]], 10
-; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT]], label [[LOOP_LATCH]]
+; CHECK-NEXT:    br i1 true, label [[EXIT]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i32 [[X]], 11
-; CHECK-NEXT:    call void @use(i1 [[C_2]])
-; CHECK-NEXT:    [[C_3:%.*]] = icmp ule i32 [[X]], 11
-; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[X_NEXT]] = add i32 [[X]], 1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
@@ -455,4 +452,36 @@ exit.1:
   %t.1 = icmp ugt i32 %y, 10
   call void @use(i1 %t.1)
   ret void
+}
+
+
+define i1 @no_predecessor_loop(i32 %start_val) {
+; CHECK-LABEL: @no_predecessor_loop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 0, [[START_VAL:%.*]]
+; CHECK-NEXT:    br label [[FOR_COND10:%.*]]
+; CHECK:       for.cond10:
+; CHECK-NEXT:    br label [[FOR_COND10]]
+; CHECK:       if.then87:
+; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK:       for.cond159:
+; CHECK-NEXT:    br label [[FOR_COND159:%.*]]
+; CHECK:       for.cond240:
+; CHECK-NEXT:    br label [[FOR_COND240:%.*]]
+;
+entry:
+  %cmp = icmp ne i32 0, %start_val
+  br label %for.cond10
+
+for.cond10:                                       ; preds = %for.cond10, %entry
+  br label %for.cond10
+
+if.then87:                                        ; No predecessors!
+  ret i1 %cmp
+
+for.cond159:                                      ; preds = %for.cond159
+  br label %for.cond159
+
+for.cond240:                                      ; preds = %for.cond240
+  br label %for.cond240
 }

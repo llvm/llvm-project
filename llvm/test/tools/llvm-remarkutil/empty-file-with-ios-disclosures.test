@@ -1,0 +1,13 @@
+RUN: not llvm-remarkutil bounds-safety-count --parser=yaml  %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --check-prefix=YAMLPARSER
+RUN: not llvm-remarkutil bounds-safety-count --collect-per-source --parser=yaml  %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --check-prefix=YAMLPARSER
+RUN: llvm-remarkutil bounds-safety-count --parser=bitstream %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=BOUNDS_SAFETYBITSTREAM
+RUN: llvm-remarkutil bounds-safety-count --collect-per-source --parser=bitstream %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=BOUNDS_SAFETYBPERSRCBITSTREAM
+REQUIRES: apple-disclosure-ios
+
+; YAMLPARSER: error: document root is not of mapping type.
+
+; BOUNDS_SAFETYBPERSRCBITSTREAM-LABEL: Source,Count
+; BOUNDS_SAFETYBPERSRCBITSTREAM-EMPTY:
+
+; BOUNDS_SAFETYBITSTREAM-LABEL: Count
+; BOUNDS_SAFETYBITSTREAM-EMPTY:

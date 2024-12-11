@@ -208,6 +208,7 @@
 // CHECK-NEXT: TrivialABI (SubjectMatchRule_record)
 // CHECK-NEXT: Uninitialized (SubjectMatchRule_variable_is_local)
 // CHECK-NEXT: UnsafeBufferUsage (SubjectMatchRule_function, SubjectMatchRule_field)
+// CHECK-NEXT: UnsafeLateConst (SubjectMatchRule_variable_is_global)
 // CHECK-NEXT: UseHandle (SubjectMatchRule_variable_is_parameter)
 // CHECK-NEXT: VTablePointerAuthentication (SubjectMatchRule_record)
 // CHECK-NEXT: VecReturn (SubjectMatchRule_record)

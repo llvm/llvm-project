@@ -10,12 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "DynamicCountPointerAssignmentAnalysis.h"
 #include "CheckExprLifetime.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceManager.h"
@@ -41,6 +43,215 @@ using namespace clang;
 //===----------------------------------------------------------------------===//
 // Sema Initialization Checking
 //===----------------------------------------------------------------------===//
+
+/* TO_UPSTREAM(BoundsSafety) ON*/
+class FindDeclRefs : public RecursiveASTVisitor<FindDeclRefs> {
+  SmallVectorImpl<Decl *> &Decls;
+public:
+  FindDeclRefs(SmallVectorImpl<Decl *> &Decls) : Decls(Decls) {}
+
+  bool TraverseDeclRefExpr(DeclRefExpr *D) {
+    Decls.push_back(D->getDecl());
+    return false;
+  }
+};
+
+// Check if value-terminated types are correctly initialized. InitListChecker
+// cannot be used, as it doesn't traverse all nested members.
+static void checkValueTerminatedInit(Sema &S, SourceLocation Loc,
+                                     const llvm::Twine &Name, QualType T,
+                                     Expr *Init, bool ZeroInit) {
+  const auto *VTT = T->getAs<ValueTerminatedType>();
+
+  // We shouldn't have both Init and ZeroInit flag set.
+  assert(!Init || !ZeroInit);
+
+  if (Init) {
+    Init = Init->IgnoreParenImpCasts();
+
+    // Check if this is copy init from a variable with the same type. For
+    // pointers, __terminated_by() attributes are checked in
+    // CheckValueTerminatedAssignmentConstraints.
+    // TODO: We handle here only the basic case (rdar://103147634).
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(Init))
+      if (S.getASTContext().hasSameUnqualifiedType(DRE->getType(), T))
+        return;
+
+    if (auto *CLE = dyn_cast<CompoundLiteralExpr>(Init))
+      Init = CLE->getInitializer();
+  }
+
+  auto getInitAt = [&](unsigned Index) -> std::pair<Expr *, bool> {
+    if (Init) {
+      if (isa<ImplicitValueInitExpr>(Init))
+        return {nullptr, true};
+      if (auto *ILE = dyn_cast<InitListExpr>(Init)) {
+        if (Index < ILE->getNumInits())
+          return {ILE->getInit(Index), ZeroInit};
+        return {nullptr, true};
+      }
+    }
+    return {nullptr, ZeroInit};
+  };
+
+  // Recursively check each field.
+  if (const auto *RT = T->getAs<RecordType>()) {
+    unsigned Index = 0;
+    for (const FieldDecl *FD : RT->getDecl()->fields()) {
+      Expr *I;
+      bool ZI;
+      std::tie(I, ZI) = getInitAt(Index);
+      checkValueTerminatedInit(
+          S, Loc, Name.concat(llvm::Twine('.').concat(FD->getName())),
+          FD->getType(), I, ZI);
+      Index++;
+    }
+    return;
+  }
+
+  // Recursively check each element of an array.
+  // If the array has a __terminated_by attribute, don't check the terminator
+  // at the end. The element at the end cannot be used anyway.
+  if (const auto *CAT = S.Context.getAsConstantArrayType(T)) {
+    QualType ET = CAT->getElementType();
+    unsigned End = CAT->getSize().getZExtValue();
+    if (VTT && End > 0)
+      --End;
+    for (unsigned Index = 0; Index < End; ++Index) {
+      Expr *I;
+      bool ZI;
+      std::tie(I, ZI) = getInitAt(Index);
+      checkValueTerminatedInit(S, Loc,
+                               Name.concat(llvm::Twine('[')
+                                               .concat(llvm::utostr(Index))
+                                               .concat(llvm::Twine(']'))),
+                               ET, I, ZI);
+    }
+    // fallthrough
+  }
+
+  if (!VTT)
+    return;
+
+  assert(T->isConstantArrayType() || T->isIncompleteArrayType() ||
+         T->isPointerType());
+
+  // The constraints for __terminated_by() pointers are handled in
+  // CheckValueTerminatedAssignmentConstraints.
+  if (T->isPointerType())
+    return;
+
+  llvm::APSInt TermVal = VTT->getTerminatorValue(S.Context);
+
+  llvm::APInt Size;
+  if (const auto *CAT = S.Context.getAsConstantArrayType(T)) {
+    Size = CAT->getSize();
+    assert(Size.isStrictlyPositive());
+  }
+
+  std::optional<llvm::APSInt> ActualVal;
+  Expr *GotExpr = nullptr;
+  const StringLiteral *GotSL = nullptr;
+  size_t GotSLIndex = 0;
+
+  if (ZeroInit || Init)
+    ActualVal = llvm::APSInt(TermVal.getBitWidth(), TermVal.isUnsigned());
+
+  if (Init) {
+    if (isa<ImplicitValueInitExpr>(Init)) {
+      // Nothing to do.
+    } else if (auto *ILE = dyn_cast<InitListExpr>(Init)) {
+      unsigned NumInits = ILE->getNumInits();
+      if (!Size && NumInits == 0) {
+        S.Diag(Loc,
+               diag::err_bounds_safety_terminated_by_incomplete_array_empty_init)
+            << Name.str();
+        return;
+      }
+      if (Size.isZero() || Size.ule(NumInits)) {
+        unsigned Last = (!Size.isZero() ? Size.getZExtValue() : NumInits) - 1;
+        Init = ILE->getInit(Last);
+        bool Ok = Init->EvaluateAsTerminatorValue(*ActualVal, S.Context,
+                                                  Expr::SE_AllowSideEffects);
+        if (!Ok) {
+          S.Diag(
+              Init->getBeginLoc(),
+              diag::
+                  err_bounds_safety_terminated_by_terminator_in_array_must_be_const)
+              << Name.str();
+          return;
+        }
+        GotExpr = Init;
+      }
+      Loc = Init->getBeginLoc();
+    } else if (const auto *SL = dyn_cast<StringLiteral>(Init)) {
+      unsigned Len = SL->getLength();
+      if (!Size.isZero() && Size.ule(Len)) {
+        size_t Last = Size.getZExtValue() - 1;
+        uint32_t Unit = SL->getCodeUnit(Last);
+        llvm::APInt Val(TermVal.getBitWidth(), Unit, TermVal.isSigned());
+        ActualVal = llvm::APSInt(Val, TermVal.isUnsigned());
+        GotSL = SL;
+        GotSLIndex = Last;
+      }
+      Loc = SL->getBeginLoc();
+    } else {
+      S.Diag(Init->getBeginLoc(),
+             diag::err_bounds_safety_terminated_by_wrong_initializer_kind)
+          << Name.str();
+      return;
+    }
+  }
+
+  if (!ActualVal) {
+    S.Diag(Loc, diag::err_bounds_safety_terminated_by_uninitialized) << Name.str();
+    return;
+  }
+
+  if (*ActualVal != TermVal) {
+    if (GotExpr) {
+      S.Diag(Loc, diag::err_bounds_safety_terminated_by_terminator_mismatch)
+          << Name.str() << VTT->getTerminatorExpr() << GotExpr;
+    } else if (GotSL) {
+      std::string Str;
+      llvm::raw_string_ostream SS(Str);
+      CharacterLiteralKind Kind;
+      switch (GotSL->getKind()) {
+      case StringLiteralKind::Ordinary:
+      case StringLiteralKind::Unevaluated:
+        Kind = CharacterLiteralKind::Ascii;
+        break;
+      case StringLiteralKind::Wide:
+        Kind = CharacterLiteralKind::Wide;
+        break;
+      case StringLiteralKind::UTF8:
+        Kind = CharacterLiteralKind::UTF8;
+        break;
+      case StringLiteralKind::UTF16:
+        Kind = CharacterLiteralKind::UTF16;
+        break;
+      case StringLiteralKind::UTF32:
+        Kind = CharacterLiteralKind::UTF32;
+        break;
+      }
+      CharacterLiteral::print(GotSL->getCodeUnit(GotSLIndex), Kind, SS);
+      S.Diag(Loc, diag::err_bounds_safety_terminated_by_terminator_mismatch)
+          << Name.str() << VTT->getTerminatorExpr() << SS.str();
+    } else {
+      S.Diag(Loc, diag::err_bounds_safety_terminated_by_terminator_mismatch)
+          << Name.str() << VTT->getTerminatorExpr()
+          << toString(*ActualVal, 10, TermVal.isSigned());
+    }
+  }
+}
+
+void Sema::CheckValueTerminatedUninitialized(const VarDecl *VD) {
+  bool ZeroInit = VD->hasGlobalStorage();
+  checkValueTerminatedInit(*this, VD->getLocation(), VD->getName(),
+                           VD->getType(),
+                           /*Init=*/nullptr, ZeroInit);
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
 
 /// Check whether T is compatible with a wide character type (wchar_t,
 /// char16_t or char32_t).
@@ -497,6 +708,8 @@ class InitListChecker {
   bool CheckFlexibleArrayInit(const InitializedEntity &Entity,
                               Expr *InitExpr, FieldDecl *Field,
                               bool TopLevelObject);
+  // TO_UPSTREAM(BoundsSafety)
+  void CheckFlexibleArrayInitCount(InitListExpr *IList);
   void CheckEmptyInitializable(const InitializedEntity &Entity,
                                SourceLocation Loc);
 
@@ -1051,6 +1264,8 @@ InitListChecker::InitListChecker(
     if (RequiresSecondPass && !hadError)
       FillInEmptyInitializations(Entity, FullyStructuredList,
                                  RequiresSecondPass, nullptr, 0);
+    if (!VerifyOnly)
+      CheckFlexibleArrayInitCount(FullyStructuredList);
   }
   if (hadError && FullyStructuredList)
     FullyStructuredList->markError();
@@ -2249,6 +2464,96 @@ bool InitListChecker::CheckFlexibleArrayInit(const InitializedEntity &Entity,
 
   return FlexArrayDiag != diag::ext_flexible_array_init;
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON*/
+void InitListChecker::CheckFlexibleArrayInitCount(InitListExpr *IList) {
+  if (!SemaRef.getLangOpts().BoundsSafety)
+    return;
+  assert(!VerifyOnly);
+  assert(!IList->getType()->isVoidType());
+  assert(IList->isSemanticForm());
+
+  auto *RD = getRecordDecl(IList->getType());
+  if (!RD || !RD->hasFlexibleArrayMember())
+    return;
+
+  assert(IList->getNumInits() > 0);
+  Expr *InitExpr = IList->getInit(IList->getNumInits() - 1);
+  assert(!InitExpr->containsErrors());
+  if (!InitExpr->getType()->isArrayType())
+    return;
+
+  FieldDecl *Field = nullptr;
+  for (FieldDecl *FD : RD->fields())
+    Field = FD;
+  assert(Field);
+  assert(Field->getType()->isIncompleteArrayType());
+
+  SourceLocation BestSourceLoc = InitExpr->getBeginLoc();
+  if (BestSourceLoc.isInvalid())
+    BestSourceLoc = IList->getBeginLoc();
+  bool Diag = false;
+  if (const auto *DCPTy = Field->getType()->getAs<CountAttributedType>()) {
+    Expr *CountExpr = DCPTy->getCountExpr();
+    // Build count expression, replacing field declarations with their
+    // initializer value, and then evaluate that.
+    CopyExpr Copier(SemaRef);
+    SmallVector<Decl *, 1> Decls;
+    FindDeclRefs(Decls).TraverseStmt(CountExpr);
+    for (Decl *D : Decls) {
+      auto VD = cast<ValueDecl>(D);
+      Expr *Val = IList->getInitForField(VD);
+      assert(Val && !isa<DesignatedInitExpr>(Val));
+      Copier.UnsafelyAddDeclSubstitution(VD, Val);
+    }
+
+    ExprResult R = Copier.TransformExpr(CountExpr);
+    if (R.isInvalid())
+      return;
+    Expr::EvalResult Res;
+    if (!R.get()->EvaluateAsRValue(Res, SemaRef.Context))
+      return; // error will be emitted later about not being compile-time
+              // constant
+
+    if (!Res.Val.isInt()) {
+      SemaRef.Diag(BestSourceLoc,
+                   diag::err_bounds_safety_flexible_global_non_int_count_init)
+          << CountExpr << R.get() << R.get()->getType();
+      Diag = true;
+    } else {
+      llvm::APSInt CountExprValue = Res.Val.getInt();
+
+      llvm::APSInt InitCount;
+      if (InitExpr)
+        if (auto *ArrayTy =
+                SemaRef.Context.getAsConstantArrayType(InitExpr->getType()))
+          InitCount = ArrayTy->getSize();
+
+      if (!llvm::APSInt::isSameValue(InitCount, CountExprValue)) {
+        std::string InitCountS;
+        std::string CountExprValueS;
+        {
+          llvm::raw_string_ostream ICS(InitCountS);
+          InitCount.print(ICS, InitCount.isSigned());
+          llvm::raw_string_ostream CEVS(CountExprValueS);
+          CountExprValue.print(CEVS, CountExprValue.isSigned());
+        }
+        SemaRef.Diag(BestSourceLoc,
+                     diag::err_bounds_safety_flexible_global_wrong_count)
+            << InitCountS << CountExprValueS << (InitCount != 1);
+        Diag = true;
+      }
+    }
+  } else {
+    SemaRef.Diag(BestSourceLoc,
+                 diag::err_bounds_safety_flexible_global_not_counted);
+    Diag = true;
+  }
+  if (Diag)
+    SemaRef.Diag(Field->getLocation(), diag::note_flexible_array_member)
+        << Field;
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
 
 static bool isInitializedStructuredList(const InitListExpr *StructuredList) {
   return StructuredList && StructuredList->getNumInits() == 1U;
@@ -8099,6 +8404,10 @@ ExprResult InitializationSequence::Perform(Sema &S,
         else if ((*ResultType)->isLValueReferenceType())
           Ty = S.Context.getLValueReferenceType(Ty,
             (*ResultType)->castAs<LValueReferenceType>()->isSpelledAsLValue());
+        /* TO_UPSTREAM(BoundsSafety) ON*/
+        if (const auto *VTT = Step->Type->getAs<ValueTerminatedType>())
+          Ty = S.Context.getValueTerminatedType(Ty, VTT->getTerminatorExpr());
+        /* TO_UPSTREAM(BoundsSafety) OFF*/
         *ResultType = Ty;
       }
 
@@ -8209,6 +8518,17 @@ ExprResult InitializationSequence::Perform(Sema &S,
             Kind.getRange().getEnd());
       } else {
         CurInit = new (S.Context) ImplicitValueInitExpr(Step->Type);
+        /* TO_UPSTREAM(BoundsSafety) ON*/
+        // Note the return value isn't used to return early
+        // to preserve the AST as best as possible even though an error
+        // might have occurred. For struct initialization it also allows
+        // all field assignments to be checked rather than bailing on the
+        // first error.
+        S.BoundsSafetyCheckInitialization(Entity, Kind,
+                                          AssignmentAction::Initializing,
+                                          /*LHSType=*/Step->Type,
+                                          /*RHSExpr=*/CurInit.get());
+        /* TO_UPSTREAM(BoundsSafety) OFF*/
       }
       break;
     }
@@ -8227,6 +8547,60 @@ ExprResult InitializationSequence::Perform(Sema &S,
         return ExprError();
       CurInit = Result;
 
+      /* TO_UPSTREAM(BoundsSafety) ON*/
+      if (S.getLangOpts().BoundsSafety &&
+          S.isCompatibleBoundsUnsafeAssignment(ConvTy) &&
+          S.allowBoundsUnsafePointerAssignment(Entity.getType(), Result.get(),
+                                               Result.get()->getExprLoc())) {
+        ConvTy = Sema::Compatible;
+      }
+      if (S.getLangOpts().BoundsSafety && !Entity.isParameterKind()) {
+        if (!S.CheckDynamicBoundVariableEscape(Step->Type, Result.get()))
+          return ExprError();
+      }
+      if (S.getLangOpts().BoundsSafety &&
+          (Entity.isParameterKind() ||
+           Entity.getKind() == InitializedEntity::EK_Result ||
+           Entity.getKind() == InitializedEntity::EK_Member)) {
+        if (Step->Type->isSinglePointerType() &&
+            !Step->Type->isBoundsAttributedType() &&
+            (!SourceType->isSinglePointerType() ||
+             SourceType->isBoundsAttributedType())) {
+          FlexibleArrayMemberUtils FlexUtils(S);
+          if (FlexUtils.GetFlexibleRecord(Step->Type->getPointeeType())) {
+            Expr *FAMPtr = CurInit.get();
+            // Unwrap if it's OpaqueValueExpr since `isNullPointerConstant`
+            // doesn't look into the source expr of OpaqueValueExpr.
+            auto *PtrUnwrap = FAMPtr->IgnoreParenCasts();
+            while (auto *PtrOVE = dyn_cast<OpaqueValueExpr>(PtrUnwrap)) {
+              PtrUnwrap = PtrOVE->getSourceExpr()->IgnoreParenCasts();
+            }
+
+            if (PtrUnwrap->isNullPointerConstant(
+                    S.Context, Expr::NPC_NeverValueDependent) ==
+                Expr::NPCK_NotNull) {
+              auto *CE = dyn_cast<CastExpr>(FAMPtr);
+              // Ensure we pass an implicit bounds pointer.
+              if (CE && CE->getCastKind() == CK_BoundsSafetyPointerCast)
+                FAMPtr = CE->getSubExpr();
+              else
+                CE = nullptr;
+              ExprResult Ckd = BoundsCheckBuilder::CheckFlexibleArrayMemberSize(
+                  S, FAMPtr->getBeginLoc(),
+                  BoundsCheckKind::FlexibleArrayCountCast, FAMPtr);
+              if (Ckd.isInvalid())
+                return ExprError();
+
+              if (CE) {
+                CE->setSubExpr(Ckd.get());
+              } else {
+                CurInit = Ckd;
+              }
+            }
+          }
+        }
+      }
+      /* TO_UPSTREAM(BoundsSafety) OFF*/
       // If this is a call, allow conversion to a transparent union.
       ExprResult CurInitExprRes = CurInit;
       if (ConvTy != Sema::Compatible &&
@@ -8256,11 +8630,33 @@ ExprResult InitializationSequence::Perform(Sema &S,
       }
 
       bool Complained;
+      ValueDecl *Assignee = nullptr;
+      /* TO_UPSTREAM(BoundsSafety) ON*/
+      if (S.getLangOpts().BoundsSafety) {
+        // Currently the Assignee is only needed for bounds-safety diagnostics
+        // so guard passing this information along in this mode.
+        Assignee = Entity.getDecl();
+      }
+
+      // Note the return value isn't used to return early so that additional
+      // diagnostics can be emitted and to preserve the AST as best as possible
+      // even though an error might have occurred. For struct initialization it
+      // also allows all field assignments to be checked rather than bailing on
+      // the first error.
+      (void)S.BoundsSafetyCheckInitialization(
+          Entity, Kind, /*Action=*/getAssignmentAction(Entity, true),
+          /*LHSType=*/Step->Type, /*RHSExpr=*/InitialCurInit.get());
+
+      /* TO_UPSTREAM(BoundsSafety) OFF*/
+
+      /* TO_UPSTREAM(BoundsSafety) ON*/
+      // Upstream doesn't have `Assignee`.
       if (S.DiagnoseAssignmentResult(ConvTy, Kind.getLocation(),
                                      Step->Type, SourceType,
                                      InitialCurInit.get(),
                                      getAssignmentAction(Entity, true),
-                                     &Complained)) {
+                                     &Complained, Assignee)) {
+      /* TO_UPSTREAM(BoundsSafety) OFF*/
         PrintInitLocationNote(S, Entity);
         return ExprError();
       } else if (Complained)
@@ -8275,6 +8671,13 @@ ExprResult InitializationSequence::Perform(Sema &S,
                       S.Context.getAsArrayType(Ty), S,
                       S.getLangOpts().C23 &&
                           initializingConstexprVariable(Entity));
+      /* TO_UPSTREAM(BoundsSafety) ON*/
+      const auto *VTT = Step->Type->getAs<ValueTerminatedType>();
+      if (VTT && UpdateType) {
+        *ResultType = S.Context.getValueTerminatedType(
+            *ResultType, VTT->getTerminatorExpr());
+      }
+      /* TO_UPSTREAM(BoundsSafety) OFF*/
       break;
     }
 
@@ -8325,6 +8728,12 @@ ExprResult InitializationSequence::Perform(Sema &S,
             *ResultType = S.Context.getConstantArrayType(
                 IncompleteDest->getElementType(), ConstantSource->getSize(),
                 ConstantSource->getSizeExpr(), ArraySizeModifier::Normal, 0);
+            /*TO_UPSTREAM(BoundsSafety) ON*/
+            if (const auto *VTT = Step->Type->getAs<ValueTerminatedType>()) {
+              *ResultType = S.Context.getValueTerminatedType(
+                  *ResultType, VTT->getTerminatorExpr());
+            }
+            /*TO_UPSTREAM(BoundsSafety) OFF*/
           }
         }
       }
@@ -8557,6 +8966,25 @@ ExprResult InitializationSequence::Perform(Sema &S,
   // Check for std::move on construction.
   CheckMoveOnConstruction(S, Init,
                           Entity.getKind() == InitializedEntity::EK_Result);
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  if (S.LangOpts.BoundsSafety) {
+    auto *Init = CurInit.get();
+    const auto K = Entity.getKind();
+    if (Init && Entity.getParent() == nullptr &&
+        (K == InitializedEntity::EK_Variable ||
+         K == InitializedEntity::EK_Parameter ||
+         K == InitializedEntity::EK_Result)) {
+      const ValueDecl *D = Entity.getDecl();
+      StringRef Name = D ? D->getName() : StringRef();
+      SourceLocation Loc = D && K == InitializedEntity::EK_Variable
+                               ? D->getLocation()
+                               : Init->getBeginLoc();
+      checkValueTerminatedInit(S, Loc, Name, Entity.getType(), Init,
+                               /*ZeroInit=*/false);
+    }
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   return Init;
 }

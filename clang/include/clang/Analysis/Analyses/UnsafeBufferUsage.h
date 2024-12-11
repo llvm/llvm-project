@@ -126,6 +126,16 @@ public:
                                                 bool IsRelatedToDecl,
                                                 ASTContext &Ctx) = 0;
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  /// Invoked when an unsafe passing to count-attributed pointer is found.
+  virtual void handleUnsafeCountAttributedPointerArgument(const CallExpr *Call,
+                                                          const Expr *Arg,
+                                                          bool IsRelatedToDecl,
+                                                          ASTContext &Ctx) {
+    handleUnsafeOperation(Arg, IsRelatedToDecl, Ctx);
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   /// Invoked when a fix is suggested against a variable. This function groups
   /// all variables that must be fixed together (i.e their types must be changed
   /// to the same target type to prevent type mismatches) into a single fixit.

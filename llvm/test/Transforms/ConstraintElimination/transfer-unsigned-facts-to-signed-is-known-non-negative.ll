@@ -9,13 +9,12 @@ define void @iv_known_non_negative_iv_constant_trip_count_uge() {
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[IV]], 2
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_LATCH]], label [[EXIT_1:%.*]]
+; CHECK-NEXT:    br i1 false, label [[LOOP_LATCH]], label [[EXIT_1:%.*]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit.1:

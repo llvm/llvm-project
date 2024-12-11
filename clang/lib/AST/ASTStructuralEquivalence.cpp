@@ -858,12 +858,20 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       return false;
     break;
 
-  case Type::Pointer:
-    if (!IsStructurallyEquivalent(Context,
-                                  cast<PointerType>(T1)->getPointeeType(),
-                                  cast<PointerType>(T2)->getPointeeType()))
+  case Type::Pointer: {
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    const PointerType *PT1 = cast<PointerType>(T1);
+    const PointerType *PT2 = cast<PointerType>(T2);
+
+    if (!IsStructurallyEquivalent(Context, PT1->getPointeeType(),
+                                  PT2->getPointeeType()))
+      return false;
+    if (!BoundsSafetyPointerAttributes::areEquivalentLayouts(
+            PT1->getPointerAttributes(), PT2->getPointerAttributes()))
       return false;
     break;
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
+  }
 
   case Type::BlockPointer:
     if (!IsStructurallyEquivalent(Context,
@@ -1087,6 +1095,22 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                   cast<CountAttributedType>(T2)->desugar()))
       return false;
     break;
+
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  case Type::DynamicRangePointer:
+    if (!IsStructurallyEquivalent(
+            Context, cast<DynamicRangePointerType>(T1)->desugar(),
+            cast<DynamicRangePointerType>(T2)->desugar()))
+      return false;
+    break;
+
+  case Type::ValueTerminated:
+    if (!IsStructurallyEquivalent(Context,
+                                  cast<ValueTerminatedType>(T1)->desugar(),
+                                  cast<ValueTerminatedType>(T2)->desugar()))
+      return false;
+    break;
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   case Type::BTFTagAttributed:
     if (!IsStructurallyEquivalent(

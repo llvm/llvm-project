@@ -40,6 +40,8 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/FPEnv.h"
+// TO_UPSTREAM(BoundsSafety) ON
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
@@ -265,9 +267,17 @@ TypeEvaluationKind CodeGenFunction::getEvaluationKind(QualType type) {
     case Type::DeducedTemplateSpecialization:
       llvm_unreachable("undeduced type in IR-generation");
 
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    case Type::Pointer: {
+      auto const *PT = dyn_cast<PointerType>(type);
+      if (!PT->hasRawPointerLayout())
+        return TEK_Aggregate;
+      return TEK_Scalar;
+    }
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
+
     // Various scalar types.
     case Type::Builtin:
-    case Type::Pointer:
     case Type::BlockPointer:
     case Type::LValueReference:
     case Type::RValueReference:
@@ -306,6 +316,43 @@ TypeEvaluationKind CodeGenFunction::getEvaluationKind(QualType type) {
     llvm_unreachable("unknown type kind!");
   }
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON*/
+llvm::BasicBlock *CodeGenFunction::createUnmergeableBasicBlock(
+    const Twine &name, llvm::Function *parent, llvm::BasicBlock *before) {
+  auto *BB = createBasicBlock(name, parent, before);
+  // This approach is the same approach used by Swift.
+  // TODO: Find a better way to do this (rdar://137627723).
+
+  // Emit unique side-effecting inline asm calls in order to eliminate
+  // the possibility that an LLVM optimization or code generation pass
+  // will merge these blocks back together again. We emit an empty asm
+  // string with the side-effect flag set, and with a unique integer
+  // argument.
+  llvm::IntegerType *asmArgTy = CGM.Int64Ty;
+  llvm::Type *argTys = {asmArgTy};
+  llvm::FunctionType *asmFnTy =
+      llvm::FunctionType::get(CGM.VoidTy, argTys, /* isVarArg=*/false);
+  // "n" is an input constraint stating that the first argument to the call
+  // will be an integer literal.
+  llvm::InlineAsm *inlineAsm =
+      llvm::InlineAsm::get(asmFnTy, /*AsmString=*/"", /*Constraints=*/"n",
+                           /*hasSideEffects=*/true);
+
+  // Use the builder so that any opt-remarks and attributes are automatically
+  // applied by the builder. The current state of the builder is saved so it
+  // can be used for creating the asm call and then the builder is reset to
+  // its previous state.
+  auto OldInsertPoint = Builder.GetInsertPoint();
+  auto* OldInsertBB = Builder.GetInsertBlock();
+  Builder.SetInsertPoint(BB);
+  Builder.CreateCall(
+      inlineAsm,
+      llvm::ConstantInt::get(asmArgTy, CGM.getAndIncrementUniqueTrapCount()));
+  Builder.SetInsertPoint(OldInsertBB, OldInsertPoint);
+  return BB;
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
 
 llvm::DebugLoc CodeGenFunction::EmitReturnBlock() {
   // For cleanliness, we try to avoid emitting the return block for
@@ -2507,6 +2554,10 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
     case Type::SubstTemplateTypeParm:
     case Type::MacroQualified:
     case Type::CountAttributed:
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    case Type::DynamicRangePointer:
+    case Type::ValueTerminated:
+    /* TO_UPSTREAM(BoundsSafety) OFF */
       // Keep walking after single level desugaring.
       type = type.getSingleStepDesugaredType(getContext());
       break;
@@ -2693,12 +2744,50 @@ CodeGenFunction::SanitizerScope::~SanitizerScope() {
   CGF->IsSanitizerScope = false;
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON*/
+CodeGenFunction::BoundsSafetyOptRemarkScope::BoundsSafetyOptRemarkScope(
+    CodeGenFunction *CGF, BoundsSafetyOptRemarkKind Kind)
+    : CGF(CGF), Kind(Kind) {
+  // Check for dupes
+  if (InScope(CGF, Kind)) {
+    assert(0 && "Kind already in scope");
+    return;
+  }
+  CGF->BoundsSafetyOptRemarkScopes.push_back(this);
+}
+
+CodeGenFunction::BoundsSafetyOptRemarkScope::~BoundsSafetyOptRemarkScope() {
+  BoundsSafetyOptRemarkScope *Current =
+      CGF->BoundsSafetyOptRemarkScopes.pop_back_val();
+  assert(Current == this);
+}
+
+void CodeGenFunction::BoundsSafetyOptRemarkScope::Annotate(llvm::Instruction *I) {
+  I->addAnnotationMetadata(GetBoundsSafetyOptRemarkString(Kind));
+}
+
+bool CodeGenFunction::BoundsSafetyOptRemarkScope::InScope(
+    const CodeGenFunction *CGF, BoundsSafetyOptRemarkKind Kind) {
+  for (const auto &Scope : CGF->BoundsSafetyOptRemarkScopes) {
+    if (Scope->GetKind() == Kind)
+      return true;
+  }
+  return false;
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
+
 void CodeGenFunction::InsertHelper(llvm::Instruction *I,
                                    const llvm::Twine &Name,
                                    llvm::BasicBlock::iterator InsertPt) const {
   LoopStack.InsertHelper(I);
   if (IsSanitizerScope)
     I->setNoSanitizeMetadata();
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  for (const auto &Scope : BoundsSafetyOptRemarkScopes) {
+    Scope->Annotate(I);
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 }
 
 void CGBuilderInserter::InsertHelper(

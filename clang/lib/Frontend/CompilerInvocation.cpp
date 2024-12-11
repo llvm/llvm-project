@@ -29,6 +29,7 @@
 #include "clang/Basic/XRayInstr.h"
 #include "clang/CAS/IncludeTree.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/BoundsSafetyArgs.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
@@ -721,6 +722,13 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
       Diags.Report(diag::err_drv_argument_not_allowed_with)
           << A->getSpelling() << T.getTriple();
   }
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  if (!LangOpts.BoundsSafety &&
+      Invocation.getDiagnosticOpts().BoundsSafetyAdoptionMode) {
+    Diags.Report(diag::warn_bounds_safety_adoption_mode_ignored);
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }
@@ -3954,6 +3962,32 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
       GenerateArg(Consumer, OPT_ftrigraphs);
   }
 
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  if (Opts.BoundsSafety &&
+      Opts.BoundsSafetyBringUpMissingChecks != LangOptions::BS_CHK_Default) {
+    std::string Checks;
+    if (Opts.BoundsSafetyBringUpMissingChecks == LangOptions::BS_CHK_All) {
+      Checks = "all";
+    } else {
+      if (Opts.hasNewBoundsSafetyCheck(LangOptions::BS_CHK_AccessSize))
+        Checks += "access_size,";
+      if (Opts.hasNewBoundsSafetyCheck(LangOptions::BS_CHK_IndirectCountUpdate))
+        Checks += "indirect_count_update,";
+      if (Opts.hasNewBoundsSafetyCheck(LangOptions::BS_CHK_ReturnSize))
+        Checks += "return_size,";
+      if (Opts.hasNewBoundsSafetyCheck(LangOptions::BS_CHK_EndedByLowerBound))
+        Checks += "ended_by_lower_bound,";
+      if (Opts.hasNewBoundsSafetyCheck(LangOptions::BS_CHK_CompoundLiteralInit))
+        Checks += "compound_literal_init,";
+      if (Opts.hasNewBoundsSafetyCheck(LangOptions::BS_CHK_LibCAttributes))
+        Checks += "libc_attributes,";
+      if (StringRef(Checks).ends_with(","))
+        Checks.pop_back();
+    }
+    GenerateArg(Consumer, OPT_fbounds_safety_bringup_missing_checks_EQ, Checks);
+  }
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
+
   if (T.isOSzOS() && !Opts.ZOSExt)
     GenerateArg(Consumer, OPT_fno_zos_extensions);
   else if (Opts.ZOSExt)
@@ -4380,6 +4414,71 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       T.isOSzOS();
   Opts.Trigraphs =
       Args.hasFlag(OPT_ftrigraphs, OPT_fno_trigraphs, Opts.Trigraphs);
+
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  // Parse the enabled checks and emit any necessary diagnostics
+  Opts.BoundsSafetyBringUpMissingChecks =
+      ParseBoundsSafetyNewChecksMaskFromArgs(Args, &Diags);
+
+  // -fbounds-safety should be automatically marshalled into `Opts` in
+  // GenerateFrontendArgs() via `LangOpts<"BoundsSafety">` on
+  // `defm bounds_safety` in `clang/Driver/Options.td`.
+
+  if (Opts.BoundsSafety) {
+    // If BoundsSafety is enabled, check that it is for a supported language.
+    // Currently, this is only C in languages that Clang has to parse. However,
+    // it's also possible to pass assembly files and LLVM IR through Clang, and
+    // those should be trivially supported. This is especially important because
+    // some build systems, like xcbuild and somewhat clumsy Makefiles, will pass
+    // C_FLAGS to Clang while building assembly files.
+    bool SupportsBoundsSafety = false;
+    switch (IK.getLanguage()) {
+    case Language::Unknown:
+    case Language::Asm:
+    case Language::LLVM_IR:
+    case Language::C:
+      SupportsBoundsSafety = true;
+      break;
+    case Language::ObjC:
+      SupportsBoundsSafety = Opts.BoundsAttributesObjCExperimental;
+      break;
+    case Language::CXX:
+      SupportsBoundsSafety = Opts.BoundsAttributesCXXExperimental;
+      break;
+    default:
+      break;
+    }
+    if (!SupportsBoundsSafety)
+      Diags.Report(diag::error_bounds_safety_lang_not_supported);
+  }
+
+  bool IsBoundsSafetyAttributesExplicitlyDisabled =
+      !Args.hasFlag(OPT_fexperimental_bounds_safety_attributes,
+                    OPT_fno_experimental_bounds_safety_attributes, true);
+  if (Opts.BoundsSafety && IsBoundsSafetyAttributesExplicitlyDisabled)
+    Diags.Report(diag::err_bounds_safety_attributes_cannot_be_disabled);
+
+  if (Opts.BoundsSafety) {
+    // BoundsSafety implies BoundsSafetyAttributes.
+    Opts.BoundsSafetyAttributes = 1;
+  }
+
+  if (Opts.BoundsSafetyAttributes) {
+    // Have -fbounds-safety silently imply
+    // `-fexperimental-late-parse-attributes`. This is kind of a hack because it
+    // won't be visible in the command line invocation.
+    Opts.ExperimentalLateParseAttributes = 1;
+  }
+
+  if (Opts.BoundsAttributesCXXExperimental && !Opts.BoundsSafety)
+    Diags.Report(diag::warn_bounds_attributes_cxx_experimental_ignored);
+
+  if (Opts.BoundsAttributesObjCExperimental && !Opts.BoundsSafety)
+    Diags.Report(diag::warn_bounds_attributes_objc_experimental_ignored);
+
+  if (!Opts.BoundsSafetyRelaxedSystemHeaders && !Opts.BoundsSafety)
+    Diags.Report(diag::warn_bounds_safety_relaxed_system_headers_ignored);
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
 
   Opts.ZOSExt =
       Args.hasFlag(OPT_fzos_extensions, OPT_fno_zos_extensions, T.isOSzOS());

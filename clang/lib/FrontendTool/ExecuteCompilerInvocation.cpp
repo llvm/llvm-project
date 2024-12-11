@@ -246,6 +246,19 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
 
   Clang->LoadRequestedPlugins();
 
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  // XXX: Is it already enabled by default?
+  if (Clang->getLangOpts().BoundsSafety) {
+    auto &LLVMArgs = Clang->getFrontendOpts().LLVMArgs;
+    bool HasConstraintElim = std::any_of(LLVMArgs.begin(), LLVMArgs.end(),
+                                         [](std::string &arg) {
+      return StringRef(arg).starts_with("-enable-constraint-elimination");
+    });
+    if (!HasConstraintElim)
+      LLVMArgs.push_back("-enable-constraint-elimination");
+  }
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
+
   // Honor -mllvm.
   //
   // FIXME: Remove this, one day.

@@ -22,6 +22,8 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
+#include "BoundsSafetyOptRemarks.h"
+#include "BoundsSafetyTraps.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
@@ -82,6 +84,222 @@ enum VariableTypeDescriptorKind : uint16_t {
 //===--------------------------------------------------------------------===//
 //                        Miscellaneous Helper Methods
 //===--------------------------------------------------------------------===//
+
+llvm::Value *CodeGenFunction::GetWidePointerElement(Address Addr,
+                                                    WPIndex Index) {
+  auto GetElemStr = [&]() {
+    switch (Index) {
+    case WPIndex::Pointer:
+      return "ptr";
+    case WPIndex::Upper:
+      return "ub";
+    case WPIndex::Lower:
+      return "lb";
+    }
+  };
+
+  std::string Name = "wide_ptr.";
+  Name += GetElemStr();
+  Address ElemAddr =
+      Builder.CreateStructGEP(Addr, (unsigned int)Index, Name + ".addr");
+  return Builder.CreateLoad(ElemAddr, Name);
+}
+
+void CodeGenFunction::EmitPtrCastLECheck(llvm::Value *LHS, llvm::Value *RHS,
+                                         BoundsSafetyTrapKind TrapKind,
+                                         BoundsSafetyTrapCtx::Kind TrapCtx) {
+  // TODO(dliew): rdar://109574814: opt-remarks could be added here.
+  {
+    BoundsSafetyOptRemarkScope Scope(this, GetBoundsSafetyOptRemarkForTrap(TrapKind));
+    llvm::Value *Check = Builder.CreateICmpULE(LHS, RHS);
+    EmitBoundsSafetyTrapCheck(Check, TrapKind, TrapCtx);
+  }
+}
+
+void CodeGenFunction::EmitBoundsSafetyBoundsCheck(
+    llvm::Type *ElemTy, llvm::Value *Ptr, llvm::Value *Upper,
+    llvm::Value *Lower, bool AcceptNullPtr,
+    BoundsSafetyTrapCtx::Kind TrapCtx) {
+  if (!Upper && !Lower)
+    return;
+  assert(TrapCtx != BoundsSafetyTrapCtx::UNKNOWN);
+
+  // rdar://109574814: opt-remarks could be added here.
+  llvm::BranchInst *NullCheckBranch = nullptr;
+  if (AcceptNullPtr) {
+    // Test that the pointer is not NULL before testing that it's in bounds,
+    // if AcceptNullPtr is specified.
+    BoundsSafetyOptRemarkScope Scope(this, BNS_OR_PTR_NEQ_NULL);
+    llvm::BasicBlock *NotNull = createBasicBlock("boundscheck.notnull");
+
+    llvm::Value *Null = llvm::Constant::getNullValue(Ptr->getType());
+    llvm::Value *PtrIsNull = Builder.CreateICmpNE(Ptr, Null);
+    NullCheckBranch = Builder.CreateCondBr(PtrIsNull, NotNull, nullptr);
+    EmitBlock(NotNull);
+  }
+
+  if (Upper) {
+    if (getLangOpts().hasNewBoundsSafetyCheck(LangOptions::BS_CHK_AccessSize) &&
+        ElemTy->isSized()) {
+      // For sized types take the size of a potential access into account.
+      // For something like:
+      //
+      // T* ptr;
+      //
+      // We check
+      // 1. `ptr.ptr + sizeof(T)` does not overflow
+      // 2. `ptr.ptr + sizeof(T) <= ptr.upper`
+      //
+      assert(ElemTy);
+      BoundsSafetyOptRemarkScope Scope(this, BNS_OR_PTR_GT_UPPER_BOUND);
+      llvm::Value *OnePastTheEndPtr =
+          Builder.CreateGEP(ElemTy, Ptr, llvm::ConstantInt::get(SizeTy, 1));
+      // Emitting the upper bound check first since it's more
+      // optimization-friendly. This is because the upper bound calculation (ptr
+      // + size) is often marked 'inbounds' if 'ptr' is '__counted_by' or an
+      // array decay of a sized array. This allows ConstraintElimination to use
+      // this information to infer subsequent pointer arithmetic (ptr + i; where
+      // 'i <= size') doesn't wrap.
+      EmitBoundsSafetyTrapCheck(Builder.CreateICmpULE(OnePastTheEndPtr, Upper),
+                              BNS_TRAP_PTR_GT_UPPER_BOUND, TrapCtx);
+      EmitBoundsSafetyTrapCheck(Builder.CreateICmpULE(Ptr, OnePastTheEndPtr),
+                              BNS_TRAP_PTR_GT_UPPER_BOUND, TrapCtx);
+    } else {
+      // Legacy path and path for unsized types (e.g. function types).
+      // In this case for something like
+      //
+      // T* ptr;
+      //
+      // We assume that `sizeof(T)` is 1. In this case
+      //
+      // `ptr.ptr + sizeof(T) <= ptr.upper` simplifies to
+      // `ptr.ptr < ptr.upper`.
+      BoundsSafetyOptRemarkScope Scope(this, BNS_OR_PTR_GE_UPPER_BOUND);
+      llvm::Value *Check = Builder.CreateICmpULT(Ptr, Upper);
+      EmitBoundsSafetyTrapCheck(Check, BNS_TRAP_PTR_GE_UPPER_BOUND, TrapCtx);
+    }
+  }
+
+  if (Lower) {
+    BoundsSafetyOptRemarkScope Scope(this, BNS_OR_PTR_LT_LOWER_BOUND);
+    llvm::Value *Check = Builder.CreateICmpUGE(Ptr, Lower);
+    EmitBoundsSafetyTrapCheck(Check, BNS_TRAP_PTR_LT_LOWER_BOUND, TrapCtx);
+  }
+  if (NullCheckBranch)
+    NullCheckBranch->setSuccessor(1, Builder.GetInsertBlock());
+}
+
+void CodeGenFunction::EmitBoundsSafetyRangeCheck(llvm::Value *LowerBound,
+                                              llvm::Value *LowerAccess,
+                                              llvm::Value *UpperAccess,
+                                              llvm::Value *UpperBound,
+                                              BoundsSafetyTrapCtx::Kind TrapCtx) {
+  // rdar://109574814: opt-remarks could be added here.
+
+  // LowerBound <= LowerAccess <= UpperAccess <= UpperBound.
+  // This function assumes that LowerAccess <= UpperAccess and
+  // LowerBound <= UpperBound, so in practice it only checks
+  // LowerBound <= LowerAccess && UpperAccess <= UpperBound.
+  if (UpperAccess != UpperBound) {
+    BoundsSafetyOptRemarkScope Scope(this, BNS_OR_PTR_GE_UPPER_BOUND);
+    llvm::Value *UpperCheck = Builder.CreateICmpULE(UpperAccess, UpperBound);
+    assert(TrapCtx != BoundsSafetyTrapCtx::UNKNOWN);
+    EmitBoundsSafetyTrapCheck(UpperCheck, BNS_TRAP_PTR_GE_UPPER_BOUND, TrapCtx);
+  }
+
+  if (LowerBound != LowerAccess) {
+    BoundsSafetyOptRemarkScope Scope(this, BNS_OR_PTR_LT_LOWER_BOUND);
+    llvm::Value *LowerCheck = Builder.CreateICmpULE(LowerBound, LowerAccess);
+    assert(TrapCtx != BoundsSafetyTrapCtx::UNKNOWN);
+    EmitBoundsSafetyTrapCheck(LowerCheck, BNS_TRAP_PTR_LT_LOWER_BOUND, TrapCtx);
+  }
+}
+
+llvm::Value *CodeGenFunction::EmitWideToRawPtr(const Expr *E, bool BoundsCheck,
+                                               BoundsSafetyTrapCtx::Kind TrapCtx,
+                                               bool LowerOnlyCheck,
+                                               llvm::Value **UpperPtr,
+                                               llvm::Value **LowerPtr,
+                                               bool IsNullAllowed) {
+  auto PT = E->getType()->getAs<PointerType>();
+  assert(PT && !PT->hasRawPointerLayout() && "Expected wide pointer type");
+  RValue PtrRV = EmitAnyExpr(E);
+  Address PtrAddress = PtrRV.getAggregateAddress();
+  llvm::Value *Ptr = GetWidePointerElement(PtrAddress, WPIndex::Pointer);
+  llvm::Value *Upper = GetWidePointerElement(PtrAddress, WPIndex::Upper);
+  llvm::Value *Lower = PT->isBidiIndexable()
+                           ? GetWidePointerElement(PtrAddress, WPIndex::Lower)
+                           : nullptr;
+  // XXX: Lower bound check only for wide to counted_by
+  if (BoundsCheck || LowerOnlyCheck)
+    EmitBoundsSafetyBoundsCheck(ConvertTypeForMem(PT->getPointeeType()), Ptr,
+                             LowerOnlyCheck ? nullptr : Upper, Lower,
+                             IsNullAllowed, TrapCtx);
+  if (UpperPtr)
+    *UpperPtr = Upper;
+  if (LowerPtr)
+    *LowerPtr = Lower;
+  return Ptr;
+}
+
+llvm::Value *CodeGenFunction::EmitTerminator(const llvm::APSInt &Terminator,
+                                             llvm::Type *Ty) {
+  if (Terminator.isZero())
+    return llvm::Constant::getNullValue(Ty);
+  if (Ty->isPointerTy()) {
+    auto *IntPtrTy = CGM.getDataLayout().getIntPtrType(Ty);
+    auto *C = llvm::ConstantInt::get(IntPtrTy, Terminator.getSExtValue());
+    return Builder.CreateIntToPtr(C, Ty);
+  }
+  if (Terminator.isSigned())
+    return llvm::ConstantInt::getSigned(Ty, Terminator.getSExtValue());
+  return llvm::ConstantInt::get(Ty, Terminator.getZExtValue());
+}
+
+void CodeGenFunction::EmitValueTerminatedPointerArithmeticCheck(
+    QualType PointerType, llvm::Value *Ptr) {
+  BoundsSafetyOptRemarkScope Scope(this, BNS_OR_TERMINATED_BY_PTR_ARITH);
+  assert(PointerType->isPointerType());
+  QualType PointeeType = PointerType->getPointeeType();
+
+  CharUnits Alignment = getContext().getTypeAlignInChars(PointeeType);
+  Address PtrAddr = Address(Ptr, ConvertTypeForMem(PointeeType), Alignment);
+  llvm::Value *Val = Builder.CreateLoad(PtrAddr);
+
+  const auto *VTT = PointerType->getAs<ValueTerminatedType>();
+  llvm::APSInt TermVal = VTT->getTerminatorValue(getContext());
+  llvm::Value *Term = EmitTerminator(TermVal, Val->getType());
+
+  llvm::Value *Check = Builder.CreateICmpNE(Val, Term);
+  EmitBoundsSafetyTrapCheck(Check, BNS_TRAP_TERMINATED_BY_PTR_ARITH);
+}
+
+void CodeGenFunction::EmitValueTerminatedAssignmentCheck(
+    const BinaryOperator *E, LValue Value) {
+  BoundsSafetyOptRemarkScope Scope(this, BNS_OR_TERMINATED_BY_TERM_ASSIGN);
+  const Expr *LHS = E->getLHS()->IgnoreParenCasts();
+  const Expr *PtrE = nullptr;
+  if (const auto *UnOp = dyn_cast<UnaryOperator>(LHS)) {
+    if (UnOp->getOpcode() == UO_Deref)
+      PtrE = UnOp->getSubExpr();
+  } else if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(LHS)) {
+    PtrE = ASE->getBase();
+  }
+  if (!PtrE)
+    return;
+
+  const auto *VTT = PtrE->getType()->getAs<ValueTerminatedType>();
+  if (!VTT)
+    return;
+
+  llvm::Value *Val = EmitLoadOfLValue(Value, E->getExprLoc()).getScalarVal();
+
+  llvm::APSInt TermVal = VTT->getTerminatorValue(getContext());
+  llvm::Value *Term = EmitTerminator(TermVal, Val->getType());
+
+  llvm::Value *Check = Builder.CreateICmpNE(Val, Term);
+  EmitBoundsSafetyTrapCheck(Check, BNS_TRAP_TERMINATED_BY_TERM_ASSIGN);
+}
 
 /// CreateTempAlloca - This creates a alloca and inserts it into the entry
 /// block.
@@ -206,6 +424,15 @@ llvm::Value *CodeGenFunction::EvaluateExprAsBool(const Expr *E) {
   QualType BoolTy = getContext().BoolTy;
   SourceLocation Loc = E->getExprLoc();
   CGFPOptionsRAII FPOptsRAII(*this, E);
+
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  auto *PT = E->getType()->getAs<PointerType>();
+  if (PT && !PT->hasRawPointerLayout())
+    return EmitScalarConversion(
+        EmitWideToRawPtr(E), getContext().getPointerType(PT->getPointeeType()),
+        BoolTy, Loc);
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
+
   if (!E->getType()->isAnyComplexType())
     return EmitScalarConversion(EmitScalarExpr(E), E->getType(), BoolTy, Loc);
 
@@ -1229,6 +1456,162 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
             SanitizerHandler::OutOfBounds, StaticData, Index);
 }
 
+static BoundsSafetyTrapCtx::Kind
+GetTrapCtxFromPredefinedBoundsCheckExpr(const PredefinedBoundsCheckExpr *E) {
+  switch (E->getKind()) {
+  case BoundsCheckKind::FlexibleArrayCountAssign:
+    return BoundsSafetyTrapCtx::ASSIGN;
+  case BoundsCheckKind::FlexibleArrayCountCast:
+    return BoundsSafetyTrapCtx::CAST;
+  case BoundsCheckKind::FlexibleArrayCountDeref:
+    return BoundsSafetyTrapCtx::DEREF;
+  }
+  llvm_unreachable("Unhandled BoundsCheckKind");
+}
+
+static llvm::Value *getPtrSubDivisor(CodeGenFunction &CGF,
+                                     QualType elementType) {
+  assert(!elementType->isVariableArrayType());
+  CharUnits elementSize;
+  // Handle GCC extension for pointer arithmetic on void* and
+  // function pointer types.
+  if (elementType->isVoidType() || elementType->isFunctionType())
+    elementSize = CharUnits::One();
+  else
+    elementSize = CGF.getContext().getTypeSizeInChars(elementType);
+
+  // Don't even emit the divide for element size of 1.
+  if (elementSize.isOne())
+    return nullptr;
+
+  return CGF.CGM.getSize(elementSize);
+}
+
+/// @brief This function performs the check to ensure `Count <= Upper - FamPtr`
+/// and other bounds checks related to the count and the pointers, e.g., checks
+/// to ensure `Count >= 0` and `Upper >= FamPtr`.
+void CodeGenFunction::EmitFlexibleArrayCountCheck(
+    const PredefinedBoundsCheckExpr *E) {
+  const Expr *BasePtr = E->getFamBasePtr();
+  const Expr *FamPtr = E->getFamPtr();
+  const Expr *Count = E->getFamCount();
+
+  assert(BasePtr && FamPtr && Count);
+
+  llvm::Value *Upper;
+  llvm::Value *Lower;
+  BoundsSafetyTrapCtx::Kind TrapCtx = GetTrapCtxFromPredefinedBoundsCheckExpr(E);
+  // Necessary bounds checks are performed later.
+  llvm::Value *Ptr = EmitWideToRawPtr(BasePtr, /*BoundsCheck*/ false, TrapCtx,
+                                      /*LowerOnlyCheck*/ false, &Upper, &Lower);
+
+  llvm::BranchInst *NullCheckBranch = nullptr;
+  // Deref doesn't survive with null.
+  if (E->getKind() != BoundsCheckKind::FlexibleArrayCountDeref) {
+    CodeGenFunction::BoundsSafetyOptRemarkScope Scope(this, BNS_OR_PTR_NEQ_NULL);
+
+    llvm::BasicBlock *NonnullBB = createBasicBlock("flex.base.nonnull");
+
+    llvm::Value *Null = llvm::Constant::getNullValue(Ptr->getType());
+    llvm::Value *PtrNonnull =
+        Builder.CreateICmpNE(Ptr, Null, "flex.base.null.check");
+    NullCheckBranch = Builder.CreateCondBr(PtrNonnull, NonnullBB, nullptr);
+    EmitBlock(NonnullBB);
+  }
+
+  // `FamPtr` is essentially `Ptr + FamOffset` and we need an overflow check
+  // for this calculation. Evaluating `FamPtr` would be emitted as StructGEP
+  // which always gets `inbounds` which will make `Ptr <= Ptr + FamOffset` be
+  // considered true. Hence we do the pointer arithmetic without `inbouds` here.
+  // We don't have the exact FamOffset here so we actually do `Ptr <= Ptr +
+  // sizeof(*Ptr)` instead but this should cover the overflow check because
+  // `sizeof(*Ptr) <= FamOffset`.
+  llvm::Type *BaseElemTy =
+      ConvertTypeForMem(BasePtr->getType()->getPointeeType());
+  llvm::Constant *One = llvm::ConstantInt::get(SizeTy, 1);
+  llvm::Value *PtrPlusSize = Builder.CreateGEP(BaseElemTy, Ptr, One, "");
+  EmitPtrCastLECheck(Ptr, PtrPlusSize, BNS_TRAP_PTR_PAST_END_OVERFLOW);
+
+  // XXX: Some redundant bounds checks are performed on the struct base pointer
+  // in `EmitMemberExpr` in order to emit FamPtr. This is not a big problem
+  // because redundant checks go away in optimized builds so we leave it as is
+  // for now. rdar://104875616
+  llvm::Value *FamPtrVal = EmitScalarExpr(FamPtr);
+  llvm::Value *UserProvidedCount = EmitScalarExpr(Count);
+
+  // Ensure `Count >= 0`.
+  if (Count->getType()->isSignedIntegerOrEnumerationType()) {
+    CodeGenFunction::BoundsSafetyOptRemarkScope Scope(this, BNS_OR_COUNT_NEGATIVE);
+    llvm::Value *Zero = llvm::ConstantInt::get(UserProvidedCount->getType(), 0);
+    llvm::Value *ZeroLE =
+        Builder.CreateICmpSLE(Zero, UserProvidedCount, "flex.count.minus");
+    EmitBoundsSafetyTrapCheck(ZeroLE, BNS_TRAP_COUNT_NEGATIVE, TrapCtx);
+  }
+
+  {
+    CodeGenFunction::BoundsSafetyOptRemarkScope Scope(this,
+                                                   BNS_OR_FLEX_COUNT_GT_BOUNDS);
+
+    // Ensure `FamPtr (Ptr + FamOffset) <= Upper`.
+    // This is necessary because we later do `Upper - FamPtr` to get the
+    // avaiable count.
+    EmitPtrCastLECheck(FamPtrVal, Upper, BNS_TRAP_PTR_GT_UPPER_BOUND, TrapCtx);
+
+    // Ensure Lower <= Ptr.
+    EmitBoundsSafetyBoundsCheck(nullptr, Ptr, nullptr, Lower,
+                             /*AcceptNullPtr*/ false, TrapCtx);
+
+    QualType ElemTy = FamPtr->getType()->getPointeeType();
+
+    llvm::Value *UpperIntPtr =
+        Builder.CreatePtrToInt(Upper, PtrDiffTy, "upper.intptr");
+    llvm::Value *FamIntPtr =
+        Builder.CreatePtrToInt(FamPtrVal, PtrDiffTy, "fam.intptr");
+    // `diffInChars = Upper - FamPtrVal`. We can do this subtraction because
+    // we ensure `FamPtrVal <= Upper` in the previous bounds check in the
+    // function.
+    llvm::Value *diffInChars = Builder.CreateSub(
+        UpperIntPtr, FamIntPtr, "flex.avail.count", /*HasNUW*/ true);
+    llvm::Value *PointerDerivedCount = diffInChars;
+    // `PointerDerivedCount = diffInChars / sizeof(Fam[0])`. In other words, we
+    // get the element count by dividing the byte count with the element type
+    // size.
+    if (llvm::Value *divisor = getPtrSubDivisor(*this, ElemTy)) {
+      PointerDerivedCount =
+          Builder.CreateExactSDiv(diffInChars, divisor, "flex.avail.count.div");
+    }
+    assert(PointerDerivedCount->getType() == IntPtrTy);
+    // It's safe to zero extend the count because we previously ensured `Count
+    // >= 0` in this function.
+    UserProvidedCount =
+        Builder.CreateIntCast(UserProvidedCount, IntPtrTy,
+                              /*isSigned*/ false, "flex.count.intptr");
+    // Ensure `Count <= PointerDerivedCount (Upper - FamPtr)`.
+    llvm::Value *CountCheck = Builder.CreateICmpULE(
+        UserProvidedCount, PointerDerivedCount, "flex.count.check");
+    EmitBoundsSafetyTrapCheck(CountCheck, BNS_TRAP_FLEX_COUNT_GT_BOUNDS);
+  }
+
+  if (NullCheckBranch)
+    NullCheckBranch->setSuccessor(1, Builder.GetInsertBlock());
+}
+
+void CodeGenFunction::EmitBoundsSafetyTrapCheck(const Expr *Cond,
+                                             BoundsSafetyTrapKind kind) {
+  auto OptRemark = GetBoundsSafetyOptRemarkForTrap(kind);
+  assert(BoundsSafetyOptRemarkScope::InScope(this, OptRemark));
+  llvm::Value *CondVal = EvaluateExprAsBool(Cond);
+
+  // The result of `EvaluateExprAsBool()` might be a phi instruction
+  // which is not created via `Builder` which means BoundsSafetyOptRemarkScope
+  // won't annotate it. Annotate the instruction explicitly.
+  if (auto *I = llvm::dyn_cast<llvm::PHINode>(CondVal)) {
+    I->addAnnotationMetadata(GetBoundsSafetyOptRemarkString(OptRemark));
+  }
+
+  EmitBoundsSafetyTrapCheck(CondVal, kind);
+}
+
 CodeGenFunction::ComplexPairTy CodeGenFunction::
 EmitComplexPrePostIncDec(const UnaryOperator *E, LValue LV,
                          bool isInc, bool isPre) {
@@ -1281,6 +1664,8 @@ void CodeGenModule::EmitExplicitCastExprType(const ExplicitCastExpr *E,
 
 static Address EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
                                         TBAAAccessInfo *TBAAInfo,
+                                        llvm::Value **UpperPtr,
+                                        llvm::Value **LowerPtr,
                                         KnownNonNull_t IsKnownNonNull,
                                         CodeGenFunction &CGF) {
   // We allow this with ObjC object pointers because of fragile ABIs.
@@ -1305,7 +1690,8 @@ static Address EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
         LValueBaseInfo InnerBaseInfo;
         TBAAAccessInfo InnerTBAAInfo;
         Address Addr = CGF.EmitPointerWithAlignment(
-            CE->getSubExpr(), &InnerBaseInfo, &InnerTBAAInfo, IsKnownNonNull);
+            CE->getSubExpr(), &InnerBaseInfo, &InnerTBAAInfo, UpperPtr,
+            LowerPtr, IsKnownNonNull);
         if (BaseInfo) *BaseInfo = InnerBaseInfo;
         if (TBAAInfo) *TBAAInfo = InnerTBAAInfo;
 
@@ -1335,6 +1721,58 @@ static Address EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
                                           CE->getBeginLoc());
         }
 
+        /* TO_UPSTREAM(BoundsSafety) ON */
+        if (auto DestPtTy = E->getType()->getAs<PointerType>()) {
+          if (!DestPtTy->hasRawPointerLayout()) {
+            QualType ETy = DestPtTy->getPointeeType();
+            llvm::Type *DestPointeeType = CGF.ConvertTypeForMem(ETy);
+            if (DestPointeeType->isVoidTy())
+              DestPointeeType = llvm::Type::getInt8Ty(CGF.getLLVMContext());
+
+            unsigned AS = DestPointeeType->isFunctionTy()
+                              ? CGF.CGM.getDataLayout().getProgramAddressSpace()
+                              : CGF.getTypes().getTargetAddressSpace(ETy);
+            llvm::Type *DestTy = llvm::PointerType::get(DestPointeeType, AS);
+
+            auto RemoveBoundsSafetyAttrs = [&] (const QualType& QT) {
+              if (auto PtrTy = QT->getAs<PointerType>()) {
+                if (!PtrTy->hasRawPointerLayout()) {
+                  const auto SrcPointeeTy = PtrTy->getPointeeType();
+                  const auto SrcPtrRawTy =
+                      CGF.CGM.getContext().getPointerType(SrcPointeeTy);
+                  return QualType(SrcPtrRawTy.getTypePtr(), QT.getQualifiers().getAsOpaqueValue());
+                }
+              }
+              return QT;
+            };
+
+            const QualType DestPtrTyForAuth = RemoveBoundsSafetyAttrs(CE->getType());
+            const QualType SrcPtrTyForAuth = RemoveBoundsSafetyAttrs(CE->getSubExpr()->getType());
+
+            auto CastBoundPtr = [&CGF, &DestTy, &SrcPtrTyForAuth,
+                                 &DestPtrTyForAuth, &CE](llvm::Value **Bound) {
+              if (Bound && *Bound) {
+                *Bound = CE->getCastKind() != CK_AddressSpaceConversion
+                             ? CGF.Builder.CreateBitCast(*Bound, DestTy)
+                             : CGF.Builder.CreateAddrSpaceCast(*Bound, DestTy);
+                *Bound = CGF.authPointerToPointerCast(*Bound, SrcPtrTyForAuth,
+                                                      DestPtrTyForAuth);
+              }
+            };
+
+            CastBoundPtr(UpperPtr);
+            CastBoundPtr(LowerPtr);
+
+            Address Result =
+                CE->getCastKind() != CK_AddressSpaceConversion
+                    ? Addr.withElementType(DestPointeeType)
+                    : CGF.Builder.CreateAddrSpaceCast(Addr, DestTy,
+                                                      DestPointeeType);
+            return CGF.authPointerToPointerCast(
+                Result, CE->getSubExpr()->getType(), CE->getType());
+          }
+        }
+        /* TO_UPSTREAM(BoundsSafety) OFF */
         llvm::Type *ElemTy =
             CGF.ConvertTypeForMem(E->getType()->getPointeeType());
         Addr = Addr.withElementType(ElemTy);
@@ -1359,7 +1797,7 @@ static Address EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
       if (TBAAInfo)
         *TBAAInfo = CGF.CGM.getTBAAAccessInfo(E->getType());
       Address Addr = CGF.EmitPointerWithAlignment(
-          CE->getSubExpr(), BaseInfo, nullptr,
+          CE->getSubExpr(), BaseInfo, nullptr, nullptr, nullptr,
           (KnownNonNull_t)(IsKnownNonNull ||
                            CE->getCastKind() == CK_UncheckedDerivedToBase));
       auto Derived = CE->getSubExpr()->getType()->getPointeeCXXRecordDecl();
@@ -1403,9 +1841,20 @@ static Address EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
 
   // TODO: conditional operators, comma.
 
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  // Extract the pointer from wide pointer
+  auto PT = E->getType()->getAs<PointerType>();
+  llvm::Value *Base =
+      (PT && !PT->hasRawPointerLayout())
+          ? CGF.EmitWideToRawPtr(E, /*BoundsCheck=*/false,
+                                 /*TrapCtx=*/BoundsSafetyTrapCtx::UNKNOWN,
+                                 /*LowerOnlyCheck=*/false, UpperPtr, LowerPtr)
+          : CGF.EmitScalarExpr(E);
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
+
   // Otherwise, use the alignment of the type.
   return CGF.makeNaturalAddressForPointer(
-      CGF.EmitScalarExpr(E), E->getType()->getPointeeType(), CharUnits(),
+      Base, E->getType()->getPointeeType(), CharUnits(),
       /*ForPointeeType=*/true, BaseInfo, TBAAInfo, IsKnownNonNull);
 }
 
@@ -1413,9 +1862,10 @@ static Address EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
 /// derive a more accurate bound on the alignment of the pointer.
 Address CodeGenFunction::EmitPointerWithAlignment(
     const Expr *E, LValueBaseInfo *BaseInfo, TBAAAccessInfo *TBAAInfo,
+    llvm::Value **UpperPtr, llvm::Value **LowerPtr,
     KnownNonNull_t IsKnownNonNull) {
-  Address Addr =
-      ::EmitPointerWithAlignment(E, BaseInfo, TBAAInfo, IsKnownNonNull, *this);
+  Address Addr = ::EmitPointerWithAlignment(E, BaseInfo, TBAAInfo, UpperPtr,
+                                            LowerPtr, IsKnownNonNull, *this);
   if (IsKnownNonNull && !Addr.isKnownNonNull())
     Addr.setKnownNonNull();
   return Addr;
@@ -1494,7 +1944,12 @@ bool CodeGenFunction::IsWrappedCXXThis(const Expr *Obj) {
 
 LValue CodeGenFunction::EmitCheckedLValue(const Expr *E, TypeCheckKind TCK) {
   LValue LV;
-  if (SanOpts.has(SanitizerKind::ArrayBounds) && isa<ArraySubscriptExpr>(E))
+  auto *ASE = dyn_cast<ArraySubscriptExpr>(E);
+  if (ASE && (SanOpts.has(SanitizerKind::ArrayBounds) ||
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+
+              ASE->getBase()->getType()->isPointerTypeWithBounds()))
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
     LV = EmitArraySubscriptExpr(cast<ArraySubscriptExpr>(E), /*Accessed*/true);
   else
     LV = EmitLValue(E);
@@ -1645,6 +2100,22 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
     CXXDefaultInitExprScope Scope(*this, DIE);
     return EmitLValue(DIE->getExpr(), IsKnownNonNull);
   }
+
+  case Expr::BoundsCheckExprClass:
+    return EmitBoundsCheckExprLValue(cast<BoundsCheckExpr>(E));
+  case Expr::PredefinedBoundsCheckExprClass:
+    return EmitPredefinedBoundsCheckExprLValue(
+        cast<PredefinedBoundsCheckExpr>(E));
+  case Expr::AssumptionExprClass:
+    return EmitAssumptionExprLValue(cast<AssumptionExpr>(E));
+  case Expr::ForgePtrExprClass:
+    return EmitForgePtrExprLValue(cast<ForgePtrExpr>(E));
+  case Expr::BoundsSafetyPointerPromotionExprClass:
+    return EmitBoundsSafetyPointerPromotionExprLValue(
+        cast<BoundsSafetyPointerPromotionExpr>(E));
+  case Expr::MaterializeSequenceExprClass:
+    return EmitMaterializeSequenceExprLValue(cast<MaterializeSequenceExpr>(E));
+
   case Expr::CXXTypeidExprClass:
     return EmitCXXTypeidLValue(cast<CXXTypeidExpr>(E));
 
@@ -3275,9 +3746,19 @@ LValue CodeGenFunction::EmitUnaryOpLValue(const UnaryOperator *E) {
 
     LValueBaseInfo BaseInfo;
     TBAAAccessInfo TBAAInfo;
-    Address Addr = EmitPointerWithAlignment(E->getSubExpr(), &BaseInfo,
-                                            &TBAAInfo);
-    LValue LV = MakeAddrLValue(Addr, T, BaseInfo, TBAAInfo);
+    /*TO_UPSTREAM(BoundsSafety) ON*/
+    LValue LV;
+    const auto *PT = E->getSubExpr()->getType()->getAs<PointerType>();
+    if (PT && !PT->hasRawPointerLayout()) {
+      llvm::Value *Ptr = EmitWideToRawPtr(E->getSubExpr(), /*BoundsCheck=*/true,
+                                          /*TrapCtx=*/BoundsSafetyTrapCtx::DEREF);
+      LV = MakeAddrLValue(Ptr, T, getContext().getTypeAlignInChars(T));
+    } else {
+    /*TO_UPSTREAM(BoundsSafety) OFF*/
+      Address Addr =
+          EmitPointerWithAlignment(E->getSubExpr(), &BaseInfo, &TBAAInfo);
+      LV = MakeAddrLValue(Addr, T, BaseInfo, TBAAInfo);
+    }
     LV.getQuals().setAddressSpace(ExprTy.getAddressSpace());
 
     // We should not generate __weak write barrier on indirect reference
@@ -3290,6 +3771,13 @@ LValue CodeGenFunction::EmitUnaryOpLValue(const UnaryOperator *E) {
       LV.setNonGC(!E->isOBJCGCCandidate(getContext()));
     return LV;
   }
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  case UO_AddrOf: {
+    if (!E->getType()->isPointerTypeWithBounds())
+      llvm_unreachable("Unknown unary operator lvalue!");
+    return EmitAggExprToLValue(E);
+  }
+  /*TO_UPSTREAM(BoundsSafety) ON*/
   case UO_Real:
   case UO_Imag: {
     LValue LV = EmitLValue(E->getSubExpr());
@@ -3928,7 +4416,11 @@ void CodeGenFunction::EmitUnreachable(SourceLocation Loc) {
 }
 
 void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
-                                    SanitizerHandler CheckHandlerID) {
+                                    SanitizerHandler CheckHandlerID,
+                                    /*TO_UPSTREAM(BoundsSafety) ON*/
+                                    StringRef Annotation,
+                                    StringRef TrapMessage) {
+                                    /*TO_UPSTREAM(BoundsSafety) OFF*/
   llvm::BasicBlock *Cont = createBasicBlock("cont");
 
   // If we're optimizing, collapse all calls to trap down to just one per
@@ -3938,39 +4430,109 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
 
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];
 
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
+  if (CheckHandlerID == SanitizerHandler::BoundsSafety && getDebugInfo()) {
+    TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
+        TrapLocation, GetBoundsSafetyTrapMessagePrefix(), TrapMessage);
+  }
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
+
   bool NoMerge = ClSanitizeDebugDeoptimization ||
                  !CGM.getCodeGenOpts().OptimizationLevel ||
                  (CurCodeDecl && CurCodeDecl->hasAttr<OptimizeNoneAttr>());
+
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  NoMerge |= CGM.getCodeGenOpts().TrapFuncReturns;
+  NoMerge |= CGM.getCodeGenOpts().UniqueTrapBlocks;
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
 
   if (TrapBB && !NoMerge) {
     auto Call = TrapBB->begin();
     assert(isa<llvm::CallInst>(Call) && "Expected call in trap BB");
 
-    Call->applyMergedLocation(Call->getDebugLoc(),
-                              Builder.getCurrentDebugLocation());
-    Builder.CreateCondBr(Checked, Cont, TrapBB);
+    Call->applyMergedLocation(Call->getDebugLoc(), TrapLocation);
+
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    // Merge the debug info on the unreachable too so its debug info is not
+    // stale.
+    auto Unreachable = ++TrapBB->begin();
+    assert(isa<llvm::UnreachableInst>(Unreachable) &&
+           "Expected unreachable instruction in trap BB");
+    Unreachable->applyMergedLocation(Unreachable->getDebugLoc(), TrapLocation);
+
+    if (!Annotation.empty()) {
+      Call->addAnnotationMetadata(Annotation);
+      Unreachable->addAnnotationMetadata(Annotation);
+    }
+    auto *CondBrInst = Builder.CreateCondBr(Checked, Cont, TrapBB);
+    if (!Annotation.empty())
+      CondBrInst->addAnnotationMetadata(Annotation);
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
   } else {
-    TrapBB = createBasicBlock("trap");
-    Builder.CreateCondBr(Checked, Cont, TrapBB);
+    /*TO_UPSTREAM(BoundsSafety) ON*/
+    if (CGM.getCodeGenOpts().UniqueTrapBlocks &&
+        !CGM.getCodeGenOpts().TrapFuncReturns)
+      TrapBB = createUnmergeableBasicBlock("trap");
+    else
+      TrapBB = createBasicBlock("trap");
+    auto *BrInst = Builder.CreateCondBr(Checked, Cont, TrapBB);
+    if (!Annotation.empty())
+      BrInst->addAnnotationMetadata(Annotation);
+    /*TO_UPSTREAM(BoundsSafety) OFF*/
+
     EmitBlock(TrapBB);
 
-    llvm::CallInst *TrapCall =
-        Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),
-                           llvm::ConstantInt::get(CGM.Int8Ty, CheckHandlerID));
+    /*TO_UPSTREAM(BoundsSafety) ON*/
+    ApplyDebugLocation applyTrapDI(*this, TrapLocation);
+    llvm::CallInst *TrapCall = nullptr;
+    if (CGM.getCodeGenOpts().TrapFuncReturns) {
+      auto *TrapID = llvm::ConstantInt::get(CGM.Int8Ty, CheckHandlerID);
+      llvm::FunctionType *FnType =
+        llvm::FunctionType::get(CGM.VoidTy, {TrapID->getType()}, false);
+      auto TrapFunc = CGM.CreateRuntimeFunction(
+        FnType, CGM.getCodeGenOpts().TrapFuncName);
+      TrapCall = EmitNounwindRuntimeCall(TrapFunc, {TrapID});
+      Builder.CreateBr(Cont);
+    } else {
+      TrapCall = Builder.CreateCall(
+          CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),
+          llvm::ConstantInt::get(CGM.Int8Ty, CheckHandlerID));
 
-    if (!CGM.getCodeGenOpts().TrapFuncName.empty()) {
-      auto A = llvm::Attribute::get(getLLVMContext(), "trap-func-name",
-                                    CGM.getCodeGenOpts().TrapFuncName);
-      TrapCall->addFnAttr(A);
+      if (!CGM.getCodeGenOpts().TrapFuncName.empty()) {
+        auto A = llvm::Attribute::get(getLLVMContext(), "trap-func-name",
+                                      CGM.getCodeGenOpts().TrapFuncName);
+        TrapCall->addFnAttr(A);
+      }
+      if (NoMerge)
+        TrapCall->addFnAttr(llvm::Attribute::NoMerge);
+      TrapCall->setDoesNotReturn();
+      TrapCall->setDoesNotThrow();
+      auto Unreachable = Builder.CreateUnreachable();
+      if (!Annotation.empty())
+        Unreachable->addAnnotationMetadata(Annotation);
     }
-    if (NoMerge)
-      TrapCall->addFnAttr(llvm::Attribute::NoMerge);
-    TrapCall->setDoesNotReturn();
-    TrapCall->setDoesNotThrow();
-    Builder.CreateUnreachable();
+
+    if (!Annotation.empty())
+      TrapCall->addAnnotationMetadata(Annotation.str());
   }
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
 
   EmitBlock(Cont);
+}
+
+void CodeGenFunction::EmitBoundsSafetyTrapCheck(llvm::Value *Checked,
+                                             BoundsSafetyTrapKind kind,
+                                             BoundsSafetyTrapCtx::Kind TrapCtx) {
+  auto OptRemark = GetBoundsSafetyOptRemarkForTrap(kind);
+  assert(BoundsSafetyOptRemarkScope::InScope(this, OptRemark));
+
+  // We still need to pass `OptRemark` because not all emitted instructions
+  // can be covered by BoundsSafetyOptRemarkScope. This is because EmitTrapCheck
+  // caches basic blocks that contain instructions that need annotating.
+  EmitTrapCheck(Checked, SanitizerHandler::BoundsSafety,
+                GetBoundsSafetyOptRemarkString(OptRemark),
+                GetBoundsSafetyTrapMessageSuffix(kind, TrapCtx));
 }
 
 llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID) {
@@ -3990,7 +4552,9 @@ llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID) {
 
 Address CodeGenFunction::EmitArrayToPointerDecay(const Expr *E,
                                                  LValueBaseInfo *BaseInfo,
-                                                 TBAAAccessInfo *TBAAInfo) {
+                                                 TBAAAccessInfo *TBAAInfo,
+                                                 // TO_UPSTREAM(BoundsSafety)
+                                                 TBAAAccessInfo *EltTBAAInfo) {
   assert(E->getType()->isArrayType() &&
          "Array to pointer decay must have array source type!");
 
@@ -4019,6 +4583,10 @@ Address CodeGenFunction::EmitArrayToPointerDecay(const Expr *E,
   QualType EltType = E->getType()->castAsArrayTypeUnsafe()->getElementType();
   if (BaseInfo) *BaseInfo = LV.getBaseInfo();
   if (TBAAInfo) *TBAAInfo = CGM.getTBAAAccessInfo(EltType);
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  if (EltTBAAInfo)
+    *EltTBAAInfo = CGM.getTBAAInfoForSubobject(LV, EltType);
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   return Addr.withElementType(ConvertTypeForMem(EltType));
 }
@@ -4208,6 +4776,116 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
   return Address(eltPtr, CGF.ConvertTypeForMem(eltType), eltAlign);
 }
 
+Address CodeGenFunction::EmitArrayToWidePointerDecay(
+    const Expr *E, llvm::Value *&Upper, LValueBaseInfo *BaseInfo,
+    TBAAAccessInfo *TBAAInfo, TBAAAccessInfo *EltTBAAInfo) {
+  assert(E->getType()->isArrayType());
+  Address Addr = EmitArrayToPointerDecay(E, BaseInfo, TBAAInfo, EltTBAAInfo);
+  llvm::Value *Ptr = Addr.getBasePointer();
+  llvm::Value *Count = nullptr;
+  QualType OrigSrcTy = E->getType();
+  QualType SrcTy = OrigSrcTy.getDesugaredType(getContext());
+  if (auto CAT = dyn_cast<ConstantArrayType>(SrcTy))
+    Count = llvm::ConstantInt::get(getLLVMContext(), CAT->getSize());
+  else if (auto VAT = dyn_cast<VariableArrayType>(SrcTy))
+    Count = getVLASize(VAT).NumElts;
+  else if (isa<IncompleteArrayType>(SrcTy)) {
+    if (const auto *DCPTy = OrigSrcTy->getAs<CountAttributedType>()) {
+      const Expr *CountExpr = DCPTy->getCountExpr();
+      assert(!isa<MemberExpr>(E->IgnoreParenCasts()));
+      Count = EmitScalarExpr(CountExpr);
+      assert(CountExpr->getType()->isIntegralOrEnumerationType());
+      Count = CountExpr->getType()->isSignedIntegerOrEnumerationType()
+                  ? Builder.CreateSExt(Count, IntPtrTy)
+                  : Builder.CreateZExt(Count, IntPtrTy);
+
+      // Propagate the assumption that unsigned count is non-negative because
+      // the optimizer doesn't have the concept of signess.
+      if (CountExpr->getType()->isUnsignedIntegerOrEnumerationType())
+        Builder.CreateAssumption(Builder.CreateICmpSGE(
+            Count, llvm::Constant::getNullValue(Count->getType()),
+            "count.positive"));
+    } else
+      Count = llvm::ConstantInt::get(IntPtrTy, 0);
+  } else
+    llvm_unreachable("Unexpected array type");
+
+  // We assume here that the upper bounds have been checked for overflow at
+  // initialization.
+  Upper = Builder.CreateInBoundsGEP(Addr.getElementType(), Ptr, Count, "upper");
+
+  return Addr;
+}
+
+LValue
+CodeGenFunction::EmitWidePtrArraySubscriptExpr(const ArraySubscriptExpr *E,
+                                               bool Accessed) {
+  const auto *PT = E->getBase()->getType()->getAs<PointerType>();
+  assert(PT && !PT->hasRawPointerLayout());
+
+  LValueBaseInfo BaseInfo;
+  TBAAAccessInfo TBAAInfo;
+  llvm::Value *Upper = nullptr;
+  llvm::Value *Lower = nullptr;
+  Address WidePtrAddr = Address::invalid();
+  Address Addr = Address::invalid();
+  QualType ArrayTy{};
+  if (auto *Array = isSimpleArrayDecayOperand(E->getBase())) {
+    ArrayTy = Array->getType();
+    // We need the element's TBAA info for array subscript, not the array's
+    // TBAA.
+    Addr = EmitArrayToWidePointerDecay(Array, Upper, &BaseInfo,
+                                       /*TBAAInfo*/ nullptr,
+                                       /*EltTBAAInfo*/ &TBAAInfo);
+    Lower = Addr.getBasePointer();
+  } else {
+    RValue BaseRV = EmitAnyExpr(E->getBase());
+    WidePtrAddr = BaseRV.getAggregateAddress();
+    Addr = makeNaturalAddressForPointer(
+        GetWidePointerElement(WidePtrAddr, WPIndex::Pointer), E->getType(),
+        CGM.getNaturalTypeAlignment(E->getType(), &BaseInfo, &TBAAInfo));
+  }
+
+  llvm::Value *Idx = EmitScalarExpr(E->getIdx());
+  QualType IdxTy = E->getIdx()->getType();
+  bool IdxSigned = IdxTy->isSignedIntegerOrEnumerationType();
+
+  // Extend or truncate the index type to 32 or 64-bits.
+  if (Idx->getType() != IntPtrTy)
+    Idx = Builder.CreateIntCast(Idx, IntPtrTy, IdxSigned, "idxprom");
+
+  // For VLAs, the memory type resolves to the innermost element type.
+  // Hence, multiplying by the VLA size emulates the behavior of GEP over
+  // a constant array.
+  if (const VariableArrayType *vla =
+      getContext().getAsVariableArrayType(E->getType())) {
+    llvm::Value *numElements = getVLASize(vla).NumElts;
+    // Do not use `CreateNSWMul` because With -fbounds-safety GEP doesn't
+    // get 'inbounds' by default. So, this also emulates the behavior of
+    // GEP on a constant array indexed with a non-constant value.
+    Idx = Builder.CreateMul(Idx, numElements);
+  }
+
+  QualType *ArrayTyPtr = ArrayTy.isNull() ? nullptr : &ArrayTy;
+  Addr = emitArraySubscriptGEP(*this, Addr, Idx, E->getType(),
+                               /*inbounds*/ false, IdxSigned, E->getExprLoc(),
+                               ArrayTyPtr, E->getBase());
+  if (Accessed) {
+    // __indexable pointers should have been cast to __bidi_indexable in Sema.
+    assert(E->getBase()->getType()->isBidiIndexablePointerType());
+    if (WidePtrAddr.isValid()) {
+      Upper = GetWidePointerElement(WidePtrAddr, WPIndex::Upper);
+      Lower = GetWidePointerElement(WidePtrAddr, WPIndex::Lower);
+    }
+    assert(!!Upper && !!Lower);
+    llvm::Type *ElemTy = ConvertTypeForMem(E->getType());
+    EmitBoundsSafetyBoundsCheck(ElemTy, Addr.getBasePointer(), Upper, Lower,
+                             /*AcceptNullPtr=*/false,
+                             /*TrapCtx=*/BoundsSafetyTrapCtx::DEREF);
+  }
+  return MakeAddrLValue(Addr, E->getType(), BaseInfo, TBAAInfo);
+}
+
 /// The offset of a field from the beginning of the record.
 static bool getFieldOffsetInBits(CodeGenFunction &CGF, const RecordDecl *RD,
                                  const FieldDecl *Field, int64_t &Offset) {
@@ -4265,6 +4943,9 @@ static std::optional<int64_t> getOffsetDifferenceInBits(CodeGenFunction &CGF,
 
 LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
                                                bool Accessed) {
+  const auto *PT = E->getBase()->getType()->getAs<PointerType>();
+  if (PT && !PT->hasRawPointerLayout())
+    return EmitWidePtrArraySubscriptExpr(E, Accessed);
   // The index must always be an integer, which is not an aggregate.  Emit it
   // in lexical order (this complexity is, sadly, required by C++17).
   llvm::Value *IdxPre =
@@ -4757,9 +5438,23 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
   // If this is s.x, emit s as an lvalue.  If it is s->x, emit s as a scalar.
   LValue BaseLV;
   if (E->isArrow()) {
+    llvm::Value *Upper = nullptr;
+    llvm::Value *Lower = nullptr;
     LValueBaseInfo BaseInfo;
     TBAAAccessInfo TBAAInfo;
-    Address Addr = EmitPointerWithAlignment(BaseExpr, &BaseInfo, &TBAAInfo);
+    Address Addr = EmitPointerWithAlignment(BaseExpr, &BaseInfo, &TBAAInfo,
+                                            &Upper, &Lower);
+
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    if (Upper) {
+      llvm::Value *Ptr = Addr.getBasePointer();
+      llvm::Value *OnePastTheEndPtr = Builder.CreateGEP(Addr.getElementType(), Ptr,
+          llvm::ConstantInt::get(SizeTy, 1));
+      EmitBoundsSafetyRangeCheck(Lower ? Lower : Ptr, Ptr, OnePastTheEndPtr, Upper,
+                              BoundsSafetyTrapCtx::DEREF);
+    }
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
+
     QualType PtrTy = BaseExpr->getType()->getPointeeType();
     SanitizerSet SkippedChecks;
     bool IsBaseCXXThis = IsWrappedCXXThis(BaseExpr);
@@ -5308,13 +6003,7 @@ LValue CodeGenFunction::EmitConditionalOperatorLValue(
 LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   switch (E->getCastKind()) {
   case CK_ToVoid:
-  case CK_BitCast:
-  case CK_LValueToRValueBitCast:
-  case CK_ArrayToPointerDecay:
   case CK_FunctionToPointerDecay:
-  case CK_NullToMemberPointer:
-  case CK_NullToPointer:
-  case CK_IntegralToPointer:
   case CK_PointerToIntegral:
   case CK_PointerToBoolean:
   case CK_IntegralCast:
@@ -5355,6 +6044,18 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_HLSLVectorTruncation:
   case CK_HLSLArrayRValue:
     return EmitUnsupportedLValue(E, "unexpected cast lvalue");
+
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  case CK_LValueToRValueBitCast:
+  case CK_ArrayToPointerDecay:
+  case CK_NullToMemberPointer:
+  case CK_NullToPointer:
+  case CK_IntegralToPointer: {
+    if (!E->getType()->isPointerTypeWithBounds())
+      return EmitUnsupportedLValue(E, "unexpected cast lvalue");
+    return EmitAggExprToLValue(E);
+  }
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
 
   case CK_Dependent:
     llvm_unreachable("dependent cast kind in IR gen!");
@@ -5399,6 +6100,22 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
     }
     return LV;
   }
+
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  case CK_BitCast: {
+    auto PT = E->getType()->getAs<PointerType>();
+    if (PT->hasRawPointerLayout())
+      return EmitUnsupportedLValue(E, "unexpected cast lvalue");
+    return EmitAggExprToLValue(E);
+  }
+
+  case CK_BoundsSafetyPointerCast: {
+    auto PT = E->getType()->getAs<PointerType>();
+    if (PT->hasRawPointerLayout())
+      return EmitLValue(E->getSubExpr());
+    return EmitAggExprToLValue(E);
+  }
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
 
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase: {
@@ -5892,6 +6609,10 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
       E->getOpcode() == BO_PtrMemI)
     return EmitPointerToDataMemberBinaryExpr(E);
 
+  if (E->getType()->isPointerTypeWithBounds()) {
+    return EmitAggExprToLValue(E);
+  }
+
   assert(E->getOpcode() == BO_Assign && "unexpected binary l-value");
 
   // Note that in all of these cases, __block variables need the RHS
@@ -6045,6 +6766,79 @@ CodeGenFunction::EmitCXXBindTemporaryLValue(const CXXBindTemporaryExpr *E) {
   EmitAggExpr(E->getSubExpr(), Slot);
   EmitCXXTemporary(E->getTemporary(), E->getType(), Slot.getAddress());
   return MakeAddrLValue(Slot.getAddress(), E->getType(), AlignmentSource::Decl);
+}
+
+LValue CodeGenFunction::EmitBoundsCheckExprLValue(const BoundsCheckExpr *E) {
+  const auto *BoundsCheck = cast<BoundsCheckExpr>(E);
+  typedef CodeGenFunction::OpaqueValueMappingData OVMD;
+  SmallVector<OVMD, 4> bindings;
+  for (auto *Common : BoundsCheck->opaquevalues()) {
+    const OpaqueValueExpr *ov = cast<OpaqueValueExpr>(Common);
+    OVMD opaqueData = OVMD::bind(*this, ov, ov->getSourceExpr());
+    bindings.push_back(opaqueData);
+  }
+
+  {
+    RAIIDisableUBSanChecks DisableChecks(*this);
+    // TODO(dliew): We should have a more specific opt-remark.
+    CodeGenFunction::BoundsSafetyOptRemarkScope Scope(this, BNS_OR_GENERAL);
+    // TODO(dliew): We should have a more specific trap reason.
+    EmitBoundsSafetyTrapCheck(BoundsCheck->getCond(), BNS_TRAP_GENERAL);
+  }
+  LValue Res = EmitLValue(BoundsCheck->getGuardedExpr());
+  for (auto &opaqueData : bindings) {
+    opaqueData.unbind(*this);
+  }
+  return Res;
+}
+
+LValue CodeGenFunction::EmitPredefinedBoundsCheckExprLValue(
+    const PredefinedBoundsCheckExpr *E) {
+  return EmitAggExprToLValue(E);
+}
+
+LValue CodeGenFunction::EmitMaterializeSequenceExprLValue(
+                                           const MaterializeSequenceExpr *MSE) {
+  if (MSE->isBinding()) {
+    for (auto *OVE : MSE->opaquevalues()) {
+      if (CodeGenFunction::OpaqueValueMappingData::shouldBindAsLValue(OVE)) {
+        RValue PtrRV = EmitAnyExpr(OVE->getSourceExpr());
+        LValue LV = MakeAddrLValue(PtrRV.getAggregateAddress(), OVE->getType());
+        CodeGenFunction::OpaqueValueMappingData::bind(*this, OVE, LV);
+      } else {
+        CodeGenFunction::OpaqueValueMappingData::bind(
+            *this, OVE, OVE->getSourceExpr());
+      }
+    }
+  }
+
+  LValue LV = EmitLValue(MSE->getWrappedExpr());
+
+  if (MSE->isUnbinding()) {
+    for (auto *OVE : MSE->opaquevalues())
+      CodeGenFunction::OpaqueValueMappingData::unbind(*this, OVE);
+  }
+
+  return LV;
+}
+
+LValue CodeGenFunction::EmitBoundsSafetyPointerPromotionExprLValue(
+                                       const BoundsSafetyPointerPromotionExpr *E) {
+  return EmitAggExprToLValue(E);
+}
+
+LValue CodeGenFunction::EmitForgePtrExprLValue(const ForgePtrExpr *E) {
+  if (!E->getType()->isPointerTypeWithBounds())
+    return EmitUnsupportedLValue(E, "l-value expression");
+  return EmitAggExprToLValue(E);
+}
+
+LValue CodeGenFunction::EmitAssumptionExprLValue(const AssumptionExpr *E) {
+  llvm::Function *FnAssume = CGM.getIntrinsic(llvm::Intrinsic::assume);
+  for (auto *Assumption : E->assumptions()) {
+    Builder.CreateCall(FnAssume, EvaluateExprAsBool(Assumption));
+  }
+  return EmitLValue(E->getWrappedExpr());
 }
 
 LValue CodeGenFunction::EmitObjCMessageExprLValue(const ObjCMessageExpr *E) {

@@ -631,6 +631,16 @@ SVal SValBuilder::evalIntegralCast(ProgramStateRef state, SVal val,
 // `evalCast` and its helper `EvalCastVisitor`
 //===----------------------------------------------------------------------===//
 
+/* TO_UPSTREAM(BoundsSafety) ON*/
+static bool isConcretePointerWidthChangingCast(ASTContext &ACtx, SVal V,
+                                               QualType CastTy,
+                                               QualType OriginalTy) {
+  return V.getAs<loc::ConcreteInt>() &&
+         CastTy->isPointerType() && OriginalTy->isPointerType() &&
+         ACtx.getTypeSize(CastTy) != ACtx.getTypeSize(OriginalTy);
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/
+
 namespace {
 class EvalCastVisitor : public SValVisitor<EvalCastVisitor, SVal> {
 private:
@@ -659,7 +669,8 @@ public:
       // FIXME: Move this check to the most appropriate
       // evalCastKind/evalCastSubKind function. For const casts, casts to void,
       // just propagate the value.
-      if (!CastTy->isVariableArrayType() && !OriginalTy->isVariableArrayType())
+      if (!CastTy->isVariableArrayType() && !OriginalTy->isVariableArrayType() &&
+          !isConcretePointerWidthChangingCast(Context, V, CastTy, OriginalTy))
         if (shouldBeModeledWithNoOp(Context, Context.getPointerType(CastTy),
                                     Context.getPointerType(OriginalTy)))
           return V;

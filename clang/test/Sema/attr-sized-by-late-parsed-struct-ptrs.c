@@ -168,12 +168,14 @@ struct on_member_pointer_fn_ptr_ty_ty_pos {
   int size;
 };
 
+/* TO_UPSTREAM(BoundsSafety) ON */
 struct on_member_pointer_fn_ptr_ty_typedef_ty_pos {
-  // TODO: This should be allowed with sized_by.
-  // expected-error@+1{{use of undeclared identifier 'size'}}
+  // disabled-expected-error@+1{{use of undeclared identifier 'size'}}
+  // expected-error@+1{{'sized_by' cannot be applied to a pointer with pointee of unknown size because 'void (void)' is a function type}}
   fn_ptr_ty __sized_by(size) fn_ptr;
   int size;
 };
+/* TO_UPSTREAM(BoundsSafety) OFF */
 
 struct on_member_pointer_fn_ptr_ty_ty_pos_inner {
   // TODO: This should be allowed with sized_by.

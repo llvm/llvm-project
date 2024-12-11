@@ -2328,6 +2328,31 @@ struct CounterCoverageMappingBuilder
     if (OVE->isUnique())
       Visit(OVE->getSourceExpr());
   }
+
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  // In most expression types, only visit the main expressions, as the others
+  // weren't spelled out and can have confusing source locations.
+  void VisitAssumptionExpr(const AssumptionExpr *AE) {
+    Visit(AE->getWrappedExpr());
+  }
+
+  void VisitBoundsSafetyPointerPromotionExpr(
+      const BoundsSafetyPointerPromotionExpr *FPPE) {
+    Visit(FPPE->getPointer());
+  }
+
+  void VisitBoundsCheckExpr(const BoundsCheckExpr *BCE) {
+    Visit(BCE->getGuardedExpr());
+  }
+
+  void VisitPredefinedBoundsCheckExpr(const PredefinedBoundsCheckExpr *PBCE) {
+    Visit(PBCE->getGuardedExpr());
+  }
+
+  void VisitMaterializeSequenceExpr(const MaterializeSequenceExpr *MSE) {
+    Visit(MSE->getWrappedExpr());
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 };
 
 } // end anonymous namespace

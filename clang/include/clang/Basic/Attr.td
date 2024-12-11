@@ -263,6 +263,8 @@ class VariadicUnsignedArgument<string name> : Argument<name, 1>;
 class VariadicExprArgument<string name> : Argument<name, 1>;
 class VariadicStringArgument<string name> : Argument<name, 1>;
 class VariadicIdentifierArgument<string name> : Argument<name, 1>;
+// TO_UPSTREAM(BoundsSafety)
+class VariadicDeclArgument<string name> : Argument<name, 1>;
 
 // Like VariadicUnsignedArgument except values are ParamIdx.
 class VariadicParamIdxArgument<string name> : Argument<name, 1>;
@@ -432,6 +434,19 @@ def HLSL : LangOpt<"HLSL">;
 
 // Language option for CMSE extensions
 def Cmse : LangOpt<"Cmse">;
+
+// TO_UPSTREAM(BoundsSafety) ON
+def BoundsSafety : LangOpt<"BoundsSafety">;
+def BoundsSafetyAttributes : LangOpt<"BoundsSafetyAttributes">;
+
+// 'counted_by' is now available without -fbounds-safety for COnly (!LangOpts.CPlusPlus).
+// Sema still ignores the attribute (with a warning) if it's applied to subjects other than
+// flexible array members.
+def CountedBySupported : LangOpt<"", [{
+  // LangOpts.BoundsSafetyAttributes is to make it still available for experimental C++/Obj-C++.
+  !LangOpts.CPlusPlus || LangOpts.BoundsSafetyAttributes
+}]>;
+// TO_UPSTREAM(BoundsSafety) OFF
 
 // Defines targets for target-specific attributes. Empty lists are unchecked.
 class TargetSpec {
@@ -2415,43 +2430,149 @@ def TypeNullUnspecified : TypeAttr {
 
 def CountedBy : DeclOrTypeAttr {
   let Spellings = [Clang<"counted_by">];
-  let Subjects = SubjectList<[Field], ErrorDiag>;
+  // TO_UPSTREAM(BoundsSafety) ON
+  // `Subjects` which is present upstream is commented out because internally
+  // the attribute can go on Decls other than FieldDecl.
+  //
+  // let Subjects = SubjectList<[Field], ErrorDiag>;
+  //
   let Args = [ExprArgument<"Count">, IntArgument<"NestedLevel", 1>];
   let LateParsed = LateAttrParseExperimentalExt;
   let ParseArgumentsAsUnevaluated = 1;
   let Documentation = [CountedByDocs];
-  let LangOpts = [COnly];
+  let LangOpts = [CountedBySupported];
+  // TO_UPSTREAM(BoundsSafety) OFF
 }
 
 def CountedByOrNull : DeclOrTypeAttr {
+  // TO_UPSTREAM(BoundsSafety) ON
+  // `Subjects` which is present upstream is commented out because internally
+  // the attribute can go on Decls other than FieldDecl.
+  //
+  // let Subjects = SubjectList<[Field], ErrorDiag>;
+  //
   let Spellings = [Clang<"counted_by_or_null">];
-  let Subjects = SubjectList<[Field], ErrorDiag>;
   let Args = [ExprArgument<"Count">, IntArgument<"NestedLevel", 1>];
   let LateParsed = LateAttrParseExperimentalExt;
   let ParseArgumentsAsUnevaluated = 1;
   let Documentation = [CountedByDocs];
-  let LangOpts = [COnly];
+  let LangOpts = [CountedBySupported];
+  // TO_UPSTREAM(BoundsSafety) OFF
 }
 
 def SizedBy : DeclOrTypeAttr {
+  // TO_UPSTREAM(BoundsSafety) ON
+  // `Subjects` which is present upstream is commented out because internally
+  // the attribute can go on Decls other than FieldDecl.
+  //
+  // let Subjects = SubjectList<[Field], ErrorDiag>;
+  //
   let Spellings = [Clang<"sized_by">];
-  let Subjects = SubjectList<[Field], ErrorDiag>;
   let Args = [ExprArgument<"Size">, IntArgument<"NestedLevel", 1>];
   let LateParsed = LateAttrParseExperimentalExt;
   let ParseArgumentsAsUnevaluated = 1;
   let Documentation = [CountedByDocs];
-  let LangOpts = [COnly];
+  let LangOpts = [CountedBySupported];
+  // TO_UPSTREAM(BoundsSafety) OFF
 }
 
 def SizedByOrNull : DeclOrTypeAttr {
+  // TO_UPSTREAM(BoundsSafety) ON
+  // `Subjects` which is present upstream is commented out because internally
+  // the attribute can go on Decls other than FieldDecl.
+  //
+  // let Subjects = SubjectList<[Field], ErrorDiag>;
+  //
   let Spellings = [Clang<"sized_by_or_null">];
-  let Subjects = SubjectList<[Field], ErrorDiag>;
   let Args = [ExprArgument<"Size">, IntArgument<"NestedLevel", 1>];
   let LateParsed = LateAttrParseExperimentalExt;
   let ParseArgumentsAsUnevaluated = 1;
   let Documentation = [CountedByDocs];
-  let LangOpts = [COnly];
+  let LangOpts = [CountedBySupported];
+  // TO_UPSTREAM(BoundsSafety) OFF
 }
+
+// TO_UPSTREAM(BoundsSafety) ON
+// BoundsSafety pointer type attributes.
+def PtrUnsafeIndexable : TypeAttr {
+  let Spellings = [Clang<"unsafe_indexable">];
+  let LangOpts = [BoundsSafetyAttributes];
+  let Documentation = [Undocumented];
+}
+
+def PtrSingle : TypeAttr {
+  let Spellings = [Clang<"single">];
+  let LangOpts = [BoundsSafetyAttributes];
+  let Documentation = [Undocumented];
+}
+
+def PtrIndexable : TypeAttr {
+  let Spellings = [Clang<"indexable">];
+  let LangOpts = [BoundsSafety];
+  let Documentation = [Undocumented];
+}
+
+def PtrBidiIndexable : TypeAttr {
+  let Spellings = [Clang<"bidi_indexable">];
+  let LangOpts = [BoundsSafety];
+  let Documentation = [Undocumented];
+}
+
+def PtrEndedBy : DeclOrTypeAttr {
+  let Spellings = [Clang<"ended_by">];
+  let Args = [ExprArgument<"EndPtr">, IntArgument<"NestedLevel">];
+  let LateParsed = LateAttrParseExperimentalExt;
+  let ParseArgumentsAsUnevaluated = 1;
+  let LangOpts = [BoundsSafetyAttributes];
+  let Documentation = [Undocumented];
+}
+
+def PtrTerminatedBy : TypeAttr {
+  let Spellings = [Clang<"terminated_by">];
+  let Args = [ExprArgument<"Terminator">];
+  let LangOpts = [BoundsSafetyAttributes];
+  let Documentation = [Undocumented];
+}
+
+def UnsafeLateConst : InheritableAttr {
+  let Spellings = [Clang<"unsafe_late_const">];
+  let Subjects = SubjectList<[GlobalVar], ErrorDiag>;
+  let LangOpts = [BoundsSafetyAttributes];
+  let Documentation = [Undocumented];
+}
+
+def ArrayDecayDiscardsCountInParameters : TypeAttr {
+  let Spellings = [Clang<"decay_discards_count_in_parameters">];
+  let LangOpts = [BoundsSafetyAttributes];
+  let Documentation = [Undocumented];
+}
+
+// BoundsSafety: Don't need to gate implicit attributes.
+def PtrAutoAttr : TypeAttr {
+  // This attribute has no spellings as it is only ever created implicitly
+  // during -fbounds-safety's implicit pointer type bounding.
+  let Spellings = [];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
+}
+
+def PtrAutoNullTerminatedAttr : TypeAttr {
+  // This attribute has no spellings as it is only ever created implicitly
+  // during -fbounds-safety's implicit pointer type bounding.
+  let Spellings = [];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
+}
+
+def DependerDecls : InheritableAttr {
+  let Spellings = [];
+  let Args = [BoolArgument<"IsDeref">,
+              VariadicDeclArgument<"DependerDecls">,
+              VariadicUnsignedArgument<"DependerLevels">];
+  let Subjects = SubjectList<[Field, Var]>;
+  let Documentation = [InternalOnly];
+}
+// TO_UPSTREAM(BoundsSafety) OFF
 
 // This is a marker used to indicate that an __unsafe_unretained qualifier was
 // ignored because ARC is not enabled. The usual representation for this

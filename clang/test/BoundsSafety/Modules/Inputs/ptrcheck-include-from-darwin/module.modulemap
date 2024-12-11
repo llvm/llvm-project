@@ -1,0 +1,9 @@
+module cdefs [system] [no_undeclared_includes] {
+  header "cdefs.h"
+  export *
+}
+
+module ptrcheck {
+  header "ptrcheck.h"
+  export *
+}

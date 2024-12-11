@@ -1114,6 +1114,64 @@ EmitArrayConstant(CodeGenModule &CGM, llvm::ArrayType *DesiredType,
   return llvm::ConstantStruct::get(SType, Elements);
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+static llvm::Constant *
+EmitWidePointerConstant(CodeGenModule &CGM, llvm::StructType *widePtrStructTy,
+                        ArrayRef<llvm::Constant *> Elements) {
+  const auto numElems = widePtrStructTy->getNumElements();
+  assert(numElems == 2 || numElems == 3);
+
+  assert(widePtrStructTy->getElementType(0) ==
+         widePtrStructTy->getElementType(1));
+  if (numElems == 3) {
+    assert(widePtrStructTy->getElementType(0) ==
+           widePtrStructTy->getElementType(2));
+  }
+
+  assert(Elements.size() == numElems);
+  return llvm::ConstantStruct::get(widePtrStructTy, Elements);
+}
+
+static llvm::Constant *
+EmitWidePointerConstant(CodeGenModule &CGM, llvm::StructType *widePtrStructTy,
+                        llvm::Constant *Ptr, llvm::Constant *Size,
+                        llvm::Constant *Base = nullptr) {
+  const auto numElems = widePtrStructTy->getNumElements();
+  assert(numElems == 2 || numElems == 3);
+
+  auto widePtrStructElemTy = widePtrStructTy->getElementType(0);
+
+  if (!Ptr->getType()->isPointerTy())
+    Ptr = llvm::ConstantExpr::getIntToPtr(Ptr, widePtrStructElemTy);
+  else if (Ptr->getType() != widePtrStructElemTy)
+    Ptr = llvm::ConstantExpr::getPointerCast(Ptr, widePtrStructElemTy);
+
+  if (Base) {
+    if (!Base->getType()->isPointerTy())
+      Base = llvm::ConstantExpr::getIntToPtr(Base, widePtrStructElemTy);
+    else if (Base->getType() != widePtrStructElemTy)
+      Base = llvm::ConstantExpr::getPointerCast(Base, widePtrStructElemTy);
+  } else {
+    Base = Ptr;
+  }
+
+  llvm::Constant *Upper = llvm::ConstantExpr::getIntToPtr(
+      llvm::ConstantExpr::getAdd(
+          llvm::ConstantExpr::getPtrToInt(Base, CGM.IntPtrTy),
+          llvm::ConstantFoldIntegerCast(Size, CGM.IntPtrTy, /*IsSigned*/ false,
+                                        CGM.getDataLayout())),
+      widePtrStructElemTy);
+
+  llvm::SmallVector<llvm::Constant *, 3> Elems;
+  Elems.push_back(Ptr);
+  Elems.push_back(Upper);
+  if (numElems == 3) {
+    Elems.push_back(Base);
+  }
+  return llvm::ConstantStruct::get(widePtrStructTy, Elems);
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 // This class only needs to handle arrays, structs and unions. Outside C++11
 // mode, we don't currently constant fold those types.  All other types are
 // handled by constant folding.
@@ -1250,6 +1308,13 @@ public:
     case CK_NoOp:
     case CK_ConstructorConversion:
       return Visit(subExpr, destType);
+
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    // BoundsSafety: Since we get to emit constant expression we assume
+    // -fbounds-safety pointer cast is side-effect free.
+    case CK_BoundsSafetyPointerCast:
+      return Emitter.tryEmitPrivate(subExpr, destType);
+    /* TO_UPSTREAM(BoundsSafety) OFF */
 
     case CK_ArrayToPointerDecay:
       if (const auto *S = dyn_cast<StringLiteral>(subExpr))
@@ -1509,6 +1574,15 @@ public:
       HasFlexibleArray = RT->getDecl()->hasFlexibleArrayMember();
     return Const.build(ValTy, HasFlexibleArray);
   }
+
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  // Have the evaluator handle this later as APValue. This is to make it
+  // consistent with how a normal C cast const-evaluated. See `VisitCastExpr`
+  // returning nullptr for `CK_BitCast` so the evaluater can handle it later.
+  llvm::Constant *VisitForgePtrExpr(const ForgePtrExpr *E, QualType Ty) {
+    return nullptr;
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   llvm::Constant *VisitCXXConstructExpr(const CXXConstructExpr *E,
                                         QualType Ty) {
@@ -2141,13 +2215,44 @@ private:
                                   Value.getLValueOffset().getQuantity());
   }
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  /// Return the offset of forged -fbounds-safety base pointer.
+  llvm::Constant *getForgedOffset() {
+    return llvm::ConstantInt::get(CGM.Int64Ty,
+                                  Value.getLValueForgedOffset().getQuantity());
+  }
+
+  /// Return the combined offset of pointer before and after forging.
+  /// This is the same as the sum of getOffset and getForgedOffset.
+  llvm::Constant *getTotalOffset() {
+    return llvm::ConstantInt::get(
+        CGM.Int64Ty, Value.getUnwrappedLValueOffset().getQuantity());
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   /// Apply the value offset to the given constant.
   llvm::Constant *applyOffset(llvm::Constant *C) {
     if (!hasNonZeroOffset())
       return C;
 
-    return llvm::ConstantExpr::getGetElementPtr(CGM.Int8Ty, C, getOffset());
+    // TO_UPSTREAM(BoundsSafety)
+    return applyOffsetArgument(C, getOffset());
   }
+
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  /// Apply the offset of forged base pointer to the given constant.
+  llvm::Constant *applyForgedOffset(llvm::Constant *C) {
+    if (Value.getLValueForgedOffset().isZero())
+      return C;
+
+    return applyOffsetArgument(C, getForgedOffset());
+  }
+
+  llvm::Constant *applyOffsetArgument(llvm::Constant *C,
+                                      llvm::Constant *Offset) {
+    return llvm::ConstantExpr::getGetElementPtr(CGM.Int8Ty, C, Offset);
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 };
 
 }
@@ -2163,11 +2268,45 @@ llvm::Constant *ConstantLValueEmitter::tryEmit() {
   // non-zero null pointer and addrspace casts that aren't trivially
   // represented in LLVM IR.
   auto destTy = CGM.getTypes().ConvertTypeForMem(DestType);
-  assert(isa<llvm::IntegerType>(destTy) || isa<llvm::PointerType>(destTy));
+
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  auto DestPtrTy = DestType->getAs<PointerType>();
+  const bool IsWidePtr = DestPtrTy && !DestPtrTy->hasRawPointerLayout();
+  assert(isa<llvm::IntegerType>(destTy) || isa<llvm::PointerType>(destTy) ||
+         IsWidePtr);
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
 
   // If there's no base at all, this is a null or absolute pointer,
   // possibly cast back to an integer type.
   if (!base) {
+    /*TO_UPSTREAM(BoundsSafety) ON*/
+    if (IsWidePtr) {
+      auto widePtrStructTy = dyn_cast_or_null<llvm::StructType>(destTy);
+      assert(widePtrStructTy && widePtrStructTy->getNumElements() > 1);
+      auto widePtrStructElemTy = widePtrStructTy->getElementType(0);
+      llvm::Constant *Size = nullptr;
+      if (Value.isLValueForgeBidi()) {
+        Size = CGM.getSize(Value.getLValueForgedSize());
+      } else if (Value.isLValueForgeSingle() &&
+                 !Value.getUnwrappedLValueOffset().isZero()) {
+        // Single points to one valid element.
+        Size = CGM.getSize(
+            CGM.getContext().getTypeSizeInChars(DestType->getPointeeType()));
+      }
+
+      if (Size) {
+        auto Ptr = llvm::ConstantExpr::getIntToPtr(
+            CGM.getSize(Value.getUnwrappedLValueOffset()), widePtrStructElemTy);
+        return EmitWidePointerConstant(CGM, widePtrStructTy, Ptr, Size);
+      }
+
+      auto Ptr = tryEmitAbsolute(widePtrStructElemTy);
+      llvm::SmallVector<llvm::Constant *, 3> Elems;
+      for (unsigned i = 0; i < widePtrStructTy->getNumElements(); ++i)
+        Elems.push_back(Ptr);
+      return EmitWidePointerConstant(CGM, widePtrStructTy, Elems);
+    }
+    /*TO_UPSTREAM(BoundsSafety) OFF*/
     return tryEmitAbsolute(destTy);
   }
 
@@ -2177,6 +2316,12 @@ llvm::Constant *ConstantLValueEmitter::tryEmit() {
   // If that failed, we're done.
   llvm::Constant *value = result.Value;
   if (!value) return nullptr;
+
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  if (Value.isLValueForge())
+    value = applyForgedOffset(value);
+  llvm::Constant *BaseAddr = value;
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   // Apply the offset if necessary and not already done.
   if (!result.HasOffsetApplied) {
@@ -2195,7 +2340,71 @@ llvm::Constant *ConstantLValueEmitter::tryEmit() {
   // an integer.  FIXME: performAddrSpaceCast
   if (isa<llvm::PointerType>(destTy))
     return llvm::ConstantExpr::getPointerCast(value, destTy);
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  if (IsWidePtr) {
+    uint64_t UpperBoundBytes = 1;
+    if (Value.isLValueForgeBidi()) {
+      UpperBoundBytes = Value.getLValueForgedSize().getQuantity();
+    } else if (Value.isLValueForgeSingle()) {
+      if (DestType->getPointeeType()->isIncompleteOrSizelessType()) {
+        UpperBoundBytes = 0;
+      } else {
+        UpperBoundBytes = CGM.getContext()
+                            .getTypeSizeInChars(DestType->getPointeeType())
+                            .getQuantity();
+      }
+    } else if (const ValueDecl *InitDecl = base.dyn_cast<const ValueDecl *>()) {
+      // In the following example, `InitDecl` picks up the first declaration,
+      // `extern float init[]` which is identified as an incomplete array type.
+      // Thus, the following code block tries to find the most recent
+      // declaration which will have a concrete array type if that exists.
+      //
+      // extern float init[];
+      // float init[] = {1, 2, 3, 4};
+      // float *__bidi_indexable f[] = {init};
+      auto *Var = dyn_cast<VarDecl>(InitDecl);
+      if (Var && Var->hasDefinition() == VarDecl::Definition) {
+        InitDecl = Var->getDefinition();
+      }
+      QualType InitDeclTy = InitDecl->getType();
+      if (auto ValTy = InitDeclTy.getTypePtrOrNull()) {
+        if (const auto IAT = dyn_cast<IncompleteArrayType>(ValTy)) {
+          if (const auto *DCPTy = InitDeclTy->getAs<CountAttributedType>()) {
+            const Expr *Count = DCPTy->getCountExpr();
+            clang::Expr::EvalResult EvaluatedDynamicCount;
+            const bool DynamicCountEvalSuccess = Count->EvaluateAsInt(
+                EvaluatedDynamicCount, CGM.getContext(),
+                clang::Expr::SE_NoSideEffects, /*InConstantContext=*/false);
+            (void)DynamicCountEvalSuccess;
+            assert(DynamicCountEvalSuccess);
 
+            const uint64_t SizeOfPointee =
+                CGM.GetTargetTypeStoreSize(
+                       CGM.getTypes().ConvertType(IAT->getElementType()))
+                    .getQuantity();
+            UpperBoundBytes =
+                EvaluatedDynamicCount.Val.getInt().getLimitedValue() *
+                SizeOfPointee;
+          } else {
+            // Currently, Sema reports this case as a warning. We might want to
+            // turn certain cases into an error (rdar://84950239).
+            UpperBoundBytes = 0;
+          }
+        } else {
+          UpperBoundBytes =
+              CGM.GetTargetTypeStoreSize(CGM.getTypes().ConvertType(InitDeclTy))
+                  .getQuantity();
+        }
+      }
+    }
+
+    auto widePtrStructTy = dyn_cast_or_null<llvm::StructType>(destTy);
+    assert(widePtrStructTy);
+    return EmitWidePointerConstant(
+        CGM, widePtrStructTy, value,
+        llvm::ConstantInt::get(CGM.SizeTy, UpperBoundBytes), BaseAddr);
+  }
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
   return llvm::ConstantExpr::getPtrToInt(value, destTy);
 }
 
@@ -2215,8 +2424,9 @@ ConstantLValueEmitter::tryEmitAbsolute(llvm::Type *destTy) {
   // FIXME: signedness depends on the original integer type.
   auto intptrTy = CGM.getDataLayout().getIntPtrType(destPtrTy);
   llvm::Constant *C;
-  C = llvm::ConstantFoldIntegerCast(getOffset(), intptrTy, /*isSigned*/ false,
-                                    CGM.getDataLayout());
+  // TO_UPSTREAM(BoundsSafety): getTotalOffset
+  C = llvm::ConstantFoldIntegerCast(getTotalOffset(), intptrTy,
+                                    /*isSigned*/ false, CGM.getDataLayout());
   assert(C && "Must have folded, as Offset is a ConstantInt");
   C = llvm::ConstantExpr::getIntToPtr(C, destPtrTy);
   return C;
@@ -2225,7 +2435,8 @@ ConstantLValueEmitter::tryEmitAbsolute(llvm::Type *destTy) {
 ConstantLValue
 ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
   // Handle values.
-  if (const ValueDecl *D = base.dyn_cast<const ValueDecl*>()) {
+  // TO_UPSTREAM(BoundsSafety): getValueDecl
+  if (const ValueDecl *D = base.getValueDecl()) {
     // The constant always points to the canonical declaration. We want to look
     // at properties of the most recent declaration at the point of emission.
     D = cast<ValueDecl>(D->getMostRecentDecl());
@@ -2778,9 +2989,14 @@ llvm::Constant *ConstantEmitter::emitNullForMemory(CodeGenModule &CGM,
 }
 
 llvm::Constant *CodeGenModule::EmitNullConstant(QualType T) {
-  if (T->getAs<PointerType>())
-    return getNullPointer(
-        cast<llvm::PointerType>(getTypes().ConvertTypeForMem(T)), T);
+  if (const auto *PT = T->getAs<PointerType>()) {
+    if (PT->hasRawPointerLayout())
+      return getNullPointer(
+          cast<llvm::PointerType>(getTypes().ConvertTypeForMem(T)), T);
+    /*TO_UPSTREAM(BoundsSafety) ON*/
+    return llvm::Constant::getNullValue(getTypes().ConvertTypeForMem(T));
+    /*TO_UPSTREAM(BoundsSafety) OFF*/
+  }
 
   if (getTypes().isZeroInitializable(T))
     return llvm::Constant::getNullValue(getTypes().ConvertTypeForMem(T));

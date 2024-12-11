@@ -334,6 +334,14 @@ public:
   /// is read.
   virtual void PragmaAssumeNonNullEnd(SourceLocation Loc) {}
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  /// Callback invoked when a \#pragma clang abi_ptr_attr set (*ATTR*)
+  /// directive is read.
+  virtual void
+  PragmaAbiPointerAttributesSet(SourceLocation Loc,
+                                ArrayRef<const IdentifierInfo *> Spec) {}
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   /// Called by Preprocessor::HandleMacroExpandedIdentifier when a
   /// macro invocation is found.
   virtual void MacroExpands(const Token &MacroNameTok,
@@ -664,6 +672,15 @@ public:
     First->PragmaAssumeNonNullEnd(Loc);
     Second->PragmaAssumeNonNullEnd(Loc);
   }
+
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  void PragmaAbiPointerAttributesSet(SourceLocation Loc,
+                                     ArrayRef<const IdentifierInfo *> Spec)
+                                    override {
+    First->PragmaAbiPointerAttributesSet(Loc, Spec);
+    Second->PragmaAbiPointerAttributesSet(Loc, Spec);
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
                     SourceRange Range, const MacroArgs *Args) override {

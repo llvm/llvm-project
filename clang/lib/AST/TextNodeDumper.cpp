@@ -1812,6 +1812,26 @@ void TextNodeDumper::VisitOMPIteratorExpr(const OMPIteratorExpr *Node) {
   }
 }
 
+void TextNodeDumper::VisitGetBoundExpr(const GetBoundExpr *Expr) {
+  OS << (Expr->getBoundKind() == GetBoundExpr::BK_Lower ? " lower" : " upper");
+}
+
+void TextNodeDumper::VisitMaterializeSequenceExpr(
+                                                  const MaterializeSequenceExpr *Node) {
+  OS << (Node->isUnbinding() ? " <Unbind>" : " <Bind>");
+}
+
+void TextNodeDumper::VisitPredefinedBoundsCheckExpr(
+    const PredefinedBoundsCheckExpr *Node) {
+  OS << " <" << Node->getKindName() << ">";
+}
+
+void TextNodeDumper::VisitBoundsCheckExpr(const BoundsCheckExpr *Node) {
+  OS << " '";
+  Node->getCond()->printPretty(OS, nullptr, PrintPolicy, 0, "\n", Context);
+  OS << "'";
+}
+
 void TextNodeDumper::VisitConceptSpecializationExpr(
     const ConceptSpecializationExpr *Node) {
   OS << " ";

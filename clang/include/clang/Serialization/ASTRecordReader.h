@@ -171,6 +171,12 @@ public:
     return Qualifiers::fromOpaqueValue(readInt());
   }
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  BoundsSafetyPointerAttributes readBoundsSafetyPointerAttributes() {
+    return BoundsSafetyPointerAttributes::fromOpaqueValue(readUInt32());
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   /// Read a type from the current position in the record.
   QualType readType() {
     return Reader->readType(*F, Record, Idx);

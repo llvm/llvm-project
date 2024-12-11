@@ -257,6 +257,13 @@ void ExpandModularHeadersPPCallbacks::PragmaAssumeNonNullEnd(
     SourceLocation Loc) {
   parseToLocation(Loc);
 }
+/*TO_UPSTREAM(BoundsSafety) ON*/
+void ExpandModularHeadersPPCallbacks::
+PragmaAbiPointerAttributesSet(SourceLocation Loc,
+                              ArrayRef<const IdentifierInfo *> Spec) {
+  parseToLocation(Loc);
+}
+/*TO_UPSTREAM(BoundsSafety) OFF*/
 void ExpandModularHeadersPPCallbacks::MacroExpands(const Token &MacroNameTok,
                                                    const MacroDefinition &,
                                                    SourceRange Range,

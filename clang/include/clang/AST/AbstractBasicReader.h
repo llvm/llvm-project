@@ -219,6 +219,13 @@ public:
     return Qualifiers::fromOpaqueValue(value);
   }
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  BoundsSafetyPointerAttributes readBoundsSafetyPointerAttributes() {
+    uint32_t value = asImpl().readUInt32();
+    return BoundsSafetyPointerAttributes::fromOpaqueValue(value);
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   FunctionProtoType::ExceptionSpecInfo
   readExceptionSpecInfo(llvm::SmallVectorImpl<QualType> &buffer) {
     FunctionProtoType::ExceptionSpecInfo esi;

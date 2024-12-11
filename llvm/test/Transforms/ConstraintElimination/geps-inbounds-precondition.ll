@@ -13,10 +13,8 @@ define i1 @inbounds_poison_is_ub1(ptr %src, i32 %n, i32 %idx) {
 ; CHECK-NEXT:    [[CMP_IDX:%.*]] = icmp ult i32 [[IDX:%.*]], [[N:%.*]]
 ; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[IDX]] to i64
 ; CHECK-NEXT:    [[SRC_IDX_4:%.*]] = getelementptr i32, ptr [[SRC]], i64 4
-; CHECK-NEXT:    [[CMP_UPPER_4:%.*]] = icmp ule ptr [[SRC_IDX_4]], [[UPPER]]
 ; CHECK-NEXT:    [[SRC_IDX_5:%.*]] = getelementptr i32, ptr [[SRC]], i64 5
-; CHECK-NEXT:    [[CMP_UPPER_5:%.*]] = icmp ule ptr [[SRC_IDX_5]], [[UPPER]]
-; CHECK-NEXT:    [[RES_0:%.*]] = xor i1 [[CMP_UPPER_4]], [[CMP_UPPER_5]]
+; CHECK-NEXT:    [[RES_0:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[SRC_IDX_6:%.*]] = getelementptr i32, ptr [[SRC]], i64 6
 ; CHECK-NEXT:    [[CMP_UPPER_6:%.*]] = icmp ule ptr [[SRC_IDX_6]], [[UPPER]]
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[RES_0]], [[CMP_UPPER_6]]
@@ -59,8 +57,7 @@ define i1 @inbounds_poison_is_ub2(ptr %src, i32 %n, i32 %idx) {
 ; CHECK-NEXT:    [[SRC_IDX:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    br i1 [[CMP_IDX]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[CMP_UPPER_1:%.*]] = icmp ule ptr [[SRC_IDX]], [[UPPER]]
-; CHECK-NEXT:    ret i1 [[CMP_UPPER_1]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    [[CMP_UPPER_2:%.*]] = icmp ule ptr [[SRC_IDX]], [[UPPER]]
 ; CHECK-NEXT:    ret i1 [[CMP_UPPER_2]]
@@ -96,8 +93,7 @@ define i1 @inbounds_poison_is_ub3(ptr %src, i32 %n, i32 %idx) {
 ; CHECK-NEXT:    [[UPPER_1:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 [[N_EXT]]
 ; CHECK-NEXT:    call void @noundef(ptr [[UPPER_1]])
 ; CHECK-NEXT:    [[SRC_IDX_1:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IDX_EXT]]
-; CHECK-NEXT:    [[CMP_UPPER_1:%.*]] = icmp ule ptr [[SRC_IDX_1]], [[UPPER_1]]
-; CHECK-NEXT:    ret i1 [[CMP_UPPER_1]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    [[UPPER_2:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[N_EXT]]
 ; CHECK-NEXT:    call void @noundef(ptr [[UPPER_2]])
@@ -125,6 +121,49 @@ else:
   %cmp.upper.2 = icmp ule ptr %src.idx.2, %upper.2
   ret i1 %cmp.upper.2
 }
+
+; Same as inbounds_poison_is_ub3, but with individual upper bound GEPs in the
+; %then and %else blocks.
+define i1 @inbounds_poison_is_ub4(ptr %src, i8 %n, i8 %idx) {
+; CHECK-LABEL: @inbounds_poison_is_ub4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_EXT:%.*]] = zext i8 [[N:%.*]] to i16
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i8 [[IDX:%.*]] to i16
+; CHECK-NEXT:    [[CMP_IDX:%.*]] = icmp ult i16 [[IDX_EXT]], [[N_EXT]]
+; CHECK-NEXT:    br i1 [[CMP_IDX]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[UPPER_1:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i16 [[N_EXT]]
+; CHECK-NEXT:    call void @noundef(ptr [[UPPER_1]])
+; CHECK-NEXT:    [[SRC_IDX_1:%.*]] = getelementptr i32, ptr [[SRC]], i16 [[IDX_EXT]]
+; CHECK-NEXT:    ret i1 true
+; CHECK:       else:
+; CHECK-NEXT:    [[UPPER_2:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i16 [[N_EXT]]
+; CHECK-NEXT:    call void @noundef(ptr [[UPPER_2]])
+; CHECK-NEXT:    [[SRC_IDX_2:%.*]] = getelementptr i32, ptr [[SRC]], i16 [[IDX_EXT]]
+; CHECK-NEXT:    [[CMP_UPPER_2:%.*]] = icmp ule ptr [[SRC_IDX_2]], [[UPPER_2]]
+; CHECK-NEXT:    ret i1 [[CMP_UPPER_2]]
+;
+entry:
+  %n.ext = zext i8 %n to i16
+  %idx.ext = zext i8 %idx to i16
+  %cmp.idx = icmp ult i16 %idx.ext, %n.ext
+  br i1 %cmp.idx, label %then, label %else
+
+then:
+  %upper.1 = getelementptr inbounds i32, ptr %src, i16 %n.ext
+  call void @noundef(ptr %upper.1)
+  %src.idx.1 = getelementptr i32, ptr %src, i16 %idx.ext
+  %cmp.upper.1 = icmp ule ptr %src.idx.1, %upper.1
+  ret i1 %cmp.upper.1
+
+else:
+  %upper.2 = getelementptr inbounds i32, ptr %src, i16 %n.ext
+  call void @noundef(ptr %upper.2)
+  %src.idx.2 = getelementptr i32, ptr %src, i16 %idx.ext
+  %cmp.upper.2 = icmp ule ptr %src.idx.2, %upper.2
+  ret i1 %cmp.upper.2
+}
+
 
 ; The function does not have UB if %upper is poison because of an overflow. Do
 ; not simplify anything. In this particular case, the returned result will be
@@ -247,8 +286,7 @@ define i1 @multiple_upper_bounds(ptr %src, i32 %n, i32 %idx) {
 ; CHECK-NEXT:    [[SRC_IDX:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    br i1 [[CMP_IDX]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[CMP_UPPER_1:%.*]] = icmp ule ptr [[SRC_IDX]], [[UPPER_2]]
-; CHECK-NEXT:    ret i1 [[CMP_UPPER_1]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    [[CMP_UPPER_2:%.*]] = icmp ule ptr [[SRC_IDX]], [[UPPER_2]]
 ; CHECK-NEXT:    ret i1 [[CMP_UPPER_2]]
@@ -282,8 +320,7 @@ define i1 @multiple_upper_bounds2(ptr %src, i32 %n, i32 %idx) {
 ; CHECK-NEXT:    [[UPPER_2:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 4
 ; CHECK-NEXT:    call void @noundef(ptr [[UPPER_2]])
 ; CHECK-NEXT:    [[SRC_IDX:%.*]] = getelementptr i32, ptr [[SRC]], i64 4
-; CHECK-NEXT:    [[CMP_UPPER_1:%.*]] = icmp ule ptr [[SRC_IDX]], [[UPPER_2]]
-; CHECK-NEXT:    ret i1 [[CMP_UPPER_1]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %n.ext = zext i32 %n to i64
@@ -305,8 +342,7 @@ define i1 @multiple_upper_bounds3(ptr %src, i32 %n, i32 %idx) {
 ; CHECK-NEXT:    [[UPPER_2:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 1
 ; CHECK-NEXT:    call void @noundef(ptr [[UPPER_2]])
 ; CHECK-NEXT:    [[SRC_IDX:%.*]] = getelementptr i32, ptr [[SRC]], i64 4
-; CHECK-NEXT:    [[CMP_UPPER_1:%.*]] = icmp ule ptr [[SRC_IDX]], [[UPPER_1]]
-; CHECK-NEXT:    ret i1 [[CMP_UPPER_1]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %n.ext = zext i32 %n to i64
@@ -342,3 +378,269 @@ entry:
   %cmp.upper.1 = icmp ule ptr %src.idx, %upper.2
   ret i1 %cmp.upper.1
 }
+
+
+; Test case where %n is not trivially signed positive via zext, but via a
+; dominating condition.
+define i1 @inbounds_poison_is_ub_idx_known_non_negative_via_constraint_system(ptr %src, i32 %n, i32 %idx) {
+; CHECK-LABEL: @inbounds_poison_is_ub_idx_known_non_negative_via_constraint_system(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_POS:%.*]] = icmp sge i32 [[N:%.*]], 0
+; CHECK-NEXT:    [[IDX_POS:%.*]] = icmp sge i32 [[IDX:%.*]], 0
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[N_POS]], [[IDX_POS]]
+; CHECK-NEXT:    br i1 [[AND]], label [[N_POS_BLOCK:%.*]], label [[EXIT:%.*]]
+; CHECK:       n.pos.block:
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i32 [[N]]
+; CHECK-NEXT:    call void @noundef(ptr [[UPPER]])
+; CHECK-NEXT:    [[CMP_IDX:%.*]] = icmp ult i32 [[IDX]], [[N]]
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[IDX]] to i64
+; CHECK-NEXT:    [[SRC_IDX:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IDX_EXT]]
+; CHECK-NEXT:    br i1 [[CMP_IDX]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       else:
+; CHECK-NEXT:    [[CMP_UPPER_2:%.*]] = icmp ule ptr [[SRC_IDX]], [[UPPER]]
+; CHECK-NEXT:    ret i1 [[CMP_UPPER_2]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %n.pos = icmp sge i32 %n, 0
+  %idx.pos = icmp sge i32 %idx, 0
+  %and = and i1 %n.pos, %idx.pos
+  br i1 %and, label %n.pos.block, label %exit
+
+n.pos.block:
+  %upper = getelementptr inbounds i32, ptr %src, i32 %n
+  call void @noundef(ptr %upper)
+  %cmp.idx = icmp ult i32 %idx, %n
+  %idx.ext = zext i32 %idx to i64
+  %src.idx = getelementptr i32, ptr %src, i64 %idx.ext
+  br i1 %cmp.idx, label %then, label %else
+
+then:
+  %cmp.upper.1 = icmp ule ptr %src.idx, %upper
+  ret i1 %cmp.upper.1
+
+else:
+  %cmp.upper.2 = icmp ule ptr %src.idx, %upper
+  ret i1 %cmp.upper.2
+
+exit:
+  ret i1 0
+}
+
+define i1 @inbounds_poison_is_ub_idx_not_known_non_negative_via_constraint_system(ptr %src, i32 %n, i32 %idx) {
+; CHECK-LABEL: @inbounds_poison_is_ub_idx_not_known_non_negative_via_constraint_system(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 true, label [[N_POS_BLOCK:%.*]], label [[EXIT:%.*]]
+; CHECK:       n.pos.block:
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i32 [[N:%.*]]
+; CHECK-NEXT:    call void @noundef(ptr [[UPPER]])
+; CHECK-NEXT:    [[CMP_IDX:%.*]] = icmp ult i32 [[IDX:%.*]], [[N]]
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[IDX]] to i64
+; CHECK-NEXT:    [[SRC_IDX:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IDX_EXT]]
+; CHECK-NEXT:    br i1 [[CMP_IDX]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[CMP_UPPER_1:%.*]] = icmp ule ptr [[SRC_IDX]], [[UPPER]]
+; CHECK-NEXT:    ret i1 [[CMP_UPPER_1]]
+; CHECK:       else:
+; CHECK-NEXT:    [[CMP_UPPER_2:%.*]] = icmp ule ptr [[SRC_IDX]], [[UPPER]]
+; CHECK-NEXT:    ret i1 [[CMP_UPPER_2]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %n.pos = icmp uge i32 %n, 0
+  br i1 %n.pos, label %n.pos.block, label %exit
+
+n.pos.block:
+  %upper = getelementptr inbounds i32, ptr %src, i32 %n
+  call void @noundef(ptr %upper)
+  %cmp.idx = icmp ult i32 %idx, %n
+  %idx.ext = zext i32 %idx to i64
+  %src.idx = getelementptr i32, ptr %src, i64 %idx.ext
+  br i1 %cmp.idx, label %then, label %else
+
+then:
+  %cmp.upper.1 = icmp ule ptr %src.idx, %upper
+  ret i1 %cmp.upper.1
+
+else:
+  %cmp.upper.2 = icmp ule ptr %src.idx, %upper
+  ret i1 %cmp.upper.2
+
+exit:
+  ret i1 0
+}
+
+define i1 @elim_consecutive_writes2(ptr %dst, i32 %n, i32 %idx) {
+; CHECK-LABEL: @elim_consecutive_writes2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[IDX:%.*]], 3
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN_1:%.*]], label [[ELSE:%.*]]
+; CHECK:       then.1:
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[N:%.*]] to i64
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 [[IDX_EXT]]
+; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[IDX]] to i64
+; CHECK-NEXT:    [[GEP_IDX:%.*]] = getelementptr i32, ptr [[DST]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult ptr [[GEP_IDX]], [[ADD_PTR]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp uge ptr [[GEP_IDX]], [[DST]]
+; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    br i1 [[AND_1]], label [[THEN_2:%.*]], label [[ELSE]]
+; CHECK:       then.2:
+; CHECK-NEXT:    [[GEP_4:%.*]] = getelementptr i32, ptr [[DST]], i64 4
+; CHECK-NEXT:    [[AND_2:%.*]] = and i1 true, true
+; CHECK-NEXT:    ret i1 [[AND_2]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cmp = icmp ugt i32 %idx, 3
+  br i1 %cmp, label %then.1, label %else
+
+then.1:
+  %idx.ext = zext i32 %n to i64
+  %add.ptr = getelementptr inbounds i32, ptr %dst, i64 %idx.ext
+  %idxprom = zext i32 %idx to i64
+  %gep.idx = getelementptr i32, ptr %dst, i64 %idxprom
+  %c.1 = icmp ult ptr %gep.idx, %add.ptr
+  %c.2 = icmp uge ptr %gep.idx, %dst
+  %and.1 = and i1 %c.1, %c.2
+  br i1 %and.1, label %then.2, label %else
+
+then.2:
+  %gep.4 = getelementptr i32, ptr %dst, i64 4
+  %c.3 = icmp ult ptr %gep.4, %add.ptr
+  %c.4 = icmp uge ptr %gep.4, %dst
+  %and.2 = and i1 %c.3, %c.4
+  ret i1 %and.2
+
+else:
+  ret i1 0
+}
+
+define void @test_multiple_variable_idx_known_positive_1(ptr noundef %buf, i32 noundef %len, i32 %idx.1, i32 %idx.2) {
+; CHECK-LABEL: @test_multiple_variable_idx_known_positive_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IDX_1_SLT_4:%.*]] = icmp ult i32 [[IDX_1:%.*]], 4
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IDX_1_SLT_4]])
+; CHECK-NEXT:    [[IDX_1_POS:%.*]] = icmp uge i32 [[IDX_1]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IDX_1_POS]])
+; CHECK-NEXT:    [[IDX_2_SLT_3:%.*]] = icmp ult i32 [[IDX_2:%.*]], 3
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IDX_2_SLT_3]])
+; CHECK-NEXT:    [[IDX_2_POS:%.*]] = icmp uge i32 [[IDX_2]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IDX_2_POS]])
+; CHECK-NEXT:    [[LEN_POS:%.*]] = icmp uge i32 [[LEN:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LEN_POS]])
+; CHECK-NEXT:    [[C_SLT_LEN:%.*]] = icmp ult i32 8, [[LEN]]
+; CHECK-NEXT:    br i1 [[C_SLT_LEN]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[LEN_EXT:%.*]] = zext i32 [[LEN]] to i64
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[BUF:%.*]], i64 [[LEN_EXT]]
+; CHECK-NEXT:    [[IDX_1_EXT:%.*]] = zext i32 [[IDX_1]] to i64
+; CHECK-NEXT:    [[GEP_IDX_1:%.*]] = getelementptr i32, ptr [[BUF]], i64 [[IDX_1_EXT]]
+; CHECK-NEXT:    [[IDX_2_EXT:%.*]] = zext i32 [[IDX_2]] to i64
+; CHECK-NEXT:    [[GEP_IDX_2:%.*]] = getelementptr i32, ptr [[GEP_IDX_1]], i64 [[IDX_2_EXT]]
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ult ptr [[GEP_IDX_2]], [[ADD_PTR]]
+; CHECK-NEXT:    [[T_2:%.*]] = icmp uge ptr [[GEP_IDX_2]], [[BUF]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    call void @use(i1 [[AND]])
+; CHECK-NEXT:    ret void
+; CHECK:       else:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idx.1.slt.4 = icmp ult i32 %idx.1, 4
+  call void @llvm.assume(i1 %idx.1.slt.4)
+  %idx.1.pos = icmp uge i32 %idx.1, 0
+  call void @llvm.assume(i1 %idx.1.pos)
+  %idx.2.slt.3 = icmp ult i32 %idx.2, 3
+  call void @llvm.assume(i1 %idx.2.slt.3)
+  %idx.2.pos = icmp uge i32 %idx.2, 0
+  call void @llvm.assume(i1 %idx.2.pos)
+  %len.pos = icmp uge i32 %len, 0
+  call void @llvm.assume(i1 %len.pos)
+  %c.slt.len = icmp ult i32 8, %len
+  br i1 %c.slt.len, label %then , label %else
+
+then:
+  %len.ext = zext i32 %len to i64
+  %add.ptr = getelementptr inbounds i32, ptr %buf, i64 %len.ext
+  %idx.1.ext = zext i32 %idx.1 to i64
+  %gep.idx.1 = getelementptr i32, ptr %buf, i64 %idx.1.ext
+  %idx.2.ext = zext i32 %idx.2 to i64
+  %gep.idx.2 = getelementptr i32, ptr %gep.idx.1, i64 %idx.2.ext
+  %t.1 = icmp ult ptr %gep.idx.2, %add.ptr
+  %t.2 = icmp uge ptr %gep.idx.2, %buf
+  %and = and i1 %t.1, %t.2
+  call void @use(i1 %and)
+  ret void
+
+else:
+  ret void
+}
+
+define void @test_multiple_variable_idx_known_positive_2(ptr noundef %buf, i32 noundef %len, i32 %idx.1, i32 %idx.2) {
+; CHECK-LABEL: @test_multiple_variable_idx_known_positive_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IDX_1_SLT_4:%.*]] = icmp slt i32 [[IDX_1:%.*]], 4
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IDX_1_SLT_4]])
+; CHECK-NEXT:    [[IDX_1_POS:%.*]] = icmp sge i32 [[IDX_1]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IDX_1_POS]])
+; CHECK-NEXT:    [[IDX_2_SLT_3:%.*]] = icmp slt i32 [[IDX_2:%.*]], 3
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IDX_2_SLT_3]])
+; CHECK-NEXT:    [[IDX_2_POS:%.*]] = icmp sge i32 [[IDX_2]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IDX_2_POS]])
+; CHECK-NEXT:    [[LEN_POS:%.*]] = icmp sge i32 [[LEN:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LEN_POS]])
+; CHECK-NEXT:    [[C_SLT_LEN:%.*]] = icmp slt i32 4, [[LEN]]
+; CHECK-NEXT:    br i1 [[C_SLT_LEN]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[LEN_EXT:%.*]] = sext i32 [[LEN]] to i64
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[BUF:%.*]], i64 [[LEN_EXT]]
+; CHECK-NEXT:    [[IDX_1_EXT:%.*]] = sext i32 [[IDX_1]] to i64
+; CHECK-NEXT:    [[GEP_IDX_1:%.*]] = getelementptr i32, ptr [[BUF]], i64 [[IDX_1_EXT]]
+; CHECK-NEXT:    [[IDX_2_EXT:%.*]] = sext i32 [[IDX_2]] to i64
+; CHECK-NEXT:    [[GEP_IDX_2:%.*]] = getelementptr i32, ptr [[GEP_IDX_1]], i64 [[IDX_2_EXT]]
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ult ptr [[GEP_IDX_2]], [[ADD_PTR]]
+; CHECK-NEXT:    [[T_2:%.*]] = icmp uge ptr [[GEP_IDX_2]], [[BUF]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    call void @use(i1 [[AND]])
+; CHECK-NEXT:    ret void
+; CHECK:       else:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idx.1.slt.4 = icmp slt i32 %idx.1, 4
+  call void @llvm.assume(i1 %idx.1.slt.4)
+  %idx.1.pos = icmp sge i32 %idx.1, 0
+  call void @llvm.assume(i1 %idx.1.pos)
+  %idx.2.slt.3 = icmp slt i32 %idx.2, 3
+  call void @llvm.assume(i1 %idx.2.slt.3)
+  %idx.2.pos = icmp sge i32 %idx.2, 0
+  call void @llvm.assume(i1 %idx.2.pos)
+  %len.pos = icmp sge i32 %len, 0
+  call void @llvm.assume(i1 %len.pos)
+  %c.slt.len = icmp slt i32 4, %len
+  br i1 %c.slt.len, label %then , label %else
+
+then:
+  %len.ext = sext i32 %len to i64
+  %add.ptr = getelementptr inbounds i32, ptr %buf, i64 %len.ext
+  %idx.1.ext = sext i32 %idx.1 to i64
+  %gep.idx.1 = getelementptr i32, ptr %buf, i64 %idx.1.ext
+  %idx.2.ext = sext i32 %idx.2 to i64
+  %gep.idx.2 = getelementptr i32, ptr %gep.idx.1, i64 %idx.2.ext
+  %t.1 = icmp ult ptr %gep.idx.2, %add.ptr
+  %t.2 = icmp uge ptr %gep.idx.2, %buf
+  %and = and i1 %t.1, %t.2
+  call void @use(i1 %and)
+  ret void
+
+else:
+  ret void
+}
+
+declare void @use(i1 noundef)
+declare void @llvm.assume(i1)

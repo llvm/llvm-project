@@ -793,6 +793,11 @@ public:
 
   bool SupportsLanguage(lldb::LanguageType language) override;
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  bool IsBoundsSafetyIndexable(lldb::opaque_compiler_type_t type) override;
+  bool IsBoundsSafetyBidiIndexable(lldb::opaque_compiler_type_t type) override;
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   static std::optional<std::string> GetCXXClassName(const CompilerType &type);
 
   // Type Completion
@@ -873,6 +878,12 @@ public:
   CompilerType AddVolatileModifier(lldb::opaque_compiler_type_t type) override;
 
   CompilerType AddRestrictModifier(lldb::opaque_compiler_type_t type) override;
+
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  CompilerType AddBoundsSafetyIndexableAttribute(lldb::opaque_compiler_type_t type) override;
+  CompilerType AddBoundsSafetyBidiIndexableAttribute(lldb::opaque_compiler_type_t type) override;
+  CompilerType AddBoundsSafetyUnspecifiedAttribute(lldb::opaque_compiler_type_t type) override;
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   /// Using the current type, create a new typedef to that type using
   /// "typedef_name" as the name and "decl_ctx" as the decl context.

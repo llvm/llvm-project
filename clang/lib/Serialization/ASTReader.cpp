@@ -7102,6 +7102,17 @@ void TypeLocReader::VisitCountAttributedTypeLoc(CountAttributedTypeLoc TL) {
   // Nothing to do
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+void TypeLocReader::VisitDynamicRangePointerTypeLoc(
+    DynamicRangePointerTypeLoc TL) {
+  // nothing to do
+}
+
+void TypeLocReader::VisitValueTerminatedTypeLoc(ValueTerminatedTypeLoc TL) {
+  // nothing to do
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 void TypeLocReader::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
   // Nothing to do.
 }

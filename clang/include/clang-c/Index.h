@@ -1691,7 +1691,17 @@ enum CXCursorKind {
    */
   CXCursor_PackIndexingExpr = 156,
 
-  CXCursor_LastExpr = CXCursor_PackIndexingExpr,
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  /**
+   * BoundsSafety '__builtin_unsafe_forge_bidi_indexable(addr, size)' or
+   * '__builtin_forge_single(addr)
+   */
+  CXCursor_ForgePtrExpr = 198,
+
+  CXCursor_GetBoundExpr = 199,
+
+  CXCursor_LastExpr = CXCursor_GetBoundExpr,
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   /* Statements */
   CXCursor_FirstStmt = 200,

@@ -288,5 +288,37 @@ if.end:                                           ; preds = %entry
   ret void
 }
 
+define i1 @test_add_zext(i8 %N, i4 %idx) {
+; CHECK-LABEL: @test_add_zext(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i4 [[IDX:%.*]] to i8
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[IDX_EXT]], 1
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i4 [[IDX]], 3
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[ADD]], 4
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i8 [[ADD]], 3
+; CHECK-NEXT:    [[XOR_1:%.*]] = xor i1 [[T_1]], [[C_2]]
+; CHECK-NEXT:    ret i1 [[XOR_1]]
+; CHECK:       else:
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ule i8 [[IDX_EXT]], 4
+; CHECK-NEXT:    ret i1 [[C_3]]
+;
+entry:
+  %idx.ext = zext i4 %idx to i8
+  %add = add i8 %idx.ext, 1
+  %c.1 = icmp ule i4 %idx, 3
+  br i1 %c.1, label %then, label %else
+
+then:
+  %t.1 = icmp ule i8 %add, 4
+  %c.2 = icmp ule i8 %add, 3
+  %xor.1 = xor i1 %t.1, %c.2
+  ret i1 %xor.1
+
+else:
+  %c.3 = icmp ule i8 %idx.ext, 4
+  ret i1 %c.3
+}
 
 declare void @use(i1)

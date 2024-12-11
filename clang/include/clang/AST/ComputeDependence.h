@@ -79,6 +79,15 @@ class LambdaExpr;
 class CXXUnresolvedConstructExpr;
 class CXXDependentScopeMemberExpr;
 class MaterializeTemporaryExpr;
+/* TO_UPSTREAM(BoundsSafety) ON */
+class MaterializeSequenceExpr;
+class PredefinedBoundsCheckExpr;
+class BoundsCheckExpr;
+class AssumptionExpr;
+class BoundsSafetyPointerPromotionExpr;
+class GetBoundExpr;
+class ForgePtrExpr;
+/* TO_UPSTREAM(BoundsSafety) OFF */
 class CXXFoldExpr;
 class CXXParenListInitExpr;
 class TypeTraitExpr;
@@ -177,6 +186,16 @@ ExprDependence computeDependence(CXXParenListInitExpr *E);
 ExprDependence computeDependence(TypeTraitExpr *E);
 ExprDependence computeDependence(ConceptSpecializationExpr *E,
                                  bool ValueDependent);
+
+/* TO_UPSTREAM(BoundsSafety) ON */
+ExprDependence computeDependence(MaterializeSequenceExpr *E);
+ExprDependence computeDependence(PredefinedBoundsCheckExpr *E);
+ExprDependence computeDependence(BoundsCheckExpr *E);
+ExprDependence computeDependence(AssumptionExpr *E);
+ExprDependence computeDependence(BoundsSafetyPointerPromotionExpr *E);
+ExprDependence computeDependence(GetBoundExpr *E);
+ExprDependence computeDependence(ForgePtrExpr *E);
+/* TO_UPSTREAM(BoundsSafety) OFF */
 
 ExprDependence computeDependence(SYCLUniqueStableNameExpr *E);
 ExprDependence computeDependence(PredefinedExpr *E);

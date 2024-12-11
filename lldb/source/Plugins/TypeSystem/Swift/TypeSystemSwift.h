@@ -250,6 +250,14 @@ public:
                           CompilerType *function_pointer_type_ptr) override {
     return false;
   }
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  bool IsBoundsSafetyIndexable(lldb::opaque_compiler_type_t type) override {
+    return false;
+  }
+  bool IsBoundsSafetyBidiIndexable(lldb::opaque_compiler_type_t type) override {
+    return false;
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
   bool IsMemberFunctionPointerType(
           lldb::opaque_compiler_type_t type) override {
     return false;

@@ -201,6 +201,12 @@ public:
     asImpl().writeUInt64(value.getAsOpaqueValue());
   }
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  void writeBoundsSafetyPointerAttributes(BoundsSafetyPointerAttributes value) {
+    asImpl().writeUInt32(value.getAsOpaqueValue());
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   void writeExceptionSpecInfo(
                         const FunctionProtoType::ExceptionSpecInfo &esi) {
     asImpl().writeUInt32(uint32_t(esi.Type));
