@@ -382,7 +382,7 @@ tstellar@redhat.com (email), [tstellar](https://github.com/tstellar) (GitHub)
 #### MinGW support
 
 Martin Storsjö \
-martin@martin.st (email), [mstrorsjo](https://github.com/mstrorsjo) (GitHub)
+martin@martin.st (email), [mstorsjo](https://github.com/mstorsjo) (GitHub)
 
 #### Windows support in object tools
 
