@@ -1976,16 +1976,14 @@ TemplateDeclInstantiator::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   if (!InstParams)
     return nullptr;
 
-  // Use canonical templated decl because only canonical decl has body
-  // if declarations were merged during loading from modules.
-  FunctionDecl *TemplatedDecl = D->getTemplatedDecl()->getCanonicalDecl();
   FunctionDecl *Instantiated = nullptr;
-  if (CXXMethodDecl *DMethod = dyn_cast<CXXMethodDecl>(TemplatedDecl))
-    Instantiated =
-        cast_or_null<FunctionDecl>(VisitCXXMethodDecl(DMethod, InstParams));
+  if (CXXMethodDecl *DMethod = dyn_cast<CXXMethodDecl>(D->getTemplatedDecl()))
+    Instantiated = cast_or_null<FunctionDecl>(VisitCXXMethodDecl(DMethod,
+                                                                 InstParams));
   else
-    Instantiated = cast_or_null<FunctionDecl>(
-        VisitFunctionDecl(TemplatedDecl, InstParams));
+    Instantiated = cast_or_null<FunctionDecl>(VisitFunctionDecl(
+                                                          D->getTemplatedDecl(),
+                                                                InstParams));
 
   if (!Instantiated)
     return nullptr;
@@ -2003,7 +2001,7 @@ TemplateDeclInstantiator::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   // Link the instantiation back to the pattern *unless* this is a
   // non-definition friend declaration.
   if (!InstTemplate->getInstantiatedFromMemberTemplate() &&
-      !(isFriend && !TemplatedDecl->isThisDeclarationADefinition()))
+      !(isFriend && !D->getTemplatedDecl()->isThisDeclarationADefinition()))
     InstTemplate->setInstantiatedFromMemberTemplate(D);
 
   // Make declarations visible in the appropriate context.
@@ -2148,6 +2146,21 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
   // Check whether there is already a function template specialization for
   // this declaration.
   FunctionTemplateDecl *FunctionTemplate = D->getDescribedFunctionTemplate();
+  bool isFriend;
+  if (FunctionTemplate)
+    isFriend = (FunctionTemplate->getFriendObjectKind() != Decl::FOK_None);
+  else
+    isFriend = (D->getFriendObjectKind() != Decl::FOK_None);
+  // Friend function defined withing class template may stop being function
+  // definition during AST merges from different modules, in this case decl
+  // with function body should be used for instantiation.
+  if (isFriend) {
+    const FunctionDecl* Defn = nullptr;
+    if (D->hasBody(Defn)) {
+      D = const_cast<FunctionDecl*>(Defn);
+      FunctionTemplate = Defn->getDescribedFunctionTemplate();
+    }
+  }
   if (FunctionTemplate && !TemplateParams) {
     ArrayRef<TemplateArgument> Innermost = TemplateArgs.getInnermost();
 
@@ -2159,12 +2172,6 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     if (SpecFunc)
       return SpecFunc;
   }
-
-  bool isFriend;
-  if (FunctionTemplate)
-    isFriend = (FunctionTemplate->getFriendObjectKind() != Decl::FOK_None);
-  else
-    isFriend = (D->getFriendObjectKind() != Decl::FOK_None);
 
   bool MergeWithParentScope = (TemplateParams != nullptr) ||
     Owner->isFunctionOrMethod() ||
