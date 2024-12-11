@@ -70,8 +70,8 @@ def check_api(header: Header, api: Dict):
         macros = api["macros"]
 
         for name, obj in macros.items():
-            if (not any(k in obj.keys() for k in possible_keys)):
-                err = f'error: Macro {name} does not contain at least one required property: {possible_keys}'
+            if not any(k in obj.keys() for k in possible_keys):
+                err = f"error: Macro {name} does not contain at least one required property: {possible_keys}"
                 errors.append(err)
 
     # Validate functions
@@ -84,8 +84,8 @@ def check_api(header: Header, api: Dict):
 
         fns = api["functions"]
         for name, obj in fns.items():
-          if (not any(k in obj.keys() for k in possible_keys)):
-                err = f'error: function {name} does not contain at least one required property: {possible_keys}'
+            if not any(k in obj.keys() for k in possible_keys):
+                err = f"error: function {name} does not contain at least one required property: {possible_keys}"
                 errors.append(err)
 
     if errors:
@@ -133,9 +133,13 @@ def print_functions_rst(header: Header, functions: Dict):
             print("    -")
 
         if "in-latest-posix" in functions[name]:
-            print(f'    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/functions/{name}.html>`__')
+            print(
+                f"    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/functions/{name}.html>`__"
+            )
         elif "removed-in-posix-2008" in functions[name]:
-            print(f'    - `removed in POSIX.1-2008 <https://pubs.opengroup.org/onlinepubs/007904875/functions/{name}.html>`__')
+            print(
+                f"    - `removed in POSIX.1-2008 <https://pubs.opengroup.org/onlinepubs/007904875/functions/{name}.html>`__"
+            )
         else:
             print("    -")
 
@@ -161,7 +165,9 @@ def print_macros_rst(header: Header, macros: Dict):
             print("    -")
 
         if "in-latest-posix" in macros[name]:
-            print(f'    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/{header.name}.html>`__')
+            print(
+                f"    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/{header.name}.html>`__"
+            )
         else:
             print("    -")
     print()
