@@ -642,6 +642,7 @@ bool llvm::StripDebugInfo(Module &M) {
 
   for (auto &GV : M.globals()) {
     Changed |= GV.eraseMetadata(LLVMContext::MD_dbg);
+    Changed |= GV.eraseMetadata(M.getContext().getMDKindID("dbg.def"));
   }
 
   if (GVMaterializer *Materializer = M.getMaterializer())
