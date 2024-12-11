@@ -33,6 +33,9 @@ void test2() {
 struct A {};
 struct B : A {};
 
+void fADefaultArgRef(A& = A{});
+void fBDefaultArgRef(A& = B{});
+
 B fB();
 A fA();
 
@@ -146,6 +149,15 @@ void test4() {
 
   fIntConstArray({ 1 });
   NS::fIntConstArray({ 1 });
+}
+
+void test5() {
+  fADefaultArgRef();
+  fADefaultArgRef(A());
+
+  fBDefaultArgRef();
+  fBDefaultArgRef(B());
+  fBDefaultArgRef(A());
 }
 
 #endif
