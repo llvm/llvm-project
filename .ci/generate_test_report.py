@@ -5,6 +5,7 @@
 # python3 -m unittest discover -p generate_test_report.py
 
 import argparse
+import os
 import subprocess
 import unittest
 from io import StringIO
@@ -267,6 +268,46 @@ class TestReports(unittest.TestCase):
             ),
         )
 
+    def test_report_dont_list_failures_link_to_log(self):
+        self.assertEqual(
+            _generate_report(
+                "Foo",
+                [
+                    junit_from_xml(
+                        dedent(
+                            """\
+          <?xml version="1.0" encoding="UTF-8"?>
+          <testsuites time="0.02">
+          <testsuite name="Bar" tests="1" failures="1" skipped="0" time="0.02">
+          <testcase classname="Bar/test_1" name="test_1" time="0.02">
+            <failure><![CDATA[Output goes here]]></failure>
+          </testcase>
+          </testsuite>
+          </testsuites>"""
+                        )
+                    )
+                ],
+                list_failures=False,
+                buildkite_info={
+                    "BUILDKITE_ORGANIZATION_SLUG": "organization_slug",
+                    "BUILDKITE_PIPELINE_SLUG": "pipeline_slug",
+                    "BUILDKITE_BUILD_NUMBER": "build_number",
+                    "BUILDKITE_JOB_ID": "job_id",
+                },
+            ),
+            (
+                dedent(
+                    """\
+          # Foo
+
+          * 1 test failed
+
+          Failed tests and their output was too large to report. [Download](https://buildkite.com/organizations/organization_slug/pipelines/pipeline_slug/builds/build_number/jobs/job_id/download.txt) the build's log file to see the details."""
+                ),
+                "error",
+            ),
+        )
+
     def test_report_size_limit(self):
         self.assertEqual(
             _generate_report(
@@ -308,7 +349,13 @@ class TestReports(unittest.TestCase):
 # listed. This minimal report will always fit into an annotation.
 # If include failures is False, total number of test will be reported but their names
 # and output will not be.
-def _generate_report(title, junit_objects, size_limit=1024 * 1024, list_failures=True):
+def _generate_report(
+    title,
+    junit_objects,
+    size_limit=1024 * 1024,
+    list_failures=True,
+    buildkite_info=None,
+):
     if not junit_objects:
         return ("", "success")
 
@@ -354,11 +401,21 @@ def _generate_report(title, junit_objects, size_limit=1024 * 1024, list_failures
         report.append(f"* {tests_failed} {plural(tests_failed)} failed")
 
     if not list_failures:
+        if buildkite_info is not None:
+            log_url = (
+                "https://buildkite.com/organizations/{BUILDKITE_ORGANIZATION_SLUG}/"
+                "pipelines/{BUILDKITE_PIPELINE_SLUG}/builds/{BUILDKITE_BUILD_NUMBER}/"
+                "jobs/{BUILDKITE_JOB_ID}/download.txt".format(**buildkite_info)
+            )
+            download_text = f"[Download]({log_url})"
+        else:
+            download_text = "Download"
+
         report.extend(
             [
                 "",
                 "Failed tests and their output was too large to report. "
-                "Download the build's log file to see the details.",
+                f"{download_text} the build's log file to see the details.",
             ]
         )
     elif failures:
@@ -381,13 +438,23 @@ def _generate_report(title, junit_objects, size_limit=1024 * 1024, list_failures
 
     report = "\n".join(report)
     if len(report.encode("utf-8")) > size_limit:
-        return _generate_report(title, junit_objects, size_limit, list_failures=False)
+        return _generate_report(
+            title,
+            junit_objects,
+            size_limit,
+            list_failures=False,
+            buildkite_info=buildkite_info,
+        )
 
     return report, style
 
 
-def generate_report(title, junit_files):
-    return _generate_report(title, [JUnitXml.fromfile(p) for p in junit_files])
+def generate_report(title, junit_files, buildkite_info):
+    return _generate_report(
+        title,
+        [JUnitXml.fromfile(p) for p in junit_files],
+        buildkite_info=buildkite_info,
+    )
 
 
 if __name__ == "__main__":
@@ -399,7 +466,18 @@ if __name__ == "__main__":
     parser.add_argument("junit_files", help="Paths to JUnit report files.", nargs="*")
     args = parser.parse_args()
 
-    report, style = generate_report(args.title, args.junit_files)
+    # All of these are required to build a link to download the log file.
+    env_var_names = [
+        "BUILDKITE_ORGANIZATION_SLUG",
+        "BUILDKITE_PIPELINE_SLUG",
+        "BUILDKITE_BUILD_NUMBER",
+        "BUILDKITE_JOB_ID",
+    ]
+    buildkite_info = {k: v for k, v in os.environ.items() if k in env_var_names}
+    if len(buildkite_info) != len(env_var_names):
+        buildkite_info = None
+
+    report, style = generate_report(args.title, args.junit_files, buildkite_info)
 
     if report:
         p = subprocess.Popen(

@@ -29,6 +29,10 @@ namespace hlfir {
 #include "flang/Optimizer/HLFIR/Passes.h.inc"
 } // namespace hlfir
 
+static llvm::cl::opt<bool>
+    simplifySum("flang-simplify-hlfir-sum",
+                llvm::cl::desc("Expand hlfir.sum into an inline sequence"),
+                llvm::cl::init(false));
 namespace {
 
 class TransposeAsElementalConversion
@@ -349,6 +353,8 @@ public:
     // expanding the SUM into a total reduction loop nest
     // would avoid creating a temporary for the elemental array expression.
     target.addDynamicallyLegalOp<hlfir::SumOp>([](hlfir::SumOp sum) {
+      if (!simplifySum)
+        return true;
       if (mlir::Value dim = sum.getDim()) {
         if (auto dimVal = fir::getIntIfConstant(dim)) {
           if (!fir::isa_trivial(sum.getType())) {

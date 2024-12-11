@@ -15,5 +15,5 @@ struct S {
   int i;
 };
 
-// CHECK: %T3S0_h = call target("dx.RawBuffer", %struct.S = type { <4 x float>, i32, [12 x i8] }, 0, 0) @llvm.dx.handle.fromBinding.tdx.RawBuffer_s_struct.Ss_0_0t(i32 0, i32 3, i32 1, i32 0, i1 false)
+// CHECK: %T3S0_h = call target("dx.RawBuffer", %struct.S, 0, 0) @llvm.dx.handle.fromBinding.tdx.RawBuffer_s_struct.Ss_0_0t(i32 0, i32 3, i32 1, i32 0, i1 false)
 StructuredBuffer<S> T3S0 : register(t3);
