@@ -389,6 +389,7 @@ SDValue XtensaTargetLowering::LowerFormalArguments(
     MachineRegisterInfo &RegInfo = MF.getRegInfo();
     unsigned RegSize = 4;
     MVT RegTy = MVT::i32;
+    MVT FITy = getFrameIndexTy(DAG.getDataLayout());
 
     XtensaFI->setVarArgsFirstGPR(Idx + 2); // 2 - number of a2 register
 
@@ -422,8 +423,7 @@ SDValue XtensaTargetLowering::LowerFormalArguments(
 
         SDValue ArgValue = DAG.getCopyFromReg(Chain, DL, Reg, RegTy);
         FI = MFI.CreateFixedObject(RegSize, VaArgOffset, true);
-        SDValue PtrOff =
-            DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
+        SDValue PtrOff = DAG.getFrameIndex(FI, FITy);
         SDValue Store = DAG.getStore(Chain, DL, ArgValue, PtrOff,
                                      MachinePointerInfo::getFixedStack(MF, FI));
         OutChains.push_back(Store);
@@ -1022,8 +1022,9 @@ SDValue XtensaTargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
   if (ArgAlignInBytes > 4) {
     OrigIndex = DAG.getNode(ISD::ADD, DL, PtrVT, OrigIndex,
                             DAG.getConstant(ArgAlignInBytes - 1, DL, MVT::i32));
-    OrigIndex = DAG.getNode(ISD::AND, DL, PtrVT, OrigIndex,
-                            DAG.getConstant(-ArgAlignInBytes, DL, MVT::i32));
+    OrigIndex =
+        DAG.getNode(ISD::AND, DL, PtrVT, OrigIndex,
+                    DAG.getSignedConstant(-ArgAlignInBytes, DL, MVT::i32));
   }
 
   VAIndex = DAG.getNode(ISD::ADD, DL, PtrVT, OrigIndex,
