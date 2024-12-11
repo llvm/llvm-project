@@ -639,6 +639,11 @@ std::optional<fp::ExceptionBehavior> CallBase::getExceptionBehavior() const {
   return std::nullopt;
 }
 
+bool CallBase::hasFloatingPointBundles() const {
+  return getOperandBundle(LLVMContext::OB_fpe_control) ||
+         getOperandBundle(LLVMContext::OB_fpe_except);
+}
+
 MemoryEffects CallBase::getMemoryEffects() const {
   MemoryEffects ME = getAttributes().getMemoryEffects();
   if (auto *Fn = dyn_cast<Function>(getCalledOperand())) {

@@ -99,7 +99,7 @@ CallInst *IRBuilderBase::CreateCall(FunctionType *FTy, Value *Callee,
         if (IntrinsicInst::canAccessFPEnvironment(ID)) {
           bool NeedRound = true, NeedExcept = true;
           for (const auto &Item : OpBundles) {
-            if (NeedRound && Item.getTag() == "fpe.round")
+            if (NeedRound && Item.getTag() == "fpe.control")
               NeedRound = false;
             else if (NeedExcept && Item.getTag() == "fpe.except")
               NeedExcept = false;

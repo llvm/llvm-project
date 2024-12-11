@@ -3731,7 +3731,7 @@ void Verifier::visitCallBase(CallBase &Call) {
        FoundGCTransitionBundle = false, FoundCFGuardTargetBundle = false,
        FoundPreallocatedBundle = false, FoundGCLiveBundle = false,
        FoundPtrauthBundle = false, FoundKCFIBundle = false,
-       FoundAttachedCallBundle = false, FoundFpeRoundBundle = false,
+       FoundAttachedCallBundle = false, FoundFpeControlBundle = false,
        FoundFpeExceptBundle = false;
 
   for (unsigned i = 0, e = Call.getNumOperandBundles(); i < e; ++i) {
@@ -3797,18 +3797,20 @@ void Verifier::visitCallBase(CallBase &Call) {
       FoundAttachedCallBundle = true;
       verifyAttachedCallBundle(Call, BU);
     } else if (Tag == LLVMContext::OB_fpe_control) {
-      Check(!FoundFpeRoundBundle, "Multiple fpe.round operand bundles", Call);
-      Check(BU.Inputs.size() == 1,
-            "Expected exactly one fpe.round bundle operand", Call);
-      auto *V = dyn_cast<MetadataAsValue>(BU.Inputs.front());
-      Check(V, "Value of fpe.round bundle operand must be a metadata", Call);
-      auto *MDS = dyn_cast<MDString>(V->getMetadata());
-      Check(MDS, "Value of fpe.round bundle operand must be a string", Call);
-      auto RM = convertStrToRoundingMode(MDS->getString(), true);
-      Check(RM.has_value(),
-            "Value of fpe.round bundle operand is not a correct rounding mode",
+      Check(!FoundFpeControlBundle, "Multiple fpe.control operand bundles",
             Call);
-      FoundFpeRoundBundle = true;
+      Check(BU.Inputs.size() == 1,
+            "Expected exactly one fpe.control bundle operand", Call);
+      auto *V = dyn_cast<MetadataAsValue>(BU.Inputs.front());
+      Check(V, "Value of fpe.control bundle operand must be a metadata", Call);
+      auto *MDS = dyn_cast<MDString>(V->getMetadata());
+      Check(MDS, "Value of fpe.control bundle operand must be a string", Call);
+      auto RM = convertStrToRoundingMode(MDS->getString(), true);
+      Check(
+          RM.has_value(),
+          "Value of fpe.control bundle operand is not a correct rounding mode",
+          Call);
+      FoundFpeControlBundle = true;
     } else if (Tag == LLVMContext::OB_fpe_except) {
       Check(!FoundFpeExceptBundle, "Multiple fpe.except operand bundles", Call);
       Check(BU.Inputs.size() == 1,

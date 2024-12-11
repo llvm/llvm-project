@@ -4330,8 +4330,7 @@ static void upgradeDbgIntrinsicToDbgRecord(StringRef Name, CallBase *CI) {
 
 static CallBase *upgradeConstrainedIntrinsicCall(CallBase *CB, Function *F,
                                                  IRBuilder<> &Builder) {
-  if (CB->getOperandBundle(LLVMContext::OB_fpe_control) ||
-      CB->getOperandBundle(LLVMContext::OB_fpe_except))
+  if (CB->hasFloatingPointBundles())
     return nullptr;
 
   SmallVector<OperandBundleDef, 2> NewBundles;
