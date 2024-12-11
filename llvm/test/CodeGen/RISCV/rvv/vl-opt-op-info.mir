@@ -560,4 +560,34 @@ body: |
     %z:gpr = ADDI $x0, 2
     PseudoVSSE8_V_MF2 %x, %y, %z, 1, 3 /* e8 */
 ...
+---
+name: vmop_mm
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vmop_mm
+    ; CHECK: %x:vr = PseudoVMAND_MM_M1 $noreg, $noreg, 1, 3 /* e8 */
+    ; CHECK-NEXT: %y:vr = PseudoVMAND_MM_M1 $noreg, %x, 1, 3 /* e8 */
+    %x:vr = PseudoVMAND_MM_M1 $noreg, $noreg, -1, 3 /* e8 */
+    %y:vr = PseudoVMAND_MM_M1 $noreg, %x, 1, 3 /* e8 */
+...
+---
+name: vmop_mm_incompatible_eew
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vmop_mm_incompatible_eew
+    ; CHECK: %x:vr = PseudoVMAND_MM_M1 $noreg, $noreg, -1, 4 /* e16 */
+    ; CHECK-NEXT: %y:vr = PseudoVMAND_MM_M1 $noreg, %x, 1, 3 /* e8 */
+    %x:vr = PseudoVMAND_MM_M1 $noreg, $noreg, -1, 4 /* e16 */
+    %y:vr = PseudoVMAND_MM_M1 $noreg, %x, 1, 3 /* e8 */
+...
+---
+name: vmop_mm_incompatible_emul
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vmop_mm_incompatible_emul
+    ; CHECK: %x:vr = PseudoVMAND_MM_M1 $noreg, $noreg, -1, 3 /* e8 */
+    ; CHECK-NEXT: %y:vr = PseudoVMAND_MM_MF2 $noreg, %x, 1, 3 /* e8 */
+    %x:vr = PseudoVMAND_MM_M1 $noreg, $noreg, -1, 3 /* e8 */
+    %y:vr = PseudoVMAND_MM_MF2 $noreg, %x, 1, 3 /* e8 */
+...
 
