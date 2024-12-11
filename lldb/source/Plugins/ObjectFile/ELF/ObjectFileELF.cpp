@@ -1697,7 +1697,6 @@ static SectionType GetSectionTypeFromName(llvm::StringRef Name) {
       .Case(".gosymtab", eSectionTypeGoSymtab)
       .Case(".text", eSectionTypeCode)
       .Case(".lldbsummaries", lldb::eSectionTypeLLDBTypeSummaries)
-      .Case(".lldbformatters", lldb::eSectionTypeLLDBFormatters)
       .Case(".swift_ast", eSectionTypeSwiftModules)
       .Default(eSectionTypeOther);
 }
