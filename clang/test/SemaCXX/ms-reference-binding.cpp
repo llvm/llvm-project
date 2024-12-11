@@ -33,8 +33,12 @@ void test2() {
 struct A {};
 struct B : A {};
 
+typedef A AAlias;
+
 void fADefaultArgRef(A& = A{});
 void fBDefaultArgRef(A& = B{});
+
+void fAAliasDefaultArgRef(AAlias& = AAlias{});
 
 B fB();
 A fA();
@@ -45,6 +49,7 @@ A(&&fARvalueRefArray())[1];
 void fADefaultArgRef2(A& = fARvalueRef());
 
 void fARef(A&) {}
+void fAAliasRef(AAlias&) {}
 
 // expected-note@+2 {{candidate function not viable: expects an lvalue for 1st argument}}
 // expected-note@+1 {{candidate function not viable: expects an lvalue for 1st argument}}
@@ -61,6 +66,7 @@ void fIntConstArray(const int (&)[1]);
 
 namespace NS {
   void fARef(A&) {}
+  void fAAliasRef(AAlias&) {}
 
   // expected-note@+2 {{passing argument to parameter here}}
   // expected-note@+1 {{passing argument to parameter here}}
@@ -114,29 +120,45 @@ void test2() {
 
 void test3() {
   A& a1 = A();
+  AAlias& aalias1 = A();
 
   fARef(A());
   fARef(static_cast<A&&>(a1));
+
+  fAAliasRef(A());
+  fAAliasRef(static_cast<A&&>(a1));
+  fAAliasRef(AAlias());
+  fAAliasRef(static_cast<AAlias&&>(a1));
 
   fAVolatileRef(A()); // expected-error{{no matching function for call to 'fAVolatileRef'}}
   fAVolatileRef(static_cast<A&&>(a1)); // expected-error{{no matching function for call to 'fAVolatileRef'}}
 
   fARef(B());
+  fAAliasRef(B());
 
   NS::fARef(A());
   NS::fARef(static_cast<A&&>(a1));
+
+  NS::fAAliasRef(A());
+  NS::fAAliasRef(static_cast<A&&>(a1));
+  NS::fAAliasRef(AAlias());
+  NS::fAAliasRef(static_cast<AAlias&&>(a1));
 
   NS::fAVolatileRef(A()); // expected-error{{volatile lvalue reference to type 'volatile A' cannot bind to a temporary of type 'A'}}
   NS::fAVolatileRef(static_cast<A&&>(a1)); // expected-error{{volatile lvalue reference to type 'volatile A' cannot bind to a temporary of type 'A'}}
 
   NS::fARef(B());
+  NS::fAAliasRef(B());
 
   A& a2 = fA();
+  AAlias& aalias2 = fA();
 
   A& a3 = fARvalueRef();
+  AAlias& aalias3 = fARvalueRef();
 
   const A& rca = fB();
   A& ra = fB();
+  AAlias& raalias = fB();
 }
 
 void test4() {
@@ -160,6 +182,10 @@ void test5() {
   fBDefaultArgRef();
   fBDefaultArgRef(B());
   fBDefaultArgRef(A());
+
+  fAAliasDefaultArgRef(A());
+  fAAliasDefaultArgRef(B());
+  fAAliasDefaultArgRef(AAlias());
 }
 
 #endif
