@@ -66,10 +66,6 @@ if(LLVM_LIBC_FULL_BUILD)
     DEPENDS
       libc.src.__support.CPP.span
       libc.src.__support.freelist_heap
-      libc.src.stdlib.aligned_alloc
-      libc.src.stdlib.calloc
-      libc.src.stdlib.free
-      libc.src.stdlib.malloc
       libc.src.string.memcmp
       libc.src.string.memcpy
   )
