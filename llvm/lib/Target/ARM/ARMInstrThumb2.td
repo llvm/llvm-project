@@ -267,11 +267,11 @@ def t2addrmode_imm8_pre : T2AddrMode_Imm8 {
 }
 
 def t2am_imm8_offset : MemOperand,
-                       ComplexPattern<i32, 1, "SelectT2AddrModeImm8Offset",
-                                      [], [SDNPWantRoot]> {
+                       ComplexPattern<i32, 1, "SelectT2AddrModeImm8Offset"> {
   let PrintMethod = "printT2AddrModeImm8OffsetOperand";
   let EncoderMethod = "getT2AddrModeImm8OffsetOpValue";
   let DecoderMethod = "DecodeT2Imm8";
+  let WantsRoot = true;
 }
 
 // t2addrmode_imm8s4  := reg +/- (imm8 << 2)
