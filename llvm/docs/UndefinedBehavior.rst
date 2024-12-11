@@ -76,7 +76,7 @@ However, this transformation is not correct! Since division triggers UB
 when the divisor is zero, we can only execute speculatively if we are sure we
 don't hit that condition.
 The function above, when called as ``f(false, 0)``, would return 0 before the
-optimization, and triggers UB after being optimizing.
+optimization, and triggers UB after being optimized.
 
 This example highlights why we minimize the cases that trigger immediate UB
 as much as possible.
