@@ -445,6 +445,10 @@ ol_impl_result_t olMemAlloc_val(ol_device_handle_t Device, ol_alloc_type_t Type,
                                 size_t Size, size_t Aligment,
                                 void **AllocationOut) {
   if (true /*enableParameterValidation*/) {
+    if (Size == 0) {
+      return OL_ERRC_INVALID_SIZE;
+    }
+
     if (NULL == Device) {
       return OL_ERRC_INVALID_NULL_HANDLE;
     }

@@ -484,6 +484,8 @@ typedef enum ol_alloc_type_t {
 ///     - ::OL_RESULT_SUCCESS
 ///     - ::OL_ERRC_UNINITIALIZED
 ///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_SIZE
+///         + `Size == 0`
 ///     - ::OL_ERRC_INVALID_NULL_HANDLE
 ///         + `NULL == Device`
 ///     - ::OL_ERRC_INVALID_NULL_POINTER

@@ -30,7 +30,11 @@ def : Function {
     Param<"size_t", "Aligment", "alignment of the allocation in bytes", PARAM_IN>,
     Param<"void**", "AllocationOut", "output for the allocated pointer", PARAM_OUT>
   ];
-  let returns = [];
+  let returns = [
+    Return<"OL_ERRC_INVALID_SIZE", [
+      "`Size == 0`"
+    ]>
+  ];
 }
 
 def : Function {
