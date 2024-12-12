@@ -603,7 +603,7 @@ body: |
     %y:vrnov0 = PseudoVADD_VV_MF2_MASK $noreg, $noreg, $noreg, %x, 1, 3 /* e8 */, 0
 ...
 ---
-name: vmcmp_vv
+name: vmop_vv
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmcmp_vv
@@ -613,7 +613,7 @@ body: |
     %y:vr = PseudoVMAND_MM_M1 $noreg, %x, 1, 0
 ...
 ---
-name: vmcmp_vv_maskuser
+name: vmop_vv_maskuser
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmcmp_vv_maskuser
@@ -623,7 +623,7 @@ body: |
     %y:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, $noreg, $noreg, %x, 1, 3 /* e8 */, 0
 ...
 ---
-name: vmcmp_vv_maskuser_incompatible_eew
+name: vmop_vv_maskuser_incompatible_eew
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmcmp_vv_maskuser_incompatible_eew
@@ -633,7 +633,7 @@ body: |
     %y:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, $noreg, $noreg, %x, 1, 4 /* e16 */, 0
 ...
 ---
-name: vmcmp_vv_incompatible_emul
+name: vmop_vv_incompatible_emul
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmcmp_vv_incompatible_emul
@@ -643,7 +643,7 @@ body: |
     %y:vr = PseudoVMAND_MM_MF2 $noreg, %x, 1, 0
 ...
 ---
-name: vmcmp_vv_maskuser_incompaible_emul
+name: vmop_vv_maskuser_incompaible_emul
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmcmp_vv_maskuser_incompaible_emul
@@ -653,7 +653,7 @@ body: |
     %y:vrnov0 = PseudoVADD_VV_MF2_MASK $noreg, $noreg, $noreg, %x, 1, 3 /* e8 */, 0
 ...
 ---
-name: vmcmp_vv_maskuser_larger_emul
+name: vmop_vv_maskuser_larger_emul
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmcmp_vv_maskuser_larger_emul
@@ -663,7 +663,7 @@ body: |
     %y:vrm2nov0 = PseudoVADD_VV_M2_MASK $noreg, $noreg, $noreg, %x, 1, 3 /* e8 */, 0
 ...
 ---
-name: vmcmp_vv_consumer_incompatible_eew
+name: vmop_vv_consumer_incompatible_eew
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmcmp_vv_consumer
@@ -673,7 +673,7 @@ body: |
     %y:vr = PseudoVMSEQ_VV_M1 $noreg, %x, 1, 0
 ...
 ---
-name: vmcmp_vv_consumer_incompatible_emul
+name: vmop_vv_consumer_incompatible_emul
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmcmp_vv_consumer_incompatible_emul

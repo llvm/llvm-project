@@ -341,11 +341,17 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VNMSUB_VV:
   case RISCV::VNMSUB_VX:
   // Vector Integer Merge Instructions
+  // Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
   // EEW=SEW and EMUL=LMUL, except the mask operand has EEW=1 and EMUL=
   // (EEW/SEW)*LMUL. Mask operand is handled before this switch.
   case RISCV::VMERGE_VIM:
   case RISCV::VMERGE_VVM:
   case RISCV::VMERGE_VXM:
+  case RISCV::VADC_VIM:
+  case RISCV::VADC_VVM:
+  case RISCV::VADC_VXM:
+  case RISCV::VSBC_VVM:
+  case RISCV::VSBC_VXM:
   // Vector Integer Move Instructions
   // Vector Fixed-Point Arithmetic Instructions
   // Vector Single-Width Saturating Add and Subtract
@@ -438,7 +444,11 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VWMACC_VX:
   case RISCV::VWMACCSU_VV:
   case RISCV::VWMACCSU_VX:
-  case RISCV::VWMACCUS_VX: {
+  case RISCV::VWMACCUS_VX:
+  // Vector Single-Width Fractional Multiply with Rounding and Saturation
+  // Destination EEW=2*SEW and EMUL=2*EMUL. Source EEW=SEW and EMUL=LMUL.
+  case RISCV::VSMUL_VV:
+  case RISCV::VSMUL_VX: {
     unsigned Log2EEW = IsMODef ? MILog2SEW + 1 : MILog2SEW;
     RISCVII::VLMUL EMUL =
         IsMODef ? RISCVVType::twoTimesVLMUL(MIVLMul) : MIVLMul;
@@ -543,9 +553,24 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VMSGTU_VX:
   case RISCV::VMSGT_VI:
   case RISCV::VMSGT_VX:
+  // Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
+  // Dest EEW=1 and EMUL=(EEW/SEW)*LMUL. Source EEW=SEW and EMUL=LMUL. Mask
+  // source operand handled above this switch.
+  case RISCV::VMADC_VIM:
+  case RISCV::VMADC_VVM:
+  case RISCV::VMADC_VXM:
+  case RISCV::VMSBC_VVM:
+  case RISCV::VMSBC_VXM: 
+  // Dest EEW=1 and EMUL=(EEW/SEW)*LMUL. Source EEW=SEW and EMUL=LMUL.
+  case RISCV::VMADC_VV:
+  case RISCV::VMADC_VI:
+  case RISCV::VMADC_VX:
+  case RISCV::VMSBC_VV:
+  case RISCV::VMSBC_VX: {
     if (IsMODef)
       return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0);
     return OperandInfo(MIVLMul, MILog2SEW);
+  }
 
   default:
     return {};
