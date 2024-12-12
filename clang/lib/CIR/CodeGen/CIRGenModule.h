@@ -860,6 +860,11 @@ private:
   /// Call replaceAllUsesWith on all pairs in Replacements.
   void applyReplacements();
 
+  /// A helper function to replace all uses of OldF to NewF that replace
+  /// the type of pointer arguments. This is not needed to tradtional
+  /// pipeline since LLVM has opaque pointers but CIR not.
+  void replacePointerTypeArgs(cir::FuncOp OldF, cir::FuncOp NewF);
+
   void setNonAliasAttributes(GlobalDecl GD, mlir::Operation *GV);
   /// Map source language used to a CIR attribute.
   cir::SourceLanguage getCIRSourceLanguage();

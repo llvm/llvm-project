@@ -3493,6 +3493,39 @@ void CIRGenModule::addReplacement(StringRef Name, mlir::Operation *Op) {
   Replacements[Name] = Op;
 }
 
+void CIRGenModule::replacePointerTypeArgs(cir::FuncOp OldF, cir::FuncOp NewF) {
+  auto optionalUseRange = OldF.getSymbolUses(theModule);
+  if (!optionalUseRange)
+    return;
+
+  for (auto U : *optionalUseRange) {
+    // CallTryOp only shows up after FlattenCFG.
+    auto Call = mlir::dyn_cast<cir::CallOp>(U.getUser());
+    if (!Call)
+      continue;
+
+    auto ArgOps = Call.getArgOps();
+    auto FuncArgTypes = NewF.getFunctionType().getInputs();
+    for (unsigned I = 0; I < FuncArgTypes.size(); I++) {
+      if (ArgOps[I].getType() == FuncArgTypes[I])
+        continue;
+
+      auto argPointerTy = mlir::dyn_cast<cir::PointerType>(ArgOps[I].getType());
+      auto funcArgPointerTy = mlir::dyn_cast<cir::PointerType>(FuncArgTypes[I]);
+
+      // If we can't solve it, leave it for the verifier to bail out.
+      if (!argPointerTy || !funcArgPointerTy)
+        continue;
+
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPoint(Call);
+      auto castedArg =
+          builder.createBitcast(Call.getLoc(), ArgOps[I], funcArgPointerTy);
+      Call.setArg(I, castedArg);
+    }
+  }
+}
+
 void CIRGenModule::applyReplacements() {
   for (auto &I : Replacements) {
     StringRef MangledName = I.first();
@@ -3504,6 +3537,10 @@ void CIRGenModule::applyReplacements() {
     auto OldF = cast<cir::FuncOp>(Entry);
     auto NewF = dyn_cast<cir::FuncOp>(Replacement);
     assert(NewF && "not implemented");
+
+    // LLVM has opaque pointer but CIR not. So we may have to handle these
+    // different pointer types when performing replacement.
+    replacePointerTypeArgs(OldF, NewF);
 
     // Replace old with new, but keep the old order.
     if (OldF.replaceAllSymbolUses(NewF.getSymNameAttr(), theModule).failed())

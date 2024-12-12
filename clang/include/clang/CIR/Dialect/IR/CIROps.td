@@ -3585,6 +3585,16 @@ class CIR_CallOp<string mnemonic, list<Trait> extra_traits = []> :
 
     bool isIndirect() { return !getCallee(); }
     mlir::Value getIndirectCall();
+
+    void setArg(unsigned index, mlir::Value value) {
+      if (!isIndirect()) {
+        setOperand(index, value);
+        return;
+      }
+
+      // For indirect call, the operand list is shifted by one.
+      setOperand(index + 1, value);
+    }
   }];
 
   let hasCustomAssemblyFormat = 1;
