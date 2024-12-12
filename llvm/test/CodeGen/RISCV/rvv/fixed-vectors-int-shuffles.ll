@@ -1021,3 +1021,55 @@ define <8 x i32> @shuffle_repeat4_singlesrc_e32(<8 x i32> %v) {
   %out = shufflevector <8 x i32> %v, <8 x i32> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1>
   ret <8 x i32> %out
 }
+
+define <8 x i32> @shuffle_zipeven_v8i32(<8 x i32> %v1, <8 x i32> %v2) {
+; CHECK-LABEL: shuffle_zipeven_v8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 170
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vslideup.vi v8, v10, 1, v0.t
+; CHECK-NEXT:    ret
+  %out = shufflevector <8 x i32> %v1, <8 x i32> %v2, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
+  ret <8 x i32> %out
+}
+
+define <8 x i32> @shuffle_zipodd_v8i32(<8 x i32> %v1, <8 x i32> %v2) {
+; CHECK-LABEL: shuffle_zipodd_v8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 85
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vslidedown.vi v10, v8, 1, v0.t
+; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    ret
+  %out = shufflevector <8 x i32> %v1, <8 x i32> %v2, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
+  ret <8 x i32> %out
+}
+
+define <16 x i64> @shuffle_zipeven_v16i64(<16 x i64> %v1, <16 x i64> %v2) {
+; CHECK-LABEL: shuffle_zipeven_v16i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 11
+; CHECK-NEXT:    addi a0, a0, -1366
+; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
+; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vslideup.vi v8, v16, 1, v0.t
+; CHECK-NEXT:    ret
+  %out = shufflevector <16 x i64> %v1, <16 x i64> %v2, <16 x i32> <i32 0, i32 16, i32 2, i32 18, i32 4, i32 20, i32 6, i32 22, i32 8, i32 24, i32 10, i32 26, i32 12, i32 28, i32 14, i32 30>
+  ret <16 x i64> %out
+}
+
+define <16 x i64> @shuffle_zipodd_v16i64(<16 x i64> %v1, <16 x i64> %v2) {
+; CHECK-LABEL: shuffle_zipodd_v16i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 5
+; CHECK-NEXT:    addi a0, a0, 1365
+; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
+; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vslidedown.vi v16, v8, 1, v0.t
+; CHECK-NEXT:    vmv.v.v v8, v16
+; CHECK-NEXT:    ret
+  %out = shufflevector <16 x i64> %v1, <16 x i64> %v2, <16 x i32> <i32 1, i32 17, i32 3, i32 19, i32 5, i32 21, i32 7, i32 23, i32 9, i32 25, i32 11, i32 27, i32 13, i32 29, i32 15, i32 31>
+  ret <16 x i64> %out
+}

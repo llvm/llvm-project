@@ -16,6 +16,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ProfileData/MemProfData.inc"
 #include "llvm/ProfileData/MemProfReader.h"
+#include "llvm/ProfileData/MemProfYAML.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -161,9 +162,8 @@ TEST(MemProf, FillsValue) {
                           /*KeepName=*/true);
 
   llvm::DenseMap<llvm::GlobalValue::GUID, MemProfRecord> Records;
-  for (const auto &Pair : Reader) {
+  for (const auto &Pair : Reader)
     Records.insert({Pair.first, Pair.second});
-  }
 
   // Mock program pseudocode and expected memprof record contents.
   //
@@ -396,9 +396,8 @@ TEST(MemProf, SymbolizationFilter) {
   RawMemProfReader Reader(std::move(Symbolizer), Seg, Prof, CSM);
 
   llvm::SmallVector<MemProfRecord, 1> Records;
-  for (const auto &KeyRecordPair : Reader) {
+  for (const auto &KeyRecordPair : Reader)
     Records.push_back(KeyRecordPair.second);
-  }
 
   ASSERT_THAT(Records, SizeIs(1));
   ASSERT_THAT(Records[0].AllocSites, SizeIs(1));
@@ -428,9 +427,8 @@ TEST(MemProf, BaseMemProfReader) {
   MemProfReader Reader(std::move(MemProfData));
 
   llvm::SmallVector<MemProfRecord, 1> Records;
-  for (const auto &KeyRecordPair : Reader) {
+  for (const auto &KeyRecordPair : Reader)
     Records.push_back(KeyRecordPair.second);
-  }
 
   ASSERT_THAT(Records, SizeIs(1));
   ASSERT_THAT(Records[0].AllocSites, SizeIs(1));
@@ -463,9 +461,8 @@ TEST(MemProf, BaseMemProfReaderWithCSIdMap) {
   MemProfReader Reader(std::move(MemProfData));
 
   llvm::SmallVector<MemProfRecord, 1> Records;
-  for (const auto &KeyRecordPair : Reader) {
+  for (const auto &KeyRecordPair : Reader)
     Records.push_back(KeyRecordPair.second);
-  }
 
   ASSERT_THAT(Records, SizeIs(1));
   ASSERT_THAT(Records[0].AllocSites, SizeIs(1));
@@ -584,15 +581,15 @@ TEST(MemProf, MissingFrameId) {
 // Verify CallStackRadixTreeBuilder can handle empty inputs.
 TEST(MemProf, RadixTreeBuilderEmpty) {
   llvm::DenseMap<FrameId, LinearFrameId> MemProfFrameIndexes;
-  llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> MemProfCallStackData;
+  IndexedMemProfData MemProfData;
   llvm::DenseMap<FrameId, FrameStat> FrameHistogram =
-      computeFrameHistogram<FrameId>(MemProfCallStackData);
+      computeFrameHistogram<FrameId>(MemProfData.CallStacks);
   CallStackRadixTreeBuilder<FrameId> Builder;
-  Builder.build(std::move(MemProfCallStackData), &MemProfFrameIndexes,
+  Builder.build(std::move(MemProfData.CallStacks), &MemProfFrameIndexes,
                 FrameHistogram);
-  ASSERT_THAT(Builder.getRadixArray(), testing::IsEmpty());
+  ASSERT_THAT(Builder.getRadixArray(), IsEmpty());
   const auto Mappings = Builder.takeCallStackPos();
-  ASSERT_THAT(Mappings, testing::IsEmpty());
+  ASSERT_THAT(Mappings, IsEmpty());
 }
 
 // Verify CallStackRadixTreeBuilder can handle one trivial call stack.
@@ -600,12 +597,12 @@ TEST(MemProf, RadixTreeBuilderOne) {
   llvm::DenseMap<FrameId, LinearFrameId> MemProfFrameIndexes = {
       {11, 1}, {12, 2}, {13, 3}};
   llvm::SmallVector<FrameId> CS1 = {13, 12, 11};
-  llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> MemProfCallStackData;
-  MemProfCallStackData.insert({hashCallStack(CS1), CS1});
+  IndexedMemProfData MemProfData;
+  MemProfData.addCallStack(CS1);
   llvm::DenseMap<FrameId, FrameStat> FrameHistogram =
-      computeFrameHistogram<FrameId>(MemProfCallStackData);
+      computeFrameHistogram<FrameId>(MemProfData.CallStacks);
   CallStackRadixTreeBuilder<FrameId> Builder;
-  Builder.build(std::move(MemProfCallStackData), &MemProfFrameIndexes,
+  Builder.build(std::move(MemProfData.CallStacks), &MemProfFrameIndexes,
                 FrameHistogram);
   EXPECT_THAT(Builder.getRadixArray(),
               ElementsAre(3U, // Size of CS1,
@@ -623,13 +620,13 @@ TEST(MemProf, RadixTreeBuilderTwo) {
       {11, 1}, {12, 2}, {13, 3}};
   llvm::SmallVector<FrameId> CS1 = {12, 11};
   llvm::SmallVector<FrameId> CS2 = {13, 12, 11};
-  llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> MemProfCallStackData;
-  MemProfCallStackData.insert({hashCallStack(CS1), CS1});
-  MemProfCallStackData.insert({hashCallStack(CS2), CS2});
+  IndexedMemProfData MemProfData;
+  MemProfData.addCallStack(CS1);
+  MemProfData.addCallStack(CS2);
   llvm::DenseMap<FrameId, FrameStat> FrameHistogram =
-      computeFrameHistogram<FrameId>(MemProfCallStackData);
+      computeFrameHistogram<FrameId>(MemProfData.CallStacks);
   CallStackRadixTreeBuilder<FrameId> Builder;
-  Builder.build(std::move(MemProfCallStackData), &MemProfFrameIndexes,
+  Builder.build(std::move(MemProfData.CallStacks), &MemProfFrameIndexes,
                 FrameHistogram);
   EXPECT_THAT(Builder.getRadixArray(),
               ElementsAre(2U,                        // Size of CS1
@@ -654,15 +651,15 @@ TEST(MemProf, RadixTreeBuilderSuccessiveJumps) {
   llvm::SmallVector<FrameId> CS2 = {15, 13, 12, 11};
   llvm::SmallVector<FrameId> CS3 = {17, 16, 12, 11};
   llvm::SmallVector<FrameId> CS4 = {18, 16, 12, 11};
-  llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> MemProfCallStackData;
-  MemProfCallStackData.insert({hashCallStack(CS1), CS1});
-  MemProfCallStackData.insert({hashCallStack(CS2), CS2});
-  MemProfCallStackData.insert({hashCallStack(CS3), CS3});
-  MemProfCallStackData.insert({hashCallStack(CS4), CS4});
+  IndexedMemProfData MemProfData;
+  MemProfData.addCallStack(CS1);
+  MemProfData.addCallStack(CS2);
+  MemProfData.addCallStack(CS3);
+  MemProfData.addCallStack(CS4);
   llvm::DenseMap<FrameId, FrameStat> FrameHistogram =
-      computeFrameHistogram<FrameId>(MemProfCallStackData);
+      computeFrameHistogram<FrameId>(MemProfData.CallStacks);
   CallStackRadixTreeBuilder<FrameId> Builder;
-  Builder.build(std::move(MemProfCallStackData), &MemProfFrameIndexes,
+  Builder.build(std::move(MemProfData.CallStacks), &MemProfFrameIndexes,
                 FrameHistogram);
   EXPECT_THAT(Builder.getRadixArray(),
               ElementsAre(4U,                        // Size of CS1
@@ -748,7 +745,7 @@ HeapProfileRecords:
 
   // Verify the entire contents of MemProfData.Records.
   ASSERT_THAT(MemProfData.Records, SizeIs(1));
-  const auto &[GUID, Record] = *MemProfData.Records.begin();
+  const auto &[GUID, Record] = MemProfData.Records.front();
   EXPECT_EQ(GUID, 0xdeadbeef12345678ULL);
   ASSERT_THAT(Record.AllocSites, SizeIs(2));
   EXPECT_EQ(Record.AllocSites[0].CSId, hashCallStack(CS1));
@@ -807,11 +804,11 @@ template <typename T> std::string serializeInYAML(T &Val) {
 }
 
 TEST(MemProf, YAMLWriterFrame) {
-  Frame F(11, 22, 33, true);
+  Frame F(0x0123456789abcdefULL, 22, 33, true);
 
   std::string Out = serializeInYAML(F);
   EXPECT_EQ(Out, R"YAML(---
-{ Function: 11, LineOffset: 22, Column: 33, IsInlineFrame: true }
+{ Function: 0x0123456789abcdef, LineOffset: 22, Column: 33, IsInlineFrame: true }
 ...
 )YAML");
 }

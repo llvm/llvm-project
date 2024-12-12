@@ -62,11 +62,13 @@ define i16 @extract_last_i16(<8 x i16> %data, <8 x i16> %mask, i16 %passthru) {
 ; NEON-FIXED-NEXT:    str q0, [sp]
 ; NEON-FIXED-NEXT:    xtn v1.8b, v1.8h
 ; NEON-FIXED-NEXT:    and v2.8b, v1.8b, v2.8b
-; NEON-FIXED-NEXT:    fcmp d1, #0.0
+; NEON-FIXED-NEXT:    umaxv b1, v1.8b
 ; NEON-FIXED-NEXT:    umaxv b2, v2.8b
 ; NEON-FIXED-NEXT:    fmov w8, s2
 ; NEON-FIXED-NEXT:    bfi x9, x8, #1, #3
 ; NEON-FIXED-NEXT:    ldrh w8, [x9]
+; NEON-FIXED-NEXT:    fmov w9, s1
+; NEON-FIXED-NEXT:    tst w9, #0x1
 ; NEON-FIXED-NEXT:    csel w0, w8, w0, ne
 ; NEON-FIXED-NEXT:    add sp, sp, #16
 ; NEON-FIXED-NEXT:    ret
@@ -81,11 +83,13 @@ define i16 @extract_last_i16(<8 x i16> %data, <8 x i16> %mask, i16 %passthru) {
 ; SVE-FIXED-NEXT:    str q0, [sp]
 ; SVE-FIXED-NEXT:    xtn v1.8b, v1.8h
 ; SVE-FIXED-NEXT:    and v2.8b, v1.8b, v2.8b
-; SVE-FIXED-NEXT:    fcmp d1, #0.0
+; SVE-FIXED-NEXT:    umaxv b1, v1.8b
 ; SVE-FIXED-NEXT:    umaxv b2, v2.8b
 ; SVE-FIXED-NEXT:    fmov w8, s2
 ; SVE-FIXED-NEXT:    bfi x9, x8, #1, #3
 ; SVE-FIXED-NEXT:    ldrh w8, [x9]
+; SVE-FIXED-NEXT:    fmov w9, s1
+; SVE-FIXED-NEXT:    tst w9, #0x1
 ; SVE-FIXED-NEXT:    csel w0, w8, w0, ne
 ; SVE-FIXED-NEXT:    add sp, sp, #16
 ; SVE-FIXED-NEXT:    ret
@@ -106,11 +110,13 @@ define i32 @extract_last_i32(<4 x i32> %data, <4 x i32> %mask, i32 %passthru) {
 ; NEON-FIXED-NEXT:    str q0, [sp]
 ; NEON-FIXED-NEXT:    xtn v1.4h, v1.4s
 ; NEON-FIXED-NEXT:    and v2.8b, v1.8b, v2.8b
-; NEON-FIXED-NEXT:    fcmp d1, #0.0
+; NEON-FIXED-NEXT:    umaxv h1, v1.4h
 ; NEON-FIXED-NEXT:    umaxv h2, v2.4h
 ; NEON-FIXED-NEXT:    fmov w8, s2
 ; NEON-FIXED-NEXT:    bfi x9, x8, #2, #2
 ; NEON-FIXED-NEXT:    ldr w8, [x9]
+; NEON-FIXED-NEXT:    fmov w9, s1
+; NEON-FIXED-NEXT:    tst w9, #0x1
 ; NEON-FIXED-NEXT:    csel w0, w8, w0, ne
 ; NEON-FIXED-NEXT:    add sp, sp, #16
 ; NEON-FIXED-NEXT:    ret
@@ -125,11 +131,13 @@ define i32 @extract_last_i32(<4 x i32> %data, <4 x i32> %mask, i32 %passthru) {
 ; SVE-FIXED-NEXT:    str q0, [sp]
 ; SVE-FIXED-NEXT:    xtn v1.4h, v1.4s
 ; SVE-FIXED-NEXT:    and v2.8b, v1.8b, v2.8b
-; SVE-FIXED-NEXT:    fcmp d1, #0.0
+; SVE-FIXED-NEXT:    umaxv h1, v1.4h
 ; SVE-FIXED-NEXT:    umaxv h2, v2.4h
 ; SVE-FIXED-NEXT:    fmov w8, s2
 ; SVE-FIXED-NEXT:    bfi x9, x8, #2, #2
 ; SVE-FIXED-NEXT:    ldr w8, [x9]
+; SVE-FIXED-NEXT:    fmov w9, s1
+; SVE-FIXED-NEXT:    tst w9, #0x1
 ; SVE-FIXED-NEXT:    csel w0, w8, w0, ne
 ; SVE-FIXED-NEXT:    add sp, sp, #16
 ; SVE-FIXED-NEXT:    ret
@@ -150,11 +158,13 @@ define i64 @extract_last_i64(<2 x i64> %data, <2 x i64> %mask, i64 %passthru) {
 ; NEON-FIXED-NEXT:    str q0, [sp]
 ; NEON-FIXED-NEXT:    xtn v1.2s, v1.2d
 ; NEON-FIXED-NEXT:    and v2.8b, v1.8b, v2.8b
-; NEON-FIXED-NEXT:    fcmp d1, #0.0
+; NEON-FIXED-NEXT:    umaxp v1.2s, v1.2s, v1.2s
 ; NEON-FIXED-NEXT:    umaxp v2.2s, v2.2s, v2.2s
 ; NEON-FIXED-NEXT:    fmov w8, s2
 ; NEON-FIXED-NEXT:    bfi x9, x8, #3, #1
 ; NEON-FIXED-NEXT:    ldr x8, [x9]
+; NEON-FIXED-NEXT:    fmov w9, s1
+; NEON-FIXED-NEXT:    tst w9, #0x1
 ; NEON-FIXED-NEXT:    csel x0, x8, x0, ne
 ; NEON-FIXED-NEXT:    add sp, sp, #16
 ; NEON-FIXED-NEXT:    ret
@@ -169,11 +179,13 @@ define i64 @extract_last_i64(<2 x i64> %data, <2 x i64> %mask, i64 %passthru) {
 ; SVE-FIXED-NEXT:    str q0, [sp]
 ; SVE-FIXED-NEXT:    xtn v1.2s, v1.2d
 ; SVE-FIXED-NEXT:    and v2.8b, v1.8b, v2.8b
-; SVE-FIXED-NEXT:    fcmp d1, #0.0
+; SVE-FIXED-NEXT:    umaxp v1.2s, v1.2s, v1.2s
 ; SVE-FIXED-NEXT:    umaxp v2.2s, v2.2s, v2.2s
 ; SVE-FIXED-NEXT:    fmov w8, s2
 ; SVE-FIXED-NEXT:    bfi x9, x8, #3, #1
 ; SVE-FIXED-NEXT:    ldr x8, [x9]
+; SVE-FIXED-NEXT:    fmov w9, s1
+; SVE-FIXED-NEXT:    tst w9, #0x1
 ; SVE-FIXED-NEXT:    csel x0, x8, x0, ne
 ; SVE-FIXED-NEXT:    add sp, sp, #16
 ; SVE-FIXED-NEXT:    ret
@@ -194,11 +206,13 @@ define float @extract_last_float(<4 x float> %data, <4 x i32> %mask, float %pass
 ; NEON-FIXED-NEXT:    str q0, [sp]
 ; NEON-FIXED-NEXT:    xtn v1.4h, v1.4s
 ; NEON-FIXED-NEXT:    and v3.8b, v1.8b, v3.8b
-; NEON-FIXED-NEXT:    fcmp d1, #0.0
+; NEON-FIXED-NEXT:    umaxv h1, v1.4h
 ; NEON-FIXED-NEXT:    umaxv h3, v3.4h
 ; NEON-FIXED-NEXT:    fmov w8, s3
 ; NEON-FIXED-NEXT:    bfi x9, x8, #2, #2
+; NEON-FIXED-NEXT:    fmov w8, s1
 ; NEON-FIXED-NEXT:    ldr s0, [x9]
+; NEON-FIXED-NEXT:    tst w8, #0x1
 ; NEON-FIXED-NEXT:    fcsel s0, s0, s2, ne
 ; NEON-FIXED-NEXT:    add sp, sp, #16
 ; NEON-FIXED-NEXT:    ret
@@ -213,11 +227,13 @@ define float @extract_last_float(<4 x float> %data, <4 x i32> %mask, float %pass
 ; SVE-FIXED-NEXT:    str q0, [sp]
 ; SVE-FIXED-NEXT:    xtn v1.4h, v1.4s
 ; SVE-FIXED-NEXT:    and v3.8b, v1.8b, v3.8b
-; SVE-FIXED-NEXT:    fcmp d1, #0.0
+; SVE-FIXED-NEXT:    umaxv h1, v1.4h
 ; SVE-FIXED-NEXT:    umaxv h3, v3.4h
 ; SVE-FIXED-NEXT:    fmov w8, s3
 ; SVE-FIXED-NEXT:    bfi x9, x8, #2, #2
+; SVE-FIXED-NEXT:    fmov w8, s1
 ; SVE-FIXED-NEXT:    ldr s0, [x9]
+; SVE-FIXED-NEXT:    tst w8, #0x1
 ; SVE-FIXED-NEXT:    fcsel s0, s0, s2, ne
 ; SVE-FIXED-NEXT:    add sp, sp, #16
 ; SVE-FIXED-NEXT:    ret
@@ -238,11 +254,13 @@ define double @extract_last_double(<2 x double> %data, <2 x i64> %mask, double %
 ; NEON-FIXED-NEXT:    str q0, [sp]
 ; NEON-FIXED-NEXT:    xtn v1.2s, v1.2d
 ; NEON-FIXED-NEXT:    and v3.8b, v1.8b, v3.8b
-; NEON-FIXED-NEXT:    fcmp d1, #0.0
+; NEON-FIXED-NEXT:    umaxp v1.2s, v1.2s, v1.2s
 ; NEON-FIXED-NEXT:    umaxp v3.2s, v3.2s, v3.2s
 ; NEON-FIXED-NEXT:    fmov w8, s3
 ; NEON-FIXED-NEXT:    bfi x9, x8, #3, #1
+; NEON-FIXED-NEXT:    fmov w8, s1
 ; NEON-FIXED-NEXT:    ldr d0, [x9]
+; NEON-FIXED-NEXT:    tst w8, #0x1
 ; NEON-FIXED-NEXT:    fcsel d0, d0, d2, ne
 ; NEON-FIXED-NEXT:    add sp, sp, #16
 ; NEON-FIXED-NEXT:    ret
@@ -257,11 +275,13 @@ define double @extract_last_double(<2 x double> %data, <2 x i64> %mask, double %
 ; SVE-FIXED-NEXT:    str q0, [sp]
 ; SVE-FIXED-NEXT:    xtn v1.2s, v1.2d
 ; SVE-FIXED-NEXT:    and v3.8b, v1.8b, v3.8b
-; SVE-FIXED-NEXT:    fcmp d1, #0.0
+; SVE-FIXED-NEXT:    umaxp v1.2s, v1.2s, v1.2s
 ; SVE-FIXED-NEXT:    umaxp v3.2s, v3.2s, v3.2s
 ; SVE-FIXED-NEXT:    fmov w8, s3
 ; SVE-FIXED-NEXT:    bfi x9, x8, #3, #1
+; SVE-FIXED-NEXT:    fmov w8, s1
 ; SVE-FIXED-NEXT:    ldr d0, [x9]
+; SVE-FIXED-NEXT:    tst w8, #0x1
 ; SVE-FIXED-NEXT:    fcsel d0, d0, d2, ne
 ; SVE-FIXED-NEXT:    add sp, sp, #16
 ; SVE-FIXED-NEXT:    ret

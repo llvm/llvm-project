@@ -15841,27 +15841,11 @@ static SDValue getVectorBitwiseReduce(unsigned Opcode, SDValue Vec, EVT VT,
       return getVectorBitwiseReduce(Opcode, HalfVec, VT, DL, DAG);
     }
 
-    // Results of setcc operations get widened to 128 bits for xor reduce if
-    // their input operands are 128 bits wide, otherwise vectors that are less
-    // than 64 bits get widened to neatly fit a 64 bit register, so e.g.
-    // <4 x i1> gets lowered to either <4 x i16> or <4 x i32>. Sign extending to
+    // Vectors that are less than 64 bits get widened to neatly fit a 64 bit
+    // register, so e.g. <4 x i1> gets lowered to <4 x i16>. Sign extending to
     // this element size leads to the best codegen, since e.g. setcc results
     // might need to be truncated otherwise.
-    unsigned ExtendedWidth = 64;
-    if (ScalarOpcode == ISD::XOR && Vec.getOpcode() == ISD::SETCC &&
-        Vec.getOperand(0).getValueSizeInBits() >= 128) {
-      ExtendedWidth = 128;
-    }
-    EVT ExtendedVT = MVT::getIntegerVT(std::max(ExtendedWidth / NumElems, 8u));
-
-    // Negate the reduced vector value for reduce and operations that use
-    // fcmp.
-    if (ScalarOpcode == ISD::AND && NumElems < 16) {
-      Vec = DAG.getNode(
-          ISD::XOR, DL, VecVT, Vec,
-          DAG.getSplatVector(
-              VecVT, DL, DAG.getConstant(APInt::getAllOnes(32), DL, MVT::i32)));
-    }
+    EVT ExtendedVT = MVT::getIntegerVT(std::max(64u / NumElems, 8u));
 
     // any_ext doesn't work with umin/umax, so only use it for uadd.
     unsigned ExtendOp =
@@ -15870,36 +15854,10 @@ static SDValue getVectorBitwiseReduce(unsigned Opcode, SDValue Vec, EVT VT,
         ExtendOp, DL, VecVT.changeVectorElementType(ExtendedVT), Vec);
     switch (ScalarOpcode) {
     case ISD::AND:
-      if (NumElems < 16) {
-        // Check if all lanes of the negated bool vector value are zero by
-        // comparing against 0.0 with ordered and equal predicate. The only
-        // non-zero bit pattern that compares ordered and equal to 0.0 is -0.0,
-        // where only the sign bit is set. However the bool vector is
-        // sign-extended so that each bit in a lane is either zero or one,
-        // meaning that it is impossible to get the bit pattern of -0.0.
-        assert(Extended.getValueSizeInBits() == 64);
-        Extended = DAG.getBitcast(MVT::f64, Extended);
-        Result =
-            DAG.getSetCC(DL, MVT::i32, Extended,
-                         DAG.getConstantFP(0.0, DL, MVT::f64), ISD::SETOEQ);
-      } else {
-        Result = DAG.getNode(ISD::VECREDUCE_UMIN, DL, ExtendedVT, Extended);
-      }
+      Result = DAG.getNode(ISD::VECREDUCE_UMIN, DL, ExtendedVT, Extended);
       break;
     case ISD::OR:
-      if (NumElems < 16) {
-        // Check if any lane of the bool vector is set by comparing against 0.0.
-        // NaN bit patterns are handled by using the 'unordered or not equal'
-        // predicate. Similarly to the reduce and case, -0.0 doesn't have to be
-        // handled here (see explanation above).
-        assert(Extended.getValueSizeInBits() == 64);
-        Extended = DAG.getBitcast(MVT::f64, Extended);
-        Result =
-            DAG.getSetCC(DL, MVT::i32, Extended,
-                         DAG.getConstantFP(0.0, DL, MVT::f64), ISD::SETUNE);
-      } else {
-        Result = DAG.getNode(ISD::VECREDUCE_UMAX, DL, ExtendedVT, Extended);
-      }
+      Result = DAG.getNode(ISD::VECREDUCE_UMAX, DL, ExtendedVT, Extended);
       break;
     case ISD::XOR:
       Result = DAG.getNode(ISD::VECREDUCE_ADD, DL, ExtendedVT, Extended);
