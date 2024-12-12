@@ -1901,7 +1901,11 @@ amd_comgr_status_t AMDGPUCompiler::translateSpirvToBitcode() {
     llvm::Module *M;
     std::string Err;
 
-    if (!llvm::readSpirv(Context, ISS, M, Err)) {
+    SPIRV::TranslatorOpts Opts;
+    Opts.enableAllExtensions();
+    Opts.setDesiredBIsRepresentation(SPIRV::BIsRepresentation::OpenCL20);
+
+    if (!llvm::readSpirv(Context, Opts, ISS, M, Err)) {
       LogS << "Failed to load SPIR-V as LLVM Module: " << Err << '\n';
       return AMD_COMGR_STATUS_ERROR;
     }
@@ -1928,8 +1932,9 @@ amd_comgr_status_t AMDGPUCompiler::translateSpirvToBitcode() {
       return Status;
     }
 
-    LogS << "SPIR-V Translation: amd-llvm-spirv -r " << Input->Name << " " <<
-      Output->Name << "\n";
+    LogS << "  SPIR-V Translation: amd-llvm-spirv -r "
+      << "--spirv-target-env=CL2.0 " << Input->Name << " -o " << Output->Name
+      << " (command line equivalent)\n";
   }
 
   return AMD_COMGR_STATUS_SUCCESS;

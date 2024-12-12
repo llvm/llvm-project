@@ -5,7 +5,7 @@
 // RUN: clang -c -emit-llvm --target=spirv64 %s -o %t.bc
 
 // COM: Translate LLVM IR to SPIRV format
-// RUN: amd-llvm-spirv %t.bc -o %t.spv
+// RUN: amd-llvm-spirv --spirv-target-env=CL2.0 %t.bc -o %t.spv
 
 // COM: Run Comgr Translator to covert SPIRV back to LLVM IR
 // RUN: spirv-translator %t.spv -o %t.translated.bc
