@@ -556,7 +556,7 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VMADC_VVM:
   case RISCV::VMADC_VXM:
   case RISCV::VMSBC_VVM:
-  case RISCV::VMSBC_VXM: 
+  case RISCV::VMSBC_VXM:
   // Dest EEW=1 and EMUL=(EEW/SEW)*LMUL. Source EEW=SEW and EMUL=LMUL.
   case RISCV::VMADC_VV:
   case RISCV::VMADC_VI:
