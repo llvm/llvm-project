@@ -562,7 +562,8 @@ template <typename T0, typename T1> struct SDShuffle_match {
   bool match(const MatchContext &Ctx, SDValue N) {
     if (auto *I = dyn_cast<ShuffleVectorSDNode>(N)) {
       return Op1.match(Ctx, I->getOperand(0)) &&
-             Op2.match(Ctx, I->getOperand(1)) && std::equal(Mask.begin(), Mask.end(), I->getMask().begin());
+             Op2.match(Ctx, I->getOperand(1)) &&
+             std::equal(Mask.begin(), Mask.end(), I->getMask().begin());
     }
     return false;
   }
@@ -823,8 +824,8 @@ inline BinaryOpc_match<LHS, RHS> m_Shuffle(const LHS &v1, const RHS &v2) {
 }
 
 template <typename V1_t, typename V2_t>
-inline SDShuffle_match<V1_t, V2_t>
-m_Shuffle(const V1_t &v1, const V2_t &v2, const ArrayRef<int> mask) {
+inline SDShuffle_match<V1_t, V2_t> m_Shuffle(const V1_t &v1, const V2_t &v2,
+                                             const ArrayRef<int> mask) {
   return SDShuffle_match<V1_t, V2_t>(v1, v2, mask);
 }
 
