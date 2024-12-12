@@ -64,9 +64,8 @@ private:
 
   LIBC_INLINE static T *addressof(T &ref) { return __builtin_addressof(ref); }
 
-  // require types that are 1, 2, 4, 8, or 16 bytes in length to be aligned to
-  // at least their size to be potentially
-  // used lock-free
+  // Require types that are 1, 2, 4, 8, or 16 bytes in length to be aligned to
+  // at least their size to be potentially used lock-free.
   LIBC_INLINE_VAR static constexpr size_t MIN_ALIGNMENT =
       (sizeof(T) & (sizeof(T) - 1)) || (sizeof(T) > 16) ? 0 : sizeof(T);
 
