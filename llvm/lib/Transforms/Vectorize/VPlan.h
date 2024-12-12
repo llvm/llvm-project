@@ -3891,10 +3891,10 @@ public:
   /// whether to execute the scalar tail loop or the exit block from the loop
   /// latch.
   const VPBasicBlock *getMiddleBlock() const {
-    return cast<VPBasicBlock>(getScalarPreheader()->getPredecessors()[0]);
+    return cast<VPBasicBlock>(getScalarPreheader()->getPredecessors().front());
   }
   VPBasicBlock *getMiddleBlock() {
-    return cast<VPBasicBlock>(getScalarPreheader()->getPredecessors()[0]);
+    return cast<VPBasicBlock>(getScalarPreheader()->getPredecessors().front());
   }
 
   /// Return the VPBasicBlock for the preheader of the scalar loop.
