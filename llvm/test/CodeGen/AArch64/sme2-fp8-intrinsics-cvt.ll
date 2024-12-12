@@ -6,6 +6,8 @@
 define <vscale x 16 x i8> @fcvt_x2(<vscale x 8 x half> %zn0, <vscale x 8 x half> %zn1) {
 ; CHECK-LABEL: fcvt_x2:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    fcvt z0.b, { z0.h, z1.h }
 ; CHECK-NEXT:    ret
   %res = call <vscale x 16 x i8> @llvm.aarch64.sve.fp8.cvt.x2.nxv8f16(<vscale x 8 x half> %zn0, <vscale x 8 x half> %zn1)
@@ -15,6 +17,10 @@ define <vscale x 16 x i8> @fcvt_x2(<vscale x 8 x half> %zn0, <vscale x 8 x half>
 define <vscale x 16 x i8> @fcvt_x4(<vscale x 4 x float> %zn0, <vscale x 4 x float> %zn1, <vscale x 4 x float> %zn2, <vscale x 4 x float> %zn3) {
 ; CHECK-LABEL: fcvt_x4:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    fcvt z0.b, { z0.s - z3.s }
 ; CHECK-NEXT:    ret
   %res = call <vscale x 16 x i8> @llvm.aarch64.sve.fp8.cvt.x4(<vscale x 4 x float> %zn0, <vscale x 4 x float> %zn1,
@@ -25,6 +31,10 @@ define <vscale x 16 x i8> @fcvt_x4(<vscale x 4 x float> %zn0, <vscale x 4 x floa
 define <vscale x 16 x i8> @fcvtn(<vscale x 4 x float> %zn0, <vscale x 4 x float> %zn1, <vscale x 4 x float> %zn2, <vscale x 4 x float> %zn3) {
 ; CHECK-LABEL: fcvtn:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    fcvtn z0.b, { z0.s - z3.s }
 ; CHECK-NEXT:    ret
   %res = call <vscale x 16 x i8> @llvm.aarch64.sve.fp8.cvtn.x4(<vscale x 4 x float> %zn0, <vscale x 4 x float> %zn1,
@@ -35,6 +45,8 @@ define <vscale x 16 x i8> @fcvtn(<vscale x 4 x float> %zn0, <vscale x 4 x float>
 define <vscale x 16 x i8> @bfcvt(<vscale x 8 x bfloat> %zn0, <vscale x 8 x bfloat> %zn1) {
 ; CHECK-LABEL: bfcvt:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    bfcvt z0.b, { z0.h, z1.h }
 ; CHECK-NEXT:    ret
   %res = call <vscale x 16 x i8> @llvm.aarch64.sve.fp8.cvt.x2.nxv8bf16(<vscale x 8 x bfloat> %zn0, <vscale x 8 x bfloat> %zn1)

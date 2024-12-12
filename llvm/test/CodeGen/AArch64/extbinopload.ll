@@ -6,6 +6,7 @@ define <4 x i16> @normal_load_v4i8(ptr %p) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp s0, s1, [x0]
 ; CHECK-NEXT:    uaddl v0.8h, v0.8b, v1.8b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %l1 = load <4 x i8>, ptr %p
   %q = getelementptr i8, ptr %p, i32 4
@@ -38,6 +39,7 @@ define <4 x i16> @load_v4i8(ptr %p) {
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #3
 ; CHECK-NEXT:    uaddw v0.8h, v0.8h, v1.8b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %l1 = load <4 x i8>, ptr %p
   %q = getelementptr i8, ptr %p, i32 4

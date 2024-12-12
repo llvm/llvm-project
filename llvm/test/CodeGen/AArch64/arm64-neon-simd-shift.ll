@@ -330,6 +330,7 @@ define <2 x i32> @test_vshrn_n_u64(<2 x i64> %a) {
 define <16 x i8> @test_vshrn_high_n_s16(<8 x i8> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vshrn_high_n_s16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    shrn2 v0.16b, v1.8h, #3
 ; CHECK-NEXT:    ret
   %1 = ashr <8 x i16> %b, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
@@ -344,6 +345,7 @@ define <16 x i8> @test_vshrn_high_n_s16(<8 x i8> %a, <8 x i16> %b) {
 define <8 x i16> @test_vshrn_high_n_s32(<4 x i16> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vshrn_high_n_s32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #9
 ; CHECK-NEXT:    ret
   %1 = ashr <4 x i32> %b, <i32 9, i32 9, i32 9, i32 9>
@@ -358,6 +360,7 @@ define <8 x i16> @test_vshrn_high_n_s32(<4 x i16> %a, <4 x i32> %b) {
 define <4 x i32> @test_vshrn_high_n_s64(<2 x i32> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_vshrn_high_n_s64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #19
 ; CHECK-NEXT:    ret
   %1 = bitcast <2 x i32> %a to <1 x i64>
@@ -372,6 +375,7 @@ define <4 x i32> @test_vshrn_high_n_s64(<2 x i32> %a, <2 x i64> %b) {
 define <16 x i8> @test_vshrn_high_n_u16(<8 x i8> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vshrn_high_n_u16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    shrn2 v0.16b, v1.8h, #3
 ; CHECK-NEXT:    ret
   %1 = lshr <8 x i16> %b, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
@@ -386,6 +390,7 @@ define <16 x i8> @test_vshrn_high_n_u16(<8 x i8> %a, <8 x i16> %b) {
 define <8 x i16> @test_vshrn_high_n_u32(<4 x i16> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vshrn_high_n_u32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #9
 ; CHECK-NEXT:    ret
   %1 = lshr <4 x i32> %b, <i32 9, i32 9, i32 9, i32 9>
@@ -400,6 +405,7 @@ define <8 x i16> @test_vshrn_high_n_u32(<4 x i16> %a, <4 x i32> %b) {
 define <4 x i32> @test_vshrn_high_n_u64(<2 x i32> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_vshrn_high_n_u64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    shrn2 v0.4s, v1.2d, #19
 ; CHECK-NEXT:    ret
   %1 = bitcast <2 x i32> %a to <1 x i64>
@@ -414,6 +420,7 @@ define <4 x i32> @test_vshrn_high_n_u64(<2 x i32> %a, <2 x i64> %b) {
 define <16 x i8> @test_vqshrun_high_n_s16(<8 x i8> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vqshrun_high_n_s16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqshrun2 v0.16b, v1.8h, #3
 ; CHECK-NEXT:    ret
   %vqshrun = tail call <8 x i8> @llvm.aarch64.neon.sqshrun.v8i8(<8 x i16> %b, i32 3)
@@ -427,6 +434,7 @@ define <16 x i8> @test_vqshrun_high_n_s16(<8 x i8> %a, <8 x i16> %b) {
 define <8 x i16> @test_vqshrun_high_n_s32(<4 x i16> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vqshrun_high_n_s32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqshrun2 v0.8h, v1.4s, #9
 ; CHECK-NEXT:    ret
   %vqshrun = tail call <4 x i16> @llvm.aarch64.neon.sqshrun.v4i16(<4 x i32> %b, i32 9)
@@ -440,6 +448,7 @@ define <8 x i16> @test_vqshrun_high_n_s32(<4 x i16> %a, <4 x i32> %b) {
 define <4 x i32> @test_vqshrun_high_n_s64(<2 x i32> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_vqshrun_high_n_s64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqshrun2 v0.4s, v1.2d, #19
 ; CHECK-NEXT:    ret
   %1 = bitcast <2 x i32> %a to <1 x i64>
@@ -453,6 +462,7 @@ define <4 x i32> @test_vqshrun_high_n_s64(<2 x i32> %a, <2 x i64> %b) {
 define <16 x i8> @test_vrshrn_high_n_s16(<8 x i8> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vrshrn_high_n_s16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    rshrn2 v0.16b, v1.8h, #3
 ; CHECK-NEXT:    ret
   %vrshrn = tail call <8 x i8> @llvm.aarch64.neon.rshrn.v8i8(<8 x i16> %b, i32 3)
@@ -466,6 +476,7 @@ define <16 x i8> @test_vrshrn_high_n_s16(<8 x i8> %a, <8 x i16> %b) {
 define <8 x i16> @test_vrshrn_high_n_s32(<4 x i16> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vrshrn_high_n_s32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    rshrn2 v0.8h, v1.4s, #9
 ; CHECK-NEXT:    ret
   %vrshrn = tail call <4 x i16> @llvm.aarch64.neon.rshrn.v4i16(<4 x i32> %b, i32 9)
@@ -479,6 +490,7 @@ define <8 x i16> @test_vrshrn_high_n_s32(<4 x i16> %a, <4 x i32> %b) {
 define <4 x i32> @test_vrshrn_high_n_s64(<2 x i32> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_vrshrn_high_n_s64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    rshrn2 v0.4s, v1.2d, #19
 ; CHECK-NEXT:    ret
   %1 = bitcast <2 x i32> %a to <1 x i64>
@@ -492,6 +504,7 @@ define <4 x i32> @test_vrshrn_high_n_s64(<2 x i32> %a, <2 x i64> %b) {
 define <16 x i8> @test_vqrshrun_high_n_s16(<8 x i8> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vqrshrun_high_n_s16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqrshrun2 v0.16b, v1.8h, #3
 ; CHECK-NEXT:    ret
   %vqrshrun = tail call <8 x i8> @llvm.aarch64.neon.sqrshrun.v8i8(<8 x i16> %b, i32 3)
@@ -505,6 +518,7 @@ define <16 x i8> @test_vqrshrun_high_n_s16(<8 x i8> %a, <8 x i16> %b) {
 define <8 x i16> @test_vqrshrun_high_n_s32(<4 x i16> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vqrshrun_high_n_s32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqrshrun2 v0.8h, v1.4s, #9
 ; CHECK-NEXT:    ret
   %vqrshrun = tail call <4 x i16> @llvm.aarch64.neon.sqrshrun.v4i16(<4 x i32> %b, i32 9)
@@ -518,6 +532,7 @@ define <8 x i16> @test_vqrshrun_high_n_s32(<4 x i16> %a, <4 x i32> %b) {
 define <4 x i32> @test_vqrshrun_high_n_s64(<2 x i32> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_vqrshrun_high_n_s64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqrshrun2 v0.4s, v1.2d, #19
 ; CHECK-NEXT:    ret
   %1 = bitcast <2 x i32> %a to <1 x i64>
@@ -531,6 +546,7 @@ define <4 x i32> @test_vqrshrun_high_n_s64(<2 x i32> %a, <2 x i64> %b) {
 define <16 x i8> @test_vqshrn_high_n_s16(<8 x i8> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vqshrn_high_n_s16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqshrn2 v0.16b, v1.8h, #3
 ; CHECK-NEXT:    ret
   %vqshrn = tail call <8 x i8> @llvm.aarch64.neon.sqshrn.v8i8(<8 x i16> %b, i32 3)
@@ -544,6 +560,7 @@ define <16 x i8> @test_vqshrn_high_n_s16(<8 x i8> %a, <8 x i16> %b) {
 define <8 x i16> @test_vqshrn_high_n_s32(<4 x i16> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vqshrn_high_n_s32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqshrn2 v0.8h, v1.4s, #9
 ; CHECK-NEXT:    ret
   %vqshrn = tail call <4 x i16> @llvm.aarch64.neon.sqshrn.v4i16(<4 x i32> %b, i32 9)
@@ -557,6 +574,7 @@ define <8 x i16> @test_vqshrn_high_n_s32(<4 x i16> %a, <4 x i32> %b) {
 define <4 x i32> @test_vqshrn_high_n_s64(<2 x i32> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_vqshrn_high_n_s64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqshrn2 v0.4s, v1.2d, #19
 ; CHECK-NEXT:    ret
   %1 = bitcast <2 x i32> %a to <1 x i64>
@@ -570,6 +588,7 @@ define <4 x i32> @test_vqshrn_high_n_s64(<2 x i32> %a, <2 x i64> %b) {
 define <16 x i8> @test_vqshrn_high_n_u16(<8 x i8> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vqshrn_high_n_u16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    uqshrn2 v0.16b, v1.8h, #3
 ; CHECK-NEXT:    ret
   %vqshrn = tail call <8 x i8> @llvm.aarch64.neon.uqshrn.v8i8(<8 x i16> %b, i32 3)
@@ -583,6 +602,7 @@ define <16 x i8> @test_vqshrn_high_n_u16(<8 x i8> %a, <8 x i16> %b) {
 define <8 x i16> @test_vqshrn_high_n_u32(<4 x i16> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vqshrn_high_n_u32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    uqshrn2 v0.8h, v1.4s, #9
 ; CHECK-NEXT:    ret
   %vqshrn = tail call <4 x i16> @llvm.aarch64.neon.uqshrn.v4i16(<4 x i32> %b, i32 9)
@@ -596,6 +616,7 @@ define <8 x i16> @test_vqshrn_high_n_u32(<4 x i16> %a, <4 x i32> %b) {
 define <4 x i32> @test_vqshrn_high_n_u64(<2 x i32> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_vqshrn_high_n_u64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    uqshrn2 v0.4s, v1.2d, #19
 ; CHECK-NEXT:    ret
   %1 = bitcast <2 x i32> %a to <1 x i64>
@@ -609,6 +630,7 @@ define <4 x i32> @test_vqshrn_high_n_u64(<2 x i32> %a, <2 x i64> %b) {
 define <16 x i8> @test_vqrshrn_high_n_s16(<8 x i8> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vqrshrn_high_n_s16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqrshrn2 v0.16b, v1.8h, #3
 ; CHECK-NEXT:    ret
   %vqrshrn = tail call <8 x i8> @llvm.aarch64.neon.sqrshrn.v8i8(<8 x i16> %b, i32 3)
@@ -622,6 +644,7 @@ define <16 x i8> @test_vqrshrn_high_n_s16(<8 x i8> %a, <8 x i16> %b) {
 define <8 x i16> @test_vqrshrn_high_n_s32(<4 x i16> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vqrshrn_high_n_s32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqrshrn2 v0.8h, v1.4s, #9
 ; CHECK-NEXT:    ret
   %vqrshrn = tail call <4 x i16> @llvm.aarch64.neon.sqrshrn.v4i16(<4 x i32> %b, i32 9)
@@ -635,6 +658,7 @@ define <8 x i16> @test_vqrshrn_high_n_s32(<4 x i16> %a, <4 x i32> %b) {
 define <4 x i32> @test_vqrshrn_high_n_s64(<2 x i32> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_vqrshrn_high_n_s64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqrshrn2 v0.4s, v1.2d, #19
 ; CHECK-NEXT:    ret
   %1 = bitcast <2 x i32> %a to <1 x i64>
@@ -648,6 +672,7 @@ define <4 x i32> @test_vqrshrn_high_n_s64(<2 x i32> %a, <2 x i64> %b) {
 define <16 x i8> @test_vqrshrn_high_n_u16(<8 x i8> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vqrshrn_high_n_u16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    uqrshrn2 v0.16b, v1.8h, #3
 ; CHECK-NEXT:    ret
   %vqrshrn = tail call <8 x i8> @llvm.aarch64.neon.uqrshrn.v8i8(<8 x i16> %b, i32 3)
@@ -661,6 +686,7 @@ define <16 x i8> @test_vqrshrn_high_n_u16(<8 x i8> %a, <8 x i16> %b) {
 define <8 x i16> @test_vqrshrn_high_n_u32(<4 x i16> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vqrshrn_high_n_u32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    uqrshrn2 v0.8h, v1.4s, #9
 ; CHECK-NEXT:    ret
   %vqrshrn = tail call <4 x i16> @llvm.aarch64.neon.uqrshrn.v4i16(<4 x i32> %b, i32 9)
@@ -674,6 +700,7 @@ define <8 x i16> @test_vqrshrn_high_n_u32(<4 x i16> %a, <4 x i32> %b) {
 define <4 x i32> @test_vqrshrn_high_n_u64(<2 x i32> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_vqrshrn_high_n_u64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    uqrshrn2 v0.4s, v1.2d, #19
 ; CHECK-NEXT:    ret
   %1 = bitcast <2 x i32> %a to <1 x i64>

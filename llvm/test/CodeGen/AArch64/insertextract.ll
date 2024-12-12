@@ -5,6 +5,7 @@
 define <2 x double> @insert_v2f64_0(<2 x double> %a, double %b, i32 %c) {
 ; CHECK-LABEL: insert_v2f64_0:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v0.d[0], v1.d[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -15,6 +16,7 @@ entry:
 define <2 x double> @insert_v2f64_1(<2 x double> %a, double %b, i32 %c) {
 ; CHECK-LABEL: insert_v2f64_1:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -28,6 +30,7 @@ define <2 x double> @insert_v2f64_c(<2 x double> %a, double %b, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    mov x8, sp
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    str q0, [sp]
 ; CHECK-SD-NEXT:    bfi x8, x0, #3, #1
 ; CHECK-SD-NEXT:    str d1, [x8]
@@ -53,9 +56,13 @@ entry:
 define <3 x double> @insert_v3f64_0(<3 x double> %a, double %b, i32 %c) {
 ; CHECK-SD-LABEL: insert_v3f64_0:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-SD-NEXT:    mov v0.d[0], v3.d[0]
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: insert_v3f64_0:
@@ -80,6 +87,10 @@ entry:
 define <3 x double> @insert_v3f64_c(<3 x double> %a, double %b, i32 %c) {
 ; CHECK-SD-LABEL: insert_v3f64_c:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    stp q0, q2, [sp, #-32]!
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
@@ -89,6 +100,8 @@ define <3 x double> @insert_v3f64_c(<3 x double> %a, double %b, i32 %c) {
 ; CHECK-SD-NEXT:    ldr q0, [sp]
 ; CHECK-SD-NEXT:    ldr d2, [sp, #16]
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    add sp, sp, #32
 ; CHECK-SD-NEXT:    ret
 ;
@@ -101,14 +114,19 @@ define <3 x double> @insert_v3f64_c(<3 x double> %a, double %b, i32 %c) {
 ; CHECK-GI-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-GI-NEXT:    .cfi_offset w30, -8
 ; CHECK-GI-NEXT:    .cfi_offset w29, -16
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    mov w8, w0
 ; CHECK-GI-NEXT:    mov x9, sp
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    and x8, x8, #0x3
 ; CHECK-GI-NEXT:    stp q0, q2, [sp]
 ; CHECK-GI-NEXT:    str d3, [x9, x8, lsl #3]
 ; CHECK-GI-NEXT:    ldp q0, q2, [sp]
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    mov sp, x29
 ; CHECK-GI-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ret
@@ -120,6 +138,7 @@ entry:
 define <4 x double> @insert_v4f64_0(<4 x double> %a, double %b, i32 %c) {
 ; CHECK-LABEL: insert_v4f64_0:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    mov v0.d[0], v2.d[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -130,6 +149,7 @@ entry:
 define <4 x double> @insert_v4f64_2(<4 x double> %a, double %b, i32 %c) {
 ; CHECK-LABEL: insert_v4f64_2:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    mov v1.d[0], v2.d[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -142,6 +162,7 @@ define <4 x double> @insert_v4f64_c(<4 x double> %a, double %b, i32 %c) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    stp q0, q1, [sp, #-32]!
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    and x8, x0, #0x3
 ; CHECK-SD-NEXT:    mov x9, sp
 ; CHECK-SD-NEXT:    str d2, [x9, x8, lsl #3]
@@ -174,7 +195,10 @@ entry:
 define <2 x float> @insert_v2f32_0(<2 x float> %a, float %b, i32 %c) {
 ; CHECK-LABEL: insert_v2f32_0:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $s1 killed $s1 def $q1
 ; CHECK-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %d = insertelement <2 x float> %a, float %b, i32 0
@@ -184,7 +208,10 @@ entry:
 define <2 x float> @insert_v2f32_1(<2 x float> %a, float %b, i32 %c) {
 ; CHECK-LABEL: insert_v2f32_1:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $s1 killed $s1 def $q1
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %d = insertelement <2 x float> %a, float %b, i32 1
@@ -197,6 +224,7 @@ define <2 x float> @insert_v2f32_c(<2 x float> %a, float %b, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    add x8, sp, #8
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    str d0, [sp, #8]
 ; CHECK-SD-NEXT:    bfi x8, x0, #2, #1
 ; CHECK-SD-NEXT:    str s1, [x8]
@@ -224,6 +252,7 @@ entry:
 define <3 x float> @insert_v3f32_0(<3 x float> %a, float %b, i32 %c) {
 ; CHECK-LABEL: insert_v3f32_0:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $s1 killed $s1 def $q1
 ; CHECK-NEXT:    mov v1.s[1], v0.s[1]
 ; CHECK-NEXT:    mov v1.s[2], v0.s[2]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
@@ -236,12 +265,14 @@ entry:
 define <3 x float> @insert_v3f32_2(<3 x float> %a, float %b, i32 %c) {
 ; CHECK-SD-LABEL: insert_v3f32_2:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $s1 killed $s1 def $q1
 ; CHECK-SD-NEXT:    mov v0.s[2], v1.s[0]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: insert_v3f32_2:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov v2.s[0], v0.s[0]
+; CHECK-GI-NEXT:    // kill: def $s1 killed $s1 def $q1
 ; CHECK-GI-NEXT:    mov v2.s[1], v0.s[1]
 ; CHECK-GI-NEXT:    mov v2.s[2], v1.s[0]
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
@@ -257,6 +288,7 @@ define <3 x float> @insert_v3f32_c(<3 x float> %a, float %b, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    mov x8, sp
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    str q0, [sp]
 ; CHECK-SD-NEXT:    bfi x8, x0, #2, #2
 ; CHECK-SD-NEXT:    str s1, [x8]
@@ -282,6 +314,7 @@ entry:
 define <4 x float> @insert_v4f32_0(<4 x float> %a, float %b, i32 %c) {
 ; CHECK-LABEL: insert_v4f32_0:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $s1 killed $s1 def $q1
 ; CHECK-NEXT:    mov v0.s[0], v1.s[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -292,6 +325,7 @@ entry:
 define <4 x float> @insert_v4f32_2(<4 x float> %a, float %b, i32 %c) {
 ; CHECK-LABEL: insert_v4f32_2:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $s1 killed $s1 def $q1
 ; CHECK-NEXT:    mov v0.s[2], v1.s[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -305,6 +339,7 @@ define <4 x float> @insert_v4f32_c(<4 x float> %a, float %b, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    mov x8, sp
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    str q0, [sp]
 ; CHECK-SD-NEXT:    bfi x8, x0, #2, #2
 ; CHECK-SD-NEXT:    str s1, [x8]
@@ -330,6 +365,7 @@ entry:
 define <8 x float> @insert_v8f32_0(<8 x float> %a, float %b, i32 %c) {
 ; CHECK-LABEL: insert_v8f32_0:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $s2 killed $s2 def $q2
 ; CHECK-NEXT:    mov v0.s[0], v2.s[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -340,6 +376,7 @@ entry:
 define <8 x float> @insert_v8f32_2(<8 x float> %a, float %b, i32 %c) {
 ; CHECK-LABEL: insert_v8f32_2:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $s2 killed $s2 def $q2
 ; CHECK-NEXT:    mov v0.s[2], v2.s[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -352,6 +389,7 @@ define <8 x float> @insert_v8f32_c(<8 x float> %a, float %b, i32 %c) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    stp q0, q1, [sp, #-32]!
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    and x8, x0, #0x7
 ; CHECK-SD-NEXT:    mov x9, sp
 ; CHECK-SD-NEXT:    str s2, [x9, x8, lsl #2]
@@ -384,7 +422,10 @@ entry:
 define <4 x half> @insert_v4f16_0(<4 x half> %a, half %b, i32 %c) {
 ; CHECK-LABEL: insert_v4f16_0:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $h1 killed $h1 def $q1
 ; CHECK-NEXT:    mov v0.h[0], v1.h[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %d = insertelement <4 x half> %a, half %b, i32 0
@@ -394,7 +435,10 @@ entry:
 define <4 x half> @insert_v4f16_2(<4 x half> %a, half %b, i32 %c) {
 ; CHECK-LABEL: insert_v4f16_2:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $h1 killed $h1 def $q1
 ; CHECK-NEXT:    mov v0.h[2], v1.h[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %d = insertelement <4 x half> %a, half %b, i32 2
@@ -407,6 +451,7 @@ define <4 x half> @insert_v4f16_c(<4 x half> %a, half %b, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    add x8, sp, #8
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    str d0, [sp, #8]
 ; CHECK-SD-NEXT:    bfi x8, x0, #1, #2
 ; CHECK-SD-NEXT:    str h1, [x8]
@@ -434,6 +479,7 @@ entry:
 define <8 x half> @insert_v8f16_0(<8 x half> %a, half %b, i32 %c) {
 ; CHECK-LABEL: insert_v8f16_0:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h1 killed $h1 def $q1
 ; CHECK-NEXT:    mov v0.h[0], v1.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -444,6 +490,7 @@ entry:
 define <8 x half> @insert_v8f16_2(<8 x half> %a, half %b, i32 %c) {
 ; CHECK-LABEL: insert_v8f16_2:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h1 killed $h1 def $q1
 ; CHECK-NEXT:    mov v0.h[2], v1.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -457,6 +504,7 @@ define <8 x half> @insert_v8f16_c(<8 x half> %a, half %b, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    mov x8, sp
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    str q0, [sp]
 ; CHECK-SD-NEXT:    bfi x8, x0, #1, #3
 ; CHECK-SD-NEXT:    str h1, [x8]
@@ -482,6 +530,7 @@ entry:
 define <16 x half> @insert_v16f16_0(<16 x half> %a, half %b, i32 %c) {
 ; CHECK-LABEL: insert_v16f16_0:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h2 killed $h2 def $q2
 ; CHECK-NEXT:    mov v0.h[0], v2.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -492,6 +541,7 @@ entry:
 define <16 x half> @insert_v16f16_2(<16 x half> %a, half %b, i32 %c) {
 ; CHECK-LABEL: insert_v16f16_2:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h2 killed $h2 def $q2
 ; CHECK-NEXT:    mov v0.h[2], v2.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -504,6 +554,7 @@ define <16 x half> @insert_v16f16_c(<16 x half> %a, half %b, i32 %c) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    stp q0, q1, [sp, #-32]!
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    and x8, x0, #0xf
 ; CHECK-SD-NEXT:    mov x9, sp
 ; CHECK-SD-NEXT:    str h2, [x9, x8, lsl #1]
@@ -536,7 +587,9 @@ entry:
 define <8 x i8> @insert_v8i8_0(<8 x i8> %a, i8 %b, i32 %c) {
 ; CHECK-LABEL: insert_v8i8_0:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.b[0], w0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %d = insertelement <8 x i8> %a, i8 %b, i32 0
@@ -546,7 +599,9 @@ entry:
 define <8 x i8> @insert_v8i8_2(<8 x i8> %a, i8 %b, i32 %c) {
 ; CHECK-LABEL: insert_v8i8_2:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.b[2], w0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %d = insertelement <8 x i8> %a, i8 %b, i32 2
@@ -559,6 +614,7 @@ define <8 x i8> @insert_v8i8_c(<8 x i8> %a, i8 %b, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    add x8, sp, #8
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    str d0, [sp, #8]
 ; CHECK-SD-NEXT:    bfxil x8, x1, #0, #3
 ; CHECK-SD-NEXT:    strb w0, [x8]
@@ -611,6 +667,7 @@ define <16 x i8> @insert_v16i8_c(<16 x i8> %a, i8 %b, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    mov x8, sp
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    str q0, [sp]
 ; CHECK-SD-NEXT:    bfxil x8, x1, #0, #4
 ; CHECK-SD-NEXT:    strb w0, [x8]
@@ -660,6 +717,7 @@ define <32 x i8> @insert_v32i8_c(<32 x i8> %a, i8 %b, i32 %c) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    stp q0, q1, [sp, #-32]!
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    and x8, x1, #0x1f
 ; CHECK-SD-NEXT:    mov x9, sp
 ; CHECK-SD-NEXT:    strb w0, [x9, x8]
@@ -694,7 +752,9 @@ entry:
 define <4 x i16> @insert_v4i16_0(<4 x i16> %a, i16 %b, i32 %c) {
 ; CHECK-LABEL: insert_v4i16_0:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.h[0], w0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %d = insertelement <4 x i16> %a, i16 %b, i32 0
@@ -704,7 +764,9 @@ entry:
 define <4 x i16> @insert_v4i16_2(<4 x i16> %a, i16 %b, i32 %c) {
 ; CHECK-LABEL: insert_v4i16_2:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.h[2], w0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %d = insertelement <4 x i16> %a, i16 %b, i32 2
@@ -717,6 +779,7 @@ define <4 x i16> @insert_v4i16_c(<4 x i16> %a, i16 %b, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    add x8, sp, #8
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    str d0, [sp, #8]
 ; CHECK-SD-NEXT:    bfi x8, x1, #1, #2
 ; CHECK-SD-NEXT:    strh w0, [x8]
@@ -767,6 +830,7 @@ define <8 x i16> @insert_v8i16_c(<8 x i16> %a, i16 %b, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    mov x8, sp
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    str q0, [sp]
 ; CHECK-SD-NEXT:    bfi x8, x1, #1, #3
 ; CHECK-SD-NEXT:    strh w0, [x8]
@@ -814,6 +878,7 @@ define <16 x i16> @insert_v16i16_c(<16 x i16> %a, i16 %b, i32 %c) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    stp q0, q1, [sp, #-32]!
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    and x8, x1, #0xf
 ; CHECK-SD-NEXT:    mov x9, sp
 ; CHECK-SD-NEXT:    strh w0, [x9, x8, lsl #1]
@@ -846,7 +911,9 @@ entry:
 define <2 x i32> @insert_v2i32_0(<2 x i32> %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: insert_v2i32_0:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.s[0], w0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %d = insertelement <2 x i32> %a, i32 %b, i32 0
@@ -856,7 +923,9 @@ entry:
 define <2 x i32> @insert_v2i32_1(<2 x i32> %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: insert_v2i32_1:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.s[1], w0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %d = insertelement <2 x i32> %a, i32 %b, i32 1
@@ -869,6 +938,7 @@ define <2 x i32> @insert_v2i32_c(<2 x i32> %a, i32 %b, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    add x8, sp, #8
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    str d0, [sp, #8]
 ; CHECK-SD-NEXT:    bfi x8, x1, #2, #1
 ; CHECK-SD-NEXT:    str w0, [x8]
@@ -938,6 +1008,7 @@ define <3 x i32> @insert_v3i32_c(<3 x i32> %a, i32 %b, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    mov x8, sp
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    str q0, [sp]
 ; CHECK-SD-NEXT:    bfi x8, x1, #2, #2
 ; CHECK-SD-NEXT:    str w0, [x8]
@@ -986,6 +1057,7 @@ define <4 x i32> @insert_v4i32_c(<4 x i32> %a, i32 %b, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    mov x8, sp
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    str q0, [sp]
 ; CHECK-SD-NEXT:    bfi x8, x1, #2, #2
 ; CHECK-SD-NEXT:    str w0, [x8]
@@ -1033,6 +1105,7 @@ define <8 x i32> @insert_v8i32_c(<8 x i32> %a, i32 %b, i32 %c) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    stp q0, q1, [sp, #-32]!
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    and x8, x1, #0x7
 ; CHECK-SD-NEXT:    mov x9, sp
 ; CHECK-SD-NEXT:    str w0, [x9, x8, lsl #2]
@@ -1088,6 +1161,7 @@ define <2 x i64> @insert_v2i64_c(<2 x i64> %a, i64 %b, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    mov x8, sp
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    str q0, [sp]
 ; CHECK-SD-NEXT:    bfi x8, x1, #3, #1
 ; CHECK-SD-NEXT:    str x0, [x8]
@@ -1113,9 +1187,12 @@ entry:
 define <3 x i64> @insert_v3i64_0(<3 x i64> %a, i64 %b, i32 %c) {
 ; CHECK-SD-LABEL: insert_v3i64_0:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    mov v0.d[0], x0
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: insert_v3i64_0:
@@ -1140,6 +1217,10 @@ entry:
 define <3 x i64> @insert_v3i64_c(<3 x i64> %a, i64 %b, i32 %c) {
 ; CHECK-SD-LABEL: insert_v3i64_c:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    stp q0, q2, [sp, #-32]!
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
@@ -1149,6 +1230,8 @@ define <3 x i64> @insert_v3i64_c(<3 x i64> %a, i64 %b, i32 %c) {
 ; CHECK-SD-NEXT:    ldr q0, [sp]
 ; CHECK-SD-NEXT:    ldr d2, [sp, #16]
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    add sp, sp, #32
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1161,14 +1244,19 @@ define <3 x i64> @insert_v3i64_c(<3 x i64> %a, i64 %b, i32 %c) {
 ; CHECK-GI-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-GI-NEXT:    .cfi_offset w30, -8
 ; CHECK-GI-NEXT:    .cfi_offset w29, -16
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    mov w8, w1
 ; CHECK-GI-NEXT:    mov x9, sp
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    and x8, x8, #0x3
 ; CHECK-GI-NEXT:    stp q0, q2, [sp]
 ; CHECK-GI-NEXT:    str x0, [x9, x8, lsl #3]
 ; CHECK-GI-NEXT:    ldp q0, q2, [sp]
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    mov sp, x29
 ; CHECK-GI-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ret
@@ -1202,6 +1290,7 @@ define <4 x i64> @insert_v4i64_c(<4 x i64> %a, i64 %b, i32 %c) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    stp q0, q1, [sp, #-32]!
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    and x8, x1, #0x3
 ; CHECK-SD-NEXT:    mov x9, sp
 ; CHECK-SD-NEXT:    str x0, [x9, x8, lsl #3]
@@ -1234,6 +1323,7 @@ entry:
 define double @extract_v2f64_0(<2 x double> %a, i32 %c) {
 ; CHECK-LABEL: extract_v2f64_0:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %d = extractelement <2 x double> %a, i32 0
@@ -1256,6 +1346,7 @@ define double @extract_v2f64_c(<2 x double> %a, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    mov x8, sp
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    str q0, [sp]
 ; CHECK-SD-NEXT:    bfi x8, x0, #3, #1
 ; CHECK-SD-NEXT:    ldr d0, [x8]
@@ -1300,8 +1391,12 @@ entry:
 define double @extract_v3f64_c(<3 x double> %a, i32 %c) {
 ; CHECK-SD-LABEL: extract_v3f64_c:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    and x8, x0, #0x3
+; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    stp q0, q2, [sp, #-32]!
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-SD-NEXT:    mov x9, sp
@@ -1318,9 +1413,12 @@ define double @extract_v3f64_c(<3 x double> %a, i32 %c) {
 ; CHECK-GI-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-GI-NEXT:    .cfi_offset w30, -8
 ; CHECK-GI-NEXT:    .cfi_offset w29, -16
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    mov w8, w0
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    mov x9, sp
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    and x8, x8, #0x3
 ; CHECK-GI-NEXT:    stp q0, q2, [sp]
 ; CHECK-GI-NEXT:    ldr d0, [x9, x8, lsl #3]
@@ -1335,6 +1433,7 @@ entry:
 define double @extract_v4f64_0(<4 x double> %a, i32 %c) {
 ; CHECK-LABEL: extract_v4f64_0:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %d = extractelement <4 x double> %a, i32 0
@@ -1345,6 +1444,7 @@ define double @extract_v4f64_2(<4 x double> %a, i32 %c) {
 ; CHECK-LABEL: extract_v4f64_2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %d = extractelement <4 x double> %a, i32 2
@@ -1356,6 +1456,7 @@ define double @extract_v4f64_c(<4 x double> %a, i32 %c) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    stp q0, q1, [sp, #-32]!
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    and x8, x0, #0x3
 ; CHECK-SD-NEXT:    mov x9, sp
 ; CHECK-SD-NEXT:    ldr d0, [x9, x8, lsl #3]
@@ -1385,9 +1486,16 @@ entry:
 }
 
 define float @extract_v2f32_0(<2 x float> %a, i32 %c) {
-; CHECK-LABEL: extract_v2f32_0:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: extract_v2f32_0:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v2f32_0:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $d0
+; CHECK-GI-NEXT:    ret
 entry:
   %d = extractelement <2 x float> %a, i32 0
   ret float %d
@@ -1396,6 +1504,7 @@ entry:
 define float @extract_v2f32_1(<2 x float> %a, i32 %c) {
 ; CHECK-LABEL: extract_v2f32_1:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov s0, v0.s[1]
 ; CHECK-NEXT:    ret
 entry:
@@ -1409,6 +1518,7 @@ define float @extract_v2f32_c(<2 x float> %a, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    add x8, sp, #8
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    str d0, [sp, #8]
 ; CHECK-SD-NEXT:    bfi x8, x0, #2, #1
 ; CHECK-SD-NEXT:    ldr s0, [x8]
@@ -1434,6 +1544,7 @@ entry:
 define float @extract_v3f32_0(<3 x float> %a, i32 %c) {
 ; CHECK-LABEL: extract_v3f32_0:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %d = extractelement <3 x float> %a, i32 0
@@ -1456,6 +1567,7 @@ define float @extract_v3f32_c(<3 x float> %a, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    mov x8, sp
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    str q0, [sp]
 ; CHECK-SD-NEXT:    bfi x8, x0, #2, #2
 ; CHECK-SD-NEXT:    ldr s0, [x8]
@@ -1481,6 +1593,7 @@ entry:
 define float @extract_v4f32_0(<4 x float> %a, i32 %c) {
 ; CHECK-LABEL: extract_v4f32_0:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %d = extractelement <4 x float> %a, i32 0
@@ -1503,6 +1616,7 @@ define float @extract_v4f32_c(<4 x float> %a, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    mov x8, sp
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    str q0, [sp]
 ; CHECK-SD-NEXT:    bfi x8, x0, #2, #2
 ; CHECK-SD-NEXT:    ldr s0, [x8]
@@ -1528,6 +1642,7 @@ entry:
 define float @extract_v8f32_0(<8 x float> %a, i32 %c) {
 ; CHECK-LABEL: extract_v8f32_0:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %d = extractelement <8 x float> %a, i32 0
@@ -1549,6 +1664,7 @@ define float @extract_v8f32_c(<8 x float> %a, i32 %c) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    stp q0, q1, [sp, #-32]!
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    and x8, x0, #0x7
 ; CHECK-SD-NEXT:    mov x9, sp
 ; CHECK-SD-NEXT:    ldr s0, [x9, x8, lsl #2]
@@ -1578,9 +1694,16 @@ entry:
 }
 
 define half @extract_v4f16_0(<4 x half> %a, i32 %c) {
-; CHECK-LABEL: extract_v4f16_0:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: extract_v4f16_0:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v4f16_0:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 killed $d0
+; CHECK-GI-NEXT:    ret
 entry:
   %d = extractelement <4 x half> %a, i32 0
   ret half %d
@@ -1589,6 +1712,7 @@ entry:
 define half @extract_v4f16_2(<4 x half> %a, i32 %c) {
 ; CHECK-LABEL: extract_v4f16_2:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov h0, v0.h[2]
 ; CHECK-NEXT:    ret
 entry:
@@ -1602,6 +1726,7 @@ define half @extract_v4f16_c(<4 x half> %a, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    add x8, sp, #8
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    str d0, [sp, #8]
 ; CHECK-SD-NEXT:    bfi x8, x0, #1, #2
 ; CHECK-SD-NEXT:    ldr h0, [x8]
@@ -1627,6 +1752,7 @@ entry:
 define half @extract_v8f16_0(<8 x half> %a, i32 %c) {
 ; CHECK-LABEL: extract_v8f16_0:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %d = extractelement <8 x half> %a, i32 0
@@ -1649,6 +1775,7 @@ define half @extract_v8f16_c(<8 x half> %a, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    mov x8, sp
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    str q0, [sp]
 ; CHECK-SD-NEXT:    bfi x8, x0, #1, #3
 ; CHECK-SD-NEXT:    ldr h0, [x8]
@@ -1674,6 +1801,7 @@ entry:
 define half @extract_v16f16_0(<16 x half> %a, i32 %c) {
 ; CHECK-LABEL: extract_v16f16_0:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %d = extractelement <16 x half> %a, i32 0
@@ -1695,6 +1823,7 @@ define half @extract_v16f16_c(<16 x half> %a, i32 %c) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    stp q0, q1, [sp, #-32]!
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    and x8, x0, #0xf
 ; CHECK-SD-NEXT:    mov x9, sp
 ; CHECK-SD-NEXT:    ldr h0, [x9, x8, lsl #1]
@@ -1726,6 +1855,7 @@ entry:
 define i8 @extract_v8i8_0(<8 x i8> %a, i32 %c) {
 ; CHECK-LABEL: extract_v8i8_0:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w0, v0.b[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -1736,6 +1866,7 @@ entry:
 define i8 @extract_v8i8_2(<8 x i8> %a, i32 %c) {
 ; CHECK-LABEL: extract_v8i8_2:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w0, v0.b[2]
 ; CHECK-NEXT:    ret
 entry:
@@ -1749,6 +1880,7 @@ define i8 @extract_v8i8_c(<8 x i8> %a, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    add x8, sp, #8
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    str d0, [sp, #8]
 ; CHECK-SD-NEXT:    bfxil x8, x0, #0, #3
 ; CHECK-SD-NEXT:    ldrb w0, [x8]
@@ -1799,6 +1931,7 @@ define i8 @extract_v16i8_c(<16 x i8> %a, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    mov x8, sp
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    str q0, [sp]
 ; CHECK-SD-NEXT:    bfxil x8, x0, #0, #4
 ; CHECK-SD-NEXT:    ldrb w0, [x8]
@@ -1848,6 +1981,7 @@ define i8 @extract_v32i8_c(<32 x i8> %a, i32 %c) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    stp q0, q1, [sp, #-32]!
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    and x8, x0, #0x1f
 ; CHECK-SD-NEXT:    mov x9, sp
 ; CHECK-SD-NEXT:    ldrb w0, [x9, x8]
@@ -1881,6 +2015,7 @@ entry:
 define i16 @extract_v4i16_0(<4 x i16> %a, i32 %c) {
 ; CHECK-LABEL: extract_v4i16_0:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w0, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -1891,6 +2026,7 @@ entry:
 define i16 @extract_v4i16_2(<4 x i16> %a, i32 %c) {
 ; CHECK-LABEL: extract_v4i16_2:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w0, v0.h[2]
 ; CHECK-NEXT:    ret
 entry:
@@ -1904,6 +2040,7 @@ define i16 @extract_v4i16_c(<4 x i16> %a, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    add x8, sp, #8
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    str d0, [sp, #8]
 ; CHECK-SD-NEXT:    bfi x8, x0, #1, #2
 ; CHECK-SD-NEXT:    ldrh w0, [x8]
@@ -1952,6 +2089,7 @@ define i16 @extract_v8i16_c(<8 x i16> %a, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    mov x8, sp
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    str q0, [sp]
 ; CHECK-SD-NEXT:    bfi x8, x0, #1, #3
 ; CHECK-SD-NEXT:    ldrh w0, [x8]
@@ -1999,6 +2137,7 @@ define i16 @extract_v16i16_c(<16 x i16> %a, i32 %c) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    stp q0, q1, [sp, #-32]!
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    and x8, x0, #0xf
 ; CHECK-SD-NEXT:    mov x9, sp
 ; CHECK-SD-NEXT:    ldrh w0, [x9, x8, lsl #1]
@@ -2028,10 +2167,16 @@ entry:
 }
 
 define i32 @extract_v2i32_0(<2 x i32> %a, i32 %c) {
-; CHECK-LABEL: extract_v2i32_0:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: extract_v2i32_0:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    fmov w0, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v2i32_0:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
 entry:
   %d = extractelement <2 x i32> %a, i32 0
   ret i32 %d
@@ -2040,11 +2185,13 @@ entry:
 define i32 @extract_v2i32_1(<2 x i32> %a, i32 %c) {
 ; CHECK-SD-LABEL: extract_v2i32_1:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    mov w0, v0.s[1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: extract_v2i32_1:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov s0, v0.s[1]
 ; CHECK-GI-NEXT:    fmov w0, s0
 ; CHECK-GI-NEXT:    ret
@@ -2059,6 +2206,7 @@ define i32 @extract_v2i32_c(<2 x i32> %a, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    add x8, sp, #8
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    str d0, [sp, #8]
 ; CHECK-SD-NEXT:    bfi x8, x0, #2, #1
 ; CHECK-SD-NEXT:    ldr w0, [x8]
@@ -2113,6 +2261,7 @@ define i32 @extract_v3i32_c(<3 x i32> %a, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    mov x8, sp
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    str q0, [sp]
 ; CHECK-SD-NEXT:    bfi x8, x0, #2, #2
 ; CHECK-SD-NEXT:    ldr w0, [x8]
@@ -2167,6 +2316,7 @@ define i32 @extract_v4i32_c(<4 x i32> %a, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    mov x8, sp
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    str q0, [sp]
 ; CHECK-SD-NEXT:    bfi x8, x0, #2, #2
 ; CHECK-SD-NEXT:    ldr w0, [x8]
@@ -2220,6 +2370,7 @@ define i32 @extract_v8i32_c(<8 x i32> %a, i32 %c) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    stp q0, q1, [sp, #-32]!
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    and x8, x0, #0x7
 ; CHECK-SD-NEXT:    mov x9, sp
 ; CHECK-SD-NEXT:    ldr w0, [x9, x8, lsl #2]
@@ -2280,6 +2431,7 @@ define i64 @extract_v2i64_c(<2 x i64> %a, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    mov x8, sp
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    str q0, [sp]
 ; CHECK-SD-NEXT:    bfi x8, x0, #3, #1
 ; CHECK-SD-NEXT:    ldr x0, [x8]
@@ -2303,20 +2455,32 @@ entry:
 }
 
 define i64 @extract_v3i64_0(<3 x i64> %a, i32 %c) {
-; CHECK-LABEL: extract_v3i64_0:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: extract_v3i64_0:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v3i64_0:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
 entry:
   %d = extractelement <3 x i64> %a, i32 0
   ret i64 %d
 }
 
 define i64 @extract_v3i64_2(<3 x i64> %a, i32 %c) {
-; CHECK-LABEL: extract_v3i64_2:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov x0, d2
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: extract_v3i64_2:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-SD-NEXT:    fmov x0, d2
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v3i64_2:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov x0, d2
+; CHECK-GI-NEXT:    ret
 entry:
   %d = extractelement <3 x i64> %a, i32 2
   ret i64 %d
@@ -2325,8 +2489,12 @@ entry:
 define i64 @extract_v3i64_c(<3 x i64> %a, i32 %c) {
 ; CHECK-SD-LABEL: extract_v3i64_c:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    and x8, x0, #0x3
+; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    stp q0, q2, [sp, #-32]!
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-SD-NEXT:    mov x9, sp
@@ -2343,9 +2511,12 @@ define i64 @extract_v3i64_c(<3 x i64> %a, i32 %c) {
 ; CHECK-GI-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-GI-NEXT:    .cfi_offset w30, -8
 ; CHECK-GI-NEXT:    .cfi_offset w29, -16
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    mov w8, w0
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    mov x9, sp
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    and x8, x8, #0x3
 ; CHECK-GI-NEXT:    stp q0, q2, [sp]
 ; CHECK-GI-NEXT:    ldr x0, [x9, x8, lsl #3]
@@ -2382,6 +2553,7 @@ define i64 @extract_v4i64_c(<4 x i64> %a, i32 %c) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    stp q0, q1, [sp, #-32]!
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    and x8, x0, #0x3
 ; CHECK-SD-NEXT:    mov x9, sp
 ; CHECK-SD-NEXT:    ldr x0, [x9, x8, lsl #3]

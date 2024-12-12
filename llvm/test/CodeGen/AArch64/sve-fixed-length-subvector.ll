@@ -404,6 +404,7 @@ define <8 x i1> @no_warn_dropped_scalable(ptr %in) #0 {
 ; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <8 x i32>, ptr %in
   br label %bb1

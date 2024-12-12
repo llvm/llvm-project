@@ -4,6 +4,8 @@
 define i32 @v1(ptr nocapture noundef readonly %p1, i32 noundef %i1, ptr nocapture noundef readonly %p2, i32 noundef %i2) {
 ; CHECK-LABEL: v1:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w3 killed $w3 def $x3
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    sxtw x8, w1
 ; CHECK-NEXT:    sxtw x9, w3
 ; CHECK-NEXT:    ldr d0, [x0]
@@ -225,7 +227,9 @@ entry:
 define i32 @v2(ptr nocapture noundef readonly %p1, i32 noundef %i1, ptr nocapture noundef readonly %p2, i32 noundef %i2) {
 ; CHECK-LABEL: v2:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    sxtw x8, w1
+; CHECK-NEXT:    // kill: def $w3 killed $w3 def $x3
 ; CHECK-NEXT:    sxtw x9, w3
 ; CHECK-NEXT:    ldr d4, [x0]
 ; CHECK-NEXT:    ldr d5, [x2]
@@ -439,6 +443,8 @@ entry:
 define i32 @v3(ptr nocapture noundef readonly %p1, i32 noundef %i1, ptr nocapture noundef readonly %p2, i32 noundef %i2) {
 ; CHECK-LABEL: v3:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w3 killed $w3 def $x3
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    sxtw x8, w1
 ; CHECK-NEXT:    sxtw x9, w3
 ; CHECK-NEXT:    ldr d0, [x0]

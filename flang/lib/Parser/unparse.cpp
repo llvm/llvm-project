@@ -2133,23 +2133,78 @@ public:
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<ScalarLogicalExpr>(x.t));
   }
-  void Unparse(const OmpLinearClause::WithoutModifier &x) {
-    Walk(x.names, ", ");
-    Walk(":", x.step);
+  void Unparse(const OmpStepSimpleModifier &x) { Walk(x.v); }
+  void Unparse(const OmpStepComplexModifier &x) {
+    Word("STEP(");
+    Walk(x.v);
+    Put(")");
   }
-  void Unparse(const OmpLinearClause::WithModifier &x) {
-    Walk(x.modifier), Put("("), Walk(x.names, ","), Put(")");
-    Walk(":", x.step);
+  void Unparse(const OmpLinearClause &x) {
+    using Modifier = OmpLinearClause::Modifier;
+    auto &modifiers{std::get<std::optional<std::list<Modifier>>>(x.t)};
+    if (std::get<bool>(x.t)) { // PostModified
+      Walk(std::get<OmpObjectList>(x.t));
+      Walk(": ", modifiers);
+    } else {
+      // Unparse using pre-5.2 syntax.
+      bool HasStepModifier{false}, HasLinearModifier{false};
+
+      if (modifiers) {
+        bool NeedComma{false};
+        for (const Modifier &m : *modifiers) {
+          // Print all linear modifiers in case we need to unparse an
+          // incorrect tree.
+          if (auto *lmod{std::get_if<parser::OmpLinearModifier>(&m.u)}) {
+            if (NeedComma) {
+              Put(",");
+            }
+            Walk(*lmod);
+            HasLinearModifier = true;
+            NeedComma = true;
+          } else {
+            // If not linear-modifier, then it has to be step modifier.
+            HasStepModifier = true;
+          }
+        }
+      }
+
+      if (HasLinearModifier) {
+        Put("(");
+      }
+      Walk(std::get<OmpObjectList>(x.t));
+      if (HasLinearModifier) {
+        Put(")");
+      }
+
+      if (HasStepModifier) {
+        Put(": ");
+        bool NeedComma{false};
+        for (const Modifier &m : *modifiers) {
+          if (!std::holds_alternative<parser::OmpLinearModifier>(m.u)) {
+            if (NeedComma) {
+              Put(",");
+            }
+            common::visit([&](auto &&s) { Walk(s); }, m.u);
+            NeedComma = true;
+          }
+        }
+      }
+    }
   }
   void Unparse(const OmpReductionClause &x) {
     using Modifier = OmpReductionClause::Modifier;
-    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ":");
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<OmpObjectList>(x.t));
   }
   void Unparse(const OmpDetachClause &x) { Walk(x.v); }
   void Unparse(const OmpInReductionClause &x) {
-    Walk(std::get<OmpReductionIdentifier>(x.t));
-    Put(":");
+    using Modifier = OmpInReductionClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
+    Walk(std::get<OmpObjectList>(x.t));
+  }
+  void Unparse(const OmpTaskReductionClause &x) {
+    using Modifier = OmpTaskReductionClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<OmpObjectList>(x.t));
   }
   void Unparse(const OmpAllocateClause &x) {

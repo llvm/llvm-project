@@ -7,7 +7,8 @@ declare void @llvm.memset.inline.p0.i64(ptr nocapture, i8, i64, i1) nounwind
 define void @test1(ptr %a, i8 %value) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #72340172838076673 // =0x101010101010101
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    mov x8, #72340172838076673
 ; CHECK-NEXT:    and x9, x1, #0xff
 ; CHECK-NEXT:    mul x8, x9, x8
 ; CHECK-NEXT:    str x8, [x0]
@@ -19,7 +20,7 @@ define void @test1(ptr %a, i8 %value) nounwind {
 define void @regular_memset_calls_external_function(ptr %a, i8 %value) nounwind {
 ; CHECK-LABEL: regular_memset_calls_external_function:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w2, #1024 // =0x400
+; CHECK-NEXT:    mov w2, #1024
 ; CHECK-NEXT:    b memset
   tail call void @llvm.memset.p0.i64(ptr %a, i8 %value, i64 1024, i1 0)
   ret void
@@ -31,37 +32,6 @@ define void @inlined_set_doesnt_call_external_function(ptr %a, i8 %value) nounwi
 ; CHECK-NEXT:    dup v0.16b, w1
 ; CHECK-NEXT:    stp q0, q0, [x0]
 ; CHECK-NEXT:    stp q0, q0, [x0, #32]
-; CHECK-NEXT:    stp q0, q0, [x0, #64]
-; CHECK-NEXT:    stp q0, q0, [x0, #96]
-; CHECK-NEXT:    stp q0, q0, [x0, #128]
-; CHECK-NEXT:    stp q0, q0, [x0, #160]
-; CHECK-NEXT:    stp q0, q0, [x0, #192]
-; CHECK-NEXT:    stp q0, q0, [x0, #224]
-; CHECK-NEXT:    stp q0, q0, [x0, #256]
-; CHECK-NEXT:    stp q0, q0, [x0, #288]
-; CHECK-NEXT:    stp q0, q0, [x0, #320]
-; CHECK-NEXT:    stp q0, q0, [x0, #352]
-; CHECK-NEXT:    stp q0, q0, [x0, #384]
-; CHECK-NEXT:    stp q0, q0, [x0, #416]
-; CHECK-NEXT:    stp q0, q0, [x0, #448]
-; CHECK-NEXT:    stp q0, q0, [x0, #480]
-; CHECK-NEXT:    stp q0, q0, [x0, #512]
-; CHECK-NEXT:    stp q0, q0, [x0, #544]
-; CHECK-NEXT:    stp q0, q0, [x0, #576]
-; CHECK-NEXT:    stp q0, q0, [x0, #608]
-; CHECK-NEXT:    stp q0, q0, [x0, #640]
-; CHECK-NEXT:    stp q0, q0, [x0, #672]
-; CHECK-NEXT:    stp q0, q0, [x0, #704]
-; CHECK-NEXT:    stp q0, q0, [x0, #736]
-; CHECK-NEXT:    stp q0, q0, [x0, #768]
-; CHECK-NEXT:    stp q0, q0, [x0, #800]
-; CHECK-NEXT:    stp q0, q0, [x0, #832]
-; CHECK-NEXT:    stp q0, q0, [x0, #864]
-; CHECK-NEXT:    stp q0, q0, [x0, #896]
-; CHECK-NEXT:    stp q0, q0, [x0, #928]
-; CHECK-NEXT:    stp q0, q0, [x0, #960]
-; CHECK-NEXT:    stp q0, q0, [x0, #992]
-; CHECK-NEXT:    ret
   tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 %value, i64 1024, i1 0)
   ret void
 }

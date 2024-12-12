@@ -83,5 +83,10 @@ class Header:
         macro file might be located in a subdirectory:
         libc/include/llvm-libc-macros/fcntl-macros.h
         libc/include/llvm-libc-macros/linux/fcntl-macros.h
+
+        When a header would be nested in a dir (such as arpa/, sys/, etc) we
+        instead use a hyphen in the name.
+        libc/include/llvm-libc-macros/sys-mman-macros.h
         """
-        return self.macros_dir.glob(f"**/{self.stem}-macros.h")
+        stem = self.stem.replace("/", "-")
+        return self.macros_dir.glob(f"**/{stem}-macros.h")

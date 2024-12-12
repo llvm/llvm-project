@@ -57,6 +57,7 @@ define <2 x half> @exp10_v2f16(<2 x half> %x) {
 ; SDAG-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
 ; SDAG-NEXT:    .cfi_def_cfa_offset 48
 ; SDAG-NEXT:    .cfi_offset w30, -16
+; SDAG-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; SDAG-NEXT:    mov h1, v0.h[1]
 ; SDAG-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; SDAG-NEXT:    fcvt s0, h1
@@ -87,6 +88,7 @@ define <2 x half> @exp10_v2f16(<2 x half> %x) {
 ; SDAG-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; SDAG-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
 ; SDAG-NEXT:    mov v0.h[3], v1.h[0]
+; SDAG-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; SDAG-NEXT:    add sp, sp, #48
 ; SDAG-NEXT:    ret
 ;
@@ -98,6 +100,7 @@ define <2 x half> @exp10_v2f16(<2 x half> %x) {
 ; GISEL-NEXT:    .cfi_def_cfa_offset 32
 ; GISEL-NEXT:    .cfi_offset w30, -8
 ; GISEL-NEXT:    .cfi_offset b8, -16
+; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; GISEL-NEXT:    mov h8, v0.h[1]
 ; GISEL-NEXT:    fcvt s0, h0
 ; GISEL-NEXT:    bl exp10f
@@ -111,6 +114,7 @@ define <2 x half> @exp10_v2f16(<2 x half> %x) {
 ; GISEL-NEXT:    ldr x30, [sp, #24] // 8-byte Folded Reload
 ; GISEL-NEXT:    ldr d8, [sp, #16] // 8-byte Folded Reload
 ; GISEL-NEXT:    mov v0.h[1], v1.h[0]
+; GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; GISEL-NEXT:    add sp, sp, #32
 ; GISEL-NEXT:    ret
   %r = call <2 x half> @llvm.exp10.v2f16(<2 x half> %x)
@@ -124,6 +128,7 @@ define <3 x half> @exp10_v3f16(<3 x half> %x) {
 ; SDAG-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
 ; SDAG-NEXT:    .cfi_def_cfa_offset 48
 ; SDAG-NEXT:    .cfi_offset w30, -16
+; SDAG-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; SDAG-NEXT:    mov h1, v0.h[1]
 ; SDAG-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; SDAG-NEXT:    fcvt s0, h1
@@ -154,6 +159,7 @@ define <3 x half> @exp10_v3f16(<3 x half> %x) {
 ; SDAG-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; SDAG-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
 ; SDAG-NEXT:    mov v0.h[3], v1.h[0]
+; SDAG-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; SDAG-NEXT:    add sp, sp, #48
 ; SDAG-NEXT:    ret
 ;
@@ -166,6 +172,7 @@ define <3 x half> @exp10_v3f16(<3 x half> %x) {
 ; GISEL-NEXT:    .cfi_offset w30, -16
 ; GISEL-NEXT:    .cfi_offset b8, -24
 ; GISEL-NEXT:    .cfi_offset b9, -32
+; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; GISEL-NEXT:    mov h8, v0.h[1]
 ; GISEL-NEXT:    mov h9, v0.h[2]
 ; GISEL-NEXT:    fcvt s0, h0
@@ -186,7 +193,8 @@ define <3 x half> @exp10_v3f16(<3 x half> %x) {
 ; GISEL-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
 ; GISEL-NEXT:    mov v1.h[1], v2.h[0]
 ; GISEL-NEXT:    mov v1.h[2], v0.h[0]
-; GISEL-NEXT:    fmov d0, d1
+; GISEL-NEXT:    mov v0.16b, v1.16b
+; GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; GISEL-NEXT:    add sp, sp, #64
 ; GISEL-NEXT:    ret
   %r = call <3 x half> @llvm.exp10.v3f16(<3 x half> %x)
@@ -200,6 +208,7 @@ define <4 x half> @exp10_v4f16(<4 x half> %x) {
 ; SDAG-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
 ; SDAG-NEXT:    .cfi_def_cfa_offset 48
 ; SDAG-NEXT:    .cfi_offset w30, -16
+; SDAG-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; SDAG-NEXT:    mov h1, v0.h[1]
 ; SDAG-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; SDAG-NEXT:    fcvt s0, h1
@@ -230,6 +239,7 @@ define <4 x half> @exp10_v4f16(<4 x half> %x) {
 ; SDAG-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; SDAG-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
 ; SDAG-NEXT:    mov v0.h[3], v1.h[0]
+; SDAG-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; SDAG-NEXT:    add sp, sp, #48
 ; SDAG-NEXT:    ret
 ;
@@ -244,6 +254,7 @@ define <4 x half> @exp10_v4f16(<4 x half> %x) {
 ; GISEL-NEXT:    .cfi_offset b8, -16
 ; GISEL-NEXT:    .cfi_offset b9, -24
 ; GISEL-NEXT:    .cfi_offset b10, -32
+; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; GISEL-NEXT:    mov h8, v0.h[1]
 ; GISEL-NEXT:    mov h9, v0.h[2]
 ; GISEL-NEXT:    mov h10, v0.h[3]
@@ -273,7 +284,8 @@ define <4 x half> @exp10_v4f16(<4 x half> %x) {
 ; GISEL-NEXT:    mov v1.h[1], v3.h[0]
 ; GISEL-NEXT:    mov v1.h[2], v2.h[0]
 ; GISEL-NEXT:    mov v1.h[3], v0.h[0]
-; GISEL-NEXT:    fmov d0, d1
+; GISEL-NEXT:    mov v0.16b, v1.16b
+; GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; GISEL-NEXT:    add sp, sp, #80
 ; GISEL-NEXT:    ret
   %r = call <4 x half> @llvm.exp10.v4f16(<4 x half> %x)
@@ -289,14 +301,28 @@ define float @exp10_f32(float %x) {
 }
 
 define <1 x float> @exp10_v1f32(<1 x float> %x) {
-; CHECK-LABEL: exp10_v1f32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl exp10f
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; SDAG-LABEL: exp10_v1f32:
+; SDAG:       // %bb.0:
+; SDAG-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; SDAG-NEXT:    .cfi_def_cfa_offset 16
+; SDAG-NEXT:    .cfi_offset w30, -16
+; SDAG-NEXT:    // kill: def $d0 killed $d0 def $q0
+; SDAG-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; SDAG-NEXT:    bl exp10f
+; SDAG-NEXT:    // kill: def $s0 killed $s0 def $d0
+; SDAG-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; SDAG-NEXT:    ret
+;
+; GISEL-LABEL: exp10_v1f32:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; GISEL-NEXT:    .cfi_def_cfa_offset 16
+; GISEL-NEXT:    .cfi_offset w30, -16
+; GISEL-NEXT:    // kill: def $s0 killed $s0 killed $d0
+; GISEL-NEXT:    bl exp10f
+; GISEL-NEXT:    // kill: def $s0 killed $s0 def $d0
+; GISEL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; GISEL-NEXT:    ret
   %r = call <1 x float> @llvm.exp10.v1f32(<1 x float> %x)
   ret <1 x float> %r
 }
@@ -308,15 +334,20 @@ define <2 x float> @exp10_v2f32(<2 x float> %x) {
 ; SDAG-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
 ; SDAG-NEXT:    .cfi_def_cfa_offset 48
 ; SDAG-NEXT:    .cfi_offset w30, -16
+; SDAG-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; SDAG-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; SDAG-NEXT:    mov s0, v0.s[1]
 ; SDAG-NEXT:    bl exp10f
+; SDAG-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; SDAG-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; SDAG-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; SDAG-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; SDAG-NEXT:    bl exp10f
 ; SDAG-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
+; SDAG-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; SDAG-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
 ; SDAG-NEXT:    mov v0.s[1], v1.s[0]
+; SDAG-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; SDAG-NEXT:    add sp, sp, #48
 ; SDAG-NEXT:    ret
 ;
@@ -328,12 +359,16 @@ define <2 x float> @exp10_v2f32(<2 x float> %x) {
 ; GISEL-NEXT:    .cfi_def_cfa_offset 32
 ; GISEL-NEXT:    .cfi_offset w30, -8
 ; GISEL-NEXT:    .cfi_offset b8, -16
+; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; GISEL-NEXT:    mov s8, v0.s[1]
+; GISEL-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; GISEL-NEXT:    bl exp10f
+; GISEL-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; GISEL-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; GISEL-NEXT:    fmov s0, s8
 ; GISEL-NEXT:    bl exp10f
 ; GISEL-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; GISEL-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; GISEL-NEXT:    ldr x30, [sp, #24] // 8-byte Folded Reload
 ; GISEL-NEXT:    ldr d8, [sp, #16] // 8-byte Folded Reload
 ; GISEL-NEXT:    mov v1.s[1], v0.s[0]
@@ -354,16 +389,20 @@ define <3 x float> @exp10_v3f32(<3 x float> %x) {
 ; SDAG-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; SDAG-NEXT:    mov s0, v0.s[1]
 ; SDAG-NEXT:    bl exp10f
+; SDAG-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; SDAG-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; SDAG-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; SDAG-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; SDAG-NEXT:    bl exp10f
 ; SDAG-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; SDAG-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; SDAG-NEXT:    mov v0.s[1], v1.s[0]
 ; SDAG-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; SDAG-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
 ; SDAG-NEXT:    mov s0, v0.s[2]
 ; SDAG-NEXT:    bl exp10f
 ; SDAG-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; SDAG-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; SDAG-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
 ; SDAG-NEXT:    mov v1.s[2], v0.s[0]
 ; SDAG-NEXT:    mov v0.16b, v1.16b
@@ -381,14 +420,18 @@ define <3 x float> @exp10_v3f32(<3 x float> %x) {
 ; GISEL-NEXT:    .cfi_offset b9, -32
 ; GISEL-NEXT:    mov s8, v0.s[1]
 ; GISEL-NEXT:    mov s9, v0.s[2]
+; GISEL-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; GISEL-NEXT:    bl exp10f
+; GISEL-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; GISEL-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; GISEL-NEXT:    fmov s0, s8
 ; GISEL-NEXT:    bl exp10f
+; GISEL-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; GISEL-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; GISEL-NEXT:    fmov s0, s9
 ; GISEL-NEXT:    bl exp10f
 ; GISEL-NEXT:    ldp q2, q1, [sp] // 32-byte Folded Reload
+; GISEL-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; GISEL-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
 ; GISEL-NEXT:    ldp d9, d8, [sp, #32] // 16-byte Folded Reload
 ; GISEL-NEXT:    mov v1.s[1], v2.s[0]
@@ -410,22 +453,27 @@ define <4 x float> @exp10_v4f32(<4 x float> %x) {
 ; SDAG-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; SDAG-NEXT:    mov s0, v0.s[1]
 ; SDAG-NEXT:    bl exp10f
+; SDAG-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; SDAG-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; SDAG-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; SDAG-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; SDAG-NEXT:    bl exp10f
 ; SDAG-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; SDAG-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; SDAG-NEXT:    mov v0.s[1], v1.s[0]
 ; SDAG-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; SDAG-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
 ; SDAG-NEXT:    mov s0, v0.s[2]
 ; SDAG-NEXT:    bl exp10f
 ; SDAG-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; SDAG-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; SDAG-NEXT:    mov v1.s[2], v0.s[0]
 ; SDAG-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
 ; SDAG-NEXT:    mov s0, v0.s[3]
 ; SDAG-NEXT:    str q1, [sp] // 16-byte Folded Spill
 ; SDAG-NEXT:    bl exp10f
 ; SDAG-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; SDAG-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; SDAG-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
 ; SDAG-NEXT:    mov v1.s[3], v0.s[0]
 ; SDAG-NEXT:    mov v0.16b, v1.16b
@@ -446,17 +494,22 @@ define <4 x float> @exp10_v4f32(<4 x float> %x) {
 ; GISEL-NEXT:    mov s8, v0.s[1]
 ; GISEL-NEXT:    mov s9, v0.s[2]
 ; GISEL-NEXT:    mov s10, v0.s[3]
+; GISEL-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; GISEL-NEXT:    bl exp10f
+; GISEL-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; GISEL-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
 ; GISEL-NEXT:    fmov s0, s8
 ; GISEL-NEXT:    bl exp10f
+; GISEL-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; GISEL-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; GISEL-NEXT:    fmov s0, s9
 ; GISEL-NEXT:    bl exp10f
+; GISEL-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; GISEL-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; GISEL-NEXT:    fmov s0, s10
 ; GISEL-NEXT:    bl exp10f
 ; GISEL-NEXT:    ldp q2, q1, [sp, #16] // 32-byte Folded Reload
+; GISEL-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; GISEL-NEXT:    ldr x30, [sp, #72] // 8-byte Folded Reload
 ; GISEL-NEXT:    ldp d9, d8, [sp, #56] // 16-byte Folded Reload
 ; GISEL-NEXT:    ldr d10, [sp, #48] // 8-byte Folded Reload
@@ -502,10 +555,13 @@ define <2 x double> @exp10_v2f64(<2 x double> %x) {
 ; SDAG-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; SDAG-NEXT:    mov d0, v0.d[1]
 ; SDAG-NEXT:    bl exp10
+; SDAG-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; SDAG-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; SDAG-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; SDAG-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; SDAG-NEXT:    bl exp10
 ; SDAG-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
+; SDAG-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; SDAG-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
 ; SDAG-NEXT:    mov v0.d[1], v1.d[0]
 ; SDAG-NEXT:    add sp, sp, #48
@@ -520,11 +576,14 @@ define <2 x double> @exp10_v2f64(<2 x double> %x) {
 ; GISEL-NEXT:    .cfi_offset w30, -8
 ; GISEL-NEXT:    .cfi_offset b8, -16
 ; GISEL-NEXT:    mov d8, v0.d[1]
+; GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; GISEL-NEXT:    bl exp10
+; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; GISEL-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; GISEL-NEXT:    fmov d0, d8
 ; GISEL-NEXT:    bl exp10
 ; GISEL-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; GISEL-NEXT:    ldr x30, [sp, #24] // 8-byte Folded Reload
 ; GISEL-NEXT:    ldr d8, [sp, #16] // 8-byte Folded Reload
 ; GISEL-NEXT:    mov v1.d[1], v0.d[0]
@@ -604,17 +663,22 @@ define <4 x double> @exp10_v4f64(<4 x double> %x) {
 ; SDAG-NEXT:    mov d0, v0.d[1]
 ; SDAG-NEXT:    str q1, [sp, #32] // 16-byte Folded Spill
 ; SDAG-NEXT:    bl exp10
+; SDAG-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; SDAG-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; SDAG-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; SDAG-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; SDAG-NEXT:    bl exp10
 ; SDAG-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
+; SDAG-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; SDAG-NEXT:    mov v0.d[1], v1.d[0]
 ; SDAG-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; SDAG-NEXT:    ldr q0, [sp, #32] // 16-byte Folded Reload
 ; SDAG-NEXT:    mov d0, v0.d[1]
 ; SDAG-NEXT:    bl exp10
+; SDAG-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; SDAG-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; SDAG-NEXT:    ldr q0, [sp, #32] // 16-byte Folded Reload
+; SDAG-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; SDAG-NEXT:    bl exp10
 ; SDAG-NEXT:    fmov d1, d0
 ; SDAG-NEXT:    ldp q2, q0, [sp] // 32-byte Folded Reload
@@ -635,23 +699,28 @@ define <4 x double> @exp10_v4f64(<4 x double> %x) {
 ; GISEL-NEXT:    str q1, [sp] // 16-byte Folded Spill
 ; GISEL-NEXT:    mov d8, v0.d[1]
 ; GISEL-NEXT:    mov d9, v1.d[1]
+; GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; GISEL-NEXT:    bl exp10
+; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; GISEL-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
 ; GISEL-NEXT:    fmov d0, d8
 ; GISEL-NEXT:    bl exp10
+; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; GISEL-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; GISEL-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; GISEL-NEXT:    bl exp10
+; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; GISEL-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; GISEL-NEXT:    fmov d0, d9
 ; GISEL-NEXT:    bl exp10
-; GISEL-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
-; GISEL-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; GISEL-NEXT:    ldp q1, q2, [sp, #16] // 32-byte Folded Reload
+; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; GISEL-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
-; GISEL-NEXT:    fmov d2, d1
-; GISEL-NEXT:    ldp q1, q3, [sp] // 32-byte Folded Reload
+; GISEL-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; GISEL-NEXT:    mov v2.d[1], v1.d[0]
+; GISEL-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
 ; GISEL-NEXT:    mov v1.d[1], v0.d[0]
-; GISEL-NEXT:    mov v2.d[1], v3.d[0]
 ; GISEL-NEXT:    mov v0.16b, v2.16b
 ; GISEL-NEXT:    add sp, sp, #80
 ; GISEL-NEXT:    ret

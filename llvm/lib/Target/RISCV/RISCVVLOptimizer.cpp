@@ -159,6 +159,12 @@ getEMULEqualsEEWDivSEWTimesLMUL(unsigned Log2EEW, const MachineInstr &MI) {
   auto [MILMUL, MILMULIsFractional] = RISCVVType::decodeVLMUL(MIVLMUL);
   unsigned MILog2SEW =
       MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
+
+  // Mask instructions will have 0 as the SEW operand. But the LMUL of these
+  // instructions is calculated is as if the SEW operand was 3 (e8).
+  if (MILog2SEW == 0)
+    MILog2SEW = 3;
+
   unsigned MISEW = 1 << MILog2SEW;
 
   unsigned EEW = 1 << Log2EEW;
@@ -492,6 +498,29 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
     return OperandInfo(EMUL, Log2EEW);
   }
 
+  // Vector Mask Instructions
+  // Vector Mask-Register Logical Instructions
+  // vmsbf.m set-before-first mask bit
+  // vmsif.m set-including-first mask bit
+  // vmsof.m set-only-first mask bit
+  // EEW=1 and EMUL=(EEW/SEW)*LMUL
+  // We handle the cases when operand is a v0 mask operand above the switch,
+  // but these instructions may use non-v0 mask operands and need to be handled
+  // specifically.
+  case RISCV::VMAND_MM:
+  case RISCV::VMNAND_MM:
+  case RISCV::VMANDN_MM:
+  case RISCV::VMXOR_MM:
+  case RISCV::VMOR_MM:
+  case RISCV::VMNOR_MM:
+  case RISCV::VMORN_MM:
+  case RISCV::VMXNOR_MM:
+  case RISCV::VMSBF_M:
+  case RISCV::VMSIF_M:
+  case RISCV::VMSOF_M: {
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0);
+  }
+
   default:
     return {};
   }
@@ -632,6 +661,23 @@ static bool isSupportedInstr(const MachineInstr &MI) {
 
   // Vector Crypto
   case RISCV::VWSLL_VI:
+
+  // Vector Mask Instructions
+  // Vector Mask-Register Logical Instructions
+  // vmsbf.m set-before-first mask bit
+  // vmsif.m set-including-first mask bit
+  // vmsof.m set-only-first mask bit
+  case RISCV::VMAND_MM:
+  case RISCV::VMNAND_MM:
+  case RISCV::VMANDN_MM:
+  case RISCV::VMXOR_MM:
+  case RISCV::VMOR_MM:
+  case RISCV::VMNOR_MM:
+  case RISCV::VMORN_MM:
+  case RISCV::VMXNOR_MM:
+  case RISCV::VMSBF_M:
+  case RISCV::VMSIF_M:
+  case RISCV::VMSOF_M:
     return true;
   }
 
