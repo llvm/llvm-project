@@ -554,14 +554,14 @@ normalizeStringPairVector(OptSpecifier Opt, int, const ArgList &Args,
 }
 
 static void denormalizeStringPairVector(
-    ArgumentConsumer Consumer, const Twine &Spelling,
+    ArgumentConsumer Consumer, unsigned SpellingOffset,
     Option::OptionClass OptClass, unsigned TableIndex,
     const std::vector<std::pair<std::string, std::string>> &Values) {
   std::vector<std::string> Joined;
   for (const auto &Pair : Values) {
     Joined.push_back(Pair.first + "=" + Pair.second);
   }
-  denormalizeStringVector(Consumer, Spelling, OptClass, TableIndex, Joined);
+  denormalizeStringVector(Consumer, SpellingOffset, OptClass, TableIndex, Joined);
 }
 
 static std::optional<std::string> normalizeTriple(OptSpecifier Opt,
