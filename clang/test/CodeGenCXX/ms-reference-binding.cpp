@@ -12,8 +12,14 @@ void fBPickConstRef(const A&) {}
 void fAPickRef(A&) {}
 void fAPickRef(const volatile A&) {}
 
-void fAPickRef2(A&) {}
-void fAPickRef2(const volatile A&) {}
+// NOTE: MSVC incorrectly picks the `const volatile A&` overload with the mangled name
+// "?fBPickConstVolatileRef@@YAXAEDUA@@@Z" when converting a derived class `B` to base `A`.
+// This occurs even with conforming reference binding enabled so this isn't a one off
+// behaviour with non-conforming MSVC specific reference binding but appears to be a bug.
+// A bug report has been submitted to MSVC. This bug has been verified upto MSVC 19.40.
+// We are not emulating this behaviour and instead will pick the `A&` overload as intended.
+void fBPickConstVolatileRef(A&) {}
+void fBPickConstVolatileRef(const volatile A&) {}
 
 namespace NS {
   void fAPickConstRef(A&) {}
@@ -25,8 +31,9 @@ namespace NS {
   void fAPickRef(A&) {}
   void fAPickRef(const volatile A&) {}
 
-  void fAPickRef2(A&) {}
-  void fAPickRef2(const volatile A&) {}
+  // See the above note above the global `fBPickConstVolatileRef`
+  void fBPickConstVolatileRef(A&) {}
+  void fBPickConstVolatileRef(const volatile A&) {}
 }
 
 struct S {
@@ -50,8 +57,8 @@ void test() {
   fAPickRef(A());
   // CHECK: call {{.*}} @"?fAPickRef@@YAXAEAUA@@@Z"
 
-  fAPickRef2(A());
-  // CHECK: call {{.*}} @"?fAPickRef2@@YAXAEAUA@@@Z"
+  fBPickConstVolatileRef(B());
+  // CHECK: call {{.*}} @"?fBPickConstVolatileRef@@YAXAEAUA@@@Z"
 
   NS::fAPickConstRef(A());
   // CHECK: call {{.*}} @"?fAPickConstRef@NS@@YAXAEBUA@@@Z"
@@ -62,8 +69,8 @@ void test() {
   NS::fAPickRef(A());
   // CHECK: call {{.*}} @"?fAPickRef@NS@@YAXAEAUA@@@Z"
 
-  NS::fAPickRef2(A());
-  // CHECK: call {{.*}} @"?fAPickRef2@NS@@YAXAEAUA@@@Z"
+  NS::fBPickConstVolatileRef(B());
+  // CHECK: call {{.*}} @"?fBPickConstVolatileRef@NS@@YAXAEAUA@@@Z"
 
   S::fAPickConstRef(A());
   // CHECK: call {{.*}} @"?fAPickConstRef@S@@SAXAEBUA@@@Z"
