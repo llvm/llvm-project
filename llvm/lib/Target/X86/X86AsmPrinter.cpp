@@ -46,6 +46,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 
+#include <map>
 #include <cstdint>
 #include <set>
 
@@ -62,6 +63,7 @@ X86AsmPrinter::X86AsmPrinter(TargetMachine &TM,
 
 const TargetInstrInfo *TII;
 const TargetRegisterInfo *TRI;
+const MCRegisterInfo *MRI;
 
 /// Clear any mappings that map to the given register.
 void clearRhs(Register Reg, std::map<Register, std::set<int64_t>> &SpillMap) {
@@ -82,6 +84,12 @@ void clearOffset(unsigned int Reg, int Offset, std::map<Register, std::set<int64
   }
 }
 
+/// Remove all mentions of the DWARF register `DwReg` from `SpillMap`.
+void killRegister(const Register DwReg, std::map<Register, std::set<int64_t>> &SpillMap) {
+    SpillMap.erase(DwReg);
+    clearRhs(DwReg, SpillMap);
+}
+
 /// Given a MachineBasicBlock, analyse its instructions to build a mapping of
 /// where duplicate values live. This can be either in another register or on
 /// the stack. Since registers are always positive and stack offsets negative,
@@ -98,6 +106,12 @@ void processInstructions(
     // encoded in the stackmap when it is lowered.
     if (Instr.getOpcode() == TargetOpcode::STACKMAP) {
       StackmapSpillMaps[&Instr] = SpillMap;
+      for (const MachineOperand MO : Instr.uses()) {
+        if (MO.isReg() && MO.isKill()) {
+          auto DwReg = getDwarfRegNum(MO.getReg(), TRI);
+          killRegister(DwReg, SpillMap);
+        }
+      }
       continue;
     }
 
@@ -105,6 +119,12 @@ void processInstructions(
     // moment we desire, there's no need to compute a spillmap for them nor do
     // we have to "patch them up". We can just skip them.
     if (Instr.getOpcode() == TargetOpcode::PATCHPOINT) {
+      for (const MachineOperand MO : Instr.uses()) {
+        if (MO.isReg() && MO.isKill()) {
+          auto DwReg = getDwarfRegNum(MO.getReg(), TRI);
+          killRegister(DwReg, SpillMap);
+        }
+      }
       continue;
     }
 
@@ -133,6 +153,9 @@ void processInstructions(
       SpillMap[LhsDwReg].insert(Other.begin(), Other.end());
       // Also add Lhs to the mapping of Rhs.
       SpillMap[RhsDwReg].insert(LhsDwReg);
+      if (Rhs.isKill()) {
+        killRegister(RhsDwReg, SpillMap);
+      }
       continue;
     }
 
@@ -175,18 +198,18 @@ void processInstructions(
     for (const MachineOperand MO : Instr.defs()) {
       assert(MO.isReg() && "Is register.");
       auto DwReg = getDwarfRegNum(MO.getReg(), TRI);
-      SpillMap.erase(DwReg);
-      clearRhs(DwReg, SpillMap);
+      killRegister(DwReg, SpillMap);
     }
 
     // Delete registers that are "killed" (no longer live) after this
     // intsruction. This prevents us deopting values at runtime that will never
     // be used.
     for (const MachineOperand MO : Instr.uses()) {
-      if (MO.isReg() && MO.isKill()) {
-        auto DwReg = getDwarfRegNum(MO.getReg(), TRI);
-        SpillMap.erase(DwReg);
-        clearRhs(DwReg, SpillMap);
+      if (MO.isReg() && (MO.isKill() || MO.isDef())) {
+        int DwReg = MRI->getDwarfRegNum(MO.getReg(), false);
+        if (DwReg >= 0) {
+          killRegister(DwReg, SpillMap);
+        }
       }
     }
   }
@@ -218,6 +241,7 @@ void findSpillLocations(
 ///
 bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   TRI = MF.getSubtarget().getRegisterInfo();
+  MRI = TM.getMCRegisterInfo();
   Subtarget = &MF.getSubtarget<X86Subtarget>();
 
   SMShadowTracker.startFunction(MF);
