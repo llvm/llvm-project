@@ -412,13 +412,9 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
       if (StoreInst *SI = dyn_cast<StoreInst>(User)) {
         updateDebugInfo(SI);
         SSA.AddAvailableValue(BB, SI->getOperand(0));
-      } else if (auto *AI = dyn_cast<AllocaInst>(User)) {
-        // We treat AllocaInst as a store of an getValueToUseForAlloca value.
-        SSA.AddAvailableValue(BB, getValueToUseForAlloca(AI));
-      } else {
+      } else
         // Otherwise it is a load, queue it to rewrite as a live-in load.
         LiveInLoads.push_back(cast<LoadInst>(User));
-      }
       BlockUses.clear();
       continue;
     }
@@ -426,7 +422,7 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
     // Otherwise, check to see if this block is all loads.
     bool HasStore = false;
     for (Instruction *I : BlockUses) {
-      if (isa<StoreInst>(I) || isa<AllocaInst>(I)) {
+      if (isa<StoreInst>(I)) {
         HasStore = true;
         break;
       }
@@ -472,12 +468,6 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
 
         // Remember that this is the active value in the block.
         StoredValue = SI->getOperand(0);
-      } else if (auto *AI = dyn_cast<AllocaInst>(&I)) {
-        // Check if this an alloca, in which case we treat it as a store of
-        // getValueToUseForAlloca.
-        if (!isInstInList(AI, Insts))
-          continue;
-        StoredValue = getValueToUseForAlloca(AI);
       }
     }
 
