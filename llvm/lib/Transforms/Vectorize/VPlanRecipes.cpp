@@ -2779,11 +2779,10 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
   // Scalable vectors cannot use arbitrary shufflevectors (only splats), so
   // must use intrinsics to interleave.
   if (VecTy->isScalableTy()) {
-    unsigned InterleaveFactor = Vals.size();
     SmallVector<Value *> InterleavingValues(Vals);
     // When interleaving, the number of values will be shrunk until we have the
     // single final interleaved value.
-    VectorType *InterleaveTy =
+    auto *InterleaveTy =
         cast<VectorType>(InterleavingValues[0]->getType());
     for (unsigned Midpoint = Factor / 2; Midpoint > 0; Midpoint /= 2) {
       InterleaveTy = VectorType::getDoubleElementsVectorType(InterleaveTy);
@@ -2937,18 +2936,18 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
       // iteration.
       // When deinterleaving, the number of values will double until we
       // have "InterleaveFactor".
-      for (int NumVectors = 1; NumVectors < InterleaveFactor; NumVectors *= 2) {
-        // deinterleave the elements within the vector
-        std::vector<Value *> TempDeinterleavedValues(NumVectors);
-        for (int I = 0; I < NumVectors; ++I) {
+      for (unsigned NumVectors = 1; NumVectors < InterleaveFactor; NumVectors *= 2) {
+        // Deinterleave the elements within the vector
+        SmallVector<Value *> TempDeinterleavedValues(NumVectors);
+        for (unsigned I = 0; I < NumVectors; ++I) {
           auto *DiTy = DeinterleavedValues[I]->getType();
           TempDeinterleavedValues[I] = State.Builder.CreateIntrinsic(
               Intrinsic::vector_deinterleave2, DiTy, DeinterleavedValues[I],
               /*FMFSource=*/nullptr, "strided.vec");
         }
         // Extract the deinterleaved values:
-        for (int I = 0; I < 2; ++I)
-          for (int J = 0; J < NumVectors; ++J)
+        for (unsigned I = 0; I < 2; ++I)
+          for (unsigned J = 0; J < NumVectors; ++J)
             DeinterleavedValues[NumVectors * I + J] =
                 State.Builder.CreateExtractValue(TempDeinterleavedValues[J], I);
       }
