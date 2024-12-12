@@ -10,8 +10,9 @@
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from typing import Dict
-import sys
 import json
+import os
+import sys
 
 from header import Header
 
@@ -161,7 +162,10 @@ def print_macros_rst(header: Header, macros: Dict):
 
 
 def print_impl_status_rst(header: Header, api: Dict):
-    print(".. include:: ../check.rst\n")
+    if os.sep in header.name:
+        print(".. include:: ../../check.rst\n")
+    else:
+        print(".. include:: ../check.rst\n")
 
     print("=" * len(header.name))
     print(header.name)
@@ -176,10 +180,22 @@ def print_impl_status_rst(header: Header, api: Dict):
         print_functions_rst(header, api["functions"])
 
 
+# This code implicitly relies on docgen.py being in the same dir as the json
+# files and is likely to need to be fixed when re-integrating docgen into
+# hdrgen.
+def get_choices() -> List:
+    choices = []
+    for path in Path(__file__).parent.rglob("*.json"):
+        fname = path.with_suffix(".h").name
+        if path.parent != Path(__file__).parent:
+            fname = path.parent.name + os.sep + fname
+        choices.append(fname)
+    return choices
+
+
 def parse_args() -> Namespace:
     parser = ArgumentParser()
-    choices = [p.with_suffix(".h").name for p in Path(__file__).parent.glob("*.json")]
-    parser.add_argument("header_name", choices=choices)
+    parser.add_argument("header_name", choices=get_choices())
     return parser.parse_args()
 
 
