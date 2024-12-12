@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONFIGURATION_LANGUAGE_H
-#define _LIBCPP___CONFIGURATION_LANGUAGE_H
+#ifndef _LIBCPP___CXX03___CONFIGURATION_LANGUAGE_H
+#define _LIBCPP___CXX03___CONFIGURATION_LANGUAGE_H
 
 #include <__config_site>
 
@@ -43,4 +43,4 @@
 #  define _LIBCPP_HAS_NO_EXCEPTIONS
 #endif
 
-#endif // _LIBCPP___CONFIGURATION_LANGUAGE_H
+#endif // _LIBCPP___CXX03___CONFIGURATION_LANGUAGE_H

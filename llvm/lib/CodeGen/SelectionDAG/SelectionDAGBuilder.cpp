@@ -11202,7 +11202,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
         if (auto MA = Args[i].Alignment)
           MemAlign = *MA;
         else
-          MemAlign = Align(getByValTypeAlignment(Args[i].IndirectType, DL));
+          MemAlign = getByValTypeAlignment(Args[i].IndirectType, DL);
       } else if (auto MA = Args[i].Alignment) {
         MemAlign = *MA;
       } else {
@@ -11759,7 +11759,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         else if ((ParamAlign = Arg.getParamAlign()))
           MemAlign = *ParamAlign;
         else
-          MemAlign = Align(TLI->getByValTypeAlignment(ArgMemTy, DL));
+          MemAlign = TLI->getByValTypeAlignment(ArgMemTy, DL);
         if (Flags.isByRef())
           Flags.setByRefSize(MemSize);
         else

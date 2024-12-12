@@ -10172,7 +10172,9 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
       return false;
     IsNothrow = true;
   } else if (OperatorNew->isReservedGlobalPlacementOperator()) {
-    if (Info.CurrentCall->isStdFunction() || Info.getLangOpts().CPlusPlus26) {
+    if (Info.CurrentCall->isStdFunction() || Info.getLangOpts().CPlusPlus26 ||
+        (Info.CurrentCall->CanEvalMSConstexpr &&
+         OperatorNew->hasAttr<MSConstexprAttr>())) {
       if (!EvaluatePointer(E->getPlacementArg(0), Result, Info))
         return false;
       if (Result.Designator.Invalid)

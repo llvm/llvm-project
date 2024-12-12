@@ -1045,10 +1045,8 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
         ->setCannotMerge(); // gets the PC using GET_CALLER_PC.
   }
   if (Options.TracePCGuard) {
-    auto GuardPtr = IRB.CreateIntToPtr(
-        IRB.CreateAdd(IRB.CreatePointerCast(FunctionGuardArray, IntptrTy),
-                      ConstantInt::get(IntptrTy, Idx * 4)),
-        PtrTy);
+    auto GuardPtr = IRB.CreateConstInBoundsGEP2_64(
+        FunctionGuardArray->getValueType(), FunctionGuardArray, 0, Idx);
     if (Options.GatedCallbacks) {
       Instruction *I = &*IP;
       auto GateBranch = CreateGateBranch(F, FunctionGateCmp, I);
