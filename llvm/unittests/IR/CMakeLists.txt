@@ -15,7 +15,6 @@ add_llvm_unittest(IRTests
   AttributesTest.cpp
   BasicBlockTest.cpp
   BasicBlockDbgInfoTest.cpp
-  CallWideningUtilsTest.cpp
   CFGBuilder.cpp
   ConstantFPRangeTest.cpp
   ConstantRangeTest.cpp
@@ -53,6 +52,7 @@ add_llvm_unittest(IRTests
   ValueTest.cpp
   VectorBuilderTest.cpp
   VectorTypesTest.cpp
+  VectorUtilsTest.cpp
   VerifierTest.cpp
   VFABIDemanglerTest.cpp
   VPIntrinsicTest.cpp

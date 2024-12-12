@@ -1,4 +1,4 @@
-//===------- CallWideningUtilsTest.cpp - Call widening utils tests --------===//
+//===------- VectorUtilsTest.cpp - Vector utils tests ---------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/CallWideningUtils.h"
+#include "llvm/IR/VectorUtils.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
 #include "gtest/gtest.h"
@@ -15,9 +15,9 @@ using namespace llvm;
 
 namespace {
 
-class CallWideningUtilsTest : public ::testing::Test {};
+class VectorUtilsTest : public ::testing::Test {};
 
-TEST(CallWideningUtilsTest, TestToWideTy) {
+TEST(VectorUtilsTest, TestToWideTy) {
   LLVMContext C;
 
   Type *ITy = Type::getInt32Ty(C);
@@ -62,7 +62,7 @@ TEST(CallWideningUtilsTest, TestToWideTy) {
   }
 }
 
-TEST(CallWideningUtilsTest, TestToNarrowTy) {
+TEST(VectorUtilsTest, TestToNarrowTy) {
   LLVMContext C;
 
   Type *ITy = Type::getInt32Ty(C);
@@ -80,7 +80,7 @@ TEST(CallWideningUtilsTest, TestToNarrowTy) {
   }
 }
 
-TEST(CallWideningUtilsTest, TestGetContainedTypes) {
+TEST(VectorUtilsTest, TestGetContainedTypes) {
   LLVMContext C;
 
   Type *ITy = Type::getInt32Ty(C);
@@ -89,15 +89,15 @@ TEST(CallWideningUtilsTest, TestGetContainedTypes) {
   Type *MixedStructTy = StructType::get(FTy, ITy);
   Type *VoidTy = Type::getVoidTy(C);
 
-  EXPECT_EQ(getContainedTypes(ITy), SmallVector<Type *>({ITy}));
-  EXPECT_EQ(getContainedTypes(FTy), SmallVector<Type *>({FTy}));
-  EXPECT_EQ(getContainedTypes(VoidTy), SmallVector<Type *>({VoidTy}));
+  EXPECT_EQ(getContainedTypes(ITy), ArrayRef<Type *>({ITy}));
+  EXPECT_EQ(getContainedTypes(FTy), ArrayRef<Type *>({FTy}));
+  EXPECT_EQ(getContainedTypes(VoidTy), ArrayRef<Type *>({VoidTy}));
   EXPECT_EQ(getContainedTypes(HomogeneousStructTy),
-            SmallVector<Type *>({FTy, FTy, FTy}));
-  EXPECT_EQ(getContainedTypes(MixedStructTy), SmallVector<Type *>({FTy, ITy}));
+            ArrayRef<Type *>({FTy, FTy, FTy}));
+  EXPECT_EQ(getContainedTypes(MixedStructTy), ArrayRef<Type *>({FTy, ITy}));
 }
 
-TEST(CallWideningUtilsTest, TestIsWideTy) {
+TEST(VectorUtilsTest, TestIsWideTy) {
   LLVMContext C;
 
   Type *ITy = Type::getInt32Ty(C);
@@ -130,7 +130,7 @@ TEST(CallWideningUtilsTest, TestIsWideTy) {
   EXPECT_FALSE(isWideTy(PackedWideStruct));
 }
 
-TEST(CallWideningUtilsTest, TestGetWideTypeVF) {
+TEST(VectorUtilsTest, TestGetWideTypeVF) {
   LLVMContext C;
 
   Type *ITy = Type::getInt32Ty(C);

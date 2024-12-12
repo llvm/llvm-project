@@ -6,7 +6,6 @@ add_llvm_component_library(LLVMCore
   AutoUpgrade.cpp
   BasicBlock.cpp
   BuiltinGCs.cpp
-  CallWideningUtils.cpp
   Comdat.cpp
   ConstantFold.cpp
   ConstantFPRange.cpp
@@ -65,6 +64,7 @@ add_llvm_component_library(LLVMCore
   PseudoProbe.cpp
   ReplaceConstant.cpp
   Statepoint.cpp
+  StructWideningUtils.cpp
   StructuralHash.cpp
   Type.cpp
   TypedPointerType.cpp
