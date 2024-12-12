@@ -4019,7 +4019,7 @@ struct OmpMapClause {
 // message-clause ->
 //    MESSAGE("message-text")
 struct OmpMessageClause {
-  WRAPPER_CLASS_BOILERPLATE(OmpMessageClause, std::string);
+  WRAPPER_CLASS_BOILERPLATE(OmpMessageClause, Expr);
 };
 
 // Ref: [4.5:87-91], [5.0:140-146], [5.1:166-171], [5.2:270]

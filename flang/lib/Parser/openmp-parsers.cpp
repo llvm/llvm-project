@@ -515,7 +515,7 @@ TYPE_PARSER(construct<OmpSeverityClause>(
     "FATAL" >> pure(OmpSeverityClause::Severity::Fatal) ||
     "WARNING" >> pure(OmpSeverityClause::Severity::Warning)))
 
-TYPE_PARSER(construct<OmpMessageClause>(charLiteralConstantWithoutKind))
+TYPE_PARSER(construct<OmpMessageClause>(expr))
 
 TYPE_PARSER(
     "ACQUIRE" >> construct<OmpClause>(construct<OmpClause::Acquire>()) ||

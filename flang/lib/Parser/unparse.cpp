@@ -2652,9 +2652,7 @@ public:
     EndOpenMP();
   }
   bool Pre(const OmpMessageClause &x) {
-    Word("\"");
     Walk(x.v);
-    Put("\"");
     return false;
   }
   void Unparse(const OpenMPErrorConstruct &x) {
