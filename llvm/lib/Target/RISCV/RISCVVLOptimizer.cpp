@@ -273,24 +273,32 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
   // Vector Indexed Instructions
   // vs(o|u)xei<eew>.v
   // Dest EEW=SEW, EMUL=LMUL. Source EEW=<eew> and EMUL=(EEW/SEW)*LMUL
+  case RISCV::VLUXEI8_V:
+  case RISCV::VLOXEI8_V:
   case RISCV::VSUXEI8_V:
   case RISCV::VSOXEI8_V: {
     if (IsMODef)
       return OperandInfo(MIVLMul, MILog2SEW);
     return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(3, MI), 3);
   }
+  case RISCV::VLUXEI16_V:
+  case RISCV::VLOXEI16_V:
   case RISCV::VSUXEI16_V:
   case RISCV::VSOXEI16_V: {
     if (IsMODef)
       return OperandInfo(MIVLMul, MILog2SEW);
     return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(4, MI), 4);
   }
+  case RISCV::VLUXEI32_V:
+  case RISCV::VLOXEI32_V:
   case RISCV::VSUXEI32_V:
   case RISCV::VSOXEI32_V: {
     if (IsMODef)
       return OperandInfo(MIVLMul, MILog2SEW);
     return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(5, MI), 5);
   }
+  case RISCV::VLUXEI64_V:
+  case RISCV::VLOXEI64_V:
   case RISCV::VSUXEI64_V:
   case RISCV::VSOXEI64_V: {
     if (IsMODef)
