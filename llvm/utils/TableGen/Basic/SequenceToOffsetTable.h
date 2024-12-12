@@ -180,6 +180,13 @@ public:
       }
       OS << '\n';
     }
+
+    // Print a dummy element if the array would be empty otherwise.
+    if (!Entries) {
+      OS << "  /* dummy */ ";
+      Print(OS, ElemT());
+      OS << '\n';
+    }
   }
 };
 
