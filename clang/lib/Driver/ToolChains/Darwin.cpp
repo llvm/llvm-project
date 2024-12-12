@@ -2261,7 +2261,7 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
     // Warn if the path does not exist.
     if (!getVFS().exists(A->getValue()))
       getDriver().Diag(clang::diag::warn_missing_sysroot) << A->getValue();
-  } else if (const char *env = ::getenv("SDKROOT"); env && *env) {
+  } else if (const char *env = ::getenv("SDKROOT")) {
     // We only use this value as the default if it is an absolute path,
     // exists, and it is not the root path.
     if (llvm::sys::path::is_absolute(env) && getVFS().exists(env) &&
@@ -2271,13 +2271,16 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
     }
   }
 #ifdef CLANG_USE_XCSELECT
-  else if (const char *env = ::getenv("CLANG_NO_XCSELECT");
-           getTriple().isMacOSX() && (!env || !*env)) {
-    if (char *p;
-        !::xcselect_host_sdk_path(CLANG_XCSELECT_HOST_SDK_POLICY, &p)) {
-      Args.append(Args.MakeSeparateArg(
-          nullptr, Opts.getOption(options::OPT_isysroot), p));
-      ::free(p);
+  else if (getTriple().isMacOSX()) {
+    const char *env = ::getenv("CLANG_NO_XCSELECT");
+
+    if (!env || !*env) {
+      char *p;
+      if (!::xcselect_host_sdk_path(CLANG_XCSELECT_HOST_SDK_POLICY, &p)) {
+        Args.append(Args.MakeSeparateArg(
+            nullptr, Opts.getOption(options::OPT_isysroot), p));
+        ::free(p);
+      }
     }
   }
 #endif
