@@ -46,7 +46,6 @@ BoundsSafetyTrapFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
 
   // The runtime error is set as the function name in the inlined function info
   // of frame #0 by the compiler
-  // (https://stashweb.sd.apple.com/projects/DEVTOOLS/repos/llvm-project/pull-requests/3196/diff#clang/lib/CodeGen/CGDebugInfo.cpp)
   const InlineFunctionInfo *inline_info = nullptr;
   Block *inline_block = sc.block->GetContainingInlinedBlock();
 

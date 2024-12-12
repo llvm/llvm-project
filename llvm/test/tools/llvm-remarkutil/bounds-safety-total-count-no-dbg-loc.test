@@ -2,7 +2,6 @@ RUN: llvm-remarkutil bounds-safety-count --parser=yaml %p/Inputs/bounds-safety-t
 RUN: llvm-remarkutil yaml2bitstream %p/Inputs/bounds-safety-total-count-no-dbg-loc.yaml | llvm-remarkutil bounds-safety-count --parser=bitstream | FileCheck %s
 RUN: llvm-remarkutil bounds-safety-count --collect-per-source --parser=yaml %p/Inputs/bounds-safety-total-count-no-dbg-loc.yaml | FileCheck  --check-prefix=CHECKPERSRC %s
 RUN: llvm-remarkutil yaml2bitstream %p/Inputs/bounds-safety-total-count-no-dbg-loc.yaml | llvm-remarkutil bounds-safety-count --collect-per-source --parser=bitstream | FileCheck --check-prefix=CHECKPERSRC %s
-REQUIRES: apple-disclosure-ios
 
 ; CHECK-LABEL: Count
 ; CHECK: 6

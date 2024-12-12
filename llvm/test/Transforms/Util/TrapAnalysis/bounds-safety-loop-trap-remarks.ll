@@ -1,8 +1,6 @@
 ; RUN: opt -passes='loop-trap-analysis' --use-bounds-safety-traps-only -pass-remarks-missed='loop-trap-analysis' -disable-output -pass-remarks-output=%t.opt.yaml %s
 ; RUN: FileCheck --check-prefixes OPT-REM  --input-file=%t.opt.yaml %s
 
-; REQUIRES: apple-disclosure-ios
-
 ; OPT-REM: --- !Analysis
 ; OPT-REM-NEXT: Pass:            loop-trap-analysis
 ; OPT-REM-NEXT: Name:            LoopTrap

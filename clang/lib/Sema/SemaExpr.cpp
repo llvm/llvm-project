@@ -35,6 +35,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/PartialDiagnostic.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
@@ -8327,13 +8328,15 @@ static bool checkDynamicCountPointerAsParameter(Sema &S, FunctionDecl *FDecl,
     const auto &ParmInfo = FuncParmInfos[i];
     Expr *ActualArgExp = Call->getArg(i)->IgnoreImpCasts();
     SourceLocation ArgLoc = ActualArgExp->getExprLoc();
-    assert(!ActualArgExp->isValueDependent());
 
     if (!ArgInfo.isCountInParamOrCountPointer() && !ArgInfo.isCountInRet() &&
         !ParmInfo.isCountInParamOrCountPointer() && !ParmInfo.isCountInRet())
       continue;
-
-    if (ParmInfo.isCountAttributedType() && !ParmInfo.isOutCountPointer() &&
+    assert(!ActualArgExp->isValueDependent());
+    // Disable these checks for attribute-only mode because we don't want
+    // non-type-incompatibility errors in that mode.
+    if (!S.getLangOpts().isBoundsSafetyAttributeOnlyMode() &&
+        ParmInfo.isCountAttributedType() && !ParmInfo.isOutCountPointer() &&
         !S.CheckDynamicCountSizeForAssignment(
             ParmInfo.getType(), ActualArgExp, AssignmentAction::Passing,
             ActualArgExp->getBeginLoc(), ParmInfo.getDecl()->getName(),
@@ -8357,7 +8360,8 @@ static bool checkDynamicCountPointerAsParameter(Sema &S, FunctionDecl *FDecl,
     // TODO: This diagnostic check should always be performed
     // (rdar://138982703). The check is currently guarded to avoid potentially
     // breaking the build.
-    if (ArgInfo.isCountInRet() && S.getLangOpts().hasNewBoundsSafetyCheck(
+    if (!S.getLangOpts().isBoundsSafetyAttributeOnlyMode() &&
+        ArgInfo.isCountInRet() && S.getLangOpts().hasNewBoundsSafetyCheck(
                                       LangOptions::BS_CHK_ReturnSize)) {
       bool IsIndirect = ActualArgExp->getType()->isPointerType();
       bool IsOutCountInRetToOutCountInRet =
@@ -8458,23 +8462,27 @@ static bool checkDynamicCountPointerAsParameter(Sema &S, FunctionDecl *FDecl,
 
     if ((ParmInfo.isOutCountPointer() && !ParmInfo.isIncompleteArray()) ||
         ParmInfo.isOutCountInParam()) {
-      for (const auto &ArgDepInfo : ArgInfo.getDepArgInfos()) {
-        if (ArgDepInfo.Unlisted ||
-            (ArgInfo.isOutCountPointer() &&
-             !CallArgInfos[ArgDepInfo.Index].isOutCountInParam())) {
-          unsigned IsDependent = 0;
+      // For attribute only mode, we do not want to report
+      // 'err_bounds_safety_unsynchronized_indirect_param'.
+      if (!S.getLangOpts().isBoundsSafetyAttributeOnlyMode()) {
+        for (const auto &ArgDepInfo : ArgInfo.getDepArgInfos()) {
+          if (ArgDepInfo.Unlisted ||
+              (ArgInfo.isOutCountPointer() &&
+               !CallArgInfos[ArgDepInfo.Index].isOutCountInParam())) {
+            unsigned IsDependent = 0;
 
-          QualType DiagTy = ArgInfo.getType();
-          if (ArgInfo.isCountInParam()) {
-            IsDependent = 1;
-            DiagTy = ArgDepInfo.getDecl()->getType();
-          }
+            QualType DiagTy = ArgInfo.getType();
+            if (ArgInfo.isCountInParam()) {
+              IsDependent = 1;
+              DiagTy = ArgDepInfo.getDecl()->getType();
+            }
 
-          S.Diag(Call->getExprLoc(),
-                 diag::err_bounds_safety_unsynchronized_indirect_param)
+	    S.Diag(Call->getExprLoc(),
+		   diag::err_bounds_safety_unsynchronized_indirect_param)
               << ArgInfo.getDecl() << ArgInfo.isAddrOf() << ArgDepInfo.getDecl()
               << !ArgDepInfo.isDeref() << IsDependent << DiagTy;
-          return false;
+            return false;
+          }
         }
       }
 
@@ -8892,13 +8900,14 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
   }
 
   /* TO_UPSTREAM(BoundsSafety) ON*/
-  if (getLangOpts().BoundsSafety && FDecl) {
+  if (getLangOpts().BoundsSafetyAttributes && FDecl) {
     // FIXME: We need to support function pointers and blocks that don't have
     // function decl.
     if (!checkDynamicCountPointerAsParameter(*this, FDecl, TheCall))
       return ExprError();
-    if (!checkDynamicRangePointerAsParameter(*this, FDecl, TheCall))
-      return ExprError();
+    if (getLangOpts().BoundsSafety)
+      if (!checkDynamicRangePointerAsParameter(*this, FDecl, TheCall))
+        return ExprError();
   }
   /* TO_UPSTREAM(BoundsSafety) OFF*/
 

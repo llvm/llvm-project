@@ -13,6 +13,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/FormatString.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"

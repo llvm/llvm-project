@@ -1508,8 +1508,8 @@ def BoundsSafetyConvSingleToImplicitIndexable :
 def BoundsSafetyConvSingleToImplicitIndexableThenConvertToLargerType :
     DiagGroup<
         "bounds-safety-conversion-single-to-implicit-indexable-then-convert-to-larger-type">;
-// FIXME: This name is wrong but we have to keep it because that's what XNU's
-// build system currently expects (see rdar://119832922).
+// FIXME: This name is wrong but we have to keep it because some adopter's
+// build system currently expects (rdar://119832922).
 def BoundsSafetyConvSingleToImplicitIndexableThenConvertToDynamicCountPtr :
     DiagGroup<
         "bounds-safety-conversion-single-to-implicit-indexable-then-convert-at-call-site">;

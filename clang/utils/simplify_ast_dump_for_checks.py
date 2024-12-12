@@ -10,6 +10,8 @@ Usage: clang -Xclang -ast-dump foo.c | python simplify_ast_dump_for_checks.py
 
 import sys
 
+DEBUG = False
+
 def char_iter(stream):
 	contents = stream.read(4000)
 	while contents:
@@ -72,24 +74,26 @@ def parse_any_tok(iter, nextval):
 	else:
 		return parse_tok(iter, nextval)
 
+line_n = 0
 class AstNode(object):
-	def __init__(self, indent, kind, addr, *whatev):
+	def __init__(self, n, indent, kind, addr, *whatev):
 		self.depth = len(indent) / 2
 		self.indent = indent
 		self.kind = kind
 		self.addr = int(addr, 0)
 		self.remainder = whatev
+		self.line_n = n
 	
 	def __repr__(self):
 		fields = ", ".join(repr(x) for x in (self.depth, self.kind, self.addr) + self.remainder)
 		return "%s(%s)" % (type(self).__name__, fields)
 	
 	@classmethod
-	def new(cls, payload):
+	def new(cls, n, payload):
 		try:
 			payload = list(payload)
 			if payload[1] == "array_filler:":
-				return ArrayFillerNode(cls, *payload)
+				return ArrayFillerNode(cls, n, *payload)
 			if payload[1].endswith("VarDecl"):
 				# move "used" marker at the end for simplicity
 				try:
@@ -108,18 +112,19 @@ class AstNode(object):
 				else:
 					del payload[marker_idx]
 			if payload[1].endswith("VarDecl"):
-				return VarDeclNode(*payload)
+				return VarDeclNode(n, *payload)
 			if payload[1] == "FunctionDecl":
-				return FuncDeclNode(*payload)
+				return FuncDeclNode(n, *payload)
 			if payload[1] == "MemberExpr":
-				return MemberNode(*payload)
+				return MemberNode(n, *payload)
 		except TypeError:
 			pass
 		
-		return cls(*payload)
+		return cls(n, *payload)
 
 	@classmethod
 	def parse_line(cls, iter, nextval):
+		global line_n
 		nextval, indent = parse_indent(iter, nextval)
 		nextval, node_name = parse_any_tok(iter, nextval)
 		tokens = [indent, node_name]
@@ -130,10 +135,11 @@ class AstNode(object):
 				tokens[-1] += ':' + tok
 			else:
 				tokens.append(tok)
+		line_n += 1
 		
 		if len(tokens) == 2 and tokens[-1] == "<<<NULL>>>":
 			tokens.append('0')
-		return (next(iter, None), cls.new(tokens))
+		return (next(iter, None), cls.new(line_n, tokens))
 
 	@classmethod
 	def parse_nodes(cls, char_iter):
@@ -143,33 +149,33 @@ class AstNode(object):
 			yield node
 
 class VarDeclNode(AstNode):
-	def __init__(self, indent, kind, addr, begin, end, name, type, *whatev):
-		super(VarDeclNode, self).__init__(indent, kind, addr, *whatev)
+	def __init__(self, n, indent, kind, addr, begin, end, name, type, *whatev):
+		super(VarDeclNode, self).__init__(n, indent, kind, addr, *whatev)
 		self.begin = begin
 		self.end = end
 		self.name = name
 		self.type = type
 
 class MemberNode(AstNode):
-	def __init__(self, *fields):
-		super(MemberNode, self).__init__(*fields)
+	def __init__(self, n, *fields):
+		super(MemberNode, self).__init__(n, *fields)
 		for f in fields:
 			if f.startswith(".") or f.startswith("->"):
 				self.member = f
 
 class FuncDeclNode(AstNode):
-	def __init__(self, indent, kind, addr, begin, paren, *remainder):
+	def __init__(self, n, indent, kind, addr, begin, paren, *remainder):
 		type = remainder[-1]
 		name = remainder[-2]
-		super(FuncDeclNode, self).__init__(indent, kind, addr, *remainder[:-2])
+		super(FuncDeclNode, self).__init__(n, indent, kind, addr, *remainder[:-2])
 		self.type = type
 		self.name = name
 
 class ArrayFillerNode(object):
-	def __init__(self, cls, *args):
+	def __init__(self, cls, n, *args):
 		payload = list(args)
 		del payload[1]
-		self.inner = cls.new(payload)
+		self.inner = cls.new(n, payload)
 	
 	def __getattr__(self, attr):
 		return getattr(self.inner, attr)
@@ -195,6 +201,7 @@ def main():
 
 	stack = []
 	skip_to_depth = None
+	is_next_line = False
 	for node in AstNode.parse_nodes(char_iter(sys.stdin)):
 		while stack and stack[-1].depth >= node.depth:
 			del stack[-1]
@@ -207,16 +214,25 @@ def main():
 				if node.kind == "OpaqueValueExpr" and not node.addr in ptr_to_name:
 					may_not_skip_ove = True
 				else:
+					is_next_line = False
 					continue
 		if not may_not_skip_ove:
 			skip_to_depth = None
 		if 'implicit' in node.remainder:
 			skip_to_depth = node.depth
+			is_next_line = False
 			continue
 	
 		if node.kind == "<<<NULL>>>":
+			is_next_line = False
 			continue
 
+		line_n_s =  " " + str(line_n) if DEBUG else ""
+		if is_next_line:
+			sys.stdout.write("//" + line_n_s + " CHECK-NEXT: {{^}}")
+		else:
+			sys.stdout.write("//" + line_n_s + " CHECK:      {{^}}")
+			is_next_line = True
 		sys.stdout.write(node.indent)
 		if isinstance(node, ArrayFillerNode):
 			sys.stdout.write("array_filler: ")

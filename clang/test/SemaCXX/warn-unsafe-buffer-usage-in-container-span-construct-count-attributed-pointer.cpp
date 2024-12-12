@@ -1,4 +1,3 @@
-// REQUIRES: apple-disclosure-ios
 // RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage-in-container -fexperimental-bounds-safety-attributes -verify %s
 
 #include <ptrcheck.h>
@@ -101,4 +100,19 @@ struct sb_char {
 void span_from_sb_int(sb_int *i, sb_char *c) {
   std::span<int>{i->p, i->size}; // expected-warning{{the two-parameter std::span construction is unsafe}}
   std::span<char>{c->p, c->size};
+}
+
+void span_from_output_parm(int * __counted_by(n)  *cb_p, size_t n,
+                           int * __counted_by(*m) *cb_q, size_t *m,
+                           int * __counted_by(*l) cb_z,  size_t *l,
+                           char * __sized_by(n)   *sb_p,
+                           char * __sized_by(*m)  *sb_q,
+                           char * __sized_by(*l)  sb_z) {
+  std::span<int>(*cb_p, n);   // no warn
+  std::span<int>(*cb_q, *m);  // no warn
+  std::span<int>(cb_z, *l);   // no warn
+  std::span<char>(*sb_p, n);  // no warn
+  std::span<char>(*sb_q, *m); // no warn
+  std::span<char>(sb_z, *l);  // no warn
+  std::span<int>(*cb_q, n);   // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
 }

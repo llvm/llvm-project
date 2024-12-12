@@ -3443,11 +3443,13 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
         for (unsigned i = 0, ni = LateParsedAttrs.size(); i < ni; ++i)
           LateParsedAttrs[i]->addDecl(ThisDecl);
 
+        /* TO_UPSTREAM(BoundsSafety) ON */
         LateParsedAttrList LateCAttrs;
 
         DistributeCLateParsedAttrs(DeclaratorInfo, ThisDecl, &LateCAttrs);
         for (auto *LCA : LateCAttrs)
           getCurrentClass().LateParsedDeclarations.push_back(LCA);
+        /* TO_UPSTREAM(BoundsSafety) OFF */
       }
       Actions.FinalizeDeclaration(ThisDecl);
       DeclsInGroup.push_back(ThisDecl);

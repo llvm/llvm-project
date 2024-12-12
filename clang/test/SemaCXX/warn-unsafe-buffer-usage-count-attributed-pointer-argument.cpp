@@ -1,5 +1,4 @@
-// REQUIRES: apple-disclosure-ios
-// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage -fsafe-buffer-usage-suggestions -fexperimental-bounds-safety-attributes -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++20 -Wno-all -Wunsafe-buffer-usage -fsafe-buffer-usage-suggestions -fexperimental-bounds-safety-attributes -verify %s
 
 #include <ptrcheck.h>
 #include <stddef.h>

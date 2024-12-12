@@ -16584,6 +16584,7 @@ TreeTransform<Derived>::TransformAtomicExpr(AtomicExpr *E) {
                                         E->getOp(), E->getRParenLoc());
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON */
 template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformBoundsSafetyPointerPromotionExpr(BoundsSafetyPointerPromotionExpr *E) {
@@ -16714,6 +16715,7 @@ ExprResult TreeTransform<Derived>::TransformTerminatedByFromIndexableExpr(
       E->getBeginLoc(), E->getEndLoc(), VTT->getTerminatorExpr(), Pointer.get(),
       PointerToTerminator);
 }
+/* TO_UPSTREAM(BoundsSafety) OFF */
 
 //===----------------------------------------------------------------------===//
 // Type reconstruction

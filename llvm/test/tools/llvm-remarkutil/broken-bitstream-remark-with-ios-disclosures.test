@@ -1,4 +1,3 @@
 RUN: not llvm-remarkutil bounds-safety-count --parser=bitstream %p/Inputs/broken-remark -o - 2>&1 | FileCheck %s
-REQUIRES: apple-disclosure-ios
 
 CHECK: error: Unknown magic number: expecting RMRK, got --- .

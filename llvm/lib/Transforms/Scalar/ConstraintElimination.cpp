@@ -1219,8 +1219,10 @@ void State::collectPHIInductionVars(Function &F) {
           PtrInductionPHIInfoMap.insert(
               {PtrPHI, {InitialPointer, IntPHI, Scale}});
         }
+        /* TO_UPSTREAM(BoundsSafety) ON */
         else
           annotateMissedPhiOptimisation(PtrPHI, PHIStep, IntPHIStep);
+        /* TO_UPSTREAM(BoundsSafety) OFF */
       }
     }
   }

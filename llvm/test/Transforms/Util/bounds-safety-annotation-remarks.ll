@@ -1,6 +1,5 @@
 ; RUN: opt -passes='annotation-remarks' -pass-remarks-missed='annotation-remarks' -disable-output -pass-remarks-output=%t.opt.yaml %s
 ; RUN: FileCheck --input-file=%t.opt.yaml %s
-; REQUIRES: apple-disclosure-ios
 
 ; CHECK: --- !Analysis
 ; CHECK-NEXT: Pass:            annotation-remarks
