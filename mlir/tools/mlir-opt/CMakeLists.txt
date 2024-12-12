@@ -94,6 +94,7 @@ add_mlir_library(MLIRMlirOptMain
 
   LINK_LIBS PUBLIC
   ${LIBS}
+  ${test_libs}
   )
 
 add_mlir_tool(mlir-opt
