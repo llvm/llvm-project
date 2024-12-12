@@ -1,7 +1,7 @@
 // REQUIRES: host-supports-nvptx
 // RUN: mlir-opt %s --gpu-module-to-binary="format=llvm" | FileCheck %s
 // RUN: mlir-opt %s --gpu-module-to-binary="format=isa" | FileCheck %s -check-prefix=CHECK-ISA
-// RUN: mlir-opt %s --gpu-module-to-binary="section=__fatbin" | FileCheck %s -check-prefix=CHECK-SECTION
+// RUN: mlir-opt %s --gpu-module-to-binary="format=llvm section=__fatbin" | FileCheck %s -check-prefix=CHECK-SECTION
 
 module attributes {gpu.container_module} {
   // CHECK-LABEL:gpu.binary @kernel_module1
