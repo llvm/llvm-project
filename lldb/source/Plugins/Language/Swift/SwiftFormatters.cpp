@@ -807,6 +807,8 @@ public:
       ThreadSafeReflectionContext reflection_ctx =
           runtime->GetReflectionContext();
       ValueObjectSP task_obj_sp = m_backend.GetChildMemberWithName("_task");
+      if (!task_obj_sp)
+        return ChildCacheState::eRefetch;
       uint64_t task_ptr = task_obj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
       if (task_ptr != LLDB_INVALID_ADDRESS) {
         llvm::Expected<ReflectionContextInterface::AsyncTaskInfo> task_info =
