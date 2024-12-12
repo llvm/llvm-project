@@ -454,6 +454,11 @@ static cl::opt<bool> NewRegBankSelect(
              "regbankselect"),
     cl::init(false), cl::Hidden);
 
+static cl::opt<bool> HasClosedWorldAssumption(
+    "amdgpu-link-time-closed-world",
+    cl::desc("Whether has closed-world assumption at link time"),
+    cl::init(false), cl::Hidden);
+
 static cl::opt<bool>
     EnablePromoteLaneShared("amdgpu-promote-lane-shared",
                             cl::desc("Enable promoting lane-shared into VGPR"),
@@ -875,8 +880,12 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
             PM.addPass(InternalizePass(mustPreserveGV));
             PM.addPass(GlobalDCEPass());
           }
-          if (EnableAMDGPUAttributor)
-            PM.addPass(AMDGPUAttributorPass(*this));
+          if (EnableAMDGPUAttributor) {
+            AMDGPUAttributorOptions Opt;
+            if (HasClosedWorldAssumption)
+              Opt.IsClosedWorld = true;
+            PM.addPass(AMDGPUAttributorPass(*this, Opt));
+          }
         }
       });
 
@@ -886,6 +895,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           return onlyAllocateSGPRs;
         if (FilterName == "vgpr")
           return onlyAllocateVGPRs;
+        if (FilterName == "wwm")
+          return onlyAllocateWWMRegs;
         return nullptr;
       });
 }

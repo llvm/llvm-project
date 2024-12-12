@@ -63,11 +63,9 @@ if(LLVM_LIBC_FULL_BUILD)
     SRCS
       fake_heap.s
       freelist_heap_test.cpp
-      freelist_malloc_test.cpp
     DEPENDS
       libc.src.__support.CPP.span
       libc.src.__support.freelist_heap
-      libc.src.stdlib.freelist_malloc
       libc.src.string.memcmp
       libc.src.string.memcpy
   )
