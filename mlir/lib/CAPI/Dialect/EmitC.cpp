@@ -33,6 +33,22 @@ MlirType mlirEmitCArrayTypeGet(intptr_t nDims, int64_t *shape,
 }
 
 //===---------------------------------------------------------------------===//
+// LValueType
+//===---------------------------------------------------------------------===//
+
+bool mlirTypeIsAEmitCLValueType(MlirType type) {
+  return isa<emitc::LValueType>(unwrap(type));
+}
+
+MlirTypeID mlirEmitCLValueTypeGetTypeID(void) {
+  return wrap(emitc::LValueType::getTypeID());
+}
+
+MlirType mlirEmitCLValueTypeGet(MlirType valueType) {
+  return wrap(emitc::LValueType::get(unwrap(valueType)));
+}
+
+//===---------------------------------------------------------------------===//
 // OpaqueType
 //===---------------------------------------------------------------------===//
 

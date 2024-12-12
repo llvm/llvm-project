@@ -30,6 +30,17 @@ MLIR_CAPI_EXPORTED MlirTypeID mlirEmitCArrayTypeGetTypeID(void);
 MLIR_CAPI_EXPORTED MlirType mlirEmitCArrayTypeGet(intptr_t nDims,
                                                   int64_t *shape,
                                                   MlirType elementType);
+
+//===---------------------------------------------------------------------===//
+// LValueType
+//===---------------------------------------------------------------------===//
+
+MLIR_CAPI_EXPORTED bool mlirTypeIsAEmitCLValueType(MlirType type);
+
+MLIR_CAPI_EXPORTED MlirTypeID mlirEmitCLValueTypeGetTypeID(void);
+
+MLIR_CAPI_EXPORTED MlirType mlirEmitCLValueTypeGet(MlirType valueType);
+
 //===---------------------------------------------------------------------===//
 // OpaqueType
 //===---------------------------------------------------------------------===//
