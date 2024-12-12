@@ -12,7 +12,6 @@
 ; CHECK-NEXT:   DXIL Intrinsic Expansion
 ; CHECK-NEXT:   DXIL Data Scalarization
 ; CHECK-NEXT:   DXIL Array Flattener
-; CHECK-NEXT:   DXIL Resource analysis
 ; CHECK-NEXT:   FunctionPass Manager
 ; CHECK-NEXT:     DXIL Resource Access
 ; CHECK-NEXT:     Dominator Tree Construction
