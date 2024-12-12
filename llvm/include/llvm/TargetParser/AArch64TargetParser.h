@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Bitset.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/VersionTuple.h"
@@ -272,9 +273,10 @@ bool isX18ReservedByDefault(const Triple &TT);
 unsigned getFMVPriority(ArrayRef<StringRef> Features);
 
 // For given feature names, return a bitmask corresponding to the entries of
-// AArch64::CPUFeatures. The values in CPUFeatures are not bitmasks
-// themselves, they are sequential (0, 1, 2, 3, ...).
-uint64_t getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
+// AArch64::CPUFeatures. The values in CPUFeatures are not bitmasks themselves,
+// they are sequential (0, 1, 2, 3, ...). The resulting bitmask is used at
+// runtime to test whether a certain FMV feature is available on the host.
+uint64_t getCpuSupportsMask(ArrayRef<StringRef> Features);
 
 void PrintSupportedExtensions();
 

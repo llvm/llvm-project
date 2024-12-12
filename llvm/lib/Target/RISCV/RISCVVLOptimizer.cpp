@@ -563,8 +563,12 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   // Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
   // FIXME: Add support
   // Vector Narrowing Integer Right Shift Instructions
-  // FIXME: Add support
+  case RISCV::VNSRL_WX:
   case RISCV::VNSRL_WI:
+  case RISCV::VNSRL_WV:
+  case RISCV::VNSRA_WI:
+  case RISCV::VNSRA_WV:
+  case RISCV::VNSRA_WX:
   // Vector Integer Compare Instructions
   // FIXME: Add support
   // Vector Integer Min/Max Instructions

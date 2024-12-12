@@ -13,10 +13,7 @@ define <4 x half> @fmaxnm_v4f16(<4 x half> %op1, <4 x half> %op2) {
 ; CHECK-LABEL: fmaxnm_v4f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    fmaxnm z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmaxnm_v4f16:
@@ -63,10 +60,7 @@ define <8 x half> @fmaxnm_v8f16(<8 x half> %op1, <8 x half> %op2) {
 ; CHECK-LABEL: fmaxnm_v8f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    fmaxnm z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmaxnm_v8f16:
@@ -283,10 +277,7 @@ define <2 x float> @fmaxnm_v2f32(<2 x float> %op1, <2 x float> %op2) {
 ; CHECK-LABEL: fmaxnm_v2f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    fmaxnm z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmaxnm_v2f32:
@@ -311,10 +302,7 @@ define <4 x float> @fmaxnm_v4f32(<4 x float> %op1, <4 x float> %op2) {
 ; CHECK-LABEL: fmaxnm_v4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    fmaxnm z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmaxnm_v4f32:
@@ -418,10 +406,7 @@ define <2 x double> @fmaxnm_v2f64(<2 x double> %op1, <2 x double> %op2) {
 ; CHECK-LABEL: fmaxnm_v2f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    fmaxnm z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmaxnm_v2f64:
@@ -492,10 +477,7 @@ define <4 x half> @fminnm_v4f16(<4 x half> %op1, <4 x half> %op2) {
 ; CHECK-LABEL: fminnm_v4f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fminnm_v4f16:
@@ -542,10 +524,7 @@ define <8 x half> @fminnm_v8f16(<8 x half> %op1, <8 x half> %op2) {
 ; CHECK-LABEL: fminnm_v8f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fminnm_v8f16:
@@ -762,10 +741,7 @@ define <2 x float> @fminnm_v2f32(<2 x float> %op1, <2 x float> %op2) {
 ; CHECK-LABEL: fminnm_v2f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fminnm_v2f32:
@@ -790,10 +766,7 @@ define <4 x float> @fminnm_v4f32(<4 x float> %op1, <4 x float> %op2) {
 ; CHECK-LABEL: fminnm_v4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fminnm_v4f32:
@@ -897,10 +870,7 @@ define <2 x double> @fminnm_v2f64(<2 x double> %op1, <2 x double> %op2) {
 ; CHECK-LABEL: fminnm_v2f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fminnm_v2f64:
@@ -971,10 +941,7 @@ define <4 x half> @fmax_v4f16(<4 x half> %op1, <4 x half> %op2) {
 ; CHECK-LABEL: fmax_v4f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    fmax z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmax_v4f16:
@@ -1021,10 +988,7 @@ define <8 x half> @fmax_v8f16(<8 x half> %op1, <8 x half> %op2) {
 ; CHECK-LABEL: fmax_v8f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    fmax z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmax_v8f16:
@@ -1241,10 +1205,7 @@ define <2 x float> @fmax_v2f32(<2 x float> %op1, <2 x float> %op2) {
 ; CHECK-LABEL: fmax_v2f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    fmax z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmax_v2f32:
@@ -1269,10 +1230,7 @@ define <4 x float> @fmax_v4f32(<4 x float> %op1, <4 x float> %op2) {
 ; CHECK-LABEL: fmax_v4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    fmax z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmax_v4f32:
@@ -1376,10 +1334,7 @@ define <2 x double> @fmax_v2f64(<2 x double> %op1, <2 x double> %op2) {
 ; CHECK-LABEL: fmax_v2f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    fmax z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmax_v2f64:
@@ -1450,10 +1405,7 @@ define <4 x half> @fmin_v4f16(<4 x half> %op1, <4 x half> %op2) {
 ; CHECK-LABEL: fmin_v4f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    fmin z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmin_v4f16:
@@ -1500,10 +1452,7 @@ define <8 x half> @fmin_v8f16(<8 x half> %op1, <8 x half> %op2) {
 ; CHECK-LABEL: fmin_v8f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    fmin z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmin_v8f16:
@@ -1720,10 +1669,7 @@ define <2 x float> @fmin_v2f32(<2 x float> %op1, <2 x float> %op2) {
 ; CHECK-LABEL: fmin_v2f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    fmin z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmin_v2f32:
@@ -1748,10 +1694,7 @@ define <4 x float> @fmin_v4f32(<4 x float> %op1, <4 x float> %op2) {
 ; CHECK-LABEL: fmin_v4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    fmin z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmin_v4f32:
@@ -1855,10 +1798,7 @@ define <2 x double> @fmin_v2f64(<2 x double> %op1, <2 x double> %op2) {
 ; CHECK-LABEL: fmin_v2f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    fmin z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmin_v2f64:

@@ -15,7 +15,6 @@ define <vscale x 16 x i8> @dup_extract_nxv16i8_nxv16i8(<vscale x 16 x i8> %data)
 define <vscale x 16 x i8> @dup_extract_nxv16i8_v16i8(<16 x i8> %data) {
 ; CHECK-LABEL: dup_extract_nxv16i8_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z0.b, z0.b[1]
 ; CHECK-NEXT:    ret
   %1 = extractelement <16 x i8> %data, i8 1
@@ -27,7 +26,6 @@ define <vscale x 16 x i8> @dup_extract_nxv16i8_v16i8(<16 x i8> %data) {
 define <vscale x 16 x i8> @dup_extract_nxv16i8_v8i8(<8 x i8> %data) {
 ; CHECK-LABEL: dup_extract_nxv16i8_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.b, z0.b[1]
 ; CHECK-NEXT:    ret
   %1 = extractelement <8 x i8> %data, i8 1
@@ -50,7 +48,6 @@ define <vscale x 8 x i16> @dup_extract_nxv8i16_nxv8i16(<vscale x 8 x i16> %data)
 define <vscale x 8 x i16> @dup_extract_nxv8i16_v8i16(<8 x i16> %data) {
 ; CHECK-LABEL: dup_extract_nxv8i16_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z0.h, z0.h[1]
 ; CHECK-NEXT:    ret
   %1 = extractelement <8 x i16> %data, i16 1
@@ -62,7 +59,6 @@ define <vscale x 8 x i16> @dup_extract_nxv8i16_v8i16(<8 x i16> %data) {
 define <vscale x 8 x i16> @dup_extract_nxv8i16_v4i16(<4 x i16> %data) {
 ; CHECK-LABEL: dup_extract_nxv8i16_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.h, z0.h[1]
 ; CHECK-NEXT:    ret
   %1 = extractelement <4 x i16> %data, i16 1
@@ -85,7 +81,6 @@ define <vscale x 4 x i32> @dup_extract_nxv4i32_nxv4i32(<vscale x 4 x i32> %data)
 define <vscale x 4 x i32> @dup_extract_nxv4i32_v4i32(<4 x i32> %data) {
 ; CHECK-LABEL: dup_extract_nxv4i32_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z0.s, z0.s[1]
 ; CHECK-NEXT:    ret
   %1 = extractelement <4 x i32> %data, i32 1
@@ -97,7 +92,6 @@ define <vscale x 4 x i32> @dup_extract_nxv4i32_v4i32(<4 x i32> %data) {
 define <vscale x 4 x i32> @dup_extract_nxv4i32_v2i32(<2 x i32> %data) {
 ; CHECK-LABEL: dup_extract_nxv4i32_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.s, z0.s[1]
 ; CHECK-NEXT:    ret
   %1 = extractelement <2 x i32> %data, i32 1
@@ -120,7 +114,6 @@ define <vscale x 2 x i64> @dup_extract_nxv2i64_nxv2i64(<vscale x 2 x i64> %data)
 define <vscale x 2 x i64> @dup_extract_nxv2i64_v2i64(<2 x i64> %data) {
 ; CHECK-LABEL: dup_extract_nxv2i64_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z0.d, z0.d[1]
 ; CHECK-NEXT:    ret
   %1 = extractelement <2 x i64> %data, i64 1
@@ -178,7 +171,6 @@ define <vscale x 8 x half> @dup_extract_nxv8f16_nxv2f16(<vscale x 2 x half> %dat
 define <vscale x 8 x half> @dup_extract_nxv8f16_v8f16(<8 x half> %data) {
 ; CHECK-LABEL: dup_extract_nxv8f16_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z0.h, z0.h[1]
 ; CHECK-NEXT:    ret
   %1 = extractelement <8 x half> %data, i16 1
@@ -190,7 +182,6 @@ define <vscale x 8 x half> @dup_extract_nxv8f16_v8f16(<8 x half> %data) {
 define <vscale x 8 x half> @dup_extract_nxv8f16_v4f16(<4 x half> %data) {
 ; CHECK-LABEL: dup_extract_nxv8f16_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.h, z0.h[1]
 ; CHECK-NEXT:    ret
   %1 = extractelement <4 x half> %data, i16 1
@@ -236,7 +227,6 @@ define <vscale x 4 x half> @dup_extract_nxv4f16_nxv2f16(<vscale x 2 x half> %dat
 define <vscale x 4 x half> @dup_extract_nxv4f16_v8f16(<8 x half> %data) {
 ; CHECK-LABEL: dup_extract_nxv4f16_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z0.h, z0.h[1]
 ; CHECK-NEXT:    ret
   %1 = extractelement <8 x half> %data, i16 1
@@ -248,7 +238,6 @@ define <vscale x 4 x half> @dup_extract_nxv4f16_v8f16(<8 x half> %data) {
 define <vscale x 4 x half> @dup_extract_nxv4f16_v4f16(<4 x half> %data) {
 ; CHECK-LABEL: dup_extract_nxv4f16_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.h, z0.h[1]
 ; CHECK-NEXT:    ret
   %1 = extractelement <4 x half> %data, i16 1
@@ -293,7 +282,6 @@ define <vscale x 2 x half> @dup_extract_nxv2f16_nxv2f16(<vscale x 2 x half> %dat
 define <vscale x 2 x half> @dup_extract_nxv2f16_v8f16(<8 x half> %data) {
 ; CHECK-LABEL: dup_extract_nxv2f16_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z0.h, z0.h[1]
 ; CHECK-NEXT:    ret
   %1 = extractelement <8 x half> %data, i16 1
@@ -305,7 +293,6 @@ define <vscale x 2 x half> @dup_extract_nxv2f16_v8f16(<8 x half> %data) {
 define <vscale x 2 x half> @dup_extract_nxv2f16_v4f16(<4 x half> %data) {
 ; CHECK-LABEL: dup_extract_nxv2f16_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.h, z0.h[1]
 ; CHECK-NEXT:    ret
   %1 = extractelement <4 x half> %data, i16 1
@@ -340,7 +327,6 @@ define <vscale x 4 x float> @dup_extract_nxv4f32_nxv2f32(<vscale x 2 x float> %d
 define <vscale x 4 x float> @dup_extract_nxv4f32_v4f32(<4 x float> %data) {
 ; CHECK-LABEL: dup_extract_nxv4f32_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z0.s, z0.s[1]
 ; CHECK-NEXT:    ret
   %1 = extractelement <4 x float> %data, i32 1
@@ -352,7 +338,6 @@ define <vscale x 4 x float> @dup_extract_nxv4f32_v4f32(<4 x float> %data) {
 define <vscale x 4 x float> @dup_extract_nxv4f32_v2f32(<2 x float> %data) {
 ; CHECK-LABEL: dup_extract_nxv4f32_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.s, z0.s[1]
 ; CHECK-NEXT:    ret
   %1 = extractelement <2 x float> %data, i32 1
@@ -386,7 +371,6 @@ define <vscale x 2 x float> @dup_extract_nxv2f32_nxv2f32(<vscale x 2 x float> %d
 define <vscale x 2 x float> @dup_extract_nxv2f32_v4f32(<4 x float> %data) {
 ; CHECK-LABEL: dup_extract_nxv2f32_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z0.s, z0.s[1]
 ; CHECK-NEXT:    ret
   %1 = extractelement <4 x float> %data, i32 1
@@ -398,7 +382,6 @@ define <vscale x 2 x float> @dup_extract_nxv2f32_v4f32(<4 x float> %data) {
 define <vscale x 2 x float> @dup_extract_nxv2f32_v2f32(<2 x float> %data) {
 ; CHECK-LABEL: dup_extract_nxv2f32_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.s, z0.s[1]
 ; CHECK-NEXT:    ret
   %1 = extractelement <2 x float> %data, i32 1
@@ -421,7 +404,6 @@ define <vscale x 2 x double> @dup_extract_nxv2f64_nxv2f64(<vscale x 2 x double> 
 define <vscale x 2 x double> @dup_extract_nxv2f64_v2f64(<2 x double> %data) {
 ; CHECK-LABEL: dup_extract_nxv2f64_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z0.d, z0.d[1]
 ; CHECK-NEXT:    ret
   %1 = extractelement <2 x double> %data, i64 1
@@ -479,7 +461,6 @@ define <vscale x 8 x bfloat> @dup_extract_nxv8bf16_nxv2bf16(<vscale x 2 x bfloat
 define <vscale x 8 x bfloat> @dup_extract_nxv8bf16_v8bf16(<8 x bfloat> %data) {
 ; CHECK-LABEL: dup_extract_nxv8bf16_v8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z0.h, z0.h[1]
 ; CHECK-NEXT:    ret
   %1 = extractelement <8 x bfloat> %data, i16 1
@@ -491,7 +472,6 @@ define <vscale x 8 x bfloat> @dup_extract_nxv8bf16_v8bf16(<8 x bfloat> %data) {
 define <vscale x 8 x bfloat> @dup_extract_nxv8bf16_v4bf16(<4 x bfloat> %data) {
 ; CHECK-LABEL: dup_extract_nxv8bf16_v4bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.h, z0.h[1]
 ; CHECK-NEXT:    ret
   %1 = extractelement <4 x bfloat> %data, i16 1
@@ -537,7 +517,6 @@ define <vscale x 4 x bfloat> @dup_extract_nxv4bf16_nxv2bf16(<vscale x 2 x bfloat
 define <vscale x 4 x bfloat> @dup_extract_nxv4bf16_v8bf16(<8 x bfloat> %data) {
 ; CHECK-LABEL: dup_extract_nxv4bf16_v8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z0.h, z0.h[1]
 ; CHECK-NEXT:    ret
   %1 = extractelement <8 x bfloat> %data, i16 1
@@ -549,7 +528,6 @@ define <vscale x 4 x bfloat> @dup_extract_nxv4bf16_v8bf16(<8 x bfloat> %data) {
 define <vscale x 4 x bfloat> @dup_extract_nxv4bf16_v4bf16(<4 x bfloat> %data) {
 ; CHECK-LABEL: dup_extract_nxv4bf16_v4bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.h, z0.h[1]
 ; CHECK-NEXT:    ret
   %1 = extractelement <4 x bfloat> %data, i16 1
@@ -594,7 +572,6 @@ define <vscale x 2 x bfloat> @dup_extract_nxv2bf16_nxv2bf16(<vscale x 2 x bfloat
 define <vscale x 2 x bfloat> @dup_extract_nxv2bf16_v8bf16(<8 x bfloat> %data) {
 ; CHECK-LABEL: dup_extract_nxv2bf16_v8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z0.h, z0.h[1]
 ; CHECK-NEXT:    ret
   %1 = extractelement <8 x bfloat> %data, i16 1
@@ -606,7 +583,6 @@ define <vscale x 2 x bfloat> @dup_extract_nxv2bf16_v8bf16(<8 x bfloat> %data) {
 define <vscale x 2 x bfloat> @dup_extract_nxv2bf16_v4bf16(<4 x bfloat> %data) {
 ; CHECK-LABEL: dup_extract_nxv2bf16_v4bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.h, z0.h[1]
 ; CHECK-NEXT:    ret
   %1 = extractelement <4 x bfloat> %data, i16 1

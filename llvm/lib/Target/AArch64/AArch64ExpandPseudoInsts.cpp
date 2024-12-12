@@ -67,6 +67,10 @@ private:
                             TargetRegisterClass ContiguousClass,
                             TargetRegisterClass StridedClass,
                             unsigned ContiguousOpc, unsigned StridedOpc);
+  bool expandFormTuplePseudo(MachineBasicBlock &MBB,
+                             MachineBasicBlock::iterator MBBI,
+                             MachineBasicBlock::iterator &NextMBBI,
+                             unsigned Size);
   bool expandMOVImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                     unsigned BitSize);
 
@@ -1142,6 +1146,32 @@ bool AArch64ExpandPseudo::expandMultiVecPseudo(
   return true;
 }
 
+bool AArch64ExpandPseudo::expandFormTuplePseudo(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI, unsigned Size) {
+  assert(Size == 2 || Size == 4 && "Invalid Tuple Size");
+  MachineInstr &MI = *MBBI;
+  Register ReturnTuple = MI.getOperand(0).getReg();
+
+  const TargetRegisterInfo *TRI =
+      MBB.getParent()->getSubtarget().getRegisterInfo();
+  for (unsigned I = 0; I < Size; ++I) {
+    Register FormTupleOpReg = MI.getOperand(I + 1).getReg();
+    Register ReturnTupleSubReg =
+        TRI->getSubReg(ReturnTuple, AArch64::zsub0 + I);
+    // Add copies to ensure the subregisters remain in the correct order
+    // for any contigious operation they are used by.
+    if (FormTupleOpReg != ReturnTupleSubReg)
+      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORR_ZZZ))
+          .addReg(ReturnTupleSubReg, RegState::Define)
+          .addReg(FormTupleOpReg)
+          .addReg(FormTupleOpReg);
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
 /// If MBBI references a pseudo instruction that should be expanded here,
 /// do the expansion and return true.  Otherwise return false.
 bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
@@ -1724,6 +1754,10 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      return expandMultiVecPseudo(
          MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
          AArch64::LDNT1D_4Z, AArch64::LDNT1D_4Z_STRIDED);
+   case AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO:
+     return expandFormTuplePseudo(MBB, MBBI, NextMBBI, 2);
+   case AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO:
+     return expandFormTuplePseudo(MBB, MBBI, NextMBBI, 4);
   }
   return false;
 }

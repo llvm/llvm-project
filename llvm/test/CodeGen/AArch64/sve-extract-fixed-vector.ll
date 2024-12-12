@@ -5,7 +5,6 @@
 define <2 x i64> @extract_v2i64_nxv2i64(<vscale x 2 x i64> %vec) nounwind {
 ; CHECK-LABEL: extract_v2i64_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %retval = call <2 x i64> @llvm.vector.extract.v2i64.nxv2i64(<vscale x 2 x i64> %vec, i64 0)
   ret <2 x i64> %retval
@@ -16,7 +15,6 @@ define <2 x i64> @extract_v2i64_nxv2i64_idx2(<vscale x 2 x i64> %vec) nounwind {
 ; CHECK-LABEL: extract_v2i64_nxv2i64_idx2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #16
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %retval = call <2 x i64> @llvm.vector.extract.v2i64.nxv2i64(<vscale x 2 x i64> %vec, i64 2)
   ret <2 x i64> %retval
@@ -26,7 +24,6 @@ define <2 x i64> @extract_v2i64_nxv2i64_idx2(<vscale x 2 x i64> %vec) nounwind {
 define <4 x i32> @extract_v4i32_nxv4i32(<vscale x 4 x i32> %vec) nounwind {
 ; CHECK-LABEL: extract_v4i32_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %retval = call <4 x i32> @llvm.vector.extract.v4i32.nxv4i32(<vscale x 4 x i32> %vec, i64 0)
   ret <4 x i32> %retval
@@ -37,7 +34,6 @@ define <4 x i32> @extract_v4i32_nxv4i32_idx4(<vscale x 4 x i32> %vec) nounwind {
 ; CHECK-LABEL: extract_v4i32_nxv4i32_idx4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #16
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %retval = call <4 x i32> @llvm.vector.extract.v4i32.nxv4i32(<vscale x 4 x i32> %vec, i64 4)
   ret <4 x i32> %retval
@@ -48,7 +44,6 @@ define <4 x i32> @extract_v4i32_nxv2i32(<vscale x 2 x i32> %vec) nounwind #1 {
 ; CHECK-LABEL: extract_v4i32_nxv2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %retval = call <4 x i32> @llvm.vector.extract.v4i32.nxv2i32(<vscale x 2 x i32> %vec, i64 0)
   ret <4 x i32> %retval
@@ -60,7 +55,6 @@ define <4 x i32> @extract_v4i32_nxv2i32_idx4(<vscale x 2 x i32> %vec) nounwind #
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #32
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %retval = call <4 x i32> @llvm.vector.extract.v4i32.nxv2i32(<vscale x 2 x i32> %vec, i64 4)
   ret <4 x i32> %retval
@@ -70,7 +64,6 @@ define <4 x i32> @extract_v4i32_nxv2i32_idx4(<vscale x 2 x i32> %vec) nounwind #
 define <8 x i16> @extract_v8i16_nxv8i16(<vscale x 8 x i16> %vec) nounwind {
 ; CHECK-LABEL: extract_v8i16_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %retval = call <8 x i16> @llvm.vector.extract.v8i16.nxv8i16(<vscale x 8 x i16> %vec, i64 0)
   ret <8 x i16> %retval
@@ -81,7 +74,6 @@ define <8 x i16> @extract_v8i16_nxv8i16_idx8(<vscale x 8 x i16> %vec) nounwind {
 ; CHECK-LABEL: extract_v8i16_nxv8i16_idx8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #16
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %retval = call <8 x i16> @llvm.vector.extract.v8i16.nxv8i16(<vscale x 8 x i16> %vec, i64 8)
   ret <8 x i16> %retval
@@ -92,7 +84,6 @@ define <8 x i16> @extract_v8i16_nxv4i16(<vscale x 4 x i16> %vec) nounwind #1 {
 ; CHECK-LABEL: extract_v8i16_nxv4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %retval = call <8 x i16> @llvm.vector.extract.v8i16.nxv4i16(<vscale x 4 x i16> %vec, i64 0)
   ret <8 x i16> %retval
@@ -104,7 +95,6 @@ define <8 x i16> @extract_v8i16_nxv4i16_idx8(<vscale x 4 x i16> %vec) nounwind #
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #32
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %retval = call <8 x i16> @llvm.vector.extract.v8i16.nxv4i16(<vscale x 4 x i16> %vec, i64 8)
   ret <8 x i16> %retval
@@ -116,7 +106,6 @@ define <8 x i16> @extract_v8i16_nxv2i16(<vscale x 2 x i16> %vec) nounwind #1 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %retval = call <8 x i16> @llvm.vector.extract.v8i16.nxv2i16(<vscale x 2 x i16> %vec, i64 0)
   ret <8 x i16> %retval
@@ -129,7 +118,6 @@ define <8 x i16> @extract_v8i16_nxv2i16_idx8(<vscale x 2 x i16> %vec) nounwind #
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #64
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %retval = call <8 x i16> @llvm.vector.extract.v8i16.nxv2i16(<vscale x 2 x i16> %vec, i64 8)
   ret <8 x i16> %retval
@@ -139,7 +127,6 @@ define <8 x i16> @extract_v8i16_nxv2i16_idx8(<vscale x 2 x i16> %vec) nounwind #
 define <16 x i8> @extract_v16i8_nxv16i8(<vscale x 16 x i8> %vec) nounwind {
 ; CHECK-LABEL: extract_v16i8_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %retval = call <16 x i8> @llvm.vector.extract.v16i8.nxv16i8(<vscale x 16 x i8> %vec, i64 0)
   ret <16 x i8> %retval
@@ -150,7 +137,6 @@ define <16 x i8> @extract_v16i8_nxv16i8_idx16(<vscale x 16 x i8> %vec) nounwind 
 ; CHECK-LABEL: extract_v16i8_nxv16i8_idx16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #16
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %retval = call <16 x i8> @llvm.vector.extract.v16i8.nxv16i8(<vscale x 16 x i8> %vec, i64 16)
   ret <16 x i8> %retval
@@ -161,7 +147,6 @@ define <16 x i8> @extract_v16i8_nxv8i8(<vscale x 8 x i8> %vec) nounwind #1 {
 ; CHECK-LABEL: extract_v16i8_nxv8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %retval = call <16 x i8> @llvm.vector.extract.v16i8.nxv8i8(<vscale x 8 x i8> %vec, i64 0)
   ret <16 x i8> %retval
@@ -173,7 +158,6 @@ define <16 x i8> @extract_v16i8_nxv8i8_idx16(<vscale x 8 x i8> %vec) nounwind #1
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #32
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %retval = call <16 x i8> @llvm.vector.extract.v16i8.nxv8i8(<vscale x 8 x i8> %vec, i64 16)
   ret <16 x i8> %retval
@@ -185,7 +169,6 @@ define <16 x i8> @extract_v16i8_nxv4i8(<vscale x 4 x i8> %vec) nounwind #1 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %retval = call <16 x i8> @llvm.vector.extract.v16i8.nxv4i8(<vscale x 4 x i8> %vec, i64 0)
   ret <16 x i8> %retval
@@ -198,7 +181,6 @@ define <16 x i8> @extract_v16i8_nxv4i8_idx16(<vscale x 4 x i8> %vec) nounwind #1
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #64
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %retval = call <16 x i8> @llvm.vector.extract.v16i8.nxv4i8(<vscale x 4 x i8> %vec, i64 16)
   ret <16 x i8> %retval
@@ -211,7 +193,6 @@ define <16 x i8> @extract_v16i8_nxv2i8(<vscale x 2 x i8> %vec) nounwind #1 {
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %retval = call <16 x i8> @llvm.vector.extract.v16i8.nxv2i8(<vscale x 2 x i8> %vec, i64 0)
   ret <16 x i8> %retval
@@ -225,7 +206,6 @@ define <16 x i8> @extract_v16i8_nxv2i8_idx16(<vscale x 2 x i8> %vec) nounwind #1
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %retval = call <16 x i8> @llvm.vector.extract.v16i8.nxv2i8(<vscale x 2 x i8> %vec, i64 16)
   ret <16 x i8> %retval
@@ -242,7 +222,6 @@ define <2 x i1> @extract_v2i1_nxv2i1(<vscale x 2 x i1> %inmask) {
 ; CHECK-NEXT:    mov x8, v0.d[1]
 ; CHECK-NEXT:    fmov s0, w0
 ; CHECK-NEXT:    mov v0.s[1], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %mask = call <2 x i1> @llvm.vector.extract.v2i1.nxv2i1(<vscale x 2 x i1> %inmask, i64 0)
   ret <2 x i1> %mask
@@ -259,7 +238,6 @@ define <4 x i1> @extract_v4i1_nxv4i1(<vscale x 4 x i1> %inmask) {
 ; CHECK-NEXT:    mov w8, v1.s[3]
 ; CHECK-NEXT:    mov v0.h[2], w9
 ; CHECK-NEXT:    mov v0.h[3], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %mask = call <4 x i1> @llvm.vector.extract.v4i1.nxv4i1(<vscale x 4 x i1> %inmask, i64 0)
   ret <4 x i1> %mask
@@ -284,7 +262,6 @@ define <8 x i1> @extract_v8i1_nxv8i1(<vscale x 8 x i1> %inmask) {
 ; CHECK-NEXT:    umov w8, v1.h[7]
 ; CHECK-NEXT:    mov v0.b[6], w9
 ; CHECK-NEXT:    mov v0.b[7], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %mask = call <8 x i1> @llvm.vector.extract.v8i1.nxv8i1(<vscale x 8 x i1> %inmask, i64 0)
   ret <8 x i1> %mask
@@ -324,7 +301,6 @@ define <2 x i64> @extract_fixed_v2i64_nxv2i64(<vscale x 2 x i64> %vec) nounwind 
 ; CHECK-LABEL: extract_fixed_v2i64_nxv2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #16
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %retval = call <2 x i64> @llvm.vector.extract.v2i64.nxv2i64(<vscale x 2 x i64> %vec, i64 2)
   ret <2 x i64> %retval
@@ -348,7 +324,6 @@ define <4 x i32> @typesize_regression_test_v4i32(ptr %addr, i64 %idx) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, x1, lsl #2]
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 entry:
   %ptr = getelementptr inbounds i32, ptr %addr, i64 %idx
@@ -365,7 +340,6 @@ entry:
 define <2 x float> @extract_v2f32_nxv4f32_splat(float %f) {
 ; CHECK-LABEL: extract_v2f32_nxv4f32_splat:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    dup v0.2s, v0.s[0]
 ; CHECK-NEXT:    ret
   %ins = insertelement <vscale x 4 x float> poison, float %f, i32 0
