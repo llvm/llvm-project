@@ -17,7 +17,7 @@ struct Outer {
 
 struct Outer a = {{0, 2}, {3,5}};
 void assign_global_fam() {
-    a = a; // expected-error{{BoundsSafety forbids passing 'struct Outer' by copy because it has a flexible array member}}
+    a = a; // expected-error{{-fbounds-safety forbids passing 'struct Outer' by copy because it has a flexible array member}}
     a.hdr.len = 1;
 }
 void assign_init_list_expr() {
@@ -35,7 +35,7 @@ struct {
 
 struct Outer e;
 void assign_global_to_global() {
-    e = a; // expected-error{{BoundsSafety forbids passing 'struct Outer' by copy because it has a flexible array member}}
+    e = a; // expected-error{{-fbounds-safety forbids passing 'struct Outer' by copy because it has a flexible array member}}
 }
 
 struct Middle {
