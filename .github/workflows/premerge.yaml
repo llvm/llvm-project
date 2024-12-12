@@ -14,6 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/llvm/ci-ubuntu-22.04:latest
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@v4
@@ -28,8 +31,6 @@ jobs:
           
           echo $modified_files
           echo $modified_dirs
-
-          cat ./.ci/compute-projects.sh
 
           . ./.ci/compute-projects.sh
 
