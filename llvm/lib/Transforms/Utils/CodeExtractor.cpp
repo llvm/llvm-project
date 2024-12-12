@@ -639,12 +639,10 @@ bool CodeExtractor::isEligible() const {
       bool IsRestore = II->getIntrinsicID() == Intrinsic::stackrestore;
       if (IsSave && any_of(II->users(), [&Blks = this->Blocks](User *U) {
             return !definedInRegion(Blks, U);
-          })) {
+          }))
         return false;
-      }
-      if (IsRestore && !definedInRegion(Blocks, II->getArgOperand(0))) {
+      if (IsRestore && !definedInRegion(Blocks, II->getArgOperand(0)))
         return false;
-      }
     }
   }
   return true;
