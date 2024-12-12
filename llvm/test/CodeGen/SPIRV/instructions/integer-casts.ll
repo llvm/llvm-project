@@ -272,6 +272,10 @@ define dso_local spir_kernel void @test_wrappers(ptr addrspace(4) %arg, i64 %arg
   %r14 = call spir_func <4 x i32> @_Z22__spirv_SConvert_Rint2Dv2_a(<4 x i8> %arg_v2)
   %r15 = call spir_func float @_Z30__spirv_ConvertUToF_Rfloat_rtz(i64 %arg_ptr)
   %r16 = call spir_func float @__spirv_ConvertUToF_Rfloat_rtz(i64 %arg_ptr)
+  %r17 = call spir_func <2 x float> @_Z28__spirv_FConvert_Rfloat2_rtzDv2_DF16_(<2 x half> noundef <half 0xH409A, half 0xH439A>)
+  %r18 = call spir_func <2 x float> @_Z28__spirv_FConvert_Rfloat2_rteDv2_DF16_(<2 x half> noundef <half 0xH409A, half 0xH439A>)
+  %r19 = call spir_func <2 x float> @_Z28__spirv_FConvert_Rfloat2_rtpDv2_DF16_(<2 x half> noundef <half 0xH409A, half 0xH439A>)
+  %r20 = call spir_func <2 x float> @_Z28__spirv_FConvert_Rfloat2_rtnDv2_DF16_(<2 x half> noundef <half 0xH409A, half 0xH439A>)
   ret void
 }
 
@@ -291,3 +295,7 @@ declare dso_local spir_func <4 x i32> @_Z22__spirv_UConvert_Rint2Dv2_a(<4 x i8>)
 declare dso_local spir_func <4 x i32> @_Z22__spirv_SConvert_Rint2Dv2_a(<4 x i8>)
 declare dso_local spir_func float @_Z30__spirv_ConvertUToF_Rfloat_rtz(i64)
 declare dso_local spir_func float @__spirv_ConvertUToF_Rfloat_rtz(i64)
+declare dso_local spir_func <2 x float> @_Z28__spirv_FConvert_Rfloat2_rtzDv2_DF16_(<2 x half> noundef)
+declare dso_local spir_func <2 x float> @_Z28__spirv_FConvert_Rfloat2_rteDv2_DF16_(<2 x half> noundef)
+declare dso_local spir_func <2 x float> @_Z28__spirv_FConvert_Rfloat2_rtpDv2_DF16_(<2 x half> noundef)
+declare dso_local spir_func <2 x float> @_Z28__spirv_FConvert_Rfloat2_rtnDv2_DF16_(<2 x half> noundef)

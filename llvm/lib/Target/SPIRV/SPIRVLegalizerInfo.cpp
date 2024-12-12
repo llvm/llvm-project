@@ -221,6 +221,14 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_FMA).legalFor(allFloatScalarsAndVectors);
 
+  getActionDefinitionsBuilder({G_STRICT_FSQRT, G_STRICT_FADD, G_STRICT_FSUB, G_STRICT_FMUL,
+                               G_STRICT_FDIV, G_STRICT_FREM, G_STRICT_FMA})
+      .legalFor(allFloatScalarsAndVectors);
+
+  getActionDefinitionsBuilder(G_STRICT_FLDEXP)
+      .legalForCartesianProduct(allFloatScalarsAndVectors,
+                                allFloatScalarsAndVectors);
+
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
       .legalForCartesianProduct(allIntScalarsAndVectors,
                                 allFloatScalarsAndVectors);
