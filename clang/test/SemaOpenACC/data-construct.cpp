@@ -58,7 +58,6 @@ void AtLeastOneOf() {
 #pragma acc data async
   ;
 
-  // expected-warning@+1{{OpenACC clause 'wait' not yet implemented}}
 #pragma acc data wait
   ;
 
@@ -80,7 +79,6 @@ void AtLeastOneOf() {
 
 #pragma acc enter data if(Var)
 #pragma acc enter data async
-  // expected-warning@+1{{OpenACC clause 'wait' not yet implemented}}
 #pragma acc enter data wait
 #pragma acc enter data
 
@@ -97,7 +95,6 @@ void AtLeastOneOf() {
 
 #pragma acc exit data if(Var)
 #pragma acc exit data async
-  // expected-warning@+1{{OpenACC clause 'wait' not yet implemented}}
 #pragma acc exit data wait
   // expected-warning@+1{{OpenACC clause 'finalize' not yet implemented}}
 #pragma acc exit data finalize
@@ -166,7 +163,6 @@ void DataRules() {
   ;
 #pragma acc data device_type(*) async
   ;
-  // expected-warning@+1{{OpenACC clause 'wait' not yet implemented}}
 #pragma acc data device_type(*) wait
   ;
 }
