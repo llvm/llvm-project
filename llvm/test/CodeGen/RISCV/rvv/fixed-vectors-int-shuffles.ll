@@ -451,21 +451,14 @@ define <8 x i8> @splat_ve2_we0_ins_i2we4(<8 x i8> %v, <8 x i8> %w) {
 define <8 x i8> @splat_ve2_we0_ins_i2ve4_i5we6(<8 x i8> %v, <8 x i8> %w) {
 ; CHECK-LABEL: splat_ve2_we0_ins_i2ve4_i5we6:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(.LCPI26_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI26_0)
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 6
-; CHECK-NEXT:    vmv.v.i v11, 0
-; CHECK-NEXT:    lui a0, 8256
-; CHECK-NEXT:    addi a0, a0, 2
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    li a0, 98
-; CHECK-NEXT:    vsetivli zero, 6, e8, mf2, tu, ma
-; CHECK-NEXT:    vslideup.vi v11, v10, 5
+; CHECK-NEXT:    vle8.v v10, (a0)
+; CHECK-NEXT:    li a0, 20
 ; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vrgather.vv v10, v8, v12
-; CHECK-NEXT:    vrgather.vv v10, v9, v11, v0.t
-; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    vmerge.vvm v9, v9, v8, v0
+; CHECK-NEXT:    vrgather.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %shuff = shufflevector <8 x i8> %v, <8 x i8> %w, <8 x i32> <i32 2, i32 8, i32 4, i32 2, i32 2, i32 14, i32 8, i32 2>
   ret <8 x i8> %shuff
@@ -693,12 +686,12 @@ define <8 x i8> @unmergable(<8 x i8> %v, <8 x i8> %w) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI46_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI46_0)
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vle8.v v10, (a0)
-; CHECK-NEXT:    li a0, -22
+; CHECK-NEXT:    li a0, 84
 ; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    vslidedown.vi v8, v8, 2
-; CHECK-NEXT:    vrgather.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    vmerge.vvm v9, v9, v8, v0
+; CHECK-NEXT:    vrgather.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %res = shufflevector <8 x i8> %v, <8 x i8> %w, <8 x i32> <i32 2, i32 9, i32 4, i32 11, i32 6, i32 13, i32 8, i32 15>
   ret <8 x i8> %res
@@ -1072,4 +1065,77 @@ define <16 x i64> @shuffle_zipodd_v16i64(<16 x i64> %v1, <16 x i64> %v2) {
 ; CHECK-NEXT:    ret
   %out = shufflevector <16 x i64> %v1, <16 x i64> %v2, <16 x i32> <i32 1, i32 17, i32 3, i32 19, i32 5, i32 21, i32 7, i32 23, i32 9, i32 25, i32 11, i32 27, i32 13, i32 29, i32 15, i32 31>
   ret <16 x i64> %out
+}
+
+define <16 x i32> @shuffle_disjoint_lanes(<16 x i32> %v, <16 x i32> %w) {
+; CHECK-LABEL: shuffle_disjoint_lanes:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(.LCPI74_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI74_0)
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vle8.v v16, (a0)
+; CHECK-NEXT:    lui a0, 11
+; CHECK-NEXT:    addi a0, a0, -1366
+; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vmerge.vvm v12, v12, v8, v0
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vsext.vf2 v18, v16
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vrgatherei16.vv v8, v12, v18
+; CHECK-NEXT:    ret
+  %out = shufflevector <16 x i32> %v, <16 x i32> %w, <16 x i32> <i32 11, i32 15, i32 7, i32 3, i32 26, i32 30, i32 22, i32 18, i32 9, i32 13, i32 5, i32 1, i32 24, i32 28, i32 20, i32 16>
+  ret <16 x i32> %out
+}
+
+define <16 x i32> @shuffle_disjoint_lanes_one_identity(<16 x i32> %v, <16 x i32> %w) {
+; CHECK-LABEL: shuffle_disjoint_lanes_one_identity:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(.LCPI75_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI75_0)
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
+; CHECK-NEXT:    vle16.v v16, (a0)
+; CHECK-NEXT:    li a0, -272
+; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vrgatherei16.vv v8, v12, v16, v0.t
+; CHECK-NEXT:    ret
+  %out = shufflevector <16 x i32> %v, <16 x i32> %w, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 26, i32 30, i32 22, i32 20, i32 8, i32 31, i32 29, i32 28, i32 27, i32 23, i32 25, i32 22>
+  ret <16 x i32> %out
+}
+
+define <16 x i32> @shuffle_disjoint_lanes_one_broadcast(<16 x i32> %v, <16 x i32> %w) {
+; CHECK-LABEL: shuffle_disjoint_lanes_one_broadcast:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(.LCPI76_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI76_0)
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
+; CHECK-NEXT:    vle16.v v20, (a0)
+; CHECK-NEXT:    lui a0, 15
+; CHECK-NEXT:    addi a0, a0, 240
+; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vrgather.vi v16, v8, 7
+; CHECK-NEXT:    vrgatherei16.vv v16, v12, v20, v0.t
+; CHECK-NEXT:    vmv.v.v v8, v16
+; CHECK-NEXT:    ret
+  %out = shufflevector <16 x i32> %v, <16 x i32> %w, <16 x i32> <i32 7, i32 7, i32 7, i32 7, i32 26, i32 30, i32 22, i32 18, i32 7, i32 7, i32 7, i32 7, i32 24, i32 28, i32 20, i32 16>
+  ret <16 x i32> %out
+}
+
+define <16 x i32> @shuffle_disjoint_lanes_one_splat(i32 %v, <16 x i32> %w) {
+; CHECK-LABEL: shuffle_disjoint_lanes_one_splat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, %hi(.LCPI77_0)
+; CHECK-NEXT:    addi a1, a1, %lo(.LCPI77_0)
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
+; CHECK-NEXT:    vle16.v v16, (a1)
+; CHECK-NEXT:    lui a1, 15
+; CHECK-NEXT:    addi a1, a1, 240
+; CHECK-NEXT:    vmv.s.x v0, a1
+; CHECK-NEXT:    vmv.v.x v12, a0
+; CHECK-NEXT:    vrgatherei16.vv v12, v8, v16, v0.t
+; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    ret
+  %head = insertelement <16 x i32> poison, i32 %v, i32 0
+  %splat = shufflevector <16 x i32> %head, <16 x i32> poison, <16 x i32> zeroinitializer
+  %out = shufflevector <16 x i32> %splat, <16 x i32> %w, <16 x i32> <i32 11, i32 15, i32 7, i32 3, i32 26, i32 30, i32 22, i32 18, i32 9, i32 13, i32 5, i32 1, i32 24, i32 28, i32 20, i32 16>
+  ret <16 x i32> %out
 }
