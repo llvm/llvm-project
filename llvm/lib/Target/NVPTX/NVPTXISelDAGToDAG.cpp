@@ -1001,6 +1001,17 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   return true;
 }
 
+static bool isVectorElementTypeUpsized(EVT EltVT) {
+  // Despite vectors like v8i8, v16i8, v8i16 being within the bit-limit for
+  // total load/store size, PTX syntax only supports v2/v4. Thus, we can't use
+  // vectorized loads/stores with the actual element type for i8/i16 as that
+  // would require v8/v16 variants that do not exist.
+  // In order to load/store such vectors efficiently, in Type Legalization
+  // we split the vector into word-sized chunks (v2x16/v4i8). Now, we will
+  // lower to PTX as vectors of b32.
+  return Isv2x16VT(EltVT) || EltVT == MVT::v4i8;
+}
+
 bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   MemSDNode *MemSD = cast<MemSDNode>(N);
   EVT LoadedVT = MemSD->getMemoryVT();
@@ -1055,12 +1066,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
 
   EVT EltVT = N->getValueType(0);
 
-  // Vectors of 8-and-16-bit elements above a certain size are special cases.
-  // PTX doesn't have anything larger than ld.v4 for those element types.
-  // In Type Legalization, rather than splitting those vectors into multiple
-  // loads, we split the vector into v2x16/v4i8 chunks. Now, we lower to PTX as
-  // vector loads of b32.
-  if (Isv2x16VT(EltVT) || EltVT == MVT::v4i8) {
+  if (isVectorElementTypeUpsized(EltVT)) {
     EltVT = MVT::i32;
     FromType = NVPTX::PTXLdStInstCode::Untyped;
     FromTypeWidth = 32;
@@ -1740,12 +1746,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
     return false;
   }
 
-  // Vectors of 8-and-16-bit elements above a certain size are special cases.
-  // PTX doesn't have anything larger than st.v4 for those element types.
-  // In Type Legalization, rather than splitting those vectors into multiple
-  // stores, we split the vector into v2x16/v4i8 chunks. Now, we lower to
-  // PTX as vector stores of b32.
-  if (Isv2x16VT(EltVT) || EltVT == MVT::v4i8) {
+  if (isVectorElementTypeUpsized(EltVT)) {
     EltVT = MVT::i32;
     ToType = NVPTX::PTXLdStInstCode::Untyped;
     ToTypeWidth = 32;
