@@ -3,11 +3,11 @@
 
 ; Make sure this does not crash.
 
-define void @f_116_0() alwaysinline {
+define void @f_116_0(ptr %p) alwaysinline {
 ; CHECK-LABEL: define void @f_116_0(
-; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[DOTPRE:%.*]] = load i16, ptr null, align 1
+; CHECK-NEXT:    [[DOTPRE:%.*]] = load i16, ptr [[P]], align 1
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i16 [[DOTPRE]], 1
@@ -18,7 +18,7 @@ define void @f_116_0() alwaysinline {
 ; CHECK-NEXT:    br label %[[FOR_COND]]
 ;
 entry:
-  %.pre = load i16, ptr null, align 1
+  %.pre = load i16, ptr %p, align 1
   br label %for.cond
 
 for.cond:                                         ; preds = %for.body, %entry
@@ -32,9 +32,9 @@ for.body:                                         ; preds = %for.cond
   br label %for.cond
 }
 
-define void @f_321_0() alwaysinline {
+define void @f_321_0(ptr %p) alwaysinline {
 ; CHECK-LABEL: define void @f_321_0(
-; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
@@ -42,7 +42,7 @@ define void @f_321_0() alwaysinline {
 ; CHECK:       [[CRIT_EDGE]]:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[FOR_COND_CLEANUP]]:
-; CHECK-NEXT:    [[DOTPRE_I:%.*]] = load i16, ptr null, align 1
+; CHECK-NEXT:    [[DOTPRE_I:%.*]] = load i16, ptr [[P]], align 1
 ; CHECK-NEXT:    br label %[[FOR_COND_I:.*]]
 ; CHECK:       [[FOR_COND_I]]:
 ; CHECK-NEXT:    [[CMP3_I:%.*]] = icmp ult i16 [[DOTPRE_I]], 1
@@ -62,18 +62,19 @@ crit_edge:                                        ; preds = %for.cond
   br label %for.cond
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  call void @f_116_0()
+  call void @f_116_0(ptr %p)
   ret void
 }
 
-define i16 @main() {
-; CHECK-LABEL: define i16 @main() {
+define i16 @main(ptr %p) {
+; CHECK-LABEL: define i16 @main(
+; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
 ; CHECK-NEXT:    br label %[[FOR_COND]]
 ; CHECK:       [[IF_ELSE:.*:]]
-; CHECK-NEXT:    [[DOTPRE_I_I:%.*]] = load i16, ptr null, align 1
+; CHECK-NEXT:    [[DOTPRE_I_I:%.*]] = load i16, ptr [[P]], align 1
 ; CHECK-NEXT:    br label %[[FOR_COND_I_I:.*]]
 ; CHECK:       [[FOR_COND_I_I]]:
 ; CHECK-NEXT:    [[CMP3_I_I:%.*]] = icmp ult i16 [[DOTPRE_I_I]], 1
@@ -92,7 +93,7 @@ for.cond:                                         ; preds = %for.cond, %entry
   br label %for.cond
 
 if.else:                                          ; No predecessors!
-  call void @f_321_0()
+  call void @f_321_0(ptr %p)
   br label %for.cond115
 
 for.cond115:                                      ; preds = %for.cond115, %if.else
