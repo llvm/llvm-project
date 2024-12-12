@@ -20,10 +20,6 @@
 
 namespace mlir {
 namespace gpu {
-/// Move scalar operations with no dependency on the warp op outside of the
-/// region.
-void moveScalarUniformCode(gpu::WarpExecuteOnLane0Op op);
-
 struct WarpDistributionPattern : OpRewritePattern<WarpExecuteOnLane0Op> {
   using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
   virtual LogicalResult
