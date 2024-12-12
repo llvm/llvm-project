@@ -24,10 +24,14 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/PassRegistry.h"
+#include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
+#include <memory>
 #include <queue>
 #include <stack>
 #include <unordered_set>
@@ -1245,8 +1249,15 @@ FunctionPass *llvm::createSPIRVStructurizerPass() {
 
 PreservedAnalyses SPIRVStructurizerWrapper::run(Function &F,
                                                 FunctionAnalysisManager &AF) {
-  FunctionPass *StructurizerPass = createSPIRVStructurizerPass();
-  if (!StructurizerPass->runOnFunction(F))
+  // TODO: Review this after migrating SPIRV passes to "modern" pass manager.
+  auto FPM = legacy::FunctionPassManager(F.getParent());
+  FPM.add(createLoopSimplifyPass());
+  FPM.add(new DominatorTreeWrapperPass());
+  FPM.add(new LoopInfoWrapperPass());
+  FPM.add(new SPIRVConvergenceRegionAnalysisWrapperPass());
+  FPM.add(createSPIRVStructurizerPass());
+  
+  if (!FPM.run(F))
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
