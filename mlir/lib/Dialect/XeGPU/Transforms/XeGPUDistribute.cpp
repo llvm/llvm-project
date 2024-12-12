@@ -170,7 +170,11 @@ getDistributedTensorDescType(xegpu::TensorDescType originalT,
   for (const auto [l, o] : llvm::zip_equal(layout, shape)) {
     if (!divisible(APInt(64, o), APInt(64, l)))
       return failure();
-    distributedShape.push_back(o / l);
+    // Tensor descriptor is distributed only for the scattered case.
+    if (originalT.isScattered())
+      distributedShape.push_back(o / l);
+    else
+      distributedShape.push_back(o);
   }
   xegpu::TensorDescType distributedDescType;
   if (originalT.isScattered()) {
