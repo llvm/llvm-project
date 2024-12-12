@@ -19,6 +19,8 @@
 
 #include "llvm/IR/Constants.h"
 
+#include "CIRGenPointerAuthInfo.h"
+
 #include "mlir/IR/Value.h"
 
 namespace clang::CIRGen {
@@ -29,9 +31,23 @@ enum KnownNonNull_t { NotKnownNonNull, KnownNonNull };
 /// Like RawAddress, an abstract representation of an aligned address, but the
 /// pointer contained in this class is possibly signed.
 class Address {
+
+  // The boolean flag indicates whether the pointer is known to be non-null.
   llvm::PointerIntPair<mlir::Value, 1, bool> PointerAndKnownNonNull;
+
+  /// The expected CIR type of the pointer. Carrying accurate element type
+  /// information in Address makes it more convenient to work with Address
+  /// values and allows frontend assertions to catch simple mistakes.
   mlir::Type ElementType;
+
   clang::CharUnits Alignment;
+
+  /// The ptrauth information needed to authenticate the base pointer.
+  cir::CIRGenPointerAuthInfo ptrAuthInfo;
+
+  /// Offset from the base pointer. This is non-null only when the base pointer
+  /// is signed.
+  mlir::Value offset = nullptr;
 
 protected:
   Address(std::nullptr_t) : ElementType(nullptr) {}
@@ -49,6 +65,14 @@ public:
     assert(elementType && "Element type cannot be null");
     assert(!alignment.isZero() && "Alignment cannot be zero");
   }
+
+  Address(mlir::Value basePtr, mlir::Type elementType,
+          clang::CharUnits alignment, cir::CIRGenPointerAuthInfo ptrAuthInfo,
+          mlir::Value offset, KnownNonNull_t isKnownNonNull = NotKnownNonNull)
+      : PointerAndKnownNonNull(basePtr, isKnownNonNull),
+        ElementType(elementType), Alignment(alignment),
+        ptrAuthInfo(ptrAuthInfo), offset(offset) {}
+
   Address(mlir::Value pointer, clang::CharUnits alignment)
       : Address(pointer,
                 mlir::cast<cir::PointerType>(pointer.getType()).getPointee(),
@@ -78,10 +102,15 @@ public:
                    isKnownNonNull());
   }
 
+  bool hasOffset() const { return bool(offset); }
+
   /// Return address with different element type, but same pointer and
   /// alignment.
   Address withElementType(mlir::Type ElemTy) const {
-    // TODO(cir): hasOffset() check
+    if (!hasOffset())
+      return Address(getBasePointer(), ElemTy, getAlignment(),
+                     getPointerAuthInfo(), /*Offset=*/nullptr,
+                     isKnownNonNull());
     return Address(getPointer(), ElemTy, getAlignment(), isKnownNonNull());
   }
 
@@ -119,6 +148,10 @@ public:
   mlir::Type getElementType() const {
     assert(isValid());
     return ElementType;
+  }
+
+  const cir::CIRGenPointerAuthInfo &getPointerAuthInfo() const {
+    return ptrAuthInfo;
   }
 
   /// Whether the pointer is known not to be null.
