@@ -283,7 +283,9 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                   D.getLTOMode() == LTOK_Thin);
   }
 
-  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+  const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs(Args);
+  bool NeedsSanitizerDeps =
+      addSanitizerRuntimes(ToolChain, Args, SanArgs, CmdArgs);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
   addLinkerCompressDebugSectionsOption(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
@@ -324,7 +326,7 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
 
     if (NeedsSanitizerDeps)
-      linkSanitizerRuntimeDeps(ToolChain, Args, CmdArgs);
+      linkSanitizerRuntimeDeps(ToolChain, Args, SanArgs, CmdArgs);
     if (NeedsXRayDeps)
       linkXRayRuntimeDeps(ToolChain, Args, CmdArgs);
     // FIXME: For some reason GCC passes -lgcc and -lgcc_s before adding

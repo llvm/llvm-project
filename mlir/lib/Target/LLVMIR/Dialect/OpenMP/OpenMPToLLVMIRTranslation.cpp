@@ -299,10 +299,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
             if (privatizer.getDataSharingType() ==
                 omp::DataSharingClauseType::FirstPrivate)
               result = todo("firstprivate");
-
-            if (!privatizer.getDeallocRegion().empty())
-              result = op.emitError("not yet implemented: privatization of "
-                                    "structures in omp.target operation");
           }
         }
         checkThreadLimit(op, result);
@@ -1290,6 +1286,41 @@ static LogicalResult allocAndInitializeReductionVars(
                            isByRef, deferredStores);
 }
 
+/// Return the llvm::Value * corresponding to the `privateVar` that
+/// is being privatized. It isn't always as simple as looking up
+/// moduleTranslation with privateVar. For instance, in case of
+/// an allocatable, the descriptor for the allocatable is privatized.
+/// This descriptor is mapped using an MapInfoOp. So, this function
+/// will return a pointer to the llvm::Value corresponding to the
+/// block argument for the mapped descriptor.
+static llvm::Value *
+findAssociatedValue(Value privateVar, llvm::IRBuilderBase &builder,
+                    LLVM::ModuleTranslation &moduleTranslation,
+                    llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
+  if (mappedPrivateVars == nullptr || !mappedPrivateVars->contains(privateVar))
+    return moduleTranslation.lookupValue(privateVar);
+
+  Value blockArg = (*mappedPrivateVars)[privateVar];
+  Type privVarType = privateVar.getType();
+  Type blockArgType = blockArg.getType();
+  assert(isa<LLVM::LLVMPointerType>(blockArgType) &&
+         "A block argument corresponding to a mapped var should have "
+         "!llvm.ptr type");
+
+  if (privVarType == blockArgType)
+    return moduleTranslation.lookupValue(blockArg);
+
+  // This typically happens when the privatized type is lowered from
+  // boxchar<KIND> and gets lowered to !llvm.struct<(ptr, i64)>. That is the
+  // struct/pair is passed by value. But, mapped values are passed only as
+  // pointers, so before we privatize, we must load the pointer.
+  if (!isa<LLVM::LLVMPointerType>(privVarType))
+    return builder.CreateLoad(moduleTranslation.convertType(privVarType),
+                              moduleTranslation.lookupValue(blockArg));
+
+  return moduleTranslation.lookupValue(privateVar);
+}
+
 /// Allocate delayed private variables. Returns the basic block which comes
 /// after all of these allocations. llvm::Value * for each of these private
 /// variables are populated in llvmPrivateVars.
@@ -1300,7 +1331,8 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
                     MutableArrayRef<omp::PrivateClauseOp> privateDecls,
                     MutableArrayRef<mlir::Value> mlirPrivateVars,
                     llvm::SmallVectorImpl<llvm::Value *> &llvmPrivateVars,
-                    const llvm::OpenMPIRBuilder::InsertPointTy &allocaIP) {
+                    const llvm::OpenMPIRBuilder::InsertPointTy &allocaIP,
+                    llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
   llvm::IRBuilderBase::InsertPointGuard guard(builder);
   // Allocate private vars
   llvm::BranchInst *allocaTerminator =
@@ -1330,7 +1362,8 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
     Region &allocRegion = privDecl.getAllocRegion();
 
     // map allocation region block argument
-    llvm::Value *nonPrivateVar = moduleTranslation.lookupValue(mlirPrivVar);
+    llvm::Value *nonPrivateVar = findAssociatedValue(
+        mlirPrivVar, builder, moduleTranslation, mappedPrivateVars);
     assert(nonPrivateVar);
     moduleTranslation.mapValue(privDecl.getAllocMoldArg(), nonPrivateVar);
 
@@ -1345,6 +1378,7 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
     } else {
       builder.SetInsertPoint(privAllocBlock->getTerminator());
     }
+
     if (failed(inlineConvertOmpRegions(allocRegion, "omp.private.alloc",
                                        builder, moduleTranslation, &phis)))
       return llvm::createStringError(
@@ -3829,6 +3863,17 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   bool isTargetDevice = ompBuilder->Config.isTargetDevice();
   auto parentFn = opInst.getParentOfType<LLVM::LLVMFuncOp>();
   auto &targetRegion = targetOp.getRegion();
+  // Holds the private vars that have been mapped along with the block argument
+  // that corresponds to the MapInfoOp corresponding to the private var in
+  // question. So, for instance:
+  //
+  // %10 = omp.map.info var_ptr(%6#0 : !fir.ref<!fir.box<!fir.heap<i32>>>, ..)
+  // omp.target map_entries(%10 -> %arg0) private(@box.privatizer %6#0-> %arg1)
+  //
+  // Then, %10 has been created so that the descriptor can be used by the
+  // privatizer @box.privatizer on the device side. Here we'd record {%6#0,
+  // %arg0} in the mappedPrivateVars map.
+  llvm::DenseMap<Value, Value> mappedPrivateVars;
   DataLayout dl = DataLayout(opInst.getParentOfType<ModuleOp>());
   SmallVector<Value> mapVars = targetOp.getMapVars();
   ArrayRef<BlockArgument> mapBlockArgs =
@@ -3839,6 +3884,57 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   // specified.
   bool isOffloadEntry =
       isTargetDevice || !ompBuilder->Config.TargetTriples.empty();
+
+  // For some private variables, the MapsForPrivatizedVariablesPass
+  // creates MapInfoOp instances. Go through the private variables and
+  // the mapped variables so that during codegeneration we are able
+  // to quickly look up the corresponding map variable, if any for each
+  // private variable.
+  if (!targetOp.getPrivateVars().empty() && !targetOp.getMapVars().empty()) {
+    auto argIface = llvm::cast<omp::BlockArgOpenMPOpInterface>(*targetOp);
+    OperandRange privateVars = targetOp.getPrivateVars();
+    std::optional<ArrayAttr> privateSyms = targetOp.getPrivateSyms();
+    std::optional<DenseI64ArrayAttr> privateMapIndices =
+        targetOp.getPrivateMapsAttr();
+
+    for (auto [privVarIdx, privVarSymPair] :
+         llvm::enumerate(llvm::zip_equal(privateVars, *privateSyms))) {
+      auto privVar = std::get<0>(privVarSymPair);
+      auto privSym = std::get<1>(privVarSymPair);
+
+      SymbolRefAttr privatizerName = llvm::cast<SymbolRefAttr>(privSym);
+      omp::PrivateClauseOp privatizer =
+          findPrivatizer(targetOp, privatizerName);
+
+      if (!privatizer.needsMap())
+        continue;
+
+      mlir::Value mappedValue =
+          targetOp.getMappedValueForPrivateVar(privVarIdx);
+      assert(mappedValue && "Expected to find mapped value for a privatized "
+                            "variable that needs mapping");
+
+      // The MapInfoOp defining the map var isn't really needed later.
+      // So, we don't store it in any datastructure. Instead, we just
+      // do some sanity checks on it right now.
+      auto mapInfoOp = mappedValue.getDefiningOp<omp::MapInfoOp>();
+      [[maybe_unused]] Type varType = mapInfoOp.getVarType();
+
+      // Check #1: Check that the type of the private variable matches
+      // the type of the variable being mapped.
+      if (!isa<LLVM::LLVMPointerType>(privVar.getType()))
+        assert(
+            varType == privVar.getType() &&
+            "Type of private var doesn't match the type of the mapped value");
+
+      // Ok, only 1 sanity check for now.
+      // Record the block argument corresponding to this mapvar.
+      mappedPrivateVars.insert(
+          {privVar,
+           targetRegion.getArgument(argIface.getMapBlockArgsStart() +
+                                    (*privateMapIndices)[privVarIdx])});
+    }
+  }
 
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   auto bodyCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP)
@@ -3859,7 +3955,6 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
         attr.isStringAttribute())
       llvmOutlinedFn->addFnAttr(attr);
 
-    builder.restoreIP(codeGenIP);
     for (auto [arg, mapOp] : llvm::zip_equal(mapBlockArgs, mapVars)) {
       auto mapInfoOp = cast<omp::MapInfoOp>(mapOp.getDefiningOp());
       llvm::Value *mapOpValue =
@@ -3869,50 +3964,52 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
     // Do privatization after moduleTranslation has already recorded
     // mapped values.
-    if (!targetOp.getPrivateVars().empty()) {
-      builder.restoreIP(allocaIP);
+    MutableArrayRef<BlockArgument> privateBlockArgs =
+        cast<omp::BlockArgOpenMPOpInterface>(opInst).getPrivateBlockArgs();
+    SmallVector<mlir::Value> mlirPrivateVars;
+    SmallVector<llvm::Value *> llvmPrivateVars;
+    SmallVector<omp::PrivateClauseOp> privateDecls;
+    mlirPrivateVars.reserve(privateBlockArgs.size());
+    llvmPrivateVars.reserve(privateBlockArgs.size());
+    collectPrivatizationDecls(targetOp, privateDecls);
+    for (mlir::Value privateVar : targetOp.getPrivateVars())
+      mlirPrivateVars.push_back(privateVar);
 
-      OperandRange privateVars = targetOp.getPrivateVars();
-      std::optional<ArrayAttr> privateSyms = targetOp.getPrivateSyms();
-      MutableArrayRef<BlockArgument> privateBlockArgs =
-          cast<omp::BlockArgOpenMPOpInterface>(opInst).getPrivateBlockArgs();
+    llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
+        builder, moduleTranslation, privateBlockArgs, privateDecls,
+        mlirPrivateVars, llvmPrivateVars, allocaIP, &mappedPrivateVars);
 
-      for (auto [privVar, privatizerNameAttr, privBlockArg] :
-           llvm::zip_equal(privateVars, *privateSyms, privateBlockArgs)) {
+    if (failed(handleError(afterAllocas, *targetOp)))
+      return llvm::make_error<PreviouslyReportedError>();
 
-        SymbolRefAttr privSym = cast<SymbolRefAttr>(privatizerNameAttr);
-        omp::PrivateClauseOp privatizer = findPrivatizer(&opInst, privSym);
-        assert(privatizer.getDataSharingType() !=
-                   omp::DataSharingClauseType::FirstPrivate &&
-               privatizer.getDeallocRegion().empty() &&
-               "unsupported privatizer");
-        moduleTranslation.mapValue(privatizer.getAllocMoldArg(),
-                                   moduleTranslation.lookupValue(privVar));
-        Region &allocRegion = privatizer.getAllocRegion();
-        SmallVector<llvm::Value *, 1> yieldedValues;
-        if (failed(inlineConvertOmpRegions(
-                allocRegion, "omp.targetop.privatizer", builder,
-                moduleTranslation, &yieldedValues))) {
-          return llvm::createStringError(
-              "failed to inline `alloc` region of `omp.private`");
-        }
-        assert(yieldedValues.size() == 1);
-        moduleTranslation.mapValue(privBlockArg, yieldedValues.front());
-        moduleTranslation.forgetMapping(allocRegion);
-        builder.restoreIP(builder.saveIP());
-      }
-    }
+    SmallVector<Region *> privateCleanupRegions;
+    llvm::transform(privateDecls, std::back_inserter(privateCleanupRegions),
+                    [](omp::PrivateClauseOp privatizer) {
+                      return &privatizer.getDeallocRegion();
+                    });
 
+    builder.restoreIP(codeGenIP);
     llvm::Expected<llvm::BasicBlock *> exitBlock = convertOmpOpRegions(
         targetRegion, "omp.target", builder, moduleTranslation);
+
     if (!exitBlock)
       return exitBlock.takeError();
 
     builder.SetInsertPoint(*exitBlock);
-    return builder.saveIP();
+    if (!privateCleanupRegions.empty()) {
+      if (failed(inlineOmpRegionCleanup(
+              privateCleanupRegions, llvmPrivateVars, moduleTranslation,
+              builder, "omp.targetop.private.cleanup",
+              /*shouldLoadCleanupRegionArg=*/false))) {
+        return llvm::createStringError(
+            "failed to inline `dealloc` region of `omp.private` "
+            "op in the target region");
+      }
+    }
+
+    return InsertPointTy(exitBlock.get(), exitBlock.get()->end());
   };
 
-  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   StringRef parentName = parentFn.getName();
 
   llvm::TargetRegionEntryInfo entryInfo;
@@ -3922,9 +4019,6 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
   int32_t defaultValTeams = -1;
   int32_t defaultValThreads = 0;
-
-  llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
-      findAllocaInsertPoint(builder, moduleTranslation);
 
   MapInfoData mapData;
   collectMapDataFromMapOperands(mapData, mapVars, moduleTranslation, dl,
@@ -3972,6 +4066,10 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   SmallVector<llvm::OpenMPIRBuilder::DependData> dds;
   buildDependData(targetOp.getDependKinds(), targetOp.getDependVars(),
                   moduleTranslation, dds);
+
+  llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
+      findAllocaInsertPoint(builder, moduleTranslation);
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
 
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createTarget(
