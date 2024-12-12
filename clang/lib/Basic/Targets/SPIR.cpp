@@ -81,8 +81,9 @@ SPIRV64AMDGCNTargetInfo::convertConstraint(const char *&Constraint) const {
   return AMDGPUTI.convertConstraint(Constraint);
 }
 
-ArrayRef<Builtin::Info> SPIRV64AMDGCNTargetInfo::getTargetBuiltins() const {
-  return AMDGPUTI.getTargetBuiltins();
+std::pair<const char *, ArrayRef<Builtin::Info>>
+SPIRV64AMDGCNTargetInfo::getTargetBuiltinStorage() const {
+  return AMDGPUTI.getTargetBuiltinStorage();
 }
 
 void SPIRV64AMDGCNTargetInfo::getTargetDefines(const LangOptions &Opts,

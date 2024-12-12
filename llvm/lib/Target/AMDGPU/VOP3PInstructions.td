@@ -1845,6 +1845,11 @@ defm V_DOT4_I32_IU8  : VOP3P_Real_gfx11_gfx12<0x16>;
 defm V_DOT8_I32_IU4  : VOP3P_Real_gfx11_gfx12<0x18>;
 defm V_DOT2_F32_BF16 : VOP3P_Real_gfx11_gfx12<0x1a>;
 
+let AssemblerPredicate = isGFX11Plus in {
+  def : AMDGPUMnemonicAlias<"v_dot4_i32_i8", "v_dot4_i32_iu8">;
+  def : AMDGPUMnemonicAlias<"v_dot8_i32_i4", "v_dot8_i32_iu4">;
+}
+
 multiclass VOP3P_Real_WMMA <bits<7> op> {
   let WaveSizePredicate = isWave32, DecoderNamespace = "GFX11" in {
     defm _twoaddr_w32 : VOP3P_Real_Base <GFX11Gen, op>;

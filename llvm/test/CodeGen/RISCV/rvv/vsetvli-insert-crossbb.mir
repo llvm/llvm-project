@@ -835,8 +835,8 @@ body:             |
   ; CHECK-NEXT:   PseudoBR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_1:%[0-9]+]]:gpr = PseudoVSETVLIX0 $x0, 197 /* e8, mf8, ta, ma */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   $v0 = COPY %mask
-  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0 killed $x0, 197 /* e8, mf8, ta, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
   ; CHECK-NEXT:   PseudoVSOXEI64_V_M1_MF8_MASK [[COPY]], %b, %idxs, $v0, -1, 3 /* e8 */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   PseudoRET
   bb.0:

@@ -29,54 +29,93 @@ const char *HeaderDesc::getName() const {
   llvm_unreachable("Unknown HeaderDesc::HeaderID enum");
 }
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-    {"not a builtin function", nullptr, nullptr, nullptr, HeaderDesc::NO_HEADER,
-     ALL_LANGUAGES},
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define LANGBUILTIN(ID, TYPE, ATTRS, LANGS)                                    \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, LANGS},
-#define LIBBUILTIN(ID, TYPE, ATTRS, HEADER, LANGS)                             \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::HEADER, LANGS},
+static constexpr auto BuiltinStorage =
+    Builtin::Storage<Builtin::FirstTSBuiltin>::Make(
+        CLANG_BUILTIN_STR_TABLE("not a builtin function", "", "")
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
 #include "clang/Basic/Builtins.inc"
-};
+            ,
+        {CLANG_BUILTIN_ENTRY("not a builtin function", "", "")
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define LANGBUILTIN CLANG_LANGBUILTIN_ENTRY
+#define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
+#include "clang/Basic/Builtins.inc"
+        });
 
-const Builtin::Info &Builtin::Context::getRecord(unsigned ID) const {
+std::pair<const char *, const Builtin::Info &>
+Builtin::Context::getStrTableAndInfo(unsigned ID) const {
   if (ID < Builtin::FirstTSBuiltin)
-    return BuiltinInfo[ID];
-  assert(((ID - Builtin::FirstTSBuiltin) <
-          (TSRecords.size() + AuxTSRecords.size())) &&
-         "Invalid builtin ID!");
+    return {BuiltinStorage.StringTable, BuiltinStorage.Infos[ID]};
+  assert(
+      ((ID - Builtin::FirstTSBuiltin) < (TSInfos.size() + AuxTSInfos.size())) &&
+      "Invalid builtin ID!");
   if (isAuxBuiltinID(ID))
-    return AuxTSRecords[getAuxBuiltinID(ID) - Builtin::FirstTSBuiltin];
-  return TSRecords[ID - Builtin::FirstTSBuiltin];
+    return {AuxTSStrTable,
+            AuxTSInfos[getAuxBuiltinID(ID) - Builtin::FirstTSBuiltin]};
+  return {TSStrTable, TSInfos[ID - Builtin::FirstTSBuiltin]};
+}
+
+static llvm::StringRef getStrFromTable(const char *StrTable, int Offset) {
+  return &StrTable[Offset];
+}
+
+/// Return the identifier name for the specified builtin,
+/// e.g. "__builtin_abs".
+llvm::StringRef Builtin::Context::getName(unsigned ID) const {
+  const auto &[StrTable, I] = getStrTableAndInfo(ID);
+  return getStrFromTable(StrTable, I.Offsets.Name);
+}
+
+const char *Builtin::Context::getTypeString(unsigned ID) const {
+  const auto &[StrTable, I] = getStrTableAndInfo(ID);
+  return getStrFromTable(StrTable, I.Offsets.Type).data();
+}
+
+const char *Builtin::Context::getAttributesString(unsigned ID) const {
+  const auto &[StrTable, I] = getStrTableAndInfo(ID);
+  return getStrFromTable(StrTable, I.Offsets.Attributes).data();
+}
+
+const char *Builtin::Context::getRequiredFeatures(unsigned ID) const {
+  const auto &[StrTable, I] = getStrTableAndInfo(ID);
+  return getStrFromTable(StrTable, I.Offsets.Features).data();
 }
 
 void Builtin::Context::InitializeTarget(const TargetInfo &Target,
                                         const TargetInfo *AuxTarget) {
-  assert(TSRecords.empty() && "Already initialized target?");
-  TSRecords = Target.getTargetBuiltins();
-  if (AuxTarget)
-    AuxTSRecords = AuxTarget->getTargetBuiltins();
+  assert(TSStrTable == nullptr && "Already initialized target?");
+  assert(TSInfos.empty() && "Already initialized target?");
+  std::tie(TSStrTable, TSInfos) = Target.getTargetBuiltinStorage();
+  if (AuxTarget) {
+    std::tie(AuxTSStrTable, AuxTSInfos) = AuxTarget->getTargetBuiltinStorage();
+  }
 }
 
 bool Builtin::Context::isBuiltinFunc(llvm::StringRef FuncName) {
   bool InStdNamespace = FuncName.consume_front("std-");
+  const char *StrTable = BuiltinStorage.StringTable;
   for (unsigned i = Builtin::NotBuiltin + 1; i != Builtin::FirstTSBuiltin;
        ++i) {
-    if (FuncName == BuiltinInfo[i].Name &&
-        (bool)strchr(BuiltinInfo[i].Attributes, 'z') == InStdNamespace)
-      return strchr(BuiltinInfo[i].Attributes, 'f') != nullptr;
+    const auto &I = BuiltinStorage.Infos[i];
+    if (FuncName == getStrFromTable(StrTable, I.Offsets.Name) &&
+        (bool)strchr(getStrFromTable(StrTable, I.Offsets.Attributes).data(),
+                     'z') == InStdNamespace)
+      return strchr(getStrFromTable(StrTable, I.Offsets.Attributes).data(),
+                    'f') != nullptr;
   }
 
   return false;
 }
 
 /// Is this builtin supported according to the given language options?
-static bool builtinIsSupported(const Builtin::Info &BuiltinInfo,
+static bool builtinIsSupported(const char *StrTable,
+                               const Builtin::Info &BuiltinInfo,
                                const LangOptions &LangOpts) {
+  auto AttributesStr =
+      getStrFromTable(StrTable, BuiltinInfo.Offsets.Attributes);
+
   /* Builtins Unsupported */
-  if (LangOpts.NoBuiltin && strchr(BuiltinInfo.Attributes, 'f') != nullptr)
+  if (LangOpts.NoBuiltin && strchr(AttributesStr.data(), 'f') != nullptr)
     return false;
   /* CorBuiltins Unsupported */
   if (!LangOpts.Coroutines && (BuiltinInfo.Langs & COR_LANG))
@@ -123,7 +162,7 @@ static bool builtinIsSupported(const Builtin::Info &BuiltinInfo,
   if (!LangOpts.CPlusPlus && BuiltinInfo.Langs == CXX_LANG)
     return false;
   /* consteval Unsupported */
-  if (!LangOpts.CPlusPlus20 && strchr(BuiltinInfo.Attributes, 'G') != nullptr)
+  if (!LangOpts.CPlusPlus20 && strchr(AttributesStr.data(), 'G') != nullptr)
     return false;
   return true;
 }
@@ -134,20 +173,23 @@ static bool builtinIsSupported(const Builtin::Info &BuiltinInfo,
 void Builtin::Context::initializeBuiltins(IdentifierTable &Table,
                                           const LangOptions& LangOpts) {
   // Step #1: mark all target-independent builtins with their ID's.
-  for (unsigned i = Builtin::NotBuiltin+1; i != Builtin::FirstTSBuiltin; ++i)
-    if (builtinIsSupported(BuiltinInfo[i], LangOpts)) {
-      Table.get(BuiltinInfo[i].Name).setBuiltinID(i);
+  for (const auto &&[Index, I] :
+       llvm::enumerate(llvm::ArrayRef(BuiltinStorage.Infos).drop_front()))
+    if (builtinIsSupported(BuiltinStorage.StringTable, I, LangOpts)) {
+      Table.get(getStrFromTable(BuiltinStorage.StringTable, I.Offsets.Name))
+          .setBuiltinID(Index + 1);
     }
 
   // Step #2: Register target-specific builtins.
-  for (unsigned i = 0, e = TSRecords.size(); i != e; ++i)
-    if (builtinIsSupported(TSRecords[i], LangOpts))
-      Table.get(TSRecords[i].Name).setBuiltinID(i + Builtin::FirstTSBuiltin);
+  for (const auto &&[Index, I] : llvm::enumerate(TSInfos))
+    if (builtinIsSupported(TSStrTable, I, LangOpts))
+      Table.get(getStrFromTable(TSStrTable, I.Offsets.Name))
+          .setBuiltinID(Index + Builtin::FirstTSBuiltin);
 
   // Step #3: Register target-specific builtins for AuxTarget.
-  for (unsigned i = 0, e = AuxTSRecords.size(); i != e; ++i)
-    Table.get(AuxTSRecords[i].Name)
-        .setBuiltinID(i + Builtin::FirstTSBuiltin + TSRecords.size());
+  for (const auto &&[Index, I] : llvm::enumerate(AuxTSInfos))
+    Table.get(getStrFromTable(AuxTSStrTable, I.Offsets.Name))
+        .setBuiltinID(Index + Builtin::FirstTSBuiltin + TSInfos.size());
 
   // Step #4: Unregister any builtins specified by -fno-builtin-foo.
   for (llvm::StringRef Name : LangOpts.NoBuiltinFuncs) {
@@ -164,7 +206,7 @@ void Builtin::Context::initializeBuiltins(IdentifierTable &Table,
 }
 
 unsigned Builtin::Context::getRequiredVectorWidth(unsigned ID) const {
-  const char *WidthPos = ::strchr(getRecord(ID).Attributes, 'V');
+  const char *WidthPos = ::strchr(getAttributesString(ID), 'V');
   if (!WidthPos)
     return 0;
 
@@ -187,7 +229,7 @@ bool Builtin::Context::isLike(unsigned ID, unsigned &FormatIdx,
   assert(::toupper(Fmt[0]) == Fmt[1] &&
          "Format string is not in the form \"xX\"");
 
-  const char *Like = ::strpbrk(getRecord(ID).Attributes, Fmt);
+  const char *Like = ::strpbrk(getAttributesString(ID), Fmt);
   if (!Like)
     return false;
 
@@ -214,7 +256,7 @@ bool Builtin::Context::isScanfLike(unsigned ID, unsigned &FormatIdx,
 
 bool Builtin::Context::performsCallback(unsigned ID,
                                         SmallVectorImpl<int> &Encoding) const {
-  const char *CalleePos = ::strchr(getRecord(ID).Attributes, 'C');
+  const char *CalleePos = ::strchr(getAttributesString(ID), 'C');
   if (!CalleePos)
     return false;
 

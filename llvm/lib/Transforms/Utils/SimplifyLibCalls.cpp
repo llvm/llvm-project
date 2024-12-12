@@ -397,9 +397,8 @@ Value *LibCallSimplifier::emitStrLenMemCpy(Value *Src, Value *Dst, uint64_t Len,
 
   // We have enough information to now generate the memcpy call to do the
   // concatenation for us.  Make a memcpy to copy the nul byte with align = 1.
-  B.CreateMemCpy(
-      CpyDst, Align(1), Src, Align(1),
-      ConstantInt::get(DL.getIntPtrType(Src->getContext()), Len + 1));
+  B.CreateMemCpy(CpyDst, Align(1), Src, Align(1),
+                 TLI->getAsSizeT(Len + 1, *B.GetInsertBlock()->getModule()));
   return Dst;
 }
 
@@ -590,26 +589,21 @@ Value *LibCallSimplifier::optimizeStrCmp(CallInst *CI, IRBuilderBase &B) {
   if (Len1 && Len2) {
     return copyFlags(
         *CI, emitMemCmp(Str1P, Str2P,
-                        ConstantInt::get(DL.getIntPtrType(CI->getContext()),
-                                         std::min(Len1, Len2)),
+                        TLI->getAsSizeT(std::min(Len1, Len2), *CI->getModule()),
                         B, DL, TLI));
   }
 
   // strcmp to memcmp
   if (!HasStr1 && HasStr2) {
     if (canTransformToMemCmp(CI, Str1P, Len2, DL))
-      return copyFlags(
-          *CI,
-          emitMemCmp(Str1P, Str2P,
-                     ConstantInt::get(DL.getIntPtrType(CI->getContext()), Len2),
-                     B, DL, TLI));
+      return copyFlags(*CI, emitMemCmp(Str1P, Str2P,
+                                       TLI->getAsSizeT(Len2, *CI->getModule()),
+                                       B, DL, TLI));
   } else if (HasStr1 && !HasStr2) {
     if (canTransformToMemCmp(CI, Str2P, Len1, DL))
-      return copyFlags(
-          *CI,
-          emitMemCmp(Str1P, Str2P,
-                     ConstantInt::get(DL.getIntPtrType(CI->getContext()), Len1),
-                     B, DL, TLI));
+      return copyFlags(*CI, emitMemCmp(Str1P, Str2P,
+                                       TLI->getAsSizeT(Len1, *CI->getModule()),
+                                       B, DL, TLI));
   }
 
   annotateNonNullNoUndefBasedOnAccess(CI, {0, 1});
@@ -676,19 +670,15 @@ Value *LibCallSimplifier::optimizeStrNCmp(CallInst *CI, IRBuilderBase &B) {
   if (!HasStr1 && HasStr2) {
     Len2 = std::min(Len2, Length);
     if (canTransformToMemCmp(CI, Str1P, Len2, DL))
-      return copyFlags(
-          *CI,
-          emitMemCmp(Str1P, Str2P,
-                     ConstantInt::get(DL.getIntPtrType(CI->getContext()), Len2),
-                     B, DL, TLI));
+      return copyFlags(*CI, emitMemCmp(Str1P, Str2P,
+                                       TLI->getAsSizeT(Len2, *CI->getModule()),
+                                       B, DL, TLI));
   } else if (HasStr1 && !HasStr2) {
     Len1 = std::min(Len1, Length);
     if (canTransformToMemCmp(CI, Str2P, Len1, DL))
-      return copyFlags(
-          *CI,
-          emitMemCmp(Str1P, Str2P,
-                     ConstantInt::get(DL.getIntPtrType(CI->getContext()), Len1),
-                     B, DL, TLI));
+      return copyFlags(*CI, emitMemCmp(Str1P, Str2P,
+                                       TLI->getAsSizeT(Len1, *CI->getModule()),
+                                       B, DL, TLI));
   }
 
   return nullptr;
@@ -722,15 +712,13 @@ Value *LibCallSimplifier::optimizeStrCpy(CallInst *CI, IRBuilderBase &B) {
 
   // We have enough information to now generate the memcpy call to do the
   // copy for us.  Make a memcpy to copy the nul byte with align = 1.
-  CallInst *NewCI =
-      B.CreateMemCpy(Dst, Align(1), Src, Align(1),
-                     ConstantInt::get(DL.getIntPtrType(CI->getContext()), Len));
+  CallInst *NewCI = B.CreateMemCpy(Dst, Align(1), Src, Align(1),
+                                   TLI->getAsSizeT(Len, *CI->getModule()));
   mergeAttributesAndFlags(NewCI, *CI);
   return Dst;
 }
 
 Value *LibCallSimplifier::optimizeStpCpy(CallInst *CI, IRBuilderBase &B) {
-  Function *Callee = CI->getCalledFunction();
   Value *Dst = CI->getArgOperand(0), *Src = CI->getArgOperand(1);
 
   // stpcpy(d,s) -> strcpy(d,s) if the result is not used.
@@ -749,10 +737,9 @@ Value *LibCallSimplifier::optimizeStpCpy(CallInst *CI, IRBuilderBase &B) {
   else
     return nullptr;
 
-  Type *PT = Callee->getFunctionType()->getParamType(0);
-  Value *LenV = ConstantInt::get(DL.getIntPtrType(PT), Len);
+  Value *LenV = TLI->getAsSizeT(Len, *CI->getModule());
   Value *DstEnd = B.CreateInBoundsGEP(
-      B.getInt8Ty(), Dst, ConstantInt::get(DL.getIntPtrType(PT), Len - 1));
+      B.getInt8Ty(), Dst, TLI->getAsSizeT(Len - 1, *CI->getModule()));
 
   // We have enough information to now generate the memcpy call to do the
   // copy for us.  Make a memcpy to copy the nul byte with align = 1.
@@ -819,13 +806,11 @@ Value *LibCallSimplifier::optimizeStrLCpy(CallInst *CI, IRBuilderBase &B) {
     return ConstantInt::get(CI->getType(), 0);
   }
 
-  Function *Callee = CI->getCalledFunction();
-  Type *PT = Callee->getFunctionType()->getParamType(0);
   // Transform strlcpy(D, S, N) to memcpy(D, S, N') where N' is the lower
   // bound on strlen(S) + 1 and N, optionally followed by a nul store to
   // D[N' - 1] if necessary.
   CallInst *NewCI = B.CreateMemCpy(Dst, Align(1), Src, Align(1),
-                        ConstantInt::get(DL.getIntPtrType(PT), NBytes));
+                                   TLI->getAsSizeT(NBytes, *CI->getModule()));
   mergeAttributesAndFlags(NewCI, *CI);
 
   if (!NulTerm) {
@@ -844,7 +829,6 @@ Value *LibCallSimplifier::optimizeStrLCpy(CallInst *CI, IRBuilderBase &B) {
 // otherwise.
 Value *LibCallSimplifier::optimizeStringNCpy(CallInst *CI, bool RetEnd,
                                              IRBuilderBase &B) {
-  Function *Callee = CI->getCalledFunction();
   Value *Dst = CI->getArgOperand(0);
   Value *Src = CI->getArgOperand(1);
   Value *Size = CI->getArgOperand(2);
@@ -917,15 +901,15 @@ Value *LibCallSimplifier::optimizeStringNCpy(CallInst *CI, bool RetEnd,
     // Create a bigger, nul-padded array with the same length, SrcLen,
     // as the original string.
     SrcStr.resize(N, '\0');
-    Src = B.CreateGlobalString(SrcStr, "str", /*AddressSpace=*/0,
-                               /*M=*/nullptr, /*AddNull=*/false);
+    Src = B.CreateGlobalString(
+        SrcStr, "str", /*AddressSpace=*/DL.getDefaultGlobalsAddressSpace(),
+        /*M=*/nullptr, /*AddNull=*/false);
   }
 
-  Type *PT = Callee->getFunctionType()->getParamType(0);
   // st{p,r}ncpy(D, S, N) -> memcpy(align 1 D, align 1 S, N) when both
   // S and N are constant.
   CallInst *NewCI = B.CreateMemCpy(Dst, Align(1), Src, Align(1),
-                                   ConstantInt::get(DL.getIntPtrType(PT), N));
+                                   TLI->getAsSizeT(N, *CI->getModule()));
   mergeAttributesAndFlags(NewCI, *CI);
   if (!RetEnd)
     return Dst;
@@ -1723,7 +1707,8 @@ Value *LibCallSimplifier::optimizeMemSet(CallInst *CI, IRBuilderBase &B) {
 
 Value *LibCallSimplifier::optimizeRealloc(CallInst *CI, IRBuilderBase &B) {
   if (isa<ConstantPointerNull>(CI->getArgOperand(0)))
-    return copyFlags(*CI, emitMalloc(CI->getArgOperand(1), B, DL, TLI));
+    return copyFlags(*CI, emitMalloc(CI->getArgOperand(0)->getType(),
+                                     CI->getArgOperand(1), B, DL, TLI));
 
   return nullptr;
 }
@@ -1758,122 +1743,124 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
   switch (Func) {
   case LibFunc_Znwm12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
-      return emitHotColdNew(CI->getArgOperand(0), B, TLI,
+      return emitHotColdNew(CI->getType(), CI->getArgOperand(0), B, TLI,
                             LibFunc_Znwm12__hot_cold_t, HotCold);
     break;
   case LibFunc_Znwm:
     if (HotCold != NotColdNewHintValue)
-      return emitHotColdNew(CI->getArgOperand(0), B, TLI,
+      return emitHotColdNew(CI->getType(), CI->getArgOperand(0), B, TLI,
                             LibFunc_Znwm12__hot_cold_t, HotCold);
     break;
   case LibFunc_Znam12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
-      return emitHotColdNew(CI->getArgOperand(0), B, TLI,
+      return emitHotColdNew(CI->getType(), CI->getArgOperand(0), B, TLI,
                             LibFunc_Znam12__hot_cold_t, HotCold);
     break;
   case LibFunc_Znam:
     if (HotCold != NotColdNewHintValue)
-      return emitHotColdNew(CI->getArgOperand(0), B, TLI,
+      return emitHotColdNew(CI->getType(), CI->getArgOperand(0), B, TLI,
                             LibFunc_Znam12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
       return emitHotColdNewNoThrow(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnwmRKSt9nothrow_t:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdNewNoThrow(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
       return emitHotColdNewNoThrow(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnamRKSt9nothrow_t:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdNewNoThrow(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnwmSt11align_val_t12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
       return emitHotColdNewAligned(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_ZnwmSt11align_val_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnwmSt11align_val_t:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdNewAligned(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_ZnwmSt11align_val_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnamSt11align_val_t12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
       return emitHotColdNewAligned(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_ZnamSt11align_val_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnamSt11align_val_t:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdNewAligned(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_ZnamSt11align_val_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
       return emitHotColdNewAlignedNoThrow(
-          CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
-          TLI, LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
-          HotCold);
+          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1),
+          CI->getArgOperand(2), B, TLI,
+          LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdNewAlignedNoThrow(
-          CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
-          TLI, LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
-          HotCold);
+          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1),
+          CI->getArgOperand(2), B, TLI,
+          LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
       return emitHotColdNewAlignedNoThrow(
-          CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
-          TLI, LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
-          HotCold);
+          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1),
+          CI->getArgOperand(2), B, TLI,
+          LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdNewAlignedNoThrow(
-          CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
-          TLI, LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
-          HotCold);
+          CI->getType(), CI->getArgOperand(0), CI->getArgOperand(1),
+          CI->getArgOperand(2), B, TLI,
+          LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold);
     break;
   case LibFunc_size_returning_new:
     if (HotCold != NotColdNewHintValue)
-      return emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
-                                         LibFunc_size_returning_new_hot_cold,
-                                         HotCold);
+      return emitHotColdSizeReturningNew(
+          CI->getType()->getStructElementType(0), CI->getArgOperand(0), B, TLI,
+          LibFunc_size_returning_new_hot_cold, HotCold);
     break;
   case LibFunc_size_returning_new_hot_cold:
     if (OptimizeExistingHotColdNew)
-      return emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
-                                         LibFunc_size_returning_new_hot_cold,
-                                         HotCold);
+      return emitHotColdSizeReturningNew(
+          CI->getType()->getStructElementType(0), CI->getArgOperand(0), B, TLI,
+          LibFunc_size_returning_new_hot_cold, HotCold);
     break;
   case LibFunc_size_returning_new_aligned:
     if (HotCold != NotColdNewHintValue)
       return emitHotColdSizeReturningNewAligned(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getType()->getStructElementType(0), CI->getArgOperand(0),
+          CI->getArgOperand(1), B, TLI,
           LibFunc_size_returning_new_aligned_hot_cold, HotCold);
     break;
   case LibFunc_size_returning_new_aligned_hot_cold:
     if (OptimizeExistingHotColdNew)
       return emitHotColdSizeReturningNewAligned(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          CI->getType()->getStructElementType(0), CI->getArgOperand(0),
+          CI->getArgOperand(1), B, TLI,
           LibFunc_size_returning_new_aligned_hot_cold, HotCold);
     break;
   default:
@@ -3345,7 +3332,8 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilderBase &B) {
     // printf("%s", str"\n") --> puts(str)
     if (OperandStr.back() == '\n') {
       OperandStr = OperandStr.drop_back();
-      Value *GV = B.CreateGlobalString(OperandStr, "str");
+      Value *GV = B.CreateGlobalString(OperandStr, "str",
+                                       DL.getDefaultGlobalsAddressSpace());
       return copyFlags(*CI, emitPutS(GV, B, TLI));
     }
     return nullptr;
@@ -3357,7 +3345,8 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilderBase &B) {
     // Create a string literal with no \n on it.  We expect the constant merge
     // pass to be run after this pass, to merge duplicate strings.
     FormatStr = FormatStr.drop_back();
-    Value *GV = B.CreateGlobalString(FormatStr, "str");
+    Value *GV = B.CreateGlobalString(FormatStr, "str",
+                                     DL.getDefaultGlobalsAddressSpace());
     return copyFlags(*CI, emitPutS(GV, B, TLI));
   }
 
@@ -3432,10 +3421,9 @@ Value *LibCallSimplifier::optimizeSPrintFString(CallInst *CI,
       return nullptr; // we found a format specifier, bail out.
 
     // sprintf(str, fmt) -> llvm.memcpy(align 1 str, align 1 fmt, strlen(fmt)+1)
-    B.CreateMemCpy(
-        Dest, Align(1), CI->getArgOperand(1), Align(1),
-        ConstantInt::get(DL.getIntPtrType(CI->getContext()),
-                         FormatStr.size() + 1)); // Copy the null byte.
+    B.CreateMemCpy(Dest, Align(1), CI->getArgOperand(1), Align(1),
+                   // Copy the null byte.
+                   TLI->getAsSizeT(FormatStr.size() + 1, *CI->getModule()));
     return ConstantInt::get(CI->getType(), FormatStr.size());
   }
 
@@ -3470,9 +3458,8 @@ Value *LibCallSimplifier::optimizeSPrintFString(CallInst *CI,
 
     uint64_t SrcLen = GetStringLength(CI->getArgOperand(2));
     if (SrcLen) {
-      B.CreateMemCpy(
-          Dest, Align(1), CI->getArgOperand(2), Align(1),
-          ConstantInt::get(DL.getIntPtrType(CI->getContext()), SrcLen));
+      B.CreateMemCpy(Dest, Align(1), CI->getArgOperand(2), Align(1),
+                     TLI->getAsSizeT(SrcLen, *CI->getModule()));
       // Returns total number of characters written without null-character.
       return ConstantInt::get(CI->getType(), SrcLen - 1);
     } else if (Value *V = emitStpCpy(Dest, CI->getArgOperand(2), B, TLI)) {
@@ -3570,11 +3557,8 @@ Value *LibCallSimplifier::emitSnPrintfMemCpy(CallInst *CI, Value *StrArg,
   Value *DstArg = CI->getArgOperand(0);
   if (NCopy && StrArg)
     // Transform the call to lvm.memcpy(dst, fmt, N).
-    copyFlags(
-         *CI,
-          B.CreateMemCpy(
-                         DstArg, Align(1), StrArg, Align(1),
-              ConstantInt::get(DL.getIntPtrType(CI->getContext()), NCopy)));
+    copyFlags(*CI, B.CreateMemCpy(DstArg, Align(1), StrArg, Align(1),
+                                  TLI->getAsSizeT(NCopy, *CI->getModule())));
 
   if (N > Str.size())
     // Return early when the whole format string, including the final nul,
@@ -3690,11 +3674,9 @@ Value *LibCallSimplifier::optimizeFPrintFString(CallInst *CI,
     if (FormatStr.contains('%'))
       return nullptr; // We found a format specifier.
 
-    unsigned SizeTBits = TLI->getSizeTSize(*CI->getModule());
-    Type *SizeTTy = IntegerType::get(CI->getContext(), SizeTBits);
     return copyFlags(
         *CI, emitFWrite(CI->getArgOperand(1),
-                        ConstantInt::get(SizeTTy, FormatStr.size()),
+                        TLI->getAsSizeT(FormatStr.size(), *CI->getModule()),
                         CI->getArgOperand(0), B, DL, TLI));
   }
 

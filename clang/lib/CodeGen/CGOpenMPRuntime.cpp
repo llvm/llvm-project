@@ -7770,7 +7770,7 @@ private:
       if (const auto *Base = Data.dyn_cast<const CXXRecordDecl *>())
         getPlainLayout(Base, Layout, /*AsBase=*/true);
       else
-        Layout.push_back(Data.get<const FieldDecl *>());
+        Layout.push_back(cast<const FieldDecl *>(Data));
     }
   }
 
@@ -8333,9 +8333,9 @@ public:
       MapCombinedInfoTy &CombinedInfo, llvm::OpenMPIRBuilder &OMPBuilder,
       const llvm::DenseSet<CanonicalDeclPtr<const Decl>> &SkipVarSet =
           llvm::DenseSet<CanonicalDeclPtr<const Decl>>()) const {
-    assert(CurDir.is<const OMPExecutableDirective *>() &&
+    assert(isa<const OMPExecutableDirective *>(CurDir) &&
            "Expect a executable directive");
-    const auto *CurExecDir = CurDir.get<const OMPExecutableDirective *>();
+    const auto *CurExecDir = cast<const OMPExecutableDirective *>(CurDir);
     generateAllInfoForClauses(CurExecDir->clauses(), CombinedInfo, OMPBuilder,
                               SkipVarSet);
   }
@@ -8345,9 +8345,9 @@ public:
   /// in \a CombinedInfo).
   void generateAllInfoForMapper(MapCombinedInfoTy &CombinedInfo,
                                 llvm::OpenMPIRBuilder &OMPBuilder) const {
-    assert(CurDir.is<const OMPDeclareMapperDecl *>() &&
+    assert(isa<const OMPDeclareMapperDecl *>(CurDir) &&
            "Expect a declare mapper directive");
-    const auto *CurMapperDir = CurDir.get<const OMPDeclareMapperDecl *>();
+    const auto *CurMapperDir = cast<const OMPDeclareMapperDecl *>(CurDir);
     generateAllInfoForClauses(CurMapperDir->clauses(), CombinedInfo,
                               OMPBuilder);
   }
@@ -8519,9 +8519,9 @@ public:
         DeclComponentLists.emplace_back(MCL, OMPC_MAP_tofrom, Unknown,
                                         /*IsImpicit = */ true, nullptr,
                                         nullptr);
-    assert(CurDir.is<const OMPExecutableDirective *>() &&
+    assert(isa<const OMPExecutableDirective *>(CurDir) &&
            "Expect a executable directive");
-    const auto *CurExecDir = CurDir.get<const OMPExecutableDirective *>();
+    const auto *CurExecDir = cast<const OMPExecutableDirective *>(CurDir);
     bool HasMapBasePtr = false;
     bool HasMapArraySec = false;
     for (const auto *C : CurExecDir->getClausesOfKind<OMPMapClause>()) {

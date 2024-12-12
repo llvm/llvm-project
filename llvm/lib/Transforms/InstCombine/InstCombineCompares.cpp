@@ -3622,7 +3622,8 @@ Instruction *InstCombinerImpl::foldICmpBinOpEqualityWithConstant(
               m_OneUse(m_c_Or(m_CombineAnd(m_Value(Sel),
                                            m_Select(m_Value(Cond), m_Value(TV),
                                                     m_Value(FV))),
-                              m_Value(Other))))) {
+                              m_Value(Other)))) &&
+        Cond->getType() == Cmp.getType()) {
       const SimplifyQuery Q = SQ.getWithInstruction(&Cmp);
       // Easy case is if eq/ne matches whether 0 is trueval/falseval.
       if (Pred == ICmpInst::ICMP_EQ
@@ -5365,6 +5366,15 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
             return new ICmpInst(Pred, X, Y);
           if (ZKnown.isNegative())
             return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), X, Y);
+          Value *LessThan = simplifyICmpInst(ICmpInst::ICMP_SLT, X, Y,
+                                             SQ.getWithInstruction(&I));
+          if (LessThan && match(LessThan, m_One()))
+            return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Z,
+                                Constant::getNullValue(Z->getType()));
+          Value *GreaterThan = simplifyICmpInst(ICmpInst::ICMP_SGT, X, Y,
+                                                SQ.getWithInstruction(&I));
+          if (GreaterThan && match(GreaterThan, m_One()))
+            return new ICmpInst(Pred, Z, Constant::getNullValue(Z->getType()));
         }
       } else {
         bool NonZero;

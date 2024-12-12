@@ -521,6 +521,9 @@ static Decomposition decompose(Value *V,
     else if (match(V, m_NNegZExt(m_Value(Op0)))) {
       V = Op0;
       IsKnownNonNegative = true;
+    } else if (match(V, m_NSWTrunc(m_Value(Op0)))) {
+      if (Op0->getType()->getScalarSizeInBits() <= 64)
+        V = Op0;
     }
 
     if (match(V, m_NSWAdd(m_Value(Op0), m_Value(Op1))))
@@ -558,12 +561,19 @@ static Decomposition decompose(Value *V,
   if (match(V, m_ZExt(m_Value(Op0)))) {
     IsKnownNonNegative = true;
     V = Op0;
-  }
-
-  if (match(V, m_SExt(m_Value(Op0)))) {
+  } else if (match(V, m_SExt(m_Value(Op0)))) {
     V = Op0;
     Preconditions.emplace_back(CmpInst::ICMP_SGE, Op0,
                                ConstantInt::get(Op0->getType(), 0));
+  } else if (auto *Trunc = dyn_cast<TruncInst>(V)) {
+    if (Trunc->getSrcTy()->getScalarSizeInBits() <= 64) {
+      if (Trunc->hasNoUnsignedWrap() || Trunc->hasNoSignedWrap()) {
+        V = Trunc->getOperand(0);
+        if (!Trunc->hasNoUnsignedWrap())
+          Preconditions.emplace_back(CmpInst::ICMP_SGE, V,
+                                     ConstantInt::get(V->getType(), 0));
+      }
+    }
   }
 
   Value *Op1;

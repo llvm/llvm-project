@@ -58,15 +58,6 @@ def GIAddrRegImm :
 def GIVLOp : GIComplexOperandMatcher<s32, "renderVLOp">,
              GIComplexPatternEquiv<VLOp>;
 
-// Convert from i32 immediate to i64 target immediate to make SelectionDAG type
-// checking happy so we can use ADDIW which expects an XLen immediate.
-def as_i64imm : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i64);
-}]>;
-
-def gi_as_i64imm : GICustomOperandRenderer<"renderImm">,
-  GISDNodeXFormEquiv<as_i64imm>;
-
 def gi_trailing_zero : GICustomOperandRenderer<"renderTrailingZeros">,
   GISDNodeXFormEquiv<TrailingZeros>;
 
@@ -76,10 +67,10 @@ def gi_trailing_zero : GICustomOperandRenderer<"renderTrailingZeros">,
 // should add a LowLevelTypeByHwMode, and use that to define our XLenLLT instead
 // here.
 def GIShiftMaskXLen :
-    GIComplexOperandMatcher<s32, "selectShiftMask">,
+    GIComplexOperandMatcher<s32, "selectShiftMaskXLen">,
     GIComplexPatternEquiv<shiftMaskXLen>;
 def GIShiftMask32 :
-    GIComplexOperandMatcher<s32, "selectShiftMask">,
+    GIComplexOperandMatcher<s64, "selectShiftMask32">,
     GIComplexPatternEquiv<shiftMask32>;
 
 def gi_sh1add_op : GIComplexOperandMatcher<s32, "selectSHXADDOp<1>">,
@@ -223,17 +214,23 @@ let Predicates = [IsRV32, NoStdExtZbb, NoStdExtZbkb] in
 def : Pat<(XLenVT (zext (i16 GPR:$src))),
           (SRLI (XLenVT (SLLI GPR:$src, 16)), 16)>;
 
-let Predicates = [IsRV64, NoStdExtZbb, NoStdExtZbkb] in
+let Predicates = [IsRV64, NoStdExtZbb, NoStdExtZbkb] in {
 def : Pat<(i64 (zext (i16 GPR:$src))),
           (SRLI (XLenVT (SLLI GPR:$src, 48)), 48)>;
+def : Pat<(i32 (zext (i16 GPR:$src))),
+          (SRLI (XLenVT (SLLI GPR:$src, 48)), 48)>;
+}
 
 let Predicates = [IsRV32, NoStdExtZbb] in
 def : Pat<(XLenVT (sext (i16 GPR:$src))),
           (SRAI (XLenVT (SLLI GPR:$src, 16)), 16)>;
 
-let Predicates = [IsRV64, NoStdExtZbb] in
+let Predicates = [IsRV64, NoStdExtZbb] in {
 def : Pat<(i64 (sext (i16 GPR:$src))),
           (SRAI (XLenVT (SLLI GPR:$src, 48)), 48)>;
+def : Pat<(i32 (sext (i16 GPR:$src))),
+          (SRAI (XLenVT (SLLI GPR:$src, 48)), 48)>;
+}
 
 //===----------------------------------------------------------------------===//
 // Zb* RV64 patterns not used by SelectionDAG.
@@ -243,15 +240,21 @@ let Predicates = [HasStdExtZba, IsRV64] in {
 def : Pat<(zext (i32 GPR:$src)), (ADD_UW GPR:$src, (XLenVT X0))>;
 }
 
-let Predicates= [HasStdExtZbb] in
-def : Pat<(XLenVT (sext (i16 GPR:$rs))), (SEXT_H GPR:$rs)>;
+let Predicates = [HasStdExtZbb] in
+def : Pat<(i32 (sext (i16 GPR:$rs))), (SEXT_H GPR:$rs)>;
+let Predicates = [HasStdExtZbb, IsRV64] in
+def : Pat<(i64 (sext (i16 GPR:$rs))), (SEXT_H GPR:$rs)>;
 
 let Predicates = [HasStdExtZbb, IsRV32] in
 def : Pat<(i32 (zext (i16 GPR:$rs))), (ZEXT_H_RV32 GPR:$rs)>;
-let Predicates = [HasStdExtZbb, IsRV64] in
+let Predicates = [HasStdExtZbb, IsRV64] in {
 def : Pat<(i64 (zext (i16 GPR:$rs))), (ZEXT_H_RV64 GPR:$rs)>;
+def : Pat<(i32 (zext (i16 GPR:$rs))), (ZEXT_H_RV64 GPR:$rs)>;
+}
 
 let Predicates = [HasStdExtZbkb, NoStdExtZbb, IsRV32] in
 def : Pat<(i32 (zext (i16 GPR:$rs))), (PACK GPR:$rs, (XLenVT X0))>;
-let Predicates = [HasStdExtZbkb, NoStdExtZbb, IsRV64] in
+let Predicates = [HasStdExtZbkb, NoStdExtZbb, IsRV64] in {
 def : Pat<(i64 (zext (i16 GPR:$rs))), (PACKW GPR:$rs, (XLenVT X0))>;
+def : Pat<(i32 (zext (i16 GPR:$rs))), (PACKW GPR:$rs, (XLenVT X0))>;
+}

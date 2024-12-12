@@ -243,9 +243,8 @@ define void @wide_truncated_iv(ptr %dst) {
 ; CHECK:       vec.epilog.iter.check:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH]], label [[VEC_EPILOG_PH]]
 ; CHECK:       vec.epilog.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 192, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_PH]] ]
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 192, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_PH]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[BC_RESUME_VAL]] to i8
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[VEC_EPILOG_RESUME_VAL]] to i8
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[TMP7]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x i8> [[DOTSPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <8 x i8> [[DOTSPLAT]], <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7>

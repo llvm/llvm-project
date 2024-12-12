@@ -695,6 +695,13 @@ defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixStoreKHR", OpenCL_std, C
 defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixMulAddKHR", OpenCL_std, CoopMatr, 3, 4, OpCooperativeMatrixMulAddKHR>;
 defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixLengthKHR", OpenCL_std, CoopMatr, 1, 1, OpCooperativeMatrixLengthKHR>;
 
+// Cooperative Matrix Intel builtin records:
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixPrefetchINTEL", OpenCL_std, CoopMatr, 5, 7, OpCooperativeMatrixPrefetchINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixLoadCheckedINTEL", OpenCL_std, CoopMatr, 6, 8, OpCooperativeMatrixLoadCheckedINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixStoreCheckedINTEL", OpenCL_std, CoopMatr, 7, 9, OpCooperativeMatrixStoreCheckedINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixConstructCheckedINTEL", OpenCL_std, CoopMatr, 5, 5, OpCooperativeMatrixConstructCheckedINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixGetElementCoordINTEL", OpenCL_std, CoopMatr, 2, 2, OpCooperativeMatrixGetElementCoordINTEL>;
+
 //===----------------------------------------------------------------------===//
 // Class defining a work/sub group builtin that should be translated into a
 // SPIR-V instruction using the defined properties.
@@ -1190,10 +1197,10 @@ defm : DemangledIntelSubgroupsBuiltin<"shuffle_down", 3, 3, OpSubgroupShuffleDow
 defm : DemangledIntelSubgroupsBuiltin<"shuffle_up", 3, 3, OpSubgroupShuffleUpINTEL>;
 defm : DemangledIntelSubgroupsBuiltin<"shuffle_xor", 2, 2, OpSubgroupShuffleXorINTEL>;
 foreach i = ["", "2", "4", "8"] in {
-  // cl_intel_subgroups
+  // cl_intel_subgroups, cl_intel_subgroup_local_block_io
   defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_read",  i), 1, 2, OpSubgroupBlockReadINTEL>;
   defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_write", i), 2, 3, OpSubgroupBlockWriteINTEL>;
-  // cl_intel_subgroups_short
+  // cl_intel_subgroups_short, cl_intel_subgroup_local_block_io
   defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_read_ui",  i), 1, 2, OpSubgroupBlockReadINTEL>;
   defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_write_ui", i), 2, 3, OpSubgroupBlockWriteINTEL>;
   // cl_intel_media_block_io
@@ -1202,7 +1209,7 @@ foreach i = ["", "2", "4", "8"] in {
   defm : DemangledIntelSubgroupsBuiltin<!strconcat("media_block_write", i), 5, 5, OpSubgroupImageMediaBlockWriteINTEL>;
   defm : DemangledIntelSubgroupsBuiltin<!strconcat("media_block_write_ui", i), 5, 5, OpSubgroupImageMediaBlockWriteINTEL>;
 }
-// cl_intel_subgroups_char, cl_intel_subgroups_short, cl_intel_subgroups_long, cl_intel_media_block_io
+// cl_intel_subgroups_char, cl_intel_subgroups_short, cl_intel_subgroups_long, cl_intel_media_block_io, cl_intel_subgroup_local_block_io
 foreach i = ["", "2", "4", "8", "16"] in {
   foreach j = ["c", "s", "l"] in {
     defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_read_u", j,  i), 1, 2, OpSubgroupBlockReadINTEL>;
