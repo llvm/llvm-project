@@ -919,3 +919,25 @@ int16_t test_vaddv_s16(int16x4_t a) {
   // LLVM-NEXT:    [[TMP0:%.*]] = trunc i32 [[VADDV_I]] to i16
   // LLVM-NEXT:    ret i16 [[TMP0]]
 }
+
+uint32_t test_vaddvq_u32(uint32x4_t a) {
+  return vaddvq_u32(a);
+
+  // CIR-LABEL: vaddvq_u32
+  // CIR: cir.llvm.intrinsic "aarch64.neon.uaddv" {{%.*}} : (!cir.vector<!u32i x 4>) -> !u32i
+
+  // LLVM-LABEL: test_vaddvq_u32
+  // LLVM:   [[VADDVQ_U32_I:%.*]] = call i32 @llvm.aarch64.neon.uaddv.i32.v4i32(<4 x i32> {{%.*}})
+  // LLVM:   ret i32 [[VADDVQ_U32_I]]
+}
+
+uint64_t test_vaddvq_u64(uint64x2_t a) {
+  return vaddvq_u64(a);
+
+  // CIR-LABEL: vaddvq_u64
+  // CIR: cir.llvm.intrinsic "aarch64.neon.uaddv" {{%.*}} : (!cir.vector<!u64i x 2>) -> !u64i
+
+  // LLVM-LABEL: test_vaddvq_u64
+  // LLVM:   [[VADDVQ_U64_I:%.*]] = call i64 @llvm.aarch64.neon.uaddv.i64.v2i64(<2 x i64> {{%.*}})
+  // LLVM:   ret i64 [[VADDVQ_U64_I]]
+}

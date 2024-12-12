@@ -2654,6 +2654,7 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
   unsigned builtinID = info.BuiltinID;
   clang::CIRGen::CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Type resultTy = cgf.convertType(expr->getType());
+  mlir::Type argTy = cgf.convertType(expr->getArg(0)->getType());
   mlir::Location loc = cgf.getLoc(expr->getExprLoc());
 
   switch (builtinID) {
@@ -2672,11 +2673,9 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
     llvm_unreachable(" neon_vaddlv_u32 NYI ");
   case NEON::BI__builtin_neon_vaddlvq_s32:
     llvm_unreachable(" neon_vaddlvq_s32 NYI ");
-  case NEON::BI__builtin_neon_vaddlvq_u32: {
-    mlir::Type argTy = cgf.convertType(expr->getArg(0)->getType());
+  case NEON::BI__builtin_neon_vaddlvq_u32:
     return emitNeonCall(builder, {argTy}, ops, "aarch64.neon.uaddlv", resultTy,
                         loc);
-  }
   case NEON::BI__builtin_neon_vaddv_f32:
     llvm_unreachable(" neon_vaddv_f32 NYI ");
   case NEON::BI__builtin_neon_vaddv_s32:
@@ -2692,9 +2691,9 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
   case NEON::BI__builtin_neon_vaddvq_s64:
     llvm_unreachable(" neon_vaddvq_s64 NYI ");
   case NEON::BI__builtin_neon_vaddvq_u32:
-    llvm_unreachable(" neon_vaddvq_u32 NYI ");
   case NEON::BI__builtin_neon_vaddvq_u64:
-    llvm_unreachable(" neon_vaddvq_u64 NYI ");
+    return emitNeonCall(builder, {argTy}, ops, "aarch64.neon.uaddv", resultTy,
+                        loc);
   case NEON::BI__builtin_neon_vcaged_f64:
     llvm_unreachable(" neon_vcaged_f64 NYI ");
   case NEON::BI__builtin_neon_vcages_f32:
