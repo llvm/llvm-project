@@ -1298,14 +1298,18 @@ static void createRoundingModeDecoration(Instruction *I,
                                          IRBuilder<> &B) {
   LLVMContext &Ctx = I->getContext();
   Type *Int32Ty = Type::getInt32Ty(Ctx);
-  SmallVector<Metadata *> MDs = {
-      MDNode::get(Ctx, ConstantAsMetadata::get(ConstantInt::get(
-                           Int32Ty, SPIRV::Decoration::FPRoundingMode))),
-      MDNode::get(Ctx, ConstantAsMetadata::get(
-                           ConstantInt::get(Int32Ty, RoundingModeDeco)))};
   setInsertPointAfterDef(B, I);
-  B.CreateIntrinsic(Intrinsic::spv_assign_decoration, {I->getType()},
-                    {I, MetadataAsValue::get(Ctx, MDNode::get(Ctx, MDs))});
+  B.CreateIntrinsic(
+      Intrinsic::spv_assign_decoration, {I->getType()},
+      {I,
+       MetadataAsValue::get(
+           Ctx,
+           MDNode::get(
+               Ctx, {MDNode::get(
+                        Ctx, {ConstantAsMetadata::get(ConstantInt::get(
+                                  Int32Ty, SPIRV::Decoration::FPRoundingMode)),
+                              ConstantAsMetadata::get(ConstantInt::get(
+                                  Int32Ty, RoundingModeDeco))})}))});
 }
 
 Instruction *SPIRVEmitIntrinsics::visitCallInst(CallInst &Call) {

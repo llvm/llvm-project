@@ -24,12 +24,18 @@
 ; CHECK-DAG: OpName [[ZEXT8_16v4:%.*]] "u8tou16v4"
 ; CHECK-DAG: OpName [[ZEXT16_32v4:%.*]] "u16tou32v4"
 
+; CHECK-DAG: OpDecorate %[[#R17:]] FPRoundingMode RTZ
+; CHECK-DAG: OpDecorate %[[#R18:]] FPRoundingMode RTE
+; CHECK-DAG: OpDecorate %[[#R19:]] FPRoundingMode RTP
+; CHECK-DAG: OpDecorate %[[#R20:]] FPRoundingMode RTN
+
 ; CHECK-DAG: [[F32:%.*]] = OpTypeFloat 32
 ; CHECK-DAG: [[F16:%.*]] = OpTypeFloat 16
 ; CHECK-DAG: [[U64:%.*]] = OpTypeInt 64 0
 ; CHECK-DAG: [[U32:%.*]] = OpTypeInt 32 0
 ; CHECK-DAG: [[U16:%.*]] = OpTypeInt 16 0
 ; CHECK-DAG: [[U8:%.*]] = OpTypeInt 8 0
+; CHECK-DAG: [[F32v2:%.*]] = OpTypeVector [[F32]] 2
 ; CHECK-DAG: [[U32v4:%.*]] = OpTypeVector [[U32]] 4
 ; CHECK-DAG: [[U16v4:%.*]] = OpTypeVector [[U16]] 4
 ; CHECK-DAG: [[U8v4:%.*]] = OpTypeVector [[U8]] 4
@@ -254,6 +260,10 @@ define <4 x i32>  @u16tou32v4(<4 x i16> %a) {
 ; CHECK: %[[#]] = OpSConvert [[U32v4]] %[[#]]
 ; CHECK: %[[#]] = OpConvertUToF [[F32]] %[[#]]
 ; CHECK: %[[#]] = OpConvertUToF [[F32]] %[[#]]
+; CHECK: %[[#R17:]] = OpFConvert [[F32v2]] %[[#]]
+; CHECK: %[[#R18:]] = OpFConvert [[F32v2]] %[[#]]
+; CHECK: %[[#R19:]] = OpFConvert [[F32v2]] %[[#]]
+; CHECK: %[[#R20:]] = OpFConvert [[F32v2]] %[[#]]
 ; CHECK: OpFunctionEnd
 define dso_local spir_kernel void @test_wrappers(ptr addrspace(4) %arg, i64 %arg_ptr, <4 x i8> %arg_v2) {
   %r1 = call spir_func i32 @__spirv_ConvertFToU(float 0.000000e+00)
