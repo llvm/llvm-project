@@ -29,6 +29,8 @@ jobs:
           echo $modified_files
           echo $modified_dirs
 
+          cat ./.ci/compute-projects.sh
+
           . ./.ci/compute-projects.sh
 
           #all_projects="bolt clang clang-tools-extra compiler-rt cross-project-tests flang libc libclc lld lldb llvm mlir openmp polly pstl"
