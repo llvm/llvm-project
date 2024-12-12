@@ -60,8 +60,8 @@ void addDisableOptimizations(llvm::Module &M) {
   M.addModuleFlag(llvm::Module::ModFlagBehavior::Override, Key, 1);
 }
 
-// Creates the LLVM struct type representing the shape of the constant buffer
-// which will be included in the LLVM target type and calculates the memory
+// Creates the LLVM struct type representing the shape of the constant buffer,
+// which will be included in the LLVM target type, and calculates the memory
 // layout and constant buffer layout offsets of each constant.
 static void layoutBuffer(CGHLSLRuntime::Buffer &Buf, const DataLayout &DL) {
   assert(!Buf.Constants.empty() &&
