@@ -1090,6 +1090,21 @@ InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
   return getVectorLoopRegion()->cost(VF, Ctx);
 }
 
+VPRegionBlock *VPlan::getVectorLoopRegion() {
+  // TODO: Cache if possible.
+  for (VPBlockBase *B : vp_depth_first_shallow(getEntry()))
+    if (auto *R = dyn_cast<VPRegionBlock>(B))
+      return R;
+  return nullptr;
+}
+
+const VPRegionBlock *VPlan::getVectorLoopRegion() const {
+  for (const VPBlockBase *B : vp_depth_first_shallow(getEntry()))
+    if (auto *R = dyn_cast<VPRegionBlock>(B))
+      return R;
+  return nullptr;
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPlan::printLiveIns(raw_ostream &O) const {
   VPSlotTracker SlotTracker(this);
@@ -1165,21 +1180,6 @@ std::string VPlan::getName() const {
   }
 
   return Out;
-}
-
-VPRegionBlock *VPlan::getVectorLoopRegion() {
-  // TODO: Cache if possible.
-  for (VPBlockBase *B : vp_depth_first_shallow(getEntry()))
-    if (auto *R = dyn_cast<VPRegionBlock>(B))
-      return R;
-  return nullptr;
-}
-
-const VPRegionBlock *VPlan::getVectorLoopRegion() const {
-  for (const VPBlockBase *B : vp_depth_first_shallow(getEntry()))
-    if (auto *R = dyn_cast<VPRegionBlock>(B))
-      return R;
-  return nullptr;
 }
 
 LLVM_DUMP_METHOD
