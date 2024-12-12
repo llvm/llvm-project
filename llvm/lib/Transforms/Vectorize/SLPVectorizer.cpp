@@ -344,6 +344,8 @@ static unsigned getShufflevectorNumGroups(ArrayRef<Value *> VL) {
   unsigned SVNumElements =
       cast<FixedVectorType>(SV->getOperand(0)->getType())->getNumElements();
   unsigned ShuffleMaskSize = SV->getShuffleMask().size();
+  if (SVNumElements % ShuffleMaskSize != 0)
+    return 0;
   unsigned GroupSize = SVNumElements / ShuffleMaskSize;
   if (GroupSize == 0 || (VL.size() % GroupSize) != 0)
     return 0;
@@ -10218,9 +10220,9 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       // sub-Mask into the CommonMask to estimate it later and avoid double cost
       // estimation.
       if ((InVectors.size() == 2 &&
-           InVectors.front().get<const TreeEntry *>() == &E1 &&
-           InVectors.back().get<const TreeEntry *>() == E2) ||
-          (!E2 && InVectors.front().get<const TreeEntry *>() == &E1)) {
+           cast<const TreeEntry *>(InVectors.front()) == &E1 &&
+           cast<const TreeEntry *>(InVectors.back()) == E2) ||
+          (!E2 && cast<const TreeEntry *>(InVectors.front()) == &E1)) {
         unsigned Limit = getNumElems(Mask.size(), SliceSize, Part);
         assert(all_of(ArrayRef(CommonMask).slice(Part * SliceSize, Limit),
                       [](int Idx) { return Idx == PoisonMaskElem; }) &&
@@ -10246,7 +10248,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         VF = std::max(VF,
                       cast<FixedVectorType>(V1->getType())->getNumElements());
       } else {
-        const auto *E = InVectors.front().get<const TreeEntry *>();
+        const auto *E = cast<const TreeEntry *>(InVectors.front());
         VF = std::max(VF, E->getVectorFactor());
       }
       for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
@@ -10262,7 +10264,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         VF = std::max(VF,
                       getNumElements(V1->getType()));
       } else {
-        const auto *E = P.get<const TreeEntry *>();
+        const auto *E = cast<const TreeEntry *>(P);
         VF = std::max(VF, E->getVectorFactor());
       }
       for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
@@ -10368,9 +10370,9 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
     };
     if (!V1 && !V2 && !P2.isNull()) {
       // Shuffle 2 entry nodes.
-      const TreeEntry *E = P1.get<const TreeEntry *>();
+      const TreeEntry *E = cast<const TreeEntry *>(P1);
       unsigned VF = E->getVectorFactor();
-      const TreeEntry *E2 = P2.get<const TreeEntry *>();
+      const TreeEntry *E2 = cast<const TreeEntry *>(P2);
       CommonVF = std::max(VF, E2->getVectorFactor());
       assert(all_of(Mask,
                     [=](int Idx) {
@@ -10402,7 +10404,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       V2 = getAllOnesValue(*R.DL, getWidenedType(ScalarTy, CommonVF));
     } else if (!V1 && P2.isNull()) {
       // Shuffle single entry node.
-      const TreeEntry *E = P1.get<const TreeEntry *>();
+      const TreeEntry *E = cast<const TreeEntry *>(P1);
       unsigned VF = E->getVectorFactor();
       CommonVF = VF;
       assert(
@@ -10451,7 +10453,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
     } else if (V1 && !V2) {
       // Shuffle vector and tree node.
       unsigned VF = getVF(V1);
-      const TreeEntry *E2 = P2.get<const TreeEntry *>();
+      const TreeEntry *E2 = cast<const TreeEntry *>(P2);
       CommonVF = std::max(VF, E2->getVectorFactor());
       assert(all_of(Mask,
                     [=](int Idx) {
@@ -10477,7 +10479,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
     } else if (!V1 && V2) {
       // Shuffle vector and tree node.
       unsigned VF = getVF(V2);
-      const TreeEntry *E1 = P1.get<const TreeEntry *>();
+      const TreeEntry *E1 = cast<const TreeEntry *>(P1);
       CommonVF = std::max(VF, E1->getVectorFactor());
       assert(all_of(Mask,
                     [=](int Idx) {
@@ -10715,8 +10717,8 @@ public:
                     if (P.value() == PoisonMaskElem)
                       return Mask[P.index()] == PoisonMaskElem;
                     auto *EI = cast<ExtractElementInst>(
-                        InVectors.front().get<const TreeEntry *>()->getOrdered(
-                            P.index()));
+                        cast<const TreeEntry *>(InVectors.front())
+                            ->getOrdered(P.index()));
                     return EI->getVectorOperand() == V1 ||
                            EI->getVectorOperand() == V2;
                   }) &&
@@ -10734,7 +10736,7 @@ public:
     if (ForExtracts) {
       // No need to add vectors here, already handled them in adjustExtracts.
       assert(
-          InVectors.size() == 1 && InVectors.front().is<const TreeEntry *>() &&
+          InVectors.size() == 1 && isa<const TreeEntry *>(InVectors.front()) &&
           !CommonMask.empty() &&
           all_of(enumerate(CommonMask),
                  [&](auto P) {
@@ -10764,7 +10766,7 @@ public:
       VF = std::max(VF, InTE->getVectorFactor());
     } else {
       VF = std::max(
-          VF, cast<FixedVectorType>(InVectors.front().get<Value *>()->getType())
+          VF, cast<FixedVectorType>(cast<Value *>(InVectors.front())->getType())
                   ->getNumElements());
     }
     InVectors.push_back(V1);
@@ -10834,7 +10836,7 @@ public:
           CommonMask[Idx] = Idx;
       assert(VF > 0 &&
              "Expected vector length for the final value before action.");
-      Value *V = Vec.get<Value *>();
+      Value *V = cast<Value *>(Vec);
       Action(V, CommonMask);
       InVectors.front() = V;
     }

@@ -3768,14 +3768,12 @@ class VPlan {
   friend class VPlanPrinter;
   friend class VPSlotTracker;
 
-  /// Hold the single entry to the Hierarchical CFG of the VPlan, i.e. the
-  /// preheader of the vector loop.
-  VPBasicBlock *Entry;
-
   /// VPBasicBlock corresponding to the original preheader. Used to place
   /// VPExpandSCEV recipes for expressions used during skeleton creation and the
   /// rest of VPlan execution.
-  VPBasicBlock *Preheader;
+  /// When this VPlan is used for the epilogue vector loop, the entry will be
+  /// replaced by a new entry block created during skeleton creation.
+  VPBasicBlock *Entry;
 
   /// VPIRBasicBlock wrapping the header of the original scalar loop.
   VPIRBasicBlock *ScalarHeader;
@@ -3821,45 +3819,47 @@ class VPlan {
   DenseMap<const SCEV *, VPValue *> SCEVToExpansion;
 
 public:
-  /// Construct a VPlan with original preheader \p Preheader, trip count \p TC,
-  /// \p Entry to the plan and with \p ScalarHeader wrapping the original header
-  /// of the scalar loop. At the moment, \p Preheader and \p Entry need to be
-  /// disconnected, as the bypass blocks between them are not yet modeled in
-  /// VPlan.
-  VPlan(VPBasicBlock *Preheader, VPValue *TC, VPBasicBlock *Entry,
-        VPIRBasicBlock *ScalarHeader)
-      : VPlan(Preheader, Entry, ScalarHeader) {
+  /// Construct a VPlan with \p Entry entering the plan, trip count \p TC and
+  /// with \p ScalarHeader wrapping the original header of the scalar loop.
+  VPlan(VPBasicBlock *Entry, VPValue *TC, VPIRBasicBlock *ScalarHeader)
+      : VPlan(Entry, ScalarHeader) {
     TripCount = TC;
   }
 
-  /// Construct a VPlan with original preheader \p Preheader, \p Entry to
-  /// the plan and with \p ScalarHeader wrapping the original header of the
-  /// scalar loop. At the moment, \p Preheader and \p Entry need to be
-  /// disconnected, as the bypass blocks between them are not yet modeled in
-  /// VPlan.
-  VPlan(VPBasicBlock *Preheader, VPBasicBlock *Entry,
-        VPIRBasicBlock *ScalarHeader)
-      : Entry(Entry), Preheader(Preheader), ScalarHeader(ScalarHeader) {
+  /// Constructor variants that take disconnected preheader and entry blocks,
+  /// connecting them as part of construction.
+  /// FIXME: Only used to reduce the need of code changes during transition.
+  VPlan(VPBasicBlock *OriginalPreheader, VPValue *TC,
+        VPBasicBlock *EntryVectorPreHeader, VPIRBasicBlock *ScalarHeader);
+  VPlan(VPBasicBlock *OriginalPreheader, VPBasicBlock *EntryVectorPreHeader,
+        VPIRBasicBlock *ScalarHeader);
+
+  /// Construct a VPlan with \p Entry to the plan and with \p ScalarHeader
+  /// wrapping the original header of the scalar loop.
+  VPlan(VPBasicBlock *Entry, VPIRBasicBlock *ScalarHeader)
+      : Entry(Entry), ScalarHeader(ScalarHeader) {
     Entry->setPlan(this);
-    Preheader->setPlan(this);
-    assert(Preheader->getNumSuccessors() == 0 &&
-           Preheader->getNumPredecessors() == 0 &&
-           "preheader must be disconnected");
     assert(ScalarHeader->getNumSuccessors() == 0 &&
            "scalar header must be a leaf node");
   }
 
   ~VPlan();
 
+  void setEntry(VPBasicBlock *VPBB) {
+    Entry = VPBB;
+    VPBB->setPlan(this);
+  }
+
   /// Create initial VPlan, having an "entry" VPBasicBlock (wrapping
-  /// original scalar pre-header ) which contains SCEV expansions that need
-  /// to happen before the CFG is modified; a VPBasicBlock for the vector
-  /// pre-header, followed by a region for the vector loop, followed by the
-  /// middle VPBasicBlock. If a check is needed to guard executing the scalar
-  /// epilogue loop, it will be added to the middle block, together with
-  /// VPBasicBlocks for the scalar preheader and exit blocks.
-  /// \p InductionTy is the type of the canonical induction and used for related
-  /// values, like the trip count expression.
+  /// original scalar pre-header) which contains SCEV expansions that need
+  /// to happen before the CFG is modified (when executing a VPlan for the
+  /// epilogue vector loop, the original entry needs to be replaced by a new
+  /// one); a VPBasicBlock for the vector pre-header, followed by a region for
+  /// the vector loop, followed by the middle VPBasicBlock. If a check is needed
+  /// to guard executing the scalar epilogue loop, it will be added to the
+  /// middle block, together with VPBasicBlocks for the scalar preheader and
+  /// exit blocks. \p InductionTy is the type of the canonical induction and
+  /// used for related values, like the trip count expression.
   static VPlanPtr createInitialVPlan(Type *InductionTy,
                                      PredicatedScalarEvolution &PSE,
                                      bool RequiresScalarEpilogueCheck,
@@ -3884,26 +3884,22 @@ public:
   }
 
   /// Returns the VPRegionBlock of the vector loop.
-  VPRegionBlock *getVectorLoopRegion() {
-    return cast<VPRegionBlock>(getEntry()->getSingleSuccessor());
-  }
-  const VPRegionBlock *getVectorLoopRegion() const {
-    return cast<VPRegionBlock>(getEntry()->getSingleSuccessor());
-  }
+  VPRegionBlock *getVectorLoopRegion();
+  const VPRegionBlock *getVectorLoopRegion() const;
 
   /// Returns the 'middle' block of the plan, that is the block that selects
   /// whether to execute the scalar tail loop or the exit block from the loop
   /// latch.
   const VPBasicBlock *getMiddleBlock() const {
-    return cast<VPBasicBlock>(getScalarPreheader()->getSinglePredecessor());
+    return cast<VPBasicBlock>(getScalarPreheader()->getPredecessors().front());
   }
   VPBasicBlock *getMiddleBlock() {
-    return cast<VPBasicBlock>(getScalarPreheader()->getSinglePredecessor());
+    return cast<VPBasicBlock>(getScalarPreheader()->getPredecessors().front());
   }
 
   /// Return the VPBasicBlock for the preheader of the scalar loop.
   VPBasicBlock *getScalarPreheader() const {
-    return cast<VPBasicBlock>(ScalarHeader->getSinglePredecessor());
+    return cast<VPBasicBlock>(getScalarHeader()->getSinglePredecessor());
   }
 
   /// Return the VPIRBasicBlock wrapping the header of the scalar loop.
@@ -4039,8 +4035,10 @@ public:
   }
 
   /// \return The block corresponding to the original preheader.
-  VPBasicBlock *getPreheader() { return Preheader; }
-  const VPBasicBlock *getPreheader() const { return Preheader; }
+  /// FIXME: There's no separate preheader any longer and Entry now serves the
+  /// same purpose as the original preheader. Remove after transition.
+  VPBasicBlock *getPreheader() { return Entry; }
+  const VPBasicBlock *getPreheader() const { return Entry; }
 
   /// Clone the current VPlan, update all VPValues of the new VPlan and cloned
   /// recipes to refer to the clones, and return it.
@@ -4190,8 +4188,6 @@ public:
            "Can't connect two block with different parents");
     assert((SuccIdx != -1u || From->getNumSuccessors() < 2) &&
            "Blocks can't have more than two successors.");
-    assert((PredIdx != -1u || To->getNumPredecessors() < 2) &&
-           "Blocks can't have more than two predecessors.");
     if (SuccIdx == -1u)
       From->appendSuccessor(To);
     else

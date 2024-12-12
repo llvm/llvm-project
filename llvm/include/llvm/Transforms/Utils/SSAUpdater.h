@@ -188,13 +188,6 @@ public:
   /// Return false if a sub-class wants to keep one of the loads/stores
   /// after the SSA construction.
   virtual bool shouldDelete(Instruction *I) const { return true; }
-
-  /// Return the value to use for the point in the code that the alloca is
-  /// positioned. This will only be used if an Alloca is included in Insts,
-  /// otherwise the value of a uninitialized load will be assumed to be poison.
-  virtual Value *getValueToUseForAlloca(Instruction *AI) const {
-    return nullptr;
-  }
 };
 
 } // end namespace llvm
