@@ -206,6 +206,19 @@ public:
     return ST.getWavesPerEU(F, FlatWorkGroupSize);
   }
 
+  std::optional<std::pair<unsigned, unsigned>>
+  getWavesPerEUAttr(const Function &F) {
+    auto Val = AMDGPU::getIntegerPairAttribute(F, "amdgpu-waves-per-eu",
+                                               /*OnlyFirstRequired=*/true);
+    if (!Val)
+      return std::nullopt;
+    if (!Val->second) {
+      const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+      Val->second = ST.getMaxWavesPerEU();
+    }
+    return std::make_pair(Val->first, *(Val->second));
+  }
+
   std::pair<unsigned, unsigned>
   getEffectiveWavesPerEU(const Function &F,
                          std::pair<unsigned, unsigned> WavesPerEU,
@@ -850,22 +863,6 @@ struct AAAMDSizeRangeAttribute
                            /*ForceReplace=*/true);
   }
 
-  ChangeStatus emitAttributeIfNotDefault(Attributor &A, unsigned Min,
-                                         unsigned Max) {
-    // Don't add the attribute if it's the implied default.
-    if (getAssumed().getLower() == Min && getAssumed().getUpper() - 1 == Max)
-      return ChangeStatus::UNCHANGED;
-
-    Function *F = getAssociatedFunction();
-    LLVMContext &Ctx = F->getContext();
-    SmallString<10> Buffer;
-    raw_svector_ostream OS(Buffer);
-    OS << getAssumed().getLower() << ',' << getAssumed().getUpper() - 1;
-    return A.manifestAttrs(getIRPosition(),
-                           {Attribute::get(Ctx, AttrName, OS.str())},
-                           /*ForceReplace=*/true);
-  }
-
   const std::string getAsStr(Attributor *) const override {
     std::string Str;
     raw_string_ostream OS(Str);
@@ -1101,29 +1098,47 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
   AAAMDWavesPerEU(const IRPosition &IRP, Attributor &A)
       : AAAMDSizeRangeAttribute(IRP, A, "amdgpu-waves-per-eu") {}
 
-  bool isValidState() const override {
-    return !Assumed.isEmptySet() && IntegerRangeState::isValidState();
-  }
-
   void initialize(Attributor &A) override {
     Function *F = getAssociatedFunction();
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
 
-    if (const auto *AssumedGroupSize = A.getAAFor<AAAMDFlatWorkGroupSize>(
-            *this, IRPosition::function(*F), DepClassTy::REQUIRED);
-        AssumedGroupSize->isValidState()) {
-
-      unsigned Min, Max;
-      std::tie(Min, Max) = InfoCache.getWavesPerEU(
-          *F, {AssumedGroupSize->getAssumed().getLower().getZExtValue(),
-               AssumedGroupSize->getAssumed().getUpper().getZExtValue() - 1});
-
+    auto TakeRange = [&](std::pair<unsigned, unsigned> R) {
+      auto [Min, Max] = R;
       ConstantRange Range(APInt(32, Min), APInt(32, Max + 1));
-      intersectKnown(Range);
+      IntegerRangeState RangeState(Range);
+      clampStateAndIndicateChange(this->getState(), RangeState);
+      indicateOptimisticFixpoint();
+    };
+
+    std::pair<unsigned, unsigned> MaxWavesPerEURange{
+        1U, InfoCache.getMaxWavesPerEU(*F)};
+
+    // If the attribute exists, we will honor it if it is not the default.
+    if (auto Attr = InfoCache.getWavesPerEUAttr(*F)) {
+      if (*Attr != MaxWavesPerEURange) {
+        TakeRange(*Attr);
+        return;
+      }
     }
 
-    if (AMDGPU::isEntryFunctionCC(F->getCallingConv()))
-      indicatePessimisticFixpoint();
+    // Unlike AAAMDFlatWorkGroupSize, it's getting trickier here. Since the
+    // calculation of waves per EU involves flat work group size, we can't
+    // simply use an assumed flat work group size as a start point, because the
+    // update of flat work group size is in an inverse direction of waves per
+    // EU. However, we can still do something if it is an entry function. Since
+    // an entry function is a terminal node, and flat work group size either
+    // from attribute or default will be used anyway, we can take that value and
+    // calculate the waves per EU based on it. This result can't be updated by
+    // no means, but that could still allow us to propagate it.
+    if (AMDGPU::isEntryFunctionCC(F->getCallingConv())) {
+      std::pair<unsigned, unsigned> FlatWorkGroupSize;
+      if (auto Attr = InfoCache.getFlatWorkGroupSizeAttr(*F))
+        FlatWorkGroupSize = *Attr;
+      else
+        FlatWorkGroupSize = InfoCache.getDefaultFlatWorkGroupSize(*F);
+      TakeRange(InfoCache.getEffectiveWavesPerEU(*F, MaxWavesPerEURange,
+                                                 FlatWorkGroupSize));
+    }
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
@@ -1172,8 +1187,8 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
   ChangeStatus manifest(Attributor &A) override {
     Function *F = getAssociatedFunction();
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
-    unsigned Max = InfoCache.getMaxWavesPerEU(*F);
-    return emitAttributeIfNotDefault(A, 1, Max);
+    return emitAttributeIfNotDefaultAfterClamp(
+        A, {1U, InfoCache.getMaxWavesPerEU(*F)});
   }
 
   /// See AbstractAttribute::getName()
