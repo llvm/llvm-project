@@ -10,7 +10,6 @@
 #ifndef LLVM_IR_STRUCTWIDENINGUTILS_H
 #define LLVM_IR_STRUCTWIDENINGUTILS_H
 
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/DerivedTypes.h"
 
 namespace llvm {
