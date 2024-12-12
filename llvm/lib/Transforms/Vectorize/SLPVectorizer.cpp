@@ -344,6 +344,8 @@ static unsigned getShufflevectorNumGroups(ArrayRef<Value *> VL) {
   unsigned SVNumElements =
       cast<FixedVectorType>(SV->getOperand(0)->getType())->getNumElements();
   unsigned ShuffleMaskSize = SV->getShuffleMask().size();
+  if (SVNumElements % ShuffleMaskSize != 0)
+    return 0;
   unsigned GroupSize = SVNumElements / ShuffleMaskSize;
   if (GroupSize == 0 || (VL.size() % GroupSize) != 0)
     return 0;
