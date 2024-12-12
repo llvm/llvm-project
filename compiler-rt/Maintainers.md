@@ -50,8 +50,7 @@ peter@pcc.me.uk (email), [pcc](https://github.com/pcc) (GitHub)
 #### Sanitizers not covered by someone else
 
 Vitaly Buka \
-vitalybuka@google.com (email), [vitalybuka](https://github.com/vitalybuka) (GitHub)
-
+vitalybuka@google.com (email), [vitalybuka](https://github.com/vitalybuka) (GitHub) \
 Alexander Potapenko \
 glider@google.com (email), [ramosian-glider](https://github.com/ramosian-glider) (GitHub)
 
@@ -68,8 +67,7 @@ alexander.v.shaposhnikov@gmail.com (email), [alexander-shaposhnikov](https://git
 #### Realtime Sanitizer (RTSan)
 
 Christopher Apple \
-cja-private@pm.me (email), [cjappl](https://github.com/cjappl) (GitHub)
-
+cja-private@pm.me (email), [cjappl](https://github.com/cjappl) (GitHub) \
 David Trevelyan \
 david.trevelyan@gmail.com (email), [davidtrevelyan](https://github.com/davidtrevelyan) (GitHub)
 
@@ -106,10 +104,7 @@ help with the success of the project!
 
 ### Inactive or former component maintainers
 
-Kostya Serebryany ([kcc](https://github.com/kcc)) - Sanitizers
-
-Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) - Sanitizers
-
-Kostya Kortchinsky ([cryptoad](https://github.com/cryptoad)) - SCUDO
-
-Mitch Phillips ([hctim](https://github.com/hctim)) - GWP ASAN
+Kostya Serebryany ([kcc](https://github.com/kcc)) -- Sanitizers \
+Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) -- Sanitizers \
+Kostya Kortchinsky ([cryptoad](https://github.com/cryptoad)) -- SCUDO \
+Mitch Phillips ([hctim](https://github.com/hctim)) -- GWP ASAN
