@@ -71,6 +71,7 @@ define i64 @test_integer(i64  %in) {
 define float @test_f16(half %in) {
 ; CHECK-LABEL: test_f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
 ; CHECK-NEXT:    fcvt s1, h0
 ; CHECK-NEXT:    movi d2, #0000000000000000
 ; CHECK-NEXT:    fcmp s1, #0.0

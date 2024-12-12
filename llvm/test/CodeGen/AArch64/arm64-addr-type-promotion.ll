@@ -11,6 +11,8 @@ define zeroext i8 @fullGtU(i32 %i1, i32 %i2) {
 ; CHECK-LABEL: fullGtU:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    adrp x9, _block@GOTPAGE
+; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sxtw x8, w0
 ; CHECK-NEXT:    sxtw x10, w1
 ; CHECK-NEXT:    ldr x9, [x9, _block@GOTPAGEOFF]

@@ -1064,8 +1064,9 @@ entry:
 define <vscale x 4 x float> @faddqr_v4f32(<vscale x 4 x float> %z, <vscale x 4 x float> %x, float %y) {
 ; CHECK-LABEL: faddqr_v4f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z2.s, s2
+; CHECK-NEXT:    // kill: def $s2 killed $s2 def $z2
 ; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z2.s, s2
 ; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
 ; CHECK-NEXT:    fadd z1.s, z1.s, z2.s
 ; CHECK-NEXT:    mov z0.s, p0/m, z1.s
@@ -1082,8 +1083,9 @@ entry:
 define <vscale x 8 x half> @faddqr_v8f16(<vscale x 8 x half> %z, <vscale x 8 x half> %x, half %y) {
 ; CHECK-LABEL: faddqr_v8f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z2.h, h2
+; CHECK-NEXT:    // kill: def $h2 killed $h2 def $z2
 ; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    mov z2.h, h2
 ; CHECK-NEXT:    fcmeq p0.h, p0/z, z0.h, #0.0
 ; CHECK-NEXT:    fadd z1.h, z1.h, z2.h
 ; CHECK-NEXT:    mov z0.h, p0/m, z1.h
@@ -1100,8 +1102,9 @@ entry:
 define <vscale x 4 x float> @fsubqr_v4f32(<vscale x 4 x float> %z, <vscale x 4 x float> %x, float %y) {
 ; CHECK-LABEL: fsubqr_v4f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z2.s, s2
+; CHECK-NEXT:    // kill: def $s2 killed $s2 def $z2
 ; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z2.s, s2
 ; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
 ; CHECK-NEXT:    fsub z1.s, z1.s, z2.s
 ; CHECK-NEXT:    mov z0.s, p0/m, z1.s
@@ -1118,8 +1121,9 @@ entry:
 define <vscale x 8 x half> @fsubqr_v8f16(<vscale x 8 x half> %z, <vscale x 8 x half> %x, half %y) {
 ; CHECK-LABEL: fsubqr_v8f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z2.h, h2
+; CHECK-NEXT:    // kill: def $h2 killed $h2 def $z2
 ; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    mov z2.h, h2
 ; CHECK-NEXT:    fcmeq p0.h, p0/z, z0.h, #0.0
 ; CHECK-NEXT:    fsub z1.h, z1.h, z2.h
 ; CHECK-NEXT:    mov z0.h, p0/m, z1.h
@@ -1136,8 +1140,9 @@ entry:
 define <vscale x 4 x float> @fmulqr_v4f32(<vscale x 4 x float> %z, <vscale x 4 x float> %x, float %y) {
 ; CHECK-LABEL: fmulqr_v4f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z2.s, s2
+; CHECK-NEXT:    // kill: def $s2 killed $s2 def $z2
 ; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z2.s, s2
 ; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
 ; CHECK-NEXT:    fmul z1.s, z1.s, z2.s
 ; CHECK-NEXT:    mov z0.s, p0/m, z1.s
@@ -1154,8 +1159,9 @@ entry:
 define <vscale x 8 x half> @fmulqr_v8f16(<vscale x 8 x half> %z, <vscale x 8 x half> %x, half %y) {
 ; CHECK-LABEL: fmulqr_v8f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z2.h, h2
+; CHECK-NEXT:    // kill: def $h2 killed $h2 def $z2
 ; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    mov z2.h, h2
 ; CHECK-NEXT:    fcmeq p0.h, p0/z, z0.h, #0.0
 ; CHECK-NEXT:    fmul z1.h, z1.h, z2.h
 ; CHECK-NEXT:    mov z0.h, p0/m, z1.h

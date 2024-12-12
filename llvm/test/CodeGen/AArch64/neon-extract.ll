@@ -261,6 +261,7 @@ entry:
 define <4 x i16> @test_undef_vext_s16(<4 x i16> %a) {
 ; CHECK-LABEL: test_undef_vext_s16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.2s, v0.s[1]
 ; CHECK-NEXT:    ret
 entry:

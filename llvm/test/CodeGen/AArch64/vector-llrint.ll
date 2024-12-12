@@ -17,6 +17,7 @@ declare <1 x i64> @llvm.llrint.v1i64.v1f16(<1 x half>)
 define <2 x i64> @llrint_v1i64_v2f16(<2 x half> %x) {
 ; CHECK-LABEL: llrint_v1i64_v2f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov h1, v0.h[1]
 ; CHECK-NEXT:    fcvt s0, h0
 ; CHECK-NEXT:    fcvt s1, h1
@@ -35,6 +36,7 @@ declare <2 x i64> @llvm.llrint.v2i64.v2f16(<2 x half>)
 define <4 x i64> @llrint_v4i64_v4f16(<4 x half> %x) {
 ; CHECK-LABEL: llrint_v4i64_v4f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov h1, v0.h[2]
 ; CHECK-NEXT:    mov h2, v0.h[1]
 ; CHECK-NEXT:    mov h3, v0.h[3]
@@ -371,6 +373,7 @@ declare <32 x i64> @llvm.llrint.v32i64.v32f16(<32 x half>)
 define <1 x i64> @llrint_v1i64_v1f32(<1 x float> %x) {
 ; CHECK-LABEL: llrint_v1i64_v1f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    frintx s0, s0
 ; CHECK-NEXT:    fcvtzs x8, s0
 ; CHECK-NEXT:    fmov d0, x8

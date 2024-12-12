@@ -22,6 +22,7 @@ define <4 x bfloat> @add_h(<4 x bfloat> %a, <4 x bfloat> %b) {
 ; CHECK-BF16-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-BF16-NEXT:    fadd v0.4s, v0.4s, v1.4s
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
+; CHECK-BF16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-BF16-NEXT:    ret
 entry:
 
@@ -61,6 +62,7 @@ define <4 x bfloat> @sub_h(<4 x bfloat> %a, <4 x bfloat> %b) {
 ; CHECK-BF16-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-BF16-NEXT:    fsub v0.4s, v0.4s, v1.4s
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
+; CHECK-BF16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-BF16-NEXT:    ret
 entry:
 
@@ -89,6 +91,7 @@ define <4 x bfloat> @mul_h(<4 x bfloat> %a, <4 x bfloat> %b) {
 ; CHECK-BF16-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-BF16-NEXT:    fmul v0.4s, v0.4s, v1.4s
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
+; CHECK-BF16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-BF16-NEXT:    ret
 entry:
 
@@ -117,6 +120,7 @@ define <4 x bfloat> @div_h(<4 x bfloat> %a, <4 x bfloat> %b) {
 ; CHECK-BF16-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-BF16-NEXT:    fdiv v0.4s, v0.4s, v1.4s
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
+; CHECK-BF16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-BF16-NEXT:    ret
 entry:
 
@@ -164,6 +168,7 @@ define <4 x bfloat> @s_to_h(<4 x float> %a) {
 ; CHECK-BF16-LABEL: s_to_h:
 ; CHECK-BF16:       // %bb.0:
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
+; CHECK-BF16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-BF16-NEXT:    ret
   %1 = fptrunc <4 x float> %a to <4 x bfloat>
   ret <4 x bfloat> %1
@@ -191,6 +196,7 @@ define <4 x bfloat> @d_to_h(<4 x double> %a) {
 ; CHECK-BF16-NEXT:    fcvtxn v0.2s, v0.2d
 ; CHECK-BF16-NEXT:    fcvtxn2 v0.4s, v1.2d
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
+; CHECK-BF16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-BF16-NEXT:    ret
   %1 = fptrunc <4 x double> %a to <4 x bfloat>
   ret <4 x bfloat> %1
@@ -256,6 +262,7 @@ define <4 x bfloat> @sitofp_i8(<4 x i8> %a) #0 {
 ; CHECK-BF16-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-BF16-NEXT:    scvtf v0.4s, v0.4s
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
+; CHECK-BF16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-BF16-NEXT:    ret
   %1 = sitofp <4 x i8> %a to <4 x bfloat>
   ret <4 x bfloat> %1
@@ -279,6 +286,7 @@ define <4 x bfloat> @sitofp_i16(<4 x i16> %a) #0 {
 ; CHECK-BF16-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-BF16-NEXT:    scvtf v0.4s, v0.4s
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
+; CHECK-BF16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-BF16-NEXT:    ret
   %1 = sitofp <4 x i16> %a to <4 x bfloat>
   ret <4 x bfloat> %1
@@ -301,6 +309,7 @@ define <4 x bfloat> @sitofp_i32(<4 x i32> %a) #0 {
 ; CHECK-BF16:       // %bb.0:
 ; CHECK-BF16-NEXT:    scvtf v0.4s, v0.4s
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
+; CHECK-BF16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-BF16-NEXT:    ret
   %1 = sitofp <4 x i32> %a to <4 x bfloat>
   ret <4 x bfloat> %1
@@ -333,6 +342,7 @@ define <4 x bfloat> @sitofp_i64(<4 x i64> %a) #0 {
 ; CHECK-BF16-NEXT:    fcvtn v0.2s, v0.2d
 ; CHECK-BF16-NEXT:    fcvtn2 v0.4s, v1.2d
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
+; CHECK-BF16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-BF16-NEXT:    ret
   %1 = sitofp <4 x i64> %a to <4 x bfloat>
   ret <4 x bfloat> %1
@@ -358,6 +368,7 @@ define <4 x bfloat> @uitofp_i8(<4 x i8> %a) #0 {
 ; CHECK-BF16-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-BF16-NEXT:    ucvtf v0.4s, v0.4s
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
+; CHECK-BF16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-BF16-NEXT:    ret
   %1 = uitofp <4 x i8> %a to <4 x bfloat>
   ret <4 x bfloat> %1
@@ -382,6 +393,7 @@ define <4 x bfloat> @uitofp_i16(<4 x i16> %a) #0 {
 ; CHECK-BF16-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-BF16-NEXT:    ucvtf v0.4s, v0.4s
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
+; CHECK-BF16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-BF16-NEXT:    ret
   %1 = uitofp <4 x i16> %a to <4 x bfloat>
   ret <4 x bfloat> %1
@@ -404,6 +416,7 @@ define <4 x bfloat> @uitofp_i32(<4 x i32> %a) #0 {
 ; CHECK-BF16:       // %bb.0:
 ; CHECK-BF16-NEXT:    ucvtf v0.4s, v0.4s
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
+; CHECK-BF16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-BF16-NEXT:    ret
   %1 = uitofp <4 x i32> %a to <4 x bfloat>
   ret <4 x bfloat> %1
@@ -436,6 +449,7 @@ define <4 x bfloat> @uitofp_i64(<4 x i64> %a) #0 {
 ; CHECK-BF16-NEXT:    fcvtn v0.2s, v0.2d
 ; CHECK-BF16-NEXT:    fcvtn2 v0.4s, v1.2d
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
+; CHECK-BF16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-BF16-NEXT:    ret
   %1 = uitofp <4 x i64> %a to <4 x bfloat>
   ret <4 x bfloat> %1
@@ -444,6 +458,7 @@ define <4 x bfloat> @uitofp_i64(<4 x i64> %a) #0 {
 define void @test_insert_at_zero(bfloat %a, ptr %b) #0 {
 ; CHECK-LABEL: test_insert_at_zero:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
   %1 = insertelement <4 x bfloat> undef, bfloat %a, i64 0

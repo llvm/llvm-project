@@ -38,6 +38,7 @@ define i32 @selecti64i32(i64 %a) {
 define i64 @selecti32i64(i32 %a) {
 ; CHECK-LABEL: selecti32i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sbfx x8, x0, #31, #1
 ; CHECK-NEXT:    eor x0, x8, #0x7fffffff
 ; CHECK-NEXT:    ret

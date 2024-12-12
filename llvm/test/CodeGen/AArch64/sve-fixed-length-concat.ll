@@ -23,6 +23,8 @@ define <8 x i8> @concat_v8i8(<4 x i8> %op1, <4 x i8> %op2) vscale_range(2,0) #0 
 define <16 x i8> @concat_v16i8(<8 x i8> %op1, <8 x i8> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: concat_v16i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
   %res = shufflevector <8 x i8> %op1, <8 x i8> %op2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
@@ -182,6 +184,8 @@ define <4 x i16> @concat_v4i16(<2 x i16> %op1, <2 x i16> %op2) vscale_range(2,0)
 define <8 x i16> @concat_v8i16(<4 x i16> %op1, <4 x i16> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: concat_v8i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
   %res = shufflevector <4 x i16> %op1, <4 x i16> %op2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -310,6 +314,8 @@ define <2 x i32> @concat_v2i32(<1 x i32> %op1, <1 x i32> %op2) vscale_range(2,0)
 define <4 x i32> @concat_v4i32(<2 x i32> %op1, <2 x i32> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: concat_v4i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
   %res = shufflevector <2 x i32> %op1, <2 x i32> %op2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -413,6 +419,8 @@ define void @concat_v64i32(ptr %a, ptr %b, ptr %c) vscale_range(16,0) #0 {
 define <2 x i64> @concat_v2i64(<1 x i64> %op1, <1 x i64> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: concat_v2i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
   %res = shufflevector <1 x i64> %op1, <1 x i64> %op2, <2 x i32> <i32 0, i32 1>
@@ -519,6 +527,8 @@ define <4 x half> @concat_v4f16(<2 x half> %op1, <2 x half> %op2) vscale_range(2
 define <8 x half> @concat_v8f16(<4 x half> %op1, <4 x half> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: concat_v8f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
   %res = shufflevector <4 x half> %op1, <4 x half> %op2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -647,6 +657,8 @@ define <2 x float> @concat_v2f32(<1 x float> %op1, <1 x float> %op2) vscale_rang
 define <4 x float> @concat_v4f32(<2 x float> %op1, <2 x float> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: concat_v4f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
   %res = shufflevector <2 x float> %op1, <2 x float> %op2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -750,6 +762,8 @@ define void @concat_v64f32(ptr %a, ptr %b, ptr %c) vscale_range(16,0) #0 {
 define <2 x double> @concat_v2f64(<1 x double> %op1, <1 x double> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: concat_v2f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
   %res = shufflevector <1 x double> %op1, <1 x double> %op2, <2 x i32> <i32 0, i32 1>

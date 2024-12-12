@@ -7,6 +7,7 @@ define i32 @testmsws(float %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    frintx s0, s0
 ; CHECK-NEXT:    fcvtzs x0, s0
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i64 @llvm.lrint.i64.f32(float %x)
@@ -30,6 +31,7 @@ define i32 @testmswd(double %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    frintx d0, d0
 ; CHECK-NEXT:    fcvtzs x0, d0
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i64 @llvm.lrint.i64.f64(double %x)
@@ -55,6 +57,7 @@ define dso_local i32 @testmswl(fp128 %x) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl lrintl
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
