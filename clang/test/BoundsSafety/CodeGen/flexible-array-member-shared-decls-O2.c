@@ -55,7 +55,7 @@ int * __counted_by(len) baz(int len);
 // CHECK:       [[CONT69]]:
 // CHECK-NEXT:    [[LEN70:%.*]] = getelementptr inbounds nuw i8, ptr [[CALL1]], i64 8
 // CHECK-NEXT:    store i32 [[LEN]], ptr [[LEN70]], align 8, !tbaa [[TBAA10:![0-9]+]]
-// CHECK-NEXT:    store ptr [[CALL]], ptr [[CALL1]], align 8, !tbaa [[TBAA16:![0-9]+]]
+// CHECK-NEXT:    store ptr [[CALL]], ptr [[CALL1]], align 8, !tbaa [[TBAA17:![0-9]+]]
 // CHECK-NEXT:    ret ptr [[CALL1]]
 //
 struct Outer *foo(int len) {
@@ -102,7 +102,7 @@ struct Outer *foo(int len) {
 // CHECK-NEXT:    [[OR_COND108:%.*]] = select i1 [[FLEX_COUNT_CHECK_NOT]], i1 [[TMP2]], i1 false, !annotation [[META6]]
 // CHECK-NEXT:    br i1 [[OR_COND108]], label %[[CONT69]], label %[[TRAP]], !annotation [[META9]]
 // CHECK:       [[CONT69]]:
-// CHECK-NEXT:    store ptr [[CALL]], ptr [[CALL1]], align 8, !tbaa [[TBAA16]]
+// CHECK-NEXT:    store ptr [[CALL]], ptr [[CALL1]], align 8, !tbaa [[TBAA17]]
 // CHECK-NEXT:    [[LEN78:%.*]] = getelementptr inbounds nuw i8, ptr [[CALL1]], i64 8
 // CHECK-NEXT:    store i32 [[LEN]], ptr [[LEN78]], align 8, !tbaa [[TBAA10]]
 // CHECK-NEXT:    ret ptr [[CALL1]]
@@ -123,11 +123,12 @@ struct Outer *foo2(int len) {
 // CHECK: [[META7]] = !{!"bounds-safety-check-one-past-end-overflow"}
 // CHECK: [[META8]] = !{!"bounds-safety-check-ptr-lt-upper-bound"}
 // CHECK: [[META9]] = !{!"bounds-safety-check-flexible-count-gt-bounds"}
-// CHECK: [[TBAA10]] = !{[[META11:![0-9]+]], [[META15:![0-9]+]], i64 8}
-// CHECK: [[META11]] = !{!"Inner", [[META12:![0-9]+]], i64 0, [[META15]], i64 8}
-// CHECK: [[META12]] = !{!"any pointer", [[META13:![0-9]+]], i64 0}
-// CHECK: [[META13]] = !{!"omnipotent char", [[META14:![0-9]+]], i64 0}
-// CHECK: [[META14]] = !{!"Simple C/C++ TBAA"}
-// CHECK: [[META15]] = !{!"int", [[META13]], i64 0}
-// CHECK: [[TBAA16]] = !{[[META11]], [[META12]], i64 0}
+// CHECK: [[TBAA10]] = !{[[META11:![0-9]+]], [[META16:![0-9]+]], i64 8}
+// CHECK: [[META11]] = !{!"Inner", [[META12:![0-9]+]], i64 0, [[META16]], i64 8}
+// CHECK: [[META12]] = !{!"p1 int", [[META13:![0-9]+]], i64 0}
+// CHECK: [[META13]] = !{!"any pointer", [[META14:![0-9]+]], i64 0}
+// CHECK: [[META14]] = !{!"omnipotent char", [[META15:![0-9]+]], i64 0}
+// CHECK: [[META15]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[META16]] = !{!"int", [[META14]], i64 0}
+// CHECK: [[TBAA17]] = !{[[META11]], [[META12]], i64 0}
 //.
