@@ -1296,8 +1296,7 @@ let SubtargetPredicate = isGFX12Plus in {
 let SubtargetPredicate = HasBitOp3Insts  in {
   let isReMaterializable = 1 in {
     defm V_BITOP3_B16 : VOP3Inst <"v_bitop3_b16",
-                                  VOP3_BITOP3_Profile<VOPProfile_True16<VOPProfile <[i16, i16, i16, i16, i32]>>,
-                                                      VOP3_OPSEL>>;
+                                  VOP3_BITOP3_Profile<VOPProfile <[i16, i16, i16, i16, i32]>, VOP3_OPSEL>>;
     defm V_BITOP3_B32 : VOP3Inst <"v_bitop3_b32",
                                   VOP3_BITOP3_Profile<VOPProfile <[i32, i32, i32, i32, i32]>, VOP3_REGULAR>>;
   }

@@ -11,7 +11,6 @@ declare half @llvm.fma.f16(half, half, half) #1
 define <4 x half> @t_vfma_lane_f16(<4 x half> %a, <4 x half> %b, <4 x half> %c, i32 %lane) {
 ; CHECK-LABEL: t_vfma_lane_f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    fmla v0.4h, v1.4h, v2.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -23,7 +22,6 @@ entry:
 define <8 x half> @t_vfmaq_lane_f16(<8 x half> %a, <8 x half> %b, <4 x half> %c, i32 %lane) {
 ; CHECK-LABEL: t_vfmaq_lane_f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    fmla v0.8h, v1.8h, v2.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -57,7 +55,6 @@ entry:
 define <4 x half> @t_vfma_n_f16(<4 x half> %a, <4 x half> %b, half %c) {
 ; CHECK-LABEL: t_vfma_n_f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $h2 killed $h2 def $q2
 ; CHECK-NEXT:    fmla v0.4h, v1.4h, v2.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -70,7 +67,6 @@ entry:
 define <8 x half> @t_vfmaq_n_f16(<8 x half> %a, <8 x half> %b, half %c) {
 ; CHECK-LABEL: t_vfmaq_n_f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $h2 killed $h2 def $q2
 ; CHECK-NEXT:    fmla v0.8h, v1.8h, v2.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -83,7 +79,6 @@ entry:
 define half @t_vfmah_lane_f16_0(half %a, half %b, <4 x half> %c, i32 %lane) {
 ; CHECK-LABEL: t_vfmah_lane_f16_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    fmadd h0, h1, h2, h0
 ; CHECK-NEXT:    ret
 entry:
@@ -95,7 +90,6 @@ entry:
 define half @t_vfmah_lane_f16_0_swap(half %a, half %b, <4 x half> %c, i32 %lane) {
 ; CHECK-LABEL: t_vfmah_lane_f16_0_swap:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    fmadd h0, h2, h1, h0
 ; CHECK-NEXT:    ret
 entry:
@@ -107,7 +101,6 @@ entry:
 define half @t_vfmah_lane_f16_3(half %a, half %b, <4 x half> %c, i32 %lane) {
 ; CHECK-LABEL: t_vfmah_lane_f16_3:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    fmla h0, h1, v2.h[3]
 ; CHECK-NEXT:    ret
 entry:
@@ -119,7 +112,6 @@ entry:
 define half @t_vfmah_lane_f16_3_0(half %a, <4 x half> %c) {
 ; CHECK-LABEL: t_vfmah_lane_f16_3_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fmla h0, h1, v1.h[3]
 ; CHECK-NEXT:    ret
 entry:
@@ -132,8 +124,6 @@ entry:
 define half @t_vfmah_lane_f16_0_0(half %a, <4 x half> %b, <4 x half> %c) {
 ; CHECK-LABEL: t_vfmah_lane_f16_0_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fmadd h0, h1, h2, h0
 ; CHECK-NEXT:    ret
 entry:
@@ -179,7 +169,6 @@ entry:
 define <4 x half> @t_vfms_lane_f16(<4 x half> %a, <4 x half> %b, <4 x half> %c, i32 %lane) {
 ; CHECK-LABEL: t_vfms_lane_f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    fmls v0.4h, v1.4h, v2.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -192,7 +181,6 @@ entry:
 define <8 x half> @t_vfmsq_lane_f16(<8 x half> %a, <8 x half> %b, <4 x half> %c, i32 %lane) {
 ; CHECK-LABEL: t_vfmsq_lane_f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    fmls v0.8h, v1.8h, v2.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -229,7 +217,6 @@ entry:
 define <4 x half> @t_vfms_n_f16(<4 x half> %a, <4 x half> %b, half %c) {
 ; CHECK-LABEL: t_vfms_n_f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $h2 killed $h2 def $q2
 ; CHECK-NEXT:    fmls v0.4h, v1.4h, v2.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -243,7 +230,6 @@ entry:
 define <8 x half> @t_vfmsq_n_f16(<8 x half> %a, <8 x half> %b, half %c) {
 ; CHECK-LABEL: t_vfmsq_n_f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $h2 killed $h2 def $q2
 ; CHECK-NEXT:    fmls v0.8h, v1.8h, v2.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -257,7 +243,6 @@ entry:
 define half @t_vfmsh_lane_f16_0(half %a, half %b, <4 x half> %c, i32 %lane) {
 ; CHECK-LABEL: t_vfmsh_lane_f16_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    fmsub h0, h2, h1, h0
 ; CHECK-NEXT:    ret
 entry:
@@ -270,7 +255,6 @@ entry:
 define half @t_vfmsh_lane_f16_0_swap(half %a, half %b, <4 x half> %c, i32 %lane) {
 ; CHECK-LABEL: t_vfmsh_lane_f16_0_swap:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    fmsub h0, h2, h1, h0
 ; CHECK-NEXT:    ret
 entry:
@@ -283,7 +267,6 @@ entry:
 define half @t_vfmsh_lane_f16_3(half %a, half %b, <4 x half> %c, i32 %lane) {
 ; CHECK-LABEL: t_vfmsh_lane_f16_3:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    fmls h0, h1, v2.h[3]
 ; CHECK-NEXT:    ret
 entry:
@@ -308,7 +291,6 @@ entry:
 define half @t_vfmsh_lane_f16_0_3(half %a, <4 x half> %c, i32 %lane) {
 ; CHECK-LABEL: t_vfmsh_lane_f16_0_3:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fmls h0, h1, v1.h[3]
 ; CHECK-NEXT:    ret
 entry:
@@ -368,7 +350,6 @@ entry:
 define half @t_vmulh_lane0_f16(half %a, <4 x half> %c, i32 %lane) {
 ; CHECK-LABEL: t_vmulh_lane0_f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fmul h0, h0, h1
 ; CHECK-NEXT:    ret
 entry:
@@ -380,7 +361,6 @@ entry:
 define half @t_vmulh_lane3_f16(half %a, <4 x half> %c, i32 %lane) {
 ; CHECK-LABEL: t_vmulh_lane3_f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fmul h0, h0, v1.h[3]
 ; CHECK-NEXT:    ret
 entry:
@@ -424,7 +404,6 @@ entry:
 define half @t_vmulxh_lane0_f16(half %a, <4 x half> %b) {
 ; CHECK-LABEL: t_vmulxh_lane0_f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fmulx h0, h0, h1
 ; CHECK-NEXT:    ret
 entry:
@@ -436,7 +415,6 @@ entry:
 define half @t_vmulxh_lane3_f16(half %a, <4 x half> %b, i32 %lane) {
 ; CHECK-LABEL: t_vmulxh_lane3_f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fmulx h0, h0, v1.h[3]
 ; CHECK-NEXT:    ret
 entry:
@@ -448,7 +426,6 @@ entry:
 define <4 x half> @t_vmulx_lane_f16(<4 x half> %a, <4 x half> %b, i32 %lane) {
 ; CHECK-LABEL: t_vmulx_lane_f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fmulx v0.4h, v0.4h, v1.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -460,7 +437,6 @@ entry:
 define <8 x half> @t_vmulxq_lane_f16(<8 x half> %a, <4 x half> %b, i32 %lane) {
 ; CHECK-LABEL: t_vmulxq_lane_f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fmulx v0.8h, v0.8h, v1.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -516,7 +492,6 @@ entry:
 define <4 x half> @t_vmulx_n_f16(<4 x half> %a, half %c) {
 ; CHECK-LABEL: t_vmulx_n_f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $h1 killed $h1 def $q1
 ; CHECK-NEXT:    dup v1.4h, v1.h[0]
 ; CHECK-NEXT:    fmulx v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ret
@@ -530,7 +505,6 @@ entry:
 define <8 x half> @t_vmulxq_n_f16(<8 x half> %a, half %c) {
 ; CHECK-LABEL: t_vmulxq_n_f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $h1 killed $h1 def $q1
 ; CHECK-NEXT:    dup v1.8h, v1.h[0]
 ; CHECK-NEXT:    fmulx v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
@@ -544,7 +518,6 @@ entry:
 define half @t_vfmah_lane3_f16(half %a, half %b, <4 x half> %c) {
 ; CHECK-LABEL: t_vfmah_lane3_f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    fmla h0, h1, v2.h[3]
 ; CHECK-NEXT:    ret
 entry:
@@ -567,7 +540,6 @@ entry:
 define half @t_vfmsh_lane3_f16(half %a, half %b, <4 x half> %c) {
 ; CHECK-LABEL: t_vfmsh_lane3_f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    fmls h0, h1, v2.h[3]
 ; CHECK-NEXT:    ret
 entry:
@@ -605,7 +577,6 @@ entry:
 define half @test_fmulx_horizontal_f16(<2 x half> %v) {
 ; CHECK-LABEL: test_fmulx_horizontal_f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmulx h0, h0, v0.h[1]
 ; CHECK-NEXT:    ret
 entry:

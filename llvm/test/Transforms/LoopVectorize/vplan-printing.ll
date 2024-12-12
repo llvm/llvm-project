@@ -13,6 +13,9 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounw
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<for.body.preheader>:
+; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
@@ -77,6 +80,9 @@ define void @print_widen_gep_and_select(i64 %n, ptr noalias %y, ptr noalias %x, 
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<for.body.preheader>:
+; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -147,6 +153,9 @@ define float @print_reduction(i64 %n, ptr noalias %y) {
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
@@ -210,6 +219,9 @@ define void @print_reduction_with_invariant_store(i64 %n, ptr noalias %y, ptr no
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -279,7 +291,7 @@ define void @print_replicate_predicated_phi(i64 %n, ptr %x) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:  EMIT vp<[[TC]]> = EXPAND SCEV (1 smax %n)
-; CHECK-NEXT: No successors
+; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -370,6 +382,9 @@ define void @print_interleave_groups(i32 %C, i32 %D) {
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<256> = original trip-count
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT:   vp<[[IV_END:%.+]]> = DERIVED-IV ir<0> + vp<[[VTC]]> * ir<4>
 ; CHECK-NEXT: Successor(s): vector loop
@@ -453,6 +468,9 @@ define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
@@ -523,6 +541,9 @@ define void @debug_loc_vpinstruction(ptr nocapture %asd, ptr nocapture %bsd) !db
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<128> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -633,7 +654,7 @@ define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-NEXT:   IR %inc = add i64 %div, 1
 ; CHECK-NEXT:   EMIT vp<[[TC]]> = EXPAND SCEV (1 + ((15 + (%y /u 492802768830814060))<nuw><nsw> /u (1 + (%y /u 492802768830814060))<nuw><nsw>))<nuw><nsw>
 ; CHECK-NEXT:   EMIT vp<[[EXP_SCEV:%.+]]> = EXPAND SCEV (1 + (%y /u 492802768830814060))<nuw><nsw>
-; CHECK-NEXT: No successors
+; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT:   vp<[[IV_END:%.+]]> = DERIVED-IV ir<0> + vp<[[VTC]]> * vp<[[EXP_SCEV]]>
@@ -702,6 +723,9 @@ define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<1000> = original trip-count
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
@@ -763,6 +787,9 @@ define void @print_fast_math_flags(i64 %n, ptr noalias %y, ptr noalias %x, ptr %
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -831,6 +858,9 @@ define void @print_exact_flags(i64 %n, ptr noalias %x) {
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
@@ -895,6 +925,9 @@ define void @print_call_flags(ptr readonly %src, ptr noalias %dest, i64 %n) {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -992,6 +1025,9 @@ define void @print_disjoint_flags(i64 %n, ptr noalias %x) {
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
@@ -1057,6 +1093,9 @@ define void @zext_nneg(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-NEXT:  Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT:  Live-in ir<1000> = original trip-count
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
@@ -1097,6 +1136,9 @@ define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<1000> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop

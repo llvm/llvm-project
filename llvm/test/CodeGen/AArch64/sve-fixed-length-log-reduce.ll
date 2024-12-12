@@ -14,7 +14,6 @@ define i8 @andv_v8i8(<8 x i8> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: andv_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    andv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -27,7 +26,6 @@ define i8 @andv_v16i8(<16 x i8> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: andv_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl16
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    andv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -103,7 +101,6 @@ define i16 @andv_v4i16(<4 x i16> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: andv_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    andv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -116,7 +113,6 @@ define i16 @andv_v8i16(<8 x i16> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: andv_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    andv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -192,7 +188,6 @@ define i32 @andv_v2i32(<2 x i32> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: andv_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    andv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -205,7 +200,6 @@ define i32 @andv_v4i32(<4 x i32> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: andv_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    andv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -280,7 +274,6 @@ define i32 @andv_v64i32(ptr %a) vscale_range(16,0) #0 {
 define i64 @andv_v1i64(<1 x i64> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: andv_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
   %res = call i64 @llvm.vector.reduce.and.v1i64(<1 x i64> %a)
@@ -292,7 +285,6 @@ define i64 @andv_v2i64(<2 x i64> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: andv_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    andv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
@@ -372,7 +364,6 @@ define i8 @eorv_v8i8(<8 x i8> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: eorv_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    eorv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -385,7 +376,6 @@ define i8 @eorv_v16i8(<16 x i8> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: eorv_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl16
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    eorv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -461,7 +451,6 @@ define i16 @eorv_v4i16(<4 x i16> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: eorv_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    eorv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -474,7 +463,6 @@ define i16 @eorv_v8i16(<8 x i16> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: eorv_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    eorv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -550,7 +538,6 @@ define i32 @eorv_v2i32(<2 x i32> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: eorv_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    eorv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -563,7 +550,6 @@ define i32 @eorv_v4i32(<4 x i32> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: eorv_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    eorv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -638,7 +624,6 @@ define i32 @eorv_v64i32(ptr %a) vscale_range(16,0) #0 {
 define i64 @eorv_v1i64(<1 x i64> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: eorv_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
   %res = call i64 @llvm.vector.reduce.xor.v1i64(<1 x i64> %a)
@@ -650,7 +635,6 @@ define i64 @eorv_v2i64(<2 x i64> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: eorv_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    eorv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
@@ -730,7 +714,6 @@ define i8 @orv_v8i8(<8 x i8> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: orv_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    orv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -743,7 +726,6 @@ define i8 @orv_v16i8(<16 x i8> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: orv_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl16
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    orv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -819,7 +801,6 @@ define i16 @orv_v4i16(<4 x i16> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: orv_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    orv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -832,7 +813,6 @@ define i16 @orv_v8i16(<8 x i16> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: orv_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    orv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -908,7 +888,6 @@ define i32 @orv_v2i32(<2 x i32> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: orv_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    orv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -921,7 +900,6 @@ define i32 @orv_v4i32(<4 x i32> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: orv_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    orv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -996,7 +974,6 @@ define i32 @orv_v64i32(ptr %a) vscale_range(16,0) #0 {
 define i64 @orv_v1i64(<1 x i64> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: orv_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
   %res = call i64 @llvm.vector.reduce.or.v1i64(<1 x i64> %a)
@@ -1008,7 +985,6 @@ define i64 @orv_v2i64(<2 x i64> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: orv_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    orv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret

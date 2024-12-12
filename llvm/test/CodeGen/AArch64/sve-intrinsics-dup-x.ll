@@ -82,7 +82,6 @@ define <vscale x 2 x i64> @dup_imm_i64(i64 %b) {
 define <vscale x 8 x half> @dup_f16(half %b) {
 ; CHECK-LABEL: dup_f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    mov z0.h, h0
 ; CHECK-NEXT:    ret
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.dup.x.nxv8f16(half %b)
@@ -92,7 +91,6 @@ define <vscale x 8 x half> @dup_f16(half %b) {
 define <vscale x 8 x bfloat> @dup_bf16(bfloat %b) #0 {
 ; CHECK-LABEL: dup_bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    mov z0.h, h0
 ; CHECK-NEXT:    ret
   %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.dup.x.nxv8bf16(bfloat %b)
@@ -111,7 +109,6 @@ define <vscale x 8 x half> @dup_imm_f16(half %b) {
 define <vscale x 4 x float> @dup_f32(float %b) {
 ; CHECK-LABEL: dup_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    mov z0.s, s0
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.dup.x.nxv4f32(float %b)
@@ -130,7 +127,6 @@ define <vscale x 4 x float> @dup_imm_f32(float %b) {
 define <vscale x 2 x double> @dup_f64(double %b) {
 ; CHECK-LABEL: dup_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.d, d0
 ; CHECK-NEXT:    ret
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.dup.x.nxv2f64(double %b)
@@ -149,7 +145,7 @@ define <vscale x 2 x double> @dup_imm_f64(double %b) {
 define <vscale x 2 x float> @dup_fmov_imm_f32_2() {
 ; CHECK-LABEL: dup_fmov_imm_f32_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #1109917696
+; CHECK-NEXT:    mov w8, #1109917696 // =0x42280000
 ; CHECK-NEXT:    mov z0.s, w8
 ; CHECK-NEXT:    ret
   %out = tail call <vscale x 2 x float> @llvm.aarch64.sve.dup.x.nxv2f32(float 4.200000e+01)
@@ -159,7 +155,7 @@ define <vscale x 2 x float> @dup_fmov_imm_f32_2() {
 define <vscale x 4 x float> @dup_fmov_imm_f32_4() {
 ; CHECK-LABEL: dup_fmov_imm_f32_4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #1109917696
+; CHECK-NEXT:    mov w8, #1109917696 // =0x42280000
 ; CHECK-NEXT:    mov z0.s, w8
 ; CHECK-NEXT:    ret
   %out = tail call <vscale x 4 x float> @llvm.aarch64.sve.dup.x.nxv4f32(float 4.200000e+01)
@@ -169,7 +165,7 @@ define <vscale x 4 x float> @dup_fmov_imm_f32_4() {
 define <vscale x 2 x double> @dup_fmov_imm_f64_2() {
 ; CHECK-LABEL: dup_fmov_imm_f64_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #4631107791820423168
+; CHECK-NEXT:    mov x8, #4631107791820423168 // =0x4045000000000000
 ; CHECK-NEXT:    mov z0.d, x8
 ; CHECK-NEXT:    ret
   %out = tail call <vscale x 2 x double> @llvm.aarch64.sve.dup.x.nxv2f64(double 4.200000e+01)

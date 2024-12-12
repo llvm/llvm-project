@@ -336,7 +336,6 @@ define <4 x bfloat> @sitofp_v4i8(<4 x i8> %a) #0 {
 ; CHECK-BF16-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-BF16-NEXT:    scvtf v0.4s, v0.4s
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
-; CHECK-BF16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-BF16-NEXT:    ret
   %1 = sitofp <4 x i8> %a to <4 x bfloat>
   ret <4 x bfloat> %1
@@ -564,7 +563,6 @@ define <4 x bfloat> @uitofp_v4i8(<4 x i8> %a) #0 {
 ; CHECK-BF16-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-BF16-NEXT:    ucvtf v0.4s, v0.4s
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
-; CHECK-BF16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-BF16-NEXT:    ret
   %1 = uitofp <4 x i8> %a to <4 x bfloat>
   ret <4 x bfloat> %1
@@ -777,7 +775,6 @@ define <8 x bfloat> @uitofp_i64(<8 x i64> %a) #0 {
 define void @test_insert_at_zero(bfloat %a, ptr %b) #0 {
 ; CHECK-LABEL: test_insert_at_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
   %1 = insertelement <8 x bfloat> undef, bfloat %a, i64 0

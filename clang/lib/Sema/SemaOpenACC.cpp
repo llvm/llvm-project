@@ -37,6 +37,10 @@ bool diagnoseConstructAppertainment(SemaOpenACC &S, OpenACCDirectiveKind K,
   case OpenACCDirectiveKind::Serial:
   case OpenACCDirectiveKind::Kernels:
   case OpenACCDirectiveKind::Loop:
+  case OpenACCDirectiveKind::Data:
+  case OpenACCDirectiveKind::EnterData:
+  case OpenACCDirectiveKind::ExitData:
+  case OpenACCDirectiveKind::HostData:
     if (!IsStmt)
       return S.Diag(StartLoc, diag::err_acc_construct_appertainment) << K;
     break;
@@ -1760,6 +1764,31 @@ void CollectActiveReductionClauses(
   }
 }
 
+// Depth needs to be preserved for all associated statements that aren't
+// supposed to modify the compute/combined/loop construct information.
+bool PreserveLoopRAIIDepthInAssociatedStmtRAII(OpenACCDirectiveKind DK) {
+  switch (DK) {
+  case OpenACCDirectiveKind::Parallel:
+  case OpenACCDirectiveKind::ParallelLoop:
+  case OpenACCDirectiveKind::Serial:
+  case OpenACCDirectiveKind::SerialLoop:
+  case OpenACCDirectiveKind::Kernels:
+  case OpenACCDirectiveKind::KernelsLoop:
+  case OpenACCDirectiveKind::Loop:
+    return false;
+  case OpenACCDirectiveKind::Data:
+  case OpenACCDirectiveKind::HostData:
+    return true;
+  case OpenACCDirectiveKind::EnterData:
+  case OpenACCDirectiveKind::ExitData:
+    llvm_unreachable("Doesn't have an associated stmt");
+  default:
+  case OpenACCDirectiveKind::Invalid:
+    llvm_unreachable("Unhandled directive kind?");
+  }
+  llvm_unreachable("Unhandled directive kind?");
+}
+
 } // namespace
 
 SemaOpenACC::SemaOpenACC(Sema &S) : SemaBase(S) {}
@@ -1774,7 +1803,7 @@ SemaOpenACC::AssociatedStmtRAII::AssociatedStmtRAII(
       OldLoopVectorClauseLoc(S.LoopVectorClauseLoc),
       OldLoopWithoutSeqInfo(S.LoopWithoutSeqInfo),
       ActiveReductionClauses(S.ActiveReductionClauses),
-      LoopRAII(SemaRef, /*PreserveDepth=*/false) {
+      LoopRAII(SemaRef, PreserveLoopRAIIDepthInAssociatedStmtRAII(DirKind)) {
 
   // Compute constructs end up taking their 'loop'.
   if (DirKind == OpenACCDirectiveKind::Parallel ||
@@ -1950,24 +1979,23 @@ void SemaOpenACC::AssociatedStmtRAII::SetTileInfoBeforeAssociatedStmt(
 }
 
 SemaOpenACC::AssociatedStmtRAII::~AssociatedStmtRAII() {
-  SemaRef.ActiveComputeConstructInfo = OldActiveComputeConstructInfo;
-  SemaRef.LoopGangClauseOnKernel = OldLoopGangClauseOnKernel;
-  SemaRef.LoopWorkerClauseLoc = OldLoopWorkerClauseLoc;
-  SemaRef.LoopVectorClauseLoc = OldLoopVectorClauseLoc;
-  SemaRef.LoopWithoutSeqInfo = OldLoopWithoutSeqInfo;
-  SemaRef.ActiveReductionClauses.swap(ActiveReductionClauses);
-
   if (DirKind == OpenACCDirectiveKind::Parallel ||
       DirKind == OpenACCDirectiveKind::Serial ||
       DirKind == OpenACCDirectiveKind::Kernels ||
+      DirKind == OpenACCDirectiveKind::Loop ||
       DirKind == OpenACCDirectiveKind::ParallelLoop ||
       DirKind == OpenACCDirectiveKind::SerialLoop ||
       DirKind == OpenACCDirectiveKind::KernelsLoop) {
-    // Nothing really to do here, the restorations above should be enough for
-    // now.
-  } else if (DirKind == OpenACCDirectiveKind::Loop) {
-    // Nothing really to do here, the LoopInConstruct should handle restorations
-    // correctly.
+    SemaRef.ActiveComputeConstructInfo = OldActiveComputeConstructInfo;
+    SemaRef.LoopGangClauseOnKernel = OldLoopGangClauseOnKernel;
+    SemaRef.LoopWorkerClauseLoc = OldLoopWorkerClauseLoc;
+    SemaRef.LoopVectorClauseLoc = OldLoopVectorClauseLoc;
+    SemaRef.LoopWithoutSeqInfo = OldLoopWithoutSeqInfo;
+    SemaRef.ActiveReductionClauses.swap(ActiveReductionClauses);
+  } else if (DirKind == OpenACCDirectiveKind::Data ||
+             DirKind == OpenACCDirectiveKind::HostData) {
+    // Intentionally doesn't reset the Loop, Compute Construct, or reduction
+    // effects.
   }
 }
 
@@ -2175,6 +2203,10 @@ void SemaOpenACC::ActOnConstruct(OpenACCDirectiveKind K,
   case OpenACCDirectiveKind::SerialLoop:
   case OpenACCDirectiveKind::KernelsLoop:
   case OpenACCDirectiveKind::Loop:
+  case OpenACCDirectiveKind::Data:
+  case OpenACCDirectiveKind::EnterData:
+  case OpenACCDirectiveKind::ExitData:
+  case OpenACCDirectiveKind::HostData:
     // Nothing to do here, there is no real legalization that needs to happen
     // here as these constructs do not take any arguments.
     break;
@@ -3441,6 +3473,24 @@ StmtResult SemaOpenACC::ActOnEndStmtDirective(OpenACCDirectiveKind K,
         getASTContext(), ActiveComputeConstructInfo.Kind, StartLoc, DirLoc,
         EndLoc, Clauses, AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
   }
+  case OpenACCDirectiveKind::Data: {
+    return OpenACCDataConstruct::Create(
+        getASTContext(), StartLoc, DirLoc, EndLoc, Clauses,
+        AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
+  }
+  case OpenACCDirectiveKind::EnterData: {
+    return OpenACCEnterDataConstruct::Create(getASTContext(), StartLoc, DirLoc,
+                                             EndLoc, Clauses);
+  }
+  case OpenACCDirectiveKind::ExitData: {
+    return OpenACCExitDataConstruct::Create(getASTContext(), StartLoc, DirLoc,
+                                            EndLoc, Clauses);
+  }
+  case OpenACCDirectiveKind::HostData: {
+    return OpenACCHostDataConstruct::Create(
+        getASTContext(), StartLoc, DirLoc, EndLoc, Clauses,
+        AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
+  }
   }
   llvm_unreachable("Unhandled case in directive handling?");
 }
@@ -3451,9 +3501,15 @@ StmtResult SemaOpenACC::ActOnAssociatedStmt(
   switch (K) {
   default:
     llvm_unreachable("Unimplemented associated statement application");
+  case OpenACCDirectiveKind::EnterData:
+  case OpenACCDirectiveKind::ExitData:
+    llvm_unreachable(
+        "these don't have associated statements, so shouldn't get here");
   case OpenACCDirectiveKind::Parallel:
   case OpenACCDirectiveKind::Serial:
   case OpenACCDirectiveKind::Kernels:
+  case OpenACCDirectiveKind::Data:
+  case OpenACCDirectiveKind::HostData:
     // There really isn't any checking here that could happen. As long as we
     // have a statement to associate, this should be fine.
     // OpenACC 3.3 Section 6:
