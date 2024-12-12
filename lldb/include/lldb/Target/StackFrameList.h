@@ -94,7 +94,7 @@ public:
                    bool show_frame_info, uint32_t num_frames_with_source,
                    bool show_unique = false, bool show_hidden = false,
                    const char *frame_marker = nullptr);
-                
+
   /// Returns whether we have currently fetched all the frames of a stack.
   bool WereAllFramesFetched() const;
 
@@ -118,13 +118,13 @@ protected:
   /// fetch frames or not.
   bool GetFramesUpTo(uint32_t end_idx, InterruptionControl allow_interrupt);
 
-  // This should be called with either the reader or writer end of the list 
+  // This should be called with either the reader or writer end of the list
   // mutex held:
-  bool GetAllFramesFetched() const { 
-    return m_concrete_frames_fetched == UINT32_MAX; 
+  bool GetAllFramesFetched() const {
+    return m_concrete_frames_fetched == UINT32_MAX;
   }
 
-  // This should be called with the writer end of the list mutex held. 
+  // This should be called with the writer end of the list mutex held.
   void SetAllFramesFetched() { m_concrete_frames_fetched = UINT32_MAX; }
 
   bool DecrementCurrentInlinedDepth();
@@ -197,7 +197,7 @@ private:
   GetFrameAtIndexNoLock(uint32_t idx,
                         std::shared_lock<std::shared_mutex> &guard);
 
-  /// These two Fetch frames APIs and SynthesizeTailCallFrames are called in 
+  /// These two Fetch frames APIs and SynthesizeTailCallFrames are called in
   /// GetFramesUpTo, they are the ones that actually add frames.  They must be
   /// called with the writer end of the list mutex held.
 

@@ -341,14 +341,14 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
 bool StackFrameList::GetFramesUpTo(uint32_t end_idx,
                                    InterruptionControl allow_interrupt) {
   // GetFramesUpTo is always called with the intent to add frames, so get the
-  // writer lock: 
+  // writer lock:
   std::unique_lock<std::shared_mutex> guard(m_list_mutex);
-  // Now that we have the lock, check to make sure someone didn't get there 
+  // Now that we have the lock, check to make sure someone didn't get there
   // ahead of us:
-  if (m_frames.size() > end_idx || GetAllFramesFetched()) 
+  if (m_frames.size() > end_idx || GetAllFramesFetched())
     return false;
 
-  // Do not fetch frames for an invalid thread.  
+  // Do not fetch frames for an invalid thread.
   bool was_interrupted = false;
   if (!m_thread.IsValid())
     return false;
@@ -371,7 +371,7 @@ bool StackFrameList::GetFramesUpTo(uint32_t end_idx,
   Dump(&s);
   s.EOL();
 #endif
-  return was_interrupted;  
+  return was_interrupted;
 }
 
 void StackFrameList::FetchOnlyConcreteFramesUpTo(uint32_t end_idx) {
@@ -394,9 +394,8 @@ void StackFrameList::FetchOnlyConcreteFramesUpTo(uint32_t end_idx) {
   m_frames.resize(num_frames);
 }
 
-
 bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
-                                   InterruptionControl allow_interrupt) {
+                                     InterruptionControl allow_interrupt) {
   Unwind &unwinder = m_thread.GetUnwinder();
   bool was_interrupted = false;
 
@@ -461,8 +460,8 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
         break;
       }
 
-      const bool success = unwinder.GetFrameInfoAtIndex(
-          idx, cfa, pc, behaves_like_zeroth_frame);
+      const bool success =
+          unwinder.GetFrameInfoAtIndex(idx, cfa, pc, behaves_like_zeroth_frame);
       if (!success) {
         // We've gotten to the end of the stack.
         SetAllFramesFetched();
@@ -470,9 +469,8 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
       }
       const bool cfa_is_valid = true;
       unwind_frame_sp = std::make_shared<StackFrame>(
-          m_thread.shared_from_this(), m_frames.size(), idx, cfa,
-          cfa_is_valid, pc, StackFrame::Kind::Regular,
-          behaves_like_zeroth_frame, nullptr);
+          m_thread.shared_from_this(), m_frames.size(), idx, cfa, cfa_is_valid,
+          pc, StackFrame::Kind::Regular, behaves_like_zeroth_frame, nullptr);
 
       // Create synthetic tail call frames between the previous frame and the
       // newly-found frame. The new frame's index may change after this call,
@@ -637,10 +635,10 @@ StackFrameSP StackFrameList::GetFrameAtIndex(uint32_t idx) {
     return {};
   }
 
-  {  // Now we're accessing m_frames as a reader, so acquire the reader lock.
+  { // Now we're accessing m_frames as a reader, so acquire the reader lock.
     std::shared_lock<std::shared_mutex> guard(m_list_mutex);
     if (idx < m_frames.size()) {
-        frame_sp = m_frames[idx];
+      frame_sp = m_frames[idx];
     } else if (original_idx == 0) {
       // There should ALWAYS be a frame at index 0.  If something went wrong
       // with the CurrentInlinedDepth such that there weren't as many frames as
@@ -798,8 +796,7 @@ StackFrameList::GetSelectedFrameIndex(SelectMostRelevant select_most_relevant) {
   return *m_selected_frame_idx;
 }
 
-uint32_t
-StackFrameList::SetSelectedFrame(lldb_private::StackFrame *frame) {
+uint32_t StackFrameList::SetSelectedFrame(lldb_private::StackFrame *frame) {
   std::shared_lock<std::shared_mutex> guard(m_list_mutex);
 
   const_iterator pos;
