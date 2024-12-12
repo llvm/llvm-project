@@ -2677,7 +2677,7 @@ public:
 
   VPReductionRecipe(const RecurrenceDescriptor &R, VPValue *ChainOp,
                     VPValue *VecOp, VPValue *CondOp, bool IsOrdered,
-                    DebugLoc DL)
+                    DebugLoc DL = {})
       : VPReductionRecipe(VPDef::VPReductionSC, R,
                           ArrayRef<VPValue *>({ChainOp, VecOp}), CondOp,
                           IsOrdered, DL) {}
@@ -2741,9 +2741,8 @@ public:
   VPReductionEVLRecipe(VPReductionRecipe &R, VPValue &EVL, VPValue *CondOp)
       : VPReductionRecipe(
             VPDef::VPReductionEVLSC, R.getRecurrenceDescriptor(),
-            cast_or_null<Instruction>(R.getUnderlyingValue()),
             ArrayRef<VPValue *>({R.getChainOp(), R.getVecOp(), &EVL}), CondOp,
-            R.isOrdered()) {}
+            R.isOrdered(), R.getDebugLoc()) {}
 
   ~VPReductionEVLRecipe() override = default;
 
