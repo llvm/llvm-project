@@ -6213,6 +6213,11 @@ PerformBUILD_VECTORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
           Op->getOperand(0).getValueType() == MVT::i32))
       return SDValue();
 
+    // If the truncate has multiple uses, this optimization can increase
+    // register pressure
+    if (!Op->hasOneUse())
+      return SDValue();
+
     *Op = Op->getOperand(0);
 
     // Optionally, fold in a shift-right of the original operand and let permute
