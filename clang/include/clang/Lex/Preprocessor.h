@@ -867,7 +867,7 @@ private:
       auto *Info = State.dyn_cast<ModuleMacroInfo*>();
       if (!Info) {
         Info = new (PP.getPreprocessorAllocator())
-            ModuleMacroInfo(State.get<MacroDirective *>());
+            ModuleMacroInfo(cast<MacroDirective *>(State));
         State = Info;
       }
 
@@ -900,7 +900,7 @@ private:
     MacroDirective *getLatest() const {
       if (auto *Info = State.dyn_cast<ModuleMacroInfo*>())
         return Info->MD;
-      return State.get<MacroDirective*>();
+      return cast<MacroDirective *>(State);
     }
 
     void setLatest(MacroDirective *MD) {
@@ -953,7 +953,7 @@ private:
         if (Overrides.empty())
           return;
         Info = new (PP.getPreprocessorAllocator())
-            ModuleMacroInfo(State.get<MacroDirective *>());
+            ModuleMacroInfo(cast<MacroDirective *>(State));
         State = Info;
       }
       Info->OverriddenMacros.clear();
