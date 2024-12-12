@@ -28,7 +28,6 @@ define <2 x i32> @utest_f64i32(<2 x double> %x) {
 ; CHECK-NEXT:    fcvtzu w9, d1
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    mov v0.s[1], w9
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptoui <2 x double> %x to <2 x i64>
@@ -353,7 +352,6 @@ define <2 x i64> @utest_f64i64(<2 x double> %x) {
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    mov x20, x1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    bl __fixunsdfti
 ; CHECK-NEXT:    cmp x1, #0
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
@@ -385,7 +383,6 @@ define <2 x i64> @ustest_f64i64(<2 x double> %x) {
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    bl __fixdfti
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov x19, x0
@@ -447,14 +444,12 @@ define <2 x i64> @utest_f32i64(<2 x float> %x) {
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
 ; CHECK-NEXT:    bl __fixunssfti
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    mov x20, x1
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl __fixunssfti
 ; CHECK-NEXT:    cmp x1, #0
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
@@ -485,9 +480,7 @@ define <2 x i64> @ustest_f32i64(<2 x float> %x) {
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl __fixsfti
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov x19, x0
@@ -526,7 +519,6 @@ entry:
 define <2 x i64> @stest_f16i64(<2 x half> %x) {
 ; CHECK-CVT-LABEL: stest_f16i64:
 ; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-CVT-NEXT:    mov h1, v0.h[1]
 ; CHECK-CVT-NEXT:    fcvt s0, h0
 ; CHECK-CVT-NEXT:    fcvt s1, h1
@@ -538,7 +530,6 @@ define <2 x i64> @stest_f16i64(<2 x half> %x) {
 ;
 ; CHECK-FP16-LABEL: stest_f16i64:
 ; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-FP16-NEXT:    mov h1, v0.h[1]
 ; CHECK-FP16-NEXT:    fcvtzs x8, h0
 ; CHECK-FP16-NEXT:    fcvtzs x9, h1
@@ -565,14 +556,12 @@ define <2 x i64> @utesth_f16i64(<2 x half> %x) {
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov h0, v0.h[1]
 ; CHECK-NEXT:    bl __fixunshfti
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    mov x20, x1
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-NEXT:    bl __fixunshfti
 ; CHECK-NEXT:    cmp x1, #0
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
@@ -603,9 +592,7 @@ define <2 x i64> @ustest_f16i64(<2 x half> %x) {
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-NEXT:    bl __fixhfti
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov x19, x0
@@ -667,7 +654,6 @@ define <2 x i32> @utest_f64i32_mm(<2 x double> %x) {
 ; CHECK-NEXT:    fcvtzu w9, d1
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    mov v0.s[1], w9
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %conv = fptoui <2 x double> %x to <2 x i64>
@@ -962,7 +948,6 @@ define <2 x i64> @utest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    mov x20, x1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    bl __fixunsdfti
 ; CHECK-NEXT:    cmp x1, #0
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
@@ -993,7 +978,6 @@ define <2 x i64> @ustest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    bl __fixdfti
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov x19, x0
@@ -1049,14 +1033,12 @@ define <2 x i64> @utest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
 ; CHECK-NEXT:    bl __fixunssfti
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    mov x20, x1
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl __fixunssfti
 ; CHECK-NEXT:    cmp x1, #0
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
@@ -1086,9 +1068,7 @@ define <2 x i64> @ustest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl __fixsfti
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov x19, x0
@@ -1123,7 +1103,6 @@ entry:
 define <2 x i64> @stest_f16i64_mm(<2 x half> %x) {
 ; CHECK-CVT-LABEL: stest_f16i64_mm:
 ; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-CVT-NEXT:    mov h1, v0.h[1]
 ; CHECK-CVT-NEXT:    fcvt s0, h0
 ; CHECK-CVT-NEXT:    fcvt s1, h1
@@ -1135,7 +1114,6 @@ define <2 x i64> @stest_f16i64_mm(<2 x half> %x) {
 ;
 ; CHECK-FP16-LABEL: stest_f16i64_mm:
 ; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-FP16-NEXT:    mov h1, v0.h[1]
 ; CHECK-FP16-NEXT:    fcvtzs x8, h0
 ; CHECK-FP16-NEXT:    fcvtzs x9, h1
@@ -1160,14 +1138,12 @@ define <2 x i64> @utesth_f16i64_mm(<2 x half> %x) {
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov h0, v0.h[1]
 ; CHECK-NEXT:    bl __fixunshfti
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    mov x20, x1
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-NEXT:    bl __fixunshfti
 ; CHECK-NEXT:    cmp x1, #0
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
@@ -1197,9 +1173,7 @@ define <2 x i64> @ustest_f16i64_mm(<2 x half> %x) {
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-NEXT:    bl __fixhfti
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov x19, x0

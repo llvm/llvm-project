@@ -771,7 +771,6 @@ entry:
 define i64 @fct18(i32 %xor72) nounwind ssp {
 ; LLC-LABEL: fct18:
 ; LLC:       // %bb.0:
-; LLC-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; LLC-NEXT:    ubfx x0, x0, #9, #8
 ; LLC-NEXT:    ret
 ; OPT-LABEL: @fct18(
