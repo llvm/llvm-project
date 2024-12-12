@@ -5197,6 +5197,67 @@ static bool isCompressMask(ArrayRef<int> Mask) {
   return true;
 }
 
+/// Given a shuffle where the indices are disjoint between the two sources,
+/// e.g.:
+///
+/// t2:v4i8 = vector_shuffle t0:v4i8, t1:v4i8, <2, 7, 1, 4>
+///
+/// Merge the two sources into one and do a single source shuffle:
+///
+/// t2:v4i8 = vselect t1:v4i8, t0:v4i8, <0, 1, 0, 1>
+/// t3:v4i8 = vector_shuffle t2:v4i8, undef, <2, 3, 1, 0>
+///
+/// A vselect will either be merged into a masked instruction or be lowered as a
+/// vmerge.vvm, which is cheaper than a vrgather.vv.
+static SDValue lowerDisjointIndicesShuffle(ShuffleVectorSDNode *SVN,
+                                           SelectionDAG &DAG,
+                                           const RISCVSubtarget &Subtarget) {
+  MVT VT = SVN->getSimpleValueType(0);
+  MVT XLenVT = Subtarget.getXLenVT();
+  SDLoc DL(SVN);
+
+  const ArrayRef<int> Mask = SVN->getMask();
+
+  // Work out which source each lane will come from.
+  SmallVector<int, 16> Srcs(Mask.size(), -1);
+
+  for (int Idx : Mask) {
+    if (Idx == -1)
+      continue;
+    unsigned SrcIdx = Idx % Mask.size();
+    int Src = (uint32_t)Idx < Mask.size() ? 0 : 1;
+    if (Srcs[SrcIdx] == -1)
+      // Mark this source as using this lane.
+      Srcs[SrcIdx] = Src;
+    else if (Srcs[SrcIdx] != Src)
+      // The other source is using this lane: not disjoint.
+      return SDValue();
+  }
+
+  SmallVector<SDValue> SelectMaskVals;
+  for (int Lane : Srcs) {
+    if (Lane == -1)
+      SelectMaskVals.push_back(DAG.getUNDEF(XLenVT));
+    else
+      SelectMaskVals.push_back(DAG.getConstant(Lane ? 0 : 1, DL, XLenVT));
+  }
+  MVT MaskVT = VT.changeVectorElementType(MVT::i1);
+  SDValue SelectMask = DAG.getBuildVector(MaskVT, DL, SelectMaskVals);
+  SDValue Select = DAG.getNode(ISD::VSELECT, DL, VT, SelectMask,
+                               SVN->getOperand(0), SVN->getOperand(1));
+
+  // Move all indices relative to the first source.
+  SmallVector<int> NewMask(Mask.size());
+  for (unsigned I = 0; I < Mask.size(); I++) {
+    if (Mask[I] == -1)
+      NewMask[I] = -1;
+    else
+      NewMask[I] = Mask[I] % Mask.size();
+  }
+
+  return DAG.getVectorShuffle(VT, DL, Select, DAG.getUNDEF(VT), NewMask);
+}
+
 static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget) {
   SDValue V1 = Op.getOperand(0);
@@ -5539,6 +5600,17 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                              ? MaskIndex : -1);
     ShuffleMaskRHS.push_back(IsLHSOrUndefIndex ? -1 : (MaskIndex - NumElts));
   }
+
+  // If the mask indices are disjoint between the two sources, we can lower it
+  // as a vselect + a single source vrgather.vv. Don't do this if we think the
+  // operands may end up being lowered to something cheaper than a vrgather.vv.
+  if (!DAG.isSplatValue(V2) && !DAG.isSplatValue(V1) &&
+      !ShuffleVectorSDNode::isSplatMask(ShuffleMaskLHS.data(), VT) &&
+      !ShuffleVectorSDNode::isSplatMask(ShuffleMaskRHS.data(), VT) &&
+      !ShuffleVectorInst::isIdentityMask(ShuffleMaskLHS, NumElts) &&
+      !ShuffleVectorInst::isIdentityMask(ShuffleMaskRHS, NumElts))
+    if (SDValue V = lowerDisjointIndicesShuffle(SVN, DAG, Subtarget))
+      return V;
 
   // Try to pick a profitable operand order.
   bool SwapOps = DAG.isSplatValue(V2) && !DAG.isSplatValue(V1);
