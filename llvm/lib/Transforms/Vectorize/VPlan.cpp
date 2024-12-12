@@ -1182,16 +1182,6 @@ const VPRegionBlock *VPlan::getVectorLoopRegion() const {
   return nullptr;
 }
 
-VPBasicBlock *VPlan::getScalarPreheader() const {
-  auto *MiddleVPBB =
-      cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor());
-  auto *LastSucc = MiddleVPBB->getSuccessors().back();
-  // If scalar preheader is connected to VPlan, it is the last successor of
-  // MiddleVPBB. If this last successor is a VPIRBasicBlock, it is the Exit
-  // block rather than the scalar preheader.
-  return isa<VPIRBasicBlock>(LastSucc) ? nullptr : cast<VPBasicBlock>(LastSucc);
-}
-
 LLVM_DUMP_METHOD
 void VPlan::printDOT(raw_ostream &O) const {
   VPlanPrinter Printer(O, *this);

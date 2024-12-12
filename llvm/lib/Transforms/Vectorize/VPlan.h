@@ -3898,7 +3898,9 @@ public:
   }
 
   /// Return the VPBasicBlock for the preheader of the scalar loop.
-  VPBasicBlock *getScalarPreheader() const;
+  VPBasicBlock *getScalarPreheader() const {
+    return cast<VPBasicBlock>(getScalarHeader()->getSinglePredecessor());
+  }
 
   /// Return the VPIRBasicBlock wrapping the header of the scalar loop.
   VPIRBasicBlock *getScalarHeader() const { return ScalarHeader; }

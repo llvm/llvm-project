@@ -15,7 +15,7 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   IR %src = alloca [128 x i32], align 4
 ; CHECK-NEXT:   IR call void @init(ptr %src)
-; CHECK-NEXT: No successors
+; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -99,7 +99,7 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values() {
 ; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   IR %src = alloca [128 x i32], align 4
 ; CHECK-NEXT:   IR call void @init(ptr %src)
-; CHECK-NEXT: No successors
+; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -176,7 +176,7 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values_2() {
 ; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   IR %src = alloca [128 x i32], align 4
 ; CHECK-NEXT:   IR call void @init(ptr %src)
-; CHECK-NEXT: No successors
+; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
