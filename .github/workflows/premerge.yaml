@@ -53,4 +53,7 @@ jobs:
           echo "Building runtimes: ${linux_runtimes}"
           echo "Running runtimes checks targets: ${linux_runtime_check_targets}"
 
+          export CC=/opt/llvm/bin/clang
+          export CXX=/opt/llvm/bin/clang++
+
           ./.ci/monolithic-linux.sh "$(echo ${linux_projects} | tr ' ' ';')" "$(echo ${linux_check_targets})" "$(echo ${linux_runtimes} | tr ' ' ';')" "$(echo ${linux_runtime_check_targets})"
