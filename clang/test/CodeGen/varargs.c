@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -verify -o - %s | FileCheck %s
 
 // PR6433 - Don't crash on va_arg(typedef).
 typedef double gdouble;
@@ -21,6 +21,6 @@ void vla(int n, ...)
   void *p;
   p = __builtin_va_arg(ap, typeof (int (*)[++n])); // CHECK: add nsw i32 {{.*}}, 1
   // Don't crash on some undefined behaviors.
-  p = __builtin_va_arg(ap, typeof (int [++n]));
-  p = __builtin_va_arg(ap, typeof (int [n][n]));
+  p = __builtin_va_arg(ap, typeof (int [++n])); // expected-warning{{second argument to 'va_arg' is of variable length array type 'typeof(int[++n])'}}
+  p = __builtin_va_arg(ap, typeof (int [n][n])); // expected-warning{{second argument to 'va_arg' is of variable length array type 'typeof(int[n][n])'}}
 }

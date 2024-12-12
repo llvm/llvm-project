@@ -16538,6 +16538,13 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
         << TInfo->getTypeLoc().getSourceRange();
     }
 
+    if (TInfo->getType()->isVariableArrayType()) {
+      DiagRuntimeBehavior(TInfo->getTypeLoc().getBeginLoc(), E,
+                  PDiag(diag::warn_second_parameter_to_va_arg_vla)
+                          << TInfo->getType()
+                          << TInfo->getTypeLoc().getSourceRange());
+    }
+
     // Check for va_arg where arguments of the given type will be promoted
     // (i.e. this va_arg is guaranteed to have undefined behavior).
     QualType PromoteType;
