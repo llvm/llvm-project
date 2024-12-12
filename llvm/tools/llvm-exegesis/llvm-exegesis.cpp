@@ -5,7 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
 /// \file
 /// Measures execution properties (latencies/uops) of an instruction.
 ///
