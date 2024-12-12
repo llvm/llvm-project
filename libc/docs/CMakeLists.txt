@@ -5,7 +5,25 @@ if (SPHINX_FOUND)
   if (${SPHINX_OUTPUT_HTML})
     add_sphinx_target(html libc)
 
-    list(APPEND docgen_list string strings)
+    list(APPEND docgen_list
+      assert
+      ctype
+      errno
+      fenv
+      float
+      inttypes
+      locale
+      setjmp
+      signal
+      stdbit
+      stdlib
+      string
+      strings
+      threads
+      uchar
+      wchar
+      wctype
+    )
 
     foreach(stem IN LISTS docgen_list)
       add_custom_target(${stem}_rst
