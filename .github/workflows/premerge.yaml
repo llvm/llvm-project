@@ -12,6 +12,8 @@ jobs:
   premerge-checks-linux:
     if: github.repository_owner == 'llvm'
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/llvm/ci-ubuntu-22.04:latest
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@v4
