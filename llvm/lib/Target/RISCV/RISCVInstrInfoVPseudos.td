@@ -2273,11 +2273,10 @@ multiclass VPseudoBinaryV_VI_RM<Operand ImmType, LMULInfo m, string Constraint =
 }
 
 multiclass VPseudoVALU_MM<bit Commutable = 0> {
-  foreach m = MxList in {
-    defvar mx = m.MX;
-    let VLMul = m.value, isCommutable = Commutable in {
-      def "_MM_" # mx : VPseudoBinaryNoMask<VR, VR, VR, "">,
-                        SchedBinary<"WriteVMALUV", "ReadVMALUV", "ReadVMALUV", mx>;
+  foreach mti = AllMasks in {
+    let VLMul = mti.LMul.value, isCommutable = Commutable in {
+      def "_MM_" # mti.BX : VPseudoBinaryNoMask<VR, VR, VR, "">,
+        SchedBinary<"WriteVMALUV", "ReadVMALUV", "ReadVMALUV", mti.LMul.MX>;
     }
   }
 }
@@ -4950,7 +4949,7 @@ multiclass VPatBinaryV_VI_RM<string intrinsic, string instruction,
 multiclass VPatBinaryM_MM<string intrinsic, string instruction> {
   foreach mti = AllMasks in
     let Predicates = [HasVInstructions] in
-    def : VPatBinaryM<intrinsic, instruction # "_MM_" # mti.LMul.MX,
+    def : VPatBinaryM<intrinsic, instruction # "_MM_" # mti.BX,
                       mti.Mask, mti.Mask, mti.Mask,
                       mti.Log2SEW, VR, VR>;
 }
