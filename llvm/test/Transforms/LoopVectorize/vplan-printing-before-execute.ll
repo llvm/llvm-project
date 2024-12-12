@@ -19,6 +19,8 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
+; CHECK-NEXT:   vp<[[END1:%.+]]> = DERIVED-IV ir<%and> + vp<[[VTC]]> * ir<-1>
+; CHECK-NEXT:   vp<[[END2:%.+]]> = DERIVED-IV ir<%A> + vp<[[VTC]]> * ir<1>
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
@@ -43,11 +45,13 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT:   EMIT vp<[[RESUME1:%.+]]> = resume-phi vp<[[END1]]>, ir<%and>
+; CHECK-NEXT:   EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%A>
 ; CHECK-NEXT: Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop>:
-; CHECK-NEXT:   IR   %iv = phi i64 [ %and, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:   IR   %p.src = phi ptr [ %A, %entry ], [ %p.src.next, %loop ]
+; CHECK-NEXT:   IR   %iv = phi i64 [ %and, %entry ], [ %iv.next, %loop ] (extra operand: vp<[[RESUME1]]> from scalar.ph)
+; CHECK-NEXT:   IR   %p.src = phi ptr [ %A, %entry ], [ %p.src.next, %loop ] (extra operand: vp<[[RESUME2]]>.1 from scalar.ph)
 ; CHECK:        IR   %cmp = icmp eq i64 %iv.next, 0
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
@@ -69,8 +73,8 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: ir-bb<vector.ph>:
 ; CHECK-NEXT:  IR   %n.mod.vf = urem i64 %and, 16
 ; CHECK-NEXT:  IR   %n.vec = sub i64 %and, %n.mod.vf
-; CHECK-NEXT:  IR   %ind.end = sub i64 %and, %n.vec
-; CHECK-NEXT:  IR   %ind.end1 = getelementptr i8, ptr %A, i64 %n.vec
+; CHECK-NEXT:  vp<[[END1:%.+]]> = DERIVED-IV ir<%and> + ir<[[VTC]]> * ir<-1>
+; CHECK-NEXT:  vp<[[END2:%.+]]> = DERIVED-IV ir<%A> + ir<[[VTC]]> * ir<1>
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
@@ -103,8 +107,8 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<scalar.ph>:
-; CHECK-NEXT:   EMIT vp<[[RESUME1:%.+]]> = resume-phi ir<%ind.end>, ir<%and>
-; CHECK-NEXT:   EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi ir<%ind.end1>, ir<%A>
+; CHECK-NEXT:   EMIT vp<[[RESUME1:%.+]]> = resume-phi vp<[[END1]]>, ir<%and>
+; CHECK-NEXT:   EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%A>
 ; CHECK-NEXT: Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop>:

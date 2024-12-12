@@ -9720,12 +9720,13 @@ void VPDerivedIVRecipe::execute(VPTransformState &State) {
     State.Builder.setFastMathFlags(FPBinOp->getFastMathFlags());
 
   Value *Step = State.get(getStepValue(), VPLane(0));
-  Value *CanonicalIV = State.get(getOperand(1), VPLane(0));
+  Value *Index = State.get(getOperand(1), VPLane(0));
   Value *DerivedIV = emitTransformedIndex(
-      State.Builder, CanonicalIV, getStartValue()->getLiveInIRValue(), Step,
+      State.Builder, Index, getStartValue()->getLiveInIRValue(), Step,
       Kind, cast_if_present<BinaryOperator>(FPBinOp));
   DerivedIV->setName(Name);
-
+  // Index may only bet set to constant 0 in prepareToExecute.
+  assert((DerivedIV != Index || cast<ConstantInt>(Index)->isNullValue()) && "IV didn't need transforming?");
   State.set(this, DerivedIV, VPLane(0));
 }
 
