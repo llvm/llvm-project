@@ -14,6 +14,9 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 
+#include "SIRegisterInfo.h"
+#include "GCNSubtarget.h"
+
 #include <limits>
 
 using namespace llvm;
@@ -24,6 +27,7 @@ class NextUseResult {
   friend class AMDGPUNextUseAnalysisWrapper;
   SlotIndexes *Indexes;
   const MachineRegisterInfo *MRI;
+  const SIRegisterInfo *TRI;
   MachineLoopInfo *LI;
   DenseMap<const SlotIndex *, DenseMap<Register, unsigned>> InstrCache;
 public:
@@ -138,8 +142,18 @@ public:
     return getNextUseDistance(MI, R) == Infinity;
   }
 
-  void getSortedForInstruction(const MachineInstr &MI,
+  void getSortedForBlockEnd(MachineBasicBlock &MBB,
                                SetVector<Register> &Regs) {
+    auto SortByDist = [&](const Register LHS, const Register RHS) {
+      return getNextUseDistance(MBB, LHS) < getNextUseDistance(MBB, RHS);
+    };
+    SmallVector<Register> Tmp(Regs.takeVector());
+    sort(Tmp, SortByDist);
+    Regs.insert(Tmp.begin(), Tmp.end());
+  }
+
+  void getSortedForInstruction(const MachineInstr &MI,
+                                   SetVector<Register> &Regs) {
     auto SortByDist = [&](const Register LHS, const Register RHS) {
       return getNextUseDistance(MI, LHS) < getNextUseDistance(MI, RHS);
     };
@@ -148,8 +162,8 @@ public:
     Regs.insert(Tmp.begin(), Tmp.end());
   }
 
-  std::vector<std::pair<Register, unsigned>> getSortedByDistance(
-          const MachineInstr &MI, std::vector<Register> &W) {
+  std::vector<std::pair<Register, unsigned>>
+  getSortedByDistance(const MachineInstr &MI, std::vector<Register> &W) {
     std::vector<std::pair<Register, unsigned>> Result;
     auto compareByVal = [](std::pair<Register, unsigned> &LHS,
                            std::pair<Register, unsigned> &RHS) -> bool {

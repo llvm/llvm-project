@@ -75,11 +75,12 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
     MFI = &MF.getFrameInfo();
     TRI = ST->getRegisterInfo();
     TII = ST->getInstrInfo();
-    NumAvailableRegs = IsVGPRsPass
-                           ? TRI->getRegPressureSetLimit(
-                                 MF, AMDGPU::RegisterPressureSets::VGPR_32)
-                           : TRI->getRegPressureSetLimit(
-                                 MF, AMDGPU::RegisterPressureSets::SReg_32);
+    NumAvailableRegs =
+        IsVGPRsPass ? ST->getMaxNumVGPRs(MF) : ST->getMaxNumSGPRs(MF);
+    //  ? TRI->getRegPressureSetLimit(
+    //        MF, AMDGPU::RegisterPressureSets::VGPR_32)
+    //  : TRI->getRegPressureSetLimit(
+    //        MF, AMDGPU::RegisterPressureSets::SReg_32);
   }
 
   SpillInfo &getBlockInfo(const MachineBasicBlock &MBB);
@@ -97,10 +98,10 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
   void spillBefore(Register VReg, MachineBasicBlock::iterator InsertBefore);
 
   unsigned getLoopMaxRP(MachineLoop *L);
-  void limit(RegisterSet &Active, RegisterSet &Spilled,
+  void limit(MachineBasicBlock &MBB, RegisterSet &Active, RegisterSet &Spilled,
              MachineBasicBlock::iterator I,
              const RegisterSet Defs = RegisterSet());
-  
+
   unsigned getSizeInRegs(const Register VReg);
   unsigned getSizeInRegs(const RegisterSet VRegs);
   bool takeReg(Register R) {
@@ -157,8 +158,9 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
   auto &Entry = RegisterMap[MBB.getNumber()];
   RegisterSet &Active = Entry.ActiveSet;
   RegisterSet &Spilled = Entry.SpillSet;
-  RegisterSet Reloads;
+  
   for (MachineBasicBlock::iterator I : MBB) {
+    RegisterSet Reloads;
     for (auto U : I->uses()) {
       if (!U.isReg())
         continue;
@@ -167,12 +169,18 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
       Register VReg = U.getReg();
       if (!takeReg(VReg))
         continue;
+      // if (U.getSubReg()) {
+      //   dbgs() << U << "\n";
+      // }
       if (Active.insert(VReg)) {
         // Not in reg, hence, should have been spilled before
         // FIXME: This is ODD as the Spilled set is a union among all
         // predecessors and should already contain all spilled before!
-        Spilled.insert(U.getReg());
-        Reloads.insert(VReg);
+        // SPECIAL CASE: undef
+        if (!U.isUndef()) {
+          Spilled.insert(VReg);
+          Reloads.insert(VReg);
+        }
       }
     }
     RegisterSet Defs;
@@ -184,8 +192,8 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
     if (Reloads.empty() && Defs.empty())
       continue;
 
-    limit(Active, Spilled, I);
-    limit(Active, Spilled, std::next(I), Defs);
+    limit(MBB, Active, Spilled, I);
+    limit(MBB, Active, Spilled, I, Defs);
     // FIXME: limit with Defs is assumed to create room for the registers being
     // defined by I. Calling with std::next(I) makes spills inserted AFTER I!!!
     Active.insert(Defs.begin(), Defs.end());
@@ -242,14 +250,16 @@ void AMDGPUSSASpiller::connectToPredecessors(MachineBasicBlock &MBB,
   for (auto Pred : Preds) {
     auto PE = getBlockInfo(*Pred);
     RegisterSet ReloadInPred = set_difference(Entry.ActiveSet, PE.ActiveSet);
-    // We're about to insert N reloads at the end of the predecessor block.
-    // Make sure we have enough registers for N definitions or spill to make
-    // room for them.
-    limit(PE.ActiveSet, PE.SpillSet, Pred->end(), ReloadInPred);
-    for (auto R : ReloadInPred) {
-      reloadAtEnd(*Pred, R);
-      // FIXME: Do we need to update sets?
-      PE.ActiveSet.insert(R);
+    if (!ReloadInPred.empty()) {
+      // We're about to insert N reloads at the end of the predecessor block.
+      // Make sure we have enough registers for N definitions or spill to make
+      // room for them.
+      limit(*Pred, PE.ActiveSet, PE.SpillSet, Pred->end(), ReloadInPred);
+      for (auto R : ReloadInPred) {
+        reloadAtEnd(*Pred, R);
+        // FIXME: Do we need to update sets?
+        PE.ActiveSet.insert(R);
+      }
     }
 
     for (auto S : set_intersection(set_difference(Entry.SpillSet, PE.SpillSet),
@@ -380,26 +390,43 @@ unsigned AMDGPUSSASpiller::getLoopMaxRP(MachineLoop *L) {
   return MaxRP;
 }
 
-void AMDGPUSSASpiller::limit(RegisterSet &Active, RegisterSet &Spilled,
-                             MachineBasicBlock::iterator I, const RegisterSet Defs) {
+void AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
+                             RegisterSet &Spilled,
+                             MachineBasicBlock::iterator I,
+                             const RegisterSet Defs) {
   MachineBasicBlock::iterator LimitPoint = I;
 
   if (!Defs.empty()) {
-    LimitPoint++;
+    if (LimitPoint != MBB.end())
+      LimitPoint = std::next(LimitPoint);
   }
 
   unsigned CurRP = getSizeInRegs(Active);
-  if(CurRP < NumAvailableRegs - Defs.size())
+  unsigned DefsRP = getSizeInRegs(Defs);
+  if(CurRP <= NumAvailableRegs - DefsRP)
     return;
 
-  unsigned Limit =  CurRP - NumAvailableRegs + Defs.size();
+  if (LimitPoint == MBB.end())
+    NU.getSortedForBlockEnd(MBB, Active);
+  else
+    NU.getSortedForInstruction(*LimitPoint, Active);
 
-  NU.getSortedForInstruction(*LimitPoint, Active);
-  RegisterSet Tmp(Active.end() - Limit, Active.end());
-  Active.set_subtract(Tmp);
-  Tmp.set_subtract(Spilled);
-  for (auto R : Tmp) {
-    if (!NU.isDead(*I, R)) {
+
+  unsigned ShrinkTo = NumAvailableRegs - DefsRP;
+  RegisterSet ToSpill;
+  while (CurRP > ShrinkTo) {
+    auto R = Active.pop_back_val();
+    unsigned RegSize = getSizeInRegs(R);
+    CurRP -= RegSize;
+    if (!Spilled.contains(R))
+      ToSpill.insert(R);
+  }
+
+  for (auto R : ToSpill) {
+
+    bool Alive = (LimitPoint == MBB.end()) ? !NU.isDead(MBB, R)
+                                           : !NU.isDead(*LimitPoint, R);
+    if (Alive) {
       spillBefore(R, I);
       Spilled.insert(R);
     }
@@ -426,8 +453,11 @@ unsigned AMDGPUSSASpiller::fillActiveSet(MachineBasicBlock &MBB, RegisterSet S,
   unsigned Size = getSizeInRegs(Active);
   NU.getSortedForInstruction(*MBB.instr_begin(), S);
   for (auto VReg : S) {
-    if (Size + getSizeInRegs(VReg) < Limit)
-      Active.insert(VReg);   
+    unsigned RSize = getSizeInRegs(VReg);
+    if (Size + RSize < Limit) {
+      Active.insert(VReg);
+      Size += RSize;
+    }
   }
   return Size;
 }

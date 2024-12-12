@@ -133,37 +133,104 @@ unsigned NextUseResult::computeNextUseDistance(const MachineBasicBlock &MBB,
     if (VRegs.contains(VReg)) {
       int UseDist = VRegs[VReg];
       if ((UseDist - IDist) < 0) {
-        for (auto Succ : successors(&MBB)) {
-          if (auto SuccVMapRef = getVRegMap(Succ)) {
-            VRegDistances &SuccVRegs = SuccVMapRef.value();
-            if (SuccVRegs.contains(VReg)) {
-              Dist = std::min(Dist, SuccVRegs[VReg]);
+
+        // FIXME:  VRegs contains only upward exposed info! In other words - the
+        // very first use in block!
+        // (UseDist - IDist) < 0 just means that our MI is later then the 1st
+        // use of the VReg.
+        // Function user (calls from outside: from SSASpiller) is interested in
+        // the next use in block after the MI!
+        // We need to scan for the uses in current block - from MI to the block
+        // end BEFORE checking the Succs!
+
+        // NOTE: Make sure that we don't spoil the info for Next Use analysis
+        // itself. If so, we need 2 different functions for querying
+        // nextUseDistance!
+        bool Done = false;
+        MachineInstr *Instr = Indexes->getInstructionFromIndex(I);
+        if (Instr) {
+          // we canot use SlotIndexes to compare positions because
+          // spills/reloads were not added in Instruction Index. So, just scan
+          // the BB.
+          unsigned D = 0;
+          MachineBasicBlock::iterator It(Instr);
+          while (It != MBB.end()) {
+            if (It->definesRegister(VReg, TRI)) {
+              // VReg is DEAD
+              Dist = Infinity;
+              Done = true;
+              break;
             }
+            if (It->readsRegister(VReg, TRI)) {
+              Dist = D;
+              Done = true;
+              break;
+            }
+            D++;
+            It++;
           }
         }
+        if (!Done)
+          // The instruction of interest is after the first use  of the register
+          // in the block and the register has not been killed in block. Look
+          // for the next use in successors.
+          for (auto Succ : successors(&MBB)) {
+            if (auto SuccVMapRef = getVRegMap(Succ)) {
+              VRegDistances &SuccVRegs = SuccVMapRef.value();
+              if (SuccVRegs.contains(VReg)) {
+                Dist = std::min(Dist, SuccVRegs[VReg]);
+              }
+            }
+          }
       } else {
         Dist = UseDist - IDist;
       }
     } else {
       // We hit a case when the VReg is defined and used inside the block.
-      // Let's see if the I is in between.
-      MachineInstr *Def = MRI->getVRegDef(VReg);
-      assert(Def && "Neither use distance no Def found for reg!");
-      SlotIndex DefIdx = Indexes->getInstructionIndex(*Def);
-      assert(DefIdx.isValid() && "Register Def not in the Index");
-      if (SlotIndex::isEarlierInstr(DefIdx, I)) {
-        // "I" is after the Def
-        for (auto &U : MRI->use_instructions(VReg)) {
-          assert(U.getParent() == &MBB &&
-                 "Use out of the block fount but distance was not recorded");
-          SlotIndex UIdx = Indexes->getInstructionIndex(U);
-          if (SlotIndex::isEarlierInstr(I, UIdx)) {
-            unsigned UDist = I.distance(UIdx)/SlotIndex::InstrDist;
-            if (UDist < Dist)
-              Dist = UDist;
+      // Let's see if I is in between. Since we may be called from the broken
+      // SSA function we cannot rely on MRI.getVRegDef. The VReg Def in block
+      // may be reload, so we canot use SlotIndexes to compare positions because
+      // spills/reloads were not added in Instruction Index. So, just scan the
+      // BB.
+      MachineInstr *Instr = Indexes->getInstructionFromIndex(I);
+      if (Instr) {
+        bool DefSeen = false, InstrSeen = false;
+        unsigned D = 0;
+        for (auto &MI : MBB) {
+          if (InstrSeen)
+            D++;
+          if (Instr == &MI) {
+            if (!DefSeen)
+              break;
+            InstrSeen = true;
+          }
+
+          if (MI.definesRegister(VReg, TRI))
+            DefSeen = true;
+          if (MI.readsRegister(VReg, TRI) && InstrSeen) {
+            Dist = D;
+            break;
           }
         }
       }
+
+      // MachineInstr *Def = MRI->getVRegDef(VReg);
+      // assert(Def && "Neither use distance no Def found for reg!");
+      // SlotIndex DefIdx = Indexes->getInstructionIndex(*Def);
+      // assert(DefIdx.isValid() && "Register Def not in the Index");
+      // if (SlotIndex::isEarlierInstr(DefIdx, I)) {
+      //   // "I" is after the Def
+      //   for (auto &U : MRI->use_instructions(VReg)) {
+      //     assert(U.getParent() == &MBB &&
+      //            "Use out of the block fount but distance was not recorded");
+      //     SlotIndex UIdx = Indexes->getInstructionIndex(U);
+      //     if (SlotIndex::isEarlierInstr(I, UIdx)) {
+      //       unsigned UDist = I.distance(UIdx)/SlotIndex::InstrDist;
+      //       if (UDist < Dist)
+      //         Dist = UDist;
+      //     }
+      //   }
+      // }
     }
     if (Dist != Infinity)
       InstrCache[&I][VReg] = Dist;
@@ -208,6 +275,7 @@ bool AMDGPUNextUseAnalysisWrapper::runOnMachineFunction(
   NU.Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
   NU.LI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   NU.MRI = &MF.getRegInfo();
+  NU.TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
   assert(NU.MRI->isSSA());
   NU.init(MF);
   NU.analyze(MF);
