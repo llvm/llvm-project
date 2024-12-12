@@ -1255,4 +1255,19 @@ namespace Memcmp {
                                                               // both-note {{not supported}}
   static_assert(__builtin_memcmp("", &incomplete, 1u) == 42); // both-error {{not an integral constant}} \
                                                               // both-note {{not supported}}
+
+  static_assert(__builtin_memcmp(u8"abab\0banana", u8"abab\0banana", 100) == 0); // both-error {{not an integral constant}} \
+                                                                                 // both-note {{dereferenced one-past-the-end}}
+
+  static_assert(__builtin_bcmp("abaa", "abba", 3) != 0);
+  static_assert(__builtin_bcmp("abaa", "abba", 2) == 0);
+  static_assert(__builtin_bcmp("a\203", "a", 2) != 0);
+  static_assert(__builtin_bcmp("a\203", "a\003", 2) != 0);
+  static_assert(__builtin_bcmp(0, 0, 0) == 0);
+  static_assert(__builtin_bcmp("abab\0banana", "abab\0banana", 100) == 0); // both-error {{not an integral constant}}\
+                                                                           // both-note {{dereferenced one-past-the-end}}
+  static_assert(__builtin_bcmp("abab\0banana", "abab\0canada", 100) != 0); // FIXME: Should we reject this?
+  static_assert(__builtin_bcmp("abab\0banana", "abab\0canada", 7) != 0);
+  static_assert(__builtin_bcmp("abab\0banana", "abab\0canada", 6) != 0);
+  static_assert(__builtin_bcmp("abab\0banana", "abab\0canada", 5) == 0);
 }

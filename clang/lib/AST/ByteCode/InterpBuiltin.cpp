@@ -1917,7 +1917,7 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
   const APSInt &Size =
       peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
 
-  if (ID == Builtin::BImemcmp)
+  if (ID == Builtin::BImemcmp || ID == Builtin::BIbcmp)
     diagnoseNonConstexprBuiltin(S, OpPC, ID);
 
   if (Size.isZero()) {
@@ -1952,15 +1952,34 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
                                   BufferB.byteSize().getQuantity());
   size_t CmpSize =
       std::min(MinBufferSize, static_cast<size_t>(Size.getZExtValue()));
-  int Result = std::memcmp(BufferA.Data.get(), BufferB.Data.get(), CmpSize);
-  if (Result == 0)
-    pushInteger(S, 0, Call->getType());
-  else if (Result < 0)
-    pushInteger(S, -1, Call->getType());
-  else
-    pushInteger(S, 1, Call->getType());
 
-  return true;
+  for (size_t I = 0; I != CmpSize; ++I) {
+    std::byte A = BufferA.Data[I];
+    std::byte B = BufferB.Data[I];
+
+    if (A < B) {
+      pushInteger(S, -1, Call->getType());
+      return true;
+    } else if (A > B) {
+      pushInteger(S, 1, Call->getType());
+      return true;
+    }
+  }
+
+  // We compared CmpSize bytes above. If the limiting factor was the Size
+  // passed, we're done and the result is equality (0).
+  if (Size.getZExtValue() <= CmpSize) {
+    pushInteger(S, 0, Call->getType());
+    return true;
+  }
+
+  // However, if we read all the available bytes but were instructed to read
+  // even more, diagnose this as a "read of dereferenced one-past-the-end
+  // pointer". This is what would happen if we called CheckRead() on every array
+  // element.
+  S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_past_end)
+      << AK_Read << S.Current->getRange(OpPC);
+  return false;
 }
 
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
@@ -2438,6 +2457,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
 
   case Builtin::BI__builtin_memcmp:
   case Builtin::BImemcmp:
+  case Builtin::BI__builtin_bcmp:
+  case Builtin::BIbcmp:
     if (!interp__builtin_memcmp(S, OpPC, Frame, F, Call))
       return false;
     break;

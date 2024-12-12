@@ -2747,7 +2747,7 @@ void InnerLoopVectorizer::createInductionResumeVPValues(
   // no suitable resume phi was already created.
   ScalarPHBuilder.createNaryOp(
       VPInstruction::ResumePhi,
-      {Plan.getOrAddLiveIn(VectorTripCount),
+      {&Plan.getVectorTripCount(),
        Plan.getOrAddLiveIn(ConstantInt::get(VectorTripCount->getType(), 0))},
       {}, "vec.epilog.resume.val");
 }
