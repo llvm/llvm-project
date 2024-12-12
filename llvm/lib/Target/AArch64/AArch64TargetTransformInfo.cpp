@@ -905,6 +905,23 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::experimental_vector_match: {
+    auto *NeedleTy = cast<FixedVectorType>(ICA.getArgTypes()[1]);
+    EVT SearchVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
+    unsigned SearchSize = NeedleTy->getNumElements();
+    if (!getTLI()->shouldExpandVectorMatch(SearchVT, SearchSize)) {
+      // Base cost for MATCH instructions. At least on the Neoverse V2 and
+      // Neoverse V3, these are cheap operations with the same latency as a
+      // vector ADD. In most cases, however, we also need to do an extra DUP.
+      // For fixed-length vectors we currently need an extra five--six
+      // instructions besides the MATCH.
+      InstructionCost Cost = 4;
+      if (isa<FixedVectorType>(RetTy))
+        Cost += 10;
+      return Cost;
+    }
+    break;
+  }
   default:
     break;
   }
@@ -2799,6 +2816,31 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i8, 2},
       {ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i8, 6},
       {ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i8, 6},
+
+      // FP Ext and trunc
+      {ISD::FP_EXTEND, MVT::f64, MVT::f32, 1},     // fcvt
+      {ISD::FP_EXTEND, MVT::v2f64, MVT::v2f32, 1}, // fcvtl
+      {ISD::FP_EXTEND, MVT::v4f64, MVT::v4f32, 2}, // fcvtl+fcvtl2
+      //   FP16
+      {ISD::FP_EXTEND, MVT::f32, MVT::f16, 1},     // fcvt
+      {ISD::FP_EXTEND, MVT::f64, MVT::f16, 1},     // fcvt
+      {ISD::FP_EXTEND, MVT::v4f32, MVT::v4f16, 1}, // fcvtl
+      {ISD::FP_EXTEND, MVT::v8f32, MVT::v8f16, 2}, // fcvtl+fcvtl2
+      {ISD::FP_EXTEND, MVT::v2f64, MVT::v2f16, 2}, // fcvtl+fcvtl
+      {ISD::FP_EXTEND, MVT::v4f64, MVT::v4f16, 3}, // fcvtl+fcvtl2+fcvtl
+      {ISD::FP_EXTEND, MVT::v8f64, MVT::v8f16, 6}, // 2 * fcvtl+fcvtl2+fcvtl
+      // FP Ext and trunc
+      {ISD::FP_ROUND, MVT::f32, MVT::f64, 1},     // fcvt
+      {ISD::FP_ROUND, MVT::v2f32, MVT::v2f64, 1}, // fcvtn
+      {ISD::FP_ROUND, MVT::v4f32, MVT::v4f64, 2}, // fcvtn+fcvtn2
+      //   FP16
+      {ISD::FP_ROUND, MVT::f16, MVT::f32, 1},     // fcvt
+      {ISD::FP_ROUND, MVT::f16, MVT::f64, 1},     // fcvt
+      {ISD::FP_ROUND, MVT::v4f16, MVT::v4f32, 1}, // fcvtn
+      {ISD::FP_ROUND, MVT::v8f16, MVT::v8f32, 2}, // fcvtn+fcvtn2
+      {ISD::FP_ROUND, MVT::v2f16, MVT::v2f64, 2}, // fcvtn+fcvtn
+      {ISD::FP_ROUND, MVT::v4f16, MVT::v4f64, 3}, // fcvtn+fcvtn2+fcvtn
+      {ISD::FP_ROUND, MVT::v8f16, MVT::v8f64, 6}, // 2 * fcvtn+fcvtn2+fcvtn
 
       // LowerVectorINT_TO_FP:
       {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i32, 1},

@@ -5320,7 +5320,7 @@ public:
   /// is complete.
   void ActOnFinishCXXInClassMemberInitializer(Decl *VarDecl,
                                               SourceLocation EqualLoc,
-                                              Expr *Init);
+                                              ExprResult Init);
 
   /// Handle a C++ member initializer using parentheses syntax.
   MemInitResult

@@ -98,9 +98,8 @@ define fp128 @fneg(fp128 %x) {
 define fp128 @fabs(fp128 %x) {
 ; CHECK-LABEL: fabs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, -1
-; CHECK-NEXT:    srli a2, a2, 1
-; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    srli a1, a1, 1
 ; CHECK-NEXT:    ret
   %a = call fp128 @llvm.fabs.f128(fp128 %x)
   ret fp128 %a
@@ -110,11 +109,11 @@ define fp128 @fcopysign(fp128 %x, fp128 %y) {
 ; CHECK-LABEL: fcopysign:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, -1
-; CHECK-NEXT:    slli a4, a2, 63
-; CHECK-NEXT:    srli a2, a2, 1
-; CHECK-NEXT:    and a1, a1, a2
-; CHECK-NEXT:    and a3, a3, a4
-; CHECK-NEXT:    or a1, a1, a3
+; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    slli a2, a2, 63
+; CHECK-NEXT:    srli a1, a1, 1
+; CHECK-NEXT:    and a2, a3, a2
+; CHECK-NEXT:    or a1, a1, a2
 ; CHECK-NEXT:    ret
   %a = call fp128 @llvm.copysign.f128(fp128 %x, fp128 %y)
   ret fp128 %a
@@ -486,9 +485,8 @@ define fp128 @uitofp_i16(i16 %x) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    lui a1, 16
-; CHECK-NEXT:    addiw a1, a1, -1
-; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    slli a0, a0, 48
+; CHECK-NEXT:    srli a0, a0, 48
 ; CHECK-NEXT:    call __floatunsitf
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
