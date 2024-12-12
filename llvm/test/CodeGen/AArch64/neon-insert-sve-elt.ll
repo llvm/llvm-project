@@ -9,9 +9,7 @@
 define <8 x i8> @test_lane0_nxv16i8(<8 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: test_lane0_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.b[0], v1.b[0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
     %c = extractelement <vscale x 16 x i8> %b, i32 0
     %d = insertelement <8 x i8> %a, i8 %c, i32 0
@@ -21,9 +19,7 @@ define <8 x i8> @test_lane0_nxv16i8(<8 x i8> %a, <vscale x 16 x i8> %b) {
 define <8 x i8> @test_lane15_nxv16i8(<8 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: test_lane15_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.b[7], v1.b[15]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
     %c = extractelement <vscale x 16 x i8> %b, i32 15
     %d = insertelement <8 x i8> %a, i8 %c, i32 7
@@ -68,9 +64,7 @@ define <16 x i8> @test_q_lane16_nxv16i8(<16 x i8> %a, <vscale x 16 x i8> %b) {
 define <4 x half> @test_lane0_nxv8f16(<4 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: test_lane0_nxv8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.h[0], v1.h[0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
     %c = extractelement <vscale x 8 x half> %b, i32 0
     %d = insertelement <4 x half> %a, half %c, i32 0
@@ -80,9 +74,7 @@ define <4 x half> @test_lane0_nxv8f16(<4 x half> %a, <vscale x 8 x half> %b) {
 define <4 x half> @test_lane7_nxv8f16(<4 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: test_lane7_nxv8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.h[3], v1.h[7]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
     %c = extractelement <vscale x 8 x half> %b, i32 7
     %d = insertelement <4 x half> %a, half %c, i32 3
@@ -126,9 +118,7 @@ define <8 x half> @test_q_lane8_nxv8f16(<8 x half> %a, <vscale x 8 x half> %b) {
 define <4 x bfloat> @test_lane0_nxv8bf16(<4 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: test_lane0_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.h[0], v1.h[0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
     %c = extractelement <vscale x 8 x bfloat> %b, i32 0
     %d = insertelement <4 x bfloat> %a, bfloat %c, i32 0
@@ -138,9 +128,7 @@ define <4 x bfloat> @test_lane0_nxv8bf16(<4 x bfloat> %a, <vscale x 8 x bfloat> 
 define <4 x bfloat> @test_lane7_nxv8bf16(<4 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: test_lane7_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.h[3], v1.h[7]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
     %c = extractelement <vscale x 8 x bfloat> %b, i32 7
     %d = insertelement <4 x bfloat> %a, bfloat %c, i32 3
@@ -184,9 +172,7 @@ define <8 x bfloat> @test_q_lane8_nxv8bf16(<8 x bfloat> %a, <vscale x 8 x bfloat
 define <4 x i16> @test_lane0_nxv8i16(<4 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: test_lane0_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.h[0], v1.h[0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
     %c = extractelement <vscale x 8 x i16> %b, i32 0
     %d = insertelement <4 x i16> %a, i16 %c, i32 0
@@ -196,9 +182,7 @@ define <4 x i16> @test_lane0_nxv8i16(<4 x i16> %a, <vscale x 8 x i16> %b) {
 define <4 x i16> @test_lane7_nxv8i16(<4 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: test_lane7_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.h[3], v1.h[7]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
     %c = extractelement <vscale x 8 x i16> %b, i32 7
     %d = insertelement <4 x i16> %a, i16 %c, i32 3
@@ -243,9 +227,7 @@ define <8 x i16> @test_q_lane8_nxv8i16(<8 x i16> %a, <vscale x 8 x i16> %b) {
 define <2 x float> @test_lane0_nxv4f32(<2 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: test_lane0_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.s[0], v1.s[0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
     %c = extractelement <vscale x 4 x float> %b, i32 0
     %d = insertelement <2 x float> %a, float %c, i32 0
@@ -255,9 +237,7 @@ define <2 x float> @test_lane0_nxv4f32(<2 x float> %a, <vscale x 4 x float> %b) 
 define <2 x float> @test_lane3_nxv4f32(<2 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: test_lane3_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.s[1], v1.s[3]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
     %c = extractelement <vscale x 4 x float> %b, i32 3
     %d = insertelement <2 x float> %a, float %c, i32 1
@@ -301,9 +281,7 @@ define <4 x float> @test_q_lane4_nxv4f32(<4 x float> %a, <vscale x 4 x float> %b
 define <2 x i32> @test_lane0_nxv4i32(<2 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: test_lane0_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.s[0], v1.s[0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
     %c = extractelement <vscale x 4 x i32> %b, i32 0
     %d = insertelement <2 x i32> %a, i32 %c, i32 0
@@ -313,9 +291,7 @@ define <2 x i32> @test_lane0_nxv4i32(<2 x i32> %a, <vscale x 4 x i32> %b) {
 define <2 x i32> @test_lane3_nxv4i32(<2 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: test_lane3_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.s[1], v1.s[3]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
     %c = extractelement <vscale x 4 x i32> %b, i32 3
     %d = insertelement <2 x i32> %a, i32 %c, i32 1
@@ -361,7 +337,6 @@ define <1 x double> @test_lane0_nxv2f64(<1 x double> %a, <vscale x 2 x double> %
 ; CHECK-LABEL: test_lane0_nxv2f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov v0.d[0], v1.d[0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
     %c = extractelement <vscale x 2 x double> %b, i32 0
     %d = insertelement <1 x double> %a, double %c, i32 0
@@ -372,7 +347,6 @@ define <1 x double> @test_lane1_nxv2f64(<1 x double> %a, <vscale x 2 x double> %
 ; CHECK-LABEL: test_lane1_nxv2f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov v0.d[0], v1.d[1]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
     %c = extractelement <vscale x 2 x double> %b, i32 1
     %d = insertelement <1 x double> %a, double %c, i32 0
@@ -417,7 +391,6 @@ define <1 x i64> @test_lane0_nxv2i64(<1 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: test_lane0_nxv2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov v0.d[0], v1.d[0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
     %c = extractelement <vscale x 2 x i64> %b, i32 0
     %d = insertelement <1 x i64> %a, i64 %c, i32 0
@@ -428,7 +401,6 @@ define <1 x i64> @test_lane1_nxv2i64(<1 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: test_lane1_nxv2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov v0.d[0], v1.d[1]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
     %c = extractelement <vscale x 2 x i64> %b, i32 1
     %d = insertelement <1 x i64> %a, i64 %c, i32 0

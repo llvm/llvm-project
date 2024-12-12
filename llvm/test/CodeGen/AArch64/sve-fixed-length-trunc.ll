@@ -15,7 +15,6 @@ define <16 x i8> @trunc_v16i16_v16i8(ptr %in) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ptrue p0.h, vl16
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <16 x i16>, ptr %in
   %b = trunc <16 x i16> %a to <16 x i8>
@@ -102,7 +101,6 @@ define <8 x i8> @trunc_v8i32_v8i8(ptr %in) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <8 x i32>, ptr %in
   %b = trunc <8 x i32> %a to <8 x i8>
@@ -121,7 +119,6 @@ define <16 x i8> @trunc_v16i32_v16i8(ptr %in) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z2.b, z0.b, z0.b
 ; VBITS_GE_256-NEXT:    uzp1 z0.b, z1.b, z1.b
 ; VBITS_GE_256-NEXT:    mov v0.d[1], v2.d[0]
-; VBITS_GE_256-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: trunc_v16i32_v16i8:
@@ -130,7 +127,6 @@ define <16 x i8> @trunc_v16i32_v16i8(ptr %in) #0 {
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_512-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_512-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; VBITS_GE_512-NEXT:    ret
   %a = load <16 x i32>, ptr %in
   %b = trunc <16 x i32> %a to <16 x i8>
@@ -185,7 +181,6 @@ define <8 x i16> @trunc_v8i32_v8i16(ptr %in) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <8 x i32>, ptr %in
   %b = trunc <8 x i32> %a to <8 x i16>
@@ -273,7 +268,6 @@ define <4 x i8> @trunc_v4i64_v4i8(ptr %in) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <4 x i64>, ptr %in
   %b = trunc <4 x i64> %a to <4 x i8>
@@ -293,7 +287,6 @@ define <8 x i8> @trunc_v8i64_v8i8(ptr %in) #0 {
 ; VBITS_GE_256-NEXT:    splice z1.s, p0, z1.s, z0.s
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z1.h, z1.h
 ; VBITS_GE_256-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_256-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: trunc_v8i64_v8i8:
@@ -303,7 +296,6 @@ define <8 x i8> @trunc_v8i64_v8i8(ptr %in) #0 {
 ; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_512-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_512-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; VBITS_GE_512-NEXT:    ret
   %a = load <8 x i64>, ptr %in
   %b = trunc <8 x i64> %a to <8 x i8>
@@ -318,7 +310,6 @@ define <16 x i8> @trunc_v16i64_v16i8(ptr %in) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <16 x i64>, ptr %in
   %b = trunc <16 x i64> %a to <16 x i8>
@@ -356,7 +347,6 @@ define <4 x i16> @trunc_v4i64_v4i16(ptr %in) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <4 x i64>, ptr %in
   %b = trunc <4 x i64> %a to <4 x i16>
@@ -375,7 +365,6 @@ define <8 x i16> @trunc_v8i64_v8i16(ptr %in) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z2.h, z0.h, z0.h
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z1.h, z1.h
 ; VBITS_GE_256-NEXT:    mov v0.d[1], v2.d[0]
-; VBITS_GE_256-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: trunc_v8i64_v8i16:
@@ -384,7 +373,6 @@ define <8 x i16> @trunc_v8i64_v8i16(ptr %in) #0 {
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_512-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; VBITS_GE_512-NEXT:    ret
   %a = load <8 x i64>, ptr %in
   %b = trunc <8 x i64> %a to <8 x i16>
@@ -439,7 +427,6 @@ define <4 x i32> @trunc_v4i64_v4i32(ptr %in) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <4 x i64>, ptr %in
   %b = trunc <4 x i64> %a to <4 x i32>

@@ -126,7 +126,6 @@ define i16 @popcount256(ptr nocapture nonnull readonly %0) {
 ; GISEL-NEXT:    mov w8, v0.s[0]
 ; GISEL-NEXT:    fmov w9, s1
 ; GISEL-NEXT:    add x0, x8, w9, uxtw
-; GISEL-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; GISEL-NEXT:    ret
 ;
 ; GISELO0-LABEL: popcount256:

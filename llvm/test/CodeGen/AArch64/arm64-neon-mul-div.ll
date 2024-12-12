@@ -59,8 +59,6 @@ define <4 x i32> @mul4x32(<4 x i32> %A, <4 x i32> %B) {
 define <1 x i64> @mul1xi64(<1 x i64> %A, <1 x i64> %B) {
 ; CHECK-LABEL: mul1xi64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov x8, d1
 ; CHECK-NEXT:    fmov x9, d0
 ; CHECK-NEXT:    mul x8, x9, x8
@@ -142,8 +140,6 @@ define <2 x double> @div2xdouble(<2 x double> %A, <2 x double> %B) {
 define <1 x i8> @sdiv1x8(<1 x i8> %A, <1 x i8> %B) {
 ; CHECK-LABEL: sdiv1x8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    smov w8, v1.b[0]
 ; CHECK-NEXT:    smov w9, v0.b[0]
 ; CHECK-NEXT:    sdiv w8, w9, w8
@@ -156,8 +152,6 @@ define <1 x i8> @sdiv1x8(<1 x i8> %A, <1 x i8> %B) {
 define <8 x i8> @sdiv8x8(<8 x i8> %A, <8 x i8> %B) {
 ; CHECK-LABEL: sdiv8x8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    smov w8, v1.b[1]
 ; CHECK-NEXT:    smov w9, v0.b[1]
 ; CHECK-NEXT:    smov w10, v0.b[0]
@@ -272,8 +266,6 @@ define <16 x i8> @sdiv16x8(<16 x i8> %A, <16 x i8> %B) {
 define <1 x i16> @sdiv1x16(<1 x i16> %A, <1 x i16> %B) {
 ; CHECK-LABEL: sdiv1x16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    smov w8, v1.h[0]
 ; CHECK-NEXT:    smov w9, v0.h[0]
 ; CHECK-NEXT:    sdiv w8, w9, w8
@@ -286,8 +278,6 @@ define <1 x i16> @sdiv1x16(<1 x i16> %A, <1 x i16> %B) {
 define <4 x i16> @sdiv4x16(<4 x i16> %A, <4 x i16> %B) {
 ; CHECK-LABEL: sdiv4x16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    smov w8, v1.h[1]
 ; CHECK-NEXT:    smov w9, v0.h[1]
 ; CHECK-NEXT:    smov w10, v0.h[0]
@@ -304,7 +294,6 @@ define <4 x i16> @sdiv4x16(<4 x i16> %A, <4 x i16> %B) {
 ; CHECK-NEXT:    sdiv w8, w12, w11
 ; CHECK-NEXT:    mov v0.h[2], w10
 ; CHECK-NEXT:    mov v0.h[3], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 	%tmp3 = sdiv <4 x i16> %A, %B;
 	ret <4 x i16> %tmp3
@@ -354,8 +343,6 @@ define <8 x i16> @sdiv8x16(<8 x i16> %A, <8 x i16> %B) {
 define <1 x i32> @sdiv1x32(<1 x i32> %A, <1 x i32> %B) {
 ; CHECK-LABEL: sdiv1x32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov w8, s1
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    sdiv w8, w9, w8
@@ -368,8 +355,6 @@ define <1 x i32> @sdiv1x32(<1 x i32> %A, <1 x i32> %B) {
 define <2 x i32> @sdiv2x32(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-LABEL: sdiv2x32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov w8, s1
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    mov w10, v0.s[1]
@@ -378,7 +363,6 @@ define <2 x i32> @sdiv2x32(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-NEXT:    sdiv w9, w10, w9
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    mov v0.s[1], w9
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 	%tmp3 = sdiv <2 x i32> %A, %B;
 	ret <2 x i32> %tmp3
@@ -411,8 +395,6 @@ define <4 x i32> @sdiv4x32(<4 x i32> %A, <4 x i32> %B) {
 define <1 x i64> @sdiv1x64(<1 x i64> %A, <1 x i64> %B) {
 ; CHECK-LABEL: sdiv1x64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov x8, d1
 ; CHECK-NEXT:    fmov x9, d0
 ; CHECK-NEXT:    sdiv x8, x9, x8
@@ -441,8 +423,6 @@ define <2 x i64> @sdiv2x64(<2 x i64> %A, <2 x i64> %B) {
 define <1 x i8> @udiv1x8(<1 x i8> %A, <1 x i8> %B) {
 ; CHECK-LABEL: udiv1x8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w8, v1.b[0]
 ; CHECK-NEXT:    umov w9, v0.b[0]
 ; CHECK-NEXT:    udiv w8, w9, w8
@@ -455,8 +435,6 @@ define <1 x i8> @udiv1x8(<1 x i8> %A, <1 x i8> %B) {
 define <8 x i8> @udiv8x8(<8 x i8> %A, <8 x i8> %B) {
 ; CHECK-LABEL: udiv8x8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w8, v1.b[1]
 ; CHECK-NEXT:    umov w9, v0.b[1]
 ; CHECK-NEXT:    umov w10, v0.b[0]
@@ -571,8 +549,6 @@ define <16 x i8> @udiv16x8(<16 x i8> %A, <16 x i8> %B) {
 define <1 x i16> @udiv1x16(<1 x i16> %A, <1 x i16> %B) {
 ; CHECK-LABEL: udiv1x16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w8, v1.h[0]
 ; CHECK-NEXT:    umov w9, v0.h[0]
 ; CHECK-NEXT:    udiv w8, w9, w8
@@ -585,8 +561,6 @@ define <1 x i16> @udiv1x16(<1 x i16> %A, <1 x i16> %B) {
 define <4 x i16> @udiv4x16(<4 x i16> %A, <4 x i16> %B) {
 ; CHECK-LABEL: udiv4x16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w8, v1.h[1]
 ; CHECK-NEXT:    umov w9, v0.h[1]
 ; CHECK-NEXT:    umov w10, v0.h[0]
@@ -603,7 +577,6 @@ define <4 x i16> @udiv4x16(<4 x i16> %A, <4 x i16> %B) {
 ; CHECK-NEXT:    udiv w8, w12, w11
 ; CHECK-NEXT:    mov v0.h[2], w10
 ; CHECK-NEXT:    mov v0.h[3], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 	%tmp3 = udiv <4 x i16> %A, %B;
 	ret <4 x i16> %tmp3
@@ -653,8 +626,6 @@ define <8 x i16> @udiv8x16(<8 x i16> %A, <8 x i16> %B) {
 define <1 x i32> @udiv1x32(<1 x i32> %A, <1 x i32> %B) {
 ; CHECK-LABEL: udiv1x32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov w8, s1
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    udiv w8, w9, w8
@@ -667,8 +638,6 @@ define <1 x i32> @udiv1x32(<1 x i32> %A, <1 x i32> %B) {
 define <2 x i32> @udiv2x32(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-LABEL: udiv2x32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov w8, s1
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    mov w10, v0.s[1]
@@ -677,7 +646,6 @@ define <2 x i32> @udiv2x32(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-NEXT:    udiv w9, w10, w9
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    mov v0.s[1], w9
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 	%tmp3 = udiv <2 x i32> %A, %B;
 	ret <2 x i32> %tmp3
@@ -710,8 +678,6 @@ define <4 x i32> @udiv4x32(<4 x i32> %A, <4 x i32> %B) {
 define <1 x i64> @udiv1x64(<1 x i64> %A, <1 x i64> %B) {
 ; CHECK-LABEL: udiv1x64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov x8, d1
 ; CHECK-NEXT:    fmov x9, d0
 ; CHECK-NEXT:    udiv x8, x9, x8
@@ -740,8 +706,6 @@ define <2 x i64> @udiv2x64(<2 x i64> %A, <2 x i64> %B) {
 define <1 x i8> @srem1x8(<1 x i8> %A, <1 x i8> %B) {
 ; CHECK-LABEL: srem1x8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    smov w8, v1.b[0]
 ; CHECK-NEXT:    smov w9, v0.b[0]
 ; CHECK-NEXT:    sdiv w10, w9, w8
@@ -755,8 +719,6 @@ define <1 x i8> @srem1x8(<1 x i8> %A, <1 x i8> %B) {
 define <8 x i8> @srem8x8(<8 x i8> %A, <8 x i8> %B) {
 ; CHECK-LABEL: srem8x8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    smov w11, v1.b[0]
 ; CHECK-NEXT:    smov w12, v0.b[0]
 ; CHECK-NEXT:    smov w8, v1.b[1]
@@ -916,8 +878,6 @@ define <16 x i8> @srem16x8(<16 x i8> %A, <16 x i8> %B) {
 define <1 x i16> @srem1x16(<1 x i16> %A, <1 x i16> %B) {
 ; CHECK-LABEL: srem1x16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    smov w8, v1.h[0]
 ; CHECK-NEXT:    smov w9, v0.h[0]
 ; CHECK-NEXT:    sdiv w10, w9, w8
@@ -931,8 +891,6 @@ define <1 x i16> @srem1x16(<1 x i16> %A, <1 x i16> %B) {
 define <4 x i16> @srem4x16(<4 x i16> %A, <4 x i16> %B) {
 ; CHECK-LABEL: srem4x16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    smov w11, v1.h[0]
 ; CHECK-NEXT:    smov w12, v0.h[0]
 ; CHECK-NEXT:    smov w8, v1.h[1]
@@ -953,7 +911,6 @@ define <4 x i16> @srem4x16(<4 x i16> %A, <4 x i16> %B) {
 ; CHECK-NEXT:    mov v0.h[2], w8
 ; CHECK-NEXT:    msub w8, w9, w17, w18
 ; CHECK-NEXT:    mov v0.h[3], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 	%tmp3 = srem <4 x i16> %A, %B;
 	ret <4 x i16> %tmp3
@@ -1011,8 +968,6 @@ define <8 x i16> @srem8x16(<8 x i16> %A, <8 x i16> %B) {
 define <1 x i32> @srem1x32(<1 x i32> %A, <1 x i32> %B) {
 ; CHECK-LABEL: srem1x32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov w8, s1
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    sdiv w10, w9, w8
@@ -1026,8 +981,6 @@ define <1 x i32> @srem1x32(<1 x i32> %A, <1 x i32> %B) {
 define <2 x i32> @srem2x32(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-LABEL: srem2x32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov w8, s1
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    mov w11, v1.s[1]
@@ -1038,7 +991,6 @@ define <2 x i32> @srem2x32(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    msub w9, w13, w11, w12
 ; CHECK-NEXT:    mov v0.s[1], w9
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 	%tmp3 = srem <2 x i32> %A, %B;
 	ret <2 x i32> %tmp3
@@ -1075,8 +1027,6 @@ define <4 x i32> @srem4x32(<4 x i32> %A, <4 x i32> %B) {
 define <1 x i64> @srem1x64(<1 x i64> %A, <1 x i64> %B) {
 ; CHECK-LABEL: srem1x64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov x8, d1
 ; CHECK-NEXT:    fmov x9, d0
 ; CHECK-NEXT:    sdiv x10, x9, x8
@@ -1108,8 +1058,6 @@ define <2 x i64> @srem2x64(<2 x i64> %A, <2 x i64> %B) {
 define <1 x i8> @urem1x8(<1 x i8> %A, <1 x i8> %B) {
 ; CHECK-LABEL: urem1x8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w8, v1.b[0]
 ; CHECK-NEXT:    umov w9, v0.b[0]
 ; CHECK-NEXT:    udiv w10, w9, w8
@@ -1123,8 +1071,6 @@ define <1 x i8> @urem1x8(<1 x i8> %A, <1 x i8> %B) {
 define <8 x i8> @urem8x8(<8 x i8> %A, <8 x i8> %B) {
 ; CHECK-LABEL: urem8x8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w11, v1.b[0]
 ; CHECK-NEXT:    umov w12, v0.b[0]
 ; CHECK-NEXT:    umov w8, v1.b[1]
@@ -1284,8 +1230,6 @@ define <16 x i8> @urem16x8(<16 x i8> %A, <16 x i8> %B) {
 define <1 x i16> @urem1x16(<1 x i16> %A, <1 x i16> %B) {
 ; CHECK-LABEL: urem1x16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w8, v1.h[0]
 ; CHECK-NEXT:    umov w9, v0.h[0]
 ; CHECK-NEXT:    udiv w10, w9, w8
@@ -1299,8 +1243,6 @@ define <1 x i16> @urem1x16(<1 x i16> %A, <1 x i16> %B) {
 define <4 x i16> @urem4x16(<4 x i16> %A, <4 x i16> %B) {
 ; CHECK-LABEL: urem4x16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w11, v1.h[0]
 ; CHECK-NEXT:    umov w12, v0.h[0]
 ; CHECK-NEXT:    umov w8, v1.h[1]
@@ -1321,7 +1263,6 @@ define <4 x i16> @urem4x16(<4 x i16> %A, <4 x i16> %B) {
 ; CHECK-NEXT:    mov v0.h[2], w8
 ; CHECK-NEXT:    msub w8, w9, w17, w18
 ; CHECK-NEXT:    mov v0.h[3], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 	%tmp3 = urem <4 x i16> %A, %B;
 	ret <4 x i16> %tmp3
@@ -1379,8 +1320,6 @@ define <8 x i16> @urem8x16(<8 x i16> %A, <8 x i16> %B) {
 define <1 x i32> @urem1x32(<1 x i32> %A, <1 x i32> %B) {
 ; CHECK-LABEL: urem1x32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov w8, s1
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    udiv w10, w9, w8
@@ -1394,8 +1333,6 @@ define <1 x i32> @urem1x32(<1 x i32> %A, <1 x i32> %B) {
 define <2 x i32> @urem2x32(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-LABEL: urem2x32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov w8, s1
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    mov w11, v1.s[1]
@@ -1406,7 +1343,6 @@ define <2 x i32> @urem2x32(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    msub w9, w13, w11, w12
 ; CHECK-NEXT:    mov v0.s[1], w9
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 	%tmp3 = urem <2 x i32> %A, %B;
 	ret <2 x i32> %tmp3
@@ -1443,8 +1379,6 @@ define <4 x i32> @urem4x32(<4 x i32> %A, <4 x i32> %B) {
 define <1 x i64> @urem1x64(<1 x i64> %A, <1 x i64> %B) {
 ; CHECK-LABEL: urem1x64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov x8, d1
 ; CHECK-NEXT:    fmov x9, d0
 ; CHECK-NEXT:    udiv x10, x9, x8
@@ -1480,23 +1414,16 @@ define <2 x float> @frem2f32(<2 x float> %A, <2 x float> %B) {
 ; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
 ; CHECK-NEXT:    mov s1, v1.s[1]
 ; CHECK-NEXT:    bl fmodf
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; CHECK-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-NEXT:    bl fmodf
 ; CHECK-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    ret
 	%tmp3 = frem <2 x float> %A, %B;
@@ -1514,14 +1441,10 @@ define <4 x float> @frem4f32(<4 x float> %A, <4 x float> %B) {
 ; CHECK-NEXT:    mov s0, v0.s[1]
 ; CHECK-NEXT:    mov s1, v1.s[1]
 ; CHECK-NEXT:    bl fmodf
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    ldp q0, q1, [sp, #16] // 32-byte Folded Reload
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; CHECK-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-NEXT:    bl fmodf
 ; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    ldp q0, q1, [sp, #16] // 32-byte Folded Reload
@@ -1529,7 +1452,6 @@ define <4 x float> @frem4f32(<4 x float> %A, <4 x float> %B) {
 ; CHECK-NEXT:    mov s1, v1.s[2]
 ; CHECK-NEXT:    bl fmodf
 ; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-NEXT:    str q1, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    ldp q0, q1, [sp, #16] // 32-byte Folded Reload
@@ -1537,7 +1459,6 @@ define <4 x float> @frem4f32(<4 x float> %A, <4 x float> %B) {
 ; CHECK-NEXT:    mov s1, v1.s[3]
 ; CHECK-NEXT:    bl fmodf
 ; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
 ; CHECK-NEXT:    mov v1.s[3], v0.s[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
@@ -1571,14 +1492,10 @@ define <2 x double> @frem2d64(<2 x double> %A, <2 x double> %B) {
 ; CHECK-NEXT:    mov d0, v0.d[1]
 ; CHECK-NEXT:    mov d1, v1.d[1]
 ; CHECK-NEXT:    bl fmod
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-NEXT:    bl fmod
 ; CHECK-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    add sp, sp, #64

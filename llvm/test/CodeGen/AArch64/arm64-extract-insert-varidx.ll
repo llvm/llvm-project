@@ -8,8 +8,6 @@ define <4 x i8> @test_varidx_extract_v8s8(<8 x i8> %x, i32 %idx) {
 ; CHECK-SDAG-NEXT:    sub sp, sp, #16
 ; CHECK-SDAG-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SDAG-NEXT:    add x8, sp, #8
-; CHECK-SDAG-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-SDAG-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SDAG-NEXT:    str d0, [sp, #8]
 ; CHECK-SDAG-NEXT:    umov w9, v0.b[1]
 ; CHECK-SDAG-NEXT:    bfxil x8, x0, #0, #3
@@ -28,7 +26,6 @@ define <4 x i8> @test_varidx_extract_v8s8(<8 x i8> %x, i32 %idx) {
 ; CHECK-GISEL-NEXT:    sub sp, sp, #16
 ; CHECK-GISEL-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-GISEL-NEXT:    mov w9, w0
-; CHECK-GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GISEL-NEXT:    mov b1, v0.b[1]
 ; CHECK-GISEL-NEXT:    add x8, sp, #8
 ; CHECK-GISEL-NEXT:    and x9, x9, #0x7
@@ -65,7 +62,6 @@ define <8 x i8> @test_varidx_extract_v16s8(<16 x i8> %x, i32 %idx) {
 ; CHECK-SDAG-NEXT:    sub sp, sp, #16
 ; CHECK-SDAG-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SDAG-NEXT:    mov x8, sp
-; CHECK-SDAG-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SDAG-NEXT:    str q0, [sp]
 ; CHECK-SDAG-NEXT:    bfxil x8, x0, #0, #4
 ; CHECK-SDAG-NEXT:    ldr b1, [x8]
@@ -134,7 +130,6 @@ define i16 @test_varidx_extract_v2s16(<2 x i16> %x, i32 %idx) {
 ; CHECK-SDAG-NEXT:    sub sp, sp, #16
 ; CHECK-SDAG-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SDAG-NEXT:    add x8, sp, #8
-; CHECK-SDAG-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SDAG-NEXT:    str d0, [sp, #8]
 ; CHECK-SDAG-NEXT:    bfi x8, x0, #2, #1
 ; CHECK-SDAG-NEXT:    ldr w0, [x8]
@@ -145,7 +140,6 @@ define i16 @test_varidx_extract_v2s16(<2 x i16> %x, i32 %idx) {
 ; CHECK-GISEL:       // %bb.0:
 ; CHECK-GISEL-NEXT:    sub sp, sp, #16
 ; CHECK-GISEL-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GISEL-NEXT:    mov s1, v0.s[1]
 ; CHECK-GISEL-NEXT:    mov w9, w0
 ; CHECK-GISEL-NEXT:    add x8, sp, #12
@@ -165,14 +159,11 @@ define <2 x i16> @test_varidx_extract_v4s16(<4 x i16> %x, i32 %idx) {
 ; CHECK-SDAG-NEXT:    sub sp, sp, #16
 ; CHECK-SDAG-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SDAG-NEXT:    add x8, sp, #8
-; CHECK-SDAG-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-SDAG-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SDAG-NEXT:    str d0, [sp, #8]
 ; CHECK-SDAG-NEXT:    umov w9, v0.h[1]
 ; CHECK-SDAG-NEXT:    bfi x8, x0, #1, #2
 ; CHECK-SDAG-NEXT:    ld1 { v0.h }[0], [x8]
 ; CHECK-SDAG-NEXT:    mov v0.s[1], w9
-; CHECK-SDAG-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SDAG-NEXT:    add sp, sp, #16
 ; CHECK-SDAG-NEXT:    ret
 ;
@@ -184,13 +175,11 @@ define <2 x i16> @test_varidx_extract_v4s16(<4 x i16> %x, i32 %idx) {
 ; CHECK-GISEL-NEXT:    mov w8, #2 // =0x2
 ; CHECK-GISEL-NEXT:    add x10, sp, #8
 ; CHECK-GISEL-NEXT:    and x9, x9, #0x3
-; CHECK-GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GISEL-NEXT:    str d0, [sp, #8]
 ; CHECK-GISEL-NEXT:    madd x8, x9, x8, x10
 ; CHECK-GISEL-NEXT:    umov w9, v0.h[1]
 ; CHECK-GISEL-NEXT:    ld1 { v0.h }[0], [x8]
 ; CHECK-GISEL-NEXT:    mov v0.s[1], w9
-; CHECK-GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GISEL-NEXT:    add sp, sp, #16
 ; CHECK-GISEL-NEXT:    ret
   %tmp = extractelement <4 x i16> %x, i32 %idx
@@ -206,7 +195,6 @@ define <4 x i16> @test_varidx_extract_v8s16(<8 x i16> %x, i32 %idx) {
 ; CHECK-SDAG-NEXT:    sub sp, sp, #16
 ; CHECK-SDAG-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SDAG-NEXT:    mov x8, sp
-; CHECK-SDAG-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SDAG-NEXT:    str q0, [sp]
 ; CHECK-SDAG-NEXT:    bfi x8, x0, #1, #3
 ; CHECK-SDAG-NEXT:    ldr h1, [x8]
@@ -249,7 +237,6 @@ define i32 @test_varidx_extract_v2s32(<2 x i32> %x, i32 %idx) {
 ; CHECK-SDAG-NEXT:    sub sp, sp, #16
 ; CHECK-SDAG-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SDAG-NEXT:    add x8, sp, #8
-; CHECK-SDAG-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SDAG-NEXT:    str d0, [sp, #8]
 ; CHECK-SDAG-NEXT:    bfi x8, x0, #2, #1
 ; CHECK-SDAG-NEXT:    ldr w0, [x8]
@@ -277,7 +264,6 @@ define <2 x i32> @test_varidx_extract_v4s32(<4 x i32> %x, i32 %idx) {
 ; CHECK-SDAG-NEXT:    sub sp, sp, #16
 ; CHECK-SDAG-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SDAG-NEXT:    mov x8, sp
-; CHECK-SDAG-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SDAG-NEXT:    str q0, [sp]
 ; CHECK-SDAG-NEXT:    bfi x8, x0, #2, #2
 ; CHECK-SDAG-NEXT:    ldr s1, [x8]
@@ -312,7 +298,6 @@ define i64 @test_varidx_extract_v2s64(<2 x i64> %x, i32 %idx) {
 ; CHECK-SDAG-NEXT:    sub sp, sp, #16
 ; CHECK-SDAG-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SDAG-NEXT:    mov x8, sp
-; CHECK-SDAG-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SDAG-NEXT:    str q0, [sp]
 ; CHECK-SDAG-NEXT:    bfi x8, x0, #3, #1
 ; CHECK-SDAG-NEXT:    ldr x0, [x8]
@@ -340,7 +325,6 @@ define ptr @test_varidx_extract_v2p0(<2 x ptr> %x, i32 %idx) {
 ; CHECK-SDAG-NEXT:    sub sp, sp, #16
 ; CHECK-SDAG-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SDAG-NEXT:    mov x8, sp
-; CHECK-SDAG-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SDAG-NEXT:    str q0, [sp]
 ; CHECK-SDAG-NEXT:    bfi x8, x0, #3, #1
 ; CHECK-SDAG-NEXT:    ldr x0, [x8]

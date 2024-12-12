@@ -16,7 +16,6 @@ entry:
 define <4 x bfloat> @test_vdup_n_bf16(bfloat %v) nounwind {
 ; CHECK-LABEL: test_vdup_n_bf16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-NEXT:    dup v0.4h, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -29,7 +28,6 @@ entry:
 define <8 x bfloat> @test_vdupq_n_bf16(bfloat %v) nounwind {
 ; CHECK-LABEL: test_vdupq_n_bf16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-NEXT:    dup v0.8h, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -42,7 +40,6 @@ entry:
 define <4 x bfloat> @test_vdup_lane_bf16(<4 x bfloat> %v) nounwind {
 ; CHECK-LABEL: test_vdup_lane_bf16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.4h, v0.h[1]
 ; CHECK-NEXT:    ret
 entry:
@@ -54,7 +51,6 @@ entry:
 define <8 x bfloat> @test_vdupq_lane_bf16(<4 x bfloat> %v) nounwind {
 ; CHECK-LABEL: test_vdupq_lane_bf16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.8h, v0.h[1]
 ; CHECK-NEXT:    ret
 entry:
@@ -88,8 +84,6 @@ entry:
 define <8 x bfloat> @test_vcombine_bf16(<4 x bfloat> %low, <4 x bfloat> %high) nounwind {
 ; CHECK-LABEL: test_vcombine_bf16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -102,7 +96,6 @@ define <4 x bfloat> @test_vget_high_bf16(<8 x bfloat> %a) nounwind {
 ; CHECK-LABEL: test_vget_high_bf16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x bfloat> %a, <8 x bfloat> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -113,7 +106,6 @@ entry:
 define <4 x bfloat> @test_vget_low_bf16(<8 x bfloat> %a) nounwind {
 ; CHECK-LABEL: test_vget_low_bf16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x bfloat> %a, <8 x bfloat> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -124,7 +116,6 @@ entry:
 define bfloat @test_vget_lane_bf16(<4 x bfloat> %v) nounwind {
 ; CHECK-LABEL: test_vget_lane_bf16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov h0, v0.h[1]
 ; CHECK-NEXT:    ret
 entry:
@@ -147,8 +138,6 @@ entry:
 define <4 x bfloat> @test_vset_lane_bf16(bfloat %a, <4 x bfloat> %v) nounwind {
 ; CHECK-LABEL: test_vset_lane_bf16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-NEXT:    mov v1.h[1], v0.h[0]
 ; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
@@ -161,7 +150,6 @@ entry:
 define <8 x bfloat> @test_vsetq_lane_bf16(bfloat %a, <8 x bfloat> %v) nounwind {
 ; CHECK-LABEL: test_vsetq_lane_bf16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-NEXT:    mov v1.h[7], v0.h[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -174,7 +162,6 @@ entry:
 define bfloat @test_vduph_lane_bf16(<4 x bfloat> %v) nounwind {
 ; CHECK-LABEL: test_vduph_lane_bf16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov h0, v0.h[1]
 ; CHECK-NEXT:    ret
 entry:
@@ -197,10 +184,7 @@ entry:
 define <4 x bfloat> @test_vcopy_lane_bf16_v1(<4 x bfloat> %a, <4 x bfloat> %b) nounwind {
 ; CHECK-LABEL: test_vcopy_lane_bf16_v1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v0.h[1], v1.h[3]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %vset_lane = shufflevector <4 x bfloat> %a, <4 x bfloat> %b, <4 x i32> <i32 0, i32 7, i32 2, i32 3>
@@ -211,10 +195,7 @@ entry:
 define <4 x bfloat> @test_vcopy_lane_bf16_v2(<4 x bfloat> %a, <4 x bfloat> %b) nounwind {
 ; CHECK-LABEL: test_vcopy_lane_bf16_v2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v0.h[2], v1.h[0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %vset_lane = shufflevector <4 x bfloat> %a, <4 x bfloat> %b, <4 x i32> <i32 0, i32 1, i32 4, i32 3>
@@ -225,7 +206,6 @@ entry:
 define <8 x bfloat> @test_vcopyq_lane_bf16_v1(<8 x bfloat> %a, <4 x bfloat> %b) nounwind {
 ; CHECK-LABEL: test_vcopyq_lane_bf16_v1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v0.h[0], v1.h[2]
 ; CHECK-NEXT:    ret
 entry:
@@ -238,7 +218,6 @@ entry:
 define <8 x bfloat> @test_vcopyq_lane_bf16_v2(<8 x bfloat> %a, <4 x bfloat> %b) nounwind {
 ; CHECK-LABEL: test_vcopyq_lane_bf16_v2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v0.h[6], v1.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -251,9 +230,7 @@ entry:
 define <4 x bfloat> @test_vcopy_laneq_bf16_v1(<4 x bfloat> %a, <8 x bfloat> %b) nounwind {
 ; CHECK-LABEL: test_vcopy_laneq_bf16_v1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.h[0], v1.h[7]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %vgetq_lane = extractelement <8 x bfloat> %b, i32 7
@@ -265,9 +242,7 @@ entry:
 define <4 x bfloat> @test_vcopy_laneq_bf16_v2(<4 x bfloat> %a, <8 x bfloat> %b) nounwind {
 ; CHECK-LABEL: test_vcopy_laneq_bf16_v2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.h[3], v1.h[4]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %vgetq_lane = extractelement <8 x bfloat> %b, i32 4

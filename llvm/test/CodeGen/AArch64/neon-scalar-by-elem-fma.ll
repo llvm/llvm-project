@@ -51,7 +51,6 @@ define float @test_fmla_ss4S_3_swap(float %a, float %b, <4 x float> %v) {
 define float @test_fmla_ss2S_0(float %a, float %b, <2 x float> %v) {
 ; CHECK-LABEL: test_fmla_ss2S_0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    fmadd s0, s1, s2, s0
 ; CHECK-NEXT:    ret
   %tmp1 = extractelement <2 x float> %v, i32 0
@@ -62,7 +61,6 @@ define float @test_fmla_ss2S_0(float %a, float %b, <2 x float> %v) {
 define float @test_fmla_ss2S_0_swap(float %a, float %b, <2 x float> %v) {
 ; CHECK-LABEL: test_fmla_ss2S_0_swap:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    fmadd s0, s2, s1, s0
 ; CHECK-NEXT:    ret
   %tmp1 = extractelement <2 x float> %v, i32 0
@@ -73,7 +71,6 @@ define float @test_fmla_ss2S_0_swap(float %a, float %b, <2 x float> %v) {
 define float @test_fmla_ss2S_1(float %a, float %b, <2 x float> %v) {
 ; CHECK-LABEL: test_fmla_ss2S_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    fmla s0, s1, v2.s[1]
 ; CHECK-NEXT:    ret
   %tmp1 = extractelement <2 x float> %v, i32 1
@@ -117,7 +114,6 @@ define float @test_fmla_ss4S_0_ext0(float %a, <4 x float> %v, <4 x float> %w) {
 define float @test_fmla_ss2S_3_ext0(float %a, <2 x float> %v) {
 ; CHECK-LABEL: test_fmla_ss2S_3_ext0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fmla s0, s1, v1.s[1]
 ; CHECK-NEXT:    ret
   %tmp0 = extractelement <2 x float> %v, i32 0
@@ -129,7 +125,6 @@ define float @test_fmla_ss2S_3_ext0(float %a, <2 x float> %v) {
 define float @test_fmla_ss2S_3_ext0_swp(float %a, <2 x float> %v) {
 ; CHECK-LABEL: test_fmla_ss2S_3_ext0_swp:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fmla s0, s1, v1.s[1]
 ; CHECK-NEXT:    ret
   %tmp0 = extractelement <2 x float> %v, i32 0
@@ -141,8 +136,6 @@ define float @test_fmla_ss2S_3_ext0_swp(float %a, <2 x float> %v) {
 define float @test_fmla_ss2S_0_ext0(float %a, <2 x float> %v, <2 x float> %w) {
 ; CHECK-LABEL: test_fmla_ss2S_0_ext0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fmadd s0, s1, s2, s0
 ; CHECK-NEXT:    ret
   %tmp0 = extractelement <2 x float> %v, i32 0
@@ -295,7 +288,6 @@ define float @test_fmls_ss4S_3_swap(float %a, float %b, <4 x float> %v) {
 define float @test_fmls_ss2S_0(float %a, float %b, <2 x float> %v) {
 ; CHECK-LABEL: test_fmls_ss2S_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    fmsub s0, s2, s1, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -308,7 +300,6 @@ entry:
 define float @test_fmls_ss2S_0_swap(float %a, float %b, <2 x float> %v) {
 ; CHECK-LABEL: test_fmls_ss2S_0_swap:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    fmsub s0, s2, s1, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -321,7 +312,6 @@ entry:
 define float @test_fmls_ss2S_1(float %a, float %b, <2 x float> %v) {
 ; CHECK-LABEL: test_fmls_ss2S_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    mov s1, v2.s[1]
 ; CHECK-NEXT:    fmls s0, s1, v2.s[1]
 ; CHECK-NEXT:    ret
@@ -494,7 +484,6 @@ define float @test_fmla_ss4S_3_swap_strict(float %a, float %b, <4 x float> %v) #
 define float @test_fmla_ss2S_0_strict(float %a, float %b, <2 x float> %v) #0 {
 ; CHECK-LABEL: test_fmla_ss2S_0_strict:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    fmadd s0, s1, s2, s0
 ; CHECK-NEXT:    ret
   %tmp1 = extractelement <2 x float> %v, i32 0
@@ -505,7 +494,6 @@ define float @test_fmla_ss2S_0_strict(float %a, float %b, <2 x float> %v) #0 {
 define float @test_fmla_ss2S_0_swap_strict(float %a, float %b, <2 x float> %v) #0 {
 ; CHECK-LABEL: test_fmla_ss2S_0_swap_strict:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    fmadd s0, s2, s1, s0
 ; CHECK-NEXT:    ret
   %tmp1 = extractelement <2 x float> %v, i32 0
@@ -516,7 +504,6 @@ define float @test_fmla_ss2S_0_swap_strict(float %a, float %b, <2 x float> %v) #
 define float @test_fmla_ss2S_1_strict(float %a, float %b, <2 x float> %v) #0 {
 ; CHECK-LABEL: test_fmla_ss2S_1_strict:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    fmla s0, s1, v2.s[1]
 ; CHECK-NEXT:    ret
   %tmp1 = extractelement <2 x float> %v, i32 1
@@ -635,7 +622,6 @@ define float @test_fmls_ss4S_3_swap_strict(float %a, float %b, <4 x float> %v) #
 define float @test_fmls_ss2S_0_strict(float %a, float %b, <2 x float> %v) #0 {
 ; CHECK-LABEL: test_fmls_ss2S_0_strict:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    fmsub s0, s2, s1, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -648,7 +634,6 @@ entry:
 define float @test_fmls_ss2S_0_swap_strict(float %a, float %b, <2 x float> %v) #0 {
 ; CHECK-LABEL: test_fmls_ss2S_0_swap_strict:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    fmsub s0, s2, s1, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -661,7 +646,6 @@ entry:
 define float @test_fmls_ss2S_1_strict(float %a, float %b, <2 x float> %v) #0 {
 ; CHECK-LABEL: test_fmls_ss2S_1_strict:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    mov s1, v2.s[1]
 ; CHECK-NEXT:    fmls s0, s1, v2.s[1]
 ; CHECK-NEXT:    ret

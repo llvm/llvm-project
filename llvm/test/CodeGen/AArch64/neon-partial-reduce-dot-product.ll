@@ -35,7 +35,6 @@ define <2 x i32> @udot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) {
 ; CHECK-NODOT-LABEL: udot_narrow:
 ; CHECK-NODOT:       // %bb.0:
 ; CHECK-NODOT-NEXT:    umull v1.8h, v2.8b, v1.8b
-; CHECK-NODOT-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NODOT-NEXT:    ushll v2.4s, v1.4h, #0
 ; CHECK-NODOT-NEXT:    ushll2 v3.4s, v1.8h, #0
 ; CHECK-NODOT-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
@@ -85,7 +84,6 @@ define <2 x i32> @sdot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) {
 ; CHECK-NODOT-LABEL: sdot_narrow:
 ; CHECK-NODOT:       // %bb.0:
 ; CHECK-NODOT-NEXT:    smull v1.8h, v2.8b, v1.8b
-; CHECK-NODOT-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NODOT-NEXT:    sshll v2.4s, v1.4h, #0
 ; CHECK-NODOT-NEXT:    sshll2 v3.4s, v1.8h, #0
 ; CHECK-NODOT-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
@@ -133,7 +131,6 @@ define <2 x i32> @usdot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) #0{
 ; CHECK-NOI8MM:       // %bb.0:
 ; CHECK-NOI8MM-NEXT:    ushll v1.8h, v1.8b, #0
 ; CHECK-NOI8MM-NEXT:    sshll v2.8h, v2.8b, #0
-; CHECK-NOI8MM-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NOI8MM-NEXT:    smull v3.4s, v2.4h, v1.4h
 ; CHECK-NOI8MM-NEXT:    smull2 v4.4s, v2.8h, v1.8h
 ; CHECK-NOI8MM-NEXT:    ext v5.16b, v1.16b, v1.16b, #8
@@ -187,7 +184,6 @@ define <2 x i32> @sudot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) #0{
 ; CHECK-NOI8MM:       // %bb.0:
 ; CHECK-NOI8MM-NEXT:    sshll v1.8h, v1.8b, #0
 ; CHECK-NOI8MM-NEXT:    ushll v2.8h, v2.8b, #0
-; CHECK-NOI8MM-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NOI8MM-NEXT:    smull v3.4s, v2.4h, v1.4h
 ; CHECK-NOI8MM-NEXT:    smull2 v4.4s, v2.8h, v1.8h
 ; CHECK-NOI8MM-NEXT:    ext v5.16b, v1.16b, v1.16b, #8
@@ -386,7 +382,6 @@ define <2 x i32> @not_udot_narrow(<2 x i32> %acc, <4 x i8> %u, <4 x i8> %s) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    bic v1.4h, #255, lsl #8
 ; CHECK-NEXT:    bic v2.4h, #255, lsl #8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umull v3.4s, v2.4h, v1.4h
 ; CHECK-NEXT:    umlal v0.4s, v2.4h, v1.4h
 ; CHECK-NEXT:    ext v1.16b, v3.16b, v3.16b, #8

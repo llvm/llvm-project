@@ -510,7 +510,6 @@ define <2 x i8> @vector_to_vector_cast(<16 x i1> %arg) nounwind {
 ; CHECK-NEXT:    ld1.b { v0 }[0], [x8]
 ; CHECK-NEXT:    orr x8, x8, #0x1
 ; CHECK-NEXT:    ld1.b { v0 }[4], [x8]
-; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh36, Lloh37

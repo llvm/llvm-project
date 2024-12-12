@@ -48,13 +48,11 @@ define i32 @extract_v4i32(<4 x i32> %x, i32 %y) {
 define i32 @extract_v2i32(<2 x i32> %x, i32 %y) {
 ; CHECK-ISEL-LABEL: extract_v2i32:
 ; CHECK-ISEL:       // %bb.0:
-; CHECK-ISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-ISEL-NEXT:    mov w0, v0.s[1]
 ; CHECK-ISEL-NEXT:    ret
 ;
 ; CHECK-GLOBAL-LABEL: extract_v2i32:
 ; CHECK-GLOBAL:       // %bb.0:
-; CHECK-GLOBAL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GLOBAL-NEXT:    mov s0, v0.s[1]
 ; CHECK-GLOBAL-NEXT:    fmov w0, s0
 ; CHECK-GLOBAL-NEXT:    ret
@@ -74,7 +72,6 @@ define i16 @extract_v8i16(<8 x i16> %x, i32 %y) {
 define i16 @extract_v4i16(<4 x i16> %x, i32 %y) {
 ; CHECK-LABEL: extract_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w0, v0.h[1]
 ; CHECK-NEXT:    ret
   %ext = extractelement <4 x i16> %x, i32 1
@@ -93,7 +90,6 @@ define i8 @extract_v16i8(<16 x i8> %x, i32 %y) {
 define i8 @extract_v8i8(<8 x i8> %x, i32 %y) {
 ; CHECK-LABEL: extract_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w0, v0.b[1]
 ; CHECK-NEXT:    ret
   %ext = extractelement <8 x i8> %x, i32 1
@@ -104,7 +100,6 @@ define i8 @extract_v8i8(<8 x i8> %x, i32 %y) {
 define i64 @sv2i32i64(<2 x i32> %x) {
 ; CHECK-LABEL: sv2i32i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    smov x0, v0.s[1]
 ; CHECK-NEXT:    ret
   %e = extractelement <2 x i32> %x, i64 1
@@ -125,7 +120,6 @@ define i64 @sv4i32i64(<4 x i32> %x) {
 define i64 @sv4i16i64(<4 x i16> %x) {
 ; CHECK-LABEL: sv4i16i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    smov x0, v0.h[2]
 ; CHECK-NEXT:    ret
   %e = extractelement <4 x i16> %x, i64 2
@@ -146,7 +140,6 @@ define i64 @sv8i16i64(<8 x i16> %x) {
 define i64 @sv8i8i64(<8 x i8> %x) {
 ; CHECK-LABEL: sv8i8i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    smov x0, v0.b[2]
 ; CHECK-NEXT:    ret
   %e = extractelement <8 x i8> %x, i64 2
@@ -177,7 +170,6 @@ define i32 @sv8i16i32(<8 x i16> %x) {
 define i32 @sv4i16i32(<4 x i16> %x) {
 ; CHECK-LABEL: sv4i16i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    smov w0, v0.h[2]
 ; CHECK-NEXT:    ret
   %e = extractelement <4 x i16> %x, i64 2
@@ -198,7 +190,6 @@ define i32 @sv16i8i32(<16 x i8> %x) {
 define i32 @sv8i8i32(<8 x i8> %x) {
 ; CHECK-LABEL: sv8i8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    smov w0, v0.b[2]
 ; CHECK-NEXT:    ret
   %e = extractelement <8 x i8> %x, i64 2
@@ -219,7 +210,6 @@ define i16 @sv16i8i16(<16 x i8> %x) {
 define i16 @sv8i8i16(<8 x i8> %x) {
 ; CHECK-LABEL: sv8i8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    smov w0, v0.b[2]
 ; CHECK-NEXT:    ret
   %e = extractelement <8 x i8> %x, i64 2
@@ -232,7 +222,6 @@ define i16 @sv8i8i16(<8 x i8> %x) {
 define i64 @zv2i32i64(<2 x i32> %x) {
 ; CHECK-LABEL: zv2i32i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov w0, v0.s[1]
 ; CHECK-NEXT:    ret
   %e = extractelement <2 x i32> %x, i64 1
@@ -253,7 +242,6 @@ define i64 @zv4i32i64(<4 x i32> %x) {
 define i64 @zv4i16i64(<4 x i16> %x) {
 ; CHECK-LABEL: zv4i16i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w0, v0.h[2]
 ; CHECK-NEXT:    ret
   %e = extractelement <4 x i16> %x, i64 2
@@ -274,7 +262,6 @@ define i64 @zv8i16i64(<8 x i16> %x) {
 define i64 @zv8i8i64(<8 x i8> %x) {
 ; CHECK-LABEL: zv8i8i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w0, v0.b[2]
 ; CHECK-NEXT:    ret
   %e = extractelement <8 x i8> %x, i64 2
@@ -305,7 +292,6 @@ define i32 @zv8i16i32(<8 x i16> %x) {
 define i32 @zv4i16i32(<4 x i16> %x) {
 ; CHECK-LABEL: zv4i16i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w0, v0.h[2]
 ; CHECK-NEXT:    ret
   %e = extractelement <4 x i16> %x, i64 2
@@ -326,7 +312,6 @@ define i32 @zv16i8i32(<16 x i8> %x) {
 define i32 @zv8i8i32(<8 x i8> %x) {
 ; CHECK-LABEL: zv8i8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w0, v0.b[2]
 ; CHECK-NEXT:    ret
   %e = extractelement <8 x i8> %x, i64 2
@@ -347,7 +332,6 @@ define i16 @zv16i8i16(<16 x i8> %x) {
 define i16 @zv8i8i16(<8 x i8> %x) {
 ; CHECK-LABEL: zv8i8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w0, v0.b[2]
 ; CHECK-NEXT:    ret
   %e = extractelement <8 x i8> %x, i64 2
@@ -386,7 +370,6 @@ define i32 @redundant_i16i32(<8 x i16> %x) {
 define i32 @both_i8i32(<8 x i8> %x) {
 ; CHECK-LABEL: both_i8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w8, v0.b[2]
 ; CHECK-NEXT:    smov w9, v0.b[2]
 ; CHECK-NEXT:    eor w0, w8, w9
@@ -401,7 +384,6 @@ define i32 @both_i8i32(<8 x i8> %x) {
 define i32 @redundant_i8i32(<8 x i8> %x) {
 ; CHECK-LABEL: redundant_i8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    smov w8, v0.b[2]
 ; CHECK-NEXT:    eor w0, w8, w8, lsl #24
 ; CHECK-NEXT:    ret
@@ -469,7 +451,6 @@ define i64 @redundant_i16i64(<8 x i16> %x) {
 define i64 @both_i8i64(<8 x i8> %x) {
 ; CHECK-LABEL: both_i8i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w8, v0.b[2]
 ; CHECK-NEXT:    smov x9, v0.b[2]
 ; CHECK-NEXT:    eor x0, x8, x9
@@ -484,7 +465,6 @@ define i64 @both_i8i64(<8 x i8> %x) {
 define i64 @redundant_i8i64(<8 x i8> %x) {
 ; CHECK-LABEL: redundant_i8i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    smov x8, v0.b[2]
 ; CHECK-NEXT:    eor x0, x8, x8, lsl #56
 ; CHECK-NEXT:    ret
