@@ -310,9 +310,8 @@ Value *VPTransformState::get(VPValue *Def, bool NeedsScalar) {
   if (!hasScalarValue(Def, LastLane)) {
     // At the moment, VPWidenIntOrFpInductionRecipes, VPScalarIVStepsRecipes and
     // VPExpandSCEVRecipes can also be uniform.
-    assert((isa<VPWidenIntOrFpInductionRecipe>(Def->getDefiningRecipe()) ||
-            isa<VPScalarIVStepsRecipe>(Def->getDefiningRecipe()) ||
-            isa<VPExpandSCEVRecipe>(Def->getDefiningRecipe())) &&
+    assert((isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe,
+                VPExpandSCEVRecipe>(Def->getDefiningRecipe())) &&
            "unexpected recipe found to be invariant");
     IsUniform = true;
     LastLane = 0;
@@ -361,7 +360,7 @@ void VPTransformState::addNewMetadata(Instruction *To,
                                       const Instruction *Orig) {
   // If the loop was versioned with memchecks, add the corresponding no-alias
   // metadata.
-  if (LVer && (isa<LoadInst>(Orig) || isa<StoreInst>(Orig)))
+  if (LVer && isa<LoadInst, StoreInst>(Orig))
     LVer->annotateInstWithNoAlias(To, Orig);
 }
 
@@ -861,14 +860,10 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   auto Plan = std::make_unique<VPlan>(Entry, VecPreheader, ScalarHeader);
 
   // Create SCEV and VPValue for the trip count.
-
-  // Currently only loops with countable exits are vectorized, but calling
-  // getSymbolicMaxBackedgeTakenCount allows enablement work for loops with
-  // uncountable exits whilst also ensuring the symbolic maximum and known
-  // back-edge taken count remain identical for loops with countable exits.
+  // We use the symbolic max backedge-taken-count, which works also when
+  // vectorizing loops with uncountable early exits.
   const SCEV *BackedgeTakenCountSCEV = PSE.getSymbolicMaxBackedgeTakenCount();
-  assert((!isa<SCEVCouldNotCompute>(BackedgeTakenCountSCEV) &&
-          BackedgeTakenCountSCEV == PSE.getBackedgeTakenCount()) &&
+  assert(!isa<SCEVCouldNotCompute>(BackedgeTakenCountSCEV) &&
          "Invalid loop count");
   ScalarEvolution &SE = *PSE.getSE();
   const SCEV *TripCount = SE.getTripCountFromExitCount(BackedgeTakenCountSCEV,
@@ -903,7 +898,7 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   // 2) If we require a scalar epilogue, there is no conditional branch as
   //    we unconditionally branch to the scalar preheader.  Do nothing.
   // 3) Otherwise, construct a runtime check.
-  BasicBlock *IRExitBlock = TheLoop->getUniqueExitBlock();
+  BasicBlock *IRExitBlock = TheLoop->getUniqueLatchExitBlock();
   auto *VPExitBlock = VPIRBasicBlock::fromBasicBlock(IRExitBlock);
   // The connection order corresponds to the operands of the conditional branch.
   VPBlockUtils::insertBlockAfter(VPExitBlock, MiddleVPBB);
@@ -1032,8 +1027,7 @@ void VPlan::execute(VPTransformState *State) {
     if (isa<VPWidenPHIRecipe>(&R))
       continue;
 
-    if (isa<VPWidenPointerInductionRecipe>(&R) ||
-        isa<VPWidenIntOrFpInductionRecipe>(&R)) {
+    if (isa<VPWidenPointerInductionRecipe, VPWidenIntOrFpInductionRecipe>(&R)) {
       PHINode *Phi = nullptr;
       if (isa<VPWidenIntOrFpInductionRecipe>(&R)) {
         Phi = cast<PHINode>(State->get(R.getVPSingleValue()));

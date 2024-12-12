@@ -1016,7 +1016,7 @@ class VOP3_CVT_SCALE_SR_PK_F4_F16BF16_TiedInput_Profile<ValueType Src0Ty> :
   let HasExtVOP3DPP = 0;
   let HasOpSel = 1;
   let HasOMod = 0;
-  let HasFP8DstByteSel = 1;
+  let HasFP4DstByteSel = 1;
 }
 
 class VOP3_CVT_SCALE_SR_PK_F4_F32_TiedInput_Profile<VOPProfile P> : VOP3_Profile<P, VOP3_OPSEL> {
@@ -1031,7 +1031,7 @@ class VOP3_CVT_SCALE_SR_PK_F4_F32_TiedInput_Profile<VOPProfile P> : VOP3_Profile
   let HasExtVOP3DPP = 0;
   let HasOpSel = 1;
   let HasOMod = 0;
-  let HasFP8DstByteSel = 1;
+  let HasFP4DstByteSel = 1;
 }
 
 class VOP3_CVT_SCALE_PK_F16BF16F32_FP4FP8BF8_Profile<ValueType DstTy> : VOP3_Profile<VOPProfile<[DstTy, i32, f32, untyped]>,

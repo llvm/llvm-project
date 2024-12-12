@@ -10,7 +10,9 @@
 #define LLVM_ANALYSIS_TARGETLIBRARYINFO_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/TargetParser/Triple.h"
@@ -564,6 +566,16 @@ public:
 
   /// \copydoc TargetLibraryInfoImpl::getSizeTSize()
   unsigned getSizeTSize(const Module &M) const { return Impl->getSizeTSize(M); }
+
+  /// Returns an IntegerType corresponding to size_t.
+  IntegerType *getSizeTType(const Module &M) const {
+    return IntegerType::get(M.getContext(), getSizeTSize(M));
+  }
+
+  /// Returns a constant materialized as a size_t type.
+  ConstantInt *getAsSizeT(uint64_t V, const Module &M) const {
+    return ConstantInt::get(getSizeTType(M), V);
+  }
 
   /// \copydoc TargetLibraryInfoImpl::getIntSize()
   unsigned getIntSize() const {

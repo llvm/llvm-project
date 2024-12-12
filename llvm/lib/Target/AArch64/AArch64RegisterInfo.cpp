@@ -1081,6 +1081,58 @@ unsigned AArch64RegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
   }
 }
 
+// FORM_TRANSPOSED_REG_TUPLE nodes are created to improve register allocation
+// where a consecutive multi-vector tuple is constructed from the same indices
+// of multiple strided loads. This may still result in unnecessary copies
+// between the loads and the tuple. Here we try to return a hint to assign the
+// contiguous ZPRMulReg starting at the same register as the first operand of
+// the pseudo, which should be a subregister of the first strided load.
+//
+// For example, if the first strided load has been assigned $z16_z20_z24_z28
+// and the operands of the pseudo are each accessing subregister zsub2, we
+// should look through through Order to find a contiguous register which
+// begins with $z24 (i.e. $z24_z25_z26_z27).
+//
+bool AArch64RegisterInfo::getRegAllocationHints(
+    Register VirtReg, ArrayRef<MCPhysReg> Order,
+    SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
+    const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  for (MachineInstr &MI : MRI.def_instructions(VirtReg)) {
+    if (MI.getOpcode() != AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO &&
+        MI.getOpcode() != AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO)
+      return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints,
+                                                       MF, VRM);
+
+    unsigned FirstOpSubReg = MI.getOperand(1).getSubReg();
+    switch (FirstOpSubReg) {
+    case AArch64::zsub0:
+    case AArch64::zsub1:
+    case AArch64::zsub2:
+    case AArch64::zsub3:
+      break;
+    default:
+      continue;
+    }
+
+    // Look up the physical register mapped to the first operand of the pseudo.
+    Register FirstOpVirtReg = MI.getOperand(1).getReg();
+    if (!VRM->hasPhys(FirstOpVirtReg))
+      continue;
+
+    MCRegister TupleStartReg =
+        getSubReg(VRM->getPhys(FirstOpVirtReg), FirstOpSubReg);
+    for (unsigned I = 0; I < Order.size(); ++I)
+      if (MCRegister R = getSubReg(Order[I], AArch64::zsub0))
+        if (R == TupleStartReg)
+          Hints.push_back(Order[I]);
+  }
+
+  return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
+                                                   VRM);
+}
+
 unsigned AArch64RegisterInfo::getLocalAddressRegister(
   const MachineFunction &MF) const {
   const auto &MFI = MF.getFrameInfo();

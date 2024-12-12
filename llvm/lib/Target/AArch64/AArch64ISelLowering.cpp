@@ -8581,6 +8581,56 @@ static bool checkZExtBool(SDValue Arg, const SelectionDAG &DAG) {
   return ZExtBool;
 }
 
+// The FORM_TRANSPOSED_REG_TUPLE pseudo should only be used if the
+// input operands are copy nodes where the source register is in a
+// StridedOrContiguous class. For example:
+//
+//   %3:zpr2stridedorcontiguous = LD1B_2Z_IMM_PSEUDO ..
+//   %4:zpr = COPY %3.zsub1:zpr2stridedorcontiguous
+//   %5:zpr = COPY %3.zsub0:zpr2stridedorcontiguous
+//   %6:zpr2stridedorcontiguous = LD1B_2Z_PSEUDO ..
+//   %7:zpr = COPY %6.zsub1:zpr2stridedorcontiguous
+//   %8:zpr = COPY %6.zsub0:zpr2stridedorcontiguous
+//   %9:zpr2mul2 = FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO %5:zpr, %8:zpr
+//
+bool shouldUseFormStridedPseudo(MachineInstr &MI) {
+  MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+
+  const TargetRegisterClass *RegClass = nullptr;
+  switch (MI.getOpcode()) {
+  case AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO:
+    RegClass = &AArch64::ZPR2StridedOrContiguousRegClass;
+    break;
+  case AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO:
+    RegClass = &AArch64::ZPR4StridedOrContiguousRegClass;
+    break;
+  default:
+    llvm_unreachable("Unexpected opcode.");
+  }
+
+  MCRegister SubReg = MCRegister::NoRegister;
+  for (unsigned I = 1; I < MI.getNumOperands(); ++I) {
+    MachineOperand &MO = MI.getOperand(I);
+    assert(MO.isReg() && "Unexpected operand to FORM_TRANSPOSED_REG_TUPLE");
+
+    MachineOperand *Def = MRI.getOneDef(MO.getReg());
+    if (!Def || !Def->getParent()->isCopy())
+      return false;
+
+    const MachineOperand &CopySrc = Def->getParent()->getOperand(1);
+    unsigned OpSubReg = CopySrc.getSubReg();
+    if (SubReg == MCRegister::NoRegister)
+      SubReg = OpSubReg;
+
+    MachineOperand *CopySrcOp = MRI.getOneDef(CopySrc.getReg());
+    if (!CopySrcOp || !CopySrcOp->isReg() || OpSubReg != SubReg ||
+        MRI.getRegClass(CopySrcOp->getReg()) != RegClass)
+      return false;
+  }
+
+  return true;
+}
+
 void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
                                                           SDNode *Node) const {
   // Live-in physreg copies that are glued to SMSTART are applied as
@@ -8604,6 +8654,27 @@ void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
       MI.addOperand(MachineOperand::CreateReg(AArch64::VG, /*IsDef=*/true,
                                               /*IsImplicit=*/true));
     }
+  }
+
+  if (MI.getOpcode() == AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO ||
+      MI.getOpcode() == AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO) {
+    // If input values to the FORM_TRANSPOSED_REG_TUPLE pseudo aren't copies
+    // from a StridedOrContiguous class, fall back on REG_SEQUENCE node.
+    if (shouldUseFormStridedPseudo(MI))
+      return;
+
+    const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+    MachineInstrBuilder MIB = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                                      TII->get(TargetOpcode::REG_SEQUENCE),
+                                      MI.getOperand(0).getReg());
+
+    for (unsigned I = 1; I < MI.getNumOperands(); ++I) {
+      MIB.add(MI.getOperand(I));
+      MIB.addImm(AArch64::zsub0 + (I - 1));
+    }
+
+    MI.eraseFromParent();
+    return;
   }
 
   // Add an implicit use of 'VG' for ADDXri/SUBXri, which are instructions that
@@ -15841,27 +15912,11 @@ static SDValue getVectorBitwiseReduce(unsigned Opcode, SDValue Vec, EVT VT,
       return getVectorBitwiseReduce(Opcode, HalfVec, VT, DL, DAG);
     }
 
-    // Results of setcc operations get widened to 128 bits for xor reduce if
-    // their input operands are 128 bits wide, otherwise vectors that are less
-    // than 64 bits get widened to neatly fit a 64 bit register, so e.g.
-    // <4 x i1> gets lowered to either <4 x i16> or <4 x i32>. Sign extending to
+    // Vectors that are less than 64 bits get widened to neatly fit a 64 bit
+    // register, so e.g. <4 x i1> gets lowered to <4 x i16>. Sign extending to
     // this element size leads to the best codegen, since e.g. setcc results
     // might need to be truncated otherwise.
-    unsigned ExtendedWidth = 64;
-    if (ScalarOpcode == ISD::XOR && Vec.getOpcode() == ISD::SETCC &&
-        Vec.getOperand(0).getValueSizeInBits() >= 128) {
-      ExtendedWidth = 128;
-    }
-    EVT ExtendedVT = MVT::getIntegerVT(std::max(ExtendedWidth / NumElems, 8u));
-
-    // Negate the reduced vector value for reduce and operations that use
-    // fcmp.
-    if (ScalarOpcode == ISD::AND && NumElems < 16) {
-      Vec = DAG.getNode(
-          ISD::XOR, DL, VecVT, Vec,
-          DAG.getSplatVector(
-              VecVT, DL, DAG.getConstant(APInt::getAllOnes(32), DL, MVT::i32)));
-    }
+    EVT ExtendedVT = MVT::getIntegerVT(std::max(64u / NumElems, 8u));
 
     // any_ext doesn't work with umin/umax, so only use it for uadd.
     unsigned ExtendOp =
@@ -15870,36 +15925,10 @@ static SDValue getVectorBitwiseReduce(unsigned Opcode, SDValue Vec, EVT VT,
         ExtendOp, DL, VecVT.changeVectorElementType(ExtendedVT), Vec);
     switch (ScalarOpcode) {
     case ISD::AND:
-      if (NumElems < 16) {
-        // Check if all lanes of the negated bool vector value are zero by
-        // comparing against 0.0 with ordered and equal predicate. The only
-        // non-zero bit pattern that compares ordered and equal to 0.0 is -0.0,
-        // where only the sign bit is set. However the bool vector is
-        // sign-extended so that each bit in a lane is either zero or one,
-        // meaning that it is impossible to get the bit pattern of -0.0.
-        assert(Extended.getValueSizeInBits() == 64);
-        Extended = DAG.getBitcast(MVT::f64, Extended);
-        Result =
-            DAG.getSetCC(DL, MVT::i32, Extended,
-                         DAG.getConstantFP(0.0, DL, MVT::f64), ISD::SETOEQ);
-      } else {
-        Result = DAG.getNode(ISD::VECREDUCE_UMIN, DL, ExtendedVT, Extended);
-      }
+      Result = DAG.getNode(ISD::VECREDUCE_UMIN, DL, ExtendedVT, Extended);
       break;
     case ISD::OR:
-      if (NumElems < 16) {
-        // Check if any lane of the bool vector is set by comparing against 0.0.
-        // NaN bit patterns are handled by using the 'unordered or not equal'
-        // predicate. Similarly to the reduce and case, -0.0 doesn't have to be
-        // handled here (see explanation above).
-        assert(Extended.getValueSizeInBits() == 64);
-        Extended = DAG.getBitcast(MVT::f64, Extended);
-        Result =
-            DAG.getSetCC(DL, MVT::i32, Extended,
-                         DAG.getConstantFP(0.0, DL, MVT::f64), ISD::SETUNE);
-      } else {
-        Result = DAG.getNode(ISD::VECREDUCE_UMAX, DL, ExtendedVT, Extended);
-      }
+      Result = DAG.getNode(ISD::VECREDUCE_UMAX, DL, ExtendedVT, Extended);
       break;
     case ISD::XOR:
       Result = DAG.getNode(ISD::VECREDUCE_ADD, DL, ExtendedVT, Extended);

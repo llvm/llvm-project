@@ -2848,6 +2848,12 @@ bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
   if (OldCost < NewCost)
     return false;
 
+  // Canonicalize undef param to RHS to help further folds.
+  if (isa<UndefValue>(DstVec) && !isa<UndefValue>(SrcVec)) {
+    ShuffleVectorInst::commuteShuffleMask(Mask, NumElts);
+    std::swap(DstVec, SrcVec);
+  }
+
   Value *Shuf = Builder.CreateShuffleVector(DstVec, SrcVec, Mask);
   replaceValue(I, *Shuf);
 
@@ -2867,6 +2873,7 @@ bool VectorCombine::run() {
   bool MadeChange = false;
   auto FoldInst = [this, &MadeChange](Instruction &I) {
     Builder.SetInsertPoint(&I);
+    bool IsVectorType = isa<VectorType>(I.getType());
     bool IsFixedVectorType = isa<FixedVectorType>(I.getType());
     auto Opcode = I.getOpcode();
 
@@ -2889,7 +2896,7 @@ bool VectorCombine::run() {
 
     // This transform works with scalable and fixed vectors
     // TODO: Identify and allow other scalable transforms
-    if (isa<VectorType>(I.getType())) {
+    if (IsVectorType) {
       MadeChange |= scalarizeBinopOrCmp(I);
       MadeChange |= scalarizeLoadExtract(I);
       MadeChange |= scalarizeVPIntrinsic(I);
