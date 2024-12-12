@@ -11,7 +11,7 @@ on:
 jobs:
   premerge-checks-linux:
     if: github.repository_owner == 'llvm'
-    runs-on: ubuntu-latest
+    runs-on: llvm-premerge-linux-runners
     container:
       image: ghcr.io/llvm/ci-ubuntu-22.04:latest
     defaults:
