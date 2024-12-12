@@ -891,7 +891,26 @@ static Expr *constructRawBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
       Context, IsIntangibleExpr, UO_Not, BoolTy, VK_LValue, OK_Ordinary,
       NameLoc, false, FPOptionsOverride());
 
-  return NotIntangibleExpr;
+  // element types also may not be of 0 size
+  UnaryExprOrTypeTraitExpr *SizeOfExpr = new (Context) UnaryExprOrTypeTraitExpr(
+      UETT_SizeOf, TTypeSourceInfo, BoolTy, NameLoc, NameLoc);
+
+  // Create a BinaryOperator that checks if the size of the type is not equal to
+  // 1 Empty structs have a size of 1 in HLSL, so we need to check for that
+  IntegerLiteral *rhs = IntegerLiteral::Create(
+      Context, llvm::APInt(Context.getTypeSize(Context.getSizeType()), 1, true),
+      Context.getSizeType(), NameLoc);
+
+  BinaryOperator *SizeGEQOneExpr =
+      BinaryOperator::Create(Context, SizeOfExpr, rhs, BO_GE, BoolTy, VK_LValue,
+                             OK_Ordinary, NameLoc, FPOptionsOverride());
+
+  // Combine the two constraints
+  BinaryOperator *CombinedExpr = BinaryOperator::Create(
+      Context, NotIntangibleExpr, SizeGEQOneExpr, BO_LAnd, BoolTy, VK_LValue,
+      OK_Ordinary, NameLoc, FPOptionsOverride());
+
+  return CombinedExpr;
 }
 
 static ConceptDecl *constructTypedBufferConceptDecl(Sema &S, NamespaceDecl *NSD,
