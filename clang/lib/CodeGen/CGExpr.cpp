@@ -3581,6 +3581,12 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
                                llvm::AttributeList::FunctionIndex, B),
       /*Local=*/true);
   llvm::CallInst *HandlerCall = CGF.EmitNounwindRuntimeCall(Fn, FnArgs);
+  bool NoMerge =
+      ClSanitizeDebugDeoptimization ||
+      !CGF.CGM.getCodeGenOpts().OptimizationLevel ||
+      (CGF.CurCodeDecl && CGF.CurCodeDecl->hasAttr<OptimizeNoneAttr>());
+  if (NoMerge)
+    HandlerCall->addFnAttr(llvm::Attribute::NoMerge);
   if (!MayReturn) {
     HandlerCall->setDoesNotReturn();
     CGF.Builder.CreateUnreachable();

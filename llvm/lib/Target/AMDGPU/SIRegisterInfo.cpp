@@ -50,6 +50,12 @@ std::array<std::array<uint16_t, 32>, 9> SIRegisterInfo::SubRegFromChannelTable;
 static const std::array<unsigned, 17> SubRegFromChannelTableWidthMap = {
     0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 9};
 
+static void emitUnsupportedError(const Function &Fn, const MachineInstr &MI,
+                                 const Twine &ErrMsg) {
+  Fn.getContext().diagnose(
+      DiagnosticInfoUnsupported(Fn, ErrMsg, MI.getDebugLoc()));
+}
+
 namespace llvm {
 
 // A temporary struct to spill SGPRs.
@@ -224,7 +230,8 @@ struct SGPRSpillBuilder {
       // and restore. FIXME: We probably would need to reserve a register for
       // this.
       if (RS->isRegUsed(AMDGPU::SCC))
-        MI->emitError("unhandled SGPR spill to memory");
+        emitUnsupportedError(MF.getFunction(), *MI,
+                             "unhandled SGPR spill to memory");
 
       // Spill active lanes
       if (TmpVGPRLive)
@@ -299,7 +306,8 @@ struct SGPRSpillBuilder {
       // and restore. FIXME: We probably would need to reserve a register for
       // this.
       if (RS->isRegUsed(AMDGPU::SCC))
-        MI->emitError("unhandled SGPR spill to memory");
+        emitUnsupportedError(MF.getFunction(), *MI,
+                             "unhandled SGPR spill to memory");
 
       // Spill active lanes
       TRI.buildVGPRSpillLoadStore(*this, Index, Offset, IsLoad,

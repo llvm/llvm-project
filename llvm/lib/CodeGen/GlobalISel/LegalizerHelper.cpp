@@ -6172,9 +6172,8 @@ LegalizerHelper::equalizeVectorShuffleLengths(MachineInstr &MI) {
   if (MaskNumElts < SrcNumElts) {
     // Extend mask to match new destination vector size with
     // undef values.
-    SmallVector<int, 16> NewMask(Mask);
-    for (unsigned I = MaskNumElts; I < SrcNumElts; ++I)
-      NewMask.push_back(-1);
+    SmallVector<int, 16> NewMask(SrcNumElts, -1);
+    llvm::copy(Mask, NewMask.begin());
 
     moreElementsVectorDst(MI, SrcTy, 0);
     MIRBuilder.setInstrAndDebugLoc(MI);
@@ -6254,16 +6253,14 @@ LegalizerHelper::moreElementsVectorShuffle(MachineInstr &MI,
   moreElementsVectorSrc(MI, MoreTy, 2);
 
   // Adjust mask based on new input vector length.
-  SmallVector<int, 16> NewMask;
+  SmallVector<int, 16> NewMask(WidenNumElts, -1);
   for (unsigned I = 0; I != NumElts; ++I) {
     int Idx = Mask[I];
     if (Idx < static_cast<int>(NumElts))
-      NewMask.push_back(Idx);
+      NewMask[I] = Idx;
     else
-      NewMask.push_back(Idx - NumElts + WidenNumElts);
+      NewMask[I] = Idx - NumElts + WidenNumElts;
   }
-  for (unsigned I = NumElts; I != WidenNumElts; ++I)
-    NewMask.push_back(-1);
   moreElementsVectorDst(MI, MoreTy, 0);
   MIRBuilder.setInstrAndDebugLoc(MI);
   MIRBuilder.buildShuffleVector(MI.getOperand(0).getReg(),
