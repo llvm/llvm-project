@@ -2353,7 +2353,7 @@ def int_amdgcn_writelane :
 >;
 
 def int_amdgcn_alignbyte : ClangBuiltin<"__builtin_amdgcn_alignbyte">,
-  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_anyint_ty],
   [IntrNoMem, IntrSpeculatable]
 >;
 
