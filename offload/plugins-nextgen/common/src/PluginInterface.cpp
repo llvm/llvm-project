@@ -726,8 +726,9 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                            KernelArgs.NumTeams[2]};
 
   // TODO fix workaround since IsBareKernel is not properly set for legacy
-  // flang.
-  //  if (isSpecializedKernel() || !IsBareKernel) {
+  // flang and specialized kernels since they don't use kernel-env. While
+  // we can check for specialized kernels, we can't for legacy flang. So,
+  // on amd-staging, all kernels including bare ones use this codepath.
   NumThreads[0] = getNumThreads(GenericDevice, NumThreads);
 
   std::pair<bool, uint32_t> AdjustInfo = adjustNumThreadsForLowTripCount(

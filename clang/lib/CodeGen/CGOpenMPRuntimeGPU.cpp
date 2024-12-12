@@ -1049,8 +1049,11 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
                     CGM.emitNxResult("[No-Loop/Big-Jump-Loop/Xteam]", D,
                                      CodeGenModule::NxNonSPMD));
   }
-  setPropertyExecutionMode(CGM, OutlinedFn->getName(),
-                           computeExecutionMode(Mode, DirectiveStmt, CGM));
+  // Note that bare kernels always run in SPMD mode.
+  setPropertyExecutionMode(
+      CGM, OutlinedFn->getName(),
+      IsBareKernel ? OMP_TGT_EXEC_MODE_SPMD
+                   : computeExecutionMode(Mode, DirectiveStmt, CGM));
 
   if (Mode && DirectiveStmt)
     CGM.resetOptKernelMetadata(DirectiveStmt);
