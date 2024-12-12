@@ -488,11 +488,9 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: vseN_v
     ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
-    ; CHECK-NEXT: %y:gpr = ADDI $x0, 1
-    ; CHECK-NEXT: PseudoVSE8_V_M1 %x, %y, 1, 3 /* e8 */
+    ; CHECK-NEXT: PseudoVSE8_V_M1 %x, $noreg, 1, 3 /* e8 */
     %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
-    %y:gpr = ADDI $x0, 1
-    PseudoVSE8_V_M1 %x, %y, 1, 3 /* e8 */
+    PseudoVSE8_V_M1 %x, $noreg, 1, 3 /* e8 */
 ...
 ---
 name: vseN_v_incompatible_eew
@@ -500,11 +498,9 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: vseN_v_incompatible_eew
     ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0 /* tu, mu */
-    ; CHECK-NEXT: %y:gpr = ADDI $x0, 1
-    ; CHECK-NEXT: PseudoVSE8_V_M1 %x, %y, 1, 3 /* e8 */
+    ; CHECK-NEXT: PseudoVSE8_V_M1 %x, $noreg, 1, 3 /* e8 */
     %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0
-    %y:gpr = ADDI $x0, 1
-    PseudoVSE8_V_M1 %x, %y, 1, 3 /* e8 */
+    PseudoVSE8_V_M1 %x, $noreg, 1, 3 /* e8 */
 ...
 ---
 name: vseN_v_incompatible_emul
@@ -512,11 +508,9 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: vseN_v_incompatible_emul
     ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
-    ; CHECK-NEXT: %y:gpr = ADDI $x0, 1
-    ; CHECK-NEXT: PseudoVSE8_V_MF2 %x, %y, 1, 3 /* e8 */
+    ; CHECK-NEXT: PseudoVSE8_V_MF2 %x, $noreg, 1, 3 /* e8 */
     %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
-    %y:gpr = ADDI $x0, 1
-    PseudoVSE8_V_MF2 %x, %y, 1, 3 /* e8 */
+    PseudoVSE8_V_MF2 %x, $noreg, 1, 3 /* e8 */
 ...
 ---
 name: vsseN_v
@@ -524,13 +518,9 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: vsseN_v
     ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
-    ; CHECK-NEXT: %y:gpr = ADDI $x0, 1
-    ; CHECK-NEXT: %z:gpr = ADDI $x0, 2
-    ; CHECK-NEXT: PseudoVSSE8_V_M1 %x, %y, %z, 1, 3 /* e8 */
+    ; CHECK-NEXT: PseudoVSSE8_V_M1 %x, $noreg, $noreg, 1, 3 /* e8 */
     %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
-    %y:gpr = ADDI $x0, 1
-    %z:gpr = ADDI $x0, 2
-    PseudoVSSE8_V_M1 %x, %y, %z, 1, 3 /* e8 */
+    PseudoVSSE8_V_M1 %x, $noreg, $noreg, 1, 3 /* e8 */
 ...
 ---
 name: vsseN_v_incompatible_eew
@@ -538,13 +528,9 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: vsseN_v_incompatible_eew
     ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0 /* tu, mu */
-    ; CHECK-NEXT: %y:gpr = ADDI $x0, 1
-    ; CHECK-NEXT: %z:gpr = ADDI $x0, 2
-    ; CHECK-NEXT: PseudoVSSE8_V_M1 %x, %y, %z, 1, 3 /* e8 */
+    ; CHECK-NEXT: PseudoVSSE8_V_M1 %x, $noreg, $noreg, 1, 3 /* e8 */
     %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0
-    %y:gpr = ADDI $x0, 1
-    %z:gpr = ADDI $x0, 2
-    PseudoVSSE8_V_M1 %x, %y, %z, 1, 3 /* e8 */
+    PseudoVSSE8_V_M1 %x, $noreg, $noreg, 1, 3 /* e8 */
 ...
 ---
 name: vsseN_v_incompatible_emul
@@ -552,12 +538,8 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: vsseN_v_incompatible_emul
     ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
-    ; CHECK-NEXT: %y:gpr = ADDI $x0, 1
-    ; CHECK-NEXT: %z:gpr = ADDI $x0, 2
-    ; CHECK-NEXT: PseudoVSSE8_V_MF2 %x, %y, %z, 1, 3 /* e8 */
+    ; CHECK-NEXT: PseudoVSSE8_V_MF2 %x, $noreg, $noreg, 1, 3 /* e8 */
     %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
-    %y:gpr = ADDI $x0, 1
-    %z:gpr = ADDI $x0, 2
-    PseudoVSSE8_V_MF2 %x, %y, %z, 1, 3 /* e8 */
+    PseudoVSSE8_V_MF2 %x, $noreg, $noreg, 1, 3 /* e8 */
 ...
 
