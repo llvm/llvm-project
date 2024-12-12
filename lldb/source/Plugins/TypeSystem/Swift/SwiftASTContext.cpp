@@ -3107,9 +3107,9 @@ SwiftASTContext::CreateInstance(const SymbolContext &sc,
         swift_ast_sp->RegisterSectionModules(*cur_module_sp, module_names);
         if (GetLog(LLDBLog::Types)) {
           std::string spacer(indent, '-');
-          LOG_PRINTF(GetLog(LLDBLog::Types), "+%s Dependency scan: %s",
-                     spacer.c_str(),
-                     cur_module_sp->GetSpecificationDescription().c_str());
+          LOG_VERBOSE_PRINTF(
+              GetLog(LLDBLog::Types), "+%s Dependency scan: %s", spacer.c_str(),
+              cur_module_sp->GetSpecificationDescription().c_str());
         }
         if (auto object = cur_module_sp->GetObjectFile()) {
           FileSpecList file_list;
@@ -3123,9 +3123,9 @@ SwiftASTContext::CreateInstance(const SymbolContext &sc,
             } else {
               if (GetLog(LLDBLog::Types)) {
                 std::string spacer(indent, '-');
-                LOG_PRINTF(GetLog(LLDBLog::Types),
-                           "+%s Could not find %s in images", spacer.c_str(),
-                           fs.GetPath().c_str());
+                LOG_VERBOSE_PRINTF(GetLog(LLDBLog::Types),
+                                   "+%s Could not find %s in images",
+                                   spacer.c_str(), fs.GetPath().c_str());
               }
             }
           }
