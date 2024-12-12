@@ -4,7 +4,6 @@ void uses() {
   int Var;
 #pragma acc data device_type(foo) async
   ;
-  // expected-warning@+1{{OpenACC clause 'wait' not yet implemented}}
 #pragma acc data device_type(foo) wait
   ;
 #pragma acc data device_type(foo) dtype(false)

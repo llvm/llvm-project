@@ -29,6 +29,7 @@ void foo() {
   ;
 
   int i;
+  int *iPtr;
   int array[5];
 
 // CHECK: #pragma acc data if(i == array[1])
@@ -51,4 +52,24 @@ void foo() {
 #pragma acc enter data copyin(i) async(i)
 // CHECK: #pragma acc exit data async
 #pragma acc exit data copyout(i) async
+
+// CHECK: #pragma acc data wait
+#pragma acc data default(none) wait()
+  ;
+
+// CHECK: #pragma acc enter data wait()
+#pragma acc enter data copyin(Var) wait()
+
+// CHECK: #pragma acc exit data wait(*iPtr, i)
+#pragma acc exit data copyout(Var) wait(*iPtr, i)
+
+// CHECK: #pragma acc data wait(queues: *iPtr, i)
+#pragma acc data default(none) wait(queues:*iPtr, i)
+  ;
+
+// CHECK: #pragma acc enter data wait(devnum: i : *iPtr, i)
+#pragma acc enter data copyin(Var) wait(devnum:i:*iPtr, i)
+
+// CHECK: #pragma acc exit data wait(devnum: i : queues: *iPtr, i)
+#pragma acc exit data copyout(Var) wait(devnum:i:queues:*iPtr, i)
 }
