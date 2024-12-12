@@ -10,9 +10,9 @@
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from typing import Dict
-import json
 import os
 import sys
+import yaml
 
 from header import Header
 
@@ -23,14 +23,14 @@ class DocgenAPIFormatError(Exception):
 
 def check_api(header: Header, api: Dict):
     """
-    Checks that docgen json files are properly formatted. If there are any
+    Checks that docgen yaml files are properly formatted. If there are any
     fatal formatting errors, raises exceptions with error messages useful for
     fixing formatting. Warnings are printed to stderr on non-fatal formatting
     errors. The code that runs after ``check_api(api)`` is called expects that
-    ``check_api`` executed without raising formatting exceptions so the json
+    ``check_api`` executed without raising formatting exceptions so the yaml
     matches the formatting specified here.
 
-    The json file may contain:
+    The yaml file may contain:
     * an optional macros object
     * an optional functions object
 
@@ -49,7 +49,7 @@ def check_api(header: Header, api: Dict):
     this should be a C standard section number. For the ``"posix-definition"`` property,
     this should be a link to the definition.
 
-    :param api: docgen json file contents parsed into a dict
+    :param api: docgen yaml file contents parsed into a dict
     """
     errors = []
     # We require entries to have at least one of these.
@@ -93,8 +93,8 @@ def check_api(header: Header, api: Dict):
 
 
 def load_api(header: Header) -> Dict:
-    api = header.docgen_json.read_text(encoding="utf-8")
-    return json.loads(api)
+    api = header.docgen_yaml.read_text(encoding="utf-8")
+    return yaml.safe_load(api)
 
 
 def print_tbl_dir(name):
@@ -192,12 +192,12 @@ def print_impl_status_rst(header: Header, api: Dict):
         print_functions_rst(header, api["functions"])
 
 
-# This code implicitly relies on docgen.py being in the same dir as the json
+# This code implicitly relies on docgen.py being in the same dir as the yaml
 # files and is likely to need to be fixed when re-integrating docgen into
 # hdrgen.
 def get_choices() -> list:
     choices = []
-    for path in Path(__file__).parent.rglob("*.json"):
+    for path in Path(__file__).parent.rglob("*.yaml"):
         fname = path.with_suffix(".h").name
         if path.parent != Path(__file__).parent:
             fname = path.parent.name + os.sep + fname
