@@ -433,10 +433,10 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       // when HasPresentModifier.
       PointerTpr = Device.getMappingInfo().getTargetPointer(
           HDTTMap, HstPtrBase, HstPtrBase, /*TgtPadding=*/0, sizeof(void *),
-          /*HstPtrName=*/nullptr, /*HasFlagTo=*/false, /*HasFlagAlways=*/false,
-          IsImplicit, UpdateRef, HasCloseModifier, HasPresentModifier,
-          HasHoldModifier, AsyncInfo,
-          /*OwnedTPR=*/nullptr, /*ReleaseHDTTMap=*/false);
+          ArgTypes[I], /*HstPtrName=*/nullptr, /*HasFlagTo=*/false,
+          /*HasFlagAlways=*/false, IsImplicit, UpdateRef, HasCloseModifier,
+          HasPresentModifier, HasHoldModifier, AsyncInfo, /*OwnedTPR=*/nullptr,
+          /*ReleaseHDTTMap=*/false);
       PointerTgtPtrBegin = PointerTpr.TargetPointer;
       IsHostPtr = PointerTpr.Flags.IsHostPointer;
       if (!PointerTgtPtrBegin) {
@@ -462,9 +462,10 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     const bool HasFlagAlways = ArgTypes[I] & OMP_TGT_MAPTYPE_ALWAYS;
     // Note that HDTTMap will be released in getTargetPointer.
     auto TPR = Device.getMappingInfo().getTargetPointer(
-        HDTTMap, HstPtrBegin, HstPtrBase, TgtPadding, DataSize, HstPtrName,
-        HasFlagTo, HasFlagAlways, IsImplicit, UpdateRef, HasCloseModifier,
-        HasPresentModifier, HasHoldModifier, AsyncInfo, PointerTpr.getEntry());
+        HDTTMap, HstPtrBegin, HstPtrBase, TgtPadding, DataSize, ArgTypes[I],
+        HstPtrName, HasFlagTo, HasFlagAlways, IsImplicit, UpdateRef,
+        HasCloseModifier, HasPresentModifier, HasHoldModifier, AsyncInfo,
+        PointerTpr.getEntry());
     void *TgtPtrBegin = TPR.TargetPointer;
     IsHostPtr = TPR.Flags.IsHostPointer;
     // If data_size==0, then the argument could be a zero-length pointer to

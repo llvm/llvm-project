@@ -3101,6 +3101,7 @@ static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
     llvm::OpenMPIRBuilder::MapInfosTy &combinedInfo, MapInfoData &mapData,
     uint64_t mapDataIndex, bool isTargetParams) {
   // Map the first segment of our structure
+  const size_t parentIndex = combinedInfo.Types.size();
   combinedInfo.Types.emplace_back(
       isTargetParams
           ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM
@@ -3120,6 +3121,10 @@ static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
   // runtime information on the dynamically allocated data).
   auto parentClause =
       llvm::cast<omp::MapInfoOp>(mapData.MapClause[mapDataIndex]);
+  auto parentMapFlags = llvm::omp::OpenMPOffloadMappingFlags(
+      parentClause.getMapType().value_or(0));
+  combinedInfo.Types[parentIndex] |=
+      parentMapFlags & llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DESCRIPTOR;
 
   llvm::Value *lowAddr, *highAddr;
   if (!parentClause.getPartialMap()) {
@@ -3152,7 +3157,7 @@ static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
   combinedInfo.Sizes.push_back(size);
 
   llvm::omp::OpenMPOffloadMappingFlags memberOfFlag =
-      ompBuilder.getMemberOfFlag(combinedInfo.BasePointers.size() - 1);
+      ompBuilder.getMemberOfFlag(parentIndex);
 
   // This creates the initial MEMBER_OF mapping that consists of
   // the parent/top level container (same as above effectively, except

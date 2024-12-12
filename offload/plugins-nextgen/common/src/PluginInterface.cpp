@@ -1842,6 +1842,8 @@ bool GenericDeviceTy::getMultiDeviceKernelValue(void *EntryPtr) {
   return GenericKernel.isMultiDeviceKernel();
 }
 
+bool GenericDeviceTy::useSharedMemForDescriptor(int64_t Size) { return false; }
+
 Error GenericPluginTy::init() {
   if (Initialized)
     return Plugin::success();
@@ -2803,6 +2805,16 @@ bool GenericPluginTy::kernel_is_multi_device(int32_t DeviceId,
   auto T = logger::log<bool>(__func__, DeviceId, TgtEntryPtr);
   auto R = [&]() {
     return getDevice(DeviceId).getMultiDeviceKernelValue(TgtEntryPtr);
+  }();
+  T.res(R);
+  return R;
+}
+
+bool GenericPluginTy::use_shared_mem_for_descriptor(int32_t DeviceId,
+                                                    int64_t Size) {
+  auto T = logger::log<bool>(__func__, DeviceId);
+  auto R = [&]() {
+    return getDevice(DeviceId).useSharedMemForDescriptor(Size);
   }();
   T.res(R);
   return R;

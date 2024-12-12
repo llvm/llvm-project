@@ -1105,6 +1105,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   bool getMultiDeviceKernelValue(void *EntryPtr);
 
+  /// Return true if a descriptor of size 'Size' should be allocated using
+  /// shared memory. Default implementation returns 'false',
+  virtual bool useSharedMemForDescriptor(int64_t Size);
+
   /// Reference to the underlying plugin that created this device.
   GenericPluginTy &Plugin;
 
@@ -1589,6 +1593,10 @@ public:
 
   /// Check if kernel is multi-device.
   bool kernel_is_multi_device(int32_t DeviceId, void *TgtEntryPtr);
+
+  /// Return true if a descriptor of size 'Size' should be allocated using
+  /// shared memory.
+  bool use_shared_mem_for_descriptor(int32_t DeviceId, int64_t Size);
 
 private:
   /// Indicates if the platform runtime has been fully initialized.
