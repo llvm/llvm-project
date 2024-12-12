@@ -8,8 +8,7 @@ define i32 @simple() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @callee(ptr [[A]])
-; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    ret i32 [[L1]]
+; CHECK-NEXT:    ret i32 0
 ;
   %a = alloca i32
   store i32 0, ptr %a
@@ -40,9 +39,7 @@ define i32 @twoalloc() {
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr i32, ptr [[A]], i32 1
 ; CHECK-NEXT:    store i32 1, ptr [[B]], align 4
 ; CHECK-NEXT:    call void @callee(ptr [[A]])
-; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[B]], align 4
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[L1]], [[L2]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 0, 1
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = alloca {i32, i32}
@@ -62,8 +59,7 @@ define i32 @twostore() {
 ; CHECK-NEXT:    store i32 1, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @callee(ptr [[A]])
 ; CHECK-NEXT:    store i32 2, ptr [[A]], align 4
-; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    ret i32 [[L]]
+; CHECK-NEXT:    ret i32 2
 ;
   %a = alloca i32
   store i32 1, ptr %a
@@ -116,10 +112,8 @@ define i32 @twocalls() {
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr i32, ptr [[A]], i32 1
 ; CHECK-NEXT:    store i32 1, ptr [[B]], align 4
 ; CHECK-NEXT:    call void @callee(ptr [[A]])
-; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @callee(ptr [[A]])
-; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[B]], align 4
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[L1]], [[L2]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 0, 1
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = alloca {i32, i32}
@@ -165,8 +159,7 @@ define i32 @atomic() {
 ; CHECK-NEXT:    store i32 1, ptr [[B]], align 4
 ; CHECK-NEXT:    call void @callee(ptr [[A]])
 ; CHECK-NEXT:    [[L1:%.*]] = load atomic i32, ptr [[A]] seq_cst, align 4
-; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[B]], align 4
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[L1]], [[L2]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[L1]], 1
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = alloca {i32, i32}
@@ -184,12 +177,10 @@ define i32 @notdominating() {
 ; CHECK-LABEL: @notdominating(
 ; CHECK-NEXT:    [[A:%.*]] = alloca { i32, i32 }, align 8
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr i32, ptr [[A]], i32 1
-; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[B]], align 4
 ; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
 ; CHECK-NEXT:    store i32 1, ptr [[B]], align 4
 ; CHECK-NEXT:    call void @callee(ptr [[A]])
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[L1]], [[L2]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 undef, undef
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = alloca {i32, i32}
@@ -235,9 +226,7 @@ define i32 @multiuse() {
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr i32, ptr [[A]], i32 1
 ; CHECK-NEXT:    store i32 1, ptr [[B]], align 4
 ; CHECK-NEXT:    call void @callee_multiuse(ptr [[A]], ptr [[A]])
-; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[B]], align 4
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[L1]], [[L2]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 0, 1
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = alloca {i32, i32}
@@ -296,8 +285,7 @@ define void @incompletestruct(i1 %b, i1 %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LII:%.*]] = alloca [[STRUCT_LOADIMMEDIATEINFO:%.*]], align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[LII]])
-; CHECK-NEXT:    [[BF_LOAD:%.*]] = load i32, ptr [[LII]], align 4
-; CHECK-NEXT:    [[BF_CLEAR4:%.*]] = and i32 [[BF_LOAD]], -262144
+; CHECK-NEXT:    [[BF_CLEAR4:%.*]] = and i32 undef, -262144
 ; CHECK-NEXT:    [[BF_SET5:%.*]] = select i1 [[B:%.*]], i32 196608, i32 131072
 ; CHECK-NEXT:    [[BF_SET12:%.*]] = or disjoint i32 [[BF_SET5]], [[BF_CLEAR4]]
 ; CHECK-NEXT:    store i32 [[BF_SET12]], ptr [[LII]], align 4
@@ -325,8 +313,7 @@ define void @incompletestruct_bb(i1 %b, i1 %c) {
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[LII]])
-; CHECK-NEXT:    [[BF_LOAD:%.*]] = load i32, ptr [[LII]], align 4
-; CHECK-NEXT:    [[BF_CLEAR4:%.*]] = and i32 [[BF_LOAD]], -262144
+; CHECK-NEXT:    [[BF_CLEAR4:%.*]] = and i32 undef, -262144
 ; CHECK-NEXT:    [[BF_SET5:%.*]] = select i1 [[B:%.*]], i32 196608, i32 131072
 ; CHECK-NEXT:    [[BF_SET12:%.*]] = or disjoint i32 [[BF_SET5]], [[BF_CLEAR4]]
 ; CHECK-NEXT:    store i32 [[BF_SET12]], ptr [[LII]], align 4
