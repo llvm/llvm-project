@@ -45,7 +45,6 @@ void AtLeastOneOf() {
   // expected-warning@+1{{OpenACC clause 'attach' not yet implemented}}
 #pragma acc data attach(Var)
   ;
-  // expected-warning@+1{{OpenACC clause 'default' not yet implemented}}
 #pragma acc data default(none)
   ;
 
