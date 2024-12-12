@@ -265,6 +265,14 @@ public:
         FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags()));
   }
 
+  VPSplatRecipe *createSplat(VPValue *Val) {
+    return tryInsertInstruction(new VPSplatRecipe(Val));
+  }
+
+  VPStepVectorRecipe *createStepVector(Type *Ty) {
+    return tryInsertInstruction(new VPStepVectorRecipe(Ty));
+  }
+
   //===--------------------------------------------------------------------===//
   // RAII helpers.
   //===--------------------------------------------------------------------===//

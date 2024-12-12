@@ -2013,7 +2013,7 @@ void VPlanTransforms::createInterleaveGroups(
   }
 }
 
-/// Expand a VPWidenIntOrFpInduction into separate recipes for the initial
+/// Expand a VPWidenIntOrFpInduction into executable recipes. for the initial
 /// value, phi and backedge value. In the followng example:
 ///
 ///  vector.ph:
@@ -2021,79 +2021,126 @@ void VPlanTransforms::createInterleaveGroups(
 ///
 ///  <x1> vector loop: {
 ///    vector.body:
-///      WIDEN-INDUCTION %i = phi %bc.resume.val, %i.next, ir<1>, ir<%5>
+///      WIDEN-INDUCTION %i = phi %start, %step, %vf
 ///      ...
-///      EMIT branch-on-count vp<%index.next>, ir<%n.vec>
+///      EMIT branch-on-count ...
 ///    No successors
 ///  }
 ///
 /// WIDEN-INDUCTION will get expanded to:
 ///
 ///  vector.ph:
-///    vp<%0> = WIDEN-INDUCTION-START ir<0>, ir<1>
+///    ...
+///    vp<%induction> = ...
+///    vp<%inc> = ...
+///
 ///  Successor(s): vector loop
 ///
 ///  <x1> vector loop: {
 ///    vector.body:
-///      ir<%i> = WIDEN-INDUCTION-PHI vp<%0>, vp<%4>
+///      ir<%i> = WIDEN-INDUCTION-PHI vp<%induction>, vp<%vec.ind.next>
 ///      ...
-///      vp<%4> = WIDEN-INDUCTION-INC ir<1>, ir<%5>, ir<%i>
-///      EMIT branch-on-count vp<%index.next>, ir<%n.vec>
+///      vp<%vec.ind.next> = add ir<%i>, vp<%inc>
+///      EMIT branch-on-count ...
 ///    No successors
 ///  }
 static void
-expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR) {
+expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
+                              VPTypeAnalysis &TypeInfo) {
   VPlan *Plan = WidenIVR->getParent()->getPlan();
   VPValue *Start = WidenIVR->getStartValue();
   VPValue *Step = WidenIVR->getStepValue();
   VPValue *VF = WidenIVR->getVFValue();
-  const InductionDescriptor &ID = WidenIVR->getInductionDescriptor();
   TruncInst *Trunc = WidenIVR->getTruncInst();
   DebugLoc DL = WidenIVR->getDebugLoc();
 
   // The value from the original loop to which we are mapping the new induction
   // variable.
   Instruction *IV = Trunc ? cast<Instruction>(Trunc) : WidenIVR->getPHINode();
+  Type *Ty = IV->getType();
+
+  const InductionDescriptor &ID = WidenIVR->getInductionDescriptor();
+  Instruction::BinaryOps AddOp;
+  Instruction::BinaryOps MulOp;
+  std::optional<FastMathFlags> FMFs;
+  if (ID.getKind() == InductionDescriptor::IK_IntInduction) {
+    AddOp = Instruction::Add;
+    MulOp = Instruction::Mul;
+  } else {
+    AddOp = ID.getInductionOpcode();
+    MulOp = Instruction::FMul;
+    FMFs = ID.getInductionBinOp()->getFastMathFlags();
+  }
 
   // If the phi is truncated, truncate the start and step values.
   VPBuilder Builder(Plan->getVectorPreheader());
   if (isa<TruncInst>(IV)) {
     assert(Start->getUnderlyingValue()->getType()->isIntegerTy() &&
            "Truncation requires an integer type");
-    auto *TruncType = cast<IntegerType>(IV->getType());
-    Step = Builder.createScalarCast(Instruction::Trunc, Step, TruncType, DL);
-    Start = Builder.createScalarCast(Instruction::Trunc, Start, TruncType, DL);
+    Step = Builder.createScalarCast(Instruction::Trunc, Step, Ty, DL);
+    Start = Builder.createScalarCast(Instruction::Trunc, Start, Ty, DL);
   }
 
   // Construct the initial value of the vector IV in the vector loop preheader.
-  auto *StartR = new VPWidenIntOrFpInductionInitialRecipe(IV, Start, Step, ID);
-  Plan->getVectorPreheader()->insert(StartR, Builder.getInsertPoint());
+  Type *IVIntTy = IntegerType::get(IV->getContext(), Ty->getScalarSizeInBits());
+  VPValue *Init = Builder.createStepVector(IVIntTy);
+  if (Ty->isFloatingPointTy())
+    Init = Builder.createWidenCast(Instruction::UIToFP, Init, Ty);
+
+  // FIXME: The newly created binary instructions should contain nsw/nuw
+  // flags, which can be found from the original scalar operations.
+  Init = Builder.createNaryOp(MulOp, {Init, Builder.createSplat(Step)}, FMFs);
+  Init = Builder.createNaryOp(AddOp, {Builder.createSplat(Start), Init}, FMFs,
+                              {}, "induction");
 
   // Create the widened phi of the vector IV.
-  auto *PhiR = new VPWidenIntOrFpInductionPHIRecipe(IV, StartR);
-  PhiR->insertBefore(WidenIVR);
+  auto *WidePHI = new VPWidenIntOrFpInductionPHIRecipe(IV, Init);
+  WidePHI->insertBefore(WidenIVR);
 
   // Create the backedge value for the vector IV.
-  VPValue *Prev = PhiR;
-  // If unrolled, use the last unrolled part in the increment.
-  if (auto *UnrolledPart = WidenIVR->getLastUnrolledPartOperand())
-    Prev = UnrolledPart;
-  auto *IncR = new VPWidenIntOrFpInductionBackedgeRecipe(
-      IV, Step, VF, Prev, WidenIVR->getSplatVFValue(), ID);
-  VPBasicBlock *ExitingBB = Plan->getVectorLoopRegion()->getExitingBasicBlock();
-  ExitingBB->insert(IncR, ExitingBB->getTerminator()->getIterator());
-  PhiR->addOperand(IncR);
+  VPValue *Inc;
+  VPValue *Prev;
+  // If unrolled, use the increment and prev value from the operands.
+  if (WidenIVR->getNumOperands() == 5) {
+    Inc = WidenIVR->getSplatVFValue();
+    Prev = WidenIVR->getLastUnrolledPartOperand();
+    assert(Inc && Prev);
+  } else {
+    unsigned VFTySize = TypeInfo.inferScalarType(VF)->getScalarSizeInBits();
 
-  WidenIVR->replaceAllUsesWith(PhiR);
+    // Multiply the vectorization factor by the step using integer or
+    // floating-point arithmetic as appropriate.
+    if (Ty->isFloatingPointTy())
+      VF = Builder.createScalarCast(Instruction::CastOps::UIToFP, VF, Ty, DL);
+    else if (VFTySize < Ty->getScalarSizeInBits())
+      VF = Builder.createScalarCast(Instruction::CastOps::ZExt, VF, Ty, DL);
+    else if (VFTySize > Ty->getScalarSizeInBits())
+      VF = Builder.createScalarCast(Instruction::CastOps::Trunc, VF, Ty, DL);
+
+    Inc = Builder.createSplat(Builder.createNaryOp(MulOp, {Step, VF}, FMFs));
+    Prev = WidePHI;
+  }
+
+  VPBasicBlock *ExitingBB = Plan->getVectorLoopRegion()->getExitingBasicBlock();
+  Builder.setInsertPoint(ExitingBB, ExitingBB->getTerminator()->getIterator());
+  auto *Next = Builder.createNaryOp(AddOp, {Prev, Inc}, FMFs, IV->getDebugLoc(),
+                                    "vec.ind.next");
+
+  WidePHI->addOperand(Next);
+
+  WidenIVR->replaceAllUsesWith(WidePHI);
   WidenIVR->eraseFromParent();
 }
 
-void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
+void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
+                                               Type *CanonicalIVTy) {
+  VPTypeAnalysis TypeInfo(CanonicalIVTy);
+
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(VPBB->phis())) {
       if (auto *WidenIVR = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
-        expandVPWidenIntOrFpInduction(WidenIVR);
+        expandVPWidenIntOrFpInduction(WidenIVR, TypeInfo);
         continue;
       }
       if (!isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(&R))

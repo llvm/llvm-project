@@ -1696,92 +1696,12 @@ InstructionCost VPHeaderPHIRecipe::computeCost(ElementCount VF,
   return Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
 }
 
-/// This function adds
-/// (0 * Step, 1 * Step, 2 * Step, ...)
-/// to each vector element of Val.
-/// \p Opcode is relevant for FP induction variable.
-static Value *getStepVector(Value *Val, Value *Step,
-                            Instruction::BinaryOps BinOp, ElementCount VF,
-                            IRBuilderBase &Builder) {
-  assert(VF.isVector() && "only vector VFs are supported");
-
-  // Create and check the types.
-  auto *ValVTy = cast<VectorType>(Val->getType());
-  ElementCount VLen = ValVTy->getElementCount();
-
-  Type *STy = Val->getType()->getScalarType();
-  assert((STy->isIntegerTy() || STy->isFloatingPointTy()) &&
-         "Induction Step must be an integer or FP");
-  assert(Step->getType() == STy && "Step has wrong type");
-
-  SmallVector<Constant *, 8> Indices;
-
-  // Create a vector of consecutive numbers from zero to VF.
-  VectorType *InitVecValVTy = ValVTy;
-  if (STy->isFloatingPointTy()) {
-    Type *InitVecValSTy =
-        IntegerType::get(STy->getContext(), STy->getScalarSizeInBits());
-    InitVecValVTy = VectorType::get(InitVecValSTy, VLen);
-  }
-  Value *InitVec = Builder.CreateStepVector(InitVecValVTy);
-
-  if (STy->isIntegerTy()) {
-    Step = Builder.CreateVectorSplat(VLen, Step);
-    assert(Step->getType() == Val->getType() && "Invalid step vec");
-    // FIXME: The newly created binary instructions should contain nsw/nuw
-    // flags, which can be found from the original scalar operations.
-    Step = Builder.CreateMul(InitVec, Step);
-    return Builder.CreateAdd(Val, Step, "induction");
-  }
-
-  // Floating point induction.
-  assert((BinOp == Instruction::FAdd || BinOp == Instruction::FSub) &&
-         "Binary Opcode should be specified for FP induction");
-  InitVec = Builder.CreateUIToFP(InitVec, ValVTy);
-
-  Step = Builder.CreateVectorSplat(VLen, Step);
-  Value *MulOp = Builder.CreateFMul(InitVec, Step);
-  return Builder.CreateBinOp(BinOp, Val, MulOp, "induction");
-}
-
 /// A helper function that returns an integer or floating-point constant with
 /// value C.
 static Constant *getSignedIntOrFpConstant(Type *Ty, int64_t C) {
   return Ty->isIntegerTy() ? ConstantInt::getSigned(Ty, C)
                            : ConstantFP::get(Ty, C);
 }
-
-void VPWidenIntOrFpInductionInitialRecipe::execute(VPTransformState &State) {
-  assert(!State.Lane && "Int or FP induction being replicated.");
-
-  Value *Start = State.get(getStartValue(), true);
-  IRBuilderBase &Builder = State.Builder;
-  assert(State.VF.isVector() && "must have vector VF");
-
-  // Fast-math-flags propagate from the original induction instruction.
-  IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-  if (isa_and_nonnull<FPMathOperator>(ID.getInductionBinOp()))
-    Builder.setFastMathFlags(ID.getInductionBinOp()->getFastMathFlags());
-
-  // Now do the actual transformations, and start with fetching the step value.
-  Value *Step = State.get(getStepValue(), VPLane(0));
-
-  // Construct the initial value of the vector IV
-  Value *SplatStart = Builder.CreateVectorSplat(State.VF, Start);
-  Value *SteppedStart = getStepVector(SplatStart, Step, ID.getInductionOpcode(),
-                                      State.VF, State.Builder);
-  State.set(this, SteppedStart);
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPWidenIntOrFpInductionInitialRecipe::print(
-    raw_ostream &O, const Twine &Indent, VPSlotTracker &SlotTracker) const {
-  O << Indent;
-  printAsOperand(O, SlotTracker);
-  O << " = WIDEN-INDUCTION-START ";
-  printOperands(O, SlotTracker);
-}
-#endif
 
 void VPWidenIntOrFpInductionPHIRecipe::execute(VPTransformState &State) {
   BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
@@ -1800,74 +1720,6 @@ void VPWidenIntOrFpInductionPHIRecipe::print(raw_ostream &O,
   O << Indent;
   printAsOperand(O, SlotTracker);
   O << " = WIDEN-INDUCTION-PHI ";
-  printOperands(O, SlotTracker);
-}
-#endif
-
-void VPWidenIntOrFpInductionBackedgeRecipe::execute(VPTransformState &State) {
-  IRBuilderBase &Builder = State.Builder;
-
-  // Fast-math-flags propagate from the original induction instruction.
-  IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-  if (isa_and_nonnull<FPMathOperator>(ID.getInductionBinOp()))
-    Builder.setFastMathFlags(ID.getInductionBinOp()->getFastMathFlags());
-
-  Value *Step = State.get(getStepValue(), VPLane(0));
-
-  auto CurrIP = Builder.saveIP();
-  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
-  Builder.SetInsertPoint(VectorPH->getTerminator());
-
-  // We create vector phi nodes for both integer and floating-point induction
-  // variables. Here, we determine the kind of arithmetic we will perform.
-  Instruction::BinaryOps AddOp;
-  Instruction::BinaryOps MulOp;
-  if (Step->getType()->isIntegerTy()) {
-    AddOp = Instruction::Add;
-    MulOp = Instruction::Mul;
-  } else {
-    AddOp = ID.getInductionOpcode();
-    MulOp = Instruction::FMul;
-  }
-
-  Value *SplatVF;
-  if (VPValue *SplatVFOperand = getSplatVFValue()) {
-    // The recipe has been unrolled. In that case, fetch the splat value for the
-    // induction increment.
-    SplatVF = State.get(SplatVFOperand);
-  } else {
-    // Multiply the vectorization factor by the step using integer or
-    // floating-point arithmetic as appropriate.
-    Type *StepType = Step->getType();
-    Value *RuntimeVF = State.get(getVFValue(), VPLane(0));
-    if (Step->getType()->isFloatingPointTy())
-      RuntimeVF = Builder.CreateUIToFP(RuntimeVF, StepType);
-    else
-      RuntimeVF = Builder.CreateZExtOrTrunc(RuntimeVF, StepType);
-    Value *Mul = Builder.CreateBinOp(MulOp, Step, RuntimeVF);
-
-    // Create a vector splat to use in the induction update.
-    SplatVF = Builder.CreateVectorSplat(State.VF, Mul);
-  }
-
-  Builder.restoreIP(CurrIP);
-  Value *PrevVal = State.get(getPrevValue());
-
-  Instruction *LastInduction = cast<Instruction>(
-      Builder.CreateBinOp(AddOp, PrevVal, SplatVF, "vec.ind.next"));
-  if (isa<TruncInst>(IV))
-    State.addMetadata(LastInduction, IV);
-  LastInduction->setDebugLoc(IV->getDebugLoc());
-
-  State.set(this, LastInduction);
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPWidenIntOrFpInductionBackedgeRecipe::print(
-    raw_ostream &O, const Twine &Indent, VPSlotTracker &SlotTracker) const {
-  O << Indent;
-  printAsOperand(O, SlotTracker);
-  O << " = WIDEN-INDUCTION-INC ";
   printOperands(O, SlotTracker);
 }
 #endif
@@ -2456,8 +2308,9 @@ Value *VPScalarCastRecipe ::generate(VPTransformState &State) {
   switch (Opcode) {
   case Instruction::SExt:
   case Instruction::ZExt:
-  case Instruction::Trunc: {
-    // Note: SExt/ZExt not used yet.
+  case Instruction::Trunc:
+  case Instruction::UIToFP: {
+    // Note: SExt not used yet.
     Value *Op = State.get(getOperand(0), VPLane(0));
     return State.Builder.CreateCast(Instruction::CastOps(Opcode), Op, ResultTy);
   }
@@ -2478,6 +2331,36 @@ void VPScalarCastRecipe ::print(raw_ostream &O, const Twine &Indent,
   O << " = " << Instruction::getOpcodeName(Opcode) << " ";
   printOperands(O, SlotTracker);
   O << " to " << *ResultTy;
+}
+#endif
+
+void VPSplatRecipe::execute(VPTransformState &State) {
+  Value *Splat =
+      State.Builder.CreateVectorSplat(State.VF, State.get(getOperand(0), true));
+  State.set(this, Splat);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPSplatRecipe::print(raw_ostream &O, const Twine &Indent,
+                          VPSlotTracker &SlotTracker) const {
+  O << Indent;
+  printAsOperand(O, SlotTracker);
+  O << " = SPLAT ";
+  printOperands(O, SlotTracker);
+}
+#endif
+
+void VPStepVectorRecipe::execute(VPTransformState &State) {
+  VectorType *Ty = VectorType::get(ScalarTy, State.VF);
+  State.set(this, State.Builder.CreateStepVector(Ty));
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPStepVectorRecipe::print(raw_ostream &O, const Twine &Indent,
+                               VPSlotTracker &SlotTracker) const {
+  O << Indent;
+  printAsOperand(O, SlotTracker);
+  O << " = STEP-VECTOR";
 }
 #endif
 

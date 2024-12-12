@@ -245,8 +245,7 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
                 return inferScalarType(R->getStartValue());
               })
           .Case<VPWidenIntOrFpInductionRecipe, VPDerivedIVRecipe,
-                VPWidenIntOrFpInductionInitialRecipe,
-                VPWidenIntOrFpInductionBackedgeRecipe>(
+                VPStepVectorRecipe>(
               [](const auto *R) { return R->getScalarType(); })
           .Case<VPReductionRecipe, VPPredInstPHIRecipe, VPWidenPHIRecipe,
                 VPScalarIVStepsRecipe, VPWidenGEPRecipe, VPVectorPointerRecipe,

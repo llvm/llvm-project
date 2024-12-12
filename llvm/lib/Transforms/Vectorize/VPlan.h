@@ -1236,6 +1236,74 @@ public:
   }
 };
 
+/// A for splatting a scalar value to a vector.
+class VPSplatRecipe : public VPSingleDefRecipe {
+public:
+  VPSplatRecipe(VPValue *Op) : VPSingleDefRecipe(VPDef::VPSplatSC, {Op}) {}
+
+  ~VPSplatRecipe() override = default;
+
+  VPSplatRecipe *clone() override { return new VPSplatRecipe(getOperand(0)); }
+
+  VP_CLASSOF_IMPL(VPDef::VPSplatSC)
+
+  void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPSplatRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override {
+    // TODO: Compute accurate cost after retiring the legacy cost model.
+    return 0;
+  }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
+};
+
+/// A recipe for generating a step vector.
+class VPStepVectorRecipe : public VPSingleDefRecipe {
+  /// Scalar return type of the intrinsic.
+  Type *ScalarTy;
+
+public:
+  VPStepVectorRecipe(Type *Ty)
+      : VPSingleDefRecipe(VPDef::VPStepVectorSC, {}), ScalarTy(Ty) {}
+
+  ~VPStepVectorRecipe() override = default;
+
+  VPStepVectorRecipe *clone() override {
+    return new VPStepVectorRecipe(ScalarTy);
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPStepVectorSC)
+
+  void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPStepVectorRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override {
+    // TODO: Compute accurate cost after retiring the legacy cost model.
+    return 0;
+  }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  /// Return the scalar return type of the intrinsic.
+  Type *getScalarType() const { return ScalarTy; }
+};
+
 /// A recipe for widening vector intrinsics.
 class VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags {
   /// ID of the vector intrinsic to widen.
@@ -1820,59 +1888,10 @@ public:
   }
 
   /// Returns the VPValue representing the value of this induction at
-  /// the last unrolled part, if it exists. Returns nullptr if unrolling did not
+  /// the last unrolled part, if it exists. Returns itself if unrolling did not
   /// take place.
   VPValue *getLastUnrolledPartOperand() {
-    return getNumOperands() == 5 ? getOperand(4) : nullptr;
-  }
-};
-
-/// A recipe to compute the initial value for a widened IV, expanded from
-/// VPWidenIntOrFpInductionRecipe.
-class VPWidenIntOrFpInductionInitialRecipe : public VPSingleDefRecipe {
-  Instruction *IV;
-  const InductionDescriptor &ID;
-
-public:
-  VPWidenIntOrFpInductionInitialRecipe(Instruction *IV, VPValue *Start,
-                                       VPValue *Step,
-                                       const InductionDescriptor &ID)
-      : VPSingleDefRecipe(VPDef::VPWidenIntOrFpInductionStartSC, {Start, Step}),
-        IV(IV), ID(ID) {
-    assert((isa<PHINode>(IV) || isa<TruncInst>(IV)) &&
-           "Expected either an induction phi-node or a truncate of it!");
-  }
-
-  ~VPWidenIntOrFpInductionInitialRecipe() override = default;
-
-  VPWidenIntOrFpInductionInitialRecipe *clone() override {
-    return new VPWidenIntOrFpInductionInitialRecipe(IV, getOperand(0),
-                                                    getOperand(1), ID);
-  }
-
-  VP_CLASSOF_IMPL(VPDef::VPWidenIntOrFpInductionStartSC)
-
-  void execute(VPTransformState &State) override;
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
-  VPValue *getStartValue() { return getOperand(0); }
-  const VPValue *getStartValue() const { return getOperand(0); }
-
-  VPValue *getStepValue() { return getOperand(1); }
-  const VPValue *getStepValue() const { return getOperand(1); }
-
-  /// Returns the scalar type of the induction.
-  Type *getScalarType() const { return IV->getType(); }
-
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return true;
+    return getNumOperands() == 5 ? getOperand(4) : this;
   }
 };
 
@@ -1906,67 +1925,6 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
-};
-
-/// A recipe to compute the backedge value for a widened IV, expanded from
-/// VPWidenIntOrFpInductionRecipe.
-class VPWidenIntOrFpInductionBackedgeRecipe : public VPSingleDefRecipe {
-  Instruction *IV;
-  const InductionDescriptor &ID;
-
-public:
-  VPWidenIntOrFpInductionBackedgeRecipe(Instruction *IV, VPValue *Step,
-                                        VPValue *VF, VPValue *Prev,
-                                        VPValue *SplatVF,
-                                        const InductionDescriptor &ID)
-      : VPSingleDefRecipe(VPDef::VPWidenIntOrFpInductionSC, {Step, VF, Prev}),
-        IV(IV), ID(ID) {
-    assert((isa<PHINode>(IV) || isa<TruncInst>(IV)) &&
-           "Expected either an induction phi-node or a truncate of it!");
-    if (SplatVF)
-      addOperand(SplatVF);
-  }
-
-  ~VPWidenIntOrFpInductionBackedgeRecipe() override = default;
-
-  VPWidenIntOrFpInductionBackedgeRecipe *clone() override {
-    return new VPWidenIntOrFpInductionBackedgeRecipe(
-        IV, getOperand(0), getOperand(1), getOperand(2), getOperand(3), ID);
-  }
-
-  VP_CLASSOF_IMPL(VPDef::VPWidenIntOrFpInductionIncSC)
-
-  void execute(VPTransformState &State) override;
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
-  VPValue *getStepValue() { return getOperand(0); }
-  const VPValue *getStepValue() const { return getOperand(0); }
-
-  VPValue *getVFValue() { return getOperand(1); }
-  const VPValue *getVFValue() const { return getOperand(1); }
-
-  VPValue *getPrevValue() { return getOperand(2); }
-  const VPValue *getPrevValue() const { return getOperand(2); }
-
-  VPValue *getSplatVFValue() {
-    // If the recipe has been unrolled (4 operands), return the VPValue for the
-    // induction increment.
-    return getNumOperands() == 4 ? getOperand(3) : nullptr;
-  }
-
-  /// Returns the scalar type of the induction.
-  Type *getScalarType() const { return IV->getType(); }
-
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return Op == getOperand(0) || Op == getOperand(1);
-  }
 };
 
 class VPWidenPointerInductionRecipe : public VPWidenInductionRecipe,
