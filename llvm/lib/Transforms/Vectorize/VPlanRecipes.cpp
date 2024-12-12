@@ -3440,6 +3440,10 @@ void VPReductionPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
+  assert((EnableVPlanNativePath || IncomingBlocks.empty()) &&
+         "Non-native vplans are not expected to have VPWidenPHIRecipes with "
+         "incoming blocks.");
+
   State.setDebugLocFrom(getDebugLoc());
   Value *Op0 = State.get(getOperand(0));
   Type *VecTy = Op0->getType();

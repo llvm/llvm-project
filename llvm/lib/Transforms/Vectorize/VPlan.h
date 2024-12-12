@@ -2318,13 +2318,15 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
-  /// Adds a pair (\p IncomingV, \p IncomingBlock) to the phi.
+  /// Adds a pair (\p IncomingV, \p IncomingBlock) to the phi. Only used in the
+  /// VPlan native path.
   void addIncoming(VPValue *IncomingV, VPBasicBlock *IncomingBlock) {
     addOperand(IncomingV);
     IncomingBlocks.push_back(IncomingBlock);
   }
 
-  /// Returns the \p I th incoming VPBasicBlock.
+  /// Returns the \p I th incoming VPBasicBlock. Only used in the VPlan native
+  /// path.
   VPBasicBlock *getIncomingBlock(unsigned I) { return IncomingBlocks[I]; }
 
   /// Returns the \p I th incoming VPValue.
