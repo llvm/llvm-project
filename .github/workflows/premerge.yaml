@@ -24,8 +24,6 @@ jobs:
           fetch-depth: 2
       - name: Build and Test
         run: |
-          git config --global --add safe.directory '*'
-
           modified_files=$(git diff --name-only HEAD~1...HEAD)
           modified_dirs=$(echo "$modified_files" | cut -d'/' -f1 | sort -u)
           
