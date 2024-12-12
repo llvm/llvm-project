@@ -25,6 +25,7 @@
 #include "gtest/gtest.h"
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 
 namespace clang {
@@ -143,7 +144,7 @@ const Formula &getFormula(const ValueDecl &D, const Environment &Env) {
   return cast<BoolValue>(Env.getValue(D))->formula();
 }
 
-const BindingDecl *findBindingDecl(const char *Name, ASTContext &ASTCtx) {
+const BindingDecl *findBindingDecl(ASTContext& ASTCxt, std::string_view Name) {
   using ast_matchers::bindingDecl;
   using ast_matchers::hasName;
   auto TargetNodes =
@@ -5524,10 +5525,10 @@ TEST(TransferTest, StructuredBindingAssignFromTupleLikeType) {
         ASSERT_THAT(Results.keys(), UnorderedElementsAre("p1", "p2"));
         const Environment &Env1 = getEnvironmentAtAnnotation(Results, "p1");
 
-        const ValueDecl *BoundFooDecl = findBindingDecl("BoundFoo", ASTCtx);
+        const ValueDecl *BoundFooDecl = findBindingDecl(ASTCtx, "BoundFoo");
         ASSERT_THAT(BoundFooDecl, NotNull());
 
-        const ValueDecl *BoundBarDecl = findBindingDecl("BoundBar", ASTCtx);
+        const ValueDecl *BoundBarDecl = findBindingDecl(ASTCtx, "BoundBar");
         ASSERT_THAT(BoundBarDecl, NotNull());
 
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
@@ -5605,10 +5606,10 @@ TEST(TransferTest, StructuredBindingAssignRefFromTupleLikeType) {
         ASSERT_THAT(Results.keys(), UnorderedElementsAre("p1", "p2"));
         const Environment &Env1 = getEnvironmentAtAnnotation(Results, "p1");
 
-        const ValueDecl *BoundFooDecl = findBindingDecl("BoundFoo", ASTCtx);
+        const ValueDecl *BoundFooDecl = findBindingDecl(ASTCtx, "BoundFoo");
         ASSERT_THAT(BoundFooDecl, NotNull());
 
-        const ValueDecl *BoundBarDecl = findBindingDecl("BoundBar", ASTCtx);
+        const ValueDecl *BoundBarDecl = findBindingDecl(ASTCtx, "BoundBar");
         ASSERT_THAT(BoundBarDecl, NotNull());
 
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
