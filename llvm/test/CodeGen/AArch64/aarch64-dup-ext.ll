@@ -106,7 +106,6 @@ define <2 x i64> @dupsext_v2i32_v2i64(i32 %src, <2 x i32> %b) {
 ;
 ; CHECK-GI-LABEL: dupsext_v2i32_v2i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-GI-NEXT:    sxtw x8, w0
 ; CHECK-GI-NEXT:    sshll v0.2d, v0.2s, #0
 ; CHECK-GI-NEXT:    dup v1.2d, x8
@@ -203,7 +202,6 @@ define <2 x i64> @dupzext_v2i16_v2i64(i16 %src, <2 x i16> %b) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    movi v1.2d, #0x0000000000ffff
 ; CHECK-GI-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-GI-NEXT:    and x8, x0, #0xffff
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    dup v1.2d, x8
@@ -408,10 +406,10 @@ define <8 x i16> @shufsext_v8i8_v8i16(<8 x i8> %src, <8 x i8> %b) {
 ; CHECK-GI-LABEL: shufsext_v8i8_v8i16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    adrp x8, .LCPI13_0
-; CHECK-GI-NEXT:    sshll v2.8h, v0.8b, #0
+; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI13_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-GI-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI13_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v2.16b, v3.16b }, v0.16b
 ; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -461,10 +459,10 @@ define <8 x i16> @shufzext_v8i8_v8i16(<8 x i8> %src, <8 x i8> %b) {
 ; CHECK-GI-LABEL: shufzext_v8i8_v8i16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    adrp x8, .LCPI15_0
-; CHECK-GI-NEXT:    ushll v2.8h, v0.8b, #0
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI15_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-GI-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI15_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v2.16b, v3.16b }, v0.16b
 ; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
 entry:

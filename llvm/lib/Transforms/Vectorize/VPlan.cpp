@@ -170,9 +170,7 @@ VPBasicBlock *VPBlockBase::getEntryBasicBlock() {
 }
 
 void VPBlockBase::setPlan(VPlan *ParentPlan) {
-  assert(
-      (ParentPlan->getEntry() == this || ParentPlan->getPreheader() == this) &&
-      "Can only set plan on its entry or preheader block.");
+  assert(ParentPlan->getEntry() == this && "Can only set plan on its entry.");
   Plan = ParentPlan;
 }
 
@@ -823,6 +821,18 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+VPlan::VPlan(VPBasicBlock *OriginalPreheader, VPValue *TC,
+             VPBasicBlock *EntryVectorPreHeader, VPIRBasicBlock *ScalarHeader)
+    : VPlan(OriginalPreheader, TC, ScalarHeader) {
+  VPBlockUtils::connectBlocks(OriginalPreheader, EntryVectorPreHeader);
+}
+
+VPlan::VPlan(VPBasicBlock *OriginalPreheader,
+             VPBasicBlock *EntryVectorPreHeader, VPIRBasicBlock *ScalarHeader)
+    : VPlan(OriginalPreheader, ScalarHeader) {
+  VPBlockUtils::connectBlocks(OriginalPreheader, EntryVectorPreHeader);
+}
+
 VPlan::~VPlan() {
   if (Entry) {
     VPValue DummyValue;
@@ -830,9 +840,6 @@ VPlan::~VPlan() {
       Block->dropAllReferences(&DummyValue);
 
     VPBlockBase::deleteCFG(Entry);
-
-    Preheader->dropAllReferences(&DummyValue);
-    delete Preheader;
   }
   for (VPValue *VPV : VPLiveInsToFree)
     delete VPV;
@@ -855,9 +862,16 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   VPIRBasicBlock *Entry =
       VPIRBasicBlock::fromBasicBlock(TheLoop->getLoopPreheader());
   VPBasicBlock *VecPreheader = new VPBasicBlock("vector.ph");
+  // Connect entry only to vector preheader initially. Entry will also be
+  // connected to the scalar preheader later, during skeleton creation when
+  // runtime guards are added as needed. Note that when executing the VPlan for
+  // an epilogue vector loop, the original entry block here will be replaced by
+  // a new VPIRBasicBlock wrapping the entry to the epilogue vector loop after
+  // generating code for the main vector loop.
+  VPBlockUtils::connectBlocks(Entry, VecPreheader);
   VPIRBasicBlock *ScalarHeader =
       VPIRBasicBlock::fromBasicBlock(TheLoop->getHeader());
-  auto Plan = std::make_unique<VPlan>(Entry, VecPreheader, ScalarHeader);
+  auto Plan = std::make_unique<VPlan>(Entry, ScalarHeader);
 
   // Create SCEV and VPValue for the trip count.
   // We use the symbolic max backedge-taken-count, which works also when
@@ -981,15 +995,21 @@ void VPlan::execute(VPTransformState *State) {
   State->CFG.DTU.applyUpdates(
       {{DominatorTree::Delete, VectorPreHeader, State->CFG.ExitBB}});
 
-  // Replace regular VPBB's for the middle and scalar preheader blocks with
-  // VPIRBasicBlocks wrapping their IR blocks. The IR blocks are created during
-  // skeleton creation, so we can only create the VPIRBasicBlocks now during
-  // VPlan execution rather than earlier during VPlan construction.
+  // Replace regular VPBB's for the vector preheader, middle and scalar
+  // preheader blocks with VPIRBasicBlocks wrapping their IR blocks. The IR
+  // blocks are created during skeleton creation, so we can only create the
+  // VPIRBasicBlocks now during VPlan execution rather than earlier during VPlan
+  // construction.
   BasicBlock *MiddleBB = State->CFG.ExitBB;
-  VPBasicBlock *MiddleVPBB = getMiddleBlock();
   BasicBlock *ScalarPh = MiddleBB->getSingleSuccessor();
+  replaceVPBBWithIRVPBB(getVectorPreheader(), VectorPreHeader);
+  replaceVPBBWithIRVPBB(getMiddleBlock(), MiddleBB);
   replaceVPBBWithIRVPBB(getScalarPreheader(), ScalarPh);
-  replaceVPBBWithIRVPBB(MiddleVPBB, MiddleBB);
+
+  LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << State->VF
+                    << ", UF=" << getUF() << '\n');
+  setName("Final VPlan");
+  LLVM_DEBUG(dump());
 
   LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << State->VF
                     << ", UF=" << getUF() << '\n');
@@ -1062,15 +1082,27 @@ void VPlan::execute(VPTransformState *State) {
   }
 
   State->CFG.DTU.flush();
-  assert(State->CFG.DTU.getDomTree().verify(
-             DominatorTree::VerificationLevel::Fast) &&
-         "DT not preserved correctly");
 }
 
 InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
   // For now only return the cost of the vector loop region, ignoring any other
   // blocks, like the preheader or middle blocks.
   return getVectorLoopRegion()->cost(VF, Ctx);
+}
+
+VPRegionBlock *VPlan::getVectorLoopRegion() {
+  // TODO: Cache if possible.
+  for (VPBlockBase *B : vp_depth_first_shallow(getEntry()))
+    if (auto *R = dyn_cast<VPRegionBlock>(B))
+      return R;
+  return nullptr;
+}
+
+const VPRegionBlock *VPlan::getVectorLoopRegion() const {
+  for (const VPBlockBase *B : vp_depth_first_shallow(getEntry()))
+    if (auto *R = dyn_cast<VPRegionBlock>(B))
+      return R;
+  return nullptr;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1116,11 +1148,6 @@ void VPlan::print(raw_ostream &O) const {
   O << "VPlan '" << getName() << "' {";
 
   printLiveIns(O);
-
-  if (!getPreheader()->empty()) {
-    O << "\n";
-    getPreheader()->print(O, "", SlotTracker);
-  }
 
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<const VPBlockBase *>>
       RPOT(getEntry());
@@ -1205,7 +1232,6 @@ static void remapOperands(VPBlockBase *Entry, VPBlockBase *NewEntry,
 
 VPlan *VPlan::duplicate() {
   // Clone blocks.
-  VPBasicBlock *NewPreheader = Preheader->clone();
   const auto &[NewEntry, __] = cloneFrom(Entry);
 
   BasicBlock *ScalarHeaderIRBB = getScalarHeader()->getIRBasicBlock();
@@ -1215,8 +1241,7 @@ VPlan *VPlan::duplicate() {
         return VPIRBB && VPIRBB->getIRBasicBlock() == ScalarHeaderIRBB;
       }));
   // Create VPlan, clone live-ins and remap operands in the cloned blocks.
-  auto *NewPlan =
-      new VPlan(NewPreheader, cast<VPBasicBlock>(NewEntry), NewScalarHeader);
+  auto *NewPlan = new VPlan(cast<VPBasicBlock>(NewEntry), NewScalarHeader);
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
   for (VPValue *OldLiveIn : VPLiveInsToFree) {
     Old2NewVPValues[OldLiveIn] =
@@ -1236,7 +1261,6 @@ VPlan *VPlan::duplicate() {
   // else NewTripCount will be created and inserted into Old2NewVPValues when
   // TripCount is cloned. In any case NewPlan->TripCount is updated below.
 
-  remapOperands(Preheader, NewPreheader, Old2NewVPValues);
   remapOperands(Entry, NewEntry, Old2NewVPValues);
 
   // Initialize remaining fields of cloned VPlan.
@@ -1287,8 +1311,6 @@ void VPlanPrinter::dump() {
   OS << "node [shape=rect, fontname=Courier, fontsize=30]\n";
   OS << "edge [fontname=Courier, fontsize=30]\n";
   OS << "compound=true\n";
-
-  dumpBlock(Plan.getPreheader());
 
   for (const VPBlockBase *Block : vp_depth_first_shallow(Plan.getEntry()))
     dumpBlock(Block);
@@ -1550,7 +1572,6 @@ void VPSlotTracker::assignNames(const VPlan &Plan) {
     assignName(Plan.BackedgeTakenCount);
   for (VPValue *LI : Plan.VPLiveInsToFree)
     assignName(LI);
-  assignNames(Plan.getPreheader());
 
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<const VPBlockBase *>>
       RPOT(VPBlockDeepTraversalWrapper<const VPBlockBase *>(Plan.getEntry()));

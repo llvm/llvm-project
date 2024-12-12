@@ -19,7 +19,7 @@ define void @test_fvdot_lane_za32_vg1x2_nxv8f16(i32 %slice, <vscale x 8 x half> 
 
 ; == BFVDOT ==
 
-define void @test_fvdot_lane_za32_vg1x2_nxv8bf16(i32 %slice, <vscale x 8 x bfloat> %zn1, <vscale x 8 x bfloat> %zn2, <vscale x 8 x bfloat> %zm) {
+define void @test_fvdot_lane_za32_vg1x2_nxv8bf16(i32 %slice, <vscale x 8 x bfloat> %zn1, <vscale x 8 x bfloat> %zn2, <vscale x 8 x bfloat> %zm) #1 {
 ; CHECK-LABEL: test_fvdot_lane_za32_vg1x2_nxv8bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, w0
@@ -35,7 +35,7 @@ define void @test_fvdot_lane_za32_vg1x2_nxv8bf16(i32 %slice, <vscale x 8 x bfloa
 
 ; == SVDOT ==
 
-define void @test_svdot_lane_za32_vg1x2_nxv8i16(i32 %slice, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zm) {
+define void @test_svdot_lane_za32_vg1x2_nxv8i16(i32 %slice, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zm) #1 {
 ; CHECK-LABEL: test_svdot_lane_za32_vg1x2_nxv8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, w0
@@ -48,7 +48,7 @@ define void @test_svdot_lane_za32_vg1x2_nxv8i16(i32 %slice, <vscale x 8 x i16> %
   ret void
 }
 
-define void @test_svdot_lane_za32_vg1x4_nxv16i8(i32 %slice, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3, <vscale x 16 x i8> %zn4, <vscale x 16 x i8> %zm) {
+define void @test_svdot_lane_za32_vg1x4_nxv16i8(i32 %slice, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3, <vscale x 16 x i8> %zn4, <vscale x 16 x i8> %zm) #1 {
 ; CHECK-LABEL: test_svdot_lane_za32_vg1x4_nxv16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, w0
@@ -61,7 +61,7 @@ define void @test_svdot_lane_za32_vg1x4_nxv16i8(i32 %slice, <vscale x 16 x i8> %
   ret void
 }
 
-define void @test_svdot_lane_za64_vg1x4_nxv8i16(i32 %slice, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3, <vscale x 8 x i16> %zn4, <vscale x 8 x i16> %zm) {
+define void @test_svdot_lane_za64_vg1x4_nxv8i16(i32 %slice, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3, <vscale x 8 x i16> %zn4, <vscale x 8 x i16> %zm) #1 {
 ; CHECK-LABEL: test_svdot_lane_za64_vg1x4_nxv8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, w0
@@ -151,7 +151,7 @@ entry:
 
 ; == UVDOT ==
 
-define void @test_uvdot_lane_za32_vg1x2_nxv8i16(i32 %slice, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zm) {
+define void @test_uvdot_lane_za32_vg1x2_nxv8i16(i32 %slice, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zm) #1 {
 ; CHECK-LABEL: test_uvdot_lane_za32_vg1x2_nxv8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, w0
@@ -164,7 +164,7 @@ define void @test_uvdot_lane_za32_vg1x2_nxv8i16(i32 %slice, <vscale x 8 x i16> %
   ret void
 }
 
-define void @test_uvdot_lane_za32_vg1x4_nxv16i8(i32 %slice, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3, <vscale x 16 x i8> %zn4, <vscale x 16 x i8> %zm) {
+define void @test_uvdot_lane_za32_vg1x4_nxv16i8(i32 %slice, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3, <vscale x 16 x i8> %zn4, <vscale x 16 x i8> %zm) #1 {
 ; CHECK-LABEL: test_uvdot_lane_za32_vg1x4_nxv16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, w0
@@ -177,7 +177,7 @@ define void @test_uvdot_lane_za32_vg1x4_nxv16i8(i32 %slice, <vscale x 16 x i8> %
   ret void
 }
 
-define void @test_uvdot_lane_za64_vg1x4_nxv8i16(i32 %slice, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3, <vscale x 8 x i16> %zn4, <vscale x 8 x i16> %zm) {
+define void @test_uvdot_lane_za64_vg1x4_nxv8i16(i32 %slice, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3, <vscale x 8 x i16> %zn4, <vscale x 8 x i16> %zm) #1 {
 ; CHECK-LABEL: test_uvdot_lane_za64_vg1x4_nxv8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, w0
@@ -267,7 +267,7 @@ entry:
 
 ; == SUVDOT ==
 
-define void @test_suvdot_lane_za32_vg1x4_nxv16i8(i32 %slice, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3, <vscale x 16 x i8> %zn4, <vscale x 16 x i8> %zm) {
+define void @test_suvdot_lane_za32_vg1x4_nxv16i8(i32 %slice, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3, <vscale x 16 x i8> %zn4, <vscale x 16 x i8> %zm) #1 {
 ; CHECK-LABEL: test_suvdot_lane_za32_vg1x4_nxv16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, w0
@@ -332,7 +332,7 @@ entry:
 
 ; == USVDOT ==
 
-define void @test_usvdot_lane_za32_vg1x4_nxv16i8(i32 %slice, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3, <vscale x 16 x i8> %zn4, <vscale x 16 x i8> %zm) {
+define void @test_usvdot_lane_za32_vg1x4_nxv16i8(i32 %slice, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3, <vscale x 16 x i8> %zn4, <vscale x 16 x i8> %zm) #1 {
 ; CHECK-LABEL: test_usvdot_lane_za32_vg1x4_nxv16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, w0

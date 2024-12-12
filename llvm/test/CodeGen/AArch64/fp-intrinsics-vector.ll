@@ -702,7 +702,6 @@ define <1 x i64> @fptoui_v1i64_v1f64(<1 x double> %x) #0 {
 define <1 x double> @sitofp_v1f64_v1i32(<1 x i32> %x) #0 {
 ; CHECK-LABEL: sitofp_v1f64_v1i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    scvtf d0, w8
 ; CHECK-NEXT:    ret
@@ -713,7 +712,6 @@ define <1 x double> @sitofp_v1f64_v1i32(<1 x i32> %x) #0 {
 define <1 x double> @uitofp_v1f64_v1i32(<1 x i32> %x) #0 {
 ; CHECK-LABEL: uitofp_v1f64_v1i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    ucvtf d0, w8
 ; CHECK-NEXT:    ret
@@ -724,7 +722,6 @@ define <1 x double> @uitofp_v1f64_v1i32(<1 x i32> %x) #0 {
 define <1 x double> @sitofp_v1f64_v1i64(<1 x i64> %x) #0 {
 ; CHECK-LABEL: sitofp_v1f64_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    scvtf d0, x8
 ; CHECK-NEXT:    ret
@@ -735,7 +732,6 @@ define <1 x double> @sitofp_v1f64_v1i64(<1 x i64> %x) #0 {
 define <1 x double> @uitofp_v1f64_v1i64(<1 x i64> %x) #0 {
 ; CHECK-LABEL: uitofp_v1f64_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    ucvtf d0, x8
 ; CHECK-NEXT:    ret
