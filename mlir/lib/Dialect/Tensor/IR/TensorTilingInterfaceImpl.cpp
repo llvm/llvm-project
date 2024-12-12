@@ -825,7 +825,7 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
     // Note that there are many ways to order this indexing math to compute
     // newLength, but we want to make sure that the final affine.min ops in the
     // sequence are bounding the index to as small a value as possible. If
-    // ValueBoundsOpInterface is used, this calcuation will get upper bounds
+    // ValueBoundsOpInterface is used, this calcualation will get upper bounds
     // from the affine.min ops, so we want to use the smallest known value to
     // set the bound at the end of the computation sequence. In this case, the
     // index will be upper bounded by length - newLow.
