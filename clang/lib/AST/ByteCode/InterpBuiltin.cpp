@@ -1950,7 +1950,8 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
 
   size_t MinBufferSize = std::min(BufferA.byteSize().getQuantity(),
                                   BufferB.byteSize().getQuantity());
-  size_t CmpSize = std::min(MinBufferSize, Size.getZExtValue());
+  size_t CmpSize =
+      std::min(MinBufferSize, static_cast<size_t>(Size.getZExtValue()));
   int Result = std::memcmp(BufferA.Data.get(), BufferB.Data.get(), CmpSize);
   if (Result == 0)
     pushInteger(S, 0, Call->getType());
