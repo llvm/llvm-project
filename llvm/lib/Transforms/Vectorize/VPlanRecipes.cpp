@@ -2235,7 +2235,7 @@ VPExtendedReductionRecipe::computeCost(ElementCount VF,
 InstructionCost VPMulAccRecipe::computeCost(ElementCount VF,
                                             VPCostContext &Ctx) const {
   Type *RedTy = Ctx.Types.inferScalarType(this);
-  VectorType *SrcVecTy =
+  auto *SrcVecTy =
       cast<VectorType>(ToVectorTy(Ctx.Types.inferScalarType(getVecOp0()), VF));
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 

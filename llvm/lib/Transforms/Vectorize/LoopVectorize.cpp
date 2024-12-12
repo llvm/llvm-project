@@ -9349,8 +9349,8 @@ static VPExtendedReductionRecipe *tryToMatchAndCreateExtendedReduction(
                                              Type *SrcTy) -> bool {
     return LoopVectorizationPlanner::getDecisionAndClampRange(
         [&](ElementCount VF) {
-          VectorType *SrcVecTy = cast<VectorType>(ToVectorTy(SrcTy, VF));
-          VectorType *VectorTy = cast<VectorType>(ToVectorTy(RedTy, VF));
+          auto *SrcVecTy = cast<VectorType>(ToVectorTy(SrcTy, VF));
+          auto *VectorTy = cast<VectorType>(ToVectorTy(RedTy, VF));
           TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
           InstructionCost ExtRedCost = Ctx.TTI.getExtendedReductionCost(
               Opcode, isZExt, RedTy, SrcVecTy, RdxDesc.getFastMathFlags(),
@@ -9412,8 +9412,8 @@ static VPMulAccRecipe *tryToMatchAndCreateMulAcc(
           TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
           Type *SrcTy =
               Ext0 ? Ctx.Types.inferScalarType(Ext0->getOperand(0)) : RedTy;
-          VectorType *SrcVecTy = cast<VectorType>(ToVectorTy(SrcTy, VF));
-          VectorType *VectorTy = cast<VectorType>(ToVectorTy(RedTy, VF));
+          auto *SrcVecTy = cast<VectorType>(ToVectorTy(SrcTy, VF));
+          auto *VectorTy = cast<VectorType>(ToVectorTy(RedTy, VF));
           InstructionCost MulAccCost =
               Ctx.TTI.getMulAccReductionCost(isZExt, RedTy, SrcVecTy, CostKind);
           InstructionCost MulCost = Mul->computeCost(VF, Ctx);
@@ -9438,16 +9438,17 @@ static VPMulAccRecipe *tryToMatchAndCreateMulAcc(
 
   // Try to match reduce.add(mul(...))
   if (match(VecOp, m_Mul(m_VPValue(A), m_VPValue(B)))) {
-    VPWidenCastRecipe *RecipeA =
+    auto *RecipeA =
         dyn_cast_if_present<VPWidenCastRecipe>(A->getDefiningRecipe());
-    VPWidenCastRecipe *RecipeB =
+    auto *RecipeB =
         dyn_cast_if_present<VPWidenCastRecipe>(B->getDefiningRecipe());
-    VPWidenRecipe *Mul = cast<VPWidenRecipe>(VecOp->getDefiningRecipe());
+    auto *Mul = cast<VPWidenRecipe>(VecOp->getDefiningRecipe());
 
     // Matched reduce.add(mul(ext, ext))
-    if (RecipeA && RecipeB && match(RecipeA, m_ZExtOrSExt(m_VPValue())) &&
-        match(RecipeB, m_ZExtOrSExt(m_VPValue())) &&
-        (RecipeA->getOpcode() == RecipeB->getOpcode() || A == B)) {
+    if (RecipeA && RecipeB &&
+        (RecipeA->getOpcode() == RecipeB->getOpcode() || A == B) &&
+        match(RecipeA, m_ZExtOrSExt(m_VPValue())) &&
+        match(RecipeB, m_ZExtOrSExt(m_VPValue()))) {
 
       // Only create MulAccRecipe if the cost is valid.
       if (!IsMulAccValidAndClampRange(RecipeA->getOpcode() ==
@@ -9471,13 +9472,11 @@ static VPMulAccRecipe *tryToMatchAndCreateMulAcc(
     // which can be transform to reduce.add(zext(mul(sext(A), sext(B)))).
   } else if (match(VecOp, m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),
                                              m_ZExtOrSExt(m_VPValue()))))) {
-    VPWidenCastRecipe *Ext =
-        cast<VPWidenCastRecipe>(VecOp->getDefiningRecipe());
-    VPWidenRecipe *Mul =
-        cast<VPWidenRecipe>(Ext->getOperand(0)->getDefiningRecipe());
-    VPWidenCastRecipe *Ext0 =
+    auto *Ext = cast<VPWidenCastRecipe>(VecOp->getDefiningRecipe());
+    auto *Mul = cast<VPWidenRecipe>(Ext->getOperand(0)->getDefiningRecipe());
+    auto *Ext0 =
         cast<VPWidenCastRecipe>(Mul->getOperand(0)->getDefiningRecipe());
-    VPWidenCastRecipe *Ext1 =
+    auto *Ext1 =
         cast<VPWidenCastRecipe>(Mul->getOperand(1)->getDefiningRecipe());
     if ((Ext->getOpcode() == Ext0->getOpcode() || Ext0 == Ext1) &&
         Ext0->getOpcode() == Ext1->getOpcode()) {
