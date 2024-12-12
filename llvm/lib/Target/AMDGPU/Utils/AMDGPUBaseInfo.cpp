@@ -1332,22 +1332,33 @@ std::pair<unsigned, unsigned>
 getIntegerPairAttribute(const Function &F, StringRef Name,
                         std::pair<unsigned, unsigned> Default,
                         bool OnlyFirstRequired) {
+  if (auto Attr = getIntegerPairAttribute(F, Name, OnlyFirstRequired))
+    return {Attr->first, Attr->second ? *(Attr->second) : Default.second};
+  return Default;
+}
+
+std::optional<std::pair<unsigned, std::optional<unsigned>>>
+getIntegerPairAttribute(const Function &F, StringRef Name,
+                        bool OnlyFirstRequired) {
   Attribute A = F.getFnAttribute(Name);
   if (!A.isStringAttribute())
-    return Default;
+    return std::nullopt;
 
   LLVMContext &Ctx = F.getContext();
-  std::pair<unsigned, unsigned> Ints = Default;
+  std::pair<unsigned, std::optional<unsigned>> Ints;
   std::pair<StringRef, StringRef> Strs = A.getValueAsString().split(',');
   if (Strs.first.trim().getAsInteger(0, Ints.first)) {
     Ctx.emitError("can't parse first integer attribute " + Name);
-    return Default;
+    return std::nullopt;
   }
-  if (Strs.second.trim().getAsInteger(0, Ints.second)) {
+  unsigned Second = 0;
+  if (Strs.second.trim().getAsInteger(0, Second)) {
     if (!OnlyFirstRequired || !Strs.second.trim().empty()) {
       Ctx.emitError("can't parse second integer attribute " + Name);
-      return Default;
+      return std::nullopt;
     }
+  } else {
+    Ints.second = Second;
   }
 
   return Ints;
