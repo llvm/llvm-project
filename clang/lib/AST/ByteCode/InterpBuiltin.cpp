@@ -1830,6 +1830,7 @@ static bool interp__builtin_elementwise_popcount(InterpState &S, CodePtr OpPC,
 
   return true;
 }
+
 static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
                                    const Function *Func, const CallExpr *Call) {
@@ -1897,6 +1898,68 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     return false;
 
   S.Stk.push<Pointer>(DestPtr);
+  return true;
+}
+
+/// Determine if T is a character type for which we guarantee that
+/// sizeof(T) == 1.
+static bool isOneByteCharacterType(QualType T) {
+  return T->isCharType() || T->isChar8Type();
+}
+
+static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
+                                   const InterpFrame *Frame,
+                                   const Function *Func, const CallExpr *Call) {
+  assert(Call->getNumArgs() == 3);
+  unsigned ID = Func->getBuiltinID();
+  const Pointer &PtrA = getParam<Pointer>(Frame, 0);
+  const Pointer &PtrB = getParam<Pointer>(Frame, 1);
+  const APSInt &Size =
+      peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
+
+  if (ID == Builtin::BImemcmp)
+    diagnoseNonConstexprBuiltin(S, OpPC, ID);
+
+  if (Size.isZero()) {
+    pushInteger(S, 0, Call->getType());
+    return true;
+  }
+
+  // FIXME: This is an arbitrary limitation the current constant interpreter
+  // had. We could remove this.
+  if (!isOneByteCharacterType(PtrA.getType()) ||
+      !isOneByteCharacterType(PtrB.getType())) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_memcmp_unsupported)
+        << ("'" + S.getASTContext().BuiltinInfo.getName(ID) + "'").str()
+        << PtrA.getType() << PtrB.getType();
+    return false;
+  }
+
+  if (PtrA.isDummy() || PtrB.isDummy())
+    return false;
+
+  // Now, read both pointers to a buffer and compare those.
+  BitcastBuffer BufferA(
+      Bits(S.getASTContext().getTypeSize(PtrA.getFieldDesc()->getType())));
+  readPointerToBuffer(S.getContext(), PtrA, BufferA, false);
+
+  BitcastBuffer BufferB(
+      Bits(S.getASTContext().getTypeSize(PtrB.getFieldDesc()->getType())));
+  readPointerToBuffer(S.getContext(), PtrB, BufferB, false);
+
+  size_t MinBufferSize = std::min(BufferA.byteSize().getQuantity(),
+                                  BufferB.byteSize().getQuantity());
+  size_t CmpSize =
+      std::min(MinBufferSize, static_cast<size_t>(Size.getZExtValue()));
+  int Result = std::memcmp(BufferA.Data.get(), BufferB.Data.get(), CmpSize);
+  if (Result == 0)
+    pushInteger(S, 0, Call->getType());
+  else if (Result < 0)
+    pushInteger(S, -1, Call->getType());
+  else
+    pushInteger(S, 1, Call->getType());
+
   return true;
 }
 
@@ -2370,6 +2433,12 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_memmove:
   case Builtin::BImemmove:
     if (!interp__builtin_memcpy(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_memcmp:
+  case Builtin::BImemcmp:
+    if (!interp__builtin_memcmp(S, OpPC, Frame, F, Call))
       return false;
     break;
 
