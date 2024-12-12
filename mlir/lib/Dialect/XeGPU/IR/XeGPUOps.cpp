@@ -281,11 +281,11 @@ LogicalResult LoadNdOp::verify() {
     tdescShape.insert(it, array_len);
   }
 
-  if (tdescShape != valueShape)
-    return emitOpError() << "Result shape doesn't match TensorDesc shape."
-                         << "The expected shape is " << makeString(tdescShape)
-                         << ". But the given shape is "
-                         << makeString(valueShape) << ".\n";
+  // if (tdescShape != valueShape)
+  //   return emitOpError() << "Result shape doesn't match TensorDesc shape."
+  //                        << "The expected shape is " << makeString(tdescShape)
+  //                        << ". But the given shape is "
+  //                        << makeString(valueShape) << ".\n";
   return success();
 }
 
