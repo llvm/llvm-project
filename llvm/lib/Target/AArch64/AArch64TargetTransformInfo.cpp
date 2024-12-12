@@ -905,6 +905,23 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::experimental_vector_match: {
+    auto *NeedleTy = cast<FixedVectorType>(ICA.getArgTypes()[1]);
+    EVT SearchVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
+    unsigned SearchSize = NeedleTy->getNumElements();
+    if (!getTLI()->shouldExpandVectorMatch(SearchVT, SearchSize)) {
+      // Base cost for MATCH instructions. At least on the Neoverse V2 and
+      // Neoverse V3, these are cheap operations with the same latency as a
+      // vector ADD. In most cases, however, we also need to do an extra DUP.
+      // For fixed-length vectors we currently need an extra five--six
+      // instructions besides the MATCH.
+      InstructionCost Cost = 4;
+      if (isa<FixedVectorType>(RetTy))
+        Cost += 10;
+      return Cost;
+    }
+    break;
+  }
   default:
     break;
   }

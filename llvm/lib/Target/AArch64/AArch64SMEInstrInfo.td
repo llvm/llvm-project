@@ -954,10 +954,10 @@ defm F2CVTL_2ZZ_BtoH   : sme2p1_fp8_cvt_vector_vg2_single<"f2cvtl",  0b10, 0b1>;
 defm BF2CVT_2ZZ_BtoH   : sme2p1_fp8_cvt_vector_vg2_single<"bf2cvt",  0b11, 0b0>;
 defm BF2CVTL_2ZZ_BtoH  : sme2p1_fp8_cvt_vector_vg2_single<"bf2cvtl", 0b11, 0b1>;
 
-defm FCVT_Z2Z_HtoB  : sme2_fp8_cvt_vg2_single<"fcvt",   0b0>;
-defm BFCVT_Z2Z_HtoB : sme2_fp8_cvt_vg2_single<"bfcvt",  0b1>;
-defm FCVT_Z4Z_StoB  : sme2_fp8_cvt_vg4_single<"fcvt",   0b0>;
-defm FCVTN_Z4Z_StoB : sme2_fp8_cvt_vg4_single<"fcvtn",  0b1>;
+defm FCVT_Z2Z_HtoB  : sme2_fp8_cvt_vg2_single<"fcvt",  0b0, nxv8f16,  int_aarch64_sve_fp8_cvt_x2>;
+defm BFCVT_Z2Z_HtoB : sme2_fp8_cvt_vg2_single<"bfcvt", 0b1, nxv8bf16, int_aarch64_sve_fp8_cvt_x2>;
+defm FCVT_Z4Z_StoB  : sme2_fp8_cvt_vg4_single<"fcvt",  0b0, int_aarch64_sve_fp8_cvt_x4>;
+defm FCVTN_Z4Z_StoB : sme2_fp8_cvt_vg4_single<"fcvtn", 0b1, int_aarch64_sve_fp8_cvtn_x4>;
 
 defm FSCALE_2ZZ   : sme2_fp_sve_destructive_vector_vg2_single<"fscale", 0b0011000>;
 defm FSCALE_4ZZ   : sme2_fp_sve_destructive_vector_vg4_single<"fscale", 0b0011000>;

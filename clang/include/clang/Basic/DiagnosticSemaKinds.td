@@ -10237,10 +10237,10 @@ def warn_dangling_pointer_assignment : Warning<
    InGroup<DanglingAssignment>;
 def warn_dangling_reference_captured : Warning<
    "object whose reference is captured by '%0' will be destroyed at the end of "
-   "the full-expression">, InGroup<DanglingCapture>, DefaultIgnore;
+   "the full-expression">, InGroup<DanglingCapture>;
 def warn_dangling_reference_captured_by_unknown : Warning<
    "object whose reference is captured will be destroyed at the end of "
-   "the full-expression">, InGroup<DanglingCapture>, DefaultIgnore;
+   "the full-expression">, InGroup<DanglingCapture>;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.

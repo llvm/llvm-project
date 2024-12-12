@@ -162,7 +162,7 @@ private:
 
   /// Clone an attribute in reference format.
   void cloneDieOffsetReferenceAttribute(
-      DIE &Die, const DWARFUnit &U, const DWARFDie &InputDIE,
+      DIE &Die, DWARFUnit &U, const DWARFDie &InputDIE,
       const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec, uint64_t Ref);
 
   /// Clone an attribute in block format.

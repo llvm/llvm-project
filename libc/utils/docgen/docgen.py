@@ -10,8 +10,9 @@
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from typing import Dict
-import sys
 import json
+import os
+import sys
 
 from header import Header
 
@@ -51,8 +52,12 @@ def check_api(header: Header, api: Dict):
     :param api: docgen json file contents parsed into a dict
     """
     errors = []
-    cdef = "c-definition"
-    pdef = "posix-definition"
+    # We require entries to have at least one of these.
+    possible_keys = [
+        "c-definition",
+        "in-latest-posix",
+        "removed-in-posix-2008",
+    ]
 
     # Validate macros
     if "macros" in api:
@@ -65,8 +70,8 @@ def check_api(header: Header, api: Dict):
         macros = api["macros"]
 
         for name, obj in macros.items():
-            if not (cdef in obj or pdef in obj):
-                err = f'error: Macro {name} does not contain at least one required property: "{cdef}" or "{pdef}"'
+            if not any(k in obj for k in possible_keys):
+                err = f"error: Macro {name} does not contain at least one required property: {possible_keys}"
                 errors.append(err)
 
     # Validate functions
@@ -79,8 +84,8 @@ def check_api(header: Header, api: Dict):
 
         fns = api["functions"]
         for name, obj in fns.items():
-            if not (cdef in obj or pdef in obj):
-                err = f'error: function {name} does not contain at least one required property: "{cdef}" or "{pdef}"'
+            if not any(k in obj for k in possible_keys):
+                err = f"error: function {name} does not contain at least one required property: {possible_keys}"
                 errors.append(err)
 
     if errors:
@@ -103,7 +108,7 @@ def print_tbl_dir(name):
   * - {name}
     - Implemented
     - C23 Standard Section
-    - POSIX.1-2024 Standard Section"""
+    - POSIX Docs"""
     )
 
 
@@ -127,8 +132,14 @@ def print_functions_rst(header: Header, functions: Dict):
         else:
             print("    -")
 
-        if "posix-definition" in functions[name]:
-            print(f'    - {functions[name]["posix-definition"]}')
+        if "in-latest-posix" in functions[name]:
+            print(
+                f"    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/functions/{name}.html>`__"
+            )
+        elif "removed-in-posix-2008" in functions[name]:
+            print(
+                f"    - `removed in POSIX.1-2008 <https://pubs.opengroup.org/onlinepubs/007904875/functions/{name}.html>`__"
+            )
         else:
             print("    -")
 
@@ -153,15 +164,20 @@ def print_macros_rst(header: Header, macros: Dict):
         else:
             print("    -")
 
-        if "posix-definition" in macros[name]:
-            print(f'    - {macros[name]["posix-definition"]}')
+        if "in-latest-posix" in macros[name]:
+            print(
+                f"    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/{header.name}.html>`__"
+            )
         else:
             print("    -")
     print()
 
 
 def print_impl_status_rst(header: Header, api: Dict):
-    print(".. include:: ../check.rst\n")
+    if os.sep in header.name:
+        print(".. include:: ../../check.rst\n")
+    else:
+        print(".. include:: ../check.rst\n")
 
     print("=" * len(header.name))
     print(header.name)
@@ -176,10 +192,22 @@ def print_impl_status_rst(header: Header, api: Dict):
         print_functions_rst(header, api["functions"])
 
 
+# This code implicitly relies on docgen.py being in the same dir as the json
+# files and is likely to need to be fixed when re-integrating docgen into
+# hdrgen.
+def get_choices() -> list:
+    choices = []
+    for path in Path(__file__).parent.rglob("*.json"):
+        fname = path.with_suffix(".h").name
+        if path.parent != Path(__file__).parent:
+            fname = path.parent.name + os.sep + fname
+        choices.append(fname)
+    return choices
+
+
 def parse_args() -> Namespace:
     parser = ArgumentParser()
-    choices = [p.with_suffix(".h").name for p in Path(__file__).parent.glob("*.json")]
-    parser.add_argument("header_name", choices=choices)
+    parser.add_argument("header_name", choices=get_choices())
     return parser.parse_args()
 
 

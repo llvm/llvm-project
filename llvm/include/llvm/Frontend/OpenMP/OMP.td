@@ -177,6 +177,7 @@ def OMPC_Exclusive : Clause<"exclusive"> {
 }
 def OMPC_Fail : Clause<"fail"> {
   let clangClass = "OMPFailClause";
+  let flangClass = "OmpFailClause";
 }
 def OMPC_Filter : Clause<"filter"> {
   let clangClass = "OMPFilterClause";
@@ -463,7 +464,7 @@ def OMPC_Sizes: Clause<"sizes"> {
 }
 def OMPC_TaskReduction : Clause<"task_reduction"> {
   let clangClass = "OMPTaskReductionClause";
-  let flangClass = "OmpReductionClause";
+  let flangClass = "OmpTaskReductionClause";
 }
 def OMPC_ThreadLimit : Clause<"thread_limit"> {
   let clangClass = "OMPThreadLimitClause";
