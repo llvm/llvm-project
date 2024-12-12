@@ -10,16 +10,19 @@
 #if defined(LIBC_TYPES_HAS_CFLOAT128)
 
 #include "src/__support/CPP/bit.h"
+#include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/common.h"
 #include "src/__support/complex_type.h"
-#include "src/__support/FPUtil/BasicOperations.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(cfloat128, cprojf128, (cfloat128 x)) {
   Complex<float128> x_c = cpp::bit_cast<Complex<float128>>(x);
-  if(fputil::FPBits<float128>(x_c.real).is_inf() || fputil::FPBits<float128>(x_c.imag).is_inf()) {
-    return cpp::bit_cast<cfloat128>(Complex<float128>{(fputil::FPBits<float128>::inf(Sign::POS).get_val()), (float128)(x_c.imag > 0 ? 0.0 : -0.0)});
+  if (fputil::FPBits<float128>(x_c.real).is_inf() ||
+      fputil::FPBits<float128>(x_c.imag).is_inf()) {
+    return cpp::bit_cast<cfloat128>(
+        Complex<float128>{(fputil::FPBits<float128>::inf(Sign::POS).get_val()),
+                          (float128)(x_c.imag > 0 ? 0.0 : -0.0)});
   } else {
     return x;
   }

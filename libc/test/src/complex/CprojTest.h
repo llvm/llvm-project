@@ -30,8 +30,8 @@ public:
     EXPECT_CFP_EQ(func(CFPT(neg_inf - 8923.124i)), CFPT(inf - 0.0i));
     EXPECT_CFP_EQ(func(CFPT(9024.2442 + inf * 1.0i)), CFPT(inf + 0.0i));
     EXPECT_CFP_EQ(func(CFPT(9024.2442 + neg_inf * 1.0i)), CFPT(inf - 0.0i));
-    EXPECT_CFP_EQ(func(CFPT(inf + neg_inf * 1.0i)), CFPT(inf - 0.0i)); 
-    EXPECT_CFP_EQ(func(CFPT(inf + inf * 1.0i)), CFPT(inf + 0.0i)); 
+    EXPECT_CFP_EQ(func(CFPT(inf + neg_inf * 1.0i)), CFPT(inf - 0.0i));
+    EXPECT_CFP_EQ(func(CFPT(inf + inf * 1.0i)), CFPT(inf + 0.0i));
     EXPECT_CFP_EQ(func(CFPT(neg_inf + neg_inf * 1.0i)), CFPT(inf - 0.0i));
     EXPECT_CFP_EQ(func(CFPT(neg_inf + inf * 1.0i)), CFPT(inf + 0.0i));
     EXPECT_CFP_EQ(func(CFPT(neg_inf + inf * 1.0i)), CFPT(inf + 0.0i));
@@ -63,9 +63,9 @@ public:
     EXPECT_CFP_EQ(func(CFPT(7824.152 + neg_sNaN * 1.0i)),
                   CFPT(7824.152 + neg_sNaN * 1.0i));
     // EXPECT_CFP_EQ(func(CFPT(9024.2442 + inf * 1.0i)),
-                //   CFPT(9024.2442 + inf * 1.0i));
+    //   CFPT(9024.2442 + inf * 1.0i));
     // EXPECT_CFP_EQ(func(CFPT(8923.124 + neg_inf * 1.0i)),
-                //   CFPT(8923.124 + neg_inf * 1.0i));
+    //   CFPT(8923.124 + neg_inf * 1.0i));
     EXPECT_CFP_EQ(func(CFPT(782.124 + min_normal * 1.0i)),
                   CFPT(782.124 + min_normal * 1.0i));
     EXPECT_CFP_EQ(func(CFPT(2141.2352 + max_normal * 1.0i)),
@@ -125,9 +125,9 @@ public:
   }
 };
 
-#define LIST_CPROJ_TESTS(U, T, func)                                            \
-  using LlvmLibcCprojTest = CprojTest<U, T>;                                    \
-  TEST_F(LlvmLibcCprojTest, SpecialNumbers) { testSpecialNumbers(&func); }      \
+#define LIST_CPROJ_TESTS(U, T, func)                                           \
+  using LlvmLibcCprojTest = CprojTest<U, T>;                                   \
+  TEST_F(LlvmLibcCprojTest, SpecialNumbers) { testSpecialNumbers(&func); }     \
   TEST_F(LlvmLibcCprojTest, RoundedNumbers) { testRoundedNumbers(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_COMPLEX_CPROJTEST_H
