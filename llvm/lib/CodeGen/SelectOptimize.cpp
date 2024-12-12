@@ -806,7 +806,12 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
         break;
       }
 
-      for (unsigned Idx = 0; Idx < 2; Idx++) {
+      // Iterate through operands and find dependant on recognised sign
+      // extending auxiliary select-like instructions. The operand index does
+      // not matter for Add and Or. However, for Sub, we can only safely
+      // transform when the operand is second.
+      unsigned Idx = BO->getOpcode() == Instruction::Sub ? 1 : 0;
+      for (; Idx < 2; Idx++) {
         auto *Op = BO->getOperand(Idx);
         auto It = SelectInfo.find(Op);
         if (It != SelectInfo.end() && It->second.IsAuxiliary) {

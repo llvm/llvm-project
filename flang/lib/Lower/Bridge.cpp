@@ -2330,7 +2330,7 @@ private:
     assert(!incrementLoopNestInfo.empty() && "empty loop nest");
     mlir::Location loc = toLocation();
     mlir::arith::IntegerOverflowFlags flags{};
-    if (getLoweringOptions().getNSWOnLoopVarInc())
+    if (!getLoweringOptions().getIntegerWrapAround())
       flags = bitEnumSet(flags, mlir::arith::IntegerOverflowFlags::nsw);
     auto iofAttr = mlir::arith::IntegerOverflowFlagsAttr::get(
         builder->getContext(), flags);
@@ -3037,8 +3037,10 @@ private:
           fir::getBase(genExprValue(*Fortran::semantics::GetExpr(bounds->upper),
                                     stmtCtx))));
       if (bounds->step)
-        steps.push_back(fir::getBase(
-            genExprValue(*Fortran::semantics::GetExpr(bounds->step), stmtCtx)));
+        steps.push_back(builder->createConvert(
+            crtLoc, idxTy,
+            fir::getBase(genExprValue(
+                *Fortran::semantics::GetExpr(bounds->step), stmtCtx))));
       else // If `step` is not present, assume it is `1`.
         steps.push_back(builder->createIntegerConstant(loc, idxTy, 1));
 

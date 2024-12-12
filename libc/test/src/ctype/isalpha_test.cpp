@@ -11,16 +11,7 @@
 
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcIsAlpha, SimpleTest) {
-  EXPECT_NE(LIBC_NAMESPACE::isalpha('a'), 0);
-  EXPECT_NE(LIBC_NAMESPACE::isalpha('B'), 0);
-
-  EXPECT_EQ(LIBC_NAMESPACE::isalpha('3'), 0);
-  EXPECT_EQ(LIBC_NAMESPACE::isalpha(' '), 0);
-  EXPECT_EQ(LIBC_NAMESPACE::isalpha('?'), 0);
-  EXPECT_EQ(LIBC_NAMESPACE::isalpha('\0'), 0);
-  EXPECT_EQ(LIBC_NAMESPACE::isalpha(-1), 0);
-}
+namespace {
 
 // TODO: Merge the ctype tests using this framework.
 constexpr char ALPHA_ARRAY[] = {
@@ -35,6 +26,19 @@ bool in_span(int ch, LIBC_NAMESPACE::cpp::span<const char> arr) {
     if (static_cast<int>(arr[i]) == ch)
       return true;
   return false;
+}
+
+} // namespace
+
+TEST(LlvmLibcIsAlpha, SimpleTest) {
+  EXPECT_NE(LIBC_NAMESPACE::isalpha('a'), 0);
+  EXPECT_NE(LIBC_NAMESPACE::isalpha('B'), 0);
+
+  EXPECT_EQ(LIBC_NAMESPACE::isalpha('3'), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::isalpha(' '), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::isalpha('?'), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::isalpha('\0'), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::isalpha(-1), 0);
 }
 
 TEST(LlvmLibcIsAlpha, DefaultLocale) {

@@ -188,8 +188,6 @@ class binop_with_non_imm12<SDPatternOperator binop>
   let PredicateCodeUsesOperands = 1;
   let GISelPredicateCode = [{
     const MachineOperand &ImmOp = *Operands[1];
-    const MachineFunction &MF = *MI.getParent()->getParent();
-    const MachineRegisterInfo &MRI = MF.getRegInfo();
 
     if (ImmOp.isReg() && ImmOp.getReg())
       if (auto Val = getIConstantVRegValWithLookThrough(ImmOp.getReg(), MRI)) {

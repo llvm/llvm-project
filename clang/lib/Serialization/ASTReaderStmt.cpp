@@ -911,9 +911,9 @@ void ASTStmtReader::VisitRequiresExpr(RequiresExpr *E) {
                   std::move(*Req), Status, SubstitutedConstraintExpr);
         else
           R = new (Record.getContext()) concepts::ExprRequirement(
-                  E.get<concepts::Requirement::SubstitutionDiagnostic *>(),
-                  RK == concepts::Requirement::RK_Simple, NoexceptLoc,
-                  std::move(*Req));
+              cast<concepts::Requirement::SubstitutionDiagnostic *>(E),
+              RK == concepts::Requirement::RK_Simple, NoexceptLoc,
+              std::move(*Req));
       } break;
       case concepts::Requirement::RK_Nested: {
         ASTContext &C = Record.getContext();

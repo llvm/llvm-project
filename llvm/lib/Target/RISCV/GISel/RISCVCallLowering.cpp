@@ -596,6 +596,8 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   for (auto &AInfo : Info.OrigArgs) {
     if (!isSupportedArgumentType(AInfo.Ty, Subtarget))
       return false;
+    if (AInfo.Flags[0].isByVal())
+      return false;
   }
 
   if (!Info.OrigRet.Ty->isVoidTy() &&

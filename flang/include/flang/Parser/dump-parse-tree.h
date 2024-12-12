@@ -546,6 +546,7 @@ public:
   NODE(parser, OmpEndCriticalDirective)
   NODE(parser, OmpEndLoopDirective)
   NODE(parser, OmpEndSectionsDirective)
+  NODE(parser, OmpFailClause)
   NODE(parser, OmpFromClause)
   NODE(OmpFromClause, Modifier)
   NODE(parser, OmpExpectation)

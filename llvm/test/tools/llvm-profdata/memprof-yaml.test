@@ -8,7 +8,7 @@
 ;--- memprof-in.yaml
 ---
 HeapProfileRecords:
-  - GUID:            16045690981402826360
+  - GUID:            0xdeadbeef12345678
     AllocSites:
       - Callstack:
           - { Function: 100, LineOffset: 11, Column: 10, IsInlineFrame: true }

@@ -12037,7 +12037,8 @@ void OpenACCClauseTransform<Derived>::VisitGangClause(
   }
 
   NewClause = Self.getSema().OpenACC().CheckGangClause(
-      ExistingClauses, ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
+      ParsedClause.getDirectiveKind(), ExistingClauses,
+      ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
       TransformedGangKinds, TransformedIntExprs, ParsedClause.getEndLoc());
 }
 } // namespace

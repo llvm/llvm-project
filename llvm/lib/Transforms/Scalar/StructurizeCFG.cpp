@@ -686,8 +686,8 @@ void StructurizeCFG::delPhiValues(BasicBlock *From, BasicBlock *To) {
 /// Add a dummy PHI value as soon as we knew the new predecessor
 void StructurizeCFG::addPhiValues(BasicBlock *From, BasicBlock *To) {
   for (PHINode &Phi : To->phis()) {
-    Value *Undef = UndefValue::get(Phi.getType());
-    Phi.addIncoming(Undef, From);
+    Value *Poison = PoisonValue::get(Phi.getType());
+    Phi.addIncoming(Poison, From);
   }
   AddedPhis[To].push_back(From);
 }

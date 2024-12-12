@@ -34,6 +34,11 @@ void templ() {
 
 #pragma acc parallel async
   for(;;){}
+
+  // expected-warning@+2{{OpenACC construct 'exit data' not yet implemented}}
+  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented, clause ignored}}
+#pragma acc exit data delete(I)
+  ;
 }
 
 struct S {

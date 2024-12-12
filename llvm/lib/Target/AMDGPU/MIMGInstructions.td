@@ -1851,6 +1851,11 @@ defm IMAGE_BVH_DUAL_INTERSECT_RAY  : MIMG_IntersectRay<mimgopc<0x80, MIMG.NOP, M
 defm IMAGE_BVH8_INTERSECT_RAY      : MIMG_IntersectRay<mimgopc<0x81, MIMG.NOP, MIMG.NOP>, "image_bvh8_intersect_ray", 1, 0, 0, 1>;
 #endif /* LLPC_BUILD_GFX12 */
 
+let SubtargetPredicate = isGFX12Plus in {
+  def : AMDGPUMnemonicAlias<"bvh_intersect_ray", "image_bvh_intersect_ray">;
+  def : AMDGPUMnemonicAlias<"bvh64_intersect_ray", "image_bvh64_intersect_ray">;
+}
+
 } // End let OtherPredicates = [HasImageInsts]
 
 /********** ========================================= **********/

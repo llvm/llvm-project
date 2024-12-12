@@ -23566,6 +23566,9 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
 
     SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
     if (isSoftF16(EltVT, Subtarget)) {
+      if (Subtarget.hasAVX512() && !Subtarget.hasVLX())
+        return SDValue();
+
       // Break 256-bit FP vector compare into smaller ones.
       if (OpVT.is256BitVector() && !Subtarget.useAVX512Regs())
         return splitVSETCC(VT, Op0, Op1, Cond, DAG, dl);
@@ -33259,7 +33262,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
                                            SmallVectorImpl<SDValue>&Results,
                                            SelectionDAG &DAG) const {
   SDLoc dl(N);
-  switch (N->getOpcode()) {
+  unsigned Opc = N->getOpcode();
+  switch (Opc) {
   default:
 #ifndef NDEBUG
     dbgs() << "ReplaceNodeResults: ";
@@ -33355,7 +33359,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     EVT VT = N->getValueType(0);
     assert(getTypeAction(*DAG.getContext(), VT) == TypeWidenVector &&
            VT == MVT::v2i32 && "Unexpected VT!");
-    bool IsSigned = N->getOpcode() == ISD::SMULO;
+    bool IsSigned = Opc == ISD::SMULO;
     unsigned ExtOpc = IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
     SDValue Op0 = DAG.getNode(ExtOpc, dl, MVT::v2i64, N->getOperand(0));
     SDValue Op1 = DAG.getNode(ExtOpc, dl, MVT::v2i64, N->getOperand(1));
@@ -33412,7 +33416,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     Ops[0] = N->getOperand(1);
     SDValue InVec1 = DAG.getNode(ISD::CONCAT_VECTORS, dl, InWideVT, Ops);
 
-    SDValue Res = DAG.getNode(N->getOpcode(), dl, WideVT, InVec0, InVec1);
+    SDValue Res = DAG.getNode(Opc, dl, WideVT, InVec0, InVec1);
     Results.push_back(Res);
     return;
   }
@@ -33420,15 +33424,26 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   case X86ISD::FMINC:
   case X86ISD::FMIN:
   case X86ISD::FMAXC:
-  case X86ISD::FMAX: {
+  case X86ISD::FMAX:
+  case X86ISD::STRICT_FMIN:
+  case X86ISD::STRICT_FMAX: {
     EVT VT = N->getValueType(0);
     assert(VT == MVT::v2f32 && "Unexpected type (!= v2f32) on FMIN/FMAX.");
+    bool IsStrict = Opc == X86ISD::STRICT_FMIN || Opc == X86ISD::STRICT_FMAX;
     SDValue UNDEF = DAG.getUNDEF(VT);
     SDValue LHS = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32,
-                              N->getOperand(0), UNDEF);
+                              N->getOperand(IsStrict ? 1 : 0), UNDEF);
     SDValue RHS = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32,
-                              N->getOperand(1), UNDEF);
-    Results.push_back(DAG.getNode(N->getOpcode(), dl, MVT::v4f32, LHS, RHS));
+                              N->getOperand(IsStrict ? 2 : 1), UNDEF);
+    SDValue Res;
+    if (IsStrict)
+      Res = DAG.getNode(Opc, dl, {MVT::v4f32, MVT::Other},
+                        {N->getOperand(0), LHS, RHS});
+    else
+      Res = DAG.getNode(Opc, dl, MVT::v4f32, LHS, RHS);
+    Results.push_back(Res);
+    if (IsStrict)
+      Results.push_back(Res.getValue(1));
     return;
   }
   case ISD::SDIV:
@@ -33450,7 +33465,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
         EVT ResVT = getTypeToTransformTo(*DAG.getContext(), VT);
         SDValue N0 = DAG.getNode(ISD::CONCAT_VECTORS, dl, ResVT, Ops0);
         SDValue N1 = DAG.getConstant(SplatVal, dl, ResVT);
-        SDValue Res = DAG.getNode(N->getOpcode(), dl, ResVT, N0, N1);
+        SDValue Res = DAG.getNode(Opc, dl, ResVT, N0, N1);
         Results.push_back(Res);
       }
       return;
@@ -33571,7 +33586,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
         (InVT == MVT::v4i16 || InVT == MVT::v4i8)){
       assert(getTypeAction(*DAG.getContext(), InVT) == TypeWidenVector &&
              "Unexpected type action!");
-      assert(N->getOpcode() == ISD::SIGN_EXTEND && "Unexpected opcode");
+      assert(Opc == ISD::SIGN_EXTEND && "Unexpected opcode");
       // Custom split this so we can extend i8/i16->i32 invec. This is better
       // since sign_extend_inreg i8/i16->i64 requires an extend to i32 using
       // sra. Then extending from i32 to i64 using pcmpgt. By custom splitting
@@ -33608,7 +33623,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
 
         // Promote the input to 128 bits. Type legalization will turn this into
         // zext_inreg/sext_inreg.
-        In = DAG.getNode(N->getOpcode(), dl, InVT, In);
+        In = DAG.getNode(Opc, dl, InVT, In);
       }
 
       // Perform custom splitting instead of the two stage extend we would get
@@ -33617,7 +33632,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
       assert(isTypeLegal(LoVT) && "Split VT not legal?");
 
-      SDValue Lo = getEXTEND_VECTOR_INREG(N->getOpcode(), dl, LoVT, In, DAG);
+      SDValue Lo = getEXTEND_VECTOR_INREG(Opc, dl, LoVT, In, DAG);
 
       // We need to shift the input over by half the number of elements.
       unsigned NumElts = InVT.getVectorNumElements();
@@ -33627,7 +33642,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
         ShufMask[i] = i + HalfNumElts;
 
       SDValue Hi = DAG.getVectorShuffle(InVT, dl, In, In, ShufMask);
-      Hi = getEXTEND_VECTOR_INREG(N->getOpcode(), dl, HiVT, Hi, DAG);
+      Hi = getEXTEND_VECTOR_INREG(Opc, dl, HiVT, Hi, DAG);
 
       SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, Lo, Hi);
       Results.push_back(Res);
@@ -33639,8 +33654,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::FP_TO_UINT:
   case ISD::STRICT_FP_TO_UINT: {
     bool IsStrict = N->isStrictFPOpcode();
-    bool IsSigned = N->getOpcode() == ISD::FP_TO_SINT ||
-                    N->getOpcode() == ISD::STRICT_FP_TO_SINT;
+    bool IsSigned = Opc == ISD::FP_TO_SINT || Opc == ISD::STRICT_FP_TO_SINT;
     EVT VT = N->getValueType(0);
     SDValue Src = N->getOperand(IsStrict ? 1 : 0);
     SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
@@ -33651,13 +33665,13 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       EVT NVT = VT.isVector() ? VT.changeVectorElementType(MVT::f32) : MVT::f32;
       if (IsStrict) {
         Res =
-            DAG.getNode(N->getOpcode(), dl, {VT, MVT::Other},
+            DAG.getNode(Opc, dl, {VT, MVT::Other},
                         {Chain, DAG.getNode(ISD::STRICT_FP_EXTEND, dl,
                                             {NVT, MVT::Other}, {Chain, Src})});
         Chain = Res.getValue(1);
       } else {
-        Res = DAG.getNode(N->getOpcode(), dl, VT,
-                          DAG.getNode(ISD::FP_EXTEND, dl, NVT, Src));
+        Res =
+            DAG.getNode(Opc, dl, VT, DAG.getNode(ISD::FP_EXTEND, dl, NVT, Src));
       }
       Results.push_back(Res);
       if (IsStrict)
@@ -33680,13 +33694,12 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       }
 
       if (IsStrict) {
-        unsigned Opc =
-            IsSigned ? X86ISD::STRICT_CVTTP2SI : X86ISD::STRICT_CVTTP2UI;
+        Opc = IsSigned ? X86ISD::STRICT_CVTTP2SI : X86ISD::STRICT_CVTTP2UI;
         Res =
             DAG.getNode(Opc, dl, {ResVT, MVT::Other}, {N->getOperand(0), Src});
         Chain = Res.getValue(1);
       } else {
-        unsigned Opc = IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI;
+        Opc = IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI;
         Res = DAG.getNode(Opc, dl, ResVT, Src);
       }
 
@@ -33772,7 +33785,6 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
           return;
         }
 
-        unsigned Opc;
         if (IsStrict)
           Opc = IsSigned ? X86ISD::STRICT_CVTTP2SI : X86ISD::STRICT_CVTTP2UI;
         else
@@ -33811,7 +33823,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       if (Src.getValueType() == MVT::v2f32 && IsStrict) {
         Src = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32, Src,
                           DAG.getConstantFP(0.0, dl, MVT::v2f32));
-        SDValue Res = DAG.getNode(N->getOpcode(), dl, {MVT::v4i32, MVT::Other},
+        SDValue Res = DAG.getNode(Opc, dl, {MVT::v4i32, MVT::Other},
                                   {N->getOperand(0), Src});
         Results.push_back(Res);
         Results.push_back(Res.getValue(1));
@@ -33835,7 +33847,6 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
           std::max(NumElts, 128U / (unsigned)SrcVT.getSizeInBits());
       MVT VecVT = MVT::getVectorVT(MVT::i64, NumElts);
       MVT VecInVT = MVT::getVectorVT(SrcVT.getSimpleVT(), SrcElts);
-      unsigned Opc = N->getOpcode();
       if (NumElts != SrcElts) {
         if (IsStrict)
           Opc = IsSigned ? X86ISD::STRICT_CVTTP2SI : X86ISD::STRICT_CVTTP2UI;
@@ -33889,8 +33900,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::UINT_TO_FP:
   case ISD::STRICT_UINT_TO_FP: {
     bool IsStrict = N->isStrictFPOpcode();
-    bool IsSigned = N->getOpcode() == ISD::SINT_TO_FP ||
-                    N->getOpcode() == ISD::STRICT_SINT_TO_FP;
+    bool IsSigned = Opc == ISD::SINT_TO_FP || Opc == ISD::STRICT_SINT_TO_FP;
     EVT VT = N->getValueType(0);
     SDValue Src = N->getOperand(IsStrict ? 1 : 0);
     if (VT.getVectorElementType() == MVT::f16 && Subtarget.hasFP16() &&
@@ -33984,7 +33994,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       // FIXME: Should generic type legalizer do this?
       Src = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i32, Src,
                         DAG.getConstant(0, dl, MVT::v2i32));
-      SDValue Res = DAG.getNode(N->getOpcode(), dl, {MVT::v4f32, MVT::Other},
+      SDValue Res = DAG.getNode(Opc, dl, {MVT::v4f32, MVT::Other},
                                 {N->getOperand(0), Src});
       Results.push_back(Res);
       Results.push_back(Res.getValue(1));

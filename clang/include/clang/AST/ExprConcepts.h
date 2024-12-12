@@ -261,13 +261,13 @@ public:
     assert(Status == SS_SubstitutionFailure &&
            "Attempted to get substitution diagnostic when there has been no "
            "substitution failure.");
-    return Value.get<SubstitutionDiagnostic *>();
+    return cast<SubstitutionDiagnostic *>(Value);
   }
 
   TypeSourceInfo *getType() const {
     assert(!isSubstitutionFailure() &&
            "Attempted to get type when there has been a substitution failure.");
-    return Value.get<TypeSourceInfo *>();
+    return cast<TypeSourceInfo *>(Value);
   }
 
   static bool classof(const Requirement *R) {
@@ -409,14 +409,14 @@ public:
     assert(isExprSubstitutionFailure() &&
            "Attempted to get expression substitution diagnostic when there has "
            "been no expression substitution failure");
-    return Value.get<SubstitutionDiagnostic *>();
+    return cast<SubstitutionDiagnostic *>(Value);
   }
 
   Expr *getExpr() const {
     assert(!isExprSubstitutionFailure() &&
            "ExprRequirement has no expression because there has been a "
            "substitution failure.");
-    return Value.get<Expr *>();
+    return cast<Expr *>(Value);
   }
 
   static bool classof(const Requirement *R) {

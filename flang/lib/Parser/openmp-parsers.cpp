@@ -739,6 +739,9 @@ TYPE_PARSER(sourced(construct<OpenMPCancellationPointConstruct>(
 TYPE_PARSER(sourced(construct<OpenMPCancelConstruct>(verbatim("CANCEL"_tok),
     Parser<OmpCancelType>{}, maybe("IF" >> parenthesized(scalarLogicalExpr)))))
 
+TYPE_PARSER(sourced(construct<OmpFailClause>(
+    parenthesized(indirect(Parser<OmpMemoryOrderClause>{})))))
+
 // 2.17.7 Atomic construct/2.17.8 Flush construct [OpenMP 5.0]
 //        memory-order-clause ->
 //                               seq_cst
@@ -767,6 +770,7 @@ TYPE_PARSER(construct<OmpAtomicDefaultMemOrderClause>(
 //        atomic-clause -> memory-order-clause | HINT(hint-expression)
 TYPE_PARSER(sourced(construct<OmpAtomicClause>(
     construct<OmpAtomicClause>(Parser<OmpMemoryOrderClause>{}) ||
+    construct<OmpAtomicClause>("FAIL" >> Parser<OmpFailClause>{}) ||
     construct<OmpAtomicClause>("HINT" >>
         sourced(construct<OmpClause>(
             construct<OmpClause::Hint>(parenthesized(constantExpr))))))))

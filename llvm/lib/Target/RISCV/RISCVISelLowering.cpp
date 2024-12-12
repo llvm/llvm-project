@@ -18233,8 +18233,46 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
   //   (shl (or x, c1), c2) -> (or (shl x, c2), c1 << c2)
   SDValue N0 = N->getOperand(0);
   EVT Ty = N0.getValueType();
+
+  // LD/ST will optimize constant Offset extraction, so when AddNode is used by
+  // LD/ST, it can still complete the folding optimization operation performed
+  // above.
+  auto isUsedByLdSt = [&]() {
+    bool CanOptAlways = false;
+    if (N0->getOpcode() == ISD::ADD && !N0->hasOneUse()) {
+      for (SDNode *Use : N0->uses()) {
+        // This use is the one we're on right now. Skip it
+        if (Use == N || Use->getOpcode() == ISD::SELECT)
+          continue;
+        if (!isa<StoreSDNode>(Use) && !isa<LoadSDNode>(Use)) {
+          CanOptAlways = false;
+          break;
+        }
+        CanOptAlways = true;
+      }
+    }
+
+    if (N0->getOpcode() == ISD::SIGN_EXTEND &&
+        !N0->getOperand(0)->hasOneUse()) {
+      for (SDNode *Use : N0->getOperand(0)->uses()) {
+        // This use is the one we're on right now. Skip it
+        if (Use == N0.getNode() || Use->getOpcode() == ISD::SELECT)
+          continue;
+        if (!isa<StoreSDNode>(Use) && !isa<LoadSDNode>(Use)) {
+          CanOptAlways = false;
+          break;
+        }
+        CanOptAlways = true;
+      }
+    }
+    return CanOptAlways;
+  };
+
   if (Ty.isScalarInteger() &&
       (N0.getOpcode() == ISD::ADD || N0.getOpcode() == ISD::OR)) {
+    if (N0.getOpcode() == ISD::ADD && !N0->hasOneUse())
+      return isUsedByLdSt();
+
     auto *C1 = dyn_cast<ConstantSDNode>(N0->getOperand(1));
     auto *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1));
     if (C1 && C2) {
@@ -18269,6 +18307,15 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
         return false;
     }
   }
+
+  if (!N0->hasOneUse())
+    return false;
+
+  if (N0->getOpcode() == ISD::SIGN_EXTEND &&
+      N0->getOperand(0)->getOpcode() == ISD::ADD &&
+      !N0->getOperand(0)->hasOneUse())
+    return isUsedByLdSt();
+
   return true;
 }
 
@@ -22303,3 +22350,25 @@ namespace llvm::RISCVVIntrinsicsTable {
 #include "RISCVGenSearchableTables.inc"
 
 } // namespace llvm::RISCVVIntrinsicsTable
+
+bool RISCVTargetLowering::hasInlineStackProbe(const MachineFunction &MF) const {
+
+  // If the function specifically requests inline stack probes, emit them.
+  if (MF.getFunction().hasFnAttribute("probe-stack"))
+    return MF.getFunction().getFnAttribute("probe-stack").getValueAsString() ==
+           "inline-asm";
+
+  return false;
+}
+
+unsigned RISCVTargetLowering::getStackProbeSize(const MachineFunction &MF,
+                                                Align StackAlign) const {
+  // The default stack probe size is 4096 if the function has no
+  // stack-probe-size attribute.
+  const Function &Fn = MF.getFunction();
+  unsigned StackProbeSize =
+      Fn.getFnAttributeAsParsedInteger("stack-probe-size", 4096);
+  // Round down to the stack alignment.
+  StackProbeSize = alignDown(StackProbeSize, StackAlign.value());
+  return StackProbeSize ? StackProbeSize : StackAlign.value();
+}

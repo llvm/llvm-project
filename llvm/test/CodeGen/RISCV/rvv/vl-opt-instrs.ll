@@ -72,17 +72,17 @@ define <vscale x 4 x i32> @vsub_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b,
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vsub.vv v8, v8, v10
 ; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vsub.vv v8, v8, v10
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v10
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vsub_vv:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vsub.vv v8, v8, v10
-; VLOPT-NEXT:    vsub.vv v8, v8, v10
+; VLOPT-NEXT:    vadd.vv v8, v8, v10
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vsub.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1)
-  %2 = call <vscale x 4 x i32> @llvm.riscv.vsub.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
   ret <vscale x 4 x i32> %2
 }
 
@@ -92,17 +92,17 @@ define <vscale x 4 x i32> @vsub_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
 ; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vsub.vx v10, v8, a0
 ; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vsub.vv v8, v10, v8
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vsub_vx:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; VLOPT-NEXT:    vsub.vx v10, v8, a0
-; VLOPT-NEXT:    vsub.vv v8, v10, v8
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vsub.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, i32 %b, iXLen -1)
-  %2 = call <vscale x 4 x i32> @llvm.riscv.vsub.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
   ret <vscale x 4 x i32> %2
 }
 
@@ -132,17 +132,257 @@ define <vscale x 4 x i32> @vrsub_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
 ; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vrsub.vx v10, v8, a0
 ; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vsub.vv v8, v10, v8
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vrsub_vx:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; VLOPT-NEXT:    vrsub.vx v10, v8, a0
-; VLOPT-NEXT:    vsub.vv v8, v10, v8
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vrsub.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, i32 %b, iXLen -1)
-  %2 = call <vscale x 4 x i32> @llvm.riscv.vsub.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vand_vi(<vscale x 4 x i32> %a, iXLen %vl) {
+; NOVLOPT-LABEL: vand_vi:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vand.vi v10, v8, 5
+; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vand_vi:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vand.vi v10, v8, 5
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vand.nxv4i32.i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, i32 5, iXLen -1)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vand_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl) {
+; NOVLOPT-LABEL: vand_vv:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vand.vv v8, v8, v10
+; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v10
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vand_vv:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vand.vv v8, v8, v10
+; VLOPT-NEXT:    vadd.vv v8, v8, v10
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vand.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vand_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
+; NOVLOPT-LABEL: vand_vx:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vand.vx v10, v8, a0
+; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vand_vx:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; VLOPT-NEXT:    vand.vx v10, v8, a0
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vand.nxv4i32.i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, i32 %b, iXLen -1)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vor_vi(<vscale x 4 x i32> %a, iXLen %vl) {
+; NOVLOPT-LABEL: vor_vi:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vor.vi v10, v8, 5
+; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vor_vi:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vor.vi v10, v8, 5
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vor.nxv4i32.i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, i32 5, iXLen -1)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vor_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl) {
+; NOVLOPT-LABEL: vor_vv:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vor.vv v8, v8, v10
+; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v10
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vor_vv:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vor.vv v8, v8, v10
+; VLOPT-NEXT:    vadd.vv v8, v8, v10
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vor.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vor_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
+; NOVLOPT-LABEL: vor_vx:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vor.vx v10, v8, a0
+; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vor_vx:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; VLOPT-NEXT:    vor.vx v10, v8, a0
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vor.nxv4i32.i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, i32 %b, iXLen -1)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vxor_vi(<vscale x 4 x i32> %a, iXLen %vl) {
+; NOVLOPT-LABEL: vxor_vi:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vxor.vi v10, v8, 5
+; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vxor_vi:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vxor.vi v10, v8, 5
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vxor.nxv4i32.i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, i32 5, iXLen -1)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vxor_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl) {
+; NOVLOPT-LABEL: vxor_vv:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vxor.vv v8, v8, v10
+; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v10
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vxor_vv:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vxor.vv v8, v8, v10
+; VLOPT-NEXT:    vadd.vv v8, v8, v10
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vxor.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vxor_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
+; NOVLOPT-LABEL: vxor_vx:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vxor.vx v10, v8, a0
+; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vxor_vx:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; VLOPT-NEXT:    vxor.vx v10, v8, a0
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vxor.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, i32 %b, iXLen -1)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vsll_vi(<vscale x 4 x i32> %a, iXLen %vl) {
+; NOVLOPT-LABEL: vsll_vi:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vsll.vi v10, v8, 5
+; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vsll_vi:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vsll.vi v10, v8, 5
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vsll.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen 5, iXLen -1)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vsll_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl) {
+; NOVLOPT-LABEL: vsll_vv:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vsll.vv v8, v8, v10
+; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v10
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vsll_vv:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vsll.vv v8, v8, v10
+; VLOPT-NEXT:    vadd.vv v8, v8, v10
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vsll.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vsll_vx(<vscale x 4 x i32> %a, iXLen %b, iXLen %vl) {
+; NOVLOPT-LABEL: vsll_vx:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vsll.vx v10, v8, a0
+; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vsll_vx:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; VLOPT-NEXT:    vsll.vx v10, v8, a0
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vsll.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen %b, iXLen -1)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
   ret <vscale x 4 x i32> %2
 }
 
@@ -165,6 +405,126 @@ define <vscale x 4 x i64> @vwaddu_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %
   %1 = call <vscale x 4 x i64> @llvm.riscv.vwaddu.nxv4i64.nxv4i32.nxv4i32(<vscale x 4 x i64> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1)
   %2 = call <vscale x 4 x i64> @llvm.riscv.vadd.nxv4i64.nxv4i64(<vscale x 4 x i64> poison, <vscale x 4 x i64> %1, <vscale x 4 x i64> %1, iXLen %vl)
   ret <vscale x 4 x i64> %2
+}
+
+define <vscale x 4 x i32> @vsrl_vi(<vscale x 4 x i32> %a, iXLen %vl) {
+; NOVLOPT-LABEL: vsrl_vi:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vsrl.vi v10, v8, 5
+; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vsrl_vi:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vsrl.vi v10, v8, 5
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vsrl.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen 5, iXLen -1)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vsrl_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl) {
+; NOVLOPT-LABEL: vsrl_vv:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vsrl.vv v8, v8, v10
+; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v10
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vsrl_vv:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vsrl.vv v8, v8, v10
+; VLOPT-NEXT:    vadd.vv v8, v8, v10
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vsrl.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vsrl_vx(<vscale x 4 x i32> %a, iXLen %b, iXLen %vl) {
+; NOVLOPT-LABEL: vsrl_vx:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vsrl.vx v10, v8, a0
+; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vsrl_vx:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; VLOPT-NEXT:    vsrl.vx v10, v8, a0
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vsrl.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen %b, iXLen -1)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vsra_vi(<vscale x 4 x i32> %a, iXLen %vl) {
+; NOVLOPT-LABEL: vsra_vi:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vsra.vi v10, v8, 5
+; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vsra_vi:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vsra.vi v10, v8, 5
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vsra.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen 5, iXLen -1)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vsra_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl) {
+; NOVLOPT-LABEL: vsra_vv:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vsra.vv v8, v8, v10
+; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v10
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vsra_vv:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vsra.vv v8, v8, v10
+; VLOPT-NEXT:    vadd.vv v8, v8, v10
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vsra.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vsra_vx(<vscale x 4 x i32> %a, iXLen %b, iXLen %vl) {
+; NOVLOPT-LABEL: vsra_vx:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vsra.vx v10, v8, a0
+; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vsra_vx:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; VLOPT-NEXT:    vsra.vx v10, v8, a0
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vsra.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen %b, iXLen -1)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
+  ret <vscale x 4 x i32> %2
 }
 
 define <vscale x 4 x i64> @vwaddu_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
@@ -602,26 +962,6 @@ define <vscale x 4 x i64> @vzext_vf8(<vscale x 4 x i8> %a, <vscale x 4 x i64> %b
   ret <vscale x 4 x i64> %2
 }
 
-define <vscale x 4 x i32> @vsll_vi(<vscale x 4 x i32> %a, iXLen %vl) {
-; NOVLOPT-LABEL: vsll_vi:
-; NOVLOPT:       # %bb.0:
-; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vsll.vi v10, v8, 5
-; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vsll.vv v8, v10, v8
-; NOVLOPT-NEXT:    ret
-;
-; VLOPT-LABEL: vsll_vi:
-; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; VLOPT-NEXT:    vsll.vi v10, v8, 5
-; VLOPT-NEXT:    vsll.vv v8, v10, v8
-; VLOPT-NEXT:    ret
-  %1 = call <vscale x 4 x i32> @llvm.riscv.vsll.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen 5, iXLen -1)
-  %2 = call <vscale x 4 x i32> @llvm.riscv.vsll.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
-  ret <vscale x 4 x i32> %2
-}
-
 define <vscale x 4 x i16> @vnsrl_wi(<vscale x 4 x i32> %a, <vscale x 4 x i16> %b, iXLen %vl) {
 ; NOVLOPT-LABEL: vnsrl_wi:
 ; NOVLOPT:       # %bb.0:
@@ -641,6 +981,107 @@ define <vscale x 4 x i16> @vnsrl_wi(<vscale x 4 x i32> %a, <vscale x 4 x i16> %b
   %2 = call <vscale x 4 x i16> @llvm.riscv.vadd.nxv4i16.nxv4i16(<vscale x 4 x i16> poison, <vscale x 4 x i16> %1, <vscale x 4 x i16> %b, iXLen %vl)
   ret <vscale x 4 x i16> %2
 }
+
+define <vscale x 4 x i16> @vnsrl_wx(<vscale x 4 x i32> %a, <vscale x 4 x i16> %b, iXLen %c, iXLen %vl) {
+; NOVLOPT-LABEL: vnsrl_wx:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a2, zero, e16, m1, ta, ma
+; NOVLOPT-NEXT:    vnsrl.wx v11, v8, a0
+; NOVLOPT-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v11, v10
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vnsrl_wx:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
+; VLOPT-NEXT:    vnsrl.wx v11, v8, a0
+; VLOPT-NEXT:    vadd.vv v8, v11, v10
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i16> @llvm.riscv.vnsrl.nxv4i16.nxv4i32(<vscale x 4 x i16> poison, <vscale x 4 x i32> %a, iXLen %c, iXLen -1)
+  %2 = call <vscale x 4 x i16> @llvm.riscv.vadd.nxv4i16.nxv4i16(<vscale x 4 x i16> poison, <vscale x 4 x i16> %1, <vscale x 4 x i16> %b, iXLen %vl)
+  ret <vscale x 4 x i16> %2
+}
+
+define <vscale x 4 x i16> @vnsrl_wv(<vscale x 4 x i32> %a, <vscale x 4 x i16> %b, <vscale x 4 x i16> %c, iXLen %vl) {
+; NOVLOPT-LABEL: vnsrl_wv:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; NOVLOPT-NEXT:    vnsrl.wv v12, v8, v11
+; NOVLOPT-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v12, v10
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vnsrl_wv:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; VLOPT-NEXT:    vnsrl.wv v12, v8, v11
+; VLOPT-NEXT:    vadd.vv v8, v12, v10
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i16> @llvm.riscv.vnsrl.nxv4i16.nxv4i32.nxv4i16(<vscale x 4 x i16> poison, <vscale x 4 x i32> %a, <vscale x 4 x i16> %c, iXLen -1)
+  %2 = call <vscale x 4 x i16> @llvm.riscv.vadd.nxv4i16.nxv4i16(<vscale x 4 x i16> poison, <vscale x 4 x i16> %1, <vscale x 4 x i16> %b, iXLen %vl)
+  ret <vscale x 4 x i16> %2
+}
+
+define <vscale x 4 x i16> @vnsra_wi(<vscale x 4 x i32> %a, <vscale x 4 x i16> %b, iXLen %vl) {
+; NOVLOPT-LABEL: vnsra_wi:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; NOVLOPT-NEXT:    vnsra.wi v11, v8, 5
+; NOVLOPT-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v11, v10
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vnsra_wi:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; VLOPT-NEXT:    vnsra.wi v11, v8, 5
+; VLOPT-NEXT:    vadd.vv v8, v11, v10
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i16> @llvm.riscv.vnsra.nxv4i16.nxv4i32(<vscale x 4 x i16> poison, <vscale x 4 x i32> %a, iXLen 5, iXLen -1)
+  %2 = call <vscale x 4 x i16> @llvm.riscv.vadd.nxv4i16.nxv4i16(<vscale x 4 x i16> poison, <vscale x 4 x i16> %1, <vscale x 4 x i16> %b, iXLen %vl)
+  ret <vscale x 4 x i16> %2
+}
+
+define <vscale x 4 x i16> @vnsra_wx(<vscale x 4 x i32> %a, <vscale x 4 x i16> %b, iXLen %c, iXLen %vl) {
+; NOVLOPT-LABEL: vnsra_wx:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a2, zero, e16, m1, ta, ma
+; NOVLOPT-NEXT:    vnsra.wx v11, v8, a0
+; NOVLOPT-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v11, v10
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vnsra_wx:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
+; VLOPT-NEXT:    vnsra.wx v11, v8, a0
+; VLOPT-NEXT:    vadd.vv v8, v11, v10
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i16> @llvm.riscv.vnsra.nxv4i16.nxv4i32(<vscale x 4 x i16> poison, <vscale x 4 x i32> %a, iXLen %c, iXLen -1)
+  %2 = call <vscale x 4 x i16> @llvm.riscv.vadd.nxv4i16.nxv4i16(<vscale x 4 x i16> poison, <vscale x 4 x i16> %1, <vscale x 4 x i16> %b, iXLen %vl)
+  ret <vscale x 4 x i16> %2
+}
+
+define <vscale x 4 x i16> @vnsra_wv(<vscale x 4 x i32> %a, <vscale x 4 x i16> %b, <vscale x 4 x i16> %c, iXLen %vl) {
+; NOVLOPT-LABEL: vnsra_wv:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; NOVLOPT-NEXT:    vnsra.wv v12, v8, v11
+; NOVLOPT-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v12, v10
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vnsra_wv:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; VLOPT-NEXT:    vnsra.wv v12, v8, v11
+; VLOPT-NEXT:    vadd.vv v8, v12, v10
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i16> @llvm.riscv.vnsra.nxv4i16.nxv4i32.nxv4i16(<vscale x 4 x i16> poison, <vscale x 4 x i32> %a, <vscale x 4 x i16> %c, iXLen -1)
+  %2 = call <vscale x 4 x i16> @llvm.riscv.vadd.nxv4i16.nxv4i16(<vscale x 4 x i16> poison, <vscale x 4 x i16> %1, <vscale x 4 x i16> %b, iXLen %vl)
+  ret <vscale x 4 x i16> %2
+}
+
 
 define <vscale x 4 x i32> @vminu_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl) {
 ; NOVLOPT-LABEL: vminu_vv:
@@ -808,17 +1249,17 @@ define <vscale x 4 x i32> @vmul_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b,
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vmul.vv v8, v8, v10
 ; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vmul.vv v8, v8, v10
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v10
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vmul_vv:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vmul.vv v8, v8, v10
-; VLOPT-NEXT:    vmul.vv v8, v8, v10
+; VLOPT-NEXT:    vadd.vv v8, v8, v10
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vmul.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1)
-  %2 = call <vscale x 4 x i32> @llvm.riscv.vmul.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
   ret <vscale x 4 x i32> %2
 }
 
@@ -828,17 +1269,17 @@ define <vscale x 4 x i32> @vmul_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
 ; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vmul.vx v10, v8, a0
 ; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vmul.vv v8, v10, v8
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vmul_vx:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; VLOPT-NEXT:    vmul.vx v10, v8, a0
-; VLOPT-NEXT:    vmul.vv v8, v10, v8
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vmul.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, i32 %b, iXLen -1)
-  %2 = call <vscale x 4 x i32> @llvm.riscv.vmul.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
   ret <vscale x 4 x i32> %2
 }
 
@@ -848,17 +1289,17 @@ define <vscale x 4 x i32> @vmulh_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vmulh.vv v8, v8, v10
 ; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vmul.vv v8, v8, v10
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v10
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vmulh_vv:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vmulh.vv v8, v8, v10
-; VLOPT-NEXT:    vmul.vv v8, v8, v10
+; VLOPT-NEXT:    vadd.vv v8, v8, v10
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vmulh.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1)
-  %2 = call <vscale x 4 x i32> @llvm.riscv.vmul.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
   ret <vscale x 4 x i32> %2
 }
 
@@ -868,17 +1309,17 @@ define <vscale x 4 x i32> @vmulh_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
 ; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vmulh.vx v10, v8, a0
 ; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vmul.vv v8, v10, v8
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vmulh_vx:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; VLOPT-NEXT:    vmulh.vx v10, v8, a0
-; VLOPT-NEXT:    vmul.vv v8, v10, v8
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vmulh.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, i32 %b, iXLen -1)
-  %2 = call <vscale x 4 x i32> @llvm.riscv.vmul.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
   ret <vscale x 4 x i32> %2
 }
 
@@ -888,17 +1329,17 @@ define <vscale x 4 x i32> @vmulhu_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vmulhu.vv v8, v8, v10
 ; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vmul.vv v8, v8, v10
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v10
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vmulhu_vv:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vmulhu.vv v8, v8, v10
-; VLOPT-NEXT:    vmul.vv v8, v8, v10
+; VLOPT-NEXT:    vadd.vv v8, v8, v10
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vmulhu.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1)
-  %2 = call <vscale x 4 x i32> @llvm.riscv.vmul.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
   ret <vscale x 4 x i32> %2
 }
 
@@ -908,17 +1349,17 @@ define <vscale x 4 x i32> @vmulhu_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
 ; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vmulhu.vx v10, v8, a0
 ; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vmul.vv v8, v10, v8
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vmulhu_vx:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; VLOPT-NEXT:    vmulhu.vx v10, v8, a0
-; VLOPT-NEXT:    vmul.vv v8, v10, v8
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vmulhu.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, i32 %b, iXLen -1)
-  %2 = call <vscale x 4 x i32> @llvm.riscv.vmul.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
   ret <vscale x 4 x i32> %2
 }
 
@@ -928,17 +1369,17 @@ define <vscale x 4 x i32> @vmulhsu_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> 
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vmulhsu.vv v8, v8, v10
 ; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vmul.vv v8, v8, v10
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v10
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vmulhsu_vv:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vmulhsu.vv v8, v8, v10
-; VLOPT-NEXT:    vmul.vv v8, v8, v10
+; VLOPT-NEXT:    vadd.vv v8, v8, v10
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vmulhsu.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1)
-  %2 = call <vscale x 4 x i32> @llvm.riscv.vmul.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
   ret <vscale x 4 x i32> %2
 }
 
@@ -948,17 +1389,17 @@ define <vscale x 4 x i32> @vmulhsu_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) 
 ; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vmulhsu.vx v10, v8, a0
 ; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vmul.vv v8, v10, v8
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vmulhsu_vx:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; VLOPT-NEXT:    vmulhsu.vx v10, v8, a0
-; VLOPT-NEXT:    vmul.vv v8, v10, v8
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vmulhsu.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, i32 %b, iXLen -1)
-  %2 = call <vscale x 4 x i32> @llvm.riscv.vmul.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
   ret <vscale x 4 x i32> %2
 }
 
@@ -968,17 +1409,17 @@ define <vscale x 4 x i32> @vdivu_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vdivu.vv v8, v8, v10
 ; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vmul.vv v8, v8, v10
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v10
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vdivu_vv:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vdivu.vv v8, v8, v10
-; VLOPT-NEXT:    vmul.vv v8, v8, v10
+; VLOPT-NEXT:    vadd.vv v8, v8, v10
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vdivu.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1)
-  %2 = call <vscale x 4 x i32> @llvm.riscv.vmul.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
   ret <vscale x 4 x i32> %2
 }
 
@@ -988,17 +1429,17 @@ define <vscale x 4 x i32> @vdivu_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
 ; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vdivu.vx v10, v8, a0
 ; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vmul.vv v8, v10, v8
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vdivu_vx:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; VLOPT-NEXT:    vdivu.vx v10, v8, a0
-; VLOPT-NEXT:    vmul.vv v8, v10, v8
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vdivu.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, i32 %b, iXLen -1)
-  %2 = call <vscale x 4 x i32> @llvm.riscv.vmul.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
   ret <vscale x 4 x i32> %2
 }
 
@@ -1008,17 +1449,17 @@ define <vscale x 4 x i32> @vdiv_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b,
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vdiv.vv v8, v8, v10
 ; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vmul.vv v8, v8, v10
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v10
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vdiv_vv:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vdiv.vv v8, v8, v10
-; VLOPT-NEXT:    vmul.vv v8, v8, v10
+; VLOPT-NEXT:    vadd.vv v8, v8, v10
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vdiv.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1)
-  %2 = call <vscale x 4 x i32> @llvm.riscv.vmul.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
   ret <vscale x 4 x i32> %2
 }
 
@@ -1028,17 +1469,17 @@ define <vscale x 4 x i32> @vdiv_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
 ; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vdiv.vx v10, v8, a0
 ; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vmul.vv v8, v10, v8
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vdiv_vx:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; VLOPT-NEXT:    vdiv.vx v10, v8, a0
-; VLOPT-NEXT:    vmul.vv v8, v10, v8
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vdiv.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, i32 %b, iXLen -1)
-  %2 = call <vscale x 4 x i32> @llvm.riscv.vmul.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
   ret <vscale x 4 x i32> %2
 }
 
@@ -1048,17 +1489,17 @@ define <vscale x 4 x i32> @vremu_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vremu.vv v8, v8, v10
 ; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vmul.vv v8, v8, v10
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v10
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vremu_vv:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vremu.vv v8, v8, v10
-; VLOPT-NEXT:    vmul.vv v8, v8, v10
+; VLOPT-NEXT:    vadd.vv v8, v8, v10
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vremu.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1)
-  %2 = call <vscale x 4 x i32> @llvm.riscv.vmul.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
   ret <vscale x 4 x i32> %2
 }
 
@@ -1068,17 +1509,17 @@ define <vscale x 4 x i32> @vremu_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
 ; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vremu.vx v10, v8, a0
 ; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vmul.vv v8, v10, v8
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vremu_vx:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; VLOPT-NEXT:    vremu.vx v10, v8, a0
-; VLOPT-NEXT:    vmul.vv v8, v10, v8
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vremu.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, i32 %b, iXLen -1)
-  %2 = call <vscale x 4 x i32> @llvm.riscv.vmul.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
   ret <vscale x 4 x i32> %2
 }
 
@@ -1088,17 +1529,17 @@ define <vscale x 4 x i32> @vrem_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b,
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vrem.vv v8, v8, v10
 ; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vmul.vv v8, v8, v10
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v10
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vrem_vv:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vrem.vv v8, v8, v10
-; VLOPT-NEXT:    vmul.vv v8, v8, v10
+; VLOPT-NEXT:    vadd.vv v8, v8, v10
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vrem.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1)
-  %2 = call <vscale x 4 x i32> @llvm.riscv.vmul.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
   ret <vscale x 4 x i32> %2
 }
 
@@ -1108,17 +1549,17 @@ define <vscale x 4 x i32> @vrem_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
 ; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vrem.vx v10, v8, a0
 ; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vmul.vv v8, v10, v8
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vrem_vx:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; VLOPT-NEXT:    vrem.vx v10, v8, a0
-; VLOPT-NEXT:    vmul.vv v8, v10, v8
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vrem.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, i32 %b, iXLen -1)
-  %2 = call <vscale x 4 x i32> @llvm.riscv.vmul.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
   ret <vscale x 4 x i32> %2
 }
 
@@ -1266,6 +1707,182 @@ define <vscale x 4 x i32> @vwmacc_vv(<vscale x 4 x i32> %a, <vscale x 4 x i16> %
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vwmacc.nxv4i32.nxv4i16(<vscale x 4 x i32> %a, <vscale x 4 x i16> %b, <vscale x 4 x i16> %c, iXLen -1, iXLen 0)
   %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %d, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vmacc_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl) {
+; NOVLOPT-LABEL: vmacc_vv:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, tu, ma
+; NOVLOPT-NEXT:    vmacc.vv v8, v8, v10
+; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v10
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vmacc_vv:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
+; VLOPT-NEXT:    vmacc.vv v8, v8, v10
+; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; VLOPT-NEXT:    vadd.vv v8, v8, v10
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vmacc.nxv4i32.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1, iXLen 0)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vmacc_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
+; NOVLOPT-LABEL: vmacc_vx:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, tu, ma
+; NOVLOPT-NEXT:    vmv2r.v v10, v8
+; NOVLOPT-NEXT:    vmacc.vx v10, a0, v8
+; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vmacc_vx:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
+; VLOPT-NEXT:    vmv2r.v v10, v8
+; VLOPT-NEXT:    vmacc.vx v10, a0, v8
+; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vmacc.nxv4i32.i32(<vscale x 4 x i32> %a, i32 %b, <vscale x 4 x i32> %a, iXLen -1, iXLen 0)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vmadd_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl) {
+; NOVLOPT-LABEL: vmadd_vv:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, tu, ma
+; NOVLOPT-NEXT:    vmadd.vv v8, v8, v10
+; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v10
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vmadd_vv:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
+; VLOPT-NEXT:    vmadd.vv v8, v8, v10
+; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; VLOPT-NEXT:    vadd.vv v8, v8, v10
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vmadd.nxv4i32.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1, iXLen 0)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vmadd_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
+; NOVLOPT-LABEL: vmadd_vx:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, tu, ma
+; NOVLOPT-NEXT:    vmv2r.v v10, v8
+; NOVLOPT-NEXT:    vmadd.vx v10, a0, v8
+; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vmadd_vx:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
+; VLOPT-NEXT:    vmv2r.v v10, v8
+; VLOPT-NEXT:    vmadd.vx v10, a0, v8
+; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vmadd.nxv4i32.nxv4i32(<vscale x 4 x i32> %a, i32 %b, <vscale x 4 x i32> %a, iXLen -1, iXLen 0)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vnmsac_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl) {
+; NOVLOPT-LABEL: vnmsac_vv:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, tu, ma
+; NOVLOPT-NEXT:    vnmsac.vv v8, v8, v10
+; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v10
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vnmsac_vv:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
+; VLOPT-NEXT:    vnmsac.vv v8, v8, v10
+; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; VLOPT-NEXT:    vadd.vv v8, v8, v10
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vnmsac.nxv4i32.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1, iXLen 0)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vnmsac_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
+; NOVLOPT-LABEL: vnmsac_vx:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, tu, ma
+; NOVLOPT-NEXT:    vmv2r.v v10, v8
+; NOVLOPT-NEXT:    vnmsac.vx v10, a0, v8
+; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vnmsac_vx:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
+; VLOPT-NEXT:    vmv2r.v v10, v8
+; VLOPT-NEXT:    vnmsac.vx v10, a0, v8
+; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vnmsac.nxv4i32.nxv4i32(<vscale x 4 x i32> %a, i32 %b, <vscale x 4 x i32> %a, iXLen -1, iXLen 0)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vnmsub_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl) {
+; NOVLOPT-LABEL: vnmsub_vv:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, tu, ma
+; NOVLOPT-NEXT:    vnmsub.vv v8, v8, v10
+; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v10
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vnmsub_vv:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
+; VLOPT-NEXT:    vnmsub.vv v8, v8, v10
+; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; VLOPT-NEXT:    vadd.vv v8, v8, v10
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vnmsub.nxv4i32.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1, iXLen 0)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vnmsub_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
+; NOVLOPT-LABEL: vnmsub_vx:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, tu, ma
+; NOVLOPT-NEXT:    vmv2r.v v10, v8
+; NOVLOPT-NEXT:    vnmsub.vx v10, a0, v8
+; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vnmsub_vx:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
+; VLOPT-NEXT:    vmv2r.v v10, v8
+; VLOPT-NEXT:    vnmsub.vx v10, a0, v8
+; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; VLOPT-NEXT:    vadd.vv v8, v10, v8
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vnmsub.nxv4i32.nxv4i32(<vscale x 4 x i32> %a, i32 %b, <vscale x 4 x i32> %a, iXLen -1, iXLen 0)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
   ret <vscale x 4 x i32> %2
 }
 
@@ -1433,6 +2050,28 @@ define <vscale x 4 x i32> @vmv_v_x(<vscale x 4 x i32> %a, i32 %x, iXLen %vl) {
   %1 = call <vscale x 4 x i32> @llvm.riscv.vmv.v.x.nxv4i32(<vscale x 4 x i32> poison, i32 %x, iXLen -1)
   %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %a, iXLen %vl)
   ret <vscale x 4 x i32> %2
+}
+
+; The vmv.v.v is optimized away if we use a vadd as the user.
+define <vscale x 1 x i8> @vmv_v_v(<vscale x 1 x i8> %a, <vscale x 1 x i8> %b, <vscale x 1 x i8> %c, <vscale x 1 x i1> %m, iXLen %vl) {
+; NOVLOPT-LABEL: vmv_v_v:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e8, mf8, tu, ma
+; NOVLOPT-NEXT:    vmv.v.v v8, v9
+; NOVLOPT-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
+; NOVLOPT-NEXT:    vmerge.vvm v8, v8, v10, v0
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vmv_v_v:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e8, mf8, tu, ma
+; VLOPT-NEXT:    vmv.v.v v8, v9
+; VLOPT-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
+; VLOPT-NEXT:    vmerge.vvm v8, v8, v10, v0
+; VLOPT-NEXT:    ret
+  %2 = call <vscale x 1 x i8> @llvm.riscv.vmv.v.v.nxv1i8.nxv1i8(<vscale x 1 x i8> %a, <vscale x 1 x i8> %b, iXLen -1)
+  %3 = call <vscale x 1 x i8> @llvm.riscv.vmerge.nxv1i8.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i8> %2, <vscale x 1 x i8> %c, <vscale x 1 x i1> %m, iXLen %vl)
+  ret <vscale x 1 x i8> %3
 }
 
 define <vscale x 4 x i32> @vwsll_vi(<vscale x 4 x i16> %a, <vscale x 4 x i32> %b, iXLen %vl) {
