@@ -25,36 +25,36 @@ def uimm11 : RISCVUImmLeafOp<11>;
 //===----------------------------------------------------------------------===//
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
-class QCILoad_ScaleIdx<bits<4> func4, string opcodestr>
+class QCILoad_ScaleIdx<bits<4> funct4, string opcodestr>
     : RVInstRBase<0b111, OPC_CUSTOM_0,
                   (outs GPR:$rd), (ins GPRMem:$rs1, GPRNoX0:$rs2, uimm3:$shamt),
                   opcodestr, "$rd, $rs1, $rs2, $shamt"> {
   bits<3> shamt;
-  let Inst{31-28} = func4;
+  let Inst{31-28} = funct4;
   let Inst{27-25} = shamt;
 }
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
 // rd corresponds to the source for the store 'rs3' described in the spec.
-class QCIStore_ScaleIdx<bits<4> func4, string opcodestr>
+class QCIStore_ScaleIdx<bits<4> funct4, string opcodestr>
     : RVInstRBase<0b110, OPC_CUSTOM_1, (outs),
                   (ins GPR:$rd, GPRMem:$rs1, GPRNoX0:$rs2, uimm3:$shamt),
                   opcodestr, "$rd, $rs1, $rs2, $shamt"> {
   bits<3> shamt;
-  let Inst{31-28} = func4;
+  let Inst{31-28} = funct4;
   let Inst{27-25} = shamt;
 }
 }
 
-class QCIRVInstR<bits<4> func4, string opcodestr>
-    : RVInstR<{0b000, func4}, 0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
+class QCIRVInstR<bits<4> funct4, string opcodestr>
+    : RVInstR<{0b000, funct4}, 0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
               (ins GPRNoX0:$rs1), opcodestr, "$rd, $rs1"> {
   let rs2 = 0;
 }
 
-class QCIRVInstRR<bits<5> func5, DAGOperand InTyRs1, string opcodestr>
-    : RVInstR<{0b00, func5}, 0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
+class QCIRVInstRR<bits<5> funct5, DAGOperand InTyRs1, string opcodestr>
+    : RVInstR<{0b00, funct5}, 0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
               (ins InTyRs1:$rs1, GPRNoX0:$rs2), opcodestr, "$rd, $rs1, $rs2">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
