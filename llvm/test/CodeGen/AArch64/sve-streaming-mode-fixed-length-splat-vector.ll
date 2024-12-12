@@ -14,6 +14,7 @@ define <4 x i8> @splat_v4i8(i8 %a) {
 ; CHECK-LABEL: splat_v4i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.h, w0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: splat_v4i8:
@@ -36,6 +37,7 @@ define <8 x i8> @splat_v8i8(i8 %a) {
 ; CHECK-LABEL: splat_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.b, w0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: splat_v8i8:
@@ -62,6 +64,7 @@ define <16 x i8> @splat_v16i8(i8 %a) {
 ; CHECK-LABEL: splat_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.b, w0
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: splat_v16i8:
@@ -132,6 +135,7 @@ define <2 x i16> @splat_v2i16(i16 %a) {
 ; CHECK-LABEL: splat_v2i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.s, w0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: splat_v2i16:
@@ -151,6 +155,7 @@ define <4 x i16> @splat_v4i16(i16 %a) {
 ; CHECK-LABEL: splat_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.h, w0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: splat_v4i16:
@@ -173,6 +178,7 @@ define <8 x i16> @splat_v8i16(i16 %a) {
 ; CHECK-LABEL: splat_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.h, w0
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: splat_v8i16:
@@ -227,6 +233,7 @@ define <2 x i32> @splat_v2i32(i32 %a) {
 ; CHECK-LABEL: splat_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.s, w0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: splat_v2i32:
@@ -246,6 +253,7 @@ define <4 x i32> @splat_v4i32(i32 %a) {
 ; CHECK-LABEL: splat_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.s, w0
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: splat_v4i32:
@@ -288,6 +296,7 @@ define <1 x i64> @splat_v1i64(i64 %a) {
 ; CHECK-LABEL: splat_v1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.d, x0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: splat_v1i64:
@@ -307,6 +316,7 @@ define <2 x i64> @splat_v2i64(i64 %a) {
 ; CHECK-LABEL: splat_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.d, x0
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: splat_v2i64:
@@ -348,7 +358,9 @@ define void @splat_v4i64(i64 %a, ptr %b) {
 define <2 x half> @splat_v2f16(half %a) {
 ; CHECK-LABEL: splat_v2f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    mov z0.h, h0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: splat_v2f16:
@@ -368,7 +380,9 @@ define <2 x half> @splat_v2f16(half %a) {
 define <4 x half> @splat_v4f16(half %a) {
 ; CHECK-LABEL: splat_v4f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    mov z0.h, h0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: splat_v4f16:
@@ -390,7 +404,9 @@ define <4 x half> @splat_v4f16(half %a) {
 define <8 x half> @splat_v8f16(half %a) {
 ; CHECK-LABEL: splat_v8f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    mov z0.h, h0
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: splat_v8f16:
@@ -415,6 +431,7 @@ define <8 x half> @splat_v8f16(half %a) {
 define void @splat_v16f16(half %a, ptr %b) {
 ; CHECK-LABEL: splat_v16f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    mov z0.h, h0
 ; CHECK-NEXT:    stp q0, q0, [x0]
 ; CHECK-NEXT:    ret
@@ -444,7 +461,9 @@ define void @splat_v16f16(half %a, ptr %b) {
 define <2 x float> @splat_v2f32(float %a, <2 x float> %op2) {
 ; CHECK-LABEL: splat_v2f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    mov z0.s, s0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: splat_v2f32:
@@ -463,7 +482,9 @@ define <2 x float> @splat_v2f32(float %a, <2 x float> %op2) {
 define <4 x float> @splat_v4f32(float %a, <4 x float> %op2) {
 ; CHECK-LABEL: splat_v4f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    mov z0.s, s0
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: splat_v4f32:
@@ -482,6 +503,7 @@ define <4 x float> @splat_v4f32(float %a, <4 x float> %op2) {
 define void @splat_v8f32(float %a, ptr %b) {
 ; CHECK-LABEL: splat_v8f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    mov z0.s, s0
 ; CHECK-NEXT:    stp q0, q0, [x0]
 ; CHECK-NEXT:    ret
@@ -523,7 +545,9 @@ define <1 x double> @splat_v1f64(double %a, <1 x double> %op2) {
 define <2 x double> @splat_v2f64(double %a, <2 x double> %op2) {
 ; CHECK-LABEL: splat_v2f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.d, d0
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: splat_v2f64:
@@ -540,6 +564,7 @@ define <2 x double> @splat_v2f64(double %a, <2 x double> %op2) {
 define void @splat_v4f64(double %a, ptr %b) {
 ; CHECK-LABEL: splat_v4f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.d, d0
 ; CHECK-NEXT:    stp q0, q0, [x0]
 ; CHECK-NEXT:    ret

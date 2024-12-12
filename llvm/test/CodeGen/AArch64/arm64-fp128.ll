@@ -602,6 +602,7 @@ define <2 x i32> @vec_fptosi_32(<2 x fp128> %val) {
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
 ; CHECK-SD-NEXT:    mov v0.s[1], w0
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    add sp, sp, #48
 ; CHECK-SD-NEXT:    ret
 ;
@@ -620,6 +621,7 @@ define <2 x i32> @vec_fptosi_32(<2 x fp128> %val) {
 ; CHECK-GI-NEXT:    mov v0.s[0], w19
 ; CHECK-GI-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v0.s[1], w0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    add sp, sp, #32
 ; CHECK-GI-NEXT:    ret
   %val32 = fptosi <2 x fp128> %val to <2 x i32>
@@ -684,6 +686,7 @@ define <2 x i32> @vec_fptoui_32(<2 x fp128> %val) {
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
 ; CHECK-SD-NEXT:    mov v0.s[1], w0
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    add sp, sp, #48
 ; CHECK-SD-NEXT:    ret
 ;
@@ -702,6 +705,7 @@ define <2 x i32> @vec_fptoui_32(<2 x fp128> %val) {
 ; CHECK-GI-NEXT:    mov v0.s[0], w19
 ; CHECK-GI-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v0.s[1], w0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    add sp, sp, #32
 ; CHECK-GI-NEXT:    ret
   %val32 = fptoui <2 x fp128> %val to <2 x i32>
@@ -757,6 +761,7 @@ define <2 x fp128> @vec_sitofp_32(<2 x i32> %src32) {
 ; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    bl __floatsitf
@@ -778,6 +783,7 @@ define <2 x fp128> @vec_sitofp_32(<2 x i32> %src32) {
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-GI-NEXT:    .cfi_offset w30, -8
 ; CHECK-GI-NEXT:    .cfi_offset b8, -16
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    fmov w0, s0
 ; CHECK-GI-NEXT:    mov s8, v0.s[1]
 ; CHECK-GI-NEXT:    bl __floatsitf
@@ -845,6 +851,7 @@ define <2 x fp128> @vec_uitofp_32(<2 x i32> %src32) {
 ; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    bl __floatunsitf
@@ -866,6 +873,7 @@ define <2 x fp128> @vec_uitofp_32(<2 x i32> %src32) {
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-GI-NEXT:    .cfi_offset w30, -8
 ; CHECK-GI-NEXT:    .cfi_offset b8, -16
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    fmov w0, s0
 ; CHECK-GI-NEXT:    mov s8, v0.s[1]
 ; CHECK-GI-NEXT:    bl __floatunsitf
@@ -971,9 +979,10 @@ define <2 x i1> @vec_setcc1(<2 x fp128> %lhs, <2 x fp128> %rhs) {
 ; CHECK-GI-NEXT:    bl __letf2
 ; CHECK-GI-NEXT:    mov v0.s[0], w19
 ; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    cset w8, le
+; CHECK-GI-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v0.s[1], w8
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    add sp, sp, #48
 ; CHECK-GI-NEXT:    ret
   %val = fcmp ole <2 x fp128> %lhs, %rhs
@@ -1025,9 +1034,10 @@ define <2 x i1> @vec_setcc2(<2 x fp128> %lhs, <2 x fp128> %rhs) {
 ; CHECK-GI-NEXT:    bl __letf2
 ; CHECK-GI-NEXT:    mov v0.s[0], w19
 ; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    cset w8, gt
+; CHECK-GI-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v0.s[1], w8
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    add sp, sp, #48
 ; CHECK-GI-NEXT:    ret
   %val = fcmp ugt <2 x fp128> %lhs, %rhs
@@ -1106,6 +1116,7 @@ define <2 x i1> @vec_setcc3(<2 x fp128> %lhs, <2 x fp128> %rhs) {
 ; CHECK-GI-NEXT:    orr w8, w20, w8
 ; CHECK-GI-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v0.s[1], w8
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    add sp, sp, #96
 ; CHECK-GI-NEXT:    ret
   %val = fcmp ueq <2 x fp128> %lhs, %rhs
@@ -1115,6 +1126,7 @@ define <2 x i1> @vec_setcc3(<2 x fp128> %lhs, <2 x fp128> %rhs) {
 define <2 x fp128> @vec_select(<2 x i1> %cond, <2 x fp128> %lhs, <2 x fp128> %rhs) {
 ; CHECK-SD-LABEL: vec_select:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    fmov w8, s0
 ; CHECK-SD-NEXT:    tst w8, #0x1
 ; CHECK-SD-NEXT:    b.eq .LBB40_2
@@ -1133,6 +1145,7 @@ define <2 x fp128> @vec_select(<2 x i1> %cond, <2 x fp128> %lhs, <2 x fp128> %rh
 ;
 ; CHECK-GI-LABEL: vec_select:
 ; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov w8, v0.s[1]
 ; CHECK-GI-NEXT:    fmov w9, s0
 ; CHECK-GI-NEXT:    mov d5, v1.d[1]
@@ -1170,12 +1183,15 @@ define <2 x half> @vec_round_f16(<2 x fp128> %val) {
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-SD-NEXT:    bl __trunctfhf2
+; CHECK-SD-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    bl __trunctfhf2
 ; CHECK-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-SD-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
 ; CHECK-SD-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    add sp, sp, #48
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1190,9 +1206,11 @@ define <2 x half> @vec_round_f16(<2 x fp128> %val) {
 ; CHECK-GI-NEXT:    mov v2.d[1], x8
 ; CHECK-GI-NEXT:    str q2, [sp, #32] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    bl __trunctfhf2
+; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    bl __trunctfhf2
+; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    ldr q0, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    bl __trunctfhf2
@@ -1201,6 +1219,7 @@ define <2 x half> @vec_round_f16(<2 x fp128> %val) {
 ; CHECK-GI-NEXT:    ldp q1, q0, [sp] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    add sp, sp, #64
 ; CHECK-GI-NEXT:    ret
   %dst = fptrunc <2 x fp128> %val to <2 x half>
@@ -1217,12 +1236,15 @@ define <2 x float> @vec_round_f32(<2 x fp128> %val) {
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-SD-NEXT:    bl __trunctfsf2
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    bl __trunctfsf2
 ; CHECK-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
 ; CHECK-SD-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    add sp, sp, #48
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1234,10 +1256,12 @@ define <2 x float> @vec_round_f32(<2 x fp128> %val) {
 ; CHECK-GI-NEXT:    .cfi_offset w30, -16
 ; CHECK-GI-NEXT:    str q1, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    bl __trunctfsf2
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    bl __trunctfsf2
 ; CHECK-GI-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.s[1], v0.s[0]
 ; CHECK-GI-NEXT:    fmov d0, d1
@@ -1257,10 +1281,12 @@ define <2 x double> @vec_round_f64(<2 x fp128> %val) {
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-SD-NEXT:    bl __trunctfdf2
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    bl __trunctfdf2
 ; CHECK-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    add sp, sp, #48
@@ -1274,10 +1300,12 @@ define <2 x double> @vec_round_f64(<2 x fp128> %val) {
 ; CHECK-GI-NEXT:    .cfi_offset w30, -16
 ; CHECK-GI-NEXT:    str q1, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    bl __trunctfdf2
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    bl __trunctfdf2
 ; CHECK-GI-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.d[1], v0.d[0]
 ; CHECK-GI-NEXT:    mov v0.16b, v1.16b
@@ -1294,7 +1322,9 @@ define <2 x fp128> @vec_extend_f16(<2 x half> %val) {
 ; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-SD-NEXT:    bl __extendhftf2
 ; CHECK-SD-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
@@ -1315,7 +1345,9 @@ define <2 x fp128> @vec_extend_f16(<2 x half> %val) {
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-GI-NEXT:    .cfi_offset w30, -8
 ; CHECK-GI-NEXT:    .cfi_offset b8, -16
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov h8, v0.h[1]
+; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-GI-NEXT:    bl __extendhftf2
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov s0, s8
@@ -1337,7 +1369,9 @@ define <2 x fp128> @vec_extend_f32(<2 x float> %val) {
 ; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-SD-NEXT:    bl __extendsftf2
 ; CHECK-SD-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
@@ -1358,7 +1392,9 @@ define <2 x fp128> @vec_extend_f32(<2 x float> %val) {
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-GI-NEXT:    .cfi_offset w30, -8
 ; CHECK-GI-NEXT:    .cfi_offset b8, -16
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov s8, v0.s[1]
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-GI-NEXT:    bl __extendsftf2
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov s0, s8
@@ -1381,6 +1417,7 @@ define <2 x fp128> @vec_extend_f64(<2 x double> %val) {
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    bl __extenddftf2
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
@@ -1401,6 +1438,7 @@ define <2 x fp128> @vec_extend_f64(<2 x double> %val) {
 ; CHECK-GI-NEXT:    .cfi_offset w30, -8
 ; CHECK-GI-NEXT:    .cfi_offset b8, -16
 ; CHECK-GI-NEXT:    mov d8, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    bl __extenddftf2
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov d0, d8

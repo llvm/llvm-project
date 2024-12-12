@@ -52,11 +52,9 @@ void AtLeastOneOf() {
   // OpenACC TODO: The following 'data' directives should diagnose, since they
   // don't have at least one of the above clauses.
 
-  // expected-warning@+1{{OpenACC clause 'if' not yet implemented}}
 #pragma acc data if(Var)
   ;
 
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented}}
 #pragma acc data async
   ;
 
@@ -80,9 +78,7 @@ void AtLeastOneOf() {
   // OpenACC TODO: The following 'enter data' directives should diagnose, since
   // they don't have at least one of the above clauses.
 
-  // expected-warning@+1{{OpenACC clause 'if' not yet implemented}}
 #pragma acc enter data if(Var)
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented}}
 #pragma acc enter data async
   // expected-warning@+1{{OpenACC clause 'wait' not yet implemented}}
 #pragma acc enter data wait
@@ -99,9 +95,7 @@ void AtLeastOneOf() {
   // OpenACC TODO: The following 'exit data' directives should diagnose, since
   // they don't have at least one of the above clauses.
 
-  // expected-warning@+1{{OpenACC clause 'if' not yet implemented}}
 #pragma acc exit data if(Var)
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented}}
 #pragma acc exit data async
   // expected-warning@+1{{OpenACC clause 'wait' not yet implemented}}
 #pragma acc exit data wait
@@ -116,7 +110,6 @@ void AtLeastOneOf() {
   // OpenACC TODO: The following 'host_data' directives should diagnose, since
   // they don't have at least one of the above clauses.
 
-  // expected-warning@+1{{OpenACC clause 'if' not yet implemented}}
 #pragma acc host_data if(Var)
   ;
   // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented}}
@@ -171,7 +164,6 @@ void DataRules() {
   // expected-note@+1{{previous clause is here}}
 #pragma acc data device_type(*) if(Var)
   ;
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented}}
 #pragma acc data device_type(*) async
   ;
   // expected-warning@+1{{OpenACC clause 'wait' not yet implemented}}
@@ -200,10 +192,8 @@ struct HasMembers {
 
 void HostDataRules() {
   int Var, Var2;
-  // TODO OpenACC: The following line should diagnose, since only 1 'if' is
-  // allowed per directive on host_data.
-  // expected-warning@+2{{OpenACC clause 'if' not yet implemented}}
-  // expected-warning@+1{{OpenACC clause 'if' not yet implemented}}
+  // expected-error@+2{{OpenACC 'if' clause cannot appear more than once on a 'host_data' directive}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc host_data if(Var) if (Var2)
   ;
 

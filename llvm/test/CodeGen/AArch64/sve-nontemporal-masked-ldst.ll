@@ -10,6 +10,7 @@ define <4 x i32> @masked_load_v4i32(ptr %a, <4 x i1> %mask) nounwind {
 ; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
 ; CHECK-NEXT:    ldnt1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %load = call <4 x i32> @llvm.masked.load.v4i32(ptr %a, i32 1, <4 x i1> %mask, <4 x i32> undef), !nontemporal !0
   ret <4 x i32> %load
@@ -20,6 +21,7 @@ define void @masked_store_v4i32(<4 x i32> %x, ptr %a, <4 x i1> %mask) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    shl v1.4s, v1.4s, #31
 ; CHECK-NEXT:    cmlt v1.4s, v1.4s, #0
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, #0

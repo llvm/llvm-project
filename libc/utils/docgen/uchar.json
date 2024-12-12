@@ -12,16 +12,20 @@
       "c-definition": "7.30.2.3"
     },
     "mbrtoc16": {
-      "c-definition": "7.30.2.4"
+      "c-definition": "7.30.2.4",
+      "in-latest-posix": ""
     },
     "c16rtomb": {
-      "c-definition": "7.30.2.5"
+      "c-definition": "7.30.2.5",
+      "in-latest-posix": ""
     },
     "mbrtoc32": {
-      "c-definition": "7.30.2.6"
+      "c-definition": "7.30.2.6",
+      "in-latest-posix": ""
     },
     "c32rtomb": {
-      "c-definition": "7.30.2.7"
+      "c-definition": "7.30.2.7",
+      "in-latest-posix": ""
     }
   }
 }

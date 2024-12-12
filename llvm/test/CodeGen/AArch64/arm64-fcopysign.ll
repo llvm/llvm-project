@@ -7,7 +7,10 @@ define float @test1(float %x, float %y) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mvni.4s v2, #128, lsl #24
+; CHECK-NEXT:    ; kill: def $s0 killed $s0 def $q0
+; CHECK-NEXT:    ; kill: def $s1 killed $s1 def $q1
 ; CHECK-NEXT:    bif.16b v0, v1, v2
+; CHECK-NEXT:    ; kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call float @copysignf(float %x, float %y) nounwind readnone
@@ -18,8 +21,11 @@ define double @test2(double %x, double %y) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    movi.2d v2, #0xffffffffffffffff
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fneg.2d v2, v2
 ; CHECK-NEXT:    bif.16b v0, v1, v2
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call double @copysign(double %x, double %y) nounwind readnone
@@ -32,9 +38,11 @@ define double @test3(double %a, float %b, float %c) nounwind {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    movi.2d v3, #0xffffffffffffffff
 ; CHECK-NEXT:    fadd s1, s1, s2
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fneg.2d v2, v3
 ; CHECK-NEXT:    fcvt d1, s1
 ; CHECK-NEXT:    bif.16b v0, v1, v2
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %tmp1 = fadd float %b, %c
   %tmp2 = fpext float %tmp1 to double

@@ -2,151 +2,151 @@
   "macros": {
     "SIG_DFL": {
       "c-definition": "7.14.3",
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIG_ERR": {
       "c-definition": "7.14.3",
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIG_HOLD": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIG_IGN": {
       "c-definition": "7.14.3",
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGRTMIN": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGRTMAX": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGABRT": {
       "c-definition": "7.14.3",
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGALRM": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGBUS": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGCHLD": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGCONT": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGFPE": {
       "c-definition": "7.14.3",
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGHUP": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGILL": {
       "c-definition": "7.14.3",
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGINT": {
       "c-definition": "7.14.3",
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGKILL": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGPIPE": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGPIPE": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGQUIT": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGSEGV": {
       "c-definition": "7.14.3",
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGSTOP": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGTERM": {
       "c-definition": "7.14.3",
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGTSTP": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGTTIN": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGTTOU": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGUSR1": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGUSR2": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGPOLL": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGPROF": {
-    "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGSYS": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGTRAP": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGURG": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGVTALRM": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGXCPU": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     },
     "SIGXFSZ": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html"
+      "in-latest-posix": ""
     }
   },
   "functions": {
     "signal": {
       "c-definition": "7.14.1.1",
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/signal.html"
+      "in-latest-posix": ""
     },
     "raise": {
       "c-definition": "7.14.2.1",
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/raise.html"
+      "in-latest-posix": ""
     },
     "kill": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/kill.html"
+      "in-latest-posix": ""
     },
     "sigaction": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/sigaction.html"
+      "in-latest-posix": ""
     },
     "sigaddset": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/sigaddset.html"
+      "in-latest-posix": ""
     },
     "sigaltstack": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/sigaltstack.html"
+      "in-latest-posix": ""
     },
     "sigdelset": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/sigdelset.html"
+      "in-latest-posix": ""
     },
     "sigemptyset": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/sigemptyset.html"
+      "in-latest-posix": ""
     },
     "sigfillset": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/sigfillset.html"
+      "in-latest-posix": ""
     },
     "sigprocmask": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/sigprocmask.html"
+      "in-latest-posix": ""
     }
   }
 }

@@ -33,6 +33,7 @@ define i32 @vector_length_i64(i64 %tc) {
 ; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    cmp x0, x8
 ; CHECK-NEXT:    csel x0, x0, x8, lo
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %a = call i32 @llvm.experimental.get.vector.length.i64(i64 %tc, i32 2, i1 true)
   ret i32 %a

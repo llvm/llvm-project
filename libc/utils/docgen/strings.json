@@ -1,40 +1,40 @@
 {
   "functions": {
     "bzero": {
-      "posix-definition": "removed in POSIX.1-2008"
+      "removed-in-posix-2008": ""
     },
     "bcmp": {
-      "posix-definition": "removed in POSIX.1-2008"
+      "removed-in-posix-2008": ""
     },
     "bcopy": {
-      "posix-definition": "removed in POSIX.1-2008"
+      "removed-in-posix-2008": ""
     },
     "ffs": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/ffs.html"
+      "in-latest-posix": ""
     },
     "ffsl": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/ffsl.html"
+      "in-latest-posix": ""
     },
     "ffsll": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/ffsll.html"
+      "in-latest-posix": ""
     },
     "index": {
-      "posix-definition": "removed in POSIX.1-2008"
+      "removed-in-posix-2008": ""
     },
     "rindex": {
-      "posix-definition": "removed in POSIX.1-2008"
+      "removed-in-posix-2008": ""
     },
     "strcasecmp": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/strncasecmp.html"
+      "in-latest-posix": ""
     },
     "strcasecmp_l": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/strncasecmp.html"
+      "in-latest-posix": ""
     },
     "strncasecmp": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/strncasecmp.html"
+      "in-latest-posix": ""
     },
     "strncasecmp_l": {
-      "posix-definition": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/strncasecmp.html"
+      "in-latest-posix": ""
     }
   }
 }
