@@ -2814,12 +2814,13 @@ bool SemaHLSL::CanPerformSplat(Expr *Src, QualType DestTy) {
     return false;
 
   const VectorType *SrcVecTy = SrcTy->getAs<VectorType>();
-  if (SrcVecTy)
-    SrcTy = SrcVecTy->getElementType();
 
   // Src isn't a scalar or a vector of length 1
   if (!SrcTy->isScalarType() && !(SrcVecTy && SrcVecTy->getNumElements() == 1))
     return false;
+
+  if (SrcVecTy)
+    SrcTy = SrcVecTy->getElementType();
 
   llvm::SmallVector<QualType> DestTypes;
   BuildFlattenedTypeList(DestTy, DestTypes);
