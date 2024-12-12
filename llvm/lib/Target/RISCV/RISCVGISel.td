@@ -58,15 +58,6 @@ def GIAddrRegImm :
 def GIVLOp : GIComplexOperandMatcher<s32, "renderVLOp">,
              GIComplexPatternEquiv<VLOp>;
 
-// Convert from i32 immediate to i64 target immediate to make SelectionDAG type
-// checking happy so we can use ADDIW which expects an XLen immediate.
-def as_i64imm : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i64);
-}]>;
-
-def gi_as_i64imm : GICustomOperandRenderer<"renderImm">,
-  GISDNodeXFormEquiv<as_i64imm>;
-
 def gi_trailing_zero : GICustomOperandRenderer<"renderTrailingZeros">,
   GISDNodeXFormEquiv<TrailingZeros>;
 

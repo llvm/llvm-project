@@ -143,8 +143,8 @@ quentin.colombet@gmail.com (email), [qcolombet](https://github.com/qcolombet) (G
 
 #### MC layer
 
-James Grosbach \
-grosbach@apple.com (email)
+Fangrui Song \
+i@maskray.me (email), [MaskRay](https://github.com/MaskRay) (GitHub)
 
 #### Windows codegen
 
@@ -340,8 +340,8 @@ jgorbe@google.com (email), [slackito](https://github.com/slackito) (GitHub)
 
 #### TableGen
 
-Paul C. Anagnostopoulos \
-paul@windfall.com (email)
+Rahul Joshi \
+rjoshi@nvidia.com (email), [jurahul](https://github.com/jurahul) (GitHub)
 
 #### TextAPI
 
@@ -452,9 +452,11 @@ sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattn
 
 ### Inactive or former component maintainers
 
+Paul C. Anagnostopoulos (paul@windfall.com, [Paul-C-Anagnostopoulos](https://github.com/Paul-C-Anagnostopoulos)) -- TableGen \
 Justin Bogner (mail@justinbogner.com, [bogner](https://github.com/bogner)) -- SelectionDAG \
 Evan Cheng (evan.cheng@apple.com) -- Parts of code generator not covered by someone else \
 Renato Golin (rengolin@systemcall.eu, [rengolin](https://github.com/rengolin)) -- ARM backend \
+James Grosbach (grosbach@apple.com) -- MC layer \
 Anton Korobeynikov (anton@korobeynikov.info, [asl](https://github.com/asl)) -- ARM EABI \
 Chad Rosier (mcrosier@codeaurora.org) -- FastISel \
 Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management \

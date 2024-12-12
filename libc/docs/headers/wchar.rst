@@ -15,7 +15,7 @@ Macros
   * - Macro
     - Implemented
     - C23 Standard Section
-    - POSIX.1-2024 Standard Section
+    - POSIX Docs
   * - WEOF
     - |check|
     - 7.31.1
@@ -36,7 +36,7 @@ Functions
   * - Function
     - Implemented
     - C23 Standard Section
-    - POSIX.1-2024 Standard Section
+    - POSIX Docs
   * - btowc
     - |check|
     - 7.31.6.2.1
