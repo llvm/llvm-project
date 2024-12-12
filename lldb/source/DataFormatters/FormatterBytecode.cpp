@@ -339,7 +339,7 @@ llvm::Error Interpret(std::vector<ControlStackElement> &control,
     }
     case op_is_null: {
       TYPE_CHECK(Object);
-      data.Push(data.Pop<ValueObjectSP>() ? 0ULL : 1ULL);
+      data.Push(data.Pop<ValueObjectSP>() ? (uint64_t)0 : (uint64_t)1);
       continue;
     }
 
