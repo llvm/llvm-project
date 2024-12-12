@@ -3671,6 +3671,7 @@ private:
 
     if (UserTreeIdx.UserTE)
       Last->UserTreeIndices.push_back(UserTreeIdx);
+    Last->dump();
     return Last;
   }
 
