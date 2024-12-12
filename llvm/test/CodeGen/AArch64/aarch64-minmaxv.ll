@@ -458,6 +458,7 @@ define i8 @sminv_v2i8(<2 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: sminv_v2i8:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov s1, v0.s[1]
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    sxtb w8, w8
@@ -509,6 +510,7 @@ define i8 @sminv_v4i8(<4 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: sminv_v4i8:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    umov w8, v0.h[0]
 ; CHECK-GI-NEXT:    umov w9, v0.h[1]
 ; CHECK-GI-NEXT:    umov w10, v0.h[2]
@@ -573,6 +575,7 @@ define i16 @sminv_v2i16(<2 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: sminv_v2i16:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov s1, v0.s[1]
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    sxth w8, w8
@@ -589,6 +592,7 @@ entry:
 define i16 @sminv_v3i16(<3 x i16> %a) {
 ; CHECK-LABEL: sminv_v3i16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov w8, #32767 // =0x7fff
 ; CHECK-NEXT:    mov v0.h[3], w8
 ; CHECK-NEXT:    sminv h0, v0.4h
@@ -706,7 +710,10 @@ entry:
 define i64 @sminv_v3i64(<3 x i64> %a) {
 ; CHECK-SD-LABEL: sminv_v3i64:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    mov x8, #9223372036854775807 // =0x7fffffffffffffff
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    mov v2.d[1], x8
 ; CHECK-SD-NEXT:    cmgt v1.2d, v2.2d, v0.2d
@@ -719,7 +726,10 @@ define i64 @sminv_v3i64(<3 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: sminv_v3i64:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    mov x8, #9223372036854775807 // =0x7fffffffffffffff
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v2.d[1], x8
 ; CHECK-GI-NEXT:    cmgt v1.2d, v2.2d, v0.2d
@@ -800,6 +810,7 @@ define i8 @smaxv_v2i8(<2 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: smaxv_v2i8:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov s1, v0.s[1]
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    sxtb w8, w8
@@ -851,6 +862,7 @@ define i8 @smaxv_v4i8(<4 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: smaxv_v4i8:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    umov w8, v0.h[0]
 ; CHECK-GI-NEXT:    umov w9, v0.h[1]
 ; CHECK-GI-NEXT:    umov w10, v0.h[2]
@@ -915,6 +927,7 @@ define i16 @smaxv_v2i16(<2 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: smaxv_v2i16:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov s1, v0.s[1]
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    sxth w8, w8
@@ -931,6 +944,7 @@ entry:
 define i16 @smaxv_v3i16(<3 x i16> %a) {
 ; CHECK-SD-LABEL: smaxv_v3i16:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    mov w8, #-32768 // =0xffff8000
 ; CHECK-SD-NEXT:    mov v0.h[3], w8
 ; CHECK-SD-NEXT:    smaxv h0, v0.4h
@@ -939,6 +953,7 @@ define i16 @smaxv_v3i16(<3 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: smaxv_v3i16:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov w8, #32768 // =0x8000
 ; CHECK-GI-NEXT:    mov v0.h[3], w8
 ; CHECK-GI-NEXT:    smaxv h0, v0.4h
@@ -1056,7 +1071,10 @@ entry:
 define i64 @smaxv_v3i64(<3 x i64> %a) {
 ; CHECK-SD-LABEL: smaxv_v3i64:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    mov v2.d[1], x8
 ; CHECK-SD-NEXT:    cmgt v1.2d, v0.2d, v2.2d
@@ -1069,7 +1087,10 @@ define i64 @smaxv_v3i64(<3 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: smaxv_v3i64:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v2.d[1], x8
 ; CHECK-GI-NEXT:    cmgt v1.2d, v0.2d, v2.2d
@@ -1150,6 +1171,7 @@ define i8 @uminv_v2i8(<2 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: uminv_v2i8:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov s1, v0.s[1]
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    and w8, w8, #0xff
@@ -1199,6 +1221,7 @@ define i8 @uminv_v4i8(<4 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: uminv_v4i8:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    umov w8, v0.h[0]
 ; CHECK-GI-NEXT:    umov w9, v0.h[1]
 ; CHECK-GI-NEXT:    umov w10, v0.h[2]
@@ -1263,6 +1286,7 @@ define i16 @uminv_v2i16(<2 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: uminv_v2i16:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov s1, v0.s[1]
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    and w8, w8, #0xffff
@@ -1279,6 +1303,7 @@ entry:
 define i16 @uminv_v3i16(<3 x i16> %a) {
 ; CHECK-SD-LABEL: uminv_v3i16:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-SD-NEXT:    mov v0.h[3], w8
 ; CHECK-SD-NEXT:    uminv h0, v0.4h
@@ -1287,6 +1312,7 @@ define i16 @uminv_v3i16(<3 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: uminv_v3i16:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov w8, #65535 // =0xffff
 ; CHECK-GI-NEXT:    mov v0.h[3], w8
 ; CHECK-GI-NEXT:    uminv h0, v0.4h
@@ -1404,7 +1430,10 @@ entry:
 define i64 @uminv_v3i64(<3 x i64> %a) {
 ; CHECK-SD-LABEL: uminv_v3i64:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    mov v2.d[1], x8
 ; CHECK-SD-NEXT:    cmhi v1.2d, v2.2d, v0.2d
@@ -1417,7 +1446,10 @@ define i64 @uminv_v3i64(<3 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: uminv_v3i64:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v2.d[1], x8
 ; CHECK-GI-NEXT:    cmhi v1.2d, v2.2d, v0.2d
@@ -1498,6 +1530,7 @@ define i8 @umaxv_v2i8(<2 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: umaxv_v2i8:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov s1, v0.s[1]
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    and w8, w8, #0xff
@@ -1547,6 +1580,7 @@ define i8 @umaxv_v4i8(<4 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: umaxv_v4i8:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    umov w8, v0.h[0]
 ; CHECK-GI-NEXT:    umov w9, v0.h[1]
 ; CHECK-GI-NEXT:    umov w10, v0.h[2]
@@ -1611,6 +1645,7 @@ define i16 @umaxv_v2i16(<2 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: umaxv_v2i16:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov s1, v0.s[1]
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    and w8, w8, #0xffff
@@ -1627,6 +1662,7 @@ entry:
 define i16 @umaxv_v3i16(<3 x i16> %a) {
 ; CHECK-SD-LABEL: umaxv_v3i16:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    mov v0.h[3], wzr
 ; CHECK-SD-NEXT:    umaxv h0, v0.4h
 ; CHECK-SD-NEXT:    fmov w0, s0
@@ -1634,6 +1670,7 @@ define i16 @umaxv_v3i16(<3 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: umaxv_v3i16:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov w8, #0 // =0x0
 ; CHECK-GI-NEXT:    mov v0.h[3], w8
 ; CHECK-GI-NEXT:    umaxv h0, v0.4h
@@ -1750,7 +1787,10 @@ entry:
 define i64 @umaxv_v3i64(<3 x i64> %a) {
 ; CHECK-SD-LABEL: umaxv_v3i64:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    mov v3.16b, v2.16b
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    mov v3.d[1], xzr
 ; CHECK-SD-NEXT:    cmhi v3.2d, v0.2d, v3.2d
@@ -1764,6 +1804,9 @@ define i64 @umaxv_v3i64(<3 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: umaxv_v3i64:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v2.d[1], xzr
 ; CHECK-GI-NEXT:    cmhi v1.2d, v0.2d, v2.2d

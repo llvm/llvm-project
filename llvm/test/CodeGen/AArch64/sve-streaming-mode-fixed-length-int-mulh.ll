@@ -17,19 +17,25 @@ define <4 x i8> @smulh_v4i8(<4 x i8> %op1, <4 x i8> %op2) {
 ; SVE-LABEL: smulh_v4i8:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ptrue p0.h, vl4
+; SVE-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; SVE-NEXT:    sxtb z0.h, p0/m, z0.h
 ; SVE-NEXT:    sxtb z1.h, p0/m, z1.h
 ; SVE-NEXT:    mul z0.h, p0/m, z0.h, z1.h
 ; SVE-NEXT:    lsr z0.h, z0.h, #4
+; SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: smulh_v4i8:
 ; SVE2:       // %bb.0:
 ; SVE2-NEXT:    ptrue p0.h, vl4
+; SVE2-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; SVE2-NEXT:    sxtb z0.h, p0/m, z0.h
 ; SVE2-NEXT:    sxtb z1.h, p0/m, z1.h
 ; SVE2-NEXT:    mul z0.h, z0.h, z1.h
 ; SVE2-NEXT:    lsr z0.h, z0.h, #4
+; SVE2-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: smulh_v4i8:
@@ -74,12 +80,18 @@ define <8 x i8> @smulh_v8i8(<8 x i8> %op1, <8 x i8> %op2) {
 ; SVE-LABEL: smulh_v8i8:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ptrue p0.b, vl8
+; SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; SVE-NEXT:    smulh z0.b, p0/m, z0.b, z1.b
+; SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: smulh_v8i8:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE2-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; SVE2-NEXT:    smulh z0.b, z0.b, z1.b
+; SVE2-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: smulh_v8i8:
@@ -144,12 +156,18 @@ define <16 x i8> @smulh_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 ; SVE-LABEL: smulh_v16i8:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ptrue p0.b, vl16
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; SVE-NEXT:    smulh z0.b, p0/m, z0.b, z1.b
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: smulh_v16i8:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; SVE2-NEXT:    smulh z0.b, z0.b, z1.b
+; SVE2-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE2-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: smulh_v16i8:
@@ -557,19 +575,25 @@ define <2 x i16> @smulh_v2i16(<2 x i16> %op1, <2 x i16> %op2) {
 ; SVE-LABEL: smulh_v2i16:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ptrue p0.s, vl2
+; SVE-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; SVE-NEXT:    sxth z0.s, p0/m, z0.s
 ; SVE-NEXT:    sxth z1.s, p0/m, z1.s
 ; SVE-NEXT:    mul z0.s, p0/m, z0.s, z1.s
 ; SVE-NEXT:    lsr z0.s, z0.s, #16
+; SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: smulh_v2i16:
 ; SVE2:       // %bb.0:
 ; SVE2-NEXT:    ptrue p0.s, vl2
+; SVE2-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; SVE2-NEXT:    sxth z0.s, p0/m, z0.s
 ; SVE2-NEXT:    sxth z1.s, p0/m, z1.s
 ; SVE2-NEXT:    mul z0.s, z0.s, z1.s
 ; SVE2-NEXT:    lsr z0.s, z0.s, #16
+; SVE2-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: smulh_v2i16:
@@ -601,12 +625,18 @@ define <4 x i16> @smulh_v4i16(<4 x i16> %op1, <4 x i16> %op2) {
 ; SVE-LABEL: smulh_v4i16:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ptrue p0.h, vl4
+; SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; SVE-NEXT:    smulh z0.h, p0/m, z0.h, z1.h
+; SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: smulh_v4i16:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE2-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; SVE2-NEXT:    smulh z0.h, z0.h, z1.h
+; SVE2-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: smulh_v4i16:
@@ -649,12 +679,18 @@ define <8 x i16> @smulh_v8i16(<8 x i16> %op1, <8 x i16> %op2) {
 ; SVE-LABEL: smulh_v8i16:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ptrue p0.h, vl8
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; SVE-NEXT:    smulh z0.h, p0/m, z0.h, z1.h
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: smulh_v8i16:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; SVE2-NEXT:    smulh z0.h, z0.h, z1.h
+; SVE2-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE2-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: smulh_v8i16:
@@ -874,12 +910,18 @@ define <2 x i32> @smulh_v2i32(<2 x i32> %op1, <2 x i32> %op2) {
 ; SVE-LABEL: smulh_v2i32:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ptrue p0.s, vl2
+; SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; SVE-NEXT:    smulh z0.s, p0/m, z0.s, z1.s
+; SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: smulh_v2i32:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE2-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; SVE2-NEXT:    smulh z0.s, z0.s, z1.s
+; SVE2-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: smulh_v2i32:
@@ -909,12 +951,18 @@ define <4 x i32> @smulh_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 ; SVE-LABEL: smulh_v4i32:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ptrue p0.s, vl4
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; SVE-NEXT:    smulh z0.s, p0/m, z0.s, z1.s
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: smulh_v4i32:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; SVE2-NEXT:    smulh z0.s, z0.s, z1.s
+; SVE2-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE2-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: smulh_v4i32:
@@ -1035,12 +1083,18 @@ define <1 x i64> @smulh_v1i64(<1 x i64> %op1, <1 x i64> %op2) {
 ; SVE-LABEL: smulh_v1i64:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ptrue p0.d, vl1
+; SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; SVE-NEXT:    smulh z0.d, p0/m, z0.d, z1.d
+; SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: smulh_v1i64:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE2-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; SVE2-NEXT:    smulh z0.d, z0.d, z1.d
+; SVE2-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: smulh_v1i64:
@@ -1068,12 +1122,18 @@ define <2 x i64> @smulh_v2i64(<2 x i64> %op1, <2 x i64> %op2) {
 ; SVE-LABEL: smulh_v2i64:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ptrue p0.d, vl2
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; SVE-NEXT:    smulh z0.d, p0/m, z0.d, z1.d
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: smulh_v2i64:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; SVE2-NEXT:    smulh z0.d, z0.d, z1.d
+; SVE2-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE2-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: smulh_v2i64:
@@ -1163,19 +1223,25 @@ define void @smulh_v4i64(ptr %a, ptr %b) {
 define <4 x i8> @umulh_v4i8(<4 x i8> %op1, <4 x i8> %op2) {
 ; SVE-LABEL: umulh_v4i8:
 ; SVE:       // %bb.0:
+; SVE-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE-NEXT:    ptrue p0.h, vl4
 ; SVE-NEXT:    and z0.h, z0.h, #0xff
 ; SVE-NEXT:    and z1.h, z1.h, #0xff
-; SVE-NEXT:    ptrue p0.h, vl4
 ; SVE-NEXT:    mul z0.h, p0/m, z0.h, z1.h
 ; SVE-NEXT:    lsr z0.h, z0.h, #4
+; SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: umulh_v4i8:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; SVE2-NEXT:    and z0.h, z0.h, #0xff
 ; SVE2-NEXT:    and z1.h, z1.h, #0xff
 ; SVE2-NEXT:    mul z0.h, z0.h, z1.h
 ; SVE2-NEXT:    lsr z0.h, z0.h, #4
+; SVE2-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: umulh_v4i8:
@@ -1218,12 +1284,18 @@ define <8 x i8> @umulh_v8i8(<8 x i8> %op1, <8 x i8> %op2) {
 ; SVE-LABEL: umulh_v8i8:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ptrue p0.b, vl8
+; SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; SVE-NEXT:    umulh z0.b, p0/m, z0.b, z1.b
+; SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: umulh_v8i8:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE2-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; SVE2-NEXT:    umulh z0.b, z0.b, z1.b
+; SVE2-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: umulh_v8i8:
@@ -1286,12 +1358,18 @@ define <16 x i8> @umulh_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 ; SVE-LABEL: umulh_v16i8:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ptrue p0.b, vl16
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; SVE-NEXT:    umulh z0.b, p0/m, z0.b, z1.b
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: umulh_v16i8:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; SVE2-NEXT:    umulh z0.b, z0.b, z1.b
+; SVE2-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE2-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: umulh_v16i8:
@@ -1698,19 +1776,25 @@ define void @umulh_v32i8(ptr %a, ptr %b) {
 define <2 x i16> @umulh_v2i16(<2 x i16> %op1, <2 x i16> %op2) {
 ; SVE-LABEL: umulh_v2i16:
 ; SVE:       // %bb.0:
+; SVE-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE-NEXT:    ptrue p0.s, vl2
 ; SVE-NEXT:    and z0.s, z0.s, #0xffff
 ; SVE-NEXT:    and z1.s, z1.s, #0xffff
-; SVE-NEXT:    ptrue p0.s, vl2
 ; SVE-NEXT:    mul z0.s, p0/m, z0.s, z1.s
 ; SVE-NEXT:    lsr z0.s, z0.s, #16
+; SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: umulh_v2i16:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; SVE2-NEXT:    and z0.s, z0.s, #0xffff
 ; SVE2-NEXT:    and z1.s, z1.s, #0xffff
 ; SVE2-NEXT:    mul z0.s, z0.s, z1.s
 ; SVE2-NEXT:    lsr z0.s, z0.s, #16
+; SVE2-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: umulh_v2i16:
@@ -1742,12 +1826,18 @@ define <4 x i16> @umulh_v4i16(<4 x i16> %op1, <4 x i16> %op2) {
 ; SVE-LABEL: umulh_v4i16:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ptrue p0.h, vl4
+; SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; SVE-NEXT:    umulh z0.h, p0/m, z0.h, z1.h
+; SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: umulh_v4i16:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE2-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; SVE2-NEXT:    umulh z0.h, z0.h, z1.h
+; SVE2-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: umulh_v4i16:
@@ -1790,12 +1880,18 @@ define <8 x i16> @umulh_v8i16(<8 x i16> %op1, <8 x i16> %op2) {
 ; SVE-LABEL: umulh_v8i16:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ptrue p0.h, vl8
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; SVE-NEXT:    umulh z0.h, p0/m, z0.h, z1.h
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: umulh_v8i16:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; SVE2-NEXT:    umulh z0.h, z0.h, z1.h
+; SVE2-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE2-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: umulh_v8i16:
@@ -2015,12 +2111,18 @@ define <2 x i32> @umulh_v2i32(<2 x i32> %op1, <2 x i32> %op2) {
 ; SVE-LABEL: umulh_v2i32:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ptrue p0.s, vl2
+; SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; SVE-NEXT:    umulh z0.s, p0/m, z0.s, z1.s
+; SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: umulh_v2i32:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE2-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; SVE2-NEXT:    umulh z0.s, z0.s, z1.s
+; SVE2-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: umulh_v2i32:
@@ -2050,12 +2152,18 @@ define <4 x i32> @umulh_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 ; SVE-LABEL: umulh_v4i32:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ptrue p0.s, vl4
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; SVE-NEXT:    umulh z0.s, p0/m, z0.s, z1.s
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: umulh_v4i32:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; SVE2-NEXT:    umulh z0.s, z0.s, z1.s
+; SVE2-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE2-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: umulh_v4i32:
@@ -2178,12 +2286,18 @@ define <1 x i64> @umulh_v1i64(<1 x i64> %op1, <1 x i64> %op2) {
 ; SVE-LABEL: umulh_v1i64:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ptrue p0.d, vl1
+; SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; SVE-NEXT:    umulh z0.d, p0/m, z0.d, z1.d
+; SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: umulh_v1i64:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE2-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; SVE2-NEXT:    umulh z0.d, z0.d, z1.d
+; SVE2-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: umulh_v1i64:
@@ -2209,12 +2323,18 @@ define <2 x i64> @umulh_v2i64(<2 x i64> %op1, <2 x i64> %op2) {
 ; SVE-LABEL: umulh_v2i64:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ptrue p0.d, vl2
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; SVE-NEXT:    umulh z0.d, p0/m, z0.d, z1.d
+; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: umulh_v2i64:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; SVE2-NEXT:    umulh z0.d, z0.d, z1.d
+; SVE2-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE2-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: umulh_v2i64:

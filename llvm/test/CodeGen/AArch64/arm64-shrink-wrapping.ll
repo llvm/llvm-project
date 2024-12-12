@@ -601,6 +601,7 @@ if.end:                                           ; preds = %for.body, %if.else
 define i32 @callVariadicFunc(i32 %cond, i32 %N) {
 ; ENABLE-LABEL: callVariadicFunc:
 ; ENABLE:       ; %bb.0: ; %entry
+; ENABLE-NEXT:    ; kill: def $w1 killed $w1 def $x1
 ; ENABLE-NEXT:    cbz w0, LBB8_2
 ; ENABLE-NEXT:  ; %bb.1: ; %if.then
 ; ENABLE-NEXT:    sub sp, sp, #64
@@ -630,6 +631,7 @@ define i32 @callVariadicFunc(i32 %cond, i32 %N) {
 ; DISABLE-NEXT:    .cfi_def_cfa w29, 16
 ; DISABLE-NEXT:    .cfi_offset w30, -8
 ; DISABLE-NEXT:    .cfi_offset w29, -16
+; DISABLE-NEXT:    ; kill: def $w1 killed $w1 def $x1
 ; DISABLE-NEXT:    cbz w0, LBB8_2
 ; DISABLE-NEXT:  ; %bb.1: ; %if.then
 ; DISABLE-NEXT:    stp x1, x1, [sp, #32]

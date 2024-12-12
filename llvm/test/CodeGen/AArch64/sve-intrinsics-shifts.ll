@@ -173,6 +173,7 @@ define <vscale x 2 x i64> @insr_i64(<vscale x 2 x i64> %a, i64 %b) {
 define <vscale x 8 x half> @insr_f16(<vscale x 8 x half> %a, half %b) {
 ; CHECK-LABEL: insr_f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h1 killed $h1 def $z1
 ; CHECK-NEXT:    insr z0.h, h1
 ; CHECK-NEXT:    ret
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.insr.nxv8f16(<vscale x 8 x half> %a, half %b)
@@ -182,6 +183,7 @@ define <vscale x 8 x half> @insr_f16(<vscale x 8 x half> %a, half %b) {
 define <vscale x 8 x bfloat> @insr_bf16(<vscale x 8 x bfloat> %a, bfloat %b) #0 {
 ; CHECK-LABEL: insr_bf16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h1 killed $h1 def $z1
 ; CHECK-NEXT:    insr z0.h, h1
 ; CHECK-NEXT:    ret
   %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.insr.nxv8bf16(<vscale x 8 x bfloat> %a, bfloat %b)
@@ -191,6 +193,7 @@ define <vscale x 8 x bfloat> @insr_bf16(<vscale x 8 x bfloat> %a, bfloat %b) #0 
 define <vscale x 4 x float> @insr_f32(<vscale x 4 x float> %a, float %b) {
 ; CHECK-LABEL: insr_f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s1 killed $s1 def $z1
 ; CHECK-NEXT:    insr z0.s, s1
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.insr.nxv4f32(<vscale x 4 x float> %a, float %b)
@@ -200,6 +203,7 @@ define <vscale x 4 x float> @insr_f32(<vscale x 4 x float> %a, float %b) {
 define <vscale x 2 x double> @insr_f64(<vscale x 2 x double> %a, double %b) {
 ; CHECK-LABEL: insr_f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    insr z0.d, d1
 ; CHECK-NEXT:    ret
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.insr.nxv2f64(<vscale x 2 x double> %a, double %b)

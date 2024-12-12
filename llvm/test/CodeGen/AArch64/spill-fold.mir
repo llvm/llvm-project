@@ -113,8 +113,8 @@ body:             |
     liveins: $q0
     %0 = COPY $q0
     INLINEASM &nop, 1, 12, implicit-def dead $d0, 12, implicit-def dead $d1, 12, implicit-def dead $d2, 12, implicit-def dead $d3, 12, implicit-def dead $d4, 12, implicit-def dead $d5, 12, implicit-def dead $d6, 12, implicit-def dead $d7, 12, implicit-def dead $d8, 12, implicit-def dead $d9, 12, implicit-def dead $d10, 12, implicit-def dead $d11, 12, implicit-def dead $d12, 12, implicit-def dead $d13, 12, implicit-def dead $d14, 12, implicit-def dead $d15, 12, implicit-def dead $d16, 12, implicit-def dead $d17, 12, implicit-def dead $d18, 12, implicit-def dead $d19, 12, implicit-def dead $d20, 12, implicit-def dead $d21, 12, implicit-def dead $d22, 12, implicit-def dead $d23, 12, implicit-def dead $d24, 12, implicit-def dead $d25, 12, implicit-def dead $d26, 12, implicit-def dead $d27, 12, implicit-def dead $d28, 12, implicit-def dead $d29, 12, implicit-def dead $d30, 12, implicit-def $d31
-    ; CHECK:      %3:fpr128 = LDRQui %stack.0, 0 :: (load (s128) from %stack.0)
-    ; CHECK-NEXT: $s0 = COPY %3.ssub
+    ; CHECK:      %1:fpr128 = LDRQui %stack.0, 0 :: (load (s128) from %stack.0)
+    ; CHECK-NEXT: $s0 = COPY %1.ssub
     $s0 = COPY %0.ssub
     RET_ReallyLR implicit $s0
 ...

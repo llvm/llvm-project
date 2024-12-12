@@ -1765,6 +1765,8 @@ entry:
 define i64 @add_pair_v2i32_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-SD-LABEL: add_pair_v2i32_v2i64_zext:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    uaddlv d0, v0.4s
 ; CHECK-SD-NEXT:    fmov x0, d0
@@ -1871,6 +1873,8 @@ entry:
 define i32 @add_pair_v4i16_v4i32_zext(<4 x i16> %x, <4 x i16> %y) {
 ; CHECK-SD-LABEL: add_pair_v4i16_v4i32_zext:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    uaddlv s0, v0.8h
 ; CHECK-SD-NEXT:    fmov w0, s0
@@ -2773,6 +2777,8 @@ entry:
 define i64 @add_pair_v2i16_v2i64_zext(<2 x i16> %x, <2 x i16> %y) {
 ; CHECK-SD-LABEL: add_pair_v2i16_v2i64_zext:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    movi v2.2d, #0x00ffff0000ffff
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    and v0.16b, v0.16b, v2.16b
@@ -3067,6 +3073,8 @@ entry:
 define i32 @add_pair_v4i8_v4i32_zext(<4 x i8> %x, <4 x i8> %y) {
 ; CHECK-SD-LABEL: add_pair_v4i8_v4i32_zext:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECK-SD-NEXT:    bic v1.4h, #255, lsl #8
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
@@ -3187,6 +3195,8 @@ entry:
 define zeroext i16 @add_pair_v8i8_v8i16_zext(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-SD-LABEL: add_pair_v8i8_v8i16_zext:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    uaddlv h0, v0.16b
 ; CHECK-SD-NEXT:    umov w0, v0.h[0]
@@ -3521,6 +3531,8 @@ entry:
 define i64 @add_pair_v2i8_v2i64_zext(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-SD-LABEL: add_pair_v2i8_v2i64_zext:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    movi v2.2d, #0x0000ff000000ff
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    and v0.16b, v0.16b, v2.16b
@@ -4549,6 +4561,8 @@ entry:
 define i32 @full(ptr %p1, i32 noundef %s1, ptr %p2, i32 noundef %s2) {
 ; CHECK-SD-BASE-LABEL: full:
 ; CHECK-SD-BASE:       // %bb.0: // %entry
+; CHECK-SD-BASE-NEXT:    // kill: def $w3 killed $w3 def $x3
+; CHECK-SD-BASE-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-BASE-NEXT:    sxtw x8, w3
 ; CHECK-SD-BASE-NEXT:    sxtw x9, w1
 ; CHECK-SD-BASE-NEXT:    ldr d0, [x0]
@@ -4603,6 +4617,8 @@ define i32 @full(ptr %p1, i32 noundef %s1, ptr %p2, i32 noundef %s2) {
 ; CHECK-SD-DOT:       // %bb.0: // %entry
 ; CHECK-SD-DOT-NEXT:    ldr d0, [x0]
 ; CHECK-SD-DOT-NEXT:    ldr d1, [x2]
+; CHECK-SD-DOT-NEXT:    // kill: def $w3 killed $w3 def $x3
+; CHECK-SD-DOT-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-DOT-NEXT:    sxtw x8, w3
 ; CHECK-SD-DOT-NEXT:    sxtw x9, w1
 ; CHECK-SD-DOT-NEXT:    movi v2.2d, #0000000000000000
@@ -4655,6 +4671,8 @@ define i32 @full(ptr %p1, i32 noundef %s1, ptr %p2, i32 noundef %s2) {
 ;
 ; CHECK-GI-LABEL: full:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-GI-NEXT:    // kill: def $w3 killed $w3 def $x3
 ; CHECK-GI-NEXT:    sxtw x9, w1
 ; CHECK-GI-NEXT:    sxtw x8, w3
 ; CHECK-GI-NEXT:    ldr d0, [x0]

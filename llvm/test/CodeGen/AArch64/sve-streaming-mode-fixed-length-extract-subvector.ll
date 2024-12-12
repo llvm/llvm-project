@@ -10,6 +10,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define <4 x i1> @extract_subvector_v8i1(<8 x i1> %op) {
 ; CHECK-LABEL: extract_subvector_v8i1:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z1.b, z0.b[7]
 ; CHECK-NEXT:    mov z2.b, z0.b[6]
 ; CHECK-NEXT:    mov z3.b, z0.b[5]
@@ -17,6 +18,7 @@ define <4 x i1> @extract_subvector_v8i1(<8 x i1> %op) {
 ; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
 ; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
 ; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extract_subvector_v8i1:
@@ -43,6 +45,7 @@ define <4 x i1> @extract_subvector_v8i1(<8 x i1> %op) {
 define <4 x i8> @extract_subvector_v8i8(<8 x i8> %op) {
 ; CHECK-LABEL: extract_subvector_v8i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z1.b, z0.b[7]
 ; CHECK-NEXT:    mov z2.b, z0.b[6]
 ; CHECK-NEXT:    mov z3.b, z0.b[5]
@@ -50,6 +53,7 @@ define <4 x i8> @extract_subvector_v8i8(<8 x i8> %op) {
 ; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
 ; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
 ; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extract_subvector_v8i8:
@@ -74,7 +78,9 @@ define <4 x i8> @extract_subvector_v8i8(<8 x i8> %op) {
 define <8 x i8> @extract_subvector_v16i8(<16 x i8> %op) {
 ; CHECK-LABEL: extract_subvector_v16i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extract_subvector_v16i8:
@@ -111,8 +117,10 @@ define void @extract_subvector_v32i8(ptr %a, ptr %b) {
 define <2 x i16> @extract_subvector_v4i16(<4 x i16> %op) {
 ; CHECK-LABEL: extract_subvector_v4i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extract_subvector_v4i16:
@@ -130,7 +138,9 @@ define <2 x i16> @extract_subvector_v4i16(<4 x i16> %op) {
 define <4 x i16> @extract_subvector_v8i16(<8 x i16> %op) {
 ; CHECK-LABEL: extract_subvector_v8i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extract_subvector_v8i16:
@@ -167,7 +177,9 @@ define void @extract_subvector_v16i16(ptr %a, ptr %b) {
 define <1 x i32> @extract_subvector_v2i32(<2 x i32> %op) {
 ; CHECK-LABEL: extract_subvector_v2i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.s, z0.s[1]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extract_subvector_v2i32:
@@ -186,7 +198,9 @@ define <1 x i32> @extract_subvector_v2i32(<2 x i32> %op) {
 define <2 x i32> @extract_subvector_v4i32(<4 x i32> %op) {
 ; CHECK-LABEL: extract_subvector_v4i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extract_subvector_v4i32:
@@ -223,7 +237,9 @@ define void @extract_subvector_v8i32(ptr %a, ptr %b) {
 define <1 x i64> @extract_subvector_v2i64(<2 x i64> %op) {
 ; CHECK-LABEL: extract_subvector_v2i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extract_subvector_v2i64:
@@ -260,7 +276,9 @@ define void @extract_subvector_v4i64(ptr %a, ptr %b) {
 define <2 x half> @extract_subvector_v4f16(<4 x half> %op) {
 ; CHECK-LABEL: extract_subvector_v4f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.s, z0.s[1]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extract_subvector_v4f16:
@@ -279,7 +297,9 @@ define <2 x half> @extract_subvector_v4f16(<4 x half> %op) {
 define <4 x half> @extract_subvector_v8f16(<8 x half> %op) {
 ; CHECK-LABEL: extract_subvector_v8f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extract_subvector_v8f16:
@@ -316,7 +336,9 @@ define void @extract_subvector_v16f16(ptr %a, ptr %b) {
 define <1 x float> @extract_subvector_v2f32(<2 x float> %op) {
 ; CHECK-LABEL: extract_subvector_v2f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.s, z0.s[1]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extract_subvector_v2f32:
@@ -335,7 +357,9 @@ define <1 x float> @extract_subvector_v2f32(<2 x float> %op) {
 define <2 x float> @extract_subvector_v4f32(<4 x float> %op) {
 ; CHECK-LABEL: extract_subvector_v4f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extract_subvector_v4f32:
@@ -372,7 +396,9 @@ define void @extract_subvector_v8f32(ptr %a, ptr %b) {
 define <1 x double> @extract_subvector_v2f64(<2 x double> %op) {
 ; CHECK-LABEL: extract_subvector_v2f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extract_subvector_v2f64:

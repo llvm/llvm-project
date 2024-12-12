@@ -277,7 +277,9 @@ define <1 x i64> @ctlz_v1i64(<1 x i64> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ctlz_v1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    clz z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <1 x i64> @llvm.ctlz.v1i64(<1 x i64> %op)
   ret <1 x i64> %res
@@ -287,7 +289,9 @@ define <2 x i64> @ctlz_v2i64(<2 x i64> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ctlz_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    clz z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %op)
   ret <2 x i64> %res
@@ -737,6 +741,7 @@ define <8 x i8> @cttz_v8i8(<8 x i8> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: cttz_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    rbit z0.b, p0/m, z0.b
 ; CHECK-NEXT:    clz v0.8b, v0.8b
 ; CHECK-NEXT:    ret
@@ -748,6 +753,7 @@ define <16 x i8> @cttz_v16i8(<16 x i8> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: cttz_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    rbit z0.b, p0/m, z0.b
 ; CHECK-NEXT:    clz v0.16b, v0.16b
 ; CHECK-NEXT:    ret
@@ -833,6 +839,7 @@ define <4 x i16> @cttz_v4i16(<4 x i16> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: cttz_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    rbit z0.h, p0/m, z0.h
 ; CHECK-NEXT:    clz v0.4h, v0.4h
 ; CHECK-NEXT:    ret
@@ -844,6 +851,7 @@ define <8 x i16> @cttz_v8i16(<8 x i16> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: cttz_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    rbit z0.h, p0/m, z0.h
 ; CHECK-NEXT:    clz v0.8h, v0.8h
 ; CHECK-NEXT:    ret
@@ -930,6 +938,7 @@ define <2 x i32> @cttz_v2i32(<2 x i32> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: cttz_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    rbit z0.s, p0/m, z0.s
 ; CHECK-NEXT:    clz v0.2s, v0.2s
 ; CHECK-NEXT:    ret
@@ -942,6 +951,7 @@ define <4 x i32> @cttz_v4i32(<4 x i32> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: cttz_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    rbit z0.s, p0/m, z0.s
 ; CHECK-NEXT:    clz v0.4s, v0.4s
 ; CHECK-NEXT:    ret
@@ -1027,8 +1037,10 @@ define <1 x i64> @cttz_v1i64(<1 x i64> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: cttz_v1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    rbit z0.d, p0/m, z0.d
 ; CHECK-NEXT:    clz z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <1 x i64> @llvm.cttz.v1i64(<1 x i64> %op)
   ret <1 x i64> %res
@@ -1038,8 +1050,10 @@ define <2 x i64> @cttz_v2i64(<2 x i64> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: cttz_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    rbit z0.d, p0/m, z0.d
 ; CHECK-NEXT:    clz z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> %op)
   ret <2 x i64> %res

@@ -6,6 +6,8 @@ target triple = "aarch64-linux"
 define {<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>}  @test_luti4_zt_i8(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1) #0 {
 ; CHECK-LABEL: test_luti4_zt_i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    luti4 { z0.b - z3.b }, zt0, { z0, z1 }
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.aarch64.sme.luti4.zt.x4.nxv16i8(i32 0, <vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1)

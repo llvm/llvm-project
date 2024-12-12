@@ -40,6 +40,7 @@ define i32 @foo(ptr %ptr, i32 %x, i64 %y) !dbg !3 {
 ; CHECK-NEXT:    mov w9, #10 ; =0xa
 ; CHECK-NEXT:    str w9, [x8]
 ; CHECK-NEXT:  LBB0_2: ; %common.ret
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 entry:
   %l = load i32, ptr %ptr, !dbg !4

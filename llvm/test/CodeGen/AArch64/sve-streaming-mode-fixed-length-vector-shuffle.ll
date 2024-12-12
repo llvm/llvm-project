@@ -10,8 +10,10 @@ define <4 x i8> @shuffle_ext_byone_v4i8(<4 x i8> %op1, <4 x i8> %op2) {
 ; CHECK-LABEL: shuffle_ext_byone_v4i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI0_0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI0_0]
 ; CHECK-NEXT:    tbl z0.h, { z0.h }, z1.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: shuffle_ext_byone_v4i8:
@@ -35,6 +37,8 @@ define <4 x i8> @shuffle_ext_byone_v4i8(<4 x i8> %op1, <4 x i8> %op2) {
 define <8 x i8> @shuffle_ext_byone_v8i8(<8 x i8> %op1, <8 x i8> %op2) {
 ; CHECK-LABEL: shuffle_ext_byone_v8i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    mov z0.b, z0.b[7]
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    insr z1.b, w8
@@ -64,6 +68,8 @@ define <8 x i8> @shuffle_ext_byone_v8i8(<8 x i8> %op1, <8 x i8> %op2) {
 define <16 x i8> @shuffle_ext_byone_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 ; CHECK-LABEL: shuffle_ext_byone_v16i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    mov z0.b, z0.b[15]
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    insr z1.b, w8
@@ -152,7 +158,9 @@ define <2 x i16> @shuffle_ext_byone_v2i16(<2 x i16> %op1, <2 x i16> %op2) {
 ; CHECK-LABEL: shuffle_ext_byone_v2i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    revw z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: shuffle_ext_byone_v2i16:
@@ -171,6 +179,8 @@ define <2 x i16> @shuffle_ext_byone_v2i16(<2 x i16> %op1, <2 x i16> %op2) {
 define <4 x i16> @shuffle_ext_byone_v4i16(<4 x i16> %op1, <4 x i16> %op2) {
 ; CHECK-LABEL: shuffle_ext_byone_v4i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    mov z0.h, z0.h[3]
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    insr z1.h, w8
@@ -198,6 +208,8 @@ define <4 x i16> @shuffle_ext_byone_v4i16(<4 x i16> %op1, <4 x i16> %op2) {
 define <8 x i16> @shuffle_ext_byone_v8i16(<8 x i16> %op1, <8 x i16> %op2) {
 ; CHECK-LABEL: shuffle_ext_byone_v8i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    mov z0.h, z0.h[7]
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    insr z1.h, w8
@@ -276,6 +288,8 @@ define void @shuffle_ext_byone_v16i16(ptr %a, ptr %b) {
 define <2 x i32> @shuffle_ext_byone_v2i32(<2 x i32> %op1, <2 x i32> %op2) {
 ; CHECK-LABEL: shuffle_ext_byone_v2i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    mov z0.s, z0.s[1]
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    insr z1.s, w8
@@ -299,6 +313,8 @@ define <2 x i32> @shuffle_ext_byone_v2i32(<2 x i32> %op1, <2 x i32> %op2) {
 define <4 x i32> @shuffle_ext_byone_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 ; CHECK-LABEL: shuffle_ext_byone_v4i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    mov z0.s, z0.s[3]
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    insr z1.s, w8
@@ -369,6 +385,8 @@ define void @shuffle_ext_byone_v8i32(ptr %a, ptr %b) {
 define <2 x i64> @shuffle_ext_byone_v2i64(<2 x i64> %op1, <2 x i64> %op2) {
 ; CHECK-LABEL: shuffle_ext_byone_v2i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    mov z0.d, z0.d[1]
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    insr z1.d, x8
@@ -430,9 +448,11 @@ define void @shuffle_ext_byone_v4i64(ptr %a, ptr %b) {
 define <4 x half> @shuffle_ext_byone_v4f16(<4 x half> %op1, <4 x half> %op2) {
 ; CHECK-LABEL: shuffle_ext_byone_v4f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z2.h, z0.h[3]
 ; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    insr z0.h, h2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: shuffle_ext_byone_v4f16:
@@ -456,9 +476,11 @@ define <4 x half> @shuffle_ext_byone_v4f16(<4 x half> %op1, <4 x half> %op2) {
 define <8 x half> @shuffle_ext_byone_v8f16(<8 x half> %op1, <8 x half> %op2) {
 ; CHECK-LABEL: shuffle_ext_byone_v8f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z2.h, z0.h[7]
 ; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    insr z0.h, h2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: shuffle_ext_byone_v8f16:
@@ -531,9 +553,11 @@ define void @shuffle_ext_byone_v16f16(ptr %a, ptr %b) {
 define <2 x float> @shuffle_ext_byone_v2f32(<2 x float> %op1, <2 x float> %op2) {
 ; CHECK-LABEL: shuffle_ext_byone_v2f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z2.s, z0.s[1]
 ; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    insr z0.s, s2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: shuffle_ext_byone_v2f32:
@@ -553,9 +577,11 @@ define <2 x float> @shuffle_ext_byone_v2f32(<2 x float> %op1, <2 x float> %op2) 
 define <4 x float> @shuffle_ext_byone_v4f32(<4 x float> %op1, <4 x float> %op2) {
 ; CHECK-LABEL: shuffle_ext_byone_v4f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z2.s, z0.s[3]
 ; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    insr z0.s, s2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: shuffle_ext_byone_v4f32:
@@ -620,9 +646,11 @@ define void @shuffle_ext_byone_v8f32(ptr %a, ptr %b) {
 define <2 x double> @shuffle_ext_byone_v2f64(<2 x double> %op1, <2 x double> %op2) {
 ; CHECK-LABEL: shuffle_ext_byone_v2f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z2.d, z0.d[1]
 ; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    insr z0.d, d2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: shuffle_ext_byone_v2f64:
