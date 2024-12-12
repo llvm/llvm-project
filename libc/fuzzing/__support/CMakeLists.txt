@@ -27,6 +27,7 @@ add_libc_fuzzer(
 add_libc_fuzzer(
   freelist_heap_fuzz
   SRCS
+    fake_heap.s
     freelist_heap_fuzz.cpp
   DEPENDS
     libc.src.__support.freelist_heap
