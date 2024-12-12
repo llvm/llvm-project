@@ -183,7 +183,7 @@ def print_impl_status_rst(header: Header, api: Dict):
 # This code implicitly relies on docgen.py being in the same dir as the json
 # files and is likely to need to be fixed when re-integrating docgen into
 # hdrgen.
-def get_choices() -> List:
+def get_choices() -> list:
     choices = []
     for path in Path(__file__).parent.rglob("*.json"):
         fname = path.with_suffix(".h").name
