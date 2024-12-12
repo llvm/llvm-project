@@ -1446,7 +1446,8 @@ static void finalizeSynthetic(Ctx &ctx, SyntheticSection *sec) {
 
 static bool canInsertPadding(OutputSection *sec) {
   StringRef s = sec->name;
-  return s == ".bss" || s == ".data" || s == ".data.rel.ro" || s == ".rodata" ||
+  return s == ".bss" || s == ".data" || s == ".data.rel.ro" || s == ".lbss" ||
+         s == ".ldata" || s == ".lrodata" || s == ".ltext" || s == ".rodata" ||
          s.starts_with(".text");
 }
 

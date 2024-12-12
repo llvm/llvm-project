@@ -9,10 +9,10 @@
 # RUN: ld.lld --randomize-section-padding=6 %t/a.o -o %t/a.out
 # RUN: llvm-readelf -sS -x .rodata -x .text -x .data %t/a.out | FileCheck --check-prefix=PAD6 %s
 
-# PAD6: .rodata           PROGBITS        0000000000200158 000158 000b8d 00   A  0   0  1
-# PAD6: .text             PROGBITS        0000000000201ce8 000ce8 000270 00  AX  0   0  4
-# PAD6: .data             PROGBITS        0000000000202f58 000f58 000941 00  WA  0   0  1
-# PAD6: .bss              NOBITS          0000000000203899 001899 000003 00  WA  0   0  1
+# PAD6:      .rodata           PROGBITS        0000000000200158 000158 000b8d 00   A  0   0  1
+# PAD6-NEXT: .text             PROGBITS        0000000000201ce8 000ce8 000270 00  AX  0   0  4
+# PAD6-NEXT: .data             PROGBITS        0000000000202f58 000f58 000941 00  WA  0   0  1
+# PAD6-NEXT: .bss              NOBITS          0000000000203899 001899 000003 00  WA  0   0  1
 
 # PAD6: 0000000000203899     0 NOTYPE  LOCAL  DEFAULT     4 a
 # PAD6: 000000000020389a     0 NOTYPE  LOCAL  DEFAULT     4 b
@@ -32,10 +32,10 @@
 # RUN: ld.lld --randomize-section-padding=46 %t/a.o -o %t/a.out
 # RUN: llvm-readelf -sS -x .rodata -x .text -x .data %t/a.out | FileCheck --check-prefix=PAD46 %s
 
-# PAD46: .rodata           PROGBITS        0000000000200158 000158 000cc0 00   A  0   0  1
-# PAD46: .text             PROGBITS        0000000000201e18 000e18 0009bf 00  AX  0   0  4
-# PAD46: .data             PROGBITS        00000000002037d7 0017d7 000540 00  WA  0   0  1
-# PAD46: .bss              NOBITS          0000000000203d17 001d17 000004 00  WA  0   0  1
+# PAD46:      .rodata           PROGBITS        0000000000200158 000158 000cc0 00   A  0   0  1
+# PAD46-NEXT: .text             PROGBITS        0000000000201e18 000e18 0009bf 00  AX  0   0  4
+# PAD46-NEXT: .data             PROGBITS        00000000002037d7 0017d7 000540 00  WA  0   0  1
+# PAD46-NEXT: .bss              NOBITS          0000000000203d17 001d17 000004 00  WA  0   0  1
 
 # PAD46: 0000000000203d17     0 NOTYPE  LOCAL  DEFAULT     4 a
 # PAD46: 0000000000203d18     0 NOTYPE  LOCAL  DEFAULT     4 b
@@ -55,10 +55,10 @@
 
 # RUN: llvm-readelf -sS -x .rodata -x .text -x .data %t/a.out | FileCheck --check-prefix=PAD46-LDS %s
 
-# PAD46-LDS: .rodata           PROGBITS        0000000000000158 000158 000cc0 00   A  0   0  1
-# PAD46-LDS: .text             PROGBITS        0000000000001000 001000 0009c0 00  AX  0   0  4
-# PAD46-LDS: .data             PROGBITS        0000000000002000 002000 000540 00  WA  0   0  1
-# PAD46-LDS: .bss              NOBITS          0000000000002540 002540 000004 00  WA  0   0  1
+# PAD46-LDS:      .rodata           PROGBITS        0000000000000158 000158 000cc0 00   A  0   0  1
+# PAD46-LDS-NEXT: .text             PROGBITS        0000000000001000 001000 0009c0 00  AX  0   0  4
+# PAD46-LDS-NEXT: .data             PROGBITS        0000000000002000 002000 000540 00  WA  0   0  1
+# PAD46-LDS-NEXT: .bss              NOBITS          0000000000002540 002540 000004 00  WA  0   0  1
 
 # PAD46-LDS: 0000000000002543     0 NOTYPE  LOCAL  DEFAULT     4 a
 # PAD46-LDS: 0000000000002541     0 NOTYPE  LOCAL  DEFAULT     4 b
