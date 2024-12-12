@@ -211,13 +211,9 @@ ResourceInfo::ResourceInfo(uint32_t RecordID, uint32_t Space,
 
 bool ResourceInfo::isUAV() const { return RC == ResourceClass::UAV; }
 
-bool ResourceInfo::isCBuffer() const {
-  return RC == ResourceClass::CBuffer;
-}
+bool ResourceInfo::isCBuffer() const { return RC == ResourceClass::CBuffer; }
 
-bool ResourceInfo::isSampler() const {
-  return RC == ResourceClass::Sampler;
-}
+bool ResourceInfo::isSampler() const { return RC == ResourceClass::Sampler; }
 
 bool ResourceInfo::isStruct() const {
   return Kind == ResourceKind::StructuredBuffer;
@@ -309,8 +305,7 @@ dxil::SamplerType ResourceInfo::getSamplerType() const {
   return cast<SamplerExtType>(HandleTy)->getSamplerType();
 }
 
-ResourceInfo::StructInfo
-ResourceInfo::getStruct(const DataLayout &DL) const {
+ResourceInfo::StructInfo ResourceInfo::getStruct(const DataLayout &DL) const {
   assert(isStruct() && "Not a Struct");
 
   Type *ElTy = cast<RawBufferExtType>(HandleTy)->getResourceType();
@@ -428,8 +423,7 @@ MDTuple *ResourceInfo::getAsMetadata(Module &M) const {
       // All SRVs include sample count in the metadata, but it's only meaningful
       // for multi-sampled textured. Also, UAVs can be multisampled in SM6.7+,
       // but this just isn't reflected in the metadata at all.
-      uint32_t SampleCount =
-          isMultiSample() ? getMultiSampleCount() : 0;
+      uint32_t SampleCount = isMultiSample() ? getMultiSampleCount() : 0;
       MDVals.push_back(getIntMD(SampleCount));
     }
 
@@ -459,8 +453,7 @@ std::pair<uint32_t, uint32_t> ResourceInfo::getAnnotateProps(Module &M) const {
   uint32_t ResourceKind = llvm::to_underlying(getResourceKind());
   uint32_t AlignLog2 = isStruct() ? getStruct(DL).AlignLog2 : 0;
   bool IsUAV = isUAV();
-  ResourceInfo::UAVInfo UAVFlags =
-      IsUAV ? getUAV() : ResourceInfo::UAVInfo{};
+  ResourceInfo::UAVInfo UAVFlags = IsUAV ? getUAV() : ResourceInfo::UAVInfo{};
   bool IsROV = IsUAV && UAVFlags.IsROV;
   bool IsGloballyCoherent = IsUAV && UAVFlags.GloballyCoherent;
   uint8_t SamplerCmpOrHasCounter = 0;
