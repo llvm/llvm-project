@@ -20,13 +20,13 @@ static __sanitizer::atomic_uintptr_t caller_pcs[kMaxCallerPcs];
 // that "too many errors" has already been reported.
 static __sanitizer::atomic_uint32_t caller_pcs_sz;
 
-SANITIZER_INTERFACE_WEAK_DEF(int, __sanitizer_report_ubsan_error,
-                             uintptr_t caller, const char* name) {
+SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error, uintptr_t caller,
+                             const char *msg, const char *decorated_msg) {
   if (caller == 0)
-    return false;
+    return;
   while (true) {
     unsigned sz = __sanitizer::atomic_load_relaxed(&caller_pcs_sz);
-    if (sz > kMaxCallerPcs) return false;  // early exit
+    if (sz > kMaxCallerPcs) return;  // early exit
     // when sz==kMaxCallerPcs print "too many errors", but only when cmpxchg
     // succeeds in order to not print it multiple times.
     if (sz > 0 && sz < kMaxCallerPcs) {
@@ -34,7 +34,7 @@ SANITIZER_INTERFACE_WEAK_DEF(int, __sanitizer_report_ubsan_error,
       for (unsigned i = 0; i < sz; ++i) {
         p = __sanitizer::atomic_load_relaxed(&caller_pcs[i]);
         if (p == 0) break;  // Concurrent update.
-        if (p == caller) return false;
+        if (p == caller) return;
       }
       if (p == 0) continue;  // FIXME: yield?
     }
@@ -45,10 +45,10 @@ SANITIZER_INTERFACE_WEAK_DEF(int, __sanitizer_report_ubsan_error,
 
     if (sz == kMaxCallerPcs) {
       message("ubsan: too many errors\n");
-      return false;
+      return;
     }
     __sanitizer::atomic_store_relaxed(&caller_pcs[sz], caller);
-    return true;
+    message(decorated_msg);
   }
 }
 
@@ -100,18 +100,17 @@ constexpr unsigned kAddrBuf = SANITIZER_WORDSIZE / 4;
 #define HANDLER_RECOVER(name, msg)                               \
   INTERFACE void __ubsan_handle_##name##_minimal() {             \
     uintptr_t caller = GET_CALLER_PC();                          \
-    if (!__sanitizer_report_ubsan_error(caller, #name))          \
-      return;                                                    \
     char msg_buf[MSG_BUF_LEN(msg)] = MSG_TMPL(msg);              \
     decorate_msg(MSG_TMPL_END(msg_buf, msg), caller);            \
-    message(msg_buf);                                            \
+    __ubsan_report_error(caller, msg, msg_buf);                  \
   }
 
 #define HANDLER_NORECOVER(name, msg)                             \
   INTERFACE void __ubsan_handle_##name##_minimal_abort() {       \
+    uintptr_t caller = GET_CALLER_PC();                          \
     char msg_buf[MSG_BUF_LEN(msg)] = MSG_TMPL(msg);              \
-    decorate_msg(MSG_TMPL_END(msg_buf, msg), GET_CALLER_PC());   \
-    message(msg_buf);                                            \
+    decorate_msg(MSG_TMPL_END(msg_buf, msg), caller);            \
+    __ubsan_report_error(caller, #msg, msg_buf);                 \
     abort_with_message(msg_buf);                                 \
   }
 
