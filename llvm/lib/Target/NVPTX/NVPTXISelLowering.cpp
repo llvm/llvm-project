@@ -6209,16 +6209,20 @@ PerformBUILD_VECTORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     if (Op->getOpcode() == ISD::BITCAST)
       *Op = Op->getOperand(0);
 
-    if (Op->getValueType() != MVT::i16 || Op->getOpcode() != ISD::TRUNCATE ||
-        Op->getOperand(0).getValueType() != MVT::i32)
+    if (!(Op->getValueType() == MVT::i16 && Op->getOpcode() == ISD::TRUNCATE &&
+          Op->getOperand(0).getValueType() == MVT::i32))
       return SDValue();
 
     *Op = Op->getOperand(0);
 
-    // Optionally, fold in a shift-right of the original operand and permute
-    // the two higher bytes from the shifted operand
+    // Optionally, fold in a shift-right of the original operand and let permute
+    // pick the two higher bytes of the original value directly.
     if (Op->getOpcode() == ISD::SRL && isa<ConstantSDNode>(Op->getOperand(1))) {
       if (cast<ConstantSDNode>(Op->getOperand(1))->getZExtValue() == 16) {
+        // Shift the PRMT byte selector to pick upper bytes from each respective
+        // value, instead of the lower ones: 0x10 -> 0x32, 0x54 -> 0x76
+        assert((*OpBytes == 0x10 || *OpBytes == 0x54) &&
+               "PRMT selector values out of range");
         *OpBytes += 0x22;
         *Op = Op->getOperand(0);
       }
