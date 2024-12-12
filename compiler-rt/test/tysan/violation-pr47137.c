@@ -2,9 +2,9 @@
 // RUN: FileCheck %s < %t.out
 
 // https://github.com/llvm/llvm-project/issues/47137
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 
 void f(int m) {
   int n = (4 * m + 2) / 3;
