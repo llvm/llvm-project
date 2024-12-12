@@ -7,6 +7,7 @@
 define i32 @testmswbf(bfloat %a) {
 ; CHECK-LABEL: testmswbf:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    mov w8, #32767 // =0x7fff
 ; CHECK-NEXT:    lsl w9, w9, #16
@@ -30,6 +31,7 @@ entry:
 define i64 @testmsxbf(bfloat %a) {
 ; CHECK-LABEL: testmsxbf:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    mov w8, #32767 // =0x7fff
 ; CHECK-NEXT:    lsl w9, w9, #16
@@ -139,6 +141,7 @@ entry:
 define i32 @testpswbf(bfloat %a) {
 ; CHECK-LABEL: testpswbf:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    mov w8, #32767 // =0x7fff
 ; CHECK-NEXT:    lsl w9, w9, #16
@@ -162,6 +165,7 @@ entry:
 define i64 @testpsxbf(bfloat %a) {
 ; CHECK-LABEL: testpsxbf:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    mov w8, #32767 // =0x7fff
 ; CHECK-NEXT:    lsl w9, w9, #16

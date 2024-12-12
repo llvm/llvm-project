@@ -23,6 +23,7 @@ define <2 x half> @masked_load_v2f16(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    mov v0.h[1], w8
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <2 x half>, ptr %ap
   %b = load <2 x half>, ptr %bp
@@ -40,6 +41,7 @@ define <2 x float> @masked_load_v2f32(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    fcmeq v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <2 x float>, ptr %ap
   %b = load <2 x float>, ptr %bp
@@ -57,6 +59,7 @@ define <4 x float> @masked_load_v4f32(ptr %ap, ptr %bp) vscale_range(1,0) #0 {
 ; CHECK-NEXT:    fcmeq v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, ptr %ap
   %b = load <4 x float>, ptr %bp

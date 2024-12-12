@@ -12,10 +12,12 @@ target triple = "aarch64-unknown-linux-gnu"
 define <4 x i8> @ctlz_v4i8(<4 x i8> %op) {
 ; CHECK-LABEL: ctlz_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and z0.h, z0.h, #0xff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    and z0.h, z0.h, #0xff
 ; CHECK-NEXT:    clz z0.h, p0/m, z0.h
 ; CHECK-NEXT:    sub z0.h, z0.h, #8 // =0x8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ctlz_v4i8:
@@ -49,7 +51,9 @@ define <8 x i8> @ctlz_v8i8(<8 x i8> %op) {
 ; CHECK-LABEL: ctlz_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    clz z0.b, p0/m, z0.b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ctlz_v8i8:
@@ -99,7 +103,9 @@ define <16 x i8> @ctlz_v16i8(<16 x i8> %op) {
 ; CHECK-LABEL: ctlz_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    clz z0.b, p0/m, z0.b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ctlz_v16i8:
@@ -333,10 +339,12 @@ define void @ctlz_v32i8(ptr %a) {
 define <2 x i16> @ctlz_v2i16(<2 x i16> %op) {
 ; CHECK-LABEL: ctlz_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and z0.s, z0.s, #0xffff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    and z0.s, z0.s, #0xffff
 ; CHECK-NEXT:    clz z0.s, p0/m, z0.s
 ; CHECK-NEXT:    sub z0.s, z0.s, #16 // =0x10
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ctlz_v2i16:
@@ -361,7 +369,9 @@ define <4 x i16> @ctlz_v4i16(<4 x i16> %op) {
 ; CHECK-LABEL: ctlz_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    clz z0.h, p0/m, z0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ctlz_v4i16:
@@ -395,7 +405,9 @@ define <8 x i16> @ctlz_v8i16(<8 x i16> %op) {
 ; CHECK-LABEL: ctlz_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    clz z0.h, p0/m, z0.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ctlz_v8i16:
@@ -534,7 +546,9 @@ define <2 x i32> @ctlz_v2i32(<2 x i32> %op) {
 ; CHECK-LABEL: ctlz_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    clz z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ctlz_v2i32:
@@ -557,7 +571,9 @@ define <4 x i32> @ctlz_v4i32(<4 x i32> %op) {
 ; CHECK-LABEL: ctlz_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    clz z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ctlz_v4i32:
@@ -630,7 +646,9 @@ define <1 x i64> @ctlz_v1i64(<1 x i64> %op) {
 ; CHECK-LABEL: ctlz_v1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    clz z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ctlz_v1i64:
@@ -651,7 +669,9 @@ define <2 x i64> @ctlz_v2i64(<2 x i64> %op) {
 ; CHECK-LABEL: ctlz_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    clz z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ctlz_v2i64:
@@ -712,9 +732,11 @@ define void @ctlz_v4i64(ptr %a) {
 define <4 x i8> @ctpop_v4i8(<4 x i8> %op) {
 ; CHECK-LABEL: ctpop_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and z0.h, z0.h, #0xff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    and z0.h, z0.h, #0xff
 ; CHECK-NEXT:    cnt z0.h, p0/m, z0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ctpop_v4i8:
@@ -785,7 +807,9 @@ define <8 x i8> @ctpop_v8i8(<8 x i8> %op) {
 ; CHECK-LABEL: ctpop_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    cnt z0.b, p0/m, z0.b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ctpop_v8i8:
@@ -908,7 +932,9 @@ define <16 x i8> @ctpop_v16i8(<16 x i8> %op) {
 ; CHECK-LABEL: ctpop_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    cnt z0.b, p0/m, z0.b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ctpop_v16i8:
@@ -1576,9 +1602,11 @@ define void @ctpop_v32i8(ptr %a) {
 define <2 x i16> @ctpop_v2i16(<2 x i16> %op) {
 ; CHECK-LABEL: ctpop_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and z0.s, z0.s, #0xffff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    and z0.s, z0.s, #0xffff
 ; CHECK-NEXT:    cnt z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ctpop_v2i16:
@@ -1622,7 +1650,9 @@ define <4 x i16> @ctpop_v4i16(<4 x i16> %op) {
 ; CHECK-LABEL: ctpop_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    cnt z0.h, p0/m, z0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ctpop_v4i16:
@@ -1693,7 +1723,9 @@ define <8 x i16> @ctpop_v8i16(<8 x i16> %op) {
 ; CHECK-LABEL: ctpop_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    cnt z0.h, p0/m, z0.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ctpop_v8i16:
@@ -2050,7 +2082,9 @@ define <2 x i32> @ctpop_v2i32(<2 x i32> %op) {
 ; CHECK-LABEL: ctpop_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    cnt z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ctpop_v2i32:
@@ -2094,7 +2128,9 @@ define <4 x i32> @ctpop_v4i32(<4 x i32> %op) {
 ; CHECK-LABEL: ctpop_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    cnt z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ctpop_v4i32:
@@ -2289,7 +2325,9 @@ define <1 x i64> @ctpop_v1i64(<1 x i64> %op) {
 ; CHECK-LABEL: ctpop_v1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    cnt z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ctpop_v1i64:
@@ -2321,7 +2359,9 @@ define <2 x i64> @ctpop_v2i64(<2 x i64> %op) {
 ; CHECK-LABEL: ctpop_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    cnt z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: ctpop_v2i64:
@@ -2444,10 +2484,12 @@ define void @ctpop_v4i64(ptr %a) {
 define <4 x i8> @cttz_v4i8(<4 x i8> %op) {
 ; CHECK-LABEL: cttz_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr z0.h, z0.h, #0x100
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    orr z0.h, z0.h, #0x100
 ; CHECK-NEXT:    rbit z0.h, p0/m, z0.h
 ; CHECK-NEXT:    clz z0.h, p0/m, z0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: cttz_v4i8:
@@ -2485,8 +2527,10 @@ define <8 x i8> @cttz_v8i8(<8 x i8> %op) {
 ; CHECK-LABEL: cttz_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    rbit z0.b, p0/m, z0.b
 ; CHECK-NEXT:    clz z0.b, p0/m, z0.b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: cttz_v8i8:
@@ -2544,8 +2588,10 @@ define <16 x i8> @cttz_v16i8(<16 x i8> %op) {
 ; CHECK-LABEL: cttz_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    rbit z0.b, p0/m, z0.b
 ; CHECK-NEXT:    clz z0.b, p0/m, z0.b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: cttz_v16i8:
@@ -2829,10 +2875,12 @@ define void @cttz_v32i8(ptr %a) {
 define <2 x i16> @cttz_v2i16(<2 x i16> %op) {
 ; CHECK-LABEL: cttz_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr z0.s, z0.s, #0x10000
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    orr z0.s, z0.s, #0x10000
 ; CHECK-NEXT:    rbit z0.s, p0/m, z0.s
 ; CHECK-NEXT:    clz z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: cttz_v2i16:
@@ -2859,8 +2907,10 @@ define <4 x i16> @cttz_v4i16(<4 x i16> %op) {
 ; CHECK-LABEL: cttz_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    rbit z0.h, p0/m, z0.h
 ; CHECK-NEXT:    clz z0.h, p0/m, z0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: cttz_v4i16:
@@ -2898,8 +2948,10 @@ define <8 x i16> @cttz_v8i16(<8 x i16> %op) {
 ; CHECK-LABEL: cttz_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    rbit z0.h, p0/m, z0.h
 ; CHECK-NEXT:    clz z0.h, p0/m, z0.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: cttz_v8i16:
@@ -3064,8 +3116,10 @@ define <2 x i32> @cttz_v2i32(<2 x i32> %op) {
 ; CHECK-LABEL: cttz_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    rbit z0.s, p0/m, z0.s
 ; CHECK-NEXT:    clz z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: cttz_v2i32:
@@ -3090,8 +3144,10 @@ define <4 x i32> @cttz_v4i32(<4 x i32> %op) {
 ; CHECK-LABEL: cttz_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    rbit z0.s, p0/m, z0.s
 ; CHECK-NEXT:    clz z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: cttz_v4i32:
@@ -3178,8 +3234,10 @@ define <1 x i64> @cttz_v1i64(<1 x i64> %op) {
 ; CHECK-LABEL: cttz_v1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    rbit z0.d, p0/m, z0.d
 ; CHECK-NEXT:    clz z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: cttz_v1i64:
@@ -3201,8 +3259,10 @@ define <2 x i64> @cttz_v2i64(<2 x i64> %op) {
 ; CHECK-LABEL: cttz_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    rbit z0.d, p0/m, z0.d
 ; CHECK-NEXT:    clz z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: cttz_v2i64:

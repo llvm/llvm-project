@@ -64,6 +64,7 @@ define void @test_stnp_v16i8(ptr %p, <16 x i8> %v) #0 {
 define void @test_stnp_v2i32(ptr %p, <2 x i32> %v) #0 {
 ; CHECK-LE-LABEL: test_stnp_v2i32:
 ; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-LE-NEXT:    mov s1, v0.s[1]
 ; CHECK-LE-NEXT:    stnp s0, s1, [x0]
 ; CHECK-LE-NEXT:    ret
@@ -79,6 +80,7 @@ define void @test_stnp_v2i32(ptr %p, <2 x i32> %v) #0 {
 define void @test_stnp_v4i16(ptr %p, <4 x i16> %v) #0 {
 ; CHECK-LE-LABEL: test_stnp_v4i16:
 ; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-LE-NEXT:    mov s1, v0.s[1]
 ; CHECK-LE-NEXT:    stnp s0, s1, [x0]
 ; CHECK-LE-NEXT:    ret
@@ -94,6 +96,7 @@ define void @test_stnp_v4i16(ptr %p, <4 x i16> %v) #0 {
 define void @test_stnp_v8i8(ptr %p, <8 x i8> %v) #0 {
 ; CHECK-LE-LABEL: test_stnp_v8i8:
 ; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-LE-NEXT:    mov s1, v0.s[1]
 ; CHECK-LE-NEXT:    stnp s0, s1, [x0]
 ; CHECK-LE-NEXT:    ret
@@ -139,6 +142,7 @@ define void @test_stnp_v4f32(ptr %p, <4 x float> %v) #0 {
 define void @test_stnp_v2f32(ptr %p, <2 x float> %v) #0 {
 ; CHECK-LE-LABEL: test_stnp_v2f32:
 ; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-LE-NEXT:    mov s1, v0.s[1]
 ; CHECK-LE-NEXT:    stnp s0, s1, [x0]
 ; CHECK-LE-NEXT:    ret
@@ -154,6 +158,7 @@ define void @test_stnp_v2f32(ptr %p, <2 x float> %v) #0 {
 define void @test_stnp_v1f64(ptr %p, <1 x double> %v) #0 {
 ; CHECK-LE-LABEL: test_stnp_v1f64:
 ; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-LE-NEXT:    mov s1, v0.s[1]
 ; CHECK-LE-NEXT:    stnp s0, s1, [x0]
 ; CHECK-LE-NEXT:    ret
@@ -169,6 +174,7 @@ define void @test_stnp_v1f64(ptr %p, <1 x double> %v) #0 {
 define void @test_stnp_v1i64(ptr %p, <1 x i64> %v) #0 {
 ; CHECK-LE-LABEL: test_stnp_v1i64:
 ; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-LE-NEXT:    mov s1, v0.s[1]
 ; CHECK-LE-NEXT:    stnp s0, s1, [x0]
 ; CHECK-LE-NEXT:    ret
@@ -232,6 +238,7 @@ define void @test_stnp_v2f64_offset_neg(ptr %p, <2 x double> %v) #0 {
 define void @test_stnp_v2f32_offset(ptr %p, <2 x float> %v) #0 {
 ; CHECK-LE-LABEL: test_stnp_v2f32_offset:
 ; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-LE-NEXT:    mov s1, v0.s[1]
 ; CHECK-LE-NEXT:    stnp s0, s1, [x0, #8]
 ; CHECK-LE-NEXT:    ret
@@ -248,6 +255,7 @@ define void @test_stnp_v2f32_offset(ptr %p, <2 x float> %v) #0 {
 define void @test_stnp_v2f32_offset_neg(ptr %p, <2 x float> %v) #0 {
 ; CHECK-LE-LABEL: test_stnp_v2f32_offset_neg:
 ; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-LE-NEXT:    mov s1, v0.s[1]
 ; CHECK-LE-NEXT:    stnp s0, s1, [x0, #-8]
 ; CHECK-LE-NEXT:    ret
@@ -418,6 +426,7 @@ define void @test_stnp_v4f32_offset_neg_512(ptr %p, <4 x float> %v) #0 {
 define void @test_stnp_v2f32_invalid_offset_256(ptr %p, <2 x float> %v) #0 {
 ; CHECK-LE-LABEL: test_stnp_v2f32_invalid_offset_256:
 ; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-LE-NEXT:    mov s1, v0.s[1]
 ; CHECK-LE-NEXT:    add x8, x0, #256
 ; CHECK-LE-NEXT:    stnp s0, s1, [x8]
@@ -435,6 +444,7 @@ define void @test_stnp_v2f32_invalid_offset_256(ptr %p, <2 x float> %v) #0 {
 define void @test_stnp_v2f32_offset_252(ptr %p, <2 x float> %v) #0 {
 ; CHECK-LE-LABEL: test_stnp_v2f32_offset_252:
 ; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-LE-NEXT:    mov s1, v0.s[1]
 ; CHECK-LE-NEXT:    stnp s0, s1, [x0, #252]
 ; CHECK-LE-NEXT:    ret
@@ -451,6 +461,7 @@ define void @test_stnp_v2f32_offset_252(ptr %p, <2 x float> %v) #0 {
 define void @test_stnp_v2f32_invalid_offset_neg_260(ptr %p, <2 x float> %v) #0 {
 ; CHECK-LE-LABEL: test_stnp_v2f32_invalid_offset_neg_260:
 ; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-LE-NEXT:    mov s1, v0.s[1]
 ; CHECK-LE-NEXT:    sub x8, x0, #260
 ; CHECK-LE-NEXT:    stnp s0, s1, [x8]
@@ -469,6 +480,7 @@ define void @test_stnp_v2f32_invalid_offset_neg_260(ptr %p, <2 x float> %v) #0 {
 define void @test_stnp_v2f32_offset_neg_256(ptr %p, <2 x float> %v) #0 {
 ; CHECK-LE-LABEL: test_stnp_v2f32_offset_neg_256:
 ; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-LE-NEXT:    mov s1, v0.s[1]
 ; CHECK-LE-NEXT:    stnp s0, s1, [x0, #-256]
 ; CHECK-LE-NEXT:    ret
@@ -629,9 +641,17 @@ entry:
 define void @test_stnp_v17f32(<17 x float> %v, ptr %ptr) {
 ; CHECK-LE-LABEL: test_stnp_v17f32:
 ; CHECK-LE:       // %bb.0: // %entry
+; CHECK-LE-NEXT:    // kill: def $s4 killed $s4 def $q4
+; CHECK-LE-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-LE-NEXT:    ldr s16, [sp, #32]
-; CHECK-LE-NEXT:    mov v4.s[1], v5.s[0]
+; CHECK-LE-NEXT:    // kill: def $s5 killed $s5 def $q5
+; CHECK-LE-NEXT:    // kill: def $s1 killed $s1 def $q1
 ; CHECK-LE-NEXT:    add x8, sp, #40
+; CHECK-LE-NEXT:    // kill: def $s6 killed $s6 def $q6
+; CHECK-LE-NEXT:    // kill: def $s2 killed $s2 def $q2
+; CHECK-LE-NEXT:    // kill: def $s7 killed $s7 def $q7
+; CHECK-LE-NEXT:    // kill: def $s3 killed $s3 def $q3
+; CHECK-LE-NEXT:    mov v4.s[1], v5.s[0]
 ; CHECK-LE-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-LE-NEXT:    ldr s5, [sp]
 ; CHECK-LE-NEXT:    ld1 { v16.s }[1], [x8]
@@ -663,11 +683,19 @@ define void @test_stnp_v17f32(<17 x float> %v, ptr %ptr) {
 ;
 ; CHECK-BE-LABEL: test_stnp_v17f32:
 ; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    // kill: def $s4 killed $s4 def $q4
+; CHECK-BE-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-BE-NEXT:    ldr s16, [sp, #36]
+; CHECK-BE-NEXT:    // kill: def $s5 killed $s5 def $q5
+; CHECK-BE-NEXT:    // kill: def $s1 killed $s1 def $q1
 ; CHECK-BE-NEXT:    ldr s17, [sp, #4]
 ; CHECK-BE-NEXT:    add x8, sp, #44
 ; CHECK-BE-NEXT:    mov v4.s[1], v5.s[0]
 ; CHECK-BE-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-BE-NEXT:    // kill: def $s6 killed $s6 def $q6
+; CHECK-BE-NEXT:    // kill: def $s2 killed $s2 def $q2
+; CHECK-BE-NEXT:    // kill: def $s7 killed $s7 def $q7
+; CHECK-BE-NEXT:    // kill: def $s3 killed $s3 def $q3
 ; CHECK-BE-NEXT:    ldr s1, [sp, #68]
 ; CHECK-BE-NEXT:    ld1 { v16.s }[1], [x8]
 ; CHECK-BE-NEXT:    add x8, sp, #12

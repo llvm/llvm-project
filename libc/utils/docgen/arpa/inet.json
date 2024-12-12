@@ -1,0 +1,28 @@
+{
+  "functions": {
+    "htonl" : {
+      "posix-definition": ""
+    },
+    "htons": {
+      "posix-definition": ""
+    },
+    "ntohl": {
+      "posix-definition": ""
+    },
+    "ntohs": {
+      "posix-definition": ""
+    },
+    "inet_addr": {
+      "posix-definition": ""
+    },
+    "inet_ntoa": {
+      "posix-definition": ""
+    },
+    "inet_ntop": {
+      "posix-definition": ""
+    },
+    "inet_pton": {
+      "posix-definition": ""
+    }
+  }
+}

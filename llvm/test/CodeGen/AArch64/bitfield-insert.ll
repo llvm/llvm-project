@@ -546,6 +546,7 @@ define i32 @test9(i64 %b, i32 %e) {
 ; CHECK-NEXT:    lsr x0, x0, #12
 ; CHECK-NEXT:    lsr w8, w1, #23
 ; CHECK-NEXT:    bfi w0, w8, #23, #9
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %c = lshr i64 %b, 12
   %d = trunc i64 %c to i32

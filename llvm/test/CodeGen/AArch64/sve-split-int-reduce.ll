@@ -34,6 +34,7 @@ define i32 @orv_nxv2i32(<vscale x 2 x i32> %a) {
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    orv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %res = call i32 @llvm.vector.reduce.or.nxv2i32(<vscale x 2 x i32> %a)
   ret i32 %res
@@ -61,6 +62,7 @@ define i16 @xorv_nxv2i16(<vscale x 2 x i16> %a) {
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    eorv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %res = call i16 @llvm.vector.reduce.xor.nxv2i16(<vscale x 2 x i16> %a)
   ret i16 %res
@@ -86,6 +88,7 @@ define i16 @uaddv_nxv4i16(<vscale x 4 x i16> %a) {
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    uaddv d0, p0, z0.s
 ; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %res = call i16 @llvm.vector.reduce.add.nxv4i16(<vscale x 4 x i16> %a)
   ret i16 %res
@@ -98,6 +101,7 @@ define i16 @uaddv_nxv16i16(<vscale x 16 x i16> %a) {
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    uaddv d0, p0, z0.h
 ; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %res = call i16 @llvm.vector.reduce.add.nxv16i16(<vscale x 16 x i16> %a)
   ret i16 %res
@@ -112,6 +116,7 @@ define i32 @uaddv_nxv16i32(<vscale x 16 x i32> %a) {
 ; CHECK-NEXT:    add z0.s, z0.s, z1.s
 ; CHECK-NEXT:    uaddv d0, p0, z0.s
 ; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %res = call i32 @llvm.vector.reduce.add.nxv16i32(<vscale x 16 x i32> %a)
   ret i32 %res
@@ -126,6 +131,7 @@ define i32 @umin_nxv2i32(<vscale x 2 x i32> %a) {
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uminv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %res = call i32 @llvm.vector.reduce.umin.nxv2i32(<vscale x 2 x i32> %a)
   ret i32 %res

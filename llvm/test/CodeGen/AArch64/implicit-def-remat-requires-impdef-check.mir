@@ -32,15 +32,15 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: STRXui $x0, %stack.0, 0 :: (store (s64) into %stack.0)
     ; CHECK-NEXT: dead undef [[COPY:%[0-9]+]].sub_32:gpr64 = COPY $x1
-    ; CHECK-NEXT: dead undef [[DEF:%[0-9]+]].sub_32:gpr64 = IMPLICIT_DEF implicit-def %8
-    ; CHECK-NEXT: STRXui %8, %stack.1, 0 :: (store (s64) into %stack.1)
+    ; CHECK-NEXT: dead undef [[DEF:%[0-9]+]].sub_32:gpr64 = IMPLICIT_DEF implicit-def %6
+    ; CHECK-NEXT: STRXui %6, %stack.1, 0 :: (store (s64) into %stack.1)
     ; CHECK-NEXT: ADJCALLSTACKDOWN 8, 0, implicit-def dead $sp, implicit $sp
     ; CHECK-NEXT: BL @foo, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
     ; CHECK-NEXT: ADJCALLSTACKUP 8, 0, implicit-def dead $sp, implicit $sp
     ; CHECK-NEXT: [[LDRXui:%[0-9]+]]:gpr64common = LDRXui %stack.0, 0 :: (load (s64) from %stack.0)
     ; CHECK-NEXT: [[LDRXui1:%[0-9]+]]:gpr64 = LDRXui %stack.1, 0 :: (load (s64) from %stack.1)
     ; CHECK-NEXT: STRXui [[LDRXui1]], [[LDRXui]], 1 :: (store (s64) into stack + 8)
-    ; CHECK-NEXT: STRXui undef %9:gpr64, [[LDRXui]], 0 :: (store (s64) into stack)
+    ; CHECK-NEXT: STRXui undef %8:gpr64, [[LDRXui]], 0 :: (store (s64) into stack)
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr64sp = COPY $x0
     undef %1.sub_32:gpr64 = COPY $x1
@@ -70,15 +70,15 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: STRXui $x0, %stack.0, 0 :: (store (s64) into %stack.0)
     ; CHECK-NEXT: dead undef [[COPY:%[0-9]+]].sub_32:gpr64 = COPY $x1
-    ; CHECK-NEXT: dead undef [[MOVi32imm:%[0-9]+]].sub_32:gpr64 = MOVi32imm 4, implicit-def %8
-    ; CHECK-NEXT: STRXui %8, %stack.1, 0 :: (store (s64) into %stack.1)
+    ; CHECK-NEXT: dead undef [[MOVi32imm:%[0-9]+]].sub_32:gpr64 = MOVi32imm 4, implicit-def %6
+    ; CHECK-NEXT: STRXui %6, %stack.1, 0 :: (store (s64) into %stack.1)
     ; CHECK-NEXT: ADJCALLSTACKDOWN 8, 0, implicit-def dead $sp, implicit $sp
     ; CHECK-NEXT: BL @foo, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
     ; CHECK-NEXT: ADJCALLSTACKUP 8, 0, implicit-def dead $sp, implicit $sp
     ; CHECK-NEXT: [[LDRXui:%[0-9]+]]:gpr64common = LDRXui %stack.0, 0 :: (load (s64) from %stack.0)
     ; CHECK-NEXT: [[LDRXui1:%[0-9]+]]:gpr64 = LDRXui %stack.1, 0 :: (load (s64) from %stack.1)
     ; CHECK-NEXT: STRXui [[LDRXui1]], [[LDRXui]], 1 :: (store (s64) into stack + 8)
-    ; CHECK-NEXT: STRXui undef %9:gpr64, [[LDRXui]], 0 :: (store (s64) into stack)
+    ; CHECK-NEXT: STRXui undef %8:gpr64, [[LDRXui]], 0 :: (store (s64) into stack)
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr64sp = COPY $x0
     undef %1.sub_32:gpr64 = COPY $x1

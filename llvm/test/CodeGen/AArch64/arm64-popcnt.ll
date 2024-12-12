@@ -39,6 +39,7 @@ define i32 @cnt32_advsimd(i32 %x) nounwind readnone {
 define i32 @cnt32_advsimd_2(<2 x i32> %x) {
 ; CHECK-LABEL: cnt32_advsimd_2:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    cnt.8b v0, v0
@@ -64,6 +65,7 @@ define i32 @cnt32_advsimd_2(<2 x i32> %x) {
 ;
 ; CHECK-CSSC-LABEL: cnt32_advsimd_2:
 ; CHECK-CSSC:       // %bb.0:
+; CHECK-CSSC-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-CSSC-NEXT:    fmov w8, s0
 ; CHECK-CSSC-NEXT:    cnt w0, w8
 ; CHECK-CSSC-NEXT:    ret

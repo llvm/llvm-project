@@ -18,6 +18,7 @@ define half @test_atomicrmw_fsub_f16_seq_cst_align2(ptr %ptr, half %value) #0 {
 ; NOLSE-NEXT:    stlxrh w9, w8, [x0]
 ; NOLSE-NEXT:    cbnz w9, .LBB0_1
 ; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
+; NOLSE-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; NOLSE-NEXT:    ret
 ;
 ; LSE-LABEL: test_atomicrmw_fsub_f16_seq_cst_align2:
@@ -37,6 +38,7 @@ define half @test_atomicrmw_fsub_f16_seq_cst_align2(ptr %ptr, half %value) #0 {
 ; LSE-NEXT:    cmp w10, w8, uxth
 ; LSE-NEXT:    b.ne .LBB0_1
 ; LSE-NEXT:  // %bb.2: // %atomicrmw.end
+; LSE-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; LSE-NEXT:    ret
 ;
 ; SOFTFP-NOLSE-LABEL: test_atomicrmw_fsub_f16_seq_cst_align2:
@@ -81,6 +83,7 @@ define half @test_atomicrmw_fsub_f16_seq_cst_align2(ptr %ptr, half %value) #0 {
 ; SOFTFP-NOLSE-NEXT:    cbz w8, .LBB0_2
 ; SOFTFP-NOLSE-NEXT:  .LBB0_6: // %atomicrmw.end
 ; SOFTFP-NOLSE-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
+; SOFTFP-NOLSE-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; SOFTFP-NOLSE-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload
 ; SOFTFP-NOLSE-NEXT:    ldr x30, [sp], #48 // 8-byte Folded Reload
 ; SOFTFP-NOLSE-NEXT:    ret
@@ -103,6 +106,7 @@ define half @test_atomicrmw_fsub_f16_seq_cst_align4(ptr %ptr, half %value) #0 {
 ; NOLSE-NEXT:    stlxrh w9, w8, [x0]
 ; NOLSE-NEXT:    cbnz w9, .LBB1_1
 ; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
+; NOLSE-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; NOLSE-NEXT:    ret
 ;
 ; LSE-LABEL: test_atomicrmw_fsub_f16_seq_cst_align4:
@@ -122,6 +126,7 @@ define half @test_atomicrmw_fsub_f16_seq_cst_align4(ptr %ptr, half %value) #0 {
 ; LSE-NEXT:    cmp w10, w8, uxth
 ; LSE-NEXT:    b.ne .LBB1_1
 ; LSE-NEXT:  // %bb.2: // %atomicrmw.end
+; LSE-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; LSE-NEXT:    ret
 ;
 ; SOFTFP-NOLSE-LABEL: test_atomicrmw_fsub_f16_seq_cst_align4:
@@ -166,6 +171,7 @@ define half @test_atomicrmw_fsub_f16_seq_cst_align4(ptr %ptr, half %value) #0 {
 ; SOFTFP-NOLSE-NEXT:    cbz w8, .LBB1_2
 ; SOFTFP-NOLSE-NEXT:  .LBB1_6: // %atomicrmw.end
 ; SOFTFP-NOLSE-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
+; SOFTFP-NOLSE-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; SOFTFP-NOLSE-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload
 ; SOFTFP-NOLSE-NEXT:    ldr x30, [sp], #48 // 8-byte Folded Reload
 ; SOFTFP-NOLSE-NEXT:    ret
@@ -176,6 +182,7 @@ define half @test_atomicrmw_fsub_f16_seq_cst_align4(ptr %ptr, half %value) #0 {
 define bfloat @test_atomicrmw_fsub_bf16_seq_cst_align2(ptr %ptr, bfloat %value) #0 {
 ; NOLSE-LABEL: test_atomicrmw_fsub_bf16_seq_cst_align2:
 ; NOLSE:       // %bb.0:
+; NOLSE-NEXT:    // kill: def $h0 killed $h0 def $s0
 ; NOLSE-NEXT:    fmov w9, s0
 ; NOLSE-NEXT:    mov w8, #32767 // =0x7fff
 ; NOLSE-NEXT:    lsl w9, w9, #16
@@ -195,13 +202,15 @@ define bfloat @test_atomicrmw_fsub_bf16_seq_cst_align2(ptr %ptr, bfloat %value) 
 ; NOLSE-NEXT:    stlxrh w10, w9, [x0]
 ; NOLSE-NEXT:    cbnz w10, .LBB2_1
 ; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
+; NOLSE-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; NOLSE-NEXT:    ret
 ;
 ; LSE-LABEL: test_atomicrmw_fsub_bf16_seq_cst_align2:
 ; LSE:       // %bb.0:
+; LSE-NEXT:    // kill: def $h0 killed $h0 def $s0
 ; LSE-NEXT:    fmov w9, s0
-; LSE-NEXT:    ldr h0, [x0]
 ; LSE-NEXT:    mov w8, #32767 // =0x7fff
+; LSE-NEXT:    ldr h0, [x0]
 ; LSE-NEXT:    lsl w9, w9, #16
 ; LSE-NEXT:    fmov s1, w9
 ; LSE-NEXT:  .LBB2_1: // %atomicrmw.start
@@ -222,6 +231,7 @@ define bfloat @test_atomicrmw_fsub_bf16_seq_cst_align2(ptr %ptr, bfloat %value) 
 ; LSE-NEXT:    cmp w11, w10, uxth
 ; LSE-NEXT:    b.ne .LBB2_1
 ; LSE-NEXT:  // %bb.2: // %atomicrmw.end
+; LSE-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; LSE-NEXT:    ret
 ;
 ; SOFTFP-NOLSE-LABEL: test_atomicrmw_fsub_bf16_seq_cst_align2:
@@ -261,6 +271,7 @@ define bfloat @test_atomicrmw_fsub_bf16_seq_cst_align2(ptr %ptr, bfloat %value) 
 ; SOFTFP-NOLSE-NEXT:    cbz w8, .LBB2_2
 ; SOFTFP-NOLSE-NEXT:  .LBB2_6: // %atomicrmw.end
 ; SOFTFP-NOLSE-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
+; SOFTFP-NOLSE-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; SOFTFP-NOLSE-NEXT:    ldp x30, x21, [sp], #32 // 16-byte Folded Reload
 ; SOFTFP-NOLSE-NEXT:    ret
   %res = atomicrmw fsub ptr %ptr, bfloat %value seq_cst, align 2
@@ -270,6 +281,7 @@ define bfloat @test_atomicrmw_fsub_bf16_seq_cst_align2(ptr %ptr, bfloat %value) 
 define bfloat @test_atomicrmw_fsub_bf16_seq_cst_align4(ptr %ptr, bfloat %value) #0 {
 ; NOLSE-LABEL: test_atomicrmw_fsub_bf16_seq_cst_align4:
 ; NOLSE:       // %bb.0:
+; NOLSE-NEXT:    // kill: def $h0 killed $h0 def $s0
 ; NOLSE-NEXT:    fmov w9, s0
 ; NOLSE-NEXT:    mov w8, #32767 // =0x7fff
 ; NOLSE-NEXT:    lsl w9, w9, #16
@@ -289,13 +301,15 @@ define bfloat @test_atomicrmw_fsub_bf16_seq_cst_align4(ptr %ptr, bfloat %value) 
 ; NOLSE-NEXT:    stlxrh w10, w9, [x0]
 ; NOLSE-NEXT:    cbnz w10, .LBB3_1
 ; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
+; NOLSE-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; NOLSE-NEXT:    ret
 ;
 ; LSE-LABEL: test_atomicrmw_fsub_bf16_seq_cst_align4:
 ; LSE:       // %bb.0:
+; LSE-NEXT:    // kill: def $h0 killed $h0 def $s0
 ; LSE-NEXT:    fmov w9, s0
-; LSE-NEXT:    ldr h0, [x0]
 ; LSE-NEXT:    mov w8, #32767 // =0x7fff
+; LSE-NEXT:    ldr h0, [x0]
 ; LSE-NEXT:    lsl w9, w9, #16
 ; LSE-NEXT:    fmov s1, w9
 ; LSE-NEXT:  .LBB3_1: // %atomicrmw.start
@@ -316,6 +330,7 @@ define bfloat @test_atomicrmw_fsub_bf16_seq_cst_align4(ptr %ptr, bfloat %value) 
 ; LSE-NEXT:    cmp w11, w10, uxth
 ; LSE-NEXT:    b.ne .LBB3_1
 ; LSE-NEXT:  // %bb.2: // %atomicrmw.end
+; LSE-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; LSE-NEXT:    ret
 ;
 ; SOFTFP-NOLSE-LABEL: test_atomicrmw_fsub_bf16_seq_cst_align4:
@@ -355,6 +370,7 @@ define bfloat @test_atomicrmw_fsub_bf16_seq_cst_align4(ptr %ptr, bfloat %value) 
 ; SOFTFP-NOLSE-NEXT:    cbz w8, .LBB3_2
 ; SOFTFP-NOLSE-NEXT:  .LBB3_6: // %atomicrmw.end
 ; SOFTFP-NOLSE-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
+; SOFTFP-NOLSE-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; SOFTFP-NOLSE-NEXT:    ldp x30, x21, [sp], #32 // 16-byte Folded Reload
 ; SOFTFP-NOLSE-NEXT:    ret
   %res = atomicrmw fsub ptr %ptr, bfloat %value seq_cst, align 4
@@ -428,6 +444,7 @@ define float @test_atomicrmw_fsub_f32_seq_cst_align4(ptr %ptr, float %value) #0 
 ; SOFTFP-NOLSE-NEXT:    cbz w8, .LBB4_2
 ; SOFTFP-NOLSE-NEXT:  .LBB4_6: // %atomicrmw.end
 ; SOFTFP-NOLSE-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
+; SOFTFP-NOLSE-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; SOFTFP-NOLSE-NEXT:    ldp x30, x21, [sp], #32 // 16-byte Folded Reload
 ; SOFTFP-NOLSE-NEXT:    ret
   %res = atomicrmw fsub ptr %ptr, float %value seq_cst, align 4
@@ -682,6 +699,7 @@ define <2 x half> @test_atomicrmw_fsub_v2f16_seq_cst_align4(ptr %ptr, <2 x half>
 ; LSE-NEXT:    cmp w10, w8
 ; LSE-NEXT:    b.ne .LBB7_1
 ; LSE-NEXT:  // %bb.2: // %atomicrmw.end
+; LSE-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; LSE-NEXT:    ret
 ;
 ; SOFTFP-NOLSE-LABEL: test_atomicrmw_fsub_v2f16_seq_cst_align4:
@@ -796,6 +814,7 @@ define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_seq_cst_align4(ptr %ptr, <2 x bf
 ; LSE-NEXT:    cmp w10, w8
 ; LSE-NEXT:    b.ne .LBB8_1
 ; LSE-NEXT:  // %bb.2: // %atomicrmw.end
+; LSE-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; LSE-NEXT:    ret
 ;
 ; SOFTFP-NOLSE-LABEL: test_atomicrmw_fsub_v2bf16_seq_cst_align4:
@@ -918,6 +937,7 @@ define <2 x float> @test_atomicrmw_fsub_v2f32_seq_cst_align8(ptr %ptr, <2 x floa
 ; SOFTFP-NOLSE-NEXT:    bl __subsf3
 ; SOFTFP-NOLSE-NEXT:    mov w8, w0
 ; SOFTFP-NOLSE-NEXT:    mov w9, w22
+; SOFTFP-NOLSE-NEXT:    // kill: def $w23 killed $w23 killed $x23 def $x23
 ; SOFTFP-NOLSE-NEXT:    orr x8, x8, x24, lsl #32
 ; SOFTFP-NOLSE-NEXT:    orr x9, x9, x23, lsl #32
 ; SOFTFP-NOLSE-NEXT:  .LBB9_3: // %cmpxchg.start
@@ -971,10 +991,10 @@ define <2 x double> @test_atomicrmw_fsub_v2f64_seq_cst_align8(ptr %ptr, <2 x dou
 ; LSE-NEXT:    fsub v2.2d, v1.2d, v0.2d
 ; LSE-NEXT:    mov x3, v1.d[1]
 ; LSE-NEXT:    fmov x2, d1
-; LSE-NEXT:    mov x6, x2
-; LSE-NEXT:    mov x5, v2.d[1]
-; LSE-NEXT:    fmov x4, d2
 ; LSE-NEXT:    mov x7, x3
+; LSE-NEXT:    mov x5, v2.d[1]
+; LSE-NEXT:    mov x6, x2
+; LSE-NEXT:    fmov x4, d2
 ; LSE-NEXT:    caspal x6, x7, x4, x5, [x0]
 ; LSE-NEXT:    fmov d1, x6
 ; LSE-NEXT:    cmp x7, x3
