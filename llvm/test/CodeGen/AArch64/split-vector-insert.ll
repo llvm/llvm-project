@@ -21,6 +21,7 @@ define <vscale x 2 x i64> @test_nxv2i64_v8i64(<vscale x 2 x i64> %a, <8 x i64> %
 ; CHECK-LEGALIZATION-NEXT:    ptrue p0.d, vl2
 ; CHECK-LEGALIZATION-NEXT:    mov w9, #2 // =0x2
 ; CHECK-LEGALIZATION-NEXT:    sub x8, x8, #2
+; CHECK-LEGALIZATION-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-LEGALIZATION-NEXT:    mov x10, sp
 ; CHECK-LEGALIZATION-NEXT:    cmp x8, #2
 ; CHECK-LEGALIZATION-NEXT:    mov z0.d, p0/m, z1.d
@@ -64,6 +65,7 @@ define <vscale x 2 x i64> @test_nxv2i64_v8i64(<vscale x 2 x i64> %a, <8 x i64> %
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    mov w9, #2 // =0x2
 ; CHECK-NEXT:    sub x8, x8, #2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    mov x10, sp
 ; CHECK-NEXT:    cmp x8, #2
 ; CHECK-NEXT:    mov z0.d, p0/m, z1.d
@@ -116,6 +118,7 @@ define <vscale x 2 x double> @test_nxv2f64_v8f64(<vscale x 2 x double> %a, <8 x 
 ; CHECK-LEGALIZATION-NEXT:    ptrue p0.d, vl2
 ; CHECK-LEGALIZATION-NEXT:    mov w9, #2 // =0x2
 ; CHECK-LEGALIZATION-NEXT:    sub x8, x8, #2
+; CHECK-LEGALIZATION-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-LEGALIZATION-NEXT:    mov x10, sp
 ; CHECK-LEGALIZATION-NEXT:    cmp x8, #2
 ; CHECK-LEGALIZATION-NEXT:    mov z0.d, p0/m, z1.d
@@ -159,6 +162,7 @@ define <vscale x 2 x double> @test_nxv2f64_v8f64(<vscale x 2 x double> %a, <8 x 
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    mov w9, #2 // =0x2
 ; CHECK-NEXT:    sub x8, x8, #2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    mov x10, sp
 ; CHECK-NEXT:    cmp x8, #2
 ; CHECK-NEXT:    mov z0.d, p0/m, z1.d

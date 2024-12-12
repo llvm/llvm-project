@@ -9,6 +9,7 @@ define i32 @promote_extract_2i32_idx(<vscale x 2 x i32> %a, i32 %idx) {
 ; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    whilels p0.d, xzr, x8
 ; CHECK-NEXT:    lastb x0, p0, z0.d
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %ext = extractelement <vscale x 2 x i32> %a, i32 %idx
   ret i32 %ext

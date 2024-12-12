@@ -25,6 +25,7 @@ declare i16 @llvm.bswap.i16(i16)
 define i64 @bswap_i16_to_i64_anyext(i16 %a) {
 ; CHECK-SD-LABEL: bswap_i16_to_i64_anyext:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    rev16 x8, x0
 ; CHECK-SD-NEXT:    lsl x0, x8, #48
 ; CHECK-SD-NEXT:    ret
@@ -178,6 +179,7 @@ define <2 x i16> @bswap_v2i16(<2 x i16> %a){
 ; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    rev16 v0.8b, v0.8b
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %res = call <2 x i16> @llvm.bswap.v2i16(<2 x i16> %a)
@@ -208,6 +210,7 @@ define <1 x i32> @bswap_v1i32(<1 x i32> %a){
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    rev w8, w8
 ; CHECK-GI-NEXT:    mov v0.s[0], w8
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %res = call <1 x i32> @llvm.bswap.v1i32(<1 x i32> %a)

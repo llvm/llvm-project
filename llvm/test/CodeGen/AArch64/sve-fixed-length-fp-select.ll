@@ -282,6 +282,7 @@ define <2 x double> @select_v2f64(<2 x double> %op1, <2 x double> %op2, i1 %mask
 define void @select_v4f64(ptr %a, ptr %b, i1 %mask) vscale_range(2,0) #0 {
 ; CHECK-LABEL: select_v4f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-NEXT:    and x8, x2, #0x1
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z0.d, x8
@@ -302,6 +303,7 @@ define void @select_v4f64(ptr %a, ptr %b, i1 %mask) vscale_range(2,0) #0 {
 define void @select_v8f64(ptr %a, ptr %b, i1 %mask) #0 {
 ; VBITS_GE_256-LABEL: select_v8f64:
 ; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; VBITS_GE_256-NEXT:    and x8, x2, #0x1
 ; VBITS_GE_256-NEXT:    ptrue p0.d
 ; VBITS_GE_256-NEXT:    mov z0.d, x8
@@ -320,6 +322,7 @@ define void @select_v8f64(ptr %a, ptr %b, i1 %mask) #0 {
 ;
 ; VBITS_GE_512-LABEL: select_v8f64:
 ; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; VBITS_GE_512-NEXT:    and x8, x2, #0x1
 ; VBITS_GE_512-NEXT:    ptrue p0.d
 ; VBITS_GE_512-NEXT:    mov z0.d, x8
@@ -340,6 +343,7 @@ define void @select_v8f64(ptr %a, ptr %b, i1 %mask) #0 {
 define void @select_v16f64(ptr %a, ptr %b, i1 %mask) vscale_range(8,0) #0 {
 ; CHECK-LABEL: select_v16f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-NEXT:    and x8, x2, #0x1
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z0.d, x8
@@ -360,6 +364,7 @@ define void @select_v16f64(ptr %a, ptr %b, i1 %mask) vscale_range(8,0) #0 {
 define void @select_v32f64(ptr %a, ptr %b, i1 %mask) vscale_range(16,0) #0 {
 ; CHECK-LABEL: select_v32f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-NEXT:    and x8, x2, #0x1
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z0.d, x8

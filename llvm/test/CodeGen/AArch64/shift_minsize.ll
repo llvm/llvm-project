@@ -34,16 +34,19 @@ define i32 @f1(i64 %x, i64 %y) minsize optsize {
 ; CHECK-LABEL: f1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsl x0, x0, x1
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-WIN-LABEL: f1:
 ; CHECK-WIN:       // %bb.0:
 ; CHECK-WIN-NEXT:    lsl x0, x0, x1
+; CHECK-WIN-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-WIN-NEXT:    ret
 ;
 ; CHECK-DARWIN-LABEL: f1:
 ; CHECK-DARWIN:       ; %bb.0:
 ; CHECK-DARWIN-NEXT:    lsl x0, x0, x1
+; CHECK-DARWIN-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-DARWIN-NEXT:    ret
 	%a = shl i64 %x, %y
 	%b = trunc i64 %a to i32
@@ -54,16 +57,19 @@ define i32 @f2(i64 %x, i64 %y) minsize optsize {
 ; CHECK-LABEL: f2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    asr x0, x0, x1
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-WIN-LABEL: f2:
 ; CHECK-WIN:       // %bb.0:
 ; CHECK-WIN-NEXT:    asr x0, x0, x1
+; CHECK-WIN-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-WIN-NEXT:    ret
 ;
 ; CHECK-DARWIN-LABEL: f2:
 ; CHECK-DARWIN:       ; %bb.0:
 ; CHECK-DARWIN-NEXT:    asr x0, x0, x1
+; CHECK-DARWIN-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-DARWIN-NEXT:    ret
 	%a = ashr i64 %x, %y
 	%b = trunc i64 %a to i32
@@ -74,16 +80,19 @@ define i32 @f3(i64 %x, i64 %y) minsize optsize {
 ; CHECK-LABEL: f3:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr x0, x0, x1
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-WIN-LABEL: f3:
 ; CHECK-WIN:       // %bb.0:
 ; CHECK-WIN-NEXT:    lsr x0, x0, x1
+; CHECK-WIN-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-WIN-NEXT:    ret
 ;
 ; CHECK-DARWIN-LABEL: f3:
 ; CHECK-DARWIN:       ; %bb.0:
 ; CHECK-DARWIN-NEXT:    lsr x0, x0, x1
+; CHECK-DARWIN-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-DARWIN-NEXT:    ret
 	%a = lshr i64 %x, %y
 	%b = trunc i64 %a to i32

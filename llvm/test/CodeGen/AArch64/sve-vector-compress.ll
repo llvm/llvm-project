@@ -160,11 +160,13 @@ define <4 x i32> @test_compress_v4i32_with_sve(<4 x i32> %vec, <4 x i1> %mask) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    shl v1.4s, v1.4s, #31
 ; CHECK-NEXT:    cmlt v1.4s, v1.4s, #0
 ; CHECK-NEXT:    and z1.s, z1.s, #0x1
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, #0
 ; CHECK-NEXT:    compact z0.s, p0, z0.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
     %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> %vec, <4 x i1> %mask, <4 x i32> undef)
     ret <4 x i32> %out
@@ -195,6 +197,8 @@ define <4 x double> @test_compress_v4f64_with_sve(<4 x double> %vec, <4 x i1> %m
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    ushll v2.4s, v2.4h, #0
 ; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    ushll v3.2d, v2.2s, #0
 ; CHECK-NEXT:    ushll2 v4.2d, v2.4s, #0
 ; CHECK-NEXT:    fmov x8, d2

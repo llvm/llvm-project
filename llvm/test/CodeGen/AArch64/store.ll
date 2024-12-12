@@ -109,6 +109,7 @@ define void @store_v2i64(<2 x i64> %a, ptr %ptr){
 define void @store_v2i8(<2 x i8> %a, ptr %ptr){
 ; CHECK-SD-LABEL: store_v2i8:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    mov w8, v0.s[1]
 ; CHECK-SD-NEXT:    fmov w9, s0
 ; CHECK-SD-NEXT:    strb w9, [x0]
@@ -117,6 +118,7 @@ define void @store_v2i8(<2 x i8> %a, ptr %ptr){
 ;
 ; CHECK-GI-LABEL: store_v2i8:
 ; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov s1, v0.s[1]
 ; CHECK-GI-NEXT:    str b0, [x0]
 ; CHECK-GI-NEXT:    str b1, [x0, #1]
@@ -147,6 +149,7 @@ define void @store_v32i8(<32 x i8> %a, ptr %ptr){
 define void @store_v2i16(<2 x i16> %a, ptr %ptr){
 ; CHECK-SD-LABEL: store_v2i16:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    mov w8, v0.s[1]
 ; CHECK-SD-NEXT:    fmov w9, s0
 ; CHECK-SD-NEXT:    strh w9, [x0]
@@ -155,6 +158,7 @@ define void @store_v2i16(<2 x i16> %a, ptr %ptr){
 ;
 ; CHECK-GI-LABEL: store_v2i16:
 ; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov s1, v0.s[1]
 ; CHECK-GI-NEXT:    str h0, [x0]
 ; CHECK-GI-NEXT:    str h1, [x0, #2]
@@ -173,10 +177,16 @@ define void @store_v16i16(<16 x i16> %a, ptr %ptr){
 }
 
 define void @store_v1i32(<1 x i32> %a, ptr %ptr){
-; CHECK-LABEL: store_v1i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str s0, [x0]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: store_v1i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    str s0, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: store_v1i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str s0, [x0]
+; CHECK-GI-NEXT:    ret
     store <1 x i32> %a, ptr %ptr
     ret void
 }
@@ -232,6 +242,7 @@ define void @store_v7i8(<7 x i8> %a, ptr %ptr){
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    add x8, x0, #6
 ; CHECK-SD-NEXT:    add x9, x0, #4
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    str s0, [x0]
 ; CHECK-SD-NEXT:    st1 { v0.b }[6], [x8]
 ; CHECK-SD-NEXT:    st1 { v0.h }[2], [x9]
@@ -240,6 +251,7 @@ define void @store_v7i8(<7 x i8> %a, ptr %ptr){
 ; CHECK-GI-LABEL: store_v7i8:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    add x8, x0, #1
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    add x9, x0, #2
 ; CHECK-GI-NEXT:    st1 { v0.b }[0], [x0]
 ; CHECK-GI-NEXT:    st1 { v0.b }[1], [x8]
@@ -261,6 +273,7 @@ define void @store_v3i16(<3 x i16> %a, ptr %ptr){
 ; CHECK-SD-LABEL: store_v3i16:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    add x8, x0, #4
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    str s0, [x0]
 ; CHECK-SD-NEXT:    st1 { v0.h }[2], [x8]
 ; CHECK-SD-NEXT:    ret
@@ -269,6 +282,7 @@ define void @store_v3i16(<3 x i16> %a, ptr %ptr){
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    add x8, x0, #2
 ; CHECK-GI-NEXT:    add x9, x0, #4
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    str h0, [x0]
 ; CHECK-GI-NEXT:    st1 { v0.h }[1], [x8]
 ; CHECK-GI-NEXT:    st1 { v0.h }[2], [x9]

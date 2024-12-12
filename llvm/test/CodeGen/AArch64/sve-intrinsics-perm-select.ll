@@ -596,6 +596,8 @@ define <vscale x 2 x i64> @dupq_i64_range(<vscale x 2 x i64> %a) {
 define dso_local <vscale x 4 x float> @dupq_f32_repeat_complex(float %x, float %y) {
 ; CHECK-LABEL: dupq_f32_repeat_complex:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
+; CHECK-NEXT:    // kill: def $s1 killed $s1 def $q1
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-NEXT:    mov z0.d, d0
 ; CHECK-NEXT:    ret
@@ -611,6 +613,8 @@ define dso_local <vscale x 4 x float> @dupq_f32_repeat_complex(float %x, float %
 define dso_local <vscale x 8 x half> @dupq_f16_repeat_complex(half %x, half %y) {
 ; CHECK-LABEL: dupq_f16_repeat_complex:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
+; CHECK-NEXT:    // kill: def $h1 killed $h1 def $q1
 ; CHECK-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-NEXT:    mov z0.s, s0
 ; CHECK-NEXT:    ret
@@ -631,6 +635,8 @@ define <vscale x 16 x i8> @ext_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) 
 ;
 ; SVE2-LABEL: ext_i8:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; SVE2-NEXT:    ext z0.b, { z0.b, z1.b }, #255
 ; SVE2-NEXT:    ret
   %out = call <vscale x 16 x i8> @llvm.aarch64.sve.ext.nxv16i8(<vscale x 16 x i8> %a,
@@ -647,6 +653,8 @@ define <vscale x 8 x i16> @ext_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
 ;
 ; SVE2-LABEL: ext_i16:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; SVE2-NEXT:    ext z0.b, { z0.b, z1.b }, #0
 ; SVE2-NEXT:    ret
   %out = call <vscale x 8 x i16> @llvm.aarch64.sve.ext.nxv8i16(<vscale x 8 x i16> %a,
@@ -663,6 +671,8 @@ define <vscale x 4 x i32> @ext_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
 ;
 ; SVE2-LABEL: ext_i32:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; SVE2-NEXT:    ext z0.b, { z0.b, z1.b }, #4
 ; SVE2-NEXT:    ret
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.ext.nxv4i32(<vscale x 4 x i32> %a,
@@ -679,6 +689,8 @@ define <vscale x 2 x i64> @ext_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
 ;
 ; SVE2-LABEL: ext_i64:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; SVE2-NEXT:    ext z0.b, { z0.b, z1.b }, #16
 ; SVE2-NEXT:    ret
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.ext.nxv2i64(<vscale x 2 x i64> %a,
@@ -695,6 +707,8 @@ define <vscale x 8 x bfloat> @ext_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x b
 ;
 ; SVE2-LABEL: ext_bf16:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; SVE2-NEXT:    ext z0.b, { z0.b, z1.b }, #6
 ; SVE2-NEXT:    ret
   %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.ext.nxv8bf16(<vscale x 8 x bfloat> %a,
@@ -711,6 +725,8 @@ define <vscale x 8 x half> @ext_f16(<vscale x 8 x half> %a, <vscale x 8 x half> 
 ;
 ; SVE2-LABEL: ext_f16:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; SVE2-NEXT:    ext z0.b, { z0.b, z1.b }, #6
 ; SVE2-NEXT:    ret
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.ext.nxv8f16(<vscale x 8 x half> %a,
@@ -727,6 +743,8 @@ define <vscale x 4 x float> @ext_f32(<vscale x 4 x float> %a, <vscale x 4 x floa
 ;
 ; SVE2-LABEL: ext_f32:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; SVE2-NEXT:    ext z0.b, { z0.b, z1.b }, #16
 ; SVE2-NEXT:    ret
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.ext.nxv4f32(<vscale x 4 x float> %a,
@@ -743,6 +761,8 @@ define <vscale x 2 x double> @ext_f64(<vscale x 2 x double> %a, <vscale x 2 x do
 ;
 ; SVE2-LABEL: ext_f64:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; SVE2-NEXT:    ext z0.b, { z0.b, z1.b }, #40
 ; SVE2-NEXT:    ret
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.ext.nxv2f64(<vscale x 2 x double> %a,
@@ -1134,6 +1154,8 @@ define <vscale x 16 x i8> @splice_i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> 
 ;
 ; SVE2-LABEL: splice_i8:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; SVE2-NEXT:    splice z0.b, p0, { z0.b, z1.b }
 ; SVE2-NEXT:    ret
   %out = call <vscale x 16 x i8> @llvm.aarch64.sve.splice.nxv16i8(<vscale x 16 x i1> %pg,
@@ -1150,6 +1172,8 @@ define <vscale x 8 x i16> @splice_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> 
 ;
 ; SVE2-LABEL: splice_i16:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; SVE2-NEXT:    splice z0.h, p0, { z0.h, z1.h }
 ; SVE2-NEXT:    ret
   %out = call <vscale x 8 x i16> @llvm.aarch64.sve.splice.nxv8i16(<vscale x 8 x i1> %pg,
@@ -1166,6 +1190,8 @@ define <vscale x 4 x i32> @splice_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> 
 ;
 ; SVE2-LABEL: splice_i32:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; SVE2-NEXT:    splice z0.s, p0, { z0.s, z1.s }
 ; SVE2-NEXT:    ret
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.splice.nxv4i32(<vscale x 4 x i1> %pg,
@@ -1182,6 +1208,8 @@ define <vscale x 2 x i64> @splice_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> 
 ;
 ; SVE2-LABEL: splice_i64:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; SVE2-NEXT:    splice z0.d, p0, { z0.d, z1.d }
 ; SVE2-NEXT:    ret
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.splice.nxv2i64(<vscale x 2 x i1> %pg,
@@ -1198,6 +1226,8 @@ define <vscale x 8 x bfloat> @splice_bf16(<vscale x 8 x i1> %pg, <vscale x 8 x b
 ;
 ; SVE2-LABEL: splice_bf16:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; SVE2-NEXT:    splice z0.h, p0, { z0.h, z1.h }
 ; SVE2-NEXT:    ret
   %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.splice.nxv8bf16(<vscale x 8 x i1> %pg,
@@ -1214,6 +1244,8 @@ define <vscale x 8 x half> @splice_f16(<vscale x 8 x i1> %pg, <vscale x 8 x half
 ;
 ; SVE2-LABEL: splice_f16:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; SVE2-NEXT:    splice z0.h, p0, { z0.h, z1.h }
 ; SVE2-NEXT:    ret
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.splice.nxv8f16(<vscale x 8 x i1> %pg,
@@ -1230,6 +1262,8 @@ define <vscale x 4 x float> @splice_f32(<vscale x 4 x i1> %pg, <vscale x 4 x flo
 ;
 ; SVE2-LABEL: splice_f32:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; SVE2-NEXT:    splice z0.s, p0, { z0.s, z1.s }
 ; SVE2-NEXT:    ret
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.splice.nxv4f32(<vscale x 4 x i1> %pg,
@@ -1246,6 +1280,8 @@ define <vscale x 2 x double> @splice_f64(<vscale x 2 x i1> %pg, <vscale x 2 x do
 ;
 ; SVE2-LABEL: splice_f64:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; SVE2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; SVE2-NEXT:    splice z0.d, p0, { z0.d, z1.d }
 ; SVE2-NEXT:    ret
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.splice.nxv2f64(<vscale x 2 x i1> %pg,

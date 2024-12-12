@@ -38,6 +38,7 @@ entry:
 define <2 x i8> @duplane0_v2i8(<2 x i8> %b) {
 ; CHECK-LABEL: duplane0_v2i8:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.2s, v0.s[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -132,6 +133,7 @@ define <4 x i8> @dup_v4i8(i8 %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    dup v0.8b, w0
 ; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %b = insertelement <4 x i8> poison, i8 %a, i64 0
@@ -142,6 +144,7 @@ entry:
 define <4 x i8> @duplane0_v4i8(<4 x i8> %b) {
 ; CHECK-SD-LABEL: duplane0_v4i8:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    dup v0.4h, v0.h[0]
 ; CHECK-SD-NEXT:    ret
 ;
@@ -150,6 +153,7 @@ define <4 x i8> @duplane0_v4i8(<4 x i8> %b) {
 ; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    dup v0.8b, v0.b[0]
 ; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = shufflevector <4 x i8> %b, <4 x i8> poison, <4 x i32> zeroinitializer
@@ -167,6 +171,7 @@ define <4 x i8> @loaddup_v4i8(ptr %p) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ld1r { v0.8b }, [x0]
 ; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load i8, ptr %p
@@ -189,6 +194,7 @@ entry:
 define <8 x i8> @duplane0_v8i8(<8 x i8> %b) {
 ; CHECK-LABEL: duplane0_v8i8:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.8b, v0.b[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -293,6 +299,7 @@ define <2 x i16> @dup_v2i16(i16 %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    dup v0.4h, w0
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %b = insertelement <2 x i16> poison, i16 %a, i64 0
@@ -303,6 +310,7 @@ entry:
 define <2 x i16> @duplane0_v2i16(<2 x i16> %b) {
 ; CHECK-SD-LABEL: duplane0_v2i16:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    dup v0.2s, v0.s[0]
 ; CHECK-SD-NEXT:    ret
 ;
@@ -311,6 +319,7 @@ define <2 x i16> @duplane0_v2i16(<2 x i16> %b) {
 ; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    dup v0.4h, v0.h[0]
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = shufflevector <2 x i16> %b, <2 x i16> poison, <2 x i32> zeroinitializer
@@ -328,6 +337,7 @@ define <2 x i16> @loaddup_v2i16(ptr %p) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ld1r { v0.4h }, [x0]
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load i16, ptr %p
@@ -350,6 +360,7 @@ entry:
 define <3 x i16> @duplane0_v3i16(<3 x i16> %b) {
 ; CHECK-LABEL: duplane0_v3i16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.4h, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -383,6 +394,7 @@ entry:
 define <4 x i16> @duplane0_v4i16(<4 x i16> %b) {
 ; CHECK-LABEL: duplane0_v4i16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.4h, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -491,6 +503,7 @@ entry:
 define <2 x i32> @duplane0_v2i32(<2 x i32> %b) {
 ; CHECK-LABEL: duplane0_v2i32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.2s, v0.s[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -681,9 +694,12 @@ define <3 x i64> @duplane0_v3i64(<3 x i64> %b) {
 ; CHECK-GI-LABEL: duplane0_v3i64:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    fmov d2, d0
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    mov v2.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    dup v0.2d, v2.d[0]
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = shufflevector <3 x i64> %b, <3 x i64> poison, <3 x i32> zeroinitializer
@@ -702,7 +718,9 @@ define <3 x i64> @loaddup_v3i64(ptr %p) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ld1r { v0.2d }, [x0]
 ; CHECK-GI-NEXT:    ld1r { v2.2d }, [x0]
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load i64, ptr %p
@@ -885,6 +903,7 @@ entry:
 define <2 x half> @dup_v2half(half %a) {
 ; CHECK-LABEL: dup_v2half:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-NEXT:    dup v0.4h, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -896,6 +915,7 @@ entry:
 define <2 x half> @duplane0_v2half(<2 x half> %b) {
 ; CHECK-LABEL: duplane0_v2half:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.4h, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -918,6 +938,7 @@ entry:
 define <3 x half> @dup_v3half(half %a) {
 ; CHECK-LABEL: dup_v3half:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-NEXT:    dup v0.4h, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -929,6 +950,7 @@ entry:
 define <3 x half> @duplane0_v3half(<3 x half> %b) {
 ; CHECK-LABEL: duplane0_v3half:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.4h, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -951,6 +973,7 @@ entry:
 define <4 x half> @dup_v4half(half %a) {
 ; CHECK-LABEL: dup_v4half:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-NEXT:    dup v0.4h, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -962,6 +985,7 @@ entry:
 define <4 x half> @duplane0_v4half(<4 x half> %b) {
 ; CHECK-LABEL: duplane0_v4half:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.4h, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -984,6 +1008,7 @@ entry:
 define <8 x half> @dup_v8half(half %a) {
 ; CHECK-LABEL: dup_v8half:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-NEXT:    dup v0.8h, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -1017,12 +1042,14 @@ entry:
 define <16 x half> @dup_v16half(half %a) {
 ; CHECK-SD-LABEL: dup_v16half:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-SD-NEXT:    dup v0.8h, v0.h[0]
 ; CHECK-SD-NEXT:    mov v1.16b, v0.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: dup_v16half:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-GI-NEXT:    dup v2.8h, v0.h[0]
 ; CHECK-GI-NEXT:    dup v1.8h, v0.h[0]
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
@@ -1066,6 +1093,7 @@ entry:
 define <2 x bfloat> @dup_v2bfloat(bfloat %a) {
 ; CHECK-LABEL: dup_v2bfloat:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-NEXT:    dup v0.4h, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -1077,6 +1105,7 @@ entry:
 define <2 x bfloat> @duplane0_v2bfloat(<2 x bfloat> %b) {
 ; CHECK-LABEL: duplane0_v2bfloat:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.4h, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -1099,6 +1128,7 @@ entry:
 define <3 x bfloat> @dup_v3bfloat(bfloat %a) {
 ; CHECK-LABEL: dup_v3bfloat:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-NEXT:    dup v0.4h, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -1110,6 +1140,7 @@ entry:
 define <3 x bfloat> @duplane0_v3bfloat(<3 x bfloat> %b) {
 ; CHECK-LABEL: duplane0_v3bfloat:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.4h, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -1132,6 +1163,7 @@ entry:
 define <4 x bfloat> @dup_v4bfloat(bfloat %a) {
 ; CHECK-LABEL: dup_v4bfloat:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-NEXT:    dup v0.4h, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -1143,6 +1175,7 @@ entry:
 define <4 x bfloat> @duplane0_v4bfloat(<4 x bfloat> %b) {
 ; CHECK-LABEL: duplane0_v4bfloat:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.4h, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -1165,6 +1198,7 @@ entry:
 define <8 x bfloat> @dup_v8bfloat(bfloat %a) {
 ; CHECK-LABEL: dup_v8bfloat:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-NEXT:    dup v0.8h, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -1198,12 +1232,14 @@ entry:
 define <16 x bfloat> @dup_v16bfloat(bfloat %a) {
 ; CHECK-SD-LABEL: dup_v16bfloat:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-SD-NEXT:    dup v0.8h, v0.h[0]
 ; CHECK-SD-NEXT:    mov v1.16b, v0.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: dup_v16bfloat:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-GI-NEXT:    dup v2.8h, v0.h[0]
 ; CHECK-GI-NEXT:    dup v1.8h, v0.h[0]
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
@@ -1247,6 +1283,7 @@ entry:
 define <2 x float> @dup_v2float(float %a) {
 ; CHECK-LABEL: dup_v2float:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    dup v0.2s, v0.s[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -1258,6 +1295,7 @@ entry:
 define <2 x float> @duplane0_v2float(<2 x float> %b) {
 ; CHECK-LABEL: duplane0_v2float:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.2s, v0.s[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -1280,6 +1318,7 @@ entry:
 define <3 x float> @dup_v3float(float %a) {
 ; CHECK-LABEL: dup_v3float:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    dup v0.4s, v0.s[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -1313,6 +1352,7 @@ entry:
 define <4 x float> @dup_v4float(float %a) {
 ; CHECK-LABEL: dup_v4float:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    dup v0.4s, v0.s[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -1346,12 +1386,14 @@ entry:
 define <8 x float> @dup_v8float(float %a) {
 ; CHECK-SD-LABEL: dup_v8float:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    dup v0.4s, v0.s[0]
 ; CHECK-SD-NEXT:    mov v1.16b, v0.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: dup_v8float:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    dup v2.4s, v0.s[0]
 ; CHECK-GI-NEXT:    dup v1.4s, v0.s[0]
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
@@ -1395,6 +1437,7 @@ entry:
 define <2 x double> @dup_v2double(double %a) {
 ; CHECK-LABEL: dup_v2double:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.2d, v0.d[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -1434,8 +1477,10 @@ define <3 x double> @dup_v3double(double %a) {
 ;
 ; CHECK-GI-LABEL: dup_v3double:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    dup v3.2d, v0.d[0]
 ; CHECK-GI-NEXT:    dup v2.2d, v0.d[0]
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    mov d1, v3.d[1]
 ; CHECK-GI-NEXT:    fmov d0, d3
 ; CHECK-GI-NEXT:    ret
@@ -1455,9 +1500,12 @@ define <3 x double> @duplane0_v3double(<3 x double> %b) {
 ; CHECK-GI-LABEL: duplane0_v3double:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    fmov d2, d0
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    mov v2.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    dup v0.2d, v2.d[0]
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = shufflevector <3 x double> %b, <3 x double> poison, <3 x i32> zeroinitializer
@@ -1476,7 +1524,9 @@ define <3 x double> @loaddup_v3double(ptr %p) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ld1r { v0.2d }, [x0]
 ; CHECK-GI-NEXT:    ld1r { v2.2d }, [x0]
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load double, ptr %p
@@ -1488,12 +1538,14 @@ entry:
 define <4 x double> @dup_v4double(double %a) {
 ; CHECK-SD-LABEL: dup_v4double:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    dup v0.2d, v0.d[0]
 ; CHECK-SD-NEXT:    mov v1.16b, v0.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: dup_v4double:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    dup v2.2d, v0.d[0]
 ; CHECK-GI-NEXT:    dup v1.2d, v0.d[0]
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
