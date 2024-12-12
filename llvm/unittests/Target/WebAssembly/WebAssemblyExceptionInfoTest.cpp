@@ -167,8 +167,8 @@ body: |
   WebAssemblyExceptionInfo WEI;
   MachineDominatorTree MDT;
   MachineDominanceFrontier MDF;
-  MDT.recalculate(*MF);
-  MDF.getBase().analyze(MDT);
+  MDT.calculate(*MF);
+  MDF.getBase().analyze(MDT.getBase());
   WEI.recalculate(*MF, MDT, MDF);
 
   // Exception info structure:
@@ -341,8 +341,8 @@ body: |
   WebAssemblyExceptionInfo WEI;
   MachineDominatorTree MDT;
   MachineDominanceFrontier MDF;
-  MDT.recalculate(*MF);
-  MDF.getBase().analyze(MDT);
+  MDT.calculate(*MF);
+  MDF.getBase().analyze(MDT.getBase());
   WEI.recalculate(*MF, MDT, MDF);
 
   // Exception info structure:
