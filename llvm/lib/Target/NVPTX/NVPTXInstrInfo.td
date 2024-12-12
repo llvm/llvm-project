@@ -727,6 +727,20 @@ let hasSideEffects = false in {
   def CVT_f16x2_e5m2x2 : CVT_f16x2_fp8<"e5m2">;
 }
 
+def fpround_oneuse : PatFrag<(ops node:$a), (fpround node:$a), [{
+  return N->hasOneUse();
+}]>;
+
+def : Pat<(v2bf16 (build_vector (bf16 (fpround_oneuse Float32Regs:$lo)),
+                                (bf16 (fpround_oneuse Float32Regs:$hi)))),
+          (CVT_bf16x2_f32 Float32Regs:$hi, Float32Regs:$lo, CvtRN)>,
+      Requires<[hasPTX<70>, hasSM<80>, hasBF16Math]>;
+
+def : Pat<(v2f16 (build_vector (f16 (fpround_oneuse Float32Regs:$lo)),
+                               (f16 (fpround_oneuse Float32Regs:$hi)))),
+          (CVT_f16x2_f32 Float32Regs:$hi, Float32Regs:$lo, CvtRN)>,
+      Requires<[hasPTX<70>, hasSM<80>, useFP16Math]>;
+
 //-----------------------------------
 // Selection instructions (selp)
 //-----------------------------------
@@ -1893,10 +1907,10 @@ defm SET_f64 : SET<"f64", Float64Regs, f64imm>;
 // Data Movement (Load / Store, Move)
 //-----------------------------------
 
-def ADDRri : ComplexPattern<i32, 2, "SelectADDRri", [frameindex],
-                            [SDNPWantRoot]>;
-def ADDRri64 : ComplexPattern<i64, 2, "SelectADDRri64", [frameindex],
-                              [SDNPWantRoot]>;
+let WantsRoot = true in {
+  def ADDRri : ComplexPattern<i32, 2, "SelectADDRri", [frameindex]>;
+  def ADDRri64 : ComplexPattern<i64, 2, "SelectADDRri64", [frameindex]>;
+}
 def ADDRvar : ComplexPattern<iPTR, 1, "SelectDirectAddr", [], []>;
 
 def MEMri : Operand<i32> {
@@ -2119,17 +2133,6 @@ defm : ISET_FORMAT_UNSIGNED<setuge, CmpGE>;
 defm : ISET_FORMAT_UNSIGNED<setule, CmpLE>;
 defm : ISET_FORMAT_UNSIGNED<setueq, CmpEQ>;
 defm : ISET_FORMAT_UNSIGNED<setune, CmpNE>;
-
-// i1 compares
-def : Pat<(setne Int1Regs:$a, Int1Regs:$b),
-          (XORb1rr Int1Regs:$a, Int1Regs:$b)>;
-def : Pat<(setune Int1Regs:$a, Int1Regs:$b),
-          (XORb1rr Int1Regs:$a, Int1Regs:$b)>;
-
-def : Pat<(seteq Int1Regs:$a, Int1Regs:$b),
-          (NOT1 (XORb1rr Int1Regs:$a, Int1Regs:$b))>;
-def : Pat<(setueq Int1Regs:$a, Int1Regs:$b),
-          (NOT1 (XORb1rr Int1Regs:$a, Int1Regs:$b))>;
 
 // comparisons of i8 extracted with BFE as i32
 // It's faster to do comparison directly on i32 extracted by BFE,

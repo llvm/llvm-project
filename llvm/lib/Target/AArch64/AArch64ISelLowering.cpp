@@ -17931,6 +17931,13 @@ AArch64TargetLowering::isDesirableToCommuteWithShift(const SDNode *N,
   SDValue ShiftLHS = N->getOperand(0);
   EVT VT = N->getValueType(0);
 
+  if (!ShiftLHS->hasOneUse())
+    return false;
+
+  if (ShiftLHS.getOpcode() == ISD::SIGN_EXTEND &&
+      !ShiftLHS.getOperand(0)->hasOneUse())
+    return false;
+
   // If ShiftLHS is unsigned bit extraction: ((x >> C) & mask), then do not
   // combine it with shift 'N' to let it be lowered to UBFX except:
   // ((x >> C) & mask) << C.
@@ -21817,7 +21824,7 @@ SDValue tryLowerPartialReductionToWideAdd(SDNode *N,
              Intrinsic::experimental_vector_partial_reduce_add &&
          "Expected a partial reduction node");
 
-  if (!Subtarget->isSVEorStreamingSVEAvailable())
+  if (!Subtarget->hasSVE2() && !Subtarget->isStreamingSVEAvailable())
     return SDValue();
 
   SDLoc DL(N);

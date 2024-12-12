@@ -789,13 +789,12 @@ static void addSanitizers(const Triple &TargetTriple,
   }
 
   if (LowerAllowCheckPass::IsRequested()) {
-    // We can optimize after inliner, and PGO profile matching. The hook below
-    // is called at the end `buildFunctionSimplificationPipeline`, which called
-    // from `buildInlinerPipeline`, which called after profile matching.
-    PB.registerScalarOptimizerLateEPCallback(
-        [](FunctionPassManager &FPM, OptimizationLevel Level) {
-          FPM.addPass(LowerAllowCheckPass());
-        });
+    // We want to call it after inline, which is about OptimizerEarlyEPCallback.
+    PB.registerOptimizerEarlyEPCallback([](ModulePassManager &MPM,
+                                           OptimizationLevel Level,
+                                           ThinOrFullLTOPhase Phase) {
+      MPM.addPass(createModuleToFunctionPassAdaptor(LowerAllowCheckPass()));
+    });
   }
 }
 
@@ -1024,12 +1023,14 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
             FPM.addPass(BoundsCheckingPass());
           });
 
-    if (LangOpts.Sanitize.has(SanitizerKind::Realtime))
+    if (LangOpts.Sanitize.has(SanitizerKind::Realtime)) {
       PB.registerScalarOptimizerLateEPCallback(
           [](FunctionPassManager &FPM, OptimizationLevel Level) {
             RealtimeSanitizerOptions Opts;
             FPM.addPass(RealtimeSanitizerPass(Opts));
           });
+      MPM.addPass(ModuleRealtimeSanitizerPass());
+    }
 
     // Don't add sanitizers if we are here from ThinLTO PostLink. That already
     // done on PreLink stage.

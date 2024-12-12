@@ -136,10 +136,16 @@ New checks
   Gives warnings for tagged unions, where the number of tags is
   different from the number of data members inside the union.
 
+- New :doc:`modernize-use-integer-sign-comparison
+  <clang-tidy/checks/modernize/use-integer-sign-comparison>` check.
+
+  Replace comparisons between signed and unsigned integers with their safe
+  C++20 ``std::cmp_*`` alternative, if available.
+
 - New :doc:`portability-template-virtual-member-function
   <clang-tidy/checks/portability/template-virtual-member-function>` check.
 
-  Finds cases when an uninstantiated virtual member function in a template class 
+  Finds cases when an uninstantiated virtual member function in a template class
   causes cross-compiler incompatibility.
 
 New check aliases
@@ -176,6 +182,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/forwarding-reference-overload>` check by fixing
   a crash when determining if an ``enable_if[_t]`` was found.
 
+- Improved :doc:`bugprone-optional-value-conversion
+  <clang-tidy/checks/bugprone/optional-value-conversion>` to support detecting
+  conversion directly by ``std::make_unique`` and ``std::make_shared``.
+
 - Improved :doc:`bugprone-posix-return
   <clang-tidy/checks/bugprone/posix-return>` check to support integer literals
   as LHS and posix call as RHS of comparison.
@@ -183,8 +193,8 @@ Changes in existing checks
 - Improved :doc:`bugprone-return-const-ref-from-parameter
   <clang-tidy/checks/bugprone/return-const-ref-from-parameter>` check to
   diagnose potential dangling references when returning a ``const &`` parameter
-  by using the conditional operator ``cond ? var1 : var2`` and no longer giving
-  false positives for functions which contain lambda and ignore parameters
+  by using the conditional operator ``cond ? var1 : var2`` and fixing false
+  positives for functions which contain lambda and ignore parameters
   with ``[[clang::lifetimebound]]`` attribute.
   
 - Improved :doc:`bugprone-sizeof-expression

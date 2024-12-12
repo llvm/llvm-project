@@ -57,6 +57,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
     case Instruction::Or:
     case Instruction::ICmp:
     case Instruction::Select:
+    case VPInstruction::AnyOf:
     case VPInstruction::Not:
     case VPInstruction::CalculateTripCountMinusVF:
     case VPInstruction::CanonicalIVIncrementForPart:
@@ -361,6 +362,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::PtrAdd:
   case VPInstruction::ExplicitVectorLength:
+  case VPInstruction::AnyOf:
     return true;
   default:
     return false;
@@ -629,12 +631,19 @@ Value *VPInstruction::generate(VPTransformState &State) {
         State.CFG
             .VPBB2IRBB[cast<VPBasicBlock>(getParent()->getSinglePredecessor())];
     NewPhi->addIncoming(IncomingFromVPlanPred, VPlanPred);
-    for (auto *OtherPred : predecessors(Builder.GetInsertBlock())) {
+    // TODO: Predecessors are temporarily reversed to reduce test changes.
+    // Remove it and update remaining tests after functional change landed.
+    auto Predecessors = to_vector(predecessors(Builder.GetInsertBlock()));
+    for (auto *OtherPred : reverse(Predecessors)) {
       assert(OtherPred != VPlanPred &&
              "VPlan predecessors should not be connected yet");
       NewPhi->addIncoming(IncomingFromOtherPreds, OtherPred);
     }
     return NewPhi;
+  }
+  case VPInstruction::AnyOf: {
+    Value *A = State.get(getOperand(0));
+    return Builder.CreateOrReduce(A);
   }
 
   default:
@@ -644,7 +653,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
 bool VPInstruction::isVectorToScalar() const {
   return getOpcode() == VPInstruction::ExtractFromEnd ||
-         getOpcode() == VPInstruction::ComputeReductionResult;
+         getOpcode() == VPInstruction::ComputeReductionResult ||
+         getOpcode() == VPInstruction::AnyOf;
 }
 
 bool VPInstruction::isSingleScalar() const {
@@ -707,6 +717,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
     return false;
   case Instruction::ICmp:
   case Instruction::Select:
+  case Instruction::Or:
   case VPInstruction::PtrAdd:
     // TODO: Cover additional opcodes.
     return vputils::onlyFirstLaneUsed(this);
@@ -802,6 +813,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::PtrAdd:
     O << "ptradd";
     break;
+  case VPInstruction::AnyOf:
+    O << "any-of";
+    break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
   }
@@ -819,12 +833,13 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
 void VPIRInstruction::execute(VPTransformState &State) {
   assert((isa<PHINode>(&I) || getNumOperands() == 0) &&
          "Only PHINodes can have extra operands");
-  if (getNumOperands() == 1) {
-    VPValue *ExitValue = getOperand(0);
+  for (const auto &[Idx, Op] : enumerate(operands())) {
+    VPValue *ExitValue = Op;
     auto Lane = vputils::isUniformAfterVectorization(ExitValue)
                     ? VPLane::getFirstLane()
                     : VPLane::getLastLaneForVF(State.VF);
-    auto *PredVPBB = cast<VPBasicBlock>(getParent()->getSinglePredecessor());
+    VPBlockBase *Pred = getParent()->getPredecessors()[Idx];
+    auto *PredVPBB = Pred->getExitingBasicBlock();
     BasicBlock *PredBB = State.CFG.VPBB2IRBB[PredVPBB];
     // Set insertion point in PredBB in case an extract needs to be generated.
     // TODO: Model extracts explicitly.
@@ -857,11 +872,13 @@ void VPIRInstruction::print(raw_ostream &O, const Twine &Indent,
   O << Indent << "IR " << I;
 
   if (getNumOperands() != 0) {
-    assert(getNumOperands() == 1 && "can have at most 1 operand");
-    O << " (extra operand: ";
-    getOperand(0)->printAsOperand(O, SlotTracker);
-    O << " from ";
-    getParent()->getPredecessors()[0]->printAsOperand(O);
+    O << " (extra operand" << (getNumOperands() > 1 ? "s" : "") << ": ";
+    interleaveComma(
+        enumerate(operands()), O, [this, &O, &SlotTracker](auto Op) {
+          Op.value()->printAsOperand(O, SlotTracker);
+          O << " from ";
+          getParent()->getPredecessors()[Op.index()]->printAsOperand(O);
+        });
     O << ")";
   }
 }
@@ -964,7 +981,8 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
   Module *M = State.Builder.GetInsertBlock()->getModule();
   Function *VectorF =
       Intrinsic::getOrInsertDeclaration(M, VectorIntrinsicID, TysForDecl);
-  assert(VectorF && "Can't retrieve vector intrinsic.");
+  assert(VectorF &&
+         "Can't retrieve vector intrinsic or vector-predication intrinsics.");
 
   auto *CI = cast_or_null<CallInst>(getUnderlyingValue());
   SmallVector<OperandBundleDef, 1> OpBundles;
@@ -3483,7 +3501,7 @@ void VPEVLBasedIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPScalarPHIRecipe::execute(VPTransformState &State) {
   BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
-  Value *Start = State.get(getOperand(0), VPLane(0));
+  Value *Start = State.get(getStartValue(), VPLane(0));
   PHINode *Phi = State.Builder.CreatePHI(Start->getType(), 2, Name);
   Phi->addIncoming(Start, VectorPH);
   Phi->setDebugLoc(getDebugLoc());
@@ -3493,7 +3511,7 @@ void VPScalarPHIRecipe::execute(VPTransformState &State) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPScalarPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
-  O << Indent << "SCALAR-PHI";
+  O << Indent << "SCALAR-PHI ";
   printAsOperand(O, SlotTracker);
   O << " = phi ";
   printOperands(O, SlotTracker);

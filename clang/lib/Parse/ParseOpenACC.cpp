@@ -86,9 +86,13 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
   if (Tok.is(tok::kw_if))
     return OpenACCClauseKind::If;
 
-  // 'private' is also a keyword, make sure we pare it correctly.
+  // 'private' is also a keyword, make sure we parse it correctly.
   if (Tok.is(tok::kw_private))
     return OpenACCClauseKind::Private;
+
+  // 'delete' is a keyword, make sure we parse it correctly.
+  if (Tok.is(tok::kw_delete))
+    return OpenACCClauseKind::Delete;
 
   if (!Tok.is(tok::identifier))
     return OpenACCClauseKind::Invalid;
