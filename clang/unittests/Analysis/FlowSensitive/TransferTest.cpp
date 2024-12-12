@@ -144,7 +144,7 @@ const Formula &getFormula(const ValueDecl &D, const Environment &Env) {
   return cast<BoolValue>(Env.getValue(D))->formula();
 }
 
-const BindingDecl *findBindingDecl(ASTContext& ASTCxt, std::string_view Name) {
+const BindingDecl *findBindingDecl(ASTContext &ASTCxt, std::string_view Name) {
   using ast_matchers::bindingDecl;
   using ast_matchers::hasName;
   auto TargetNodes =
