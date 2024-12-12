@@ -1,4 +1,4 @@
-// RUN: clang-tidy %s -checks="-*,misc-redundant-expression" -- 2>&1 | FileCheck %s --check-prefix=CHECK-MESSAGES-IDENTEXPR
+// RUN: %check_clang_tidy %s misc-redundant-expression -check-suffix=IDENTEXPR %t
 
 /* Only one expected warning per function allowed at the very end. */
 
@@ -76,6 +76,7 @@ int checkNotEqualBinaryOpFloatCompare1(void) {
   int res;
   float f= 3.14F;
   res = (f + 3.14F != f + 3.14F);  // no warning
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:20: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 int checkNotEqualBinaryOpFloatCompare2(void) {
@@ -87,6 +88,7 @@ int checkNotEqualBinaryOpFloatCompare3(void) {
   int res;
   float f= 3.14F;
   res = ((int)f + 3.14F != (int)f + 3.14F);  // no warning
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:25: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 int checkNotEqualBinaryOpFloatCompare4(void) {
@@ -102,6 +104,7 @@ int checkNotEqualNestedBinaryOpFloatCompare1(void) {
   int u= 2;
   float f= 3.14F;
   res = (((int)f + (3.14F - u)*t) != ((int)f + (3.14F - u)*t));  // no warning
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:35: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 
@@ -120,10 +123,9 @@ int checkNotEqualNestedBinaryOpFloatCompare3(void) {
   int u= 2;
   float f= 3.14F;
   res = (((int)f + (u - 3.14F)*t) != ((int)f + (3.14F - u)*(f + t != f + t)));  // no warning
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:67: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
-
-
 
 
 /* end '!=' with float*/
@@ -237,8 +239,6 @@ int checkNotEqualNestedBinaryOpIntCompare3(void) {
 
 /*   end '!=' int          */
 
-
-
 /* '!=' with int pointer */
 
 int checkNotEqualIntPointerLiteralCompare1(void) {
@@ -328,6 +328,7 @@ int checkNotEqualSameFunction() {
   unsigned a = 0;
   unsigned b = 1;
   int res = (a+func() != a+func());  // no warning
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:23: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 
@@ -342,6 +343,7 @@ int checkNotEqualSameFunctionSameParam() {
   unsigned a = 0;
   unsigned b = 1;
   int res = (a+funcParam(a) != a+funcParam(a));  // no warning
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:29: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 
@@ -433,7 +435,8 @@ int checkEqualCastFloatDeclCompare12(void) {
 int checkEqualBinaryOpFloatCompare1(void) {
   int res;
   float f= 3.14F;
-  res = (f + 3.14F == f + 3.14F);  // no warning
+  res = (f + 3.14F == f + 3.14F);
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:20: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 int checkEqualBinaryOpFloatCompare2(void) {
@@ -444,7 +447,8 @@ int checkEqualBinaryOpFloatCompare2(void) {
 int checkEqualBinaryOpFloatCompare3(void) {
   int res;
   float f= 3.14F;
-  res = ((int)f + 3.14F == (int)f + 3.14F);  // no warning
+  res = ((int)f + 3.14F == (int)f + 3.14F);
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:25: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 int checkEqualBinaryOpFloatCompare4(void) {
@@ -459,7 +463,8 @@ int checkEqualNestedBinaryOpFloatCompare1(void) {
   int t= 1;
   int u= 2;
   float f= 3.14F;
-  res = (((int)f + (3.14F - u)*t) == ((int)f + (3.14F - u)*t));  // no warning
+  res = (((int)f + (3.14F - u)*t) == ((int)f + (3.14F - u)*t));
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:35: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 
@@ -477,13 +482,10 @@ int checkEqualNestedBinaryOpFloatCompare3(void) {
   int t= 1;
   int u= 2;
   float f= 3.14F;
-  res = (((int)f + (u - 3.14F)*t) == ((int)f + (3.14F - u)*(f + t == f + t)));  // no warning
+  res = (((int)f + (u - 3.14F)*t) == ((int)f + (3.14F - u)*(f + t == f + t)));
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:67: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
-
-
-
-
 
 /* Equal with int*/
 
@@ -599,7 +601,8 @@ int checkEqualNestedBinaryOpIntCompare3(void) {
 int checkEqualSameFunction() {
   unsigned a = 0;
   unsigned b = 1;
-  int res = (a+func() == a+func());  // no warning
+  int res = (a+func() == a+func());
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:23: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 
@@ -613,7 +616,8 @@ int checkEqualDifferentFunction() {
 int checkEqualSameFunctionSameParam() {
   unsigned a = 0;
   unsigned b = 1;
-  int res = (a+funcParam(a) == a+funcParam(a));  // no warning
+  int res = (a+funcParam(a) == a+funcParam(a));
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:29: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 
@@ -691,7 +695,8 @@ int checkLessThanCastFloatDeclCompare12(void) {
 int checkLessThanBinaryOpFloatCompare1(void) {
   int res;
   float f= 3.14F;
-  res = (f + 3.14F < f + 3.14F);  // no warning
+  res = (f + 3.14F < f + 3.14F);
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:20: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 int checkLessThanBinaryOpFloatCompare2(void) {
@@ -702,7 +707,8 @@ int checkLessThanBinaryOpFloatCompare2(void) {
 int checkLessThanBinaryOpFloatCompare3(void) {
   int res;
   float f= 3.14F;
-  res = ((int)f + 3.14F < (int)f + 3.14F);  // no warning
+  res = ((int)f + 3.14F < (int)f + 3.14F);
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:25: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 int checkLessThanBinaryOpFloatCompare4(void) {
@@ -717,7 +723,8 @@ int checkLessThanNestedBinaryOpFloatCompare1(void) {
   int t= 1;
   int u= 2;
   float f= 3.14F;
-  res = (((int)f + (3.14F - u)*t) < ((int)f + (3.14F - u)*t));  // no warning
+  res = (((int)f + (3.14F - u)*t) < ((int)f + (3.14F - u)*t));
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:35: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 
@@ -735,7 +742,8 @@ int checkLessThanNestedBinaryOpFloatCompare3(void) {
   int t= 1;
   int u= 2;
   float f= 3.14F;
-  res = (((int)f + (u - 3.14F)*t) < ((int)f + (3.14F - u)*(f + t < f + t)));  // no warning
+  res = (((int)f + (u - 3.14F)*t) < ((int)f + (3.14F - u)*(f + t < f + t)));
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:66: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 
@@ -911,7 +919,8 @@ int checkGreaterThanCastFloatDeclCompare12(void) {
 int checkGreaterThanBinaryOpFloatCompare1(void) {
   int res;
   float f= 3.14F;
-  res = (f + 3.14F > f + 3.14F);  // no warning
+  res = (f + 3.14F > f + 3.14F);
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:20: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 int checkGreaterThanBinaryOpFloatCompare2(void) {
@@ -922,7 +931,8 @@ int checkGreaterThanBinaryOpFloatCompare2(void) {
 int checkGreaterThanBinaryOpFloatCompare3(void) {
   int res;
   float f= 3.14F;
-  res = ((int)f + 3.14F > (int)f + 3.14F);  // no warning
+  res = ((int)f + 3.14F > (int)f + 3.14F);
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:25: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 int checkGreaterThanBinaryOpFloatCompare4(void) {
@@ -937,7 +947,8 @@ int checkGreaterThanNestedBinaryOpFloatCompare1(void) {
   int t= 1;
   int u= 2;
   float f= 3.14F;
-  res = (((int)f + (3.14F - u)*t) > ((int)f + (3.14F - u)*t));  // no warning
+  res = (((int)f + (3.14F - u)*t) > ((int)f + (3.14F - u)*t));
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:35: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 
@@ -956,6 +967,7 @@ int checkGreaterThanNestedBinaryOpFloatCompare3(void) {
   int u= 2;
   float f= 3.14F;
   res = (((int)f + (u - 3.14F)*t) > ((int)f + (3.14F - u)*(f + t > f + t)));  // no warning
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:66: warning: both sides of operator are equivalent [misc-redundant-expression]
   return (0);
 }
 
@@ -1262,7 +1274,8 @@ void test_identical_logical3(int a) {
 }
 
 void test_identical_logical4(int a) {
-  if (a == func() || a == func()) // no-warning
+  if (a == func() || a == func())
+// CHECK-MESSAGES-IDENTEXPR: :[[@LINE-1]]:19: warning: both sides of operator are equivalent [misc-redundant-expression]
     ;
 }
 
