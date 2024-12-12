@@ -57,6 +57,54 @@ class QCIRVInstRR<bits<5> func5, DAGOperand InTyRs1, string opcodestr>
     : RVInstR<{0b00, func5}, 0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
               (ins InTyRs1:$rs1, GPRNoX0:$rs2), opcodestr, "$rd, $rs1, $rs2">;
 
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class QCISELECTIICC<bits<3> funct3, string opcodestr>
+    : RVInstR4<0b00, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
+               (ins GPRNoX0:$rd, GPRNoX0:$rs1, simm5:$simm1, simm5:$simm2),
+               opcodestr, "$rd, $rs1, $simm1, $simm2"> {
+  let Constraints = "$rd = $rd_wb";
+  bits<5> simm1;
+  bits<5> simm2;
+
+  let rs3 = simm2;
+  let rs2 = simm1;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class QCISELECTICC<bits<3> funct3, string opcodestr>
+    : RVInstR4<0b01, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
+               (ins GPRNoX0:$rd, GPRNoX0:$rs1, GPRNoX0:$rs2, simm5:$simm2),
+               opcodestr, "$rd, $rs1, $rs2, $simm2"> {
+  let Constraints = "$rd = $rd_wb";
+  bits<5> simm2;
+
+  let rs3 = simm2;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class QCISELECTCCI<bits<3> funct3, string opcodestr>
+    : RVInstR4<0b10, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
+               (ins GPRNoX0:$rd, simm5:$imm, GPRNoX0:$rs2, GPRNoX0:$rs3),
+               opcodestr, "$rd, $imm, $rs2, $rs3"> {
+  let Constraints = "$rd = $rd_wb";
+  bits<5> imm;
+
+  let rs1 = imm;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class QCISELECTICCI<bits<3> funct3, string opcodestr>
+    : RVInstR4<0b11, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
+               (ins GPRNoX0:$rd, simm5:$imm, GPRNoX0:$rs2, simm5:$simm2),
+               opcodestr, "$rd, $imm, $rs2, $simm2"> {
+  let Constraints = "$rd = $rd_wb";
+  bits<5> imm;
+  bits<5> simm2;
+
+  let rs3 = simm2;
+  let rs1 = imm;
+}
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -108,3 +156,14 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_NORMEU : QCIRVInstR<0b1001, "qc.normeu">;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 } // Predicates = [HasVendorXqcia, IsRV32], DecoderNamespace = "Xqcia"
+
+let Predicates = [HasVendorXqcics, IsRV32], DecoderNamespace = "Xqcics" in {
+  def QC_SELECTIIEQ : QCISELECTIICC <0b010, "qc.selectiieq">;
+  def QC_SELECTIINE : QCISELECTIICC <0b011, "qc.selectiine">;
+  def QC_SELECTIEQ  : QCISELECTICC  <0b010, "qc.selectieq">;
+  def QC_SELECTINE  : QCISELECTICC  <0b011, "qc.selectine">;
+  def QC_SELECTEQI  : QCISELECTCCI  <0b010, "qc.selecteqi">;
+  def QC_SELECTNEI  : QCISELECTCCI  <0b011, "qc.selectnei">;
+  def QC_SELECTIEQI : QCISELECTICCI <0b010, "qc.selectieqi">;
+  def QC_SELECTINEI : QCISELECTICCI <0b011, "qc.selectinei">;
+} // Predicates = [HasVendorXqcics, IsRV32], DecoderNamespace = "Xqcics"
