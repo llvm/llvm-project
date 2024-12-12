@@ -48,7 +48,7 @@ class LiveIntervals;
 class LiveRegMatrix;
 class MachineInstr;
 class MachineRegisterInfo;
-template<typename T> class SmallVectorImpl;
+template <typename T> class SmallVectorImpl;
 class Spiller;
 class TargetRegisterInfo;
 class VirtRegMap;

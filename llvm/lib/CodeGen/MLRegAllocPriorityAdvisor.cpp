@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AllocationOrder.h"
-#include "RegAllocGreedy.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/InteractiveModelRunner.h"
 #include "llvm/Analysis/MLModelRunner.h"
@@ -24,6 +23,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/RegAllocGreedy.h"
 #include "llvm/CodeGen/RegAllocPriorityAdvisor.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"

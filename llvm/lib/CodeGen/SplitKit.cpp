@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SplitKit.h"
+#include "llvm/CodeGen/SplitKit.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveRangeEdit.h"

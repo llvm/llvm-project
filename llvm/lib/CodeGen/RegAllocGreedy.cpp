@@ -11,11 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RegAllocGreedy.h"
+#include "llvm/CodeGen/RegAllocGreedy.h"
 #include "AllocationOrder.h"
-#include "InterferenceCache.h"
-#include "RegAllocBase.h"
-#include "SplitKit.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/IndexedMap.h"
@@ -26,6 +23,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/CalcSpillWeights.h"
 #include "llvm/CodeGen/EdgeBundles.h"
+#include "llvm/CodeGen/InterferenceCache.h"
 #include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervalUnion.h"
@@ -44,6 +42,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegAllocBase.h"
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "llvm/CodeGen/RegAllocPriorityAdvisor.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
@@ -51,6 +50,7 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/SpillPlacement.h"
 #include "llvm/CodeGen/Spiller.h"
+#include "llvm/CodeGen/SplitKit.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"

@@ -11,11 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "AllocationOrder.h"
-#include "RegAllocGreedy.h"
 #include "llvm/Analysis/InteractiveModelRunner.h"
 #include "llvm/Analysis/MLModelRunner.h"
 #include "llvm/Analysis/TensorSpec.h"
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
+#include "llvm/CodeGen/RegAllocGreedy.h"
 #if defined(LLVM_HAVE_TF_AOT_REGALLOCEVICTMODEL) || defined(LLVM_HAVE_TFLITE)
 #include "llvm/Analysis/ModelUnderTrainingRunner.h"
 #include "llvm/Analysis/NoInferenceModelRunner.h"

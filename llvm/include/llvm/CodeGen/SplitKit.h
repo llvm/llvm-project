@@ -88,7 +88,6 @@ public:
     }
     return Res;
   }
-
 };
 
 /// SplitAnalysis - Analyze a LiveInterval, looking for live range splitting
@@ -387,7 +386,7 @@ private:
 
   /// removeBackCopies - Remove the copy instructions that defines the values
   /// in the vector in the complement interval.
-  void removeBackCopies(SmallVectorImpl<VNInfo*> &Copies);
+  void removeBackCopies(SmallVectorImpl<VNInfo *> &Copies);
 
   /// getShallowDominator - Returns the least busy dominator of MBB that is
   /// also dominated by DefMBB.  Busy is measured by loop depth.
@@ -430,8 +429,9 @@ private:
   /// \p InsertBefore. This can be invoked with a \p LaneMask which may make it
   /// necessary to construct a sequence of copies to cover it exactly.
   SlotIndex buildCopy(Register FromReg, Register ToReg, LaneBitmask LaneMask,
-      MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
-      bool Late, unsigned RegIdx);
+                      MachineBasicBlock &MBB,
+                      MachineBasicBlock::iterator InsertBefore, bool Late,
+                      unsigned RegIdx);
 
   SlotIndex buildSingleSubRegCopy(Register FromReg, Register ToReg,
                                   MachineBasicBlock &MB,
@@ -448,7 +448,7 @@ public:
               VirtRegAuxInfo &VRAI);
 
   /// reset - Prepare for a new split.
-  void reset(LiveRangeEdit&, ComplementSpillMode = SM_Partition);
+  void reset(LiveRangeEdit &, ComplementSpillMode = SM_Partition);
 
   /// Create a new virtual register and live interval.
   /// Return the interval index, starting from 1. Interval index 0 is the
@@ -533,9 +533,9 @@ public:
   /// @param LeaveBefore When set, leave IntvIn before this point.
   /// @param IntvOut     Interval index leaving the block.
   /// @param EnterAfter  When set, enter IntvOut after this point.
-  void splitLiveThroughBlock(unsigned MBBNum,
-                             unsigned IntvIn, SlotIndex LeaveBefore,
-                             unsigned IntvOut, SlotIndex EnterAfter);
+  void splitLiveThroughBlock(unsigned MBBNum, unsigned IntvIn,
+                             SlotIndex LeaveBefore, unsigned IntvOut,
+                             SlotIndex EnterAfter);
 
   /// splitRegInBlock - Split CurLI in the given block such that it enters the
   /// block in IntvIn and leaves it on the stack (or not at all). Split points
@@ -545,8 +545,8 @@ public:
   /// @param BI          Block descriptor.
   /// @param IntvIn      Interval index entering the block. Not 0.
   /// @param LeaveBefore When set, leave IntvIn before this point.
-  void splitRegInBlock(const SplitAnalysis::BlockInfo &BI,
-                       unsigned IntvIn, SlotIndex LeaveBefore);
+  void splitRegInBlock(const SplitAnalysis::BlockInfo &BI, unsigned IntvIn,
+                       SlotIndex LeaveBefore);
 
   /// splitRegOutBlock - Split CurLI in the given block such that it enters the
   /// block on the stack (or isn't live-in at all) and leaves it in IntvOut.
@@ -557,8 +557,8 @@ public:
   /// @param BI          Block descriptor.
   /// @param IntvOut     Interval index leaving the block.
   /// @param EnterAfter  When set, enter IntvOut after this point.
-  void splitRegOutBlock(const SplitAnalysis::BlockInfo &BI,
-                        unsigned IntvOut, SlotIndex EnterAfter);
+  void splitRegOutBlock(const SplitAnalysis::BlockInfo &BI, unsigned IntvOut,
+                        SlotIndex EnterAfter);
 };
 
 } // end namespace llvm

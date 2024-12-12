@@ -11,11 +11,11 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "AllocationOrder.h"
-#include "RegAllocGreedy.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/RegAllocGreedy.h"
 #include "llvm/CodeGen/RegAllocPriorityAdvisor.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"

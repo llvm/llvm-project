@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AllocationOrder.h"
-#include "RegAllocBase.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/CalcSpillWeights.h"
@@ -26,6 +25,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/RegAllocBase.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/Spiller.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"

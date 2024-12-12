@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RegAllocBase.h"
+#include "llvm/CodeGen/RegAllocBase.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveInterval.h"

@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "InterferenceCache.h"
+#include "llvm/CodeGen/InterferenceCache.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
