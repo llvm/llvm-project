@@ -4,8 +4,8 @@
 // CHECK-LABEL: define void {{.*}}call4
 // CHECK: [[B:%.*]] = alloca [2 x i32], align 4
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[B]], ptr align 4 {{.*}}, i32 8, i1 false)
-// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], i32 0
-// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], i32 1
+// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], i32 0, i32 0
+// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], i32 0, i32 1
 // CHECK-NEXT: store i32 3, ptr [[G1]], align 4
 // CHECK-NEXT: store i32 3, ptr [[G2]], align 4
 export void call4() {
@@ -20,8 +20,8 @@ export void call4() {
 // CHECK-NEXT: store <1 x i32> splat (i32 1), ptr [[A]], align 4
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[B]], ptr align 4 {{.*}}, i32 8, i1 false)
 // CHECK-NEXT: [[L:%.*]] = load <1 x i32>, ptr [[A]], align 4
-// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], i32 0
-// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], i32 1
+// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], i32 0, i32 0
+// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], i32 0, i32 1
 // CHECK-NEXT: [[VL:%.*]] = extractelement <1 x i32> [[L]], i64 0
 // CHECK-NEXT: store i32 [[VL]], ptr [[G1]], align 4
 // CHECK-NEXT: store i32 [[VL]], ptr [[G2]], align 4
@@ -58,8 +58,8 @@ struct S {
 // CHECK: [[s:%.*]] = alloca %struct.S, align 4
 // CHECK-NEXT: store <1 x i32> splat (i32 1), ptr [[A]], align 4
 // CHECK-NEXT: [[L:%.*]] = load <1 x i32>, ptr [[A]], align 4
-// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0
-// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 1
+// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0, i32 0
+// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0, i32 1
 // CHECK-NEXT: [[VL:%.*]] = extractelement <1 x i32> [[L]], i64 0
 // CHECK-NEXT: store i32 [[VL]], ptr [[G1]], align 4
 // CHECK-NEXT: [[C:%.*]] = sitofp i32 [[VL]] to float
@@ -75,8 +75,8 @@ export void call3() {
 // CHECK-NEXT: [[s:%.*]] = alloca %struct.S, align 4
 // CHECK-NEXT: store <1 x i32> splat (i32 1), ptr [[A]], align 4
 // CHECK-NEXT: [[L:%.*]] = load <1 x i32>, ptr [[A]], align 4
-// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0
-// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 1
+// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0, i32 0
+// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0, i32 1
 // CHECK-NEXT: [[VL:%.*]] = extractelement <1 x i32> [[L]], i64 0
 // CHECK-NEXT: store i32 [[VL]], ptr [[G1]], align 4
 // CHECK-NEXT: [[C:%.*]] = sitofp i32 [[VL]] to float
