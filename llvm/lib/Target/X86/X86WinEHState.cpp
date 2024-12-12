@@ -364,14 +364,9 @@ void WinEHStatePass::emitExceptionRegistrationRecord(Function *F) {
     if (!isa<ReturnInst>(T))
       continue;
 
-    // Back up to any preceding musttail call, the de-facto terminator.
-    Instruction *Prev = T->getPrevNonDebugInstruction();
-    if (isa_and_present<BitCastInst>(Prev))
-      Prev = T->getPrevNonDebugInstruction();
-    if (CallInst *CI = dyn_cast_or_null<CallInst>(Prev)) {
-      if (CI->isMustTailCall())
-        T = CI;
-    }
+    // If there is a musttail call, that's the de-facto terminator.
+    if (CallInst *CI = BB.getTerminatingMustTailCall())
+      T = CI;
 
     Builder.SetInsertPoint(T);
     unlinkExceptionRegistration(Builder);
