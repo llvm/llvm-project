@@ -23,6 +23,7 @@ entry:
 define i8 @xtn_i64_to_i8(i64 %a) {
 ; CHECK-LABEL: xtn_i64_to_i8:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 entry:
   %arg1 = trunc i64 %a to i8
@@ -32,6 +33,7 @@ entry:
 define i8 @xtn_i128_to_i8(i128 %a) {
 ; CHECK-LABEL: xtn_i128_to_i8:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 entry:
   %arg1 = trunc i128 %a to i8
@@ -50,6 +52,7 @@ entry:
 define i16 @xtn_i64_to_i16(i64 %a) {
 ; CHECK-LABEL: xtn_i64_to_i16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 entry:
   %arg1 = trunc i64 %a to i16
@@ -59,6 +62,7 @@ entry:
 define i16 @xtn_i128_to_i16(i128 %a) {
 ; CHECK-LABEL: xtn_i128_to_i16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 entry:
   %arg1 = trunc i128 %a to i16
@@ -68,6 +72,7 @@ entry:
 define i32 @xtn_i64_to_i32(i64 %a) {
 ; CHECK-LABEL: xtn_i64_to_i32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 entry:
   %arg1 = trunc i64 %a to i32
@@ -77,6 +82,7 @@ entry:
 define i32 @xtn_i128_to_i32(i128 %a) {
 ; CHECK-LABEL: xtn_i128_to_i32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 entry:
   %arg1 = trunc i128 %a to i32
@@ -125,12 +131,14 @@ define <2 x i8> @xtn_v2i128_v2i8(<2 x i128> %a) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    fmov s0, w0
 ; CHECK-SD-NEXT:    mov v0.s[1], w2
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: xtn_v2i128_v2i8:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov v0.s[0], w0
 ; CHECK-GI-NEXT:    mov v0.s[1], w2
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %arg1 = trunc <2 x i128> %a to <2 x i8>
@@ -161,12 +169,14 @@ define <2 x i16> @xtn_v2i128_v2i16(<2 x i128> %a) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    fmov s0, w0
 ; CHECK-SD-NEXT:    mov v0.s[1], w2
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: xtn_v2i128_v2i16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov v0.s[0], w0
 ; CHECK-GI-NEXT:    mov v0.s[1], w2
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %arg1 = trunc <2 x i128> %a to <2 x i16>
@@ -188,12 +198,14 @@ define <2 x i32> @xtn_v2i128_v2i32(<2 x i128> %a) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    fmov s0, w0
 ; CHECK-SD-NEXT:    mov v0.s[1], w2
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: xtn_v2i128_v2i32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov v0.s[0], w0
 ; CHECK-GI-NEXT:    mov v0.s[1], w2
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %arg1 = trunc <2 x i128> %a to <2 x i32>
@@ -220,6 +232,7 @@ entry:
 define <3 x i8> @xtn_v3i16_v3i8(<3 x i16> %a) {
 ; CHECK-LABEL: xtn_v3i16_v3i8:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w0, v0.h[0]
 ; CHECK-NEXT:    umov w1, v0.h[1]
 ; CHECK-NEXT:    umov w2, v0.h[2]
@@ -254,6 +267,9 @@ entry:
 define <3 x i8> @xtn_v3i64_v3i8(<3 x i64> %a) {
 ; CHECK-SD-LABEL: xtn_v3i64_v3i8:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    xtn v1.2s, v2.2d
 ; CHECK-SD-NEXT:    xtn v0.2s, v0.2d
@@ -267,6 +283,9 @@ define <3 x i8> @xtn_v3i64_v3i8(<3 x i64> %a) {
 ; CHECK-GI-NEXT:    fmov x0, d0
 ; CHECK-GI-NEXT:    fmov x1, d1
 ; CHECK-GI-NEXT:    fmov x2, d2
+; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 killed $x1
+; CHECK-GI-NEXT:    // kill: def $w2 killed $w2 killed $x2
 ; CHECK-GI-NEXT:    ret
 entry:
   %arg1 = trunc <3 x i64> %a to <3 x i8>
@@ -286,6 +305,9 @@ entry:
 define <3 x i16> @xtn_v3i64_v3i16(<3 x i64> %a) {
 ; CHECK-SD-LABEL: xtn_v3i64_v3i16:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    uzp1 v0.4s, v0.4s, v2.4s
 ; CHECK-SD-NEXT:    xtn v0.4h, v0.4s
@@ -299,6 +321,7 @@ define <3 x i16> @xtn_v3i64_v3i16(<3 x i64> %a) {
 ; CHECK-GI-NEXT:    fmov x8, d2
 ; CHECK-GI-NEXT:    mov v0.h[1], w9
 ; CHECK-GI-NEXT:    mov v0.h[2], w8
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %arg1 = trunc <3 x i64> %a to <3 x i16>
@@ -308,6 +331,9 @@ entry:
 define <3 x i32> @xtn_v3i64_v3i32(<3 x i64> %a) {
 ; CHECK-SD-LABEL: xtn_v3i64_v3i32:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    uzp1 v0.4s, v0.4s, v2.4s
 ; CHECK-SD-NEXT:    ret

@@ -88,6 +88,7 @@ entry:
 define i64 @test_rev_x_srl32(i32 %a) {
 ; CHECK-SD-LABEL: test_rev_x_srl32:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    rev x8, x0
 ; CHECK-SD-NEXT:    lsr x0, x8, #32
 ; CHECK-SD-NEXT:    ret

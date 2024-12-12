@@ -4,6 +4,7 @@
 define i62 @f(i1 %0) {
 ; CHECK-LABEL: f:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    and x8, x0, #0x1
 ; CHECK-NEXT:    sub x8, x8, #1
 ; CHECK-NEXT:    tst x8, #0x3fffffffffffffff

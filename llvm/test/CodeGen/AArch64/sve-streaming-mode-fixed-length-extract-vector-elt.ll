@@ -12,7 +12,9 @@ target triple = "aarch64-unknown-linux-gnu"
 define half @extractelement_v2f16(<2 x half> %op1) {
 ; CHECK-LABEL: extractelement_v2f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.h, z0.h[1]
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extractelement_v2f16:
@@ -30,7 +32,9 @@ define half @extractelement_v2f16(<2 x half> %op1) {
 define half @extractelement_v4f16(<4 x half> %op1) {
 ; CHECK-LABEL: extractelement_v4f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.h, z0.h[3]
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extractelement_v4f16:
@@ -48,7 +52,9 @@ define half @extractelement_v4f16(<4 x half> %op1) {
 define half @extractelement_v8f16(<8 x half> %op1) {
 ; CHECK-LABEL: extractelement_v8f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z0.h, z0.h[7]
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extractelement_v8f16:
@@ -67,6 +73,7 @@ define half @extractelement_v16f16(ptr %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0, #16]
 ; CHECK-NEXT:    mov z0.h, z0.h[7]
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extractelement_v16f16:
@@ -85,7 +92,9 @@ define half @extractelement_v16f16(ptr %a) {
 define float @extractelement_v2f32(<2 x float> %op1) {
 ; CHECK-LABEL: extractelement_v2f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.s, z0.s[1]
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extractelement_v2f32:
@@ -103,7 +112,9 @@ define float @extractelement_v2f32(<2 x float> %op1) {
 define float @extractelement_v4f32(<4 x float> %op1) {
 ; CHECK-LABEL: extractelement_v4f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z0.s, z0.s[3]
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extractelement_v4f32:
@@ -122,6 +133,7 @@ define float @extractelement_v8f32(ptr %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0, #16]
 ; CHECK-NEXT:    mov z0.s, z0.s[3]
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extractelement_v8f32:
@@ -151,7 +163,9 @@ define double @extractelement_v1f64(<1 x double> %op1) {
 define double @extractelement_v2f64(<2 x double> %op1) {
 ; CHECK-LABEL: extractelement_v2f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z0.d, z0.d[1]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extractelement_v2f64:
@@ -170,6 +184,7 @@ define double @extractelement_v4f64(ptr %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0, #16]
 ; CHECK-NEXT:    mov z0.d, z0.d[1]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extractelement_v4f64:

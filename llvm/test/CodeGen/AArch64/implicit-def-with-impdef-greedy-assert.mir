@@ -51,7 +51,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.9(0x01288b01), %bb.5(0x01288b01), %bb.2(0x11f46a91), %bb.6(0x23e8d524), %bb.7(0x47d1aa49)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   dead early-clobber %12:gpr64, dead early-clobber %13:gpr64sp = JumpTableDest32 [[DEF8]], [[DEF7]], %jump-table.0
-  ; CHECK-NEXT:   BR undef [[DEF10]]
+  ; CHECK-NEXT:   BR undef %18:gpr64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   successors: %bb.8(0x80000000)

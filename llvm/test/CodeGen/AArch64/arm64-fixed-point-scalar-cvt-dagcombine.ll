@@ -25,6 +25,7 @@ define double @bar(ptr %iVals, ptr %fVals, ptr %dVals) {
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    sri d0, d0, #1
 ; CHECK-NEXT:    scvtf.2d v0, v0, #1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %arrayidx = getelementptr inbounds double, ptr %dVals, i64 16

@@ -8,6 +8,7 @@ define <8 x i8> @v8i8(<16 x i8> %a) nounwind {
 ; CHECK-SD-LABEL: v8i8:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ext.16b v0, v0, v0, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v8i8:
@@ -22,6 +23,7 @@ define <4 x i16> @v4i16(<8 x i16> %a) nounwind {
 ; CHECK-SD-LABEL: v4i16:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ext.16b v0, v0, v0, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v4i16:
@@ -36,6 +38,7 @@ define <2 x i32> @v2i32(<4 x i32> %a) nounwind {
 ; CHECK-SD-LABEL: v2i32:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ext.16b v0, v0, v0, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v2i32:
@@ -50,6 +53,7 @@ define <1 x i64> @v1i64(<2 x i64> %a) nounwind {
 ; CHECK-SD-LABEL: v1i64:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ext.16b v0, v0, v0, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v1i64:
@@ -64,6 +68,7 @@ define <1 x ptr> @v1p0(<2 x ptr> %a) nounwind {
 ; CHECK-SD-LABEL: v1p0:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ext.16b v0, v0, v0, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v1p0:
@@ -78,6 +83,7 @@ define <2 x float> @v2f32(<4 x float> %a) nounwind {
 ; CHECK-SD-LABEL: v2f32:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ext.16b v0, v0, v0, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v2f32:
@@ -92,6 +98,7 @@ define <1 x double> @v1f64(<2 x double> %a) nounwind {
 ; CHECK-SD-LABEL: v1f64:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ext.16b v0, v0, v0, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v1f64:

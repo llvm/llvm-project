@@ -17,6 +17,7 @@ define <4 x i1> @reshuffle_v4i1_nxv4i1(<vscale x 4 x i1> %a) {
 ; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
 ; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
 ; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %el0 = extractelement <vscale x 4 x i1> %a, i32 0
   %el1 = extractelement <vscale x 4 x i1> %a, i32 1

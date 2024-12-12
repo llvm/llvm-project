@@ -316,6 +316,8 @@ define <4 x i32> @test_shuf6(<4 x i32> %a, <4 x i32> %b)
 define <4 x i16> @test_shuf7(<4 x i16> %a, <4 x i16> %b)
 ; CHECKLE-LABEL: test_shuf7:
 ; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECKLE-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECKLE-NEXT:    mov v0.h[2], v1.h[3]
 ; CHECKLE-NEXT:    trn1 v0.4h, v0.4h, v0.4h
 ; CHECKLE-NEXT:    ret
@@ -336,8 +338,10 @@ define <4 x i16> @test_shuf7(<4 x i16> %a, <4 x i16> %b)
 define <8 x i8> @test_shuf8(<8 x i8> %a, <8 x i8> %b)
 ; CHECKLE-LABEL: test_shuf8:
 ; CHECKLE:       // %bb.0:
-; CHECKLE-NEXT:    mov v0.d[1], v1.d[0]
+; CHECKLE-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECKLE-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECKLE-NEXT:    adrp x8, .LCPI12_0
+; CHECKLE-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECKLE-NEXT:    ldr d1, [x8, :lo12:.LCPI12_0]
 ; CHECKLE-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; CHECKLE-NEXT:    ret
@@ -362,7 +366,9 @@ define <8 x i16> @test_shuf9(<8 x i16> %a, <8 x i16> %b)
 ; CHECKLE-LABEL: test_shuf9:
 ; CHECKLE:       // %bb.0:
 ; CHECKLE-NEXT:    adrp x8, .LCPI13_0
+; CHECKLE-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECKLE-NEXT:    ldr q2, [x8, :lo12:.LCPI13_0]
+; CHECKLE-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECKLE-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECKLE-NEXT:    ret
 ;
@@ -372,10 +378,10 @@ define <8 x i16> @test_shuf9(<8 x i16> %a, <8 x i16> %b)
 ; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
 ; CHECKBE-NEXT:    adrp x8, .LCPI13_0
 ; CHECKBE-NEXT:    add x8, x8, :lo12:.LCPI13_0
-; CHECKBE-NEXT:    ld1 { v2.16b }, [x8]
-; CHECKBE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECKBE-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECKBE-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
+; CHECKBE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ld1 { v0.16b }, [x8]
+; CHECKBE-NEXT:    tbl v0.16b, { v1.16b, v2.16b }, v0.16b
 ; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
 ; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECKBE-NEXT:    ret
@@ -412,7 +418,9 @@ define <8 x half> @test_shuf11(<8 x half> %a, <8 x half> %b)
 ; CHECKLE-LABEL: test_shuf11:
 ; CHECKLE:       // %bb.0:
 ; CHECKLE-NEXT:    adrp x8, .LCPI15_0
+; CHECKLE-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECKLE-NEXT:    ldr q2, [x8, :lo12:.LCPI15_0]
+; CHECKLE-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECKLE-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECKLE-NEXT:    ret
 ;
@@ -422,10 +430,10 @@ define <8 x half> @test_shuf11(<8 x half> %a, <8 x half> %b)
 ; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
 ; CHECKBE-NEXT:    adrp x8, .LCPI15_0
 ; CHECKBE-NEXT:    add x8, x8, :lo12:.LCPI15_0
-; CHECKBE-NEXT:    ld1 { v2.16b }, [x8]
-; CHECKBE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECKBE-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECKBE-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
+; CHECKBE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ld1 { v0.16b }, [x8]
+; CHECKBE-NEXT:    tbl v0.16b, { v1.16b, v2.16b }, v0.16b
 ; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
 ; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECKBE-NEXT:    ret
@@ -438,7 +446,9 @@ define <8 x half> @test_shuf12(<8 x half> %a, <8 x half> %b)
 ; CHECKLE-LABEL: test_shuf12:
 ; CHECKLE:       // %bb.0:
 ; CHECKLE-NEXT:    adrp x8, .LCPI16_0
+; CHECKLE-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECKLE-NEXT:    ldr q2, [x8, :lo12:.LCPI16_0]
+; CHECKLE-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECKLE-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECKLE-NEXT:    ret
 ;
@@ -448,10 +458,10 @@ define <8 x half> @test_shuf12(<8 x half> %a, <8 x half> %b)
 ; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
 ; CHECKBE-NEXT:    adrp x8, .LCPI16_0
 ; CHECKBE-NEXT:    add x8, x8, :lo12:.LCPI16_0
-; CHECKBE-NEXT:    ld1 { v2.16b }, [x8]
-; CHECKBE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECKBE-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECKBE-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
+; CHECKBE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ld1 { v0.16b }, [x8]
+; CHECKBE-NEXT:    tbl v0.16b, { v1.16b, v2.16b }, v0.16b
 ; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
 ; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECKBE-NEXT:    ret
@@ -464,7 +474,9 @@ define <8 x half> @test_shuf13(<8 x half> %a, <8 x half> %b)
 ; CHECKLE-LABEL: test_shuf13:
 ; CHECKLE:       // %bb.0:
 ; CHECKLE-NEXT:    adrp x8, .LCPI17_0
+; CHECKLE-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECKLE-NEXT:    ldr q2, [x8, :lo12:.LCPI17_0]
+; CHECKLE-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECKLE-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECKLE-NEXT:    ret
 ;
@@ -474,10 +486,10 @@ define <8 x half> @test_shuf13(<8 x half> %a, <8 x half> %b)
 ; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
 ; CHECKBE-NEXT:    adrp x8, .LCPI17_0
 ; CHECKBE-NEXT:    add x8, x8, :lo12:.LCPI17_0
-; CHECKBE-NEXT:    ld1 { v2.16b }, [x8]
-; CHECKBE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECKBE-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECKBE-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
+; CHECKBE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ld1 { v0.16b }, [x8]
+; CHECKBE-NEXT:    tbl v0.16b, { v1.16b, v2.16b }, v0.16b
 ; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
 ; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECKBE-NEXT:    ret
@@ -490,7 +502,9 @@ define <8 x half> @test_shuf14(<8 x half> %a, <8 x half> %b)
 ; CHECKLE-LABEL: test_shuf14:
 ; CHECKLE:       // %bb.0:
 ; CHECKLE-NEXT:    adrp x8, .LCPI18_0
+; CHECKLE-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECKLE-NEXT:    ldr q2, [x8, :lo12:.LCPI18_0]
+; CHECKLE-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECKLE-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECKLE-NEXT:    ret
 ;
@@ -500,10 +514,10 @@ define <8 x half> @test_shuf14(<8 x half> %a, <8 x half> %b)
 ; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
 ; CHECKBE-NEXT:    adrp x8, .LCPI18_0
 ; CHECKBE-NEXT:    add x8, x8, :lo12:.LCPI18_0
-; CHECKBE-NEXT:    ld1 { v2.16b }, [x8]
-; CHECKBE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECKBE-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECKBE-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
+; CHECKBE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ld1 { v0.16b }, [x8]
+; CHECKBE-NEXT:    tbl v0.16b, { v1.16b, v2.16b }, v0.16b
 ; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
 ; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECKBE-NEXT:    ret
@@ -516,7 +530,9 @@ define <8 x half> @test_shuf15(<8 x half> %a, <8 x half> %b)
 ; CHECKLE-LABEL: test_shuf15:
 ; CHECKLE:       // %bb.0:
 ; CHECKLE-NEXT:    adrp x8, .LCPI19_0
+; CHECKLE-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECKLE-NEXT:    ldr q2, [x8, :lo12:.LCPI19_0]
+; CHECKLE-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECKLE-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECKLE-NEXT:    ret
 ;
@@ -526,10 +542,10 @@ define <8 x half> @test_shuf15(<8 x half> %a, <8 x half> %b)
 ; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
 ; CHECKBE-NEXT:    adrp x8, .LCPI19_0
 ; CHECKBE-NEXT:    add x8, x8, :lo12:.LCPI19_0
-; CHECKBE-NEXT:    ld1 { v2.16b }, [x8]
-; CHECKBE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECKBE-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECKBE-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
+; CHECKBE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ld1 { v0.16b }, [x8]
+; CHECKBE-NEXT:    tbl v0.16b, { v1.16b, v2.16b }, v0.16b
 ; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
 ; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECKBE-NEXT:    ret
