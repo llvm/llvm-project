@@ -1513,7 +1513,7 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
   // Transfer any debug information.
   Call->setDebugLoc(Region.Call->getDebugLoc());
   // Since our output may determine which branch we go to, we make sure to
-  // propogate this new call value through the module.
+  // propagate this new call value through the module.
   OldCall->replaceAllUsesWith(Call);
 
   // Remove the old instruction.

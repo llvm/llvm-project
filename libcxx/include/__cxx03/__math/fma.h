@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MATH_FMA_H
-#define _LIBCPP___MATH_FMA_H
+#ifndef _LIBCPP___CXX03___MATH_FMA_H
+#define _LIBCPP___CXX03___MATH_FMA_H
 
-#include <__config>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/is_arithmetic.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/promote.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/is_arithmetic.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/promote.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -52,4 +52,4 @@ inline _LIBCPP_HIDE_FROM_ABI typename __promote<_A1, _A2, _A3>::type fma(_A1 __x
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MATH_FMA_H
+#endif // _LIBCPP___CXX03___MATH_FMA_H

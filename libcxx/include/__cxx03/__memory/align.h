@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_ALIGN_H
-#define _LIBCPP___MEMORY_ALIGN_H
+#ifndef _LIBCPP___CXX03___MEMORY_ALIGN_H
+#define _LIBCPP___CXX03___MEMORY_ALIGN_H
 
-#include <__config>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -22,4 +22,4 @@ _LIBCPP_EXPORTED_FROM_ABI void* align(size_t __align, size_t __sz, void*& __ptr,
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_ALIGN_H
+#endif // _LIBCPP___CXX03___MEMORY_ALIGN_H

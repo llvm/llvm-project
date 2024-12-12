@@ -70,6 +70,7 @@ private:
   // The primitive representing the integral.
   using ReprT = typename Repr<Bits, Signed>::Type;
   ReprT V;
+  static_assert(std::is_trivially_copyable_v<ReprT>);
 
   /// Primitive representing limits.
   static const auto Min = std::numeric_limits<ReprT>::min();
@@ -122,7 +123,9 @@ public:
   APSInt toAPSInt() const {
     return APSInt(APInt(Bits, static_cast<uint64_t>(V), Signed), !Signed);
   }
-  APSInt toAPSInt(unsigned BitWidth) const { return APSInt(toAPInt(BitWidth)); }
+  APSInt toAPSInt(unsigned BitWidth) const {
+    return APSInt(toAPInt(BitWidth), !Signed);
+  }
   APInt toAPInt(unsigned BitWidth) const {
     if constexpr (Signed)
       return APInt(Bits, static_cast<uint64_t>(V), Signed)
@@ -154,6 +157,18 @@ public:
     return Compare(V, RHS.V);
   }
 
+  void bitcastToMemory(std::byte *Dest) const {
+    std::memcpy(Dest, &V, sizeof(V));
+  }
+
+  static Integral bitcastFromMemory(const std::byte *Src, unsigned BitWidth) {
+    assert(BitWidth == sizeof(ReprT) * 8);
+    ReprT V;
+
+    std::memcpy(&V, Src, sizeof(ReprT));
+    return Integral(V);
+  }
+
   std::string toDiagnosticString(const ASTContext &Ctx) const {
     std::string NameStr;
     llvm::raw_string_ostream OS(NameStr);
@@ -168,6 +183,7 @@ public:
   }
 
   Integral truncate(unsigned TruncBits) const {
+    assert(TruncBits >= 1);
     if (TruncBits >= Bits)
       return *this;
     const ReprT BitMask = (ReprT(1) << ReprT(TruncBits)) - 1;

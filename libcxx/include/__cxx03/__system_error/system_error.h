@@ -7,15 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SYSTEM_ERROR_SYSTEM_ERROR_H
-#define _LIBCPP___SYSTEM_ERROR_SYSTEM_ERROR_H
+#ifndef _LIBCPP___CXX03___SYSTEM_ERROR_SYSTEM_ERROR_H
+#define _LIBCPP___CXX03___SYSTEM_ERROR_SYSTEM_ERROR_H
 
-#include <__config>
-#include <__system_error/error_category.h>
-#include <__system_error/error_code.h>
-#include <__verbose_abort>
-#include <stdexcept>
-#include <string>
+#include <__cxx03/__config>
+#include <__cxx03/__system_error/error_category.h>
+#include <__cxx03/__system_error/error_code.h>
+#include <__cxx03/__verbose_abort>
+#include <__cxx03/stdexcept>
+#include <__cxx03/string>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -51,4 +51,4 @@ _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI inline void __throw_system_error(error_co
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___SYSTEM_ERROR_SYSTEM_ERROR_H
+#endif // _LIBCPP___CXX03___SYSTEM_ERROR_SYSTEM_ERROR_H

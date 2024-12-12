@@ -25,14 +25,12 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/UniqueVector.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -365,7 +363,7 @@ public:
   /// GcReadWeakFn -- LLVM objc_read_weak (id *src) function.
   llvm::FunctionCallee getGcReadWeakFn() {
     // id objc_read_weak (id *)
-    llvm::Type *args[] = { ObjectPtrTy->getPointerTo() };
+    llvm::Type *args[] = {CGM.UnqualPtrTy};
     llvm::FunctionType *FTy =
       llvm::FunctionType::get(ObjectPtrTy, args, false);
     return CGM.CreateRuntimeFunction(FTy, "objc_read_weak");
@@ -374,7 +372,7 @@ public:
   /// GcAssignWeakFn -- LLVM objc_assign_weak function.
   llvm::FunctionCallee getGcAssignWeakFn() {
     // id objc_assign_weak (id, id *)
-    llvm::Type *args[] = { ObjectPtrTy, ObjectPtrTy->getPointerTo() };
+    llvm::Type *args[] = {ObjectPtrTy, CGM.UnqualPtrTy};
     llvm::FunctionType *FTy =
       llvm::FunctionType::get(ObjectPtrTy, args, false);
     return CGM.CreateRuntimeFunction(FTy, "objc_assign_weak");
@@ -383,7 +381,7 @@ public:
   /// GcAssignGlobalFn -- LLVM objc_assign_global function.
   llvm::FunctionCallee getGcAssignGlobalFn() {
     // id objc_assign_global(id, id *)
-    llvm::Type *args[] = { ObjectPtrTy, ObjectPtrTy->getPointerTo() };
+    llvm::Type *args[] = {ObjectPtrTy, CGM.UnqualPtrTy};
     llvm::FunctionType *FTy =
       llvm::FunctionType::get(ObjectPtrTy, args, false);
     return CGM.CreateRuntimeFunction(FTy, "objc_assign_global");
@@ -392,7 +390,7 @@ public:
   /// GcAssignThreadLocalFn -- LLVM objc_assign_threadlocal function.
   llvm::FunctionCallee getGcAssignThreadLocalFn() {
     // id objc_assign_threadlocal(id src, id * dest)
-    llvm::Type *args[] = { ObjectPtrTy, ObjectPtrTy->getPointerTo() };
+    llvm::Type *args[] = {ObjectPtrTy, CGM.UnqualPtrTy};
     llvm::FunctionType *FTy =
       llvm::FunctionType::get(ObjectPtrTy, args, false);
     return CGM.CreateRuntimeFunction(FTy, "objc_assign_threadlocal");
@@ -401,8 +399,7 @@ public:
   /// GcAssignIvarFn -- LLVM objc_assign_ivar function.
   llvm::FunctionCallee getGcAssignIvarFn() {
     // id objc_assign_ivar(id, id *, ptrdiff_t)
-    llvm::Type *args[] = { ObjectPtrTy, ObjectPtrTy->getPointerTo(),
-                           CGM.PtrDiffTy };
+    llvm::Type *args[] = {ObjectPtrTy, CGM.UnqualPtrTy, CGM.PtrDiffTy};
     llvm::FunctionType *FTy =
       llvm::FunctionType::get(ObjectPtrTy, args, false);
     return CGM.CreateRuntimeFunction(FTy, "objc_assign_ivar");
@@ -419,7 +416,7 @@ public:
   /// GcAssignStrongCastFn -- LLVM objc_assign_strongCast function.
   llvm::FunctionCallee getGcAssignStrongCastFn() {
     // id objc_assign_strongCast(id, id *)
-    llvm::Type *args[] = { ObjectPtrTy, ObjectPtrTy->getPointerTo() };
+    llvm::Type *args[] = {ObjectPtrTy, CGM.UnqualPtrTy};
     llvm::FunctionType *FTy =
       llvm::FunctionType::get(ObjectPtrTy, args, false);
     return CGM.CreateRuntimeFunction(FTy, "objc_assign_strongCast");
@@ -554,7 +551,7 @@ public:
 
   /// ExceptionTryEnterFn - LLVM objc_exception_try_enter function.
   llvm::FunctionCallee getExceptionTryEnterFn() {
-    llvm::Type *params[] = { ExceptionDataTy->getPointerTo() };
+    llvm::Type *params[] = {CGM.UnqualPtrTy};
     return CGM.CreateRuntimeFunction(
       llvm::FunctionType::get(CGM.VoidTy, params, false),
       "objc_exception_try_enter");
@@ -562,7 +559,7 @@ public:
 
   /// ExceptionTryExitFn - LLVM objc_exception_try_exit function.
   llvm::FunctionCallee getExceptionTryExitFn() {
-    llvm::Type *params[] = { ExceptionDataTy->getPointerTo() };
+    llvm::Type *params[] = {CGM.UnqualPtrTy};
     return CGM.CreateRuntimeFunction(
       llvm::FunctionType::get(CGM.VoidTy, params, false),
       "objc_exception_try_exit");
@@ -570,7 +567,7 @@ public:
 
   /// ExceptionExtractFn - LLVM objc_exception_extract function.
   llvm::FunctionCallee getExceptionExtractFn() {
-    llvm::Type *params[] = { ExceptionDataTy->getPointerTo() };
+    llvm::Type *params[] = {CGM.UnqualPtrTy};
     return CGM.CreateRuntimeFunction(llvm::FunctionType::get(ObjectPtrTy,
                                                              params, false),
                                      "objc_exception_extract");
@@ -587,7 +584,7 @@ public:
   /// SetJmpFn - LLVM _setjmp function.
   llvm::FunctionCallee getSetJmpFn() {
     // This is specifically the prototype for x86.
-    llvm::Type *params[] = { CGM.Int32Ty->getPointerTo() };
+    llvm::Type *params[] = {CGM.UnqualPtrTy};
     return CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(CGM.Int32Ty, params, false), "_setjmp",
         llvm::AttributeList::get(CGM.getLLVMContext(),
@@ -5835,15 +5832,7 @@ ObjCTypesHelper::ObjCTypesHelper(CodeGen::CodeGenModule &cgm)
   // struct _objc_protocol_extension *
   ProtocolExtensionPtrTy = llvm::PointerType::getUnqual(ProtocolExtensionTy);
 
-  // Handle recursive construction of Protocol and ProtocolList types
-
-  ProtocolTy =
-    llvm::StructType::create(VMContext, "struct._objc_protocol");
-
-  ProtocolListTy =
-    llvm::StructType::create(VMContext, "struct._objc_protocol_list");
-  ProtocolListTy->setBody(llvm::PointerType::getUnqual(ProtocolListTy), LongTy,
-                          llvm::ArrayType::get(ProtocolTy, 0));
+  // Handle construction of Protocol and ProtocolList types
 
   // struct _objc_protocol {
   //   struct _objc_protocol_extension *isa;
@@ -5852,9 +5841,16 @@ ObjCTypesHelper::ObjCTypesHelper(CodeGen::CodeGenModule &cgm)
   //   struct _objc_method_description_list *instance_methods;
   //   struct _objc_method_description_list *class_methods;
   // }
-  ProtocolTy->setBody(ProtocolExtensionPtrTy, Int8PtrTy,
-                      llvm::PointerType::getUnqual(ProtocolListTy),
-                      MethodDescriptionListPtrTy, MethodDescriptionListPtrTy);
+  ProtocolTy = llvm::StructType::create(
+      {ProtocolExtensionPtrTy, Int8PtrTy,
+       llvm::PointerType::getUnqual(VMContext), MethodDescriptionListPtrTy,
+       MethodDescriptionListPtrTy},
+      "struct._objc_protocol");
+
+  ProtocolListTy =
+      llvm::StructType::create({llvm::PointerType::getUnqual(VMContext), LongTy,
+                                llvm::ArrayType::get(ProtocolTy, 0)},
+                               "struct._objc_protocol_list");
 
   // struct _objc_protocol_list *
   ProtocolListPtrTy = llvm::PointerType::getUnqual(ProtocolListTy);
@@ -5886,8 +5882,6 @@ ObjCTypesHelper::ObjCTypesHelper(CodeGen::CodeGenModule &cgm)
       "struct._objc_class_extension", IntTy, Int8PtrTy, PropertyListPtrTy);
   ClassExtensionPtrTy = llvm::PointerType::getUnqual(ClassExtensionTy);
 
-  ClassTy = llvm::StructType::create(VMContext, "struct._objc_class");
-
   // struct _objc_class {
   //   Class isa;
   //   Class super_class;
@@ -5902,10 +5896,12 @@ ObjCTypesHelper::ObjCTypesHelper(CodeGen::CodeGenModule &cgm)
   //   char *ivar_layout;
   //   struct _objc_class_ext *ext;
   // };
-  ClassTy->setBody(llvm::PointerType::getUnqual(ClassTy),
-                   llvm::PointerType::getUnqual(ClassTy), Int8PtrTy, LongTy,
-                   LongTy, LongTy, IvarListPtrTy, MethodListPtrTy, CachePtrTy,
-                   ProtocolListPtrTy, Int8PtrTy, ClassExtensionPtrTy);
+  ClassTy = llvm::StructType::create(
+      {llvm::PointerType::getUnqual(VMContext),
+       llvm::PointerType::getUnqual(VMContext), Int8PtrTy, LongTy, LongTy,
+       LongTy, IvarListPtrTy, MethodListPtrTy, CachePtrTy, ProtocolListPtrTy,
+       Int8PtrTy, ClassExtensionPtrTy},
+      "struct._objc_class");
 
   ClassPtrTy = llvm::PointerType::getUnqual(ClassTy);
 
@@ -5988,13 +5984,9 @@ ObjCNonFragileABITypesHelper::ObjCNonFragileABITypesHelper(CodeGen::CodeGenModul
   //   const struct _prop_list_t * class_properties;
   // }
 
-  // Holder for struct _protocol_list_t *
-  ProtocolListnfABITy =
-    llvm::StructType::create(VMContext, "struct._objc_protocol_list");
-
   ProtocolnfABITy = llvm::StructType::create(
       "struct._protocol_t", ObjectPtrTy, Int8PtrTy,
-      llvm::PointerType::getUnqual(ProtocolListnfABITy), MethodListnfABIPtrTy,
+      llvm::PointerType::getUnqual(VMContext), MethodListnfABIPtrTy,
       MethodListnfABIPtrTy, MethodListnfABIPtrTy, MethodListnfABIPtrTy,
       PropertyListPtrTy, IntTy, IntTy, Int8PtrPtrTy, Int8PtrTy,
       PropertyListPtrTy);
@@ -6006,8 +5998,9 @@ ObjCNonFragileABITypesHelper::ObjCNonFragileABITypesHelper(CodeGen::CodeGenModul
   //   long protocol_count;   // Note, this is 32/64 bit
   //   struct _protocol_t *[protocol_count];
   // }
-  ProtocolListnfABITy->setBody(LongTy,
-                               llvm::ArrayType::get(ProtocolnfABIPtrTy, 0));
+  ProtocolListnfABITy = llvm::StructType::create(
+      {LongTy, llvm::ArrayType::get(ProtocolnfABIPtrTy, 0)},
+      "struct._objc_protocol_list");
 
   // struct _objc_protocol_list*
   ProtocolListnfABIPtrTy = llvm::PointerType::getUnqual(ProtocolListnfABITy);
@@ -6055,9 +6048,7 @@ ObjCNonFragileABITypesHelper::ObjCNonFragileABITypesHelper(CodeGen::CodeGenModul
       Int8PtrTy, PropertyListPtrTy);
 
   // ImpnfABITy - LLVM for id (*)(id, SEL, ...)
-  llvm::Type *params[] = { ObjectPtrTy, SelectorPtrTy };
-  ImpnfABITy = llvm::FunctionType::get(ObjectPtrTy, params, false)
-                 ->getPointerTo();
+  ImpnfABITy = CGM.UnqualPtrTy;
 
   // struct _class_t {
   //   struct _class_t *isa;
@@ -6067,11 +6058,12 @@ ObjCNonFragileABITypesHelper::ObjCNonFragileABITypesHelper(CodeGen::CodeGenModul
   //   struct class_ro_t *ro;
   // }
 
-  ClassnfABITy = llvm::StructType::create(VMContext, "struct._class_t");
-  ClassnfABITy->setBody(llvm::PointerType::getUnqual(ClassnfABITy),
-                        llvm::PointerType::getUnqual(ClassnfABITy), CachePtrTy,
-                        llvm::PointerType::getUnqual(ImpnfABITy),
-                        llvm::PointerType::getUnqual(ClassRonfABITy));
+  ClassnfABITy = llvm::StructType::create(
+      {llvm::PointerType::getUnqual(VMContext),
+       llvm::PointerType::getUnqual(VMContext), CachePtrTy,
+       llvm::PointerType::getUnqual(ImpnfABITy),
+       llvm::PointerType::getUnqual(ClassRonfABITy)},
+      "struct._class_t");
 
   // LLVM for struct _class_t *
   ClassnfABIPtrTy = llvm::PointerType::getUnqual(ClassnfABITy);
@@ -6472,8 +6464,7 @@ void CGObjCNonFragileABIMac::GenerateClass(const ObjCImplementationDecl *ID) {
                                    llvm::GlobalValue::ExternalLinkage, nullptr,
                                    "_objc_empty_vtable");
     else
-      ObjCEmptyVtableVar =
-        llvm::ConstantPointerNull::get(ObjCTypes.ImpnfABITy->getPointerTo());
+      ObjCEmptyVtableVar = llvm::ConstantPointerNull::get(CGM.UnqualPtrTy);
   }
 
   // FIXME: Is this correct (that meta class size is never computed)?

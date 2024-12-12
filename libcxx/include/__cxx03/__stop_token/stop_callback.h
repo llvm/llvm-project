@@ -7,27 +7,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___STOP_TOKEN_STOP_CALLBACK_H
-#define _LIBCPP___STOP_TOKEN_STOP_CALLBACK_H
+#ifndef _LIBCPP___CXX03___STOP_TOKEN_STOP_CALLBACK_H
+#define _LIBCPP___CXX03___STOP_TOKEN_STOP_CALLBACK_H
 
-#include <__concepts/constructible.h>
-#include <__concepts/destructible.h>
-#include <__concepts/invocable.h>
-#include <__config>
-#include <__stop_token/intrusive_shared_ptr.h>
-#include <__stop_token/stop_state.h>
-#include <__stop_token/stop_token.h>
-#include <__type_traits/is_nothrow_constructible.h>
-#include <__utility/forward.h>
-#include <__utility/move.h>
-#include <__utility/private_constructor_tag.h>
+#include <__cxx03/__concepts/constructible.h>
+#include <__cxx03/__concepts/destructible.h>
+#include <__cxx03/__concepts/invocable.h>
+#include <__cxx03/__config>
+#include <__cxx03/__stop_token/intrusive_shared_ptr.h>
+#include <__cxx03/__stop_token/stop_state.h>
+#include <__cxx03/__stop_token/stop_token.h>
+#include <__cxx03/__type_traits/is_nothrow_constructible.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/__utility/private_constructor_tag.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -99,4 +99,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && !defined(_LIBCPP_HAS_NO_THREADS)
+#endif // _LIBCPP___CXX03___STOP_TOKEN_STOP_CALLBACK_H

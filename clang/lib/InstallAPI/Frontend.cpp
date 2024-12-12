@@ -94,7 +94,7 @@ InstallAPIContext::findAndRecordFile(const FileEntry *FE,
   // included. This is primarily to resolve headers found
   // in a different location than what passed directly as input.
   StringRef IncludeName = PP.getHeaderSearchInfo().getIncludeNameForHeader(FE);
-  auto BackupIt = KnownIncludes.find(IncludeName.str());
+  auto BackupIt = KnownIncludes.find(IncludeName);
   if (BackupIt != KnownIncludes.end()) {
     KnownFiles[FE] = BackupIt->second;
     return BackupIt->second;

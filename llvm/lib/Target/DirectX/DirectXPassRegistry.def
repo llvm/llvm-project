@@ -24,6 +24,7 @@ MODULE_ANALYSIS("dxil-resource-md", DXILResourceMDAnalysis())
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
 MODULE_PASS("dxil-data-scalarization", DXILDataScalarization())
+MODULE_PASS("dxil-flatten-arrays", DXILFlattenArrays())
 MODULE_PASS("dxil-intrinsic-expansion", DXILIntrinsicExpansion())
 MODULE_PASS("dxil-op-lower", DXILOpLowering())
 MODULE_PASS("dxil-pretty-printer", DXILPrettyPrinterPass(dbgs()))

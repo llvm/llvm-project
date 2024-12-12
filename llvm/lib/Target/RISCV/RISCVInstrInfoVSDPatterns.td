@@ -25,6 +25,7 @@ def rvv_vnot : PatFrag<(ops node:$in),
                        (xor node:$in, (riscv_vmset_vl (XLenVT srcvalue)))>;
 
 multiclass VPatUSLoadStoreSDNode<ValueType type,
+                                 RegisterClass regclass,
                                  int log2sew,
                                  LMULInfo vlmul,
                                  OutPatFrag avl,
@@ -37,7 +38,7 @@ multiclass VPatUSLoadStoreSDNode<ValueType type,
             (load_instr (type (IMPLICIT_DEF)), GPR:$rs1, avl,
                         log2sew, TA_MA)>;
   // Store
-  def : Pat<(store type:$rs2, (XLenVT GPR:$rs1)),
+  def : Pat<(store (type regclass:$rs2), (XLenVT GPR:$rs1)),
             (store_instr reg_class:$rs2, GPR:$rs1, avl, log2sew)>;
 }
 
@@ -49,7 +50,7 @@ multiclass VPatUSLoadStoreMaskSDNode<MTypeInfo m> {
             (load_instr (m.Mask (IMPLICIT_DEF)), GPR:$rs1, m.AVL,
                          m.Log2SEW, TA_MA)>;
   // Store
-  def : Pat<(store m.Mask:$rs2, GPR:$rs1),
+  def : Pat<(store (m.Mask VR:$rs2), GPR:$rs1),
             (store_instr VR:$rs2, GPR:$rs1, m.AVL, m.Log2SEW)>;
 }
 
@@ -884,7 +885,7 @@ multiclass VPatAVGADD_VV_VX_RM<SDNode vop, int vxrm, string suffix = ""> {
 foreach vti = AllVectors in
   let Predicates = !if(!eq(vti.Scalar, f16), [HasVInstructionsF16Minimal],
                        GetVTypePredicates<vti>.Predicates) in 
-  defm : VPatUSLoadStoreSDNode<vti.Vector, vti.Log2SEW, vti.LMul,
+  defm : VPatUSLoadStoreSDNode<vti.Vector, vti.RegClass, vti.Log2SEW, vti.LMul,
                                vti.AVL, vti.RegClass>;
 foreach mti = AllMasks in
   let Predicates = [HasVInstructions] in

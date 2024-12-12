@@ -91,6 +91,7 @@
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCSchedule.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -99,7 +100,6 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCSymbolCOFF.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
@@ -161,10 +161,24 @@ static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
         "Enable extended information within the SHT_LLVM_BB_ADDR_MAP that is "
         "extracted from PGO related analysis."));
 
+static cl::opt<bool> BBAddrMapSkipEmitBBEntries(
+    "basic-block-address-map-skip-bb-entries",
+    cl::desc("Skip emitting basic block entries in the SHT_LLVM_BB_ADDR_MAP "
+             "section. It's used to save binary size when BB entries are "
+             "unnecessary for some PGOAnalysisMap features."),
+    cl::Hidden, cl::init(false));
+
 static cl::opt<bool> EmitJumpTableSizesSection(
     "emit-jump-table-sizes-section",
     cl::desc("Emit a section containing jump table addresses and sizes"),
     cl::Hidden, cl::init(false));
+
+// This isn't turned on by default, since several of the scheduling models are
+// not completely accurate, and we don't want to be misleading.
+static cl::opt<bool> PrintLatency(
+    "asm-print-latency",
+    cl::desc("Print instruction latencies as verbose asm comments"), cl::Hidden,
+    cl::init(false));
 
 STATISTIC(EmittedInsts, "Number of machine instrs printed");
 
@@ -1085,7 +1099,8 @@ void AsmPrinter::emitFunctionEntryLabel() {
 }
 
 /// emitComments - Pretty-print comments for instructions.
-static void emitComments(const MachineInstr &MI, raw_ostream &CommentOS) {
+static void emitComments(const MachineInstr &MI, const MCSubtargetInfo *STI,
+                         raw_ostream &CommentOS) {
   const MachineFunction *MF = MI.getMF();
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
 
@@ -1113,6 +1128,17 @@ static void emitComments(const MachineInstr &MI, raw_ostream &CommentOS) {
   // Check for spill-induced copies
   if (MI.getAsmPrinterFlag(MachineInstr::ReloadReuse))
     CommentOS << " Reload Reuse\n";
+
+  if (PrintLatency) {
+    const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+    const MCSchedModel &SCModel = STI->getSchedModel();
+    int Latency = SCModel.computeInstrLatency<MCSubtargetInfo, MCInstrInfo,
+                                              InstrItineraryData, MachineInstr>(
+        *STI, *TII, MI);
+    // Report only interesting latencies.
+    if (1 < Latency)
+      CommentOS << " Latency: " << Latency << "\n";
+  }
 }
 
 /// emitImplicitDef - This method emits the specified machine instruction
@@ -1392,8 +1418,15 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
   bool BrProbEnabled =
       AllFeatures ||
       (!NoFeatures && PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::BrProb));
+
+  if ((BBFreqEnabled || BrProbEnabled) && BBAddrMapSkipEmitBBEntries) {
+    MF.getFunction().getContext().emitError(
+        "BB entries info is required for BBFreq and BrProb "
+        "features");
+  }
   return {FuncEntryCountEnabled, BBFreqEnabled, BrProbEnabled,
-          MF.hasBBSections() && NumMBBSectionRanges > 1};
+          MF.hasBBSections() && NumMBBSectionRanges > 1,
+          static_cast<bool>(BBAddrMapSkipEmitBBEntries)};
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
@@ -1450,24 +1483,28 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       OutStreamer->emitULEB128IntValue(MBBSectionNumBlocks[MBB.getSectionID()]);
       PrevMBBEndSymbol = MBBSymbol;
     }
-    // TODO: Remove this check when version 1 is deprecated.
-    if (BBAddrMapVersion > 1) {
-      OutStreamer->AddComment("BB id");
-      // Emit the BB ID for this basic block.
-      // We only emit BaseID since CloneID is unset for
-      // -basic-block-adress-map.
-      // TODO: Emit the full BBID when labels and sections can be mixed
-      // together.
-      OutStreamer->emitULEB128IntValue(MBB.getBBID()->BaseID);
+
+    if (!Features.OmitBBEntries) {
+      // TODO: Remove this check when version 1 is deprecated.
+      if (BBAddrMapVersion > 1) {
+        OutStreamer->AddComment("BB id");
+        // Emit the BB ID for this basic block.
+        // We only emit BaseID since CloneID is unset for
+        // -basic-block-adress-map.
+        // TODO: Emit the full BBID when labels and sections can be mixed
+        // together.
+        OutStreamer->emitULEB128IntValue(MBB.getBBID()->BaseID);
+      }
+      // Emit the basic block offset relative to the end of the previous block.
+      // This is zero unless the block is padded due to alignment.
+      emitLabelDifferenceAsULEB128(MBBSymbol, PrevMBBEndSymbol);
+      // Emit the basic block size. When BBs have alignments, their size cannot
+      // always be computed from their offsets.
+      emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), MBBSymbol);
+      // Emit the Metadata.
+      OutStreamer->emitULEB128IntValue(getBBAddrMapMetadata(MBB));
     }
-    // Emit the basic block offset relative to the end of the previous block.
-    // This is zero unless the block is padded due to alignment.
-    emitLabelDifferenceAsULEB128(MBBSymbol, PrevMBBEndSymbol);
-    // Emit the basic block size. When BBs have alignments, their size cannot
-    // always be computed from their offsets.
-    emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), MBBSymbol);
-    // Emit the Metadata.
-    OutStreamer->emitULEB128IntValue(getBBAddrMapMetadata(MBB));
+
     PrevMBBEndSymbol = MBB.getEndSymbol();
   }
 
@@ -1773,7 +1810,19 @@ void AsmPrinter::emitFunctionBody() {
   int NumInstsInFunction = 0;
   bool IsEHa = MMI->getModule()->getModuleFlag("eh-asynch");
 
+  const MCSubtargetInfo *STI = nullptr;
+  if (this->MF)
+    STI = &getSubtargetInfo();
+  else
+    STI = TM.getMCSubtargetInfo();
+
   bool CanDoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
+  // Create a slot for the entry basic block section so that the section
+  // order is preserved when iterating over MBBSectionRanges.
+  if (!MF->empty())
+    MBBSectionRanges[MF->front().getSectionID()] =
+        MBBSectionRange{CurrentFnBegin, nullptr};
+
   for (auto &MBB : *MF) {
     // Print a label for the basic block.
     emitBasicBlockStart(MBB);
@@ -1796,7 +1845,7 @@ void AsmPrinter::emitFunctionBody() {
         Handler->beginInstruction(&MI);
 
       if (isVerbose())
-        emitComments(MI, OutStreamer->getCommentOS());
+        emitComments(MI, STI, OutStreamer->getCommentOS());
 
       switch (MI.getOpcode()) {
       case TargetOpcode::CFI_INSTRUCTION:
@@ -2052,11 +2101,8 @@ void AsmPrinter::emitFunctionBody() {
   }
   for (auto &Handler : Handlers)
     Handler->markFunctionEnd();
-
-  assert(!MBBSectionRanges.contains(MF->front().getSectionID()) &&
-         "Overwrite section range");
-  MBBSectionRanges[MF->front().getSectionID()] =
-      MBBSectionRange{CurrentFnBegin, CurrentFnEnd};
+  // Update the end label of the entry block's section.
+  MBBSectionRanges[MF->front().getSectionID()].EndLabel = CurrentFnEnd;
 
   // Print out jump tables referenced by the function.
   emitJumpTableInfo();
@@ -3821,6 +3867,8 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
                                    AsmPrinter &AP, const Constant *BaseCV,
                                    uint64_t Offset,
                                    AsmPrinter::AliasMapTy *AliasList) {
+  assert((!AliasList || AP.TM.getTargetTriple().isOSBinFormatXCOFF()) &&
+         "AliasList only expected for XCOFF");
   emitGlobalAliasInline(AP, Offset, AliasList);
   uint64_t Size = DL.getTypeAllocSize(CV->getType());
 
@@ -3830,7 +3878,27 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
   if (!BaseCV && CV->hasOneUse())
     BaseCV = dyn_cast<Constant>(CV->user_back());
 
-  if (isa<ConstantAggregateZero>(CV) || isa<UndefValue>(CV))
+  if (isa<ConstantAggregateZero>(CV)) {
+    StructType *structType;
+    if (AliasList && (structType = llvm::dyn_cast<StructType>(CV->getType()))) {
+      // Handle cases of aliases to direct struct elements
+      const StructLayout *Layout = DL.getStructLayout(structType);
+      uint64_t SizeSoFar = 0;
+      for (unsigned int i = 0, n = structType->getNumElements(); i < n - 1;
+           ++i) {
+        uint64_t GapToNext = Layout->getElementOffset(i + 1) - SizeSoFar;
+        AP.OutStreamer->emitZeros(GapToNext);
+        SizeSoFar += GapToNext;
+        emitGlobalAliasInline(AP, Offset + SizeSoFar, AliasList);
+      }
+      AP.OutStreamer->emitZeros(Size - SizeSoFar);
+      return;
+    } else {
+      return AP.OutStreamer->emitZeros(Size);
+    }
+  }
+
+  if (isa<UndefValue>(CV))
     return AP.OutStreamer->emitZeros(Size);
 
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CV)) {

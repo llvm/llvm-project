@@ -18,8 +18,8 @@ define void @generate_disjoint_flags(i64 %n, ptr noalias %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint <4 x i32> [[WIDE_LOAD]], <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = or <4 x i32> [[WIDE_LOAD]], <i32 3, i32 3, i32 3, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint <4 x i32> [[WIDE_LOAD]], splat (i32 1)
+; CHECK-NEXT:    [[TMP4:%.*]] = or <4 x i32> [[WIDE_LOAD]], splat (i32 3)
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nuw nsw <4 x i32> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

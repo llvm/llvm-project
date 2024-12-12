@@ -1,4 +1,4 @@
-; RUN: llc -O2 -mtriple powerpc64-ibm-aix-xcoff -stop-after=machine-cp -verify-machineinstrs < %s | \
+; RUN: llc -O2 -mtriple powerpc64-ibm-aix-xcoff -mcpu=ppc -stop-after=machine-cp -verify-machineinstrs < %s | \
 ; RUN: FileCheck --check-prefix=64BIT %s
 
 ; RUN: llc -O2 -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec \

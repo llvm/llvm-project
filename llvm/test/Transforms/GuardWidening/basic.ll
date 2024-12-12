@@ -22,13 +22,13 @@ entry:
 }
 
 ; Same as @f_0, but with using a more general notion of postdominance.
-define void @f_1(i1 %cond_0, i1 %cond_1) {
+define void @f_1(i1 %cond_0, i1 %cond_1, i1 %arg) {
 ; CHECK-LABEL: @f_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND_1_GW_FR:%.*]] = freeze i1 [[COND_1:%.*]]
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_0:%.*]], [[COND_1_GW_FR]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK]]) [ "deopt"() ]
-; CHECK-NEXT:    br i1 undef, label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[LEFT:%.*]], label [[RIGHT:%.*]]
 ; CHECK:       left:
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
 ; CHECK:       right:
@@ -39,7 +39,7 @@ define void @f_1(i1 %cond_0, i1 %cond_1) {
 entry:
 
   call void(i1, ...) @llvm.experimental.guard(i1 %cond_0) [ "deopt"() ]
-  br i1 undef, label %left, label %right
+  br i1 %arg, label %left, label %right
 
 left:
   br label %merge
@@ -54,7 +54,7 @@ merge:
 
 ; Like @f_1, but we have some code we need to hoist before we can
 ; widen a dominanting check.
-define void @f_2(i32 %a, i32 %b) {
+define void @f_2(i32 %a, i32 %b, i1 %arg) {
 ; CHECK-LABEL: @f_2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B_GW_FR:%.*]] = freeze i32 [[B:%.*]]
@@ -62,7 +62,7 @@ define void @f_2(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp ult i32 [[B_GW_FR]], 10
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_0]], [[COND_1]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK]]) [ "deopt"() ]
-; CHECK-NEXT:    br i1 undef, label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[LEFT:%.*]], label [[RIGHT:%.*]]
 ; CHECK:       left:
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
 ; CHECK:       right:
@@ -74,7 +74,7 @@ entry:
 
   %cond_0 = icmp ult i32 %a, 10
   call void(i1, ...) @llvm.experimental.guard(i1 %cond_0) [ "deopt"() ]
-  br i1 undef, label %left, label %right
+  br i1 %arg, label %left, label %right
 
 left:
   br label %merge
@@ -90,12 +90,12 @@ merge:
 
 ; Negative test: don't hoist stuff out of control flow
 ; indiscriminately, since that can make us do more work than needed.
-define void @f_3(i32 %a, i32 %b) {
+define void @f_3(i32 %a, i32 %b, i1 %arg) {
 ; CHECK-LABEL: @f_3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND_0:%.*]] = icmp ult i32 [[A:%.*]], 10
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND_0]]) [ "deopt"() ]
-; CHECK-NEXT:    br i1 undef, label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[LEFT:%.*]], label [[RIGHT:%.*]]
 ; CHECK:       left:
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp ult i32 [[B:%.*]], 10
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND_1]]) [ "deopt"() ]
@@ -107,7 +107,7 @@ entry:
 
   %cond_0 = icmp ult i32 %a, 10
   call void(i1, ...) @llvm.experimental.guard(i1 %cond_0) [ "deopt"() ]
-  br i1 undef, label %left, label %right
+  br i1 %arg, label %left, label %right
 
 left:
 
@@ -122,7 +122,7 @@ right:
 ; But hoisting out of control flow is fine if it makes a loop computed
 ; condition loop invariant.  This behavior may require some tuning in
 ; the future.
-define void @f_4(i32 %a, i32 %b) {
+define void @f_4(i32 %a, i32 %b, i1 %arg) {
 ; CHECK-LABEL: @f_4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B_GW_FR:%.*]] = freeze i32 [[B:%.*]]
@@ -130,9 +130,9 @@ define void @f_4(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp ult i32 [[B_GW_FR]], 10
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_0]], [[COND_1]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK]]) [ "deopt"() ]
-; CHECK-NEXT:    br i1 undef, label [[LOOP:%.*]], label [[LEAVE:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[LOOP:%.*]], label [[LEAVE:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    br i1 undef, label [[LOOP]], label [[LEAVE]]
+; CHECK-NEXT:    br i1 %arg, label [[LOOP]], label [[LEAVE]]
 ; CHECK:       leave:
 ; CHECK-NEXT:    ret void
 ;
@@ -140,12 +140,12 @@ entry:
 
   %cond_0 = icmp ult i32 %a, 10
   call void(i1, ...) @llvm.experimental.guard(i1 %cond_0) [ "deopt"() ]
-  br i1 undef, label %loop, label %leave
+  br i1 %arg, label %loop, label %leave
 
 loop:
   %cond_1 = icmp ult i32 %b, 10
   call void(i1, ...) @llvm.experimental.guard(i1 %cond_1) [ "deopt"() ]
-  br i1 undef, label %loop, label %leave
+  br i1 %arg, label %loop, label %leave
 
 leave:
   ret void
@@ -153,13 +153,13 @@ leave:
 
 ; Hoisting out of control flow is also fine if we can widen the
 ; dominating check without doing any extra work.
-define void @f_5(i32 %a) {
+define void @f_5(i32 %a, i1 %arg) {
 ; CHECK-LABEL: @f_5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND_0:%.*]] = icmp ugt i32 [[A:%.*]], 7
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = icmp uge i32 [[A]], 11
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK]]) [ "deopt"() ]
-; CHECK-NEXT:    br i1 undef, label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[LEFT:%.*]], label [[RIGHT:%.*]]
 ; CHECK:       left:
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp ugt i32 [[A]], 10
 ; CHECK-NEXT:    ret void
@@ -170,7 +170,7 @@ entry:
 
   %cond_0 = icmp ugt i32 %a, 7
   call void(i1, ...) @llvm.experimental.guard(i1 %cond_0) [ "deopt"() ]
-  br i1 undef, label %left, label %right
+  br i1 %arg, label %left, label %right
 
 left:
   %cond_1 = icmp ugt i32 %a, 10
@@ -205,7 +205,7 @@ entry:
 
 ; All else equal, we try to widen the earliest guard we can.  This
 ; heuristic can use some tuning.
-define void @f_7(i32 %a, ptr %cond_buf) {
+define void @f_7(i32 %a, ptr %cond_buf, i1 %arg) {
 ; CHECK-LABEL: @f_7(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_GW_FR:%.*]] = freeze i32 [[A:%.*]]
@@ -215,7 +215,7 @@ define void @f_7(i32 %a, ptr %cond_buf) {
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK]]) [ "deopt"() ]
 ; CHECK-NEXT:    [[COND_2:%.*]] = load volatile i1, ptr [[COND_BUF]], align 1
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND_2]]) [ "deopt"() ]
-; CHECK-NEXT:    br i1 undef, label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[LEFT:%.*]], label [[RIGHT:%.*]]
 ; CHECK:       left:
 ; CHECK-NEXT:    br label [[LEFT]]
 ; CHECK:       right:
@@ -227,7 +227,7 @@ entry:
   call void(i1, ...) @llvm.experimental.guard(i1 %cond_1) [ "deopt"() ]
   %cond_2 = load volatile i1, ptr %cond_buf
   call void(i1, ...) @llvm.experimental.guard(i1 %cond_2) [ "deopt"() ]
-  br i1 undef, label %left, label %right
+  br i1 %arg, label %left, label %right
 
 left:
   %cond_3 = icmp ult i32 %a, 7
@@ -241,19 +241,19 @@ right:
 ; In this case the earliest dominating guard is in a loop, and we
 ; don't want to put extra work in there.  This heuristic can use some
 ; tuning.
-define void @f_8(i32 %a, i1 %cond_1, i1 %cond_2) {
+define void @f_8(i32 %a, i1 %cond_1, i1 %cond_2, i1 %arg) {
 ; CHECK-LABEL: @f_8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_GW_FR:%.*]] = freeze i32 [[A:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND_1:%.*]]) [ "deopt"() ]
-; CHECK-NEXT:    br i1 undef, label [[LOOP]], label [[LEAVE:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[LOOP]], label [[LEAVE:%.*]]
 ; CHECK:       leave:
 ; CHECK-NEXT:    [[COND_3:%.*]] = icmp ult i32 [[A_GW_FR]], 7
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_2:%.*]], [[COND_3]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK]]) [ "deopt"() ]
-; CHECK-NEXT:    br i1 undef, label [[LOOP2:%.*]], label [[LEAVE2:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[LOOP2:%.*]], label [[LEAVE2:%.*]]
 ; CHECK:       loop2:
 ; CHECK-NEXT:    br label [[LOOP2]]
 ; CHECK:       leave2:
@@ -264,12 +264,12 @@ entry:
 
 loop:
   call void(i1, ...) @llvm.experimental.guard(i1 %cond_1) [ "deopt"() ]
-  br i1 undef, label %loop, label %leave
+  br i1 %arg, label %loop, label %leave
 
 leave:
 
   call void(i1, ...) @llvm.experimental.guard(i1 %cond_2) [ "deopt"() ]
-  br i1 undef, label %loop2, label %leave2
+  br i1 %arg, label %loop2, label %leave2
 
 loop2:
   %cond_3 = icmp ult i32 %a, 7
@@ -282,13 +282,13 @@ leave2:
 
 ; In cases like these where there isn't any "obviously profitable"
 ; widening sites, we refuse to do anything.
-define void @f_9(i32 %a, i1 %cond_0, i1 %cond_1) {
+define void @f_9(i32 %a, i1 %cond_0, i1 %cond_1, i1 %arg) {
 ; CHECK-LABEL: @f_9(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FIRST_LOOP:%.*]]
 ; CHECK:       first_loop:
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND_0:%.*]]) [ "deopt"() ]
-; CHECK-NEXT:    br i1 undef, label [[FIRST_LOOP]], label [[SECOND_LOOP:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[FIRST_LOOP]], label [[SECOND_LOOP:%.*]]
 ; CHECK:       second_loop:
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND_1:%.*]]) [ "deopt"() ]
 ; CHECK-NEXT:    br label [[SECOND_LOOP]]
@@ -299,7 +299,7 @@ entry:
 first_loop:
 
   call void(i1, ...) @llvm.experimental.guard(i1 %cond_0) [ "deopt"() ]
-  br i1 undef, label %first_loop, label %second_loop
+  br i1 %arg, label %first_loop, label %second_loop
 
 second_loop:
 
@@ -309,13 +309,13 @@ second_loop:
 
 ; Same situation as in @f_9: no "obviously profitable" widening sites,
 ; so we refuse to do anything.
-define void @f_10(i32 %a, i1 %cond_0, i1 %cond_1) {
+define void @f_10(i32 %a, i1 %cond_0, i1 %cond_1, i1 %arg) {
 ; CHECK-LABEL: @f_10(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND_0:%.*]]) [ "deopt"() ]
-; CHECK-NEXT:    br i1 undef, label [[LOOP]], label [[NO_LOOP:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[LOOP]], label [[NO_LOOP:%.*]]
 ; CHECK:       no_loop:
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND_1:%.*]]) [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -326,7 +326,7 @@ entry:
 loop:
 
   call void(i1, ...) @llvm.experimental.guard(i1 %cond_0) [ "deopt"() ]
-  br i1 undef, label %loop, label %no_loop
+  br i1 %arg, label %loop, label %no_loop
 
 no_loop:
   call void(i1, ...) @llvm.experimental.guard(i1 %cond_1) [ "deopt"() ]
@@ -335,7 +335,7 @@ no_loop:
 
 ; With guards in loops, we're okay hoisting out the guard into the
 ; containing loop.
-define void @f_11(i32 %a, i1 %cond_0, i1 %cond_1) {
+define void @f_11(i32 %a, i1 %cond_0, i1 %cond_1, i1 %arg) {
 ; CHECK-LABEL: @f_11(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND_1_GW_FR:%.*]] = freeze i1 [[COND_1:%.*]]
@@ -343,7 +343,7 @@ define void @f_11(i32 %a, i1 %cond_0, i1 %cond_1) {
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_0:%.*]], [[COND_1_GW_FR]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK]]) [ "deopt"() ]
-; CHECK-NEXT:    br i1 undef, label [[INNER]], label [[OUTER:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[INNER]], label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    br label [[INNER]]
 ;
@@ -353,7 +353,7 @@ entry:
 inner:
 
   call void(i1, ...) @llvm.experimental.guard(i1 %cond_0) [ "deopt"() ]
-  br i1 undef, label %inner, label %outer
+  br i1 %arg, label %inner, label %outer
 
 outer:
   call void(i1, ...) @llvm.experimental.guard(i1 %cond_1) [ "deopt"() ]
@@ -441,13 +441,13 @@ entry:
   ret void
 }
 
-define void @f_13(i32 %a) {
+define void @f_13(i32 %a, i1 %arg) {
 ; CHECK-LABEL: @f_13(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND_0:%.*]] = icmp ult i32 [[A:%.*]], 14
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = icmp ult i32 [[A]], 10
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK]]) [ "deopt"() ]
-; CHECK-NEXT:    br i1 undef, label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[LEFT:%.*]], label [[RIGHT:%.*]]
 ; CHECK:       left:
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp slt i32 [[A]], 10
 ; CHECK-NEXT:    ret void
@@ -458,7 +458,7 @@ entry:
 
   %cond_0 = icmp ult i32 %a, 14
   call void(i1, ...) @llvm.experimental.guard(i1 %cond_0) [ "deopt"() ]
-  br i1 undef, label %left, label %right
+  br i1 %arg, label %left, label %right
 
 left:
   %cond_1 = icmp slt i32 %a, 10
@@ -469,12 +469,12 @@ right:
   ret void
 }
 
-define void @f_14(i32 %a) {
+define void @f_14(i32 %a, i1 %arg) {
 ; CHECK-LABEL: @f_14(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND_0:%.*]] = icmp ult i32 [[A:%.*]], 14
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND_0]]) [ "deopt"() ]
-; CHECK-NEXT:    br i1 undef, label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[LEFT:%.*]], label [[RIGHT:%.*]]
 ; CHECK:       left:
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp sgt i32 [[A]], 10
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND_1]]) [ "deopt"() ]
@@ -486,7 +486,7 @@ entry:
 
   %cond_0 = icmp ult i32 %a, 14
   call void(i1, ...) @llvm.experimental.guard(i1 %cond_0) [ "deopt"() ]
-  br i1 undef, label %left, label %right
+  br i1 %arg, label %left, label %right
 
 left:
 

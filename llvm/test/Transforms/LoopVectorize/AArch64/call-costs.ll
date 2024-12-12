@@ -21,8 +21,8 @@ define void @fshl_operand_first_order_recurrence(ptr %dst, ptr noalias %src) {
 ; CHECK-NEXT:    [[WIDE_LOAD1]] = load <2 x i64>, ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i64> [[VECTOR_RECUR]], <2 x i64> [[WIDE_LOAD]], <2 x i32> <i32 1, i32 2>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> [[WIDE_LOAD]], <2 x i64> [[WIDE_LOAD1]], <2 x i32> <i32 1, i32 2>
-; CHECK-NEXT:    [[TMP8:%.*]] = call <2 x i64> @llvm.fshl.v2i64(<2 x i64> <i64 1, i64 1>, <2 x i64> [[TMP6]], <2 x i64> <i64 1, i64 1>)
-; CHECK-NEXT:    [[TMP9:%.*]] = call <2 x i64> @llvm.fshl.v2i64(<2 x i64> <i64 1, i64 1>, <2 x i64> [[TMP7]], <2 x i64> <i64 1, i64 1>)
+; CHECK-NEXT:    [[TMP8:%.*]] = call <2 x i64> @llvm.fshl.v2i64(<2 x i64> splat (i64 1), <2 x i64> [[TMP6]], <2 x i64> splat (i64 1))
+; CHECK-NEXT:    [[TMP9:%.*]] = call <2 x i64> @llvm.fshl.v2i64(<2 x i64> splat (i64 1), <2 x i64> [[TMP7]], <2 x i64> splat (i64 1))
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[TMP10]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[TMP10]], i32 2

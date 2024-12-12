@@ -1119,6 +1119,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
     if (Name.consume_front("experimental.vector.")) {
       Intrinsic::ID ID =
           StringSwitch<Intrinsic::ID>(Name)
+              // Skip over extract.last.active, otherwise it will be 'upgraded'
+              // to a regular vector extract which is a different operation.
+              .StartsWith("extract.last.active.", Intrinsic::not_intrinsic)
               .StartsWith("extract.", Intrinsic::vector_extract)
               .StartsWith("insert.", Intrinsic::vector_insert)
               .StartsWith("splice.", Intrinsic::vector_splice)
@@ -5556,7 +5559,9 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     return Res;
   }
 
-  if (T.isSPARC()) {
+  if (T.isSPARC() || (T.isMIPS64() && !DL.contains("m:m")) || T.isPPC64() ||
+      T.isWasm()) {
+    // Mips64 with o32 ABI did not add "-i128:128".
     // Add "-i128:128"
     std::string I64 = "-i64:64";
     std::string I128 = "-i128:128";

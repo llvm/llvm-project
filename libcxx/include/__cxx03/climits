@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CLIMITS
-#define _LIBCPP_CLIMITS
+#ifndef _LIBCPP___CXX03_CLIMITS
+#define _LIBCPP___CXX03_CLIMITS
 
 /*
     climits synopsis
@@ -37,12 +37,12 @@ Macros:
 
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
-#include <limits.h>
+#include <__cxx03/limits.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-#endif // _LIBCPP_CLIMITS
+#endif // _LIBCPP___CXX03_CLIMITS

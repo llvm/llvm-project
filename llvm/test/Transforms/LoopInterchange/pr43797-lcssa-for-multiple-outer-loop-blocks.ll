@@ -59,7 +59,7 @@ inner.header:                                        ; preds = %for.inc, %for.bo
 
 inner.latch:                                          ; preds = %for.body6
   %inner.idx.inc = add nsw i64 %inner.idx, 1
-  br i1 undef, label %inner.header, label %inner.exit
+  br i1 false, label %inner.header, label %inner.exit
 
 inner.exit:                                          ; preds = %for.inc
   %outer.v = add nsw i64 %outer.idx, 1
@@ -67,7 +67,7 @@ inner.exit:                                          ; preds = %for.inc
 
 outer.latch:                                        ; preds = %for.end
   %outer.idx.inc = add nsw i64 %outer.idx, 1
-  br i1 undef, label %outer.header, label %outer.exit
+  br i1 false, label %outer.header, label %outer.exit
 
 outer.exit:                                        ; preds = %for.inc27
   %exit1.lcssa = phi i64 [ %outer.v, %outer.latch ]
@@ -133,7 +133,7 @@ inner.header:                                        ; preds = %for.inc, %for.bo
 
 inner.latch:                                          ; preds = %for.body6
   %inner.idx.inc = add nsw i64 %inner.idx , 1
-  br i1 undef, label %inner.header, label %inner.exit
+  br i1 false, label %inner.header, label %inner.exit
 
 inner.exit:                                          ; preds = %for.inc
   %outer.v = add nsw i64 %outer.idx, 1
@@ -141,7 +141,7 @@ inner.exit:                                          ; preds = %for.inc
 
 outer.latch:                                        ; preds = %for.end
   %outer.idx.inc = add nsw i64 %outer.idx, 1
-  br i1 undef, label %outer.header, label %outer.exit
+  br i1 false, label %outer.header, label %outer.exit
 
 outer.exit:                                        ; preds = %for.inc27
   %exit1.lcssa = phi i64 [ 0, %entry ], [ %outer.v, %outer.latch ]

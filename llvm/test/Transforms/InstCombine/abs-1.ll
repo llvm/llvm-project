@@ -385,7 +385,7 @@ define <2 x i8> @shifty_abs_commute1(<2 x i8> %x) {
 
 define <2 x i8> @shifty_abs_commute2(<2 x i8> %x) {
 ; CHECK-LABEL: @shifty_abs_commute2(
-; CHECK-NEXT:    [[Y:%.*]] = mul <2 x i8> [[X:%.*]], <i8 3, i8 3>
+; CHECK-NEXT:    [[Y:%.*]] = mul <2 x i8> [[X:%.*]], splat (i8 3)
 ; CHECK-NEXT:    [[ABS:%.*]] = call <2 x i8> @llvm.abs.v2i8(<2 x i8> [[Y]], i1 false)
 ; CHECK-NEXT:    ret <2 x i8> [[ABS]]
 ;

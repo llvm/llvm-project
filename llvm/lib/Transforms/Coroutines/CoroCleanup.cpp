@@ -78,7 +78,7 @@ bool Lowerer::lower(Function &F) {
       case Intrinsic::coro_end:
       case Intrinsic::coro_suspend_retcon:
         if (IsPrivateAndUnprocessed) {
-          II->replaceAllUsesWith(UndefValue::get(II->getType()));
+          II->replaceAllUsesWith(PoisonValue::get(II->getType()));
         } else
           continue;
         break;

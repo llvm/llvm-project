@@ -6,11 +6,11 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_TUPLE_H
-#define _LIBCPP___FWD_TUPLE_H
+#ifndef _LIBCPP___CXX03___FWD_TUPLE_H
+#define _LIBCPP___CXX03___FWD_TUPLE_H
 
-#include <__config>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -49,4 +49,4 @@ get(const tuple<_Tp...>&&) _NOEXCEPT;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FWD_TUPLE_H
+#endif // _LIBCPP___CXX03___FWD_TUPLE_H

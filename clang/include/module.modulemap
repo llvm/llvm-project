@@ -115,8 +115,7 @@ module Clang_Diagnostics {
   module Driver { header "clang/Driver/DriverDiagnostic.h" export * }
   module Frontend { header "clang/Frontend/FrontendDiagnostic.h" export * }
   module Lex { header "clang/Lex/LexDiagnostic.h" export * }
-  module Parse { header "clang/Parse/ParseDiagnostic.h" export * }
-  module Sema { header "clang/Sema/SemaDiagnostic.h" export * }
+  module Parse { header "clang/Basic/DiagnosticParse.h" export * }
   module Serialization { header "clang/Serialization/SerializationDiagnostic.h" export * }
   module Refactoring { header "clang/Tooling/Refactoring/RefactoringDiagnostic.h" export * }
 }
@@ -184,9 +183,14 @@ module Clang_StaticAnalyzer_Frontend {
   module * { export * }
 }
 
+module Clang_Support { requires cplusplus umbrella "clang/Support" module * { export * } }
+
 module Clang_Testing {
   requires cplusplus
   umbrella "clang/Testing"
+
+  textual header "clang/Testing/TestLanguage.def"
+
   module * { export * }
 }
 

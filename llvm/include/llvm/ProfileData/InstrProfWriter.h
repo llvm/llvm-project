@@ -78,12 +78,24 @@ private:
   // Whether to serialize the full schema.
   bool MemProfFullSchema;
 
+  // Whether to generated random memprof hotness for testing.
+  bool MemprofGenerateRandomHotness;
+
 public:
-  InstrProfWriter(
-      bool Sparse = false, uint64_t TemporalProfTraceReservoirSize = 0,
-      uint64_t MaxTemporalProfTraceLength = 0, bool WritePrevVersion = false,
-      memprof::IndexedVersion MemProfVersionRequested = memprof::Version0,
-      bool MemProfFullSchema = false);
+  // For memprof testing, random hotness can be assigned to the contexts if
+  // MemprofGenerateRandomHotness is enabled. The random seed can be either
+  // provided by MemprofGenerateRandomHotnessSeed, or if that is 0, one will be
+  // generated in the writer using the current time.
+  InstrProfWriter(bool Sparse = false,
+                  uint64_t TemporalProfTraceReservoirSize = 0,
+                  uint64_t MaxTemporalProfTraceLength = 0,
+                  bool WritePrevVersion = false,
+                  memprof::IndexedVersion MemProfVersionRequested =
+                      static_cast<memprof::IndexedVersion>(
+                          memprof::MinimumSupportedVersion),
+                  bool MemProfFullSchema = false,
+                  bool MemprofGenerateRandomHotness = false,
+                  unsigned MemprofGenerateRandomHotnessSeed = 0);
   ~InstrProfWriter();
 
   StringMap<ProfilingData> &getProfileData() { return FunctionData; }
@@ -117,6 +129,10 @@ public:
   bool addMemProfCallStack(const memprof::CallStackId CSId,
                            const llvm::SmallVector<memprof::FrameId> &CallStack,
                            function_ref<void(Error)> Warn);
+
+  /// Add the entire MemProfData \p Incoming to the writer context.
+  bool addMemProfData(memprof::IndexedMemProfData Incoming,
+                      function_ref<void(Error)> Warn);
 
   // Add a binary id to the binary ids list.
   void addBinaryIds(ArrayRef<llvm::object::BuildID> BIs);
@@ -174,7 +190,9 @@ public:
       return make_error<InstrProfError>(instrprof_error::unsupported_version);
     }
     if (testIncompatible(InstrProfKind::FunctionEntryOnly,
-                         InstrProfKind::FunctionEntryInstrumentation)) {
+                         InstrProfKind::FunctionEntryInstrumentation) ||
+        testIncompatible(InstrProfKind::FunctionEntryOnly,
+                         InstrProfKind::LoopEntriesInstrumentation)) {
       return make_error<InstrProfError>(
           instrprof_error::unsupported_version,
           "cannot merge FunctionEntryOnly profiles and BB profiles together");
@@ -218,6 +236,9 @@ private:
   // back patching.
   uint64_t writeHeader(const IndexedInstrProf::Header &header,
                        const bool WritePrevVersion, ProfOStream &OS);
+
+  // Writes binary IDs.
+  Error writeBinaryIds(ProfOStream &OS);
 
   // Writes compressed vtable names to profiles.
   Error writeVTableNames(ProfOStream &OS);

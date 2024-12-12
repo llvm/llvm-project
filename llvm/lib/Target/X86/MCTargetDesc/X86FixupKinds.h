@@ -24,6 +24,8 @@ enum Fixups {
                                              // instruction with rex prefix
   reloc_riprel_4byte_relax_rex2,             // 32-bit rip-relative in relaxable
                                              // instruction with rex2 prefix
+  reloc_riprel_6byte_relax,                  // 32-bit rip-relative in relaxable
+                                             // instruction with APX NDD
   reloc_signed_4byte,                        // 32-bit signed. Unlike FK_Data_4
                                              // this will be sign extended at
                                              // runtime.

@@ -10,7 +10,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ;
 ; CHECK-NOT: Found uniform instruction: %cond = icmp slt i64 %i.next, %n
 ; CHECK:     vector.body
-; CHECK:       %[[I:.+]] = add nuw nsw <4 x i64> %vec.ind, <i64 1, i64 1, i64 1, i64 1>
+; CHECK:       %[[I:.+]] = add nuw nsw <4 x i64> %vec.ind, splat (i64 1)
 ; CHECK:       icmp slt <4 x i64> %[[I]], %broadcast.splat
 ; CHECK:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;
@@ -72,7 +72,7 @@ for.end:
 ; CHECK-NEXT:  Successor(s): loop.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.0:
-; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = add vp<[[CAN_IV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successor
 ; CHECK-NEXT: }

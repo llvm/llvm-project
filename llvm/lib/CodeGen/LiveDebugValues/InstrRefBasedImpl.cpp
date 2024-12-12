@@ -2927,7 +2927,7 @@ std::optional<ValueIDNum> InstrRefBasedLDV::pickOperandPHILoc(
     SmallVector<LocIdx, 4> NewCandidates;
     std::set_intersection(CandidateLocs.begin(), CandidateLocs.end(),
                           LocVec.begin(), LocVec.end(), std::inserter(NewCandidates, NewCandidates.begin()));
-    CandidateLocs = NewCandidates;
+    CandidateLocs = std::move(NewCandidates);
   }
   if (CandidateLocs.empty())
     return std::nullopt;

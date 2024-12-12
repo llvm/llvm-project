@@ -6,7 +6,7 @@ declare <8 x i8> @llvm.abs.v8i8(<8 x i8>, i1)
 
 define i8 @undef_val_min_poison() {
 ; CHECK-LABEL: @undef_val_min_poison(
-; CHECK-NEXT:    ret i8 undef
+; CHECK-NEXT:    ret i8 poison
 ;
   %r = call i8 @llvm.abs.i8(i8 undef, i1 true)
   ret i8 %r
@@ -22,7 +22,7 @@ define i8 @undef_val_min_not_poison() {
 
 define i8 @min_val_min_poison() {
 ; CHECK-LABEL: @min_val_min_poison(
-; CHECK-NEXT:    ret i8 undef
+; CHECK-NEXT:    ret i8 poison
 ;
   %r = call i8 @llvm.abs.i8(i8 -128, i1 true)
   ret i8 %r

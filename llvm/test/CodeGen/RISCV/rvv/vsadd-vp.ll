@@ -572,8 +572,8 @@ declare <vscale x 128 x i8> @llvm.vp.sadd.sat.nxv128i8(<vscale x 128 x i8>, <vsc
 define <vscale x 128 x i8> @vsadd_vi_nxv128i8(<vscale x 128 x i8> %va, <vscale x 128 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsadd_vi_nxv128i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    vlm.v v0, (a0)
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
@@ -1350,12 +1350,12 @@ declare <vscale x 32 x i32> @llvm.vp.sadd.sat.nxv32i32(<vscale x 32 x i32>, <vsc
 define <vscale x 32 x i32> @vsadd_vi_nxv32i32(<vscale x 32 x i32> %va, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsadd_vi_nxv32i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 2
-; CHECK-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-NEXT:    sub a2, a0, a1
 ; CHECK-NEXT:    sltu a3, a0, a2
 ; CHECK-NEXT:    addi a3, a3, -1
@@ -1431,6 +1431,7 @@ define <vscale x 1 x i64> @vsadd_vx_nxv1i64(<vscale x 1 x i64> %va, i64 %b, <vsc
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vsadd.vv v8, v8, v9, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vsadd_vx_nxv1i64:
@@ -1457,6 +1458,7 @@ define <vscale x 1 x i64> @vsadd_vx_nxv1i64_unmasked(<vscale x 1 x i64> %va, i64
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vsadd.vv v8, v8, v9
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vsadd_vx_nxv1i64_unmasked:
@@ -1525,6 +1527,7 @@ define <vscale x 2 x i64> @vsadd_vx_nxv2i64(<vscale x 2 x i64> %va, i64 %b, <vsc
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; RV32-NEXT:    vsadd.vv v8, v8, v10, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vsadd_vx_nxv2i64:
@@ -1551,6 +1554,7 @@ define <vscale x 2 x i64> @vsadd_vx_nxv2i64_unmasked(<vscale x 2 x i64> %va, i64
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; RV32-NEXT:    vsadd.vv v8, v8, v10
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vsadd_vx_nxv2i64_unmasked:
@@ -1619,6 +1623,7 @@ define <vscale x 4 x i64> @vsadd_vx_nxv4i64(<vscale x 4 x i64> %va, i64 %b, <vsc
 ; RV32-NEXT:    vsetvli zero, a2, e64, m4, ta, ma
 ; RV32-NEXT:    vsadd.vv v8, v8, v12, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vsadd_vx_nxv4i64:
@@ -1645,6 +1650,7 @@ define <vscale x 4 x i64> @vsadd_vx_nxv4i64_unmasked(<vscale x 4 x i64> %va, i64
 ; RV32-NEXT:    vsetvli zero, a2, e64, m4, ta, ma
 ; RV32-NEXT:    vsadd.vv v8, v8, v12
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vsadd_vx_nxv4i64_unmasked:
@@ -1713,6 +1719,7 @@ define <vscale x 8 x i64> @vsadd_vx_nxv8i64(<vscale x 8 x i64> %va, i64 %b, <vsc
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vsadd.vv v8, v8, v16, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vsadd_vx_nxv8i64:
@@ -1739,6 +1746,7 @@ define <vscale x 8 x i64> @vsadd_vx_nxv8i64_unmasked(<vscale x 8 x i64> %va, i64
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vsadd.vv v8, v8, v16
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vsadd_vx_nxv8i64_unmasked:

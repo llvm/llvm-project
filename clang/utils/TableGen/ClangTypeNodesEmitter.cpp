@@ -1,4 +1,4 @@
-//=== ClangTypeNodesEmitter.cpp - Generate type node tables -----*- C++ -*-===//
+//===-- ClangTypeNodesEmitter.cpp - Generate type node tables -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -52,8 +52,6 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include <set>
-#include <string>
 #include <vector>
 
 using namespace llvm;

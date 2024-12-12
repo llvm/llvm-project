@@ -401,7 +401,7 @@ define <8 x i8> @narrow_zext_ashr_keep_trunc_vector(<8 x i8> %i1, <8 x i8> %i2) 
 ; CHECK-NEXT:    [[I1_EXT:%.*]] = sext <8 x i8> [[I1]] to <8 x i32>
 ; CHECK-NEXT:    [[I2_EXT:%.*]] = sext <8 x i8> [[I2]] to <8 x i32>
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw <8 x i32> [[I1_EXT]], [[I2_EXT]]
-; CHECK-NEXT:    [[SHIFT:%.*]] = lshr <8 x i32> [[SUB]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[SHIFT:%.*]] = lshr <8 x i32> [[SUB]], splat (i32 1)
 ; CHECK-NEXT:    [[T:%.*]] = trunc <8 x i32> [[SHIFT]] to <8 x i8>
 ; CHECK-NEXT:    ret <8 x i8> [[T]]
 ;

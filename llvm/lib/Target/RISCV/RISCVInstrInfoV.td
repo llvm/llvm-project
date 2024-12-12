@@ -104,13 +104,28 @@ class SchedCommon<list<SchedWrite> writes, list<SchedRead> reads,
                   string mx = "WorstCase", int sew = 0, bit forceMasked = 0,
                   bit forcePassthruRead = 0> : Sched<[]> {
   defvar isMasked = !ne(!find(NAME, "_MASK"), -1);
+  defvar isTied = !ne(!find(NAME, "_TIED"), -1);
   defvar isMaskedOrForceMasked = !or(forceMasked, isMasked);
+  defvar isTiedMasked = !and(isMaskedOrForceMasked, isTied);
   defvar passthruRead = !if(!or(!eq(mx, "WorstCase"), !eq(sew, 0)),
                             !cast<SchedRead>("ReadVPassthru_" # mx),
                             !cast<SchedRead>("ReadVPassthru_" # mx # "_E" #sew));
-  defvar needsPassthruRead = !or(isMaskedOrForceMasked, forcePassthruRead);
+  // We don't need passthru operand if it's already _TIED without mask.
+  defvar needsForcePassthruRead = !and(forcePassthruRead, !not(isTied));
+  defvar needsPassthruRead = !or(isMaskedOrForceMasked, needsForcePassthruRead);
+  // If this is a _TIED + masked operation, $rs2 (i.e. the first operand) is
+  // merged with the mask.
+  // NOTE: the following if statement is written in such a weird way because
+  // should we want to write something like
+  // `!if(!and(!not(!empty(reads), isTiedMasked), !tail(reads), reads)`
+  // since `!if` doesn't have a proper short-circuit behavior, if the
+  // condition of this `!if` cannot be resolved right away, `!tail(reads)` will
+  // be immediately evaluated anyway even when `reads` is empty, which leads to
+  // an assertion failure.
+  defvar readsWithTiedMask =
+      !if(isTiedMasked, !if(!not(!empty(reads)), !tail(reads), reads), reads);
   defvar readsWithMask =
-      !if(isMaskedOrForceMasked, !listconcat(reads, [ReadVMask]), reads);
+      !if(isMaskedOrForceMasked, !listconcat(readsWithTiedMask, [ReadVMask]), reads);
   defvar allReads =
       !if(needsPassthruRead, !listconcat([passthruRead], readsWithMask), reads);
   let SchedRW = !listconcat(writes, allReads);
@@ -1711,7 +1726,7 @@ foreach n = [1, 2, 4, 8] in {
   def VMV#n#R_V  : RVInstV<0b100111, !add(n, -1), OPIVI, (outs vrc:$vd),
                            (ins vrc:$vs2), "vmv" # n # "r.v", "$vd, $vs2">,
                    VMVRSched<n> {
-    let Uses = [];
+    let Uses = [VTYPE];
     let vm = 1;
   }
 }

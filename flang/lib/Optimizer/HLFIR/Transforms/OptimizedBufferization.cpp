@@ -20,6 +20,7 @@
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
+#include "flang/Optimizer/OpenMP/Passes.h"
 #include "flang/Optimizer/Transforms/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Dominance.h"
@@ -337,34 +338,20 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
   if (!fir::isa_trivial(eleTy))
     return std::nullopt;
 
-  // the array must have the same shape as the elemental. CSE should have
-  // deduplicated the fir.shape operations where they are provably the same
-  // so we just have to check for the same ssa value
-  // TODO: add more ways of getting the shape of the array
-  mlir::Value arrayShape;
-  if (match.array.getDefiningOp())
-    arrayShape =
-        mlir::TypeSwitch<mlir::Operation *, mlir::Value>(
-            match.array.getDefiningOp())
-            .Case([](hlfir::DesignateOp designate) {
-              return designate.getShape();
-            })
-            .Case([](hlfir::DeclareOp declare) { return declare.getShape(); })
-            .Default([](mlir::Operation *) { return mlir::Value{}; });
-  if (!arrayShape) {
-    LLVM_DEBUG(llvm::dbgs() << "Can't get shape of " << match.array << " at "
-                            << elemental->getLoc() << "\n");
+  // The array must have the same shape as the elemental.
+  //
+  // f2018 10.2.1.2 (3) requires the lhs and rhs of an assignment to be
+  // conformable unless the lhs is an allocatable array. In HLFIR we can
+  // see this from the presence or absence of the realloc attribute on
+  // hlfir.assign. If it is not a realloc assignment, we can trust that
+  // the shapes do conform.
+  //
+  // TODO: the lhs's shape is dynamic, so it is hard to prove that
+  // there is no reallocation of the lhs due to the assignment.
+  // We can probably try generating multiple versions of the code
+  // with checking for the shape match, length parameters match, etc.
+  if (match.assign.getRealloc())
     return std::nullopt;
-  }
-  if (arrayShape != elemental.getShape()) {
-    // f2018 10.2.1.2 (3) requires the lhs and rhs of an assignment to be
-    // conformable unless the lhs is an allocatable array. In HLFIR we can
-    // see this from the presence or absence of the realloc attribute on
-    // hlfir.assign. If it is not a realloc assignment, we can trust that
-    // the shapes do conform
-    if (match.assign.getRealloc())
-      return std::nullopt;
-  }
 
   // the transformation wants to apply the elemental in a do-loop at the
   // hlfir.assign, check there are no effects which make this unsafe
@@ -482,8 +469,9 @@ llvm::LogicalResult ElementalAssignBufferization::matchAndRewrite(
   // Generate a loop nest looping around the hlfir.elemental shape and clone
   // hlfir.elemental region inside the inner loop
   hlfir::LoopNest loopNest =
-      hlfir::genLoopNest(loc, builder, extents, !elemental.isOrdered());
-  builder.setInsertionPointToStart(loopNest.innerLoop.getBody());
+      hlfir::genLoopNest(loc, builder, extents, !elemental.isOrdered(),
+                         flangomp::shouldUseWorkshareLowering(elemental));
+  builder.setInsertionPointToStart(loopNest.body);
   auto yield = hlfir::inlineElementalOp(loc, builder, elemental,
                                         loopNest.oneBasedIndices);
   hlfir::Entity elementValue{yield.getElementValue()};
@@ -553,8 +541,9 @@ llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
   llvm::SmallVector<mlir::Value> extents =
       hlfir::getIndexExtents(loc, builder, shape);
   hlfir::LoopNest loopNest =
-      hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true);
-  builder.setInsertionPointToStart(loopNest.innerLoop.getBody());
+      hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,
+                         flangomp::shouldUseWorkshareLowering(assign));
+  builder.setInsertionPointToStart(loopNest.body);
   auto arrayElement =
       hlfir::getElementAt(loc, builder, lhs, loopNest.oneBasedIndices);
   builder.create<hlfir::AssignOp>(loc, rhs, arrayElement);
@@ -598,11 +587,14 @@ llvm::LogicalResult VariableAssignBufferization::matchAndRewrite(
     return rewriter.notifyMatchFailure(assign, "AssignOp may imply allocation");
 
   hlfir::Entity rhs{assign.getRhs()};
-  // TODO: ExprType check is here to avoid conflicts with
-  // ElementalAssignBufferization pattern. We need to combine
-  // these matchers into a single one that applies to AssignOp.
-  if (mlir::isa<hlfir::ExprType>(rhs.getType()))
-    return rewriter.notifyMatchFailure(assign, "RHS is not in memory");
+
+  // To avoid conflicts with ElementalAssignBufferization pattern, we avoid
+  // matching RHS when it is an `ExprType` defined by an `ElementalOp`; which is
+  // among the main criteria matched by ElementalAssignBufferization.
+  if (mlir::isa<hlfir::ExprType>(rhs.getType()) &&
+      mlir::isa<hlfir::ElementalOp>(rhs.getDefiningOp()))
+    return rewriter.notifyMatchFailure(
+        assign, "RHS is an ExprType defined by ElementalOp");
 
   if (!rhs.isArray())
     return rewriter.notifyMatchFailure(assign,
@@ -648,8 +640,9 @@ llvm::LogicalResult VariableAssignBufferization::matchAndRewrite(
   llvm::SmallVector<mlir::Value> extents =
       hlfir::getIndexExtents(loc, builder, shape);
   hlfir::LoopNest loopNest =
-      hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true);
-  builder.setInsertionPointToStart(loopNest.innerLoop.getBody());
+      hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,
+                         flangomp::shouldUseWorkshareLowering(assign));
+  builder.setInsertionPointToStart(loopNest.body);
   auto rhsArrayElement =
       hlfir::getElementAt(loc, builder, rhs, loopNest.oneBasedIndices);
   rhsArrayElement = hlfir::loadTrivialScalar(loc, builder, rhsArrayElement);
@@ -1101,6 +1094,100 @@ public:
   }
 };
 
+class EvaluateIntoMemoryAssignBufferization
+    : public mlir::OpRewritePattern<hlfir::EvaluateInMemoryOp> {
+
+public:
+  using mlir::OpRewritePattern<hlfir::EvaluateInMemoryOp>::OpRewritePattern;
+
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::EvaluateInMemoryOp,
+                  mlir::PatternRewriter &rewriter) const override;
+};
+
+static llvm::LogicalResult
+tryUsingAssignLhsDirectly(hlfir::EvaluateInMemoryOp evalInMem,
+                          mlir::PatternRewriter &rewriter) {
+  mlir::Location loc = evalInMem.getLoc();
+  hlfir::DestroyOp destroy;
+  hlfir::AssignOp assign;
+  for (auto user : llvm::enumerate(evalInMem->getUsers())) {
+    if (user.index() > 2)
+      return mlir::failure();
+    mlir::TypeSwitch<mlir::Operation *, void>(user.value())
+        .Case([&](hlfir::AssignOp op) { assign = op; })
+        .Case([&](hlfir::DestroyOp op) { destroy = op; });
+  }
+  if (!assign || !destroy || destroy.mustFinalizeExpr() ||
+      assign.isAllocatableAssignment())
+    return mlir::failure();
+
+  hlfir::Entity lhs{assign.getLhs()};
+  // EvaluateInMemoryOp memory is contiguous, so in general, it can only be
+  // replace by the LHS if the LHS is contiguous.
+  if (!lhs.isSimplyContiguous())
+    return mlir::failure();
+  // Character assignment may involves truncation/padding, so the LHS
+  // cannot be used to evaluate RHS in place without proving the LHS and
+  // RHS lengths are the same.
+  if (lhs.isCharacter())
+    return mlir::failure();
+  fir::AliasAnalysis aliasAnalysis;
+  // The region must not read or write the LHS.
+  // Note that getModRef is used instead of mlir::MemoryEffects because
+  // EvaluateInMemoryOp is typically expected to hold fir.calls and that
+  // Fortran calls cannot be modeled in a useful way with mlir::MemoryEffects:
+  // it is hard/impossible to list all the read/written SSA values in a call,
+  // but it is often possible to tell that an SSA value cannot be accessed,
+  // hence getModRef is needed here and below. Also note that getModRef uses
+  // mlir::MemoryEffects for operations that do not have special handling in
+  // getModRef.
+  if (aliasAnalysis.getModRef(evalInMem.getBody(), lhs).isModOrRef())
+    return mlir::failure();
+  // Any variables affected between the hlfir.evalInMem and assignment must not
+  // be read or written inside the region since it will be moved at the
+  // assignment insertion point.
+  auto effects = getEffectsBetween(evalInMem->getNextNode(), assign);
+  if (!effects) {
+    LLVM_DEBUG(
+        llvm::dbgs()
+        << "operation with unknown effects between eval_in_mem and assign\n");
+    return mlir::failure();
+  }
+  for (const mlir::MemoryEffects::EffectInstance &effect : *effects) {
+    mlir::Value affected = effect.getValue();
+    if (!affected ||
+        aliasAnalysis.getModRef(evalInMem.getBody(), affected).isModOrRef())
+      return mlir::failure();
+  }
+
+  rewriter.setInsertionPoint(assign);
+  fir::FirOpBuilder builder(rewriter, evalInMem.getOperation());
+  mlir::Value rawLhs = hlfir::genVariableRawAddress(loc, builder, lhs);
+  hlfir::computeEvaluateOpIn(loc, builder, evalInMem, rawLhs);
+  rewriter.eraseOp(assign);
+  rewriter.eraseOp(destroy);
+  rewriter.eraseOp(evalInMem);
+  return mlir::success();
+}
+
+llvm::LogicalResult EvaluateIntoMemoryAssignBufferization::matchAndRewrite(
+    hlfir::EvaluateInMemoryOp evalInMem,
+    mlir::PatternRewriter &rewriter) const {
+  if (mlir::succeeded(tryUsingAssignLhsDirectly(evalInMem, rewriter)))
+    return mlir::success();
+  // Rewrite to temp + as_expr here so that the assign + as_expr pattern can
+  // kick-in for simple types and at least implement the assignment inline
+  // instead of call Assign runtime.
+  fir::FirOpBuilder builder(rewriter, evalInMem.getOperation());
+  mlir::Location loc = evalInMem.getLoc();
+  auto [temp, isHeapAllocated] = hlfir::computeEvaluateOpInNewTemp(
+      loc, builder, evalInMem, evalInMem.getShape(), evalInMem.getTypeparams());
+  rewriter.replaceOpWithNewOp<hlfir::AsExprOp>(
+      evalInMem, temp, /*mustFree=*/builder.createBool(loc, isHeapAllocated));
+  return mlir::success();
+}
+
 class OptimizedBufferizationPass
     : public hlfir::impl::OptimizedBufferizationBase<
           OptimizedBufferizationPass> {
@@ -1123,6 +1210,7 @@ public:
     patterns.insert<ElementalAssignBufferization>(context);
     patterns.insert<BroadcastAssignBufferization>(context);
     patterns.insert<VariableAssignBufferization>(context);
+    patterns.insert<EvaluateIntoMemoryAssignBufferization>(context);
     patterns.insert<ReductionConversion<hlfir::CountOp>>(context);
     patterns.insert<ReductionConversion<hlfir::AnyOp>>(context);
     patterns.insert<ReductionConversion<hlfir::AllOp>>(context);

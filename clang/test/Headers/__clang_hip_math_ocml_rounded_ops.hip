@@ -297,9 +297,9 @@ extern "C" __device__ double test___dmul_rz(double x, double y) {
 
 // CHECK-LABEL: @test___drcp_rd(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CONV:%.*]] = fpext float [[X:%.*]] to double
+// CHECK-NEXT:    [[CONV:%.*]] = fpext contract float [[X:%.*]] to double
 // CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_div_rtn_f64(double noundef 1.000000e+00, double noundef [[CONV]]) #[[ATTR3]]
-// CHECK-NEXT:    [[CONV1:%.*]] = fptrunc double [[CALL_I]] to float
+// CHECK-NEXT:    [[CONV1:%.*]] = fptrunc contract double [[CALL_I]] to float
 // CHECK-NEXT:    ret float [[CONV1]]
 //
 extern "C" __device__ float test___drcp_rd(float x) {
@@ -308,9 +308,9 @@ extern "C" __device__ float test___drcp_rd(float x) {
 
 // CHECK-LABEL: @test___drcp_rn(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CONV:%.*]] = fpext float [[X:%.*]] to double
+// CHECK-NEXT:    [[CONV:%.*]] = fpext contract float [[X:%.*]] to double
 // CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_div_rte_f64(double noundef 1.000000e+00, double noundef [[CONV]]) #[[ATTR3]]
-// CHECK-NEXT:    [[CONV1:%.*]] = fptrunc double [[CALL_I]] to float
+// CHECK-NEXT:    [[CONV1:%.*]] = fptrunc contract double [[CALL_I]] to float
 // CHECK-NEXT:    ret float [[CONV1]]
 //
 extern "C" __device__ float test___drcp_rn(float x) {
@@ -319,9 +319,9 @@ extern "C" __device__ float test___drcp_rn(float x) {
 
 // CHECK-LABEL: @test___drcp_ru(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CONV:%.*]] = fpext float [[X:%.*]] to double
+// CHECK-NEXT:    [[CONV:%.*]] = fpext contract float [[X:%.*]] to double
 // CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_div_rtp_f64(double noundef 1.000000e+00, double noundef [[CONV]]) #[[ATTR3]]
-// CHECK-NEXT:    [[CONV1:%.*]] = fptrunc double [[CALL_I]] to float
+// CHECK-NEXT:    [[CONV1:%.*]] = fptrunc contract double [[CALL_I]] to float
 // CHECK-NEXT:    ret float [[CONV1]]
 //
 extern "C" __device__ float test___drcp_ru(float x) {
@@ -330,9 +330,9 @@ extern "C" __device__ float test___drcp_ru(float x) {
 
 // CHECK-LABEL: @test___drcp_rz(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CONV:%.*]] = fpext float [[X:%.*]] to double
+// CHECK-NEXT:    [[CONV:%.*]] = fpext contract float [[X:%.*]] to double
 // CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_div_rtz_f64(double noundef 1.000000e+00, double noundef [[CONV]]) #[[ATTR3]]
-// CHECK-NEXT:    [[CONV1:%.*]] = fptrunc double [[CALL_I]] to float
+// CHECK-NEXT:    [[CONV1:%.*]] = fptrunc contract double [[CALL_I]] to float
 // CHECK-NEXT:    ret float [[CONV1]]
 //
 extern "C" __device__ float test___drcp_rz(float x) {
@@ -341,9 +341,9 @@ extern "C" __device__ float test___drcp_rz(float x) {
 
 // CHECK-LABEL: @test___dsqrt_rd(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CONV:%.*]] = fpext float [[X:%.*]] to double
+// CHECK-NEXT:    [[CONV:%.*]] = fpext contract float [[X:%.*]] to double
 // CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_sqrt_rtn_f64(double noundef [[CONV]]) #[[ATTR3]]
-// CHECK-NEXT:    [[CONV1:%.*]] = fptrunc double [[CALL_I]] to float
+// CHECK-NEXT:    [[CONV1:%.*]] = fptrunc contract double [[CALL_I]] to float
 // CHECK-NEXT:    ret float [[CONV1]]
 //
 extern "C" __device__ float test___dsqrt_rd(float x) {
@@ -352,9 +352,9 @@ extern "C" __device__ float test___dsqrt_rd(float x) {
 
 // CHECK-LABEL: @test___dsqrt_rn(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CONV:%.*]] = fpext float [[X:%.*]] to double
+// CHECK-NEXT:    [[CONV:%.*]] = fpext contract float [[X:%.*]] to double
 // CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_sqrt_rte_f64(double noundef [[CONV]]) #[[ATTR3]]
-// CHECK-NEXT:    [[CONV1:%.*]] = fptrunc double [[CALL_I]] to float
+// CHECK-NEXT:    [[CONV1:%.*]] = fptrunc contract double [[CALL_I]] to float
 // CHECK-NEXT:    ret float [[CONV1]]
 //
 extern "C" __device__ float test___dsqrt_rn(float x) {
@@ -363,9 +363,9 @@ extern "C" __device__ float test___dsqrt_rn(float x) {
 
 // CHECK-LABEL: @test___dsqrt_ru(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CONV:%.*]] = fpext float [[X:%.*]] to double
+// CHECK-NEXT:    [[CONV:%.*]] = fpext contract float [[X:%.*]] to double
 // CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_sqrt_rtp_f64(double noundef [[CONV]]) #[[ATTR3]]
-// CHECK-NEXT:    [[CONV1:%.*]] = fptrunc double [[CALL_I]] to float
+// CHECK-NEXT:    [[CONV1:%.*]] = fptrunc contract double [[CALL_I]] to float
 // CHECK-NEXT:    ret float [[CONV1]]
 //
 extern "C" __device__ float test___dsqrt_ru(float x) {
@@ -374,9 +374,9 @@ extern "C" __device__ float test___dsqrt_ru(float x) {
 
 // CHECK-LABEL: @test___dsqrt_rz(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CONV:%.*]] = fpext float [[X:%.*]] to double
+// CHECK-NEXT:    [[CONV:%.*]] = fpext contract float [[X:%.*]] to double
 // CHECK-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_sqrt_rtz_f64(double noundef [[CONV]]) #[[ATTR3]]
-// CHECK-NEXT:    [[CONV1:%.*]] = fptrunc double [[CALL_I]] to float
+// CHECK-NEXT:    [[CONV1:%.*]] = fptrunc contract double [[CALL_I]] to float
 // CHECK-NEXT:    ret float [[CONV1]]
 //
 extern "C" __device__ float test___dsqrt_rz(float x) {

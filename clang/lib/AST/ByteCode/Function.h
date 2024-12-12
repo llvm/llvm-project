@@ -94,10 +94,10 @@ public:
 
   /// Returns the original FunctionDecl.
   const FunctionDecl *getDecl() const {
-    return Source.dyn_cast<const FunctionDecl *>();
+    return dyn_cast<const FunctionDecl *>(Source);
   }
   const BlockExpr *getExpr() const {
-    return Source.dyn_cast<const BlockExpr *>();
+    return dyn_cast<const BlockExpr *>(Source);
   }
 
   /// Returns the name of the function decl this code
@@ -146,18 +146,18 @@ public:
   /// Checks if the function is a constructor.
   bool isConstructor() const {
     return isa_and_nonnull<CXXConstructorDecl>(
-        Source.dyn_cast<const FunctionDecl *>());
+        dyn_cast<const FunctionDecl *>(Source));
   }
   /// Checks if the function is a destructor.
   bool isDestructor() const {
     return isa_and_nonnull<CXXDestructorDecl>(
-        Source.dyn_cast<const FunctionDecl *>());
+        dyn_cast<const FunctionDecl *>(Source));
   }
 
   /// Returns the parent record decl, if any.
   const CXXRecordDecl *getParentDecl() const {
     if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(
-            Source.dyn_cast<const FunctionDecl *>()))
+            dyn_cast<const FunctionDecl *>(Source)))
       return MD->getParent();
     return nullptr;
   }
@@ -166,7 +166,7 @@ public:
   /// which we generate custom byte code for.
   bool isLambdaStaticInvoker() const {
     if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(
-            Source.dyn_cast<const FunctionDecl *>()))
+            dyn_cast<const FunctionDecl *>(Source)))
       return MD->isLambdaStaticInvoker();
     return false;
   }
@@ -175,7 +175,7 @@ public:
   /// of a lambda record decl.
   bool isLambdaCallOperator() const {
     if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(
-            Source.dyn_cast<const FunctionDecl *>()))
+            dyn_cast<const FunctionDecl *>(Source)))
       return clang::isLambdaCallOperator(MD);
     return false;
   }

@@ -311,11 +311,6 @@ The :doc:`CodeOfConduct` applies to all office hours.
     - Monthly, last Monday of the month at 18:00 London time (typically 9am PT), for 30 minutes.
     - `Video Call <https://meet.grosser.science/LLVMOfficeHours>`__
     - English, German, Spanish, French
-  * - Anastasia Stulova
-    - Clang internals for C/C++ language extensions and dialects, OpenCL, GPU, SPIR-V, how to contribute, women in compilers.
-    - Monthly, 1st Tuesday of the month at 17:00 BST - London time (9:00am PT except for 2 weeks in spring), 30 mins slot.
-    - `GoogleMeet <https://meet.google.com/kdy-fdbv-nuk>`__
-    - English, Russian, German (not fluently)
   * - Alexey Bader
     - SYCL compiler, offload tools, OpenCL and SPIR-V, how to contribute.
     - Monthly, 2nd Monday of the month at 9:30am PT, for 30 minutes.
@@ -373,11 +368,7 @@ Guidance for office hours hosts
 * When starting an office hours session, consider typing something like "*Hi,
   I'm available for chats in the next half hour at* video chat URL. *I'm
   looking forward to having conversations on the video chat or here.*" on the
-  LLVM chat channels that you are already on. These could include:
-
-    * the `#office-hours Discord channel
-      <https://discord.com/channels/636084430946959380/976196303681896538>`__.
-    * :ref:`IRC`
+  the `#office-hours Discord channel <https://discord.com/channels/636084430946959380/976196303681896538>`__.
 
   Doing this can help:
     * overcome potential anxiety to call in for a first time,
@@ -388,27 +379,18 @@ Guidance for office hours hosts
   from the list above.
 
 
-.. _IRC:
-
-IRC
----
+Discord
+-------
 
 Users and developers of the LLVM project (including subprojects such as Clang)
-can be found in #llvm on `irc.oftc.net <irc://irc.oftc.net/llvm>`_. The channel
-is actively moderated.
+can be found on the community's `Discord <https://discord.com/channels/636084430946959380/636725486533345280>`_
+chat server. The server is actively moderated.
 
-The #llvm-build channel has a bot for
+The #buildbot-status channel has a bot for
 `LLVM buildbot <http://lab.llvm.org/buildbot/#/console>`_ status changes. The
-bot will post a message with a link to a build bot and a blamelist when a build
-goes from passing to failing and again (without the blamelist) when the build
-goes from failing back to passing. It is a good channel for actively monitoring
-build statuses, but it is a noisy channel due to the automated messages. The
-channel is not actively moderated.
-
-In addition to the traditional IRC there is a
-`Discord <https://discord.com/channels/636084430946959380/636725486533345280>`_
-chat server available. To sign up, please use this
-`invitation link <https://discord.com/invite/xS7Z362>`_.
+bot will update the channel with a link to a build bot when a build goes from
+passing to failing and again when the build goes from failing back to passing.
+It is a great way to actively monitor the status of the build.
 
 
 .. _meetups-social-events:

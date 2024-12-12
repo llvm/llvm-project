@@ -1,6 +1,7 @@
-// RUN: mlir-vulkan-runner %s \
-// RUN:  --shared-libs=%vulkan-runtime-wrappers,%mlir_runner_utils \
-// RUN:  --entry-point-result=void | FileCheck %s
+// RUN: mlir-opt %s -test-vulkan-runner-pipeline \
+// RUN:   | mlir-vulkan-runner - \
+// RUN:     --shared-libs=%vulkan-runtime-wrappers,%mlir_runner_utils \
+// RUN:     --entry-point-result=void | FileCheck %s
 
 // CHECK: [2, 1, 3, 3]
 module attributes {

@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___THREAD_ID_H
-#define _LIBCPP___THREAD_ID_H
+#ifndef _LIBCPP___CXX03___THREAD_ID_H
+#define _LIBCPP___CXX03___THREAD_ID_H
 
-#include <__compare/ordering.h>
-#include <__config>
-#include <__fwd/functional.h>
-#include <__fwd/ostream.h>
-#include <__thread/support.h>
+#include <__cxx03/__compare/ordering.h>
+#include <__cxx03/__config>
+#include <__cxx03/__fwd/functional.h>
+#include <__cxx03/__fwd/ostream.h>
+#include <__cxx03/__thread/support.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -118,4 +118,4 @@ inline _LIBCPP_HIDE_FROM_ABI __thread_id get_id() _NOEXCEPT { return __libcpp_th
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___THREAD_ID_H
+#endif // _LIBCPP___CXX03___THREAD_ID_H

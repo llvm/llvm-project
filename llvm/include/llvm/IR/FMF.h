@@ -108,6 +108,20 @@ public:
 
   /// Print fast-math flags to \p O.
   void print(raw_ostream &O) const;
+
+  /// Intersect rewrite-based flags
+  static inline FastMathFlags intersectRewrite(FastMathFlags LHS,
+                                               FastMathFlags RHS) {
+    const unsigned RewriteMask =
+        AllowReassoc | AllowReciprocal | AllowContract | ApproxFunc;
+    return FastMathFlags(RewriteMask & LHS.Flags & RHS.Flags);
+  }
+
+  /// Union value flags
+  static inline FastMathFlags unionValue(FastMathFlags LHS, FastMathFlags RHS) {
+    const unsigned ValueMask = NoNaNs | NoInfs | NoSignedZeros;
+    return FastMathFlags(ValueMask & (LHS.Flags | RHS.Flags));
+  }
 };
 
 inline FastMathFlags operator|(FastMathFlags LHS, FastMathFlags RHS) {

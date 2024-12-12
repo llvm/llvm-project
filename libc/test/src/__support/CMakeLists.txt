@@ -1,6 +1,6 @@
 add_custom_target(libc-support-tests)
 
-if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+if(NOT LIBC_TARGET_OS_IS_GPU)
   add_libc_test(
     block_test
     SUITE
@@ -24,7 +24,34 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     DEPENDS
       libc.src.__support.CPP.array
       libc.src.__support.CPP.span
+      libc.src.__support.block
       libc.src.__support.freelist
+  )
+
+  add_libc_test(
+    freetrie_test
+    SUITE
+      libc-support-tests
+    SRCS
+      freetrie_test.cpp
+    DEPENDS
+      libc.src.__support.CPP.optional
+      libc.src.__support.block
+      libc.src.__support.freetrie
+  )
+
+  add_libc_test(
+    freestore_test
+    SUITE
+      libc-support-tests
+    SRCS
+      freestore_test.cpp
+    DEPENDS
+      libc.src.__support.CPP.optional
+      libc.src.__support.block
+      libc.src.__support.freelist
+      libc.src.__support.freestore
+      libc.src.__support.freetrie
   )
 endif()
 
@@ -57,11 +84,11 @@ add_libc_test(
 )
 
 add_libc_test(
-  endian_test
+  endian_internal_test
   SUITE
     libc-support-tests
   SRCS
-    endian_test.cpp
+    endian_internal_test.cpp
   DEPENDS
     libc.src.__support.common
 )

@@ -7,19 +7,19 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_SPAN_H
-#define _LIBCPP___FWD_SPAN_H
+#ifndef _LIBCPP___CXX03___FWD_SPAN_H
+#define _LIBCPP___CXX03___FWD_SPAN_H
 
-#include <__config>
-#include <cstddef>
-#include <limits>
+#include <__cxx03/__config>
+#include <__cxx03/cstddef>
+#include <__cxx03/limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -35,4 +35,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FWD_SPAN_H
+#endif // _LIBCPP___CXX03___FWD_SPAN_H

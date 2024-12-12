@@ -2116,7 +2116,7 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
   const uint32_t term_width = GetTerminalWidth();
   const uint32_t ellipsis = 3;
   if (message.size() + ellipsis >= term_width)
-    message = message.substr(0, term_width - ellipsis);
+    message.resize(term_width - ellipsis);
 
   const bool use_color = GetUseColor();
   llvm::StringRef ansi_prefix = GetShowProgressAnsiPrefix();

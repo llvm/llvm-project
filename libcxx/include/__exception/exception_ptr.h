@@ -10,11 +10,11 @@
 #define _LIBCPP___EXCEPTION_EXCEPTION_PTR_H
 
 #include <__config>
+#include <__cstddef/nullptr_t.h>
 #include <__exception/operations.h>
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
 #include <__type_traits/decay.h>
-#include <cstddef>
 #include <cstdlib>
 #include <new>
 #include <typeinfo>

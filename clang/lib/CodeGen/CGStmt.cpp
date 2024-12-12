@@ -455,6 +455,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OpenACCLoopConstructClass:
     EmitOpenACCLoopConstruct(cast<OpenACCLoopConstruct>(*S));
     break;
+  case Stmt::OpenACCCombinedConstructClass:
+    EmitOpenACCCombinedConstruct(cast<OpenACCCombinedConstruct>(*S));
+    break;
   }
 }
 

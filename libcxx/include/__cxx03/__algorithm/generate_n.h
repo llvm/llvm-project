@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_GENERATE_N_H
-#define _LIBCPP___ALGORITHM_GENERATE_N_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_GENERATE_N_H
+#define _LIBCPP___CXX03___ALGORITHM_GENERATE_N_H
 
-#include <__config>
-#include <__utility/convert_to_integral.h>
+#include <__cxx03/__config>
+#include <__cxx03/__utility/convert_to_integral.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -30,4 +30,4 @@ generate_n(_OutputIterator __first, _Size __orig_n, _Generator __gen) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_GENERATE_N_H
+#endif // _LIBCPP___CXX03___ALGORITHM_GENERATE_N_H

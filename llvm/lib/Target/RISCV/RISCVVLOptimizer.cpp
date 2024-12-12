@@ -17,7 +17,6 @@
 //===---------------------------------------------------------------------===//
 
 #include "RISCV.h"
-#include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -248,6 +247,23 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
     llvm_unreachable("Configuration setting instructions do not read or write "
                      "vector registers");
 
+  // Vector Loads and Stores
+  // Vector Unit-Stride Instructions
+  // Vector Strided Instructions
+  /// Dest EEW encoded in the instruction and EMUL=(EEW/SEW)*LMUL
+  case RISCV::VSE8_V:
+  case RISCV::VSSE8_V:
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(3, MI), 3);
+  case RISCV::VSE16_V:
+  case RISCV::VSSE16_V:
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(4, MI), 4);
+  case RISCV::VSE32_V:
+  case RISCV::VSSE32_V:
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(5, MI), 5);
+  case RISCV::VSE64_V:
+  case RISCV::VSSE64_V:
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(6, MI), 6);
+
   // Vector Integer Arithmetic Instructions
   // Vector Single-Width Integer Add and Subtract
   case RISCV::VADD_VI:
@@ -404,7 +420,19 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VWMULSU_VV:
   case RISCV::VWMULSU_VX:
   case RISCV::VWMULU_VV:
-  case RISCV::VWMULU_VX: {
+  case RISCV::VWMULU_VX:
+  // Vector Widening Integer Multiply-Add Instructions
+  // Destination EEW=2*SEW and EMUL=2*LMUL. Source EEW=SEW and EMUL=LMUL.
+  // A SEW-bit*SEW-bit multiply of the sources forms a 2*SEW-bit value, which
+  // is then added to the 2*SEW-bit Dest. These instructions never have a
+  // passthru operand.
+  case RISCV::VWMACCU_VV:
+  case RISCV::VWMACCU_VX:
+  case RISCV::VWMACC_VV:
+  case RISCV::VWMACC_VX:
+  case RISCV::VWMACCSU_VV:
+  case RISCV::VWMACCSU_VX:
+  case RISCV::VWMACCUS_VX: {
     unsigned Log2EEW = IsMODef ? MILog2SEW + 1 : MILog2SEW;
     RISCVII::VLMUL EMUL =
         IsMODef ? RISCVVType::twoTimesVLMUL(MIVLMul) : MIVLMul;
@@ -419,18 +447,7 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VWADD_WV:
   case RISCV::VWADD_WX:
   case RISCV::VWSUB_WV:
-  case RISCV::VWSUB_WX:
-  // Vector Widening Integer Multiply-Add Instructions
-  // Destination EEW=2*SEW and EMUL=2*LMUL. Source EEW=SEW and EMUL=LMUL.
-  // Even though the add is a 2*SEW addition, the operands of the add are the
-  // Dest which is 2*SEW and the result of the multiply which is 2*SEW.
-  case RISCV::VWMACCU_VV:
-  case RISCV::VWMACCU_VX:
-  case RISCV::VWMACC_VV:
-  case RISCV::VWMACC_VX:
-  case RISCV::VWMACCSU_VV:
-  case RISCV::VWMACCSU_VX:
-  case RISCV::VWMACCUS_VX: {
+  case RISCV::VWSUB_WX: {
     bool IsOp1 = HasPassthru ? MO.getOperandNo() == 2 : MO.getOperandNo() == 1;
     bool TwoTimes = IsMODef || IsOp1;
     unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
@@ -499,6 +516,26 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VSUB_VX:
   case RISCV::VRSUB_VI:
   case RISCV::VRSUB_VX:
+  // Vector Bitwise Logical Instructions
+  // Vector Single-Width Shift Instructions
+  case RISCV::VAND_VI:
+  case RISCV::VAND_VV:
+  case RISCV::VAND_VX:
+  case RISCV::VOR_VI:
+  case RISCV::VOR_VV:
+  case RISCV::VOR_VX:
+  case RISCV::VXOR_VI:
+  case RISCV::VXOR_VV:
+  case RISCV::VXOR_VX:
+  case RISCV::VSLL_VI:
+  case RISCV::VSLL_VV:
+  case RISCV::VSLL_VX:
+  case RISCV::VSRL_VI:
+  case RISCV::VSRL_VV:
+  case RISCV::VSRL_VX:
+  case RISCV::VSRA_VI:
+  case RISCV::VSRA_VV:
+  case RISCV::VSRA_VX:
   // Vector Widening Integer Add/Subtract
   case RISCV::VWADDU_VV:
   case RISCV::VWADDU_VX:
@@ -525,14 +562,13 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VSEXT_VF8:
   // Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
   // FIXME: Add support
-  // Vector Bitwise Logical Instructions
-  // FIXME: Add support
-  // Vector Single-Width Shift Instructions
-  // FIXME: Add support
-  case RISCV::VSLL_VI:
   // Vector Narrowing Integer Right Shift Instructions
-  // FIXME: Add support
+  case RISCV::VNSRL_WX:
   case RISCV::VNSRL_WI:
+  case RISCV::VNSRL_WV:
+  case RISCV::VNSRA_WI:
+  case RISCV::VNSRA_WV:
+  case RISCV::VNSRA_WX:
   // Vector Integer Compare Instructions
   // FIXME: Add support
   // Vector Integer Min/Max Instructions
@@ -570,17 +606,29 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VWMULU_VV:
   case RISCV::VWMULU_VX:
   // Vector Single-Width Integer Multiply-Add Instructions
-  // FIXME: Add support
+  case RISCV::VMACC_VV:
+  case RISCV::VMACC_VX:
+  case RISCV::VNMSAC_VV:
+  case RISCV::VNMSAC_VX:
+  case RISCV::VMADD_VV:
+  case RISCV::VMADD_VX:
+  case RISCV::VNMSUB_VV:
+  case RISCV::VNMSUB_VX:
   // Vector Widening Integer Multiply-Add Instructions
-  // FIXME: Add support
-  case RISCV::VWMACC_VX:
+  case RISCV::VWMACCU_VV:
   case RISCV::VWMACCU_VX:
+  case RISCV::VWMACC_VV:
+  case RISCV::VWMACC_VX:
+  case RISCV::VWMACCSU_VV:
+  case RISCV::VWMACCSU_VX:
+  case RISCV::VWMACCUS_VX:
   // Vector Integer Merge Instructions
   // FIXME: Add support
   // Vector Integer Move Instructions
   // FIXME: Add support
   case RISCV::VMV_V_I:
   case RISCV::VMV_V_X:
+  case RISCV::VMV_V_V:
 
   // Vector Crypto
   case RISCV::VWSLL_VI:
@@ -661,7 +709,7 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   // If we're not using VLMAX, then we need to be careful whether we are using
   // TA/TU when there is a non-undef Passthru. But when we are using VLMAX, it
   // does not matter whether we are using TA/TU with a non-undef Passthru, since
-  // there are no tail elements to be perserved.
+  // there are no tail elements to be preserved.
   unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
   const MachineOperand &VLOp = MI.getOperand(VLOpNum);
   if (VLOp.isReg() || VLOp.getImm() != RISCV::VLMaxSentinel) {
@@ -694,7 +742,7 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   // lower lanes using data from higher lanes. There may be other complex
   // semantics not mentioned here that make it hard to determine whether
   // the VL can be optimized. As a result, a white-list of supported
-  // instructions is used. Over time, more instructions cam be supported
+  // instructions is used. Over time, more instructions can be supported
   // upon careful examination of their semantics under the logic in this
   // optimization.
   // TODO: Use a better approach than a white-list, such as adding

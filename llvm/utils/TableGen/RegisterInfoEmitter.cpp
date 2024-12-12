@@ -953,7 +953,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
 
   OS << "extern const MCRegisterDesc " << TargetName
      << "RegDesc[] = { // Descriptors\n";
-  OS << "  { " << RegStrings.get("") << ", 0, 0, 0, 0, 0, 0 },\n";
+  OS << "  { " << RegStrings.get("") << ", 0, 0, 0, 0, 0, 0, 0 },\n";
 
   // Emit the register descriptors now.
   i = 0;
@@ -968,8 +968,8 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
        << DiffSeqs.get(SubRegLists[i]) << ", " << DiffSeqs.get(SuperRegLists[i])
        << ", " << SubRegIdxSeqs.get(SubRegIdxLists[i]) << ", "
        << (Offset << RegUnitBits | FirstRU) << ", "
-       << LaneMaskSeqs.get(RegUnitLaneMasks[i]) << ", " << Reg.Constant
-       << " },\n";
+       << LaneMaskSeqs.get(RegUnitLaneMasks[i]) << ", " << Reg.Constant << ", "
+       << Reg.Artificial << " },\n";
     ++i;
   }
   OS << "};\n\n"; // End of register descriptors...
@@ -1286,9 +1286,6 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
     }
     OS << "};\n";
 
-    OS << "\nstatic const TargetRegisterClass *const "
-       << "NullRegClasses[] = { nullptr };\n\n";
-
     // Emit register class bit mask tables. The first bit mask emitted for a
     // register class, RC, is the set of sub-classes, including RC itself.
     //
@@ -1340,19 +1337,18 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
     SuperRegIdxSeqs.emit(OS, printSubRegIndex);
     OS << "};\n\n";
 
-    // Emit NULL terminated super-class lists.
+    // Emit super-class lists.
     for (const auto &RC : RegisterClasses) {
       ArrayRef<CodeGenRegisterClass *> Supers = RC.getSuperClasses();
 
-      // Skip classes without supers.  We can reuse NullRegClasses.
+      // Skip classes without supers.
       if (Supers.empty())
         continue;
 
-      OS << "static const TargetRegisterClass *const " << RC.getName()
-         << "Superclasses[] = {\n";
+      OS << "static unsigned const " << RC.getName() << "Superclasses[] = {\n";
       for (const auto *Super : Supers)
-        OS << "  &" << Super->getQualifiedName() << "RegClass,\n";
-      OS << "  nullptr\n};\n\n";
+        OS << "  " << Super->getQualifiedIdName() << ",\n";
+      OS << "};\n\n";
     }
 
     // Emit methods.
@@ -1406,9 +1402,10 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
          << (RC.CoveredBySubRegs ? "true" : "false")
          << ", /* CoveredBySubRegs */\n    ";
       if (RC.getSuperClasses().empty())
-        OS << "NullRegClasses,\n    ";
+        OS << "nullptr, ";
       else
-        OS << RC.getName() << "Superclasses,\n    ";
+        OS << RC.getName() << "Superclasses,  ";
+      OS << RC.getSuperClasses().size() << ",\n    ";
       if (RC.AltOrderSelect.empty())
         OS << "nullptr\n";
       else
