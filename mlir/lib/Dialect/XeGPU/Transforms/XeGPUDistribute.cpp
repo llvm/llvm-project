@@ -31,46 +31,46 @@ using namespace mlir;
 namespace {
 bool divisible(APInt lhs, APInt rhs) { return !lhs.urem(rhs); }
 
-// /// Clone a create_nd_tdesc feeding into vector.yield op for the enclosing
-// /// `vector.warp_execute_on_lane_0` and put it after the warp op.
-// /// The warp op will still contain the original op that will not be used by
-// the
-// /// yield op (and should be cleaned up later with dce). The yield op will
-// bypass
-// /// the create_nd_tdesc's arguments.
-// /// The rewrite will create a subview of the size used by a single work item
-// and
-// /// appropriate offset. The distributed create_nd_tdesc points into the
-// subview
-// /// without offset. The tensor descriptor types is distributed according to
-// /// sg_map attribute.
-// ///
-// /// Example:
-// ///
-// /// ```
-// ///   #sg_map_8 = #xegpu.sg_map<wi_layout = [1, 8], wi_data = [1, 1]>
-// ///   %r = vector.warp_execute_on_lane_0(%laneid) ->
-// ///                   (!xegpu.tensor_desc<4x8xf32>) {
-// ///     ...
-// ///     %td = xegpu.create_nd_tdesc %arg0[0, 0]
-// ///               : memref<4x8xf32> -> !xegpu.tensor_desc<4x8xf32>
-// ///     vector.yield %td
-// ///   }
-// /// ```
-// /// To
-// /// ```
-// ///   %r:2 = vector.warp_execute_on_lane_0(%laneid) -> () {
-// ///     ...
-// ///     %dead = xegpu.create_nd_tdesc %arg0[0, 0]
-// ///               : memref<4x8xf32> -> !xegpu.tensor_desc<4x8xf32>
-// ///     vector.yield %arg0, %dead
-// ///   }
-// ///   %view = memref.subview %r#0[0, %laneid] [4, 1] [1, 1]
-// ///                               : memref<4x8xf32> to memref<4x1xf32>
-// ///   %td = xegpu.create_nd_tdesc %view[0, 0]: memref<4x1xf32>
-// ///                                 -> !xegpu.tensor_desc<4x1xf32>
-// ///
-// /// ```
+/// Clone a create_nd_tdesc feeding into vector.yield op for the enclosing
+/// `vector.warp_execute_on_lane_0` and put it after the warp op.
+/// The warp op will still contain the original op that will not be used by
+/// the
+/// yield op (and should be cleaned up later with dce). The yield op will
+/// bypass
+/// the create_nd_tdesc's arguments.
+/// The rewrite will create a subview of the size used by a single work item
+/// and
+/// appropriate offset. The distributed create_nd_tdesc points into the
+/// subview
+/// without offset. The tensor descriptor types is distributed according to
+/// sg_map attribute.
+///
+/// Example:
+///
+/// ```
+///   #sg_map_8 = #xegpu.sg_map<wi_layout = [1, 8], wi_data = [1, 1]>
+///   %r = vector.warp_execute_on_lane_0(%laneid) ->
+///                   (!xegpu.tensor_desc<4x8xf32>) {
+///     ...
+///     %td = xegpu.create_nd_tdesc %arg0[0, 0]
+///               : memref<4x8xf32> -> !xegpu.tensor_desc<4x8xf32>
+///     vector.yield %td
+///   }
+/// ```
+/// To
+/// ```
+///   %r:2 = vector.warp_execute_on_lane_0(%laneid) -> () {
+///     ...
+///     %dead = xegpu.create_nd_tdesc %arg0[0, 0]
+///               : memref<4x8xf32> -> !xegpu.tensor_desc<4x8xf32>
+///     vector.yield %arg0, %dead
+///   }
+///   %view = memref.subview %r#0[0, %laneid] [4, 1] [1, 1]
+///                               : memref<4x8xf32> to memref<4x1xf32>
+///   %td = xegpu.create_nd_tdesc %view[0, 0]: memref<4x1xf32>
+///                                 -> !xegpu.tensor_desc<4x1xf32>
+///
+/// ```
 struct WarpOpTensorDescOp final
     : public OpRewritePattern<gpu::WarpExecuteOnLane0Op> {
   using OpRewritePattern<gpu::WarpExecuteOnLane0Op>::OpRewritePattern;
@@ -78,35 +78,35 @@ struct WarpOpTensorDescOp final
                                 PatternRewriter &rewriter) const override;
 };
 
-// /// Sink a store_nd feeding into vector.yield op for the enclosing
-// /// `vector.warp_execute_on_lane_0`. In case arguments for the store are
-// passed
-// /// through the warp op interface they would be propagated as returned
-// values.
-// /// Both the stored vector type and tensor descriptor types are distributed
-// /// according to sg_map attribute.
-// ///
-// /// Example:
-// ///
-// /// ```
-// ///   #sg_map_8 = #xegpu.sg_map<wi_layout = [1, 8], wi_data = [1, 1]>
-// ///   vector.warp_execute_on_lane_0(%laneid) -> () {
-// ///     ...
-// ///     xegpu.store_nd %arg0, %arg1: vector<4x8xf32>,
-// ///                                 !xegpu.tensor_desc<4x8xf32>
-// ///     vector.yield
-// ///   }
-// /// ```
-// /// To
-// /// ```
-// ///   %r = vector.warp_execute_on_lane_0(%laneid) -> () {
-// ///     ...
-// ///     vector.yield
-// ///   }
-// ///   xegpu.store_nd %arg0, %arg1: vector<4x1xf32>,
-// !xegpu.tensor_desc<4x1xf32>
-// ///
-// /// ```
+/// Sink a store_nd feeding into vector.yield op for the enclosing
+/// `vector.warp_execute_on_lane_0`. In case arguments for the store are
+/// passed
+/// through the warp op interface they would be propagated as returned
+/// values.
+/// Both the stored vector type and tensor descriptor types are distributed
+/// according to sg_map attribute.
+///
+/// Example:
+///
+/// ```
+///   #sg_map_8 = #xegpu.sg_map<wi_layout = [1, 8], wi_data = [1, 1]>
+///   vector.warp_execute_on_lane_0(%laneid) -> () {
+///     ...
+///     xegpu.store_nd %arg0, %arg1: vector<4x8xf32>,
+///                                 !xegpu.tensor_desc<4x8xf32>
+///     vector.yield
+///   }
+/// ```
+/// To
+/// ```
+///   %r = vector.warp_execute_on_lane_0(%laneid) -> () {
+///     ...
+///     vector.yield
+///   }
+///   xegpu.store_nd %arg0, %arg1: vector<4x1xf32>,
+///   !xegpu.tensor_desc<4x1xf32>
+///
+/// ```
 struct WarpOpStoreNd final
     : public OpRewritePattern<gpu::WarpExecuteOnLane0Op> {
   using OpRewritePattern<gpu::WarpExecuteOnLane0Op>::OpRewritePattern;
@@ -114,38 +114,36 @@ struct WarpOpStoreNd final
                                 PatternRewriter &rewriter) const override;
 };
 
-// /// Clone a load_nd feeding into vector.yield op for the enclosing
-// /// `vector.warp_execute_on_lane_0` and put it after the warp op.
-// /// The warp op will still contain the original op that will not be used by
-// the
-// /// yield op (and should be cleaned up later with dce). The yield op will
-// bypass
-// /// the load's arguments.
-// /// Both the loaded vector type and tensor descriptor types are distributed
-// /// according to sg_map attribute.
-// ///
-// /// Example:
-// ///
-// /// ```
-// ///   #sg_map_8 = #xegpu.sg_map<wi_layout = [1, 8], wi_data = [1, 1]>
-// ///   %r = vector.warp_execute_on_lane_0(%laneid) ->
-// ///                   (!xegpu.tensor_desc<4x8xf32>) {
-// ///     ...
-// ///     %ld = xegpu.load_nd %arg0, %arg1: !xegpu.tensor_desc<4x8xf32>,
-// ///     vector<4x8xf32> vector.yield %ld
-// ///   }
-// /// ```
-// /// To
-// /// ```
-// ///   %r:2 = vector.warp_execute_on_lane_0(%laneid) -> () {
-// ///     ...
-// ///     %dead = xegpu.load_nd %arg0, %arg1:
-// ///         !xegpu.tensor_desc<4x8xf32>, vector<4x8xf32>
-// ///     vector.yield %arg0, %arg1
-// ///   }
-// ///   xegpu.store_nd %r#0, %r#1: vector<4x1xf32>, !xegpu.tensor_desc<4x1xf32>
-// ///
-// /// ```
+/// Clone a load_nd feeding into vector.yield op for the enclosing
+/// `vector.warp_execute_on_lane_0` and put it after the warp op.
+/// The warp op will still contain the original op that will not be used by
+/// the yield op (and should be cleaned up later with dce). The yield op will
+/// bypass the load's arguments. Both the loaded vector type and tensor
+/// descriptor types are distributed according to sg_map attribute.
+///
+/// Example:
+///
+/// ```
+///   #sg_map_8 = #xegpu.sg_map<wi_layout = [1, 8], wi_data = [1, 1]>
+///   %r = vector.warp_execute_on_lane_0(%laneid) ->
+///                   (!xegpu.tensor_desc<4x8xf32>) {
+///     ...
+///     %ld = xegpu.load_nd %arg0, %arg1: !xegpu.tensor_desc<4x8xf32>,
+///     vector<4x8xf32> vector.yield %ld
+///   }
+/// ```
+/// To
+/// ```
+///   %r:2 = vector.warp_execute_on_lane_0(%laneid) -> () {
+///     ...
+///     %dead = xegpu.load_nd %arg0, %arg1:
+///         !xegpu.tensor_desc<4x8xf32>, vector<4x8xf32>
+///     vector.yield %arg0, %arg1
+///   }
+///   xegpu.store_nd %r#0, %r#1: vector<4x1xf32>,
+///   !xegpu.tensor_desc<4x1xf32>
+///
+/// ```
 struct WarpOpLoadNd final : public OpRewritePattern<gpu::WarpExecuteOnLane0Op> {
   using OpRewritePattern<gpu::WarpExecuteOnLane0Op>::OpRewritePattern;
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
