@@ -2569,6 +2569,17 @@ MVT AArch64TargetLowering::getScalarShiftAmountTy(const DataLayout &DL,
 bool AArch64TargetLowering::allowsMisalignedMemoryAccesses(
     EVT VT, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
     unsigned *Fast) const {
+
+  // Allow SVE loads/stores where the alignment >= the size of the element type,
+  // even with +strict-align. The SVE loads/stores do not require memory to be
+  // aligned more than the element type even without unaligned accesses.
+  // Without this, already aligned loads and stores are forced to have 16-byte
+  // alignment, which is unnecessary and fails to build as
+  // TLI.expandUnalignedLoad() and TLI.expandUnalignedStore() don't yet support
+  // scalable vectors.
+  if (VT.isScalableVector() && Alignment >= Align(VT.getScalarSizeInBits() / 8))
+    return true;
+
   if (Subtarget->requiresStrictAlign())
     return false;
 
