@@ -1,5 +1,5 @@
-; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1210 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1210 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1250 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1250 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
 
 declare void @llvm.amdgcn.s.monitor.sleep(i16)
 

@@ -2,8 +2,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64,DPP64-GFX9,GFX940 -DCTL=row_newbcast
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS -DCTL=row_share
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS -DCTL=row_share
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1210 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX1210 -DCTL=row_share
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1211 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64,DPP64-GFX1211 -DCTL=row_share
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX1250 -DCTL=row_share
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1251 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64,DPP64-GFX1251 -DCTL=row_share
 
 ; GCN-LABEL: {{^}}dpp64_ceil:
 ; GCN:           global_load_{{dwordx2|b64}} [[V:v\[[0-9:]+\]]],
@@ -24,8 +24,8 @@ define amdgpu_kernel void @dpp64_ceil(ptr addrspace(1) %arg, i64 %in1) {
 ; GCN-LABEL: {{^}}dpp64_rcp:
 ; GCN:           global_load_{{dwordx2|b64}} [[V:v\[[0-9:]+\]]],
 ; DPP64-GFX9:    v_rcp_f64_dpp [[V]], [[V]] [[CTL]]:1 row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
-; DPP64-GFX1211: v_mov_b64_dpp v[{{[0-9:]+}}], [[V]] [[CTL]]:1 row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
-; DPP64-GFX1211: v_rcp_f64_e32
+; DPP64-GFX1251: v_mov_b64_dpp v[{{[0-9:]+}}], [[V]] [[CTL]]:1 row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
+; DPP64-GFX1251: v_rcp_f64_e32
 ; DPP32-COUNT-2: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} [[CTL]]:1 row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
 define amdgpu_kernel void @dpp64_rcp(ptr addrspace(1) %arg, i64 %in1) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -79,10 +79,10 @@ define amdgpu_kernel void @dpp64_div(ptr addrspace(1) %arg, i64 %in1) {
 ; DPP64-GFX9: v_mov_b32_e32 [[V2:v[0-9]+]], [[V]]
 ; DPP64-GFX9: v_mov_b32_dpp [[V2]], [[V2]] {{row_share|row_newbcast}}:0 row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
 ; DPP64-GFX9: v_mul_lo_u32 [[V]], [[V2]], [[V]]{{$}}
-; GFX1210: v_mov_b32_e32 [[V2:v[0-9]+]], [[V]]
-; GFX1210: v_mov_b32_dpp [[V2]], [[V2]] {{row_share|row_newbcast}}:0 row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
-; GFX1210: v_mul_lo_u32 [[V]], [[V2]], [[V]]{{$}}
-; DPP64-GFX1211: v_mul_lo_u32_e64_dpp [[V]], [[V]], [[V]] [[CTL]]:0 row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
+; GFX1250: v_mov_b32_e32 [[V2:v[0-9]+]], [[V]]
+; GFX1250: v_mov_b32_dpp [[V2]], [[V2]] {{row_share|row_newbcast}}:0 row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
+; GFX1250: v_mul_lo_u32 [[V]], [[V2]], [[V]]{{$}}
+; DPP64-GFX1251: v_mul_lo_u32_e64_dpp [[V]], [[V]], [[V]] [[CTL]]:0 row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
 define amdgpu_kernel void @dpp_mul_row_share(ptr addrspace(1) %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %id

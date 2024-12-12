@@ -34,12 +34,12 @@
 // RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-ON %s
 // RUN: %clang -E -dM --offload-arch=gfx1030 --cuda-device-only -nogpuinc -nogpulib -mno-cumode \
 // RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-OFF %s
-// RUN: %clang -E -dM --offload-arch=gfx1210 --cuda-device-only -nogpuinc -nogpulib \
+// RUN: %clang -E -dM --offload-arch=gfx1250 --cuda-device-only -nogpuinc -nogpulib \
 // RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-ON %s
-// RUN: %clang -E -dM --offload-arch=gfx1210 --cuda-device-only -nogpuinc -nogpulib -mcumode \
+// RUN: %clang -E -dM --offload-arch=gfx1250 --cuda-device-only -nogpuinc -nogpulib -mcumode \
 // RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-ON %s
-// RUN: %clang -E -dM --offload-arch=gfx1210 --cuda-device-only -nogpuinc -nogpulib -mno-cumode \
-// RUN:   %s 2>&1 | FileCheck -DOFFLOAD_ARCH=gfx1210 --check-prefixes=CUMODE-ON,WARN-CUMODE %s
+// RUN: %clang -E -dM --offload-arch=gfx1250 --cuda-device-only -nogpuinc -nogpulib -mno-cumode \
+// RUN:   %s 2>&1 | FileCheck -DOFFLOAD_ARCH=gfx1250 --check-prefixes=CUMODE-ON,WARN-CUMODE %s
 
 // Check no duplicate warnings.
 // RUN: %clang -E -dM --offload-arch=gfx906 --cuda-device-only -nogpuinc -nogpulib -mcumode \

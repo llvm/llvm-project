@@ -4,7 +4,7 @@
 // RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx1200 -show-encoding %s 2>&1 >/dev/null | FileCheck %s -DMCPU=gfx1200 --check-prefixes=ALL,GCN,GFX10PLUS,GFX12,AMDHSA
 // RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd- -mcpu=gfx810 -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=ALL,GCN,NONAMDHSA
 // RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx90a -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s -DMCPU=gfx90a --check-prefixes=ALL,GFX90A,PREGFX10,NOWGP,AMDHSA
-// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx1210 -show-encoding %s 2>&1 >/dev/null | FileCheck %s -DMCPU=gfx1210 --check-prefixes=ALL,GCN,GFX10PLUS,GFX12,NOWGP,AMDHSA
+// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx1250 -show-encoding %s 2>&1 >/dev/null | FileCheck %s -DMCPU=gfx1250 --check-prefixes=ALL,GCN,GFX10PLUS,GFX12,NOWGP,AMDHSA
 
 .text
 

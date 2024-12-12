@@ -2525,7 +2525,7 @@ multiclass VBUFFER_MTBUF_Real_gfx12<bits<4> op, string real_name> {
 }
 
 //===----------------------------------------------------------------------===//
-// MUBUF - GFX11, GFX12, GFX1210.
+// MUBUF - GFX11, GFX12, GFX1250.
 //===----------------------------------------------------------------------===//
 
 // gfx11 instruction that accept both old and new assembler name.

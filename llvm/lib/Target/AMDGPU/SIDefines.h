@@ -45,7 +45,7 @@ enum {
   GFX940 = 9,
   GFX11 = 10,
   GFX12 = 11,
-  GFX1210 = 12,
+  GFX1250 = 12,
 };
 }
 
@@ -463,7 +463,7 @@ enum Id { // Message ID, width(4) [3:0].
   ID_EARLY_PRIM_DEALLOC = 8, // added in GFX9, removed in GFX10
   ID_GS_ALLOC_REQ = 9,       // added in GFX9
   ID_GET_DOORBELL = 10,      // added in GFX9, removed in GFX11
-  ID_SAVEWAVE_HAS_TDM = 10,  // added in GFX1210
+  ID_SAVEWAVE_HAS_TDM = 10,  // added in GFX1250
   ID_GET_DDID = 11,          // added in GFX10, removed in GFX11
   ID_SYSMSG = 15,
 
@@ -476,7 +476,7 @@ enum Id { // Message ID, width(4) [3:0].
   ID_RTN_GET_TBA_TO_PC = 134,
   ID_RTN_GET_SE_AID_ID = 135,
 
-  ID_RTN_GET_CLUSTER_BARRIER_STATE = 136, // added in GFX1210
+  ID_RTN_GET_CLUSTER_BARRIER_STATE = 136, // added in GFX1250
 
   ID_MASK_PreGFX11_ = 0xF,
   ID_MASK_GFX11Plus_ = 0xFF
@@ -591,7 +591,7 @@ enum ModeRegisterMasks : uint32_t {
   VSKIP_MASK = 1 << 28,
   CSP_MASK = 0x7u << 29, // Bits 29..31
 
-  // GFX1210
+  // GFX1250
   DST_VGPR_MSB = 1 << 12,
   SRC0_VGPR_MSB = 1 << 13,
   SRC1_VGPR_MSB = 1 << 14,

@@ -51,7 +51,7 @@ static constexpr unsigned GFX10_1 = 1;
 static constexpr unsigned GFX10_3 = 1;
 static constexpr unsigned GFX11 = 1;
 static constexpr unsigned GFX12 = 1;
-static constexpr unsigned GFX12_1 = 1;
+static constexpr unsigned GFX12_5 = 1;
 } // namespace GenericVersion
 
 enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5, AMDHSA_COV6 = 6 };
@@ -927,7 +927,7 @@ public:
   // Check VOPD operands constraints.
   // Return the index of an invalid component operand, if any.
   // If \p SkipSrc is set to true then constraints for source operands are not
-  // checked except for being from the same halves of VGPR file on gfx1210.
+  // checked except for being from the same halves of VGPR file on gfx1250.
   // If \p AllowSameVGPR is set then same VGPRs are allowed for X and Y sources
   // even though it violates requirement to be from different banks.
   // If \p VOPD3 is set to true both dst registers allowed to be either odd
@@ -1057,7 +1057,7 @@ struct Waitcnt {
   unsigned SampleCnt = ~0u; // gfx12+ only.
   unsigned BvhCnt = ~0u;    // gfx12+ only.
   unsigned KmCnt = ~0u;     // gfx12+ only.
-  unsigned XCnt = ~0u;      // gfx1210.
+  unsigned XCnt = ~0u;      // gfx1250.
   unsigned VaVdst = ~0u;    // gfx12+ expert scheduling mode only.
   unsigned VmVsrc = ~0u;    // gfx12+ expert scheduling mode only.
 
@@ -1442,7 +1442,7 @@ bool isGFX11(const MCSubtargetInfo &STI);
 bool isGFX11Plus(const MCSubtargetInfo &STI);
 bool isGFX12(const MCSubtargetInfo &STI);
 bool isGFX12Plus(const MCSubtargetInfo &STI);
-bool isGFX1210(const MCSubtargetInfo &STI);
+bool isGFX1250(const MCSubtargetInfo &STI);
 bool supportsWGP(const MCSubtargetInfo &STI);
 bool isNotGFX12Plus(const MCSubtargetInfo &STI);
 bool isNotGFX11Plus(const MCSubtargetInfo &STI);

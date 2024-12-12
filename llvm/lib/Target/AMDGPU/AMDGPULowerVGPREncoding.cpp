@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Lower VGPRs above first 256 on gfx1210.
+/// Lower VGPRs above first 256 on gfx1250.
 ///
 /// The pass scans used VGPRs and inserts S_SET_VGPR_MSB instructions to switch
 /// VGPR addressing mode. The mode change is effective until the next change.
