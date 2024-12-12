@@ -4361,7 +4361,18 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
     llvm_unreachable("NEON::BI__builtin_neon_vsraq_n_v NYI");
   case NEON::BI__builtin_neon_vrsra_n_v:
   case NEON::BI__builtin_neon_vrsraq_n_v: {
-    llvm_unreachable("NEON::BI__builtin_neon_vrsraq_n_v NYI");
+    llvm::SmallVector<mlir::Value> tmpOps = {Ops[1], Ops[2]};
+    // The llvm intrinsic is expecting negative shift amount for right shift.
+    // Thus we have to make shift amount vec type to be signed.
+    cir::VectorType shitAmtVecTy =
+        usgn ? getSignChangedVectorType(builder, vTy) : vTy;
+    mlir::Value tmp =
+        emitNeonCall(builder, {vTy, shitAmtVecTy}, tmpOps,
+                     usgn ? "aarch64.neon.urshl" : "aarch64.neon.srshl", vTy,
+                     getLoc(E->getExprLoc()), false,
+                     1 /* shift amount is args[1]*/, true /* right shift */);
+    Ops[0] = builder.createBitcast(Ops[0], vTy);
+    return builder.createBinop(Ops[0], cir::BinOpKind::Add, tmp);
   }
   case NEON::BI__builtin_neon_vld1_v:
   case NEON::BI__builtin_neon_vld1q_v: {
