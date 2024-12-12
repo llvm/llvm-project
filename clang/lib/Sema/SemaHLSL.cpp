@@ -164,18 +164,18 @@ Decl *SemaHLSL::ActOnStartBuffer(Scope *BufferScope, bool CBuffer,
   return Result;
 }
 
-// Calculate the size of a legacy cbuffer type based on
+// Calculate the size of a legacy cbuffer type in bytes based on
 // https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-packing-rules
 static unsigned calculateLegacyCbufferSize(const ASTContext &Context,
                                            QualType T) {
   unsigned Size = 0;
-  constexpr unsigned CBufferAlign = 128;
+  constexpr unsigned CBufferAlign = 16;
   if (const RecordType *RT = T->getAs<RecordType>()) {
     const RecordDecl *RD = RT->getDecl();
     for (const FieldDecl *Field : RD->fields()) {
       QualType Ty = Field->getType();
       unsigned FieldSize = calculateLegacyCbufferSize(Context, Ty);
-      unsigned FieldAlign = 32;
+      unsigned FieldAlign = 4;
       if (Ty->isAggregateType())
         FieldAlign = CBufferAlign;
       Size = llvm::alignTo(Size, FieldAlign);
@@ -194,7 +194,7 @@ static unsigned calculateLegacyCbufferSize(const ASTContext &Context,
         calculateLegacyCbufferSize(Context, VT->getElementType());
     Size = ElementSize * ElementCount;
   } else {
-    Size = Context.getTypeSize(T);
+    Size = Context.getTypeSize(T) / 8;
   }
   return Size;
 }
@@ -229,16 +229,17 @@ void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
     std::sort(PackOffsetVec.begin(), PackOffsetVec.end(),
               [](const std::pair<VarDecl *, HLSLPackOffsetAttr *> &LHS,
                  const std::pair<VarDecl *, HLSLPackOffsetAttr *> &RHS) {
-                return LHS.second->getOffset() < RHS.second->getOffset();
+                return LHS.second->getOffsetInBytes() <
+                       RHS.second->getOffsetInBytes();
               });
 
     for (unsigned i = 0; i < PackOffsetVec.size() - 1; i++) {
       VarDecl *Var = PackOffsetVec[i].first;
       HLSLPackOffsetAttr *Attr = PackOffsetVec[i].second;
       unsigned Size = calculateLegacyCbufferSize(Context, Var->getType());
-      unsigned Begin = Attr->getOffset() * 32;
+      unsigned Begin = Attr->getOffsetInBytes();
       unsigned End = Begin + Size;
-      unsigned NextBegin = PackOffsetVec[i + 1].second->getOffset() * 32;
+      unsigned NextBegin = PackOffsetVec[i + 1].second->getOffsetInBytes();
       if (End > NextBegin) {
         VarDecl *NextVar = PackOffsetVec[i + 1].first;
         Diag(NextVar->getLocation(), diag::err_hlsl_packoffset_overlap)

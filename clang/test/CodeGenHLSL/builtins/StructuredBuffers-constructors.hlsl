@@ -31,10 +31,6 @@ RasterizerOrderedStructuredBuffer<float> Buf5 : register(u1, space2);
 // CHECK: define linkonce_odr void @_ZN4hlsl33RasterizerOrderedStructuredBufferIfEC2Ev(ptr noundef nonnull align 4 dereferenceable(4) %this)
 // CHECK-NEXT: entry:
 
-// CHECK: define internal void @_GLOBAL__sub_I_StructuredBuffers_constructors.hlsl()
-// CHECK: entry:
-// CHECK: call void @_init_resource_bindings()
-
 // CHECK: define internal void @_init_resource_bindings() {
 // CHECK-NEXT: entry:
 // CHECK-DXIL-NEXT: %Buf_h = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.handle.fromBinding.tdx.RawBuffer_f32_0_0t(i32 0, i32 10, i32 1, i32 0, i1 false)
@@ -58,3 +54,7 @@ RasterizerOrderedStructuredBuffer<float> Buf5 : register(u1, space2);
 // CHECK-SPIRV-NEXT: store target("dx.RawBuffer", float, 1, 0) %Buf4_h, ptr @Buf4, align 4
 // CHECK-SPIRV-NEXT: %Buf5_h = call target("dx.RawBuffer", float, 1, 1) @llvm.spv.handle.fromBinding.tdx.RawBuffer_f32_1_1t(i32 2, i32 1, i32 1, i32 0, i1 false)
 // CHECK-SPIRV-NEXT: store target("dx.RawBuffer", float, 1, 1) %Buf5_h, ptr @Buf5, align 4
+
+// CHECK: define internal void @_GLOBAL__sub_I_StructuredBuffers_constructors.hlsl()
+// CHECK: entry:
+// CHECK: call void @_init_resource_bindings()

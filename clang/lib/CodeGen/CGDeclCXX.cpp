@@ -886,6 +886,10 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
       ModuleInits.push_back(Fn);
     }
 
+  if (getLangOpts().HLSL && getHLSLRuntime().needsResourceBindingInitFn()) {
+    CXXGlobalInits.push_back(getHLSLRuntime().createResourceBindingInitFn());
+  }
+
   if (ModuleInits.empty() && CXXGlobalInits.empty() &&
       PrioritizedCXXGlobalInits.empty())
     return;
@@ -1126,14 +1130,6 @@ CodeGenFunction::GenerateCXXGlobalInitFunc(llvm::Function *Fn,
     for (unsigned i = 0, e = Decls.size(); i != e; ++i)
       if (Decls[i])
         EmitRuntimeCall(Decls[i]);
-
-    if (getLangOpts().HLSL) {
-      CGHLSLRuntime &CGHLSL = CGM.getHLSLRuntime();
-      if (CGHLSL.needsResourceBindingInitFn()) {
-        llvm::Function *ResInitFn = CGHLSL.createResourceBindingInitFn();
-        Builder.CreateCall(llvm::FunctionCallee(ResInitFn), {});
-      }
-    }
 
     Scope.ForceCleanup();
 

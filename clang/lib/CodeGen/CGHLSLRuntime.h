@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CGHLSLRUNTIME_H
 #define LLVM_CLANG_LIB_CODEGEN_CGHLSLRUNTIME_H
 
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
@@ -53,6 +54,7 @@ class StructType;
 } // namespace llvm
 
 namespace clang {
+class NamedDecl;
 class VarDecl;
 class ParmVarDecl;
 class HLSLBufferDecl;
@@ -112,22 +114,43 @@ public:
   //===----------------------------------------------------------------------===//
 
   struct BufferResBinding {
-    // The ID like 2 in register(b2, space1).
-    std::optional<unsigned> Reg;
-    // The Space like 1 is register(b2, space1).
-    // Default value is 0.
+    // Register slot
+    std::optional<unsigned> Slot;
+    // Register space; default value is 0.
     unsigned Space;
+
     BufferResBinding(HLSLResourceBindingAttr *Attr);
   };
+
+  struct BufferConstant {
+    llvm::GlobalVariable *GlobalVar;
+    // offset in memory layout (in bytes)
+    unsigned MemOffset;
+    // offset in cbuffer layout (in bytes)
+    unsigned CBufferOffset;
+
+    BufferConstant(llvm::GlobalVariable *GV)
+        : GlobalVar(GV), MemOffset(UINT_MAX), CBufferOffset(UINT_MAX) {}
+  };
+
   struct Buffer {
-    Buffer(const HLSLBufferDecl *D);
     llvm::StringRef Name;
-    // IsCBuffer - Whether the buffer is a cbuffer (and not a tbuffer).
+    // Whether the buffer is a cbuffer (and not a tbuffer).
     bool IsCBuffer;
-    BufferResBinding Binding;
-    // Global variable and offset for each constant.
-    std::vector<std::pair<llvm::GlobalVariable *, unsigned>> Constants;
-    llvm::StructType *LayoutStruct = nullptr;
+    // Whether the buffer has packoffset annotations
+    bool HasPackoffset;
+    // List of global constants with memory and cbuffer layout ofsets
+    std::vector<BufferConstant> Constants;
+    // LLVM layout type
+    llvm::StructType *LayoutStruct;
+    // size of the buffer in cbuffer layout
+    unsigned Size;
+    // reference to the AST Decl node with resource binding attribute
+    const HLSLBufferDecl *Decl;
+    // global variable for the constant buffer
+    llvm::GlobalVariable *GlobalVar;
+
+    Buffer(const HLSLBufferDecl *D);
   };
 
 protected:
@@ -169,7 +192,7 @@ private:
   llvm::Triple::ArchType getArch();
   llvm::SmallVector<Buffer> Buffers;
 
-  llvm::SmallVector<std::pair<const VarDecl *, llvm::GlobalVariable *>>
+  llvm::SmallVector<std::pair<const NamedDecl *, llvm::GlobalVariable *>>
       ResourcesToBind;
 };
 
