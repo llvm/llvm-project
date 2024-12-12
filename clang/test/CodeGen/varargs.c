@@ -20,4 +20,7 @@ void vla(int n, ...)
   __builtin_va_list ap;
   void *p;
   p = __builtin_va_arg(ap, typeof (int (*)[++n])); // CHECK: add nsw i32 {{.*}}, 1
+  // Don't crash on some undefined behaviors.
+  p = __builtin_va_arg(ap, typeof (int [++n]));
+  p = __builtin_va_arg(ap, typeof (int [n][n]));
 }
