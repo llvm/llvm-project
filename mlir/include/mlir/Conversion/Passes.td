@@ -553,9 +553,9 @@ def ConvertGpuOpsToLLVMSPVOps : Pass<"convert-gpu-to-llvm-spv", "gpu::GPUModuleO
     "Generate LLVM operations to be ingested by a SPIR-V backend for gpu operations";
   let dependentDialects = ["LLVM::LLVMDialect"];
   let options = [
-    Option<"indexBitwidth", "index-bitwidth", "unsigned",
-           /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
-           "Bitwidth of the index type, 0 to use size of machine word">,
+    Option<"use64bitIndex", "use-64bit-index",
+           "bool", /*default=*/"false",
+           "Use 64-bit integers to convert index types">,
   ];
 }
 
