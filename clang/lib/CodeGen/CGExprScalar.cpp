@@ -2796,17 +2796,20 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return Builder.CreateExtractElement(Vec, Zero, "cast.vtrunc");
   }
   case CK_HLSLSplatCast: {
+    // This code should only handle splatting from vectors of length 1.
     assert(DestTy->isVectorType() && "Destination type must be a vector.");
     auto *DestVecTy = DestTy->getAs<VectorType>();
     QualType SrcTy = E->getType();
     SourceLocation Loc = CE->getExprLoc();
     Value *V = Visit(const_cast<Expr *>(E));
-    if (auto *VecTy = SrcTy->getAs<VectorType>()) {
-      assert(VecTy->getNumElements() == 1 && "Invalid HLSL splat cast.");
-      V = CGF.Builder.CreateExtractElement(V, (uint64_t)0, "vec.load");
-      SrcTy = VecTy->getElementType();
-    }
-    assert(SrcTy->isScalarType() && "Invalid HLSL splat cast.");
+    assert(SrcTy->isVectorType() && "Invalid HLSL splat cast.");
+
+    auto *VecTy = SrcTy->getAs<VectorType>();
+    assert(VecTy->getNumElements() == 1 && "Invalid HLSL splat cast.");
+
+    V = CGF.Builder.CreateExtractElement(V, (uint64_t)0, "vec.load");
+    SrcTy = VecTy->getElementType();
+
     Value *Cast =
         EmitScalarConversion(V, SrcTy, DestVecTy->getElementType(), Loc);
     return Builder.CreateVectorSplat(DestVecTy->getNumElements(), Cast,
