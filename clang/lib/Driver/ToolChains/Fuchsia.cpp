@@ -184,7 +184,8 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // Note that Fuchsia never needs to link in sanitizer runtime deps.  Any
     // sanitizer runtimes with system dependencies use the `.deplibs` feature
     // instead.
-    addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+    const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs(Args);
+    addSanitizerRuntimes(ToolChain, Args, SanArgs, CmdArgs);
 
     addXRayRuntime(ToolChain, Args, CmdArgs);
 
@@ -317,10 +318,9 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
       Args.hasFlag(options::OPT_fexceptions, options::OPT_fno_exceptions, true);
   addMultilibFlag(Exceptions, "-fexceptions", Flags);
   addMultilibFlag(!Exceptions, "-fno-exceptions", Flags);
-  addMultilibFlag(getSanitizerArgs(Args).needsAsanRt(), "-fsanitize=address",
-                  Flags);
-  addMultilibFlag(getSanitizerArgs(Args).needsHwasanRt(),
-                  "-fsanitize=hwaddress", Flags);
+  const SanitizerArgs &SanArgs = getSanitizerArgs(Args);
+  addMultilibFlag(SanArgs.needsAsanRt(), "-fsanitize=address", Flags);
+  addMultilibFlag(SanArgs.needsHwasanRt(), "-fsanitize=hwaddress", Flags);
 
   addMultilibFlag(Args.getLastArgValue(options::OPT_fcxx_abi_EQ) == "itanium",
                   "-fc++-abi=itanium", Flags);
