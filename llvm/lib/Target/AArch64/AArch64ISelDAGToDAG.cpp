@@ -5581,6 +5581,18 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
               {AArch64::BF2CVTL_2ZZ_BtoH, AArch64::F2CVTL_2ZZ_BtoH}))
         SelectCVTIntrinsicFP8(Node, 2, Opc);
       return;
+    case Intrinsic::aarch64_sve_fp8_cvt1_x2:
+      if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {AArch64::BF1CVT_2ZZ_BtoH, AArch64::F1CVT_2ZZ_BtoH}))
+        SelectCVTIntrinsicFP8(Node, 2, Opc);
+      return;
+    case Intrinsic::aarch64_sve_fp8_cvt2_x2:
+      if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {AArch64::BF2CVT_2ZZ_BtoH, AArch64::F2CVT_2ZZ_BtoH}))
+        SelectCVTIntrinsicFP8(Node, 2, Opc);
+      return;
     }
   } break;
   case ISD::INTRINSIC_WO_CHAIN: {

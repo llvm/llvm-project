@@ -530,6 +530,24 @@ mlir_c_api_cc_library(
 )
 
 mlir_c_api_cc_library(
+    name = "CAPIEmitC",
+    srcs = [
+        "lib/CAPI/Dialect/EmitC.cpp",
+    ],
+    hdrs = ["include/mlir-c/Dialect/EmitC.h"],
+    capi_deps = [
+        ":CAPIIR",
+    ],
+    header_deps = [
+        ":EmitCPassIncGen",
+    ],
+    includes = ["include"],
+    deps = [
+        ":EmitCDialect",
+    ],
+)
+
+mlir_c_api_cc_library(
     name = "CAPILinalg",
     srcs = [
         "lib/CAPI/Dialect/Linalg.cpp",
@@ -932,7 +950,6 @@ exports_files(
 filegroup(
     name = "MLIRBindingsPythonHeaderFiles",
     srcs = glob([
-        "lib/Bindings/Python/*.h",
         "include/mlir-c/Bindings/Python/*.h",
         "include/mlir/Bindings/Python/*.h",
     ]),
@@ -942,12 +959,10 @@ cc_library(
     name = "MLIRBindingsPythonHeaders",
     includes = [
         "include",
-        "lib/Bindings/Python",
     ],
     textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
     deps = [
         ":CAPIIRHeaders",
-        ":CAPITransformsHeaders",
         "@pybind11",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
@@ -957,13 +972,37 @@ cc_library(
     name = "MLIRBindingsPythonHeadersAndDeps",
     includes = [
         "include",
-        "lib/Bindings/Python",
     ],
     textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
     deps = [
         ":CAPIIR",
-        ":CAPITransforms",
         "@pybind11",
+        "@rules_python//python/cc:current_py_cc_headers",
+    ],
+)
+
+cc_library(
+    name = "MLIRBindingsPythonNanobindHeaders",
+    includes = [
+        "include",
+    ],
+    textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
+    deps = [
+        ":CAPIIRHeaders",
+        "@nanobind",
+        "@rules_python//python/cc:current_py_cc_headers",
+    ],
+)
+
+cc_library(
+    name = "MLIRBindingsPythonNanobindHeadersAndDeps",
+    includes = [
+        "include",
+    ],
+    textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
+    deps = [
+        ":CAPIIR",
+        "@nanobind",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
@@ -993,16 +1032,25 @@ filegroup(
     ],
 )
 
+filegroup(
+    name = "MLIRBindingsPythonCoreHeaders",
+    srcs = glob([
+        "lib/Bindings/Python/*.h",
+    ]),
+)
+
 cc_library(
     name = "MLIRBindingsPythonCore",
     srcs = [":MLIRBindingsPythonSourceFiles"],
     copts = PYBIND11_COPTS,
     features = PYBIND11_FEATURES,
+    textual_hdrs = [":MLIRBindingsPythonCoreHeaders"],
     deps = [
         ":CAPIAsync",
         ":CAPIDebug",
         ":CAPIIR",
         ":CAPIInterfaces",
+        ":CAPITransforms",
         ":MLIRBindingsPythonHeadersAndDeps",
         ":Support",
         ":config",
@@ -1017,10 +1065,12 @@ cc_library(
     srcs = [":MLIRBindingsPythonSourceFiles"],
     copts = PYBIND11_COPTS,
     features = PYBIND11_FEATURES,
+    textual_hdrs = [":MLIRBindingsPythonCoreHeaders"],
     deps = [
         ":CAPIAsyncHeaders",
         ":CAPIDebugHeaders",
         ":CAPIIRHeaders",
+        ":CAPITransformsHeaders",
         ":MLIRBindingsPythonHeaders",
         ":Support",
         ":config",
@@ -1050,6 +1100,9 @@ cc_binary(
     # These flags are needed for pybind11 to work.
     copts = PYBIND11_COPTS,
     features = PYBIND11_FEATURES,
+    includes = [
+        "lib/Bindings/Python",
+    ],
     linkshared = 1,
     linkstatic = 0,
     deps = [
@@ -1063,6 +1116,9 @@ cc_binary(
     srcs = ["lib/Bindings/Python/DialectLinalg.cpp"],
     copts = PYBIND11_COPTS,
     features = PYBIND11_FEATURES,
+    includes = [
+        "lib/Bindings/Python",
+    ],
     linkshared = 1,
     linkstatic = 0,
     deps = [
@@ -8448,9 +8504,9 @@ cc_library(
     hdrs = ["include/mlir/Conversion/ConvertToLLVM/ToLLVMPass.h"],
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":ConversionPassIncGen",
         ":ConvertToLLVMInterface",
-        ":Analysis",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",

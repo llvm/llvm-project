@@ -266,6 +266,14 @@ def TuneA64FX : SubtargetFeature<"a64fx", "ARMProcFamily", "A64FX",
                                  FeatureStorePairSuppress,
                                  FeaturePredictableSelectIsExpensive]>;
 
+def TuneMONAKA : SubtargetFeature<"fujitsu-monaka", "ARMProcFamily", "MONAKA",
+                                 "Fujitsu FUJITSU-MONAKA processors", [
+                                 FeaturePredictableSelectIsExpensive,
+                                 FeatureEnableSelectOptimize,
+                                 FeaturePostRAScheduler,
+                                 FeatureArithmeticBccFusion,
+                                 ]>;
+
 def TuneCarmel : SubtargetFeature<"carmel", "ARMProcFamily", "Carmel",
                                   "Nvidia Carmel processors">;
 
@@ -843,6 +851,12 @@ def ProcessorFeatures {
                                      FeatureSHA2, FeaturePerfMon, FeatureFullFP16,
                                      FeatureSVE, FeatureComplxNum,
                                      FeatureAES, FeatureCRC, FeatureLSE, FeatureRAS, FeatureRDM];
+  list<SubtargetFeature> MONAKA = [HasV9_3aOps, FeaturePerfMon, FeatureCCIDX,
+                                   FeatureFPAC, FeatureFP16FML, FeatureRandGen,
+                                   FeatureSSBS, FeatureLS64, FeatureCLRBHB,
+                                   FeatureSPECRES2, FeatureSVEAES, FeatureSVE2SM4,
+                                   FeatureSVE2SHA3, FeatureSVE2BitPerm, FeatureETE,
+                                   FeatureMEC, FeatureFP8DOT2];
   list<SubtargetFeature> Carmel   = [HasV8_2aOps, FeatureNEON, FeatureSHA2, FeatureAES,
                                      FeatureFullFP16, FeatureCRC, FeatureLSE, FeatureRAS, FeatureRDM,
                                      FeatureFPARMv8];
@@ -1224,6 +1238,10 @@ def : ProcessorAlias<"apple-latest", "apple-m4">;
 // Fujitsu A64FX
 def : ProcessorModel<"a64fx", A64FXModel, ProcessorFeatures.A64FX,
                      [TuneA64FX]>;
+
+// Fujitsu FUJITSU-MONAKA
+def : ProcessorModel<"fujitsu-monaka", A64FXModel, ProcessorFeatures.MONAKA,
+                     [TuneMONAKA]>;
 
 // Nvidia Carmel
 def : ProcessorModel<"carmel", NoSchedModel, ProcessorFeatures.Carmel,
