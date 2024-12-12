@@ -1223,3 +1223,36 @@ namespace BuiltinMemcpy {
   static_assert(test_memcpy(0, 1, sizeof(int) * 2) == 2334); // both-error {{not an integral constant expression}} \
                                                              // both-note {{in call}}
 }
+
+namespace Memcmp {
+  constexpr unsigned char ku00fe00[] = {0x00, 0xfe, 0x00};
+  constexpr unsigned char ku00feff[] = {0x00, 0xfe, 0xff};
+  constexpr signed char ks00fe00[] = {0, -2, 0};
+  constexpr signed char ks00feff[] = {0, -2, -1};
+  static_assert(__builtin_memcmp(ku00feff, ks00fe00, 2) == 0);
+  static_assert(__builtin_memcmp(ku00feff, ks00fe00, 99) == 1);
+  static_assert(__builtin_memcmp(ku00fe00, ks00feff, 99) == -1);
+  static_assert(__builtin_memcmp(ks00feff, ku00fe00, 2) == 0);
+  static_assert(__builtin_memcmp(ks00feff, ku00fe00, 99) == 1);
+  static_assert(__builtin_memcmp(ks00fe00, ku00feff, 99) == -1);
+  static_assert(__builtin_memcmp(ks00fe00, ks00feff, 2) == 0);
+  static_assert(__builtin_memcmp(ks00feff, ks00fe00, 99) == 1);
+  static_assert(__builtin_memcmp(ks00fe00, ks00feff, 99) == -1);
+
+  struct Bool3Tuple { bool bb[3]; };
+  constexpr Bool3Tuple kb000100 = {{false, true, false}};
+  static_assert(sizeof(bool) != 1u || __builtin_memcmp(ks00fe00, kb000100.bb, 1) == 0); // both-error {{constant}} \
+                                                                                        // both-note {{not supported}}
+
+  constexpr char a = 'a';
+  constexpr char b = 'a';
+  static_assert(__builtin_memcmp(&a, &b, 1) == 0);
+
+  extern struct Incomplete incomplete;
+  static_assert(__builtin_memcmp(&incomplete, "", 0u) == 0);
+  static_assert(__builtin_memcmp("", &incomplete, 0u) == 0);
+  static_assert(__builtin_memcmp(&incomplete, "", 1u) == 42); // both-error {{not an integral constant}} \
+                                                              // both-note {{not supported}}
+  static_assert(__builtin_memcmp("", &incomplete, 1u) == 42); // both-error {{not an integral constant}} \
+                                                              // both-note {{not supported}}
+}
