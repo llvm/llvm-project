@@ -486,8 +486,8 @@ enum class TemplateSubstitutionKind : char {
         const Decl *D = I->first;
         llvm::PointerUnion<Decl *, DeclArgumentPack *> &Stored =
           newScope->LocalDecls[D];
-        if (isa<Decl *>(I->second)) {
-          Stored = cast<Decl *>(I->second);
+        if (auto *D2 = dyn_cast<Decl *>(I->second)) {
+          Stored = D2;
         } else {
           DeclArgumentPack *OldPack = cast<DeclArgumentPack *>(I->second);
           DeclArgumentPack *NewPack = new DeclArgumentPack(*OldPack);
