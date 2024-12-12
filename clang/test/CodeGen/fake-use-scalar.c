@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -O0 -disable-O0-optnone -emit-llvm -fextend-lifetimes -o - | FileCheck %s --implicit-check-not=fake.use
+// RUN: %clang_cc1 %s -emit-llvm -fextend-variable-liveness -o - | FileCheck %s --implicit-check-not=fake.use
 // Make sure we don't generate fake.use for non-scalar variables, unless they
 // are small enough that they may be represented as a scalar in LLVM IR.
 // Make sure we don't generate fake.use for volatile variables

@@ -1834,13 +1834,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     Opts.setInlining(CodeGenOptions::NormalInlining);
   }
 
-  // Extended lifetimes are meaningless if we are not going to run any
-  // optimizations, so skip them here.
-  if (Opts.OptimizationLevel == 0 && !Opts.DisableO0ImplyOptNone) {
-    Opts.ExtendLifetimes = false;
-    Opts.ExtendThisPtr = false;
-  }
-
   // PIC defaults to -fno-direct-access-external-data while non-PIC defaults to
   // -fdirect-access-external-data.
   Opts.DirectAccessExternalData =

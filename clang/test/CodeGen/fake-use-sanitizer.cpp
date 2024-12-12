@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -O0 -disable-O0-optnone -emit-llvm -fextend-lifetimes -fsanitize=null -fsanitize-trap=null -o - | FileCheck --check-prefixes=CHECK,NULL --implicit-check-not=ubsantrap %s
-// RUN: %clang_cc1 %s -O0 -disable-O0-optnone -emit-llvm -fextend-lifetimes -o - | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -fextend-variable-liveness -fsanitize=null -fsanitize-trap=null -o - | FileCheck --check-prefixes=CHECK,NULL --implicit-check-not=ubsantrap %s
+// RUN: %clang_cc1 %s -emit-llvm -fextend-variable-liveness -o - | FileCheck %s
 
 // With -fextend-lifetimes, the compiler previously generated a fake.use of any
 // reference variable at the end of the scope in which its alloca exists. This

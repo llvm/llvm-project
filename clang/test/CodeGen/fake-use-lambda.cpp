@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple=%itanium_abi_triple -O1 -emit-llvm -fextend-lifetimes -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple=%itanium_abi_triple -O1 -emit-llvm -fextend-variable-liveness -o - | FileCheck %s
 // Make sure we don't crash compiling a lambda that is not nested in a function.
 // We also check that fake uses are properly issued in lambdas.
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -O0 -disable-O0-optnone -debug-info-kind=limited -fextend-lifetimes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -fextend-variable-liveness -o - %s | FileCheck %s
 
 // Clang adjusts the line numbers of returns based on the line numbers of
 // dominating stores to %retval; we test that fake use intrinsics do not affect

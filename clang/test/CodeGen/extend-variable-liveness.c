@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -O0 -disable-O0-optnone -emit-llvm -fextend-lifetimes -o - | FileCheck %s --implicit-check-not=llvm.fake.use
+// RUN: %clang_cc1 %s -emit-llvm -fextend-variable-liveness -o - | FileCheck %s --implicit-check-not=llvm.fake.use
 // Check that fake use calls are emitted at the correct locations, i.e.
 // at the end of lexical blocks and at the end of the function.
 
