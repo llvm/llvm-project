@@ -343,7 +343,6 @@ bool SBTypeSummary::IsEqualTo(lldb::SBTypeSummary &rhs) {
   case TypeSummaryImpl::Kind::eCallback:
     return llvm::dyn_cast<CXXFunctionSummaryFormat>(m_opaque_sp.get()) ==
            llvm::dyn_cast<CXXFunctionSummaryFormat>(rhs.m_opaque_sp.get());
-  case TypeSummaryImpl::Kind::eBytecode:
   case TypeSummaryImpl::Kind::eScript:
     if (IsFunctionCode() != rhs.IsFunctionCode())
       return false;
