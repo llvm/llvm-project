@@ -7,6 +7,8 @@ module {
     %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["a", init] {alignment = 4 : i64}
     %1 = cir.alloca !u32i, !cir.ptr<!u32i>, ["b", init] {alignment = 4 : i64}
     %2 = cir.alloca !u32i, !cir.ptr<!u32i>, ["x", init] {alignment = 4 : i64}
+    %100 = cir.alloca !cir.vector<!u32i x 2>, !cir.ptr<!cir.vector<!u32i x 2>>, ["vec1", init] {alignment = 8 : i64}
+    %101 = cir.alloca !cir.vector<!u32i x 2>, !cir.ptr<!cir.vector<!u32i x 2>>, ["vec2", init] {alignment = 8 : i64}
     %3 = cir.const #cir.int<2> : !u32i    cir.store %3, %0 : !u32i, !cir.ptr<!u32i>
     %4 = cir.const #cir.int<1> : !u32i    cir.store %4, %1 : !u32i, !cir.ptr<!u32i>
     %5 = cir.load %0 : !cir.ptr<!u32i>, !u32i
@@ -51,6 +53,10 @@ module {
     cir.store %34, %2 : !u32i, !cir.ptr<!u32i>
     %35 = cir.binop(add, %32, %33) sat: !u32i
     %36 = cir.binop(sub, %32, %33) sat: !u32i  
+    %37 = cir.binop(max, %32, %33) : !u32i
+    %38 = cir.load %100 : !cir.ptr<!cir.vector<!u32i x 2>>, !cir.vector<!u32i x 2>
+    %39 = cir.load %101 : !cir.ptr<!cir.vector<!u32i x 2>>, !cir.vector<!u32i x 2>
+    %40 = cir.binop(max, %38, %39) : !cir.vector<!u32i x 2>
     cir.return
   }
 }
@@ -64,8 +70,11 @@ module {
 // MLIR: = llvm.shl
 // MLIR: = llvm.and
 // MLIR: = llvm.xor
+// MLIR: = llvm.or
 // MLIR: = llvm.intr.uadd.sat{{.*}}(i32, i32) -> i32
 // MLIR: = llvm.intr.usub.sat{{.*}}(i32, i32) -> i32 
+// MLIR: = llvm.intr.umax
+// MLIR: = llvm.intr.umax
 
 // LLVM: = mul i32
 // LLVM: = udiv i32
@@ -79,3 +88,5 @@ module {
 // LLVM: = or i32
 // LLVM: = call i32 @llvm.uadd.sat.i32
 // LLVM: = call i32 @llvm.usub.sat.i32
+// LLVM: = call i32 @llvm.umax.i32
+// LLVM: = call <2 x i32> @llvm.umax.v2i32

@@ -1157,6 +1157,7 @@ def BinOpKind_Sub : I32EnumAttrCase<"Sub", 5, "sub">;
 def BinOpKind_And : I32EnumAttrCase<"And", 8, "and">;
 def BinOpKind_Xor : I32EnumAttrCase<"Xor", 9, "xor">;
 def BinOpKind_Or  : I32EnumAttrCase<"Or", 10, "or">;
+def BinOpKind_Max : I32EnumAttrCase<"Max", 11, "max">;
 
 def BinOpKind : I32EnumAttr<
     "BinOpKind",
@@ -1164,7 +1165,7 @@ def BinOpKind : I32EnumAttr<
     [BinOpKind_Mul, BinOpKind_Div, BinOpKind_Rem,
      BinOpKind_Add, BinOpKind_Sub,
      BinOpKind_And, BinOpKind_Xor,
-     BinOpKind_Or]> {
+     BinOpKind_Or, BinOpKind_Max]> {
   let cppNamespace = "::cir";
 }
 
