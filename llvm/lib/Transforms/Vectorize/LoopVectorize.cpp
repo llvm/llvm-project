@@ -2643,14 +2643,12 @@ void InnerLoopVectorizer::createInductionAdditionalBypassValue(
       B.setFastMathFlags(II.getInductionBinOp()->getFastMathFlags());
 
     // Compute the end value for the additional bypass.
-    if (MainVectorTripCount) {
-      B.SetInsertPoint(getAdditionalBypassBlock(),
-                       getAdditionalBypassBlock()->getFirstInsertionPt());
-      EndValueFromAdditionalBypass =
-          emitTransformedIndex(B, MainVectorTripCount, II.getStartValue(), Step,
-                               II.getKind(), II.getInductionBinOp());
-      EndValueFromAdditionalBypass->setName("ind.end");
-    }
+    B.SetInsertPoint(getAdditionalBypassBlock(),
+                     getAdditionalBypassBlock()->getFirstInsertionPt());
+    EndValueFromAdditionalBypass =
+        emitTransformedIndex(B, MainVectorTripCount, II.getStartValue(), Step,
+                             II.getKind(), II.getInductionBinOp());
+    EndValueFromAdditionalBypass->setName("ind.end");
   }
 
   // Store the bypass value here, as it needs to be added as operand to its
@@ -9722,11 +9720,12 @@ void VPDerivedIVRecipe::execute(VPTransformState &State) {
   Value *Step = State.get(getStepValue(), VPLane(0));
   Value *Index = State.get(getOperand(1), VPLane(0));
   Value *DerivedIV = emitTransformedIndex(
-      State.Builder, Index, getStartValue()->getLiveInIRValue(), Step,
-      Kind, cast_if_present<BinaryOperator>(FPBinOp));
+      State.Builder, Index, getStartValue()->getLiveInIRValue(), Step, Kind,
+      cast_if_present<BinaryOperator>(FPBinOp));
   DerivedIV->setName(Name);
-  // Index may only bet set to constant 0 in prepareToExecute.
-  assert((DerivedIV != Index || cast<ConstantInt>(Index)->isNullValue()) && "IV didn't need transforming?");
+  // Index may only be set to constant 0 in prepareToExecute.
+  assert((DerivedIV != Index || cast<ConstantInt>(Index)->isNullValue()) &&
+         "IV didn't need transforming?");
   State.set(this, DerivedIV, VPLane(0));
 }
 

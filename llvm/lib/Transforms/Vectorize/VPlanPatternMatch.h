@@ -391,8 +391,8 @@ using VPDerivedIV_match =
     Recipe_match<std::tuple<Op0_t, Op1_t, Op2_t>, 0, false, VPDerivedIVRecipe>;
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
-inline VPDerivedIV_match<Op0_t, Op1_t, Op2_t> m_DerivedIV(const Op0_t &Op0,
-                                                           const Op1_t &Op1, const Op2_t &Op2) {
+inline VPDerivedIV_match<Op0_t, Op1_t, Op2_t>
+m_DerivedIV(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
   return VPDerivedIV_match<Op0_t, Op1_t, Op2_t>({Op0, Op1, Op2});
 }
 
