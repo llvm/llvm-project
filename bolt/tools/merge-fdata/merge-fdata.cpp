@@ -19,6 +19,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/ThreadPool.h"
 #include <algorithm>
@@ -266,7 +267,19 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   errs() << "Using legacy profile format.\n";
   std::optional<bool> BoltedCollection;
   std::mutex BoltedCollectionMutex;
-  typedef StringMap<uint64_t> ProfileTy;
+  constexpr static const char *const FdataCountersPattern =
+      "(.*) ([0-9]+) ([0-9]+)";
+  Regex FdataRegex(FdataCountersPattern);
+  struct CounterTy {
+    uint64_t Count;
+    uint64_t MispredCount;
+    CounterTy &operator+(const CounterTy &O) {
+      Count += O.Count;
+      MispredCount += O.MispredCount;
+      return *this;
+    }
+  };
+  typedef StringMap<CounterTy> ProfileTy;
 
   auto ParseProfile = [&](const std::string &Filename, auto &Profiles) {
     const llvm::thread::id tid = llvm::this_thread::get_id();
@@ -304,15 +317,19 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
     SmallVector<StringRef> Lines;
     SplitString(Buf, Lines, "\n");
     for (StringRef Line : Lines) {
-      size_t Pos = Line.rfind(" ");
-      if (Pos == StringRef::npos)
+      CounterTy CurrCount;
+      SmallVector<StringRef, 4> Fields;
+      if (!FdataRegex.match(Line, &Fields))
         report_error(Filename, "Malformed / corrupted profile");
-      StringRef Signature = Line.substr(0, Pos);
-      uint64_t Count;
-      if (Line.substr(Pos + 1, Line.size() - Pos).getAsInteger(10, Count))
-        report_error(Filename, "Malformed / corrupted profile counter");
-      Count += Profile->lookup(Signature);
-      Profile->insert_or_assign(Signature, Count);
+      StringRef Signature = Fields[1];
+      if (Fields[2].getAsInteger(10, CurrCount.MispredCount))
+        report_error(Filename, "Malformed / corrupted execution count");
+      if (Fields[3].getAsInteger(10, CurrCount.Count))
+        report_error(Filename, "Malformed / corrupted misprediction count");
+
+      CounterTy Counter = Profile->lookup(Signature);
+      Counter = Counter + CurrCount;
+      Profile->insert_or_assign(Signature, Counter);
     }
   };
 
@@ -330,14 +347,14 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   ProfileTy MergedProfile;
   for (const auto &[Thread, Profile] : ParsedProfiles)
     for (const auto &[Key, Value] : Profile) {
-      uint64_t Count = MergedProfile.lookup(Key) + Value;
+      auto Count = MergedProfile.lookup(Key) + Value;
       MergedProfile.insert_or_assign(Key, Count);
     }
 
   if (BoltedCollection.value_or(false))
     output() << "boltedcollection\n";
   for (const auto &[Key, Value] : MergedProfile)
-    output() << Key << " " << Value << "\n";
+    output() << Key << " " << Value.MispredCount << " " << Value.Count << "\n";
 
   errs() << "Profile from " << Filenames.size() << " files merged.\n";
 }

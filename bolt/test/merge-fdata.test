@@ -1,0 +1,8 @@
+## Reproduces an issue where counts were not accumulated by merge-fdata
+
+# RUN: split-file %s %t
+# RUN: merge-fdata %t/fdata | FileCheck %s
+# CHECK: 1 main 10 1 main 1a 1 20
+#--- fdata
+1 main 10 1 main 1a 0 10
+1 main 10 1 main 1a 1 10
