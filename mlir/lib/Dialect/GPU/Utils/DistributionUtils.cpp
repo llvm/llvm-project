@@ -51,22 +51,22 @@ WarpExecuteOnLane0Op
 WarpDistributionPattern::moveRegionToNewWarpOpAndAppendReturns(
     RewriterBase &rewriter, WarpExecuteOnLane0Op warpOp,
     ValueRange newYieldedValues, TypeRange newReturnTypes,
-    llvm::SmallVector<size_t> &indices) const {
+    SmallVector<size_t> &indices) const {
   SmallVector<Type> types(warpOp.getResultTypes().begin(),
                           warpOp.getResultTypes().end());
   auto yield = cast<gpu::YieldOp>(
       warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
   llvm::SmallSetVector<Value, 32> yieldValues(yield.getOperands().begin(),
                                               yield.getOperands().end());
-  for (auto newRet : llvm::zip(newYieldedValues, newReturnTypes)) {
-    if (yieldValues.insert(std::get<0>(newRet))) {
-      types.push_back(std::get<1>(newRet));
+  for (auto [value, type] : llvm::zip_equal(newYieldedValues, newReturnTypes)) {
+    if (yieldValues.insert(value)) {
+      types.push_back(type);
       indices.push_back(yieldValues.size() - 1);
     } else {
       // If the value already exit the region don't create a new output.
       for (auto [idx, yieldOperand] :
            llvm::enumerate(yieldValues.getArrayRef())) {
-        if (yieldOperand == std::get<0>(newRet)) {
+        if (yieldOperand == value) {
           indices.push_back(idx);
           break;
         }
@@ -83,7 +83,7 @@ WarpDistributionPattern::moveRegionToNewWarpOpAndAppendReturns(
 
 OpOperand *WarpDistributionPattern::getWarpResult(
     WarpExecuteOnLane0Op warpOp,
-    const std::function<bool(Operation *)> &fn) const {
+    const llvm::function_ref<bool(Operation *)> fn) const {
   auto yield = cast<gpu::YieldOp>(
       warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
   for (OpOperand &yieldOperand : yield->getOpOperands()) {
@@ -94,7 +94,7 @@ OpOperand *WarpDistributionPattern::getWarpResult(
         return &yieldOperand;
     }
   }
-  return {};
+  return nullptr;
 }
 
 bool WarpDistributionPattern::delinearizeLaneId(

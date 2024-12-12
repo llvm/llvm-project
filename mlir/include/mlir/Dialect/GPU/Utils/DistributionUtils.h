@@ -1,4 +1,4 @@
-//===- VectorDistributionUtils.h - Distribution Utilities -------*- C++ -*-===//
+//===- DistributionUtils.h - Distribution Utilities -------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,13 +15,10 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
 
-#include <numeric>
-#include <utility>
-
-namespace mlir {
-namespace gpu {
+namespace mlir::gpu {
 struct WarpDistributionPattern : OpRewritePattern<WarpExecuteOnLane0Op> {
-  using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
+  using Base = WarpDistributionPattern;
 
   virtual LogicalResult
   matchAndRewrite(WarpExecuteOnLane0Op op,
@@ -30,8 +27,9 @@ struct WarpDistributionPattern : OpRewritePattern<WarpExecuteOnLane0Op> {
 protected:
   /// Return a value yielded by `warpOp` which statifies the filter lamdba
   /// condition and is not dead.
-  OpOperand *getWarpResult(WarpExecuteOnLane0Op warpOp,
-                           const std::function<bool(Operation *)> &fn) const;
+  OpOperand *
+  getWarpResult(WarpExecuteOnLane0Op warpOp,
+                const llvm::function_ref<bool(Operation *)> fn) const;
 
   /// Helper to create a new WarpExecuteOnLane0Op with different signature.
   WarpExecuteOnLane0Op moveRegionToNewWarpOpAndReplaceReturns(
@@ -43,7 +41,7 @@ protected:
   WarpExecuteOnLane0Op moveRegionToNewWarpOpAndAppendReturns(
       RewriterBase &rewriter, WarpExecuteOnLane0Op warpOp,
       ValueRange newYieldedValues, TypeRange newReturnTypes,
-      llvm::SmallVector<size_t> &indices) const;
+      SmallVector<size_t> &indices) const;
 
   /// Delinearize the given `laneId` into multiple dimensions, where each
   /// dimension's size is determined by `originalShape` and `distributedShape`
@@ -57,7 +55,6 @@ protected:
                          SmallVectorImpl<Value> &delinearizedIds) const;
 };
 
-} // namespace gpu
-} // namespace mlir
+} // namespace mlir::gpu
 
 #endif // MLIR_DIALECT_GPU_TRANSFORMS_DISTRIBUTIONUTILS_H_
