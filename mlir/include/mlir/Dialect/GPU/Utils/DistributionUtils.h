@@ -22,6 +22,7 @@ namespace mlir {
 namespace gpu {
 struct WarpDistributionPattern : OpRewritePattern<WarpExecuteOnLane0Op> {
   using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
+
   virtual LogicalResult
   matchAndRewrite(WarpExecuteOnLane0Op op,
                   PatternRewriter &rewriter) const override = 0;
@@ -29,31 +30,31 @@ struct WarpDistributionPattern : OpRewritePattern<WarpExecuteOnLane0Op> {
 protected:
   /// Return a value yielded by `warpOp` which statifies the filter lamdba
   /// condition and is not dead.
-  static OpOperand *getWarpResult(WarpExecuteOnLane0Op warpOp,
-                                  const std::function<bool(Operation *)> &fn);
+  OpOperand *getWarpResult(WarpExecuteOnLane0Op warpOp,
+                           const std::function<bool(Operation *)> &fn) const;
 
   /// Helper to create a new WarpExecuteOnLane0Op with different signature.
-  static WarpExecuteOnLane0Op moveRegionToNewWarpOpAndReplaceReturns(
+  WarpExecuteOnLane0Op moveRegionToNewWarpOpAndReplaceReturns(
       RewriterBase &rewriter, WarpExecuteOnLane0Op warpOp,
-      ValueRange newYieldedValues, TypeRange newReturnTypes);
+      ValueRange newYieldedValues, TypeRange newReturnTypes) const;
 
   /// Helper to create a new WarpExecuteOnLane0Op region with extra outputs.
   /// `indices` return the index of each new output.
-  static WarpExecuteOnLane0Op moveRegionToNewWarpOpAndAppendReturns(
+  WarpExecuteOnLane0Op moveRegionToNewWarpOpAndAppendReturns(
       RewriterBase &rewriter, WarpExecuteOnLane0Op warpOp,
       ValueRange newYieldedValues, TypeRange newReturnTypes,
-      llvm::SmallVector<size_t> &indices);
+      llvm::SmallVector<size_t> &indices) const;
 
   /// Delinearize the given `laneId` into multiple dimensions, where each
   /// dimension's size is determined by `originalShape` and `distributedShape`
   /// together. This function expects the total numbers of threads needed for
   /// distribution is equal to `warpSize`. Returns true and updates
   /// `delinearizedIds` if so.
-  static bool delinearizeLaneId(OpBuilder &builder, Location loc,
-                                ArrayRef<int64_t> originalShape,
-                                ArrayRef<int64_t> distributedShape,
-                                int64_t warpSize, Value laneId,
-                                SmallVectorImpl<Value> &delinearizedIds);
+  bool delinearizeLaneId(OpBuilder &builder, Location loc,
+                         ArrayRef<int64_t> originalShape,
+                         ArrayRef<int64_t> distributedShape, int64_t warpSize,
+                         Value laneId,
+                         SmallVectorImpl<Value> &delinearizedIds) const;
 };
 
 } // namespace gpu

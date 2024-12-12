@@ -536,11 +536,11 @@ private:
   /// Clone `writeOp` assumed to be nested under `warpOp` into a new warp
   /// execute op with the proper return type. The new write op is updated to
   /// write the result of the new warp execute op. The old `writeOp` is deleted.
-  static vector::TransferWriteOp cloneWriteOp(RewriterBase &rewriter,
-                                              WarpExecuteOnLane0Op warpOp,
-                                              vector::TransferWriteOp writeOp,
-                                              VectorType targetType,
-                                              VectorType maybeMaskType) {
+  vector::TransferWriteOp cloneWriteOp(RewriterBase &rewriter,
+                                       WarpExecuteOnLane0Op warpOp,
+                                       vector::TransferWriteOp writeOp,
+                                       VectorType targetType,
+                                       VectorType maybeMaskType) const {
     assert(writeOp->getParentOp() == warpOp &&
            "write must be nested immediately under warp");
     OpBuilder::InsertionGuard g(rewriter);
