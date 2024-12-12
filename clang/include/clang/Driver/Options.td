@@ -4301,7 +4301,11 @@ def stack_usage_file : Separate<["-"], "stack-usage-file">,
 def fextend_variable_liveness_EQ : Joined<["-"], "fextend-variable-liveness=">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Extend the liveness of user variables through optimizations to "
-           "prevent stale or optimized-out variable values when debugging.">,
+           "prevent stale or optimized-out variable values when debugging. Can "
+           "be applied to all user variables, or just to the C++ 'this' ptr. "
+           "May choose not to extend the liveness of some variables, such as "
+           "non-scalars larger than 4 unsigned ints, or variables in any "
+           "inlined functions.">,
   Values<"all,this,none">,
   NormalizedValues<["All", "This", "None"]>,
   NormalizedValuesScope<"CodeGenOptions::ExtendVariableLivenessKind">,
@@ -4309,14 +4313,11 @@ def fextend_variable_liveness_EQ : Joined<["-"], "fextend-variable-liveness=">,
 def fextend_this_ptr_liveness : Flag<["-"], "fextend-this-ptr-liveness">,
   Visibility<[ClangOption, CC1Option]>,
   Alias<fextend_variable_liveness_EQ>, AliasArgs<["this"]>,
-  HelpText<"Extend the liveness of the `this` pointer through optimizations to "
-           "prevent a stale or optimized-out value when debugging.">;
+  HelpText<"Alias for -fextend-variable-liveness=this.">;
 def fextend_variable_liveness : Flag<["-"], "fextend-variable-liveness">,
   Visibility<[ClangOption, CC1Option]>,
   Alias<fextend_variable_liveness_EQ>, AliasArgs<["all"]>,
-  HelpText<"Extend the liveness of all local variables and parameters through "
-           "optimizations to prevent stale or optimized-out variable values "
-           "when debugging.">;
+  HelpText<"Alias for -fextend-variable-liveness=all.">;
 
 defm unique_basic_block_section_names : BoolFOption<"unique-basic-block-section-names",
   CodeGenOpts<"UniqueBasicBlockSectionNames">, DefaultFalse,
