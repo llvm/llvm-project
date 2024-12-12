@@ -418,18 +418,20 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
                                      CGCXXABI::RAA_DirectInMemory);
   }
 
-  // Empty records are always ignored on Darwin, but actually passed in C++ mode
-  // elsewhere for GNU compatibility.
+  // Empty records:
   uint64_t Size = getContext().getTypeSize(Ty);
   bool IsEmpty = isEmptyRecord(getContext(), Ty, true);
   if (!Ty->isSVESizelessBuiltinType() && (IsEmpty || Size == 0)) {
+    // Empty records are ignored in C mode, and in C++ on Darwin.
     if (!getContext().getLangOpts().CPlusPlus || isDarwinPCS())
       return ABIArgInfo::getIgnore();
 
-    // GNU C mode. The only argument that gets ignored is an empty one with size
-    // 0.
+    // In C++ mode, arguments which are empty and have sizeof() == 0 (which are
+    // non-standard C++) are ignored.
     if (IsEmpty && Size == 0)
       return ABIArgInfo::getIgnore();
+
+    // Otherwise, they are passed as if they have a size of 1 byte.
     return ABIArgInfo::getDirect(llvm::Type::getInt8Ty(getVMContext()));
   }
 
