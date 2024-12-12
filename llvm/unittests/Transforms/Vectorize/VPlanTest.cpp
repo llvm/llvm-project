@@ -747,8 +747,9 @@ compound=true
   N0 [label =
     "preheader:\l" +
     "  EMIT vp\<%1\> = add\l" +
-    "No successors\l"
+    "Successor(s): bb1\l"
   ]
+  N0 -> N1 [ label=""]
   N1 [label =
     "bb1:\l" +
     "  EMIT vp\<%2\> = add\l" +
@@ -840,7 +841,7 @@ vp<%1> = original trip-count
 
 preheader:
   EMIT vp<%1> = sub
-No successors
+Successor(s): bb1
 
 bb1:
   EMIT vp<%2> = add
@@ -864,7 +865,7 @@ vp<%1> = original trip-count
 
 preheader:
   EMIT vp<%1> = sub
-No successors
+Successor(s): bb1
 
 bb1:
   EMIT vp<%2> = add
@@ -888,7 +889,7 @@ vp<%1> = original trip-count
 
 preheader:
   EMIT vp<%1> = sub
-No successors
+Successor(s): bb1
 
 bb1:
   EMIT vp<%2> = add

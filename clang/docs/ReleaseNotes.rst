@@ -61,6 +61,8 @@ code bases.
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
+- Clang now rejects ``_Complex _BitInt`` types.
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
@@ -612,6 +614,8 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses ``[[deprecated]]`` attribute usage on local variables (#GH90073).
 
+- Fix false positives when `[[gsl::Owner/Pointer]]` and `[[clang::lifetimebound]]` are used together.
+
 - Improved diagnostic message for ``__builtin_bit_cast`` size mismatch (#GH115870).
 
 - Clang now omits shadow warnings for enum constants in separate class scopes (#GH62588).
@@ -663,6 +667,15 @@ Improvements to Clang's diagnostics
     class C {
       bool operator==(const C&) = default;
     };
+
+- Clang now emits `-Wdangling-capture` diangostic when a STL container captures a dangling reference.
+
+  .. code-block:: c++
+
+    void test() {
+      std::vector<std::string_view> views;
+      views.push_back(std::string("123")); // warning
+    }
 
 Improvements to Clang's time-trace
 ----------------------------------
