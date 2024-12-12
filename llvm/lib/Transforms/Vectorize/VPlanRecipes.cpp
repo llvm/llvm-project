@@ -2782,8 +2782,7 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
     SmallVector<Value *> InterleavingValues(Vals);
     // When interleaving, the number of values will be shrunk until we have the
     // single final interleaved value.
-    auto *InterleaveTy =
-        cast<VectorType>(InterleavingValues[0]->getType());
+    auto *InterleaveTy = cast<VectorType>(InterleavingValues[0]->getType());
     for (unsigned Midpoint = Factor / 2; Midpoint > 0; Midpoint /= 2) {
       InterleaveTy = VectorType::getDoubleElementsVectorType(InterleaveTy);
       for (unsigned I = 0; I < Midpoint; ++I)
@@ -2936,7 +2935,8 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
       // iteration.
       // When deinterleaving, the number of values will double until we
       // have "InterleaveFactor".
-      for (unsigned NumVectors = 1; NumVectors < InterleaveFactor; NumVectors *= 2) {
+      for (unsigned NumVectors = 1; NumVectors < InterleaveFactor;
+           NumVectors *= 2) {
         // Deinterleave the elements within the vector
         SmallVector<Value *> TempDeinterleavedValues(NumVectors);
         for (unsigned I = 0; I < NumVectors; ++I) {
