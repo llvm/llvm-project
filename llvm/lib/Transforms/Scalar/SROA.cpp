@@ -5523,7 +5523,7 @@ bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
           Insts.push_back(User);
         } else if (auto *SI = dyn_cast<StoreInst>(User)) {
           Type *UserTy = SI->getValueOperand()->getType();
-          if (!SI->isSimple() || PartitionType && UserTy != PartitionType)
+          if (!SI->isSimple() || (PartitionType && UserTy != PartitionType))
             AllSameAndValid = false;
           PartitionType = UserTy;
           Insts.push_back(User);
