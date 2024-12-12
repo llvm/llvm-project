@@ -56,6 +56,6 @@ define void @test3() {
 }
 
 ; CHECK: attributes [[ATTR1]] = { "inline-remark"="(cost=25, threshold=0)" }
-; CHECK: attributes [[ATTR2]] = { "inline-remark"="(cost=never): recursive" }
+; CHECK: attributes [[ATTR2]] = { "inline-remark"="(cost=0, threshold=0)" }
 ; CHECK: attributes [[ATTR3]] = { "inline-remark"="unsupported operand bundle; (cost={{.*}}, threshold={{.*}})" }
 ; CHECK: attributes [[ATTR4]] = { alwaysinline "inline-remark"="(cost=never): recursive call" }

@@ -236,7 +236,7 @@ struct InlineParams {
   std::optional<bool> EnableDeferral;
 
   /// Indicate whether we allow inlining for recursive call.
-  std::optional<bool> AllowRecursiveCall = false;
+  std::optional<bool> AllowRecursiveCall = true;
 };
 
 std::optional<int> getStringFnAttrAsInt(CallBase &CB, StringRef AttrKind);

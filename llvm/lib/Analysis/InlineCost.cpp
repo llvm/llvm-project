@@ -21,6 +21,7 @@
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/EphemeralValuesCache.h"
+#include "llvm/Analysis/DomConditionCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
@@ -1170,6 +1171,10 @@ public:
   std::optional<CostBenefitPair> getCostBenefitPair() { return CostBenefit; }
   bool wasDecidedByCostBenefit() const { return DecidedByCostBenefit; }
   bool wasDecidedByCostThreshold() const { return DecidedByCostThreshold; }
+  bool shouldCheckRecursiveCall() {
+    return IsRecursiveCall && AllowRecursiveCall;
+  }
+  bool shouldInlineRecursiveCall(CallBase &Call);
 };
 
 // Return true if CB is the sole call to local function Callee.
@@ -2895,6 +2900,68 @@ InlineResult CallAnalyzer::analyze() {
   return finalizeAnalysis();
 }
 
+bool InlineCostCallAnalyzer::shouldInlineRecursiveCall(CallBase &Call) {
+  CallInst *CI = cast<CallInst>(&Call);
+  auto CIB = CI->getParent();
+  // Only handle case when we have sinlge predecessor
+  if (auto Predecessor = CIB->getSinglePredecessor()) {
+    BranchInst *Br = dyn_cast<BranchInst>(Predecessor->getTerminator());
+    if (!Br || Br->isUnconditional()) {
+      return false;
+    }
+    Value *Var = Br->getCondition();
+    CmpInst *CmpInstr = dyn_cast<CmpInst>(Var);
+    if (CmpInstr && !isa<Constant>(CmpInstr->getOperand(1))) {
+      // Current logic of ValueTracking/DomConditionCache works only if RHS is
+      // constant.
+      return false;
+    }
+    unsigned ArgNum = 0;
+    Value *FuncArg = nullptr, *CallArg = nullptr;
+    // Check which func argument the cmp instr is using:
+    for (; ArgNum < CI->getFunction()->arg_size(); ArgNum++) {
+      FuncArg = CI->getFunction()->getArg(ArgNum);
+      CallArg = CI->getArgOperand(ArgNum);
+      if (CmpInstr) {
+        if ((FuncArg == CmpInstr->getOperand(0)) &&
+            (CallArg != CmpInstr->getOperand(0)))
+          break;
+      } else if (FuncArg == Var && (CallArg != Var))
+        break;
+    }
+    // Only handle the case when a func argument controls the cmp instruction:
+    if (ArgNum < CI->getFunction()->arg_size()) {
+      bool isTrueSuccessor = CIB == Br->getSuccessor(0);
+      if (CmpInstr) {
+        SimplifyQuery SQ(CI->getFunction()->getDataLayout(),
+                         dyn_cast<Instruction>(CallArg));
+        DomConditionCache DC;
+        DC.registerBranch(Br);
+        SQ.DC = &DC;
+        DominatorTree DT(*CI->getFunction());
+        SQ.DT = &DT;
+        Value *simplifiedInstruction = llvm::simplifyInstructionWithOperands(
+            CmpInstr, {CallArg, CmpInstr->getOperand(1)}, SQ);
+        if (!simplifiedInstruction)
+          return false;
+        if (auto *ConstVal =
+                dyn_cast<llvm::ConstantInt>(simplifiedInstruction)) {
+          if (ConstVal->isOne())
+            return !isTrueSuccessor;
+          return isTrueSuccessor;
+        }
+      } else {
+        if (auto *ConstVal = dyn_cast<llvm::ConstantInt>(CallArg)) {
+          if (ConstVal->isOne())
+            return !isTrueSuccessor;
+          return isTrueSuccessor;
+        }
+      }
+    }
+  }
+  return false;
+}
+
 void InlineCostCallAnalyzer::print(raw_ostream &OS) {
 #define DEBUG_PRINT_STAT(x) OS << "      " #x ": " << x << "\n"
   if (PrintInstructionComments)
@@ -3126,6 +3193,12 @@ InlineCost llvm::getInlineCost(
 
   LLVM_DEBUG(CA.dump());
 
+  // Check if callee function is recursive:
+  if (ShouldInline.isSuccess()) {
+    if (CA.shouldCheckRecursiveCall() && !CA.shouldInlineRecursiveCall(Call))
+      return InlineCost::getNever("deep recursion");
+  }
+
   // Always make cost benefit based decision explicit.
   // We use always/never here since threshold is not meaningful,
   // as it's not what drives cost-benefit analysis.
@@ -3168,6 +3241,13 @@ InlineResult llvm::isInlineViable(Function &F) {
 
       // Disallow recursive calls.
       Function *Callee = Call->getCalledFunction();
+      // This function is called when we have "alwaysinline" attribute.
+      // If we allowed the inlining here given that the recursive inlining is
+      // allowed, then there will be problem in the second trial of inlining,
+      // because the Inliner pass allow only one time inlining and then it
+      // inserts "noinline" attribute which will be in conflict with the
+      // attribute of "alwaysinline" so, "alwaysinline" for recursive function
+      // will be disallowed to avoid conflict of attributes.
       if (&F == Callee)
         return InlineResult::failure("recursive call");
 
