@@ -590,6 +590,14 @@ void OmpStructureChecker::CheckHintClause(
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
+  PushContextAndClauseSets(x.source, std::get<llvm::omp::Directive>(x.t));
+}
+
+void OmpStructureChecker::Leave(const parser::OmpDirectiveSpecification &) {
+  dirContext_.pop_back();
+}
+
 void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
   // Simd Construct with Ordered Construct Nesting check
   // We cannot use CurrentDirectiveIsNested() here because

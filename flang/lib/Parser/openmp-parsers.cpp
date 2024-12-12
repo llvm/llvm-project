@@ -153,6 +153,84 @@ static TypeDeclarationStmt makeIterSpecDecl(std::list<ObjectName> &&names) {
       makeEntityList(std::move(names)));
 }
 
+TYPE_PARSER(sourced(construct<OmpDirectiveSpecification>(
+    OmpDirectiveNameParser{}, maybe(indirect(Parser<OmpClauseList>{})))))
+
+// --- Parsers for context traits -------------------------------------
+
+TYPE_PARSER(construct<OmpTraitPropertyName>( //
+    (space >> charLiteralConstantWithoutKind) ||
+    applyMem(&Name::ToString, Parser<Name>{})))
+
+TYPE_PARSER(construct<OmpTraitScore>( //
+    "SCORE" >> parenthesized(scalarIntExpr)))
+
+TYPE_PARSER(construct<OmpTraitPropertyExtension::ExtensionValue>(
+    // Parse nested extension first.
+    construct<OmpTraitPropertyExtension::ExtensionValue>(
+        indirect(Parser<OmpTraitPropertyExtension>{})) ||
+    construct<OmpTraitPropertyExtension::ExtensionValue>(
+        Parser<OmpTraitPropertyName>{}) ||
+    construct<OmpTraitPropertyExtension::ExtensionValue>(scalarExpr)))
+
+TYPE_PARSER(construct<OmpTraitPropertyExtension>( //
+    Parser<OmpTraitPropertyName>{},
+    parenthesized(nonemptySeparated(
+        Parser<OmpTraitPropertyExtension::ExtensionValue>{}, ","_tok))))
+
+TYPE_PARSER(construct<OmpTraitProperty>(
+    // Try extension first, before OmpTraitPropertyName.
+    construct<OmpTraitProperty>(Parser<OmpTraitPropertyExtension>{}) ||
+    construct<OmpTraitProperty>(Parser<OmpTraitPropertyName>{}) ||
+    construct<OmpTraitProperty>(indirect(Parser<OmpClause>{})) ||
+    construct<OmpTraitProperty>(scalarExpr)))
+
+TYPE_PARSER(construct<OmpTraitSelectorName::Value>(
+    "ARCH" >> pure(OmpTraitSelectorName::Value::Arch) ||
+    "ATOMIC_DEFAULT_MEM_ORDER" >>
+        pure(OmpTraitSelectorName::Value::Atomic_Default_Mem_Order) ||
+    "CONDITION" >> pure(OmpTraitSelectorName::Value::Condition) ||
+    "DEVICE_NUM" >> pure(OmpTraitSelectorName::Value::Device_Num) ||
+    "EXTENSION" >> pure(OmpTraitSelectorName::Value::Extension) ||
+    "ISA" >> pure(OmpTraitSelectorName::Value::Isa) ||
+    "KIND" >> pure(OmpTraitSelectorName::Value::Kind) ||
+    "REQUIRES" >> pure(OmpTraitSelectorName::Value::Requires) ||
+    "SIMD" >> pure(OmpTraitSelectorName::Value::Simd) ||
+    "UID" >> pure(OmpTraitSelectorName::Value::Uid) ||
+    "VENDOR" >> pure(OmpTraitSelectorName::Value::Vendor)))
+
+TYPE_PARSER(construct<OmpTraitSelectorName>(
+    // Parse predefined names first (because of SIMD).
+    construct<OmpTraitSelectorName>(Parser<OmpTraitSelectorName::Value>{}) ||
+    construct<OmpTraitSelectorName>(OmpDirectiveNameParser{})))
+
+TYPE_PARSER(construct<OmpTraitSelector::Properties>(
+    maybe(Parser<OmpTraitScore>{} / ":"_tok),
+    nonemptySeparated(Parser<OmpTraitProperty>{}, ","_tok)))
+
+TYPE_PARSER(construct<OmpTraitSelector>( //
+    Parser<OmpTraitSelectorName>{}, //
+    maybe(parenthesized(Parser<OmpTraitSelector::Properties>{}))))
+
+TYPE_PARSER(construct<OmpTraitSetSelectorName::Value>(
+    "CONSTRUCT" >> pure(OmpTraitSetSelectorName::Value::Construct) ||
+    "DEVICE" >> pure(OmpTraitSetSelectorName::Value::Device) ||
+    "IMPLEMENTATION" >> pure(OmpTraitSetSelectorName::Value::Implementation) ||
+    "TARGET_DEVICE" >> pure(OmpTraitSetSelectorName::Value::Target_Device) ||
+    "USER" >> pure(OmpTraitSetSelectorName::Value::User)))
+
+TYPE_PARSER(construct<OmpTraitSetSelectorName>(
+    Parser<OmpTraitSetSelectorName::Value>{}))
+
+TYPE_PARSER(construct<OmpTraitSetSelector>( //
+    Parser<OmpTraitSetSelectorName>{},
+    "=" >> braced(nonemptySeparated(Parser<OmpTraitSelector>{}, ","_tok))))
+
+TYPE_PARSER(construct<OmpContextSelectorSpecification>(
+    nonemptySeparated(Parser<OmpTraitSetSelector>{}, ","_tok)))
+
+// Parser<OmpContextSelector> == Parser<traits::OmpContextSelectorSpecification>
+
 // --- Parsers for clause modifiers -----------------------------------
 
 TYPE_PARSER(construct<OmpAlignment>(scalarIntExpr))
