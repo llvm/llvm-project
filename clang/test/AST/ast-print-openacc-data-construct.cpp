@@ -10,6 +10,11 @@ void foo() {
 // CHECK-NOT: default(none)
 #pragma acc data default(none)
   ;
+
+// CHECK: #pragma acc data device_type(int)
+#pragma acc data device_type(int)
+  ;
+
 // CHECK: #pragma acc enter data
 // CHECK-NOT: copyin(Var)
 #pragma acc enter data copyin(Var)

@@ -435,11 +435,12 @@ bool checkAlreadyHasClauseOfKind(
 bool checkValidAfterDeviceType(
     SemaOpenACC &S, const OpenACCDeviceTypeClause &DeviceTypeClause,
     const SemaOpenACC::OpenACCParsedClause &NewClause) {
-  // This is only a requirement on compute and loop constructs so far, so this
-  // is fine otherwise.
+  // This is only a requirement on compute, combined, data and loop constructs
+  // so far, so this is fine otherwise.
   if (!isOpenACCComputeDirectiveKind(NewClause.getDirectiveKind()) &&
       !isOpenACCCombinedDirectiveKind(NewClause.getDirectiveKind()) &&
-      NewClause.getDirectiveKind() != OpenACCDirectiveKind::Loop)
+      NewClause.getDirectiveKind() != OpenACCDirectiveKind::Loop &&
+      NewClause.getDirectiveKind() != OpenACCDirectiveKind::Data)
     return false;
 
   // OpenACC3.3: Section 2.4: Clauses that precede any device_type clause are
@@ -500,6 +501,16 @@ bool checkValidAfterDeviceType(
     case OpenACCClauseKind::Independent:
     case OpenACCClauseKind::Auto:
     case OpenACCClauseKind::Tile:
+      return false;
+    default:
+      break;
+    }
+  } else if (NewClause.getDirectiveKind() == OpenACCDirectiveKind::Data) {
+    // OpenACC3.3 section 2.6.5: Only the async and wait clauses may follow a
+    // device_type clause.
+    switch (NewClause.getClauseKind()) {
+    case OpenACCClauseKind::Async:
+    case OpenACCClauseKind::Wait:
       return false;
     default:
       break;
@@ -1067,12 +1078,13 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitWaitClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceTypeClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute', 'combined',  and
-  // 'loop' constructs, and 'compute'/'combined'/'loop' constructs are the only
-  // construct that can do anything with this yet, so skip/treat as
+  // Restrictions only properly implemented on 'compute', 'combined', 'data' and
+  // 'loop' constructs, and 'compute'/'combined'/'data'/'loop' constructs are
+  // the only construct that can do anything with this yet, so skip/treat as
   // unimplemented in this case.
   if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) &&
       Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop &&
+      Clause.getDirectiveKind() != OpenACCDirectiveKind::Data &&
       !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()))
     return isNotImplemented();
 
