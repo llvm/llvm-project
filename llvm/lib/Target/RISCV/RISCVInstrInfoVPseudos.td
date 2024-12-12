@@ -102,6 +102,13 @@ def vec_rm : RISCVOp {
 // !X0 |  X0 |       VLMAX | Set vl to VLMAX
 //  X0 |  X0 | Value in vl | Keep current vl, just change vtype.
 def VLOp : ComplexPattern<XLenVT, 1, "selectVLOp">;
+// FIXME: This is labelled as handling 's32', however the ComplexPattern it
+// refers to handles both i32 and i64 based on the HwMode. Currently this LLT
+// parameter appears to be ignored so this pattern works for both, however we
+// should add a LowLevelTypeByHwMode, and use that to define our XLenLLT instead
+// here.
+def GIVLOp : GIComplexOperandMatcher<s32, "renderVLOp">,
+             GIComplexPatternEquiv<VLOp>;
 
 def DecImm : SDNodeXForm<imm, [{
   return CurDAG->getSignedTargetConstant(N->getSExtValue() - 1, SDLoc(N),

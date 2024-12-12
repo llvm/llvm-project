@@ -323,14 +323,15 @@ void no_other_directives() {
 #pragma acc loop collapse(2)
   for(unsigned i = 0; i < 5; ++i) {
     for(unsigned j = 0; j < 5; ++j) {
-#pragma acc data // expected-warning{{OpenACC construct 'data' not yet implemented}}
+#pragma acc data
+      ;
     }
   }
   // expected-note@+1{{active 'collapse' clause defined here}}
 #pragma acc loop collapse(2)
   for(unsigned i = 0; i < 5; ++i) {
     // expected-error@+1{{OpenACC 'data' construct cannot appear in intervening code of a 'loop' with a 'collapse' clause}}
-#pragma acc data // expected-warning{{OpenACC construct 'data' not yet implemented}}
+#pragma acc data
     for(unsigned j = 0; j < 5; ++j) {
     }
   }

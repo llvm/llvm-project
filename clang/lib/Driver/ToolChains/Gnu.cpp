@@ -23,6 +23,7 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/MultilibBuilder.h"
 #include "clang/Driver/Options.h"
+#include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "llvm/ADT/StringSet.h"
@@ -538,7 +539,9 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("--no-demangle");
 
-  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+  const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs(Args);
+  bool NeedsSanitizerDeps =
+      addSanitizerRuntimes(ToolChain, Args, SanArgs, CmdArgs);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
   addLinkerCompressDebugSectionsOption(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
@@ -583,7 +586,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back("--start-group");
 
       if (NeedsSanitizerDeps)
-        linkSanitizerRuntimeDeps(ToolChain, Args, CmdArgs);
+        linkSanitizerRuntimeDeps(ToolChain, Args, SanArgs, CmdArgs);
 
       if (NeedsXRayDeps)
         linkXRayRuntimeDeps(ToolChain, Args, CmdArgs);

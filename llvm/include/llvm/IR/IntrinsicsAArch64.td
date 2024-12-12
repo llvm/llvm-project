@@ -3812,6 +3812,7 @@ let TargetPrefix = "aarch64" in {
                             [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>,
                              LLVMVectorOfBitcastsToInt<0>, LLVMVectorOfBitcastsToInt<0>, LLVMVectorOfBitcastsToInt<0>, LLVMVectorOfBitcastsToInt<0>],
                             [IntrNoMem]>;
+
 }
 
 // SVE2.1 - ZIPQ1, ZIPQ2, UZPQ1, UZPQ2
@@ -3871,9 +3872,28 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_fp8_cvtlt1 : SVE2_FP8_Cvt;
   def int_aarch64_sve_fp8_cvtlt2 : SVE2_FP8_Cvt;
 
+  // SVE Narrowing Conversions
+  class SVE2_FP8_Narrow_Cvt
+    : DefaultAttrsIntrinsic<[llvm_nxv16i8_ty],
+                            [llvm_anyvector_ty, LLVMMatchType<0>],
+                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+  
+  def int_aarch64_sve_fp8_cvtn  : SVE2_FP8_Narrow_Cvt;
+  def int_aarch64_sve_fp8_cvtnb : SVE2_FP8_Narrow_Cvt;
+  
+  def int_aarch64_sve_fp8_cvtnt
+    : DefaultAttrsIntrinsic<[llvm_nxv16i8_ty],
+                            [llvm_nxv16i8_ty, llvm_anyvector_ty, LLVMMatchType<0>],
+                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+
   class SME2_FP8_CVT_X2_Single_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
                             [llvm_nxv16i8_ty],
+                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+
+  class SME2_FP8_CVT_Single_X4_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_nxv16i8_ty],
+                            [llvm_nxv4f32_ty, llvm_nxv4f32_ty, llvm_nxv4f32_ty, llvm_nxv4f32_ty],
                             [IntrReadMem, IntrInaccessibleMemOnly]>;
 
   class SME_FP8_OuterProduct_Intrinsic
@@ -3893,6 +3913,17 @@ let TargetPrefix = "aarch64" in {
   //
   def int_aarch64_sve_fp8_cvtl1_x2 : SME2_FP8_CVT_X2_Single_Intrinsic;
   def int_aarch64_sve_fp8_cvtl2_x2 : SME2_FP8_CVT_X2_Single_Intrinsic;
+
+  //
+  // CVT to FP8 from half-precision/BFloat16/single-precision multi-vector
+  //
+  def int_aarch64_sve_fp8_cvt_x2
+    : DefaultAttrsIntrinsic<[llvm_nxv16i8_ty],
+                            [llvm_anyvector_ty, LLVMMatchType<0>],
+                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+
+  def int_aarch64_sve_fp8_cvt_x4  : SME2_FP8_CVT_Single_X4_Intrinsic;
+  def int_aarch64_sve_fp8_cvtn_x4 : SME2_FP8_CVT_Single_X4_Intrinsic;
 
   // FP8 outer product
   def int_aarch64_sme_fp8_fmopa_za16 : SME_FP8_OuterProduct_Intrinsic;

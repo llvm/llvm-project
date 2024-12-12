@@ -1014,7 +1014,7 @@ class VOP3_CVT_SCALE_SR_PK_F4_F16BF16_TiedInput_Profile<ValueType Src0Ty> :
   let HasExtVOP3DPP = 0;
   let HasOpSel = 1;
   let HasOMod = 0;
-  let HasFP8DstByteSel = 1;
+  let HasFP4DstByteSel = 1;
 }
 
 def VOP3_CVT_SCALE_SR_PK_F4_F32_TiedInput_Profile : VOP3_Profile<VOPProfile<[i32, v2f32, i32, f32]>, VOP3_OPSEL> {
@@ -1026,7 +1026,7 @@ def VOP3_CVT_SCALE_SR_PK_F4_F32_TiedInput_Profile : VOP3_Profile<VOPProfile<[i32
   let HasExtVOP3DPP = 0;
   let HasOpSel = 1;
   let HasOMod = 0;
-  let HasFP8DstByteSel = 1;
+  let HasFP4DstByteSel = 1;
 }
 
 class VOP3_CVT_SCALE_PK_F16BF16F32_FP4FP8BF8_Profile<ValueType DstTy> : VOP3_Profile<VOPProfile<[DstTy, i32, f32, untyped]>,
@@ -1296,8 +1296,7 @@ let SubtargetPredicate = isGFX12Plus in {
 let SubtargetPredicate = HasBitOp3Insts  in {
   let isReMaterializable = 1 in {
     defm V_BITOP3_B16 : VOP3Inst <"v_bitop3_b16",
-                                  VOP3_BITOP3_Profile<VOPProfile_True16<VOPProfile <[i16, i16, i16, i16, i32]>>,
-                                                      VOP3_OPSEL>>;
+                                  VOP3_BITOP3_Profile<VOPProfile <[i16, i16, i16, i16, i32]>, VOP3_OPSEL>>;
     defm V_BITOP3_B32 : VOP3Inst <"v_bitop3_b32",
                                   VOP3_BITOP3_Profile<VOPProfile <[i32, i32, i32, i32, i32]>, VOP3_REGULAR>>;
   }
