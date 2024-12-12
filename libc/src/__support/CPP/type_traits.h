@@ -18,6 +18,7 @@
 #include "src/__support/CPP/type_traits/decay.h"
 #include "src/__support/CPP/type_traits/enable_if.h"
 #include "src/__support/CPP/type_traits/false_type.h"
+#include "src/__support/CPP/type_traits/has_unique_object_representations.h"
 #include "src/__support/CPP/type_traits/integral_constant.h"
 #include "src/__support/CPP/type_traits/invoke.h"
 #include "src/__support/CPP/type_traits/invoke_result.h"
@@ -64,5 +65,6 @@
 #include "src/__support/CPP/type_traits/true_type.h"
 #include "src/__support/CPP/type_traits/type_identity.h"
 #include "src/__support/CPP/type_traits/void_t.h"
+
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_H
