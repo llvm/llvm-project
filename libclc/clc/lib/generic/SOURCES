@@ -1,6 +1,11 @@
 geometric/clc_dot.cl
 integer/clc_abs.cl
 integer/clc_abs_diff.cl
+math/clc_ceil.cl
+math/clc_fabs.cl
+math/clc_floor.cl
+math/clc_rint.cl
+math/clc_trunc.cl
 relational/clc_all.cl
 relational/clc_any.cl
 relational/clc_bitselect.cl
