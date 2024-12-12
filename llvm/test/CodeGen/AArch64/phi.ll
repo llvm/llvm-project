@@ -302,6 +302,8 @@ define <2 x i8> @tv2i8(i1 %c, ptr %p, <2 x i8> %a, <2 x i8> %b) {
 ;
 ; CHECK-GI-LABEL: tv2i8:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    tbz w0, #0, .LBB10_2
 ; CHECK-GI-NEXT:  // %bb.1: // %t
 ; CHECK-GI-NEXT:    mov w8, v0.s[1]
@@ -317,6 +319,7 @@ define <2 x i8> @tv2i8(i1 %c, ptr %p, <2 x i8> %a, <2 x i8> %b) {
 ; CHECK-GI-NEXT:    umov w9, v1.b[1]
 ; CHECK-GI-NEXT:    mov v0.s[0], w8
 ; CHECK-GI-NEXT:    mov v0.s[1], w9
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
@@ -389,10 +392,12 @@ define <4 x i8> @tv4i8(i1 %c, ptr %p, <4 x i8> %a, <4 x i8> %b) {
 ; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    str wzr, [x1]
 ; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 ; CHECK-GI-NEXT:  .LBB12_2:
 ; CHECK-GI-NEXT:    uzp1 v0.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
@@ -497,10 +502,12 @@ define <2 x i16> @tv2i16(i1 %c, ptr %p, <2 x i16> %a, <2 x i16> %b) {
 ; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    str wzr, [x1]
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 ; CHECK-GI-NEXT:  .LBB16_2:
 ; CHECK-GI-NEXT:    uzp1 v0.4h, v1.4h, v0.4h
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
@@ -739,6 +746,8 @@ define <3 x i64> @tv3i64(i1 %c, ptr %p, <3 x i64> %a, <3 x i64> %b) {
 ;
 ; CHECK-GI-LABEL: tv3i64:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
 ; CHECK-GI-NEXT:    tbz w0, #0, .LBB26_2
 ; CHECK-GI-NEXT:  // %bb.1: // %t
 ; CHECK-GI-NEXT:    fmov d6, d0
@@ -746,14 +755,18 @@ define <3 x i64> @tv3i64(i1 %c, ptr %p, <3 x i64> %a, <3 x i64> %b) {
 ; CHECK-GI-NEXT:    str wzr, [x1]
 ; CHECK-GI-NEXT:    mov v6.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v2.16b, v7.16b
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    mov d1, v6.d[1]
 ; CHECK-GI-NEXT:    mov v0.16b, v6.16b
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 ; CHECK-GI-NEXT:  .LBB26_2:
 ; CHECK-GI-NEXT:    fmov d0, d3
 ; CHECK-GI-NEXT:    fmov d2, d5
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    mov v0.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
@@ -1195,6 +1208,8 @@ define <3 x double> @tv3f64(i1 %c, ptr %p, <3 x double> %a, <3 x double> %b) {
 ;
 ; CHECK-GI-LABEL: tv3f64:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
 ; CHECK-GI-NEXT:    tbz w0, #0, .LBB42_2
 ; CHECK-GI-NEXT:  // %bb.1: // %t
 ; CHECK-GI-NEXT:    fmov d6, d0
@@ -1202,14 +1217,18 @@ define <3 x double> @tv3f64(i1 %c, ptr %p, <3 x double> %a, <3 x double> %b) {
 ; CHECK-GI-NEXT:    str wzr, [x1]
 ; CHECK-GI-NEXT:    mov v6.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v2.16b, v7.16b
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    mov d1, v6.d[1]
 ; CHECK-GI-NEXT:    mov v0.16b, v6.16b
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 ; CHECK-GI-NEXT:  .LBB42_2:
 ; CHECK-GI-NEXT:    fmov d0, d3
 ; CHECK-GI-NEXT:    fmov d2, d5
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    mov v0.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e

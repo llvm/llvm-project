@@ -12,6 +12,7 @@ define linkonce_odr void @_ZN1y2beEPiRK1vPmPS1_(<8 x i8> %0, ptr %agg.tmp.i) {
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    orr x9, x8, #0xf
 ; CHECK-NEXT:    orr x10, x8, #0xe

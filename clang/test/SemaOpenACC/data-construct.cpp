@@ -52,11 +52,9 @@ void AtLeastOneOf() {
   // OpenACC TODO: The following 'data' directives should diagnose, since they
   // don't have at least one of the above clauses.
 
-  // expected-warning@+1{{OpenACC clause 'if' not yet implemented}}
 #pragma acc data if(Var)
   ;
 
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented}}
 #pragma acc data async
   ;
 
@@ -64,7 +62,6 @@ void AtLeastOneOf() {
 #pragma acc data wait
   ;
 
-  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented}}
 #pragma acc data device_type(*)
   ;
 #pragma acc data
@@ -81,9 +78,7 @@ void AtLeastOneOf() {
   // OpenACC TODO: The following 'enter data' directives should diagnose, since
   // they don't have at least one of the above clauses.
 
-  // expected-warning@+1{{OpenACC clause 'if' not yet implemented}}
 #pragma acc enter data if(Var)
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented}}
 #pragma acc enter data async
   // expected-warning@+1{{OpenACC clause 'wait' not yet implemented}}
 #pragma acc enter data wait
@@ -100,9 +95,7 @@ void AtLeastOneOf() {
   // OpenACC TODO: The following 'exit data' directives should diagnose, since
   // they don't have at least one of the above clauses.
 
-  // expected-warning@+1{{OpenACC clause 'if' not yet implemented}}
 #pragma acc exit data if(Var)
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented}}
 #pragma acc exit data async
   // expected-warning@+1{{OpenACC clause 'wait' not yet implemented}}
 #pragma acc exit data wait
@@ -117,7 +110,6 @@ void AtLeastOneOf() {
   // OpenACC TODO: The following 'host_data' directives should diagnose, since
   // they don't have at least one of the above clauses.
 
-  // expected-warning@+1{{OpenACC clause 'if' not yet implemented}}
 #pragma acc host_data if(Var)
   ;
   // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented}}
@@ -132,51 +124,48 @@ void DataRules() {
   // OpenACC TODO: Only 'async' and 'wait' are permitted after a device_type, so
   // the rest of these should diagnose.
 
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented}}
-  // expected-warning@+1{{OpenACC clause 'copy' not yet implemented}}
+  // expected-error@+2{{OpenACC clause 'copy' may not follow a 'device_type' clause in a 'data' construct}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc data device_type(*) copy(Var)
   ;
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented}}
-  // expected-warning@+1{{OpenACC clause 'copyin' not yet implemented}}
+  // expected-error@+2{{OpenACC clause 'copyin' may not follow a 'device_type' clause in a 'data' construct}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc data device_type(*) copyin(Var)
   ;
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented}}
-  // expected-warning@+1{{OpenACC clause 'copyout' not yet implemented}}
+  // expected-error@+2{{OpenACC clause 'copyout' may not follow a 'device_type' clause in a 'data' construct}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc data device_type(*) copyout(Var)
   ;
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented}}
-  // expected-warning@+1{{OpenACC clause 'create' not yet implemented}}
+  // expected-error@+2{{OpenACC clause 'create' may not follow a 'device_type' clause in a 'data' construct}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc data device_type(*) create(Var)
   ;
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented}}
-  // expected-warning@+1{{OpenACC clause 'no_create' not yet implemented}}
+  // expected-error@+2{{OpenACC clause 'no_create' may not follow a 'device_type' clause in a 'data' construct}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc data device_type(*) no_create(Var)
   ;
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented}}
-  // expected-warning@+1{{OpenACC clause 'present' not yet implemented}}
+  // expected-error@+2{{OpenACC clause 'present' may not follow a 'device_type' clause in a 'data' construct}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc data device_type(*) present(Var)
   ;
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented}}
-  // expected-warning@+1{{OpenACC clause 'deviceptr' not yet implemented}}
+  // expected-error@+2{{OpenACC clause 'deviceptr' may not follow a 'device_type' clause in a 'data' construct}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc data device_type(*) deviceptr(Var)
   ;
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented}}
-  // expected-warning@+1{{OpenACC clause 'attach' not yet implemented}}
+  // expected-error@+2{{OpenACC clause 'attach' may not follow a 'device_type' clause in a 'data' construct}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc data device_type(*) attach(Var)
   ;
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented}}
-  // expected-warning@+1{{OpenACC clause 'default' not yet implemented}}
+  // expected-error@+2{{OpenACC clause 'default' may not follow a 'device_type' clause in a 'data' construct}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc data device_type(*) default(none)
   ;
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented}}
-  // expected-warning@+1{{OpenACC clause 'if' not yet implemented}}
+  // expected-error@+2{{OpenACC clause 'if' may not follow a 'device_type' clause in a 'data' construct}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc data device_type(*) if(Var)
   ;
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented}}
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented}}
 #pragma acc data device_type(*) async
   ;
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented}}
   // expected-warning@+1{{OpenACC clause 'wait' not yet implemented}}
 #pragma acc data device_type(*) wait
   ;
@@ -203,10 +192,8 @@ struct HasMembers {
 
 void HostDataRules() {
   int Var, Var2;
-  // TODO OpenACC: The following line should diagnose, since only 1 'if' is
-  // allowed per directive on host_data.
-  // expected-warning@+2{{OpenACC clause 'if' not yet implemented}}
-  // expected-warning@+1{{OpenACC clause 'if' not yet implemented}}
+  // expected-error@+2{{OpenACC 'if' clause cannot appear more than once on a 'host_data' directive}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc host_data if(Var) if (Var2)
   ;
 

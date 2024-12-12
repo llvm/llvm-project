@@ -66,18 +66,27 @@ entry:
 define <3 x double> @sqrt_v3f64(<3 x double> %a) {
 ; CHECK-SD-LABEL: sqrt_v3f64:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    fsqrt v2.2d, v2.2d
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    fsqrt v0.2d, v0.2d
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sqrt_v3f64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    fsqrt d2, d2
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    fsqrt v0.2d, v0.2d
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = call <3 x double> @llvm.sqrt.v3f64(<3 x double> %a)
@@ -216,6 +225,7 @@ entry:
 define <4 x half> @sqrt_v4f16(<4 x half> %a) {
 ; CHECK-SD-NOFP16-LABEL: sqrt_v4f16:
 ; CHECK-SD-NOFP16:       // %bb.0: // %entry
+; CHECK-SD-NOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NOFP16-NEXT:    mov h1, v0.h[1]
 ; CHECK-SD-NOFP16-NEXT:    fcvt s2, h0
 ; CHECK-SD-NOFP16-NEXT:    mov h3, v0.h[2]
@@ -234,6 +244,7 @@ define <4 x half> @sqrt_v4f16(<4 x half> %a) {
 ; CHECK-SD-NOFP16-NEXT:    mov v0.h[2], v1.h[0]
 ; CHECK-SD-NOFP16-NEXT:    fcvt h1, s4
 ; CHECK-SD-NOFP16-NEXT:    mov v0.h[3], v1.h[0]
+; CHECK-SD-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: sqrt_v4f16:

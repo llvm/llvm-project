@@ -10,6 +10,11 @@ void foo() {
 // CHECK-NOT: default(none)
 #pragma acc data default(none)
   ;
+
+// CHECK: #pragma acc data device_type(int)
+#pragma acc data device_type(int)
+  ;
+
 // CHECK: #pragma acc enter data
 // CHECK-NOT: copyin(Var)
 #pragma acc enter data copyin(Var)
@@ -22,4 +27,28 @@ void foo() {
 // CHECK-NOT: use_device(Var)
 #pragma acc host_data use_device(Var)
   ;
+
+  int i;
+  int array[5];
+
+// CHECK: #pragma acc data if(i == array[1])
+#pragma acc data default(none) if(i == array[1])
+  ;
+// CHECK: #pragma acc enter data if(i == array[1])
+#pragma acc enter data copyin(Var) if(i == array[1])
+  ;
+// CHECK: #pragma acc exit data if(i == array[1])
+#pragma acc exit data copyout(Var) if(i == array[1])
+  ;
+// CHECK: #pragma acc host_data if(i == array[1])
+#pragma acc host_data use_device(Var) if(i == array[1])
+  ;
+
+// CHECK: #pragma acc data async(i)
+#pragma acc data default(none) async(i)
+  ;
+// CHECK: #pragma acc enter data async(i)
+#pragma acc enter data copyin(i) async(i)
+// CHECK: #pragma acc exit data async
+#pragma acc exit data copyout(i) async
 }

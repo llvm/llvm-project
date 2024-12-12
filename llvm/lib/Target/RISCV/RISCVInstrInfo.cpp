@@ -3199,21 +3199,27 @@ std::string RISCVInstrInfo::createMIROperandComment(
 
   // Print the full VType operand of vsetvli/vsetivli instructions, and the SEW
   // operand of vector codegen pseudos.
-  if (OpInfo.OperandType == RISCVOp::OPERAND_VTYPEI10 ||
-      OpInfo.OperandType == RISCVOp::OPERAND_VTYPEI11) {
+  switch (OpInfo.OperandType) {
+  case RISCVOp::OPERAND_VTYPEI10:
+  case RISCVOp::OPERAND_VTYPEI11: {
     unsigned Imm = Op.getImm();
     RISCVVType::printVType(Imm, OS);
-  } else if (OpInfo.OperandType == RISCVOp::OPERAND_SEW) {
+    break;
+  }
+  case RISCVOp::OPERAND_SEW: {
     unsigned Log2SEW = Op.getImm();
     unsigned SEW = Log2SEW ? 1 << Log2SEW : 8;
     assert(RISCVVType::isValidSEW(SEW) && "Unexpected SEW");
     OS << "e" << SEW;
-  } else if (OpInfo.OperandType == RISCVOp::OPERAND_VEC_POLICY) {
+    break;
+  }
+  case RISCVOp::OPERAND_VEC_POLICY:
     unsigned Policy = Op.getImm();
     assert(Policy <= (RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC) &&
            "Invalid Policy Value");
     OS << (Policy & RISCVII::TAIL_AGNOSTIC ? "ta" : "tu") << ", "
        << (Policy & RISCVII::MASK_AGNOSTIC ? "ma" : "mu");
+    break;
   }
 
   return Comment;

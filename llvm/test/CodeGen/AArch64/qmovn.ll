@@ -210,6 +210,7 @@ entry:
 define <16 x i8> @signed_minmax_v8i16_to_v16i8(<8 x i8> %x, <8 x i16> %y) {
 ; CHECK-LABEL: signed_minmax_v8i16_to_v16i8:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqxtn2 v0.16b, v1.8h
 ; CHECK-NEXT:    ret
 entry:
@@ -223,6 +224,7 @@ entry:
 define <8 x i16> @signed_minmax_v4i32_to_v8i16(<4 x i16> %x, <4 x i32> %y) {
 ; CHECK-LABEL: signed_minmax_v4i32_to_v8i16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqxtn2 v0.8h, v1.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -236,6 +238,7 @@ entry:
 define <4 x i32> @signed_minmax_v2i64_to_v4i32(<2 x i32> %x, <2 x i64> %y) {
 ; CHECK-LABEL: signed_minmax_v2i64_to_v4i32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqxtn2 v0.4s, v1.2d
 ; CHECK-NEXT:    ret
 entry:
@@ -251,6 +254,7 @@ entry:
 define <16 x i8> @signed_maxmin_v8i16_to_v16i8(<8 x i8> %x, <8 x i16> %y) {
 ; CHECK-LABEL: signed_maxmin_v8i16_to_v16i8:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqxtn2 v0.16b, v1.8h
 ; CHECK-NEXT:    ret
 entry:
@@ -264,6 +268,7 @@ entry:
 define <8 x i16> @signed_maxmin_v4i32_to_v8i16(<4 x i16> %x, <4 x i32> %y) {
 ; CHECK-LABEL: signed_maxmin_v4i32_to_v8i16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqxtn2 v0.8h, v1.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -277,6 +282,7 @@ entry:
 define <4 x i32> @signed_maxmin_v2i64_to_v4i32(<2 x i32> %x, <2 x i64> %y) {
 ; CHECK-LABEL: signed_maxmin_v2i64_to_v4i32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqxtn2 v0.4s, v1.2d
 ; CHECK-NEXT:    ret
 entry:
@@ -292,6 +298,7 @@ entry:
 define <16 x i8> @unsigned_v8i16_to_v16i8(<8 x i8> %x, <8 x i16> %y) {
 ; CHECK-LABEL: unsigned_v8i16_to_v16i8:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    uqxtn2 v0.16b, v1.8h
 ; CHECK-NEXT:    ret
 entry:
@@ -304,6 +311,7 @@ entry:
 define <8 x i16> @unsigned_v4i32_to_v8i16(<4 x i16> %x, <4 x i32> %y) {
 ; CHECK-LABEL: unsigned_v4i32_to_v8i16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    uqxtn2 v0.8h, v1.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -316,6 +324,7 @@ entry:
 define <4 x i32> @unsigned_v2i64_to_v4i32(<2 x i32> %x, <2 x i64> %y) {
 ; CHECK-LABEL: unsigned_v2i64_to_v4i32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    uqxtn2 v0.4s, v1.2d
 ; CHECK-NEXT:    ret
 entry:
@@ -330,6 +339,7 @@ entry:
 define <16 x i8> @us_maxmin_v8i16_to_v16i8(<8 x i8> %x, <8 x i16> %y) {
 ; CHECK-LABEL: us_maxmin_v8i16_to_v16i8:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqxtun2 v0.16b, v1.8h
 ; CHECK-NEXT:    ret
 entry:
@@ -343,6 +353,7 @@ entry:
 define <8 x i16> @us_maxmin_v4i32_to_v8i16(<4 x i16> %x, <4 x i32> %y) {
 ; CHECK-LABEL: us_maxmin_v4i32_to_v8i16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqxtun2 v0.8h, v1.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -356,6 +367,7 @@ entry:
 define <4 x i32> @us_maxmin_v2i64_to_v4i32(<2 x i32> %x, <2 x i64> %y) {
 ; CHECK-LABEL: us_maxmin_v2i64_to_v4i32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqxtun2 v0.4s, v1.2d
 ; CHECK-NEXT:    ret
 entry:
@@ -371,6 +383,7 @@ entry:
 define <16 x i8> @sminsmax_range_unsigned_i16_to_i8(<8 x i8> %x, <8 x i16> %y) {
 ; CHECK-LABEL: sminsmax_range_unsigned_i16_to_i8:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqxtun2 v0.16b, v1.8h
 ; CHECK-NEXT:    ret
 entry:
@@ -384,6 +397,7 @@ entry:
 define <8 x i16> @sminsmax_range_unsigned_i32_to_i16(<4 x i16> %x, <4 x i32> %y) {
 ; CHECK-LABEL: sminsmax_range_unsigned_i32_to_i16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqxtun2 v0.8h, v1.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -397,6 +411,7 @@ entry:
 define <4 x i32> @sminsmax_range_unsigned_i64_to_i32(<2 x i32> %x, <2 x i64> %y) {
 ; CHECK-LABEL: sminsmax_range_unsigned_i64_to_i32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqxtun2 v0.4s, v1.2d
 ; CHECK-NEXT:    ret
 entry:

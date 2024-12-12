@@ -208,10 +208,12 @@ define void @ucvtf_v64i16_v64f32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <1 x double> @ucvtf_v1i16_v1f64(<1 x i16> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ucvtf_v1i16_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = uitofp <1 x i16> %op1 to <1 x double>
   ret <1 x double> %res
@@ -314,6 +316,7 @@ define void @ucvtf_v32i16_v32f64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <2 x half> @ucvtf_v2i32_v2f16(<2 x i32> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ucvtf_v2i32_v2f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ucvtf v0.4s, v0.4s
 ; CHECK-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
@@ -339,6 +342,7 @@ define <8 x half> @ucvtf_v8i32_v8f16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
   %res = uitofp <8 x i32> %op1 to <8 x half>
@@ -511,6 +515,7 @@ define <1 x double> @ucvtf_v1i32_v1f64(<1 x i32> %op1) vscale_range(2,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %res = uitofp <1 x i32> %op1 to <1 x double>
   ret <1 x double> %res
@@ -607,6 +612,7 @@ define void @ucvtf_v32i32_v32f64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <1 x half> @ucvtf_v1i64_v1f16(<1 x i64> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ucvtf_v1i64_v1f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    ucvtf h0, x8
 ; CHECK-NEXT:    ret
@@ -619,9 +625,11 @@ define <2 x half> @ucvtf_v2i64_v2f16(<2 x i64> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ucvtf_v2i64_v2f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.d
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = uitofp <2 x i64> %op1 to <2 x half>
   ret <2 x half> %res
@@ -635,6 +643,7 @@ define <4 x half> @ucvtf_v4i64_v4f16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.d
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a
   %res = uitofp <4 x i64> %op1 to <4 x half>
@@ -655,6 +664,7 @@ define <8 x half> @ucvtf_v8i64_v8f16(ptr %a) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z2.h, z0.h, z0.h
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z1.h, z1.h
 ; VBITS_GE_256-NEXT:    mov v0.d[1], v2.d[0]
+; VBITS_GE_256-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: ucvtf_v8i64_v8f16:
@@ -664,6 +674,7 @@ define <8 x half> @ucvtf_v8i64_v8f16(ptr %a) #0 {
 ; VBITS_GE_512-NEXT:    ucvtf z0.h, p0/m, z0.d
 ; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
+; VBITS_GE_512-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; VBITS_GE_512-NEXT:    ret
   %op1 = load <8 x i64>, ptr %a
   %res = uitofp <8 x i64> %op1 to <8 x half>
@@ -710,6 +721,7 @@ define void @ucvtf_v32i64_v32f16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <1 x float> @ucvtf_v1i64_v1f32(<1 x i64> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ucvtf_v1i64_v1f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ucvtf v0.2d, v0.2d
 ; CHECK-NEXT:    fcvtn v0.2s, v0.2d
 ; CHECK-NEXT:    ret
@@ -735,6 +747,7 @@ define <4 x float> @ucvtf_v4i64_v4f32(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.d
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a
   %res = uitofp <4 x i64> %op1 to <4 x float>
@@ -813,6 +826,7 @@ define void @ucvtf_v32i64_v32f32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <1 x double> @ucvtf_v1i64_v1f64(<1 x i64> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ucvtf_v1i64_v1f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ucvtf d0, d0
 ; CHECK-NEXT:    ret
   %res = uitofp <1 x i64> %op1 to <1 x double>
@@ -1106,10 +1120,12 @@ define void @scvtf_v64i16_v64f32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <1 x double> @scvtf_v1i16_v1f64(<1 x i16> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: scvtf_v1i16_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sunpklo z0.s, z0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
 ; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = sitofp <1 x i16> %op1 to <1 x double>
   ret <1 x double> %res
@@ -1218,6 +1234,7 @@ define void @scvtf_v32i16_v32f64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <2 x half> @scvtf_v2i32_v2f16(<2 x i32> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: scvtf_v2i32_v2f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    scvtf v0.4s, v0.4s
 ; CHECK-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
@@ -1243,6 +1260,7 @@ define <8 x half> @scvtf_v8i32_v8f16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    scvtf z0.h, p0/m, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
   %res = sitofp <8 x i32> %op1 to <8 x half>
@@ -1415,6 +1433,7 @@ define <1 x double> @scvtf_v1i32_v1f64(<1 x i32> %op1) vscale_range(2,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %res = sitofp <1 x i32> %op1 to <1 x double>
   ret <1 x double> %res
@@ -1517,6 +1536,7 @@ define void @scvtf_v32i32_v32f64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <1 x half> @scvtf_v1i64_v1f16(<1 x i64> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: scvtf_v1i64_v1f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    scvtf h0, x8
 ; CHECK-NEXT:    ret
@@ -1529,9 +1549,11 @@ define <2 x half> @scvtf_v2i64_v2f16(<2 x i64> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: scvtf_v2i64_v2f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    scvtf z0.h, p0/m, z0.d
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = sitofp <2 x i64> %op1 to <2 x half>
   ret <2 x half> %res
@@ -1545,6 +1567,7 @@ define <4 x half> @scvtf_v4i64_v4f16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    scvtf z0.h, p0/m, z0.d
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a
   %res = sitofp <4 x i64> %op1 to <4 x half>
@@ -1565,6 +1588,7 @@ define <8 x half> @scvtf_v8i64_v8f16(ptr %a) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z2.h, z0.h, z0.h
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z1.h, z1.h
 ; VBITS_GE_256-NEXT:    mov v0.d[1], v2.d[0]
+; VBITS_GE_256-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: scvtf_v8i64_v8f16:
@@ -1574,6 +1598,7 @@ define <8 x half> @scvtf_v8i64_v8f16(ptr %a) #0 {
 ; VBITS_GE_512-NEXT:    scvtf z0.h, p0/m, z0.d
 ; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
+; VBITS_GE_512-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; VBITS_GE_512-NEXT:    ret
   %op1 = load <8 x i64>, ptr %a
   %res = sitofp <8 x i64> %op1 to <8 x half>
@@ -1620,6 +1645,7 @@ define void @scvtf_v32i64_v32f16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <1 x float> @scvtf_v1i64_v1f32(<1 x i64> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: scvtf_v1i64_v1f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    scvtf v0.2d, v0.2d
 ; CHECK-NEXT:    fcvtn v0.2s, v0.2d
 ; CHECK-NEXT:    ret
@@ -1645,6 +1671,7 @@ define <4 x float> @scvtf_v4i64_v4f32(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    scvtf z0.s, p0/m, z0.d
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a
   %res = sitofp <4 x i64> %op1 to <4 x float>
@@ -1723,6 +1750,7 @@ define void @scvtf_v32i64_v32f32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <1 x double> @scvtf_v1i64_v1f64(<1 x i64> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: scvtf_v1i64_v1f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    scvtf d0, d0
 ; CHECK-NEXT:    ret
   %res = sitofp <1 x i64> %op1 to <1 x double>

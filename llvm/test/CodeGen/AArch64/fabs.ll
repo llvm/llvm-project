@@ -27,9 +27,11 @@ entry:
 define half @fabs_f16(half %a) {
 ; CHECK-SD-NOFP16-LABEL: fabs_f16:
 ; CHECK-SD-NOFP16:       // %bb.0: // %entry
+; CHECK-SD-NOFP16-NEXT:    // kill: def $h0 killed $h0 def $s0
 ; CHECK-SD-NOFP16-NEXT:    fmov w8, s0
 ; CHECK-SD-NOFP16-NEXT:    and w8, w8, #0x7fff
 ; CHECK-SD-NOFP16-NEXT:    fmov s0, w8
+; CHECK-SD-NOFP16-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fabs_f16:
@@ -39,9 +41,11 @@ define half @fabs_f16(half %a) {
 ;
 ; CHECK-GI-NOFP16-LABEL: fabs_f16:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
+; CHECK-GI-NOFP16-NEXT:    // kill: def $h0 killed $h0 def $s0
 ; CHECK-GI-NOFP16-NEXT:    fmov w8, s0
 ; CHECK-GI-NOFP16-NEXT:    and w8, w8, #0x7fff
 ; CHECK-GI-NOFP16-NEXT:    fmov s0, w8
+; CHECK-GI-NOFP16-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fabs_f16:
@@ -66,18 +70,27 @@ entry:
 define <3 x double> @fabs_v3f64(<3 x double> %a) {
 ; CHECK-SD-LABEL: fabs_v3f64:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    fabs v2.2d, v2.2d
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    fabs v0.2d, v0.2d
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: fabs_v3f64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    fabs d2, d2
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    fabs v0.2d, v0.2d
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = call <3 x double> @llvm.fabs.v3f64(<3 x double> %a)

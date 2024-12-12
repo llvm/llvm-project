@@ -9,6 +9,8 @@ declare <2 x fp128> @llvm.maximum.v2f128(<2 x fp128>, <2 x fp128>)
 define <4 x half> @fmaximum_v4f16(<4 x half> %x, <4 x half> %y) {
 ; CHECK-LABEL: fmaximum_v4f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov h2, v1.h[1]
 ; CHECK-NEXT:    mov h3, v0.h[1]
 ; CHECK-NEXT:    mov h4, v1.h[2]
@@ -34,6 +36,7 @@ define <4 x half> @fmaximum_v4f16(<4 x half> %x, <4 x half> %y) {
 ; CHECK-NEXT:    mov v0.h[2], v2.h[0]
 ; CHECK-NEXT:    fcvt h1, s1
 ; CHECK-NEXT:    mov v0.h[3], v1.h[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %r = call <4 x half> @llvm.maximum.v4f16(<4 x half> %x, <4 x half> %y)
   ret <4 x half> %r
