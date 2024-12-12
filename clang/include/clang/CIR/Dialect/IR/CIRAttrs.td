@@ -170,6 +170,21 @@ def UndefAttr : CIR_Attr<"Undef", "undef", [TypedAttrInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
+// PoisonAttr
+//===----------------------------------------------------------------------===//
+
+def PoisonAttr : CIR_Attr<"Poison", "poison", [TypedAttrInterface]> {
+  let summary = "Represent an poison constant";
+  let description = [{
+    The PoisonAttr represents an poison constant, corresponding to LLVM's notion
+    of poison.
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type);
+  let assemblyFormat = [{}];
+}
+
+//===----------------------------------------------------------------------===//
 // ConstArrayAttr
 //===----------------------------------------------------------------------===//
 

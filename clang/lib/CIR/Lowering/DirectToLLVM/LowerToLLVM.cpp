@@ -425,6 +425,16 @@ lowerCirAttrAsValue(mlir::Operation *parentOp, cir::UndefAttr undefAttr,
       loc, converter->convertType(undefAttr.getType()));
 }
 
+/// PoisonAttr visitor.
+static mlir::Value
+lowerCirAttrAsValue(mlir::Operation *parentOp, cir::PoisonAttr poisonAttr,
+                    mlir::ConversionPatternRewriter &rewriter,
+                    const mlir::TypeConverter *converter) {
+  auto loc = parentOp->getLoc();
+  return rewriter.create<mlir::LLVM::PoisonOp>(
+      loc, converter->convertType(poisonAttr.getType()));
+}
+
 /// ConstStruct visitor.
 static mlir::Value
 lowerCirAttrAsValue(mlir::Operation *parentOp, cir::ConstStructAttr constStruct,
@@ -644,6 +654,8 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp, mlir::Attribute attr,
     return lowerCirAttrAsValue(parentOp, zeroAttr, rewriter, converter);
   if (const auto undefAttr = mlir::dyn_cast<cir::UndefAttr>(attr))
     return lowerCirAttrAsValue(parentOp, undefAttr, rewriter, converter);
+  if (const auto poisonAttr = mlir::dyn_cast<cir::PoisonAttr>(attr))
+    return lowerCirAttrAsValue(parentOp, poisonAttr, rewriter, converter);
   if (const auto globalAttr = mlir::dyn_cast<cir::GlobalViewAttr>(attr))
     return lowerCirAttrAsValue(parentOp, globalAttr, rewriter, converter);
   if (const auto vtableAttr = mlir::dyn_cast<cir::VTableAttr>(attr))
@@ -1555,6 +1567,14 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Attribute attr = op.getValue();
 
+  // Regardless of the type, we should lower the constant of poison value
+  // into PoisonOp.
+  if (mlir::isa<cir::PoisonAttr>(attr)) {
+    rewriter.replaceOp(
+        op, lowerCirAttrAsValue(op, attr, rewriter, getTypeConverter()));
+    return mlir::success();
+  }
+
   if (mlir::isa<mlir::IntegerType>(op.getType())) {
     // Verified cir.const operations cannot actually be of these types, but the
     // lowering pass may generate temporary cir.const operations with these
@@ -1695,6 +1715,7 @@ mlir::LogicalResult CIRToLLVMVecCreateOpLowering::matchAndRewrite(
   mlir::Value result = rewriter.create<mlir::LLVM::PoisonOp>(loc, llvmTy);
   assert(vecTy.getSize() == op.getElements().size() &&
          "cir.vec.create op count doesn't match vector type elements count");
+
   for (uint64_t i = 0; i < vecTy.getSize(); ++i) {
     mlir::Value indexValue =
         rewriter.create<mlir::LLVM::ConstantOp>(loc, rewriter.getI64Type(), i);
@@ -1745,15 +1766,21 @@ mlir::LogicalResult CIRToLLVMVecSplatOpLowering::matchAndRewrite(
   assert(vecTy && "result type of cir.vec.splat op is not VectorType");
   auto llvmTy = typeConverter->convertType(vecTy);
   auto loc = op.getLoc();
-  mlir::Value undef = rewriter.create<mlir::LLVM::PoisonOp>(loc, llvmTy);
+  mlir::Value poison = rewriter.create<mlir::LLVM::PoisonOp>(loc, llvmTy);
   mlir::Value indexValue =
       rewriter.create<mlir::LLVM::ConstantOp>(loc, rewriter.getI64Type(), 0);
   mlir::Value elementValue = adaptor.getValue();
+  if (mlir::isa<mlir::LLVM::PoisonOp>(elementValue.getDefiningOp())) {
+    // If the splat value is poison, then we can just use poison value
+    // for the entire vector.
+    rewriter.replaceOp(op, poison);
+    return mlir::success();
+  }
   mlir::Value oneElement = rewriter.create<mlir::LLVM::InsertElementOp>(
-      loc, undef, elementValue, indexValue);
+      loc, poison, elementValue, indexValue);
   SmallVector<int32_t> zeroValues(vecTy.getSize(), 0);
   mlir::Value shuffled = rewriter.create<mlir::LLVM::ShuffleVectorOp>(
-      loc, oneElement, undef, zeroValues);
+      loc, oneElement, poison, zeroValues);
   rewriter.replaceOp(op, shuffled);
   return mlir::success();
 }

@@ -389,6 +389,12 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return op->emitOpError("undef expects non-void type");
   }
 
+  if (isa<cir::PoisonAttr>(attrType)) {
+    if (!::mlir::isa<cir::VoidType>(opType))
+      return success();
+    return op->emitOpError("poison expects non-void type");
+  }
+
   if (mlir::isa<cir::BoolAttr>(attrType)) {
     if (!mlir::isa<cir::BoolType>(opType))
       return op->emitOpError("result type (")

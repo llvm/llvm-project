@@ -2263,6 +2263,32 @@ static mlir::Value emitNeonRShiftImm(CIRGenFunction &cgf, mlir::Value shiftVec,
                              false /* right shift */);
 }
 
+/// Vectorize value, usually for argument of a neon SISD intrinsic call.
+static void vecExtendIntValue(CIRGenFunction &cgf, cir::VectorType argVTy,
+                              mlir::Value &arg, mlir::Location loc) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  cir::IntType eltTy = mlir::dyn_cast<cir::IntType>(argVTy.getEltType());
+  assert(mlir::isa<cir::IntType>(arg.getType()) && eltTy);
+  // The constant argument to an _n_ intrinsic always has Int32Ty, so truncate
+  // it before inserting.
+  arg = builder.createIntCast(arg, eltTy);
+  mlir::Value zero = builder.getConstInt(loc, cgf.SizeTy, 0);
+  mlir::Value poison = builder.create<cir::ConstantOp>(
+      loc, eltTy, builder.getAttr<cir::PoisonAttr>(eltTy));
+  arg = builder.create<cir::VecInsertOp>(
+      loc, builder.create<cir::VecSplatOp>(loc, argVTy, poison), arg, zero);
+}
+
+/// Reduce vector type value to scalar, usually for result of a
+/// neon SISD intrinsic call
+static mlir::Value vecReduceIntValue(CIRGenFunction &cgf, mlir::Value val,
+                                     mlir::Location loc) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  assert(mlir::isa<cir::VectorType>(val.getType()));
+  return builder.create<cir::VecExtractOp>(
+      loc, val, builder.getConstInt(loc, cgf.SizeTy, 0));
+}
+
 mlir::Value emitNeonCall(CIRGenBuilderTy &builder,
                          llvm::SmallVector<mlir::Type> argTypes,
                          llvm::SmallVectorImpl<mlir::Value> &args,
@@ -2851,8 +2877,17 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
     llvm_unreachable(" neon_vqmovnh_s16 NYI ");
   case NEON::BI__builtin_neon_vqmovnh_u16:
     llvm_unreachable(" neon_vqmovnh_u16 NYI ");
-  case NEON::BI__builtin_neon_vqmovns_s32:
-    llvm_unreachable(" neon_vqmovns_s32 NYI ");
+  case NEON::BI__builtin_neon_vqmovns_s32: {
+    mlir::Location loc = cgf.getLoc(expr->getExprLoc());
+    cir::VectorType argVecTy =
+        cir::VectorType::get(&(cgf.getMLIRContext()), cgf.SInt32Ty, 4);
+    cir::VectorType resVecTy =
+        cir::VectorType::get(&(cgf.getMLIRContext()), cgf.SInt16Ty, 4);
+    vecExtendIntValue(cgf, argVecTy, ops[0], loc);
+    mlir::Value result = emitNeonCall(builder, {argVecTy}, ops,
+                                      "aarch64.neon.sqxtn", resVecTy, loc);
+    return vecReduceIntValue(cgf, result, loc);
+  }
   case NEON::BI__builtin_neon_vqmovns_u32:
     llvm_unreachable(" neon_vqmovns_u32 NYI ");
   case NEON::BI__builtin_neon_vqmovund_s64:

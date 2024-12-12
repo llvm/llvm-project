@@ -14611,14 +14611,25 @@ void test_vst1q_s64(int64_t *a, int64x2_t b) {
 //   return (int8_t)vqmovnh_s16(a);
 // }
 
-// NYI-LABEL: @test_vqmovns_s32(
-// NYI:   [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 %a, i64 0
-// NYI:   [[VQMOVNS_S32_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqxtn.v4i16(<4 x i32> [[TMP0]])
-// NYI:   [[TMP1:%.*]] = extractelement <4 x i16> [[VQMOVNS_S32_I]], i64 0
-// NYI:   ret i16 [[TMP1]]
-// int16_t test_vqmovns_s32(int32_t a) {
-//   return (int16_t)vqmovns_s32(a);
-// }
+int16_t test_vqmovns_s32(int32_t a) {
+  return (int16_t)vqmovns_s32(a);
+
+  // CIR-LABEL: vqmovns_s32
+  // CIR: [[A:%.*]] = cir.load {{.*}} : !cir.ptr<!s32i>, !s32i
+  // CIR: [[VQMOVNS_S32_ZERO1:%.*]] = cir.const #cir.int<0> : !u64i
+  // CIR: [[POISON:%.*]] = cir.const #cir.poison : !s32i
+  // CIR: [[POISON_VEC:%.*]] = cir.vec.splat [[POISON]] : !s32i, !cir.vector<!s32i x 4>
+  // CIR: [[TMP0:%.*]] = cir.vec.insert [[A]], [[POISON_VEC]][[[VQMOVNS_S32_ZERO1]] : !u64i] : !cir.vector<!s32i x 4>
+  // CIR: [[VQMOVNS_S32_I:%.*]] = cir.llvm.intrinsic "aarch64.neon.sqxtn" [[TMP0]] : (!cir.vector<!s32i x 4>) -> !cir.vector<!s16i x 4>
+  // CIR: [[VQMOVNS_S32_ZERO2:%.*]] = cir.const #cir.int<0> : !u64i
+  // CIR: [[TMP1:%.*]] = cir.vec.extract [[VQMOVNS_S32_I]][[[VQMOVNS_S32_ZERO2]] : !u64i] : !cir.vector<!s16i x 4>
+
+  // LLVM: {{.*}}@test_vqmovns_s32(i32{{.*}}[[a:%.*]])
+  // LLVM:   [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[a]], i64 0
+  // LLVM:   [[VQMOVNS_S32_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqxtn.v4i16(<4 x i32> [[TMP0]])
+  // LLVM:   [[TMP1:%.*]] = extractelement <4 x i16> [[VQMOVNS_S32_I]], i64 0
+  // LLVM:   ret i16 [[TMP1]]
+}
 
 // NYI-LABEL: @test_vqmovnd_s64(
 // NYI:   [[VQMOVND_S64_I:%.*]] = call i32 @llvm.aarch64.neon.scalar.sqxtn.i32.i64(i64 %a)

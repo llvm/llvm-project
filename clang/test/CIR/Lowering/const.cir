@@ -17,6 +17,8 @@ module {
     // CHECK: llvm.mlir.zero : !llvm.array<3 x i32>
     %5 = cir.const #cir.undef : !cir.array<!s32i x 3>
     // CHECK: llvm.mlir.undef : !llvm.array<3 x i32>
+    %6 = cir.const #cir.poison : !s32i
+    // CHECK: llvm.mlir.poison : i32
     cir.return
   }
 
