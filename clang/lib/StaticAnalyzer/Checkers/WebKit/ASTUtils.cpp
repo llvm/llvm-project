@@ -202,7 +202,7 @@ bool EnsureFunctionAnalysis::isACallToEnsureFn(const clang::Expr *E) const {
   auto *Callee = MCE->getDirectCallee();
   if (!Callee)
     return false;
-  auto* Body = Callee->getBody();
+  auto *Body = Callee->getBody();
   if (!Body)
     return false;
   auto [CacheIt, IsNew] = Cache.insert(std::make_pair(Callee, false));

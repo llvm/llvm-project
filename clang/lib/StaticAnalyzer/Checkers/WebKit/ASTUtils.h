@@ -67,8 +67,8 @@ bool isASafeCallArg(const clang::Expr *E);
 /// \returns true if E is a MemberExpr accessing a const smart pointer type.
 bool isConstOwnerPtrMemberExpr(const clang::Expr *E);
 
-/// \returns true if E is a CXXMemberCallExpr which returns a const smart pointer
-/// type.
+/// \returns true if E is a CXXMemberCallExpr which returns a const smart
+/// pointer type.
 class EnsureFunctionAnalysis {
   using CacheTy = llvm::DenseMap<const FunctionDecl *, bool>;
   mutable CacheTy Cache{};
