@@ -916,7 +916,7 @@ template <class Derived> struct DestroyNRVOVariable : EHScopeStack::Cleanup {
   QualType Ty;
 
   void Emit(CIRGenFunction &CGF, Flags flags) override {
-    assert(!cir::MissingFeatures::cleanupDestroyNRVOVariable());
+    llvm_unreachable("NYI");
   }
 
   virtual ~DestroyNRVOVariable() = default;

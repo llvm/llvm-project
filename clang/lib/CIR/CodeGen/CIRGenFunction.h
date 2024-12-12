@@ -379,13 +379,10 @@ public:
   clang::GlobalDecl CurGD;
 
   /// Unified return block.
-  /// In CIR this is a function because each scope might have
-  /// it's associated return block.
-  JumpDest returnBlock(mlir::Block *retBlock) {
-    return getJumpDestInCurrentScope(retBlock);
+  /// Not that for LLVM codegen this is a memeber variable instead.
+  JumpDest ReturnBlock() {
+    return JumpDest(currLexScope->getOrCreateCleanupBlock(builder));
   }
-
-  unsigned nextCleanupDestIndex = 1;
 
   /// The temporary alloca to hold the return value. This is
   /// invalid iff the function has no return value.
@@ -1354,16 +1351,6 @@ public:
   void emitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
                                       mlir::Value &Result);
 
-  /// The given basic block lies in the current EH scope, but may be a
-  /// target of a potentially scope-crossing jump; get a stable handle
-  /// to which we can perform this jump later.
-  /// CIRGen: this mostly tracks state for figuring out the proper scope
-  /// information, no actual branches are emitted.
-  JumpDest getJumpDestInCurrentScope(mlir::Block *target) {
-    return JumpDest(target, EHStack.getInnermostNormalCleanup(),
-                    nextCleanupDestIndex++);
-  }
-
   cir::BrOp emitBranchThroughCleanup(mlir::Location Loc, JumpDest Dest);
 
   /// Given an assignment `*LHS = RHS`, emit a test that checks if \p RHS is
@@ -2083,14 +2070,11 @@ public:
     void
     ForceCleanup(std::initializer_list<mlir::Value *> ValuesToReload = {}) {
       assert(PerformCleanup && "Already forced cleanup");
-      {
-        mlir::OpBuilder::InsertionGuard guard(CGF.getBuilder());
-        CGF.DidCallStackSave = OldDidCallStackSave;
-        CGF.PopCleanupBlocks(CleanupStackDepth,
-                             LifetimeExtendedCleanupStackSize, ValuesToReload);
-        PerformCleanup = false;
-        CGF.CurrentCleanupScopeDepth = OldCleanupScopeDepth;
-      }
+      CGF.DidCallStackSave = OldDidCallStackSave;
+      CGF.PopCleanupBlocks(CleanupStackDepth, LifetimeExtendedCleanupStackSize,
+                           ValuesToReload);
+      PerformCleanup = false;
+      CGF.CurrentCleanupScopeDepth = OldCleanupScopeDepth;
     }
   };
 
@@ -2219,8 +2203,7 @@ public:
     mlir::Block *getOrCreateCleanupBlock(mlir::OpBuilder &builder) {
       if (CleanupBlock)
         return getCleanupBlock(builder);
-      CleanupBlock = createCleanupBlock(builder);
-      return CleanupBlock;
+      return createCleanupBlock(builder);
     }
 
     mlir::Block *getCleanupBlock(mlir::OpBuilder &builder) {
@@ -2230,10 +2213,9 @@ public:
       {
         // Create the cleanup block but dont hook it up around just yet.
         mlir::OpBuilder::InsertionGuard guard(builder);
-        mlir::Region *r = builder.getBlock() ? builder.getBlock()->getParent()
-                                             : &CGF.CurFn->getRegion(0);
-        CleanupBlock = builder.createBlock(r);
+        CleanupBlock = builder.createBlock(builder.getBlock()->getParent());
       }
+      assert(builder.getInsertionBlock() && "Should be valid");
       return CleanupBlock;
     }
 
@@ -2245,7 +2227,7 @@ public:
     // On switches we need one return block per region, since cases don't
     // have their own scopes but are distinct regions nonetheless.
     llvm::SmallVector<mlir::Block *> RetBlocks;
-    llvm::DenseMap<mlir::Block *, mlir::Location> RetLocs;
+    llvm::SmallVector<std::optional<mlir::Location>> RetLocs;
     llvm::DenseMap<cir::CaseOp, unsigned> RetBlockInCaseIndex;
     std::optional<unsigned> NormalRetBlockIndex;
     llvm::SmallVector<std::unique_ptr<mlir::Region>> SwitchRegions;
@@ -2263,7 +2245,7 @@ public:
       mlir::OpBuilder::InsertionGuard guard(CGF.builder);
       auto *b = CGF.builder.createBlock(CGF.builder.getBlock()->getParent());
       RetBlocks.push_back(b);
-      updateRetLoc(b, loc);
+      RetLocs.push_back(loc);
       return b;
     }
 
@@ -2272,9 +2254,8 @@ public:
 
   public:
     llvm::ArrayRef<mlir::Block *> getRetBlocks() { return RetBlocks; }
-    mlir::Location getRetLoc(mlir::Block *b) { return RetLocs.at(b); }
-    void updateRetLoc(mlir::Block *b, mlir::Location loc) {
-      RetLocs.insert_or_assign(b, loc);
+    llvm::ArrayRef<std::optional<mlir::Location>> getRetLocs() {
+      return RetLocs;
     }
     llvm::MutableArrayRef<std::unique_ptr<mlir::Region>> getSwitchRegions() {
       assert(isSwitch() && "expected switch scope");
@@ -2288,26 +2269,22 @@ public:
     }
 
     mlir::Block *getOrCreateRetBlock(CIRGenFunction &CGF, mlir::Location loc) {
-      mlir::Block *ret = nullptr;
       if (auto caseOp = mlir::dyn_cast_if_present<cir::CaseOp>(
               CGF.builder.getBlock()->getParentOp())) {
         auto iter = RetBlockInCaseIndex.find(caseOp);
         if (iter != RetBlockInCaseIndex.end())
-          ret = RetBlocks[iter->second];
-        else {
-          ret = createRetBlock(CGF, loc);
-          RetBlockInCaseIndex[caseOp] = RetBlocks.size() - 1;
-          return ret;
-        }
-      } else if (!NormalRetBlockIndex) {
-        ret = createRetBlock(CGF, loc);
+          return RetBlocks[iter->second];
+
+        mlir::Block *ret = createRetBlock(CGF, loc);
+        RetBlockInCaseIndex[caseOp] = RetBlocks.size() - 1;
+        return ret;
+      }
+      if (!NormalRetBlockIndex) {
+        mlir::Block *ret = createRetBlock(CGF, loc);
         NormalRetBlockIndex = RetBlocks.size() - 1;
         return ret;
-      } else {
-        ret = &*RetBlocks[*NormalRetBlockIndex];
       }
-      updateRetLoc(ret, loc);
-      return ret;
+      return &*RetBlocks[*NormalRetBlockIndex];
     }
 
     // Scope entry block tracking
