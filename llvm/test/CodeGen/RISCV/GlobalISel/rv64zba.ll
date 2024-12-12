@@ -1520,19 +1520,17 @@ entry:
 define i64 @srli_slli_i16(i64 %1) {
 ; RV64I-LABEL: srli_slli_i16:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
 ; RV64I-NEXT:    srli a0, a0, 2
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    slli a0, a0, 4
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBANOZBB-LABEL: srli_slli_i16:
 ; RV64ZBANOZBB:       # %bb.0: # %entry
-; RV64ZBANOZBB-NEXT:    lui a1, 16
-; RV64ZBANOZBB-NEXT:    addiw a1, a1, -1
 ; RV64ZBANOZBB-NEXT:    srli a0, a0, 2
-; RV64ZBANOZBB-NEXT:    and a0, a0, a1
+; RV64ZBANOZBB-NEXT:    slli a0, a0, 48
+; RV64ZBANOZBB-NEXT:    srli a0, a0, 48
 ; RV64ZBANOZBB-NEXT:    slli a0, a0, 4
 ; RV64ZBANOZBB-NEXT:    ret
 ;

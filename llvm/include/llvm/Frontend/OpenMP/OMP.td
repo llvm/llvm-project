@@ -177,6 +177,7 @@ def OMPC_Exclusive : Clause<"exclusive"> {
 }
 def OMPC_Fail : Clause<"fail"> {
   let clangClass = "OMPFailClause";
+  let flangClass = "OmpFailClause";
 }
 def OMPC_Filter : Clause<"filter"> {
   let clangClass = "OMPFilterClause";
@@ -769,6 +770,7 @@ def OMP_Flush : Directive<"flush"> {
     // OMPKinds.def.
     VersionedClause<OMPC_Flush>,
     VersionedClause<OMPC_Release, 50>,
+    VersionedClause<OMPC_SeqCst, 51>,
   ];
   let association = AS_None;
   let category = CA_Executable;

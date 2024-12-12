@@ -161,6 +161,13 @@ static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
         "Enable extended information within the SHT_LLVM_BB_ADDR_MAP that is "
         "extracted from PGO related analysis."));
 
+static cl::opt<bool> BBAddrMapSkipEmitBBEntries(
+    "basic-block-address-map-skip-bb-entries",
+    cl::desc("Skip emitting basic block entries in the SHT_LLVM_BB_ADDR_MAP "
+             "section. It's used to save binary size when BB entries are "
+             "unnecessary for some PGOAnalysisMap features."),
+    cl::Hidden, cl::init(false));
+
 static cl::opt<bool> EmitJumpTableSizesSection(
     "emit-jump-table-sizes-section",
     cl::desc("Emit a section containing jump table addresses and sizes"),
@@ -1411,8 +1418,15 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
   bool BrProbEnabled =
       AllFeatures ||
       (!NoFeatures && PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::BrProb));
+
+  if ((BBFreqEnabled || BrProbEnabled) && BBAddrMapSkipEmitBBEntries) {
+    MF.getFunction().getContext().emitError(
+        "BB entries info is required for BBFreq and BrProb "
+        "features");
+  }
   return {FuncEntryCountEnabled, BBFreqEnabled, BrProbEnabled,
-          MF.hasBBSections() && NumMBBSectionRanges > 1};
+          MF.hasBBSections() && NumMBBSectionRanges > 1,
+          static_cast<bool>(BBAddrMapSkipEmitBBEntries)};
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
@@ -1469,24 +1483,28 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       OutStreamer->emitULEB128IntValue(MBBSectionNumBlocks[MBB.getSectionID()]);
       PrevMBBEndSymbol = MBBSymbol;
     }
-    // TODO: Remove this check when version 1 is deprecated.
-    if (BBAddrMapVersion > 1) {
-      OutStreamer->AddComment("BB id");
-      // Emit the BB ID for this basic block.
-      // We only emit BaseID since CloneID is unset for
-      // -basic-block-adress-map.
-      // TODO: Emit the full BBID when labels and sections can be mixed
-      // together.
-      OutStreamer->emitULEB128IntValue(MBB.getBBID()->BaseID);
+
+    if (!Features.OmitBBEntries) {
+      // TODO: Remove this check when version 1 is deprecated.
+      if (BBAddrMapVersion > 1) {
+        OutStreamer->AddComment("BB id");
+        // Emit the BB ID for this basic block.
+        // We only emit BaseID since CloneID is unset for
+        // -basic-block-adress-map.
+        // TODO: Emit the full BBID when labels and sections can be mixed
+        // together.
+        OutStreamer->emitULEB128IntValue(MBB.getBBID()->BaseID);
+      }
+      // Emit the basic block offset relative to the end of the previous block.
+      // This is zero unless the block is padded due to alignment.
+      emitLabelDifferenceAsULEB128(MBBSymbol, PrevMBBEndSymbol);
+      // Emit the basic block size. When BBs have alignments, their size cannot
+      // always be computed from their offsets.
+      emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), MBBSymbol);
+      // Emit the Metadata.
+      OutStreamer->emitULEB128IntValue(getBBAddrMapMetadata(MBB));
     }
-    // Emit the basic block offset relative to the end of the previous block.
-    // This is zero unless the block is padded due to alignment.
-    emitLabelDifferenceAsULEB128(MBBSymbol, PrevMBBEndSymbol);
-    // Emit the basic block size. When BBs have alignments, their size cannot
-    // always be computed from their offsets.
-    emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), MBBSymbol);
-    // Emit the Metadata.
-    OutStreamer->emitULEB128IntValue(getBBAddrMapMetadata(MBB));
+
     PrevMBBEndSymbol = MBB.getEndSymbol();
   }
 

@@ -49,6 +49,11 @@ struct vector {
 	vector(InputIterator first, InputIterator __last);
 
   T &at(int n);
+
+  void push_back(const T&);
+  void push_back(T&&);
+  
+  void insert(iterator, T&&);
 };
 
 template<typename T>

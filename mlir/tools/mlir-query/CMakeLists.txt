@@ -10,11 +10,11 @@ add_mlir_tool(mlir-query
   mlir-query.cpp
   )
 llvm_update_compile_flags(mlir-query)
-target_link_libraries(mlir-query
+mlir_target_link_libraries(mlir-query
   PRIVATE
   ${dialect_libs}
-  ${test_libs}
   MLIRQueryLib
   )
+target_link_libraries(mlir-query PRIVATE ${test_libs})
 
 mlir_check_link_libraries(mlir-query)

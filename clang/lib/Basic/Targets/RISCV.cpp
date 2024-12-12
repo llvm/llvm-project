@@ -216,11 +216,11 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (ISAInfo->hasExtension("c"))
     Builder.defineMacro("__riscv_compressed");
 
-  if (ISAInfo->hasExtension("zve32x")) {
+  if (ISAInfo->hasExtension("zve32x"))
     Builder.defineMacro("__riscv_vector");
-    // Currently we support the v0.12 RISC-V V intrinsics.
-    Builder.defineMacro("__riscv_v_intrinsic", Twine(getVersionValue(0, 12)));
-  }
+
+  // Currently we support the v1.0 RISC-V V intrinsics.
+  Builder.defineMacro("__riscv_v_intrinsic", Twine(getVersionValue(1, 0)));
 
   auto VScale = getVScaleRange(Opts);
   if (VScale && VScale->first && VScale->first == VScale->second)
@@ -240,22 +240,28 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 }
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#include "clang/Basic/BuiltinsRISCVVector.def"
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#include "clang/Basic/BuiltinsRISCV.inc"
-};
+static constexpr int NumBuiltins =
+    clang::RISCV::LastTSBuiltin - Builtin::FirstTSBuiltin;
 
-ArrayRef<Builtin::Info> RISCVTargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfo,
-                        clang::RISCV::LastTSBuiltin - Builtin::FirstTSBuiltin);
+static constexpr auto BuiltinStorage = Builtin::Storage<NumBuiltins>::Make(
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsRISCVVector.def"
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsRISCV.inc"
+    , {
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsRISCVVector.def"
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsRISCV.inc"
+      });
+
+std::pair<const char *, ArrayRef<Builtin::Info>>
+RISCVTargetInfo::getTargetBuiltinStorage() const {
+  return {BuiltinStorage.StringTable, BuiltinStorage.Infos};
 }
 
 bool RISCVTargetInfo::initFeatureMap(
@@ -423,6 +429,24 @@ ParsedTargetAttr RISCVTargetInfo::parseTargetAttr(StringRef Features) const {
   Features.split(AttrFeatures, ";");
   bool FoundArch = false;
 
+  auto handleArchExtension = [](StringRef AttrString,
+                                std::vector<std::string> &Features) {
+    SmallVector<StringRef, 1> Exts;
+    AttrString.split(Exts, ",");
+    for (auto Ext : Exts) {
+      if (Ext.empty())
+        continue;
+
+      StringRef ExtName = Ext.substr(1);
+      std::string TargetFeature =
+          llvm::RISCVISAInfo::getTargetFeatureForExtension(ExtName);
+      if (!TargetFeature.empty())
+        Features.push_back(Ext.front() + TargetFeature);
+      else
+        Features.push_back(Ext.str());
+    }
+  };
+
   for (auto &Feature : AttrFeatures) {
     Feature = Feature.trim();
     StringRef AttrString = Feature.split("=").second.trim();
@@ -436,20 +460,7 @@ ParsedTargetAttr RISCVTargetInfo::parseTargetAttr(StringRef Features) const {
 
       if (AttrString.starts_with("+")) {
         // EXTENSION like arch=+v,+zbb
-        SmallVector<StringRef, 1> Exts;
-        AttrString.split(Exts, ",");
-        for (auto Ext : Exts) {
-          if (Ext.empty())
-            continue;
-
-          StringRef ExtName = Ext.substr(1);
-          std::string TargetFeature =
-              llvm::RISCVISAInfo::getTargetFeatureForExtension(ExtName);
-          if (!TargetFeature.empty())
-            Ret.Features.push_back(Ext.front() + TargetFeature);
-          else
-            Ret.Features.push_back(Ext.str());
-        }
+        handleArchExtension(AttrString, Ret.Features);
       } else {
         // full-arch-string like arch=rv64gcv
         handleFullArchString(AttrString, Ret.Features);
@@ -475,9 +486,33 @@ ParsedTargetAttr RISCVTargetInfo::parseTargetAttr(StringRef Features) const {
       Ret.Tune = AttrString;
     } else if (Feature.starts_with("priority")) {
       // Skip because it only use for FMV.
+    } else if (Feature.starts_with("+")) {
+      // Handle target_version/target_clones attribute strings
+      // that are already delimited by ','
+      handleArchExtension(Feature, Ret.Features);
     }
   }
   return Ret;
+}
+
+unsigned RISCVTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
+  // Priority is explicitly specified on RISC-V unlike on other targets, where
+  // it is derived by all the features of a specific version. Therefore if a
+  // feature contains the priority string, then return it immediately.
+  for (StringRef Feature : Features) {
+    auto [LHS, RHS] = Feature.rsplit(';');
+    if (LHS.consume_front("priority="))
+      Feature = LHS;
+    else if (RHS.consume_front("priority="))
+      Feature = RHS;
+    else
+      continue;
+    unsigned Priority;
+    if (!Feature.getAsInteger(0, Priority))
+      return Priority;
+  }
+  // Default Priority is zero.
+  return 0;
 }
 
 TargetInfo::CallingConvCheckResult
@@ -511,4 +546,11 @@ bool RISCVTargetInfo::validateGlobalRegisterVariable(
     return true;
   }
   return false;
+}
+
+bool RISCVTargetInfo::validateCpuIs(StringRef CPUName) const {
+  assert(getTriple().isOSLinux() &&
+         "__builtin_cpu_is() is only supported for Linux.");
+
+  return llvm::RISCV::hasValidCPUModel(CPUName);
 }

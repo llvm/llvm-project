@@ -13,6 +13,7 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
+#include "clang/Driver/SanitizerArgs.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
@@ -215,7 +216,8 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
       "-mcpu=hexagon" +
       toolchains::HexagonToolChain::GetTargetCPUVersion(Args)));
 
-  addSanitizerRuntimes(HTC, Args, CmdArgs);
+  SanitizerArgs SanArgs = HTC.getSanitizerArgs(Args);
+  addSanitizerRuntimes(HTC, Args, SanArgs, CmdArgs);
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
@@ -294,13 +296,15 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   bool IncStartFiles = !Args.hasArg(options::OPT_nostartfiles);
   bool IncDefLibs = !Args.hasArg(options::OPT_nodefaultlibs);
   bool UseG0 = false;
-  const char *Exec = Args.MakeArgString(HTC.GetLinkerPath());
-  bool UseLLD = (llvm::sys::path::filename(Exec).equals_insensitive("ld.lld") ||
-                 llvm::sys::path::stem(Exec).equals_insensitive("ld.lld"));
+  bool UseLLD = false;
+  const char *Exec = Args.MakeArgString(HTC.GetLinkerPath(&UseLLD));
+  UseLLD = UseLLD || llvm::sys::path::filename(Exec).ends_with("ld.lld") ||
+           llvm::sys::path::stem(Exec).ends_with("ld.lld");
   bool UseShared = IsShared && !IsStatic;
   StringRef CpuVer = toolchains::HexagonToolChain::GetTargetCPUVersion(Args);
 
-  bool NeedsSanitizerDeps = addSanitizerRuntimes(HTC, Args, CmdArgs);
+  const SanitizerArgs &SanArgs = HTC.getSanitizerArgs(Args);
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(HTC, Args, SanArgs, CmdArgs);
   bool NeedsXRayDeps = addXRayRuntime(HTC, Args, CmdArgs);
 
   //----------------------------------------------------------------------------
@@ -370,7 +374,7 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
 
     if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
       if (NeedsSanitizerDeps) {
-        linkSanitizerRuntimeDeps(HTC, Args, CmdArgs);
+        linkSanitizerRuntimeDeps(HTC, Args, SanArgs, CmdArgs);
 
         if (UNW != ToolChain::UNW_None)
           CmdArgs.push_back("-lunwind");
@@ -378,9 +382,9 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
       if (NeedsXRayDeps)
         linkXRayRuntimeDeps(HTC, Args, CmdArgs);
 
-      CmdArgs.push_back("-lclang_rt.builtins-hexagon");
       if (!Args.hasArg(options::OPT_nolibc))
         CmdArgs.push_back("-lc");
+      CmdArgs.push_back("-lclang_rt.builtins-hexagon");
     }
     if (D.CCCIsCXX()) {
       if (HTC.ShouldLinkCXXStdlib(Args))

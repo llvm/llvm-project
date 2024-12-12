@@ -21,6 +21,7 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/ProfileData/MemProf.h"
+#include "llvm/ProfileData/MemProfYAML.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LineIterator.h"
@@ -122,6 +123,9 @@ public:
   virtual bool hasCSIRLevelProfile() const = 0;
 
   virtual bool instrEntryBBEnabled() const = 0;
+
+  /// Return true if the profile instruments all loop entries.
+  virtual bool instrLoopEntriesEnabled() const = 0;
 
   /// Return true if the profile has single byte counters representing coverage.
   virtual bool hasSingleByteCoverage() const = 0;
@@ -274,6 +278,11 @@ public:
                              InstrProfKind::FunctionEntryInstrumentation);
   }
 
+  bool instrLoopEntriesEnabled() const override {
+    return static_cast<bool>(ProfileKind &
+                             InstrProfKind::LoopEntriesInstrumentation);
+  }
+
   bool hasSingleByteCoverage() const override {
     return static_cast<bool>(ProfileKind & InstrProfKind::SingleByteCoverage);
   }
@@ -396,6 +405,10 @@ public:
 
   bool instrEntryBBEnabled() const override {
     return (Version & VARIANT_MASK_INSTR_ENTRY) != 0;
+  }
+
+  bool instrLoopEntriesEnabled() const override {
+    return (Version & VARIANT_MASK_INSTR_LOOP_ENTRIES) != 0;
   }
 
   bool hasSingleByteCoverage() const override {
@@ -564,6 +577,7 @@ struct InstrProfReaderIndexBase {
   virtual bool isIRLevelProfile() const = 0;
   virtual bool hasCSIRLevelProfile() const = 0;
   virtual bool instrEntryBBEnabled() const = 0;
+  virtual bool instrLoopEntriesEnabled() const = 0;
   virtual bool hasSingleByteCoverage() const = 0;
   virtual bool functionEntryOnly() const = 0;
   virtual bool hasMemoryProfile() const = 0;
@@ -628,6 +642,10 @@ public:
     return (FormatVersion & VARIANT_MASK_INSTR_ENTRY) != 0;
   }
 
+  bool instrLoopEntriesEnabled() const override {
+    return (FormatVersion & VARIANT_MASK_INSTR_LOOP_ENTRIES) != 0;
+  }
+
   bool hasSingleByteCoverage() const override {
     return (FormatVersion & VARIANT_MASK_BYTE_COVERAGE) != 0;
   }
@@ -686,7 +704,7 @@ private:
   // The number of elements in the radix tree array.
   unsigned RadixTreeSize = 0;
 
-  Error deserializeV12(const unsigned char *Start, const unsigned char *Ptr);
+  Error deserializeV2(const unsigned char *Start, const unsigned char *Ptr);
   Error deserializeV3(const unsigned char *Start, const unsigned char *Ptr);
 
 public:
@@ -699,6 +717,9 @@ public:
 
   DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>>
   getMemProfCallerCalleePairs() const;
+
+  // Return the entire MemProf profile.
+  memprof::AllMemProfData getAllMemProfData() const;
 };
 
 /// Reader for the indexed binary instrprof format.
@@ -753,6 +774,10 @@ public:
     return Index->instrEntryBBEnabled();
   }
 
+  bool instrLoopEntriesEnabled() const override {
+    return Index->instrLoopEntriesEnabled();
+  }
+
   bool hasSingleByteCoverage() const override {
     return Index->hasSingleByteCoverage();
   }
@@ -800,6 +825,10 @@ public:
   DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>>
   getMemProfCallerCalleePairs() {
     return MemProfReader.getMemProfCallerCalleePairs();
+  }
+
+  memprof::AllMemProfData getAllMemProfData() const {
+    return MemProfReader.getAllMemProfData();
   }
 
   /// Fill Counts with the profile data for the given function name.

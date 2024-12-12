@@ -19,7 +19,7 @@ subroutine test_loop
 
   !PARSE-TREE: OmpBeginLoopDirective
   !PARSE-TREE-NEXT: OmpLoopDirective -> llvm::omp::Directive = loop
-  !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Bind -> OmpBindClause -> Type = Thread
+  !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Bind -> OmpBindClause -> Binding = Thread
   !CHECK: !$omp loop
   !$omp loop bind(thread)
   do i=1,10

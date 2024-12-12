@@ -9,19 +9,18 @@ define i32 @alloca_used_in_call(ptr %data, i64 %n) {
 ; CHECK-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[RDX_INC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[RDX:%.*]] = load i32, ptr [[RETVAL]], align 4
-; CHECK-NEXT:    [[RDX_INC:%.*]] = add nsw i32 [[RDX]], [[LD]]
+; CHECK-NEXT:    [[RDX_INC]] = add nsw i32 [[RDX]], [[LD]]
 ; CHECK-NEXT:    store i32 [[RDX_INC]], ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca(ptr [[RETVAL]])
-; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[RETVAL]], align 4
-; CHECK-NEXT:    ret i32 [[I1]]
+; CHECK-NEXT:    ret i32 [[RDX_INC]]
 ;
 entry:
   %retval = alloca i32, align 4
@@ -138,19 +137,18 @@ define i32 @alloca_not_captured_and_readonly_as_per_operand_attr(ptr %data, i64 
 ; CHECK-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[RDX_INC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[RDX:%.*]] = load i32, ptr [[RETVAL]], align 4
-; CHECK-NEXT:    [[RDX_INC:%.*]] = add nsw i32 [[RDX]], [[LD]]
+; CHECK-NEXT:    [[RDX_INC]] = add nsw i32 [[RDX]], [[LD]]
 ; CHECK-NEXT:    store i32 [[RDX_INC]], ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[I0:%.*]] = call i32 @capture_of_alloca(ptr nocapture readonly [[RETVAL]])
-; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[RETVAL]], align 4
-; CHECK-NEXT:    ret i32 [[I1]]
+; CHECK-NEXT:    ret i32 [[RDX_INC]]
 ;
 entry:
   %retval = alloca i32, align 4
@@ -267,19 +265,18 @@ define i32 @alloca_with_gep_used_in_call(ptr %data, i64 %n) {
 ; CHECK-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[RDX_INC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[RDX:%.*]] = load i32, ptr [[RETVAL]], align 4
-; CHECK-NEXT:    [[RDX_INC:%.*]] = add nsw i32 [[RDX]], [[LD]]
+; CHECK-NEXT:    [[RDX_INC]] = add nsw i32 [[RDX]], [[LD]]
 ; CHECK-NEXT:    store i32 [[RDX_INC]], ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca(ptr [[RETVAL]])
-; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[RETVAL]], align 4
-; CHECK-NEXT:    ret i32 [[I1]]
+; CHECK-NEXT:    ret i32 [[RDX_INC]]
 ;
 entry:
   %retval = alloca i32, align 4
@@ -353,27 +350,26 @@ define i32 @alloca_used_in_maybe_throwing_call(ptr %data, i64 %n) personality pt
 ; CHECK-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[RDX_INC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[RDX:%.*]] = load i32, ptr [[RETVAL]], align 4
-; CHECK-NEXT:    [[RDX_INC:%.*]] = add nsw i32 [[RDX]], [[LD]]
+; CHECK-NEXT:    [[RDX_INC]] = add nsw i32 [[RDX]], [[LD]]
 ; CHECK-NEXT:    store i32 [[RDX_INC]], ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[I0:%.*]] = invoke i32 @user_of_alloca(ptr [[RETVAL]])
-; CHECK-NEXT:    to label [[CONT:%.*]] unwind label [[UW:%.*]]
+; CHECK-NEXT:            to label [[CONT:%.*]] unwind label [[UW:%.*]]
 ; CHECK:       cont:
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       uw:
 ; CHECK-NEXT:    [[I1:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    catch ptr null
+; CHECK-NEXT:            catch ptr null
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr [[RETVAL]], align 4
-; CHECK-NEXT:    ret i32 [[I2]]
+; CHECK-NEXT:    ret i32 [[RDX_INC]]
 ;
 entry:
   %retval = alloca i32, align 4
@@ -413,25 +409,24 @@ define i32 @alloca_used_in_maybe_throwing_call_with_same_dests(ptr %data, i64 %n
 ; CHECK-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[RDX_INC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[RDX:%.*]] = load i32, ptr [[RETVAL]], align 4
-; CHECK-NEXT:    [[RDX_INC:%.*]] = add nsw i32 [[RDX]], [[LD]]
+; CHECK-NEXT:    [[RDX_INC]] = add nsw i32 [[RDX]], [[LD]]
 ; CHECK-NEXT:    store i32 [[RDX_INC]], ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[I0:%.*]] = invoke i32 @user_of_alloca(ptr [[RETVAL]])
-; CHECK-NEXT:    to label [[END:%.*]] unwind label [[UW:%.*]]
+; CHECK-NEXT:            to label [[END:%.*]] unwind label [[UW:%.*]]
 ; CHECK:       uw:
 ; CHECK-NEXT:    [[I1:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    catch ptr null
+; CHECK-NEXT:            catch ptr null
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr [[RETVAL]], align 4
-; CHECK-NEXT:    ret i32 [[I2]]
+; CHECK-NEXT:    ret i32 [[RDX_INC]]
 ;
 entry:
   %retval = alloca i32, align 4
@@ -472,11 +467,11 @@ define [2 x i32] @part_of_alloca_used_in_call(ptr %data, i64 %n) {
 ; CHECK-NEXT:    [[RETVAL:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i64 0, i64 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[RDX_INC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[RDX:%.*]] = load i32, ptr [[RETVAL]], align 4
-; CHECK-NEXT:    [[RDX_INC:%.*]] = add nsw i32 [[RDX]], [[LD]]
+; CHECK-NEXT:    [[RDX_INC]] = add nsw i32 [[RDX]], [[LD]]
 ; CHECK-NEXT:    store i32 [[RDX_INC]], ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
@@ -484,11 +479,9 @@ define [2 x i32] @part_of_alloca_used_in_call(ptr %data, i64 %n) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca(ptr [[RETVAL]])
 ; CHECK-NEXT:    [[I1_FCA_0_GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i32 0, i32 0
-; CHECK-NEXT:    [[I1_FCA_0_LOAD:%.*]] = load i32, ptr [[I1_FCA_0_GEP]], align 4
-; CHECK-NEXT:    [[I1_FCA_0_INSERT:%.*]] = insertvalue [2 x i32] poison, i32 [[I1_FCA_0_LOAD]], 0
+; CHECK-NEXT:    [[I1_FCA_0_INSERT:%.*]] = insertvalue [2 x i32] poison, i32 0, 0
 ; CHECK-NEXT:    [[I1_FCA_1_GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i32 0, i32 1
-; CHECK-NEXT:    [[I1_FCA_1_LOAD:%.*]] = load i32, ptr [[I1_FCA_1_GEP]], align 4
-; CHECK-NEXT:    [[I1_FCA_1_INSERT:%.*]] = insertvalue [2 x i32] [[I1_FCA_0_INSERT]], i32 [[I1_FCA_1_LOAD]], 1
+; CHECK-NEXT:    [[I1_FCA_1_INSERT:%.*]] = insertvalue [2 x i32] [[I1_FCA_0_INSERT]], i32 [[RDX_INC]], 1
 ; CHECK-NEXT:    ret [2 x i32] [[I1_FCA_1_INSERT]]
 ;
 entry:
@@ -525,11 +518,11 @@ define [2 x i32] @all_parts_of_alloca_used_in_call_with_multiple_args(ptr %data,
 ; CHECK-NEXT:    [[RETVAL:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i64 0, i64 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[RDX_INC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[RDX:%.*]] = load i32, ptr [[RETVAL]], align 4
-; CHECK-NEXT:    [[RDX_INC:%.*]] = add nsw i32 [[RDX]], [[LD]]
+; CHECK-NEXT:    [[RDX_INC]] = add nsw i32 [[RDX]], [[LD]]
 ; CHECK-NEXT:    store i32 [[RDX_INC]], ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
@@ -537,11 +530,9 @@ define [2 x i32] @all_parts_of_alloca_used_in_call_with_multiple_args(ptr %data,
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca_with_multiple_args(ptr [[RETVAL]], ptr [[RETVAL_FULL]])
 ; CHECK-NEXT:    [[I1_FCA_0_GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i32 0, i32 0
-; CHECK-NEXT:    [[I1_FCA_0_LOAD:%.*]] = load i32, ptr [[I1_FCA_0_GEP]], align 4
-; CHECK-NEXT:    [[I1_FCA_0_INSERT:%.*]] = insertvalue [2 x i32] poison, i32 [[I1_FCA_0_LOAD]], 0
+; CHECK-NEXT:    [[I1_FCA_0_INSERT:%.*]] = insertvalue [2 x i32] poison, i32 0, 0
 ; CHECK-NEXT:    [[I1_FCA_1_GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i32 0, i32 1
-; CHECK-NEXT:    [[I1_FCA_1_LOAD:%.*]] = load i32, ptr [[I1_FCA_1_GEP]], align 4
-; CHECK-NEXT:    [[I1_FCA_1_INSERT:%.*]] = insertvalue [2 x i32] [[I1_FCA_0_INSERT]], i32 [[I1_FCA_1_LOAD]], 1
+; CHECK-NEXT:    [[I1_FCA_1_INSERT:%.*]] = insertvalue [2 x i32] [[I1_FCA_0_INSERT]], i32 [[RDX_INC]], 1
 ; CHECK-NEXT:    ret [2 x i32] [[I1_FCA_1_INSERT]]
 ;
 entry:
@@ -688,11 +679,11 @@ define [2 x i32] @part_of_alloca_used_in_call_with_multiple_args(ptr %data, i64 
 ; CHECK-NEXT:    [[RETVAL:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i64 0, i64 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[RDX_INC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[RDX:%.*]] = load i32, ptr [[RETVAL]], align 4
-; CHECK-NEXT:    [[RDX_INC:%.*]] = add nsw i32 [[RDX]], [[LD]]
+; CHECK-NEXT:    [[RDX_INC]] = add nsw i32 [[RDX]], [[LD]]
 ; CHECK-NEXT:    store i32 [[RDX_INC]], ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
@@ -700,11 +691,9 @@ define [2 x i32] @part_of_alloca_used_in_call_with_multiple_args(ptr %data, i64 
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca_with_multiple_args(ptr [[RETVAL]], ptr [[RETVAL]])
 ; CHECK-NEXT:    [[I1_FCA_0_GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i32 0, i32 0
-; CHECK-NEXT:    [[I1_FCA_0_LOAD:%.*]] = load i32, ptr [[I1_FCA_0_GEP]], align 4
-; CHECK-NEXT:    [[I1_FCA_0_INSERT:%.*]] = insertvalue [2 x i32] poison, i32 [[I1_FCA_0_LOAD]], 0
+; CHECK-NEXT:    [[I1_FCA_0_INSERT:%.*]] = insertvalue [2 x i32] poison, i32 0, 0
 ; CHECK-NEXT:    [[I1_FCA_1_GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i32 0, i32 1
-; CHECK-NEXT:    [[I1_FCA_1_LOAD:%.*]] = load i32, ptr [[I1_FCA_1_GEP]], align 4
-; CHECK-NEXT:    [[I1_FCA_1_INSERT:%.*]] = insertvalue [2 x i32] [[I1_FCA_0_INSERT]], i32 [[I1_FCA_1_LOAD]], 1
+; CHECK-NEXT:    [[I1_FCA_1_INSERT:%.*]] = insertvalue [2 x i32] [[I1_FCA_0_INSERT]], i32 [[RDX_INC]], 1
 ; CHECK-NEXT:    ret [2 x i32] [[I1_FCA_1_INSERT]]
 ;
 entry:
@@ -742,11 +731,11 @@ define [2 x i32] @all_parts_of_alloca_used_in_calls_with_multiple_args(ptr %data
 ; CHECK-NEXT:    [[RETVAL:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i64 0, i64 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[RDX_INC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[RDX:%.*]] = load i32, ptr [[RETVAL]], align 4
-; CHECK-NEXT:    [[RDX_INC:%.*]] = add nsw i32 [[RDX]], [[LD]]
+; CHECK-NEXT:    [[RDX_INC]] = add nsw i32 [[RDX]], [[LD]]
 ; CHECK-NEXT:    store i32 [[RDX_INC]], ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
@@ -756,11 +745,9 @@ define [2 x i32] @all_parts_of_alloca_used_in_calls_with_multiple_args(ptr %data
 ; CHECK-NEXT:    [[I1:%.*]] = call i32 @user_of_alloca_with_multiple_args(ptr [[RETVAL_FULL]], ptr [[RETVAL]])
 ; CHECK-NEXT:    [[I2:%.*]] = call i32 @capture_of_alloca(ptr [[SOME_ANOTHER_ALLOCA_FULL]])
 ; CHECK-NEXT:    [[I3_FCA_0_GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i32 0, i32 0
-; CHECK-NEXT:    [[I3_FCA_0_LOAD:%.*]] = load i32, ptr [[I3_FCA_0_GEP]], align 4
-; CHECK-NEXT:    [[I3_FCA_0_INSERT:%.*]] = insertvalue [2 x i32] poison, i32 [[I3_FCA_0_LOAD]], 0
+; CHECK-NEXT:    [[I3_FCA_0_INSERT:%.*]] = insertvalue [2 x i32] poison, i32 0, 0
 ; CHECK-NEXT:    [[I3_FCA_1_GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i32 0, i32 1
-; CHECK-NEXT:    [[I3_FCA_1_LOAD:%.*]] = load i32, ptr [[I3_FCA_1_GEP]], align 4
-; CHECK-NEXT:    [[I3_FCA_1_INSERT:%.*]] = insertvalue [2 x i32] [[I3_FCA_0_INSERT]], i32 [[I3_FCA_1_LOAD]], 1
+; CHECK-NEXT:    [[I3_FCA_1_INSERT:%.*]] = insertvalue [2 x i32] [[I3_FCA_0_INSERT]], i32 [[RDX_INC]], 1
 ; CHECK-NEXT:    ret [2 x i32] [[I3_FCA_1_INSERT]]
 ;
 entry:
@@ -851,8 +838,7 @@ define i8 @dont_transform_load_only() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    call void @byte_user_of_alloca(ptr [[A]])
-; CHECK-NEXT:    [[R:%.*]] = load i8, ptr [[A]], align 1
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 undef
 ;
 entry:
   %a = alloca i8
@@ -866,8 +852,7 @@ define i8 @transform_load_and_store() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    store i8 0, ptr [[A]], align 1
 ; CHECK-NEXT:    call void @byte_user_of_alloca(ptr [[A]])
-; CHECK-NEXT:    [[R:%.*]] = load i8, ptr [[A]], align 1
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
 entry:
   %a = alloca i8
