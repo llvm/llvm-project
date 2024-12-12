@@ -2966,7 +2966,15 @@ struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
                                  getDebugLoc());
   }
 
-  VP_CLASSOF_IMPL(VPDef::VPWidenLoadSC);
+  static inline bool classof(const VPRecipeBase *R) {
+    return R->getVPDefID() == VPRecipeBase::VPWidenLoadSC ||
+           R->getVPDefID() == VPRecipeBase::VPWidenLoadEVLSC;
+  }
+
+  static inline bool classof(const VPUser *U) {
+    auto *R = dyn_cast<VPRecipeBase>(U);
+    return R && classof(R);
+  }
 
   /// Generate a wide load or gather.
   void execute(VPTransformState &State) override;
@@ -3043,7 +3051,15 @@ struct VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
                                   Reverse, getDebugLoc());
   }
 
-  VP_CLASSOF_IMPL(VPDef::VPWidenStoreSC);
+  static inline bool classof(const VPRecipeBase *R) {
+    return R->getVPDefID() == VPRecipeBase::VPWidenStoreSC ||
+           R->getVPDefID() == VPRecipeBase::VPWidenStoreEVLSC;
+  }
+
+  static inline bool classof(const VPUser *U) {
+    auto *R = dyn_cast<VPRecipeBase>(U);
+    return R && classof(R);
+  }
 
   /// Return the value stored by this recipe.
   VPValue *getStoredValue() const { return getOperand(1); }
