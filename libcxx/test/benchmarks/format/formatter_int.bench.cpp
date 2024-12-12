@@ -12,7 +12,7 @@
 #include <format>
 #include <random>
 
-#include "CartesianBenchmarks.h"
+#include "../CartesianBenchmarks.h"
 #include "benchmark/benchmark.h"
 #include "test_macros.h"
 
