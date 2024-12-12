@@ -329,24 +329,24 @@ public:
 
       bool isSubstitutionFailure() const {
         return !isEmpty() &&
-            TypeConstraintInfo.getPointer().is<SubstitutionDiagnostic *>();
+               isa<SubstitutionDiagnostic *>(TypeConstraintInfo.getPointer());
       }
 
       bool isTypeConstraint() const {
         return !isEmpty() &&
-            TypeConstraintInfo.getPointer().is<TemplateParameterList *>();
+               isa<TemplateParameterList *>(TypeConstraintInfo.getPointer());
       }
 
       SubstitutionDiagnostic *getSubstitutionDiagnostic() const {
         assert(isSubstitutionFailure());
-        return TypeConstraintInfo.getPointer().get<SubstitutionDiagnostic *>();
+        return cast<SubstitutionDiagnostic *>(TypeConstraintInfo.getPointer());
       }
 
       const TypeConstraint *getTypeConstraint() const;
 
       TemplateParameterList *getTypeConstraintTemplateParameterList() const {
         assert(isTypeConstraint());
-        return TypeConstraintInfo.getPointer().get<TemplateParameterList *>();
+        return cast<TemplateParameterList *>(TypeConstraintInfo.getPointer());
       }
   };
 private:
