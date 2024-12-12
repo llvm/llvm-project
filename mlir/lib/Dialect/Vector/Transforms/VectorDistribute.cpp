@@ -588,7 +588,7 @@ private:
 /// }
 /// %0 = arith.addf %r#1, %r#2 : vector<1xf32>
 struct WarpOpElementwise : public WarpDistributionPattern {
-  using WarpDistributionPattern::WarpDistributionPattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *yieldOperand = getWarpResult(warpOp, [](Operation *op) {
@@ -654,7 +654,7 @@ struct WarpOpElementwise : public WarpDistributionPattern {
 /// }
 /// %0 = arith.constant dense<2.0> : vector<1xf32>
 struct WarpOpConstant : public WarpDistributionPattern {
-  using WarpDistributionPattern::WarpDistributionPattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *yieldOperand =
@@ -700,7 +700,7 @@ struct WarpOpConstant : public WarpDistributionPattern {
 /// }
 /// %0 = vector.transfer_read %src[%c0], %cst : memref<1024xf32>, vector<1xf32>
 struct WarpOpTransferRead : public WarpDistributionPattern {
-  using WarpDistributionPattern::WarpDistributionPattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     // Try to find a distributable yielded read. Note that this pattern can
@@ -812,7 +812,7 @@ struct WarpOpTransferRead : public WarpDistributionPattern {
 /// Remove any result that has no use along with the matching yieldOp operand.
 // TODO: Move this in WarpExecuteOnLane0Op canonicalization.
 struct WarpOpDeadResult : public WarpDistributionPattern {
-  using WarpDistributionPattern::WarpDistributionPattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     SmallVector<Type> newResultTypes;
@@ -873,7 +873,7 @@ struct WarpOpDeadResult : public WarpDistributionPattern {
 // If an operand is directly yielded out of the region we can forward it
 // directly and it doesn't need to go through the region.
 struct WarpOpForwardOperand : public WarpDistributionPattern {
-  using WarpDistributionPattern::WarpDistributionPattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     SmallVector<Type> resultTypes;
@@ -917,7 +917,7 @@ struct WarpOpForwardOperand : public WarpDistributionPattern {
 };
 
 struct WarpOpBroadcast : public WarpDistributionPattern {
-  using WarpDistributionPattern::WarpDistributionPattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *operand =
@@ -954,7 +954,7 @@ struct WarpOpBroadcast : public WarpDistributionPattern {
 /// Pattern to move shape cast out of the warp op. shape cast is basically a
 /// no-op for warp distribution; we need to handle the shape though.
 struct WarpOpShapeCast : public WarpDistributionPattern {
-  using WarpDistributionPattern::WarpDistributionPattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *operand =
@@ -1013,7 +1013,7 @@ struct WarpOpShapeCast : public WarpDistributionPattern {
 /// %ub = arith.select %cmp, %c0, %c1
 /// %1 = vector.create_mask %ub : vector<1xi1>
 struct WarpOpCreateMask : public WarpDistributionPattern {
-  using WarpDistributionPattern::WarpDistributionPattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *yieldOperand =
@@ -1079,7 +1079,7 @@ struct WarpOpCreateMask : public WarpDistributionPattern {
 /// Pattern to move out vector.extract of single element vector. Those don't
 /// need to be distributed and can just be propagated outside of the region.
 struct WarpOpExtract : public WarpDistributionPattern {
-  using WarpDistributionPattern::WarpDistributionPattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *operand =
@@ -1257,7 +1257,7 @@ private:
 
 /// Pattern to convert vector.extractelement to vector.extract.
 struct WarpOpExtractElement : public WarpDistributionPattern {
-  using WarpDistributionPattern::WarpDistributionPattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *operand =
@@ -1279,7 +1279,7 @@ struct WarpOpExtractElement : public WarpDistributionPattern {
 /// Pattern to move out vector.insert with a scalar input.
 /// Only supports 1-D and 0-D destinations for now.
 struct WarpOpInsertScalar : public WarpDistributionPattern {
-  using WarpDistributionPattern::WarpDistributionPattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *operand = getWarpResult(warpOp, llvm::IsaPred<vector::InsertOp>);
@@ -1371,7 +1371,7 @@ struct WarpOpInsertScalar : public WarpDistributionPattern {
 };
 
 struct WarpOpInsert : public WarpDistributionPattern {
-  using WarpDistributionPattern::WarpDistributionPattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *operand = getWarpResult(warpOp, llvm::IsaPred<vector::InsertOp>);
@@ -1484,7 +1484,7 @@ struct WarpOpInsert : public WarpDistributionPattern {
 };
 
 struct WarpOpInsertElement : public WarpDistributionPattern {
-  using WarpDistributionPattern::WarpDistributionPattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *operand =
