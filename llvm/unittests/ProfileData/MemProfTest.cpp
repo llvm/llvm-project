@@ -587,9 +587,9 @@ TEST(MemProf, RadixTreeBuilderEmpty) {
   CallStackRadixTreeBuilder<FrameId> Builder;
   Builder.build(std::move(MemProfCallStackData), &MemProfFrameIndexes,
                 FrameHistogram);
-  ASSERT_THAT(Builder.getRadixArray(), testing::IsEmpty());
+  ASSERT_THAT(Builder.getRadixArray(), IsEmpty());
   const auto Mappings = Builder.takeCallStackPos();
-  ASSERT_THAT(Mappings, testing::IsEmpty());
+  ASSERT_THAT(Mappings, IsEmpty());
 }
 
 // Verify CallStackRadixTreeBuilder can handle one trivial call stack.
