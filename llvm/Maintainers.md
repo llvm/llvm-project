@@ -126,11 +126,6 @@ llvm-dev@redking.me.uk (email), [RKSimon](https://github.com/RKSimon) (GitHub) \
 Craig Topper \
 craig.topper@sifive.com (email), [topperc](https://github.com/topperc) (GitHub)
 
-#### FastISel
-
-Chad Rosier \
-mcrosier@codeaurora.org (email)
-
 #### Instruction scheduling
 
 Matthias Braun \
@@ -461,6 +456,7 @@ Justin Bogner (mail@justinbogner.com, [bogner](https://github.com/bogner)) -- Se
 Evan Cheng (evan.cheng@apple.com) -- Parts of code generator not covered by someone else \
 Renato Golin (rengolin@systemcall.eu, [rengolin](https://github.com/rengolin)) -- ARM backend \
 Anton Korobeynikov (anton@korobeynikov.info, [asl](https://github.com/asl)) -- ARM EABI \
+Chad Rosier (mcrosier@codeaurora.org) -- FastISel \
 Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management \
 Kostya Serebryany ([kcc](https://github.com/kcc)) -- Sanitizers \
 Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) -- Sanitizers
