@@ -943,11 +943,11 @@ class QualType {
                        Qualifiers::FastWidth> Value;
 
   const ExtQuals *getExtQualsUnsafe() const {
-    return Value.getPointer().get<const ExtQuals*>();
+    return cast<const ExtQuals *>(Value.getPointer());
   }
 
   const Type *getTypePtrUnsafe() const {
-    return Value.getPointer().get<const Type*>();
+    return cast<const Type *>(Value.getPointer());
   }
 
   const ExtQualsTypeCommonBase *getCommonPtr() const {
@@ -1073,7 +1073,7 @@ public:
   /// "non-fast" qualifiers, e.g., those that are stored in an ExtQualType
   /// instance.
   bool hasLocalNonFastQualifiers() const {
-    return Value.getPointer().is<const ExtQuals*>();
+    return isa<const ExtQuals *>(Value.getPointer());
   }
 
   /// Retrieve the set of qualifiers local to this particular QualType

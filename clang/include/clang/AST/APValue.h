@@ -247,7 +247,7 @@ public:
     void Profile(llvm::FoldingSetNodeID &ID) const;
 
     template <class T> EnableIfNotDANorForged<T, bool> is() const {
-      return Ptr.is<T>();
+      return isa<T>(Ptr);
     }
 
     template <class T> EnableIfDAOrForged<T, bool> is() const {
@@ -257,7 +257,7 @@ public:
     }
 
     template <class T> EnableIfNotDANorForged<T> get() const {
-      return Ptr.get<T>();
+      return cast<T>(Ptr);
     }
 
     template <class T> EnableIfDAOrForged<T> get() const {
