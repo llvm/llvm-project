@@ -4,40 +4,50 @@
       "c-definition": "7.6.5"
     },
     "FE_DIVBYZERO": {
-      "c-definition": "7.6.9"
+      "c-definition": "7.6.9",
+      "in-latest-posix": ""
     },
     "FE_INEXACT": {
-      "c-definition": "7.6.9"
+      "c-definition": "7.6.9",
+      "in-latest-posix": ""
     },
     "FE_INVALID": {
-      "c-definition": "7.6.9"
+      "c-definition": "7.6.9",
+      "in-latest-posix": ""
     },
     "FE_OVERFLOW": {
-      "c-definition": "7.6.9"
+      "c-definition": "7.6.9",
+      "in-latest-posix": ""
     },
     "FE_UNDERFLOW": {
-      "c-definition": "7.6.9"
+      "c-definition": "7.6.9",
+      "in-latest-posix": ""
     },
     "FE_ALL_EXCEPT": {
-      "c-definition": "7.6.12"
+      "c-definition": "7.6.12",
+      "in-latest-posix": ""
     },
     "FE_DFL_MODE": {
       "c-definition": "7.6.11"
     },
-    "FE_DOWNARD": {
-      "c-definition": "7.6.13"
+    "FE_DOWNWARD": {
+      "c-definition": "7.6.13",
+      "in-latest-posix": ""
     },
     "FE_TONEAREST": {
-      "c-definition": "7.6.13"
+      "c-definition": "7.6.13",
+      "in-latest-posix": ""
     },
     "FE_TONEARESTFROMZERO": {
       "c-definition": "7.6.13"
     },
     "FE_TOWARDZERO": {
-      "c-definition": "7.6.13"
+      "c-definition": "7.6.13",
+      "in-latest-posix": ""
     },
     "FE_UPWARD": {
-      "c-definition": "7.6.13"
+      "c-definition": "7.6.13",
+      "in-latest-posix": ""
     },
     "FE_DEC_DOWNWARD": {
       "c-definition": "7.6.14"
@@ -55,36 +65,43 @@
       "c-definition": "7.6.14"
     },
     "FE_DFL_ENV": {
-      "c-definition": "7.6.17"
+      "c-definition": "7.6.17",
+      "in-latest-posix": ""
     }
   },
   "functions": {
     "feclearexcept": {
-      "c-definition": "7.6.4.1"
+      "c-definition": "7.6.4.1",
+      "in-latest-posix": ""
     },
     "fegetexceptflag": {
-      "c-definition": "7.6.4.2"
+      "c-definition": "7.6.4.2",
+      "in-latest-posix": ""
     },
     "feraiseexcept": {
-      "c-definition": "7.6.4.3"
+      "c-definition": "7.6.4.3",
+      "in-latest-posix": ""
     },
     "fesetexcept": {
       "c-definition": "7.6.4.4"
     },
     "fesetexceptflag": {
-      "c-definition": "7.6.4.5"
+      "c-definition": "7.6.4.5",
+      "in-latest-posix": ""
     },
     "fetestexceptflag": {
       "c-definition": "7.6.4.6"
     },
     "fetestexcept": {
-      "c-definition": "7.6.4.7"
+      "c-definition": "7.6.4.7",
+      "in-latest-posix": ""
     },
     "fegetmode": {
       "c-definition": "7.6.5.1"
     },
     "fegetround": {
-      "c-definition": "7.6.5.2"
+      "c-definition": "7.6.5.2",
+      "in-latest-posix": ""
     },
     "fe_dec_getround": {
       "c-definition": "7.6.5.3"
@@ -93,22 +110,27 @@
       "c-definition": "7.6.5.4"
     },
     "fesetround": {
-      "c-definition": "7.6.5.5"
+      "c-definition": "7.6.5.5",
+      "in-latest-posix": ""
     },
     "fe_dec_setround": {
       "c-definition": "7.6.5.6"
     },
     "fegetenv": {
-      "c-definition": "7.6.6.1"
+      "c-definition": "7.6.6.1",
+      "in-latest-posix": ""
     },
     "feholdexcept": {
-      "c-definition": "7.6.6.2"
+      "c-definition": "7.6.6.2",
+      "in-latest-posix": ""
     },
     "fesetenv": {
-      "c-definition": "7.6.6.3"
+      "c-definition": "7.6.6.3",
+      "in-latest-posix": ""
     },
     "feupdateenv": {
-      "c-definition": "7.6.6.4"
+      "c-definition": "7.6.6.4",
+      "in-latest-posix": ""
     }
   }
 }
