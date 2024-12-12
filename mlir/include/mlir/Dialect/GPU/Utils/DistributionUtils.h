@@ -27,9 +27,8 @@ struct WarpDistributionPattern : OpRewritePattern<WarpExecuteOnLane0Op> {
 protected:
   /// Return a value yielded by `warpOp` which statifies the filter lamdba
   /// condition and is not dead.
-  OpOperand *
-  getWarpResult(WarpExecuteOnLane0Op warpOp,
-                const llvm::function_ref<bool(Operation *)> fn) const;
+  OpOperand *getWarpResult(WarpExecuteOnLane0Op warpOp,
+                           llvm::function_ref<bool(Operation *)> fn) const;
 
   /// Helper to create a new WarpExecuteOnLane0Op with different signature.
   WarpExecuteOnLane0Op moveRegionToNewWarpOpAndReplaceReturns(

@@ -83,7 +83,7 @@ WarpDistributionPattern::moveRegionToNewWarpOpAndAppendReturns(
 
 OpOperand *WarpDistributionPattern::getWarpResult(
     WarpExecuteOnLane0Op warpOp,
-    const llvm::function_ref<bool(Operation *)> fn) const {
+    llvm::function_ref<bool(Operation *)> fn) const {
   auto yield = cast<gpu::YieldOp>(
       warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
   for (OpOperand &yieldOperand : yield->getOpOperands()) {
