@@ -148,8 +148,11 @@ namespace lldb_private {
 
 void RegisterVerboseTrapFrameRecognizer(Process &process) {
   RegularExpressionSP module_regex_sp = nullptr;
+  // Older -fbounds-safety versions didn't have a ClangTrapPrefix, so the name
+  // of the frame was just the bounds-check failure message. This regex supports
+  // the old and new style of frames.
   auto symbol_regex_sp = std::make_shared<RegularExpression>(
-      llvm::formatv("^{0}", ClangTrapPrefix).str());
+      llvm::formatv("^({0}|Bounds check failed|Pointer Check runtime failure)", ClangTrapPrefix).str());
 
   StackFrameRecognizerSP srf_recognizer_sp =
       std::make_shared<VerboseTrapFrameRecognizer>();

@@ -80,12 +80,9 @@ class TestOutOfBoundsPointer(TestBase):
     def overflow_oob(self, type_name):
         return self.get_idx_var_regex(oob_kind=OOBKind.Overflow, type_name=type_name)
 
-    def setUp(self):
-        TestBase.setUp(self)
-        if _get_bool_config("ios_disclosed", fail_value=False):
-            self.build()
-
     def test_bidi_known_type_size(self):
+        self.build()
+
         (_, self.process, _, bkpt) = lldbutil.run_to_source_breakpoint(
             self, r"// break here:.+", lldb.SBFileSpec("bidi_check_known_type_size.c")
         )
@@ -154,6 +151,8 @@ class TestOutOfBoundsPointer(TestBase):
         self.expect("frame variable fams2", patterns=[self.bidi_full_oob("FAMS_t *")])
 
     def test_bidi_unknown_type_size(self):
+        self.build()
+
         (_, self.process, _, bkpt) = lldbutil.run_to_source_breakpoint(
             self, r"// break here:.+", lldb.SBFileSpec("bidi_check_unknown_type_size.c")
         )
@@ -203,6 +202,8 @@ class TestOutOfBoundsPointer(TestBase):
         self.expect("frame variable oob_null", patterns=[self.bidi_full_oob("void *")])
 
     def test_idx_known_type_size(self):
+        self.build()
+
         (_, self.process, _, bkpt) = lldbutil.run_to_source_breakpoint(
             self, r"// break here:.+", lldb.SBFileSpec("idx_check_known_type_size.c")
         )
@@ -252,6 +253,8 @@ class TestOutOfBoundsPointer(TestBase):
         self.expect("frame variable fams2", patterns=[self.full_oob("FAMS_t *")])
 
     def test_idx_unknown_type_size(self):
+        self.build()
+
         (_, self.process, _, bkpt) = lldbutil.run_to_source_breakpoint(
             self, r"// break here:.+", lldb.SBFileSpec("idx_check_unknown_type_size.c")
         )
