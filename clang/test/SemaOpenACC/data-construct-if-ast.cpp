@@ -21,6 +21,7 @@ void NormalFunc(int j, float f) {
   // CHECK-NEXT: DeclRefExpr{{.*}} 'int' lvalue ParmVar{{.*}} 'j' 'int'
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'float' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}} 'float' lvalue ParmVar{{.*}} 'f' 'float'
+  // CHECK-NEXT: default(none)
   // CHECK-NEXT: NullStmt
 
 }
@@ -39,6 +40,7 @@ void TemplFunc() {
 #pragma acc data default(none) if(T::SomeFloat < typename T::IntTy{})
   ;
   // CHECK-NEXT: OpenACCDataConstruct{{.*}}data
+  // CHECK-NEXT: default(none)
   // CHECK-NEXT: if clause
   // CHECK-NEXT: BinaryOperator{{.*}} '<dependent type>' '<'
   // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
@@ -79,6 +81,7 @@ void TemplFunc() {
   // CHECK-NEXT: CompoundStmt
 
   // CHECK-NEXT: OpenACCDataConstruct{{.*}}data
+  // CHECK-NEXT: default(none)
   // CHECK-NEXT: if clause
   // CHECK-NEXT: BinaryOperator{{.*}} 'bool' '<'
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'float' <LValueToRValue>
