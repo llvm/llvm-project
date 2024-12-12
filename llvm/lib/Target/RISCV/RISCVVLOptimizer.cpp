@@ -341,11 +341,17 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VNMSUB_VV:
   case RISCV::VNMSUB_VX:
   // Vector Integer Merge Instructions
+  // Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
   // EEW=SEW and EMUL=LMUL, except the mask operand has EEW=1 and EMUL=
   // (EEW/SEW)*LMUL. Mask operand is handled before this switch.
   case RISCV::VMERGE_VIM:
   case RISCV::VMERGE_VVM:
   case RISCV::VMERGE_VXM:
+  case RISCV::VADC_VIM:
+  case RISCV::VADC_VVM:
+  case RISCV::VADC_VXM:
+  case RISCV::VSBC_VVM:
+  case RISCV::VSBC_VXM:
   // Vector Integer Move Instructions
   // Vector Fixed-Point Arithmetic Instructions
   // Vector Single-Width Saturating Add and Subtract
@@ -521,6 +527,47 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
     return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0);
   }
 
+  // Vector Integer Compare Instructions
+  // Dest EEW=1 and EMUL=(EEW/SEW)*LMUL. Source EEW=SEW and EMUL=LMUL.
+  case RISCV::VMSEQ_VI:
+  case RISCV::VMSEQ_VV:
+  case RISCV::VMSEQ_VX:
+  case RISCV::VMSNE_VI:
+  case RISCV::VMSNE_VV:
+  case RISCV::VMSNE_VX:
+  case RISCV::VMSLTU_VV:
+  case RISCV::VMSLTU_VX:
+  case RISCV::VMSLT_VV:
+  case RISCV::VMSLT_VX:
+  case RISCV::VMSLEU_VV:
+  case RISCV::VMSLEU_VI:
+  case RISCV::VMSLEU_VX:
+  case RISCV::VMSLE_VV:
+  case RISCV::VMSLE_VI:
+  case RISCV::VMSLE_VX:
+  case RISCV::VMSGTU_VI:
+  case RISCV::VMSGTU_VX:
+  case RISCV::VMSGT_VI:
+  case RISCV::VMSGT_VX:
+  // Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
+  // Dest EEW=1 and EMUL=(EEW/SEW)*LMUL. Source EEW=SEW and EMUL=LMUL. Mask
+  // source operand handled above this switch.
+  case RISCV::VMADC_VIM:
+  case RISCV::VMADC_VVM:
+  case RISCV::VMADC_VXM:
+  case RISCV::VMSBC_VVM:
+  case RISCV::VMSBC_VXM:
+  // Dest EEW=1 and EMUL=(EEW/SEW)*LMUL. Source EEW=SEW and EMUL=LMUL.
+  case RISCV::VMADC_VV:
+  case RISCV::VMADC_VI:
+  case RISCV::VMADC_VX:
+  case RISCV::VMSBC_VV:
+  case RISCV::VMSBC_VX: {
+    if (IsMODef)
+      return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0);
+    return OperandInfo(MIVLMul, MILog2SEW);
+  }
+
   default:
     return {};
   }
@@ -591,6 +638,11 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VSEXT_VF8:
   // Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
   // FIXME: Add support
+  case RISCV::VMADC_VV:
+  case RISCV::VMADC_VI:
+  case RISCV::VMADC_VX:
+  case RISCV::VMSBC_VV:
+  case RISCV::VMSBC_VX:
   // Vector Narrowing Integer Right Shift Instructions
   case RISCV::VNSRL_WX:
   case RISCV::VNSRL_WI:
@@ -599,7 +651,26 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VNSRA_WV:
   case RISCV::VNSRA_WX:
   // Vector Integer Compare Instructions
-  // FIXME: Add support
+  case RISCV::VMSEQ_VI:
+  case RISCV::VMSEQ_VV:
+  case RISCV::VMSEQ_VX:
+  case RISCV::VMSNE_VI:
+  case RISCV::VMSNE_VV:
+  case RISCV::VMSNE_VX:
+  case RISCV::VMSLTU_VV:
+  case RISCV::VMSLTU_VX:
+  case RISCV::VMSLT_VV:
+  case RISCV::VMSLT_VX:
+  case RISCV::VMSLEU_VV:
+  case RISCV::VMSLEU_VI:
+  case RISCV::VMSLEU_VX:
+  case RISCV::VMSLE_VV:
+  case RISCV::VMSLE_VI:
+  case RISCV::VMSLE_VX:
+  case RISCV::VMSGTU_VI:
+  case RISCV::VMSGTU_VX:
+  case RISCV::VMSGT_VI:
+  case RISCV::VMSGT_VX:
   // Vector Integer Min/Max Instructions
   case RISCV::VMINU_VV:
   case RISCV::VMINU_VX:
