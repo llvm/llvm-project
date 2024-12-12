@@ -203,13 +203,11 @@ namespace {
 ///
 /// All this assumes the vector distribution occurs along the most minor
 /// distributed vector dimension.
-struct WarpOpToScfIfPattern
-    : public WarpDistributionPattern<WarpExecuteOnLane0Op> {
+struct WarpOpToScfIfPattern : public WarpDistributionPattern {
   WarpOpToScfIfPattern(MLIRContext *context,
                        const WarpExecuteOnLane0LoweringOptions &options,
                        PatternBenefit benefit = 1)
-      : WarpDistributionPattern<WarpExecuteOnLane0Op>(context, benefit),
-        options(options) {}
+      : WarpDistributionPattern(context, benefit), options(options) {}
 
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
@@ -369,12 +367,10 @@ static VectorType getDistributedType(VectorType originalType, AffineMap map,
 ///   gpu.yield %v : vector<32xf32>
 /// }
 /// vector.transfer_write %v, %A[%id] : vector<1xf32>, memref<128xf32>
-struct WarpOpTransferWrite
-    : public WarpDistributionPattern<WarpExecuteOnLane0Op> {
+struct WarpOpTransferWrite : public WarpDistributionPattern {
   WarpOpTransferWrite(MLIRContext *ctx, DistributionMapFn fn,
                       unsigned maxNumElementsToExtract, PatternBenefit b = 1)
-      : WarpDistributionPattern<WarpExecuteOnLane0Op>(ctx, b),
-        distributionMapFn(std::move(fn)),
+      : WarpDistributionPattern(ctx, b), distributionMapFn(std::move(fn)),
         maxNumElementsToExtract(maxNumElementsToExtract) {}
 
   /// Distribute the TransferWriteOp. Only 1D distributions and vector dims that
@@ -591,8 +587,7 @@ private:
 ///   vector<32xf32>
 /// }
 /// %0 = arith.addf %r#1, %r#2 : vector<1xf32>
-struct WarpOpElementwise
-    : public WarpDistributionPattern<WarpExecuteOnLane0Op> {
+struct WarpOpElementwise : public WarpDistributionPattern {
   using WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
@@ -658,7 +653,7 @@ struct WarpOpElementwise
 ///   ...
 /// }
 /// %0 = arith.constant dense<2.0> : vector<1xf32>
-struct WarpOpConstant : public WarpDistributionPattern<WarpExecuteOnLane0Op> {
+struct WarpOpConstant : public WarpDistributionPattern {
   using WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
@@ -704,8 +699,7 @@ struct WarpOpConstant : public WarpDistributionPattern<WarpExecuteOnLane0Op> {
 ///   vector<32xf32> gpu.yield %2 : vector<32xf32>
 /// }
 /// %0 = vector.transfer_read %src[%c0], %cst : memref<1024xf32>, vector<1xf32>
-struct WarpOpTransferRead
-    : public WarpDistributionPattern<WarpExecuteOnLane0Op> {
+struct WarpOpTransferRead : public WarpDistributionPattern {
   using WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
@@ -817,7 +811,7 @@ struct WarpOpTransferRead
 
 /// Remove any result that has no use along with the matching yieldOp operand.
 // TODO: Move this in WarpExecuteOnLane0Op canonicalization.
-struct WarpOpDeadResult : public WarpDistributionPattern<WarpExecuteOnLane0Op> {
+struct WarpOpDeadResult : public WarpDistributionPattern {
   using WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
@@ -878,8 +872,7 @@ struct WarpOpDeadResult : public WarpDistributionPattern<WarpExecuteOnLane0Op> {
 
 // If an operand is directly yielded out of the region we can forward it
 // directly and it doesn't need to go through the region.
-struct WarpOpForwardOperand
-    : public WarpDistributionPattern<WarpExecuteOnLane0Op> {
+struct WarpOpForwardOperand : public WarpDistributionPattern {
   using WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
@@ -923,7 +916,7 @@ struct WarpOpForwardOperand
   }
 };
 
-struct WarpOpBroadcast : public WarpDistributionPattern<WarpExecuteOnLane0Op> {
+struct WarpOpBroadcast : public WarpDistributionPattern {
   using WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
@@ -960,7 +953,7 @@ struct WarpOpBroadcast : public WarpDistributionPattern<WarpExecuteOnLane0Op> {
 
 /// Pattern to move shape cast out of the warp op. shape cast is basically a
 /// no-op for warp distribution; we need to handle the shape though.
-struct WarpOpShapeCast : public WarpDistributionPattern<WarpExecuteOnLane0Op> {
+struct WarpOpShapeCast : public WarpDistributionPattern {
   using WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
@@ -1019,7 +1012,7 @@ struct WarpOpShapeCast : public WarpDistributionPattern<WarpExecuteOnLane0Op> {
 /// %cmp = arith.cmpi ult, %laneid, %0
 /// %ub = arith.select %cmp, %c0, %c1
 /// %1 = vector.create_mask %ub : vector<1xi1>
-struct WarpOpCreateMask : public WarpDistributionPattern<WarpExecuteOnLane0Op> {
+struct WarpOpCreateMask : public WarpDistributionPattern {
   using WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
@@ -1085,7 +1078,7 @@ struct WarpOpCreateMask : public WarpDistributionPattern<WarpExecuteOnLane0Op> {
 
 /// Pattern to move out vector.extract of single element vector. Those don't
 /// need to be distributed and can just be propagated outside of the region.
-struct WarpOpExtract : public WarpDistributionPattern<WarpExecuteOnLane0Op> {
+struct WarpOpExtract : public WarpDistributionPattern {
   using WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
@@ -1165,12 +1158,10 @@ struct WarpOpExtract : public WarpDistributionPattern<WarpExecuteOnLane0Op> {
 
 /// Pattern to move out vector.extract with a scalar result.
 /// Only supports 1-D and 0-D sources for now.
-struct WarpOpExtractScalar
-    : public WarpDistributionPattern<WarpExecuteOnLane0Op> {
+struct WarpOpExtractScalar : public WarpDistributionPattern {
   WarpOpExtractScalar(MLIRContext *ctx, WarpShuffleFromIdxFn fn,
                       PatternBenefit b = 1)
-      : WarpDistributionPattern<WarpExecuteOnLane0Op>(ctx, b),
-        warpShuffleFromIdxFn(std::move(fn)) {}
+      : WarpDistributionPattern(ctx, b), warpShuffleFromIdxFn(std::move(fn)) {}
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *operand =
@@ -1265,8 +1256,7 @@ private:
 };
 
 /// Pattern to convert vector.extractelement to vector.extract.
-struct WarpOpExtractElement
-    : public WarpDistributionPattern<WarpExecuteOnLane0Op> {
+struct WarpOpExtractElement : public WarpDistributionPattern {
   using WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
@@ -1288,8 +1278,7 @@ struct WarpOpExtractElement
 
 /// Pattern to move out vector.insert with a scalar input.
 /// Only supports 1-D and 0-D destinations for now.
-struct WarpOpInsertScalar
-    : public WarpDistributionPattern<WarpExecuteOnLane0Op> {
+struct WarpOpInsertScalar : public WarpDistributionPattern {
   using WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
@@ -1381,7 +1370,7 @@ struct WarpOpInsertScalar
   }
 };
 
-struct WarpOpInsert : public WarpDistributionPattern<WarpExecuteOnLane0Op> {
+struct WarpOpInsert : public WarpDistributionPattern {
   using WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
@@ -1494,8 +1483,7 @@ struct WarpOpInsert : public WarpDistributionPattern<WarpExecuteOnLane0Op> {
   }
 };
 
-struct WarpOpInsertElement
-    : public WarpDistributionPattern<WarpExecuteOnLane0Op> {
+struct WarpOpInsertElement : public WarpDistributionPattern {
   using WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
@@ -1547,11 +1535,10 @@ struct WarpOpInsertElement
 ///     scf.yield %iw : vector<4xf32>
 ///  }
 /// ```
-struct WarpOpScfForOp : public WarpDistributionPattern<WarpExecuteOnLane0Op> {
+struct WarpOpScfForOp : public WarpDistributionPattern {
 
   WarpOpScfForOp(MLIRContext *ctx, DistributionMapFn fn, PatternBenefit b = 1)
-      : WarpDistributionPattern<WarpExecuteOnLane0Op>(ctx, b),
-        distributionMapFn(std::move(fn)) {}
+      : WarpDistributionPattern(ctx, b), distributionMapFn(std::move(fn)) {}
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     auto yield = cast<gpu::YieldOp>(
@@ -1690,11 +1677,11 @@ private:
 /// %a = vector.extract %0[0] : f32 from vector<1xf32>
 /// %r = ("warp.reduction %a")
 /// ```
-struct WarpOpReduction : public WarpDistributionPattern<WarpExecuteOnLane0Op> {
+struct WarpOpReduction : public WarpDistributionPattern {
   WarpOpReduction(MLIRContext *context,
                   DistributedReductionFn distributedReductionFn,
                   PatternBenefit benefit = 1)
-      : WarpDistributionPattern<WarpExecuteOnLane0Op>(context, benefit),
+      : WarpDistributionPattern(context, benefit),
         distributedReductionFn(std::move(distributedReductionFn)) {}
 
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
