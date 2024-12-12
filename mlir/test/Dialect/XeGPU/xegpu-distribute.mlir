@@ -62,6 +62,8 @@ func.func @test_load_nd_distribution(%dst: !xegpu.tensor_desc<24x32xf16, #blk_td
 // CHECK: ^bb0(%[[dst:.*]]: memref<24x32xf16>)
 // CHECK: %[[dead:.*]] = xegpu.create_nd_tdesc
 // CHECK: gpu.yield %[[dead]], %[[dst]] :
+// CHECK: %[[T2:.*]] = xegpu.create_nd_tdesc %[[res]]#1[%[[C12]], 0] : memref<24x32xf16> -> !xegpu.tensor_desc<12x32xf16, #xegpu.block_tdesc_attr<memory_space =  global, array_length = 1 : i64, boundary_check = true>, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
+// CHECK: return %[[T2]] : !xegpu.tensor_desc<12x32xf16, #xegpu.block_tdesc_attr<memory_space =  global, array_length = 1 : i64, boundary_check = true>, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
 
 
 func.func @test_create_nd_desc_distribution(%dst: memref<24x32xf16>) -> (!xegpu.tensor_desc<12x32xf16, #blk_tdesc, #sg_map_16>) {
