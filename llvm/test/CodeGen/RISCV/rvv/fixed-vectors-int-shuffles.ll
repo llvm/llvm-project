@@ -1070,8 +1070,8 @@ define <16 x i64> @shuffle_zipodd_v16i64(<16 x i64> %v1, <16 x i64> %v2) {
 define <16 x i32> @shuffle_disjoint_lanes(<16 x i32> %v, <16 x i32> %w) {
 ; CHECK-LABEL: shuffle_disjoint_lanes:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI70_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI70_0)
+; CHECK-NEXT:    lui a0, %hi(.LCPI74_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI74_0)
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vle8.v v16, (a0)
 ; CHECK-NEXT:    lui a0, 11
@@ -1090,8 +1090,8 @@ define <16 x i32> @shuffle_disjoint_lanes(<16 x i32> %v, <16 x i32> %w) {
 define <16 x i32> @shuffle_disjoint_lanes_one_identity(<16 x i32> %v, <16 x i32> %w) {
 ; CHECK-LABEL: shuffle_disjoint_lanes_one_identity:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI71_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI71_0)
+; CHECK-NEXT:    lui a0, %hi(.LCPI75_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI75_0)
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
 ; CHECK-NEXT:    vle16.v v16, (a0)
 ; CHECK-NEXT:    li a0, -272
@@ -1105,8 +1105,8 @@ define <16 x i32> @shuffle_disjoint_lanes_one_identity(<16 x i32> %v, <16 x i32>
 define <16 x i32> @shuffle_disjoint_lanes_one_broadcast(<16 x i32> %v, <16 x i32> %w) {
 ; CHECK-LABEL: shuffle_disjoint_lanes_one_broadcast:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI72_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI72_0)
+; CHECK-NEXT:    lui a0, %hi(.LCPI76_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI76_0)
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
 ; CHECK-NEXT:    vle16.v v20, (a0)
 ; CHECK-NEXT:    lui a0, 15
@@ -1123,8 +1123,8 @@ define <16 x i32> @shuffle_disjoint_lanes_one_broadcast(<16 x i32> %v, <16 x i32
 define <16 x i32> @shuffle_disjoint_lanes_one_splat(i32 %v, <16 x i32> %w) {
 ; CHECK-LABEL: shuffle_disjoint_lanes_one_splat:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, %hi(.LCPI73_0)
-; CHECK-NEXT:    addi a1, a1, %lo(.LCPI73_0)
+; CHECK-NEXT:    lui a1, %hi(.LCPI77_0)
+; CHECK-NEXT:    addi a1, a1, %lo(.LCPI77_0)
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
 ; CHECK-NEXT:    vle16.v v16, (a1)
 ; CHECK-NEXT:    lui a1, 15
