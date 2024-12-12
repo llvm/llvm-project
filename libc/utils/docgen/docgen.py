@@ -70,7 +70,7 @@ def check_api(header: Header, api: Dict):
         macros = api["macros"]
 
         for name, obj in macros.items():
-            if not any(k in obj.keys() for k in possible_keys):
+            if not any(k in obj for k in possible_keys):
                 err = f"error: Macro {name} does not contain at least one required property: {possible_keys}"
                 errors.append(err)
 
@@ -84,7 +84,7 @@ def check_api(header: Header, api: Dict):
 
         fns = api["functions"]
         for name, obj in fns.items():
-            if not any(k in obj.keys() for k in possible_keys):
+            if not any(k in obj for k in possible_keys):
                 err = f"error: function {name} does not contain at least one required property: {possible_keys}"
                 errors.append(err)
 
