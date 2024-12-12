@@ -1247,7 +1247,7 @@ LLT llvm::getGCDType(LLT OrigTy, LLT TargetTy) {
     return OrigTy;
 
   if (OrigTy.isVector() && TargetTy.isVector()) {
-    LLT OrigElt = OrigTy.getElementType();
+    LLT OrigElt = LLT::scalar(OrigTy.getScalarSizeInBits());
 
     // TODO: The docstring for this function says the intention is to use this
     // function to build MERGE/UNMERGE instructions. It won't be the case that
@@ -1268,7 +1268,7 @@ LLT llvm::getGCDType(LLT OrigTy, LLT TargetTy) {
     // Cannot produce original element type, but both have vscale in common.
     if (GCD < OrigElt.getSizeInBits())
       return LLT::scalarOrVector(ElementCount::get(1, OrigTy.isScalable()),
-                                 GCD);
+                                 LLT::scalar(GCD));
 
     return LLT::vector(
         ElementCount::get(GCD / OrigElt.getSizeInBits().getFixedValue(),

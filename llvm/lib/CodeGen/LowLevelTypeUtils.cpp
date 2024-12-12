@@ -67,8 +67,9 @@ LLT llvm::getLLTForMVT(MVT Ty) {
   if (!Ty.isVector())
     return LLT::scalar(Ty.getSizeInBits());
 
-  return LLT::scalarOrVector(Ty.getVectorElementCount(),
-                             Ty.getVectorElementType().getSizeInBits());
+  return LLT::scalarOrVector(
+      Ty.getVectorElementCount(),
+      LLT::scalar(Ty.getVectorElementType().getSizeInBits()));
 }
 
 const llvm::fltSemantics &llvm::getFltSemanticForLLT(LLT Ty) {

@@ -80,7 +80,8 @@ LegalizeMutation LegalizeMutations::widenScalarOrEltToNextPow2(unsigned TypeIdx,
     const LLT Ty = Query.Types[TypeIdx];
     unsigned NewEltSizeInBits =
         std::max(1u << Log2_32_Ceil(Ty.getScalarSizeInBits()), Min);
-    return std::make_pair(TypeIdx, Ty.changeElementSize(NewEltSizeInBits));
+    return std::make_pair(TypeIdx,
+                          Ty.changeElementType(LLT::scalar(NewEltSizeInBits)));
   };
 }
 
@@ -90,7 +91,8 @@ LegalizeMutations::widenScalarOrEltToNextMultipleOf(unsigned TypeIdx,
   return [=](const LegalityQuery &Query) {
     const LLT Ty = Query.Types[TypeIdx];
     unsigned NewEltSizeInBits = alignTo(Ty.getScalarSizeInBits(), Size);
-    return std::make_pair(TypeIdx, Ty.changeElementSize(NewEltSizeInBits));
+    return std::make_pair(TypeIdx,
+                          Ty.changeElementType(LLT::scalar(NewEltSizeInBits)));
   };
 }
 

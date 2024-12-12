@@ -343,12 +343,11 @@ LegacyLegalizerInfo::findVectorLegalAction(const InstrAspect &Aspect) const {
       ScalarInVectorActions[OpcodeIdx][TypeIdx];
 
   LLT IntermediateType;
-  auto ElementSizeAndAction =
+  auto &&[ElementSize, Action1] =
       findAction(ElemSizeVec, Aspect.Type.getScalarSizeInBits());
-  IntermediateType = LLT::fixed_vector(Aspect.Type.getNumElements(),
-                                       ElementSizeAndAction.first);
-  if (ElementSizeAndAction.second != Legal)
-    return {ElementSizeAndAction.second, IntermediateType};
+  IntermediateType = Aspect.Type.changeElementType(LLT::scalar(ElementSize));
+  if (Action1 != Legal)
+    return {Action1, IntermediateType};
 
   auto i = NumElements2Actions[OpcodeIdx].find(
       IntermediateType.getScalarSizeInBits());
@@ -356,11 +355,10 @@ LegacyLegalizerInfo::findVectorLegalAction(const InstrAspect &Aspect) const {
     return {NotFound, IntermediateType};
   }
   const SizeAndActionsVec &NumElementsVec = (*i).second[TypeIdx];
-  auto NumElementsAndAction =
+  auto &&[NumElements, Action2] =
       findAction(NumElementsVec, IntermediateType.getNumElements());
-  return {NumElementsAndAction.second,
-          LLT::fixed_vector(NumElementsAndAction.first,
-                            IntermediateType.getScalarSizeInBits())};
+  return {Action2,
+          LLT::fixed_vector(NumElements, IntermediateType.getScalarType())};
 }
 
 unsigned LegacyLegalizerInfo::getOpcodeIdxForOpcode(unsigned Opcode) const {

@@ -73,10 +73,10 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
   const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
-  const LLT v16s8 = LLT::fixed_vector(16, 8);
-  const LLT v8s16 = LLT::fixed_vector(8, 16);
-  const LLT v4s32 = LLT::fixed_vector(4, 32);
-  const LLT v2s64 = LLT::fixed_vector(2, 64);
+  const LLT v16s8 = LLT::fixed_vector(16, s8);
+  const LLT v8s16 = LLT::fixed_vector(8, s16);
+  const LLT v4s32 = LLT::fixed_vector(4, s32);
+  const LLT v2s64 = LLT::fixed_vector(2, s64);
   const LLT p0 = LLT::pointer(0, 32);
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL})

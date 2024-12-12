@@ -388,9 +388,11 @@ bool matchCombineMulCMLT(MachineInstr &MI, MachineRegisterInfo &MRI,
                          Register &SrcReg) {
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
 
-  if (DstTy != LLT::fixed_vector(2, 64) && DstTy != LLT::fixed_vector(2, 32) &&
-      DstTy != LLT::fixed_vector(4, 32) && DstTy != LLT::fixed_vector(4, 16) &&
-      DstTy != LLT::fixed_vector(8, 16))
+  if (DstTy != LLT::fixed_vector(2, LLT::scalar(64)) &&
+      DstTy != LLT::fixed_vector(2, LLT::scalar(32)) &&
+      DstTy != LLT::fixed_vector(4, LLT::scalar(32)) &&
+      DstTy != LLT::fixed_vector(4, LLT::scalar(16)) &&
+      DstTy != LLT::fixed_vector(8, LLT::scalar(16)))
     return false;
 
   auto AndMI = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
@@ -423,9 +425,8 @@ void applyCombineMulCMLT(MachineInstr &MI, MachineRegisterInfo &MRI,
                          MachineIRBuilder &B, Register &SrcReg) {
   Register DstReg = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(DstReg);
-  LLT HalfTy =
-      DstTy.changeElementCount(DstTy.getElementCount().multiplyCoefficientBy(2))
-          .changeElementSize(DstTy.getScalarSizeInBits() / 2);
+  LLT HalfTy = DstTy.multiplyElements(2).changeElementType(
+      LLT::scalar(DstTy.getScalarSizeInBits() / 2));
 
   Register ZeroVec = B.buildConstant(HalfTy, 0).getReg(0);
   Register CastReg =

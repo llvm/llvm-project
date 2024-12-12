@@ -615,12 +615,12 @@ TEST_F(AArch64GISelMITest, TestVectorSignBitIsZero) {
   if (!TM)
     GTEST_SKIP();
 
-  const LLT V2S32 = LLT::fixed_vector(2, 32);
+  const LLT S32 = LLT::scalar(32);
+  const LLT V2S32 = LLT::fixed_vector(2, S32);
   // Vector buildConstant makes splat G_BUILD_VECTOR instruction.
   auto SignBit = B.buildConstant(V2S32, 0x80000000);
   auto Zero = B.buildConstant(V2S32, 0);
 
-  const LLT S32 = LLT::scalar(32);
   auto NonSplat =
       B.buildBuildVector(V2S32, {B.buildConstant(S32, 1).getReg(0),
                                  B.buildConstant(S32, 2).getReg(0)});

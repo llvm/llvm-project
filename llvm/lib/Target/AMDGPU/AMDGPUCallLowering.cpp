@@ -1159,8 +1159,8 @@ void AMDGPUCallLowering::handleImplicitCallArguments(
   if (!ST.enableFlatScratch()) {
     // Insert copies for the SRD. In the HSA case, this should be an identity
     // copy.
-    auto ScratchRSrcReg = MIRBuilder.buildCopy(LLT::fixed_vector(4, 32),
-                                               FuncInfo.getScratchRSrcReg());
+    auto ScratchRSrcReg = MIRBuilder.buildCopy(
+        LLT::fixed_vector(4, LLT::scalar(32)), FuncInfo.getScratchRSrcReg());
 
     auto CalleeRSrcReg = AMDGPU::isChainCC(CalleeCC)
                              ? AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51
