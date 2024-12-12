@@ -40,7 +40,6 @@ public:
     EXPECT_CFP_EQ(func(CFPT(90.24 + inf * 1.0i)), CFPT(inf + 0.0i));
     EXPECT_CFP_EQ(func(CFPT(89.12 + neg_inf * 1.0i)), CFPT(inf - 0.0i));
 
-
     EXPECT_CFP_EQ(func(CFPT(aNaN + 67.123i)), CFPT(aNaN + 67.123i));
     EXPECT_CFP_EQ(func(CFPT(neg_aNaN + 78.319i)), CFPT(neg_aNaN + 78.319i));
     EXPECT_CFP_EQ(func(CFPT(sNaN + 7813.131i)), CFPT(sNaN + 7813.131i));
