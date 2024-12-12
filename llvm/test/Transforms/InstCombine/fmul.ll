@@ -1131,7 +1131,7 @@ for.body:
 
 define double @fmul_negated_constant_expression(double %x) {
 ; CHECK-LABEL: @fmul_negated_constant_expression(
-; CHECK-NEXT:    [[FSUB:%.*]] = fneg double bitcast (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr @g, i64 16) to i64) to double)
+; CHECK-NEXT:    [[FSUB:%.*]] = fneg double bitcast (i64 ptrtoint (ptr getelementptr inbounds nuw (i8, ptr @g, i64 16) to i64) to double)
 ; CHECK-NEXT:    [[R:%.*]] = fmul double [[X:%.*]], [[FSUB]]
 ; CHECK-NEXT:    ret double [[R]]
 ;

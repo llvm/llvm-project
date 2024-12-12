@@ -157,14 +157,14 @@ define void @_Z3fn1v() #0 {
 ; CHECK:       middle.block24:
 ; CHECK-NEXT:    [[CMP_N40:%.*]] = icmp eq i64 [[TMP28]], [[N_VEC32]]
 ; CHECK-NEXT:    br i1 [[CMP_N40]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK48:%.*]]
-; CHECK:       vec.epilog.iter.check48:
+; CHECK:       vec.epilog.iter.check49:
 ; CHECK-NEXT:    [[IND_END58:%.*]] = mul i64 [[N_VEC32]], 2
 ; CHECK-NEXT:    [[TMP42:%.*]] = mul i64 [[N_VEC32]], 2
 ; CHECK-NEXT:    [[IND_END55:%.*]] = add i64 8, [[TMP42]]
 ; CHECK-NEXT:    [[N_VEC_REMAINING49:%.*]] = sub i64 [[TMP28]], [[N_VEC32]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK50:%.*]] = icmp ult i64 [[N_VEC_REMAINING49]], 8
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK50]], label [[VEC_EPILOG_SCALAR_PH46]], label [[VEC_EPILOG_PH47]]
-; CHECK:       vec.epilog.ph47:
+; CHECK:       vec.epilog.ph48:
 ; CHECK-NEXT:    [[BC_RESUME_VAL42:%.*]] = phi i64 [ [[IND_END41]], [[VEC_EPILOG_ITER_CHECK48]] ], [ 8, [[VECTOR_MAIN_LOOP_ITER_CHECK29]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL44:%.*]] = phi i64 [ [[IND_END43]], [[VEC_EPILOG_ITER_CHECK48]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK29]] ]
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL51:%.*]] = phi i64 [ [[N_VEC32]], [[VEC_EPILOG_ITER_CHECK48]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK29]] ]
@@ -206,10 +206,10 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[VEC_IND_NEXT71]] = add <8 x i64> [[VEC_IND70]], splat (i64 16)
 ; CHECK-NEXT:    [[TMP55:%.*]] = icmp eq i64 [[INDEX_NEXT74]], [[N_VEC53]]
 ; CHECK-NEXT:    br i1 [[TMP55]], label [[VEC_EPILOG_MIDDLE_BLOCK45:%.*]], label [[VEC_EPILOG_VECTOR_BODY58]], !llvm.loop [[LOOP5:![0-9]+]]
-; CHECK:       vec.epilog.middle.block45:
+; CHECK:       vec.epilog.middle.block46:
 ; CHECK-NEXT:    [[CMP_N75:%.*]] = icmp eq i64 [[TMP28]], [[N_VEC53]]
 ; CHECK-NEXT:    br i1 [[CMP_N75]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH46]]
-; CHECK:       vec.epilog.scalar.ph46:
+; CHECK:       vec.epilog.scalar.ph47:
 ; CHECK-NEXT:    [[BC_RESUME_VAL56:%.*]] = phi i64 [ [[IND_END54]], [[VEC_EPILOG_MIDDLE_BLOCK45]] ], [ [[IND_END55]], [[VEC_EPILOG_ITER_CHECK48]] ], [ 8, [[ITER_CHECK27]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL59:%.*]] = phi i64 [ [[IND_END57]], [[VEC_EPILOG_MIDDLE_BLOCK45]] ], [ [[IND_END58]], [[VEC_EPILOG_ITER_CHECK48]] ], [ 0, [[ITER_CHECK27]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY_US:%.*]]

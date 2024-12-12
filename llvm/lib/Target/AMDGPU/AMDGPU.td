@@ -2074,7 +2074,6 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
    FeatureBF16PackedInsts,
-   FeatureF16BF16ToFP6BF6ConversionScaleInsts,
    FeatureCvtPkF16F32Inst,
    FeatureFmaMixBF16Insts,
    FeatureMin3Max3PKF16,

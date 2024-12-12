@@ -393,7 +393,6 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       [[fallthrough]];
     case GK_GFX1210:
     case GK_GFX12_1_GENERIC:
-      Features["f16bf16-to-fp6bf6-cvt-scale-insts"] = true;
       Features["ci-insts"] = true;
       Features["dot7-insts"] = true;
       Features["dot8-insts"] = true;
