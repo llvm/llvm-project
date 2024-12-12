@@ -822,11 +822,7 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
     // the source tensor. (Similar to newOffset.)
     // srcSize - newOffset represents how much length we have available
     // and length - newLow represents how much length we want at most.
-    // In the dynamic case if ValueBoundsOpInterface is used this calcuation
-    // will lead to an upper bound of length - newLow. If we calculated the
-    // ending location as min(some expression, srcSize) and then subtracted
-    // the new offset then ValueBoundsOpInterface will upper bound by SrcSize
-    // which is larger than needed.
+    // Note that there are many ways to order this indexing math to compute newLength, but we want to make sure that the final affine.min ops in the sequence are bounding the index to as small a value as possible. If ValueBoundsOpInterface is used, this calcuation will get upper bounds from the affine.min ops, so we want to use the smallest known value to set the bound at the end of the computation sequence. In this case, the index will be upper bounded by length - newLow.
     OpFoldResult newLength = min(sub(srcSize, newOffset), sub(length, newLow));
     // Optimization: If low = 0, then newLow = 0. then newLength >= 0 assuming
     // length >= 0.
