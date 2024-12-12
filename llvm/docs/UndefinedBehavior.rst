@@ -237,6 +237,53 @@ Poison values can be replaced with any value of type (undef, concrete values,
 or a ``freeze`` instruction).
 
 
+Propagation of Poison Through Select
+------------------------------------
+Most instructions return poison if any of their inputs is poison.
+A notable exception is the ``select`` instruction, which is poison if and
+only if the condition is poison or the selected value is poison.
+This means that ``select`` acts as a barrier for poison propagation, which
+impacts which optimizations can be performed.
+
+For example, consider the following function:
+
+.. code-block:: llvm
+
+  define i1 @fn(i32 %x, i32 %y) {
+    %cmp1 = icmp ne i32 %x, 0
+    %cmp2 = icmp ugt i32 %x, %y
+    %and = select i1 %cmp1, i1 %cmp2, i1 false
+    ret i1 %and
+  }
+
+It is not correct to optimize the ``select`` into an ``and`` because when
+``%cmp1`` is false, the ``select`` is only poison if ``%x`` is poison, while
+the ``and`` below is poison if either ``%x`` or ``%y`` are poison.
+
+.. code-block:: llvm
+
+  define i1 @fn(i32 %x, i32 %y) {
+    %cmp1 = icmp ne i32 %x, 0
+    %cmp2 = icmp ugt i32 %x, %y
+    %and = and i1 %cmp1, %cmp2     ;; poison if %x or %y are poison
+    ret i1 %and
+  }
+
+However, the optimization is possible if all operands of the values are used in
+the condition (notice the flipped operands in the ``select``):
+
+.. code-block:: llvm
+
+  define i1 @fn(i32 %x, i32 %y) {
+    %cmp1 = icmp ne i32 %x, 0
+    %cmp2 = icmp ugt i32 %x, %y
+    %and = select i1 %cmp2, i1 %cmp1, i1 false
+    ; ok to replace with:
+    %and = and i1 %cmp1, %cmp2
+    ret i1 %and
+  }
+
+
 The Freeze Instruction
 ======================
 Both undef and poison values sometimes propagate too much down an expression
