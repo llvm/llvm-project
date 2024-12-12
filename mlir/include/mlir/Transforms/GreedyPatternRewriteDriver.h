@@ -129,6 +129,8 @@ applyPatternsGreedily(Region &region, const FrozenRewritePatternSet &patterns,
                       GreedyRewriteConfig config = GreedyRewriteConfig(),
                       bool *changed = nullptr);
 /// Same as `applyPatternsAndGreedily` above with folding.
+/// FIXME: Remove this once transition to above is complieted.
+LLVM_DEPRECATED("Use applyPatternsGreedily() instead", "applyPatternsGreedily")
 inline LogicalResult
 applyPatternsAndFoldGreedily(Region &region,
                              const FrozenRewritePatternSet &patterns,
@@ -179,6 +181,8 @@ applyPatternsGreedily(Operation *op, const FrozenRewritePatternSet &patterns,
   return failure(failed);
 }
 /// Same as `applyPatternsGreedily` above with folding.
+/// FIXME: Remove this once transition to above is complieted.
+LLVM_DEPRECATED("Use applyPatternsGreedily() instead", "applyPatternsGreedily")
 inline LogicalResult
 applyPatternsAndFoldGreedily(Operation *op,
                              const FrozenRewritePatternSet &patterns,
@@ -222,6 +226,8 @@ applyOpPatternsGreedily(ArrayRef<Operation *> ops,
                         GreedyRewriteConfig config = GreedyRewriteConfig(),
                         bool *changed = nullptr, bool *allErased = nullptr);
 /// Same as `applyOpPatternsGreedily` with folding.
+/// FIXME: Remove this once transition to above is complieted.
+LLVM_DEPRECATED("Use applyPatternsGreedily() instead", "applyPatternsGreedily")
 inline LogicalResult
 applyOpPatternsAndFold(ArrayRef<Operation *> ops,
                        const FrozenRewritePatternSet &patterns,
