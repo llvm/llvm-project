@@ -2146,13 +2146,6 @@ void AsmPrinter::Impl::printLocation(LocationAttr loc, bool allowAlias) {
   os << ')';
 }
 
-void AsmPrinter::Impl::printResourceHandle(
-    const AsmDialectResourceHandle &resource) {
-  auto *interface = cast<OpAsmDialectInterface>(resource.getDialect());
-  os << interface->getResourceKey(resource);
-  state.getDialectResources()[resource.getDialect()].insert(resource);
-}
-
 /// Returns true if the given dialect symbol data is simple enough to print in
 /// the pretty form. This is essentially when the symbol takes the form:
 ///   identifier (`<` body `>`)?
@@ -2235,6 +2228,13 @@ static void printSymbolReference(StringRef symbolRef, raw_ostream &os) {
 // content to hopefully alert readers to the fact that this has been elided.
 static void printElidedElementsAttr(raw_ostream &os) {
   os << R"(dense_resource<__elided__>)";
+}
+
+void AsmPrinter::Impl::printResourceHandle(
+    const AsmDialectResourceHandle &resource) {
+  auto *interface = cast<OpAsmDialectInterface>(resource.getDialect());
+  ::printKeywordOrString(interface->getResourceKey(resource), os);
+  state.getDialectResources()[resource.getDialect()].insert(resource);
 }
 
 LogicalResult AsmPrinter::Impl::printAlias(Attribute attr) {
