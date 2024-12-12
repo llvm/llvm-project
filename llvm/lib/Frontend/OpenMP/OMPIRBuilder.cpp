@@ -6821,8 +6821,11 @@ static Expected<Function *> createOutlinedFunction(
     OMPBuilder.ConstantAllocaRaiseCandidates.emplace_back(Func);
 
   // Insert target deinit call in the device compilation pass.
-  llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
-      CBFunc(Builder.saveIP(), Builder.saveIP());
+  BasicBlock *OutlinedBodyBB =
+      splitBB(Builder, /*CreateBranch=*/true, "outlined.body");
+  llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP = CBFunc(
+      Builder.saveIP(),
+      OpenMPIRBuilder::InsertPointTy(OutlinedBodyBB, OutlinedBodyBB->begin()));
   if (!AfterIP)
     return AfterIP.takeError();
   Builder.restoreIP(*AfterIP);

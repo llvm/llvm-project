@@ -409,9 +409,7 @@ struct GPUToLLVMSPVConversionPass final
     RewritePatternSet patterns(context);
 
     LowerToLLVMOptions options(context);
-    if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
-      options.overrideIndexBitwidth(indexBitwidth);
-
+    options.overrideIndexBitwidth(this->use64bitIndex ? 64 : 32);
     LLVMTypeConverter converter(context, options);
     LLVMConversionTarget target(*context);
 

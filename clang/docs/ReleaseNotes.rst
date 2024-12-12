@@ -61,6 +61,8 @@ code bases.
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
+- Clang now rejects ``_Complex _BitInt`` types.
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
