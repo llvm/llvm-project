@@ -142,10 +142,13 @@ class ReusablePrerequisiteModules : public PrerequisiteModules {
 public:
   ReusablePrerequisiteModules() = default;
 
-  ReusablePrerequisiteModules(const ReusablePrerequisiteModules &Other) =
-      default;
-  ReusablePrerequisiteModules &
-  operator=(const ReusablePrerequisiteModules &) = default;
+  ReusablePrerequisiteModules(const ReusablePrerequisiteModules &Other)
+          : PrerequisiteModules(Other) {
+    RequiredModules = Other.RequiredModules;
+    BuiltModuleNames = Other.BuiltModuleNames;
+  }
+
+  ReusablePrerequisiteModules &operator=(const ReusablePrerequisiteModules &) = delete;
   ReusablePrerequisiteModules(ReusablePrerequisiteModules &&) = delete;
   ReusablePrerequisiteModules
   operator=(ReusablePrerequisiteModules &&) = delete;
@@ -310,7 +313,7 @@ bool ReusablePrerequisiteModules::canReuse(
   llvm::SmallVector<llvm::StringRef> BMIPaths;
   for (auto &MF : RequiredModules)
     BMIPaths.push_back(MF->getModuleFilePath());
-  return IsModuleFilesUpToDate(BMIPaths, *this, VFS);
+  return IsModuleFilesUpToDate(std::move(BMIPaths), *this, VFS);
 }
 
 class ModuleFileCache {
