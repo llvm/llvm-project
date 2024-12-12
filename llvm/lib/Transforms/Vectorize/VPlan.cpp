@@ -861,14 +861,10 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   auto Plan = std::make_unique<VPlan>(Entry, VecPreheader, ScalarHeader);
 
   // Create SCEV and VPValue for the trip count.
-
-  // Currently only loops with countable exits are vectorized, but calling
-  // getSymbolicMaxBackedgeTakenCount allows enablement work for loops with
-  // uncountable exits whilst also ensuring the symbolic maximum and known
-  // back-edge taken count remain identical for loops with countable exits.
+  // We use the symbolic max backedge-taken-count, which works also when
+  // vectorizing loops with uncountable early exits.
   const SCEV *BackedgeTakenCountSCEV = PSE.getSymbolicMaxBackedgeTakenCount();
-  assert((!isa<SCEVCouldNotCompute>(BackedgeTakenCountSCEV) &&
-          BackedgeTakenCountSCEV == PSE.getBackedgeTakenCount()) &&
+  assert(!isa<SCEVCouldNotCompute>(BackedgeTakenCountSCEV) &&
          "Invalid loop count");
   ScalarEvolution &SE = *PSE.getSE();
   const SCEV *TripCount = SE.getTripCountFromExitCount(BackedgeTakenCountSCEV,
@@ -903,7 +899,7 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   // 2) If we require a scalar epilogue, there is no conditional branch as
   //    we unconditionally branch to the scalar preheader.  Do nothing.
   // 3) Otherwise, construct a runtime check.
-  BasicBlock *IRExitBlock = TheLoop->getUniqueExitBlock();
+  BasicBlock *IRExitBlock = TheLoop->getUniqueLatchExitBlock();
   auto *VPExitBlock = VPIRBasicBlock::fromBasicBlock(IRExitBlock);
   // The connection order corresponds to the operands of the conditional branch.
   VPBlockUtils::insertBlockAfter(VPExitBlock, MiddleVPBB);
