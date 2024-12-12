@@ -8,7 +8,7 @@
 
 // <vector>
 
-// flip()
+// void flip();
 
 #include <cassert>
 #include <vector>

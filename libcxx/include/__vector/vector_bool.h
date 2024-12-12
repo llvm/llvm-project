@@ -1049,14 +1049,11 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::resize(size_type __
 
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::flip() _NOEXCEPT {
-  // Process the whole words in the front
-  size_type __n         = __size_;
+  // Flip each storage word entirely, including the last potentially partial word.
+  // The unused bits in the last word are safe to flip as they won't be accessed.
   __storage_pointer __p = __begin_;
-  for (; __n >= __bits_per_word; ++__p, __n -= __bits_per_word)
+  for (size_type __n = __external_cap_to_internal(size()); __n; ++__p, --__n)
     *__p = ~*__p;
-  // Process the last partial word, if it exists
-  if (__n > 0)
-    *__p ^= ~__storage_type(0) >> (__bits_per_word - __n);
 }
 
 template <class _Allocator>
