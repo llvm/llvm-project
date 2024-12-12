@@ -8918,8 +8918,12 @@ static void addScalarResumePhis(
       ScalarPhiIRI->addOperand(ResumePhi);
       continue;
     }
-    if (!isa<VPFirstOrderRecurrencePHIRecipe, VPReductionPHIRecipe>(VectorPhiR))
+    if (!isa<VPFirstOrderRecurrencePHIRecipe, VPReductionPHIRecipe>(
+            VectorPhiR)) {
+      assert(cast<VPWidenIntOrFpInductionRecipe>(VectorPhiR)->getTruncInst() &&
+             "should only skip truncated wide inductions");
       continue;
+    }
     // The backedge value provides the value to resume coming out of a loop,
     // which for FORs is a vector whose last element needs to be extracted. The
     // start value provides the value if the loop is bypassed.
@@ -10031,6 +10035,63 @@ LoopVectorizePass::LoopVectorizePass(LoopVectorizeOptions Opts)
       VectorizeOnlyWhenForced(Opts.VectorizeOnlyWhenForced ||
                               !EnableLoopVectorization) {}
 
+/// Prepare \p MainPlan for vectorizing the main vector loop during epilogue
+/// vectorization. Remove ResumePhis from \p MainPlan for inductions if they
+/// don't have a corresponding wide induction in \p EpiPlan.
+static void preparePlanForMainVectorLoop(
+    VPlan &MainPlan, VPlan &EpiPlan,
+    const MapVector<PHINode *, InductionDescriptor> &Inductions) {
+  // Collect PHI nodes of wide inductions in the VPlan for the epilogue. Those
+  // will need their resume-values computed from the main vector loop. Others
+  // can be removed in the main VPlan.
+  SmallPtrSet<PHINode *, 2> WidenedPhis;
+  for (VPRecipeBase &R :
+       EpiPlan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
+    if (!isa<VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe>(&R))
+      continue;
+    if (isa<VPWidenIntOrFpInductionRecipe>(&R))
+      WidenedPhis.insert(cast<VPWidenIntOrFpInductionRecipe>(&R)->getPHINode());
+    else
+      WidenedPhis.insert(
+          cast<PHINode>(R.getVPSingleValue()->getUnderlyingValue()));
+  }
+  for (VPRecipeBase &R : *cast<VPIRBasicBlock>(MainPlan.getScalarHeader())) {
+    auto *VPIRInst = cast<VPIRInstruction>(&R);
+    auto *IRI = dyn_cast<PHINode>(&VPIRInst->getInstruction());
+    if (!IRI)
+      break;
+    if (WidenedPhis.contains(IRI) || !Inductions.contains(IRI))
+      continue;
+    // There is no corresponding wide induction in the epilogue plan that would
+    // need a resume value. Set the operand in VPIRInst to zero, so ResumePhi
+    // can be removed. The resume values for the scalar loop will be created
+    // during execution of EpiPlan.
+    VPRecipeBase *ResumePhi = VPIRInst->getOperand(0)->getDefiningRecipe();
+    VPIRInst->setOperand(
+        0, MainPlan.getOrAddLiveIn(Constant::getNullValue(IRI->getType())));
+    ResumePhi->eraseFromParent();
+  }
+
+  using namespace VPlanPatternMatch;
+  VPBasicBlock *ScalarPHVPBB = MainPlan.getScalarPreheader();
+  VPValue *VectorTC = &MainPlan.getVectorTripCount();
+  // If there is no suitable resume value for the canonical induction in the
+  // epilogue loop, create it.
+  if (none_of(*ScalarPHVPBB, [VectorTC](VPRecipeBase &R) {
+        return match(&R, m_VPInstruction<VPInstruction::ResumePhi>(
+                             m_Specific(VectorTC), m_SpecificInt(0)));
+      })) {
+    VPBuilder ScalarPHBuilder(ScalarPHVPBB, ScalarPHVPBB->begin());
+    // When vectorizing the epilogue, create a resume phi for the
+    // canonical IV if no suitable resume phi was already created.
+    ScalarPHBuilder.createNaryOp(
+        VPInstruction::ResumePhi,
+        {VectorTC, MainPlan.getOrAddLiveIn(ConstantInt::get(
+                       MainPlan.getCanonicalIV()->getScalarType(), 0))},
+        {}, "vec.epilog.resume.val");
+  }
+}
+
 /// Prepare \p Plan for vectorizing the epilogue loop. That is, re-use expanded
 /// SCEVs from \p ExpandedSCEVs and set resume values for header recipes.
 static void
@@ -10491,62 +10552,13 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         // to be vectorized by executing the plan (potentially with a different
         // factor) again shortly afterwards.
         VPlan &BestEpiPlan = LVP.getPlanFor(EpilogueVF.Width);
+        preparePlanForMainVectorLoop(*BestMainPlan, BestEpiPlan,
+                                     LVL.getInductionVars());
         EpilogueLoopVectorizationInfo EPI(VF.Width, IC, EpilogueVF.Width, 1,
                                           BestEpiPlan);
         EpilogueVectorizerMainLoop MainILV(L, PSE, LI, DT, TLI, TTI, AC, ORE,
                                            EPI, &LVL, &CM, BFI, PSI, Checks,
                                            *BestMainPlan);
-
-        // Collect PHI nodes of wide inductions in the VPlan for the epilogue.
-        // Those will need their resume-values computed from the main vector
-        // loop. Others can be removed in the main VPlan.
-        SmallPtrSet<PHINode *, 2> WidenedPhis;
-        for (VPRecipeBase &R :
-             BestEpiPlan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
-          if (!isa<VPWidenIntOrFpInductionRecipe,
-                   VPWidenPointerInductionRecipe>(&R))
-            continue;
-          if (isa<VPWidenIntOrFpInductionRecipe>(&R))
-            WidenedPhis.insert(
-                cast<VPWidenIntOrFpInductionRecipe>(&R)->getPHINode());
-          else
-            WidenedPhis.insert(
-                cast<PHINode>(R.getVPSingleValue()->getUnderlyingValue()));
-        }
-        for (VPRecipeBase &R :
-             *cast<VPIRBasicBlock>(BestMainPlan->getScalarHeader())) {
-          auto *VPIRInst = cast<VPIRInstruction>(&R);
-          auto *IRI = dyn_cast<PHINode>(&VPIRInst->getInstruction());
-          if (!IRI)
-            break;
-          if (WidenedPhis.contains(IRI) ||
-              !LVL.getInductionVars().contains(IRI))
-            continue;
-          VPRecipeBase *ResumePhi =
-              VPIRInst->getOperand(0)->getDefiningRecipe();
-          VPIRInst->setOperand(0, BestMainPlan->getOrAddLiveIn(
-                                      Constant::getNullValue(IRI->getType())));
-          ResumePhi->eraseFromParent();
-        }
-        // VPlanTransforms::removeDeadRecipes(*BestMainPlan);
-
-        using namespace VPlanPatternMatch;
-        VPBasicBlock *ScalarPHVPBB = BestMainPlan->getScalarPreheader();
-        VPValue *VectorTC = &BestMainPlan->getVectorTripCount();
-        if (none_of(*ScalarPHVPBB, [VectorTC](VPRecipeBase &R) {
-              return match(&R, m_VPInstruction<VPInstruction::ResumePhi>(
-                                   m_Specific(VectorTC), m_SpecificInt(0)));
-            })) {
-          VPBuilder ScalarPHBuilder(ScalarPHVPBB, ScalarPHVPBB->begin());
-          // When vectorizing the epilogue, create a resume phi for the
-          // canonical IV if no suitable resume phi was already created.
-          ScalarPHBuilder.createNaryOp(
-              VPInstruction::ResumePhi,
-              {VectorTC, BestMainPlan->getOrAddLiveIn(ConstantInt::get(
-                             LVL.getWidestInductionType(), 0))},
-              {}, "vec.epilog.resume.val");
-        }
-
         auto ExpandedSCEVs = LVP.executePlan(EPI.MainLoopVF, EPI.MainLoopUF,
                                              *BestMainPlan, MainILV, DT, false);
         ++LoopsVectorized;
