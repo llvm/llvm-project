@@ -143,12 +143,13 @@ public:
   ReusablePrerequisiteModules() = default;
 
   ReusablePrerequisiteModules(const ReusablePrerequisiteModules &Other)
-          : PrerequisiteModules(Other) {
+      : PrerequisiteModules(Other) {
     RequiredModules = Other.RequiredModules;
     BuiltModuleNames = Other.BuiltModuleNames;
   }
 
-  ReusablePrerequisiteModules &operator=(const ReusablePrerequisiteModules &) = delete;
+  ReusablePrerequisiteModules &
+  operator=(const ReusablePrerequisiteModules &) = delete;
   ReusablePrerequisiteModules(ReusablePrerequisiteModules &&) = delete;
   ReusablePrerequisiteModules
   operator=(ReusablePrerequisiteModules &&) = delete;
