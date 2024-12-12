@@ -666,6 +666,15 @@ Improvements to Clang's diagnostics
       bool operator==(const C&) = default;
     };
 
+- Clang now emits `-Wdangling-capture` diangostic when a STL container captures a dangling reference.
+
+  .. code-block:: c++
+
+    void test() {
+      std::vector<std::string_view> views;
+      views.push_back(std::string("123")); // warning
+    }
+
 Improvements to Clang's time-trace
 ----------------------------------
 
