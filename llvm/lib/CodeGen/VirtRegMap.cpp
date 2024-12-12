@@ -598,6 +598,9 @@ void VirtRegRewriter::rewrite() {
   SmallVector<Register, 8> SuperDefs;
   SmallVector<Register, 8> SuperKills;
 
+  const bool IsValidAlloc = !MF->getProperties().hasProperty(
+      MachineFunctionProperties::Property::FailedRegAlloc);
+
   for (MachineFunction::iterator MBBI = MF->begin(), MBBE = MF->end();
        MBBI != MBBE; ++MBBI) {
     LLVM_DEBUG(MBBI->print(dbgs(), Indexes));
@@ -617,9 +620,7 @@ void VirtRegRewriter::rewrite() {
         assert(Register(PhysReg).isPhysical());
 
         RewriteRegs.insert(PhysReg);
-        assert((!MRI->isReserved(PhysReg) ||
-                MF->getProperties().hasProperty(
-                    MachineFunctionProperties::Property::FailedRegAlloc)) &&
+        assert((!MRI->isReserved(PhysReg) || !IsValidAlloc) &&
                "Reserved register assignment");
 
         // Preserve semantics of sub-register operands.
@@ -695,7 +696,14 @@ void VirtRegRewriter::rewrite() {
         // Rewrite. Note we could have used MachineOperand::substPhysReg(), but
         // we need the inlining here.
         MO.setReg(PhysReg);
-        MO.setIsRenamable(true);
+
+        // Defend against generating invalid flags in allocation failure
+        // scenarios. We have have assigned a register which was undefined, or a
+        // reserved register which cannot be renamable.
+        if (LLVM_LIKELY(IsValidAlloc))
+          MO.setIsRenamable(true);
+        else if (MO.isUse())
+          MO.setIsUndef(true);
       }
 
       // Add any missing super-register kills after rewriting the whole
