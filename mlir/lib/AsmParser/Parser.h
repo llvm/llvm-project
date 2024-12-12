@@ -171,13 +171,16 @@ public:
   /// Parse a keyword, if present, into 'keyword'.
   ParseResult parseOptionalKeyword(StringRef *keyword);
 
+  /// Parse an optional keyword or string and set instance into 'result'.`
+  ParseResult parseOptionalKeywordOrString(std::string *result);
+
   //===--------------------------------------------------------------------===//
   // Resource Parsing
   //===--------------------------------------------------------------------===//
 
   /// Parse a handle to a dialect resource within the assembly format.
   FailureOr<AsmDialectResourceHandle>
-  parseResourceHandle(const OpAsmDialectInterface *dialect, StringRef &name);
+  parseResourceHandle(const OpAsmDialectInterface *dialect, std::string &name);
   FailureOr<AsmDialectResourceHandle> parseResourceHandle(Dialect *dialect);
 
   //===--------------------------------------------------------------------===//

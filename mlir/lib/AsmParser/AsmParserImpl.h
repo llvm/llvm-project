@@ -514,7 +514,7 @@ public:
       return parser.emitError() << "dialect '" << dialect->getNamespace()
                                 << "' does not expect resource handles";
     }
-    StringRef resourceName;
+    std::string resourceName;
     return parser.parseResourceHandle(interface, resourceName);
   }
 
