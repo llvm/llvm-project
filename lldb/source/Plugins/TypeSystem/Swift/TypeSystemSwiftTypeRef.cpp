@@ -1775,8 +1775,11 @@ const char *TypeSystemSwiftTypeRef::DeriveKeyFor(const SymbolContext &sc) {
     if (ConstString name = GetSwiftModuleFor(sc))
       return name.GetCString();
 
-  if (sc.module_sp)
-    return sc.module_sp->GetFileSpec().GetFilename().GetCString();
+  if (sc.module_sp) {
+    if (sc.module_sp->GetFileSpec())
+      return sc.module_sp->GetFileSpec().GetFilename().GetCString();
+    return sc.module_sp->GetObjectName().GetCString();
+  }
   return nullptr;
 }
 

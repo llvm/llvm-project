@@ -2812,7 +2812,7 @@ SwiftASTContext::CreateInstance(const SymbolContext &sc,
     return {};
   }
 
-  bool handled_sdk_path = false;
+  bool sdk_path_override = false;
   ModuleList module_module;
   if (!target_sp)
     module_module.Append(module_sp);
@@ -2826,10 +2826,11 @@ SwiftASTContext::CreateInstance(const SymbolContext &sc,
     swift_ast_sp->SetPlatformSDKPath(target_sdk_spec.GetPath());
     LOG_PRINTF(GetLog(LLDBLog::Types), "Using target SDK override: %s",
                target_sdk_spec.GetPath().c_str());
-    handled_sdk_path = true;
+    sdk_path_override = true;
   }
 
   // Get the precise SDK from the symbol context.
+  std::optional<XcodeSDK> sdk;
   if (cu)
     if (auto platform_sp = Platform::GetHostPlatform()) {
       auto sdk_or_err = platform_sp->GetSDKPathFromDebugInfo(*cu);
@@ -2837,32 +2838,13 @@ SwiftASTContext::CreateInstance(const SymbolContext &sc,
         Debugger::ReportError("Error while parsing SDK path from debug info: " +
                               toString(sdk_or_err.takeError()));
       else {
-        std::string sdk_path = GetSDKPath(m_description, *sdk_or_err);
-        if (!sdk_path.empty()) {
-          swift_ast_sp->SetPlatformSDKPath(sdk_path);
-          handled_sdk_path = true;
-          LOG_PRINTF(GetLog(LLDBLog::Types), "Using precise SDK: %s",
-                     sdk_path.c_str());
-        }
+        sdk = *sdk_or_err;
+        LOG_PRINTF(GetLog(LLDBLog::Types), "Using precise SDK: %s",
+                   sdk->GetString().str().c_str());
       }
     }
 
-  if (!handled_sdk_path) {
-    for (size_t mi = 0; mi != num_images; ++mi) {
-      ModuleSP module_sp = modules.GetModuleAtIndex(mi);
-      if (!HasSwiftModules(*module_sp))
-        continue;
-
-      std::string sdk_path = GetSDKPathFromDebugInfo(m_description, *module_sp);
-
-      if (sdk_path.empty())
-        continue;
-
-      swift_ast_sp->SetPlatformSDKPath(sdk_path);
-      handled_sdk_path = true;
-      break;
-    }
-  }
+  // Derive the triple next.
 
   // First, prime the compiler with the options from the main executable:
   bool got_serialized_options = false;
@@ -2907,13 +2889,30 @@ SwiftASTContext::CreateInstance(const SymbolContext &sc,
     ArchSpec preferred_arch;
     llvm::Triple preferred_triple;
     if (is_repl) {
+      LOG_PRINTF(GetLog(LLDBLog::Types), "REPL: prefer target triple.");
+      preferred_arch = target_arch;
+      preferred_triple = target_triple;
+    } else if (!sdk_path_override && !sdk && target_arch) {
+      LOG_PRINTF(GetLog(LLDBLog::Types),
+                 "No Swift debug info: prefer target triple.");
+      if (!target_arch.IsCompatibleMatch(module_arch))
+        HEALTH_LOG_PRINTF(
+            "SwiftASTContext requested for a non-Swift translation unit. Using "
+            "target triple \"%s\", which is not compatible with this "
+            "translation unit's triple \"%s\". Expressions may behave "
+            "unexpectedly because of this.",
+            target_triple.str().c_str(), module_triple.str().c_str());
       preferred_arch = target_arch;
       preferred_triple = target_triple;
     } else if (module_arch &&
                (!target_arch || module_arch.IsFullySpecifiedTriple())) {
+      LOG_PRINTF(GetLog(LLDBLog::Types),
+                 "Prefer module triple.");
       preferred_arch = module_arch;
       preferred_triple = module_triple;
     } else {
+      LOG_PRINTF(GetLog(LLDBLog::Types),
+                 "No viable alternatives: Prefer target triple.");
       // When no viable module triple, fallback to the target triple.
       preferred_arch = target_arch;
       preferred_triple = target_triple;
@@ -2993,6 +2992,27 @@ SwiftASTContext::CreateInstance(const SymbolContext &sc,
   }
 
   llvm::Triple triple = swift_ast_sp->GetTriple();
+  
+  // Triple has been derived, find a matching SDK.
+  if (!sdk_path_override) {
+    XcodeSDK::Type sdk_type_for_triple = XcodeSDK::GetSDKTypeForTriple(triple);
+    if (sdk && sdk->GetType() != sdk_type_for_triple) {
+      HEALTH_LOG_PRINTF("Precise SDK is not compatible with triple. Ignoring.");
+      XcodeSDK::Info info{sdk_type_for_triple, {}, sdk->IsAppleInternalSDK()};
+      sdk = XcodeSDK(info);
+    }
+    if (!sdk) {
+      XcodeSDK::Info info{sdk_type_for_triple, {}, false};
+      sdk = XcodeSDK(info);
+    }
+
+    std::string sdk_path = GetSDKPath(m_description, *sdk);
+    if (!sdk_path.empty()) {
+      swift_ast_sp->SetPlatformSDKPath(sdk_path);
+      LOG_PRINTF(GetLog(LLDBLog::Types), "Using SDK: %s", sdk_path.c_str());
+    }
+  }
+
   std::string resource_dir = HostInfo::GetSwiftResourceDir(
       triple, swift_ast_sp->GetPlatformSDKPath());
   ConfigureResourceDirs(swift_ast_sp->GetCompilerInvocation(), resource_dir,
