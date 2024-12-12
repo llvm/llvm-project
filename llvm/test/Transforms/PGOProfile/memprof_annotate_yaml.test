@@ -1,7 +1,7 @@
+; REQUIRES: x86_64-linux
+
 ; Make sure that we can ingest the MemProf profile in YAML and
 ; annotate a call to new as cold.
-
-; REQUIRES: x86_64-linux
 
 ; RUN: split-file %s %t
 ; RUN: llvm-profdata merge %t/memprof_annotate_yaml.yaml -o %t/memprof_annotate_yaml.memprofdata
@@ -16,6 +16,8 @@ HeapProfileRecords:
           - { Function: _Z3foov, LineOffset: 0, Column: 22, IsInlineFrame: false }
           - { Function: main, LineOffset: 2, Column: 5, IsInlineFrame: false }
         MemInfoBlock:
+          # With these numbers, llvm::memprof::getAllocType will determine that
+          # the call to new is cold.  See MemoryProfileInfo.cpp for details.
           TotalSize:                  400
           AllocCount:                 1
           TotalLifetimeAccessDensity: 1
@@ -26,14 +28,14 @@ HeapProfileRecords:
 define dso_local ptr @_Z3foov() !dbg !4 {
 entry:
   %call = call ptr @_Znam(i64 4) #0, !dbg !5
-; CHECK: call ptr @_Znam(i64 4) [[ATTR:#[0-9]+]],
+; CHECK: call ptr @_Znam(i64 4) #[[ATTR:[0-9]+]],
   ret ptr %call
 }
 
 declare ptr @_Znam(i64)
 
 attributes #0 = { builtin allocsize(0) }
-; CHECK: attributes [[ATTR]] = {{.*}} "memprof"="cold"
+; CHECK: attributes #[[ATTR]] = {{.*}} "memprof"="cold"
 
 !llvm.module.flags = !{!2, !3}
 
