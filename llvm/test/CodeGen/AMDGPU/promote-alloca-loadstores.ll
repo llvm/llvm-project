@@ -93,21 +93,6 @@ end:
   ret void
 }
 
-define ptr @alloca_load_store_ptr64_full_ivec(ptr %arg) {
-; CHECK-LABEL: define ptr @alloca_load_store_ptr64_full_ivec
-; CHECK-SAME: (ptr [[ARG:%.*]]) {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[ARG]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <8 x i8>
-; CHECK-NEXT:    ret ptr [[ARG]]
-;
-entry:
-  %alloca = alloca [8 x i8], align 8, addrspace(5)
-  store ptr %arg, ptr addrspace(5) %alloca, align 8
-  %tmp = load ptr, ptr addrspace(5) %alloca, align 8
-  ret ptr %tmp
-}
-
 define ptr addrspace(3) @alloca_load_store_ptr32_full_ivec(ptr addrspace(3) %arg) {
 ; CHECK-LABEL: define ptr addrspace(3) @alloca_load_store_ptr32_full_ivec
 ; CHECK-SAME: (ptr addrspace(3) [[ARG:%.*]]) {
@@ -121,22 +106,6 @@ entry:
   store ptr addrspace(3) %arg, ptr addrspace(5) %alloca, align 8
   %tmp = load ptr addrspace(3), ptr addrspace(5) %alloca, align 8
   ret ptr addrspace(3) %tmp
-}
-
-define <4 x ptr addrspace(3)> @alloca_load_store_ptr_mixed_full_ptrvec(<2 x ptr> %arg) {
-; CHECK-LABEL: define <4 x ptr addrspace(3)> @alloca_load_store_ptr_mixed_full_ptrvec
-; CHECK-SAME: (<2 x ptr> [[ARG:%.*]]) {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint <2 x ptr> [[ARG]] to <2 x i64>
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <4 x i32>
-; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr <4 x i32> [[TMP1]] to <4 x ptr addrspace(3)>
-; CHECK-NEXT:    ret <4 x ptr addrspace(3)> [[TMP2]]
-;
-entry:
-  %alloca = alloca [4 x i32], align 8, addrspace(5)
-  store <2 x ptr> %arg, ptr addrspace(5) %alloca, align 8
-  %tmp = load <4 x ptr addrspace(3)>, ptr addrspace(5) %alloca, align 8
-  ret <4 x ptr addrspace(3)> %tmp
 }
 
 define <8 x i16> @ptralloca_load_store_ints_full(<2 x i64> %arg) {
@@ -197,4 +166,40 @@ entry:
   store ptr addrspace(3) %arg, ptr addrspace(5) %alloca, align 8
   %tmp = load ptr addrspace(3), ptr addrspace(5) %alloca, align 8
   ret ptr addrspace(3) %tmp
+}
+
+; Will not vectorize because we are doing a load/store of a pointer across
+; address spaces of varying pointer sizes.
+define ptr @alloca_load_store_ptr64_full_ivec(ptr %arg) {
+; CHECK-LABEL: define ptr @alloca_load_store_ptr64_full_ivec
+; CHECK-SAME: (ptr [[ARG:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [8 x i8], align 8, addrspace(5)
+; CHECK-NEXT:    store ptr [[ARG]], ptr addrspace(5) [[ALLOCA]], align 8
+; CHECK-NEXT:    [[TMP:%.*]] = load ptr, ptr addrspace(5) [[ALLOCA]], align 8
+; CHECK-NEXT:    ret ptr [[TMP]]
+;
+entry:
+  %alloca = alloca [8 x i8], align 8, addrspace(5)
+  store ptr %arg, ptr addrspace(5) %alloca, align 8
+  %tmp = load ptr, ptr addrspace(5) %alloca, align 8
+  ret ptr %tmp
+}
+
+; Will not vectorize because we are doing a load/store of a pointer across
+; address spaces of varying pointer sizes.
+define <4 x ptr addrspace(3)> @alloca_load_store_ptr_mixed_full_ptrvec(<2 x ptr> %arg) {
+; CHECK-LABEL: define <4 x ptr addrspace(3)> @alloca_load_store_ptr_mixed_full_ptrvec
+; CHECK-SAME: (<2 x ptr> [[ARG:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [4 x i32], align 8, addrspace(5)
+; CHECK-NEXT:    store <2 x ptr> [[ARG]], ptr addrspace(5) [[ALLOCA]], align 8
+; CHECK-NEXT:    [[TMP:%.*]] = load <4 x ptr addrspace(3)>, ptr addrspace(5) [[ALLOCA]], align 8
+; CHECK-NEXT:    ret <4 x ptr addrspace(3)> [[TMP]]
+;
+entry:
+  %alloca = alloca [4 x i32], align 8, addrspace(5)
+  store <2 x ptr> %arg, ptr addrspace(5) %alloca, align 8
+  %tmp = load <4 x ptr addrspace(3)>, ptr addrspace(5) %alloca, align 8
+  ret <4 x ptr addrspace(3)> %tmp
 }

@@ -796,6 +796,16 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
       if (!IsSimple)
         return RejectUser(Inst, "not a simple load or store");
 
+      // If the access type is a pointer, reject the address spaces with
+      // different pointer sizes.
+      // store <2 x ptr> %arg, ptr addrspace(5) %alloca - Reject.
+      // %tmp = load <4 x ptr addrspace(3)>, ptr addrspace(5) %alloca - ok.
+      if (AccessTy->isPtrOrPtrVectorTy()) {
+        if (DL->getPointerSize(getLoadStoreAddressSpace(Inst)) !=
+            DL->getPointerSize(AccessTy->getPointerAddressSpace()))
+          return RejectUser(Inst, "pointers to incompatible address spaces");
+      }
+
       Ptr = Ptr->stripPointerCasts();
 
       // Alloca already accessed as vector.
