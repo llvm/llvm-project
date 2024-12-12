@@ -5,15 +5,24 @@ get_property(translation_libs GLOBAL PROPERTY MLIR_TRANSLATION_LIBS)
 include_directories(${LLVM_MAIN_SRC_DIR}/../mlir/include)
 include_directories(${CMAKE_BINARY_DIR}/tools/mlir/include)
 
-set(LIBS
+add_clang_tool(cir-translate
+  cir-translate.cpp
+)
+
+clang_target_link_libraries(cir-translate
+  PRIVATE
+  clangCIR
+  clangCIRLoweringDirectToLLVM
+  MLIRCIR
+  MLIRCIRTransforms
+)
+
+target_link_libraries(cir-translate
+  PRIVATE
   ${dialect_libs}
   ${conversion_libs}
   ${translation_libs}
-  clangCIR
-  clangCIRLoweringDirectToLLVM
   MLIRAnalysis
-  MLIRCIR
-  MLIRCIRTransforms
   MLIRDialect
   MLIRIR
   MLIROptLib
@@ -24,13 +33,3 @@ set(LIBS
   MLIRTranslateLib
   MLIRSupport
 )
-
-add_clang_tool(cir-translate
-  cir-translate.cpp
-
-  DEPENDS
-  ${LIBS}
-)
-
-target_link_libraries(cir-translate PRIVATE ${LIBS})
-llvm_update_compile_flags(cir-translate)

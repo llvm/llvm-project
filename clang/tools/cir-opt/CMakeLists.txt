@@ -4,15 +4,24 @@ get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
 include_directories(${LLVM_MAIN_SRC_DIR}/../mlir/include)
 include_directories(${CMAKE_BINARY_DIR}/tools/mlir/include)
 
-set(LIBS
-  ${dialect_libs}
-  ${conversion_libs}
+add_clang_tool(cir-opt
+  cir-opt.cpp
+)
+
+clang_target_link_libraries(cir-opt
+  PRIVATE
   clangCIR
   clangCIRLoweringThroughMLIR
   clangCIRLoweringDirectToLLVM
-  MLIRAnalysis
   MLIRCIR
   MLIRCIRTransforms
+)
+
+target_link_libraries(cir-opt
+  PRIVATE
+  ${dialect_libs}
+  ${conversion_libs}
+  MLIRAnalysis
   MLIRDialect
   MLIRIR
   MLIRMemRefDialect
@@ -23,13 +32,3 @@ set(LIBS
   MLIRTransforms
   MLIRTransformUtils
 )
-
-add_clang_tool(cir-opt
-  cir-opt.cpp
-
-  DEPENDS
-  ${LIBS}
-)
-
-target_link_libraries(cir-opt PRIVATE ${LIBS})
-llvm_update_compile_flags(cir-opt)

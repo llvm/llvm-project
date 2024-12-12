@@ -22,10 +22,12 @@ add_clang_library(TargetLowering
   DEPENDS
   clangBasic
 
+  LINK_COMPONENTS
+  TargetParser
+
   LINK_LIBS PUBLIC
 
   clangBasic
-  LLVMTargetParser
   MLIRIR
   MLIRPass
   MLIRDLTIDialect
