@@ -447,7 +447,7 @@ TEST(MemProf, BaseMemProfReaderWithCSIdMap) {
   auto F2Id = MemProfData.addFrame(F2);
 
   llvm::SmallVector<FrameId> CallStack = {F1Id, F2Id};
-  auto CSId = MemProfData.addCallStack(CallStack);
+  auto CSId = MemProfData.addCallStack(std::move(CallStack));
 
   IndexedMemProfRecord FakeRecord;
   MemInfoBlock Block;
@@ -487,10 +487,10 @@ TEST(MemProf, IndexedMemProfRecordToMemProfRecord) {
   llvm::SmallVector<FrameId> CS2 = {F1Id, F3Id};
   llvm::SmallVector<FrameId> CS3 = {F2Id, F3Id};
   llvm::SmallVector<FrameId> CS4 = {F2Id, F4Id};
-  auto CS1Id = MemProfData.addCallStack(CS1);
-  auto CS2Id = MemProfData.addCallStack(CS2);
-  auto CS3Id = MemProfData.addCallStack(CS3);
-  auto CS4Id = MemProfData.addCallStack(CS4);
+  auto CS1Id = MemProfData.addCallStack(std::move(CS1));
+  auto CS2Id = MemProfData.addCallStack(std::move(CS2));
+  auto CS3Id = MemProfData.addCallStack(std::move(CS3));
+  auto CS4Id = MemProfData.addCallStack(std::move(CS4));
 
   IndexedMemProfRecord IndexedRecord;
   IndexedAllocationInfo AI;
@@ -596,7 +596,7 @@ TEST(MemProf, RadixTreeBuilderOne) {
       {11, 1}, {12, 2}, {13, 3}};
   llvm::SmallVector<FrameId> CS1 = {13, 12, 11};
   IndexedMemProfData MemProfData;
-  auto CS1Id = MemProfData.addCallStack(CS1);
+  auto CS1Id = MemProfData.addCallStack(std::move(CS1));
   llvm::DenseMap<FrameId, FrameStat> FrameHistogram =
       computeFrameHistogram<FrameId>(MemProfData.CallStacks);
   CallStackRadixTreeBuilder<FrameId> Builder;
@@ -619,8 +619,8 @@ TEST(MemProf, RadixTreeBuilderTwo) {
   llvm::SmallVector<FrameId> CS1 = {12, 11};
   llvm::SmallVector<FrameId> CS2 = {13, 12, 11};
   IndexedMemProfData MemProfData;
-  auto CS1Id = MemProfData.addCallStack(CS1);
-  auto CS2Id = MemProfData.addCallStack(CS2);
+  auto CS1Id = MemProfData.addCallStack(std::move(CS1));
+  auto CS2Id = MemProfData.addCallStack(std::move(CS2));
   llvm::DenseMap<FrameId, FrameStat> FrameHistogram =
       computeFrameHistogram<FrameId>(MemProfData.CallStacks);
   CallStackRadixTreeBuilder<FrameId> Builder;
@@ -649,10 +649,10 @@ TEST(MemProf, RadixTreeBuilderSuccessiveJumps) {
   llvm::SmallVector<FrameId> CS3 = {17, 16, 12, 11};
   llvm::SmallVector<FrameId> CS4 = {18, 16, 12, 11};
   IndexedMemProfData MemProfData;
-  auto CS1Id = MemProfData.addCallStack(CS1);
-  auto CS2Id = MemProfData.addCallStack(CS2);
-  auto CS3Id = MemProfData.addCallStack(CS3);
-  auto CS4Id = MemProfData.addCallStack(CS4);
+  auto CS1Id = MemProfData.addCallStack(std::move(CS1));
+  auto CS2Id = MemProfData.addCallStack(std::move(CS2));
+  auto CS3Id = MemProfData.addCallStack(std::move(CS3));
+  auto CS4Id = MemProfData.addCallStack(std::move(CS4));
   llvm::DenseMap<FrameId, FrameStat> FrameHistogram =
       computeFrameHistogram<FrameId>(MemProfData.CallStacks);
   CallStackRadixTreeBuilder<FrameId> Builder;
