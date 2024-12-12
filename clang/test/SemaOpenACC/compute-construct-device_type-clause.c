@@ -34,11 +34,9 @@ void uses() {
 #pragma acc kernels dtype(MACRO)
   while(1);
 
-  // expected-error@+2{{OpenACC 'device_type' clause is not valid on 'enter data' directive}}
-  // expected-warning@+1{{OpenACC construct 'enter data' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device_type' clause is not valid on 'enter data' directive}}
 #pragma acc enter data device_type(I)
-  // expected-error@+2{{OpenACC 'dtype' clause is not valid on 'enter data' directive}}
-  // expected-warning@+1{{OpenACC construct 'enter data' not yet implemented}}
+  // expected-error@+1{{OpenACC 'dtype' clause is not valid on 'enter data' directive}}
 #pragma acc enter data dtype(I)
 
 
