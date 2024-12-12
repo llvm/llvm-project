@@ -47,7 +47,6 @@ struct tysan_struct_type_descriptor {
     struct tysan_type_descriptor *Type;
     uptr Offset;
   } Members[1]; // Tail allocated.
-  // char Name[]; // Tail allocated.
 };
 
 struct tysan_type_descriptor {
