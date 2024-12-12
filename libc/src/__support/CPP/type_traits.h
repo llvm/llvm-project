@@ -66,5 +66,4 @@
 #include "src/__support/CPP/type_traits/type_identity.h"
 #include "src/__support/CPP/type_traits/void_t.h"
 
-
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_H
