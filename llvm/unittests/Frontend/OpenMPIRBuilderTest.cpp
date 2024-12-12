@@ -6358,7 +6358,13 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   auto *Load2 = Load1->getNextNode();
   EXPECT_TRUE(isa<LoadInst>(Load2));
 
-  auto *Value1 = Load2->getNextNode();
+  auto *OutlinedBlockBr = Load2->getNextNode();
+  EXPECT_TRUE(isa<BranchInst>(OutlinedBlockBr));
+
+  auto *OutlinedBlock = OutlinedBlockBr->getSuccessor(0);
+  EXPECT_EQ(OutlinedBlock->getName(), "outlined.body");
+
+  auto *Value1 = OutlinedBlock->getFirstNonPHI();
   EXPECT_EQ(Value1, Value);
   EXPECT_EQ(Value1->getNextNode(), TargetStore);
   auto *Deinit = TargetStore->getNextNode();
@@ -6510,7 +6516,14 @@ TEST_F(OpenMPIRBuilderTest, ConstantAllocaRaise) {
   EXPECT_EQ(UserCodeBlock->getName(), "user_code.entry");
   auto *Load1 = UserCodeBlock->getFirstNonPHI();
   EXPECT_TRUE(isa<LoadInst>(Load1));
-  auto *Load2 = Load1->getNextNode();
+
+  auto *OutlinedBlockBr = Load1->getNextNode();
+  EXPECT_TRUE(isa<BranchInst>(OutlinedBlockBr));
+
+  auto *OutlinedBlock = OutlinedBlockBr->getSuccessor(0);
+  EXPECT_EQ(OutlinedBlock->getName(), "outlined.body");
+
+  auto *Load2 = OutlinedBlock->getFirstNonPHI();
   EXPECT_TRUE(isa<LoadInst>(Load2));
   EXPECT_EQ(Load2, Value);
   EXPECT_EQ(Load2->getNextNode(), TargetStore);

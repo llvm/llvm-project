@@ -135,6 +135,14 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface]>
       auto &region = getDeallocRegion();
       return region.empty() ? nullptr : region.getArgument(0);
     }
+
+    /// needsMap returns true if the value being privatized should additionally
+    /// be mapped to the target region using a MapInfoOp. This is most common
+    /// when an allocatable is privatized. In such cases, the descriptor is used
+    /// in privatization and needs to be mapped on to the device.
+    bool needsMap() {
+      return !getAllocMoldArg().use_empty();
+    }
   }];
 
   let hasRegionVerifier = 1;
