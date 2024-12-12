@@ -282,6 +282,9 @@ TYPE_PARSER(sourced(
 
 TYPE_PARSER(sourced(construct<OmpIfClause::Modifier>(OmpDirectiveNameParser{})))
 
+TYPE_PARSER(sourced(construct<OmpInReductionClause::Modifier>(
+    Parser<OmpReductionIdentifier>{})))
+
 TYPE_PARSER(sourced(construct<OmpLastprivateClause::Modifier>(
     Parser<OmpLastprivateModifier>{})))
 
@@ -305,6 +308,9 @@ TYPE_PARSER(sourced(construct<OmpReductionClause::Modifier>(sourced(
 TYPE_PARSER(sourced(construct<OmpScheduleClause::Modifier>(sourced(
     construct<OmpScheduleClause::Modifier>(Parser<OmpChunkModifier>{}) ||
     construct<OmpScheduleClause::Modifier>(Parser<OmpOrderingModifier>{})))))
+
+TYPE_PARSER(sourced(construct<OmpTaskReductionClause::Modifier>(
+    Parser<OmpReductionIdentifier>{})))
 
 TYPE_PARSER(sourced(construct<OmpToClause::Modifier>(
     sourced(construct<OmpToClause::Modifier>(Parser<OmpExpectation>{}) ||
@@ -407,7 +413,12 @@ TYPE_PARSER(construct<OmpReductionClause>(
 
 // OMP 5.0 2.19.5.6 IN_REDUCTION (reduction-identifier: variable-name-list)
 TYPE_PARSER(construct<OmpInReductionClause>(
-    Parser<OmpReductionIdentifier>{} / ":", Parser<OmpObjectList>{}))
+    maybe(nonemptyList(Parser<OmpInReductionClause::Modifier>{}) / ":"),
+    Parser<OmpObjectList>{}))
+
+TYPE_PARSER(construct<OmpTaskReductionClause>(
+    maybe(nonemptyList(Parser<OmpTaskReductionClause::Modifier>{}) / ":"),
+    Parser<OmpObjectList>{}))
 
 // OMP 5.0 2.11.4 allocate-clause -> ALLOCATE ([allocator:] variable-name-list)
 // OMP 5.2 2.13.4 allocate-clause -> ALLOCATE ([allocate-modifier
@@ -609,15 +620,15 @@ TYPE_PARSER(
                      parenthesized(Parser<OmpObjectList>{}))) ||
     "PROC_BIND" >> construct<OmpClause>(construct<OmpClause::ProcBind>(
                        parenthesized(Parser<OmpProcBindClause>{}))) ||
-    "REDUCTION" >> construct<OmpClause>(construct<OmpClause::Reduction>(
-                       parenthesized(Parser<OmpReductionClause>{}))) ||
+    "REDUCTION"_id >> construct<OmpClause>(construct<OmpClause::Reduction>(
+                          parenthesized(Parser<OmpReductionClause>{}))) ||
     "IN_REDUCTION" >> construct<OmpClause>(construct<OmpClause::InReduction>(
                           parenthesized(Parser<OmpInReductionClause>{}))) ||
     "DETACH" >> construct<OmpClause>(construct<OmpClause::Detach>(
                     parenthesized(Parser<OmpDetachClause>{}))) ||
     "TASK_REDUCTION" >>
         construct<OmpClause>(construct<OmpClause::TaskReduction>(
-            parenthesized(Parser<OmpReductionClause>{}))) ||
+            parenthesized(Parser<OmpTaskReductionClause>{}))) ||
     "RELAXED" >> construct<OmpClause>(construct<OmpClause::Relaxed>()) ||
     "RELEASE" >> construct<OmpClause>(construct<OmpClause::Release>()) ||
     "REVERSE_OFFLOAD" >>
