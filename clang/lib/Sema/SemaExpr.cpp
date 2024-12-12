@@ -15866,9 +15866,7 @@ ExprResult Sema::ActOnStmtExprResult(ExprResult ER) {
   // If the type is an atomic, the statement type is the underlying type.
   if (const AtomicType *AT = Ty->getAs<AtomicType>()) {
     Ty = AT->getValueType().getUnqualifiedType();
-    return ImplicitCastExpr::Create(Context, Ty, CK_AtomicToNonAtomic, E,
-                                    /*base path*/ nullptr, VK_PRValue,
-                                    FPOptionsOverride());
+    return PerformImplicitConversion(E, Ty, AssignmentAction::Casting);
   }
 
   // FIXME: Provide a better location for the initialization.
