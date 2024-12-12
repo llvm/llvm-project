@@ -58,83 +58,51 @@ class QCIRVInstRR<bits<5> func5, DAGOperand InTyRs1, string opcodestr>
               (ins InTyRs1:$rs1, GPRNoX0:$rs2), opcodestr, "$rd, $rs1, $rs2">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class QCISELECTIICC<bits<3> func3, string opcodestr>
-    : RVInst<(outs GPRNoX0:$rd_wb), (ins GPRNoX0:$rd, GPRNoX0:$rs1,
-                            simm5:$simm5, simm5:$simm), opcodestr,
-                            "$rd, $rs1, $simm5, $simm", [], InstFormatR4> {
+class QCISELECTIICC<bits<3> funct3, string opcodestr>
+    : RVInstR4<0b00, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
+               (ins GPRNoX0:$rd, GPRNoX0:$rs1, simm5:$simm1, simm5:$simm2),
+               opcodestr, "$rd, $rs1, $simm1, $simm2"> {
   let Constraints = "$rd = $rd_wb";
-  bits<5> simm;
-  bits<5> simm5;
-  bits<5> rs1;
-  bits<5> rd;
+  bits<5> simm1;
+  bits<5> simm2;
 
-  let Inst{31-27} = simm;
-  let Inst{26-25} = 0b00;
-  let Inst{24-20} = simm5;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = func3;
-  let Inst{11-7} = rd;
-  let Inst{6-0} = 0b1011011;
+  let rs3 = simm2;
+  let rs2 = simm1;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class QCISELECTICC<bits<3> func3, string opcodestr>
-    : RVInst<(outs GPRNoX0:$rd_wb), (ins GPRNoX0:$rd, GPRNoX0:$rs1,
-                           GPRNoX0:$rs2, simm5:$simm), opcodestr,
-                           "$rd, $rs1, $rs2, $simm", [], InstFormatR4> {
+class QCISELECTICC<bits<3> funct3, string opcodestr>
+    : RVInstR4<0b01, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
+               (ins GPRNoX0:$rd, GPRNoX0:$rs1, GPRNoX0:$rs2, simm5:$simm2),
+               opcodestr, "$rd, $rs1, $rs2, $simm2"> {
   let Constraints = "$rd = $rd_wb";
-  bits<5> simm;
-  bits<5> rs1;
-  bits<5> rs2;
-  bits<5> rd;
+  bits<5> simm2;
 
-  let Inst{31-27} = simm;
-  let Inst{26-25} = 0b01;
-  let Inst{24-20} = rs2;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = func3;
-  let Inst{11-7} = rd;
-  let Inst{6-0} = 0b1011011;
+  let rs3 = simm2;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class QCISELECTCCI<bits<3> func3, string opcodestr>
-    : RVInst<(outs GPRNoX0:$rd_wb), (ins GPRNoX0:$rd, simm5:$simm5,
-                           GPRNoX0:$rs2, GPRNoX0:$rs3), opcodestr,
-                           "$rd, $simm5, $rs2, $rs3", [], InstFormatR4> {
+class QCISELECTCCI<bits<3> funct3, string opcodestr>
+    : RVInstR4<0b10, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
+               (ins GPRNoX0:$rd, simm5:$imm, GPRNoX0:$rs2, GPRNoX0:$rs3),
+               opcodestr, "$rd, $imm, $rs2, $rs3"> {
   let Constraints = "$rd = $rd_wb";
-  bits<5> rs3;
-  bits<5> simm5;
-  bits<5> rs2;
-  bits<5> rd;
+  bits<5> imm;
 
-  let Inst{31-27} = rs3;
-  let Inst{26-25} = 0b10;
-  let Inst{24-20} = rs2;
-  let Inst{19-15} = simm5;
-  let Inst{14-12} = func3;
-  let Inst{11-7} = rd;
-  let Inst{6-0} = 0b1011011;
+  let rs1 = imm;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class QCISELECTICCI<bits<3> func3, string opcodestr>
-    : RVInst<(outs GPRNoX0:$rd_wb), (ins GPRNoX0:$rd, simm5:$simm5,
-                            GPRNoX0:$rs2, simm5:$simm), opcodestr,
-                            "$rd, $simm5, $rs2, $simm", [], InstFormatR4> {
+class QCISELECTICCI<bits<3> funct3, string opcodestr>
+    : RVInstR4<0b11, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
+               (ins GPRNoX0:$rd, simm5:$imm, GPRNoX0:$rs2, simm5:$simm2),
+               opcodestr, "$rd, $imm, $rs2, $simm2"> {
   let Constraints = "$rd = $rd_wb";
-  bits<5> simm;
-  bits<5> simm5;
-  bits<5> rs2;
-  bits<5> rd;
+  bits<5> imm;
+  bits<5> simm2;
 
-  let Inst{31-27} = simm;
-  let Inst{26-25} = 0b11;
-  let Inst{24-20} = rs2;
-  let Inst{19-15} = simm5;
-  let Inst{14-12} = func3;
-  let Inst{11-7} = rd;
-  let Inst{6-0} = 0b1011011;
+  let rs3 = simm2;
+  let rs1 = imm;
 }
 
 //===----------------------------------------------------------------------===//
