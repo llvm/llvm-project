@@ -28,8 +28,6 @@ namespace fir {
 
 namespace {
 
-static constexpr llvm::StringRef builtinPrefix = "_QM__fortran_builtins";
-
 static void processAddrOfOp(fir::AddrOfOp addrOfOp,
                             mlir::SymbolTable &symbolTable,
                             llvm::DenseSet<fir::GlobalOp> &candidates,
