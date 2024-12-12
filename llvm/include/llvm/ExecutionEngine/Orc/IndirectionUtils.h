@@ -135,7 +135,7 @@ private:
   LocalTrampolinePool(ResolveLandingFunction ResolveLanding, Error &Err)
       : ResolveLanding(std::move(ResolveLanding)) {
 
-    ErrorAsOutParameter _(&Err);
+    ErrorAsOutParameter _(Err);
 
     /// Try to set up the resolver block.
     std::error_code EC;
@@ -262,7 +262,7 @@ private:
     using NotifyLandingResolvedFunction =
         TrampolinePool::NotifyLandingResolvedFunction;
 
-    ErrorAsOutParameter _(&Err);
+    ErrorAsOutParameter _(Err);
     auto TP = LocalTrampolinePool<ORCABI>::Create(
         [this](ExecutorAddr TrampolineAddr,
                NotifyLandingResolvedFunction NotifyLandingResolved) {

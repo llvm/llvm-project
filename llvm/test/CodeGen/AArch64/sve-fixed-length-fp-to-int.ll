@@ -111,7 +111,6 @@ define <2 x i32> @fcvtzu_v2f16_v2i32(<2 x half> %op1) vscale_range(2,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %res = fptoui <2 x half> %op1 to <2 x i32>
   ret <2 x i32> %res
@@ -219,12 +218,10 @@ define <1 x i64> @fcvtzu_v1f16_v1i64(<1 x half> %op1) vscale_range(2,0) #0 {
 define <2 x i64> @fcvtzu_v2f16_v2i64(<2 x half> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcvtzu_v2f16_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    fcvtzu z0.d, p0/m, z0.h
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fptoui <2 x half> %op1 to <2 x i64>
   ret <2 x i64> %res
@@ -332,7 +329,6 @@ define <4 x i16> @fcvtzu_v4f32_v4i16(<4 x float> %op1) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    mov w8, v1.s[3]
 ; CHECK-NEXT:    mov v0.h[2], w9
 ; CHECK-NEXT:    mov v0.h[3], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %res = fptoui <4 x float> %op1 to <4 x i16>
   ret <4 x i16> %res
@@ -345,7 +341,6 @@ define <8 x i16> @fcvtzu_v8f32_v8i16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    fcvtzu z0.s, p0/m, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %op1 = load <8 x float>, ptr %a
   %res = fptoui <8 x float> %op1 to <8 x i16>
@@ -512,7 +507,6 @@ define <1 x i64> @fcvtzu_v1f32_v1i64(<1 x float> %op1) vscale_range(2,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvtl v0.2d, v0.2s
 ; CHECK-NEXT:    fcvtzu v0.2d, v0.2d
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %res = fptoui <1 x float> %op1 to <1 x i64>
   ret <1 x i64> %res
@@ -611,11 +605,9 @@ define <1 x i16> @fcvtzu_v1f64_v1i16(<1 x double> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcvtzu_v1f64_v1i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    fcvtzu z0.d, p0/m, z0.d
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fptoui <1 x double> %op1 to <1 x i16>
   ret <1 x i16> %res
@@ -640,7 +632,6 @@ define <4 x i16> @fcvtzu_v4f64_v4i16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    fcvtzu z0.d, p0/m, z0.d
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %op1 = load <4 x double>, ptr %a
   %res = fptoui <4 x double> %op1 to <4 x i16>
@@ -661,7 +652,6 @@ define <8 x i16> @fcvtzu_v8f64_v8i16(ptr %a) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z2.h, z0.h, z0.h
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z1.h, z1.h
 ; VBITS_GE_256-NEXT:    mov v0.d[1], v2.d[0]
-; VBITS_GE_256-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fcvtzu_v8f64_v8i16:
@@ -671,7 +661,6 @@ define <8 x i16> @fcvtzu_v8f64_v8i16(ptr %a) #0 {
 ; VBITS_GE_512-NEXT:    fcvtzu z0.d, p0/m, z0.d
 ; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_512-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; VBITS_GE_512-NEXT:    ret
   %op1 = load <8 x double>, ptr %a
   %res = fptoui <8 x double> %op1 to <8 x i16>
@@ -714,7 +703,6 @@ define void @fcvtzu_v32f64_v32i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <1 x i32> @fcvtzu_v1f64_v1i32(<1 x double> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcvtzu_v1f64_v1i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fcvtzu v0.2d, v0.2d
 ; CHECK-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-NEXT:    ret
@@ -740,7 +728,6 @@ define <4 x i32> @fcvtzu_v4f64_v4i32(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    fcvtzu z0.d, p0/m, z0.d
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %op1 = load <4 x double>, ptr %a
   %res = fptoui <4 x double> %op1 to <4 x i32>
@@ -1004,7 +991,6 @@ define <2 x i32> @fcvtzs_v2f16_v2i32(<2 x half> %op1) vscale_range(2,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %res = fptosi <2 x half> %op1 to <2 x i32>
   ret <2 x i32> %res
@@ -1112,12 +1098,10 @@ define <1 x i64> @fcvtzs_v1f16_v1i64(<1 x half> %op1) vscale_range(2,0) #0 {
 define <2 x i64> @fcvtzs_v2f16_v2i64(<2 x half> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcvtzs_v2f16_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.h
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fptosi <2 x half> %op1 to <2 x i64>
   ret <2 x i64> %res
@@ -1225,7 +1209,6 @@ define <4 x i16> @fcvtzs_v4f32_v4i16(<4 x float> %op1) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    mov w8, v1.s[3]
 ; CHECK-NEXT:    mov v0.h[2], w9
 ; CHECK-NEXT:    mov v0.h[3], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %res = fptosi <4 x float> %op1 to <4 x i16>
   ret <4 x i16> %res
@@ -1238,7 +1221,6 @@ define <8 x i16> @fcvtzs_v8f32_v8i16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    fcvtzs z0.s, p0/m, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %op1 = load <8 x float>, ptr %a
   %res = fptosi <8 x float> %op1 to <8 x i16>
@@ -1405,7 +1387,6 @@ define <1 x i64> @fcvtzs_v1f32_v1i64(<1 x float> %op1) vscale_range(2,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvtl v0.2d, v0.2s
 ; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %res = fptosi <1 x float> %op1 to <1 x i64>
   ret <1 x i64> %res
@@ -1504,11 +1485,9 @@ define <1 x i16> @fcvtzs_v1f64_v1i16(<1 x double> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcvtzs_v1f64_v1i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.d
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fptosi <1 x double> %op1 to <1 x i16>
   ret <1 x i16> %res
@@ -1533,7 +1512,6 @@ define <4 x i16> @fcvtzs_v4f64_v4i16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.d
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %op1 = load <4 x double>, ptr %a
   %res = fptosi <4 x double> %op1 to <4 x i16>
@@ -1554,7 +1532,6 @@ define <8 x i16> @fcvtzs_v8f64_v8i16(ptr %a) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z2.h, z0.h, z0.h
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z1.h, z1.h
 ; VBITS_GE_256-NEXT:    mov v0.d[1], v2.d[0]
-; VBITS_GE_256-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fcvtzs_v8f64_v8i16:
@@ -1564,7 +1541,6 @@ define <8 x i16> @fcvtzs_v8f64_v8i16(ptr %a) #0 {
 ; VBITS_GE_512-NEXT:    fcvtzs z0.d, p0/m, z0.d
 ; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_512-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; VBITS_GE_512-NEXT:    ret
   %op1 = load <8 x double>, ptr %a
   %res = fptosi <8 x double> %op1 to <8 x i16>
@@ -1607,7 +1583,6 @@ define void @fcvtzs_v32f64_v32i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <1 x i32> @fcvtzs_v1f64_v1i32(<1 x double> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcvtzs_v1f64_v1i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
 ; CHECK-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-NEXT:    ret
@@ -1633,7 +1608,6 @@ define <4 x i32> @fcvtzs_v4f64_v4i32(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.d
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %op1 = load <4 x double>, ptr %a
   %res = fptosi <4 x double> %op1 to <4 x i32>

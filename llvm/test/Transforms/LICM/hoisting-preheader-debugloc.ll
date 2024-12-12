@@ -1,6 +1,8 @@
 ; RUN: opt -passes=licm %s -S | FileCheck %s
 
-; CHECK: %arrayidx4.promoted = load i32, ptr %arrayidx4, align 4, !tbaa !{{[0-9]+$}}
+; CHECK: %arrayidx4.promoted = load i32, ptr %arrayidx4, align 4
+; CHECK-NOT: !dbg
+; CHECK: br label %for.body
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 

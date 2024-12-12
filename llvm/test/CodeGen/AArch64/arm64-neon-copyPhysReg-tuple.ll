@@ -7,12 +7,11 @@ define <4 x i32> @copyTuple.QPair(ptr %a, ptr %b) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v3.4s, #2
 ; CHECK-NEXT:    movi v2.2d, #0xffffffffffffffff
-; CHECK-NEXT:    mov v1.16b, v3.16b
 ; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    mov v1.16b, v3.16b
 ; CHECK-NEXT:    ld2 { v0.s, v1.s }[1], [x0]
 ; CHECK-NEXT:    mov v1.16b, v2.16b
 ; CHECK-NEXT:    ld2 { v0.s, v1.s }[1], [x1]
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1
 ; CHECK-NEXT:    ret
 entry:
   %vld = tail call { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld2lane.v4i32.p0(<4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, <4 x i32> <i32 2, i32 2, i32 2, i32 2>, i64 1, ptr %a)
@@ -25,17 +24,16 @@ entry:
 define <4 x i32> @copyTuple.QTriple(ptr %a, ptr %b, <4 x i32> %c) {
 ; CHECK-LABEL: copyTuple.QTriple:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $q31_q0_q1
 ; CHECK-NEXT:    movi v31.2d, #0xffffffffffffffff
 ; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:    mov v2.16b, v0.16b
+; CHECK-NEXT:    mov v3.16b, v1.16b
+; CHECK-NEXT:    mov v1.16b, v31.16b
+; CHECK-NEXT:    ld3 { v1.s, v2.s, v3.s }[1], [x0]
 ; CHECK-NEXT:    mov v2.16b, v31.16b
 ; CHECK-NEXT:    mov v3.16b, v0.16b
-; CHECK-NEXT:    mov v4.16b, v1.16b
-; CHECK-NEXT:    ld3 { v2.s, v3.s, v4.s }[1], [x0]
-; CHECK-NEXT:    mov v3.16b, v31.16b
-; CHECK-NEXT:    mov v4.16b, v0.16b
-; CHECK-NEXT:    ld3 { v2.s, v3.s, v4.s }[1], [x1]
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    ld3 { v1.s, v2.s, v3.s }[1], [x1]
+; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   %vld = tail call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld3lane.v4i32.p0(<4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, <4 x i32> %c, <4 x i32> %c, i64 1, ptr %a)
@@ -48,20 +46,19 @@ entry:
 define <4 x i32> @copyTuple.QQuad(ptr %a, ptr %b, <4 x i32> %c) {
 ; CHECK-LABEL: copyTuple.QQuad:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $q31_q0_q1_q2
 ; CHECK-NEXT:    movi v31.2d, #0xffffffffffffffff
 ; CHECK-NEXT:    mov v1.16b, v0.16b
 ; CHECK-NEXT:    mov v2.16b, v0.16b
-; CHECK-NEXT:    mov v3.16b, v31.16b
+; CHECK-NEXT:    mov v4.16b, v2.16b
+; CHECK-NEXT:    mov v3.16b, v1.16b
+; CHECK-NEXT:    mov v2.16b, v0.16b
+; CHECK-NEXT:    mov v1.16b, v31.16b
+; CHECK-NEXT:    ld4 { v1.s, v2.s, v3.s, v4.s }[1], [x0]
+; CHECK-NEXT:    mov v2.16b, v31.16b
+; CHECK-NEXT:    mov v3.16b, v0.16b
 ; CHECK-NEXT:    mov v4.16b, v0.16b
-; CHECK-NEXT:    mov v5.16b, v1.16b
-; CHECK-NEXT:    mov v6.16b, v2.16b
-; CHECK-NEXT:    ld4 { v3.s, v4.s, v5.s, v6.s }[1], [x0]
-; CHECK-NEXT:    mov v4.16b, v31.16b
-; CHECK-NEXT:    mov v5.16b, v0.16b
-; CHECK-NEXT:    mov v6.16b, v0.16b
-; CHECK-NEXT:    ld4 { v3.s, v4.s, v5.s, v6.s }[1], [x1]
-; CHECK-NEXT:    mov v0.16b, v3.16b
+; CHECK-NEXT:    ld4 { v1.s, v2.s, v3.s, v4.s }[1], [x1]
+; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   %vld = tail call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld4lane.v4i32.p0(<4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, <4 x i32> %c, <4 x i32> %c, <4 x i32> %c, i64 1, ptr %a)

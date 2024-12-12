@@ -569,7 +569,8 @@ void PDBLinker::writeSymbolRecord(SectionChunk *debugChunk,
   // Re-map all the type index references.
   TpiSource *source = debugChunk->file->debugTypesObj;
   if (!source->remapTypesInSymbolRecord(recordBytes)) {
-    log("ignoring unknown symbol record with kind 0x" + utohexstr(sym.kind()));
+    Log(ctx) << "ignoring unknown symbol record with kind 0x"
+             << utohexstr(sym.kind());
     replaceWithSkipRecord(recordBytes);
   }
 
@@ -1006,11 +1007,10 @@ static void warnUnusable(InputFile *f, Error e, bool shouldWarn) {
     consumeError(std::move(e));
     return;
   }
-  auto msg = "Cannot use debug info for '" + toString(f) + "' [LNK4099]";
+  auto diag = Warn(f->ctx);
+  diag << "Cannot use debug info for '" << f << "' [LNK4099]";
   if (e)
-    warn(msg + "\n>>> failed to load reference " + toString(std::move(e)));
-  else
-    warn(msg);
+    diag << "\n>>> failed to load reference " << std::move(e);
 }
 
 // Allocate memory for a .debug$S / .debug$F section and relocate it.
@@ -1317,7 +1317,7 @@ void PDBLinker::printStats() {
     printLargeInputTypeRecs("IPI", tMerger.ipiCounts, tMerger.getIDTable());
   }
 
-  message(buffer);
+  Msg(ctx) << buffer;
 }
 
 void PDBLinker::addNatvisFiles() {
@@ -1725,14 +1725,13 @@ void PDBLinker::commit(codeview::GUID *guid) {
   // the user can see the output of /time and /summary, which is very helpful
   // when trying to figure out why a PDB file is too large.
   if (Error e = builder.commit(ctx.config.pdbPath, guid)) {
-    e = handleErrors(std::move(e),
-        [](const llvm::msf::MSFError &me) {
-          error(me.message());
-          if (me.isPageOverflow())
-            error("try setting a larger /pdbpagesize");
-        });
+    e = handleErrors(std::move(e), [&](const llvm::msf::MSFError &me) {
+      Err(ctx) << me.message();
+      if (me.isPageOverflow())
+        Err(ctx) << "try setting a larger /pdbpagesize";
+    });
     checkError(std::move(e));
-    error("failed to write PDB file " + Twine(ctx.config.pdbPath));
+    Err(ctx) << "failed to write PDB file " << Twine(ctx.config.pdbPath);
   }
 }
 

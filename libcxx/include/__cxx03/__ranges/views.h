@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_VIEWS
-#define _LIBCPP___RANGES_VIEWS
+#ifndef _LIBCPP___CXX03___RANGES_VIEWS
+#define _LIBCPP___CXX03___RANGES_VIEWS
 
 #include <__cxx03/__config>
 
@@ -32,4 +32,4 @@ namespace views = ranges::views;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANGES_VIEWS
+#endif // _LIBCPP___CXX03___RANGES_VIEWS

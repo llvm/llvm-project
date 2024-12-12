@@ -238,7 +238,7 @@ define void @test_runtime_check2(ptr %a, float %b, i64 %offset, i64 %offset2, i6
 ; CHECK-NEXT:    [[C_IDX:%.*]] = getelementptr i8, ptr [[TMP2]], i64 -4
 ; CHECK-NEXT:    [[LC:%.*]] = load float, ptr [[C_IDX]], align 4
 ; CHECK-NEXT:    [[VC:%.*]] = fadd float [[LC]], 1.000000e+00
-; CHECK-NEXT:    [[C_IDX2:%.*]] = getelementptr inbounds float, ptr [[C]], i64 [[IV]]
+; CHECK-NEXT:    [[C_IDX2:%.*]] = getelementptr inbounds nuw float, ptr [[C]], i64 [[IV]]
 ; CHECK-NEXT:    store float [[VC]], ptr [[C_IDX2]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N:%.*]]

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_MEMORY_RESOURCE
-#define _LIBCPP_MEMORY_RESOURCE
+#ifndef _LIBCPP___CXX03_MEMORY_RESOURCE
+#define _LIBCPP___CXX03_MEMORY_RESOURCE
 
 /**
     memory_resource synopsis
@@ -80,4 +80,4 @@ namespace std::pmr {
 #  include <__cxx03/stdexcept>
 #endif
 
-#endif /* _LIBCPP_MEMORY_RESOURCE */
+#endif /* _LIBCPP___CXX03_MEMORY_RESOURCE */

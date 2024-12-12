@@ -250,8 +250,8 @@ def OptimizeAllocationLiveness
   let summary = "This pass optimizes the liveness of temp allocations in the "
                 "input function";
   let description =
-       [{This pass will find all operations that have a memory allocation effect. 
-       It will search for the corresponding deallocation and move it right after 
+       [{This pass will find all operations that have a memory allocation effect.
+       It will search for the corresponding deallocation and move it right after
        the last user of the allocation.
        This will optimize the liveness of the allocations.
 
@@ -510,6 +510,10 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
            /*default=*/"false",
            "The memory space of an memref types must always be inferred. If "
            "unset, a default memory space of 0 is used otherwise.">,
+    Option<"useEncodingForMemorySpace", "use-encoding-for-memory-space", "bool",
+            /*default=*/"false",
+            "Use the Tensor encoding attribute for the memory space. Exclusive to"
+            " the 'must-infer-memory-space' option">,
     Option<"testAnalysisOnly", "test-analysis-only", "bool",
             /*default=*/"false",
            "Test only: Only run inplaceability analysis and annotate IR">,

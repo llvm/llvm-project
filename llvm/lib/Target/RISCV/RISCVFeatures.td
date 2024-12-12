@@ -1059,6 +1059,10 @@ def FeatureStdExtSha
                       FeatureStdExtShvstvala, FeatureStdExtShtvala, FeatureStdExtShvstvecd,
                       FeatureStdExtShvsatpa, FeatureStdExtShgatpa]>;
 
+def FeatureStdExtSvukte
+    : RISCVExperimentalExtension<"svukte", 0, 3,
+                                 "'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses)">;
+
 // Pointer Masking extensions
 
 // A supervisor-level extension that provides pointer masking for the next lower
@@ -1337,6 +1341,40 @@ def HasVendorXwchc
       AssemblerPredicate<(all_of FeatureVendorXwchc),
                          "'Xwchc' (WCH/QingKe additional compressed opcodes)">;
 
+// Qualcomm Extension(s)
+
+def FeatureVendorXqcicsr
+    : RISCVExperimentalExtension<"xqcicsr", 0, 2,
+                                 "'Xqcicsr' (Qualcomm uC CSR Extension)">;
+def HasVendorXqcicsr
+    : Predicate<"Subtarget->hasVendorXqcicsr()">,
+      AssemblerPredicate<(all_of FeatureVendorXqcicsr),
+                         "'Xqcicsr' (Qualcomm uC CSR Extension)">;
+
+def FeatureVendorXqcisls
+    : RISCVExperimentalExtension<"xqcisls", 0, 2,
+                                 "'Xqcisls' (Qualcomm uC Scaled Load Store Extension)">;
+def HasVendorXqcisls
+    : Predicate<"Subtarget->hasVendorXqcisls()">,
+      AssemblerPredicate<(all_of FeatureVendorXqcisls),
+                         "'Xqcisls' (Qualcomm uC Scaled Load Store Extension)">;
+
+def FeatureVendorXqcia
+    : RISCVExperimentalExtension<"xqcia", 0, 2,
+                                 "'Xqcia' (Qualcomm uC Arithmetic Extension)">;
+def HasVendorXqcia
+    : Predicate<"Subtarget->hasVendorXqcia()">,
+      AssemblerPredicate<(all_of FeatureVendorXqcia),
+                         "'Xqcia' (Qualcomm uC Arithmetic Extension)">;
+
+def FeatureVendorXqcics
+    : RISCVExperimentalExtension<"xqcics", 0, 2,
+                                 "'Xqcics' (Qualcomm uC Conditional Select Extension)">;
+def HasVendorXqcics
+    : Predicate<"Subtarget->hasVendorXqcics()">,
+      AssemblerPredicate<(all_of FeatureVendorXqcics),
+                         "'Xqcics' (Qualcomm uC Conditional Select Extension)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//
@@ -1384,10 +1422,14 @@ def FeatureUnalignedVectorMem
                       "true", "Has reasonably performant unaligned vector "
                       "loads and stores">;
 
-def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
+def TunePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
     "UsePostRAScheduler", "true", "Schedule again after register allocation">;
 
-def FeaturePredictableSelectIsExpensive
+def TuneDisableLatencySchedHeuristic
+    : SubtargetFeature<"disable-latency-sched-heuristic", "DisableLatencySchedHeuristic", "true",
+                       "Disable latency scheduling heuristic">;
+
+def TunePredictableSelectIsExpensive
     : SubtargetFeature<"predictable-select-expensive", "PredictableSelectIsExpensive", "true",
                        "Prefer likely predicted branches over selects">;
 
@@ -1448,6 +1490,9 @@ def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
 
 def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
                                          "Ventana Veyron-Series processors">;
+
+def TuneVXRMPipelineFlush : SubtargetFeature<"vxrm-pipeline-flush", "HasVXRMPipelineFlush",
+                                             "true", "VXRM writes causes pipeline flush">;
 
 // Assume that lock-free native-width atomics are available, even if the target
 // and operating system combination would not usually provide them. The user

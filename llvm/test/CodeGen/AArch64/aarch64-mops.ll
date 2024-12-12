@@ -432,7 +432,6 @@ define void @memset_10(ptr %dst, i32 %value) {
 ;
 ; GISel-WITHOUT-MOPS-O3-LABEL: memset_10:
 ; GISel-WITHOUT-MOPS-O3:       // %bb.0: // %entry
-; GISel-WITHOUT-MOPS-O3-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; GISel-WITHOUT-MOPS-O3-NEXT:    mov x8, #72340172838076673 // =0x101010101010101
 ; GISel-WITHOUT-MOPS-O3-NEXT:    and x9, x1, #0xff
 ; GISel-WITHOUT-MOPS-O3-NEXT:    mul x8, x9, x8
@@ -454,7 +453,6 @@ define void @memset_10(ptr %dst, i32 %value) {
 ;
 ; GISel-MOPS-O3-LABEL: memset_10:
 ; GISel-MOPS-O3:       // %bb.0: // %entry
-; GISel-MOPS-O3-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; GISel-MOPS-O3-NEXT:    mov x8, #72340172838076673 // =0x101010101010101
 ; GISel-MOPS-O3-NEXT:    and x9, x1, #0xff
 ; GISel-MOPS-O3-NEXT:    mul x8, x9, x8
@@ -464,7 +462,6 @@ define void @memset_10(ptr %dst, i32 %value) {
 ;
 ; SDAG-WITHOUT-MOPS-O2-LABEL: memset_10:
 ; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
-; SDAG-WITHOUT-MOPS-O2-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    mov x8, #72340172838076673 // =0x101010101010101
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    and x9, x1, #0xff
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    mul x8, x9, x8
@@ -474,7 +471,6 @@ define void @memset_10(ptr %dst, i32 %value) {
 ;
 ; SDAG-MOPS-O2-LABEL: memset_10:
 ; SDAG-MOPS-O2:       // %bb.0: // %entry
-; SDAG-MOPS-O2-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; SDAG-MOPS-O2-NEXT:    mov x8, #72340172838076673 // =0x101010101010101
 ; SDAG-MOPS-O2-NEXT:    and x9, x1, #0xff
 ; SDAG-MOPS-O2-NEXT:    mul x8, x9, x8
@@ -523,7 +519,6 @@ define void @memset_10_volatile(ptr %dst, i32 %value) {
 ; GISel-MOPS-O3-LABEL: memset_10_volatile:
 ; GISel-MOPS-O3:       // %bb.0: // %entry
 ; GISel-MOPS-O3-NEXT:    mov w8, #10 // =0xa
-; GISel-MOPS-O3-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; GISel-MOPS-O3-NEXT:    setp [x0]!, x8!, x1
 ; GISel-MOPS-O3-NEXT:    setm [x0]!, x8!, x1
 ; GISel-MOPS-O3-NEXT:    sete [x0]!, x8!, x1
@@ -531,7 +526,6 @@ define void @memset_10_volatile(ptr %dst, i32 %value) {
 ;
 ; SDAG-WITHOUT-MOPS-O2-LABEL: memset_10_volatile:
 ; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
-; SDAG-WITHOUT-MOPS-O2-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    mov x8, #72340172838076673 // =0x101010101010101
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    and x9, x1, #0xff
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    mul x8, x9, x8
@@ -541,7 +535,6 @@ define void @memset_10_volatile(ptr %dst, i32 %value) {
 ;
 ; SDAG-MOPS-O2-LABEL: memset_10_volatile:
 ; SDAG-MOPS-O2:       // %bb.0: // %entry
-; SDAG-MOPS-O2-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; SDAG-MOPS-O2-NEXT:    mov x8, #72340172838076673 // =0x101010101010101
 ; SDAG-MOPS-O2-NEXT:    and x9, x1, #0xff
 ; SDAG-MOPS-O2-NEXT:    mul x8, x9, x8
@@ -590,7 +583,6 @@ define void @memset_10000(ptr %dst, i32 %value) {
 ; GISel-MOPS-O3-LABEL: memset_10000:
 ; GISel-MOPS-O3:       // %bb.0: // %entry
 ; GISel-MOPS-O3-NEXT:    mov w8, #10000 // =0x2710
-; GISel-MOPS-O3-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; GISel-MOPS-O3-NEXT:    setp [x0]!, x8!, x1
 ; GISel-MOPS-O3-NEXT:    setm [x0]!, x8!, x1
 ; GISel-MOPS-O3-NEXT:    sete [x0]!, x8!, x1
@@ -609,7 +601,6 @@ define void @memset_10000(ptr %dst, i32 %value) {
 ; SDAG-MOPS-O2-LABEL: memset_10000:
 ; SDAG-MOPS-O2:       // %bb.0: // %entry
 ; SDAG-MOPS-O2-NEXT:    mov w8, #10000 // =0x2710
-; SDAG-MOPS-O2-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; SDAG-MOPS-O2-NEXT:    setp [x0]!, x8!, x1
 ; SDAG-MOPS-O2-NEXT:    setm [x0]!, x8!, x1
 ; SDAG-MOPS-O2-NEXT:    sete [x0]!, x8!, x1
@@ -656,7 +647,6 @@ define void @memset_10000_volatile(ptr %dst, i32 %value) {
 ; GISel-MOPS-O3-LABEL: memset_10000_volatile:
 ; GISel-MOPS-O3:       // %bb.0: // %entry
 ; GISel-MOPS-O3-NEXT:    mov w8, #10000 // =0x2710
-; GISel-MOPS-O3-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; GISel-MOPS-O3-NEXT:    setp [x0]!, x8!, x1
 ; GISel-MOPS-O3-NEXT:    setm [x0]!, x8!, x1
 ; GISel-MOPS-O3-NEXT:    sete [x0]!, x8!, x1
@@ -675,7 +665,6 @@ define void @memset_10000_volatile(ptr %dst, i32 %value) {
 ; SDAG-MOPS-O2-LABEL: memset_10000_volatile:
 ; SDAG-MOPS-O2:       // %bb.0: // %entry
 ; SDAG-MOPS-O2-NEXT:    mov w8, #10000 // =0x2710
-; SDAG-MOPS-O2-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; SDAG-MOPS-O2-NEXT:    setp [x0]!, x8!, x1
 ; SDAG-MOPS-O2-NEXT:    setm [x0]!, x8!, x1
 ; SDAG-MOPS-O2-NEXT:    sete [x0]!, x8!, x1
@@ -724,7 +713,6 @@ define void @memset_size(ptr %dst, i64 %size, i32 %value) {
 ;
 ; GISel-MOPS-O3-LABEL: memset_size:
 ; GISel-MOPS-O3:       // %bb.0: // %entry
-; GISel-MOPS-O3-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; GISel-MOPS-O3-NEXT:    setp [x0]!, x1!, x2
 ; GISel-MOPS-O3-NEXT:    setm [x0]!, x1!, x2
 ; GISel-MOPS-O3-NEXT:    sete [x0]!, x1!, x2
@@ -744,7 +732,6 @@ define void @memset_size(ptr %dst, i64 %size, i32 %value) {
 ;
 ; SDAG-MOPS-O2-LABEL: memset_size:
 ; SDAG-MOPS-O2:       // %bb.0: // %entry
-; SDAG-MOPS-O2-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; SDAG-MOPS-O2-NEXT:    setp [x0]!, x1!, x2
 ; SDAG-MOPS-O2-NEXT:    setm [x0]!, x1!, x2
 ; SDAG-MOPS-O2-NEXT:    sete [x0]!, x1!, x2
@@ -793,7 +780,6 @@ define void @memset_size_volatile(ptr %dst, i64 %size, i32 %value) {
 ;
 ; GISel-MOPS-O3-LABEL: memset_size_volatile:
 ; GISel-MOPS-O3:       // %bb.0: // %entry
-; GISel-MOPS-O3-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; GISel-MOPS-O3-NEXT:    setp [x0]!, x1!, x2
 ; GISel-MOPS-O3-NEXT:    setm [x0]!, x1!, x2
 ; GISel-MOPS-O3-NEXT:    sete [x0]!, x1!, x2
@@ -813,7 +799,6 @@ define void @memset_size_volatile(ptr %dst, i64 %size, i32 %value) {
 ;
 ; SDAG-MOPS-O2-LABEL: memset_size_volatile:
 ; SDAG-MOPS-O2:       // %bb.0: // %entry
-; SDAG-MOPS-O2-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; SDAG-MOPS-O2-NEXT:    setp [x0]!, x1!, x2
 ; SDAG-MOPS-O2-NEXT:    setm [x0]!, x1!, x2
 ; SDAG-MOPS-O2-NEXT:    sete [x0]!, x1!, x2

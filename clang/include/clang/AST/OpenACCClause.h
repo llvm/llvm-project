@@ -483,6 +483,14 @@ public:
     return {getGangKind(I), getExprs()[I]};
   }
 
+  bool hasExprOfKind(OpenACCGangKind GK) const {
+    for (unsigned I = 0; I < getNumExprs(); ++I) {
+      if (getGangKind(I) == GK)
+        return true;
+    }
+    return false;
+  }
+
   static OpenACCGangClause *
   Create(const ASTContext &Ctx, SourceLocation BeginLoc,
          SourceLocation LParenLoc, ArrayRef<OpenACCGangKind> GangKinds,

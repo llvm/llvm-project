@@ -410,12 +410,14 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator>::shrink_to_fi
     try {
 #endif // _LIBCPP_HAS_EXCEPTIONS
       __split_buffer<value_type, __alloc_rr&> __t(size(), 0, __alloc_);
-      __t.__construct_at_end(move_iterator<pointer>(__begin_), move_iterator<pointer>(__end_));
-      __t.__end_ = __t.__begin_ + (__end_ - __begin_);
-      std::swap(__first_, __t.__first_);
-      std::swap(__begin_, __t.__begin_);
-      std::swap(__end_, __t.__end_);
-      std::swap(__cap_, __t.__cap_);
+      if (__t.capacity() < capacity()) {
+        __t.__construct_at_end(move_iterator<pointer>(__begin_), move_iterator<pointer>(__end_));
+        __t.__end_ = __t.__begin_ + (__end_ - __begin_);
+        std::swap(__first_, __t.__first_);
+        std::swap(__begin_, __t.__begin_);
+        std::swap(__end_, __t.__end_);
+        std::swap(__cap_, __t.__cap_);
+      }
 #if _LIBCPP_HAS_EXCEPTIONS
     } catch (...) {
     }

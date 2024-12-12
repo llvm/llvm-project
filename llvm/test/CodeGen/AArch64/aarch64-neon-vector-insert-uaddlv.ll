@@ -210,9 +210,9 @@ define void @insert_vec_v8i16_uaddlv_from_v8i16(ptr %0) {
 ; CHECK-NEXT:    stp xzr, xzr, [x0, #16]
 ; CHECK-NEXT:    uaddlv.8h s0, v0
 ; CHECK-NEXT:    mov.h v1[0], v0[0]
-; CHECK-NEXT:    ushll.4s v1, v1, #0
-; CHECK-NEXT:    ucvtf.4s v1, v1
-; CHECK-NEXT:    str q1, [x0]
+; CHECK-NEXT:    ushll.4s v0, v1, #0
+; CHECK-NEXT:    ucvtf.4s v0, v0
+; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
 
 entry:
@@ -232,10 +232,10 @@ define void @insert_vec_v3i16_uaddlv_from_v8i16(ptr %0) {
 ; CHECK-NEXT:    add x8, x0, #8
 ; CHECK-NEXT:    uaddlv.8h s0, v0
 ; CHECK-NEXT:    mov.h v1[0], v0[0]
-; CHECK-NEXT:    ushll.4s v1, v1, #0
-; CHECK-NEXT:    ucvtf.4s v1, v1
-; CHECK-NEXT:    st1.s { v1 }[2], [x8]
-; CHECK-NEXT:    str d1, [x0]
+; CHECK-NEXT:    ushll.4s v0, v1, #0
+; CHECK-NEXT:    ucvtf.4s v0, v0
+; CHECK-NEXT:    st1.s { v0 }[2], [x8]
+; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
 
 entry:
@@ -278,9 +278,9 @@ define void @insert_vec_v16i8_uaddlv_from_v8i8(ptr %0) {
 ; CHECK-NEXT:    stp q0, q0, [x0, #32]
 ; CHECK-NEXT:    mov.h v2[0], v1[0]
 ; CHECK-NEXT:    bic.4h v2, #255, lsl #8
-; CHECK-NEXT:    ushll.4s v2, v2, #0
-; CHECK-NEXT:    ucvtf.4s v2, v2
-; CHECK-NEXT:    stp q2, q0, [x0]
+; CHECK-NEXT:    ushll.4s v1, v2, #0
+; CHECK-NEXT:    ucvtf.4s v1, v1
+; CHECK-NEXT:    stp q1, q0, [x0]
 ; CHECK-NEXT:    ret
 
 entry:
@@ -490,7 +490,6 @@ define void @store_saddlv_v8i8(ptr %H, <8 x i8> %sum_h, i32 %idx) {
 ; CHECK-LABEL: store_saddlv_v8i8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    saddlv.8b h0, v0
-; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    sbfiz x8, x1, #3, #32
 ; CHECK-NEXT:    str s0, [x0, x8]
 ; CHECK-NEXT:    ret
@@ -506,7 +505,6 @@ define void @store_saddlv_v16i8(ptr %H, <16 x i8> %sum_h, i32 %idx) {
 ; CHECK-LABEL: store_saddlv_v16i8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    saddlv.16b h0, v0
-; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    sbfiz x8, x1, #3, #32
 ; CHECK-NEXT:    str s0, [x0, x8]
 ; CHECK-NEXT:    ret
@@ -522,7 +520,6 @@ define void @store_saddlv_v4i16(ptr %H, <4 x i16> %sum_h, i32 %idx) {
 ; CHECK-LABEL: store_saddlv_v4i16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    saddlv.4h s0, v0
-; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    sbfiz x8, x1, #3, #32
 ; CHECK-NEXT:    str s0, [x0, x8]
 ; CHECK-NEXT:    ret
@@ -538,7 +535,6 @@ define void @store_saddlv_v8i16(ptr %H, <8 x i16> %sum_h, i32 %idx) {
 ; CHECK-LABEL: store_saddlv_v8i16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    saddlv.8h s0, v0
-; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    sbfiz x8, x1, #3, #32
 ; CHECK-NEXT:    str s0, [x0, x8]
 ; CHECK-NEXT:    ret

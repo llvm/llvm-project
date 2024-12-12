@@ -90,7 +90,7 @@ static cl::alias AArch64StreamingStackHazardSize(
 // are ironed out. This option allows the feature to be used in tests.
 static cl::opt<bool>
     EnableSubregLivenessTracking("aarch64-enable-subreg-liveness-tracking",
-                                 cl::init(false), cl::Hidden,
+                                 cl::init(true), cl::Hidden,
                                  cl::desc("Enable subreg liveness tracking"));
 
 static cl::opt<bool>
@@ -194,6 +194,9 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MinPrefetchStride = 1024;
     MaxPrefetchIterationsAhead = 4;
     VScaleForTuning = 4;
+    break;
+  case MONAKA:
+    VScaleForTuning = 2;
     break;
   case AppleA7:
   case AppleA10:

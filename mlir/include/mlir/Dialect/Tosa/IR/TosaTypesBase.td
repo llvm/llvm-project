@@ -166,7 +166,7 @@ def Tosa_Int32TensorUpto4D : AnyTypeOf<[
 
 class Tosa_TypeLike<list<Type> types, string description = ""> : TypeConstraint<Or<[
      AnyTypeOf<types>.predicate,
-     VectorOf<types>.predicate,
+     VectorOfNonZeroRankOf<types>.predicate,
      TosaTensorOf<types>.predicate]>,
      description>;
 

@@ -267,7 +267,6 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_HI20:
   case R_RISCV_LO12_I:
   case R_RISCV_LO12_S:
-  case R_RISCV_RVC_LUI:
     return R_ABS;
   case R_RISCV_ADD8:
   case R_RISCV_ADD16:
@@ -282,7 +281,7 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_SUB16:
   case R_RISCV_SUB32:
   case R_RISCV_SUB64:
-    return R_RISCV_ADD;
+    return RE_RISCV_ADD;
   case R_RISCV_JAL:
   case R_RISCV_BRANCH:
   case R_RISCV_PCREL_HI20:
@@ -299,7 +298,7 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
     return R_GOT_PC;
   case R_RISCV_PCREL_LO12_I:
   case R_RISCV_PCREL_LO12_S:
-    return R_RISCV_PC_INDIRECT;
+    return RE_RISCV_PC_INDIRECT;
   case R_RISCV_TLSDESC_HI20:
   case R_RISCV_TLSDESC_LOAD_LO12:
   case R_RISCV_TLSDESC_ADD_LO12:
@@ -321,7 +320,7 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
     return ctx.arg.relax ? R_RELAX_HINT : R_NONE;
   case R_RISCV_SET_ULEB128:
   case R_RISCV_SUB_ULEB128:
-    return R_RISCV_LEB128;
+    return RE_RISCV_LEB128;
   default:
     Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
@@ -370,19 +369,6 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     insn |= imm11 | imm4 | imm9_8 | imm10 | imm6 | imm7 | imm3_1 | imm5;
 
     write16le(loc, insn);
-    return;
-  }
-
-  case R_RISCV_RVC_LUI: {
-    int64_t imm = SignExtend64(val + 0x800, bits) >> 12;
-    checkInt(ctx, loc, imm, 6, rel);
-    if (imm == 0) { // `c.lui rd, 0` is illegal, convert to `c.li rd, 0`
-      write16le(loc, (read16le(loc) & 0x0F83) | 0x4000);
-    } else {
-      uint16_t imm17 = extractBits(val + 0x800, 17, 17) << 12;
-      uint16_t imm16_12 = extractBits(val + 0x800, 16, 12) << 2;
-      write16le(loc, (read16le(loc) & 0xEF83) | imm17 | imm16_12);
-    }
     return;
   }
 
@@ -650,7 +636,7 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
       else
         tlsdescToIe(ctx, loc, rel, val);
       continue;
-    case R_RISCV_LEB128:
+    case RE_RISCV_LEB128:
       if (i + 1 < size) {
         const Relocation &rel1 = relocs[i + 1];
         if (rel.type == R_RISCV_SET_ULEB128 &&

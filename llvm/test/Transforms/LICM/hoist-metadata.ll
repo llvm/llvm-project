@@ -77,7 +77,7 @@ define void @noalias_metadata_load_may_not_execute() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 16
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[A]]
-; CHECK-NEXT:    [[GEP_PROMOTED:%.*]] = load i32, ptr [[GEP]], align 4, !tbaa [[TBAA3:![0-9]+]], !noalias [[META7:![0-9]+]]
+; CHECK-NEXT:    [[GEP_PROMOTED:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[ADD1:%.*]] = phi i32 [ [[GEP_PROMOTED]], [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[LOOP_LATCH:%.*]] ]
@@ -92,7 +92,7 @@ define void @noalias_metadata_load_may_not_execute() {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_HEADER]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[ADD2:%.*]] = phi i32 [ [[ADD]], [[LOOP_LATCH]] ], [ [[ADD1]], [[LOOP_HEADER]] ]
-; CHECK-NEXT:    store i32 [[ADD2]], ptr [[GEP]], align 4, !tbaa [[TBAA3]], !noalias [[META7]]
+; CHECK-NEXT:    store i32 [[ADD2]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -132,11 +132,4 @@ exit:
 ; CHECK: [[RNG0]] = !{i32 0, i32 10}
 ; CHECK: [[META1]] = !{}
 ; CHECK: [[META2]] = !{i64 4}
-; CHECK: [[TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}
-; CHECK: [[META4]] = !{!"short", [[META5:![0-9]+]], i64 0}
-; CHECK: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
-; CHECK: [[META6]] = !{!"Simple C/C++ TBAA"}
-; CHECK: [[META7]] = !{[[META8:![0-9]+]]}
-; CHECK: [[META8]] = distinct !{[[META8]], [[META9:![0-9]+]]}
-; CHECK: [[META9]] = distinct !{[[META9]]}
 ;.
