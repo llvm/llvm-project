@@ -20,9 +20,7 @@ jobs:
       - name: Build and Test
         run: |
           modified_files=$(git diff --name-only HEAD~1...HEAD)
-          echo $modified_files
           modified_dirs=$(echo "$modified_files" | cut -d'/' -f1 | sort -u)
-          echo "$modified_dirs"
 
           . ./.ci/compute-projects.sh
 
@@ -37,3 +35,9 @@ jobs:
           linux_runtime_check_targets=$(check-targets ${linux_runtimes_to_test} | sort | uniq)
           linux_runtimes=$(echo ${linux_runtimes_to_test} | sort | uniq)
 
+          echo "Building projects: ${linux_projects}"
+          echo "Running project checks targets: ${linux_check_targets}"
+          echo "Building runtimes: ${linux_runtimes}"
+          echo "Running runtimes checks targets: ${linux_runtime_check_targets}"
+
+          ./.ci/monolithic-linux.sh "$(echo ${linux_projects} | tr ' ' ';')" "$(echo ${linux_check_targets})" "$(echo ${linux_runtimes} | tr ' ' ';')" "$(echo ${linux_runtime_check_targets})"
