@@ -282,13 +282,7 @@ public:
             // thunk size greater than 32 bytes.  For RISCV and x86_64, the
             // thunk setup doesn't go through __trampoline_setup and fits in 32
             // bytes.
-            fir::SequenceType::Extent thunkSize = 32;
-            if (triple.isPPC32())
-              thunkSize = 40;
-            else if (triple.isPPC64())
-              thunkSize = 48;
-            else if (triple.isAArch64())
-              thunkSize = 36;
+            fir::SequenceType::Extent thunkSize = triple.getTrampolineSize();
             mlir::Type buffTy = SequenceType::get({thunkSize}, i8Ty);
             auto buffer = builder.create<AllocaOp>(loc, buffTy);
             mlir::Value closure =
