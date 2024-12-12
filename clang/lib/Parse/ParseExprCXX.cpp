@@ -260,9 +260,9 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     //   declares a pack of parameters without specifying a declarator-id
     //   becomes ill-formed.
     //
-    // However, we still avoid parsing them as pack expansions because this is a
-    // rare use case of packs, despite being partway non-conforming, to ensure
-    // semantic consistency given that we have backported this feature.
+    // However, we still treat it as a pack indexing type because the use case
+    // is fairly rare, to ensure semantic consistency given that we have
+    // backported this feature to pre-C++26 modes.
     if (!Tok.is(tok::coloncolon) && !getLangOpts().CPlusPlus26 &&
         getCurScope()->isFunctionDeclarationScope())
       Diag(Start, diag::warn_pre_cxx26_ambiguous_pack_indexing_type) << Type;
