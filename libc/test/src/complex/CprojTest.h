@@ -35,8 +35,11 @@ public:
     EXPECT_CFP_EQ(func(CFPT(neg_inf + neg_inf * 1.0i)), CFPT(inf - 0.0i));
     EXPECT_CFP_EQ(func(CFPT(neg_inf + inf * 1.0i)), CFPT(inf + 0.0i));
     EXPECT_CFP_EQ(func(CFPT(neg_inf + inf * 1.0i)), CFPT(inf + 0.0i));
-    // EXPECT_CFP_EQ(func(CFPT(inf + aNaN * 1.0i)), CFPT(inf + 0.0i));
-    // EXPECT_CFP_EQ(func(CFPT(inf + neg_aNaN * 1.0i)), CFPT(inf - 0.0i));
+    EXPECT_CFP_EQ(func(CFPT(aNaN + inf * 1.0i)), CFPT(inf + 0.0i));
+    EXPECT_CFP_EQ(func(CFPT(aNaN + neg_inf * 1.0i)), CFPT(inf - 0.0i));
+    EXPECT_CFP_EQ(func(CFPT(90.24 + inf * 1.0i)), CFPT(inf + 0.0i));
+    EXPECT_CFP_EQ(func(CFPT(89.12 + neg_inf * 1.0i)), CFPT(inf - 0.0i));
+
 
     EXPECT_CFP_EQ(func(CFPT(aNaN + 67.123i)), CFPT(aNaN + 67.123i));
     EXPECT_CFP_EQ(func(CFPT(neg_aNaN + 78.319i)), CFPT(neg_aNaN + 78.319i));
@@ -62,10 +65,6 @@ public:
                   CFPT(7813.131 + sNaN * 1.0i));
     EXPECT_CFP_EQ(func(CFPT(7824.152 + neg_sNaN * 1.0i)),
                   CFPT(7824.152 + neg_sNaN * 1.0i));
-    // EXPECT_CFP_EQ(func(CFPT(9024.2442 + inf * 1.0i)),
-    //   CFPT(9024.2442 + inf * 1.0i));
-    // EXPECT_CFP_EQ(func(CFPT(8923.124 + neg_inf * 1.0i)),
-    //   CFPT(8923.124 + neg_inf * 1.0i));
     EXPECT_CFP_EQ(func(CFPT(782.124 + min_normal * 1.0i)),
                   CFPT(782.124 + min_normal * 1.0i));
     EXPECT_CFP_EQ(func(CFPT(2141.2352 + max_normal * 1.0i)),
