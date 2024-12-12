@@ -13,10 +13,9 @@
 
 using namespace mlir;
 
-static ParseResult
-parseFunctionArgumentList(OpAsmParser &parser, bool allowVariadic,
-                          SmallVectorImpl<OpAsmParser::Argument> &arguments,
-                          bool &isVariadic) {
+ParseResult function_interface_impl::parseFunctionArgumentList(
+    OpAsmParser &parser, bool allowVariadic,
+    SmallVectorImpl<OpAsmParser::Argument> &arguments, bool &isVariadic) {
 
   // Parse the function arguments.  The argument list either has to consistently
   // have ssa-id's followed by types, or just be a type list.  It isn't ok to
@@ -79,9 +78,9 @@ parseFunctionArgumentList(OpAsmParser &parser, bool allowVariadic,
 ///   function-result-list-no-parens ::= function-result (`,` function-result)*
 ///   function-result ::= type attribute-dict?
 ///
-static ParseResult
-parseFunctionResultList(OpAsmParser &parser, SmallVectorImpl<Type> &resultTypes,
-                        SmallVectorImpl<DictionaryAttr> &resultAttrs) {
+ParseResult function_interface_impl::parseFunctionResultList(
+    OpAsmParser &parser, SmallVectorImpl<Type> &resultTypes,
+    SmallVectorImpl<DictionaryAttr> &resultAttrs) {
   if (failed(parser.parseOptionalLParen())) {
     // We already know that there is no `(`, so parse a type.
     // Because there is no `(`, it cannot be a function type.
