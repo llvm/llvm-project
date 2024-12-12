@@ -1172,7 +1172,7 @@ llvm::Value *CodeGenFunction::GetCountedByFieldExprGEP(
   Indices.push_back(Builder.getInt32(0));
   return Builder.CreateInBoundsGEP(
       ConvertType(QualType(RD->getTypeForDecl(), 0)), Res,
-      RecIndicesTy(llvm::reverse(Indices)), "..counted_by.gep");
+      RecIndicesTy(llvm::reverse(Indices)), "counted_by.gep");
 }
 
 /// This method is typically called in contexts where we can't generate
@@ -1187,7 +1187,7 @@ llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
     const Expr *Base, const FieldDecl *FAMDecl, const FieldDecl *CountDecl) {
   if (llvm::Value *GEP = GetCountedByFieldExprGEP(Base, FAMDecl, CountDecl))
     return Builder.CreateAlignedLoad(ConvertType(CountDecl->getType()), GEP,
-                                     getIntAlign(), "..counted_by.load");
+                                     getIntAlign(), "counted_by.load");
   return nullptr;
 }
 
@@ -3581,6 +3581,12 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
                                llvm::AttributeList::FunctionIndex, B),
       /*Local=*/true);
   llvm::CallInst *HandlerCall = CGF.EmitNounwindRuntimeCall(Fn, FnArgs);
+  bool NoMerge =
+      ClSanitizeDebugDeoptimization ||
+      !CGF.CGM.getCodeGenOpts().OptimizationLevel ||
+      (CGF.CurCodeDecl && CGF.CurCodeDecl->hasAttr<OptimizeNoneAttr>());
+  if (NoMerge)
+    HandlerCall->addFnAttr(llvm::Attribute::NoMerge);
   if (!MayReturn) {
     HandlerCall->setDoesNotReturn();
     CGF.Builder.CreateUnreachable();

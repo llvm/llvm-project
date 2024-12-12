@@ -11,6 +11,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/CUFCommon.h"
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/allocatable.h"
@@ -27,6 +28,8 @@ namespace fir {
 
 namespace {
 
+static constexpr llvm::StringRef builtinPrefix = "_QM__fortran_builtins";
+
 static void processAddrOfOp(fir::AddrOfOp addrOfOp,
                             mlir::SymbolTable &symbolTable,
                             llvm::DenseSet<fir::GlobalOp> &candidates) {
@@ -35,22 +38,46 @@ static void processAddrOfOp(fir::AddrOfOp addrOfOp,
     // TO DO: limit candidates to non-scalars. Scalars appear to have been
     // folded in already.
     if (globalOp.getConstant()) {
+      // Limit recursion to builtin global for now.
+      if (globalOp.getSymName().starts_with(builtinPrefix)) {
+        globalOp.walk([&](fir::AddrOfOp op) {
+          processAddrOfOp(op, symbolTable, candidates);
+        });
+      }
       candidates.insert(globalOp);
     }
   }
+}
+
+static void processEmboxOp(fir::EmboxOp emboxOp, mlir::SymbolTable &symbolTable,
+                           llvm::DenseSet<fir::GlobalOp> &candidates) {
+  if (auto recTy = mlir::dyn_cast<fir::RecordType>(
+          fir::unwrapRefType(emboxOp.getMemref().getType())))
+    // Only look at builtin record type.
+    if (recTy.getName().starts_with(builtinPrefix))
+      if (auto globalOp = symbolTable.lookup<fir::GlobalOp>(
+              fir::NameUniquer::getTypeDescriptorName(recTy.getName()))) {
+        if (!candidates.contains(globalOp)) {
+          globalOp.walk([&](fir::AddrOfOp op) {
+            processAddrOfOp(op, symbolTable, candidates);
+          });
+          candidates.insert(globalOp);
+        }
+      }
 }
 
 static void
 prepareImplicitDeviceGlobals(mlir::func::FuncOp funcOp,
                              mlir::SymbolTable &symbolTable,
                              llvm::DenseSet<fir::GlobalOp> &candidates) {
-
   auto cudaProcAttr{
       funcOp->getAttrOfType<cuf::ProcAttributeAttr>(cuf::getProcAttrName())};
   if (cudaProcAttr && cudaProcAttr.getValue() != cuf::ProcAttribute::Host) {
-    funcOp.walk([&](fir::AddrOfOp addrOfOp) {
-      processAddrOfOp(addrOfOp, symbolTable, candidates);
+    funcOp.walk([&](fir::AddrOfOp op) {
+      processAddrOfOp(op, symbolTable, candidates);
     });
+    funcOp.walk(
+        [&](fir::EmboxOp op) { processEmboxOp(op, symbolTable, candidates); });
   }
 }
 
@@ -67,6 +94,11 @@ public:
     mod.walk([&](mlir::func::FuncOp funcOp) {
       prepareImplicitDeviceGlobals(funcOp, symTable, candidates);
       return mlir::WalkResult::advance();
+    });
+    mod.walk([&](cuf::KernelOp kernelOp) {
+      kernelOp.walk([&](fir::AddrOfOp addrOfOp) {
+        processAddrOfOp(addrOfOp, symTable, candidates);
+      });
     });
 
     // Copying the device global variable into the gpu module

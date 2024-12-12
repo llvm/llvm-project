@@ -32,7 +32,8 @@ def tileslicerange2s4 : ComplexPattern<i32, 2, "SelectSMETileSlice<12, 4>", []>;
 def tileslicerange1s4 : ComplexPattern<i32, 2, "SelectSMETileSlice<4,  4>", []>;
 def tileslicerange0s4 : ComplexPattern<i32, 2, "SelectSMETileSlice<0,  4>", []>;
 
-def am_sme_indexed_b4 :ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<0,15>", [], [SDNPWantRoot]>;
+let WantsRoot = true in
+def am_sme_indexed_b4 : ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<0, 15>">;
 
 def SDTZALoadStore : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisInt<2>]>;
 def AArch64SMELdr : SDNode<"AArch64ISD::SME_ZA_LDR", SDTZALoadStore,
@@ -2398,10 +2399,14 @@ multiclass sme2_cvt_vg2_single<string mnemonic, bits<5> op, ValueType out_vt,
 }
 
 // SME2 multi-vec FP8 down convert two registers
-multiclass sme2_fp8_cvt_vg2_single<string mnemonic, bit op> {
+multiclass sme2_fp8_cvt_vg2_single<string mnemonic, bit op, ValueType in_vt, SDPatternOperator intrinsic> {
   def NAME :  sme2_cvt_vg2_single<mnemonic, {op, 0b1000}, ZPR8, ZZ_h_mul_r>{
+    let mayLoad = 1;
+    let mayStore = 0;
     let Uses = [FPMR, FPCR];
   }
+  def : Pat<(nxv16i8 (intrinsic in_vt:$Zn1, in_vt:$Zn2)),
+            (!cast<Instruction>(NAME) (REG_SEQUENCE ZPR2Mul2, in_vt:$Zn1, zsub0, in_vt:$Zn2, zsub1))>;
 }
 
 class sme2_cvt_unpk_vector_vg2<bits<2>sz, bits<3> op, bit u, RegisterOperand first_ty,
@@ -2467,8 +2472,13 @@ multiclass sme2_int_cvt_vg4_single<string mnemonic, bits<3> op, SDPatternOperato
 }
 
 //SME2 multi-vec FP8 down convert four registers
-multiclass sme2_fp8_cvt_vg4_single<string mnemonic, bit N> {
- def _NAME : sme2_cvt_vg4_single<0b0, {0b00, N}, 0b0100, ZPR8, ZZZZ_s_mul_r, mnemonic>;
+multiclass sme2_fp8_cvt_vg4_single<string mnemonic, bit N, SDPatternOperator intrinsic> {
+ def NAME : sme2_cvt_vg4_single<0b0, {0b00, N}, 0b0100, ZPR8, ZZZZ_s_mul_r, mnemonic> {
+    let mayLoad = 1;
+    let mayStore = 0;
+    let Uses = [FPMR, FPCR];
+ }
+ def : SME2_Cvt_VG4_Pat<NAME, intrinsic, nxv16i8, nxv4f32>;
 }
 
 class sme2_unpk_vector_vg4<bits<2>sz, bit u, RegisterOperand first_ty,

@@ -95,15 +95,10 @@ chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.co
 
 ### Instrumentation and sanitizers
 
-#### AddressSanitizer, ThreadSanitizer
+#### Sanitizers not covered by someone else
 
-Kostya Serebryany \
-kcc@google.com (email), [kcc](https://github.com/kcc) (GitHub)
-
-#### MemorySanitizer
-
-Evgeniy Stepanov \
-eugenis@google.com (email), [eugenis](https://github.com/eugenis) (GitHub)
+Vitaly Buka \
+vitalybuka@google.com (email), [vitalybuka](https://github.com/vitalybuka) (GitHub)
 
 #### NumericalStabilitySanitizer
 
@@ -130,11 +125,6 @@ Simon Pilgrim \
 llvm-dev@redking.me.uk (email), [RKSimon](https://github.com/RKSimon) (GitHub) \
 Craig Topper \
 craig.topper@sifive.com (email), [topperc](https://github.com/topperc) (GitHub)
-
-#### FastISel
-
-Chad Rosier \
-mcrosier@codeaurora.org (email)
 
 #### Instruction scheduling
 
@@ -392,7 +382,7 @@ tstellar@redhat.com (email), [tstellar](https://github.com/tstellar) (GitHub)
 #### MinGW support
 
 Martin Storsjö \
-martin@martin.st (email), [mstrorsjo](https://github.com/mstrorsjo) (GitHub)
+martin@martin.st (email), [mstorsjo](https://github.com/mstorsjo) (GitHub)
 
 #### Windows support in object tools
 
@@ -430,7 +420,7 @@ Others only have a lead maintainer listed here.
 
 [Clang-tools-extra maintainers](https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/Maintainers.txt)
 
-[Compiler-rt maintainers](https://github.com/llvm/llvm-project/blob/main/compiler-rt/Maintainers.txt)
+[Compiler-rt maintainers](https://github.com/llvm/llvm-project/blob/main/compiler-rt/Maintainers.md)
 
 [Flang maintainers](https://github.com/llvm/llvm-project/blob/main/flang/Maintainers.txt)
 
@@ -466,7 +456,10 @@ Justin Bogner (mail@justinbogner.com, [bogner](https://github.com/bogner)) -- Se
 Evan Cheng (evan.cheng@apple.com) -- Parts of code generator not covered by someone else \
 Renato Golin (rengolin@systemcall.eu, [rengolin](https://github.com/rengolin)) -- ARM backend \
 Anton Korobeynikov (anton@korobeynikov.info, [asl](https://github.com/asl)) -- ARM EABI \
+Chad Rosier (mcrosier@codeaurora.org) -- FastISel \
 Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management \
+Kostya Serebryany ([kcc](https://github.com/kcc)) -- Sanitizers \
+Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) -- Sanitizers
 
 ### Former maintainers of removed components
 

@@ -2370,10 +2370,10 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
               ScalableDstTy->getElementCount().getKnownMinValue() / 8);
         }
         if (FixedSrcTy->getElementType() == ScalableDstTy->getElementType()) {
-          llvm::Value *UndefVec = llvm::UndefValue::get(ScalableDstTy);
+          llvm::Value *PoisonVec = llvm::PoisonValue::get(ScalableDstTy);
           llvm::Value *Zero = llvm::Constant::getNullValue(CGF.CGM.Int64Ty);
           llvm::Value *Result = Builder.CreateInsertVector(
-              ScalableDstTy, UndefVec, Src, Zero, "cast.scalable");
+              ScalableDstTy, PoisonVec, Src, Zero, "cast.scalable");
           if (Result->getType() != DstTy)
             Result = Builder.CreateBitCast(Result, DstTy);
           return Result;

@@ -5724,6 +5724,24 @@ TEST_F(FormatTest, HashInMacroDefinition) {
                getLLVMStyleWithColumns(22));
 
   verifyFormat("#define A void # ## #", getLLVMStyleWithColumns(22));
+
+#if 0
+  // FIXME: The correct format is:
+  verifyFormat("{\n"
+               "  {\n"
+               "#define GEN_ID(_x) char *_x{#_x}\n"
+               "    GEN_ID(one);\n"
+               "  }\n"
+               "}");
+#endif
+  verifyFormat("{\n"
+               "  {\n"
+               "#define GEN_ID(_x) \\\n"
+               "  char *_x { #_x }\n"
+               "    GEN_ID(one);\n"
+               "  }\n"
+               "}",
+               getGoogleStyle());
 }
 
 TEST_F(FormatTest, RespectWhitespaceInMacroDefinitions) {
@@ -9441,6 +9459,15 @@ TEST_F(FormatTest, AlignsAfterOpenBracket) {
       "    aaaaaaaaaaaaaaaa\n"
       ");",
       Style);
+  verifyFormat("void foo(\n"
+               "    void (*foobarpntr)(\n"
+               "        aaaaaaaaaaaaaaaaaa *,\n"
+               "        bbbbbbbbbbbbbb *,\n"
+               "        cccccccccccccccccccc *,\n"
+               "        dddddddddddddddddd *\n"
+               "    )\n"
+               ");",
+               Style);
   verifyFormat("aaaaaaa<bbbbbbbb> const aaaaaaaaaa{\n"
                "    aaaaaaaaaaaaa(aaaaaaaaaaa, aaaaaaaaaaaaaaaa)\n"
                "};",

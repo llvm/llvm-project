@@ -127,7 +127,8 @@ void RegAllocBase::allocatePhysRegs() {
       if (AllocOrder.empty())
         report_fatal_error("no registers from class available to allocate");
       else if (MI && MI->isInlineAsm()) {
-        MI->emitError("inline assembly requires more registers than available");
+        MI->emitInlineAsmError(
+            "inline assembly requires more registers than available");
       } else if (MI) {
         LLVMContext &Context =
             MI->getParent()->getParent()->getFunction().getContext();
