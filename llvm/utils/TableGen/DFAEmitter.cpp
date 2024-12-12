@@ -117,19 +117,17 @@ void DfaEmitter::emit(StringRef Name, raw_ostream &OS) {
   OS << "// transition implies a set of NFA transitions. These are referred\n";
   OS << "// to by index in " << Name << "Transitions[].\n";
 
-  SequenceToOffsetTable<DfaTransitionInfo> Table;
+  SequenceToOffsetTable<DfaTransitionInfo> Table(
+      /*Terminator=*/std::pair(0, 0));
   std::map<DfaTransitionInfo, unsigned> EmittedIndices;
   for (auto &T : DfaTransitions)
     Table.add(T.second.second);
   Table.layout();
   OS << "const std::array<NfaStatePair, " << Table.size() << "> " << Name
      << "TransitionInfo = {{\n";
-  Table.emit(
-      OS,
-      [](raw_ostream &OS, std::pair<uint64_t, uint64_t> P) {
-        OS << "{" << P.first << ", " << P.second << "}";
-      },
-      "{0ULL, 0ULL}");
+  Table.emit(OS, [](raw_ostream &OS, std::pair<uint64_t, uint64_t> P) {
+    OS << "{" << P.first << ", " << P.second << "}";
+  });
 
   OS << "}};\n\n";
 

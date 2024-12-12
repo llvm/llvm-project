@@ -988,7 +988,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
 
   OS << "extern const " << TargetName << "InstrTable " << TargetName
      << "Descs = {\n  {\n";
-  SequenceToOffsetTable<std::string> InstrNames;
+  SequenceToOffsetTable<std::string> InstrNames(/*Terminator=*/'\0');
   unsigned Num = NumberedInstructions.size();
   for (const CodeGenInstruction *Inst : reverse(NumberedInstructions)) {
     // Keep a list of the instruction names.
