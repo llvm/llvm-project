@@ -13,8 +13,8 @@
 #include <new>
 #include <vector>
 
-#include "CartesianBenchmarks.h"
-#include "GenerateInput.h"
+#include "../CartesianBenchmarks.h"
+#include "../GenerateInput.h"
 #include "benchmark/benchmark.h"
 #include "test_macros.h"
 

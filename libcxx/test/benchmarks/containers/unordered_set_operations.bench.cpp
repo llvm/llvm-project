@@ -18,7 +18,7 @@
 #include "benchmark/benchmark.h"
 
 #include "ContainerBenchmarks.h"
-#include "GenerateInput.h"
+#include "../GenerateInput.h"
 #include "test_macros.h"
 
 using namespace ContainerBenchmarks;
