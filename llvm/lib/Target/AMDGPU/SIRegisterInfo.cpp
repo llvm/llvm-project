@@ -1956,12 +1956,8 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
                                RegScavenger *RS, SlotIndexes *Indexes,
                                LiveIntervals *LIS, bool OnlyToVGPR,
                                bool SpillToPhysVGPRLane) const {
-  if (MI->getOperand(0).isUndef()) {
-    if (Indexes)
-      Indexes->removeMachineInstrFromMaps(*MI);
-    MI->eraseFromParent();
-    return true;
-  }
+  assert(!MI->getOperand(0).isUndef() &&
+         "undef spill should have been deleted earlier");
 
   SGPRSpillBuilder SB(*this, *ST.getInstrInfo(), isWave32, MI, Index, RS);
 
