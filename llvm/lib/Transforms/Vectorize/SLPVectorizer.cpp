@@ -943,7 +943,7 @@ getInterchangeableInstruction(Instruction *I, Instruction *MainOp,
                               Instruction *AltOp) {
   SmallVector<InterchangeableInstruction> IIList =
       getInterchangeableInstruction(I);
-  auto Iter = find_if(IIList, [&](const InterchangeableInstruction &II) {
+  const auto *Iter = find_if(IIList, [&](const InterchangeableInstruction &II) {
     return II.Opcode == MainOp->getOpcode();
   });
   if (Iter == IIList.end()) {
@@ -1227,7 +1227,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   if (IsBinOp) {
     auto FindOp = [&](ArrayRef<InterchangeableInstruction> CandidateOp) {
       for (Value *V : VL) {
-        if (!isa<Instruction>(V))
+        if (isa<PoisonValue>(V))
           continue;
         for (const InterchangeableInstruction &I : CandidateOp)
           if (cast<Instruction>(V)->getOpcode() == I.Opcode)
