@@ -556,14 +556,12 @@ TEST(MemProf, MissingCallStackId) {
 }
 
 TEST(MemProf, MissingFrameId) {
-  IndexedAllocationInfo AI(0x222, makePartialMIB(), getHotColdSchema());
-
-  IndexedMemProfRecord IndexedMR;
-  IndexedMR.AllocSites.push_back(AI);
-
   // An empty Frame map to trigger a mapping error.
   IndexedMemProfData MemProfData;
-  MemProfData.CallStacks.insert({0x222, {2, 3}});
+  auto CSId = MemProfData.addCallStack(SmallVector<FrameId>{2, 3});
+
+  IndexedMemProfRecord IndexedMR;
+  IndexedMR.AllocSites.emplace_back(CSId, makePartialMIB(), getHotColdSchema());
 
   FrameIdConverter<decltype(MemProfData.Frames)> FrameIdConv(
       MemProfData.Frames);
