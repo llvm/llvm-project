@@ -651,7 +651,10 @@ LoongArchInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_DESC_LD, "loongarch-desc-ld"},
       {MO_DESC_CALL, "loongarch-desc-call"},
       {MO_LD_PC_HI, "loongarch-ld-pc-hi"},
-      {MO_GD_PC_HI, "loongarch-gd-pc-hi"}};
+      {MO_GD_PC_HI, "loongarch-gd-pc-hi"},
+      {MO_LE_HI_R, "loongarch-le-hi-r"},
+      {MO_LE_ADD_R, "loongarch-le-add-r"},
+      {MO_LE_LO_R, "loongarch-le-lo-r"}};
   return ArrayRef(TargetFlags);
 }
 
