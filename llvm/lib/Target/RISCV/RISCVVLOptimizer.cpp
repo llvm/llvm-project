@@ -270,6 +270,34 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
   case RISCV::VSSE64_V:
     return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(6, MI), 6);
 
+  // Vector Indexed Instructions
+  // vs(o|u)xei<eew>.v
+  // Dest EEW=SEW, EMUL=LMUL. Source EEW=<eew> and EMUL=(EEW/SEW)*LMUL
+  case RISCV::VSUXEI8_V:
+  case RISCV::VSOXEI8_V: {
+    if (IsMODef)
+      return OperandInfo(MIVLMul, MILog2SEW);
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(3, MI), 3);
+  }
+  case RISCV::VSUXEI16_V:
+  case RISCV::VSOXEI16_V: {
+    if (IsMODef)
+      return OperandInfo(MIVLMul, MILog2SEW);
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(4, MI), 4);
+  }
+  case RISCV::VSUXEI32_V:
+  case RISCV::VSOXEI32_V: {
+    if (IsMODef)
+      return OperandInfo(MIVLMul, MILog2SEW);
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(5, MI), 5);
+  }
+  case RISCV::VSUXEI64_V:
+  case RISCV::VSOXEI64_V: {
+    if (IsMODef)
+      return OperandInfo(MIVLMul, MILog2SEW);
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(6, MI), 6);
+  }
+
   // Vector Integer Arithmetic Instructions
   // Vector Single-Width Integer Add and Subtract
   case RISCV::VADD_VI:
