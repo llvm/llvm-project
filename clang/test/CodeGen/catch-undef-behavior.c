@@ -371,6 +371,10 @@ void call_memcpy_nonnull(void *p, void *q, int sz) {
   // CHECK-TRAP: call void @llvm.ubsantrap(i8 16)
   // CHECK-COMMON-NOT: call
 
+  // CHECK-COMMON: %5 = icmp ne ptr %0, null
+  // CHECK-COMMON: call void @llvm.assume(i1 %5)
+  // CHECK-COMMON: %6 = icmp ne ptr %0, null
+  // CHECK-COMMON: call void @llvm.assume(i1 %6)
   // CHECK-COMMON: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %0, ptr align 1 %1, i64 %conv, i1 false)
   memcpy(p, q, sz);
 }
