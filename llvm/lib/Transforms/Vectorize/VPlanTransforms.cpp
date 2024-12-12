@@ -2106,15 +2106,11 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
     Prev = WidenIVR->getLastUnrolledPartOperand();
     assert(Inc && Prev);
   } else {
-    unsigned VFTySize = TypeInfo.inferScalarType(VF)->getScalarSizeInBits();
-
     // Multiply the vectorization factor by the step using integer or
     // floating-point arithmetic as appropriate.
     if (Ty->isFloatingPointTy())
       VF = Builder.createScalarCast(Instruction::CastOps::UIToFP, VF, Ty, DL);
-    else if (VFTySize < Ty->getScalarSizeInBits())
-      VF = Builder.createScalarCast(Instruction::CastOps::ZExt, VF, Ty, DL);
-    else if (VFTySize > Ty->getScalarSizeInBits())
+    else if (Ty != TypeInfo.inferScalarType(VF))
       VF = Builder.createScalarCast(Instruction::CastOps::Trunc, VF, Ty, DL);
 
     Inc = Builder.createSplat(Builder.createNaryOp(MulOp, {Step, VF}, FMFs));
