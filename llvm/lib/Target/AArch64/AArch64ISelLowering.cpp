@@ -22041,13 +22041,18 @@ SDValue tryCombineToDotProduct(SDValue &Acc, SDValue &Input, SelectionDAG &DAG,
     return SDValue();
 
   unsigned InputOpcode = Input->getOpcode();
+  EVT AccVT = Acc->getValueType(0);
+  if (AccVT.getVectorElementCount() * 4 ==
+          Input->getValueType(0).getVectorElementCount() &&
+      InputOpcode != ISD::MUL)
+    return DAG.expandPartialReduceAdd(DL, Acc, Input);
   if (InputOpcode != ISD::MUL)
     return SDValue();
+
   auto A = Input->getOperand(0);
   auto B = Input->getOperand(1);
   unsigned AOpcode = A->getOpcode();
   unsigned BOpcode = B->getOpcode();
-  EVT AccVT = Acc->getValueType(0);
 
   if (!ISD::isExtOpcode(AOpcode) || !ISD::isExtOpcode(BOpcode))
     return DAG.expandPartialReduceAdd(DL, Acc, Input);
@@ -22122,6 +22127,8 @@ SDValue tryCombineToWideAdd(SDValue &Acc, SDValue &Input, SelectionDAG &DAG,
   Input = Input->getOperand(0);
   EVT InputVT = Input.getValueType();
   EVT AccVT = Acc->getValueType(0);
+  if (!AccVT.isScalableVector())
+    return DAG.expandPartialReduceAdd(DL, Acc, Input);
 
   if (!(InputVT == MVT::nxv4i32 && AccVT == MVT::nxv2i64) &&
       !(InputVT == MVT::nxv8i16 && AccVT == MVT::nxv4i32) &&
@@ -29376,6 +29383,9 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_ADD(SDValue Op,
 
   unsigned Opcode = Op.getOpcode();
 
+  // If the following condition is true and the input opcode was not ISD::MUL
+  // during the DAG-combine, it is already expanded. So this condition means the
+  // input opcode must have been ISD::MUL.
   if (AccVT.getVectorElementCount() * 4 == InputVT.getVectorElementCount()) {
     unsigned IndexAdd = 0;
     // ISD::MUL may have already been lowered, meaning the operands would be in
