@@ -29,7 +29,7 @@ jobs:
           echo $modified_files
           echo $modified_dirs
 
-          #. ./.ci/compute-projects.sh
+          . ./.ci/compute-projects.sh
 
           #all_projects="bolt clang clang-tools-extra compiler-rt cross-project-tests flang libc libclc lld lldb llvm mlir openmp polly pstl"
           #modified_projects="$(keep-modified-projects ${all_projects})"
