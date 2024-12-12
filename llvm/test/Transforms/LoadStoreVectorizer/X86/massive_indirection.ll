@@ -80,9 +80,9 @@ define void @v1x8_levels_6_7_8_9_10_11_12_13(i32 %arg0, ptr align 16 %arg1) {
   ret void
 }
 
-define void @v1_4_4_4_2_1_to_v8_8_levels_6_7(i32 %arg0, ptr addrspace(3) align 16 %arg1_ptr, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, half %arg6_half, half %arg7_half) {
+define void @v1_4_4_4_2_1_to_v8_8_levels_6_7(i32 %arg0, ptr addrspace(3) align 16 %arg1_ptr, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, half %arg6_half, half %arg7_half, <2 x half> %arg8_2xhalf) {
 ; CHECK-LABEL: define void @v1_4_4_4_2_1_to_v8_8_levels_6_7(
-; CHECK-SAME: i32 [[ARG0:%.*]], ptr addrspace(3) align 16 [[ARG1_PTR:%.*]], i32 [[ARG2:%.*]], i32 [[ARG3:%.*]], i32 [[ARG4:%.*]], i32 [[ARG5:%.*]], half [[ARG6_HALF:%.*]], half [[ARG7_HALF:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: i32 [[ARG0:%.*]], ptr addrspace(3) align 16 [[ARG1_PTR:%.*]], i32 [[ARG2:%.*]], i32 [[ARG3:%.*]], i32 [[ARG4:%.*]], i32 [[ARG5:%.*]], half [[ARG6_HALF:%.*]], half [[ARG7_HALF:%.*]], <2 x half> [[ARG8_2XHALF:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[ARG1_PTR]], i32 458752
 ; CHECK-NEXT:    br [[DOTPREHEADER11_PREHEADER:label %.*]]
 ; CHECK:       [[_PREHEADER11_PREHEADER:.*:]]
@@ -90,8 +90,6 @@ define void @v1_4_4_4_2_1_to_v8_8_levels_6_7(i32 %arg0, ptr addrspace(3) align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[TMP1]], i32 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[TMP3]], i32 [[ARG2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[TMP4]], i32 [[ARG3]]
-; CHECK-NEXT:    [[VEC2_INIT:%.*]] = insertelement <2 x half> undef, half [[ARG7_HALF]], i32 0
-; CHECK-NEXT:    [[VEC2:%.*]] = shufflevector <2 x half> [[VEC2_INIT]], <2 x half> undef, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[ARG0]], 2
 ; CHECK-NEXT:    br i1 [[CMP]], [[DOTLR_PH:label %.*]], [[DOTEXIT_POINT:label %.*]]
 ; CHECK:       [[_LR_PH:.*:]]
@@ -102,9 +100,9 @@ define void @v1_4_4_4_2_1_to_v8_8_levels_6_7(i32 %arg0, ptr addrspace(3) align 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x half> [[TMP8]], half 0xH0000, i32 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x half> [[TMP9]], half 0xH0000, i32 3
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x half> [[TMP10]], half 0xH0000, i32 4
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x half> [[VEC2]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x half> [[ARG8_2XHALF]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x half> [[TMP11]], half [[TMP12]], i32 5
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x half> [[VEC2]], i32 1
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x half> [[ARG8_2XHALF]], i32 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x half> [[TMP13]], half [[TMP14]], i32 6
 ; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <8 x half> [[TMP15]], half [[ARG7_HALF]], i32 7
 ; CHECK-NEXT:    store <8 x half> [[TMP16]], ptr addrspace(3) [[TMP6]], align 2
@@ -112,34 +110,31 @@ define void @v1_4_4_4_2_1_to_v8_8_levels_6_7(i32 %arg0, ptr addrspace(3) align 1
 ; CHECK:       [[_EXIT_POINT:.*:]]
 ; CHECK-NEXT:    ret void
 ;
-  %37 = getelementptr inbounds i8, ptr addrspace(3) %arg1_ptr, i32 458752
+  %base1 = getelementptr inbounds i8, ptr addrspace(3) %arg1_ptr, i32 458752
   br label %.preheader11.preheader
 
 .preheader11.preheader:
-  %258 = shl nuw nsw i32 %arg0, 6
-  %259 = getelementptr inbounds i8, ptr addrspace(3) %37, i32 %258
+  %base2 = shl nuw nsw i32 %arg0, 6
+  %base3 = getelementptr inbounds i8, ptr addrspace(3) %base1, i32 %base2
 
-  %268 = getelementptr inbounds i8, ptr addrspace(3) %259, i32 %arg2
-  %269 = getelementptr inbounds i8, ptr addrspace(3) %268, i32 %arg3
-
-  %vec2_init = insertelement <2 x half> undef, half %arg7_half, i32 0
-  %vec2 = shufflevector <2 x half> %vec2_init, <2 x half> undef, <2 x i32> zeroinitializer
+  %base4 = getelementptr inbounds i8, ptr addrspace(3) %base3, i32 %arg2
+  %base5 = getelementptr inbounds i8, ptr addrspace(3) %base4, i32 %arg3
 
   %cmp = icmp sgt i32 %arg0, 2
   br i1 %cmp, label %.lr.ph, label %.exit_point
 
 .lr.ph:
-  %gep = getelementptr inbounds i8, ptr addrspace(3) %269, i32 %arg4
+  %gep = getelementptr inbounds i8, ptr addrspace(3) %base5, i32 %arg4
 
-  %1000 = getelementptr inbounds i8, ptr addrspace(3) %gep, i32 %arg5
-  %1002 = getelementptr inbounds i8, ptr addrspace(3) %1000, i32 2
-  %1010 = getelementptr inbounds i8, ptr addrspace(3) %1000, i32 10
-  %1014 = getelementptr inbounds i8, ptr addrspace(3) %1000, i32 14
+  %dst = getelementptr inbounds i8, ptr addrspace(3) %gep, i32 %arg5
+  %dst_off2 = getelementptr inbounds i8, ptr addrspace(3) %dst, i32 2
+  %dst_off10 = getelementptr inbounds i8, ptr addrspace(3) %dst, i32 10
+  %dst_off14 = getelementptr inbounds i8, ptr addrspace(3) %dst, i32 14
 
-  store half %arg6_half, ptr addrspace(3) %1000, align 2
-  store <4 x half> zeroinitializer, ptr addrspace(3) %1002, align 2
-  store <2 x half> %vec2, ptr addrspace(3) %1010, align 2
-  store half %arg7_half, ptr addrspace(3) %1014, align 2
+  store half %arg6_half, ptr addrspace(3) %dst, align 2
+  store <4 x half> zeroinitializer, ptr addrspace(3) %dst_off2, align 2
+  store <2 x half> %arg8_2xhalf, ptr addrspace(3) %dst_off10, align 2
+  store half %arg7_half, ptr addrspace(3) %dst_off14, align 2
   br label %.exit_point
 
 .exit_point:
