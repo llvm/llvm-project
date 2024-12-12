@@ -444,11 +444,7 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VWMACC_VX:
   case RISCV::VWMACCSU_VV:
   case RISCV::VWMACCSU_VX:
-  case RISCV::VWMACCUS_VX:
-  // Vector Single-Width Fractional Multiply with Rounding and Saturation
-  // Destination EEW=2*SEW and EMUL=2*EMUL. Source EEW=SEW and EMUL=LMUL.
-  case RISCV::VSMUL_VV:
-  case RISCV::VSMUL_VX: {
+  case RISCV::VWMACCUS_VX: {
     unsigned Log2EEW = IsMODef ? MILog2SEW + 1 : MILog2SEW;
     RISCVII::VLMUL EMUL =
         IsMODef ? RISCVVType::twoTimesVLMUL(MIVLMul) : MIVLMul;
@@ -642,6 +638,11 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VSEXT_VF8:
   // Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
   // FIXME: Add support
+  case RISCV::VMADC_VV:
+  case RISCV::VMADC_VI:
+  case RISCV::VMADC_VX:
+  case RISCV::VMSBC_VV:
+  case RISCV::VMSBC_VX:
   // Vector Narrowing Integer Right Shift Instructions
   case RISCV::VNSRL_WX:
   case RISCV::VNSRL_WI:
