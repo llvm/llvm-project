@@ -24,6 +24,8 @@ jobs:
           fetch-depth: 2
       - name: Build and Test
         run: |
+          git config --global --add safe.directory '*'
+
           modified_files=$(git diff --name-only HEAD~1...HEAD)
           modified_dirs=$(echo "$modified_files" | cut -d'/' -f1 | sort -u)
           
@@ -32,20 +34,20 @@ jobs:
 
           . ./.ci/compute-projects.sh
 
-          #all_projects="bolt clang clang-tools-extra compiler-rt cross-project-tests flang libc libclc lld lldb llvm mlir openmp polly pstl"
-          #modified_projects="$(keep-modified-projects ${all_projects})"
+          all_projects="bolt clang clang-tools-extra compiler-rt cross-project-tests flang libc libclc lld lldb llvm mlir openmp polly pstl"
+          modified_projects="$(keep-modified-projects ${all_projects})"
 
-          #linux_projects_to_test=$(exclude-linux $(compute-projects-to-test 0 ${modified_projects}))
-          #linux_check_targets=$(check-targets ${linux_projects_to_test} | sort | uniq)
-          #linux_projects=$(add-dependencies ${linux_projects_to_test} | sort | uniq)
+          linux_projects_to_test=$(exclude-linux $(compute-projects-to-test 0 ${modified_projects}))
+          linux_check_targets=$(check-targets ${linux_projects_to_test} | sort | uniq)
+          linux_projects=$(add-dependencies ${linux_projects_to_test} | sort | uniq)
 
-          #linux_runtimes_to_test=$(compute-runtimes-to-test ${linux_projects_to_test})
-          #linux_runtime_check_targets=$(check-targets ${linux_runtimes_to_test} | sort | uniq)
-          #linux_runtimes=$(echo ${linux_runtimes_to_test} | sort | uniq)
+          linux_runtimes_to_test=$(compute-runtimes-to-test ${linux_projects_to_test})
+          linux_runtime_check_targets=$(check-targets ${linux_runtimes_to_test} | sort | uniq)
+          linux_runtimes=$(echo ${linux_runtimes_to_test} | sort | uniq)
 
-          #echo "Building projects: ${linux_projects}"
-          #echo "Running project checks targets: ${linux_check_targets}"
-          #echo "Building runtimes: ${linux_runtimes}"
-          #echo "Running runtimes checks targets: ${linux_runtime_check_targets}"
+          echo "Building projects: ${linux_projects}"
+          echo "Running project checks targets: ${linux_check_targets}"
+          echo "Building runtimes: ${linux_runtimes}"
+          echo "Running runtimes checks targets: ${linux_runtime_check_targets}"
 
-          #./.ci/monolithic-linux.sh "$(echo ${linux_projects} | tr ' ' ';')" "$(echo ${linux_check_targets})" "$(echo ${linux_runtimes} | tr ' ' ';')" "$(echo ${linux_runtime_check_targets})"
+          ./.ci/monolithic-linux.sh "$(echo ${linux_projects} | tr ' ' ';')" "$(echo ${linux_check_targets})" "$(echo ${linux_runtimes} | tr ' ' ';')" "$(echo ${linux_runtime_check_targets})"
