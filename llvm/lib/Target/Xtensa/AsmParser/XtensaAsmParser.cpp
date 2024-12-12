@@ -193,7 +193,8 @@ public:
 
   bool isImm1_16() const { return isImm(1, 16); }
 
-  bool isImm1n_15() const { return (isImm(1, 15) || isImm(-1, -1)); }
+  // Check that value is either equals (-1) or from [1,15] range.
+  bool isImm1n_15() const { return isImm(1, 15) || isImm(-1, -1); }
 
   bool isImm32n_95() const { return isImm(-32, 95); }
 
