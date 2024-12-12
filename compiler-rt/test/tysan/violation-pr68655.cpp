@@ -8,8 +8,8 @@ struct S1 {
 };
 
 // CHECK: TypeSanitizer: type-aliasing-violation on address
-// CHECK-NEXT:  READ of size 4 at {{.+}} with type int accesses an existing object of type long long (in S1 at offset 0)
-// CHECK-NEXT: in copyMem(S1*, S1*) violation-pr68655.cpp:19
+// CHECK-NEXT:  READ of size 4 at {{.+}} with type int accesses an existing object of type long long (in {{.*}}S1 at offset 0)
+// CHECK-NEXT: in copyMem(S1*, S1*) {{.*/?}}violation-pr68655.cpp:19
 
 void inline copyMem(S1 *dst, S1 *src) {
   unsigned *d = reinterpret_cast<unsigned *>(dst);

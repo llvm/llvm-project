@@ -13,7 +13,7 @@ void foo(int *s, float *f, long n) {
 
     // CHECK:      TypeSanitizer: type-aliasing-violation on address
     // CHECK-NEXT: WRITE of size 4 at {{.+}} with type int accesses an existing object of type float
-    // CHECK-NEXT:   #0 {{.+}} in foo violation-pr86685.c:17
+    // CHECK-NEXT:   #0 {{.+}} in foo {{.*/?}}violation-pr86685.c:17
     *s = 4;
   }
 }

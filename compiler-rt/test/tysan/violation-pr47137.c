@@ -4,6 +4,7 @@
 // https://github.com/llvm/llvm-project/issues/47137
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 void f(int m) {
   int n = (4 * m + 2) / 3;
@@ -23,8 +24,8 @@ void f(int m) {
   }
 
   // CHECK:      TypeSanitizer: type-aliasing-violation on address
-  // CHECK-NEXT: READ of size 2 at {{.+}} with type short accesses an existing object of type long long
-  // CHECK-NEXT:    in f violation-pr47137.c:30
+  // CHECK-NEXT: READ of size 2 at {{.+}} with type short accesses an existing object of type long
+  // CHECK-NEXT:    in f {{.*/?}}violation-pr47137.c:31
   for (int i = 0, j = 0; j < 4 * m; i += 4, j += 3) {
     for (int k = 0; k < 3; k++) {
       ((uint16_t *)a)[j + k] = ((uint16_t *)a)[i + k];

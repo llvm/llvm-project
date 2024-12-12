@@ -18,7 +18,7 @@ int main(void) {
 
   // CHECK:      TypeSanitizer: type-aliasing-violation on address
   // CHECK-NEXT: WRITE of size 8 at {{.+}} with type double accesses an existing object of type float
-  // CHECK-NEXT:   in main violation-pr45282.c:25
+  // CHECK-NEXT:   in main {{.*/?}}violation-pr45282.c:25
 
   // loop of problems
   for (j = 2; j <= 4; ++j) {

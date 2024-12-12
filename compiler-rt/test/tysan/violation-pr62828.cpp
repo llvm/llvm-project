@@ -24,7 +24,7 @@ short *test1(int_v8 *cast_c_array, short_v8 *shuf_c_array1, int *ptr) {
 
   // CHECK:      ERROR: TypeSanitizer: type-aliasing-violation on address
   // CHECK-NEXT: READ of size 2 at {{.+}} with type short accesses an existing object of type int
-  // CHECK-NEXT:    in test1(int (*) [8], short (*) [8], int*) violation-pr62828.cpp:29
+  // CHECK-NEXT:    in test1(int (*) [8], short (*) [8], int*) {{.*/?}}violation-pr62828.cpp:29
   for (int i3 = 0; i3 < 4; ++i3) {
     output2[i3] = input2[(i3 * 2)];
   }
