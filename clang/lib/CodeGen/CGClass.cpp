@@ -1433,6 +1433,88 @@ static bool CanSkipVTablePointerInitialization(CodeGenFunction &CGF,
   return true;
 }
 
+namespace {
+llvm::Value *LoadThisForDtorDelete(CodeGenFunction &CGF,
+                                   const CXXDestructorDecl *DD) {
+  if (Expr *ThisArg = DD->getOperatorDeleteThisArg())
+    return CGF.EmitScalarExpr(ThisArg);
+  return CGF.LoadCXXThis();
+}
+}
+
+void EmitConditionalArrayDtorCall(const CXXDestructorDecl *DD,
+                                  CodeGenFunction &CGF,
+                                  llvm::Value *ShouldDeleteCondition,
+                                  bool ReturnAfterDelete) {
+  Address ThisPtr = CGF.LoadCXXThisAddress();
+  // llvm::Value *ThisPtr = LoadThisForDtorDelete(CGF, DD);
+  // llvm::BasicBlock *End = CGF.createBasicBlock("dtor.end");
+  llvm::BasicBlock *ScalarBB = CGF.createBasicBlock("dtor.scalar");
+  llvm::BasicBlock *callDeleteBB =
+      CGF.createBasicBlock("dtor.call_delete_after_array_destroy");
+  llvm::BasicBlock *VectorBB = CGF.createBasicBlock("dtor.vector");
+  auto *CondTy = cast<llvm::IntegerType>(ShouldDeleteCondition->getType());
+  llvm::Value *CheckTheBitForArrayDestroy = CGF.Builder.CreateAnd(
+      ShouldDeleteCondition,
+      llvm::Constant::getIntegerValue(CondTy, llvm::APInt(CondTy->getBitWidth(),
+                                                          /*val=*/2)));
+  llvm::Value *ShouldDestroyArray =
+      CGF.Builder.CreateIsNull(CheckTheBitForArrayDestroy);
+  CGF.Builder.CreateCondBr(ShouldDestroyArray, ScalarBB, VectorBB);
+
+  CGF.EmitBlock(VectorBB);
+
+  llvm::Value *numElements = nullptr;
+  llvm::Value *allocatedPtr = nullptr;
+  CharUnits cookieSize;
+  QualType EltTy = DD->getThisType()->getPointeeType();
+  CGF.CGM.getCXXABI().ReadArrayCookie(CGF, ThisPtr, EltTy, numElements,
+                                      allocatedPtr, cookieSize);
+
+  // Destroy the elements.
+  QualType::DestructionKind dtorKind = EltTy.isDestructedType();
+
+  assert(dtorKind);
+  assert(numElements && "no element count for a type with a destructor!");
+
+  CharUnits elementSize = CGF.getContext().getTypeSizeInChars(EltTy);
+  CharUnits elementAlign =
+      ThisPtr.getAlignment().alignmentOfArrayElement(elementSize);
+
+  llvm::Value *arrayBegin = ThisPtr.emitRawPointer(CGF);
+  llvm::Value *arrayEnd = CGF.Builder.CreateInBoundsGEP(
+      ThisPtr.getElementType(), arrayBegin, numElements, "delete.end");
+
+  // Note that it is legal to allocate a zero-length array, and we
+  // can never fold the check away because the length should always
+  // come from a cookie.
+  CGF.emitArrayDestroy(arrayBegin, arrayEnd, EltTy, elementAlign,
+                       CGF.getDestroyer(dtorKind),
+                       /*checkZeroLength*/ true, CGF.needsEHCleanup(dtorKind));
+
+  llvm::BasicBlock *VectorBBCont = CGF.createBasicBlock("dtor.vector.cont");
+  CGF.EmitBlock(VectorBBCont);
+
+  llvm::Value *CheckTheBitForDeleteCall = CGF.Builder.CreateAnd(
+      ShouldDeleteCondition,
+      llvm::Constant::getIntegerValue(CondTy, llvm::APInt(CondTy->getBitWidth(),
+                                                          /*val=*/1)));
+
+  llvm::Value *ShouldCallDelete =
+      CGF.Builder.CreateIsNull(CheckTheBitForDeleteCall);
+  CGF.Builder.CreateCondBr(ShouldCallDelete, CGF.ReturnBlock.getBlock(),
+                           callDeleteBB);
+  CGF.EmitBlock(callDeleteBB);
+  const CXXDestructorDecl *Dtor = cast<CXXDestructorDecl>(CGF.CurCodeDecl);
+  const CXXRecordDecl *ClassDecl = Dtor->getParent();
+  CGF.EmitDeleteCall(Dtor->getOperatorDelete(), allocatedPtr,
+                     CGF.getContext().getTagDeclType(ClassDecl));
+
+  // FIXME figure how to go to the end properly
+  CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
+  CGF.EmitBlock(ScalarBB);
+}
+
 /// EmitDestructorBody - Emits the body of the current destructor.
 void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
   const CXXDestructorDecl *Dtor = cast<CXXDestructorDecl>(CurGD.getDecl());
@@ -1463,6 +1545,10 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
   // possible to delegate the destructor body to the complete
   // destructor.  Do so.
   if (DtorType == Dtor_Deleting) {
+    if (CXXStructorImplicitParamValue) {
+      EmitConditionalArrayDtorCall(Dtor, *this, CXXStructorImplicitParamValue,
+                                   false);
+    }
     RunCleanupsScope DtorEpilogue(*this);
     EnterDtorCleanups(Dtor, Dtor_Deleting);
     if (HaveInsertPoint()) {
@@ -1567,12 +1653,12 @@ void CodeGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &Args) 
 }
 
 namespace {
-  llvm::Value *LoadThisForDtorDelete(CodeGenFunction &CGF,
-                                     const CXXDestructorDecl *DD) {
-    if (Expr *ThisArg = DD->getOperatorDeleteThisArg())
-      return CGF.EmitScalarExpr(ThisArg);
-    return CGF.LoadCXXThis();
-  }
+  // llvm::Value *LoadThisForDtorDelete(CodeGenFunction &CGF,
+  //                                    const CXXDestructorDecl *DD) {
+  //   if (Expr *ThisArg = DD->getOperatorDeleteThisArg())
+  //     return CGF.EmitScalarExpr(ThisArg);
+  //   return CGF.LoadCXXThis();
+  // }
 
   /// Call the operator delete associated with the current destructor.
   struct CallDtorDelete final : EHScopeStack::Cleanup {
@@ -1592,8 +1678,12 @@ namespace {
                                      bool ReturnAfterDelete) {
     llvm::BasicBlock *callDeleteBB = CGF.createBasicBlock("dtor.call_delete");
     llvm::BasicBlock *continueBB = CGF.createBasicBlock("dtor.continue");
-    llvm::Value *ShouldCallDelete
-      = CGF.Builder.CreateIsNull(ShouldDeleteCondition);
+    auto *CondTy = cast<llvm::IntegerType>(ShouldDeleteCondition->getType());
+    llvm::Value *CheckTheBit = CGF.Builder.CreateAnd(
+        ShouldDeleteCondition, llvm::Constant::getIntegerValue(
+                                   CondTy, llvm::APInt(CondTy->getBitWidth(),
+                                                       /*val=*/1)));
+    llvm::Value *ShouldCallDelete = CGF.Builder.CreateIsNull(CheckTheBit);
     CGF.Builder.CreateCondBr(ShouldCallDelete, continueBB, callDeleteBB);
 
     CGF.EmitBlock(callDeleteBB);
@@ -1857,9 +1947,10 @@ void CodeGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
       if (DD->getOperatorDelete()->isDestroyingOperatorDelete())
         EmitConditionalDtorDeleteCall(*this, CXXStructorImplicitParamValue,
                                       /*ReturnAfterDelete*/true);
-      else
+      else {
         EHStack.pushCleanup<CallDtorDeleteConditional>(
             NormalAndEHCleanup, CXXStructorImplicitParamValue);
+      }
     } else {
       if (DD->getOperatorDelete()->isDestroyingOperatorDelete()) {
         const CXXRecordDecl *ClassDecl = DD->getParent();
