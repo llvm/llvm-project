@@ -587,9 +587,9 @@ TEST(MemProf, RadixTreeBuilderEmpty) {
   CallStackRadixTreeBuilder<FrameId> Builder;
   Builder.build(std::move(MemProfCallStackData), &MemProfFrameIndexes,
                 FrameHistogram);
-  ASSERT_THAT(Builder.getRadixArray(), testing::IsEmpty());
+  ASSERT_THAT(Builder.getRadixArray(), IsEmpty());
   const auto Mappings = Builder.takeCallStackPos();
-  ASSERT_THAT(Mappings, testing::IsEmpty());
+  ASSERT_THAT(Mappings, IsEmpty());
 }
 
 // Verify CallStackRadixTreeBuilder can handle one trivial call stack.
@@ -804,11 +804,11 @@ template <typename T> std::string serializeInYAML(T &Val) {
 }
 
 TEST(MemProf, YAMLWriterFrame) {
-  Frame F(11, 22, 33, true);
+  Frame F(0x0123456789abcdefULL, 22, 33, true);
 
   std::string Out = serializeInYAML(F);
   EXPECT_EQ(Out, R"YAML(---
-{ Function: 11, LineOffset: 22, Column: 33, IsInlineFrame: true }
+{ Function: 0x0123456789abcdef, LineOffset: 22, Column: 33, IsInlineFrame: true }
 ...
 )YAML");
 }
