@@ -55,7 +55,6 @@ void AtLeastOneOf() {
 #pragma acc data if(Var)
   ;
 
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented}}
 #pragma acc data async
   ;
 
@@ -80,7 +79,6 @@ void AtLeastOneOf() {
   // they don't have at least one of the above clauses.
 
 #pragma acc enter data if(Var)
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented}}
 #pragma acc enter data async
   // expected-warning@+1{{OpenACC clause 'wait' not yet implemented}}
 #pragma acc enter data wait
@@ -98,7 +96,6 @@ void AtLeastOneOf() {
   // they don't have at least one of the above clauses.
 
 #pragma acc exit data if(Var)
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented}}
 #pragma acc exit data async
   // expected-warning@+1{{OpenACC clause 'wait' not yet implemented}}
 #pragma acc exit data wait
@@ -167,7 +164,6 @@ void DataRules() {
   // expected-note@+1{{previous clause is here}}
 #pragma acc data device_type(*) if(Var)
   ;
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented}}
 #pragma acc data device_type(*) async
   ;
   // expected-warning@+1{{OpenACC clause 'wait' not yet implemented}}

@@ -43,4 +43,12 @@ void foo() {
 // CHECK: #pragma acc host_data if(i == array[1])
 #pragma acc host_data use_device(Var) if(i == array[1])
   ;
+
+// CHECK: #pragma acc data async(i)
+#pragma acc data default(none) async(i)
+  ;
+// CHECK: #pragma acc enter data async(i)
+#pragma acc enter data copyin(i) async(i)
+// CHECK: #pragma acc exit data async
+#pragma acc exit data copyout(i) async
 }
