@@ -366,8 +366,8 @@ namespace call_with_explicit_temporary_obj {
   }
   template <typename T>
   void bar() {
-    Ref { *provide() }->method();
-    RefPtr { provide() }->method();
+    Ref(*provide())->method();
+    RefPtr(provide())->method();
   }
   void baz() {
     bar<int>();
