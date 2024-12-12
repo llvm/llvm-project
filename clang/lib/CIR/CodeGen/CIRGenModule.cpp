@@ -2500,6 +2500,12 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(const Decl *decl,
                                                          FuncOp f) {
   mlir::NamedAttrList attrs{f.getExtraAttrs().getElements().getValue()};
 
+  if ((!decl || !decl->hasAttr<NoUwtableAttr>()) && codeGenOpts.UnwindTables) {
+    auto attr = cir::UWTableAttr::get(
+        &getMLIRContext(), cir::UWTableKind(codeGenOpts.UnwindTables));
+    attrs.set(attr.getMnemonic(), attr);
+  }
+
   if (!hasUnwindExceptions(getLangOpts())) {
     auto attr = cir::NoThrowAttr::get(&getMLIRContext());
     attrs.set(attr.getMnemonic(), attr);
@@ -3258,7 +3264,10 @@ void CIRGenModule::Release() {
     llvm_unreachable("NYI");
   assert(!MissingFeatures::directAccessExternalData());
   if (codeGenOpts.UnwindTables)
-    assert(!MissingFeatures::setUwtable());
+    theModule->setAttr(
+        cir::CIRDialect::getUWTableAttrName(),
+        cir::UWTableAttr::get(&getMLIRContext(),
+                              cir::UWTableKind(codeGenOpts.UnwindTables)));
 
   switch (codeGenOpts.getFramePointer()) {
   case CodeGenOptions::FramePointerKind::None:

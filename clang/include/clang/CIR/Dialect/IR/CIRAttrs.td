@@ -1134,6 +1134,36 @@ def ConvergentAttr : CIRUnitAttr<"Convergent", "convergent"> {
   let storageType = [{ ConvergentAttr }];
 }
 
+def UWTableKindNone
+    : I32EnumAttrCase<"None", 0, "none">;
+def UWTableKindSync
+    : I32EnumAttrCase<"Sync", 1, "sync">;
+def UWTableKindAsync
+    : I32EnumAttrCase<"Async", 2, "async">;
+
+def UWTableKind : I32EnumAttr<"UWTableKind", "Unwind table kind", [
+  UWTableKindNone, UWTableKindSync, UWTableKindAsync
+]> {
+  let cppNamespace = "::cir";
+  let genSpecializedAttr = 0;
+}
+
+def UWTableAttr : EnumAttr<CIR_Dialect, UWTableKind, "uwtable"> {
+  let summary = "Unwind table kind attribute";
+  let description = [{
+    The kind of unwind tables to generate for a function. `none` means no unwind
+    tables are generated; `sync` means synchronous unwind tables (that are only
+    valid at call boundaries), and `async` means asynchronous unwind tables
+    (that are valid at all instructions). When applied to a module, this
+    controls the unwind table generation for any synthesized functions.
+  }];
+
+  let cppClassName = "UWTableAttr";
+  let assemblyFormat = [{
+    `<` $value `>`
+  }];
+}
+
 class CIR_GlobalCtorDtor<string name, string attrMnemonic,
                          string sum, string desc>
     : CIR_Attr<"Global" # name, "global_" # attrMnemonic> {

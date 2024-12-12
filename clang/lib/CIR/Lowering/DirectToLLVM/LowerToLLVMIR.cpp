@@ -81,6 +81,10 @@ private:
       oclVerMD->addOperand(llvm::MDNode::get(llvmContext, oclVerElts));
     }
 
+    if (auto uwTableAttr =
+            mlir::dyn_cast<cir::UWTableAttr>(attribute.getValue()))
+      llvmModule->setUwtable(convertUWTableKind(uwTableAttr.getValue()));
+
     // Drop ammended CIR attribute from LLVM op.
     module->removeAttr(attribute.getName());
   }
@@ -129,6 +133,11 @@ private:
                            attr.getValue())) {
           emitOpenCLKernelArgMetadata(clArgMetadata, func.getNumArguments(),
                                       llvmFunc, moduleTranslation);
+        } else if (auto uwTableAttr =
+                       mlir::dyn_cast<cir::UWTableAttr>(attr.getValue())) {
+          llvm::AttrBuilder builder(llvmFunc->getContext());
+          builder.addUWTableAttr(convertUWTableKind(uwTableAttr.getValue()));
+          llvmFunc->addFnAttrs(builder);
         }
       }
     }
@@ -260,6 +269,19 @@ private:
     if (shouldEmitArgName)
       llvmFunc->setMetadata("kernel_arg_name",
                             llvm::MDNode::get(vmCtx, argNames));
+  }
+
+private:
+  static llvm::UWTableKind convertUWTableKind(cir::UWTableKind kind) {
+    // TODO(cir): Use UWTableKindAttr from the LLVM dialect when available.
+    switch (kind) {
+    case cir::UWTableKind::None:
+      return llvm::UWTableKind::None;
+    case cir::UWTableKind::Sync:
+      return llvm::UWTableKind::Sync;
+    case cir::UWTableKind::Async:
+      return llvm::UWTableKind::Async;
+    }
   }
 };
 

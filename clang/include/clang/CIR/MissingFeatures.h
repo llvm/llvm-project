@@ -361,7 +361,6 @@ struct MissingFeatures {
   static bool codeModel() { return false; }
   static bool largeDataThreshold() { return false; }
   static bool directAccessExternalData() { return false; }
-  static bool setUwtable() { return false; }
   static bool setFramePointer() { return false; }
   static bool simplifyPersonality() { return false; }
   static bool emitVersionIdentMetadata() { return false; }
