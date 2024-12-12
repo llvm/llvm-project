@@ -32,7 +32,8 @@ def tileslicerange2s4 : ComplexPattern<i32, 2, "SelectSMETileSlice<12, 4>", []>;
 def tileslicerange1s4 : ComplexPattern<i32, 2, "SelectSMETileSlice<4,  4>", []>;
 def tileslicerange0s4 : ComplexPattern<i32, 2, "SelectSMETileSlice<0,  4>", []>;
 
-def am_sme_indexed_b4 :ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<0,15>", [], [SDNPWantRoot]>;
+let WantsRoot = true in
+def am_sme_indexed_b4 : ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<0, 15>">;
 
 def SDTZALoadStore : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisInt<2>]>;
 def AArch64SMELdr : SDNode<"AArch64ISD::SME_ZA_LDR", SDTZALoadStore,

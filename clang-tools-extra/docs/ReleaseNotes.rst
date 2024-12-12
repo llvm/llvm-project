@@ -182,6 +182,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/forwarding-reference-overload>` check by fixing
   a crash when determining if an ``enable_if[_t]`` was found.
 
+- Improved :doc:`bugprone-optional-value-conversion
+  <clang-tidy/checks/bugprone/optional-value-conversion>` to support detecting
+  conversion directly by ``std::make_unique`` and ``std::make_shared``.
+
 - Improved :doc:`bugprone-posix-return
   <clang-tidy/checks/bugprone/posix-return>` check to support integer literals
   as LHS and posix call as RHS of comparison.

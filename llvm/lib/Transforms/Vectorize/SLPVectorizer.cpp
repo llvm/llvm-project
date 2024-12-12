@@ -20451,6 +20451,8 @@ private:
     case RecurKind::FMulAdd:
     case RecurKind::IAnyOf:
     case RecurKind::FAnyOf:
+    case RecurKind::IFindLastIV:
+    case RecurKind::FFindLastIV:
     case RecurKind::None:
       llvm_unreachable("Unexpected reduction kind for repeated scalar.");
     }
@@ -20548,6 +20550,8 @@ private:
     case RecurKind::FMulAdd:
     case RecurKind::IAnyOf:
     case RecurKind::FAnyOf:
+    case RecurKind::IFindLastIV:
+    case RecurKind::FFindLastIV:
     case RecurKind::None:
       llvm_unreachable("Unexpected reduction kind for reused scalars.");
     }
