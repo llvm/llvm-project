@@ -341,24 +341,6 @@ WarpOpTensorDescOp::matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
     return rewriter.notifyMatchFailure(
         descOp, "the tensor descriptor lacks sg_map attribute");
 
-  auto layout = sgMap.getWiLayout();
-
-  // Calculate the offset within tensor descriptor for the current lane_id. The
-  // access to proper element for a work item is done through a lane-specific
-  // subview (tdesc offsets are used as base, lane shift is added on top).
-  auto laneid = warpOp.getLaneid();
-  auto xDim =
-      rewriter.create<arith::ConstantIndexOp>(laneid.getLoc(), layout[0]);
-  auto shiftx = rewriter.create<arith::RemUIOp>(laneid.getLoc(), laneid, xDim);
-  auto shifty = rewriter.create<arith::DivUIOp>(laneid.getLoc(), laneid, xDim);
-
-  auto basex = getValueOrCreateConstantIndexOp(rewriter, laneid.getLoc(),
-                                               descOffsets[0]);
-  auto basey = getValueOrCreateConstantIndexOp(rewriter, laneid.getLoc(),
-                                               descOffsets[1]);
-  auto offsetx = rewriter.create<arith::AddIOp>(laneid.getLoc(), shiftx, basex);
-  auto offsety = rewriter.create<arith::AddIOp>(laneid.getLoc(), shifty, basey);
-
   auto distributedDescTypeOrFailure = getDistributedTensorDescType(
       descOp.getType(), sgMap, descOp.getType().getMemorySpace());
   if (failed(distributedDescTypeOrFailure))
@@ -378,15 +360,10 @@ WarpOpTensorDescOp::matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
       newRetIndices);
 
   rewriter.setInsertionPointAfter(newWarpOp);
-  auto subview = rewriter.create<memref::SubViewOp>(
-      newWarpOp.getLoc(), srcTypedVal, getAsOpFoldResult({offsetx, offsety}),
-      overwriteSizes, overwriteStrides);
-  subview.getSourceMutable().assign(newWarpOp.getResult(newRetIndices[0]));
-
-  auto zero = rewriter.create<arith::ConstantIndexOp>(laneid.getLoc(), 0);
   auto newDescOp = rewriter.create<xegpu::CreateNdDescOp>(
-      newWarpOp.getLoc(), newTDescType, subview,
-      getAsOpFoldResult({zero, zero}));
+      newWarpOp.getLoc(), newTDescType,
+      dyn_cast<TypedValue<MemRefType>>(newWarpOp.getResult(newRetIndices[0])),
+      descOffsets);
 
   Value distributedVal = newWarpOp.getResult(operandIdx);
   rewriter.replaceAllUsesWith(distributedVal, newDescOp);
