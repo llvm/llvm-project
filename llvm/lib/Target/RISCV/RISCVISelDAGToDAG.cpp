@@ -1026,13 +1026,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     unsigned ShAmt = N1C->getZExtValue();
     uint64_t Mask = N0.getConstantOperandVal(1);
 
-    // Optimize (shl (and X, C2), C) -> (slli (srliw X, C3), C3+C) where C2 has
-    // 32 leading zeros and C3 trailing zeros.
     if (ShAmt <= 32 && isShiftedMask_64(Mask)) {
       unsigned XLen = Subtarget->getXLen();
       unsigned LeadingZeros = XLen - llvm::bit_width(Mask);
       unsigned TrailingZeros = llvm::countr_zero(Mask);
       if (TrailingZeros > 0 && LeadingZeros == 32) {
+        // Optimize (shl (and X, C2), C) -> (slli (srliw X, C3), C3+C)
+        // where C2 has 32 leading zeros and C3 trailing zeros.
         SDNode *SRLIW = CurDAG->getMachineNode(
             RISCV::SRLIW, DL, VT, N0->getOperand(0),
             CurDAG->getTargetConstant(TrailingZeros, DL, VT));
@@ -1040,6 +1040,25 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
             RISCV::SLLI, DL, VT, SDValue(SRLIW, 0),
             CurDAG->getTargetConstant(TrailingZeros + ShAmt, DL, VT));
         ReplaceNode(Node, SLLI);
+        return;
+      }
+      if (TrailingZeros == 0 && LeadingZeros > ShAmt &&
+          XLen - LeadingZeros > 11 && LeadingZeros != 32) {
+        // Optimize (shl (and X, C2), C) -> (srli (slli X, C4), C4-C)
+        // where C2 has C4 leading zeros and no trailing zeros.
+        // This is profitable if the "and" was to be lowered to
+        // (srli (slli X, C4), C4) and not (andi X, C2).
+        // For "LeadingZeros == 32":
+        // - with Zba it's just (slli.uw X, C)
+        // - without Zba a tablegen pattern applies the very same
+        //   transform as we would have done here
+        SDNode *SLLI = CurDAG->getMachineNode(
+            RISCV::SLLI, DL, VT, N0->getOperand(0),
+            CurDAG->getTargetConstant(LeadingZeros, DL, VT));
+        SDNode *SRLI = CurDAG->getMachineNode(
+            RISCV::SRLI, DL, VT, SDValue(SLLI, 0),
+            CurDAG->getTargetConstant(LeadingZeros - ShAmt, DL, VT));
+        ReplaceNode(Node, SRLI);
         return;
       }
     }
