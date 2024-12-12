@@ -6,10 +6,18 @@
   },
   "functions": {
     "setjmp": {
-      "c-definition": "7.13.1.1"
+      "c-definition": "7.13.1.1",
+      "in-latest-posix": ""
     },
     "longjmp": {
-      "c-definition": "7.13.2.1"
+      "c-definition": "7.13.2.1",
+      "in-latest-posix": ""
+    },
+    "sigsetjmp": {
+      "in-latest-posix": ""
+    },
+    "siglongjmp": {
+      "in-latest-posix": ""
     }
   }
 }
