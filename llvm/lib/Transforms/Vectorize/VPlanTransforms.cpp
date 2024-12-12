@@ -1500,6 +1500,26 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                         *CI, VPID, Ops, TypeInfo.inferScalarType(CInst),
                         CInst->getDebugLoc());
                   })
+              .Case<VPWidenCastRecipe>(
+                  [&](VPWidenCastRecipe *CInst) -> VPRecipeBase * {
+                    auto *CI = dyn_cast<CastInst>(CInst->getUnderlyingInstr());
+                    Intrinsic::ID VPID =
+                        VPIntrinsic::getForOpcode(CI->getOpcode());
+                    assert(VPID != Intrinsic::not_intrinsic &&
+                           "Expected vp.casts Instrinsic");
+
+                    SmallVector<VPValue *> Ops(CInst->operands());
+                    assert(VPIntrinsic::getMaskParamPos(VPID) &&
+                           VPIntrinsic::getVectorLengthParamPos(VPID) &&
+                           "Expected VP intrinsic");
+                    VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(
+                        IntegerType::getInt1Ty(CI->getContext())));
+                    Ops.push_back(Mask);
+                    Ops.push_back(&EVL);
+                    return new VPWidenIntrinsicRecipe(
+                        VPID, Ops, TypeInfo.inferScalarType(CInst),
+                        CInst->getDebugLoc());
+                  })
               .Case<VPWidenSelectRecipe>([&](VPWidenSelectRecipe *Sel) {
                 SmallVector<VPValue *> Ops(Sel->operands());
                 Ops.push_back(&EVL);
@@ -1837,4 +1857,63 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
       PhiR->eraseFromParent();
     }
   }
+}
+
+void VPlanTransforms::handleUncountableEarlyExit(
+    VPlan &Plan, ScalarEvolution &SE, Loop *OrigLoop,
+    BasicBlock *UncountableExitingBlock, VPRecipeBuilder &RecipeBuilder) {
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  auto *LatchVPBB = cast<VPBasicBlock>(LoopRegion->getExiting());
+  VPBuilder Builder(LatchVPBB->getTerminator());
+  auto *MiddleVPBB = Plan.getMiddleBlock();
+  VPValue *IsEarlyExitTaken = nullptr;
+
+  // Process the uncountable exiting block. Update IsEarlyExitTaken, which
+  // tracks if the uncountable early exit has been taken. Also split the middle
+  // block and have it conditionally branch to the early exit block if
+  // EarlyExitTaken.
+  auto *EarlyExitingBranch =
+      cast<BranchInst>(UncountableExitingBlock->getTerminator());
+  BasicBlock *TrueSucc = EarlyExitingBranch->getSuccessor(0);
+  BasicBlock *FalseSucc = EarlyExitingBranch->getSuccessor(1);
+
+  // The early exit block may or may not be the same as the "countable" exit
+  // block. Creates a new VPIRBB for the early exit block in case it is distinct
+  // from the countable exit block.
+  // TODO: Introduce both exit blocks during VPlan skeleton construction.
+  VPIRBasicBlock *VPEarlyExitBlock;
+  if (OrigLoop->getUniqueExitBlock()) {
+    VPEarlyExitBlock = cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0]);
+  } else {
+    VPEarlyExitBlock = VPIRBasicBlock::fromBasicBlock(
+        !OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
+  }
+
+  VPValue *EarlyExitNotTakenCond = RecipeBuilder.getBlockInMask(
+      OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
+  auto *EarlyExitTakenCond = Builder.createNot(EarlyExitNotTakenCond);
+  IsEarlyExitTaken =
+      Builder.createNaryOp(VPInstruction::AnyOf, {EarlyExitTakenCond});
+
+  VPBasicBlock *NewMiddle = new VPBasicBlock("middle.split");
+  VPBlockUtils::insertOnEdge(LoopRegion, MiddleVPBB, NewMiddle);
+  VPBlockUtils::connectBlocks(NewMiddle, VPEarlyExitBlock);
+  NewMiddle->swapSuccessors();
+
+  VPBuilder MiddleBuilder(NewMiddle);
+  MiddleBuilder.createNaryOp(VPInstruction::BranchOnCond, {IsEarlyExitTaken});
+
+  // Replace the condition controlling the non-early exit from the vector loop
+  // with one exiting if either the original condition of the vector latch is
+  // true or the early exit has been taken.
+  auto *LatchExitingBranch = cast<VPInstruction>(LatchVPBB->getTerminator());
+  assert(LatchExitingBranch->getOpcode() == VPInstruction::BranchOnCount &&
+         "Unexpected terminator");
+  auto *IsLatchExitTaken =
+      Builder.createICmp(CmpInst::ICMP_EQ, LatchExitingBranch->getOperand(0),
+                         LatchExitingBranch->getOperand(1));
+  auto *AnyExitTaken = Builder.createNaryOp(
+      Instruction::Or, {IsEarlyExitTaken, IsLatchExitTaken});
+  Builder.createNaryOp(VPInstruction::BranchOnCond, AnyExitTaken);
+  LatchExitingBranch->eraseFromParent();
 }

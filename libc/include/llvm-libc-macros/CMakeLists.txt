@@ -315,3 +315,9 @@ add_macro_header(
   HDR
     locale-macros.h
 )
+
+add_macro_header(
+  pthread_macros
+  HDR
+    pthread-macros.h
+)

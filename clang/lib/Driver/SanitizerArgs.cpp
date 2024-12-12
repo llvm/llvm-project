@@ -418,8 +418,14 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                 Add & NotAllowedWithExecuteOnly & ~DiagnosedKinds) {
           if (DiagnoseErrors) {
             std::string Desc = describeSanitizeArg(Arg, KindsToDiagnose);
-            D.Diag(diag::err_drv_argument_not_allowed_with)
-                << Desc << Triple.str();
+            llvm::opt::Arg *A = Args.getLastArgNoClaim(
+                options::OPT_mexecute_only, options::OPT_mno_execute_only);
+            if (A && A->getOption().matches(options::OPT_mexecute_only))
+              D.Diag(diag::err_drv_argument_not_allowed_with)
+                  << Desc << A->getAsString(Args);
+            else
+              D.Diag(diag::err_drv_unsupported_opt_for_target)
+                  << Desc << Triple.str();
           }
           DiagnosedKinds |= KindsToDiagnose;
         }
