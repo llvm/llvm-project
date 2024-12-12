@@ -15,7 +15,6 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -56,6 +55,7 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timer.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-enumerations.h"
 
@@ -2200,7 +2200,7 @@ protected:
     }
 
     clang::CompilerInstance compiler;
-    compiler.createDiagnostics();
+    compiler.createDiagnostics(*FileSystem::Instance().GetVirtualFileSystem());
 
     const char *clang_args[] = {"clang", pcm_path};
     compiler.setInvocation(clang::createInvocation(clang_args));
@@ -2775,7 +2775,7 @@ protected:
           result.AppendErrorWithFormat(
               "Unable to locate the executable or symbol file with UUID %s",
               strm.GetData());
-          result.SetError(error);
+          result.SetError(std::move(error));
           return;
         }
       } else {
@@ -4409,7 +4409,7 @@ protected:
         return AddModuleSymbols(m_exe_ctx.GetTargetPtr(), module_spec, flush,
                                 result);
     } else {
-      result.SetError(error);
+      result.SetError(std::move(error));
     }
     return false;
   }

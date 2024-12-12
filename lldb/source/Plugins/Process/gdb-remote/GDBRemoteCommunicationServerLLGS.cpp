@@ -277,7 +277,7 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
     // lldb-server on Windows.
 #if !defined(_WIN32)
     if (llvm::Error Err = m_process_launch_info.SetUpPtyRedirection())
-      return Status(std::move(Err));
+      return Status::FromError(std::move(Err));
 #endif
   }
 
@@ -287,7 +287,7 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
                                            "process but one already exists");
     auto process_or = m_process_manager.Launch(m_process_launch_info, *this);
     if (!process_or)
-      return Status(process_or.takeError());
+      return Status::FromError(process_or.takeError());
     m_continue_process = m_current_process = process_or->get();
     m_debugged_processes.emplace(
         m_current_process->GetID(),
@@ -356,7 +356,7 @@ Status GDBRemoteCommunicationServerLLGS::AttachToProcess(lldb::pid_t pid) {
   // Try to attach.
   auto process_or = m_process_manager.Attach(pid, *this);
   if (!process_or) {
-    Status status(process_or.takeError());
+    Status status = Status::FromError(process_or.takeError());
     llvm::errs() << llvm::formatv("failed to attach to process {0}: {1}\n", pid,
                                   status);
     return status;
@@ -1367,7 +1367,7 @@ GDBRemoteCommunicationServerLLGS::Handle_jLLDBTraceGetBinaryData(
       llvm::json::parse<TraceGetBinaryDataRequest>(packet.Peek(),
                                                    "TraceGetBinaryDataRequest");
   if (!request)
-    return SendErrorResponse(Status(request.takeError()));
+    return SendErrorResponse(Status::FromError(request.takeError()));
 
   if (Expected<std::vector<uint8_t>> bytes =
           m_current_process->TraceGetBinaryData(*request)) {
@@ -2526,28 +2526,18 @@ GDBRemoteCommunicationServerLLGS::Handle_memory_read(
   size_t bytes_read = 0;
   Status error = m_current_process->ReadMemoryWithoutTrap(
       read_addr, &buf[0], byte_count, bytes_read);
-  if (error.Fail()) {
-    LLDB_LOGF(log,
-              "GDBRemoteCommunicationServerLLGS::%s pid %" PRIu64
-              " mem 0x%" PRIx64 ": failed to read. Error: %s",
-              __FUNCTION__, m_current_process->GetID(), read_addr,
-              error.AsCString());
+  LLDB_LOG(
+      log,
+      "ReadMemoryWithoutTrap({0}) read {1} of {2} requested bytes (error: {3})",
+      read_addr, byte_count, bytes_read, error);
+  if (bytes_read == 0)
     return SendErrorResponse(0x08);
-  }
-
-  if (bytes_read == 0) {
-    LLDB_LOGF(log,
-              "GDBRemoteCommunicationServerLLGS::%s pid %" PRIu64
-              " mem 0x%" PRIx64 ": read 0 of %" PRIu64 " requested bytes",
-              __FUNCTION__, m_current_process->GetID(), read_addr, byte_count);
-    return SendErrorResponse(0x08);
-  }
 
   StreamGDBRemote response;
   packet.SetFilePos(0);
   char kind = packet.GetChar('?');
   if (kind == 'x')
-    response.PutEscapedBytes(buf.data(), byte_count);
+    response.PutEscapedBytes(buf.data(), bytes_read);
   else {
     assert(kind == 'm');
     for (size_t i = 0; i < bytes_read; ++i)

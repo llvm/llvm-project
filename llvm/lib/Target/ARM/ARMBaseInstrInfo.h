@@ -546,19 +546,6 @@ public:
 
   std::optional<RegImmPair> isAddImmediate(const MachineInstr &MI,
                                            Register Reg) const override;
-
-  unsigned getUndefInitOpcode(unsigned RegClassID) const override {
-    if (RegClassID == ARM::MQPRRegClass.getID())
-      return ARM::PseudoARMInitUndefMQPR;
-    if (RegClassID == ARM::SPRRegClass.getID())
-      return ARM::PseudoARMInitUndefSPR;
-    if (RegClassID == ARM::DPR_VFP2RegClass.getID())
-      return ARM::PseudoARMInitUndefDPR_VFP2;
-    if (RegClassID == ARM::GPRRegClass.getID())
-      return ARM::PseudoARMInitUndefGPR;
-
-    llvm_unreachable("Unexpected register class.");
-  }
 };
 
 /// Get the operands corresponding to the given \p Pred value. By default, the
@@ -985,6 +972,34 @@ inline bool isGatherScatter(IntrinsicInst *IntInst) {
 unsigned getBLXOpcode(const MachineFunction &MF);
 unsigned gettBLXrOpcode(const MachineFunction &MF);
 unsigned getBLXpredOpcode(const MachineFunction &MF);
+
+inline bool isMVEVectorInstruction(const MachineInstr *MI) {
+  // This attempts to remove non-mve instructions (scalar shifts), which
+  // are just DPU CX instruction.
+  switch (MI->getOpcode()) {
+  case ARM::MVE_SQSHL:
+  case ARM::MVE_SRSHR:
+  case ARM::MVE_UQSHL:
+  case ARM::MVE_URSHR:
+  case ARM::MVE_SQRSHR:
+  case ARM::MVE_UQRSHL:
+  case ARM::MVE_ASRLr:
+  case ARM::MVE_ASRLi:
+  case ARM::MVE_LSLLr:
+  case ARM::MVE_LSLLi:
+  case ARM::MVE_LSRL:
+  case ARM::MVE_SQRSHRL:
+  case ARM::MVE_SQSHLL:
+  case ARM::MVE_SRSHRL:
+  case ARM::MVE_UQRSHLL:
+  case ARM::MVE_UQSHLL:
+  case ARM::MVE_URSHRL:
+    return false;
+  }
+  const MCInstrDesc &MCID = MI->getDesc();
+  uint64_t Flags = MCID.TSFlags;
+  return (Flags & ARMII::DomainMask) == ARMII::DomainMVE;
+}
 
 } // end namespace llvm
 

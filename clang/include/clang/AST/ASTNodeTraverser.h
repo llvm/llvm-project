@@ -439,6 +439,11 @@ public:
   void VisitBTFTagAttributedType(const BTFTagAttributedType *T) {
     Visit(T->getWrappedType());
   }
+  void VisitHLSLAttributedResourceType(const HLSLAttributedResourceType *T) {
+    QualType Contained = T->getContainedType();
+    if (!Contained.isNull())
+      Visit(Contained);
+  }
   void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *) {}
   void
   VisitSubstTemplateTypeParmPackType(const SubstTemplateTypeParmPackType *T) {
@@ -793,6 +798,13 @@ public:
   void VisitAttributedStmt(const AttributedStmt *Node) {
     for (const auto *A : Node->getAttrs())
       Visit(A);
+  }
+
+  void VisitLabelStmt(const LabelStmt *Node) {
+    if (Node->getDecl()->hasAttrs()) {
+      for (const auto *A : Node->getDecl()->getAttrs())
+        Visit(A);
+    }
   }
 
   void VisitCXXCatchStmt(const CXXCatchStmt *Node) {

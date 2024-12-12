@@ -15,5 +15,118 @@
 #define LLVM_CLANG_CIR_DIALECT_IR_CIROPS
 
 include "clang/CIR/Dialect/IR/CIRDialect.td"
+include "clang/CIR/Dialect/IR/CIRTypes.td"
+
+include "mlir/IR/BuiltinAttributeInterfaces.td"
+include "mlir/IR/EnumAttr.td"
+include "mlir/IR/SymbolInterfaces.td"
+include "mlir/IR/CommonAttrConstraints.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/FunctionInterfaces.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Interfaces/LoopLikeInterface.td"
+include "mlir/Interfaces/MemorySlotInterfaces.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
+
+//===----------------------------------------------------------------------===//
+// CIR Ops
+//===----------------------------------------------------------------------===//
+
+// LLVMLoweringInfo is used by cir-tablegen to generate LLVM lowering logic
+// automatically for CIR operations. The `llvmOp` field gives the name of the
+// LLVM IR dialect operation that the CIR operation will be lowered to. The
+// input arguments of the CIR operation will be passed in the same order to the
+// lowered LLVM IR operation.
+//
+// Example:
+//
+// For the following CIR operation definition:
+//
+//   def FooOp : CIR_Op<"foo"> {
+//     // ...
+//     let arguments = (ins CIR_AnyType:$arg1, CIR_AnyType:$arg2);
+//     let llvmOp = "BarOp";
+//   }
+//
+// cir-tablegen will generate LLVM lowering code for the FooOp similar to the
+// following:
+//
+//   class CIRFooOpLowering
+//       : public mlir::OpConversionPattern<cir::FooOp> {
+//   public:
+//     using OpConversionPattern<cir::FooOp>::OpConversionPattern;
+//
+//     mlir::LogicalResult matchAndRewrite(
+//         cir::FooOp op,
+//         OpAdaptor adaptor,
+//         mlir::ConversionPatternRewriter &rewriter) const override {
+//       rewriter.replaceOpWithNewOp<mlir::LLVM::BarOp>(
+//         op, adaptor.getOperands()[0], adaptor.getOperands()[1]);
+//       return mlir::success();
+//     }
+//   }
+//
+// If you want fully customized LLVM IR lowering logic, simply exclude the
+// `llvmOp` field from your CIR operation definition.
+class LLVMLoweringInfo {
+  string llvmOp = "";
+}
+
+class CIR_Op<string mnemonic, list<Trait> traits = []> :
+    Op<CIR_Dialect, mnemonic, traits>, LLVMLoweringInfo;
+
+//===----------------------------------------------------------------------===//
+// GlobalOp
+//===----------------------------------------------------------------------===//
+
+// TODO(CIR): For starters, cir.global has only name and type.  The other
+// properties of a global variable will be added over time as more of ClangIR
+// is upstreamed.
+
+def GlobalOp : CIR_Op<"global"> {
+  let summary = "Declare or define a global variable";
+  let description = [{
+    The `cir.global` operation declares or defines a named global variable.
+
+    The backing memory for the variable is allocated statically and is
+    described by the type of the variable.
+  }];
+
+  let arguments = (ins SymbolNameAttr:$sym_name, TypeAttr:$sym_type);
+
+  let assemblyFormat = [{ $sym_name `:` $sym_type attr-dict }];
+
+  let skipDefaultBuilders = 1;
+
+  let builders = [OpBuilder<(ins "llvm::StringRef":$sym_name,
+                                 "mlir::Type":$sym_type)>];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// FuncOp
+//===----------------------------------------------------------------------===//
+
+// TODO(CIR): For starters, cir.func has only name, nothing else.  The other
+// properties of a function will be added over time as more of ClangIR is
+// upstreamed.
+
+def FuncOp : CIR_Op<"func"> {
+  let summary = "Declare or define a function";
+  let description = [{
+    The `cir.func` operation defines a function, similar to the `mlir::FuncOp`
+    built-in.
+  }];
+
+  let arguments = (ins SymbolNameAttr:$sym_name);
+
+  let skipDefaultBuilders = 1;
+
+  let builders = [OpBuilder<(ins "llvm::StringRef":$sym_name)>];
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+}
 
 #endif // LLVM_CLANG_CIR_DIALECT_IR_CIROPS

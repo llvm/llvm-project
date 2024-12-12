@@ -121,7 +121,7 @@ template <typename T> struct TypeListContainsSuperOf<EmptyTypeList, T> {
 template <typename ResultT, typename ArgT,
           ResultT (*Func)(ArrayRef<const ArgT *>)>
 struct VariadicFunction {
-  ResultT operator()() const { return Func(std::nullopt); }
+  ResultT operator()() const { return Func({}); }
 
   template <typename... ArgsT>
   ResultT operator()(const ArgT &Arg1, const ArgsT &... Args) const {
@@ -160,6 +160,9 @@ inline QualType getUnderlyingType(const FriendDecl &Node) {
 }
 inline QualType getUnderlyingType(const CXXBaseSpecifier &Node) {
   return Node.getType();
+}
+inline QualType getUnderlyingType(const ObjCInterfaceDecl &Node) {
+  return Node.getTypeForDecl()->getPointeeType();
 }
 
 /// Unifies obtaining a `TypeSourceInfo` from different node types.
@@ -1113,6 +1116,11 @@ private:
     return matchesDecl(Node.getDecl(), Finder, Builder);
   }
 
+  bool matchesSpecialized(const ObjCInterfaceDecl &Node, ASTMatchFinder *Finder,
+                          BoundNodesTreeBuilder *Builder) const {
+    return matchesDecl(Node.getCanonicalDecl(), Finder, Builder);
+  }
+
   /// Extracts the operator new of the new call and returns whether the
   /// inner matcher matches on it.
   bool matchesSpecialized(const CXXNewExpr &Node,
@@ -1213,7 +1221,7 @@ using HasDeclarationSupportedTypes =
              ElaboratedType, InjectedClassNameType, LabelStmt, AddrLabelExpr,
              MemberExpr, QualType, RecordType, TagType,
              TemplateSpecializationType, TemplateTypeParmType, TypedefType,
-             UnresolvedUsingType, ObjCIvarRefExpr>;
+             UnresolvedUsingType, ObjCIvarRefExpr, ObjCInterfaceDecl>;
 
 /// A Matcher that allows binding the node it matches to an id.
 ///
@@ -1949,35 +1957,35 @@ inline ArrayRef<TemplateArgument>
 getTemplateSpecializationArgs(const FunctionDecl &FD) {
   if (const auto* TemplateArgs = FD.getTemplateSpecializationArgs())
     return TemplateArgs->asArray();
-  return std::nullopt;
+  return {};
 }
 
 inline ArrayRef<TemplateArgumentLoc>
 getTemplateArgsWritten(const ClassTemplateSpecializationDecl &D) {
   if (const ASTTemplateArgumentListInfo *Args = D.getTemplateArgsAsWritten())
     return Args->arguments();
-  return std::nullopt;
+  return {};
 }
 
 inline ArrayRef<TemplateArgumentLoc>
 getTemplateArgsWritten(const VarTemplateSpecializationDecl &D) {
   if (const ASTTemplateArgumentListInfo *Args = D.getTemplateArgsAsWritten())
     return Args->arguments();
-  return std::nullopt;
+  return {};
 }
 
 inline ArrayRef<TemplateArgumentLoc>
 getTemplateArgsWritten(const FunctionDecl &FD) {
   if (const auto *Args = FD.getTemplateSpecializationArgsAsWritten())
     return Args->arguments();
-  return std::nullopt;
+  return {};
 }
 
 inline ArrayRef<TemplateArgumentLoc>
 getTemplateArgsWritten(const DeclRefExpr &DRE) {
   if (const auto *Args = DRE.getTemplateArgs())
     return {Args, DRE.getNumTemplateArgs()};
-  return std::nullopt;
+  return {};
 }
 
 inline SmallVector<TemplateArgumentLoc>

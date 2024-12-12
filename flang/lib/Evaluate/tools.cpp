@@ -1011,6 +1011,9 @@ struct CollectCudaSymbolsHelper : public SetTraverse<CollectCudaSymbolsHelper,
   }
   // Overload some of the operator() to filter out the symbols that are not
   // of interest for CUDA data transfer logic.
+  semantics::UnorderedSymbolSet operator()(const DescriptorInquiry &) const {
+    return {};
+  }
   semantics::UnorderedSymbolSet operator()(const Subscript &) const {
     return {};
   }
@@ -1046,6 +1049,23 @@ struct HasVectorSubscriptHelper
 
 bool HasVectorSubscript(const Expr<SomeType> &expr) {
   return HasVectorSubscriptHelper{}(expr);
+}
+
+// HasConstant()
+struct HasConstantHelper : public AnyTraverse<HasConstantHelper, bool,
+                               /*TraverseAssocEntityDetails=*/false> {
+  using Base = AnyTraverse<HasConstantHelper, bool, false>;
+  HasConstantHelper() : Base{*this} {}
+  using Base::operator();
+  template <typename T> bool operator()(const Constant<T> &) const {
+    return true;
+  }
+  // Only look for constant not in subscript.
+  bool operator()(const Subscript &) const { return false; }
+};
+
+bool HasConstant(const Expr<SomeType> &expr) {
+  return HasConstantHelper{}(expr);
 }
 
 parser::Message *AttachDeclaration(
@@ -1317,8 +1337,10 @@ std::optional<Expr<SomeType>> HollerithToBOZ(FoldingContext &context,
 
 // Extracts a whole symbol being used as a bound of a dummy argument,
 // possibly wrapped with parentheses or MAX(0, ...).
+// Works with any integer expression.
+template <typename T> const Symbol *GetBoundSymbol(const Expr<T> &);
 template <int KIND>
-static const Symbol *GetBoundSymbol(
+const Symbol *GetBoundSymbol(
     const Expr<Type<TypeCategory::Integer, KIND>> &expr) {
   using T = Type<TypeCategory::Integer, KIND>;
   return common::visit(
@@ -1355,9 +1377,15 @@ static const Symbol *GetBoundSymbol(
       },
       expr.u);
 }
+template <>
+const Symbol *GetBoundSymbol<SomeInteger>(const Expr<SomeInteger> &expr) {
+  return common::visit(
+      [](const auto &kindExpr) { return GetBoundSymbol(kindExpr); }, expr.u);
+}
 
+template <typename T>
 std::optional<bool> AreEquivalentInInterface(
-    const Expr<SubscriptInteger> &x, const Expr<SubscriptInteger> &y) {
+    const Expr<T> &x, const Expr<T> &y) {
   auto xVal{ToInt64(x)};
   auto yVal{ToInt64(y)};
   if (xVal && yVal) {
@@ -1391,6 +1419,10 @@ std::optional<bool> AreEquivalentInInterface(
     return std::nullopt; // not sure
   }
 }
+template std::optional<bool> AreEquivalentInInterface<SubscriptInteger>(
+    const Expr<SubscriptInteger> &, const Expr<SubscriptInteger> &);
+template std::optional<bool> AreEquivalentInInterface<SomeInteger>(
+    const Expr<SomeInteger> &, const Expr<SomeInteger> &);
 
 bool CheckForCoindexedObject(parser::ContextualMessages &messages,
     const std::optional<ActualArgument> &arg, const std::string &procName,
@@ -1697,7 +1729,7 @@ bool IsSaved(const Symbol &original) {
           (features.IsEnabled(
                common::LanguageFeature::SaveBigMainProgramVariables) &&
               symbol.size() > 32)) &&
-      Fortran::evaluate::CanCUDASymbolHasSave(symbol)) {
+      Fortran::evaluate::CanCUDASymbolHaveSaveAttr(symbol)) {
     // With SaveBigMainProgramVariables, keeping all unsaved main program
     // variables of 32 bytes or less on the stack allows keeping numerical and
     // logical scalars, small scalar characters or derived, small arrays, and
@@ -1973,6 +2005,39 @@ std::optional<int> GetDummyArgumentNumber(const Symbol *symbol) {
     }
   }
   return std::nullopt;
+}
+
+// Given a symbol that is a SubprogramNameDetails in a submodule, try to
+// find its interface definition in its module or ancestor submodule.
+const Symbol *FindAncestorModuleProcedure(const Symbol *symInSubmodule) {
+  if (symInSubmodule && symInSubmodule->owner().IsSubmodule()) {
+    if (const auto *nameDetails{
+            symInSubmodule->detailsIf<semantics::SubprogramNameDetails>()};
+        nameDetails &&
+        nameDetails->kind() == semantics::SubprogramKind::Module) {
+      const Symbol *next{symInSubmodule->owner().symbol()};
+      while (const Symbol * submodSym{next}) {
+        next = nullptr;
+        if (const auto *modDetails{
+                submodSym->detailsIf<semantics::ModuleDetails>()};
+            modDetails && modDetails->isSubmodule() && modDetails->scope()) {
+          if (const semantics::Scope & parent{modDetails->scope()->parent()};
+              parent.IsSubmodule() || parent.IsModule()) {
+            if (auto iter{parent.find(symInSubmodule->name())};
+                iter != parent.end()) {
+              const Symbol &proc{iter->second->GetUltimate()};
+              if (IsProcedure(proc)) {
+                return &proc;
+              }
+            } else if (parent.IsSubmodule()) {
+              next = parent.symbol();
+            }
+          }
+        }
+      }
+    }
+  }
+  return nullptr;
 }
 
 } // namespace Fortran::semantics

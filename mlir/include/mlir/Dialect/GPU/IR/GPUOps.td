@@ -353,7 +353,7 @@ def GPU_OptionalDimSizeHintAttr : ConfinedAttr<OptionalAttr<DenseI32ArrayAttr>,
 
 def GPU_GPUFuncOp : GPU_Op<"func", [
     HasParent<"GPUModuleOp">, AutomaticAllocationScope, FunctionOpInterface,
-    IsolatedFromAbove
+    IsolatedFromAbove, AffineScope
   ]> {
   let summary = "Function executable on a GPU";
 
@@ -803,7 +803,9 @@ def GPU_LaunchOp : GPU_Op<"launch", [
                Optional<Index>:$clusterSizeX,
                Optional<Index>:$clusterSizeY,
                Optional<Index>:$clusterSizeZ,
-               Optional<I32>:$dynamicSharedMemorySize)>,
+               Optional<I32>:$dynamicSharedMemorySize,
+               OptionalAttr<SymbolRefAttr>:$kernelFunc,
+               OptionalAttr<SymbolRefAttr>:$kernelModule)>,
     Results<(outs Optional<GPU_AsyncToken>:$asyncToken)> {
   let summary = "GPU kernel launch operation";
 
@@ -836,6 +838,9 @@ def GPU_LaunchOp : GPU_Op<"launch", [
         grid and block sizes).
     -   a variadic number of Workgroup memory attributions.
     -   a variadic number of Private memory attributions.
+
+    The `kernelFunc` and `kernelModule` attributes are optional and specifies
+    the kernel name and a module in which the kernel should be outlined. 
 
     Syntax:
 
@@ -1097,6 +1102,10 @@ def GPU_YieldOp : GPU_Op<"yield", [Pure, ReturnLike, Terminator]>,
     ```
   }];
 
+  let builders = [
+    OpBuilder<(ins), [{ /* nothing to do */ }]>
+  ];
+
   let assemblyFormat = "attr-dict ($values^ `:` type($values))?";
 }
 
@@ -1200,10 +1209,12 @@ def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]
     The `subgroup_reduce` op reduces the values of lanes (work items) across a
     subgroup.
 
-    The subgroup is divided into clusters of `cluster_size` contiguous lanes
-    each, and a reduction is done for every lane of each cluster (in parallel).
-    The result is equal for all lanes in a cluster. When `cluster_size` is
-    omitted, there is a single cluster covering the entire subgroup.
+    The subgroup is divided into clusters starting at lane index 0. Within each
+    cluster, there are `size` lanes, and the lane index advances by `stride`.
+    A reduction is done for each cluster in parallel: every lane in the cluster
+    is reduced, and the result is equal for all lanes in the cluster. If `size`
+    is omitted, there is a single cluster covering the entire subgroup. If
+    `stride` is omitted, the stride is 1 (the cluster's lanes are contiguous).
 
     When the reduced value is of a vector type, each vector element is reduced
     independently. Only 1-d vector types are allowed.
@@ -1213,7 +1224,8 @@ def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]
     ```mlir
     %1 = gpu.subgroup_reduce add %a : (f32) -> f32
     %2 = gpu.subgroup_reduce add %b : (vector<4xf16>) -> vector<4xf16>
-    %3 = gpu.subgroup_reduce add %c cluster_size(4) : (f32) -> f32
+    %3 = gpu.subgroup_reduce add %c cluster(size = 4) : (f32) -> f32
+    %3 = gpu.subgroup_reduce add %c cluster(size = 4, stride = 2) : (f32) -> f32
     ```
 
     If `uniform` flag is set either none or all lanes of a subgroup need to execute
@@ -1230,7 +1242,8 @@ def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]
     AnyIntegerOrFloatOr1DVector:$value,
     GPU_AllReduceOperationAttr:$op,
     UnitAttr:$uniform,
-    OptionalAttr<I32Attr>:$cluster_size
+    OptionalAttr<I32Attr>:$cluster_size,
+    DefaultValuedAttr<I32Attr,"1">:$cluster_stride
   );
   let results = (outs AnyIntegerOrFloatOr1DVector:$result);
 
@@ -1238,19 +1251,29 @@ def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]
     OpBuilder<(ins "Value":$value,
                "::mlir::gpu::AllReduceOperation":$op,
                "bool":$uniform), [{
-      build($_builder, $_state, value, op, uniform, /*cluster_size=*/ nullptr);
+      build($_builder, $_state, value, op, uniform, std::nullopt);
     }]>,
     OpBuilder<(ins "Value":$value,
                "::mlir::gpu::AllReduceOperation":$op,
                "bool":$uniform,
                "std::optional<uint32_t>":$cluster_size), [{
-      build($_builder, $_state, value, op, uniform, cluster_size ? $_builder.getI32IntegerAttr(*cluster_size) : nullptr);
+      build($_builder, $_state, value, op, uniform,
+            cluster_size ? $_builder.getI32IntegerAttr(*cluster_size) : nullptr);
+    }]>,
+    OpBuilder<(ins "Value":$value,
+               "::mlir::gpu::AllReduceOperation":$op,
+               "bool":$uniform,
+               "std::optional<uint32_t>":$cluster_size,
+               "uint32_t":$cluster_stride), [{
+      build($_builder, $_state, value, op, uniform,
+            cluster_size ? $_builder.getI32IntegerAttr(*cluster_size) : nullptr,
+            cluster_stride);
     }]>
   ];
 
   let assemblyFormat = [{ custom<AllReduceOperation>($op) $value
                           (`uniform` $uniform^)?
-                          (`cluster_size` `(` $cluster_size^ `)`)?
+                          (`cluster` `(` `size` `=` $cluster_size^ (`,` `stride` `=` $cluster_stride^)? `)`)?
                           attr-dict
                           `:` functional-type(operands, results) }];
 
@@ -2904,6 +2927,140 @@ def GPU_SetCsrPointersOp : GPU_Op<"set_csr_pointers", [GPU_AsyncOpInterface]> {
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
       $spmat `,` $positions `,` $coordinates `,` $values attr-dict
         `:` type($positions) `,` type($coordinates) `,` type($values)
+  }];
+}
+
+def GPU_WarpExecuteOnLane0Op : GPU_Op<"warp_execute_on_lane_0",
+      [DeclareOpInterfaceMethods<RegionBranchOpInterface, ["areTypesCompatible"]>,
+       SingleBlockImplicitTerminator<"gpu::YieldOp">,
+       RecursiveMemoryEffects]> {
+  let summary = "Executes operations in the associated region on thread #0 of a"
+                "SPMD program";
+  let description = [{
+    `warp_execute_on_lane_0` is an operation used to bridge the gap between
+    vector programming and SPMD programming model like GPU SIMT. It allows to
+    trivially convert a region of vector code meant to run on a multiple threads
+    into a valid SPMD region and then allows incremental transformation to
+    distribute vector operations on the threads.
+
+    Any code present in the region would only be executed on first thread/lane
+    based on the `laneid` operand. The `laneid` operand is an integer ID between
+    [0, `warp_size`). The `warp_size` attribute indicates the number of lanes in
+    a warp.
+
+    Operands are vector values distributed on all lanes that may be used by
+    the single lane execution. The matching region argument is a vector of all
+    the values of those lanes available to the single active lane. The
+    distributed dimension is implicit based on the shape of the operand and
+    argument. the properties of the distribution may be described by extra
+    attributes (e.g. affine map).
+
+    Return values are distributed on all lanes using laneId as index. The
+    vector is distributed based on the shape ratio between the vector type of
+    the yield and the result type.
+    If the shapes are the same this means the value is broadcasted to all lanes.
+    In the future the distribution can be made more explicit using affine_maps
+    and will support having multiple Ids.
+
+    Therefore the `warp_execute_on_lane_0` operations allow to implicitly copy
+    between lane0 and the lanes of the warp. When distributing a vector
+    from lane0 to all the lanes, the data are distributed in a block cyclic way.
+    For example `vector<64xf32>` gets distributed on 32 threads and map to
+    `vector<2xf32>` where thread 0 contains vector[0] and vector[1].
+
+    During lowering values passed as operands and return value need to be
+    visible to different lanes within the warp. This would usually be done by
+    going through memory.
+
+    The region is *not* isolated from above. For values coming from the parent
+    region not going through operands only the lane 0 value will be accesible so
+    it generally only make sense for uniform values.
+
+    Example:
+    ```
+    // Execute in parallel on all threads/lanes.
+    gpu.warp_execute_on_lane_0 (%laneid)[32] {
+      // Serial code running only on thread/lane 0.
+      ...
+    }
+    // Execute in parallel on all threads/lanes.
+    ```
+
+    This may be lowered to an scf.if region as below:
+    ```
+      // Execute in parallel on all threads/lanes.
+      %cnd = arith.cmpi eq, %laneid, %c0 : index
+      scf.if %cnd {
+        // Serial code running only on thread/lane 0.
+        ...
+      }
+      // Execute in parallel on all threads/lanes.
+    ```
+
+    When the region has operands and/or return values:
+    ```
+    // Execute in parallel on all threads/lanes.
+    %0 = gpu.warp_execute_on_lane_0(%laneid)[32]
+    args(%v0 : vector<4xi32>) -> (vector<1xf32>) {
+    ^bb0(%arg0 : vector<128xi32>) :
+      // Serial code running only on thread/lane 0.
+      ...
+      gpu.yield %1 : vector<32xf32>
+    }
+    // Execute in parallel on all threads/lanes.
+    ```
+
+    values at the region boundary would go through memory:
+    ```
+    // Execute in parallel on all threads/lanes.
+    ...
+    // Store the data from each thread into memory and Synchronization.
+    %tmp0 = memreg.alloc() : memref<128xf32>
+    %tmp1 = memreg.alloc() : memref<32xf32>
+    %cnd = arith.cmpi eq, %laneid, %c0 : index
+    vector.store %v0, %tmp0[%laneid] : memref<128xf32>, vector<4xf32>
+    some_synchronization_primitive
+    scf.if %cnd {
+      // Serialized code running only on thread 0.
+      // Load the data from all the threads into a register from thread 0. This
+      // allow threads 0 to access data from all the threads.
+      %arg0 = vector.load %tmp0[%c0] : memref<128xf32>, vector<128xf32>
+      ...
+      // Store the data from thread 0 into memory.
+      vector.store %1, %tmp1[%c0] : memref<32xf32>, vector<32xf32>
+    }
+    // Synchronization and load the data in a block cyclic way so that the
+    // vector is distributed on all threads.
+    some_synchronization_primitive
+    %0 = vector.load %tmp1[%laneid] : memref<32xf32>, vector<32xf32>
+    // Execute in parallel on all threads/lanes.
+    ```
+
+  }];
+
+  let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
+  let arguments = (ins Index:$laneid, I64Attr:$warp_size,
+                       Variadic<AnyType>:$args);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region SizedRegion<1>:$warpRegion);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "TypeRange":$resultTypes, "Value":$laneid,
+                   "int64_t":$warpSize)>,
+    // `blockArgTypes` are different than `args` types as they are they
+    // represent all the `args` instances visibile to lane 0. Therefore we need
+    // to explicit pass the type.
+    OpBuilder<(ins "TypeRange":$resultTypes, "Value":$laneid,
+                   "int64_t":$warpSize, "ValueRange":$args,
+                   "TypeRange":$blockArgTypes)>
+  ];
+
+  let extraClassDeclaration = [{
+    bool isDefinedOutsideOfRegion(Value value) {
+      return !getRegion().isAncestor(value.getParentRegion());
+    }
   }];
 }
 

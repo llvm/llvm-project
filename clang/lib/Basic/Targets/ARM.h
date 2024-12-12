@@ -196,7 +196,8 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  std::pair<const char *, ArrayRef<Builtin::Info>>
+  getTargetBuiltinStorage() const override;
 
   bool isCLZForZeroUndef() const override;
   BuiltinVaListKind getBuiltinVaListKind() const override;
@@ -308,17 +309,6 @@ protected:
 
 public:
   DarwinARMTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
-};
-
-// 32-bit RenderScript is armv7 with width and align of 'long' set to 8-bytes
-class LLVM_LIBRARY_VISIBILITY RenderScript32TargetInfo
-    : public ARMleTargetInfo {
-public:
-  RenderScript32TargetInfo(const llvm::Triple &Triple,
-                           const TargetOptions &Opts);
-
-  void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override;
 };
 
 } // namespace targets

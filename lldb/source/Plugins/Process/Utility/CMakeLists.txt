@@ -9,6 +9,7 @@ add_lldb_library(lldbPluginProcessUtility
   LinuxSignals.cpp
   MemoryTagManagerAArch64MTE.cpp
   NativeProcessSoftwareSingleStep.cpp
+  NativeRegisterContextDBReg.cpp
   NativeRegisterContextDBReg_arm64.cpp
   NativeRegisterContextDBReg_x86.cpp
   NativeRegisterContextRegisterInfo.cpp
@@ -66,6 +67,7 @@ add_lldb_library(lldbPluginProcessUtility
     lldbSymbol
     lldbTarget
     lldbUtility
+    lldbValueObject
   LINK_COMPONENTS
     Support
     TargetParser

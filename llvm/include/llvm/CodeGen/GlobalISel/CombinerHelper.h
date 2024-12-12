@@ -20,6 +20,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/InstrTypes.h"
@@ -320,6 +321,9 @@ public:
   bool matchCombineMulToShl(MachineInstr &MI, unsigned &ShiftVal);
   void applyCombineMulToShl(MachineInstr &MI, unsigned &ShiftVal);
 
+  // Transform a G_SUB with constant on the RHS to G_ADD.
+  bool matchCombineSubToAdd(MachineInstr &MI, BuildFnTy &MatchInfo);
+
   // Transform a G_SHL with an extended source into a narrower shift if
   // possible.
   bool matchCombineShlOfExtend(MachineInstr &MI, RegisterImmPair &MatchData);
@@ -599,6 +603,9 @@ public:
   bool matchRotateOutOfRange(MachineInstr &MI);
   void applyRotateOutOfRange(MachineInstr &MI);
 
+  bool matchUseVectorTruncate(MachineInstr &MI, Register &MatchInfo);
+  void applyUseVectorTruncate(MachineInstr &MI, Register &MatchInfo);
+
   /// \returns true if a G_ICMP instruction \p MI can be replaced with a true
   /// or false constant based off of KnownBits information.
   bool matchICmpToTrueFalseKnownBits(MachineInstr &MI, int64_t &MatchInfo);
@@ -831,6 +838,12 @@ public:
   /// Combine ors.
   bool matchOr(MachineInstr &MI, BuildFnTy &MatchInfo);
 
+  /// trunc (binop X, C) --> binop (trunc X, trunc C).
+  bool matchNarrowBinop(const MachineInstr &TruncMI,
+                        const MachineInstr &BinopMI, BuildFnTy &MatchInfo);
+
+  bool matchCastOfInteger(const MachineInstr &CastMI, APInt &MatchInfo);
+
   /// Combine addos.
   bool matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo);
 
@@ -838,7 +851,8 @@ public:
   bool matchExtractVectorElement(MachineInstr &MI, BuildFnTy &MatchInfo);
 
   /// Combine extract vector element with a build vector on the vector register.
-  bool matchExtractVectorElementWithBuildVector(const MachineOperand &MO,
+  bool matchExtractVectorElementWithBuildVector(const MachineInstr &MI,
+                                                const MachineInstr &MI2,
                                                 BuildFnTy &MatchInfo);
 
   /// Combine extract vector element with a build vector trunc on the vector
@@ -848,13 +862,22 @@ public:
 
   /// Combine extract vector element with a shuffle vector on the vector
   /// register.
-  bool matchExtractVectorElementWithShuffleVector(const MachineOperand &MO,
+  bool matchExtractVectorElementWithShuffleVector(const MachineInstr &MI,
+                                                  const MachineInstr &MI2,
                                                   BuildFnTy &MatchInfo);
 
   /// Combine extract vector element with a insert vector element on the vector
   /// register and different indices.
   bool matchExtractVectorElementWithDifferentIndices(const MachineOperand &MO,
                                                      BuildFnTy &MatchInfo);
+
+  /// Remove references to rhs if it is undef
+  bool matchShuffleUndefRHS(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  /// Turn shuffle a, b, mask -> shuffle undef, b, mask iff mask does not
+  /// reference a.
+  bool matchShuffleDisjointMask(MachineInstr &MI, BuildFnTy &MatchInfo);
+
   /// Use a function which takes in a MachineIRBuilder to perform a combine.
   /// By default, it erases the instruction def'd on \p MO from the function.
   void applyBuildFnMO(const MachineOperand &MO, BuildFnTy &MatchInfo);
@@ -902,6 +925,22 @@ public:
 
   bool matchCastOfBuildVector(const MachineInstr &CastMI,
                               const MachineInstr &BVMI, BuildFnTy &MatchInfo);
+
+  bool matchCanonicalizeICmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
+  bool matchCanonicalizeFCmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  // unmerge_values(anyext(build vector)) -> build vector(anyext)
+  bool matchUnmergeValuesAnyExtBuildVector(const MachineInstr &MI,
+                                           BuildFnTy &MatchInfo);
+
+  // merge_values(_, undef) -> anyext
+  bool matchMergeXAndUndef(const MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  // merge_values(_, zero) -> zext
+  bool matchMergeXAndZero(const MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  // overflow sub
+  bool matchSuboCarryOut(const MachineInstr &MI, BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
@@ -1017,6 +1056,11 @@ private:
   bool tryFoldLogicOfFCmps(GLogicalBinOp *Logic, BuildFnTy &MatchInfo);
 
   bool isCastFree(unsigned Opcode, LLT ToTy, LLT FromTy) const;
+
+  bool constantFoldICmp(const GICmp &ICmp, const GIConstant &LHSCst,
+                        const GIConstant &RHSCst, BuildFnTy &MatchInfo);
+  bool constantFoldFCmp(const GFCmp &FCmp, const GFConstant &LHSCst,
+                        const GFConstant &RHSCst, BuildFnTy &MatchInfo);
 };
 } // namespace llvm
 

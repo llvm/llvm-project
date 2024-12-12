@@ -326,14 +326,14 @@ public:
   /// \param ITraits information about special handling for particular regions
   ///        or symbols.
   [[nodiscard]] ProgramStateRef
-  invalidateRegions(ArrayRef<const MemRegion *> Regions, const Expr *E,
+  invalidateRegions(ArrayRef<const MemRegion *> Regions, const Stmt *S,
                     unsigned BlockCount, const LocationContext *LCtx,
                     bool CausesPointerEscape, InvalidatedSymbols *IS = nullptr,
                     const CallEvent *Call = nullptr,
                     RegionAndSymbolInvalidationTraits *ITraits = nullptr) const;
 
   [[nodiscard]] ProgramStateRef
-  invalidateRegions(ArrayRef<SVal> Values, const Expr *E, unsigned BlockCount,
+  invalidateRegions(ArrayRef<SVal> Values, const Stmt *S, unsigned BlockCount,
                     const LocationContext *LCtx, bool CausesPointerEscape,
                     InvalidatedSymbols *IS = nullptr,
                     const CallEvent *Call = nullptr,
@@ -487,6 +487,7 @@ private:
   friend void ProgramStateRetain(const ProgramState *state);
   friend void ProgramStateRelease(const ProgramState *state);
 
+  SVal desugarReference(SVal Val) const;
   SVal wrapSymbolicRegion(SVal Base) const;
 };
 

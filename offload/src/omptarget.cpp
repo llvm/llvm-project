@@ -156,8 +156,8 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
         for (auto &Image : PM->deviceImages()) {
           const char *Start = reinterpret_cast<const char *>(
               Image.getExecutableImage().ImageStart);
-          uint64_t Length = llvm::omp::target::getPtrDiff(
-              Start, Image.getExecutableImage().ImageEnd);
+          uint64_t Length =
+              utils::getPtrDiff(Start, Image.getExecutableImage().ImageEnd);
           llvm::MemoryBufferRef Buffer(llvm::StringRef(Start, Length),
                                        /*Identifier=*/"");
 
@@ -1451,8 +1451,6 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
         Loc);
 
 #ifdef OMPT_SUPPORT
-    assert(KernelArgs.NumTeams[1] == 0 && KernelArgs.NumTeams[2] == 0 &&
-           "Multi dimensional launch not supported yet.");
     /// RAII to establish tool anchors before and after kernel launch
     int32_t NumTeams = KernelArgs.NumTeams[0];
     // No need to guard this with OMPT_IF_BUILT

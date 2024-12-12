@@ -206,10 +206,9 @@ public:
     if (!callback)
       return false;
     assert(!name.empty());
-    Instance instance =
-        Instance(name, description, callback, std::forward<Args>(args)...);
-    m_instances.push_back(instance);
-    return false;
+    m_instances.emplace_back(name, description, callback,
+                             std::forward<Args>(args)...);
+    return true;
   }
 
   bool UnregisterPlugin(typename Instance::CallbackType callback) {
@@ -723,7 +722,7 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
     llvm::Expected<bool> ret =
         process_sp->SaveCore(options.GetOutputFile()->GetPath());
     if (!ret)
-      return Status(ret.takeError());
+      return Status::FromError(ret.takeError());
     if (ret.get())
       return Status();
   }

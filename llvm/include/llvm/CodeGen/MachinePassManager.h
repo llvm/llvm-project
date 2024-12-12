@@ -41,7 +41,7 @@ using MachineFunctionAnalysisManager = AnalysisManager<MachineFunction>;
 /// MachineFunctionProperties properly.
 template <typename PassT> class MFPropsModifier {
 public:
-  MFPropsModifier(PassT &P_, MachineFunction &MF_) : P(P_), MF(MF_) {
+  MFPropsModifier(const PassT &P_, MachineFunction &MF_) : P(P_), MF(MF_) {
     auto &MFProps = MF.getProperties();
 #ifndef NDEBUG
     if constexpr (has_get_required_properties_v<PassT>) {
@@ -71,7 +71,7 @@ public:
   }
 
 private:
-  PassT &P;
+  const PassT &P;
   MachineFunction &MF;
 
   template <typename T>

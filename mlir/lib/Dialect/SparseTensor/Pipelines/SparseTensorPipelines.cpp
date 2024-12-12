@@ -45,7 +45,8 @@ void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
       /*enableVLAVectorization=*/options.armSVE,
       /*enableSIMDIndex32=*/options.force32BitVectorIndices,
       options.enableGPULibgen,
-      options.sparsificationOptions().sparseEmitStrategy));
+      options.sparsificationOptions().sparseEmitStrategy,
+      options.sparsificationOptions().parallelizationStrategy));
 
   // Bail-early for test setup.
   if (options.testBufferizationAnalysisOnly)
@@ -54,8 +55,6 @@ void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
   // Storage specifier lowering and bufferization wrap-up.
   pm.addPass(createStorageSpecifierToLLVMPass());
   pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
-  pm.addNestedPass<func::FuncOp>(
-      mlir::bufferization::createFinalizingBufferizePass());
 
   // GPU code generation.
   const bool gpuCodegen = options.gpuTriple.hasValue();

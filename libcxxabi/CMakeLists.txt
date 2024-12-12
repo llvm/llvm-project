@@ -34,6 +34,11 @@ MACRO_ENSURE_OUT_OF_SOURCE_BUILD(
  build directory and run 'cmake /path/to/${PROJECT_NAME} [options]' there."
  )
 
+if (MSVC)
+  message(FATAL_ERROR "Libc++abi can't be built for MSVC targets, and doing so is pointless anyway because such "
+                      "targets must use the MS C++ ABI, and libc++abi provides the Itanium C++ ABI.")
+endif()
+
 #===============================================================================
 # Setup CMake Options
 #===============================================================================
@@ -131,11 +136,6 @@ if (NOT LIBCXXABI_ENABLE_SHARED AND NOT LIBCXXABI_ENABLE_STATIC)
   message(FATAL_ERROR "libc++abi must be built as either a shared or static library.")
 endif()
 
-# TODO: Remove this, which shouldn't be necessary since we know we're being built
-#       side-by-side with libc++.
-set(LIBCXXABI_LIBCXX_INCLUDES "" CACHE PATH
-    "Specify path to libc++ includes.")
-
 set(LIBCXXABI_HERMETIC_STATIC_LIBRARY_DEFAULT OFF)
 if (WIN32)
   set(LIBCXXABI_HERMETIC_STATIC_LIBRARY_DEFAULT ON)
@@ -227,8 +227,7 @@ set(LIBCXXABI_CXX_FLAGS "")
 set(LIBCXXABI_COMPILE_FLAGS "")
 set(LIBCXXABI_LINK_FLAGS "")
 set(LIBCXXABI_LIBRARIES "")
-set(LIBCXXABI_ADDITIONAL_COMPILE_FLAGS "" CACHE STRING
-    "Additional Compile only flags which can be provided in cache")
+set(LIBCXXABI_ADDITIONAL_COMPILE_FLAGS "" CACHE STRING "See documentation LIBCXX_ADDITIONAL_COMPILE_FLAGS")
 set(LIBCXXABI_ADDITIONAL_LIBRARIES "" CACHE STRING
     "Additional libraries libc++abi is linked to which can be provided in cache")
 

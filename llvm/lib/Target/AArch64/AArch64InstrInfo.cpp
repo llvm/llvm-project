@@ -12,7 +12,6 @@
 
 #include "AArch64InstrInfo.h"
 #include "AArch64ExpandImm.h"
-#include "AArch64FrameLowering.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64PointerAuth.h"
 #include "AArch64Subtarget.h"
@@ -106,6 +105,19 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   //        before the assembly printer.
   unsigned NumBytes = 0;
   const MCInstrDesc &Desc = MI.getDesc();
+
+  if (!MI.isBundle() && isTailCallReturnInst(MI)) {
+    NumBytes = Desc.getSize() ? Desc.getSize() : 4;
+
+    const auto *MFI = MF->getInfo<AArch64FunctionInfo>();
+    if (!MFI->shouldSignReturnAddress(MF))
+      return NumBytes;
+
+    const auto &STI = MF->getSubtarget<AArch64Subtarget>();
+    auto Method = STI.getAuthenticatedLRCheckMethod(*MF);
+    NumBytes += AArch64PAuth::getCheckerSizeInBytes(Method);
+    return NumBytes;
+  }
 
   // Size should be preferably set in
   // llvm/lib/Target/AArch64/AArch64InstrInfo.td (default case).
@@ -1994,6 +2006,7 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         .addReg(AArch64::X0)
         .addMBB(TargetMBB)
         .addImm(0);
+    TargetMBB->setMachineBlockAddressTaken();
     return true;
   }
 
@@ -5559,10 +5572,6 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   if (PNRReg.isValid() && !PNRReg.isVirtual())
     MI.addDef(PNRReg, RegState::Implicit);
   MI.addMemOperand(MMO);
-
-  if (PNRReg.isValid() && PNRReg.isVirtual())
-    BuildMI(MBB, MBBI, DebugLoc(), get(TargetOpcode::COPY), PNRReg)
-        .addReg(DestReg);
 }
 
 bool llvm::isNZCVTouchedInInstructionRange(const MachineInstr &DefMI,
@@ -7360,7 +7369,8 @@ genSubAdd2SubSub(MachineFunction &MF, MachineRegisterInfo &MRI,
   bool RegBIsKill = AddMI->getOperand(IdxOpd1).isKill();
   Register RegC = AddMI->getOperand(IdxOtherOpd).getReg();
   bool RegCIsKill = AddMI->getOperand(IdxOtherOpd).isKill();
-  Register NewVR = MRI.createVirtualRegister(MRI.getRegClass(RegA));
+  Register NewVR =
+      MRI.createVirtualRegister(MRI.getRegClass(Root.getOperand(2).getReg()));
 
   unsigned Opcode = Root.getOpcode();
   if (Opcode == AArch64::SUBSWrr)
@@ -9003,7 +9013,7 @@ AArch64InstrInfo::getOutliningCandidateInfo(
         NumBytesNoStackCalls <= RepeatedSequenceLocs.size() * 12) {
       RepeatedSequenceLocs = CandidatesWithoutStackFixups;
       FrameID = MachineOutlinerNoLRSave;
-      if (RepeatedSequenceLocs.size() < 2)
+      if (RepeatedSequenceLocs.size() < MinRepeats)
         return std::nullopt;
     } else {
       SetCandidateCallInfo(MachineOutlinerDefault, 12);
@@ -9064,10 +9074,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     }
 
     // If we dropped all of the candidates, bail out here.
-    if (RepeatedSequenceLocs.size() < MinRepeats) {
-      RepeatedSequenceLocs.clear();
+    if (RepeatedSequenceLocs.size() < MinRepeats)
       return std::nullopt;
-    }
   }
 
   // Does every candidate's MBB contain a call? If so, then we might have a call
@@ -9092,10 +9100,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
 
     if (ModStackToSaveLR) {
       // We can't fix up the stack. Bail out.
-      if (!AllStackInstrsSafe) {
-        RepeatedSequenceLocs.clear();
+      if (!AllStackInstrsSafe)
         return std::nullopt;
-      }
 
       // Save + restore LR.
       NumBytesToCreateFrame += 8;
@@ -9694,13 +9700,20 @@ void AArch64InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
 
   if (TRI.isGeneralPurposeRegister(MF, Reg)) {
     BuildMI(MBB, Iter, DL, get(AArch64::MOVZXi), Reg).addImm(0).addImm(0);
-  } else if (STI.hasSVE()) {
+  } else if (STI.isSVEorStreamingSVEAvailable()) {
     BuildMI(MBB, Iter, DL, get(AArch64::DUP_ZI_D), Reg)
       .addImm(0)
       .addImm(0);
-  } else {
+  } else if (STI.isNeonAvailable()) {
     BuildMI(MBB, Iter, DL, get(AArch64::MOVIv2d_ns), Reg)
       .addImm(0);
+  } else {
+    // This is a streaming-compatible function without SVE. We don't have full
+    // Neon (just FPRs), so we can at most use the first 64-bit sub-register.
+    // So given `movi v..` would be illegal use `fmov d..` instead.
+    assert(STI.hasNEON() && "Expected to have NEON.");
+    Register Reg64 = TRI.getSubReg(Reg, AArch64::dsub);
+    BuildMI(MBB, Iter, DL, get(AArch64::FMOVD0), Reg64);
   }
 }
 

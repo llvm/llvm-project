@@ -9,12 +9,14 @@
 #ifndef LLVM_LIBC_SRC_STDIO_VSSCANF_H
 #define LLVM_LIBC_SRC_STDIO_VSSCANF_H
 
+#include "src/__support/macros/config.h"
+
 #include <stdarg.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int vsscanf(const char *s, const char *format, va_list vlist);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_VSSCANF_H

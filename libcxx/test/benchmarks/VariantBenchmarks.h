@@ -35,7 +35,7 @@ static auto genVariants(std::index_sequence<Is...>) {
 
   std::array<V, N> result = {};
   for (auto& v : result) {
-    v = fs[getRandomInteger(0ul, sizeof...(Is) - 1)]();
+    v = fs[getRandomInteger(std::size_t(0), sizeof...(Is) - 1)]();
   }
 
   return result;
@@ -50,6 +50,6 @@ static void BM_Visit(benchmark::State& state) {
   }
 }
 
-} // end namespace VariantBenchmarks
+} // namespace VariantBenchmarks
 
 #endif // BENCHMARK_VARIANT_BENCHMARKS_H

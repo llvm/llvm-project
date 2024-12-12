@@ -13,8 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-jitlink.h"
-
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX, LLVM_ENABLE_THREADS
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
 #include "llvm/ExecutionEngine/Orc/COFFVCRuntimeSupport.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
@@ -28,8 +29,11 @@
 #include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
+#include "llvm/ExecutionEngine/Orc/JITLinkRedirectableSymbolManager.h"
+#include "llvm/ExecutionEngine/Orc/JITLinkReentryTrampolines.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LoadLinkableFile.h"
+#include "llvm/ExecutionEngine/Orc/MachO.h"
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
@@ -60,7 +64,6 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Timer.h"
-
 #include <cstring>
 #include <deque>
 #include <string>
@@ -79,6 +82,10 @@ using namespace llvm::jitlink;
 using namespace llvm::orc;
 
 static cl::OptionCategory JITLinkCategory("JITLink Options");
+
+static cl::list<bool> LazyLink("lazy",
+                               cl::desc("Link the following file lazily"),
+                               cl::cat(JITLinkCategory));
 
 static cl::list<std::string> InputFiles(cl::Positional, cl::OneOrMore,
                                         cl::desc("input files"),
@@ -182,6 +189,11 @@ static cl::list<std::string> TestHarnesses("harness", cl::Positional,
                                            cl::PositionalEatsArgs,
                                            cl::cat(JITLinkCategory));
 
+static cl::opt<bool>
+    ShowLinkedFiles("show-linked-files",
+                    cl::desc("List each file/graph name if/when it is linked"),
+                    cl::init(false), cl::cat(JITLinkCategory));
+
 static cl::opt<bool> ShowInitialExecutionSessionState(
     "show-init-es",
     cl::desc("Print ExecutionSession state before resolving entry point"),
@@ -266,6 +278,17 @@ static cl::opt<std::string>
     OverrideTriple("triple", cl::desc("Override target triple detection"),
                    cl::init(""), cl::cat(JITLinkCategory));
 
+static cl::opt<bool> AllLoad("all_load",
+                             cl::desc("Load all members of static archives"),
+                             cl::init(false), cl::cat(JITLinkCategory));
+
+static cl::opt<bool> ForceLoadObjC(
+    "ObjC",
+    cl::desc("Load all members of static archives that implement "
+             "Objective-C classes or categories, or Swift structs, "
+             "classes or extensions"),
+    cl::init(false), cl::cat(JITLinkCategory));
+
 static ExitOnError ExitOnErr;
 
 static LLVM_ATTRIBUTE_USED void linkComponents() {
@@ -343,7 +366,7 @@ static raw_ostream &
 operator<<(raw_ostream &OS, const Session::SymbolInfoMap &SIM) {
   OS << "Symbols:\n";
   for (auto &SKV : SIM)
-    OS << "  \"" << SKV.first() << "\" " << SKV.second << "\n";
+    OS << "  \"" << SKV.first << "\" " << SKV.second << "\n";
   return OS;
 }
 
@@ -369,6 +392,13 @@ operator<<(raw_ostream &OS, const Session::FileInfoMap &FIM) {
   return OS;
 }
 
+bool lazyLinkingRequested() {
+  for (auto LL : LazyLink)
+    if (LL)
+      return true;
+  return false;
+}
+
 static Error applyHarnessPromotions(Session &S, LinkGraph &G) {
 
   // If this graph is part of the test harness there's nothing to do.
@@ -387,8 +417,8 @@ static Error applyHarnessPromotions(Session &S, LinkGraph &G) {
       continue;
 
     if (Sym->getLinkage() == Linkage::Weak) {
-      if (!S.CanonicalWeakDefs.count(Sym->getName()) ||
-          S.CanonicalWeakDefs[Sym->getName()] != G.getName()) {
+      if (!S.CanonicalWeakDefs.count(*Sym->getName()) ||
+          S.CanonicalWeakDefs[*Sym->getName()] != G.getName()) {
         LLVM_DEBUG({
           dbgs() << "  Externalizing weak symbol " << Sym->getName() << "\n";
         });
@@ -397,18 +427,18 @@ static Error applyHarnessPromotions(Session &S, LinkGraph &G) {
         LLVM_DEBUG({
           dbgs() << "  Making weak symbol " << Sym->getName() << " strong\n";
         });
-        if (S.HarnessExternals.count(Sym->getName()))
+        if (S.HarnessExternals.count(*Sym->getName()))
           Sym->setScope(Scope::Default);
         else
           Sym->setScope(Scope::Hidden);
         Sym->setLinkage(Linkage::Strong);
       }
-    } else if (S.HarnessExternals.count(Sym->getName())) {
+    } else if (S.HarnessExternals.count(*Sym->getName())) {
       LLVM_DEBUG(dbgs() << "  Promoting " << Sym->getName() << "\n");
       Sym->setScope(Scope::Default);
       Sym->setLive(true);
       continue;
-    } else if (S.HarnessDefinitions.count(Sym->getName())) {
+    } else if (S.HarnessDefinitions.count(*Sym->getName())) {
       LLVM_DEBUG(dbgs() << "  Externalizing " << Sym->getName() << "\n");
       DefinitionsToRemove.push_back(Sym);
     }
@@ -920,6 +950,20 @@ public:
   }
 };
 
+Expected<std::unique_ptr<Session::LazyLinkingSupport>>
+createLazyLinkingSupport(ObjectLinkingLayer &OLL, JITDylib &PlatformJD) {
+  auto RSMgr = JITLinkRedirectableSymbolManager::Create(OLL);
+  if (!RSMgr)
+    return RSMgr.takeError();
+
+  auto LRMgr = createJITLinkLazyReexportsManager(OLL, **RSMgr, PlatformJD);
+  if (!LRMgr)
+    return LRMgr.takeError();
+
+  return std::make_unique<Session::LazyLinkingSupport>(std::move(*RSMgr),
+                                                       std::move(*LRMgr), OLL);
+}
+
 Expected<std::unique_ptr<Session>> Session::Create(Triple TT,
                                                    SubtargetFeatures Features) {
 
@@ -952,6 +996,15 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT,
   if (Err)
     return std::move(Err);
   S->Features = std::move(Features);
+
+  if (lazyLinkingRequested()) {
+    if (auto LazyLinking =
+            createLazyLinkingSupport(S->ObjLayer, *S->PlatformJD))
+      S->LazyLinking = std::move(*LazyLinking);
+    else
+      return LazyLinking.takeError();
+  }
+
   return std::move(S);
 }
 
@@ -971,7 +1024,7 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     JITLinkSessionPlugin(Session &S) : S(S) {}
     void modifyPassConfig(MaterializationResponsibility &MR, LinkGraph &G,
                           PassConfiguration &PassConfig) override {
-      S.modifyPassConfig(G.getTargetTriple(), PassConfig);
+      S.modifyPassConfig(G, PassConfig);
     }
 
     Error notifyFailed(MaterializationResponsibility &MR) override {
@@ -1034,16 +1087,16 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     PlatformJD->addToLinkOrder(*ProcessSymsJD);
 
     if (TT.isOSBinFormatMachO()) {
-      if (auto P = MachOPlatform::Create(ES, ObjLayer, *PlatformJD,
-                                         OrcRuntime.c_str()))
+      if (auto P =
+              MachOPlatform::Create(ObjLayer, *PlatformJD, OrcRuntime.c_str()))
         ES.setPlatform(std::move(*P));
       else {
         Err = P.takeError();
         return;
       }
     } else if (TT.isOSBinFormatELF()) {
-      if (auto P = ELFNixPlatform::Create(ES, ObjLayer, *PlatformJD,
-                                          OrcRuntime.c_str()))
+      if (auto P =
+              ELFNixPlatform::Create(ObjLayer, *PlatformJD, OrcRuntime.c_str()))
         ES.setPlatform(std::move(*P));
       else {
         Err = P.takeError();
@@ -1058,9 +1111,9 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
         return loadAndLinkDynamicLibrary(JD, DLLName);
       };
 
-      if (auto P = COFFPlatform::Create(ES, ObjLayer, *PlatformJD,
-                                        OrcRuntime.c_str(),
-                                        std::move(LoadDynLibrary)))
+      if (auto P =
+              COFFPlatform::Create(ObjLayer, *PlatformJD, OrcRuntime.c_str(),
+                                   std::move(LoadDynLibrary)))
         ES.setPlatform(std::move(*P));
       else {
         Err = P.takeError();
@@ -1146,8 +1199,11 @@ void Session::dumpSessionInfo(raw_ostream &OS) {
   OS << "Registered addresses:\n" << SymbolInfos << FileInfos;
 }
 
-void Session::modifyPassConfig(const Triple &TT,
-                               PassConfiguration &PassConfig) {
+void Session::modifyPassConfig(LinkGraph &G, PassConfiguration &PassConfig) {
+
+  if (ShowLinkedFiles)
+    outs() << "Linking " << G.getName() << "\n";
+
   if (!CheckFiles.empty())
     PassConfig.PostFixupPasses.push_back([this](LinkGraph &G) {
       if (ES.getTargetTriple().getObjectFormat() == Triple::ELF)
@@ -1190,7 +1246,7 @@ void Session::modifyPassConfig(const Triple &TT,
 }
 
 Expected<JITDylib *> Session::getOrLoadDynamicLibrary(StringRef LibPath) {
-  auto It = DynLibJDs.find(LibPath.str());
+  auto It = DynLibJDs.find(LibPath);
   if (It != DynLibJDs.end()) {
     return It->second;
   }
@@ -1229,9 +1285,9 @@ Error Session::FileInfo::registerGOTEntry(
   auto TS = GetSymbolTarget(G, Sym.getBlock());
   if (!TS)
     return TS.takeError();
-  GOTEntryInfos[TS->getName()] = {Sym.getSymbolContent(),
-                                  Sym.getAddress().getValue(),
-                                  Sym.getTargetFlags()};
+  GOTEntryInfos[*TS->getName()] = {Sym.getSymbolContent(),
+                                   Sym.getAddress().getValue(),
+                                   Sym.getTargetFlags()};
   return Error::success();
 }
 
@@ -1245,7 +1301,7 @@ Error Session::FileInfo::registerStubEntry(
   if (!TS)
     return TS.takeError();
 
-  SmallVectorImpl<MemoryRegionInfo> &Entry = StubInfos[TS->getName()];
+  SmallVectorImpl<MemoryRegionInfo> &Entry = StubInfos[*TS->getName()];
   Entry.insert(Entry.begin(),
                {Sym.getSymbolContent(), Sym.getAddress().getValue(),
                 Sym.getTargetFlags()});
@@ -1263,7 +1319,7 @@ Error Session::FileInfo::registerMultiStubEntry(
   if (!Target)
     return Target.takeError();
 
-  SmallVectorImpl<MemoryRegionInfo> &Entry = StubInfos[Target->getName()];
+  SmallVectorImpl<MemoryRegionInfo> &Entry = StubInfos[*Target->getName()];
   Entry.emplace_back(Sym.getSymbolContent(), Sym.getAddress().getValue(),
                      Sym.getTargetFlags());
 
@@ -1408,15 +1464,16 @@ Session::findGOTEntryInfo(StringRef FileName, StringRef TargetName) {
   return GOTInfoItr->second;
 }
 
-bool Session::isSymbolRegistered(StringRef SymbolName) {
+bool Session::isSymbolRegistered(const orc::SymbolStringPtr &SymbolName) {
   return SymbolInfos.count(SymbolName);
 }
 
 Expected<Session::MemoryRegionInfo &>
-Session::findSymbolInfo(StringRef SymbolName, Twine ErrorMsgStem) {
+Session::findSymbolInfo(const orc::SymbolStringPtr &SymbolName,
+                        Twine ErrorMsgStem) {
   auto SymInfoItr = SymbolInfos.find(SymbolName);
   if (SymInfoItr == SymbolInfos.end())
-    return make_error<StringError>(ErrorMsgStem + ": symbol " + SymbolName +
+    return make_error<StringError>(ErrorMsgStem + ": symbol " + *SymbolName +
                                        " not found",
                                    inconvertibleErrorCode());
   return SymInfoItr->second;
@@ -1564,6 +1621,18 @@ static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
     OutOfProcessExecutor = OOPExecutorPath.str().str();
   }
 
+  // If lazy linking is requested then check compatibility with other options.
+  if (lazyLinkingRequested()) {
+    if (OrcRuntime.empty())
+      return make_error<StringError>("Lazy linking requries the ORC runtime",
+                                     inconvertibleErrorCode());
+
+    if (!TestHarnesses.empty())
+      return make_error<StringError>(
+          "Lazy linking cannot be used with -harness mode",
+          inconvertibleErrorCode());
+  }
+
   return Error::success();
 }
 
@@ -1637,12 +1706,13 @@ static Error addAbsoluteSymbols(Session &S,
                                          AbsDefStmt + "\"",
                                      inconvertibleErrorCode());
     ExecutorSymbolDef AbsDef(ExecutorAddr(Addr), JITSymbolFlags::Exported);
-    if (auto Err = JD.define(absoluteSymbols({{S.ES.intern(Name), AbsDef}})))
+    auto InternedName = S.ES.intern(Name);
+    if (auto Err = JD.define(absoluteSymbols({{InternedName, AbsDef}})))
       return Err;
 
     // Register the absolute symbol with the session symbol infos.
-    S.SymbolInfos[Name] = {ArrayRef<char>(), Addr,
-                           AbsDef.getFlags().getTargetFlags()};
+    S.SymbolInfos[InternedName] = {ArrayRef<char>(), Addr,
+                                   AbsDef.getFlags().getTargetFlags()};
   }
 
   return Error::success();
@@ -1729,7 +1799,7 @@ static Error addSectCreates(Session &S,
 
     StringRef SCArg(*SCItr);
 
-    auto [SectAndFileName, ExtraSymbolsString] = SCArg.split('@');
+    auto [SectAndFileName, ExtraSymbolsString] = SCArg.rsplit('@');
     auto [SectName, FileName] = SectAndFileName.rsplit(',');
     if (SectName.empty())
       return make_error<StringError>("In -sectcreate=" + SCArg +
@@ -1785,7 +1855,8 @@ static Error addTestHarnesses(Session &S) {
 }
 
 static Error addObjects(Session &S,
-                        const std::map<unsigned, JITDylib *> &IdxToJD) {
+                        const std::map<unsigned, JITDylib *> &IdxToJD,
+                        const DenseSet<unsigned> &LazyLinkIdxs) {
 
   // Load each object into the corresponding JITDylib..
   LLVM_DEBUG(dbgs() << "Adding objects...\n");
@@ -1798,15 +1869,18 @@ static Error addObjects(Session &S,
         StringRef(InputFile).ends_with(".lib"))
       continue;
     auto &JD = *std::prev(IdxToJD.lower_bound(InputFileArgIdx))->second;
-    LLVM_DEBUG(dbgs() << "  " << InputFileArgIdx << ": \"" << InputFile
-                      << "\" to " << JD.getName() << "\n";);
+    bool AddLazy = LazyLinkIdxs.count(InputFileArgIdx);
+    LLVM_DEBUG(dbgs() << "  " << InputFileArgIdx << ": \"" << InputFile << "\" "
+                      << (AddLazy ? " (lazy-linked)" : "") << " to "
+                      << JD.getName() << "\n";);
     auto ObjBuffer = loadLinkableFile(InputFile, S.ES.getTargetTriple(),
                                       LoadArchives::Never);
     if (!ObjBuffer)
       return ObjBuffer.takeError();
 
     if (S.HarnessFiles.empty()) {
-      if (auto Err = S.ObjLayer.add(JD, std::move(ObjBuffer->first)))
+      if (auto Err =
+              S.getLinkLayer(AddLazy).add(JD, std::move(ObjBuffer->first)))
         return Err;
     } else {
       // We're in -harness mode. Use a custom interface for this
@@ -1815,6 +1889,7 @@ static Error addObjects(Session &S,
           getTestObjectFileInterface(S, ObjBuffer->first->getMemBufferRef());
       if (!ObjInterface)
         return ObjInterface.takeError();
+
       if (auto Err = S.ObjLayer.add(JD, std::move(ObjBuffer->first),
                                     std::move(*ObjInterface)))
         return Err;
@@ -1847,7 +1922,8 @@ static SmallVector<StringRef, 5> getSearchPathsFromEnvVar(Session &S) {
 }
 
 static Error addLibraries(Session &S,
-                          const std::map<unsigned, JITDylib *> &IdxToJD) {
+                          const std::map<unsigned, JITDylib *> &IdxToJD,
+                          const DenseSet<unsigned> &LazyLinkIdxs) {
 
   // 1. Collect search paths for each JITDylib.
   DenseMap<const JITDylib *, SmallVector<StringRef, 2>> JDSearchPaths;
@@ -1958,10 +2034,9 @@ static Error addLibraries(Session &S,
              });
 
   // 3. Process library loads.
-  auto AddArchive = [&](const char *Path, const LibraryLoad &LL)
+  auto AddArchive = [&](JITDylib &JD, const char *Path, const LibraryLoad &LL)
       -> Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>> {
-    unique_function<Expected<MaterializationUnit::Interface>(
-        ExecutionSession & ES, MemoryBufferRef ObjBuffer)>
+    StaticLibraryDefinitionGenerator::GetObjectFileInterface
         GetObjFileInterface;
     switch (LL.Modifier) {
     case LibraryLoad::Standard:
@@ -1971,8 +2046,19 @@ static Error addLibraries(Session &S,
       GetObjFileInterface = getObjectFileInterfaceHidden;
       break;
     }
+
+    auto &LinkLayer = S.getLinkLayer(LazyLinkIdxs.count(LL.Position));
+
+    StaticLibraryDefinitionGenerator::VisitMembersFunction VisitMembers;
+    if (AllLoad)
+      VisitMembers = StaticLibraryDefinitionGenerator::loadAllObjectFileMembers(
+          LinkLayer, JD);
+    else if (S.ES.getTargetTriple().isOSBinFormatMachO() && ForceLoadObjC)
+      VisitMembers = ForceLoadMachOArchiveMembers(LinkLayer, JD, true);
+
     auto G = StaticLibraryDefinitionGenerator::Load(
-        S.ObjLayer, Path, std::move(GetObjFileInterface));
+        LinkLayer, Path, std::move(VisitMembers),
+        std::move(GetObjFileInterface));
     if (!G)
       return G.takeError();
 
@@ -2010,7 +2096,7 @@ static Error addLibraries(Session &S,
     }
 
     if (LL.IsPath) {
-      auto G = AddArchive(LL.LibName.c_str(), LL);
+      auto G = AddArchive(JD, LL.LibName.c_str(), LL);
       if (!G)
         return createFileError(LL.LibName, G.takeError());
       JD.addGenerator(std::move(*G));
@@ -2066,7 +2152,7 @@ static Error addLibraries(Session &S,
         }
         case file_magic::archive:
         case file_magic::macho_universal_binary: {
-          auto G = AddArchive(LibPath.data(), LL);
+          auto G = AddArchive(JD, LibPath.data(), LL);
           if (!G)
             return G.takeError();
           JD.addGenerator(std::move(*G));
@@ -2112,6 +2198,13 @@ static Error addLibraries(Session &S,
 
 static Error addSessionInputs(Session &S) {
   std::map<unsigned, JITDylib *> IdxToJD;
+  DenseSet<unsigned> LazyLinkIdxs;
+
+  for (auto LLItr = LazyLink.begin(), LLEnd = LazyLink.end(); LLItr != LLEnd;
+       ++LLItr) {
+    if (*LLItr)
+      LazyLinkIdxs.insert(LazyLink.getPosition(LLItr - LazyLink.begin()) + 1);
+  }
 
   if (auto Err = createJITDylibs(S, IdxToJD))
     return Err;
@@ -2129,10 +2222,10 @@ static Error addSessionInputs(Session &S) {
     if (auto Err = addTestHarnesses(S))
       return Err;
 
-  if (auto Err = addObjects(S, IdxToJD))
+  if (auto Err = addObjects(S, IdxToJD, LazyLinkIdxs))
     return Err;
 
-  if (auto Err = addLibraries(S, IdxToJD))
+  if (auto Err = addLibraries(S, IdxToJD, LazyLinkIdxs))
     return Err;
 
   return Error::success();
@@ -2225,11 +2318,13 @@ static Error runChecks(Session &S, Triple TT, SubtargetFeatures Features) {
   LLVM_DEBUG(dbgs() << "Running checks...\n");
 
   auto IsSymbolValid = [&S](StringRef Symbol) {
-    return S.isSymbolRegistered(Symbol);
+    auto InternedSymbol = S.ES.getSymbolStringPool()->intern(Symbol);
+    return S.isSymbolRegistered(InternedSymbol);
   };
 
   auto GetSymbolInfo = [&S](StringRef Symbol) {
-    return S.findSymbolInfo(Symbol, "Can not get symbol info");
+    auto InternedSymbol = S.ES.getSymbolStringPool()->intern(Symbol);
+    return S.findSymbolInfo(InternedSymbol, "Can not get symbol info");
   };
 
   auto GetSectionInfo = [&S](StringRef FileName, StringRef SectionName) {

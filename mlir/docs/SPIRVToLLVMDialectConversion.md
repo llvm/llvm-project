@@ -501,7 +501,7 @@ The SPIR-V to LLVM conversion does not involve modelling of workgroups. Hence,
 we say that only current invocation is in conversion's scope. This means that
 global variables with pointers of `Input`, `Output`, and `Private` storage
 classes are supported. Also, `StorageBuffer` storage class is allowed for
-executing [`mlir-spirv-cpu-runner`](#mlir-spirv-cpu-runner).
+executing [SPIR-V CPU Runner tests](#spir-v-cpu-runner-tests).
 
 Moreover, `bind` that specifies the descriptor set and the binding number and
 `built_in` that specifies SPIR-V `BuiltIn` decoration have no conversion into
@@ -815,14 +815,15 @@ Module in SPIR-V has one region that contains one block. It is defined via
 `spirv.module` is converted into `ModuleOp`. This plays a role of enclosing scope
 to LLVM ops. At the moment, SPIR-V module attributes are ignored.
 
-## `mlir-spirv-cpu-runner`
+## SPIR-V CPU Runner Tests
 
-`mlir-spirv-cpu-runner` allows to execute `gpu` dialect kernel on the CPU via
-SPIR-V to LLVM dialect conversion. Currently, only single-threaded kernel is
-supported.
+The `mlir-cpu-runner` has support for executing a `gpu` dialect kernel on the
+CPU via SPIR-V to LLVM dialect conversion. This is referred to as the "SPIR-V
+CPU Runner". The `--link-nested-modules` flag needs to be passed for this.
+Currently, only single-threaded kernels are supported.
 
-To build the runner, add the following option to `cmake`: `bash
--DMLIR_ENABLE_SPIRV_CPU_RUNNER=1`
+To build the required runtime libaries, add the following option to `cmake`:
+`-DMLIR_ENABLE_SPIRV_CPU_RUNNER=1`
 
 ### Pipeline
 
@@ -846,7 +847,7 @@ executed using `ExecutionEngine`.
 ### Walk-through
 
 This section gives a detailed overview of the IR changes while running
-`mlir-spirv-cpu-runner`. First, consider that we have the following IR. (For
+SPIR-V CPU Runner tests. First, consider that we have the following IR. (For
 simplicity some type annotations and function implementations have been
 omitted).
 

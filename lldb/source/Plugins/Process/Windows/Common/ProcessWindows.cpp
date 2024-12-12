@@ -169,6 +169,38 @@ Status ProcessWindows::DoDetach(bool keep_stopped) {
   Log *log = GetLog(WindowsLog::Process);
   StateType private_state = GetPrivateState();
   if (private_state != eStateExited && private_state != eStateDetached) {
+    if (!keep_stopped) {
+      // if the thread is suspended by lldb, we have to resume threads before
+      // detaching process. When we do after DetachProcess(), thread handles
+      // become invalid so we do before detach.
+      if (private_state == eStateStopped || private_state == eStateCrashed) {
+        LLDB_LOG(log, "process {0} is in state {1}.  Resuming for detach...",
+                 m_session_data->m_debugger->GetProcess().GetProcessId(),
+                 GetPrivateState());
+
+        LLDB_LOG(log, "resuming {0} threads for detach.",
+                 m_thread_list.GetSize());
+
+        bool failed = false;
+        for (uint32_t i = 0; i < m_thread_list.GetSize(); ++i) {
+          auto thread = std::static_pointer_cast<TargetThreadWindows>(
+              m_thread_list.GetThreadAtIndex(i));
+          Status result = thread->DoResume();
+          if (result.Fail()) {
+            failed = true;
+            LLDB_LOG(log,
+                     "Trying to resume thread at index {0}, but failed with "
+                     "error {1}.",
+                     i, result);
+          }
+        }
+
+        if (failed) {
+          error = Status::FromErrorString("Resuming Threads for Detach failed");
+        }
+      }
+    }
+
     error = DetachProcess();
     if (error.Success())
       SetPrivateState(eStateDetached);
@@ -492,10 +524,10 @@ void ProcessWindows::RefreshStateAfterStop() {
                 << llvm::format_hex(active_exception->GetExceptionAddress(), 8);
     DumpAdditionalExceptionInformation(desc_stream, active_exception);
 
-    stop_info = StopInfo::CreateStopReasonWithException(
-        *stop_thread, desc_stream.str().c_str());
+    stop_info =
+        StopInfo::CreateStopReasonWithException(*stop_thread, desc.c_str());
     stop_thread->SetStopInfo(stop_info);
-    LLDB_LOG(log, "{0}", desc_stream.str());
+    LLDB_LOG(log, "{0}", desc);
     return;
   }
   }
@@ -821,7 +853,7 @@ void ProcessWindows::OnDebuggerError(const Status &error, uint32_t type) {
     // If we haven't actually launched the process yet, this was an error
     // launching the process.  Set the internal error and signal the initial
     // stop event so that the DoLaunch method wakes up and returns a failure.
-    m_session_data->m_launch_error = error;
+    m_session_data->m_launch_error = error.Clone();
     ::SetEvent(m_session_data->m_initial_stop_event);
     LLDB_LOG(
         log,

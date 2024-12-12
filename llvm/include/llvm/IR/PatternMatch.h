@@ -792,6 +792,16 @@ inline cstfp_pred_ty<is_non_zero_fp> m_NonZeroFP() {
   return cstfp_pred_ty<is_non_zero_fp>();
 }
 
+struct is_non_zero_not_denormal_fp {
+  bool isValue(const APFloat &C) { return !C.isDenormal() && C.isNonZero(); }
+};
+
+/// Match a floating-point non-zero that is not a denormal.
+/// For vectors, this includes constants with undefined elements.
+inline cstfp_pred_ty<is_non_zero_not_denormal_fp> m_NonZeroNotDenormalFP() {
+  return cstfp_pred_ty<is_non_zero_not_denormal_fp>();
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 template <typename Class> struct bind_ty {
@@ -1706,7 +1716,8 @@ template <typename T0, typename T1, unsigned Opcode> struct TwoOps_match {
 };
 
 /// Matches instructions with Opcode and three operands.
-template <typename T0, typename T1, typename T2, unsigned Opcode>
+template <typename T0, typename T1, typename T2, unsigned Opcode,
+          bool CommutableOp2Op3 = false>
 struct ThreeOps_match {
   T0 Op1;
   T1 Op2;
@@ -1718,8 +1729,12 @@ struct ThreeOps_match {
   template <typename OpTy> bool match(OpTy *V) {
     if (V->getValueID() == Value::InstructionVal + Opcode) {
       auto *I = cast<Instruction>(V);
-      return Op1.match(I->getOperand(0)) && Op2.match(I->getOperand(1)) &&
-             Op3.match(I->getOperand(2));
+      if (!Op1.match(I->getOperand(0)))
+        return false;
+      if (Op2.match(I->getOperand(1)) && Op3.match(I->getOperand(2)))
+        return true;
+      return CommutableOp2Op3 && Op2.match(I->getOperand(2)) &&
+             Op3.match(I->getOperand(1));
     }
     return false;
   }
@@ -1769,6 +1784,14 @@ inline ThreeOps_match<Cond, constantint_match<L>, constantint_match<R>,
                       Instruction::Select>
 m_SelectCst(const Cond &C) {
   return m_Select(C, m_ConstantInt<L>(), m_ConstantInt<R>());
+}
+
+/// Match Select(C, LHS, RHS) or Select(C, RHS, LHS)
+template <typename LHS, typename RHS>
+inline ThreeOps_match<decltype(m_Value()), LHS, RHS, Instruction::Select, true>
+m_c_Select(const LHS &L, const RHS &R) {
+  return ThreeOps_match<decltype(m_Value()), LHS, RHS, Instruction::Select,
+                        true>(m_Value(), L, R);
 }
 
 /// Matches FreezeInst.
@@ -2385,6 +2408,32 @@ template <typename LHS, typename RHS>
 inline MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>
 m_UnordFMin(const LHS &L, const RHS &R) {
   return MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>(L, R);
+}
+
+/// Match an 'ordered' or 'unordered' floating point maximum function.
+/// Floating point has one special value 'NaN'. Therefore, there is no total
+/// order. However, if we can ignore the 'NaN' value (for example, because of a
+/// 'no-nans-float-math' flag) a combination of a fcmp and select has 'maximum'
+/// semantics.
+template <typename LHS, typename RHS>
+inline match_combine_or<MaxMin_match<FCmpInst, LHS, RHS, ofmax_pred_ty>,
+                        MaxMin_match<FCmpInst, LHS, RHS, ufmax_pred_ty>>
+m_OrdOrUnordFMax(const LHS &L, const RHS &R) {
+  return m_CombineOr(MaxMin_match<FCmpInst, LHS, RHS, ofmax_pred_ty>(L, R),
+                     MaxMin_match<FCmpInst, LHS, RHS, ufmax_pred_ty>(L, R));
+}
+
+/// Match an 'ordered' or 'unordered' floating point minimum function.
+/// Floating point has one special value 'NaN'. Therefore, there is no total
+/// order. However, if we can ignore the 'NaN' value (for example, because of a
+/// 'no-nans-float-math' flag) a combination of a fcmp and select has 'minimum'
+/// semantics.
+template <typename LHS, typename RHS>
+inline match_combine_or<MaxMin_match<FCmpInst, LHS, RHS, ofmin_pred_ty>,
+                        MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>>
+m_OrdOrUnordFMin(const LHS &L, const RHS &R) {
+  return m_CombineOr(MaxMin_match<FCmpInst, LHS, RHS, ofmin_pred_ty>(L, R),
+                     MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>(L, R));
 }
 
 /// Matches a 'Not' as 'xor V, -1' or 'xor -1, V'.

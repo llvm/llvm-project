@@ -30,14 +30,60 @@ add_libc_unittest(
     libc.src.time.asctime_r
 )
 
+add_libc_unittest(
+  ctime_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    ctime_test.cpp
+  HDRS
+    TmHelper.h
+    TmMatcher.h
+  CXX_STANDARD
+    20
+  DEPENDS
+    libc.include.time
+    libc.hdr.types.time_t
+    libc.src.time.ctime
+    libc.src.time.time_utils
+)
+
+add_libc_unittest(
+  ctime_r_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    ctime_r_test.cpp
+  HDRS
+    TmHelper.h
+    TmMatcher.h
+  CXX_STANDARD
+    20
+  DEPENDS
+    libc.include.time
+    libc.hdr.types.time_t
+    libc.src.time.ctime_r
+    libc.src.time.time_utils
+)
+
 add_libc_test(
   clock_gettime_test
   SUITE
     libc_time_unittests
   SRCS
-  clock_gettime_test.cpp
+    clock_gettime_test.cpp
   DEPENDS
     libc.src.time.clock_gettime
+)
+
+add_libc_test(
+  clock_getres_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    clock_getres_test.cpp
+  DEPENDS
+    libc.src.time.clock_getres
 )
 
 add_libc_unittest(
@@ -121,9 +167,19 @@ add_libc_unittest(
   SRCS
     time_test.cpp
   DEPENDS
-    libc.include.time
     libc.src.time.time
+    libc.src.__support.time.clock_gettime
     libc.src.errno.errno
+)
+
+add_libc_test(
+  timespec_get_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    timespec_get_test.cpp
+  DEPENDS
+    libc.src.time.timespec_get
 )
 
 add_libc_test(

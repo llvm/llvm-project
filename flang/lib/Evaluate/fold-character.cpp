@@ -60,7 +60,7 @@ Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
           if (i.IsNegative() || i.BGE(Scalar<IntT>{0}.IBSET(8 * KIND))) {
             if (context.languageFeatures().ShouldWarn(
                     common::UsageWarning::FoldingValueChecks)) {
-              context.messages().Say(
+              context.messages().Say(common::UsageWarning::FoldingValueChecks,
                   "%s(I=%jd) is out of range for CHARACTER(KIND=%d)"_warn_en_US,
                   parser::ToUpperCaseLetters(name),
                   static_cast<std::intmax_t>(i.ToInt64()), KIND);
@@ -108,7 +108,7 @@ Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
           (1 << 20)) { // sanity limit of 1MiB
         if (context.languageFeatures().ShouldWarn(
                 common::UsageWarning::FoldingLimit)) {
-          context.messages().Say(
+          context.messages().Say(common::UsageWarning::FoldingLimit,
               "Result of REPEAT() is too large to compute at compilation time (%g characters)"_port_en_US,
               static_cast<double>(n) * str.size());
         }

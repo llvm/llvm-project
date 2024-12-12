@@ -17,7 +17,7 @@ subroutine proc
 end subroutine proc
 
 !CHECK-LABEL: define void @proc_()
-!CHECK: call void
+!CHECK: call void (ptr, i32, ptr, ...)
 !CHECK-SAME: @__kmpc_fork_call(ptr {{.*}}, i32 1, ptr @[[OMP_PAR:.*]], {{.*}})
 
 !CHECK: define internal void @[[OMP_PAR]](ptr {{.*}} %[[TID_ADDR:.*]], ptr noalias 

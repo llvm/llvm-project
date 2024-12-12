@@ -61,5 +61,5 @@ void uses() {
 
   // expected-error@+1{{OpenACC 'deviceptr' clause is not valid on 'loop' directive}}
 #pragma acc loop deviceptr(LocalInt)
-  for(;;);
+  for(int i = 5; i < 10;++i);
 }

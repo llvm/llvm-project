@@ -46,33 +46,45 @@ func.func @ops(f32, f32, i32, i32, f64) -> (f32, i32) {
   %1 = arith.subi %arg2, %arg3: i32
 // CHECK: = llvm.icmp "slt" %arg2, %1 : i32
   %2 = arith.cmpi slt, %arg2, %1 : i32
+// CHECK: = llvm.icmp "sle" %arg2, %1 : i32
+  %3 = arith.cmpi sle, %arg2, %1 : i32
+// CHECK: = llvm.icmp "sgt" %arg2, %1 : i32
+  %4 = arith.cmpi sgt, %arg2, %1 : i32
+// CHECK: = llvm.icmp "ult" %arg2, %1 : i32
+  %5 = arith.cmpi ult, %arg2, %1 : i32
+// CHECK: = llvm.icmp "ule" %arg2, %1 : i32
+  %6 = arith.cmpi ule, %arg2, %1 : i32
+// CHECK: = llvm.icmp "ugt" %arg2, %1 : i32
+  %7 = arith.cmpi ugt, %arg2, %1 : i32
+// CHECK: = llvm.icmp "eq" %arg2, %1 : i32
+  %8 = arith.cmpi eq, %arg2, %1 : i32
 // CHECK: = llvm.sdiv %arg2, %arg3 : i32
-  %3 = arith.divsi %arg2, %arg3 : i32
+  %9 = arith.divsi %arg2, %arg3 : i32
 // CHECK: = llvm.udiv %arg2, %arg3 : i32
-  %4 = arith.divui %arg2, %arg3 : i32
+  %10 = arith.divui %arg2, %arg3 : i32
 // CHECK: = llvm.srem %arg2, %arg3 : i32
-  %5 = arith.remsi %arg2, %arg3 : i32
+  %11 = arith.remsi %arg2, %arg3 : i32
 // CHECK: = llvm.urem %arg2, %arg3 : i32
-  %6 = arith.remui %arg2, %arg3 : i32
+  %12 = arith.remui %arg2, %arg3 : i32
 // CHECK: = llvm.fdiv %arg0, %arg1 : f32
-  %8 = arith.divf %arg0, %arg1 : f32
+  %13 = arith.divf %arg0, %arg1 : f32
 // CHECK: = llvm.frem %arg0, %arg1 : f32
-  %9 = arith.remf %arg0, %arg1 : f32
+  %14 = arith.remf %arg0, %arg1 : f32
 // CHECK: = llvm.and %arg2, %arg3 : i32
-  %10 = arith.andi %arg2, %arg3 : i32
+  %15 = arith.andi %arg2, %arg3 : i32
 // CHECK: = llvm.or %arg2, %arg3 : i32
-  %11 = arith.ori %arg2, %arg3 : i32
+  %16 = arith.ori %arg2, %arg3 : i32
 // CHECK: = llvm.xor %arg2, %arg3 : i32
-  %12 = arith.xori %arg2, %arg3 : i32
+  %17 = arith.xori %arg2, %arg3 : i32
 // CHECK: = llvm.mlir.constant(7.900000e-01 : f64) : f64
-  %15 = arith.constant 7.9e-01 : f64
+  %18 = arith.constant 7.9e-01 : f64
 // CHECK: = llvm.shl %arg2, %arg3 : i32
-  %16 = arith.shli %arg2, %arg3 : i32
+  %19 = arith.shli %arg2, %arg3 : i32
 // CHECK: = llvm.ashr %arg2, %arg3 : i32
-  %17 = arith.shrsi %arg2, %arg3 : i32
+  %20 = arith.shrsi %arg2, %arg3 : i32
 // CHECK: = llvm.lshr %arg2, %arg3 : i32
-  %18 = arith.shrui %arg2, %arg3 : i32
-  return %0, %4 : f32, i32
+  %21 = arith.shrui %arg2, %arg3 : i32
+  return %0, %10 : f32, i32
 }
 
 // Checking conversion of index types to integers using i1, assuming no target

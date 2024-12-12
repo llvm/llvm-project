@@ -17,11 +17,13 @@
 namespace mlir {
 
 /// Rewriting that replace SourceOp with a CallOp to `f32Func` or `f64Func` or
-/// `f32ApproxFunc` depending on the element type and the fastMathFlag of that
-/// Op. The function declaration is added in case it was not added before.
+/// `f32ApproxFunc` or `f16Func` depending on the element type and the
+/// fastMathFlag of that Op. The function declaration is added in case it was
+/// not added before.
 ///
-/// If the input values are of f16 type, the value is first casted to f32, the
-/// function called and then the result casted back.
+/// If the input values are of bf16 type (or f16 type if f16Func is empty), the
+/// value is first casted to f32, the function called and then the result casted
+/// back.
 ///
 /// Example with NVVM:
 ///   %exp_f32 = math.exp %arg_f32 : f32
@@ -40,10 +42,11 @@ namespace mlir {
 template <typename SourceOp>
 struct OpToFuncCallLowering : public ConvertOpToLLVMPattern<SourceOp> {
 public:
-  explicit OpToFuncCallLowering(LLVMTypeConverter &lowering, StringRef f32Func,
-                                StringRef f64Func, StringRef f32ApproxFunc)
+  explicit OpToFuncCallLowering(const LLVMTypeConverter &lowering,
+                                StringRef f32Func, StringRef f64Func,
+                                StringRef f32ApproxFunc, StringRef f16Func)
       : ConvertOpToLLVMPattern<SourceOp>(lowering), f32Func(f32Func),
-        f64Func(f64Func), f32ApproxFunc(f32ApproxFunc) {}
+        f64Func(f64Func), f32ApproxFunc(f32ApproxFunc), f16Func(f16Func) {}
 
   LogicalResult
   matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
@@ -57,6 +60,11 @@ public:
     static_assert(std::is_base_of<OpTrait::SameOperandsAndResultType<SourceOp>,
                                   SourceOp>::value,
                   "expected op with same operand and result types");
+
+    if (!op->template getParentOfType<FunctionOpInterface>()) {
+      return rewriter.notifyMatchFailure(
+          op, "expected op to be within a function region");
+    }
 
     SmallVector<Value, 1> castedOperands;
     for (Value operand : adaptor.getOperands())
@@ -89,7 +97,11 @@ public:
 private:
   Value maybeCast(Value operand, PatternRewriter &rewriter) const {
     Type type = operand.getType();
-    if (!isa<Float16Type>(type))
+    if (!isa<Float16Type, BFloat16Type>(type))
+      return operand;
+
+    // if there's a f16 function, no need to cast f16 values
+    if (!f16Func.empty() && isa<Float16Type>(type))
       return operand;
 
     return rewriter.create<LLVM::FPExtOp>(
@@ -102,6 +114,8 @@ private:
   }
 
   StringRef getFunctionName(Type type, arith::FastMathFlags flag) const {
+    if (isa<Float16Type>(type))
+      return f16Func;
     if (isa<Float32Type>(type)) {
       if (((uint32_t)arith::FastMathFlags::afn & (uint32_t)flag) &&
           !f32ApproxFunc.empty())
@@ -130,6 +144,7 @@ private:
   const std::string f32Func;
   const std::string f64Func;
   const std::string f32ApproxFunc;
+  const std::string f16Func;
 };
 
 } // namespace mlir

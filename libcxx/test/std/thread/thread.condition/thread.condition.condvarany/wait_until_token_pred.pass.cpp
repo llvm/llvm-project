@@ -8,7 +8,7 @@
 //
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-experimental-stop_token
+
 // XFAIL: availability-synchronization_library-missing
 
 // <condition_variable>
@@ -19,6 +19,7 @@
 //   bool wait_until(Lock& lock, stop_token stoken,
 //                   const chrono::time_point<Clock, Duration>& abs_time, Predicate pred);
 
+#include <atomic>
 #include <cassert>
 #include <chrono>
 #include <concepts>

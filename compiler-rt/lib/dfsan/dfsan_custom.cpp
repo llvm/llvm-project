@@ -2859,6 +2859,7 @@ WRAPPER_ALIAS(__isoc99_sscanf, sscanf)
 WRAPPER_ALIAS(__isoc23_sscanf, sscanf)
 
 static void BeforeFork() {
+  VReport(2, "BeforeFork tid: %llu\n", GetTid());
   StackDepotLockBeforeFork();
   ChainedOriginDepotLockBeforeFork();
 }
@@ -2866,6 +2867,7 @@ static void BeforeFork() {
 static void AfterFork(bool fork_child) {
   ChainedOriginDepotUnlockAfterFork(fork_child);
   StackDepotUnlockAfterFork(fork_child);
+  VReport(2, "AfterFork tid: %llu\n", GetTid());
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE

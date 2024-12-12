@@ -53,6 +53,34 @@ void InstCombinerImpl::PHIArgMergedDebugLoc(Instruction *Inst, PHINode &PN) {
   }
 }
 
+/// If the phi is within a phi web, which is formed by the def-use chain
+/// of phis and all the phis in the web are only used in the other phis.
+/// In this case, these phis are dead and we will remove all of them.
+bool InstCombinerImpl::foldDeadPhiWeb(PHINode &PN) {
+  SmallVector<PHINode *, 16> Stack;
+  SmallPtrSet<PHINode *, 16> Visited;
+  Stack.push_back(&PN);
+  while (!Stack.empty()) {
+    PHINode *Phi = Stack.pop_back_val();
+    if (!Visited.insert(Phi).second)
+      continue;
+    // Early stop if the set of PHIs is large
+    if (Visited.size() == 16)
+      return false;
+    for (User *Use : Phi->users()) {
+      if (PHINode *PhiUse = dyn_cast<PHINode>(Use))
+        Stack.push_back(PhiUse);
+      else
+        return false;
+    }
+  }
+  for (PHINode *Phi : Visited)
+    replaceInstUsesWith(*Phi, PoisonValue::get(Phi->getType()));
+  for (PHINode *Phi : Visited)
+    eraseInstFromFunction(*Phi);
+  return true;
+}
+
 // Replace Integer typed PHI PN if the PHI's value is used as a pointer value.
 // If there is an existing pointer typed PHI that produces the same value as PN,
 // replace PN and the IntToPtr operation with it. Otherwise, synthesize a new
@@ -517,7 +545,8 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
   // especially bad when the PHIs are in the header of a loop.
   bool NeededPhi = false;
 
-  GEPNoWrapFlags NW = GEPNoWrapFlags::all();
+  // Remember flags of the first phi-operand getelementptr.
+  GEPNoWrapFlags NW = FirstInst->getNoWrapFlags();
 
   // Scan to see if all operands are the same opcode, and all have one user.
   for (Value *V : drop_begin(PN.incoming_values())) {
@@ -974,26 +1003,6 @@ Instruction *InstCombinerImpl::foldPHIArgOpIntoPHI(PHINode &PN) {
                                    PhiVal, ConstantOp);
   PHIArgMergedDebugLoc(NewCI, PN);
   return NewCI;
-}
-
-/// Return true if this PHI node is only used by a PHI node cycle that is dead.
-static bool isDeadPHICycle(PHINode *PN,
-                           SmallPtrSetImpl<PHINode *> &PotentiallyDeadPHIs) {
-  if (PN->use_empty()) return true;
-  if (!PN->hasOneUse()) return false;
-
-  // Remember this node, and if we find the cycle, return.
-  if (!PotentiallyDeadPHIs.insert(PN).second)
-    return true;
-
-  // Don't scan crazily complex things.
-  if (PotentiallyDeadPHIs.size() == 16)
-    return false;
-
-  if (PHINode *PU = dyn_cast<PHINode>(PN->user_back()))
-    return isDeadPHICycle(PU, PotentiallyDeadPHIs);
-
-  return false;
 }
 
 /// Return true if this phi node is always equal to NonPhiInVal.
@@ -1474,20 +1483,13 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
     }
   }
 
-  // If this is a trivial cycle in the PHI node graph, remove it.  Basically, if
-  // this PHI only has a single use (a PHI), and if that PHI only has one use (a
-  // PHI)... break the cycle.
+  if (foldDeadPhiWeb(PN))
+    return nullptr;
+
+  // Optimization when the phi only has one use
   if (PN.hasOneUse()) {
     if (foldIntegerTypedPHI(PN))
       return nullptr;
-
-    Instruction *PHIUser = cast<Instruction>(PN.user_back());
-    if (PHINode *PU = dyn_cast<PHINode>(PHIUser)) {
-      SmallPtrSet<PHINode*, 16> PotentiallyDeadPHIs;
-      PotentiallyDeadPHIs.insert(&PN);
-      if (isDeadPHICycle(PU, PotentiallyDeadPHIs))
-        return replaceInstUsesWith(PN, PoisonValue::get(PN.getType()));
-    }
 
     // If this phi has a single use, and if that use just computes a value for
     // the next iteration of a loop, delete the phi.  This occurs with unused
@@ -1495,6 +1497,7 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
     // common case here is good because the only other things that catch this
     // are induction variable analysis (sometimes) and ADCE, which is only run
     // late.
+    Instruction *PHIUser = cast<Instruction>(PN.user_back());
     if (PHIUser->hasOneUse() &&
         (isa<BinaryOperator>(PHIUser) || isa<UnaryOperator>(PHIUser) ||
          isa<GetElementPtrInst>(PHIUser)) &&

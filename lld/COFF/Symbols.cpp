@@ -53,6 +53,17 @@ std::string toCOFFString(const COFFLinkerContext &ctx,
   return maybeDemangleSymbol(ctx, b.getName());
 }
 
+const COFFSyncStream &
+coff::operator<<(const COFFSyncStream &s,
+                 const llvm::object::Archive::Symbol *sym) {
+  s << maybeDemangleSymbol(s.ctx, sym->getName());
+  return s;
+}
+
+const COFFSyncStream &coff::operator<<(const COFFSyncStream &s, Symbol *sym) {
+  return s << maybeDemangleSymbol(s.ctx, sym->getName());
+}
+
 namespace coff {
 
 void Symbol::computeName() {
@@ -84,7 +95,7 @@ bool Symbol::isLive() const {
   if (auto *imp = dyn_cast<DefinedImportData>(this))
     return imp->file->live;
   if (auto *imp = dyn_cast<DefinedImportThunk>(this))
-    return imp->wrappedSym->file->thunkLive;
+    return imp->getChunk()->live;
   // Assume any other kind of symbol is live.
   return true;
 }
@@ -107,29 +118,20 @@ COFFSymbolRef DefinedCOFF::getCOFFSymbol() {
 
 uint64_t DefinedAbsolute::getRVA() { return va - ctx.config.imageBase; }
 
-static Chunk *makeImportThunk(COFFLinkerContext &ctx, DefinedImportData *s,
-                              uint16_t machine) {
-  if (machine == AMD64)
-    return make<ImportThunkChunkX64>(ctx, s);
-  if (machine == I386)
-    return make<ImportThunkChunkX86>(ctx, s);
-  if (machine == ARM64)
-    return make<ImportThunkChunkARM64>(ctx, s);
-  assert(machine == ARMNT);
-  return make<ImportThunkChunkARM>(ctx, s);
-}
-
 DefinedImportThunk::DefinedImportThunk(COFFLinkerContext &ctx, StringRef name,
-                                       DefinedImportData *s, uint16_t machine)
-    : Defined(DefinedImportThunkKind, name), wrappedSym(s),
-      data(makeImportThunk(ctx, s, machine)) {}
+                                       DefinedImportData *s,
+                                       ImportThunkChunk *chunk)
+    : Defined(DefinedImportThunkKind, name), wrappedSym(s), data(chunk) {}
 
-Defined *Undefined::getWeakAlias() {
+Symbol *Undefined::getWeakAlias() {
   // A weak alias may be a weak alias to another symbol, so check recursively.
   DenseSet<Symbol *> weakChain;
   for (Symbol *a = weakAlias; a; a = cast<Undefined>(a)->weakAlias) {
-    if (auto *d = dyn_cast<Defined>(a))
-      return d;
+    // Anti-dependency symbols can't be chained.
+    if (a->isAntiDep)
+      break;
+    if (!isa<Undefined>(a))
+      return a;
     if (!weakChain.insert(a).second)
       break; // We have a cycle.
   }
@@ -137,7 +139,7 @@ Defined *Undefined::getWeakAlias() {
 }
 
 bool Undefined::resolveWeakAlias() {
-  Defined *d = getWeakAlias();
+  Defined *d = getDefinedWeakAlias();
   if (!d)
     return false;
 
@@ -147,6 +149,7 @@ bool Undefined::resolveWeakAlias() {
   // Symbols. For that reason we need to check which type of symbol we
   // are dealing with and copy the correct number of bytes.
   StringRef name = getName();
+  bool wasAntiDep = isAntiDep;
   if (isa<DefinedRegular>(d))
     memcpy(this, d, sizeof(DefinedRegular));
   else if (isa<DefinedAbsolute>(d))
@@ -156,6 +159,7 @@ bool Undefined::resolveWeakAlias() {
 
   nameData = name.data();
   nameSize = name.size();
+  isAntiDep = wasAntiDep;
   return true;
 }
 

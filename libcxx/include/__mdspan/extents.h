@@ -21,6 +21,7 @@
 #include <__config>
 
 #include <__concepts/arithmetic.h>
+#include <__cstddef/byte.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_nothrow_constructible.h>
@@ -29,9 +30,7 @@
 #include <__utility/integer_sequence.h>
 #include <__utility/unreachable.h>
 #include <array>
-#include <cinttypes>
 #include <concepts>
-#include <cstddef>
 #include <limits>
 #include <span>
 
@@ -449,7 +448,7 @@ struct __make_dextents< _IndexType, 0, extents<_IndexType, _ExtentsPack...>> {
   using type = extents<_IndexType, _ExtentsPack...>;
 };
 
-} // end namespace __mdspan_detail
+} // namespace __mdspan_detail
 
 // [mdspan.extents.dextents], alias template
 template <class _IndexType, size_t _Rank>

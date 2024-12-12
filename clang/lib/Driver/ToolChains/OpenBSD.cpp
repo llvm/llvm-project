@@ -213,7 +213,9 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                   D.getLTOMode() == LTOK_Thin);
   }
 
-  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+  const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs(Args);
+  bool NeedsSanitizerDeps =
+      addSanitizerRuntimes(ToolChain, Args, SanArgs, CmdArgs);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
@@ -239,7 +241,8 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // to generate executables. As Fortran runtime depends on the C runtime,
     // these dependencies need to be listed before the C runtime below (i.e.
     // AddRunTimeLibs).
-    if (D.IsFlangMode()) {
+    if (D.IsFlangMode() &&
+        !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
       addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
       addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
       if (Profiling)
@@ -250,7 +253,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     if (NeedsSanitizerDeps) {
       CmdArgs.push_back(ToolChain.getCompilerRTArgString(Args, "builtins"));
-      linkSanitizerRuntimeDeps(ToolChain, Args, CmdArgs);
+      linkSanitizerRuntimeDeps(ToolChain, Args, SanArgs, CmdArgs);
     }
     if (NeedsXRayDeps) {
       CmdArgs.push_back(ToolChain.getCompilerRTArgString(Args, "builtins"));

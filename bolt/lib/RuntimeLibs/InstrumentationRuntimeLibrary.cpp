@@ -314,7 +314,6 @@ std::string InstrumentationRuntimeLibrary::buildTables(BinaryContext &BC) {
   }
   // Our string table lives immediately after descriptions vector
   OS << Summary->StringTable;
-  OS.flush();
 
   return TablesStr;
 }

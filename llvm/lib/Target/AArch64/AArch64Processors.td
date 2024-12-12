@@ -266,6 +266,14 @@ def TuneA64FX : SubtargetFeature<"a64fx", "ARMProcFamily", "A64FX",
                                  FeatureStorePairSuppress,
                                  FeaturePredictableSelectIsExpensive]>;
 
+def TuneMONAKA : SubtargetFeature<"fujitsu-monaka", "ARMProcFamily", "MONAKA",
+                                 "Fujitsu FUJITSU-MONAKA processors", [
+                                 FeaturePredictableSelectIsExpensive,
+                                 FeatureEnableSelectOptimize,
+                                 FeaturePostRAScheduler,
+                                 FeatureArithmeticBccFusion,
+                                 ]>;
+
 def TuneCarmel : SubtargetFeature<"carmel", "ARMProcFamily", "Carmel",
                                   "Nvidia Carmel processors">;
 
@@ -843,6 +851,12 @@ def ProcessorFeatures {
                                      FeatureSHA2, FeaturePerfMon, FeatureFullFP16,
                                      FeatureSVE, FeatureComplxNum,
                                      FeatureAES, FeatureCRC, FeatureLSE, FeatureRAS, FeatureRDM];
+  list<SubtargetFeature> MONAKA = [HasV9_3aOps, FeaturePerfMon, FeatureCCIDX,
+                                   FeatureFPAC, FeatureFP16FML, FeatureRandGen,
+                                   FeatureSSBS, FeatureLS64, FeatureCLRBHB,
+                                   FeatureSPECRES2, FeatureSVEAES, FeatureSVE2SM4,
+                                   FeatureSVE2SHA3, FeatureSVE2BitPerm, FeatureETE,
+                                   FeatureMEC, FeatureFP8DOT2];
   list<SubtargetFeature> Carmel   = [HasV8_2aOps, FeatureNEON, FeatureSHA2, FeatureAES,
                                      FeatureFullFP16, FeatureCRC, FeatureLSE, FeatureRAS, FeatureRDM,
                                      FeatureFPARMv8];
@@ -895,7 +909,12 @@ def ProcessorFeatures {
                                      FeatureLSE, FeaturePAuth, FeatureFPAC,
                                      FeatureRAS, FeatureRCPC, FeatureRDM,
                                      FeatureBF16, FeatureDotProd, FeatureMatMulInt8, FeatureSSBS];
-  list<SubtargetFeature> AppleM4 = [HasV9_2aOps, FeatureSHA2, FeatureFPARMv8,
+  // Technically apple-m4 is v9.2a, but we can't use that here.
+  // Historically, llvm defined v9.0a as requiring SVE, but it's optional
+  // according to the Arm ARM, and not supported by the core.  We decoupled the
+  // two in the clang driver and in the backend subtarget features, but it's
+  // still an issue in the clang frontend.  v8.7a is the next closest choice.
+  list<SubtargetFeature> AppleM4 = [HasV8_7aOps, FeatureSHA2, FeatureFPARMv8,
                                     FeatureNEON, FeaturePerfMon, FeatureSHA3,
                                     FeatureFullFP16, FeatureFP16FML,
                                     FeatureAES, FeatureBF16,
@@ -1102,21 +1121,21 @@ def : ProcessorModel<"cortex-a720", NeoverseN2Model, ProcessorFeatures.A720,
                      [TuneA720]>;
 def : ProcessorModel<"cortex-a720ae", NeoverseN2Model, ProcessorFeatures.A720AE,
                      [TuneA720AE]>;
-def : ProcessorModel<"cortex-a725", NeoverseN2Model, ProcessorFeatures.A725,
+def : ProcessorModel<"cortex-a725", NeoverseN3Model, ProcessorFeatures.A725,
                      [TuneA725]>;
 def : ProcessorModel<"cortex-r82", CortexA55Model, ProcessorFeatures.R82,
                      [TuneR82]>;
 def : ProcessorModel<"cortex-r82ae", CortexA55Model, ProcessorFeatures.R82AE,
                      [TuneR82AE]>;
-def : ProcessorModel<"cortex-x1", CortexA57Model, ProcessorFeatures.X1,
+def : ProcessorModel<"cortex-x1", NeoverseV1Model, ProcessorFeatures.X1,
                      [TuneX1]>;
-def : ProcessorModel<"cortex-x1c", CortexA57Model, ProcessorFeatures.X1C,
+def : ProcessorModel<"cortex-x1c", NeoverseV1Model, ProcessorFeatures.X1C,
                      [TuneX1]>;
-def : ProcessorModel<"cortex-x2", NeoverseN2Model, ProcessorFeatures.X2,
+def : ProcessorModel<"cortex-x2", NeoverseV2Model, ProcessorFeatures.X2,
                      [TuneX2]>;
-def : ProcessorModel<"cortex-x3", NeoverseN2Model, ProcessorFeatures.X3,
+def : ProcessorModel<"cortex-x3", NeoverseV2Model, ProcessorFeatures.X3,
                      [TuneX3]>;
-def : ProcessorModel<"cortex-x4", NeoverseN2Model, ProcessorFeatures.X4,
+def : ProcessorModel<"cortex-x4", NeoverseV2Model, ProcessorFeatures.X4,
                      [TuneX4]>;
 def : ProcessorModel<"cortex-x925", NeoverseV2Model, ProcessorFeatures.X925,
                      [TuneX925]>;
@@ -1127,7 +1146,7 @@ def : ProcessorModel<"neoverse-n1", NeoverseN1Model,
 def : ProcessorModel<"neoverse-n2", NeoverseN2Model,
                      ProcessorFeatures.NeoverseN2, [TuneNeoverseN2]>;
 def : ProcessorAlias<"cobalt-100", "neoverse-n2">;
-def : ProcessorModel<"neoverse-n3", NeoverseN2Model,
+def : ProcessorModel<"neoverse-n3", NeoverseN3Model,
                      ProcessorFeatures.NeoverseN3, [TuneNeoverseN3]>;
 def : ProcessorModel<"neoverse-512tvb", NeoverseV1Model,
                      ProcessorFeatures.Neoverse512TVB, [TuneNeoverse512TVB]>;
@@ -1219,6 +1238,10 @@ def : ProcessorAlias<"apple-latest", "apple-m4">;
 // Fujitsu A64FX
 def : ProcessorModel<"a64fx", A64FXModel, ProcessorFeatures.A64FX,
                      [TuneA64FX]>;
+
+// Fujitsu FUJITSU-MONAKA
+def : ProcessorModel<"fujitsu-monaka", A64FXModel, ProcessorFeatures.MONAKA,
+                     [TuneMONAKA]>;
 
 // Nvidia Carmel
 def : ProcessorModel<"carmel", NoSchedModel, ProcessorFeatures.Carmel,

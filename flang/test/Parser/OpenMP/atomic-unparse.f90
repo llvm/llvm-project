@@ -3,6 +3,7 @@
 program main
    implicit none
    integer :: i, j = 10
+   integer :: k
 !READ
 !$omp atomic read
    i = j
@@ -121,6 +122,63 @@ program main
    i = j
 !$omp end atomic
 
+!COMPARE
+!$omp atomic compare
+   if (k == i) k = j
+!$omp atomic seq_cst compare
+   if (k == j) then
+      k = i
+   end if
+!$omp atomic compare seq_cst
+   if (k .eq. j) then
+      k = i
+   end if
+!$omp atomic release compare
+   if (i .eq. j) k = i
+!$omp atomic compare release
+   if (i .eq. j) then
+      i = k
+   end if
+!$omp atomic acq_rel compare
+   if (k .eq. j) then
+      j = i
+   end if
+!$omp atomic compare acq_rel
+   if (i .eq. j) then
+      i = k
+   end if
+!$omp atomic acquire compare
+   if (i .eq. j + 1) then
+      i = j
+   end if
+   
+!$omp atomic compare acquire
+   if (i .eq. j) then
+      i = k
+   end if
+!$omp atomic relaxed compare
+   if (i .eq. j) then
+      i = k
+   end if
+!$omp atomic compare relaxed
+   if (i .eq. k) then
+      i = j
+   end if
+
+
+!$omp atomic compare fail(relaxed)
+   if (i .eq. k) then
+      i = j
+   end if
+!$omp atomic fail(relaxed) compare
+   if (i .eq. k) then
+      i = j
+   end if
+!$omp atomic fail(relaxed) compare acquire
+   if (i .eq. k) then
+      i = j
+   end if
+   
 !ATOMIC
 !$omp atomic
    i = j
@@ -205,6 +263,23 @@ end program main
 !CHECK: !$OMP ATOMIC CAPTURE RELAXED
 !CHECK: !$OMP END ATOMIC
 
+!COMPARE
+
+!CHECK: !$OMP ATOMIC COMPARE
+!CHECK: !$OMP ATOMIC SEQ_CST COMPARE
+!CHECK: !$OMP ATOMIC COMPARE SEQ_CST
+!CHECK: !$OMP ATOMIC RELEASE COMPARE
+!CHECK: !$OMP ATOMIC COMPARE RELEASE
+!CHECK: !$OMP ATOMIC ACQ_REL COMPARE
+!CHECK: !$OMP ATOMIC COMPARE ACQ_REL
+!CHECK: !$OMP ATOMIC ACQUIRE COMPARE
+!CHECK: !$OMP ATOMIC COMPARE ACQUIRE
+!CHECK: !$OMP ATOMIC RELAXED COMPARE
+!CHECK: !$OMP ATOMIC COMPARE RELAXED
+!CHECK: !$OMP ATOMIC COMPARE FAIL(RELAXED)
+!CHECK: !$OMP ATOMIC FAIL(RELAXED) COMPARE
+!CHECK: !$OMP ATOMIC FAIL(RELAXED) COMPARE ACQUIRE
+
 !ATOMIC
 !CHECK: !$OMP ATOMIC
 !CHECK: !$OMP ATOMIC SEQ_CST
@@ -212,3 +287,5 @@ end program main
 !CHECK: !$OMP ATOMIC ACQ_REL
 !CHECK: !$OMP ATOMIC ACQUIRE
 !CHECK: !$OMP ATOMIC RELAXED
+
+

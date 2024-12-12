@@ -81,6 +81,7 @@ Clang-Tidy Checks
    :doc:`bugprone-assert-side-effect <bugprone/assert-side-effect>`,
    :doc:`bugprone-assignment-in-if-condition <bugprone/assignment-in-if-condition>`,
    :doc:`bugprone-bad-signal-to-kill-thread <bugprone/bad-signal-to-kill-thread>`,
+   :doc:`bugprone-bitwise-pointer-cast <bugprone/bitwise-pointer-cast>`,
    :doc:`bugprone-bool-pointer-implicit-conversion <bugprone/bool-pointer-implicit-conversion>`, "Yes"
    :doc:`bugprone-branch-clone <bugprone/branch-clone>`,
    :doc:`bugprone-casting-through-void <bugprone/casting-through-void>`,
@@ -114,6 +115,7 @@ Clang-Tidy Checks
    :doc:`bugprone-multiple-new-in-one-expression <bugprone/multiple-new-in-one-expression>`,
    :doc:`bugprone-multiple-statement-macro <bugprone/multiple-statement-macro>`,
    :doc:`bugprone-no-escape <bugprone/no-escape>`,
+   :doc:`bugprone-nondeterministic-pointer-iteration-order <bugprone/nondeterministic-pointer-iteration-order>`,
    :doc:`bugprone-non-zero-enum-to-bool-conversion <bugprone/non-zero-enum-to-bool-conversion>`,
    :doc:`bugprone-not-null-terminated-result <bugprone/not-null-terminated-result>`, "Yes"
    :doc:`bugprone-optional-value-conversion <bugprone/optional-value-conversion>`, "Yes"
@@ -145,6 +147,7 @@ Clang-Tidy Checks
    :doc:`bugprone-suspicious-stringview-data-usage <bugprone/suspicious-stringview-data-usage>`,
    :doc:`bugprone-swapped-arguments <bugprone/swapped-arguments>`, "Yes"
    :doc:`bugprone-switch-missing-default-case <bugprone/switch-missing-default-case>`,
+   :doc:`bugprone-tagged-union-member-count <bugprone/tagged-union-member-count>`,
    :doc:`bugprone-terminating-continue <bugprone/terminating-continue>`, "Yes"
    :doc:`bugprone-throw-keyword-missing <bugprone/throw-keyword-missing>`,
    :doc:`bugprone-too-small-loop-variable <bugprone/too-small-loop-variable>`,
@@ -298,6 +301,7 @@ Clang-Tidy Checks
    :doc:`modernize-use-emplace <modernize/use-emplace>`, "Yes"
    :doc:`modernize-use-equals-default <modernize/use-equals-default>`, "Yes"
    :doc:`modernize-use-equals-delete <modernize/use-equals-delete>`, "Yes"
+   :doc:`modernize-use-integer-sign-comparison <modernize/use-integer-sign-comparison>`, "Yes"
    :doc:`modernize-use-nodiscard <modernize/use-nodiscard>`, "Yes"
    :doc:`modernize-use-noexcept <modernize/use-noexcept>`, "Yes"
    :doc:`modernize-use-nullptr <modernize/use-nullptr>`, "Yes"
@@ -346,6 +350,7 @@ Clang-Tidy Checks
    :doc:`portability-restrict-system-includes <portability/restrict-system-includes>`, "Yes"
    :doc:`portability-simd-intrinsics <portability/simd-intrinsics>`,
    :doc:`portability-std-allocator-const <portability/std-allocator-const>`,
+   :doc:`portability-template-virtual-member-function <portability/template-virtual-member-function>`,
    :doc:`readability-avoid-const-params-in-decls <readability/avoid-const-params-in-decls>`, "Yes"
    :doc:`readability-avoid-nested-conditional-operator <readability/avoid-nested-conditional-operator>`,
    :doc:`readability-avoid-return-with-void-value <readability/avoid-return-with-void-value>`, "Yes"
@@ -407,6 +412,7 @@ Check aliases
    :header: "Name", "Redirect", "Offers fixes"
 
    :doc:`bugprone-narrowing-conversions <bugprone/narrowing-conversions>`, :doc:`cppcoreguidelines-narrowing-conversions <cppcoreguidelines/narrowing-conversions>`,
+   :doc:`cert-arr39-c <cert/arr39-c>`, :doc:`bugprone-sizeof-expression <bugprone/sizeof-expression>`,
    :doc:`cert-con36-c <cert/con36-c>`, :doc:`bugprone-spuriously-wake-up-functions <bugprone/spuriously-wake-up-functions>`,
    :doc:`cert-con54-cpp <cert/con54-cpp>`, :doc:`bugprone-spuriously-wake-up-functions <bugprone/spuriously-wake-up-functions>`,
    :doc:`cert-ctr56-cpp <cert/ctr56-cpp>`, :doc:`bugprone-pointer-arithmetic-on-polymorphic-object <bugprone/pointer-arithmetic-on-polymorphic-object>`,

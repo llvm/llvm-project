@@ -87,6 +87,7 @@ set(hlsl_h
 set(hlsl_subdir_files
   hlsl/hlsl_basic_types.h
   hlsl/hlsl_intrinsics.h
+  hlsl/hlsl_detail.h
   )
 set(hlsl_files
   ${hlsl_h}
@@ -119,6 +120,7 @@ set(ppc_htm_files
 
 set(riscv_files
   riscv_bitmanip.h
+        riscv_corev_alu.h
   riscv_crypto.h
   riscv_ntlh.h
   sifive_vector.h
@@ -144,16 +146,31 @@ set(x86_files
   adcintrin.h
   adxintrin.h
   ammintrin.h
+  amxavx512intrin.h
+  amxbf16transposeintrin.h
   amxcomplexintrin.h
+  amxcomplextransposeintrin.h
   amxfp16intrin.h
+  amxfp16transposeintrin.h
+  amxfp8intrin.h
   amxintrin.h
+  amxmovrsintrin.h
+  amxmovrstransposeintrin.h
+  amxtf32intrin.h
+  amxtf32transposeintrin.h
+  amxtransposeintrin.h
+  avx10_2_512bf16intrin.h
   avx10_2_512convertintrin.h
   avx10_2_512minmaxintrin.h
   avx10_2_512niintrin.h
+  avx10_2_512satcvtdsintrin.h
   avx10_2_512satcvtintrin.h
+  avx10_2bf16intrin.h
   avx10_2convertintrin.h
+  avx10_2copyintrin.h
   avx10_2minmaxintrin.h
   avx10_2niintrin.h
+  avx10_2satcvtdsintrin.h
   avx10_2satcvtintrin.h
   avx2intrin.h
   avx512bf16intrin.h
@@ -214,6 +231,9 @@ set(x86_files
   mm3dnow.h
   mmintrin.h
   movdirintrin.h
+  movrs_avx10_2_512intrin.h
+  movrs_avx10_2intrin.h
+  movrsintrin.h
   mwaitxintrin.h
   nmmintrin.h
   pconfigintrin.h
@@ -234,6 +254,7 @@ set(x86_files
   shaintrin.h
   sm3intrin.h
   sm4intrin.h
+  sm4evexintrin.h
   smmintrin.h
   tbmintrin.h
   tmmintrin.h
@@ -259,6 +280,12 @@ set(x86_files
 # others
   cet.h
   cpuid.h
+  )
+
+set(gpu_files
+  gpuintrin.h
+  nvptxintrin.h
+  amdgpuintrin.h
   )
 
 set(windows_only_files
@@ -289,6 +316,7 @@ set(files
   ${systemz_files}
   ${ve_files}
   ${x86_files}
+  ${gpu_files}
   ${webassembly_files}
   ${windows_only_files}
   ${utility_files}
@@ -511,6 +539,7 @@ add_header_target("systemz-resource-headers" "${systemz_files};${zos_wrapper_fil
 add_header_target("ve-resource-headers" "${ve_files}")
 add_header_target("webassembly-resource-headers" "${webassembly_files}")
 add_header_target("x86-resource-headers" "${x86_files}")
+add_header_target("gpu-resource-headers" "${gpu_files}")
 
 # Other header groupings
 add_header_target("hlsl-resource-headers" ${hlsl_files})
@@ -696,6 +725,12 @@ install(
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL
   COMPONENT x86-resource-headers)
+
+install(
+  FILES ${gpu_files}
+  DESTINATION ${header_install_dir}
+  EXCLUDE_FROM_ALL
+  COMPONENT gpu-resource-headers)
 
 if(NOT CLANG_ENABLE_HLSL)
   set(EXCLUDE_HLSL EXCLUDE_FROM_ALL)

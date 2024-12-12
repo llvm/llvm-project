@@ -31,8 +31,8 @@ define i32 @srem8_ashr_mask(i32 %a0) {
 
 define <2 x i32> @srem2_ashr_mask_vector(<2 x i32> %a0) {
 ; CHECK-LABEL: @srem2_ashr_mask_vector(
-; CHECK-NEXT:    [[SREM:%.*]] = srem <2 x i32> [[A0:%.*]], <i32 2, i32 2>
-; CHECK-NEXT:    [[MASK:%.*]] = and <2 x i32> [[SREM]], <i32 2, i32 2>
+; CHECK-NEXT:    [[SREM:%.*]] = srem <2 x i32> [[A0:%.*]], splat (i32 2)
+; CHECK-NEXT:    [[MASK:%.*]] = and <2 x i32> [[SREM]], splat (i32 2)
 ; CHECK-NEXT:    ret <2 x i32> [[MASK]]
 ;
   %srem = srem <2 x i32> %a0, <i32 2, i32 2>
@@ -43,8 +43,8 @@ define <2 x i32> @srem2_ashr_mask_vector(<2 x i32> %a0) {
 
 define <2 x i32> @srem2_ashr_mask_vector_nonconstant(<2 x i32> %a0, <2 x i32> %a1) {
 ; CHECK-LABEL: @srem2_ashr_mask_vector_nonconstant(
-; CHECK-NEXT:    [[SREM:%.*]] = srem <2 x i32> [[A0:%.*]], <i32 2, i32 2>
-; CHECK-NEXT:    [[MASK:%.*]] = and <2 x i32> [[SREM]], <i32 2, i32 2>
+; CHECK-NEXT:    [[SREM:%.*]] = srem <2 x i32> [[A0:%.*]], splat (i32 2)
+; CHECK-NEXT:    [[MASK:%.*]] = and <2 x i32> [[SREM]], splat (i32 2)
 ; CHECK-NEXT:    ret <2 x i32> [[MASK]]
 ;
   %srem = srem <2 x i32> %a0, <i32 2, i32 2>

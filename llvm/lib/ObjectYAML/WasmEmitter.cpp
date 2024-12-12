@@ -648,7 +648,7 @@ bool WasmWriter::writeWasm(raw_ostream &OS) {
     StringStream.flush();
 
     unsigned HeaderSecSizeEncodingLen =
-        Sec->HeaderSecSizeEncodingLen ? *Sec->HeaderSecSizeEncodingLen : 5;
+        Sec->HeaderSecSizeEncodingLen.value_or(5);
     unsigned RequiredLen = getULEB128Size(OutString.size());
     // Wasm spec does not allow LEBs larger than 5 bytes
     assert(RequiredLen <= 5);

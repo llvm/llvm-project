@@ -111,7 +111,7 @@ define i1 @test9(i8 %A) {
 
 define <2 x i1> @test9vec(<2 x i8> %a) {
 ; CHECK-LABEL: @test9vec(
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i8> [[A:%.*]], <i8 89, i8 89>
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i8> [[A:%.*]], splat (i8 89)
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %b = xor <2 x i8> %a, <i8 123, i8 123>
@@ -153,7 +153,7 @@ define i1 @test12(i8 %A) {
 
 define <2 x i1> @test12vec(<2 x i8> %a) {
 ; CHECK-LABEL: @test12vec(
-; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i8> [[A:%.*]], <i8 4, i8 4>
+; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i8> [[A:%.*]], splat (i8 4)
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %b = xor <2 x i8> %a, <i8 4, i8 4>
@@ -222,7 +222,7 @@ define i32 @fold_zext_xor_sandwich(i1 %X) {
 define <2 x i32> @fold_zext_xor_sandwich_vec(<2 x i1> %X) {
 ; CHECK-LABEL: @fold_zext_xor_sandwich_vec(
 ; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i1> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[Q:%.*]] = xor <2 x i32> [[Z]], <i32 3, i32 3>
+; CHECK-NEXT:    [[Q:%.*]] = xor <2 x i32> [[Z]], splat (i32 3)
 ; CHECK-NEXT:    ret <2 x i32> [[Q]]
 ;
   %Y = xor <2 x i1> %X, <i1 true, i1 true>
@@ -287,7 +287,7 @@ define i32 @test28(i32 %indvar) {
 
 define <2 x i32> @test28vec(<2 x i32> %indvar) {
 ; CHECK-LABEL: @test28vec(
-; CHECK-NEXT:    [[T214:%.*]] = add <2 x i32> [[INDVAR:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[T214:%.*]] = add <2 x i32> [[INDVAR:%.*]], splat (i32 1)
 ; CHECK-NEXT:    ret <2 x i32> [[T214]]
 ;
   %t7 = add <2 x i32> %indvar, <i32 -2147483647, i32 -2147483647>
@@ -307,7 +307,7 @@ define i32 @test28_sub(i32 %indvar) {
 
 define <2 x i32> @test28_subvec(<2 x i32> %indvar) {
 ; CHECK-LABEL: @test28_subvec(
-; CHECK-NEXT:    [[T214:%.*]] = sub <2 x i32> <i32 1, i32 1>, [[INDVAR:%.*]]
+; CHECK-NEXT:    [[T214:%.*]] = sub <2 x i32> splat (i32 1), [[INDVAR:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[T214]]
 ;
   %t7 = sub <2 x i32> <i32 -2147483647, i32 -2147483647>, %indvar
@@ -327,7 +327,7 @@ define i32 @test29(i1 %C) {
 
 define <2 x i32> @test29vec(i1 %C) {
 ; CHECK-LABEL: @test29vec(
-; CHECK-NEXT:    [[V:%.*]] = select i1 [[C:%.*]], <2 x i32> <i32 915, i32 915>, <2 x i32> <i32 113, i32 113>
+; CHECK-NEXT:    [[V:%.*]] = select i1 [[C:%.*]], <2 x i32> splat (i32 915), <2 x i32> splat (i32 113)
 ; CHECK-NEXT:    ret <2 x i32> [[V]]
 ;
   %A = select i1 %C, <2 x i32> <i32 1000, i32 1000>, <2 x i32> <i32 10, i32 10>
@@ -374,7 +374,7 @@ define <2 x i32> @test30vec(i1 %which) {
 ; CHECK:       delay:
 ; CHECK-NEXT:    br label [[FINAL]]
 ; CHECK:       final:
-; CHECK-NEXT:    [[A:%.*]] = phi <2 x i32> [ <i32 915, i32 915>, [[ENTRY:%.*]] ], [ <i32 113, i32 113>, [[DELAY]] ]
+; CHECK-NEXT:    [[A:%.*]] = phi <2 x i32> [ splat (i32 915), [[ENTRY:%.*]] ], [ splat (i32 113), [[DELAY]] ]
 ; CHECK-NEXT:    ret <2 x i32> [[A]]
 ;
 entry:
@@ -759,7 +759,7 @@ define i32 @test45(i32 %x, i32 %y) {
 ; Check that we work with splat vectors also.
 define <4 x i32> @test46(<4 x i32> %x) {
 ; CHECK-LABEL: @test46(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[X:%.*]], <4 x i32> <i32 255, i32 255, i32 255, i32 255>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[X:%.*]], <4 x i32> splat (i32 255))
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %1 = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -803,8 +803,8 @@ define i32 @test48(i32 %x) {
 
 define <2 x i32> @test48vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test48vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X:%.*]], <i32 1, i32 1>
-; CHECK-NEXT:    [[D:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[TMP1]], <2 x i32> <i32 -1, i32 -1>)
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X:%.*]], splat (i32 1)
+; CHECK-NEXT:    [[D:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[TMP1]], <2 x i32> splat (i32 -1))
 ; CHECK-NEXT:    ret <2 x i32> [[D]]
 ;
   %a = sub <2 x i32> <i32 -2, i32 -2>, %x
@@ -829,7 +829,7 @@ define i32 @test49(i32 %x) {
 
 define <2 x i32> @test49vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test49vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i32> <i32 1, i32 1>, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i32> splat (i32 1), [[X:%.*]]
 ; CHECK-NEXT:    [[D:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[TMP1]], <2 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <2 x i32> [[D]]
 ;
@@ -857,8 +857,8 @@ define i32 @test50(i32 %x, i32 %y) {
 
 define <2 x i32> @test50vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @test50vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i32> <i32 1, i32 1>, [[X:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i32> [[Y:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i32> splat (i32 1), [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i32> [[Y:%.*]], splat (i32 1)
 ; CHECK-NEXT:    [[E:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[TMP1]], <2 x i32> [[TMP2]])
 ; CHECK-NEXT:    ret <2 x i32> [[E]]
 ;
@@ -887,8 +887,8 @@ define i32 @test51(i32 %x, i32 %y) {
 
 define <2 x i32> @test51vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @test51vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i32> <i32 -3, i32 -3>, [[X:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i32> [[Y:%.*]], <i32 -3, i32 -3>
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i32> splat (i32 -3), [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i32> [[Y:%.*]], splat (i32 -3)
 ; CHECK-NEXT:    [[E:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[TMP1]], <2 x i32> [[TMP2]])
 ; CHECK-NEXT:    ret <2 x i32> [[E]]
 ;
@@ -941,7 +941,7 @@ define i4 @or_or_xor_commute2(i4 %x, i4 %y, i4 %z) {
 
 define <2 x i4> @or_or_xor_commute3(<2 x i4> %x, <2 x i4> %y, <2 x i4> %z) {
 ; CHECK-LABEL: @or_or_xor_commute3(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i4> [[Z:%.*]], <i4 -1, i4 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i4> [[Z:%.*]], splat (i4 -1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i4> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = and <2 x i4> [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
@@ -1011,8 +1011,8 @@ define i8 @not_shl(i8 %x) {
 
 define <2 x i8> @not_shl_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @not_shl_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[R:%.*]] = shl <2 x i8> [[TMP1]], <i8 5, i8 5>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[X:%.*]], splat (i8 -1)
+; CHECK-NEXT:    [[R:%.*]] = shl <2 x i8> [[TMP1]], splat (i8 5)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = shl <2 x i8> %x, <i8 5, i8 5>
@@ -1061,7 +1061,7 @@ define i8 @not_lshr(i8 %x) {
 
 define <2 x i8> @not_lshr_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @not_lshr_vec(
-; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt <2 x i8> [[X:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    [[R:%.*]] = zext <2 x i1> [[ISNOTNEG]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
@@ -1124,7 +1124,7 @@ define i8 @not_ashr(i8 %x) {
 
 define <2 x i8> @not_ashr_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @not_ashr_vec(
-; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt <2 x i8> [[X:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    [[R:%.*]] = sext <2 x i1> [[ISNOTNEG]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
@@ -1222,7 +1222,7 @@ define i32 @xor_andn_commute4(i32 %pa, i32 %pb) {
 define <2 x i64> @xor_orn(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: @xor_orn(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i64> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = xor <2 x i64> [[TMP1]], <i64 -1, i64 -1>
+; CHECK-NEXT:    [[Z:%.*]] = xor <2 x i64> [[TMP1]], splat (i64 -1)
 ; CHECK-NEXT:    ret <2 x i64> [[Z]]
 ;
   %nota = xor <2 x i64> %a, <i64 -1, i64 -1>
@@ -1350,7 +1350,7 @@ define i32 @ctlz_pow2(i32 %x) {
 
 define <2 x i8> @cttz_pow2(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @cttz_pow2(
-; CHECK-NEXT:    [[S:%.*]] = shl nuw <2 x i8> <i8 1, i8 1>, [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = shl nuw <2 x i8> splat (i8 1), [[X:%.*]]
 ; CHECK-NEXT:    [[D:%.*]] = udiv exact <2 x i8> [[S]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = call range(i8 0, 9) <2 x i8> @llvm.ctlz.v2i8(<2 x i8> [[D]], i1 true)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
@@ -1484,4 +1484,183 @@ define i4 @PR96857_xor_without_noundef(i4  %val0, i4  %val1, i4 %val2) {
   %val6 = and i4 %val5, %val1
   %val7 = xor i4 %val4, %val6
   ret i4 %val7
+}
+
+define i32 @or_disjoint_with_xor(i32 %a, i32 %b) {
+; CHECK-LABEL: @or_disjoint_with_xor(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 [[B:%.*]]
+;
+entry:
+  %or = or disjoint i32 %a, %b
+  %xor = xor i32 %or, %a
+  ret i32 %xor
+}
+
+define i32 @xor_with_or_disjoint_ab(i32 %a, i32 %b) {
+; CHECK-LABEL: @xor_with_or_disjoint_ab(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 [[B:%.*]]
+;
+entry:
+  %or = or disjoint i32 %a, %b
+  %xor = xor i32 %a, %or
+  ret i32 %xor
+}
+
+define i32 @xor_with_or_disjoint_ba(i32 %a, i32 %b) {
+; CHECK-LABEL: @xor_with_or_disjoint_ba(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 [[B:%.*]]
+;
+entry:
+  %or = or disjoint i32 %b, %a
+  %xor = xor i32 %b, %or
+  ret i32 %xor
+}
+
+define <2 x i32> @or_disjoint_with_xor_vec(<2 x i32> %a, < 2 x i32> %b) {
+; CHECK-LABEL: @or_disjoint_with_xor_vec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <2 x i32> [[B:%.*]]
+;
+entry:
+  %or = or disjoint <2 x i32> %a, %b
+  %xor = xor <2 x i32> %or, %a
+  ret <2 x i32> %xor
+}
+
+define <2 x i32> @xor_with_or_disjoint_vec(<2 x i32> %a, < 2 x i32> %b) {
+; CHECK-LABEL: @xor_with_or_disjoint_vec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <2 x i32> [[B:%.*]]
+;
+entry:
+  %or = or disjoint <2 x i32> %a, %b
+  %xor = xor <2 x i32> %a, %or
+  ret <2 x i32> %xor
+}
+
+define i32 @select_or_disjoint_xor(i32 %a, i1 %c) {
+; CHECK-LABEL: @select_or_disjoint_xor(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i32 0, i32 4
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], 4
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[S]], [[SHL]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[OR]], 4
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+entry:
+  %s = select i1 %c, i32 0, i32 4
+  %shl = shl i32 %a, 4
+  %or = or disjoint i32 %s, %shl
+  %xor = xor i32 %or, 4
+  ret i32 %xor
+}
+
+define <2 x i32> @select_or_disjoint_xor_vec(<2 x i32> %a, i1 %c) {
+; CHECK-LABEL: @select_or_disjoint_xor_vec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], <2 x i32> zeroinitializer, <2 x i32> splat (i32 4)
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[A:%.*]], splat (i32 4)
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint <2 x i32> [[S]], [[SHL]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[OR]], splat (i32 4)
+; CHECK-NEXT:    ret <2 x i32> [[XOR]]
+;
+entry:
+  %s = select i1 %c, <2 x i32> <i32 0, i32 0>, <2 x i32> <i32 4, i32 4>
+  %shl = shl <2 x i32> %a, <i32 4, i32 4>
+  %or = or <2 x i32> %s, %shl
+  %xor = xor <2 x i32> %or, <i32 4, i32 4>
+  ret <2 x i32> %xor
+}
+
+define i32 @select_or_disjoint_or(i32 %a, i1 %c) {
+; CHECK-LABEL: @select_or_disjoint_or(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i32 0, i32 4
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], 4
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[S]], [[SHL]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[OR]], 4
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+entry:
+  %s = select i1 %c, i32 0, i32 4
+  %shl = shl i32 %a, 4
+  %or = or disjoint i32 %s, %shl
+  %add = add i32 %or, 4
+  ret i32 %add
+}
+
+define <2 x i32> @select_or_disjoint_or_vec(<2 x i32> %a, i1 %c) {
+; CHECK-LABEL: @select_or_disjoint_or_vec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], <2 x i32> zeroinitializer, <2 x i32> splat (i32 4)
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[A:%.*]], splat (i32 4)
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint <2 x i32> [[S]], [[SHL]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <2 x i32> [[OR]], splat (i32 4)
+; CHECK-NEXT:    ret <2 x i32> [[ADD]]
+;
+entry:
+  %s = select i1 %c, <2 x i32> <i32 0, i32 0>, <2 x i32> <i32 4, i32 4>
+  %shl = shl <2 x i32> %a, <i32 4, i32 4>
+  %or = or <2 x i32> %s, %shl
+  %add = add <2 x i32> %or, <i32 4, i32 4>
+  ret <2 x i32> %add
+}
+
+define i32 @or_multi_use_disjoint_with_xor(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @or_multi_use_disjoint_with_xor(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[OR]], [[C:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[OR]], [[XOR]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+entry:
+  %or = or disjoint i32 %a, %b
+  %xor = xor i32 %or, %c
+  %add = add i32 %or, %xor
+  ret i32 %add
+}
+
+define <2 x i32> @or_multi_use_disjoint_with_xor_vec(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) {
+; CHECK-LABEL: @or_multi_use_disjoint_with_xor_vec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[OR]], [[C:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[OR]], [[XOR]]
+; CHECK-NEXT:    ret <2 x i32> [[ADD]]
+;
+entry:
+  %or = or disjoint <2 x i32> %a, %b
+  %xor = xor <2 x i32> %or, %c
+  %add = add <2 x i32> %or, %xor
+  ret <2 x i32> %add
+}
+
+define i32 @add_with_or(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @add_with_or(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[ADD]], [[C:%.*]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+entry:
+  %add = add i32 %a, %b
+  %or = or i32 %add, %c
+  ret i32 %or
+}
+
+define <2 x i32> @add_with_or_vec(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) {
+; CHECK-LABEL: @add_with_or_vec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[ADD]], [[C:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[OR]]
+;
+entry:
+  %add = add <2 x i32> %a, %b
+  %or = or <2 x i32> %add, %c
+  ret <2 x i32> %or
 }

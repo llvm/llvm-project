@@ -14,6 +14,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "llvm/Support/RWMutex.h"
+
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/lldb-private-forward.h"
@@ -96,9 +98,12 @@ public:
   void ClearThreadCache();
 
 private:
-  void PrintOneStack(Stream &s, llvm::StringRef stack_name,
-                     const PlanStack &stack, lldb::DescriptionLevel desc_level,
-                     bool include_internal) const;
+  lldb::ThreadPlanSP DiscardPlanNoLock();
+  lldb::ThreadPlanSP GetCurrentPlanNoLock() const;
+  void PrintOneStackNoLock(Stream &s, llvm::StringRef stack_name,
+                           const PlanStack &stack,
+                           lldb::DescriptionLevel desc_level,
+                           bool include_internal) const;
 
   PlanStack m_plans;           ///< The stack of plans this thread is executing.
   PlanStack m_completed_plans; ///< Plans that have been completed by this
@@ -110,7 +115,7 @@ private:
   size_t m_completed_plan_checkpoint = 0; // Monotonically increasing token for
                                           // completed plan checkpoints.
   std::unordered_map<size_t, PlanStack> m_completed_plan_store;
-  mutable std::recursive_mutex m_stack_mutex;
+  mutable llvm::sys::RWMutex m_stack_mutex;
 };
 
 class ThreadPlanStackMap {

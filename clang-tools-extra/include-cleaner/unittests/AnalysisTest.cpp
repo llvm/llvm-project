@@ -25,6 +25,7 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -39,6 +40,7 @@
 
 namespace clang::include_cleaner {
 namespace {
+using testing::_;
 using testing::AllOf;
 using testing::Contains;
 using testing::ElementsAre;
@@ -262,10 +264,12 @@ int x = a + c;
   auto Results =
       analyze(std::vector<Decl *>{Decls.begin(), Decls.end()},
               PP.MacroReferences, PP.Includes, &PI, AST.preprocessor());
+  auto CHeader = llvm::cantFail(
+      AST.context().getSourceManager().getFileManager().getFileRef("c.h"));
 
   const Include *B = PP.Includes.atLine(3);
   ASSERT_EQ(B->Spelled, "b.h");
-  EXPECT_THAT(Results.Missing, ElementsAre("\"c.h\""));
+  EXPECT_THAT(Results.Missing, ElementsAre(Pair("\"c.h\"", Header(CHeader))));
   EXPECT_THAT(Results.Unused, ElementsAre(B));
 }
 
@@ -370,7 +374,7 @@ TEST_F(AnalyzeTest, SpellingIncludesWithSymlinks) {
   auto Results = analyze(DeclsInTU, {}, PP.Includes, &PI, AST.preprocessor());
   // Check that we're spelling header using the symlink, and not underlying
   // path.
-  EXPECT_THAT(Results.Missing, testing::ElementsAre("\"inner.h\""));
+  EXPECT_THAT(Results.Missing, testing::ElementsAre(Pair("\"inner.h\"", _)));
   // header.h should be unused.
   EXPECT_THAT(Results.Unused, Not(testing::IsEmpty()));
 
@@ -379,7 +383,7 @@ TEST_F(AnalyzeTest, SpellingIncludesWithSymlinks) {
     auto HeaderFilter = [](llvm::StringRef Path) { return Path == "inner.h"; };
     Results = analyze(DeclsInTU, {}, PP.Includes, &PI, AST.preprocessor(),
                       HeaderFilter);
-    EXPECT_THAT(Results.Missing, testing::ElementsAre("\"inner.h\""));
+    EXPECT_THAT(Results.Missing, testing::ElementsAre(Pair("\"inner.h\"", _)));
     // header.h should be unused.
     EXPECT_THAT(Results.Unused, Not(testing::IsEmpty()));
   }
@@ -389,7 +393,7 @@ TEST_F(AnalyzeTest, SpellingIncludesWithSymlinks) {
                       HeaderFilter);
     // header.h should be ignored now.
     EXPECT_THAT(Results.Unused, Not(testing::IsEmpty()));
-    EXPECT_THAT(Results.Missing, testing::ElementsAre("\"inner.h\""));
+    EXPECT_THAT(Results.Missing, testing::ElementsAre(Pair("\"inner.h\"", _)));
   }
 }
 
@@ -414,9 +418,9 @@ TEST(FixIncludes, Basic) {
   Inc.add(I);
 
   AnalysisResults Results;
-  Results.Missing.push_back("\"aa.h\"");
-  Results.Missing.push_back("\"ab.h\"");
-  Results.Missing.push_back("<e.h>");
+  Results.Missing.emplace_back("\"aa.h\"", Header(""));
+  Results.Missing.emplace_back("\"ab.h\"", Header(""));
+  Results.Missing.emplace_back("<e.h>", Header(""));
   Results.Unused.push_back(Inc.atLine(3));
   Results.Unused.push_back(Inc.atLine(4));
 
@@ -429,7 +433,7 @@ R"cpp(#include "d.h"
 )cpp");
 
   Results = {};
-  Results.Missing.push_back("\"d.h\"");
+  Results.Missing.emplace_back("\"d.h\"", Header(""));
   Code = R"cpp(#include "a.h")cpp";
   EXPECT_EQ(fixIncludes(Results, "d.cc", Code, format::getLLVMStyle()),
 R"cpp(#include "d.h"

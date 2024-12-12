@@ -395,6 +395,9 @@ typedef enum {
                                when incremented above input value */
   LLVMAtomicRMWBinOpUDecWrap, /**< Decrements the value, wrapping back to
                                the input value when decremented below zero */
+  LLVMAtomicRMWBinOpUSubCond, /**<Subtracts the value only if no unsigned
+                                 overflow */
+  LLVMAtomicRMWBinOpUSubSat,  /**<Subtracts the value, clamping to zero */
 } LLVMAtomicRMWBinOp;
 
 typedef enum {
@@ -2792,7 +2795,7 @@ void LLVMSetPersonalityFn(LLVMValueRef Fn, LLVMValueRef PersonalityFn);
 /**
  * Obtain the intrinsic ID number which matches the given function name.
  *
- * @see llvm::Function::lookupIntrinsicID()
+ * @see llvm::Intrinsic::lookupIntrinsicID()
  */
 unsigned LLVMLookupIntrinsicID(const char *Name, size_t NameLen);
 
@@ -2804,10 +2807,10 @@ unsigned LLVMLookupIntrinsicID(const char *Name, size_t NameLen);
 unsigned LLVMGetIntrinsicID(LLVMValueRef Fn);
 
 /**
- * Create or insert the declaration of an intrinsic.  For overloaded intrinsics,
+ * Get or insert the declaration of an intrinsic.  For overloaded intrinsics,
  * parameter types must be provided to uniquely identify an overload.
  *
- * @see llvm::Intrinsic::getDeclaration()
+ * @see llvm::Intrinsic::getOrInsertDeclaration()
  */
 LLVMValueRef LLVMGetIntrinsicDeclaration(LLVMModuleRef Mod,
                                          unsigned ID,
@@ -2831,10 +2834,8 @@ LLVMTypeRef LLVMIntrinsicGetType(LLVMContextRef Ctx, unsigned ID,
 const char *LLVMIntrinsicGetName(unsigned ID, size_t *NameLength);
 
 /** Deprecated: Use LLVMIntrinsicCopyOverloadedName2 instead. */
-const char *LLVMIntrinsicCopyOverloadedName(unsigned ID,
-                                            LLVMTypeRef *ParamTypes,
-                                            size_t ParamCount,
-                                            size_t *NameLength);
+char *LLVMIntrinsicCopyOverloadedName(unsigned ID, LLVMTypeRef *ParamTypes,
+                                      size_t ParamCount, size_t *NameLength);
 
 /**
  * Copies the name of an overloaded intrinsic identified by a given list of
@@ -2847,10 +2848,9 @@ const char *LLVMIntrinsicCopyOverloadedName(unsigned ID,
  *
  * @see llvm::Intrinsic::getName()
  */
-const char *LLVMIntrinsicCopyOverloadedName2(LLVMModuleRef Mod, unsigned ID,
-                                             LLVMTypeRef *ParamTypes,
-                                             size_t ParamCount,
-                                             size_t *NameLength);
+char *LLVMIntrinsicCopyOverloadedName2(LLVMModuleRef Mod, unsigned ID,
+                                       LLVMTypeRef *ParamTypes,
+                                       size_t ParamCount, size_t *NameLength);
 
 /**
  * Obtain if the intrinsic identified by the given ID is overloaded.
@@ -3683,6 +3683,41 @@ LLVMValueRef LLVMInstructionClone(LLVMValueRef Inst);
 LLVMValueRef LLVMIsATerminatorInst(LLVMValueRef Inst);
 
 /**
+ * Obtain the first debug record attached to an instruction.
+ *
+ * Use LLVMGetNextDbgRecord() and LLVMGetPreviousDbgRecord() to traverse the
+ * sequence of DbgRecords.
+ *
+ * Return the first DbgRecord attached to Inst or NULL if there are none.
+ *
+ * @see llvm::Instruction::getDbgRecordRange()
+ */
+LLVMDbgRecordRef LLVMGetFirstDbgRecord(LLVMValueRef Inst);
+
+/**
+ * Obtain the last debug record attached to an instruction.
+ *
+ * Return the last DbgRecord attached to Inst or NULL if there are none.
+ *
+ * @see llvm::Instruction::getDbgRecordRange()
+ */
+LLVMDbgRecordRef LLVMGetLastDbgRecord(LLVMValueRef Inst);
+
+/**
+ * Obtain the next DbgRecord in the sequence or NULL if there are no more.
+ *
+ * @see llvm::Instruction::getDbgRecordRange()
+ */
+LLVMDbgRecordRef LLVMGetNextDbgRecord(LLVMDbgRecordRef DbgRecord);
+
+/**
+ * Obtain the previous DbgRecord in the sequence or NULL if there are no more.
+ *
+ * @see llvm::Instruction::getDbgRecordRange()
+ */
+LLVMDbgRecordRef LLVMGetPreviousDbgRecord(LLVMDbgRecordRef DbgRecord);
+
+/**
  * @defgroup LLVMCCoreValueInstructionCall Call Sites and Invocations
  *
  * Functions in this group apply to instructions that refer to call
@@ -4488,6 +4523,9 @@ LLVMValueRef LLVMBuildStructGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
                                  const char *Name);
 LLVMValueRef LLVMBuildGlobalString(LLVMBuilderRef B, const char *Str,
                                    const char *Name);
+/**
+ * Deprecated: Use LLVMBuildGlobalString instead, which has identical behavior.
+ */
 LLVMValueRef LLVMBuildGlobalStringPtr(LLVMBuilderRef B, const char *Str,
                                       const char *Name);
 LLVMBool LLVMGetVolatile(LLVMValueRef MemoryAccessInst);

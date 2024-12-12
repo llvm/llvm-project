@@ -1024,7 +1024,7 @@ bool simplifyLoopIVs(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
                      LoopInfo *LI, const TargetTransformInfo *TTI,
                      SmallVectorImpl<WeakTrackingVH> &Dead) {
   SCEVExpander Rewriter(*SE, SE->getDataLayout(), "indvars");
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   Rewriter.setDebugType(DEBUG_TYPE);
 #endif
   bool Changed = false;
@@ -1103,10 +1103,8 @@ class WidenIV {
 
   void updatePostIncRangeInfo(Value *Def, Instruction *UseI, ConstantRange R) {
     DefUserPair Key(Def, UseI);
-    auto It = PostIncRangeInfos.find(Key);
-    if (It == PostIncRangeInfos.end())
-      PostIncRangeInfos.insert({Key, R});
-    else
+    auto [It, Inserted] = PostIncRangeInfos.try_emplace(Key, R);
+    if (!Inserted)
       It->second = R.intersectWith(It->second);
   }
 

@@ -3782,7 +3782,7 @@ int bar(int n){
 // CHECK9-NEXT:    store i32 [[TMP0]], ptr [[DOTLINEAR_START]], align 4
 // CHECK9-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK9-NEXT:    store i32 [[TMP1]], ptr [[DOTLINEAR_START1]], align 4
-// CHECK9-NEXT:    [[CALL:%.*]] = call noundef i64 @_Z7get_valv() #[[ATTR4:[0-9]+]]
+// CHECK9-NEXT:    [[CALL:%.*]] = call noundef i64 @_Z7get_valv()
 // CHECK9-NEXT:    store i64 [[CALL]], ptr [[DOTLINEAR_STEP]], align 8
 // CHECK9-NEXT:    store i64 0, ptr [[DOTOMP_LB]], align 8
 // CHECK9-NEXT:    store i64 3, ptr [[DOTOMP_UB]], align 8
@@ -4561,7 +4561,7 @@ int bar(int n){
 // CHECK11-NEXT:    store i32 [[TMP0]], ptr [[DOTLINEAR_START]], align 4
 // CHECK11-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK11-NEXT:    store i32 [[TMP1]], ptr [[DOTLINEAR_START1]], align 4
-// CHECK11-NEXT:    [[CALL:%.*]] = call noundef i64 @_Z7get_valv() #[[ATTR4:[0-9]+]]
+// CHECK11-NEXT:    [[CALL:%.*]] = call noundef i64 @_Z7get_valv()
 // CHECK11-NEXT:    store i64 [[CALL]], ptr [[DOTLINEAR_STEP]], align 8
 // CHECK11-NEXT:    store i64 0, ptr [[DOTOMP_LB]], align 8
 // CHECK11-NEXT:    store i64 3, ptr [[DOTOMP_UB]], align 8

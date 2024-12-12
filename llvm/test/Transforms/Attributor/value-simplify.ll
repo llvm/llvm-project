@@ -838,8 +838,7 @@ define void @user() {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
 ; TUNIT-LABEL: define {{[^@]+}}@user
 ; TUNIT-SAME: () #[[ATTR5]] {
-; TUNIT-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspacecast (ptr addrspace(3) @ConstAS3Ptr to ptr) to ptr addrspace(3)
-; TUNIT-NEXT:    store i32 0, ptr addrspace(3) [[TMP1]], align 4
+; TUNIT-NEXT:    store i32 0, ptr addrspacecast (ptr addrspace(3) @ConstAS3Ptr to ptr), align 4
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(write)

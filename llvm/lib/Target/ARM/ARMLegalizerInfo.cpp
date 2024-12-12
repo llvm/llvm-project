@@ -29,7 +29,7 @@ static bool AEABI(const ARMSubtarget &ST) {
   return ST.isTargetAEABI() || ST.isTargetGNUAEABI() || ST.isTargetMuslAEABI();
 }
 
-ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
+ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
   using namespace TargetOpcode;
 
   const LLT p0 = LLT::pointer(0, 32);
@@ -99,8 +99,10 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
       .minScalar(0, s32);
 
   getActionDefinitionsBuilder(G_CONSTANT)
-      .legalFor({s32, p0})
+      .customFor({s32, p0})
       .clampScalar(0, s32, s32);
+
+  getActionDefinitionsBuilder(G_CONSTANT_POOL).legalFor({p0});
 
   getActionDefinitionsBuilder(G_ICMP)
       .legalForCartesianProduct({s1}, {s32, p0})
@@ -161,6 +163,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
         .legalFor({s32});
     getActionDefinitionsBuilder(G_RESET_FPENV).alwaysLegal();
     getActionDefinitionsBuilder(G_SET_FPMODE).customFor({s32});
+    getActionDefinitionsBuilder(G_RESET_FPMODE).custom();
   } else {
     getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV})
         .libcallFor({s32, s64});
@@ -435,6 +438,13 @@ bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     }
     break;
   }
+  case G_CONSTANT: {
+    const ConstantInt *ConstVal = MI.getOperand(1).getCImm();
+    uint64_t ImmVal = ConstVal->getZExtValue();
+    if (ConstantMaterializationCost(ImmVal, &ST) > 2 && !ST.genExecuteOnly())
+      return Helper.lowerConstant(MI) == LegalizerHelper::Legalized;
+    return true;
+  }
   case G_FCONSTANT: {
     // Convert to integer constants, while preserving the binary representation.
     auto AsInteger =
@@ -455,6 +465,17 @@ bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
         MIRBuilder.buildConstant(FPEnvTy, ~ARM::FPStatusBits);
     auto FPModeBits = MIRBuilder.buildAnd(FPEnvTy, Modes, NotStatusBitMask);
     auto NewFPSCR = MIRBuilder.buildOr(FPEnvTy, StatusBits, FPModeBits);
+    MIRBuilder.buildSetFPEnv(NewFPSCR);
+    break;
+  }
+  case G_RESET_FPMODE: {
+    // To get the default FP mode all control bits are cleared:
+    // FPSCR = FPSCR & (FPStatusBits | FPReservedBits)
+    LLT FPEnvTy = LLT::scalar(32);
+    auto FPEnv = MIRBuilder.buildGetFPEnv(FPEnvTy);
+    auto NotModeBitMask = MIRBuilder.buildConstant(
+        FPEnvTy, ARM::FPStatusBits | ARM::FPReservedBits);
+    auto NewFPSCR = MIRBuilder.buildAnd(FPEnvTy, FPEnv, NotModeBitMask);
     MIRBuilder.buildSetFPEnv(NewFPSCR);
     break;
   }

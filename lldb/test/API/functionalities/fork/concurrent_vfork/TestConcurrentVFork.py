@@ -49,7 +49,7 @@ class TestConcurrentVFork(TestBase):
 
     @skipUnlessPlatform(["linux"])
     # https://github.com/llvm/llvm-project/issues/85084.
-    @skipIf(oslist=["linux"], archs=["aarch64", "arm"])
+    @skipIf(oslist=["linux"])
     def test_follow_parent_vfork_no_exec(self):
         """
         Make sure that debugging concurrent vfork() from multiple threads won't crash lldb during follow-parent.
@@ -59,7 +59,7 @@ class TestConcurrentVFork(TestBase):
 
     @skipUnlessPlatform(["linux"])
     # https://github.com/llvm/llvm-project/issues/85084.
-    @skipIf(oslist=["linux"], archs=["aarch64", "arm"])
+    @skipIf(oslist=["linux"])
     def test_follow_parent_fork_no_exec(self):
         """
         Make sure that debugging concurrent fork() from multiple threads won't crash lldb during follow-parent.
@@ -69,7 +69,7 @@ class TestConcurrentVFork(TestBase):
 
     @skipUnlessPlatform(["linux"])
     # https://github.com/llvm/llvm-project/issues/85084.
-    @skipIf(oslist=["linux"], archs=["aarch64", "arm"])
+    @skipIf(oslist=["linux"])
     def test_follow_parent_vfork_call_exec(self):
         """
         Make sure that debugging concurrent vfork() from multiple threads won't crash lldb during follow-parent.
@@ -79,7 +79,7 @@ class TestConcurrentVFork(TestBase):
 
     @skipUnlessPlatform(["linux"])
     # https://github.com/llvm/llvm-project/issues/85084.
-    @skipIf(oslist=["linux"], archs=["aarch64", "arm"])
+    @skipIf(oslist=["linux"])
     def test_follow_parent_fork_call_exec(self):
         """
         Make sure that debugging concurrent vfork() from multiple threads won't crash lldb during follow-parent.
@@ -89,7 +89,7 @@ class TestConcurrentVFork(TestBase):
 
     @skipUnlessPlatform(["linux"])
     # https://github.com/llvm/llvm-project/issues/85084.
-    @skipIf(oslist=["linux"], archs=["aarch64", "arm"])
+    @skipIf(oslist=["linux"])
     def test_follow_child_vfork_no_exec(self):
         """
         Make sure that debugging concurrent vfork() from multiple threads won't crash lldb during follow-child.
@@ -99,7 +99,7 @@ class TestConcurrentVFork(TestBase):
 
     @skipUnlessPlatform(["linux"])
     # https://github.com/llvm/llvm-project/issues/85084.
-    @skipIf(oslist=["linux"], archs=["aarch64", "arm"])
+    @skipIf(oslist=["linux"])
     def test_follow_child_fork_no_exec(self):
         """
         Make sure that debugging concurrent fork() from multiple threads won't crash lldb during follow-child.
@@ -109,7 +109,7 @@ class TestConcurrentVFork(TestBase):
 
     @skipUnlessPlatform(["linux"])
     # https://github.com/llvm/llvm-project/issues/85084.
-    @skipIf(oslist=["linux"], archs=["aarch64", "arm"])
+    @skipIf(oslist=["linux"])
     def test_follow_child_vfork_call_exec(self):
         """
         Make sure that debugging concurrent vfork() from multiple threads won't crash lldb during follow-child.
@@ -119,7 +119,7 @@ class TestConcurrentVFork(TestBase):
 
     @skipUnlessPlatform(["linux"])
     # https://github.com/llvm/llvm-project/issues/85084.
-    @skipIf(oslist=["linux"], archs=["aarch64", "arm"])
+    @skipIf(oslist=["linux"])
     def test_follow_child_fork_call_exec(self):
         """
         Make sure that debugging concurrent fork() from multiple threads won't crash lldb during follow-child.

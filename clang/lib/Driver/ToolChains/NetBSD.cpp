@@ -274,11 +274,12 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                             options::OPT_s, options::OPT_t});
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
-  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+  const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs(Args);
+  bool NeedsSanitizerDeps =
+      addSanitizerRuntimes(ToolChain, Args, SanArgs, CmdArgs);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
-  const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs(Args);
   if (SanArgs.needsSharedRt()) {
     CmdArgs.push_back("-rpath");
     CmdArgs.push_back(Args.MakeArgString(ToolChain.getCompilerRTPath()));
@@ -326,14 +327,15 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // to generate executables. As Fortran runtime depends on the C runtime,
     // these dependencies need to be listed before the C runtime below (i.e.
     // AddRunTimeLibs).
-    if (D.IsFlangMode()) {
+    if (D.IsFlangMode() &&
+        !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
       addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
       addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
       CmdArgs.push_back("-lm");
     }
 
     if (NeedsSanitizerDeps)
-      linkSanitizerRuntimeDeps(ToolChain, Args, CmdArgs);
+      linkSanitizerRuntimeDeps(ToolChain, Args, SanArgs, CmdArgs);
     if (NeedsXRayDeps)
       linkXRayRuntimeDeps(ToolChain, Args, CmdArgs);
     if (Args.hasArg(options::OPT_pthread))

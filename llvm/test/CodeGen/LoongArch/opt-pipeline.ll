@@ -65,7 +65,6 @@
 ; LAXX-NEXT:       Scalarize Masked Memory Intrinsics
 ; LAXX-NEXT:       Expand reduction intrinsics
 ; LAXX-NEXT:       Natural Loop Information
-; LAXX-NEXT:       TLS Variable Hoist
 ; LAXX-NEXT:       Type Promotion
 ; LAXX-NEXT:       CodeGen Prepare
 ; LAXX-NEXT:       Dominator Tree Construction
@@ -166,6 +165,7 @@
 ; LAXX-NEXT:       Implement the 'patchable-function' attribute
 ; LAXX-NEXT:       Branch relaxation pass
 ; LAXX-NEXT:       Contiguously Lay Out Funclets
+; LAXX-NEXT:       Remove Loads Into Fake Uses
 ; LAXX-NEXT:       StackMap Liveness Analysis
 ; LAXX-NEXT:       Live DEBUG_VALUE analysis
 ; LAXX-NEXT:       Machine Sanitizer Binary Metadata

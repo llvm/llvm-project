@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/ModRef.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace llvm;
 
@@ -33,7 +34,7 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, ModRefInfo MR) {
 }
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, MemoryEffects ME) {
-  for (IRMemLocation Loc : MemoryEffects::locations()) {
+  interleaveComma(MemoryEffects::locations(), OS, [&](IRMemLocation Loc) {
     switch (Loc) {
     case IRMemLocation::ArgMem:
       OS << "ArgMem: ";
@@ -45,7 +46,7 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, MemoryEffects ME) {
       OS << "Other: ";
       break;
     }
-    OS << ME.getModRef(Loc) << ", ";
-  }
+    OS << ME.getModRef(Loc);
+  });
   return OS;
 }

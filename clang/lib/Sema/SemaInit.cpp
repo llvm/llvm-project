@@ -16,10 +16,8 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
-#include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/TypeLoc.h"
-#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
@@ -28,13 +26,11 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLForwardCompat.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -569,7 +565,7 @@ ExprResult InitListChecker::PerformEmptyInit(SourceLocation Loc,
                                                             true);
   MultiExprArg SubInit;
   Expr *InitExpr;
-  InitListExpr DummyInitList(SemaRef.Context, Loc, std::nullopt, Loc);
+  InitListExpr DummyInitList(SemaRef.Context, Loc, {}, Loc);
 
   // C++ [dcl.init.aggr]p7:
   //   If there are fewer initializer-clauses in the list than there are
@@ -588,10 +584,9 @@ ExprResult InitListChecker::PerformEmptyInit(SourceLocation Loc,
     //
     // Only do this if we're initializing a class type, to avoid filling in
     // the initializer list where possible.
-    InitExpr = VerifyOnly
-                   ? &DummyInitList
-                   : new (SemaRef.Context)
-                         InitListExpr(SemaRef.Context, Loc, std::nullopt, Loc);
+    InitExpr = VerifyOnly ? &DummyInitList
+                          : new (SemaRef.Context)
+                                InitListExpr(SemaRef.Context, Loc, {}, Loc);
     InitExpr->setType(SemaRef.Context.VoidTy);
     SubInit = InitExpr;
     Kind = InitializationKind::CreateCopy(Loc, Loc);
@@ -751,7 +746,23 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
       if (VerifyOnly)
         return;
 
-      ExprResult DIE = SemaRef.BuildCXXDefaultInitExpr(Loc, Field);
+      ExprResult DIE;
+      {
+        // Enter a default initializer rebuild context, then we can support
+        // lifetime extension of temporary created by aggregate initialization
+        // using a default member initializer.
+        // CWG1815 (https://wg21.link/CWG1815).
+        EnterExpressionEvaluationContext RebuildDefaultInit(
+            SemaRef, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+        SemaRef.currentEvaluationContext().RebuildDefaultArgOrDefaultInit =
+            true;
+        SemaRef.currentEvaluationContext().DelayedDefaultInitializationContext =
+            SemaRef.parentEvaluationContext()
+                .DelayedDefaultInitializationContext;
+        SemaRef.currentEvaluationContext().InLifetimeExtendingContext =
+            SemaRef.parentEvaluationContext().InLifetimeExtendingContext;
+        DIE = SemaRef.BuildCXXDefaultInitExpr(Loc, Field);
+      }
       if (DIE.isInvalid()) {
         hadError = true;
         return;
@@ -1963,8 +1974,9 @@ void InitListChecker::CheckVectorType(const InitializedEntity &Entity,
   if (numEltsInit != maxElements) {
     if (!VerifyOnly)
       SemaRef.Diag(IList->getBeginLoc(),
-                   diag::err_vector_incorrect_num_initializers)
-          << (numEltsInit < maxElements) << maxElements << numEltsInit;
+                   diag::err_vector_incorrect_num_elements)
+          << (numEltsInit < maxElements) << maxElements << numEltsInit
+          << /*initialization*/ 0;
     hadError = true;
   }
 }
@@ -2238,6 +2250,10 @@ bool InitListChecker::CheckFlexibleArrayInit(const InitializedEntity &Entity,
   return FlexArrayDiag != diag::ext_flexible_array_init;
 }
 
+static bool isInitializedStructuredList(const InitListExpr *StructuredList) {
+  return StructuredList && StructuredList->getNumInits() == 1U;
+}
+
 void InitListChecker::CheckStructUnionTypes(
     const InitializedEntity &Entity, InitListExpr *IList, QualType DeclType,
     CXXRecordDecl::base_class_const_range Bases, RecordDecl::field_iterator Field,
@@ -2484,8 +2500,7 @@ void InitListChecker::CheckStructUnionTypes(
                         StructuredList, StructuredIndex);
     InitializedSomething = true;
     InitializedFields.insert(*Field);
-
-    if (RD->isUnion() && StructuredList) {
+    if (RD->isUnion() && isInitializedStructuredList(StructuredList)) {
       // Initialize the first field within the union.
       StructuredList->setInitializedFieldInUnion(*Field);
     }
@@ -2570,7 +2585,7 @@ void InitListChecker::CheckStructUnionTypes(
     CheckImplicitInitList(MemberEntity, IList, Field->getType(), Index,
                           StructuredList, StructuredIndex);
 
-  if (RD->isUnion() && StructuredList) {
+  if (RD->isUnion() && isInitializedStructuredList(StructuredList)) {
     // Initialize the first field within the union.
     StructuredList->setInitializedFieldInUnion(*Field);
   }
@@ -3387,7 +3402,7 @@ InitListChecker::createInitListExpr(QualType CurrentObjectType,
                                     SourceRange InitRange,
                                     unsigned ExpectedNumInits) {
   InitListExpr *Result = new (SemaRef.Context) InitListExpr(
-      SemaRef.Context, InitRange.getBegin(), std::nullopt, InitRange.getEnd());
+      SemaRef.Context, InitRange.getBegin(), {}, InitRange.getEnd());
 
   QualType ResultType = CurrentObjectType;
   if (!ResultType->isArrayType())
@@ -4700,7 +4715,7 @@ static void TryReferenceListInitialization(Sema &S,
   if (T1Quals.hasAddressSpace()) {
     Qualifiers T2Quals;
     (void)S.Context.getUnqualifiedArrayType(InitList->getType(), T2Quals);
-    if (!T1Quals.isAddressSpaceSupersetOf(T2Quals)) {
+    if (!T1Quals.isAddressSpaceSupersetOf(T2Quals, S.getASTContext())) {
       Sequence.SetFailed(
           InitializationSequence::FK_ReferenceInitDropsQualifiers);
       return;
@@ -5306,8 +5321,9 @@ static void TryReferenceInitializationCore(Sema &S,
   //       shall be an rvalue reference.
   //       For address spaces, we interpret this to mean that an addr space
   //       of a reference "cv1 T1" is a superset of addr space of "cv2 T2".
-  if (isLValueRef && !(T1Quals.hasConst() && !T1Quals.hasVolatile() &&
-                       T1Quals.isAddressSpaceSupersetOf(T2Quals))) {
+  if (isLValueRef &&
+      !(T1Quals.hasConst() && !T1Quals.hasVolatile() &&
+        T1Quals.isAddressSpaceSupersetOf(T2Quals, S.getASTContext()))) {
     if (S.Context.getCanonicalType(T2) == S.Context.OverloadTy)
       Sequence.SetFailed(InitializationSequence::FK_AddressOfOverloadFailed);
     else if (ConvOvlResult && !Sequence.getFailedCandidateSet().empty())
@@ -5316,7 +5332,7 @@ static void TryReferenceInitializationCore(Sema &S,
                                   ConvOvlResult);
     else if (!InitCategory.isLValue())
       Sequence.SetFailed(
-          T1Quals.isAddressSpaceSupersetOf(T2Quals)
+          T1Quals.isAddressSpaceSupersetOf(T2Quals, S.getASTContext())
               ? InitializationSequence::
                     FK_NonConstLValueReferenceBindingToTemporary
               : InitializationSequence::FK_ReferenceInitDropsQualifiers);
@@ -5501,7 +5517,7 @@ static void TryReferenceInitializationCore(Sema &S,
   unsigned T2CVRQuals = T2Quals.getCVRQualifiers();
   if (RefRelationship == Sema::Ref_Related &&
       ((T1CVRQuals | T2CVRQuals) != T1CVRQuals ||
-       !T1Quals.isAddressSpaceSupersetOf(T2Quals))) {
+       !T1Quals.isAddressSpaceSupersetOf(T2Quals, S.getASTContext()))) {
     Sequence.SetFailed(InitializationSequence::FK_ReferenceInitDropsQualifiers);
     return;
   }
@@ -5518,8 +5534,8 @@ static void TryReferenceInitializationCore(Sema &S,
   Sequence.AddReferenceBindingStep(cv1T1IgnoreAS, /*BindingTemporary=*/true);
 
   if (T1Quals.hasAddressSpace()) {
-    if (!Qualifiers::isAddressSpaceSupersetOf(T1Quals.getAddressSpace(),
-                                              LangAS::Default)) {
+    if (!Qualifiers::isAddressSpaceSupersetOf(
+            T1Quals.getAddressSpace(), LangAS::Default, S.getASTContext())) {
       Sequence.SetFailed(
           InitializationSequence::FK_ReferenceAddrspaceMismatchTemporary);
       return;
@@ -5634,7 +5650,7 @@ static void TryDefaultInitialization(Sema &S,
   //       constructor for T is called (and the initialization is ill-formed if
   //       T has no accessible default constructor);
   if (DestType->isRecordType() && S.getLangOpts().CPlusPlus) {
-    TryConstructorInitialization(S, Entity, Kind, std::nullopt, DestType,
+    TryConstructorInitialization(S, Entity, Kind, {}, DestType,
                                  Entity.getType(), Sequence);
     return;
   }
@@ -5671,11 +5687,13 @@ static void TryOrBuildParenListInitialization(
                                      const InitializationKind &SubKind,
                                      Expr *Arg, Expr **InitExpr = nullptr) {
     InitializationSequence IS = InitializationSequence(
-        S, SubEntity, SubKind, Arg ? MultiExprArg(Arg) : std::nullopt);
+        S, SubEntity, SubKind,
+        Arg ? MultiExprArg(Arg) : MutableArrayRef<Expr *>());
 
     if (IS.Failed()) {
       if (!VerifyOnly) {
-        IS.Diagnose(S, SubEntity, SubKind, Arg ? ArrayRef(Arg) : std::nullopt);
+        IS.Diagnose(S, SubEntity, SubKind,
+                    Arg ? ArrayRef(Arg) : ArrayRef<Expr *>());
       } else {
         Sequence.SetFailed(
             InitializationSequence::FK_ParenthesizedListInitFailed);
@@ -5686,7 +5704,7 @@ static void TryOrBuildParenListInitialization(
     if (!VerifyOnly) {
       ExprResult ER;
       ER = IS.Perform(S, SubEntity, SubKind,
-                      Arg ? MultiExprArg(Arg) : std::nullopt);
+                      Arg ? MultiExprArg(Arg) : MutableArrayRef<Expr *>());
 
       if (ER.isInvalid())
         return false;
@@ -6799,43 +6817,44 @@ InitializationSequence::~InitializationSequence() {
 //===----------------------------------------------------------------------===//
 // Perform initialization
 //===----------------------------------------------------------------------===//
-static Sema::AssignmentAction
-getAssignmentAction(const InitializedEntity &Entity, bool Diagnose = false) {
+static AssignmentAction getAssignmentAction(const InitializedEntity &Entity,
+                                            bool Diagnose = false) {
   switch(Entity.getKind()) {
   case InitializedEntity::EK_Variable:
   case InitializedEntity::EK_New:
   case InitializedEntity::EK_Exception:
   case InitializedEntity::EK_Base:
   case InitializedEntity::EK_Delegating:
-    return Sema::AA_Initializing;
+    return AssignmentAction::Initializing;
 
   case InitializedEntity::EK_Parameter:
     if (Entity.getDecl() &&
         isa<ObjCMethodDecl>(Entity.getDecl()->getDeclContext()))
-      return Sema::AA_Sending;
+      return AssignmentAction::Sending;
 
-    return Sema::AA_Passing;
+    return AssignmentAction::Passing;
 
   case InitializedEntity::EK_Parameter_CF_Audited:
     if (Entity.getDecl() &&
       isa<ObjCMethodDecl>(Entity.getDecl()->getDeclContext()))
-      return Sema::AA_Sending;
+      return AssignmentAction::Sending;
 
-    return !Diagnose ? Sema::AA_Passing : Sema::AA_Passing_CFAudited;
+    return !Diagnose ? AssignmentAction::Passing
+                     : AssignmentAction::Passing_CFAudited;
 
   case InitializedEntity::EK_Result:
   case InitializedEntity::EK_StmtExprResult: // FIXME: Not quite right.
-    return Sema::AA_Returning;
+    return AssignmentAction::Returning;
 
   case InitializedEntity::EK_Temporary:
   case InitializedEntity::EK_RelatedResult:
     // FIXME: Can we tell apart casting vs. converting?
-    return Sema::AA_Casting;
+    return AssignmentAction::Casting;
 
   case InitializedEntity::EK_TemplateParameter:
     // This is really initialization, but refer to it as conversion for
     // consistency with CheckConvertedConstantExpression.
-    return Sema::AA_Converting;
+    return AssignmentAction::Converting;
 
   case InitializedEntity::EK_Member:
   case InitializedEntity::EK_ParenAggInitMember:
@@ -6847,7 +6866,7 @@ getAssignmentAction(const InitializedEntity &Entity, bool Diagnose = false) {
   case InitializedEntity::EK_LambdaToBlockConversionBlockElement:
   case InitializedEntity::EK_LambdaCapture:
   case InitializedEntity::EK_CompoundLiteralInit:
-    return Sema::AA_Initializing;
+    return AssignmentAction::Initializing;
   }
 
   llvm_unreachable("Invalid EntityKind!");
@@ -7383,7 +7402,7 @@ PerformConstructorInitialization(Sema &S,
 
 void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
                                     Expr *Init) {
-  return sema::checkExprLifetime(*this, Entity, Init);
+  return sema::checkInitLifetime(*this, Entity, Init);
 }
 
 static void DiagnoseNarrowingInInitList(Sema &S,
@@ -7520,10 +7539,8 @@ Sema::CreateMaterializeTemporaryExpr(QualType T, Expr *Temporary,
   // are done in both CreateMaterializeTemporaryExpr and MaybeBindToTemporary,
   // but there may be a chance to merge them.
   Cleanup.setExprNeedsCleanups(false);
-  if (isInLifetimeExtendingContext()) {
-    auto &Record = ExprEvalContexts.back();
-    Record.ForRangeLifetimeExtendTemps.push_back(MTE);
-  }
+  if (isInLifetimeExtendingContext())
+    currentEvaluationContext().ForRangeLifetimeExtendTemps.push_back(MTE);
   return MTE;
 }
 
@@ -8610,7 +8627,7 @@ static void emitBadConversionNotes(Sema &S, const InitializedEntity &entity,
       !fromDecl->isInvalidDecl() && !destDecl->isInvalidDecl() &&
       !fromDecl->hasDefinition() &&
       destPointeeType.getQualifiers().compatiblyIncludes(
-          fromPointeeType.getQualifiers()))
+          fromPointeeType.getQualifiers(), S.getASTContext()))
     S.Diag(fromDecl->getLocation(), diag::note_forward_class_conversion)
         << S.getASTContext().getTagDeclType(fromDecl)
         << S.getASTContext().getTagDeclType(destDecl);
@@ -8888,7 +8905,7 @@ bool InitializationSequence::Diagnose(Sema &S,
         SourceType.getQualifiers() - NonRefType.getQualifiers();
 
     if (!NonRefType.getQualifiers().isAddressSpaceSupersetOf(
-            SourceType.getQualifiers()))
+            SourceType.getQualifiers(), S.getASTContext()))
       S.Diag(Kind.getLocation(), diag::err_reference_bind_drops_quals)
           << NonRefType << SourceType << 1 /*addr space*/
           << Args[0]->getSourceRange();
@@ -9536,7 +9553,7 @@ static void DiagnoseNarrowingInInitList(Sema &S,
                       unsigned ConstRefDiagID, unsigned WarnDiagID) {
     unsigned DiagID;
     auto &L = S.getLangOpts();
-    if (L.CPlusPlus11 &&
+    if (L.CPlusPlus11 && !L.HLSL &&
         (!L.MicrosoftExt || L.isCompatibleWithMSVC(LangOptions::MSVC2015)))
       DiagID = IsConstRef ? ConstRefDiagID : DefaultDiagID;
     else

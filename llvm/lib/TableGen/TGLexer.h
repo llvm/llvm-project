@@ -80,7 +80,6 @@ enum TokKind {
   Code,
   Dag,
   ElseKW,
-  FalseKW,
   Field,
   In,
   Include,
@@ -88,7 +87,6 @@ enum TokKind {
   List,
   String,
   Then,
-  TrueKW,
 
   // Object start tokens.
   OBJECT_START_FIRST,
@@ -122,6 +120,7 @@ enum TokKind {
   XSRL,
   XSHL,
   XListConcat,
+  XListFlatten,
   XListSplat,
   XStrConcat,
   XInterleave,

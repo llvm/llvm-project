@@ -96,69 +96,23 @@ void InterpFrame::destroy(unsigned Idx) {
   }
 }
 
-void InterpFrame::popArgs() {
-  for (PrimType Ty : Func->args_reverse())
-    TYPE_SWITCH(Ty, S.Stk.discard<T>());
-}
-
 template <typename T>
 static void print(llvm::raw_ostream &OS, const T &V, ASTContext &ASTCtx,
                   QualType Ty) {
   V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
 }
 
-template <>
-void print(llvm::raw_ostream &OS, const Pointer &P, ASTContext &Ctx,
-           QualType Ty) {
-  if (P.isZero()) {
-    OS << "nullptr";
-    return;
-  }
+static bool shouldSkipInBacktrace(const Function *F) {
+  if (F->isBuiltin())
+    return true;
+  if (F->isLambdaStaticInvoker())
+    return true;
 
-  auto printDesc = [&OS, &Ctx](const Descriptor *Desc) {
-    if (const auto *D = Desc->asDecl()) {
-      // Subfields or named values.
-      if (const auto *VD = dyn_cast<ValueDecl>(D)) {
-        OS << *VD;
-        return;
-      }
-      // Base classes.
-      if (isa<RecordDecl>(D))
-        return;
-    }
-    // Temporary expression.
-    if (const auto *E = Desc->asExpr()) {
-      E->printPretty(OS, nullptr, Ctx.getPrintingPolicy());
-      return;
-    }
-    llvm_unreachable("Invalid descriptor type");
-  };
-
-  if (!Ty->isReferenceType())
-    OS << "&";
-  llvm::SmallVector<Pointer, 2> Levels;
-  for (Pointer F = P; !F.isRoot();) {
-    Levels.push_back(F);
-    F = F.isArrayElement() ? F.getArray().expand() : F.getBase();
-  }
-
-  // Drop the first pointer since we print it unconditionally anyway.
-  if (!Levels.empty())
-    Levels.erase(Levels.begin());
-
-  printDesc(P.getDeclDesc());
-  for (const auto &It : Levels) {
-    if (It.inArray()) {
-      OS << "[" << It.expand().getIndex() << "]";
-      continue;
-    }
-    if (auto Index = It.getIndex()) {
-      OS << " + " << Index;
-      continue;
-    }
-    OS << ".";
-    printDesc(It.getFieldDesc());
-  }
+  const FunctionDecl *FD = F->getDecl();
+  if (FD->getDeclName().getCXXOverloadedOperator() == OO_New ||
+      FD->getDeclName().getCXXOverloadedOperator() == OO_Array_New)
+    return true;
+  return false;
 }
 
 void InterpFrame::describe(llvm::raw_ostream &OS) const {
@@ -167,8 +121,7 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
   // user _and_ it doesn't generally work since the argument types don't always
   // match the function prototype. Just ignore them.
   // Similarly, for lambda static invokers, we would just print __invoke().
-  if (const auto *F = getFunction();
-      F && (F->isBuiltin() || F->isLambdaStaticInvoker()))
+  if (const auto *F = getFunction(); F && shouldSkipInBacktrace(F))
     return;
 
   const Expr *CallExpr = Caller->getExpr(getRetPC());
@@ -266,32 +219,56 @@ Pointer InterpFrame::getParamPointer(unsigned Off) {
   return Pointer(B);
 }
 
+static bool funcHasUsableBody(const Function *F) {
+  assert(F);
+
+  if (F->isConstructor() || F->isDestructor())
+    return true;
+
+  return !F->getDecl()->isImplicit();
+}
+
 SourceInfo InterpFrame::getSource(CodePtr PC) const {
   // Implicitly created functions don't have any code we could point at,
   // so return the call site.
-  if (Func && (!Func->hasBody() || Func->getDecl()->isImplicit()) && Caller)
+  if (Func && !funcHasUsableBody(Func) && Caller)
     return Caller->getSource(RetPC);
 
-  return S.getSource(Func, PC);
+  // Similarly, if the resulting source location is invalid anyway,
+  // point to the caller instead.
+  SourceInfo Result = S.getSource(Func, PC);
+  if (Result.getLoc().isInvalid() && Caller)
+    return Caller->getSource(RetPC);
+  return Result;
 }
 
 const Expr *InterpFrame::getExpr(CodePtr PC) const {
-  if (Func && (!Func->hasBody() || Func->getDecl()->isImplicit()) && Caller)
-    return Caller->getExpr(RetPC);
+  if (Func && !funcHasUsableBody(Func) && Caller)
+    return Caller->getExpr(PC);
 
   return S.getExpr(Func, PC);
 }
 
 SourceLocation InterpFrame::getLocation(CodePtr PC) const {
-  if (Func && (!Func->hasBody() || Func->getDecl()->isImplicit()) && Caller)
+  if (Func && !funcHasUsableBody(Func) && Caller)
     return Caller->getLocation(RetPC);
 
   return S.getLocation(Func, PC);
 }
 
 SourceRange InterpFrame::getRange(CodePtr PC) const {
-  if (Func && (!Func->hasBody() || Func->getDecl()->isImplicit()) && Caller)
+  if (Func && !funcHasUsableBody(Func) && Caller)
     return Caller->getRange(RetPC);
 
   return S.getRange(Func, PC);
+}
+
+bool InterpFrame::isStdFunction() const {
+  if (!Func)
+    return false;
+  for (const DeclContext *DC = Func->getDecl(); DC; DC = DC->getParent())
+    if (DC->isStdNamespace())
+      return true;
+
+  return false;
 }

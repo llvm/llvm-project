@@ -36,8 +36,8 @@ meet the criteria for inclusion below. The list is in the format
 `* ${full_name} (${affiliation}) [${github_username}]`. If a github
 username for an individual isn't available, the brackets will be empty.
 
+* Abhay Kanhere (Apple) [@AbhayKanhere]
 * Ahmed Bougacha (Apple) [@ahmedbougacha]
-* Andy Kaylor (Intel) [@andykaylor]
 * Artur Pilipenko (Azul Systems Inc) []
 * Boovaragavan Dasarathan (Nvidia) [@mrragava]
 * Dimitry Andric (individual; FreeBSD) [@DimitryAndric]
@@ -46,12 +46,13 @@ username for an individual isn't available, the brackets will be empty.
 * Josh Stone (Red Hat; Rust) [@cuviper]
 * Kristof Beyls (ARM) [@kbeyls]
 * Matthew Riley (Google) [@mmdriley]
+* Matthew Voss (Sony) [@ormris]
 * Nikhil Gupta (Nvidia) []
 * Oliver Hunt (Apple) [@ojhunt]
-* Paul Robinson (Sony) [@pogo59]
 * Peter Smith (ARM) [@smithp35]
 * Pietro Albini (Ferrous Systems; Rust) [@pietroalbini]
 * Serge Guelton (Mozilla) [@serge-sans-paille]
+* Sergey Zverev (Intel) [@offsake]
 * Shayne Hiet-Block (Microsoft) [@GreatKeeper]
 * Tim Penge (Sony) [@tpenge]
 * Tulio Magno Quites Machado Filho (Red Hat) [@tuliom]

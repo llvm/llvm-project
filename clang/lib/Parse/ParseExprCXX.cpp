@@ -13,11 +13,11 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/PrettyStackTrace.h"
 #include "clang/Basic/TemplateKinds.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/LiteralSupport.h"
-#include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
@@ -1344,9 +1344,13 @@ static void DiagnoseStaticSpecifierRestrictions(Parser &P,
 ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                      LambdaIntroducer &Intro) {
   SourceLocation LambdaBeginLoc = Intro.Range.getBegin();
-  Diag(LambdaBeginLoc, getLangOpts().CPlusPlus11
-                           ? diag::warn_cxx98_compat_lambda
-                           : diag::ext_lambda);
+  if (getLangOpts().HLSL)
+    Diag(LambdaBeginLoc, diag::ext_hlsl_lambda) << /*HLSL*/ 1;
+  else
+    Diag(LambdaBeginLoc, getLangOpts().CPlusPlus11
+                             ? diag::warn_cxx98_compat_lambda
+                             : diag::ext_lambda)
+        << /*C++*/ 0;
 
   PrettyStackTraceLoc CrashInfo(PP.getSourceManager(), LambdaBeginLoc,
                                 "lambda expression parsing");
@@ -1575,9 +1579,8 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                       DynamicExceptionRanges.data(), DynamicExceptions.size(),
                       NoexceptExpr.isUsable() ? NoexceptExpr.get() : nullptr,
                       /*ExceptionSpecTokens*/ nullptr,
-                      /*DeclsInPrototype=*/std::nullopt, LParenLoc,
-                      FunLocalRangeEnd, D, TrailingReturnType,
-                      TrailingReturnTypeLoc, &DS),
+                      /*DeclsInPrototype=*/{}, LParenLoc, FunLocalRangeEnd, D,
+                      TrailingReturnType, TrailingReturnTypeLoc, &DS),
                   std::move(Attributes), DeclEndLoc);
 
     // We have called ActOnLambdaClosureQualifiers for parentheses-less cases

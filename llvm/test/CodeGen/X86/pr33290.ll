@@ -10,7 +10,7 @@ define dso_local void @e() {
 ; X86-LABEL: e:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl b, %eax
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB0_1: # %for.cond
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    movzbl c, %ecx
@@ -22,7 +22,7 @@ define dso_local void @e() {
 ; X64-LABEL: e:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq b(%rip), %rax
-; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB0_1: # %for.cond
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    movzbl c(%rip), %ecx

@@ -91,6 +91,37 @@ struct DeviceExprChecker
   }
 };
 
+struct FindHostArray
+    : public evaluate::AnyTraverse<FindHostArray, const Symbol *> {
+  using Result = const Symbol *;
+  using Base = evaluate::AnyTraverse<FindHostArray, Result>;
+  FindHostArray() : Base(*this) {}
+  using Base::operator();
+  Result operator()(const evaluate::Component &x) const {
+    const Symbol &symbol{x.GetLastSymbol()};
+    if (IsAllocatableOrPointer(symbol)) {
+      if (Result hostArray{(*this)(symbol)}) {
+        return hostArray;
+      }
+    }
+    return (*this)(x.base());
+  }
+  Result operator()(const Symbol &symbol) const {
+    if (const auto *details{
+            symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
+      if (details->IsArray() &&
+          (!details->cudaDataAttr() ||
+              (details->cudaDataAttr() &&
+                  *details->cudaDataAttr() != common::CUDADataAttr::Device &&
+                  *details->cudaDataAttr() != common::CUDADataAttr::Managed &&
+                  *details->cudaDataAttr() != common::CUDADataAttr::Unified))) {
+        return &symbol;
+      }
+    }
+    return nullptr;
+  }
+};
+
 template <typename A> static MaybeMsg CheckUnwrappedExpr(const A &x) {
   if (const auto *expr{parser::Unwrap<parser::Expr>(x)}) {
     return DeviceExprChecker{}(expr->typedExpr);
@@ -296,10 +327,8 @@ private:
     return false;
   }
   void WarnOnIoStmt(const parser::CharBlock &source) {
-    if (context_.ShouldWarn(common::UsageWarning::CUDAUsage)) {
-      context_.Say(
-          source, "I/O statement might not be supported on device"_warn_en_US);
-    }
+    context_.Warn(common::UsageWarning::CUDAUsage, source,
+        "I/O statement might not be supported on device"_warn_en_US);
   }
   template <typename A>
   void WarnIfNotInternal(const A &stmt, const parser::CharBlock &source) {
@@ -308,22 +337,11 @@ private:
     }
   }
   template <typename A>
-  void ErrorIfHostSymbol(const A &expr, const parser::CharBlock &source) {
-    for (const Symbol &sym : CollectCudaSymbols(expr)) {
-      if (const auto *details =
-              sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
-        if (details->IsArray() &&
-            (!details->cudaDataAttr() ||
-                (details->cudaDataAttr() &&
-                    *details->cudaDataAttr() != common::CUDADataAttr::Device &&
-                    *details->cudaDataAttr() != common::CUDADataAttr::Managed &&
-                    *details->cudaDataAttr() !=
-                        common::CUDADataAttr::Unified))) {
-          context_.Say(source,
-              "Host array '%s' cannot be present in CUF kernel"_err_en_US,
-              sym.name());
-        }
-      }
+  void ErrorIfHostSymbol(const A &expr, parser::CharBlock source) {
+    if (const Symbol * hostArray{FindHostArray{}(expr)}) {
+      context_.Say(source,
+          "Host array '%s' cannot be present in CUF kernel"_err_en_US,
+          hostArray->name());
     }
   }
   void Check(const parser::ActionStmt &stmt, const parser::CharBlock &source) {
@@ -565,13 +583,18 @@ void CUDAChecker::Enter(const parser::CUFKernelDoConstruct &x) {
       std::get<std::list<parser::CUFReduction>>(directive.t)) {
     CheckReduce(context_, reduce);
   }
+  inCUFKernelDoConstruct_ = true;
+}
+
+void CUDAChecker::Leave(const parser::CUFKernelDoConstruct &) {
+  inCUFKernelDoConstruct_ = false;
 }
 
 void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
   auto lhsLoc{std::get<parser::Variable>(x.t).GetSource()};
   const auto &scope{context_.FindScope(lhsLoc)};
   const Scope &progUnit{GetProgramUnitContaining(scope)};
-  if (IsCUDADeviceContext(&progUnit)) {
+  if (IsCUDADeviceContext(&progUnit) || inCUFKernelDoConstruct_) {
     return; // Data transfer with assignment is only perform on host.
   }
 

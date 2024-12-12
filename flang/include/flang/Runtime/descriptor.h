@@ -19,6 +19,7 @@
 // but should never reference this internal header.
 
 #include "flang/ISO_Fortran_binding_wrapper.h"
+#include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/memory.h"
 #include "flang/Runtime/type-code.h"
 #include <algorithm>
@@ -28,14 +29,8 @@
 #include <cstdio>
 #include <cstring>
 
-namespace Fortran::runtime::typeInfo {
-using TypeParameterValue = std::int64_t;
-class DerivedType;
-} // namespace Fortran::runtime::typeInfo
-
 namespace Fortran::runtime {
 
-using SubscriptValue = ISO::CFI_index_t;
 class Terminator;
 
 RT_VAR_GROUP_BEGIN
@@ -420,13 +415,6 @@ public:
 
   void Dump(FILE * = stdout) const;
 
-// Value of the addendum presence flag.
-#define _CFI_ADDENDUM_FLAG 1
-// Number of bits needed to be shifted when manipulating the allocator index.
-#define _CFI_ALLOCATOR_IDX_SHIFT 1
-// Allocator index mask.
-#define _CFI_ALLOCATOR_IDX_MASK 0b00001110
-
   RT_API_ATTRS inline bool HasAddendum() const {
     return raw_.extra & _CFI_ADDENDUM_FLAG;
   }
@@ -438,7 +426,7 @@ public:
   }
   RT_API_ATTRS inline void SetAllocIdx(int pos) {
     raw_.extra &= ~_CFI_ALLOCATOR_IDX_MASK; // Clear the allocator index bits.
-    raw_.extra |= (pos << _CFI_ALLOCATOR_IDX_SHIFT);
+    raw_.extra |= pos << _CFI_ALLOCATOR_IDX_SHIFT;
   }
 
 private:
@@ -464,6 +452,8 @@ public:
   static constexpr bool hasAddendum{ADDENDUM || MAX_LEN_PARMS > 0};
   static constexpr std::size_t byteSize{
       Descriptor::SizeInBytes(maxRank, hasAddendum, maxLengthTypeParameters)};
+  static_assert(byteSize <=
+      MaxDescriptorSizeInBytes(maxRank, hasAddendum, maxLengthTypeParameters));
   RT_OFFLOAD_VAR_GROUP_END
 
   RT_API_ATTRS Descriptor &descriptor() {

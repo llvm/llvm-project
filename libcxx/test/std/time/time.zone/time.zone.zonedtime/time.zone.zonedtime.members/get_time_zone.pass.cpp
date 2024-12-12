@@ -20,6 +20,7 @@
 // TimeZonePtr get_time_zone() const;
 
 #include <chrono>
+#include <cassert>
 #include <concepts>
 
 #include "../test_offset_time_zone.h"

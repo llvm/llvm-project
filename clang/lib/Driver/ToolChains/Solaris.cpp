@@ -203,7 +203,8 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group});
 
-  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+  const SanitizerArgs &SA = ToolChain.getSanitizerArgs(Args);
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, SA, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,
@@ -223,7 +224,8 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // Additional linker set-up and flags for Fortran. This is required in order
     // to generate executables. As Fortran runtime depends on the C runtime,
     // these dependencies need to be listed before the C runtime below.
-    if (D.IsFlangMode()) {
+    if (D.IsFlangMode() &&
+        !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
       addFortranRuntimeLibraryPath(getToolChain(), Args, CmdArgs);
       addFortranRuntimeLibs(getToolChain(), Args, CmdArgs);
       CmdArgs.push_back("-lm");
@@ -249,9 +251,8 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (!Args.hasArg(options::OPT_shared)) {
       CmdArgs.push_back("-lgcc");
     }
-    const SanitizerArgs &SA = ToolChain.getSanitizerArgs(Args);
     if (NeedsSanitizerDeps) {
-      linkSanitizerRuntimeDeps(ToolChain, Args, CmdArgs);
+      linkSanitizerRuntimeDeps(ToolChain, Args, SA, CmdArgs);
 
       // Work around Solaris/amd64 ld bug when calling __tls_get_addr directly.
       // However, ld -z relax=transtls is available since Solaris 11.2, but not
@@ -265,8 +266,7 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       }
     }
     // Avoid AsanInitInternal cycle, Issue #64126.
-    if (ToolChain.getTriple().isX86() && SA.needsSharedRt() &&
-        SA.needsAsanRt()) {
+    if (SA.needsSharedRt() && SA.needsAsanRt()) {
       CmdArgs.push_back("-z");
       CmdArgs.push_back("now");
     }
@@ -333,10 +333,11 @@ Solaris::Solaris(const Driver &D, const llvm::Triple &Triple,
 }
 
 SanitizerMask Solaris::getSupportedSanitizers() const {
+  const bool IsSparc = getTriple().getArch() == llvm::Triple::sparc;
   const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
-  // FIXME: Omit X86_64 until 64-bit support is figured out.
-  if (IsX86) {
+  // FIXME: Omit SparcV9 and X86_64 until 64-bit support is figured out.
+  if (IsSparc || IsX86) {
     Res |= SanitizerKind::Address;
     Res |= SanitizerKind::PointerCompare;
     Res |= SanitizerKind::PointerSubtract;
