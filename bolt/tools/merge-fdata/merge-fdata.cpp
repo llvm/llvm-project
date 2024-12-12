@@ -271,13 +271,14 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
       "(.*) ([0-9]+) ([0-9]+)";
   Regex FdataRegex(FdataCountersPattern);
   struct CounterTy {
-    uint64_t Count;
-    uint64_t MispredCount;
-    CounterTy &operator+(const CounterTy &O) {
-      Count += O.Count;
-      MispredCount += O.MispredCount;
+    uint64_t Exec{0};
+    uint64_t Mispred{0};
+    CounterTy &operator+=(const CounterTy &O) {
+      Exec += O.Exec;
+      Mispred += O.Mispred;
       return *this;
     }
+    CounterTy operator+(const CounterTy &O) { return *this += O; }
   };
   typedef StringMap<CounterTy> ProfileTy;
 
@@ -317,19 +318,18 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
     SmallVector<StringRef> Lines;
     SplitString(Buf, Lines, "\n");
     for (StringRef Line : Lines) {
-      CounterTy CurrCount;
       SmallVector<StringRef, 4> Fields;
       if (!FdataRegex.match(Line, &Fields))
         report_error(Filename, "Malformed / corrupted profile");
       StringRef Signature = Fields[1];
-      if (Fields[2].getAsInteger(10, CurrCount.MispredCount))
+      CounterTy Count;
+      if (Fields[2].getAsInteger(10, Count.Mispred))
         report_error(Filename, "Malformed / corrupted execution count");
-      if (Fields[3].getAsInteger(10, CurrCount.Count))
+      if (Fields[3].getAsInteger(10, Count.Exec))
         report_error(Filename, "Malformed / corrupted misprediction count");
 
-      CounterTy Counter = Profile->lookup(Signature);
-      Counter = Counter + CurrCount;
-      Profile->insert_or_assign(Signature, Counter);
+      Count += Profile->lookup(Signature);
+      Profile->insert_or_assign(Signature, Count);
     }
   };
 
@@ -354,7 +354,7 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   if (BoltedCollection.value_or(false))
     output() << "boltedcollection\n";
   for (const auto &[Key, Value] : MergedProfile)
-    output() << Key << " " << Value.MispredCount << " " << Value.Count << "\n";
+    output() << Key << " " << Value.Mispred << " " << Value.Exec << "\n";
 
   errs() << "Profile from " << Filenames.size() << " files merged.\n";
 }
