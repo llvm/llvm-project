@@ -9,7 +9,7 @@
 #ifndef FORTRAN_COMMON_FORTRAN_CONSTS_H_
 #define FORTRAN_COMMON_FORTRAN_CONSTS_H_
 
-#include "flang/Common/enum-class.h"
+#include "enum-set.h"
 #include <cstdint>
 
 namespace Fortran::common {

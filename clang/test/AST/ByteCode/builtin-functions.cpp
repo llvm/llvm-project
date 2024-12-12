@@ -15,6 +15,10 @@
 #error "huh?"
 #endif
 
+extern "C" {
+  typedef decltype(sizeof(int)) size_t;
+  extern size_t wcslen(const wchar_t *p);
+}
 
 namespace strcmp {
   constexpr char kFoobar[6] = {'f','o','o','b','a','r'};
@@ -47,6 +51,15 @@ namespace strcmp {
     return __builtin_strcmp(buffer, "mutable") == 0;
   }
   static_assert(char_memchr_mutable(), "");
+
+  static_assert(__builtin_strncmp("abaa", "abba", 5) == -1);
+  static_assert(__builtin_strncmp("abaa", "abba", 4) == -1);
+  static_assert(__builtin_strncmp("abaa", "abba", 3) == -1);
+  static_assert(__builtin_strncmp("abaa", "abba", 2) == 0);
+  static_assert(__builtin_strncmp("abaa", "abba", 1) == 0);
+  static_assert(__builtin_strncmp("abaa", "abba", 0) == 0);
+  static_assert(__builtin_strncmp(0, 0, 0) == 0);
+  static_assert(__builtin_strncmp("abab\0banana", "abab\0canada", 100) == 0);
 }
 
 /// Copied from constant-expression-cxx11.cpp
@@ -93,6 +106,14 @@ constexpr const char *a = "foo\0quux";
   constexpr char d[] = { 'f', 'o', 'o' }; // no nul terminator.
   constexpr int bad = __builtin_strlen(d); // both-error {{constant expression}} \
                                            // both-note {{one-past-the-end}}
+
+  constexpr int wn = __builtin_wcslen(L"hello");
+  static_assert(wn == 5);
+  constexpr int wm = wcslen(L"hello"); // both-error {{constant expression}} \
+                                       // both-note {{non-constexpr function 'wcslen' cannot be used in a constant expression}}
+
+  int arr[3]; // both-note {{here}}
+  int wk = arr[wcslen(L"hello")]; // both-warning {{array index 5}}
 }
 
 namespace nan {
@@ -1176,4 +1197,29 @@ namespace BuiltinMemcpy {
     return b;
   }
   static_assert(simpleMove() == 12);
+
+  constexpr int memcpyTypeRem() { // both-error {{never produces a constant expression}}
+    int a = 12;
+    int b = 0;
+    __builtin_memmove(&b, &a, 1); // both-note {{'memmove' not supported: size to copy (1) is not a multiple of size of element type 'int'}} \
+                                  // both-note {{not supported}}
+    return b;
+  }
+  static_assert(memcpyTypeRem() == 12); // both-error {{not an integral constant expression}} \
+                                        // both-note {{in call to}}
+
+  template<typename T>
+  constexpr T result(T (&arr)[4]) {
+    return arr[0] * 1000 + arr[1] * 100 + arr[2] * 10 + arr[3];
+  }
+
+  constexpr int test_memcpy(int a, int b, int n) {
+    int arr[4] = {1, 2, 3, 4};
+    __builtin_memcpy(arr + a, arr + b, n); // both-note {{overlapping memory regions}}
+    return result(arr);
+  }
+
+  static_assert(test_memcpy(1, 2, sizeof(int)) == 1334);
+  static_assert(test_memcpy(0, 1, sizeof(int) * 2) == 2334); // both-error {{not an integral constant expression}} \
+                                                             // both-note {{in call}}
 }

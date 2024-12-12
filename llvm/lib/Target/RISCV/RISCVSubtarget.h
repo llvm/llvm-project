@@ -236,6 +236,9 @@ public:
     return UserReservedRegister[i];
   }
 
+  // XRay support - require D and C extensions.
+  bool isXRaySupported() const override { return hasStdExtD() && hasStdExtC(); }
+
   // Vector codegen related methods.
   bool hasVInstructions() const { return HasStdExtZve32x; }
   bool hasVInstructionsI64() const { return HasStdExtZve64x; }

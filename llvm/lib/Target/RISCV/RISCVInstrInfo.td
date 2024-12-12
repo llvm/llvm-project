@@ -476,6 +476,8 @@ def XLenSubTrailingOnes : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(XLen - TrailingOnes, SDLoc(N),
                                    N->getValueType(0));
 }]>;
+def GIXLenSubTrailingOnes : GICustomOperandRenderer<"renderXLenSubTrailingOnes">,
+  GISDNodeXFormEquiv<XLenSubTrailingOnes>;
 
 // Checks if this mask is a non-empty sequence of ones starting at the
 // most/least significant bit with the remainder zero and exceeds simm32/simm12.
@@ -489,7 +491,15 @@ def TrailingOnesMask : PatLeaf<(imm), [{
   if (!N->hasOneUse())
     return false;
   return !isInt<12>(N->getSExtValue()) && isMask_64(N->getZExtValue());
-}], XLenSubTrailingOnes>;
+}], XLenSubTrailingOnes> {
+  let GISelPredicateCode = [{
+    if (!MRI.hasOneNonDBGUse(MI.getOperand(0).getReg()))
+      return false;
+    const auto &MO = MI.getOperand(1);
+    return !isInt<12>(MO.getCImm()->getSExtValue()) &&
+           isMask_64(MO.getCImm()->getZExtValue());
+  }];
+}
 
 // Similar to LeadingOnesMask, but only consider leading ones in the lower 32
 // bits.
@@ -1372,6 +1382,17 @@ def PseudoAddTPRel : Pseudo<(outs GPR:$rd),
 
 def : Pat<(FrameAddrRegImm (iPTR GPR:$rs1), simm12:$imm12),
           (ADDI GPR:$rs1, simm12:$imm12)>;
+
+/// Stack probing
+
+let hasSideEffects = 1, mayLoad = 1, mayStore = 1, isCodeGenOnly = 1 in {
+// Probed stack allocation of a constant size, used in function prologues when
+// stack-clash protection is enabled.
+def PROBED_STACKALLOC : Pseudo<(outs GPR:$sp),
+                               (ins GPR:$scratch),
+                               []>,
+                               Sched<[]>;
+}
 
 /// HI and ADD_LO address nodes.
 

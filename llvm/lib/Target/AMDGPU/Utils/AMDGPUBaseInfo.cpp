@@ -378,17 +378,18 @@ struct VOPTrue16Info {
   bool IsTrue16;
 };
 
-#define GET_FP8DstByteSelTable_DECL
-#define GET_FP8DstByteSelTable_IMPL
+#define GET_FP4FP8DstByteSelTable_DECL
+#define GET_FP4FP8DstByteSelTable_IMPL
 
 struct DPMACCInstructionInfo {
   uint16_t Opcode;
   bool IsDPMACCInstruction;
 };
 
-struct FP8DstByteSelInfo {
+struct FP4FP8DstByteSelInfo {
   uint16_t Opcode;
   bool HasFP8DstByteSel;
+  bool HasFP4DstByteSel;
 };
 
 #define GET_MTBUFInfoTable_DECL
@@ -655,9 +656,16 @@ bool isTrue16Inst(unsigned Opc) {
   return Info ? Info->IsTrue16 : false;
 }
 
-bool isFP8DstSelInst(unsigned Opc) {
-  const FP8DstByteSelInfo *Info = getFP8DstByteSelHelper(Opc);
-  return Info ? Info->HasFP8DstByteSel : false;
+FPType getFPDstSelType(unsigned Opc) {
+  const FP4FP8DstByteSelInfo *Info = getFP4FP8DstByteSelHelper(Opc);
+  if (!Info)
+    return FPType::None;
+  if (Info->HasFP8DstByteSel)
+    return FPType::FP8;
+  if (Info->HasFP4DstByteSel)
+    return FPType::FP4;
+
+  return FPType::None;
 }
 
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {
@@ -1324,22 +1332,33 @@ std::pair<unsigned, unsigned>
 getIntegerPairAttribute(const Function &F, StringRef Name,
                         std::pair<unsigned, unsigned> Default,
                         bool OnlyFirstRequired) {
+  if (auto Attr = getIntegerPairAttribute(F, Name, OnlyFirstRequired))
+    return {Attr->first, Attr->second ? *(Attr->second) : Default.second};
+  return Default;
+}
+
+std::optional<std::pair<unsigned, std::optional<unsigned>>>
+getIntegerPairAttribute(const Function &F, StringRef Name,
+                        bool OnlyFirstRequired) {
   Attribute A = F.getFnAttribute(Name);
   if (!A.isStringAttribute())
-    return Default;
+    return std::nullopt;
 
   LLVMContext &Ctx = F.getContext();
-  std::pair<unsigned, unsigned> Ints = Default;
+  std::pair<unsigned, std::optional<unsigned>> Ints;
   std::pair<StringRef, StringRef> Strs = A.getValueAsString().split(',');
   if (Strs.first.trim().getAsInteger(0, Ints.first)) {
     Ctx.emitError("can't parse first integer attribute " + Name);
-    return Default;
+    return std::nullopt;
   }
-  if (Strs.second.trim().getAsInteger(0, Ints.second)) {
+  unsigned Second = 0;
+  if (Strs.second.trim().getAsInteger(0, Second)) {
     if (!OnlyFirstRequired || !Strs.second.trim().empty()) {
       Ctx.emitError("can't parse second integer attribute " + Name);
-      return Default;
+      return std::nullopt;
     }
+  } else {
+    Ints.second = Second;
   }
 
   return Ints;

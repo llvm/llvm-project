@@ -9567,8 +9567,10 @@ multiclass sve_int_perm_bin_perm_128_zz<bits<2> opc, bit P, string asm, SDPatter
 }
 
 /// Addressing modes
-def am_sve_indexed_s4 :ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<-8,7>", [], [SDNPWantRoot]>;
-def am_sve_indexed_s6 :ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<-32,31>", [], [SDNPWantRoot]>;
+let WantsRoot = true in {
+  def am_sve_indexed_s4 : ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<-8, 7>">;
+  def am_sve_indexed_s6 : ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<-32, 31>">;
+}
 
 def am_sve_regreg_lsl0 : ComplexPattern<iPTR, 2, "SelectSVERegRegAddrMode<0>", []>;
 def am_sve_regreg_lsl1 : ComplexPattern<iPTR, 2, "SelectSVERegRegAddrMode<1>", []>;
@@ -10769,10 +10771,15 @@ class sve2_fp8_cvt_single<bit L, bits<2> opc, string mnemonic,
   let Inst{9-5}   = Zn;
   let Inst{4-0}   = Zd;
   let Uses = [FPMR, FPCR];
+
+  let mayLoad  = 1;
+  let mayStore = 0;
 }
 
-multiclass sve2_fp8_cvt_single<bit L, bits<2> opc, string mnemonic> {
+multiclass sve2_fp8_cvt_single<bit L, bits<2> opc, string mnemonic, ValueType vtd, SDPatternOperator op> {
   def _BtoH : sve2_fp8_cvt_single<L, opc, mnemonic, ZPR16, ZPR8>;
+  
+  def : SVE_1_Op_Pat<vtd, op, nxv16i8, !cast<Instruction>(NAME # _BtoH)>;
 }
 
 // FP8 downconvert
@@ -10789,10 +10796,45 @@ class sve2_fp8_down_cvt_single<bits<2> opc, string mnemonic,
   let Inst{5} = 0b0;
   let Inst{4-0} = Zd;
   let Uses = [FPMR, FPCR];
+
+  let mayLoad  = 1;
+  let mayStore = 0;
 }
 
-multiclass sve2_fp8_down_cvt_single<bits<2> opc, string mnemonic, RegisterOperand src> {
+multiclass sve2_fp8_down_cvt_single<bits<2> opc, string mnemonic, RegisterOperand src,
+                                    ValueType ty, SDPatternOperator op> {
   def NAME : sve2_fp8_down_cvt_single<opc, mnemonic, ZPR8, src>;
+
+  def : Pat<(nxv16i8 (op ty:$Zn1, ty:$Zn2)),
+            (!cast<Instruction>(NAME) (REG_SEQUENCE ZPR2Mul2, $Zn1, zsub0, $Zn2, zsub1))>;
+}
+
+class sve2_fp8_down_cvt_single_top<bits<2> opc, string mnemonic, RegisterOperand src_ty>
+  : I<(outs ZPR8:$Zd), (ins ZPR8:$_Zd, src_ty:$Zn), mnemonic, "\t$Zd, $Zn","", []>, Sched<[]> {
+  bits<5> Zd;
+  bits<4> Zn;
+
+  let Inst{31-12} = 0b01100101000010100011;
+  let Inst{11-10} = opc;
+  let Inst{9-6}   = Zn;
+  let Inst{5}     = 0b0;
+  let Inst{4-0}   = Zd;
+
+  let Constraints = "$Zd = $_Zd";
+  let DestructiveInstType = DestructiveOther;
+  let ElementSize         = ZPR8.ElementSize;
+  
+  let Uses     = [FPMR, FPCR];
+  let mayLoad  = 1;
+  let mayStore = 0;
+}
+
+multiclass sve2_fp8_down_cvt_single_top<bits<2> opc, string mnemonic, RegisterOperand src_ty,
+                                        ValueType ty, SDPatternOperator op> {
+  def NAME : sve2_fp8_down_cvt_single_top<opc, mnemonic, src_ty>;
+
+  def : Pat<(nxv16i8 (op nxv16i8:$Zd, ty:$Zn1, ty:$Zn2)),
+            (!cast<Instruction>(NAME) $Zd, (REG_SEQUENCE ZPR2Mul2, $Zn1, zsub0, $Zn2, zsub1))>;
 }
 
 // FP8 Widening Multiply-Add Long - Indexed Group
