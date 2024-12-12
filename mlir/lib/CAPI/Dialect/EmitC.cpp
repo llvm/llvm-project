@@ -10,4 +10,104 @@
 #include "mlir/CAPI/Registration.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 
+using namespace mlir;
+
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(EmitC, emitc, mlir::emitc::EmitCDialect)
+
+//===---------------------------------------------------------------------===//
+// ArrayType
+//===---------------------------------------------------------------------===//
+
+bool mlirTypeIsAEmitCArrayType(MlirType type) {
+  return isa<emitc::ArrayType>(unwrap(type));
+}
+
+MlirTypeID mlirEmitCArrayTypeGetTypeID(void) {
+  return wrap(emitc::ArrayType::getTypeID());
+}
+
+MlirType mlirEmitCArrayTypeGet(intptr_t nDims, int64_t *shape,
+                               MlirType elementType) {
+  return wrap(
+      emitc::ArrayType::get(llvm::ArrayRef(shape, nDims), unwrap(elementType)));
+}
+
+//===---------------------------------------------------------------------===//
+// OpaqueType
+//===---------------------------------------------------------------------===//
+
+bool mlirTypeIsAEmitCOpaqueType(MlirType type) {
+  return isa<emitc::OpaqueType>(unwrap(type));
+}
+
+MlirTypeID mlirEmitCOpaqueTypeGetTypeID(void) {
+  return wrap(emitc::OpaqueType::getTypeID());
+}
+
+MlirType mlirEmitCOpaqueTypeGet(MlirContext ctx, MlirStringRef value) {
+  return wrap(emitc::OpaqueType::get(unwrap(ctx), unwrap(value)));
+}
+
+//===---------------------------------------------------------------------===//
+// PointerType
+//===---------------------------------------------------------------------===//
+
+bool mlirTypeIsAEmitCPointerType(MlirType type) {
+  return isa<emitc::PointerType>(unwrap(type));
+}
+
+MlirTypeID mlirEmitCPointerTypeGetTypeID(void) {
+  return wrap(emitc::PointerType::getTypeID());
+}
+
+MlirType mlirEmitCPointerTypeGet(MlirType pointee) {
+  return wrap(emitc::PointerType::get(unwrap(pointee)));
+}
+
+//===---------------------------------------------------------------------===//
+// PtrDiffTType
+//===---------------------------------------------------------------------===//
+
+bool mlirTypeIsAEmitCPtrDiffTType(MlirType type) {
+  return isa<emitc::PtrDiffTType>(unwrap(type));
+}
+
+MlirTypeID mlirEmitCPtrDiffTTypeGetTypeID(void) {
+  return wrap(emitc::PtrDiffTType::getTypeID());
+}
+
+MlirType mlirEmitCPtrDiffTTypeGet(MlirContext ctx) {
+  return wrap(emitc::PtrDiffTType::get(unwrap(ctx)));
+}
+
+//===---------------------------------------------------------------------===//
+// SignedSizeTType
+//===---------------------------------------------------------------------===//
+
+bool mlirTypeIsAEmitCSignedSizeTType(MlirType type) {
+  return isa<emitc::SignedSizeTType>(unwrap(type));
+}
+
+MlirTypeID mlirEmitCSignedSizeTTypeGetTypeID(void) {
+  return wrap(emitc::SignedSizeTType::getTypeID());
+}
+
+MlirType mlirEmitCSignedSizeTTypeGet(MlirContext ctx) {
+  return wrap(emitc::SignedSizeTType::get(unwrap(ctx)));
+}
+
+//===---------------------------------------------------------------------===//
+// SizeTType
+//===---------------------------------------------------------------------===//
+
+bool mlirTypeIsAEmitCSizeTType(MlirType type) {
+  return isa<emitc::SizeTType>(unwrap(type));
+}
+
+MlirTypeID mlirEmitCSizeTTypeGetTypeID(void) {
+  return wrap(emitc::SizeTType::getTypeID());
+}
+
+MlirType mlirEmitCSizeTTypeGet(MlirContext ctx) {
+  return wrap(emitc::SizeTType::get(unwrap(ctx)));
+}

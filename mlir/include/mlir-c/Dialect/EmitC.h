@@ -19,6 +19,68 @@ extern "C" {
 
 MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(EmitC, emitc);
 
+//===---------------------------------------------------------------------===//
+// ArrayType
+//===---------------------------------------------------------------------===//
+
+MLIR_CAPI_EXPORTED bool mlirTypeIsAEmitCArrayType(MlirType type);
+
+MLIR_CAPI_EXPORTED MlirTypeID mlirEmitCArrayTypeGetTypeID(void);
+
+MLIR_CAPI_EXPORTED MlirType mlirEmitCArrayTypeGet(intptr_t nDims,
+                                                  int64_t *shape,
+                                                  MlirType elementType);
+//===---------------------------------------------------------------------===//
+// OpaqueType
+//===---------------------------------------------------------------------===//
+
+MLIR_CAPI_EXPORTED bool mlirTypeIsAEmitCOpaqueType(MlirType type);
+
+MLIR_CAPI_EXPORTED MlirTypeID mlirEmitCOpaqueTypeGetTypeID(void);
+
+MLIR_CAPI_EXPORTED MlirType mlirEmitCOpaqueTypeGet(MlirContext ctx,
+                                                   MlirStringRef value);
+
+//===---------------------------------------------------------------------===//
+// PointerType
+//===---------------------------------------------------------------------===//
+
+MLIR_CAPI_EXPORTED bool mlirTypeIsAEmitCPointerType(MlirType type);
+
+MLIR_CAPI_EXPORTED MlirTypeID mlirEmitCPointerTypeGetTypeID(void);
+
+MLIR_CAPI_EXPORTED MlirType mlirEmitCPointerTypeGet(MlirType pointee);
+
+//===---------------------------------------------------------------------===//
+// PtrDiffTType
+//===---------------------------------------------------------------------===//
+
+MLIR_CAPI_EXPORTED bool mlirTypeIsAEmitCPtrDiffTType(MlirType type);
+
+MLIR_CAPI_EXPORTED MlirTypeID mlirEmitCPtrDiffTTypeGetTypeID(void);
+
+MLIR_CAPI_EXPORTED MlirType mlirEmitCPtrDiffTTypeGet(MlirContext ctx);
+
+//===---------------------------------------------------------------------===//
+// SignedSizeTType
+//===---------------------------------------------------------------------===//
+
+MLIR_CAPI_EXPORTED bool mlirTypeIsAEmitCSignedSizeTType(MlirType type);
+
+MLIR_CAPI_EXPORTED MlirTypeID mlirEmitCSignedSizeTTypeGetTypeID(void);
+
+MLIR_CAPI_EXPORTED MlirType mlirEmitCSignedSizeTTypeGet(MlirContext ctx);
+
+//===---------------------------------------------------------------------===//
+// SizeTType
+//===---------------------------------------------------------------------===//
+
+MLIR_CAPI_EXPORTED bool mlirTypeIsAEmitCSizeTType(MlirType type);
+
+MLIR_CAPI_EXPORTED MlirTypeID mlirEmitCSizeTTypeGetTypeID(void);
+
+MLIR_CAPI_EXPORTED MlirType mlirEmitCSizeTTypeGet(MlirContext ctx);
+
 #ifdef __cplusplus
 }
 #endif
