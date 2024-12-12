@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/Utils/DistributionUtils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorDistribution.h"
@@ -66,12 +67,12 @@ bool divisible(APInt lhs, APInt rhs) { return !lhs.urem(rhs); }
 // ///                                 -> !xegpu.tensor_desc<4x1xf32>
 // ///
 // /// ```
-// struct WarpOpTensorDescOp final
-//     : public OpRewritePattern<vector::WarpExecuteOnLane0Op> {
-//   using OpRewritePattern<vector::WarpExecuteOnLane0Op>::OpRewritePattern;
-//   LogicalResult matchAndRewrite(vector::WarpExecuteOnLane0Op warpOp,
-//                                 PatternRewriter &rewriter) const override;
-// };
+struct WarpOpTensorDescOp final
+    : public OpRewritePattern<gpu::WarpExecuteOnLane0Op> {
+  using OpRewritePattern<gpu::WarpExecuteOnLane0Op>::OpRewritePattern;
+  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
+                                PatternRewriter &rewriter) const override;
+};
 
 // /// Sink a store_nd feeding into vector.yield op for the enclosing
 // /// `vector.warp_execute_on_lane_0`. In case arguments for the store are passed
@@ -159,32 +160,32 @@ bool divisible(APInt lhs, APInt rhs) { return !lhs.urem(rhs); }
 //   return newVectorType;
 // }
 
-// FailureOr<xegpu::TensorDescType>
-// getDistributedTensorDescType(xegpu::TensorDescType originalT,
-//                              xegpu::SGMapAttr sgMap,
-//                              xegpu::MemorySpace memSpace) {
-//   llvm::SmallVector<int64_t, 2> distributedShape;
-//   auto layout = sgMap.getWiLayout();
-//   auto shape = originalT.getShape();
-//   for (const auto [l, o] : llvm::zip_equal(layout, shape)) {
-//     if (!divisible(APInt(64, o), APInt(64, l)))
-//       return failure();
-//     distributedShape.push_back(o / l);
-//   }
-//   xegpu::TensorDescType distributedDescType;
-//   if (originalT.isScattered()) {
+FailureOr<xegpu::TensorDescType>
+getDistributedTensorDescType(xegpu::TensorDescType originalT,
+                             xegpu::SGMapAttr sgMap,
+                             xegpu::MemorySpace memSpace) {
+  llvm::SmallVector<int64_t, 2> distributedShape;
+  auto layout = sgMap.getWiLayout();
+  auto shape = originalT.getShape();
+  for (const auto [l, o] : llvm::zip_equal(layout, shape)) {
+    if (!divisible(APInt(64, o), APInt(64, l)))
+      return failure();
+    distributedShape.push_back(o / l);
+  }
+  xegpu::TensorDescType distributedDescType;
+  if (originalT.isScattered()) {
 
-//     distributedDescType = xegpu::TensorDescType::get(
-//         distributedShape, originalT.getElementType(), originalT.getChunkSize(),
-//         originalT.getMemorySpace(), originalT.getSGMapAttr());
-//   } else {
-//     distributedDescType = xegpu::TensorDescType::get(
-//         distributedShape, originalT.getElementType(),
-//         originalT.getBoundaryCheck(), originalT.getArrayLength(),
-//         originalT.getMemorySpace(), originalT.getSGMapAttr());
-//   }
-//   return distributedDescType;
-// }
+    distributedDescType = xegpu::TensorDescType::get(
+        distributedShape, originalT.getElementType(), originalT.getChunkSize(),
+        originalT.getMemorySpace(), originalT.getSGMapAttr());
+  } else {
+    distributedDescType = xegpu::TensorDescType::get(
+        distributedShape, originalT.getElementType(),
+        originalT.getBoundaryCheck(), originalT.getArrayLength(),
+        originalT.getMemorySpace(), originalT.getSGMapAttr());
+  }
+  return distributedDescType;
+}
 } // namespace
 
 // LogicalResult
@@ -303,91 +304,91 @@ bool divisible(APInt lhs, APInt rhs) { return !lhs.urem(rhs); }
 //   return success();
 // }
 
-// LogicalResult
-// WarpOpTensorDescOp::matchAndRewrite(vector::WarpExecuteOnLane0Op warpOp,
-//                                     PatternRewriter &rewriter) const {
-//   OpOperand *operand = getWarpResult(warpOp, [](Operation *op) {
-//     return isa<xegpu::CreateNdDescOp>(op) && op->hasOneUse();
-//   });
+LogicalResult
+WarpOpTensorDescOp::matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
+                                    PatternRewriter &rewriter) const {
+  OpOperand *operand = getWarpResult(warpOp, [](Operation *op) {
+    return isa<xegpu::CreateNdDescOp>(op) && op->hasOneUse();
+  });
 
-//   if (!operand)
-//     return rewriter.notifyMatchFailure(
-//         warpOp, "warp result is not a xegpu::CreateNdDesc op");
-//   auto descOp = operand->get().getDefiningOp<xegpu::CreateNdDescOp>();
-//   assert(descOp && "desc op must be not null");
-//   unsigned operandIdx = operand->getOperandNumber();
+  if (!operand)
+    return rewriter.notifyMatchFailure(
+        warpOp, "warp result is not a xegpu::CreateNdDesc op");
+  auto descOp = operand->get().getDefiningOp<xegpu::CreateNdDescOp>();
+  assert(descOp && "desc op must be not null");
+  unsigned operandIdx = operand->getOperandNumber();
 
-//   // TODO: is memref uniform in the region
-//   rewriter.setInsertionPoint(warpOp);
-//   auto srcTypedVal = dyn_cast<TypedValue<MemRefType>>(descOp.getSource());
-//   assert(srcTypedVal && "source value must be not null");
+  // TODO: is memref uniform in the region
+  rewriter.setInsertionPoint(warpOp);
+  auto srcTypedVal = dyn_cast<TypedValue<MemRefType>>(descOp.getSource());
+  assert(srcTypedVal && "source value must be not null");
 
-//   auto descOffsets = descOp.getMixedOffsets();
-//   if (descOffsets.size() != 2)
-//     return rewriter.notifyMatchFailure(descOp,
-//                                        "offsets size is expected to be 2");
+  auto descOffsets = descOp.getMixedOffsets();
+  if (descOffsets.size() != 2)
+    return rewriter.notifyMatchFailure(descOp,
+                                       "offsets size is expected to be 2");
 
-//   xegpu::SGMapAttr sgMap = descOp.getType().getSGMapAttr();
-//   if (!sgMap)
-//     return rewriter.notifyMatchFailure(
-//         descOp, "the tensor descriptor lacks sg_map attribute");
+  xegpu::SGMapAttr sgMap = descOp.getType().getSGMapAttr();
+  if (!sgMap)
+    return rewriter.notifyMatchFailure(
+        descOp, "the tensor descriptor lacks sg_map attribute");
 
-//   auto layout = sgMap.getWiLayout();
+  auto layout = sgMap.getWiLayout();
 
-//   // Calculate the offset within tensor descriptor for the current lane_id. The
-//   // access to proper element for a work item is done through a lane-specific
-//   // subview (tdesc offsets are used as base, lane shift is added on top).
-//   auto laneid = warpOp.getLaneid();
-//   auto xDim =
-//       rewriter.create<arith::ConstantIndexOp>(laneid.getLoc(), layout[0]);
-//   auto shiftx = rewriter.create<arith::RemUIOp>(laneid.getLoc(), laneid, xDim);
-//   auto shifty = rewriter.create<arith::DivUIOp>(laneid.getLoc(), laneid, xDim);
+  // Calculate the offset within tensor descriptor for the current lane_id. The
+  // access to proper element for a work item is done through a lane-specific
+  // subview (tdesc offsets are used as base, lane shift is added on top).
+  auto laneid = warpOp.getLaneid();
+  auto xDim =
+      rewriter.create<arith::ConstantIndexOp>(laneid.getLoc(), layout[0]);
+  auto shiftx = rewriter.create<arith::RemUIOp>(laneid.getLoc(), laneid, xDim);
+  auto shifty = rewriter.create<arith::DivUIOp>(laneid.getLoc(), laneid, xDim);
 
-//   auto basex = getValueOrCreateConstantIndexOp(rewriter, laneid.getLoc(),
-//                                                descOffsets[0]);
-//   auto basey = getValueOrCreateConstantIndexOp(rewriter, laneid.getLoc(),
-//                                                descOffsets[1]);
-//   auto offsetx = rewriter.create<arith::AddIOp>(laneid.getLoc(), shiftx, basex);
-//   auto offsety = rewriter.create<arith::AddIOp>(laneid.getLoc(), shifty, basey);
+  auto basex = getValueOrCreateConstantIndexOp(rewriter, laneid.getLoc(),
+                                               descOffsets[0]);
+  auto basey = getValueOrCreateConstantIndexOp(rewriter, laneid.getLoc(),
+                                               descOffsets[1]);
+  auto offsetx = rewriter.create<arith::AddIOp>(laneid.getLoc(), shiftx, basex);
+  auto offsety = rewriter.create<arith::AddIOp>(laneid.getLoc(), shifty, basey);
 
-//   auto distributedDescTypeOrFailure = getDistributedTensorDescType(
-//       descOp.getType(), sgMap, descOp.getType().getMemorySpace());
-//   if (failed(distributedDescTypeOrFailure))
-//     return rewriter.notifyMatchFailure(descOp,
-//                                        "Failed to distribute the desc type");
-//   xegpu::TensorDescType newTDescType = distributedDescTypeOrFailure.value();
-//   auto distributedShape = newTDescType.getShape();
-//   // use the base memref strides
-//   SmallVector<OpFoldResult> overwriteStrides =
-//       getAsIndexOpFoldResult(rewriter.getContext(), SmallVector<int64_t>{1, 1});
-//   SmallVector<OpFoldResult> overwriteSizes =
-//       getAsIndexOpFoldResult(rewriter.getContext(), distributedShape);
+  auto distributedDescTypeOrFailure = getDistributedTensorDescType(
+      descOp.getType(), sgMap, descOp.getType().getMemorySpace());
+  if (failed(distributedDescTypeOrFailure))
+    return rewriter.notifyMatchFailure(descOp,
+                                       "Failed to distribute the desc type");
+  xegpu::TensorDescType newTDescType = distributedDescTypeOrFailure.value();
+  auto distributedShape = newTDescType.getShape();
+  // use the base memref strides
+  SmallVector<OpFoldResult> overwriteStrides =
+      getAsIndexOpFoldResult(rewriter.getContext(), SmallVector<int64_t>{1, 1});
+  SmallVector<OpFoldResult> overwriteSizes =
+      getAsIndexOpFoldResult(rewriter.getContext(), distributedShape);
 
-//   SmallVector<size_t> newRetIndices;
-//   vector::WarpExecuteOnLane0Op newWarpOp =
-//       moveRegionToNewWarpOpAndAppendReturns(
-//           rewriter, warpOp, descOp.getSource(), descOp.getSourceType(),
-//           newRetIndices);
+  SmallVector<size_t> newRetIndices;
+  gpu::WarpExecuteOnLane0Op newWarpOp =
+      moveRegionToNewWarpOpAndAppendReturns(
+          rewriter, warpOp, descOp.getSource(), descOp.getSourceType(),
+          newRetIndices);
 
-//   rewriter.setInsertionPointAfter(newWarpOp);
-//   auto subview = rewriter.create<memref::SubViewOp>(
-//       newWarpOp.getLoc(), srcTypedVal, getAsOpFoldResult({offsetx, offsety}),
-//       overwriteSizes, overwriteStrides);
-//   subview.getSourceMutable().assign(newWarpOp.getResult(newRetIndices[0]));
+  rewriter.setInsertionPointAfter(newWarpOp);
+  auto subview = rewriter.create<memref::SubViewOp>(
+      newWarpOp.getLoc(), srcTypedVal, getAsOpFoldResult({offsetx, offsety}),
+      overwriteSizes, overwriteStrides);
+  subview.getSourceMutable().assign(newWarpOp.getResult(newRetIndices[0]));
 
-//   auto zero = rewriter.create<arith::ConstantIndexOp>(laneid.getLoc(), 0);
-//   auto newDescOp = rewriter.create<xegpu::CreateNdDescOp>(
-//       newWarpOp.getLoc(), newTDescType, subview,
-//       getAsOpFoldResult({zero, zero}));
+  auto zero = rewriter.create<arith::ConstantIndexOp>(laneid.getLoc(), 0);
+  auto newDescOp = rewriter.create<xegpu::CreateNdDescOp>(
+      newWarpOp.getLoc(), newTDescType, subview,
+      getAsOpFoldResult({zero, zero}));
 
-//   Value distributedVal = newWarpOp.getResult(operandIdx);
-//   rewriter.replaceAllUsesWith(distributedVal, newDescOp);
+  Value distributedVal = newWarpOp.getResult(operandIdx);
+  rewriter.replaceAllUsesWith(distributedVal, newDescOp);
 
-//   return success();
-// }
+  return success();
+}
 
 void xegpu::populateXeGPUDistributePatterns(RewritePatternSet &patterns) {
-  // patterns.add<WarpOpTensorDescOp>(patterns.getContext());
+  patterns.add<WarpOpTensorDescOp>(patterns.getContext());
   // patterns.add<WarpOpStoreNd>(patterns.getContext());
   // patterns.add<WarpOpLoadNd>(patterns.getContext());
 }
