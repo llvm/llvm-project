@@ -3456,6 +3456,14 @@ WRAPPER_CLASS(PauseStmt, std::optional<StopCode>);
 struct OmpClause;
 struct OmpClauseList;
 
+struct OmpDirectiveSpecification {
+  TUPLE_CLASS_BOILERPLATE(OmpDirectiveSpecification);
+  std::tuple<llvm::omp::Directive,
+      std::optional<common::Indirection<OmpClauseList>>>
+      t;
+  CharBlock source;
+};
+
 // 2.1 Directives or clauses may accept a list or extended-list.
 //     A list item is a variable, array section or common block name (enclosed
 //     in slashes). An extended list item is a list item or a procedure Name.
@@ -3964,6 +3972,7 @@ struct OmpBindClause {
 // data-sharing-attribute ->
 //    SHARED | NONE |                               // since 4.5
 //    PRIVATE | FIRSTPRIVATE                        // since 5.0
+// See also otherwise-clause.
 struct OmpDefaultClause {
   ENUM_CLASS(DataSharingAttribute, Private, Firstprivate, Shared, None)
   WRAPPER_CLASS_BOILERPLATE(OmpDefaultClause, DataSharingAttribute);
@@ -4184,6 +4193,16 @@ struct OmpMapClause {
   std::tuple<MODIFIERS(), OmpObjectList, /*CommaSeparated=*/bool> t;
 };
 
+// Ref: [5.0:58-60], [5.1:63-68], [5.2:194-195]
+//
+// match-clause ->
+//    MATCH (context-selector-specification)        // since 5.0
+struct OmpMatchClause {
+  // The context-selector is an argument.
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpMatchClause, traits::OmpContextSelectorSpecification);
+};
+
 // Ref: [5.2:217-218]
 // message-clause ->
 //    MESSAGE("message-text")
@@ -4212,6 +4231,17 @@ struct OmpOrderClause {
   ENUM_CLASS(Ordering, Concurrent)
   MODIFIER_BOILERPLATE(OmpOrderModifier);
   std::tuple<MODIFIERS(), Ordering> t;
+};
+
+// Ref: [5.0:56-57], [5.1:60-62], [5.2:191]
+//
+// otherwise-clause ->
+//    DEFAULT ([directive-specification])           // since 5.0, until 5.1
+// otherwise-clause ->
+//    OTHERWISE ([directive-specification])]        // since 5.2
+struct OmpOtherwiseClause {
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpOtherwiseClause, std::optional<OmpDirectiveSpecification>);
 };
 
 // Ref: [4.5:46-50], [5.0:74-78], [5.1:92-96], [5.2:229-230]
@@ -4299,6 +4329,17 @@ struct OmpUpdateClause {
   std::variant<OmpDependenceType, OmpTaskDependenceType> u;
 };
 
+// Ref: [5.0:56-57], [5.1:60-62], [5.2:190-191]
+//
+// when-clause ->
+//    WHEN (context-selector :
+//        [directive-specification])                // since 5.0
+struct OmpWhenClause {
+  TUPLE_CLASS_BOILERPLATE(OmpWhenClause);
+  MODIFIER_BOILERPLATE(OmpContextSelector);
+  std::tuple<MODIFIERS(), std::optional<OmpDirectiveSpecification>> t;
+};
+
 // OpenMP Clauses
 struct OmpClause {
   UNION_CLASS_BOILERPLATE(OmpClause);
@@ -4322,6 +4363,12 @@ struct OmpClauseList {
 };
 
 // --- Directives and constructs
+
+struct OmpMetadirectiveDirective {
+  TUPLE_CLASS_BOILERPLATE(OmpMetadirectiveDirective);
+  std::tuple<OmpClauseList> t;
+  CharBlock source;
+};
 
 // Ref: [5.1:89-90], [5.2:216]
 //
@@ -4696,7 +4743,7 @@ struct OpenMPStandaloneConstruct {
   CharBlock source;
   std::variant<OpenMPSimpleStandaloneConstruct, OpenMPFlushConstruct,
       OpenMPCancelConstruct, OpenMPCancellationPointConstruct,
-      OpenMPDepobjConstruct>
+      OpenMPDepobjConstruct, OmpMetadirectiveDirective>
       u;
 };
 

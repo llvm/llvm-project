@@ -214,6 +214,11 @@ private:
 };
 
 bool OmpStructureChecker::CheckAllowedClause(llvmOmpClause clause) {
+  // Do not do clause checks while processing METADIRECTIVE.
+  if (GetDirectiveNest(ContextSelectorNest) > 0) {
+    return true;
+  }
+
   unsigned version{context_.langOptions().OpenMPVersion};
   DirectiveContext &dirCtx = GetContext();
   llvm::omp::Directive dir{dirCtx.directive};
@@ -588,6 +593,22 @@ void OmpStructureChecker::CheckHintClause(
   if (rightOmpClauseList) {
     checkForValidHintClause(rightOmpClauseList);
   }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
+  PushContextAndClauseSets(x.source, std::get<llvm::omp::Directive>(x.t));
+}
+
+void OmpStructureChecker::Leave(const parser::OmpDirectiveSpecification &) {
+  dirContext_.pop_back();
+}
+
+void OmpStructureChecker::Enter(const parser::OmpMetadirectiveDirective &x) {
+  PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_metadirective);
+}
+
+void OmpStructureChecker::Leave(const parser::OmpMetadirectiveDirective &) {
+  dirContext_.pop_back();
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
@@ -2894,6 +2915,7 @@ CHECK_SIMPLE_CLAUSE(Nocontext, OMPC_nocontext)
 CHECK_SIMPLE_CLAUSE(Severity, OMPC_severity)
 CHECK_SIMPLE_CLAUSE(Message, OMPC_message)
 CHECK_SIMPLE_CLAUSE(Filter, OMPC_filter)
+CHECK_SIMPLE_CLAUSE(Otherwise, OMPC_otherwise)
 CHECK_SIMPLE_CLAUSE(When, OMPC_when)
 CHECK_SIMPLE_CLAUSE(AdjustArgs, OMPC_adjust_args)
 CHECK_SIMPLE_CLAUSE(AppendArgs, OMPC_append_args)
@@ -4439,6 +4461,14 @@ void OmpStructureChecker::Enter(const parser::OmpClause::OmpxBare &x) {
         "%s clause is only allowed on combined TARGET TEAMS"_err_en_US,
         parser::ToUpperCaseLetters(getClauseName(llvm::omp::OMPC_ompx_bare)));
   }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpContextSelector &ctxSel) {
+  EnterDirectiveNest(ContextSelectorNest);
+}
+
+void OmpStructureChecker::Leave(const parser::OmpContextSelector &) {
+  ExitDirectiveNest(ContextSelectorNest);
 }
 
 llvm::StringRef OmpStructureChecker::getClauseName(llvm::omp::Clause clause) {

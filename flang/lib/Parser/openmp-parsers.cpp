@@ -153,6 +153,9 @@ static TypeDeclarationStmt makeIterSpecDecl(std::list<ObjectName> &&names) {
       makeEntityList(std::move(names)));
 }
 
+TYPE_PARSER(sourced(construct<OmpDirectiveSpecification>(
+    OmpDirectiveNameParser{}, maybe(indirect(Parser<OmpClauseList>{})))))
+
 // --- Parsers for context traits -------------------------------------
 
 static std::string nameToString(Name &&name) { return name.ToString(); }
@@ -496,6 +499,9 @@ TYPE_PARSER(sourced(construct<OmpToClause::Modifier>(
         construct<OmpToClause::Modifier>(Parser<OmpMapper>{}) ||
         construct<OmpToClause::Modifier>(Parser<OmpIterator>{})))))
 
+TYPE_PARSER(sourced(construct<OmpWhenClause::Modifier>( //
+    Parser<OmpContextSelector>{})))
+
 // --- Parsers for clauses --------------------------------------------
 
 /// `MOBClause` is a clause that has a
@@ -693,6 +699,16 @@ TYPE_PARSER(construct<OmpOrderClause>(
     maybe(nonemptyList(Parser<OmpOrderClause::Modifier>{}) / ":"),
     "CONCURRENT" >> pure(OmpOrderClause::Ordering::Concurrent)))
 
+TYPE_PARSER(construct<OmpMatchClause>(
+    Parser<traits::OmpContextSelectorSpecification>{}))
+
+TYPE_PARSER(construct<OmpOtherwiseClause>(
+    maybe(sourced(Parser<OmpDirectiveSpecification>{}))))
+
+TYPE_PARSER(construct<OmpWhenClause>(
+    maybe(nonemptyList(Parser<OmpWhenClause::Modifier>{}) / ":"),
+    maybe(sourced(Parser<OmpDirectiveSpecification>{}))))
+
 // OMP 5.2 12.6.1 grainsize([ prescriptiveness :] scalar-integer-expression)
 TYPE_PARSER(construct<OmpGrainsizeClause>(
     maybe(nonemptyList(Parser<OmpGrainsizeClause::Modifier>{}) / ":"),
@@ -810,6 +826,8 @@ TYPE_PARSER(
                   parenthesized(Parser<OmpObjectList>{}))) ||
     "MAP" >> construct<OmpClause>(construct<OmpClause::Map>(
                  parenthesized(Parser<OmpMapClause>{}))) ||
+    "MATCH" >> construct<OmpClause>(construct<OmpClause::Match>(
+                   parenthesized(Parser<OmpMatchClause>{}))) ||
     "MERGEABLE" >> construct<OmpClause>(construct<OmpClause::Mergeable>()) ||
     "MESSAGE" >> construct<OmpClause>(construct<OmpClause::Message>(
                      parenthesized(Parser<OmpMessageClause>{}))) ||
@@ -830,6 +848,8 @@ TYPE_PARSER(
                    parenthesized(Parser<OmpOrderClause>{}))) ||
     "ORDERED" >> construct<OmpClause>(construct<OmpClause::Ordered>(
                      maybe(parenthesized(scalarIntConstantExpr)))) ||
+    "OTHERWISE" >> construct<OmpClause>(construct<OmpClause::Otherwise>(
+                       maybe(parenthesized(Parser<OmpOtherwiseClause>{})))) ||
     "PARTIAL" >> construct<OmpClause>(construct<OmpClause::Partial>(
                      maybe(parenthesized(scalarIntConstantExpr)))) ||
     "PRIORITY" >> construct<OmpClause>(construct<OmpClause::Priority>(
@@ -885,7 +905,9 @@ TYPE_PARSER(
                      parenthesized(nonemptyList(name)))) ||
     "UNTIED" >> construct<OmpClause>(construct<OmpClause::Untied>()) ||
     "UPDATE" >> construct<OmpClause>(construct<OmpClause::Update>(
-                    parenthesized(Parser<OmpUpdateClause>{}))))
+                    parenthesized(Parser<OmpUpdateClause>{}))) ||
+    "WHEN" >> construct<OmpClause>(construct<OmpClause::When>(
+                  parenthesized(Parser<OmpWhenClause>{}))))
 
 // [Clause, [Clause], ...]
 TYPE_PARSER(sourced(construct<OmpClauseList>(
@@ -904,6 +926,9 @@ TYPE_PARSER(sourced(construct<OpenMPUtilityConstruct>(
         sourced(Parser<OmpErrorDirective>{}))) ||
     sourced(construct<OpenMPUtilityConstruct>(
         sourced(Parser<OmpNothingDirective>{}))))))
+
+TYPE_PARSER(sourced(construct<OmpMetadirectiveDirective>(
+    "METADIRECTIVE" >> Parser<OmpClauseList>{})))
 
 // Omp directives enclosing do loop
 TYPE_PARSER(sourced(construct<OmpLoopDirective>(first(
@@ -1050,6 +1075,8 @@ TYPE_PARSER(
         construct<OpenMPStandaloneConstruct>(Parser<OpenMPCancelConstruct>{}) ||
         construct<OpenMPStandaloneConstruct>(
             Parser<OpenMPCancellationPointConstruct>{}) ||
+        construct<OpenMPStandaloneConstruct>(
+            Parser<OmpMetadirectiveDirective>{}) ||
         construct<OpenMPStandaloneConstruct>(Parser<OpenMPDepobjConstruct>{})) /
     endOfLine)
 

@@ -230,9 +230,9 @@ MAKE_EMPTY_CLASS(Threadprivate, Threadprivate);
 
 MAKE_INCOMPLETE_CLASS(AdjustArgs, AdjustArgs);
 MAKE_INCOMPLETE_CLASS(AppendArgs, AppendArgs);
-MAKE_INCOMPLETE_CLASS(Match, Match);
+// MAKE_INCOMPLETE_CLASS(Match, Match);
 // MAKE_INCOMPLETE_CLASS(Otherwise, );   // missing-in-parser
-MAKE_INCOMPLETE_CLASS(When, When);
+// MAKE_INCOMPLETE_CLASS(When, When);
 
 List<IteratorSpecifier>
 makeIteratorSpecifiers(const parser::OmpIteratorSpecifier &inp,
@@ -997,7 +997,11 @@ Map make(const parser::OmpClause::Map &inp,
               /*LocatorList=*/makeObjects(t4, semaCtx)}};
 }
 
-// Match: incomplete
+Match make(const parser::OmpClause::Match &inp,
+           semantics::SemanticsContext &semaCtx) {
+  return Match{};
+}
+
 // MemoryOrder: empty
 // Mergeable: empty
 
@@ -1102,6 +1106,10 @@ Ordered make(const parser::OmpClause::Ordered &inp,
 }
 
 // Otherwise: incomplete, missing-in-parser
+Otherwise make(const parser::OmpClause::Otherwise &inp,
+               semantics::SemanticsContext &semaCtx) {
+  return Otherwise{};
+}
 
 Partial make(const parser::OmpClause::Partial &inp,
              semantics::SemanticsContext &semaCtx) {
@@ -1356,7 +1364,12 @@ UsesAllocators make(const parser::OmpClause::UsesAllocators &inp,
 }
 
 // Weak: empty
-// When: incomplete
+
+When make(const parser::OmpClause::When &inp,
+          semantics::SemanticsContext &semaCtx) {
+  return When{};
+}
+
 // Write: empty
 } // namespace clause
 
