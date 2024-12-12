@@ -304,6 +304,10 @@ public:
     return PPOpts;
   }
   std::shared_ptr<LangOptions> getLangOptsPtr() { return LangOpts; }
+  std::shared_ptr<CASOptions> getCASOptsPtr() { return CASOpts; }
+  void setCASOption(std::shared_ptr<CASOptions> CASOpts) {
+    this->CASOpts = CASOpts;
+  }
   /// @}
 
   /// Create a compiler invocation from a list of input options.
