@@ -251,9 +251,10 @@ protected:
 
 public:
   virtual void emitVirtualObjectDelete(CodeGenFunction &CGF,
-                                       const CXXDeleteExpr *DE,
-                                       Address Ptr, QualType ElementType,
-                                       const CXXDestructorDecl *Dtor) = 0;
+                                       const CXXDeleteExpr *DE, Address Ptr,
+                                       QualType ElementType,
+                                       const CXXDestructorDecl *Dtor,
+                                       bool ArrayDeletion) = 0;
   virtual void emitRethrow(CodeGenFunction &CGF, bool isNoReturn) = 0;
   virtual void emitThrow(CodeGenFunction &CGF, const CXXThrowExpr *E) = 0;
   virtual llvm::GlobalVariable *getThrowInfo(QualType T) { return nullptr; }
@@ -275,6 +276,7 @@ public:
   virtual CatchTypeInfo getCatchAllTypeInfo();
 
   virtual bool shouldTypeidBeNullChecked(QualType SrcRecordTy) = 0;
+  virtual bool hasVectorDeletingDtors() = 0;
   virtual void EmitBadTypeidCall(CodeGenFunction &CGF) = 0;
   virtual llvm::Value *EmitTypeid(CodeGenFunction &CGF, QualType SrcRecordTy,
                                   Address ThisPtr,
@@ -485,11 +487,10 @@ public:
       llvm::PointerUnion<const CXXDeleteExpr *, const CXXMemberCallExpr *>;
 
   /// Emit the ABI-specific virtual destructor call.
-  virtual llvm::Value *
-  EmitVirtualDestructorCall(CodeGenFunction &CGF, const CXXDestructorDecl *Dtor,
-                            CXXDtorType DtorType, Address This,
-                            DeleteOrMemberCallExpr E,
-                            llvm::CallBase **CallOrInvoke) = 0;
+  virtual llvm::Value *EmitVirtualDestructorCall(
+      CodeGenFunction &CGF, const CXXDestructorDecl *Dtor, CXXDtorType DtorType,
+      Address This, DeleteOrMemberCallExpr E, llvm::CallBase **CallOrInvoke,
+      bool ArrayDeletion = false) = 0;
 
   virtual void adjustCallArgsForDestructorThunk(CodeGenFunction &CGF,
                                                 GlobalDecl GD,
@@ -572,6 +573,12 @@ public:
   ///   with the size of the cookie, or zero if there is no cookie
   virtual void ReadArrayCookie(CodeGenFunction &CGF, Address Ptr,
                                const CXXDeleteExpr *expr,
+                               QualType ElementType, llvm::Value *&NumElements,
+                               llvm::Value *&AllocPtr, CharUnits &CookieSize);
+
+  /// Reads the array cookie associated with the given pointer,
+  /// that should have one.
+  virtual void ReadArrayCookie(CodeGenFunction &CGF, Address Ptr,
                                QualType ElementType, llvm::Value *&NumElements,
                                llvm::Value *&AllocPtr, CharUnits &CookieSize);
 

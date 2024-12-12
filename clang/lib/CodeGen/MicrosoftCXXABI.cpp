@@ -70,8 +70,8 @@ public:
       switch (GD.getDtorType()) {
       case Dtor_Complete:
       case Dtor_Deleting:
+      case Dtor_VectorDeleting:
         return true;
-
       case Dtor_Base:
         return false;
 
@@ -120,7 +120,8 @@ public:
 
   void emitVirtualObjectDelete(CodeGenFunction &CGF, const CXXDeleteExpr *DE,
                                Address Ptr, QualType ElementType,
-                               const CXXDestructorDecl *Dtor) override;
+                               const CXXDestructorDecl *Dtor,
+                               bool ArrayDeletion) override;
 
   void emitRethrow(CodeGenFunction &CGF, bool isNoReturn) override;
   void emitThrow(CodeGenFunction &CGF, const CXXThrowExpr *E) override;
@@ -145,6 +146,9 @@ public:
   }
 
   bool shouldTypeidBeNullChecked(QualType SrcRecordTy) override;
+  bool hasVectorDeletingDtors() override {
+    return true;
+  }
   void EmitBadTypeidCall(CodeGenFunction &CGF) override;
   llvm::Value *EmitTypeid(CodeGenFunction &CGF, QualType SrcRecordTy,
                           Address ThisPtr,
@@ -260,7 +264,7 @@ public:
 
         // There's only Dtor_Deleting in vftable but it shares the this
         // adjustment with the base one, so look up the deleting one instead.
-        LookupGD = GlobalDecl(DD, Dtor_Deleting);
+        LookupGD = GlobalDecl(DD, Dtor_VectorDeleting);
       }
       MethodVFTableLocation ML =
           CGM.getMicrosoftVTableContext().getMethodVFTableLocation(LookupGD);
@@ -334,16 +338,17 @@ public:
                                      Address This, llvm::Type *Ty,
                                      SourceLocation Loc) override;
 
-  llvm::Value *
-  EmitVirtualDestructorCall(CodeGenFunction &CGF, const CXXDestructorDecl *Dtor,
-                            CXXDtorType DtorType, Address This,
-                            DeleteOrMemberCallExpr E,
-                            llvm::CallBase **CallOrInvoke) override;
+  llvm::Value *EmitVirtualDestructorCall(CodeGenFunction &CGF,
+                                         const CXXDestructorDecl *Dtor,
+                                         CXXDtorType DtorType, Address This,
+                                         DeleteOrMemberCallExpr E,
+                                         llvm::CallBase **CallOrInvoke,
+                                         bool ArrayDeletion) override;
 
   void adjustCallArgsForDestructorThunk(CodeGenFunction &CGF, GlobalDecl GD,
                                         CallArgList &CallArgs) override {
-    assert(GD.getDtorType() == Dtor_Deleting &&
-           "Only deleting destructor thunks are available in this ABI");
+    assert(GD.getDtorType() == Dtor_VectorDeleting &&
+           "Only vector deleting destructor thunks are available in this ABI");
     CallArgs.add(RValue::get(getStructorImplicitParamValue(CGF)),
                  getContext().IntTy);
   }
@@ -888,15 +893,16 @@ MicrosoftCXXABI::getRecordArgABI(const CXXRecordDecl *RD) const {
 
 void MicrosoftCXXABI::emitVirtualObjectDelete(CodeGenFunction &CGF,
                                               const CXXDeleteExpr *DE,
-                                              Address Ptr,
-                                              QualType ElementType,
-                                              const CXXDestructorDecl *Dtor) {
+                                              Address Ptr, QualType ElementType,
+                                              const CXXDestructorDecl *Dtor,
+                                              bool ArrayDeletion) {
   // FIXME: Provide a source location here even though there's no
   // CXXMemberCallExpr for dtor call.
   bool UseGlobalDelete = DE->isGlobalDelete();
   CXXDtorType DtorType = UseGlobalDelete ? Dtor_Complete : Dtor_Deleting;
-  llvm::Value *MDThis = EmitVirtualDestructorCall(CGF, Dtor, DtorType, Ptr, DE,
-                                                  /*CallOrInvoke=*/nullptr);
+  llvm::Value *MDThis =
+      EmitVirtualDestructorCall(CGF, Dtor, DtorType, Ptr, DE,
+                                /*CallOrInvoke=*/nullptr, ArrayDeletion);
   if (UseGlobalDelete)
     CGF.EmitDeleteCall(DE->getOperatorDelete(), MDThis, ElementType);
 }
@@ -1090,7 +1096,8 @@ bool MicrosoftCXXABI::HasThisReturn(GlobalDecl GD) const {
 
 static bool isDeletingDtor(GlobalDecl GD) {
   return isa<CXXDestructorDecl>(GD.getDecl()) &&
-         GD.getDtorType() == Dtor_Deleting;
+         (GD.getDtorType() == Dtor_Deleting ||
+          GD.getDtorType() == Dtor_VectorDeleting);
 }
 
 bool MicrosoftCXXABI::hasMostDerivedReturn(GlobalDecl GD) const {
@@ -1341,7 +1348,8 @@ MicrosoftCXXABI::buildStructorSignature(GlobalDecl GD,
   AddedStructorArgCounts Added;
   // TODO: 'for base' flag
   if (isa<CXXDestructorDecl>(GD.getDecl()) &&
-      GD.getDtorType() == Dtor_Deleting) {
+      (GD.getDtorType() == Dtor_Deleting ||
+       GD.getDtorType() == Dtor_VectorDeleting)) {
     // The scalar deleting destructor takes an implicit int parameter.
     ArgTys.push_back(getContext().IntTy);
     ++Added.Suffix;
@@ -1373,7 +1381,7 @@ void MicrosoftCXXABI::setCXXDestructorDLLStorage(llvm::GlobalValue *GV,
                                                  CXXDtorType DT) const {
   // Deleting destructor variants are never imported or exported. Give them the
   // default storage class.
-  if (DT == Dtor_Deleting) {
+  if (DT == Dtor_Deleting || DT == Dtor_VectorDeleting) {
     GV->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
   } else {
     const NamedDecl *ND = Dtor;
@@ -1407,6 +1415,8 @@ llvm::GlobalValue::LinkageTypes MicrosoftCXXABI::getCXXDestructorLinkage(
     // and are emitted everywhere they are used. They are internal if the class
     // is internal.
     return llvm::GlobalValue::LinkOnceODRLinkage;
+  case Dtor_VectorDeleting:
+    return llvm::GlobalValue::WeakAnyLinkage;
   case Dtor_Comdat:
     llvm_unreachable("MS C++ ABI does not support comdat dtors");
   }
@@ -1438,7 +1448,7 @@ MicrosoftCXXABI::getVirtualFunctionPrologueThisAdjustment(GlobalDecl GD) {
 
     // There's no Dtor_Base in vftable but it shares the this adjustment with
     // the deleting one, so look it up instead.
-    GD = GlobalDecl(DD, Dtor_Deleting);
+    GD = GlobalDecl(DD, Dtor_VectorDeleting);
   }
 
   MethodVFTableLocation ML =
@@ -1487,7 +1497,7 @@ Address MicrosoftCXXABI::adjustThisArgumentForVirtualFunctionCall(
 
     // There's only Dtor_Deleting in vftable but it shares the this adjustment
     // with the base one, so look up the deleting one instead.
-    LookupGD = GlobalDecl(DD, Dtor_Deleting);
+    LookupGD = GlobalDecl(DD, Dtor_VectorDeleting);
   }
   MethodVFTableLocation ML =
       CGM.getMicrosoftVTableContext().getMethodVFTableLocation(LookupGD);
@@ -1995,16 +2005,18 @@ CGCallee MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
 
 llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
     CodeGenFunction &CGF, const CXXDestructorDecl *Dtor, CXXDtorType DtorType,
-    Address This, DeleteOrMemberCallExpr E, llvm::CallBase **CallOrInvoke) {
+    Address This, DeleteOrMemberCallExpr E, llvm::CallBase **CallOrInvoke,
+    bool ArrayDeletion) {
   auto *CE = dyn_cast<const CXXMemberCallExpr *>(E);
   auto *D = dyn_cast<const CXXDeleteExpr *>(E);
   assert((CE != nullptr) ^ (D != nullptr));
   assert(CE == nullptr || CE->arg_begin() == CE->arg_end());
-  assert(DtorType == Dtor_Deleting || DtorType == Dtor_Complete);
+  assert(DtorType == Dtor_VectorDeleting || DtorType == Dtor_Complete ||
+         DtorType == Dtor_Deleting);
 
   // We have only one destructor in the vftable but can get both behaviors
   // by passing an implicit int parameter.
-  GlobalDecl GD(Dtor, Dtor_Deleting);
+  GlobalDecl GD(Dtor, Dtor_VectorDeleting);
   const CGFunctionInfo *FInfo =
       &CGM.getTypes().arrangeCXXStructorDeclaration(GD);
   llvm::FunctionType *Ty = CGF.CGM.getTypes().GetFunctionType(*FInfo);
@@ -2013,7 +2025,7 @@ llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
   ASTContext &Context = getContext();
   llvm::Value *ImplicitParam = llvm::ConstantInt::get(
       llvm::IntegerType::getInt32Ty(CGF.getLLVMContext()),
-      DtorType == Dtor_Deleting);
+      2 * (ArrayDeletion) + (DtorType == Dtor_Deleting));
 
   QualType ThisTy;
   if (CE) {
@@ -4052,6 +4064,19 @@ void MicrosoftCXXABI::emitCXXStructor(GlobalDecl GD) {
   // destructor, and the body of the destructor is trivial.
   if (GD.getDtorType() == Dtor_Base && !CGM.TryEmitBaseDestructorAsAlias(dtor))
     return;
+
+  if (GD.getDtorType() == Dtor_VectorDeleting &&
+      !CGM.classNeedsVectorDestructor(dtor->getParent())) {
+    // Create GlobalDecl objects with the correct type for the vector and scalar
+    // deleting destructors.
+    GlobalDecl VectorDtorGD(dtor, Dtor_VectorDeleting);
+    GlobalDecl ScalarDtorGD(dtor, Dtor_Deleting);
+
+    // Emit an alias from the vector deleting destructor to the scalar deleting
+    // destructor.
+    CGM.EmitDefinitionAsAlias(VectorDtorGD, ScalarDtorGD);
+    return;
+  }
 
   llvm::Function *Fn = CGM.codegenCXXStructor(GD);
   if (Fn->isWeakForLinker())

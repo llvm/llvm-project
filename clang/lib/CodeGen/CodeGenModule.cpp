@@ -7919,3 +7919,38 @@ void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {
 
   NewBuilder->ABI->MangleCtx = std::move(ABI->MangleCtx);
 }
+
+bool CodeGenModule::classNeedsVectorDestructor(const CXXRecordDecl *RD) {
+  CXXDestructorDecl *Dtor = RD->getDestructor();
+  if (Dtor && Dtor->isVirtual() && Dtor->isDefined() &&
+      Dtor->hasAttr<DLLExportAttr>())
+    return true;
+
+  assert(getCXXABI().hasVectorDeletingDtors());
+  return RequireVectorDeletingDtor.count(RD);
+}
+
+void CodeGenModule::requireVectorDestructorDefinition(const CXXRecordDecl *RD) {
+  assert(getCXXABI().hasVectorDeletingDtors());
+  RequireVectorDeletingDtor.insert(RD);
+  CXXDestructorDecl *DtorD = RD->getDestructor();
+  GlobalDecl ScalarDtorGD(DtorD, Dtor_Deleting);
+  StringRef MangledName = getMangledName(ScalarDtorGD);
+  llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
+  if (Entry && !Entry->isDeclaration()) {
+    GlobalDecl VectorDtorGD(DtorD, Dtor_VectorDeleting);
+    StringRef VDName = getMangledName(VectorDtorGD);
+    llvm::GlobalValue *VDEntry = GetGlobalValue(VDName);
+    // It exists and it should be an alias.
+    assert(VDEntry && isa<llvm::GlobalAlias>(VDEntry));
+    auto *NewFn = llvm::Function::Create(
+        cast<llvm::FunctionType>(VDEntry->getValueType()),
+        llvm::Function::ExternalLinkage, VDName, &getModule());
+    NewFn->takeName(VDEntry);
+    VDEntry->replaceAllUsesWith(NewFn);
+    VDEntry->eraseFromParent();
+    Entry->replaceAllUsesWith(NewFn);
+    Entry->eraseFromParent();
+    addDeferredDeclToEmit(VectorDtorGD);
+  }
+}

@@ -1209,6 +1209,8 @@ void CodeGenFunction::EmitNewArrayInitializer(
     EmitCXXAggrConstructorCall(Ctor, NumElements, CurPtr, CCE,
                                /*NewPointerIsChecked*/true,
                                CCE->requiresZeroInitialization());
+    if (CGM.getCXXABI().hasVectorDeletingDtors())
+      CGM.requireVectorDestructorDefinition(Ctor->getParent());
     return;
   }
 
@@ -1902,8 +1904,8 @@ static void EmitDestroyingObjectDelete(CodeGenFunction &CGF,
                                        QualType ElementType) {
   auto *Dtor = ElementType->getAsCXXRecordDecl()->getDestructor();
   if (Dtor && Dtor->isVirtual())
-    CGF.CGM.getCXXABI().emitVirtualObjectDelete(CGF, DE, Ptr, ElementType,
-                                                Dtor);
+    CGF.CGM.getCXXABI().emitVirtualObjectDelete(CGF, DE, Ptr, ElementType, Dtor,
+                                                /*ArrayDeletion=*/false);
   else
     CGF.EmitDeleteCall(DE->getOperatorDelete(), Ptr.emitRawPointer(CGF),
                        ElementType);
@@ -1916,7 +1918,8 @@ static bool EmitObjectDelete(CodeGenFunction &CGF,
                              const CXXDeleteExpr *DE,
                              Address Ptr,
                              QualType ElementType,
-                             llvm::BasicBlock *UnconditionalDeleteBlock) {
+                             llvm::BasicBlock *UnconditionalDeleteBlock,
+                             bool ArrayDeletion) {
   // C++11 [expr.delete]p3:
   //   If the static type of the object to be deleted is different from its
   //   dynamic type, the static type shall be a base class of the dynamic type
@@ -1961,7 +1964,7 @@ static bool EmitObjectDelete(CodeGenFunction &CGF,
         }
         if (UseVirtualCall) {
           CGF.CGM.getCXXABI().emitVirtualObjectDelete(CGF, DE, Ptr, ElementType,
-                                                      Dtor);
+                                                      Dtor, ArrayDeletion);
           return false;
         }
       }
@@ -2131,11 +2134,48 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
 
   assert(ConvertTypeForMem(DeleteTy) == Ptr.getElementType());
 
+  if (E->isArrayForm() && CGM.getCXXABI().hasVectorDeletingDtors()) {
+    if (auto *RD = DeleteTy->getAsCXXRecordDecl()) {
+      auto *Dtor = RD->getDestructor();
+      if (Dtor && Dtor->isVirtual()) {
+        llvm::Value *NumElements = nullptr;
+        llvm::Value *AllocatedPtr = nullptr;
+        CharUnits CookieSize;
+        llvm::BasicBlock *bodyBB = createBasicBlock("vdtor.call");
+        llvm::BasicBlock *doneBB = createBasicBlock("vdtor.nocall");
+        // Check array cookie to see if the array has 0 length. Don't call
+        // the destructor in that case.
+        CGM.getCXXABI().ReadArrayCookie(*this, Ptr, E, DeleteTy, NumElements,
+                                        AllocatedPtr, CookieSize);
+
+        auto *CondTy = cast<llvm::IntegerType>(NumElements->getType());
+        llvm::Value *isEmpty = Builder.CreateICmpEQ(
+            NumElements, llvm::Constant::getIntegerValue(
+                             CondTy, llvm::APInt(CondTy->getBitWidth(),
+                                                 /*val=*/0)));
+        Builder.CreateCondBr(isEmpty, doneBB, bodyBB);
+
+        // Delete cookie for empty array.
+        const FunctionDecl *operatorDelete = E->getOperatorDelete();
+        EmitBlock(doneBB);
+        EmitDeleteCall(operatorDelete, AllocatedPtr, DeleteTy, NumElements,
+                       CookieSize);
+        EmitBranch(DeleteEnd);
+
+        EmitBlock(bodyBB);
+        if (!EmitObjectDelete(*this, E, Ptr, DeleteTy, DeleteEnd,
+                              /*ArrayDeletion*/true))
+          EmitBlock(DeleteEnd);
+        return;
+      }
+    }
+  }
+
   if (E->isArrayForm()) {
     EmitArrayDelete(*this, E, Ptr, DeleteTy);
     EmitBlock(DeleteEnd);
   } else {
-    if (!EmitObjectDelete(*this, E, Ptr, DeleteTy, DeleteEnd))
+    if (!EmitObjectDelete(*this, E, Ptr, DeleteTy, DeleteEnd, E->isArrayForm()))
       EmitBlock(DeleteEnd);
   }
 }

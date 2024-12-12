@@ -90,6 +90,8 @@ public:
 
       case Dtor_Comdat:
         llvm_unreachable("emitting dtor comdat as function?");
+      case Dtor_VectorDeleting:
+        llvm_unreachable("unexpected dtor kind for this ABI");
       }
       llvm_unreachable("bad dtor kind");
     }
@@ -159,7 +161,8 @@ public:
 
   void emitVirtualObjectDelete(CodeGenFunction &CGF, const CXXDeleteExpr *DE,
                                Address Ptr, QualType ElementType,
-                               const CXXDestructorDecl *Dtor) override;
+                               const CXXDestructorDecl *Dtor,
+                               bool ArrayDeletion = false) override;
 
   void emitRethrow(CodeGenFunction &CGF, bool isNoReturn) override;
   void emitThrow(CodeGenFunction &CGF, const CXXThrowExpr *E) override;
@@ -179,6 +182,9 @@ public:
   }
 
   bool shouldTypeidBeNullChecked(QualType SrcRecordTy) override;
+  bool hasVectorDeletingDtors() override {
+    return false;
+  }
   void EmitBadTypeidCall(CodeGenFunction &CGF) override;
   llvm::Value *EmitTypeid(CodeGenFunction &CGF, QualType SrcRecordTy,
                           Address ThisPtr,
@@ -314,11 +320,12 @@ public:
                                      Address This, llvm::Type *Ty,
                                      SourceLocation Loc) override;
 
-  llvm::Value *
-  EmitVirtualDestructorCall(CodeGenFunction &CGF, const CXXDestructorDecl *Dtor,
-                            CXXDtorType DtorType, Address This,
-                            DeleteOrMemberCallExpr E,
-                            llvm::CallBase **CallOrInvoke) override;
+  llvm::Value *EmitVirtualDestructorCall(CodeGenFunction &CGF,
+                                         const CXXDestructorDecl *Dtor,
+                                         CXXDtorType DtorType, Address This,
+                                         DeleteOrMemberCallExpr E,
+                                         llvm::CallBase **CallOrInvoke,
+                                         bool ArrayDeletion = false) override;
 
   void emitVirtualInheritanceTables(const CXXRecordDecl *RD) override;
 
@@ -448,7 +455,7 @@ public:
        if (!IsInlined)
          continue;
 
-       StringRef Name = CGM.getMangledName(VtableComponent.getGlobalDecl());
+       StringRef Name = CGM.getMangledName(VtableComponent.getGlobalDecl(false));
        auto *Entry = CGM.GetGlobalValue(Name);
        // This checks if virtual inline function has already been emitted.
        // Note that it is possible that this inline function would be emitted
@@ -1368,7 +1375,8 @@ void ItaniumCXXABI::emitVirtualObjectDelete(CodeGenFunction &CGF,
                                             const CXXDeleteExpr *DE,
                                             Address Ptr,
                                             QualType ElementType,
-                                            const CXXDestructorDecl *Dtor) {
+                                            const CXXDestructorDecl *Dtor,
+                                            bool ArrayDeletion) {
   bool UseGlobalDelete = DE->isGlobalDelete();
   if (UseGlobalDelete) {
     // Derive the complete-object pointer, which is what we need
@@ -2238,7 +2246,8 @@ CGCallee ItaniumCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
 
 llvm::Value *ItaniumCXXABI::EmitVirtualDestructorCall(
     CodeGenFunction &CGF, const CXXDestructorDecl *Dtor, CXXDtorType DtorType,
-    Address This, DeleteOrMemberCallExpr E, llvm::CallBase **CallOrInvoke) {
+    Address This, DeleteOrMemberCallExpr E, llvm::CallBase **CallOrInvoke,
+    bool ArrayDeletion) {
   auto *CE = dyn_cast<const CXXMemberCallExpr *>(E);
   auto *D = dyn_cast<const CXXDeleteExpr *>(E);
   assert((CE != nullptr) ^ (D != nullptr));
