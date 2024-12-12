@@ -48,6 +48,11 @@ jobs:
           linux_runtime_check_targets=$(check-targets ${linux_runtimes_to_test} | sort | uniq)
           linux_runtimes=$(echo ${linux_runtimes_to_test} | sort | uniq)
 
+          if [[ "${linux_projects}" == "" ]]; then
+            echo "No projects to build"
+            exit 0
+          fi
+
           echo "Building projects: ${linux_projects}"
           echo "Running project checks targets: ${linux_check_targets}"
           echo "Building runtimes: ${linux_runtimes}"
