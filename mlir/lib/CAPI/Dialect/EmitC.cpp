@@ -127,3 +127,45 @@ MlirTypeID mlirEmitCSizeTTypeGetTypeID(void) {
 MlirType mlirEmitCSizeTTypeGet(MlirContext ctx) {
   return wrap(emitc::SizeTType::get(unwrap(ctx)));
 }
+
+//===----------------------------------------------------------------------===//
+// CmpPredicate attribute.
+//===----------------------------------------------------------------------===//
+
+bool mlirAttributeIsAEmitCCmpPredicate(MlirAttribute attr) {
+  return llvm::isa<emitc::CmpPredicateAttr>(unwrap(attr));
+}
+
+MlirAttribute mlirEmitCCmpPredicateAttrGet(MlirContext ctx, uint64_t val) {
+  return wrap((Attribute)emitc::CmpPredicateAttr::get(
+      unwrap(ctx), static_cast<emitc::CmpPredicate>(val)));
+}
+
+uint64_t mlirEmitCCmpPredicateAttrGetValue(MlirAttribute attr) {
+  return static_cast<uint64_t>(
+      llvm::cast<emitc::CmpPredicateAttr>(unwrap(attr)).getValue());
+}
+
+MlirTypeID mlirEmitCCmpPredicateAttrGetTypeID(void) {
+  return wrap(emitc::CmpPredicateAttr::getTypeID());
+}
+
+//===----------------------------------------------------------------------===//
+// Opaque attribute.
+//===----------------------------------------------------------------------===//
+
+bool mlirAttributeIsAEmitCOpaque(MlirAttribute attr) {
+  return llvm::isa<emitc::OpaqueAttr>(unwrap(attr));
+}
+
+MlirAttribute mlirEmitCOpaqueAttrGet(MlirContext ctx, MlirStringRef value) {
+  return wrap((Attribute)emitc::OpaqueAttr::get(unwrap(ctx), unwrap(value)));
+}
+
+MlirStringRef mlirEmitCOpaqueAttrGetValue(MlirAttribute attr) {
+  return wrap(llvm::cast<emitc::OpaqueAttr>(unwrap(attr)).getValue());
+}
+
+MlirTypeID mlirEmitCOpaqueAttrGetTypeID(void) {
+  return wrap(emitc::OpaqueAttr::getTypeID());
+}

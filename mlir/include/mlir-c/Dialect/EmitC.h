@@ -92,6 +92,34 @@ MLIR_CAPI_EXPORTED MlirTypeID mlirEmitCSizeTTypeGetTypeID(void);
 
 MLIR_CAPI_EXPORTED MlirType mlirEmitCSizeTTypeGet(MlirContext ctx);
 
+//===----------------------------------------------------------------------===//
+// CmpPredicate attribute.
+//===----------------------------------------------------------------------===//
+
+MLIR_CAPI_EXPORTED bool mlirAttributeIsAEmitCCmpPredicate(MlirAttribute attr);
+
+MLIR_CAPI_EXPORTED MlirAttribute mlirEmitCCmpPredicateAttrGet(MlirContext ctx,
+                                                              uint64_t val);
+
+MLIR_CAPI_EXPORTED uint64_t
+mlirEmitCCmpPredicateAttrGetValue(MlirAttribute attr);
+
+MLIR_CAPI_EXPORTED MlirTypeID mlirEmitCCmpPredicateAttrGetTypeID(void);
+
+//===----------------------------------------------------------------------===//
+// Opaque attribute.
+//===----------------------------------------------------------------------===//
+
+MLIR_CAPI_EXPORTED bool mlirAttributeIsAEmitCOpaque(MlirAttribute attr);
+
+MLIR_CAPI_EXPORTED MlirAttribute mlirEmitCOpaqueAttrGet(MlirContext ctx,
+                                                        MlirStringRef value);
+
+MLIR_CAPI_EXPORTED MlirStringRef
+mlirEmitCOpaqueAttrGetValue(MlirAttribute attr);
+
+MLIR_CAPI_EXPORTED MlirTypeID mlirEmitCOpaqueAttrGetTypeID(void);
+
 #ifdef __cplusplus
 }
 #endif
