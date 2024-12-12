@@ -202,7 +202,8 @@ public:
   /// special or non-printable characters in it.
   virtual void printSymbolName(StringRef symbolRef);
 
-  /// Print a handle to the given dialect resource.
+  /// Print a handle to the given dialect resource. The handle key is quoted and
+  /// escaped if it has any special or non-printable characters in it.
   virtual void printResourceHandle(const AsmDialectResourceHandle &resource);
 
   /// Print an optional arrow followed by a type list.
