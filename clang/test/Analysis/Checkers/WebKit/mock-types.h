@@ -1,6 +1,34 @@
 #ifndef mock_types_1103988513531
 #define mock_types_1103988513531
 
+namespace std {
+
+template <typename T>
+class unique_ptr {
+private:
+  T *t;
+
+public:
+  unique_ptr() : t(nullptr) { }
+  unique_ptr(T *t) : t(t) { }
+  ~unique_ptr() {
+    if (t)
+      delete t;
+  }
+  template <typename U> unique_ptr(unique_ptr<U>&& u)
+    : t(u.t)
+  {
+    u.t = nullptr;
+  }
+  T *get() const { return t; }
+  T *operator->() const { return t; }
+  T &operator*() const { return *t; }
+  unique_ptr &operator=(T *) { return *this; }
+  explicit operator bool() const { return !!t; }
+};
+
+};
+
 template<typename T>
 struct RawPtrTraits {
   using StorageType = T*;
@@ -103,7 +131,7 @@ template <typename T> struct RefPtr {
   }
   T *get() const { return t; }
   T *operator->() const { return t; }
-  T &operator*() { return *t; }
+  T &operator*() const { return *t; }
   RefPtr &operator=(T *t) {
     RefPtr o(t);
     swap(o);
@@ -130,6 +158,7 @@ template <typename T> bool operator!=(const RefPtr<T> &, T &) { return false; }
 
 struct RefCountable {
   static Ref<RefCountable> create();
+  static std::unique_ptr<RefCountable> makeUnique();
   void ref() {}
   void deref() {}
   void method();
@@ -176,7 +205,7 @@ public:
   }
   T *get() const { return t; }
   T *operator->() const { return t; }
-  T &operator*() { return *t; }
+  T &operator*() const { return *t; }
   CheckedPtr &operator=(T *) { return *this; }
   operator bool() const { return t; }
 };
@@ -187,6 +216,7 @@ public:
   void decrementCheckedPtrCount();
   void method();
   int trivial() { return 123; }
+  CheckedObj* next();
 };
 
 class RefCountableAndCheckable {
@@ -218,33 +248,6 @@ public:
   T &get() const { return *t; }
   T *operator->() const { return t; }
   UniqueRef &operator=(T &) { return *this; }
-};
-
-namespace std {
-
-template <typename T>
-class unique_ptr {
-private:
-  T *t;
-
-public:
-  unique_ptr() : t(nullptr) { }
-  unique_ptr(T *t) : t(t) { }
-  ~unique_ptr() {
-    if (t)
-      delete t;
-  }
-  template <typename U> unique_ptr(unique_ptr<U>&& u)
-    : t(u.t)
-  {
-    u.t = nullptr;
-  }
-  T *get() const { return t; }
-  T *operator->() const { return t; }
-  T &operator*() { return *t; }
-  unique_ptr &operator=(T *) { return *this; }
-};
-
 };
 
 #endif
