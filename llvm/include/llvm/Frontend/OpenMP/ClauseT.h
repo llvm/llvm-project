@@ -758,15 +758,13 @@ template <typename T, typename I, typename E> //
 struct LinearT {
   // std::get<type> won't work here due to duplicate types in the tuple.
   using List = ObjectListT<I, E>;
-  using StepSimpleModifier = E;
+  // StepSimpleModifier is same as StepComplexModifier.
   using StepComplexModifier = E;
   ENUM(LinearModifier, Ref, Val, Uval);
 
   using TupleTrait = std::true_type;
   // Step == nullopt means 1.
-  std::tuple<OPT(StepSimpleModifier), OPT(StepComplexModifier),
-             OPT(LinearModifier), List>
-      t;
+  std::tuple<OPT(StepComplexModifier), OPT(LinearModifier), List> t;
 };
 
 // V5.2: [5.8.5] `link` clause

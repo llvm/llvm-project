@@ -82,6 +82,8 @@ public:
     Instance.setDiagnostics(Diags.get());
     Instance.setInvocation(Invocation);
     Instance.getFrontendOpts().OutputFile = CacheBMIPath;
+    // Avoid memory leaks.
+    Instance.getFrontendOpts().DisableFree = false;
     GenerateModuleInterfaceAction Action;
     EXPECT_TRUE(Instance.ExecuteAction(Action));
     EXPECT_FALSE(Diags->hasErrorOccurred());

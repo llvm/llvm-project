@@ -28,8 +28,6 @@ void SingleOnly() {
   #pragma acc kernels default(none)
   for(int i = 0; i < 5; ++i);
 
-  // expected-warning@+2{{OpenACC construct 'data' not yet implemented}}
-  // expected-warning@+1{{OpenACC clause 'default' not yet implemented}}
   #pragma acc data default(none)
   while(0);
 

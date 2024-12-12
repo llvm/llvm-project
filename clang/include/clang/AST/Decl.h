@@ -3457,18 +3457,17 @@ public:
   using redeclarable_base::isFirstDecl;
 
   bool isModed() const {
-    return MaybeModedTInfo.getPointer().is<ModedTInfo *>();
+    return isa<ModedTInfo *>(MaybeModedTInfo.getPointer());
   }
 
   TypeSourceInfo *getTypeSourceInfo() const {
-    return isModed() ? MaybeModedTInfo.getPointer().get<ModedTInfo *>()->first
-                     : MaybeModedTInfo.getPointer().get<TypeSourceInfo *>();
+    return isModed() ? cast<ModedTInfo *>(MaybeModedTInfo.getPointer())->first
+                     : cast<TypeSourceInfo *>(MaybeModedTInfo.getPointer());
   }
 
   QualType getUnderlyingType() const {
-    return isModed() ? MaybeModedTInfo.getPointer().get<ModedTInfo *>()->second
-                     : MaybeModedTInfo.getPointer()
-                           .get<TypeSourceInfo *>()
+    return isModed() ? cast<ModedTInfo *>(MaybeModedTInfo.getPointer())->second
+                     : cast<TypeSourceInfo *>(MaybeModedTInfo.getPointer())
                            ->getType();
   }
 
