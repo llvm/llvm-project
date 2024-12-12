@@ -19792,6 +19792,14 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   llvm::AtomicOrdering AO = llvm::AtomicOrdering::SequentiallyConsistent;
   llvm::SyncScope::ID SSID;
   switch (BuiltinID) {
+  case AMDGPU::BI__builtin_amdgcn_alignbyte: {
+    llvm::Value *Src0 = EmitScalarExpr(E->getArg(0));
+    llvm::Value *Src1 = EmitScalarExpr(E->getArg(1));
+    llvm::Value *Src2 = EmitScalarExpr(E->getArg(2));
+    llvm::Function *F =
+        CGM.getIntrinsic(Intrinsic::amdgcn_alignbyte, Src2->getType());
+    return Builder.CreateCall(F, {Src0, Src1, Src2});
+  }
   case AMDGPU::BI__builtin_amdgcn_div_scale:
   case AMDGPU::BI__builtin_amdgcn_div_scalef: {
     // Translate from the intrinsics's struct return to the builtin's out

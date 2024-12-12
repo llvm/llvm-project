@@ -212,7 +212,11 @@ defm V_BFE_U32 : VOP3Inst <"v_bfe_u32", VOP3_Profile<VOP_I32_I32_I32_I32>, AMDGP
 defm V_BFE_I32 : VOP3Inst <"v_bfe_i32", VOP3_Profile<VOP_I32_I32_I32_I32>, AMDGPUbfe_i32>;
 defm V_BFI_B32 : VOP3Inst <"v_bfi_b32", VOP3_Profile<VOP_I32_I32_I32_I32>, AMDGPUbfi>;
 defm V_ALIGNBIT_B32 : VOP3Inst <"v_alignbit_b32", VOP3_Profile<VOP_I32_I32_I32_I32>, fshr>;
-defm V_ALIGNBYTE_B32 : VOP3Inst <"v_alignbyte_b32", VOP3_Profile<VOP_I32_I32_I32_I32>, int_amdgcn_alignbyte>;
+defm V_ALIGNBYTE_B32 : VOP3Inst_t16_with_profiles <"v_alignbyte_b32",
+                                                   VOP3_Profile<VOP_I32_I32_I32_I32>,
+                                                   VOP3_Profile_True16<VOP_I32_I32_I32_I16, VOP3_OPSEL>,
+                                                   VOP3_Profile_Fake16<VOP_I32_I32_I32_I16, VOP3_OPSEL>,
+                                                   int_amdgcn_alignbyte>;
 
 // XXX - No FPException seems suspect but manual doesn't say it does
 let mayRaiseFPException = 0 in {
@@ -1690,7 +1694,7 @@ defm V_FMA_F32             : VOP3_Realtriple_gfx11_gfx12<0x213>;
 defm V_FMA_F64             : VOP3_Real_Base_gfx11_gfx12<0x214>;
 defm V_LERP_U8             : VOP3_Realtriple_gfx11_gfx12<0x215>;
 defm V_ALIGNBIT_B32        : VOP3_Realtriple_gfx11_gfx12<0x216>;
-defm V_ALIGNBYTE_B32       : VOP3_Realtriple_gfx11_gfx12<0x217>;
+defm V_ALIGNBYTE_B32       : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<0x217, "v_alignbyte_b32">;
 defm V_MULLIT_F32          : VOP3_Realtriple_gfx11_gfx12<0x218>;
 defm V_MIN3_F32            : VOP3_Realtriple_gfx11<0x219>;
 defm V_MIN3_I32            : VOP3_Realtriple_gfx11_gfx12<0x21a>;
