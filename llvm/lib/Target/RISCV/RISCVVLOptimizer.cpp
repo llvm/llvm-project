@@ -247,6 +247,23 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
     llvm_unreachable("Configuration setting instructions do not read or write "
                      "vector registers");
 
+  // Vector Loads and Stores
+  // Vector Unit-Stride Instructions
+  // Vector Strided Instructions
+  /// Dest EEW encoded in the instruction and EMUL=(EEW/SEW)*LMUL
+  case RISCV::VSE8_V:
+  case RISCV::VSSE8_V:
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(3, MI), 3);
+  case RISCV::VSE16_V:
+  case RISCV::VSSE16_V:
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(4, MI), 4);
+  case RISCV::VSE32_V:
+  case RISCV::VSSE32_V:
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(5, MI), 5);
+  case RISCV::VSE64_V:
+  case RISCV::VSSE64_V:
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(6, MI), 6);
+
   // Vector Integer Arithmetic Instructions
   // Vector Single-Width Integer Add and Subtract
   case RISCV::VADD_VI:
@@ -546,8 +563,12 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   // Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
   // FIXME: Add support
   // Vector Narrowing Integer Right Shift Instructions
-  // FIXME: Add support
+  case RISCV::VNSRL_WX:
   case RISCV::VNSRL_WI:
+  case RISCV::VNSRL_WV:
+  case RISCV::VNSRA_WI:
+  case RISCV::VNSRA_WV:
+  case RISCV::VNSRA_WX:
   // Vector Integer Compare Instructions
   // FIXME: Add support
   // Vector Integer Min/Max Instructions
