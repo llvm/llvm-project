@@ -10,15 +10,12 @@ define <4 x i8> @concat1(<2 x i8> %A, <2 x i8> %B) {
 ;
 ; CHECK-GI-LABEL: concat1:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov w8, v0.s[1]
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    mov w9, v1.s[1]
 ; CHECK-GI-NEXT:    mov v0.h[1], w8
 ; CHECK-GI-NEXT:    fmov w8, s1
 ; CHECK-GI-NEXT:    mov v0.h[2], w8
 ; CHECK-GI-NEXT:    mov v0.h[3], w9
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
    %v4i8 = shufflevector <2 x i8> %A, <2 x i8> %B, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
    ret <4 x i8> %v4i8
@@ -38,7 +35,6 @@ define <8 x i8> @concat2(<4 x i8> %A, <4 x i8> %B) {
 ; CHECK-GI-NEXT:    mov v0.s[0], w8
 ; CHECK-GI-NEXT:    fmov w8, s1
 ; CHECK-GI-NEXT:    mov v0.s[1], w8
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
    %v8i8 = shufflevector <4 x i8> %A, <4 x i8> %B, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
    ret <8 x i8> %v8i8
@@ -47,8 +43,6 @@ define <8 x i8> @concat2(<4 x i8> %A, <4 x i8> %B) {
 define <16 x i8> @concat3(<8 x i8> %A, <8 x i8> %B) {
 ; CHECK-LABEL: concat3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
    %v16i8 = shufflevector <8 x i8> %A, <8 x i8> %B, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -69,7 +63,6 @@ define <4 x i16> @concat4(<2 x i16> %A, <2 x i16> %B) {
 ; CHECK-GI-NEXT:    mov v0.s[0], w8
 ; CHECK-GI-NEXT:    fmov w8, s1
 ; CHECK-GI-NEXT:    mov v0.s[1], w8
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
    %v4i16 = shufflevector <2 x i16> %A, <2 x i16> %B, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
    ret <4 x i16> %v4i16
@@ -78,8 +71,6 @@ define <4 x i16> @concat4(<2 x i16> %A, <2 x i16> %B) {
 define <8 x i16> @concat5(<4 x i16> %A, <4 x i16> %B) {
 ; CHECK-LABEL: concat5:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
    %v8i16 = shufflevector <4 x i16> %A, <4 x i16> %B, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -101,8 +92,6 @@ define <16 x i16> @concat6(ptr %A, ptr %B) {
 define <4 x i32> @concat7(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-LABEL: concat7:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
    %v4i32 = shufflevector <2 x i32> %A, <2 x i32> %B, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -133,7 +122,6 @@ define <4 x half> @concat9(<2 x half> %A, <2 x half> %B) {
 ; CHECK-GI-NEXT:    mov v0.s[0], w8
 ; CHECK-GI-NEXT:    fmov w8, s1
 ; CHECK-GI-NEXT:    mov v0.s[1], w8
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
    %v4half= shufflevector <2 x half> %A, <2 x half> %B, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
    ret <4 x half> %v4half
@@ -142,8 +130,6 @@ define <4 x half> @concat9(<2 x half> %A, <2 x half> %B) {
 define <8 x half> @concat10(<4 x half> %A, <4 x half> %B) {
 ; CHECK-LABEL: concat10:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
    %v8half= shufflevector <4 x half> %A, <4 x half> %B, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -168,9 +154,9 @@ define <8 x i16> @concat_v8s16_v2s16(ptr %ptr) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldrh w8, [x0]
 ; CHECK-GI-NEXT:    ldrh w9, [x0, #2]
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    mov v1.h[1], w9
-; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    mov v0.h[1], w9
+; CHECK-GI-NEXT:    mov v0.s[0], v0.s[0]
 ; CHECK-GI-NEXT:    ret
     %a = load <2 x i16>, ptr %ptr
     %b = shufflevector <2 x i16> %a, <2 x i16> %a, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -209,10 +195,6 @@ define <16 x i8> @concat_v16s8_v4s8_load(ptr %ptrA, ptr %ptrB, ptr %ptrC, ptr %p
 define <16 x i8> @concat_v16s8_v4s8_reg(<4 x i8> %A, <4 x i8> %B, <4 x i8> %C, <4 x i8> %D) {
 ; CHECK-SD-LABEL: concat_v16s8_v4s8_reg:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 def $q3
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    mov v2.d[1], v3.d[0]
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    uzp1 v0.16b, v0.16b, v2.16b
@@ -242,12 +224,8 @@ define <16 x i8> @concat_v16s8_v4s8_reg(<4 x i8> %A, <4 x i8> %B, <4 x i8> %C, <
 define <8 x i16> @concat_v8s16_v2s16_reg(<2 x i16> %A, <2 x i16> %B, <2 x i16> %C, <2 x i16> %D) {
 ; CHECK-SD-LABEL: concat_v8s16_v2s16_reg:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    adrp x8, .LCPI15_0
-; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI15_0]
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v4.16b
 ; CHECK-SD-NEXT:    ret
 ;
@@ -282,10 +260,9 @@ define <4 x i16> @concat_undef_first_use_first(ptr %p1, ptr %p2) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldrh w8, [x0]
 ; CHECK-GI-NEXT:    ldrh w9, [x0, #2]
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    mov v1.h[1], w9
-; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    mov v0.h[1], w9
+; CHECK-GI-NEXT:    mov v0.s[1], v0.s[0]
 ; CHECK-GI-NEXT:    ret
   %l1 = load <2 x i16>, ptr %p1
   %l2 = load <2 x i16>, ptr %p2
@@ -305,10 +282,9 @@ define <4 x i16> @concat_undef_first_use_second(ptr %p1, ptr %p2) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldrh w8, [x0]
 ; CHECK-GI-NEXT:    ldrh w9, [x0, #2]
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    mov v1.h[1], w9
-; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    mov v0.h[1], w9
+; CHECK-GI-NEXT:    mov v0.s[1], v0.s[0]
 ; CHECK-GI-NEXT:    ret
   %l1 = load <2 x i16>, ptr %p1
   %l2 = load <2 x i16>, ptr %p2

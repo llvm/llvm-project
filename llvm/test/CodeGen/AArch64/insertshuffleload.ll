@@ -259,7 +259,6 @@ define <8 x i8> @wrongidx_first(ptr %p) {
 ; CHECK-NEXT:    ldur d0, [x0, #1]
 ; CHECK-NEXT:    ext v0.8b, v0.8b, v0.8b, #7
 ; CHECK-NEXT:    ld1 { v0.b }[7], [x0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 1
   %l1 = load <8 x i8>, ptr %q
@@ -276,7 +275,6 @@ define <8 x i8> @wrong_last(ptr %p) {
 ; CHECK-NEXT:    add x8, x0, #8
 ; CHECK-NEXT:    ext v0.8b, v0.8b, v0.8b, #1
 ; CHECK-NEXT:    ld1 { v0.b }[0], [x8]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 8
   %l1 = load <8 x i8>, ptr %p
@@ -295,7 +293,6 @@ define <8 x i8> @wrong_shuffle(ptr %p) {
 ; CHECK-NEXT:    mov v0.d[1], v0.d[0]
 ; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; CHECK-NEXT:    ld1 { v0.b }[0], [x0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 1
   %l1 = load <8 x i8>, ptr %q
@@ -348,7 +345,6 @@ define <8 x i8> @wrong_offsetfirst(ptr %p) {
 ; CHECK-NEXT:    ldur d0, [x0, #-1]
 ; CHECK-NEXT:    ext v0.8b, v0.8b, v0.8b, #7
 ; CHECK-NEXT:    ld1 { v0.b }[0], [x0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 -1
   %l1 = load <8 x i8>, ptr %q
@@ -365,7 +361,6 @@ define <8 x i8> @wrong_offsetlast(ptr %p) {
 ; CHECK-NEXT:    add x8, x0, #7
 ; CHECK-NEXT:    ext v0.8b, v0.8b, v0.8b, #1
 ; CHECK-NEXT:    ld1 { v0.b }[7], [x8]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 7
   %l1 = load <8 x i8>, ptr %p
@@ -383,7 +378,6 @@ define <8 x i8> @storebetween(ptr %p, ptr %r) {
 ; CHECK-NEXT:    strb wzr, [x1]
 ; CHECK-NEXT:    ext v0.8b, v0.8b, v0.8b, #7
 ; CHECK-NEXT:    ld1 { v0.b }[0], [x0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 1
   %l1 = load <8 x i8>, ptr %q

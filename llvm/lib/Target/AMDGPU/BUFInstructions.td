@@ -9,8 +9,10 @@
 def MUBUFAddr64 : ComplexPattern<iPTR, 4, "SelectMUBUFAddr64">;
 def MUBUFOffset : ComplexPattern<iPTR, 3, "SelectMUBUFOffset">;
 
-def MUBUFScratchOffen : ComplexPattern<iPTR, 4, "SelectMUBUFScratchOffen", [], [SDNPWantParent]>;
-def MUBUFScratchOffset : ComplexPattern<iPTR, 3, "SelectMUBUFScratchOffset", [], [SDNPWantParent], 20>;
+let WantsParent = true in {
+  def MUBUFScratchOffen : ComplexPattern<iPTR, 4, "SelectMUBUFScratchOffen">;
+  def MUBUFScratchOffset : ComplexPattern<iPTR, 3, "SelectMUBUFScratchOffset", [], [], 20>;
+}
 
 def BUFSOffset   : ComplexPattern<iPTR, 1, "SelectBUFSOffset">;
 

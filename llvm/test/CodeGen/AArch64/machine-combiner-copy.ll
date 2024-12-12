@@ -4,7 +4,6 @@
 define void @fma_dup_f16(ptr noalias nocapture noundef readonly %A, half noundef %B, ptr noalias nocapture noundef %C, i32 noundef %n) {
 ; CHECK-LABEL: fma_dup_f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-NEXT:    cbz w2, .LBB0_8
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-NEXT:    cmp w2, #15

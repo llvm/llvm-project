@@ -259,8 +259,10 @@ static bool CheckBitcastType(InterpState &S, CodePtr OpPC, QualType T,
   return true;
 }
 
-static bool readPointerToBuffer(const Context &Ctx, const Pointer &FromPtr,
-                                BitcastBuffer &Buffer, bool ReturnOnUninit) {
+bool clang::interp::readPointerToBuffer(const Context &Ctx,
+                                        const Pointer &FromPtr,
+                                        BitcastBuffer &Buffer,
+                                        bool ReturnOnUninit) {
   const ASTContext &ASTCtx = Ctx.getASTContext();
   Endian TargetEndianness =
       ASTCtx.getTargetInfo().isLittleEndian() ? Endian::Little : Endian::Big;

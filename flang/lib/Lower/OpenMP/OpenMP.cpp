@@ -718,7 +718,8 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
   std::optional<DataSharingProcessor> tempDsp;
   if (privatize && !info.dsp) {
     tempDsp.emplace(info.converter, info.semaCtx, *info.clauses, info.eval,
-                    Fortran::lower::omp::isLastItemInQueue(item, queue));
+                    Fortran::lower::omp::isLastItemInQueue(item, queue),
+                    /*useDelayedPrivatization=*/false, info.symTable);
     tempDsp->processStep1();
   }
 
@@ -1423,7 +1424,7 @@ static void genLoopOp(lower::AbstractConverter &converter,
 
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
-                           /*useDelayedPrivatization=*/true, &symTable);
+                           /*useDelayedPrivatization=*/true, symTable);
   dsp.processStep1(&loopClauseOps);
 
   mlir::omp::LoopNestOperands loopNestClauseOps;
@@ -1544,7 +1545,8 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   // Insert privatizations before SECTIONS
   lower::SymMapScope scope(symTable);
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
-                           lower::omp::isLastItemInQueue(item, queue));
+                           lower::omp::isLastItemInQueue(item, queue),
+                           /*useDelayedPrivatization=*/false, symTable);
   dsp.processStep1();
 
   List<Clause> nonDsaClauses;
@@ -1695,7 +1697,7 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/
                            lower::omp::isLastItemInQueue(item, queue),
-                           /*useDelayedPrivatization=*/true, &symTable);
+                           /*useDelayedPrivatization=*/true, symTable);
   dsp.processStep1(&clauseOps);
 
   // 5.8.1 Implicit Data-Mapping Attribute Rules
@@ -1896,7 +1898,7 @@ genTaskOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            lower::omp::isLastItemInQueue(item, queue),
-                           /*useDelayedPrivatization=*/true, &symTable);
+                           /*useDelayedPrivatization=*/true, symTable);
   dsp.processStep1(&clauseOps);
 
   EntryBlockArgs taskArgs;
@@ -2011,7 +2013,7 @@ static void genStandaloneDistribute(lower::AbstractConverter &converter,
 
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
-                           enableDelayedPrivatizationStaging, &symTable);
+                           enableDelayedPrivatizationStaging, symTable);
   dsp.processStep1(&distributeClauseOps);
 
   mlir::omp::LoopNestOperands loopNestClauseOps;
@@ -2045,7 +2047,7 @@ static void genStandaloneDo(lower::AbstractConverter &converter,
 
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
-                           enableDelayedPrivatizationStaging, &symTable);
+                           enableDelayedPrivatizationStaging, symTable);
   dsp.processStep1(&wsloopClauseOps);
 
   mlir::omp::LoopNestOperands loopNestClauseOps;
@@ -2084,7 +2086,7 @@ static void genStandaloneParallel(lower::AbstractConverter &converter,
   if (enableDelayedPrivatization) {
     dsp.emplace(converter, semaCtx, item->clauses, eval,
                 lower::omp::isLastItemInQueue(item, queue),
-                /*useDelayedPrivatization=*/true, &symTable);
+                /*useDelayedPrivatization=*/true, symTable);
     dsp->processStep1(&parallelClauseOps);
   }
 
@@ -2113,7 +2115,7 @@ static void genStandaloneSimd(lower::AbstractConverter &converter,
   // TODO: Support delayed privatization.
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
-                           /*useDelayedPrivatization=*/false, &symTable);
+                           /*useDelayedPrivatization=*/false, symTable);
   dsp.processStep1();
 
   mlir::omp::LoopNestOperands loopNestClauseOps;
@@ -2167,7 +2169,7 @@ static void genCompositeDistributeParallelDo(
 
   DataSharingProcessor dsp(converter, semaCtx, doItem->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
-                           /*useDelayedPrivatization=*/true, &symTable);
+                           /*useDelayedPrivatization=*/true, symTable);
   dsp.processStep1(&parallelClauseOps);
 
   EntryBlockArgs parallelArgs;
@@ -2235,7 +2237,7 @@ static void genCompositeDistributeParallelDoSimd(
 
   DataSharingProcessor dsp(converter, semaCtx, simdItem->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
-                           /*useDelayedPrivatization=*/true, &symTable);
+                           /*useDelayedPrivatization=*/true, symTable);
   dsp.processStep1(&parallelClauseOps);
 
   EntryBlockArgs parallelArgs;
@@ -2323,7 +2325,7 @@ static void genCompositeDistributeSimd(lower::AbstractConverter &converter,
   // TODO: Support delayed privatization.
   DataSharingProcessor dsp(converter, semaCtx, simdItem->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
-                           /*useDelayedPrivatization=*/false, &symTable);
+                           /*useDelayedPrivatization=*/false, symTable);
   dsp.processStep1();
 
   // Pass the innermost leaf construct's clauses because that's where COLLAPSE
@@ -2380,7 +2382,7 @@ static void genCompositeDoSimd(lower::AbstractConverter &converter,
   // TODO: Support delayed privatization.
   DataSharingProcessor dsp(converter, semaCtx, simdItem->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
-                           /*useDelayedPrivatization=*/false, &symTable);
+                           /*useDelayedPrivatization=*/false, symTable);
   dsp.processStep1();
 
   // Pass the innermost leaf construct's clauses because that's where COLLAPSE

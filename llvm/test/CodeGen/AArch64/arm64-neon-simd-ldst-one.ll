@@ -403,17 +403,13 @@ entry:
 define <8 x i8> @test_vld1_lane_s8(ptr %a, <8 x i8> %b) {
 ; CHECK-GI-LABEL: test_vld1_lane_s8:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    ld1 { v0.b }[7], [x0]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 ;
 ; CHECK-SD-LABEL: test_vld1_lane_s8:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldr b1, [x0]
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    mov v0.b[7], v1.b[0]
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 entry:
   %0 = load i8, ptr %a, align 1
@@ -424,9 +420,7 @@ entry:
 define <4 x i16> @test_vld1_lane_s16(ptr %a, <4 x i16> %b) {
 ; CHECK-LABEL: test_vld1_lane_s16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ld1 { v0.h }[3], [x0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i16, ptr %a, align 2
@@ -437,9 +431,7 @@ entry:
 define <2 x i32> @test_vld1_lane_s32(ptr %a, <2 x i32> %b) {
 ; CHECK-LABEL: test_vld1_lane_s32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ld1 { v0.s }[1], [x0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i32, ptr %a, align 4
@@ -461,9 +453,7 @@ entry:
 define <2 x float> @test_vld1_lane_f32(ptr %a, <2 x float> %b) {
 ; CHECK-LABEL: test_vld1_lane_f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ld1 { v0.s }[1], [x0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %0 = load float, ptr %a, align 4
@@ -606,7 +596,6 @@ entry:
 define void @test_vst1_lane_s8(ptr %a, <8 x i8> %b) {
 ; CHECK-LABEL: test_vst1_lane_s8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    st1 { v0.b }[7], [x0]
 ; CHECK-NEXT:    ret
 entry:
@@ -618,7 +607,6 @@ entry:
 define void @test_vst1_lane_s16(ptr %a, <4 x i16> %b) {
 ; CHECK-LABEL: test_vst1_lane_s16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    st1 { v0.h }[3], [x0]
 ; CHECK-NEXT:    ret
 entry:
@@ -628,16 +616,10 @@ entry:
 }
 
 define void @test_vst1_lane0_s16(ptr %a, <4 x i16> %b) {
-; CHECK-GI-LABEL: test_vst1_lane0_s16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    str h0, [x0]
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-SD-LABEL: test_vst1_lane0_s16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    str h0, [x0]
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: test_vst1_lane0_s16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str h0, [x0]
+; CHECK-NEXT:    ret
 entry:
   %0 = extractelement <4 x i16> %b, i32 0
   store i16 %0, ptr %a, align 2
@@ -647,7 +629,6 @@ entry:
 define void @test_vst1_lane_s32(ptr %a, <2 x i32> %b) {
 ; CHECK-LABEL: test_vst1_lane_s32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    st1 { v0.s }[1], [x0]
 ; CHECK-NEXT:    ret
 entry:
@@ -657,16 +638,10 @@ entry:
 }
 
 define void @test_vst1_lane0_s32(ptr %a, <2 x i32> %b) {
-; CHECK-GI-LABEL: test_vst1_lane0_s32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    str s0, [x0]
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-SD-LABEL: test_vst1_lane0_s32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    str s0, [x0]
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: test_vst1_lane0_s32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str s0, [x0]
+; CHECK-NEXT:    ret
 entry:
   %0 = extractelement <2 x i32> %b, i32 0
   store i32 %0, ptr %a, align 4
@@ -674,16 +649,10 @@ entry:
 }
 
 define void @test_vst1_lane_s64(ptr %a, <1 x i64> %b) {
-; CHECK-GI-LABEL: test_vst1_lane_s64:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    str d0, [x0]
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-SD-LABEL: test_vst1_lane_s64:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    str d0, [x0]
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: test_vst1_lane_s64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str d0, [x0]
+; CHECK-NEXT:    ret
 entry:
   %0 = extractelement <1 x i64> %b, i32 0
   store i64 %0, ptr %a, align 8
@@ -693,7 +662,6 @@ entry:
 define void @test_vst1_lane_f32(ptr %a, <2 x float> %b) {
 ; CHECK-LABEL: test_vst1_lane_f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    st1 { v0.s }[1], [x0]
 ; CHECK-NEXT:    ret
 entry:
@@ -703,16 +671,10 @@ entry:
 }
 
 define void @test_vst1_lane0_f32(ptr %a, <2 x float> %b) {
-; CHECK-GI-LABEL: test_vst1_lane0_f32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    str s0, [x0]
-; CHECK-GI-NEXT:    ret
-;
-; CHECK-SD-LABEL: test_vst1_lane0_f32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    str s0, [x0]
-; CHECK-SD-NEXT:    ret
+; CHECK-LABEL: test_vst1_lane0_f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str s0, [x0]
+; CHECK-NEXT:    ret
 entry:
   %0 = extractelement <2 x float> %b, i32 0
   store float %0, ptr %a, align 4

@@ -346,6 +346,7 @@ extern module LLVM_Extern_Utils_DataTypes "module.extern.modulemap"
 // TargetParser module before building the TargetParser module itself.
 module TargetParserGen {
   module AArch64TargetParserDef {
+    textual header "llvm/TargetParser/AArch64CPUFeatures.inc"
     header "llvm/TargetParser/AArch64TargetParser.h"
     extern module LLVM_Extern_TargetParser_Gen "module.extern.modulemap"
     export *
@@ -425,4 +426,13 @@ module LLVM_WindowsManifest {
   requires cplusplus
   umbrella "llvm/WindowsManifest"
   module * { export * }
+}
+
+module LLVM_SandboxIR {
+  requires cplusplus
+
+  umbrella "llvm/SandboxIR"
+  module * { export * }
+
+  textual header "llvm/SandboxIR/Values.def"
 }

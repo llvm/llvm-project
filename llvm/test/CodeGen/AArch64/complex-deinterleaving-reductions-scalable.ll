@@ -42,8 +42,6 @@ define %"class.std::complex" @complex_mul_v2f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    uzp2 z1.d, z1.d, z0.d
 ; CHECK-NEXT:    faddv d0, p0, z2.d
 ; CHECK-NEXT:    faddv d1, p0, z1.d
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $z1
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i64 @llvm.vscale.i64()
@@ -131,8 +129,6 @@ define %"class.std::complex" @complex_mul_nonzero_init_v2f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    uzp2 z1.d, z1.d, z0.d
 ; CHECK-NEXT:    faddv d0, p0, z2.d
 ; CHECK-NEXT:    faddv d1, p0, z1.d
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $z1
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i64 @llvm.vscale.i64()
@@ -225,8 +221,6 @@ define %"class.std::complex" @complex_mul_v2f64_unrolled(ptr %a, ptr %b) {
 ; CHECK-NEXT:    fadd z2.d, z2.d, z0.d
 ; CHECK-NEXT:    faddv d0, p0, z1.d
 ; CHECK-NEXT:    faddv d1, p0, z2.d
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $z1
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i64 @llvm.vscale.i64()
@@ -332,14 +326,12 @@ define dso_local %"class.std::complex" @reduction_mix(ptr %a, ptr %b, ptr noalia
 ; CHECK-NEXT:    add z2.d, z5.d, z2.d
 ; CHECK-NEXT:    b.ne .LBB3_1
 ; CHECK-NEXT:  // %bb.2: // %middle.block
-; CHECK-NEXT:    uaddv d2, p0, z2.d
 ; CHECK-NEXT:    uzp2 z3.d, z1.d, z0.d
 ; CHECK-NEXT:    uzp1 z1.d, z1.d, z0.d
+; CHECK-NEXT:    uaddv d2, p0, z2.d
 ; CHECK-NEXT:    faddv d0, p0, z3.d
-; CHECK-NEXT:    fmov x8, d2
 ; CHECK-NEXT:    faddv d1, p0, z1.d
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $z1
+; CHECK-NEXT:    fmov x8, d2
 ; CHECK-NEXT:    str w8, [x4]
 ; CHECK-NEXT:    ret
 entry:

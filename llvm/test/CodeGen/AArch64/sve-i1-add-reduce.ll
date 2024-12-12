@@ -5,7 +5,6 @@ define i8 @uaddv_zexti8_nxv16i1(<vscale x 16 x i1> %v) {
 ; CHECK-LABEL: uaddv_zexti8_nxv16i1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cntp x0, p0, p0.b
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 entry:
   %3 = zext <vscale x 16 x i1> %v to <vscale x 16 x i8>
@@ -17,7 +16,6 @@ define i8 @uaddv_zexti8_nxv8i1(<vscale x 8 x i1> %v) {
 ; CHECK-LABEL: uaddv_zexti8_nxv8i1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cntp x0, p0, p0.h
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 entry:
   %3 = zext <vscale x 8 x i1> %v to <vscale x 8 x i8>
@@ -29,7 +27,6 @@ define i16 @uaddv_zexti16_nxv8i1(<vscale x 8 x i1> %v) {
 ; CHECK-LABEL: uaddv_zexti16_nxv8i1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cntp x0, p0, p0.h
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 entry:
   %3 = zext <vscale x 8 x i1> %v to <vscale x 8 x i16>
@@ -41,7 +38,6 @@ define i8 @uaddv_zexti8_nxv4i1(<vscale x 4 x i1> %v) {
 ; CHECK-LABEL: uaddv_zexti8_nxv4i1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cntp x0, p0, p0.s
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 entry:
   %3 = zext <vscale x 4 x i1> %v to <vscale x 4 x i8>
@@ -53,7 +49,6 @@ define i16 @uaddv_zexti16_nxv4i1(<vscale x 4 x i1> %v) {
 ; CHECK-LABEL: uaddv_zexti16_nxv4i1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cntp x0, p0, p0.s
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 entry:
   %3 = zext <vscale x 4 x i1> %v to <vscale x 4 x i16>
@@ -65,7 +60,6 @@ define i32 @uaddv_zexti32_nxv4i1(<vscale x 4 x i1> %v) {
 ; CHECK-LABEL: uaddv_zexti32_nxv4i1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cntp x0, p0, p0.s
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 entry:
   %3 = zext <vscale x 4 x i1> %v to <vscale x 4 x i32>
@@ -77,7 +71,6 @@ define i8 @uaddv_zexti8_nxv2i1(<vscale x 2 x i1> %v) {
 ; CHECK-LABEL: uaddv_zexti8_nxv2i1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cntp x0, p0, p0.d
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 entry:
   %3 = zext <vscale x 2 x i1> %v to <vscale x 2 x i8>
@@ -89,7 +82,6 @@ define i16 @uaddv_zexti16_nxv2i1(<vscale x 2 x i1> %v) {
 ; CHECK-LABEL: uaddv_zexti16_nxv2i1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cntp x0, p0, p0.d
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 entry:
   %3 = zext <vscale x 2 x i1> %v to <vscale x 2 x i16>
@@ -101,7 +93,6 @@ define i32 @uaddv_zexti32_nxv2i1(<vscale x 2 x i1> %v) {
 ; CHECK-LABEL: uaddv_zexti32_nxv2i1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cntp x0, p0, p0.d
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 entry:
   %3 = zext <vscale x 2 x i1> %v to <vscale x 2 x i32>

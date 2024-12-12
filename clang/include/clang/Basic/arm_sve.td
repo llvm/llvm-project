@@ -2468,4 +2468,11 @@ let SVETargetGuard = "sve2,fp8", SMETargetGuard = "sme2,fp8" in {
   // 8-bit floating-point convert to BFloat16/Float16 (top)
   def SVF1CVTLT : SInst<"svcvtlt1_{d}[_mf8]_fpm", "d~>", "bh", MergeNone, "aarch64_sve_fp8_cvtlt1", [VerifyRuntimeMode, SetsFPMR]>;
   def SVF2CVTLT : SInst<"svcvtlt2_{d}[_mf8]_fpm", "d~>", "bh", MergeNone, "aarch64_sve_fp8_cvtlt2", [VerifyRuntimeMode, SetsFPMR]>;
+
+  // BFloat16/Float16 convert, narrow and interleave to 8-bit floating-point
+  def SVFCVTN : SInst<"svcvtn_mf8[_{d}_x2]_fpm", "~2>", "bh", MergeNone, "aarch64_sve_fp8_cvtn", [VerifyRuntimeMode, SetsFPMR]>;
+
+  // Single-precision convert, narrow and interleave to 8-bit floating-point (top and bottom)
+  def SVFCVTNB : SInst<"svcvtnb_mf8[_f32_x2]_fpm", "~2>",  "f", MergeNone, "aarch64_sve_fp8_cvtnb", [VerifyRuntimeMode, SetsFPMR]>;
+  def SVFCVTNT : SInst<"svcvtnt_mf8[_f32_x2]_fpm", "~~2>", "f", MergeNone, "aarch64_sve_fp8_cvtnt", [VerifyRuntimeMode, SetsFPMR]>;
 }
