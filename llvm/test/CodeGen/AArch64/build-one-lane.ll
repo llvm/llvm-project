@@ -9,7 +9,6 @@ define <8 x i8> @v8i8z(i8 %t, i8 %s) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov v0.b[7], w1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %v = insertelement <8 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 undef>, i8 %s, i32 7
   ret <8 x i8> %v
@@ -30,7 +29,6 @@ define <4 x i16> @v4i16z(i16 %t, i16 %s) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov v0.h[3], w1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %v = insertelement <4 x i16> <i16 0, i16 0, i16 0, i16 undef>, i16 %s, i32 3
   ret <4 x i16> %v
@@ -51,7 +49,6 @@ define <2 x i32> @v2i32z(i32 %t, i32 %s) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov v0.s[1], w1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %v = insertelement <2 x i32> <i32 0, i32 undef>, i32 %s, i32 1
   ret <2 x i32> %v
@@ -81,9 +78,7 @@ define <2 x float> @v2f32z(float %t, float %s) nounwind {
 ; CHECK-LABEL: v2f32z:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi d0, #0000000000000000
-; CHECK-NEXT:    // kill: def $s1 killed $s1 def $q1
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %v = insertelement <2 x float> <float 0.0, float undef>, float %s, i32 1
   ret <2 x float> %v
@@ -93,7 +88,6 @@ define <4 x float> @v4f32z(float %t, float %s) nounwind {
 ; CHECK-LABEL: v4f32z:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    // kill: def $s1 killed $s1 def $q1
 ; CHECK-NEXT:    mov v0.s[3], v1.s[0]
 ; CHECK-NEXT:    ret
   %v = insertelement <4 x float> <float 0.0, float 0.0, float 0.0, float undef>, float %s, i32 3
@@ -104,7 +98,6 @@ define <2 x double> @v2f64z(double %t, double %s) nounwind {
 ; CHECK-LABEL: v2f64z:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
   %v = insertelement <2 x double> <double 0.0, double undef>, double %s, i32 1
@@ -119,7 +112,6 @@ define <8 x i8> @v8i8m(i8 %t, i8 %s) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0xffffffffffffffff
 ; CHECK-NEXT:    mov v0.b[7], w1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %v = insertelement <8 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 undef>, i8 %s, i32 7
   ret <8 x i8> %v
@@ -140,7 +132,6 @@ define <4 x i16> @v4i16m(i16 %t, i16 %s) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0xffffffffffffffff
 ; CHECK-NEXT:    mov v0.h[3], w1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %v = insertelement <4 x i16> <i16 -1, i16 -1, i16 -1, i16 undef>, i16 %s, i32 3
   ret <4 x i16> %v
@@ -161,7 +152,6 @@ define <2 x i32> @v2i32m(i32 %t, i32 %s) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0xffffffffffffffff
 ; CHECK-NEXT:    mov v0.s[1], w1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %v = insertelement <2 x i32> <i32 -1, i32 undef>, i32 %s, i32 1
   ret <2 x i32> %v
@@ -277,7 +267,6 @@ define void @v2f32st(ptr %p, float %s) nounwind {
 ; CHECK-LABEL: v2f32st:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.2s, #64, lsl #24
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v1.s[1], v0.s[0]
 ; CHECK-NEXT:    str d1, [x0]
 ; CHECK-NEXT:    ret
@@ -290,7 +279,6 @@ define void @v4f32st(ptr %p, float %s) nounwind {
 ; CHECK-LABEL: v4f32st:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.4s, #192, lsl #24
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v1.s[3], v0.s[0]
 ; CHECK-NEXT:    str q1, [x0]
 ; CHECK-NEXT:    ret
@@ -303,7 +291,6 @@ define void @v2f64st(ptr %p, double %s) nounwind {
 ; CHECK-LABEL: v2f64st:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov v1.2d, #2.00000000
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v1.d[1], v0.d[0]
 ; CHECK-NEXT:    str q1, [x0]
 ; CHECK-NEXT:    ret
@@ -320,7 +307,6 @@ define <32 x i8> @test_lanex_32xi8(<32 x i8> %a, i32 %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp q0, q1, [sp, #-32]!
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    and x8, x0, #0x1f
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    mov w10, #30 // =0x1e

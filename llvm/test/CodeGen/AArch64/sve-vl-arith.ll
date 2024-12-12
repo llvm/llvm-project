@@ -263,9 +263,7 @@ define i32 @incb_scalar_i32(i32 %a) {
 ;
 ; CHECK-LABEL: incb_scalar_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    addvl x0, x0, #3
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 
   %vscale = call i64 @llvm.vscale.i64()
@@ -284,9 +282,7 @@ define i32 @inch_scalar_i32(i32 %a) {
 ;
 ; CHECK-LABEL: inch_scalar_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    inch x0, all, mul #7
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 
   %vscale = call i64 @llvm.vscale.i64()
@@ -305,9 +301,7 @@ define i32 @incw_scalar_i32(i32 %a) {
 ;
 ; CHECK-LABEL: incw_scalar_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    incw x0, all, mul #7
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 
   %vscale = call i64 @llvm.vscale.i64()
@@ -326,9 +320,7 @@ define i32 @incd_scalar_i32(i32 %a) {
 ;
 ; CHECK-LABEL: incd_scalar_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    incd x0, all, mul #7
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 
   %vscale = call i64 @llvm.vscale.i64()
@@ -349,9 +341,7 @@ define i32 @decb_scalar_i32(i32 %a) {
 ;
 ; CHECK-LABEL: decb_scalar_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    addvl x0, x0, #-4
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 
   %vscale = call i64 @llvm.vscale.i64()
@@ -370,9 +360,7 @@ define i32 @dech_scalar_i32(i32 %a) {
 ;
 ; CHECK-LABEL: dech_scalar_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    dech x0
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 
   %vscale = call i64 @llvm.vscale.i64()
@@ -391,9 +379,7 @@ define i32 @decw_scalar_i32(i32 %a) {
 ;
 ; CHECK-LABEL: decw_scalar_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    decw x0
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 
   %vscale = call i64 @llvm.vscale.i64()
@@ -412,9 +398,7 @@ define i32 @decd_scalar_i32(i32 %a) {
 ;
 ; CHECK-LABEL: decd_scalar_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    decd x0
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
   %mul = mul i64 %vscale, 2

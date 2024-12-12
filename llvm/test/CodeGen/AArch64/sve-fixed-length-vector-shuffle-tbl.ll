@@ -24,7 +24,6 @@ define <8 x i8> @shuffle_index_indices_from_op1(ptr %a, ptr %b) {
 ; SVE2_128-NEXT:    ldr d0, [x0]
 ; SVE2_128-NEXT:    ldr q1, [x8, :lo12:.LCPI0_0]
 ; SVE2_128-NEXT:    tbl z0.b, { z0.b }, z1.b
-; SVE2_128-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_128-NEXT:    ret
 ;
 ; SVE2_128_NOMAX-LABEL: shuffle_index_indices_from_op1:
@@ -33,7 +32,6 @@ define <8 x i8> @shuffle_index_indices_from_op1(ptr %a, ptr %b) {
 ; SVE2_128_NOMAX-NEXT:    ldr d0, [x0]
 ; SVE2_128_NOMAX-NEXT:    ldr q1, [x8, :lo12:.LCPI0_0]
 ; SVE2_128_NOMAX-NEXT:    tbl z0.b, { z0.b }, z1.b
-; SVE2_128_NOMAX-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_128_NOMAX-NEXT:    ret
 ;
 ; SVE2_NOMIN_NOMAX-LABEL: shuffle_index_indices_from_op1:
@@ -42,7 +40,6 @@ define <8 x i8> @shuffle_index_indices_from_op1(ptr %a, ptr %b) {
 ; SVE2_NOMIN_NOMAX-NEXT:    ldr d0, [x0]
 ; SVE2_NOMIN_NOMAX-NEXT:    ldr q1, [x8, :lo12:.LCPI0_0]
 ; SVE2_NOMIN_NOMAX-NEXT:    tbl z0.b, { z0.b }, z1.b
-; SVE2_NOMIN_NOMAX-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_NOMIN_NOMAX-NEXT:    ret
 ;
 ; SVE2_MIN_256_NOMAX-LABEL: shuffle_index_indices_from_op1:
@@ -53,7 +50,6 @@ define <8 x i8> @shuffle_index_indices_from_op1(ptr %a, ptr %b) {
 ; SVE2_MIN_256_NOMAX-NEXT:    ldr d1, [x0]
 ; SVE2_MIN_256_NOMAX-NEXT:    ld1b { z0.b }, p0/z, [x8]
 ; SVE2_MIN_256_NOMAX-NEXT:    tbl z0.b, { z1.b }, z0.b
-; SVE2_MIN_256_NOMAX-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_MIN_256_NOMAX-NEXT:    ret
   %op1 = load <8 x i8>, ptr %a
   %op2 = load <8 x i8>, ptr %b
@@ -79,7 +75,6 @@ define <8 x i8> @shuffle_index_indices_from_op2(ptr %a, ptr %b) {
 ; SVE2_128-NEXT:    ldr d0, [x1]
 ; SVE2_128-NEXT:    ldr q1, [x8, :lo12:.LCPI1_0]
 ; SVE2_128-NEXT:    tbl z0.b, { z0.b }, z1.b
-; SVE2_128-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_128-NEXT:    ret
 ;
 ; SVE2_128_NOMAX-LABEL: shuffle_index_indices_from_op2:
@@ -88,7 +83,6 @@ define <8 x i8> @shuffle_index_indices_from_op2(ptr %a, ptr %b) {
 ; SVE2_128_NOMAX-NEXT:    ldr d0, [x1]
 ; SVE2_128_NOMAX-NEXT:    ldr q1, [x8, :lo12:.LCPI1_0]
 ; SVE2_128_NOMAX-NEXT:    tbl z0.b, { z0.b }, z1.b
-; SVE2_128_NOMAX-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_128_NOMAX-NEXT:    ret
 ;
 ; SVE2_NOMIN_NOMAX-LABEL: shuffle_index_indices_from_op2:
@@ -97,7 +91,6 @@ define <8 x i8> @shuffle_index_indices_from_op2(ptr %a, ptr %b) {
 ; SVE2_NOMIN_NOMAX-NEXT:    ldr d0, [x1]
 ; SVE2_NOMIN_NOMAX-NEXT:    ldr q1, [x8, :lo12:.LCPI1_0]
 ; SVE2_NOMIN_NOMAX-NEXT:    tbl z0.b, { z0.b }, z1.b
-; SVE2_NOMIN_NOMAX-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_NOMIN_NOMAX-NEXT:    ret
 ;
 ; SVE2_MIN_256_NOMAX-LABEL: shuffle_index_indices_from_op2:
@@ -108,7 +101,6 @@ define <8 x i8> @shuffle_index_indices_from_op2(ptr %a, ptr %b) {
 ; SVE2_MIN_256_NOMAX-NEXT:    ldr d1, [x1]
 ; SVE2_MIN_256_NOMAX-NEXT:    ld1b { z0.b }, p0/z, [x8]
 ; SVE2_MIN_256_NOMAX-NEXT:    tbl z0.b, { z1.b }, z0.b
-; SVE2_MIN_256_NOMAX-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_MIN_256_NOMAX-NEXT:    ret
   %op1 = load <8 x i8>, ptr %a
   %op2 = load <8 x i8>, ptr %b
@@ -135,7 +127,6 @@ define <8 x i8> @shuffle_index_indices_from_both_ops(ptr %a, ptr %b) {
 ; SVE2_128-NEXT:    ldr d1, [x1]
 ; SVE2_128-NEXT:    ldr q2, [x8, :lo12:.LCPI2_0]
 ; SVE2_128-NEXT:    tbl z0.b, { z0.b, z1.b }, z2.b
-; SVE2_128-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_128-NEXT:    ret
 ;
 ; SVE2_128_NOMAX-LABEL: shuffle_index_indices_from_both_ops:
@@ -156,7 +147,6 @@ define <8 x i8> @shuffle_index_indices_from_both_ops(ptr %a, ptr %b) {
 ; SVE2_128_NOMAX-NEXT:    zip1 z1.h, z1.h, z2.h
 ; SVE2_128_NOMAX-NEXT:    zip1 z0.h, z0.h, z3.h
 ; SVE2_128_NOMAX-NEXT:    zip1 z0.s, z1.s, z0.s
-; SVE2_128_NOMAX-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_128_NOMAX-NEXT:    ret
 ;
 ; SVE2_NOMIN_NOMAX-LABEL: shuffle_index_indices_from_both_ops:
@@ -177,7 +167,6 @@ define <8 x i8> @shuffle_index_indices_from_both_ops(ptr %a, ptr %b) {
 ; SVE2_NOMIN_NOMAX-NEXT:    zip1 z1.h, z1.h, z2.h
 ; SVE2_NOMIN_NOMAX-NEXT:    zip1 z0.h, z0.h, z3.h
 ; SVE2_NOMIN_NOMAX-NEXT:    zip1 z0.s, z1.s, z0.s
-; SVE2_NOMIN_NOMAX-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_NOMIN_NOMAX-NEXT:    ret
 ;
 ; SVE2_MIN_256_NOMAX-LABEL: shuffle_index_indices_from_both_ops:
@@ -198,7 +187,6 @@ define <8 x i8> @shuffle_index_indices_from_both_ops(ptr %a, ptr %b) {
 ; SVE2_MIN_256_NOMAX-NEXT:    zip1 z1.h, z1.h, z2.h
 ; SVE2_MIN_256_NOMAX-NEXT:    zip1 z0.h, z0.h, z3.h
 ; SVE2_MIN_256_NOMAX-NEXT:    zip1 z0.s, z1.s, z0.s
-; SVE2_MIN_256_NOMAX-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_MIN_256_NOMAX-NEXT:    ret
   %op1 = load <8 x i8>, ptr %a
   %op2 = load <8 x i8>, ptr %b
@@ -225,7 +213,6 @@ define <8 x i8> @shuffle_index_poison_value(ptr %a, ptr %b) {
 ; SVE2_128-NEXT:    ldr d1, [x1]
 ; SVE2_128-NEXT:    ldr q2, [x8, :lo12:.LCPI3_0]
 ; SVE2_128-NEXT:    tbl z0.b, { z0.b, z1.b }, z2.b
-; SVE2_128-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_128-NEXT:    ret
 ;
 ; SVE2_128_NOMAX-LABEL: shuffle_index_poison_value:
@@ -244,7 +231,6 @@ define <8 x i8> @shuffle_index_poison_value(ptr %a, ptr %b) {
 ; SVE2_128_NOMAX-NEXT:    zip1 z1.h, z1.h, z2.h
 ; SVE2_128_NOMAX-NEXT:    zip1 z0.h, z3.h, z0.h
 ; SVE2_128_NOMAX-NEXT:    zip1 z0.s, z1.s, z0.s
-; SVE2_128_NOMAX-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_128_NOMAX-NEXT:    ret
 ;
 ; SVE2_NOMIN_NOMAX-LABEL: shuffle_index_poison_value:
@@ -263,7 +249,6 @@ define <8 x i8> @shuffle_index_poison_value(ptr %a, ptr %b) {
 ; SVE2_NOMIN_NOMAX-NEXT:    zip1 z1.h, z1.h, z2.h
 ; SVE2_NOMIN_NOMAX-NEXT:    zip1 z0.h, z3.h, z0.h
 ; SVE2_NOMIN_NOMAX-NEXT:    zip1 z0.s, z1.s, z0.s
-; SVE2_NOMIN_NOMAX-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_NOMIN_NOMAX-NEXT:    ret
 ;
 ; SVE2_MIN_256_NOMAX-LABEL: shuffle_index_poison_value:
@@ -282,7 +267,6 @@ define <8 x i8> @shuffle_index_poison_value(ptr %a, ptr %b) {
 ; SVE2_MIN_256_NOMAX-NEXT:    zip1 z1.h, z1.h, z2.h
 ; SVE2_MIN_256_NOMAX-NEXT:    zip1 z0.h, z3.h, z0.h
 ; SVE2_MIN_256_NOMAX-NEXT:    zip1 z0.s, z1.s, z0.s
-; SVE2_MIN_256_NOMAX-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_MIN_256_NOMAX-NEXT:    ret
   %op1 = load <8 x i8>, ptr %a
   %op2 = load <8 x i8>, ptr %b
@@ -297,7 +281,6 @@ define <8 x i8> @shuffle_op1_poison(ptr %a, ptr %b) {
 ; SVE2_128-NEXT:    ldr d0, [x1]
 ; SVE2_128-NEXT:    ldr q1, [x8, :lo12:.LCPI4_0]
 ; SVE2_128-NEXT:    tbl z0.b, { z0.b }, z1.b
-; SVE2_128-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_128-NEXT:    ret
 ;
 ; SVE2_128_NOMAX-LABEL: shuffle_op1_poison:
@@ -306,7 +289,6 @@ define <8 x i8> @shuffle_op1_poison(ptr %a, ptr %b) {
 ; SVE2_128_NOMAX-NEXT:    ldr d0, [x1]
 ; SVE2_128_NOMAX-NEXT:    ldr q1, [x8, :lo12:.LCPI4_0]
 ; SVE2_128_NOMAX-NEXT:    tbl z0.b, { z0.b }, z1.b
-; SVE2_128_NOMAX-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_128_NOMAX-NEXT:    ret
 ;
 ; SVE2_NOMIN_NOMAX-LABEL: shuffle_op1_poison:
@@ -315,7 +297,6 @@ define <8 x i8> @shuffle_op1_poison(ptr %a, ptr %b) {
 ; SVE2_NOMIN_NOMAX-NEXT:    ldr d0, [x1]
 ; SVE2_NOMIN_NOMAX-NEXT:    ldr q1, [x8, :lo12:.LCPI4_0]
 ; SVE2_NOMIN_NOMAX-NEXT:    tbl z0.b, { z0.b }, z1.b
-; SVE2_NOMIN_NOMAX-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_NOMIN_NOMAX-NEXT:    ret
 ;
 ; SVE2_MIN_256_NOMAX-LABEL: shuffle_op1_poison:
@@ -326,7 +307,6 @@ define <8 x i8> @shuffle_op1_poison(ptr %a, ptr %b) {
 ; SVE2_MIN_256_NOMAX-NEXT:    ldr d1, [x1]
 ; SVE2_MIN_256_NOMAX-NEXT:    ld1b { z0.b }, p0/z, [x8]
 ; SVE2_MIN_256_NOMAX-NEXT:    tbl z0.b, { z1.b }, z0.b
-; SVE2_MIN_256_NOMAX-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_MIN_256_NOMAX-NEXT:    ret
   %op2 = load <8 x i8>, ptr %b
   %1 = shufflevector <8 x i8> poison, <8 x i8> %op2, <8 x i32> <i32 1, i32 9, i32 10, i32 11, i32 12, i32 12, i32 14, i32 15>
@@ -354,7 +334,6 @@ define <8 x i8> @negative_test_shuffle_index_size_op_both_maxhw(ptr %a, ptr %b) 
 ; CHECK-NEXT:    zip1 z1.h, z1.h, z2.h
 ; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
 ; CHECK-NEXT:    zip1 z0.s, z1.s, z0.s
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i8>, ptr %a
   %op2 = load <8 x i8>, ptr %b
@@ -382,7 +361,6 @@ define <8 x i8> @shuffle_index_size_op1_maxhw(ptr %a, ptr %b) "target-features"=
 ; CHECK-NEXT:    ldr d1, [x0]
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x8]
 ; CHECK-NEXT:    tbl z0.b, { z1.b }, z0.b
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i8>, ptr %a
   %op2 = load <8 x i8>, ptr %b
@@ -480,7 +458,6 @@ define <8 x i16> @shuffle_index_indices_from_both_ops_i16(ptr %a, ptr %b) {
 ; SVE2_128-NEXT:    ldr q1, [x1]
 ; SVE2_128-NEXT:    ldr q2, [x8, :lo12:.LCPI7_0]
 ; SVE2_128-NEXT:    tbl z0.h, { z0.h, z1.h }, z2.h
-; SVE2_128-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE2_128-NEXT:    ret
 ;
 ; SVE2_128_NOMAX-LABEL: shuffle_index_indices_from_both_ops_i16:
@@ -496,7 +473,6 @@ define <8 x i16> @shuffle_index_indices_from_both_ops_i16(ptr %a, ptr %b) {
 ; SVE2_128_NOMAX-NEXT:    ldr q1, [x0]
 ; SVE2_128_NOMAX-NEXT:    ldr q2, [x1]
 ; SVE2_128_NOMAX-NEXT:    tbl z0.h, { z1.h, z2.h }, z0.h
-; SVE2_128_NOMAX-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE2_128_NOMAX-NEXT:    ret
 ;
 ; SVE2_NOMIN_NOMAX-LABEL: shuffle_index_indices_from_both_ops_i16:
@@ -512,7 +488,6 @@ define <8 x i16> @shuffle_index_indices_from_both_ops_i16(ptr %a, ptr %b) {
 ; SVE2_NOMIN_NOMAX-NEXT:    ldr q1, [x0]
 ; SVE2_NOMIN_NOMAX-NEXT:    ldr q2, [x1]
 ; SVE2_NOMIN_NOMAX-NEXT:    tbl z0.h, { z1.h, z2.h }, z0.h
-; SVE2_NOMIN_NOMAX-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE2_NOMIN_NOMAX-NEXT:    ret
 ;
 ; SVE2_MIN_256_NOMAX-LABEL: shuffle_index_indices_from_both_ops_i16:
@@ -530,7 +505,6 @@ define <8 x i16> @shuffle_index_indices_from_both_ops_i16(ptr %a, ptr %b) {
 ; SVE2_MIN_256_NOMAX-NEXT:    ldr q1, [x0]
 ; SVE2_MIN_256_NOMAX-NEXT:    ldr q2, [x1]
 ; SVE2_MIN_256_NOMAX-NEXT:    tbl z0.h, { z1.h, z2.h }, z0.h
-; SVE2_MIN_256_NOMAX-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE2_MIN_256_NOMAX-NEXT:    ret
   %op1 = load <8 x i16>, ptr %a
   %op2 = load <8 x i16>, ptr %b
