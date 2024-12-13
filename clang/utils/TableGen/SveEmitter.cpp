@@ -1636,12 +1636,8 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "  return x0 & (1ULL << 63);\n";
   OS << "}\n\n";
 
-  OS << "__ai bool __arm_in_streaming_mode(void) __arm_streaming_compatible "
-        "{\n";
-  OS << "  uint64_t x0, x1;\n";
-  OS << "  __builtin_arm_get_sme_state(&x0, &x1);\n";
-  OS << "  return x0 & 1;\n";
-  OS << "}\n\n";
+  OS << "__ai __attribute__((__clang_arm_builtin_alias(__builtin_sme_in_streaming_mode)))";
+  OS << " bool __arm_in_streaming_mode(void) __arm_streaming_compatible;\n\n";
 
   OS << "void *__arm_sc_memcpy(void *dest, const void *src, size_t n) __arm_streaming_compatible;\n";
   OS << "void *__arm_sc_memmove(void *dest, const void *src, size_t n) __arm_streaming_compatible;\n";

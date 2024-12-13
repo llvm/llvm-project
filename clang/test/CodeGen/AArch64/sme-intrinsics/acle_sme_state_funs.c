@@ -8,19 +8,13 @@
 
 // CHECK-LABEL: @test_in_streaming_mode(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call aarch64_sme_preservemost_from_x2 { i64, i64 } @__arm_sme_state() #[[ATTR3:[0-9]+]]
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i64, i64 } [[TMP0]], 0
-// CHECK-NEXT:    [[AND_I:%.*]] = and i64 [[TMP1]], 1
-// CHECK-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i64 [[AND_I]], 0
-// CHECK-NEXT:    ret i1 [[TOBOOL_I]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.aarch64.sme.in.streaming.mode()
+// CHECK-NEXT:    ret i1 [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z22test_in_streaming_modev(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call aarch64_sme_preservemost_from_x2 { i64, i64 } @__arm_sme_state() #[[ATTR3:[0-9]+]]
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i64, i64 } [[TMP0]], 0
-// CPP-CHECK-NEXT:    [[AND_I:%.*]] = and i64 [[TMP1]], 1
-// CPP-CHECK-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i64 [[AND_I]], 0
-// CPP-CHECK-NEXT:    ret i1 [[TOBOOL_I]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.aarch64.sme.in.streaming.mode()
+// CPP-CHECK-NEXT:    ret i1 [[TMP0]]
 //
 bool test_in_streaming_mode(void) __arm_streaming_compatible {
   return __arm_in_streaming_mode();
@@ -28,12 +22,12 @@ bool test_in_streaming_mode(void) __arm_streaming_compatible {
 
 // CHECK-LABEL: @test_za_disable(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @__arm_za_disable() #[[ATTR3]]
+// CHECK-NEXT:    tail call void @__arm_za_disable() #[[ATTR5:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z15test_za_disablev(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @__arm_za_disable() #[[ATTR3]]
+// CPP-CHECK-NEXT:    tail call void @__arm_za_disable() #[[ATTR5:[0-9]+]]
 // CPP-CHECK-NEXT:    ret void
 //
 void test_za_disable(void) __arm_streaming_compatible {
@@ -42,14 +36,14 @@ void test_za_disable(void) __arm_streaming_compatible {
 
 // CHECK-LABEL: @test_has_sme(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call aarch64_sme_preservemost_from_x2 { i64, i64 } @__arm_sme_state() #[[ATTR3]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call aarch64_sme_preservemost_from_x2 { i64, i64 } @__arm_sme_state() #[[ATTR5]]
 // CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i64, i64 } [[TMP0]], 0
 // CHECK-NEXT:    [[TOBOOL_I:%.*]] = icmp slt i64 [[TMP1]], 0
 // CHECK-NEXT:    ret i1 [[TOBOOL_I]]
 //
 // CPP-CHECK-LABEL: @_Z12test_has_smev(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call aarch64_sme_preservemost_from_x2 { i64, i64 } @__arm_sme_state() #[[ATTR3]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call aarch64_sme_preservemost_from_x2 { i64, i64 } @__arm_sme_state() #[[ATTR5]]
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i64, i64 } [[TMP0]], 0
 // CPP-CHECK-NEXT:    [[TOBOOL_I:%.*]] = icmp slt i64 [[TMP1]], 0
 // CPP-CHECK-NEXT:    ret i1 [[TOBOOL_I]]
@@ -72,12 +66,12 @@ void test_svundef_za(void) __arm_streaming_compatible __arm_out("za") {
 
 // CHECK-LABEL: @test_sc_memcpy(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @__arm_sc_memcpy(ptr noundef [[DEST:%.*]], ptr noundef [[SRC:%.*]], i64 noundef [[N:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @__arm_sc_memcpy(ptr noundef [[DEST:%.*]], ptr noundef [[SRC:%.*]], i64 noundef [[N:%.*]]) #[[ATTR5]]
 // CHECK-NEXT:    ret ptr [[CALL]]
 //
 // CPP-CHECK-LABEL: @_Z14test_sc_memcpyPvPKvm(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @__arm_sc_memcpy(ptr noundef [[DEST:%.*]], ptr noundef [[SRC:%.*]], i64 noundef [[N:%.*]]) #[[ATTR3]]
+// CPP-CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @__arm_sc_memcpy(ptr noundef [[DEST:%.*]], ptr noundef [[SRC:%.*]], i64 noundef [[N:%.*]]) #[[ATTR5]]
 // CPP-CHECK-NEXT:    ret ptr [[CALL]]
 //
 void *test_sc_memcpy(void *dest, const void *src, size_t n) __arm_streaming_compatible {
@@ -86,12 +80,12 @@ void *test_sc_memcpy(void *dest, const void *src, size_t n) __arm_streaming_comp
 
 // CHECK-LABEL: @test_sc_memmove(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @__arm_sc_memmove(ptr noundef [[DEST:%.*]], ptr noundef [[SRC:%.*]], i64 noundef [[N:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @__arm_sc_memmove(ptr noundef [[DEST:%.*]], ptr noundef [[SRC:%.*]], i64 noundef [[N:%.*]]) #[[ATTR5]]
 // CHECK-NEXT:    ret ptr [[CALL]]
 //
 // CPP-CHECK-LABEL: @_Z15test_sc_memmovePvPKvm(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @__arm_sc_memmove(ptr noundef [[DEST:%.*]], ptr noundef [[SRC:%.*]], i64 noundef [[N:%.*]]) #[[ATTR3]]
+// CPP-CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @__arm_sc_memmove(ptr noundef [[DEST:%.*]], ptr noundef [[SRC:%.*]], i64 noundef [[N:%.*]]) #[[ATTR5]]
 // CPP-CHECK-NEXT:    ret ptr [[CALL]]
 //
 void *test_sc_memmove(void *dest, const void *src, size_t n) __arm_streaming_compatible {
@@ -100,12 +94,12 @@ void *test_sc_memmove(void *dest, const void *src, size_t n) __arm_streaming_com
 
 // CHECK-LABEL: @test_sc_memset(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @__arm_sc_memset(ptr noundef [[S:%.*]], i32 noundef [[C:%.*]], i64 noundef [[N:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @__arm_sc_memset(ptr noundef [[S:%.*]], i32 noundef [[C:%.*]], i64 noundef [[N:%.*]]) #[[ATTR5]]
 // CHECK-NEXT:    ret ptr [[CALL]]
 //
 // CPP-CHECK-LABEL: @_Z14test_sc_memsetPvim(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @__arm_sc_memset(ptr noundef [[S:%.*]], i32 noundef [[C:%.*]], i64 noundef [[N:%.*]]) #[[ATTR3]]
+// CPP-CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @__arm_sc_memset(ptr noundef [[S:%.*]], i32 noundef [[C:%.*]], i64 noundef [[N:%.*]]) #[[ATTR5]]
 // CPP-CHECK-NEXT:    ret ptr [[CALL]]
 //
 void *test_sc_memset(void *s, int c, size_t n) __arm_streaming_compatible {
@@ -114,12 +108,12 @@ void *test_sc_memset(void *s, int c, size_t n) __arm_streaming_compatible {
 
 // CHECK-LABEL: @test_sc_memchr(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @__arm_sc_memchr(ptr noundef [[S:%.*]], i32 noundef [[C:%.*]], i64 noundef [[N:%.*]]) #[[ATTR3]]
+// CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @__arm_sc_memchr(ptr noundef [[S:%.*]], i32 noundef [[C:%.*]], i64 noundef [[N:%.*]]) #[[ATTR5]]
 // CHECK-NEXT:    ret ptr [[CALL]]
 //
 // CPP-CHECK-LABEL: @_Z14test_sc_memchrPvim(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @__arm_sc_memchr(ptr noundef [[S:%.*]], i32 noundef [[C:%.*]], i64 noundef [[N:%.*]]) #[[ATTR3]]
+// CPP-CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @__arm_sc_memchr(ptr noundef [[S:%.*]], i32 noundef [[C:%.*]], i64 noundef [[N:%.*]]) #[[ATTR5]]
 // CPP-CHECK-NEXT:    ret ptr [[CALL]]
 //
 void *test_sc_memchr(void *s, int c, size_t n) __arm_streaming_compatible {
