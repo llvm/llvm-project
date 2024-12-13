@@ -93,4 +93,3 @@ void function<bool, 0>(bool x) {}
 // MD: *void function(_Bool x)*
 // MD: *Defined at {{.*}}templates.cpp#[[# @LINE - 27]]*
 
-
