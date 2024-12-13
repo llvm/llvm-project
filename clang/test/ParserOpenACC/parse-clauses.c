@@ -16,11 +16,8 @@ void func() {
 
 #pragma acc exit data wait finalize
 
-  // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented, clause ignored}}
 #pragma acc host_data if_present
 
-  // expected-warning@+2{{OpenACC clause 'if_present' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented, clause ignored}}
 #pragma acc host_data if_present, if_present
 
   // expected-error@+4{{OpenACC clause 'independent' on 'loop' construct conflicts with previous data dependence clause}}

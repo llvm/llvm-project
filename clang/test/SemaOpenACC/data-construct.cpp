@@ -96,7 +96,6 @@ void AtLeastOneOf() {
 
 #pragma acc host_data if(Var)
   ;
-  // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented}}
 #pragma acc host_data if_present
   ;
 #pragma acc host_data

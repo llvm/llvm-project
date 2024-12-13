@@ -11987,6 +11987,14 @@ void OpenACCClauseTransform<Derived>::VisitFinalizeClause(
 }
 
 template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitIfPresentClause(
+    const OpenACCIfPresentClause &C) {
+  NewClause = OpenACCIfPresentClause::Create(Self.getSema().getASTContext(),
+                                             ParsedClause.getBeginLoc(),
+                                             ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitReductionClause(
     const OpenACCReductionClause &C) {
   SmallVector<Expr *> TransformedVars = VisitVarList(C.getVarList());

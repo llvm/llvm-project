@@ -40,7 +40,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'finalize' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop auto finalize
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented}}
+  // expected-error@+1{{OpenACC 'if_present' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop auto if_present
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop auto worker
@@ -157,7 +157,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'finalize' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop finalize auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented}}
+  // expected-error@+1{{OpenACC 'if_present' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop if_present auto
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop worker auto
@@ -275,7 +275,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'finalize' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop independent finalize
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented}}
+  // expected-error@+1{{OpenACC 'if_present' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop independent if_present
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop independent worker
@@ -392,7 +392,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'finalize' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop finalize independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented}}
+  // expected-error@+1{{OpenACC 'if_present' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop if_present independent
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop worker independent
@@ -522,7 +522,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'finalize' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop seq finalize
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented}}
+  // expected-error@+1{{OpenACC 'if_present' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop seq if_present
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
@@ -645,7 +645,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'finalize' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop finalize seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented}}
+  // expected-error@+1{{OpenACC 'if_present' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop if_present seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
