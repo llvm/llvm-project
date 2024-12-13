@@ -4532,10 +4532,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     EmitArgCheck(TCK_Store, Dest, E->getArg(0), 0);
     EmitArgCheck(TCK_Load, Src, E->getArg(1), 1);
     if (BuiltinID == Builtin::BImemcpy || BuiltinID == Builtin::BImempcpy) {
-      Builder.CreateAssumption(
-          Builder.CreateIsNotNull(Dest.emitRawPointer(*this)));
-      Builder.CreateAssumption(
-          Builder.CreateIsNotNull(Src.emitRawPointer(*this)));
+      Value *NullSize = Builder.CreateIsNull(SizeVal);
+      Builder.CreateAssumption(Builder.CreateOr(
+          NullSize, Builder.CreateIsNotNull(Dest.emitRawPointer(*this))));
+      Builder.CreateAssumption(Builder.CreateOr(
+          NullSize, Builder.CreateIsNotNull(Src.emitRawPointer(*this))));
     }
     Builder.CreateMemCpy(Dest, Src, SizeVal, false);
     if (BuiltinID == Builtin::BImempcpy ||
