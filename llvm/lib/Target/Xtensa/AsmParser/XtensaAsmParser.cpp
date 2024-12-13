@@ -490,7 +490,7 @@ bool XtensaAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                  "expected immediate in range [-1, 15] except 0");
   case Match_InvalidImm32n_95:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
-                 "expected immediate in range [-32, 95] except 0");
+                 "expected immediate in range [-32, 95]");
   case Match_InvalidShimm1_31:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected immediate in range [1, 31]");

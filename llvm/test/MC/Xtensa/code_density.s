@@ -14,6 +14,11 @@ add.n a2, a3, a4
 # CHECK: encoding: [0x3b,0x23]
 addi.n a2, a3, 3
 
+# Instruction format RRRN
+# CHECK-INST: addi.n a2, a3, -1
+# CHECK: encoding: [0x0b,0x23]
+addi.n a2, a3, -1
+
 # Instruction format RI6
 # CHECK-INST:  beqz.n  a3, LBL1
 # CHECK: encoding: [0x8c'A',0x03'A']
