@@ -516,7 +516,7 @@ static bool isCommutative(Instruction *I) {
                 BO->uses(),
                 [](const Use &U) {
                   // Commutative, if icmp eq/ne sub, 0
-                  ICmpInst::Predicate Pred;
+                  CmpPredicate Pred;
                   if (match(U.getUser(),
                             m_ICmp(Pred, m_Specific(U.get()), m_Zero())) &&
                       (Pred == ICmpInst::ICMP_EQ || Pred == ICmpInst::ICMP_NE))
@@ -11406,7 +11406,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   case Instruction::FCmp:
   case Instruction::ICmp:
   case Instruction::Select: {
-    CmpInst::Predicate VecPred, SwappedVecPred;
+    CmpPredicate VecPred, SwappedVecPred;
     auto MatchCmp = m_Cmp(VecPred, m_Value(), m_Value());
     if (match(VL0, m_Select(MatchCmp, m_Value(), m_Value())) ||
         match(VL0, MatchCmp))
@@ -11420,13 +11420,15 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         return InstructionCost(TTI::TCC_Free);
 
       auto *VI = cast<Instruction>(UniqueValues[Idx]);
-      CmpInst::Predicate CurrentPred = ScalarTy->isFloatingPointTy()
-                                           ? CmpInst::BAD_FCMP_PREDICATE
-                                           : CmpInst::BAD_ICMP_PREDICATE;
+      CmpPredicate CurrentPred = ScalarTy->isFloatingPointTy()
+                                     ? CmpInst::BAD_FCMP_PREDICATE
+                                     : CmpInst::BAD_ICMP_PREDICATE;
       auto MatchCmp = m_Cmp(CurrentPred, m_Value(), m_Value());
+      // FIXME: Use CmpPredicate::getMatching here.
       if ((!match(VI, m_Select(MatchCmp, m_Value(), m_Value())) &&
            !match(VI, MatchCmp)) ||
-          (CurrentPred != VecPred && CurrentPred != SwappedVecPred))
+          (CurrentPred != static_cast<CmpInst::Predicate>(VecPred) &&
+           CurrentPred != static_cast<CmpInst::Predicate>(SwappedVecPred)))
         VecPred = SwappedVecPred = ScalarTy->isFloatingPointTy()
                                        ? CmpInst::BAD_FCMP_PREDICATE
                                        : CmpInst::BAD_ICMP_PREDICATE;
@@ -19319,7 +19321,7 @@ public:
       // %3 = extractelement <2 x i32> %a, i32 0
       // %4 = extractelement <2 x i32> %a, i32 1
       // %select = select i1 %cond, i32 %3, i32 %4
-      CmpInst::Predicate Pred;
+      CmpPredicate Pred;
       Instruction *L1;
       Instruction *L2;
 
