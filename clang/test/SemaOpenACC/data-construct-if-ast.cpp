@@ -52,6 +52,8 @@ void TemplFunc() {
 #pragma acc enter data copyin(Global) if(typename T::IntTy{})
   ;
   // CHECK-NEXT: OpenACCEnterDataConstruct{{.*}}enter data
+  // CHECK-NEXT: copyin clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Global' 'int'
   // CHECK-NEXT: if clause
   // CHECK-NEXT: CXXUnresolvedConstructExpr{{.*}} 'typename T::IntTy' 'typename T::IntTy'
   // CHECK-NEXT: InitListExpr{{.*}} 'void'
@@ -93,6 +95,8 @@ void TemplFunc() {
   // CHECK-NEXT: NullStmt
 
   // CHECK-NEXT: OpenACCEnterDataConstruct{{.*}}enter data
+  // CHECK-NEXT: copyin clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Global' 'int'
   // CHECK-NEXT: if clause
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'bool' <IntegralToBoolean>
   // CHECK-NEXT: CXXFunctionalCastExpr{{.*}}'typename InstTy::IntTy':'int' functional cast to typename struct InstTy::IntTy <NoOp>
