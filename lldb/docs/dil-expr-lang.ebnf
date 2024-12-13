@@ -1,0 +1,165 @@
+(* LLDB Debug Expressions, a subset of C++ *)
+(* Insired by https://www.nongnu.org/hcb *)
+
+expression = assignment_expression ;
+
+assignment_expression = conditional_expression
+                        logical_or_expression assignment_operator assignment_expression ;
+
+assignment_operator = "="
+                    | "*="
+                    | "/="
+                    | "%="
+                    | "+="
+                    | "-="
+                    | ">>="
+                    | "<<="
+                    | "&="
+                    | "^="
+                    | "|=" ;
+
+conditional_expression = logical_or_expression
+                       | logical_or_expression "?" expression ":" assignment_expression ;
+
+logical_or_expression = logical_and_expression {"||" logical_and_expression} ;
+
+logical_and_expression = inclusive_or_expression {"&&" inclusive_or_expression} ;
+
+inclusive_or_expression = exclusive_or_expression {"|" exclusive_or_expression} ;
+
+exclusive_or_expression = and_expression {"^" and_expression} ;
+
+and_expression = equality_expression {"&" equality_expression} ;
+
+equality_expression = relational_expression {"==" relational_expression}
+                    | relational_expression {"!=" relational_expression} ;
+
+relational_expression = shift_expression {"<" shift_expression}
+                      | shift_expression {">" shift_expression}
+                      | shift_expression {"<=" shift_expression}
+                      | shift_expression {">=" shift_expression} ;
+
+shift_expression = additive_expression {"<<" additive_expression}
+                 | additive_expression {">>" additive_expression} ;
+
+additive_expression = multiplicative_expression {"+" multiplicative_expression}
+                    | multiplicative_expression {"-" multiplicative_expression} ;
+
+multiplicative_expression = cast_expression {"*" cast_expression}
+                          | cast_expression {"/" cast_expression}
+                          | cast_expression {"%" cast_expression} ;
+
+cast_expression = unary_expression
+                | "(" type_id ")" cast_expression ;
+
+unary_expression = postfix_expression
+                 | "++" cast_expression
+                 | "--" cast_expression
+                 | unary_operator cast_expression
+                 | "sizeof" unary_expression
+                 | "sizeof" "(" type_id ")" ;
+
+unary_operator = "*" | "&" | "+" | "-" | "!" | "~" ;
+
+postfix_expression = primary_expression
+                   | postfix_expression "[" expression "]"
+                   | postfix_expression "." id_expression
+                   | postfix_expression "->" id_expression
+                   | postfix_expression "++"
+                   | postfix_expression "--"
+                   | static_cast "<" type_id ">" "(" expression ")" ;
+                   | dynamic_cast "<" type_id ">" "(" expression ")" ;
+                   | reinterpret_cast "<" type_id ">" "(" expression ")" ;
+
+primary_expression = numeric_literal
+                   | boolean_literal
+                   | pointer_literal
+                   | id_expression
+                   | "this"
+                   | "(" expression ")"
+                   | builtin_func ;
+
+type_id = type_specifier_seq [abstract_declarator] ;
+
+type_specifier_seq = type_specifier [type_specifier_seq] ;
+
+type_specifier = simple_type_specifier
+               | cv_qualifier ;
+
+simple_type_specifier = ["::"] [nested_name_specifier] type_name
+                      | "char"
+                      | "char16_t"
+                      | "char32_t"
+                      | "wchar_t"
+                      | "bool"
+                      | "short"
+                      | "int"
+                      | "long"
+                      | "signed"
+                      | "unsigned"
+                      | "float"
+                      | "double"
+                      | "void" ;
+
+nested_name_specifier = type_name "::"
+                      | namespace_name '::'
+                      | nested_name_specifier identifier "::"
+                      | nested_name_specifier simple_template_id "::"
+
+type_name = class_name
+          | enum_name
+          | typedef_name
+          | simple_template_id ;
+
+class_name = identifier ;
+
+enum_name = identifier ;
+
+typedef_name = identifier ;
+
+simple_template_id = template_name "<" [template_argument_list] ">" ;
+
+template_name = identifier ;
+
+template_argument_list = template_argument
+                       | template_argument_list "," template_argument ;
+
+template_argument = type_id
+                  | numeric_literal
+                  | id_expression ;
+
+namespace_name = identifier ;
+
+cv_qualifier = "const" | "volatile" ;
+
+cv_qualifier_seq = cv_qualifier [cv_qualifier_seq] ;
+
+abstract_declarator = ptr_operator [abstract_declarator] ;
+
+ptr_operator = "*" [cv_qualifier_seq]
+             | "&" ;
+
+id_expression = unqualified_id
+              | qualified_id ;
+
+unqualified_id = identifier ;
+
+qualified_id = ["::"] [nested_name_specifier] unqualified_id
+             | ["::"] identifier ;
+
+identifier = ? clang::tok::identifier ? ;
+
+numeric_literal = ? clang::tok::numeric_constant ? ;
+
+boolean_literal = "true" | "false" ;
+
+pointer_literal = "nullptr" ;
+
+builtin_func = builtin_func_name "(" [builtin_func_argument_list] ")" ;
+
+builtin_func_name = "__log2" ;
+
+builtin_func_argument_list = builtin_func_argument
+                           | builtin_func_argument_list "," builtin_func_argument
+
+builtin_func_argument = expression ;

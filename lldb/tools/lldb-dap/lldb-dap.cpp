@@ -4958,6 +4958,13 @@ int main(int argc, char *argv[]) {
   llvm::ArrayRef<const char *> ArgsArr = llvm::ArrayRef(argv + 1, argc);
   llvm::opt::InputArgList input_args = T.ParseArgs(ArgsArr, MAI, MAC);
 
+  // CAROLINE START
+  //bool loop = true;
+  bool loop = false;
+  while (loop) {
+    usleep(1);
+  }
+  // CAROLINE END
   if (input_args.hasArg(OPT_help)) {
     printHelp(T, llvm::sys::path::filename(argv[0]));
     return EXIT_SUCCESS;
