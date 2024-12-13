@@ -26367,35 +26367,38 @@ performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   return NVCAST;
 }
 
+/// If the operand is a bitwise AND with a constant RHS, and the shift has a
+/// constant RHS and is the only use, we can pull it out of the shift, i.e.
+///
+///   (shl (and X, C1), C2) -> (and (shl X, C2), (shl C1, C2))
+///
+/// We prefer this canonical form to match existing isel patterns.
 static SDValue performSHLCombine(SDNode *N, SelectionDAG &DAG) {
-  SDValue Op0 = N->getOperand(0);
-  SDValue Op1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
   if (VT != MVT::i32 && VT != MVT::i64)
     return SDValue();
 
-  // If the operand is a bitwise AND with a constant RHS, and the shift is the
-  // only use, we can pull it out of the shift.
-  //
-  // (shl (and X, C1), C2) -> (and (shl X, C2), (shl C1, C2))
+  SDValue Op0 = N->getOperand(0);
   if (!Op0.hasOneUse() || Op0.getOpcode() != ISD::AND)
     return SDValue();
 
-  ConstantSDNode *C1 = dyn_cast<ConstantSDNode>(Op0.getOperand(1));
-  ConstantSDNode *C2 = dyn_cast<ConstantSDNode>(Op1);
-  if (!C1 || !C2)
+  SDValue C1 = Op0->getOperand(1);
+  SDValue C2 = N->getOperand(1);
+  if (!isa<ConstantSDNode>(C1) || !isa<ConstantSDNode>(C2))
     return SDValue();
 
   // Might be folded into shifted op, do not lower.
-  unsigned UseOpc = N->use_begin()->getOpcode();
-  if (N->hasOneUse() &&
-      (UseOpc == ISD::ADD || UseOpc == ISD::SUB || UseOpc == ISD::SETCC ||
-       UseOpc == AArch64ISD::ADDS || UseOpc == AArch64ISD::SUBS))
-    return SDValue();
+  if (N->hasOneUse()) {
+    unsigned UseOpc = N->use_begin()->getOpcode();
+    if (UseOpc == ISD::ADD || UseOpc == ISD::SUB || UseOpc == ISD::SETCC ||
+        UseOpc == AArch64ISD::ADDS || UseOpc == AArch64ISD::SUBS)
+      return SDValue();
+  }
 
   SDLoc DL(N);
-  SDValue NewRHS = DAG.getNode(ISD::SHL, DL, VT, Op0.getOperand(1), Op1);
-  SDValue NewShift = DAG.getNode(ISD::SHL, DL, VT, Op0->getOperand(0), Op1);
+  SDValue X = Op0->getOperand(0);
+  SDValue NewRHS = DAG.getNode(ISD::SHL, DL, VT, C1, C2);
+  SDValue NewShift = DAG.getNode(ISD::SHL, DL, VT, X, C2);
   return DAG.getNode(ISD::AND, DL, VT, NewShift, NewRHS);
 }
 
