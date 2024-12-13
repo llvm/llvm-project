@@ -24,7 +24,8 @@ jobs:
           fetch-depth: 2
       - name: Setup system deps
         run: |
-          DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y ccache python3 python3-pip file tzdata
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y ccache python3 python3-pip file tzdata
       - name: Build and Test
         run: |
           git config --global --add safe.directory '*'
