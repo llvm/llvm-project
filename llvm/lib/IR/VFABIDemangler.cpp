@@ -347,6 +347,11 @@ getScalableECFromSignature(const FunctionType *Signature, const VFISAKind ISA,
   // Also check the return type if not void.
   Type *RetTy = Signature->getReturnType();
   if (!RetTy->isVoidTy()) {
+    // If the return type is a struct, only allow unpacked struct literals.
+    StructType *StructTy = dyn_cast<StructType>(RetTy);
+    if (StructTy && !isUnpackedStructLiteral(StructTy))
+      return std::nullopt;
+
     for (Type *RetTy : getContainedTypes(RetTy)) {
       std::optional<ElementCount> ReturnEC = getElementCountForTy(ISA, RetTy);
       // If we have an unknown scalar element type we can't find a reasonable

@@ -13,13 +13,17 @@
 
 namespace llvm {
 
+inline bool isUnpackedStructLiteral(StructType *StructTy) {
+  return StructTy->isLiteral() && !StructTy->isPacked();
+}
+
 /// A helper for converting structs of scalar types to structs of vector types.
 /// Note: Only unpacked literal struct types are supported.
-Type *ToWideStructTy(StructType *StructTy, ElementCount EC);
+Type *toWideStructTy(StructType *StructTy, ElementCount EC);
 
 /// A helper for converting structs of vector types to structs of scalar types.
 /// Note: Only unpacked literal struct types are supported.
-Type *ToNarrowStructTy(StructType *StructTy);
+Type *toNarrowStructTy(StructType *StructTy);
 
 /// Returns true if `StructTy` is an unpacked literal struct where all elements
 /// are vectors of matching element count. This does not include empty structs.

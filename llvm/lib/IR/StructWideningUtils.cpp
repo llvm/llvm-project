@@ -12,17 +12,15 @@
 
 using namespace llvm;
 
-static bool isUnpackedStructLiteral(StructType *StructTy) {
-  return StructTy->isLiteral() && !StructTy->isPacked();
-}
-
 /// A helper for converting structs of scalar types to structs of vector types.
 /// Note: Only unpacked literal struct types are supported.
-Type *llvm::ToWideStructTy(StructType *StructTy, ElementCount EC) {
+Type *llvm::toWideStructTy(StructType *StructTy, ElementCount EC) {
   if (EC.isScalar())
     return StructTy;
   assert(isUnpackedStructLiteral(StructTy) &&
          "expected unpacked struct literal");
+  assert(all_of(StructTy->elements(), VectorType::isValidElementType) &&
+         "expected all element types to be valid vector element types");
   return StructType::get(
       StructTy->getContext(),
       map_to_vector(StructTy->elements(), [&](Type *ElTy) -> Type * {
@@ -32,7 +30,7 @@ Type *llvm::ToWideStructTy(StructType *StructTy, ElementCount EC) {
 
 /// A helper for converting structs of vector types to structs of scalar types.
 /// Note: Only unpacked literal struct types are supported.
-Type *llvm::ToNarrowStructTy(StructType *StructTy) {
+Type *llvm::toNarrowStructTy(StructType *StructTy) {
   assert(isUnpackedStructLiteral(StructTy) &&
          "expected unpacked struct literal");
   return StructType::get(

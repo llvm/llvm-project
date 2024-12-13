@@ -33,7 +33,7 @@ inline Type *ToVectorTy(Type *Scalar, unsigned VF) {
 /// unpacked literal struct types are supported.
 inline Type *ToWideTy(Type *Ty, ElementCount EC) {
   if (StructType *StructTy = dyn_cast<StructType>(Ty))
-    return ToWideStructTy(StructTy, EC);
+    return toWideStructTy(StructTy, EC);
   return ToVectorTy(Ty, EC);
 }
 
@@ -43,7 +43,7 @@ inline Type *ToWideTy(Type *Ty, ElementCount EC) {
 /// scalar type. Note: Only unpacked literal struct types are supported.
 inline Type *ToNarrowTy(Type *Ty) {
   if (StructType *StructTy = dyn_cast<StructType>(Ty))
-    return ToNarrowStructTy(StructTy);
+    return toNarrowStructTy(StructTy);
   return Ty->getScalarType();
 }
 
@@ -60,10 +60,10 @@ inline bool isWideTy(Type *Ty) {
 inline ArrayRef<Type *> getContainedTypes(Type *const &Ty) {
   if (auto *StructTy = dyn_cast<StructType>(Ty))
     return StructTy->elements();
-  return ArrayRef<Type *>{&Ty, 1};
+  return ArrayRef<Type *>(&Ty, 1);
 }
 
-/// Returns the vectorization factor for a widened type.
+/// Returns the number of vector elements for a widened type.
 inline ElementCount getWideTypeVF(Type *Ty) {
   assert(isWideTy(Ty) && "expected widened type");
   return cast<VectorType>(getContainedTypes(Ty).front())->getElementCount();
