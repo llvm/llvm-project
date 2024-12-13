@@ -167,9 +167,9 @@ public:
   enum class SlicesOverlapKind {
     // Slices overlap is unknown.
     Unknown,
-    // Slices are definitely disjoint.
-    DefinitelyIdentical,
     // Slices are definitely identical.
+    DefinitelyIdentical,
+    // Slices are definitely disjoint.
     DefinitelyDisjoint,
     // Slices may be either disjoint or identical,
     // i.e. there is definitely no partial overlap.
@@ -241,7 +241,7 @@ private:
   static std::pair<mlir::Value, mlir::Value>
   getOrderedBounds(const SectionDesc &desc) {
     mlir::Value stride = desc.stride;
-    // Null stride means stride-1.
+    // Null stride means stride=1.
     if (!stride)
       return {desc.lb, desc.ub};
     // Reverse the bounds, if stride is negative.
