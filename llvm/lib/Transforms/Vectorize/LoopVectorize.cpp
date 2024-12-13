@@ -7763,19 +7763,19 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
        (!VectorizingEpilogue && !ExpandedSCEVs)) &&
       "expanded SCEVs to reuse can only be used during epilogue vectorization");
 
-  // TODO: Move to VPlan transform stage once the transition to the VPlan-based
-  // cost model is complete for better cost estimates.
   bool IVUpdateMayOverflow =
       !isIndvarOverflowCheckKnownFalse(&CM, BestVF, BestUF);
   TailFoldingStyle Style = CM.getTailFoldingStyle(IVUpdateMayOverflow);
   bool WithoutRuntimeCheck =
       Style == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
   // Use NUW for the induction increment if we proved that it won't overflow in
-  // the vector loop or when not folding the tail. In the later case, we know
+  // the vector loop or when not folding the tail. In the latter case, we know
   // that the canonical induction increment will not overflow as the vector trip
   // count is >= increment and a multiple of the increment.
   bool HasNUW = !IVUpdateMayOverflow || Style == TailFoldingStyle::None;
-  VPlanTransforms::lowerCanonicalIV(BestVPlan, HasNUW, WithoutRuntimeCheck);
+  // TODO: Move transforms to VPlan transform stage once the transition to the
+  // VPlan-based cost model is complete for better cost estimates.
+  VPlanTransforms::convertCanonicalIV(BestVPlan, HasNUW, WithoutRuntimeCheck);
   VPlanTransforms::unrollByUF(BestVPlan, BestUF,
                               OrigLoop->getHeader()->getContext());
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
@@ -8905,7 +8905,8 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
   }
 }
 
-// Add the required canonical IV.
+// Add the required canonical IV along with its loop branch, but w/o its
+// increment - which is introduced later.
 static void addCanonicalIV(VPlan &Plan, Type *IdxTy, DebugLoc DL) {
   Value *StartIdx = ConstantInt::get(IdxTy, 0);
   auto *StartV = Plan.getOrAddLiveIn(StartIdx);
@@ -10099,7 +10100,7 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
                              isa<VPScalarCastRecipe>(U) ||
                              isa<VPDerivedIVRecipe>(U) ||
                              cast<VPInstruction>(U)->getOpcode() ==
-                                 Instruction::Add;
+                                 VPInstruction::BranchOnCount;
                     }) &&
              "the canonical IV should only be used by its increment or "
              "ScalarIVSteps when resetting the start value");
