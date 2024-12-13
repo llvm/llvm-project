@@ -1,10 +1,7 @@
 // RUN: rm -rf %t
 // RUN: mkdir %t
-// RUN: echo "" > %t/compile_flags.txt
-// RUN: cp "%s" "%t/test.cpp"
-// RUN: clang-doc --doxygen --executor=standalone -p %t %t/test.cpp -output=%t/docs
+// RUN: clang-doc --doxygen --executor=standalone %s -output=%t/docs
 // RUN: cat %t/docs/index.yaml | FileCheck %s --check-prefix=YAML
-// RUN: rm -rf %t
 
 // YAML: ---
 // YAML-NEXT: USR:             '{{([0-9A-F]{40})}}'
