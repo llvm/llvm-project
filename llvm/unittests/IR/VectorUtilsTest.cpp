@@ -17,7 +17,7 @@ namespace {
 
 class VectorUtilsTest : public ::testing::Test {};
 
-TEST(VectorUtilsTest, TestToWideTy) {
+TEST(VectorUtilsTest, TestToVectorizedTy) {
   LLVMContext C;
 
   Type *ITy = Type::getInt32Ty(C);
@@ -28,15 +28,15 @@ TEST(VectorUtilsTest, TestToWideTy) {
 
   for (ElementCount VF :
        {ElementCount::getFixed(4), ElementCount::getScalable(2)}) {
-    Type *IntVec = ToWideTy(ITy, VF);
+    Type *IntVec = toVectorizedTy(ITy, VF);
     EXPECT_TRUE(isa<VectorType>(IntVec));
     EXPECT_EQ(IntVec, VectorType::get(ITy, VF));
 
-    Type *FloatVec = ToWideTy(FTy, VF);
+    Type *FloatVec = toVectorizedTy(FTy, VF);
     EXPECT_TRUE(isa<VectorType>(FloatVec));
     EXPECT_EQ(FloatVec, VectorType::get(FTy, VF));
 
-    Type *WideHomogeneousStructTy = ToWideTy(HomogeneousStructTy, VF);
+    Type *WideHomogeneousStructTy = toVectorizedTy(HomogeneousStructTy, VF);
     EXPECT_TRUE(isa<StructType>(WideHomogeneousStructTy));
     EXPECT_TRUE(
         cast<StructType>(WideHomogeneousStructTy)->containsHomogeneousTypes());
@@ -45,7 +45,7 @@ TEST(VectorUtilsTest, TestToWideTy) {
     EXPECT_TRUE(cast<StructType>(WideHomogeneousStructTy)->getElementType(0) ==
                 VectorType::get(FTy, VF));
 
-    Type *WideMixedStructTy = ToWideTy(MixedStructTy, VF);
+    Type *WideMixedStructTy = toVectorizedTy(MixedStructTy, VF);
     EXPECT_TRUE(isa<StructType>(WideMixedStructTy));
     EXPECT_TRUE(cast<StructType>(WideMixedStructTy)->getNumElements() == 2);
     EXPECT_TRUE(cast<StructType>(WideMixedStructTy)->getElementType(0) ==
@@ -53,16 +53,16 @@ TEST(VectorUtilsTest, TestToWideTy) {
     EXPECT_TRUE(cast<StructType>(WideMixedStructTy)->getElementType(1) ==
                 VectorType::get(ITy, VF));
 
-    EXPECT_EQ(ToWideTy(VoidTy, VF), VoidTy);
+    EXPECT_EQ(toVectorizedTy(VoidTy, VF), VoidTy);
   }
 
   ElementCount ScalarVF = ElementCount::getFixed(1);
   for (Type *Ty : {ITy, FTy, HomogeneousStructTy, MixedStructTy, VoidTy}) {
-    EXPECT_EQ(ToWideTy(Ty, ScalarVF), Ty);
+    EXPECT_EQ(toVectorizedTy(Ty, ScalarVF), Ty);
   }
 }
 
-TEST(VectorUtilsTest, TestToNarrowTy) {
+TEST(VectorUtilsTest, TestToScalarizedTy) {
   LLVMContext C;
 
   Type *ITy = Type::getInt32Ty(C);
@@ -74,8 +74,8 @@ TEST(VectorUtilsTest, TestToNarrowTy) {
   for (ElementCount VF : {ElementCount::getFixed(1), ElementCount::getFixed(4),
                           ElementCount::getScalable(2)}) {
     for (Type *Ty : {ITy, FTy, HomogeneousStructTy, MixedStructTy, VoidTy}) {
-      // ToNarrowTy should be the inverse of ToWideTy.
-      EXPECT_EQ(ToNarrowTy(ToWideTy(Ty, VF)), Ty);
+      // toScalarizedTy should be the inverse of toVectorizedTy.
+      EXPECT_EQ(toScalarizedTy(toVectorizedTy(Ty, VF)), Ty);
     };
   }
 }
@@ -97,7 +97,7 @@ TEST(VectorUtilsTest, TestGetContainedTypes) {
   EXPECT_EQ(getContainedTypes(MixedStructTy), ArrayRef<Type *>({FTy, ITy}));
 }
 
-TEST(VectorUtilsTest, TestIsWideTy) {
+TEST(VectorUtilsTest, TestIsVectorizedTy) {
   LLVMContext C;
 
   Type *ITy = Type::getInt32Ty(C);
@@ -105,32 +105,32 @@ TEST(VectorUtilsTest, TestIsWideTy) {
   Type *NarrowStruct = StructType::get(FTy, ITy);
   Type *VoidTy = Type::getVoidTy(C);
 
-  EXPECT_FALSE(isWideTy(ITy));
-  EXPECT_FALSE(isWideTy(NarrowStruct));
-  EXPECT_FALSE(isWideTy(VoidTy));
+  EXPECT_FALSE(isVectorizedTy(ITy));
+  EXPECT_FALSE(isVectorizedTy(NarrowStruct));
+  EXPECT_FALSE(isVectorizedTy(VoidTy));
 
   ElementCount VF = ElementCount::getFixed(4);
-  EXPECT_TRUE(isWideTy(ToWideTy(ITy, VF)));
-  EXPECT_TRUE(isWideTy(ToWideTy(NarrowStruct, VF)));
+  EXPECT_TRUE(isVectorizedTy(toVectorizedTy(ITy, VF)));
+  EXPECT_TRUE(isVectorizedTy(toVectorizedTy(NarrowStruct, VF)));
 
   Type *MixedVFStruct =
       StructType::get(VectorType::get(ITy, ElementCount::getFixed(2)),
                       VectorType::get(ITy, ElementCount::getFixed(4)));
-  EXPECT_FALSE(isWideTy(MixedVFStruct));
+  EXPECT_FALSE(isVectorizedTy(MixedVFStruct));
 
   // Currently only literals types are considered wide.
   Type *NamedWideStruct = StructType::create("Named", VectorType::get(ITy, VF),
                                              VectorType::get(ITy, VF));
-  EXPECT_FALSE(isWideTy(NamedWideStruct));
+  EXPECT_FALSE(isVectorizedTy(NamedWideStruct));
 
   // Currently only unpacked types are considered wide.
   Type *PackedWideStruct = StructType::get(
       C, ArrayRef<Type *>{VectorType::get(ITy, VF), VectorType::get(ITy, VF)},
       /*isPacked=*/true);
-  EXPECT_FALSE(isWideTy(PackedWideStruct));
+  EXPECT_FALSE(isVectorizedTy(PackedWideStruct));
 }
 
-TEST(VectorUtilsTest, TestGetWideTypeVF) {
+TEST(VectorUtilsTest, TestGetVectorizedTypeVF) {
   LLVMContext C;
 
   Type *ITy = Type::getInt32Ty(C);
@@ -141,7 +141,7 @@ TEST(VectorUtilsTest, TestGetWideTypeVF) {
   for (ElementCount VF :
        {ElementCount::getFixed(4), ElementCount::getScalable(2)}) {
     for (Type *Ty : {ITy, FTy, HomogeneousStructTy, MixedStructTy}) {
-      EXPECT_EQ(getWideTypeVF(ToWideTy(Ty, VF)), VF);
+      EXPECT_EQ(getVectorizedTypeVF(toVectorizedTy(Ty, VF)), VF);
     };
   }
 }

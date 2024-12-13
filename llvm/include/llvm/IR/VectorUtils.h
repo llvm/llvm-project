@@ -27,31 +27,31 @@ inline Type *ToVectorTy(Type *Scalar, unsigned VF) {
   return ToVectorTy(Scalar, ElementCount::getFixed(VF));
 }
 
-/// A helper for converting to wider (vector) types. For scalar types, this is
+/// A helper for converting to vectorized types. For scalar types, this is
 /// equivalent to calling `ToVectorTy`. For struct types, this returns a new
 /// struct where each element type has been widened to a vector type. Note: Only
 /// unpacked literal struct types are supported.
-inline Type *ToWideTy(Type *Ty, ElementCount EC) {
+inline Type *toVectorizedTy(Type *Ty, ElementCount EC) {
   if (StructType *StructTy = dyn_cast<StructType>(Ty))
-    return toWideStructTy(StructTy, EC);
+    return toVectorizedStructTy(StructTy, EC);
   return ToVectorTy(Ty, EC);
 }
 
-/// A helper for converting wide types to narrow (non-vector) types. For vector
-/// types, this is equivalent to calling .getScalarType(). For struct types,
-/// this returns a new struct where each element type has been converted to a
-/// scalar type. Note: Only unpacked literal struct types are supported.
-inline Type *ToNarrowTy(Type *Ty) {
+/// A helper for converting vectorized types to scalarized (non-vector) types.
+/// For vector types, this is equivalent to calling .getScalarType(). For struct
+/// types, this returns a new struct where each element type has been converted
+/// to a scalar type. Note: Only unpacked literal struct types are supported.
+inline Type *toScalarizedTy(Type *Ty) {
   if (StructType *StructTy = dyn_cast<StructType>(Ty))
-    return toNarrowStructTy(StructTy);
+    return toScalarizedStructTy(StructTy);
   return Ty->getScalarType();
 }
 
 /// Returns true if `Ty` is a vector type or a struct of vector types where all
 /// vector types share the same VF.
-inline bool isWideTy(Type *Ty) {
+inline bool isVectorizedTy(Type *Ty) {
   if (StructType *StructTy = dyn_cast<StructType>(Ty))
-    return isWideStructTy(StructTy);
+    return isVectorizedStructTy(StructTy);
   return Ty->isVectorTy();
 }
 
@@ -63,9 +63,9 @@ inline ArrayRef<Type *> getContainedTypes(Type *const &Ty) {
   return ArrayRef<Type *>(&Ty, 1);
 }
 
-/// Returns the number of vector elements for a widened type.
-inline ElementCount getWideTypeVF(Type *Ty) {
-  assert(isWideTy(Ty) && "expected widened type");
+/// Returns the number of vector elements for a vectorized type.
+inline ElementCount getVectorizedTypeVF(Type *Ty) {
+  assert(isVectorizedTy(Ty) && "expected widened type");
   return cast<VectorType>(getContainedTypes(Ty).front())->getElementCount();
 }
 

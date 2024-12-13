@@ -1,4 +1,4 @@
-//===- StructWideningUtils.cpp - Utils for widening/narrowing struct types ===//
+//===- StructWideningUtils.cpp - Utils for vectorizing struct types------- ===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,7 +14,7 @@ using namespace llvm;
 
 /// A helper for converting structs of scalar types to structs of vector types.
 /// Note: Only unpacked literal struct types are supported.
-Type *llvm::toWideStructTy(StructType *StructTy, ElementCount EC) {
+Type *llvm::toVectorizedStructTy(StructType *StructTy, ElementCount EC) {
   if (EC.isScalar())
     return StructTy;
   assert(isUnpackedStructLiteral(StructTy) &&
@@ -30,7 +30,7 @@ Type *llvm::toWideStructTy(StructType *StructTy, ElementCount EC) {
 
 /// A helper for converting structs of vector types to structs of scalar types.
 /// Note: Only unpacked literal struct types are supported.
-Type *llvm::toNarrowStructTy(StructType *StructTy) {
+Type *llvm::toScalarizedStructTy(StructType *StructTy) {
   assert(isUnpackedStructLiteral(StructTy) &&
          "expected unpacked struct literal");
   return StructType::get(
@@ -42,7 +42,7 @@ Type *llvm::toNarrowStructTy(StructType *StructTy) {
 
 /// Returns true if `StructTy` is an unpacked literal struct where all elements
 /// are vectors of matching element count. This does not include empty structs.
-bool llvm::isWideStructTy(StructType *StructTy) {
+bool llvm::isVectorizedStructTy(StructType *StructTy) {
   if (!isUnpackedStructLiteral(StructTy))
     return false;
   auto ElemTys = StructTy->elements();

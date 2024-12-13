@@ -575,7 +575,7 @@ FunctionType *VFABI::createFunctionType(const VFInfo &Info,
 
   auto *RetTy = ScalarFTy->getReturnType();
   if (!RetTy->isVoidTy())
-    RetTy = ToWideTy(RetTy, VF);
+    RetTy = toVectorizedTy(RetTy, VF);
   return FunctionType::get(RetTy, VecTypes, false);
 }
 
