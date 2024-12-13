@@ -56,6 +56,42 @@ define half @ld_global_v8f16(ptr addrspace(1) %ptr) {
   ret half %sum
 }
 
+; CHECK-LABEL: @ld_global_v8i8
+define i8 @ld_global_v8i8(ptr addrspace(1) %ptr) {
+; CHECK: ld.global.nc.v2.u32
+  %a = load <8 x i8>, ptr addrspace(1) %ptr, !invariant.load !0
+  %v1 = extractelement <8 x i8> %a, i32 0
+  %v2 = extractelement <8 x i8> %a, i32 2
+  %v3 = extractelement <8 x i8> %a, i32 4
+  %v4 = extractelement <8 x i8> %a, i32 6
+  %sum1 = add i8 %v1, %v2
+  %sum2 = add i8 %v3, %v4
+  %sum = add i8 %sum1, %sum2
+  ret i8 %sum
+}
+
+; CHECK-LABEL: @ld_global_v16i8
+define i8 @ld_global_v16i8(ptr addrspace(1) %ptr) {
+; CHECK: ld.global.nc.v4.u32
+  %a = load <16 x i8>, ptr addrspace(1) %ptr, !invariant.load !0
+  %v1 = extractelement <16 x i8> %a, i32 0
+  %v2 = extractelement <16 x i8> %a, i32 2
+  %v3 = extractelement <16 x i8> %a, i32 4
+  %v4 = extractelement <16 x i8> %a, i32 6
+  %v5 = extractelement <16 x i8> %a, i32 8
+  %v6 = extractelement <16 x i8> %a, i32 10
+  %v7 = extractelement <16 x i8> %a, i32 12
+  %v8 = extractelement <16 x i8> %a, i32 14
+  %sum1 = add i8 %v1, %v2
+  %sum2 = add i8 %v3, %v4
+  %sum3 = add i8 %v5, %v6
+  %sum4 = add i8 %v7, %v8
+  %sum5 = add i8 %sum1, %sum2
+  %sum6 = add i8 %sum3, %sum4
+  %sum7 = add i8 %sum5, %sum6
+  ret i8 %sum7
+}
+
 ; CHECK-LABEL: @ld_global_v2i32
 define i32 @ld_global_v2i32(ptr addrspace(1) %ptr) {
 ; CHECK: ld.global.nc.v2.{{[a-z]}}32

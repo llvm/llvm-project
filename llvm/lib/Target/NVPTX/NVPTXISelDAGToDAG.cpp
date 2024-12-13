@@ -1239,7 +1239,7 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
       NumElts /= 2;
     } else if (OrigType == MVT::v4i8) {
       EltVT = OrigType;
-      NumElts = 1;
+      NumElts /= 4;
     }
   }
 
