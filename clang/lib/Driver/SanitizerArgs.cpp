@@ -247,39 +247,49 @@ static SanitizerMask setGroupBits(SanitizerMask Kinds) {
   return Kinds;
 }
 
-static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
-                                           const llvm::opt::ArgList &Args,
-                                           bool DiagnoseErrors) {
-  SanitizerMask TrapRemove; // During the loop below, the accumulated set of
-                            // sanitizers disabled by the current sanitizer
-                            // argument or any argument after it.
-  SanitizerMask TrappingKinds;
-  SanitizerMask TrappingSupportedWithGroups = setGroupBits(TrappingSupported);
+// Computes the sanitizer mask based on the default plus opt-in (if supported)
+// minus opt-out.
+static SanitizerMask
+parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
+                  bool DiagnoseErrors, SanitizerMask Supported,
+                  SanitizerMask Default, int OptInID, int OptOutID) {
+  SanitizerMask Remove; // During the loop below, the accumulated set of
+                        // sanitizers disabled by the current sanitizer
+                        // argument or any argument after it.
+  SanitizerMask Kinds;
+  SanitizerMask SupportedWithGroups = setGroupBits(Supported);
 
   for (const llvm::opt::Arg *Arg : llvm::reverse(Args)) {
-    if (Arg->getOption().matches(options::OPT_fsanitize_trap_EQ)) {
+    if (Arg->getOption().matches(OptInID)) {
       Arg->claim();
       SanitizerMask Add = parseArgValues(D, Arg, true);
-      Add &= ~TrapRemove;
-      SanitizerMask InvalidValues = Add & ~TrappingSupportedWithGroups;
+      Add &= ~Remove;
+      SanitizerMask InvalidValues = Add & ~SupportedWithGroups;
       if (InvalidValues && DiagnoseErrors) {
         SanitizerSet S;
         S.Mask = InvalidValues;
         D.Diag(diag::err_drv_unsupported_option_argument)
             << Arg->getSpelling() << toString(S);
       }
-      TrappingKinds |= expandSanitizerGroups(Add) & ~TrapRemove;
-    } else if (Arg->getOption().matches(options::OPT_fno_sanitize_trap_EQ)) {
+      Kinds |= expandSanitizerGroups(Add) & ~Remove;
+    } else if (Arg->getOption().matches(OptOutID)) {
       Arg->claim();
-      TrapRemove |=
-          expandSanitizerGroups(parseArgValues(D, Arg, DiagnoseErrors));
+      Remove |= expandSanitizerGroups(parseArgValues(D, Arg, DiagnoseErrors));
     }
   }
 
-  // Apply default trapping behavior.
-  TrappingKinds |= TrappingDefault & ~TrapRemove;
+  // Apply default behavior.
+  Kinds |= Default & ~Remove;
 
-  return TrappingKinds;
+  return Kinds;
+}
+
+static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
+                                           const llvm::opt::ArgList &Args,
+                                           bool DiagnoseErrors) {
+  return parseSanitizeArgs(D, Args, DiagnoseErrors, TrappingSupported,
+                           TrappingDefault, options::OPT_fsanitize_trap_EQ,
+                           options::OPT_fno_sanitize_trap_EQ);
 }
 
 bool SanitizerArgs::needsFuzzerInterceptors() const {
