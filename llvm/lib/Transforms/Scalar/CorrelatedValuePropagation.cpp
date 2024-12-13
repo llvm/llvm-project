@@ -1103,10 +1103,8 @@ static bool narrowLShr(BinaryOperator *LShr, LazyValueInfo *LVI) {
 
   unsigned OrigWidth = RetTy->getScalarSizeInBits();
   unsigned MaxActiveBitsInArg = ArgRange.getActiveBits();
-  uint64_t MinShiftValue64 = ShiftRange.getUnsignedMin().getZExtValue();
-  unsigned MinShiftValue =
-      MinShiftValue64 < std::numeric_limits<unsigned>::max()
-          ? static_cast<unsigned>(MinShiftValue64)
+  unsigned MinShiftValue = ShiftRange.getUnsignedMin().getActiveBits() <= 32
+          ? static_cast<unsigned>(ShiftRange.getUnsignedMin().getZExtValue())
           : std::numeric_limits<unsigned>::max();
 
   // First we deal with the cases where the result is guaranteed to vanish or be
@@ -1138,12 +1136,9 @@ static bool narrowLShr(BinaryOperator *LShr, LazyValueInfo *LVI) {
   // width of the argument, we must make sure that the maximal possible value
   // for the shift is larger than the new width after narrowing. Otherwise some
   // shifts that originally vanish would result in poison after the narrowing.
-  uint64_t MaxShiftValue64 = ShiftRange.getUnsignedMax().getZExtValue();
-  unsigned MaxShiftValue =
-      MaxShiftValue64 < std::numeric_limits<unsigned>::max()
-          ? static_cast<unsigned>(MaxShiftValue64)
+  unsigned MaxShiftValue = ShiftRange.getUnsignedMax().getActiveBits() <= 32
+          ? static_cast<unsigned>(ShiftRange.getUnsignedMax().getZExtValue())
           : std::numeric_limits<unsigned>::max();
-
   if (OrigWidth <= MaxShiftValue)
     return false;
 
