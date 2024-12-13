@@ -666,9 +666,9 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
     return false;
 
   auto *VecTy = cast<FixedVectorType>(I.getType());
-  auto *SrcVecTy = cast<FixedVectorType>(SrcVec->getType());
+  auto *SrcVecTy = dyn_cast<FixedVectorType>(SrcVec->getType());
   auto *ScalarTy = SrcVecTy->getScalarType();
-  if (ScalarTy != VecTy->getScalarType())
+  if (!SrcVecTy || ScalarTy != SrcVecTy->getScalarType())
     return false;
 
   // Ignore bogus insert/extract index.
