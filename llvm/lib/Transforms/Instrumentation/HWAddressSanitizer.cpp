@@ -1793,8 +1793,15 @@ void HWAddressSanitizer::instrumentGlobal(GlobalVariable *GV, uint8_t Tag) {
 }
 
 void HWAddressSanitizer::instrumentGlobals() {
-  std::vector<GlobalVariable *> Globals;
-  for (GlobalVariable &GV : M.globals()) {
+  MD5 Hasher;
+  Hasher.update(M.getSourceFileName());
+  MD5::MD5Result Hash;
+  Hasher.final(Hash);
+  uint8_t Tag = Hash[0];
+
+  assert(TagMaskByte >= 16);
+
+  for (GlobalVariable &GV : make_early_inc_range(M.globals())) {
     if (GV.hasSanitizerMetadata() && GV.getSanitizerMetadata().NoHWAddress)
       continue;
 
@@ -1812,24 +1819,12 @@ void HWAddressSanitizer::instrumentGlobals() {
     if (GV.hasSection())
       continue;
 
-    Globals.push_back(&GV);
-  }
-
-  MD5 Hasher;
-  Hasher.update(M.getSourceFileName());
-  MD5::MD5Result Hash;
-  Hasher.final(Hash);
-  uint8_t Tag = Hash[0];
-
-  assert(TagMaskByte >= 16);
-
-  for (GlobalVariable *GV : Globals) {
     // Don't allow globals to be tagged with something that looks like a
     // short-granule tag, otherwise we lose inter-granule overflow detection, as
     // the fast path shadow-vs-address check succeeds.
     if (Tag < 16 || Tag > TagMaskByte)
       Tag = 16;
-    instrumentGlobal(GV, Tag++);
+    instrumentGlobal(&GV, Tag++);
   }
 }
 
