@@ -138,6 +138,11 @@ static cl::opt<bool> EnableReduceLoadOpStoreWidth(
     "combiner-reduce-load-op-store-width", cl::Hidden, cl::init(true),
     cl::desc("DAG combiner enable reducing the width of load/op/store "
              "sequence"));
+static cl::opt<bool> ReduceLoadOpStoreWidthForceNarrowingProfitable(
+    "combiner-reduce-load-op-store-width-force-narrowing-profitable",
+    cl::Hidden, cl::init(false),
+    cl::desc("DAG combiner force override the narrowing profitable check when"
+             "reducing the width of load/op/store sequences"));
 
 static cl::opt<bool> EnableShrinkLoadReplaceStoreWithStore(
     "combiner-shrink-load-replace-store-with-store", cl::Hidden, cl::init(true),
@@ -20351,19 +20356,38 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
     EVT NewVT = EVT::getIntegerVT(*DAG.getContext(), NewBW);
     // The narrowing should be profitable, the load/store operation should be
     // legal (or custom) and the store size should be equal to the NewVT width.
-    while (NewBW < BitWidth && (NewVT.getStoreSizeInBits() != NewBW ||
-                                !TLI.isOperationLegalOrCustom(Opc, NewVT) ||
-                                !TLI.isNarrowingProfitable(N, VT, NewVT))) {
+    while (NewBW < BitWidth &&
+           (NewVT.getStoreSizeInBits() != NewBW ||
+            !TLI.isOperationLegalOrCustom(Opc, NewVT) ||
+            (!ReduceLoadOpStoreWidthForceNarrowingProfitable &&
+             !TLI.isNarrowingProfitable(N, VT, NewVT)))) {
       NewBW = NextPowerOf2(NewBW);
       NewVT = EVT::getIntegerVT(*DAG.getContext(), NewBW);
     }
     if (NewBW >= BitWidth)
       return SDValue();
 
-    // If the lsb changed does not start at the type bitwidth boundary,
-    // start at the previous one.
-    if (ShAmt % NewBW)
-      ShAmt = (((ShAmt + NewBW - 1) / NewBW) * NewBW) - NewBW;
+    // TODO: For big-endian we probably want to align given the most significant
+    // bit being modified instead of adjusting ShAmt based on least significant
+    // bits. This to reduce the risk of failing on the alignment check below. If
+    // for example VT.getStoreSize()==5 and Imm is 0x0000ffff00, then we want to
+    // find NewBW=16, and we want to load/store with a PtrOff set to 2. But then
+    // ShAmt should be set to 8, which isn't a multiple of NewBW.  But given
+    // that isNarrowingProfitable doesn't seem to be overridden for any in-tree
+    // big-endian target, then the support for big-endian here isn't covered by
+    // any in-tree lit tests, so it is unfortunately not highly optimized
+    // either. It should be possible to improve that by using
+    // ReduceLoadOpStoreWidthForceNarrowingProfitable.
+
+    // If the lsb that is modified does not start at the type bitwidth boundary,
+    // align to start at the previous boundary.
+    ShAmt = ShAmt - (ShAmt % NewBW);
+
+    // Make sure we do not access memory outside the memory touched by the
+    // original load/store.
+    if (ShAmt + NewBW > VT.getStoreSizeInBits())
+      return SDValue();
+
     APInt Mask = APInt::getBitsSet(BitWidth, ShAmt,
                                    std::min(BitWidth, ShAmt + NewBW));
     if ((Imm & Mask) == Imm) {

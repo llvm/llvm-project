@@ -102,6 +102,13 @@ def vec_rm : RISCVOp {
 // !X0 |  X0 |       VLMAX | Set vl to VLMAX
 //  X0 |  X0 | Value in vl | Keep current vl, just change vtype.
 def VLOp : ComplexPattern<XLenVT, 1, "selectVLOp">;
+// FIXME: This is labelled as handling 's32', however the ComplexPattern it
+// refers to handles both i32 and i64 based on the HwMode. Currently this LLT
+// parameter appears to be ignored so this pattern works for both, however we
+// should add a LowLevelTypeByHwMode, and use that to define our XLenLLT instead
+// here.
+def GIVLOp : GIComplexOperandMatcher<s32, "renderVLOp">,
+             GIComplexPatternEquiv<VLOp>;
 
 def DecImm : SDNodeXForm<imm, [{
   return CurDAG->getSignedTargetConstant(N->getSExtValue() - 1, SDLoc(N),
@@ -415,13 +422,13 @@ class MTypeInfo<ValueType Mas, LMULInfo M, string Bx> {
 
 defset list<MTypeInfo> AllMasks = {
   // vbool<n>_t, <n> = SEW/LMUL, we assume SEW=8 and corresponding LMUL.
-  def : MTypeInfo<vbool64_t, V_MF8, "B1">;
-  def : MTypeInfo<vbool32_t, V_MF4, "B2">;
-  def : MTypeInfo<vbool16_t, V_MF2, "B4">;
+  def : MTypeInfo<vbool64_t, V_MF8, "B64">;
+  def : MTypeInfo<vbool32_t, V_MF4, "B32">;
+  def : MTypeInfo<vbool16_t, V_MF2, "B16">;
   def : MTypeInfo<vbool8_t, V_M1, "B8">;
-  def : MTypeInfo<vbool4_t, V_M2, "B16">;
-  def : MTypeInfo<vbool2_t, V_M4, "B32">;
-  def : MTypeInfo<vbool1_t, V_M8, "B64">;
+  def : MTypeInfo<vbool4_t, V_M2, "B4">;
+  def : MTypeInfo<vbool2_t, V_M4, "B2">;
+  def : MTypeInfo<vbool1_t, V_M8, "B1">;
 }
 
 class VTypeInfoToWide<VTypeInfo vti, VTypeInfo wti> {

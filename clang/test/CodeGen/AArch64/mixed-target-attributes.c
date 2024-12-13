@@ -66,24 +66,24 @@ __attribute__((target_version("jscvt"))) int default_def_with_version_decls(void
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1048576
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1048576
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1048832
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1048832
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
 // CHECK-NEXT:    ret ptr @explicit_default._Mjscvt
 // CHECK:       resolver_else:
 // CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 64
-// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 64
+// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 832
+// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 832
 // CHECK-NEXT:    [[TMP7:%.*]] = and i1 true, [[TMP6]]
 // CHECK-NEXT:    br i1 [[TMP7]], label [[RESOLVER_RETURN1:%.*]], label [[RESOLVER_ELSE2:%.*]]
 // CHECK:       resolver_return1:
 // CHECK-NEXT:    ret ptr @explicit_default._Mrdm
 // CHECK:       resolver_else2:
 // CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP9:%.*]] = and i64 [[TMP8]], 16
-// CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 16
+// CHECK-NEXT:    [[TMP9:%.*]] = and i64 [[TMP8]], 784
+// CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 784
 // CHECK-NEXT:    [[TMP11:%.*]] = and i1 true, [[TMP10]]
 // CHECK-NEXT:    br i1 [[TMP11]], label [[RESOLVER_RETURN3:%.*]], label [[RESOLVER_ELSE4:%.*]]
 // CHECK:       resolver_return3:
@@ -140,24 +140,24 @@ __attribute__((target_version("jscvt"))) int default_def_with_version_decls(void
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1048576
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1048576
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1048832
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1048832
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
 // CHECK-NEXT:    ret ptr @implicit_default._Mjscvt
 // CHECK:       resolver_else:
 // CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 64
-// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 64
+// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 832
+// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 832
 // CHECK-NEXT:    [[TMP7:%.*]] = and i1 true, [[TMP6]]
 // CHECK-NEXT:    br i1 [[TMP7]], label [[RESOLVER_RETURN1:%.*]], label [[RESOLVER_ELSE2:%.*]]
 // CHECK:       resolver_return1:
 // CHECK-NEXT:    ret ptr @implicit_default._Mrdm
 // CHECK:       resolver_else2:
 // CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP9:%.*]] = and i64 [[TMP8]], 16
-// CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 16
+// CHECK-NEXT:    [[TMP9:%.*]] = and i64 [[TMP8]], 784
+// CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 784
 // CHECK-NEXT:    [[TMP11:%.*]] = and i1 true, [[TMP10]]
 // CHECK-NEXT:    br i1 [[TMP11]], label [[RESOLVER_RETURN3:%.*]], label [[RESOLVER_ELSE4:%.*]]
 // CHECK:       resolver_return3:
@@ -207,16 +207,16 @@ __attribute__((target_version("jscvt"))) int default_def_with_version_decls(void
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1048576
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1048576
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1048832
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1048832
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
 // CHECK-NEXT:    ret ptr @default_def_with_version_decls._Mjscvt
 // CHECK:       resolver_else:
 // CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 16
-// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 16
+// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 784
+// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 784
 // CHECK-NEXT:    [[TMP7:%.*]] = and i1 true, [[TMP6]]
 // CHECK-NEXT:    br i1 [[TMP7]], label [[RESOLVER_RETURN1:%.*]], label [[RESOLVER_ELSE2:%.*]]
 // CHECK:       resolver_return1:

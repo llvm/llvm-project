@@ -4379,10 +4379,11 @@ defm BF1CVTLT_ZZ  : sve2_fp8_cvt_single<0b1, 0b10, "bf1cvtlt", nxv8bf16, int_aar
 defm BF2CVTLT_ZZ  : sve2_fp8_cvt_single<0b1, 0b11, "bf2cvtlt", nxv8bf16, int_aarch64_sve_fp8_cvtlt2>;
 
 // FP8 downconvert
-defm FCVTN_Z2Z_HtoB  : sve2_fp8_down_cvt_single<0b00, "fcvtn", ZZ_h_mul_r>;
-defm FCVTNB_Z2Z_StoB : sve2_fp8_down_cvt_single<0b01, "fcvtnb", ZZ_s_mul_r>;
-defm BFCVTN_Z2Z_HtoB : sve2_fp8_down_cvt_single<0b10, "bfcvtn", ZZ_h_mul_r>;
-defm FCVTNT_Z2Z_StoB : sve2_fp8_down_cvt_single<0b11, "fcvtnt", ZZ_s_mul_r>;
+defm FCVTN_Z2Z_HtoB  : sve2_fp8_down_cvt_single<0b00, "fcvtn",  ZZ_h_mul_r, nxv8f16,  int_aarch64_sve_fp8_cvtn>;
+defm FCVTNB_Z2Z_StoB : sve2_fp8_down_cvt_single<0b01, "fcvtnb", ZZ_s_mul_r, nxv4f32,  int_aarch64_sve_fp8_cvtnb>;
+defm BFCVTN_Z2Z_HtoB : sve2_fp8_down_cvt_single<0b10, "bfcvtn", ZZ_h_mul_r, nxv8bf16, int_aarch64_sve_fp8_cvtn>;
+
+defm FCVTNT_Z2Z_StoB : sve2_fp8_down_cvt_single_top<0b11, "fcvtnt", ZZ_s_mul_r, nxv4f32,  int_aarch64_sve_fp8_cvtnt>;
 } // End HasSVE2orSME2, HasFP8
 
 let Predicates = [HasSVE2orSME2, HasFAMINMAX] in {
