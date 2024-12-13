@@ -1845,8 +1845,8 @@ public:
 
 /// Hoist any common code in the successor blocks up into the block. This
 /// function guarantees that BB dominates all successors. If AllInstsEqOnly is
-/// given, only perform hoisting in case all successors blocks contain matchin
-/// instructions only In that case, all instructions can be hoisted and the
+/// given, only perform hoisting in case all successors blocks contain matching
+/// instructions only. In that case, all instructions can be hoisted and the
 /// original branch will be replaced and selects for PHIs are added.
 bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
                                                    bool AllInstsEqOnly) {
@@ -1882,34 +1882,30 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
     // Check if all instructions in the successor blocks match. This allows
     // hoisting all instructions and removing the blocks we are hoisting from,
     // so does not add any new instructions.
-    bool AllSame = true;
     SmallVector<BasicBlock *> Succs = to_vector(successors(BB));
     // Check if sizes and terminators of all successors match.
-    if (any_of(Succs, [&Succs](BasicBlock *Succ) {
-          Instruction *Term0 = Succs[0]->getTerminator();
-          Instruction *Term = Succ->getTerminator();
-          if (!Term->isSameOperationAs(Term0) ||
-              !equal(Term->operands(), Term0->operands()))
-            return true;
-          return Succs[0]->sizeWithoutDebug() != Succ->sizeWithoutDebug();
-        })) {
-      AllSame = false;
-    } else {
+    bool AllSame = none_of(Succs, [&Succs](BasicBlock *Succ) {
+      Instruction *Term0 = Succs[0]->getTerminator();
+      Instruction *Term = Succ->getTerminator();
+      return !Term->isSameOperationAs(Term0) ||
+             !equal(Term->operands(), Term0->operands()) ||
+             Succs[0]->size() != Succ->size();
+    });
+    if (!AllSame)
+      return false;
+    if (AllSame) {
       LockstepReverseIterator LRI(Succs);
       while (LRI.isValid()) {
         Instruction *I0 = (*LRI)[0];
         if (any_of(*LRI, [I0](Instruction *I) {
               return !areIdenticalUpToCommutativity(I0, I);
             })) {
-          AllSame = false;
-          break;
+          return false;
         }
         --LRI;
       }
     }
-    if (!AllSame)
-      return false;
-    // Now we know that all instructions in all successors can be hoisted  Let
+    // Now we know that all instructions in all successors can be hoisted. Let
     // the loop below handle the hoisting.
   }
 
