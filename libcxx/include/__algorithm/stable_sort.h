@@ -36,15 +36,6 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// Making placement new available in constexpr contexts. This is necessary to work around a "constexpr placement new"
-// bug in gcc (fixed in 14.2). See https://github.com/llvm/llvm-project/pull/110320#discussion_r1788557715.
-#if _LIBCPP_STD_VER >= 20
-#  define _LIBCPP_MOVING_PLACEMENT_NEW(__ptr, __type, __move_func, __iter) std::construct_at(__ptr, __move_func(__iter))
-#else
-#  define _LIBCPP_MOVING_PLACEMENT_NEW(__ptr, __type, __move_func, __iter)                                             \
-    ::new ((void*)__ptr) __type(__move_func(__iter))
-#endif
-
 template <class _AlgPolicy, class _Compare, class _BidirectionalIterator>
 _LIBCPP_HIDE_FROM_ABI void __insertion_sort_move(
     _BidirectionalIterator __first1,
@@ -58,7 +49,7 @@ _LIBCPP_HIDE_FROM_ABI void __insertion_sort_move(
     __destruct_n __d(0);
     unique_ptr<value_type, __destruct_n&> __h(__first2, __d);
     value_type* __last2 = __first2;
-    _LIBCPP_MOVING_PLACEMENT_NEW(__last2, value_type, _Ops::__iter_move, __first1);
+    std::__construct_at(__last2, _Ops::__iter_move(__first1));
     __d.template __incr<value_type>();
     for (++__last2; ++__first1 != __last1; ++__last2) {
       value_type* __j2 = __last2;
@@ -66,14 +57,14 @@ _LIBCPP_HIDE_FROM_ABI void __insertion_sort_move(
       if (__comp(*__first1, *--__i2)) {
         {
           value_type& __tmp = *__i2;
-          _LIBCPP_MOVING_PLACEMENT_NEW(__j2, value_type, std::move, __tmp);
+          std::__construct_at(__j2, std::move(__tmp));
         }
         __d.template __incr<value_type>();
         for (--__j2; __i2 != __first2 && __comp(*__first1, *--__i2); --__j2)
           *__j2 = std::move(*__i2);
         *__j2 = _Ops::__iter_move(__first1);
       } else {
-        _LIBCPP_MOVING_PLACEMENT_NEW(__j2, value_type, _Ops::__iter_move, __first1);
+        std::__construct_at(__j2, _Ops::__iter_move(__first1));
         __d.template __incr<value_type>();
       }
     }
@@ -97,22 +88,22 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __merge_move_construct(
   for (; true; ++__result) {
     if (__first1 == __last1) {
       for (; __first2 != __last2; ++__first2, (void)++__result, __d.template __incr<value_type>())
-        _LIBCPP_MOVING_PLACEMENT_NEW(__result, value_type, _Ops::__iter_move, __first2);
+        std::__construct_at(__result, _Ops::__iter_move(__first2));
       __h.release();
       return;
     }
     if (__first2 == __last2) {
       for (; __first1 != __last1; ++__first1, (void)++__result, __d.template __incr<value_type>())
-        _LIBCPP_MOVING_PLACEMENT_NEW(__result, value_type, _Ops::__iter_move, __first1);
+        std::__construct_at(__result, _Ops::__iter_move(__first1));
       __h.release();
       return;
     }
     if (__comp(*__first2, *__first1)) {
-      _LIBCPP_MOVING_PLACEMENT_NEW(__result, value_type, _Ops::__iter_move, __first2);
+      std::__construct_at(__result, _Ops::__iter_move(__first2));
       __d.template __incr<value_type>();
       ++__first2;
     } else {
-      _LIBCPP_MOVING_PLACEMENT_NEW(__result, value_type, _Ops::__iter_move, __first1);
+      std::__construct_at(__result, _Ops::__iter_move(__first1));
       __d.template __incr<value_type>();
       ++__first1;
     }
@@ -170,21 +161,21 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void __stable_sort_move(
   case 0:
     return;
   case 1:
-    _LIBCPP_MOVING_PLACEMENT_NEW(__first2, value_type, _Ops::__iter_move, __first1);
+    std::__construct_at(__first2, _Ops::__iter_move(__first1));
     return;
   case 2:
     __destruct_n __d(0);
     unique_ptr<value_type, __destruct_n&> __h2(__first2, __d);
     if (__comp(*--__last1, *__first1)) {
-      _LIBCPP_MOVING_PLACEMENT_NEW(__first2, value_type, _Ops::__iter_move, __last1);
+      std::__construct_at(__first2, _Ops::__iter_move(__last1));
       __d.template __incr<value_type>();
       ++__first2;
-      _LIBCPP_MOVING_PLACEMENT_NEW(__first2, value_type, _Ops::__iter_move, __first1);
+      std::__construct_at(__first2, _Ops::__iter_move(__first1));
     } else {
-      _LIBCPP_MOVING_PLACEMENT_NEW(__first2, value_type, _Ops::__iter_move, __first1);
+      std::__construct_at(__first2, _Ops::__iter_move(__first1));
       __d.template __incr<value_type>();
       ++__first2;
-      _LIBCPP_MOVING_PLACEMENT_NEW(__first2, value_type, _Ops::__iter_move, __last1);
+      std::__construct_at(__first2, _Ops::__iter_move(__last1));
     }
     __h2.release();
     return;
@@ -282,7 +273,6 @@ stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last) {
   std::stable_sort(__first, __last, __less<>());
 }
 
-#undef _LIBCPP_MOVING_PLACEMENT_NEW
 _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_POP_MACROS
 
