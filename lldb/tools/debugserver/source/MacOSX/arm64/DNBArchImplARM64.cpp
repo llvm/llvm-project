@@ -515,6 +515,9 @@ kern_return_t DNBArchMachARM64::GetSMEState(bool force) {
   // will fail, and we may return uninitialized data in the register context.
   memset(&m_state.context.sme.svcr, 0, ARM_SME_STATE_COUNT * sizeof(uint32_t));
   memset(m_state.context.sme.za.data(), 0, m_state.context.sme.za.size());
+  if (CPUHasSME2())
+    memset(&m_state.context.sme.zt0, 0,
+           ARM_SME2_STATE_COUNT * sizeof(uint32_t));
 
   // Read the registers from our thread
   mach_msg_type_number_t count = ARM_SME_STATE_COUNT;
@@ -526,7 +529,6 @@ kern_return_t DNBArchMachARM64::GetSMEState(bool force) {
   if (kret != KERN_SUCCESS)
     return kret;
 
-  memset(m_state.context.sme.za.data(), 0, m_state.context.sme.za.size());
 
   size_t za_size = m_state.context.sme.svl_b * m_state.context.sme.svl_b;
   const size_t max_chunk_size = 4096;
@@ -553,8 +555,6 @@ kern_return_t DNBArchMachARM64::GetSMEState(bool force) {
   }
 
   if (CPUHasSME2()) {
-    memset(&m_state.context.sme.zt0, 0,
-           ARM_SME2_STATE_COUNT * sizeof(uint32_t));
     count = ARM_SME2_STATE_COUNT;
     kret = thread_get_state(m_thread->MachPortNumber(), ARM_SME2_STATE,
                             (thread_state_t)&m_state.context.sme.zt0, &count);
