@@ -25,7 +25,7 @@
 !CHECK:          return
 !CHECK:         }
 
-subroutine in_reduction
+subroutine in_reduction()
    integer :: x
    x = 0
    !$omp taskgroup task_reduction(+:x)

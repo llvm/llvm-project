@@ -31,4 +31,4 @@ subroutine omp_taskgroup_task_reduction()
    !$omp taskgroup task_reduction(+:res)
    res = res + 1
    !$omp end taskgroup
-end subroutine omp_taskgroup_task_reduction
+end subroutine

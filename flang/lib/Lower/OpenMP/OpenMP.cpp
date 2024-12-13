@@ -1253,21 +1253,20 @@ static void genTaskClauses(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
     lower::StatementContext &stmtCtx, const List<Clause> &clauses,
     mlir::Location loc, mlir::omp::TaskOperands &clauseOps,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &InReductionSyms) {
+    llvm::SmallVectorImpl<const semantics::Symbol *> &inReductionSyms) {
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processAllocate(clauseOps);
   cp.processDepend(clauseOps);
   cp.processFinal(stmtCtx, clauseOps);
   cp.processIf(llvm::omp::Directive::OMPD_task, clauseOps);
-  cp.processInReduction(loc, clauseOps, InReductionSyms);
+  cp.processInReduction(loc, clauseOps, inReductionSyms);
   cp.processMergeable(clauseOps);
   cp.processPriority(stmtCtx, clauseOps);
   cp.processUntied(clauseOps);
   cp.processDetach(clauseOps);
   // TODO Support delayed privatization.
 
-  cp.processTODO<clause::Affinity>(
-      loc, llvm::omp::Directive::OMPD_task);
+  cp.processTODO<clause::Affinity>(loc, llvm::omp::Directive::OMPD_task);
 }
 
 static void genTaskgroupClauses(
@@ -1888,9 +1887,9 @@ genTaskOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
           ConstructQueue::const_iterator item) {
   lower::StatementContext stmtCtx;
   mlir::omp::TaskOperands clauseOps;
-  llvm::SmallVector<const semantics::Symbol *> InReductionSyms;
+  llvm::SmallVector<const semantics::Symbol *> inReductionSyms;
   genTaskClauses(converter, semaCtx, stmtCtx, item->clauses, loc, clauseOps,
-                 InReductionSyms);
+                 inReductionSyms);
 
   if (!enableDelayedPrivatization)
     return genOpWithBody<mlir::omp::TaskOp>(
@@ -1907,7 +1906,7 @@ genTaskOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   EntryBlockArgs taskArgs;
   taskArgs.priv.syms = dsp.getDelayedPrivSymbols();
   taskArgs.priv.vars = clauseOps.privateVars;
-  taskArgs.inReduction.syms = InReductionSyms;
+  taskArgs.inReduction.syms = inReductionSyms;
   taskArgs.inReduction.vars = clauseOps.inReductionVars;
 
   auto genRegionEntryCB = [&](mlir::Operation *op) {
@@ -1927,14 +1926,6 @@ genTaskOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   auto taskOp =
       genOpWithBody<mlir::omp::TaskOp>(genInfo, queue, item, clauseOps);
-
-  llvm::SmallVector<mlir::Type> inReductionTypes;
-  for (const auto &inreductionVar : clauseOps.inReductionVars)
-    inReductionTypes.push_back(inreductionVar.getType());
-
-  // Add reduction variables as entry block arguments to the task region
-  llvm::SmallVector<mlir::Location> blockArgLocs(InReductionSyms.size(), loc);
-  taskOp->getRegion(0).addArguments(inReductionTypes, blockArgLocs);
   return taskOp;
 }
 
@@ -1949,21 +1940,23 @@ genTaskgroupOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   genTaskgroupClauses(converter, semaCtx, item->clauses, loc, clauseOps,
                       taskReductionSyms);
 
+  EntryBlockArgs taskgroupArgs;
+  taskgroupArgs.taskReduction.syms = taskReductionSyms;
+  taskgroupArgs.taskReduction.vars = clauseOps.taskReductionVars;
+
+  auto genRegionEntryCB = [&](mlir::Operation *op) {
+    genEntryBlock(converter.getFirOpBuilder(), taskgroupArgs, op->getRegion(0));
+    return llvm::to_vector(taskgroupArgs.getSyms());
+  };
+
   OpWithBodyGenInfo genInfo =
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_taskgroup)
-          .setClauses(&item->clauses);
+          .setClauses(&item->clauses)
+          .setGenRegionEntryCb(genRegionEntryCB);
 
   auto taskgroupOp =
       genOpWithBody<mlir::omp::TaskgroupOp>(genInfo, queue, item, clauseOps);
-
-  llvm::SmallVector<mlir::Type> taskReductionTypes;
-  for (const auto &taskreductionVar : clauseOps.taskReductionVars)
-    taskReductionTypes.push_back(taskreductionVar.getType());
-
-  // Add reduction variables as entry block arguments to the taskgroup region
-  llvm::SmallVector<mlir::Location> blockArgLocs(taskReductionSyms.size(), loc);
-  taskgroupOp->getRegion(0).addArguments(taskReductionTypes, blockArgLocs);
   return taskgroupOp;
 }
 
