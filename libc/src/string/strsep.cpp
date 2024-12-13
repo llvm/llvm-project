@@ -9,6 +9,7 @@
 #include "src/string/strsep.h"
 
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 #include "src/string/string_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -17,6 +18,7 @@ LLVM_LIBC_FUNCTION(char *, strsep,
                    (char **__restrict stringp, const char *__restrict delim)) {
   if (!*stringp)
     return nullptr;
+  LIBC_CRASH_ON_NULLPTR(delim);
   return internal::string_token<false>(*stringp, delim, stringp);
 }
 
