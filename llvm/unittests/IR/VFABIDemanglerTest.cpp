@@ -824,7 +824,7 @@ TEST_F(VFABIParserTest, ParseWideStructReturnTypeNEON) {
 TEST_F(VFABIParserTest, ParseUnsupportedStructReturnTypesSVE) {
   // Struct with array element type.
   EXPECT_FALSE(
-      invokeParser("_ZGVsMxv_foo(vector_foo)", "{double, [4 x f32]}(float)"));
+      invokeParser("_ZGVsMxv_foo(vector_foo)", "{double, [4 x float]}(float)"));
   // Nested struct type.
   EXPECT_FALSE(
       invokeParser("_ZGVsMxv_foo(vector_foo)", "{{float, float}}(float)"));
