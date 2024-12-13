@@ -15,7 +15,9 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void *, memrchr, (const void *src, int c, size_t n)) {
-  LIBC_CRASH_ON_NULLPTR(src);
+  const unsigned char *src_cpy = (const unsigned char *)src;
+  LIBC_CRASH_ON_NULLPTR(src_cpy);
+
   const unsigned char *str = reinterpret_cast<const unsigned char *>(src);
   const unsigned char ch = static_cast<unsigned char>(c);
   for (; n != 0; --n) {
