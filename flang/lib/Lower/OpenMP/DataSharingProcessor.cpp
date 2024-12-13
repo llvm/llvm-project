@@ -20,6 +20,7 @@
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Semantics/attr.h"
 #include "flang/Semantics/tools.h"
@@ -565,7 +566,8 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
 
     // Populate the `init` region.
     const bool needsInitialization =
-        Fortran::lower::hasDefaultInitialization(sym->GetUltimate()) ||
+        (Fortran::lower::hasDefaultInitialization(sym->GetUltimate()) &&
+         (!isFirstPrivate || hlfir::mayHaveAllocatableComponent(allocType))) ||
         mlir::isa<fir::BaseBoxType>(allocType) ||
         mlir::isa<fir::BoxCharType>(allocType);
     if (needsInitialization) {
@@ -573,16 +575,10 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
       mlir::Block *initBlock = firOpBuilder.createBlock(
           &initRegion, /*insertPt=*/{}, {argType, argType}, {symLoc, symLoc});
 
-      if (fir::isa_derived(allocType))
-        TODO(symLoc, "Privatization init of derived types");
-      if (Fortran::lower::hasDefaultInitialization(sym->GetUltimate()))
-        TODO(symLoc,
-             "Privatization init of symbol with default initialization");
-
       populateByRefInitAndCleanupRegions(
           firOpBuilder, symLoc, argType, /*scalarInitValue=*/nullptr, initBlock,
           result.getInitPrivateArg(), result.getInitMoldArg(),
-          result.getDeallocRegion(), /*isPrivate=*/true);
+          result.getDeallocRegion(), /*isPrivate=*/true, sym);
     }
 
     // Populate the `copy` region if this is a `firstprivate`.

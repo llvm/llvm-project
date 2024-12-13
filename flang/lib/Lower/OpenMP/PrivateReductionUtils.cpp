@@ -12,21 +12,34 @@
 
 #include "PrivateReductionUtils.h"
 
+#include "flang/Lower/ConvertVariable.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
+#include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FatalError.h"
+#include "flang/Semantics/symbol.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Location.h"
 
+static bool hasFinalization(const Fortran::semantics::Symbol &sym) {
+  if (sym.has<Fortran::semantics::ObjectEntityDetails>())
+    if (const Fortran::semantics::DeclTypeSpec *declTypeSpec = sym.GetType())
+      if (const Fortran::semantics::DerivedTypeSpec *derivedTypeSpec =
+              declTypeSpec->AsDerived())
+        return Fortran::semantics::IsFinalizable(*derivedTypeSpec);
+  return false;
+}
+
 static void createCleanupRegion(fir::FirOpBuilder &builder, mlir::Location loc,
-                                mlir::Type argType,
-                                mlir::Region &cleanupRegion) {
+                                mlir::Type argType, mlir::Region &cleanupRegion,
+                                const Fortran::semantics::Symbol *sym) {
   assert(cleanupRegion.empty());
   mlir::Block *block = builder.createBlock(&cleanupRegion, cleanupRegion.end(),
                                            {argType}, {loc});
@@ -41,12 +54,6 @@ static void createCleanupRegion(fir::FirOpBuilder &builder, mlir::Location loc,
 
   mlir::Type valTy = fir::unwrapRefType(argType);
   if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(valTy)) {
-    if (!mlir::isa<fir::HeapType, fir::PointerType>(boxTy.getEleTy())) {
-      mlir::Type innerTy = fir::extractSequenceType(boxTy);
-      if (!mlir::isa<fir::SequenceType>(innerTy))
-        typeError();
-    }
-
     mlir::Value arg = builder.loadIfRef(loc, block->getArgument(0));
     assert(mlir::isa<fir::BaseBoxType>(arg.getType()));
 
@@ -138,12 +145,19 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type argType,
     mlir::Value scalarInitValue, mlir::Block *initBlock,
     mlir::Value allocatedPrivVarArg, mlir::Value moldArg,
-    mlir::Region &cleanupRegion, bool isPrivate) {
+    mlir::Region &cleanupRegion, bool isPrivate,
+    const Fortran::semantics::Symbol *sym) {
   mlir::Type ty = fir::unwrapRefType(argType);
   builder.setInsertionPointToEnd(initBlock);
   auto yield = [&](mlir::Value ret) {
     builder.create<mlir::omp::YieldOp>(loc, ret);
   };
+
+  if (isPrivate)
+    assert(sym && "Symbol information is needed to privatize derived types");
+  bool needsInitialization =
+      sym ? Fortran::lower::hasDefaultInitialization(sym->GetUltimate())
+          : false;
 
   if (fir::isa_trivial(ty)) {
     builder.setInsertionPointToEnd(initBlock);
@@ -214,19 +228,30 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
     }
 
     moldArg = builder.loadIfRef(loc, moldArg);
-    hlfir::genLengthParameters(loc, builder, hlfir::Entity{moldArg}, lenParams);
+    // We pass derived types unboxed and so are not self-contained entities.
+    if (hlfir::isFortranEntity(moldArg))
+      hlfir::genLengthParameters(loc, builder, hlfir::Entity{moldArg},
+                                 lenParams);
 
     mlir::Type innerTy = fir::unwrapRefType(boxTy.getEleTy());
+    bool isDerived = fir::isa_derived(innerTy);
     bool isChar = fir::isa_char(innerTy);
-    if (fir::isa_trivial(innerTy) || isChar) {
+    if (fir::isa_trivial(innerTy) || isDerived || isChar) {
       // boxed non-sequence value e.g. !fir.box<!fir.heap<i32>>
-      if (!isAllocatableOrPointer)
-        TODO(loc,
-             "Reduction/Privatization of non-allocatable trivial typed box");
+      if (!isAllocatableOrPointer && !isDerived)
+        TODO(loc, "Reduction/Privatization of non-allocatable trivial or "
+                  "character typed box");
 
-      fir::IfOp ifUnallocated = handleNullAllocatable(boxAlloca, moldArg);
+      if ((isDerived || isChar) && (!isPrivate || scalarInitValue))
+        TODO(loc, "Reduction of an unsupported boxed type");
 
-      builder.setInsertionPointToStart(&ifUnallocated.getElseRegion().front());
+      fir::IfOp ifUnallocated{nullptr};
+      if (isAllocatableOrPointer) {
+        ifUnallocated = handleNullAllocatable(boxAlloca, moldArg);
+        builder.setInsertionPointToStart(
+            &ifUnallocated.getElseRegion().front());
+      }
+
       mlir::Value valAlloc = builder.createHeapTemporary(
           loc, innerTy, /*name=*/{}, /*shape=*/{}, lenParams);
       if (scalarInitValue)
@@ -234,19 +259,31 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
       mlir::Value box = builder.create<fir::EmboxOp>(
           loc, ty, valAlloc, /*shape=*/mlir::Value{}, /*slice=*/mlir::Value{},
           lenParams);
-      builder.create<fir::StoreOp>(loc, box, boxAlloca);
+      if (needsInitialization)
+        fir::runtime::genDerivedTypeInitialize(builder, loc, box);
+      fir::StoreOp lastOp = builder.create<fir::StoreOp>(loc, box, boxAlloca);
 
-      createCleanupRegion(builder, loc, argType, cleanupRegion);
-      builder.setInsertionPointAfter(ifUnallocated);
+      createCleanupRegion(builder, loc, argType, cleanupRegion, sym);
+
+      if (ifUnallocated)
+        builder.setInsertionPointAfter(ifUnallocated);
+      else
+        builder.setInsertionPointAfter(lastOp);
       yield(boxAlloca);
       return;
     }
+
     innerTy = fir::extractSequenceType(boxTy);
     if (!innerTy || !mlir::isa<fir::SequenceType>(innerTy))
       TODO(loc, "Unsupported boxed type for reduction/privatization");
 
     moldArg = builder.loadIfRef(loc, moldArg);
-    hlfir::genLengthParameters(loc, builder, hlfir::Entity{moldArg}, lenParams);
+    // We pass derived types unboxed and so are not self-contained entities.
+    // Assume that if length parameters are required, they will be boxed by
+    // lowering.
+    if (hlfir::isFortranEntity(moldArg))
+      hlfir::genLengthParameters(loc, builder, hlfir::Entity{moldArg},
+                                 lenParams);
 
     fir::IfOp ifUnallocated{nullptr};
     if (isAllocatableOrPointer) {
@@ -274,7 +311,7 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
            "createTempFromMold decides this statically");
     if (cstNeedsDealloc.has_value() && *cstNeedsDealloc != false) {
       mlir::OpBuilder::InsertionGuard guard(builder);
-      createCleanupRegion(builder, loc, argType, cleanupRegion);
+      createCleanupRegion(builder, loc, argType, cleanupRegion, sym);
     } else {
       assert(!isAllocatableOrPointer &&
              "Pointer-like arrays must be heap allocated");
@@ -298,6 +335,9 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
 
     if (scalarInitValue)
       builder.create<hlfir::AssignOp>(loc, scalarInitValue, box);
+    if (needsInitialization)
+      fir::runtime::genDerivedTypeInitialize(builder, loc, box);
+
     builder.create<fir::StoreOp>(loc, box, boxAlloca);
     if (ifUnallocated)
       builder.setInsertionPointAfter(ifUnallocated);
@@ -323,10 +363,26 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
         loc, eleTy, /*name=*/{}, /*shape=*/{}, /*lenParams=*/len);
     mlir::Value boxChar = charExprHelper.createEmboxChar(privateAddr, len);
 
-    createCleanupRegion(builder, loc, argType, cleanupRegion);
+    createCleanupRegion(builder, loc, argType, cleanupRegion, sym);
 
     builder.setInsertionPointToEnd(initBlock);
     yield(boxChar);
+    return;
+  }
+
+  if (fir::isa_derived(ty)) {
+    if (needsInitialization) {
+      builder.setInsertionPointToStart(initBlock);
+      mlir::Type boxedTy = fir::BoxType::get(ty);
+      mlir::Value box =
+          builder.create<fir::EmboxOp>(loc, boxedTy, allocatedPrivVarArg);
+      fir::runtime::genDerivedTypeInitialize(builder, loc, box);
+    }
+    if (sym && hasFinalization(*sym))
+      createCleanupRegion(builder, loc, argType, cleanupRegion, sym);
+
+    builder.setInsertionPointToEnd(initBlock);
+    yield(allocatedPrivVarArg);
     return;
   }
 

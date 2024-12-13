@@ -20,6 +20,12 @@ namespace mlir {
 class Region;
 } // namespace mlir
 
+namespace Fortran {
+namespace semantics {
+class Symbol;
+} // namespace semantics
+} // namespace Fortran
+
 namespace fir {
 class FirOpBuilder;
 class ShapeShiftOp;
@@ -37,7 +43,8 @@ void populateByRefInitAndCleanupRegions(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type argType,
     mlir::Value scalarInitValue, mlir::Block *initBlock,
     mlir::Value allocatedPrivVarArg, mlir::Value moldArg,
-    mlir::Region &cleanupRegion, bool isPrivate = false);
+    mlir::Region &cleanupRegion, bool isPrivate = false,
+    const Fortran::semantics::Symbol *sym = nullptr);
 
 /// Generate a fir::ShapeShift op describing the provided boxed array.
 fir::ShapeShiftOp getShapeShift(fir::FirOpBuilder &builder, mlir::Location loc,
