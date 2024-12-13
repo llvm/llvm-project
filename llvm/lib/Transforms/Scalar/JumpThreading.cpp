@@ -2516,7 +2516,7 @@ void JumpThreadingPass::updateBlockFreqAndEdgeWeight(BasicBlock *PredBB,
                                                      BlockFrequencyInfo *BFI,
                                                      BranchProbabilityInfo *BPI,
                                                      bool HasProfile) {
-  assert(((BFI && BPI) || (!BFI && !BFI)) &&
+  assert(((BFI && BPI) || (!BFI && !BPI)) &&
          "Both BFI & BPI should either be set or unset");
 
   if (!BFI) {

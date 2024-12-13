@@ -13859,7 +13859,7 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
     Value *createShuffleVector(Value *V1, Value *V2, ArrayRef<int> Mask) {
       if (V1->getType() != V2->getType()) {
         assert(V1->getType()->isIntOrIntVectorTy() &&
-               V1->getType()->isIntOrIntVectorTy() &&
+               V2->getType()->isIntOrIntVectorTy() &&
                "Expected integer vector types only.");
         if (V1->getType() != V2->getType()) {
           if (cast<VectorType>(V2->getType())
