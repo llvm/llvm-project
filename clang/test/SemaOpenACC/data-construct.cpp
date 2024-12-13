@@ -36,7 +36,6 @@ void AtLeastOneOf() {
   ;
 #pragma acc data deviceptr(VarPtr)
   ;
-  // expected-warning@+1{{OpenACC clause 'attach' not yet implemented}}
 #pragma acc data attach(VarPtr)
   ;
 #pragma acc data default(none)
@@ -62,8 +61,7 @@ void AtLeastOneOf() {
   // Enter Data
 #pragma acc enter data copyin(Var)
 #pragma acc enter data create(Var)
-  // expected-warning@+1{{OpenACC clause 'attach' not yet implemented}}
-#pragma acc enter data attach(Var)
+#pragma acc enter data attach(VarPtr)
 
   // OpenACC TODO: The following 'enter data' directives should diagnose, since
   // they don't have at least one of the above clauses.
