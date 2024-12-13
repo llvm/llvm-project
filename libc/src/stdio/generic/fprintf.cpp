@@ -11,7 +11,6 @@
 #include "src/__support/File/file.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/null_check.h"
 #include "src/stdio/printf_core/vfprintf_internal.h"
 
 #include "hdr/types/FILE.h"
@@ -22,8 +21,6 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(int, fprintf,
                    (::FILE *__restrict stream, const char *__restrict format,
                     ...)) {
-  LIBC_CRASH_ON_NULLPTR(stream);
-  LIBC_CRASH_ON_NULLPTR(format);
   va_list vlist;
   va_start(vlist, format);
   internal::ArgList args(vlist); // This holder class allows for easier copying
