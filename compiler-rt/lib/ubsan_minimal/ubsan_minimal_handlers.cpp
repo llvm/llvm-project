@@ -21,9 +21,6 @@ static __sanitizer::atomic_uintptr_t caller_pcs[kMaxCallerPcs];
 // that "too many errors" has already been reported.
 static __sanitizer::atomic_uint32_t caller_pcs_sz;
 
-#define MSG_PREFIX "ubsan: "
-#define MSG_SUFFIX " by 0x"
-
 static char *append_str(const char *s, char *buf, const char *end) {
   for (const char *p = s; (buf < end) && (*p != '\0'); ++p, ++buf) *buf = *p;
   return buf;
@@ -41,9 +38,9 @@ static char *append_hex(uintptr_t d, char *buf, const char *end) {
 
 static void format_msg(const char *kind, uintptr_t caller, char *buf,
                        const char *end) {
-  buf = append_str(MSG_PREFIX, buf, end);
+  buf = append_str("ubsan: ", buf, end);
   buf = append_str(kind, buf, end);
-  buf = append_str(MSG_SUFFIX, buf, end);
+  buf = append_str(" by 0x", buf, end);
   buf = append_hex(caller, buf, end);
   buf = append_str("\n", buf, end);
   if (buf == end) --buf; // Make sure we don't cause a buffer overflow.
