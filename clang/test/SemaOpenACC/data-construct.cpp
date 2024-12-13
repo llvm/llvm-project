@@ -32,7 +32,6 @@ void AtLeastOneOf() {
   // expected-warning@+1{{OpenACC clause 'create' not yet implemented}}
 #pragma acc data create(Var)
   ;
-  // expected-warning@+1{{OpenACC clause 'no_create' not yet implemented}}
 #pragma acc data no_create(Var)
   ;
   // expected-warning@+1{{OpenACC clause 'present' not yet implemented}}
