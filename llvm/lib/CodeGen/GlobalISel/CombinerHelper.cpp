@@ -3122,7 +3122,6 @@ bool CombinerHelper::matchHoistLogicOpWithSameOpcodeHands(
   case TargetOpcode::G_TRUNC: {
     // Match: logic (trunc X), (trunc Y) -> trunc (logic X, Y)
     const MachineFunction *MF = MI.getMF();
-    const DataLayout &DL = MF->getDataLayout();
     LLVMContext &Ctx = MF->getFunction().getContext();
 
     LLT DstTy = MRI.getType(Dst);
@@ -3130,8 +3129,7 @@ bool CombinerHelper::matchHoistLogicOpWithSameOpcodeHands(
 
     // Be extra careful sinking truncate. If it's free, there's no benefit in
     // widening a binop.
-    if (TLI.isZExtFree(DstTy, XTy, DL, Ctx) &&
-        TLI.isTruncateFree(XTy, DstTy, DL, Ctx))
+    if (TLI.isZExtFree(DstTy, XTy, Ctx) && TLI.isTruncateFree(XTy, DstTy, Ctx))
       return false;
     break;
   }
@@ -5072,9 +5070,8 @@ bool CombinerHelper::matchNarrowBinopFeedingAnd(
   auto &MF = *MI.getMF();
   const auto &TLI = getTargetLowering();
   LLVMContext &Ctx = MF.getFunction().getContext();
-  auto &DL = MF.getDataLayout();
-  if (!TLI.isTruncateFree(WideTy, NarrowTy, DL, Ctx) ||
-      !TLI.isZExtFree(NarrowTy, WideTy, DL, Ctx))
+  if (!TLI.isTruncateFree(WideTy, NarrowTy, Ctx) ||
+      !TLI.isZExtFree(NarrowTy, WideTy, Ctx))
     return false;
   if (!isLegalOrBeforeLegalizer({TargetOpcode::G_TRUNC, {NarrowTy, WideTy}}) ||
       !isLegalOrBeforeLegalizer({TargetOpcode::G_ZEXT, {WideTy, NarrowTy}}))
@@ -5378,8 +5375,7 @@ bool CombinerHelper::matchUDivByConst(MachineInstr &MI) {
   AttributeList Attr = MF.getFunction().getAttributes();
   const auto &TLI = getTargetLowering();
   LLVMContext &Ctx = MF.getFunction().getContext();
-  auto &DL = MF.getDataLayout();
-  if (TLI.isIntDivCheap(getApproximateEVTForLLT(DstTy, DL, Ctx), Attr))
+  if (TLI.isIntDivCheap(getApproximateEVTForLLT(DstTy, Ctx), Attr))
     return false;
 
   // Don't do this for minsize because the instruction sequence is usually
@@ -5428,8 +5424,7 @@ bool CombinerHelper::matchSDivByConst(MachineInstr &MI) {
   AttributeList Attr = MF.getFunction().getAttributes();
   const auto &TLI = getTargetLowering();
   LLVMContext &Ctx = MF.getFunction().getContext();
-  auto &DL = MF.getDataLayout();
-  if (TLI.isIntDivCheap(getApproximateEVTForLLT(DstTy, DL, Ctx), Attr))
+  if (TLI.isIntDivCheap(getApproximateEVTForLLT(DstTy, Ctx), Attr))
     return false;
 
   // Don't do this for minsize because the instruction sequence is usually
