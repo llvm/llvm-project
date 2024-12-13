@@ -167,7 +167,7 @@ defm V_MUL_LO_I32 : VOP3Inst <"v_mul_lo_i32", V_MUL_PROF<VOP_I32_I32_I32>>;
 defm V_MUL_HI_I32 : VOP3Inst <"v_mul_hi_i32", V_MUL_PROF<VOP_I32_I32_I32>, mulhs>;
 } // End SchedRW = [WriteIntMul]
 
-let SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0 in {
+let SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0, AddedComplexity = 1 in {
 defm V_MINIMUM_F32 : VOP3Inst <"v_minimum_f32", VOP3_Profile<VOP_F32_F32_F32>, DivergentBinFrag<fminimum>>;
 defm V_MAXIMUM_F32 : VOP3Inst <"v_maximum_f32", VOP3_Profile<VOP_F32_F32_F32>, DivergentBinFrag<fmaximum>>;
 defm V_MINIMUM_F16 : VOP3Inst <"v_minimum_f16", VOP3_Profile<VOP_F16_F16_F16>, DivergentBinFrag<fminimum>>;
@@ -177,7 +177,7 @@ let SchedRW = [WriteDoubleAdd] in {
 defm V_MINIMUM_F64 : VOP3Inst <"v_minimum_f64", VOP3_Profile<VOP_F64_F64_F64>, fminimum>;
 defm V_MAXIMUM_F64 : VOP3Inst <"v_maximum_f64", VOP3_Profile<VOP_F64_F64_F64>, fmaximum>;
 } // End SchedRW = [WriteDoubleAdd]
-} // End SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0
+} // End SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0, AddedComplexity = 1
 
 } // End isReMaterializable = 1
 
@@ -1560,7 +1560,7 @@ class MinimumMaximumByMinimum3Maximum3<SDPatternOperator node, ValueType vt,
 >;
 
 // Prefer the real 2 operand form if legal
-let SubtargetPredicate = HasMinimum3Maximum3F32, AddedComplexity = -1000 in {
+let SubtargetPredicate = HasMinimum3Maximum3F32 in {
 def : MinimumMaximumByMinimum3Maximum3<fminimum, f32, V_MINIMUM3_F32_e64>;
 def : MinimumMaximumByMinimum3Maximum3<fmaximum, f32, V_MAXIMUM3_F32_e64>;
 }
