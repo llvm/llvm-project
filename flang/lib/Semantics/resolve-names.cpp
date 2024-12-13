@@ -8976,7 +8976,7 @@ void ResolveNamesVisitor::FinishSpecificationPart(
     if (inDeviceSubprogram && IsDummy(symbol) &&
         symbol.has<ObjectEntityDetails>()) {
       auto *dummy{symbol.detailsIf<ObjectEntityDetails>()};
-      if (!dummy->cudaDataAttr()) {
+      if (!dummy->cudaDataAttr() && !IsValue(symbol)) {
         // Implicitly set device attribute if none is set in device context.
         dummy->set_cudaDataAttr(common::CUDADataAttr::Device);
       }
