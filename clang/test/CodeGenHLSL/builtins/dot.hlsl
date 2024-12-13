@@ -1,16 +1,16 @@
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
+// RUN: %clang_cc1 -finclude-default-header -x hlsl -fno-fast-math -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,DXCHECK,NATIVE_HALF
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
+// RUN: %clang_cc1 -finclude-default-header -x hlsl -fno-fast-math -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,DXCHECK,NO_HALF
 
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
+// RUN: %clang_cc1 -finclude-default-header -x hlsl -fno-fast-math -triple \
 // RUN:   spirv-unknown-vulkan-compute %s -fnative-half-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,SPVCHECK,NATIVE_HALF
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
+// RUN: %clang_cc1 -finclude-default-header -x hlsl -fno-fast-math -triple \
 // RUN:   spirv-unknown-vulkan-compute %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,SPVCHECK,NO_HALF
 

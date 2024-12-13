@@ -2,7 +2,7 @@
 //
 // ---------- Native Half support test -----------
 //
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
+// RUN: %clang_cc1 -finclude-default-header -x hlsl -fno-fast-math -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \
 // RUN:   -DFNATTRS=noundef -DTYPE=half
@@ -10,7 +10,7 @@
 //
 // ---------- No Native Half support test -----------
 //
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
+// RUN: %clang_cc1 -finclude-default-header -x hlsl -fno-fast-math -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s \
 // RUN:   -DFNATTRS=noundef -DTYPE=float
@@ -20,7 +20,7 @@
 //
 // ---------- Native Half support test -----------
 //
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
+// RUN: %clang_cc1 -finclude-default-header -x hlsl -fno-fast-math -triple \
 // RUN:   spirv-unknown-vulkan-compute %s -fnative-half-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \
 // RUN:   -DFNATTRS="spir_func noundef" -DTYPE=half
@@ -28,7 +28,7 @@
 //
 // ---------- No Native Half support test -----------
 //
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
+// RUN: %clang_cc1 -finclude-default-header -x hlsl -fno-fast-math -triple \
 // RUN:   spirv-unknown-vulkan-compute %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s \
 // RUN:   -DFNATTRS="spir_func noundef" -DTYPE=float
