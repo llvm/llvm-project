@@ -40,19 +40,7 @@
 # CHECK-MERGED-CALLSITES-NEXT:   0x[[#%.4x,]] Flags[None] MatchRegex[function3_copy2]
 # CHECK-MERGED-CALLSITES-NEXT:   0x[[#%.4x,]] Flags[None] MatchRegex[function2_copy1]
 
-
-#--- repro-script.sh
-#!/bin/bash
-set -ex
-
-# Set TOOLCHAIN_DIR to point to the llvm bin directory
-TOOLCHAIN_DIR="llvm-project/build/Debug/bin"  # Replace with the actual path to your LLVM bin directory
-SCRIPT_DIR="$(cd "$(dirname "$0")"; pwd)"
-OUT_DIR="$SCRIPT_DIR/out"
-cd $SCRIPT_DIR
-rm -rf "$OUT_DIR" && mkdir -p "$OUT_DIR"
-
-cat > "$OUT_DIR/merged_funcs_test.cpp" << EOF
+#--- merged_funcs_test.cpp
 #define ATTRIB extern "C" __attribute__((noinline))
 volatile int global_result = 0;
 
@@ -121,29 +109,6 @@ int main() {
     sum += function2_copy1(11);
     return sum;
 }
-EOF
-
-# Compile merged_funcs_test.cpp to merged_funcs_test.o with flags -g -O3 for MachO / arm64
-"$TOOLCHAIN_DIR/clang++" --target=arm64-apple-macos11 -c  -g -gdwarf-4 -fno-unwind-tables \
-    -mllvm -emit-func-debug-line-table-offsets -fno-exceptions -mno-outline \
-    -O3 "$OUT_DIR/merged_funcs_test.cpp" -o "$OUT_DIR/merged_funcs_test.o"
-
-# Link using ld64.lld directly with flags "--icf=all --keep-icf-stabs"
-"$TOOLCHAIN_DIR/ld64.lld" \
-    -arch arm64 \
-    -platform_version macos 11.0.0 11.0.0 \
-    -o "$OUT_DIR/merged_funcs_test.exe" \
-    "$OUT_DIR/merged_funcs_test.o" \
-    -dead_strip \
-    --icf=all \
-    --keep-icf-stabs
-
-# Create merged_funcs_test.dSYM from merged_funcs_test.exe
-"$TOOLCHAIN_DIR/dsymutil" --flat "$OUT_DIR/merged_funcs_test.exe" --verify-dwarf=none -o "$OUT_DIR/merged_funcs_test.dSYM"
-"$TOOLCHAIN_DIR/obj2yaml" "$OUT_DIR/merged_funcs_test.dSYM" -o "$OUT_DIR/merged_funcs_test.dSYM.yaml"
-
-
-
 
 #--- callsites.yaml
 functions:
@@ -180,6 +145,25 @@ functions:
       - return_offset: 0x48
         match_regex: ["function2_copy1"]
 
+#--- gen
+# Compile merged_funcs_test.cpp to merged_funcs_test.o with flags -g -O3 for MachO / arm64
+clang --target=arm64-apple-macos11 -c  -g -gdwarf-4 -fno-unwind-tables \
+    -mllvm -emit-func-debug-line-table-offsets -fno-exceptions -mno-outline \
+    -O3 "merged_funcs_test.cpp" -o "merged_funcs_test.o"
+
+# Link using ld64.lld directly with flags "--icf=all --keep-icf-stabs"
+"ld64.lld" \
+    -arch arm64 \
+    -platform_version macos 11.0.0 11.0.0 \
+    -o "merged_funcs_test.exe" \
+    "merged_funcs_test.o" \
+    -dead_strip \
+    --icf=all \
+    --keep-icf-stabs
+
+# Create merged_funcs_test.dSYM from merged_funcs_test.exe
+"dsymutil" --flat "merged_funcs_test.exe" --verify-dwarf=none -o "merged_funcs_test.dSYM"
+"obj2yaml" "merged_funcs_test.dSYM"
 
 
 #--- merged_callsites.dSYM.yaml
