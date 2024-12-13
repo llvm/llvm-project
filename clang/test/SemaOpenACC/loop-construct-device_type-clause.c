@@ -41,8 +41,7 @@ void uses() {
 #pragma acc loop device_type(*) vector
   for(int i = 0; i < 5; ++i);
 
-  // expected-error@+2{{OpenACC clause 'finalize' may not follow a 'device_type' clause in a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'finalize' clause is not valid on 'loop' directive}}
 #pragma acc loop device_type(*) finalize
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'if_present' may not follow a 'device_type' clause in a 'loop' construct}}
