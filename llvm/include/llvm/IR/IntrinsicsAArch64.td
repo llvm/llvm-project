@@ -3911,6 +3911,22 @@ let TargetPrefix = "aarch64" in {
                             [llvm_nxv16i8_ty, llvm_anyvector_ty, LLVMMatchType<0>],
                             [IntrReadMem, IntrInaccessibleMemOnly]>;
 
+  // Dot product
+  class SVE2_FP8_FMLA_FDOT
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>,
+                             llvm_nxv16i8_ty, llvm_nxv16i8_ty],
+                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+  
+  class SVE2_FP8_FMLA_FDOT_Lane
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>,
+                             llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_i32_ty],
+                            [IntrReadMem, IntrInaccessibleMemOnly, ImmArg<ArgIndex<3>>]>;
+  
+  def int_aarch64_sve_fp8_fdot      : SVE2_FP8_FMLA_FDOT;
+  def int_aarch64_sve_fp8_fdot_lane : SVE2_FP8_FMLA_FDOT_Lane;
+
   class SME2_FP8_CVT_X2_Single_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
                             [llvm_nxv16i8_ty],
