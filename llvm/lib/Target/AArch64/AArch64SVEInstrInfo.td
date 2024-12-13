@@ -4379,10 +4379,11 @@ defm BF1CVTLT_ZZ  : sve2_fp8_cvt_single<0b1, 0b10, "bf1cvtlt", nxv8bf16, int_aar
 defm BF2CVTLT_ZZ  : sve2_fp8_cvt_single<0b1, 0b11, "bf2cvtlt", nxv8bf16, int_aarch64_sve_fp8_cvtlt2>;
 
 // FP8 downconvert
-defm FCVTN_Z2Z_HtoB  : sve2_fp8_down_cvt_single<0b00, "fcvtn", ZZ_h_mul_r>;
-defm FCVTNB_Z2Z_StoB : sve2_fp8_down_cvt_single<0b01, "fcvtnb", ZZ_s_mul_r>;
-defm BFCVTN_Z2Z_HtoB : sve2_fp8_down_cvt_single<0b10, "bfcvtn", ZZ_h_mul_r>;
-defm FCVTNT_Z2Z_StoB : sve2_fp8_down_cvt_single<0b11, "fcvtnt", ZZ_s_mul_r>;
+defm FCVTN_Z2Z_HtoB  : sve2_fp8_down_cvt_single<0b00, "fcvtn",  ZZ_h_mul_r, nxv8f16,  int_aarch64_sve_fp8_cvtn>;
+defm FCVTNB_Z2Z_StoB : sve2_fp8_down_cvt_single<0b01, "fcvtnb", ZZ_s_mul_r, nxv4f32,  int_aarch64_sve_fp8_cvtnb>;
+defm BFCVTN_Z2Z_HtoB : sve2_fp8_down_cvt_single<0b10, "bfcvtn", ZZ_h_mul_r, nxv8bf16, int_aarch64_sve_fp8_cvtn>;
+
+defm FCVTNT_Z2Z_StoB : sve2_fp8_down_cvt_single_top<0b11, "fcvtnt", ZZ_s_mul_r, nxv4f32,  int_aarch64_sve_fp8_cvtnt>;
 } // End HasSVE2orSME2, HasFP8
 
 let Predicates = [HasSVE2orSME2, HasFAMINMAX] in {
@@ -4422,18 +4423,17 @@ let Predicates = [HasSVE2, HasF8F16MM] in {
 
 let Predicates = [HasSSVE_FP8DOT2] in {
 // FP8 Widening Dot-Product - Indexed Group
-defm FDOT_ZZZI_BtoH : sve2_fp8_dot_indexed_h<"fdot">;
+defm FDOT_ZZZI_BtoH : sve2_fp8_dot_indexed_h<"fdot", int_aarch64_sve_fp8_fdot_lane>;
 // FP8 Widening Dot-Product - Group
-// TODO: Replace nxv16i8 by nxv16f8
-defm FDOT_ZZZ_BtoH : sve_fp8_dot<0b0, ZPR16, "fdot">;
+defm FDOT_ZZZ_BtoH : sve_fp8_dot<0b0, ZPR16, "fdot", nxv8f16, int_aarch64_sve_fp8_fdot>;
 }
 
 // TODO: Replace nxv16i8 by nxv16f8
 let Predicates = [HasSSVE_FP8DOT4] in {
 // FP8 Widening Dot-Product - Indexed Group
-defm FDOT_ZZZI_BtoS : sve2_fp8_dot_indexed_s<"fdot">;
+defm FDOT_ZZZI_BtoS : sve2_fp8_dot_indexed_s<"fdot", int_aarch64_sve_fp8_fdot_lane>;
 // FP8 Widening Dot-Product - Group
-defm FDOT_ZZZ_BtoS : sve_fp8_dot<0b1, ZPR32, "fdot">;
+defm FDOT_ZZZ_BtoS : sve_fp8_dot<0b1, ZPR32, "fdot", nxv4f32, int_aarch64_sve_fp8_fdot>;
 }
 
 let Predicates = [HasSVE2orSME2, HasLUT] in {

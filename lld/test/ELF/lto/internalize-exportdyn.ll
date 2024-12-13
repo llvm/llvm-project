@@ -56,16 +56,19 @@ define linkonce_odr void @baz() {
 
 @use_baz = global ptr @baz
 
+;; Test comdat symbols that are prevailing in this module and non-prevailing in the other module.
 define void @ext_and_ext() local_unnamed_addr comdat {
   call void @foo(i64 1)
   ret void
 }
 
+;; linkonce_odr in this module and external in the other module.
 define linkonce_odr void @lo_and_ext() local_unnamed_addr comdat {
   call void @foo(i64 1)
   ret void
 }
 
+;; linkonce_odr in this module and weak_odr in the other module.
 define linkonce_odr void @lo_and_wo() local_unnamed_addr comdat {
   ret void
 }
@@ -92,7 +95,7 @@ define weak_odr void @wo_and_lo() local_unnamed_addr comdat {
 ; CHECK-NEXT: call void @foo(i64 1)
 ; CHECK: define internal void @lo_and_ext() comdat
 ; CHECK-NEXT: call void @foo(i64 1)
-; CHECK: define internal void @lo_and_wo() comdat
+; CHECK: define weak_odr dso_local void @lo_and_wo() comdat
 ; CHECK: define weak_odr dso_local void @wo_and_lo() comdat
 
 ; DSO: @c = weak_odr constant i32 1
@@ -110,7 +113,7 @@ define weak_odr void @wo_and_lo() local_unnamed_addr comdat {
 ; DSO: define weak_odr void @baz()
 ; DSO: define void @ext_and_ext() comdat
 ; DSO: define internal void @lo_and_ext() comdat
-; DSO: define internal void @lo_and_wo() comdat
+; DSO: define weak_odr void @lo_and_wo() comdat
 ; DSO: define weak_odr void @wo_and_lo() comdat
 
 ;--- lib.s

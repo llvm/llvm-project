@@ -1367,6 +1367,14 @@ def HasVendorXqcia
       AssemblerPredicate<(all_of FeatureVendorXqcia),
                          "'Xqcia' (Qualcomm uC Arithmetic Extension)">;
 
+def FeatureVendorXqcics
+    : RISCVExperimentalExtension<"xqcics", 0, 2,
+                                 "'Xqcics' (Qualcomm uC Conditional Select Extension)">;
+def HasVendorXqcics
+    : Predicate<"Subtarget->hasVendorXqcics()">,
+      AssemblerPredicate<(all_of FeatureVendorXqcics),
+                         "'Xqcics' (Qualcomm uC Conditional Select Extension)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//

@@ -41,7 +41,7 @@ class CIRGenModule : public CIRGenTypeCache {
   CIRGenModule &operator=(CIRGenModule &) = delete;
 
 public:
-  CIRGenModule(mlir::MLIRContext &context, clang::ASTContext &astctx,
+  CIRGenModule(mlir::MLIRContext &mlirContext, clang::ASTContext &astContext,
                const clang::CodeGenOptions &cgo,
                clang::DiagnosticsEngine &diags);
 
@@ -51,7 +51,7 @@ private:
   CIRGenBuilderTy builder;
 
   /// Hold Clang AST information.
-  clang::ASTContext &astCtx;
+  clang::ASTContext &astContext;
 
   const clang::LangOptions &langOpts;
 
@@ -67,7 +67,7 @@ private:
 public:
   mlir::ModuleOp getModule() const { return theModule; }
   CIRGenBuilderTy &getBuilder() { return builder; }
-  clang::ASTContext &getASTContext() const { return astCtx; }
+  clang::ASTContext &getASTContext() const { return astContext; }
   CIRGenTypes &getTypes() { return genTypes; }
   mlir::MLIRContext &getMLIRContext() { return *builder.getContext(); }
 

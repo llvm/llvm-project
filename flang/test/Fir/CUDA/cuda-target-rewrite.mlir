@@ -1,5 +1,5 @@
 // REQUIRES: x86-registered-target
-// RUN: fir-opt --target-rewrite="target=x86_64-unknown-linux-gnu" %s | FileCheck %s
+// RUN: fir-opt --split-input-file --target-rewrite="target=x86_64-unknown-linux-gnu" %s | FileCheck %s
 
 gpu.module @testmod {
   gpu.func @_QPvcpowdk(%arg0: !fir.ref<complex<f64>> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "a"}) attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
@@ -15,3 +15,15 @@ gpu.module @testmod {
 // CHECK-LABEL: gpu.func @_QPvcpowdk
 // CHECK: %{{.*}} = fir.call @_FortranAzpowk(%{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, i64) -> tuple<f64, f64>
 // CHECK: func.func private @_FortranAzpowk(f64, f64, i64) -> tuple<f64, f64> attributes {fir.bindc_name = "_FortranAzpowk", fir.runtime}
+
+// -----
+
+gpu.module @testmod {
+  gpu.func @_QPtest(%arg0: complex<f64>) -> (complex<f64>) {
+    gpu.return %arg0 : complex<f64>
+  }
+}
+
+// CHECK-LABEL: gpu.func @_QPtest
+// CHECK-SAME: (%arg0: f64, %arg1: f64) -> tuple<f64, f64> {
+// CHECK: gpu.return %{{.*}} : tuple<f64, f64>

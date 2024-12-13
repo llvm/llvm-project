@@ -339,7 +339,7 @@ llvm::Error Interpret(std::vector<ControlStackElement> &control,
     }
     case op_is_null: {
       TYPE_CHECK(Object);
-      data.Push(data.Pop<ValueObjectSP>() ? 0ULL : 1ULL);
+      data.Push(data.Pop<ValueObjectSP>() ? (uint64_t)0 : (uint64_t)1);
       continue;
     }
 
@@ -379,7 +379,7 @@ llvm::Error Interpret(std::vector<ControlStackElement> &control,
       BINOP_CHECKZERO(%);
       continue;
     case op_shl:
-#define SHIFTOP(OP)                                                            \
+#define SHIFTOP(OP, LEFT)                                                      \
   {                                                                            \
     TYPE_CHECK(Any, UInt);                                                     \
     uint64_t y = data.Pop<uint64_t>();                                         \
@@ -390,18 +390,18 @@ llvm::Error Interpret(std::vector<ControlStackElement> &control,
       data.Push(x OP y);                                                       \
     } else if (std::holds_alternative<int64_t>(data.back())) {                 \
       int64_t x = data.Pop<int64_t>();                                         \
+      if (x < 0 && LEFT)                                                       \
+        return error("left shift of negative value");                          \
       if (y > 64)                                                              \
-        return error("shift out of bounds");                                   \
-      if (y < 0)                                                               \
         return error("shift out of bounds");                                   \
       data.Push(x OP y);                                                       \
     } else                                                                     \
       return error("unsupported data types");                                  \
   }
-      SHIFTOP(<<);
+      SHIFTOP(<<, true);
       continue;
     case op_shr:
-      SHIFTOP(<<);
+      SHIFTOP(>>, false);
       continue;
     case op_and:
       BINOP(&);

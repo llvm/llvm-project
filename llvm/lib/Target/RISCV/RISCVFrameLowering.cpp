@@ -14,6 +14,7 @@
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -1784,7 +1785,7 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
   const auto &UnmanagedCSI = getUnmanagedCSI(*MF, CSI);
   const auto &RVVCSI = getRVVCalleeSavedInfo(*MF, CSI);
 
-  auto storeRegToStackSlot = [&](decltype(UnmanagedCSI) CSInfo) {
+  auto storeRegsToStackSlots = [&](decltype(UnmanagedCSI) CSInfo) {
     for (auto &CS : CSInfo) {
       // Insert the spill to the stack frame.
       Register Reg = CS.getReg();
@@ -1793,8 +1794,8 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
                               CS.getFrameIdx(), RC, TRI, Register());
     }
   };
-  storeRegToStackSlot(UnmanagedCSI);
-  storeRegToStackSlot(RVVCSI);
+  storeRegsToStackSlots(UnmanagedCSI);
+  storeRegsToStackSlots(RVVCSI);
 
   return true;
 }
@@ -2066,6 +2067,8 @@ static void emitStackProbeInline(MachineFunction &MF, MachineBasicBlock &MBB,
   LoopTestMBB->addSuccessor(ExitMBB);
   LoopTestMBB->addSuccessor(LoopTestMBB);
   MBB.addSuccessor(LoopTestMBB);
+  // Update liveins.
+  fullyRecomputeLiveIns({ExitMBB, LoopTestMBB});
 }
 
 void RISCVFrameLowering::inlineStackProbe(MachineFunction &MF,

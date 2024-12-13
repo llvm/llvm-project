@@ -9,7 +9,7 @@ using namespace clang;
 using namespace clang::CIRGen;
 
 CIRGenTypes::CIRGenTypes(CIRGenModule &genModule)
-    : cgm(genModule), context(genModule.getASTContext()),
+    : cgm(genModule), astContext(genModule.getASTContext()),
       builder(cgm.getBuilder()) {}
 
 CIRGenTypes::~CIRGenTypes() {}
@@ -19,7 +19,7 @@ mlir::MLIRContext &CIRGenTypes::getMLIRContext() const {
 }
 
 mlir::Type CIRGenTypes::convertType(QualType type) {
-  type = context.getCanonicalType(type);
+  type = astContext.getCanonicalType(type);
   const Type *ty = type.getTypePtr();
 
   // Has the type already been processed?
@@ -43,8 +43,9 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     case BuiltinType::SChar:
     case BuiltinType::Short:
     case BuiltinType::WChar_S:
-      resultType = cir::IntType::get(&getMLIRContext(), context.getTypeSize(ty),
-                                     /*isSigned=*/true);
+      resultType =
+          cir::IntType::get(&getMLIRContext(), astContext.getTypeSize(ty),
+                            /*isSigned=*/true);
       break;
     // Unsigned integral types.
     case BuiltinType::Char8:
@@ -58,8 +59,9 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     case BuiltinType::ULongLong:
     case BuiltinType::UShort:
     case BuiltinType::WChar_U:
-      resultType = cir::IntType::get(&getMLIRContext(), context.getTypeSize(ty),
-                                     /*isSigned=*/false);
+      resultType =
+          cir::IntType::get(&getMLIRContext(), astContext.getTypeSize(ty),
+                            /*isSigned=*/false);
       break;
     default:
       cgm.errorNYI(SourceLocation(), "processing of built-in type", type);

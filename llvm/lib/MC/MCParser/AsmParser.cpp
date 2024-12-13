@@ -2439,7 +2439,8 @@ bool AsmParser::parseCppHashLineFilenameComment(SMLoc L, bool SaveLocInfo) {
     // If we haven't encountered any .file directives, then the first #line
     // directive describes the "root" file and directory of the compilation
     // unit.
-    if (getContext().getGenDwarfFileNumber() == 0) {
+    if (getContext().getGenDwarfForAssembly() &&
+        getContext().getGenDwarfFileNumber() == 0) {
       // It's preprocessed, so there is no checksum, and of course no source
       // directive.
       getContext().setMCLineTableRootFile(

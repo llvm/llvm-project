@@ -2697,6 +2697,37 @@ void StmtProfiler::VisitOpenACCCombinedConstruct(
   P.VisitOpenACCClauseList(S->clauses());
 }
 
+void StmtProfiler::VisitOpenACCDataConstruct(const OpenACCDataConstruct *S) {
+  VisitStmt(S);
+
+  OpenACCClauseProfiler P{*this};
+  P.VisitOpenACCClauseList(S->clauses());
+}
+
+void StmtProfiler::VisitOpenACCEnterDataConstruct(
+    const OpenACCEnterDataConstruct *S) {
+  VisitStmt(S);
+
+  OpenACCClauseProfiler P{*this};
+  P.VisitOpenACCClauseList(S->clauses());
+}
+
+void StmtProfiler::VisitOpenACCExitDataConstruct(
+    const OpenACCExitDataConstruct *S) {
+  VisitStmt(S);
+
+  OpenACCClauseProfiler P{*this};
+  P.VisitOpenACCClauseList(S->clauses());
+}
+
+void StmtProfiler::VisitOpenACCHostDataConstruct(
+    const OpenACCHostDataConstruct *S) {
+  VisitStmt(S);
+
+  OpenACCClauseProfiler P{*this};
+  P.VisitOpenACCClauseList(S->clauses());
+}
+
 void StmtProfiler::VisitHLSLOutArgExpr(const HLSLOutArgExpr *S) {
   VisitStmt(S);
 }

@@ -79,20 +79,18 @@ define i8 @ucmp.8.128(i128 %x, i128 %y) nounwind {
 ;
 ; CHECK-GI-LABEL: ucmp.8.128:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    cmp x1, x3
-; CHECK-GI-NEXT:    cset w8, hi
 ; CHECK-GI-NEXT:    cmp x0, x2
-; CHECK-GI-NEXT:    cset w9, hi
+; CHECK-GI-NEXT:    cset w8, hi
 ; CHECK-GI-NEXT:    cmp x1, x3
-; CHECK-GI-NEXT:    csel w8, w9, w8, eq
+; CHECK-GI-NEXT:    cset w9, hi
+; CHECK-GI-NEXT:    csel w8, w8, w9, eq
 ; CHECK-GI-NEXT:    tst w8, #0x1
 ; CHECK-GI-NEXT:    cset w8, ne
-; CHECK-GI-NEXT:    cmp x1, x3
-; CHECK-GI-NEXT:    cset w9, lo
 ; CHECK-GI-NEXT:    cmp x0, x2
-; CHECK-GI-NEXT:    cset w10, lo
+; CHECK-GI-NEXT:    cset w9, lo
 ; CHECK-GI-NEXT:    cmp x1, x3
-; CHECK-GI-NEXT:    csel w9, w10, w9, eq
+; CHECK-GI-NEXT:    cset w10, lo
+; CHECK-GI-NEXT:    csel w9, w9, w10, eq
 ; CHECK-GI-NEXT:    tst w9, #0x1
 ; CHECK-GI-NEXT:    csinv w0, w8, wzr, eq
 ; CHECK-GI-NEXT:    ret
@@ -151,20 +149,18 @@ define <1 x i64> @ucmp.1.64.65(<1 x i65> %x, <1 x i65> %y) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    and x8, x1, #0x1
 ; CHECK-GI-NEXT:    and x9, x3, #0x1
-; CHECK-GI-NEXT:    cmp x8, x9
-; CHECK-GI-NEXT:    cset w10, hi
 ; CHECK-GI-NEXT:    cmp x0, x2
-; CHECK-GI-NEXT:    cset w11, hi
+; CHECK-GI-NEXT:    cset w10, hi
 ; CHECK-GI-NEXT:    cmp x8, x9
-; CHECK-GI-NEXT:    csel w10, w11, w10, eq
+; CHECK-GI-NEXT:    cset w11, hi
+; CHECK-GI-NEXT:    csel w10, w10, w11, eq
 ; CHECK-GI-NEXT:    tst w10, #0x1
 ; CHECK-GI-NEXT:    cset x10, ne
-; CHECK-GI-NEXT:    cmp x8, x9
-; CHECK-GI-NEXT:    cset w11, lo
 ; CHECK-GI-NEXT:    cmp x0, x2
-; CHECK-GI-NEXT:    cset w12, lo
+; CHECK-GI-NEXT:    cset w11, lo
 ; CHECK-GI-NEXT:    cmp x8, x9
-; CHECK-GI-NEXT:    csel w8, w12, w11, eq
+; CHECK-GI-NEXT:    cset w8, lo
+; CHECK-GI-NEXT:    csel w8, w11, w8, eq
 ; CHECK-GI-NEXT:    tst w8, #0x1
 ; CHECK-GI-NEXT:    csinv x8, x10, xzr, eq
 ; CHECK-GI-NEXT:    fmov d0, x8

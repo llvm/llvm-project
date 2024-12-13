@@ -529,7 +529,7 @@ protected:
   void generateMDProfMetadata(Function &F);
   bool rejectHighStalenessProfile(Module &M, ProfileSummaryInfo *PSI,
                                   const SampleProfileMap &Profiles);
-  void removePseudoProbeInsts(Module &M);
+  void removePseudoProbeInstsDiscriminator(Module &M);
 
   /// Map from function name to Function *. Used to find the function from
   /// the function name. If the function name contains suffix, additional
@@ -2138,13 +2138,25 @@ bool SampleProfileLoader::rejectHighStalenessProfile(
   return false;
 }
 
-void SampleProfileLoader::removePseudoProbeInsts(Module &M) {
+void SampleProfileLoader::removePseudoProbeInstsDiscriminator(Module &M) {
   for (auto &F : M) {
     std::vector<Instruction *> InstsToDel;
     for (auto &BB : F) {
       for (auto &I : BB) {
         if (isa<PseudoProbeInst>(&I))
           InstsToDel.push_back(&I);
+        else if (isa<CallBase>(&I))
+          if (const DILocation *DIL = I.getDebugLoc().get()) {
+            // Restore dwarf discriminator for call.
+            unsigned Discriminator = DIL->getDiscriminator();
+            if (DILocation::isPseudoProbeDiscriminator(Discriminator)) {
+              std::optional<uint32_t> DwarfDiscriminator =
+                  PseudoProbeDwarfDiscriminator::extractDwarfBaseDiscriminator(
+                      Discriminator);
+              I.setDebugLoc(DIL->cloneWithDiscriminator(
+                  DwarfDiscriminator ? *DwarfDiscriminator : 0));
+            }
+          }
       }
     }
     for (auto *I : InstsToDel)
@@ -2224,8 +2236,12 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
          notInlinedCallInfo)
       updateProfileCallee(pair.first, pair.second.entryCount);
 
-  if (RemoveProbeAfterProfileAnnotation && FunctionSamples::ProfileIsProbeBased)
-    removePseudoProbeInsts(M);
+  if (RemoveProbeAfterProfileAnnotation &&
+      FunctionSamples::ProfileIsProbeBased) {
+    removePseudoProbeInstsDiscriminator(M);
+    if (auto *FuncInfo = M.getNamedMetadata(PseudoProbeDescMetadataName))
+      M.eraseNamedMetadata(FuncInfo);
+  }
 
   return retval;
 }
