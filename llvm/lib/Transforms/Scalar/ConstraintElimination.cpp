@@ -1229,7 +1229,7 @@ void State::collectPHIInductionVars(Function &F) {
 }
 
 void State::addPointerBoundInfoFromOverflowCheck(Value *Op, DomTreeNode *DTN) {
-  CmpInst::Predicate Pred;
+  CmpPredicate Pred;
   Value *Ptr1;
   Value *G;
   if (match(Op, m_Cmp(Pred, m_Value(G), m_Value(Ptr1))) &&
