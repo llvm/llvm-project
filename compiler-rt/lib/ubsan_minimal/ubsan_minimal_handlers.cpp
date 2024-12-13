@@ -1,5 +1,6 @@
 #include "sanitizer_common/sanitizer_atomic.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
@@ -20,8 +21,36 @@ static __sanitizer::atomic_uintptr_t caller_pcs[kMaxCallerPcs];
 // that "too many errors" has already been reported.
 static __sanitizer::atomic_uint32_t caller_pcs_sz;
 
+#define MSG_PREFIX "ubsan: "
+#define MSG_SUFFIX " by 0x"
+
+static char *append_str(const char *s, char *buf, const char *end) {
+  for (const char *p = s; (buf < end) && (*p != '\0'); ++p, ++buf) *buf = *p;
+  return buf;
+}
+
+static char *append_hex(uintptr_t d, char *buf, const char *end) {
+  // Print the address by nibbles.
+  for (unsigned shift = sizeof(uintptr_t) * 8; shift && buf < end;) {
+    shift -= 4;
+    unsigned nibble = (d >> shift) & 0xf;
+    *(buf++) = nibble < 10 ? nibble + '0' : nibble - 10 + 'a';
+  }
+  return buf;
+}
+
+#if defined(__ANDROID__)
+extern "C" __attribute__((weak)) void android_set_abort_message(const char *);
+static void abort_with_message(const char *msg) {
+  if (&android_set_abort_message) android_set_abort_message(msg);
+  abort();
+}
+#else
+static void abort_with_message(const char *) { abort(); }
+#endif
+
 SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error, const char *msg,
-                             uintptr_t caller, const char *decorated_msg) {
+                             uintptr_t caller, int abort) {
   if (caller == 0)
     return;
   while (true) {
@@ -48,32 +77,21 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error, const char *msg,
       return;
     }
     __sanitizer::atomic_store_relaxed(&caller_pcs[sz], caller);
-    message(decorated_msg);
+
+    char msg_buf[128] = MSG_PREFIX;
+    const char *end = msg_buf + sizeof(msg_buf);
+    char *p = append_str(msg, msg_buf + sizeof(MSG_PREFIX) - 1, end);
+    p = append_str(MSG_SUFFIX, p, end);
+    p = append_hex(caller, p, end);
+    if (p < end) *p++ = '\n';
+
+    // Zero terminate.
+    if (p == end) --p;
+    *p = '\0';
+    message(msg_buf);
+    if (abort) abort_with_message(msg_buf);                                 \
   }
 }
-
-__attribute__((noinline)) static void decorate_msg(char *buf,
-                                                   uintptr_t caller) {
-  // print the address by nibbles
-  for (unsigned shift = sizeof(uintptr_t) * 8; shift;) {
-    shift -= 4;
-    unsigned nibble = (caller >> shift) & 0xf;
-    *(buf++) = nibble < 10 ? nibble + '0' : nibble - 10 + 'a';
-  }
-  // finish the message
-  buf[0] = '\n';
-  buf[1] = '\0';
-}
-
-#if defined(__ANDROID__)
-extern "C" __attribute__((weak)) void android_set_abort_message(const char *);
-static void abort_with_message(const char *msg) {
-  if (&android_set_abort_message) android_set_abort_message(msg);
-  abort();
-}
-#else
-static void abort_with_message(const char *) { abort(); }
-#endif
 
 #if SANITIZER_DEBUG
 namespace __sanitizer {
@@ -90,28 +108,16 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
 
 #define INTERFACE extern "C" __attribute__((visibility("default")))
 
-// How many chars we need to reserve to print an address.
-constexpr unsigned kAddrBuf = SANITIZER_WORDSIZE / 4;
-#define MSG_TMPL(msg) "ubsan: " msg " by 0x"
-#define MSG_TMPL_END(buf, msg) (buf + sizeof(MSG_TMPL(msg)) - 1)
-// Reserve an additional byte for '\n'.
-#define MSG_BUF_LEN(msg) (sizeof(MSG_TMPL(msg)) + kAddrBuf + 1)
-
 #define HANDLER_RECOVER(name, msg)                               \
   INTERFACE void __ubsan_handle_##name##_minimal() {             \
     uintptr_t caller = GET_CALLER_PC();                          \
-    char msg_buf[MSG_BUF_LEN(msg)] = MSG_TMPL(msg);              \
-    decorate_msg(MSG_TMPL_END(msg_buf, msg), caller);            \
-    __ubsan_report_error(msg, caller, msg_buf);                  \
+    __ubsan_report_error(msg, caller, 0);                        \
   }
 
 #define HANDLER_NORECOVER(name, msg)                             \
   INTERFACE void __ubsan_handle_##name##_minimal_abort() {       \
     uintptr_t caller = GET_CALLER_PC();                          \
-    char msg_buf[MSG_BUF_LEN(msg)] = MSG_TMPL(msg);              \
-    decorate_msg(MSG_TMPL_END(msg_buf, msg), caller);            \
-    __ubsan_report_error(msg, caller, msg_buf);                  \
-    abort_with_message(msg_buf);                                 \
+    __ubsan_report_error(msg, caller, 1);                         \
   }
 
 #define HANDLER(name, msg)                                       \
