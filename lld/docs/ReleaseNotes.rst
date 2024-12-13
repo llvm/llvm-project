@@ -36,10 +36,11 @@ ELF Improvements
   increases the expressive power of linker scripts.
   (`#95323 <https://github.com/llvm/llvm-project/pull/95323>`_)
 * Supported relocation types for x86-64 target:
+
   * ``R_X86_64_CODE_4_GOTPCRELX`` (`#109783 <https://github.com/llvm/llvm-project/pull/109783>`_) (`#116737 <https://github.com/llvm/llvm-project/pull/116737>`_)
   * ``R_X86_64_CODE_4_GOTTPOFF`` (`#116634 <https://github.com/llvm/llvm-project/pull/116634>`_)
   * ``R_X86_64_CODE_4_GOTPC32_TLSDESC`` (`#116909 <https://github.com/llvm/llvm-project/pull/116909>`_)
-  * ``R_X86_64_CODE_6_GOTTPOFF``  (`#117675 <https://github.com/llvm/llvm-project/pull/117675>`_)
+  * ``R_X86_64_CODE_6_GOTTPOFF`` (`#117675 <https://github.com/llvm/llvm-project/pull/117675>`_)
 
 Breaking changes
 ----------------
