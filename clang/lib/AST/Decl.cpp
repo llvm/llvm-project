@@ -3884,10 +3884,12 @@ FunctionTypeLoc FunctionDecl::getFunctionTypeLoc() const {
   FunctionTypeLoc FTL;
 
   while (!(FTL = TL.getAs<FunctionTypeLoc>())) {
-    if (auto PTL = TL.getAs<ParenTypeLoc>())
+    if (const auto PTL = TL.getAs<ParenTypeLoc>())
       TL = PTL.getInnerLoc();
-    else if (auto ATL = TL.getAs<AttributedTypeLoc>())
+    else if (const auto ATL = TL.getAs<AttributedTypeLoc>())
       TL = ATL.getEquivalentTypeLoc();
+    else if (const auto MQTL = TL.getAs<MacroQualifiedTypeLoc>())
+      TL = MQTL.getInnerLoc();
     else
       break;
   }

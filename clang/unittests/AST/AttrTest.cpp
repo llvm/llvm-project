@@ -90,6 +90,19 @@ TEST(Attr, AnnotateType) {
     // Function Type Attributes
     __attribute__((noreturn)) int f_noreturn();
     __attribute__((preserve_most)) int f_cc_preserve_most();
+
+    #define PRESERVE_MOST __attribute__((preserve_most))
+    PRESERVE_MOST int f_macro_attribue();
+
+    int (__attribute__((preserve_most)) f_paren_attribute)();
+
+    int (
+      PRESERVE_MOST
+      (
+        __attribute__((warn_unused_result))
+        (f_w_paren_and_attr)
+      )
+    ) ();
   )cpp");
 
   {
@@ -173,6 +186,19 @@ TEST(Attr, AnnotateType) {
     EXPECT_TRUE(FT->getCallConv() == CC_PreserveMost);
   }
 
+  {
+    for(auto should_have_func_type_loc: {
+	"f_macro_attribue",
+	"f_paren_attribute",
+	"f_w_paren_and_attr",
+      }) {
+      llvm::errs() << "O: " << should_have_func_type_loc << "\n";
+      const FunctionDecl *Func = getFunctionNode(AST.get(), should_have_func_type_loc);
+
+      EXPECT_TRUE(Func->getFunctionTypeLoc());
+    }
+  }
+
   // The following test verifies getFunctionTypeLoc returns a type
   // which takes into account the attribute (instead of only the nake
   // type).
@@ -182,7 +208,7 @@ TEST(Attr, AnnotateType) {
   // with either:
   //
   // 1. It does NOT produce any AttributedType (for example it only
-  //   sets one flag of the FunctionType's ExtInfo, ie NoReturn).
+  //   sets one flag of the FunctionType's ExtInfo, e.g. NoReturn).
   // 2. It produces an AttributedType with modified type and
   //   equivalent type that are equal (for example, that's what
   //   happens with Calling Convention attributes).
