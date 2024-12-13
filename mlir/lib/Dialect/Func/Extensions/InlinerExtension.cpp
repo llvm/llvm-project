@@ -23,6 +23,8 @@ namespace {
 struct FuncInlinerInterface : public DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;
 
+  static constexpr const char* NoInlineAttrName = "noinline";
+
   //===--------------------------------------------------------------------===//
   // Analysis Hooks
   //===--------------------------------------------------------------------===//
@@ -30,7 +32,7 @@ struct FuncInlinerInterface : public DialectInlinerInterface {
   /// All call operations can be inlined.
   bool isLegalToInline(Operation *call, Operation *callable,
                        bool wouldBeCloned) const final {
-    return true;
+    return !call->hasAttr(NoInlineAttrName) && !callable->hasAttr(NoInlineAttrName);
   }
 
   /// All operations can be inlined.
