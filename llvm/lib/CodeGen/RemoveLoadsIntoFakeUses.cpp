@@ -104,11 +104,9 @@ bool RemoveLoadsIntoFakeUses::runOnMachineFunction(MachineFunction &MF) {
       if (MI.isFakeUse()) {
         if (MI.getNumOperands() == 0 || !MI.getOperand(0).isReg())
           continue;
-        const MachineOperand &FakeUseOp = MI.getOperand(0);
         // Track the Fake Uses that use these register units so that we can
         // delete them if we delete the corresponding load.
-        if (FakeUseOp.isReg())
-          RegFakeUses.push_back(&MI);
+        RegFakeUses.push_back(&MI);
         // Do not record FAKE_USE uses in LivePhysRegs so that we can recognize
         // otherwise-unused loads.
         continue;
