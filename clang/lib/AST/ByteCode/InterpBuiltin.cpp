@@ -1943,10 +1943,18 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
   BitcastBuffer BufferA(
       Bits(S.getASTContext().getTypeSize(PtrA.getFieldDesc()->getType())));
   readPointerToBuffer(S.getContext(), PtrA, BufferA, false);
+  // FIXME: The swapping here is UNDOING something we do when reading the
+  // data into the buffer.
+  if (S.getASTContext().getTargetInfo().isBigEndian())
+    swapBytes(BufferA.Data.get(), BufferA.byteSize().getQuantity());
 
   BitcastBuffer BufferB(
       Bits(S.getASTContext().getTypeSize(PtrB.getFieldDesc()->getType())));
   readPointerToBuffer(S.getContext(), PtrB, BufferB, false);
+  // FIXME: The swapping here is UNDOING something we do when reading the
+  // data into the buffer.
+  if (S.getASTContext().getTargetInfo().isBigEndian())
+    swapBytes(BufferB.Data.get(), BufferB.byteSize().getQuantity());
 
   size_t MinBufferSize = std::min(BufferA.byteSize().getQuantity(),
                                   BufferB.byteSize().getQuantity());
