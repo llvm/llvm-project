@@ -64,11 +64,11 @@ kernel void foo(image1d_t img) {
 
 kernel void foo_ro_pipe(read_only pipe int p) {}
 // CHECK-SPIR: @foo_ro_pipe(target("spirv.Pipe", 0) %p)
-// CHECK_AMDGCN: @foo_ro_pipe(ptr addrspace(1) %p)
+// CHECK-AMDGCN: @foo_ro_pipe(ptr addrspace(1) %p)
 
 kernel void foo_wo_pipe(write_only pipe int p) {}
 // CHECK-SPIR: @foo_wo_pipe(target("spirv.Pipe", 1) %p)
-// CHECK_AMDGCN: @foo_wo_pipe(ptr addrspace(1) %p)
+// CHECK-AMDGCN: @foo_wo_pipe(ptr addrspace(1) %p)
 
 void __attribute__((overloadable)) bad1(image1d_t b, image2d_t c, image2d_t d) {}
 // CHECK-SPIR-LABEL: @{{_Z4bad114ocl_image1d_ro14ocl_image2d_roS0_|"\\01\?bad1@@\$\$J0YAXPAUocl_image1d_ro@@PAUocl_image2d_ro@@1@Z"}}

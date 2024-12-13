@@ -118,7 +118,7 @@ bool LiveDebugValues::runOnMachineFunction(MachineFunction &MF) {
   if (!llvm::isHeterogeneousDebug(*MF.getFunction().getParent())) {
     if (InstrRefBased) {
       DomTree = &MDT;
-      MDT.calculate(MF);
+      MDT.recalculate(MF);
       TheImpl = &*InstrRefImpl;
     }
   } else
