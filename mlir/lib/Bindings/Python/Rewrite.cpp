@@ -8,11 +8,10 @@
 
 #include "Rewrite.h"
 
-#include <nanobind/nanobind.h>
-
 #include "IRModule.h"
 #include "mlir-c/Bindings/Python/Interop.h"
 #include "mlir-c/Rewrite.h"
+#include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Config/mlir-config.h"
 
 namespace nb = nanobind;

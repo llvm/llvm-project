@@ -6,10 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <nanobind/nanobind.h>
-#include <nanobind/stl/string.h>
-#include <nanobind/stl/vector.h>
-
 #include <cstddef>
 #include <cstdint>
 #include <stdexcept>
@@ -23,6 +19,7 @@
 #include "mlir-c/AffineMap.h"
 #include "mlir-c/Bindings/Python/Interop.h"
 #include "mlir-c/IntegerSet.h"
+#include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"

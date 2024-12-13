@@ -8,13 +8,10 @@
 
 #include "Pass.h"
 
-#include <nanobind/nanobind.h>
-#include <nanobind/stl/optional.h>
-#include <nanobind/stl/string.h>
-
 #include "IRModule.h"
 #include "mlir-c/Bindings/Python/Interop.h"
 #include "mlir-c/Pass.h"
+#include "mlir/Bindings/Python/Nanobind.h"
 
 namespace nb = nanobind;
 using namespace nb::literals;
