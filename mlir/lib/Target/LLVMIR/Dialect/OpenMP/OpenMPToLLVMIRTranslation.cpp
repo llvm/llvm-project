@@ -158,6 +158,10 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (!op.getAllocateVars().empty() || !op.getAllocatorVars().empty())
       result = todo("allocate");
   };
+  auto checkBare = [&todo](auto op, LogicalResult &result) {
+    if (op.getBare())
+      result = todo("ompx_bare");
+  };
   auto checkDepend = [&todo](auto op, LogicalResult &result) {
     if (!op.getDependVars().empty() || op.getDependKinds())
       result = todo("depend");
@@ -283,6 +287,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
           [&](auto op) { checkDepend(op, result); })
       .Case([&](omp::TargetOp op) {
         checkAllocate(op, result);
+        checkBare(op, result);
         checkDevice(op, result);
         checkHasDeviceAddr(op, result);
         checkIf(op, result);
