@@ -18608,9 +18608,9 @@ static SDValue performBuildShuffleExtendCombine(SDValue BV, SelectionDAG &DAG) {
                                    : BV.getOperand(1).getOperand(0),
                                cast<ShuffleVectorSDNode>(BV)->getMask());
   }
-  unsigned ExtOpc = !SeenZExtOrSExt ? ISD::ANY_EXTEND
-                    : IsSExt        ? ISD::SIGN_EXTEND
-                                    : ISD::ZERO_EXTEND;
+  unsigned ExtOpc = !SeenZExtOrSExt
+                        ? ISD::ANY_EXTEND
+                        : (IsSExt ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND);
   return DAG.getNode(ExtOpc, DL, VT, NBV);
 }
 
