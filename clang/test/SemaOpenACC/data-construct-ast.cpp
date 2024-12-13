@@ -27,6 +27,8 @@ void NormalFunc() {
   // CHECK: NullStmt
 #pragma acc enter data copyin(Var)
   // CHECK-NEXT: OpenACCEnterDataConstruct{{.*}} enter data
+  // CHECK-NEXT: copyin clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Var' 'int'
 #pragma acc exit data copyout(Var)
   // CHECK-NEXT: OpenACCExitDataConstruct{{.*}} exit data
 #pragma acc host_data use_device(Var)
@@ -55,6 +57,8 @@ void TemplFunc() {
   // CHECK: NullStmt
 #pragma acc enter data copyin(Var)
   // CHECK-NEXT: OpenACCEnterDataConstruct{{.*}} enter data
+  // CHECK-NEXT: copyin clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Var' 'T'
 #pragma acc exit data copyout(Var)
   // CHECK-NEXT: OpenACCExitDataConstruct{{.*}} exit data
 #pragma acc host_data use_device(Var)
@@ -78,6 +82,8 @@ void TemplFunc() {
   // CHECK: NullStmt
 
   // CHECK-NEXT: OpenACCEnterDataConstruct{{.*}} enter data
+  // CHECK-NEXT: copyin clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Var' 'int'
 
   // CHECK-NEXT: OpenACCExitDataConstruct{{.*}} exit data
 

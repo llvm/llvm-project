@@ -14,8 +14,7 @@ void foo() {
 #pragma acc data device_type(int)
   ;
 
-// CHECK: #pragma acc enter data
-// CHECK-NOT: copyin(Var)
+// CHECK: #pragma acc enter data copyin(Var)
 #pragma acc enter data copyin(Var)
   ;
 // CHECK: #pragma acc exit data
@@ -34,7 +33,7 @@ void foo() {
 // CHECK: #pragma acc data default(none) if(i == array[1])
 #pragma acc data default(none) if(i == array[1])
   ;
-// CHECK: #pragma acc enter data if(i == array[1])
+// CHECK: #pragma acc enter data copyin(Var) if(i == array[1])
 #pragma acc enter data copyin(Var) if(i == array[1])
   ;
 // CHECK: #pragma acc exit data if(i == array[1])
@@ -47,7 +46,7 @@ void foo() {
 // CHECK: #pragma acc data default(none) async(i)
 #pragma acc data default(none) async(i)
   ;
-// CHECK: #pragma acc enter data async(i)
+// CHECK: #pragma acc enter data copyin(i) async(i)
 #pragma acc enter data copyin(i) async(i)
 // CHECK: #pragma acc exit data async
 #pragma acc exit data copyout(i) async
@@ -56,7 +55,7 @@ void foo() {
 #pragma acc data default(none) wait()
   ;
 
-// CHECK: #pragma acc enter data wait()
+// CHECK: #pragma acc enter data copyin(Var) wait()
 #pragma acc enter data copyin(Var) wait()
 
 // CHECK: #pragma acc exit data wait(*iPtr, i)
@@ -66,7 +65,7 @@ void foo() {
 #pragma acc data default(none) wait(queues:*iPtr, i)
   ;
 
-// CHECK: #pragma acc enter data wait(devnum: i : *iPtr, i)
+// CHECK: #pragma acc enter data copyin(Var) wait(devnum: i : *iPtr, i)
 #pragma acc enter data copyin(Var) wait(devnum:i:*iPtr, i)
 
 // CHECK: #pragma acc exit data wait(devnum: i : queues: *iPtr, i)
@@ -79,4 +78,26 @@ void foo() {
 // CHECK: #pragma acc data default(present)
 #pragma acc data default(present)
   ;
+
+// CHECK: #pragma acc data default(none) no_create(i, array[1], array, array[1:2])
+#pragma acc data default(none) no_create(i, array[1], array, array[1:2])
+  ;
+
+// CHECK: #pragma acc data default(none) no_create(i, array[1], array, array[1:2])
+// CHECK-NOT: present(i, array[1], array, array[1:2])
+#pragma acc data default(none) no_create(i, array[1], array, array[1:2]) present(i, array[1], array, array[1:2])
+  ;
+
+// CHECK: #pragma acc data default(none) copy(i, array[1], array, array[1:2]) pcopy(i, array[1], array, array[1:2]) present_or_copy(i, array[1], array, array[1:2])
+#pragma acc data default(none) copy(i, array[1], array, array[1:2]) pcopy(i, array[1], array, array[1:2]) present_or_copy(i, array[1], array, array[1:2])
+  ;
+
+// CHECK: #pragma acc enter data copyin(i, array[1], array, array[1:2]) pcopyin(readonly: i, array[1], array, array[1:2]) present_or_copyin(i, array[1], array, array[1:2])
+#pragma acc enter data copyin(i, array[1], array, array[1:2]) pcopyin(readonly:i, array[1], array, array[1:2]) present_or_copyin(i, array[1], array, array[1:2])
+
+// CHECK-NOT: #pragma acc exit data copyout(i, array[1], array, array[1:2]) pcopyout(zero: i, array[1], array, array[1:2]) present_or_copyout(i, array[1], array, array[1:2])
+#pragma acc exit data copyout(i, array[1], array, array[1:2]) pcopyout(zero: i, array[1], array, array[1:2]) present_or_copyout(i, array[1], array, array[1:2])
+
+// CHECK: #pragma acc enter data create(i, array[1], array, array[1:2]) pcreate(zero: i, array[1], array, array[1:2]) present_or_create(i, array[1], array, array[1:2])
+#pragma acc enter data create(i, array[1], array, array[1:2]) pcreate(zero: i, array[1], array, array[1:2]) present_or_create(i, array[1], array, array[1:2])
 }
