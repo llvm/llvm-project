@@ -1689,7 +1689,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     VMNANDOpcode = RISCV::PseudoVMNAND_MM_##suffix;                            \
     VMSetOpcode = RISCV::PseudoVMSET_M_##suffix;                               \
     break;
-        CASE_VMNAND_VMSET_OPCODES(LMUL_F8, B64
+        CASE_VMNAND_VMSET_OPCODES(LMUL_F8, B64)
         CASE_VMNAND_VMSET_OPCODES(LMUL_F4, B32)
         CASE_VMNAND_VMSET_OPCODES(LMUL_F2, B16)
         CASE_VMNAND_VMSET_OPCODES(LMUL_1, B8)
