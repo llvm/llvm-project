@@ -367,6 +367,7 @@ void IdenticalCodeFolding::initVTableReferences(const BinaryContext &BC) {
 }
 void IdenticalCodeFolding::analyzeDataRelocations(BinaryContext &BC) {
   initVTableReferences(BC);
+  // For static relocations there should be a symbol for function references.
   for (const BinarySection &Sec : BC.sections()) {
     if (!Sec.hasSectionRef() || !Sec.isData())
       continue;
