@@ -20,6 +20,7 @@ void HasStmt() {
 
 void AtLeastOneOf() {
   int Var;
+  int *VarPtr = &Var;
 // Data
 #pragma acc data copy(Var)
   ;
@@ -33,11 +34,10 @@ void AtLeastOneOf() {
   ;
 #pragma acc data present(Var)
   ;
-  // expected-warning@+1{{OpenACC clause 'deviceptr' not yet implemented}}
-#pragma acc data deviceptr(Var)
+#pragma acc data deviceptr(VarPtr)
   ;
   // expected-warning@+1{{OpenACC clause 'attach' not yet implemented}}
-#pragma acc data attach(Var)
+#pragma acc data attach(VarPtr)
   ;
 #pragma acc data default(none)
   ;
