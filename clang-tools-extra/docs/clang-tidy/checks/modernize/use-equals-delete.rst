@@ -41,4 +41,4 @@ for manually relocating functions to the ``public`` section.
 
 .. option:: IgnoreMacros
 
-  See :doc:`global options <clang-tidy/GlobalOptions>`.
+  See :doc:`global options <../../GlobalOptions>`.

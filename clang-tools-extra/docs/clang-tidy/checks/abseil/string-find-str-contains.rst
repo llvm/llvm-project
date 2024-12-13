@@ -43,7 +43,7 @@ Options
 
 .. option:: IncludeStyle
 
-   See :doc:`global options <clang-tidy/GlobalOptions>`.
+   See :doc:`global options <../../GlobalOptions>`.
 
 .. option:: AbseilStringsMatchHeader
 

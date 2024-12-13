@@ -26,7 +26,7 @@ Options
 
 .. option:: IgnoreMacros
 
-  See :doc:`global options <clang-tidy/GlobalOptions>`.
+  See :doc:`global options <../../GlobalOptions>`.
   This is useful for safely defining function-like macros:
 
   .. code-block:: c++

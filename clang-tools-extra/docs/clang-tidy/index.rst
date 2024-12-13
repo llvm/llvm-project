@@ -10,7 +10,7 @@ See also:
    :maxdepth: 1
 
    The list of clang-tidy checks <checks/list>
-   The list of clang-tidy global configuration <GlobalOptions>
+   The list of clang-tidy global options <GlobalOptions>
    Clang-tidy IDE/Editor Integrations <Integrations>
    Getting Involved <Contributing>
    External Clang-Tidy Examples <ExternalClang-TidyExamples>

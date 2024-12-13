@@ -26,7 +26,7 @@ Options
 
 .. option:: IgnoreMacros
 
-   See :doc:`global options <clang-tidy/GlobalOptions>`.
+   See :doc:`global options <../../GlobalOptions>`.
    Note, that also any macro arguments are ignored, even if they should count
    to the complexity.
    As this might change in the future, this option isn't guaranteed to be

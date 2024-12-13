@@ -32,7 +32,7 @@ Options
 
 .. option:: IgnoreMacros
 
-   See :doc:`global options <clang-tidy/GlobalOptions>`.
+   See :doc:`global options <../../GlobalOptions>`.
    If set to `true`, the check will not give warnings inside macros and will
    ignore special members with bodies contain macros or preprocessor directives.
    Default is `true`.

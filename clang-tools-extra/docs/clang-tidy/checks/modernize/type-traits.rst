@@ -29,7 +29,7 @@ Options
 
 .. option:: IgnoreMacros
 
-  See :doc:`global options <clang-tidy/GlobalOptions>`.
+  See :doc:`global options <../../GlobalOptions>`.
 
   Note: Fixes will never be emitted for code inside of macros.
 

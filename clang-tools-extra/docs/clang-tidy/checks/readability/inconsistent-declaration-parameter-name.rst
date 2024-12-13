@@ -54,7 +54,7 @@ the definition or the first declaration seen in a translation unit.
 
 .. option:: IgnoreMacros
 
-   See :doc:`global options <clang-tidy/GlobalOptions>`.
+   See :doc:`global options <../../GlobalOptions>`.
 
 .. option:: Strict
 
