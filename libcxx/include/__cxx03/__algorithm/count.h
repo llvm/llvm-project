@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_COUNT_H
-#define _LIBCPP___ALGORITHM_COUNT_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_COUNT_H
+#define _LIBCPP___CXX03___ALGORITHM_COUNT_H
 
 #include <__cxx03/__algorithm/iterator_operations.h>
 #include <__cxx03/__algorithm/min.h>
@@ -89,4 +89,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_COUNT_H
+#endif // _LIBCPP___CXX03___ALGORITHM_COUNT_H

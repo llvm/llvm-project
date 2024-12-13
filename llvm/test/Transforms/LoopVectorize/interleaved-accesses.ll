@@ -34,13 +34,13 @@ define void @test_array_load2_store2(i32 %C, i32 %D) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [1024 x i32], ptr @AB, i64 0, i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [1024 x i32], ptr @AB, i64 0, i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[STRIDED_VEC]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul nsw <4 x i32> [[STRIDED_VEC1]], [[BROADCAST_SPLAT3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1024 x i32], ptr @CD, i64 0, i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [1024 x i32], ptr @CD, i64 0, i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
 ; CHECK-NEXT:    store <8 x i32> [[INTERLEAVED_VEC]], ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -113,7 +113,7 @@ define void @test_struct_array_load3_store3() {
 ; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <12 x i32> [[WIDE_VEC]], <12 x i32> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
 ; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <12 x i32> [[WIDE_VEC]], <12 x i32> poison, <4 x i32> <i32 2, i32 5, i32 8, i32 11>
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw <4 x i32> [[STRIDED_VEC]], splat (i32 1)
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1024 x %struct.ST3], ptr @S, i64 0, i64 [[INDEX]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [1024 x %struct.ST3], ptr @S, i64 0, i64 [[INDEX]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <4 x i32> [[STRIDED_VEC2]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[STRIDED_VEC3]], splat (i32 3)
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>

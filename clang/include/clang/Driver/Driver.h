@@ -297,8 +297,11 @@ private:
   /// Object that stores strings read from configuration file.
   llvm::StringSaver Saver;
 
-  /// Arguments originated from configuration file.
-  std::unique_ptr<llvm::opt::InputArgList> CfgOptions;
+  /// Arguments originated from configuration file (head part).
+  std::unique_ptr<llvm::opt::InputArgList> CfgOptionsHead;
+
+  /// Arguments originated from configuration file (tail part).
+  std::unique_ptr<llvm::opt::InputArgList> CfgOptionsTail;
 
   /// Arguments originated from command line.
   std::unique_ptr<llvm::opt::InputArgList> CLOptions;

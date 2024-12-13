@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_EQUAL_H
-#define _LIBCPP___ALGORITHM_RANGES_EQUAL_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_RANGES_EQUAL_H
+#define _LIBCPP___CXX03___ALGORITHM_RANGES_EQUAL_H
 
 #include <__cxx03/__algorithm/equal.h>
 #include <__cxx03/__algorithm/unwrap_range.h>
@@ -106,4 +106,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RANGES_EQUAL_H
+#endif // _LIBCPP___CXX03___ALGORITHM_RANGES_EQUAL_H

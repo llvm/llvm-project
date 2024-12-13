@@ -18,14 +18,13 @@
 namespace llvm::orc {
 
 class ObjectLinkingLayer;
-class LazyCallThroughManager;
+class LazyReexportsManager;
 class RedirectableSymbolManager;
 
 class LazyObjectLinkingLayer : public ObjectLayer {
 public:
   LazyObjectLinkingLayer(ObjectLinkingLayer &BaseLayer,
-                         LazyCallThroughManager &LCTMgr,
-                         RedirectableSymbolManager &RSMgr);
+                         LazyReexportsManager &LRMgr);
 
   llvm::Error add(llvm::orc::ResourceTrackerSP RT,
                   std::unique_ptr<llvm::MemoryBuffer> O,
@@ -38,8 +37,7 @@ private:
   class RenamerPlugin;
 
   ObjectLinkingLayer &BaseLayer;
-  LazyCallThroughManager &LCTMgr;
-  RedirectableSymbolManager &RSMgr;
+  LazyReexportsManager &LRMgr;
 };
 
 } // namespace llvm::orc

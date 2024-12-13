@@ -53,6 +53,7 @@ public:
       : converter(converter), semaCtx(semaCtx), clauses(clauses) {}
 
   // 'Unique' clauses: They can appear at most once in the clause list.
+  bool processBare(mlir::omp::BareClauseOps &result) const;
   bool processBind(mlir::omp::BindClauseOps &result) const;
   bool
   processCollapse(mlir::Location currentLocation, lower::pft::Evaluation &eval,
@@ -90,6 +91,7 @@ public:
                           mlir::omp::ThreadLimitClauseOps &result) const;
   bool processUntied(mlir::omp::UntiedClauseOps &result) const;
 
+  bool processDetach(mlir::omp::DetachClauseOps &result) const;
   // 'Repeatable' clauses: They can appear multiple times in the clause list.
   bool processAligned(mlir::omp::AlignedClauseOps &result) const;
   bool processAllocate(mlir::omp::AllocateClauseOps &result) const;

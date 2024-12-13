@@ -238,7 +238,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
 
   else if (!HasScopeSpecifier && Tok.is(tok::identifier) &&
            GetLookAheadToken(1).is(tok::ellipsis) &&
-           GetLookAheadToken(2).is(tok::l_square)) {
+           GetLookAheadToken(2).is(tok::l_square) &&
+           !GetLookAheadToken(3).is(tok::r_square)) {
     SourceLocation Start = Tok.getLocation();
     DeclSpec DS(AttrFactory);
     SourceLocation CCLoc;
@@ -252,6 +253,19 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
 
     if (Type.isNull())
       return false;
+
+    // C++ [cpp23.dcl.dcl-2]:
+    //   Previously, T...[n] would declare a pack of function parameters.
+    //   T...[n] is now a pack-index-specifier. [...] Valid C++ 2023 code that
+    //   declares a pack of parameters without specifying a declarator-id
+    //   becomes ill-formed.
+    //
+    // However, we still treat it as a pack indexing type because the use case
+    // is fairly rare, to ensure semantic consistency given that we have
+    // backported this feature to pre-C++26 modes.
+    if (!Tok.is(tok::coloncolon) && !getLangOpts().CPlusPlus26 &&
+        getCurScope()->isFunctionDeclarationScope())
+      Diag(Start, diag::warn_pre_cxx26_ambiguous_pack_indexing_type) << Type;
 
     if (!TryConsumeToken(tok::coloncolon, CCLoc)) {
       AnnotateExistingIndexedTypeNamePack(ParsedType::make(Type), Start,

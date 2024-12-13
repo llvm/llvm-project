@@ -11,16 +11,7 @@
 
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcToLower, SimpleTest) {
-  EXPECT_EQ(LIBC_NAMESPACE::tolower('a'), int('a'));
-  EXPECT_EQ(LIBC_NAMESPACE::tolower('B'), int('b'));
-  EXPECT_EQ(LIBC_NAMESPACE::tolower('3'), int('3'));
-
-  EXPECT_EQ(LIBC_NAMESPACE::tolower(' '), int(' '));
-  EXPECT_EQ(LIBC_NAMESPACE::tolower('?'), int('?'));
-  EXPECT_EQ(LIBC_NAMESPACE::tolower('\0'), int('\0'));
-  EXPECT_EQ(LIBC_NAMESPACE::tolower(-1), int(-1));
-}
+namespace {
 
 // TODO: Merge the ctype tests using this framework.
 // Invariant: UPPER_ARR and LOWER_ARR are both the complete alphabet in the same
@@ -43,6 +34,19 @@ int span_index(int ch, LIBC_NAMESPACE::cpp::span<const char> arr) {
     if (static_cast<int>(arr[i]) == ch)
       return static_cast<int>(i);
   return -1;
+}
+
+} // namespace
+
+TEST(LlvmLibcToLower, SimpleTest) {
+  EXPECT_EQ(LIBC_NAMESPACE::tolower('a'), int('a'));
+  EXPECT_EQ(LIBC_NAMESPACE::tolower('B'), int('b'));
+  EXPECT_EQ(LIBC_NAMESPACE::tolower('3'), int('3'));
+
+  EXPECT_EQ(LIBC_NAMESPACE::tolower(' '), int(' '));
+  EXPECT_EQ(LIBC_NAMESPACE::tolower('?'), int('?'));
+  EXPECT_EQ(LIBC_NAMESPACE::tolower('\0'), int('\0'));
+  EXPECT_EQ(LIBC_NAMESPACE::tolower(-1), int(-1));
 }
 
 TEST(LlvmLibcToLower, DefaultLocale) {

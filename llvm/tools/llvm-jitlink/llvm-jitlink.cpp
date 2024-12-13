@@ -30,6 +30,7 @@
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/JITLinkRedirectableSymbolManager.h"
+#include "llvm/ExecutionEngine/Orc/JITLinkReentryTrampolines.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LoadLinkableFile.h"
 #include "llvm/ExecutionEngine/Orc/MachO.h"
@@ -949,41 +950,18 @@ public:
   }
 };
 
-static void handleLazyCallFailure() {
-  dbgs() << "ERROR: failure to materialize lazy call-through target.\n";
-  exit(1);
-}
-
-static void *reenter(void *Ctx, void *TrampolineAddr) {
-  std::promise<void *> LandingAddressP;
-  auto LandingAddressF = LandingAddressP.get_future();
-
-  auto *EPCIU = static_cast<EPCIndirectionUtils *>(Ctx);
-  EPCIU->getLazyCallThroughManager().resolveTrampolineLandingAddress(
-      ExecutorAddr::fromPtr(TrampolineAddr), [&](ExecutorAddr LandingAddress) {
-        LandingAddressP.set_value(LandingAddress.toPtr<void *>());
-      });
-  return LandingAddressF.get();
-}
-
 Expected<std::unique_ptr<Session::LazyLinkingSupport>>
-createLazyLinkingSupport(ObjectLinkingLayer &OLL) {
-  auto EPCIU = EPCIndirectionUtils::Create(OLL.getExecutionSession());
-  if (!EPCIU)
-    return EPCIU.takeError();
-  if (auto Err = (*EPCIU)
-                     ->writeResolverBlock(ExecutorAddr::fromPtr(&reenter),
-                                          ExecutorAddr::fromPtr(EPCIU->get()))
-                     .takeError())
-    return Err;
-  (*EPCIU)->createLazyCallThroughManager(
-      OLL.getExecutionSession(), ExecutorAddr::fromPtr(handleLazyCallFailure));
+createLazyLinkingSupport(ObjectLinkingLayer &OLL, JITDylib &PlatformJD) {
   auto RSMgr = JITLinkRedirectableSymbolManager::Create(OLL);
   if (!RSMgr)
     return RSMgr.takeError();
 
-  return std::make_unique<Session::LazyLinkingSupport>(std::move(*EPCIU),
-                                                       std::move(*RSMgr), OLL);
+  auto LRMgr = createJITLinkLazyReexportsManager(OLL, **RSMgr, PlatformJD);
+  if (!LRMgr)
+    return LRMgr.takeError();
+
+  return std::make_unique<Session::LazyLinkingSupport>(std::move(*RSMgr),
+                                                       std::move(*LRMgr), OLL);
 }
 
 Expected<std::unique_ptr<Session>> Session::Create(Triple TT,
@@ -1020,7 +998,8 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT,
   S->Features = std::move(Features);
 
   if (lazyLinkingRequested()) {
-    if (auto LazyLinking = createLazyLinkingSupport(S->ObjLayer))
+    if (auto LazyLinking =
+            createLazyLinkingSupport(S->ObjLayer, *S->PlatformJD))
       S->LazyLinking = std::move(*LazyLinking);
     else
       return LazyLinking.takeError();
@@ -1642,10 +1621,17 @@ static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
     OutOfProcessExecutor = OOPExecutorPath.str().str();
   }
 
-  if (lazyLinkingRequested() && !TestHarnesses.empty())
-    return make_error<StringError>(
-        "Lazy linking cannot be used with -harness mode",
-        inconvertibleErrorCode());
+  // If lazy linking is requested then check compatibility with other options.
+  if (lazyLinkingRequested()) {
+    if (OrcRuntime.empty())
+      return make_error<StringError>("Lazy linking requries the ORC runtime",
+                                     inconvertibleErrorCode());
+
+    if (!TestHarnesses.empty())
+      return make_error<StringError>(
+          "Lazy linking cannot be used with -harness mode",
+          inconvertibleErrorCode());
+  }
 
   return Error::success();
 }

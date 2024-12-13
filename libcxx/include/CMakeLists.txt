@@ -212,11 +212,13 @@ set(files
   __atomic/atomic_sync.h
   __atomic/check_memory_order.h
   __atomic/contention_t.h
-  __atomic/cxx_atomic_impl.h
   __atomic/fence.h
   __atomic/is_always_lock_free.h
   __atomic/kill_dependency.h
   __atomic/memory_order.h
+  __atomic/support.h
+  __atomic/support/c11.h
+  __atomic/support/gcc.h
   __atomic/to_gcc_order.h
   __bit/bit_cast.h
   __bit/bit_ceil.h
@@ -358,6 +360,7 @@ set(files
   __filesystem/space_info.h
   __filesystem/u8path.h
   __flat_map/flat_map.h
+  __flat_map/key_value_iterator.h
   __flat_map/sorted_unique.h
   __format/buffer.h
   __format/concepts.h

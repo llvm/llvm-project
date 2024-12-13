@@ -39,7 +39,6 @@ void uses() {
   // 'worker', 'vector', 'seq', 'independent', 'auto', and 'tile'  after
   // 'device_type'.
 
-  //expected-warning@+1{{OpenACC clause 'vector' not yet implemented, clause ignored}}
 #pragma acc parallel loop device_type(*) vector
   for(int i = 0; i < 5; ++i);
 
