@@ -1577,7 +1577,7 @@ InstructionCost VPHeaderPHIRecipe::computeCost(ElementCount VF,
 
 /// This function adds
 /// (0 * Step, 1 * Step, 2 * Step, ...)
-/// to each vector element of Val. The sequence starts at StartIndex.
+/// to each vector element of Val.
 /// \p Opcode is relevant for FP induction variable.
 static Value *getStepVector(Value *Val, Value *Step,
                             Instruction::BinaryOps BinOp, ElementCount VF,
