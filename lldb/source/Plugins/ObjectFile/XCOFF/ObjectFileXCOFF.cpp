@@ -127,7 +127,6 @@ bool ObjectFileXCOFF::MagicBytesMatch(DataBufferSP &data_sp,
                                       lldb::addr_t data_length) {
   lldb_private::DataExtractor data;
   data.SetData(data_sp, data_offset, data_length);
-  // Need to set this as XCOFF is only compatible with Big Endian
   data.SetByteOrder(eByteOrderBig);
   lldb::offset_t offset = 0;
   uint16_t magic = data.GetU16(&offset);
@@ -140,10 +139,7 @@ ByteOrder ObjectFileXCOFF::GetByteOrder() const { return eByteOrderBig; }
 
 bool ObjectFileXCOFF::IsExecutable() const { return true; }
 
-uint32_t ObjectFileXCOFF::GetAddressByteSize() const {
-  // 32-bit not supported. return 8 for 64-bit XCOFF::XCOFF64
-  return 8;
-}
+uint32_t ObjectFileXCOFF::GetAddressByteSize() const { return 8; }
 
 void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {}
 
