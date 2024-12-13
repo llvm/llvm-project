@@ -49,8 +49,7 @@ static void abort_with_message(const char *msg) {
 static void abort_with_message(const char *) { abort(); }
 #endif
 
-__attribute__((noinline)) static void report_error(const char *msg,
-                             uintptr_t caller, int abort) {
+static void report_error(const char *msg, uintptr_t caller, int abort) {
   if (caller == 0)
     return;
   while (true) {
