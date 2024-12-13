@@ -11,14 +11,11 @@
 
 #include "hdr/types/FILE.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/null_check.h"
 #include "src/errno/libc_errno.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fflush, (::FILE * stream)) {
-
-  LIBC_CRASH_ON_NULLPTR(stream);
   int result = reinterpret_cast<LIBC_NAMESPACE::File *>(stream)->flush();
   if (result != 0) {
     libc_errno = result;
