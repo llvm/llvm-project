@@ -144,10 +144,9 @@ size_t ObjectFileXCOFF::GetModuleSpecifications(
 
 static uint32_t XCOFFHeaderSizeFromMagic(uint32_t magic) {
   switch (magic) {
-    // TODO: 32bit not supported yet
+    // TODO: 32bit not supported.
     // case XCOFF::XCOFF32:
     //  return sizeof(struct llvm::object::XCOFFFileHeader32);
-
   case XCOFF::XCOFF64:
     return sizeof(struct llvm::object::XCOFFFileHeader64);
     break;
@@ -163,7 +162,6 @@ bool ObjectFileXCOFF::MagicBytesMatch(DataBufferSP &data_sp,
                                       lldb::addr_t data_length) {
   lldb_private::DataExtractor data;
   data.SetData(data_sp, data_offset, data_length);
-
   // Need to set this as XCOFF is only compatible with Big Endian
   data.SetByteOrder(eByteOrderBig);
   lldb::offset_t offset = 0;
@@ -172,16 +170,9 @@ bool ObjectFileXCOFF::MagicBytesMatch(DataBufferSP &data_sp,
 }
 
 bool ObjectFileXCOFF::ParseHeader() {
-
-  bool retVal = false;
   ModuleSP module_sp(GetModule());
-  if (module_sp) {
-    // Only 64-bit is supported for now
-    if (m_binary->fileHeader64()->Magic == XCOFF::XCOFF64)
-      retVal = true;
-  }
-
-  return retVal;
+  // Only 64-bit is supported for now
+  return module_sp && m_binary->fileHeader64()->Magic == XCOFF::XCOFF64;
 }
 
 ByteOrder ObjectFileXCOFF::GetByteOrder() const { return eByteOrderBig; }
@@ -189,9 +180,7 @@ ByteOrder ObjectFileXCOFF::GetByteOrder() const { return eByteOrderBig; }
 bool ObjectFileXCOFF::IsExecutable() const { return true; }
 
 uint32_t ObjectFileXCOFF::GetAddressByteSize() const {
-
-  /* TODO: Need to handle 32-bit support, until then
-   * return 8 for 64-bit XCOFF::XCOFF64 */
+  // 32-bit not supported. return 8 for 64-bit XCOFF::XCOFF64
   return 8;
 }
 
