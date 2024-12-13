@@ -2507,6 +2507,9 @@ static Value *salvageNewDebugInfo(Instruction &I, uint64_t CurrentLocOps,
   auto &M = *I.getModule();
   auto &DL = M.getDataLayout();
 
+  if (I.getType()->isVectorTy())
+    return nullptr;
+
   if (auto *CI = dyn_cast<CastInst>(&I)) {
     Value *FromValue = CI->getOperand(0);
     Type *Type = CI->getType();
