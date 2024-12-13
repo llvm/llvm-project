@@ -347,8 +347,10 @@ enum OperandType : unsigned {
   OPERAND_COND_CODE,
   // Vector policy operand.
   OPERAND_VEC_POLICY,
-  // Vector SEW operand.
+  // Vector SEW operand. Stores in log2(SEW).
   OPERAND_SEW,
+  // Special SEW for mask only instructions. Always 0.
+  OPERAND_SEW_MASK,
   // Vector rounding mode for VXRM or FRM.
   OPERAND_VEC_RM,
   OPERAND_LAST_RISCV_IMM = OPERAND_VEC_RM,
