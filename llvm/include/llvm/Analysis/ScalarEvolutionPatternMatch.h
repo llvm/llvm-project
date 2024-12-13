@@ -79,6 +79,18 @@ inline bind_ty<const SCEVUnknown> m_SCEVUnknown(const SCEVUnknown *&V) {
   return V;
 }
 
+/// Match a specified const SCEV *.
+struct specificscev_ty {
+  const SCEV *Expr;
+
+  specificscev_ty(const SCEV *Expr) : Expr(Expr) {}
+
+  template <typename ITy> bool match(ITy *S) { return S == Expr; }
+};
+
+/// Match if we have a specific specified SCEV.
+inline specificscev_ty m_Specific(const SCEV *S) { return S; }
+
 namespace detail {
 
 template <typename TupleTy, typename Fn, std::size_t... Is>
@@ -131,6 +143,26 @@ template <typename Op0_t, typename Op1_t>
 inline BinarySCEV_match<Op0_t, Op1_t, SCEVAddExpr>
 m_scev_Add(const Op0_t &Op0, const Op1_t &Op1) {
   return BinarySCEV_match<Op0_t, Op1_t, SCEVAddExpr>(Op0, Op1);
+}
+
+template <typename Op0_t, typename SCEVTy>
+using UnarySCEV_match = SCEV_match<std::tuple<Op0_t>, SCEVTy>;
+
+template <typename Op0_t, typename Op1_t, typename SCEVTy>
+inline UnarySCEV_match<Op0_t, SCEVTy> m_scev_Unary(const Op0_t &Op0) {
+  return UnarySCEV_match<Op0_t, SCEVTy>(Op0);
+}
+
+template <typename Op0_t>
+inline UnarySCEV_match<Op0_t, SCEVSignExtendExpr>
+m_scev_SExt(const Op0_t &Op0) {
+  return UnarySCEV_match<Op0_t, SCEVSignExtendExpr>(Op0);
+}
+
+template <typename Op0_t>
+inline UnarySCEV_match<Op0_t, SCEVZeroExtendExpr>
+m_scev_ZExt(const Op0_t &Op0) {
+  return UnarySCEV_match<Op0_t, SCEVZeroExtendExpr>(Op0);
 }
 
 } // namespace SCEVPatternMatch

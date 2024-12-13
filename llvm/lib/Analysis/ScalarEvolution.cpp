@@ -12725,33 +12725,28 @@ bool ScalarEvolution::isImpliedViaOperations(ICmpInst::Predicate Pred,
 static bool isKnownPredicateExtendIdiom(ICmpInst::Predicate Pred,
                                         const SCEV *LHS, const SCEV *RHS) {
   // zext x u<= sext x, sext x s<= zext x
+  const SCEV *Op;
   switch (Pred) {
   case ICmpInst::ICMP_SGE:
     std::swap(LHS, RHS);
     [[fallthrough]];
   case ICmpInst::ICMP_SLE: {
-    // If operand >=s 0 then ZExt == SExt.  If operand <s 0 then SExt <s ZExt.
-    const SCEVSignExtendExpr *SExt = dyn_cast<SCEVSignExtendExpr>(LHS);
-    const SCEVZeroExtendExpr *ZExt = dyn_cast<SCEVZeroExtendExpr>(RHS);
-    if (SExt && ZExt && SExt->getOperand() == ZExt->getOperand())
-      return true;
-    break;
+    // If operand >=s 0 then ZExt == SExt. If operand <s 0 then SExt <s ZExt.
+    return match(LHS, m_scev_SExt(m_SCEV(Op))) &&
+           match(RHS, m_scev_ZExt(m_Specific(Op)));
   }
   case ICmpInst::ICMP_UGE:
     std::swap(LHS, RHS);
     [[fallthrough]];
   case ICmpInst::ICMP_ULE: {
-    // If operand >=s 0 then ZExt == SExt.  If operand <s 0 then ZExt <u SExt.
-    const SCEVZeroExtendExpr *ZExt = dyn_cast<SCEVZeroExtendExpr>(LHS);
-    const SCEVSignExtendExpr *SExt = dyn_cast<SCEVSignExtendExpr>(RHS);
-    if (SExt && ZExt && SExt->getOperand() == ZExt->getOperand())
-      return true;
-    break;
+    // If operand >=u 0 then ZExt == SExt.  If operand <u 0 then ZExt <u SExt.
+    return match(LHS, m_scev_ZExt(m_SCEV(Op))) &&
+           match(RHS, m_scev_SExt(m_Specific(Op)));
   }
   default:
-    break;
+    return false;
   };
-  return false;
+  llvm_unreachable("unhandled case");
 }
 
 bool
