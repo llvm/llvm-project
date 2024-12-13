@@ -96,9 +96,7 @@ TEST_CONSTEXPR_CXX26 void test_larger_sorts() {
   std::stable_sort(array, array + N);
   assert(std::is_sorted(array, array + N));
   // test random pattern
-#if TEST_STD_VER >= 26
-  if !consteval // random-number generators not constexpr-friendly
-#endif
+  if (!TEST_IS_CONSTANT_EVALUATED) // random-number generators not constexpr-friendly
   {
     static std::mt19937 randomness;
     std::shuffle(array, array + N, randomness);
@@ -142,10 +140,7 @@ TEST_CONSTEXPR_CXX26 void test() {
   std::stable_sort(&d, &d);
 
   // exhaustively test all possibilities up to length 8
-#if TEST_STD_VER >= 26
-  if !consteval
-#endif
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     test_sort_<1>();
     test_sort_<2>();
     test_sort_<3>();
@@ -158,9 +153,7 @@ TEST_CONSTEXPR_CXX26 void test() {
 
   test_larger_sorts<256>();
   test_larger_sorts<257>();
-#if TEST_STD_VER >= 26
-  if !consteval // only runtime tests bc. error: "constexpr evaluation hit maximum step limit"
-#endif
+  if (!TEST_IS_CONSTANT_EVALUATED) // only runtime tests bc. error: "constexpr evaluation hit maximum step limit"
   {
     test_larger_sorts<499>();
     test_larger_sorts<500>();
@@ -169,16 +162,14 @@ TEST_CONSTEXPR_CXX26 void test() {
     test_larger_sorts<1009>();
   }
 
-#if !defined(TEST_HAS_NO_EXCEPTIONS)
-#  if TEST_STD_VER >= 26
-  if !consteval
-#  endif
-  { // check that the algorithm works without memory
+  // check that the algorithm works without memory
+#ifndef TEST_HAS_NO_EXCEPTIONS
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     std::vector<int> vec(150, 3);
     getGlobalMemCounter()->throw_after = 0;
     std::stable_sort(vec.begin(), vec.end());
   }
-#endif // !defined(TEST_HAS_NO_EXCEPTIONS)
+#endif
 }
 
 int main(int, char**) {
