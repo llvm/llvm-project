@@ -55,15 +55,14 @@ LLVM_LIBC_FUNCTION(float16, cosf16, (float16 x)) {
 
   // Handle exceptional values
 
-  if (LIBC_UNLIKELY(x_abs == 0x2b7c || x_abs == 0x4ac1 || x_abs == 0x5c49 ||
-                    x_abs == 0x7acc)) {
-    if (auto r = COSF16_EXCEPTS.lookup(x_abs); LIBC_UNLIKELY(r.has_value()))
-      return r.value();
-  }
+  if (auto r = COSF16_EXCEPTS.lookup(x_abs); LIBC_UNLIKELY(r.has_value())) 
+    return r.value();
 
+  // cos(+/-0) = 1
   if (LIBC_UNLIKELY(x_abs == 0U))
     return fputil::cast<float16>(1.0f);
 
+  // cos(+/-inf) = NaN, and cos(NaN) = NaN
   if (xbits.is_inf_or_nan()) {
     if (xbits.is_inf()) {
       fputil::set_errno_if_required(EDOM);
@@ -76,7 +75,9 @@ LLVM_LIBC_FUNCTION(float16, cosf16, (float16 x)) {
   float sin_k, cos_k, sin_y, cosm1_y;
   sincosf16_eval(xf, sin_k, cos_k, sin_y, cosm1_y);
   // Since, cosm1_y = cos_y - 1, therefore:
-  //   cos(x) = cos_k * cosm1_y - sin_k * sin_y
+  //   cos(x) = cos_k * cos_y - sin_k * sin_y
+  //          = cos_k * (cos_y - 1 + 1) - sin_k * sin_y
+  //          = cos_k * cosm1_y - sin_k * sin_y + cos_k
   return fputil::cast<float16>(fputil::multiply_add(
       cos_k, cosm1_y, fputil::multiply_add(-sin_k, sin_y, cos_k)));
 }

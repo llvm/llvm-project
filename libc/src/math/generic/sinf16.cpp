@@ -54,13 +54,10 @@ LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
   //   	        sin(y * pi/32) * cos(k * pi/32)
 
   // Handle exceptional values
-  if (LIBC_UNLIKELY(x_abs == 0x585c || x_abs == 0x5cb0 || x_abs == 0x51f5 ||
-                    x_abs == 0x2b45)) {
-    bool x_sign = x_u >> 15;
-    if (auto r = SINF16_EXCEPTS.lookup_odd(x_abs, x_sign);
+  bool x_sign = x_u >> 15;
+  if (auto r = SINF16_EXCEPTS.lookup_odd(x_abs, x_sign);
         LIBC_UNLIKELY(r.has_value()))
-      return r.value();
-  }
+    return r.value();
 
   int rounding = fputil::quick_get_round();
 
