@@ -20,9 +20,10 @@
 using namespace mlir;
 using namespace mlir::gpu;
 
-WarpExecuteOnLane0Op mlir::gpu::moveRegionToNewWarpOpAndReplaceReturns(
+WarpExecuteOnLane0Op
+WarpDistributionPattern::moveRegionToNewWarpOpAndReplaceReturns(
     RewriterBase &rewriter, WarpExecuteOnLane0Op warpOp,
-    ValueRange newYieldedValues, TypeRange newReturnTypes) {
+    ValueRange newYieldedValues, TypeRange newReturnTypes) const {
   // Create a new op before the existing one, with the extra operands.
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(warpOp);
@@ -46,25 +47,26 @@ WarpExecuteOnLane0Op mlir::gpu::moveRegionToNewWarpOpAndReplaceReturns(
   return newWarpOp;
 }
 
-WarpExecuteOnLane0Op mlir::gpu::moveRegionToNewWarpOpAndAppendReturns(
+WarpExecuteOnLane0Op
+WarpDistributionPattern::moveRegionToNewWarpOpAndAppendReturns(
     RewriterBase &rewriter, WarpExecuteOnLane0Op warpOp,
     ValueRange newYieldedValues, TypeRange newReturnTypes,
-    llvm::SmallVector<size_t> &indices) {
+    SmallVector<size_t> &indices) const {
   SmallVector<Type> types(warpOp.getResultTypes().begin(),
                           warpOp.getResultTypes().end());
   auto yield = cast<gpu::YieldOp>(
       warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
   llvm::SmallSetVector<Value, 32> yieldValues(yield.getOperands().begin(),
                                               yield.getOperands().end());
-  for (auto newRet : llvm::zip(newYieldedValues, newReturnTypes)) {
-    if (yieldValues.insert(std::get<0>(newRet))) {
-      types.push_back(std::get<1>(newRet));
+  for (auto [value, type] : llvm::zip_equal(newYieldedValues, newReturnTypes)) {
+    if (yieldValues.insert(value)) {
+      types.push_back(type);
       indices.push_back(yieldValues.size() - 1);
     } else {
       // If the value already exit the region don't create a new output.
       for (auto [idx, yieldOperand] :
            llvm::enumerate(yieldValues.getArrayRef())) {
-        if (yieldOperand == std::get<0>(newRet)) {
+        if (yieldOperand == value) {
           indices.push_back(idx);
           break;
         }
@@ -79,15 +81,9 @@ WarpExecuteOnLane0Op mlir::gpu::moveRegionToNewWarpOpAndAppendReturns(
   return newWarpOp;
 }
 
-bool mlir::gpu::canBeHoisted(Operation *op,
-                             function_ref<bool(Value)> definedOutside) {
-  return llvm::all_of(op->getOperands(), definedOutside) &&
-         isMemoryEffectFree(op) && op->getNumRegions() == 0;
-}
-
-OpOperand *
-mlir::gpu::getWarpResult(WarpExecuteOnLane0Op warpOp,
-                         const std::function<bool(Operation *)> &fn) {
+OpOperand *WarpDistributionPattern::getWarpResult(
+    WarpExecuteOnLane0Op warpOp,
+    llvm::function_ref<bool(Operation *)> fn) const {
   auto yield = cast<gpu::YieldOp>(
       warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
   for (OpOperand &yieldOperand : yield->getOpOperands()) {
@@ -98,14 +94,13 @@ mlir::gpu::getWarpResult(WarpExecuteOnLane0Op warpOp,
         return &yieldOperand;
     }
   }
-  return {};
+  return nullptr;
 }
 
-bool mlir::gpu::delinearizeLaneId(OpBuilder &builder, Location loc,
-                                  ArrayRef<int64_t> originalShape,
-                                  ArrayRef<int64_t> distributedShape,
-                                  int64_t warpSize, Value laneId,
-                                  SmallVectorImpl<Value> &delinearizedIds) {
+bool WarpDistributionPattern::delinearizeLaneId(
+    OpBuilder &builder, Location loc, ArrayRef<int64_t> originalShape,
+    ArrayRef<int64_t> distributedShape, int64_t warpSize, Value laneId,
+    SmallVectorImpl<Value> &delinearizedIds) const {
   // If the original shape and the distributed shape is the same, we don't
   // distribute at all--every thread is handling the whole. For such case, we
   // should not rely on lane IDs later. So just return an empty lane ID vector.
