@@ -13,7 +13,6 @@
 #include "bolt/Passes/IdenticalCodeFolding.h"
 #include "bolt/Core/HashUtilities.h"
 #include "bolt/Core/ParallelUtilities.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ThreadPool.h"
@@ -48,6 +47,8 @@ cl::opt<bolt::IdenticalCodeFolding::ICFLevel> ICF(
     "icf", cl::desc("fold functions with identical code"),
     cl::init(bolt::IdenticalCodeFolding::ICFLevel::None),
     cl::values(clEnumValN(bolt::IdenticalCodeFolding::ICFLevel::All, "all",
+                          "Enable identical code folding"),
+               clEnumValN(bolt::IdenticalCodeFolding::ICFLevel::All, "1",
                           "Enable identical code folding"),
                clEnumValN(bolt::IdenticalCodeFolding::ICFLevel::All, "",
                           "Enable identical code folding"),
@@ -373,36 +374,35 @@ void IdenticalCodeFolding::analyzeDataRelocations(BinaryContext &BC) {
       const uint64_t RelAddr = Rel.Offset + Sec.getAddress();
       if (isAddressInVTable(RelAddr))
         continue;
-      BinaryFunction *BF = BC.getFunctionForSymbol(Rel.Symbol);
-      if (!BF)
-        continue;
-      BF->setHasAddressTaken(true);
+      if (BinaryFunction *BF = BC.getFunctionForSymbol(Rel.Symbol))
+        BF->setHasAddressTaken(true);
     }
+    // For dyanmic relocations there are two cases:
+    // 1: No symbol and only addend.
+    // 2: There is symbol, but it references undefined symbol, or things like
+    // type information. As the result only using addend to lookup BF is a valid
+    // case.
     for (const auto &Rel : Sec.dynamicRelocations()) {
       const uint64_t RelAddr = Rel.Offset + Sec.getAddress();
       if (isAddressInVTable(RelAddr))
         continue;
-      BinaryFunction *BF =
-          BC.getBinaryFunctionContainingAddress(Rel.Addend,
-                                                /*CheckPastEnd*/ false,
-                                                /*UseMaxSize*/ true);
-      if (!BF)
-        continue;
-      BF->setHasAddressTaken(true);
+      if (BinaryFunction *BF =
+              BC.getBinaryFunctionContainingAddress(Rel.Addend,
+                                                    /*CheckPastEnd*/ false,
+                                                    /*UseMaxSize*/ true))
+        BF->setHasAddressTaken(true);
     }
   }
 }
 void IdenticalCodeFolding::analyzeFunctions(BinaryContext &BC) {
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
-    for (const BinaryBasicBlock *BB : BF.getLayout().blocks())
-      for (const MCInst &Inst : *BB)
+    for (const BinaryBasicBlock &BB : BF)
+      for (const MCInst &Inst : BB)
         if (!(BC.MIB->isCall(Inst) || BC.MIB->isBranch(Inst)))
-          BF.processInstructionsForFuncReferences(BC, Inst);
+          BF.analyzeInstructionForFuncReference(BC, Inst);
   };
   ParallelUtilities::PredicateTy SkipFunc =
-      [&](const BinaryFunction &BF) -> bool {
-    return BF.getState() != BinaryFunction::State::CFG;
-  };
+      [&](const BinaryFunction &BF) -> bool { return !BF.hasCFG(); };
   ParallelUtilities::runOnEachFunction(
       BC, ParallelUtilities::SchedulingPolicy::SP_INST_LINEAR, WorkFun,
       SkipFunc, "markUnsafe", /*ForceSequential*/ false, 2);
@@ -411,8 +411,8 @@ void IdenticalCodeFolding::analyzeFunctions(BinaryContext &BC) {
     for (auto &BFIter : BC.getBinaryFunctions()) {
       if (!BFIter.second.hasAddressTaken())
         continue;
-      dbgs() << "BOLT-DEBUG: skipping function " << BFIter.second.getOneName()
-             << '\n';
+      dbgs() << "BOLT-DEBUG: skipping function with reference taken "
+             << BFIter.second.getOneName() << '\n';
     }
   });
 }
