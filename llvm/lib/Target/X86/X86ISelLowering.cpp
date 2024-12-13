@@ -28,7 +28,6 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
-#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -29782,8 +29781,8 @@ template <typename InputTy, typename PermutationTy,
                              8>>
 static bool PermuteAndPairVector(
     const InputTy &Inputs, PermutationTy &Permutation,
-    MapTy UnpairedInputs = MapTy()) {
-  const auto Wildcard = ~typename InputTy::value_type();
+    MapTy UnpairedInputs = MapTy()) {static_assert(std::is_same<typename InputTy::value_type, uint8_t>::value);
+  const typename InputTy::value_type Wildcard = ~0;
   SmallVector<typename PermutationTy::value_type, 16> WildcardPairs;
 
   size_t OutputOffset = Permutation.size();
@@ -30155,14 +30154,16 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
   // amounts can be shuffled such that every pair or quad of adjacent elements
   // has the same value. This introduces an extra shuffle before and after the
   // shift, and it is profitable if the operand is aready a shuffle so that both
-  // can be merged and the extra shuffle is fast. This is not profitable on
-  // AVX512 becasue it has 16-bit vector variable shift instruction VPS**VW.
+  // can be merged or the extra shuffle is fast.
   // (shift (shuffle X P1) S1) ->
   // (shuffle (shift (shuffle X (shuffle P2 P1)) S2) P2^-1) where S2 can be
   // widened, and P2^-1 is the inverse shuffle of P2.
+  // This is not profitable on XOP or AVX512 becasue it has 8/16-bit vector
+  // variable shift instructions.
   if (ConstantAmt &&
       (VT == MVT::v16i8 || VT == MVT::v32i8 || VT == MVT::v64i8) &&
-      R.hasOneUse() && Subtarget.hasSSE3() && !Subtarget.hasAVX512()) {
+      R.hasOneUse() && Subtarget.hasSSSE3() && !Subtarget.hasAVX512() &&
+      !Subtarget.hasXOP()) {
     constexpr size_t LaneBytes = 16;
     const size_t NumLanes = VT.getVectorNumElements() / LaneBytes;
 
@@ -30176,7 +30177,9 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     }
 
     // Check if we can find an in-lane shuffle to rearrange the shift amounts,
-    // if so, this transformation may be profitable.
+    // if so, this transformation may be profitable. Cross-lane shuffle is
+    // almost never profitable because there is no general 1-instruction
+    // solution.
     bool Profitable;
     for (size_t I = 0; I < NumLanes; ++I) {
       if (!(Profitable = PermuteAndPairVector(
@@ -30193,8 +30196,9 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       for (size_t I = 0; I < Permutation.size(); I += 2) {
         uint8_t Shift1 = ShiftAmt[Permutation[I]];
         uint8_t Shift2 = ShiftAmt[Permutation[I + 1]];
-        assert(Shift1 == Shift2 || ~Shift1 == 0 || ~Shift2 == 0);
-        EveryOtherShiftAmt.push_back(~Shift1 ? Shift1 : Shift2);
+        assert(Shift1 == Shift2 || Shift1 == (uint8_t) ~0 ||
+               Shift2 == (uint8_t) ~0);
+        EveryOtherShiftAmt.push_back(Shift1 != (uint8_t) ~0 ? Shift1 : Shift2);
       }
       SmallVector<int, 32> Permutation2;
       for (size_t I = 0; I < NumLanes; ++I) {
@@ -30214,43 +30218,27 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       }
     }
 
-    // For right shifts, (V)PMULHUW needs an extra instruction to handle an
-    // amount of 0, disabling the transformation here to be cautious.
+    // For right shifts, (V)PMULHUW needs 2 extra instructions to handle an
+    // amount of 0, making it unprofitable.
     if (!IsAdjacentQuads && (Opc == ISD::SRL || Opc == ISD::SRA) &&
         any_of(ShiftAmt, [](auto x) { return x == 0; }))
       Profitable = false;
 
     bool IsOperandShuffle = R.getOpcode() == ISD::VECTOR_SHUFFLE;
-    // If operand R is not a shuffle by itself, the transformation here adds two
-    // shuffles, adding a non-trivial cost. Here we take out a few cases where
-    // the benefit is questionable according to llvm-mca's modeling.
-    //
-    // Each cell shows latency before/after transform. Here R is not a shuffle.
-    // SSE3
-    //      | v16i8 | v32i8 | v64i8
-    // ----------------------------
-    // SLL  | 17/17 | 20/20 | 26/26
-    // SRL  | 18/17 | 22/20 | 35/26
-    // SRA  | 21/19 | 26/22 | 39/30
-    // AVX2 using VPMUL*W
-    //      | v16i8 | v32i8 | v64i8
-    // ----------------------------
-    // SLL  | 20/18 | 18/18 | 21/21
-    // SRL  | 20/18 | 22/18 | 26/21
-    // SRA  | 20/20 | 22/20 | 25/23
-    // AVX2 using VPS*LVD
-    //      | v16i8 | v32i8 | v64i8
-    // ----------------------------
-    // SLL  | 20/16 | 18/16 | 21/20
-    // SRL  | 20/16 | 22/16 | 26/20
-    // SRA  | 20/18 | 22/18 | 25/22
+    // If operand R is a shuffle, one of the two shuffles introduced by this
+    // transformation can be merged with it, and the extrast shuffle is 1 cycle.
+    // This is generally profitable because it eliminates one (or both) vector
+    // multiplication, which has to be scheduled at least 1 cycle apart.
+    // If operand R is not a shuffle, several cases are not profitable based on
+    // pipeline modeling, so we are excluding them here.
     if (!IsOperandShuffle) {
-      if (Subtarget.hasAVX2()) {
-        if (!IsAdjacentQuads || (VT == MVT::v64i8 && Opc == ISD::SHL))
+      // A hack to detect AMD CPU.
+      if (Subtarget.hasSSE4A() && Opc == ISD::SRA) {
+        if (Opc == ISD::SRA)
           Profitable = false;
       } else {
-        if (Opc == ISD::SHL ||
-            ((VT == MVT::v16i8 || VT == MVT::v32i8) && Opc == ISD::SRL))
+        if ((Subtarget.hasAVX() && !Subtarget.hasAVX2()) ||
+            (Subtarget.hasAVX2() && !IsAdjacentQuads))
           Profitable = false;
       }
     }
@@ -30258,7 +30246,8 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     // Found a permutation P that can rearrange the shift amouts into adjacent
     // pair or quad of same values. Rewrite the shift S1(x) into P^-1(S2(P(x))).
     if (Profitable) {
-      SDValue InnerShuffle = DAG.getVectorShuffle(VT, dl, R, DAG.getUNDEF(VT), Permutation);
+      SDValue InnerShuffle =
+          DAG.getVectorShuffle(VT, dl, R, DAG.getUNDEF(VT), Permutation);
       SmallVector<SDValue, 64> NewShiftAmt;
       for (int Index : Permutation) {
         NewShiftAmt.push_back(Amt.getOperand(Index));
@@ -30267,7 +30256,8 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       for (size_t I = 0; I < NewShiftAmt.size(); I += 2) {
         SDValue Even = NewShiftAmt[I];
         SDValue Odd = NewShiftAmt[I + 1];
-        assert(Even.isUndef() || Odd.isUndef() || Even->getAsZExtVal() == Odd->getAsZExtVal());
+        assert(Even.isUndef() || Odd.isUndef() ||
+               Even->getAsZExtVal() == Odd->getAsZExtVal());
       }
 #endif
       SDValue NewShiftVector = DAG.getBuildVector(VT, dl, NewShiftAmt);
@@ -30276,7 +30266,8 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       for (size_t I = 0; I < Permutation.size(); ++I) {
         InversePermutation[Permutation[I]] = I;
       }
-      SDValue OuterShuffle = DAG.getVectorShuffle(VT, dl, NewShift, DAG.getUNDEF(VT), InversePermutation);
+      SDValue OuterShuffle = DAG.getVectorShuffle(
+          VT, dl, NewShift, DAG.getUNDEF(VT), InversePermutation);
       return OuterShuffle;
     }
   }
