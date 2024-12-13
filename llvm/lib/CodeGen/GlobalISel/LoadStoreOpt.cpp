@@ -317,7 +317,6 @@ bool LoadStoreOpt::mergeStores(SmallVectorImpl<GStore *> &StoresToMerge) {
     assert(MRI->getType(StoreMI->getValueReg()) == OrigTy);
 #endif
 
-  const auto &DL = MF->getFunction().getDataLayout();
   bool AnyMerged = false;
   do {
     unsigned NumPow2 = llvm::bit_floor(StoresToMerge.size());

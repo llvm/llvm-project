@@ -164,7 +164,6 @@ bool CombinerHelper::matchTruncateOfExt(const MachineInstr &Root,
 
 bool CombinerHelper::isCastFree(unsigned Opcode, LLT ToTy, LLT FromTy) const {
   const TargetLowering &TLI = getTargetLowering();
-  const DataLayout &DL = getDataLayout();
   LLVMContext &Ctx = getContext();
 
   switch (Opcode) {
