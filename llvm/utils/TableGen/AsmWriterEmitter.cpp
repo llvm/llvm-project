@@ -338,7 +338,7 @@ void AsmWriterEmitter::EmitGetMnemonic(
     << "::getMnemonic(const MCInst &MI) const {\n";
 
   // Build an aggregate string, and build a table of offsets into it.
-  SequenceToOffsetTable<std::string> StringTable(/*Terminator=*/'\0');
+  SequenceToOffsetTable<std::string> StringTable;
 
   /// OpcodeInfo - This encodes the index of the string to use for the first
   /// chunk of the output as well as indices used for operand printing.
@@ -583,7 +583,7 @@ void AsmWriterEmitter::EmitPrintInstruction(
 static void
 emitRegisterNameString(raw_ostream &O, StringRef AltName,
                        const std::deque<CodeGenRegister> &Registers) {
-  SequenceToOffsetTable<std::string> StringTable(/*Terminator=*/'\0');
+  SequenceToOffsetTable<std::string> StringTable;
   SmallVector<std::string, 4> AsmNames(Registers.size());
   unsigned i = 0;
   for (const auto &Reg : Registers) {

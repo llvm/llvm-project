@@ -869,7 +869,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
   typedef std::vector<const CodeGenRegister *> RegVec;
 
   // Differentially encoded lists.
-  SequenceToOffsetTable<DiffVec> DiffSeqs(/*Terminator=*/0);
+  SequenceToOffsetTable<DiffVec> DiffSeqs;
   SmallVector<DiffVec, 4> SubRegLists(Regs.size());
   SmallVector<DiffVec, 4> SuperRegLists(Regs.size());
   SmallVector<DiffVec, 4> RegUnitLists(Regs.size());
@@ -885,7 +885,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
       /*Terminator=*/std::nullopt);
   SmallVector<SubRegIdxVec, 4> SubRegIdxLists(Regs.size());
 
-  SequenceToOffsetTable<std::string> RegStrings(/*Terminator=*/'\0');
+  SequenceToOffsetTable<std::string> RegStrings;
 
   // Precompute register lists for the SequenceToOffsetTable.
   unsigned i = 0;
@@ -993,7 +993,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
   // Loop over all of the register classes... emitting each one.
   OS << "namespace {     // Register classes...\n";
 
-  SequenceToOffsetTable<std::string> RegClassStrings(/*Terminator=*/'\0');
+  SequenceToOffsetTable<std::string> RegClassStrings;
 
   // Emit the register enum value arrays for each RegisterClass
   for (const auto &RC : RegisterClasses) {
@@ -1307,8 +1307,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
     // Compress the sub-reg index lists.
     typedef std::vector<const CodeGenSubRegIndex *> IdxList;
     SmallVector<IdxList, 8> SuperRegIdxLists(RegisterClasses.size());
-    SequenceToOffsetTable<IdxList, deref<std::less<>>> SuperRegIdxSeqs(
-        /*Terminator=*/nullptr);
+    SequenceToOffsetTable<IdxList, deref<std::less<>>> SuperRegIdxSeqs;
     BitVector MaskBV(RegisterClasses.size());
 
     for (const auto &RC : RegisterClasses) {

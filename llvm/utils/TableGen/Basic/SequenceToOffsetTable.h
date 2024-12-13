@@ -79,7 +79,7 @@ class SequenceToOffsetTable {
   }
 
 public:
-  explicit SequenceToOffsetTable(std::optional<ElemT> Terminator)
+  explicit SequenceToOffsetTable(std::optional<ElemT> Terminator = ElemT())
       : Terminator(Terminator) {}
 
   /// add - Add a sequence to the table.

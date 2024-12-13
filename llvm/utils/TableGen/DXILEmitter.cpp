@@ -449,8 +449,8 @@ static void emitDXILIntrinsicArgSelectTypes(const RecordKeeper &Records,
 static void emitDXILOperationTable(ArrayRef<DXILOperationDesc> Ops,
                                    raw_ostream &OS) {
   // Collect Names.
-  SequenceToOffsetTable<std::string> OpClassStrings(/*Terminator=*/'\0');
-  SequenceToOffsetTable<std::string> OpStrings(/*Terminator=*/'\0');
+  SequenceToOffsetTable<std::string> OpClassStrings;
+  SequenceToOffsetTable<std::string> OpStrings;
 
   StringSet<> ClassSet;
   for (const auto &Op : Ops) {

@@ -338,7 +338,7 @@ void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
   // If we can compute a 16/32-bit fixed encoding for this intrinsic, do so and
   // capture it in this vector, otherwise store a ~0U.
   std::vector<FixedEncodingTy> FixedEncodings;
-  SequenceToOffsetTable<TypeSigTy> LongEncodingTable(/*Terminator=*/0);
+  SequenceToOffsetTable<TypeSigTy> LongEncodingTable;
 
   FixedEncodings.reserve(Ints.size());
 
