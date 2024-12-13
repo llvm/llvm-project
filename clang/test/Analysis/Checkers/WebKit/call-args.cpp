@@ -117,7 +117,7 @@ namespace null_ptr {
 
 namespace ref_counted_lookalike {
   struct Decoy {
-    RefCountable* get() { return nullptr; }
+    RefCountable* get();
   };
 
   void foo() {

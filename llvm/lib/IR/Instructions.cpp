@@ -3932,6 +3932,24 @@ std::optional<CmpPredicate> CmpPredicate::getMatching(CmpPredicate A,
   return {};
 }
 
+CmpPredicate CmpPredicate::get(const CmpInst *Cmp) {
+  if (auto *ICI = dyn_cast<ICmpInst>(Cmp))
+    return ICI->getCmpPredicate();
+  return Cmp->getPredicate();
+}
+
+CmpPredicate CmpPredicate::getSwapped(CmpPredicate P) {
+  return {CmpInst::getSwappedPredicate(P), P.hasSameSign()};
+}
+
+CmpPredicate CmpPredicate::getSwapped(const CmpInst *Cmp) {
+  return getSwapped(get(Cmp));
+}
+
+hash_code llvm::hash_value(const CmpPredicate &Arg) { // NOLINT
+  return hash_combine(Arg.Pred, Arg.HasSameSign);
+}
+
 //===----------------------------------------------------------------------===//
 //                        SwitchInst Implementation
 //===----------------------------------------------------------------------===//

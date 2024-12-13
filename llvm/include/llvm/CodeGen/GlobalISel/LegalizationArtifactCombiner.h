@@ -112,7 +112,7 @@ public:
         return true;
       }
     }
-    return tryFoldImplicitDef(MI, DeadInsts, UpdatedDefs);
+    return tryFoldImplicitDef(MI, DeadInsts, UpdatedDefs, Observer);
   }
 
   bool tryCombineZExt(MachineInstr &MI,
@@ -187,7 +187,7 @@ public:
         return true;
       }
     }
-    return tryFoldImplicitDef(MI, DeadInsts, UpdatedDefs);
+    return tryFoldImplicitDef(MI, DeadInsts, UpdatedDefs, Observer);
   }
 
   bool tryCombineSExt(MachineInstr &MI,
@@ -252,7 +252,7 @@ public:
       }
     }
 
-    return tryFoldImplicitDef(MI, DeadInsts, UpdatedDefs);
+    return tryFoldImplicitDef(MI, DeadInsts, UpdatedDefs, Observer);
   }
 
   bool tryCombineTrunc(MachineInstr &MI,
@@ -376,7 +376,8 @@ public:
   /// Try to fold G_[ASZ]EXT (G_IMPLICIT_DEF).
   bool tryFoldImplicitDef(MachineInstr &MI,
                           SmallVectorImpl<MachineInstr *> &DeadInsts,
-                          SmallVectorImpl<Register> &UpdatedDefs) {
+                          SmallVectorImpl<Register> &UpdatedDefs,
+                          GISelObserverWrapper &Observer) {
     unsigned Opcode = MI.getOpcode();
     assert(Opcode == TargetOpcode::G_ANYEXT || Opcode == TargetOpcode::G_ZEXT ||
            Opcode == TargetOpcode::G_SEXT);
@@ -392,7 +393,9 @@ public:
         if (!isInstLegal({TargetOpcode::G_IMPLICIT_DEF, {DstTy}}))
           return false;
         LLVM_DEBUG(dbgs() << ".. Combine G_ANYEXT(G_IMPLICIT_DEF): " << MI;);
-        Builder.buildInstr(TargetOpcode::G_IMPLICIT_DEF, {DstReg}, {});
+        auto Impl = Builder.buildUndef(DstTy);
+        replaceRegOrBuildCopy(DstReg, Impl.getReg(0), MRI, Builder, UpdatedDefs,
+                              Observer);
         UpdatedDefs.push_back(DstReg);
       } else {
         // G_[SZ]EXT (G_IMPLICIT_DEF) -> G_CONSTANT 0 because the top
