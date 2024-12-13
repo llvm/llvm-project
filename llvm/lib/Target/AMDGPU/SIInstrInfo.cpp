@@ -4771,11 +4771,12 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     if (ST.needsAlignedVGPRs()) {
       const TargetRegisterClass *RC = RI.getRegClassForReg(MRI, Reg);
       if (RI.hasVectorRegisters(RC) && MO.getSubReg()) {
-        const TargetRegisterClass *SubRC =
-            RI.getSubRegisterClass(RC, MO.getSubReg());
-        RC = RI.getCompatibleSubRegClass(RC, SubRC, MO.getSubReg());
-        if (RC)
-          RC = SubRC;
+        if (const TargetRegisterClass *SubRC =
+                RI.getSubRegisterClass(RC, MO.getSubReg())) {
+          RC = RI.getCompatibleSubRegClass(RC, SubRC, MO.getSubReg());
+          if (RC)
+            RC = SubRC;
+        }
       }
 
       // Check that this is the aligned version of the class.
