@@ -184,8 +184,8 @@ define <2 x i32> @dupzext_v2i32_v2i64_trunc(i32 %src, <2 x i32> %b) {
 entry:
   %in = zext i32 %src to i64
   %ext.b = zext <2 x i32> %b to <2 x i64>
-  %broadcast.splatinsert = insertelement <2 x i64> undef, i64 %in, i64 0
-  %broadcast.splat = shufflevector <2 x i64> %broadcast.splatinsert, <2 x i64> undef, <2 x i32> zeroinitializer
+  %broadcast.splatinsert = insertelement <2 x i64> poison, i64 %in, i64 0
+  %broadcast.splat = shufflevector <2 x i64> %broadcast.splatinsert, <2 x i64> poison, <2 x i32> zeroinitializer
   %prod = mul nuw <2 x i64> %broadcast.splat, %ext.b
   %out = trunc <2 x i64> %prod to <2 x i32>
   ret <2 x i32> %out
