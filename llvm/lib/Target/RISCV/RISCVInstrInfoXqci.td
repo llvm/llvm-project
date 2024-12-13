@@ -113,23 +113,23 @@ class QCISELECTICCI<bits<3> funct3, string opcodestr>
 }
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
-class QCILoadMultiple<bits<2> func2, DAGOperand InTyRs2, string opcodestr>
+class QCILoadMultiple<bits<2> funct2, DAGOperand InTyRs2, string opcodestr>
     : RVInstRBase<0b111, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
                   (ins GPR:$rs1, InTyRs2:$rs2, uimm7_lsb00:$imm),
                   opcodestr, "$rd, $rs2, ${imm}(${rs1})"> {
   bits<7> imm;
-  let Inst{31-25} = {func2, imm{6-2}};
+  let Inst{31-25} = {funct2, imm{6-2}};
 }
 
 
 // rd corresponds to the source for the store 'rs3' described in the spec.
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
-class QCIStoreMultiple<bits<2> func2, DAGOperand InTyRs2, string opcodestr>
+class QCIStoreMultiple<bits<2> funct2, DAGOperand InTyRs2, string opcodestr>
     : RVInstRBase<0b111, OPC_CUSTOM_1, (outs),
                   (ins GPR:$rd, GPR:$rs1, InTyRs2:$rs2, uimm7_lsb00:$imm),
                   opcodestr, "$rd, $rs2, ${imm}(${rs1})"> {
   bits<7> imm;
-  let Inst{31-25} = {func2, imm{6-2}};
+  let Inst{31-25} = {funct2, imm{6-2}};
 }
 
 //===----------------------------------------------------------------------===//
