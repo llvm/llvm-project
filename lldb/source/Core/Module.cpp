@@ -1011,6 +1011,12 @@ void Module::FindTypes(const TypeQuery &query, TypeResults &results) {
   if (SymbolFile *symbols = GetSymbolFile())
     symbols->FindTypes(query, results);
 }
+void Module::FindImportedDeclarations(ConstString name,
+                                      std::vector<ImportedDeclaration> &results,
+                                      bool find_one) {
+  if (SymbolFile *symbols = GetSymbolFile())
+    symbols->FindImportedDeclaration(name, results, find_one);
+}
 
 static Debugger::DebuggerList
 DebuggersOwningModuleRequestingInterruption(Module &module) {

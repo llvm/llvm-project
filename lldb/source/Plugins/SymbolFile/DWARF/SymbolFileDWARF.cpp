@@ -2609,6 +2609,22 @@ void SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
   });
 }
 
+void SymbolFileDWARF::FindImportedDeclaration(
+    ConstString name, std::vector<ImportedDeclaration> &sc_list,
+    bool find_one) {
+  llvm::DenseSet<const DWARFDebugInfoEntry *> resolved_dies;
+  m_index->GetNamespaces(name, [&](DWARFDIE die) {
+    if (die.Tag() != llvm::dwarf::DW_TAG_imported_declaration)
+      return true;
+
+    if (name != die.GetName())
+      return true;
+
+    sc_list.emplace_back(die.GetID(), name, this);
+    return !find_one;
+  });
+}
+
 void SymbolFileDWARF::GetMangledNamesForFunction(
     const std::string &scope_qualified_name,
     std::vector<ConstString> &mangled_names) {

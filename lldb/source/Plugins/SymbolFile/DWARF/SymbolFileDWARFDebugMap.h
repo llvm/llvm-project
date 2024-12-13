@@ -123,6 +123,9 @@ public:
                      bool include_inlines, SymbolContextList &sc_list) override;
   void FindFunctions(const RegularExpression &regex, bool include_inlines,
                      SymbolContextList &sc_list) override;
+  void FindImportedDeclaration(ConstString name,
+                               std::vector<ImportedDeclaration> &declarations,
+                               bool find_one) override;
   void FindTypes(const lldb_private::TypeQuery &match,
                  lldb_private::TypeResults &results) override;
   CompilerDeclContext FindNamespace(ConstString name,
