@@ -39,17 +39,18 @@ static char *append_hex(uintptr_t d, char *buf, const char *end) {
   return buf;
 }
 
-#if defined(__ANDROID__)
-extern "C" __attribute__((weak)) void android_set_abort_message(const char *);
-static void abort_with_message(const char *msg) {
-  if (&android_set_abort_message) android_set_abort_message(msg);
-  abort();
+static void format_msg(const char *kind, uintptr_t caller, char *buf,
+                       const char *end) {
+  buf = append_str(MSG_PREFIX, buf, end);
+  buf = append_str(kind, buf, end);
+  buf = append_str(MSG_SUFFIX, buf, end);
+  buf = append_hex(caller, buf, end);
+  buf = append_str("\n", buf, end);
+  if (buf == end) --buf; // Make sure we don't cause a buffer overflow.
+  *buf = '\0';
 }
-#else
-static void abort_with_message(const char *) { abort(); }
-#endif
 
-static void report_error(const char *msg, uintptr_t caller, int abort) {
+static void report_error(const char *kind, uintptr_t caller) {
   if (caller == 0)
     return;
   while (true) {
@@ -77,20 +78,23 @@ static void report_error(const char *msg, uintptr_t caller, int abort) {
     }
     __sanitizer::atomic_store_relaxed(&caller_pcs[sz], caller);
 
-    char msg_buf[128] = MSG_PREFIX;
-    const char *end = msg_buf + sizeof(msg_buf);
-    char *p = append_str(msg, msg_buf + sizeof(MSG_PREFIX) - 1, end);
-    p = append_str(MSG_SUFFIX, p, end);
-    p = append_hex(caller, p, end);
-    if (p < end) *p++ = '\n';
-
-    // Zero terminate.
-    if (p == end) --p;
-    *p = '\0';
+    char msg_buf[128];
+    format_msg(kind, caller, msg_buf, msg_buf + sizeof(msg_buf));
     message(msg_buf);
-    if (abort) abort_with_message(msg_buf);                                 \
   }
 }
+
+#if defined(__ANDROID__)
+extern "C" __attribute__((weak)) void android_set_abort_message(const char *);
+static void abort_with_message(const char *kind, uintptr_t caller) {
+  char msg_buf[128];
+  format_msg(kind, caller, msg_buf, msg_buf + sizeof(msg_buf));
+  if (&android_set_abort_message) android_set_abort_message(msg_buf);
+  abort();
+}
+#else
+static void abort_with_message(const char *kind, uintptr_t caller) { abort(); }
+#endif
 
 #if SANITIZER_DEBUG
 namespace __sanitizer {
@@ -107,19 +111,21 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
 
 #define INTERFACE extern "C" __attribute__((visibility("default")))
 
-#define HANDLER_RECOVER(name, msg)                               \
-  INTERFACE void __ubsan_handle_##name##_minimal() {             \
-    report_error(msg, GET_CALLER_PC(), 0);                       \
+#define HANDLER_RECOVER(name, kind)                               \
+  INTERFACE void __ubsan_handle_##name##_minimal() {              \
+    report_error(kind, GET_CALLER_PC());                          \
   }
 
-#define HANDLER_NORECOVER(name, msg)                             \
-  INTERFACE void __ubsan_handle_##name##_minimal_abort() {       \
-    report_error(msg, GET_CALLER_PC(), 1);                       \
+#define HANDLER_NORECOVER(name, kind)                             \
+  INTERFACE void __ubsan_handle_##name##_minimal_abort() {        \
+    uintptr_t caller = GET_CALLER_PC();                           \
+    report_error(kind, caller);                                   \
+    abort_with_message(kind, caller);                             \
   }
 
-#define HANDLER(name, msg)                                       \
-  HANDLER_RECOVER(name, msg)                                     \
-  HANDLER_NORECOVER(name, msg)
+#define HANDLER(name, kind)                                       \
+  HANDLER_RECOVER(name, kind)                                     \
+  HANDLER_NORECOVER(name, kind)
 
 HANDLER(type_mismatch, "type-mismatch")
 HANDLER(alignment_assumption, "alignment-assumption")
