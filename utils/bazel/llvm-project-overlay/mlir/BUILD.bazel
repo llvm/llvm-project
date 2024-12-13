@@ -5167,6 +5167,7 @@ cc_library(
         ":FuncDialect",
         ":FunctionInterfaces",
         ":GPUDialect",
+        ":GPUUtils",
         ":IR",
         ":LinalgDialect",
         ":MemRefDialect",
@@ -5795,6 +5796,7 @@ cc_library(
         ":ExecutionEngineUtils",
         ":FuncDialect",
         ":GPUDialect",
+        ":GPUUtils",
         ":GPUPassIncGen",
         ":GPUToLLVMIRTranslation",
         ":IR",
@@ -5827,6 +5829,26 @@ cc_library(
         ":NVVMToLLVMIRTranslation",
         "//llvm:NVPTXCodeGen",
     ]),
+)
+
+cc_library(
+    name = "GPUUtils",
+    srcs = glob(
+        [
+            "lib/Dialect/GPU/Utils/*.cpp",
+        ],
+    ),
+    hdrs = glob(["include/mlir/Dialect/GPU/Utils/*.h"]),
+    includes = ["include"],
+    deps = [
+      ":AffineDialect",
+      ":ArithDialect",
+      ":GPUDialect",
+      ":IR",
+      ":Support",
+      ":VectorDialect",
+      "//llvm:Support",
+    ],
 )
 
 td_library(
@@ -6188,6 +6210,7 @@ cc_library(
         ":FuncToLLVM",
         ":GPUCommonTransforms",
         ":GPUDialect",
+        ":GPUUtils",
         ":GPUTransforms",
         ":IR",
         ":LLVMCommonConversion",

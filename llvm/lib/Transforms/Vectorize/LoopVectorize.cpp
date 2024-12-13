@@ -7774,6 +7774,10 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPTransformState State(&TTI, BestVF, BestUF, LI, DT, ILV.Builder, &ILV,
                          &BestVPlan, Legal->getWidestInductionType());
 
+#ifdef EXPENSIVE_CHECKS
+  assert(DT->verify(DominatorTree::VerificationLevel::Fast));
+#endif
+
   // 0. Generate SCEV-dependent code into the preheader, including TripCount,
   // before making any changes to the CFG.
   if (!BestVPlan.getPreheader()->empty()) {
@@ -7793,10 +7797,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       ExpandedSCEVs ? *ExpandedSCEVs : State.ExpandedSCEVs);
   if (VectorizingEpilogue)
     VPlanTransforms::removeDeadRecipes(BestVPlan);
-
-#ifdef EXPENSIVE_CHECKS
-  assert(DT->verify(DominatorTree::VerificationLevel::Fast));
-#endif
 
   // Only use noalias metadata when using memory checks guaranteeing no overlap
   // across all iterations.
