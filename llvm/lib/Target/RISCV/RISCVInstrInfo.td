@@ -499,7 +499,7 @@ def LeadingOnesMask : PatLeaf<(imm), [{
       return false;
     const auto &MO = MI.getOperand(1);
     return !isInt<32>(MO.getCImm()->getSExtValue()) && 
-            isMask_64(~MO.getCImm()->getSExtValue());
+           isMask_64(~MO.getCImm()->getSExtValue());
   }];
 }
 
@@ -535,7 +535,7 @@ def LeadingOnesWMask : PatLeaf<(imm), [{
     const auto &MO = MI.getOperand(1);
     int64_t Imm = MO.getCImm()->getSExtValue();
     return !isInt<32>(Imm) && isUInt<32>(Imm) && isShiftedMask_64(Imm) &&
-         Imm != UINT64_C(0xffffffff);
+           Imm != UINT64_C(0xffffffff);
   }];
 
 }
