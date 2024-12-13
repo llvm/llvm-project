@@ -5,6 +5,7 @@
 // RUN: %clang -### -c -fveclib=Darwin_libsystem_m %s 2>&1 | FileCheck --check-prefix=CHECK-DARWIN_LIBSYSTEM_M %s
 // RUN: %clang -### -c --target=aarch64 -fveclib=SLEEF %s 2>&1 | FileCheck --check-prefix=CHECK-SLEEF %s
 // RUN: %clang -### -c --target=riscv64-unknown-linux-gnu -fveclib=SLEEF -march=rv64gcv %s 2>&1 | FileCheck -check-prefix CHECK-SLEEF-RISCV %s
+// RUN: %clang -### -c --target=riscv64-unknown-linux-gnu -fveclib=libmvec -march=rv64gcv %s 2>&1 | FileCheck -check-prefix CHECK-libmvec %s
 // RUN: %clang -### -c --target=aarch64 -fveclib=ArmPL %s 2>&1 | FileCheck --check-prefix=CHECK-ARMPL %s
 // RUN: not %clang -c -fveclib=something %s 2>&1 | FileCheck --check-prefix=CHECK-INVALID %s
 
@@ -21,7 +22,7 @@
 
 // RUN: not %clang --target=x86 -c -fveclib=SLEEF %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
 // RUN: not %clang --target=x86 -c -fveclib=ArmPL %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
-// RUN: not %clang --target=aarch64 -c -fveclib=LIBMVEC-X86 %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
+// RUN: not %clang --target=aarch64 -c -fveclib=LIBMVEC %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
 // RUN: not %clang --target=aarch64 -c -fveclib=SVML %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
 // CHECK-ERROR: unsupported option {{.*}} for target
 
@@ -38,7 +39,7 @@
 /* Verify that the correct vector library is passed to LTO flags. */
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=LIBMVEC -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-LIBMVEC %s
-// CHECK-LTO-LIBMVEC: "-plugin-opt=-vector-library=LIBMVEC-X86"
+// CHECK-LTO-LIBMVEC: "-plugin-opt=-vector-library=LIBMVEC"
 
 // RUN: %clang -### --target=powerpc64-unknown-linux-gnu -fveclib=MASSV -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-MASSV %s
 // CHECK-LTO-MASSV: "-plugin-opt=-vector-library=MASSV"
@@ -51,6 +52,9 @@
 
 // RUN: %clang -### --target=riscv64-unknown-linux-gnu -fveclib=SLEEF -flto -march=rv64gcv %s 2>&1 | FileCheck -check-prefix CHECK-LTO-SLEEF-RISCV %s
 // CHECK-LTO-SLEEF-RISCV: "-plugin-opt=-vector-library=sleefgnuabi"
+
+// RUN: %clang -### --target=riscv64-unknown-linux-gnu -fveclib=LIBMVEC -flto -march=rv64gcv %s 2>&1 | FileCheck -check-prefix CHECK-LTO-LIBMVEC-RISCV %s
+// CHECK-LTO-LIBMVEC-RISCV: "-plugin-opt=-vector-library=LIBMVEC"
 
 // RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-ARMPL %s
 // CHECK-LTO-ARMPL: "-plugin-opt=-vector-library=ArmPL"
@@ -110,7 +114,7 @@
 // CHECK-ENABLED-LAST: math errno enabled by '-ffp-model=strict' after it was implicitly disabled by '-fveclib=ArmPL', this may limit the utilization of the vector library [-Wmath-errno-enabled-with-veclib]
 
 /* Verify no warning when math-errno is re-enabled for a different veclib (that does not imply -fno-math-errno). */
-// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL -fmath-errno -fveclib=LIBMVEC %s 2>&1 | FileCheck --check-prefix=CHECK-REPEAT-VECLIB %s
+// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL -fmath-errno -fveclib=LIBMVEC-X86 %s 2>&1 | FileCheck --check-prefix=CHECK-REPEAT-VECLIB %s
 // CHECK-REPEAT-VECLIB-NOT: math errno enabled
 
 /// Verify that vectorized routines library is being linked in.

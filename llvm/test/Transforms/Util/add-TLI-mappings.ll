@@ -1,7 +1,7 @@
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -vector-library=SVML -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,SVML
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -vector-library=AMDLIBM -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,AMDLIBM
 ; RUN: opt -mtriple=powerpc64-unknown-linux-gnu -vector-library=MASSV -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,MASSV
-; RUN: opt -mtriple=x86_64-unknown-linux-gnu -vector-library=LIBMVEC-X86 -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,LIBMVEC-X86
+; RUN: opt -mtriple=x86_64-unknown-linux-gnu -vector-library=LIBMVEC -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,LIBMVEC
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -vector-library=Accelerate -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,ACCELERATE
 ; RUN: opt -mtriple=aarch64-unknown-linux-gnu -vector-library=sleefgnuabi -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,SLEEFGNUABI
 ; RUN: opt -mtriple=riscv64-unknown-linux-gnu -vector-library=sleefgnuabi -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,SLEEFGNUABI_RISCV
@@ -32,9 +32,9 @@
 ; MASSV-SAME:         ptr @__log10f4
 ; ACCELERATE-SAME:  [1 x ptr] [
 ; ACCELERATE-SAME:    ptr @vlog10f
-; LIBMVEC-X86-SAME: [2 x ptr] [
-; LIBMVEC-X86-SAME:   ptr @_ZGVbN2v_sin,
-; LIBMVEC-X86-SAME:   ptr @_ZGVdN4v_sin
+; LIBMVEC-SAME: [2 x ptr] [
+; LIBMVEC-SAME:   ptr @_ZGVbN2v_sin,
+; LIBMVEC-SAME:   ptr @_ZGVdN4v_sin
 ; SLEEFGNUABI-SAME: [16 x ptr] [
 ; SLEEFGNUABI-SAME:   ptr @_ZGVnN2vl8_modf,
 ; SLEEFGNUABI-SAME:   ptr @_ZGVsNxvl8_modf,
@@ -97,7 +97,7 @@ define double @sin_f64(double %in) {
 ; AMDLIBM:            call double @sin(double %{{.*}}) #[[SIN:[0-9]+]]
 ; MASSV:              call double @sin(double %{{.*}}) #[[SIN:[0-9]+]]
 ; ACCELERATE:         call double @sin(double %{{.*}})
-; LIBMVEC-X86:        call double @sin(double %{{.*}}) #[[SIN:[0-9]+]]
+; LIBMVEC:        call double @sin(double %{{.*}}) #[[SIN:[0-9]+]]
 ; SLEEFGNUABI:        call double @sin(double %{{.*}}) #[[SIN:[0-9]+]]
 ; SLEEFGNUABI_RISCV:  call double @sin(double %{{.*}}) #[[SIN:[0-9]+]]
 ; ARMPL:              call double @sin(double %{{.*}}) #[[SIN:[0-9]+]]
@@ -155,7 +155,7 @@ define float @call_llvm.log10.f32(float %in) {
 ; COMMON-LABEL:       @call_llvm.log10.f32(
 ; SVML:               call float @llvm.log10.f32(float %{{.*}})
 ; AMDLIBM:            call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
-; LIBMVEC-X86:        call float @llvm.log10.f32(float %{{.*}})
+; LIBMVEC:        call float @llvm.log10.f32(float %{{.*}})
 ; MASSV:              call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
 ; ACCELERATE:         call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
 ; SLEEFGNUABI:        call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
@@ -164,7 +164,7 @@ define float @call_llvm.log10.f32(float %in) {
 ; No mapping of "llvm.log10.f32" to a vector function for SVML.
 ; SVML-NOT:        _ZGV_LLVM_{{.*}}_llvm.log10.f32({{.*}})
 ; AMDLIBM-NOT:        _ZGV_LLVM_{{.*}}_llvm.log10.f32({{.*}})
-; LIBMVEC-X86-NOT: _ZGV_LLVM_{{.*}}_llvm.log10.f32({{.*}})
+; LIBMVEC-NOT: _ZGV_LLVM_{{.*}}_llvm.log10.f32({{.*}})
   %call = tail call float @llvm.log10.f32(float %in)
   ret float %call
 }
@@ -193,8 +193,8 @@ declare float @llvm.log10.f32(float) #0
 ; MASSV: declare <2 x double> @__sind2(<2 x double>)
 ; MASSV: declare <4 x float> @__log10f4(<4 x float>)
 
-; LIBMVEC-X86: declare <2 x double> @_ZGVbN2v_sin(<2 x double>)
-; LIBMVEC-X86: declare <4 x double> @_ZGVdN4v_sin(<4 x double>)
+; LIBMVEC: declare <2 x double> @_ZGVbN2v_sin(<2 x double>)
+; LIBMVEC: declare <4 x double> @_ZGVdN4v_sin(<4 x double>)
 
 ; ACCELERATE: declare <4 x float> @vlog10f(<4 x float>)
 
@@ -266,9 +266,9 @@ attributes #0 = { nounwind readnone }
 ; ACCELERATE:      attributes #[[LOG10]] = { "vector-function-abi-variant"=
 ; ACCELERATE-SAME:   "_ZGV_LLVM_N4v_llvm.log10.f32(vlog10f)" }
 
-; LIBMVEC-X86:      attributes #[[SIN]] = { "vector-function-abi-variant"=
-; LIBMVEC-X86-SAME:   "_ZGV_LLVM_N2v_sin(_ZGVbN2v_sin),
-; LIBMVEC-X86-SAME:   _ZGV_LLVM_N4v_sin(_ZGVdN4v_sin)" }
+; LIBMVEC:      attributes #[[SIN]] = { "vector-function-abi-variant"=
+; LIBMVEC-SAME:   "_ZGV_LLVM_N2v_sin(_ZGVbN2v_sin),
+; LIBMVEC-SAME:   _ZGV_LLVM_N4v_sin(_ZGVdN4v_sin)" }
 
 ; SLEEFGNUABI:      attributes #[[MODF]] = { "vector-function-abi-variant"=
 ; SLEEFGNUABI-SAME:   "_ZGV_LLVM_N2vl8_modf(_ZGVnN2vl8_modf),
