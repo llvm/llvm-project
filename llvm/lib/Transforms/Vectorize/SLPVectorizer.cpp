@@ -4782,8 +4782,10 @@ static Align computeCommonAlignment(ArrayRef<Value *> VL) {
 
 /// Check if \p Order represents reverse order.
 static bool isReverseOrder(ArrayRef<unsigned> Order) {
+  assert(!Order.empty() &&
+         "Order is empty. Please check it before using isReverseOrder.");
   unsigned Sz = Order.size();
-  return !Order.empty() && all_of(enumerate(Order), [&](const auto &Pair) {
+  return all_of(enumerate(Order), [&](const auto &Pair) {
     return Pair.value() == Sz || Sz - Pair.index() - 1 == Pair.value();
   });
 }
@@ -9839,7 +9841,7 @@ void BoUpSLP::transformNodes() {
       Align CommonAlignment = computeCommonAlignment<LoadInst>(E.Scalars);
       // Check if profitable to represent consecutive load + reverse as strided
       // load with stride -1.
-      if (isReverseOrder(E.ReorderIndices) &&
+      if (!E.ReorderIndices.empty() && isReverseOrder(E.ReorderIndices) &&
           TTI->isLegalStridedLoadStore(VecTy, CommonAlignment)) {
         SmallVector<int> Mask;
         inversePermutation(E.ReorderIndices, Mask);
@@ -9866,7 +9868,7 @@ void BoUpSLP::transformNodes() {
       Align CommonAlignment = computeCommonAlignment<StoreInst>(E.Scalars);
       // Check if profitable to represent consecutive load + reverse as strided
       // load with stride -1.
-      if (isReverseOrder(E.ReorderIndices) &&
+      if (!E.ReorderIndices.empty() && isReverseOrder(E.ReorderIndices) &&
           TTI->isLegalStridedLoadStore(VecTy, CommonAlignment)) {
         SmallVector<int> Mask;
         inversePermutation(E.ReorderIndices, Mask);
@@ -10992,7 +10994,6 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   unsigned EntryVF = E->getVectorFactor();
   auto *FinalVecTy = getWidenedType(ScalarTy, EntryVF);
 
-  bool NeedToShuffleReuses = !E->ReuseShuffleIndices.empty();
   if (E->isGather()) {
     if (allConstant(VL))
       return 0;
@@ -11005,9 +11006,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   }
   InstructionCost CommonCost = 0;
   SmallVector<int> Mask;
-  bool IsReverseOrder = isReverseOrder(E->ReorderIndices);
-  if (!E->ReorderIndices.empty() &&
-      (E->State != TreeEntry::StridedVectorize || !IsReverseOrder)) {
+  if (!E->ReorderIndices.empty() && (E->State != TreeEntry::StridedVectorize ||
+                                     !isReverseOrder(E->ReorderIndices))) {
     SmallVector<int> NewMask;
     if (E->getOpcode() == Instruction::Store) {
       // For stores the order is actually a mask.
@@ -11018,7 +11018,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     }
     ::addMask(Mask, NewMask);
   }
-  if (NeedToShuffleReuses)
+  if (!E->ReuseShuffleIndices.empty())
     ::addMask(Mask, E->ReuseShuffleIndices);
   if (!Mask.empty() && !ShuffleVectorInst::isIdentityMask(Mask, Mask.size()))
     CommonCost =
@@ -15068,7 +15068,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
     return Vec;
   }
 
-  bool IsReverseOrder = isReverseOrder(E->ReorderIndices);
+  bool IsReverseOrder =
+      !E->ReorderIndices.empty() && isReverseOrder(E->ReorderIndices);
   auto FinalShuffle = [&](Value *V, const TreeEntry *E) {
     ShuffleInstructionBuilder ShuffleBuilder(ScalarTy, Builder, *this);
     if (E->getOpcode() == Instruction::Store &&
