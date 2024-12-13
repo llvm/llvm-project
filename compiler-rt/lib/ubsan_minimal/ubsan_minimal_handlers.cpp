@@ -21,7 +21,8 @@ static __sanitizer::atomic_uintptr_t caller_pcs[kMaxCallerPcs];
 static __sanitizer::atomic_uint32_t caller_pcs_sz;
 
 static char *append_str(const char *s, char *buf, const char *end) {
-  for (const char *p = s; (buf < end) && (*p != '\0'); ++p, ++buf) *buf = *p;
+  for (const char *p = s; (buf < end) && (*p != '\0'); ++p, ++buf)
+    *buf = *p;
   return buf;
 }
 
@@ -42,7 +43,8 @@ static void format_msg(const char *kind, uintptr_t caller, char *buf,
   buf = append_str(" by 0x", buf, end);
   buf = append_hex(caller, buf, end);
   buf = append_str("\n", buf, end);
-  if (buf == end) --buf; // Make sure we don't cause a buffer overflow.
+  if (buf == end)
+    --buf; // Make sure we don't cause a buffer overflow.
   *buf = '\0';
 }
 
@@ -51,7 +53,8 @@ static void report_error(const char *kind, uintptr_t caller) {
     return;
   while (true) {
     unsigned sz = __sanitizer::atomic_load_relaxed(&caller_pcs_sz);
-    if (sz > kMaxCallerPcs) return;  // early exit
+    if (sz > kMaxCallerPcs)
+      return; // early exit
     // when sz==kMaxCallerPcs print "too many errors", but only when cmpxchg
     // succeeds in order to not print it multiple times.
     if (sz > 0 && sz < kMaxCallerPcs) {
@@ -59,7 +62,8 @@ static void report_error(const char *kind, uintptr_t caller) {
       for (unsigned i = 0; i < sz; ++i) {
         p = __sanitizer::atomic_load_relaxed(&caller_pcs[i]);
         if (p == 0) break;  // Concurrent update.
-        if (p == caller) return;
+        if (p == caller)
+          return;
       }
       if (p == 0) continue;  // FIXME: yield?
     }
@@ -85,7 +89,8 @@ extern "C" __attribute__((weak)) void android_set_abort_message(const char *);
 static void abort_with_message(const char *kind, uintptr_t caller) {
   char msg_buf[128];
   format_msg(kind, caller, msg_buf, msg_buf + sizeof(msg_buf));
-  if (&android_set_abort_message) android_set_abort_message(msg_buf);
+  if (&android_set_abort_message)
+    android_set_abort_message(msg_buf);
   abort();
 }
 #else
@@ -107,20 +112,20 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
 
 #define INTERFACE extern "C" __attribute__((visibility("default")))
 
-#define HANDLER_RECOVER(name, kind)                               \
-  INTERFACE void __ubsan_handle_##name##_minimal() {              \
-    report_error(kind, GET_CALLER_PC());                          \
+#define HANDLER_RECOVER(name, kind)                                            \
+  INTERFACE void __ubsan_handle_##name##_minimal() {                           \
+    report_error(kind, GET_CALLER_PC());                                       \
   }
 
-#define HANDLER_NORECOVER(name, kind)                             \
-  INTERFACE void __ubsan_handle_##name##_minimal_abort() {        \
-    uintptr_t caller = GET_CALLER_PC();                           \
-    report_error(kind, caller);                                   \
-    abort_with_message(kind, caller);                             \
+#define HANDLER_NORECOVER(name, kind)                                          \
+  INTERFACE void __ubsan_handle_##name##_minimal_abort() {                     \
+    uintptr_t caller = GET_CALLER_PC();                                        \
+    report_error(kind, caller);                                                \
+    abort_with_message(kind, caller);                                          \
   }
 
-#define HANDLER(name, kind)                                       \
-  HANDLER_RECOVER(name, kind)                                     \
+#define HANDLER(name, kind)                                                    \
+  HANDLER_RECOVER(name, kind)                                                  \
   HANDLER_NORECOVER(name, kind)
 
 HANDLER(type_mismatch, "type-mismatch")
