@@ -14,8 +14,8 @@
 #include "bolt/Core/HashUtilities.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ThreadPool.h"
@@ -356,7 +356,8 @@ typedef std::unordered_map<BinaryFunction *, std::vector<BinaryFunction *>,
 
 namespace llvm {
 namespace bolt {
-/// Scans symbol table and creates a bit vector of memory addresses of vtable symbols.
+/// Scans symbol table and creates a bit vector of memory addresses of vtable
+/// symbols.
 void IdenticalCodeFolding::initVTableReferences(const BinaryContext &BC) {
   initVtable();
   for (const auto &[Address, Data] : BC.getBinaryData()) {

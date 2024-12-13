@@ -52,9 +52,11 @@ private:
     return VtableBitVector.test(Address / 8);
   }
   /// Initialize bit vector of memory addresses of vtables.
-  void initVtable() {VtableBitVector.resize((((uint64_t)1) << 32) / 8);}
+  void initVtable() { VtableBitVector.resize((((uint64_t)1) << 32) / 8); }
   /// Mark memory address of vtable as used.
-  void setAddressUsedInVTable(uint64_t Address) { VtableBitVector.set(Address / 8); }
+  void setAddressUsedInVTable(uint64_t Address) {
+    VtableBitVector.set(Address / 8);
+  }
   /// Scans symbol table and creates a bit vector of memory addresses of
   /// vtables.
   void initVTableReferences(const BinaryContext &BC);
