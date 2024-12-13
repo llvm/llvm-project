@@ -15,6 +15,8 @@
 #ifndef LLVM_IR_NVVMINTRINSICUTILS_H
 #define LLVM_IR_NVVMINTRINSICUTILS_H
 
+#include <stdint.h>
+
 #include "llvm/ADT/APFloat.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
