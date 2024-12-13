@@ -140,12 +140,8 @@ public:
       // Loop over all indices in the DIM dimension, and reduce all values.
       // If DIM is not present, do total reduction.
 
-      // Create temporary scalar for keeping the running reduction value.
-      mlir::Value reductionTemp =
-          builder.createTemporaryAlloc(loc, elementType, ".sum.reduction");
       // Initial value for the reduction.
-      mlir::Value initValue = genInitValue(loc, builder, elementType);
-      builder.create<fir::StoreOp>(loc, initValue, reductionTemp);
+      mlir::Value reductionInitValue = genInitValue(loc, builder, elementType);
 
       // The reduction loop may be unordered if FastMathFlags::reassoc
       // transformations are allowed. The integer reduction is always
@@ -161,56 +157,68 @@ public:
         extents.push_back(
             builder.createConvert(loc, builder.getIndexType(), dimExtent));
 
-      // NOTE: the outer elemental operation may be lowered into
-      // omp.workshare.loop_wrapper/omp.loop_nest later, so the reduction
-      // loop may appear disjoint from the workshare loop nest.
-      //
-      // TODO: a workshare loop nest can be used for the total reductions,
-      // but a proper reduction clause is required to make it work.
-      hlfir::LoopNest loopNest = hlfir::genLoopNest(
-          loc, builder, extents, isUnordered, /*emitWorkshareLoop=*/false);
-
-      llvm::SmallVector<mlir::Value> indices;
-      if (isTotalReduction) {
-        indices = loopNest.oneBasedIndices;
-      } else {
-        indices = inputIndices;
-        indices.insert(indices.begin() + dimVal - 1,
-                       loopNest.oneBasedIndices[0]);
-      }
-
-      builder.setInsertionPointToStart(loopNest.body);
-      fir::IfOp ifOp;
-      if (mask) {
-        // Make the reduction value update conditional on the value
-        // of the mask.
-        if (!maskValue) {
-          // If the mask is an array, use the elemental and the loop indices
-          // to address the proper mask element.
-          maskValue = genMaskValue(loc, builder, mask, isPresentPred, indices);
+      auto genBody = [&](mlir::Location loc, fir::FirOpBuilder &builder,
+                         mlir::ValueRange oneBasedIndices,
+                         mlir::ValueRange reductionArgs)
+          -> llvm::SmallVector<mlir::Value, 1> {
+        // Generate the reduction loop-nest body.
+        // The initial reduction value in the innermost loop
+        // is passed via reductionArgs[0].
+        llvm::SmallVector<mlir::Value> indices;
+        if (isTotalReduction) {
+          indices = oneBasedIndices;
+        } else {
+          indices = inputIndices;
+          indices.insert(indices.begin() + dimVal - 1, oneBasedIndices[0]);
         }
-        mlir::Value isUnmasked =
-            builder.create<fir::ConvertOp>(loc, builder.getI1Type(), maskValue);
-        ifOp = builder.create<fir::IfOp>(loc, isUnmasked,
-                                         /*withElseRegion=*/false);
 
-        // In the 'then' block do the actual addition.
-        builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-      }
+        mlir::Value reductionValue = reductionArgs[0];
+        fir::IfOp ifOp;
+        if (mask) {
+          // Make the reduction value update conditional on the value
+          // of the mask.
+          if (!maskValue) {
+            // If the mask is an array, use the elemental and the loop indices
+            // to address the proper mask element.
+            maskValue =
+                genMaskValue(loc, builder, mask, isPresentPred, indices);
+          }
+          mlir::Value isUnmasked = builder.create<fir::ConvertOp>(
+              loc, builder.getI1Type(), maskValue);
+          ifOp = builder.create<fir::IfOp>(loc, elementType, isUnmasked,
+                                           /*withElseRegion=*/true);
+          // In the 'else' block return the current reduction value.
+          builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+          builder.create<fir::ResultOp>(loc, reductionValue);
 
-      mlir::Value reductionValue =
-          builder.create<fir::LoadOp>(loc, reductionTemp);
-      hlfir::Entity element = hlfir::getElementAt(loc, builder, array, indices);
-      hlfir::Entity elementValue =
-          hlfir::loadTrivialScalar(loc, builder, element);
-      // NOTE: we can use "Kahan summation" same way as the runtime
-      // (e.g. when fast-math is not allowed), but let's start with
-      // the simple version.
-      reductionValue = genScalarAdd(loc, builder, reductionValue, elementValue);
-      builder.create<fir::StoreOp>(loc, reductionValue, reductionTemp);
+          // In the 'then' block do the actual addition.
+          builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+        }
 
-      builder.setInsertionPointAfter(loopNest.outerOp);
-      return hlfir::Entity{builder.create<fir::LoadOp>(loc, reductionTemp)};
+        hlfir::Entity element =
+            hlfir::getElementAt(loc, builder, array, indices);
+        hlfir::Entity elementValue =
+            hlfir::loadTrivialScalar(loc, builder, element);
+        // NOTE: we can use "Kahan summation" same way as the runtime
+        // (e.g. when fast-math is not allowed), but let's start with
+        // the simple version.
+        reductionValue =
+            genScalarAdd(loc, builder, reductionValue, elementValue);
+
+        if (ifOp) {
+          builder.create<fir::ResultOp>(loc, reductionValue);
+          builder.setInsertionPointAfter(ifOp);
+          reductionValue = ifOp.getResult(0);
+        }
+
+        return {reductionValue};
+      };
+
+      llvm::SmallVector<mlir::Value, 1> reductionFinalValues =
+          hlfir::genLoopNestWithReductions(loc, builder, extents,
+                                           {reductionInitValue}, genBody,
+                                           isUnordered);
+      return hlfir::Entity{reductionFinalValues[0]};
     };
 
     if (isTotalReduction) {
