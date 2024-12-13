@@ -1281,11 +1281,6 @@ parseRegAllocFastPassOptions(PassBuilder &PB, StringRef Params) {
   return Opts;
 }
 
-Expected<RealtimeSanitizerOptions> parseRtSanPassOptions(StringRef Params) {
-  RealtimeSanitizerOptions Result;
-  return Result;
-}
-
 } // namespace
 
 /// Tests whether a pass name starts with a valid prefix for a default pipeline
