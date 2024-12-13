@@ -202,11 +202,16 @@ void RAGreedy::setAnalyses(RequiredAnalyses &Analyses) {
   PriorityProvider = Analyses.PriorityProvider;
 }
 
+void RAGreedyPass::printPipeline(raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) const {
+  StringRef FilterName = Opts.FilterName.empty() ? "all" : Opts.FilterName;
+  OS << "regallocgreedy<" << FilterName << ">";
+}
+
 PreservedAnalyses RAGreedyPass::run(MachineFunction &MF,
                                     MachineFunctionAnalysisManager &MFAM) {
   MFPropsModifier _(*this, MF);
 
-  RAGreedy Impl(Filter);
+  RAGreedy Impl(Opts.Filter);
   RAGreedy::RequiredAnalyses Analyses;
 
   Analyses.VRM = &MFAM.getResult<VirtRegMapAnalysis>(MF);
