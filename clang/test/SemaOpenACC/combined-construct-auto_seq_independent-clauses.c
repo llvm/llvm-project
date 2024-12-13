@@ -1,8 +1,5 @@
 // RUN: %clang_cc1 %s -fopenacc -verify
 
-// TODO: OpenACC: A number of the 'not yet implemented' diagnostics interfere
-// with the diagnostics we want to make here, so as we implement these, we need
-// to replace the errors we should have.
 void uses() {
 #pragma acc parallel loop auto
   for(unsigned i = 0; i < 5; ++i);
@@ -124,7 +121,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause name 'present_or_create' is a deprecated clause name and is now an alias for 'create'}}
 #pragma acc parallel loop auto present_or_create(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc parallel loop auto reduction(+:Var)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop auto collapse(1)
@@ -242,7 +238,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause name 'present_or_create' is a deprecated clause name and is now an alias for 'create'}}
 #pragma acc parallel loop present_or_create(Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc parallel loop reduction(+:Var) auto
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop collapse(1) auto
@@ -361,7 +356,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause name 'present_or_create' is a deprecated clause name and is now an alias for 'create'}}
 #pragma acc parallel loop independent present_or_create(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc parallel loop independent reduction(+:Var)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop independent collapse(1)
@@ -479,7 +473,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause name 'present_or_create' is a deprecated clause name and is now an alias for 'create'}}
 #pragma acc parallel loop present_or_create(Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc parallel loop reduction(+:Var) independent
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop collapse(1) independent
@@ -606,7 +599,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause name 'present_or_create' is a deprecated clause name and is now an alias for 'create'}}
 #pragma acc parallel loop seq present_or_create(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc parallel loop seq reduction(+:Var)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop seq collapse(1)
@@ -730,7 +722,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause name 'present_or_create' is a deprecated clause name and is now an alias for 'create'}}
 #pragma acc parallel loop present_or_create(Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc parallel loop reduction(+:Var) seq
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop collapse(1) seq

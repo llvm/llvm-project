@@ -1066,6 +1066,7 @@ is being invoked, and added after all of the command-line specified linker
 inputs. Here is some example of ``$``-prefixed options:
 
 ::
+
     $-Wl,-Bstatic $-lm
     $-Wl,-Bshared
 

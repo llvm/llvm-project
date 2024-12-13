@@ -696,177 +696,22 @@ struct MulOpConversion : public OpConversionPattern<complex::MulOp> {
     auto elementType = cast<FloatType>(type.getElementType());
     arith::FastMathFlagsAttr fmf = op.getFastMathFlagsAttr();
     auto fmfValue = fmf.getValue();
-
     Value lhsReal = b.create<complex::ReOp>(elementType, adaptor.getLhs());
-    Value lhsRealAbs = b.create<math::AbsFOp>(lhsReal, fmfValue);
     Value lhsImag = b.create<complex::ImOp>(elementType, adaptor.getLhs());
-    Value lhsImagAbs = b.create<math::AbsFOp>(lhsImag, fmfValue);
     Value rhsReal = b.create<complex::ReOp>(elementType, adaptor.getRhs());
-    Value rhsRealAbs = b.create<math::AbsFOp>(rhsReal, fmfValue);
     Value rhsImag = b.create<complex::ImOp>(elementType, adaptor.getRhs());
-    Value rhsImagAbs = b.create<math::AbsFOp>(rhsImag, fmfValue);
-
     Value lhsRealTimesRhsReal =
         b.create<arith::MulFOp>(lhsReal, rhsReal, fmfValue);
-    Value lhsRealTimesRhsRealAbs =
-        b.create<math::AbsFOp>(lhsRealTimesRhsReal, fmfValue);
     Value lhsImagTimesRhsImag =
         b.create<arith::MulFOp>(lhsImag, rhsImag, fmfValue);
-    Value lhsImagTimesRhsImagAbs =
-        b.create<math::AbsFOp>(lhsImagTimesRhsImag, fmfValue);
     Value real = b.create<arith::SubFOp>(lhsRealTimesRhsReal,
                                          lhsImagTimesRhsImag, fmfValue);
-
     Value lhsImagTimesRhsReal =
         b.create<arith::MulFOp>(lhsImag, rhsReal, fmfValue);
-    Value lhsImagTimesRhsRealAbs =
-        b.create<math::AbsFOp>(lhsImagTimesRhsReal, fmfValue);
     Value lhsRealTimesRhsImag =
         b.create<arith::MulFOp>(lhsReal, rhsImag, fmfValue);
-    Value lhsRealTimesRhsImagAbs =
-        b.create<math::AbsFOp>(lhsRealTimesRhsImag, fmfValue);
     Value imag = b.create<arith::AddFOp>(lhsImagTimesRhsReal,
                                          lhsRealTimesRhsImag, fmfValue);
-
-    // Handle cases where the "naive" calculation results in NaN values.
-    Value realIsNan =
-        b.create<arith::CmpFOp>(arith::CmpFPredicate::UNO, real, real);
-    Value imagIsNan =
-        b.create<arith::CmpFOp>(arith::CmpFPredicate::UNO, imag, imag);
-    Value isNan = b.create<arith::AndIOp>(realIsNan, imagIsNan);
-
-    Value inf = b.create<arith::ConstantOp>(
-        elementType,
-        b.getFloatAttr(elementType,
-                       APFloat::getInf(elementType.getFloatSemantics())));
-
-    // Case 1. `lhsReal` or `lhsImag` are infinite.
-    Value lhsRealIsInf =
-        b.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, lhsRealAbs, inf);
-    Value lhsImagIsInf =
-        b.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, lhsImagAbs, inf);
-    Value lhsIsInf = b.create<arith::OrIOp>(lhsRealIsInf, lhsImagIsInf);
-    Value rhsRealIsNan =
-        b.create<arith::CmpFOp>(arith::CmpFPredicate::UNO, rhsReal, rhsReal);
-    Value rhsImagIsNan =
-        b.create<arith::CmpFOp>(arith::CmpFPredicate::UNO, rhsImag, rhsImag);
-    Value zero =
-        b.create<arith::ConstantOp>(elementType, b.getZeroAttr(elementType));
-    Value one = b.create<arith::ConstantOp>(elementType,
-                                            b.getFloatAttr(elementType, 1));
-    Value lhsRealIsInfFloat =
-        b.create<arith::SelectOp>(lhsRealIsInf, one, zero);
-    lhsReal = b.create<arith::SelectOp>(
-        lhsIsInf, b.create<math::CopySignOp>(lhsRealIsInfFloat, lhsReal),
-        lhsReal);
-    Value lhsImagIsInfFloat =
-        b.create<arith::SelectOp>(lhsImagIsInf, one, zero);
-    lhsImag = b.create<arith::SelectOp>(
-        lhsIsInf, b.create<math::CopySignOp>(lhsImagIsInfFloat, lhsImag),
-        lhsImag);
-    Value lhsIsInfAndRhsRealIsNan =
-        b.create<arith::AndIOp>(lhsIsInf, rhsRealIsNan);
-    rhsReal = b.create<arith::SelectOp>(
-        lhsIsInfAndRhsRealIsNan, b.create<math::CopySignOp>(zero, rhsReal),
-        rhsReal);
-    Value lhsIsInfAndRhsImagIsNan =
-        b.create<arith::AndIOp>(lhsIsInf, rhsImagIsNan);
-    rhsImag = b.create<arith::SelectOp>(
-        lhsIsInfAndRhsImagIsNan, b.create<math::CopySignOp>(zero, rhsImag),
-        rhsImag);
-
-    // Case 2. `rhsReal` or `rhsImag` are infinite.
-    Value rhsRealIsInf =
-        b.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, rhsRealAbs, inf);
-    Value rhsImagIsInf =
-        b.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, rhsImagAbs, inf);
-    Value rhsIsInf = b.create<arith::OrIOp>(rhsRealIsInf, rhsImagIsInf);
-    Value lhsRealIsNan =
-        b.create<arith::CmpFOp>(arith::CmpFPredicate::UNO, lhsReal, lhsReal);
-    Value lhsImagIsNan =
-        b.create<arith::CmpFOp>(arith::CmpFPredicate::UNO, lhsImag, lhsImag);
-    Value rhsRealIsInfFloat =
-        b.create<arith::SelectOp>(rhsRealIsInf, one, zero);
-    rhsReal = b.create<arith::SelectOp>(
-        rhsIsInf, b.create<math::CopySignOp>(rhsRealIsInfFloat, rhsReal),
-        rhsReal);
-    Value rhsImagIsInfFloat =
-        b.create<arith::SelectOp>(rhsImagIsInf, one, zero);
-    rhsImag = b.create<arith::SelectOp>(
-        rhsIsInf, b.create<math::CopySignOp>(rhsImagIsInfFloat, rhsImag),
-        rhsImag);
-    Value rhsIsInfAndLhsRealIsNan =
-        b.create<arith::AndIOp>(rhsIsInf, lhsRealIsNan);
-    lhsReal = b.create<arith::SelectOp>(
-        rhsIsInfAndLhsRealIsNan, b.create<math::CopySignOp>(zero, lhsReal),
-        lhsReal);
-    Value rhsIsInfAndLhsImagIsNan =
-        b.create<arith::AndIOp>(rhsIsInf, lhsImagIsNan);
-    lhsImag = b.create<arith::SelectOp>(
-        rhsIsInfAndLhsImagIsNan, b.create<math::CopySignOp>(zero, lhsImag),
-        lhsImag);
-    Value recalc = b.create<arith::OrIOp>(lhsIsInf, rhsIsInf);
-
-    // Case 3. One of the pairwise products of left hand side with right hand
-    // side is infinite.
-    Value lhsRealTimesRhsRealIsInf = b.create<arith::CmpFOp>(
-        arith::CmpFPredicate::OEQ, lhsRealTimesRhsRealAbs, inf);
-    Value lhsImagTimesRhsImagIsInf = b.create<arith::CmpFOp>(
-        arith::CmpFPredicate::OEQ, lhsImagTimesRhsImagAbs, inf);
-    Value isSpecialCase = b.create<arith::OrIOp>(lhsRealTimesRhsRealIsInf,
-                                                 lhsImagTimesRhsImagIsInf);
-    Value lhsRealTimesRhsImagIsInf = b.create<arith::CmpFOp>(
-        arith::CmpFPredicate::OEQ, lhsRealTimesRhsImagAbs, inf);
-    isSpecialCase =
-        b.create<arith::OrIOp>(isSpecialCase, lhsRealTimesRhsImagIsInf);
-    Value lhsImagTimesRhsRealIsInf = b.create<arith::CmpFOp>(
-        arith::CmpFPredicate::OEQ, lhsImagTimesRhsRealAbs, inf);
-    isSpecialCase =
-        b.create<arith::OrIOp>(isSpecialCase, lhsImagTimesRhsRealIsInf);
-    Type i1Type = b.getI1Type();
-    Value notRecalc = b.create<arith::XOrIOp>(
-        recalc,
-        b.create<arith::ConstantOp>(i1Type, b.getIntegerAttr(i1Type, 1)));
-    isSpecialCase = b.create<arith::AndIOp>(isSpecialCase, notRecalc);
-    Value isSpecialCaseAndLhsRealIsNan =
-        b.create<arith::AndIOp>(isSpecialCase, lhsRealIsNan);
-    lhsReal = b.create<arith::SelectOp>(
-        isSpecialCaseAndLhsRealIsNan, b.create<math::CopySignOp>(zero, lhsReal),
-        lhsReal);
-    Value isSpecialCaseAndLhsImagIsNan =
-        b.create<arith::AndIOp>(isSpecialCase, lhsImagIsNan);
-    lhsImag = b.create<arith::SelectOp>(
-        isSpecialCaseAndLhsImagIsNan, b.create<math::CopySignOp>(zero, lhsImag),
-        lhsImag);
-    Value isSpecialCaseAndRhsRealIsNan =
-        b.create<arith::AndIOp>(isSpecialCase, rhsRealIsNan);
-    rhsReal = b.create<arith::SelectOp>(
-        isSpecialCaseAndRhsRealIsNan, b.create<math::CopySignOp>(zero, rhsReal),
-        rhsReal);
-    Value isSpecialCaseAndRhsImagIsNan =
-        b.create<arith::AndIOp>(isSpecialCase, rhsImagIsNan);
-    rhsImag = b.create<arith::SelectOp>(
-        isSpecialCaseAndRhsImagIsNan, b.create<math::CopySignOp>(zero, rhsImag),
-        rhsImag);
-    recalc = b.create<arith::OrIOp>(recalc, isSpecialCase);
-    recalc = b.create<arith::AndIOp>(isNan, recalc);
-
-    // Recalculate real part.
-    lhsRealTimesRhsReal = b.create<arith::MulFOp>(lhsReal, rhsReal, fmfValue);
-    lhsImagTimesRhsImag = b.create<arith::MulFOp>(lhsImag, rhsImag, fmfValue);
-    Value newReal = b.create<arith::SubFOp>(lhsRealTimesRhsReal,
-                                            lhsImagTimesRhsImag, fmfValue);
-    real = b.create<arith::SelectOp>(
-        recalc, b.create<arith::MulFOp>(inf, newReal, fmfValue), real);
-
-    // Recalculate imag part.
-    lhsImagTimesRhsReal = b.create<arith::MulFOp>(lhsImag, rhsReal, fmfValue);
-    lhsRealTimesRhsImag = b.create<arith::MulFOp>(lhsReal, rhsImag, fmfValue);
-    Value newImag = b.create<arith::AddFOp>(lhsImagTimesRhsReal,
-                                            lhsRealTimesRhsImag, fmfValue);
-    imag = b.create<arith::SelectOp>(
-        recalc, b.create<arith::MulFOp>(inf, newImag, fmfValue), imag);
-
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, real, imag);
     return success();
   }

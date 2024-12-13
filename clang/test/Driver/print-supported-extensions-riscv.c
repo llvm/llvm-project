@@ -189,6 +189,7 @@
 // CHECK-NEXT:     ssctr                1.0       'Ssctr' (Control Transfer Records Supervisor Level)
 // CHECK-NEXT:     svukte               0.3       'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses)
 // CHECK-NEXT:     xqcia                0.2       'Xqcia' (Qualcomm uC Arithmetic Extension)
+// CHECK-NEXT:     xqcics               0.2       'Xqcics' (Qualcomm uC Conditional Select Extension)
 // CHECK-NEXT:     xqcicsr              0.2       'Xqcicsr' (Qualcomm uC CSR Extension)
 // CHECK-NEXT:     xqcisls              0.2       'Xqcisls' (Qualcomm uC Scaled Load Store Extension)
 // CHECK-EMPTY:

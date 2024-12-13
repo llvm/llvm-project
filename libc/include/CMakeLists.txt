@@ -389,7 +389,7 @@ add_header_macro(
   pthread.h.def
   pthread.h
   DEPENDS
-    .llvm_libc_common_h
+    .llvm-libc-macros.pthread_macros
     .llvm-libc-types.__atfork_callback_t
     .llvm-libc-types.__pthread_once_func_t
     .llvm-libc-types.__pthread_start_t
@@ -404,6 +404,7 @@ add_header_macro(
     .llvm-libc-types.pthread_rwlockattr_t
     .llvm-libc-types.pthread_spinlock_t
     .llvm-libc-types.pthread_t
+    .llvm_libc_common_h
 )
 
 add_header_macro(

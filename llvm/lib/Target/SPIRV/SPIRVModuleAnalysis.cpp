@@ -1770,6 +1770,27 @@ static void addMBBNames(const Module &M, const SPIRVInstrInfo &TII,
   }
 }
 
+// patching Instruction::PHI to SPIRV::OpPhi
+static void patchPhis(const Module &M, SPIRVGlobalRegistry *GR,
+                      const SPIRVInstrInfo &TII, MachineModuleInfo *MMI) {
+  for (auto F = M.begin(), E = M.end(); F != E; ++F) {
+    MachineFunction *MF = MMI->getMachineFunction(*F);
+    if (!MF)
+      continue;
+    for (auto &MBB : *MF) {
+      for (MachineInstr &MI : MBB) {
+        if (MI.getOpcode() != TargetOpcode::PHI)
+          continue;
+        MI.setDesc(TII.get(SPIRV::OpPhi));
+        Register ResTypeReg = GR->getSPIRVTypeID(
+            GR->getSPIRVTypeForVReg(MI.getOperand(0).getReg(), MF));
+        MI.insert(MI.operands_begin() + 1,
+                  {MachineOperand::CreateReg(ResTypeReg, false)});
+      }
+    }
+  }
+}
+
 struct SPIRV::ModuleAnalysisInfo SPIRVModuleAnalysis::MAI;
 
 void SPIRVModuleAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -1787,6 +1808,8 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
   MMI = &getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
 
   setBaseInfo(M);
+
+  patchPhis(M, GR, *TII, MMI);
 
   addMBBNames(M, *TII, MMI, *ST, MAI);
   addDecorations(M, *TII, MMI, *ST, MAI);

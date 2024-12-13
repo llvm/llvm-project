@@ -2430,12 +2430,18 @@ let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2,fp8" in {
   def FSCALE_X4 : Inst<"svscale[_{d}_x4]", "444.x", "fhd", MergeNone, "aarch64_sme_fp8_scale_x4", [IsStreaming],[]>;
 
   // Convert from FP8 to half-precision/BFloat16 multi-vector
-  def SVF1CVT : Inst<"svcvt1_{d}[_mf8]_x2_fpm", "2~>", "bh", MergeNone, "aarch64_sve_fp8_cvt1_x2", [IsStreaming, SetsFPMR], []>;
-  def SVF2CVT : Inst<"svcvt2_{d}[_mf8]_x2_fpm", "2~>", "bh", MergeNone, "aarch64_sve_fp8_cvt2_x2", [IsStreaming, SetsFPMR], []>;
+  def SVF1CVT_X2 : Inst<"svcvt1_{d}[_mf8]_x2_fpm", "2~>", "bh", MergeNone, "aarch64_sve_fp8_cvt1_x2", [IsStreaming, SetsFPMR], []>;
+  def SVF2CVT_X2 : Inst<"svcvt2_{d}[_mf8]_x2_fpm", "2~>", "bh", MergeNone, "aarch64_sve_fp8_cvt2_x2", [IsStreaming, SetsFPMR], []>;
 
   // Convert from FP8 to deinterleaved half-precision/BFloat16 multi-vector
-  def SVF1CVTL : Inst<"svcvtl1_{d}[_mf8]_x2_fpm",  "2~>", "bh", MergeNone, "aarch64_sve_fp8_cvtl1_x2",  [IsStreaming, SetsFPMR], []>;
-  def SVF2CVTL : Inst<"svcvtl2_{d}[_mf8]_x2_fpm",  "2~>", "bh", MergeNone, "aarch64_sve_fp8_cvtl2_x2",  [IsStreaming, SetsFPMR], []>;
+  def SVF1CVTL_X2 : Inst<"svcvtl1_{d}[_mf8]_x2_fpm",  "2~>", "bh", MergeNone, "aarch64_sve_fp8_cvtl1_x2",  [IsStreaming, SetsFPMR], []>;
+  def SVF2CVTL_X2 : Inst<"svcvtl2_{d}[_mf8]_x2_fpm",  "2~>", "bh", MergeNone, "aarch64_sve_fp8_cvtl2_x2",  [IsStreaming, SetsFPMR], []>;
+
+  // Convert from single/half/bfloat multivector to FP8
+  def SVFCVT_X2 : Inst<"svcvt_mf8[_{d}_x2]_fpm", "~2>", "bh", MergeNone, "aarch64_sve_fp8_cvt_x2", [IsStreaming, SetsFPMR], []>;
+  def SVFCVT_X4 : Inst<"svcvt_mf8[_{d}_x4]_fpm", "~4>", "f",  MergeNone, "aarch64_sve_fp8_cvt_x4", [IsOverloadNone, IsStreaming, SetsFPMR], []>;
+  // interleaved
+  def SVFCVTN_X4 : Inst<"svcvtn_mf8[_{d}_x4]_fpm", "~4>", "f", MergeNone, "aarch64_sve_fp8_cvtn_x4", [IsOverloadNone, IsStreaming, SetsFPMR], []>;
 }
 
 let SVETargetGuard = "sve2p1", SMETargetGuard = "sme2" in {
@@ -2450,4 +2456,23 @@ let SVETargetGuard = "sve2p1", SMETargetGuard = "sme2" in {
 let SVETargetGuard = "sve2,faminmax", SMETargetGuard = "sme2,faminmax" in {
   defm SVAMIN : SInstZPZZ<"svamin", "hfd", "aarch64_sve_famin", "aarch64_sve_famin_u">;
   defm SVAMAX : SInstZPZZ<"svamax", "hfd", "aarch64_sve_famax", "aarch64_sve_famax_u">;
+}
+
+let SVETargetGuard = "sve2,fp8", SMETargetGuard = "sme2,fp8" in {
+  // SVE FP8 widening conversions
+
+  // 8-bit floating-point convert to BFloat16/Float16
+  def SVF1CVT : SInst<"svcvt1_{d}[_mf8]_fpm", "d~>", "bh", MergeNone, "aarch64_sve_fp8_cvt1", [VerifyRuntimeMode, SetsFPMR]>;
+  def SVF2CVT : SInst<"svcvt2_{d}[_mf8]_fpm", "d~>", "bh", MergeNone, "aarch64_sve_fp8_cvt2", [VerifyRuntimeMode, SetsFPMR]>;
+
+  // 8-bit floating-point convert to BFloat16/Float16 (top)
+  def SVF1CVTLT : SInst<"svcvtlt1_{d}[_mf8]_fpm", "d~>", "bh", MergeNone, "aarch64_sve_fp8_cvtlt1", [VerifyRuntimeMode, SetsFPMR]>;
+  def SVF2CVTLT : SInst<"svcvtlt2_{d}[_mf8]_fpm", "d~>", "bh", MergeNone, "aarch64_sve_fp8_cvtlt2", [VerifyRuntimeMode, SetsFPMR]>;
+
+  // BFloat16/Float16 convert, narrow and interleave to 8-bit floating-point
+  def SVFCVTN : SInst<"svcvtn_mf8[_{d}_x2]_fpm", "~2>", "bh", MergeNone, "aarch64_sve_fp8_cvtn", [VerifyRuntimeMode, SetsFPMR]>;
+
+  // Single-precision convert, narrow and interleave to 8-bit floating-point (top and bottom)
+  def SVFCVTNB : SInst<"svcvtnb_mf8[_f32_x2]_fpm", "~2>",  "f", MergeNone, "aarch64_sve_fp8_cvtnb", [VerifyRuntimeMode, SetsFPMR]>;
+  def SVFCVTNT : SInst<"svcvtnt_mf8[_f32_x2]_fpm", "~~2>", "f", MergeNone, "aarch64_sve_fp8_cvtnt", [VerifyRuntimeMode, SetsFPMR]>;
 }

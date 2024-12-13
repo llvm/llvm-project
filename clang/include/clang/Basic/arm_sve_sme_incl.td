@@ -52,6 +52,7 @@ include "arm_immcheck_incl.td"
 // h: half-float
 // d: double
 // b: bfloat
+// m: mfloat8
 
 // Typespec modifiers
 // ------------------
