@@ -56,7 +56,7 @@ LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
   // Handle exceptional values
   bool x_sign = x_u >> 15;
   if (auto r = SINF16_EXCEPTS.lookup_odd(x_abs, x_sign);
-        LIBC_UNLIKELY(r.has_value()))
+      LIBC_UNLIKELY(r.has_value()))
     return r.value();
 
   int rounding = fputil::quick_get_round();

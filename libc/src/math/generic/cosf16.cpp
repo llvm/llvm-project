@@ -54,8 +54,7 @@ LLVM_LIBC_FUNCTION(float16, cosf16, (float16 x)) {
   //            sin(k * pi/32) * sin(y * pi/32)
 
   // Handle exceptional values
-
-  if (auto r = COSF16_EXCEPTS.lookup(x_abs); LIBC_UNLIKELY(r.has_value())) 
+  if (auto r = COSF16_EXCEPTS.lookup(x_abs); LIBC_UNLIKELY(r.has_value()))
     return r.value();
 
   // cos(+/-0) = 1
