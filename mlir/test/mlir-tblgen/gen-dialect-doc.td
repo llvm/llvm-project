@@ -122,7 +122,7 @@ def TestEnum :
 
 // CHECK: ## Enums
 // CHECK: ### TestEnum
-// CHECK: enum summary
+// CHECK: _Enum summary_
 // CHECK: #### Cases:
 // CHECK: | Symbol | Value | String |
 // CHECK: | :----: | :---: | ------ |
