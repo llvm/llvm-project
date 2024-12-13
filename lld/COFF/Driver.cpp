@@ -2346,9 +2346,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   if (tar) {
     llvm::TimeTraceScope timeScope("Reproducer: response file");
-    tar->append("response.txt",
-                createResponseFile(args,
-                                   ArrayRef<StringRef>(searchPaths).slice(1)));
+    tar->append(
+        "response.txt",
+        createResponseFile(args, ArrayRef<StringRef>(searchPaths).slice(1)));
   }
 
   // Handle /largeaddressaware
