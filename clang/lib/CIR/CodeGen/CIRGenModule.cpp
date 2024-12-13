@@ -2506,73 +2506,74 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(const Decl *decl,
     attrs.set(attr.getMnemonic(), attr);
   }
 
+  if (codeGenOpts.StackClashProtector)
+    llvm_unreachable("NYI");
+
+  if (codeGenOpts.StackProbeSize && codeGenOpts.StackProbeSize != 4096)
+    llvm_unreachable("NYI");
+
   if (!hasUnwindExceptions(getLangOpts())) {
     auto attr = cir::NoThrowAttr::get(&getMLIRContext());
     attrs.set(attr.getMnemonic(), attr);
   }
 
+  assert(!MissingFeatures::stackProtector());
+
+  auto existingInlineAttr = dyn_cast_if_present<cir::InlineAttr>(
+      attrs.get(cir::InlineAttr::getMnemonic()));
+  bool isNoInline = existingInlineAttr && existingInlineAttr.isNoInline();
+  bool isAlwaysInline =
+      existingInlineAttr && existingInlineAttr.isAlwaysInline();
+
   if (!decl) {
-    // If we don't have a declaration to control inlining, the function isn't
-    // explicitly marked as alwaysinline for semantic reasons, and inlining is
-    // disabled, mark the function as noinline.
-    if (codeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining) {
+    // Non-entry HLSL functions must always be inlined.
+    if (getLangOpts().HLSL && !isNoInline) {
       auto attr = cir::InlineAttr::get(&getMLIRContext(),
                                        cir::InlineKind::AlwaysInline);
       attrs.set(attr.getMnemonic(), attr);
-    }
-  } else if (decl->hasAttr<NoInlineAttr>()) {
-    // Add noinline if the function isn't always_inline.
-    auto attr =
-        cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::NoInline);
-    attrs.set(attr.getMnemonic(), attr);
-  } else if (decl->hasAttr<AlwaysInlineAttr>()) {
-    // (noinline wins over always_inline, and we can't specify both in IR)
-    auto attr =
-        cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::AlwaysInline);
-    attrs.set(attr.getMnemonic(), attr);
-  } else if (codeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining) {
-    // If we're not inlining, then force everything that isn't always_inline
-    // to carry an explicit noinline attribute.
-    auto attr =
-        cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::NoInline);
-    attrs.set(attr.getMnemonic(), attr);
-  } else {
-    // Otherwise, propagate the inline hint attribute and potentially use its
-    // absence to mark things as noinline.
-    // Search function and template pattern redeclarations for inline.
-    auto CheckForInline = [](const FunctionDecl *decl) {
-      auto CheckRedeclForInline = [](const FunctionDecl *Redecl) {
-        return Redecl->isInlineSpecified();
-      };
-      if (any_of(decl->redecls(), CheckRedeclForInline))
-        return true;
-      const FunctionDecl *Pattern = decl->getTemplateInstantiationPattern();
-      if (!Pattern)
-        return false;
-      return any_of(Pattern->redecls(), CheckRedeclForInline);
-    };
-    if (CheckForInline(cast<FunctionDecl>(decl))) {
-      auto attr =
-          cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::InlineHint);
-      attrs.set(attr.getMnemonic(), attr);
-    } else if (codeGenOpts.getInlining() == CodeGenOptions::OnlyHintInlining) {
+    } else if (!isAlwaysInline && codeGenOpts.getInlining() ==
+                                      CodeGenOptions::OnlyAlwaysInlining) {
+      // If we don't have a declaration to control inlining, the function isn't
+      // explicitly marked as alwaysinline for semantic reasons, and inlining is
+      // disabled, mark the function as noinline.
       auto attr =
           cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::NoInline);
       attrs.set(attr.getMnemonic(), attr);
     }
+
+    f.setExtraAttrsAttr(cir::ExtraFuncAttributesAttr::get(
+        &getMLIRContext(), attrs.getDictionary(&getMLIRContext())));
+    return;
+  }
+
+  // Handle SME attributes that apply to function definitions,
+  // rather than to function prototypes.
+  if (decl->hasAttr<ArmLocallyStreamingAttr>())
+    llvm_unreachable("NYI");
+
+  if (auto *attr = decl->getAttr<ArmNewAttr>()) {
+    if (attr->isNewZA())
+      llvm_unreachable("NYI");
+    if (attr->isNewZT0())
+      llvm_unreachable("NYI");
   }
 
   // Track whether we need to add the optnone attribute,
   // starting with the default for this optimization level.
-  bool ShouldAddOptNone =
+  bool shouldAddOptNone =
       !codeGenOpts.DisableO0ImplyOptNone && codeGenOpts.OptimizationLevel == 0;
-  if (decl) {
-    ShouldAddOptNone &= !decl->hasAttr<MinSizeAttr>();
-    ShouldAddOptNone &= !decl->hasAttr<AlwaysInlineAttr>();
-    ShouldAddOptNone |= decl->hasAttr<OptimizeNoneAttr>();
-  }
+  // We can't add optnone in the following cases, it won't pass the verifier.
+  shouldAddOptNone &= !decl->hasAttr<MinSizeAttr>();
+  shouldAddOptNone &= !decl->hasAttr<AlwaysInlineAttr>();
 
-  if (ShouldAddOptNone) {
+  // Non-entry HLSL functions must always be inlined.
+  if (getLangOpts().HLSL && !isNoInline && !decl->hasAttr<NoInlineAttr>()) {
+    auto attr =
+        cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::AlwaysInline);
+    attrs.set(attr.getMnemonic(), attr);
+  } else if ((shouldAddOptNone || decl->hasAttr<OptimizeNoneAttr>()) &&
+             !isAlwaysInline) {
+    // Add optnone, but do so only if the function isn't always_inline.
     auto optNoneAttr = cir::OptNoneAttr::get(&getMLIRContext());
     attrs.set(optNoneAttr.getMnemonic(), optNoneAttr);
 
@@ -2580,10 +2581,93 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(const Decl *decl,
     auto noInlineAttr =
         cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::NoInline);
     attrs.set(noInlineAttr.getMnemonic(), noInlineAttr);
+
+    // We still need to handle naked functions even though optnone subsumes
+    // much of their semantics.
+    if (decl->hasAttr<NakedAttr>())
+      llvm_unreachable("NYI");
+
+    // OptimizeNone wins over OptimizeForSize and MinSize.
+    assert(!MissingFeatures::optimizeForSize());
+    assert(!MissingFeatures::minSize());
+  } else if (decl->hasAttr<NakedAttr>()) {
+    // Naked implies noinline: we should not be inlining such functions.
+    llvm_unreachable("NYI");
+  } else if (decl->hasAttr<NoDuplicateAttr>()) {
+    llvm_unreachable("NYI");
+  } else if (decl->hasAttr<NoInlineAttr>() && !isAlwaysInline) {
+    // Add noinline if the function isn't always_inline.
+    auto attr =
+        cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::NoInline);
+    attrs.set(attr.getMnemonic(), attr);
+  } else if (decl->hasAttr<AlwaysInlineAttr>() && !isNoInline) {
+    // (noinline wins over always_inline, and we can't specify both in IR)
+    auto attr =
+        cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::AlwaysInline);
+    attrs.set(attr.getMnemonic(), attr);
+  } else if (codeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining) {
+    // If we're not inlining, then force everything that isn't always_inline
+    // to carry an explicit noinline attribute.
+    if (!isAlwaysInline) {
+      auto attr =
+          cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::NoInline);
+      attrs.set(attr.getMnemonic(), attr);
+    }
+  } else {
+    // Otherwise, propagate the inline hint attribute and potentially use its
+    // absence to mark things as noinline.
+    // Search function and template pattern redeclarations for inline.
+    if (auto *fd = dyn_cast<FunctionDecl>(decl)) {
+      auto checkForInline = [](const FunctionDecl *decl) {
+        auto checkRedeclForInline = [](const FunctionDecl *redecl) {
+          return redecl->isInlineSpecified();
+        };
+        if (any_of(decl->redecls(), checkRedeclForInline))
+          return true;
+        const FunctionDecl *pattern = decl->getTemplateInstantiationPattern();
+        if (!pattern)
+          return false;
+        return any_of(pattern->redecls(), checkRedeclForInline);
+      };
+      if (checkForInline(fd)) {
+        auto attr = cir::InlineAttr::get(&getMLIRContext(),
+                                         cir::InlineKind::InlineHint);
+        attrs.set(attr.getMnemonic(), attr);
+      } else if (codeGenOpts.getInlining() ==
+                     CodeGenOptions::OnlyHintInlining &&
+                 !fd->isInlined() && !isAlwaysInline) {
+        auto attr =
+            cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::NoInline);
+        attrs.set(attr.getMnemonic(), attr);
+      }
+    }
+  }
+
+  // Add other optimization related attributes if we are optimizing this
+  // function.
+  if (!decl->hasAttr<OptimizeNoneAttr>()) {
+    if (decl->hasAttr<ColdAttr>()) {
+      llvm_unreachable("NYI");
+    }
+    if (decl->hasAttr<HotAttr>())
+      llvm_unreachable("NYI");
+    if (decl->hasAttr<MinSizeAttr>())
+      assert(!MissingFeatures::minSize());
   }
 
   f.setExtraAttrsAttr(cir::ExtraFuncAttributesAttr::get(
       &getMLIRContext(), attrs.getDictionary(&getMLIRContext())));
+
+  assert(!MissingFeatures::setFunctionAlignment());
+
+  // In the cross-dso CFI mode with canonical jump tables, we want !type
+  // attributes on definitions only.
+  if (codeGenOpts.SanitizeCfiCrossDso &&
+      codeGenOpts.SanitizeCfiCanonicalJumpTables) {
+    llvm_unreachable("NYI");
+  }
+
+  assert(!MissingFeatures::memberFunctionPointerTypeMetadata());
 }
 
 void CIRGenModule::setCIRFunctionAttributes(GlobalDecl GD,

@@ -371,6 +371,13 @@ struct MissingFeatures {
   static bool setVisibilityFromDLLStorageClass() { return false; }
   static bool mustTailCallUndefinedGlobals() { return false; }
 
+  //-- Missing parts of the setCIRFunctionAttributesForDefinition skeleton.
+  static bool stackProtector() { return false; }
+  static bool optimizeForSize() { return false; }
+  static bool minSize() { return false; }
+  static bool setFunctionAlignment() { return false; }
+  static bool memberFunctionPointerTypeMetadata() { return false; }
+
   //-- Other missing features
 
   // We need to track the parent record types that represent a field
