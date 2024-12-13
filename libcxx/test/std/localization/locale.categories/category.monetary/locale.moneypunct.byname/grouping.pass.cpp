@@ -24,7 +24,6 @@
 
 // string grouping() const;
 
-#include <iostream>
 #include <locale>
 #include <limits>
 #include <cassert>
