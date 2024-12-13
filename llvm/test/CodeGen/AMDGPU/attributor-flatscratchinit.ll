@@ -27,12 +27,12 @@ define void @without_global_to_flat_addrspacecast(ptr addrspace(1) %ptr) {
 
 define amdgpu_kernel void @without_global_to_flat_addrspacecast_cc_kernel(ptr addrspace(1) %ptr) {
 ; GFX9-LABEL: define amdgpu_kernel void @without_global_to_flat_addrspacecast_cc_kernel(
-; GFX9-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1:[0-9]+]] {
+; GFX9-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
 ; GFX9-NEXT:    store volatile i32 0, ptr addrspace(1) [[PTR]], align 4
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @without_global_to_flat_addrspacecast_cc_kernel(
-; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1:[0-9]+]] {
+; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
 ; GFX10-NEXT:    store volatile i32 0, ptr addrspace(1) [[PTR]], align 4
 ; GFX10-NEXT:    ret void
 ;
@@ -60,13 +60,13 @@ define void @with_global_to_flat_addrspacecast(ptr addrspace(1) %ptr) {
 
 define amdgpu_kernel void @with_global_to_flat_addrspacecast_cc_kernel(ptr addrspace(1) %ptr) {
 ; GFX9-LABEL: define amdgpu_kernel void @with_global_to_flat_addrspacecast_cc_kernel(
-; GFX9-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; GFX9-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
 ; GFX9-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
 ; GFX9-NEXT:    store volatile i32 0, ptr [[STOF]], align 4
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @with_global_to_flat_addrspacecast_cc_kernel(
-; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
 ; GFX10-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
 ; GFX10-NEXT:    store volatile i32 0, ptr [[STOF]], align 4
 ; GFX10-NEXT:    ret void
@@ -93,12 +93,12 @@ define void @without_region_to_flat_addrspacecast(ptr addrspace(2) %ptr) {
 
 define amdgpu_kernel void @without_region_to_flat_addrspacecast_cc_kernel(ptr addrspace(2) %ptr) {
 ; GFX9-LABEL: define amdgpu_kernel void @without_region_to_flat_addrspacecast_cc_kernel(
-; GFX9-SAME: ptr addrspace(2) [[PTR:%.*]]) #[[ATTR1]] {
+; GFX9-SAME: ptr addrspace(2) [[PTR:%.*]]) #[[ATTR0]] {
 ; GFX9-NEXT:    store volatile i32 0, ptr addrspace(2) [[PTR]], align 4
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @without_region_to_flat_addrspacecast_cc_kernel(
-; GFX10-SAME: ptr addrspace(2) [[PTR:%.*]]) #[[ATTR1]] {
+; GFX10-SAME: ptr addrspace(2) [[PTR:%.*]]) #[[ATTR0]] {
 ; GFX10-NEXT:    store volatile i32 0, ptr addrspace(2) [[PTR]], align 4
 ; GFX10-NEXT:    ret void
 ;
@@ -126,13 +126,13 @@ define void @with_region_to_flat_addrspacecast(ptr addrspace(2) %ptr) {
 
 define amdgpu_kernel void @with_region_to_flat_addrspacecast_cc_kernel(ptr addrspace(2) %ptr) {
 ; GFX9-LABEL: define amdgpu_kernel void @with_region_to_flat_addrspacecast_cc_kernel(
-; GFX9-SAME: ptr addrspace(2) [[PTR:%.*]]) #[[ATTR1]] {
+; GFX9-SAME: ptr addrspace(2) [[PTR:%.*]]) #[[ATTR0]] {
 ; GFX9-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(2) [[PTR]] to ptr
 ; GFX9-NEXT:    store volatile i32 0, ptr [[STOF]], align 4
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @with_region_to_flat_addrspacecast_cc_kernel(
-; GFX10-SAME: ptr addrspace(2) [[PTR:%.*]]) #[[ATTR1]] {
+; GFX10-SAME: ptr addrspace(2) [[PTR:%.*]]) #[[ATTR0]] {
 ; GFX10-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(2) [[PTR]] to ptr
 ; GFX10-NEXT:    store volatile i32 0, ptr [[STOF]], align 4
 ; GFX10-NEXT:    ret void
@@ -159,12 +159,12 @@ define void @without_group_to_flat_addrspacecast(ptr addrspace(3) %ptr) {
 
 define amdgpu_kernel void @without_group_to_flat_addrspacecast_cc_kernel(ptr addrspace(3) %ptr) {
 ; GFX9-LABEL: define amdgpu_kernel void @without_group_to_flat_addrspacecast_cc_kernel(
-; GFX9-SAME: ptr addrspace(3) [[PTR:%.*]]) #[[ATTR1]] {
+; GFX9-SAME: ptr addrspace(3) [[PTR:%.*]]) #[[ATTR0]] {
 ; GFX9-NEXT:    store volatile i32 0, ptr addrspace(3) [[PTR]], align 4
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @without_group_to_flat_addrspacecast_cc_kernel(
-; GFX10-SAME: ptr addrspace(3) [[PTR:%.*]]) #[[ATTR1]] {
+; GFX10-SAME: ptr addrspace(3) [[PTR:%.*]]) #[[ATTR0]] {
 ; GFX10-NEXT:    store volatile i32 0, ptr addrspace(3) [[PTR]], align 4
 ; GFX10-NEXT:    ret void
 ;
@@ -192,13 +192,13 @@ define void @with_group_to_flat_addrspacecast(ptr addrspace(3) %ptr) {
 
 define amdgpu_kernel void @with_group_to_flat_addrspacecast_cc_kernel(ptr addrspace(3) %ptr) {
 ; GFX9-LABEL: define amdgpu_kernel void @with_group_to_flat_addrspacecast_cc_kernel(
-; GFX9-SAME: ptr addrspace(3) [[PTR:%.*]]) #[[ATTR1]] {
+; GFX9-SAME: ptr addrspace(3) [[PTR:%.*]]) #[[ATTR0]] {
 ; GFX9-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(3) [[PTR]] to ptr
 ; GFX9-NEXT:    store volatile i32 0, ptr [[STOF]], align 4
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @with_group_to_flat_addrspacecast_cc_kernel(
-; GFX10-SAME: ptr addrspace(3) [[PTR:%.*]]) #[[ATTR1]] {
+; GFX10-SAME: ptr addrspace(3) [[PTR:%.*]]) #[[ATTR0]] {
 ; GFX10-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(3) [[PTR]] to ptr
 ; GFX10-NEXT:    store volatile i32 0, ptr [[STOF]], align 4
 ; GFX10-NEXT:    ret void
@@ -225,12 +225,12 @@ define void @without_constant_to_flat_addrspacecast(ptr addrspace(4) %ptr) {
 
 define amdgpu_kernel void @without_constant_to_flat_addrspacecast_cc_kernel(ptr addrspace(4) %ptr) {
 ; GFX9-LABEL: define amdgpu_kernel void @without_constant_to_flat_addrspacecast_cc_kernel(
-; GFX9-SAME: ptr addrspace(4) [[PTR:%.*]]) #[[ATTR1]] {
+; GFX9-SAME: ptr addrspace(4) [[PTR:%.*]]) #[[ATTR0]] {
 ; GFX9-NEXT:    store volatile i32 0, ptr addrspace(4) [[PTR]], align 4
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @without_constant_to_flat_addrspacecast_cc_kernel(
-; GFX10-SAME: ptr addrspace(4) [[PTR:%.*]]) #[[ATTR1]] {
+; GFX10-SAME: ptr addrspace(4) [[PTR:%.*]]) #[[ATTR0]] {
 ; GFX10-NEXT:    store volatile i32 0, ptr addrspace(4) [[PTR]], align 4
 ; GFX10-NEXT:    ret void
 ;
@@ -258,13 +258,13 @@ define void @with_constant_to_flat_addrspacecast(ptr addrspace(4) %ptr) {
 
 define amdgpu_kernel void @with_constant_to_flat_addrspacecast_cc_kernel(ptr addrspace(4) %ptr) {
 ; GFX9-LABEL: define amdgpu_kernel void @with_constant_to_flat_addrspacecast_cc_kernel(
-; GFX9-SAME: ptr addrspace(4) [[PTR:%.*]]) #[[ATTR1]] {
+; GFX9-SAME: ptr addrspace(4) [[PTR:%.*]]) #[[ATTR0]] {
 ; GFX9-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(4) [[PTR]] to ptr
 ; GFX9-NEXT:    store volatile i32 0, ptr [[STOF]], align 4
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @with_constant_to_flat_addrspacecast_cc_kernel(
-; GFX10-SAME: ptr addrspace(4) [[PTR:%.*]]) #[[ATTR1]] {
+; GFX10-SAME: ptr addrspace(4) [[PTR:%.*]]) #[[ATTR0]] {
 ; GFX10-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(4) [[PTR]] to ptr
 ; GFX10-NEXT:    store volatile i32 0, ptr [[STOF]], align 4
 ; GFX10-NEXT:    ret void
@@ -291,12 +291,12 @@ define void @without_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) {
 
 define amdgpu_kernel void @without_private_to_flat_addrspacecast_cc_kernel(ptr addrspace(5) %ptr) {
 ; GFX9-LABEL: define amdgpu_kernel void @without_private_to_flat_addrspacecast_cc_kernel(
-; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
+; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR0]] {
 ; GFX9-NEXT:    store volatile i32 0, ptr addrspace(5) [[PTR]], align 4
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @without_private_to_flat_addrspacecast_cc_kernel(
-; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
+; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR0]] {
 ; GFX10-NEXT:    store volatile i32 0, ptr addrspace(5) [[PTR]], align 4
 ; GFX10-NEXT:    ret void
 ;
@@ -306,13 +306,13 @@ define amdgpu_kernel void @without_private_to_flat_addrspacecast_cc_kernel(ptr a
 
 define void @with_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) {
 ; GFX9-LABEL: define void @with_private_to_flat_addrspacecast(
-; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR2:[0-9]+]] {
+; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1:[0-9]+]] {
 ; GFX9-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(5) [[PTR]] to ptr
 ; GFX9-NEXT:    store volatile i32 0, ptr [[STOF]], align 4
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @with_private_to_flat_addrspacecast(
-; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR2:[0-9]+]] {
+; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1:[0-9]+]] {
 ; GFX10-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(5) [[PTR]] to ptr
 ; GFX10-NEXT:    store volatile i32 0, ptr [[STOF]], align 4
 ; GFX10-NEXT:    ret void
@@ -324,13 +324,13 @@ define void @with_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) {
 
 define amdgpu_kernel void @with_private_to_flat_addrspacecast_cc_kernel(ptr addrspace(5) %ptr) {
 ; GFX9-LABEL: define amdgpu_kernel void @with_private_to_flat_addrspacecast_cc_kernel(
-; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR3:[0-9]+]] {
+; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX9-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(5) [[PTR]] to ptr
 ; GFX9-NEXT:    store volatile i32 0, ptr [[STOF]], align 4
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @with_private_to_flat_addrspacecast_cc_kernel(
-; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR3:[0-9]+]] {
+; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX10-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(5) [[PTR]] to ptr
 ; GFX10-NEXT:    store volatile i32 0, ptr [[STOF]], align 4
 ; GFX10-NEXT:    ret void
@@ -357,12 +357,12 @@ define void @call_without_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) {
 
 define amdgpu_kernel void @call_without_private_to_flat_addrspacecast_cc_kernel(ptr addrspace(5) %ptr) {
 ; GFX9-LABEL: define amdgpu_kernel void @call_without_private_to_flat_addrspacecast_cc_kernel(
-; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
+; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR0]] {
 ; GFX9-NEXT:    call void @without_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @call_without_private_to_flat_addrspacecast_cc_kernel(
-; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
+; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR0]] {
 ; GFX10-NEXT:    call void @without_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX10-NEXT:    ret void
 ;
@@ -372,12 +372,12 @@ define amdgpu_kernel void @call_without_private_to_flat_addrspacecast_cc_kernel(
 
 define void @call_with_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) {
 ; GFX9-LABEL: define void @call_with_private_to_flat_addrspacecast(
-; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR2]] {
+; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX9-NEXT:    call void @with_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @call_with_private_to_flat_addrspacecast(
-; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR2]] {
+; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX10-NEXT:    call void @with_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX10-NEXT:    ret void
 ;
@@ -387,12 +387,12 @@ define void @call_with_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) {
 
 define amdgpu_kernel void @call_with_private_to_flat_addrspacecast_cc_kernel(ptr addrspace(5) %ptr) {
 ; GFX9-LABEL: define amdgpu_kernel void @call_with_private_to_flat_addrspacecast_cc_kernel(
-; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR3]] {
+; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX9-NEXT:    call void @with_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @call_with_private_to_flat_addrspacecast_cc_kernel(
-; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR3]] {
+; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX10-NEXT:    call void @with_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX10-NEXT:    ret void
 ;
@@ -402,13 +402,13 @@ define amdgpu_kernel void @call_with_private_to_flat_addrspacecast_cc_kernel(ptr
 
 define void @call_both_with_and_without_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) {
 ; GFX9-LABEL: define void @call_both_with_and_without_private_to_flat_addrspacecast(
-; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR2]] {
+; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX9-NEXT:    call void @without_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX9-NEXT:    call void @with_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @call_both_with_and_without_private_to_flat_addrspacecast(
-; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR2]] {
+; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX10-NEXT:    call void @without_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX10-NEXT:    call void @with_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX10-NEXT:    ret void
@@ -420,13 +420,13 @@ define void @call_both_with_and_without_private_to_flat_addrspacecast(ptr addrsp
 
 define amdgpu_kernel void @call_both_with_and_without_private_to_flat_addrspacecast_cc_kernel(ptr addrspace(5) %ptr) {
 ; GFX9-LABEL: define amdgpu_kernel void @call_both_with_and_without_private_to_flat_addrspacecast_cc_kernel(
-; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR3]] {
+; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX9-NEXT:    call void @without_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX9-NEXT:    call void @with_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @call_both_with_and_without_private_to_flat_addrspacecast_cc_kernel(
-; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR3]] {
+; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX10-NEXT:    call void @without_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX10-NEXT:    call void @with_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX10-NEXT:    ret void
@@ -453,12 +453,12 @@ define void @call_call_without_private_to_flat_addrspacecast(ptr addrspace(5) %p
 
 define amdgpu_kernel void @call_call_without_private_to_flat_addrspacecast_cc_kernel(ptr addrspace(5) %ptr) {
 ; GFX9-LABEL: define amdgpu_kernel void @call_call_without_private_to_flat_addrspacecast_cc_kernel(
-; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
+; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR0]] {
 ; GFX9-NEXT:    call void @call_without_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @call_call_without_private_to_flat_addrspacecast_cc_kernel(
-; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
+; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR0]] {
 ; GFX10-NEXT:    call void @call_without_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX10-NEXT:    ret void
 ;
@@ -468,12 +468,12 @@ define amdgpu_kernel void @call_call_without_private_to_flat_addrspacecast_cc_ke
 
 define void @call_call_with_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) {
 ; GFX9-LABEL: define void @call_call_with_private_to_flat_addrspacecast(
-; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR2]] {
+; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX9-NEXT:    call void @call_with_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @call_call_with_private_to_flat_addrspacecast(
-; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR2]] {
+; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX10-NEXT:    call void @call_with_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX10-NEXT:    ret void
 ;
@@ -483,12 +483,12 @@ define void @call_call_with_private_to_flat_addrspacecast(ptr addrspace(5) %ptr)
 
 define amdgpu_kernel void @call_call_with_private_to_flat_addrspacecast_cc_kernel(ptr addrspace(5) %ptr) {
 ; GFX9-LABEL: define amdgpu_kernel void @call_call_with_private_to_flat_addrspacecast_cc_kernel(
-; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR3]] {
+; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX9-NEXT:    call void @call_with_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @call_call_with_private_to_flat_addrspacecast_cc_kernel(
-; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR3]] {
+; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX10-NEXT:    call void @call_with_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX10-NEXT:    ret void
 ;
@@ -498,12 +498,12 @@ define amdgpu_kernel void @call_call_with_private_to_flat_addrspacecast_cc_kerne
 
 define void @call_call_both_with_and_without_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) {
 ; GFX9-LABEL: define void @call_call_both_with_and_without_private_to_flat_addrspacecast(
-; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR2]] {
+; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX9-NEXT:    call void @call_both_with_and_without_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @call_call_both_with_and_without_private_to_flat_addrspacecast(
-; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR2]] {
+; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX10-NEXT:    call void @call_both_with_and_without_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX10-NEXT:    ret void
 ;
@@ -513,12 +513,12 @@ define void @call_call_both_with_and_without_private_to_flat_addrspacecast(ptr a
 
 define amdgpu_kernel void @call_call_both_with_and_without_private_to_flat_addrspacecast_cc_kernel(ptr addrspace(5) %ptr) {
 ; GFX9-LABEL: define amdgpu_kernel void @call_call_both_with_and_without_private_to_flat_addrspacecast_cc_kernel(
-; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR3]] {
+; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX9-NEXT:    call void @call_both_with_and_without_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @call_call_both_with_and_without_private_to_flat_addrspacecast_cc_kernel(
-; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR3]] {
+; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX10-NEXT:    call void @call_both_with_and_without_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX10-NEXT:    ret void
 ;
@@ -528,14 +528,14 @@ define amdgpu_kernel void @call_call_both_with_and_without_private_to_flat_addrs
 
 define void @with_cast_call_without_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) {
 ; GFX9-LABEL: define void @with_cast_call_without_private_to_flat_addrspacecast(
-; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR2]] {
+; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX9-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(5) [[PTR]] to ptr
 ; GFX9-NEXT:    store volatile i32 0, ptr [[STOF]], align 4
 ; GFX9-NEXT:    call void @without_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @with_cast_call_without_private_to_flat_addrspacecast(
-; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR2]] {
+; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX10-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(5) [[PTR]] to ptr
 ; GFX10-NEXT:    store volatile i32 0, ptr [[STOF]], align 4
 ; GFX10-NEXT:    call void @without_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
@@ -549,14 +549,14 @@ define void @with_cast_call_without_private_to_flat_addrspacecast(ptr addrspace(
 
 define amdgpu_kernel void @with_cast_call_without_private_to_flat_addrspacecast_cc_kernel(ptr addrspace(5) %ptr) {
 ; GFX9-LABEL: define amdgpu_kernel void @with_cast_call_without_private_to_flat_addrspacecast_cc_kernel(
-; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR3]] {
+; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX9-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(5) [[PTR]] to ptr
 ; GFX9-NEXT:    store volatile i32 0, ptr [[STOF]], align 4
 ; GFX9-NEXT:    call void @without_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @with_cast_call_without_private_to_flat_addrspacecast_cc_kernel(
-; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR3]] {
+; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX10-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(5) [[PTR]] to ptr
 ; GFX10-NEXT:    store volatile i32 0, ptr [[STOF]], align 4
 ; GFX10-NEXT:    call void @without_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
@@ -570,14 +570,14 @@ define amdgpu_kernel void @with_cast_call_without_private_to_flat_addrspacecast_
 
 define void @with_cast_call_with_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) {
 ; GFX9-LABEL: define void @with_cast_call_with_private_to_flat_addrspacecast(
-; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR2]] {
+; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX9-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(5) [[PTR]] to ptr
 ; GFX9-NEXT:    store volatile i32 0, ptr [[STOF]], align 4
 ; GFX9-NEXT:    call void @with_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @with_cast_call_with_private_to_flat_addrspacecast(
-; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR2]] {
+; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX10-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(5) [[PTR]] to ptr
 ; GFX10-NEXT:    store volatile i32 0, ptr [[STOF]], align 4
 ; GFX10-NEXT:    call void @with_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
@@ -591,14 +591,14 @@ define void @with_cast_call_with_private_to_flat_addrspacecast(ptr addrspace(5) 
 
 define amdgpu_kernel void @with_cast_call_with_private_to_flat_addrspacecast_cc_kernel(ptr addrspace(5) %ptr) {
 ; GFX9-LABEL: define amdgpu_kernel void @with_cast_call_with_private_to_flat_addrspacecast_cc_kernel(
-; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR3]] {
+; GFX9-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX9-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(5) [[PTR]] to ptr
 ; GFX9-NEXT:    store volatile i32 0, ptr [[STOF]], align 4
 ; GFX9-NEXT:    call void @with_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @with_cast_call_with_private_to_flat_addrspacecast_cc_kernel(
-; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR3]] {
+; GFX10-SAME: ptr addrspace(5) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX10-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(5) [[PTR]] to ptr
 ; GFX10-NEXT:    store volatile i32 0, ptr [[STOF]], align 4
 ; GFX10-NEXT:    call void @with_private_to_flat_addrspacecast(ptr addrspace(5) [[PTR]])
@@ -614,12 +614,12 @@ define amdgpu_kernel void @with_cast_call_with_private_to_flat_addrspacecast_cc_
 
 define amdgpu_kernel void @private_constant_expression_use(ptr addrspace(1) nocapture %out) {
 ; GFX9-LABEL: define amdgpu_kernel void @private_constant_expression_use(
-; GFX9-SAME: ptr addrspace(1) nocapture [[OUT:%.*]]) #[[ATTR3]] {
+; GFX9-SAME: ptr addrspace(1) nocapture [[OUT:%.*]]) #[[ATTR1]] {
 ; GFX9-NEXT:    store volatile ptr addrspacecast (ptr addrspace(5) inttoptr (i32 123 to ptr addrspace(5)) to ptr), ptr addrspace(1) [[OUT]], align 8
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @private_constant_expression_use(
-; GFX10-SAME: ptr addrspace(1) nocapture [[OUT:%.*]]) #[[ATTR3]] {
+; GFX10-SAME: ptr addrspace(1) nocapture [[OUT:%.*]]) #[[ATTR1]] {
 ; GFX10-NEXT:    store volatile ptr addrspacecast (ptr addrspace(5) inttoptr (i32 123 to ptr addrspace(5)) to ptr), ptr addrspace(1) [[OUT]], align 8
 ; GFX10-NEXT:    ret void
 ;
@@ -633,13 +633,13 @@ define amdgpu_kernel void @private_constant_expression_use(ptr addrspace(1) noca
 
 define void @with_indirect_call() {
 ; GFX9-LABEL: define void @with_indirect_call(
-; GFX9-SAME: ) #[[ATTR4:[0-9]+]] {
+; GFX9-SAME: ) #[[ATTR2:[0-9]+]] {
 ; GFX9-NEXT:    [[FPTR:%.*]] = load ptr, ptr addrspace(4) @gv.fptr0, align 8
 ; GFX9-NEXT:    call void [[FPTR]]()
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @with_indirect_call(
-; GFX10-SAME: ) #[[ATTR4:[0-9]+]] {
+; GFX10-SAME: ) #[[ATTR2:[0-9]+]] {
 ; GFX10-NEXT:    [[FPTR:%.*]] = load ptr, ptr addrspace(4) @gv.fptr0, align 8
 ; GFX10-NEXT:    call void [[FPTR]]()
 ; GFX10-NEXT:    ret void
@@ -651,13 +651,13 @@ define void @with_indirect_call() {
 
 define amdgpu_kernel void @with_indirect_call_cc_kernel() {
 ; GFX9-LABEL: define amdgpu_kernel void @with_indirect_call_cc_kernel(
-; GFX9-SAME: ) #[[ATTR5:[0-9]+]] {
+; GFX9-SAME: ) #[[ATTR2]] {
 ; GFX9-NEXT:    [[FPTR:%.*]] = load ptr, ptr addrspace(4) @gv.fptr0, align 8
 ; GFX9-NEXT:    call void [[FPTR]]()
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @with_indirect_call_cc_kernel(
-; GFX10-SAME: ) #[[ATTR5:[0-9]+]] {
+; GFX10-SAME: ) #[[ATTR2]] {
 ; GFX10-NEXT:    [[FPTR:%.*]] = load ptr, ptr addrspace(4) @gv.fptr0, align 8
 ; GFX10-NEXT:    call void [[FPTR]]()
 ; GFX10-NEXT:    ret void
@@ -669,12 +669,12 @@ define amdgpu_kernel void @with_indirect_call_cc_kernel() {
 
 define void @call_with_indirect_call() {
 ; GFX9-LABEL: define void @call_with_indirect_call(
-; GFX9-SAME: ) #[[ATTR4]] {
+; GFX9-SAME: ) #[[ATTR2]] {
 ; GFX9-NEXT:    call void @with_indirect_call()
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @call_with_indirect_call(
-; GFX10-SAME: ) #[[ATTR4]] {
+; GFX10-SAME: ) #[[ATTR2]] {
 ; GFX10-NEXT:    call void @with_indirect_call()
 ; GFX10-NEXT:    ret void
 ;
@@ -684,12 +684,12 @@ define void @call_with_indirect_call() {
 
 define amdgpu_kernel void @call_with_indirect_call_cc_kernel() {
 ; GFX9-LABEL: define amdgpu_kernel void @call_with_indirect_call_cc_kernel(
-; GFX9-SAME: ) #[[ATTR5]] {
+; GFX9-SAME: ) #[[ATTR2]] {
 ; GFX9-NEXT:    call void @with_indirect_call()
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @call_with_indirect_call_cc_kernel(
-; GFX10-SAME: ) #[[ATTR5]] {
+; GFX10-SAME: ) #[[ATTR2]] {
 ; GFX10-NEXT:    call void @with_indirect_call()
 ; GFX10-NEXT:    ret void
 ;
@@ -723,7 +723,7 @@ define void @also_empty() {
 
 define amdgpu_kernel void @indirect_call_known_callees(i1 %cond) {
 ; GFX9-LABEL: define amdgpu_kernel void @indirect_call_known_callees(
-; GFX9-SAME: i1 [[COND:%.*]]) #[[ATTR6:[0-9]+]] {
+; GFX9-SAME: i1 [[COND:%.*]]) #[[ATTR3:[0-9]+]] {
 ; GFX9-NEXT:    [[FPTR:%.*]] = select i1 [[COND]], ptr @empty, ptr @also_empty
 ; GFX9-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FPTR]], @also_empty
 ; GFX9-NEXT:    br i1 [[TMP1]], label %[[BB2:.*]], label %[[BB3:.*]]
@@ -741,7 +741,7 @@ define amdgpu_kernel void @indirect_call_known_callees(i1 %cond) {
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @indirect_call_known_callees(
-; GFX10-SAME: i1 [[COND:%.*]]) #[[ATTR6:[0-9]+]] {
+; GFX10-SAME: i1 [[COND:%.*]]) #[[ATTR3:[0-9]+]] {
 ; GFX10-NEXT:    [[FPTR:%.*]] = select i1 [[COND]], ptr @empty, ptr @also_empty
 ; GFX10-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FPTR]], @also_empty
 ; GFX10-NEXT:    br i1 [[TMP1]], label %[[BB2:.*]], label %[[BB3:.*]]
@@ -767,13 +767,13 @@ declare i32 @llvm.amdgcn.workgroup.id.x()
 
 define void @use_intrinsic_workitem_id_x() {
 ; GFX9-LABEL: define void @use_intrinsic_workitem_id_x(
-; GFX9-SAME: ) #[[ATTR8:[0-9]+]] {
+; GFX9-SAME: ) #[[ATTR5:[0-9]+]] {
 ; GFX9-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; GFX9-NEXT:    store volatile i32 [[VAL]], ptr addrspace(1) null, align 4
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @use_intrinsic_workitem_id_x(
-; GFX10-SAME: ) #[[ATTR8:[0-9]+]] {
+; GFX10-SAME: ) #[[ATTR5:[0-9]+]] {
 ; GFX10-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; GFX10-NEXT:    store volatile i32 [[VAL]], ptr addrspace(1) null, align 4
 ; GFX10-NEXT:    ret void
@@ -785,13 +785,13 @@ define void @use_intrinsic_workitem_id_x() {
 
 define amdgpu_kernel void @use_intrinsic_workitem_id_x_cc_kernel() {
 ; GFX9-LABEL: define amdgpu_kernel void @use_intrinsic_workitem_id_x_cc_kernel(
-; GFX9-SAME: ) #[[ATTR1]] {
+; GFX9-SAME: ) #[[ATTR0]] {
 ; GFX9-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; GFX9-NEXT:    store volatile i32 [[VAL]], ptr addrspace(1) null, align 4
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @use_intrinsic_workitem_id_x_cc_kernel(
-; GFX10-SAME: ) #[[ATTR1]] {
+; GFX10-SAME: ) #[[ATTR0]] {
 ; GFX10-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; GFX10-NEXT:    store volatile i32 [[VAL]], ptr addrspace(1) null, align 4
 ; GFX10-NEXT:    ret void
@@ -803,12 +803,12 @@ define amdgpu_kernel void @use_intrinsic_workitem_id_x_cc_kernel() {
 
 define void @call_use_intrinsic_workitem_id_x() {
 ; GFX9-LABEL: define void @call_use_intrinsic_workitem_id_x(
-; GFX9-SAME: ) #[[ATTR8]] {
+; GFX9-SAME: ) #[[ATTR5]] {
 ; GFX9-NEXT:    call void @use_intrinsic_workitem_id_x()
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @call_use_intrinsic_workitem_id_x(
-; GFX10-SAME: ) #[[ATTR8]] {
+; GFX10-SAME: ) #[[ATTR5]] {
 ; GFX10-NEXT:    call void @use_intrinsic_workitem_id_x()
 ; GFX10-NEXT:    ret void
 ;
@@ -818,12 +818,12 @@ define void @call_use_intrinsic_workitem_id_x() {
 
 define amdgpu_kernel void @call_use_intrinsic_workitem_id_x_cc_kernel() {
 ; GFX9-LABEL: define amdgpu_kernel void @call_use_intrinsic_workitem_id_x_cc_kernel(
-; GFX9-SAME: ) #[[ATTR9:[0-9]+]] {
+; GFX9-SAME: ) #[[ATTR5]] {
 ; GFX9-NEXT:    call void @use_intrinsic_workitem_id_x()
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @call_use_intrinsic_workitem_id_x_cc_kernel(
-; GFX10-SAME: ) #[[ATTR9:[0-9]+]] {
+; GFX10-SAME: ) #[[ATTR5]] {
 ; GFX10-NEXT:    call void @use_intrinsic_workitem_id_x()
 ; GFX10-NEXT:    ret void
 ;
@@ -833,13 +833,13 @@ define amdgpu_kernel void @call_use_intrinsic_workitem_id_x_cc_kernel() {
 
 define amdgpu_kernel void @calls_intrin_ascast_cc_kernel(ptr addrspace(3) %ptr) {
 ; GFX9-LABEL: define amdgpu_kernel void @calls_intrin_ascast_cc_kernel(
-; GFX9-SAME: ptr addrspace(3) [[PTR:%.*]]) #[[ATTR3]] {
+; GFX9-SAME: ptr addrspace(3) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX9-NEXT:    [[TMP1:%.*]] = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p3(ptr addrspace(3) [[PTR]])
 ; GFX9-NEXT:    store volatile i32 7, ptr [[TMP1]], align 4
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @calls_intrin_ascast_cc_kernel(
-; GFX10-SAME: ptr addrspace(3) [[PTR:%.*]]) #[[ATTR3]] {
+; GFX10-SAME: ptr addrspace(3) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX10-NEXT:    [[TMP1:%.*]] = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p3(ptr addrspace(3) [[PTR]])
 ; GFX10-NEXT:    store volatile i32 7, ptr [[TMP1]], align 4
 ; GFX10-NEXT:    ret void
@@ -851,12 +851,12 @@ define amdgpu_kernel void @calls_intrin_ascast_cc_kernel(ptr addrspace(3) %ptr) 
 
 define amdgpu_kernel void @call_calls_intrin_ascast_cc_kernel(ptr addrspace(3) %ptr) {
 ; GFX9-LABEL: define amdgpu_kernel void @call_calls_intrin_ascast_cc_kernel(
-; GFX9-SAME: ptr addrspace(3) [[PTR:%.*]]) #[[ATTR3]] {
+; GFX9-SAME: ptr addrspace(3) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX9-NEXT:    call void @calls_intrin_ascast_cc_kernel(ptr addrspace(3) [[PTR]])
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @call_calls_intrin_ascast_cc_kernel(
-; GFX10-SAME: ptr addrspace(3) [[PTR:%.*]]) #[[ATTR3]] {
+; GFX10-SAME: ptr addrspace(3) [[PTR:%.*]]) #[[ATTR1]] {
 ; GFX10-NEXT:    call void @calls_intrin_ascast_cc_kernel(ptr addrspace(3) [[PTR]])
 ; GFX10-NEXT:    ret void
 ;
@@ -866,12 +866,12 @@ define amdgpu_kernel void @call_calls_intrin_ascast_cc_kernel(ptr addrspace(3) %
 
 define amdgpu_kernel void @with_inline_asm() {
 ; GFX9-LABEL: define amdgpu_kernel void @with_inline_asm(
-; GFX9-SAME: ) #[[ATTR6]] {
+; GFX9-SAME: ) #[[ATTR3]] {
 ; GFX9-NEXT:    call void asm sideeffect "
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @with_inline_asm(
-; GFX10-SAME: ) #[[ATTR6]] {
+; GFX10-SAME: ) #[[ATTR3]] {
 ; GFX10-NEXT:    call void asm sideeffect "
 ; GFX10-NEXT:    ret void
 ;
@@ -880,25 +880,17 @@ define amdgpu_kernel void @with_inline_asm() {
 }
 
 ;.
-; GFX9: attributes #[[ATTR0]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "target-cpu"="gfx900" "uniform-work-group-size"="false" }
-; GFX9: attributes #[[ATTR1]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx900" "uniform-work-group-size"="false" }
-; GFX9: attributes #[[ATTR2]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "target-cpu"="gfx900" "uniform-work-group-size"="false" }
-; GFX9: attributes #[[ATTR3]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx900" "uniform-work-group-size"="false" }
-; GFX9: attributes #[[ATTR4]] = { "amdgpu-waves-per-eu"="4,10" "target-cpu"="gfx900" "uniform-work-group-size"="false" }
-; GFX9: attributes #[[ATTR5]] = { "target-cpu"="gfx900" "uniform-work-group-size"="false" }
-; GFX9: attributes #[[ATTR6]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx900" "uniform-work-group-size"="false" }
-; GFX9: attributes #[[ATTR7:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) "target-cpu"="gfx900" }
-; GFX9: attributes #[[ATTR8]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "target-cpu"="gfx900" "uniform-work-group-size"="false" }
-; GFX9: attributes #[[ATTR9]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx900" "uniform-work-group-size"="false" }
+; GFX9: attributes #[[ATTR0]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx900" "uniform-work-group-size"="false" }
+; GFX9: attributes #[[ATTR1]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx900" "uniform-work-group-size"="false" }
+; GFX9: attributes #[[ATTR2]] = { "target-cpu"="gfx900" "uniform-work-group-size"="false" }
+; GFX9: attributes #[[ATTR3]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx900" "uniform-work-group-size"="false" }
+; GFX9: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) "target-cpu"="gfx900" }
+; GFX9: attributes #[[ATTR5]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx900" "uniform-work-group-size"="false" }
 ;.
-; GFX10: attributes #[[ATTR0]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="8,20" "target-cpu"="gfx1010" "uniform-work-group-size"="false" }
-; GFX10: attributes #[[ATTR1]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx1010" "uniform-work-group-size"="false" }
-; GFX10: attributes #[[ATTR2]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="8,20" "target-cpu"="gfx1010" "uniform-work-group-size"="false" }
-; GFX10: attributes #[[ATTR3]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx1010" "uniform-work-group-size"="false" }
-; GFX10: attributes #[[ATTR4]] = { "amdgpu-waves-per-eu"="8,20" "target-cpu"="gfx1010" "uniform-work-group-size"="false" }
-; GFX10: attributes #[[ATTR5]] = { "target-cpu"="gfx1010" "uniform-work-group-size"="false" }
-; GFX10: attributes #[[ATTR6]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx1010" "uniform-work-group-size"="false" }
-; GFX10: attributes #[[ATTR7:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) "target-cpu"="gfx1010" }
-; GFX10: attributes #[[ATTR8]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="8,20" "target-cpu"="gfx1010" "uniform-work-group-size"="false" }
-; GFX10: attributes #[[ATTR9]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx1010" "uniform-work-group-size"="false" }
+; GFX10: attributes #[[ATTR0]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx1010" "uniform-work-group-size"="false" }
+; GFX10: attributes #[[ATTR1]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx1010" "uniform-work-group-size"="false" }
+; GFX10: attributes #[[ATTR2]] = { "target-cpu"="gfx1010" "uniform-work-group-size"="false" }
+; GFX10: attributes #[[ATTR3]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx1010" "uniform-work-group-size"="false" }
+; GFX10: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) "target-cpu"="gfx1010" }
+; GFX10: attributes #[[ATTR5]] = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx1010" "uniform-work-group-size"="false" }
 ;.

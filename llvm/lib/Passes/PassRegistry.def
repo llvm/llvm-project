@@ -366,6 +366,8 @@ FUNCTION_PASS("dwarf-eh-prepare", DwarfEHPreparePass(TM))
 FUNCTION_PASS("expand-large-div-rem", ExpandLargeDivRemPass(TM))
 FUNCTION_PASS("expand-large-fp-convert", ExpandLargeFpConvertPass(TM))
 FUNCTION_PASS("expand-memcmp", ExpandMemCmpPass(TM))
+FUNCTION_PASS("extra-vector-passes",
+                  ExtraFunctionPassManager<ShouldRunExtraVectorPasses>())
 FUNCTION_PASS("fix-irreducible", FixIrreduciblePass())
 FUNCTION_PASS("flatten-cfg", FlattenCFGPass())
 FUNCTION_PASS("float2int", Float2IntPass())
@@ -651,6 +653,8 @@ LOOP_ANALYSIS("should-run-extra-simple-loop-unswitch",
 LOOP_PASS("canon-freeze", CanonicalizeFreezeInLoopsPass())
 LOOP_PASS("dot-ddg", DDGDotPrinterPass())
 LOOP_PASS("guard-widening", GuardWideningPass())
+LOOP_PASS("extra-simple-loop-unswitch-passes",
+              ExtraLoopPassManager<ShouldRunExtraSimpleLoopUnswitch>())
 LOOP_PASS("indvars", IndVarSimplifyPass())
 LOOP_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 LOOP_PASS("loop-bound-split", LoopBoundSplitPass())

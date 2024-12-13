@@ -3872,6 +3872,20 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_fp8_cvtlt1 : SVE2_FP8_Cvt;
   def int_aarch64_sve_fp8_cvtlt2 : SVE2_FP8_Cvt;
 
+  // SVE Narrowing Conversions
+  class SVE2_FP8_Narrow_Cvt
+    : DefaultAttrsIntrinsic<[llvm_nxv16i8_ty],
+                            [llvm_anyvector_ty, LLVMMatchType<0>],
+                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+  
+  def int_aarch64_sve_fp8_cvtn  : SVE2_FP8_Narrow_Cvt;
+  def int_aarch64_sve_fp8_cvtnb : SVE2_FP8_Narrow_Cvt;
+  
+  def int_aarch64_sve_fp8_cvtnt
+    : DefaultAttrsIntrinsic<[llvm_nxv16i8_ty],
+                            [llvm_nxv16i8_ty, llvm_anyvector_ty, LLVMMatchType<0>],
+                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+
   class SME2_FP8_CVT_X2_Single_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
                             [llvm_nxv16i8_ty],
