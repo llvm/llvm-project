@@ -71,9 +71,8 @@ bool divisible(APInt lhs, APInt rhs) { return !lhs.urem(rhs); }
 ///                                 -> !xegpu.tensor_desc<4x1xf32>
 ///
 /// ```
-struct WarpOpTensorDescOp final
-    : public OpRewritePattern<gpu::WarpExecuteOnLane0Op> {
-  using OpRewritePattern<gpu::WarpExecuteOnLane0Op>::OpRewritePattern;
+struct WarpOpTensorDescOp final : public gpu::WarpDistributionPattern {
+  using gpu::WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override;
 };
@@ -107,9 +106,8 @@ struct WarpOpTensorDescOp final
 ///   !xegpu.tensor_desc<4x1xf32>
 ///
 /// ```
-struct WarpOpStoreNd final
-    : public OpRewritePattern<gpu::WarpExecuteOnLane0Op> {
-  using OpRewritePattern<gpu::WarpExecuteOnLane0Op>::OpRewritePattern;
+struct WarpOpStoreNd final : public gpu::WarpDistributionPattern {
+  using gpu::WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override;
 };
@@ -144,8 +142,8 @@ struct WarpOpStoreNd final
 ///   !xegpu.tensor_desc<4x1xf32>
 ///
 /// ```
-struct WarpOpLoadNd final : public OpRewritePattern<gpu::WarpExecuteOnLane0Op> {
-  using OpRewritePattern<gpu::WarpExecuteOnLane0Op>::OpRewritePattern;
+struct WarpOpLoadNd final : public gpu::WarpDistributionPattern {
+  using gpu::WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override;
 };
