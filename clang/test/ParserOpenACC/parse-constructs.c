@@ -54,16 +54,13 @@ void func() {
   // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc kernels clause list
   for(;;){}
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'data' not yet implemented, pragma ignored}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc data clause list
   for(;;){}
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'enter data' not yet implemented, pragma ignored}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc enter data clause list
   for(;;){}
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'exit data' not yet implemented, pragma ignored}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc exit data clause list
   for(;;){}
   // expected-error@+1{{invalid OpenACC directive 'enter invalid'}}
@@ -78,8 +75,7 @@ void func() {
   // expected-error@+1{{expected identifier}}
 #pragma acc exit }
   for(;;){}
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'host_data' not yet implemented, pragma ignored}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc host_data clause list
   for(;;){}
   // expected-error@+1{{invalid OpenACC clause 'clause'}}

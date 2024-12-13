@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CSIGNAL
-#define _LIBCPP_CSIGNAL
+#ifndef _LIBCPP___CXX03_CSIGNAL
+#define _LIBCPP___CXX03_CSIGNAL
 
 /*
     csignal synopsis
@@ -44,7 +44,7 @@ int raise(int sig);
 // <signal.h> is not provided by libc++
 #if __has_include(<signal.h>)
 #  include <signal.h>
-#  ifdef _LIBCPP_SIGNAL_H
+#  ifdef _LIBCPP___CXX03_SIGNAL_H
 #    error "If libc++ starts defining <signal.h>, the __has_include check should move to libc++'s <signal.h>"
 #  endif
 #endif
@@ -61,4 +61,4 @@ using ::raise _LIBCPP_USING_IF_EXISTS;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_CSIGNAL
+#endif // _LIBCPP___CXX03_CSIGNAL

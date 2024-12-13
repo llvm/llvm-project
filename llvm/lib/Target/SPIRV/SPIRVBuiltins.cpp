@@ -1633,8 +1633,14 @@ static bool generateICarryBorrowInst(const SPIRV::IncomingCall *Call,
     }
 
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
-  Register ResReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
-  MRI->setRegClass(ResReg, &SPIRV::iIDRegClass);
+  Register ResReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
+  if (const TargetRegisterClass *DstRC =
+          MRI->getRegClassOrNull(Call->Arguments[1])) {
+    MRI->setRegClass(ResReg, DstRC);
+    MRI->setType(ResReg, MRI->getType(Call->Arguments[1]));
+  } else {
+    MRI->setType(ResReg, LLT::scalar(64));
+  }
   GR->assignSPIRVTypeToVReg(RetType, ResReg, MIRBuilder.getMF());
   MIRBuilder.buildInstr(Opcode)
       .addDef(ResReg)

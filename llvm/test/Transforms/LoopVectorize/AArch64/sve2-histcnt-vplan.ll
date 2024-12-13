@@ -15,6 +15,9 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: Live-in [[VTC:.*]] = vector-trip-count
 ; CHECK-NEXT: Live-in [[OTC:.*]] = original trip-count
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
@@ -55,6 +58,9 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK: VPlan 'Initial VPlan for VF={vscale x 2,vscale x 4},UF>=1' {
 ; CHECK-NEXT: Live-in [[VTC:.*]] = vector-trip-count
 ; CHECK-NEXT: Live-in [[OTC:.*]] = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop

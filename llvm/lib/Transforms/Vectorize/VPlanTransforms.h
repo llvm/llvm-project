@@ -124,9 +124,20 @@ struct VPlanTransforms {
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
 
+  /// Update \p Plan to account for the uncountable early exit block in \p
+  /// UncountableExitingBlock by
+  ///  * updating the condition exiting the vector loop to include the early
+  ///    exit conditions
+  ///  * splitting the original middle block to branch to the early exit block
+  ///    if taken.
+  static void handleUncountableEarlyExit(VPlan &Plan, ScalarEvolution &SE,
+                                         Loop *OrigLoop,
+                                         BasicBlock *UncountableExitingBlock,
+                                         VPRecipeBuilder &RecipeBuilder);
+
   /// Finalize \p Plan by introducing explicit increments for the canonical
   /// induction.
-  static void lowerCanonicalIV(VPlan &Plan, bool HasNUW,
+  static void convertCanonicalIV(VPlan &Plan, bool HasNUW,
                                bool DataAndControlFlowWithoutRuntimeCheck);
 
   /// Lower abstract recipes to concrete ones, that can be codegen'd.

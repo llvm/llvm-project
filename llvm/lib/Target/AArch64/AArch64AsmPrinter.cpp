@@ -2391,28 +2391,39 @@ void AArch64AsmPrinter::LowerLOADgotAUTH(const MachineInstr &MI) {
   const MachineOperand &GAMO = MI.getOperand(1);
   assert(GAMO.getOffset() == 0);
 
-  MachineOperand GAHiOp(GAMO);
-  MachineOperand GALoOp(GAMO);
-  GAHiOp.addTargetFlag(AArch64II::MO_PAGE);
-  GALoOp.addTargetFlag(AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
+  if (MI.getMF()->getTarget().getCodeModel() == CodeModel::Tiny) {
+    MCOperand GAMC;
+    MCInstLowering.lowerOperand(GAMO, GAMC);
+    EmitToStreamer(
+        MCInstBuilder(AArch64::ADR).addReg(AArch64::X17).addOperand(GAMC));
+    EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
+                       .addReg(AuthResultReg)
+                       .addReg(AArch64::X17)
+                       .addImm(0));
+  } else {
+    MachineOperand GAHiOp(GAMO);
+    MachineOperand GALoOp(GAMO);
+    GAHiOp.addTargetFlag(AArch64II::MO_PAGE);
+    GALoOp.addTargetFlag(AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
 
-  MCOperand GAMCHi, GAMCLo;
-  MCInstLowering.lowerOperand(GAHiOp, GAMCHi);
-  MCInstLowering.lowerOperand(GALoOp, GAMCLo);
+    MCOperand GAMCHi, GAMCLo;
+    MCInstLowering.lowerOperand(GAHiOp, GAMCHi);
+    MCInstLowering.lowerOperand(GALoOp, GAMCLo);
 
-  EmitToStreamer(
-      MCInstBuilder(AArch64::ADRP).addReg(AArch64::X17).addOperand(GAMCHi));
+    EmitToStreamer(
+        MCInstBuilder(AArch64::ADRP).addReg(AArch64::X17).addOperand(GAMCHi));
 
-  EmitToStreamer(MCInstBuilder(AArch64::ADDXri)
-                     .addReg(AArch64::X17)
-                     .addReg(AArch64::X17)
-                     .addOperand(GAMCLo)
-                     .addImm(0));
+    EmitToStreamer(MCInstBuilder(AArch64::ADDXri)
+                       .addReg(AArch64::X17)
+                       .addReg(AArch64::X17)
+                       .addOperand(GAMCLo)
+                       .addImm(0));
 
-  EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
-                     .addReg(AuthResultReg)
-                     .addReg(AArch64::X17)
-                     .addImm(0));
+    EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
+                       .addReg(AuthResultReg)
+                       .addReg(AArch64::X17)
+                       .addImm(0));
+  }
 
   assert(GAMO.isGlobal());
   MCSymbol *UndefWeakSym;

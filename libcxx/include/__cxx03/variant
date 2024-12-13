@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_VARIANT
-#define _LIBCPP_VARIANT
+#ifndef _LIBCPP___CXX03_VARIANT
+#define _LIBCPP___CXX03_VARIANT
 
 /*
    variant synopsis
@@ -1647,4 +1647,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/utility>
 #endif
 
-#endif // _LIBCPP_VARIANT
+#endif // _LIBCPP___CXX03_VARIANT
