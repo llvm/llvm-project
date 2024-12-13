@@ -740,13 +740,6 @@ unsigned DataLayout::getPointerSize(unsigned AS) const {
   return divideCeil(getPointerSpec(AS).BitWidth, 8);
 }
 
-unsigned DataLayout::getMaxIndexSizeInBits() const {
-  unsigned MaxIndexSize = 0;
-  for (const PointerSpec &Spec : PointerSpecs)
-    MaxIndexSize = std::max(MaxIndexSize, Spec.IndexBitWidth);
-  return MaxIndexSize;
-}
-
 unsigned DataLayout::getPointerTypeSizeInBits(Type *Ty) const {
   assert(Ty->isPtrOrPtrVectorTy() &&
          "This should only be called with a pointer or pointer vector type");
