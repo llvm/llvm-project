@@ -170,9 +170,9 @@ bool CombinerHelper::isCastFree(unsigned Opcode, LLT ToTy, LLT FromTy) const {
   switch (Opcode) {
   case TargetOpcode::G_ANYEXT:
   case TargetOpcode::G_ZEXT:
-    return TLI.isZExtFree(FromTy, ToTy, DL, Ctx);
+    return TLI.isZExtFree(FromTy, ToTy, Ctx);
   case TargetOpcode::G_TRUNC:
-    return TLI.isTruncateFree(FromTy, ToTy, DL, Ctx);
+    return TLI.isTruncateFree(FromTy, ToTy, Ctx);
   default:
     return false;
   }

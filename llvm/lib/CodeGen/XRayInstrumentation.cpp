@@ -176,7 +176,7 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
       auto *MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
       MachineDominatorTree ComputedMDT;
       if (!MDT) {
-        ComputedMDT.getBase().recalculate(MF);
+        ComputedMDT.recalculate(MF);
         MDT = &ComputedMDT;
       }
 
@@ -185,7 +185,7 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
       auto *MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
       MachineLoopInfo ComputedMLI;
       if (!MLI) {
-        ComputedMLI.analyze(MDT->getBase());
+        ComputedMLI.analyze(*MDT);
         MLI = &ComputedMLI;
       }
 
