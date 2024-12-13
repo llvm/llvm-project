@@ -1098,6 +1098,54 @@ bool AArch64RegisterInfo::getRegAllocationHints(
     SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
+  unsigned RegID = MRI.getRegClass(VirtReg)->getID();
+
+  // Since the SVE calling convention preserves registers Z8-Z23, there are no
+  // ZPR2Strided or ZPR4Strided registers which do not overlap with the
+  // callee-saved registers. These will be pushed to the back of the allocation
+  // order for the ZPRStridedOrContiguous classes.
+  // However, if any of the instructions which define VirtReg are
+  // ZPRStridedOrContiguous registers used by a FORM_TRANSPOSED_REG_TUPLE
+  // pseudo, it will likely be better to try assigning a strided register
+  // anyway to avoid extra copy instructions.
+
+  if (RegID == AArch64::ZPR2StridedOrContiguousRegClassID ||
+      RegID == AArch64::ZPR4StridedOrContiguousRegClassID) {
+
+    if (!MF.getInfo<AArch64FunctionInfo>()->isSVECC())
+      return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints,
+                                                       MF, VRM);
+
+    for (MachineInstr &MI : MRI.def_instructions(VirtReg)) {
+      // Look through uses of the register and if the FORM_TRANSPOSED_REG_TUPLE
+      // pseudo is found in the uses, set HintStrided.
+      bool HintStrided = false;
+      for (MachineInstr &Use : MRI.use_nodbg_instructions(VirtReg)) {
+        unsigned UseOp = Use.getOpcode();
+        if (UseOp == AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO ||
+            UseOp == AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO) {
+          HintStrided = true;
+          break;
+        }
+      }
+
+      if (!HintStrided)
+        continue;
+
+      // Push the list of 2/4 ZPRStrided registers to Hints to ensure we try to
+      // allocate these first.
+      TargetRegisterClass StridedRC =
+          RegID == AArch64::ZPR2StridedOrContiguousRegClassID
+              ? AArch64::ZPR2StridedRegClass
+              : AArch64::ZPR4StridedRegClass;
+
+      for (MCPhysReg Reg : StridedRC.getRawAllocationOrder(MF))
+        Hints.push_back(Reg);
+    }
+
+    return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
+                                                     VRM);
+  }
 
   for (MachineInstr &MI : MRI.def_instructions(VirtReg)) {
     if (MI.getOpcode() != AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO &&
