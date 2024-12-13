@@ -21,7 +21,6 @@ void HasStmt() {
 void AtLeastOneOf() {
   int Var;
 // Data
-  // expected-warning@+1{{OpenACC clause 'copy' not yet implemented}}
 #pragma acc data copy(Var)
   ;
   // expected-warning@+1{{OpenACC clause 'copyin' not yet implemented}}
@@ -30,10 +29,8 @@ void AtLeastOneOf() {
   // expected-warning@+1{{OpenACC clause 'copyout' not yet implemented}}
 #pragma acc data copyout(Var)
   ;
-  // expected-warning@+1{{OpenACC clause 'create' not yet implemented}}
 #pragma acc data create(Var)
   ;
-  // expected-warning@+1{{OpenACC clause 'no_create' not yet implemented}}
 #pragma acc data no_create(Var)
   ;
   // expected-warning@+1{{OpenACC clause 'present' not yet implemented}}
@@ -68,7 +65,6 @@ void AtLeastOneOf() {
   // Enter Data
   // expected-warning@+1{{OpenACC clause 'copyin' not yet implemented}}
 #pragma acc enter data copyin(Var)
-  // expected-warning@+1{{OpenACC clause 'create' not yet implemented}}
 #pragma acc enter data create(Var)
   // expected-warning@+1{{OpenACC clause 'attach' not yet implemented}}
 #pragma acc enter data attach(Var)
