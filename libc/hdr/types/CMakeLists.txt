@@ -137,7 +137,6 @@ add_proxy_header_library(
     clockid_t.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.clockid_t
-    libc.include.sys_types
 )
 
 add_proxy_header_library(
@@ -173,7 +172,6 @@ add_proxy_header_library(
     pid_t.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.pid_t
-    libc.include.sys_types
 )
 
 add_proxy_header_library(
