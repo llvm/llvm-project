@@ -152,7 +152,6 @@ void DILLexer::UpdateLexedTokens(DILToken &result, dil::TokenKind tok_kind,
 
 bool DILLexer::Lex(DILToken &result, bool look_ahead) {
   bool retval = true;
-  DILToken new_token;
 
   if (!look_ahead) {
     // We're being asked for the 'next' token, and not a part of a LookAhead.
@@ -401,8 +400,6 @@ bool DILLexer::Lex(DILToken &result, bool look_ahead) {
         m_cur_pos += 3;
         UpdateLexedTokens(result, dil::TokenKind::greatergreaterequal, ">>=",
                           position, 3);
-        new_token = result;
-        m_lexed_tokens.push_back(std::move(new_token));
         return true;
       } else if (position+1 < m_expr.size() &&
                  ((m_expr[position+1] == '>') || (m_expr[position+1] == '='))){
