@@ -444,6 +444,14 @@ OpenACCVectorClause *OpenACCVectorClause::Create(const ASTContext &C,
   return new (Mem) OpenACCVectorClause(BeginLoc, LParenLoc, IntExpr, EndLoc);
 }
 
+OpenACCFinalizeClause *OpenACCFinalizeClause::Create(const ASTContext &C,
+                                                     SourceLocation BeginLoc,
+                                                     SourceLocation EndLoc) {
+  void *Mem =
+      C.Allocate(sizeof(OpenACCFinalizeClause), alignof(OpenACCFinalizeClause));
+  return new (Mem) OpenACCFinalizeClause(BeginLoc, EndLoc);
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenACC clauses printing methods
 //===----------------------------------------------------------------------===//
@@ -684,4 +692,8 @@ void OpenACCClausePrinter::VisitVectorClause(const OpenACCVectorClause &C) {
     printExpr(C.getIntExpr());
     OS << ")";
   }
+}
+
+void OpenACCClausePrinter::VisitFinalizeClause(const OpenACCFinalizeClause &C) {
+  OS << "finalize";
 }
