@@ -3095,7 +3095,9 @@ bool CombinerHelper::matchHoistLogicOpWithSameOpcodeHands(
   unsigned HandOpcode = LeftHandInst->getOpcode();
   if (HandOpcode != RightHandInst->getOpcode())
     return false;
-  if (!LeftHandInst->getOperand(1).isReg() ||
+  if (LeftHandInst->getNumOperands() < 2 ||
+      !LeftHandInst->getOperand(1).isReg() ||
+      RightHandInst->getNumOperands() < 2 ||
       !RightHandInst->getOperand(1).isReg())
     return false;
 
