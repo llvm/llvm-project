@@ -82,9 +82,11 @@ void foo() {
 #pragma acc data default(none) no_create(i, array[1], array, array[1:2])
   ;
 
-// CHECK: #pragma acc data default(none) no_create(i, array[1], array, array[1:2])
-// CHECK-NOT: present(i, array[1], array, array[1:2])
+// CHECK: #pragma acc data default(none) no_create(i, array[1], array, array[1:2]) present(i, array[1], array, array[1:2])
 #pragma acc data default(none) no_create(i, array[1], array, array[1:2]) present(i, array[1], array, array[1:2])
+  ;
+// CHECK: #pragma acc data present(i, array[1], array, array[1:2])
+#pragma acc data present(i, array[1], array, array[1:2])
   ;
 
 // CHECK: #pragma acc data default(none) copy(i, array[1], array, array[1:2]) pcopy(i, array[1], array, array[1:2]) present_or_copy(i, array[1], array, array[1:2])
