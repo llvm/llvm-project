@@ -21,7 +21,6 @@ void HasStmt() {
 void AtLeastOneOf() {
   int Var;
 // Data
-  // expected-warning@+1{{OpenACC clause 'copy' not yet implemented}}
 #pragma acc data copy(Var)
   ;
   // expected-warning@+1{{OpenACC clause 'copyin' not yet implemented}}
