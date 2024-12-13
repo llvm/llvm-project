@@ -2914,6 +2914,13 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
+                   const parser::OpenMPErrorConstruct &) {
+  TODO(converter.getCurrentLocation(), "OpenMPErrorConstruct");
+}
+
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
                    const parser::OpenMPExecutableAllocate &execAllocConstruct) {
   TODO(converter.getCurrentLocation(), "OpenMPExecutableAllocate");
 }

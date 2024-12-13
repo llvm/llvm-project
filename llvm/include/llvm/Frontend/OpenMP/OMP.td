@@ -66,6 +66,7 @@ def OMPC_AppendArgs : Clause<"append_args"> {
 }
 def OMPC_At : Clause<"at"> {
   let clangClass = "OMPAtClause";
+  let flangClass = "OmpAtClause";
 }
 def OMPC_AtomicDefaultMemOrder : Clause<"atomic_default_mem_order"> {
   let clangClass = "OMPAtomicDefaultMemOrderClause";
@@ -288,6 +289,7 @@ def OMPC_Mergeable : Clause<"mergeable"> {
 }
 def OMPC_Message : Clause<"message"> {
   let clangClass = "OMPMessageClause";
+  let flangClass = "OmpMessageClause";
 }
 def OMPC_NoOpenMP : Clause<"no_openmp"> {
   let clangClass = "OMPNoOpenMPClause";
@@ -445,6 +447,7 @@ def OMPC_SeqCst : Clause<"seq_cst"> {
 }
 def OMPC_Severity : Clause<"severity"> {
   let clangClass = "OMPSeverityClause";
+  let flangClass = "OmpSeverityClause";
 }
 def OMPC_Shared : Clause<"shared"> {
   let clangClass = "OMPSharedClause";
