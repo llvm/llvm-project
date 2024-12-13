@@ -8,7 +8,8 @@
 
 // <vector>
 
-// void assign(size_type n, const_reference v);
+// template <class InputIt>
+// constexpr void assign(InputIt first, InputIt last);
 
 #include <vector>
 #include <algorithm>

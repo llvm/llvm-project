@@ -986,8 +986,8 @@ def LUTI4_S_4ZZT2Z  : sme2_luti4_vector_vg4_strided<0b00, 0b00, "luti4">;
 
 let Predicates = [HasSMEF8F16] in {
 defm FVDOT_VG2_M2ZZI_BtoH : sme2p1_multi_vec_array_vg2_index_f8f16<"fvdot", 0b11, 0b110, ZZ_b_mul_r, ZPR4b8>;
-defm FDOT_VG2_M2ZZI_BtoH  : sme2p1_multi_vec_array_vg2_index_f8f16<"fdot",  0b11, 0b010, ZZ_b_mul_r, ZPR4b8>;
-defm FDOT_VG4_M4ZZI_BtoH  : sme2p1_multi_vec_array_vg4_index_f8f16<"fdot",    0b100, ZZZZ_b_mul_r, ZPR4b8>;
+defm FDOT_VG2_M2ZZI_BtoH  : sme2_fp8_fdot_index_za16_vg1x2<"fdot", int_aarch64_sme_fp8_fdot_lane_za16_vg1x2>;
+defm FDOT_VG4_M4ZZI_BtoH  : sme2_fp8_fdot_index_za16_vg1x4<"fdot", int_aarch64_sme_fp8_fdot_lane_za16_vg1x4>;
 defm FDOT_VG2_M2ZZ_BtoH   :  sme2_dot_mla_add_sub_array_vg24_single<"fdot", 0b0010001, MatrixOp16, ZZ_b, ZPR4b8>;
 defm FDOT_VG4_M4ZZ_BtoH   :  sme2_dot_mla_add_sub_array_vg24_single<"fdot", 0b0110001, MatrixOp16, ZZZZ_b, ZPR4b8>;
 
@@ -1008,9 +1008,9 @@ defm FMOPA_MPPZZ_BtoH : sme2_fp8_fmopa_za16<"fmopa", int_aarch64_sme_fp8_fmopa_z
 } //[HasSMEF8F16]
 
 let Predicates = [HasSMEF8F32] in {
+defm FDOT_VG2_M2ZZI_BtoS : sme2_fp8_fdot_index_za32_vg1x2<"fdot", int_aarch64_sme_fp8_fdot_lane_za32_vg1x2>;
+defm FDOT_VG4_M4ZZI_BtoS : sme2_fp8_fdot_index_za32_vg1x4<"fdot", int_aarch64_sme_fp8_fdot_lane_za32_vg1x4>;
 
-defm FDOT_VG2_M2ZZI_BtoS : sme2_multi_vec_array_vg2_index_32b<"fdot", 0b01, 0b0111, ZZ_b_mul_r, ZPR4b8, nxv16i8, null_frag>;
-defm FDOT_VG4_M4ZZI_BtoS : sme2_multi_vec_array_vg4_index_32b<"fdot", 0b0001, ZZZZ_b_mul_r, ZPR4b8, nxv16i8, null_frag>;
 defm FDOT_VG2_M2ZZ_BtoS  : sme2_dot_mla_add_sub_array_vg24_single<"fdot", 0b0010011, MatrixOp32, ZZ_b, ZPR4b8>;
 defm FDOT_VG4_M4ZZ_BtoS  : sme2_dot_mla_add_sub_array_vg24_single<"fdot", 0b0110011, MatrixOp32, ZZZZ_b, ZPR4b8>;
 

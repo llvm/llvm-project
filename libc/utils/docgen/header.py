@@ -14,7 +14,7 @@ class Header:
     Maintains implementation information about a standard header file:
     * where does its implementation dir live
     * where is its macros file
-    * where is its docgen json file
+    * where is its docgen yaml file
 
     By convention, the macro-only part of a header file is in a header-specific
     file somewhere in the directory tree with root at
@@ -42,7 +42,7 @@ class Header:
         self.stem = header_name.rstrip(".h")
         self.docgen_root = Path(__file__).parent
         self.libc_root = self.docgen_root.parent.parent
-        self.docgen_json = self.docgen_root / Path(header_name).with_suffix(".json")
+        self.docgen_yaml = self.docgen_root / Path(header_name).with_suffix(".yaml")
         self.fns_dir = Path(self.libc_root, "src", self.stem)
         self.macros_dir = Path(self.libc_root, "include", "llvm-libc-macros")
 
