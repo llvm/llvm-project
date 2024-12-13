@@ -5,8 +5,8 @@
 
 static int Result;
 
-void __ubsan_report_error(const char *msg, uintptr_t caller) {
-  fprintf(stderr, "CUSTOM_CALLBACK: %s\n", msg);
+void __ubsan_report_error(const char *kind, uintptr_t caller) {
+  fprintf(stderr, "CUSTOM_CALLBACK: %s\n", kind);
 }
 
 int main(int argc, const char **argv) {
