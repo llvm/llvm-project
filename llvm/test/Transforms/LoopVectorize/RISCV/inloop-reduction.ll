@@ -662,7 +662,7 @@ define  nofpclass(nan inf) float @vp_reduction_with_fastflags(ptr %a, ptr %b, i6
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[TMP12]], i32 0
 ; IF-EVL-OUTLOOP-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP13]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP10]])
 ; IF-EVL-OUTLOOP-NEXT:    [[VP_OP:%.*]] = call fast <vscale x 4 x float> @llvm.vp.fadd.nxv4f32(<vscale x 4 x float> [[VP_OP_LOAD]], <vscale x 4 x float> [[VEC_PHI]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP10]])
-; IF-EVL-OUTLOOP-NEXT:    [[TMP14]] = call <vscale x 4 x float> @llvm.vp.merge.nxv4f32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x float> [[VP_OP]], <vscale x 4 x float> [[VEC_PHI]], i32 [[TMP10]])
+; IF-EVL-OUTLOOP-NEXT:    [[TMP14]] = call fast <vscale x 4 x float> @llvm.vp.merge.nxv4f32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x float> [[VP_OP]], <vscale x 4 x float> [[VEC_PHI]], i32 [[TMP10]])
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP10]] to i64
 ; IF-EVL-OUTLOOP-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP15]], [[EVL_BASED_IV]]
 ; IF-EVL-OUTLOOP-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]

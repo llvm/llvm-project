@@ -447,7 +447,7 @@ define void @vp_fpext_with_fastflags(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[TMP14]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x float> @llvm.vp.load.nxv2f32.p0(ptr align 4 [[TMP15]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP12]]), !alias.scope [[META30:![0-9]+]]
-; IF-EVL-NEXT:    [[TMP16:%.*]] = call <vscale x 2 x double> @llvm.vp.fpext.nxv2f64.nxv2f32(<vscale x 2 x float> [[VP_OP_LOAD]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP12]])
+; IF-EVL-NEXT:    [[TMP16:%.*]] = call fast <vscale x 2 x double> @llvm.vp.fpext.nxv2f64.nxv2f32(<vscale x 2 x float> [[VP_OP_LOAD]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP12]])
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = getelementptr inbounds double, ptr [[TMP17]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv2f64.p0(<vscale x 2 x double> [[TMP16]], ptr align 8 [[TMP18]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP12]]), !alias.scope [[META33:![0-9]+]], !noalias [[META30]]
@@ -647,7 +647,7 @@ define void @vp_fptrunc_with_fastflags(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds double, ptr [[B]], i64 [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = getelementptr inbounds double, ptr [[TMP14]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x double> @llvm.vp.load.nxv2f64.p0(ptr align 8 [[TMP15]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP12]]), !alias.scope [[META44:![0-9]+]]
-; IF-EVL-NEXT:    [[TMP16:%.*]] = call <vscale x 2 x float> @llvm.vp.fptrunc.nxv2f32.nxv2f64(<vscale x 2 x double> [[VP_OP_LOAD]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP12]])
+; IF-EVL-NEXT:    [[TMP16:%.*]] = call fast <vscale x 2 x float> @llvm.vp.fptrunc.nxv2f32.nxv2f64(<vscale x 2 x double> [[VP_OP_LOAD]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP12]])
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = getelementptr inbounds float, ptr [[TMP17]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv2f32.p0(<vscale x 2 x float> [[TMP16]], ptr align 4 [[TMP18]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP12]]), !alias.scope [[META47:![0-9]+]], !noalias [[META44]]

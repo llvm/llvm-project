@@ -83,7 +83,7 @@ define void @vp_select_with_fastflags(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:     WIDEN ir<[[LD2:%.+]]> = vp.load vp<[[PTR2]]>, vp<[[EVL]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[FCMP:%.+]]> = fcmp ogt ir<[[LD1]]>, ir<[[LD2]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[FADD:%.+]]> = vp.fadd reassoc nnan ninf nsz arcp contract afn ir<[[LD1]]>, ir<1.000000e+01>, vp<[[EVL]]>
-; IF-EVL-NEXT:     WIDEN-INTRINSIC vp<[[SELECT:%.+]]> = call llvm.vp.select(ir<[[FCMP]]>, ir<[[FADD]]>, ir<[[LD2]]>, vp<[[EVL]]>)
+; IF-EVL-NEXT:     WIDEN-INTRINSIC vp<[[SELECT:%.+]]> = call reassoc nnan ninf nsz arcp contract afn llvm.vp.select(ir<[[FCMP]]>, ir<[[FADD]]>, ir<[[LD2]]>, vp<[[EVL]]>)
 ; IF-EVL-NEXT:     CLONE ir<[[GEP3:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR3:%.+]]> = vector-pointer ir<[[GEP3]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR3]]>, vp<[[SELECT]]>, vp<[[EVL]]>

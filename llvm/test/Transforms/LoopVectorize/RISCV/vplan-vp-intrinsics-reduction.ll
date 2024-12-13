@@ -261,7 +261,7 @@ define nofpclass(nan inf) float @vp_reduction_with_fastflags(ptr %a, ptr %b, i64
 ; IF-EVL-OUTLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; IF-EVL-OUTLOOP-NEXT:    WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
 ; IF-EVL-OUTLOOP-NEXT:    WIDEN ir<[[FADD:%.+]]> = vp.fadd reassoc nnan ninf nsz arcp contract afn ir<[[LD1]]>, ir<[[RDX_PHI]]>, vp<[[EVL]]>
-; IF-EVL-OUTLOOP-NEXT:    WIDEN-INTRINSIC vp<[[RDX_SELECT]]> = call llvm.vp.merge(ir<true>, ir<[[FADD]]>, ir<[[RDX_PHI]]>, vp<[[EVL]]>)
+; IF-EVL-OUTLOOP-NEXT:    WIDEN-INTRINSIC vp<[[RDX_SELECT]]> = call reassoc nnan ninf nsz arcp contract afn llvm.vp.merge(ir<true>, ir<[[FADD]]>, ir<[[RDX_PHI]]>, vp<[[EVL]]>)
 ; IF-EVL-OUTLOOP-NEXT:    SCALAR-CAST vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64
 ; IF-EVL-OUTLOOP-NEXT:    EMIT vp<[[IV_NEXT]]> = add vp<[[CAST]]>, vp<[[EVL_PHI]]>
 ; IF-EVL-OUTLOOP-NEXT:    EMIT vp<[[IV_NEXT_EXIT:%.+]]> = add vp<[[IV]]>, vp<[[VFUF]]>

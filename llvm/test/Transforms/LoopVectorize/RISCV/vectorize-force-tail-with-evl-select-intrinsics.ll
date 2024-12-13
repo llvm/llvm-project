@@ -183,7 +183,7 @@ define void @vp_select_with_fastflags(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    [[VP_OP_LOAD5:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP21]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP16]])
 ; IF-EVL-NEXT:    [[TMP22:%.*]] = fcmp fast ogt <vscale x 4 x float> [[VP_OP_LOAD]], [[VP_OP_LOAD5]]
 ; IF-EVL-NEXT:    [[VP_OP:%.*]] = call fast <vscale x 4 x float> @llvm.vp.fadd.nxv4f32(<vscale x 4 x float> [[VP_OP_LOAD]], <vscale x 4 x float> splat (float 1.000000e+01), <vscale x 4 x i1> splat (i1 true), i32 [[TMP16]])
-; IF-EVL-NEXT:    [[TMP23:%.*]] = call <vscale x 4 x float> @llvm.vp.select.nxv4f32(<vscale x 4 x i1> [[TMP22]], <vscale x 4 x float> [[VP_OP]], <vscale x 4 x float> [[VP_OP_LOAD5]], i32 [[TMP16]])
+; IF-EVL-NEXT:    [[TMP23:%.*]] = call fast <vscale x 4 x float> @llvm.vp.select.nxv4f32(<vscale x 4 x i1> [[TMP22]], <vscale x 4 x float> [[VP_OP]], <vscale x 4 x float> [[VP_OP_LOAD5]], i32 [[TMP16]])
 ; IF-EVL-NEXT:    [[TMP24:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP17]]
 ; IF-EVL-NEXT:    [[TMP25:%.*]] = getelementptr inbounds float, ptr [[TMP24]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[TMP23]], ptr align 4 [[TMP25]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP16]])

@@ -217,7 +217,7 @@ define void @vp_fpext_with_fastfalgs(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:     CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
-; IF-EVL-NEXT:     WIDEN-INTRINSIC vp<[[FPEXT:%.+]]> = call llvm.vp.fpext(ir<[[LD1]]>, ir<true>, vp<[[EVL]]>)
+; IF-EVL-NEXT:     WIDEN-INTRINSIC vp<[[FPEXT:%.+]]> = call reassoc nnan ninf nsz arcp contract afn llvm.vp.fpext(ir<[[LD1]]>, ir<true>, vp<[[EVL]]>)
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR2]]>, vp<[[FPEXT]]>, vp<[[EVL]]>
@@ -313,7 +313,7 @@ define void @vp_fptrunc_with_fastflags(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:     CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
-; IF-EVL-NEXT:     WIDEN-INTRINSIC vp<[[FPTRUNC:%.+]]> = call llvm.vp.fptrunc(ir<[[LD1]]>, ir<true>, vp<[[EVL]]>)
+; IF-EVL-NEXT:     WIDEN-INTRINSIC vp<[[FPTRUNC:%.+]]> = call reassoc nnan ninf nsz arcp contract afn llvm.vp.fptrunc(ir<[[LD1]]>, ir<true>, vp<[[EVL]]>)
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR2]]>, vp<[[FPTRUNC]]>, vp<[[EVL]]>
