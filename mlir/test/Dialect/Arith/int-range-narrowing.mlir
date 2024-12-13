@@ -311,7 +311,7 @@ func.func @i32_overflows_to_i64(%arg0: i32) -> i64 {
   return %mul : i64
 }
 
-// Motivating example for negatative number support, added as a test case
+// Motivating example for negative number support, added as a test case
 // and simplified
 // CHECK-LABEL: func.func @clamp_to_loop_bound_and_id()
 // CHECK: %[[TID:.+]] = test.with_bounds

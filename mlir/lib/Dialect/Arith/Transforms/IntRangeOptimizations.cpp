@@ -53,7 +53,8 @@ static void copyIntegerRange(DataFlowSolver &solver, Value oldVal,
   auto *oldState = solver.lookupState<IntegerValueRangeLattice>(oldVal);
   if (!oldState)
     return;
-  solver.getOrCreateState<IntegerValueRangeLattice>(newVal)->join(*oldState);
+  (void)solver.getOrCreateState<IntegerValueRangeLattice>(newVal)->join(
+      *oldState);
 }
 
 /// Patterned after SCCP
@@ -318,14 +319,15 @@ struct NarrowElementwise final : OpTraitRewritePattern<OpTrait::Elementwise> {
   using OpTraitRewritePattern::OpTraitRewritePattern;
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
+    if (op->getNumResults() == 0)
+      return rewriter.notifyMatchFailure(op, "can't narrow resultless op");
+
     SmallVector<ConstantIntRanges> ranges;
     if (failed(collectRanges(solver, op->getOperands(), ranges)))
       return rewriter.notifyMatchFailure(op, "input without specified range");
     if (failed(collectRanges(solver, op->getResults(), ranges)))
       return rewriter.notifyMatchFailure(op, "output without specified range");
 
-    if (op->getNumResults() == 0)
-      return rewriter.notifyMatchFailure(op, "can't narrow resultless op");
     Type srcType = op->getResult(0).getType();
     if (!llvm::all_equal(op->getResultTypes()))
       return rewriter.notifyMatchFailure(op, "mismatched result types");
@@ -416,10 +418,10 @@ struct NarrowCmpI final : OpRewritePattern<arith::CmpIOp> {
 
       Location loc = op->getLoc();
       IRMapping mapping;
-      for (Value arg : op->getOperands()) {
-        Value newArg = doCast(rewriter, loc, arg, targetType, castKind);
-        mapping.map(arg, newArg);
-      }
+      Value lhsCast = doCast(rewriter, loc, lhs, targetType, lhsCastKind);
+      Value rhsCast = doCast(rewriter, loc, rhs, targetType, rhsCastKind);
+      mapping.map(lhs, lhsCast);
+      mapping.map(rhs, rhsCast);
 
       Operation *newOp = rewriter.clone(*op, mapping);
       copyIntegerRange(solver, op.getResult(), newOp->getResult(0));
@@ -447,7 +449,6 @@ struct FoldIndexCastChain final : OpRewritePattern<CastOp> {
     auto srcOp = op.getIn().template getDefiningOp<CastOp>();
     if (!srcOp)
       return rewriter.notifyMatchFailure(op, "doesn't come from an index cast");
-    ;
 
     Value src = srcOp.getIn();
     if (src.getType() != op.getType())
