@@ -458,8 +458,10 @@ void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
   assert(MI.getNumDefs() > 0 && MRI.hasOneUse(MI.getOperand(0).getReg()));
   MachineInstr &AssignTypeInst =
       *(MRI.use_instr_begin(MI.getOperand(0).getReg()));
+  SPIRVType *SpvTypeRes = GR->getSPIRVTypeForVReg(MI.getOperand(0).getReg());
   auto NewReg =
-      createNewIdReg(nullptr, MI.getOperand(0).getReg(), MRI, *GR).first;
+      createNewIdReg(SpvTypeRes, MI.getOperand(0).getReg(), MRI, *GR).first;
+  GR->assignSPIRVTypeToVReg(SpvTypeRes, NewReg, MIB.getMF());
   AssignTypeInst.getOperand(1).setReg(NewReg);
   MI.getOperand(0).setReg(NewReg);
   MIB.setInsertPt(*MI.getParent(), MI.getIterator());

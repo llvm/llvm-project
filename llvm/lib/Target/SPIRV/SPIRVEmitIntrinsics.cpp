@@ -1293,23 +1293,35 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
   }
 }
 
+static void createDecorationIntrinsic(Instruction *I, MDNode *Node,
+                                      IRBuilder<> &B) {
+  LLVMContext &Ctx = I->getContext();
+  setInsertPointAfterDef(B, I);
+  B.CreateIntrinsic(Intrinsic::spv_assign_decoration, {I->getType()},
+                    {I, MetadataAsValue::get(Ctx, MDNode::get(Ctx, {Node}))});
+}
+
 static void createRoundingModeDecoration(Instruction *I,
                                          unsigned RoundingModeDeco,
                                          IRBuilder<> &B) {
   LLVMContext &Ctx = I->getContext();
   Type *Int32Ty = Type::getInt32Ty(Ctx);
-  setInsertPointAfterDef(B, I);
-  B.CreateIntrinsic(
-      Intrinsic::spv_assign_decoration, {I->getType()},
-      {I,
-       MetadataAsValue::get(
-           Ctx,
-           MDNode::get(
-               Ctx, {MDNode::get(
-                        Ctx, {ConstantAsMetadata::get(ConstantInt::get(
-                                  Int32Ty, SPIRV::Decoration::FPRoundingMode)),
-                              ConstantAsMetadata::get(ConstantInt::get(
-                                  Int32Ty, RoundingModeDeco))})}))});
+  MDNode *RoundingModeNode = MDNode::get(
+      Ctx,
+      {ConstantAsMetadata::get(
+           ConstantInt::get(Int32Ty, SPIRV::Decoration::FPRoundingMode)),
+       ConstantAsMetadata::get(ConstantInt::get(Int32Ty, RoundingModeDeco))});
+  createDecorationIntrinsic(I, RoundingModeNode, B);
+}
+
+static void createSaturatedConversionDecoration(Instruction *I,
+                                                IRBuilder<> &B) {
+  LLVMContext &Ctx = I->getContext();
+  Type *Int32Ty = Type::getInt32Ty(Ctx);
+  MDNode *SaturatedConversionNode =
+      MDNode::get(Ctx, {ConstantAsMetadata::get(ConstantInt::get(
+                           Int32Ty, SPIRV::Decoration::SaturatedConversion))});
+  createDecorationIntrinsic(I, SaturatedConversionNode, B);
 }
 
 Instruction *SPIRVEmitIntrinsics::visitCallInst(CallInst &Call) {
@@ -1912,10 +1924,13 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
       SmallVector<StringRef, 8> Parts;
       S.split(Parts, "_", -1, false);
       if (Parts.size() > 1) {
-        // Convert the tip about rounding mode into a decoration record.
+        // Convert the info about rounding mode into a decoration record.
         unsigned RoundingModeDeco = roundingModeMDToDecorationConst(Parts[1]);
         if (RoundingModeDeco != std::numeric_limits<unsigned>::max())
           createRoundingModeDecoration(CI, RoundingModeDeco, B);
+        // Check if the SaturatedConversion info is present.
+        if (Parts[1] == "sat")
+          createSaturatedConversionDecoration(CI, B);
       }
     }
   }

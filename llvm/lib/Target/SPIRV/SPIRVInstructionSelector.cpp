@@ -557,19 +557,12 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_UCMP:
     return selectSUCmp(ResVReg, ResType, I, false);
 
+  case TargetOpcode::G_STRICT_FMA:
   case TargetOpcode::G_FMA:
     return selectExtInst(ResVReg, ResType, I, CL::fma, GL::Fma);
 
-  case TargetOpcode::G_STRICT_FSQRT:
-  case TargetOpcode::G_STRICT_FADD:
-  case TargetOpcode::G_STRICT_FSUB:
-  case TargetOpcode::G_STRICT_FMUL:
-  case TargetOpcode::G_STRICT_FDIV:
-  case TargetOpcode::G_STRICT_FREM:
   case TargetOpcode::G_STRICT_FLDEXP:
-    return false;
-  case TargetOpcode::G_STRICT_FMA:
-    return selectExtInst(ResVReg, ResType, I, CL::fma, GL::Fma);
+    return selectExtInst(ResVReg, ResType, I, CL::ldexp);
 
   case TargetOpcode::G_FPOW:
     return selectExtInst(ResVReg, ResType, I, CL::pow, GL::Pow);
@@ -629,6 +622,7 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_FTANH:
     return selectExtInst(ResVReg, ResType, I, CL::tanh, GL::Tanh);
 
+  case TargetOpcode::G_STRICT_FSQRT:
   case TargetOpcode::G_FSQRT:
     return selectExtInst(ResVReg, ResType, I, CL::sqrt, GL::Sqrt);
 

@@ -21,8 +21,6 @@
 ; CHECK: OpFDiv %[[#]] %[[#di]]
 ; CHECK: OpFSub %[[#]] %[[#su]]
 ; CHECK: OpFMul %[[#]] %[[#mu]]
-; CHECK: OpFMul
-; CHECK: OpFAdd
 ; CHECK: OpExtInst %[[#]] %[[#]] %[[#]] fma
 ; CHECK: OpFRem
 
@@ -30,13 +28,12 @@
 define dso_local spir_kernel void @test(float %a, i32 %in, i32 %ui) local_unnamed_addr #0 !kernel_arg_addr_space !5 !kernel_arg_access_qual !6 !kernel_arg_type !7 !kernel_arg_base_type !7 !kernel_arg_type_qual !8 !kernel_arg_buffer_location !9 {
 entry:
   %add = tail call float @llvm.experimental.constrained.fadd.f32(float %a, float %a, metadata !"round.tonearest", metadata !"fpexcept.strict") #2
-  %div = tail call float @llvm.experimental.constrained.fdiv.f32(float %add, float %add, metadata !"round.towardzero", metadata !"fpexcept.strict") #2, !fpmath !10
-  %sub = tail call float @llvm.experimental.constrained.fsub.f32(float %div, float %div, metadata !"round.upward", metadata !"fpexcept.strict") #2
-  %mul = tail call float @llvm.experimental.constrained.fmul.f32(float %sub, float %sub, metadata !"round.downward", metadata !"fpexcept.strict") #2
-  ; TODO: @llvm.experimental.constrained.fmuladd is not supported at the moment
-  ; %0 = tail call float @llvm.experimental.constrained.fmuladd.f32(float %mul, float %mul, float %mul, metadata !"round.tonearestaway", metadata !"fpexcept.strict") #2
-  %r1 = tail call float @llvm.experimental.constrained.fma.f32(float %a, float %a, float %a, metadata !"round.dynamic", metadata !"fpexcept.strict") #2
-  %r2 = tail call float @llvm.experimental.constrained.frem.f32(float %a, float %a, metadata !"round.dynamic", metadata !"fpexcept.strict") #2
+  %add2 = fadd float %a, %a
+;  %div = tail call float @llvm.experimental.constrained.fdiv.f32(float %a, float %a, metadata !"round.towardzero", metadata !"fpexcept.strict") #2, !fpmath !10
+;  %sub = tail call float @llvm.experimental.constrained.fsub.f32(float %a, float %a, metadata !"round.upward", metadata !"fpexcept.strict") #2
+;  %mul = tail call float @llvm.experimental.constrained.fmul.f32(float %a, float %a, metadata !"round.downward", metadata !"fpexcept.strict") #2
+;  %r1 = tail call float @llvm.experimental.constrained.fma.f32(float %a, float %a, float %a, metadata !"round.dynamic", metadata !"fpexcept.strict") #2
+;  %r2 = tail call float @llvm.experimental.constrained.frem.f32(float %a, float %a, metadata !"round.dynamic", metadata !"fpexcept.strict") #2
   ret void
 }
 

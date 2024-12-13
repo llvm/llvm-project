@@ -55,10 +55,11 @@ extern void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
                          MachineRegisterInfo &MRI, SPIRVGlobalRegistry *GR);
 } // namespace llvm
 
-static bool isMetaInstrGET(unsigned Opcode) {
+static bool isMetaInstr(unsigned Opcode) {
   return Opcode == SPIRV::GET_ID || Opcode == SPIRV::GET_fID ||
          Opcode == SPIRV::GET_pID || Opcode == SPIRV::GET_vID ||
-         Opcode == SPIRV::GET_vfID || Opcode == SPIRV::GET_vpID;
+         Opcode == SPIRV::GET_vfID || Opcode == SPIRV::GET_vpID ||
+         Opcode == SPIRV::ASSIGN_TYPE;
 }
 
 static bool mayBeInserted(unsigned Opcode) {
@@ -128,7 +129,7 @@ static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         if (isTypeFoldingSupported(Opcode)) {
           // Check if the instruction newly generated or already processed
           MachineInstr *NextMI = I.getNextNode();
-          if (NextMI && isMetaInstrGET(NextMI->getOpcode()))
+          if (NextMI && isMetaInstr(NextMI->getOpcode()))
             continue;
           // Restore usual instructions pattern for the newly inserted
           // instruction

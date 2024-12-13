@@ -27,16 +27,21 @@ using namespace llvm::LegalityPredicates;
 static const std::set<unsigned> TypeFoldingSupportingOpcs = {
     TargetOpcode::G_ADD,
     TargetOpcode::G_FADD,
+    TargetOpcode::G_STRICT_FADD,
     TargetOpcode::G_SUB,
     TargetOpcode::G_FSUB,
+    TargetOpcode::G_STRICT_FSUB,
     TargetOpcode::G_MUL,
     TargetOpcode::G_FMUL,
+    TargetOpcode::G_STRICT_FMUL,
     TargetOpcode::G_SDIV,
     TargetOpcode::G_UDIV,
     TargetOpcode::G_FDIV,
+    TargetOpcode::G_STRICT_FDIV,
     TargetOpcode::G_SREM,
     TargetOpcode::G_UREM,
     TargetOpcode::G_FREM,
+    TargetOpcode::G_STRICT_FREM,
     TargetOpcode::G_FNEG,
     TargetOpcode::G_CONSTANT,
     TargetOpcode::G_FCONSTANT,
@@ -219,10 +224,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalFor(allIntScalarsAndVectors)
       .legalIf(extendedScalarsAndVectors);
 
-  getActionDefinitionsBuilder(G_FMA).legalFor(allFloatScalarsAndVectors);
-
-  getActionDefinitionsBuilder({G_STRICT_FSQRT, G_STRICT_FADD, G_STRICT_FSUB, G_STRICT_FMUL,
-                               G_STRICT_FDIV, G_STRICT_FREM, G_STRICT_FMA})
+  getActionDefinitionsBuilder({G_FMA, G_STRICT_FMA})
       .legalFor(allFloatScalarsAndVectors);
 
   getActionDefinitionsBuilder(G_STRICT_FLDEXP)
