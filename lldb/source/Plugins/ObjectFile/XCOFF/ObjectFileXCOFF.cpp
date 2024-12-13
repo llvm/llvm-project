@@ -79,43 +79,7 @@ ObjectFile *ObjectFileXCOFF::CreateInstance(const lldb::ModuleSP &module_sp,
   if (!objfile_up)
     return nullptr;
 
-  // Cache xcoff binary.
-  if (!objfile_up->CreateBinary())
-    return nullptr;
-
-  if (!objfile_up->ParseHeader())
-    return nullptr;
-
   return objfile_up.release();
-}
-
-bool ObjectFileXCOFF::CreateBinary() {
-  if (m_binary)
-    return true;
-
-  Log *log = GetLog(LLDBLog::Object);
-
-  auto binary = llvm::object::XCOFFObjectFile::createObjectFile(
-      llvm::MemoryBufferRef(toStringRef(m_data.GetData()),
-                            m_file.GetFilename().GetStringRef()),
-      file_magic::xcoff_object_64);
-  if (!binary) {
-    LLDB_LOG_ERROR(log, binary.takeError(),
-                   "Failed to create binary for file ({1}): {0}", m_file);
-    return false;
-  }
-
-  // Make sure we only handle XCOFF format.
-  m_binary =
-      llvm::unique_dyn_cast<llvm::object::XCOFFObjectFile>(std::move(*binary));
-  if (!m_binary)
-    return false;
-
-  LLDB_LOG(log, "this = {0}, module = {1} ({2}), file = {3}, binary = {4}",
-           this, GetModule().get(), GetModule()->GetSpecificationDescription(),
-           m_file.GetPath(), m_binary.get());
-
-  return true;
 }
 
 ObjectFile *ObjectFileXCOFF::CreateMemoryInstance(
@@ -144,10 +108,9 @@ size_t ObjectFileXCOFF::GetModuleSpecifications(
 
 static uint32_t XCOFFHeaderSizeFromMagic(uint32_t magic) {
   switch (magic) {
-    /* TODO: 32bit not supported yet
-    case XCOFF::XCOFF32:
-      return sizeof(struct llvm::object::XCOFFFileHeader32);
-    */
+    // TODO: 32bit not supported yet
+    // case XCOFF::XCOFF32:
+    //  return sizeof(struct llvm::object::XCOFFFileHeader32);
 
   case XCOFF::XCOFF64:
     return sizeof(struct llvm::object::XCOFFFileHeader64);
@@ -172,18 +135,7 @@ bool ObjectFileXCOFF::MagicBytesMatch(DataBufferSP &data_sp,
   return XCOFFHeaderSizeFromMagic(magic) != 0;
 }
 
-bool ObjectFileXCOFF::ParseHeader() {
-
-  bool retVal = false;
-  ModuleSP module_sp(GetModule());
-  if (module_sp) {
-    // Only 64-bit is supported for now
-    if (m_binary->fileHeader64()->Magic == XCOFF::XCOFF64)
-      retVal = true;
-  }
-
-  return retVal;
-}
+bool ObjectFileXCOFF::ParseHeader() { return false; }
 
 ByteOrder ObjectFileXCOFF::GetByteOrder() const { return eByteOrderBig; }
 
@@ -191,8 +143,7 @@ bool ObjectFileXCOFF::IsExecutable() const { return true; }
 
 uint32_t ObjectFileXCOFF::GetAddressByteSize() const {
 
-  /* TODO: Need to handle 32-bit support, until then
-   * return 8 for 64-bit XCOFF::XCOFF64 */
+  // 32-bit not supprted. return 8 for 64-bit XCOFF::XCOFF64
   return 8;
 }
 
@@ -218,13 +169,7 @@ UUID ObjectFileXCOFF::GetUUID() { return UUID(); }
 
 uint32_t ObjectFileXCOFF::GetDependentModules(FileSpecList &files) { return 0; }
 
-ObjectFile::Type ObjectFileXCOFF::CalculateType() {
-  if (m_binary->fileHeader64()->Flags & XCOFF::F_EXEC)
-    return eTypeExecutable;
-  else if (m_binary->fileHeader64()->Flags & XCOFF::F_SHROBJ)
-    return eTypeSharedLibrary;
-  return eTypeUnknown;
-}
+ObjectFile::Type ObjectFileXCOFF::CalculateType() { return eTypeExecutable; }
 
 ObjectFile::Strata ObjectFileXCOFF::CalculateStrata() { return eStrataUnknown; }
 
