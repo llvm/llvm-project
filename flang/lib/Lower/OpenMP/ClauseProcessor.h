@@ -53,6 +53,7 @@ public:
       : converter(converter), semaCtx(semaCtx), clauses(clauses) {}
 
   // 'Unique' clauses: They can appear at most once in the clause list.
+  bool processBare(mlir::omp::BareClauseOps &result) const;
   bool processBind(mlir::omp::BindClauseOps &result) const;
   bool
   processCollapse(mlir::Location currentLocation, lower::pft::Evaluation &eval,

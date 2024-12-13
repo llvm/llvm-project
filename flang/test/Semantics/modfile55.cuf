@@ -29,6 +29,7 @@ end
 !contains
 !attributes(global) subroutine globsub(x,y,z)
 !real(4),value::x
+!attributes(device) x
 !real(4)::y
 !attributes(device) y
 !real(4)::z
