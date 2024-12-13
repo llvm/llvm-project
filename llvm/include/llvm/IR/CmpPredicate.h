@@ -62,12 +62,11 @@ public:
   bool operator==(CmpPredicate) const = delete;
   bool operator!=(CmpPredicate) const = delete;
 
-  /// TypeSwitch over the CmpInst and either do ICmpInst::getCmpPredicate() or
-  /// FCmpInst::getPredicate().
+  /// Do a ICmpInst::getCmpPredicate() or CmpInst::getPredicate(), as
+  /// appropriate.
   static CmpPredicate get(const CmpInst *Cmp);
 
-  /// Get the swapped predicate of a CmpPredicate, using
-  /// CmpInst::isIntPredicate().
+  /// Get the swapped predicate of a CmpPredicate.
   static CmpPredicate getSwapped(CmpPredicate P);
 
   /// Get the swapped predicate of a CmpInst.

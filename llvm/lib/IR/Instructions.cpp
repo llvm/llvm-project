@@ -16,7 +16,6 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -3934,15 +3933,13 @@ std::optional<CmpPredicate> CmpPredicate::getMatching(CmpPredicate A,
 }
 
 CmpPredicate CmpPredicate::get(const CmpInst *Cmp) {
-  return TypeSwitch<const CmpInst *, CmpPredicate>(Cmp)
-      .Case<ICmpInst>([](auto *ICI) { return ICI->getCmpPredicate(); })
-      .Case<FCmpInst>([](auto *FCI) { return FCI->getPredicate(); });
+  if (auto *ICI = dyn_cast<ICmpInst>(Cmp))
+    return ICI->getCmpPredicate();
+  return Cmp->getPredicate();
 }
 
 CmpPredicate CmpPredicate::getSwapped(CmpPredicate P) {
-  return CmpInst::isIntPredicate(P)
-             ? ICmpInst::getSwappedCmpPredicate(P)
-             : CmpPredicate{CmpInst::getSwappedPredicate(P)};
+  return {CmpInst::getSwappedPredicate(P), P.hasSameSign()};
 }
 
 CmpPredicate CmpPredicate::getSwapped(const CmpInst *Cmp) {

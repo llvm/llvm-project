@@ -695,7 +695,7 @@ struct icmp_pred_with_threshold {
 /// Match an integer or vector with every element comparing 'pred' (eg/ne/...)
 /// to Threshold. For vectors, this includes constants with undefined elements.
 inline cst_pred_ty<icmp_pred_with_threshold>
-m_SpecificInt_ICMP(CmpPredicate Predicate, const APInt &Threshold) {
+m_SpecificInt_ICMP(ICmpInst::Predicate Predicate, const APInt &Threshold) {
   cst_pred_ty<icmp_pred_with_threshold> P;
   P.Pred = Predicate;
   P.Thr = &Threshold;
