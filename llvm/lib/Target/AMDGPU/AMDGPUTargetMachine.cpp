@@ -1561,7 +1561,7 @@ static const char RegAllocOptNotSupportedMessage[] =
 
 bool GCNPassConfig::addRegAssignAndRewriteFast() {
   if (!usingDefaultRegAlloc())
-    report_fatal_error(RegAllocOptNotSupportedMessage);
+    report_fatal_error(RegAllocOptNotSupportedMessage, /*GenCrashDiag=*/false);
 
   addPass(&GCNPreRALongBranchRegID);
 
@@ -1587,7 +1587,7 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
 
 bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   if (!usingDefaultRegAlloc())
-    report_fatal_error(RegAllocOptNotSupportedMessage);
+    report_fatal_error(RegAllocOptNotSupportedMessage, /*GenCrashDiag=*/false);
 
   addPass(&GCNPreRALongBranchRegID);
 
