@@ -87,7 +87,6 @@ TEST(IntrinsicNameLookup, ClangBuiltinLookup) {
       {"__builtin_adjust_trampoline", "", adjust_trampoline},
       {"__builtin_trap", "", trap},
       {"__builtin_arm_chkfeat", "aarch64", aarch64_chkfeat},
-      {"__builtin_amdgcn_alignbyte", "amdgcn", amdgcn_alignbyte},
       {"__builtin_amdgcn_workgroup_id_z", "amdgcn", amdgcn_workgroup_id_z},
       {"__builtin_arm_cdp", "arm", arm_cdp},
       {"__builtin_bpf_preserve_type_info", "bpf", bpf_preserve_type_info},
