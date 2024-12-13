@@ -1,16 +1,9 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=webkit.UncountedLambdaCapturesChecker -verify %s
 
+#include "mock-types.h"
+
 struct A {
   static void b();
-};
-
-struct RefCountable {
-  void ref() {}
-  void deref() {}
-  void method();
-  void constMethod() const;
-  int trivial() { return 123; }
-  RefCountable* next();
 };
 
 RefCountable* make_obj();
@@ -151,6 +144,42 @@ struct RefCountableWithLambdaCapturingThis {
     };
     call(lambda);
   }
+
+  void method_captures_this_unsafe_capture_local_var_explicitly() {
+    RefCountable* x = make_obj();
+    call([this, protectedThis = RefPtr { this }, x]() {
+      // expected-warning@-1{{Captured raw-pointer 'x' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+      nonTrivial();
+      x->method();
+    });
+  }
+
+  void method_captures_this_unsafe_capture_local_var_explicitly_with_deref() {
+    RefCountable* x = make_obj();
+    call([this, protectedThis = Ref { *this }, x]() {
+      // expected-warning@-1{{Captured raw-pointer 'x' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+      nonTrivial();
+      x->method();
+    });
+  }
+
+  void method_captures_this_unsafe_local_var_via_vardecl() {
+    RefCountable* x = make_obj();
+    auto lambda = [this, protectedThis = Ref { *this }, x]() {
+      // expected-warning@-1{{Captured raw-pointer 'x' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+      nonTrivial();
+      x->method();
+    };
+    call(lambda);
+  }
+
+  void method_captures_this_with_guardian() {
+    auto lambda = [this, protectedThis = Ref { *this }]() {
+      nonTrivial();
+    };
+    call(lambda);
+  }
+
 };
 
 struct NonRefCountableWithLambdaCapturingThis {
