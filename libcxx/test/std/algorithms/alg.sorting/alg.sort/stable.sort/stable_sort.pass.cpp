@@ -134,7 +134,7 @@ TEST_CONSTEXPR_CXX26 void test_larger_sorts() {
   test_larger_sorts<N, N>();
 }
 
-TEST_CONSTEXPR_CXX26 void test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   // test null range
   int d = 0;
   std::stable_sort(&d, &d);
@@ -170,12 +170,14 @@ TEST_CONSTEXPR_CXX26 void test() {
     std::stable_sort(vec.begin(), vec.end());
   }
 #endif
+
+  return true;
 }
 
 int main(int, char**) {
   test();
 #if TEST_STD_VER >= 26
-  static_assert((test(), true));
+  static_assert(test());
 #endif
   return 0;
 }
