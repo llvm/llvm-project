@@ -554,18 +554,16 @@ void OmpStructureChecker::CheckHintClause(
     D *leftOmpClauseList, D *rightOmpClauseList) {
   auto checkForValidHintClause = [&](const D *clauseList) {
     for (const auto &clause : clauseList->v) {
-      const Fortran::parser::OmpClause *ompClause = nullptr;
-      if constexpr (std::is_same_v<D,
-                        const Fortran::parser::OmpAtomicClauseList>) {
-        ompClause = std::get_if<Fortran::parser::OmpClause>(&clause.u);
+      const parser::OmpClause *ompClause = nullptr;
+      if constexpr (std::is_same_v<D, const parser::OmpAtomicClauseList>) {
+        ompClause = std::get_if<parser::OmpClause>(&clause.u);
         if (!ompClause)
           continue;
-      } else if constexpr (std::is_same_v<D,
-                               const Fortran::parser::OmpClauseList>) {
+      } else if constexpr (std::is_same_v<D, const parser::OmpClauseList>) {
         ompClause = &clause;
       }
-      if (const Fortran::parser::OmpClause::Hint *hintClause{
-              std::get_if<Fortran::parser::OmpClause::Hint>(&ompClause->u)}) {
+      if (const parser::OmpClause::Hint *hintClause{
+              std::get_if<parser::OmpClause::Hint>(&ompClause->u)}) {
         std::optional<std::int64_t> hintValue = GetIntValue(hintClause->v);
         if (hintValue && *hintValue >= 0) {
           /*`omp_sync_hint_nonspeculative` and `omp_lock_hint_speculative`*/
@@ -793,7 +791,7 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
   // TODO: Check for declare simd regions.
   bool eligibleSIMD{false};
   common::visit(
-      Fortran::common::visitors{
+      common::visitors{
           // Allow `!$OMP ORDERED SIMD`
           [&](const parser::OpenMPBlockConstruct &c) {
             const auto &beginBlockDir{
@@ -2121,7 +2119,7 @@ void OmpStructureChecker::CheckCancellationNest(
         eligibleCancellation = true;
       }
       break;
-    case Fortran::parser::OmpCancelType::Type::Do:
+    case parser::OmpCancelType::Type::Do:
       if (llvm::omp::nestedCancelDoAllowedSet.test(
               GetContextParent().directive)) {
         eligibleCancellation = true;
@@ -2162,7 +2160,7 @@ void OmpStructureChecker::CheckCancellationNest(
           parser::ToUpperCaseLetters(
               parser::OmpCancelType::EnumToString(type)));
       break;
-    case Fortran::parser::OmpCancelType::Type::Do:
+    case parser::OmpCancelType::Type::Do:
       context_.Say(source,
           "%s %s directive is not closely nested inside "
           "the construct that matches the DO clause type"_err_en_US,
@@ -2228,9 +2226,9 @@ inline void OmpStructureChecker::ErrIfAllocatableVariable(
         const auto &designator =
             std::get<common::Indirection<parser::Designator>>(var.u);
         const auto *dataRef =
-            std::get_if<Fortran::parser::DataRef>(&designator.value().u);
-        const Fortran::parser::Name *name =
-            dataRef ? std::get_if<Fortran::parser::Name>(&dataRef->u) : nullptr;
+            std::get_if<parser::DataRef>(&designator.value().u);
+        const parser::Name *name =
+            dataRef ? std::get_if<parser::Name>(&dataRef->u) : nullptr;
         if (name)
           context_.Say(name->source,
               "%s must not have ALLOCATABLE "
@@ -2250,10 +2248,8 @@ inline void OmpStructureChecker::ErrIfLHSAndRHSSymbolsMatch(
     const Symbol &varSymbol = vSyms.front();
     for (const Symbol &symbol : evaluate::GetSymbolVector(*e)) {
       if (varSymbol == symbol) {
-        const Fortran::common::Indirection<Fortran::parser::Designator>
-            *designator = std::get_if<
-                Fortran::common::Indirection<Fortran::parser::Designator>>(
-                &expr.u);
+        const common::Indirection<parser::Designator> *designator =
+            std::get_if<common::Indirection<parser::Designator>>(&expr.u);
         if (designator) {
           auto *z{var.typedExpr.get()};
           auto *c{expr.typedExpr.get()};
@@ -2334,10 +2330,9 @@ void OmpStructureChecker::CheckAtomicCaptureStmt(
       common::visitors{
           [&](const common::Indirection<parser::Designator> &designator) {
             const auto *dataRef =
-                std::get_if<Fortran::parser::DataRef>(&designator.value().u);
-            const auto *name = dataRef
-                ? std::get_if<Fortran::parser::Name>(&dataRef->u)
-                : nullptr;
+                std::get_if<parser::DataRef>(&designator.value().u);
+            const auto *name =
+                dataRef ? std::get_if<parser::Name>(&dataRef->u) : nullptr;
             if (name && IsAllocatable(*name->symbol))
               context_.Say(name->source,
                   "%s must not have ALLOCATABLE "
@@ -2470,23 +2465,21 @@ void OmpStructureChecker::CheckAtomicCompareConstruct(
 // TODO: Allow cond-update-stmt once compare clause is supported.
 void OmpStructureChecker::CheckAtomicCaptureConstruct(
     const parser::OmpAtomicCapture &atomicCaptureConstruct) {
-  const Fortran::parser::AssignmentStmt &stmt1 =
-      std::get<Fortran::parser::OmpAtomicCapture::Stmt1>(
-          atomicCaptureConstruct.t)
+  const parser::AssignmentStmt &stmt1 =
+      std::get<parser::OmpAtomicCapture::Stmt1>(atomicCaptureConstruct.t)
           .v.statement;
-  const auto &stmt1Var{std::get<Fortran::parser::Variable>(stmt1.t)};
-  const auto &stmt1Expr{std::get<Fortran::parser::Expr>(stmt1.t)};
+  const auto &stmt1Var{std::get<parser::Variable>(stmt1.t)};
+  const auto &stmt1Expr{std::get<parser::Expr>(stmt1.t)};
 
-  const Fortran::parser::AssignmentStmt &stmt2 =
-      std::get<Fortran::parser::OmpAtomicCapture::Stmt2>(
-          atomicCaptureConstruct.t)
+  const parser::AssignmentStmt &stmt2 =
+      std::get<parser::OmpAtomicCapture::Stmt2>(atomicCaptureConstruct.t)
           .v.statement;
-  const auto &stmt2Var{std::get<Fortran::parser::Variable>(stmt2.t)};
-  const auto &stmt2Expr{std::get<Fortran::parser::Expr>(stmt2.t)};
+  const auto &stmt2Var{std::get<parser::Variable>(stmt2.t)};
+  const auto &stmt2Expr{std::get<parser::Expr>(stmt2.t)};
 
-  if (Fortran::semantics::checkForSingleVariableOnRHS(stmt1)) {
+  if (semantics::checkForSingleVariableOnRHS(stmt1)) {
     CheckAtomicCaptureStmt(stmt1);
-    if (Fortran::semantics::checkForSymbolMatch(stmt2)) {
+    if (semantics::checkForSymbolMatch(stmt2)) {
       // ATOMIC CAPTURE construct is of the form [capture-stmt, update-stmt]
       CheckAtomicUpdateStmt(stmt2);
     } else {
@@ -2500,8 +2493,8 @@ void OmpStructureChecker::CheckAtomicCaptureConstruct(
           "Captured variable/array element/derived-type component %s expected to be assigned in the second statement of ATOMIC CAPTURE construct"_err_en_US,
           stmt1Expr.source);
     }
-  } else if (Fortran::semantics::checkForSymbolMatch(stmt1) &&
-      Fortran::semantics::checkForSingleVariableOnRHS(stmt2)) {
+  } else if (semantics::checkForSymbolMatch(stmt1) &&
+      semantics::checkForSingleVariableOnRHS(stmt2)) {
     // ATOMIC CAPTURE construct is of the form [update-stmt, capture-stmt]
     CheckAtomicUpdateStmt(stmt1);
     CheckAtomicCaptureStmt(stmt2);
@@ -2524,28 +2517,28 @@ void OmpStructureChecker::CheckAtomicMemoryOrderClause(
     const parser::OmpAtomicClauseList *rightHandClauseList) {
   int numMemoryOrderClause{0};
   int numFailClause{0};
-  auto checkForValidMemoryOrderClause =
-      [&](const parser::OmpAtomicClauseList *clauseList) {
-        for (const auto &clause : clauseList->v) {
-          if (std::get_if<parser::OmpFailClause>(&clause.u)) {
-            numFailClause++;
-            if (numFailClause > 1) {
-              context_.Say(clause.source,
-                  "More than one FAIL clause not allowed on OpenMP ATOMIC construct"_err_en_US);
-              return;
-            }
-          } else {
-            if (std::get_if<Fortran::parser::OmpMemoryOrderClause>(&clause.u)) {
-              numMemoryOrderClause++;
-              if (numMemoryOrderClause > 1) {
-                context_.Say(clause.source,
-                    "More than one memory order clause not allowed on OpenMP ATOMIC construct"_err_en_US);
-                return;
-              }
-            }
+  auto checkForValidMemoryOrderClause = [&](const parser::OmpAtomicClauseList
+                                                *clauseList) {
+    for (const auto &clause : clauseList->v) {
+      if (std::get_if<parser::OmpFailClause>(&clause.u)) {
+        numFailClause++;
+        if (numFailClause > 1) {
+          context_.Say(clause.source,
+              "More than one FAIL clause not allowed on OpenMP ATOMIC construct"_err_en_US);
+          return;
+        }
+      } else {
+        if (std::get_if<parser::OmpMemoryOrderClause>(&clause.u)) {
+          numMemoryOrderClause++;
+          if (numMemoryOrderClause > 1) {
+            context_.Say(clause.source,
+                "More than one memory order clause not allowed on OpenMP ATOMIC construct"_err_en_US);
+            return;
           }
         }
-      };
+      }
+    }
+  };
   if (leftHandClauseList) {
     checkForValidMemoryOrderClause(leftHandClauseList);
   }
