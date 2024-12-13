@@ -150,7 +150,7 @@ tuple<int,int,bool> func_with_tuple_param(tuple<int,int,bool> t){ return t;}
 // YAML-NEXT: ...
 
 // MD: ### func_with_tuple_param
-// MD: *tuple func_with_tuple_param(tuple t)*
+// MD: *tuple<int, int, _Bool> func_with_tuple_param(tuple<int, int, _Bool> t)*
 // MD: *Defined at {{.*}}templates.cpp#[[# @LINE - 44]]*
 // MD:  A function with a tuple parameter
 // MD: **t** The input to func_with_tuple_param
