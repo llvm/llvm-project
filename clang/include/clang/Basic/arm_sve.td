@@ -2495,3 +2495,34 @@ let SVETargetGuard = "sve2,fp8dot4", SMETargetGuard ="sme,ssve-fp8dot4" in {
   def SVFDOT_LANE_4WAY :  SInst<"svdot_lane[_f32_mf8]_fpm", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fdot_lane", [VerifyRuntimeMode, SetsFPMR], [ImmCheck<3, ImmCheck0_3>]>;
 }
 
+let SVETargetGuard = "sve2,fp8fma", SMETargetGuard = "sme,ssve-fp8fma" in {
+  // 8-bit floating-point multiply-add long to half-precision (bottom)
+  def SVFMLALB   : SInst<"svmlalb[_f16_mf8]_fpm",   "dd~~>", "h", MergeNone, "aarch64_sve_fp8_fmlalb", [VerifyRuntimeMode, SetsFPMR]>;
+  def SVFMLALB_N : SInst<"svmlalb[_n_f16_mf8]_fpm", "dd~!>", "h", MergeNone, "aarch64_sve_fp8_fmlalb", [VerifyRuntimeMode, SetsFPMR]>;
+
+  // 8-bit floating-point multiply-add long to ha_fpmlf-precision (bottom, indexed)
+  def SVFMLALB_LANE : SInst<"svmlalb_lane[_f16_mf8]_fpm", "dd~~i>", "h", MergeNone, "aarch64_sve_fp8_fmlalb_lane", [VerifyRuntimeMode, SetsFPMR], [ImmCheck<3, ImmCheck0_15>]>;
+
+  // 8-bit floating-point multiply-add long to half-precision (top)
+  def SVFMLALT   : SInst<"svmlalt[_f16_mf8]_fpm",   "dd~~>", "h", MergeNone, "aarch64_sve_fp8_fmlalt", [VerifyRuntimeMode, SetsFPMR]>;
+  def SVFMLALT_N : SInst<"svmlalt[_n_f16_mf8]_fpm", "dd~!>", "h", MergeNone, "aarch64_sve_fp8_fmlalt", [VerifyRuntimeMode, SetsFPMR]>;
+
+  // 8-bit floating-point multiply-add long to half-precision (top, indexed)
+  def SVFMLALT_LANE : SInst<"svmlalt_lane[_f16_mf8]_fpm", "dd~~i>", "h", MergeNone, "aarch64_sve_fp8_fmlalt_lane", [VerifyRuntimeMode, SetsFPMR], [ImmCheck<3, ImmCheck0_15>]>;
+
+  // 8-bit floating-point multiply-add long long to single-precision (all top/bottom variants)
+  def SVFMLALLBB   : SInst<"svmlallbb[_f32_mf8]_fpm",   "dd~~>", "f", MergeNone, "aarch64_sve_fp8_fmlallbb", [VerifyRuntimeMode, SetsFPMR]>;
+  def SVFMLALLBB_N : SInst<"svmlallbb[_n_f32_mf8]_fpm", "dd~!>", "f", MergeNone, "aarch64_sve_fp8_fmlallbb", [VerifyRuntimeMode, SetsFPMR]>;
+  def SVFMLALLBT   : SInst<"svmlallbt[_f32_mf8]_fpm",   "dd~~>", "f", MergeNone, "aarch64_sve_fp8_fmlallbt", [VerifyRuntimeMode, SetsFPMR]>;
+  def SVFMLALLBT_N : SInst<"svmlallbt[_n_f32_mf8]_fpm", "dd~!>", "f", MergeNone, "aarch64_sve_fp8_fmlallbt", [VerifyRuntimeMode, SetsFPMR]>;
+  def SVFMLALLTB   : SInst<"svmlalltb[_f32_mf8]_fpm",   "dd~~>", "f", MergeNone, "aarch64_sve_fp8_fmlalltb", [VerifyRuntimeMode, SetsFPMR]>;
+  def SVFMLALLTB_N : SInst<"svmlalltb[_n_f32_mf8]_fpm", "dd~!>", "f", MergeNone, "aarch64_sve_fp8_fmlalltb", [VerifyRuntimeMode, SetsFPMR]>;
+  def SVFMLALLTT   : SInst<"svmlalltt[_f32_mf8]_fpm",   "dd~~>", "f", MergeNone, "aarch64_sve_fp8_fmlalltt", [VerifyRuntimeMode, SetsFPMR]>;
+  def SVFMLALLTT_N : SInst<"svmlalltt[_n_f32_mf8]_fpm", "dd~!>", "f", MergeNone, "aarch64_sve_fp8_fmlalltt", [VerifyRuntimeMode, SetsFPMR]>;
+
+  // 8-bit floating-point multiply-add long long to single-precision (indexed, all top/bottom variants)
+  def SVFMLALLBB_LANE : SInst<"svmlallbb_lane[_f32_mf8]_fpm", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fmlallbb_lane", [VerifyRuntimeMode, SetsFPMR], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVFMLALLBT_LANE : SInst<"svmlallbt_lane[_f32_mf8]_fpm", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fmlallbt_lane", [VerifyRuntimeMode, SetsFPMR], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVFMLALLTB_LANE : SInst<"svmlalltb_lane[_f32_mf8]_fpm", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fmlalltb_lane", [VerifyRuntimeMode, SetsFPMR], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVFMLALLTT_LANE : SInst<"svmlalltt_lane[_f32_mf8]_fpm", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fmlalltt_lane", [VerifyRuntimeMode, SetsFPMR], [ImmCheck<3, ImmCheck0_7>]>;
+}
