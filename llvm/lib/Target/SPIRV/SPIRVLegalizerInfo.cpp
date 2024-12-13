@@ -24,6 +24,7 @@ using namespace llvm;
 using namespace llvm::LegalizeActions;
 using namespace llvm::LegalityPredicates;
 
+// clang-format off
 static const std::set<unsigned> TypeFoldingSupportingOpcs = {
     TargetOpcode::G_ADD,
     TargetOpcode::G_FADD,
@@ -54,6 +55,7 @@ static const std::set<unsigned> TypeFoldingSupportingOpcs = {
     TargetOpcode::G_SELECT,
     TargetOpcode::G_EXTRACT_VECTOR_ELT,
 };
+// clang-format on
 
 bool isTypeFoldingSupported(unsigned Opcode) {
   return TypeFoldingSupportingOpcs.count(Opcode) > 0;

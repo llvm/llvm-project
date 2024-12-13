@@ -1250,6 +1250,9 @@ defm CacheControlStoreINTEL : DecorationOperand<6443, 0, 0, [], [CacheControlsIN
 defm HostAccessINTEL : DecorationOperand<6188, 0, 0, [], [GlobalVariableHostAccessINTEL]>;
 defm InitModeINTEL : DecorationOperand<6190, 0, 0, [], [GlobalVariableFPGADecorationsINTEL]>;
 defm ImplementInRegisterMapINTEL : DecorationOperand<6191, 0, 0, [], [GlobalVariableFPGADecorationsINTEL]>;
+defm FunctionRoundingModeINTEL : DecorationOperand<5822, 0, 0, [], [FunctionFloatControlINTEL]>;
+defm FunctionDenormModeINTEL : DecorationOperand<5823, 0, 0, [], [FunctionFloatControlINTEL]>;
+defm FunctionFloatingPointModeINTEL : DecorationOperand<6080, 0, 0, [], [FunctionFloatControlINTEL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define BuiltIn enum values and at the same time
