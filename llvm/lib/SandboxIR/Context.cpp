@@ -295,20 +295,17 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
   }
   case llvm::Instruction::CatchSwitch: {
     auto *LLVMCatchSwitchInst = cast<llvm::CatchSwitchInst>(LLVMV);
-    It->second = std::unique_ptr<CatchSwitchInst>(
-        new CatchSwitchInst(LLVMCatchSwitchInst, *this));
+    It->second = std::make_unique<CatchSwitchInst>(LLVMCatchSwitchInst, *this);
     return It->second.get();
   }
   case llvm::Instruction::Resume: {
     auto *LLVMResumeInst = cast<llvm::ResumeInst>(LLVMV);
-    It->second =
-        std::unique_ptr<ResumeInst>(new ResumeInst(LLVMResumeInst, *this));
+    It->second = std::make_unique<ResumeInst>(LLVMResumeInst, *this);
     return It->second.get();
   }
   case llvm::Instruction::Switch: {
     auto *LLVMSwitchInst = cast<llvm::SwitchInst>(LLVMV);
-    It->second =
-        std::unique_ptr<SwitchInst>(new SwitchInst(LLVMSwitchInst, *this));
+    It->second = std::make_unique<SwitchInst>(LLVMSwitchInst, *this);
     return It->second.get();
   }
   case llvm::Instruction::FNeg: {
@@ -549,15 +546,15 @@ Context::createGetElementPtrInst(llvm::GetElementPtrInst *I) {
   return cast<GetElementPtrInst>(registerValue(std::move(NewPtr)));
 }
 CatchSwitchInst *Context::createCatchSwitchInst(llvm::CatchSwitchInst *I) {
-  auto NewPtr = std::unique_ptr<CatchSwitchInst>(new CatchSwitchInst(I, *this));
+  auto NewPtr = std::make_unique<CatchSwitchInst>(I, *this);
   return cast<CatchSwitchInst>(registerValue(std::move(NewPtr)));
 }
 ResumeInst *Context::createResumeInst(llvm::ResumeInst *I) {
-  auto NewPtr = std::unique_ptr<ResumeInst>(new ResumeInst(I, *this));
+  auto NewPtr = std::make_unique<ResumeInst>(I, *this);
   return cast<ResumeInst>(registerValue(std::move(NewPtr)));
 }
 SwitchInst *Context::createSwitchInst(llvm::SwitchInst *I) {
-  auto NewPtr = std::unique_ptr<SwitchInst>(new SwitchInst(I, *this));
+  auto NewPtr = std::make_unique<SwitchInst>(I, *this);
   return cast<SwitchInst>(registerValue(std::move(NewPtr)));
 }
 UnaryOperator *Context::createUnaryOperator(llvm::UnaryOperator *I) {
