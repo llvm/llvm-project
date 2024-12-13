@@ -8,7 +8,7 @@
 
 // <vector>
 
-// void assign(size_type __n, const value_type& __x);
+// void assign(size_type n, const value_type& x);
 
 #include <vector>
 #include <cassert>
@@ -18,7 +18,7 @@
 TEST_CONSTEXPR_CXX20 bool tests() {
   {   // Test with various cases where assign may or may not trigger reallocations
     { // Reallocation happens
-      TEST_CONSTEXPR std::size_t N = 128;
+      std::size_t N = 128;
       std::vector<bool> v(5, false);
       assert(v.capacity() < N);
       v.assign(N, true);
@@ -26,16 +26,16 @@ TEST_CONSTEXPR_CXX20 bool tests() {
       for (std::size_t i = 0; i < N; ++i)
         assert(v[i] == true);
     }
-    { // No reallocation: fit wintin current size
-      TEST_CONSTEXPR std::size_t N = 5;
+    { // No reallocation: fit within current size
+      std::size_t N = 5;
       std::vector<bool> v(2 * N, false);
       v.assign(N, true);
       assert(v.size() == N);
       for (std::size_t i = 0; i < N; ++i)
         assert(v[i] == true);
     }
-    { // No reallocation: fit wintin spare space
-      TEST_CONSTEXPR std::size_t N = 5;
+    { // No reallocation: fit within spare space
+      std::size_t N = 5;
       std::vector<bool> v(N / 2, false);
       v.reserve(N * 2);
       v.assign(N, true);
