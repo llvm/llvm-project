@@ -418,7 +418,7 @@ Error LinuxKernelRewriter::detectLinuxKernelVersion() {
     if (std::regex_search(S, Match, Re)) {
       const unsigned Major = std::stoi(Match[2].str());
       const unsigned Minor = std::stoi(Match[3].str());
-      const unsigned Rev = Match.size() > 5 ? std::stoi(Match[5].str()) : 0;
+      const unsigned Rev = Match[5].matched ? std::stoi(Match[5].str()) : 0;
       LinuxKernelVersion = LKVersion(Major, Minor, Rev);
       BC.outs() << "BOLT-INFO: Linux kernel version is " << Match[1].str()
                 << "\n";
