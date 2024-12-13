@@ -187,13 +187,14 @@ TEST(Attr, AnnotateType) {
   }
 
   {
-    for(auto should_have_func_type_loc: {
-	"f_macro_attribue",
-	"f_paren_attribute",
-	"f_w_paren_and_attr",
-      }) {
+    for (auto should_have_func_type_loc : {
+             "f_macro_attribue",
+             "f_paren_attribute",
+             "f_w_paren_and_attr",
+         }) {
       llvm::errs() << "O: " << should_have_func_type_loc << "\n";
-      const FunctionDecl *Func = getFunctionNode(AST.get(), should_have_func_type_loc);
+      const FunctionDecl *Func =
+          getFunctionNode(AST.get(), should_have_func_type_loc);
 
       EXPECT_TRUE(Func->getFunctionTypeLoc());
     }
