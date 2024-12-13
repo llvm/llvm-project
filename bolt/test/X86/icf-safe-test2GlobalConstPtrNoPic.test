@@ -1,5 +1,5 @@
-## Check that BOLT handles correctly folding functions with --icf=safe that can be referenced.
-## This checks global const function pointer in -fno-pic mode is handled correctly.
+## Check that BOLT handles correctly folding functions with --icf=safe that can be referenced by non-control flow instructions,
+## when binary is built with -fno-PIC/-fno-PIE mode.
 
 # REQUIRES: system-linux
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t1.o

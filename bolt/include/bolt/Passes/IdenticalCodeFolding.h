@@ -39,9 +39,7 @@ public:
     All,  // Aggressive ICF for code.
   };
   explicit IdenticalCodeFolding(const cl::opt<bool> &PrintPass)
-      : BinaryFunctionPass(PrintPass) {
-    VtableBitVector.resize((((uint64_t)1) << 32) / 8);
-  }
+      : BinaryFunctionPass(PrintPass) {}
 
   const char *getName() const override { return "identical-code-folding"; }
   Error runOnFunctions(BinaryContext &BC) override;
@@ -49,20 +47,27 @@ public:
 private:
   /// Bit vector of memory addresses of vtables.
   llvm::BitVector VtableBitVector;
-  bool isInVTable(uint64_t Address) const {
+  /// Returns true if the memory address is in the bit vector of vtables.
+  bool isAddressInVTable(uint64_t Address) const {
     return VtableBitVector.test(Address / 8);
   }
+  /// Initialize bit vector of memory addresses of vtables.
+  void initVtable() {VtableBitVector.resize((((uint64_t)1) << 32) / 8);}
+  /// Mark memory address of vtable as used.
+  void setAddressUsedInVTable(uint64_t Address) { VtableBitVector.set(Address / 8); }
   /// Scans symbol table and creates a bit vector of memory addresses of
   /// vtables.
-  void processSymbolTable(const BinaryContext &BC);
+  void initVTableReferences(const BinaryContext &BC);
   /// Analyze .text section and relocations and mark functions that are not
   /// safe to fold.
-  Error markFunctionsUnsafeToFold(BinaryContext &BC);
-  /// Process relocations in the .data section to identify function
-  /// references.
-  Error processDataRelocations(BinaryContext &BC,
-                               const SectionRef &SecRefRelData,
-                               const bool HasAddressTaken);
+  void markFunctionsUnsafeToFold(BinaryContext &BC);
+  /// Process static and dynamic relocations in the data sections to identify
+  /// function references, and marks them as unsafe to fold. It filters out
+  /// symbol references that are in vtables.
+  void analyzeDataRelocations(BinaryContext &BC);
+  /// Process functions that have CFG created and mark functions unsafe to fold
+  /// that are used in non-control flow instructions.
+  void analyzeFunctions(BinaryContext &BC);
 };
 
 } // namespace bolt

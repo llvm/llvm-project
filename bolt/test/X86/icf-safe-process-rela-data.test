@@ -1,5 +1,4 @@
-## Check that BOLT handles correctly folding functions with --icf=safe that can be referenced.
-## This checks when only reference to a function is in .rela.data section.
+## Check that BOLT handles correctly folding functions with --icf=safe that are only reference in a .rela.data section.
 
 # REQUIRES: system-linux
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t1.o

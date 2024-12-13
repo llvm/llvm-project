@@ -14,6 +14,8 @@
 #include "bolt/Core/HashUtilities.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ThreadPool.h"
@@ -354,94 +356,51 @@ typedef std::unordered_map<BinaryFunction *, std::vector<BinaryFunction *>,
 
 namespace llvm {
 namespace bolt {
-/// Scans symbol table and creates a bit vector of memory addresses of vtables.
-void IdenticalCodeFolding::processSymbolTable(const BinaryContext &BC) {
-  for (auto &[Address, Data] : BC.getBinaryData()) {
+/// Scans symbol table and creates a bit vector of memory addresses of vtable symbols.
+void IdenticalCodeFolding::initVTableReferences(const BinaryContext &BC) {
+  initVtable();
+  for (const auto &[Address, Data] : BC.getBinaryData()) {
     // Filter out all symbols that are not vtables.
     if (!Data->getName().starts_with("_ZTV"))
       continue;
-    for (uint64_t I = Address / 8, End = I + (Data->getSize() / 8); I < End;
-         ++I)
-      VtableBitVector.set(I);
+    for (uint64_t I = Address, End = I + Data->getSize(); I < End; I += 8)
+      setAddressUsedInVTable(I);
   }
 }
-Error IdenticalCodeFolding::processDataRelocations(
-    BinaryContext &BC, const SectionRef &SecRefRelData,
-    const bool HasAddressTaken) {
-  for (const RelocationRef &Rel : SecRefRelData.relocations()) {
-    if (isInVTable(Rel.getOffset()))
+void IdenticalCodeFolding::analyzeDataRelocations(BinaryContext &BC) {
+  initVTableReferences(BC);
+  for (const BinarySection &Sec : BC.sections()) {
+    if (!Sec.hasSectionRef() || !Sec.isData())
       continue;
-    symbol_iterator SymbolIter = Rel.getSymbol();
-    const ObjectFile *OwningObj = Rel.getObject();
-    assert(SymbolIter != OwningObj->symbol_end() &&
-           "relocation Symbol expected");
-    const SymbolRef &Symbol = *SymbolIter;
-    const uint64_t SymbolAddress = cantFail(Symbol.getAddress());
-    const ELFObjectFileBase *ELFObj = dyn_cast<ELFObjectFileBase>(OwningObj);
-    if (!ELFObj)
-      return createFatalBOLTError(
-          Twine("BOLT-ERROR: Only ELFObjectFileBase is supported"));
-    const int64_t Addend = getRelocationAddend(ELFObj, Rel);
-    BinaryFunction *BF = BC.getBinaryFunctionAtAddress(SymbolAddress + Addend);
-    if (!BF)
-      continue;
-    BF->setHasAddressTaken(HasAddressTaken);
+    for (const auto &Rel : Sec.relocations()) {
+      const uint64_t RelAddr = Rel.Offset + Sec.getAddress();
+      if (isAddressInVTable(RelAddr))
+        continue;
+      BinaryFunction *BF = BC.getFunctionForSymbol(Rel.Symbol);
+      if (!BF)
+        continue;
+      BF->setHasAddressTaken(true);
+    }
+    for (const auto &Rel : Sec.dynamicRelocations()) {
+      const uint64_t RelAddr = Rel.Offset + Sec.getAddress();
+      if (isAddressInVTable(RelAddr))
+        continue;
+      BinaryFunction *BF =
+          BC.getBinaryFunctionContainingAddress(Rel.Addend,
+                                                /*CheckPastEnd*/ false,
+                                                /*UseMaxSize*/ true);
+      if (!BF)
+        continue;
+      BF->setHasAddressTaken(true);
+    }
   }
-  return Error::success();
 }
-
-Error IdenticalCodeFolding::markFunctionsUnsafeToFold(BinaryContext &BC) {
-  if (!BC.isX86())
-    BC.outs() << "BOLT-WARNING: safe ICF is only supported for x86\n";
-  processSymbolTable(BC);
-  for (const auto &Sec : BC.sections()) {
-    if (!Sec.hasSectionRef() || !Sec.isRela())
-      continue;
-    const SectionRef &SecRef = Sec.getSectionRef();
-    section_iterator RelocatedSecIter = cantFail(SecRef.getRelocatedSection());
-    assert(RelocatedSecIter != SecRef.getObject()->section_end() &&
-           "Relocation section exists without corresponding relocated section");
-    const SectionRef &RelocatedSecRef = *RelocatedSecIter;
-    const StringRef RelocatedSectionName = cantFail(RelocatedSecRef.getName());
-    const bool SkipRelocs =
-        StringSwitch<bool>(RelocatedSectionName)
-            .Cases(".plt", ".got.plt", ".eh_frame", ".gcc_except_table",
-                   ".fini_array", ".init_array", true)
-            .Default(false);
-    if (!RelocatedSecRef.isData() || SkipRelocs)
-      continue;
-
-    Error ErrorStatus =
-        processDataRelocations(BC, SecRef, /* HasAddressTaken */ true);
-    if (ErrorStatus)
-      return ErrorStatus;
-  }
-  ErrorOr<BinarySection &> SecRelDataIA =
-      BC.getUniqueSectionByName(".rela.init_array");
-  if (SecRelDataIA) {
-    const SectionRef SecRefRelData = SecRelDataIA->getSectionRef();
-    Error ErrorStatus =
-        processDataRelocations(BC, SecRefRelData, /* !HasAddressTaken */ false);
-    if (ErrorStatus)
-      return ErrorStatus;
-  }
-  ErrorOr<BinarySection &> SecRelDataFIA =
-      BC.getUniqueSectionByName(".rela.fini_array");
-  if (SecRelDataFIA) {
-    const SectionRef SecRefRelData = SecRelDataFIA->getSectionRef();
-    Error ErrorStatus =
-        processDataRelocations(BC, SecRefRelData, /* !HasAddressTaken */ false);
-    if (ErrorStatus)
-      return ErrorStatus;
-  }
-
+void IdenticalCodeFolding::analyzeFunctions(BinaryContext &BC) {
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
-    for (const BinaryBasicBlock *BB : BF.getLayout().blocks()) {
-      for (const MCInst &Inst : *BB) {
+    for (const BinaryBasicBlock *BB : BF.getLayout().blocks())
+      for (const MCInst &Inst : *BB)
         if (!(BC.MIB->isCall(Inst) || BC.MIB->isBranch(Inst)))
           BF.processInstructionForFuncReferences(BC, Inst);
-      }
-    }
   };
   ParallelUtilities::PredicateTy SkipFunc =
       [&](const BinaryFunction &BF) -> bool {
@@ -459,7 +418,15 @@ Error IdenticalCodeFolding::markFunctionsUnsafeToFold(BinaryContext &BC) {
              << '\n';
     }
   });
-  return Error::success();
+}
+void IdenticalCodeFolding::markFunctionsUnsafeToFold(BinaryContext &BC) {
+  NamedRegionTimer MarkFunctionsUnsafeToFoldTimer(
+      "markFunctionsUnsafeToFold", "markFunctionsUnsafeToFold", "ICF breakdown",
+      "ICF breakdown", opts::TimeICF);
+  if (!BC.isX86())
+    BC.outs() << "BOLT-WARNING: safe ICF is only supported for x86\n";
+  analyzeDataRelocations(BC);
+  analyzeFunctions(BC);
 }
 
 Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
@@ -597,8 +564,7 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
     LLVM_DEBUG(SinglePass.stopTimer());
   };
   if (opts::ICF == ICFLevel::Safe)
-    if (Error Err = markFunctionsUnsafeToFold(BC))
-      return Err;
+    markFunctionsUnsafeToFold(BC);
   hashFunctions();
   createCongruentBuckets();
 

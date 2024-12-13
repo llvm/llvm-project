@@ -1,5 +1,5 @@
-## Check that BOLT handles correctly folding functions with --icf=safe that can be referenced.
-## It invokes BOLT twice first testing CFG path, and second when function has to be disassembled.
+## Check that BOLT handles correctly folding functions with --icf=safe that can be referenced by non-control flow instructions.
+## It invokes BOLT twice first testing CFG path, and second when functions have to be disassembled.
 
 # REQUIRES: system-linux
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t1.o
