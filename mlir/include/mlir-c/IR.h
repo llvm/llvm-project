@@ -742,6 +742,14 @@ MLIR_CAPI_EXPORTED
 void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
                        void *userData, MlirWalkOrder walkOrder);
 
+MLIR_CAPI_EXPORTED MlirLogicalResult
+mlirOperationTryFold(MlirContext mlirContext, MlirOperation mlirOp,
+                     void *mlirResults, void *mlirConstants);
+
+MLIR_CAPI_EXPORTED MlirLogicalResult mlirOperationTryFold(
+    MlirContext mlirContext, MlirOperation mlirOp, MlirValue **mlirResults,
+    size_t *numResults, MlirOperation **mlirConstants, size_t *numConstants);
+
 //===----------------------------------------------------------------------===//
 // Region API.
 //===----------------------------------------------------------------------===//

@@ -509,8 +509,12 @@ Operation *OpBuilder::create(Location loc, StringAttr opName,
   return create(state);
 }
 
-LogicalResult OpBuilder::tryFold(Operation *op,
-                                 SmallVectorImpl<Value> &results) {
+/// Attempts to fold the given operation and places new results within
+/// 'results'. Returns success if the operation was folded, failure otherwise.
+/// Note: This function does not erase the operation on a successful fold.
+LogicalResult mlir::tryFold(MLIRContext *context, Operation *op,
+                            SmallVectorImpl<Value> &results,
+                            SmallVector<Operation *, 1> &generatedConstants) {
   assert(results.empty() && "expected empty results");
   ResultRange opResults = op->getResults();
 
@@ -535,7 +539,6 @@ LogicalResult OpBuilder::tryFold(Operation *op,
 
   // A temporary builder used for creating constants during folding.
   OpBuilder cstBuilder(context);
-  SmallVector<Operation *, 1> generatedConstants;
 
   // Populate the results with the folded results.
   Dialect *dialect = op->getDialect();
@@ -568,6 +571,14 @@ LogicalResult OpBuilder::tryFold(Operation *op,
     results.push_back(constOp->getResult(0));
   }
 
+  return success();
+}
+
+LogicalResult OpBuilder::tryFold(Operation *op,
+                                 SmallVectorImpl<Value> &results) {
+  SmallVector<Operation *, 1> generatedConstants;
+  if (failed(mlir::tryFold(context, op, results, generatedConstants)))
+    return failure();
   // If we were successful, insert any generated constants.
   for (Operation *cst : generatedConstants)
     insert(cst);
