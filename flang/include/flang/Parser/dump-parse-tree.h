@@ -488,6 +488,9 @@ public:
   NODE(parser, OmpAlignment)
   NODE(parser, OmpAlignedClause)
   NODE(OmpAlignedClause, Modifier)
+  NODE(parser, OmpAtClause)
+  NODE_ENUM(OmpAtClause, ActionTime)
+  NODE_ENUM(OmpSeverityClause, Severity)
   NODE(parser, OmpAtomic)
   NODE(parser, OmpAtomicCapture)
   NODE(OmpAtomicCapture, Stmt1)
@@ -566,6 +569,7 @@ public:
   NODE(parser, OmpStepSimpleModifier)
   NODE(parser, OmpLoopDirective)
   NODE(parser, OmpMapClause)
+  NODE(parser, OmpMessageClause)
   NODE(OmpMapClause, Modifier)
   static std::string GetNodeName(const llvm::omp::Clause &x) {
     return llvm::Twine(
@@ -609,6 +613,7 @@ public:
   NODE(parser, OmpScheduleClause)
   NODE(OmpScheduleClause, Modifier)
   NODE_ENUM(OmpScheduleClause, Kind)
+  NODE(parser, OmpSeverityClause)
   NODE(parser, OmpDeviceClause)
   NODE(OmpDeviceClause, Modifier)
   NODE(parser, OmpDeviceModifier)
@@ -657,6 +662,7 @@ public:
   NODE(parser, OmpAtomicDefaultMemOrderClause)
   NODE_ENUM(common, OmpAtomicDefaultMemOrderType)
   NODE(parser, OpenMPDepobjConstruct)
+  NODE(parser, OpenMPErrorConstruct)
   NODE(parser, OpenMPFlushConstruct)
   NODE(parser, OpenMPLoopConstruct)
   NODE(parser, OpenMPExecutableAllocate)
