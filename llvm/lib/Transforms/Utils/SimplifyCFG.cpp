@@ -7474,9 +7474,6 @@ static bool simplifySwitchOfCmpIntrinsic(SwitchInst *SI, IRBuilderBase &Builder,
 /// IncomingValue and add it in the Wrapper so isEqual can do O(1) checking
 /// of the incoming values.
 struct SwitchSuccWrapper {
-  // Keep so we can use SwitchInst::setSuccessor to do the replacement. It won't
-  // be important to equality though.
-  unsigned SuccNum;
   BasicBlock *Dest;
   DenseMap<PHINode *, SmallDenseMap<BasicBlock *, Value *, 8>> *PhiPredIVs;
 };
@@ -7563,6 +7560,7 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
   SmallPtrSet<PHINode *, 8> Phis;
   SmallPtrSet<BasicBlock *, 8> Seen;
   DenseMap<PHINode *, SmallDenseMap<BasicBlock *, Value *, 8>> PhiPredIVs;
+  DenseMap<BasicBlock *, SmallVector<unsigned, 4>> BBToSuccessorIndexes;
   SmallVector<SwitchSuccWrapper> Cases;
   Cases.reserve(SI->getNumSuccessors());
 
@@ -7575,8 +7573,9 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
       continue;
 
     // FIXME: This case needs some extra care because the terminators other than
-    // SI need to be updated.
-    if (BB->hasNPredecessorsOrMore(2))
+    // SI need to be updated. For now, consider only backedges to the SI.
+    if (BB->hasNPredecessorsOrMore(4) ||
+        BB->getUniquePredecessor() != SI->getParent())
       continue;
 
     // FIXME: Relax that the terminator is a BranchInst by checking for equality
@@ -7591,8 +7590,11 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
       for (BasicBlock *Succ : BI->successors())
         for (PHINode &Phi : Succ->phis())
           Phis.insert(&Phi);
+      // Add the successor only if not previously visited.
+      Cases.emplace_back(SwitchSuccWrapper{BB, &PhiPredIVs});
     }
-    Cases.emplace_back(SwitchSuccWrapper{I, BB, &PhiPredIVs});
+
+    BBToSuccessorIndexes[BB].emplace_back(I);
   }
 
   // Precompute a data structure to improve performance of isEqual for
@@ -7627,7 +7629,9 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
       // We know that SI's parent BB no longer dominates the old case successor
       // since we are making it dead.
       Updates.push_back({DominatorTree::Delete, SI->getParent(), SSW.Dest});
-      SI->setSuccessor(SSW.SuccNum, (*It)->Dest);
+      const auto &Successors = BBToSuccessorIndexes.at(SSW.Dest);
+      for (unsigned Idx : Successors)
+        SI->setSuccessor(Idx, (*It)->Dest);
       MadeChange = true;
     }
   }
