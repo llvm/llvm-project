@@ -23,7 +23,7 @@ define <vscale x 8 x half> @fmla_2way_top(<vscale x 8 x half> %a, <vscale x 16 x
 }
 
 define <vscale x 8 x half> @fmla_2way_bot_lane(<vscale x 8 x half> %a, <vscale x 16 x i8> %s1, <vscale x 16 x i8> %s2) {
-; CHECK-LABEL: fdot_2way_bot_lane:
+; CHECK-LABEL: fmla_2way_bot_lane:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmlalb z0.h, z1.b, z2.b[3]
 ; CHECK-NEXT:    ret
@@ -32,7 +32,7 @@ define <vscale x 8 x half> @fmla_2way_bot_lane(<vscale x 8 x half> %a, <vscale x
 }
 
 define <vscale x 8 x half> @fmla_2way_top_lane(<vscale x 8 x half> %a, <vscale x 16 x i8> %s1, <vscale x 16 x i8> %s2) {
-; CHECK-LABEL: fdot_2way_top_lane:
+; CHECK-LABEL: fmla_2way_top_lane:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmlalt z0.h, z1.b, z2.b[3]
 ; CHECK-NEXT:    ret
