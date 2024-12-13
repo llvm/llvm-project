@@ -5,11 +5,11 @@
 
 static int Result;
 
-void __ubsan_report_error(const char *msg, uintptr_t caller, int abort) {
-  fprintf(stderr, "CUSTOM_CALLBACK: %s %d\n", msg, abort);
+void __ubsan_report_error(const char *msg, uintptr_t caller) {
+  fprintf(stderr, "CUSTOM_CALLBACK: %s\n", msg);
 }
 
 int main(int argc, const char** argv) {
   int32_t t0 = (~((uint32_t)0));
-// CHECK: CUSTOM_CALLBACK: implicit-conversion 0
+// CHECK: CUSTOM_CALLBACK: implicit-conversion
 }
