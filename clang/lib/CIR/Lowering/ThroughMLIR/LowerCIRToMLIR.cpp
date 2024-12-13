@@ -726,6 +726,9 @@ public:
       rewriter.replaceOpWithNewOp<mlir::arith::XOrIOp>(
           op, mlirType, adaptor.getLhs(), adaptor.getRhs());
       break;
+    case cir::BinOpKind::Max:
+      llvm_unreachable("BinOpKind::Max lowering through MLIR NYI");
+      break;
     }
 
     return mlir::LogicalResult::success();
