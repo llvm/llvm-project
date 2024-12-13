@@ -49,7 +49,7 @@ static void abort_with_message(const char *msg) {
 static void abort_with_message(const char *) { abort(); }
 #endif
 
-SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error, const char *msg,
+__attribute__((noinline)) static void report_error(const char *msg,
                              uintptr_t caller, int abort) {
   if (caller == 0)
     return;
@@ -110,12 +110,12 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
 
 #define HANDLER_RECOVER(name, msg)                               \
   INTERFACE void __ubsan_handle_##name##_minimal() {             \
-    __ubsan_report_error(msg, GET_CALLER_PC(), 0);               \
+    report_error(msg, GET_CALLER_PC(), 0);                       \
   }
 
 #define HANDLER_NORECOVER(name, msg)                             \
   INTERFACE void __ubsan_handle_##name##_minimal_abort() {       \
-    __ubsan_report_error(msg, GET_CALLER_PC(), 1);               \
+    report_error(msg, GET_CALLER_PC(), 1);                       \
   }
 
 #define HANDLER(name, msg)                                       \
