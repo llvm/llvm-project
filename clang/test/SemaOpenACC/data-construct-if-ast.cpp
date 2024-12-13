@@ -52,6 +52,8 @@ void TemplFunc() {
 #pragma acc enter data copyin(Global) if(typename T::IntTy{})
   ;
   // CHECK-NEXT: OpenACCEnterDataConstruct{{.*}}enter data
+  // CHECK-NEXT: copyin clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Global' 'int'
   // CHECK-NEXT: if clause
   // CHECK-NEXT: CXXUnresolvedConstructExpr{{.*}} 'typename T::IntTy' 'typename T::IntTy'
   // CHECK-NEXT: InitListExpr{{.*}} 'void'
@@ -60,6 +62,8 @@ void TemplFunc() {
 #pragma acc exit data copyout(Global) if(T::SomeFloat)
   ;
   // CHECK-NEXT: OpenACCExitDataConstruct{{.*}}exit data
+  // CHECK-NEXT: copyout clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Global' 'int'
   // CHECK-NEXT: if clause
   // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
   // CHECK-NEXT: NestedNameSpecifier TypeSpec 'T'
@@ -93,6 +97,8 @@ void TemplFunc() {
   // CHECK-NEXT: NullStmt
 
   // CHECK-NEXT: OpenACCEnterDataConstruct{{.*}}enter data
+  // CHECK-NEXT: copyin clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Global' 'int'
   // CHECK-NEXT: if clause
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'bool' <IntegralToBoolean>
   // CHECK-NEXT: CXXFunctionalCastExpr{{.*}}'typename InstTy::IntTy':'int' functional cast to typename struct InstTy::IntTy <NoOp>
@@ -100,6 +106,8 @@ void TemplFunc() {
   // CHECK-NEXT: NullStmt
 
   // CHECK-NEXT: OpenACCExitDataConstruct{{.*}}exit data
+  // CHECK-NEXT: copyout clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Global' 'int'
   // CHECK-NEXT: if clause
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'bool' <FloatingToBoolean>
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'float' <LValueToRValue>
