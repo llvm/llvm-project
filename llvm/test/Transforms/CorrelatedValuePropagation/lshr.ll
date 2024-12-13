@@ -50,7 +50,7 @@ entry:
   br i1 %cmp, label %bb, label %exit
 
 bb:
-; CHECK: lshr i16
+; CHECK: lshr i32
   %shr = lshr i32 %m, %n
   br label %exit
 
@@ -58,11 +58,11 @@ exit:
   ret void
 }
 
-; CHECK-LABEL: @test4(
-define void @test4(i32 %m, i32 %n) {
+; CHECK-LABEL: @test3a(
+define void @test3a(i32 %m, i32 %n) {
 entry:
   %cmp1 = icmp ult i32 %m, 65535
-  %cmp2 = icmp ule i32 %n, 65536
+  %cmp2 = icmp ult i32 %n, 17
   %cmp = and i1 %cmp1, %cmp2
   br i1 %cmp, label %bb, label %exit
 
@@ -75,11 +75,36 @@ exit:
   ret void
 }
 
+; CHECK-LABEL: @test3b(
+define void @test3b(i32 %m, i32 %n) {
+entry:
+  %cmp1 = icmp ult i32 %m, 65535
+  %cmp2 = icmp ult i32 %n, 16
+  %cmp = and i1 %cmp1, %cmp2
+  br i1 %cmp, label %bb, label %exit
+
+bb:
+; CHECK: lshr i16
+  %shr = lshr i32 %m, %n
+  br label %exit
+
+exit:
+  ret void
+}
+
 ; CHECK-LABEL: @test5
 define void @test5(i32 %n) {
   %trunc = and i32 %n, 65535
   ; CHECK: lshr i16
   %shr = lshr i32 %trunc, 2
+  ret void
+}
+
+; CHECK-LABEL: @test5a
+define void @test5a(i32 %n) {
+  %trunc = and i32 %n, 65535
+  ; CHECK: lshr i16
+  %shr = lshr i32 %trunc, 15
   ret void
 }
 
@@ -107,7 +132,7 @@ exit:
 
 ; CHECK-LABEL: @trunc_test1
 ; CHECK-NEXT: [[A1:%.*]] = lshr i32 [[A:%.*]], 16
-; CHECK-NEXT: [[B1:%.*]] = and i32 [[B:%.*]], 65535
+; CHECK-NEXT: [[B1:%.*]] = and i32 [[B:%.*]], 15
 ; CHECK-NEXT: [[A2:%.*]] = trunc i32 [[A1]] to i16
 ; CHECK-NEXT: [[B2:%.*]] = trunc i32 [[B1]] to i16
 ; CHECK-NEXT: [[C1:%.*]] = lshr i16 [[A2]], [[B2]]
@@ -117,7 +142,7 @@ exit:
 
 define i16 @trunc_test1(i32 %a, i32 %b) {
   %a.eff.trunc = lshr i32 %a, 16
-  %b.eff.trunc = and i32 %b, 65535
+  %b.eff.trunc = and i32 %b, 15
   %c = lshr i32 %a.eff.trunc, %b.eff.trunc
   %c.trunc = trunc i32 %c to i16
   ret i16 %c.trunc

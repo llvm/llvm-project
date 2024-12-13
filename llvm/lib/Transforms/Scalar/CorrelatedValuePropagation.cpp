@@ -1134,6 +1134,19 @@ static bool narrowLShr(BinaryOperator *LShr, LazyValueInfo *LVI) {
     return true;
   }
 
+  // Since LShr returns poison if the shift is larger of equal that the bit
+  // width of the argument, we must make sure that the maximal possible value
+  // for the shift is larger than the new width after narrowing. Otherwise some
+  // shifts that originally vanish would result in poison after the narrowing.
+  uint64_t MaxShiftValue64 = ShiftRange.getUnsignedMax().getZExtValue();
+  unsigned MaxShiftValue =
+      MaxShiftValue64 < std::numeric_limits<unsigned>::max()
+          ? static_cast<unsigned>(MaxShiftValue64)
+          : std::numeric_limits<unsigned>::max();
+
+  if (OrigWidth <= MaxShiftValue)
+    return false;
+
   // That's how many bits we need.
   unsigned MaxActiveBits =
       std::max(MaxActiveBitsInArg, ShiftRange.getActiveBits());
@@ -1164,6 +1177,10 @@ static bool narrowLShr(BinaryOperator *LShr, LazyValueInfo *LVI) {
       return false;
     }
   }
+
+  // See comment above MaxShiftValue.
+  if (NewWidth <= MaxShiftValue)
+    return false;
 
   // We are ready to truncate.
   IRBuilder<> B(LShr);

@@ -7,13 +7,14 @@
 ; CHECK-LABEL: @trunc_test1
 ; CHECK-NEXT: [[A1:%.*]] = lshr i32 [[A:%.*]], 16
 ; CHECK-NEXT: [[CARG:%.*]] = trunc nuw i32 [[A1]] to i16
-; CHECK-NEXT: [[CSHIFT:%.*]] = trunc i32 [[B:%.*]] to i16
+; CHECK-NEXT: [[B1:%.*]] = trunc i32 [[B:%.*]] to i16
+; CHECK-NEXT: [[CSHIFT:%.*]] = and i16 [[B1]], 15
 ; CHECK-NEXT: [[C1:%.*]] = lshr i16 [[CARG]], [[CSHIFT]]
 ; CHECK-NEXT: ret i16 [[C1]]
 
 define i16 @trunc_test1(i32 %a, i32 %b) {
   %a.eff.trunc = lshr i32 %a, 16
-  %b.eff.trunc = and i32 %b, 65535
+  %b.eff.trunc = and i32 %b, 15
   %c = lshr i32 %a.eff.trunc, %b.eff.trunc
   %c.trunc = trunc i32 %c to i16
   ret i16 %c.trunc
