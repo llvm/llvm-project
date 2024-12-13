@@ -188,4 +188,38 @@ void test5() {
   fAAliasDefaultArgRef(AAlias());
 }
 
+struct C { operator A() { return A(); } };
+struct D { D(int) {} };
+
+// expected-note@+1 {{candidate function not viable: no known conversion from 'C' to 'A &' for 1st argument}}
+void fARefConvOperator(A&);
+
+// expected-note@+1 {{candidate function not viable: no known conversion from 'int' to 'D &' for 1st argument}}
+void fDRefTemp(D&);
+
+void fAConstRefConvOperator(const A&);
+void fDConstRefTemp(const D&);
+
+void test6() {
+  fARefConvOperator(C()); // expected-error{{no matching function for call to 'fARefConvOperator'}}
+  fDRefTemp(1); // expected-error{{no matching function for call to 'fDRefTemp'}}
+
+  fAConstRefConvOperator(C());
+  fDConstRefTemp(1);
+
+  const A& cARef = C();
+  A& ARef = C(); // expected-error{{non-const lvalue reference to type 'A' cannot bind to a temporary of type 'C'}}
+
+  const D& cDRef = 1;
+  D& DRef = 1; // expected-error{{non-const lvalue reference to type 'D' cannot bind to a temporary of type 'int'}}
+}
+
+A& retARef();
+struct E { operator A&() { return retARef(); } };
+
+void test7() {
+  const A& cARef = E();
+  A& ARef = E();
+}
+
 #endif
