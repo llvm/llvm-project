@@ -2271,7 +2271,9 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
     }
   }
 #ifdef CLANG_USE_XCSELECT
-  else if (getTriple().isMacOSX()) {
+  // FIXME: This should check for `getTriple().isMacOSX()`, but this breaks
+  // many tests. See https://github.com/llvm/llvm-project/pull/119670.
+  else if (getTriple().getOS() == llvm::Triple::MacOSX) {
     char *p;
     if (!::xcselect_host_sdk_path(CLANG_XCSELECT_HOST_SDK_POLICY, &p)) {
       Args.append(Args.MakeSeparateArg(

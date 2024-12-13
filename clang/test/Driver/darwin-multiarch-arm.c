@@ -1,6 +1,3 @@
-// XFAIL: xcselect
-// FIXME: There's no reason why this should fail with CLANG_USE_XCSELECT.
-
 // Check that we compile correctly with multiple ARM -arch options.
 //
 // RUN: %clang -target arm7-apple-darwin10 -### \

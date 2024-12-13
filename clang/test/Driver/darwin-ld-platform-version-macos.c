@@ -1,5 +1,6 @@
 // XFAIL: xcselect
 // FIXME: There's no reason why this should fail with CLANG_USE_XCSELECT.
+// See https://github.com/llvm/llvm-project/pull/119670.
 
 // RUN: touch %t.o
 

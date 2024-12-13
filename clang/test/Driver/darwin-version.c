@@ -1,6 +1,3 @@
-// XFAIL: xcselect
-// FIXME: There's no reason why this should fail with CLANG_USE_XCSELECT.
-
 // RUN: %clang -target armv6-apple-darwin9 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-OSX %s
 // CHECK-VERSION-OSX: "armv6k-apple-macosx10.5.0"
