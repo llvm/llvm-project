@@ -110,14 +110,12 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
 
 #define HANDLER_RECOVER(name, msg)                               \
   INTERFACE void __ubsan_handle_##name##_minimal() {             \
-    uintptr_t caller = GET_CALLER_PC();                          \
-    __ubsan_report_error(msg, caller, 0);                        \
+    __ubsan_report_error(msg, GET_CALLER_PC(), 0);               \
   }
 
 #define HANDLER_NORECOVER(name, msg)                             \
   INTERFACE void __ubsan_handle_##name##_minimal_abort() {       \
-    uintptr_t caller = GET_CALLER_PC();                          \
-    __ubsan_report_error(msg, caller, 1);                         \
+    __ubsan_report_error(msg, GET_CALLER_PC(), 1);               \
   }
 
 #define HANDLER(name, msg)                                       \
