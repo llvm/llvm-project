@@ -326,7 +326,7 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
         }
 
         assert(I == 0);
-        return Ctx->FunArgs.get<til::SExpr *>();
+        return cast<til::SExpr *>(Ctx->FunArgs);
       }
     }
     // Map the param back to the param of the original function declaration
