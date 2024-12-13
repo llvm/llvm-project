@@ -998,7 +998,7 @@ void RegAllocFastImpl::allocVirtRegUndef(MachineOperand &MO) {
       PhysReg = getErrorAssignment(*LRI, *MO.getParent(), RC);
       LRI->Error = true;
     } else
-      PhysReg = AllocationOrder[0];
+      PhysReg = AllocationOrder.front();
   }
 
   unsigned SubRegIdx = MO.getSubReg();
