@@ -2463,20 +2463,16 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
         // Can only check for types of a known size
         if (VT == MVT::iPTR)
           continue;
-        unsigned Size = MVT(VT).getFixedSizeInBits();
-        // Make sure that the value is representable for this type.
-        if (Size >= 32)
-          continue;
+
         // Check that the value doesn't use more bits than we have. It must
         // either be a sign- or zero-extended equivalent of the original.
-        int64_t SignBitAndAbove = II->getValue() >> (Size - 1);
-        if (SignBitAndAbove == -1 || SignBitAndAbove == 0 ||
-            SignBitAndAbove == 1)
-          continue;
-
-        TP.error("Integer value '" + Twine(II->getValue()) +
-                 "' is out of range for type '" + getEnumName(VT) + "'!");
-        break;
+        unsigned Width = MVT(VT).getFixedSizeInBits();
+        int64_t Val = II->getValue();
+        if (!isIntN(Width, Val) && !isUIntN(Width, Val)) {
+          TP.error("Integer value '" + Twine(Val) +
+                   "' is out of range for type '" + getEnumName(VT) + "'!");
+          break;
+        }
       }
       return MadeChange;
     }
