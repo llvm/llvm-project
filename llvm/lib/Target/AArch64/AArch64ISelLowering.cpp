@@ -1140,6 +1140,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   setTargetDAGCombine(ISD::SCALAR_TO_VECTOR);
 
+  setTargetDAGCombine(ISD::SHL);
+
   // In case of strict alignment, avoid an excessive number of byte wide stores.
   MaxStoresPerMemsetOptSize = 8;
   MaxStoresPerMemset =
@@ -26365,6 +26367,36 @@ performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   return NVCAST;
 }
 
+static SDValue performSHLCombine(SDNode *N, SelectionDAG &DAG) {
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i32 && VT != MVT::i64)
+    return SDValue();
+
+  // If the operand is a bitwise AND with a constant RHS, and the shift is the
+  // only use, we can pull it out of the shift.
+  //
+  // (shl (and X, C1), C2) -> (and (shl X, C2), (shl C1, C2))
+  if (!Op0.hasOneUse() || Op0.getOpcode() != ISD::AND)
+    return SDValue();
+
+  ConstantSDNode *C1 = dyn_cast<ConstantSDNode>(Op0.getOperand(1));
+  ConstantSDNode *C2 = dyn_cast<ConstantSDNode>(Op1);
+  if (!C1 || !C2)
+    return SDValue();
+
+  // Might be folded into shifted add/sub, do not lower.
+  if (N->hasOneUse() && (N->use_begin()->getOpcode() == ISD::ADD ||
+                         N->use_begin()->getOpcode() == ISD::SUB))
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue NewRHS = DAG.getNode(ISD::SHL, DL, VT, Op0.getOperand(1), Op1);
+  SDValue NewShift = DAG.getNode(ISD::SHL, DL, VT, Op0->getOperand(0), Op1);
+  return DAG.getNode(ISD::AND, DL, VT, NewShift, NewRHS);
+}
+
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -26710,6 +26742,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performCTLZCombine(N, DAG, Subtarget);
   case ISD::SCALAR_TO_VECTOR:
     return performScalarToVectorCombine(N, DCI, DAG);
+  case ISD::SHL:
+    return performSHLCombine(N, DAG);
   }
   return SDValue();
 }

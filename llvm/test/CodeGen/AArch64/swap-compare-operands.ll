@@ -133,8 +133,9 @@ entry:
 
 define i1 @testSwapCmpWithShiftedZeroExtend16_64(i16 %a, i64 %b) {
 ; CHECK-LABEL: testSwapCmpWithShiftedZeroExtend16_64
-; CHECK:      cmp    x1, w0, uxth #2
-; CHECK-NEXT: cset   w0, lo
+; CHECK:      ubfiz  x8, x0, #2, #16
+; CHECK:      cmp    x8, x1
+; CHECK-NEXT: cset   w0, hi
 entry:
   %a64 = zext i16 %a to i64
   %shl.0 = shl i64 %a64, 2
@@ -144,8 +145,9 @@ entry:
 
 define i1 @testSwapCmpWithShiftedZeroExtend8_64(i8 %a, i64 %b) {
 ; CHECK-LABEL: testSwapCmpWithShiftedZeroExtend8_64
-; CHECK:      cmp    x1, w0, uxtb #4
-; CHECK-NEXT: cset    w0, lo
+; CHECK:      ubfiz  x8, x0, #4, #8
+; CHECK:      cmp    x8, x1
+; CHECK-NEXT: cset    w0, hi
 entry:
   %a64 = zext i8 %a to i64
   %shl.2 = shl i64 %a64, 4
@@ -155,8 +157,9 @@ entry:
 
 define i1 @testSwapCmpWithShiftedZeroExtend16_32(i16 %a, i32 %b) {
 ; CHECK-LABEL: testSwapCmpWithShiftedZeroExtend16_32
-; CHECK:      cmp    w1, w0, uxth #3
-; CHECK-NEXT: cset    w0, lo
+; CHECK:      ubfiz  w8, w0, #3, #16
+; CHECK:      cmp    w8, w1
+; CHECK-NEXT: cset    w0, hi
 entry:
   %a32 = zext i16 %a to i32
   %shl = shl i32 %a32, 3
@@ -166,8 +169,9 @@ entry:
 
 define i1 @testSwapCmpWithShiftedZeroExtend8_32(i8 %a, i32 %b) {
 ; CHECK-LABEL: testSwapCmpWithShiftedZeroExtend8_32
-; CHECK:      cmp    w1, w0, uxtb #4
-; CHECK-NEXT: cset    w0, lo
+; CHECK:      ubfiz  w8, w0, #4, #8
+; CHECK:      cmp    w8, w1
+; CHECK-NEXT: cset    w0, hi
 entry:
   %a32 = zext i8 %a to i32
   %shl = shl i32 %a32, 4
@@ -177,9 +181,9 @@ entry:
 
 define i1 @testSwapCmpWithTooLargeShiftedZeroExtend8_32(i8 %a, i32 %b) {
 ; CHECK-LABEL: testSwapCmpWithTooLargeShiftedZeroExtend8_32
-; CHECK:      and    [[REG:w[0-9]+]], w0, #0xff
-; CHECK:      cmp    w1, [[REG]], lsl #5
-; CHECK-NEXT: cset   w0, lo
+; CHECK:      ubfiz  w8, w0, #5, #8
+; CHECK:      cmp    w8, w1
+; CHECK-NEXT: cset   w0, hi
 entry:
   %a32 = zext i8 %a to i32
   %shl = shl i32 %a32, 5
@@ -517,7 +521,8 @@ t1:
   %shl1 = shl i64 %conv1, 4
   %na1 = sub i64 0, %shl1
   %cmp1 = icmp ne i64 %na1, %b64
-; CHECK: cmn    x3, w1, uxth #4
+; CHECK: ubfiz  x8, x1, #4, #16
+; CHECK: cmn    x3, x8
   br i1 %cmp1, label %t2, label %end
 
 t2:
@@ -525,7 +530,8 @@ t2:
   %shl2 = shl i64 %conv2, 3
   %na2 = sub i64 0, %shl2
   %cmp2 = icmp ne i64 %na2, %b64
-; CHECK: cmn    x3, w2, uxtb #3
+; CHECK: ubfiz  x8, x2, #3, #8
+; CHECK: cmn    x3, x8
   br i1 %cmp2, label %t3, label %end
 
 t3:
@@ -533,7 +539,8 @@ t3:
   %shl3 = shl i32 %conv3, 2
   %na3 = sub i32 0, %shl3
   %cmp3 = icmp ne i32 %na3, %b32
-; CHECK: cmn    w4, w1, uxth #2
+; CHECK: ubfiz  w8, w1, #2, #16
+; CHECK: cmn    w4, w8
   br i1 %cmp3, label %t4, label %end
 
 t4:
@@ -541,7 +548,8 @@ t4:
   %shl4 = shl i32 %conv4, 1
   %na4 = sub i32 0, %shl4
   %cmp4 = icmp ne i32 %na4, %b32
-; CHECK: cmn    w4, w2, uxtb #1
+; CHECK: ubfiz  w8, w2, #1, #8
+; CHECK: cmn    w4, w8
   br i1 %cmp4, label %t5, label %end
 
 t5:
@@ -549,8 +557,8 @@ t5:
   %shl5 = shl i32 %conv5, 5
   %na5 = sub i32 0, %shl5
   %cmp5 = icmp ne i32 %na5, %b32
-; CHECK: and    [[REG:w[0-9]+]], w2, #0xff
-; CHECK: cmn    w4, [[REG]], lsl #5
+; CHECK: ubfiz  w8, w2, #5, #8
+; CHECK: cmn    w4, w8
   br i1 %cmp5, label %t6, label %end
 
 t6:
