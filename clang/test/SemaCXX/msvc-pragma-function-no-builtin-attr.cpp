@@ -1,4 +1,4 @@
-// RUN: %clang_cl -fms-compatibility -Xclang -ast-dump -fsyntax-only %s | FileCheck %s
+// RUN: %clang_cl -fms-compatibility -Xclang -ast-dump -fsyntax-only -- %s | FileCheck %s
 
 extern "C" __inline float __cdecl fabsf(  float _X);
 // CHECK: FunctionDecl {{.*}} fabsf
