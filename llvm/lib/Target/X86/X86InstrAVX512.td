@@ -13533,17 +13533,17 @@ let Uses = [MXCSR] in {
 multiclass avx512_cfmaop_sh_common<bits<8> opc, string OpcodeStr, SDNode OpNode, SDNode OpNodeRnd,
                                    bit IsCommutable> {
   let Predicates = [HasFP16], Constraints = "@earlyclobber $dst, $src1 = $dst" in {
-    defm r : AVX512_maskable_3src<opc, MRMSrcReg, v4f32x_info, (outs VR128X:$dst),
+    defm r : AVX512_maskable_3src_scalar<opc, MRMSrcReg, f32x_info, (outs VR128X:$dst),
                         (ins VR128X:$src2, VR128X:$src3), OpcodeStr,
                         "$src3, $src2", "$src2, $src3",
                         (v4f32 (OpNode VR128X:$src2, VR128X:$src3, VR128X:$src1)), IsCommutable>,
                         Sched<[WriteFMAX]>;
-    defm m : AVX512_maskable_3src<opc, MRMSrcMem, v4f32x_info, (outs VR128X:$dst),
+    defm m : AVX512_maskable_3src_scalar<opc, MRMSrcMem, f32x_info, (outs VR128X:$dst),
                         (ins VR128X:$src2, ssmem:$src3), OpcodeStr,
                         "$src3, $src2", "$src2, $src3",
                         (v4f32 (OpNode VR128X:$src2, (sse_load_f32 addr:$src3), VR128X:$src1))>,
                         Sched<[WriteFMAX.Folded, WriteFMAX.ReadAfterFold]>;
-    defm rb : AVX512_maskable_3src<opc,  MRMSrcReg, v4f32x_info, (outs VR128X:$dst),
+    defm rb : AVX512_maskable_3src_scalar<opc,  MRMSrcReg, f32x_info, (outs VR128X:$dst),
                         (ins VR128X:$src2, VR128X:$src3, AVX512RC:$rc), OpcodeStr,
                         "$rc, $src3, $src2", "$src2, $src3, $rc",
                         (v4f32 (OpNodeRnd VR128X:$src2, VR128X:$src3, VR128X:$src1, (i32 timm:$rc)))>,

@@ -238,6 +238,12 @@ def SDT_ZTest               : SDTypeProfile<1, 2,
                                             [SDTCisVT<0, i32>,
                                              SDTCisVT<2, i64>]>;
 
+def SDT_ZSetJmp             : SDTypeProfile<1, 1,
+                                            [SDTCisInt<0>,
+                                             SDTCisPtrTy<1>]>;
+def SDT_ZLongJmp            : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
+
+
 //===----------------------------------------------------------------------===//
 // Node definitions
 //===----------------------------------------------------------------------===//
@@ -313,6 +319,12 @@ def z_stckf            : SDNode<"SystemZISD::STCKF", SDT_ZStoreInherent,
                                 [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 def z_tdc               : SDNode<"SystemZISD::TDC", SDT_ZTest>;
+
+def z_eh_sjlj_setjmp    : SDNode<"ISD::EH_SJLJ_SETJMP", SDT_ZSetJmp,
+                                 [SDNPHasChain, SDNPSideEffect]>;
+def z_eh_sjlj_longjmp   : SDNode<"ISD::EH_SJLJ_LONGJMP", SDT_ZLongJmp,
+                                 [SDNPHasChain, SDNPSideEffect]>;
+
 
 // Defined because the index is an i32 rather than a pointer.
 def z_vector_insert     : SDNode<"ISD::INSERT_VECTOR_ELT",

@@ -61,6 +61,10 @@ public:
                                 SMRange &SourceRange) const override;
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
 };
+
+std::unique_ptr<ScheduleDAGMutation>
+createRISCVVectorMaskDAGMutation(const TargetRegisterInfo *TRI);
+
 } // namespace llvm
 
 #endif

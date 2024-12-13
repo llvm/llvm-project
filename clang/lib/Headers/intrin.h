@@ -396,6 +396,16 @@ unsigned short __readx18word(unsigned long offset);
 unsigned long __readx18dword(unsigned long offset);
 unsigned __int64 __readx18qword(unsigned long offset);
 
+void __addx18byte(unsigned long offset, unsigned char data);
+void __addx18word(unsigned long offset, unsigned short data);
+void __addx18dword(unsigned long offset, unsigned long data);
+void __addx18qword(unsigned long offset, unsigned __int64 data);
+
+void __incx18byte(unsigned long offset);
+void __incx18word(unsigned long offset);
+void __incx18dword(unsigned long offset);
+void __incx18qword(unsigned long offset);
+
 double _CopyDoubleFromInt64(__int64);
 float _CopyFloatFromInt32(__int32);
 __int32 _CopyInt32FromFloat(float);

@@ -648,7 +648,8 @@ elementwise to the input.
 Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±infinity
 
 The integer elementwise intrinsics, including ``__builtin_elementwise_popcount``,
-can be called in a ``constexpr`` context.
+``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
+``__builtin_elementwise_sub_sat`` can be called in a ``constexpr`` context.
 
 ============================================== ====================================================================== =========================================
          Name                                   Operation                                                             Supported element types
@@ -1989,7 +1990,7 @@ Enumerations with a fixed underlying type
 -----------------------------------------
 
 Clang provides support for C++11 enumerations with a fixed underlying type
-within Objective-C.  For example, one can write an enumeration type as:
+within Objective-C and C `prior to C23 <https://open-std.org/JTC1/SC22/WG14/www/docs/n3030.htm>`_.  For example, one can write an enumeration type as:
 
 .. code-block:: c++
 
@@ -2000,6 +2001,14 @@ value, is ``unsigned char``.
 
 Use ``__has_feature(objc_fixed_enum)`` to determine whether support for fixed
 underlying types is available in Objective-C.
+
+Use ``__has_extension(c_fixed_enum)`` to determine whether support for fixed
+underlying types is available in C prior to C23. This will also report ``true`` in C23
+and later modes as the functionality is available even if it's not an extension in
+those modes.
+
+Use ``__has_feature(c_fixed_enum)`` to determine whether support for fixed
+underlying types is available in C23 and later.
 
 Interoperability with C++11 lambdas
 -----------------------------------
@@ -5542,7 +5551,7 @@ The ``#pragma clang section`` directive obeys the following rules:
 * Global variables that are initialized to zero will be placed in the named
   bss section, if one is present.
 
-* The ``#pragma clang section`` directive does not does try to infer section-kind
+* The ``#pragma clang section`` directive does not try to infer section-kind
   from the name. For example, naming a section "``.bss.mySec``" does NOT mean
   it will be a bss section name.
 

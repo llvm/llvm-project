@@ -424,14 +424,13 @@ ComplexPattern::ComplexPattern(const Record *R) {
       Properties |= 1 << SDNPMemOperand;
     } else if (Prop->getName() == "SDNPVariadic") {
       Properties |= 1 << SDNPVariadic;
-    } else if (Prop->getName() == "SDNPWantRoot") {
-      Properties |= 1 << SDNPWantRoot;
-    } else if (Prop->getName() == "SDNPWantParent") {
-      Properties |= 1 << SDNPWantParent;
     } else {
       PrintFatalError(R->getLoc(),
                       "Unsupported SD Node property '" + Prop->getName() +
                           "' on ComplexPattern '" + R->getName() + "'!");
     }
   }
+
+  WantsRoot = R->getValueAsBit("WantsRoot");
+  WantsParent = R->getValueAsBit("WantsParent");
 }

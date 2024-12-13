@@ -3983,9 +3983,11 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
                               : packOrUnPack.getSourceType();
   size_t packedRank = packedType.getRank();
   // Require output rank to match input rank + number of blocking factors.
-  if (unpackedRank + mixedTiles.size() != packedRank) {
+  size_t expectedPackedRank = unpackedRank + mixedTiles.size();
+  if (expectedPackedRank != packedRank) {
     return op->emitError(
-        "packed rank must equal unpacked rank + tiling factors");
+               "packed rank != (unpacked rank + num tiling factors), got ")
+           << packedRank << " != " << expectedPackedRank;
   }
 
   // Verify result shape is greater than the minimum expected

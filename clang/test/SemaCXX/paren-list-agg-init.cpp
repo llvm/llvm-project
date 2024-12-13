@@ -116,6 +116,7 @@ void foo(int n) { // expected-note {{declared here}}
   B b2(A(1), {}, 1);
   // beforecxx20-warning@-1 {{aggregate initialization of type 'A' from a parenthesized list of values is a C++20 extension}}
   // beforecxx20-warning@-2 {{aggregate initialization of type 'B' from a parenthesized list of values is a C++20 extension}}
+  // expected-warning@-3 {{temporary whose address is used as value of local variable 'b2' will be destroyed at the end of the full-expression}}
 
   C c(A(1), 1, 2, 3, 4);
   // expected-error@-1 {{array initializer must be an initializer list}}
@@ -262,9 +263,12 @@ struct O {
 
 O o1(0, 0, 0); // no-error
 // beforecxx20-warning@-1 {{aggregate initialization of type 'O' from a parenthesized list of values is a C++20 extension}}
+// expected-warning@-2 {{temporary whose address is used as value of local variable 'o1' will be destroyed at the end of the full-expression}}
+// expected-warning@-3 {{temporary whose address is used as value of local variable 'o1' will be destroyed at the end of the full-expression}}
 
 O o2(0, 0); // no-error
 // beforecxx20-warning@-1 {{aggregate initialization of type 'O' from a parenthesized list of values is a C++20 extension}}
+// expected-warning@-2 {{temporary whose address is used as value of local variable 'o2' will be destroyed at the end of the full-expression}}
 
 O o3(0);
 // expected-error@-1 {{reference member of type 'int &&' uninitialized}}

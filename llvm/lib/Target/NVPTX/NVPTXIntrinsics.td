@@ -536,22 +536,22 @@ multiclass CP_ASYNC_BULK_TENSOR_G2S_INTR<int dim, bit is_shared32, string mode> 
   defvar asm_str = !if(!eq(mode, "im2col"),
     !strconcat(asm_str_default, im2col_asm_str), asm_str_default);
 
-  def "": NVPTXInst<(outs),
-          !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag),
-          !strconcat(G2S_STRINGS<dim, mode, 0, 0>.inst_name, asm_str, ";"), []>,
-          Requires<[hasPTX<80>, hasSM<90>]>;
-  def _MC: NVPTXInst<(outs),
-           !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag, (ins Int16Regs:$mc)),
-           !strconcat(G2S_STRINGS<dim, mode, 1, 0>.inst_name, asm_str, ", $mc;"), []>,
-           Requires<[hasPTX<80>, hasSM<90>]>;
-  def _CH: NVPTXInst<(outs),
-           !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag, (ins Int64Regs:$ch)),
-           !strconcat(G2S_STRINGS<dim, mode, 0, 1>.inst_name, asm_str, ", $ch;"), []>,
-           Requires<[hasPTX<80>, hasSM<90>]>;
-  def _MC_CH: NVPTXInst<(outs),
-              !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag, (ins Int16Regs:$mc, Int64Regs:$ch)),
-              !strconcat(G2S_STRINGS<dim, mode, 1, 1>.inst_name, asm_str, ", $mc, $ch;"), []>,
-              Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME: NVPTXInst<(outs),
+            !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag),
+            !strconcat(G2S_STRINGS<dim, mode, 0, 0>.inst_name, asm_str, ";"), []>,
+            Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME # _MC: NVPTXInst<(outs),
+                  !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag, (ins Int16Regs:$mc)),
+                  !strconcat(G2S_STRINGS<dim, mode, 1, 0>.inst_name, asm_str, ", $mc;"), []>,
+                  Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME # _CH: NVPTXInst<(outs),
+                  !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag, (ins Int64Regs:$ch)),
+                  !strconcat(G2S_STRINGS<dim, mode, 0, 1>.inst_name, asm_str, ", $ch;"), []>,
+                  Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME # _MC_CH: NVPTXInst<(outs),
+                     !con((ins rc:$dst, rc:$mbar, Int64Regs:$tmap), dims_dag, im2col_dag, (ins Int16Regs:$mc, Int64Regs:$ch)),
+                     !strconcat(G2S_STRINGS<dim, mode, 1, 1>.inst_name, asm_str, ", $mc, $ch;"), []>,
+                     Requires<[hasPTX<80>, hasSM<90>]>;
 }
 
 foreach dim = [1, 2, 3, 4, 5] in {
@@ -588,14 +588,14 @@ multiclass CP_ASYNC_BULK_TENSOR_S2G_INTR<int dim, bit shared32, string mode> {
   defvar asm_str = " [$tmap, {{" # dims_str # "}}], [$src]";
   defvar rc = !if(shared32, Int32Regs, Int64Regs);
 
-  def "": NVPTXInst<(outs),
-          !con((ins rc:$src, Int64Regs:$tmap), dims_dag),
-          !strconcat(S2G_STRINGS<dim, mode, 0>.inst_name, asm_str, ";"), []>,
-          Requires<[hasPTX<80>, hasSM<90>]>;
-  def _CH: NVPTXInst<(outs),
-           !con((ins rc:$src, Int64Regs:$tmap), dims_dag, (ins Int64Regs:$ch)),
-           !strconcat(S2G_STRINGS<dim, mode, 1>.inst_name, asm_str, ", $ch;"), []>,
-           Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME: NVPTXInst<(outs),
+            !con((ins rc:$src, Int64Regs:$tmap), dims_dag),
+            !strconcat(S2G_STRINGS<dim, mode, 0>.inst_name, asm_str, ";"), []>,
+            Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME # _CH: NVPTXInst<(outs),
+                  !con((ins rc:$src, Int64Regs:$tmap), dims_dag, (ins Int64Regs:$ch)),
+                  !strconcat(S2G_STRINGS<dim, mode, 1>.inst_name, asm_str, ", $ch;"), []>,
+                  Requires<[hasPTX<80>, hasSM<90>]>;
 }
 
 def TMAReductionFlags : Operand<i32> {
@@ -662,14 +662,14 @@ multiclass CP_ASYNC_BULK_TENSOR_PREFETCH_INTR<int dim, string mode> {
   defvar asm_str = !if(!eq(mode, "im2col"),
     !strconcat(asm_str_default, im2col_asm_str), asm_str_default);
 
-  def "": NVPTXInst<(outs),
-          !con((ins Int64Regs:$tmap), dims_dag, im2col_dag),
-          !strconcat(PREFETCH_STRINGS<dim, mode, 0>.inst_name, asm_str, ";"), []>,
-          Requires<[hasPTX<80>, hasSM<90>]>;
-  def _CH: NVPTXInst<(outs),
-           !con((ins Int64Regs:$tmap), dims_dag, im2col_dag, (ins Int64Regs:$ch)),
-           !strconcat(PREFETCH_STRINGS<dim, mode, 1>.inst_name, asm_str, ", $ch;"), []>,
-           Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME: NVPTXInst<(outs),
+            !con((ins Int64Regs:$tmap), dims_dag, im2col_dag),
+            !strconcat(PREFETCH_STRINGS<dim, mode, 0>.inst_name, asm_str, ";"), []>,
+            Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME # _CH: NVPTXInst<(outs),
+                  !con((ins Int64Regs:$tmap), dims_dag, im2col_dag, (ins Int64Regs:$ch)),
+                  !strconcat(PREFETCH_STRINGS<dim, mode, 1>.inst_name, asm_str, ", $ch;"), []>,
+                  Requires<[hasPTX<80>, hasSM<90>]>;
 }
 
 foreach dim = [1, 2, 3, 4, 5] in {
