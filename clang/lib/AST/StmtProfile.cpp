@@ -2561,6 +2561,9 @@ void OpenACCClauseProfiler::VisitSelfClause(const OpenACCSelfClause &Clause) {
 void OpenACCClauseProfiler::VisitFinalizeClause(
     const OpenACCFinalizeClause &Clause) {}
 
+void OpenACCClauseProfiler::VisitIfPresentClause(
+    const OpenACCIfPresentClause &Clause) {}
+
 void OpenACCClauseProfiler::VisitNumGangsClause(
     const OpenACCNumGangsClause &Clause) {
   for (auto *E : Clause.getIntExprs())

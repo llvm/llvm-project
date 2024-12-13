@@ -45,8 +45,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'finalize' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*) finalize
   while(1);
-  // expected-error@+2{{OpenACC clause 'if_present' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'if_present' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*) if_present
   while(1);
   // expected-error@+1{{OpenACC 'seq' clause is not valid on 'kernels' directive}}
