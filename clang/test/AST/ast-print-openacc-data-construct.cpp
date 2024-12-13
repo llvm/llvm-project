@@ -117,4 +117,7 @@ void foo() {
 // CHECK: #pragma acc host_data if_present
 #pragma acc host_data use_device(i) if_present
   ;
+// CHECK: #pragma acc exit data copyout(i) detach(iPtr, arrayPtr[0])
+#pragma acc exit data copyout(i) detach(iPtr, arrayPtr[0])
+
 }

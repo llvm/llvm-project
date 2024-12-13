@@ -425,6 +425,14 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
       return false;
     }
   }
+  case OpenACCClauseKind::Detach: {
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::ExitData:
+      return true;
+    default:
+      return false;
+    }
+  }
   }
 
   default:
@@ -1039,6 +1047,21 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitAttachClause(
   Clause.setVarListDetails(VarList,
                            /*IsReadOnly=*/false, /*IsZero=*/false);
   return OpenACCAttachClause::Create(Ctx, Clause.getBeginLoc(),
+                                     Clause.getLParenLoc(), Clause.getVarList(),
+                                     Clause.getEndLoc());
+}
+
+OpenACCClause *SemaOpenACCClauseVisitor::VisitDetachClause(
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  // ActOnVar ensured that everything is a valid variable reference, but we
+  // still have to make sure it is a pointer type.
+  llvm::SmallVector<Expr *> VarList{Clause.getVarList()};
+  llvm::erase_if(VarList, [&](Expr *E) {
+    return SemaRef.CheckVarIsPointerType(OpenACCClauseKind::Detach, E);
+  });
+  Clause.setVarListDetails(VarList,
+                           /*IsReadOnly=*/false, /*IsZero=*/false);
+  return OpenACCDetachClause::Create(Ctx, Clause.getBeginLoc(),
                                      Clause.getLParenLoc(), Clause.getVarList(),
                                      Clause.getEndLoc());
 }

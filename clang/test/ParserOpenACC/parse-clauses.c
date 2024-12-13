@@ -488,14 +488,13 @@ void VarListClauses() {
 #pragma acc serial attach(IsPointer), self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'detach' not yet implemented, clause ignored}}
-#pragma acc serial detach(s.array[s.value] s.array[s.value :5] ), self
-  for(int i = 0; i < 5;++i) {}
+  // expected-error@+4{{expected ','}}
+  // expected-error@+3{{expected pointer in 'detach' clause, type is 'char'}}
+  // expected-error@+2{{OpenACC sub-array is not allowed here}}
+  // expected-note@+1{{expected variable of pointer type}}
+#pragma acc exit data copyout(s) detach(s.array[s.value] s.array[s.value :5])
 
-  // expected-warning@+1{{OpenACC clause 'detach' not yet implemented, clause ignored}}
-#pragma acc serial detach(s.array[s.value : 5], s.value), self
-  for(int i = 0; i < 5;++i) {}
+#pragma acc exit data copyout(s) detach(IsPointer)
 
   // expected-error@+1{{expected ','}}
 #pragma acc serial private(s.array[s.value] s.array[s.value :5] ), self

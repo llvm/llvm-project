@@ -2605,6 +2605,12 @@ void OpenACCClauseProfiler::VisitAttachClause(
     Profiler.VisitStmt(E);
 }
 
+void OpenACCClauseProfiler::VisitDetachClause(
+    const OpenACCDetachClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
+
 void OpenACCClauseProfiler::VisitDevicePtrClause(
     const OpenACCDevicePtrClause &Clause) {
   for (auto *E : Clause.getVarList())

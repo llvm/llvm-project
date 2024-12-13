@@ -75,8 +75,7 @@ void AtLeastOneOf() {
 #pragma acc exit data copyout(Var)
   // expected-warning@+1{{OpenACC clause 'delete' not yet implemented}}
 #pragma acc exit data delete(Var)
-  // expected-warning@+1{{OpenACC clause 'detach' not yet implemented}}
-#pragma acc exit data detach(Var)
+#pragma acc exit data detach(VarPtr)
 
   // OpenACC TODO: The following 'exit data' directives should diagnose, since
   // they don't have at least one of the above clauses.
