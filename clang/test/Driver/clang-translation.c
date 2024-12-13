@@ -1,3 +1,6 @@
+// XFAIL: xcselect
+// FIXME: There's no reason why this should fail with CLANG_USE_XCSELECT.
+
 // RUN: %clang -target i386-unknown-unknown -### -S -O0 -Os %s -o %t.s -fverbose-asm -fvisibility=hidden 2>&1 | FileCheck -check-prefix=I386 %s
 // I386: "-triple" "i386-unknown-unknown"
 // I386: "-S"

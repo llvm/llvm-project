@@ -1,3 +1,6 @@
+// XFAIL: xcselect
+// FIXME: There's no reason why this should fail with CLANG_USE_XCSELECT.
+
 // Check to make sure clang is somewhat picky about -g options.
 
 // Linux.

@@ -2272,15 +2272,11 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   }
 #ifdef CLANG_USE_XCSELECT
   else if (getTriple().isMacOSX()) {
-    const char *env = ::getenv("CLANG_NO_XCSELECT");
-
-    if (!env || !*env) {
-      char *p;
-      if (!::xcselect_host_sdk_path(CLANG_XCSELECT_HOST_SDK_POLICY, &p)) {
-        Args.append(Args.MakeSeparateArg(
-            nullptr, Opts.getOption(options::OPT_isysroot), p));
-        ::free(p);
-      }
+    char *p;
+    if (!::xcselect_host_sdk_path(CLANG_XCSELECT_HOST_SDK_POLICY, &p)) {
+      Args.append(Args.MakeSeparateArg(
+          nullptr, Opts.getOption(options::OPT_isysroot), p));
+      ::free(p);
     }
   }
 #endif
