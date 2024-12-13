@@ -758,6 +758,15 @@ static Domain getDomain(const ConstantRange &CR) {
   return Domain::Unknown;
 }
 
+/// Returns the optimal bit width for the narrowed type.
+/// If desiredBitWidth is greater that 32 returns max int and thus effectively
+/// turns of the narrowing. For desiredBitWidth <= 32 returns i8, i16, i32.
+static unsigned getNarrowedWidth(unsigned desiredBitWidth) {
+  return desiredBitWidth <= 32
+             ? std::max<unsigned>(PowerOf2Ceil(desiredBitWidth), 8)
+             : std::numeric_limits<unsigned>::max();
+}
+
 /// Try to shrink a sdiv/srem's width down to the smallest power of two that's
 /// sufficient to contain its operands.
 static bool narrowSDivOrSRem(BinaryOperator *Instr, const ConstantRange &LCR,
@@ -781,7 +790,7 @@ static bool narrowSDivOrSRem(BinaryOperator *Instr, const ConstantRange &LCR,
     ++MinSignedBits;
 
   // Don't shrink below 8 bits wide.
-  unsigned NewWidth = std::max<unsigned>(PowerOf2Ceil(MinSignedBits), 8);
+  unsigned NewWidth = getNarrowedWidth(MinSignedBits);
 
   // NewWidth might be greater than OrigWidth if OrigWidth is not a power of
   // two.
@@ -899,7 +908,7 @@ static bool narrowUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
   // of both of the operands?
   unsigned MaxActiveBits = std::max(XCR.getActiveBits(), YCR.getActiveBits());
   // Don't shrink below 8 bits wide.
-  unsigned NewWidth = std::max<unsigned>(PowerOf2Ceil(MaxActiveBits), 8);
+  unsigned NewWidth = getNarrowedWidth(MaxActiveBits);
 
   // NewWidth might be greater than OrigWidth if OrigWidth is not a power of
   // two.
@@ -1156,7 +1165,7 @@ static bool narrowLShr(BinaryOperator *LShr, LazyValueInfo *LVI) {
 
   // What is the smallest bit width that can accommodate the entire value ranges
   // of both of the operands? Don't shrink below 8 bits wide.
-  unsigned NewWidth = std::max<unsigned>(PowerOf2Ceil(MaxActiveBits), 8);
+  unsigned NewWidth = getNarrowedWidth(MaxActiveBits);
 
   // NewWidth might be greater than OrigWidth if OrigWidth is not a power of
   // two.
