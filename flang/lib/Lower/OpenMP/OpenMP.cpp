@@ -1184,6 +1184,7 @@ static void genTargetClauses(
     llvm::SmallVectorImpl<const semantics::Symbol *> &isDevicePtrSyms,
     llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms) {
   ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processBare(clauseOps);
   cp.processDepend(clauseOps);
   cp.processDevice(stmtCtx, clauseOps);
   cp.processHasDeviceAddr(clauseOps, hasDeviceAddrSyms);
@@ -2860,6 +2861,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
         !std::holds_alternative<clause::Nowait>(clause.u) &&
         !std::holds_alternative<clause::NumTeams>(clause.u) &&
         !std::holds_alternative<clause::NumThreads>(clause.u) &&
+        !std::holds_alternative<clause::OmpxBare>(clause.u) &&
         !std::holds_alternative<clause::Priority>(clause.u) &&
         !std::holds_alternative<clause::Private>(clause.u) &&
         !std::holds_alternative<clause::ProcBind>(clause.u) &&
