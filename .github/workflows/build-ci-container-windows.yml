@@ -53,7 +53,7 @@ jobs:
           retention-days: 14
   
   push-ci-container:
-    if: github.event_name == 'push'
+    #if: github.event_name == 'push'
     needs:
       - build-ci-container-windows
     permissions:
@@ -68,8 +68,8 @@ jobs:
           name: container
       - name: Push Container
         run: |
-          docker load -i ${{ needs.build-ci-container.outptus.container-filename }}
+          docker load -i ${{ needs.build-ci-container-windows.outputs.container-filename }}
           docker tag ${{ steps.vars.outputs.container-name-tag }} ${{ steps.vars.outputs.container-name }}:latest
           docker login -u ${{ github.actor }} -p $env:GITHUB_TOKEN ghcr.io
-          docker push ${{ needs.build-ci-container.outputs.container-name-tag }}
-          docker push ${{ needs.build-ci-container.outputs.container-name }}:latest
+          docker push ${{ needs.build-ci-container-windows.outputs.container-name-tag }}
+          docker push ${{ needs.build-ci-container-windows.outputs.container-name }}:latest
