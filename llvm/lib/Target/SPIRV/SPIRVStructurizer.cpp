@@ -1255,7 +1255,7 @@ PreservedAnalyses SPIRVStructurizerWrapper::run(Function &F,
   FPM.add(new LoopInfoWrapperPass());
   FPM.add(new SPIRVConvergenceRegionAnalysisWrapperPass());
   FPM.add(createSPIRVStructurizerPass());
-  
+
   if (!FPM.run(F))
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
