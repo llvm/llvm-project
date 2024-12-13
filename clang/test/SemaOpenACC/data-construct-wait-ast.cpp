@@ -34,6 +34,8 @@ void NormalUses() {
   // CHECK-NEXT: <<<NULL>>>
 #pragma acc exit data copyout(I) wait(some_int(), some_long())
   // CHECK: OpenACCExitDataConstruct{{.*}}exit data
+  // CHECK-NEXT: copyout clause
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'I' 'int'
   // CHECK-NEXT: wait clause
   // CHECK-NEXT: <<<NULL>>>
   // CHECK-NEXT: CallExpr{{.*}}'int'
@@ -72,6 +74,8 @@ void NormalUses() {
   // CHECK-NEXT: DeclRefExpr{{.*}}'long ()' lvalue Function{{.*}} 'some_long' 'long ()'
 #pragma acc exit data copyout(I) wait(devnum: some_int() : queues :some_int(), some_long()) wait(devnum: some_int() : queues :some_int(), some_long())
   // CHECK: OpenACCExitDataConstruct{{.*}}exit data
+  // CHECK-NEXT: copyout clause
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'I' 'int'
   // CHECK-NEXT: wait clause has devnum has queues tag
   // CHECK-NEXT: CallExpr{{.*}}'int'
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'int (*)()' <FunctionToPointerDecay>
@@ -124,6 +128,8 @@ void TemplUses(U u) {
 
 #pragma acc exit data copyout(I) wait(U::value, u)
   // CHECK: OpenACCExitDataConstruct{{.*}}exit data
+  // CHECK-NEXT: copyout clause
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'I' 'U'
   // CHECK-NEXT: wait clause
   // CHECK-NEXT: <<<NULL>>>
   // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
@@ -154,6 +160,8 @@ void TemplUses(U u) {
 
 #pragma acc exit data copyout(I) wait(devnum:u: U::value, u)
   // CHECK: OpenACCExitDataConstruct{{.*}}exit data
+  // CHECK-NEXT: copyout clause
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'I' 'U'
   // CHECK-NEXT: wait clause has devnum
   // CHECK-NEXT: DeclRefExpr{{.*}} 'U' lvalue ParmVar{{.*}} 'u' 'U'
   // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
@@ -185,6 +193,8 @@ void TemplUses(U u) {
   // CHECK-NEXT: <<<NULL>>>
 
   // CHECK: OpenACCExitDataConstruct{{.*}}exit data
+  // CHECK-NEXT: copyout clause
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'I' 'HasInt'
   // CHECK-NEXT: wait clause
   // CHECK-NEXT: <<<NULL>>>
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int' <LValueToRValue>
@@ -226,6 +236,8 @@ void TemplUses(U u) {
   // CHECK-NEXT: DeclRefExpr{{.*}} 'HasInt' lvalue ParmVar
 
   // CHECK: OpenACCExitDataConstruct{{.*}}exit data
+  // CHECK-NEXT: copyout clause
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'I' 'HasInt'
   // CHECK-NEXT: wait clause has devnum
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'char' <UserDefinedConversion>
   // CHECK-NEXT: CXXMemberCallExpr{{.*}}'char'
