@@ -10,7 +10,6 @@
 #include "src/__support/OSUtil/io.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/null_check.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_main.h"
 #include "src/stdio/printf_core/writer.h"
@@ -31,7 +30,6 @@ LIBC_INLINE int raw_write_hook(cpp::string_view new_str, void *) {
 
 LLVM_LIBC_FUNCTION(int, vprintf,
                    (const char *__restrict format, va_list vlist)) {
-  LIBC_CRASH_ON_NULLPTR(format);
   internal::ArgList args(vlist); // This holder class allows for easier copying
                                  // and pointer semantics, as well as handling
                                  // destruction automatically.
