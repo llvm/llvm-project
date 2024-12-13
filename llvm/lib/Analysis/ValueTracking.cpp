@@ -8781,10 +8781,8 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
   return matchFastFloatClamp(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal, LHS, RHS);
 }
 
-static Value *lookThroughCastConst(CmpInst *CmpI, Value *V1, Value *V2,
+static Value *lookThroughCastConst(CmpInst *CmpI, CastInst *Cast1, Constant *C,
                                    Instruction::CastOps *CastOp) {
-  auto *Cast1 = dyn_cast<CastInst>(V1);
-  auto *C = dyn_cast<Constant>(V2);
   Type *SrcTy = Cast1->getSrcTy();
   const DataLayout &DL = CmpI->getDataLayout();
 
@@ -8897,7 +8895,7 @@ static Value *lookThroughCast(CmpInst *CmpI, Value *V1, Value *V2,
 
   auto *C = dyn_cast<Constant>(V2);
   if (C)
-    return lookThroughCastConst(CmpI, V1, V2, CastOp);
+    return lookThroughCastConst(CmpI, Cast1, C, CastOp);
 
   Value *CastedTo = nullptr;
   if (*CastOp == Instruction::Trunc) {
