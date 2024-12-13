@@ -1,10 +1,17 @@
 // RUN: rm -rf %t
 // RUN: mkdir %t
+
 // RUN: clang-doc --doxygen --executor=standalone %s -output=%t/docs
 // RUN: cat %t/docs/index.yaml | FileCheck %s --check-prefix=YAML
 
+// RUN: clang-doc --doxygen --executor=standalone %s -output=%t/docs --format=md
+// RUN: cat %t/docs/GlobalNamespace/index.md | FileCheck %s --check-prefix=MD
+
 // YAML: ---
 // YAML-NEXT: USR:             '{{([0-9A-F]{40})}}'
+
+// MD: # Global Namespace
+// MD: ## Functions
 
 template<class... T>
 void ParamPackFunction(T... args);
@@ -28,6 +35,9 @@ void ParamPackFunction(T... args);
 // YAML-NEXT:      Params:
 // YAML-NEXT:        - Contents:        'class... T'
 
+// MD: ### ParamPackFunction
+// MD: *void ParamPackFunction(T... args)*
+
 template<typename T, int U = 1>
 void function(T x) {}
 
@@ -49,6 +59,10 @@ void function(T x) {}
 // YAML-NEXT:       Params:
 // YAML-NEXT:         - Contents:        'typename T'
 // YAML-NEXT:         - Contents:        'int U = 1'
+
+// MD: ### function
+// MD: *void function(T x)*
+// MD: *Defined at {{.*}}templates.cpp#[[# @LINE - 23]]*
 
 template<>
 void function<bool, 0>(bool x) {}
@@ -74,4 +88,8 @@ void function<bool, 0>(bool x) {}
 // YAML-NEXT:           - Contents:        'bool'
 // YAML-NEXT:           - Contents:        '0'
 // YAML-NEXT: ...
+
+// MD: ### function
+// MD: *void function(_Bool x)*
+// MD: *Defined at {{.*}}templates.cpp#[[# @LINE - 27]]*
 
