@@ -107,15 +107,16 @@ bool all_of_tuple_elements(const TupleTy &Ops, Fn P) {
 
 } // namespace detail
 
-template <typename Ops_t, typename SCEVTy> struct SCEV_match {
+template <typename Ops_t, typename SCEVTy> struct SCEVExpr_match {
   Ops_t Ops;
 
-  SCEV_match() : Ops() {
+  SCEVExpr_match() : Ops() {
     static_assert(std::tuple_size<Ops_t>::value == 0 &&
                   "constructor can only be used with zero operands");
   }
-  SCEV_match(Ops_t Ops) : Ops(Ops) {}
-  template <typename A_t, typename B_t> SCEV_match(A_t A, B_t B) : Ops({A, B}) {
+  SCEVExpr_match(Ops_t Ops) : Ops(Ops) {}
+  template <typename A_t, typename B_t>
+  SCEVExpr_match(A_t A, B_t B) : Ops({A, B}) {
     static_assert(std::tuple_size<Ops_t>::value == 2 &&
                   "constructor can only be used for binary matcher");
   }
@@ -131,38 +132,38 @@ template <typename Ops_t, typename SCEVTy> struct SCEV_match {
 };
 
 template <typename Op0_t, typename Op1_t, typename SCEVTy>
-using BinarySCEV_match = SCEV_match<std::tuple<Op0_t, Op1_t>, SCEVTy>;
+using BinarySCEVExpr_match = SCEVExpr_match<std::tuple<Op0_t, Op1_t>, SCEVTy>;
 
 template <typename Op0_t, typename Op1_t, typename SCEVTy>
-inline BinarySCEV_match<Op0_t, Op1_t, SCEVTy> m_scev_Binary(const Op0_t &Op0,
-                                                            const Op1_t &Op1) {
-  return BinarySCEV_match<Op0_t, Op1_t, SCEVTy>(Op0, Op1);
+inline BinarySCEVExpr_match<Op0_t, Op1_t, SCEVTy>
+m_scev_Binary(const Op0_t &Op0, const Op1_t &Op1) {
+  return BinarySCEVExpr_match<Op0_t, Op1_t, SCEVTy>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>
-inline BinarySCEV_match<Op0_t, Op1_t, SCEVAddExpr>
+inline BinarySCEVExpr_match<Op0_t, Op1_t, SCEVAddExpr>
 m_scev_Add(const Op0_t &Op0, const Op1_t &Op1) {
-  return BinarySCEV_match<Op0_t, Op1_t, SCEVAddExpr>(Op0, Op1);
+  return BinarySCEVExpr_match<Op0_t, Op1_t, SCEVAddExpr>(Op0, Op1);
 }
 
 template <typename Op0_t, typename SCEVTy>
-using UnarySCEV_match = SCEV_match<std::tuple<Op0_t>, SCEVTy>;
+using UnarySCEVExpr_match = SCEVExpr_match<std::tuple<Op0_t>, SCEVTy>;
 
 template <typename Op0_t, typename Op1_t, typename SCEVTy>
-inline UnarySCEV_match<Op0_t, SCEVTy> m_scev_Unary(const Op0_t &Op0) {
-  return UnarySCEV_match<Op0_t, SCEVTy>(Op0);
+inline UnarySCEVExpr_match<Op0_t, SCEVTy> m_scev_Unary(const Op0_t &Op0) {
+  return UnarySCEVExpr_match<Op0_t, SCEVTy>(Op0);
 }
 
 template <typename Op0_t>
-inline UnarySCEV_match<Op0_t, SCEVSignExtendExpr>
+inline UnarySCEVExpr_match<Op0_t, SCEVSignExtendExpr>
 m_scev_SExt(const Op0_t &Op0) {
-  return UnarySCEV_match<Op0_t, SCEVSignExtendExpr>(Op0);
+  return UnarySCEVExpr_match<Op0_t, SCEVSignExtendExpr>(Op0);
 }
 
 template <typename Op0_t>
-inline UnarySCEV_match<Op0_t, SCEVZeroExtendExpr>
+inline UnarySCEVExpr_match<Op0_t, SCEVZeroExtendExpr>
 m_scev_ZExt(const Op0_t &Op0) {
-  return UnarySCEV_match<Op0_t, SCEVZeroExtendExpr>(Op0);
+  return UnarySCEVExpr_match<Op0_t, SCEVZeroExtendExpr>(Op0);
 }
 
 } // namespace SCEVPatternMatch
