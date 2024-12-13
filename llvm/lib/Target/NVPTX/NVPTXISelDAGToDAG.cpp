@@ -1238,6 +1238,7 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
       EltVT = OrigType;
       NumElts /= 2;
     } else if (OrigType == MVT::v4i8) {
+      assert(NumElts % 4 == 0 && "NumElts must be a multuple of 4");
       EltVT = OrigType;
       NumElts /= 4;
     }
