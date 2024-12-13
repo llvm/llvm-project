@@ -50,9 +50,13 @@ define void @nxv2i64(ptr %ldptr, ptr %stptr) {
   ret void
 }
 
-; FIXME: Support TLI.expandUnalignedLoad()/TLI.expandUnalignedStore() for SVE.
-; define void @unaligned_nxv2i64(ptr %ldptr, ptr %stptr) {
-;   %l3 = load <vscale x 2 x i64>, ptr %ldptr, align 4
-;   store <vscale x 2 x i64> %l3, ptr %stptr, align 4
-;   ret void
-; }
+define void @nxv16i1(ptr %ldptr, ptr %stptr) {
+; CHECK-LABEL: nxv16i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr p0, [x0]
+; CHECK-NEXT:    str p0, [x1]
+; CHECK-NEXT:    ret
+  %l3 = load <vscale x 16 x i1>, ptr %ldptr, align 2
+  store <vscale x 16 x i1> %l3, ptr %stptr, align 2
+  ret void
+}

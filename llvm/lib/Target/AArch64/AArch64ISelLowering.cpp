@@ -2571,14 +2571,16 @@ bool AArch64TargetLowering::allowsMisalignedMemoryAccesses(
     unsigned *Fast) const {
 
   // Allow SVE loads/stores where the alignment >= the size of the element type,
-  // even with +strict-align. The SVE loads/stores do not require memory to be
-  // aligned more than the element type even without unaligned accesses.
-  // Without this, already aligned loads and stores are forced to have 16-byte
-  // alignment, which is unnecessary and fails to build as
-  // TLI.expandUnalignedLoad() and TLI.expandUnalignedStore() don't yet support
-  // scalable vectors.
-  if (VT.isScalableVector() && Alignment >= Align(VT.getScalarSizeInBits() / 8))
-    return true;
+  // even with +strict-align. Predicated SVE loads/stores (e.g. ld1/st1), used
+  // for stores that come from IR, only require element-size alignment (even if
+  // unaligned accesses are disabled). Without this, these will be forced to
+  // have 16-byte alignment with +strict-align (and fail to lower as we don't
+  // yet support TLI.expandUnalignedLoad() and TLI.expandUnalignedStore()).
+  if (VT.isScalableVector()) {
+    unsigned ElementSizeBits = VT.getScalarSizeInBits();
+    if (ElementSizeBits % 8 == 0 && Alignment >= Align(ElementSizeBits / 8))
+      return true;
+  }
 
   if (Subtarget->requiresStrictAlign())
     return false;
