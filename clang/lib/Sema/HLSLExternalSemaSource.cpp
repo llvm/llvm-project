@@ -198,6 +198,7 @@ public:
     ASTContext &AST = Record->getASTContext();
     IdentifierInfo &II = AST.Idents.get("Load", tok::TokenKind::identifier);
     DeclarationName Load(&II);
+    // TODO: We also need versions with status for CheckAccessFullyMapped.
     addHandleAccessFunction(Load, /*IsConst=*/false, /*IsRef=*/false);
 
     return *this;
