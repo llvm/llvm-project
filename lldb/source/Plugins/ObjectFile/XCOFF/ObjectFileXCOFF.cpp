@@ -143,12 +143,8 @@ bool ObjectFileXCOFF::IsExecutable() const { return true; }
 
 uint32_t ObjectFileXCOFF::GetAddressByteSize() const {
 
-  // 32-bit not supprted. return 8 for 64-bit XCOFF::XCOFF64
+  // 32-bit not supported. return 8 for 64-bit XCOFF::XCOFF64
   return 8;
-}
-
-AddressClass ObjectFileXCOFF::GetAddressClass(addr_t file_addr) {
-  return AddressClass::eUnknown;
 }
 
 void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {}
