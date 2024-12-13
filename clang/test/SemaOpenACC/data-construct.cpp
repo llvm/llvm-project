@@ -25,7 +25,6 @@ void AtLeastOneOf() {
   ;
 #pragma acc data copyin(Var)
   ;
-  // expected-warning@+1{{OpenACC clause 'copyout' not yet implemented}}
 #pragma acc data copyout(Var)
   ;
 #pragma acc data create(Var)
@@ -76,7 +75,6 @@ void AtLeastOneOf() {
 #pragma acc enter data
 
   // Exit Data
-  // expected-warning@+1{{OpenACC clause 'copyout' not yet implemented}}
 #pragma acc exit data copyout(Var)
   // expected-warning@+1{{OpenACC clause 'delete' not yet implemented}}
 #pragma acc exit data delete(Var)

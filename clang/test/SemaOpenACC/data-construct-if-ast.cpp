@@ -62,6 +62,8 @@ void TemplFunc() {
 #pragma acc exit data copyout(Global) if(T::SomeFloat)
   ;
   // CHECK-NEXT: OpenACCExitDataConstruct{{.*}}exit data
+  // CHECK-NEXT: copyout clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Global' 'int'
   // CHECK-NEXT: if clause
   // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
   // CHECK-NEXT: NestedNameSpecifier TypeSpec 'T'
@@ -104,6 +106,8 @@ void TemplFunc() {
   // CHECK-NEXT: NullStmt
 
   // CHECK-NEXT: OpenACCExitDataConstruct{{.*}}exit data
+  // CHECK-NEXT: copyout clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Global' 'int'
   // CHECK-NEXT: if clause
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'bool' <FloatingToBoolean>
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'float' <LValueToRValue>
