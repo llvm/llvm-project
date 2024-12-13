@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -ast-dump-filter=__is_raw_resource_element_compatible %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -ast-dump-filter=__is_structured_resource_element_compatible %s | FileCheck %s
 
-// CHECK: ConceptDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> __is_raw_resource_element_compatible
+// CHECK: ConceptDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> __is_structured_resource_element_compatible
 // CHECK: |-TemplateTypeParmDecl 0x{{[0-9a-f]+}} <<invalid sloc>> <invalid sloc> referenced typename depth 0 index 0 element_type
 // CHECK: `-BinaryOperator 0x{{[0-9a-f]+}} <<invalid sloc>> 'bool' lvalue '&&'
 // CHECK:   |-UnaryOperator 0x{{[0-9a-f]+}} <<invalid sloc>> 'bool' lvalue prefix '~' cannot overflow

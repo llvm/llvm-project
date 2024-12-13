@@ -868,8 +868,9 @@ static Expr *constructTypedBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
   return TypedResExpr;
 }
 
-static Expr *constructRawBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
-                                              TemplateTypeParmDecl *T) {
+static Expr *constructStructuredBufferConstraintExpr(Sema &S,
+                                                     SourceLocation NameLoc,
+                                                     TemplateTypeParmDecl *T) {
   ASTContext &Context = S.getASTContext();
 
   // Obtain the QualType for 'bool'
@@ -944,8 +945,8 @@ static ConceptDecl *constructTypedBufferConceptDecl(Sema &S, NamespaceDecl *NSD,
     ConstraintExpr = constructTypedBufferConstraintExpr(S, DeclLoc, T);
   } else {
     DeclName = DeclarationName(
-        &Context.Idents.get("__is_raw_resource_element_compatible"));
-    ConstraintExpr = constructRawBufferConstraintExpr(S, DeclLoc, T);
+        &Context.Idents.get("__is_structured_resource_element_compatible"));
+    ConstraintExpr = constructStructuredBufferConstraintExpr(S, DeclLoc, T);
   }
 
   // Create a ConceptDecl
@@ -966,7 +967,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   CXXRecordDecl *Decl;
   ConceptDecl *TypedBufferConcept = constructTypedBufferConceptDecl(
       *SemaPtr, HLSLNamespace, /*isTypedBuffer*/ true);
-  ConceptDecl *RawBufferConcept = constructTypedBufferConceptDecl(
+  ConceptDecl *StructuredBufferConcept = constructTypedBufferConceptDecl(
       *SemaPtr, HLSLNamespace, /*isTypedBuffer*/ false);
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWBuffer")
              .addSimpleTemplateParams({"element_type"}, TypedBufferConcept)
@@ -982,7 +983,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
 
   Decl =
       BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RasterizerOrderedBuffer")
-          .addSimpleTemplateParams({"element_type"}, RawBufferConcept)
+          .addSimpleTemplateParams({"element_type"}, StructuredBufferConcept)
           .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
@@ -993,7 +994,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   });
 
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "StructuredBuffer")
-             .addSimpleTemplateParams({"element_type"}, RawBufferConcept)
+             .addSimpleTemplateParams({"element_type"}, StructuredBufferConcept)
              .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::SRV, ResourceKind::RawBuffer,
@@ -1003,7 +1004,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   });
 
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWStructuredBuffer")
-             .addSimpleTemplateParams({"element_type"}, RawBufferConcept)
+             .addSimpleTemplateParams({"element_type"}, StructuredBufferConcept)
              .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
@@ -1016,7 +1017,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
 
   Decl =
       BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "AppendStructuredBuffer")
-          .addSimpleTemplateParams({"element_type"}, RawBufferConcept)
+          .addSimpleTemplateParams({"element_type"}, StructuredBufferConcept)
           .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
@@ -1027,7 +1028,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
 
   Decl =
       BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "ConsumeStructuredBuffer")
-          .addSimpleTemplateParams({"element_type"}, RawBufferConcept)
+          .addSimpleTemplateParams({"element_type"}, StructuredBufferConcept)
           .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
@@ -1038,7 +1039,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
 
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace,
                                 "RasterizerOrderedStructuredBuffer")
-             .addSimpleTemplateParams({"element_type"}, RawBufferConcept)
+             .addSimpleTemplateParams({"element_type"}, StructuredBufferConcept)
              .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
