@@ -734,7 +734,7 @@ kernel void test_alignbit(global uint* out, uint src0, uint src1, uint src2) {
 }
 
 // CHECK-LABEL: @test_alignbyte(
-// CHECK: tail call{{.*}} i32 @llvm.amdgcn.alignbyte(i32 %src0, i32 %src1, i32 %src2)
+// CHECK: tail call{{.*}} i32 @llvm.amdgcn.alignbyte.i32(i32 %src0, i32 %src1, i32 %src2)
 kernel void test_alignbyte(global uint* out, uint src0, uint src1, uint src2) {
   *out = __builtin_amdgcn_alignbyte(src0, src1, src2);
 }
