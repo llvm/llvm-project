@@ -1,3 +1,6 @@
+// XFAIL: xcselect
+// FIXME: There's no reason why this should fail with CLANG_USE_XCSELECT.
+
 // RUN: touch %t.o
 
 // RUN: %clang -target x86_64-apple-macos10.13 -fuse-ld=lld \

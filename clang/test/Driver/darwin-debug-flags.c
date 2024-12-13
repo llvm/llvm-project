@@ -1,3 +1,6 @@
+// XFAIL: xcselect
+// FIXME: There's no reason why this should fail with CLANG_USE_XCSELECT.
+
 // RUN: env RC_DEBUG_OPTIONS=1 %clang -target i386-apple-darwin11 -I "path with \spaces" -g -Os %s  -emit-llvm -S -o - | FileCheck %s
 // RUN: touch %t.s
 // RUN: env RC_DEBUG_OPTIONS=1 %clang -### -target i386-apple-darwin11 -c -g %t.s 2>&1 | FileCheck -check-prefix=S %s

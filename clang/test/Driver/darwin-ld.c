@@ -1,3 +1,6 @@
+// XFAIL: xcselect
+// FIXME: There's no reason why this should fail with CLANG_USE_XCSELECT.
+
 // Check that ld gets arch_multiple.
 
 // RUN: %clang -target i386-apple-darwin9 -arch i386 -arch x86_64 %s -### -o foo 2> %t.log

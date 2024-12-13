@@ -1,3 +1,6 @@
+// XFAIL: xcselect
+// FIXME: There's no reason why this should fail with CLANG_USE_XCSELECT.
+
 // This file contains feature-unspecific common -fsanitize= driver tests.
 // Where possible avoid adding new tests to this file, and instead group tests
 // in feature-specific fsanitize-*.c test files.

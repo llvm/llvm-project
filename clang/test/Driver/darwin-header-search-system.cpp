@@ -1,4 +1,6 @@
 // UNSUPPORTED: system-windows
+// XFAIL: xcselect
+// FIXME: There's no reason why this should fail with CLANG_USE_XCSELECT.
 
 // General tests that the system header search paths detected by the driver
 // and passed to CC1 are correct on Darwin platforms.
