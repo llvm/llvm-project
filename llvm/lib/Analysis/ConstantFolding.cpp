@@ -291,6 +291,143 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
   return ConstantVector::get(Result);
 }
 
+//===----------------------------------------------------------------------===//
+// NVVM-specific internal helper functions
+//===----------------------------------------------------------------------===//
+
+static bool NVVMIntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  // Float to i32 / i64 conversion intrinsics:
+  case Intrinsic::nvvm_f2i_rm_ftz:
+  case Intrinsic::nvvm_f2i_rn_ftz:
+  case Intrinsic::nvvm_f2i_rp_ftz:
+  case Intrinsic::nvvm_f2i_rz_ftz:
+
+  case Intrinsic::nvvm_f2ui_rm_ftz:
+  case Intrinsic::nvvm_f2ui_rn_ftz:
+  case Intrinsic::nvvm_f2ui_rp_ftz:
+  case Intrinsic::nvvm_f2ui_rz_ftz:
+
+  case Intrinsic::nvvm_f2ll_rm_ftz:
+  case Intrinsic::nvvm_f2ll_rn_ftz:
+  case Intrinsic::nvvm_f2ll_rp_ftz:
+  case Intrinsic::nvvm_f2ll_rz_ftz:
+
+  case Intrinsic::nvvm_f2ull_rm_ftz:
+  case Intrinsic::nvvm_f2ull_rn_ftz:
+  case Intrinsic::nvvm_f2ull_rp_ftz:
+  case Intrinsic::nvvm_f2ull_rz_ftz:
+    return true;
+  }
+  return false;
+}
+
+static bool NVVMIntrinsicConvertsToSignedInteger(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  // f2i
+  case Intrinsic::nvvm_f2i_rm:
+  case Intrinsic::nvvm_f2i_rm_ftz:
+  case Intrinsic::nvvm_f2i_rn:
+  case Intrinsic::nvvm_f2i_rn_ftz:
+  case Intrinsic::nvvm_f2i_rp:
+  case Intrinsic::nvvm_f2i_rp_ftz:
+  case Intrinsic::nvvm_f2i_rz:
+  case Intrinsic::nvvm_f2i_rz_ftz:
+  // d2i
+  case Intrinsic::nvvm_d2i_rm:
+  case Intrinsic::nvvm_d2i_rn:
+  case Intrinsic::nvvm_d2i_rp:
+  case Intrinsic::nvvm_d2i_rz:
+  // f2ll
+  case Intrinsic::nvvm_f2ll_rm:
+  case Intrinsic::nvvm_f2ll_rm_ftz:
+  case Intrinsic::nvvm_f2ll_rn:
+  case Intrinsic::nvvm_f2ll_rn_ftz:
+  case Intrinsic::nvvm_f2ll_rp:
+  case Intrinsic::nvvm_f2ll_rp_ftz:
+  case Intrinsic::nvvm_f2ll_rz:
+  case Intrinsic::nvvm_f2ll_rz_ftz:
+  // d2ll
+  case Intrinsic::nvvm_d2ll_rm:
+  case Intrinsic::nvvm_d2ll_rn:
+  case Intrinsic::nvvm_d2ll_rp:
+  case Intrinsic::nvvm_d2ll_rz:
+    return true;
+  }
+  return false;
+}
+
+static APFloat::roundingMode
+NVVMIntrinsicGetRoundingMode(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  // RM:
+  case Intrinsic::nvvm_f2i_rm:
+  case Intrinsic::nvvm_f2ui_rm:
+  case Intrinsic::nvvm_f2i_rm_ftz:
+  case Intrinsic::nvvm_f2ui_rm_ftz:
+  case Intrinsic::nvvm_d2i_rm:
+  case Intrinsic::nvvm_d2ui_rm:
+
+  case Intrinsic::nvvm_f2ll_rm:
+  case Intrinsic::nvvm_f2ull_rm:
+  case Intrinsic::nvvm_f2ll_rm_ftz:
+  case Intrinsic::nvvm_f2ull_rm_ftz:
+  case Intrinsic::nvvm_d2ll_rm:
+  case Intrinsic::nvvm_d2ull_rm:
+    return APFloat::rmTowardNegative;
+
+  // RN:
+  case Intrinsic::nvvm_f2i_rn:
+  case Intrinsic::nvvm_f2ui_rn:
+  case Intrinsic::nvvm_f2i_rn_ftz:
+  case Intrinsic::nvvm_f2ui_rn_ftz:
+  case Intrinsic::nvvm_d2i_rn:
+  case Intrinsic::nvvm_d2ui_rn:
+
+  case Intrinsic::nvvm_f2ll_rn:
+  case Intrinsic::nvvm_f2ull_rn:
+  case Intrinsic::nvvm_f2ll_rn_ftz:
+  case Intrinsic::nvvm_f2ull_rn_ftz:
+  case Intrinsic::nvvm_d2ll_rn:
+  case Intrinsic::nvvm_d2ull_rn:
+    return APFloat::rmNearestTiesToEven;
+
+  // RP:
+  case Intrinsic::nvvm_f2i_rp:
+  case Intrinsic::nvvm_f2ui_rp:
+  case Intrinsic::nvvm_f2i_rp_ftz:
+  case Intrinsic::nvvm_f2ui_rp_ftz:
+  case Intrinsic::nvvm_d2i_rp:
+  case Intrinsic::nvvm_d2ui_rp:
+
+  case Intrinsic::nvvm_f2ll_rp:
+  case Intrinsic::nvvm_f2ull_rp:
+  case Intrinsic::nvvm_f2ll_rp_ftz:
+  case Intrinsic::nvvm_f2ull_rp_ftz:
+  case Intrinsic::nvvm_d2ll_rp:
+  case Intrinsic::nvvm_d2ull_rp:
+    return APFloat::rmTowardPositive;
+
+  // RZ:
+  case Intrinsic::nvvm_f2i_rz:
+  case Intrinsic::nvvm_f2ui_rz:
+  case Intrinsic::nvvm_f2i_rz_ftz:
+  case Intrinsic::nvvm_f2ui_rz_ftz:
+  case Intrinsic::nvvm_d2i_rz:
+  case Intrinsic::nvvm_d2ui_rz:
+
+  case Intrinsic::nvvm_f2ll_rz:
+  case Intrinsic::nvvm_f2ull_rz:
+  case Intrinsic::nvvm_f2ll_rz_ftz:
+  case Intrinsic::nvvm_f2ull_rz_ftz:
+  case Intrinsic::nvvm_d2ll_rz:
+  case Intrinsic::nvvm_d2ull_rz:
+    return APFloat::rmTowardZero;
+  }
+  llvm_unreachable("Invalid f2i/d2i rounding mode intrinsic");
+  return APFloat::roundingMode::Invalid;
+}
+
 } // end anonymous namespace
 
 /// If this constant is a constant offset from a global, return the global and
@@ -1902,10 +2039,9 @@ inline bool llvm_fenv_testexcept() {
   return false;
 }
 
-static const APFloat FTZPreserveSign(Type *Ty, const APFloat &V) {
+static const APFloat FTZPreserveSign(const APFloat &V) {
   if (V.isDenormal())
-    return APFloat::getZero(Ty->getFltSemantics(), V.isNegative());
-
+    return APFloat::getZero(V.getSemantics(), V.isNegative());
   return V;
 }
 
@@ -2431,138 +2567,14 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       if (U.isNaN())
         return ConstantInt::get(Ty, 0);
 
-      APFloat::roundingMode RMode = APFloat::roundingMode::Invalid;
-      switch (IntrinsicID) {
-      // i_rm
-      case Intrinsic::nvvm_f2i_rm:
-      case Intrinsic::nvvm_f2ui_rm:
-      case Intrinsic::nvvm_f2i_rm_ftz:
-      case Intrinsic::nvvm_f2ui_rm_ftz:
-      case Intrinsic::nvvm_d2i_rm:
-      case Intrinsic::nvvm_d2ui_rm:
-      // ll_rm
-      case Intrinsic::nvvm_f2ll_rm:
-      case Intrinsic::nvvm_f2ull_rm:
-      case Intrinsic::nvvm_f2ll_rm_ftz:
-      case Intrinsic::nvvm_f2ull_rm_ftz:
-      case Intrinsic::nvvm_d2ll_rm:
-      case Intrinsic::nvvm_d2ull_rm:
-        RMode = APFloat::rmTowardNegative;
-        break;
-
-      // i_rn
-      case Intrinsic::nvvm_f2i_rn:
-      case Intrinsic::nvvm_f2ui_rn:
-      case Intrinsic::nvvm_f2i_rn_ftz:
-      case Intrinsic::nvvm_f2ui_rn_ftz:
-      case Intrinsic::nvvm_d2i_rn:
-      case Intrinsic::nvvm_d2ui_rn:
-      // ll_rn
-      case Intrinsic::nvvm_f2ll_rn:
-      case Intrinsic::nvvm_f2ull_rn:
-      case Intrinsic::nvvm_f2ll_rn_ftz:
-      case Intrinsic::nvvm_f2ull_rn_ftz:
-      case Intrinsic::nvvm_d2ll_rn:
-      case Intrinsic::nvvm_d2ull_rn:
-        RMode = APFloat::rmNearestTiesToEven;
-        break;
-
-      // i_rp
-      case Intrinsic::nvvm_f2i_rp:
-      case Intrinsic::nvvm_f2ui_rp:
-      case Intrinsic::nvvm_f2i_rp_ftz:
-      case Intrinsic::nvvm_f2ui_rp_ftz:
-      case Intrinsic::nvvm_d2i_rp:
-      case Intrinsic::nvvm_d2ui_rp:
-      // ll_rp
-      case Intrinsic::nvvm_f2ll_rp:
-      case Intrinsic::nvvm_f2ull_rp:
-      case Intrinsic::nvvm_f2ll_rp_ftz:
-      case Intrinsic::nvvm_f2ull_rp_ftz:
-      case Intrinsic::nvvm_d2ll_rp:
-      case Intrinsic::nvvm_d2ull_rp:
-        RMode = APFloat::rmTowardPositive;
-        break;
-
-      // i_rz
-      case Intrinsic::nvvm_f2i_rz:
-      case Intrinsic::nvvm_f2ui_rz:
-      case Intrinsic::nvvm_f2i_rz_ftz:
-      case Intrinsic::nvvm_f2ui_rz_ftz:
-      case Intrinsic::nvvm_d2i_rz:
-      case Intrinsic::nvvm_d2ui_rz:
-      // ll_rz
-      case Intrinsic::nvvm_f2ll_rz:
-      case Intrinsic::nvvm_f2ull_rz:
-      case Intrinsic::nvvm_f2ll_rz_ftz:
-      case Intrinsic::nvvm_f2ull_rz_ftz:
-      case Intrinsic::nvvm_d2ll_rz:
-      case Intrinsic::nvvm_d2ull_rz:
-        RMode = APFloat::rmTowardZero;
-        break;
-      default:
-        llvm_unreachable("Invalid f2i/d2i rounding mode intrinsic");
-      }
+      APFloat::roundingMode RMode = NVVMIntrinsicGetRoundingMode(IntrinsicID);
       assert(RM != APFloat::roundingMode::Invalid);
 
-      bool IsFTZ = false;
-      switch (IntrinsicID) {
-      case Intrinsic::nvvm_f2i_rm_ftz:
-      case Intrinsic::nvvm_f2i_rn_ftz:
-      case Intrinsic::nvvm_f2i_rp_ftz:
-      case Intrinsic::nvvm_f2i_rz_ftz:
-      case Intrinsic::nvvm_f2ui_rm_ftz:
-      case Intrinsic::nvvm_f2ui_rn_ftz:
-      case Intrinsic::nvvm_f2ui_rp_ftz:
-      case Intrinsic::nvvm_f2ui_rz_ftz:
-      case Intrinsic::nvvm_f2ll_rm_ftz:
-      case Intrinsic::nvvm_f2ll_rn_ftz:
-      case Intrinsic::nvvm_f2ll_rp_ftz:
-      case Intrinsic::nvvm_f2ll_rz_ftz:
-      case Intrinsic::nvvm_f2ull_rm_ftz:
-      case Intrinsic::nvvm_f2ull_rn_ftz:
-      case Intrinsic::nvvm_f2ull_rp_ftz:
-      case Intrinsic::nvvm_f2ull_rz_ftz:
-        IsFTZ = true;
-        break;
-      }
-
-      bool IsSigned = false;
-      switch (IntrinsicID) {
-      // f2i
-      case Intrinsic::nvvm_f2i_rm:
-      case Intrinsic::nvvm_f2i_rm_ftz:
-      case Intrinsic::nvvm_f2i_rn:
-      case Intrinsic::nvvm_f2i_rn_ftz:
-      case Intrinsic::nvvm_f2i_rp:
-      case Intrinsic::nvvm_f2i_rp_ftz:
-      case Intrinsic::nvvm_f2i_rz:
-      case Intrinsic::nvvm_f2i_rz_ftz:
-      // d2i
-      case Intrinsic::nvvm_d2i_rm:
-      case Intrinsic::nvvm_d2i_rn:
-      case Intrinsic::nvvm_d2i_rp:
-      case Intrinsic::nvvm_d2i_rz:
-      // f2ll
-      case Intrinsic::nvvm_f2ll_rm:
-      case Intrinsic::nvvm_f2ll_rm_ftz:
-      case Intrinsic::nvvm_f2ll_rn:
-      case Intrinsic::nvvm_f2ll_rn_ftz:
-      case Intrinsic::nvvm_f2ll_rp:
-      case Intrinsic::nvvm_f2ll_rp_ftz:
-      case Intrinsic::nvvm_f2ll_rz:
-      case Intrinsic::nvvm_f2ll_rz_ftz:
-      // d2ll
-      case Intrinsic::nvvm_d2ll_rm:
-      case Intrinsic::nvvm_d2ll_rn:
-      case Intrinsic::nvvm_d2ll_rp:
-      case Intrinsic::nvvm_d2ll_rz:
-        IsSigned = true;
-        break;
-      }
+      bool IsFTZ = NVVMIntrinsicShouldFTZ(IntrinsicID);
+      bool IsSigned = NVVMIntrinsicConvertsToSignedInteger(IntrinsicID);
 
       APSInt ResInt(Ty->getIntegerBitWidth(), !IsSigned);
-      auto FloatToRound = IsFTZ ? FTZPreserveSign(Op->getType(), U) : U;
+      auto FloatToRound = IsFTZ ? FTZPreserveSign(U) : U;
 
       bool IsExact = false;
       APFloat::opStatus Status =
