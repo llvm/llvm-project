@@ -722,15 +722,18 @@ basic_string_view(_Range) -> basic_string_view<ranges::range_value_t<_Range>>;
 
 // [string.view.comparison]
 
-#  if _LIBCPP_STD_VER >= 20
-
-template <class _CharT, class _Traits>
-_LIBCPP_HIDE_FROM_ABI constexpr bool operator==(basic_string_view<_CharT, _Traits> __lhs,
-                                                type_identity_t<basic_string_view<_CharT, _Traits>> __rhs) noexcept {
+// The dummy default template parameters are used to work around a MSVC issue with mangling, see VSO-409326 for details.
+// This applies to the other sufficient overloads below for the other comparison operators.
+template <class _CharT, class _Traits, int = 1>
+_LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI bool
+operator==(basic_string_view<_CharT, _Traits> __lhs,
+           __type_identity_t<basic_string_view<_CharT, _Traits> > __rhs) _NOEXCEPT {
   if (__lhs.size() != __rhs.size())
     return false;
   return __lhs.compare(__rhs) == 0;
 }
+
+#  if _LIBCPP_STD_VER >= 20
 
 template <class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI constexpr auto operator<=>(basic_string_view<_CharT, _Traits> __lhs,
@@ -757,51 +760,32 @@ operator==(basic_string_view<_CharT, _Traits> __lhs, basic_string_view<_CharT, _
   return __lhs.compare(__rhs) == 0;
 }
 
-// The dummy default template parameters are used to work around a MSVC issue with mangling, see VSO-409326 for details.
-// This applies to the other sufficient overloads below for the other comparison operators.
-template <class _CharT, class _Traits, int = 1>
-_LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI bool
-operator==(basic_string_view<_CharT, _Traits> __lhs,
-           __type_identity_t<basic_string_view<_CharT, _Traits> > __rhs) _NOEXCEPT {
-  if (__lhs.size() != __rhs.size())
-    return false;
-  return __lhs.compare(__rhs) == 0;
-}
-
 template <class _CharT, class _Traits, int = 2>
 _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI bool
 operator==(__type_identity_t<basic_string_view<_CharT, _Traits> > __lhs,
            basic_string_view<_CharT, _Traits> __rhs) _NOEXCEPT {
-  if (__lhs.size() != __rhs.size())
-    return false;
-  return __lhs.compare(__rhs) == 0;
+  return __lhs == __rhs;
 }
 
 // operator !=
 template <class _CharT, class _Traits>
 _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI bool
 operator!=(basic_string_view<_CharT, _Traits> __lhs, basic_string_view<_CharT, _Traits> __rhs) _NOEXCEPT {
-  if (__lhs.size() != __rhs.size())
-    return true;
-  return __lhs.compare(__rhs) != 0;
+  return !(__lhs == __rhs);
 }
 
 template <class _CharT, class _Traits, int = 1>
 _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI bool
 operator!=(basic_string_view<_CharT, _Traits> __lhs,
            __type_identity_t<basic_string_view<_CharT, _Traits> > __rhs) _NOEXCEPT {
-  if (__lhs.size() != __rhs.size())
-    return true;
-  return __lhs.compare(__rhs) != 0;
+  return !(__lhs == __rhs);
 }
 
 template <class _CharT, class _Traits, int = 2>
 _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI bool
 operator!=(__type_identity_t<basic_string_view<_CharT, _Traits> > __lhs,
            basic_string_view<_CharT, _Traits> __rhs) _NOEXCEPT {
-  if (__lhs.size() != __rhs.size())
-    return true;
-  return __lhs.compare(__rhs) != 0;
+  return !(__lhs == __rhs);
 }
 
 // operator <
