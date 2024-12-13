@@ -440,6 +440,9 @@ public:
   StmtResult ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
                                       Stmt *AStmt, SourceLocation StartLoc,
                                       SourceLocation EndLoc);
+  StmtResult ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
+                                        Stmt *AStmt, SourceLocation StartLoc,
+                                        SourceLocation EndLoc);
   /// Called on well-formed '#pragma omp unroll' after parsing of its clauses
   /// and the associated statement.
   StmtResult ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
