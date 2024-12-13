@@ -1,7 +1,3 @@
-// XFAIL: xcselect
-// FIXME: There's no reason why this should fail with CLANG_USE_XCSELECT.
-// See https://github.com/llvm/llvm-project/pull/119670.
-
 // RUN: touch %t.o
 
 // RUN: %clang -target x86_64-apple-macos10.13 -fuse-ld=lld \
@@ -47,8 +43,8 @@
 
 // RUN: %clang -target x86_64-apple-macos10.13 -mlinker-version=520 \
 // RUN:   -### %t.o 2>&1 \
-// RUN:   | FileCheck --check-prefix=NOSDK %s
+// RUN:   | FileCheck --check-prefix=INFERRED-SDK %s
 // RUN: %clang -target x86_64-apple-darwin17 -mlinker-version=520 \
 // RUN:   -### %t.o 2>&1 \
-// RUN:   | FileCheck --check-prefix=NOSDK %s
-// NOSDK: "-platform_version" "macos" "10.13.0" "10.13.0"
+// RUN:   | FileCheck --check-prefix=INFERRED-SDK %s
+// INFERRED-SDK: "-platform_version" "macos" "10.13.0" "{{[0-9]+(\.[0-9]+)*}}"
