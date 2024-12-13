@@ -773,11 +773,17 @@ StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {
       // First see if the frame is already realized.  This is the scope for
       // the shared mutex:
       std::shared_lock<std::shared_mutex> guard(m_list_mutex);
-      // Do a binary search in case the stack frame is already in our cache
-      collection::const_iterator pos =
-          llvm::lower_bound(m_frames, stack_id, CompareStackID);
-      if (pos != m_frames.end() && (*pos)->GetStackID() == stack_id)
-        return *pos;
+      // Do a search in case the stack frame is already in our cache.
+      collection::const_iterator begin = m_frames.begin();
+      collection::const_iterator end = m_frames.end();
+      if (begin != end) {
+        collection::const_iterator pos =
+            std::find_if(begin, end, [&](StackFrameSP frame_sp) {
+              return frame_sp->GetStackID() == stack_id;
+            });
+        if (pos != end)
+          return *pos;
+      } 
     }
     // If we needed to add more frames, we would get to here.
     do {
