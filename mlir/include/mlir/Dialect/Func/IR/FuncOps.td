@@ -98,10 +98,6 @@ def CallOp : Func_Op<"call",
     void setCalleeFromCallable(CallInterfaceCallable callee) {
       (*this)->setAttr("callee", callee.get<SymbolRefAttr>());
     }
-
-    bool legalToInline() {
-      return !(*this)->hasAttr("noinline");
-    }
   }];
 
   let assemblyFormat = [{

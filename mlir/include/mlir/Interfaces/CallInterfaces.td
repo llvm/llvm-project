@@ -80,16 +80,6 @@ def CallOpInterface : OpInterface<"CallOpInterface"> {
       /*methodBody=*/[{}], /*defaultImplementation=*/[{
         return ::mlir::call_interface_impl::resolveCallable($_op);
       }]
-    >,
-    InterfaceMethod<[{
-        Return whether a given call is legal to inline or not (assuming all other requirements are met,
-        like the callee is direct, the parent region supports multiple blocks and the resolved, etc).
-        This can be used to implement a `noinline`-like attribute.
-    }],
-      "bool", "legalToInline", (ins),
-      /*methodBody=*/[{}], /*defaultImplementation=*/[{
-        return true;
-      }]
     >
   ];
 }
