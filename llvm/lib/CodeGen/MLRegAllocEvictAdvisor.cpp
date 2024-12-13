@@ -554,7 +554,7 @@ private:
   std::unique_ptr<Logger> Log;
 };
 
-#endif //#ifdef LLVM_HAVE_TFLITE
+#endif // #ifdef LLVM_HAVE_TFLITE
 } // namespace
 
 float MLEvictAdvisor::getInitialQueueSize(const MachineFunction &MF) {
