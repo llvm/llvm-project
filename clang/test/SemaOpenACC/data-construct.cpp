@@ -29,7 +29,6 @@ void AtLeastOneOf() {
   // expected-warning@+1{{OpenACC clause 'copyout' not yet implemented}}
 #pragma acc data copyout(Var)
   ;
-  // expected-warning@+1{{OpenACC clause 'create' not yet implemented}}
 #pragma acc data create(Var)
   ;
 #pragma acc data no_create(Var)
@@ -66,7 +65,6 @@ void AtLeastOneOf() {
   // Enter Data
   // expected-warning@+1{{OpenACC clause 'copyin' not yet implemented}}
 #pragma acc enter data copyin(Var)
-  // expected-warning@+1{{OpenACC clause 'create' not yet implemented}}
 #pragma acc enter data create(Var)
   // expected-warning@+1{{OpenACC clause 'attach' not yet implemented}}
 #pragma acc enter data attach(Var)
