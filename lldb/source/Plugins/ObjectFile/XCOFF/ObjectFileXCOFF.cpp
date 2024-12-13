@@ -144,10 +144,9 @@ size_t ObjectFileXCOFF::GetModuleSpecifications(
 
 static uint32_t XCOFFHeaderSizeFromMagic(uint32_t magic) {
   switch (magic) {
-    /* TODO: 32bit not supported yet
-    case XCOFF::XCOFF32:
-      return sizeof(struct llvm::object::XCOFFFileHeader32);
-    */
+    // TODO: 32bit not supported yet
+    // case XCOFF::XCOFF32:
+    //  return sizeof(struct llvm::object::XCOFFFileHeader32);
 
   case XCOFF::XCOFF64:
     return sizeof(struct llvm::object::XCOFFFileHeader64);

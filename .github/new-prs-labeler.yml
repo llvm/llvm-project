@@ -587,6 +587,12 @@ llvm:ir:
   - llvm/docs/LangRef.rst
   - llvm/unittests/IR/**
 
+llvm:SandboxIR:
+  - llvm/lib/SandboxIR/**
+  - llvm/include/llvm/SandboxIR/**
+  - llvm/docs/SandboxIR.md
+  - llvm/unittests/SandboxIR/**
+
 llvm:analysis:
   - llvm/lib/Analysis/**
   - llvm/include/llvm/Analysis/**

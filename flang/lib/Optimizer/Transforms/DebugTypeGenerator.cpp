@@ -629,7 +629,12 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertPointerLikeType(
     return convertCharacterType(charTy, fileAttr, scope, declOp,
                                 /*hasDescriptor=*/true);
 
-  mlir::LLVM::DITypeAttr elTyAttr = convertType(elTy, fileAttr, scope, declOp);
+  // If elTy is null or none then generate a void*
+  mlir::LLVM::DITypeAttr elTyAttr;
+  if (!elTy || mlir::isa<mlir::NoneType>(elTy))
+    elTyAttr = mlir::LLVM::DINullTypeAttr::get(context);
+  else
+    elTyAttr = convertType(elTy, fileAttr, scope, declOp);
 
   return mlir::LLVM::DIDerivedTypeAttr::get(
       context, llvm::dwarf::DW_TAG_pointer_type,
@@ -679,8 +684,8 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
     return genBasicType(context, mlir::StringAttr::get(context, "integer"),
                         llvmTypeConverter.getIndexTypeBitwidth(),
                         llvm::dwarf::DW_ATE_signed);
-  } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BoxType>(Ty)) {
-    auto elTy = boxTy.getElementType();
+  } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(Ty)) {
+    auto elTy = boxTy.getEleTy();
     if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(elTy))
       return convertBoxedSequenceType(seqTy, fileAttr, scope, declOp, false,
                                       false);
@@ -692,7 +697,9 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
       return convertPointerLikeType(ptrTy.getElementType(), fileAttr, scope,
                                     declOp, /*genAllocated=*/false,
                                     /*genAssociated=*/true);
-    return genPlaceholderType(context);
+    return convertPointerLikeType(elTy, fileAttr, scope, declOp,
+                                  /*genAllocated=*/false,
+                                  /*genAssociated=*/false);
   } else {
     // FIXME: These types are currently unhandled. We are generating a
     // placeholder type to allow us to test supported bits.

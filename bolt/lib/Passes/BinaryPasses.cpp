@@ -588,10 +588,18 @@ Error CheckLargeFunctions::runOnFunctions(BinaryContext &BC) {
     uint64_t HotSize, ColdSize;
     std::tie(HotSize, ColdSize) =
         BC.calculateEmittedSize(BF, /*FixBranches=*/false);
-    if (HotSize > BF.getMaxSize()) {
+    uint64_t MainFragmentSize = HotSize;
+    if (BF.hasIslandsInfo()) {
+      MainFragmentSize +=
+          offsetToAlignment(BF.getAddress() + MainFragmentSize,
+                            Align(BF.getConstantIslandAlignment()));
+      MainFragmentSize += BF.estimateConstantIslandSize();
+    }
+    if (MainFragmentSize > BF.getMaxSize()) {
       if (opts::PrintLargeFunctions)
-        BC.outs() << "BOLT-INFO: " << BF << " size exceeds allocated space by "
-                  << (HotSize - BF.getMaxSize()) << " bytes\n";
+        BC.outs() << "BOLT-INFO: " << BF << " size of " << MainFragmentSize
+                  << " bytes exceeds allocated space by "
+                  << (MainFragmentSize - BF.getMaxSize()) << " bytes\n";
       BF.setSimple(false);
     }
   };

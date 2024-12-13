@@ -195,6 +195,9 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MaxPrefetchIterationsAhead = 4;
     VScaleForTuning = 4;
     break;
+  case MONAKA:
+    VScaleForTuning = 2;
+    break;
   case AppleA7:
   case AppleA10:
   case AppleA11:
@@ -255,12 +258,13 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MaxBytesForLoopAlignment = 16;
     break;
   case NeoverseV2:
-    // Specialize cost for Neoverse-V2.
+  case NeoverseV3:
+    EpilogueVectorizationMinVF = 8;
+    MaxInterleaveFactor = 4;
     ScatterOverhead = 13;
     LLVM_FALLTHROUGH;
   case NeoverseN2:
   case NeoverseN3:
-  case NeoverseV3:
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;

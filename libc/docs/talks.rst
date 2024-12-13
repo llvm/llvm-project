@@ -12,6 +12,10 @@ Talks
 
   * `slides <https://llvm.org/devmtg/2023-10/slides/techtalks/Huber-LibCforGPUs.pdf>`__
   * `video <https://www.youtube.com/watch?v=_LLGc48GYHc>`__
+* The Challenges of Implementing the C Standard Library in C++ - Sivachandra Reddy
+
+  * `slides <https://github.com/boostcon/cppnow_presentations_2023/blob/main/cppnow_slides/The_Challenges_of_Implementing_the_C_Standard_Library_in_Cpp.pdf>`__
+  * `video <https://www.youtube.com/watch?v=cuVrWUGSIgM>`__
 
 ----
 2022

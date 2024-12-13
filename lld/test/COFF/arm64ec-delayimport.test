@@ -12,9 +12,9 @@ RUN: lld-link -machine:arm64ec -dll -noentry -out:out.dll loadconfig-arm64ec.obj
 RUN:          helper-mangled.obj test-arm64ec.lib test2-arm64ec.lib -delayload:test.dll -map
 
 RUN: llvm-readobj --hex-dump=.test out.dll | FileCheck --check-prefix=TESTSEC %s
-TESTSEC:      0x180009000 00600000 88700000 00200000 10100000
-TESTSEC-NEXT: 0x180009010 08600000 90700000 10200000 30100000
-TESTSEC-NEXT: 0x180009020 1c100000 3c100000 00300000
+TESTSEC:      0x18000a000 00600000 88700000 00200000 10100000
+TESTSEC-NEXT: 0x18000a010 08600000 90700000 10200000 30100000
+TESTSEC-NEXT: 0x18000a020 1c100000 3c100000 00300000
 
 RUN: llvm-objdump -d out.dll | FileCheck --check-prefix=DISASM %s
 DISASM:      0000000180001000 <.text>:
@@ -61,7 +61,7 @@ DISASM-NEXT: 18000203d: 66 0f 7f 4c 24 10            movdqa  %xmm1, 0x10(%rsp)
 DISASM-NEXT: 180002043: 66 0f 7f 54 24 20            movdqa  %xmm2, 0x20(%rsp)
 DISASM-NEXT: 180002049: 66 0f 7f 5c 24 30            movdqa  %xmm3, 0x30(%rsp)
 DISASM-NEXT: 18000204f: 48 8b d0                     movq    %rax, %rdx
-DISASM-NEXT: 180002052: 48 8d 0d 97 21 00 00         leaq    0x2197(%rip), %rcx      # 0x1800041f0
+DISASM-NEXT: 180002052: 48 8d 0d a7 21 00 00         leaq    0x21a7(%rip), %rcx      # 0x180004200
 DISASM-NEXT: 180002059: e8 aa ef ff ff               callq   0x180001008 <.text+0x8>
 DISASM-NEXT: 18000205e: 66 0f 6f 04 24               movdqa  (%rsp), %xmm0
 DISASM-NEXT: 180002063: 66 0f 6f 4c 24 10            movdqa  0x10(%rsp), %xmm1
@@ -85,7 +85,7 @@ IMPORTS-NEXT:   Name: test.dll
 IMPORTS-NEXT:   Attributes: 0x1
 IMPORTS-NEXT:   ModuleHandle: 0x7080
 IMPORTS-NEXT:   ImportAddressTable: 0x7088
-IMPORTS-NEXT:   ImportNameTable: 0x4230
+IMPORTS-NEXT:   ImportNameTable: 0x4240
 IMPORTS-NEXT:   BoundDelayImportTable: 0x0
 IMPORTS-NEXT:   UnloadDelayImportTable: 0x0
 IMPORTS-NEXT:   Import {
@@ -139,6 +139,9 @@ RELOC-NEXT:   Entry {
 RELOC-NEXT:     Type: DIR64
 RELOC-NEXT:     Address: 0x6008
 RELOC-NEXT:   }
+
+RUN: llvm-readobj --hex-dump=.pdata out.dll | FileCheck --check-prefix=PDATA %s
+PDATA: 0x180008000 2e200000 81200000 18400000
 
 Verify that a demangled version of __delayLoadHelper2 can be used.
 

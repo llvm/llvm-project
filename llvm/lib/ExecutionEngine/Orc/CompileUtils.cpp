@@ -15,12 +15,9 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Target/TargetMachine.h"
-
-#include <algorithm>
 
 namespace llvm {
 namespace orc {

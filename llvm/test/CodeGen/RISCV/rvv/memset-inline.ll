@@ -194,11 +194,11 @@ define void @memset_64(ptr %a, i8 %value) nounwind {
 ; RV32-BOTH-NEXT:    addi a2, a0, 48
 ; RV32-BOTH-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV32-BOTH-NEXT:    vmv.v.x v8, a1
-; RV32-BOTH-NEXT:    vse8.v v8, (a2)
 ; RV32-BOTH-NEXT:    addi a1, a0, 32
+; RV32-BOTH-NEXT:    vse8.v v8, (a2)
+; RV32-BOTH-NEXT:    addi a2, a0, 16
 ; RV32-BOTH-NEXT:    vse8.v v8, (a1)
-; RV32-BOTH-NEXT:    addi a1, a0, 16
-; RV32-BOTH-NEXT:    vse8.v v8, (a1)
+; RV32-BOTH-NEXT:    vse8.v v8, (a2)
 ; RV32-BOTH-NEXT:    vse8.v v8, (a0)
 ; RV32-BOTH-NEXT:    ret
 ;
@@ -207,11 +207,11 @@ define void @memset_64(ptr %a, i8 %value) nounwind {
 ; RV64-BOTH-NEXT:    addi a2, a0, 48
 ; RV64-BOTH-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV64-BOTH-NEXT:    vmv.v.x v8, a1
-; RV64-BOTH-NEXT:    vse8.v v8, (a2)
 ; RV64-BOTH-NEXT:    addi a1, a0, 32
+; RV64-BOTH-NEXT:    vse8.v v8, (a2)
+; RV64-BOTH-NEXT:    addi a2, a0, 16
 ; RV64-BOTH-NEXT:    vse8.v v8, (a1)
-; RV64-BOTH-NEXT:    addi a1, a0, 16
-; RV64-BOTH-NEXT:    vse8.v v8, (a1)
+; RV64-BOTH-NEXT:    vse8.v v8, (a2)
 ; RV64-BOTH-NEXT:    vse8.v v8, (a0)
 ; RV64-BOTH-NEXT:    ret
   tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 %value, i64 64, i1 0)
@@ -334,11 +334,11 @@ define void @aligned_memset_64(ptr align 64 %a, i8 %value) nounwind {
 ; RV32-BOTH-NEXT:    addi a2, a0, 48
 ; RV32-BOTH-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV32-BOTH-NEXT:    vmv.v.x v8, a1
-; RV32-BOTH-NEXT:    vse8.v v8, (a2)
 ; RV32-BOTH-NEXT:    addi a1, a0, 32
+; RV32-BOTH-NEXT:    vse8.v v8, (a2)
+; RV32-BOTH-NEXT:    addi a2, a0, 16
 ; RV32-BOTH-NEXT:    vse8.v v8, (a1)
-; RV32-BOTH-NEXT:    addi a1, a0, 16
-; RV32-BOTH-NEXT:    vse8.v v8, (a1)
+; RV32-BOTH-NEXT:    vse8.v v8, (a2)
 ; RV32-BOTH-NEXT:    vse8.v v8, (a0)
 ; RV32-BOTH-NEXT:    ret
 ;
@@ -347,11 +347,11 @@ define void @aligned_memset_64(ptr align 64 %a, i8 %value) nounwind {
 ; RV64-BOTH-NEXT:    addi a2, a0, 48
 ; RV64-BOTH-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV64-BOTH-NEXT:    vmv.v.x v8, a1
-; RV64-BOTH-NEXT:    vse8.v v8, (a2)
 ; RV64-BOTH-NEXT:    addi a1, a0, 32
+; RV64-BOTH-NEXT:    vse8.v v8, (a2)
+; RV64-BOTH-NEXT:    addi a2, a0, 16
 ; RV64-BOTH-NEXT:    vse8.v v8, (a1)
-; RV64-BOTH-NEXT:    addi a1, a0, 16
-; RV64-BOTH-NEXT:    vse8.v v8, (a1)
+; RV64-BOTH-NEXT:    vse8.v v8, (a2)
 ; RV64-BOTH-NEXT:    vse8.v v8, (a0)
 ; RV64-BOTH-NEXT:    ret
   tail call void @llvm.memset.inline.p0.i64(ptr align 64 %a, i8 %value, i64 64, i1 0)
@@ -704,12 +704,12 @@ define void @aligned_bzero_96(ptr %a) nounwind {
 ; RV32-BOTH:       # %bb.0:
 ; RV32-BOTH-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32-BOTH-NEXT:    vmv.v.i v8, 0
-; RV32-BOTH-NEXT:    vse64.v v8, (a0)
 ; RV32-BOTH-NEXT:    addi a1, a0, 80
+; RV32-BOTH-NEXT:    vse64.v v8, (a0)
 ; RV32-BOTH-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-BOTH-NEXT:    vmv.v.i v8, 0
-; RV32-BOTH-NEXT:    vse64.v v8, (a1)
 ; RV32-BOTH-NEXT:    addi a0, a0, 64
+; RV32-BOTH-NEXT:    vse64.v v8, (a1)
 ; RV32-BOTH-NEXT:    vse64.v v8, (a0)
 ; RV32-BOTH-NEXT:    ret
 ;
@@ -717,12 +717,12 @@ define void @aligned_bzero_96(ptr %a) nounwind {
 ; RV64-BOTH:       # %bb.0:
 ; RV64-BOTH-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-BOTH-NEXT:    vmv.v.i v8, 0
-; RV64-BOTH-NEXT:    vse64.v v8, (a0)
 ; RV64-BOTH-NEXT:    addi a1, a0, 80
+; RV64-BOTH-NEXT:    vse64.v v8, (a0)
 ; RV64-BOTH-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-BOTH-NEXT:    vmv.v.i v8, 0
-; RV64-BOTH-NEXT:    vse64.v v8, (a1)
 ; RV64-BOTH-NEXT:    addi a0, a0, 64
+; RV64-BOTH-NEXT:    vse64.v v8, (a1)
 ; RV64-BOTH-NEXT:    vse64.v v8, (a0)
 ; RV64-BOTH-NEXT:    ret
   tail call void @llvm.memset.inline.p0.i64(ptr align 64 %a, i8 0, i64 96, i1 0)

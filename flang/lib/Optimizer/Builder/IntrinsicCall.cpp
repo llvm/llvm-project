@@ -41,7 +41,7 @@
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Runtime/entry-names.h"
-#include "flang/Runtime/iostat.h"
+#include "flang/Runtime/iostat-consts.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -94,11 +94,6 @@ static bool isStaticallyAbsent(llvm::ArrayRef<mlir::Value> args,
 static bool isStaticallyPresent(const fir::ExtendedValue &exv) {
   return !isStaticallyAbsent(exv);
 }
-
-/// IEEE module procedure names not yet implemented for genModuleProcTODO.
-static constexpr char ieee_get_underflow_mode[] = "ieee_get_underflow_mode";
-static constexpr char ieee_rem[] = "ieee_rem";
-static constexpr char ieee_set_underflow_mode[] = "ieee_set_underflow_mode";
 
 using I = IntrinsicLibrary;
 
@@ -329,7 +324,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"radix", asValue, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"ieee_get_status", &I::genIeeeGetOrSetStatus</*isGet=*/true>},
-    {"ieee_get_underflow_mode", &I::genModuleProcTODO<ieee_get_underflow_mode>},
+    {"ieee_get_underflow_mode",
+     &I::genIeeeGetUnderflowMode,
+     {{{"gradual", asAddr}}},
+     /*isElemental=*/false},
     {"ieee_int", &I::genIeeeInt},
     {"ieee_is_finite", &I::genIeeeIsFinite},
     {"ieee_is_nan", &I::genIeeeIsNan},
@@ -362,7 +360,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"ieee_quiet_lt", &I::genIeeeQuietCompare<mlir::arith::CmpFPredicate::OLT>},
     {"ieee_quiet_ne", &I::genIeeeQuietCompare<mlir::arith::CmpFPredicate::UNE>},
     {"ieee_real", &I::genIeeeReal},
-    {"ieee_rem", &I::genModuleProcTODO<ieee_rem>},
+    {"ieee_rem", &I::genIeeeRem},
     {"ieee_rint", &I::genIeeeRint},
     {"ieee_round_eq", &I::genIeeeTypeCompare<mlir::arith::CmpIPredicate::eq>},
     {"ieee_round_ne", &I::genIeeeTypeCompare<mlir::arith::CmpIPredicate::ne>},
@@ -376,7 +374,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"radix", asValue, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"ieee_set_status", &I::genIeeeGetOrSetStatus</*isGet=*/false>},
-    {"ieee_set_underflow_mode", &I::genModuleProcTODO<ieee_set_underflow_mode>},
+    {"ieee_set_underflow_mode", &I::genIeeeSetUnderflowMode},
     {"ieee_signaling_eq",
      &I::genIeeeSignalingCompare<mlir::arith::CmpFPredicate::OEQ>},
     {"ieee_signaling_ge",
@@ -435,6 +433,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"lgt", &I::genCharacterCompare<mlir::arith::CmpIPredicate::sgt>},
     {"lle", &I::genCharacterCompare<mlir::arith::CmpIPredicate::sle>},
     {"llt", &I::genCharacterCompare<mlir::arith::CmpIPredicate::slt>},
+    {"lnblnk", &I::genLenTrim},
     {"loc", &I::genLoc, {{{"x", asBox}}}, /*isElemental=*/false},
     {"malloc", &I::genMalloc},
     {"maskl", &I::genMask<mlir::arith::ShLIOp>},
@@ -1297,6 +1296,14 @@ static constexpr MathOperation mathOperations[] = {
     {"pow", RTNAME_STRING(zpowk),
      genFuncType<Ty::Complex<8>, Ty::Complex<8>, Ty::Integer<8>>, genLibCall},
     {"pow", RTNAME_STRING(cqpowk), FuncTypeComplex16Complex16Integer8,
+     genLibF128Call},
+    {"remainder", "remainderf",
+     genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Real<4>>, genLibCall},
+    {"remainder", "remainder",
+     genFuncType<Ty::Real<8>, Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"remainder", "remainderl",
+     genFuncType<Ty::Real<10>, Ty::Real<10>, Ty::Real<10>>, genLibCall},
+    {"remainder", RTNAME_STRING(RemainderF128), FuncTypeReal16Real16Real16,
      genLibF128Call},
     {"sign", "copysignf", genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Real<4>>,
      genMathOp<mlir::math::CopySignOp>},
@@ -2285,12 +2292,6 @@ mlir::Value IntrinsicLibrary::genConversion(mlir::Type resultType,
   // There can be an optional kind in second argument.
   assert(args.size() >= 1);
   return builder.convertWithSemantics(loc, resultType, args[0]);
-}
-
-template <const char *intrinsicName>
-void IntrinsicLibrary::genModuleProcTODO(
-    llvm::ArrayRef<fir::ExtendedValue> args) {
-  crashOnMissingIntrinsic(loc, intrinsicName);
 }
 
 // ABORT
@@ -4463,6 +4464,14 @@ void IntrinsicLibrary::genIeeeGetOrSetStatus(
   genRuntimeCall(isGet ? "fegetenv" : "fesetenv", i32Ty, addr);
 }
 
+// IEEE_GET_UNDERFLOW_MODE
+void IntrinsicLibrary::genIeeeGetUnderflowMode(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  mlir::Value flag = fir::runtime::genGetUnderflowMode(builder, loc);
+  builder.createStoreWithConvert(loc, flag, fir::getBase(args[0]));
+}
+
 // IEEE_INT
 mlir::Value IntrinsicLibrary::genIeeeInt(mlir::Type resultType,
                                          llvm::ArrayRef<mlir::Value> args) {
@@ -5030,6 +5039,32 @@ mlir::Value IntrinsicLibrary::genIeeeReal(mlir::Type resultType,
   return ifOp1.getResult(0);
 }
 
+// IEEE_REM
+mlir::Value IntrinsicLibrary::genIeeeRem(mlir::Type resultType,
+                                         llvm::ArrayRef<mlir::Value> args) {
+  // Return the remainder of X divided by Y.
+  // Signal IEEE_UNDERFLOW if X is subnormal and Y is infinite.
+  // Signal IEEE_INVALID if X is infinite or Y is zero and neither is a NaN.
+  assert(args.size() == 2);
+  mlir::Value x = args[0];
+  mlir::Value y = args[1];
+  if (mlir::dyn_cast<mlir::FloatType>(resultType).getWidth() < 32) {
+    mlir::Type f32Ty = mlir::FloatType::getF32(builder.getContext());
+    x = builder.create<fir::ConvertOp>(loc, f32Ty, x);
+    y = builder.create<fir::ConvertOp>(loc, f32Ty, y);
+  } else {
+    x = builder.create<fir::ConvertOp>(loc, resultType, x);
+    y = builder.create<fir::ConvertOp>(loc, resultType, y);
+  }
+  // remainder calls do not signal IEEE_UNDERFLOW.
+  mlir::Value underflow = builder.create<mlir::arith::AndIOp>(
+      loc, genIsFPClass(builder.getI1Type(), x, subnormalTest),
+      genIsFPClass(builder.getI1Type(), y, infiniteTest));
+  mlir::Value result = genRuntimeCall("remainder", x.getType(), {x, y});
+  genRaiseExcept(_FORTRAN_RUNTIME_IEEE_UNDERFLOW, underflow);
+  return builder.create<fir::ConvertOp>(loc, resultType, result);
+}
+
 // IEEE_RINT
 mlir::Value IntrinsicLibrary::genIeeeRint(mlir::Type resultType,
                                           llvm::ArrayRef<mlir::Value> args) {
@@ -5099,6 +5134,15 @@ void IntrinsicLibrary::genIeeeSetRoundingMode(
   mode = builder.create<fir::ConvertOp>(
       loc, setRound.getFunctionType().getInput(0), mode);
   builder.create<fir::CallOp>(loc, setRound, mode);
+}
+
+// IEEE_SET_UNDERFLOW_MODE
+void IntrinsicLibrary::genIeeeSetUnderflowMode(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  mlir::Value gradual = builder.create<fir::ConvertOp>(loc, builder.getI1Type(),
+                                                       getBase(args[0]));
+  fir::runtime::genSetUnderflowMode(builder, loc, {gradual});
 }
 
 // IEEE_SIGNALING_EQ, IEEE_SIGNALING_GE, IEEE_SIGNALING_GT,
@@ -7247,11 +7291,21 @@ IntrinsicLibrary::genSum(mlir::Type resultType,
 }
 
 // SYSTEM
-void IntrinsicLibrary::genSystem(llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() == 2);
+fir::ExtendedValue
+IntrinsicLibrary::genSystem(std::optional<mlir::Type> resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert((!resultType && (args.size() == 2)) ||
+         (resultType && (args.size() == 1)));
   mlir::Value command = fir::getBase(args[0]);
-  const fir::ExtendedValue &exitstat = args[1];
   assert(command && "expected COMMAND parameter");
+
+  fir::ExtendedValue exitstat;
+  if (resultType) {
+    mlir::Value tmp = builder.createTemporary(loc, *resultType);
+    exitstat = builder.createBox(loc, tmp);
+  } else {
+    exitstat = args[1];
+  }
 
   mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
 
@@ -7274,6 +7328,12 @@ void IntrinsicLibrary::genSystem(llvm::ArrayRef<fir::ExtendedValue> args) {
 
   fir::runtime::genExecuteCommandLine(builder, loc, command, waitBool,
                                       exitstatBox, cmdstatBox, cmdmsgBox);
+
+  if (resultType) {
+    mlir::Value exitstatAddr = builder.create<fir::BoxAddrOp>(loc, exitstatBox);
+    return builder.create<fir::LoadOp>(loc, fir::getBase(exitstatAddr));
+  }
+  return {};
 }
 
 // SYSTEM_CLOCK

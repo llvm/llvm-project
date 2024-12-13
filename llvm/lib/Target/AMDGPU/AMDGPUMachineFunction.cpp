@@ -9,7 +9,6 @@
 #include "AMDGPUMachineFunction.h"
 #include "AMDGPU.h"
 #include "AMDGPUMemoryUtils.h"
-#include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPUSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"

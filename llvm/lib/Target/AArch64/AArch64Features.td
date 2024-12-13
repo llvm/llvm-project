@@ -160,7 +160,7 @@ def FeatureSVE : ExtensionWithMArch<"sve", "SVE", "FEAT_SVE",
 
 let ArchExtKindSpelling = "AEK_I8MM" in
 def FeatureMatMulInt8 : ExtensionWithMArch<"i8mm", "MatMulInt8", "FEAT_I8MM",
-  "Enable Matrix Multiply Int8 Extension">;
+  "Enable Matrix Multiply Int8 Extension", [FeatureNEON]>;
 
 let ArchExtKindSpelling = "AEK_F32MM" in
 def FeatureMatMulFP32 : ExtensionWithMArch<"f32mm", "MatMulFP32", "FEAT_F32MM",
@@ -207,7 +207,7 @@ def FeatureLSE2 : Extension<"lse2", "LSE2", "FEAT_LSE2",
   "Enable Armv8.4-A Large System Extension 2 (LSE2) atomicity rules">;
 
 def FeatureFP16FML : ExtensionWithMArch<"fp16fml", "FP16FML", "FEAT_FHM",
-  "Enable FP16 FML instructions", [FeatureFullFP16]>;
+  "Enable FP16 FML instructions", [FeatureFullFP16, FeatureNEON]>;
 
 def FeatureDotProd : ExtensionWithMArch<"dotprod", "DotProd", "FEAT_DotProd",
   "Enable dot product support", [FeatureNEON]>;
@@ -247,7 +247,8 @@ def FeatureAltFPCmp : Extension<"altnzcv", "AlternativeNZCV", "FEAT_FlagM2",
 
 def FeatureFRInt3264 : Extension<"fptoint", "FRInt3264", "FEAT_FRINTTS",
   "Enable FRInt[32|64][Z|X] instructions that round a floating-point number to "
-  "an integer (in FP format) forcing it to fit into a 32- or 64-bit int">;
+  "an integer (in FP format) forcing it to fit into a 32- or 64-bit int",
+  [FeatureFPARMv8]>;
 
 def FeatureSB : ExtensionWithMArch<"sb", "SB", "FEAT_SB",
   "Enable Armv8.5-A Speculation Barrier">;
@@ -279,7 +280,7 @@ def FeatureMTE : ExtensionWithMArch<"mte", "MTE", "FEAT_MTE, FEAT_MTE2",
 //===----------------------------------------------------------------------===//
 
 def FeatureBF16 : ExtensionWithMArch<"bf16", "BF16", "FEAT_BF16",
-  "Enable BFloat16 Extension">;
+  "Enable BFloat16 Extension", [FeatureNEON]>;
 
 def FeatureAMVS : Extension<"amvs", "AMVS", "FEAT_AMUv1p1",
   "Enable Armv8.6-A Activity Monitors Virtualization support",
@@ -362,9 +363,12 @@ def FeatureSVE2 : ExtensionWithMArch<"sve2", "SVE2", "FEAT_SVE2",
   "Enable Scalable Vector Extension 2 (SVE2) instructions",
   [FeatureSVE]>;
 
-def FeatureSVE2AES : ExtensionWithMArch<"sve2-aes", "SVE2AES",
+def FeatureSVEAES : ExtensionWithMArch<"sve-aes", "SVEAES",
   "FEAT_SVE_AES, FEAT_SVE_PMULL128",
-  "Enable AES SVE2 instructions", [FeatureSVE2, FeatureAES]>;
+  "Enable SVE AES and quadword SVE polynomial multiply instructions", [FeatureAES]>;
+
+def FeatureAliasSVE2AES : ExtensionWithMArch<"sve2-aes", "SVE2AES",
+  "", "Shorthand for +sve2+sve-aes", [FeatureSVE2, FeatureSVEAES]>;
 
 def FeatureSVE2SM4 : ExtensionWithMArch<"sve2-sm4", "SVE2SM4", "FEAT_SVE_SM4",
   "Enable SM4 SVE2 instructions", [FeatureSVE2, FeatureSM4]>;
@@ -400,7 +404,7 @@ def FeatureRME : Extension<"rme", "RME", "FEAT_RME",
   "Enable Realm Management Extension">;
 
 def FeatureSME : ExtensionWithMArch<"sme", "SME", "FEAT_SME",
-  "Enable Scalable Matrix Extension (SME)", [FeatureBF16]>;
+  "Enable Scalable Matrix Extension (SME)", [FeatureBF16, FeatureFullFP16]>;
 
 def FeatureSMEF64F64 : ExtensionWithMArch<"sme-f64f64", "SMEF64F64", "FEAT_SME_F64F64",
   "Enable Scalable Matrix Extension (SME) F64F64 instructions", [FeatureSME]>;
@@ -535,13 +539,13 @@ def FeatureSME2p2: ExtensionWithMArch<"sme2p2", "SME2p2", "FEAT_SME2p2",
   "Enable Armv9.6-A Scalable Matrix Extension 2.2 instructions", [FeatureSME2p1]>;
 
 def FeatureSSVE_AES : ExtensionWithMArch<"ssve-aes", "SSVE_AES", "FEAT_SSVE_AES",
-  "Enable Armv9.6-A SVE2 AES support in streaming SVE mode", [FeatureSME2, FeatureSVE2AES]>;
+  "Enable Armv9.6-A SVE AES support in streaming SVE mode", [FeatureSME2, FeatureSVEAES]>;
 
 def FeatureSVE2p2 : ExtensionWithMArch<"sve2p2", "SVE2p2", "FEAT_SVE2p2",
   "Enable Armv9.6-A Scalable Vector Extension 2.2 instructions", [FeatureSVE2p1]>;
 
 def FeatureSVEAES2: ExtensionWithMArch<"sve-aes2", "SVE_AES2", "FEAT_SVE_AES2",
-  "Enable Armv9.6-A SVE multi-vector AES and 128-bit PMULL instructions">;
+  "Enable Armv9.6-A SVE multi-vector AES and multi-vector quadword polynomial multiply instructions">;
 
 def FeatureSVEBFSCALE: ExtensionWithMArch<"sve-bfscale", "SVE_BFSCALE", "FEAT_SVE_BFSCALE",
   "Enable Armv9.6-A SVE BFloat16 scaling instructions">;

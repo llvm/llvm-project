@@ -609,15 +609,6 @@ TEST_F(PragmaIncludeTest, ExportInUnnamedBuffer) {
   )cpp";
   Inputs.ExtraFiles["foo.h"] = "";
 
-  auto Clang = std::make_unique<CompilerInstance>(
-      std::make_shared<PCHContainerOperations>());
-  Clang->createDiagnostics();
-
-  Clang->setInvocation(std::make_unique<CompilerInvocation>());
-  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(
-      Clang->getInvocation(), {Filename.data()}, Clang->getDiagnostics(),
-      "clang"));
-
   // Create unnamed memory buffers for all the files.
   auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   VFS->addFile(Filename, /*ModificationTime=*/0,
@@ -626,6 +617,16 @@ TEST_F(PragmaIncludeTest, ExportInUnnamedBuffer) {
     VFS->addFile(Extra.getKey(), /*ModificationTime=*/0,
                  llvm::MemoryBuffer::getMemBufferCopy(Extra.getValue(),
                                                       /*BufferName=*/""));
+
+  auto Clang = std::make_unique<CompilerInstance>(
+      std::make_shared<PCHContainerOperations>());
+  Clang->createDiagnostics(*VFS);
+
+  Clang->setInvocation(std::make_unique<CompilerInvocation>());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(
+      Clang->getInvocation(), {Filename.data()}, Clang->getDiagnostics(),
+      "clang"));
+
   auto *FM = Clang->createFileManager(VFS);
   ASSERT_TRUE(Clang->ExecuteAction(*Inputs.MakeAction()));
   EXPECT_THAT(

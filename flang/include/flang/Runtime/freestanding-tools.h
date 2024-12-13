@@ -109,6 +109,15 @@ static inline RT_API_ATTRS void *memmove(
 using std::memmove;
 #endif // !STD_MEMMOVE_UNSUPPORTED
 
+using MemmoveFct = void *(*)(void *, const void *, std::size_t);
+
+#ifdef RT_DEVICE_COMPILATION
+static RT_API_ATTRS void *MemmoveWrapper(
+    void *dest, const void *src, std::size_t count) {
+  return Fortran::runtime::memmove(dest, src, count);
+}
+#endif
+
 #if STD_STRLEN_UNSUPPORTED
 // Provides alternative implementation for std::strlen(), if
 // it is not supported.

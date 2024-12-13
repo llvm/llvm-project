@@ -302,8 +302,8 @@ define i64 @rori_i64(i64 %a) nounwind {
 ; CHECK-NEXT:    slli a2, a0, 31
 ; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    slli a3, a1, 31
-; CHECK-NEXT:    or a0, a0, a3
 ; CHECK-NEXT:    srli a1, a1, 1
+; CHECK-NEXT:    or a0, a0, a3
 ; CHECK-NEXT:    or a1, a2, a1
 ; CHECK-NEXT:    ret
   %1 = tail call i64 @llvm.fshl.i64(i64 %a, i64 %a, i64 63)
@@ -361,9 +361,8 @@ define i8 @srai_i8(i8 %a) nounwind {
 define i16 @srli_i16(i16 %a) nounwind {
 ; RV32I-LABEL: srli_i16:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    srli a0, a0, 6
 ; RV32I-NEXT:    ret
 ;

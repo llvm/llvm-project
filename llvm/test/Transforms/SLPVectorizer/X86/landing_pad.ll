@@ -33,16 +33,15 @@ define void @foo() personality ptr @bar {
 ; CHECK-NEXT:    br i1 poison, label [[BB7]], label [[BB6]]
 ; CHECK:       bb9:
 ; CHECK-NEXT:    [[INDVARS_IV528799:%.*]] = phi i64 [ poison, [[BB10]] ], [ poison, [[BB12]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x i32> [ [[TMP8:%.*]], [[BB10]] ], [ [[TMP9:%.*]], [[BB12]] ]
-; CHECK-NEXT:    [[TMP7]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <4 x i32> <i32 poison, i32 poison, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP7]] = phi <4 x i32> [ [[TMP9:%.*]], [[BB10]] ], [ [[TMP11:%.*]], [[BB12]] ]
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb10:
 ; CHECK-NEXT:    [[LOCAL_10_38123_LCSSA:%.*]] = phi i32 [ [[TMP10]], [[BB3]] ]
 ; CHECK-NEXT:    [[LOCAL_5_33118_LCSSA:%.*]] = phi i32 [ [[TMP4]], [[BB3]] ]
 ; CHECK-NEXT:    [[LANDING_PAD68:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:            cleanup
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x i32> poison, i32 [[LOCAL_10_38123_LCSSA]], i32 0
-; CHECK-NEXT:    [[TMP8]] = insertelement <2 x i32> [[TMP12]], i32 [[LOCAL_5_33118_LCSSA]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> poison, i32 [[LOCAL_10_38123_LCSSA]], i32 2
+; CHECK-NEXT:    [[TMP9]] = insertelement <4 x i32> [[TMP8]], i32 [[LOCAL_5_33118_LCSSA]], i32 3
 ; CHECK-NEXT:    br label [[BB9]]
 ; CHECK:       bb11:
 ; CHECK-NEXT:    ret void
@@ -51,8 +50,8 @@ define void @foo() personality ptr @bar {
 ; CHECK-NEXT:    [[LOCAL_5_84111_LCSSA:%.*]] = phi i32 [ [[LOCAL_5_84111]], [[BB7]] ]
 ; CHECK-NEXT:    [[LANDING_PAD149:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:            cleanup
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i32> poison, i32 [[LOCAL_10_89113_LCSSA]], i32 0
-; CHECK-NEXT:    [[TMP9]] = insertelement <2 x i32> [[TMP11]], i32 [[LOCAL_5_84111_LCSSA]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> poison, i32 [[LOCAL_10_89113_LCSSA]], i32 2
+; CHECK-NEXT:    [[TMP11]] = insertelement <4 x i32> [[TMP12]], i32 [[LOCAL_5_84111_LCSSA]], i32 3
 ; CHECK-NEXT:    br label [[BB9]]
 ;
 bb1:

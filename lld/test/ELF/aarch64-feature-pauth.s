@@ -56,8 +56,8 @@
 
 # PACPLTTAG:      0x0000000070000003 (AARCH64_PAC_PLT)
 
-# RUN: llvm-objdump -d pacplt-nowarn | FileCheck --check-prefix PACPLT -DA=10380 -DB=478 -DC=480 %s
-# RUN: llvm-objdump -d pacplt-warn   | FileCheck --check-prefix PACPLT -DA=10390 -DB=488 -DC=490 %s
+# RUN: llvm-objdump -d pacplt-nowarn | FileCheck --check-prefixes=PACPLT,NOHINT -DA=10380 -DB=478 -DC=480 %s
+# RUN: llvm-objdump -d pacplt-warn   | FileCheck --check-prefixes=PACPLT,HINT   -DA=10390 -DB=488 -DC=490 %s
 
 # PACPLT: Disassembly of section .text:
 # PACPLT:      <func2>:
@@ -77,8 +77,10 @@
 # PACPLT-NEXT:     adrp    x16, 0x30000 <func3+0x30000>
 # PACPLT-NEXT:     ldr     x17, [x16, #0x[[C]]]
 # PACPLT-NEXT:     add     x16, x16, #0x[[C]]
-# PACPLT-NEXT:     autia1716
-# PACPLT-NEXT:     br      x17
+# NOHINT-NEXT:     braa    x17, x16
+# NOHINT-NEXT:     nop
+# HINT-NEXT:       autia1716
+# HINT-NEXT:       br      x17
 # PACPLT-NEXT:     nop
 
 #--- abi-tag-short.s

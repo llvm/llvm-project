@@ -56,6 +56,9 @@ mapBuiltinToOpcode(const StringRef DemangledCall,
 /// \p ArgIdx is the index of the argument to parse.
 Type *parseBuiltinCallArgumentBaseType(const StringRef DemangledCall,
                                        unsigned ArgIdx, LLVMContext &Ctx);
+bool parseBuiltinTypeStr(SmallVector<StringRef, 10> &BuiltinArgsTypeStrs,
+                         const StringRef DemangledCall, LLVMContext &Ctx);
+Type *parseBuiltinCallArgumentType(StringRef TypeStr, LLVMContext &Ctx);
 
 /// Translates a string representing a SPIR-V or OpenCL builtin type to a
 /// TargetExtType that can be further lowered with lowerBuiltinType().

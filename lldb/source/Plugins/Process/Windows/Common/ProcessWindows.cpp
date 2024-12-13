@@ -169,6 +169,38 @@ Status ProcessWindows::DoDetach(bool keep_stopped) {
   Log *log = GetLog(WindowsLog::Process);
   StateType private_state = GetPrivateState();
   if (private_state != eStateExited && private_state != eStateDetached) {
+    if (!keep_stopped) {
+      // if the thread is suspended by lldb, we have to resume threads before
+      // detaching process. When we do after DetachProcess(), thread handles
+      // become invalid so we do before detach.
+      if (private_state == eStateStopped || private_state == eStateCrashed) {
+        LLDB_LOG(log, "process {0} is in state {1}.  Resuming for detach...",
+                 m_session_data->m_debugger->GetProcess().GetProcessId(),
+                 GetPrivateState());
+
+        LLDB_LOG(log, "resuming {0} threads for detach.",
+                 m_thread_list.GetSize());
+
+        bool failed = false;
+        for (uint32_t i = 0; i < m_thread_list.GetSize(); ++i) {
+          auto thread = std::static_pointer_cast<TargetThreadWindows>(
+              m_thread_list.GetThreadAtIndex(i));
+          Status result = thread->DoResume();
+          if (result.Fail()) {
+            failed = true;
+            LLDB_LOG(log,
+                     "Trying to resume thread at index {0}, but failed with "
+                     "error {1}.",
+                     i, result);
+          }
+        }
+
+        if (failed) {
+          error = Status::FromErrorString("Resuming Threads for Detach failed");
+        }
+      }
+    }
+
     error = DetachProcess();
     if (error.Success())
       SetPrivateState(eStateDetached);

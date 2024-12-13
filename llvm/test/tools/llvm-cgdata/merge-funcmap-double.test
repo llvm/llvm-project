@@ -18,7 +18,7 @@ RUN: sed "s/<RAW_2_BYTES>/$(cat %t/raw-2-bytes.txt)/g" %t/merge-2-template.ll > 
 RUN: llc -filetype=obj -mtriple arm64-apple-darwin %t/merge-2.ll -o %t/merge-2.o
 
 # Merge two object files into the codegen data file.
-RUN: llvm-cgdata --merge %t/merge-1.o %t/merge-2.o -o %t/merge.cgdata
+RUN: llvm-cgdata --merge --skip-trim %t/merge-1.o %t/merge-2.o -o %t/merge.cgdata
 
 RUN: llvm-cgdata --show %t/merge.cgdata | FileCheck %s
 CHECK: Stable function map:

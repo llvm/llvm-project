@@ -250,6 +250,7 @@ static void populateDialectQuantSubmodule(const py::module &m) {
           double scale = mlirUniformQuantizedPerAxisTypeGetScale(type, i);
           scales.push_back(scale);
         }
+        return scales;
       },
       "The scales designate the difference between the real values "
       "corresponding to consecutive quantized values differing by 1. The ith "
@@ -265,6 +266,7 @@ static void populateDialectQuantSubmodule(const py::module &m) {
               mlirUniformQuantizedPerAxisTypeGetZeroPoint(type, i);
           zeroPoints.push_back(zeroPoint);
         }
+        return zeroPoints;
       },
       "the storage values corresponding to the real value 0 in the affine "
       "equation. The ith zero point corresponds to the ith slice in the "

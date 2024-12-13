@@ -228,7 +228,7 @@ CodeGenInstAlias::CodeGenInstAlias(const Record *R, const CodeGenTarget &T)
       if (NumSubOps == 1 || (InstOpRec->getValue("ParserMatchClass") &&
                              InstOpRec->getValueAsDef("ParserMatchClass")
                                      ->getValueAsString("Name") != "Imm")) {
-        ResultOperands.push_back(ResOp);
+        ResultOperands.push_back(std::move(ResOp));
         ResultInstOperandIndex.push_back(std::pair(i, -1));
         ++AliasOpNo;
 

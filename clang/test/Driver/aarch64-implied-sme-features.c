@@ -49,3 +49,6 @@
 
 // RUN: %clang -target aarch64-linux-gnu -march=armv8-a+nosme+sme-i16i64 %s -### 2>&1 | FileCheck %s --check-prefix=SME-SUBFEATURE-CONFLICT-REV
 // SME-SUBFEATURE-CONFLICT-REV: "-target-feature" "+bf16"{{.*}} "-target-feature" "+sme" "-target-feature" "+sme-i16i64"
+
+// RUN: %clang --target=aarch64-linux-gnu -march=armv8-a+ssve-aes %s -### 2>&1 | FileCheck %s --check-prefix=SVE-AES
+// SVE-AES: "-target-feature" "+sme" "-target-feature" "+sme2" "-target-feature" "+ssve-aes" "-target-feature" "+sve-aes"

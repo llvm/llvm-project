@@ -5,11 +5,11 @@
 define half @fp16_vminnm_o(half %a, half %b) {
 ; CHECK-LABEL: fp16_vminnm_o:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f16 s0, r1
-; CHECK-NEXT:    vmov.f16 s2, r0
-; CHECK-NEXT:    vcmp.f16 s0, s2
+; CHECK-NEXT:    vmov.f16 s0, r0
+; CHECK-NEXT:    vmov.f16 s2, r1
+; CHECK-NEXT:    vcmp.f16 s2, s0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vselgt.f16 s0, s2, s0
+; CHECK-NEXT:    vselgt.f16 s0, s0, s2
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -37,11 +37,11 @@ entry:
 define half @fp16_vminnm_u(half %a, half %b) {
 ; CHECK-LABEL: fp16_vminnm_u:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f16 s0, r0
-; CHECK-NEXT:    vmov.f16 s2, r1
-; CHECK-NEXT:    vcmp.f16 s0, s2
+; CHECK-NEXT:    vmov.f16 s0, r1
+; CHECK-NEXT:    vmov.f16 s2, r0
+; CHECK-NEXT:    vcmp.f16 s2, s0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vselge.f16 s0, s2, s0
+; CHECK-NEXT:    vselge.f16 s0, s0, s2
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -53,11 +53,11 @@ entry:
 define half @fp16_vminnm_ule(half %a, half %b) {
 ; CHECK-LABEL: fp16_vminnm_ule:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f16 s0, r0
-; CHECK-NEXT:    vmov.f16 s2, r1
-; CHECK-NEXT:    vcmp.f16 s0, s2
+; CHECK-NEXT:    vmov.f16 s0, r1
+; CHECK-NEXT:    vmov.f16 s2, r0
+; CHECK-NEXT:    vcmp.f16 s2, s0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vselgt.f16 s0, s2, s0
+; CHECK-NEXT:    vselgt.f16 s0, s0, s2
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -69,11 +69,11 @@ entry:
 define half @fp16_vminnm_u_rev(half %a, half %b) {
 ; CHECK-LABEL: fp16_vminnm_u_rev:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f16 s0, r1
-; CHECK-NEXT:    vmov.f16 s2, r0
-; CHECK-NEXT:    vcmp.f16 s0, s2
+; CHECK-NEXT:    vmov.f16 s0, r0
+; CHECK-NEXT:    vmov.f16 s2, r1
+; CHECK-NEXT:    vcmp.f16 s2, s0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vselge.f16 s0, s2, s0
+; CHECK-NEXT:    vselge.f16 s0, s0, s2
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 entry:

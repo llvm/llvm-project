@@ -51,6 +51,13 @@ struct IdTyTemplate {
     return designator == other.designator;
   }
 
+  // Defining an "ordering" which allows types derived from this to be
+  // utilised in maps and other containers that require comparison
+  // operators for ordering
+  bool operator<(const IdTyTemplate &other) const {
+    return symbol < other.symbol;
+  }
+
   operator bool() const { return symbol != nullptr; }
 };
 
@@ -71,6 +78,10 @@ struct ObjectT<Fortran::lower::omp::IdTyTemplate<Fortran::lower::omp::ExprTy>,
   IdTy id() const { return identity; }
   Fortran::semantics::Symbol *sym() const { return identity.symbol; }
   const std::optional<ExprTy> &ref() const { return identity.designator; }
+
+  bool operator<(const ObjectT<IdTy, ExprTy> &other) const {
+    return identity < other.identity;
+  }
 
   IdTy identity;
 };
@@ -139,7 +150,18 @@ std::optional<ResultTy> maybeApply(FuncTy &&func,
                                    const std::optional<ArgTy> &arg) {
   if (!arg)
     return std::nullopt;
-  return std::move(func(*arg));
+  return func(*arg);
+}
+
+template <           //
+    typename FuncTy, //
+    typename ArgTy,  //
+    typename ResultTy =
+        std::invoke_result_t<FuncTy, decltype(std::declval<ArgTy>().v)>>
+std::optional<ResultTy> maybeApplyToV(FuncTy &&func, const ArgTy *arg) {
+  if (!arg)
+    return std::nullopt;
+  return func(arg->v);
 }
 
 std::optional<Object> getBaseObject(const Object &object,
@@ -147,12 +169,14 @@ std::optional<Object> getBaseObject(const Object &object,
 
 namespace clause {
 using Range = tomp::type::RangeT<ExprTy>;
+using Mapper = tomp::type::MapperT<IdTy, ExprTy>;
 using Iterator = tomp::type::IteratorT<TypeTy, IdTy, ExprTy>;
 using IteratorSpecifier = tomp::type::IteratorSpecifierT<TypeTy, IdTy, ExprTy>;
 using DefinedOperator = tomp::type::DefinedOperatorT<IdTy, ExprTy>;
 using ProcedureDesignator = tomp::type::ProcedureDesignatorT<IdTy, ExprTy>;
 using ReductionOperator = tomp::type::ReductionIdentifierT<IdTy, ExprTy>;
 using DependenceType = tomp::type::DependenceType;
+using Prescriptiveness = tomp::type::Prescriptiveness;
 
 // "Requires" clauses are handled early on, and the aggregated information
 // is stored in the Symbol details of modules, programs, and subprograms.

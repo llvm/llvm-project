@@ -160,7 +160,7 @@ static inline Align getFnStackAlignment(const TargetSubtargetInfo *STI,
   return STI->getFrameLowering()->getStackAlign();
 }
 
-MachineFunction::MachineFunction(Function &F, const LLVMTargetMachine &Target,
+MachineFunction::MachineFunction(Function &F, const TargetMachine &Target,
                                  const TargetSubtargetInfo &STI, MCContext &Ctx,
                                  unsigned FunctionNum)
     : F(F), Target(Target), STI(&STI), Ctx(Ctx) {
