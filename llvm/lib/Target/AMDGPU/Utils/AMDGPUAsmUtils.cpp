@@ -210,7 +210,11 @@ static constexpr CustomOperand Operands[] = {
   {{"HW_REG_PERF_SNAPSHOT_DATA"}, ID_PERF_SNAPSHOT_DATA_gfx11, isGFX11},
   {{""}},
   {{"HW_REG_SHADER_CYCLES"},    ID_SHADER_CYCLES,    isGFX10_3_GFX11},
+#if LLPC_BUILD_NPI
+  {{"HW_REG_SHADER_CYCLES_HI"}, ID_SHADER_CYCLES_HI, isGFX12},
+#else /* LLPC_BUILD_NPI */
   {{"HW_REG_SHADER_CYCLES_HI"}, ID_SHADER_CYCLES_HI, isGFX12Plus},
+#endif /* LLPC_BUILD_NPI */
   {{"HW_REG_DVGPR_ALLOC_LO"},   ID_DVGPR_ALLOC_LO,   isGFX12Plus},
   {{"HW_REG_DVGPR_ALLOC_HI"},   ID_DVGPR_ALLOC_HI,   isGFX12Plus},
 #if LLPC_BUILD_NPI
@@ -242,11 +246,13 @@ static constexpr CustomOperand Operands[] = {
   {{"HW_REG_TRAP_CTRL"},           ID_TRAP_CTRL,           isGFX12Plus},
   {{"HW_REG_SCRATCH_BASE_LO"},     ID_FLAT_SCR_LO,         isGFX12Plus},
   {{"HW_REG_SCRATCH_BASE_HI"},     ID_FLAT_SCR_HI,         isGFX12Plus},
-  {{"HW_REG_SHADER_CYCLES_LO"},    ID_SHADER_CYCLES,       isGFX12Plus},
 #if LLPC_BUILD_NPI
+  {{"HW_REG_SHADER_CYCLES_LO"},    ID_SHADER_CYCLES,       isGFX12},
 
   // Register numbers reused in GFX13+
   {{"HW_REG_WAVE_GROUP_INFO"},     ID_WAVE_GROUP_INFO,     isGFX13Plus},
+#else /* LLPC_BUILD_NPI */
+  {{"HW_REG_SHADER_CYCLES_LO"},    ID_SHADER_CYCLES,       isGFX12Plus},
 #endif /* LLPC_BUILD_NPI */
 
   // GFX940 specific registers

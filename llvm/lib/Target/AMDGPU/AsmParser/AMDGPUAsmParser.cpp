@@ -612,6 +612,10 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VS_32_Lo256RegClassID, MVT::i32);
   }
 
+  bool isVCSrc_b64_Lo256() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_64_Lo256RegClassID, MVT::i64);
+  }
+
   bool isVCSrc_b64() const {
 #else /* LLPC_BUILD_NPI */
   bool isVCSrcB64() const {
@@ -2164,12 +2168,6 @@ public:
   ParseStatus parseEndpgm(OperandVector &Operands);
 
   ParseStatus parseVOPD(OperandVector &Operands);
-#if LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
-
-  ParseStatus parseBitOp3(OperandVector &Operands);
-  AMDGPUOperand::Ptr defaultBitOp3() const;
-#endif /* LLPC_BUILD_NPI */
 };
 
 } // end anonymous namespace
@@ -4667,6 +4665,13 @@ bool AMDGPUAsmParser::validateMIMGAtomicDMask(const MCInst &Inst) {
     return true;
   if (!Desc.mayLoad() || !Desc.mayStore())
     return true; // Not atomic
+#if LLPC_BUILD_NPI
+  if ((Desc.TSFlags & SIInstrFlags::VIMAGE) != 0 &&
+      AMDGPU::getMIMGBaseOpcodeInfo(AMDGPU::getMIMGInfo(Opc)->BaseOpcode)
+          ->BVH &&
+      isGFX13())
+    return true; // RTS instructions don't use dmask
+#endif /* LLPC_BUILD_NPI */
 
   int DMaskIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::dmask);
   unsigned DMask = Inst.getOperand(DMaskIdx).getImm() & 0xf;
@@ -10998,23 +11003,6 @@ ParseStatus AMDGPUAsmParser::parseEndpgm(OperandVector &Operands) {
 }
 
 bool AMDGPUOperand::isEndpgm() const { return isImmTy(ImmTyEndpgm); }
-#if LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
-
-//===----------------------------------------------------------------------===//
-// BITOP3
-//===----------------------------------------------------------------------===//
-
-ParseStatus AMDGPUAsmParser::parseBitOp3(OperandVector &Operands) {
-  ParseStatus Res =
-      parseIntWithPrefix("bitop3", Operands, AMDGPUOperand::ImmTyBitOp3);
-  return Res;
-}
-
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultBitOp3() const {
-  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyBitOp3);
-}
-#endif /* LLPC_BUILD_NPI */
 
 //===----------------------------------------------------------------------===//
 // Split Barrier

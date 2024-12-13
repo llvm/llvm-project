@@ -898,6 +898,20 @@ TEST(InstructionsTest, GEPIndices) {
   delete GEPI;
 }
 
+TEST(InstructionsTest, ZeroIndexGEP) {
+  LLVMContext Context;
+  DataLayout DL;
+  Type *PtrTy = PointerType::getUnqual(Context);
+  auto *GEP = GetElementPtrInst::Create(Type::getInt8Ty(Context),
+                                        PoisonValue::get(PtrTy), {});
+
+  APInt Offset(DL.getIndexTypeSizeInBits(PtrTy), 0);
+  EXPECT_TRUE(GEP->accumulateConstantOffset(DL, Offset));
+  EXPECT_TRUE(Offset.isZero());
+
+  delete GEP;
+}
+
 TEST(InstructionsTest, SwitchInst) {
   LLVMContext C;
 

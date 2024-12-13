@@ -2284,6 +2284,12 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
   if (!STM->hasFlatInstOffsets() || !SIInstrInfo::isFLAT(MI))
     return false;
 
+#if LLPC_BUILD_NPI
+  if (!TII->getNamedOperand(MI, AMDGPU::OpName::offset) &&
+      SIInstrInfo::isFLATGlobal(MI))
+    return false;
+
+#endif /* LLPC_BUILD_NPI */
   // TODO: Support FLAT_SCRATCH. Currently code expects 64-bit pointers.
   if (SIInstrInfo::isFLATScratch(MI))
     return false;

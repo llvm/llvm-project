@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_MUTEX
-#define _LIBCPP_MUTEX
+#ifndef _LIBCPP___CXX03_MUTEX
+#define _LIBCPP___CXX03_MUTEX
 
 /*
     mutex synopsis
@@ -513,4 +513,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/typeinfo>
 #endif
 
-#endif // _LIBCPP_MUTEX
+#endif // _LIBCPP___CXX03_MUTEX

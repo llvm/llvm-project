@@ -8,7 +8,9 @@
 
 #include "llvm/ExecutionEngine/Orc/LazyReexports.h"
 
+#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
 #include "llvm/TargetParser/Triple.h"
 
 #define DEBUG_TYPE "orc"
@@ -227,6 +229,168 @@ LazyReexportsMaterializationUnit::extractFlags(const SymbolAliasMap &Aliases) {
     SymbolFlags[KV.first] = KV.second.AliasFlags;
   }
   return MaterializationUnit::Interface(std::move(SymbolFlags), nullptr);
+}
+
+class LazyReexportsManager::MU : public MaterializationUnit {
+public:
+  MU(LazyReexportsManager &LRMgr, SymbolAliasMap Reexports)
+      : MaterializationUnit(getInterface(Reexports)), LRMgr(LRMgr),
+        Reexports(std::move(Reexports)) {}
+
+private:
+  Interface getInterface(const SymbolAliasMap &Reexports) {
+    SymbolFlagsMap SF;
+    for (auto &[Alias, AI] : Reexports)
+      SF[Alias] = AI.AliasFlags;
+    return {std::move(SF), nullptr};
+  }
+
+  StringRef getName() const override { return "LazyReexportsManager::MU"; }
+
+  void materialize(std::unique_ptr<MaterializationResponsibility> R) override {
+    LRMgr.emitReentryTrampolines(std::move(R), std::move(Reexports));
+  }
+
+  void discard(const JITDylib &JD, const SymbolStringPtr &Name) override {
+    Reexports.erase(Name);
+  }
+
+  LazyReexportsManager &LRMgr;
+  SymbolAliasMap Reexports;
+};
+
+class LazyReexportsManager::Plugin : public ObjectLinkingLayer::Plugin {
+public:
+  void modifyPassConfig(MaterializationResponsibility &MR,
+                        jitlink::LinkGraph &G,
+                        jitlink::PassConfiguration &Config) override {}
+
+  Error notifyFailed(MaterializationResponsibility &MR) override {
+    return Error::success();
+  }
+
+  Error notifyRemovingResources(JITDylib &JD, ResourceKey K) override {
+    return Error::success();
+  }
+
+  void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
+                                   ResourceKey SrcKey) override {}
+
+private:
+  std::mutex M;
+};
+
+Expected<std::unique_ptr<LazyReexportsManager>>
+LazyReexportsManager::Create(EmitTrampolinesFn EmitTrampolines,
+                             RedirectableSymbolManager &RSMgr,
+                             JITDylib &PlatformJD) {
+  Error Err = Error::success();
+  std::unique_ptr<LazyReexportsManager> LRM(new LazyReexportsManager(
+      std::move(EmitTrampolines), RSMgr, PlatformJD, Err));
+  if (Err)
+    return std::move(Err);
+  return std::move(LRM);
+}
+
+LazyReexportsManager::LazyReexportsManager(EmitTrampolinesFn EmitTrampolines,
+                                           RedirectableSymbolManager &RSMgr,
+                                           JITDylib &PlatformJD, Error &Err)
+    : EmitTrampolines(std::move(EmitTrampolines)), RSMgr(RSMgr) {
+
+  using namespace shared;
+
+  ErrorAsOutParameter _(&Err);
+
+  auto &ES = PlatformJD.getExecutionSession();
+  ExecutionSession::JITDispatchHandlerAssociationMap WFs;
+
+  WFs[ES.intern("__orc_rt_resolve_tag")] =
+      ES.wrapAsyncWithSPS<SPSExpected<SPSExecutorSymbolDef>(SPSExecutorAddr)>(
+          this, &LazyReexportsManager::resolve);
+
+  Err = ES.registerJITDispatchHandlers(PlatformJD, std::move(WFs));
+}
+
+std::unique_ptr<MaterializationUnit>
+LazyReexportsManager::createLazyReexports(SymbolAliasMap Reexports) {
+  return std::make_unique<MU>(*this, std::move(Reexports));
+}
+
+void LazyReexportsManager::emitReentryTrampolines(
+    std::unique_ptr<MaterializationResponsibility> MR,
+    SymbolAliasMap Reexports) {
+  size_t NumTrampolines = Reexports.size();
+  auto RT = MR->getResourceTracker();
+  EmitTrampolines(
+      std::move(RT), NumTrampolines,
+      [this, MR = std::move(MR), Reexports = std::move(Reexports)](
+          Expected<std::vector<ExecutorSymbolDef>> ReentryPoints) mutable {
+        emitRedirectableSymbols(std::move(MR), std::move(Reexports),
+                                std::move(ReentryPoints));
+      });
+}
+
+void LazyReexportsManager::emitRedirectableSymbols(
+    std::unique_ptr<MaterializationResponsibility> MR, SymbolAliasMap Reexports,
+    Expected<std::vector<ExecutorSymbolDef>> ReentryPoints) {
+
+  if (!ReentryPoints) {
+    MR->getExecutionSession().reportError(ReentryPoints.takeError());
+    MR->failMaterialization();
+    return;
+  }
+
+  assert(Reexports.size() == ReentryPoints->size() &&
+         "Number of reentry points doesn't match number of reexports");
+
+  // Bind entry points to names.
+  SymbolMap Redirs;
+  {
+    std::lock_guard<std::mutex> Lock(M);
+    size_t I = 0;
+    for (auto &[Name, AI] : Reexports) {
+      const auto &ReentryPoint = (*ReentryPoints)[I++];
+      Redirs[Name] = ReentryPoint;
+      CallThroughs[ReentryPoint.getAddress()] = {Name, AI.Aliasee,
+                                                 &MR->getTargetJITDylib()};
+    }
+  }
+
+  RSMgr.emitRedirectableSymbols(std::move(MR), std::move(Redirs));
+}
+
+void LazyReexportsManager::resolve(ResolveSendResultFn SendResult,
+                                   ExecutorAddr ReentryStubAddr) {
+
+  CallThroughInfo LandingInfo;
+
+  {
+    std::lock_guard<std::mutex> Lock(M);
+
+    auto I = CallThroughs.find(ReentryStubAddr);
+    if (I == CallThroughs.end())
+      return SendResult(make_error<StringError>(
+          "Reentry address " + formatv("{0:x}", ReentryStubAddr) +
+              " not registered",
+          inconvertibleErrorCode()));
+    LandingInfo = I->second;
+  }
+
+  SymbolInstance LandingSym(LandingInfo.JD, std::move(LandingInfo.BodyName));
+  LandingSym.lookupAsync([this, JD = std::move(LandingInfo.JD),
+                          ReentryName = std::move(LandingInfo.Name),
+                          SendResult = std::move(SendResult)](
+                             Expected<ExecutorSymbolDef> Result) mutable {
+    if (Result) {
+      // FIXME: Make RedirectionManager operations async, then use the async
+      //        APIs here.
+      if (auto Err = RSMgr.redirect(*JD, ReentryName, *Result))
+        SendResult(std::move(Err));
+      else
+        SendResult(std::move(Result));
+    } else
+      SendResult(std::move(Result));
+  });
 }
 
 } // End namespace orc.

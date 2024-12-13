@@ -884,8 +884,10 @@ def smrd_prefetch : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
 def SMRDImm         : ComplexPattern<iPTR, 2, "SelectSMRDImm">;
 def SMRDImm32       : ComplexPattern<iPTR, 2, "SelectSMRDImm32">;
 #ifdef LLPC_BUILD_NPI
-def SMRDSgpr        : ComplexPattern<iPTR, 3, "SelectSMRDSgpr", [], [SDNPWantRoot], -3>;
-def SMRDSgprImm     : ComplexPattern<iPTR, 4, "SelectSMRDSgprImm", [], [SDNPWantRoot]>;
+let WantsRoot = true in {
+  def SMRDSgpr        : ComplexPattern<iPTR, 3, "SelectSMRDSgpr", [], [], -3>;
+  def SMRDSgprImm     : ComplexPattern<iPTR, 4, "SelectSMRDSgprImm", [], []>;
+}
 #else /* LLPC_BUILD_NPI */
 def SMRDSgpr        : ComplexPattern<iPTR, 2, "SelectSMRDSgpr">;
 def SMRDSgprImm     : ComplexPattern<iPTR, 3, "SelectSMRDSgprImm">;

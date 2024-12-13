@@ -1372,7 +1372,7 @@ let Constraints = "$vdst = $src2",
     defm V_DOT8C_I32_I4  : VOP2Inst<"v_dot8c_i32_i4",  VOP_DOT_ACC_I32_I32>;
 
   let SubtargetPredicate = HasDot13Insts in
-    defm V_DOT2C_F32_BF16 : VOP2Inst<"v_dot2c_f32_bf16", VOP_DOT_ACC_F32_V2BF16>;
+    defm V_DOT2C_F32_BF16 : VOP2Inst_VOPD<"v_dot2c_f32_bf16", VOP_DOT_ACC_F32_V2BF16, 0xd, "v_dot2acc_f32_bf16">;
 }
 
 let AddedComplexity = 30 in {
@@ -2340,10 +2340,8 @@ defm V_PK_FMAC_F16     : VOP2_Real_e32_gfx11_gfx12<0x03c>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
-defm V_ADD_F16_t16         : VOP2_Real_FULL_t16_gfx11_gfx12_gfx13<0x032, "v_add_f16">;
-defm V_ADD_F16_fake16      : VOP2_Real_FULL_t16_gfx11_gfx12_gfx13<0x032, "v_add_f16">;
-defm V_SUB_F16_t16         : VOP2_Real_FULL_t16_gfx11_gfx12_gfx13<0x033, "v_sub_f16">;
-defm V_SUB_F16_fake16      : VOP2_Real_FULL_t16_gfx11_gfx12_gfx13<0x033, "v_sub_f16">;
+defm V_ADD_F16             : VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<0x032, "v_add_f16">;
+defm V_SUB_F16             : VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<0x033, "v_sub_f16">;
 defm V_SUBREV_F16_t16      : VOP2_Real_FULL_t16_gfx11_gfx12_gfx13<0x034, "v_subrev_f16">;
 defm V_SUBREV_F16_fake16   : VOP2_Real_FULL_t16_gfx11_gfx12_gfx13<0x034, "v_subrev_f16">;
 defm V_MUL_F16_t16         : VOP2_Real_FULL_t16_gfx11_gfx12_gfx13<0x035, "v_mul_f16">;
@@ -2352,10 +2350,8 @@ defm V_FMAC_F16            : VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<0x0
 defm V_LDEXP_F16_t16       : VOP2_Real_FULL_t16_gfx11_gfx12_gfx13<0x03b, "v_ldexp_f16">;
 defm V_LDEXP_F16_fake16    : VOP2_Real_FULL_t16_gfx11_gfx12_gfx13<0x03b, "v_ldexp_f16">;
 #else /* LLPC_BUILD_NPI */
-defm V_ADD_F16_t16         : VOP2_Real_FULL_t16_gfx11_gfx12<0x032, "v_add_f16">;
-defm V_ADD_F16_fake16      : VOP2_Real_FULL_t16_gfx11_gfx12<0x032, "v_add_f16">;
-defm V_SUB_F16_t16         : VOP2_Real_FULL_t16_gfx11_gfx12<0x033, "v_sub_f16">;
-defm V_SUB_F16_fake16      : VOP2_Real_FULL_t16_gfx11_gfx12<0x033, "v_sub_f16">;
+defm V_ADD_F16             : VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12<0x032, "v_add_f16">;
+defm V_SUB_F16             : VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12<0x033, "v_sub_f16">;
 defm V_SUBREV_F16_t16      : VOP2_Real_FULL_t16_gfx11_gfx12<0x034, "v_subrev_f16">;
 defm V_SUBREV_F16_fake16   : VOP2_Real_FULL_t16_gfx11_gfx12<0x034, "v_subrev_f16">;
 defm V_MUL_F16_t16         : VOP2_Real_FULL_t16_gfx11_gfx12<0x035, "v_mul_f16">;

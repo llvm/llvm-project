@@ -56,7 +56,8 @@ private:
     auto DefineExternalGOTSymbolIfPresent =
         createDefineExternalSectionStartAndEndSymbolsPass(
             [&](LinkGraph &LG, Symbol &Sym) -> SectionRangeSymbolDesc {
-              if (Sym.getName() == ELFGOTSymbolName)
+              if (Sym.getName() != nullptr &&
+                  *Sym.getName() == ELFGOTSymbolName)
                 if (auto *GOTSection = G.findSectionByName(
                         i386::GOTTableManager::getSectionName())) {
                   GOTSymbol = &Sym;
@@ -82,7 +83,7 @@ private:
 
       // Check for an existing defined symbol.
       for (auto *Sym : GOTSection->symbols())
-        if (Sym->getName() == ELFGOTSymbolName) {
+        if (Sym->getName() != nullptr && *Sym->getName() == ELFGOTSymbolName) {
           GOTSymbol = Sym;
           return Error::success();
         }
@@ -224,13 +225,16 @@ private:
 
 public:
   ELFLinkGraphBuilder_i386(StringRef FileName, const object::ELFFile<ELFT> &Obj,
+                           std::shared_ptr<orc::SymbolStringPool> SSP,
                            Triple TT, SubtargetFeatures Features)
-      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), std::move(Features),
-                                  FileName, i386::getEdgeKindName) {}
+      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(SSP), std::move(TT),
+                                  std::move(Features), FileName,
+                                  i386::getEdgeKindName) {}
 };
 
 Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromELFObject_i386(MemoryBufferRef ObjectBuffer) {
+createLinkGraphFromELFObject_i386(MemoryBufferRef ObjectBuffer,
+                                  std::shared_ptr<orc::SymbolStringPool> SSP) {
   LLVM_DEBUG({
     dbgs() << "Building jitlink graph for new input "
            << ObjectBuffer.getBufferIdentifier() << "...\n";
@@ -248,8 +252,9 @@ createLinkGraphFromELFObject_i386(MemoryBufferRef ObjectBuffer) {
          "Only i386 (little endian) is supported for now");
 
   auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF32LE>>(**ELFObj);
+
   return ELFLinkGraphBuilder_i386<object::ELF32LE>(
-             (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
+             (*ELFObj)->getFileName(), ELFObjFile.getELFFile(), std::move(SSP),
              (*ELFObj)->makeTriple(), std::move(*Features))
       .buildGraph();
 }

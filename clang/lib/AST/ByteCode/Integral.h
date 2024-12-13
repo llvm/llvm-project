@@ -183,6 +183,7 @@ public:
   }
 
   Integral truncate(unsigned TruncBits) const {
+    assert(TruncBits >= 1);
     if (TruncBits >= Bits)
       return *this;
     const ReprT BitMask = (ReprT(1) << ReprT(TruncBits)) - 1;

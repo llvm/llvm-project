@@ -3296,11 +3296,11 @@ define <4 x i16> @buildvec_v4i16_pack(i16 %e1, i16 %e2, i16 %e3, i16 %e4) {
 ; RVA22U64-LABEL: buildvec_v4i16_pack:
 ; RVA22U64:       # %bb.0:
 ; RVA22U64-NEXT:    slli a3, a3, 48
-; RVA22U64-NEXT:    zext.h a2, a2
+; RVA22U64-NEXT:    slli a2, a2, 48
 ; RVA22U64-NEXT:    zext.h a0, a0
-; RVA22U64-NEXT:    zext.h a1, a1
-; RVA22U64-NEXT:    slli a2, a2, 32
-; RVA22U64-NEXT:    slli a1, a1, 16
+; RVA22U64-NEXT:    slli a1, a1, 48
+; RVA22U64-NEXT:    srli a2, a2, 16
+; RVA22U64-NEXT:    srli a1, a1, 32
 ; RVA22U64-NEXT:    or a2, a2, a3
 ; RVA22U64-NEXT:    or a0, a0, a1
 ; RVA22U64-NEXT:    or a0, a0, a2

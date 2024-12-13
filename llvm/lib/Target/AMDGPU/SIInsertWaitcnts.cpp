@@ -2617,6 +2617,12 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     if (isCacheInvOrWBInst(Inst))
       return;
 
+#if LLPC_BUILD_NPI
+    // TODO-GFX13: Insert correct waitcnts for RTS instructions.
+    if (Inst.getOpcode() == AMDGPU::RTS_FLUSH)
+      return;
+
+#endif /* LLPC_BUILD_NPI */
     assert(Inst.mayLoadOrStore());
 
     int FlatASCount = 0;

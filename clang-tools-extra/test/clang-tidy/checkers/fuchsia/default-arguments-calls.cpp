@@ -26,7 +26,7 @@ void S::x(int i = 12) {}
 int main() {
   S s;
   s.x();
-  // CHECK-NOTES: [[@LINE-1]]:3: warning: calling a function that uses a default argument is disallowed [fuchsia-default-arguments-calls]
+  // CHECK-NOTES: [[@LINE-1]]:5: warning: calling a function that uses a default argument is disallowed [fuchsia-default-arguments-calls]
   // CHECK-NOTES: [[@LINE-6]]:11: note: default parameter was declared here
   // CHECK-NEXT: void S::x(int i = 12) {}
   x();

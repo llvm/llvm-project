@@ -353,6 +353,22 @@ static bool isStride64(unsigned Opc) {
   }
 }
 
+#if LLPC_BUILD_NPI
+static bool isRTSOpc(unsigned op) {
+  switch (op) {
+  case AMDGPU::RTS_READ_RESULT_ALL_STOP:
+  case AMDGPU::RTS_READ_RESULT_ONGOING:
+  case AMDGPU::RTS_FLUSH:
+  case AMDGPU::RTS_RAY_SAVE:
+  case AMDGPU::RTS_RAY_RESTORE:
+  case AMDGPU::RTS_UPDATE_RAY:
+    return true;
+  default:
+    return false;
+  }
+}
+
+#endif /* LLPC_BUILD_NPI */
 bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
     int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
@@ -467,6 +483,10 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     auto RsrcOpName =
         isMIMG(LdSt) ? AMDGPU::OpName::srsrc : AMDGPU::OpName::rsrc;
     int SRsrcIdx = AMDGPU::getNamedOperandIdx(Opc, RsrcOpName);
+#if LLPC_BUILD_NPI
+    if (SRsrcIdx == -1)
+      return false;
+#endif /* LLPC_BUILD_NPI */
     BaseOps.push_back(&LdSt.getOperand(SRsrcIdx));
     int VAddr0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr0);
     if (VAddr0Idx >= 0) {
@@ -500,7 +520,11 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     return true;
   }
 
+#if LLPC_BUILD_NPI
+  if (isFLAT(LdSt) && !isRTSOpc(LdSt.getOpcode())) {
+#else /* LLPC_BUILD_NPI */
   if (isFLAT(LdSt)) {
+#endif /* LLPC_BUILD_NPI */
     // Instructions have either vaddr or saddr or both or none.
     BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
     if (BaseOp)
@@ -4917,6 +4941,15 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     return false;
   }
 
+#if LLPC_BUILD_NPI
+  if ((MI.getOpcode() == AMDGPU::V_LOAD_IDX ||
+       MI.getOpcode() == AMDGPU::V_STORE_IDX) &&
+      MI.memoperands_empty()) {
+    ErrInfo = "missing memory operand from v_load/store_idx.";
+    return false;
+  }
+
+#endif /* LLPC_BUILD_NPI */
   // Make sure the register classes are correct.
   for (int i = 0, e = Desc.getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = MI.getOperand(i);
@@ -4996,11 +5029,12 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     if (ST.needsAlignedVGPRs()) {
       const TargetRegisterClass *RC = RI.getRegClassForReg(MRI, Reg);
       if (RI.hasVectorRegisters(RC) && MO.getSubReg()) {
-        const TargetRegisterClass *SubRC =
-            RI.getSubRegisterClass(RC, MO.getSubReg());
-        RC = RI.getCompatibleSubRegClass(RC, SubRC, MO.getSubReg());
-        if (RC)
-          RC = SubRC;
+        if (const TargetRegisterClass *SubRC =
+                RI.getSubRegisterClass(RC, MO.getSubReg())) {
+          RC = RI.getCompatibleSubRegClass(RC, SubRC, MO.getSubReg());
+          if (RC)
+            RC = SubRC;
+        }
       }
 
       // Check that this is the aligned version of the class.
@@ -6445,6 +6479,23 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
   if ((Opc == AMDGPU::V_FMAC_F32_e64 || Opc == AMDGPU::V_FMAC_F16_e64) &&
       !RI.isVGPR(MRI, MI.getOperand(VOP3Idx[2]).getReg()))
     legalizeOpWithMove(MI, VOP3Idx[2]);
+#if LLPC_BUILD_NPI
+
+  if (isWMMA(MI)) {
+    // scale_src has a register class restricted to low 256 VGPRs, we may need
+    // to insert a copy to the restricted VGPR class.
+    int ScaleSrc0Idx =
+        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::scale_src0);
+    if (ScaleSrc0Idx != -1) {
+      int ScaleSrc1Idx =
+          AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::scale_src1);
+      if (!isOperandLegal(MI, ScaleSrc0Idx))
+        legalizeOpWithMove(MI, ScaleSrc0Idx);
+      if (!isOperandLegal(MI, ScaleSrc1Idx))
+        legalizeOpWithMove(MI, ScaleSrc1Idx);
+    }
+  }
+#endif /* LLPC_BUILD_NPI */
 }
 
 Register SIInstrInfo::readlaneVGPRToSGPR(
@@ -7220,14 +7271,9 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
 #if LLPC_BUILD_NPI
         .add(SrcMO);
     SrcMO.ChangeToRegister(Reg, false);
-#else /* LLPC_BUILD_NPI */
-        .add(Src0);
-    Src0.ChangeToRegister(Reg, false);
-#endif /* LLPC_BUILD_NPI */
     return nullptr;
   }
 
-#if LLPC_BUILD_NPI
   if (MI.getOpcode() == AMDGPU::V_PERMUTE_PAIR_GENSGPR_B32) {
     const DebugLoc &DL = MI.getDebugLoc();
     Register Reg = MRI.createVirtualRegister(&AMDGPU::SReg_64_XEXECRegClass);
@@ -7251,9 +7297,14 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
         .addImm(AMDGPU::sub1);
 
     Src1.ChangeToRegister(Reg, false);
+#else /* LLPC_BUILD_NPI */
+        .add(Src0);
+    Src0.ChangeToRegister(Reg, false);
+#endif /* LLPC_BUILD_NPI */
     return nullptr;
   }
 
+#if LLPC_BUILD_NPI
   // Legalize TENSOR_LOAD_TO_LDS, TENSOR_LOAD_TO_LDS_D2, TENSOR_STORE_FROM_LDS,
   // TENSOR_STORE_FROM_LDS_D2. All their operands are scalar.
   if (MI.getOpcode() == AMDGPU::TENSOR_LOAD_TO_LDS ||

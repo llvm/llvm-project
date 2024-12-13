@@ -778,15 +778,6 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
         let samp = 0 in
 #ifdef LLPC_BUILD_NPI
           def _V4_gfx12 : VSAMPLE_Sampler_gfx12<op, asm, dst_rc, 4, VGPR_32, enableDisasm>;
-      }
-      else {
-        def _V4_gfx12 : VIMAGE_NoSampler_gfx12<op, asm, dst_rc, 4, enableDisasm>;
-      }
-    }
-    if op.HAS_GFX13 then {
-      if isVSample then {
-        let samp = 0 in
-          def _V4_gfx13 : VSAMPLE_Sampler_gfx13<op, asm, dst_rc, 4, VGPR_32, enableDisasm>;
 #else /* LLPC_BUILD_NPI */
           def _V4_gfx12 : VSAMPLE_Sampler_gfx12<op, asm, dst_rc, 4, VGPR_32,
                                                 !if(enableDisasm, "GFX12", "")>;
@@ -794,6 +785,15 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
       }
       else {
 #ifdef LLPC_BUILD_NPI
+        def _V4_gfx12 : VIMAGE_NoSampler_gfx12<op, asm, dst_rc, 4, enableDisasm>;
+      }
+    }
+    if op.HAS_GFX13 then {
+      if isVSample then {
+        let samp = 0 in
+          def _V4_gfx13 : VSAMPLE_Sampler_gfx13<op, asm, dst_rc, 4, VGPR_32, enableDisasm>;
+      }
+      else {
         def _V4_gfx13 : VIMAGE_NoSampler_gfx13<op, asm, dst_rc, 4, enableDisasm>;
 #else /* LLPC_BUILD_NPI */
         def _V4_gfx12 : VIMAGE_NoSampler_gfx12<op, asm, dst_rc, 4,
@@ -2038,14 +2038,16 @@ class VIMAGE_RTS<int op, string opcode, int num_addrs, dag RsrcIns, GFXGen gfxGe
   let AsmString = opcode#!if(HasVdst, " $vdata, ", " ")#nsah.AddrAsm#!if(IsTraceRay, ", $rsrc", ", null")#"$r128";
 }
 
-multiclass MIMG_RTS<mimgopc op, string opcode, bit HasVdst, bit IsTraceRay>{
+multiclass MIMG_RTS<mimgopc op, string opcode, bit HasVdst, bit IsTraceRay, bit isStore>{
   defvar info = VIMAGE_RTS_Helper<HasVdst, IsTraceRay>;
   def "" : MIMGBaseOpcode {
     let NoReturn = !not(HasVdst);
     let BVH = 1;
   }
   let BaseOpcode = !cast<MIMGBaseOpcode>(NAME),
-      mayLoad = 0,
+      mayLoad = 1,
+      hasSideEffects = 1,
+      mayStore = isStore,
       d16 = 0,
       dmask = 0x0,
       cpol = 0,
@@ -2151,9 +2153,9 @@ def IMAGE_ATOMIC_MAX_FLT : MIMGBaseOpcodeAtomic;
 defm IMAGE_ATOMIC_MAX_FLT       : MIMG_Atomic_With_Alias <mimgopc<MIMG.NOP, 0x85, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_max_flt", "image_atomic_max_num_flt", 0, 1>;
 defm IMAGE_ATOMIC_MAX_FLT       : MIMG_Atomic_With_Alias <mimgopc<0x85, MIMG.NOP, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_max_num_flt", "image_atomic_max_flt", 0, 1>;
 
-defm RTS_TRACE_RAY          : MIMG_RTS<mimgopc<0x0f2, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "rts_trace_ray", 0, 1>;
-defm RTS_TRACE_RAY_NONBLOCK : MIMG_RTS<mimgopc<0x0f3, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "rts_trace_ray_nonblock", 1, 1>;
-defm RTS_READ_VERTEX        : MIMG_RTS<mimgopc<0x0f4, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "rts_read_vertex", 1, 0>;
+defm RTS_TRACE_RAY          : MIMG_RTS<mimgopc<0x0f2, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "rts_trace_ray", 0, 1, 1>;
+defm RTS_TRACE_RAY_NONBLOCK : MIMG_RTS<mimgopc<0x0f3, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "rts_trace_ray_nonblock", 1, 1, 1>;
+defm RTS_READ_VERTEX        : MIMG_RTS<mimgopc<0x0f4, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "rts_read_vertex", 1, 0, 0>;
 
 defm IMAGE_SAMPLE               : MIMG_Sampler_WQM <mimgopc<0x1b, 0x1b, 0x1b, 0x20>, AMDGPUSample>;
 #else /* LLPC_BUILD_NPI */
@@ -2384,8 +2386,31 @@ defm IMAGE_BVH_DUAL_INTERSECT_RAY  : MIMG_IntersectRay<mimgopc<0x80, MIMG.NOP, M
 defm IMAGE_BVH8_INTERSECT_RAY      : MIMG_IntersectRay<mimgopc<0x81, MIMG.NOP, MIMG.NOP>, "image_bvh8_intersect_ray", 1, 0, 0, 1>;
 #endif /* LLPC_BUILD_NPI */
 
+let SubtargetPredicate = isGFX12Plus in {
+  def : AMDGPUMnemonicAlias<"bvh_intersect_ray", "image_bvh_intersect_ray">;
+  def : AMDGPUMnemonicAlias<"bvh64_intersect_ray", "image_bvh64_intersect_ray">;
+}
+
 } // End let OtherPredicates = [HasImageInsts]
 
+#ifdef LLPC_BUILD_NPI
+class RtsTraceRayPat<VIMAGE_RTS inst, SDPatternOperator node, ValueType vdata_vt = isVoid> : GCNPat<
+  !if(!ne(vdata_vt, isVoid),
+      (vdata_vt:$vdata (node i32:$vaddr0, v3i32:$vaddr1, f32:$vaddr2, v3f32:$vaddr3, v3f32:$vaddr4, v4i32:$rsrc)),
+      (node i32:$vaddr0, v3i32:$vaddr1, f32:$vaddr2, v3f32:$vaddr3, v3f32:$vaddr4, v4i32:$rsrc)),
+  (inst $vaddr0, $vaddr1, $vaddr2, $vaddr3, $vaddr4, $rsrc, (i1 1))
+>;
+
+def : RtsTraceRayPat <RTS_TRACE_RAY_gfx13, int_amdgcn_rts_trace_ray>;
+def : RtsTraceRayPat <RTS_TRACE_RAY_NONBLOCK_gfx13, int_amdgcn_rts_trace_ray_nonblock, i32>;
+
+def : GCNPat<
+  (v9f32:$vdata (int_amdgcn_rts_read_vertex i64:$vaddr, i32:$vaddr2)),
+  (RTS_READ_VERTEX_gfx13 (i32 (EXTRACT_SUBREG VReg_64:$vaddr, sub0)),
+                         (i32 (EXTRACT_SUBREG VReg_64:$vaddr, sub1)), $vaddr2, (i1 1))
+>;
+
+#endif /* LLPC_BUILD_NPI */
 /********** ========================================= **********/
 /********** Table of dimension-aware image intrinsics **********/
 /********** ========================================= **********/

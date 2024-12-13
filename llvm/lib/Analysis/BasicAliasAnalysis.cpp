@@ -1074,19 +1074,6 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call1,
   return ModRefInfo::ModRef;
 }
 
-/// Return true if we know V to the base address of the corresponding memory
-/// object.  This implies that any address less than V must be out of bounds
-/// for the underlying object.  Note that just being isIdentifiedObject() is
-/// not enough - For example, a negative offset from a noalias argument or call
-/// can be inbounds w.r.t the actual underlying object.
-static bool isBaseOfObject(const Value *V) {
-  // TODO: We can handle other cases here
-  // 1) For GC languages, arguments to functions are often required to be
-  //    base pointers.
-  // 2) Result of allocation routines are often base pointers.  Leverage TLI.
-  return (isa<AllocaInst>(V) || isa<GlobalVariable>(V));
-}
-
 /// Provides a bunch of ad-hoc rules to disambiguate a GEP instruction against
 /// another pointer.
 ///

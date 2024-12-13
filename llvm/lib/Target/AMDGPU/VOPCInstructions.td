@@ -2260,6 +2260,17 @@ defm V_CMPX_CLASS_F32     : VOPCX_Real_gfx11_gfx12<0x0fe>;
 defm V_CMPX_CLASS_F64     : VOPCX_Real_gfx11_gfx12<0x0ff>;
 #endif /* LLPC_BUILD_NPI */
 
+let AssemblerPredicate = isGFX11Only in {
+  def : AMDGPUMnemonicAlias<"v_cmp_tru_i32", "v_cmp_t_i32">;
+  def : AMDGPUMnemonicAlias<"v_cmp_tru_u32", "v_cmp_t_u32">;
+  def : AMDGPUMnemonicAlias<"v_cmp_tru_i64", "v_cmp_t_i64">;
+  def : AMDGPUMnemonicAlias<"v_cmp_tru_u64", "v_cmp_t_u64">;
+  def : AMDGPUMnemonicAlias<"v_cmpx_tru_i32", "v_cmpx_t_i32">;
+  def : AMDGPUMnemonicAlias<"v_cmpx_tru_u32", "v_cmpx_t_u32">;
+  def : AMDGPUMnemonicAlias<"v_cmpx_tru_i64", "v_cmpx_t_i64">;
+  def : AMDGPUMnemonicAlias<"v_cmpx_tru_u64", "v_cmpx_t_u64">;
+}
+
 //===----------------------------------------------------------------------===//
 // GFX10.
 //===----------------------------------------------------------------------===//
