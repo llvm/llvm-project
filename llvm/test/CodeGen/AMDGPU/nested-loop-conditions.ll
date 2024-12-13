@@ -154,7 +154,7 @@ define amdgpu_kernel void @nested_loop_conditions(ptr addrspace(1) nocapture %ar
 ; GCN-NEXT:    v_cmp_lt_i32_e32 vcc, 8, v0
 ; GCN-NEXT:    s_cbranch_vccnz .LBB1_6
 ; GCN-NEXT:  ; %bb.1: ; %bb14.lr.ph
-; GCN-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x0
 ; GCN-NEXT:    s_branch .LBB1_3
 ; GCN-NEXT:  .LBB1_2: ; %Flow
 ; GCN-NEXT:    ; in Loop: Header=BB1_3 Depth=1
@@ -179,7 +179,7 @@ define amdgpu_kernel void @nested_loop_conditions(ptr addrspace(1) nocapture %ar
 ; GCN-NEXT:    s_cbranch_vccnz .LBB1_4
 ; GCN-NEXT:  ; %bb.5: ; %bb21
 ; GCN-NEXT:    ; in Loop: Header=BB1_3 Depth=1
-; GCN-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x0
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_cmp_lt_i32_e64 s[0:1], 8, v0

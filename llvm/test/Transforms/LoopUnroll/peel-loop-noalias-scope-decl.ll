@@ -7,40 +7,40 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Loop peeling must result in valid scope declartions
 
-define internal fastcc void @test01(ptr %p0, ptr %p1, ptr %p2) unnamed_addr align 2 {
+define internal fastcc void @test01(ptr %p0, ptr %p1, ptr %p2, i32 %n) unnamed_addr align 2 {
 ; CHECK-LABEL: @test01(
 ; CHECK-NEXT:  for.body47.lr.ph:
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata !0)
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META0:![0-9]+]])
 ; CHECK-NEXT:    br label [[FOR_BODY47_PEEL_BEGIN:%.*]]
 ; CHECK:       for.body47.peel.begin:
 ; CHECK-NEXT:    br label [[FOR_BODY47_PEEL:%.*]]
 ; CHECK:       for.body47.peel:
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata !3)
-; CHECK-NEXT:    store i8 42, ptr [[P0:%.*]], align 1, !alias.scope !3
-; CHECK-NEXT:    store i8 43, ptr [[P1:%.*]], align 1, !alias.scope !0
-; CHECK-NEXT:    store i8 44, ptr [[P2:%.*]], align 1, !alias.scope !5
-; CHECK-NEXT:    store i8 42, ptr [[P0]], align 1, !noalias !3
-; CHECK-NEXT:    store i8 43, ptr [[P1]], align 1, !noalias !0
-; CHECK-NEXT:    store i8 44, ptr [[P2]], align 1, !noalias !5
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META3:![0-9]+]])
+; CHECK-NEXT:    store i8 42, ptr [[P0:%.*]], align 1, !alias.scope [[META3]]
+; CHECK-NEXT:    store i8 43, ptr [[P1:%.*]], align 1, !alias.scope [[META0]]
+; CHECK-NEXT:    store i8 44, ptr [[P2:%.*]], align 1, !alias.scope [[META5:![0-9]+]]
+; CHECK-NEXT:    store i8 42, ptr [[P0]], align 1, !noalias [[META3]]
+; CHECK-NEXT:    store i8 43, ptr [[P1]], align 1, !noalias [[META0]]
+; CHECK-NEXT:    store i8 44, ptr [[P2]], align 1, !noalias [[META5]]
 ; CHECK-NEXT:    [[CMP52_PEEL:%.*]] = icmp eq i32 0, 0
 ; CHECK-NEXT:    br i1 [[CMP52_PEEL]], label [[COND_TRUE_PEEL:%.*]], label [[COND_END_PEEL:%.*]]
 ; CHECK:       cond.true.peel:
-; CHECK-NEXT:    store i8 52, ptr [[P0]], align 1, !alias.scope !3
-; CHECK-NEXT:    store i8 53, ptr [[P1]], align 1, !alias.scope !0
-; CHECK-NEXT:    store i8 54, ptr [[P2]], align 1, !alias.scope !5
-; CHECK-NEXT:    store i8 52, ptr [[P0]], align 1, !noalias !3
-; CHECK-NEXT:    store i8 53, ptr [[P1]], align 1, !noalias !0
-; CHECK-NEXT:    store i8 54, ptr [[P2]], align 1, !noalias !5
+; CHECK-NEXT:    store i8 52, ptr [[P0]], align 1, !alias.scope [[META3]]
+; CHECK-NEXT:    store i8 53, ptr [[P1]], align 1, !alias.scope [[META0]]
+; CHECK-NEXT:    store i8 54, ptr [[P2]], align 1, !alias.scope [[META5]]
+; CHECK-NEXT:    store i8 52, ptr [[P0]], align 1, !noalias [[META3]]
+; CHECK-NEXT:    store i8 53, ptr [[P1]], align 1, !noalias [[META0]]
+; CHECK-NEXT:    store i8 54, ptr [[P2]], align 1, !noalias [[META5]]
 ; CHECK-NEXT:    br label [[COND_END_PEEL]]
 ; CHECK:       cond.end.peel:
-; CHECK-NEXT:    store i8 62, ptr [[P0]], align 1, !alias.scope !3
-; CHECK-NEXT:    store i8 63, ptr [[P1]], align 1, !alias.scope !0
-; CHECK-NEXT:    store i8 64, ptr [[P2]], align 1, !alias.scope !5
-; CHECK-NEXT:    store i8 62, ptr [[P0]], align 1, !noalias !3
-; CHECK-NEXT:    store i8 63, ptr [[P1]], align 1, !noalias !0
-; CHECK-NEXT:    store i8 64, ptr [[P2]], align 1, !noalias !5
+; CHECK-NEXT:    store i8 62, ptr [[P0]], align 1, !alias.scope [[META3]]
+; CHECK-NEXT:    store i8 63, ptr [[P1]], align 1, !alias.scope [[META0]]
+; CHECK-NEXT:    store i8 64, ptr [[P2]], align 1, !alias.scope [[META5]]
+; CHECK-NEXT:    store i8 62, ptr [[P0]], align 1, !noalias [[META3]]
+; CHECK-NEXT:    store i8 63, ptr [[P1]], align 1, !noalias [[META0]]
+; CHECK-NEXT:    store i8 64, ptr [[P2]], align 1, !noalias [[META5]]
 ; CHECK-NEXT:    [[INC_PEEL:%.*]] = add nuw i32 0, 1
-; CHECK-NEXT:    [[EXITCOND_NOT_PEEL:%.*]] = icmp eq i32 [[INC_PEEL]], undef
+; CHECK-NEXT:    [[EXITCOND_NOT_PEEL:%.*]] = icmp eq i32 [[INC_PEEL]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT_PEEL]], label [[FOR_COND_CLEANUP46:%.*]], label [[FOR_BODY47_PEEL_NEXT:%.*]]
 ; CHECK:       for.body47.peel.next:
 ; CHECK-NEXT:    br label [[FOR_BODY47_PEEL_NEXT1:%.*]]
@@ -54,31 +54,32 @@ define internal fastcc void @test01(ptr %p0, ptr %p1, ptr %p2) unnamed_addr alig
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body47:
 ; CHECK-NEXT:    [[J_02:%.*]] = phi i32 [ [[INC_PEEL]], [[FOR_BODY47_LR_PH_PEEL_NEWPH]] ], [ [[INC:%.*]], [[COND_END:%.*]] ]
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata !6)
-; CHECK-NEXT:    store i8 42, ptr [[P0]], align 1, !alias.scope !6
-; CHECK-NEXT:    store i8 43, ptr [[P1]], align 1, !alias.scope !0
-; CHECK-NEXT:    store i8 44, ptr [[P2]], align 1, !alias.scope !8
-; CHECK-NEXT:    store i8 42, ptr [[P0]], align 1, !noalias !6
-; CHECK-NEXT:    store i8 43, ptr [[P1]], align 1, !noalias !0
-; CHECK-NEXT:    store i8 44, ptr [[P2]], align 1, !noalias !8
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META6:![0-9]+]])
+; CHECK-NEXT:    store i8 42, ptr [[P0]], align 1, !alias.scope [[META6]]
+; CHECK-NEXT:    store i8 43, ptr [[P1]], align 1, !alias.scope [[META0]]
+; CHECK-NEXT:    store i8 44, ptr [[P2]], align 1, !alias.scope [[META8:![0-9]+]]
+; CHECK-NEXT:    store i8 42, ptr [[P0]], align 1, !noalias [[META6]]
+; CHECK-NEXT:    store i8 43, ptr [[P1]], align 1, !noalias [[META0]]
+; CHECK-NEXT:    store i8 44, ptr [[P2]], align 1, !noalias [[META8]]
 ; CHECK-NEXT:    br i1 false, label [[COND_TRUE:%.*]], label [[COND_END]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    store i8 52, ptr [[P0]], align 1, !alias.scope !6
-; CHECK-NEXT:    store i8 53, ptr [[P1]], align 1, !alias.scope !0
-; CHECK-NEXT:    store i8 54, ptr [[P2]], align 1, !alias.scope !8
-; CHECK-NEXT:    store i8 52, ptr [[P0]], align 1, !noalias !6
-; CHECK-NEXT:    store i8 53, ptr [[P1]], align 1, !noalias !0
-; CHECK-NEXT:    store i8 54, ptr [[P2]], align 1, !noalias !8
+; CHECK-NEXT:    store i8 52, ptr [[P0]], align 1, !alias.scope [[META6]]
+; CHECK-NEXT:    store i8 53, ptr [[P1]], align 1, !alias.scope [[META0]]
+; CHECK-NEXT:    store i8 54, ptr [[P2]], align 1, !alias.scope [[META8]]
+; CHECK-NEXT:    store i8 52, ptr [[P0]], align 1, !noalias [[META6]]
+; CHECK-NEXT:    store i8 53, ptr [[P1]], align 1, !noalias [[META0]]
+; CHECK-NEXT:    store i8 54, ptr [[P2]], align 1, !noalias [[META8]]
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
-; CHECK-NEXT:    store i8 62, ptr [[P0]], align 1, !alias.scope !6
-; CHECK-NEXT:    store i8 63, ptr [[P1]], align 1, !alias.scope !0
-; CHECK-NEXT:    store i8 64, ptr [[P2]], align 1, !alias.scope !8
-; CHECK-NEXT:    store i8 62, ptr [[P0]], align 1, !noalias !6
-; CHECK-NEXT:    store i8 63, ptr [[P1]], align 1, !noalias !0
-; CHECK-NEXT:    store i8 64, ptr [[P2]], align 1, !noalias !8
+; CHECK-NEXT:    store i8 62, ptr [[P0]], align 1, !alias.scope [[META6]]
+; CHECK-NEXT:    store i8 63, ptr [[P1]], align 1, !alias.scope [[META0]]
+; CHECK-NEXT:    store i8 64, ptr [[P2]], align 1, !alias.scope [[META8]]
+; CHECK-NEXT:    store i8 62, ptr [[P0]], align 1, !noalias [[META6]]
+; CHECK-NEXT:    store i8 63, ptr [[P1]], align 1, !noalias [[META0]]
+; CHECK-NEXT:    store i8 64, ptr [[P2]], align 1, !noalias [[META8]]
 ; CHECK-NEXT:    [[INC]] = add nuw i32 [[J_02]], 1
-; CHECK-NEXT:    br i1 undef, label [[FOR_COND_CLEANUP46_LOOPEXIT:%.*]], label [[FOR_BODY47]], [[LOOP9:!llvm.loop !.*]]
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP46_LOOPEXIT:%.*]], label [[FOR_BODY47]], !llvm.loop [[LOOP9:![0-9]+]]
 ;
 for.body47.lr.ph:
   call void @llvm.experimental.noalias.scope.decl(metadata !5)
@@ -116,7 +117,7 @@ cond.end:                                         ; preds = %cond.true, %for.bod
   store i8 63, ptr %p1, !noalias !5
   store i8 64, ptr %p2, !noalias !7
   %inc = add nuw i32 %j.02, 1
-  %exitcond.not = icmp eq i32 %inc, undef
+  %exitcond.not = icmp eq i32 %inc, %n
   br i1 %exitcond.not, label %for.cond.cleanup46, label %for.body47, !llvm.loop !3
 }
 

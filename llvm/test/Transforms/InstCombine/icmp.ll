@@ -73,28 +73,6 @@ define i32 @test4(i32 %X) {
   ret i32 %b
 }
 
-; PR4837
-define <2 x i1> @test5_eq(<2 x i64> %x) {
-; CHECK-LABEL: @test5_eq(
-; CHECK-NEXT:    ret <2 x i1> undef
-;
-  %V = icmp eq <2 x i64> %x, undef
-  ret <2 x i1> %V
-}
-define <2 x i1> @test5_ne(<2 x i64> %x) {
-; CHECK-LABEL: @test5_ne(
-; CHECK-NEXT:    ret <2 x i1> undef
-;
-  %V = icmp ne <2 x i64> %x, undef
-  ret <2 x i1> %V
-}
-define <2 x i1> @test5_ugt(<2 x i64> %x) {
-; CHECK-LABEL: @test5_ugt(
-; CHECK-NEXT:    ret <2 x i1> zeroinitializer
-;
-  %V = icmp ugt <2 x i64> %x, undef
-  ret <2 x i1> %V
-}
 define <2 x i1> @test5_zero() {
 ; CHECK-LABEL: @test5_zero(
 ; CHECK-NEXT:    ret <2 x i1> undef
@@ -262,39 +240,6 @@ define i1 @test12(i1 %A) {
   %S = select i1 %A, i64 -4294967295, i64 8589934591
   %B = icmp ne i64 bitcast (<2 x i32> <i32 1, i32 -1> to i64), %S
   ret i1 %B
-}
-
-; PR6481
-define i1 @test13(i8 %X) {
-; CHECK-LABEL: @test13(
-; CHECK-NEXT:    ret i1 false
-;
-  %cmp = icmp slt i8 undef, %X
-  ret i1 %cmp
-}
-
-define i1 @test14(i8 %X) {
-; CHECK-LABEL: @test14(
-; CHECK-NEXT:    ret i1 false
-;
-  %cmp = icmp slt i8 undef, -128
-  ret i1 %cmp
-}
-
-define i1 @test15() {
-; CHECK-LABEL: @test15(
-; CHECK-NEXT:    ret i1 undef
-;
-  %cmp = icmp eq i8 undef, -128
-  ret i1 %cmp
-}
-
-define i1 @test16() {
-; CHECK-LABEL: @test16(
-; CHECK-NEXT:    ret i1 undef
-;
-  %cmp = icmp ne i8 undef, -128
-  ret i1 %cmp
 }
 
 define i1 @test17(i32 %x) {

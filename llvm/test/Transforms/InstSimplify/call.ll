@@ -826,48 +826,11 @@ define <2 x i8> @rotr_zero_shift_guard_splat(<2 x i8> %x, <2 x i8> %sh) {
   ret <2 x i8> %s
 }
 
-; If first two operands of funnel shift are undef, the result is undef
-
-define i8 @fshl_ops_undef(i8 %shamt) {
-; CHECK-LABEL: @fshl_ops_undef(
-; CHECK-NEXT:    ret i8 undef
-;
-  %r = call i8 @llvm.fshl.i8(i8 undef, i8 undef, i8 %shamt)
-  ret i8 %r
-}
-
-define i9 @fshr_ops_undef(i9 %shamt) {
-; CHECK-LABEL: @fshr_ops_undef(
-; CHECK-NEXT:    ret i9 undef
-;
-  %r = call i9 @llvm.fshr.i9(i9 undef, i9 undef, i9 %shamt)
-  ret i9 %r
-}
-
-; If shift amount is undef, treat it as zero, returning operand 0 or 1
-
-define i8 @fshl_shift_undef(i8 %x, i8 %y) {
-; CHECK-LABEL: @fshl_shift_undef(
-; CHECK-NEXT:    ret i8 [[X:%.*]]
-;
-  %r = call i8 @llvm.fshl.i8(i8 %x, i8 %y, i8 undef)
-  ret i8 %r
-}
-
-define i9 @fshr_shift_undef(i9 %x, i9 %y) {
-; CHECK-LABEL: @fshr_shift_undef(
-; CHECK-NEXT:    ret i9 [[Y:%.*]]
-;
-  %r = call i9 @llvm.fshr.i9(i9 %x, i9 %y, i9 undef)
-  ret i9 %r
-}
 
 ; If one of operands is poison, the result is poison
-; TODO: these should be poison
 define i8 @fshl_ops_poison(i8 %b, i8 %shamt) {
 ; CHECK-LABEL: @fshl_ops_poison(
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.fshl.i8(i8 poison, i8 [[B:%.*]], i8 [[SHAMT:%.*]])
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 poison
 ;
   %r = call i8 @llvm.fshl.i8(i8 poison, i8 %b, i8 %shamt)
   ret i8 %r
@@ -875,7 +838,7 @@ define i8 @fshl_ops_poison(i8 %b, i8 %shamt) {
 
 define i8 @fshl_ops_poison2(i8 %shamt) {
 ; CHECK-LABEL: @fshl_ops_poison2(
-; CHECK-NEXT:    ret i8 undef
+; CHECK-NEXT:    ret i8 poison
 ;
   %r = call i8 @llvm.fshl.i8(i8 poison, i8 undef, i8 %shamt)
   ret i8 %r
@@ -883,8 +846,7 @@ define i8 @fshl_ops_poison2(i8 %shamt) {
 
 define i8 @fshl_ops_poison3(i8 %a, i8 %shamt) {
 ; CHECK-LABEL: @fshl_ops_poison3(
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.fshl.i8(i8 [[A:%.*]], i8 poison, i8 [[SHAMT:%.*]])
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 poison
 ;
   %r = call i8 @llvm.fshl.i8(i8 %a, i8 poison, i8 %shamt)
   ret i8 %r
@@ -892,15 +854,15 @@ define i8 @fshl_ops_poison3(i8 %a, i8 %shamt) {
 
 define i8 @fshl_ops_poison4(i8 %shamt) {
 ; CHECK-LABEL: @fshl_ops_poison4(
-; CHECK-NEXT:    ret i8 undef
+; CHECK-NEXT:    ret i8 poison
 ;
-  %r = call i8 @llvm.fshl.i8(i8 undef, i8 poison, i8 %shamt)
+  %r = call i8 @llvm.fshl.i8(i8 0, i8 poison, i8 %shamt)
   ret i8 %r
 }
 
 define i8 @fshl_ops_poison5(i8 %a, i8 %b) {
 ; CHECK-LABEL: @fshl_ops_poison5(
-; CHECK-NEXT:    ret i8 [[A:%.*]]
+; CHECK-NEXT:    ret i8 poison
 ;
   %r = call i8 @llvm.fshl.i8(i8 %a, i8 %b, i8 poison)
   ret i8 %r
@@ -916,8 +878,7 @@ define i8 @fshl_ops_poison6() {
 
 define i9 @fshr_ops_poison(i9 %b, i9 %shamt) {
 ; CHECK-LABEL: @fshr_ops_poison(
-; CHECK-NEXT:    [[R:%.*]] = call i9 @llvm.fshr.i9(i9 poison, i9 [[B:%.*]], i9 [[SHAMT:%.*]])
-; CHECK-NEXT:    ret i9 [[R]]
+; CHECK-NEXT:    ret i9 poison
 ;
   %r = call i9 @llvm.fshr.i9(i9 poison, i9 %b, i9 %shamt)
   ret i9 %r
@@ -925,7 +886,7 @@ define i9 @fshr_ops_poison(i9 %b, i9 %shamt) {
 
 define i9 @fshr_ops_poison2(i9 %shamt) {
 ; CHECK-LABEL: @fshr_ops_poison2(
-; CHECK-NEXT:    ret i9 undef
+; CHECK-NEXT:    ret i9 poison
 ;
   %r = call i9 @llvm.fshr.i9(i9 poison, i9 undef, i9 %shamt)
   ret i9 %r
@@ -933,8 +894,7 @@ define i9 @fshr_ops_poison2(i9 %shamt) {
 
 define i9 @fshr_ops_poison3(i9 %a, i9 %shamt) {
 ; CHECK-LABEL: @fshr_ops_poison3(
-; CHECK-NEXT:    [[R:%.*]] = call i9 @llvm.fshr.i9(i9 [[A:%.*]], i9 poison, i9 [[SHAMT:%.*]])
-; CHECK-NEXT:    ret i9 [[R]]
+; CHECK-NEXT:    ret i9 poison
 ;
   %r = call i9 @llvm.fshr.i9(i9 %a, i9 poison, i9 %shamt)
   ret i9 %r
@@ -942,7 +902,7 @@ define i9 @fshr_ops_poison3(i9 %a, i9 %shamt) {
 
 define i9 @fshr_ops_poison4(i9 %shamt) {
 ; CHECK-LABEL: @fshr_ops_poison4(
-; CHECK-NEXT:    ret i9 undef
+; CHECK-NEXT:    ret i9 poison
 ;
   %r = call i9 @llvm.fshr.i9(i9 undef, i9 poison, i9 %shamt)
   ret i9 %r
@@ -950,7 +910,7 @@ define i9 @fshr_ops_poison4(i9 %shamt) {
 
 define i9 @fshr_ops_poison5(i9 %a, i9 %b) {
 ; CHECK-LABEL: @fshr_ops_poison5(
-; CHECK-NEXT:    ret i9 [[B:%.*]]
+; CHECK-NEXT:    ret i9 poison
 ;
   %r = call i9 @llvm.fshr.i9(i9 %a, i9 %b, i9 poison)
   ret i9 %r

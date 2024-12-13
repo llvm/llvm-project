@@ -32,7 +32,7 @@ define i129 @vec_extract_undef_index(<3 x i129> %a) {
 ; CHECK-LABEL: @vec_extract_undef_index(
 ; CHECK-NEXT:    ret i129 poison
 ;
-  %E1 = extractelement <3 x i129> %a, i129 undef
+  %E1 = extractelement <3 x i129> %a, i129 poison
   ret i129 %E1
 }
 

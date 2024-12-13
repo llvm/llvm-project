@@ -161,19 +161,19 @@ define ptr @test7(ptr %b, ptr %e) {
   ret ptr %gep
 }
 
-define ptr @undef_inbounds_var_idx(i64 %idx) {
-; CHECK-LABEL: @undef_inbounds_var_idx(
-; CHECK-NEXT:    ret ptr undef
+define ptr @poison_inbounds_var_idx(i64 %idx) {
+; CHECK-LABEL: @poison_inbounds_var_idx(
+; CHECK-NEXT:    ret ptr poison
 ;
-  %el = getelementptr inbounds i64, ptr undef, i64 %idx
+  %el = getelementptr inbounds i64, ptr poison, i64 %idx
   ret ptr %el
 }
 
-define ptr @undef_no_inbounds_var_idx(i64 %idx) {
-; CHECK-LABEL: @undef_no_inbounds_var_idx(
-; CHECK-NEXT:    ret ptr undef
+define ptr @poison_no_inbounds_var_idx(i64 %idx) {
+; CHECK-LABEL: @poison_no_inbounds_var_idx(
+; CHECK-NEXT:    ret ptr poison
 ;
-  %el = getelementptr i64, ptr undef, i64 %idx
+  %el = getelementptr i64, ptr poison, i64 %idx
   ret ptr %el
 }
 

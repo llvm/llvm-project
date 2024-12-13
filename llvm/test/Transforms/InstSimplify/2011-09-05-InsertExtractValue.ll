@@ -66,6 +66,6 @@ define i32 @test5(<4 x i32> %V) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    ret i32 poison
 ;
-  %extract = extractelement <4 x i32> %V, i32 undef
+  %extract = extractelement <4 x i32> %V, i32 poison
   ret i32 %extract
 }

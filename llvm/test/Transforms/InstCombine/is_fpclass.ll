@@ -59,13 +59,6 @@ define i1 @test_class_poison_full_mask_f32() {
   ret i1 %val
 }
 
-define i1 @test_class_undef_val_f32() {
-; CHECK-LABEL: @test_class_undef_val_f32(
-; CHECK-NEXT:    ret i1 undef
-;
-  %val = call i1 @llvm.is.fpclass.f32(float undef, i32 4)
-  ret i1 %val
-}
 
 define i1 @test_class_poison_val_f32() {
 ; CHECK-LABEL: @test_class_poison_val_f32(
