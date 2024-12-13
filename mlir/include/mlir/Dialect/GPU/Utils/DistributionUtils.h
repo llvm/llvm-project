@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_DIALECT_GPU_TRANSFORMS_DISTRIBUTIONUTILS_H_
-#define MLIR_DIALECT_GPU_TRANSFORMS_DISTRIBITIONUTILS_H_
+#define MLIR_DIALECT_GPU_TRANSFORMS_DISTRIBUTIONUTILS_H_
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
