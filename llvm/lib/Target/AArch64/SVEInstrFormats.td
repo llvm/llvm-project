@@ -9267,10 +9267,16 @@ multiclass sve_float_dot<bit bf, bit o2, ZPRRegOp dst_ty, ZPRRegOp src_ty,
   def : SVE_3_Op_Pat<nxv4f32, op, nxv4f32, InVT, InVT, !cast<Instruction>(NAME)>;
 }
 
-multiclass sve_fp8_dot<bit bf, ZPRRegOp dst_ty, string asm> {
-  def NAME : sve_float_dot<bf, 0b1, dst_ty, ZPR8, asm>{
+multiclass sve_fp8_dot<bit bf, ZPRRegOp dstrc, string asm, ValueType vt,
+                       SDPatternOperator op> {
+  def NAME : sve_float_dot<bf, 0b1, dstrc, ZPR8, asm> {
     let Uses = [FPMR, FPCR];
+
+    let mayLoad  = 1;
+    let mayStore = 0;
   }
+  
+  def : SVE_3_Op_Pat<vt, op, vt, nxv16i8, nxv16i8, !cast<Instruction>(NAME)>;
 }
 
 class sve_float_dot_indexed<bit bf, ZPRRegOp dst_ty, ZPRRegOp src1_ty,
@@ -10955,24 +10961,31 @@ class sve_fp8_dot_indexed<bits<4> opc, ZPRRegOp dst_ty, Operand iop_ty, string m
   let DestructiveInstType = DestructiveOther;
   let hasSideEffects = 0;
   let mayRaiseFPException = 1;
+
+  let mayLoad  = 1;
+  let mayStore = 0;
 }
 
 // FP8 Widening Dot-Product - Indexed Group
-multiclass sve2_fp8_dot_indexed_h<string asm>{
-  def NAME : sve_fp8_dot_indexed<{0, ?, ?, ?}, ZPR16, VectorIndexH, asm> {
+multiclass sve2_fp8_dot_indexed_h<string asm, SDPatternOperator op> {
+  def NAME : sve_fp8_dot_indexed<{0, ?, ?, ?}, ZPR16, VectorIndexH32b, asm> {
     bits<3> iop;
 
     let Inst{20-19} = iop{2-1};
     let Inst{11}    = iop{0};
   }
+
+  def : SVE_4_Op_Pat<nxv8f16, op, nxv8f16, nxv16i8, nxv16i8, i32, !cast<Instruction>(NAME)>;
 }
 
-multiclass sve2_fp8_dot_indexed_s<string asm>{
+multiclass sve2_fp8_dot_indexed_s<string asm, SDPatternOperator op> {
   def NAME : sve_fp8_dot_indexed<{1, ?, ?, 0}, ZPR32, VectorIndexS32b, asm> {
     bits<2> iop;
 
     let Inst{20-19} = iop{1-0};
   }
+
+  def : SVE_4_Op_Pat<nxv4f32, op, nxv4f32, nxv16i8, nxv16i8, i32, !cast<Instruction>(NAME)>;
 }
 
 // FP8 Look up table
