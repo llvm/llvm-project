@@ -2483,7 +2483,9 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
     __throw_length_error();
   pointer __old_p = __get_pointer();
   size_type __cap =
-      __old_cap < __ms / 2 - __alignment ? __recommend(std::max(__old_cap + __delta_cap, 2 * __old_cap)) : __ms - 1;
+      __old_cap < __ms / 2 - __alignment
+          ? __recommend(std::max<size_type>(__old_cap + __delta_cap, 2 * __old_cap))
+          : __ms - 1;
   __annotate_delete();
   auto __allocation = std::__allocate_at_least(__alloc(), __cap + 1);
   pointer __p       = __allocation.ptr;
@@ -2526,7 +2528,9 @@ _LIBCPP_DEPRECATED_("use __grow_by_without_replace") basic_string<_CharT, _Trait
     __throw_length_error();
   pointer __old_p = __get_pointer();
   size_type __cap =
-      __old_cap < __ms / 2 - __alignment ? __recommend(std::max(__old_cap + __delta_cap, 2 * __old_cap)) : __ms - 1;
+      __old_cap < __ms / 2 - __alignment
+          ? __recommend(std::max<size_type>(__old_cap + __delta_cap, 2 * __old_cap))
+          : __ms - 1;
   __annotate_delete();
   auto __allocation = std::__allocate_at_least(__alloc(), __cap + 1);
   pointer __p       = __allocation.ptr;
