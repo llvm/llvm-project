@@ -13,6 +13,7 @@
 
 #include "mlir/Target/LLVM/NVVM/Target.h"
 
+#include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Target/LLVM/NVVM/Utils.h"
@@ -669,9 +670,9 @@ NVVMTargetAttrImpl::createObject(Attribute attribute, Operation *module,
     properties.push_back(
         builder.getNamedAttr("O", builder.getI32IntegerAttr(target.getO())));
 
-  if (auto section = options.getELFSection(); !section.empty())
-    properties.push_back(
-        builder.getNamedAttr("section", builder.getStringAttr(section)));
+  if (StringRef section = options.getELFSection(); !section.empty())
+    properties.push_back(builder.getNamedAttr(gpu::elfSectionName,
+                                              builder.getStringAttr(section)));
 
   if (!properties.empty())
     objectProps = builder.getDictionaryAttr(properties);
