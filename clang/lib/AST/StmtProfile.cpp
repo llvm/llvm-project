@@ -2558,6 +2558,9 @@ void OpenACCClauseProfiler::VisitSelfClause(const OpenACCSelfClause &Clause) {
     Profiler.VisitStmt(Clause.getConditionExpr());
 }
 
+void OpenACCClauseProfiler::VisitFinalizeClause(
+    const OpenACCFinalizeClause &Clause) {}
+
 void OpenACCClauseProfiler::VisitNumGangsClause(
     const OpenACCNumGangsClause &Clause) {
   for (auto *E : Clause.getIntExprs())

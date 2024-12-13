@@ -4,23 +4,17 @@
 
 void func() {
 
-  // expected-warning@+1{{OpenACC clause 'finalize' not yet implemented, clause ignored}}
-#pragma acc enter data finalize
+#pragma acc exit data finalize
 
-  // expected-warning@+2{{OpenACC clause 'finalize' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'finalize' not yet implemented, clause ignored}}
-#pragma acc enter data finalize finalize
+#pragma acc exit data finalize finalize
 
-  // expected-warning@+2{{OpenACC clause 'finalize' not yet implemented, clause ignored}}
   // expected-error@+1{{invalid OpenACC clause 'invalid'}}
-#pragma acc enter data finalize invalid
+#pragma acc exit data finalize invalid
 
-  // expected-warning@+2{{OpenACC clause 'finalize' not yet implemented, clause ignored}}
   // expected-error@+1{{invalid OpenACC clause 'invalid'}}
-#pragma acc enter data finalize invalid invalid finalize
+#pragma acc exit data finalize invalid invalid finalize
 
-  // expected-warning@+1{{OpenACC clause 'finalize' not yet implemented, clause ignored}}
-#pragma acc enter data wait finalize
+#pragma acc exit data wait finalize
 
   // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented, clause ignored}}
 #pragma acc host_data if_present

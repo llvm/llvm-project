@@ -84,7 +84,6 @@ void AtLeastOneOf() {
 #pragma acc exit data if(Var)
 #pragma acc exit data async
 #pragma acc exit data wait
-  // expected-warning@+1{{OpenACC clause 'finalize' not yet implemented}}
 #pragma acc exit data finalize
 #pragma acc exit data
 
