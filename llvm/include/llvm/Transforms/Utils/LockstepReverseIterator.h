@@ -17,9 +17,7 @@
 
 namespace llvm {
 
-struct NoActiveBlocksOption {
-  template <typename... Args> NoActiveBlocksOption(Args...) {}
-};
+struct NoActiveBlocksOption {};
 
 struct ActiveBlocksOption {
 protected:
@@ -46,15 +44,12 @@ class LockstepReverseIterator
     : public std::conditional_t<EarlyFailure, NoActiveBlocksOption,
                                 ActiveBlocksOption> {
 private:
-  using BasicBlockT = BasicBlock;
-  using InstructionT = Instruction;
-
-  ArrayRef<BasicBlockT *> Blocks;
-  SmallVector<InstructionT *, 4> Insts;
+  ArrayRef<BasicBlock *> Blocks;
+  SmallVector<Instruction *, 4> Insts;
   bool Fail;
 
 public:
-  LockstepReverseIterator(ArrayRef<BasicBlockT *> Blocks) : Blocks(Blocks) {
+  LockstepReverseIterator(ArrayRef<BasicBlock *> Blocks) : Blocks(Blocks) {
     reset();
   }
 
@@ -62,12 +57,12 @@ public:
     Fail = false;
     if constexpr (!EarlyFailure) {
       this->ActiveBlocks.clear();
-      for (BasicBlockT *BB : Blocks)
+      for (BasicBlock *BB : Blocks)
         this->ActiveBlocks.insert(BB);
     }
     Insts.clear();
-    for (BasicBlockT *BB : Blocks) {
-      InstructionT *Prev = BB->getTerminator()->getPrevNonDebugInstruction();
+    for (BasicBlock *BB : Blocks) {
+      Instruction *Prev = BB->getTerminator()->getPrevNonDebugInstruction();
       if (!Prev) {
         // Block wasn't big enough - only contained a terminator.
         if constexpr (EarlyFailure) {
@@ -85,7 +80,7 @@ public:
   }
 
   bool isValid() const { return !Fail; }
-  ArrayRef<InstructionT *> operator*() const { return Insts; }
+  ArrayRef<Instruction *> operator*() const { return Insts; }
 
   // Note: This needs to return a SmallSetVector as the elements of
   // ActiveBlocks will be later copied to Blocks using std::copy. The
@@ -93,13 +88,13 @@ public:
   // Using SmallPtrSet instead causes non-deterministic order while
   // copying. And we cannot simply sort Blocks as they need to match the
   // corresponding Values.
-  template <bool C = EarlyFailure, std::enable_if_t<!C, int> = 0>
-  SmallSetVector<BasicBlockT *, 4> &getActiveBlocks() {
+  SmallSetVector<BasicBlock *, 4> &getActiveBlocks() {
+    static_assert(!EarlyFailure, "Unknown method");
     return this->ActiveBlocks;
   }
 
-  template <bool C = EarlyFailure, std::enable_if_t<!C, int> = 0>
-  void restrictToBlocks(SmallSetVector<BasicBlockT *, 4> &Blocks) {
+  void restrictToBlocks(SmallSetVector<BasicBlock *, 4> &Blocks) {
+    static_assert(!EarlyFailure, "Unknown method");
     for (auto It = Insts.begin(); It != Insts.end();) {
       if (!Blocks.contains((*It)->getParent())) {
         this->ActiveBlocks.remove((*It)->getParent());
@@ -113,9 +108,9 @@ public:
   void operator--() {
     if (Fail)
       return;
-    SmallVector<InstructionT *, 4> NewInsts;
-    for (InstructionT *Inst : Insts) {
-      InstructionT *Prev = Inst->getPrevNonDebugInstruction();
+    SmallVector<Instruction *, 4> NewInsts;
+    for (Instruction *Inst : Insts) {
+      Instruction *Prev = Inst->getPrevNonDebugInstruction();
       if (!Prev) {
         if constexpr (!EarlyFailure) {
           this->ActiveBlocks.remove(Inst->getParent());
@@ -137,9 +132,9 @@ public:
   void operator++() {
     if (Fail)
       return;
-    SmallVector<InstructionT *, 4> NewInsts;
-    for (InstructionT *Inst : Insts) {
-      InstructionT *Next = Inst->getNextNonDebugInstruction();
+    SmallVector<Instruction *, 4> NewInsts;
+    for (Instruction *Inst : Insts) {
+      Instruction *Next = Inst->getNextNonDebugInstruction();
       // Already at end of block.
       if (!Next) {
         Fail = true;
