@@ -55,10 +55,7 @@ _LIBCPP_HIDE_FROM_ABI void __insertion_sort_move(
       value_type* __j2 = __last2;
       value_type* __i2 = __j2;
       if (__comp(*__first1, *--__i2)) {
-        {
-          value_type& __tmp = *__i2;
-          std::__construct_at(__j2, std::move(__tmp));
-        }
+        std::__construct_at(__j2, std::move(*__i2));
         __d.template __incr<value_type>();
         for (--__j2; __i2 != __first2 && __comp(*__first1, *--__i2); --__j2)
           *__j2 = std::move(*__i2);
