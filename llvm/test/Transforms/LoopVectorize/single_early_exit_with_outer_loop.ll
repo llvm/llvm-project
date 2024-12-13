@@ -2,7 +2,8 @@
 
 declare void @init_mem(ptr, i64);
 
-
+; Tests that the additional middle.split created for handling loops with
+; uncountable early exits is correctly adding to the outer loop at depth 1.
 define void @early_exit_in_outer_loop1() {
 ; CHECK-LABEL: Loop info for function 'early_exit_in_outer_loop1':
 ; CHECK: Loop at depth 1 containing: {{.*}}%middle.block,%scalar.ph,%vector.ph,%vector.body,%middle.split
@@ -39,6 +40,9 @@ loop.inner.end:
   br label %loop.outer
 }
 
+; Tests that the additional middle.split created for handling loops with
+; uncountable early exits is correctly adding to both the outer and middle
+; loops at depths 1 and 2, respectively.
 define void @early_exit_in_outer_loop2() {
 ; CHECK-LABEL: Loop info for function 'early_exit_in_outer_loop2':
 ; CHECK: Loop at depth 1 containing: {{.*}}%middle.block,%scalar.ph,%vector.ph,%vector.body,%middle.split

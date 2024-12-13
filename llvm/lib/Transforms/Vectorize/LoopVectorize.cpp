@@ -4138,8 +4138,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   // a bottom-test and a single exiting block. We'd have to handle the fact
   // that not every instruction executes on the last iteration.  This will
   // require a lane mask which varies through the vector loop body.  (TODO)
-  if (Legal->hasUncountableEarlyExit() ||
-      TheLoop->getExitingBlock() != TheLoop->getLoopLatch()) {
+  if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch()) {
     // If there was a tail-folding hint/switch, but we can't fold the tail by
     // masking, fallback to a vectorization with a scalar epilogue.
     if (ScalarEpilogueStatus == CM_ScalarEpilogueNotNeededUsePredicate) {
@@ -4770,8 +4769,7 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
   // non-latch exits properly.  It may be fine, but it needs auditted and
   // tested.
   // TODO: Add support for loops with an early exit.
-  if (Legal->hasUncountableEarlyExit() ||
-      OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch())
+  if (OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch())
     return false;
 
   return true;
@@ -5019,7 +5017,9 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
   if (!Legal->isSafeForAnyVectorWidth())
     return 1;
 
-  // We don't attempt to perform interleaving for early exit loops.
+  // We don't attempt to perform interleaving for loops with uncountable early
+  // exits because the VPInstruction::AnyOf code cannot currently handle
+  // multiple parts.
   if (Legal->hasUncountableEarlyExit())
     return 1;
 
@@ -7842,7 +7842,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       fixReductionScalarResumeWhenVectorizingEpilog(
           &R, State, State.CFG.VPBB2IRBB[ExitVPBB], BypassBlock);
     }
-
     BasicBlock *PH = OrigLoop->getLoopPreheader();
     for (const auto &[IVPhi, _] : Legal->getInductionVars()) {
       auto *Inc = cast<PHINode>(IVPhi->getIncomingValueForBlock(PH));
@@ -10206,13 +10205,14 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     if (!EnableEarlyExitVectorization) {
       reportVectorizationFailure("Auto-vectorization of loops with uncountable "
                                  "early exit is not enabled",
-                                 "Auto-vectorization of loops with uncountable "
-                                 "early exit is not enabled",
                                  "UncountableEarlyExitLoopsDisabled", ORE, L);
       return false;
     }
 
-    // Needed to prevent InnerLoopVectorizer::fixupIVUsers from crashing.
+    // In addUsersInExitBlocks we already bail out if there is an outside use
+    // of a loop-defined variable, but it ignores induction variables which are
+    // handled by InnerLoopVectorizer::fixupIVUsers. We need to bail out if we
+    // encounter induction variables too otherwise fixupIVUsers will crash.
     for (BasicBlock *BB : L->blocks()) {
       for (Instruction &I : *BB) {
         for (User *U : I.users()) {
@@ -10220,9 +10220,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
           if (!L->contains(UI)) {
             reportVectorizationFailure(
                 "Auto-vectorization of loops with uncountable "
-                "early exit and live-outs is not yet supported",
-                "Auto-vectorization of loop with uncountable "
-                "early exit and live-outs is not yet supported",
+                "early exit and live-outs is not supported",
                 "UncountableEarlyExitLoopLiveOutsUnsupported", ORE, L);
             return false;
           }
@@ -10256,11 +10254,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   if (LVL.hasUncountableEarlyExit()) {
     BasicBlock *LoopLatch = L->getLoopLatch();
     if (IAI.requiresScalarEpilogue() ||
-        llvm::any_of(LVL.getCountableExitingBlocks(),
-                     [LoopLatch](BasicBlock *BB) { return BB != LoopLatch; })) {
+        any_of(LVL.getCountableExitingBlocks(),
+               [LoopLatch](BasicBlock *BB) { return BB != LoopLatch; })) {
       reportVectorizationFailure("Auto-vectorization of early exit loops "
-                                 "requiring a scalar epilogue is unsupported",
-                                 "Auto-vectorization of early exit loops "
                                  "requiring a scalar epilogue is unsupported",
                                  "UncountableEarlyExitUnsupported", ORE, L);
       return false;
