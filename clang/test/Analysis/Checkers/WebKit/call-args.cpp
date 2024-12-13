@@ -365,3 +365,20 @@ namespace call_with_explicit_temporary_obj {
     RefPtr { provide() }->method();
   }
 }
+
+namespace call_with_adopt_ref {
+  class Obj {
+  public:
+    void ref() const;
+    void deref() const;
+    void method();
+  };
+
+  struct dummy {
+    RefPtr<Obj> any;
+  };
+
+  void foo() {
+    adoptRef(new Obj)->method();
+  }
+}
