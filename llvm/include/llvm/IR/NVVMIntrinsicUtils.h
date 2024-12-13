@@ -8,7 +8,7 @@
 //
 /// \file
 /// This file contains the definitions of the enumerations and flags
-/// associated with NVVM Intrinsics.
+/// associated with NVVM Intrinsics, along with some helper functions.
 //
 //===----------------------------------------------------------------------===//
 

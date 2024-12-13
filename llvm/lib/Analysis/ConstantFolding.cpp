@@ -291,6 +291,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
 
   return ConstantVector::get(Result);
 }
+
 } // end anonymous namespace
 
 /// If this constant is a constant offset from a global, return the global and
@@ -2431,8 +2432,6 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         return ConstantInt::get(Ty, 0);
 
       APFloat::roundingMode RMode = nvvm::IntrinsicGetRoundingMode(IntrinsicID);
-      assert(RM != APFloat::roundingMode::Invalid);
-
       bool IsFTZ = nvvm::IntrinsicShouldFTZ(IntrinsicID);
       bool IsSigned = nvvm::IntrinsicConvertsToSignedInteger(IntrinsicID);
 
