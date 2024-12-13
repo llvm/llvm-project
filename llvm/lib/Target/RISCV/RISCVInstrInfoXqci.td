@@ -14,6 +14,13 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
+def uimm5nonzero : RISCVOp<XLenVT>,
+                   ImmLeaf<XLenVT, [{return (Imm != 0) && isUInt<5>(Imm);}]> {
+  let ParserMatchClass = UImmAsmOperand<5, "NonZero">;
+  let DecoderMethod = "decodeUImmNonZeroOperand<5>";
+  let OperandType = "OPERAND_UIMM5_NONZERO";
+}
+
 def uimm11 : RISCVUImmLeafOp<11>;
 
 //===----------------------------------------------------------------------===//
@@ -105,6 +112,26 @@ class QCISELECTICCI<bits<3> funct3, string opcodestr>
   let rs1 = imm;
 }
 
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+class QCILoadMultiple<bits<2> funct2, DAGOperand InTyRs2, string opcodestr>
+    : RVInstRBase<0b111, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
+                  (ins GPR:$rs1, InTyRs2:$rs2, uimm7_lsb00:$imm),
+                  opcodestr, "$rd, $rs2, ${imm}(${rs1})"> {
+  bits<7> imm;
+  let Inst{31-25} = {funct2, imm{6-2}};
+}
+
+
+// rd corresponds to the source for the store 'rs3' described in the spec.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
+class QCIStoreMultiple<bits<2> funct2, DAGOperand InTyRs2, string opcodestr>
+    : RVInstRBase<0b111, OPC_CUSTOM_1, (outs),
+                  (ins GPR:$rd, GPR:$rs1, InTyRs2:$rs2, uimm7_lsb00:$imm),
+                  opcodestr, "$rd, $rs2, ${imm}(${rs1})"> {
+  bits<7> imm;
+  let Inst{31-25} = {funct2, imm{6-2}};
+}
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -167,3 +194,34 @@ let Predicates = [HasVendorXqcics, IsRV32], DecoderNamespace = "Xqcics" in {
   def QC_SELECTIEQI : QCISELECTICCI <0b010, "qc.selectieqi">;
   def QC_SELECTINEI : QCISELECTICCI <0b011, "qc.selectinei">;
 } // Predicates = [HasVendorXqcics, IsRV32], DecoderNamespace = "Xqcics"
+
+let Predicates = [HasVendorXqcilsm, IsRV32], DecoderNamespace = "Xqcilsm" in {
+    def QC_SWM : QCIStoreMultiple<0b00, GPRNoX0, "qc.swm">;
+    def QC_SWMI : QCIStoreMultiple<0b01, uimm5nonzero, "qc.swmi">;
+    def QC_SETWM : QCIStoreMultiple<0b10, GPRNoX0, "qc.setwm">;
+    def QC_SETWMI : QCIStoreMultiple<0b11, uimm5nonzero, "qc.setwmi">;
+
+    def QC_LWM : QCILoadMultiple<0b00, GPRNoX0, "qc.lwm">;
+    def QC_LWMI : QCILoadMultiple<0b01, uimm5nonzero, "qc.lwmi">;
+} // Predicates = [HasVendorXqcilsm, IsRV32], DecoderNamespace = "Xqcilsm"
+
+//===----------------------------------------------------------------------===//
+// Aliases
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasVendorXqcilsm, IsRV32] in {
+let EmitPriority = 0 in {
+  def : InstAlias<"qc.swm $rs3, $rs2, (${rs1})",
+                  (QC_SWM GPR:$rs3, GPR:$rs1, GPRNoX0:$rs2, 0)>;
+  def : InstAlias<"qc.swmi $rs3, $length, (${rs1})",
+                  (QC_SWMI GPR:$rs3, GPR:$rs1, uimm5nonzero:$length, 0)>;
+  def : InstAlias<"qc.setwm $rs3, $rs2, (${rs1})",
+                  (QC_SETWM GPR:$rs3, GPR:$rs1, GPRNoX0:$rs2, 0)>;
+  def : InstAlias<"qc.setwmi $rs3, $length, (${rs1})",
+                  (QC_SETWMI GPR:$rs3, GPR:$rs1, uimm5nonzero:$length, 0)>;
+  def : InstAlias<"qc.lwm $rd, $rs2, (${rs1})",
+                  (QC_LWM GPRNoX0:$rd, GPR:$rs1, GPRNoX0:$rs2, 0)>;
+  def : InstAlias<"qc.lwmi $rd, $length, (${rs1})",
+                  (QC_LWMI GPRNoX0:$rd, GPR:$rs1, uimm5nonzero:$length, 0)>;
+} // EmitPriority = 0
+} // Predicates = [HasVendorXqcilsm, IsRV32]

@@ -12534,6 +12534,8 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   }
   case OpenACCClauseKind::Seq:
     return OpenACCSeqClause::Create(getContext(), BeginLoc, EndLoc);
+  case OpenACCClauseKind::Finalize:
+    return OpenACCFinalizeClause::Create(getContext(), BeginLoc, EndLoc);
   case OpenACCClauseKind::Independent:
     return OpenACCIndependentClause::Create(getContext(), BeginLoc, EndLoc);
   case OpenACCClauseKind::Auto:
@@ -12579,7 +12581,6 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
                                        VectorExpr, EndLoc);
   }
 
-  case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
   case OpenACCClauseKind::NoHost:
   case OpenACCClauseKind::UseDevice:
