@@ -10237,10 +10237,10 @@ def warn_dangling_pointer_assignment : Warning<
    InGroup<DanglingAssignment>;
 def warn_dangling_reference_captured : Warning<
    "object whose reference is captured by '%0' will be destroyed at the end of "
-   "the full-expression">, InGroup<DanglingCapture>, DefaultIgnore;
+   "the full-expression">, InGroup<DanglingCapture>;
 def warn_dangling_reference_captured_by_unknown : Warning<
    "object whose reference is captured will be destroyed at the end of "
-   "the full-expression">, InGroup<DanglingCapture>, DefaultIgnore;
+   "the full-expression">, InGroup<DanglingCapture>;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
@@ -12724,9 +12724,9 @@ def err_acc_clause_cannot_combine
     : Error<"OpenACC clause '%0' may not appear on the same construct as a "
             "'%1' clause on a '%2' construct">;
 def err_acc_reduction_num_gangs_conflict
-    : Error<
-          "OpenACC 'reduction' clause may not appear on a 'parallel' construct "
-          "with a 'num_gangs' clause with more than 1 argument, have %0">;
+    : Error<"OpenACC '%1' clause %select{|with more than 1 argument }0may not "
+            "appear on a '%2' construct "
+            "with a '%3' clause%select{ with more than 1 argument|}0">;
 def err_acc_reduction_type
     : Error<"OpenACC 'reduction' variable must be of scalar type, sub-array, or a "
             "composite of scalar types;%select{| sub-array base}1 type is %0">;
@@ -12787,13 +12787,14 @@ def err_acc_clause_in_clause_region
 def err_acc_gang_reduction_conflict
     : Error<"%select{OpenACC 'gang' clause with a 'dim' value greater than "
             "1|OpenACC 'reduction' clause}0 cannot "
-            "appear on the same 'loop' construct as a %select{'reduction' "
+            "appear on the same '%1' construct as a %select{'reduction' "
             "clause|'gang' clause with a 'dim' value greater than 1}0">;
 def err_acc_gang_reduction_numgangs_conflict
-    : Error<"OpenACC '%0' clause cannot appear on the same 'loop' construct "
-            "as a '%1' clause inside a compute construct with a "
+    : Error<"OpenACC '%0' clause cannot appear on the same '%2' construct as a "
+            "'%1' clause %select{inside a compute construct with a|and a}3 "
             "'num_gangs' clause with more than one argument">;
-def err_reduction_op_mismatch
+
+    def err_reduction_op_mismatch
     : Error<"OpenACC 'reduction' variable must have the same operator in all "
             "nested constructs (%0 vs %1)">;
 def err_acc_loop_variable_type

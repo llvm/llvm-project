@@ -1750,6 +1750,21 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 
     return true;
   }
+  case Intrinsic::amdgcn_rts_trace_ray:
+  case Intrinsic::amdgcn_rts_trace_ray_nonblock:
+  case Intrinsic::amdgcn_rts_read_vertex: {
+    if (IntrID == Intrinsic::amdgcn_rts_trace_ray) {
+      Info.opc = ISD::INTRINSIC_VOID;
+      Info.memVT = MVT::i32;
+    } else {
+      Info.opc = ISD::INTRINSIC_W_CHAIN;
+      Info.memVT = MVT::getVT(CI.getType());
+    }
+    Info.flags |= MachineMemOperand::MOLoad;
+    if (IntrID != Intrinsic::amdgcn_rts_read_vertex)
+      Info.flags |= MachineMemOperand::MOStore;
+    return true;
+  }
   case Intrinsic::amdgcn_s_prefetch_data:
   case Intrinsic::amdgcn_flat_prefetch:
   case Intrinsic::amdgcn_global_prefetch: {
@@ -16093,7 +16108,7 @@ SDValue SITargetLowering::performFMACombine(SDNode *N,
   EVT VT = N->getValueType(0);
   SDLoc SL(N);
 
-  if (!Subtarget->hasDot7Insts() || VT != MVT::f32)
+  if (!Subtarget->hasDot10Insts() || VT != MVT::f32)
     return SDValue();
 
   // FMA((F32)S0.x, (F32)S1. x, FMA((F32)S0.y, (F32)S1.y, (F32)z)) ->

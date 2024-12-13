@@ -35,7 +35,7 @@ static constexpr auto BuiltinStorage = Builtin::Storage<NumBuiltins>::Make(
       });
 
 static constexpr llvm::StringLiteral ValidCPUNames[] = {
-    {"mvp"}, {"bleeding-edge"}, {"generic"}, {"lime"}};
+    {"mvp"}, {"bleeding-edge"}, {"generic"}, {"lime1"}};
 
 StringRef WebAssemblyTargetInfo::getABI() const { return ABI; }
 

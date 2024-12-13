@@ -477,6 +477,8 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     auto RsrcOpName =
         isMIMG(LdSt) ? AMDGPU::OpName::srsrc : AMDGPU::OpName::rsrc;
     int SRsrcIdx = AMDGPU::getNamedOperandIdx(Opc, RsrcOpName);
+    if (SRsrcIdx == -1)
+      return false;
     BaseOps.push_back(&LdSt.getOperand(SRsrcIdx));
     int VAddr0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr0);
     if (VAddr0Idx >= 0) {
@@ -4807,6 +4809,13 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     return false;
   }
 
+  if ((MI.getOpcode() == AMDGPU::V_LOAD_IDX ||
+       MI.getOpcode() == AMDGPU::V_STORE_IDX) &&
+      MI.memoperands_empty()) {
+    ErrInfo = "missing memory operand from v_load/store_idx.";
+    return false;
+  }
+
   // Make sure the register classes are correct.
   for (int i = 0, e = Desc.getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = MI.getOperand(i);
@@ -4882,11 +4891,12 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     if (ST.needsAlignedVGPRs()) {
       const TargetRegisterClass *RC = RI.getRegClassForReg(MRI, Reg);
       if (RI.hasVectorRegisters(RC) && MO.getSubReg()) {
-        const TargetRegisterClass *SubRC =
-            RI.getSubRegisterClass(RC, MO.getSubReg());
-        RC = RI.getCompatibleSubRegClass(RC, SubRC, MO.getSubReg());
-        if (RC)
-          RC = SubRC;
+        if (const TargetRegisterClass *SubRC =
+                RI.getSubRegisterClass(RC, MO.getSubReg())) {
+          RC = RI.getCompatibleSubRegClass(RC, SubRC, MO.getSubReg());
+          if (RC)
+            RC = SubRC;
+        }
       }
 
       // Check that this is the aligned version of the class.
@@ -6285,6 +6295,21 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
   if ((Opc == AMDGPU::V_FMAC_F32_e64 || Opc == AMDGPU::V_FMAC_F16_e64) &&
       !RI.isVGPR(MRI, MI.getOperand(VOP3Idx[2]).getReg()))
     legalizeOpWithMove(MI, VOP3Idx[2]);
+
+  if (isWMMA(MI)) {
+    // scale_src has a register class restricted to low 256 VGPRs, we may need
+    // to insert a copy to the restricted VGPR class.
+    int ScaleSrc0Idx =
+        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::scale_src0);
+    if (ScaleSrc0Idx != -1) {
+      int ScaleSrc1Idx =
+          AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::scale_src1);
+      if (!isOperandLegal(MI, ScaleSrc0Idx))
+        legalizeOpWithMove(MI, ScaleSrc0Idx);
+      if (!isOperandLegal(MI, ScaleSrc1Idx))
+        legalizeOpWithMove(MI, ScaleSrc1Idx);
+    }
+  }
 }
 
 Register SIInstrInfo::readlaneVGPRToSGPR(

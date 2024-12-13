@@ -1102,8 +1102,7 @@ static SDValue performMADD_MSUBCombine(SDNode *ROOTNode, SelectionDAG &CurDAG,
   SDValue MAddOps[3] = {
       CurDAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Mult->getOperand(0)),
       CurDAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Mult->getOperand(1)), ACCIn};
-  EVT VTs[2] = {MVT::i32, MVT::i32};
-  SDValue MAdd = CurDAG.getNode(Opcode, DL, VTs, MAddOps);
+  SDValue MAdd = CurDAG.getNode(Opcode, DL, MVT::Untyped, MAddOps);
 
   SDValue ResLo = CurDAG.getNode(MipsISD::MFLO, DL, MVT::i32, MAdd);
   SDValue ResHi = CurDAG.getNode(MipsISD::MFHI, DL, MVT::i32, MAdd);

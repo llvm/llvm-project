@@ -4860,6 +4860,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // Buffer is a void**.
     Address Buf = EmitPointerWithAlignment(E->getArg(0));
 
+    if (getTarget().getTriple().getArch() == llvm::Triple::systemz) {
+      // On this target, the back end fills in the context buffer completely.
+      // It doesn't really matter if the frontend stores to the buffer before
+      // calling setjmp, the back-end is going to overwrite them anyway.
+      Function *F = CGM.getIntrinsic(Intrinsic::eh_sjlj_setjmp);
+      return RValue::get(Builder.CreateCall(F, Buf.emitRawPointer(*this)));
+    }
+
     // Store the frame pointer to the setjmp buffer.
     Value *FrameAddr = Builder.CreateCall(
         CGM.getIntrinsic(Intrinsic::frameaddress, AllocaInt8PtrTy),
@@ -10201,6 +10209,8 @@ CodeGenFunction::getSVEType(const SVETypeFlags &TypeFlags) {
   case SVETypeFlags::EltTyInt64:
     return llvm::ScalableVectorType::get(Builder.getInt64Ty(), 2);
 
+  case SVETypeFlags::EltTyMFloat8:
+    return llvm::ScalableVectorType::get(Builder.getInt8Ty(), 16);
   case SVETypeFlags::EltTyFloat16:
     return llvm::ScalableVectorType::get(Builder.getHalfTy(), 8);
   case SVETypeFlags::EltTyBFloat16:
@@ -11255,6 +11265,10 @@ Value *CodeGenFunction::EmitAArch64SMEBuiltinExpr(unsigned BuiltinID,
            BuiltinID == SME::BI__builtin_sme_svstr_za)
     return EmitSMELdrStr(TypeFlags, Ops, Builtin->LLVMIntrinsic);
 
+  // Emit set FPMR for intrinsics that require it
+  if (TypeFlags.setsFPMR())
+    Builder.CreateCall(CGM.getIntrinsic(Intrinsic::aarch64_set_fpmr),
+                       Ops.pop_back_val());
   // Handle builtins which require their multi-vector operands to be swapped
   swapCommutativeSMEOperands(BuiltinID, Ops);
 
@@ -20197,6 +20211,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x128_iu4:
   case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x128_f8f6f4:
   case AMDGPU::BI__builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4:
+  case AMDGPU::BI__builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4:
   case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x64_f16:
   case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x64_bf16:
   case AMDGPU::BI__builtin_amdgcn_swmmac_f16_16x16x64_f16:
@@ -20447,6 +20462,10 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     case AMDGPU::BI__builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4:
       ArgsForMatchingMatrixTypes = {5, 1};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_scale_f32_16x16x128_f8f6f4;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4:
+      ArgsForMatchingMatrixTypes = {5, 1};
+      BuiltinWMMAOp = Intrinsic::amdgcn_wmma_scale16_f32_16x16x128_f8f6f4;
       break;
     case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x64_f16:
       ArgsForMatchingMatrixTypes = {4, 1, 3, 5};

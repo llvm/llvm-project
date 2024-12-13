@@ -12,6 +12,8 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX12 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1210 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX1210 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1210 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX1210 %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX1210 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX1210 %s
 
 declare i64 @llvm.readcyclecounter() #0
 

@@ -2960,7 +2960,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
       }
     }
     if (auto *PN = dyn_cast<PHINode>(LHS)) {
-      if (Instruction *I = foldOpIntoPhi(SVI, PN))
+      if (Instruction *I = foldOpIntoPhi(SVI, PN, /*AllowMultipleUses=*/true))
         return I;
     }
   }

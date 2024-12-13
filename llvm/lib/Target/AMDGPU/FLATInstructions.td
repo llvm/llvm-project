@@ -6,18 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-def FlatOffset : ComplexPattern<iPTR, 2, "SelectFlatOffset", [], [SDNPWantRoot], -10>;
-def GlobalOffset : ComplexPattern<iPTR, 2, "SelectGlobalOffset", [], [SDNPWantRoot], -10>;
-def ScratchOffset : ComplexPattern<iPTR, 2, "SelectScratchOffset", [], [SDNPWantRoot], -10>;
+let WantsRoot = true in {
+  def FlatOffset : ComplexPattern<iPTR, 2, "SelectFlatOffset", [], [], -10>;
+  def GlobalOffset : ComplexPattern<iPTR, 2, "SelectGlobalOffset", [], [], -10>;
+  def ScratchOffset : ComplexPattern<iPTR, 2, "SelectScratchOffset", [], [], -10>;
 
-def GlobalSAddrNoIOffset : ComplexPattern<iPTR, 3, "SelectGlobalSAddrNoIOffset", [], [SDNPWantRoot], -3>;
-def GlobalSAddrNoIOffsetM0 : ComplexPattern<iPTR, 3, "SelectGlobalSAddrNoIOffsetM0", [], [SDNPWantRoot], -3>;
-def GlobalSAddr : ComplexPattern<iPTR, 4, "SelectGlobalSAddr", [], [SDNPWantRoot], -10>;
-def GlobalSAddrGLC : ComplexPattern<iPTR, 4, "SelectGlobalSAddrGLC", [], [SDNPWantRoot], -10>;
-def GlobalSAddrCPol : ComplexPattern<iPTR, 4, "SelectGlobalSAddrCPol", [], [SDNPWantRoot], -10>;
-def GlobalSAddrCPolM0 : ComplexPattern<iPTR, 4, "SelectGlobalSAddrCPolM0", [], [SDNPWantRoot], -10>;
-def ScratchSAddr : ComplexPattern<iPTR, 2, "SelectScratchSAddr", [], [SDNPWantRoot], -10>;
-def ScratchSVAddr : ComplexPattern<iPTR, 4, "SelectScratchSVAddr", [], [SDNPWantRoot], -10>;
+  def GlobalSAddrNoIOffset : ComplexPattern<iPTR, 3, "SelectGlobalSAddrNoIOffset", [], [], -3>;
+  def GlobalSAddrNoIOffsetM0 : ComplexPattern<iPTR, 3, "SelectGlobalSAddrNoIOffsetM0", [], [], -3>;
+  def GlobalSAddr : ComplexPattern<iPTR, 4, "SelectGlobalSAddr", [], [], -10>;
+  def GlobalSAddrGLC : ComplexPattern<iPTR, 4, "SelectGlobalSAddrGLC", [], [], -10>;
+  def GlobalSAddrCPol : ComplexPattern<iPTR, 4, "SelectGlobalSAddrCPol", [], [], -10>;
+  def GlobalSAddrCPolM0 : ComplexPattern<iPTR, 4, "SelectGlobalSAddrCPolM0", [], [], -10>;
+  def ScratchSAddr : ComplexPattern<iPTR, 2, "SelectScratchSAddr", [], [], -10>;
+  def ScratchSVAddr : ComplexPattern<iPTR, 4, "SelectScratchSVAddr", [], [], -10>;
+}
 
 //===----------------------------------------------------------------------===//
 // FLAT classes
@@ -215,14 +217,13 @@ class FLAT_Load_Pseudo <string opName, RegisterClass regClass,
   opName,
   (outs vdata_op:$vdst),
   !con(
-    !con(
-      !if(EnableSaddr,
-        (ins SReg_64_XEXEC_XNULL:$saddr, VGPR_32:$vaddr),
-        (ins VReg_64:$vaddr)),
-        (ins flat_offset:$offset)),
-        // FIXME: Operands with default values do not work with following non-optional operands.
-        !if(HasTiedOutput, (ins CPol:$cpol, vdata_op:$vdst_in),
-                           (ins CPol_0:$cpol))),
+    !if(EnableSaddr,
+      (ins SReg_64_XEXEC_XNULL:$saddr, VGPR_32:$vaddr),
+      (ins VReg_64:$vaddr)),
+      (ins flat_offset:$offset),
+      // FIXME: Operands with default values do not work with following non-optional operands.
+      !if(HasTiedOutput, (ins CPol:$cpol, vdata_op:$vdst_in),
+                         (ins CPol_0:$cpol))),
   " $vdst, $vaddr"#!if(HasSaddr, !if(EnableSaddr, ", $saddr", ", off"), "")#"$offset$cpol"> {
   let has_data = 0;
   let mayLoad = 1;

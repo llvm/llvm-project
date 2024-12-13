@@ -103,6 +103,8 @@ public:
       return needsConversion(unwrapRefType(ty));
     if (auto t = mlir::dyn_cast<SequenceType>(ty))
       return needsConversion(unwrapSequenceType(ty));
+    if (auto t = mlir::dyn_cast<TypeDescType>(ty))
+      return needsConversion(t.getOfTy());
     return false;
   }
 
@@ -167,6 +169,9 @@ public:
       rec.finalize(ps, cs);
       return rec;
     });
+    addConversion([&](TypeDescType ty) {
+      return TypeDescType::get(convertType(ty.getOfTy()));
+    });
     addArgumentMaterialization(materializeProcedure);
     addSourceMaterialization(materializeProcedure);
     addTargetMaterialization(materializeProcedure);
@@ -220,7 +225,6 @@ public:
       auto *context = &getContext();
       mlir::IRRewriter rewriter(context);
       BoxprocTypeRewriter typeConverter(mlir::UnknownLoc::get(context));
-      mlir::Dialect *firDialect = context->getLoadedDialect("fir");
       getModule().walk([&](mlir::Operation *op) {
         bool opIsValid = true;
         typeConverter.setLocation(op->getLoc());
@@ -366,13 +370,22 @@ public:
                 index, toTy, index.getFieldId(), toOnTy, index.getTypeparams());
             opIsValid = false;
           }
-        } else if (op->getDialect() == firDialect) {
+        } else {
           rewriter.startOpModification(op);
+          // Convert the operands if needed
           for (auto i : llvm::enumerate(op->getResultTypes()))
             if (typeConverter.needsConversion(i.value())) {
               auto toTy = typeConverter.convertType(i.value());
               op->getResult(i.index()).setType(toTy);
             }
+
+          // Convert the type attributes if needed
+          for (const mlir::NamedAttribute &attr : op->getAttrDictionary())
+            if (auto tyAttr = llvm::dyn_cast<mlir::TypeAttr>(attr.getValue()))
+              if (typeConverter.needsConversion(tyAttr.getValue())) {
+                auto toTy = typeConverter.convertType(tyAttr.getValue());
+                op->setAttr(attr.getName(), mlir::TypeAttr::get(toTy));
+              }
           rewriter.finalizeOpModification(op);
         }
         // Ensure block arguments are updated if needed.

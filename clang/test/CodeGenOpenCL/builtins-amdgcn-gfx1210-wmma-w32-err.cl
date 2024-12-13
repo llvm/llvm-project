@@ -109,6 +109,17 @@ void test_amdgcn_wmma_scale_f32_16x16x128_f8f6f4(global v8f* out, v16i a, v16i b
   *out = __builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4(1, a, 2, b, 0, c, 1, scale_src0, 2, scale_src1, 0, reuse); // expected-error {{'__builtin_amdgcn_wmma_scale_f32_16x16x128_f8f6f4' must be a constant integer}}
 }
 
+void test_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4(global v8f* out, v16i a, v16i b, v8f c, int mod, long scale_src0, long scale_src1, bool reuse)
+{
+  *out = __builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4(mod, a, 2, b, 0, c, 1, scale_src0, 2, scale_src1, 1, 0); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4(1, a, mod, b, 0, c, 1, scale_src0, 2, scale_src1, 0, 1); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4(1, a, 2, b, mod, c, 1, scale_src0, 2, scale_src1, 1, 0); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4(1, a, 2, b, 0, c, mod, scale_src0, 2, scale_src1, 0, 0); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4(1, a, 2, b, 0, c, 1, scale_src0, mod, scale_src1, 0, 0); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4(1, a, 2, b, 0, c, 1, scale_src0, 2, scale_src1, reuse, 0); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4(1, a, 2, b, 0, c, 1, scale_src0, 2, scale_src1, 0, reuse); // expected-error {{'__builtin_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4' must be a constant integer}}
+}
+
 void test_amdgcn_swmmac_f32_16x16x64_bf16(global v8f* out, v16bf16 a, v32bf16 b, v8f c, short index, int mod)
 {
   *out = __builtin_amdgcn_swmmac_f32_16x16x64_bf16(mod, a, 0, b, c, index); // expected-error {{'__builtin_amdgcn_swmmac_f32_16x16x64_bf16' must be a constant integer}}

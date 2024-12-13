@@ -964,9 +964,10 @@ void RegAllocFastImpl::allocVirtReg(MachineInstr &MI, LiveReg &LR,
     // Nothing we can do: Report an error and keep going with an invalid
     // allocation.
     if (MI.isInlineAsm())
-      MI.emitError("inline assembly requires more registers than available");
+      MI.emitInlineAsmError(
+          "inline assembly requires more registers than available");
     else
-      MI.emitError("ran out of registers during register allocation");
+      MI.emitInlineAsmError("ran out of registers during register allocation");
 
     LR.Error = true;
     LR.PhysReg = 0;

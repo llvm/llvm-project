@@ -2783,6 +2783,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit IsFP8SrcByteSel = 0;
   field bit IsFP8DstByteSel = 0;
   field bit HasFP8DstByteSel = 0;
+  field bit HasFP4DstByteSel = 0;
   field bit IsFP8ByteSel = !or(IsFP8SrcByteSel, IsFP8DstByteSel);
 
   field bit HasDst = !ne(DstVT.Value, untyped.Value);
@@ -3082,18 +3083,20 @@ def VOP_V32BF16_V6I32_F32 : VOPProfile <[v32bf16, v6i32, f32, untyped]>;
 def VOP_V2BF16_F32_F32_I32 : VOPProfile <[v2bf16, f32, f32, i32]>;
 def VOP_V2F16_F32_F32_I32 : VOPProfile <[v2f16, f32, f32, i32]>;
 def VOP_I32_F16_I32 : VOPProfile <[i32, f16, i32, untyped]>;
-def VOP_V32F16_V6I32_I32  : VOPProfile<[v32f16, v6i32, i32, untyped]>;
-def VOP_V32BF16_V6I32_I32 : VOPProfile<[v32bf16, v6i32, i32, untyped]>;
+def VOP_V16F16_V3I32_I32  : VOPProfile<[v16f16, v3i32, i32, untyped]>;
+def VOP_V16BF16_V3I32_I32 : VOPProfile<[v16bf16, v3i32, i32, untyped]>;
 def VOP_V8F16_V2I32_I32  : VOPProfile<[v8f16, v2i32, i32, untyped]>;
 def VOP_V8BF16_V2I32_I32 : VOPProfile<[v8bf16, v2i32, i32, untyped]>;
 def VOP_V8F16_I32_I32  : VOPProfile<[v8f16, i32, i32, untyped]>;
 def VOP_V8BF16_I32_I32 : VOPProfile<[v8bf16, i32, i32, untyped]>;
-def VOP_V32F32_V6I32_I32 : VOPProfile<[v32f32, v6i32, i32, untyped]>;
+def VOP_V16F32_V3I32_I32 : VOPProfile<[v16f32, v3i32, i32, untyped]>;
 def VOP_V8F32_V2I32_I32 : VOPProfile<[v8f32, v2i32, i32, untyped]>;
 def VOP_V8F32_I32_I32 : VOPProfile<[v8f32, i32, i32, untyped]>;
 def VOP_V6I32_V32F16_F32 : VOPProfile<[v6i32, v32f16, f32, untyped]>;
 def VOP_V6I32_V32BF16_F32 : VOPProfile<[v6i32, v32bf16, f32, untyped]>;
-def VOP_V6I32_V32F32_F32 : VOPProfile<[v6i32, v32f32, f32, untyped]>;
+def VOP_V3I32_V16F16_F32 : VOPProfile<[v3i32, v16f16, f32, untyped]>;
+def VOP_V3I32_V16BF16_F32 : VOPProfile<[v3i32, v16bf16, f32, untyped]>;
+def VOP_V3I32_V16F32_F32 : VOPProfile<[v3i32, v16f32, f32, untyped]>;
 def VOP_V2I32_V8BF16_F32 : VOPProfile<[v2i32, v8bf16, f32, untyped]>;
 def VOP_V2I32_V8F16_F32 : VOPProfile<[v2i32, v8f16, f32, untyped]>;
 def VOP_V2I32_V8F32_F32 : VOPProfile<[v2i32, v8f32, f32, untyped]>;
@@ -3103,6 +3106,9 @@ def VOP_I32_V8BF16_F32 : VOPProfile<[i32, v8bf16, f32, untyped]>;
 def VOP_V6I32_V32F16_I32_F32 : VOPProfile<[v6i32, v32f16, i32, f32]>;
 def VOP_V6I32_V32BF16_I32_F32 : VOPProfile<[v6i32, v32bf16, i32, f32]>;
 def VOP_V6I32_V32F32_I32_F32 : VOPProfile<[v6i32, v32f32, i32, f32]>;
+def VOP_V3I32_V16F16_I32_F32 : VOPProfile<[v3i32, v16f16, i32, f32]>;
+def VOP_V3I32_V16BF16_I32_F32 : VOPProfile<[v3i32, v16bf16, i32, f32]>;
+def VOP_V3I32_V16F32_I32_F32 : VOPProfile<[v3i32, v16f32, i32, f32]>;
 def VOP_V2I32_V8BF16_I32_F32 : VOPProfile<[v2i32, v8bf16, i32, f32]>;
 def VOP_V2I32_V8F16_I32_F32 : VOPProfile<[v2i32, v8f16, i32, f32]>;
 def VOP_V2I32_V8F32_I32_F32 : VOPProfile<[v2i32, v8f32, i32, f32]>;
@@ -3512,13 +3518,13 @@ def isMFMA_F8F6F4Table : GenericTable {
   let PrimaryKeyName = "isMFMA_F8F6F4" ;
 }
 
-def FP8DstByteSelTable : GenericTable {
+def FP4FP8DstByteSelTable : GenericTable {
   let FilterClass = "VOP3_Pseudo";
-  let CppTypeName = "FP8DstByteSelInfo";
-  let Fields = ["Opcode", "HasFP8DstByteSel"];
+  let CppTypeName = "FP4FP8DstByteSelInfo";
+  let Fields = ["Opcode", "HasFP8DstByteSel", "HasFP4DstByteSel"];
 
   let PrimaryKey = ["Opcode"];
-  let PrimaryKeyName = "getFP8DstByteSelHelper";
+  let PrimaryKeyName = "getFP4FP8DstByteSelHelper";
 }
 
 def VOPDComponentTable : GenericTable {

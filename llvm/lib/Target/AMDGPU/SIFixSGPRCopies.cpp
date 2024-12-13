@@ -625,6 +625,9 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
   TRI = ST.getRegisterInfo();
   TII = ST.getInstrInfo();
 
+  // Instructions to re-legalize after changing register classes
+  SmallVector<MachineInstr *, 8> Relegalize;
+
   for (MachineBasicBlock &MBB : MF) {
     for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;
          ++I) {
@@ -632,6 +635,11 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
 
       switch (MI.getOpcode()) {
       default:
+        // scale_src has a register class restricted to low 256 VGPRs, changing
+        // registers to VGPR may not take it into acount.
+        if (TII->isWMMA(MI) &&
+            AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::scale_src0))
+          Relegalize.push_back(&MI);
         continue;
       case AMDGPU::COPY:
       case AMDGPU::WQM:
@@ -785,6 +793,9 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
   for (auto *MI : PHINodes) {
     processPHINode(*MI);
   }
+  while (!Relegalize.empty())
+    TII->legalizeOperands(*Relegalize.pop_back_val(), MDT);
+
   if (MF.getTarget().getOptLevel() > CodeGenOptLevel::None && EnableM0Merge)
     hoistAndMergeSGPRInits(AMDGPU::M0, *MRI, TRI, *MDT, TII);
 

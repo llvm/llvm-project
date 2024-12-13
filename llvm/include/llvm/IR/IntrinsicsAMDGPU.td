@@ -657,24 +657,21 @@ class AMDGPUCvtScaleF32SRIntrinsic<LLVMType DstTy, LLVMType Src0Ty, string name>
   [DstTy], [Src0Ty, llvm_i32_ty, llvm_float_ty], [IntrNoMem, IntrSpeculatable]
 >, ClangBuiltin<"__builtin_amdgcn_"#name>;
 
-def int_amdgcn_cvt_scale_pk32_f16_bf6  : AMDGPUCvtScaleIntrinsic<llvm_v32f16_ty,  llvm_v6i32_ty, "cvt_scale_pk32_f16_bf6">;
-def int_amdgcn_cvt_scale_pk32_bf16_bf6 : AMDGPUCvtScaleIntrinsic<llvm_v32bf16_ty, llvm_v6i32_ty, "cvt_scale_pk32_bf16_bf6">;
-def int_amdgcn_cvt_scale_pk32_f16_fp6  : AMDGPUCvtScaleIntrinsic<llvm_v32f16_ty,  llvm_v6i32_ty, "cvt_scale_pk32_f16_fp6">;
-def int_amdgcn_cvt_scale_pk32_bf16_fp6 : AMDGPUCvtScaleIntrinsic<llvm_v32bf16_ty, llvm_v6i32_ty, "cvt_scale_pk32_bf16_fp6">;
 def int_amdgcn_cvt_scale_pk8_f16_fp8   : AMDGPUCvtScaleIntrinsic<llvm_v8f16_ty,   llvm_v2i32_ty, "cvt_scale_pk8_f16_fp8">;
 def int_amdgcn_cvt_scale_pk8_bf16_fp8  : AMDGPUCvtScaleIntrinsic<llvm_v8bf16_ty,  llvm_v2i32_ty, "cvt_scale_pk8_bf16_fp8">;
 def int_amdgcn_cvt_scale_pk8_f16_bf8   : AMDGPUCvtScaleIntrinsic<llvm_v8f16_ty,   llvm_v2i32_ty, "cvt_scale_pk8_f16_bf8">;
 def int_amdgcn_cvt_scale_pk8_bf16_bf8  : AMDGPUCvtScaleIntrinsic<llvm_v8bf16_ty,  llvm_v2i32_ty, "cvt_scale_pk8_bf16_bf8">;
 def int_amdgcn_cvt_scale_pk8_f16_fp4   : AMDGPUCvtScaleIntrinsic<llvm_v8f16_ty,   llvm_i32_ty,   "cvt_scale_pk8_f16_fp4">;
 def int_amdgcn_cvt_scale_pk8_bf16_fp4  : AMDGPUCvtScaleIntrinsic<llvm_v8bf16_ty,  llvm_i32_ty,   "cvt_scale_pk8_bf16_fp4">;
-def int_amdgcn_cvt_scale_pk32_f32_fp6  : AMDGPUCvtScaleIntrinsic<llvm_v32f32_ty,  llvm_v6i32_ty, "cvt_scale_pk32_f32_fp6">;
-def int_amdgcn_cvt_scale_pk32_f32_bf6  : AMDGPUCvtScaleIntrinsic<llvm_v32f32_ty,  llvm_v6i32_ty, "cvt_scale_pk32_f32_bf6">;
 def int_amdgcn_cvt_scale_pk8_f32_fp8   : AMDGPUCvtScaleIntrinsic<llvm_v8f32_ty,   llvm_v2i32_ty, "cvt_scale_pk8_f32_fp8">;
 def int_amdgcn_cvt_scale_pk8_f32_bf8   : AMDGPUCvtScaleIntrinsic<llvm_v8f32_ty,   llvm_v2i32_ty, "cvt_scale_pk8_f32_bf8">;
 def int_amdgcn_cvt_scale_pk8_f32_fp4   : AMDGPUCvtScaleIntrinsic<llvm_v8f32_ty,   llvm_i32_ty,   "cvt_scale_pk8_f32_fp4">;
-
-def int_amdgcn_cvt_scalef32_pk32_fp6_f32  : AMDGPUCvtScaleF32Intrinsic<llvm_v6i32_ty, llvm_v32f32_ty,  "cvt_scalef32_pk32_fp6_f32">;
-def int_amdgcn_cvt_scalef32_pk32_bf6_f32  : AMDGPUCvtScaleF32Intrinsic<llvm_v6i32_ty, llvm_v32f32_ty,  "cvt_scalef32_pk32_bf6_f32">;
+def int_amdgcn_cvt_scale_pk16_f16_bf6  : AMDGPUCvtScaleIntrinsic<llvm_v16f16_ty,  llvm_v3i32_ty, "cvt_scale_pk16_f16_bf6">;
+def int_amdgcn_cvt_scale_pk16_bf16_bf6 : AMDGPUCvtScaleIntrinsic<llvm_v16bf16_ty, llvm_v3i32_ty, "cvt_scale_pk16_bf16_bf6">;
+def int_amdgcn_cvt_scale_pk16_f16_fp6  : AMDGPUCvtScaleIntrinsic<llvm_v16f16_ty,  llvm_v3i32_ty, "cvt_scale_pk16_f16_fp6">;
+def int_amdgcn_cvt_scale_pk16_bf16_fp6 : AMDGPUCvtScaleIntrinsic<llvm_v16bf16_ty, llvm_v3i32_ty, "cvt_scale_pk16_bf16_fp6">;
+def int_amdgcn_cvt_scale_pk16_f32_fp6  : AMDGPUCvtScaleIntrinsic<llvm_v16f32_ty,  llvm_v3i32_ty, "cvt_scale_pk16_f32_fp6">;
+def int_amdgcn_cvt_scale_pk16_f32_bf6  : AMDGPUCvtScaleIntrinsic<llvm_v16f32_ty,  llvm_v3i32_ty, "cvt_scale_pk16_f32_bf6">;
 
 class AMDGPUCvtScaleF32ToFP6BF6Intrinsic<LLVMType DstTy, LLVMType Src0Ty, LLVMType Src1Ty, string name> : DefaultAttrsIntrinsic<
   [DstTy], [Src0Ty, Src1Ty, llvm_float_ty], [IntrNoMem, IntrSpeculatable]
@@ -693,15 +690,21 @@ def int_amdgcn_cvt_scalef32_pk8_bf8_f32   : AMDGPUCvtScaleF32Intrinsic<llvm_v2i3
 def int_amdgcn_cvt_scalef32_pk8_fp4_f32   : AMDGPUCvtScaleF32Intrinsic<llvm_i32_ty,   llvm_v8f32_ty,   "cvt_scalef32_pk8_fp4_f32">;
 def int_amdgcn_cvt_scalef32_pk8_fp4_f16   : AMDGPUCvtScaleF32Intrinsic<llvm_i32_ty,   llvm_v8f16_ty,   "cvt_scalef32_pk8_fp4_f16">;
 def int_amdgcn_cvt_scalef32_pk8_fp4_bf16  : AMDGPUCvtScaleF32Intrinsic<llvm_i32_ty,   llvm_v8bf16_ty,  "cvt_scalef32_pk8_fp4_bf16">;
+def int_amdgcn_cvt_scalef32_pk16_fp6_f32  : AMDGPUCvtScaleF32Intrinsic<llvm_v3i32_ty, llvm_v16f32_ty,   "cvt_scalef32_pk16_fp6_f32">;
+def int_amdgcn_cvt_scalef32_pk16_bf6_f32  : AMDGPUCvtScaleF32Intrinsic<llvm_v3i32_ty, llvm_v16f32_ty,   "cvt_scalef32_pk16_bf6_f32">;
+def int_amdgcn_cvt_scalef32_pk16_fp6_f16  : AMDGPUCvtScaleF32Intrinsic<llvm_v3i32_ty, llvm_v16f16_ty,   "cvt_scalef32_pk16_fp6_f16">;
+def int_amdgcn_cvt_scalef32_pk16_bf6_f16  : AMDGPUCvtScaleF32Intrinsic<llvm_v3i32_ty, llvm_v16f16_ty,   "cvt_scalef32_pk16_bf6_f16">;
+def int_amdgcn_cvt_scalef32_pk16_fp6_bf16 : AMDGPUCvtScaleF32Intrinsic<llvm_v3i32_ty, llvm_v16bf16_ty,  "cvt_scalef32_pk16_fp6_bf16">;
+def int_amdgcn_cvt_scalef32_pk16_bf6_bf16 : AMDGPUCvtScaleF32Intrinsic<llvm_v3i32_ty, llvm_v16bf16_ty,  "cvt_scalef32_pk16_bf6_bf16">;
 
 def int_amdgcn_cvt_scalef32_sr_pk32_fp6_f32  : AMDGPUCvtScaleF32SRIntrinsic<llvm_v6i32_ty, llvm_v32f32_ty,  "cvt_scalef32_sr_pk32_fp6_f32">;
 def int_amdgcn_cvt_scalef32_sr_pk32_bf6_f32  : AMDGPUCvtScaleF32SRIntrinsic<llvm_v6i32_ty, llvm_v32f32_ty,  "cvt_scalef32_sr_pk32_bf6_f32">;
 def int_amdgcn_cvt_scalef32_sr_pk32_fp6_f16  : AMDGPUCvtScaleF32SRIntrinsic<llvm_v6i32_ty, llvm_v32f16_ty,  "cvt_scalef32_sr_pk32_fp6_f16">;
 def int_amdgcn_cvt_scalef32_sr_pk32_bf6_f16  : AMDGPUCvtScaleF32SRIntrinsic<llvm_v6i32_ty, llvm_v32f16_ty,  "cvt_scalef32_sr_pk32_bf6_f16">;
-def int_amdgcn_cvt_scalef32_sr_pk8_fp8_bf16  : AMDGPUCvtScaleF32SRIntrinsic<llvm_v2i32_ty, llvm_v8bf16_ty,  "cvt_scalef32_sr_pk8_fp8_bf16">;
-def int_amdgcn_cvt_scalef32_sr_pk8_bf8_bf16  : AMDGPUCvtScaleF32SRIntrinsic<llvm_v2i32_ty, llvm_v8bf16_ty,  "cvt_scalef32_sr_pk8_bf8_bf16">;
 def int_amdgcn_cvt_scalef32_sr_pk32_fp6_bf16 : AMDGPUCvtScaleF32SRIntrinsic<llvm_v6i32_ty, llvm_v32bf16_ty, "cvt_scalef32_sr_pk32_fp6_bf16">;
 def int_amdgcn_cvt_scalef32_sr_pk32_bf6_bf16 : AMDGPUCvtScaleF32SRIntrinsic<llvm_v6i32_ty, llvm_v32bf16_ty, "cvt_scalef32_sr_pk32_bf6_bf16">;
+def int_amdgcn_cvt_scalef32_sr_pk8_fp8_bf16  : AMDGPUCvtScaleF32SRIntrinsic<llvm_v2i32_ty, llvm_v8bf16_ty,  "cvt_scalef32_sr_pk8_fp8_bf16">;
+def int_amdgcn_cvt_scalef32_sr_pk8_bf8_bf16  : AMDGPUCvtScaleF32SRIntrinsic<llvm_v2i32_ty, llvm_v8bf16_ty,  "cvt_scalef32_sr_pk8_bf8_bf16">;
 def int_amdgcn_cvt_scalef32_sr_pk8_fp8_f16   : AMDGPUCvtScaleF32SRIntrinsic<llvm_v2i32_ty, llvm_v8f16_ty,   "cvt_scalef32_sr_pk8_fp8_f16">;
 def int_amdgcn_cvt_scalef32_sr_pk8_bf8_f16   : AMDGPUCvtScaleF32SRIntrinsic<llvm_v2i32_ty, llvm_v8f16_ty,   "cvt_scalef32_sr_pk8_bf8_f16">;
 def int_amdgcn_cvt_scalef32_sr_pk8_fp8_f32   : AMDGPUCvtScaleF32SRIntrinsic<llvm_v2i32_ty, llvm_v8f32_ty,   "cvt_scalef32_sr_pk8_fp8_f32">;
@@ -709,6 +712,12 @@ def int_amdgcn_cvt_scalef32_sr_pk8_bf8_f32   : AMDGPUCvtScaleF32SRIntrinsic<llvm
 def int_amdgcn_cvt_scalef32_sr_pk8_fp4_f32   : AMDGPUCvtScaleF32SRIntrinsic<llvm_i32_ty,   llvm_v8f32_ty,   "cvt_scalef32_sr_pk8_fp4_f32">;
 def int_amdgcn_cvt_scalef32_sr_pk8_fp4_f16   : AMDGPUCvtScaleF32SRIntrinsic<llvm_i32_ty,   llvm_v8f16_ty,   "cvt_scalef32_sr_pk8_fp4_f16">;
 def int_amdgcn_cvt_scalef32_sr_pk8_fp4_bf16  : AMDGPUCvtScaleF32SRIntrinsic<llvm_i32_ty,   llvm_v8bf16_ty,  "cvt_scalef32_sr_pk8_fp4_bf16">;
+def int_amdgcn_cvt_scalef32_sr_pk16_fp6_f32  : AMDGPUCvtScaleF32SRIntrinsic<llvm_v3i32_ty, llvm_v16f32_ty,  "cvt_scalef32_sr_pk16_fp6_f32">;
+def int_amdgcn_cvt_scalef32_sr_pk16_bf6_f32  : AMDGPUCvtScaleF32SRIntrinsic<llvm_v3i32_ty, llvm_v16f32_ty,  "cvt_scalef32_sr_pk16_bf6_f32">;
+def int_amdgcn_cvt_scalef32_sr_pk16_fp6_f16  : AMDGPUCvtScaleF32SRIntrinsic<llvm_v3i32_ty, llvm_v16f16_ty,  "cvt_scalef32_sr_pk16_fp6_f16">;
+def int_amdgcn_cvt_scalef32_sr_pk16_bf6_f16  : AMDGPUCvtScaleF32SRIntrinsic<llvm_v3i32_ty, llvm_v16f16_ty,  "cvt_scalef32_sr_pk16_bf6_f16">;
+def int_amdgcn_cvt_scalef32_sr_pk16_fp6_bf16 : AMDGPUCvtScaleF32SRIntrinsic<llvm_v3i32_ty, llvm_v16bf16_ty, "cvt_scalef32_sr_pk16_fp6_bf16">;
+def int_amdgcn_cvt_scalef32_sr_pk16_bf6_bf16 : AMDGPUCvtScaleF32SRIntrinsic<llvm_v3i32_ty, llvm_v16bf16_ty, "cvt_scalef32_sr_pk16_bf6_bf16">;
 
 def int_amdgcn_cvt_scalef32_2xpk16_fp6_f32 : AMDGPUCvtScaleF32ToFP6BF6Intrinsic<llvm_v6i32_ty, llvm_v16f32_ty, llvm_v16f32_ty, "cvt_scalef32_2xpk16_fp6_f32">;
 def int_amdgcn_cvt_scalef32_2xpk16_bf6_f32 : AMDGPUCvtScaleF32ToFP6BF6Intrinsic<llvm_v6i32_ty, llvm_v16f32_ty, llvm_v16f32_ty, "cvt_scalef32_2xpk16_bf6_f32">;
@@ -3938,6 +3947,21 @@ def int_amdgcn_rts_ray_restore: Intrinsic<
   [], [llvm_i32_ty], [IntrReadMem, IntrHasSideEffects, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]
 >;
 
+// llvm.amdgcn.rts.trace.ray <ray_init_data> <ray_init_flag> <ray_extent> <ray_origin> <ray_dir> <texture_descr>
+def int_amdgcn_rts_trace_ray : Intrinsic<[],
+    [llvm_i32_ty , llvm_v3i32_ty, llvm_float_ty, llvm_v3f32_ty, llvm_v3f32_ty, llvm_v4i32_ty],
+    [IntrHasSideEffects, IntrNoCallback, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<5>;
+
+// <vdata> llvm.amdgcn.rts.trace.ray <ray_init_data> <ray_init_flag> <ray_extent> <ray_origin> <ray_dir> <texture_descr>
+def int_amdgcn_rts_trace_ray_nonblock : Intrinsic<[llvm_i32_ty],
+    [llvm_i32_ty , llvm_v3i32_ty, llvm_float_ty, llvm_v3f32_ty, llvm_v3f32_ty, llvm_v4i32_ty],
+    [IntrHasSideEffects, IntrNoCallback, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<5>;
+
+// <vdata> llvm.amdgcn_rts_read_vertex <vaddr0> <vaddr1> <vaddr2>
+def int_amdgcn_rts_read_vertex: Intrinsic<[llvm_v9f32_ty],
+    [global_ptr_ty, llvm_i32_ty],
+    [IntrReadMem, IntrHasSideEffects, IntrNoCallback, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]>;
+
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
 //===----------------------------------------------------------------------===//
@@ -4664,7 +4688,7 @@ class AMDGPUWmmaIntrinsicModsC_MatrixFMT<LLVMType AB, LLVMType CD> :
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<4>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
-class AMDGPUWmmaScaleIntrinsicModsC<LLVMType AB, LLVMType CD> :
+class AMDGPUWmmaScaleIntrinsicModsC<LLVMType AB, LLVMType CD, LLVMType scale_ty> :
   Intrinsic<
     [CD], // %D
     [
@@ -4675,9 +4699,9 @@ class AMDGPUWmmaScaleIntrinsicModsC<LLVMType AB, LLVMType CD> :
       llvm_i16_ty,      // %C_mod: 0 - none, 1 - neg, 2 - abs, 3 - neg(abs)
       LLVMMatchType<0>, // %C
       llvm_i32_ty,      // matrix_a_scale
-      llvm_i32_ty,      // matrix a scale exponential
+      scale_ty,         // matrix a scale exponential
       llvm_i32_ty,      // matrix_b_scale
-      llvm_i32_ty,      // matrix b scale exponential
+      scale_ty,         // matrix b scale exponential
       llvm_i1_ty,       // matrix_a_reuse
       llvm_i1_ty,       // matrix_b_reuse
     ],
@@ -4705,7 +4729,8 @@ def int_amdgcn_wmma_f16_16x16x64_bf8_bf8  : AMDGPUWmmaIntrinsicModsC<llvm_anyint
 def int_amdgcn_wmma_i32_16x16x64_iu8      : AMDGPUWmmaIntrinsicModsAB<llvm_anyint_ty, llvm_anyint_ty>;
 def int_amdgcn_wmma_i32_16x16x128_iu4     : AMDGPUWmmaIntrinsicModsAB<llvm_anyint_ty, llvm_anyint_ty>;
 def int_amdgcn_wmma_f32_16x16x128_f8f6f4  : AMDGPUWmmaIntrinsicModsC_MatrixFMT<llvm_anyint_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_scale_f32_16x16x128_f8f6f4  : AMDGPUWmmaScaleIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_scale_f32_16x16x128_f8f6f4   : AMDGPUWmmaScaleIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty, llvm_i32_ty>;
+def int_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4 : AMDGPUWmmaScaleIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty, llvm_i64_ty>;
 }
 
 class AMDGPUSWmmacIntrinsicABIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType Index> :

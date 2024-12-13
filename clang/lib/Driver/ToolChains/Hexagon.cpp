@@ -13,6 +13,7 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
+#include "clang/Driver/SanitizerArgs.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
@@ -215,7 +216,8 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
       "-mcpu=hexagon" +
       toolchains::HexagonToolChain::GetTargetCPUVersion(Args)));
 
-  addSanitizerRuntimes(HTC, Args, CmdArgs);
+  SanitizerArgs SanArgs = HTC.getSanitizerArgs(Args);
+  addSanitizerRuntimes(HTC, Args, SanArgs, CmdArgs);
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
@@ -301,7 +303,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   bool UseShared = IsShared && !IsStatic;
   StringRef CpuVer = toolchains::HexagonToolChain::GetTargetCPUVersion(Args);
 
-  bool NeedsSanitizerDeps = addSanitizerRuntimes(HTC, Args, CmdArgs);
+  const SanitizerArgs &SanArgs = HTC.getSanitizerArgs(Args);
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(HTC, Args, SanArgs, CmdArgs);
   bool NeedsXRayDeps = addXRayRuntime(HTC, Args, CmdArgs);
 
   //----------------------------------------------------------------------------
@@ -371,7 +374,7 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
 
     if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
       if (NeedsSanitizerDeps) {
-        linkSanitizerRuntimeDeps(HTC, Args, CmdArgs);
+        linkSanitizerRuntimeDeps(HTC, Args, SanArgs, CmdArgs);
 
         if (UNW != ToolChain::UNW_None)
           CmdArgs.push_back("-lunwind");

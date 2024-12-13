@@ -207,3 +207,8 @@ multiclass DSDIR_Real_gfx12_gfx13<bits<2> op> :
 
 defm DS_PARAM_LOAD : DSDIR_Real_gfx12_gfx13<0x0>;
 defm DS_DIRECT_LOAD : DSDIR_Real_gfx12_gfx13<0x1>;
+
+let SubtargetPredicate = isGFX12Plus in {
+  def : AMDGPUMnemonicAlias<"lds_param_load", "ds_param_load">;
+  def : AMDGPUMnemonicAlias<"lds_direct_load", "ds_direct_load">;
+}
