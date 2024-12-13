@@ -1525,7 +1525,10 @@ module std [system] {
     module aligned_alloc                      { header "__memory/aligned_alloc.h" }
     module allocate_at_least                  { header "__memory/allocate_at_least.h" }
     module allocation_guard                   { header "__memory/allocation_guard.h" }
-    module allocator                          { header "__memory/allocator.h" }
+    module allocator {
+      header "__memory/allocator.h"
+      export * // TODO: Workaround for https://github.com/llvm/llvm-project/issues/120108
+    }
     module allocator_arg_t                    { header "__memory/allocator_arg_t.h" }
     module allocator_destructor               { header "__memory/allocator_destructor.h" }
     module allocator_traits                   { header "__memory/allocator_traits.h" }
@@ -1601,7 +1604,10 @@ module std [system] {
   module new {
     header "new"
     module align_val_t          { header "__new/align_val_t.h" }
-    module allocate             { header "__new/allocate.h" }
+    module allocate {
+      header "__new/allocate.h"
+      export * // TODO: Workaround for https://github.com/llvm/llvm-project/issues/120108
+    }
     module destroying_delete_t  { header "__new/destroying_delete_t.h" }
     module exceptions           { header "__new/exceptions.h" }
     module global_new_delete    {
