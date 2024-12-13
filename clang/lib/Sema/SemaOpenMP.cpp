@@ -14485,9 +14485,9 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
 }
 
 StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
-                                                Stmt *AStmt,
-                                                SourceLocation StartLoc,
-                                                SourceLocation EndLoc) {
+                                                  Stmt *AStmt,
+                                                  SourceLocation StartLoc,
+                                                  SourceLocation EndLoc) {
   ASTContext &Context = getASTContext();
   Scope *CurScope = SemaRef.getCurScope();
 
@@ -14506,14 +14506,14 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
   SmallVector<OMPLoopBasedDirective::HelperExprs, 4> LoopHelpers(NumLoops);
   Stmt *Body = nullptr;
   SmallVector<SmallVector<Stmt *, 0>, 4> OriginalInits;
-  if (!checkTransformableLoopNest(OMPD_stripe, AStmt, NumLoops, LoopHelpers, Body,
-                                  OriginalInits))
+  if (!checkTransformableLoopNest(OMPD_stripe, AStmt, NumLoops, LoopHelpers,
+                                  Body, OriginalInits))
     return StmtError();
 
   // Delay tiling to when template is completely instantiated.
   if (SemaRef.CurContext->isDependentContext())
     return OMPStripeDirective::Create(Context, StartLoc, EndLoc, Clauses,
-                                    NumLoops, AStmt, nullptr, nullptr);
+                                      NumLoops, AStmt, nullptr, nullptr);
 
   assert(LoopHelpers.size() == NumLoops &&
          "Expecting loop iteration space dimensionality to match number of "
@@ -14574,8 +14574,8 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
   // Once the original iteration values are set, append the innermost body.
   Stmt *Inner = Body;
 
-  auto MakeDimStripeSize = [&SemaRef = this->SemaRef, &CopyTransformer, &Context,
-                          SizesClause, CurScope](int I) -> Expr * {
+  auto MakeDimStripeSize = [&SemaRef = this->SemaRef, &CopyTransformer,
+                            &Context, SizesClause, CurScope](int I) -> Expr * {
     Expr *DimStripeSizeExpr = SizesClause->getSizesRefs()[I];
     if (isa<ConstantExpr>(DimStripeSizeExpr))
       return AssertSuccess(CopyTransformer.TransformExpr(DimStripeSizeExpr));
@@ -14588,9 +14588,9 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
     //   for (int i = 0; i < 42; ++i)
     //     body(i);
     // \endcode
-    // Although there is no meaningful interpretation of the stripe size, the body
-    // should still be executed 42 times to avoid surprises. To preserve the
-    // invariant that every loop iteration is executed exactly once and not
+    // Although there is no meaningful interpretation of the stripe size, the
+    // body should still be executed 42 times to avoid surprises. To preserve
+    // the invariant that every loop iteration is executed exactly once and not
     // cause an infinite loop, apply a minimum stripe size of one.
     // Build expr:
     // \code{c}
@@ -14624,7 +14624,7 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
     // node object must appear at most once, hence we define lamdas that create
     // a new AST node at every use.
     auto MakeStripeIVRef = [&SemaRef = this->SemaRef, &StripeIndVars, I, IVTy,
-                          OrigCntVar]() {
+                            OrigCntVar]() {
       return buildDeclRefExpr(SemaRef, StripeIndVars[I], IVTy,
                               OrigCntVar->getExprLoc());
     };
@@ -14636,7 +14636,8 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
 
     // For init-statement: auto .stripe.iv = .floor.iv
     SemaRef.AddInitializerToDecl(
-        StripeIndVars[I], SemaRef.DefaultLvalueConversion(MakeFloorIVRef()).get(),
+        StripeIndVars[I],
+        SemaRef.DefaultLvalueConversion(MakeFloorIVRef()).get(),
         /*DirectInit=*/false);
     Decl *CounterDecl = StripeIndVars[I];
     StmtResult InitStmt = new (Context)
@@ -14751,9 +14752,9 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
                 LoopHelper.Init->getBeginLoc(), LoopHelper.Inc->getEndLoc());
   }
 
-  return OMPStripeDirective::Create(Context, StartLoc, EndLoc, Clauses, NumLoops,
-                                  AStmt, Inner,
-                                  buildPreInits(Context, PreInits));
+  return OMPStripeDirective::Create(Context, StartLoc, EndLoc, Clauses,
+                                    NumLoops, AStmt, Inner,
+                                    buildPreInits(Context, PreInits));
 }
 
 StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
