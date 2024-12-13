@@ -43,8 +43,6 @@ void BoolExpr(int *I, float *F) {
 #pragma acc kernels if (*I < *F)
   while(0);
 
-  // expected-warning@+2{{OpenACC construct 'data' not yet implemented}}
-  // expected-warning@+1{{OpenACC clause 'if' not yet implemented}}
 #pragma acc data if (*I < *F)
   while(0);
 #pragma acc parallel loop if (*I < *F)

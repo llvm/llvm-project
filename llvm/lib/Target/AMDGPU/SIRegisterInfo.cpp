@@ -1875,6 +1875,8 @@ void SIRegisterInfo::buildSpillLoadStore(
                            .addReg(SubReg, getKillRegState(IsKill));
         if (NeedSuperRegDef)
           AccRead.addReg(ValueReg, RegState::ImplicitDefine);
+        if (NeedSuperRegImpOperand && (IsFirstSubReg || IsLastSubReg))
+          AccRead.addReg(ValueReg, RegState::Implicit);
         AccRead->setAsmPrinterFlag(MachineInstr::ReloadReuse);
       }
       SubReg = TmpIntermediateVGPR;

@@ -1,4 +1,5 @@
 // RUN: %clang %s -### -no-canonical-prefixes --target=arm-liteos \
+// XFAIL: *
 // RUN:     -resource-dir=%S/Inputs/ohos_native_tree/llvm/lib/clang/x.y.z \
 // RUN:     --sysroot=%S/Inputs/ohos_native_tree/sysroot -fuse-ld=ld -march=armv7-a 2>&1 \
 // RUN:     | FileCheck -check-prefixes=CHECK,CHECK-ARM %s

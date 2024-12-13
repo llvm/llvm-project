@@ -411,10 +411,10 @@ TEST(MemProf, BaseMemProfReader) {
            /*Column=*/5, /*IsInlineFrame=*/true);
   Frame F2(/*Hash=*/IndexedMemProfRecord::getGUID("bar"), /*LineOffset=*/10,
            /*Column=*/2, /*IsInlineFrame=*/false);
-  MemProfData.addFrame(F1);
-  MemProfData.addFrame(F2);
+  auto F1Id = MemProfData.addFrame(F1);
+  auto F2Id = MemProfData.addFrame(F2);
 
-  llvm::SmallVector<FrameId> CallStack{F1.hash(), F2.hash()};
+  llvm::SmallVector<FrameId> CallStack{F1Id, F2Id};
   CallStackId CSId = MemProfData.addCallStack(std::move(CallStack));
 
   IndexedMemProfRecord FakeRecord;
@@ -443,19 +443,17 @@ TEST(MemProf, BaseMemProfReaderWithCSIdMap) {
            /*Column=*/5, /*IsInlineFrame=*/true);
   Frame F2(/*Hash=*/IndexedMemProfRecord::getGUID("bar"), /*LineOffset=*/10,
            /*Column=*/2, /*IsInlineFrame=*/false);
-  MemProfData.addFrame(F1);
-  MemProfData.addFrame(F2);
+  auto F1Id = MemProfData.addFrame(F1);
+  auto F2Id = MemProfData.addFrame(F2);
 
-  llvm::SmallVector<FrameId> CallStack = {F1.hash(), F2.hash()};
-  MemProfData.addCallStack(CallStack);
+  llvm::SmallVector<FrameId> CallStack = {F1Id, F2Id};
+  auto CSId = MemProfData.addCallStack(std::move(CallStack));
 
   IndexedMemProfRecord FakeRecord;
   MemInfoBlock Block;
   Block.AllocCount = 1U, Block.TotalAccessDensity = 4,
   Block.TotalLifetime = 200001;
-  FakeRecord.AllocSites.emplace_back(
-      /*CSId=*/hashCallStack(CallStack),
-      /*MB=*/Block);
+  FakeRecord.AllocSites.emplace_back(/*CSId=*/CSId, /*MB=*/Block);
   MemProfData.Records.insert({F1.hash(), FakeRecord});
 
   MemProfReader Reader(std::move(MemProfData));
@@ -480,28 +478,28 @@ TEST(MemProf, IndexedMemProfRecordToMemProfRecord) {
   Frame F2(2, 0, 0, false);
   Frame F3(3, 0, 0, false);
   Frame F4(4, 0, 0, false);
-  MemProfData.addFrame(F1);
-  MemProfData.addFrame(F2);
-  MemProfData.addFrame(F3);
-  MemProfData.addFrame(F4);
+  auto F1Id = MemProfData.addFrame(F1);
+  auto F2Id = MemProfData.addFrame(F2);
+  auto F3Id = MemProfData.addFrame(F3);
+  auto F4Id = MemProfData.addFrame(F4);
 
-  llvm::SmallVector<FrameId> CS1 = {F1.hash(), F2.hash()};
-  llvm::SmallVector<FrameId> CS2 = {F1.hash(), F3.hash()};
-  llvm::SmallVector<FrameId> CS3 = {F2.hash(), F3.hash()};
-  llvm::SmallVector<FrameId> CS4 = {F2.hash(), F4.hash()};
-  MemProfData.addCallStack(CS1);
-  MemProfData.addCallStack(CS2);
-  MemProfData.addCallStack(CS3);
-  MemProfData.addCallStack(CS4);
+  llvm::SmallVector<FrameId> CS1 = {F1Id, F2Id};
+  llvm::SmallVector<FrameId> CS2 = {F1Id, F3Id};
+  llvm::SmallVector<FrameId> CS3 = {F2Id, F3Id};
+  llvm::SmallVector<FrameId> CS4 = {F2Id, F4Id};
+  auto CS1Id = MemProfData.addCallStack(std::move(CS1));
+  auto CS2Id = MemProfData.addCallStack(std::move(CS2));
+  auto CS3Id = MemProfData.addCallStack(std::move(CS3));
+  auto CS4Id = MemProfData.addCallStack(std::move(CS4));
 
   IndexedMemProfRecord IndexedRecord;
   IndexedAllocationInfo AI;
-  AI.CSId = hashCallStack(CS1);
+  AI.CSId = CS1Id;
   IndexedRecord.AllocSites.push_back(AI);
-  AI.CSId = hashCallStack(CS2);
+  AI.CSId = CS2Id;
   IndexedRecord.AllocSites.push_back(AI);
-  IndexedRecord.CallSiteIds.push_back(hashCallStack(CS3));
-  IndexedRecord.CallSiteIds.push_back(hashCallStack(CS4));
+  IndexedRecord.CallSiteIds.push_back(CS3Id);
+  IndexedRecord.CallSiteIds.push_back(CS4Id);
 
   FrameIdConverter<decltype(MemProfData.Frames)> FrameIdConv(
       MemProfData.Frames);
@@ -556,14 +554,12 @@ TEST(MemProf, MissingCallStackId) {
 }
 
 TEST(MemProf, MissingFrameId) {
-  IndexedAllocationInfo AI(0x222, makePartialMIB(), getHotColdSchema());
-
-  IndexedMemProfRecord IndexedMR;
-  IndexedMR.AllocSites.push_back(AI);
-
   // An empty Frame map to trigger a mapping error.
   IndexedMemProfData MemProfData;
-  MemProfData.CallStacks.insert({0x222, {2, 3}});
+  auto CSId = MemProfData.addCallStack(SmallVector<FrameId>{2, 3});
+
+  IndexedMemProfRecord IndexedMR;
+  IndexedMR.AllocSites.emplace_back(CSId, makePartialMIB(), getHotColdSchema());
 
   FrameIdConverter<decltype(MemProfData.Frames)> FrameIdConv(
       MemProfData.Frames);
@@ -598,7 +594,7 @@ TEST(MemProf, RadixTreeBuilderOne) {
       {11, 1}, {12, 2}, {13, 3}};
   llvm::SmallVector<FrameId> CS1 = {13, 12, 11};
   IndexedMemProfData MemProfData;
-  MemProfData.addCallStack(CS1);
+  auto CS1Id = MemProfData.addCallStack(std::move(CS1));
   llvm::DenseMap<FrameId, FrameStat> FrameHistogram =
       computeFrameHistogram<FrameId>(MemProfData.CallStacks);
   CallStackRadixTreeBuilder<FrameId> Builder;
@@ -611,7 +607,7 @@ TEST(MemProf, RadixTreeBuilderOne) {
                           1U  // MemProfFrameIndexes[11]
                           ));
   const auto Mappings = Builder.takeCallStackPos();
-  EXPECT_THAT(Mappings, UnorderedElementsAre(Pair(hashCallStack(CS1), 0U)));
+  EXPECT_THAT(Mappings, UnorderedElementsAre(Pair(CS1Id, 0U)));
 }
 
 // Verify CallStackRadixTreeBuilder can form a link between two call stacks.
@@ -621,8 +617,8 @@ TEST(MemProf, RadixTreeBuilderTwo) {
   llvm::SmallVector<FrameId> CS1 = {12, 11};
   llvm::SmallVector<FrameId> CS2 = {13, 12, 11};
   IndexedMemProfData MemProfData;
-  MemProfData.addCallStack(CS1);
-  MemProfData.addCallStack(CS2);
+  auto CS1Id = MemProfData.addCallStack(std::move(CS1));
+  auto CS2Id = MemProfData.addCallStack(std::move(CS2));
   llvm::DenseMap<FrameId, FrameStat> FrameHistogram =
       computeFrameHistogram<FrameId>(MemProfData.CallStacks);
   CallStackRadixTreeBuilder<FrameId> Builder;
@@ -637,8 +633,7 @@ TEST(MemProf, RadixTreeBuilderTwo) {
                           1U                         // MemProfFrameIndexes[11]
                           ));
   const auto Mappings = Builder.takeCallStackPos();
-  EXPECT_THAT(Mappings, UnorderedElementsAre(Pair(hashCallStack(CS1), 0U),
-                                             Pair(hashCallStack(CS2), 2U)));
+  EXPECT_THAT(Mappings, UnorderedElementsAre(Pair(CS1Id, 0U), Pair(CS2Id, 2U)));
 }
 
 // Verify CallStackRadixTreeBuilder can form a jump to a prefix that itself has
@@ -652,10 +647,10 @@ TEST(MemProf, RadixTreeBuilderSuccessiveJumps) {
   llvm::SmallVector<FrameId> CS3 = {17, 16, 12, 11};
   llvm::SmallVector<FrameId> CS4 = {18, 16, 12, 11};
   IndexedMemProfData MemProfData;
-  MemProfData.addCallStack(CS1);
-  MemProfData.addCallStack(CS2);
-  MemProfData.addCallStack(CS3);
-  MemProfData.addCallStack(CS4);
+  auto CS1Id = MemProfData.addCallStack(std::move(CS1));
+  auto CS2Id = MemProfData.addCallStack(std::move(CS2));
+  auto CS3Id = MemProfData.addCallStack(std::move(CS3));
+  auto CS4Id = MemProfData.addCallStack(std::move(CS4));
   llvm::DenseMap<FrameId, FrameStat> FrameHistogram =
       computeFrameHistogram<FrameId>(MemProfData.CallStacks);
   CallStackRadixTreeBuilder<FrameId> Builder;
@@ -679,10 +674,9 @@ TEST(MemProf, RadixTreeBuilderSuccessiveJumps) {
                           1U                         // MemProfFrameIndexes[11]
                           ));
   const auto Mappings = Builder.takeCallStackPos();
-  EXPECT_THAT(Mappings, UnorderedElementsAre(Pair(hashCallStack(CS1), 0U),
-                                             Pair(hashCallStack(CS2), 3U),
-                                             Pair(hashCallStack(CS3), 7U),
-                                             Pair(hashCallStack(CS4), 10U)));
+  EXPECT_THAT(Mappings,
+              UnorderedElementsAre(Pair(CS1Id, 0U), Pair(CS2Id, 3U),
+                                   Pair(CS3Id, 7U), Pair(CS4Id, 10U)));
 }
 
 // Verify that we can parse YAML and retrieve IndexedMemProfData as expected.

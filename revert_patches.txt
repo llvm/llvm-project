@@ -21,3 +21,7 @@ Revert: breaks build of rocFFT
 854d7301f989 [Clang/AMDGPU] Zero sized arrays not allowed in HIP device code. (#113470)
 Ron and Vigneshwar
 ---
+revert: breaks smoke/xteamr
+f4ee5a673f6e [OpenMP] Replace AMDGPU fences with generic scoped fences (#119619) 
+Ron , Dhruva, Joseph 
+---
