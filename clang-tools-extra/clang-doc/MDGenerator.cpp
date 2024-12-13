@@ -163,8 +163,8 @@ static void genMarkdown(const ClangDocContext &CDCtx, const FunctionInfo &I,
   writeHeader(I.Name, 3, OS);
   std::string Access = getAccessSpelling(I.Access).str();
   if (Access != "")
-    writeLine(genItalic(Access + " " + I.ReturnType.Type.QualName + " " + I.Name +
-                        "(" + Stream.str() + ")"),
+    writeLine(genItalic(Access + " " + I.ReturnType.Type.QualName + " " +
+                        I.Name + "(" + Stream.str() + ")"),
               OS);
   else
     writeLine(genItalic(I.ReturnType.Type.QualName + " " + I.Name + "(" +

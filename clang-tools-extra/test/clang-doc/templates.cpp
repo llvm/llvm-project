@@ -100,7 +100,7 @@ void function<bool, 0>(bool x) {}
 
 /// A Tuple type
 ///
-/// Does nothing.
+/// Does Tuple things.
 template<typename ...Tys>
 struct tuple{};
 
@@ -154,3 +154,4 @@ tuple<int,int,bool> func_with_tuple_param(tuple<int,int,bool> t){ return t;}
 // MD: *Defined at {{.*}}templates.cpp#[[# @LINE - 44]]*
 // MD:  A function with a tuple parameter
 // MD: **t** The input to func_with_tuple_param
+
