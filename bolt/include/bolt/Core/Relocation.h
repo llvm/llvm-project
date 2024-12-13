@@ -16,8 +16,6 @@
 
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Object/ObjectFile.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {

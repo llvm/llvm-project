@@ -1513,8 +1513,8 @@ MCSymbol *BinaryFunction::registerBranch(uint64_t Src, uint64_t Dst) {
   return Target;
 }
 
-void BinaryFunction::processInstructionForFuncReferences(BinaryContext &BC,
-                                                         const MCInst &Inst) {
+void BinaryFunction::processInstructionsForFuncReferences(BinaryContext &BC,
+                                                          const MCInst &Inst) {
   for (const MCOperand &Op : MCPlus::primeOperands(Inst)) {
     if (!Op.isExpr())
       continue;
@@ -1648,7 +1648,7 @@ bool BinaryFunction::scanExternalRefs() {
       // Skip assembly if the instruction may not have any symbolic operands.
       continue;
     } else {
-      processInstructionForFuncReferences(BC, Instruction);
+      processInstructionsForFuncReferences(BC, Instruction);
     }
 
     // Emit the instruction using temp emitter and generate relocations.

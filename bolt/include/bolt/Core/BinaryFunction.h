@@ -428,7 +428,7 @@ private:
   /// Function order for streaming into the destination binary.
   uint32_t Index{-1U};
 
-  /// Indicates function is referenced by non-control flow instruction.
+  /// Function is referenced by non-control flow instruction.
   bool HasAddressTaken{false};
 
   /// Get basic block index assuming it belongs to this function.
@@ -820,7 +820,7 @@ public:
     return nullptr;
   }
 
-  /// Return true if function is referenced in non-control flow instructions..
+  /// Return true if function is referenced in non-control flow instructions.
   bool hasAddressTaken() const { return HasAddressTaken; }
 
   /// Set whether function is referenced in non-control flow instructions.
@@ -2104,8 +2104,8 @@ public:
   void handleAArch64IndirectCall(MCInst &Instruction, const uint64_t Offset);
 
   /// Processes code section to identify function references.
-  void processInstructionForFuncReferences(BinaryContext &BC,
-                                           const MCInst &Inst);
+  void processInstructionsForFuncReferences(BinaryContext &BC,
+                                            const MCInst &Inst);
 
   /// Scan function for references to other functions. In relocation mode,
   /// add relocations for external references. In non-relocation mode, detect

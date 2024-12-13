@@ -340,8 +340,6 @@ public:
   /// Does this section have any non-pending relocations?
   bool hasRelocations() const { return !Relocations.empty(); }
 
-  bool hasDynamicRelocations() const { return !DynamicRelocations.empty(); }
-
   /// Does this section have any pending relocations?
   bool hasPendingRelocations() const { return !PendingRelocations.empty(); }
 
