@@ -4,62 +4,338 @@
 ; Make sure we can produce a valid FunctionType for the expected
 ; signature of image functions.
 
-declare i32 @_Z16get_image_height20ocl_image2d_depth_rw(ptr addrspace(4))
-
-define i32 @call_ocl_image2d_depth(ptr addrspace(4) %img) {
-; CHECK-LABEL: define i32 @call_ocl_image2d_depth(
-; CHECK-SAME: ptr addrspace(4) [[IMG:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @_Z16get_image_height20ocl_image2d_depth_rw(ptr addrspace(4) [[IMG]])
-; CHECK-NEXT:    ret i32 [[RESULT]]
+define i32 @test_get_image_width_ro_image1d_t(ptr addrspace(4) readnone %img) {
+; CHECK-LABEL: define i32 @test_get_image_width_ro_image1d_t(
+; CHECK-SAME: ptr addrspace(4) readnone [[IMG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z15get_image_width14ocl_image1d_ro(ptr addrspace(4) [[IMG]])
+; CHECK-NEXT:    ret i32 [[CALL]]
 ;
-  %result = call i32 @_Z16get_image_height20ocl_image2d_depth_rw(ptr addrspace(4) %img)
-  ret i32 %result
+entry:
+  %call = tail call i32 @_Z15get_image_width14ocl_image1d_ro(ptr addrspace(4) %img)
+  ret i32 %call
 }
 
-declare i32 @_Z15get_image_width14ocl_image3d_ro(ptr addrspace(4))
+declare i32 @_Z15get_image_width14ocl_image1d_ro(ptr addrspace(4)) #1
 
-define i32 @call_ocl_image3d_depth(ptr addrspace(4) %img) {
-; CHECK-LABEL: define i32 @call_ocl_image3d_depth(
-; CHECK-SAME: ptr addrspace(4) [[IMG:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @_Z15get_image_width14ocl_image3d_ro(ptr addrspace(4) [[IMG]])
-; CHECK-NEXT:    ret i32 [[RESULT]]
+define i32 @test_get_image_width_wo_image1d_t(ptr addrspace(4) readnone %img) {
+; CHECK-LABEL: define i32 @test_get_image_width_wo_image1d_t(
+; CHECK-SAME: ptr addrspace(4) readnone [[IMG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z15get_image_width14ocl_image1d_wo(ptr addrspace(4) [[IMG]])
+; CHECK-NEXT:    ret i32 [[CALL]]
 ;
-  %result = call i32 @_Z15get_image_width14ocl_image3d_ro(ptr addrspace(4) %img)
-  ret i32 %result
+entry:
+  %call = tail call i32 @_Z15get_image_width14ocl_image1d_wo(ptr addrspace(4) %img)
+  ret i32 %call
 }
 
-declare i32 @_Z15get_image_width14ocl_image1d_ro(ptr addrspace(4))
+declare i32 @_Z15get_image_width14ocl_image1d_wo(ptr addrspace(4)) #1
 
-define i32 @call_get_image_width14ocl_image1d_ro(ptr addrspace(4) %img) {
-; CHECK-LABEL: define i32 @call_get_image_width14ocl_image1d_ro(
-; CHECK-SAME: ptr addrspace(4) [[IMG:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @_Z15get_image_width14ocl_image1d_ro(ptr addrspace(4) [[IMG]])
-; CHECK-NEXT:    ret i32 [[RESULT]]
+define i32 @test_get_image_width_rw_image1d_t(ptr addrspace(4) readnone %img) {
+; CHECK-LABEL: define i32 @test_get_image_width_rw_image1d_t(
+; CHECK-SAME: ptr addrspace(4) readnone [[IMG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z15get_image_width14ocl_image1d_rw(ptr addrspace(4) [[IMG]])
+; CHECK-NEXT:    ret i32 [[CALL]]
 ;
-  %result = call i32 @_Z15get_image_width14ocl_image1d_ro(ptr addrspace(4) %img)
-  ret i32 %result
+entry:
+  %call = tail call i32 @_Z15get_image_width14ocl_image1d_rw(ptr addrspace(4) %img)
+  ret i32 %call
 }
 
-declare <2 x i32> @_Z13get_image_dim20ocl_image2d_array_ro(ptr addrspace(4))
+declare i32 @_Z15get_image_width14ocl_image1d_rw(ptr addrspace(4)) #1
 
-define <2 x i32> @call_Z13get_image_dim20ocl_image2d_array_ro(ptr addrspace(4) %img) {
-; CHECK-LABEL: define <2 x i32> @call_Z13get_image_dim20ocl_image2d_array_ro(
-; CHECK-SAME: ptr addrspace(4) [[IMG:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call <2 x i32> @_Z13get_image_dim20ocl_image2d_array_ro(ptr addrspace(4) [[IMG]])
-; CHECK-NEXT:    ret <2 x i32> [[RESULT]]
+define i32 @test_get_image_width_ro_image1d_buffer_t(ptr addrspace(4) readnone %img) {
+; CHECK-LABEL: define i32 @test_get_image_width_ro_image1d_buffer_t(
+; CHECK-SAME: ptr addrspace(4) readnone [[IMG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z15get_image_width21ocl_image1d_buffer_ro(ptr addrspace(4) [[IMG]])
+; CHECK-NEXT:    ret i32 [[CALL]]
 ;
-  %result = call <2 x i32> @_Z13get_image_dim20ocl_image2d_array_ro(ptr addrspace(4) %img)
-  ret <2 x i32> %result
+entry:
+  %call = tail call i32 @_Z15get_image_width21ocl_image1d_buffer_ro(ptr addrspace(4) %img)
+  ret i32 %call
 }
 
-declare i32 @_Z15get_image_width20ocl_image1d_array_ro(ptr addrspace(4))
+declare i32 @_Z15get_image_width21ocl_image1d_buffer_ro(ptr addrspace(4)) #1
 
-define i32 @call_Z15get_image_width20ocl_image1d_array_ro(ptr addrspace(4) %img) {
-; CHECK-LABEL: define i32 @call_Z15get_image_width20ocl_image1d_array_ro(
-; CHECK-SAME: ptr addrspace(4) [[IMG:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @_Z15get_image_width20ocl_image1d_array_ro(ptr addrspace(4) [[IMG]])
-; CHECK-NEXT:    ret i32 [[RESULT]]
+define i32 @test_get_image_width_wo_image1d_buffer_t(ptr addrspace(4) readnone %img) {
+; CHECK-LABEL: define i32 @test_get_image_width_wo_image1d_buffer_t(
+; CHECK-SAME: ptr addrspace(4) readnone [[IMG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z15get_image_width21ocl_image1d_buffer_wo(ptr addrspace(4) [[IMG]])
+; CHECK-NEXT:    ret i32 [[CALL]]
 ;
-  %result = call i32 @_Z15get_image_width20ocl_image1d_array_ro(ptr addrspace(4) %img)
-  ret i32 %result
+entry:
+  %call = tail call i32 @_Z15get_image_width21ocl_image1d_buffer_wo(ptr addrspace(4) %img)
+  ret i32 %call
 }
+
+declare i32 @_Z15get_image_width21ocl_image1d_buffer_wo(ptr addrspace(4)) #1
+
+define i32 @test_get_image_width_rw_image1d_buffer_t(ptr addrspace(4) readnone %img) {
+; CHECK-LABEL: define i32 @test_get_image_width_rw_image1d_buffer_t(
+; CHECK-SAME: ptr addrspace(4) readnone [[IMG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z15get_image_width21ocl_image1d_buffer_rw(ptr addrspace(4) [[IMG]])
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+entry:
+  %call = tail call i32 @_Z15get_image_width21ocl_image1d_buffer_rw(ptr addrspace(4) %img)
+  ret i32 %call
+}
+
+declare i32 @_Z15get_image_width21ocl_image1d_buffer_rw(ptr addrspace(4)) #1
+
+define i32 @test_get_image_width_ro_image2d_t(ptr addrspace(4) readnone %img) {
+; CHECK-LABEL: define i32 @test_get_image_width_ro_image2d_t(
+; CHECK-SAME: ptr addrspace(4) readnone [[IMG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z15get_image_width14ocl_image2d_ro(ptr addrspace(4) [[IMG]])
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+entry:
+  %call = tail call i32 @_Z15get_image_width14ocl_image2d_ro(ptr addrspace(4) %img)
+  ret i32 %call
+}
+
+declare i32 @_Z15get_image_width14ocl_image2d_ro(ptr addrspace(4)) #1
+
+define i32 @test_get_image_width_wo_image2d_t(ptr addrspace(4) readnone %img) {
+; CHECK-LABEL: define i32 @test_get_image_width_wo_image2d_t(
+; CHECK-SAME: ptr addrspace(4) readnone [[IMG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z15get_image_width14ocl_image2d_wo(ptr addrspace(4) [[IMG]])
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+entry:
+  %call = tail call i32 @_Z15get_image_width14ocl_image2d_wo(ptr addrspace(4) %img)
+  ret i32 %call
+}
+
+declare i32 @_Z15get_image_width14ocl_image2d_wo(ptr addrspace(4)) #1
+
+define i32 @test_get_image_width_rw_image2d_t(ptr addrspace(4) readnone %img) {
+; CHECK-LABEL: define i32 @test_get_image_width_rw_image2d_t(
+; CHECK-SAME: ptr addrspace(4) readnone [[IMG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z15get_image_width14ocl_image2d_rw(ptr addrspace(4) [[IMG]])
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+entry:
+  %call = tail call i32 @_Z15get_image_width14ocl_image2d_rw(ptr addrspace(4) %img)
+  ret i32 %call
+}
+
+declare i32 @_Z15get_image_width14ocl_image2d_rw(ptr addrspace(4)) #1
+
+define i32 @test_get_image_width_ro_image3d_t(ptr addrspace(4) readnone %img) {
+; CHECK-LABEL: define i32 @test_get_image_width_ro_image3d_t(
+; CHECK-SAME: ptr addrspace(4) readnone [[IMG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z15get_image_width14ocl_image3d_ro(ptr addrspace(4) [[IMG]])
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+entry:
+  %call = tail call i32 @_Z15get_image_width14ocl_image3d_ro(ptr addrspace(4) %img)
+  ret i32 %call
+}
+
+declare i32 @_Z15get_image_width14ocl_image3d_ro(ptr addrspace(4)) #1
+
+define i32 @test_get_image_width_wo_image3d_t(ptr addrspace(4) readnone %img) {
+; CHECK-LABEL: define i32 @test_get_image_width_wo_image3d_t(
+; CHECK-SAME: ptr addrspace(4) readnone [[IMG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z15get_image_width14ocl_image3d_wo(ptr addrspace(4) [[IMG]])
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+entry:
+  %call = tail call i32 @_Z15get_image_width14ocl_image3d_wo(ptr addrspace(4) %img)
+  ret i32 %call
+}
+
+declare i32 @_Z15get_image_width14ocl_image3d_wo(ptr addrspace(4)) #1
+
+define i32 @test_get_image_width_rw_image3d_t(ptr addrspace(4) readnone %img) {
+; CHECK-LABEL: define i32 @test_get_image_width_rw_image3d_t(
+; CHECK-SAME: ptr addrspace(4) readnone [[IMG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z15get_image_width14ocl_image3d_rw(ptr addrspace(4) [[IMG]])
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+entry:
+  %call = tail call i32 @_Z15get_image_width14ocl_image3d_rw(ptr addrspace(4) %img)
+  ret i32 %call
+}
+
+declare i32 @_Z15get_image_width14ocl_image3d_rw(ptr addrspace(4)) #1
+
+define i32 @test_get_image_width_ro_image1d_array_t(ptr addrspace(4) readnone %img) {
+; CHECK-LABEL: define i32 @test_get_image_width_ro_image1d_array_t(
+; CHECK-SAME: ptr addrspace(4) readnone [[IMG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z15get_image_width20ocl_image1d_array_ro(ptr addrspace(4) [[IMG]])
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+entry:
+  %call = tail call i32 @_Z15get_image_width20ocl_image1d_array_ro(ptr addrspace(4) %img)
+  ret i32 %call
+}
+
+declare i32 @_Z15get_image_width20ocl_image1d_array_ro(ptr addrspace(4)) #1
+
+define i32 @test_get_image_width_wo_image1d_array_t(ptr addrspace(4) readnone %img) {
+; CHECK-LABEL: define i32 @test_get_image_width_wo_image1d_array_t(
+; CHECK-SAME: ptr addrspace(4) readnone [[IMG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z15get_image_width20ocl_image1d_array_wo(ptr addrspace(4) [[IMG]])
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+entry:
+  %call = tail call i32 @_Z15get_image_width20ocl_image1d_array_wo(ptr addrspace(4) %img)
+  ret i32 %call
+}
+
+declare i32 @_Z15get_image_width20ocl_image1d_array_wo(ptr addrspace(4)) #1
+
+define i32 @test_get_image_width_rw_image1d_array_t(ptr addrspace(4) readnone %img) {
+; CHECK-LABEL: define i32 @test_get_image_width_rw_image1d_array_t(
+; CHECK-SAME: ptr addrspace(4) readnone [[IMG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z15get_image_width20ocl_image1d_array_rw(ptr addrspace(4) [[IMG]])
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+entry:
+  %call = tail call i32 @_Z15get_image_width20ocl_image1d_array_rw(ptr addrspace(4) %img)
+  ret i32 %call
+}
+
+declare i32 @_Z15get_image_width20ocl_image1d_array_rw(ptr addrspace(4)) #1
+
+define i32 @test_get_image_width_ro_image2d_array_t(ptr addrspace(4) readnone %img) {
+; CHECK-LABEL: define i32 @test_get_image_width_ro_image2d_array_t(
+; CHECK-SAME: ptr addrspace(4) readnone [[IMG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z15get_image_width20ocl_image2d_array_ro(ptr addrspace(4) [[IMG]])
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+entry:
+  %call = tail call i32 @_Z15get_image_width20ocl_image2d_array_ro(ptr addrspace(4) %img)
+  ret i32 %call
+}
+
+declare i32 @_Z15get_image_width20ocl_image2d_array_ro(ptr addrspace(4)) #1
+
+define i32 @test_get_image_width_wo_image2d_array_t(ptr addrspace(4) readnone %img) {
+; CHECK-LABEL: define i32 @test_get_image_width_wo_image2d_array_t(
+; CHECK-SAME: ptr addrspace(4) readnone [[IMG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z15get_image_width20ocl_image2d_array_wo(ptr addrspace(4) [[IMG]])
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+entry:
+  %call = tail call i32 @_Z15get_image_width20ocl_image2d_array_wo(ptr addrspace(4) %img)
+  ret i32 %call
+}
+
+declare i32 @_Z15get_image_width20ocl_image2d_array_wo(ptr addrspace(4)) #1
+
+define i32 @test_get_image_width_rw_image2d_array_t(ptr addrspace(4) readnone %img) {
+; CHECK-LABEL: define i32 @test_get_image_width_rw_image2d_array_t(
+; CHECK-SAME: ptr addrspace(4) readnone [[IMG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z15get_image_width20ocl_image2d_array_rw(ptr addrspace(4) [[IMG]])
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+entry:
+  %call = tail call i32 @_Z15get_image_width20ocl_image2d_array_rw(ptr addrspace(4) %img)
+  ret i32 %call
+}
+
+declare i32 @_Z15get_image_width20ocl_image2d_array_rw(ptr addrspace(4)) #1
+
+define i32 @test_get_image_width_ro_image2d_depth_t(ptr addrspace(4) readnone %img) {
+; CHECK-LABEL: define i32 @test_get_image_width_ro_image2d_depth_t(
+; CHECK-SAME: ptr addrspace(4) readnone [[IMG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z15get_image_width20ocl_image2d_depth_ro(ptr addrspace(4) [[IMG]])
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+entry:
+  %call = tail call i32 @_Z15get_image_width20ocl_image2d_depth_ro(ptr addrspace(4) %img)
+  ret i32 %call
+}
+
+declare i32 @_Z15get_image_width20ocl_image2d_depth_ro(ptr addrspace(4)) #1
+
+define i32 @test_get_image_width_wo_image2d_depth_t(ptr addrspace(4) readnone %img) {
+; CHECK-LABEL: define i32 @test_get_image_width_wo_image2d_depth_t(
+; CHECK-SAME: ptr addrspace(4) readnone [[IMG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z15get_image_width20ocl_image2d_depth_wo(ptr addrspace(4) [[IMG]])
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+entry:
+  %call = tail call i32 @_Z15get_image_width20ocl_image2d_depth_wo(ptr addrspace(4) %img)
+  ret i32 %call
+}
+
+declare i32 @_Z15get_image_width20ocl_image2d_depth_wo(ptr addrspace(4)) #1
+
+define i32 @test_get_image_width_rw_image2d_depth_t(ptr addrspace(4) readnone %img) {
+; CHECK-LABEL: define i32 @test_get_image_width_rw_image2d_depth_t(
+; CHECK-SAME: ptr addrspace(4) readnone [[IMG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z15get_image_width20ocl_image2d_depth_rw(ptr addrspace(4) [[IMG]])
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+entry:
+  %call = tail call i32 @_Z15get_image_width20ocl_image2d_depth_rw(ptr addrspace(4) %img)
+  ret i32 %call
+}
+
+declare i32 @_Z15get_image_width20ocl_image2d_depth_rw(ptr addrspace(4)) #1
+
+define i32 @test_get_image_width_ro_image2d_array_depth_t(ptr addrspace(4) readnone %img) {
+; CHECK-LABEL: define i32 @test_get_image_width_ro_image2d_array_depth_t(
+; CHECK-SAME: ptr addrspace(4) readnone [[IMG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z15get_image_width26ocl_image2d_array_depth_ro(ptr addrspace(4) [[IMG]])
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+entry:
+  %call = tail call i32 @_Z15get_image_width26ocl_image2d_array_depth_ro(ptr addrspace(4) %img)
+  ret i32 %call
+}
+
+declare i32 @_Z15get_image_width26ocl_image2d_array_depth_ro(ptr addrspace(4)) #1
+
+define i32 @test_get_image_width_wo_image2d_array_depth_t(ptr addrspace(4) readnone %img) {
+; CHECK-LABEL: define i32 @test_get_image_width_wo_image2d_array_depth_t(
+; CHECK-SAME: ptr addrspace(4) readnone [[IMG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z15get_image_width26ocl_image2d_array_depth_wo(ptr addrspace(4) [[IMG]])
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+entry:
+  %call = tail call i32 @_Z15get_image_width26ocl_image2d_array_depth_wo(ptr addrspace(4) %img)
+  ret i32 %call
+}
+
+declare i32 @_Z15get_image_width26ocl_image2d_array_depth_wo(ptr addrspace(4)) #1
+
+define i32 @test_get_image_width_rw_image2d_array_depth_t(ptr addrspace(4) readnone %img) {
+; CHECK-LABEL: define i32 @test_get_image_width_rw_image2d_array_depth_t(
+; CHECK-SAME: ptr addrspace(4) readnone [[IMG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z15get_image_width26ocl_image2d_array_depth_rw(ptr addrspace(4) [[IMG]])
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+entry:
+  %call = tail call i32 @_Z15get_image_width26ocl_image2d_array_depth_rw(ptr addrspace(4) %img)
+  ret i32 %call
+}
+
+declare i32 @_Z15get_image_width26ocl_image2d_array_depth_rw(ptr addrspace(4)) #1
