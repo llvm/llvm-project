@@ -26386,9 +26386,11 @@ static SDValue performSHLCombine(SDNode *N, SelectionDAG &DAG) {
   if (!C1 || !C2)
     return SDValue();
 
-  // Might be folded into shifted add/sub, do not lower.
-  if (N->hasOneUse() && (N->use_begin()->getOpcode() == ISD::ADD ||
-                         N->use_begin()->getOpcode() == ISD::SUB))
+  // Might be folded into shifted op, do not lower.
+  unsigned UseOpc = N->use_begin()->getOpcode();
+  if (N->hasOneUse() &&
+      (UseOpc == ISD::ADD || UseOpc == ISD::SUB || UseOpc == ISD::SETCC ||
+       UseOpc == AArch64ISD::ADDS || UseOpc == AArch64ISD::SUBS))
     return SDValue();
 
   SDLoc DL(N);
