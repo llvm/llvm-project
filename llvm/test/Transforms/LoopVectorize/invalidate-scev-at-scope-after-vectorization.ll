@@ -2,6 +2,11 @@
 ; RUN: opt -passes='print<scalar-evolution>,loop-vectorize' -force-vector-width=4 -scalar-evolution-classify-expressions=false -S %s | FileCheck %s
 
 ; Test case for https://github.com/llvm/llvm-project/issues/119665.
+
+; %loop.2's backedge-taken-count depends on %add.1 from %loop.1 via its
+; corresponding SCEV at the scope of %loop.2. After vectorizing %loop.1, %add.1
+; isn't available at the entry of %loop.2 anymore and %add.1 at %loop.2's scope
+; must be invalidated, as well as %loop.2's backedge-taken count.
 define void @test_invalidate_scevs_at_scope(ptr %p) {
 ; CHECK-LABEL: define void @test_invalidate_scevs_at_scope(
 ; CHECK-SAME: ptr [[P:%.*]]) {
