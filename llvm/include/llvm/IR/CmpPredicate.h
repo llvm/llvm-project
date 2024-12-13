@@ -24,6 +24,9 @@ class CmpPredicate {
   bool HasSameSign;
 
 public:
+  /// Default constructor.
+  CmpPredicate() : Pred(CmpInst::BAD_ICMP_PREDICATE), HasSameSign(false) {}
+
   /// Constructed implictly with a either Predicate and samesign information, or
   /// just a Predicate, dropping samesign information.
   CmpPredicate(CmpInst::Predicate Pred, bool HasSameSign = false)
@@ -52,11 +55,29 @@ public:
 
   /// An operator== on the underlying Predicate.
   bool operator==(CmpInst::Predicate P) const { return Pred == P; }
+  bool operator!=(CmpInst::Predicate P) const { return Pred != P; }
 
   /// There is no operator== defined on CmpPredicate. Use getMatching instead to
   /// get the canonicalized matching CmpPredicate.
   bool operator==(CmpPredicate) const = delete;
+  bool operator!=(CmpPredicate) const = delete;
+
+  /// Do a ICmpInst::getCmpPredicate() or CmpInst::getPredicate(), as
+  /// appropriate.
+  static CmpPredicate get(const CmpInst *Cmp);
+
+  /// Get the swapped predicate of a CmpPredicate.
+  static CmpPredicate getSwapped(CmpPredicate P);
+
+  /// Get the swapped predicate of a CmpInst.
+  static CmpPredicate getSwapped(const CmpInst *Cmp);
+
+  /// Provided to facilitate storing a CmpPredicate in data structures that
+  /// require hashing.
+  friend hash_code hash_value(const CmpPredicate &Arg); // NOLINT
 };
+
+[[nodiscard]] hash_code hash_value(const CmpPredicate &Arg);
 } // namespace llvm
 
 #endif
