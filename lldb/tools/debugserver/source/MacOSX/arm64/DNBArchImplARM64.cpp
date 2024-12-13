@@ -463,6 +463,15 @@ kern_return_t DNBArchMachARM64::GetSVEState(bool force) {
   if (!CPUHasSME())
     return KERN_INVALID_ARGUMENT;
 
+  // If the processor is not in Streaming SVE Mode, these thread_get_states
+  // will fail, and we may return uninitialized data in the register context.
+  memset(&m_state.context.sve.z[0], 0,
+         ARM_SVE_Z_STATE_COUNT * sizeof(uint32_t));
+  memset(&m_state.context.sve.z[16], 0,
+         ARM_SVE_Z_STATE_COUNT * sizeof(uint32_t));
+  memset(&m_state.context.sve.p[0], 0,
+         ARM_SVE_P_STATE_COUNT * sizeof(uint32_t));
+
   // Read the registers from our thread
   mach_msg_type_number_t count = ARM_SVE_Z_STATE_COUNT;
   kern_return_t kret =
@@ -502,6 +511,11 @@ kern_return_t DNBArchMachARM64::GetSMEState(bool force) {
   if (!CPUHasSME())
     return KERN_INVALID_ARGUMENT;
 
+  // If the processor is not in Streaming SVE Mode, these thread_get_states
+  // will fail, and we may return uninitialized data in the register context.
+  memset(&m_state.context.sme.svcr, 0, ARM_SME_STATE_COUNT * sizeof(uint32_t));
+  memset(m_state.context.sme.za.data(), 0, m_state.context.sme.za.size());
+
   // Read the registers from our thread
   mach_msg_type_number_t count = ARM_SME_STATE_COUNT;
   kern_return_t kret =
@@ -539,7 +553,9 @@ kern_return_t DNBArchMachARM64::GetSMEState(bool force) {
   }
 
   if (CPUHasSME2()) {
-    count = ARM_SME2_STATE;
+    memset(&m_state.context.sme.zt0, 0,
+           ARM_SME2_STATE_COUNT * sizeof(uint32_t));
+    count = ARM_SME2_STATE_COUNT;
     kret = thread_get_state(m_thread->MachPortNumber(), ARM_SME2_STATE,
                             (thread_state_t)&m_state.context.sme.zt0, &count);
     m_state.SetError(set, Read, kret);
@@ -2903,9 +2919,12 @@ kern_return_t DNBArchMachARM64::GetRegisterState(int set, bool force) {
   case e_regSetALL: {
     kern_return_t retval = GetGPRState(force) | GetVFPState(force) |
                            GetEXCState(force) | GetDBGState(force);
+    // If the processor is not in Streaming SVE Mode currently, these
+    // two will fail to read.  Don't return that as an error, it will
+    // be the most common case.
     if (CPUHasSME()) {
-      retval |= GetSVEState(force);
-      retval |= GetSMEState(force);
+      GetSVEState(force);
+      GetSMEState(force);
     }
     return retval;
   }
@@ -2964,7 +2983,11 @@ nub_size_t DNBArchMachARM64::GetRegisterContext(void *buf, nub_size_t buf_len) {
   const bool cpu_has_sme = CPUHasSME();
   if (cpu_has_sme) {
     size += sizeof(m_state.context.sve);
-    size += sizeof(m_state.context.sme);
+    // ZA register is in a std::vector<uint8_t> so we need to add
+    // the sizes of the SME manually.
+    size += ARM_SME_STATE_COUNT * sizeof(uint32_t);
+    size += m_state.context.sme.za.size();
+    size += ARM_SME2_STATE_COUNT * sizeof(uint32_t);
   }
 
   if (buf && buf_len) {
@@ -2974,9 +2997,13 @@ nub_size_t DNBArchMachARM64::GetRegisterContext(void *buf, nub_size_t buf_len) {
     bool force = false;
     if (GetGPRState(force) | GetVFPState(force) | GetEXCState(force))
       return 0;
-    if (cpu_has_sme)
-      if (GetSVEState(force) | GetSMEState(force))
-        return 0;
+    // Don't error out if SME/SVE fail to read. These can only be read
+    // when the process is in Streaming SVE Mode, so the failure to read
+    // them will be common.
+    if (cpu_has_sme) {
+      GetSVEState(force);
+      GetSMEState(force);
+    }
 
     // Copy each struct individually to avoid any padding that might be between
     // the structs in m_state.context
@@ -2988,8 +3015,17 @@ nub_size_t DNBArchMachARM64::GetRegisterContext(void *buf, nub_size_t buf_len) {
     if (cpu_has_sme) {
       ::memcpy(p, &m_state.context.sve, sizeof(m_state.context.sve));
       p += sizeof(m_state.context.sve);
-      ::memcpy(p, &m_state.context.sme, sizeof(m_state.context.sme));
-      p += sizeof(m_state.context.sme);
+
+      memcpy(p, &m_state.context.sme.svcr,
+             ARM_SME_STATE_COUNT * sizeof(uint32_t));
+      p += ARM_SME_STATE_COUNT * sizeof(uint32_t);
+      memcpy(p, m_state.context.sme.za.data(), m_state.context.sme.za.size());
+      p += m_state.context.sme.za.size();
+      if (CPUHasSME2()) {
+        memcpy(p, &m_state.context.sme.zt0,
+               ARM_SME2_STATE_COUNT * sizeof(uint32_t));
+        p += ARM_SME2_STATE_COUNT * sizeof(uint32_t);
+      }
     }
     ::memcpy(p, &m_state.context.exc, sizeof(m_state.context.exc));
     p += sizeof(m_state.context.exc);
@@ -3010,6 +3046,15 @@ nub_size_t DNBArchMachARM64::SetRegisterContext(const void *buf,
                                                 nub_size_t buf_len) {
   nub_size_t size = sizeof(m_state.context.gpr) + sizeof(m_state.context.vfp) +
                     sizeof(m_state.context.exc);
+  if (CPUHasSME()) {
+    // m_state.context.za is three status registers, then a std::vector<uint8_t>
+    // for ZA, then zt0, so the size of the data is not statically knowable.
+    nub_size_t sme_size = ARM_SME_STATE_COUNT * sizeof(uint32_t);
+    sme_size += m_state.context.sme.za.size();
+    sme_size += ARM_SME2_STATE_COUNT * sizeof(uint32_t);
+
+    size += sizeof(m_state.context.sve) + sme_size;
+  }
 
   if (buf == NULL || buf_len == 0)
     size = 0;
@@ -3025,6 +3070,20 @@ nub_size_t DNBArchMachARM64::SetRegisterContext(const void *buf,
     p += sizeof(m_state.context.gpr);
     ::memcpy(&m_state.context.vfp, p, sizeof(m_state.context.vfp));
     p += sizeof(m_state.context.vfp);
+    if (CPUHasSME()) {
+      memcpy(&m_state.context.sve, p, sizeof(m_state.context.sve));
+      p += sizeof(m_state.context.sve);
+      memcpy(&m_state.context.sme.svcr, p,
+             ARM_SME_STATE_COUNT * sizeof(uint32_t));
+      p += ARM_SME_STATE_COUNT * sizeof(uint32_t);
+      memcpy(m_state.context.sme.za.data(), p, m_state.context.sme.za.size());
+      p += m_state.context.sme.za.size();
+      if (CPUHasSME2()) {
+        memcpy(&m_state.context.sme.zt0, p,
+               ARM_SME2_STATE_COUNT * sizeof(uint32_t));
+        p += ARM_SME2_STATE_COUNT * sizeof(uint32_t);
+      }
+    }
     ::memcpy(&m_state.context.exc, p, sizeof(m_state.context.exc));
     p += sizeof(m_state.context.exc);
 
@@ -3033,6 +3092,10 @@ nub_size_t DNBArchMachARM64::SetRegisterContext(const void *buf,
     assert(bytes_written == size);
     SetGPRState();
     SetVFPState();
+    if (CPUHasSME()) {
+      SetSVEState();
+      SetSMEState();
+    }
     SetEXCState();
   }
   DNBLogThreadedIf(

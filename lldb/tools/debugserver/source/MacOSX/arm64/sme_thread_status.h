@@ -1,7 +1,7 @@
 #include <mach/mach.h>
 #include <stdint.h>
 
-// define the SVE/SME/SME2 thread status structures
+// Define the SVE/SME/SME2 thread status structures
 // flavors, and sizes so this can build against an
 // older SDK which does not have these definitions
 // yet.
