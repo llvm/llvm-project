@@ -11889,6 +11889,47 @@ bool TargetLowering::LegalizeSetCCCondCode(SelectionDAG &DAG, EVT VT,
       return true;
     }
 
+    // Special case: expand i1 comparisons using logical operations.
+    if (OpVT == MVT::i1) {
+      SDValue Ret;
+      switch (CCCode) {
+      default:
+        llvm_unreachable("Unknown integer setcc!");
+      case ISD::SETEQ: // X == Y  -->  ~(X ^ Y)
+        Ret = DAG.getNOT(dl, DAG.getNode(ISD::XOR, dl, MVT::i1, LHS, RHS),
+                         MVT::i1);
+        break;
+      case ISD::SETNE: // X != Y  -->  (X ^ Y)
+        Ret = DAG.getNode(ISD::XOR, dl, MVT::i1, LHS, RHS);
+        break;
+      case ISD::SETGT:  // X >s Y  -->  X == 0 & Y == 1  -->  ~X & Y
+      case ISD::SETULT: // X <u Y  -->  X == 0 & Y == 1  -->  ~X & Y
+        Ret = DAG.getNode(ISD::AND, dl, MVT::i1, RHS,
+                          DAG.getNOT(dl, LHS, MVT::i1));
+        break;
+      case ISD::SETLT:  // X <s Y  -->  X == 1 & Y == 0  -->  ~Y & X
+      case ISD::SETUGT: // X >u Y  -->  X == 1 & Y == 0  -->  ~Y & X
+        Ret = DAG.getNode(ISD::AND, dl, MVT::i1, LHS,
+                          DAG.getNOT(dl, RHS, MVT::i1));
+        break;
+      case ISD::SETULE: // X <=u Y  -->  X == 0 | Y == 1  -->  ~X | Y
+      case ISD::SETGE:  // X >=s Y  -->  X == 0 | Y == 1  -->  ~X | Y
+        Ret = DAG.getNode(ISD::OR, dl, MVT::i1, RHS,
+                          DAG.getNOT(dl, LHS, MVT::i1));
+        break;
+      case ISD::SETUGE: // X >=u Y  -->  X == 1 | Y == 0  -->  ~Y | X
+      case ISD::SETLE:  // X <=s Y  -->  X == 1 | Y == 0  -->  ~Y | X
+        Ret = DAG.getNode(ISD::OR, dl, MVT::i1, LHS,
+                          DAG.getNOT(dl, RHS, MVT::i1));
+        break;
+      }
+
+      LHS = DAG.getZExtOrTrunc(Ret, dl, VT);
+      RHS = SDValue();
+      CC = SDValue();
+      return true;
+    }
+
     ISD::CondCode CC1 = ISD::SETCC_INVALID, CC2 = ISD::SETCC_INVALID;
     unsigned Opc = 0;
     switch (CCCode) {

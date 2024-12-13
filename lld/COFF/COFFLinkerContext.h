@@ -88,6 +88,8 @@ public:
   Timer diskCommitTimer;
 
   Configuration config;
+
+  DynamicRelocsChunk *dynamicRelocs = nullptr;
 };
 
 } // namespace lld::coff

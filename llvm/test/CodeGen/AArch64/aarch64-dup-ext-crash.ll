@@ -10,14 +10,18 @@ target triple = "aarch64-unknown-linux-gnu"
 define dso_local i32 @dupext_crashtest(i32 %e) local_unnamed_addr {
 ; CHECK-LABEL: dupext_crashtest:
 ; CHECK:       // %bb.0: // %for.body.lr.ph
-; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    dup v0.2s, w8
 ; CHECK-NEXT:  .LBB0_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr d1, [x8]
-; CHECK-NEXT:    smull v1.2d, v0.2s, v1.2s
-; CHECK-NEXT:    xtn v1.2s, v1.2d
-; CHECK-NEXT:    str d1, [x8]
+; CHECK-NEXT:    ldr d0, [x8]
+; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:    mul w9, w0, w9
+; CHECK-NEXT:    mul w8, w0, w8
+; CHECK-NEXT:    fmov d0, x9
+; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    str d0, [x8]
 ; CHECK-NEXT:    b .LBB0_1
 for.body.lr.ph:
   %conv314 = zext i32 %e to i64

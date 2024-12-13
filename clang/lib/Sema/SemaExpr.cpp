@@ -5587,10 +5587,6 @@ static FieldDecl *FindFieldDeclInstantiationPattern(const ASTContext &Ctx,
 ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
   assert(Field->hasInClassInitializer());
 
-  // If we might have already tried and failed to instantiate, don't try again.
-  if (Field->isInvalidDecl())
-    return ExprError();
-
   CXXThisScopeRAII This(*this, Field->getParent(), Qualifiers());
 
   auto *ParentRD = cast<CXXRecordDecl>(Field->getParent());
@@ -5948,7 +5944,7 @@ Sema::ConvertArgumentsForCall(CallExpr *Call, Expr *Fn,
   SmallVector<Expr *, 8> AllArgs;
   VariadicCallType CallType = getVariadicCallType(FDecl, Proto, Fn);
 
-  Invalid = GatherArgumentsForCall(Call->getBeginLoc(), FDecl, Proto, 0, Args,
+  Invalid = GatherArgumentsForCall(Call->getExprLoc(), FDecl, Proto, 0, Args,
                                    AllArgs, CallType);
   if (Invalid)
     return true;
@@ -11833,14 +11829,23 @@ static void diagnoseTautologicalComparison(Sema &S, SourceLocation Loc,
     AlwaysEqual, // std::strong_ordering::equal from operator<=>
   };
 
+  // C++1a [array.comp]:
+  //   Equality and relational comparisons ([expr.eq], [expr.rel]) between two
+  //   operands of array type.
   // C++2a [depr.array.comp]:
   //   Equality and relational comparisons ([expr.eq], [expr.rel]) between two
   //   operands of array type are deprecated.
-  if (S.getLangOpts().CPlusPlus20 && LHSStripped->getType()->isArrayType() &&
+  if (S.getLangOpts().CPlusPlus && LHSStripped->getType()->isArrayType() &&
       RHSStripped->getType()->isArrayType()) {
-    S.Diag(Loc, diag::warn_depr_array_comparison)
-        << LHS->getSourceRange() << RHS->getSourceRange()
-        << LHSStripped->getType() << RHSStripped->getType();
+    auto IsDeprArrayComparionIgnored =
+        S.getDiagnostics().isIgnored(diag::warn_depr_array_comparison, Loc);
+    auto DiagID = S.getLangOpts().CPlusPlus26
+                      ? diag::warn_array_comparison_cxx26
+                  : !S.getLangOpts().CPlusPlus20 || IsDeprArrayComparionIgnored
+                      ? diag::warn_array_comparison
+                      : diag::warn_depr_array_comparison;
+    S.Diag(Loc, DiagID) << LHS->getSourceRange() << RHS->getSourceRange()
+                        << LHSStripped->getType() << RHSStripped->getType();
     // Carry on to produce the tautological comparison warning, if this
     // expression is potentially-evaluated, we can resolve the array to a
     // non-weak declaration, and so on.
@@ -19288,7 +19293,7 @@ static ExprResult rebuildPotentialResultsAsNonOdrUsed(Sema &S, Expr *E,
       if (VD->getType()->isReferenceType())
         return true;
       if (auto *RD = VD->getType()->getAsCXXRecordDecl())
-        if (RD->hasMutableFields())
+        if (RD->hasDefinition() && RD->hasMutableFields())
           return true;
       if (!VD->isUsableInConstantExpressions(S.Context))
         return true;

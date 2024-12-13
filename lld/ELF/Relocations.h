@@ -22,6 +22,7 @@ class Symbol;
 class InputSection;
 class InputSectionBase;
 class OutputSection;
+class RelocationBaseSection;
 class SectionBase;
 
 // Represents a relocation type, such as R_X86_64_PC32 or R_ARM_THM_CALL.
@@ -355,6 +356,8 @@ sortRels(Relocs<llvm::object::Elf_Crel_Impl<is64>> rels,
          SmallVector<llvm::object::Elf_Crel_Impl<is64>, 0> &storage) {
   return {};
 }
+
+RelocationBaseSection &getIRelativeSection(Ctx &ctx);
 
 // Returns true if Expr refers a GOT entry. Note that this function returns
 // false for TLS variables even though they need GOT, because TLS variables uses

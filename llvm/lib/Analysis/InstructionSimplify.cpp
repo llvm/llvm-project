@@ -81,48 +81,6 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
                                               const SimplifyQuery &SQ,
                                               unsigned MaxRecurse);
 
-static Value *foldSelectWithBinaryOp(Value *Cond, Value *TrueVal,
-                                     Value *FalseVal) {
-  BinaryOperator::BinaryOps BinOpCode;
-  if (auto *BO = dyn_cast<BinaryOperator>(Cond))
-    BinOpCode = BO->getOpcode();
-  else
-    return nullptr;
-
-  CmpInst::Predicate ExpectedPred;
-  if (BinOpCode == BinaryOperator::Or) {
-    ExpectedPred = ICmpInst::ICMP_NE;
-  } else if (BinOpCode == BinaryOperator::And) {
-    ExpectedPred = ICmpInst::ICMP_EQ;
-  } else
-    return nullptr;
-
-  // %A = icmp eq %TV, %FV
-  // %B = icmp eq %X, %Y (and one of these is a select operand)
-  // %C = and %A, %B
-  // %D = select %C, %TV, %FV
-  // -->
-  // %FV
-
-  // %A = icmp ne %TV, %FV
-  // %B = icmp ne %X, %Y (and one of these is a select operand)
-  // %C = or %A, %B
-  // %D = select %C, %TV, %FV
-  // -->
-  // %TV
-  Value *X, *Y;
-  if (!match(Cond,
-             m_c_BinOp(m_c_SpecificICmp(ExpectedPred, m_Specific(TrueVal),
-                                        m_Specific(FalseVal)),
-                       m_SpecificICmp(ExpectedPred, m_Value(X), m_Value(Y)))))
-    return nullptr;
-
-  if (X == TrueVal || X == FalseVal || Y == TrueVal || Y == FalseVal)
-    return BinOpCode == BinaryOperator::Or ? TrueVal : FalseVal;
-
-  return nullptr;
-}
-
 /// For a boolean type or a vector of boolean type, return false or a vector
 /// with every element false.
 static Constant *getFalse(Type *Ty) { return ConstantInt::getFalse(Ty); }
@@ -4992,9 +4950,6 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
     return V;
 
   if (Value *V = simplifySelectWithFCmp(Cond, TrueVal, FalseVal, Q, MaxRecurse))
-    return V;
-
-  if (Value *V = foldSelectWithBinaryOp(Cond, TrueVal, FalseVal))
     return V;
 
   std::optional<bool> Imp = isImpliedByDomCondition(Cond, Q.CxtI, Q.DL);

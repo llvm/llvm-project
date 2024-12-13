@@ -1633,8 +1633,14 @@ static bool generateICarryBorrowInst(const SPIRV::IncomingCall *Call,
     }
 
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
-  Register ResReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
-  MRI->setRegClass(ResReg, &SPIRV::iIDRegClass);
+  Register ResReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
+  if (const TargetRegisterClass *DstRC =
+          MRI->getRegClassOrNull(Call->Arguments[1])) {
+    MRI->setRegClass(ResReg, DstRC);
+    MRI->setType(ResReg, MRI->getType(Call->Arguments[1]));
+  } else {
+    MRI->setType(ResReg, LLT::scalar(64));
+  }
   GR->assignSPIRVTypeToVReg(RetType, ResReg, MIRBuilder.getMF());
   MIRBuilder.buildInstr(Opcode)
       .addDef(ResReg)
@@ -1969,15 +1975,49 @@ static bool generateCoopMatrInst(const SPIRV::IncomingCall *Call,
   const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
   unsigned Opcode =
       SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
-  bool IsSet = Opcode != SPIRV::OpCooperativeMatrixStoreKHR;
+  bool IsSet = Opcode != SPIRV::OpCooperativeMatrixStoreKHR &&
+               Opcode != SPIRV::OpCooperativeMatrixStoreCheckedINTEL &&
+               Opcode != SPIRV::OpCooperativeMatrixPrefetchINTEL;
   unsigned ArgSz = Call->Arguments.size();
   unsigned LiteralIdx = 0;
-  if (Opcode == SPIRV::OpCooperativeMatrixLoadKHR && ArgSz > 3)
-    LiteralIdx = 3;
-  else if (Opcode == SPIRV::OpCooperativeMatrixStoreKHR && ArgSz > 4)
-    LiteralIdx = 4;
+  switch (Opcode) {
+  // Memory operand is optional and is literal.
+  case SPIRV::OpCooperativeMatrixLoadKHR:
+    LiteralIdx = ArgSz > 3 ? 3 : 0;
+    break;
+  case SPIRV::OpCooperativeMatrixStoreKHR:
+    LiteralIdx = ArgSz > 4 ? 4 : 0;
+    break;
+  case SPIRV::OpCooperativeMatrixLoadCheckedINTEL:
+    LiteralIdx = ArgSz > 7 ? 7 : 0;
+    break;
+  case SPIRV::OpCooperativeMatrixStoreCheckedINTEL:
+    LiteralIdx = ArgSz > 8 ? 8 : 0;
+    break;
+  // Cooperative Matrix Operands operand is optional and is literal.
+  case SPIRV::OpCooperativeMatrixMulAddKHR:
+    LiteralIdx = ArgSz > 3 ? 3 : 0;
+    break;
+  };
+
   SmallVector<uint32_t, 1> ImmArgs;
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  if (Opcode == SPIRV::OpCooperativeMatrixPrefetchINTEL) {
+    const uint32_t CacheLevel = getConstFromIntrinsic(Call->Arguments[3], MRI);
+    auto MIB = MIRBuilder.buildInstr(SPIRV::OpCooperativeMatrixPrefetchINTEL)
+                   .addUse(Call->Arguments[0])  // pointer
+                   .addUse(Call->Arguments[1])  // rows
+                   .addUse(Call->Arguments[2])  // columns
+                   .addImm(CacheLevel)          // cache level
+                   .addUse(Call->Arguments[4]); // memory layout
+    if (ArgSz > 5)
+      MIB.addUse(Call->Arguments[5]); // stride
+    if (ArgSz > 6) {
+      const uint32_t MemOp = getConstFromIntrinsic(Call->Arguments[6], MRI);
+      MIB.addImm(MemOp); // memory operand
+    }
+    return true;
+  }
   if (LiteralIdx > 0)
     ImmArgs.push_back(getConstFromIntrinsic(Call->Arguments[LiteralIdx], MRI));
   Register TypeReg = GR->getSPIRVTypeID(Call->ReturnType);
@@ -2630,16 +2670,7 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
   return false;
 }
 
-Type *parseBuiltinCallArgumentBaseType(const StringRef DemangledCall,
-                                       unsigned ArgIdx, LLVMContext &Ctx) {
-  SmallVector<StringRef, 10> BuiltinArgsTypeStrs;
-  StringRef BuiltinArgs =
-      DemangledCall.slice(DemangledCall.find('(') + 1, DemangledCall.find(')'));
-  BuiltinArgs.split(BuiltinArgsTypeStrs, ',', -1, false);
-  if (ArgIdx >= BuiltinArgsTypeStrs.size())
-    return nullptr;
-  StringRef TypeStr = BuiltinArgsTypeStrs[ArgIdx].trim();
-
+Type *parseBuiltinCallArgumentType(StringRef TypeStr, LLVMContext &Ctx) {
   // Parse strings representing OpenCL builtin types.
   if (hasBuiltinTypePrefix(TypeStr)) {
     // OpenCL builtin types in demangled call strings have the following format:
@@ -2681,6 +2712,29 @@ Type *parseBuiltinCallArgumentBaseType(const StringRef DemangledCall,
         BaseType->isVoidTy() ? Type::getInt8Ty(Ctx) : BaseType, VecElts, false);
 
   return BaseType;
+}
+
+bool parseBuiltinTypeStr(SmallVector<StringRef, 10> &BuiltinArgsTypeStrs,
+                         const StringRef DemangledCall, LLVMContext &Ctx) {
+  auto Pos1 = DemangledCall.find('(');
+  if (Pos1 == StringRef::npos)
+    return false;
+  auto Pos2 = DemangledCall.find(')');
+  if (Pos2 == StringRef::npos || Pos1 > Pos2)
+    return false;
+  DemangledCall.slice(Pos1 + 1, Pos2)
+      .split(BuiltinArgsTypeStrs, ',', -1, false);
+  return true;
+}
+
+Type *parseBuiltinCallArgumentBaseType(const StringRef DemangledCall,
+                                       unsigned ArgIdx, LLVMContext &Ctx) {
+  SmallVector<StringRef, 10> BuiltinArgsTypeStrs;
+  parseBuiltinTypeStr(BuiltinArgsTypeStrs, DemangledCall, Ctx);
+  if (ArgIdx >= BuiltinArgsTypeStrs.size())
+    return nullptr;
+  StringRef TypeStr = BuiltinArgsTypeStrs[ArgIdx].trim();
+  return parseBuiltinCallArgumentType(TypeStr, Ctx);
 }
 
 struct BuiltinType {

@@ -3293,7 +3293,7 @@ multiclass sve_fp_z2op_p_zd_bfcvt<string asm, SDPatternOperator op> {
   def : SVE_3_Op_UndefZero_Pat<nxv8bf16, op, nxv8bf16, nxv4i1, nxv4f32, !cast<Instruction>(NAME)>;
 }
 
-multiclass sve_fp_z2op_p_zd_d<bit U, string asm> {
+multiclass sve_fp_z2op_p_zd_d<bit U, string asm, string int_op, SDPatternOperator ir_op> {
   def _HtoH : sve_fp_z2op_p_zd<{ 0b011101, U }, asm, ZPR16, ZPR16>;
   def _HtoS : sve_fp_z2op_p_zd<{ 0b011110, U }, asm, ZPR16, ZPR32>;
   def _HtoD : sve_fp_z2op_p_zd<{ 0b011111, U }, asm, ZPR16, ZPR64>;
@@ -3301,6 +3301,15 @@ multiclass sve_fp_z2op_p_zd_d<bit U, string asm> {
   def _StoD : sve_fp_z2op_p_zd<{ 0b111110, U }, asm, ZPR32, ZPR64>;
   def _DtoS : sve_fp_z2op_p_zd<{ 0b111100, U }, asm, ZPR64, ZPR32>;
   def _DtoD : sve_fp_z2op_p_zd<{ 0b111111, U }, asm, ZPR64, ZPR64>;
+
+  def : SVE_3_Op_UndefZero_Pat<nxv4i32, !cast<SDPatternOperator>(int_op # _i32f64), nxv4i32, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _DtoS)>;
+  def : SVE_3_Op_UndefZero_Pat<nxv2i64, !cast<SDPatternOperator>(int_op # _i64f32), nxv2i64, nxv2i1, nxv4f32, !cast<Instruction>(NAME # _StoD)>;
+  def : SVE_3_Op_UndefZero_Pat<nxv4i32, !cast<SDPatternOperator>(int_op # _i32f16), nxv4i32, nxv4i1, nxv8f16, !cast<Instruction>(NAME # _HtoS)>;
+  def : SVE_3_Op_UndefZero_Pat<nxv2i64, !cast<SDPatternOperator>(int_op # _i64f16), nxv2i64, nxv2i1, nxv8f16, !cast<Instruction>(NAME # _HtoD)>;
+
+  def : SVE_1_Op_PassthruUndefZero_Pat<nxv8i16, ir_op, nxv8i1, nxv8f16, !cast<Instruction>(NAME # _HtoH)>;
+  def : SVE_1_Op_PassthruUndefZero_Pat<nxv4i32, ir_op, nxv4i1, nxv4f32, !cast<Instruction>(NAME # _StoS)>;
+  def : SVE_1_Op_PassthruUndefZero_Pat<nxv2i64, ir_op, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _DtoD)>;
 }
 
 multiclass sve_fp_z2op_p_zd_c<bit U, string asm> {
@@ -9558,8 +9567,10 @@ multiclass sve_int_perm_bin_perm_128_zz<bits<2> opc, bit P, string asm, SDPatter
 }
 
 /// Addressing modes
-def am_sve_indexed_s4 :ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<-8,7>", [], [SDNPWantRoot]>;
-def am_sve_indexed_s6 :ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<-32,31>", [], [SDNPWantRoot]>;
+let WantsRoot = true in {
+  def am_sve_indexed_s4 : ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<-8, 7>">;
+  def am_sve_indexed_s6 : ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<-32, 31>">;
+}
 
 def am_sve_regreg_lsl0 : ComplexPattern<iPTR, 2, "SelectSVERegRegAddrMode<0>", []>;
 def am_sve_regreg_lsl1 : ComplexPattern<iPTR, 2, "SelectSVERegRegAddrMode<1>", []>;
@@ -10760,10 +10771,15 @@ class sve2_fp8_cvt_single<bit L, bits<2> opc, string mnemonic,
   let Inst{9-5}   = Zn;
   let Inst{4-0}   = Zd;
   let Uses = [FPMR, FPCR];
+
+  let mayLoad  = 1;
+  let mayStore = 0;
 }
 
-multiclass sve2_fp8_cvt_single<bit L, bits<2> opc, string mnemonic> {
+multiclass sve2_fp8_cvt_single<bit L, bits<2> opc, string mnemonic, ValueType vtd, SDPatternOperator op> {
   def _BtoH : sve2_fp8_cvt_single<L, opc, mnemonic, ZPR16, ZPR8>;
+  
+  def : SVE_1_Op_Pat<vtd, op, nxv16i8, !cast<Instruction>(NAME # _BtoH)>;
 }
 
 // FP8 downconvert
@@ -10780,10 +10796,45 @@ class sve2_fp8_down_cvt_single<bits<2> opc, string mnemonic,
   let Inst{5} = 0b0;
   let Inst{4-0} = Zd;
   let Uses = [FPMR, FPCR];
+
+  let mayLoad  = 1;
+  let mayStore = 0;
 }
 
-multiclass sve2_fp8_down_cvt_single<bits<2> opc, string mnemonic, RegisterOperand src> {
+multiclass sve2_fp8_down_cvt_single<bits<2> opc, string mnemonic, RegisterOperand src,
+                                    ValueType ty, SDPatternOperator op> {
   def NAME : sve2_fp8_down_cvt_single<opc, mnemonic, ZPR8, src>;
+
+  def : Pat<(nxv16i8 (op ty:$Zn1, ty:$Zn2)),
+            (!cast<Instruction>(NAME) (REG_SEQUENCE ZPR2Mul2, $Zn1, zsub0, $Zn2, zsub1))>;
+}
+
+class sve2_fp8_down_cvt_single_top<bits<2> opc, string mnemonic, RegisterOperand src_ty>
+  : I<(outs ZPR8:$Zd), (ins ZPR8:$_Zd, src_ty:$Zn), mnemonic, "\t$Zd, $Zn","", []>, Sched<[]> {
+  bits<5> Zd;
+  bits<4> Zn;
+
+  let Inst{31-12} = 0b01100101000010100011;
+  let Inst{11-10} = opc;
+  let Inst{9-6}   = Zn;
+  let Inst{5}     = 0b0;
+  let Inst{4-0}   = Zd;
+
+  let Constraints = "$Zd = $_Zd";
+  let DestructiveInstType = DestructiveOther;
+  let ElementSize         = ZPR8.ElementSize;
+  
+  let Uses     = [FPMR, FPCR];
+  let mayLoad  = 1;
+  let mayStore = 0;
+}
+
+multiclass sve2_fp8_down_cvt_single_top<bits<2> opc, string mnemonic, RegisterOperand src_ty,
+                                        ValueType ty, SDPatternOperator op> {
+  def NAME : sve2_fp8_down_cvt_single_top<opc, mnemonic, src_ty>;
+
+  def : Pat<(nxv16i8 (op nxv16i8:$Zd, ty:$Zn1, ty:$Zn2)),
+            (!cast<Instruction>(NAME) $Zd, (REG_SEQUENCE ZPR2Mul2, $Zn1, zsub0, $Zn2, zsub1))>;
 }
 
 // FP8 Widening Multiply-Add Long - Indexed Group

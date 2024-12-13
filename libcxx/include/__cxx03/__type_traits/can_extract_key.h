@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_CAN_EXTRACT_KEY_H
-#define _LIBCPP___TYPE_TRAITS_CAN_EXTRACT_KEY_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_CAN_EXTRACT_KEY_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_CAN_EXTRACT_KEY_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/pair.h>
@@ -50,4 +50,4 @@ struct __can_extract_map_key<_ValTy, _Key, _Key, _RawValTy> : false_type {};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_CAN_EXTRACT_KEY_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_CAN_EXTRACT_KEY_H

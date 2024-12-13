@@ -3095,7 +3095,9 @@ bool CombinerHelper::matchHoistLogicOpWithSameOpcodeHands(
   unsigned HandOpcode = LeftHandInst->getOpcode();
   if (HandOpcode != RightHandInst->getOpcode())
     return false;
-  if (!LeftHandInst->getOperand(1).isReg() ||
+  if (LeftHandInst->getNumOperands() < 2 ||
+      !LeftHandInst->getOperand(1).isReg() ||
+      RightHandInst->getNumOperands() < 2 ||
       !RightHandInst->getOperand(1).isReg())
     return false;
 
@@ -7717,9 +7719,9 @@ bool CombinerHelper::matchShuffleUndefRHS(MachineInstr &MI,
   if (!Changed)
     return false;
 
-  MatchInfo = [&, NewMask](MachineIRBuilder &B) {
+  MatchInfo = [&, NewMask = std::move(NewMask)](MachineIRBuilder &B) {
     B.buildShuffleVector(MI.getOperand(0), MI.getOperand(1), MI.getOperand(2),
-                         NewMask);
+                         std::move(NewMask));
   };
 
   return true;

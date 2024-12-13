@@ -1180,11 +1180,8 @@ void XCOFFWriter::writeSymbolTable(MCAssembler &Asm) {
       LangID = XCOFF::TB_Fortran;
     else
       LangID = XCOFF::TB_CPLUSPLUS;
-    uint8_t CpuID;
-    if (is64Bit())
-      CpuID = XCOFF::TCPU_PPC64;
-    else
-      CpuID = XCOFF::TCPU_COM;
+
+    uint8_t CpuID = XCOFF::getCpuID(getCPUType());
 
     int NumberOfFileAuxEntries = 1;
     if (!Vers.empty())

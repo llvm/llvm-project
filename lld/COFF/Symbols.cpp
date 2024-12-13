@@ -60,6 +60,10 @@ coff::operator<<(const COFFSyncStream &s,
   return s;
 }
 
+const COFFSyncStream &coff::operator<<(const COFFSyncStream &s, Symbol *sym) {
+  return s << maybeDemangleSymbol(s.ctx, sym->getName());
+}
+
 namespace coff {
 
 void Symbol::computeName() {

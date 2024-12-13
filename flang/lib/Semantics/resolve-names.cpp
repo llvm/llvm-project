@@ -8953,6 +8953,18 @@ void ResolveNamesVisitor::FinishSpecificationPart(
   misparsedStmtFuncFound_ = false;
   funcResultStack().CompleteFunctionResultType();
   CheckImports();
+  bool inDeviceSubprogram = false;
+  if (auto *subp{currScope().symbol()
+              ? currScope().symbol()->detailsIf<SubprogramDetails>()
+              : nullptr}) {
+    if (auto attrs{subp->cudaSubprogramAttrs()}) {
+      if (*attrs != common::CUDASubprogramAttrs::Device ||
+          *attrs != common::CUDASubprogramAttrs::Global ||
+          *attrs != common::CUDASubprogramAttrs::Grid_Global) {
+        inDeviceSubprogram = true;
+      }
+    }
+  }
   for (auto &pair : currScope()) {
     auto &symbol{*pair.second};
     if (inInterfaceBlock()) {
@@ -8960,6 +8972,14 @@ void ResolveNamesVisitor::FinishSpecificationPart(
     }
     if (NeedsExplicitType(symbol)) {
       ApplyImplicitRules(symbol);
+    }
+    if (inDeviceSubprogram && IsDummy(symbol) &&
+        symbol.has<ObjectEntityDetails>()) {
+      auto *dummy{symbol.detailsIf<ObjectEntityDetails>()};
+      if (!dummy->cudaDataAttr()) {
+        // Implicitly set device attribute if none is set in device context.
+        dummy->set_cudaDataAttr(common::CUDADataAttr::Device);
+      }
     }
     if (IsDummy(symbol) && isImplicitNoneType() &&
         symbol.test(Symbol::Flag::Implicit) && !context().HasError(symbol)) {

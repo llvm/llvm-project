@@ -33,6 +33,13 @@ public:
   static bool isRequired() { return true; }
 };
 
+/// Create ctor and init functions.
+struct ModuleRealtimeSanitizerPass
+    : public PassInfoMixin<ModuleRealtimeSanitizerPass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  static bool isRequired() { return true; }
+};
+
 } // namespace llvm
 
 #endif // LLVM_TRANSFORMS_INSTRUMENTATION_REALTIMESANITIZER_H
