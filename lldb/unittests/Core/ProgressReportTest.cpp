@@ -246,7 +246,7 @@ TEST_F(ProgressReportTest, TestNonDeterministicOverflow) {
   // Increment the report beyond its limit and make sure we only get one
   // completed event. The event which overflows the counter should be ignored.
   {
-    Progress progress("Finite progress", "Report 1");
+    Progress progress("Non deterministic progress", "Report 1");
     progress.Increment(max_minus_1);
     progress.Increment(max_minus_1);
   }
