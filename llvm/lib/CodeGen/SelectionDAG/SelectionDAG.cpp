@@ -2562,23 +2562,24 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
     auto *ST = cast<StoreSDNode>(User);
     SDValue StoreValue = ST->getValue();
     unsigned ResNo = StoreValue.getResNo();
+    // Ensure the store corresponds to an output pointer.
+    if (CallRetResNo == ResNo)
+      continue;
+    // Ensure the store to the default address space and not atomic or volatile.
+    if (!ST->isSimple() || ST->getAddressSpace() != 0)
+      continue;
+    // Ensure all store chains are the same (so they don't alias).
+    if (StoresInChain && ST->getChain() != StoresInChain)
+      continue;
+    // Ensure the store is properly aligned.
     Type *StoreType = StoreValue.getValueType().getTypeForEVT(Ctx);
-    if (
-        // Ensure the store corresponds to an output pointer.
-        CallRetResNo == ResNo ||
-        // Ensure the store is not atomic or volatile.
-        !ST->isSimple() ||
-        // Ensure the store is in the default address space.
-        ST->getAddressSpace() != 0 ||
-        // Ensure the store is properly aligned.
-        ST->getAlign() <
-            getDataLayout().getABITypeAlign(StoreType->getScalarType()) ||
-        // Ensure all store chains are the same (so they don't alias).
-        (StoresInChain && ST->getChain() != StoresInChain) ||
-        // Avoid:
-        //  1. Creating cyclic dependencies.
-        //  2. Expanding the node to a call within a call sequence.
-        !canFoldStoreIntoLibCallOutputPointers(ST, Node))
+    if (ST->getAlign() <
+        getDataLayout().getABITypeAlign(StoreType->getScalarType()))
+      continue;
+    // Avoid:
+    //  1. Creating cyclic dependencies.
+    //  2. Expanding the node to a call within a call sequence.
+    if (!canFoldStoreIntoLibCallOutputPointers(ST, Node))
       continue;
     ResultStores[ResNo] = ST;
     StoresInChain = ST->getChain();
