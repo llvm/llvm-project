@@ -2,10 +2,8 @@
 
 void Foo() {
   int Var;
-  // expected-warning@+1{{OpenACC clause 'default' not yet implemented}}
 #pragma acc data default(present) if(1)
   ;
-  // expected-warning@+3{{OpenACC clause 'default' not yet implemented}}
   // expected-error@+2{{OpenACC 'if' clause cannot appear more than once on a 'data' directive}}
   // expected-note@+1{{previous clause is here}}
 #pragma acc data default(present) if(1) if (2)

@@ -22,6 +22,7 @@ void NormalFunc() {
 #pragma acc data default(none)
   while (Var);
   // CHECK-NEXT: OpenACCDataConstruct{{.*}}data
+  // CHECK-NEXT: default(none)
   // CHECK-NEXT: WhileStmt
   // CHECK: NullStmt
 #pragma acc enter data copyin(Var)
@@ -49,6 +50,7 @@ void TemplFunc() {
 #pragma acc data default(none)
   while (Var);
   // CHECK-NEXT: OpenACCDataConstruct{{.*}}data
+  // CHECK-NEXT: default(none)
   // CHECK-NEXT: WhileStmt
   // CHECK: NullStmt
 #pragma acc enter data copyin(Var)
@@ -71,6 +73,7 @@ void TemplFunc() {
   // CHECK-NEXT: VarDecl
 
   // CHECK-NEXT: OpenACCDataConstruct{{.*}}data
+  // CHECK-NEXT: default(none)
   // CHECK-NEXT: WhileStmt
   // CHECK: NullStmt
 
