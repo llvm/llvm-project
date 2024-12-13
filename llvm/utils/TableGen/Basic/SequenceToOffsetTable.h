@@ -116,12 +116,9 @@ public:
     for (typename SeqMap::iterator I = Seqs.begin(), E = Seqs.end(); I != E;
          ++I) {
       I->second = Entries;
-      Entries += I->first.size();
+      // Include space for a terminator.
+      Entries += I->first.size() + Terminator.has_value();
     }
-
-    // Include space for terminators.
-    if (Terminator)
-      Entries += Seqs.size();
   }
 
   /// get - Returns the offset of Seq in the final table.
