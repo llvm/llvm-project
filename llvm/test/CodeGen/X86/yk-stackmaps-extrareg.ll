@@ -12,11 +12,9 @@
 ; NOTE: Reserved
 ; CHECK-NEXT: .short 0
 ; NOTE: Number of extra locations.
-; CHECK-NEXT: .short 2
+; CHECK-NEXT: .short 1
 ; NOTE: Stack offset this value is stored in.
 ; CHECK-NEXT: .short -80
-; NOTE: Extra register this value is stored in.
-; CHECK-NEXT: .short 8
 
 source_filename = "ld-temp.o"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
