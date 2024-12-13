@@ -740,6 +740,21 @@ let SMETargetGuard = "sme2" in {
   def SVLUTI4_LANE_ZT_X2 : Inst<"svluti4_lane_zt_{d}_x2", "2.di[i", "cUcsUsiUibhf", MergeNone, "aarch64_sme_luti4_lane_zt_x2", [IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_3>]>;
 }
 
+//
+// SME2 FP8 instructions
+//
+
+// FDOT
+let SMETargetGuard = "sme-f8f32" in {
+  def SVDOT_LANE_FP8_ZA32_VG1x2 : Inst<"svdot_lane_za32[_mf8]_vg1x2_fpm", "vm2di>", "m", MergeNone, "aarch64_sme_fp8_fdot_lane_za32_vg1x2", [IsStreaming, IsInOutZA, SetsFPMR, IsOverloadNone], [ImmCheck<3, ImmCheck0_3>]>;
+  def SVDOT_LANE_FP8_ZA32_VG1x4 : Inst<"svdot_lane_za32[_mf8]_vg1x4_fpm", "vm4di>", "m", MergeNone, "aarch64_sme_fp8_fdot_lane_za32_vg1x4", [IsStreaming, IsInOutZA, SetsFPMR, IsOverloadNone], [ImmCheck<3, ImmCheck0_3>]>;
+}
+
+let SMETargetGuard = "sme-f8f16" in {
+  def SVDOT_LANE_FP8_ZA16_VG1x2 : Inst<"svdot_lane_za16[_mf8]_vg1x2_fpm", "vm2di>", "m", MergeNone, "aarch64_sme_fp8_fdot_lane_za16_vg1x2", [IsStreaming, IsInOutZA, SetsFPMR, IsOverloadNone], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVDOT_LANE_FP8_ZA16_VG1x4 : Inst<"svdot_lane_za16[_mf8]_vg1x4_fpm", "vm4di>", "m", MergeNone, "aarch64_sme_fp8_fdot_lane_za16_vg1x4", [IsStreaming, IsInOutZA, SetsFPMR, IsOverloadNone], [ImmCheck<3, ImmCheck0_7>]>;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // SME2p1 - FMOPA, FMOPS (non-widening)
 let SMETargetGuard = "sme-b16b16" in {

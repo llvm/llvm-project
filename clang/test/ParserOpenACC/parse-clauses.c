@@ -19,7 +19,6 @@ void func() {
   // expected-error@+1{{invalid OpenACC clause 'invalid'}}
 #pragma acc enter data finalize invalid invalid finalize
 
-  // expected-warning@+2{{OpenACC clause 'wait' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC clause 'finalize' not yet implemented, clause ignored}}
 #pragma acc enter data wait finalize
 
@@ -521,25 +520,21 @@ void VarListClauses() {
 #pragma acc serial firstprivate(s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+3{{expected ','}}
-  // expected-warning@+2{{OpenACC clause 'delete' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented, clause ignored}}
+  // expected-error@+2{{expected ','}}
+  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented, clause ignored}}
 #pragma acc exit data delete(s.array[s.value] s.array[s.value :5] ) async
   for(int i = 0; i < 5;++i) {}
 
-  // expected-warning@+2{{OpenACC clause 'delete' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented, clause ignored}}
+  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented, clause ignored}}
 #pragma acc exit data delete(s.array[s.value : 5], s.value),async
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+3{{expected ','}}
-  // expected-warning@+2{{OpenACC clause 'use_device' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented, clause ignored}}
+  // expected-error@+2{{expected ','}}
+  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented, clause ignored}}
 #pragma acc exit data use_device(s.array[s.value] s.array[s.value :5] ),async
   for(int i = 0; i < 5;++i) {}
 
-  // expected-warning@+2{{OpenACC clause 'use_device' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented, clause ignored}}
+  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented, clause ignored}}
 #pragma acc exit data use_device(s.array[s.value : 5], s.value), async
   for(int i = 0; i < 5;++i) {}
 

@@ -3647,7 +3647,7 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
     // If VecPred is not set, check if we can get a predicate from the context
     // instruction, if its type matches the requested ValTy.
     if (VecPred == CmpInst::BAD_ICMP_PREDICATE && I && I->getType() == ValTy) {
-      CmpInst::Predicate CurrentPred;
+      CmpPredicate CurrentPred;
       if (match(I, m_Select(m_Cmp(CurrentPred, m_Value(), m_Value()), m_Value(),
                             m_Value())))
         VecPred = CurrentPred;

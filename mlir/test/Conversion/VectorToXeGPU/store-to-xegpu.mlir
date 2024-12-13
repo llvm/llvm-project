@@ -14,7 +14,7 @@ func.func @store_1D_vector(%vec: vector<8xf32>,
 // CHECK:       %[[DESC:.+]] = xegpu.create_nd_tdesc
 // CHECK-SAME:    %[[SRC]][%[[OFFSET]], %[[OFFSET]], %[[OFFSET]]]
 // CHECK-SAME:    memref<8x16x32xf32> -> !xegpu.tensor_desc<8xf32,
-// CHECK-SAME:    boundary_check = true
+// CHECK-SAME:    boundary_check = false
 // CHECK:       xegpu.store_nd %[[VEC]], %[[DESC]] : vector<8xf32>
 
 // -----
