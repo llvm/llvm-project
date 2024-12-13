@@ -36,7 +36,15 @@ def ACOp : Op<Test_Dialect, "c", [NoMemoryEffect, SingleBlockImplicitTerminator<
 def ABOp : Op<Test_Dialect, "b", [NoMemoryEffect, SingleBlockImplicitTerminator<"YieldOp">]>;
 }
 
-def AEOp : Op<Test_Dialect, "e", [NoMemoryEffect, SingleBlockImplicitTerminator<"YieldOp">]>;
+def AEOp : Op<Test_Dialect, "e", [NoMemoryEffect]> {
+  let summary = "Op with a summary";
+  let description = "Op with a description";
+  let arguments = (ins ConfinedType<AnyType, [CPred<"::llvm::isa<::mlir::TensorType>($_self)">]>:$tensor,
+                       I16Attr:$int_attr);
+  let results = (outs
+    ConfinedType<AnyType, [CPred<"::llvm::isa<::mlir::TensorType>($_self)">]>:$output
+  ); 
+}
 
 def TestAttr : DialectAttr<Test_Dialect, CPred<"true">> {
   let summary = "attribute summary";
@@ -85,7 +93,19 @@ def TestEnum :
 // CHECK: [TOC]
 
 // CHECK-NOT: [TOC]
+
 // CHECK: test.e
+// CHECK: _Op with a summary_
+// CHECK: Op with a description
+// CHECK: Operands:
+// CHECK: | Operand | Description |
+// CHECK: | :-----: | ----------- |
+// CHECK: | `tensor` | |
+// CHECK: Results:
+// CHECK: | Result | Description |
+// CHECK: | :----: | ----------- |
+// CHECK: | `output` | |
+
 // CHECK: Group of ops
 // CHECK: test.a
 // CHECK: test.d
