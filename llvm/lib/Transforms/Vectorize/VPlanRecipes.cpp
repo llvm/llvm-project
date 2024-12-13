@@ -567,6 +567,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
         if (Op != Instruction::ICmp && Op != Instruction::FCmp)
           ReducedPartRdx = Builder.CreateBinOp(
               (Instruction::BinaryOps)Op, RdxPart, ReducedPartRdx, "bin.rdx");
+        else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK))
+          ReducedPartRdx =
+              createMinMaxOp(Builder, RecurKind::SMax, ReducedPartRdx, RdxPart);
         else
           ReducedPartRdx = createMinMaxOp(Builder, RK, ReducedPartRdx, RdxPart);
       }
@@ -575,7 +578,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
     // Create the reduction after the loop. Note that inloop reductions create
     // the target reduction in the loop using a Reduction recipe.
     if ((State.VF.isVector() ||
-         RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) &&
+         RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
+         RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) &&
         !PhiR->isInLoop()) {
       ReducedPartRdx =
           createReduction(Builder, RdxDesc, ReducedPartRdx, OrigPhi);
@@ -3397,6 +3401,20 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
       IRBuilderBase::InsertPointGuard IPBuilder(Builder);
       Builder.SetInsertPoint(VectorPH->getTerminator());
       StartV = Iden = State.get(StartVPV);
+    }
+  } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) {
+    // [I|F]FindLastIV will use a sentinel value to initialize the reduction
+    // phi. In the exit block, ComputeReductionResult will generate checks to
+    // verify if the reduction result is the sentinel value. If the result is
+    // the sentinel value, it will be corrected back to the start value.
+    // TODO: The sentinel value is not always necessary. When the start value is
+    // a constant, and smaller than the start value of the induction variable,
+    // the start value can be directly used to initialize the reduction phi.
+    StartV = Iden = RdxDesc.getSentinelValue();
+    if (!ScalarPHI) {
+      IRBuilderBase::InsertPointGuard IPBuilder(Builder);
+      Builder.SetInsertPoint(VectorPH->getTerminator());
+      StartV = Iden = Builder.CreateVectorSplat(State.VF, Iden);
     }
   } else {
     Iden = llvm::getRecurrenceIdentity(RK, VecTy->getScalarType(),

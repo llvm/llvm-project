@@ -886,6 +886,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           return onlyAllocateSGPRs;
         if (FilterName == "vgpr")
           return onlyAllocateVGPRs;
+        if (FilterName == "wwm")
+          return onlyAllocateWWMRegs;
         return nullptr;
       });
 }

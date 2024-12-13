@@ -5270,7 +5270,7 @@ CXString clang_getCursorSpelling(CXCursor C) {
       if (const OverloadExpr *E = Storage.dyn_cast<const OverloadExpr *>())
         return cxstring::createDup(E->getName().getAsString());
       OverloadedTemplateStorage *Ovl =
-          Storage.get<OverloadedTemplateStorage *>();
+          cast<OverloadedTemplateStorage *>(Storage);
       if (Ovl->size() == 0)
         return cxstring::createEmpty();
       return cxstring::createDup((*Ovl->begin())->getNameAsString());
@@ -7309,7 +7309,7 @@ unsigned clang_getNumOverloadedDecls(CXCursor C) {
           Storage.dyn_cast<OverloadedTemplateStorage *>())
     return S->size();
 
-  const Decl *D = Storage.get<const Decl *>();
+  const Decl *D = cast<const Decl *>(Storage);
   if (const UsingDecl *Using = dyn_cast<UsingDecl>(D))
     return Using->shadow_size();
 
@@ -7332,7 +7332,7 @@ CXCursor clang_getOverloadedDecl(CXCursor cursor, unsigned index) {
           Storage.dyn_cast<OverloadedTemplateStorage *>())
     return MakeCXCursor(S->begin()[index], TU);
 
-  const Decl *D = Storage.get<const Decl *>();
+  const Decl *D = cast<const Decl *>(Storage);
   if (const UsingDecl *Using = dyn_cast<UsingDecl>(D)) {
     // FIXME: This is, unfortunately, linear time.
     UsingDecl::shadow_iterator Pos = Using->shadow_begin();

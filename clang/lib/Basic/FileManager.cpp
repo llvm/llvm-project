@@ -398,7 +398,7 @@ FileEntryRef FileManager::getVirtualFileRef(StringRef Filename, off_t Size,
       {Filename, std::errc::no_such_file_or_directory}).first;
   if (NamedFileEnt.second) {
     FileEntryRef::MapValue Value = *NamedFileEnt.second;
-    if (LLVM_LIKELY(Value.V.is<FileEntry *>()))
+    if (LLVM_LIKELY(isa<FileEntry *>(Value.V)))
       return FileEntryRef(NamedFileEnt);
     return FileEntryRef(*Value.V.get<const FileEntryRef::MapEntry *>());
   }
