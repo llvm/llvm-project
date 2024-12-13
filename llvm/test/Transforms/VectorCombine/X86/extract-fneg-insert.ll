@@ -240,6 +240,20 @@ define <2 x double> @ext1_v2f64_ins0(<2 x double> %x, <2 x double> %y) {
   ret <2 x double> %r
 }
 
+; Negative test - extract from an index greater than the vector width of the destination
+define <2 x double> @ext3_v4f64v2f64(<4 x double> %x, <2 x double> %y) {
+; CHECK-LABEL: @ext3_v4f64v2f64(
+; CHECK-NEXT:    [[E:%.*]] = extractelement <4 x double> [[X:%.*]], i32 3
+; CHECK-NEXT:    [[N:%.*]] = fneg nsz double [[E]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x double> [[Y:%.*]], double [[N]], i32 1
+; CHECK-NEXT:    ret <2 x double> [[R]]
+;
+  %e = extractelement <4 x double> %x, i32 3
+  %n = fneg nsz double %e
+  %r = insertelement <2 x double> %y, double %n, i32 1
+  ret <2 x double> %r
+}
+
 define <4 x double> @ext1_v2f64v4f64_ins0(<2 x double> %x, <4 x double> %y) {
 ; CHECK-LABEL: @ext1_v2f64v4f64_ins0(
 ; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x double> [[X:%.*]], i32 1
