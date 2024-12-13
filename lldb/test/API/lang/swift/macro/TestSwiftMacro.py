@@ -34,19 +34,58 @@ class TestSwiftMacro(lldbtest.TestBase):
         """Test Swift macros"""
         self.build(dictionary={'SWIFT_SOURCES': 'main.swift'})
         self.setupPluginServerForTesting()
+        main_spec = lldb.SBFileSpec('main.swift')
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
-            self, 'break here', lldb.SBFileSpec('main.swift'))
+            self, 'break here', main_spec
+        )
+
+        # We're testing line breakpoint setting here:
+        call_site_line = lldbtest.line_number("main.swift", "#no_return(a / b)")
+        call_site_bp = target.BreakpointCreateByLocation(main_spec, call_site_line)
 
         thread.StepOver()
         thread.StepInto()
+        
         # This is the expanded macro source, we should be able to step into it.
-        self.expect('reg read pc', substrs=[
-            '[inlined] freestanding macro expansion #1 of stringify in module a file main.swift line 5 column 11',
-            'stringify'
-        ])
+        # Don't check the actual line number so we are line independent
+        self.assertIn(
+            'freestanding macro expansion #1 of stringify in module a file main.swift line 5 column 11',
+            thread.frames[0].name,
+            "Stopped in stringify macro"
+        )
 
         self.expect('expression -- #stringify(1)', substrs=['0 = 1', '1 = "1"'])
 
+        # Step out should get us out of stringify, then in to the next macro:
+        thread.StepOut()
+        self.assertIn("a.testStringify", thread.frames[0].name, "Step out back to origin")
+        thread.StepInto()
+        self.assertIn(
+            "freestanding macro expansion #1 of no_return in module a file main.swift line 6 column 3",
+            thread.frames[0].name,
+            "Step out and in gets to no_return"
+        )
+        
+        # We've set a breakpoint on the call site for another instance - run to that:
+        threads = lldbutil.continue_to_breakpoint(process, call_site_bp)
+        self.assertEqual(len(threads), 1, "Stopped at one thread")
+        thread = threads[0]
+        frame_0 = thread.frames[0]
+        line_entry_0 = frame_0.line_entry
+        self.assertEqual(line_entry_0.line, call_site_line, "Got the right line attribution")
+        self.assertEqual(line_entry_0.file, main_spec, "Got the right file attribution") 
+
+        # Now test stepping in and back out again:
+        thread.StepInto()
+        self.assertIn(
+            "freestanding macro expansion #3 of no_return in module a file main.swift line 8 column 3",
+            thread.frames[0].name,
+            "Step out and in gets to no_return"
+        )
+        
+        thread.StepOut()
+        self.assertIn("a.testStringify", thread.frames[0].name, "Step out from no_return")
+        
         # Make sure we can set a symbolic breakpoint on a macro.
         b = target.BreakpointCreateByName("stringify")
         self.assertGreaterEqual(b.GetNumLocations(), 1)
