@@ -914,8 +914,8 @@ static Expr *constructStructuredBufferConstraintExpr(Sema &S,
   return CombinedExpr;
 }
 
-static ConceptDecl *constructTypedBufferConceptDecl(Sema &S, NamespaceDecl *NSD,
-                                                    bool isTypedBuffer) {
+static ConceptDecl *constructBufferConceptDecl(Sema &S, NamespaceDecl *NSD,
+                                               bool isTypedBuffer) {
   ASTContext &Context = S.getASTContext();
   DeclContext *DC = NSD->getDeclContext();
   SourceLocation DeclLoc = SourceLocation();
@@ -965,9 +965,9 @@ static ConceptDecl *constructTypedBufferConceptDecl(Sema &S, NamespaceDecl *NSD,
 
 void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   CXXRecordDecl *Decl;
-  ConceptDecl *TypedBufferConcept = constructTypedBufferConceptDecl(
+  ConceptDecl *TypedBufferConcept = constructBufferConceptDecl(
       *SemaPtr, HLSLNamespace, /*isTypedBuffer*/ true);
-  ConceptDecl *StructuredBufferConcept = constructTypedBufferConceptDecl(
+  ConceptDecl *StructuredBufferConcept = constructBufferConceptDecl(
       *SemaPtr, HLSLNamespace, /*isTypedBuffer*/ false);
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWBuffer")
              .addSimpleTemplateParams({"element_type"}, TypedBufferConcept)
