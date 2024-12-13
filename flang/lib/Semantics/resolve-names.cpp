@@ -8958,9 +8958,9 @@ void ResolveNamesVisitor::FinishSpecificationPart(
               ? currScope().symbol()->detailsIf<SubprogramDetails>()
               : nullptr}) {
     if (auto attrs{subp->cudaSubprogramAttrs()}) {
-      if (*attrs != common::CUDASubprogramAttrs::Device ||
-          *attrs != common::CUDASubprogramAttrs::Global ||
-          *attrs != common::CUDASubprogramAttrs::Grid_Global) {
+      if (*attrs == common::CUDASubprogramAttrs::Device ||
+          *attrs == common::CUDASubprogramAttrs::Global ||
+          *attrs == common::CUDASubprogramAttrs::Grid_Global) {
         inDeviceSubprogram = true;
       }
     }
