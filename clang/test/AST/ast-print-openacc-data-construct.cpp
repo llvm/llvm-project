@@ -101,4 +101,10 @@ void foo() {
 
 // CHECK: #pragma acc enter data create(i, array[1], array, array[1:2]) pcreate(zero: i, array[1], array, array[1:2]) present_or_create(i, array[1], array, array[1:2])
 #pragma acc enter data create(i, array[1], array, array[1:2]) pcreate(zero: i, array[1], array, array[1:2]) present_or_create(i, array[1], array, array[1:2])
+
+  float *arrayPtr[5];
+
+// CHECK: #pragma acc data default(none) deviceptr(iPtr, arrayPtr[0])
+#pragma acc data default(none) deviceptr(iPtr, arrayPtr[0])
+  ;
 }
