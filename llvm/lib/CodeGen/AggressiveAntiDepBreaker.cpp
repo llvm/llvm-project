@@ -152,12 +152,12 @@ void AggressiveAntiDepBreaker::StartBlock(MachineBasicBlock *BB) {
   std::vector<unsigned> &DefIndices = State->GetDefIndices();
 
   // Examine the live-in regs of all successors.
+  unsigned BBSize = BB->size();
   for (MachineBasicBlock *Succ : BB->successors())
     for (const auto &LI : Succ->liveins()) {
       for (MCRegAliasIterator AI(LI.PhysReg, TRI, true); AI.isValid(); ++AI) {
         unsigned Reg = *AI;
-        State->UnionGroups(Reg, 0);
-        KillIndices[Reg] = BB->size();
+        KillIndices[Reg] = BBSize;
         DefIndices[Reg] = ~0u;
       }
     }
@@ -174,8 +174,7 @@ void AggressiveAntiDepBreaker::StartBlock(MachineBasicBlock *BB) {
       continue;
     for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI) {
       unsigned AliasReg = *AI;
-      State->UnionGroups(AliasReg, 0);
-      KillIndices[AliasReg] = BB->size();
+      KillIndices[AliasReg] = BBSize;
       DefIndices[AliasReg] = ~0u;
     }
   }
