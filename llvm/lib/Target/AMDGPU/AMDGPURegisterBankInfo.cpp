@@ -1182,7 +1182,7 @@ bool AMDGPURegisterBankInfo::applyMappingDynStackAlloc(
   // Guard in case the stack growth direction ever changes with scratch
   // instructions.
   assert(TFI.getStackGrowthDirection() == TargetFrameLowering::StackGrowsUp &&
-         "Stack grows upwards for AMDGPU\n");
+         "Stack grows upwards for AMDGPU");
 
   Register Dst = MI.getOperand(0).getReg();
   Register AllocSize = MI.getOperand(1).getReg();
