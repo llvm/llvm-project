@@ -3423,7 +3423,7 @@ def warn_typecheck_vector_element_sizes_not_equal : Warning<
 def err_ext_vector_component_exceeds_length : Error<
   "vector component access exceeds type %0">;
 def err_ext_vector_component_name_illegal : Error<
-  "illegal vector component name '%0'">;
+  "illegal vector component name %0">;
 def err_attribute_address_space_negative : Error<
   "address space is negative">;
 def err_attribute_address_space_too_high : Error<
