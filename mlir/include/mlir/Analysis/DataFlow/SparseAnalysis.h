@@ -87,7 +87,7 @@ public:
   using AbstractSparseLattice::AbstractSparseLattice;
 
   /// Return the value this lattice is located at.
-  Value getAnchor() const { return anchor.get<Value>(); }
+  Value getAnchor() const { return cast<Value>(anchor); }
 
   /// Return the value held by this lattice. This requires that the value is
   /// initialized.
