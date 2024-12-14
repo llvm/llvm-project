@@ -155,9 +155,8 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
                                   Type boundType, bool getUpper) {
     unsigned int width = ConstantIntRanges::getStorageBitwidth(boundType);
     if (loopBound.has_value()) {
-      if (isa<Attribute>(*loopBound)) {
-        if (auto bound =
-                dyn_cast_or_null<IntegerAttr>(cast<Attribute>(*loopBound)))
+      if (auto attr = dyn_cast<Attribute>(*loopBound)) {
+        if (auto bound = dyn_cast_or_null<IntegerAttr>(attr))
           return bound.getValue();
       } else if (auto value = llvm::dyn_cast_if_present<Value>(*loopBound)) {
         const IntegerValueRangeLattice *lattice =
