@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_QUICK_SORT_H
 #define LLVM_LIBC_SRC_STDLIB_QUICK_SORT_H
 
-#include "src/__support/macros/attributes.h"
+#include "src/__support/CPP/cstddef.h"
 #include "src/__support/macros/config.h"
-#include "src/stdlib/qsort_data.h"
+#include "src/stdlib/qsort_pivot.h"
 
 #include <stdint.h>
 
@@ -69,7 +69,7 @@ template <typename F> void quick_sort(Array &array, const F &is_less) {
     if (array_len <= 1)
       return;
 
-    const size_t pivot_index = array_len / 2;
+    const size_t pivot_index = choose_pivot(array, is_less);
     size_t split_index = partition(array, pivot_index, is_less);
 
     if (array_len == 2)
