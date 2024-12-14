@@ -893,6 +893,7 @@ const struct InstructionSizeData {
     { 5, {0x68, 0x71, 0x72, 0x73, 0x74}, 0, "68 XX XX XX XX : push imm32"},
     { 5, {0xb8, 0x71, 0x72, 0x73, 0x74}, 0, "b8 XX XX XX XX : mov eax, XX XX XX XX"},
     { 5, {0xB9, 0x71, 0x72, 0x73, 0x74}, 0, "b9 XX XX XX XX : mov ecx, XX XX XX XX"},
+    { 5, {0xBA, 0x71, 0x72, 0x73, 0x74}, 0, "ba XX XX XX XX : mov edx, XX XX XX XX"},
     { 7, {0x8D, 0xA4, 0x24, 0x73, 0x74, 0x75, 0x76}, 0, "8D A4 24 XX XX XX XX : lea esp, [esp + XX XX XX XX]"},
 #if SANITIZER_WINDOWS_x64
     // sorted list
@@ -1007,6 +1008,7 @@ const struct InstructionSizeData {
     { 4, {0x80, 0x7D, 0x72, 0x73}, 0, "80 7D YY XX : cmp BYTE PTR [rbp+YY], XX"},
     { 4, {0x80, 0x7E, 0x72, 0x73}, 0, "80 7E YY XX : cmp BYTE PTR [rsi+YY], XX"},
     { 4, {0x89, 0x54, 0x24, 0x73}, 0, "89 54 24 XX : mov DWORD PTR[rsp + XX], edx"},
+    { 5, {0x0F, 0x1F, 0x44, 0x00, 0x00}, 0, "0F 1F 44 00 00 : nop DWORD PTR [rax+rax*1+0x0]"},
     { 5, {0x44, 0x89, 0x44, 0x24, 0x74}, 0, "44 89 44 24 XX : mov DWORD PTR [rsp + XX], r8d"},
     { 5, {0x44, 0x89, 0x4c, 0x24, 0x74}, 0, "44 89 4c 24 XX : mov DWORD PTR [rsp + XX], r9d"},
     { 5, {0x48, 0x89, 0x4C, 0x24, 0x74}, 0, "48 89 4C 24 XX : mov QWORD PTR [rsp + XX], rcx"},
@@ -1019,6 +1021,7 @@ const struct InstructionSizeData {
     { 5, {0x48, 0x8d, 0x6c, 0x24, 0x74}, 0, "48 8d 6c 24 XX : lea rbp, [rsp + XX]"},
     { 5, {0x4c, 0x89, 0x44, 0x24, 0x74}, 0, "4c 89 44 24 XX : mov QWORD PTR [rsp + XX], r8"},
     { 5, {0x4c, 0x89, 0x4c, 0x24, 0x74}, 0, "4c 89 4c 24 XX : mov QWORD PTR [rsp + XX], r9"},
+    { 5, {0x66, 0x48, 0x0F, 0x7E, 0xC0}, 0, "66 48 0F 7E C0 : movq rax,xmm0 (for wine fexp)"},
     { 5, {0x83, 0x44, 0x72, 0x73, 0x74}, 0, "83 44 72 XX YY : add DWORD PTR [rdx+rsi*2+XX],YY"},
     { 5, {0x83, 0x64, 0x24, 0x73, 0x74}, 0, "83 64 24 XX YY : and DWORD PTR [rsp+XX], YY"},
     { 6, {0x48, 0x83, 0x64, 0x24, 0x74, 0x75}, 0, "48 83 64 24 XX YY : and QWORD PTR [rsp + XX], YY"},

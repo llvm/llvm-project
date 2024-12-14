@@ -606,6 +606,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
 
     case 0xb8:  // b8 XX XX XX XX : mov eax, XX XX XX XX
     case 0xB9:  // b9 XX XX XX XX : mov ecx, XX XX XX XX
+    case 0xBA:  // ba XX XX XX XX : mov edx, XX XX XX XX
       return 5;
 
     // Cannot overwrite control-instruction. Return 0 to indicate failure.
@@ -910,6 +911,12 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
       return 5;
     case 0x24648348:  // 48 83 64 24 XX YY : and QWORD PTR [rsp + XX], YY
       return 6;
+  }
+
+  switch (0xFFFFFFFFFFULL & *(u64*)(address)) {
+    case 0xC07E0F4866:  // 66 48 0F 7E C0 : movq rax,xmm0 (for wine fexp)
+    case 0x0000441F0F:  // 0F 1F 44 00 00 : nop DWORD PTR [rax+rax*1+0x0]
+      return 5;
   }
 
 #else
