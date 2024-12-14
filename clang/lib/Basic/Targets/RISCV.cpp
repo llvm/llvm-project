@@ -240,22 +240,44 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 }
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#include "clang/Basic/BuiltinsRISCVVector.def"
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#include "clang/Basic/BuiltinsRISCV.inc"
-};
+static constexpr int NumRVVBuiltins =
+    clang::RISCVVector::FirstTSBuiltin - Builtin::FirstTSBuiltin;
+static constexpr int NumRISCVBuiltins =
+    clang::RISCV::LastTSBuiltin - RISCVVector::FirstTSBuiltin;
+static constexpr int NumBuiltins =
+    clang::RISCV::LastTSBuiltin - Builtin::FirstTSBuiltin;
+static_assert(NumBuiltins == (NumRVVBuiltins + NumRISCVBuiltins));
 
-ArrayRef<Builtin::Info> RISCVTargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfo,
-                        clang::RISCV::LastTSBuiltin - Builtin::FirstTSBuiltin);
+static constexpr llvm::StringTable BuiltinRVVStrings =
+    CLANG_BUILTIN_STR_TABLE_START
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsRISCVVector.def"
+    ;
+static constexpr llvm::StringTable BuiltinRISCVStrings =
+    CLANG_BUILTIN_STR_TABLE_START
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsRISCV.inc"
+    ;
+
+static constexpr auto BuiltinRVVInfos = Builtin::MakeInfos<NumRVVBuiltins>({
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsRISCVVector.def"
+});
+static constexpr auto BuiltinRISCVInfos = Builtin::MakeInfos<NumRISCVBuiltins>({
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsRISCV.inc"
+});
+
+llvm::SmallVector<Builtin::InfosShard>
+RISCVTargetInfo::getTargetBuiltins() const {
+  return {
+      {&BuiltinRVVStrings, BuiltinRVVInfos},
+      {&BuiltinRISCVStrings, BuiltinRISCVInfos},
+  };
 }
 
 bool RISCVTargetInfo::initFeatureMap(

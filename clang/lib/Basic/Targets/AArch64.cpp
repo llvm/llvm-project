@@ -26,35 +26,67 @@
 using namespace clang;
 using namespace clang::targets;
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+static constexpr int NumNEONBuiltins =
+    NEON::FirstTSBuiltin - Builtin::FirstTSBuiltin;
+static constexpr int NumSVEBuiltins =
+    SVE::FirstTSBuiltin - NEON::FirstTSBuiltin;
+static constexpr int NumSMEBuiltins = SME::FirstTSBuiltin - SVE::FirstTSBuiltin;
+static constexpr int NumAArch64Builtins =
+    AArch64::LastTSBuiltin - SME::FirstTSBuiltin;
+static constexpr int NumBuiltins =
+    AArch64::LastTSBuiltin - Builtin::FirstTSBuiltin;
+static_assert(NumBuiltins == (NumNEONBuiltins + NumSVEBuiltins +
+                              NumSMEBuiltins + NumAArch64Builtins));
+
+static constexpr llvm::StringTable BuiltinNEONStrings =
+    CLANG_BUILTIN_STR_TABLE_START
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsNEON.def"
-
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+    ;
+static constexpr llvm::StringTable BuiltinSVEStrings =
+    CLANG_BUILTIN_STR_TABLE_START
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsSVE.def"
-
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+    ;
+static constexpr llvm::StringTable BuiltinSMEStrings =
+    CLANG_BUILTIN_STR_TABLE_START
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsSME.def"
-
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define LANGBUILTIN(ID, TYPE, ATTRS, LANG)                                     \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, LANG},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
+    ;
+static constexpr llvm::StringTable BuiltinAArch64Strings =
+    CLANG_BUILTIN_STR_TABLE_START
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsAArch64.def"
-};
+    ;
+
+static constexpr auto BuiltinNEONInfos = Builtin::MakeInfos<NumNEONBuiltins>({
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsNEON.def"
+});
+static constexpr auto BuiltinSVEInfos = Builtin::MakeInfos<NumSVEBuiltins>({
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsSVE.def"
+});
+static constexpr auto BuiltinSMEInfos = Builtin::MakeInfos<NumSMEBuiltins>({
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsSME.def"
+});
+static constexpr auto BuiltinAArch64Infos =
+    Builtin::MakeInfos<NumAArch64Builtins>({
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#define LANGBUILTIN CLANG_LANGBUILTIN_ENTRY
+#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsAArch64.def"
+    });
 
 void AArch64TargetInfo::setArchFeatures() {
   if (*ArchInfo == llvm::AArch64::ARMV8R) {
@@ -697,9 +729,14 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 }
 
-ArrayRef<Builtin::Info> AArch64TargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfo, clang::AArch64::LastTSBuiltin -
-                                         Builtin::FirstTSBuiltin);
+llvm::SmallVector<Builtin::InfosShard>
+AArch64TargetInfo::getTargetBuiltins() const {
+  return {
+      {&BuiltinNEONStrings, BuiltinNEONInfos},
+      {&BuiltinSVEStrings, BuiltinSVEInfos},
+      {&BuiltinSMEStrings, BuiltinSMEInfos},
+      {&BuiltinAArch64Strings, BuiltinAArch64Infos},
+  };
 }
 
 std::optional<std::pair<unsigned, unsigned>>
