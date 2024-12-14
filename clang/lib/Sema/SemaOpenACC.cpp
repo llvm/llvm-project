@@ -416,6 +416,15 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
       return false;
     }
   }
+  case OpenACCClauseKind::IfPresent: {
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::HostData:
+    case OpenACCDirectiveKind::Update:
+      return true;
+    default:
+      return false;
+    }
+  }
   }
 
   default:
@@ -1618,6 +1627,16 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitFinalizeClause(
   // has no associated rules.
   return OpenACCFinalizeClause::Create(Ctx, Clause.getBeginLoc(),
                                        Clause.getEndLoc());
+}
+
+OpenACCClause *SemaOpenACCClauseVisitor::VisitIfPresentClause(
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  if (Clause.getDirectiveKind() != OpenACCDirectiveKind::HostData)
+    return isNotImplemented();
+  // There isn't anything to do here, this is only valid on one construct, and
+  // has no associated rules.
+  return OpenACCIfPresentClause::Create(Ctx, Clause.getBeginLoc(),
+                                        Clause.getEndLoc());
 }
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitSeqClause(
