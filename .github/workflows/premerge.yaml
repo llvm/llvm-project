@@ -63,4 +63,4 @@ jobs:
           export CXX=/opt/llvm/bin/clang++
 
           #./.ci/monolithic-linux.sh "$(echo ${linux_projects} | tr ' ' ';')" "$(echo ${linux_check_targets})" "$(echo ${linux_runtimes} | tr ' ' ';')" "$(echo ${linux_runtime_check_targets})"
-          ./.ci/monolithic-linux.sh "clang;bolt;lld" "check-bolt" "libcxx" "check-cxx"
+          ./.ci/monolithic-linux.sh "clang;bolt;lld" "check-bolt" "libcxx;libcxxabi;libunwind" "check-cxx"
