@@ -261,7 +261,7 @@ main_body:
 
 ; TODO: NSA reassign is very limited and cannot work with VGPR tuples and subregs.
 
-define amdgpu_kernel void @image_bvh_intersect_ray_nsa_reassign(ptr %p_node_ptr, ptr %p_ray, <4 x i32> inreg %tdescr) {
+define amdgpu_kernel void @image_bvh_intersect_ray_nsa_reassign(ptr %p_node_ptr, ptr %p_ray, <4 x i32> %tdescr) {
 ; GFX1013-LABEL: image_bvh_intersect_ray_nsa_reassign:
 ; GFX1013:       ; %bb.0: ; %main_body
 ; GFX1013-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
@@ -425,7 +425,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @image_bvh_intersect_ray_a16_nsa_reassign(ptr %p_node_ptr, ptr %p_ray, <4 x i32> inreg %tdescr) {
+define amdgpu_kernel void @image_bvh_intersect_ray_a16_nsa_reassign(ptr %p_node_ptr, ptr %p_ray, <4 x i32> %tdescr) {
 ; GFX1013-LABEL: image_bvh_intersect_ray_a16_nsa_reassign:
 ; GFX1013:       ; %bb.0: ; %main_body
 ; GFX1013-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
@@ -573,7 +573,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @image_bvh64_intersect_ray_nsa_reassign(ptr %p_ray, <4 x i32> inreg %tdescr) {
+define amdgpu_kernel void @image_bvh64_intersect_ray_nsa_reassign(ptr %p_ray, <4 x i32> %tdescr) {
 ; GFX1013-LABEL: image_bvh64_intersect_ray_nsa_reassign:
 ; GFX1013:       ; %bb.0: ; %main_body
 ; GFX1013-NEXT:    s_clause 0x1
@@ -734,7 +734,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @image_bvh64_intersect_ray_a16_nsa_reassign(ptr %p_ray, <4 x i32> inreg %tdescr) {
+define amdgpu_kernel void @image_bvh64_intersect_ray_a16_nsa_reassign(ptr %p_ray, <4 x i32> %tdescr) {
 ; GFX1013-LABEL: image_bvh64_intersect_ray_a16_nsa_reassign:
 ; GFX1013:       ; %bb.0: ; %main_body
 ; GFX1013-NEXT:    s_clause 0x1

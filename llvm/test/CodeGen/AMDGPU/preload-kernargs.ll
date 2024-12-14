@@ -566,13 +566,10 @@ define amdgpu_kernel void @v5f64_arg(ptr addrspace(1) nocapture inreg %out, <5 x
 ; GFX940-NEXT:    .p2align 8
 ; GFX940-NEXT:  ; %bb.2:
 ; GFX940-NEXT:  .LBB14_0:
-; GFX940-NEXT:    s_load_dwordx2 s[12:13], s[0:1], 0x60
-; GFX940-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x40
+; GFX940-NEXT:    s_load_dwordx16 s[4:19], s[0:1], 0x40
 ; GFX940-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NEXT:    v_mov_b64_e32 v[2:3], s[12:13]
 ; GFX940-NEXT:    v_mov_b32_e32 v0, s8
-; GFX940-NEXT:    global_store_dwordx2 v4, v[2:3], s[2:3] offset:32 sc0 sc1
 ; GFX940-NEXT:    v_mov_b32_e32 v1, s9
 ; GFX940-NEXT:    v_mov_b32_e32 v2, s10
 ; GFX940-NEXT:    v_mov_b32_e32 v3, s11
@@ -583,6 +580,10 @@ define amdgpu_kernel void @v5f64_arg(ptr addrspace(1) nocapture inreg %out, <5 x
 ; GFX940-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX940-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX940-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3] sc0 sc1
+; GFX940-NEXT:    s_nop 1
+; GFX940-NEXT:    v_mov_b32_e32 v0, s12
+; GFX940-NEXT:    v_mov_b32_e32 v1, s13
+; GFX940-NEXT:    global_store_dwordx2 v4, v[0:1], s[2:3] offset:32 sc0 sc1
 ; GFX940-NEXT:    s_endpgm
 ;
 ; GFX90a-LABEL: v5f64_arg:
@@ -593,13 +594,10 @@ define amdgpu_kernel void @v5f64_arg(ptr addrspace(1) nocapture inreg %out, <5 x
 ; GFX90a-NEXT:    .p2align 8
 ; GFX90a-NEXT:  ; %bb.2:
 ; GFX90a-NEXT:  .LBB14_0:
-; GFX90a-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x60
-; GFX90a-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x40
+; GFX90a-NEXT:    s_load_dwordx16 s[8:23], s[4:5], 0x40
 ; GFX90a-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX90a-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-NEXT:    v_pk_mov_b32 v[2:3], s[0:1], s[0:1] op_sel:[0,1]
 ; GFX90a-NEXT:    v_mov_b32_e32 v0, s12
-; GFX90a-NEXT:    global_store_dwordx2 v4, v[2:3], s[6:7] offset:32
 ; GFX90a-NEXT:    v_mov_b32_e32 v1, s13
 ; GFX90a-NEXT:    v_mov_b32_e32 v2, s14
 ; GFX90a-NEXT:    v_mov_b32_e32 v3, s15
@@ -610,6 +608,10 @@ define amdgpu_kernel void @v5f64_arg(ptr addrspace(1) nocapture inreg %out, <5 x
 ; GFX90a-NEXT:    v_mov_b32_e32 v2, s10
 ; GFX90a-NEXT:    v_mov_b32_e32 v3, s11
 ; GFX90a-NEXT:    global_store_dwordx4 v4, v[0:3], s[6:7]
+; GFX90a-NEXT:    s_nop 0
+; GFX90a-NEXT:    v_mov_b32_e32 v0, s16
+; GFX90a-NEXT:    v_mov_b32_e32 v1, s17
+; GFX90a-NEXT:    global_store_dwordx2 v4, v[0:1], s[6:7] offset:32
 ; GFX90a-NEXT:    s_endpgm
   store <5 x double> %in, ptr addrspace(1) %out, align 8
   ret void
@@ -941,17 +943,15 @@ define amdgpu_kernel void @half_v7bfloat_kernel_preload_arg(ptr addrspace(1) inr
 ; GFX90a-NEXT:    .p2align 8
 ; GFX90a-NEXT:  ; %bb.2:
 ; GFX90a-NEXT:  .LBB23_0:
-; GFX90a-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x20
 ; GFX90a-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX90a-NEXT:    v_mov_b32_e32 v0, s8
 ; GFX90a-NEXT:    global_store_short v3, v0, s[6:7]
 ; GFX90a-NEXT:    v_mov_b32_e32 v0, s13
-; GFX90a-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-NEXT:    global_store_short v3, v0, s[0:1] offset:12
+; GFX90a-NEXT:    global_store_short v3, v0, s[14:15] offset:12
 ; GFX90a-NEXT:    v_mov_b32_e32 v2, s12
 ; GFX90a-NEXT:    v_mov_b32_e32 v0, s10
 ; GFX90a-NEXT:    v_mov_b32_e32 v1, s11
-; GFX90a-NEXT:    global_store_dwordx3 v3, v[0:2], s[0:1]
+; GFX90a-NEXT:    global_store_dwordx3 v3, v[0:2], s[14:15]
 ; GFX90a-NEXT:    s_endpgm
   store half %in, ptr addrspace(1) %out
   store <7 x bfloat> %in2, ptr addrspace(1) %out2
@@ -1191,15 +1191,13 @@ define amdgpu_kernel void @i16_v3i32_kernel_preload_arg(ptr addrspace(1) inreg %
 ; GFX90a-NEXT:    .p2align 8
 ; GFX90a-NEXT:  ; %bb.2:
 ; GFX90a-NEXT:  .LBB29_0:
-; GFX90a-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x20
 ; GFX90a-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX90a-NEXT:    v_mov_b32_e32 v4, s8
 ; GFX90a-NEXT:    v_mov_b32_e32 v0, s10
 ; GFX90a-NEXT:    v_mov_b32_e32 v1, s11
 ; GFX90a-NEXT:    v_mov_b32_e32 v2, s12
 ; GFX90a-NEXT:    global_store_short v3, v4, s[6:7]
-; GFX90a-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-NEXT:    global_store_dwordx3 v3, v[0:2], s[0:1]
+; GFX90a-NEXT:    global_store_dwordx3 v3, v[0:2], s[14:15]
 ; GFX90a-NEXT:    s_endpgm
   store i16 %in, ptr addrspace(1) %out
   store <3 x i32> %in2, ptr addrspace(1) %out2
