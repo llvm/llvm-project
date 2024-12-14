@@ -778,6 +778,11 @@ public:
   LegalizeRuleSet &libcallFor(std::initializer_list<LLT> Types) {
     return actionFor(LegalizeAction::Libcall, Types);
   }
+  LegalizeRuleSet &libcallFor(bool Pred, std::initializer_list<LLT> Types) {
+    if (!Pred)
+      return *this;
+    return actionFor(LegalizeAction::Libcall, Types);
+  }
   LegalizeRuleSet &
   libcallFor(std::initializer_list<std::pair<LLT, LLT>> Types) {
     return actionFor(LegalizeAction::Libcall, Types);

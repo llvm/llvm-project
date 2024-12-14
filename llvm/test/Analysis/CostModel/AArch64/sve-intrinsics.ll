@@ -1360,6 +1360,54 @@ define void @histogram_nxv4i64(<vscale x 4 x ptr> %buckets, <vscale x 4 x i1> %m
   ret void
 }
 
+define void @match() #3 {
+; CHECK-VSCALE-1-LABEL: 'match'
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %match_nxv16i8_v16i8 = call <vscale x 16 x i1> @llvm.experimental.vector.match.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> undef, <vscale x 16 x i1> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %match_nxv8i16_v8i16 = call <vscale x 8 x i1> @llvm.experimental.vector.match.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> undef, <vscale x 8 x i1> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %match_nxv4i32_v4i32 = call <vscale x 4 x i1> @llvm.experimental.vector.match.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> undef, <vscale x 4 x i1> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %match_nxv2i64_v2i64 = call <vscale x 2 x i1> @llvm.experimental.vector.match.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> undef, <vscale x 2 x i1> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %match_v16i8_v16i8 = call <16 x i1> @llvm.experimental.vector.match.v16i8.v16i8(<16 x i8> undef, <16 x i8> undef, <16 x i1> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %match_v8i16_v8i16 = call <8 x i1> @llvm.experimental.vector.match.v8i16.v8i16(<8 x i16> undef, <8 x i16> undef, <8 x i1> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %match_v4i32_v4i32 = call <4 x i1> @llvm.experimental.vector.match.v4i32.v4i32(<4 x i32> undef, <4 x i32> undef, <4 x i1> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %match_v2i64_v2i64 = call <2 x i1> @llvm.experimental.vector.match.v2i64.v2i64(<2 x i64> undef, <2 x i64> undef, <2 x i1> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-VSCALE-2-LABEL: 'match'
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %match_nxv16i8_v16i8 = call <vscale x 16 x i1> @llvm.experimental.vector.match.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> undef, <vscale x 16 x i1> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %match_nxv8i16_v8i16 = call <vscale x 8 x i1> @llvm.experimental.vector.match.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> undef, <vscale x 8 x i1> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %match_nxv4i32_v4i32 = call <vscale x 4 x i1> @llvm.experimental.vector.match.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> undef, <vscale x 4 x i1> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %match_nxv2i64_v2i64 = call <vscale x 2 x i1> @llvm.experimental.vector.match.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> undef, <vscale x 2 x i1> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %match_v16i8_v16i8 = call <16 x i1> @llvm.experimental.vector.match.v16i8.v16i8(<16 x i8> undef, <16 x i8> undef, <16 x i1> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %match_v8i16_v8i16 = call <8 x i1> @llvm.experimental.vector.match.v8i16.v8i16(<8 x i16> undef, <8 x i16> undef, <8 x i1> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %match_v4i32_v4i32 = call <4 x i1> @llvm.experimental.vector.match.v4i32.v4i32(<4 x i32> undef, <4 x i32> undef, <4 x i1> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %match_v2i64_v2i64 = call <2 x i1> @llvm.experimental.vector.match.v2i64.v2i64(<2 x i64> undef, <2 x i64> undef, <2 x i1> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'match'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %match_nxv16i8_v16i8 = call <vscale x 16 x i1> @llvm.experimental.vector.match.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> undef, <vscale x 16 x i1> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %match_nxv8i16_v8i16 = call <vscale x 8 x i1> @llvm.experimental.vector.match.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> undef, <vscale x 8 x i1> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %match_nxv4i32_v4i32 = call <vscale x 4 x i1> @llvm.experimental.vector.match.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> undef, <vscale x 4 x i1> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %match_nxv2i64_v2i64 = call <vscale x 2 x i1> @llvm.experimental.vector.match.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> undef, <vscale x 2 x i1> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %match_v16i8_v16i8 = call <16 x i1> @llvm.experimental.vector.match.v16i8.v16i8(<16 x i8> undef, <16 x i8> undef, <16 x i1> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %match_v8i16_v8i16 = call <8 x i1> @llvm.experimental.vector.match.v8i16.v8i16(<8 x i16> undef, <8 x i16> undef, <8 x i1> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %match_v4i32_v4i32 = call <4 x i1> @llvm.experimental.vector.match.v4i32.v4i32(<4 x i32> undef, <4 x i32> undef, <4 x i1> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %match_v2i64_v2i64 = call <2 x i1> @llvm.experimental.vector.match.v2i64.v2i64(<2 x i64> undef, <2 x i64> undef, <2 x i1> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+
+  %match_nxv16i8_v16i8 = call <vscale x 16 x i1> @llvm.experimental.vector.match.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> undef, <vscale x 16 x i1> undef)
+  %match_nxv8i16_v8i16 = call <vscale x 8 x i1> @llvm.experimental.vector.match.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> undef, <vscale x 8 x i1> undef)
+  %match_nxv4i32_v4i32 = call <vscale x 4 x i1> @llvm.experimental.vector.match.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> undef, <vscale x 4 x i1> undef)
+  %match_nxv2i64_v2i64 = call <vscale x 2 x i1> @llvm.experimental.vector.match.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> undef, <vscale x 2 x i1> undef)
+
+  %match_v16i8_v16i8 = call <16 x i1> @llvm.experimental.vector.match.v16i8.v16i8(<16 x i8> undef, <16 x i8> undef, <16 x i1> undef)
+  %match_v8i16_v8i16 = call <8 x i1> @llvm.experimental.vector.match.v8i16.v8i16(<8 x i16> undef, <8 x i16> undef, <8 x i1> undef)
+  %match_v4i32_v4i32 = call <4 x i1> @llvm.experimental.vector.match.v4i32.v4i32(<4 x i32> undef, <4 x i32> undef, <4 x i1> undef)
+  %match_v2i64_v2i64 = call <2 x i1> @llvm.experimental.vector.match.v2i64.v2i64(<2 x i64> undef, <2 x i64> undef, <2 x i1> undef)
+
+  ret void
+}
+
 declare <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64, i64)
 declare <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64, i64)
 declare <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64, i64)

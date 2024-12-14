@@ -33,7 +33,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Parser/parse-tree.h"
-#include "flang/Runtime/io-api.h"
+#include "flang/Runtime/io-api-consts.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
@@ -929,7 +929,7 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Location loc = converter.getCurrentLocation();
   mlir::arith::IntegerOverflowFlags flags{};
-  if (converter.getLoweringOptions().getNSWOnLoopVarInc())
+  if (!converter.getLoweringOptions().getIntegerWrapAround())
     flags = bitEnumSet(flags, mlir::arith::IntegerOverflowFlags::nsw);
   auto iofAttr =
       mlir::arith::IntegerOverflowFlagsAttr::get(builder.getContext(), flags);

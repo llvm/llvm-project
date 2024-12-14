@@ -15,8 +15,8 @@
 
 #  include_next <wchar.h>
 
-#elif !defined(_LIBCPP_WCHAR_H)
-#  define _LIBCPP_WCHAR_H
+#elif !defined(_LIBCPP___CXX03_WCHAR_H)
+#  define _LIBCPP___CXX03_WCHAR_H
 
 /*
     wchar.h synopsis
@@ -208,4 +208,4 @@ size_t wcsnrtombs(
 } // extern "C"
 #  endif // __cplusplus && (_LIBCPP_MSVCRT || __MVS__)
 
-#endif // _LIBCPP_WCHAR_H
+#endif // _LIBCPP___CXX03_WCHAR_H

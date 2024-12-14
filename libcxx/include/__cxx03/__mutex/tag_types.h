@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MUTEX_TAG_TYPES_H
-#define _LIBCPP___MUTEX_TAG_TYPES_H
+#ifndef _LIBCPP___CXX03___MUTEX_TAG_TYPES_H
+#define _LIBCPP___CXX03___MUTEX_TAG_TYPES_H
 
 #include <__cxx03/__config>
 
@@ -41,4 +41,4 @@ constexpr adopt_lock_t adopt_lock   = adopt_lock_t();
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MUTEX_TAG_TYPES_H
+#endif // _LIBCPP___CXX03___MUTEX_TAG_TYPES_H

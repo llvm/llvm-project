@@ -738,6 +738,9 @@ static void addSanitizers(const Triple &TargetTriple,
     if (LangOpts.Sanitize.has(SanitizerKind::NumericalStability))
       MPM.addPass(NumericalStabilitySanitizerPass());
 
+    if (LangOpts.Sanitize.has(SanitizerKind::Realtime))
+      MPM.addPass(RealtimeSanitizerPass());
+
     auto ASanPass = [&](SanitizerMask Mask, bool CompileKernel) {
       if (LangOpts.Sanitize.has(Mask)) {
         bool UseGlobalGC = asanUseGlobalsGC(TargetTriple, CodeGenOpts);
@@ -789,13 +792,12 @@ static void addSanitizers(const Triple &TargetTriple,
   }
 
   if (LowerAllowCheckPass::IsRequested()) {
-    // We can optimize after inliner, and PGO profile matching. The hook below
-    // is called at the end `buildFunctionSimplificationPipeline`, which called
-    // from `buildInlinerPipeline`, which called after profile matching.
-    PB.registerScalarOptimizerLateEPCallback(
-        [](FunctionPassManager &FPM, OptimizationLevel Level) {
-          FPM.addPass(LowerAllowCheckPass());
-        });
+    // We want to call it after inline, which is about OptimizerEarlyEPCallback.
+    PB.registerOptimizerEarlyEPCallback([](ModulePassManager &MPM,
+                                           OptimizationLevel Level,
+                                           ThinOrFullLTOPhase Phase) {
+      MPM.addPass(createModuleToFunctionPassAdaptor(LowerAllowCheckPass()));
+    });
   }
 }
 
@@ -1022,13 +1024,6 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
       PB.registerScalarOptimizerLateEPCallback(
           [](FunctionPassManager &FPM, OptimizationLevel Level) {
             FPM.addPass(BoundsCheckingPass());
-          });
-
-    if (LangOpts.Sanitize.has(SanitizerKind::Realtime))
-      PB.registerScalarOptimizerLateEPCallback(
-          [](FunctionPassManager &FPM, OptimizationLevel Level) {
-            RealtimeSanitizerOptions Opts;
-            FPM.addPass(RealtimeSanitizerPass(Opts));
           });
 
     // Don't add sanitizers if we are here from ThinLTO PostLink. That already
