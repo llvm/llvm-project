@@ -226,15 +226,6 @@ inline SwitchContext<MatchContext, Pattern> m_Context(const MatchContext &Ctx,
   return SwitchContext<MatchContext, Pattern>{Ctx, std::move(P)};
 }
 
-struct m_Mask {
-  ArrayRef<int> &MaskRef;
-  m_Mask(ArrayRef<int> &MaskRef) : MaskRef(MaskRef) {}
-  bool match(ArrayRef<int> Mask) {
-    MaskRef = Mask;
-    return true;
-  }
-};
-
 // === Value type ===
 struct ValueType_bind {
   EVT &BindVT;
@@ -549,21 +540,41 @@ struct BinaryOpc_match {
   }
 };
 
-/// Matches shuffle.
+/// Matching while capturing mask
 template <typename T0, typename T1> struct SDShuffle_match {
   T0 Op1;
   T1 Op2;
-  ArrayRef<int> Mask;
 
-  SDShuffle_match(const T0 &Op1, const T1 &Op2, const ArrayRef<int> &Mask)
-      : Op1(Op1), Op2(Op2), Mask(Mask) {}
+  const ArrayRef<int> *MaskRef;
+
+  // capturing mask
+  SDShuffle_match(const T0 &Op1, const T1 &Op2, const ArrayRef<int> &MaskRef)
+      : Op1(Op1), Op2(Op2), MaskRef(&MaskRef) {}
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
     if (auto *I = dyn_cast<ShuffleVectorSDNode>(N)) {
       return Op1.match(Ctx, I->getOperand(0)) &&
-             Op2.match(Ctx, I->getOperand(1)) &&
-             std::equal(Mask.begin(), Mask.end(), I->getMask().begin());
+             Op2.match(Ctx, I->getOperand(1));
+    }
+    return false;
+  }
+};
+
+/// Matching against a specific match
+template <typename T0, typename T1> struct SDShuffle_maskMatch {
+  T0 Op1;
+  T1 Op2;
+  ArrayRef<int> SpecificMask;
+
+  SDShuffle_maskMatch(const T0 &Op1, const T1 &Op2, const ArrayRef<int> Mask)
+      : Op1(Op1), Op2(Op2), SpecificMask(Mask) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    if (auto *I = dyn_cast<ShuffleVectorSDNode>(N)) {
+      return Op1.match(Ctx, I->getOperand(0)) &&
+             Op2.match(Ctx, I->getOperand(1)) && I->getMask() == SpecificMask;
     }
     return false;
   }
@@ -818,15 +829,17 @@ inline BinaryOpc_match<LHS, RHS> m_FRem(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS>(ISD::FREM, L, R);
 }
 
-template <typename LHS, typename RHS>
-inline BinaryOpc_match<LHS, RHS> m_Shuffle(const LHS &v1, const RHS &v2) {
-  return BinaryOpc_match<LHS, RHS>(ISD::VECTOR_SHUFFLE, v1, v2);
+template <typename V1_t, typename V2_t>
+inline SDShuffle_match<V1_t, V2_t> m_Shuffle(const V1_t &v1, const V2_t &v2,
+                                             const ArrayRef<int> &maskRef) {
+  return SDShuffle_match<V1_t, V2_t>(v1, v2, maskRef);
 }
 
 template <typename V1_t, typename V2_t>
-inline SDShuffle_match<V1_t, V2_t> m_Shuffle(const V1_t &v1, const V2_t &v2,
-                                             const ArrayRef<int> mask) {
-  return SDShuffle_match<V1_t, V2_t>(v1, v2, mask);
+inline SDShuffle_maskMatch<V1_t, V2_t>
+m_ShuffleSpecificMask(const V1_t &v1, const V2_t &v2,
+                      const ArrayRef<int> mask) {
+  return SDShuffle_maskMatch<V1_t, V2_t>(v1, v2, mask);
 }
 
 // === Unary operations ===
