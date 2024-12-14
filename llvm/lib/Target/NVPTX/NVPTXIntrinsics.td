@@ -7078,3 +7078,738 @@ defm INT_SET_MAXNREG_DEC : SET_MAXNREG<"dec", int_nvvm_setmaxnreg_dec_sync_align
 } // isConvergent
 
 def INT_EXIT : NVPTXInst<(outs), (ins), "exit;", [(int_nvvm_exit)]>;
+
+def : Pat<(int_nvvm_tex_1d_v4f32_s32 i64:$t, i64:$s, i32:$x),
+          (TEX_1D_F32_S32_RR $t, $s, $x)>;
+def : Pat<(int_nvvm_tex_1d_v4f32_f32 i64:$t, i64:$s, f32:$x),
+          (TEX_1D_F32_F32_RR $t, $s, $x)>;
+def : Pat<(int_nvvm_tex_1d_v4s32_s32 i64:$t, i64:$s, i32:$x),
+          (TEX_1D_S32_S32_RR $t, $s, $x)>;
+def : Pat<(int_nvvm_tex_1d_v4s32_f32 i64:$t, i64:$s, f32:$x),
+          (TEX_1D_S32_F32_RR $t, $s, $x)>;
+def : Pat<(int_nvvm_tex_1d_v4u32_s32 i64:$t, i64:$s, i32:$x),
+          (TEX_1D_U32_S32_RR $t, $s, $x)>;
+def : Pat<(int_nvvm_tex_1d_v4u32_f32 i64:$t, i64:$s, f32:$x),
+          (TEX_1D_U32_F32_RR $t, $s, $x)>;
+
+def : Pat<(int_nvvm_tex_1d_level_v4f32_f32 i64:$t, i64:$s, f32:$x, f32:$lod),
+          (TEX_1D_F32_F32_LEVEL_RR $t, $s, $x, $lod)>;
+def : Pat<(int_nvvm_tex_1d_level_v4s32_f32 i64:$t, i64:$s, f32:$x, f32:$lod),
+          (TEX_1D_S32_F32_LEVEL_RR $t, $s, $x, $lod)>;
+def : Pat<(int_nvvm_tex_1d_level_v4u32_f32 i64:$t, i64:$s, f32:$x, f32:$lod),
+          (TEX_1D_U32_F32_LEVEL_RR $t, $s, $x, $lod)>;
+
+def : Pat<(int_nvvm_tex_1d_grad_v4f32_f32 i64:$t, i64:$s, f32:$x, f32:$gradx, f32:$grady),
+          (TEX_1D_F32_F32_GRAD_RR $t, $s, $x, $gradx, $grady)>;
+def : Pat<(int_nvvm_tex_1d_grad_v4s32_f32 i64:$t, i64:$s, f32:$x, f32:$gradx, f32:$grady),
+          (TEX_1D_S32_F32_GRAD_RR $t, $s, $x, $gradx, $grady)>;
+def : Pat<(int_nvvm_tex_1d_grad_v4u32_f32 i64:$t, i64:$s, f32:$x, f32:$gradx, f32:$grady),
+          (TEX_1D_U32_F32_GRAD_RR $t, $s, $x, $gradx, $grady)>;
+
+def : Pat<(int_nvvm_tex_1d_array_v4f32_f32 i64:$t, i64:$s, i32:$l, f32:$x),
+          (TEX_1D_ARRAY_F32_F32_RR $t, $s, $l, $x)>;
+def : Pat<(int_nvvm_tex_1d_array_v4f32_s32 i64:$t, i64:$s, i32:$l, i32:$x),
+          (TEX_1D_ARRAY_F32_S32_RR $t, $s, $l, $x)>;
+def : Pat<(int_nvvm_tex_1d_array_v4s32_s32 i64:$t, i64:$s, i32:$l, i32:$x),
+          (TEX_1D_ARRAY_S32_S32_RR $t, $s, $l, $x)>;
+def : Pat<(int_nvvm_tex_1d_array_v4s32_f32 i64:$t, i64:$s, i32:$l, f32:$x),
+          (TEX_1D_ARRAY_S32_F32_RR $t, $s, $l, $x)>;
+def : Pat<(int_nvvm_tex_1d_array_v4u32_s32 i64:$t, i64:$s, i32:$l, i32:$x),
+          (TEX_1D_ARRAY_U32_S32_RR $t, $s, $l, $x)>;
+def : Pat<(int_nvvm_tex_1d_array_v4u32_f32 i64:$t, i64:$s, i32:$l, f32:$x),
+          (TEX_1D_ARRAY_U32_F32_RR $t, $s, $l, $x)>;
+
+def : Pat<(int_nvvm_tex_1d_array_level_v4f32_f32 i64:$t, i64:$s, i32:$l, f32:$x, f32:$lod),
+          (TEX_1D_ARRAY_F32_F32_LEVEL_RR $t, $s, $l, $x, $lod)>;
+def : Pat<(int_nvvm_tex_1d_array_level_v4s32_f32 i64:$t, i64:$s, i32:$l, f32:$x, f32:$lod),
+          (TEX_1D_ARRAY_S32_F32_LEVEL_RR $t, $s, $l, $x, $lod)>;
+def : Pat<(int_nvvm_tex_1d_array_level_v4u32_f32 i64:$t, i64:$s, i32:$l, f32:$x, f32:$lod),
+          (TEX_1D_ARRAY_U32_F32_LEVEL_RR $t, $s, $l, $x, $lod)>;
+
+def : Pat<(int_nvvm_tex_1d_array_grad_v4f32_f32 i64:$t, i64:$s, i32:$l, f32:$x, f32:$gradx, f32:$grady),
+          (TEX_1D_ARRAY_F32_F32_GRAD_RR $t, $s, $l, $x, $gradx, $grady)>;
+def : Pat<(int_nvvm_tex_1d_array_grad_v4s32_f32 i64:$t, i64:$s, i32:$l, f32:$x, f32:$gradx, f32:$grady),
+          (TEX_1D_ARRAY_S32_F32_GRAD_RR $t, $s, $l, $x, $gradx, $grady)>;
+def : Pat<(int_nvvm_tex_1d_array_grad_v4u32_f32 i64:$t, i64:$s, i32:$l, f32:$x, f32:$gradx, f32:$grady),
+          (TEX_1D_ARRAY_U32_F32_GRAD_RR $t, $s, $l, $x, $gradx, $grady)>;
+
+def : Pat<(int_nvvm_tex_2d_v4f32_f32 i64:$t, i64:$s, f32:$x, f32:$y),
+          (TEX_2D_F32_F32_RR $t, $s, $x, $y)>;
+def : Pat<(int_nvvm_tex_2d_v4f32_s32 i64:$t, i64:$s, i32:$x, i32:$y),
+          (TEX_2D_F32_S32_RR $t, $s, $x, $y)>;
+def : Pat<(int_nvvm_tex_2d_v4s32_s32 i64:$t, i64:$s, i32:$x, i32:$y),
+          (TEX_2D_S32_S32_RR $t, $s, $x, $y)>;
+def : Pat<(int_nvvm_tex_2d_v4s32_f32 i64:$t, i64:$s, f32:$x, f32:$y),
+          (TEX_2D_S32_F32_RR $t, $s, $x, $y)>;
+def : Pat<(int_nvvm_tex_2d_v4u32_s32 i64:$t, i64:$s, i32:$x, i32:$y),
+          (TEX_2D_U32_S32_RR $t, $s, $x, $y)>;
+def : Pat<(int_nvvm_tex_2d_v4u32_f32 i64:$t, i64:$s, f32:$x, f32:$y),
+          (TEX_2D_U32_F32_RR $t, $s, $x, $y)>;
+
+def : Pat<(int_nvvm_tex_2d_level_v4f32_f32 i64:$t, i64:$s, f32:$x, f32:$y, f32:$lod),
+          (TEX_2D_F32_F32_LEVEL_RR $t, $s, $x, $y, $lod)>;
+def : Pat<(int_nvvm_tex_2d_level_v4s32_f32 i64:$t, i64:$s, f32:$x, f32:$y, f32:$lod),
+          (TEX_2D_S32_F32_LEVEL_RR $t, $s, $x, $y, $lod)>;
+def : Pat<(int_nvvm_tex_2d_level_v4u32_f32 i64:$t, i64:$s, f32:$x, f32:$y, f32:$lod),
+          (TEX_2D_U32_F32_LEVEL_RR $t, $s, $x, $y, $lod)>;
+
+def : Pat<(int_nvvm_tex_2d_grad_v4f32_f32 i64:$t, i64:$s, f32:$x, f32:$y, f32:$gradx0, f32:$gradx1, f32:$grady0, f32:$grady1),
+          (TEX_2D_F32_F32_GRAD_RR $t, $s, $x, $y, $gradx0, $gradx1, $grady0, $grady1)>;
+def : Pat<(int_nvvm_tex_2d_grad_v4s32_f32 i64:$t, i64:$s, f32:$x, f32:$y, f32:$gradx0, f32:$gradx1, f32:$grady0, f32:$grady1),
+          (TEX_2D_S32_F32_GRAD_RR $t, $s, $x, $y, $gradx0, $gradx1, $grady0, $grady1)>;
+def : Pat<(int_nvvm_tex_2d_grad_v4u32_f32 i64:$t, i64:$s, f32:$x, f32:$y, f32:$gradx0, f32:$gradx1, f32:$grady0, f32:$grady1),
+          (TEX_2D_U32_F32_GRAD_RR $t, $s, $x, $y, $gradx0, $gradx1, $grady0, $grady1)>;
+
+def : Pat<(int_nvvm_tex_2d_array_v4f32_f32 i64:$t, i64:$s, i32:$l, f32:$x, f32:$y),
+          (TEX_2D_ARRAY_F32_F32_RR $t, $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_tex_2d_array_v4f32_s32 i64:$t, i64:$s, i32:$l, i32:$x, i32:$y),
+          (TEX_2D_ARRAY_F32_S32_RR $t, $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_tex_2d_array_v4s32_s32 i64:$t, i64:$s, i32:$l, i32:$x, i32:$y),
+          (TEX_2D_ARRAY_S32_S32_RR $t, $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_tex_2d_array_v4s32_f32 i64:$t, i64:$s, i32:$l, f32:$x, f32:$y),
+          (TEX_2D_ARRAY_S32_F32_RR $t, $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_tex_2d_array_v4u32_s32 i64:$t, i64:$s, i32:$l, i32:$x, i32:$y),
+          (TEX_2D_ARRAY_U32_S32_RR $t, $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_tex_2d_array_v4u32_f32 i64:$t, i64:$s, i32:$l, f32:$x, f32:$y),
+          (TEX_2D_ARRAY_U32_F32_RR $t, $s, $l, $x, $y)>;
+
+def : Pat<(int_nvvm_tex_2d_array_level_v4f32_f32 i64:$t, i64:$s, i32:$l, f32:$x, f32:$y, f32:$lod),
+          (TEX_2D_ARRAY_F32_F32_LEVEL_RR $t, $s, $l, $x, $y, $lod)>;
+def : Pat<(int_nvvm_tex_2d_array_level_v4s32_f32 i64:$t, i64:$s, i32:$l, f32:$x, f32:$y, f32:$lod),
+          (TEX_2D_ARRAY_S32_F32_LEVEL_RR $t, $s, $l, $x, $y, $lod)>;
+def : Pat<(int_nvvm_tex_2d_array_level_v4u32_f32 i64:$t, i64:$s, i32:$l, f32:$x, f32:$y, f32:$lod),
+          (TEX_2D_ARRAY_U32_F32_LEVEL_RR $t, $s, $l, $x, $y, $lod)>;
+
+def : Pat<(int_nvvm_tex_2d_array_grad_v4f32_f32 i64:$t, i64:$s, i32:$l, f32:$x, f32:$y, f32:$gradx0, f32:$gradx1, f32:$grady0, f32:$grady1),
+          (TEX_2D_ARRAY_F32_F32_GRAD_RR $t, $s, $l, $x, $y, $gradx0, $gradx1, $grady0, $grady1)>;
+def : Pat<(int_nvvm_tex_2d_array_grad_v4s32_f32 i64:$t, i64:$s, i32:$l, f32:$x, f32:$y, f32:$gradx0, f32:$gradx1, f32:$grady0, f32:$grady1),
+          (TEX_2D_ARRAY_S32_F32_GRAD_RR $t, $s, $l, $x, $y, $gradx0, $gradx1, $grady0, $grady1)>;
+def : Pat<(int_nvvm_tex_2d_array_grad_v4u32_f32 i64:$t, i64:$s, i32:$l, f32:$x, f32:$y, f32:$gradx0, f32:$gradx1, f32:$grady0, f32:$grady1),
+          (TEX_2D_ARRAY_U32_F32_GRAD_RR $t, $s, $l, $x, $y, $gradx0, $gradx1, $grady0, $grady1)>;
+
+def : Pat<(int_nvvm_tex_3d_v4f32_f32 i64:$t, i64:$s, f32:$x, f32:$y, f32:$z),
+          (TEX_3D_F32_F32_RR $t, $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_tex_3d_v4f32_s32 i64:$t, i64:$s, i32:$x, i32:$y, i32:$z),
+          (TEX_3D_F32_S32_RR $t, $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_tex_3d_v4s32_s32 i64:$t, i64:$s, i32:$x, i32:$y, i32:$z),
+          (TEX_3D_S32_S32_RR $t, $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_tex_3d_v4s32_f32 i64:$t, i64:$s, f32:$x, f32:$y, f32:$z),
+          (TEX_3D_S32_F32_RR $t, $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_tex_3d_v4u32_s32 i64:$t, i64:$s, i32:$x, i32:$y, i32:$z),
+          (TEX_3D_U32_S32_RR $t, $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_tex_3d_v4u32_f32 i64:$t, i64:$s, f32:$x, f32:$y, f32:$z),
+          (TEX_3D_U32_F32_RR $t, $s, $x, $y, $z)>;
+
+def : Pat<(int_nvvm_tex_3d_level_v4f32_f32 i64:$t, i64:$s, f32:$x, f32:$y, f32:$z, f32:$lod),
+          (TEX_3D_F32_F32_LEVEL_RR $t, $s, $x, $y, $z, $lod)>;
+def : Pat<(int_nvvm_tex_3d_level_v4s32_f32 i64:$t, i64:$s, f32:$x, f32:$y, f32:$z, f32:$lod),
+          (TEX_3D_S32_F32_LEVEL_RR $t, $s, $x, $y, $z, $lod)>;
+def : Pat<(int_nvvm_tex_3d_level_v4u32_f32 i64:$t, i64:$s, f32:$x, f32:$y, f32:$z, f32:$lod),
+          (TEX_3D_U32_F32_LEVEL_RR $t, $s, $x, $y, $z, $lod)>;
+
+def : Pat<(int_nvvm_tex_3d_grad_v4f32_f32 i64:$t, i64:$s, f32:$x, f32:$y, f32:$z, f32:$gradx0, f32:$gradx1, f32:$gradx2, f32:$grady0, f32:$grady1, f32:$grady2),
+          (TEX_3D_F32_F32_GRAD_RR $t, $s, $x, $y, $z, $gradx0, $gradx1, $gradx2, $grady0, $grady1, $grady2)>;
+def : Pat<(int_nvvm_tex_3d_grad_v4s32_f32 i64:$t, i64:$s, f32:$x, f32:$y, f32:$z, f32:$gradx0, f32:$gradx1, f32:$gradx2, f32:$grady0, f32:$grady1, f32:$grady2),
+          (TEX_3D_S32_F32_GRAD_RR $t, $s, $x, $y, $z, $gradx0, $gradx1, $gradx2, $grady0, $grady1, $grady2)>;
+def : Pat<(int_nvvm_tex_3d_grad_v4u32_f32 i64:$t, i64:$s, f32:$x, f32:$y, f32:$z, f32:$gradx0, f32:$gradx1, f32:$gradx2, f32:$grady0, f32:$grady1, f32:$grady2),
+          (TEX_3D_U32_F32_GRAD_RR $t, $s, $x, $y, $z, $gradx0, $gradx1, $gradx2, $grady0, $grady1, $grady2)>;
+
+def : Pat<(int_nvvm_tex_cube_v4f32_f32 i64:$t, i64:$s, f32:$x, f32:$y, f32:$z),
+          (TEX_CUBE_F32_F32_RR $t, $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_tex_cube_v4s32_f32 i64:$t, i64:$s, f32:$x, f32:$y, f32:$z),
+          (TEX_CUBE_S32_F32_RR $t, $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_tex_cube_v4u32_f32 i64:$t, i64:$s, f32:$x, f32:$y, f32:$z),
+          (TEX_CUBE_U32_F32_RR $t, $s, $x, $y, $z)>;
+
+def : Pat<(int_nvvm_tex_cube_level_v4f32_f32 i64:$t, i64:$s, f32:$x, f32:$y, f32:$z, f32:$lod),
+          (TEX_CUBE_F32_F32_LEVEL_RR $t, $s, $x, $y, $z, $lod)>;
+def : Pat<(int_nvvm_tex_cube_level_v4s32_f32 i64:$t, i64:$s, f32:$x, f32:$y, f32:$z, f32:$lod),
+          (TEX_CUBE_S32_F32_LEVEL_RR $t, $s, $x, $y, $z, $lod)>;
+def : Pat<(int_nvvm_tex_cube_level_v4u32_f32 i64:$t, i64:$s, f32:$x, f32:$y, f32:$z, f32:$lod),
+          (TEX_CUBE_U32_F32_LEVEL_RR $t, $s, $x, $y, $z, $lod)>;
+
+def : Pat<(int_nvvm_tex_cube_array_v4f32_f32 i64:$t, i64:$s, i32:$l, f32:$x, f32:$y, f32:$z),
+          (TEX_CUBE_ARRAY_F32_F32_RR $t, $s, $l, $x, $y, $z)>;
+def : Pat<(int_nvvm_tex_cube_array_v4s32_f32 i64:$t, i64:$s, i32:$l, f32:$x, f32:$y, f32:$z),
+          (TEX_CUBE_ARRAY_S32_F32_RR $t, $s, $l, $x, $y, $z)>;
+def : Pat<(int_nvvm_tex_cube_array_v4u32_f32 i64:$t, i64:$s, i32:$l, f32:$x, f32:$y, f32:$z),
+          (TEX_CUBE_ARRAY_U32_F32_RR $t, $s, $l, $x, $y, $z)>;
+
+def : Pat<(int_nvvm_tex_cube_array_level_v4f32_f32 i64:$t, i64:$s, i32:$l, f32:$x, f32:$y, f32:$z, f32:$lod),
+          (TEX_CUBE_ARRAY_F32_F32_LEVEL_RR $t, $s, $l, $x, $y, $z, $lod)>;
+def : Pat<(int_nvvm_tex_cube_array_level_v4s32_f32 i64:$t, i64:$s, i32:$l, f32:$x, f32:$y, f32:$z, f32:$lod),
+          (TEX_CUBE_ARRAY_S32_F32_LEVEL_RR $t, $s, $l, $x, $y, $z, $lod)>;
+def : Pat<(int_nvvm_tex_cube_array_level_v4u32_f32 i64:$t, i64:$s, i32:$l, f32:$x, f32:$y, f32:$z, f32:$lod),
+          (TEX_CUBE_ARRAY_U32_F32_LEVEL_RR $t, $s, $l, $x, $y, $z, $lod)>;
+
+def : Pat<(int_nvvm_tld4_r_2d_v4f32_f32 i64:$t, i64:$s, f32:$x, f32:$y),
+          (TLD4_R_2D_F32_F32_RR $t, $s, $x, $y)>;
+def : Pat<(int_nvvm_tld4_g_2d_v4f32_f32 i64:$t, i64:$s, f32:$x, f32:$y),
+          (TLD4_G_2D_F32_F32_RR $t, $s, $x, $y)>;
+def : Pat<(int_nvvm_tld4_b_2d_v4f32_f32 i64:$t, i64:$s, f32:$x, f32:$y),
+          (TLD4_B_2D_F32_F32_RR $t, $s, $x, $y)>;
+def : Pat<(int_nvvm_tld4_a_2d_v4f32_f32 i64:$t, i64:$s, f32:$x, f32:$y),
+          (TLD4_A_2D_F32_F32_RR $t, $s, $x, $y)>;
+def : Pat<(int_nvvm_tld4_r_2d_v4s32_f32 i64:$t, i64:$s, f32:$x, f32:$y),
+          (TLD4_R_2D_S32_F32_RR $t, $s, $x, $y)>;
+def : Pat<(int_nvvm_tld4_g_2d_v4s32_f32 i64:$t, i64:$s, f32:$x, f32:$y),
+          (TLD4_G_2D_S32_F32_RR $t, $s, $x, $y)>;
+def : Pat<(int_nvvm_tld4_b_2d_v4s32_f32 i64:$t, i64:$s, f32:$x, f32:$y),
+          (TLD4_B_2D_S32_F32_RR $t, $s, $x, $y)>;
+def : Pat<(int_nvvm_tld4_a_2d_v4s32_f32 i64:$t, i64:$s, f32:$x, f32:$y),
+          (TLD4_A_2D_S32_F32_RR $t, $s, $x, $y)>;
+def : Pat<(int_nvvm_tld4_r_2d_v4u32_f32 i64:$t, i64:$s, f32:$x, f32:$y),
+          (TLD4_R_2D_U32_F32_RR $t, $s, $x, $y)>;
+def : Pat<(int_nvvm_tld4_g_2d_v4u32_f32 i64:$t, i64:$s, f32:$x, f32:$y),
+          (TLD4_G_2D_U32_F32_RR $t, $s, $x, $y)>;
+def : Pat<(int_nvvm_tld4_b_2d_v4u32_f32 i64:$t, i64:$s, f32:$x, f32:$y),
+          (TLD4_B_2D_U32_F32_RR $t, $s, $x, $y)>;
+def : Pat<(int_nvvm_tld4_a_2d_v4u32_f32 i64:$t, i64:$s, f32:$x, f32:$y),
+          (TLD4_A_2D_U32_F32_RR $t, $s, $x, $y)>;
+
+def : Pat<(int_nvvm_tex_unified_1d_v4f32_s32 i64:$t, i32:$x),
+          (TEX_UNIFIED_1D_F32_S32_R $t, $x)>;
+def : Pat<(int_nvvm_tex_unified_1d_v4f32_f32 i64:$t, f32:$x),
+          (TEX_UNIFIED_1D_F32_F32_R $t, $x)>;
+def : Pat<(int_nvvm_tex_unified_1d_v4s32_s32 i64:$t, i32:$x),
+          (TEX_UNIFIED_1D_S32_S32_R $t, $x)>;
+def : Pat<(int_nvvm_tex_unified_1d_v4s32_f32 i64:$t, f32:$x),
+          (TEX_UNIFIED_1D_S32_F32_R $t, $x)>;
+def : Pat<(int_nvvm_tex_unified_1d_v4u32_s32 i64:$t, i32:$x),
+          (TEX_UNIFIED_1D_U32_S32_R $t, $x)>;
+def : Pat<(int_nvvm_tex_unified_1d_v4u32_f32 i64:$t, f32:$x),
+          (TEX_UNIFIED_1D_U32_F32_R $t, $x)>;
+
+def : Pat<(int_nvvm_tex_unified_1d_level_v4f32_f32 i64:$t, f32:$x, f32:$lod),
+          (TEX_UNIFIED_1D_F32_F32_LEVEL_R $t, $x, $lod)>;
+def : Pat<(int_nvvm_tex_unified_1d_level_v4s32_f32 i64:$t, f32:$x, f32:$lod),
+          (TEX_UNIFIED_1D_S32_F32_LEVEL_R $t, $x, $lod)>;
+def : Pat<(int_nvvm_tex_unified_1d_level_v4u32_f32 i64:$t, f32:$x, f32:$lod),
+          (TEX_UNIFIED_1D_U32_F32_LEVEL_R $t, $x, $lod)>;
+
+def : Pat<(int_nvvm_tex_unified_1d_grad_v4f32_f32 i64:$t, f32:$x, f32:$gradx, f32:$grady),
+          (TEX_UNIFIED_1D_F32_F32_GRAD_R $t, $x, $gradx, $grady)>;
+def : Pat<(int_nvvm_tex_unified_1d_grad_v4s32_f32 i64:$t, f32:$x, f32:$gradx, f32:$grady),
+          (TEX_UNIFIED_1D_S32_F32_GRAD_R $t, $x, $gradx, $grady)>;
+def : Pat<(int_nvvm_tex_unified_1d_grad_v4u32_f32 i64:$t, f32:$x, f32:$gradx, f32:$grady),
+          (TEX_UNIFIED_1D_U32_F32_GRAD_R $t, $x, $gradx, $grady)>;
+
+def : Pat<(int_nvvm_tex_unified_1d_array_v4f32_s32 i64:$t, i32:$l, i32:$x),
+          (TEX_UNIFIED_1D_ARRAY_F32_S32_R $t, $l, $x)>;
+def : Pat<(int_nvvm_tex_unified_1d_array_v4f32_f32 i64:$t, i32:$l, f32:$x),
+          (TEX_UNIFIED_1D_ARRAY_F32_F32_R $t, $l, $x)>;
+def : Pat<(int_nvvm_tex_unified_1d_array_v4s32_s32 i64:$t, i32:$l, i32:$x),
+          (TEX_UNIFIED_1D_ARRAY_S32_S32_R $t, $l, $x)>;
+def : Pat<(int_nvvm_tex_unified_1d_array_v4s32_f32 i64:$t, i32:$l, f32:$x),
+          (TEX_UNIFIED_1D_ARRAY_S32_F32_R $t, $l, $x)>;
+def : Pat<(int_nvvm_tex_unified_1d_array_v4u32_s32 i64:$t, i32:$l, i32:$x),
+          (TEX_UNIFIED_1D_ARRAY_U32_S32_R $t, $l, $x)>;
+def : Pat<(int_nvvm_tex_unified_1d_array_v4u32_f32 i64:$t, i32:$l, f32:$x),
+          (TEX_UNIFIED_1D_ARRAY_U32_F32_R $t, $l, $x)>;
+
+def : Pat<(int_nvvm_tex_unified_1d_array_level_v4f32_f32 i64:$t, i32:$l, f32:$x, f32:$lod),
+          (TEX_UNIFIED_1D_ARRAY_F32_F32_LEVEL_R $t, $l, $x, $lod)>;
+def : Pat<(int_nvvm_tex_unified_1d_array_level_v4s32_f32 i64:$t, i32:$l, f32:$x, f32:$lod),
+          (TEX_UNIFIED_1D_ARRAY_S32_F32_LEVEL_R $t, $l, $x, $lod)>;
+def : Pat<(int_nvvm_tex_unified_1d_array_level_v4u32_f32 i64:$t, i32:$l, f32:$x, f32:$lod),
+          (TEX_UNIFIED_1D_ARRAY_U32_F32_LEVEL_R $t, $l, $x, $lod)>;
+
+def : Pat<(int_nvvm_tex_unified_1d_array_grad_v4f32_f32 i64:$t, i32:$l, f32:$x, f32:$gradx, f32:$grady),
+          (TEX_UNIFIED_1D_ARRAY_F32_F32_GRAD_R $t, $l, $x, $gradx, $grady)>;
+def : Pat<(int_nvvm_tex_unified_1d_array_grad_v4s32_f32 i64:$t, i32:$l, f32:$x, f32:$gradx, f32:$grady),
+          (TEX_UNIFIED_1D_ARRAY_S32_F32_GRAD_R $t, $l, $x, $gradx, $grady)>;
+def : Pat<(int_nvvm_tex_unified_1d_array_grad_v4u32_f32 i64:$t, i32:$l, f32:$x, f32:$gradx, f32:$grady),
+          (TEX_UNIFIED_1D_ARRAY_U32_F32_GRAD_R $t, $l, $x, $gradx, $grady)>;
+
+def : Pat<(int_nvvm_tex_unified_2d_v4f32_s32 i64:$t, i32:$x, i32:$y),
+          (TEX_UNIFIED_2D_F32_S32_R $t, $x, $y)>;
+def : Pat<(int_nvvm_tex_unified_2d_v4f32_f32 i64:$t, f32:$x, f32:$y),
+          (TEX_UNIFIED_2D_F32_F32_R $t, $x, $y)>;
+def : Pat<(int_nvvm_tex_unified_2d_v4s32_s32 i64:$t, i32:$x, i32:$y),
+          (TEX_UNIFIED_2D_S32_S32_R $t, $x, $y)>;
+def : Pat<(int_nvvm_tex_unified_2d_v4s32_f32 i64:$t, f32:$x, f32:$y),
+          (TEX_UNIFIED_2D_S32_F32_R $t, $x, $y)>;
+def : Pat<(int_nvvm_tex_unified_2d_v4u32_s32 i64:$t, i32:$x, i32:$y),
+          (TEX_UNIFIED_2D_U32_S32_R $t, $x, $y)>;
+def : Pat<(int_nvvm_tex_unified_2d_v4u32_f32 i64:$t, f32:$x, f32:$y),
+          (TEX_UNIFIED_2D_U32_F32_R $t, $x, $y)>;
+
+def : Pat<(int_nvvm_tex_unified_2d_level_v4f32_f32 i64:$t, f32:$x, f32:$y, f32:$lod),
+          (TEX_UNIFIED_2D_F32_F32_LEVEL_R $t, $x, $y, $lod)>;
+def : Pat<(int_nvvm_tex_unified_2d_level_v4s32_f32 i64:$t, f32:$x, f32:$y, f32:$lod),
+          (TEX_UNIFIED_2D_S32_F32_LEVEL_R $t, $x, $y, $lod)>;
+def : Pat<(int_nvvm_tex_unified_2d_level_v4u32_f32 i64:$t, f32:$x, f32:$y, f32:$lod),
+          (TEX_UNIFIED_2D_U32_F32_LEVEL_R $t, $x, $y, $lod)>;
+
+def : Pat<(int_nvvm_tex_unified_2d_grad_v4f32_f32 i64:$t, f32:$x, f32:$y, f32:$gradx0, f32:$gradx1, f32:$grady0, f32:$grady1),
+          (TEX_UNIFIED_2D_F32_F32_GRAD_R $t, $x, $y, $gradx0, $gradx1, $grady0, $grady1)>;
+def : Pat<(int_nvvm_tex_unified_2d_grad_v4s32_f32 i64:$t, f32:$x, f32:$y, f32:$gradx0, f32:$gradx1, f32:$grady0, f32:$grady1),
+          (TEX_UNIFIED_2D_S32_F32_GRAD_R $t, $x, $y, $gradx0, $gradx1, $grady0, $grady1)>;
+def : Pat<(int_nvvm_tex_unified_2d_grad_v4u32_f32 i64:$t, f32:$x, f32:$y, f32:$gradx0, f32:$gradx1, f32:$grady0, f32:$grady1),
+          (TEX_UNIFIED_2D_U32_F32_GRAD_R $t, $x, $y, $gradx0, $gradx1, $grady0, $grady1)>;
+
+def : Pat<(int_nvvm_tex_unified_2d_array_v4f32_s32 i64:$t, i32:$l, i32:$x, i32:$y),
+          (TEX_UNIFIED_2D_ARRAY_F32_S32_R $t, $l, $x, $y)>;
+def : Pat<(int_nvvm_tex_unified_2d_array_v4f32_f32 i64:$t, i32:$l, f32:$x, f32:$y),
+          (TEX_UNIFIED_2D_ARRAY_F32_F32_R $t, $l, $x, $y)>;
+def : Pat<(int_nvvm_tex_unified_2d_array_v4s32_s32 i64:$t, i32:$l, i32:$x, i32:$y),
+          (TEX_UNIFIED_2D_ARRAY_S32_S32_R $t, $l, $x, $y)>;
+def : Pat<(int_nvvm_tex_unified_2d_array_v4s32_f32 i64:$t, i32:$l, f32:$x, f32:$y),
+          (TEX_UNIFIED_2D_ARRAY_S32_F32_R $t, $l, $x, $y)>;
+def : Pat<(int_nvvm_tex_unified_2d_array_v4u32_s32 i64:$t, i32:$l, i32:$x, i32:$y),
+          (TEX_UNIFIED_2D_ARRAY_U32_S32_R $t, $l, $x, $y)>;
+def : Pat<(int_nvvm_tex_unified_2d_array_v4u32_f32 i64:$t, i32:$l, f32:$x, f32:$y),
+          (TEX_UNIFIED_2D_ARRAY_U32_F32_R $t, $l, $x, $y)>;
+
+def : Pat<(int_nvvm_tex_unified_2d_array_level_v4f32_f32 i64:$t, i32:$l, f32:$x, f32:$y, f32:$lod),
+          (TEX_UNIFIED_2D_ARRAY_F32_F32_LEVEL_R $t, $l, $x, $y, $lod)>;
+def : Pat<(int_nvvm_tex_unified_2d_array_level_v4s32_f32 i64:$t, i32:$l, f32:$x, f32:$y, f32:$lod),
+          (TEX_UNIFIED_2D_ARRAY_S32_F32_LEVEL_R $t, $l, $x, $y, $lod)>;
+def : Pat<(int_nvvm_tex_unified_2d_array_level_v4u32_f32 i64:$t, i32:$l, f32:$x, f32:$y, f32:$lod),
+          (TEX_UNIFIED_2D_ARRAY_U32_F32_LEVEL_R $t, $l, $x, $y, $lod)>;
+
+def : Pat<(int_nvvm_tex_unified_2d_array_grad_v4f32_f32 i64:$t, i32:$l, f32:$x, f32:$y, f32:$gradx0, f32:$gradx1, f32:$grady0, f32:$grady1),
+          (TEX_UNIFIED_2D_ARRAY_F32_F32_GRAD_R $t, $l, $x, $y, $gradx0, $gradx1, $grady0, $grady1)>;
+def : Pat<(int_nvvm_tex_unified_2d_array_grad_v4s32_f32 i64:$t, i32:$l, f32:$x, f32:$y, f32:$gradx0, f32:$gradx1, f32:$grady0, f32:$grady1),
+          (TEX_UNIFIED_2D_ARRAY_S32_F32_GRAD_R $t, $l, $x, $y, $gradx0, $gradx1, $grady0, $grady1)>;
+def : Pat<(int_nvvm_tex_unified_2d_array_grad_v4u32_f32 i64:$t, i32:$l, f32:$x, f32:$y, f32:$gradx0, f32:$gradx1, f32:$grady0, f32:$grady1),
+          (TEX_UNIFIED_2D_ARRAY_U32_F32_GRAD_R $t, $l, $x, $y, $gradx0, $gradx1, $grady0, $grady1)>;
+
+def : Pat<(int_nvvm_tex_unified_3d_v4f32_s32 i64:$t, i32:$x, i32:$y, i32:$z),
+          (TEX_UNIFIED_3D_F32_S32_R $t, $x, $y, $z)>;
+def : Pat<(int_nvvm_tex_unified_3d_v4f32_f32 i64:$t, f32:$x, f32:$y, f32:$z),
+          (TEX_UNIFIED_3D_F32_F32_R $t, $x, $y, $z)>;
+def : Pat<(int_nvvm_tex_unified_3d_v4s32_s32 i64:$t, i32:$x, i32:$y, i32:$z),
+          (TEX_UNIFIED_3D_S32_S32_R $t, $x, $y, $z)>;
+def : Pat<(int_nvvm_tex_unified_3d_v4s32_f32 i64:$t, f32:$x, f32:$y, f32:$z),
+          (TEX_UNIFIED_3D_S32_F32_R $t, $x, $y, $z)>;
+def : Pat<(int_nvvm_tex_unified_3d_v4u32_s32 i64:$t, i32:$x, i32:$y, i32:$z),
+          (TEX_UNIFIED_3D_U32_S32_R $t, $x, $y, $z)>;
+def : Pat<(int_nvvm_tex_unified_3d_v4u32_f32 i64:$t, f32:$x, f32:$y, f32:$z),
+          (TEX_UNIFIED_3D_U32_F32_R $t, $x, $y, $z)>;
+
+def : Pat<(int_nvvm_tex_unified_3d_level_v4f32_f32 i64:$t, f32:$x, f32:$y, f32:$z, f32:$lod),
+          (TEX_UNIFIED_3D_F32_F32_LEVEL_R $t, $x, $y, $z, $lod)>;
+def : Pat<(int_nvvm_tex_unified_3d_level_v4s32_f32 i64:$t, f32:$x, f32:$y, f32:$z, f32:$lod),
+          (TEX_UNIFIED_3D_S32_F32_LEVEL_R $t, $x, $y, $z, $lod)>;
+def : Pat<(int_nvvm_tex_unified_3d_level_v4u32_f32 i64:$t, f32:$x, f32:$y, f32:$z, f32:$lod),
+          (TEX_UNIFIED_3D_U32_F32_LEVEL_R $t, $x, $y, $z, $lod)>;
+
+def : Pat<(int_nvvm_tex_unified_3d_grad_v4f32_f32 i64:$t, f32:$x, f32:$y, f32:$z, f32:$gradx0, f32:$gradx1, f32:$gradx2, f32:$grady0, f32:$grady1, f32:$grady2),
+          (TEX_UNIFIED_3D_F32_F32_GRAD_R $t, $x, $y, $z, $gradx0, $gradx1, $gradx2, $grady0, $grady1, $grady2)>;
+def : Pat<(int_nvvm_tex_unified_3d_grad_v4s32_f32 i64:$t, f32:$x, f32:$y, f32:$z, f32:$gradx0, f32:$gradx1, f32:$gradx2, f32:$grady0, f32:$grady1, f32:$grady2),
+          (TEX_UNIFIED_3D_S32_F32_GRAD_R $t, $x, $y, $z, $gradx0, $gradx1, $gradx2, $grady0, $grady1, $grady2)>;
+def : Pat<(int_nvvm_tex_unified_3d_grad_v4u32_f32 i64:$t, f32:$x, f32:$y, f32:$z, f32:$gradx0, f32:$gradx1, f32:$gradx2, f32:$grady0, f32:$grady1, f32:$grady2),
+          (TEX_UNIFIED_3D_U32_F32_GRAD_R $t, $x, $y, $z, $gradx0, $gradx1, $gradx2, $grady0, $grady1, $grady2)>;
+
+def : Pat<(int_nvvm_tex_unified_cube_v4f32_f32 i64:$t, f32:$x, f32:$y, f32:$z),
+          (TEX_UNIFIED_CUBE_F32_F32_R $t, $x, $y, $z)>;
+def : Pat<(int_nvvm_tex_unified_cube_v4s32_f32 i64:$t, f32:$x, f32:$y, f32:$z),
+          (TEX_UNIFIED_CUBE_S32_F32_R $t, $x, $y, $z)>;
+def : Pat<(int_nvvm_tex_unified_cube_v4u32_f32 i64:$t, f32:$x, f32:$y, f32:$z),
+          (TEX_UNIFIED_CUBE_U32_F32_R $t, $x, $y, $z)>;
+
+def : Pat<(int_nvvm_tex_unified_cube_level_v4f32_f32 i64:$t, f32:$x, f32:$y, f32:$z, f32:$lod),
+          (TEX_UNIFIED_CUBE_F32_F32_LEVEL_R $t, $x, $y, $z, $lod)>;
+def : Pat<(int_nvvm_tex_unified_cube_level_v4s32_f32 i64:$t, f32:$x, f32:$y, f32:$z, f32:$lod),
+          (TEX_UNIFIED_CUBE_S32_F32_LEVEL_R $t, $x, $y, $z, $lod)>;
+def : Pat<(int_nvvm_tex_unified_cube_level_v4u32_f32 i64:$t, f32:$x, f32:$y, f32:$z, f32:$lod),
+          (TEX_UNIFIED_CUBE_U32_F32_LEVEL_R $t, $x, $y, $z, $lod)>;
+
+def : Pat<(int_nvvm_tex_unified_cube_array_v4f32_f32 i64:$t, i32:$l, f32:$x, f32:$y, f32:$z),
+          (TEX_UNIFIED_CUBE_ARRAY_F32_F32_R $t, $l, $x, $y, $z)>;
+def : Pat<(int_nvvm_tex_unified_cube_array_v4s32_f32 i64:$t, i32:$l, f32:$x, f32:$y, f32:$z),
+          (TEX_UNIFIED_CUBE_ARRAY_S32_F32_R $t, $l, $x, $y, $z)>;
+def : Pat<(int_nvvm_tex_unified_cube_array_v4u32_f32 i64:$t, i32:$l, f32:$x, f32:$y, f32:$z),
+          (TEX_UNIFIED_CUBE_ARRAY_U32_F32_R $t, $l, $x, $y, $z)>;
+
+def : Pat<(int_nvvm_tex_unified_cube_array_level_v4f32_f32 i64:$t, i32:$l, f32:$x, f32:$y, f32:$z, f32:$lod),
+          (TEX_UNIFIED_CUBE_ARRAY_F32_F32_LEVEL_R $t, $l, $x, $y, $z, $lod)>;
+def : Pat<(int_nvvm_tex_unified_cube_array_level_v4s32_f32 i64:$t, i32:$l, f32:$x, f32:$y, f32:$z, f32:$lod),
+          (TEX_UNIFIED_CUBE_ARRAY_S32_F32_LEVEL_R $t, $l, $x, $y, $z, $lod)>;
+def : Pat<(int_nvvm_tex_unified_cube_array_level_v4u32_f32 i64:$t, i32:$l, f32:$x, f32:$y, f32:$z, f32:$lod),
+          (TEX_UNIFIED_CUBE_ARRAY_U32_F32_LEVEL_R $t, $l, $x, $y, $z, $lod)>;
+
+def : Pat<(int_nvvm_tex_unified_cube_grad_v4f32_f32 i64:$t, f32:$x, f32:$y, f32:$z, f32:$gradx0, f32:$gradx1, f32:$gradx2, f32:$grady0, f32:$grady1, f32:$grady2),
+          (TEX_UNIFIED_CUBE_F32_F32_GRAD_R $t, $x, $y, $z, $gradx0, $gradx1, $gradx2, $grady0, $grady1, $grady2)>;
+def : Pat<(int_nvvm_tex_unified_cube_grad_v4s32_f32 i64:$t, f32:$x, f32:$y, f32:$z, f32:$gradx0, f32:$gradx1, f32:$gradx2, f32:$grady0, f32:$grady1, f32:$grady2),
+          (TEX_UNIFIED_CUBE_S32_F32_GRAD_R $t, $x, $y, $z, $gradx0, $gradx1, $gradx2, $grady0, $grady1, $grady2)>;
+def : Pat<(int_nvvm_tex_unified_cube_grad_v4u32_f32 i64:$t, f32:$x, f32:$y, f32:$z, f32:$gradx0, f32:$gradx1, f32:$gradx2, f32:$grady0, f32:$grady1, f32:$grady2),
+          (TEX_UNIFIED_CUBE_U32_F32_GRAD_R $t, $x, $y, $z, $gradx0, $gradx1, $gradx2, $grady0, $grady1, $grady2)>;
+
+def : Pat<(int_nvvm_tex_unified_cube_array_grad_v4f32_f32 i64:$t, i32:$l, f32:$x, f32:$y, f32:$z, f32:$gradx0, f32:$gradx1, f32:$gradx2, f32:$grady0, f32:$grady1, f32:$grady2),
+          (TEX_UNIFIED_CUBE_ARRAY_F32_F32_GRAD_R $t, $l, $x, $y, $z, $gradx0, $gradx1, $gradx2, $grady0, $grady1, $grady2)>;
+def : Pat<(int_nvvm_tex_unified_cube_array_grad_v4s32_f32 i64:$t, i32:$l, f32:$x, f32:$y, f32:$z, f32:$gradx0, f32:$gradx1, f32:$gradx2, f32:$grady0, f32:$grady1, f32:$grady2),
+          (TEX_UNIFIED_CUBE_ARRAY_S32_F32_GRAD_R $t, $l, $x, $y, $z, $gradx0, $gradx1, $gradx2, $grady0, $grady1, $grady2)>;
+def : Pat<(int_nvvm_tex_unified_cube_array_grad_v4u32_f32 i64:$t, i32:$l, f32:$x, f32:$y, f32:$z, f32:$gradx0, f32:$gradx1, f32:$gradx2, f32:$grady0, f32:$grady1, f32:$grady2),
+          (TEX_UNIFIED_CUBE_ARRAY_U32_F32_GRAD_R $t, $l, $x, $y, $z, $gradx0, $gradx1, $gradx2, $grady0, $grady1, $grady2)>;
+
+def : Pat<(int_nvvm_tld4_unified_r_2d_v4f32_f32 i64:$t, f32:$x, f32:$y),
+          (TLD4_UNIFIED_R_2D_F32_F32_R $t, $x, $y)>;
+def : Pat<(int_nvvm_tld4_unified_g_2d_v4f32_f32 i64:$t, f32:$x, f32:$y),
+          (TLD4_UNIFIED_G_2D_F32_F32_R $t, $x, $y)>;
+def : Pat<(int_nvvm_tld4_unified_b_2d_v4f32_f32 i64:$t, f32:$x, f32:$y),
+          (TLD4_UNIFIED_B_2D_F32_F32_R $t, $x, $y)>;
+def : Pat<(int_nvvm_tld4_unified_a_2d_v4f32_f32 i64:$t, f32:$x, f32:$y),
+          (TLD4_UNIFIED_A_2D_F32_F32_R $t, $x, $y)>;
+def : Pat<(int_nvvm_tld4_unified_r_2d_v4s32_f32 i64:$t, f32:$x, f32:$y),
+          (TLD4_UNIFIED_R_2D_S32_F32_R $t, $x, $y)>;
+def : Pat<(int_nvvm_tld4_unified_g_2d_v4s32_f32 i64:$t, f32:$x, f32:$y),
+          (TLD4_UNIFIED_G_2D_S32_F32_R $t, $x, $y)>;
+def : Pat<(int_nvvm_tld4_unified_b_2d_v4s32_f32 i64:$t, f32:$x, f32:$y),
+          (TLD4_UNIFIED_B_2D_S32_F32_R $t, $x, $y)>;
+def : Pat<(int_nvvm_tld4_unified_a_2d_v4s32_f32 i64:$t, f32:$x, f32:$y),
+          (TLD4_UNIFIED_A_2D_S32_F32_R $t, $x, $y)>;
+def : Pat<(int_nvvm_tld4_unified_r_2d_v4u32_f32 i64:$t, f32:$x, f32:$y),
+          (TLD4_UNIFIED_R_2D_U32_F32_R $t, $x, $y)>;
+def : Pat<(int_nvvm_tld4_unified_g_2d_v4u32_f32 i64:$t, f32:$x, f32:$y),
+          (TLD4_UNIFIED_G_2D_U32_F32_R $t, $x, $y)>;
+def : Pat<(int_nvvm_tld4_unified_b_2d_v4u32_f32 i64:$t, f32:$x, f32:$y),
+          (TLD4_UNIFIED_B_2D_U32_F32_R $t, $x, $y)>;
+def : Pat<(int_nvvm_tld4_unified_a_2d_v4u32_f32 i64:$t, f32:$x, f32:$y),
+          (TLD4_UNIFIED_A_2D_U32_F32_R $t, $x, $y)>;
+
+def : Pat<(int_nvvm_suld_1d_i8_clamp i64:$s, i32:$x),
+          (SULD_1D_I8_CLAMP_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_i16_clamp i64:$s, i32:$x),
+          (SULD_1D_I16_CLAMP_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_i32_clamp i64:$s, i32:$x),
+          (SULD_1D_I32_CLAMP_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_i64_clamp i64:$s, i32:$x),
+          (SULD_1D_I64_CLAMP_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_v2i8_clamp i64:$s, i32:$x),
+          (SULD_1D_V2I8_CLAMP_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_v2i16_clamp i64:$s, i32:$x),
+          (SULD_1D_V2I16_CLAMP_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_v2i32_clamp i64:$s, i32:$x),
+          (SULD_1D_V2I32_CLAMP_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_v2i64_clamp i64:$s, i32:$x),
+          (SULD_1D_V2I64_CLAMP_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_v4i8_clamp i64:$s, i32:$x),
+          (SULD_1D_V4I8_CLAMP_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_v4i16_clamp i64:$s, i32:$x),
+          (SULD_1D_V4I16_CLAMP_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_v4i32_clamp i64:$s, i32:$x),
+          (SULD_1D_V4I32_CLAMP_R $s, $x)>;
+
+def : Pat<(int_nvvm_suld_1d_array_i8_clamp i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_I8_CLAMP_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_i16_clamp i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_I16_CLAMP_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_i32_clamp i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_I32_CLAMP_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_i64_clamp i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_I64_CLAMP_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_v2i8_clamp i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_V2I8_CLAMP_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_v2i16_clamp i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_V2I16_CLAMP_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_v2i32_clamp i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_V2I32_CLAMP_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_v2i64_clamp i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_V2I64_CLAMP_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_v4i8_clamp i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_V4I8_CLAMP_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_v4i16_clamp i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_V4I16_CLAMP_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_v4i32_clamp i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_V4I32_CLAMP_R $s, $l, $x)>;
+
+def : Pat<(int_nvvm_suld_2d_i8_clamp i64:$s, i32:$x, i32:$y),
+          (SULD_2D_I8_CLAMP_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_i16_clamp i64:$s, i32:$x, i32:$y),
+          (SULD_2D_I16_CLAMP_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_i32_clamp i64:$s, i32:$x, i32:$y),
+          (SULD_2D_I32_CLAMP_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_i64_clamp i64:$s, i32:$x, i32:$y),
+          (SULD_2D_I64_CLAMP_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_v2i8_clamp i64:$s, i32:$x, i32:$y),
+          (SULD_2D_V2I8_CLAMP_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_v2i16_clamp i64:$s, i32:$x, i32:$y),
+          (SULD_2D_V2I16_CLAMP_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_v2i32_clamp i64:$s, i32:$x, i32:$y),
+          (SULD_2D_V2I32_CLAMP_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_v2i64_clamp i64:$s, i32:$x, i32:$y),
+          (SULD_2D_V2I64_CLAMP_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_v4i8_clamp i64:$s, i32:$x, i32:$y),
+          (SULD_2D_V4I8_CLAMP_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_v4i16_clamp i64:$s, i32:$x, i32:$y),
+          (SULD_2D_V4I16_CLAMP_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_v4i32_clamp i64:$s, i32:$x, i32:$y),
+          (SULD_2D_V4I32_CLAMP_R $s, $x, $y)>;
+
+def : Pat<(int_nvvm_suld_2d_array_i8_clamp i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_I8_CLAMP_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_i16_clamp i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_I16_CLAMP_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_i32_clamp i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_I32_CLAMP_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_i64_clamp i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_I64_CLAMP_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_v2i8_clamp i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_V2I8_CLAMP_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_v2i16_clamp i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_V2I16_CLAMP_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_v2i32_clamp i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_V2I32_CLAMP_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_v2i64_clamp i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_V2I64_CLAMP_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_v4i8_clamp i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_V4I8_CLAMP_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_v4i16_clamp i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_V4I16_CLAMP_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_v4i32_clamp i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_V4I32_CLAMP_R $s, $l, $x, $y)>;
+
+def : Pat<(int_nvvm_suld_3d_i8_clamp i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_I8_CLAMP_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_i16_clamp i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_I16_CLAMP_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_i32_clamp i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_I32_CLAMP_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_i64_clamp i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_I64_CLAMP_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_v2i8_clamp i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_V2I8_CLAMP_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_v2i16_clamp i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_V2I16_CLAMP_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_v2i32_clamp i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_V2I32_CLAMP_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_v2i64_clamp i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_V2I64_CLAMP_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_v4i8_clamp i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_V4I8_CLAMP_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_v4i16_clamp i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_V4I16_CLAMP_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_v4i32_clamp i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_V4I32_CLAMP_R $s, $x, $y, $z)>;
+
+def : Pat<(int_nvvm_suld_1d_i8_trap i64:$s, i32:$x),
+          (SULD_1D_I8_TRAP_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_i16_trap i64:$s, i32:$x),
+          (SULD_1D_I16_TRAP_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_i32_trap i64:$s, i32:$x),
+          (SULD_1D_I32_TRAP_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_i64_trap i64:$s, i32:$x),
+          (SULD_1D_I64_TRAP_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_v2i8_trap i64:$s, i32:$x),
+          (SULD_1D_V2I8_TRAP_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_v2i16_trap i64:$s, i32:$x),
+          (SULD_1D_V2I16_TRAP_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_v2i32_trap i64:$s, i32:$x),
+          (SULD_1D_V2I32_TRAP_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_v2i64_trap i64:$s, i32:$x),
+          (SULD_1D_V2I64_TRAP_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_v4i8_trap i64:$s, i32:$x),
+          (SULD_1D_V4I8_TRAP_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_v4i16_trap i64:$s, i32:$x),
+          (SULD_1D_V4I16_TRAP_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_v4i32_trap i64:$s, i32:$x),
+          (SULD_1D_V4I32_TRAP_R $s, $x)>;
+
+def : Pat<(int_nvvm_suld_1d_array_i8_trap i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_I8_TRAP_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_i16_trap i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_I16_TRAP_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_i32_trap i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_I32_TRAP_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_i64_trap i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_I64_TRAP_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_v2i8_trap i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_V2I8_TRAP_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_v2i16_trap i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_V2I16_TRAP_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_v2i32_trap i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_V2I32_TRAP_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_v2i64_trap i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_V2I64_TRAP_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_v4i8_trap i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_V4I8_TRAP_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_v4i16_trap i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_V4I16_TRAP_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_v4i32_trap i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_V4I32_TRAP_R $s, $l, $x)>;
+
+def : Pat<(int_nvvm_suld_2d_i8_trap i64:$s, i32:$x, i32:$y),
+          (SULD_2D_I8_TRAP_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_i16_trap i64:$s, i32:$x, i32:$y),
+          (SULD_2D_I16_TRAP_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_i32_trap i64:$s, i32:$x, i32:$y),
+          (SULD_2D_I32_TRAP_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_i64_trap i64:$s, i32:$x, i32:$y),
+          (SULD_2D_I64_TRAP_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_v2i8_trap i64:$s, i32:$x, i32:$y),
+          (SULD_2D_V2I8_TRAP_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_v2i16_trap i64:$s, i32:$x, i32:$y),
+          (SULD_2D_V2I16_TRAP_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_v2i32_trap i64:$s, i32:$x, i32:$y),
+          (SULD_2D_V2I32_TRAP_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_v2i64_trap i64:$s, i32:$x, i32:$y),
+          (SULD_2D_V2I64_TRAP_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_v4i8_trap i64:$s, i32:$x, i32:$y),
+          (SULD_2D_V4I8_TRAP_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_v4i16_trap i64:$s, i32:$x, i32:$y),
+          (SULD_2D_V4I16_TRAP_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_v4i32_trap i64:$s, i32:$x, i32:$y),
+          (SULD_2D_V4I32_TRAP_R $s, $x, $y)>;
+
+def : Pat<(int_nvvm_suld_2d_array_i8_trap i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_I8_TRAP_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_i16_trap i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_I16_TRAP_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_i32_trap i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_I32_TRAP_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_i64_trap i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_I64_TRAP_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_v2i8_trap i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_V2I8_TRAP_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_v2i16_trap i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_V2I16_TRAP_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_v2i32_trap i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_V2I32_TRAP_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_v2i64_trap i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_V2I64_TRAP_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_v4i8_trap i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_V4I8_TRAP_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_v4i16_trap i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_V4I16_TRAP_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_v4i32_trap i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_V4I32_TRAP_R $s, $l, $x, $y)>;
+
+def : Pat<(int_nvvm_suld_3d_i8_trap i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_I8_TRAP_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_i16_trap i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_I16_TRAP_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_i32_trap i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_I32_TRAP_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_i64_trap i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_I64_TRAP_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_v2i8_trap i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_V2I8_TRAP_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_v2i16_trap i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_V2I16_TRAP_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_v2i32_trap i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_V2I32_TRAP_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_v2i64_trap i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_V2I64_TRAP_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_v4i8_trap i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_V4I8_TRAP_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_v4i16_trap i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_V4I16_TRAP_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_v4i32_trap i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_V4I32_TRAP_R $s, $x, $y, $z)>;
+
+def : Pat<(int_nvvm_suld_1d_i8_zero i64:$s, i32:$x),
+          (SULD_1D_I8_ZERO_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_i16_zero i64:$s, i32:$x),
+          (SULD_1D_I16_ZERO_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_i32_zero i64:$s, i32:$x),
+          (SULD_1D_I32_ZERO_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_i64_zero i64:$s, i32:$x),
+          (SULD_1D_I64_ZERO_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_v2i8_zero i64:$s, i32:$x),
+          (SULD_1D_V2I8_ZERO_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_v2i16_zero i64:$s, i32:$x),
+          (SULD_1D_V2I16_ZERO_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_v2i32_zero i64:$s, i32:$x),
+          (SULD_1D_V2I32_ZERO_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_v2i64_zero i64:$s, i32:$x),
+          (SULD_1D_V2I64_ZERO_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_v4i8_zero i64:$s, i32:$x),
+          (SULD_1D_V4I8_ZERO_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_v4i16_zero i64:$s, i32:$x),
+          (SULD_1D_V4I16_ZERO_R $s, $x)>;
+def : Pat<(int_nvvm_suld_1d_v4i32_zero i64:$s, i32:$x),
+          (SULD_1D_V4I32_ZERO_R $s, $x)>;
+
+def : Pat<(int_nvvm_suld_1d_array_i8_zero i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_I8_ZERO_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_i16_zero i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_I16_ZERO_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_i32_zero i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_I32_ZERO_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_i64_zero i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_I64_ZERO_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_v2i8_zero i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_V2I8_ZERO_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_v2i16_zero i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_V2I16_ZERO_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_v2i32_zero i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_V2I32_ZERO_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_v2i64_zero i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_V2I64_ZERO_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_v4i8_zero i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_V4I8_ZERO_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_v4i16_zero i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_V4I16_ZERO_R $s, $l, $x)>;
+def : Pat<(int_nvvm_suld_1d_array_v4i32_zero i64:$s, i32:$l, i32:$x),
+          (SULD_1D_ARRAY_V4I32_ZERO_R $s, $l, $x)>;
+
+def : Pat<(int_nvvm_suld_2d_i8_zero i64:$s, i32:$x, i32:$y),
+          (SULD_2D_I8_ZERO_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_i16_zero i64:$s, i32:$x, i32:$y),
+          (SULD_2D_I16_ZERO_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_i32_zero i64:$s, i32:$x, i32:$y),
+          (SULD_2D_I32_ZERO_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_i64_zero i64:$s, i32:$x, i32:$y),
+          (SULD_2D_I64_ZERO_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_v2i8_zero i64:$s, i32:$x, i32:$y),
+          (SULD_2D_V2I8_ZERO_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_v2i16_zero i64:$s, i32:$x, i32:$y),
+          (SULD_2D_V2I16_ZERO_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_v2i32_zero i64:$s, i32:$x, i32:$y),
+          (SULD_2D_V2I32_ZERO_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_v2i64_zero i64:$s, i32:$x, i32:$y),
+          (SULD_2D_V2I64_ZERO_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_v4i8_zero i64:$s, i32:$x, i32:$y),
+          (SULD_2D_V4I8_ZERO_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_v4i16_zero i64:$s, i32:$x, i32:$y),
+          (SULD_2D_V4I16_ZERO_R $s, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_v4i32_zero i64:$s, i32:$x, i32:$y),
+          (SULD_2D_V4I32_ZERO_R $s, $x, $y)>;
+
+def : Pat<(int_nvvm_suld_2d_array_i8_zero i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_I8_ZERO_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_i16_zero i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_I16_ZERO_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_i32_zero i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_I32_ZERO_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_i64_zero i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_I64_ZERO_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_v2i8_zero i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_V2I8_ZERO_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_v2i16_zero i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_V2I16_ZERO_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_v2i32_zero i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_V2I32_ZERO_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_v2i64_zero i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_V2I64_ZERO_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_v4i8_zero i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_V4I8_ZERO_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_v4i16_zero i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_V4I16_ZERO_R $s, $l, $x, $y)>;
+def : Pat<(int_nvvm_suld_2d_array_v4i32_zero i64:$s, i32:$l, i32:$x, i32:$y),
+          (SULD_2D_ARRAY_V4I32_ZERO_R $s, $l, $x, $y)>;
+
+def : Pat<(int_nvvm_suld_3d_i8_zero i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_I8_ZERO_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_i16_zero i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_I16_ZERO_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_i32_zero i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_I32_ZERO_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_i64_zero i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_I64_ZERO_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_v2i8_zero i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_V2I8_ZERO_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_v2i16_zero i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_V2I16_ZERO_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_v2i32_zero i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_V2I32_ZERO_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_v2i64_zero i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_V2I64_ZERO_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_v4i8_zero i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_V4I8_ZERO_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_v4i16_zero i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_V4I16_ZERO_R $s, $x, $y, $z)>;
+def : Pat<(int_nvvm_suld_3d_v4i32_zero i64:$s, i32:$x, i32:$y, i32:$z),
+          (SULD_3D_V4I32_ZERO_R $s, $x, $y, $z)>;
