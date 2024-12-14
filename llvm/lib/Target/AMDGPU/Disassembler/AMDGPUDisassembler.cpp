@@ -1695,10 +1695,11 @@ AMDGPUDisassembler::decodeNonVGPRSrcOp(const OpWidthTy Width, unsigned Val,
   case OPW64:
   case OPWV232:
     return decodeSpecialReg64(Val);
+  case OPW96:
   case OPW128:
   case OPW256:
   case OPW512:
-    return decodeSpecialReg128(Val);
+    return decodeSpecialReg96Plus(Val);
   default:
     llvm_unreachable("unexpected immediate type");
   }
@@ -1785,7 +1786,7 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg64(unsigned Val) const {
   return errOperand(Val, "unknown operand encoding " + Twine(Val));
 }
 
-MCOperand AMDGPUDisassembler::decodeSpecialReg128(unsigned Val) const {
+MCOperand AMDGPUDisassembler::decodeSpecialReg96Plus(unsigned Val) const {
   using namespace AMDGPU;
 
   switch (Val) {
