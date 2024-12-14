@@ -105,7 +105,7 @@ public:
         return true;
       }
 
-      LambdaExpr *findLambdaInArg(Expr* E) {
+      LambdaExpr *findLambdaInArg(Expr *E) {
         if (auto *Lambda = dyn_cast_or_null<LambdaExpr>(E))
           return Lambda;
         auto *TempExpr = dyn_cast_or_null<CXXBindTemporaryExpr>(E);
