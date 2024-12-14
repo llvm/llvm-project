@@ -72,7 +72,7 @@ static rpc::Status handle_offload_opcodes(plugin::GenericDeviceTy &Device,
   else if (NumLanes == 64)
     return handle_offload_opcodes<64>(Device, Port);
   else
-    return rpc::ERROR;
+    return rpc::RPC_ERROR;
 }
 
 RPCServerTy::RPCServerTy(plugin::GenericPluginTy &Plugin)

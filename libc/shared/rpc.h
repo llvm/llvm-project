@@ -45,7 +45,7 @@ namespace rpc {
 /// Generic codes that can be used whem implementing the server.
 enum Status {
   SUCCESS = 0x0,
-  ERROR = 0x1000,
+  RPC_ERROR = 0x1000,
   UNHANDLED_OPCODE = 0x1001,
 };
 

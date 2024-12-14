@@ -455,7 +455,7 @@ rpc::Status handle_libc_opcodes(rpc::Server::Port &port, uint32_t num_lanes) {
   case 64:
     return handle_port_impl<64>(port);
   default:
-    return rpc::ERROR;
+    return rpc::RPC_ERROR;
   }
 }
 } // namespace rpc
