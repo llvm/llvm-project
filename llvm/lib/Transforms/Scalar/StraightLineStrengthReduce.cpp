@@ -78,6 +78,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -92,6 +93,9 @@ using namespace PatternMatch;
 
 static const unsigned UnknownAddressSpace =
     std::numeric_limits<unsigned>::max();
+
+DEBUG_COUNTER(StraightLineStrengthReduceCounter, "slsr-counter",
+              "Controls whether rewriteCandidateWithBasis is executed.");
 
 namespace {
 
@@ -690,7 +694,8 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
   while (!Candidates.empty()) {
     const Candidate &C = Candidates.back();
     if (C.Basis != nullptr) {
-      rewriteCandidateWithBasis(C, *C.Basis);
+      if (DebugCounter::shouldExecute(StraightLineStrengthReduceCounter))
+        rewriteCandidateWithBasis(C, *C.Basis);
     }
     Candidates.pop_back();
   }
