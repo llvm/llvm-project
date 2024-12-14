@@ -993,8 +993,7 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
     unsigned Idx = 0;
     for (auto &StackFrame : CS) {
       uint64_t StackId = computeStackId(StackFrame);
-      LocHashToCallSites[StackId].insert(
-        ArrayRef<Frame>(CS).drop_front(Idx++));
+      LocHashToCallSites[StackId].insert(ArrayRef<Frame>(CS).drop_front(Idx++));
       ProfileHasColumns |= StackFrame.Column;
       // Once we find this function, we can stop recording.
       if (StackFrame.Function == FuncGUID)
