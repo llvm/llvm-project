@@ -721,9 +721,9 @@ public:
       return emitError(loc, "expected integer value");
 
     // Unlike the parseOptionalInteger used below for integral types, the
-    // virtual APInt does not check for whether the parsed integer fits in the
-    // width we want or whether its signednes matches the requested one.. Check
-    // here.
+    // virtual APInt version does not check for whether the parsed integer fits
+    // in the width we want or whether its signednes matches the requested one.
+    // Check here.
     if (signedness == IntegerType::Unsigned && apintResult.isNegative())
       return emitError(loc, "negative integer when unsigned expected");
     APInt sextOrTrunc = apintResult.sextOrTrunc(bitWidth);
