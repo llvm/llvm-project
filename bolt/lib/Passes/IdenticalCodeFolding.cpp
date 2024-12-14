@@ -15,6 +15,7 @@
 #include "bolt/Core/ParallelUtilities.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Timer.h"
 #include <atomic>
@@ -43,20 +44,24 @@ TimeICF("time-icf",
   cl::ZeroOrMore,
   cl::cat(BoltOptCategory));
 
-cl::opt<bolt::IdenticalCodeFolding::ICFLevel> ICF(
-    "icf", cl::desc("fold functions with identical code"),
-    cl::init(bolt::IdenticalCodeFolding::ICFLevel::None),
-    cl::values(clEnumValN(bolt::IdenticalCodeFolding::ICFLevel::All, "all",
-                          "Enable identical code folding"),
-               clEnumValN(bolt::IdenticalCodeFolding::ICFLevel::All, "1",
-                          "Enable identical code folding"),
-               clEnumValN(bolt::IdenticalCodeFolding::ICFLevel::All, "",
-                          "Enable identical code folding"),
-               clEnumValN(bolt::IdenticalCodeFolding::ICFLevel::None, "none",
-                          "Disable identical code folding (default)"),
-               clEnumValN(bolt::IdenticalCodeFolding::ICFLevel::Safe, "safe",
-                          "Enable safe identical code folding")),
-    cl::ZeroOrMore, cl::ValueOptional, cl::cat(BoltOptCategory));
+cl::opt<bolt::IdenticalCodeFolding::ICFLevel, false,
+        DeprecatedICFNumericOptionParser>
+    ICF("icf", cl::desc("fold functions with identical code"),
+        cl::init(bolt::IdenticalCodeFolding::ICFLevel::None),
+        cl::values(clEnumValN(bolt::IdenticalCodeFolding::ICFLevel::All, "all",
+                              "Enable identical code folding"),
+                   clEnumValN(bolt::IdenticalCodeFolding::ICFLevel::All, "1",
+                              "Enable identical code folding"),
+                   clEnumValN(bolt::IdenticalCodeFolding::ICFLevel::All, "",
+                              "Enable identical code folding"),
+                   clEnumValN(bolt::IdenticalCodeFolding::ICFLevel::None,
+                              "none",
+                              "Disable identical code folding (default)"),
+                   clEnumValN(bolt::IdenticalCodeFolding::ICFLevel::None, "0",
+                              "Disable identical code folding (default)"),
+                   clEnumValN(bolt::IdenticalCodeFolding::ICFLevel::Safe,
+                              "safe", "Enable safe identical code folding")),
+        cl::ZeroOrMore, cl::ValueOptional, cl::cat(BoltOptCategory));
 } // namespace opts
 
 /// Compare two jump tables in 2 functions. The function relies on consistent
@@ -356,7 +361,6 @@ typedef std::unordered_map<BinaryFunction *, std::vector<BinaryFunction *>,
 namespace llvm {
 namespace bolt {
 void IdenticalCodeFolding::initVTableReferences(const BinaryContext &BC) {
-  initVtable();
   for (const auto &[Address, Data] : BC.getBinaryData()) {
     // Filter out all symbols that are not vtables.
     if (!Data->getName().starts_with("_ZTV"))
@@ -365,6 +369,7 @@ void IdenticalCodeFolding::initVTableReferences(const BinaryContext &BC) {
       setAddressUsedInVTable(I);
   }
 }
+
 void IdenticalCodeFolding::analyzeDataRelocations(BinaryContext &BC) {
   initVTableReferences(BC);
   // For static relocations there should be a symbol for function references.
@@ -378,7 +383,7 @@ void IdenticalCodeFolding::analyzeDataRelocations(BinaryContext &BC) {
       if (BinaryFunction *BF = BC.getFunctionForSymbol(Rel.Symbol))
         BF->setHasAddressTaken(true);
     }
-    // For dyanmic relocations there are two cases:
+    // For dynamic relocations there are two cases:
     // 1: No symbol and only addend.
     // 2: There is symbol, but it references undefined symbol, or things like
     // type information. As the result only using addend to lookup BF is a valid
@@ -395,12 +400,13 @@ void IdenticalCodeFolding::analyzeDataRelocations(BinaryContext &BC) {
     }
   }
 }
+
 void IdenticalCodeFolding::analyzeFunctions(BinaryContext &BC) {
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
     for (const BinaryBasicBlock &BB : BF)
       for (const MCInst &Inst : BB)
         if (!(BC.MIB->isCall(Inst) || BC.MIB->isBranch(Inst)))
-          BF.analyzeInstructionForFuncReference(BC, Inst);
+          BF.analyzeInstructionForFuncReference(Inst);
   };
   ParallelUtilities::PredicateTy SkipFunc =
       [&](const BinaryFunction &BF) -> bool { return !BF.hasCFG(); };
@@ -417,6 +423,7 @@ void IdenticalCodeFolding::analyzeFunctions(BinaryContext &BC) {
     }
   });
 }
+
 void IdenticalCodeFolding::markFunctionsUnsafeToFold(BinaryContext &BC) {
   NamedRegionTimer MarkFunctionsUnsafeToFoldTimer(
       "markFunctionsUnsafeToFold", "markFunctionsUnsafeToFold", "ICF breakdown",

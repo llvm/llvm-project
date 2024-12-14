@@ -28,7 +28,9 @@ using namespace bolt;
 namespace opts {
 extern cl::OptionCategory BoltDiffCategory;
 extern cl::opt<bool> NeverPrint;
-extern cl::opt<bolt::IdenticalCodeFolding::ICFLevel> ICF;
+extern cl::opt<bolt::IdenticalCodeFolding::ICFLevel, false,
+               llvm::bolt::DeprecatedICFNumericOptionParser>
+    ICF;
 
 static cl::opt<bool> IgnoreLTOSuffix(
     "ignore-lto-suffix",

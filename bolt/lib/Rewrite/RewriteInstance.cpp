@@ -87,7 +87,9 @@ extern cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions;
 extern cl::opt<bool> TerminalTrap;
 extern cl::opt<bool> TimeBuild;
 extern cl::opt<bool> TimeRewrite;
-extern cl::opt<bolt::IdenticalCodeFolding::ICFLevel> ICF;
+extern cl::opt<bolt::IdenticalCodeFolding::ICFLevel, false,
+               llvm::bolt::DeprecatedICFNumericOptionParser>
+    ICF;
 
 cl::opt<bool> AllowStripped("allow-stripped",
                             cl::desc("allow processing of stripped binaries"),

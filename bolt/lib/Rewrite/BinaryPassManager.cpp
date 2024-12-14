@@ -54,7 +54,9 @@ extern cl::opt<bool> PrintDynoStats;
 extern cl::opt<bool> DumpDotAll;
 extern cl::opt<std::string> AsmDump;
 extern cl::opt<bolt::PLTCall::OptType> PLT;
-extern cl::opt<bolt::IdenticalCodeFolding::ICFLevel> ICF;
+extern cl::opt<bolt::IdenticalCodeFolding::ICFLevel, false,
+               llvm::bolt::DeprecatedICFNumericOptionParser>
+    ICF;
 
 static cl::opt<bool>
 DynoStatsAll("dyno-stats-all",

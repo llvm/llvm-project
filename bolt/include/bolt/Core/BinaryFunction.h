@@ -2103,9 +2103,8 @@ public:
   // adjustments.
   void handleAArch64IndirectCall(MCInst &Instruction, const uint64_t Offset);
 
-  /// Analyze instruction to identify a function references.
-  void analyzeInstructionForFuncReference(BinaryContext &BC,
-                                          const MCInst &Inst);
+  /// Analyze instruction to identify a function reference.
+  void analyzeInstructionForFuncReference(const MCInst &Inst);
 
   /// Scan function for references to other functions. In relocation mode,
   /// add relocations for external references. In non-relocation mode, detect
