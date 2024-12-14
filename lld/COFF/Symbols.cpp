@@ -28,8 +28,8 @@ static_assert(sizeof(SymbolUnion) <= 48,
               "symbols should be optimized for memory usage");
 
 // Returns a symbol name for an error message.
-static std::string maybeDemangleSymbol(const COFFLinkerContext &ctx,
-                                       StringRef symName) {
+std::string maybeDemangleSymbol(const COFFLinkerContext &ctx,
+                                StringRef symName) {
   if (ctx.config.demangle) {
     std::string prefix;
     StringRef prefixless = symName;
