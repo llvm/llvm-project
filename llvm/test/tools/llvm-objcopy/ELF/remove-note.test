@@ -1,4 +1,5 @@
 # RUN: not llvm-objcopy --remove-note= - 2>&1 | FileCheck %s --check-prefix=ERR-NOTYPEID
+# RUN: not llvm-objcopy --remove-note=CORE/ - 2>&1 | FileCheck %s --check-prefix=ERR-NOTYPEID
 # RUN: not llvm-objcopy --remove-note=/1 - 2>&1 | FileCheck %s --check-prefix=ERR-EMPTYNAME
 # RUN: not llvm-objcopy --remove-note=CORE/1/2 - 2>&1 | FileCheck %s --check-prefix=ERR-INVNUM1
 # RUN: not llvm-objcopy --remove-note=Notanumber - 2>&1 | FileCheck %s --check-prefix=ERR-INVNUM2
@@ -9,15 +10,13 @@
 # ERR-INVNUM1: error: bad note type_id for --remove-note: '1/2'
 # ERR-INVNUM2: error: bad note type_id for --remove-note: 'Notanumber'
 
-# RUN: yaml2obj -D ALIGN=8 %s -o - \
-# RUN:   | llvm-objcopy --remove-note=0x01 --remove-note=DUMMY/0x02 --remove-note=CORE/0x03 - - \
-# RUN:   | llvm-readobj --segments --sections --notes - \
-# RUN:   | FileCheck %s -D#SIZE=64
+# RUN: yaml2obj -D ALIGN=8 %s -o %t8
+# RUN: llvm-objcopy --remove-note=0x01 --remove-note=DUMMY/2 --remove-note=CORE/0x03 %t8 %t8o
+# RUN: llvm-readobj --segments --sections --notes %t8o | FileCheck %s -D#SIZE=64
 
-# RUN: yaml2obj -D ALIGN=4 %s -o - \
-# RUN:   | llvm-objcopy --remove-note=0x01 --remove-note=DUMMY/0x02 --remove-note=CORE/0x03 - - \
-# RUN:   | llvm-readobj --segments --sections --notes - \
-# RUN:   | FileCheck %s -D#SIZE=48
+# RUN: yaml2obj -D ALIGN=4 %s -o %t4
+# RUN: llvm-objcopy --remove-note=0x01 --remove-note=DUMMY/0x02 --remove-note=CORE/3 %t4 %t4o
+# RUN: llvm-readobj --segments --sections --notes %t4o | FileCheck %s -D#SIZE=48
 
 # CHECK:      Sections [
 # CHECK:        Section {
