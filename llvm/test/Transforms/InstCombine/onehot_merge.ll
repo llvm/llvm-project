@@ -1369,6 +1369,27 @@ define i1 @icmp_logical_and_trunc(i8 %k, i8 %c1) {
   ret i1 %ret
 }
 
+define i1 @trunc_logical_and_icmp_and_icmps(i8 %x, i8 %y, i8 %c1) {
+; CHECK-LABEL: @trunc_logical_and_icmp_and_icmps(
+; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze i8 [[Z_SHIFT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[TMP4]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[TMP3]], i1 [[C1]], i1 false
+; CHECK-NEXT:    ret i1 [[AND2]]
+;
+  %t = shl i8 1, %c1
+  %t1 = and i8 %x, %t
+  %trunc = trunc i8 %x to i1
+  %icmp1 = icmp eq i8 %y, 42
+  %and1 = select i1 %trunc, i1 %icmp1, i1 false
+  %icmp2 = icmp ne i8 %t1, 0
+  %and2 = and i1 %icmp2, %and1
+  ret i1 %and2
+}
+
 define <2 x i1> @trunc_and_icmp_vec(<2 x i8> %k, <2 x i8> %c1) {
 ; CHECK-LABEL: @trunc_and_icmp_vec(
 ; CHECK-NEXT:    [[T:%.*]] = shl nuw <2 x i8> splat (i8 1), [[C1:%.*]]
