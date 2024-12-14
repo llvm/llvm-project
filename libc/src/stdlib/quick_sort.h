@@ -63,13 +63,36 @@ size_t partition(const Array &array, size_t pivot_index, const F &is_less) {
   return num_lt;
 }
 
-template <typename F> void quick_sort(Array &array, const F &is_less) {
+template <typename F>
+void quick_sort_impl(Array &array, const void *ancestor_pivot,
+                     const F &is_less) {
   while (true) {
     const size_t array_len = array.len();
     if (array_len <= 1)
       return;
 
     const size_t pivot_index = choose_pivot(array, is_less);
+
+    // If the chosen pivot is equal to the predecessor, then it's the smallest
+    // element in the slice. Partition the slice into elements equal to and
+    // elements greater than the pivot. This case is usually hit when the slice
+    // contains many duplicate elements.
+    if (ancestor_pivot) {
+      if (!is_less(ancestor_pivot, array.get(pivot_index))) {
+        const size_t num_lt =
+            partition(array, pivot_index,
+                      [is_less](const void *a, const void *b) noexcept -> bool {
+                        return !is_less(b, a);
+                      });
+
+        // Continue sorting elements greater than the pivot. We know that
+        // `num_lt` cont
+        array.reset_bounds(num_lt + 1, array.len() - (num_lt + 1));
+        ancestor_pivot = nullptr;
+        continue;
+      }
+    }
+
     size_t split_index = partition(array, pivot_index, is_less);
 
     if (array_len == 2)
@@ -78,6 +101,7 @@ template <typename F> void quick_sort(Array &array, const F &is_less) {
 
     // Split the array into `left`, `pivot`, and `right`.
     Array left = array.make_array(0, split_index);
+    const void *pivot = array.get(split_index);
     const size_t right_start = split_index + 1;
     Array right = array.make_array(right_start, array.len() - right_start);
 
@@ -86,13 +110,19 @@ template <typename F> void quick_sort(Array &array, const F &is_less) {
     // by log2 of the total array size, because every recursive call is sorting
     // a list at most half the length of the one in its caller.
     if (left.len() < right.len()) {
-      quick_sort(left, is_less);
+      quick_sort_impl(left, ancestor_pivot, is_less);
       array.reset_bounds(right_start, right.len());
+      ancestor_pivot = pivot;
     } else {
-      quick_sort(right, is_less);
+      quick_sort_impl(right, pivot, is_less);
       array.reset_bounds(0, left.len());
     }
   }
+}
+
+template <typename F> void quick_sort(Array &array, const F &is_less) {
+  const void *ancestor_pivot = nullptr;
+  quick_sort_impl(array, ancestor_pivot, is_less);
 }
 
 } // namespace internal
