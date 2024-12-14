@@ -442,10 +442,6 @@ private:
                              PointerListInfo &ptrList,
                              SourceLanguage sourceLang);
 
-  PointerListInfo parseProtocolListInfo(const ConcatInputSection *isec,
-                                        uint32_t secOffset,
-                                        SourceLanguage sourceLang);
-
   bool parsePointerListInfo(const ConcatInputSection *isec, uint32_t secOffset,
                             PointerListInfo &ptrList);
 
@@ -717,16 +713,6 @@ void ObjcCategoryMerger::parseProtocolListInfo(
          "expected null terminating protocol");
   assert(off + /*extra null value*/ target->wordSize == expectedListSize &&
          "Protocol list end offset does not match expected size");
-}
-
-// Parse a protocol list and return the PointerListInfo for it
-ObjcCategoryMerger::PointerListInfo
-ObjcCategoryMerger::parseProtocolListInfo(const ConcatInputSection *isec,
-                                          uint32_t secOffset,
-                                          SourceLanguage sourceLang) {
-  PointerListInfo ptrList;
-  parseProtocolListInfo(isec, secOffset, ptrList, sourceLang);
-  return ptrList;
 }
 
 // Parse a pointer list that might be linked to ConcatInputSection at a given
