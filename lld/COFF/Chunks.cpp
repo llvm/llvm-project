@@ -369,13 +369,14 @@ static void maybeReportRelocationToDiscarded(const SectionChunk *fromChunk,
   // Get the name of the symbol. If it's null, it was discarded early, so we
   // have to go back to the object file.
   ObjFile *file = fromChunk->file;
-  StringRef name;
+  std::string name;
   if (sym) {
-    name = sym->getName();
+    name = toString(file->ctx, *sym);
   } else {
     COFFSymbolRef coffSym =
         check(file->getCOFFObj()->getSymbol(rel.SymbolTableIndex));
-    name = check(file->getCOFFObj()->getSymbolName(coffSym));
+    name = maybeDemangleSymbol(
+        file->ctx, check(file->getCOFFObj()->getSymbolName(coffSym)));
   }
 
   std::vector<std::string> symbolLocations =
