@@ -1,4 +1,10 @@
 function(get_fq_target_name local_name target_name_var)
+  # this is the absolute path to the target
+  if (local_name MATCHES "^@.+")
+    string (SUBSTRING ${local_name} 1 -1 local_name)
+    set(${target_name_var} ${local_name} PARENT_SCOPE)
+    return()
+  endif()
   file(RELATIVE_PATH rel_path ${LIBC_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
   string(REPLACE "/" "." fq_name "libc.${rel_path}.${local_name}")
   set(${target_name_var} ${fq_name} PARENT_SCOPE)
