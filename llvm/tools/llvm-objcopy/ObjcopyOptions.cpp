@@ -549,23 +549,24 @@ static Expected<RemoveNoteInfo> parseRemoveNoteInfo(StringRef FlagValue) {
   // <type_id> - note type value, can be decimal or hexadecimal number prefixed
   //             with 0x.
   RemoveNoteInfo NI;
-  if (FlagValue.empty())
-    return createStringError(errc::invalid_argument,
-                             "bad format for --remove-note, missing type_id");
-  SmallVector<StringRef, 2> Tokens;
-  FlagValue.split(Tokens, '/', /*MaxSplit=*/1);
-  assert(!Tokens.empty() && Tokens.size() <= 2);
-  if (Tokens.size() == 2) {
-    if (Tokens[0].empty())
+  StringRef TypeIdStr;
+  if (auto Idx = FlagValue.find('/'); Idx != StringRef::npos) {
+    if (Idx == 0)
       return createStringError(
           errc::invalid_argument,
           "bad format for --remove-note, note name is empty");
-    NI.Name = Tokens[0];
+    NI.Name = FlagValue.slice(0, Idx);
+    TypeIdStr = FlagValue.substr(Idx + 1);
+  } else {
+    TypeIdStr = FlagValue;
   }
-  if (Tokens.back().getAsInteger(0, NI.TypeId))
+  if (TypeIdStr.empty())
+    return createStringError(errc::invalid_argument,
+                             "bad format for --remove-note, missing type_id");
+  if (TypeIdStr.getAsInteger(0, NI.TypeId))
     return createStringError(errc::invalid_argument,
                              "bad note type_id for --remove-note: '%s'",
-                             Tokens.back().str().c_str());
+                             TypeIdStr.str().c_str());
   return NI;
 }
 
