@@ -49,8 +49,6 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
   size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
@@ -69,8 +67,6 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
-
-  bool MightHaveChildren() override;
 
   size_t GetIndexOfChildWithName(ConstString name) override;
 private:
@@ -148,8 +144,6 @@ LibstdcppMapIteratorSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   }
   return lldb::ValueObjectSP();
 }
-
-bool LibstdcppMapIteratorSyntheticFrontEnd::MightHaveChildren() { return true; }
 
 size_t LibstdcppMapIteratorSyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {
@@ -231,8 +225,6 @@ VectorIteratorSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
     return m_item_sp;
   return lldb::ValueObjectSP();
 }
-
-bool VectorIteratorSyntheticFrontEnd::MightHaveChildren() { return true; }
 
 size_t VectorIteratorSyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {
@@ -415,8 +407,6 @@ lldb::ChildCacheState LibStdcppSharedPtrSyntheticFrontEnd::Update() {
 
   return lldb::ChildCacheState::eRefetch;
 }
-
-bool LibStdcppSharedPtrSyntheticFrontEnd::MightHaveChildren() { return true; }
 
 size_t LibStdcppSharedPtrSyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {
