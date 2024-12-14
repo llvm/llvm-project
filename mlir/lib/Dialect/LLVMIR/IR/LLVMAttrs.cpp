@@ -249,14 +249,9 @@ Attribute ConstantRangeAttr::parse(AsmParser &parser, Type odsType) {
   unsigned bitWidth = widthType.getWidth();
   APInt lower(bitWidth, 0);
   APInt upper(bitWidth, 0);
-  if (parser.parseInteger(lower) || parser.parseComma() ||
-      parser.parseInteger(upper) || parser.parseGreater())
+  if (parser.parseInteger(lower, bitWidth, true) || parser.parseComma() ||
+      parser.parseInteger(upper, bitWidth, true) || parser.parseGreater())
     return Attribute{};
-  // For some reason, 0 is always parsed as 64-bits, fix that if needed.
-  if (lower.isZero())
-    lower = lower.sextOrTrunc(bitWidth);
-  if (upper.isZero())
-    upper = upper.sextOrTrunc(bitWidth);
   return parser.getChecked<ConstantRangeAttr>(loc, parser.getContext(), lower,
                                               upper);
 }
