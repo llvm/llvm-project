@@ -220,7 +220,6 @@ namespace Foundation1437 {
     }
   }
 }
-  
 } // namespace formatters
 } // namespace lldb_private
 
