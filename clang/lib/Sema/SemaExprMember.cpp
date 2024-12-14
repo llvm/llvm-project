@@ -435,9 +435,10 @@ CheckExtVectorComponent(Sema &S, QualType baseType, ExprValueKind &VK,
     // We didn't get to the end of the string. This means the component names
     // didn't come from the same set *or* we encountered an illegal name.
     size_t Offset = compStr - CompName->getNameStart() + 1;
+    char Fmt[3] = {'\'', *compStr, '\''};
     S.Diag(OpLoc.getLocWithOffset(Offset),
            diag::err_ext_vector_component_name_illegal)
-        << StringRef({'\'', *compStr, '\''}) << SourceRange(CompLoc);
+        << StringRef(Fmt, 3) << SourceRange(CompLoc);
     return QualType();
   }
 
@@ -1657,10 +1658,8 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
     // We disallow element access for ext_vector_type bool.  There is no way to
     // materialize a reference to a vector element as a pointer (each element is
     // one bit in the vector).
-    assert(MemberName.isIdentifier() &&
-           "Ext vector component name not an identifier!");
     S.Diag(R.getNameLoc(), diag::err_ext_vector_component_name_illegal)
-        << MemberName.getAsIdentifierInfo()->getName()
+        << MemberName
         << (BaseExpr.get() ? BaseExpr.get()->getSourceRange() : SourceRange());
     return ExprError();
   }
