@@ -28,6 +28,8 @@ struct ExpensiveToCopyType {
   template <typename A>
   const A &templatedAccessor() const;
   operator int() const; // Implicit conversion to int.
+
+  static const ExpensiveToCopyType &instance();
 };
 
 template <typename T>
@@ -97,6 +99,28 @@ void PositiveFunctionCall() {
   const ExpensiveToCopyType VarCopyConstructed(ExpensiveTypeReference());
   // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarCopyConstructed'
   // CHECK-FIXES: const ExpensiveToCopyType& VarCopyConstructed(ExpensiveTypeReference());
+  VarCopyConstructed.constMethod();
+}
+
+void PositiveStaticMethodCall() {
+  const auto AutoAssigned = ExpensiveToCopyType::instance();
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoAssigned' is copy-constructed from a const reference; consider making it a const reference [performance-unnecessary-copy-initialization]
+  // CHECK-FIXES: const auto& AutoAssigned = ExpensiveToCopyType::instance();
+  AutoAssigned.constMethod();
+
+  const auto AutoCopyConstructed(ExpensiveToCopyType::instance());
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoCopyConstructed'
+  // CHECK-FIXES: const auto& AutoCopyConstructed(ExpensiveToCopyType::instance());
+  AutoCopyConstructed.constMethod();
+
+  const ExpensiveToCopyType VarAssigned = ExpensiveToCopyType::instance();
+  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarAssigned'
+  // CHECK-FIXES:   const ExpensiveToCopyType& VarAssigned = ExpensiveToCopyType::instance();
+  VarAssigned.constMethod();
+
+  const ExpensiveToCopyType VarCopyConstructed(ExpensiveToCopyType::instance());
+  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarCopyConstructed'
+  // CHECK-FIXES: const ExpensiveToCopyType& VarCopyConstructed(ExpensiveToCopyType::instance());
   VarCopyConstructed.constMethod();
 }
 
