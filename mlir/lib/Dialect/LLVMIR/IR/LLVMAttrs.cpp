@@ -247,10 +247,11 @@ Attribute ConstantRangeAttr::parse(AsmParser &parser, Type odsType) {
     return Attribute{};
   }
   unsigned bitWidth = widthType.getWidth();
+  IntegerType::SignednessSemantics signedness = widthType.getSignedness();
   APInt lower(bitWidth, 0);
   APInt upper(bitWidth, 0);
-  if (parser.parseInteger(lower, bitWidth, true) || parser.parseComma() ||
-      parser.parseInteger(upper, bitWidth, true) || parser.parseGreater())
+  if (parser.parseInteger(lower, bitWidth, signedness) || parser.parseComma() ||
+      parser.parseInteger(upper, bitWidth, signedness) || parser.parseGreater())
     return Attribute{};
   return parser.getChecked<ConstantRangeAttr>(loc, parser.getContext(), lower,
                                               upper);

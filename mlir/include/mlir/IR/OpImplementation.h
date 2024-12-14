@@ -713,7 +713,7 @@ public:
 
   /// Parse an integer value from the stream.
   ParseResult parseInteger(APInt &result, unsigned bitWidth,
-                           bool isSignedOrSignless) {
+                           IntegerType::SignednessSemantics signedness) {
     auto loc = getCurrentLocation();
     APInt apintResult;
     OptionalParseResult parseResult = parseOptionalInteger(apintResult);
@@ -724,7 +724,7 @@ public:
     // virtual APInt does not check for whether the parsed integer fits in the
     // width we want or whether its signednes matches the requested one.. Check
     // here.
-    if (!isSignedOrSignless && apintResult.isNegative())
+    if (signedness == IntegerType::Unsigned && apintResult.isNegative())
       return emitError(loc, "negative integer when unsigned expected");
     APInt sextOrTrunc = apintResult.sextOrTrunc(bitWidth);
     if (sextOrTrunc.sextOrTrunc(apintResult.getBitWidth()) != apintResult)
