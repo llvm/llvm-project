@@ -1281,11 +1281,6 @@ parseRegAllocFastPassOptions(PassBuilder &PB, StringRef Params) {
   return Opts;
 }
 
-Expected<RealtimeSanitizerOptions> parseRtSanPassOptions(StringRef Params) {
-  RealtimeSanitizerOptions Result;
-  return Result;
-}
-
 Expected<BoundsCheckingPass::ReportingMode>
 parseBoundsCheckingOptions(StringRef Params) {
   BoundsCheckingPass::ReportingMode Mode =
