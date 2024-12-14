@@ -9,7 +9,7 @@ See also:
 .. toctree::
    :maxdepth: 1
 
-   The List of Clang-Tidy Checks <checks/list>
+   List of Clang-Tidy Checks <checks/list>
    Clang-tidy IDE/Editor Integrations <Integrations>
    Getting Involved <Contributing>
    External Clang-Tidy Examples <ExternalClang-TidyExamples>
