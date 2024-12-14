@@ -518,7 +518,7 @@ Sections:
 ## Check that an incorrect offset for generating notes is reported.
 
 # RUN: not yaml2obj --docnum=19 %s 2>&1 | FileCheck %s --check-prefix=ERR_OFFSET
-# ERR_OFFSET: error: .note: invalid offset of a note section: 0x{{.*}}, should be aligned to 4
+# ERR_OFFSET: error: .note: invalid offset of a note section: 0x501, should be aligned to 4
 
 --- !ELF
 FileHeader:
@@ -526,11 +526,9 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_EXEC
 Sections:
-  - Name: .dummy
-    Type: SHT_PROGBITS
-    Size: 1
-  - Name: .note
-    Type: SHT_NOTE
+  - Name:   .note
+    Type:   SHT_NOTE
+    Offset: 0x501
     Notes:
       - Type: 0x1
 
@@ -546,7 +544,7 @@ Sections:
 # TEST20-NEXT:   Flags [ (0x0)
 # TEST20-NEXT:   ]
 # TEST20-NEXT:   Address:
-# TEST20-NEXT:   Offset:
+# TEST20-NEXT:   Offset: 0x501
 # TEST20-NEXT:   Size: 0
 # TEST20-NEXT:   Link:
 # TEST20-NEXT:   Info:
@@ -562,10 +560,8 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_EXEC
 Sections:
-  - Name: .dummy
-    Type: SHT_PROGBITS
-    Size: 1
-  - Name: .note
-    Type: SHT_NOTE
+  - Name:         .note
+    Type:         SHT_NOTE
+    Offset:       0x501
     AddressAlign: 5
-    Notes: []
+    Notes:        []
