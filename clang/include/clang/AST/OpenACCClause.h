@@ -744,6 +744,28 @@ public:
          ArrayRef<Expr *> VarList, SourceLocation EndLoc);
 };
 
+class OpenACCDetachClause final
+    : public OpenACCClauseWithVarList,
+      public llvm::TrailingObjects<OpenACCDetachClause, Expr *> {
+
+  OpenACCDetachClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                      ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(OpenACCClauseKind::Detach, BeginLoc, LParenLoc,
+                                 EndLoc) {
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Detach;
+  }
+  static OpenACCDetachClause *
+  Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+};
+
 class OpenACCNoCreateClause final
     : public OpenACCClauseWithVarList,
       public llvm::TrailingObjects<OpenACCNoCreateClause, Expr *> {

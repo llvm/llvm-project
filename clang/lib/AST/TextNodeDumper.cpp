@@ -411,6 +411,7 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::If:
     case OpenACCClauseKind::IfPresent:
     case OpenACCClauseKind::Independent:
+    case OpenACCClauseKind::Detach:
     case OpenACCClauseKind::DevicePtr:
     case OpenACCClauseKind::Finalize:
     case OpenACCClauseKind::FirstPrivate:

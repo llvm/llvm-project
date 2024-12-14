@@ -2897,6 +2897,11 @@ void OpenACCClauseEnqueue::VisitCreateClause(const OpenACCCreateClause &C) {
 void OpenACCClauseEnqueue::VisitAttachClause(const OpenACCAttachClause &C) {
   VisitVarList(C);
 }
+
+void OpenACCClauseEnqueue::VisitDetachClause(const OpenACCDetachClause &C) {
+  VisitVarList(C);
+}
+
 void OpenACCClauseEnqueue::VisitDevicePtrClause(
     const OpenACCDevicePtrClause &C) {
   VisitVarList(C);
