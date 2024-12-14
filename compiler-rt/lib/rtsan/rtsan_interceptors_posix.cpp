@@ -46,6 +46,7 @@ void OSSpinLockLock(volatile OSSpinLock *__lock);
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <time.h>
@@ -244,14 +245,29 @@ INTERCEPTOR(FILE *, fopen, const char *path, const char *mode) {
   return REAL(fopen)(path, mode);
 }
 
+INTERCEPTOR(FILE *, freopen, const char *path, const char *mode, FILE *stream) {
+  __rtsan_notify_intercepted_call("freopen");
+  return REAL(freopen)(path, mode, stream);
+}
+
+// Streams
+
 #if SANITIZER_INTERCEPT_FOPEN64
 INTERCEPTOR(FILE *, fopen64, const char *path, const char *mode) {
   __rtsan_notify_intercepted_call("fopen64");
   return REAL(fopen64)(path, mode);
 }
-#define RTSAN_MAYBE_INTERCEPT_FOPEN64 INTERCEPT_FUNCTION(fopen64)
+
+INTERCEPTOR(FILE *, freopen64, const char *path, const char *mode,
+            FILE *stream) {
+  __rtsan_notify_intercepted_call("freopen64");
+  return REAL(freopen64)(path, mode, stream);
+}
+#define RTSAN_MAYBE_INTERCEPT_FOPEN64 INTERCEPT_FUNCTION(fopen64);
+#define RTSAN_MAYBE_INTERCEPT_FREOPEN64 INTERCEPT_FUNCTION(freopen64);
 #else
 #define RTSAN_MAYBE_INTERCEPT_FOPEN64
+#define RTSAN_MAYBE_INTERCEPT_FREOPEN64
 #endif // SANITIZER_INTERCEPT_FOPEN64
 
 INTERCEPTOR(size_t, fread, void *ptr, size_t size, size_t nitems,
@@ -276,7 +292,11 @@ INTERCEPTOR(int, fputs, const char *s, FILE *stream) {
   return REAL(fputs)(s, stream);
 }
 
-// Streams
+INTERCEPTOR(FILE *, fdopen, int fd, const char *mode) {
+  __rtsan_notify_intercepted_call("fdopen");
+  return REAL(fdopen)(fd, mode);
+}
+
 INTERCEPTOR(int, puts, const char *s) {
   __rtsan_notify_intercepted_call("puts");
   return REAL(puts)(s);
@@ -707,6 +727,17 @@ INTERCEPTOR(int, shutdown, int socket, int how) {
   return REAL(shutdown)(socket, how);
 }
 
+#if SANITIZER_INTERCEPT_ACCEPT4
+INTERCEPTOR(int, accept4, int socket, struct sockaddr *address,
+            socklen_t *address_len, int flags) {
+  __rtsan_notify_intercepted_call("accept4");
+  return REAL(accept4)(socket, address, address_len, flags);
+}
+#define RTSAN_MAYBE_INTERCEPT_ACCEPT4 INTERCEPT_FUNCTION(accept4)
+#else
+#define RTSAN_MAYBE_INTERCEPT_ACCEPT4
+#endif
+
 // I/O Multiplexing
 
 INTERCEPTOR(int, poll, struct pollfd *fds, nfds_t nfds, int timeout) {
@@ -893,6 +924,7 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(close);
   INTERCEPT_FUNCTION(fopen);
   RTSAN_MAYBE_INTERCEPT_FOPEN64;
+  RTSAN_MAYBE_INTERCEPT_FREOPEN64;
   INTERCEPT_FUNCTION(fread);
   INTERCEPT_FUNCTION(read);
   INTERCEPT_FUNCTION(write);
@@ -910,6 +942,8 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_CREAT64;
   INTERCEPT_FUNCTION(puts);
   INTERCEPT_FUNCTION(fputs);
+  INTERCEPT_FUNCTION(fdopen);
+  INTERCEPT_FUNCTION(freopen);
   INTERCEPT_FUNCTION(lseek);
   RTSAN_MAYBE_INTERCEPT_LSEEK64;
   INTERCEPT_FUNCTION(dup);
@@ -956,6 +990,7 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(sendto);
   INTERCEPT_FUNCTION(shutdown);
   INTERCEPT_FUNCTION(socket);
+  RTSAN_MAYBE_INTERCEPT_ACCEPT4;
 
   RTSAN_MAYBE_INTERCEPT_SELECT;
   INTERCEPT_FUNCTION(pselect);

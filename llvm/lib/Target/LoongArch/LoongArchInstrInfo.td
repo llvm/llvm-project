@@ -112,6 +112,7 @@ def loongarch_bstrpick
 def loongarch_revb_2h : SDNode<"LoongArchISD::REVB_2H", SDTUnaryOp>;
 def loongarch_revb_2w : SDNode<"LoongArchISD::REVB_2W", SDTUnaryOp>;
 def loongarch_bitrev_4b : SDNode<"LoongArchISD::BITREV_4B", SDTUnaryOp>;
+def loongarch_bitrev_8b : SDNode<"LoongArchISD::BITREV_8B", SDTUnaryOp>;
 def loongarch_bitrev_w : SDNode<"LoongArchISD::BITREV_W", SDTUnaryOp>;
 def loongarch_clzw : SDNode<"LoongArchISD::CLZ_W", SDTIntBitCountUnaryOp>;
 def loongarch_ctzw : SDNode<"LoongArchISD::CTZ_W", SDTIntBitCountUnaryOp>;
@@ -1765,6 +1766,7 @@ def : Pat<(bitreverse (bswap GPR:$rj)), (BITREV_4B GPR:$rj)>;
 let Predicates = [IsLA64] in {
 def : Pat<(loongarch_revb_2w GPR:$rj), (REVB_2W GPR:$rj)>;
 def : Pat<(bswap GPR:$rj), (REVB_D GPR:$rj)>;
+def : Pat<(loongarch_bitrev_8b GPR:$rj), (BITREV_8B GPR:$rj)>;
 def : Pat<(loongarch_bitrev_w GPR:$rj), (BITREV_W GPR:$rj)>;
 def : Pat<(bitreverse GPR:$rj), (BITREV_D GPR:$rj)>;
 def : Pat<(bswap (bitreverse GPR:$rj)), (BITREV_8B GPR:$rj)>;

@@ -364,12 +364,12 @@ define i32 @alloca_used_in_maybe_throwing_call(ptr %data, i64 %n) personality pt
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[I0:%.*]] = invoke i32 @user_of_alloca(ptr [[RETVAL]])
-; CHECK-NEXT:    to label [[CONT:%.*]] unwind label [[UW:%.*]]
+; CHECK-NEXT:            to label [[CONT:%.*]] unwind label [[UW:%.*]]
 ; CHECK:       cont:
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       uw:
 ; CHECK-NEXT:    [[I1:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    catch ptr null
+; CHECK-NEXT:            catch ptr null
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr [[RETVAL]], align 4
@@ -424,10 +424,10 @@ define i32 @alloca_used_in_maybe_throwing_call_with_same_dests(ptr %data, i64 %n
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[I0:%.*]] = invoke i32 @user_of_alloca(ptr [[RETVAL]])
-; CHECK-NEXT:    to label [[END:%.*]] unwind label [[UW:%.*]]
+; CHECK-NEXT:            to label [[END:%.*]] unwind label [[UW:%.*]]
 ; CHECK:       uw:
 ; CHECK-NEXT:    [[I1:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    catch ptr null
+; CHECK-NEXT:            catch ptr null
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr [[RETVAL]], align 4

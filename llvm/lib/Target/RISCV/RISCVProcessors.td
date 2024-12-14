@@ -24,15 +24,32 @@ class RISCVTuneInfo {
 
   // Tail duplication threshold at -O3.
   bits<32> TailDupAggressiveThreshold = 6;
+
+  bits<32> MaxStoresPerMemsetOptSize = 4;
+  bits<32> MaxStoresPerMemset = 8;
+
+  bits<32> MaxGluedStoresPerMemcpy = 0;
+  bits<32> MaxStoresPerMemcpyOptSize = 4;
+  bits<32> MaxStoresPerMemcpy = 8;
+
+  bits<32> MaxStoresPerMemmoveOptSize = 4;
+  bits<32> MaxStoresPerMemmove = 8;
+
+  bits<32> MaxLoadsPerMemcmpOptSize = 4;
+  bits<32> MaxLoadsPerMemcmp = 8;
 }
 
 def RISCVTuneInfoTable : GenericTable {
   let FilterClass = "RISCVTuneInfo";
   let CppTypeName = "RISCVTuneInfo";
   let Fields = ["Name", "PrefFunctionAlignment", "PrefLoopAlignment",
-                "CacheLineSize", "PrefetchDistance",
-                "MinPrefetchStride", "MaxPrefetchIterationsAhead",
-                "MinimumJumpTableEntries", "TailDupAggressiveThreshold"];
+                "CacheLineSize", "PrefetchDistance", "MinPrefetchStride",
+                "MaxPrefetchIterationsAhead", "MinimumJumpTableEntries",
+                "TailDupAggressiveThreshold", "MaxStoresPerMemsetOptSize",
+                "MaxStoresPerMemset", "MaxGluedStoresPerMemcpy",
+                "MaxStoresPerMemcpyOptSize", "MaxStoresPerMemcpy",
+                "MaxStoresPerMemmoveOptSize", "MaxStoresPerMemmove",
+                "MaxLoadsPerMemcmpOptSize", "MaxLoadsPerMemcmp"];
 }
 
 def getRISCVTuneInfo : SearchIndex {
@@ -77,6 +94,21 @@ def GENERIC_RV64 : RISCVProcessorModel<"generic-rv64",
 // Support generic for compatibility with other targets. The triple will be used
 // to change to the appropriate rv32/rv64 version.
 def GENERIC : RISCVTuneProcessorModel<"generic", NoSchedModel>, GenericTuneInfo;
+
+def MIPS_P8700 : RISCVProcessorModel<"mips-p8700",
+                                     NoSchedModel,
+                                     [Feature64Bit,
+                                      FeatureStdExtI,
+                                      FeatureStdExtM,
+                                      FeatureStdExtA,
+                                      FeatureStdExtF,
+                                      FeatureStdExtD,
+                                      FeatureStdExtC,
+                                      FeatureStdExtZba,
+                                      FeatureStdExtZbb,
+                                      FeatureStdExtZifencei,
+                                      FeatureStdExtZicsr],
+                                     [TuneMIPSP8700]>;
 
 def ROCKET_RV32 : RISCVProcessorModel<"rocket-rv32",
                                       RocketModel,

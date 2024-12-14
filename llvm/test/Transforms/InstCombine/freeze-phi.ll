@@ -116,8 +116,8 @@ C:
 define i32 @two_undef(i8 %cond, i32 %x) {
 ; CHECK-LABEL: @two_undef(
 ; CHECK-NEXT:    switch i8 [[COND:%.*]], label [[A:%.*]] [
-; CHECK-NEXT:    i8 0, label [[B:%.*]]
-; CHECK-NEXT:    i8 1, label [[C:%.*]]
+; CHECK-NEXT:      i8 0, label [[B:%.*]]
+; CHECK-NEXT:      i8 1, label [[C:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       A:
 ; CHECK-NEXT:    br label [[D:%.*]]
@@ -149,8 +149,8 @@ D:
 define i32 @one_undef(i8 %cond) {
 ; CHECK-LABEL: @one_undef(
 ; CHECK-NEXT:    switch i8 [[COND:%.*]], label [[A:%.*]] [
-; CHECK-NEXT:    i8 0, label [[B:%.*]]
-; CHECK-NEXT:    i8 1, label [[C:%.*]]
+; CHECK-NEXT:      i8 0, label [[B:%.*]]
+; CHECK-NEXT:      i8 1, label [[C:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       A:
 ; CHECK-NEXT:    br label [[D:%.*]]
@@ -183,11 +183,11 @@ D:
 define i32 @one_constexpr(i8 %cond, i32 %x) {
 ; CHECK-LABEL: @one_constexpr(
 ; CHECK-NEXT:    switch i8 [[COND:%.*]], label [[A:%.*]] [
-; CHECK-NEXT:    i8 0, label [[B:%.*]]
-; CHECK-NEXT:    i8 1, label [[C:%.*]]
+; CHECK-NEXT:      i8 0, label [[B:%.*]]
+; CHECK-NEXT:      i8 1, label [[C:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       A:
-; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 ptrtoint (ptr getelementptr inbounds (i8, ptr @glb, i64 2) to i32)
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 ptrtoint (ptr getelementptr inbounds nuw (i8, ptr @glb, i64 2) to i32)
 ; CHECK-NEXT:    br label [[D:%.*]]
 ; CHECK:       B:
 ; CHECK-NEXT:    br label [[D]]

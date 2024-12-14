@@ -271,7 +271,7 @@ TEST_P(SocketTest, TCPListen0GetListeningConnectionURI) {
 }
 
 TEST_F(SocketTest, TCPListen0MultiListenerGetListeningConnectionURI) {
-  if (!HostSupportsIPv6() || !HostSupportsIPv4())
+  if (!HostSupportsLocalhostToIPv4() || !HostSupportsLocalhostToIPv6())
     return;
 
   llvm::Expected<std::unique_ptr<TCPSocket>> sock =

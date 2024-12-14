@@ -974,9 +974,9 @@ Error GlobalISelEmitter::importChildMatcher(
     // The "name" of a non-leaf complex pattern (MY_PAT $op1, $op2) is
     // "MY_PAT:op1:op2" and the ones with same "name" represent same operand.
     std::string PatternName = std::string(SrcChild.getOperator()->getName());
-    for (unsigned I = 0; I < SrcChild.getNumChildren(); ++I) {
+    for (const TreePatternNode &Child : SrcChild.children()) {
       PatternName += ":";
-      PatternName += SrcChild.getChild(I).getName();
+      PatternName += Child.getName();
     }
     SrcChildName = PatternName;
   }
@@ -1348,11 +1348,12 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
   // Handle the case where the MVT/register class is omitted in the dest pattern
   // but MVT exists in the source pattern.
   if (isa<UnsetInit>(DstChild.getLeafValue())) {
-    for (unsigned NumOp = 0; NumOp < Src.getNumChildren(); NumOp++)
-      if (Src.getChild(NumOp).getName() == DstChild.getName()) {
-        DstMIBuilder.addRenderer<CopyRenderer>(Src.getChild(NumOp).getName());
+    for (const TreePatternNode &SrcChild : Src.children()) {
+      if (SrcChild.getName() == DstChild.getName()) {
+        DstMIBuilder.addRenderer<CopyRenderer>(SrcChild.getName());
         return InsertPt;
       }
+    }
   }
   return failedImport("Dst pattern child is an unsupported kind");
 }

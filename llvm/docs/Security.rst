@@ -36,6 +36,7 @@ meet the criteria for inclusion below. The list is in the format
 `* ${full_name} (${affiliation}) [${github_username}]`. If a github
 username for an individual isn't available, the brackets will be empty.
 
+* Abhay Kanhere (Apple) [@AbhayKanhere]
 * Ahmed Bougacha (Apple) [@ahmedbougacha]
 * Artur Pilipenko (Azul Systems Inc) []
 * Boovaragavan Dasarathan (Nvidia) [@mrragava]

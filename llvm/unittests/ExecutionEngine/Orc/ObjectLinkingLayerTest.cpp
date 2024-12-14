@@ -15,6 +15,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
+#include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
@@ -44,9 +45,9 @@ protected:
 };
 
 TEST_F(ObjectLinkingLayerTest, AddLinkGraph) {
-  auto G = std::make_unique<LinkGraph>("foo", Triple("x86_64-apple-darwin"), 8,
-                                       llvm::endianness::little,
-                                       x86_64::getEdgeKindName);
+  auto G = std::make_unique<LinkGraph>(
+      "foo", ES.getSymbolStringPool(), Triple("x86_64-apple-darwin"), 8,
+      llvm::endianness::little, x86_64::getEdgeKindName);
 
   auto &Sec1 = G->createSection("__data", MemProt::Read | MemProt::Write);
   auto &B1 = G->createContentBlock(Sec1, BlockContent,
@@ -71,9 +72,9 @@ TEST_F(ObjectLinkingLayerTest, ResourceTracker) {
   // may invalidate some iterators internally.
   std::vector<ResourceTrackerSP> Trackers;
   for (unsigned I = 0; I < 64; I++) {
-    auto G = std::make_unique<LinkGraph>("foo", Triple("x86_64-apple-darwin"),
-                                         8, llvm::endianness::little,
-                                         x86_64::getEdgeKindName);
+    auto G = std::make_unique<LinkGraph>(
+        "foo", ES.getSymbolStringPool(), Triple("x86_64-apple-darwin"), 8,
+        llvm::endianness::little, x86_64::getEdgeKindName);
 
     auto &Sec1 = G->createSection("__data", MemProt::Read | MemProt::Write);
     auto &B1 = G->createContentBlock(Sec1, BlockContent,
@@ -138,10 +139,9 @@ TEST_F(ObjectLinkingLayerTest, ClaimLateDefinedWeakSymbols) {
   };
 
   ObjLinkingLayer.addPlugin(std::make_unique<TestPlugin>());
-
-  auto G = std::make_unique<LinkGraph>("foo", Triple("x86_64-apple-darwin"), 8,
-                                       llvm::endianness::little,
-                                       x86_64::getEdgeKindName);
+  auto G = std::make_unique<LinkGraph>(
+      "foo", ES.getSymbolStringPool(), Triple("x86_64-apple-darwin"), 8,
+      llvm::endianness::little, getGenericEdgeKindName);
 
   auto &DataSec = G->createSection("__data", MemProt::Read | MemProt::Write);
   auto &DataBlock = G->createContentBlock(DataSec, BlockContent,
@@ -192,10 +192,9 @@ TEST_F(ObjectLinkingLayerTest, HandleErrorDuringPostAllocationPass) {
   ES.setErrorReporter(consumeError);
 
   ObjLinkingLayer.addPlugin(std::make_unique<TestPlugin>());
-
-  auto G = std::make_unique<LinkGraph>("foo", Triple("x86_64-apple-darwin"), 8,
-                                       llvm::endianness::little,
-                                       x86_64::getEdgeKindName);
+  auto G = std::make_unique<LinkGraph>(
+      "foo", ES.getSymbolStringPool(), Triple("x86_64-apple-darwin"), 8,
+      llvm::endianness::little, getGenericEdgeKindName);
 
   auto &DataSec = G->createSection("__data", MemProt::Read | MemProt::Write);
   auto &DataBlock = G->createContentBlock(DataSec, BlockContent,
@@ -247,9 +246,9 @@ TEST_F(ObjectLinkingLayerTest, AddAndRemovePlugins) {
   ObjLinkingLayer.addPlugin(P);
 
   {
-    auto G1 = std::make_unique<LinkGraph>("G1", Triple("x86_64-apple-darwin"),
-                                          8, llvm::endianness::little,
-                                          x86_64::getEdgeKindName);
+    auto G1 = std::make_unique<LinkGraph>(
+        "G1", ES.getSymbolStringPool(), Triple("x86_64-apple-darwin"), 8,
+        llvm::endianness::little, x86_64::getEdgeKindName);
 
     auto &DataSec = G1->createSection("__data", MemProt::Read | MemProt::Write);
     auto &DataBlock = G1->createContentBlock(DataSec, BlockContent,
@@ -265,9 +264,9 @@ TEST_F(ObjectLinkingLayerTest, AddAndRemovePlugins) {
   ObjLinkingLayer.removePlugin(*P);
 
   {
-    auto G2 = std::make_unique<LinkGraph>("G2", Triple("x86_64-apple-darwin"),
-                                          8, llvm::endianness::little,
-                                          x86_64::getEdgeKindName);
+    auto G2 = std::make_unique<LinkGraph>(
+        "G2", ES.getSymbolStringPool(), Triple("x86_64-apple-darwin"), 8,
+        llvm::endianness::little, x86_64::getEdgeKindName);
 
     auto &DataSec = G2->createSection("__data", MemProt::Read | MemProt::Write);
     auto &DataBlock = G2->createContentBlock(DataSec, BlockContent,
@@ -325,8 +324,8 @@ TEST(ObjectLinkingLayerSearchGeneratorTest, AbsoluteSymbolsObjectLayer) {
 
   auto G = EPCDynamicLibrarySearchGenerator::GetForTargetProcess(
       ES, {}, [&](JITDylib &JD, SymbolMap Syms) {
-        auto G =
-            absoluteSymbolsLinkGraph(ES.getTargetTriple(), std::move(Syms));
+        auto G = absoluteSymbolsLinkGraph(
+            ES.getTargetTriple(), ES.getSymbolStringPool(), std::move(Syms));
         return ObjLinkingLayer.add(JD, std::move(G));
       });
   ASSERT_THAT_EXPECTED(G, Succeeded());
@@ -347,7 +346,7 @@ TEST(ObjectLinkingLayerSearchGeneratorTest, AbsoluteSymbolsObjectLayer) {
             ADD_FAILURE() << "unexpected unnamed symbol";
             continue;
           }
-          if (Sym->getName() == "_testFunc")
+          if (*Sym->getName() == "_testFunc")
             SawSymbolDef = true;
           else
             ADD_FAILURE() << "unexpected symbol " << Sym->getName();

@@ -1098,7 +1098,7 @@ define void @fmul_loop_invariant_fdiv(ptr %a, float %x) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext nneg i32 [[I_08]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[A:%.*]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[F:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[M:%.*]] = fdiv fast float [[F]], [[X:%.*]]
 ; CHECK-NEXT:    store float [[M]], ptr [[ARRAYIDX]], align 4
@@ -1131,7 +1131,7 @@ for.body:
 
 define double @fmul_negated_constant_expression(double %x) {
 ; CHECK-LABEL: @fmul_negated_constant_expression(
-; CHECK-NEXT:    [[FSUB:%.*]] = fneg double bitcast (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr @g, i64 16) to i64) to double)
+; CHECK-NEXT:    [[FSUB:%.*]] = fneg double bitcast (i64 ptrtoint (ptr getelementptr inbounds nuw (i8, ptr @g, i64 16) to i64) to double)
 ; CHECK-NEXT:    [[R:%.*]] = fmul double [[X:%.*]], [[FSUB]]
 ; CHECK-NEXT:    ret double [[R]]
 ;

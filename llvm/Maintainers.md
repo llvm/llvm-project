@@ -95,15 +95,10 @@ chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.co
 
 ### Instrumentation and sanitizers
 
-#### AddressSanitizer, ThreadSanitizer
+#### Sanitizers not covered by someone else
 
-Kostya Serebryany \
-kcc@google.com (email), [kcc](https://github.com/kcc) (GitHub)
-
-#### MemorySanitizer
-
-Evgeniy Stepanov \
-eugenis@google.com (email), [eugenis](https://github.com/eugenis) (GitHub)
+Vitaly Buka \
+vitalybuka@google.com (email), [vitalybuka](https://github.com/vitalybuka) (GitHub)
 
 #### NumericalStabilitySanitizer
 
@@ -131,11 +126,6 @@ llvm-dev@redking.me.uk (email), [RKSimon](https://github.com/RKSimon) (GitHub) \
 Craig Topper \
 craig.topper@sifive.com (email), [topperc](https://github.com/topperc) (GitHub)
 
-#### FastISel
-
-Chad Rosier \
-mcrosier@codeaurora.org (email)
-
 #### Instruction scheduling
 
 Matthias Braun \
@@ -153,8 +143,8 @@ quentin.colombet@gmail.com (email), [qcolombet](https://github.com/qcolombet) (G
 
 #### MC layer
 
-James Grosbach \
-grosbach@apple.com (email)
+Fangrui Song \
+i@maskray.me (email), [MaskRay](https://github.com/MaskRay) (GitHub)
 
 #### Windows codegen
 
@@ -350,8 +340,8 @@ jgorbe@google.com (email), [slackito](https://github.com/slackito) (GitHub)
 
 #### TableGen
 
-Paul C. Anagnostopoulos \
-paul@windfall.com (email)
+Rahul Joshi \
+rjoshi@nvidia.com (email), [jurahul](https://github.com/jurahul) (GitHub)
 
 #### TextAPI
 
@@ -392,7 +382,7 @@ tstellar@redhat.com (email), [tstellar](https://github.com/tstellar) (GitHub)
 #### MinGW support
 
 Martin Storsjö \
-martin@martin.st (email), [mstrorsjo](https://github.com/mstrorsjo) (GitHub)
+martin@martin.st (email), [mstorsjo](https://github.com/mstorsjo) (GitHub)
 
 #### Windows support in object tools
 
@@ -430,9 +420,11 @@ Others only have a lead maintainer listed here.
 
 [Clang-tools-extra maintainers](https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/Maintainers.txt)
 
-[Compiler-rt maintainers](https://github.com/llvm/llvm-project/blob/main/compiler-rt/Maintainers.txt)
+[Compiler-rt maintainers](https://github.com/llvm/llvm-project/blob/main/compiler-rt/Maintainers.md)
 
 [Flang maintainers](https://github.com/llvm/llvm-project/blob/main/flang/Maintainers.txt)
+
+[libc++ maintainers](https://github.com/llvm/llvm-project/blob/main/libcxx/Maintainers.md)
 
 [LLD maintainers](https://github.com/llvm/llvm-project/blob/main/lld/Maintainers.md)
 
@@ -440,20 +432,12 @@ Others only have a lead maintainer listed here.
 
 [LLVM OpenMP Library maintainers](https://github.com/llvm/llvm-project/blob/main/openmp/Maintainers.md)
 
-#### libc++
-
-Louis Dionne \
-ldionne.2@gmail.com (email), [ldionne](https://github.com/ldionne) (GitHub)
+[Polly maintainers](https://github.com/llvm/llvm-project/blob/main/polly/Maintainers.md)
 
 #### libclc
 
 Tom Stellard \
 tstellar@redhat.com (email), [tstellar](https://github.com/tstellar) (GitHub)
-
-#### Polly
-
-Tobias Grosser \
-tobias@grosser.es (email), [tobiasgrosser](https://github.com/tobiasgrosser) (GitHub)
 
 ## Inactive Maintainers
 
@@ -468,11 +452,16 @@ sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattn
 
 ### Inactive or former component maintainers
 
+Paul C. Anagnostopoulos (paul@windfall.com, [Paul-C-Anagnostopoulos](https://github.com/Paul-C-Anagnostopoulos)) -- TableGen \
 Justin Bogner (mail@justinbogner.com, [bogner](https://github.com/bogner)) -- SelectionDAG \
 Evan Cheng (evan.cheng@apple.com) -- Parts of code generator not covered by someone else \
 Renato Golin (rengolin@systemcall.eu, [rengolin](https://github.com/rengolin)) -- ARM backend \
+James Grosbach (grosbach@apple.com) -- MC layer \
 Anton Korobeynikov (anton@korobeynikov.info, [asl](https://github.com/asl)) -- ARM EABI \
+Chad Rosier (mcrosier@codeaurora.org) -- FastISel \
 Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management \
+Kostya Serebryany ([kcc](https://github.com/kcc)) -- Sanitizers \
+Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) -- Sanitizers
 
 ### Former maintainers of removed components
 
