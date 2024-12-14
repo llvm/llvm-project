@@ -178,8 +178,16 @@ namespace clang {
   namespace LoongArch {
   enum {
     LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
-#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
-#include "clang/Basic/BuiltinsLoongArch.def"
+#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE) BI##ID,
+#include "clang/Basic/BuiltinsLoongArchBase.def"
+    FirstLSXBuiltin,
+    LastBaseBuiltin = FirstLSXBuiltin - 1,
+#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE) BI##ID,
+#include "clang/Basic/BuiltinsLoongArchLSX.def"
+    FirstLASXBuiltin,
+    LastLSXBuiltin = FirstLASXBuiltin - 1,
+#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE) BI##ID,
+#include "clang/Basic/BuiltinsLoongArchLASX.def"
     LastTSBuiltin
   };
   } // namespace LoongArch
