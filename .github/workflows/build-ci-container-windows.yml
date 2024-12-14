@@ -69,7 +69,7 @@ jobs:
       - name: Push Container
         run: |
           docker load -i ${{ needs.build-ci-container-windows.outputs.container-filename }}
-          docker tag ${{ needs.build-ci-container-windows..outputs.container-name-tag }} ${{ needs.build-ci-container-windows..outputs.container-name }}:latest
+          docker tag ${{ needs.build-ci-container-windows.outputs.container-name-tag }} ${{ needs.build-ci-container-windows.outputs.container-name }}:latest
           docker login -u ${{ github.actor }} -p $env:GITHUB_TOKEN ghcr.io
           docker push ${{ needs.build-ci-container-windows.outputs.container-name-tag }}
           docker push ${{ needs.build-ci-container-windows.outputs.container-name }}:latest
