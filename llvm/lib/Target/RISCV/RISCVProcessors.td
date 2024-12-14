@@ -95,6 +95,21 @@ def GENERIC_RV64 : RISCVProcessorModel<"generic-rv64",
 // to change to the appropriate rv32/rv64 version.
 def GENERIC : RISCVTuneProcessorModel<"generic", NoSchedModel>, GenericTuneInfo;
 
+def MIPS_P8700 : RISCVProcessorModel<"mips-p8700",
+                                     NoSchedModel,
+                                     [Feature64Bit,
+                                      FeatureStdExtI,
+                                      FeatureStdExtM,
+                                      FeatureStdExtA,
+                                      FeatureStdExtF,
+                                      FeatureStdExtD,
+                                      FeatureStdExtC,
+                                      FeatureStdExtZba,
+                                      FeatureStdExtZbb,
+                                      FeatureStdExtZifencei,
+                                      FeatureStdExtZicsr],
+                                     [TuneMIPSP8700]>;
+
 def ROCKET_RV32 : RISCVProcessorModel<"rocket-rv32",
                                       RocketModel,
                                       [Feature32Bit,

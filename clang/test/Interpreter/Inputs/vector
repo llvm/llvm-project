@@ -1,0 +1,10 @@
+#ifndef VECTOR
+#define VECTOR
+namespace std {
+template <typename>
+class vector {
+public:
+  vector();
+};
+} // namespace std
+#endif // VECTOR
