@@ -105,7 +105,7 @@ public:
         return true;
       }
 
-      LambdaExpr* findLambdaInArg(Expr* E) {
+      LambdaExpr *findLambdaInArg(Expr* E) {
         if (auto *Lambda = dyn_cast_or_null<LambdaExpr>(E))
           return Lambda;
         auto *TempExpr = dyn_cast_or_null<CXXBindTemporaryExpr>(E);
@@ -130,7 +130,7 @@ public:
         auto *VD = dyn_cast_or_null<VarDecl>(DRE->getDecl());
         if (!VD)
           return nullptr;
-        auto* Init = VD->getInit();
+        auto *Init = VD->getInit();
         if (!Init)
           return nullptr;
         TempExpr = dyn_cast<CXXBindTemporaryExpr>(Init->IgnoreParenCasts());
@@ -202,7 +202,7 @@ public:
   }
 
   bool protectThis(const ValueDecl *ValueDecl) const {
-    auto* VD = dyn_cast<VarDecl>(ValueDecl);
+    auto *VD = dyn_cast<VarDecl>(ValueDecl);
     if (!VD)
       return false;
     auto *Init = VD->getInit()->IgnoreParenCasts();
@@ -214,7 +214,7 @@ public:
     auto *CE = dyn_cast_or_null<CXXConstructExpr>(BTE->getSubExpr());
     if (!CE)
       return false;
-    auto* Ctor = CE->getConstructor();
+    auto *Ctor = CE->getConstructor();
     if (!Ctor)
       return false;
     auto clsName = safeGetName(Ctor->getParent());
