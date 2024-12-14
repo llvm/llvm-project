@@ -110,4 +110,7 @@ void foo() {
 // CHECK: #pragma acc data default(none) attach(iPtr, arrayPtr[0])
 #pragma acc data default(none) attach(iPtr, arrayPtr[0])
   ;
+
+// CHECK: #pragma acc exit data copyout(i) finalize
+#pragma acc exit data copyout(i) finalize
 }

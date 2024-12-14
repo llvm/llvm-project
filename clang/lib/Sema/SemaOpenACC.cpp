@@ -408,6 +408,14 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
       return false;
     }
   }
+  case OpenACCClauseKind::Finalize: {
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::ExitData:
+      return true;
+    default:
+      return false;
+    }
+  }
   }
 
   default:
@@ -1602,6 +1610,14 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitGangClause(
   return SemaRef.CheckGangClause(Clause.getDirectiveKind(), ExistingClauses,
                                  Clause.getBeginLoc(), Clause.getLParenLoc(),
                                  GangKinds, IntExprs, Clause.getEndLoc());
+}
+
+OpenACCClause *SemaOpenACCClauseVisitor::VisitFinalizeClause(
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  // There isn't anything to do here, this is only valid on one construct, and
+  // has no associated rules.
+  return OpenACCFinalizeClause::Create(Ctx, Clause.getBeginLoc(),
+                                       Clause.getEndLoc());
 }
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitSeqClause(

@@ -38,7 +38,7 @@ public:
   SourceLocation getBeginLoc() const { return Location.getBegin(); }
   SourceLocation getEndLoc() const { return Location.getEnd(); }
 
-  static bool classof(const OpenACCClause *) { return false; }
+  static bool classof(const OpenACCClause *) { return true; }
 
   using child_iterator = StmtIterator;
   using const_child_iterator = ConstStmtIterator;
@@ -66,6 +66,28 @@ public:
   }
 
   static OpenACCAutoClause *
+  Create(const ASTContext &Ctx, SourceLocation BeginLoc, SourceLocation EndLoc);
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+};
+
+// Represents the 'finalize' clause.
+class OpenACCFinalizeClause : public OpenACCClause {
+protected:
+  OpenACCFinalizeClause(SourceLocation BeginLoc, SourceLocation EndLoc)
+      : OpenACCClause(OpenACCClauseKind::Finalize, BeginLoc, EndLoc) {}
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Finalize;
+  }
+
+  static OpenACCFinalizeClause *
   Create(const ASTContext &Ctx, SourceLocation BeginLoc, SourceLocation EndLoc);
 
   child_range children() {
