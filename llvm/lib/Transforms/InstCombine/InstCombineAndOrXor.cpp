@@ -815,8 +815,11 @@ static Value *foldTruncAndOrICmpOfAndWithPow2(InstCombiner::BuilderTy &Builder,
                                               const SimplifyQuery &Q) {
   CmpInst::Predicate Pred = IsAnd ? CmpInst::ICMP_NE : CmpInst::ICMP_EQ;
 
-  if (isa<ICmpInst>(LHS))
+  bool Swapped = false;
+  if (isa<ICmpInst>(LHS)) {
     std::swap(LHS, RHS);
+    Swapped = true;
+  }
 
   Value *X, *Pow2;
 
@@ -828,7 +831,7 @@ static Value *foldTruncAndOrICmpOfAndWithPow2(InstCombiner::BuilderTy &Builder,
                              Q.CxtI, Q.DT)) {
     // If this is a logical and/or, then we must prevent propagation of a
     // poison value from the RHS by inserting freeze.
-    if (IsLogical)
+    if (!Swapped && IsLogical)
       Pow2 = Builder.CreateFreeze(Pow2);
     Value *Mask = Builder.CreateOr(ConstantInt::get(Pow2->getType(), 1), Pow2);
     Value *Masked = Builder.CreateAnd(X, Mask);

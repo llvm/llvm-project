@@ -1373,8 +1373,7 @@ define i1 @trunc_logical_and_icmp_and_icmps(i8 %x, i8 %y, i8 %c1) {
 ; CHECK-LABEL: @trunc_logical_and_icmp_and_icmps(
 ; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[TMP4:%.*]] = freeze i8 [[Z_SHIFT]]
-; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[TMP4]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Z_SHIFT]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[TMP3]], i1 [[C1]], i1 false
