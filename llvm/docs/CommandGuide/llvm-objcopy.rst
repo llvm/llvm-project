@@ -464,6 +464,11 @@ them.
 
  Preserve access and modification timestamps in the output.
 
+.. option:: --remove-note [<name>/]<type>
+
+ Remove notes of integer type ``<type>`` and name ``<name>`` from SHT_NOTE
+ sections and PT_NOTE segments. Can be specified multiple times.
+
 .. option:: --rename-section <old>=<new>[,<flag>,...]
 
  Rename sections called ``<old>`` to ``<new>`` in the output, and apply any
