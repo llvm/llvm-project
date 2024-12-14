@@ -195,6 +195,10 @@ struct AsmPrinterOptions {
       "mlir-print-unique-ssa-ids", llvm::cl::init(false),
       llvm::cl::desc("Print unique SSA ID numbers for values, block arguments "
                      "and naming conflicts across all regions")};
+
+  llvm::cl::opt<bool> useNameLocAsPrefix{
+      "mlir-use-nameloc-as-prefix", llvm::cl::init(false),
+      llvm::cl::desc("TODO")};
 };
 } // namespace
 
@@ -212,7 +216,8 @@ OpPrintingFlags::OpPrintingFlags()
     : printDebugInfoFlag(false), printDebugInfoPrettyFormFlag(false),
       printGenericOpFormFlag(false), skipRegionsFlag(false),
       assumeVerifiedFlag(false), printLocalScope(false),
-      printValueUsersFlag(false), printUniqueSSAIDsFlag(false) {
+      printValueUsersFlag(false), printUniqueSSAIDsFlag(false),
+      useNameLocAsPrefix(false) {
   // Initialize based upon command line options, if they are available.
   if (!clOptions.isConstructed())
     return;
@@ -231,6 +236,7 @@ OpPrintingFlags::OpPrintingFlags()
   skipRegionsFlag = clOptions->skipRegionsOpt;
   printValueUsersFlag = clOptions->printValueUsers;
   printUniqueSSAIDsFlag = clOptions->printUniqueSSAIDs;
+  useNameLocAsPrefix = clOptions->useNameLocAsPrefix;
 }
 
 /// Enable the elision of large elements attributes, by printing a '...'
@@ -360,6 +366,11 @@ bool OpPrintingFlags::shouldPrintValueUsers() const {
 /// Return if the printer should use unique IDs.
 bool OpPrintingFlags::shouldPrintUniqueSSAIDs() const {
   return printUniqueSSAIDsFlag || shouldPrintGenericOpForm();
+}
+
+/// TODO
+bool OpPrintingFlags::shouldUseNameLocAsPrefix() const {
+  return useNameLocAsPrefix;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1514,10 +1525,22 @@ void SSANameState::numberValuesInRegion(Region &region) {
     setValueName(arg, name);
   };
 
+  bool alreadySetNames = false;
   if (!printerFlags.shouldPrintGenericOpForm()) {
     if (Operation *op = region.getParentOp()) {
-      if (auto asmInterface = dyn_cast<OpAsmOpInterface>(op))
+      if (auto asmInterface = dyn_cast<OpAsmOpInterface>(op)) {
         asmInterface.getAsmBlockArgumentNames(region, setBlockArgNameFn);
+        alreadySetNames = true;
+      }
+    }
+  }
+
+  if (printerFlags.shouldUseNameLocAsPrefix() && !alreadySetNames) {
+    for (BlockArgument arg : region.getArguments()) {
+      if (isa<NameLoc>(arg.getLoc())) {
+        auto nameLoc = cast<NameLoc>(arg.getLoc());
+        setBlockArgNameFn(arg, nameLoc.getName());
+      }
     }
   }
 
@@ -1553,7 +1576,12 @@ void SSANameState::numberValuesInBlock(Block &block) {
       specialNameBuffer.resize(strlen("arg"));
       specialName << nextArgumentID++;
     }
-    setValueName(arg, specialName.str());
+    if (printerFlags.shouldUseNameLocAsPrefix() && isa<NameLoc>(arg.getLoc())) {
+      auto nameLoc = cast<NameLoc>(arg.getLoc());
+      setValueName(arg, nameLoc.getName());
+    } else {
+      setValueName(arg, specialName.str());
+    }
   }
 
   // Number the operations in this block.
@@ -1589,10 +1617,21 @@ void SSANameState::numberValuesInOp(Operation &op) {
     blockNames[block] = {-1, name};
   };
 
+  bool alreadySetNames = false;
   if (!printerFlags.shouldPrintGenericOpForm()) {
     if (OpAsmOpInterface asmInterface = dyn_cast<OpAsmOpInterface>(&op)) {
       asmInterface.getAsmBlockNames(setBlockNameFn);
       asmInterface.getAsmResultNames(setResultNameFn);
+      alreadySetNames = true;
+    }
+  }
+
+  if (printerFlags.shouldUseNameLocAsPrefix() && !alreadySetNames) {
+    for (Value opResult : op.getResults()) {
+      if (isa<NameLoc>(opResult.getLoc())) {
+        auto nameLoc = cast<NameLoc>(opResult.getLoc());
+        setResultNameFn(opResult, nameLoc.getName());
+      }
     }
   }
 
