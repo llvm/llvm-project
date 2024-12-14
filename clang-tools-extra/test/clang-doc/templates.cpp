@@ -9,6 +9,12 @@
 
 // YAML: ---
 // YAML-NEXT: USR:             '{{([0-9A-F]{40})}}'
+// YAML-NEXT: ChildRecords:
+// YAML-NEXT:   - Type:            Record
+// YAML-NEXT:     Name:            'tuple'
+// YAML-NEXT:     QualName:        'tuple'
+// YAML-NEXT:     USR:             '{{([0-9A-F]{40})}}'
+// YAML-NEXT:     Path:            'GlobalNamespace'
 
 // MD: # Global Namespace
 // MD: ## Functions
@@ -87,9 +93,65 @@ void function<bool, 0>(bool x) {}
 // YAML-NEXT:         Params:
 // YAML-NEXT:           - Contents:        'bool'
 // YAML-NEXT:           - Contents:        '0'
-// YAML-NEXT: ...
 
 // MD: ### function
 // MD: *void function(_Bool x)*
-// MD: *Defined at {{.*}}templates.cpp#[[# @LINE - 27]]*
+// MD: *Defined at {{.*}}templates.cpp#[[# @LINE - 26]]*
+
+/// A Tuple type
+///
+/// Does Tuple things.
+template<typename ...Tys>
+struct tuple{};
+
+/// A function with a tuple parameter
+///
+/// \param t The input to func_with_tuple_param
+tuple<int,int,bool> func_with_tuple_param(tuple<int,int,bool> t){ return t;}
+
+// YAML-NEXT:   - USR:             '{{([0-9A-F]{40})}}'
+// YAML-NEXT:    Name:            'func_with_tuple_param'
+// YAML-NEXT:    Description:
+// YAML-NEXT:      - Kind:            'FullComment'
+// YAML-NEXT:        Children:
+// YAML-NEXT:          - Kind:            'ParagraphComment'
+// YAML-NEXT:            Children:
+// YAML-NEXT:              - Kind:            'TextComment'
+// YAML-NEXT:                Text:            ' A function with a tuple parameter'
+// YAML-NEXT:          - Kind:            'ParagraphComment'
+// YAML-NEXT:            Children:
+// YAML-NEXT:              - Kind:            'TextComment'
+// YAML-NEXT:          - Kind:            'ParamCommandComment'
+// YAML-NEXT:            Direction:       '[in]'
+// YAML-NEXT:            ParamName:       't'
+// YAML-NEXT:            Children:
+// YAML-NEXT:              - Kind:            'ParagraphComment'
+// YAML-NEXT:                Children:
+// YAML-NEXT:                  - Kind:            'TextComment'
+// YAML-NEXT:                    Text:            ' The input to func_with_tuple_param'
+// YAML-NEXT:    DefLocation:
+// YAML-NEXT:      LineNumber:      [[# @LINE - 23]]
+// YAML-NEXT:      Filename:
+// YAML-NEXT:    Params:
+// YAML-NEXT:      - Type:
+// YAML-NEXT:          Type:            Record
+// YAML-NEXT:          Name:            'tuple'
+// YAML-NEXT:          QualName:        'tuple<int, int, _Bool>'
+// YAML-NEXT:          USR:             '{{([0-9A-F]{40})}}'
+// YAML-NEXT:          Path:            'GlobalNamespace'
+// YAML-NEXT:        Name:            't'
+// YAML-NEXT:    ReturnType:
+// YAML-NEXT:      Type:
+// YAML-NEXT:        Type:            Record
+// YAML-NEXT:        Name:            'tuple'
+// YAML-NEXT:        QualName:        'tuple<int, int, _Bool>'
+// YAML-NEXT:        USR:             '{{([0-9A-F]{40})}}'
+// YAML-NEXT:        Path:            'GlobalNamespace'
+// YAML-NEXT: ...
+
+// MD: ### func_with_tuple_param
+// MD: *tuple func_with_tuple_param(tuple t)*
+// MD: *Defined at {{.*}}templates.cpp#[[# @LINE - 44]]*
+// MD:  A function with a tuple parameter
+// MD: **t** The input to func_with_tuple_param
 
