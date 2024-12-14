@@ -10,7 +10,7 @@
 
 // Check that type traits derive from integral_constant
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_EXTENSION_WARNING
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <cstddef>
 #include <type_traits>
