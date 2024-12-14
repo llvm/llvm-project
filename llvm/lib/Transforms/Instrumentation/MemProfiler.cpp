@@ -725,8 +725,7 @@ static uint64_t computeStackId(const memprof::Frame &Frame) {
 
 // Helper to generate a single hash id for a given callstack, used for emitting
 // matching statistics and useful for uniquing such statistics across modules.
-static uint64_t
-computeFullStackId(const std::vector<memprof::Frame> &CallStack) {
+static uint64_t computeFullStackId(ArrayRef<Frame> CallStack) {
   llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::endianness::little>
       HashBuilder;
   for (auto &F : CallStack)
@@ -968,20 +967,16 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
   // Build maps of the location hash to all profile data with that leaf location
   // (allocation info and the callsites).
   std::map<uint64_t, std::set<const AllocationInfo *>> LocHashToAllocInfo;
-  // A thin wrapper around ArrayRef<Frame> to facilitate std::set<CallStackRef>.
-  struct CallStackRef : public ArrayRef<Frame> {
-    CallStackRef(ArrayRef<Frame> CS, unsigned Pos)
-        : ArrayRef<Frame>(CS.drop_front(Pos)) {}
-    // std::set requires std::less.
-    bool operator<(const CallStackRef &R) const {
-      const CallStackRef &L = *this;
-      return std::make_pair(L.data(), L.size()) <
-             std::make_pair(R.data(), R.size());
+  // A hash function for std::unordered_set<ArrayRef<Frame>> to work.
+  struct CallStackHash {
+    size_t operator()(ArrayRef<Frame> CS) const {
+      return computeFullStackId(CS);
     }
   };
   // For the callsites we need to record slices of the frame array (see comments
   // below where the map entries are added).
-  std::map<uint64_t, std::set<CallStackRef>> LocHashToCallSites;
+  std::map<uint64_t, std::unordered_set<ArrayRef<Frame>, CallStackHash>>
+      LocHashToCallSites;
   for (auto &AI : MemProfRec->AllocSites) {
     NumOfMemProfAllocContextProfiles++;
     // Associate the allocation info with the leaf frame. The later matching
@@ -998,7 +993,8 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
     unsigned Idx = 0;
     for (auto &StackFrame : CS) {
       uint64_t StackId = computeStackId(StackFrame);
-      LocHashToCallSites[StackId].emplace(CS, Idx++);
+      LocHashToCallSites[StackId].insert(
+        ArrayRef<Frame>(CS).drop_front(Idx++));
       ProfileHasColumns |= StackFrame.Column;
       // Once we find this function, we can stop recording.
       if (StackFrame.Function == FuncGUID)
@@ -1038,7 +1034,7 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
       // and another callsite).
       std::map<uint64_t, std::set<const AllocationInfo *>>::iterator
           AllocInfoIter;
-      std::map<uint64_t, std::set<CallStackRef>>::iterator CallSitesIter;
+      decltype(LocHashToCallSites)::iterator CallSitesIter;
       for (const DILocation *DIL = I.getDebugLoc(); DIL != nullptr;
            DIL = DIL->getInlinedAt()) {
         // Use C++ linkage name if possible. Need to compile with
