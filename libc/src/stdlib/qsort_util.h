@@ -27,11 +27,13 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
+template <typename F> void unstable_sort(Array array, const F &is_less) {
 #if LIBC_QSORT_IMPL == LIBC_QSORT_QUICK_SORT
-constexpr auto sort = quick_sort;
+  quick_sort(array, is_less);
 #elif LIBC_QSORT_IMPL == LIBC_QSORT_HEAP_SORT
-constexpr auto sort = heap_sort;
+  heap_sort(array, is_less);
 #endif
+}
 
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL

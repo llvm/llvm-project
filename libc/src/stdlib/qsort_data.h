@@ -17,60 +17,25 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-using Compare = int(const void *, const void *);
-using CompareWithState = int(const void *, const void *, void *);
-
-enum class CompType { COMPARE, COMPARE_WITH_STATE };
-
-struct Comparator {
-  union {
-    Compare *comp_func;
-    CompareWithState *comp_func_r;
-  };
-  const CompType comp_type;
-
-  void *arg;
-
-  Comparator(Compare *func)
-      : comp_func(func), comp_type(CompType::COMPARE), arg(nullptr) {}
-
-  Comparator(CompareWithState *func, void *arg_val)
-      : comp_func_r(func), comp_type(CompType::COMPARE_WITH_STATE),
-        arg(arg_val) {}
-
-#if defined(__clang__)
-  // Recent upstream changes to -fsanitize=function find more instances of
-  // function type mismatches. One case is with the comparator passed to this
-  // class. Libraries will tend to pass comparators that take pointers to
-  // varying types while this comparator expects to accept const void pointers.
-  // Ideally those tools would pass a function that strictly accepts const
-  // void*s to avoid UB, or would use qsort_r to pass their own comparator.
-  [[clang::no_sanitize("function")]]
-#endif
-  int comp_vals(const void *a, const void *b) const {
-    if (comp_type == CompType::COMPARE) {
-      return comp_func(a, b);
-    } else {
-      return comp_func_r(a, b, arg);
-    }
-  }
-};
-
 class Array {
-  uint8_t *array;
-  size_t array_size;
+  uint8_t *array_base;
+  size_t array_len;
   size_t elem_size;
-  Comparator compare;
+
+  uint8_t *get_internal(size_t i) const { return array_base + (i * elem_size); }
 
 public:
-  Array(uint8_t *a, size_t s, size_t e, Comparator c)
-      : array(a), array_size(s), elem_size(e), compare(c) {}
+  Array(uint8_t *a, size_t s, size_t e)
+      : array_base(a), array_len(s), elem_size(e) {}
 
-  uint8_t *get(size_t i) const { return array + i * elem_size; }
+  inline void *get(size_t i) const {
+    return reinterpret_cast<void *>(get_internal(i));
+  }
 
   void swap(size_t i, size_t j) const {
-    uint8_t *elem_i = get(i);
-    uint8_t *elem_j = get(j);
+    uint8_t *elem_i = get_internal(i);
+    uint8_t *elem_j = get_internal(j);
+
     for (size_t b = 0; b < elem_size; ++b) {
       uint8_t temp = elem_i[b];
       elem_i[b] = elem_j[b];
@@ -78,29 +43,20 @@ public:
     }
   }
 
-  int elem_compare(size_t i, const uint8_t *other) const {
-    // An element must compare equal to itself so we don't need to consult the
-    // user provided comparator.
-    if (get(i) == other)
-      return 0;
-    return compare.comp_vals(get(i), other);
+  size_t len() const { return array_len; }
+
+  // Make an Array starting at index |i| and length |s|.
+  inline Array make_array(size_t i, size_t s) const {
+    return Array(get_internal(i), s, elem_size);
   }
 
-  size_t size() const { return array_size; }
-
-  // Make an Array starting at index |i| and size |s|.
-  LIBC_INLINE Array make_array(size_t i, size_t s) const {
-    return Array(get(i), s, elem_size, compare);
-  }
-
-  // Reset this Array to point at a different interval of the same items.
-  LIBC_INLINE void reset_bounds(uint8_t *a, size_t s) {
-    array = a;
-    array_size = s;
+  // Reset this Array to point at a different interval of the same
+  // items starting at index |i|.
+  inline void reset_bounds(size_t i, size_t s) {
+    array_base = get_internal(i);
+    array_len = s;
   }
 };
-
-using SortingRoutine = void(const Array &);
 
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL

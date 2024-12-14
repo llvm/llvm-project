@@ -20,12 +20,14 @@ LLVM_LIBC_FUNCTION(void, qsort,
                     int (*compare)(const void *, const void *))) {
   if (array == nullptr || array_size == 0 || elem_size == 0)
     return;
-  internal::Comparator c(compare);
 
   auto arr = internal::Array(reinterpret_cast<uint8_t *>(array), array_size,
-                             elem_size, c);
+                             elem_size);
 
-  internal::sort(arr);
+  internal::unstable_sort(
+      arr, [compare](const void *a, const void *b) noexcept -> bool {
+        return compare(a, b) < 0;
+      });
 }
 
 } // namespace LIBC_NAMESPACE_DECL
