@@ -1134,6 +1134,97 @@ inline BinaryOpc_match<ValTy, AllOnes_match, true> m_Not(const ValTy &V) {
   return m_Xor(V, m_AllOnes());
 }
 
+template <typename... PatternTs> struct ReassociatableOpc_match {
+  unsigned Opcode;
+  std::tuple<PatternTs...> Patterns;
+
+  ReassociatableOpc_match(unsigned Opcode, const PatternTs &...Patterns)
+      : Opcode(Opcode), Patterns(Patterns...) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    SmallVector<SDValue> Leaves;
+    collectLeaves(N, Leaves);
+    if (Leaves.size() != std::tuple_size_v<std::tuple<PatternTs...>>) {
+      return false;
+    }
+
+    // J in Matches[I] iff sd_context_match(Leaves[I], Ctx,
+    // std::get<J>(Patterns)) == true
+    SmallVector<SmallVector<size_t>> Matches(Leaves.size());
+    for (size_t I = 0; I < Leaves.size(); I += 1) {
+      SmallVector<bool> MatchResults;
+      std::apply(
+          [&](auto &...P) {
+            (MatchResults.emplace_back(sd_context_match(Leaves[I], Ctx, P)),
+             ...);
+          },
+          Patterns);
+      for (size_t J = 0; J < MatchResults.size(); J += 1) {
+        if (MatchResults[J]) {
+          Matches[I].emplace_back(J);
+        }
+      }
+    }
+
+    SmallVector<bool> Used(std::tuple_size_v<std::tuple<PatternTs...>>, false);
+    return reassociatableMatchHelper(Matches, Used);
+  }
+
+  void collectLeaves(SDValue V, SmallVector<SDValue> &Leaves) {
+    if (V->getOpcode() == Opcode) {
+      for (size_t I = 0; I < V->getNumOperands(); I += 1) {
+        collectLeaves(V->getOperand(I), Leaves);
+      }
+    } else {
+      Leaves.emplace_back(V);
+    }
+  }
+
+  [[nodiscard]] inline bool
+  reassociatableMatchHelper(const SmallVector<SmallVector<size_t>> &Matches,
+                            SmallVector<bool> &Used, size_t Curr = 0) {
+    if (Curr == Matches.size()) {
+      return true;
+    }
+    for (auto Match : Matches[Curr]) {
+      if (Used[Match]) {
+        continue;
+      }
+      Used[Match] = true;
+      if (reassociatableMatchHelper(Matches, Used, Curr + 1)) {
+        return true;
+      }
+      Used[Match] = false;
+    }
+    return false;
+  }
+};
+
+template <typename... PatternTs>
+inline ReassociatableOpc_match<PatternTs...>
+m_ReassociatableAdd(const PatternTs &...Patterns) {
+  return ReassociatableOpc_match<PatternTs...>(ISD::ADD, Patterns...);
+}
+
+template <typename... PatternTs>
+inline ReassociatableOpc_match<PatternTs...>
+m_ReassociatableOr(const PatternTs &...Patterns) {
+  return ReassociatableOpc_match<PatternTs...>(ISD::OR, Patterns...);
+}
+
+template <typename... PatternTs>
+inline ReassociatableOpc_match<PatternTs...>
+m_ReassociatableAnd(const PatternTs &...Patterns) {
+  return ReassociatableOpc_match<PatternTs...>(ISD::AND, Patterns...);
+}
+
+template <typename... PatternTs>
+inline ReassociatableOpc_match<PatternTs...>
+m_ReassociatableMul(const PatternTs &...Patterns) {
+  return ReassociatableOpc_match<PatternTs...>(ISD::MUL, Patterns...);
+}
+
 } // namespace SDPatternMatch
 } // namespace llvm
 #endif
