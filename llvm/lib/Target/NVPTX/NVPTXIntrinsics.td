@@ -4126,13 +4126,17 @@ defm TLD4_UNIFIED_A_2D_U32_F32
 
 let IsSuld = true in {
 
-class SULD_1D_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_1D_base<string inst, NVPTXRegClass outtype, dag surf,
+                   list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r),
                 !con(surf, (ins Int32Regs:$x)),
                 inst # " \\{$r\\}, [$s, \\{$x\\}];",
-                []>;
+                pattern>;
 multiclass SULD_1D<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_1D_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_1D_base<inst, outtype, (ins Int64Regs:$s),
+                        [(set outtype:$r, (intr i64:$s, i32:$x))]>;
   def _I : SULD_1D_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -4151,13 +4155,18 @@ defm SULD_1D_I16_ZERO : SULD_1D<"suld.b.1d.b16.zero", Int16Regs>;
 defm SULD_1D_I32_ZERO : SULD_1D<"suld.b.1d.b32.zero", Int32Regs>;
 defm SULD_1D_I64_ZERO : SULD_1D<"suld.b.1d.b64.zero", Int64Regs>;
 
-class SULD_1D_ARRAY_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_1D_ARRAY_base<string inst, NVPTXRegClass outtype, dag surf,
+                         list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r),
                 !con(surf, (ins Int32Regs:$l, Int32Regs:$x)),
                 inst # " \\{$r\\}, [$s, \\{$l, $x\\}];",
-                []>;
+                pattern>;
 multiclass SULD_1D_ARRAY<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_1D_ARRAY_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_1D_ARRAY_base<inst, outtype, (ins Int64Regs:$s),
+                              [(set outtype:$r,
+                                    (intr i64:$s, i32:$l, i32:$x))]>;
   def _I : SULD_1D_ARRAY_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -4188,13 +4197,17 @@ defm SULD_1D_ARRAY_I32_ZERO
 defm SULD_1D_ARRAY_I64_ZERO
   : SULD_1D_ARRAY<"suld.b.a1d.b64.zero", Int64Regs>;
 
-class SULD_2D_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_2D_base<string inst, NVPTXRegClass outtype, dag surf,
+                   list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r),
                 !con(surf, (ins Int32Regs:$x, Int32Regs:$y)),
                 inst # " \\{$r\\}, [$s, \\{$x, $y\\}];",
-                []>;
+                pattern>;
 multiclass SULD_2D<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_2D_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_2D_base<inst, outtype, (ins Int64Regs:$s),
+                        [(set outtype:$r, (intr i64:$s, i32:$x, i32:$y))]>;
   def _I : SULD_2D_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -4213,13 +4226,18 @@ defm SULD_2D_I16_ZERO : SULD_2D<"suld.b.2d.b16.zero", Int16Regs>;
 defm SULD_2D_I32_ZERO : SULD_2D<"suld.b.2d.b32.zero", Int32Regs>;
 defm SULD_2D_I64_ZERO : SULD_2D<"suld.b.2d.b64.zero", Int64Regs>;
 
-class SULD_2D_ARRAY_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_2D_ARRAY_base<string inst, NVPTXRegClass outtype, dag surf,
+                         list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r),
                 !con(surf, (ins Int32Regs:$l, Int32Regs:$x, Int32Regs:$y)),
                 inst # " \\{$r\\}, [$s, \\{$l, $x, $y, $y\\}];",
-                []>;
+                pattern>;
 multiclass SULD_2D_ARRAY<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_2D_ARRAY_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_2D_ARRAY_base<inst, outtype, (ins Int64Regs:$s),
+                              [(set outtype:$r,
+                                    (intr i64:$s, i32:$l, i32:$x, i32:$y))]>;
   def _I : SULD_2D_ARRAY_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -4238,13 +4256,18 @@ defm SULD_2D_ARRAY_I16_ZERO : SULD_2D_ARRAY<"suld.b.a2d.b16.zero", Int16Regs>;
 defm SULD_2D_ARRAY_I32_ZERO : SULD_2D_ARRAY<"suld.b.a2d.b32.zero", Int32Regs>;
 defm SULD_2D_ARRAY_I64_ZERO : SULD_2D_ARRAY<"suld.b.a2d.b64.zero", Int64Regs>;
 
-class SULD_3D_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_3D_base<string inst, NVPTXRegClass outtype, dag surf,
+                   list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r),
                 !con(surf, (ins Int32Regs:$x, Int32Regs:$y, Int32Regs:$z)),
                 inst # " \\{$r\\}, [$s, \\{$x, $y, $z, $z\\}];",
-                []>;
+                pattern>;
 multiclass SULD_3D<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_3D_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_3D_base<inst, outtype, (ins Int64Regs:$s),
+                        [(set outtype:$r,
+                              (intr i64:$s, i32:$x, i32:$y, i32:$z))]>;
   def _I : SULD_3D_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -4266,13 +4289,18 @@ defm SULD_3D_I64_ZERO : SULD_3D<"suld.b.3d.b64.zero", Int64Regs>;
 
 let IsSuld = 2 in {
 
-class SULD_1D_V2_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_1D_V2_base<string inst, NVPTXRegClass outtype, dag surf,
+                      list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g),
                 !con(surf, (ins Int32Regs:$x)),
                 inst # " \\{$r, $g\\}, [$s, \\{$x\\}];",
-                []>;
+                pattern>;
 multiclass SULD_1D_V2<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_1D_V2_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_1D_V2_base<inst, outtype, (ins Int64Regs:$s),
+                           [(set outtype:$r, outtype:$g,
+                                 (intr i64:$s, i32:$x))]>;
   def _I : SULD_1D_V2_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -4291,13 +4319,18 @@ defm SULD_1D_V2I16_ZERO : SULD_1D_V2<"suld.b.1d.v2.b16.zero", Int16Regs>;
 defm SULD_1D_V2I32_ZERO : SULD_1D_V2<"suld.b.1d.v2.b32.zero", Int32Regs>;
 defm SULD_1D_V2I64_ZERO : SULD_1D_V2<"suld.b.1d.v2.b64.zero", Int64Regs>;
 
-class SULD_1D_ARRAY_V2_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_1D_ARRAY_V2_base<string inst, NVPTXRegClass outtype, dag surf,
+                            list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g),
                 !con(surf, (ins Int32Regs:$l, Int32Regs:$x)),
                 inst # " \\{$r, $g\\}, [$s, \\{$l, $x\\}];",
-                []>;
+                pattern>;
 multiclass SULD_1D_ARRAY_V2<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_1D_ARRAY_V2_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_1D_ARRAY_V2_base<inst, outtype, (ins Int64Regs:$s),
+                                 [(set outtype:$r, outtype:$g,
+                                       (intr i64:$s, i32:$l, i32:$x))]>;
   def _I : SULD_1D_ARRAY_V2_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -4328,13 +4361,18 @@ defm SULD_1D_ARRAY_V2I32_ZERO
 defm SULD_1D_ARRAY_V2I64_ZERO
   : SULD_1D_ARRAY_V2<"suld.b.a1d.v2.b64.zero", Int64Regs>;
 
-class SULD_2D_V2_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_2D_V2_base<string inst, NVPTXRegClass outtype, dag surf,
+                      list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g),
                 !con(surf, (ins Int32Regs:$x, Int32Regs:$y)),
                 inst # " \\{$r, $g\\}, [$s, \\{$x, $y\\}];",
-                []>;
+                pattern>;
 multiclass SULD_2D_V2<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_2D_V2_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_2D_V2_base<inst, outtype, (ins Int64Regs:$s),
+                           [(set outtype:$r, outtype:$g,
+                                 (intr i64:$s, i32:$x, i32:$y))]>;
   def _I : SULD_2D_V2_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -4365,13 +4403,18 @@ defm SULD_2D_V2I32_ZERO
 defm SULD_2D_V2I64_ZERO
   : SULD_2D_V2<"suld.b.2d.v2.b64.zero", Int64Regs>;
 
-class SULD_2D_ARRAY_V2_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_2D_ARRAY_V2_base<string inst, NVPTXRegClass outtype, dag surf,
+                            list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g),
                 !con(surf, (ins Int32Regs:$l, Int32Regs:$x, Int32Regs:$y)),
                 inst # " \\{$r, $g\\}, [$s, \\{$l, $x, $y, $y\\}];",
-                []>;
+                pattern>;
 multiclass SULD_2D_ARRAY_V2<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_2D_ARRAY_V2_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_2D_ARRAY_V2_base<inst, outtype, (ins Int64Regs:$s),
+                                 [(set outtype:$r, outtype:$g,
+                                       (intr i64:$s, i32:$l, i32:$x, i32:$y))]>;
   def _I : SULD_2D_ARRAY_V2_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -4402,13 +4445,18 @@ defm SULD_2D_ARRAY_V2I32_ZERO
 defm SULD_2D_ARRAY_V2I64_ZERO
   : SULD_2D_ARRAY_V2<"suld.b.a2d.v2.b64.zero", Int64Regs>;
 
-class SULD_3D_V2_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_3D_V2_base<string inst, NVPTXRegClass outtype, dag surf,
+                      list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g),
                 !con(surf, (ins Int32Regs:$x, Int32Regs:$y, Int32Regs:$z)),
                 inst # " \\{$r, $g\\}, [$s, \\{$x, $y, $z, $z\\}];",
-                []>;
+                pattern>;
 multiclass SULD_3D_V2<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_3D_V2_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_3D_V2_base<inst, outtype, (ins Int64Regs:$s),
+                           [(set outtype:$r, outtype:$g,
+                                 (intr i64:$s, i32:$x, i32:$y, i32:$z))]>;
   def _I : SULD_3D_V2_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -4431,13 +4479,18 @@ defm SULD_3D_V2I64_ZERO : SULD_3D_V2<"suld.b.3d.v2.b64.zero", Int64Regs>;
 
 let IsSuld = 3 in {
 
-class SULD_1D_V4_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_1D_V4_base<string inst, NVPTXRegClass outtype, dag surf,
+                      list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g, outtype:$b, outtype:$a),
                 !con(surf, (ins Int32Regs:$x)),
                 inst # " \\{$r, $g, $b, $a\\}, [$s, \\{$x\\}];",
-                []>;
+                pattern>;
 multiclass SULD_1D_V4<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_1D_V4_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_1D_V4_base<inst, outtype, (ins Int64Regs:$s),
+                           [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+                                 (intr i64:$s, i32:$x))]>;
   def _I : SULD_1D_V4_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -4453,13 +4506,19 @@ defm SULD_1D_V4I8_ZERO : SULD_1D_V4<"suld.b.1d.v4.b8.zero", Int16Regs>;
 defm SULD_1D_V4I16_ZERO : SULD_1D_V4<"suld.b.1d.v4.b16.zero", Int16Regs>;
 defm SULD_1D_V4I32_ZERO : SULD_1D_V4<"suld.b.1d.v4.b32.zero", Int32Regs>;
 
-class SULD_1D_ARRAY_V4_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_1D_ARRAY_V4_base<string inst, NVPTXRegClass outtype, dag surf,
+                            list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g, outtype:$b, outtype:$a),
                 !con(surf, (ins Int32Regs:$l, Int32Regs:$x)),
                 inst # " \\{$r, $g, $b, $a\\}, [$s, \\{$l, $x\\}];",
-                []>;
+                pattern>;
 multiclass SULD_1D_ARRAY_V4<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_1D_ARRAY_V4_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_1D_ARRAY_V4_base<inst, outtype, (ins Int64Regs:$s),
+                                 [(set outtype:$r, outtype:$g, outtype:$b,
+                                       outtype:$a,
+                                       (intr i64:$s, i32:$l, i32:$x))]>;
   def _I : SULD_1D_ARRAY_V4_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -4484,13 +4543,18 @@ defm SULD_1D_ARRAY_V4I16_ZERO
 defm SULD_1D_ARRAY_V4I32_ZERO
   : SULD_1D_ARRAY_V4<"suld.b.a1d.v4.b32.zero", Int32Regs>;
 
-class SULD_2D_V4_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_2D_V4_base<string inst, NVPTXRegClass outtype, dag surf,
+                      list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g, outtype:$b, outtype:$a),
                 !con(surf, (ins Int32Regs:$x, Int32Regs:$y)),
                 inst # " \\{$r, $g, $b, $a\\}, [$s, \\{$x, $y\\}];",
-                []>;
+                pattern>;
 multiclass SULD_2D_V4<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_2D_V4_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_2D_V4_base<inst, outtype, (ins Int64Regs:$s),
+                           [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+                                 (intr i64:$s, i32:$x, i32:$y))]>;
   def _I : SULD_2D_V4_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -4506,13 +4570,19 @@ defm SULD_2D_V4I8_ZERO : SULD_2D_V4<"suld.b.2d.v4.b8.zero", Int16Regs>;
 defm SULD_2D_V4I16_ZERO : SULD_2D_V4<"suld.b.2d.v4.b16.zero", Int16Regs>;
 defm SULD_2D_V4I32_ZERO : SULD_2D_V4<"suld.b.2d.v4.b32.zero", Int32Regs>;
 
-class SULD_2D_ARRAY_V4_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_2D_ARRAY_V4_base<string inst, NVPTXRegClass outtype, dag surf,
+                            list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g, outtype:$b, outtype:$a),
                 !con(surf, (ins Int32Regs:$l, Int32Regs:$x, Int32Regs:$y)),
                 inst # " \\{$r, $g, $b, $a\\}, [$s, \\{$l, $x, $y, $y\\}];",
-                []>;
+                pattern>;
 multiclass SULD_2D_ARRAY_V4<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_2D_ARRAY_V4_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_2D_ARRAY_V4_base<inst, outtype, (ins Int64Regs:$s),
+                                 [(set outtype:$r, outtype:$g, outtype:$b,
+                                       outtype:$a,
+                                       (intr i64:$s, i32:$l, i32:$x, i32:$y))]>;
   def _I : SULD_2D_ARRAY_V4_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -4537,13 +4607,18 @@ defm SULD_2D_ARRAY_V4I16_ZERO
 defm SULD_2D_ARRAY_V4I32_ZERO
   : SULD_2D_ARRAY_V4<"suld.b.a2d.v4.b32.zero", Int32Regs>;
 
-class SULD_3D_V4_base<string inst, NVPTXRegClass outtype, dag surf>
+class SULD_3D_V4_base<string inst, NVPTXRegClass outtype, dag surf,
+                      list<dag> pattern = []>
     : NVPTXInst<(outs outtype:$r, outtype:$g, outtype:$b, outtype:$a),
                 !con(surf, (ins Int32Regs:$x, Int32Regs:$y, Int32Regs:$z)),
                 inst # " \\{$r, $g, $b, $a\\}, [$s, \\{$x, $y, $z, $z\\}];",
-                []>;
+                pattern>;
 multiclass SULD_3D_V4<string inst, NVPTXRegClass outtype> {
-  def _R : SULD_3D_V4_base<inst, outtype, (ins Int64Regs:$s)>;
+  defvar intr = !cast<Intrinsic>("int_nvvm_" # !tolower(NAME));
+
+  def _R : SULD_3D_V4_base<inst, outtype, (ins Int64Regs:$s),
+                           [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
+                                 (intr i64:$s, i32:$x, i32:$y, i32:$z))]>;
   def _I : SULD_3D_V4_base<inst, outtype, (ins i64imm:$s)>;
 }
 
@@ -7468,348 +7543,3 @@ def : Pat<(int_nvvm_tld4_unified_b_2d_v4u32_f32 i64:$t, f32:$x, f32:$y),
           (TLD4_UNIFIED_B_2D_U32_F32_R $t, $x, $y)>;
 def : Pat<(int_nvvm_tld4_unified_a_2d_v4u32_f32 i64:$t, f32:$x, f32:$y),
           (TLD4_UNIFIED_A_2D_U32_F32_R $t, $x, $y)>;
-
-def : Pat<(int_nvvm_suld_1d_i8_clamp i64:$s, i32:$x),
-          (SULD_1D_I8_CLAMP_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_i16_clamp i64:$s, i32:$x),
-          (SULD_1D_I16_CLAMP_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_i32_clamp i64:$s, i32:$x),
-          (SULD_1D_I32_CLAMP_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_i64_clamp i64:$s, i32:$x),
-          (SULD_1D_I64_CLAMP_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_v2i8_clamp i64:$s, i32:$x),
-          (SULD_1D_V2I8_CLAMP_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_v2i16_clamp i64:$s, i32:$x),
-          (SULD_1D_V2I16_CLAMP_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_v2i32_clamp i64:$s, i32:$x),
-          (SULD_1D_V2I32_CLAMP_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_v2i64_clamp i64:$s, i32:$x),
-          (SULD_1D_V2I64_CLAMP_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_v4i8_clamp i64:$s, i32:$x),
-          (SULD_1D_V4I8_CLAMP_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_v4i16_clamp i64:$s, i32:$x),
-          (SULD_1D_V4I16_CLAMP_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_v4i32_clamp i64:$s, i32:$x),
-          (SULD_1D_V4I32_CLAMP_R $s, $x)>;
-
-def : Pat<(int_nvvm_suld_1d_array_i8_clamp i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_I8_CLAMP_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_i16_clamp i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_I16_CLAMP_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_i32_clamp i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_I32_CLAMP_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_i64_clamp i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_I64_CLAMP_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_v2i8_clamp i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_V2I8_CLAMP_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_v2i16_clamp i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_V2I16_CLAMP_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_v2i32_clamp i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_V2I32_CLAMP_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_v2i64_clamp i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_V2I64_CLAMP_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_v4i8_clamp i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_V4I8_CLAMP_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_v4i16_clamp i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_V4I16_CLAMP_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_v4i32_clamp i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_V4I32_CLAMP_R $s, $l, $x)>;
-
-def : Pat<(int_nvvm_suld_2d_i8_clamp i64:$s, i32:$x, i32:$y),
-          (SULD_2D_I8_CLAMP_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_i16_clamp i64:$s, i32:$x, i32:$y),
-          (SULD_2D_I16_CLAMP_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_i32_clamp i64:$s, i32:$x, i32:$y),
-          (SULD_2D_I32_CLAMP_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_i64_clamp i64:$s, i32:$x, i32:$y),
-          (SULD_2D_I64_CLAMP_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_v2i8_clamp i64:$s, i32:$x, i32:$y),
-          (SULD_2D_V2I8_CLAMP_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_v2i16_clamp i64:$s, i32:$x, i32:$y),
-          (SULD_2D_V2I16_CLAMP_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_v2i32_clamp i64:$s, i32:$x, i32:$y),
-          (SULD_2D_V2I32_CLAMP_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_v2i64_clamp i64:$s, i32:$x, i32:$y),
-          (SULD_2D_V2I64_CLAMP_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_v4i8_clamp i64:$s, i32:$x, i32:$y),
-          (SULD_2D_V4I8_CLAMP_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_v4i16_clamp i64:$s, i32:$x, i32:$y),
-          (SULD_2D_V4I16_CLAMP_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_v4i32_clamp i64:$s, i32:$x, i32:$y),
-          (SULD_2D_V4I32_CLAMP_R $s, $x, $y)>;
-
-def : Pat<(int_nvvm_suld_2d_array_i8_clamp i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_I8_CLAMP_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_i16_clamp i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_I16_CLAMP_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_i32_clamp i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_I32_CLAMP_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_i64_clamp i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_I64_CLAMP_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_v2i8_clamp i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_V2I8_CLAMP_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_v2i16_clamp i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_V2I16_CLAMP_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_v2i32_clamp i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_V2I32_CLAMP_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_v2i64_clamp i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_V2I64_CLAMP_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_v4i8_clamp i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_V4I8_CLAMP_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_v4i16_clamp i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_V4I16_CLAMP_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_v4i32_clamp i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_V4I32_CLAMP_R $s, $l, $x, $y)>;
-
-def : Pat<(int_nvvm_suld_3d_i8_clamp i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_I8_CLAMP_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_i16_clamp i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_I16_CLAMP_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_i32_clamp i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_I32_CLAMP_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_i64_clamp i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_I64_CLAMP_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_v2i8_clamp i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_V2I8_CLAMP_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_v2i16_clamp i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_V2I16_CLAMP_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_v2i32_clamp i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_V2I32_CLAMP_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_v2i64_clamp i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_V2I64_CLAMP_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_v4i8_clamp i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_V4I8_CLAMP_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_v4i16_clamp i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_V4I16_CLAMP_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_v4i32_clamp i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_V4I32_CLAMP_R $s, $x, $y, $z)>;
-
-def : Pat<(int_nvvm_suld_1d_i8_trap i64:$s, i32:$x),
-          (SULD_1D_I8_TRAP_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_i16_trap i64:$s, i32:$x),
-          (SULD_1D_I16_TRAP_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_i32_trap i64:$s, i32:$x),
-          (SULD_1D_I32_TRAP_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_i64_trap i64:$s, i32:$x),
-          (SULD_1D_I64_TRAP_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_v2i8_trap i64:$s, i32:$x),
-          (SULD_1D_V2I8_TRAP_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_v2i16_trap i64:$s, i32:$x),
-          (SULD_1D_V2I16_TRAP_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_v2i32_trap i64:$s, i32:$x),
-          (SULD_1D_V2I32_TRAP_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_v2i64_trap i64:$s, i32:$x),
-          (SULD_1D_V2I64_TRAP_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_v4i8_trap i64:$s, i32:$x),
-          (SULD_1D_V4I8_TRAP_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_v4i16_trap i64:$s, i32:$x),
-          (SULD_1D_V4I16_TRAP_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_v4i32_trap i64:$s, i32:$x),
-          (SULD_1D_V4I32_TRAP_R $s, $x)>;
-
-def : Pat<(int_nvvm_suld_1d_array_i8_trap i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_I8_TRAP_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_i16_trap i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_I16_TRAP_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_i32_trap i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_I32_TRAP_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_i64_trap i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_I64_TRAP_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_v2i8_trap i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_V2I8_TRAP_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_v2i16_trap i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_V2I16_TRAP_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_v2i32_trap i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_V2I32_TRAP_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_v2i64_trap i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_V2I64_TRAP_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_v4i8_trap i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_V4I8_TRAP_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_v4i16_trap i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_V4I16_TRAP_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_v4i32_trap i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_V4I32_TRAP_R $s, $l, $x)>;
-
-def : Pat<(int_nvvm_suld_2d_i8_trap i64:$s, i32:$x, i32:$y),
-          (SULD_2D_I8_TRAP_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_i16_trap i64:$s, i32:$x, i32:$y),
-          (SULD_2D_I16_TRAP_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_i32_trap i64:$s, i32:$x, i32:$y),
-          (SULD_2D_I32_TRAP_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_i64_trap i64:$s, i32:$x, i32:$y),
-          (SULD_2D_I64_TRAP_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_v2i8_trap i64:$s, i32:$x, i32:$y),
-          (SULD_2D_V2I8_TRAP_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_v2i16_trap i64:$s, i32:$x, i32:$y),
-          (SULD_2D_V2I16_TRAP_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_v2i32_trap i64:$s, i32:$x, i32:$y),
-          (SULD_2D_V2I32_TRAP_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_v2i64_trap i64:$s, i32:$x, i32:$y),
-          (SULD_2D_V2I64_TRAP_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_v4i8_trap i64:$s, i32:$x, i32:$y),
-          (SULD_2D_V4I8_TRAP_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_v4i16_trap i64:$s, i32:$x, i32:$y),
-          (SULD_2D_V4I16_TRAP_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_v4i32_trap i64:$s, i32:$x, i32:$y),
-          (SULD_2D_V4I32_TRAP_R $s, $x, $y)>;
-
-def : Pat<(int_nvvm_suld_2d_array_i8_trap i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_I8_TRAP_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_i16_trap i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_I16_TRAP_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_i32_trap i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_I32_TRAP_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_i64_trap i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_I64_TRAP_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_v2i8_trap i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_V2I8_TRAP_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_v2i16_trap i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_V2I16_TRAP_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_v2i32_trap i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_V2I32_TRAP_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_v2i64_trap i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_V2I64_TRAP_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_v4i8_trap i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_V4I8_TRAP_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_v4i16_trap i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_V4I16_TRAP_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_v4i32_trap i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_V4I32_TRAP_R $s, $l, $x, $y)>;
-
-def : Pat<(int_nvvm_suld_3d_i8_trap i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_I8_TRAP_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_i16_trap i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_I16_TRAP_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_i32_trap i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_I32_TRAP_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_i64_trap i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_I64_TRAP_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_v2i8_trap i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_V2I8_TRAP_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_v2i16_trap i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_V2I16_TRAP_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_v2i32_trap i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_V2I32_TRAP_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_v2i64_trap i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_V2I64_TRAP_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_v4i8_trap i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_V4I8_TRAP_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_v4i16_trap i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_V4I16_TRAP_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_v4i32_trap i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_V4I32_TRAP_R $s, $x, $y, $z)>;
-
-def : Pat<(int_nvvm_suld_1d_i8_zero i64:$s, i32:$x),
-          (SULD_1D_I8_ZERO_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_i16_zero i64:$s, i32:$x),
-          (SULD_1D_I16_ZERO_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_i32_zero i64:$s, i32:$x),
-          (SULD_1D_I32_ZERO_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_i64_zero i64:$s, i32:$x),
-          (SULD_1D_I64_ZERO_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_v2i8_zero i64:$s, i32:$x),
-          (SULD_1D_V2I8_ZERO_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_v2i16_zero i64:$s, i32:$x),
-          (SULD_1D_V2I16_ZERO_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_v2i32_zero i64:$s, i32:$x),
-          (SULD_1D_V2I32_ZERO_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_v2i64_zero i64:$s, i32:$x),
-          (SULD_1D_V2I64_ZERO_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_v4i8_zero i64:$s, i32:$x),
-          (SULD_1D_V4I8_ZERO_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_v4i16_zero i64:$s, i32:$x),
-          (SULD_1D_V4I16_ZERO_R $s, $x)>;
-def : Pat<(int_nvvm_suld_1d_v4i32_zero i64:$s, i32:$x),
-          (SULD_1D_V4I32_ZERO_R $s, $x)>;
-
-def : Pat<(int_nvvm_suld_1d_array_i8_zero i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_I8_ZERO_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_i16_zero i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_I16_ZERO_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_i32_zero i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_I32_ZERO_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_i64_zero i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_I64_ZERO_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_v2i8_zero i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_V2I8_ZERO_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_v2i16_zero i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_V2I16_ZERO_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_v2i32_zero i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_V2I32_ZERO_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_v2i64_zero i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_V2I64_ZERO_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_v4i8_zero i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_V4I8_ZERO_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_v4i16_zero i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_V4I16_ZERO_R $s, $l, $x)>;
-def : Pat<(int_nvvm_suld_1d_array_v4i32_zero i64:$s, i32:$l, i32:$x),
-          (SULD_1D_ARRAY_V4I32_ZERO_R $s, $l, $x)>;
-
-def : Pat<(int_nvvm_suld_2d_i8_zero i64:$s, i32:$x, i32:$y),
-          (SULD_2D_I8_ZERO_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_i16_zero i64:$s, i32:$x, i32:$y),
-          (SULD_2D_I16_ZERO_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_i32_zero i64:$s, i32:$x, i32:$y),
-          (SULD_2D_I32_ZERO_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_i64_zero i64:$s, i32:$x, i32:$y),
-          (SULD_2D_I64_ZERO_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_v2i8_zero i64:$s, i32:$x, i32:$y),
-          (SULD_2D_V2I8_ZERO_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_v2i16_zero i64:$s, i32:$x, i32:$y),
-          (SULD_2D_V2I16_ZERO_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_v2i32_zero i64:$s, i32:$x, i32:$y),
-          (SULD_2D_V2I32_ZERO_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_v2i64_zero i64:$s, i32:$x, i32:$y),
-          (SULD_2D_V2I64_ZERO_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_v4i8_zero i64:$s, i32:$x, i32:$y),
-          (SULD_2D_V4I8_ZERO_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_v4i16_zero i64:$s, i32:$x, i32:$y),
-          (SULD_2D_V4I16_ZERO_R $s, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_v4i32_zero i64:$s, i32:$x, i32:$y),
-          (SULD_2D_V4I32_ZERO_R $s, $x, $y)>;
-
-def : Pat<(int_nvvm_suld_2d_array_i8_zero i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_I8_ZERO_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_i16_zero i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_I16_ZERO_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_i32_zero i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_I32_ZERO_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_i64_zero i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_I64_ZERO_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_v2i8_zero i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_V2I8_ZERO_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_v2i16_zero i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_V2I16_ZERO_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_v2i32_zero i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_V2I32_ZERO_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_v2i64_zero i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_V2I64_ZERO_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_v4i8_zero i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_V4I8_ZERO_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_v4i16_zero i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_V4I16_ZERO_R $s, $l, $x, $y)>;
-def : Pat<(int_nvvm_suld_2d_array_v4i32_zero i64:$s, i32:$l, i32:$x, i32:$y),
-          (SULD_2D_ARRAY_V4I32_ZERO_R $s, $l, $x, $y)>;
-
-def : Pat<(int_nvvm_suld_3d_i8_zero i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_I8_ZERO_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_i16_zero i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_I16_ZERO_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_i32_zero i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_I32_ZERO_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_i64_zero i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_I64_ZERO_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_v2i8_zero i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_V2I8_ZERO_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_v2i16_zero i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_V2I16_ZERO_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_v2i32_zero i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_V2I32_ZERO_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_v2i64_zero i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_V2I64_ZERO_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_v4i8_zero i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_V4I8_ZERO_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_v4i16_zero i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_V4I16_ZERO_R $s, $x, $y, $z)>;
-def : Pat<(int_nvvm_suld_3d_v4i32_zero i64:$s, i32:$x, i32:$y, i32:$z),
-          (SULD_3D_V4I32_ZERO_R $s, $x, $y, $z)>;
