@@ -179,8 +179,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // Match insert into fixed vector of scalar value.
   // TODO: Handle non-zero insert index.
   Value *Scalar;
-  if (!match(&I, m_InsertElt(m_Undef(), m_Value(Scalar), m_ZeroInt())) ||
-      !Scalar->hasOneUse())
+  if (!match(&I,
+             m_InsertElt(m_Poison(), m_OneUse(m_Value(Scalar)), m_ZeroInt())))
     return false;
 
   // Optionally match an extract from another vector.

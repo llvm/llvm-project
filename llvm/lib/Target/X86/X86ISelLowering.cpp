@@ -56568,14 +56568,11 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
             Op0H = Op0->getOperand(i + 1), Op1H = Op1->getOperand(i + 1);
     // TODO: Be more tolerant to undefs.
     APInt Idx0L, Idx0H, Idx1L, Idx1H;
-    if (!sd_match(Op0L, m_BinOp(ISD::EXTRACT_VECTOR_ELT, m_Value(),
-                                m_ConstInt(Idx0L))) ||
-        !sd_match(Op0H, m_BinOp(ISD::EXTRACT_VECTOR_ELT, m_Value(),
-                                m_ConstInt(Idx0H))) ||
-        !sd_match(Op1L, m_BinOp(ISD::EXTRACT_VECTOR_ELT, m_Value(),
-                                m_ConstInt(Idx1L))) ||
-        !sd_match(Op1H, m_BinOp(ISD::EXTRACT_VECTOR_ELT, m_Value(),
-                                m_ConstInt(Idx1H))))
+    SDValue Vec0L, Vec0H, Vec1L, Vec1H;
+    if (!sd_match(Op0L, m_ExtractElt(m_Value(Vec0L), m_ConstInt(Idx0L))) ||
+        !sd_match(Op0H, m_ExtractElt(m_Value(Vec0H), m_ConstInt(Idx0H))) ||
+        !sd_match(Op1L, m_ExtractElt(m_Value(Vec1L), m_ConstInt(Idx1L))) ||
+        !sd_match(Op1H, m_ExtractElt(m_Value(Vec1H), m_ConstInt(Idx1H))))
       return SDValue();
     // Commutativity of mul allows factors of a product to reorder.
     if (Idx0L.getZExtValue() > Idx1L.getZExtValue())
@@ -56594,14 +56591,13 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
       // First time an extract_elt's source vector is visited. Must be a MUL
       // with 2X number of vector elements than the BUILD_VECTOR.
       // Both extracts must be from same MUL.
-      Mul = Op0L->getOperand(0);
-      if (Mul->getOpcode() != ISD::MUL ||
+      Mul = Vec0L;
+      if (Mul.getOpcode() != ISD::MUL ||
           Mul.getValueType().getVectorNumElements() != 2 * e)
         return SDValue();
     }
     // Check that the extract is from the same MUL previously seen.
-    if (Mul != Op0L->getOperand(0) || Mul != Op1L->getOperand(0) ||
-        Mul != Op0H->getOperand(0) || Mul != Op1H->getOperand(0))
+    if (Mul != Vec0L || Mul != Vec1L || Mul != Vec0H || Mul != Vec1H)
       return SDValue();
   }
 
@@ -56681,14 +56677,10 @@ static SDValue matchPMADDWD_2(SelectionDAG &DAG, SDNode *N,
     // TODO: Be more tolerant to undefs.
     SDValue N00In, N01In, N10In, N11In;
     APInt IdxN00, IdxN01, IdxN10, IdxN11;
-    if (!sd_match(N00Elt, m_BinOp(ISD::EXTRACT_VECTOR_ELT, m_Value(N00In),
-                                  m_ConstInt(IdxN00))) ||
-        !sd_match(N01Elt, m_BinOp(ISD::EXTRACT_VECTOR_ELT, m_Value(N01In),
-                                  m_ConstInt(IdxN01))) ||
-        !sd_match(N10Elt, m_BinOp(ISD::EXTRACT_VECTOR_ELT, m_Value(N10In),
-                                  m_ConstInt(IdxN10))) ||
-        !sd_match(N11Elt, m_BinOp(ISD::EXTRACT_VECTOR_ELT, m_Value(N11In),
-                                  m_ConstInt(IdxN11))))
+    if (!sd_match(N00Elt, m_ExtractElt(m_Value(N00In), m_ConstInt(IdxN00))) ||
+        !sd_match(N01Elt, m_ExtractElt(m_Value(N01In), m_ConstInt(IdxN01))) ||
+        !sd_match(N10Elt, m_ExtractElt(m_Value(N10In), m_ConstInt(IdxN10))) ||
+        !sd_match(N11Elt, m_ExtractElt(m_Value(N11In), m_ConstInt(IdxN11))))
       return SDValue();
     // Add is commutative so indices can be reordered.
     if (IdxN00.getZExtValue() > IdxN10.getZExtValue()) {

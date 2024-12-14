@@ -31,6 +31,7 @@ static_library("Utility") {
     "NativeProcessSoftwareSingleStep.cpp",
     "NativeRegisterContextDBReg.cpp",
     "NativeRegisterContextDBReg_arm64.cpp",
+    "NativeRegisterContextDBReg_loongarch.cpp",
     "NativeRegisterContextDBReg_x86.cpp",
     "NativeRegisterContextRegisterInfo.cpp",
     "NetBSDSignals.cpp",
