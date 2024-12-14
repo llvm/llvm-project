@@ -277,7 +277,7 @@ ProTypeMemberInitCheck::ProTypeMemberInitCheck(StringRef Name,
                                                ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IgnoreArrays(Options.get("IgnoreArrays", false)),
-      UseAssignment(Options.getLocalOrGlobal("UseAssignment", false)) {}
+      UseAssignment(Options.get("UseAssignment", false)) {}
 
 void ProTypeMemberInitCheck::registerMatchers(MatchFinder *Finder) {
   auto IsUserProvidedNonDelegatingConstructor =
