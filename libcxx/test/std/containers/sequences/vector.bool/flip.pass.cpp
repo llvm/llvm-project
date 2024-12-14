@@ -11,89 +11,43 @@
 // void flip();
 
 #include <cassert>
+#include <memory>
 #include <vector>
 
 #include "min_allocator.h"
 #include "test_allocator.h"
 #include "test_macros.h"
 
-TEST_CONSTEXPR_CXX20 bool tests() {
-  //
-  // Testing flip() function with small vectors and various allocators
-  //
-  {
-    std::vector<bool> v;
-    v.push_back(true);
-    v.push_back(false);
-    v.push_back(true);
-    v.flip();
-    assert(!v[0]);
-    assert(v[1]);
-    assert(!v[2]);
-  }
-  {
-    std::vector<bool, min_allocator<bool> > v;
-    v.push_back(true);
-    v.push_back(false);
-    v.push_back(true);
-    v.flip();
-    assert(!v[0]);
-    assert(v[1]);
-    assert(!v[2]);
-  }
-  {
-    std::vector<bool, test_allocator<bool> > v(test_allocator<bool>(5));
-    v.push_back(true);
-    v.push_back(false);
-    v.push_back(true);
-    v.flip();
-    assert(!v[0]);
-    assert(v[1]);
-    assert(!v[2]);
-  }
+template <typename Allocator>
+TEST_CONSTEXPR_CXX20 void test_vector_flip(std::size_t n, Allocator a) {
+  std::vector<bool, Allocator> v(n, false, a);
+  for (std::size_t i = 0; i < n; ++i)
+    v[i] = i & 1;
+  std::vector<bool, Allocator> original = v;
+  v.flip();
+  for (size_t i = 0; i < n; ++i)
+    assert(v[i] == !original[i]);
+  v.flip();
+  assert(v == original);
+}
 
-  //
-  // Testing flip() function with larger vectors
-  //
-  {
-    std::vector<bool> v(1000);
-    for (std::size_t i = 0; i < v.size(); ++i)
-      v[i] = i & 1;
-    std::vector<bool> original = v;
-    v.flip();
-    for (size_t i = 0; i < v.size(); ++i) {
-      assert(v[i] == !original[i]);
-    }
-  }
-  {
-    std::vector<bool, min_allocator<bool> > v(1000, false, min_allocator<bool>());
-    for (std::size_t i = 0; i < v.size(); ++i)
-      v[i] = i & 1;
-    std::vector<bool, min_allocator<bool> > original = v;
-    v.flip();
-    for (size_t i = 0; i < v.size(); ++i)
-      assert(v[i] == !original[i]);
-    v.flip();
-    assert(v == original);
-  }
-  {
-    std::vector<bool, test_allocator<bool> > v(1000, false, test_allocator<bool>(5));
-    for (std::size_t i = 0; i < v.size(); ++i)
-      v[i] = i & 1;
-    std::vector<bool, test_allocator<bool> > original = v;
-    v.flip();
-    for (size_t i = 0; i < v.size(); ++i)
-      assert(v[i] == !original[i]);
-    v.flip();
-    assert(v == original);
-  }
+TEST_CONSTEXPR_CXX20 bool tests() {
+  // Test small vectors with different allocators
+  test_vector_flip(3, std::allocator<bool>());
+  test_vector_flip(3, min_allocator<bool>());
+  test_vector_flip(3, test_allocator<bool>(5));
+
+  // Test large vectors with different allocators
+  test_vector_flip(1000, std::allocator<bool>());
+  test_vector_flip(1000, min_allocator<bool>());
+  test_vector_flip(1000, test_allocator<bool>(5));
 
   return true;
 }
 
 int main(int, char**) {
   tests();
-#if TEST_STD_VER > 17
+#if TEST_STD_VER >= 20
   static_assert(tests());
 #endif
   return 0;

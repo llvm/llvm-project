@@ -1052,7 +1052,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::flip() _NOEXCEPT {
   // Flip each storage word entirely, including the last potentially partial word.
   // The unused bits in the last word are safe to flip as they won't be accessed.
   __storage_pointer __p = __begin_;
-  for (size_type __n = __external_cap_to_internal(size()); __n; ++__p, --__n)
+  for (size_type __n = __external_cap_to_internal(size()); __n != 0; ++__p, --__n)
     *__p = ~*__p;
 }
 
