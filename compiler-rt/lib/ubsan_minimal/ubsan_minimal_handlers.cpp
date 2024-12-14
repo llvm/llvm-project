@@ -48,7 +48,8 @@ static void format_msg(const char *kind, uintptr_t caller, char *buf,
   *buf = '\0';
 }
 
-static void report_error(const char *kind, uintptr_t caller) {
+SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error, const char *kind,
+                             uintptr_t caller) {
   if (caller == 0)
     return;
   while (true) {
@@ -114,13 +115,13 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
 
 #define HANDLER_RECOVER(name, kind)                                            \
   INTERFACE void __ubsan_handle_##name##_minimal() {                           \
-    report_error(kind, GET_CALLER_PC());                                       \
+    __ubsan_report_error(kind, GET_CALLER_PC());                               \
   }
 
 #define HANDLER_NORECOVER(name, kind)                                          \
   INTERFACE void __ubsan_handle_##name##_minimal_abort() {                     \
     uintptr_t caller = GET_CALLER_PC();                                        \
-    report_error(kind, caller);                                                \
+    __ubsan_report_error(kind, caller);                                        \
     abort_with_message(kind, caller);                                          \
   }
 
