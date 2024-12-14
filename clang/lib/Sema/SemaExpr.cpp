@@ -16538,9 +16538,9 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
         << TInfo->getTypeLoc().getSourceRange();
     }
 
-    if (TInfo->getType()->isVariableArrayType()) {
+    if (TInfo->getType()->isArrayType()) {
       DiagRuntimeBehavior(TInfo->getTypeLoc().getBeginLoc(), E,
-                  PDiag(diag::warn_second_parameter_to_va_arg_vla)
+                  PDiag(diag::warn_second_parameter_to_va_arg_array)
                           << TInfo->getType()
                           << TInfo->getTypeLoc().getSourceRange());
     }
