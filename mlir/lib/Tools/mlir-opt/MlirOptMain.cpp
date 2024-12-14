@@ -184,6 +184,11 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         cl::desc("Disable the verifier on parsing (very unsafe)"),
         cl::location(disableVerifierOnParsingFlag), cl::init(false));
 
+    static cl::opt<bool, /*ExternalStorage=*/true> retainIdentifierNames(
+        "mlir-retain-identifier-names",
+        cl::desc("Retain the original names of identifiers when printing"),
+        cl::location(retainIdentifierNamesFlag), cl::init(false));
+
     static cl::opt<bool, /*ExternalStorage=*/true> verifyRoundtrip(
         "verify-roundtrip",
         cl::desc("Round-trip the IR after parsing and ensure it succeeds"),
@@ -373,7 +378,8 @@ static LogicalResult doVerifyRoundTrip(Operation *op,
     }
     FallbackAsmResourceMap fallbackResourceMap;
     ParserConfig parseConfig(&roundtripContext, config.shouldVerifyOnParsing(),
-                             &fallbackResourceMap);
+                             &fallbackResourceMap,
+                             config.shouldRetainIdentifierNames());
     roundtripModule = parseSourceString<Operation *>(buffer, parseConfig);
     if (!roundtripModule) {
       op->emitOpError() << "failed to parse " << testType

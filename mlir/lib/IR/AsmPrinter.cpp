@@ -73,7 +73,8 @@ OpAsmParser::~OpAsmParser() = default;
 MLIRContext *AsmParser::getContext() const { return getBuilder().getContext(); }
 
 /// Parse a type list.
-/// This is out-of-line to work-around https://github.com/llvm/llvm-project/issues/62918
+/// This is out-of-line to work-around
+/// https://github.com/llvm/llvm-project/issues/62918
 ParseResult AsmParser::parseTypeList(SmallVectorImpl<Type> &result) {
   return parseCommaSeparatedList(
       [&]() { return parseType(result.emplace_back()); });
@@ -195,6 +196,10 @@ struct AsmPrinterOptions {
       "mlir-print-unique-ssa-ids", llvm::cl::init(false),
       llvm::cl::desc("Print unique SSA ID numbers for values, block arguments "
                      "and naming conflicts across all regions")};
+
+  llvm::cl::opt<bool> printRetainedIdentifierNamesFlag{
+      "mlir-print-retained-identifier-names", llvm::cl::init(false),
+      llvm::cl::desc("Print the retained original names of identifiers")};
 };
 } // namespace
 
@@ -212,7 +217,8 @@ OpPrintingFlags::OpPrintingFlags()
     : printDebugInfoFlag(false), printDebugInfoPrettyFormFlag(false),
       printGenericOpFormFlag(false), skipRegionsFlag(false),
       assumeVerifiedFlag(false), printLocalScope(false),
-      printValueUsersFlag(false), printUniqueSSAIDsFlag(false) {
+      printValueUsersFlag(false), printUniqueSSAIDsFlag(false),
+      printRetainedIdentifierNamesFlag(false) {
   // Initialize based upon command line options, if they are available.
   if (!clOptions.isConstructed())
     return;
@@ -231,6 +237,8 @@ OpPrintingFlags::OpPrintingFlags()
   skipRegionsFlag = clOptions->skipRegionsOpt;
   printValueUsersFlag = clOptions->printValueUsers;
   printUniqueSSAIDsFlag = clOptions->printUniqueSSAIDs;
+  printRetainedIdentifierNamesFlag =
+      clOptions->printRetainedIdentifierNamesFlag;
 }
 
 /// Enable the elision of large elements attributes, by printing a '...'
@@ -360,6 +368,11 @@ bool OpPrintingFlags::shouldPrintValueUsers() const {
 /// Return if the printer should use unique IDs.
 bool OpPrintingFlags::shouldPrintUniqueSSAIDs() const {
   return printUniqueSSAIDsFlag || shouldPrintGenericOpForm();
+}
+
+/// Return if the printer should use unique IDs.
+bool OpPrintingFlags::shouldPrintRetainedIdentifierNames() const {
+  return printRetainedIdentifierNamesFlag;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1511,7 +1524,13 @@ void SSANameState::numberValuesInRegion(Region &region) {
     assert(!valueIDs.count(arg) && "arg numbered multiple times");
     assert(llvm::cast<BlockArgument>(arg).getOwner()->getParent() == &region &&
            "arg not defined in current region");
-    setValueName(arg, name);
+    if (printerFlags.shouldPrintRetainedIdentifierNames() &&
+        isa<NameLoc>(arg.getLoc())) {
+      auto nameLoc = cast<NameLoc>(arg.getLoc());
+      setValueName(arg, nameLoc.getName());
+    } else {
+      setValueName(arg, name);
+    }
   };
 
   if (!printerFlags.shouldPrintGenericOpForm()) {
@@ -1553,7 +1572,13 @@ void SSANameState::numberValuesInBlock(Block &block) {
       specialNameBuffer.resize(strlen("arg"));
       specialName << nextArgumentID++;
     }
-    setValueName(arg, specialName.str());
+    if (printerFlags.shouldPrintRetainedIdentifierNames() &&
+        isa<NameLoc>(arg.getLoc())) {
+      auto nameLoc = cast<NameLoc>(arg.getLoc());
+      setValueName(arg, nameLoc.getName());
+    } else {
+      setValueName(arg, specialName.str());
+    }
   }
 
   // Number the operations in this block.
@@ -1567,7 +1592,13 @@ void SSANameState::numberValuesInOp(Operation &op) {
   auto setResultNameFn = [&](Value result, StringRef name) {
     assert(!valueIDs.count(result) && "result numbered multiple times");
     assert(result.getDefiningOp() == &op && "result not defined by 'op'");
-    setValueName(result, name);
+    if (printerFlags.shouldPrintRetainedIdentifierNames() &&
+        isa<NameLoc>(result.getLoc())) {
+      auto nameLoc = cast<NameLoc>(result.getLoc());
+      setValueName(result, nameLoc.getName());
+    } else {
+      setValueName(result, name);
+    }
 
     // Record the result number for groups not anchored at 0.
     if (int resultNo = llvm::cast<OpResult>(result).getResultNumber())
@@ -1608,8 +1639,23 @@ void SSANameState::numberValuesInOp(Operation &op) {
   Value resultBegin = op.getResult(0);
 
   // If the first result wasn't numbered, give it a default number.
-  if (valueIDs.try_emplace(resultBegin, nextValueID).second)
-    ++nextValueID;
+  if (!printerFlags.shouldPrintRetainedIdentifierNames()) {
+    if (valueIDs.try_emplace(resultBegin, nextValueID).second)
+      ++nextValueID;
+  } else {
+    for (OpResult opResult : op.getOpResults()) {
+      if (!isa<OpAsmOpInterface>(&op) &&
+          printerFlags.shouldPrintRetainedIdentifierNames() &&
+          isa<NameLoc>(opResult.getLoc())) {
+        auto nameLoc = cast<NameLoc>(opResult.getLoc());
+        setResultNameFn(opResult, nameLoc.getName());
+      } else {
+        // If the first result wasn't numbered, give it a default number.
+        if (valueIDs.try_emplace(opResult, nextValueID).second)
+          ++nextValueID;
+      }
+    }
+  }
 
   // If this operation has multiple result groups, mark it.
   if (resultGroups.size() != 1) {

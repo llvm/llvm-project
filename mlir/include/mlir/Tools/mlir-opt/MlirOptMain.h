@@ -198,6 +198,12 @@ public:
   }
   bool shouldVerifyPasses() const { return verifyPassesFlag; }
 
+  MlirOptMainConfig &retainIdentifierNames(bool retain) {
+    retainIdentifierNamesFlag = retain;
+    return *this;
+  }
+  bool shouldRetainIdentifierNames() const { return retainIdentifierNamesFlag; }
+
   /// Set whether to run the verifier on parsing.
   MlirOptMainConfig &verifyOnParsing(bool verify) {
     disableVerifierOnParsingFlag = !verify;
@@ -283,6 +289,9 @@ protected:
 
   /// Run the verifier after each transformation pass.
   bool verifyPassesFlag = true;
+
+  /// Retain identifier names in the output (e.g., `%my_var` instead of `%0`).
+  bool retainIdentifierNamesFlag = false;
 
   /// Disable the verifier on parsing.
   bool disableVerifierOnParsingFlag = false;

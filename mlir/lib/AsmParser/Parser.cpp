@@ -543,6 +543,10 @@ Type Parser::codeCompleteDialectSymbol(const llvm::StringMap<Type> &aliases) {
 //===----------------------------------------------------------------------===//
 
 namespace {
+/// This is the structure of a result specifier in the assembly syntax,
+/// including the name, number of results, and location.
+using ResultRecord = std::tuple<StringRef, unsigned, SMLoc>;
+
 /// This class provides support for parsing operations and regions of
 /// operations.
 class OperationParser : public Parser {
@@ -618,7 +622,8 @@ public:
   ParseResult parseSuccessors(SmallVectorImpl<Block *> &destinations);
 
   /// Parse an operation instance that is in the generic form.
-  Operation *parseGenericOperation();
+  Operation *parseGenericOperation(
+      std::optional<ArrayRef<ResultRecord>> resultIDs = std::nullopt);
 
   /// Parse different components, viz., use-info of operand(s), successor(s),
   /// region(s), attribute(s) and function-type, of the generic form of an
@@ -658,10 +663,6 @@ public:
   /// case an OpaqueLoc is used a placeholder. The caller must ensure that the
   /// token is actually an alias, which means it must not contain a dot.
   ParseResult parseLocationAlias(LocationAttr &loc);
-
-  /// This is the structure of a result specifier in the assembly syntax,
-  /// including the name, number of results, and location.
-  using ResultRecord = std::tuple<StringRef, unsigned, SMLoc>;
 
   /// Parse an operation instance that is in the op-defined custom form.
   /// resultInfo specifies information about the "%name =" specifiers.
@@ -1238,7 +1239,7 @@ ParseResult OperationParser::parseOperation() {
   if (nameTok.is(Token::bare_identifier) || nameTok.isKeyword())
     op = parseCustomOperation(resultIDs);
   else if (nameTok.is(Token::string))
-    op = parseGenericOperation();
+    op = parseGenericOperation(resultIDs);
   else if (nameTok.isCodeCompletionFor(Token::string))
     return codeCompleteStringDialectOrOperationName(nameTok.getStringValue());
   else if (nameTok.isCodeCompletion())
@@ -1344,6 +1345,38 @@ struct CleanupOpStateRegions {
   }
   OperationState &state;
 };
+
+std::pair<StringRef, unsigned> getResultName(ArrayRef<ResultRecord> resultIDs,
+                                             unsigned resultNo) {
+  // Scan for the resultID that contains this result number.
+  for (const auto &entry : resultIDs) {
+    if (resultNo < std::get<1>(entry)) {
+      // Don't pass on the leading %.
+      StringRef name = std::get<0>(entry).drop_front();
+      return {name, resultNo};
+    }
+    resultNo -= std::get<1>(entry);
+  }
+
+  // Invalid result number.
+  return {"", ~0U};
+}
+
+std::pair<SMLoc, unsigned> getResultLoc(ArrayRef<ResultRecord> resultIDs,
+                                        unsigned resultNo) {
+  // Scan for the resultID that contains this result number.
+  for (const auto &entry : resultIDs) {
+    if (resultNo < std::get<1>(entry)) {
+      SMLoc loc = std::get<2>(entry);
+      return {loc, resultNo};
+    }
+    resultNo -= std::get<1>(entry);
+  }
+
+  // Invalid result number.
+  return {SMLoc{}, ~0U};
+}
+
 } // namespace
 
 ParseResult OperationParser::parseGenericOperationAfterOpName(
@@ -1457,7 +1490,8 @@ ParseResult OperationParser::parseGenericOperationAfterOpName(
   return success();
 }
 
-Operation *OperationParser::parseGenericOperation() {
+Operation *OperationParser::parseGenericOperation(
+    std::optional<ArrayRef<ResultRecord>> maybeResultIDs) {
   // Get location information for the operation.
   auto srcLocation = getEncodedSourceLocation(getToken().getLoc());
 
@@ -1531,6 +1565,17 @@ Operation *OperationParser::parseGenericOperation() {
 
   // Create the operation and try to parse a location for it.
   Operation *op = opBuilder.create(result);
+  if (state.config.shouldRetainIdentifierNames() && maybeResultIDs) {
+    for (OpResult opResult : op->getResults()) {
+      unsigned resultNum = opResult.getResultNumber();
+      Location resultLoc = getEncodedSourceLocation(
+          getResultLoc(*maybeResultIDs, resultNum).first);
+      opResult.setLoc(NameLoc::get(
+          StringAttr::get(state.config.getContext(),
+                          getResultName(*maybeResultIDs, resultNum).first),
+          resultLoc));
+    }
+  }
   if (parseTrailingLocationSpecifier(op))
     return nullptr;
 
@@ -1571,7 +1616,7 @@ namespace {
 class CustomOpAsmParser : public AsmParserImpl<OpAsmParser> {
 public:
   CustomOpAsmParser(
-      SMLoc nameLoc, ArrayRef<OperationParser::ResultRecord> resultIDs,
+      SMLoc nameLoc, ArrayRef<ResultRecord> resultIDs,
       function_ref<ParseResult(OpAsmParser &, OperationState &)> parseAssembly,
       bool isIsolatedFromAbove, StringRef opName, OperationParser &parser)
       : AsmParserImpl<OpAsmParser>(nameLoc, parser), resultIDs(resultIDs),
@@ -1634,18 +1679,7 @@ public:
   ///    getResultName(3) == {"z", 0 }
   std::pair<StringRef, unsigned>
   getResultName(unsigned resultNo) const override {
-    // Scan for the resultID that contains this result number.
-    for (const auto &entry : resultIDs) {
-      if (resultNo < std::get<1>(entry)) {
-        // Don't pass on the leading %.
-        StringRef name = std::get<0>(entry).drop_front();
-        return {name, resultNo};
-      }
-      resultNo -= std::get<1>(entry);
-    }
-
-    // Invalid result number.
-    return {"", ~0U};
+    return ::getResultName(resultIDs, resultNo);
   }
 
   /// Return the number of declared SSA results.  This returns 4 for the foo.op
@@ -1962,7 +1996,7 @@ public:
 
 private:
   /// Information about the result name specifiers.
-  ArrayRef<OperationParser::ResultRecord> resultIDs;
+  ArrayRef<ResultRecord> resultIDs;
 
   /// The abstract information of the operation.
   function_ref<ParseResult(OpAsmParser &, OperationState &)> parseAssembly;
@@ -2093,6 +2127,18 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
 
   // Otherwise, create the operation and try to parse a location for it.
   Operation *op = opBuilder.create(opState);
+
+  if (state.config.shouldRetainIdentifierNames()) {
+    for (OpResult opResult : op->getResults()) {
+      unsigned resultNum = opResult.getResultNumber();
+      Location resultLoc =
+          getEncodedSourceLocation(getResultLoc(resultIDs, resultNum).first);
+      StringRef resName = opAsmParser.getResultName(resultNum).first;
+      opResult.setLoc(NameLoc::get(
+          StringAttr::get(state.config.getContext(), resName), resultLoc));
+    }
+  }
+
   if (parseTrailingLocationSpecifier(op))
     return nullptr;
 
@@ -2159,8 +2205,11 @@ OperationParser::parseTrailingLocationSpecifier(OpOrArgument opOrArgument) {
   if (parseToken(Token::r_paren, "expected ')' in location"))
     return failure();
 
-  if (auto *op = llvm::dyn_cast_if_present<Operation *>(opOrArgument))
+  if (auto *op = llvm::dyn_cast_if_present<Operation *>(opOrArgument)) {
     op->setLoc(directLoc);
+    for (auto result : op->getResults())
+      result.setLoc(directLoc);
+  }
   else
     opOrArgument.get<BlockArgument>().setLoc(directLoc);
   return success();
@@ -2235,6 +2284,11 @@ ParseResult OperationParser::parseRegionBody(Region &region, SMLoc startLoc,
       Location loc = entryArg.sourceLoc.has_value()
                          ? *entryArg.sourceLoc
                          : getEncodedSourceLocation(argInfo.location);
+      if (state.config.shouldRetainIdentifierNames()) {
+        loc = NameLoc::get(StringAttr::get(state.config.getContext(),
+                                           entryArg.ssaName.name.drop_front(1)),
+                           loc);
+      }
       BlockArgument arg = block->addArgument(entryArg.type, loc);
 
       // Add a definition of this arg to the assembly state if provided.
@@ -2415,6 +2469,11 @@ ParseResult OperationParser::parseOptionalBlockArgList(Block *owner) {
               return emitError("argument and block argument type mismatch");
           } else {
             auto loc = getEncodedSourceLocation(useInfo.location);
+            if (state.config.shouldRetainIdentifierNames()) {
+              loc = NameLoc::get(StringAttr::get(state.config.getContext(),
+                                                 useInfo.name.drop_front(1)),
+                                 loc);
+            }
             arg = owner->addArgument(type, loc);
           }
 

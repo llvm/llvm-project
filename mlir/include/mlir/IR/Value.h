@@ -367,7 +367,8 @@ namespace detail {
 /// This class provides the implementation for an operation result.
 class alignas(8) OpResultImpl : public ValueImpl {
 public:
-  using ValueImpl::ValueImpl;
+  OpResultImpl(Type type, Kind kind, Location loc)
+      : ValueImpl(type, kind), loc(loc) {}
 
   static bool classof(const ValueImpl *value) {
     return value->getKind() != ValueImpl::Kind::BlockArgument;
@@ -390,14 +391,17 @@ public:
   static unsigned getMaxInlineResults() {
     return static_cast<unsigned>(Kind::OutOfLineOpResult);
   }
+
+  /// The source location of this result.
+  Location loc;
 };
 
 /// This class provides the implementation for an operation result whose index
 /// can be represented "inline" in the underlying ValueImpl.
 struct InlineOpResult : public OpResultImpl {
 public:
-  InlineOpResult(Type type, unsigned resultNo)
-      : OpResultImpl(type, static_cast<ValueImpl::Kind>(resultNo)) {
+  InlineOpResult(Type type, unsigned resultNo, Location loc)
+      : OpResultImpl(type, static_cast<ValueImpl::Kind>(resultNo), loc) {
     assert(resultNo < getMaxInlineResults());
   }
 
@@ -413,8 +417,8 @@ public:
 /// cannot be represented "inline", and thus requires an additional index field.
 class OutOfLineOpResult : public OpResultImpl {
 public:
-  OutOfLineOpResult(Type type, uint64_t outOfLineIndex)
-      : OpResultImpl(type, Kind::OutOfLineOpResult),
+  OutOfLineOpResult(Type type, uint64_t outOfLineIndex, Location loc)
+      : OpResultImpl(type, Kind::OutOfLineOpResult, loc),
         outOfLineIndex(outOfLineIndex) {}
 
   static bool classof(const OpResultImpl *value) {
@@ -467,6 +471,10 @@ public:
 
   /// Returns the number of this result.
   unsigned getResultNumber() const { return getImpl()->getResultNumber(); }
+
+  /// Return the location for this result.
+  Location getLoc() const { return getImpl()->loc; }
+  void setLoc(Location loc) { getImpl()->loc = loc; }
 
 private:
   /// Get a raw pointer to the internal implementation.

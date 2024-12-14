@@ -1221,6 +1221,10 @@ public:
   /// Return if printer should use unique SSA IDs.
   bool shouldPrintUniqueSSAIDs() const;
 
+  /// Returns if the printer should retain identifier names collected using
+  /// parsing.
+  bool shouldPrintRetainedIdentifierNames() const;
+
 private:
   /// Elide large elements attributes if the number of elements is larger than
   /// the upper limit.
@@ -1254,6 +1258,9 @@ private:
 
   /// Print unique SSA IDs for values, block arguments and naming conflicts
   bool printUniqueSSAIDsFlag : 1;
+
+  /// Print the retained original names of identifiers
+  bool printRetainedIdentifierNamesFlag : 1;
 };
 
 //===----------------------------------------------------------------------===//
