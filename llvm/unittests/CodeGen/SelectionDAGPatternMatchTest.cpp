@@ -133,10 +133,11 @@ TEST_F(SelectionDAGPatternMatchTest, matchVecShuffle) {
 
   using namespace SDPatternMatch;
   EXPECT_TRUE(sd_match(VecShuffleWithMask,
-                       m_Shuffle(m_Value(V0), m_Value(V1), CapturedMask)));
-  EXPECT_TRUE(
-      sd_match(VecShuffleWithMask,
-               m_ShuffleSpecificMask(m_Value(V0), m_Value(V1), MaskData)));
+                       m_Shuffle(m_Value(), m_Value(), CapturedMask)));
+  EXPECT_TRUE(sd_match(VecShuffleWithMask,
+                       m_ShuffleSpecificMask(m_Value(), m_Value(), MaskData)));
+  EXPECT_TRUE(std::equal(MaskData.begin(), MaskData.end(), CapturedMask.begin(),
+                         CapturedMask.end()));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, matchTernaryOp) {

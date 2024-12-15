@@ -545,15 +545,16 @@ template <typename T0, typename T1> struct SDShuffle_match {
   T0 Op1;
   T1 Op2;
 
-  const ArrayRef<int> *MaskRef;
+  ArrayRef<int> &CapturedMask;
 
   // capturing mask
-  SDShuffle_match(const T0 &Op1, const T1 &Op2, const ArrayRef<int> &MaskRef)
-      : Op1(Op1), Op2(Op2), MaskRef(&MaskRef) {}
+  SDShuffle_match(const T0 &Op1, const T1 &Op2, ArrayRef<int> &MaskRef)
+      : Op1(Op1), Op2(Op2), CapturedMask(MaskRef) {}
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
     if (auto *I = dyn_cast<ShuffleVectorSDNode>(N)) {
+      CapturedMask = I->getMask();
       return Op1.match(Ctx, I->getOperand(0)) &&
              Op2.match(Ctx, I->getOperand(1));
     }
@@ -567,14 +568,16 @@ template <typename T0, typename T1> struct SDShuffle_maskMatch {
   T1 Op2;
   ArrayRef<int> SpecificMask;
 
-  SDShuffle_maskMatch(const T0 &Op1, const T1 &Op2, const ArrayRef<int> Mask)
+  SDShuffle_maskMatch(const T0 &Op1, const T1 &Op2, ArrayRef<int> Mask)
       : Op1(Op1), Op2(Op2), SpecificMask(Mask) {}
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
     if (auto *I = dyn_cast<ShuffleVectorSDNode>(N)) {
       return Op1.match(Ctx, I->getOperand(0)) &&
-             Op2.match(Ctx, I->getOperand(1)) && I->getMask() == SpecificMask;
+             Op2.match(Ctx, I->getOperand(1)) &&
+             std::equal(SpecificMask.begin(), SpecificMask.end(),
+                        I->getMask().begin(), I->getMask().end());
     }
     return false;
   }
@@ -831,14 +834,13 @@ inline BinaryOpc_match<LHS, RHS> m_FRem(const LHS &L, const RHS &R) {
 
 template <typename V1_t, typename V2_t>
 inline SDShuffle_match<V1_t, V2_t> m_Shuffle(const V1_t &v1, const V2_t &v2,
-                                             const ArrayRef<int> &maskRef) {
-  return SDShuffle_match<V1_t, V2_t>(v1, v2, maskRef);
+                                             ArrayRef<int> &mask) {
+  return SDShuffle_match<V1_t, V2_t>(v1, v2, mask);
 }
 
 template <typename V1_t, typename V2_t>
 inline SDShuffle_maskMatch<V1_t, V2_t>
-m_ShuffleSpecificMask(const V1_t &v1, const V2_t &v2,
-                      const ArrayRef<int> mask) {
+m_ShuffleSpecificMask(const V1_t &v1, const V2_t &v2, ArrayRef<int> mask) {
   return SDShuffle_maskMatch<V1_t, V2_t>(v1, v2, mask);
 }
 
