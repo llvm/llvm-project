@@ -172,7 +172,6 @@ public:
     addConversion([&](TypeDescType ty) {
       return TypeDescType::get(convertType(ty.getOfTy()));
     });
-    addArgumentMaterialization(materializeProcedure);
     addSourceMaterialization(materializeProcedure);
     addTargetMaterialization(materializeProcedure);
   }
