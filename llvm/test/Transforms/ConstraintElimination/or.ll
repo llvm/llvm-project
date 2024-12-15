@@ -126,7 +126,7 @@ define i1 @test_or_chain_ule_1(i4 %x, i4 %y, i4 %z, i4 %a, i4 %b) {
 ; CHECK-NEXT:    [[OR_1:%.*]] = or i1 [[C_1]], [[C_2]]
 ; CHECK-NEXT:    [[OR_2:%.*]] = or i1 [[OR_1]], true
 ; CHECK-NEXT:    [[OR_3:%.*]] = or i1 [[C_4]], [[OR_2]]
-; CHECK-NEXT:    br i1 [[OR_3]], label [[BB1:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i4 [[X]], [[Z]]
 ; CHECK-NEXT:    [[C_6:%.*]] = icmp ule i4 [[X]], [[A]]
@@ -199,7 +199,7 @@ define i1 @test_or_chain_ule_2(i4 %x, i4 %y, i4 %z, i4 %a, i4 %b) {
 ; CHECK-NEXT:    [[OR_1:%.*]] = or i1 [[C_1]], [[C_2]]
 ; CHECK-NEXT:    [[OR_2:%.*]] = or i1 [[C_3]], [[C_4]]
 ; CHECK-NEXT:    [[OR_3:%.*]] = or i1 [[OR_1]], [[OR_2]]
-; CHECK-NEXT:    br i1 [[OR_3]], label [[BB1:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i4 [[X]], [[Z]]
 ; CHECK-NEXT:    [[C_6:%.*]] = icmp ule i4 [[X]], [[A]]
