@@ -3194,7 +3194,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   // A pointer induction, performed by using a gep
   BasicBlock::iterator InductionLoc = State.Builder.GetInsertPoint();
   Value *ScalarStepValue = State.get(getOperand(1), VPLane(0));
-  Type *PhiType = IndDesc.getStep()->getType();
+  Type *PhiType = State.TypeAnalysis.inferScalarType(getOperand(1));
   Value *RuntimeVF = getRuntimeVF(State.Builder, PhiType, State.VF);
   // Add induction update using an incorrect block temporarily. The phi node
   // will be fixed after VPlan execution. Note that at this point the latch
@@ -3246,7 +3246,8 @@ void VPWidenPointerInductionRecipe::print(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = WIDEN-POINTER-INDUCTION ";
   getStartValue()->printAsOperand(O, SlotTracker);
-  O << ", " << *IndDesc.getStep();
+  O << ", ";
+  getOperand(1)->printAsOperand(O, SlotTracker);
   if (getNumOperands() == 4) {
     O << ", ";
     getOperand(2)->printAsOperand(O, SlotTracker);
