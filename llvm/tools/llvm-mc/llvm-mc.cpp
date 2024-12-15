@@ -95,7 +95,9 @@ static cl::opt<bool>
                 cl::cat(MCCategory));
 
 static cl::opt<bool>
-    HexBytes("hex", cl::desc("Take hex bytes as input for the disassembler"),
+    HexBytes("hex",
+             cl::desc("Take raw hexadecimal bytes as input for disassembly. "
+                      "Whitespace is ignored"),
              cl::cat(MCCategory));
 
 static cl::list<std::string>
