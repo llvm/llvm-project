@@ -8844,37 +8844,28 @@ static VPValue *addResumeValuesForInduction(VPHeaderPHIRecipe *PhiR,
                                             VPBuilder &ScalarPHBuilder,
                                             VPTypeAnalysis &TypeInfo,
                                             VPValue *VectorTC) {
-  PHINode *OrigPhi;
-  const InductionDescriptor *ID;
-  VPValue *Start = PhiR->getStartValue();
-  VPValue *Step;
-  Type *ScalarTy;
+  auto *WideIV = dyn_cast<VPWidenInductionRecipe>(PhiR);
+  if (!WideIV)
+    return nullptr;
+
+  VPValue *Start = WideIV->getStartValue();
+  VPValue *Step = WideIV->getStepValue();
+  const InductionDescriptor &ID = WideIV->getInductionDescriptor();
+  Type *ScalarTy = TypeInfo.inferScalarType(WideIV);
   bool IsCanonical = false;
   if (auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(PhiR)) {
     // Truncated wide inductions resume from the last lane of their vector value
     // in the last vector iteration.
-    if (WideIV->getTruncInst())
+    if (ScalarTy != TypeInfo.inferScalarType(Step))
       return nullptr;
-    OrigPhi = cast<PHINode>(WideIV->getUnderlyingValue());
-    ID = &WideIV->getInductionDescriptor();
-    Step = WideIV->getStepValue();
-    ScalarTy = WideIV->getScalarType();
     IsCanonical = WideIV->isCanonical();
-  } else if (auto *WideIV = dyn_cast<VPWidenPointerInductionRecipe>(PhiR)) {
-    OrigPhi = cast<PHINode>(WideIV->getUnderlyingValue());
-    ID = &WideIV->getInductionDescriptor();
-    Step = WideIV->getOperand(1);
-    ScalarTy = Start->getLiveInIRValue()->getType();
-  } else {
-    return nullptr;
   }
 
   VPValue *EndValue = VectorTC;
   if (!IsCanonical) {
     EndValue = VectorPHBuilder.createDerivedIV(
-        ID->getKind(),
-        dyn_cast_or_null<FPMathOperator>(ID->getInductionBinOp()), Start,
-        VectorTC, Step);
+        ID.getKind(), dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),
+        Start, VectorTC, Step);
   }
 
   // EndValue is based on the vector trip count (which has the same type as the
@@ -8886,7 +8877,7 @@ static VPValue *addResumeValuesForInduction(VPHeaderPHIRecipe *PhiR,
 
   auto *ResumePhiRecipe =
       ScalarPHBuilder.createNaryOp(VPInstruction::ResumePhi, {EndValue, Start},
-                                   OrigPhi->getDebugLoc(), "bc.resume.val");
+                                   WideIV->getDebugLoc(), "bc.resume.val");
   return ResumePhiRecipe;
 }
 
