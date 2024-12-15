@@ -757,23 +757,18 @@ defm block_or  : block_op<or>;
 defm block_xor : block_op<xor>;
 
 // Insertions.
-def inserti8 : PatFrag<(ops node:$src1, node:$src2),
-                       (or (and node:$src1, -256), node:$src2)>;
+class insert_imm<int mask> : PatFrag<(ops node:$src1, node:$src2),
+                                     (or (and node:$src1, mask), node:$src2)>;
 
-class inserti16<int mask> : PatFrag<(ops node:$src1, node:$src2),
-                                    (or (and node:$src1, mask), node:$src2)>;
-
-def insertll   : inserti16<0xffff0000>;
-def insertlh   : inserti16<0x0000ffff>;
-def insertll64 : inserti16<0xffffffffffff0000>;
-def insertlh64 : inserti16<0xffffffff0000ffff>;
-def inserthl64 : inserti16<0xffff0000ffffffff>;
-def inserthh64 : inserti16<0x0000ffffffffffff>;
-
-def insertlf : PatFrag<(ops node:$src1, node:$src2),
-                       (or (and node:$src1, 0xffffffff00000000), node:$src2)>;
-def inserthf : PatFrag<(ops node:$src1, node:$src2),
-                       (or (and node:$src1, 0x00000000ffffffff), node:$src2)>;
+def inserti8   : insert_imm<-256>;
+def insertll   : insert_imm<0xffff0000>;
+def insertlh   : insert_imm<0x0000ffff>;
+def insertll64 : insert_imm<0xffffffffffff0000>;
+def insertlh64 : insert_imm<0xffffffff0000ffff>;
+def inserthl64 : insert_imm<0xffff0000ffffffff>;
+def inserthh64 : insert_imm<0x0000ffffffffffff>;
+def insertlf   : insert_imm<0xffffffff00000000>;
+def inserthf   : insert_imm<0x00000000ffffffff>;
 
 // ORs that can be treated as insertions.
 def or_as_inserti8 : PatFrag<(ops node:$src1, node:$src2),
