@@ -312,10 +312,6 @@ static const char *getIgnoredOpcodeReasonOrNull(const LLVMState &State,
   return nullptr;
 }
 
-static bool isIgnoredOpcode(const LLVMState &State, unsigned Opcode) {
-  return getIgnoredOpcodeReasonOrNull(State, Opcode) != nullptr;
-}
-
 // Checks that only one of OpcodeNames, OpcodeIndex or SnippetsFile is provided,
 // and returns the opcode indices or {} if snippets should be read from
 // `SnippetsFile`.
