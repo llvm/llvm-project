@@ -31,12 +31,14 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
-; FIXME: Missing debug location for pointer induction in vector loop
 define void @widen_ptr_induction_dbg(ptr %start, ptr %end) {
 ; DEBUGLOC-LABEL: define void @widen_ptr_induction_dbg(
 ; DEBUGLOC: vector.body:
-; DEBUGLOC-NOT: = phi ptr {{.+}}, !dbg
+; DEBUGLOC-NEXT: = phi ptr {{.+}}, !dbg ![[PTRIVLOC:[0-9]+]]
 ; DEBUGLOC: = phi i64
+;
+; DEBUGLOC: loop:
+; DEBUGLOC-NEXT: = phi ptr {{.+}}, !dbg ![[PTRIVLOC]]
 ;
 entry:
   br label %loop
@@ -59,3 +61,4 @@ exit:
 ; CHECK: !{!"llvm.loop.isvectorized", i32 1}
 
 ; DEBUGLOC: ![[RESUMELOC]] = !DILocation(line: 2
+; DEBUGLOC: ![[PTRIVLOC]] = !DILocation(line: 12
