@@ -141,8 +141,7 @@ public:
   static bool classof(const InputFile *f) { return f->kind() == ObjectKind; }
   void parse() override;
   void parseLazy();
-  MachineTypes getMachineType() const override { return getMachineType(mb); }
-  static MachineTypes getMachineType(MemoryBufferRef mb);
+  MachineTypes getMachineType() const override;
   ArrayRef<Chunk *> getChunks() { return chunks; }
   ArrayRef<SectionChunk *> getDebugChunks() { return debugChunks; }
   ArrayRef<SectionChunk *> getSXDataChunks() { return sxDataChunks; }
