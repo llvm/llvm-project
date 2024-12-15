@@ -2957,8 +2957,8 @@ class TEX_1D_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_1D<string inst, NVPTXRegClass outtype, NVPTXRegClass intype,
                   Intrinsic intr> {
-  def _RR : TEX_1D_base<inst, outtype, intype,
-                        (ins Int64Regs:$t, Int64Regs:$s),
+  def _RR : TEX_1D_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i64:$s, intype:$x))]>;
   def _RI : TEX_1D_base<inst, outtype, intype,
@@ -2993,8 +2993,8 @@ class TEX_1D_LEVEL_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_1D_LEVEL<string inst, NVPTXRegClass outtype,
                         NVPTXRegClass intype, Intrinsic intr> {
-  def _RR : TEX_1D_LEVEL_base<inst, outtype, intype,
-                              (ins Int64Regs:$t, Int64Regs:$s),
+  def _RR : TEX_1D_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i64:$s, intype:$x, intype:$lod))]>;
   def _RI : TEX_1D_LEVEL_base<inst, outtype, intype,
@@ -3027,8 +3027,8 @@ class TEX_1D_GRAD_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_1D_GRAD<string inst, NVPTXRegClass outtype,
                        NVPTXRegClass intype, Intrinsic intr> {
-  def _RR : TEX_1D_GRAD_base<inst, outtype, intype,
-                             (ins Int64Regs:$t, Int64Regs:$s),
+  def _RR : TEX_1D_GRAD_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i64:$s, intype:$x, intype:$gradx, intype:$grady))]>;
   def _RI : TEX_1D_GRAD_base<inst, outtype, intype,
@@ -3060,8 +3060,8 @@ class TEX_1D_ARRAY_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_1D_ARRAY<string inst, NVPTXRegClass outtype,
                         NVPTXRegClass intype, Intrinsic intr> {
-  def _RR : TEX_1D_ARRAY_base<inst, outtype, intype,
-                              (ins Int64Regs:$t, Int64Regs:$s),
+  def _RR : TEX_1D_ARRAY_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i64:$s, i32:$l, intype:$x))]>;
   def _RI : TEX_1D_ARRAY_base<inst, outtype, intype,
@@ -3103,8 +3103,8 @@ class TEX_1D_ARRAY_LEVEL_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_1D_ARRAY_LEVEL<string inst, NVPTXRegClass outtype,
                               NVPTXRegClass intype, Intrinsic intr> {
-  def _RR : TEX_1D_ARRAY_LEVEL_base<inst, outtype, intype,
-                                    (ins Int64Regs:$t, Int64Regs:$s),
+  def _RR : TEX_1D_ARRAY_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i64:$s, i32:$l, intype:$x, intype:$lod))]>;
   def _RI : TEX_1D_ARRAY_LEVEL_base<inst, outtype, intype,
@@ -3138,8 +3138,8 @@ class TEX_1D_ARRAY_GRAD_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_1D_ARRAY_GRAD<string inst, NVPTXRegClass outtype,
                              NVPTXRegClass intype, Intrinsic intr> {
-  def _RR : TEX_1D_ARRAY_GRAD_base<inst, outtype, intype,
-                                   (ins Int64Regs:$t, Int64Regs:$s),
+  def _RR : TEX_1D_ARRAY_GRAD_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i64:$s, i32:$l, intype:$x,
                   intype:$gradx, intype:$grady))]>;
@@ -3171,8 +3171,8 @@ class TEX_2D_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_2D<string inst, NVPTXRegClass outtype, NVPTXRegClass intype,
                   Intrinsic intr> {
-  def _RR : TEX_2D_base<inst, outtype, intype,
-                        (ins Int64Regs:$t, Int64Regs:$s),
+  def _RR : TEX_2D_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i64:$s, intype:$x, intype:$y))]>;
   def _RI : TEX_2D_base<inst, outtype, intype, (ins Int64Regs:$t, i64imm:$s)>;
@@ -3205,8 +3205,8 @@ class TEX_2D_LEVEL_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_2D_LEVEL<string inst, NVPTXRegClass outtype,
                         NVPTXRegClass intype, Intrinsic intr> {
-  def _RR : TEX_2D_LEVEL_base<inst, outtype, intype,
-                              (ins Int64Regs:$t, Int64Regs:$s),
+  def _RR : TEX_2D_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i64:$s, intype:$x, intype:$y, intype:$lod))]>;
   def _RI : TEX_2D_LEVEL_base<inst, outtype, intype,
@@ -3241,8 +3241,8 @@ class TEX_2D_GRAD_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_2D_GRAD<string inst, NVPTXRegClass outtype,
                        NVPTXRegClass intype, Intrinsic intr> {
-  def _RR : TEX_2D_GRAD_base<inst, outtype, intype,
-                              (ins Int64Regs:$t, Int64Regs:$s),
+  def _RR : TEX_2D_GRAD_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i64:$s, intype:$x, intype:$y,
                   intype:$gradx0, intype:$gradx1,
@@ -3277,8 +3277,8 @@ class TEX_2D_ARRAY_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_2D_ARRAY<string inst, NVPTXRegClass outtype,
                         NVPTXRegClass intype, Intrinsic intr> {
-  def _RR : TEX_2D_ARRAY_base<inst, outtype, intype,
-                              (ins Int64Regs:$t, Int64Regs:$s),
+  def _RR : TEX_2D_ARRAY_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i64:$s, i32:$l, intype:$x, intype:$y))]>;
   def _RI : TEX_2D_ARRAY_base<inst, outtype, intype,
@@ -3321,8 +3321,8 @@ class TEX_2D_ARRAY_LEVEL_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_2D_ARRAY_LEVEL<string inst, NVPTXRegClass outtype,
                               NVPTXRegClass intype, Intrinsic intr> {
-  def _RR : TEX_2D_ARRAY_LEVEL_base<inst, outtype, intype,
-                              (ins Int64Regs:$t, Int64Regs:$s),
+  def _RR : TEX_2D_ARRAY_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i64:$s, i32:$l, intype:$x, intype:$y, intype:$lod))]>;
   def _RI : TEX_2D_ARRAY_LEVEL_base<inst, outtype, intype,
@@ -3358,8 +3358,8 @@ class TEX_2D_ARRAY_GRAD_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_2D_ARRAY_GRAD<string inst, NVPTXRegClass outtype,
                              NVPTXRegClass intype, Intrinsic intr> {
-  def _RR : TEX_2D_ARRAY_GRAD_base<inst, outtype, intype,
-                              (ins Int64Regs:$t, Int64Regs:$s),
+  def _RR : TEX_2D_ARRAY_GRAD_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i64:$s, i32:$l, intype:$x, intype:$y,
                   intype:$gradx0, intype:$gradx1,
@@ -3393,8 +3393,8 @@ class TEX_3D_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_3D<string inst, NVPTXRegClass outtype, NVPTXRegClass intype,
                   Intrinsic intr> {
-  def _RR : TEX_3D_base<inst, outtype, intype,
-                              (ins Int64Regs:$t, Int64Regs:$s),
+  def _RR : TEX_3D_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i64:$s, intype:$x, intype:$y, intype:$z))]>;
   def _RI : TEX_3D_base<inst, outtype, intype,
@@ -3431,8 +3431,8 @@ class TEX_3D_LEVEL_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_3D_LEVEL<string inst, NVPTXRegClass outtype,
                         NVPTXRegClass intype, Intrinsic intr> {
-  def _RR : TEX_3D_LEVEL_base<inst, outtype, intype,
-                              (ins Int64Regs:$t, Int64Regs:$s),
+  def _RR : TEX_3D_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i64:$s, intype:$x, intype:$y, intype:$z,
                   intype:$lod))]>;
@@ -3471,8 +3471,8 @@ class TEX_3D_GRAD_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_3D_GRAD<string inst, NVPTXRegClass outtype,
                        NVPTXRegClass intype, Intrinsic intr> {
-  def _RR : TEX_3D_GRAD_base<inst, outtype, intype,
-                             (ins Int64Regs:$t, Int64Regs:$s),
+  def _RR : TEX_3D_GRAD_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i64:$s, intype:$x, intype:$y, intype:$z,
                   intype:$gradx0, intype:$gradx1, intype:$gradx2,
@@ -3506,8 +3506,8 @@ class TEX_CUBE_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_CUBE<string inst, NVPTXRegClass outtype, NVPTXRegClass intype,
                     Intrinsic intr> {
-  def _RR : TEX_CUBE_base<inst, outtype, intype,
-                          (ins Int64Regs:$t, Int64Regs:$s),
+  def _RR : TEX_CUBE_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i64:$s, intype:$x, intype:$y, intype:$z))]>;
   def _RI : TEX_CUBE_base<inst, outtype, intype,
@@ -3541,8 +3541,8 @@ class TEX_CUBE_LEVEL_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_CUBE_LEVEL<string inst, NVPTXRegClass outtype,
                           NVPTXRegClass intype, Intrinsic intr> {
-  def _RR : TEX_CUBE_LEVEL_base<inst, outtype, intype,
-                                (ins Int64Regs:$t, Int64Regs:$s),
+  def _RR : TEX_CUBE_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i64:$s, intype:$x, intype:$y, intype:$z,
                   intype:$lod))]>;
@@ -3577,8 +3577,8 @@ class TEX_CUBE_ARRAY_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_CUBE_ARRAY<string inst, NVPTXRegClass outtype,
                           NVPTXRegClass intype, Intrinsic intr> {
-  def _RR : TEX_CUBE_ARRAY_base<inst, outtype, intype,
-                                (ins Int64Regs:$t, Int64Regs:$s),
+  def _RR : TEX_CUBE_ARRAY_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i64:$s, i32:$l, intype:$x, intype:$y, intype:$z))]>;
   def _RI : TEX_CUBE_ARRAY_base<inst, outtype, intype,
@@ -3612,8 +3612,8 @@ class TEX_CUBE_ARRAY_LEVEL_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_CUBE_ARRAY_LEVEL<string inst, NVPTXRegClass outtype,
                                 NVPTXRegClass intype, Intrinsic intr> {
-  def _RR : TEX_CUBE_ARRAY_LEVEL_base<inst, outtype, intype,
-                                      (ins Int64Regs:$t, Int64Regs:$s),
+  def _RR : TEX_CUBE_ARRAY_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i64:$s, i32:$l, intype:$x, intype:$y, intype:$z,
                   intype:$lod))]>;
@@ -3648,8 +3648,8 @@ class TLD4_2D_base<string inst, NVPTXRegClass outtype,
 
 multiclass TLD4_2D<string inst, NVPTXRegClass outtype, NVPTXRegClass intype,
                    Intrinsic intr> {
-  def _RR : TLD4_2D_base<inst, outtype, intype,
-                         (ins Int64Regs:$t, Int64Regs:$s),
+  def _RR : TLD4_2D_base<
+      inst, outtype, intype, (ins Int64Regs:$t, Int64Regs:$s),
       [(set outtype:$v0, outtype:$v1, outtype:$v2, outtype:$v3,
             (intr i64:$t, i64:$s, intype:$x, intype:$y))]>;
   def _RI : TLD4_2D_base<inst, outtype, intype,
@@ -3716,7 +3716,8 @@ class TEX_UNIFIED_1D_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_UNIFIED_1D<string inst, NVPTXRegClass outtype,
                           NVPTXRegClass intype, Intrinsic intr> {
-  def _R : TEX_UNIFIED_1D_base<inst, outtype, intype, (ins Int64Regs:$t),
+  def _R : TEX_UNIFIED_1D_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, intype:$x))]>;
   def _I : TEX_UNIFIED_1D_base<inst, outtype, intype, (ins i64imm:$t)>;
@@ -3752,7 +3753,8 @@ class TEX_UNIFIED_1D_LEVEL_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_UNIFIED_1D_LEVEL<string inst, NVPTXRegClass outtype,
                                 NVPTXRegClass intype, Intrinsic intr> {
-  def _R : TEX_UNIFIED_1D_LEVEL_base<inst, outtype, intype, (ins Int64Regs:$t),
+  def _R : TEX_UNIFIED_1D_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, intype:$x, intype:$lod))]>;
   def _I : TEX_UNIFIED_1D_LEVEL_base<inst, outtype, intype, (ins i64imm:$t)>;
@@ -3780,7 +3782,8 @@ class TEX_UNIFIED_1D_GRAD_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_UNIFIED_1D_GRAD<string inst, NVPTXRegClass outtype,
                                NVPTXRegClass intype, Intrinsic intr> {
-  def _R : TEX_UNIFIED_1D_GRAD_base<inst, outtype, intype, (ins Int64Regs:$t),
+  def _R : TEX_UNIFIED_1D_GRAD_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, intype:$x, intype:$gradx, intype:$grady))]>;
   def _I : TEX_UNIFIED_1D_GRAD_base<inst, outtype, intype, (ins i64imm:$t)>;
@@ -3807,7 +3810,8 @@ class TEX_UNIFIED_1D_ARRAY_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_UNIFIED_1D_ARRAY<string inst, NVPTXRegClass outtype,
                                 NVPTXRegClass intype, Intrinsic intr> {
-  def _R : TEX_UNIFIED_1D_ARRAY_base<inst, outtype, intype, (ins Int64Regs:$t),
+  def _R : TEX_UNIFIED_1D_ARRAY_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i32:$l, intype:$x))]>;
   def _I : TEX_UNIFIED_1D_ARRAY_base<inst, outtype, intype, (ins i64imm:$t)>;
@@ -3843,8 +3847,8 @@ class TEX_UNIFIED_1D_ARRAY_LEVEL_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_UNIFIED_1D_ARRAY_LEVEL<string inst, NVPTXRegClass outtype,
                                       NVPTXRegClass intype, Intrinsic intr> {
-  def _R : TEX_UNIFIED_1D_ARRAY_LEVEL_base<inst, outtype, intype,
-                                           (ins Int64Regs:$t),
+  def _R : TEX_UNIFIED_1D_ARRAY_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i32:$l, intype:$x, intype:$lod))]>;
   def _I : TEX_UNIFIED_1D_ARRAY_LEVEL_base<inst, outtype, intype,
@@ -3877,8 +3881,8 @@ class TEX_UNIFIED_1D_ARRAY_GRAD_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_UNIFIED_1D_ARRAY_GRAD<string inst, NVPTXRegClass outtype,
                                      NVPTXRegClass intype, Intrinsic intr> {
-  def _R : TEX_UNIFIED_1D_ARRAY_GRAD_base<inst, outtype, intype,
-                                          (ins Int64Regs:$t),
+  def _R : TEX_UNIFIED_1D_ARRAY_GRAD_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i32:$l, intype:$x, intype:$gradx, intype:$grady))]>;
   def _I : TEX_UNIFIED_1D_ARRAY_GRAD_base<inst, outtype, intype,
@@ -3908,7 +3912,8 @@ class TEX_UNIFIED_2D_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_UNIFIED_2D<string inst, NVPTXRegClass outtype,
                           NVPTXRegClass intype, Intrinsic intr> {
-  def _R : TEX_UNIFIED_2D_base<inst, outtype, intype, (ins Int64Regs:$t),
+  def _R : TEX_UNIFIED_2D_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, intype:$x, intype:$y))]>;
   def _I : TEX_UNIFIED_2D_base<inst, outtype, intype, (ins i64imm:$t)>;
@@ -3944,7 +3949,8 @@ class TEX_UNIFIED_2D_LEVEL_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_UNIFIED_2D_LEVEL<string inst, NVPTXRegClass outtype,
                                 NVPTXRegClass intype, Intrinsic intr> {
-  def _R : TEX_UNIFIED_2D_LEVEL_base<inst, outtype, intype, (ins Int64Regs:$t),
+  def _R : TEX_UNIFIED_2D_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, intype:$x, intype:$y, intype:$lod))]>;
   def _I : TEX_UNIFIED_2D_LEVEL_base<inst, outtype, intype, (ins i64imm:$t)>;
@@ -3973,7 +3979,8 @@ class TEX_UNIFIED_2D_GRAD_base<string inst, NVPTXRegClass outtype,
                  pattern>;
 multiclass TEX_UNIFIED_2D_GRAD<string inst, NVPTXRegClass outtype,
                                NVPTXRegClass intype, Intrinsic intr> {
-  def _R : TEX_UNIFIED_2D_GRAD_base<inst, outtype, intype, (ins Int64Regs:$t),
+  def _R : TEX_UNIFIED_2D_GRAD_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, intype:$x, intype:$y,
                   intype:$gradx0, intype:$gradx1,
@@ -4001,7 +4008,8 @@ class TEX_UNIFIED_2D_ARRAY_base<string inst, NVPTXRegClass outtype,
                  pattern>;
 multiclass TEX_UNIFIED_2D_ARRAY<string inst, NVPTXRegClass outtype,
                                 NVPTXRegClass intype, Intrinsic intr> {
-  def _R : TEX_UNIFIED_2D_ARRAY_base<inst, outtype, intype, (ins Int64Regs:$t),
+  def _R : TEX_UNIFIED_2D_ARRAY_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i32:$l, intype:$x, intype:$y))]>;
   def _I : TEX_UNIFIED_2D_ARRAY_base<inst, outtype, intype, (ins i64imm:$t)>;
@@ -4038,8 +4046,8 @@ class TEX_UNIFIED_2D_ARRAY_LEVEL_base<string inst, NVPTXRegClass outtype,
                  pattern>;
 multiclass TEX_UNIFIED_2D_ARRAY_LEVEL<string inst, NVPTXRegClass outtype,
                                       NVPTXRegClass intype, Intrinsic intr> {
-  def _R : TEX_UNIFIED_2D_ARRAY_LEVEL_base<inst, outtype, intype,
-                                           (ins Int64Regs:$t),
+  def _R : TEX_UNIFIED_2D_ARRAY_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i32:$l, intype:$x, intype:$y, intype:$lod))]>;
   def _I : TEX_UNIFIED_2D_ARRAY_LEVEL_base<inst, outtype, intype,
@@ -4072,8 +4080,8 @@ class TEX_UNIFIED_2D_ARRAY_GRAD_base<string inst, NVPTXRegClass outtype,
                  pattern>;
 multiclass TEX_UNIFIED_2D_ARRAY_GRAD<string inst, NVPTXRegClass outtype,
                                      NVPTXRegClass intype, Intrinsic intr> {
-  def _R : TEX_UNIFIED_2D_ARRAY_GRAD_base<inst, outtype, intype,
-                                          (ins Int64Regs:$t),
+  def _R : TEX_UNIFIED_2D_ARRAY_GRAD_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i32:$l, intype:$x, intype:$y,
                   intype:$gradx0, intype:$gradx1,
@@ -4104,7 +4112,8 @@ class TEX_UNIFIED_3D_base<string inst, NVPTXRegClass outtype,
                  pattern>;
 multiclass TEX_UNIFIED_3D<string inst, NVPTXRegClass outtype,
                           NVPTXRegClass intype, Intrinsic intr> {
-  def _R : TEX_UNIFIED_3D_base<inst, outtype, intype, (ins Int64Regs:$t),
+  def _R : TEX_UNIFIED_3D_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, intype:$x, intype:$y, intype:$z))]>;
   def _I : TEX_UNIFIED_3D_base<inst, outtype, intype, (ins i64imm:$t)>;
@@ -4140,7 +4149,8 @@ class TEX_UNIFIED_3D_LEVEL_base<string inst, NVPTXRegClass outtype,
                  pattern>;
 multiclass TEX_UNIFIED_3D_LEVEL<string inst, NVPTXRegClass outtype,
                                 NVPTXRegClass intype, Intrinsic intr> {
-  def _R : TEX_UNIFIED_3D_LEVEL_base<inst, outtype, intype, (ins Int64Regs:$t),
+  def _R : TEX_UNIFIED_3D_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, intype:$x, intype:$y, intype:$z, intype:$lod))]>;
   def _I : TEX_UNIFIED_3D_LEVEL_base<inst, outtype, intype, (ins i64imm:$t)>;
@@ -4171,7 +4181,8 @@ class TEX_UNIFIED_3D_GRAD_base<string inst, NVPTXRegClass outtype,
                  pattern>;
 multiclass TEX_UNIFIED_3D_GRAD<string inst, NVPTXRegClass outtype,
                                NVPTXRegClass intype, Intrinsic intr> {
-  def _R : TEX_UNIFIED_3D_GRAD_base<inst, outtype, intype, (ins Int64Regs:$t),
+  def _R : TEX_UNIFIED_3D_GRAD_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, intype:$x, intype:$y, intype:$z,
                   intype:$gradx0, intype:$gradx1, intype:$gradx2,
@@ -4199,7 +4210,8 @@ class TEX_UNIFIED_CUBE_base<string inst, NVPTXRegClass outtype,
                  pattern>;
 multiclass TEX_UNIFIED_CUBE<string inst, NVPTXRegClass outtype,
                             NVPTXRegClass intype, Intrinsic intr> {
-  def _R : TEX_UNIFIED_CUBE_base<inst, outtype, intype, (ins Int64Regs:$t),
+  def _R : TEX_UNIFIED_CUBE_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, intype:$x, intype:$y, intype:$z))]>;
   def _I : TEX_UNIFIED_CUBE_base<inst, outtype, intype, (ins i64imm:$t)>;
@@ -4226,8 +4238,8 @@ class TEX_UNIFIED_CUBE_LEVEL_base<string inst, NVPTXRegClass outtype,
                  pattern>;
 multiclass TEX_UNIFIED_CUBE_LEVEL<string inst, NVPTXRegClass outtype,
                                   NVPTXRegClass intype, Intrinsic intr> {
-  def _R : TEX_UNIFIED_CUBE_LEVEL_base<inst, outtype, intype,
-                                       (ins Int64Regs:$t),
+  def _R : TEX_UNIFIED_CUBE_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, intype:$x, intype:$y, intype:$z, intype:$lod))]>;
   def _I : TEX_UNIFIED_CUBE_LEVEL_base<inst, outtype, intype,
@@ -4257,8 +4269,8 @@ class TEX_UNIFIED_CUBE_ARRAY_base<string inst, NVPTXRegClass outtype,
                  pattern>;
 multiclass TEX_UNIFIED_CUBE_ARRAY<string inst, NVPTXRegClass outtype,
                                   NVPTXRegClass intype, Intrinsic intr> {
-  def _R : TEX_UNIFIED_CUBE_ARRAY_base<inst, outtype, intype,
-                                       (ins Int64Regs:$t),
+  def _R : TEX_UNIFIED_CUBE_ARRAY_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i32:$l, intype:$x, intype:$y, intype:$z))]>;
   def _I : TEX_UNIFIED_CUBE_ARRAY_base<inst, outtype, intype,
@@ -4287,8 +4299,8 @@ class TEX_UNIFIED_CUBE_ARRAY_LEVEL_base<string inst, NVPTXRegClass outtype,
                  pattern>;
 multiclass TEX_UNIFIED_CUBE_ARRAY_LEVEL<string inst, NVPTXRegClass outtype,
                                         NVPTXRegClass intype, Intrinsic intr> {
-  def _R : TEX_UNIFIED_CUBE_ARRAY_LEVEL_base<inst, outtype, intype,
-                                             (ins Int64Regs:$t),
+  def _R : TEX_UNIFIED_CUBE_ARRAY_LEVEL_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i32:$l, intype:$x, intype:$y, intype:$z, intype:$lod))]>;
   def _I : TEX_UNIFIED_CUBE_ARRAY_LEVEL_base<inst, outtype, intype,
@@ -4324,7 +4336,8 @@ class TEX_UNIFIED_CUBE_GRAD_base<string inst, NVPTXRegClass outtype,
 
 multiclass TEX_UNIFIED_CUBE_GRAD<string inst, NVPTXRegClass outtype,
                                  NVPTXRegClass intype, Intrinsic intr> {
-  def _R : TEX_UNIFIED_CUBE_GRAD_base<inst, outtype, intype, (ins Int64Regs:$t),
+  def _R : TEX_UNIFIED_CUBE_GRAD_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, intype:$x, intype:$y, intype:$z,
                   intype:$gradx0, intype:$gradx1, intype:$gradx2,
@@ -4357,8 +4370,8 @@ class TEX_UNIFIED_CUBE_ARRAY_GRAD_base<string inst, NVPTXRegClass outtype,
                  pattern>;
 multiclass TEX_UNIFIED_CUBE_ARRAY_GRAD<string inst, NVPTXRegClass outtype,
                                        NVPTXRegClass intype, Intrinsic intr> {
-  def _R : TEX_UNIFIED_CUBE_ARRAY_GRAD_base<inst, outtype, intype,
-                                            (ins Int64Regs:$t),
+  def _R : TEX_UNIFIED_CUBE_ARRAY_GRAD_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
       [(set outtype:$r, outtype:$g, outtype:$b, outtype:$a,
             (intr i64:$t, i32:$l, intype:$x, intype:$y, intype:$z,
                   intype:$gradx0, intype:$gradx1,
@@ -4391,7 +4404,8 @@ class TLD4_UNIFIED_2D_base<string inst, NVPTXRegClass outtype,
                  pattern>;
 multiclass TLD4_UNIFIED_2D<string inst, NVPTXRegClass outtype,
                            NVPTXRegClass intype, Intrinsic intr> {
-  def _R : TLD4_UNIFIED_2D_base<inst, outtype, intype, (ins Int64Regs:$t),
+  def _R : TLD4_UNIFIED_2D_base<
+      inst, outtype, intype, (ins Int64Regs:$t),
       [(set outtype:$v0, outtype:$v1, outtype:$v2, outtype:$v3,
             (intr i64:$t, intype:$x, intype:$y))]>;
   def _I : TLD4_UNIFIED_2D_base<inst, outtype, intype, (ins i64imm:$t)>;
