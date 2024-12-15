@@ -44,7 +44,7 @@ MlirType mlirLLVMArrayTypeGet(MlirType elementType, unsigned numElements) {
 }
 
 MlirType mlirLLVMArrayTypeGetElementType(MlirType type) {
-  return wrap(cast<LLVM::LLVMArrayType>(unwrap(type)).getElementType();
+  return wrap(cast<LLVM::LLVMArrayType>(unwrap(type)).getElementType());
 }
 
 MlirType mlirLLVMFunctionTypeGet(MlirType resultType, intptr_t nArgumentTypes,
