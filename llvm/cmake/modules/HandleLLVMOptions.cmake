@@ -1064,7 +1064,8 @@ if(LLVM_USE_SANITIZER)
   if (LLVM_USE_SANITIZE_COVERAGE)
     append("-fsanitize=fuzzer-no-link" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   endif()
-  if (LLVM_USE_SANITIZER MATCHES ".*Undefined.*")
+  if (LLVM_USE_SANITIZER MATCHES ".*Undefined.*" AND CMAKE_C_COMPILER_ID MATCHES "Clang" AND
+		                                     CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(IGNORELIST_FILE "${PROJECT_SOURCE_DIR}/utils/sanitizers/ubsan_ignorelist.txt")
     if (EXISTS "${IGNORELIST_FILE}")
       # Use this option name version since -fsanitize-ignorelist is only

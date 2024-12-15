@@ -707,8 +707,15 @@ endif( LLVM_USE_PERF )
 set(LLVM_USE_SANITIZER "" CACHE STRING
   "Define the sanitizer used to build binaries and tests.")
 option(LLVM_OPTIMIZE_SANITIZED_BUILDS "Pass -O1 on debug sanitizer builds" ON)
+
+if( CMAKE_C_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_ID MATCHES "Clang" )
+  set(LLVM_UBSAN_FLAGS_CLANG "-fno-sanitize=function")
+else()
+  # gcc doesn't know about -fsanitize=function
+  set(LLVM_UBSAN_FLAGS_CLANG)
+endif()
 set(LLVM_UBSAN_FLAGS
-    "-fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all"
+    "-fsanitize=undefined -fno-sanitize=vptr ${LLVM_UBSAN_FLAGS_CLANG} -fno-sanitize-recover=all"
     CACHE STRING
     "Compile flags set to enable UBSan. Only used if LLVM_USE_SANITIZER contains 'Undefined'.")
 set(LLVM_LIB_FUZZING_ENGINE "" CACHE PATH
