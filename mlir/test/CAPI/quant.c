@@ -10,6 +10,7 @@
 // RUN: mlir-capi-quant-test 2>&1 | FileCheck %s
 
 #include "mlir-c/Dialect/Quant.h"
+#include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/IR.h"
 
@@ -357,6 +358,7 @@ int main(void) {
   testAnyQuantizedType(ctx);
   testUniformType(ctx);
   testUniformPerAxisType(ctx);
+  testUniformSubChannelType(ctx);
   testCalibratedType(ctx);
   mlirContextDestroy(ctx);
   return EXIT_SUCCESS;

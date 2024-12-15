@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir-c/Dialect/Quant.h"
+#include "mlir-c/BuiltinAttributes.h"
 #include "mlir/CAPI/Registration.h"
 #include "mlir/Dialect/Quant/IR/Quant.h"
 #include "mlir/Dialect/Quant/IR/QuantTypes.h"
