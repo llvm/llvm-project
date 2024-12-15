@@ -147,7 +147,7 @@ int Disassembler::disassemble(const Target &T, const std::string &Triple,
                               MCSubtargetInfo &STI, MCStreamer &Streamer,
                               MemoryBuffer &Buffer, SourceMgr &SM,
                               MCContext &Ctx, const MCTargetOptions &MCOptions,
-                              bool HexPairs) {
+                              bool HexBytes) {
   std::unique_ptr<const MCRegisterInfo> MRI(T.createMCRegInfo(Triple));
   if (!MRI) {
     errs() << "error: no register info for target " << Triple << "\n";
@@ -203,7 +203,7 @@ int Disassembler::disassemble(const Target &T, const std::string &Triple,
     }
 
     // It's a real token, get the bytes and emit them
-    ErrorOccurred |= byteArrayFromString(ByteArray, Str, SM, HexPairs);
+    ErrorOccurred |= byteArrayFromString(ByteArray, Str, SM, HexBytes);
 
     if (!ByteArray.first.empty())
       ErrorOccurred |=

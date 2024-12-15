@@ -95,7 +95,7 @@ static cl::opt<bool>
                 cl::cat(MCCategory));
 
 static cl::opt<bool>
-    HexPairs("hex", cl::desc("Take hex pairs as input for the disassembler"),
+    HexBytes("hex", cl::desc("Take hex bytes as input for the disassembler"),
              cl::cat(MCCategory));
 
 static cl::list<std::string>
@@ -596,7 +596,7 @@ int main(int argc, char **argv) {
   }
   if (disassemble)
     Res = Disassembler::disassemble(*TheTarget, TripleName, *STI, *Str, *Buffer,
-                                    SrcMgr, Ctx, MCOptions, HexPairs);
+                                    SrcMgr, Ctx, MCOptions, HexBytes);
 
   // Keep output if no errors.
   if (Res == 0) {

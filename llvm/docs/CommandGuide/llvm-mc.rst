@@ -94,7 +94,7 @@ End-user Options
 
 .. option:: --hex
 
- Take hex pairs as input for the disassembler.
+ Take hex bytes as input for the disassembler.
  Whitespace is ignored.
 
 .. option:: --large-code-model
