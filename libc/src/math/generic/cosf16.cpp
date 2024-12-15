@@ -1,4 +1,4 @@
-//===-- Half-precision sin(x) function ------------------------------------===//
+//===-- Half-precision cos(x) function ------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/sinf16.h"
+#include "src/math/cosf16.h"
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
 #include "sincosf16_utils.h"
@@ -21,15 +21,15 @@ namespace LIBC_NAMESPACE_DECL {
 
 constexpr size_t N_EXCEPTS = 4;
 
-constexpr fputil::ExceptValues<float16, N_EXCEPTS> SINF16_EXCEPTS{{
+constexpr fputil::ExceptValues<float16, N_EXCEPTS> COSF16_EXCEPTS{{
     // (input, RZ output, RU offset, RD offset, RN offset)
-    {0x2b45, 0x2b43, 1, 0, 1},
-    {0x585c, 0x3ba3, 1, 0, 1},
-    {0x5cb0, 0xbbff, 0, 1, 0},
-    {0x51f5, 0xb80f, 0, 1, 0},
+    {0x2b7c, 0x3bfc, 1, 0, 1},
+    {0x4ac1, 0x38b5, 1, 0, 0},
+    {0x5c49, 0xb8c6, 0, 1, 0},
+    {0x7acc, 0xa474, 0, 1, 0},
 }};
 
-LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
+LLVM_LIBC_FUNCTION(float16, cosf16, (float16 x)) {
   using FPBits = fputil::FPBits<float16>;
   FPBits xbits(x);
 
@@ -47,40 +47,21 @@ LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
   //   k = round(x * 32/pi)
   //   y = x * 32/pi - k
   //
-  // Once k and y are computed, we then deduce the answer by the sine of sum
+  // Once k and y are computed, we then deduce the answer by the cosine of sum
   // formula:
-  //   sin(x) = sin((k + y) * pi/32)
-  //   	      = sin(k * pi/32) * cos(y * pi/32) +
-  //   	        sin(y * pi/32) * cos(k * pi/32)
+  //   cos(x) = cos((k + y) * pi/32)
+  //          = cos(k * pi/32) * cos(y * pi/32) -
+  //            sin(k * pi/32) * sin(y * pi/32)
 
   // Handle exceptional values
-  bool x_sign = x_u >> 15;
-  if (auto r = SINF16_EXCEPTS.lookup_odd(x_abs, x_sign);
-      LIBC_UNLIKELY(r.has_value()))
+  if (auto r = COSF16_EXCEPTS.lookup(x_abs); LIBC_UNLIKELY(r.has_value()))
     return r.value();
 
-  int rounding = fputil::quick_get_round();
+  // cos(+/-0) = 1
+  if (LIBC_UNLIKELY(x_abs == 0U))
+    return fputil::cast<float16>(1.0f);
 
-  // Exhaustive tests show that for |x| <= 0x1.f4p-11, 1ULP rounding errors
-  // occur. To fix this, the following apply:
-  if (LIBC_UNLIKELY(x_abs <= 0x13d0)) {
-    // sin(+/-0) = +/-0
-    if (LIBC_UNLIKELY(x_abs == 0U))
-      return x;
-
-    // When x > 0, and rounding upward, sin(x) == x.
-    // When x < 0, and rounding downward, sin(x) == x.
-    if ((rounding == FE_UPWARD && xbits.is_pos()) ||
-        (rounding == FE_DOWNWARD && xbits.is_neg()))
-      return x;
-
-    // When x < 0, and rounding upward, sin(x) == (x - 1ULP)
-    if (rounding == FE_UPWARD && xbits.is_neg()) {
-      x_u--;
-      return FPBits(x_u).get_val();
-    }
-  }
-
+  // cos(+/-inf) = NaN, and cos(NaN) = NaN
   if (xbits.is_inf_or_nan()) {
     if (xbits.is_inf()) {
       fputil::set_errno_if_required(EDOM);
@@ -92,14 +73,12 @@ LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
 
   float sin_k, cos_k, sin_y, cosm1_y;
   sincosf16_eval(xf, sin_k, cos_k, sin_y, cosm1_y);
-
-  if (LIBC_UNLIKELY(sin_y == 0 && sin_k == 0))
-    return FPBits::zero(xbits.sign()).get_val();
-
   // Since, cosm1_y = cos_y - 1, therefore:
-  //   sin(x) = cos_k * sin_y + sin_k + (cosm1_y * sin_k)
+  //   cos(x) = cos_k * cos_y - sin_k * sin_y
+  //          = cos_k * (cos_y - 1 + 1) - sin_k * sin_y
+  //          = cos_k * cosm1_y - sin_k * sin_y + cos_k
   return fputil::cast<float16>(fputil::multiply_add(
-      sin_y, cos_k, fputil::multiply_add(cosm1_y, sin_k, sin_k)));
+      cos_k, cosm1_y, fputil::multiply_add(-sin_k, sin_y, cos_k)));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
