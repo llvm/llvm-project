@@ -542,4 +542,143 @@ body: |
     %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
     PseudoVSSE8_V_MF2 %x, $noreg, $noreg, 1, 3 /* e8 */
 ...
-
+---
+name: vmop_mm
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vmop_mm
+    ; CHECK: %x:vr = PseudoVMAND_MM_B8 $noreg, $noreg, 1, 0 /* e8 */
+    ; CHECK-NEXT: %y:vr = PseudoVMAND_MM_B8 $noreg, %x, 1, 0 /* e8 */
+    %x:vr = PseudoVMAND_MM_B8 $noreg, $noreg, -1, 0
+    %y:vr = PseudoVMAND_MM_B8 $noreg, %x, 1, 0
+...
+---
+name: vmop_mm_incompatible_eew
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vmop_mm_incompatible_eew
+    ; CHECK: %x:vr = PseudoVMAND_MM_B8 $noreg, $noreg, -1, 0 /* e8 */
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 $noreg, $noreg, %x, 1, 3 /* e8 */, 0 /* tu, mu */
+    %x:vr = PseudoVMAND_MM_B8 $noreg, $noreg, -1, 0
+    %y:vr = PseudoVADD_VV_M1 $noreg, $noreg, %x, 1, 3 /* e8 */, 0
+...
+---
+name: vmop_mm_incompatible_emul
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vmop_mm_incompatible_emul
+    ; CHECK: %x:vr = PseudoVMAND_MM_B8 $noreg, $noreg, -1, 0 /* e8 */
+    ; CHECK-NEXT: %y:vr = PseudoVMAND_MM_B16 $noreg, %x, 1, 0 /* e8 */
+    %x:vr = PseudoVMAND_MM_B8 $noreg, $noreg, -1, 0
+    %y:vr = PseudoVMAND_MM_B16  $noreg, %x, 1, 0
+...
+---
+name: vmop_mm_mask
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vmop_mm_mask
+    ; CHECK: %x:vmv0 = PseudoVMAND_MM_B8 $noreg, $noreg, 1, 0 /* e8 */
+    ; CHECK-NEXT: %y:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, $noreg, $noreg, %x, 1, 3 /* e8 */, 0 /* tu, mu */
+    %x:vmv0 = PseudoVMAND_MM_B8 $noreg, $noreg, -1, 0
+    %y:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, $noreg, $noreg, %x, 1, 3 /* e8 */, 0
+...
+---
+name: vmop_mm_mask_larger_emul_user
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vmop_mm_mask_larger_emul_user
+    ; CHECK: %x:vmv0 = PseudoVMAND_MM_B8 $noreg, $noreg, 1, 0 /* e8 */
+    ; CHECK-NEXT: %y:vrm2nov0 = PseudoVADD_VV_M2_MASK $noreg, $noreg, $noreg, %x, 1, 4 /* e16 */, 0 /* tu, mu */
+    %x:vmv0 = PseudoVMAND_MM_B8 $noreg, $noreg, -1, 0
+    %y:vrm2nov0 = PseudoVADD_VV_M2_MASK $noreg, $noreg, $noreg, %x, 1, 4 /* e16 */, 0
+...
+---
+name: vmop_mm_mask_incompatible_emul
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vmop_mm_mask_incompatible_emul
+    ; CHECK: %x:vmv0 = PseudoVMAND_MM_B8 $noreg, $noreg, -1, 0 /* e8 */
+    ; CHECK-NEXT: %y:vrnov0 = PseudoVADD_VV_MF2_MASK $noreg, $noreg, $noreg, %x, 1, 3 /* e8 */, 0 /* tu, mu */
+    %x:vmv0 = PseudoVMAND_MM_B8 $noreg, $noreg, -1, 0
+    %y:vrnov0 = PseudoVADD_VV_MF2_MASK $noreg, $noreg, $noreg, %x, 1, 3 /* e8 */, 0
+...
+---
+name: vmop_vv
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vmop_vv
+    ; CHECK: %x:vr = PseudoVMSEQ_VV_M1 $noreg, $noreg, 1, 3 /* e8 */
+    ; CHECK-NEXT: %y:vr = PseudoVMAND_MM_B8 $noreg, %x, 1, 0 /* e8 */
+    %x:vr = PseudoVMSEQ_VV_M1 $noreg, $noreg, -1, 3 /* e8 */
+    %y:vr = PseudoVMAND_MM_B8 $noreg, %x, 1, 0
+...
+---
+name: vmop_vv_maskuser
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vmop_vv_maskuser
+    ; CHECK: %x:vmv0 = PseudoVMSEQ_VV_M1 $noreg, $noreg, 1, 3 /* e8 */
+    ; CHECK-NEXT: %y:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, $noreg, $noreg, %x, 1, 3 /* e8 */, 0 /* tu, mu */
+    %x:vmv0 = PseudoVMSEQ_VV_M1 $noreg, $noreg, -1, 3 /* e8 */
+    %y:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, $noreg, $noreg, %x, 1, 3 /* e8 */, 0
+...
+---
+name: vmop_vv_maskuser_incompatible_eew
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vmop_vv_maskuser_incompatible_eew
+    ; CHECK: %x:vmv0 = PseudoVMSEQ_VV_M1 $noreg, $noreg, -1, 3 /* e8 */
+    ; CHECK-NEXT: %y:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, $noreg, $noreg, %x, 1, 4 /* e16 */, 0 /* tu, mu */
+    %x:vmv0 = PseudoVMSEQ_VV_M1 $noreg, $noreg, -1, 3 /* e8 */
+    %y:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, $noreg, $noreg, %x, 1, 4 /* e16 */, 0
+...
+---
+name: vmop_vv_incompatible_emul
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vmop_vv_incompatible_emul
+    ; CHECK: %x:vr = PseudoVMSEQ_VV_M1 $noreg, $noreg, -1, 3 /* e8 */
+    ; CHECK-NEXT: %y:vr = PseudoVMAND_MM_B16 $noreg, %x, 1, 0 /* e8 */
+    %x:vr = PseudoVMSEQ_VV_M1 $noreg, $noreg, -1, 3 /* e8 */
+    %y:vr = PseudoVMAND_MM_B16 $noreg, %x, 1, 0
+...
+---
+name: vmop_vv_maskuser_incompaible_emul
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vmop_vv_maskuser_incompaible_emul
+    ; CHECK: %x:vmv0 = PseudoVMSEQ_VV_M1 $noreg, $noreg, -1, 3 /* e8 */
+    ; CHECK-NEXT: %y:vrnov0 = PseudoVADD_VV_MF2_MASK $noreg, $noreg, $noreg, %x, 1, 3 /* e8 */, 0 /* tu, mu */
+    %x:vmv0 = PseudoVMSEQ_VV_M1 $noreg, $noreg, -1, 3 /* e8 */
+    %y:vrnov0 = PseudoVADD_VV_MF2_MASK $noreg, $noreg, $noreg, %x, 1, 3 /* e8 */, 0
+...
+---
+name: vmop_vv_maskuser_larger_emul
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vmop_vv_maskuser_larger_emul
+    ; CHECK: %x:vmv0 = PseudoVMSEQ_VV_M1 $noreg, $noreg, 1, 3 /* e8 */
+    ; CHECK-NEXT: %y:vrm2nov0 = PseudoVADD_VV_M2_MASK $noreg, $noreg, $noreg, %x, 1, 4 /* e16 */, 0 /* tu, mu */
+    %x:vmv0 = PseudoVMSEQ_VV_M1 $noreg, $noreg, -1, 3 /* e8 */
+    %y:vrm2nov0 = PseudoVADD_VV_M2_MASK $noreg, $noreg, $noreg, %x, 1, 4 /* e16 */, 0
+...
+---
+name: vmop_vv_consumer_incompatible_eew
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vmop_vv_consumer_incompatible_eew
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVMSEQ_VV_M1 $noreg, %x, 1, 4 /* e16 */
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
+    %y:vr = PseudoVMSEQ_VV_M1 $noreg, %x, 1, 4 /* e16 */
+...
+---
+name: vmop_vv_consumer_incompatible_emul
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vmop_vv_consumer_incompatible_emul
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVMSEQ_VV_MF2 $noreg, %x, 1, 3 /* e8 */
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
+    %y:vr = PseudoVMSEQ_VV_MF2 $noreg, %x, 1, 3 /* e8 */
+...

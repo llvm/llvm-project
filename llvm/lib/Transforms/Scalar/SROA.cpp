@@ -5549,6 +5549,8 @@ bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
 
     // Step on to the next partition.
     PartitionBegin = PartitionEnd;
+    if (PartitionBegin == AS.end())
+      break;
     BeginOffset = PartitionBegin->beginOffset();
     EndOffset = PartitionBegin->endOffset();
   }

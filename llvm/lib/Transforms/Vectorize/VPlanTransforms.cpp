@@ -377,7 +377,8 @@ static bool mergeBlocksIntoPredecessors(VPlan &Plan) {
       continue;
     auto *PredVPBB =
         dyn_cast_or_null<VPBasicBlock>(VPBB->getSinglePredecessor());
-    if (!PredVPBB || PredVPBB->getNumSuccessors() != 1)
+    if (!PredVPBB || PredVPBB->getNumSuccessors() != 1 ||
+        isa<VPIRBasicBlock>(PredVPBB))
       continue;
     WorkList.push_back(VPBB);
   }
@@ -1058,6 +1059,9 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   }
 
   if (match(&R, m_c_Mul(m_VPValue(A), m_SpecificInt(1))))
+    return R.getVPSingleValue()->replaceAllUsesWith(A);
+
+  if (match(&R, m_Not(m_Not(m_VPValue(A)))))
     return R.getVPSingleValue()->replaceAllUsesWith(A);
 }
 

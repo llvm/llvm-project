@@ -2017,10 +2017,10 @@ def NVVM_CpAsyncBulkTensorPrefetchOp :
       translatedOperands.push_back(moduleTranslation.lookupValue(v));
 
     llvm::LLVMContext &ctx = moduleTranslation.getLLVMContext();
-    auto *i64Undef = llvm::UndefValue::get(llvm::IntegerType::get(ctx, 64));
+    auto *i64Unused = llvm::ConstantInt::get(llvm::Type::getInt64Ty(ctx), 0);
 
     bool isCacheHint = op.getL2CacheHint() ? true : false;
-    translatedOperands.push_back(isCacheHint ? $l2CacheHint : i64Undef);
+    translatedOperands.push_back(isCacheHint ? $l2CacheHint : i64Unused);
     translatedOperands.push_back(builder.getInt1(isCacheHint));
 
     auto intId = NVVM::CpAsyncBulkTensorPrefetchOp::getIntrinsicID(
