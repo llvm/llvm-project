@@ -108,15 +108,13 @@ struct __atomic_wait_backoff_impl {
 
   _LIBCPP_AVAILABILITY_SYNC
   _LIBCPP_HIDE_FROM_ABI bool operator()(chrono::nanoseconds __elapsed) const {
-    if (__elapsed > chrono::microseconds(64)) {
+    if (__elapsed > chrono::microseconds(4)) {
       auto __contention_address = __waitable_traits::__atomic_contention_address(__a_);
       __cxx_contention_t __monitor_val;
       if (__update_monitor_val_and_poll(__contention_address, __monitor_val))
         return true;
       std::__libcpp_atomic_wait(__contention_address, __monitor_val);
-    } else if (__elapsed > chrono::microseconds(4))
-      __libcpp_thread_yield();
-    else {
+    } else {
     } // poll
     return false;
   }
