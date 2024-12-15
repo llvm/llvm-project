@@ -196,9 +196,9 @@ struct AsmPrinterOptions {
       llvm::cl::desc("Print unique SSA ID numbers for values, block arguments "
                      "and naming conflicts across all regions")};
 
-  llvm::cl::opt<bool> useNameLocAsPrefix{
-      "mlir-use-nameloc-as-prefix", llvm::cl::init(false),
-      llvm::cl::desc("TODO")};
+  llvm::cl::opt<bool> useNameLocAsPrefix{"mlir-use-nameloc-as-prefix",
+                                         llvm::cl::init(true),
+                                         llvm::cl::desc("TODO")};
 };
 } // namespace
 
