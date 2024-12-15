@@ -7950,6 +7950,8 @@ LegalizerHelper::lowerThreewayCompare(MachineInstr &MI) {
   } else {
     if (BC == TargetLowering::ZeroOrNegativeOneBooleanContent)
       std::swap(IsGT, IsLT);
+    // Extend boolean results to DstTy, which is at least i2, before subtracting
+    // them.
     unsigned BoolExtOp =
         MIRBuilder.getBoolExtOp(DstTy.isVector(), /*isFP=*/false);
     IsGT = MIRBuilder.buildInstr(BoolExtOp, {DstTy}, {IsGT});
