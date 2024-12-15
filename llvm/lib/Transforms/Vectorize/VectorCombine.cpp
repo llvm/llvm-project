@@ -1628,11 +1628,16 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
 }
 
 /// Try to convert "shuffle (binop), (binop)" into "binop (shuffle), (shuffle)".
+/// TODO: Handle "shuffle (cmp), (cmp)" into "cmp (shuffle), (shuffle)".
 bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
-  BinaryOperator *B0, *B1;
   ArrayRef<int> OldMask;
-  if (!match(&I, m_Shuffle(m_OneUse(m_BinOp(B0)), m_OneUse(m_BinOp(B1)),
-                           m_Mask(OldMask))))
+  Instruction *LHS, *RHS;
+  if (!match(&I, m_Shuffle(m_OneUse(m_Instruction(LHS)),
+                           m_OneUse(m_Instruction(RHS)), m_Mask(OldMask))))
+    return false;
+
+  BinaryOperator *B0, *B1;
+  if (!match(LHS, m_BinOp(B0)) || !match(RHS, m_BinOp(B1)))
     return false;
 
   // Don't introduce poison into div/rem.
@@ -1645,15 +1650,15 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
     return false;
 
   auto *ShuffleDstTy = dyn_cast<FixedVectorType>(I.getType());
-  auto *BinOpTy = dyn_cast<FixedVectorType>(B0->getType());
+  auto *BinOpTy = dyn_cast<FixedVectorType>(LHS->getType());
   if (!ShuffleDstTy || !BinOpTy)
     return false;
 
   unsigned NumSrcElts = BinOpTy->getNumElements();
 
   // If we have something like "add X, Y" and "add Z, X", swap ops to match.
-  Value *X = B0->getOperand(0), *Y = B0->getOperand(1);
-  Value *Z = B1->getOperand(0), *W = B1->getOperand(1);
+  Value *X = LHS->getOperand(0), *Y = LHS->getOperand(1);
+  Value *Z = RHS->getOperand(0), *W = RHS->getOperand(1);
   if (BinaryOperator::isCommutative(Opcode) && X != Z && Y != W &&
       (X == W || Y == Z))
     std::swap(X, Y);
@@ -1681,10 +1686,10 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
 
   // Try to replace a binop with a shuffle if the shuffle is not costly.
   InstructionCost OldCost =
-      TTI.getArithmeticInstrCost(B0->getOpcode(), BinOpTy, CostKind) +
-      TTI.getArithmeticInstrCost(B1->getOpcode(), BinOpTy, CostKind) +
+      TTI.getInstructionCost(LHS, CostKind) +
+      TTI.getInstructionCost(RHS, CostKind) +
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, BinOpTy,
-                         OldMask, CostKind, 0, nullptr, {B0, B1}, &I);
+                         OldMask, CostKind, 0, nullptr, {LHS, RHS}, &I);
 
   InstructionCost NewCost =
       TTI.getShuffleCost(SK0, BinOpTy, NewMask0, CostKind, 0, nullptr, {X, Z}) +
@@ -1703,8 +1708,8 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
 
   // Intersect flags from the old binops.
   if (auto *NewInst = dyn_cast<Instruction>(NewBO)) {
-    NewInst->copyIRFlags(B0);
-    NewInst->andIRFlags(B1);
+    NewInst->copyIRFlags(LHS);
+    NewInst->andIRFlags(RHS);
   }
 
   Worklist.pushValue(Shuf0);
