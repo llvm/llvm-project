@@ -115,6 +115,10 @@ Improvements to clang-tidy
 - Improved :program:`run-clang-tidy.py` script. Fixed minor shutdown noise
   happening on certain platforms when interrupting the script.
 
+- Removed :program:`clang-tidy`'s global options for most of checks. All options
+  are changed to local options except `IncludeStyle`, `StrictMode` and
+  `IgnoreMacros`.
+
 New checks
 ^^^^^^^^^^
 
