@@ -20347,7 +20347,7 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
     unsigned BitWidth = N1.getValueSizeInBits();
     APInt Imm = N1->getAsAPIntVal();
     if (Opc == ISD::AND)
-      Imm ^= APInt::getAllOnes(BitWidth);
+      Imm.flipAllBits();
     if (Imm == 0 || Imm.isAllOnes())
       return SDValue();
     // Find least/most significant bit that need to be part of the narrowed
@@ -20413,7 +20413,7 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
 
     APInt NewImm = Imm.lshr(ShAmt).trunc(NewBW);
     if (Opc == ISD::AND)
-      NewImm ^= APInt::getAllOnes(NewBW);
+      NewImm.flipAllBits();
     Align NewAlign = commonAlignment(LD->getAlign(), PtrOff);
     SDValue NewPtr =
         DAG.getMemBasePlusOffset(Ptr, TypeSize::getFixed(PtrOff), SDLoc(LD));
