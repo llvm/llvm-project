@@ -437,10 +437,10 @@ rpc::Status handle_port_impl(rpc::Server::Port &port) {
     break;
   }
   default:
-    return rpc::UNHANDLED_OPCODE;
+    return rpc::RPC_UNHANDLED_OPCODE;
   }
 
-  return rpc::SUCCESS;
+  return rpc::RPC_SUCCESS;
 }
 
 namespace rpc {
