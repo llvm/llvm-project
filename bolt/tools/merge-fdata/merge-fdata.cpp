@@ -278,22 +278,18 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
 
     std::ifstream FdataFile(Filename, std::ios::in);
     std::string FdataLine;
+    std::getline(FdataFile, FdataLine);
 
     auto checkMode = [&](const std::string &Key, std::optional<bool> &Flag) {
-      std::string ErrorMsg = "cannot mix profile with and without " + Key;
-      auto Pos = FdataFile.tellg();
-      std::getline(FdataFile, FdataLine);
-      if (FdataLine.rfind(Key, 0) == 0) {
-        if (!Flag.value_or(true))
-          report_error(Filename, ErrorMsg);
-        Flag = true;
-      } else {
-        if (Flag.value_or(false))
-          report_error(Filename, ErrorMsg);
-        Flag = false;
-        // Rewind line
-        FdataFile.seekg(Pos);
-      }
+      const bool KeyIsSet = FdataLine.rfind(Key, 0) == 0;
+
+      if (!Flag.has_value())
+        Flag = KeyIsSet;
+      else if (*Flag != KeyIsSet)
+        report_error(Filename, "cannot mix profile with and without " + Key);
+      if (KeyIsSet)
+        // Advance line
+        std::getline(FdataFile, FdataLine);
     };
 
     ProfileTy *Profile;
@@ -307,7 +303,7 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
       Profile = &Profiles[tid];
     }
 
-    while (std::getline(FdataFile, FdataLine)) {
+    do {
       StringRef Line(FdataLine);
       size_t Pos = Line.rfind(" ");
       if (Pos == StringRef::npos)
@@ -318,7 +314,7 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
         report_error(Filename, "Malformed / corrupted profile counter");
       Count += Profile->lookup(Signature);
       Profile->insert_or_assign(Signature, Count);
-    }
+    } while (std::getline(FdataFile, FdataLine));
   };
 
   // The final reduction has non-trivial cost, make sure each thread has at
