@@ -67,9 +67,9 @@ _LIBCPP_END_NAMESPACE_STD
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 1
 #  define _LIBCPP_OVERRIDABLE_FUNCTION(symbol, type, name, arglist)                                                    \
-    static type symbol##_impl__ arglist __asm__("_" _LIBCPP_TOSTRING(symbol##_impl__));                                \
+    static type symbol##_impl__ arglist __asm__("_" _LIBCPP_TOSTRING(symbol));                                         \
     __asm__(".globl _" _LIBCPP_TOSTRING(symbol));                                                                      \
-    __asm__(".set _" _LIBCPP_TOSTRING(symbol) ", _" _LIBCPP_TOSTRING(symbol##_impl__));                                \
+    __asm__(".weak_definition _" _LIBCPP_TOSTRING(symbol));                                                            \
     extern __typeof(symbol##_impl__) name __attribute__((weak_import));                                                \
     _LIBCPP_BEGIN_NAMESPACE_STD                                                                                        \
     template <>                                                                                                        \
