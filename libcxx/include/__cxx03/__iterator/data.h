@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_DATA_H
-#define _LIBCPP___ITERATOR_DATA_H
+#ifndef _LIBCPP___CXX03___ITERATOR_DATA_H
+#define _LIBCPP___CXX03___ITERATOR_DATA_H
 
 #include <__cxx03/__config>
 #include <__cxx03/cstddef>
@@ -46,4 +46,4 @@ _LIBCPP_HIDE_FROM_ABI constexpr const _Ep* data(initializer_list<_Ep> __il) noex
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_DATA_H
+#endif // _LIBCPP___CXX03___ITERATOR_DATA_H

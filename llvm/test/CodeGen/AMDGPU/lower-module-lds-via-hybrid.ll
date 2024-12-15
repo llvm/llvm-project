@@ -187,6 +187,7 @@ define amdgpu_kernel void @k01() {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GCN-NEXT:    s_endpgm
+
   call void @f0()
   call void @f1()
   ret void

@@ -54,6 +54,10 @@ enum FeatureKind : uint32_t {
   // available.
   FK_LAM_BH = 1 << 10,
 
+  // Atomic memory compare and swap instructions for byte, half word, word and
+  // double word are available.
+  FK_LAMCAS = 1 << 11,
+
   // Do not generate load-load barrier instructions (dbar 0x700).
   FK_LD_SEQ_SA = 1 << 12,
 

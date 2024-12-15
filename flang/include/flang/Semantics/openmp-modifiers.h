@@ -67,18 +67,28 @@ template <typename SpecificTy> const OmpModifierDescriptor &OmpGetDescriptor();
 #define DECLARE_DESCRIPTOR(name) \
   template <> const OmpModifierDescriptor &OmpGetDescriptor<name>()
 
+DECLARE_DESCRIPTOR(parser::OmpAlignment);
+DECLARE_DESCRIPTOR(parser::OmpAlignModifier);
+DECLARE_DESCRIPTOR(parser::OmpAllocatorComplexModifier);
+DECLARE_DESCRIPTOR(parser::OmpAllocatorSimpleModifier);
 DECLARE_DESCRIPTOR(parser::OmpChunkModifier);
 DECLARE_DESCRIPTOR(parser::OmpDependenceType);
+DECLARE_DESCRIPTOR(parser::OmpDeviceModifier);
+DECLARE_DESCRIPTOR(parser::OmpDirectiveNameModifier);
 DECLARE_DESCRIPTOR(parser::OmpExpectation);
 DECLARE_DESCRIPTOR(parser::OmpIterator);
+DECLARE_DESCRIPTOR(parser::OmpLastprivateModifier);
 DECLARE_DESCRIPTOR(parser::OmpLinearModifier);
 DECLARE_DESCRIPTOR(parser::OmpMapper);
 DECLARE_DESCRIPTOR(parser::OmpMapType);
 DECLARE_DESCRIPTOR(parser::OmpMapTypeModifier);
 DECLARE_DESCRIPTOR(parser::OmpOrderModifier);
 DECLARE_DESCRIPTOR(parser::OmpOrderingModifier);
+DECLARE_DESCRIPTOR(parser::OmpPrescriptiveness);
 DECLARE_DESCRIPTOR(parser::OmpReductionIdentifier);
 DECLARE_DESCRIPTOR(parser::OmpReductionModifier);
+DECLARE_DESCRIPTOR(parser::OmpStepComplexModifier);
+DECLARE_DESCRIPTOR(parser::OmpStepSimpleModifier);
 DECLARE_DESCRIPTOR(parser::OmpTaskDependenceType);
 DECLARE_DESCRIPTOR(parser::OmpVariableCategory);
 
@@ -216,9 +226,25 @@ OmpGetRepeatableModifier(const std::optional<std::list<UnionTy>> &modifiers) {
       OmpSpecificModifierIterator(items, items->end()));
 }
 
+// Attempt to prevent creating a range based on an expiring modifier list.
 template <typename SpecificTy, typename UnionTy>
 llvm::iterator_range<OmpSpecificModifierIterator<SpecificTy>>
 OmpGetRepeatableModifier(std::optional<std::list<UnionTy>> &&) = delete;
+
+template <typename SpecificTy, typename UnionTy>
+Fortran::parser::CharBlock OmpGetModifierSource(
+    const std::optional<std::list<UnionTy>> &modifiers,
+    const SpecificTy *specific) {
+  if (!modifiers || !specific) {
+    return Fortran::parser::CharBlock{};
+  }
+  for (auto &m : *modifiers) {
+    if (std::get_if<SpecificTy>(&m.u) == specific) {
+      return m.source;
+    }
+  }
+  llvm_unreachable("`specific` must be a member of `modifiers`");
+}
 
 namespace detail {
 template <typename T> constexpr const T *make_nullptr() {

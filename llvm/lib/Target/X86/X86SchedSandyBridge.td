@@ -588,7 +588,7 @@ def : WriteRes<WriteSTMXCSR, [SBPort0,SBPort4,SBPort5,SBPort23]> { let Latency =
 
 def : WriteRes<WriteSystem,     [SBPort015]> { let Latency = 100; }
 def : WriteRes<WriteMicrocoded, [SBPort015]> { let Latency = 100; }
-def : WriteRes<WriteFence, [SBPort23, SBPort4]>;
+def : WriteRes<WriteFence, [SBPort23, SBPort4]> { let NumMicroOps = 2; let ReleaseAtCycles = [1,1]; }
 def : WriteRes<WriteNop, []>;
 
 // AVX2/FMA is not supported on that architecture, but we should define the basic

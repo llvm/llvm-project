@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/time/linux/clock_gettime.h"
+#include "src/__support/time/clock_gettime.h"
 #include "hdr/types/clockid_t.h"
 #include "hdr/types/struct_timespec.h"
 #include "src/__support/OSUtil/linux/vdso.h"

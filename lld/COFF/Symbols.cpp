@@ -28,8 +28,8 @@ static_assert(sizeof(SymbolUnion) <= 48,
               "symbols should be optimized for memory usage");
 
 // Returns a symbol name for an error message.
-static std::string maybeDemangleSymbol(const COFFLinkerContext &ctx,
-                                       StringRef symName) {
+std::string maybeDemangleSymbol(const COFFLinkerContext &ctx,
+                                StringRef symName) {
   if (ctx.config.demangle) {
     std::string prefix;
     StringRef prefixless = symName;
@@ -51,6 +51,17 @@ std::string toString(const COFFLinkerContext &ctx, coff::Symbol &b) {
 std::string toCOFFString(const COFFLinkerContext &ctx,
                          const Archive::Symbol &b) {
   return maybeDemangleSymbol(ctx, b.getName());
+}
+
+const COFFSyncStream &
+coff::operator<<(const COFFSyncStream &s,
+                 const llvm::object::Archive::Symbol *sym) {
+  s << maybeDemangleSymbol(s.ctx, sym->getName());
+  return s;
+}
+
+const COFFSyncStream &coff::operator<<(const COFFSyncStream &s, Symbol *sym) {
+  return s << maybeDemangleSymbol(s.ctx, sym->getName());
 }
 
 namespace coff {

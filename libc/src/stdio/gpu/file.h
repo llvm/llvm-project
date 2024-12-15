@@ -54,7 +54,7 @@ LIBC_INLINE uint64_t write_impl(::FILE *file, const void *data, size_t size) {
   uint64_t ret = 0;
   rpc::Client::Port port = rpc::client.open<opcode>();
 
-  if constexpr (opcode == RPC_WRITE_TO_STREAM) {
+  if constexpr (opcode == LIBC_WRITE_TO_STREAM) {
     port.send([&](rpc::Buffer *buffer, uint32_t) {
       buffer->data[0] = reinterpret_cast<uintptr_t>(file);
     });
@@ -70,17 +70,17 @@ LIBC_INLINE uint64_t write_impl(::FILE *file, const void *data, size_t size) {
 
 LIBC_INLINE uint64_t write(::FILE *f, const void *data, size_t size) {
   if (f == stdout)
-    return write_impl<RPC_WRITE_TO_STDOUT>(f, data, size);
+    return write_impl<LIBC_WRITE_TO_STDOUT>(f, data, size);
   else if (f == stderr)
-    return write_impl<RPC_WRITE_TO_STDERR>(f, data, size);
+    return write_impl<LIBC_WRITE_TO_STDERR>(f, data, size);
   else
-    return write_impl<RPC_WRITE_TO_STREAM>(f, data, size);
+    return write_impl<LIBC_WRITE_TO_STREAM>(f, data, size);
 }
 
 LIBC_INLINE uint64_t read_from_stream(::FILE *file, void *buf, size_t size) {
   uint64_t ret = 0;
   uint64_t recv_size;
-  rpc::Client::Port port = rpc::client.open<RPC_READ_FROM_STREAM>();
+  rpc::Client::Port port = rpc::client.open<LIBC_READ_FROM_STREAM>();
   port.send([=](rpc::Buffer *buffer, uint32_t) {
     buffer->data[0] = size;
     buffer->data[1] = from_stream(file);

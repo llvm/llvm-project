@@ -749,7 +749,7 @@ MipsGotSection::MipsGotSection(Ctx &ctx)
 void MipsGotSection::addEntry(InputFile &file, Symbol &sym, int64_t addend,
                               RelExpr expr) {
   FileGot &g = getGot(file);
-  if (expr == R_MIPS_GOT_LOCAL_PAGE) {
+  if (expr == RE_MIPS_GOT_LOCAL_PAGE) {
     if (const OutputSection *os = sym.getOutputSection())
       g.pagesMap.insert({os, {}});
     else
@@ -760,7 +760,7 @@ void MipsGotSection::addEntry(InputFile &file, Symbol &sym, int64_t addend,
     g.relocs.insert({&sym, 0});
   else if (sym.isPreemptible)
     g.global.insert({&sym, 0});
-  else if (expr == R_MIPS_GOT_OFF32)
+  else if (expr == RE_MIPS_GOT_OFF32)
     g.local32.insert({{&sym, addend}, 0});
   else
     g.local16.insert({{&sym, addend}, 0});
@@ -2752,6 +2752,21 @@ bool IBTPltSection::isNeeded() const { return ctx.in.plt->getNumEntries() > 0; }
 RelroPaddingSection::RelroPaddingSection(Ctx &ctx)
     : SyntheticSection(ctx, ".relro_padding", SHT_NOBITS, SHF_ALLOC | SHF_WRITE,
                        1) {}
+
+RandomizePaddingSection::RandomizePaddingSection(Ctx &ctx, uint64_t size,
+                                                 OutputSection *parent)
+    : SyntheticSection(ctx, ".randomize_padding", SHT_PROGBITS, SHF_ALLOC, 1),
+      size(size) {
+  this->parent = parent;
+}
+
+void RandomizePaddingSection::writeTo(uint8_t *buf) {
+  std::array<uint8_t, 4> filler = getParent()->getFiller(ctx);
+  uint8_t *end = buf + size;
+  for (; buf + 4 <= end; buf += 4)
+    memcpy(buf, &filler[0], 4);
+  memcpy(buf, &filler[0], end - buf);
+}
 
 // The string hash function for .gdb_index.
 static uint32_t computeGdbHash(StringRef s) {

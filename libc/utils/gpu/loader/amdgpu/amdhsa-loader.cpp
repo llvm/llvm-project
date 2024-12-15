@@ -15,18 +15,10 @@
 
 #include "Loader.h"
 
-#if defined(__has_include)
-#if __has_include("hsa/hsa.h")
 #include "hsa/hsa.h"
 #include "hsa/hsa_ext_amd.h"
-#elif __has_include("hsa.h")
-#include "hsa.h"
-#include "hsa_ext_amd.h"
-#endif
-#else
-#include "hsa/hsa.h"
-#include "hsa/hsa_ext_amd.h"
-#endif
+
+#include "llvm/Frontend/Offloading/Utility.h"
 
 #include <atomic>
 #include <cstdio>
@@ -163,17 +155,13 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
                            hsa_queue_t *queue, rpc::Server &server,
                            const LaunchParameters &params,
                            const char *kernel_name, args_t kernel_args,
-                           bool print_resource_usage) {
+                           uint32_t wavefront_size, bool print_resource_usage) {
   // Look up the kernel in the loaded executable.
   hsa_executable_symbol_t symbol;
   if (hsa_status_t err = hsa_executable_get_symbol_by_name(
           executable, kernel_name, &dev_agent, &symbol))
     return err;
 
-  uint32_t wavefront_size = 0;
-  if (hsa_status_t err = hsa_agent_get_info(
-          dev_agent, HSA_AGENT_INFO_WAVEFRONT_SIZE, &wavefront_size))
-    handle_error(err);
   // Retrieve different properties of the kernel symbol used for launch.
   uint64_t kernel;
   uint32_t args_size;
@@ -419,6 +407,16 @@ int load(int argc, const char **argv, const char **envp, void *image,
               dev_agent, &coarsegrained_pool))
     handle_error(err);
 
+  // The AMDGPU target can change its wavefront size. There currently isn't a
+  // good way to look this up through the HSA API so we use the LLVM interface.
+  uint16_t abi_version;
+  llvm::StringRef image_ref(reinterpret_cast<char *>(image), size);
+  llvm::StringMap<llvm::offloading::amdgpu::AMDGPUKernelMetaData> info_map;
+  if (llvm::Error err = llvm::offloading::amdgpu::getAMDGPUMetaDataFromImage(
+          llvm::MemoryBufferRef(image_ref, ""), info_map, abi_version)) {
+    handle_error(llvm::toString(std::move(err)).c_str());
+  }
+
   // Allocate fine-grained memory on the host to hold the pointer array for the
   // copied argv and allow the GPU agent to access it.
   auto allocator = [&](uint64_t size) -> void * {
@@ -448,10 +446,10 @@ int load(int argc, const char **argv, const char **envp, void *image,
   hsa_amd_memory_fill(dev_ret, 0, /*count=*/1);
 
   // Allocate finegrained memory for the RPC server and client to share.
-  uint32_t wavefront_size = 0;
-  if (hsa_status_t err = hsa_agent_get_info(
-          dev_agent, HSA_AGENT_INFO_WAVEFRONT_SIZE, &wavefront_size))
-    handle_error(err);
+  uint32_t wavefront_size =
+      llvm::max_element(info_map, [](auto &&x, auto &&y) {
+        return x.second.WavefrontSize < y.second.WavefrontSize;
+      })->second.WavefrontSize;
 
   // Set up the RPC server.
   void *rpc_buffer;
@@ -469,25 +467,13 @@ int load(int argc, const char **argv, const char **envp, void *image,
   // device's internal pointer.
   hsa_executable_symbol_t rpc_client_sym;
   if (hsa_status_t err = hsa_executable_get_symbol_by_name(
-          executable, "__llvm_libc_rpc_client", &dev_agent, &rpc_client_sym))
+          executable, "__llvm_rpc_client", &dev_agent, &rpc_client_sym))
     handle_error(err);
-
-  void *rpc_client_host;
-  if (hsa_status_t err =
-          hsa_amd_memory_pool_allocate(finegrained_pool, sizeof(void *),
-                                       /*flags=*/0, &rpc_client_host))
-    handle_error(err);
-  hsa_amd_agents_allow_access(1, &dev_agent, nullptr, rpc_client_host);
 
   void *rpc_client_dev;
   if (hsa_status_t err = hsa_executable_symbol_get_info(
           rpc_client_sym, HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ADDRESS,
           &rpc_client_dev))
-    handle_error(err);
-
-  // Copy the address of the client buffer from the device to the host.
-  if (hsa_status_t err = hsa_memcpy(rpc_client_host, host_agent, rpc_client_dev,
-                                    dev_agent, sizeof(void *)))
     handle_error(err);
 
   void *rpc_client_buffer;
@@ -498,13 +484,11 @@ int load(int argc, const char **argv, const char **envp, void *image,
 
   // Copy the RPC client buffer to the address pointed to by the symbol.
   if (hsa_status_t err =
-          hsa_memcpy(*reinterpret_cast<void **>(rpc_client_host), dev_agent,
-                     rpc_client_buffer, host_agent, sizeof(rpc::Client)))
+          hsa_memcpy(rpc_client_dev, dev_agent, rpc_client_buffer, host_agent,
+                     sizeof(rpc::Client)))
     handle_error(err);
 
   if (hsa_status_t err = hsa_amd_memory_unlock(&client))
-    handle_error(err);
-  if (hsa_status_t err = hsa_amd_memory_pool_free(rpc_client_host))
     handle_error(err);
 
   // Obtain the GPU's fixed-frequency clock rate and copy it to the GPU.
@@ -513,7 +497,6 @@ int load(int argc, const char **argv, const char **envp, void *image,
   if (HSA_STATUS_SUCCESS ==
       hsa_executable_get_symbol_by_name(executable, "__llvm_libc_clock_freq",
                                         &dev_agent, &freq_sym)) {
-
     void *host_clock_freq;
     if (hsa_status_t err =
             hsa_amd_memory_pool_allocate(finegrained_pool, sizeof(uint64_t),
@@ -553,16 +536,17 @@ int load(int argc, const char **argv, const char **envp, void *image,
 
   LaunchParameters single_threaded_params = {1, 1, 1, 1, 1, 1};
   begin_args_t init_args = {argc, dev_argv, dev_envp};
-  if (hsa_status_t err = launch_kernel(dev_agent, executable, kernargs_pool,
-                                       coarsegrained_pool, queue, server,
-                                       single_threaded_params, "_begin.kd",
-                                       init_args, print_resource_usage))
+  if (hsa_status_t err = launch_kernel(
+          dev_agent, executable, kernargs_pool, coarsegrained_pool, queue,
+          server, single_threaded_params, "_begin.kd", init_args,
+          info_map["_begin"].WavefrontSize, print_resource_usage))
     handle_error(err);
 
   start_args_t args = {argc, dev_argv, dev_envp, dev_ret};
   if (hsa_status_t err = launch_kernel(
           dev_agent, executable, kernargs_pool, coarsegrained_pool, queue,
-          server, params, "_start.kd", args, print_resource_usage))
+          server, params, "_start.kd", args, info_map["_start"].WavefrontSize,
+          print_resource_usage))
     handle_error(err);
 
   void *host_ret;
@@ -580,10 +564,10 @@ int load(int argc, const char **argv, const char **envp, void *image,
   int ret = *static_cast<int *>(host_ret);
 
   end_args_t fini_args = {ret};
-  if (hsa_status_t err = launch_kernel(dev_agent, executable, kernargs_pool,
-                                       coarsegrained_pool, queue, server,
-                                       single_threaded_params, "_end.kd",
-                                       fini_args, print_resource_usage))
+  if (hsa_status_t err = launch_kernel(
+          dev_agent, executable, kernargs_pool, coarsegrained_pool, queue,
+          server, single_threaded_params, "_end.kd", fini_args,
+          info_map["_end"].WavefrontSize, print_resource_usage))
     handle_error(err);
 
   if (hsa_status_t err = hsa_amd_memory_pool_free(rpc_buffer))

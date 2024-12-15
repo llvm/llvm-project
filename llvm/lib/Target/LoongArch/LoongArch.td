@@ -118,6 +118,12 @@ def FeatureLAM_BH
                         "Support amswap[_db].{b/h} and amadd[_db].{b/h} instructions.">;
 def HasLAM_BH : Predicate<"Subtarget->hasLAM_BH()">;
 
+// Atomic memory compare and swap instructions for byte, half word, word and double word
+def FeatureLAMCAS
+    : SubtargetFeature<"lamcas", "HasLAMCAS", "true",
+                        "Support amcas[_db].{b/h/w/d}.">;
+def HasLAMCAS : Predicate<"Subtarget->hasLAMCAS()">;
+
 def FeatureLD_SEQ_SA
     : SubtargetFeature<"ld-seq-sa", "HasLD_SEQ_SA", "true",
                         "Don't use load-load barrier (dbar 0x700).">;
@@ -172,6 +178,8 @@ def : ProcessorModel<"la664", NoSchedModel, [Feature64Bit,
                                              FeatureExtLBT,
                                              FeatureFrecipe,
                                              FeatureLAM_BH,
+                                             FeatureLAMCAS,
+                                             FeatureLD_SEQ_SA,
                                              FeatureDiv32]>;
 
 //===----------------------------------------------------------------------===//

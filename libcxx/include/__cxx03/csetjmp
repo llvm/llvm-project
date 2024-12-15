@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CSETJMP
-#define _LIBCPP_CSETJMP
+#ifndef _LIBCPP___CXX03_CSETJMP
+#define _LIBCPP___CXX03_CSETJMP
 
 /*
     csetjmp synopsis
@@ -35,7 +35,7 @@ void longjmp(jmp_buf env, int val);
 // <setjmp.h> is not provided by libc++
 #if __has_include(<setjmp.h>)
 #  include <setjmp.h>
-#  ifdef _LIBCPP_SETJMP_H
+#  ifdef _LIBCPP___CXX03_SETJMP_H
 #    error "If libc++ starts defining <setjmp.h>, the __has_include check should move to libc++'s <setjmp.h>"
 #  endif
 #endif
@@ -51,4 +51,4 @@ using ::longjmp _LIBCPP_USING_IF_EXISTS;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_CSETJMP
+#endif // _LIBCPP___CXX03_CSETJMP

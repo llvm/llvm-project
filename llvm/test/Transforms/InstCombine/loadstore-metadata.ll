@@ -278,8 +278,8 @@ entry:
 define double @preserve_load_metadata_after_select_transform_metadata_missing_4(ptr %a, ptr %b) {
 ; CHECK-LABEL: @preserve_load_metadata_after_select_transform_metadata_missing_4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L_A:%.*]] = load double, ptr [[A:%.*]], align 8, !tbaa [[TBAA0]], !llvm.access.group [[META6]]
-; CHECK-NEXT:    [[L_B:%.*]] = load double, ptr [[B:%.*]], align 8, !tbaa [[TBAA0]], !llvm.access.group [[ACC_GRP10:![0-9]+]]
+; CHECK-NEXT:    [[L_A:%.*]] = load double, ptr [[A:%.*]], align 8, !tbaa [[TBAA0]], !alias.scope [[META3]], !noalias [[META3]], !llvm.access.group [[META6]]
+; CHECK-NEXT:    [[L_B:%.*]] = load double, ptr [[B:%.*]], align 8, !tbaa [[TBAA0]], !alias.scope [[META10:![0-9]+]], !noalias [[META10]], !llvm.access.group [[ACC_GRP13:![0-9]+]]
 ; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp fast olt double [[L_A]], [[L_B]]
 ; CHECK-NEXT:    [[L_SEL:%.*]] = select i1 [[CMP_I]], double [[L_B]], double [[L_A]]
 ; CHECK-NEXT:    ret double [[L_SEL]]
@@ -322,5 +322,8 @@ entry:
 ; CHECK: [[META7]] = !{i32 1}
 ; CHECK: [[META8]] = !{i64 8}
 ; CHECK: [[ACC_GRP9]] = distinct !{}
-; CHECK: [[ACC_GRP10]] = distinct !{}
+; CHECK: [[META10]] = !{[[META11:![0-9]+]]}
+; CHECK: [[META11]] = distinct !{[[META11]], [[META12:![0-9]+]]}
+; CHECK: [[META12]] = distinct !{[[META12]]}
+; CHECK: [[ACC_GRP13]] = distinct !{}
 ;.
