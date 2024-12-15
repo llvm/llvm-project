@@ -124,6 +124,7 @@ TEST_F(SelectionDAGPatternMatchTest, matchVecShuffle) {
   auto Int32VT = EVT::getIntegerVT(Context, 32);
   auto VInt32VT = EVT::getVectorVT(Context, Int32VT, 4);
   SmallVector<int, 4> MaskData = {2, 0, 3, 1};
+  SmallVector<int, 4> otherMaskData = {1, 2, 3, 4};
   ArrayRef<int> CapturedMask;
 
   SDValue V0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, VInt32VT);
@@ -138,6 +139,11 @@ TEST_F(SelectionDAGPatternMatchTest, matchVecShuffle) {
                        m_ShuffleSpecificMask(m_Value(), m_Value(), MaskData)));
   EXPECT_TRUE(std::equal(MaskData.begin(), MaskData.end(), CapturedMask.begin(),
                          CapturedMask.end()));
+  EXPECT_FALSE(
+      sd_match(VecShuffleWithMask,
+               m_ShuffleSpecificMask(m_Value(), m_Value(), otherMaskData)));
+  EXPECT_FALSE(std::equal(otherMaskData.begin(), otherMaskData.end(),
+                          CapturedMask.begin(), CapturedMask.end()));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, matchTernaryOp) {
