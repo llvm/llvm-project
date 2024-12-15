@@ -9,10 +9,11 @@
 #include <cstdint>
 #include <vector>
 
+#include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/Dialect/Quant.h"
 #include "mlir-c/IR.h"
-#include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir/Bindings/Python/NanobindAdaptors.h"
 
 namespace nb = nanobind;
 using namespace llvm;
@@ -292,7 +293,7 @@ static void populateDialectQuantSubmodule(const nb::module_ &m) {
       mlirTypeIsAUniformQuantizedSubChannelType, quantizedType.get_class());
   uniformQuantizedSubChannelType.def_classmethod(
       "get",
-      [](py::object cls, unsigned flags, MlirType storageType,
+      [](nb::object cls, unsigned flags, MlirType storageType,
          MlirType expressedType, MlirAttribute scales, MlirAttribute zeroPoints,
          std::vector<int32_t> quantizedDimensions,
          std::vector<int64_t> blockSizes, int64_t storageTypeMin,
@@ -305,10 +306,10 @@ static void populateDialectQuantSubmodule(const nb::module_ &m) {
       },
       "Gets an instance of UniformQuantizedSubChannel in the same context as "
       "the provided storage type.",
-      py::arg("cls"), py::arg("flags"), py::arg("storage_type"),
-      py::arg("expressed_type"), py::arg("scales"), py::arg("zero_points"),
-      py::arg("quantized_dimensions"), py::arg("block_sizes"),
-      py::arg("storage_type_min"), py::arg("storage_type_max"));
+      nb::arg("cls"), nb::arg("flags"), nb::arg("storage_type"),
+      nb::arg("expressed_type"), nb::arg("scales"), nb::arg("zero_points"),
+      nb::arg("quantized_dimensions"), nb::arg("block_sizes"),
+      nb::arg("storage_type_min"), nb::arg("storage_type_max"));
   uniformQuantizedSubChannelType.def_property_readonly(
       "quantized_dimensions",
       [](MlirType type) {
