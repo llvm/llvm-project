@@ -1660,12 +1660,13 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
   const InductionDescriptor &ID = getInductionDescriptor();
   TruncInst *Trunc = getTruncInst();
   IRBuilderBase &Builder = State.Builder;
-  assert(IV->getType() == ID.getStartValue()->getType() && "Types must match");
+  assert(getPHINode()->getType() == ID.getStartValue()->getType() &&
+         "Types must match");
   assert(State.VF.isVector() && "must have vector VF");
 
   // The value from the original loop to which we are mapping the new induction
   // variable.
-  Instruction *EntryVal = Trunc ? cast<Instruction>(Trunc) : IV;
+  Instruction *EntryVal = Trunc ? cast<Instruction>(Trunc) : getPHINode();
 
   // Fast-math-flags propagate from the original induction instruction.
   IRBuilder<>::FastMathFlagGuard FMFG(Builder);
@@ -1755,13 +1756,12 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
 void VPWidenIntOrFpInductionRecipe::print(raw_ostream &O, const Twine &Indent,
                                           VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-INDUCTION";
-  if (getTruncInst()) {
+  if (auto *TI = getTruncInst()) {
     O << "\\l\"";
-    O << " +\n" << Indent << "\"  " << VPlanIngredient(IV) << "\\l\"";
-    O << " +\n" << Indent << "\"  ";
-    getVPValue(0)->printAsOperand(O, SlotTracker);
+    O << " +\n" << Indent << "\"  " << VPlanIngredient(getPHINode()) << "\\l\"";
+    O << " +\n" << Indent << "\"  " << VPlanIngredient(TI);
   } else
-    O << " " << VPlanIngredient(IV);
+    O << " " << VPlanIngredient(getPHINode());
 
   O << ", ";
   getStepValue()->printAsOperand(O, SlotTracker);
@@ -3157,7 +3157,8 @@ bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(bool IsScalable) {
 }
 
 void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
-  assert(IndDesc.getKind() == InductionDescriptor::IK_PtrInduction &&
+  assert(getInductionDescriptor().getKind() ==
+             InductionDescriptor::IK_PtrInduction &&
          "Not a pointer induction according to InductionDescriptor!");
   assert(cast<PHINode>(getUnderlyingInstr())->getType()->isPointerTy() &&
          "Unexpected type.");
@@ -3193,8 +3194,8 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
 
   // A pointer induction, performed by using a gep
   BasicBlock::iterator InductionLoc = State.Builder.GetInsertPoint();
-  Value *ScalarStepValue = State.get(getOperand(1), VPLane(0));
-  Type *PhiType = IndDesc.getStep()->getType();
+  Value *ScalarStepValue = State.get(getStepValue(), VPLane(0));
+  Type *PhiType = State.TypeAnalysis.inferScalarType(getStepValue());
   Value *RuntimeVF = getRuntimeVF(State.Builder, PhiType, State.VF);
   // Add induction update using an incorrect block temporarily. The phi node
   // will be fixed after VPlan execution. Note that at this point the latch
@@ -3246,7 +3247,8 @@ void VPWidenPointerInductionRecipe::print(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = WIDEN-POINTER-INDUCTION ";
   getStartValue()->printAsOperand(O, SlotTracker);
-  O << ", " << *IndDesc.getStep();
+  O << ", ";
+  getStepValue()->printAsOperand(O, SlotTracker);
   if (getNumOperands() == 4) {
     O << ", ";
     getOperand(2)->printAsOperand(O, SlotTracker);
