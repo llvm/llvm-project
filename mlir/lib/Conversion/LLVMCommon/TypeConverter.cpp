@@ -189,9 +189,9 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
   auto unrakedMemRefMaterialization = [&](OpBuilder &builder,
                                           UnrankedMemRefType resultType,
                                           ValueRange inputs, Location loc) {
-    // An argument materialization must return a value of type
-    // `resultType`, so insert a cast from the memref descriptor type
-    // (!llvm.struct) to the original memref type.
+    // A source materialization must return a value of type `resultType`, so
+    // insert a cast from the memref descriptor type (!llvm.struct) to the
+    // original memref type.
     Value packed =
         packUnrankedMemRefDesc(builder, resultType, inputs, loc, *this);
     if (!packed)
@@ -223,7 +223,7 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
   auto rankedMemRefMaterialization = [&](OpBuilder &builder,
                                          MemRefType resultType,
                                          ValueRange inputs, Location loc) {
-    // An argument materialization must return a value of type `resultType`,
+    // A source materialization must return a value of type `resultType`,
     // so insert a cast from the memref descriptor type (!llvm.struct) to the
     // original memref type.
     Value packed =
@@ -234,11 +234,9 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
         .getResult(0);
   };
 
-  // Argument materializations convert from the new block argument types
-  // (multiple SSA values that make up a memref descriptor) back to the
+  // Source materializations convert from the new block argument types
+  // (e.g., multiple SSA values that make up a memref descriptor) back to the
   // original block argument type.
-  addArgumentMaterialization(unrakedMemRefMaterialization);
-  addArgumentMaterialization(rankedMemRefMaterialization);
   addSourceMaterialization(unrakedMemRefMaterialization);
   addSourceMaterialization(rankedMemRefMaterialization);
 
