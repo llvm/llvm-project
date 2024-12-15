@@ -4766,3 +4766,73 @@ define i32 @sel_extractvalue_simplify(i1 %c, { i32, i32 } %agg1, i32 %x, i32 %y)
   %res = extractvalue { i32, i32 } %sel, 1
   ret i32 %res
 }
+
+define i1 @replace_select_cond_true(i1 %cond, i32 %v1, i32 %v2, i32 %v3) {
+; CHECK-LABEL: @replace_select_cond_true(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i32 [[V1:%.*]], i32 [[V3:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SEL]], [[V2:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[COND]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %sel = select i1 %cond, i32 %v1, i32 %v3
+  %cmp = icmp eq i32 %sel, %v2
+  %and = select i1 %cond, i1 %cmp, i1 false
+  ret i1 %and
+}
+
+define i1 @replace_select_cond_false(i1 %cond, i32 %v1, i32 %v2, i32 %v3) {
+; CHECK-LABEL: @replace_select_cond_false(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i32 [[V1:%.*]], i32 [[V3:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SEL]], [[V2:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[COND]], i1 true, i1 [[CMP]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %sel = select i1 %cond, i32 %v1, i32 %v3
+  %cmp = icmp eq i32 %sel, %v2
+  %or = select i1 %cond, i1 true, i1 %cmp
+  ret i1 %or
+}
+
+define i32 @replace_and_cond(i1 %cond1, i1 %cond2) {
+; CHECK-LABEL: @replace_and_cond(
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[COND1:%.*]], [[COND2:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[AND]], i32 3, i32 2
+; CHECK-NEXT:    [[MUX:%.*]] = select i1 [[COND1]], i32 [[SEL]], i32 1
+; CHECK-NEXT:    ret i32 [[MUX]]
+;
+  %and = and i1 %cond1, %cond2
+  %sel = select i1 %and, i32 3, i32 2
+  %mux = select i1 %cond1, i32 %sel, i32 1
+  ret i32 %mux
+}
+
+; TODO: We can still replace the use of %and with %cond2
+define i32 @replace_and_cond_multiuse1(i1 %cond1, i1 %cond2) {
+; CHECK-LABEL: @replace_and_cond_multiuse1(
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[COND1:%.*]], [[COND2:%.*]]
+; CHECK-NEXT:    call void @use(i1 [[AND]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[AND]], i32 3, i32 2
+; CHECK-NEXT:    [[MUX:%.*]] = select i1 [[COND1]], i32 [[SEL]], i32 1
+; CHECK-NEXT:    ret i32 [[MUX]]
+;
+  %and = and i1 %cond1, %cond2
+  call void @use(i1 %and)
+  %sel = select i1 %and, i32 3, i32 2
+  %mux = select i1 %cond1, i32 %sel, i32 1
+  ret i32 %mux
+}
+
+define i32 @replace_and_cond_multiuse2(i1 %cond1, i1 %cond2) {
+; CHECK-LABEL: @replace_and_cond_multiuse2(
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[COND1:%.*]], [[COND2:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[AND]], i32 3, i32 2
+; CHECK-NEXT:    call void @use32(i32 [[SEL]])
+; CHECK-NEXT:    [[MUX:%.*]] = select i1 [[COND1]], i32 [[SEL]], i32 1
+; CHECK-NEXT:    ret i32 [[MUX]]
+;
+  %and = and i1 %cond1, %cond2
+  %sel = select i1 %and, i32 3, i32 2
+  call void @use32(i32 %sel)
+  %mux = select i1 %cond1, i32 %sel, i32 1
+  ret i32 %mux
+}
