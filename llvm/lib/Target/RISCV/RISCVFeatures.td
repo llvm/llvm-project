@@ -1375,6 +1375,14 @@ def HasVendorXqcics
       AssemblerPredicate<(all_of FeatureVendorXqcics),
                          "'Xqcics' (Qualcomm uC Conditional Select Extension)">;
 
+def FeatureVendorXqcilsm
+    : RISCVExperimentalExtension<"xqcilsm", 0, 2,
+                                 "'Xqcilsm' (Qualcomm uC Load Store Multiple Extension)">;
+def HasVendorXqcilsm
+    : Predicate<"Subtarget->hasVendorXqcilsm()">,
+      AssemblerPredicate<(all_of FeatureVendorXqcilsm),
+                         "'Xqcilsm' (Qualcomm uC Load Store Multiple Extension)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//
@@ -1484,6 +1492,10 @@ def TuneConditionalCompressedMoveFusion
                        "true", "Enable branch+c.mv fusion">;
 def HasConditionalMoveFusion : Predicate<"Subtarget->hasConditionalMoveFusion()">;
 def NoConditionalMoveFusion  : Predicate<"!Subtarget->hasConditionalMoveFusion()">;
+
+def TuneMIPSP8700
+    : SubtargetFeature<"mips-p8700", "RISCVProcFamily", "Others",
+                       "MIPS p8700 processor">;
 
 def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
                                    "SiFive 7-Series processors">;

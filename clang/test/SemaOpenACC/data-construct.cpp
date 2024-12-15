@@ -20,30 +20,23 @@ void HasStmt() {
 
 void AtLeastOneOf() {
   int Var;
+  int *VarPtr = &Var;
 // Data
-  // expected-warning@+1{{OpenACC clause 'copy' not yet implemented}}
 #pragma acc data copy(Var)
   ;
-  // expected-warning@+1{{OpenACC clause 'copyin' not yet implemented}}
 #pragma acc data copyin(Var)
   ;
-  // expected-warning@+1{{OpenACC clause 'copyout' not yet implemented}}
 #pragma acc data copyout(Var)
   ;
-  // expected-warning@+1{{OpenACC clause 'create' not yet implemented}}
 #pragma acc data create(Var)
   ;
-  // expected-warning@+1{{OpenACC clause 'no_create' not yet implemented}}
 #pragma acc data no_create(Var)
   ;
-  // expected-warning@+1{{OpenACC clause 'present' not yet implemented}}
 #pragma acc data present(Var)
   ;
-  // expected-warning@+1{{OpenACC clause 'deviceptr' not yet implemented}}
-#pragma acc data deviceptr(Var)
+#pragma acc data deviceptr(VarPtr)
   ;
-  // expected-warning@+1{{OpenACC clause 'attach' not yet implemented}}
-#pragma acc data attach(Var)
+#pragma acc data attach(VarPtr)
   ;
 #pragma acc data default(none)
   ;
@@ -66,12 +59,9 @@ void AtLeastOneOf() {
   ;
 
   // Enter Data
-  // expected-warning@+1{{OpenACC clause 'copyin' not yet implemented}}
 #pragma acc enter data copyin(Var)
-  // expected-warning@+1{{OpenACC clause 'create' not yet implemented}}
 #pragma acc enter data create(Var)
-  // expected-warning@+1{{OpenACC clause 'attach' not yet implemented}}
-#pragma acc enter data attach(Var)
+#pragma acc enter data attach(VarPtr)
 
   // OpenACC TODO: The following 'enter data' directives should diagnose, since
   // they don't have at least one of the above clauses.
@@ -82,12 +72,10 @@ void AtLeastOneOf() {
 #pragma acc enter data
 
   // Exit Data
-  // expected-warning@+1{{OpenACC clause 'copyout' not yet implemented}}
 #pragma acc exit data copyout(Var)
   // expected-warning@+1{{OpenACC clause 'delete' not yet implemented}}
 #pragma acc exit data delete(Var)
-  // expected-warning@+1{{OpenACC clause 'detach' not yet implemented}}
-#pragma acc exit data detach(Var)
+#pragma acc exit data detach(VarPtr)
 
   // OpenACC TODO: The following 'exit data' directives should diagnose, since
   // they don't have at least one of the above clauses.
@@ -95,7 +83,6 @@ void AtLeastOneOf() {
 #pragma acc exit data if(Var)
 #pragma acc exit data async
 #pragma acc exit data wait
-  // expected-warning@+1{{OpenACC clause 'finalize' not yet implemented}}
 #pragma acc exit data finalize
 #pragma acc exit data
 
@@ -108,7 +95,6 @@ void AtLeastOneOf() {
 
 #pragma acc host_data if(Var)
   ;
-  // expected-warning@+1{{OpenACC clause 'if_present' not yet implemented}}
 #pragma acc host_data if_present
   ;
 #pragma acc host_data

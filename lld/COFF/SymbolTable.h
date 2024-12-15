@@ -119,6 +119,8 @@ public:
                        SectionChunk *newSc = nullptr,
                        uint32_t newSectionOffset = 0);
 
+  COFFLinkerContext &ctx;
+
   // A list of chunks which to be added to .rdata.
   std::vector<Chunk *> localImportChunks;
 
@@ -147,8 +149,6 @@ private:
   bool ltoCompilationDone = false;
   std::vector<std::pair<Symbol *, Symbol *>> entryThunks;
   llvm::DenseMap<Symbol *, Symbol *> exitThunks;
-
-  COFFLinkerContext &ctx;
 };
 
 std::vector<std::string> getSymbolLocations(ObjFile *file, uint32_t symIndex);

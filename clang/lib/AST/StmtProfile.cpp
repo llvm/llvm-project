@@ -2558,6 +2558,12 @@ void OpenACCClauseProfiler::VisitSelfClause(const OpenACCSelfClause &Clause) {
     Profiler.VisitStmt(Clause.getConditionExpr());
 }
 
+void OpenACCClauseProfiler::VisitFinalizeClause(
+    const OpenACCFinalizeClause &Clause) {}
+
+void OpenACCClauseProfiler::VisitIfPresentClause(
+    const OpenACCIfPresentClause &Clause) {}
+
 void OpenACCClauseProfiler::VisitNumGangsClause(
     const OpenACCNumGangsClause &Clause) {
   for (auto *E : Clause.getIntExprs())
@@ -2595,6 +2601,12 @@ void OpenACCClauseProfiler::VisitFirstPrivateClause(
 
 void OpenACCClauseProfiler::VisitAttachClause(
     const OpenACCAttachClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
+
+void OpenACCClauseProfiler::VisitDetachClause(
+    const OpenACCDetachClause &Clause) {
   for (auto *E : Clause.getVarList())
     Profiler.VisitStmt(E);
 }
