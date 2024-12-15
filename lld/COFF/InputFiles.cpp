@@ -114,15 +114,15 @@ void ArchiveFile::parse() {
   file = CHECK(Archive::create(mb), this);
 
   // Try to read symbols from ECSYMBOLS section on ARM64EC.
-  if (isArm64EC(ctx.config.machine)) {
+  if (ctx.symtabEC) {
     iterator_range<Archive::symbol_iterator> symbols =
         CHECK(file->ec_symbols(), this);
     if (!symbols.empty()) {
       for (const Archive::Symbol &sym : symbols)
-        ctx.symtab.addLazyArchive(this, sym);
+        ctx.symtabEC->addLazyArchive(this, sym);
 
       // Read both EC and native symbols on ARM64X.
-      if (ctx.config.machine != ARM64X)
+      if (!ctx.hybridSymtab)
         return;
     }
   }
@@ -163,7 +163,7 @@ lld::coff::getArchiveMembers(COFFLinkerContext &ctx, Archive *file) {
 }
 
 ObjFile::ObjFile(COFFLinkerContext &ctx, MemoryBufferRef m, bool lazy)
-    : InputFile(ctx.symtab, ObjectKind, m, lazy) {}
+    : InputFile(ctx.getSymtab(getMachineType(m)), ObjectKind, m, lazy) {}
 
 void ObjFile::parseLazy() {
   // Native object file.
@@ -806,10 +806,12 @@ std::optional<Symbol *> ObjFile::createDefined(
   return createRegular(sym);
 }
 
-MachineTypes ObjFile::getMachineType() const {
-  if (coffObj)
-    return static_cast<MachineTypes>(coffObj->getMachine());
-  return IMAGE_FILE_MACHINE_UNKNOWN;
+MachineTypes ObjFile::getMachineType(MemoryBufferRef mb) {
+  // Extract the machine type directly from the COFF header, as it's the first
+  // 16-bit field.
+  uint16_t machine =
+      *reinterpret_cast<const ulittle16_t *>(mb.getBufferStart());
+  return MachineTypes(machine);
 }
 
 ArrayRef<uint8_t> ObjFile::getDebugSection(StringRef secName) {
