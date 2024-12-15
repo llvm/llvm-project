@@ -719,9 +719,7 @@ llvm::Error Interpreter::LoadDynamicLibrary(const char *name) {
 
   if (auto DLSG = llvm::orc::DynamicLibrarySearchGenerator::Load(
           name, DL.getGlobalPrefix()))
-    // FIXME: Eventually we should put each library in its own JITDylib and
-    //        turn off process symbols by default.
-    EE->getProcessSymbolsJITDylib()->addGenerator(std::move(*DLSG));
+    EE->getMainJITDylib().addGenerator(std::move(*DLSG));
   else
     return DLSG.takeError();
 
