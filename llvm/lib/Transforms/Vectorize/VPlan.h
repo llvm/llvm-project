@@ -2211,8 +2211,8 @@ public:
   /// Start.
   VPWidenPointerInductionRecipe(PHINode *Phi, VPValue *Start, VPValue *Step,
                                 const InductionDescriptor &IndDesc,
-                                bool IsScalarAfterVectorization)
-      : VPHeaderPHIRecipe(VPDef::VPWidenPointerInductionSC, Phi),
+                                bool IsScalarAfterVectorization, DebugLoc DL)
+      : VPHeaderPHIRecipe(VPDef::VPWidenPointerInductionSC, Phi, nullptr, DL),
         IndDesc(IndDesc),
         IsScalarAfterVectorization(IsScalarAfterVectorization) {
     addOperand(Start);
@@ -2224,7 +2224,7 @@ public:
   VPWidenPointerInductionRecipe *clone() override {
     return new VPWidenPointerInductionRecipe(
         cast<PHINode>(getUnderlyingInstr()), getOperand(0), getOperand(1),
-        IndDesc, IsScalarAfterVectorization);
+        IndDesc, IsScalarAfterVectorization, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenPointerInductionSC)
