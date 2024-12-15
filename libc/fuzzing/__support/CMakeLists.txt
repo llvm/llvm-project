@@ -24,11 +24,20 @@ add_libc_fuzzer(
     -D__LIBC_EXPLICIT_SIMD_OPT
 ) 
 
-add_libc_fuzzer(
-  freelist_heap_fuzz
-  SRCS
-    fake_heap.s
-    freelist_heap_fuzz.cpp
-  DEPENDS
-    libc.src.__support.freelist_heap
-)
+if(LLVM_LIBC_FULL_BUILD)
+  add_libc_fuzzer(
+    freelist_heap_fuzz
+    SRCS
+      fake_heap.s
+      freelist_heap_fuzz.cpp
+    DEPENDS
+      libc.src.__support.freelist_heap
+  )
+  # TODO(#119995): Remove this once sccache on Windows no longer requires
+  # the use of -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded.
+  set_target_properties(
+    freelist_heap_fuzz
+    PROPERTIES
+      MSVC_DEBUG_INFORMATION_FORMAT ""
+  )
+endif()
