@@ -1,4 +1,3 @@
-
 ; RUN: llc < %s -mtriple=aarch64-none-linux-gnu -mcpu=neoverse-v1 -O3 -aarch64-sve-vector-bits-min=256 -verify-machineinstrs | FileCheck %s --check-prefixes=SVE256
 ; RUN: llc < %s -mtriple=aarch64-none-linux-gnu -mcpu=neoverse-v1 -O3 -aarch64-sve-vector-bits-min=128 -verify-machineinstrs | FileCheck %s --check-prefixes=NEON
 ; RUN: llc < %s -mtriple=aarch64-none-linux-gnu -mcpu=neoverse-n1 -O3 -verify-machineinstrs | FileCheck %s --check-prefixes=NEON
@@ -9,11 +8,7 @@ define internal i32 @test(ptr nocapture readonly %p1, i32 %i1, ptr nocapture rea
 ; SVE256:       ld1b    { z0.h }, p0/z,
 ; SVE256:       ld1b    { z1.h }, p0/z,
 ; SVE256:       sub z0.h, z0.h, z1.h
-; SVE256-NEXT:  sunpklo z1.s, z0.h
-; SVE256-NEXT:  ext z0.b, z0.b, z0.b, #16
-; SVE256-NEXT:  sunpklo z0.s, z0.h
-; SVE256-NEXT:  add z0.s, z1.s, z0.s
-; SVE256-NEXT:  uaddv   d0, p1, z0.s
+; SVE256-NEXT:  saddv d0, p0, z0.h
 
 ; NEON-LABEL: test:
 ; NEON:       ldr q0, [x0, w9, sxtw]

@@ -364,6 +364,34 @@ define i64 @uaddv_v32i64(ptr %a) vscale_range(16,0) #0 {
   ret i64 %res
 }
 
+define i64 @uaddv_zext_v32i8_v32i64(ptr %a) vscale_range(2,0) #0 {
+; CHECK-LABEL: uaddv_zext_v32i8_v32i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b, vl32
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    uaddv d0, p0, z0.b
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    ret
+  %op = load <32 x i8>, ptr %a
+  %op.zext = zext <32 x i8> %op to <32 x i64>
+  %res = call i64 @llvm.vector.reduce.add.v32i64(<32 x i64> %op.zext)
+  ret i64 %res
+}
+
+define i64 @uaddv_zext_v64i8_v64i64(ptr %a) vscale_range(4,0) #0 {
+; CHECK-LABEL: uaddv_zext_v64i8_v64i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b, vl64
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    uaddv d0, p0, z0.b
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    ret
+  %op = load <64 x i8>, ptr %a
+  %op.zext = zext <64 x i8> %op to <64 x i64>
+  %res = call i64 @llvm.vector.reduce.add.v64i64(<64 x i64> %op.zext)
+  ret i64 %res
+}
+
 ;
 ; SMAXV
 ;

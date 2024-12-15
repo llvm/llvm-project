@@ -188,6 +188,44 @@ define i64 @uaddv_nxv2i64(<vscale x 2 x i64> %a) {
   ret i64 %res
 }
 
+define i16 @uaddv_nxv16i8_nxv16i16(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: uaddv_nxv16i8_nxv16i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    uaddv d0, p0, z0.b
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
+  %1 = zext <vscale x 16 x i8> %a to <vscale x 16 x i16>
+  %2 = call i16 @llvm.vector.reduce.add.nxv16i16(<vscale x 16 x i16> %1)
+  ret i16 %2
+}
+
+define i32 @uaddv_nxv16i8_nxv16i32(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: uaddv_nxv16i8_nxv16i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    uaddv d0, p0, z0.b
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
+  %1 = zext <vscale x 16 x i8> %a to <vscale x 16 x i32>
+  %2 = call i32 @llvm.vector.reduce.add.nxv16i32(<vscale x 16 x i32> %1)
+  ret i32 %2
+}
+
+define i64 @uaddv_nxv16i8_nxv16i64(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: uaddv_nxv16i8_nxv16i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    uaddv d0, p0, z0.b
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    ret
+  %1 = zext <vscale x 16 x i8> %a to <vscale x 16 x i64>
+  %2 = call i64 @llvm.vector.reduce.add.nxv16i64(<vscale x 16 x i64> %1)
+  ret i64 %2
+}
+
 ; UMINV
 
 define i8 @umin_nxv16i8(<vscale x 16 x i8> %a) {
