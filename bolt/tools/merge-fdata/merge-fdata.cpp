@@ -19,10 +19,10 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/ThreadPool.h"
 #include <algorithm>
+#include <fstream>
 #include <mutex>
 #include <unordered_map>
 
@@ -266,10 +266,8 @@ bool isYAML(const StringRef Filename) {
 void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   errs() << "Using legacy profile format.\n";
   std::optional<bool> BoltedCollection;
+  std::optional<bool> NoLBRCollection;
   std::mutex BoltedCollectionMutex;
-  constexpr static const char *const FdataCountersPattern =
-      "(.*) ([0-9]+) ([0-9]+)";
-  Regex FdataRegex(FdataCountersPattern);
   struct CounterTy {
     uint64_t Exec{0};
     uint64_t Mispred{0};
@@ -287,50 +285,51 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
 
     if (isYAML(Filename))
       report_error(Filename, "cannot mix YAML and legacy formats");
-    ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
-        MemoryBuffer::getFileOrSTDIN(Filename);
-    if (std::error_code EC = MB.getError())
-      report_error(Filename, EC);
 
-    StringRef Buf = MB.get()->getBuffer();
+    std::ifstream FdataFile(Filename, std::ios::in);
+    std::string FdataLine;
+    std::getline(FdataFile, FdataLine);
+
+    auto checkMode = [&](const std::string &Key, std::optional<bool> &Flag) {
+      const bool KeyIsSet = FdataLine.rfind(Key, 0) == 0;
+
+      if (!Flag.has_value())
+        Flag = KeyIsSet;
+      else if (*Flag != KeyIsSet)
+        report_error(Filename, "cannot mix profile with and without " + Key);
+      if (KeyIsSet)
+        // Advance line
+        std::getline(FdataFile, FdataLine);
+    };
+
     ProfileTy *Profile;
     {
       std::lock_guard<std::mutex> Lock(BoltedCollectionMutex);
       // Check if the string "boltedcollection" is in the first line
-      if (Buf.starts_with("boltedcollection\n")) {
-        if (!BoltedCollection.value_or(true))
-          report_error(
-              Filename,
-              "cannot mix profile collected in BOLT and non-BOLT deployments");
-        BoltedCollection = true;
-        Buf = Buf.drop_front(17);
-      } else {
-        if (BoltedCollection.value_or(false))
-          report_error(
-              Filename,
-              "cannot mix profile collected in BOLT and non-BOLT deployments");
-        BoltedCollection = false;
-      }
-
+      checkMode("boltedcollection", BoltedCollection);
+      // Check if the string "no_lbr" is in the first line
+      // (or second line if BoltedCollection is true)
+      checkMode("no_lbr", NoLBRCollection);
       Profile = &Profiles[tid];
     }
 
-    SmallVector<StringRef> Lines;
-    SplitString(Buf, Lines, "\n");
-    for (StringRef Line : Lines) {
-      SmallVector<StringRef, 4> Fields;
-      if (!FdataRegex.match(Line, &Fields))
-        report_error(Filename, "Malformed / corrupted profile");
-      StringRef Signature = Fields[1];
+    do {
+      StringRef Line(FdataLine);
       CounterTy Count;
-      if (Fields[2].getAsInteger(10, Count.Mispred))
+      auto [Signature, ExecCount] = Line.rsplit(' ');
+      if (ExecCount.getAsInteger(10, Count.Exec))
         report_error(Filename, "Malformed / corrupted execution count");
-      if (Fields[3].getAsInteger(10, Count.Exec))
-        report_error(Filename, "Malformed / corrupted misprediction count");
+      // Only LBR profile has misprediction field
+      if (!NoLBRCollection.value_or(false)) {
+        auto [SignatureLBR, MispredCount] = Signature.rsplit(' ');
+        Signature = SignatureLBR;
+        if (MispredCount.getAsInteger(10, Count.Mispred))
+          report_error(Filename, "Malformed / corrupted misprediction count");
+      }
 
       Count += Profile->lookup(Signature);
       Profile->insert_or_assign(Signature, Count);
-    }
+    } while (std::getline(FdataFile, FdataLine));
   };
 
   // The final reduction has non-trivial cost, make sure each thread has at
@@ -347,14 +346,20 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   ProfileTy MergedProfile;
   for (const auto &[Thread, Profile] : ParsedProfiles)
     for (const auto &[Key, Value] : Profile) {
-      auto Count = MergedProfile.lookup(Key) + Value;
+      CounterTy Count = MergedProfile.lookup(Key) + Value;
       MergedProfile.insert_or_assign(Key, Count);
     }
 
   if (BoltedCollection.value_or(false))
     output() << "boltedcollection\n";
-  for (const auto &[Key, Value] : MergedProfile)
-    output() << Key << " " << Value.Mispred << " " << Value.Exec << "\n";
+  if (NoLBRCollection.value_or(false))
+    output() << "no_lbr\n";
+  for (const auto &[Key, Value] : MergedProfile) {
+    output() << Key << " ";
+    if (!NoLBRCollection.value_or(false))
+      output() << Value.Mispred << " ";
+    output() << Value.Exec << "\n";
+  }
 
   errs() << "Profile from " << Filenames.size() << " files merged.\n";
 }

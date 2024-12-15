@@ -2053,7 +2053,7 @@ struct DSEState {
       return false;
 
     Instruction *ICmpL;
-    ICmpInst::Predicate Pred;
+    CmpPredicate Pred;
     if (!match(BI->getCondition(),
                m_c_ICmp(Pred,
                         m_CombineAnd(m_Load(m_Specific(StorePtr)),

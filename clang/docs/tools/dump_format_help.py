@@ -72,5 +72,7 @@ with open(DOC_FILE, encoding="utf-8") as f:
 
 contents = substitute(contents, "FORMAT_HELP", help_text)
 
-with open(opts.output if opts.output else DOC_FILE, "wb") as output:
-    output.write(contents.encode())
+with open(
+    opts.output if opts.output else DOC_FILE, "w", newline="", encoding="utf-8"
+) as f:
+    f.write(contents)

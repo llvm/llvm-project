@@ -15,143 +15,143 @@ Macros
   * - Macro
     - Implemented
     - C23 Standard Section
-    - POSIX.1-2024 Standard Section
+    - POSIX Docs
   * - SIGABRT
     - |check|
     - 7.14.3
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGALRM
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGBUS
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGCHLD
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGCONT
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGFPE
     - |check|
     - 7.14.3
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGHUP
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGILL
     - |check|
     - 7.14.3
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGINT
     - |check|
     - 7.14.3
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGKILL
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGPIPE
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGPOLL
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGPROF
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGQUIT
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGRTMAX
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGRTMIN
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGSEGV
     - |check|
     - 7.14.3
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGSTOP
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGSYS
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGTERM
     - |check|
     - 7.14.3
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGTRAP
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGTSTP
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGTTIN
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGTTOU
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGURG
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGUSR1
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGUSR2
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGVTALRM
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGXCPU
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIGXFSZ
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIG_DFL
     - |check|
     - 7.14.3
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIG_ERR
     - |check|
     - 7.14.3
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIG_HOLD
     -
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
   * - SIG_IGN
     - |check|
     - 7.14.3
-    - https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html>`__
 
 Functions
 =========
@@ -164,44 +164,44 @@ Functions
   * - Function
     - Implemented
     - C23 Standard Section
-    - POSIX.1-2024 Standard Section
+    - POSIX Docs
   * - kill
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/functions/kill.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/functions/kill.html>`__
   * - raise
     - |check|
     - 7.14.2.1
-    - https://pubs.opengroup.org/onlinepubs/9799919799/functions/raise.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/functions/raise.html>`__
   * - sigaction
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/functions/sigaction.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/functions/sigaction.html>`__
   * - sigaddset
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/functions/sigaddset.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/functions/sigaddset.html>`__
   * - sigaltstack
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/functions/sigaltstack.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/functions/sigaltstack.html>`__
   * - sigdelset
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/functions/sigdelset.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/functions/sigdelset.html>`__
   * - sigemptyset
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/functions/sigemptyset.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/functions/sigemptyset.html>`__
   * - sigfillset
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/functions/sigfillset.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/functions/sigfillset.html>`__
   * - signal
     - |check|
     - 7.14.1.1
-    - https://pubs.opengroup.org/onlinepubs/9799919799/functions/signal.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/functions/signal.html>`__
   * - sigprocmask
     - |check|
     -
-    - https://pubs.opengroup.org/onlinepubs/9799919799/functions/sigprocmask.html
+    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/functions/sigprocmask.html>`__

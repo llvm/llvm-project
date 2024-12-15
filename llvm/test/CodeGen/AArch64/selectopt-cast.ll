@@ -729,3 +729,127 @@ loop:
 exit:
   ret void
 }
+
+define void @test_add_lshr_add_regular_select(ptr %dst, ptr %src, i64 %i.start, i64 %j.start) {
+; CHECK-LABEL: @test_add_lshr_add_regular_select(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 100000, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[SELECT_END:%.*]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_START:%.*]], [[ENTRY]] ], [ [[I_NEXT:%.*]], [[SELECT_END]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[J_START:%.*]], [[ENTRY]] ], [ [[J_NEXT:%.*]], [[SELECT_END]] ]
+; CHECK-NEXT:    [[GEP_I:%.*]] = getelementptr inbounds ptr, ptr [[SRC:%.*]], i64 [[I]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[GEP_I]], align 8
+; CHECK-NEXT:    [[GEP_J:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 [[J]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[GEP_J]], align 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[TMP1]], -1
+; CHECK-NEXT:    [[SHIFT:%.*]] = lshr i64 [[TMP1]], 63
+; CHECK-NEXT:    [[CMP_FROZEN:%.*]] = freeze i1 [[CMP]]
+; CHECK-NEXT:    br i1 [[CMP_FROZEN]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_FALSE_SINK:%.*]]
+; CHECK:       select.true.sink:
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i64 [[I]], 1
+; CHECK-NEXT:    br label [[SELECT_END]]
+; CHECK:       select.false.sink:
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i64 [[J]], 1
+; CHECK-NEXT:    br label [[SELECT_END]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[J_NEXT]] = phi i64 [ [[J]], [[SELECT_TRUE_SINK]] ], [ [[TMP3]], [[SELECT_FALSE_SINK]] ]
+; CHECK-NEXT:    [[I_NEXT]] = phi i64 [ [[TMP2]], [[SELECT_TRUE_SINK]] ], [ [[I]], [[SELECT_FALSE_SINK]] ]
+; CHECK-NEXT:    [[COND:%.*]] = phi i64 [ [[J]], [[SELECT_TRUE_SINK]] ], [ [[I]], [[SELECT_FALSE_SINK]] ]
+; CHECK-NEXT:    [[INC:%.*]] = zext i1 [[CMP]] to i64
+; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr i64, ptr [[DST:%.*]], i64 [[IV]]
+; CHECK-NEXT:    store i64 [[COND]], ptr [[GEP_DST]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 100000, %entry ], [ %iv.next, %loop ]
+  %i = phi i64 [ %i.start, %entry ], [ %i.next, %loop ]
+  %j = phi i64 [ %j.start, %entry ], [ %j.next, %loop ]
+  %gep.i = getelementptr inbounds ptr, ptr %src, i64 %i
+  %0 = load ptr, ptr %gep.i, align 8
+  %gep.j = getelementptr inbounds i64, ptr %0, i64 %j
+  %1 = load i64, ptr %gep.j, align 8
+  %cmp = icmp sgt i64 %1, -1
+  %shift = lshr i64 %1, 63
+  %j.next = add nsw i64 %j, %shift
+  %inc = zext i1 %cmp to i64
+  %i.next = add nsw i64 %i, %inc
+  %cond = select i1 %cmp, i64 %j, i64 %i
+  %gep.dst = getelementptr i64, ptr %dst, i64 %iv
+  store i64 %cond, ptr %gep.dst, align 8
+  %iv.next = add nsw i64 %iv, -1
+  %ec = icmp eq i64 %iv.next, 0
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_add_ashr_add_regular_select(ptr %dst, ptr %src, i64 %i.start, i64 %j.start) {
+; CHECK-LABEL: @test_add_ashr_add_regular_select(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 100000, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[SELECT_END:%.*]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_START:%.*]], [[ENTRY]] ], [ [[I_NEXT:%.*]], [[SELECT_END]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[J_START:%.*]], [[ENTRY]] ], [ [[J_NEXT:%.*]], [[SELECT_END]] ]
+; CHECK-NEXT:    [[GEP_I:%.*]] = getelementptr inbounds ptr, ptr [[SRC:%.*]], i64 [[I]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[GEP_I]], align 8
+; CHECK-NEXT:    [[GEP_J:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 [[J]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[GEP_J]], align 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[TMP1]], -1
+; CHECK-NEXT:    [[SHIFT:%.*]] = ashr i64 [[TMP1]], 63
+; CHECK-NEXT:    [[CMP_FROZEN:%.*]] = freeze i1 [[CMP]]
+; CHECK-NEXT:    br i1 [[CMP_FROZEN]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_FALSE_SINK:%.*]]
+; CHECK:       select.true.sink:
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i64 [[I]], 1
+; CHECK-NEXT:    br label [[SELECT_END]]
+; CHECK:       select.false.sink:
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i64 [[J]], -1
+; CHECK-NEXT:    br label [[SELECT_END]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[J_NEXT]] = phi i64 [ [[J]], [[SELECT_TRUE_SINK]] ], [ [[TMP3]], [[SELECT_FALSE_SINK]] ]
+; CHECK-NEXT:    [[I_NEXT]] = phi i64 [ [[TMP2]], [[SELECT_TRUE_SINK]] ], [ [[I]], [[SELECT_FALSE_SINK]] ]
+; CHECK-NEXT:    [[COND:%.*]] = phi i64 [ [[J]], [[SELECT_TRUE_SINK]] ], [ [[I]], [[SELECT_FALSE_SINK]] ]
+; CHECK-NEXT:    [[INC:%.*]] = zext i1 [[CMP]] to i64
+; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr i64, ptr [[DST:%.*]], i64 [[IV]]
+; CHECK-NEXT:    store i64 [[COND]], ptr [[GEP_DST]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 100000, %entry ], [ %iv.next, %loop ]
+  %i = phi i64 [ %i.start, %entry ], [ %i.next, %loop ]
+  %j = phi i64 [ %j.start, %entry ], [ %j.next, %loop ]
+  %gep.i = getelementptr inbounds ptr, ptr %src, i64 %i
+  %0 = load ptr, ptr %gep.i, align 8
+  %gep.j = getelementptr inbounds i64, ptr %0, i64 %j
+  %1 = load i64, ptr %gep.j, align 8
+  %cmp = icmp sgt i64 %1, -1
+  %shift = ashr i64 %1, 63
+  %j.next = add nsw i64 %j, %shift
+  %inc = zext i1 %cmp to i64
+  %i.next = add nsw i64 %i, %inc
+  %cond = select i1 %cmp, i64 %j, i64 %i
+  %gep.dst = getelementptr i64, ptr %dst, i64 %iv
+  store i64 %cond, ptr %gep.dst, align 8
+  %iv.next = add nsw i64 %iv, -1
+  %ec = icmp eq i64 %iv.next, 0
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
