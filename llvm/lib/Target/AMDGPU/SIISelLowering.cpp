@@ -4041,17 +4041,15 @@ SDValue SITargetLowering::lowerDYNAMIC_STACKALLOCImpl(SDValue Op,
   Chain = SP.getValue(1);
   MaybeAlign Alignment = cast<ConstantSDNode>(Tmp3)->getMaybeAlignValue();
   const TargetFrameLowering *TFL = Subtarget->getFrameLowering();
-  unsigned Opc =
-      TFL->getStackGrowthDirection() == TargetFrameLowering::StackGrowsUp
-          ? ISD::ADD
-          : ISD::SUB;
+  assert(TFL->getStackGrowthDirection() == TargetFrameLowering::StackGrowsUp &&
+         "Stack grows upwards for AMDGPU");
 
   SDValue ScaledSize = DAG.getNode(
       ISD::SHL, dl, VT, Size,
       DAG.getConstant(Subtarget->getWavefrontSizeLog2(), dl, MVT::i32));
 
   Align StackAlign = TFL->getStackAlign();
-  Tmp1 = DAG.getNode(Opc, dl, VT, SP, ScaledSize); // Value
+  Tmp1 = DAG.getNode(ISD::ADD, dl, VT, SP, ScaledSize); // Value
   if (Alignment && *Alignment > StackAlign) {
     Tmp1 = DAG.getNode(
         ISD::AND, dl, VT, Tmp1,
