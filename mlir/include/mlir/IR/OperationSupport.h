@@ -1221,8 +1221,8 @@ public:
   /// Return if printer should use unique SSA IDs.
   bool shouldPrintUniqueSSAIDs() const;
 
-  /// Returns if the printer should retain identifier names collected using
-  /// parsing.
+  /// Return if the printer should use NameLocs as prefixes when printing SSA
+  /// IDs
   bool shouldUseNameLocAsPrefix() const;
 
 private:
@@ -1259,7 +1259,7 @@ private:
   /// Print unique SSA IDs for values, block arguments and naming conflicts
   bool printUniqueSSAIDsFlag : 1;
 
-  /// Print the retained original names of identifiers
+  /// Print SSA IDs using NameLocs as prefixes
   bool useNameLocAsPrefix : 1;
 };
 

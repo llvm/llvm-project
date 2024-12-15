@@ -197,9 +197,9 @@ struct AsmPrinterOptions {
       llvm::cl::desc("Print unique SSA ID numbers for values, block arguments "
                      "and naming conflicts across all regions")};
 
-  llvm::cl::opt<bool> useNameLocAsPrefix{"mlir-use-nameloc-as-prefix",
-                                         llvm::cl::init(false),
-                                         llvm::cl::desc("TODO")};
+  llvm::cl::opt<bool> useNameLocAsPrefix{
+      "mlir-use-nameloc-as-prefix", llvm::cl::init(false),
+      llvm::cl::desc("Print SSA IDs using NameLocs as prefixes")};
 };
 } // namespace
 
@@ -369,7 +369,7 @@ bool OpPrintingFlags::shouldPrintUniqueSSAIDs() const {
   return printUniqueSSAIDsFlag || shouldPrintGenericOpForm();
 }
 
-/// TODO
+/// Return if the printer should use NameLocs as prefixes when printing SSA IDs
 bool OpPrintingFlags::shouldUseNameLocAsPrefix() const {
   return useNameLocAsPrefix;
 }
@@ -1523,25 +1523,18 @@ void SSANameState::numberValuesInRegion(Region &region) {
     assert(!valueIDs.count(arg) && "arg numbered multiple times");
     assert(llvm::cast<BlockArgument>(arg).getOwner()->getParent() == &region &&
            "arg not defined in current region");
-    setValueName(arg, name);
+    if (printerFlags.shouldUseNameLocAsPrefix() && isa<NameLoc>(arg.getLoc())) {
+      auto nameLoc = cast<NameLoc>(arg.getLoc());
+      setValueName(arg, nameLoc.getName());
+    } else {
+      setValueName(arg, name);
+    }
   };
 
-  bool alreadySetNames = false;
   if (!printerFlags.shouldPrintGenericOpForm()) {
     if (Operation *op = region.getParentOp()) {
-      if (auto asmInterface = dyn_cast<OpAsmOpInterface>(op)) {
+      if (auto asmInterface = dyn_cast<OpAsmOpInterface>(op))
         asmInterface.getAsmBlockArgumentNames(region, setBlockArgNameFn);
-        alreadySetNames = true;
-      }
-    }
-  }
-
-  if (printerFlags.shouldUseNameLocAsPrefix() && !alreadySetNames) {
-    for (BlockArgument arg : region.getArguments()) {
-      if (isa<NameLoc>(arg.getLoc())) {
-        auto nameLoc = cast<NameLoc>(arg.getLoc());
-        setBlockArgNameFn(arg, nameLoc.getName());
-      }
     }
   }
 
@@ -1596,7 +1589,13 @@ void SSANameState::numberValuesInOp(Operation &op) {
   auto setResultNameFn = [&](Value result, StringRef name) {
     assert(!valueIDs.count(result) && "result numbered multiple times");
     assert(result.getDefiningOp() == &op && "result not defined by 'op'");
-    setValueName(result, name);
+    if (printerFlags.shouldUseNameLocAsPrefix() &&
+        isa<NameLoc>(result.getLoc())) {
+      auto nameLoc = cast<NameLoc>(result.getLoc());
+      setValueName(result, nameLoc.getName());
+    } else {
+      setValueName(result, name);
+    }
 
     // Record the result number for groups not anchored at 0.
     if (int resultNo = llvm::cast<OpResult>(result).getResultNumber())
@@ -1618,25 +1617,14 @@ void SSANameState::numberValuesInOp(Operation &op) {
     blockNames[block] = {-1, name};
   };
 
-  bool alreadySetNames = false;
   if (!printerFlags.shouldPrintGenericOpForm()) {
     if (OpAsmOpInterface asmInterface = dyn_cast<OpAsmOpInterface>(&op)) {
       asmInterface.getAsmBlockNames(setBlockNameFn);
       asmInterface.getAsmResultNames(setResultNameFn);
-      alreadySetNames = true;
     }
   }
 
   unsigned numResults = op.getNumResults();
-  if (printerFlags.shouldUseNameLocAsPrefix() && !alreadySetNames &&
-      numResults > 0) {
-    Value resultBegin = op.getResult(0);
-    if (isa<NameLoc>(resultBegin.getLoc())) {
-      auto nameLoc = cast<NameLoc>(resultBegin.getLoc());
-      setResultNameFn(resultBegin, nameLoc.getName());
-    }
-  }
-
   if (numResults == 0) {
     // If value users should be printed, operations with no result need an id.
     if (printerFlags.shouldPrintValueUsers()) {
@@ -1646,6 +1634,13 @@ void SSANameState::numberValuesInOp(Operation &op) {
     return;
   }
   Value resultBegin = op.getResult(0);
+
+  if (printerFlags.shouldUseNameLocAsPrefix() && !valueIDs.count(resultBegin)) {
+    if (isa<NameLoc>(resultBegin.getLoc())) {
+      auto nameLoc = cast<NameLoc>(resultBegin.getLoc());
+      setResultNameFn(resultBegin, nameLoc.getName());
+    }
+  }
 
   // If the first result wasn't numbered, give it a default number.
   if (valueIDs.try_emplace(resultBegin, nextValueID).second)
