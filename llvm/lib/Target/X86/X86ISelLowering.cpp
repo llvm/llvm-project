@@ -29781,7 +29781,7 @@ template <typename InputTy, typename PermutationTy,
                              8>>
 static bool PermuteAndPairVector(
     const InputTy &Inputs, PermutationTy &Permutation,
-    MapTy UnpairedInputs = MapTy()) {static_assert(std::is_same<typename InputTy::value_type, uint8_t>::value);
+    MapTy UnpairedInputs = MapTy()) {
   const typename InputTy::value_type Wildcard = ~0;
   SmallVector<typename PermutationTy::value_type, 16> WildcardPairs;
 
@@ -30160,10 +30160,13 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
   // widened, and P2^-1 is the inverse shuffle of P2.
   // This is not profitable on XOP or AVX512 becasue it has 8/16-bit vector
   // variable shift instructions.
+  // Picking out GFNI because normally it implies AVX512, and there is no
+  // latency data for CPU with GFNI and SSE or AVX only, but there are tests for
+  // such combination anyways.
   if (ConstantAmt &&
       (VT == MVT::v16i8 || VT == MVT::v32i8 || VT == MVT::v64i8) &&
       R.hasOneUse() && Subtarget.hasSSSE3() && !Subtarget.hasAVX512() &&
-      !Subtarget.hasXOP()) {
+      !Subtarget.hasXOP() && !Subtarget.hasGFNI()) {
     constexpr size_t LaneBytes = 16;
     const size_t NumLanes = VT.getVectorNumElements() / LaneBytes;
 
@@ -30172,8 +30175,10 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     for (size_t I = 0; I < Amt.getNumOperands(); ++I) {
       if (Amt.getOperand(I).isUndef())
         ShiftAmt.push_back(~0);
-      else
-        ShiftAmt.push_back(Amt.getConstantOperandVal(I));
+      else {
+        auto A = Amt.getConstantOperandVal(I);
+        ShiftAmt.push_back(A > 8 ? 8 : A);
+      }
     }
 
     // Check if we can find an in-lane shuffle to rearrange the shift amounts,
@@ -30221,7 +30226,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     // For right shifts, (V)PMULHUW needs 2 extra instructions to handle an
     // amount of 0, making it unprofitable.
     if (!IsAdjacentQuads && (Opc == ISD::SRL || Opc == ISD::SRA) &&
-        any_of(ShiftAmt, [](auto x) { return x == 0; }))
+        any_of(ShiftAmt, [](uint8_t x) { return x == 0; }))
       Profitable = false;
 
     bool IsOperandShuffle = R.getOpcode() == ISD::VECTOR_SHUFFLE;
@@ -30252,14 +30257,17 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       for (int Index : Permutation) {
         NewShiftAmt.push_back(Amt.getOperand(Index));
       }
-#ifndef NDEBUG
+      // If using (V)PMULHUW, any undef pair is resolved to shift by 8 so that
+      // it does not create extra instructions in case it is resolved to 0.
       for (size_t I = 0; I < NewShiftAmt.size(); I += 2) {
-        SDValue Even = NewShiftAmt[I];
-        SDValue Odd = NewShiftAmt[I + 1];
+        SDValue &Even = NewShiftAmt[I];
+        SDValue &Odd = NewShiftAmt[I + 1];
         assert(Even.isUndef() || Odd.isUndef() ||
                Even->getAsZExtVal() == Odd->getAsZExtVal());
+        if (!IsAdjacentQuads && Even.isUndef() && Odd.isUndef())
+          Even = DAG.getConstant(8, dl, VT.getScalarType());
       }
-#endif
+
       SDValue NewShiftVector = DAG.getBuildVector(VT, dl, NewShiftAmt);
       SDValue NewShift = DAG.getNode(Opc, dl, VT, InnerShuffle, NewShiftVector);
       SmallVector<int, 64> InversePermutation(Permutation.size());

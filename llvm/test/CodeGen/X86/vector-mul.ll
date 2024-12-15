@@ -262,22 +262,20 @@ define <16 x i8> @mul_v16i8_1_2_4_8_1_2_4_8_1_2_4_8_1_2_4_8(<16 x i8> %a0) nounw
 ;
 ; X86-SSE4-LABEL: mul_v16i8_1_2_4_8_1_2_4_8_1_2_4_8_1_2_4_8:
 ; X86-SSE4:       # %bb.0:
-; X86-SSE4-NEXT:    movdqa %xmm0, %xmm1
-; X86-SSE4-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1 # [0,2,0,8,0,2,0,8,0,2,0,8,0,2,0,8]
-; X86-SSE4-NEXT:    psllw $8, %xmm1
-; X86-SSE4-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [1,0,4,0,1,0,4,0,1,0,4,0,1,0,4,0]
+; X86-SSE4-NEXT:    movdqa {{.*#+}} xmm1 = [0,4,2,6,1,5,3,7,8,12,10,14,9,13,11,15]
+; X86-SSE4-NEXT:    pshufb %xmm1, %xmm0
+; X86-SSE4-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [1,4,2,8,1,4,2,8]
+; X86-SSE4-NEXT:    pshufb %xmm1, %xmm0
 ; X86-SSE4-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE4-NEXT:    por %xmm1, %xmm0
 ; X86-SSE4-NEXT:    retl
 ;
 ; X64-SSE4-LABEL: mul_v16i8_1_2_4_8_1_2_4_8_1_2_4_8_1_2_4_8:
 ; X64-SSE4:       # %bb.0:
-; X64-SSE4-NEXT:    movdqa %xmm0, %xmm1
-; X64-SSE4-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [0,2,0,8,0,2,0,8,0,2,0,8,0,2,0,8]
-; X64-SSE4-NEXT:    psllw $8, %xmm1
-; X64-SSE4-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,0,4,0,1,0,4,0,1,0,4,0,1,0,4,0]
+; X64-SSE4-NEXT:    movdqa {{.*#+}} xmm1 = [0,4,2,6,1,5,3,7,8,12,10,14,9,13,11,15]
+; X64-SSE4-NEXT:    pshufb %xmm1, %xmm0
+; X64-SSE4-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,4,2,8,1,4,2,8]
+; X64-SSE4-NEXT:    pshufb %xmm1, %xmm0
 ; X64-SSE4-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-SSE4-NEXT:    por %xmm1, %xmm0
 ; X64-SSE4-NEXT:    retq
 ;
 ; X64-XOP-LABEL: mul_v16i8_1_2_4_8_1_2_4_8_1_2_4_8_1_2_4_8:
@@ -287,12 +285,11 @@ define <16 x i8> @mul_v16i8_1_2_4_8_1_2_4_8_1_2_4_8_1_2_4_8(<16 x i8> %a0) nounw
 ;
 ; X64-AVX2-LABEL: mul_v16i8_1_2_4_8_1_2_4_8_1_2_4_8_1_2_4_8:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
-; X64-AVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,2,4,8,1,2,4,8,1,2,4,8,1,2,4,8]
-; X64-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; X64-AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; X64-AVX2-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vzeroupper
+; X64-AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,4,8,12,1,5,9,13,2,6,10,14,3,7,11,15]
+; X64-AVX2-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX2-NEXT:    retq
 ;
 ; X64-AVX512DQ-LABEL: mul_v16i8_1_2_4_8_1_2_4_8_1_2_4_8_1_2_4_8:

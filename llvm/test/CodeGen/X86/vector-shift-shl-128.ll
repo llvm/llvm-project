@@ -1162,12 +1162,11 @@ define <16 x i8> @constant_shift_v16i8(<16 x i8> %a) nounwind {
 ;
 ; SSE41-LABEL: constant_shift_v16i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa %xmm0, %xmm1
-; SSE41-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [0,2,0,8,0,32,0,128,0,64,0,16,0,4,0,1]
-; SSE41-NEXT:    psllw $8, %xmm1
-; SSE41-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,0,4,0,16,0,64,0,128,0,32,0,8,0,2,0]
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [14,1,12,3,10,5,8,7,6,9,4,11,2,13,0,15]
+; SSE41-NEXT:    pshufb %xmm1, %xmm0
+; SSE41-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [2,8,32,128,64,16,4,1]
+; SSE41-NEXT:    pshufb %xmm1, %xmm0
 ; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE41-NEXT:    por %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: constant_shift_v16i8:

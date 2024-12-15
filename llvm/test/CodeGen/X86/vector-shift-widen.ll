@@ -14,7 +14,7 @@ define <16 x i8> @shl_v16i8(<16 x i8> %a) {
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movdqa {{\.LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # xmm1 = [8,1,2,12,4,5,6,7,0,9,10,11,3,13,14,15]
 ; SSSE3-NEXT:    pshufb %xmm1, %xmm0
-; SSSE3-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,4,1,1,8,1,16,32]
+; SSSE3-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,4,256,256,8,256,16,32]
 ; SSSE3-NEXT:    pshufb %xmm1, %xmm0
 ; SSSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSSE3-NEXT:    retq

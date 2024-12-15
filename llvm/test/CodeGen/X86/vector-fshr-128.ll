@@ -2010,13 +2010,11 @@ define <16 x i8> @constant_funnnel_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; SSE41-NEXT:    psrlw $8, %xmm3
 ; SSE41-NEXT:    packuswb %xmm1, %xmm3
 ; SSE41-NEXT:    paddb %xmm0, %xmm0
-; SSE41-NEXT:    movdqa %xmm0, %xmm1
-; SSE41-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [0,64,0,16,0,4,0,1,0,1,0,4,0,16,0,64]
-; SSE41-NEXT:    psllw $8, %xmm1
-; SSE41-NEXT:    por %xmm3, %xmm1
-; SSE41-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [128,0,32,0,8,0,2,0,128,0,2,0,8,0,32,0]
+; SSE41-NEXT:    pshufb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # xmm0 = xmm0[0,8,13,3,11,5,9,7,10,6,12,4,14,2,1,15]
+; SSE41-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [128,16,4,1,2,8,32,64]
+; SSE41-NEXT:    pshufb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # xmm0 = xmm0[0,14,13,3,11,5,9,7,1,6,8,4,10,2,12,15]
 ; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    por %xmm3, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: constant_funnnel_v16i8:
