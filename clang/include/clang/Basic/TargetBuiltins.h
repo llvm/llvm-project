@@ -156,8 +156,12 @@ namespace clang {
   namespace RISCVVector {
   enum {
     LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
-#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
-#include "clang/Basic/BuiltinsRISCVVector.def"
+#define GET_RISCVV_BUILTIN_ENUMERATORS
+#include "clang/Basic/riscv_vector_builtins.inc"
+    FirstSiFiveBuiltin,
+    LastRVVBuiltin = FirstSiFiveBuiltin - 1,
+#include "clang/Basic/riscv_sifive_vector_builtins.inc"
+#undef GET_RISCVV_BUILTIN_ENUMERATORS
     FirstTSBuiltin,
   };
   }
