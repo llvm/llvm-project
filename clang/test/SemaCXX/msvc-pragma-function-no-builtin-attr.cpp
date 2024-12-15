@@ -18,10 +18,10 @@ int bar() {
 
 struct A {
     int foo() = delete;
-    // CHECK: CXXMethodDecl {{.*}} foo 'int ()' delete
+    // CHECK: CXXMethodDecl {{.*}} foo {{.*}} delete
     // CHECK-NOT: NoBuiltinAttr
     A() = default;
-    // CHECK: CXXConstructorDecl {{.*}} A 'void ()' default
+    // CHECK: CXXConstructorDecl {{.*}} A {{.*}} default
     // CHECK-NOT: NoBuiltinAttr
 };
 
