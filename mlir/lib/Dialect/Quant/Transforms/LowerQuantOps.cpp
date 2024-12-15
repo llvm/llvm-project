@@ -570,6 +570,73 @@ Value convertPerChannel(OpBuilder &builder, Location loc, Operation *op,
   return result;
 }
 
+// Convert an operation using sub-channel quantization.
+//
+// - op
+//   'quant.dcast' or 'quant.qcast' op.
+//
+// - input
+//   Scalar, ranked tensor.
+//
+// - quantizedType
+//   Sub-channel quantized type.
+//
+Value convertSubChannel(OpBuilder &builder, Location loc, Operation *op,
+                        Value input,
+                        UniformQuantizedSubChannelType quantizedType) {
+  auto *context = builder.getContext();
+
+  auto inputType = cast<RankedTensorType>(input.getType());
+  auto inputRank = inputType.getRank();
+
+  auto scales = materializeSubChannelScales(builder, loc, quantizedType);
+  auto zeroPoints =
+      materializeSubChannelZeroPoints(builder, loc, quantizedType);
+
+  auto elementType = isa<FloatType>(inputType.getElementType())
+                         ? quantizedType.getStorageType()
+                         : quantizedType.getExpressedType();
+  auto initShape = tensor::getMixedSizes(builder, loc, input);
+  Value init = builder.create<tensor::EmptyOp>(loc, initShape, elementType);
+
+  SmallVector<utils::IteratorType> iteratorTypes(inputRank,
+                                                 utils::IteratorType::parallel);
+  const SmallVector<std::pair<int32_t, int64_t>> &blockSizeInfo =
+      quantizedType.getBlockSizeInfo();
+  SmallVector<AffineExpr> affineExprs(inputRank,
+                                      builder.getAffineConstantExpr(0));
+  for (auto [quantizedDimension, blockSize] : blockSizeInfo) {
+    affineExprs[quantizedDimension] =
+        builder.getAffineDimExpr(quantizedDimension).floorDiv(blockSize);
+  }
+  auto affineMap = AffineMap::get(inputRank, 0, affineExprs, context);
+  SmallVector<AffineMap> indexingMaps{
+      builder.getMultiDimIdentityMap(inputRank), affineMap, affineMap,
+      builder.getMultiDimIdentityMap(inputRank)};
+  auto result = builder
+                    .create<linalg::GenericOp>(
+                        loc,
+                        init.getType(),                        // resultType
+                        ValueRange{input, scales, zeroPoints}, // inputs
+                        ValueRange{init},                      // outputs
+                        indexingMaps, iteratorTypes,
+                        [&](OpBuilder &builder, Location loc, ValueRange args) {
+                          assert(args.size() == 4);
+                          auto input = args[0];
+                          auto scale = args[1];
+                          auto zeroPoint = args[2];
+
+                          auto result =
+                              convertRanked(builder, loc, op, input, {}, scale,
+                                            zeroPoint, quantizedType);
+
+                          builder.create<linalg::YieldOp>(loc, result);
+                        })
+                    .getResult(0);
+
+  return result;
+}
+
 // Convert a quantization operation.
 //
 // - op
