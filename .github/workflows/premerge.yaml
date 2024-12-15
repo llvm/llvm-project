@@ -16,7 +16,7 @@ jobs:
       group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
       cancel-in-progress: true
     container:
-      image: ghcr.io/keenuts-test-org/linux-ci-testing:latest
+      image: ghcr.io/llvm/ci-ubuntu-22.04:latest
     defaults:
       run:
         shell: bash
