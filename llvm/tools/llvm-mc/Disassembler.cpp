@@ -96,7 +96,7 @@ static bool SkipToToken(StringRef &Str) {
 }
 
 static bool byteArrayFromString(ByteArrayTy &ByteArray, StringRef &Str,
-                                SourceMgr &SM, bool HexPairs) {
+                                SourceMgr &SM, bool HexBytes) {
   while (SkipToToken(Str)) {
     // Handled by higher level
     if (Str[0] == '[' || Str[0] == ']')
@@ -108,7 +108,7 @@ static bool byteArrayFromString(ByteArrayTy &ByteArray, StringRef &Str,
 
     // Convert to a byte and add to the byte vector.
     unsigned ByteVal;
-    if (HexPairs) {
+    if (HexBytes) {
       if (Next < 2) {
         SM.PrintMessage(SMLoc::getFromPointer(Value.data()),
                         SourceMgr::DK_Error, "expected two hex digits");
