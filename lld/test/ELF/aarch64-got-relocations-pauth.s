@@ -8,11 +8,11 @@
 #--- ok.s
 # RUN: llvm-mc -filetype=obj -triple=aarch64 ok.s -o ok.o
 
-# RUN: ld.lld ok.o a.so -pie -o external
-# RUN: llvm-readelf -r -S -x .got external | FileCheck %s --check-prefix=EXTERNAL
+# RUN: ld.lld ok.o a.so -pie -o ok1
+# RUN: llvm-readelf -r -S -x .got ok1 | FileCheck %s --check-prefix=EXTERNAL
 
-# RUN: ld.lld ok.o a.o -pie -o local
-# RUN: llvm-readelf -r -S -x .got -s local | FileCheck %s --check-prefix=LOCAL
+# RUN: ld.lld ok.o a.o -pie -o ok2
+# RUN: llvm-readelf -r -S -x .got -s ok2 | FileCheck %s --check-prefix=LOCAL
 
 # EXTERNAL:      Offset            Info             Type                    Symbol's Value   Symbol's Name + Addend
 # EXTERNAL-NEXT: 0000000000020380  0000000100000412 R_AARCH64_AUTH_GLOB_DAT 0000000000000000 bar + 0
@@ -42,7 +42,7 @@
 ##                                                           ^^
 ##                                                           0b10100000 bit 63 address diversity = true, bits 61..60 key = DA
 
-# RUN: llvm-objdump -d external | FileCheck %s --check-prefix=EXTERNAL-ASM
+# RUN: llvm-objdump -d ok1 | FileCheck %s --check-prefix=EXTERNAL-ASM
 
 # EXTERNAL-ASM:      <_start>:
 # EXTERNAL-ASM-NEXT: adrp x0, 0x20000
@@ -54,7 +54,7 @@
 # EXTERNAL-ASM-NEXT: adrp x1, 0x20000
 # EXTERNAL-ASM-NEXT: add  x1, x1, #0x388
 
-# RUN: llvm-objdump -d local | FileCheck %s --check-prefix=LOCAL-ASM
+# RUN: llvm-objdump -d ok2 | FileCheck %s --check-prefix=LOCAL-ASM
 
 # LOCAL-ASM:         <_start>:
 # LOCAL-ASM-NEXT:    adrp x0, 0x20000
