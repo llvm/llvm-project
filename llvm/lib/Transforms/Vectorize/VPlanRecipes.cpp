@@ -3182,6 +3182,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
     NewPointerPhi = PHINode::Create(ScStValueType, 2, "pointer.phi",
                                     CanonicalIV->getIterator());
     NewPointerPhi->addIncoming(ScalarStartValue, VectorPH);
+    NewPointerPhi->setDebugLoc(getDebugLoc());
   } else {
     // The recipe has been unrolled. In that case, fetch the single pointer phi
     // shared among all unrolled parts of the recipe.
