@@ -666,8 +666,8 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
     return false;
 
   auto *VecTy = cast<FixedVectorType>(I.getType());
+  auto *ScalarTy = VecTy->getScalarType();
   auto *SrcVecTy = dyn_cast<FixedVectorType>(SrcVec->getType());
-  auto *ScalarTy = SrcVecTy->getScalarType();
   if (!SrcVecTy || ScalarTy != SrcVecTy->getScalarType())
     return false;
 
