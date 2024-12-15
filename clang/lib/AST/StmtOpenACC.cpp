@@ -110,3 +110,89 @@ OpenACCCombinedConstruct *OpenACCCombinedConstruct::Create(
       OpenACCCombinedConstruct(DK, BeginLoc, DirLoc, EndLoc, Clauses, Loop);
   return Inst;
 }
+
+OpenACCDataConstruct *OpenACCDataConstruct::CreateEmpty(const ASTContext &C,
+                                                        unsigned NumClauses) {
+  void *Mem =
+      C.Allocate(OpenACCDataConstruct::totalSizeToAlloc<const OpenACCClause *>(
+          NumClauses));
+  auto *Inst = new (Mem) OpenACCDataConstruct(NumClauses);
+  return Inst;
+}
+
+OpenACCDataConstruct *
+OpenACCDataConstruct::Create(const ASTContext &C, SourceLocation Start,
+                             SourceLocation DirectiveLoc, SourceLocation End,
+                             ArrayRef<const OpenACCClause *> Clauses,
+                             Stmt *StructuredBlock) {
+  void *Mem =
+      C.Allocate(OpenACCDataConstruct::totalSizeToAlloc<const OpenACCClause *>(
+          Clauses.size()));
+  auto *Inst = new (Mem)
+      OpenACCDataConstruct(Start, DirectiveLoc, End, Clauses, StructuredBlock);
+  return Inst;
+}
+
+OpenACCEnterDataConstruct *
+OpenACCEnterDataConstruct::CreateEmpty(const ASTContext &C,
+                                       unsigned NumClauses) {
+  void *Mem = C.Allocate(
+      OpenACCEnterDataConstruct::totalSizeToAlloc<const OpenACCClause *>(
+          NumClauses));
+  auto *Inst = new (Mem) OpenACCEnterDataConstruct(NumClauses);
+  return Inst;
+}
+
+OpenACCEnterDataConstruct *OpenACCEnterDataConstruct::Create(
+    const ASTContext &C, SourceLocation Start, SourceLocation DirectiveLoc,
+    SourceLocation End, ArrayRef<const OpenACCClause *> Clauses) {
+  void *Mem = C.Allocate(
+      OpenACCEnterDataConstruct::totalSizeToAlloc<const OpenACCClause *>(
+          Clauses.size()));
+  auto *Inst =
+      new (Mem) OpenACCEnterDataConstruct(Start, DirectiveLoc, End, Clauses);
+  return Inst;
+}
+
+OpenACCExitDataConstruct *
+OpenACCExitDataConstruct::CreateEmpty(const ASTContext &C,
+                                      unsigned NumClauses) {
+  void *Mem = C.Allocate(
+      OpenACCExitDataConstruct::totalSizeToAlloc<const OpenACCClause *>(
+          NumClauses));
+  auto *Inst = new (Mem) OpenACCExitDataConstruct(NumClauses);
+  return Inst;
+}
+
+OpenACCExitDataConstruct *OpenACCExitDataConstruct::Create(
+    const ASTContext &C, SourceLocation Start, SourceLocation DirectiveLoc,
+    SourceLocation End, ArrayRef<const OpenACCClause *> Clauses) {
+  void *Mem = C.Allocate(
+      OpenACCExitDataConstruct::totalSizeToAlloc<const OpenACCClause *>(
+          Clauses.size()));
+  auto *Inst =
+      new (Mem) OpenACCExitDataConstruct(Start, DirectiveLoc, End, Clauses);
+  return Inst;
+}
+
+OpenACCHostDataConstruct *
+OpenACCHostDataConstruct::CreateEmpty(const ASTContext &C,
+                                      unsigned NumClauses) {
+  void *Mem = C.Allocate(
+      OpenACCHostDataConstruct::totalSizeToAlloc<const OpenACCClause *>(
+          NumClauses));
+  auto *Inst = new (Mem) OpenACCHostDataConstruct(NumClauses);
+  return Inst;
+}
+
+OpenACCHostDataConstruct *OpenACCHostDataConstruct::Create(
+    const ASTContext &C, SourceLocation Start, SourceLocation DirectiveLoc,
+    SourceLocation End, ArrayRef<const OpenACCClause *> Clauses,
+    Stmt *StructuredBlock) {
+  void *Mem = C.Allocate(
+      OpenACCHostDataConstruct::totalSizeToAlloc<const OpenACCClause *>(
+          Clauses.size()));
+  auto *Inst = new (Mem) OpenACCHostDataConstruct(Start, DirectiveLoc, End,
+                                                  Clauses, StructuredBlock);
+  return Inst;
+}

@@ -738,7 +738,7 @@ static Value *
 foldAndOrOfICmpsWithPow2AndWithZero(InstCombiner::BuilderTy &Builder,
                                     ICmpInst *LHS, ICmpInst *RHS, bool IsAnd,
                                     const SimplifyQuery &Q) {
-  CmpInst::Predicate Pred = IsAnd ? CmpInst::ICMP_NE : CmpInst::ICMP_EQ;
+  CmpPredicate Pred = IsAnd ? CmpInst::ICMP_NE : CmpInst::ICMP_EQ;
   // Make sure we have right compares for our op.
   if (LHS->getPredicate() != Pred || RHS->getPredicate() != Pred)
     return nullptr;
@@ -875,7 +875,7 @@ static Value *foldSignedTruncationCheck(ICmpInst *ICmp0, ICmpInst *ICmp1,
   // Try to match/decompose into:  icmp eq (X & Mask), 0
   auto tryToDecompose = [](ICmpInst *ICmp, Value *&X,
                            APInt &UnsetBitsMask) -> bool {
-    CmpInst::Predicate Pred = ICmp->getPredicate();
+    CmpPredicate Pred = ICmp->getPredicate();
     // Can it be decomposed into  icmp eq (X & Mask), 0  ?
     auto Res =
         llvm::decomposeBitTestICmp(ICmp->getOperand(0), ICmp->getOperand(1),
@@ -944,7 +944,7 @@ static Value *foldSignedTruncationCheck(ICmpInst *ICmp0, ICmpInst *ICmp1,
 static Value *foldIsPowerOf2OrZero(ICmpInst *Cmp0, ICmpInst *Cmp1, bool IsAnd,
                                    InstCombiner::BuilderTy &Builder,
                                    InstCombinerImpl &IC) {
-  CmpInst::Predicate Pred0, Pred1;
+  CmpPredicate Pred0, Pred1;
   Value *X;
   if (!match(Cmp0, m_ICmp(Pred0, m_Intrinsic<Intrinsic::ctpop>(m_Value(X)),
                           m_SpecificInt(1))) ||
@@ -1117,12 +1117,12 @@ static Value *foldUnsignedUnderflowCheck(ICmpInst *ZeroICmp,
                                          const SimplifyQuery &Q,
                                          InstCombiner::BuilderTy &Builder) {
   Value *ZeroCmpOp;
-  ICmpInst::Predicate EqPred;
+  CmpPredicate EqPred;
   if (!match(ZeroICmp, m_ICmp(EqPred, m_Value(ZeroCmpOp), m_Zero())) ||
       !ICmpInst::isEquality(EqPred))
     return nullptr;
 
-  ICmpInst::Predicate UnsignedPred;
+  CmpPredicate UnsignedPred;
 
   Value *A, *B;
   if (match(UnsignedICmp,
@@ -1281,7 +1281,7 @@ static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
                                           const SimplifyQuery &Q) {
   // Match an equality compare with a non-poison constant as Cmp0.
   // Also, give up if the compare can be constant-folded to avoid looping.
-  ICmpInst::Predicate Pred0;
+  CmpPredicate Pred0;
   Value *X;
   Constant *C;
   if (!match(Cmp0, m_ICmp(Pred0, m_Value(X), m_Constant(C))) ||
@@ -1295,7 +1295,7 @@ static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
   // common operand as operand 1 (Pred1 is swapped if the common operand was
   // operand 0).
   Value *Y;
-  ICmpInst::Predicate Pred1;
+  CmpPredicate Pred1;
   if (!match(Cmp1, m_c_ICmp(Pred1, m_Value(Y), m_Specific(X))))
     return nullptr;
 
@@ -1326,7 +1326,7 @@ static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
 Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1,
                                                      ICmpInst *ICmp2,
                                                      bool IsAnd) {
-  ICmpInst::Predicate Pred1, Pred2;
+  CmpPredicate Pred1, Pred2;
   Value *V1, *V2;
   const APInt *C1, *C2;
   if (!match(ICmp1, m_ICmp(Pred1, m_Value(V1), m_APInt(C1))) ||
@@ -1348,12 +1348,12 @@ Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1,
     return nullptr;
 
   ConstantRange CR1 = ConstantRange::makeExactICmpRegion(
-      IsAnd ? ICmpInst::getInversePredicate(Pred1) : Pred1, *C1);
+      IsAnd ? ICmpInst::getInverseCmpPredicate(Pred1) : Pred1, *C1);
   if (Offset1)
     CR1 = CR1.subtract(*Offset1);
 
   ConstantRange CR2 = ConstantRange::makeExactICmpRegion(
-      IsAnd ? ICmpInst::getInversePredicate(Pred2) : Pred2, *C2);
+      IsAnd ? ICmpInst::getInverseCmpPredicate(Pred2) : Pred2, *C2);
   if (Offset2)
     CR2 = CR2.subtract(*Offset2);
 
@@ -3943,7 +3943,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
           canonicalizeCondSignextOfHighBitExtractToSignextHighBitExtract(I))
     return V;
 
-  CmpInst::Predicate Pred;
+  CmpPredicate Pred;
   Value *Mul, *Ov, *MulIsNotZero, *UMulWithOv;
   // Check if the OR weakens the overflow condition for umul.with.overflow by
   // treating any non-zero result as overflow. In that case, we overflow if both
@@ -4608,7 +4608,7 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
   }
 
   // not (cmp A, B) = !cmp A, B
-  CmpInst::Predicate Pred;
+  CmpPredicate Pred;
   if (match(NotOp, m_Cmp(Pred, m_Value(), m_Value())) &&
       (NotOp->hasOneUse() ||
        InstCombiner::canFreelyInvertAllUsersOf(cast<Instruction>(NotOp),

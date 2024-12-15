@@ -796,6 +796,15 @@ public:
   void writeTo(uint8_t *buf) override {}
 };
 
+class RandomizePaddingSection final : public SyntheticSection {
+  uint64_t size;
+
+public:
+  RandomizePaddingSection(Ctx &ctx, uint64_t size, OutputSection *parent);
+  size_t getSize() const override { return size; }
+  void writeTo(uint8_t *buf) override;
+};
+
 // Used by the merged DWARF32 .debug_names (a per-module index). If we
 // move to DWARF64, most of this data will need to be re-sized.
 class DebugNamesBaseSection : public SyntheticSection {

@@ -22,6 +22,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/ThreadPool.h"
 #include <algorithm>
+#include <fstream>
 #include <mutex>
 #include <unordered_map>
 
@@ -265,6 +266,7 @@ bool isYAML(const StringRef Filename) {
 void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   errs() << "Using legacy profile format.\n";
   std::optional<bool> BoltedCollection;
+  std::optional<bool> NoLBRCollection;
   std::mutex BoltedCollectionMutex;
   typedef StringMap<uint64_t> ProfileTy;
 
@@ -273,37 +275,36 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
 
     if (isYAML(Filename))
       report_error(Filename, "cannot mix YAML and legacy formats");
-    ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
-        MemoryBuffer::getFileOrSTDIN(Filename);
-    if (std::error_code EC = MB.getError())
-      report_error(Filename, EC);
 
-    StringRef Buf = MB.get()->getBuffer();
+    std::ifstream FdataFile(Filename, std::ios::in);
+    std::string FdataLine;
+    std::getline(FdataFile, FdataLine);
+
+    auto checkMode = [&](const std::string &Key, std::optional<bool> &Flag) {
+      const bool KeyIsSet = FdataLine.rfind(Key, 0) == 0;
+
+      if (!Flag.has_value())
+        Flag = KeyIsSet;
+      else if (*Flag != KeyIsSet)
+        report_error(Filename, "cannot mix profile with and without " + Key);
+      if (KeyIsSet)
+        // Advance line
+        std::getline(FdataFile, FdataLine);
+    };
+
     ProfileTy *Profile;
     {
       std::lock_guard<std::mutex> Lock(BoltedCollectionMutex);
       // Check if the string "boltedcollection" is in the first line
-      if (Buf.starts_with("boltedcollection\n")) {
-        if (!BoltedCollection.value_or(true))
-          report_error(
-              Filename,
-              "cannot mix profile collected in BOLT and non-BOLT deployments");
-        BoltedCollection = true;
-        Buf = Buf.drop_front(17);
-      } else {
-        if (BoltedCollection.value_or(false))
-          report_error(
-              Filename,
-              "cannot mix profile collected in BOLT and non-BOLT deployments");
-        BoltedCollection = false;
-      }
-
+      checkMode("boltedcollection", BoltedCollection);
+      // Check if the string "no_lbr" is in the first line
+      // (or second line if BoltedCollection is true)
+      checkMode("no_lbr", NoLBRCollection);
       Profile = &Profiles[tid];
     }
 
-    SmallVector<StringRef> Lines;
-    SplitString(Buf, Lines, "\n");
-    for (StringRef Line : Lines) {
+    do {
+      StringRef Line(FdataLine);
       size_t Pos = Line.rfind(" ");
       if (Pos == StringRef::npos)
         report_error(Filename, "Malformed / corrupted profile");
@@ -313,7 +314,7 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
         report_error(Filename, "Malformed / corrupted profile counter");
       Count += Profile->lookup(Signature);
       Profile->insert_or_assign(Signature, Count);
-    }
+    } while (std::getline(FdataFile, FdataLine));
   };
 
   // The final reduction has non-trivial cost, make sure each thread has at
@@ -336,6 +337,8 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
 
   if (BoltedCollection.value_or(false))
     output() << "boltedcollection\n";
+  if (NoLBRCollection.value_or(false))
+    output() << "no_lbr\n";
   for (const auto &[Key, Value] : MergedProfile)
     output() << Key << " " << Value << "\n";
 

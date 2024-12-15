@@ -285,7 +285,7 @@ class SimplifyCFGOpt {
   bool tryToSimplifyUncondBranchWithICmpInIt(ICmpInst *ICI,
                                              IRBuilder<> &Builder);
 
-  bool hoistCommonCodeFromSuccessors(Instruction *TI, bool EqTermsOnly);
+  bool hoistCommonCodeFromSuccessors(Instruction *TI, bool AllInstsEqOnly);
   bool hoistSuccIdenticalTerminatorToSwitchOrIf(
       Instruction *TI, Instruction *I1,
       SmallVectorImpl<Instruction *> &OtherSuccTIs);
@@ -1772,13 +1772,84 @@ static bool isSafeCheapLoadStore(const Instruction *I,
          getLoadStoreAlignment(I) < Value::MaximumAlignment;
 }
 
+namespace {
+
+// LockstepReverseIterator - Iterates through instructions
+// in a set of blocks in reverse order from the first non-terminator.
+// For example (assume all blocks have size n):
+//   LockstepReverseIterator I([B1, B2, B3]);
+//   *I-- = [B1[n], B2[n], B3[n]];
+//   *I-- = [B1[n-1], B2[n-1], B3[n-1]];
+//   *I-- = [B1[n-2], B2[n-2], B3[n-2]];
+//   ...
+class LockstepReverseIterator {
+  ArrayRef<BasicBlock *> Blocks;
+  SmallVector<Instruction *, 4> Insts;
+  bool Fail;
+
+public:
+  LockstepReverseIterator(ArrayRef<BasicBlock *> Blocks) : Blocks(Blocks) {
+    reset();
+  }
+
+  void reset() {
+    Fail = false;
+    Insts.clear();
+    for (auto *BB : Blocks) {
+      Instruction *Inst = BB->getTerminator();
+      for (Inst = Inst->getPrevNode(); Inst && isa<DbgInfoIntrinsic>(Inst);)
+        Inst = Inst->getPrevNode();
+      if (!Inst) {
+        // Block wasn't big enough.
+        Fail = true;
+        return;
+      }
+      Insts.push_back(Inst);
+    }
+  }
+
+  bool isValid() const { return !Fail; }
+
+  void operator--() {
+    if (Fail)
+      return;
+    for (auto *&Inst : Insts) {
+      for (Inst = Inst->getPrevNode(); Inst && isa<DbgInfoIntrinsic>(Inst);)
+        Inst = Inst->getPrevNode();
+      // Already at beginning of block.
+      if (!Inst) {
+        Fail = true;
+        return;
+      }
+    }
+  }
+
+  void operator++() {
+    if (Fail)
+      return;
+    for (auto *&Inst : Insts) {
+      for (Inst = Inst->getNextNode(); Inst && isa<DbgInfoIntrinsic>(Inst);)
+        Inst = Inst->getNextNode();
+      // Already at end of block.
+      if (!Inst) {
+        Fail = true;
+        return;
+      }
+    }
+  }
+
+  ArrayRef<Instruction *> operator*() const { return Insts; }
+};
+
+} // end anonymous namespace
+
 /// Hoist any common code in the successor blocks up into the block. This
-/// function guarantees that BB dominates all successors. If EqTermsOnly is
-/// given, only perform hoisting in case both blocks only contain a terminator.
-/// In that case, only the original BI will be replaced and selects for PHIs are
-/// added.
+/// function guarantees that BB dominates all successors. If AllInstsEqOnly is
+/// given, only perform hoisting in case all successors blocks contain matching
+/// instructions only. In that case, all instructions can be hoisted and the
+/// original branch will be replaced and selects for PHIs are added.
 bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
-                                                   bool EqTermsOnly) {
+                                                   bool AllInstsEqOnly) {
   // This does very trivial matching, with limited scanning, to find identical
   // instructions in the two blocks. In particular, we don't want to get into
   // O(N1*N2*...) situations here where Ni are the sizes of these successors. As
@@ -1807,17 +1878,35 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
     SuccIterPairs.push_back(SuccIterPair(SuccItr, 0));
   }
 
-  // Check if only hoisting terminators is allowed. This does not add new
-  // instructions to the hoist location.
-  if (EqTermsOnly) {
-    // Skip any debug intrinsics, as they are free to hoist.
-    for (auto &SuccIter : make_first_range(SuccIterPairs)) {
-      auto *INonDbg = &*skipDebugIntrinsics(SuccIter);
-      if (!INonDbg->isTerminator())
-        return false;
+  if (AllInstsEqOnly) {
+    // Check if all instructions in the successor blocks match. This allows
+    // hoisting all instructions and removing the blocks we are hoisting from,
+    // so does not add any new instructions.
+    SmallVector<BasicBlock *> Succs = to_vector(successors(BB));
+    // Check if sizes and terminators of all successors match.
+    bool AllSame = none_of(Succs, [&Succs](BasicBlock *Succ) {
+      Instruction *Term0 = Succs[0]->getTerminator();
+      Instruction *Term = Succ->getTerminator();
+      return !Term->isSameOperationAs(Term0) ||
+             !equal(Term->operands(), Term0->operands()) ||
+             Succs[0]->size() != Succ->size();
+    });
+    if (!AllSame)
+      return false;
+    if (AllSame) {
+      LockstepReverseIterator LRI(Succs);
+      while (LRI.isValid()) {
+        Instruction *I0 = (*LRI)[0];
+        if (any_of(*LRI, [I0](Instruction *I) {
+              return !areIdenticalUpToCommutativity(I0, I);
+            })) {
+          return false;
+        }
+        --LRI;
+      }
     }
-    // Now we know that we only need to hoist debug intrinsics and the
-    // terminator. Let the loop below handle those 2 cases.
+    // Now we know that all instructions in all successors can be hoisted. Let
+    // the loop below handle the hoisting.
   }
 
   // Count how many instructions were not hoisted so far. There's a limit on how
@@ -2349,81 +2438,6 @@ static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
     I->eraseFromParent();
   }
 }
-
-namespace {
-
-  // LockstepReverseIterator - Iterates through instructions
-  // in a set of blocks in reverse order from the first non-terminator.
-  // For example (assume all blocks have size n):
-  //   LockstepReverseIterator I([B1, B2, B3]);
-  //   *I-- = [B1[n], B2[n], B3[n]];
-  //   *I-- = [B1[n-1], B2[n-1], B3[n-1]];
-  //   *I-- = [B1[n-2], B2[n-2], B3[n-2]];
-  //   ...
-  class LockstepReverseIterator {
-    ArrayRef<BasicBlock*> Blocks;
-    SmallVector<Instruction*,4> Insts;
-    bool Fail;
-
-  public:
-    LockstepReverseIterator(ArrayRef<BasicBlock*> Blocks) : Blocks(Blocks) {
-      reset();
-    }
-
-    void reset() {
-      Fail = false;
-      Insts.clear();
-      for (auto *BB : Blocks) {
-        Instruction *Inst = BB->getTerminator();
-        for (Inst = Inst->getPrevNode(); Inst && isa<DbgInfoIntrinsic>(Inst);)
-          Inst = Inst->getPrevNode();
-        if (!Inst) {
-          // Block wasn't big enough.
-          Fail = true;
-          return;
-        }
-        Insts.push_back(Inst);
-      }
-    }
-
-    bool isValid() const {
-      return !Fail;
-    }
-
-    void operator--() {
-      if (Fail)
-        return;
-      for (auto *&Inst : Insts) {
-        for (Inst = Inst->getPrevNode(); Inst && isa<DbgInfoIntrinsic>(Inst);)
-          Inst = Inst->getPrevNode();
-        // Already at beginning of block.
-        if (!Inst) {
-          Fail = true;
-          return;
-        }
-      }
-    }
-
-    void operator++() {
-      if (Fail)
-        return;
-      for (auto *&Inst : Insts) {
-        for (Inst = Inst->getNextNode(); Inst && isa<DbgInfoIntrinsic>(Inst);)
-          Inst = Inst->getNextNode();
-        // Already at end of block.
-        if (!Inst) {
-          Fail = true;
-          return;
-        }
-      }
-    }
-
-    ArrayRef<Instruction*> operator * () const {
-      return Insts;
-    }
-  };
-
-} // end anonymous namespace
 
 /// Check whether BB's predecessors end with unconditional branches. If it is
 /// true, sink any common code from the predecessors to BB.
@@ -7474,9 +7488,6 @@ static bool simplifySwitchOfCmpIntrinsic(SwitchInst *SI, IRBuilderBase &Builder,
 /// IncomingValue and add it in the Wrapper so isEqual can do O(1) checking
 /// of the incoming values.
 struct SwitchSuccWrapper {
-  // Keep so we can use SwitchInst::setSuccessor to do the replacement. It won't
-  // be important to equality though.
-  unsigned SuccNum;
   BasicBlock *Dest;
   DenseMap<PHINode *, SmallDenseMap<BasicBlock *, Value *, 8>> *PhiPredIVs;
 };
@@ -7563,6 +7574,7 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
   SmallPtrSet<PHINode *, 8> Phis;
   SmallPtrSet<BasicBlock *, 8> Seen;
   DenseMap<PHINode *, SmallDenseMap<BasicBlock *, Value *, 8>> PhiPredIVs;
+  DenseMap<BasicBlock *, SmallVector<unsigned, 4>> BBToSuccessorIndexes;
   SmallVector<SwitchSuccWrapper> Cases;
   Cases.reserve(SI->getNumSuccessors());
 
@@ -7575,8 +7587,9 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
       continue;
 
     // FIXME: This case needs some extra care because the terminators other than
-    // SI need to be updated.
-    if (BB->hasNPredecessorsOrMore(2))
+    // SI need to be updated. For now, consider only backedges to the SI.
+    if (BB->hasNPredecessorsOrMore(4) ||
+        BB->getUniquePredecessor() != SI->getParent())
       continue;
 
     // FIXME: Relax that the terminator is a BranchInst by checking for equality
@@ -7591,8 +7604,11 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
       for (BasicBlock *Succ : BI->successors())
         for (PHINode &Phi : Succ->phis())
           Phis.insert(&Phi);
+      // Add the successor only if not previously visited.
+      Cases.emplace_back(SwitchSuccWrapper{BB, &PhiPredIVs});
     }
-    Cases.emplace_back(SwitchSuccWrapper{I, BB, &PhiPredIVs});
+
+    BBToSuccessorIndexes[BB].emplace_back(I);
   }
 
   // Precompute a data structure to improve performance of isEqual for
@@ -7627,7 +7643,9 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
       // We know that SI's parent BB no longer dominates the old case successor
       // since we are making it dead.
       Updates.push_back({DominatorTree::Delete, SI->getParent(), SSW.Dest});
-      SI->setSuccessor(SSW.SuccNum, (*It)->Dest);
+      const auto &Successors = BBToSuccessorIndexes.at(SSW.Dest);
+      for (unsigned Idx : Successors)
+        SI->setSuccessor(Idx, (*It)->Dest);
       MadeChange = true;
     }
   }

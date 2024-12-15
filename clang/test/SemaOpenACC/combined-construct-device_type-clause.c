@@ -42,12 +42,10 @@ void uses() {
 #pragma acc parallel loop device_type(*) vector
   for(int i = 0; i < 5; ++i);
 
-  // expected-error@+2{{OpenACC clause 'finalize' may not follow a 'device_type' clause in a 'serial loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'finalize' clause is not valid on 'serial loop' directive}}
 #pragma acc serial loop device_type(*) finalize
   for(int i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'if_present' may not follow a 'device_type' clause in a 'kernels loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'if_present' clause is not valid on 'kernels loop' directive}}
 #pragma acc kernels loop device_type(*) if_present
   for(int i = 0; i < 5; ++i);
 #pragma acc parallel loop device_type(*) seq
@@ -101,8 +99,7 @@ void uses() {
   // expected-note@+1{{previous clause is here}}
 #pragma acc serial loop device_type(*) delete(Var)
   for(int i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'detach' may not follow a 'device_type' clause in a 'kernels loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'detach' clause is not valid on 'kernels loop' directive}}
 #pragma acc kernels loop device_type(*) detach(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'device' may not follow a 'device_type' clause in a 'parallel loop' construct}}
