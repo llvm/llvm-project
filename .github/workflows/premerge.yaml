@@ -13,7 +13,7 @@ jobs:
     if: github.repository_owner == 'llvm'
     runs-on: llvm-premerge-linux-runners
     container:
-      image: ghcr.io/llvm/ci-ubuntu-22.04:latest
+      image: ghcr.io/keenuts-test-org/linux-ci-testing:latest
     defaults:
       run:
         shell: bash
