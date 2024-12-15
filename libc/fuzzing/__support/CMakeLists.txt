@@ -35,8 +35,9 @@ if(LLVM_LIBC_FULL_BUILD)
   )
   # TODO(#119995): Remove this once sccache on Windows no longer requires
   # the use of -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded.
+  get_fq_target_name(freelist_heap_fuzz freelist_heap_fuzz_target_name)
   set_target_properties(
-    freelist_heap_fuzz
+    ${freelist_heap_fuzz_target_name}
     PROPERTIES
       MSVC_DEBUG_INFORMATION_FORMAT ""
   )
