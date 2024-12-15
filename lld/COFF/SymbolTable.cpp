@@ -95,8 +95,7 @@ void SymbolTable::addFile(InputFile *file) {
   if (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN &&
       mt != IMAGE_FILE_MACHINE_UNKNOWN) {
     ctx.config.machineInferred = true;
-    ctx.config.machine = mt;
-    ctx.driver.addWinSysRootLibSearchPaths();
+    ctx.driver.setMachine(mt);
   }
 
   ctx.driver.parseDirectives(file);
