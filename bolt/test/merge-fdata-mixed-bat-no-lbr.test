@@ -5,7 +5,7 @@
 # RUN: split-file %s %t
 # RUN: not merge-fdata %t/a.fdata %t/b.fdata 2>&1 | FileCheck %s
 
-# CHECK: cannot mix profile collected in BOLT and non-BOLT deployments
+# CHECK: cannot mix profile with and without boltedcollection
 
 #--- a.fdata
 boltedcollection
