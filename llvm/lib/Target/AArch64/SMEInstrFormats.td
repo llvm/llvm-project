@@ -2916,7 +2916,7 @@ multiclass sme2_multi_vec_array_vg4_index_64b<string mnemonic, bits<3> op,
 }
 
 // FMLAL (multiple and indexed vector, FP8 to FP16)
-class sme2_multi_vec_array_vg24_index_16b<bits<2> sz, bit vg4, bits<3> op,
+class sme2_fp8_fmlal_vg24_index_za16<bits<2> sz, bit vg4, bits<3> op,
                                           RegisterOperand multi_vector_ty, string mnemonic>
     : I<(outs MatrixOp16:$ZAda),
         (ins MatrixOp16:$_ZAda, MatrixIndexGPR32Op8_11:$Rv, uimm2s2range:$imm2,
@@ -2939,11 +2939,12 @@ class sme2_multi_vec_array_vg24_index_16b<bits<2> sz, bit vg4, bits<3> op,
   let Inst{3-2}   = i{1-0};
   let Inst{1-0}   = imm2;
 
+  let Uses = [FPMR, FPCR];
   let Constraints = "$ZAda = $_ZAda";
 }
 
 multiclass sme2_fp8_fmlal_index_za16_vgx2<string mnemonic, SDPatternOperator intrinsic> {
-  def NAME : sme2_multi_vec_array_vg24_index_16b<0b10, 0b0, 0b111, ZZ_b_mul_r, mnemonic>,  SMEPseudo2Instr<NAME, 1> {
+  def NAME : sme2_fp8_fmlal_vg24_index_za16<0b10, 0b0, 0b111, ZZ_b_mul_r, mnemonic>,  SMEPseudo2Instr<NAME, 1> {
     bits<4> Zn;
     let Inst{9-6} = Zn;
   }
@@ -2957,7 +2958,7 @@ multiclass sme2_fp8_fmlal_index_za16_vgx2<string mnemonic, SDPatternOperator int
 }
 
 multiclass sme2_fp8_fmlal_index_za16_vgx4<string mnemonic, SDPatternOperator intrinsic> {
-  def NAME: sme2_multi_vec_array_vg24_index_16b<0b10, 0b1, 0b110, ZZZZ_b_mul_r, mnemonic>, SMEPseudo2Instr<NAME, 1> {
+  def NAME: sme2_fp8_fmlal_vg24_index_za16<0b10, 0b1, 0b110, ZZZZ_b_mul_r, mnemonic>, SMEPseudo2Instr<NAME, 1> {
     bits<3> Zn;
     let Inst{9-7} = Zn;
     let Inst{6}   = 0b0;

@@ -1019,8 +1019,8 @@ defm FDOT_VG4_M4Z4Z_BtoS : sme2_fp8_fdot_multi_vg1x4 <"fdot", 0b0100110, MatrixO
 defm FVDOTB_VG4_M2ZZI_BtoS : sme2_fp8_fdotv_index_za32_vg1x4<"fvdotb", 0b0, int_aarch64_sme_fp8_fvdotb_lane_za32_vg1x4>;
 defm FVDOTT_VG4_M2ZZI_BtoS : sme2_fp8_fdotv_index_za32_vg1x4<"fvdott", 0b1, int_aarch64_sme_fp8_fvdott_lane_za32_vg1x4>;
 
-defm FMLALL_MZZI_BtoS      : sme2_mla_ll_array_index_32b<"fmlall",     0b01, 0b000, int_aarch64_sme_fp8_fmlall_lane_za32_vg4x1, [FPMR, FPCR]>;
-defm FMLALL_VG2_M2ZZI_BtoS : sme2_mla_ll_array_vg2_index_32b<"fmlall", 0b10, 0b100, int_aarch64_sme_fp8_fmlall_lane_za32_vg4x2, [FPMR, FPCR]>;
+defm FMLALL_MZZI_BtoS      : sme2_mla_ll_array_index_32b<"fmlall",     0b01, 0b000,  int_aarch64_sme_fp8_fmlall_lane_za32_vg4x1, [FPMR, FPCR]>;
+defm FMLALL_VG2_M2ZZI_BtoS : sme2_mla_ll_array_vg2_index_32b<"fmlall", 0b10, 0b100,  int_aarch64_sme_fp8_fmlall_lane_za32_vg4x2, [FPMR, FPCR]>;
 defm FMLALL_VG4_M4ZZI_BtoS : sme2_mla_ll_array_vg4_index_32b<"fmlall", 0b00, 0b1000, int_aarch64_sme_fp8_fmlall_lane_za32_vg4x4, [FPMR, FPCR]>;
 
 defm FMLALL_MZZ_BtoS       : sme2_mla_ll_array_single<"fmlall",      0b01000, MatrixOp32, ZPR8, ZPR4b8, nxv16i8, null_frag>;
