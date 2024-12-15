@@ -6142,6 +6142,8 @@ StmtResult SemaOpenMP::transformDispatchDirective(
 
     const OMPNovariantsClause *NoVariantsC =
         OMPExecutableDirective::getSingleClause<OMPNovariantsClause>(Clauses);
+    // The following example explains the code transformation in the code
+    //
     // #pragma omp dispatch novariants(c2) depend(out: x)
     // foo();
     // becomes:
@@ -6150,7 +6152,7 @@ StmtResult SemaOpenMP::transformDispatchDirective(
     //    foo();
     // } else {
     //    #pragma omp dispatch
-    //    foo(); <--- foo() is replaced with foo_variant() in CodeGen
+    //    foo();
     // }
     Expr *Cond = getInitialExprFromCapturedExpr(NoVariantsC->getCondition());
     StmtResult ThenStmt =
@@ -6179,12 +6181,15 @@ StmtResult SemaOpenMP::transformDispatchDirective(
     const OMPNocontextClause *NoContextC =
         OMPExecutableDirective::getSingleClause<OMPNocontextClause>(Clauses);
     Expr *Cond = getInitialExprFromCapturedExpr(NoContextC->getCondition());
+    // The following example explains the code transformation in the code
+    //
     // #pragma omp dispatch depend(out: x) nocontext(c2)
     // foo();
     // becomes:
     // #pragma omp taskwait depend(out: x)
     // if (c2) {
-    //    foo();
+    //    foo(); <=== transformation explained clearly in
+    //    	         replaceWithNewTraitsOrDirectCall()
     // } else {
     //    #pragma omp dispatch
     //    foo();
@@ -6215,7 +6220,7 @@ StmtResult SemaOpenMP::transformDispatchDirective(
     // Only:
     // #pragma omp dispatch depend(out: x)
     // foo();
-    // to
+    // becomes:
     // #pragma omp taskwait depend(out: x)
     // foo();
     StmtResult FinalStmts =
