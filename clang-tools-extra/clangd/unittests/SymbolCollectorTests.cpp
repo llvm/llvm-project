@@ -2111,7 +2111,7 @@ TEST_F(SymbolCollectorTest, Reserved) {
   EXPECT_THAT(Symbols, IsEmpty());
 }
 
-TEST_F(SymbolCollectorTest, UnreservedIntrin) {
+TEST_F(SymbolCollectorTest, ReservedSymbolInIntrinsicHeader) {
   const char *Header = R"cpp(
     #pragma once
     void __foo();
