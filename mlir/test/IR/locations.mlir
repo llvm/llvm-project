@@ -13,7 +13,7 @@ func.func @inline_notation() -> i32 {
   // CHECK: arith.constant 4 : index loc(callsite("foo" at "mysource.cc":10:8))
   %2 = arith.constant 4 : index loc(callsite("foo" at "mysource.cc":10:8))
 
-  // CHECK: affine.for %IVlocation loc("IVlocation") = 0 to 8 {
+  // CHECK: affine.for %arg0 loc("IVlocation") = 0 to 8 {
   // CHECK: } loc(fused["foo", "mysource.cc":10:8])
   affine.for %i0 loc("IVlocation") = 0 to 8 {
   } loc(fused["foo", "mysource.cc":10:8])
@@ -26,7 +26,7 @@ func.func @inline_notation() -> i32 {
   affine.if #set0(%2) {
   } loc(fused<"myPass">["foo"])
 
-  // CHECK: return %foo : i32 loc(unknown)
+  // CHECK: return %0 : i32 loc(unknown)
   return %1 : i32 loc(unknown)
 }
 
@@ -62,7 +62,7 @@ func.func @escape_strings() {
 // CHECK-LABEL: func @argLocs(
 // CHECK-SAME:  %arg0: i32 loc({{.*}}locations.mlir":[[# @LINE+1]]:20),
 func.func @argLocs(%x: i32,
-// CHECK-SAME:  %hotdog: i64 loc("hotdog")
+// CHECK-SAME:  %arg1: i64 loc("hotdog")
               %y: i64 loc("hotdog")) {
   return
 }
@@ -73,11 +73,11 @@ func.func @argLocs(%x: i32,
 // CHECK-NEXT: ^bb0(%arg0: i32 loc({{.*}}locations.mlir":[[# @LINE+2]]:7),
 // CHECK-ALIAS-NEXT: ^bb0(%arg0: i32 loc({{.*}}locations.mlir":[[# @LINE+1]]:7),
  ^bb0(%x: i32,
-// CHECK-SAME: %cheetos: i32 loc("cheetos"),
-// CHECK-ALIAS-SAME: %cheetos: i32 loc("cheetos"),
+// CHECK-SAME: %arg1: i32 loc("cheetos"),
+// CHECK-ALIAS-SAME: %arg1: i32 loc("cheetos"),
       %y: i32 loc("cheetos"),
-// CHECK-SAME: %out_of_line_location2: i32 loc("out_of_line_location2")):
-// CHECK-ALIAS-SAME: %out_of_line_location2: i32 loc("out_of_line_location2")):
+// CHECK-SAME: %arg2: i32 loc("out_of_line_location2")):
+// CHECK-ALIAS-SAME: %arg2: i32 loc("out_of_line_location2")):
       %z: i32 loc("out_of_line_location2")):
     %1 = arith.addi %x, %y : i32
     "foo.yield"(%1) : (i32) -> ()

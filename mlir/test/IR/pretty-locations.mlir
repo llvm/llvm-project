@@ -27,6 +27,6 @@ func.func @inline_notation() -> i32 {
   // CHECK: "foo.op"() : () -> () #test.custom_location<"foo.mlir" * 1234>
   "foo.op"() : () -> () loc(#test.custom_location<"foo.mlir" * 1234>)
 
-  // CHECK: return %foo : i32 [unknown]
+  // CHECK: return %0 : i32 [unknown]
   return %1 : i32 loc(unknown)
 }

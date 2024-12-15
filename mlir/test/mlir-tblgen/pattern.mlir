@@ -678,7 +678,7 @@ func.func @returnTypeAndLocation(%arg0 : i32) -> i1 {
   %0 = "test.source_op"(%arg0) {tag = 66 : i32} : (i32) -> i1
   // CHECK: "test.op_x"(%arg0) : (i32) -> i32 loc("loc1")
   // CHECK: "test.op_x"(%arg0) : (i32) -> i32 loc("loc2")
-  // CHECK: "test.two_to_one"(%loc1, %loc2) : (i32, i32) -> i1
+  // CHECK: "test.two_to_one"(%0, %1) : (i32, i32) -> i1
   return %0 : i1
 }
 

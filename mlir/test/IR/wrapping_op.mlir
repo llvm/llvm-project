@@ -5,7 +5,7 @@
 // CHECK-GENERIC: "func.func"
 // CHECK-GENERIC-SAME: sym_name = "wrapping_op"
 func.func @wrapping_op(%arg0 : i32, %arg1 : f32) -> (i3, i2, i1) {
-// CHECK: %some_NameLoc:3 = test.wrapping_region wraps "some.op"(%arg1, %arg0) {test.attr = "attr"} : (f32, i32) -> (i1, i2, i3)
+// CHECK: %0:3 = test.wrapping_region wraps "some.op"(%arg1, %arg0) {test.attr = "attr"} : (f32, i32) -> (i1, i2, i3)
 // CHECK-GENERIC: "test.wrapping_region"() ({
 // CHECK-GENERIC:   %[[NESTED_RES:.*]]:3 = "some.op"(%arg1, %arg0) {test.attr = "attr"} : (f32, i32) -> (i1, i2, i3) loc("some_NameLoc")
 // CHECK-GENERIC:   "test.return"(%[[NESTED_RES]]#0, %[[NESTED_RES]]#1, %[[NESTED_RES]]#2) : (i1, i2, i3) -> () loc("some_NameLoc")

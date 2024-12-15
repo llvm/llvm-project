@@ -198,7 +198,7 @@ struct AsmPrinterOptions {
                      "and naming conflicts across all regions")};
 
   llvm::cl::opt<bool> useNameLocAsPrefix{"mlir-use-nameloc-as-prefix",
-                                         llvm::cl::init(true),
+                                         llvm::cl::init(false),
                                          llvm::cl::desc("TODO")};
 };
 } // namespace
@@ -1628,13 +1628,12 @@ void SSANameState::numberValuesInOp(Operation &op) {
   }
 
   unsigned numResults = op.getNumResults();
-  if (printerFlags.shouldUseNameLocAsPrefix() && !alreadySetNames) {
-    if (numResults > 0) {
-      Value resultBegin = op.getResult(0);
-      if (isa<NameLoc>(resultBegin.getLoc())) {
-        auto nameLoc = cast<NameLoc>(resultBegin.getLoc());
-        setResultNameFn(resultBegin, nameLoc.getName());
-      }
+  if (printerFlags.shouldUseNameLocAsPrefix() && !alreadySetNames &&
+      numResults > 0) {
+    Value resultBegin = op.getResult(0);
+    if (isa<NameLoc>(resultBegin.getLoc())) {
+      auto nameLoc = cast<NameLoc>(resultBegin.getLoc());
+      setResultNameFn(resultBegin, nameLoc.getName());
     }
   }
 
