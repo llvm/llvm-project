@@ -35,63 +35,75 @@
 // CHECK: add x5, x0, :tlsdesc_lo12:sym
 // CHECK-OBJ-LP64: 1c R_AARCH64_TLSDESC_ADD_LO12 sym
 
+   add x5, x0, #:tlsdesc_auth_lo12:sym
+// CHECK: add x5, x0, :tlsdesc_auth_lo12:sym
+// CHECK-OBJ-LP64: 20 R_AARCH64_AUTH_TLSDESC_ADD_LO12 sym
+
         add x0, x2, #:lo12:sym+8
 // CHECK: add x0, x2, :lo12:sym
-// CHECK-OBJ-LP64: 20 R_AARCH64_ADD_ABS_LO12_NC sym+0x8
+// CHECK-OBJ-LP64: 24 R_AARCH64_ADD_ABS_LO12_NC sym+0x8
 
    add x5, x7, #:dtprel_lo12:sym+1
 // CHECK: add x5, x7, :dtprel_lo12:sym+1
-// CHECK-OBJ-LP64: 24 R_AARCH64_TLSLD_ADD_DTPREL_LO12 sym+0x1
+// CHECK-OBJ-LP64: 28 R_AARCH64_TLSLD_ADD_DTPREL_LO12 sym+0x1
 
    add x9, x12, #:dtprel_lo12_nc:sym+2
 // CHECK: add x9, x12, :dtprel_lo12_nc:sym+2
-// CHECK-OBJ-LP64: 28 R_AARCH64_TLSLD_ADD_DTPREL_LO12_NC sym+0x2
+// CHECK-OBJ-LP64: 2c R_AARCH64_TLSLD_ADD_DTPREL_LO12_NC sym+0x2
 
    add x20, x30, #:tprel_lo12:sym+12
 // CHECK: add x20, x30, :tprel_lo12:sym+12
-// CHECK-OBJ-LP64: 2c R_AARCH64_TLSLE_ADD_TPREL_LO12 sym+0xc
+// CHECK-OBJ-LP64: 30 R_AARCH64_TLSLE_ADD_TPREL_LO12 sym+0xc
 
    add x9, x12, #:tprel_lo12_nc:sym+54
 // CHECK: add x9, x12, :tprel_lo12_nc:sym+54
-// CHECK-OBJ-LP64: 30 R_AARCH64_TLSLE_ADD_TPREL_LO12_NC sym+0x36
+// CHECK-OBJ-LP64: 34 R_AARCH64_TLSLE_ADD_TPREL_LO12_NC sym+0x36
 
    add x5, x0, #:tlsdesc_lo12:sym+70
 // CHECK: add x5, x0, :tlsdesc_lo12:sym+70
-// CHECK-OBJ-LP64: 34 R_AARCH64_TLSDESC_ADD_LO12 sym+0x46
+// CHECK-OBJ-LP64: 38 R_AARCH64_TLSDESC_ADD_LO12 sym+0x46
+
+   add x5, x0, #:tlsdesc_auth_lo12:sym+70
+// CHECK: add x5, x0, :tlsdesc_auth_lo12:sym+70
+// CHECK-OBJ-LP64: 3c R_AARCH64_AUTH_TLSDESC_ADD_LO12 sym+0x46
 
         .hword sym + 4 - .
-// CHECK-OBJ-LP64: 38 R_AARCH64_PREL16 sym+0x4
+// CHECK-OBJ-LP64: 40 R_AARCH64_PREL16 sym+0x4
         .word sym - . + 8
-// CHECK-OBJ-LP64: 3a R_AARCH64_PREL32 sym+0x8
+// CHECK-OBJ-LP64: 42 R_AARCH64_PREL32 sym+0x8
         .xword sym-.
-// CHECK-OBJ-LP64: 3e R_AARCH64_PREL64 sym{{$}}
+// CHECK-OBJ-LP64: 46 R_AARCH64_PREL64 sym{{$}}
 
         .hword sym
-// CHECK-OBJ-LP64: 46 R_AARCH64_ABS16 sym
+// CHECK-OBJ-LP64: 4e R_AARCH64_ABS16 sym
         .word sym+1
-// CHECK-OBJ-LP64: 48 R_AARCH64_ABS32 sym+0x1
+// CHECK-OBJ-LP64: 50 R_AARCH64_ABS32 sym+0x1
         .xword sym+16
-// CHECK-OBJ-LP64: 4c R_AARCH64_ABS64 sym+0x10
+// CHECK-OBJ-LP64: 54 R_AARCH64_ABS64 sym+0x10
 
    adrp x0, sym
 // CHECK: adrp x0, sym
-// CHECK-OBJ-LP64: 54 R_AARCH64_ADR_PREL_PG_HI21 sym
+// CHECK-OBJ-LP64: 5c R_AARCH64_ADR_PREL_PG_HI21 sym
 
    adrp x15, :got:sym
 // CHECK: adrp x15, :got:sym
-// CHECK-OBJ-LP64: 58 R_AARCH64_ADR_GOT_PAGE sym
+// CHECK-OBJ-LP64: 60 R_AARCH64_ADR_GOT_PAGE sym
 
    adrp x15, :got_auth:sym
 // CHECK: adrp x15, :got_auth:sym
-// CHECK-OBJ-LP64: 5c R_AARCH64_AUTH_ADR_GOT_PAGE sym
+// CHECK-OBJ-LP64: 64 R_AARCH64_AUTH_ADR_GOT_PAGE sym
 
    adrp x29, :gottprel:sym
 // CHECK: adrp x29, :gottprel:sym
-// CHECK-OBJ-LP64: 60 R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 sym
+// CHECK-OBJ-LP64: 68 R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 sym
 
    adrp x2, :tlsdesc:sym
 // CHECK: adrp x2, :tlsdesc:sym
-// CHECK-OBJ-LP64: 64 R_AARCH64_TLSDESC_ADR_PAGE21 sym
+// CHECK-OBJ-LP64: 6c R_AARCH64_TLSDESC_ADR_PAGE21 sym
+
+   adrp x2, :tlsdesc_auth:sym
+// CHECK: adrp x2, :tlsdesc_auth:sym
+// CHECK-OBJ-LP64: 70 R_AARCH64_AUTH_TLSDESC_ADR_PAGE21 sym
 
    // LLVM is not competent enough to do this relocation because the
    // page boundary could occur anywhere after linking. A relocation
@@ -100,7 +112,7 @@
    .global trickQuestion
 trickQuestion:
 // CHECK: adrp x3, trickQuestion
-// CHECK-OBJ-LP64: 68 R_AARCH64_ADR_PREL_PG_HI21 trickQuestion
+// CHECK-OBJ-LP64: 74 R_AARCH64_ADR_PREL_PG_HI21 trickQuestion
 
    ldrb w2, [x3, :lo12:sym]
    ldrsb w5, [x7, #:lo12:sym]
@@ -310,6 +322,13 @@ trickQuestion:
 // CHECK: ldr d22, [x21, :tlsdesc_lo12:sym]
 // CHECK-OBJ-LP64: R_AARCH64_TLSDESC_LD64_LO12 sym
 // CHECK-OBJ-LP64: R_AARCH64_TLSDESC_LD64_LO12 sym
+
+   ldr x24, [x23, #:tlsdesc_auth_lo12:sym]
+   ldr d22, [x21, :tlsdesc_auth_lo12:sym]
+// CHECK: ldr x24, [x23, :tlsdesc_auth_lo12:sym]
+// CHECK: ldr d22, [x21, :tlsdesc_auth_lo12:sym]
+// CHECK-OBJ-LP64: R_AARCH64_AUTH_TLSDESC_LD64_LO12 sym
+// CHECK-OBJ-LP64: R_AARCH64_AUTH_TLSDESC_LD64_LO12 sym
 
    ldr q20, [x19, #:lo12:sym]
 // CHECK: ldr q20, [x19, :lo12:sym]
