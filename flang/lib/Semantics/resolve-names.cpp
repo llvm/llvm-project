@@ -8958,9 +8958,9 @@ void ResolveNamesVisitor::FinishSpecificationPart(
               ? currScope().symbol()->detailsIf<SubprogramDetails>()
               : nullptr}) {
     if (auto attrs{subp->cudaSubprogramAttrs()}) {
-      if (*attrs != common::CUDASubprogramAttrs::Device ||
-          *attrs != common::CUDASubprogramAttrs::Global ||
-          *attrs != common::CUDASubprogramAttrs::Grid_Global) {
+      if (*attrs == common::CUDASubprogramAttrs::Device ||
+          *attrs == common::CUDASubprogramAttrs::Global ||
+          *attrs == common::CUDASubprogramAttrs::Grid_Global) {
         inDeviceSubprogram = true;
       }
     }
@@ -8976,7 +8976,7 @@ void ResolveNamesVisitor::FinishSpecificationPart(
     if (inDeviceSubprogram && IsDummy(symbol) &&
         symbol.has<ObjectEntityDetails>()) {
       auto *dummy{symbol.detailsIf<ObjectEntityDetails>()};
-      if (!dummy->cudaDataAttr()) {
+      if (!dummy->cudaDataAttr() && !IsValue(symbol)) {
         // Implicitly set device attribute if none is set in device context.
         dummy->set_cudaDataAttr(common::CUDADataAttr::Device);
       }
