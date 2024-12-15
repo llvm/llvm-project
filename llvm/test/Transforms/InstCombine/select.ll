@@ -4580,9 +4580,8 @@ define i32 @src_select_xxory_eq0_xorxy_y(i32 %x, i32 %y) {
 
 define i32 @sequence_select_with_same_cond_false(i1 %c1, i1 %c2){
 ; CHECK-LABEL: @sequence_select_with_same_cond_false(
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1:%.*]], i32 23, i32 45
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2:%.*]], i32 666, i32 [[S1]]
-; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C1]], i32 789, i32 [[S2]]
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2:%.*]], i32 666, i32 45
+; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C1:%.*]], i32 789, i32 [[S2]]
 ; CHECK-NEXT:    ret i32 [[S3]]
 ;
   %s1 = select i1 %c1, i32 23, i32 45
@@ -4593,9 +4592,8 @@ define i32 @sequence_select_with_same_cond_false(i1 %c1, i1 %c2){
 
 define i32 @sequence_select_with_same_cond_true(i1 %c1, i1 %c2){
 ; CHECK-LABEL: @sequence_select_with_same_cond_true(
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1:%.*]], i32 45, i32 23
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2:%.*]], i32 [[S1]], i32 666
-; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C1]], i32 [[S2]], i32 789
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2:%.*]], i32 45, i32 666
+; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C1:%.*]], i32 [[S2]], i32 789
 ; CHECK-NEXT:    ret i32 [[S3]]
 ;
   %s1 = select i1 %c1, i32 45, i32 23
@@ -4769,9 +4767,8 @@ define i32 @sel_extractvalue_simplify(i1 %c, { i32, i32 } %agg1, i32 %x, i32 %y)
 
 define i1 @replace_select_cond_true(i1 %cond, i32 %v1, i32 %v2, i32 %v3) {
 ; CHECK-LABEL: @replace_select_cond_true(
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i32 [[V1:%.*]], i32 [[V3:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SEL]], [[V2:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[COND]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SEL:%.*]], [[V2:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[COND:%.*]], i1 [[CMP]], i1 false
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %sel = select i1 %cond, i32 %v1, i32 %v3
@@ -4782,9 +4779,8 @@ define i1 @replace_select_cond_true(i1 %cond, i32 %v1, i32 %v2, i32 %v3) {
 
 define i1 @replace_select_cond_false(i1 %cond, i32 %v1, i32 %v2, i32 %v3) {
 ; CHECK-LABEL: @replace_select_cond_false(
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i32 [[V1:%.*]], i32 [[V3:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SEL]], [[V2:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[COND]], i1 true, i1 [[CMP]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SEL:%.*]], [[V2:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[COND:%.*]], i1 true, i1 [[CMP]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %sel = select i1 %cond, i32 %v1, i32 %v3
@@ -4795,9 +4791,8 @@ define i1 @replace_select_cond_false(i1 %cond, i32 %v1, i32 %v2, i32 %v3) {
 
 define i32 @replace_and_cond(i1 %cond1, i1 %cond2) {
 ; CHECK-LABEL: @replace_and_cond(
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[COND1:%.*]], [[COND2:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[AND]], i32 3, i32 2
-; CHECK-NEXT:    [[MUX:%.*]] = select i1 [[COND1]], i32 [[SEL]], i32 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[AND:%.*]], i32 3, i32 2
+; CHECK-NEXT:    [[MUX:%.*]] = select i1 [[COND1:%.*]], i32 [[SEL]], i32 1
 ; CHECK-NEXT:    ret i32 [[MUX]]
 ;
   %and = and i1 %cond1, %cond2
