@@ -12,6 +12,9 @@ jobs:
   premerge-checks-linux:
     if: github.repository_owner == 'llvm'
     runs-on: llvm-premerge-linux-runners
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
     container:
       image: ghcr.io/keenuts-test-org/linux-ci-testing:latest
     defaults:
@@ -22,6 +25,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 2
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2.14
       - name: Build and Test
         run: |
           git config --global --add safe.directory '*'
