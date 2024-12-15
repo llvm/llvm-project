@@ -268,7 +268,17 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   std::optional<bool> BoltedCollection;
   std::optional<bool> NoLBRCollection;
   std::mutex BoltedCollectionMutex;
-  typedef StringMap<uint64_t> ProfileTy;
+  struct CounterTy {
+    uint64_t Exec{0};
+    uint64_t Mispred{0};
+    CounterTy &operator+=(const CounterTy &O) {
+      Exec += O.Exec;
+      Mispred += O.Mispred;
+      return *this;
+    }
+    CounterTy operator+(const CounterTy &O) { return *this += O; }
+  };
+  typedef StringMap<CounterTy> ProfileTy;
 
   auto ParseProfile = [&](const std::string &Filename, auto &Profiles) {
     const llvm::thread::id tid = llvm::this_thread::get_id();
@@ -305,13 +315,18 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
 
     do {
       StringRef Line(FdataLine);
-      size_t Pos = Line.rfind(" ");
-      if (Pos == StringRef::npos)
-        report_error(Filename, "Malformed / corrupted profile");
-      StringRef Signature = Line.substr(0, Pos);
-      uint64_t Count;
-      if (Line.substr(Pos + 1, Line.size() - Pos).getAsInteger(10, Count))
-        report_error(Filename, "Malformed / corrupted profile counter");
+      CounterTy Count;
+      auto [Signature, ExecCount] = Line.rsplit(' ');
+      if (ExecCount.getAsInteger(10, Count.Exec))
+        report_error(Filename, "Malformed / corrupted execution count");
+      // Only LBR profile has misprediction field
+      if (!NoLBRCollection.value_or(false)) {
+        auto [SignatureLBR, MispredCount] = Signature.rsplit(' ');
+        Signature = SignatureLBR;
+        if (MispredCount.getAsInteger(10, Count.Mispred))
+          report_error(Filename, "Malformed / corrupted misprediction count");
+      }
+
       Count += Profile->lookup(Signature);
       Profile->insert_or_assign(Signature, Count);
     } while (std::getline(FdataFile, FdataLine));
@@ -331,7 +346,7 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   ProfileTy MergedProfile;
   for (const auto &[Thread, Profile] : ParsedProfiles)
     for (const auto &[Key, Value] : Profile) {
-      uint64_t Count = MergedProfile.lookup(Key) + Value;
+      CounterTy Count = MergedProfile.lookup(Key) + Value;
       MergedProfile.insert_or_assign(Key, Count);
     }
 
@@ -339,8 +354,12 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
     output() << "boltedcollection\n";
   if (NoLBRCollection.value_or(false))
     output() << "no_lbr\n";
-  for (const auto &[Key, Value] : MergedProfile)
-    output() << Key << " " << Value << "\n";
+  for (const auto &[Key, Value] : MergedProfile) {
+    output() << Key << " ";
+    if (!NoLBRCollection.value_or(false))
+      output() << Value.Mispred << " ";
+    output() << Value.Exec << "\n";
+  }
 
   errs() << "Profile from " << Filenames.size() << " files merged.\n";
 }
