@@ -73,7 +73,8 @@ OpAsmParser::~OpAsmParser() = default;
 MLIRContext *AsmParser::getContext() const { return getBuilder().getContext(); }
 
 /// Parse a type list.
-/// This is out-of-line to work-around https://github.com/llvm/llvm-project/issues/62918
+/// This is out-of-line to work-around
+/// https://github.com/llvm/llvm-project/issues/62918
 ParseResult AsmParser::parseTypeList(SmallVectorImpl<Type> &result) {
   return parseCommaSeparatedList(
       [&]() { return parseType(result.emplace_back()); });
@@ -1626,16 +1627,17 @@ void SSANameState::numberValuesInOp(Operation &op) {
     }
   }
 
+  unsigned numResults = op.getNumResults();
   if (printerFlags.shouldUseNameLocAsPrefix() && !alreadySetNames) {
-    for (Value opResult : op.getResults()) {
-      if (isa<NameLoc>(opResult.getLoc())) {
-        auto nameLoc = cast<NameLoc>(opResult.getLoc());
-        setResultNameFn(opResult, nameLoc.getName());
+    if (numResults > 0) {
+      Value resultBegin = op.getResult(0);
+      if (isa<NameLoc>(resultBegin.getLoc())) {
+        auto nameLoc = cast<NameLoc>(resultBegin.getLoc());
+        setResultNameFn(resultBegin, nameLoc.getName());
       }
     }
   }
 
-  unsigned numResults = op.getNumResults();
   if (numResults == 0) {
     // If value users should be printed, operations with no result need an id.
     if (printerFlags.shouldPrintValueUsers()) {
