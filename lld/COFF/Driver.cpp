@@ -596,6 +596,7 @@ void LinkerDriver::setMachine(MachineTypes machine) {
   assert(machine != IMAGE_FILE_MACHINE_UNKNOWN);
 
   ctx.config.machine = machine;
+  ctx.symtab.machine = machine;
   addWinSysRootLibSearchPaths();
 }
 

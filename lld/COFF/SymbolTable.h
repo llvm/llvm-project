@@ -120,6 +120,9 @@ public:
                        uint32_t newSectionOffset = 0);
 
   COFFLinkerContext &ctx;
+  llvm::COFF::MachineTypes machine = IMAGE_FILE_MACHINE_UNKNOWN;
+
+  bool isEC() const { return machine == ARM64EC; }
 
   // A list of chunks which to be added to .rdata.
   std::vector<Chunk *> localImportChunks;
