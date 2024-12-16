@@ -446,14 +446,8 @@ int Driver::MainLoop() {
   m_debugger.SetUseExternalEditor(m_option_data.m_use_external_editor);
   m_debugger.SetShowInlineDiagnostics(true);
 
-  struct winsize window_size;
-  if ((isatty(STDIN_FILENO) != 0) &&
-      ::ioctl(STDIN_FILENO, TIOCGWINSZ, &window_size) == 0) {
-    if (window_size.ws_col > 0)
-      m_debugger.SetTerminalWidth(window_size.ws_col);
-    if (window_size.ws_row > 0)
-      m_debugger.SetTerminalHeight(window_size.ws_row);
-  }
+  // Set the terminal dimensions.
+  UpdateWindowSize();
 
   SBCommandInterpreter sb_interpreter = m_debugger.GetCommandInterpreter();
 
@@ -629,19 +623,22 @@ int Driver::MainLoop() {
   return sb_interpreter.GetQuitStatus();
 }
 
-void Driver::ResizeWindow(unsigned short col, unsigned short row) {
-  GetDebugger().SetTerminalWidth(col);
-  GetDebugger().SetTerminalHeight(row);
-}
-
-void sigwinch_handler(int signo) {
+void Driver::UpdateWindowSize() {
   struct winsize window_size;
   if ((isatty(STDIN_FILENO) != 0) &&
       ::ioctl(STDIN_FILENO, TIOCGWINSZ, &window_size) == 0) {
-    if ((window_size.ws_col > 0) && g_driver != nullptr) {
-      g_driver->ResizeWindow(window_size.ws_col, window_size.ws_row);
-    }
+    if (window_size.ws_col > 0)
+      m_debugger.SetTerminalWidth(window_size.ws_col);
+#ifndef _WIN32
+    if (window_size.ws_row > 0)
+      m_debugger.SetTerminalHeight(window_size.ws_row);
+#endif
   }
+}
+
+void sigwinch_handler(int signo) {
+  if (g_driver != nullptr)
+    g_driver->UpdateWindowSize();
 }
 
 void sigint_handler(int signo) {

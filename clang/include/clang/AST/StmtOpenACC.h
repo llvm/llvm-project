@@ -297,7 +297,7 @@ public:
 // and clauses, but is otherwise pretty simple.
 class OpenACCDataConstruct final
     : public OpenACCAssociatedStmtConstruct,
-      public llvm::TrailingObjects<OpenACCCombinedConstruct,
+      public llvm::TrailingObjects<OpenACCDataConstruct,
                                    const OpenACCClause *> {
   OpenACCDataConstruct(unsigned NumClauses)
       : OpenACCAssociatedStmtConstruct(
@@ -345,7 +345,7 @@ public:
 // This class represents a 'enter data' construct, which JUST has clauses.
 class OpenACCEnterDataConstruct final
     : public OpenACCConstructStmt,
-      public llvm::TrailingObjects<OpenACCCombinedConstruct,
+      public llvm::TrailingObjects<OpenACCEnterDataConstruct,
                                    const OpenACCClause *> {
   OpenACCEnterDataConstruct(unsigned NumClauses)
       : OpenACCConstructStmt(OpenACCEnterDataConstructClass,
@@ -382,7 +382,7 @@ public:
 // This class represents a 'exit data' construct, which JUST has clauses.
 class OpenACCExitDataConstruct final
     : public OpenACCConstructStmt,
-      public llvm::TrailingObjects<OpenACCCombinedConstruct,
+      public llvm::TrailingObjects<OpenACCExitDataConstruct,
                                    const OpenACCClause *> {
   OpenACCExitDataConstruct(unsigned NumClauses)
       : OpenACCConstructStmt(OpenACCExitDataConstructClass,
@@ -420,7 +420,7 @@ public:
 // statement and clauses, but is otherwise pretty simple.
 class OpenACCHostDataConstruct final
     : public OpenACCAssociatedStmtConstruct,
-      public llvm::TrailingObjects<OpenACCCombinedConstruct,
+      public llvm::TrailingObjects<OpenACCHostDataConstruct,
                                    const OpenACCClause *> {
   OpenACCHostDataConstruct(unsigned NumClauses)
       : OpenACCAssociatedStmtConstruct(

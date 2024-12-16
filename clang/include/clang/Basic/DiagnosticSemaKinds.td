@@ -12804,6 +12804,8 @@ def err_acc_loop_terminating_condition
 def err_acc_loop_not_monotonic
     : Error<"OpenACC '%0' variable must monotonically increase or decrease "
             "('++', '--', or compound assignment)">;
+def err_acc_construct_one_clause_of
+    : Error<"OpenACC '%0' construct must have at least one %1 clause">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;
