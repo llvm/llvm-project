@@ -949,6 +949,7 @@ def WaveActiveAnyTrue : DXILOp<113, waveAnyTrue> {
   let arguments = [Int1Ty];
   let result = Int1Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
+  let properties = [IsWave];
 }
 
 def WaveIsFirstLane :  DXILOp<110, waveIsFirstLane> {
@@ -957,6 +958,7 @@ def WaveIsFirstLane :  DXILOp<110, waveIsFirstLane> {
   let arguments = [];
   let result = Int1Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
+  let properties = [IsWave];
 }
 
 def WaveReadLaneAt:  DXILOp<117, waveReadLaneAt> {
@@ -966,6 +968,7 @@ def WaveReadLaneAt:  DXILOp<117, waveReadLaneAt> {
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int1Ty, Int16Ty, Int32Ty, Int64Ty]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
+  let properties = [IsWave];
 }
 
 def WaveGetLaneIndex : DXILOp<111, waveGetLaneIndex> {
@@ -975,6 +978,7 @@ def WaveGetLaneIndex : DXILOp<111, waveGetLaneIndex> {
   let result = Int32Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
+  let properties = [IsWave];
 }
 
 def WaveAllBitCount : DXILOp<135, waveAllOp> {
@@ -983,6 +987,7 @@ def WaveAllBitCount : DXILOp<135, waveAllOp> {
   let arguments = [Int1Ty];
   let result = Int32Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
+  let properties = [IsWave];
 }
 
 def Barrier : DXILOp<80, barrier> {
@@ -997,4 +1002,5 @@ def Barrier : DXILOp<80, barrier> {
   let result = VoidTy;
   let stages = [Stages<DXIL1_0, [compute, library]>];
   let attributes = [Attributes<DXIL1_0, []>];
+  let properties = [IsBarrier];
 }
