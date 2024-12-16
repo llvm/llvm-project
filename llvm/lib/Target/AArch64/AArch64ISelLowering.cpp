@@ -19107,22 +19107,9 @@ tryToReplaceScalarFPConversionWithSVE(SDNode *N, SelectionDAG &DAG,
       !isSupportedType(N->getOperand(0).getValueType()))
     return SDValue();
 
-  // Look through fp_extends to avoid extra fcvts.
   SDValue SrcVal = N->getOperand(0);
-  if (SrcVal->getOpcode() == ISD::FP_EXTEND &&
-      isSupportedType(SrcVal->getOperand(0).getValueType()))
-    SrcVal = SrcVal->getOperand(0);
-
   EVT SrcTy = SrcVal.getValueType();
   EVT DestTy = N->getValueType(0);
-
-  // Merge in any subsequent fp_round to avoid extra fcvts.
-  SDNode *FPRoundNode = nullptr;
-  if (N->hasOneUse() && N->use_begin()->getOpcode() == ISD::FP_ROUND &&
-      isSupportedType(N->use_begin()->getValueType(0))) {
-    FPRoundNode = *N->use_begin();
-    DestTy = FPRoundNode->getValueType(0);
-  }
 
   EVT SrcVecTy;
   EVT DestVecTy;
@@ -19145,11 +19132,6 @@ tryToReplaceScalarFPConversionWithSVE(SDNode *N, SelectionDAG &DAG,
   SDValue Convert = DAG.getNode(N->getOpcode(), DL, DestVecTy, Vec);
   SDValue Scalar =
       DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, DestTy, Convert, ZeroIdx);
-
-  if (FPRoundNode) {
-    DAG.ReplaceAllUsesWith(SDValue(FPRoundNode, 0), Scalar);
-    return SDValue();
-  }
   return Scalar;
 }
 
