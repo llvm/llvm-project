@@ -8781,12 +8781,10 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
   return matchFastFloatClamp(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal, LHS, RHS);
 }
 
-static Value *lookThroughCastConst(CmpInst *CmpI, CastInst *Cast1, Constant *C,
+static Value *lookThroughCastConst(CmpInst *CmpI, Type *SrcTy, Constant *C,
                                    Instruction::CastOps *CastOp) {
-  Type *SrcTy = Cast1->getSrcTy();
   const DataLayout &DL = CmpI->getDataLayout();
 
-  *CastOp = Cast1->getOpcode();
   Constant *CastedTo = nullptr;
   switch (*CastOp) {
   case Instruction::ZExt:
@@ -8895,7 +8893,7 @@ static Value *lookThroughCast(CmpInst *CmpI, Value *V1, Value *V2,
 
   auto *C = dyn_cast<Constant>(V2);
   if (C)
-    return lookThroughCastConst(CmpI, Cast1, C, CastOp);
+    return lookThroughCastConst(CmpI, SrcTy, C, CastOp);
 
   Value *CastedTo = nullptr;
   if (*CastOp == Instruction::Trunc) {
