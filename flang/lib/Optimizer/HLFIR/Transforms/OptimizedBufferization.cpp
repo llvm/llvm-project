@@ -42,18 +42,6 @@ namespace hlfir {
 
 #define DEBUG_TYPE "opt-bufferization"
 
-// An engineering option to allow treating hlfir.assign with realloc
-// attribute as never requiring (re)allocation of the LHS.
-// Setting it to true may result in incorrect code, so it is present
-// just for quicker benchmarking of apps that may benefit
-// from multiversioning such hlfir.assign operations under
-// the dynamic checks of the type/shape/allocation status.
-static llvm::cl::opt<bool> assumeNoLhsReallocation(
-    "flang-assume-no-lhs-reallocation",
-    llvm::cl::desc("Assume that hlfir.assign never (re)allocates the LHS, i.e. "
-                   "that the LHS and RHS are always conformant"),
-    llvm::cl::init(false));
-
 namespace {
 
 /// This transformation should match in place modification of arrays.
@@ -474,7 +462,7 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
   // the incoming expression
   match.array = match.assign.getLhs();
   mlir::Type arrayType = mlir::dyn_cast<fir::SequenceType>(
-      hlfir::getFortranElementOrSequenceType(match.array.getType()));
+      fir::unwrapPassByRefType(match.array.getType()));
   if (!arrayType) {
     LLVM_DEBUG(llvm::dbgs() << "AssignOp's result is not an array\n");
     return std::nullopt;
@@ -501,7 +489,7 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
   // there is no reallocation of the lhs due to the assignment.
   // We can probably try generating multiple versions of the code
   // with checking for the shape match, length parameters match, etc.
-  if (match.assign.isAllocatableAssignment() && !assumeNoLhsReallocation) {
+  if (match.assign.isAllocatableAssignment()) {
     LLVM_DEBUG(llvm::dbgs() << "AssignOp may involve (re)allocation of LHS\n");
     return std::nullopt;
   }
@@ -624,8 +612,6 @@ llvm::LogicalResult ElementalAssignBufferization::matchAndRewrite(
 
   // create the loop at the assignment
   builder.setInsertionPoint(match->assign);
-  hlfir::Entity arrayObj = hlfir::derefPointersAndAllocatables(
-      loc, builder, hlfir::Entity{match->array});
 
   // Generate a loop nest looping around the hlfir.elemental shape and clone
   // hlfir.elemental region inside the inner loop
@@ -639,8 +625,8 @@ llvm::LogicalResult ElementalAssignBufferization::matchAndRewrite(
   rewriter.eraseOp(yield);
 
   // Assign the element value to the array element for this iteration.
-  auto arrayElement =
-      hlfir::getElementAt(loc, builder, arrayObj, loopNest.oneBasedIndices);
+  auto arrayElement = hlfir::getElementAt(
+      loc, builder, hlfir::Entity{match->array}, loopNest.oneBasedIndices);
   builder.create<hlfir::AssignOp>(
       loc, elementValue, arrayElement, /*realloc=*/false,
       /*keep_lhs_length_if_realloc=*/false, match->assign.getTemporaryLhs());
