@@ -570,33 +570,34 @@ void DwarfTransformer::parseCallSiteInfoFromDwarf(CUInfo &CUI, DWARFDie Die,
   CallSiteInfoCollection CSIC;
 
   for (DWARFDie Child : Die.children()) {
-    if (Child.getTag() == dwarf::DW_TAG_call_site) {
-      CallSiteInfo CSI;
-      // DW_AT_call_return_pc: the return PC (address). We'll convert it to
-      // offset relative to FI's start.
-      uint64_t ReturnPC =
-          dwarf::toAddress(Child.find(dwarf::DW_AT_call_return_pc), 0);
-      if (ReturnPC < FI.startAddress() || ReturnPC >= FI.endAddress())
-        continue;
+    if (Child.getTag() != dwarf::DW_TAG_call_site)
+      continue;
 
-      CSI.ReturnOffset = ReturnPC - FI.startAddress();
+    CallSiteInfo CSI;
+    // DW_AT_call_return_pc: the return PC (address). We'll convert it to
+    // offset relative to FI's start.
+    auto ReturnPC = dwarf::toAddress(Child.find(dwarf::DW_AT_call_return_pc));
+    if (!ReturnPC || *ReturnPC < FI.startAddress() ||
+        *ReturnPC >= FI.endAddress())
+      continue;
 
-      // Attempt to get function name from DW_AT_call_origin. If present, we can
-      // insert it as a match regex.
-      if (DWARFDie OriginDie = Child.getAttributeValueAsReferencedDie(
-              dwarf::DW_AT_call_origin)) {
-        if (auto Name = OriginDie.getName(DINameKind::ShortName)) {
-          uint32_t NameOff = Gsym.insertString(Name, /*Copy=*/false);
-          CSI.MatchRegex.push_back(NameOff);
-        }
+    CSI.ReturnOffset = *ReturnPC - FI.startAddress();
+
+    // Attempt to get function name from DW_AT_call_origin. If present, we can
+    // insert it as a match regex.
+    if (DWARFDie OriginDie =
+            Child.getAttributeValueAsReferencedDie(dwarf::DW_AT_call_origin)) {
+      if (auto Name = OriginDie.getName(DINameKind::ShortName)) {
+        uint32_t NameOff = Gsym.insertString(Name, /*Copy=*/false);
+        CSI.MatchRegex.push_back(NameOff);
       }
-
-      // For now, we won't attempt to deduce InternalCall/ExternalCall flags
-      // from DWARF.
-      CSI.Flags = CallSiteInfo::Flags::None;
-
-      CSIC.CallSites.push_back(CSI);
     }
+
+    // For now, we won't attempt to deduce InternalCall/ExternalCall flags
+    // from DWARF.
+    CSI.Flags = CallSiteInfo::Flags::None;
+
+    CSIC.CallSites.push_back(CSI);
   }
 
   if (!CSIC.CallSites.empty()) {

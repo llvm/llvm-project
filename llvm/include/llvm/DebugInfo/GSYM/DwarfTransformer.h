@@ -40,7 +40,7 @@ public:
   /// \param G The GSYM creator to populate with the function information
   /// from the debug info.
   ///
-  /// \param LDCS Flag to indicate weather we should load the call site
+  /// \param LDCS Flag to indicate whether we should load the call site
   /// information from DWARF `DW_TAG_call_site` entries
   DwarfTransformer(DWARFContext &D, GsymCreator &G, bool LDCS = false)
       : DICtx(D), Gsym(G), LoadDwarfCallSites(LDCS) {}
