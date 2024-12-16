@@ -399,6 +399,8 @@ public:
               ClauseKind == OpenACCClauseKind::PCreate ||
               ClauseKind == OpenACCClauseKind::PresentOrCreate ||
               ClauseKind == OpenACCClauseKind::Attach ||
+              ClauseKind == OpenACCClauseKind::Delete ||
+              ClauseKind == OpenACCClauseKind::UseDevice ||
               ClauseKind == OpenACCClauseKind::Detach ||
               ClauseKind == OpenACCClauseKind::DevicePtr ||
               ClauseKind == OpenACCClauseKind::Reduction ||
@@ -536,6 +538,8 @@ public:
               ClauseKind == OpenACCClauseKind::PCreate ||
               ClauseKind == OpenACCClauseKind::PresentOrCreate ||
               ClauseKind == OpenACCClauseKind::Attach ||
+              ClauseKind == OpenACCClauseKind::Delete ||
+              ClauseKind == OpenACCClauseKind::UseDevice ||
               ClauseKind == OpenACCClauseKind::Detach ||
               ClauseKind == OpenACCClauseKind::DevicePtr ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
@@ -573,6 +577,8 @@ public:
               ClauseKind == OpenACCClauseKind::PCreate ||
               ClauseKind == OpenACCClauseKind::PresentOrCreate ||
               ClauseKind == OpenACCClauseKind::Attach ||
+              ClauseKind == OpenACCClauseKind::Delete ||
+              ClauseKind == OpenACCClauseKind::UseDevice ||
               ClauseKind == OpenACCClauseKind::Detach ||
               ClauseKind == OpenACCClauseKind::DevicePtr ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
@@ -656,7 +662,8 @@ public:
   /// parsing has consumed the 'annot_pragma_openacc_end' token. This DOES
   /// happen before any associated declarations or statements have been parsed.
   /// This function is only called when we are parsing a 'statement' context.
-  bool ActOnStartStmtDirective(OpenACCDirectiveKind K, SourceLocation StartLoc);
+  bool ActOnStartStmtDirective(OpenACCDirectiveKind K, SourceLocation StartLoc,
+                               ArrayRef<const OpenACCClause *> Clauses);
 
   /// Called after the directive, including its clauses, have been parsed and
   /// parsing has consumed the 'annot_pragma_openacc_end' token. This DOES

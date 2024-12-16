@@ -13,6 +13,7 @@
 
 #include "mlir/Target/LLVM/NVVM/Target.h"
 
+#include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Target/LLVM/NVVM/Utils.h"
@@ -664,9 +665,18 @@ NVVMTargetAttrImpl::createObject(Attribute attribute, Operation *module,
   gpu::CompilationTarget format = options.getCompilationTarget();
   DictionaryAttr objectProps;
   Builder builder(attribute.getContext());
+  SmallVector<NamedAttribute, 2> properties;
   if (format == gpu::CompilationTarget::Assembly)
-    objectProps = builder.getDictionaryAttr(
-        {builder.getNamedAttr("O", builder.getI32IntegerAttr(target.getO()))});
+    properties.push_back(
+        builder.getNamedAttr("O", builder.getI32IntegerAttr(target.getO())));
+
+  if (StringRef section = options.getELFSection(); !section.empty())
+    properties.push_back(builder.getNamedAttr(gpu::elfSectionName,
+                                              builder.getStringAttr(section)));
+
+  if (!properties.empty())
+    objectProps = builder.getDictionaryAttr(properties);
+
   return builder.getAttr<gpu::ObjectAttr>(
       attribute, format,
       builder.getStringAttr(StringRef(object.data(), object.size())),
