@@ -167,7 +167,7 @@ public:
 
   void getBaserels(std::vector<Baserel> *res) override {
     if (file->impchkThunk)
-      res->emplace_back(rva, file->symtab.ctx.config.machine);
+      res->emplace_back(rva, file->symtab.machine);
   }
 
 private:

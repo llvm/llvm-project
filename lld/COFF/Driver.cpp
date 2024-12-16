@@ -591,6 +591,15 @@ std::optional<StringRef> LinkerDriver::findLibIfNew(StringRef filename) {
   return path;
 }
 
+void LinkerDriver::setMachine(MachineTypes machine) {
+  assert(ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN);
+  assert(machine != IMAGE_FILE_MACHINE_UNKNOWN);
+
+  ctx.config.machine = machine;
+  ctx.symtab.machine = machine;
+  addWinSysRootLibSearchPaths();
+}
+
 void LinkerDriver::detectWinSysRoot(const opt::InputArgList &Args) {
   IntrusiveRefCntPtr<vfs::FileSystem> VFS = vfs::getRealFileSystem();
 
@@ -1887,10 +1896,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   {
     llvm::TimeTraceScope timeScope2("Machine arg");
     if (auto *arg = args.getLastArg(OPT_machine)) {
-      config->machine = getMachineType(arg->getValue());
-      if (config->machine == IMAGE_FILE_MACHINE_UNKNOWN)
+      MachineTypes machine = getMachineType(arg->getValue());
+      if (machine == IMAGE_FILE_MACHINE_UNKNOWN)
         Fatal(ctx) << "unknown /machine argument: " << arg->getValue();
-      addWinSysRootLibSearchPaths();
+      setMachine(machine);
     }
   }
 
@@ -2298,8 +2307,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // not we assume x64.
   if (config->machine == IMAGE_FILE_MACHINE_UNKNOWN) {
     Warn(ctx) << "/machine is not specified. x64 is assumed";
-    config->machine = AMD64;
-    addWinSysRootLibSearchPaths();
+    setMachine(AMD64);
   }
   config->wordsize = config->is64() ? 8 : 4;
 

@@ -95,8 +95,7 @@ void SymbolTable::addFile(InputFile *file) {
   if (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN &&
       mt != IMAGE_FILE_MACHINE_UNKNOWN) {
     ctx.config.machineInferred = true;
-    ctx.config.machine = mt;
-    ctx.driver.addWinSysRootLibSearchPaths();
+    ctx.driver.setMachine(mt);
   }
 
   ctx.driver.parseDirectives(file);
@@ -301,7 +300,7 @@ void SymbolTable::loadMinGWSymbols() {
 
     StringRef name = undef->getName();
 
-    if (ctx.config.machine == I386 && ctx.config.stdcallFixup) {
+    if (machine == I386 && ctx.config.stdcallFixup) {
       // Check if we can resolve an undefined decorated symbol by finding
       // the intended target as an undecorated symbol (only with a leading
       // underscore).
@@ -525,7 +524,7 @@ bool SymbolTable::resolveRemainingUndefines() {
 
       StringRef impName = name.substr(strlen("__imp_"));
       Symbol *imp = findLocalSym(impName);
-      if (!imp && isArm64EC(ctx.config.machine)) {
+      if (!imp && isEC()) {
         // Try to use the mangled symbol on ARM64EC.
         std::optional<std::string> mangledName =
             getArm64ECMangledFunctionName(impName);
@@ -583,7 +582,7 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef name) {
     sym->canInline = true;
     inserted = true;
 
-    if (isArm64EC(ctx.config.machine) && name.starts_with("EXP+"))
+    if (isEC() && name.starts_with("EXP+"))
       expSymbols.push_back(sym);
   }
   return {sym, inserted};
@@ -701,8 +700,7 @@ bool checkLazyECPair(SymbolTable *symtab, StringRef name, InputFile *f) {
 
 void SymbolTable::addLazyArchive(ArchiveFile *f, const Archive::Symbol &sym) {
   StringRef name = sym.getName();
-  if (isArm64EC(ctx.config.machine) &&
-      !checkLazyECPair<LazyArchive>(this, name, f))
+  if (isEC() && !checkLazyECPair<LazyArchive>(this, name, f))
     return;
   auto [s, wasInserted] = insert(name);
   if (wasInserted) {
@@ -710,8 +708,7 @@ void SymbolTable::addLazyArchive(ArchiveFile *f, const Archive::Symbol &sym) {
     return;
   }
   auto *u = dyn_cast<Undefined>(s);
-  if (!u || (u->weakAlias && !u->isECAlias(ctx.config.machine)) ||
-      s->pendingArchiveLoad)
+  if (!u || (u->weakAlias && !u->isECAlias(machine)) || s->pendingArchiveLoad)
     return;
   s->pendingArchiveLoad = true;
   f->addMember(sym);
@@ -719,7 +716,7 @@ void SymbolTable::addLazyArchive(ArchiveFile *f, const Archive::Symbol &sym) {
 
 void SymbolTable::addLazyObject(InputFile *f, StringRef n) {
   assert(f->lazy);
-  if (isArm64EC(ctx.config.machine) && !checkLazyECPair<LazyObject>(this, n, f))
+  if (isEC() && !checkLazyECPair<LazyObject>(this, n, f))
     return;
   auto [s, wasInserted] = insert(n, f);
   if (wasInserted) {
@@ -727,8 +724,7 @@ void SymbolTable::addLazyObject(InputFile *f, StringRef n) {
     return;
   }
   auto *u = dyn_cast<Undefined>(s);
-  if (!u || (u->weakAlias && !u->isECAlias(ctx.config.machine)) ||
-      s->pendingArchiveLoad)
+  if (!u || (u->weakAlias && !u->isECAlias(machine)) || s->pendingArchiveLoad)
     return;
   s->pendingArchiveLoad = true;
   f->lazy = false;
@@ -940,7 +936,7 @@ Symbol *SymbolTable::find(StringRef name) const {
 }
 
 Symbol *SymbolTable::findUnderscore(StringRef name) const {
-  if (ctx.config.machine == I386)
+  if (machine == I386)
     return find(("_" + name).str());
   return find(name);
 }
@@ -987,7 +983,7 @@ Symbol *SymbolTable::findMangle(StringRef name) {
   };
 
   // For non-x86, just look for C++ functions.
-  if (ctx.config.machine != I386)
+  if (machine != I386)
     return findByPrefix("?" + name + "@@Y");
 
   if (!name.starts_with("_"))

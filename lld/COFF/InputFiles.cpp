@@ -551,7 +551,7 @@ Symbol *ObjFile::createUndefined(COFFSymbolRef sym, bool overrideLazy) {
 
   // Add an anti-dependency alias for undefined AMD64 symbols on the ARM64EC
   // target.
-  if (isArm64EC(symtab.ctx.config.machine) && getMachineType() == AMD64) {
+  if (symtab.isEC() && getMachineType() == AMD64) {
     auto u = dyn_cast<Undefined>(s);
     if (u && !u->weakAlias) {
       if (std::optional<std::string> mangledName =
@@ -1035,7 +1035,7 @@ ObjFile::getVariableLocation(StringRef var) {
     if (!dwarf)
       return std::nullopt;
   }
-  if (symtab.ctx.config.machine == I386)
+  if (symtab.machine == I386)
     var.consume_front("_");
   std::optional<std::pair<std::string, unsigned>> ret =
       dwarf->getVariableLoc(var);
@@ -1139,7 +1139,7 @@ void ImportFile::parse() {
 
   bool isCode = hdr->getType() == llvm::COFF::IMPORT_CODE;
 
-  if (symtab.ctx.config.machine != ARM64EC) {
+  if (!symtab.isEC()) {
     impSym = symtab.addImportData(impName, this, location);
   } else {
     // In addition to the regular IAT, ARM64EC also contains an auxiliary IAT,
@@ -1175,7 +1175,7 @@ void ImportFile::parse() {
   // address pointed by the __imp_ symbol. (This allows you to call
   // DLL functions just like regular non-DLL functions.)
   if (isCode) {
-    if (symtab.ctx.config.machine != ARM64EC) {
+    if (!symtab.isEC()) {
       thunkSym = symtab.addImportThunk(name, impSym, makeImportThunk());
     } else {
       thunkSym = symtab.addImportThunk(

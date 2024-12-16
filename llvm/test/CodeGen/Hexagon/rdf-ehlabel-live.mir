@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass hexagon-rdf-opt -o - %s | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-rdf-opt -o - %s | FileCheck %s
 
 # Check that EH_LABELs are not removed as dead (since they are no longer
 # marked as having side-effects):

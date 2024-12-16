@@ -73,8 +73,7 @@ define void @skip_free_iv_truncate(i16 %x, ptr %A) #0 {
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[X_I64]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i64> [[DOTSPLATINSERT]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP53:%.*]] = call <vscale x 8 x i64> @llvm.stepvector.nxv8i64()
-; CHECK-NEXT:    [[TMP54:%.*]] = add <vscale x 8 x i64> [[TMP53]], zeroinitializer
-; CHECK-NEXT:    [[TMP55:%.*]] = mul <vscale x 8 x i64> [[TMP54]], splat (i64 3)
+; CHECK-NEXT:    [[TMP55:%.*]] = mul <vscale x 8 x i64> [[TMP53]], splat (i64 3)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 8 x i64> [[DOTSPLAT]], [[TMP55]]
 ; CHECK-NEXT:    [[TMP58:%.*]] = mul i64 3, [[TMP52]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT24:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[TMP58]], i64 0
