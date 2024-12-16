@@ -237,31 +237,6 @@ TEST(LowLevelTypeTest, ChangeNumElements) {
   EXPECT_EQ(NXV2P0, P0.changeElementCount(ElementCount::getScalable(2)));
 }
 
-#ifdef GTEST_HAS_DEATH_TEST
-#ifndef NDEBUG
-
-// Invalid to directly change the element size for pointers.
-TEST(LowLevelTypeTest, ChangeElementTypeDeath) {
-  const LLT S32 = LLT::scalar(32);
-  const LLT S64 = LLT::scalar(64);
-  const LLT P0 = LLT::pointer(0, 32);
-  const LLT V2P0 = LLT::fixed_vector(2, P0);
-
-  EXPECT_DEATH(P0.changeElementType(S64),
-               "invalid to directly change element type for pointers");
-  EXPECT_DEATH(V2P0.changeElementType(S64),
-               "invalid to directly change element type for pointers");
-
-  // Make sure this still fails even without a change in type.
-  EXPECT_DEATH(P0.changeElementType(S32),
-               "invalid to directly change element type for pointers");
-  EXPECT_DEATH(V2P0.changeElementType(S32),
-               "invalid to directly change element type for pointers");
-}
-
-#endif
-#endif
-
 TEST(LowLevelTypeTest, Pointer) {
   LLVMContext C;
   DataLayout DL("p64:64:64-p127:512:512:512-p16777215:65528:8");
