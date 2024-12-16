@@ -6,7 +6,7 @@ add_mlir_unittest(MLIRTargetLLVMTests
   SerializeToLLVMBitcode.cpp
 )
 
-target_link_libraries(MLIRTargetLLVMTests
+mlir_target_link_libraries(MLIRTargetLLVMTests
   PRIVATE
   MLIRTargetLLVM
   MLIRNVVMTarget
