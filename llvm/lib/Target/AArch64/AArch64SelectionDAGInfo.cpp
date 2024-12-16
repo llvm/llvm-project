@@ -34,8 +34,6 @@ bool AArch64SelectionDAGInfo::isTargetStrictFPOpcode(unsigned Opcode) const {
     return false;
   case AArch64ISD::STRICT_FCMP:
   case AArch64ISD::STRICT_FCMPE:
-  case AArch64ISD::SME_ZA_LDR:
-  case AArch64ISD::SME_ZA_STR:
     return true;
   }
 }

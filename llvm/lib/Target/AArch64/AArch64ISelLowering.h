@@ -480,10 +480,6 @@ enum NodeType : unsigned {
   STRICT_FCMP,
   STRICT_FCMPE,
 
-  // SME ZA loads and stores
-  SME_ZA_LDR,
-  SME_ZA_STR,
-
   // NEON Load/Store with post-increment base updates
   FIRST_MEMORY_OPCODE,
   LD2post = FIRST_MEMORY_OPCODE,
@@ -522,6 +518,10 @@ enum NodeType : unsigned {
   STILP,
   STNP,
   LAST_MEMORY_OPCODE = STNP,
+
+  // SME ZA loads and stores
+  SME_ZA_LDR,
+  SME_ZA_STR,
 };
 
 } // end namespace AArch64ISD
