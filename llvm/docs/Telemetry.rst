@@ -17,7 +17,7 @@ Objective
 
 Provides a common framework in LLVM for collecting various usage and performance
 metrics.
-It is located at ``llvm/Telemetry/Telemetry.h``
+It is located at ``llvm/Telemetry/Telemetry.h``.
 
 Characteristics
 ---------------
