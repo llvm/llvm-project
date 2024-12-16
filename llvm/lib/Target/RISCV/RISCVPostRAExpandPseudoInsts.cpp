@@ -120,7 +120,7 @@ bool RISCVPostRAExpandPseudo::expandMovAddr(MachineBasicBlock &MBB,
 
 } // end of anonymous namespace
 
-INITIALIZE_PASS(RISCVPostRAExpandPseudo, "riscv-expand-pseudolisimm32",
+INITIALIZE_PASS(RISCVPostRAExpandPseudo, "riscv-post-ra-expand-pseudo",
                 RISCV_POST_RA_EXPAND_PSEUDO_NAME, false, false)
 namespace llvm {
 

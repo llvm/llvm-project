@@ -24,7 +24,6 @@
 #include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
@@ -155,8 +154,8 @@ static LegalizeMutation moreElementsToNextExistingRegClass(unsigned TypeIdx) {
       if (SIRegisterInfo::getSGPRClassForBitWidth(NewNumElts * EltSize))
         break;
     }
-
-    return std::pair(TypeIdx, LLT::fixed_vector(NewNumElts, EltSize));
+    return std::pair(TypeIdx,
+                     LLT::fixed_vector(NewNumElts, Ty.getElementType()));
   };
 }
 
@@ -1041,10 +1040,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .lower();
   }
 
-  getActionDefinitionsBuilder(G_FPTRUNC)
-    .legalFor({{S32, S64}, {S16, S32}})
-    .scalarize(0)
-    .lower();
+  auto &FPTruncActions = getActionDefinitionsBuilder(G_FPTRUNC);
+  if (ST.hasCvtPkF16F32Inst())
+    FPTruncActions.legalFor(
+        {{S32, S64}, {S16, S32}, {V2S16, V2S32}, {V2S16, V2S64}});
+  else
+    FPTruncActions.legalFor({{S32, S64}, {S16, S32}});
+  FPTruncActions.scalarize(0).lower();
 
   getActionDefinitionsBuilder(G_FPEXT)
     .legalFor({{S64, S32}, {S32, S16}})

@@ -10,7 +10,7 @@
 #include "DiagOutputUtils.h"
 #include "PtrTypesSemantics.h"
 #include "clang/AST/CXXInheritance.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -37,25 +37,24 @@ public:
     // The calls to checkAST* from AnalysisConsumer don't
     // visit template instantiations or lambda classes. We
     // want to visit those, so we make our own RecursiveASTVisitor.
-    struct LocalVisitor : public RecursiveASTVisitor<LocalVisitor> {
+    struct LocalVisitor : DynamicRecursiveASTVisitor {
       const UncountedLambdaCapturesChecker *Checker;
       llvm::DenseSet<const DeclRefExpr *> DeclRefExprsToIgnore;
+      llvm::DenseSet<const LambdaExpr *> LambdasToIgnore;
       QualType ClsType;
-
-      using Base = RecursiveASTVisitor<LocalVisitor>;
 
       explicit LocalVisitor(const UncountedLambdaCapturesChecker *Checker)
           : Checker(Checker) {
         assert(Checker);
+        ShouldVisitTemplateInstantiations = true;
+        ShouldVisitImplicitCode = false;
       }
 
-      bool shouldVisitTemplateInstantiations() const { return true; }
-      bool shouldVisitImplicitCode() const { return false; }
-
-      bool TraverseCXXMethodDecl(CXXMethodDecl *CXXMD) {
+      bool TraverseCXXMethodDecl(CXXMethodDecl *CXXMD) override {
         llvm::SaveAndRestore SavedDecl(ClsType);
-        ClsType = CXXMD->getThisType();
-        return Base::TraverseCXXMethodDecl(CXXMD);
+        if (CXXMD && CXXMD->isInstance())
+          ClsType = CXXMD->getThisType();
+        return DynamicRecursiveASTVisitor::TraverseCXXMethodDecl(CXXMD);
       }
 
       bool shouldCheckThis() {
@@ -63,7 +62,25 @@ public:
         return result && *result;
       }
 
-      bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+      bool VisitLambdaExpr(LambdaExpr *L) override {
+        if (LambdasToIgnore.contains(L))
+          return true;
+        Checker->visitLambdaExpr(L, shouldCheckThis());
+        return true;
+      }
+
+      bool VisitVarDecl(VarDecl *VD) override {
+        auto *Init = VD->getInit();
+        if (!Init)
+          return true;
+        auto *L = dyn_cast_or_null<LambdaExpr>(Init->IgnoreParenCasts());
+        if (!L)
+          return true;
+        LambdasToIgnore.insert(L); // Evaluate lambdas in VisitDeclRefExpr.
+        return true;
+      }
+
+      bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
         if (DeclRefExprsToIgnore.contains(DRE))
           return true;
         auto *VD = dyn_cast_or_null<VarDecl>(DRE->getDecl());
@@ -75,6 +92,7 @@ public:
         auto *L = dyn_cast_or_null<LambdaExpr>(Init->IgnoreParenCasts());
         if (!L)
           return true;
+        LambdasToIgnore.insert(L);
         Checker->visitLambdaExpr(L, shouldCheckThis());
         return true;
       }
@@ -88,7 +106,7 @@ public:
         return safeGetName(NsDecl) == "WTF" && safeGetName(Decl) == "switchOn";
       }
 
-      bool VisitCallExpr(CallExpr *CE) {
+      bool VisitCallExpr(CallExpr *CE) override {
         checkCalleeLambda(CE);
         if (auto *Callee = CE->getDirectCallee()) {
           bool TreatAllArgsAsNoEscape = shouldTreatAllArgAsNoEscape(Callee);
@@ -97,10 +115,10 @@ public:
             if (ArgIndex >= CE->getNumArgs())
               return true;
             auto *Arg = CE->getArg(ArgIndex)->IgnoreParenCasts();
-            if (!Param->hasAttr<NoEscapeAttr>() && !TreatAllArgsAsNoEscape) {
-              if (auto *L = dyn_cast_or_null<LambdaExpr>(Arg)) {
+            if (auto *L = dyn_cast_or_null<LambdaExpr>(Arg)) {
+              LambdasToIgnore.insert(L);
+              if (!Param->hasAttr<NoEscapeAttr>() && !TreatAllArgsAsNoEscape)
                 Checker->visitLambdaExpr(L, shouldCheckThis());
-              }
             }
             ++ArgIndex;
           }
@@ -116,9 +134,13 @@ public:
         if (!DRE)
           return;
         auto *MD = dyn_cast_or_null<CXXMethodDecl>(DRE->getDecl());
-        if (!MD || CE->getNumArgs() != 1)
+        if (!MD || CE->getNumArgs() < 1)
           return;
         auto *Arg = CE->getArg(0)->IgnoreParenCasts();
+        if (auto *L = dyn_cast_or_null<LambdaExpr>(Arg)) {
+          LambdasToIgnore.insert(L); // Calling a lambda upon creation is safe.
+          return;
+        }
         auto *ArgRef = dyn_cast<DeclRefExpr>(Arg);
         if (!ArgRef)
           return;
@@ -132,6 +154,7 @@ public:
         if (!L)
           return;
         DeclRefExprsToIgnore.insert(ArgRef);
+        LambdasToIgnore.insert(L);
         Checker->visitLambdaExpr(L, shouldCheckThis(),
                                  /* ignoreParamVarDecl */ true);
       }

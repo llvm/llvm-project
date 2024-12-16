@@ -669,7 +669,7 @@ define <2 x i1> @n38_overshift(<2 x i32> %x, <2 x i32> %y) {
 }
 
 ; As usual, don't crash given constantexpr's :/
-@f.a = internal global i16 0
+@f.a = internal global i16 0, align 1
 define i1 @constantexpr() {
 ; CHECK-LABEL: @constantexpr(
 ; CHECK-NEXT:  entry:

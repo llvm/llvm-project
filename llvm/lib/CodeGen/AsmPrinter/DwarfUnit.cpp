@@ -1043,6 +1043,11 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
         addUInt(Buffer, dwarf::DW_AT_calling_convention, dwarf::DW_FORM_data1,
                 CC);
     }
+
+    if (auto *SpecifiedFrom = CTy->getSpecification())
+      addDIEEntry(Buffer, dwarf::DW_AT_specification,
+                  *getOrCreateContextDIE(SpecifiedFrom));
+
     break;
   }
   default:
@@ -1783,6 +1788,10 @@ DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
   addSourceLine(StaticMemberDIE, DT);
   addFlag(StaticMemberDIE, dwarf::DW_AT_external);
   addFlag(StaticMemberDIE, dwarf::DW_AT_declaration);
+
+  // Consider the case when the static member was created by the compiler.
+  if (DT->isArtificial())
+    addFlag(StaticMemberDIE, dwarf::DW_AT_artificial);
 
   // FIXME: We could omit private if the parent is a class_type, and
   // public if the parent is something else.

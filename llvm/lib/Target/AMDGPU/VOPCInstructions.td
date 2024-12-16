@@ -192,6 +192,8 @@ class VOPC_Real <VOPC_Pseudo ps, int EncodingFamily, string asm_name = ps.Pseudo
 
   // copy relevant pseudo op flags
   let SubtargetPredicate = ps.SubtargetPredicate;
+  let True16Predicate    = ps.True16Predicate;
+  let OtherPredicates    = ps.OtherPredicates;
   let AsmMatchConverter  = ps.AsmMatchConverter;
   let Constraints        = ps.Constraints;
   let DisableEncoding    = ps.DisableEncoding;
@@ -314,7 +316,7 @@ multiclass VOPC_Pseudos <string opName,
     let isCommutable = 1;
   }
 
-  def _e64 : VOP3_Pseudo<opName, P, getVOPCPat64<cond, P>.ret>,
+  def _e64 : VOP3_Pseudo<opName, P, getVOPCPat64<cond, P>.ret, /*IsVOP3P*/false, P.HasOpSel>,
     Commutable_REV<revOp#"_e64", !eq(revOp, opName)>,
     VCMPXNoSDstTable<1, opName#"_e64">,
     VCMPVCMPXTable<opName#"_e64"> {
@@ -373,7 +375,7 @@ multiclass VOPCX_Pseudos <string opName,
     let IsVCMPX = 1;
   }
 
-  def _nosdst_e64 : VOP3_Pseudo<opName#"_nosdst", P_NoSDst>,
+  def _nosdst_e64 : VOP3_Pseudo<opName#"_nosdst", P_NoSDst, [], /*IsVOP3P*/false, P_NoSDst.HasOpSel>,
     Commutable_REV<revOp#"_nosdst_e64", !eq(revOp, opName)>,
     VCMPXNoSDstTable<0, opName#"_e64">,
     VCMPVCMPXTable<!subst("v_cmpx", "v_cmp", opName#"_e64")> {
@@ -799,11 +801,22 @@ defm V_CMPX_T_U64 : VOPCX_I64 <"v_cmpx_t_u64">;
 // Class instructions
 //===----------------------------------------------------------------------===//
 
-class VOPC_Class_Profile<list<SchedReadWrite> sched, ValueType src0VT, ValueType src1VT = i32> :
+class VOPC_Class_Profile_Base<list<SchedReadWrite> sched, ValueType src0VT, ValueType src1VT = i32> :
   VOPC_Profile<sched, src0VT, src1VT> {
+  let InsSDWA = (ins Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
+                     Src1ModSDWA:$src1_modifiers, Src1SDWA:$src1,
+                     Clamp:$clamp, src0_sel:$src0_sel, src1_sel:$src1_sel);
+
+  let AsmSDWA = " vcc, $src0_modifiers, $src1_modifiers$clamp $src0_sel $src1_sel";
+  let HasClamp = 0;
+  let HasOMod = 0;
+}
+
+class VOPC_Class_Profile<list<SchedReadWrite> sched, ValueType src0VT, ValueType src1VT = i32> :
+  VOPC_Class_Profile_Base<sched, src0VT, src1VT> {
   let AsmDPP = "$src0_modifiers, $src1 $dpp_ctrl$row_mask$bank_mask$bound_ctrl";
   let AsmDPP16 = AsmDPP#"$fi";
-    let InsDPP = (ins Src0ModDPP:$src0_modifiers, Src0DPP:$src0, Src1DPP:$src1, dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask, DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl);
+  let InsDPP = (ins Src0ModDPP:$src0_modifiers, Src0DPP:$src0, Src1DPP:$src1, dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask, DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl);
   let InsDPP16 = !con(InsDPP, (ins Dpp16FI:$fi));
   // DPP8 forbids modifiers and can inherit from VOPC_Profile
 
@@ -812,15 +825,7 @@ class VOPC_Class_Profile<list<SchedReadWrite> sched, ValueType src0VT, ValueType
   let InsVOP3Base = !con(InsPartVOP3DPP, !if(HasOpSel, (ins op_sel0:$op_sel),
                                                        (ins)));
   let AsmVOP3Base = "$sdst, $src0_modifiers, $src1";
-
-  let InsSDWA = (ins Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
-                     Src1ModSDWA:$src1_modifiers, Src1SDWA:$src1,
-                     Clamp:$clamp, src0_sel:$src0_sel, src1_sel:$src1_sel);
-
-  let AsmSDWA = " vcc, $src0_modifiers, $src1_modifiers$clamp $src0_sel $src1_sel";
   let HasSrc1Mods = 0;
-  let HasClamp = 0;
-  let HasOMod = 0;
 }
 
 multiclass VOPC_Class_Profile_t16<list<SchedReadWrite> sched> {
@@ -837,16 +842,25 @@ multiclass VOPC_Class_Profile_t16<list<SchedReadWrite> sched> {
     let Src1ModDPP = getSrcModDPP_t16<Src1VT>.ret;
     let Src2ModDPP = getSrcModDPP_t16<Src2VT>.ret;
   }
-  def _fake16 : VOPC_Class_Profile<sched, f16, i16> {
+  def _fake16 : VOPC_Class_Profile_Base<sched, f16, f16> {
     let IsTrue16 = 1;
+    let DstRC = getVALUDstForVT_fake16<DstVT>.ret;
+    let DstRC64 = getVALUDstForVT<DstVT>.ret;
+    let Src0RC32 = getVOPSrc0ForVT<Src0VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
     let Src1RC32 = getVregSrcForVT<Src1VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
     let Src1RC64 = VSrc_b32;
     let Src0DPP = getVregSrcForVT<Src0VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
     let Src1DPP = getVregSrcForVT<Src1VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
     let Src2DPP = getVregSrcForVT<Src2VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
-    let Src0ModDPP = getSrcModDPP_t16<Src0VT>.ret;
-    let Src1ModDPP = getSrcModDPP_t16<Src1VT>.ret;
-    let Src2ModDPP = getSrcModDPP_t16<Src2VT>.ret;
+    let Src0ModDPP = getSrcModDPP_t16<Src0VT, 1/*IsFake16*/>.ret;
+    let Src1ModDPP = getSrcModDPP_t16<Src1VT, 1/*IsFake16*/>.ret;
+    let Src2ModDPP = getSrcModDPP_t16<Src2VT, 1/*IsFake16*/>.ret;
+    let Src0VOP3DPP = VGPRSrc_32;
+    let Src1VOP3DPP = getVOP3DPPSrcForVT<Src1VT, 1/*IsFake16*/>.ret;
+    let Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT, 1/*IsFake16*/>.ret;
+    let Src0ModVOP3DPP = getSrc0ModVOP3DPP<Src0VT, DstVT, 1/*IsFake16*/>.ret;
+    let Src1ModVOP3DPP = getSrcModVOP3DPP<Src1VT, 1/*IsFake16*/>.ret;
+    let Src2ModVOP3DPP = getSrcModVOP3DPP<Src2VT, 1/*IsFake16*/>.ret;
   }
 }
 
@@ -889,17 +903,34 @@ multiclass VOPC_Class_NoSdst_Profile_t16<list<SchedReadWrite> sched> {
   }
 }
 
-class getVOPCClassPat64 <VOPProfile P> {
-  list<dag> ret =
-    [(set i1:$sdst,
+multiclass VOPCClassPat64<string inst_name> {
+  defvar inst = !cast<VOP_Pseudo>(inst_name#"_e64");
+  defvar P = inst.Pfl;
+  def : GCNPat <
+    (i1:$sdst
       (AMDGPUfp_class
         (P.Src0VT (VOP3ModsNonCanonicalizing P.Src0VT:$src0, i32:$src0_modifiers)),
-        i32:$src1))];
+        P.Src1VT:$src1)),
+    (inst i32:$src0_modifiers, P.Src0VT:$src0, P.Src1VT:$src1)
+  >;
 }
 
+multiclass VOPCClassPat64_fake16<string inst_name> {
+  defvar inst = !cast<VOP_Pseudo>(inst_name#"_fake16_e64");
+  defvar P = inst.Pfl;
+  def : GCNPat <
+    (i1:$sdst
+      (AMDGPUfp_class
+        (P.Src0VT (VOP3ModsNonCanonicalizing P.Src0VT:$src0, i32:$src0_modifiers)),
+        i32:$src1)),
+    (inst i32:$src0_modifiers, P.Src0VT:$src0,
+          0 /*src1_modifiers*/, VGPR_32:$src1)
+  >;
+}
 
-// Special case for class instructions which only have modifiers on
-// the 1st source operand.
+// cmp_class ignores the FP mode and faithfully reports the unmodified
+// source value.
+let ReadsModeReg = 0, mayRaiseFPException = 0 in {
 multiclass VOPC_Class_Pseudos <string opName, VOPC_Profile p, bit DefExec,
                                bit DefVcc = 1> {
   def _e32 : VOPC_Pseudo <opName, p>,
@@ -910,7 +941,7 @@ multiclass VOPC_Class_Pseudos <string opName, VOPC_Profile p, bit DefExec,
     let isConvergent = DefExec;
   }
 
-  def _e64 : VOP3_Pseudo<opName, p, getVOPCClassPat64<p>.ret>,
+  def _e64 : VOP3_Pseudo<opName, p, [], 0/*IsVOP3P*/, p.HasOpSel>,
              VCMPXNoSDstTable<1, opName#"_e64"> {
     let Defs = !if(DefExec, [EXEC], []);
     let SchedRW = p.Schedule;
@@ -957,7 +988,7 @@ multiclass VOPCX_Class_Pseudos <string opName,
     let SubtargetPredicate = HasNoSdstCMPX;
   }
 
-  def _nosdst_e64 : VOP3_Pseudo<opName#"_nosdst", P_NoSDst>,
+  def _nosdst_e64 : VOP3_Pseudo<opName#"_nosdst", P_NoSDst, [], 0/*IsVOP3P*/, P_NoSDst.HasOpSel>,
                     VCMPXNoSDstTable<0, opName#"_e64"> {
     let Defs = [EXEC];
     let SchedRW = P_NoSDst.Schedule;
@@ -990,6 +1021,7 @@ multiclass VOPCX_Class_Pseudos <string opName,
   } // end SubtargetPredicate = isGFX11Plus
 }
 } // End SubtargetPredicate = HasSdstCMPX
+} // End ReadsModeReg = 0, mayRaiseFPException = 0
 
 defm VOPC_I1_F16_I16 : VOPC_Class_Profile_t16<[Write32Bit]>;
 def VOPC_I1_F32_I32 : VOPC_Class_Profile<[Write32Bit], f32>;
@@ -1002,12 +1034,14 @@ def VOPC_F64_I32 : VOPC_Class_NoSdst_Profile<[Write64Bit], f64>;
 multiclass VOPC_CLASS_F16 <string opName> {
   let OtherPredicates = [Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
     defm NAME : VOPC_Class_Pseudos <opName, VOPC_I1_F16_I16, 0>;
+    defm : VOPCClassPat64<NAME>;
   }
-  let OtherPredicates = [UseRealTrue16Insts] in {
+  let True16Predicate = UseRealTrue16Insts in {
     defm _t16 : VOPC_Class_Pseudos <opName#"_t16", VOPC_I1_F16_I16_t16, 0>;
   }
-  let OtherPredicates = [UseFakeTrue16Insts] in {
+  let True16Predicate = UseFakeTrue16Insts in {
     defm _fake16 : VOPC_Class_Pseudos <opName#"_fake16", VOPC_I1_F16_I16_fake16, 0>;
+    defm : VOPCClassPat64_fake16<NAME>;
   }
 }
 
@@ -1023,21 +1057,22 @@ multiclass VOPCX_CLASS_F16 <string opName> {
   }
 }
 
-multiclass VOPC_CLASS_F32 <string opName> :
-  VOPC_Class_Pseudos <opName, VOPC_I1_F32_I32, 0>;
+multiclass VOPC_CLASS_F32 <string opName> {
+  defm NAME : VOPC_Class_Pseudos <opName, VOPC_I1_F32_I32, 0>;
+  defm : VOPCClassPat64<NAME>;
+}
 
 multiclass VOPCX_CLASS_F32 <string opName> :
   VOPCX_Class_Pseudos <opName, VOPC_I1_F32_I32, VOPC_F32_I32>;
 
-multiclass VOPC_CLASS_F64 <string opName> :
-  VOPC_Class_Pseudos <opName, VOPC_I1_F64_I32, 0>;
+multiclass VOPC_CLASS_F64 <string opName> {
+  defm NAME : VOPC_Class_Pseudos <opName, VOPC_I1_F64_I32, 0>;
+  defm : VOPCClassPat64<NAME>;
+}
 
 multiclass VOPCX_CLASS_F64 <string opName> :
   VOPCX_Class_Pseudos <opName, VOPC_I1_F64_I32, VOPC_F64_I32>;
 
-// cmp_class ignores the FP mode and faithfully reports the unmodified
-// source value.
-let ReadsModeReg = 0, mayRaiseFPException = 0 in {
 defm V_CMP_CLASS_F32 : VOPC_CLASS_F32 <"v_cmp_class_f32">;
 defm V_CMPX_CLASS_F32 : VOPCX_CLASS_F32 <"v_cmpx_class_f32">;
 defm V_CMP_CLASS_F64 : VOPC_CLASS_F64 <"v_cmp_class_f64">;
@@ -1045,7 +1080,6 @@ defm V_CMPX_CLASS_F64 : VOPCX_CLASS_F64 <"v_cmpx_class_f64">;
 
 defm V_CMP_CLASS_F16  : VOPC_CLASS_F16 <"v_cmp_class_f16">;
 defm V_CMPX_CLASS_F16 : VOPCX_CLASS_F16 <"v_cmpx_class_f16">;
-} // End ReadsModeReg = 0, mayRaiseFPException = 0
 
 //===----------------------------------------------------------------------===//
 // V_ICMPIntrinsic Pattern.
@@ -1283,6 +1317,7 @@ class VOPC_DPP16<bits<8> op, VOP_DPP_Pseudo ps, string opName = ps.OpName>
     : VOPC_DPP_Base<op, opName, ps.Pfl> {
   let AssemblerPredicate = HasDPP16;
   let SubtargetPredicate = HasDPP16;
+  let True16Predicate = ps.True16Predicate;
   let hasSideEffects = ps.hasSideEffects;
   let Defs = ps.Defs;
   let SchedRW = ps.SchedRW;
@@ -1303,6 +1338,7 @@ class VOPC_DPP8<bits<8> op, VOPC_Pseudo ps, string opName = ps.OpName>
   let SchedRW = ps.SchedRW;
   let Uses = ps.Uses;
   let OtherPredicates = ps.OtherPredicates;
+  let True16Predicate = ps.True16Predicate;
   let Constraints = "";
 }
 
@@ -1333,6 +1369,7 @@ class VOPC64_DPP16<bits<10> op, VOP_DPP_Pseudo ps, string opName = ps.OpName>
     : VOPC64_DPP_Base<op, opName, ps.Pfl> {
   let AssemblerPredicate = HasDPP16;
   let SubtargetPredicate = HasDPP16;
+  let True16Predicate = ps.True16Predicate;
   let hasSideEffects = ps.hasSideEffects;
   let Defs = ps.Defs;
   let SchedRW = ps.SchedRW;
@@ -1375,6 +1412,7 @@ class VOPC64_DPP8<bits<10> op, VOP_Pseudo ps, string opName = ps.OpName>
   let SchedRW = ps.SchedRW;
   let Uses = ps.Uses;
   let OtherPredicates = ps.OtherPredicates;
+  let True16Predicate = ps.True16Predicate;
 }
 
 class VOPC64_DPP8_Dst<bits<10> op, VOP_Pseudo ps, string opName = ps.OpName>
@@ -1918,6 +1956,17 @@ defm V_CMPX_CLASS_F16_fake16 : VOPCX_Real_t16_gfx11_gfx12<0x0fd, "v_cmpx_class_f
 defm V_CMPX_CLASS_F32     : VOPCX_Real_gfx11_gfx12<0x0fe>;
 defm V_CMPX_CLASS_F64     : VOPCX_Real_gfx11_gfx12<0x0ff>;
 
+let AssemblerPredicate = isGFX11Only in {
+  def : AMDGPUMnemonicAlias<"v_cmp_tru_i32", "v_cmp_t_i32">;
+  def : AMDGPUMnemonicAlias<"v_cmp_tru_u32", "v_cmp_t_u32">;
+  def : AMDGPUMnemonicAlias<"v_cmp_tru_i64", "v_cmp_t_i64">;
+  def : AMDGPUMnemonicAlias<"v_cmp_tru_u64", "v_cmp_t_u64">;
+  def : AMDGPUMnemonicAlias<"v_cmpx_tru_i32", "v_cmpx_t_i32">;
+  def : AMDGPUMnemonicAlias<"v_cmpx_tru_u32", "v_cmpx_t_u32">;
+  def : AMDGPUMnemonicAlias<"v_cmpx_tru_i64", "v_cmpx_t_i64">;
+  def : AMDGPUMnemonicAlias<"v_cmpx_tru_u64", "v_cmpx_t_u64">;
+}
+
 //===----------------------------------------------------------------------===//
 // GFX10.
 //===----------------------------------------------------------------------===//
@@ -2290,7 +2339,7 @@ multiclass VOPC_Real_vi <bits<10> op> {
 
   if !cast<VOPC_Pseudo>(NAME#"_e32").Pfl.HasExtSDWA then
   def _sdwa_vi :
-    VOP_SDWA_Real <!cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa")>,
+    VOP_SDWA8_Real <!cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa")>,
     VOPC_SDWAe <op{7-0}, !cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
 
   if !cast<VOPC_Pseudo>(NAME#"_e32").Pfl.HasExtSDWA9 then

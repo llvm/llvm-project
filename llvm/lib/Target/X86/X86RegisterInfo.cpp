@@ -123,7 +123,8 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
   const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
 
   const TargetRegisterClass *Super = RC;
-  TargetRegisterClass::sc_iterator I = RC->getSuperClasses();
+  auto I = RC->superclasses().begin();
+  auto E = RC->superclasses().end();
   do {
     switch (Super->getID()) {
     case X86::FR32RegClassID:
@@ -172,7 +173,12 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
       if (getRegSizeInBits(*Super) == getRegSizeInBits(*RC))
         return Super;
     }
-    Super = *I++;
+    if (I != E) {
+      Super = getRegClass(*I);
+      ++I;
+    } else {
+      Super = nullptr;
+    }
   } while (Super);
   return RC;
 }
@@ -1077,6 +1083,12 @@ static ShapeT getTileShape(Register VirtReg, VirtRegMap *VRM,
   case X86::PTCMMIMFP16PSV:
   case X86::PTCMMRLFP16PSV:
   case X86::PTTRANSPOSEDV:
+  case X86::PTTDPBF16PSV:
+  case X86::PTTDPFP16PSV:
+  case X86::PTTCMMIMFP16PSV:
+  case X86::PTTCMMRLFP16PSV:
+  case X86::PTCONJTCMMIMFP16PSV:
+  case X86::PTCONJTFP16V:
   case X86::PTILELOADDRSV:
   case X86::PTILELOADDRST1V:
   case X86::PTMMULTF32PSV:

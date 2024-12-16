@@ -102,6 +102,7 @@ static const char *getPropertyName(MachineFunctionProperties::Property Prop) {
   case P::TracksLiveness: return "TracksLiveness";
   case P::TiedOpsRewritten: return "TiedOpsRewritten";
   case P::FailsVerification: return "FailsVerification";
+  case P::FailedRegAlloc: return "FailedRegAlloc";
   case P::TracksDebugUserValues: return "TracksDebugUserValues";
   }
   // clang-format on
@@ -160,7 +161,7 @@ static inline Align getFnStackAlignment(const TargetSubtargetInfo *STI,
   return STI->getFrameLowering()->getStackAlign();
 }
 
-MachineFunction::MachineFunction(Function &F, const LLVMTargetMachine &Target,
+MachineFunction::MachineFunction(Function &F, const TargetMachine &Target,
                                  const TargetSubtargetInfo &STI, MCContext &Ctx,
                                  unsigned FunctionNum)
     : F(F), Target(Target), STI(&STI), Ctx(Ctx) {

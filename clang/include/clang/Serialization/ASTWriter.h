@@ -230,13 +230,12 @@ private:
   /// instead of comparing the result of `getDeclID()` or `GetDeclRef()`.
   llvm::SmallPtrSet<const Decl *, 32> PredefinedDecls;
 
-  /// Mapping from FunctionDecl ID to the list of lambda IDs inside the
-  /// function.
+  /// Mapping from the main decl to related decls inside the main decls.
   ///
-  /// These lambdas have to be loaded right after the function they belong to.
-  /// In order to have canonical declaration for lambda class from the same
-  /// module as enclosing function during deserialization.
-  llvm::DenseMap<LocalDeclID, SmallVector<LocalDeclID, 4>> FunctionToLambdasMap;
+  /// These related decls have to be loaded right after the main decl they
+  /// belong to. In order to have canonical declaration for related decls from
+  /// the same module as the main decl during deserialization.
+  llvm::DenseMap<LocalDeclID, SmallVector<LocalDeclID, 4>> RelatedDeclsMap;
 
   /// Offset of each declaration in the bitstream, indexed by
   /// the declaration's ID.
@@ -423,6 +422,13 @@ private:
   /// Only meaningful for reduced BMI.
   DeclUpdateMap DeclUpdatesFromGMF;
 
+  /// Mapping from decl templates and its new specialization in the
+  /// current TU.
+  using SpecializationUpdateMap =
+      llvm::MapVector<const NamedDecl *, SmallVector<const Decl *>>;
+  SpecializationUpdateMap SpecializationsUpdates;
+  SpecializationUpdateMap PartialSpecializationsUpdates;
+
   using FirstLatestDeclMap = llvm::DenseMap<Decl *, Decl *>;
 
   /// Map of first declarations from a chained PCH that point to the
@@ -575,6 +581,12 @@ private:
 
   bool isLookupResultExternal(StoredDeclsList &Result, DeclContext *DC);
 
+  void GenerateSpecializationInfoLookupTable(
+      const NamedDecl *D, llvm::SmallVectorImpl<const Decl *> &Specializations,
+      llvm::SmallVectorImpl<char> &LookupTable, bool IsPartial);
+  uint64_t WriteSpecializationInfoLookupTable(
+      const NamedDecl *D, llvm::SmallVectorImpl<const Decl *> &Specializations,
+      bool IsPartial);
   void GenerateNameLookupTable(ASTContext &Context, const DeclContext *DC,
                                llvm::SmallVectorImpl<char> &LookupTable);
   uint64_t WriteDeclContextLexicalBlock(ASTContext &Context,
@@ -590,6 +602,7 @@ private:
   void WriteDeclAndTypes(ASTContext &Context);
   void PrepareWritingSpecialDecls(Sema &SemaRef);
   void WriteSpecialDeclRecords(Sema &SemaRef);
+  void WriteSpecializationsUpdates(bool IsPartial);
   void WriteDeclUpdatesBlocks(ASTContext &Context,
                               RecordDataImpl &OffsetsRecord);
   void WriteDeclContextVisibleUpdate(ASTContext &Context,
@@ -619,6 +632,9 @@ private:
   unsigned DeclEnumAbbrev = 0;
   unsigned DeclObjCIvarAbbrev = 0;
   unsigned DeclCXXMethodAbbrev = 0;
+  unsigned DeclSpecializationsAbbrev = 0;
+  unsigned DeclPartialSpecializationsAbbrev = 0;
+
   unsigned DeclDependentNonTemplateCXXMethodAbbrev = 0;
   unsigned DeclTemplateCXXMethodAbbrev = 0;
   unsigned DeclMemberSpecializedCXXMethodAbbrev = 0;
@@ -769,6 +785,8 @@ public:
 
   /// Add a string to the given record.
   void AddString(StringRef Str, RecordDataImpl &Record);
+  void AddStringBlob(StringRef Str, RecordDataImpl &Record,
+                     SmallVectorImpl<char> &Blob);
 
   /// Convert a path from this build process into one that is appropriate
   /// for emission in the module file.
@@ -776,6 +794,8 @@ public:
 
   /// Add a path to the given record.
   void AddPath(StringRef Path, RecordDataImpl &Record);
+  void AddPathBlob(StringRef Str, RecordDataImpl &Record,
+                   SmallVectorImpl<char> &Blob);
 
   /// Emit the current record with the given path as a blob.
   void EmitRecordWithPath(unsigned Abbrev, RecordDataRef Record,

@@ -18,10 +18,13 @@
 #include <__functional/unary_function.h>
 #include <__memory/unique_ptr.h>
 #include <__mutex/mutex.h>
-#include <__system_error/system_error.h>
+#include <__system_error/throw_system_error.h>
 #include <__thread/id.h>
 #include <__thread/support.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/is_same.h>
+#include <__type_traits/remove_cvref.h>
 #include <__utility/forward.h>
 #include <tuple>
 

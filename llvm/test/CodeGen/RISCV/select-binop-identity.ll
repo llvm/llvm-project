@@ -301,8 +301,8 @@ define i64 @and_select_all_ones_i64_cmp2(i64 %x, i64 %y, i64 %z) {
 ; ZICOND32-LABEL: and_select_all_ones_i64_cmp2:
 ; ZICOND32:       # %bb.0:
 ; ZICOND32-NEXT:    slti a6, a5, 0
-; ZICOND32-NEXT:    czero.eqz a6, a6, a5
 ; ZICOND32-NEXT:    sltiu a4, a4, 4
+; ZICOND32-NEXT:    czero.eqz a6, a6, a5
 ; ZICOND32-NEXT:    czero.nez a4, a4, a5
 ; ZICOND32-NEXT:    or a4, a4, a6
 ; ZICOND32-NEXT:    addi a4, a4, -1

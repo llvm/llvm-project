@@ -13,8 +13,10 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
+#include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/Object/Error.h"
 
 #include "DWARFCompileUnit.h"
@@ -1027,16 +1029,21 @@ DWARFUnit::GetStringOffsetSectionItem(uint32_t index) const {
   return m_dwarf.GetDWARFContext().getOrLoadStrOffsetsData().GetU32(&offset);
 }
 
-llvm::Expected<DWARFRangeList>
+llvm::Expected<llvm::DWARFAddressRangesVector>
 DWARFUnit::FindRnglistFromOffset(dw_offset_t offset) {
   if (GetVersion() <= 4) {
-    const DWARFDebugRanges *debug_ranges = m_dwarf.GetDebugRanges();
-    if (!debug_ranges)
-      return llvm::make_error<llvm::object::GenericBinaryError>(
-          "No debug_ranges section");
-    return debug_ranges->FindRanges(this, offset);
+    llvm::DWARFDataExtractor data =
+        m_dwarf.GetDWARFContext().getOrLoadRangesData().GetAsLLVMDWARF();
+    data.setAddressSize(m_header.getAddressByteSize());
+
+    llvm::DWARFDebugRangeList list;
+    if (llvm::Error e = list.extract(data, &offset))
+      return e;
+    return list.getAbsoluteRanges(
+        llvm::object::SectionedAddress{GetBaseAddress()});
   }
 
+  // DWARF >= v5
   if (!GetRnglistTable())
     return llvm::createStringError(std::errc::invalid_argument,
                                    "missing or invalid range list table");
@@ -1049,31 +1056,21 @@ DWARFUnit::FindRnglistFromOffset(dw_offset_t offset) {
   if (!range_list_or_error)
     return range_list_or_error.takeError();
 
-  llvm::Expected<llvm::DWARFAddressRangesVector> llvm_ranges =
-      range_list_or_error->getAbsoluteRanges(
-          llvm::object::SectionedAddress{GetBaseAddress()},
-          GetAddressByteSize(), [&](uint32_t index) {
-            uint32_t index_size = GetAddressByteSize();
-            dw_offset_t addr_base = GetAddrBase();
-            lldb::offset_t offset =
-                addr_base + static_cast<lldb::offset_t>(index) * index_size;
-            return llvm::object::SectionedAddress{
-                m_dwarf.GetDWARFContext().getOrLoadAddrData().GetMaxU64(
-                    &offset, index_size)};
-          });
-  if (!llvm_ranges)
-    return llvm_ranges.takeError();
-
-  DWARFRangeList ranges;
-  for (const llvm::DWARFAddressRange &llvm_range : *llvm_ranges) {
-    ranges.Append(DWARFRangeList::Entry(llvm_range.LowPC,
-                                        llvm_range.HighPC - llvm_range.LowPC));
-  }
-  ranges.Sort();
-  return ranges;
+  return range_list_or_error->getAbsoluteRanges(
+      llvm::object::SectionedAddress{GetBaseAddress()}, GetAddressByteSize(),
+      [&](uint32_t index) {
+        uint32_t index_size = GetAddressByteSize();
+        dw_offset_t addr_base = GetAddrBase();
+        lldb::offset_t offset =
+            addr_base + static_cast<lldb::offset_t>(index) * index_size;
+        return llvm::object::SectionedAddress{
+            m_dwarf.GetDWARFContext().getOrLoadAddrData().GetMaxU64(
+                &offset, index_size)};
+      });
 }
 
-llvm::Expected<DWARFRangeList> DWARFUnit::FindRnglistFromIndex(uint32_t index) {
+llvm::Expected<llvm::DWARFAddressRangesVector>
+DWARFUnit::FindRnglistFromIndex(uint32_t index) {
   llvm::Expected<uint64_t> maybe_offset = GetRnglistOffset(index);
   if (!maybe_offset)
     return maybe_offset.takeError();

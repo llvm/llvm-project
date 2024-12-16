@@ -161,6 +161,16 @@ entry:
   ret <2 x i64> %shuffle.i
 }
 
+define <2 x ptr> @test_vuzp1q_p0(<2 x ptr> %a, <2 x ptr> %b) {
+; CHECK-LABEL: test_vuzp1q_p0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+entry:
+  %shuffle.i = shufflevector <2 x ptr> %a, <2 x ptr> %b, <2 x i32> <i32 0, i32 2>
+  ret <2 x ptr> %shuffle.i
+}
+
 define <2 x float> @test_vuzp1_f32(<2 x float> %a, <2 x float> %b) {
 ; CHECK-LABEL: test_vuzp1_f32:
 ; CHECK:       // %bb.0: // %entry
@@ -369,6 +379,16 @@ define <2 x i64> @test_vuzp2q_u64(<2 x i64> %a, <2 x i64> %b) {
 entry:
   %shuffle.i = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 1, i32 3>
   ret <2 x i64> %shuffle.i
+}
+
+define <2 x ptr> @test_vuzp2q_p0(<2 x ptr> %a, <2 x ptr> %b) {
+; CHECK-LABEL: test_vuzp2q_p0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    zip2 v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+entry:
+  %shuffle.i = shufflevector <2 x ptr> %a, <2 x ptr> %b, <2 x i32> <i32 1, i32 3>
+  ret <2 x ptr> %shuffle.i
 }
 
 define <2 x float> @test_vuzp2_f32(<2 x float> %a, <2 x float> %b) {
@@ -581,6 +601,16 @@ entry:
   ret <2 x i64> %shuffle.i
 }
 
+define <2 x ptr> @test_vzip1q_p0(<2 x ptr> %a, <2 x ptr> %b) {
+; CHECK-LABEL: test_vzip1q_p0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+entry:
+  %shuffle.i = shufflevector <2 x ptr> %a, <2 x ptr> %b, <2 x i32> <i32 0, i32 2>
+  ret <2 x ptr> %shuffle.i
+}
+
 define <2 x float> @test_vzip1_f32(<2 x float> %a, <2 x float> %b) {
 ; CHECK-LABEL: test_vzip1_f32:
 ; CHECK:       // %bb.0: // %entry
@@ -789,6 +819,16 @@ define <2 x i64> @test_vzip2q_u64(<2 x i64> %a, <2 x i64> %b) {
 entry:
   %shuffle.i = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 1, i32 3>
   ret <2 x i64> %shuffle.i
+}
+
+define <2 x ptr> @test_vzip2q_p0(<2 x ptr> %a, <2 x ptr> %b) {
+; CHECK-LABEL: test_vzip2q_p0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    zip2 v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+entry:
+  %shuffle.i = shufflevector <2 x ptr> %a, <2 x ptr> %b, <2 x i32> <i32 1, i32 3>
+  ret <2 x ptr> %shuffle.i
 }
 
 define <2 x float> @test_vzip2_f32(<2 x float> %a, <2 x float> %b) {
@@ -1001,6 +1041,16 @@ entry:
   ret <2 x i64> %shuffle.i
 }
 
+define <2 x ptr> @test_vtrn1q_p0(<2 x ptr> %a, <2 x ptr> %b) {
+; CHECK-LABEL: test_vtrn1q_p0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+entry:
+  %shuffle.i = shufflevector <2 x ptr> %a, <2 x ptr> %b, <2 x i32> <i32 0, i32 2>
+  ret <2 x ptr> %shuffle.i
+}
+
 define <2 x float> @test_vtrn1_f32(<2 x float> %a, <2 x float> %b) {
 ; CHECK-LABEL: test_vtrn1_f32:
 ; CHECK:       // %bb.0: // %entry
@@ -1209,6 +1259,16 @@ define <2 x i64> @test_vtrn2q_u64(<2 x i64> %a, <2 x i64> %b) {
 entry:
   %shuffle.i = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 1, i32 3>
   ret <2 x i64> %shuffle.i
+}
+
+define <2 x ptr> @test_vtrn2q_p0(<2 x ptr> %a, <2 x ptr> %b) {
+; CHECK-LABEL: test_vtrn2q_p0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    zip2 v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+entry:
+  %shuffle.i = shufflevector <2 x ptr> %a, <2 x ptr> %b, <2 x i32> <i32 1, i32 3>
+  ret <2 x ptr> %shuffle.i
 }
 
 define <2 x float> @test_vtrn2_f32(<2 x float> %a, <2 x float> %b) {

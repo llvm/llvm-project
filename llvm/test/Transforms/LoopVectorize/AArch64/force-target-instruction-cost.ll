@@ -67,7 +67,7 @@ define void @test_iv_cost(ptr %ptr.start, i8 %a, i64 %b) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[START]], 0
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT:.*]], label %[[ITER_CHECK:.*]]
 ; CHECK:       [[ITER_CHECK]]:
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[START]], 8
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[START]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[START]], 32
@@ -94,11 +94,11 @@ define void @test_iv_cost(ptr %ptr.start, i8 %a, i64 %b) {
 ; CHECK-NEXT:    [[IND_END6:%.*]] = getelementptr i8, ptr [[PTR_START]], i64 [[N_VEC]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = sub i64 [[START]], [[N_VEC]]
 ; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[START]], [[N_VEC]]
-; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 8
+; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 4
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[N_MOD_VF2:%.*]] = urem i64 [[START]], 8
+; CHECK-NEXT:    [[N_MOD_VF2:%.*]] = urem i64 [[START]], 4
 ; CHECK-NEXT:    [[N_VEC3:%.*]] = sub i64 [[START]], [[N_MOD_VF2]]
 ; CHECK-NEXT:    [[IND_END1:%.*]] = sub i64 [[START]], [[N_VEC3]]
 ; CHECK-NEXT:    [[IND_END5:%.*]] = getelementptr i8, ptr [[PTR_START]], i64 [[N_VEC3]]
@@ -108,8 +108,8 @@ define void @test_iv_cost(ptr %ptr.start, i8 %a, i64 %b) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR_START]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 0
-; CHECK-NEXT:    store <8 x i8> zeroinitializer, ptr [[TMP2]], align 1
-; CHECK-NEXT:    [[INDEX_NEXT10]] = add nuw i64 [[INDEX]], 8
+; CHECK-NEXT:    store <4 x i8> zeroinitializer, ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT10]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT10]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:

@@ -3095,7 +3095,9 @@ bool CombinerHelper::matchHoistLogicOpWithSameOpcodeHands(
   unsigned HandOpcode = LeftHandInst->getOpcode();
   if (HandOpcode != RightHandInst->getOpcode())
     return false;
-  if (!LeftHandInst->getOperand(1).isReg() ||
+  if (LeftHandInst->getNumOperands() < 2 ||
+      !LeftHandInst->getOperand(1).isReg() ||
+      RightHandInst->getNumOperands() < 2 ||
       !RightHandInst->getOperand(1).isReg())
     return false;
 
@@ -3122,7 +3124,6 @@ bool CombinerHelper::matchHoistLogicOpWithSameOpcodeHands(
   case TargetOpcode::G_TRUNC: {
     // Match: logic (trunc X), (trunc Y) -> trunc (logic X, Y)
     const MachineFunction *MF = MI.getMF();
-    const DataLayout &DL = MF->getDataLayout();
     LLVMContext &Ctx = MF->getFunction().getContext();
 
     LLT DstTy = MRI.getType(Dst);
@@ -3130,8 +3131,7 @@ bool CombinerHelper::matchHoistLogicOpWithSameOpcodeHands(
 
     // Be extra careful sinking truncate. If it's free, there's no benefit in
     // widening a binop.
-    if (TLI.isZExtFree(DstTy, XTy, DL, Ctx) &&
-        TLI.isTruncateFree(XTy, DstTy, DL, Ctx))
+    if (TLI.isZExtFree(DstTy, XTy, Ctx) && TLI.isTruncateFree(XTy, DstTy, Ctx))
       return false;
     break;
   }
@@ -5072,9 +5072,8 @@ bool CombinerHelper::matchNarrowBinopFeedingAnd(
   auto &MF = *MI.getMF();
   const auto &TLI = getTargetLowering();
   LLVMContext &Ctx = MF.getFunction().getContext();
-  auto &DL = MF.getDataLayout();
-  if (!TLI.isTruncateFree(WideTy, NarrowTy, DL, Ctx) ||
-      !TLI.isZExtFree(NarrowTy, WideTy, DL, Ctx))
+  if (!TLI.isTruncateFree(WideTy, NarrowTy, Ctx) ||
+      !TLI.isZExtFree(NarrowTy, WideTy, Ctx))
     return false;
   if (!isLegalOrBeforeLegalizer({TargetOpcode::G_TRUNC, {NarrowTy, WideTy}}) ||
       !isLegalOrBeforeLegalizer({TargetOpcode::G_ZEXT, {WideTy, NarrowTy}}))
@@ -5378,8 +5377,7 @@ bool CombinerHelper::matchUDivByConst(MachineInstr &MI) {
   AttributeList Attr = MF.getFunction().getAttributes();
   const auto &TLI = getTargetLowering();
   LLVMContext &Ctx = MF.getFunction().getContext();
-  auto &DL = MF.getDataLayout();
-  if (TLI.isIntDivCheap(getApproximateEVTForLLT(DstTy, DL, Ctx), Attr))
+  if (TLI.isIntDivCheap(getApproximateEVTForLLT(DstTy, Ctx), Attr))
     return false;
 
   // Don't do this for minsize because the instruction sequence is usually
@@ -5428,8 +5426,7 @@ bool CombinerHelper::matchSDivByConst(MachineInstr &MI) {
   AttributeList Attr = MF.getFunction().getAttributes();
   const auto &TLI = getTargetLowering();
   LLVMContext &Ctx = MF.getFunction().getContext();
-  auto &DL = MF.getDataLayout();
-  if (TLI.isIntDivCheap(getApproximateEVTForLLT(DstTy, DL, Ctx), Attr))
+  if (TLI.isIntDivCheap(getApproximateEVTForLLT(DstTy, Ctx), Attr))
     return false;
 
   // Don't do this for minsize because the instruction sequence is usually
@@ -7717,10 +7714,151 @@ bool CombinerHelper::matchShuffleUndefRHS(MachineInstr &MI,
   if (!Changed)
     return false;
 
-  MatchInfo = [&, NewMask](MachineIRBuilder &B) {
+  MatchInfo = [&, NewMask = std::move(NewMask)](MachineIRBuilder &B) {
     B.buildShuffleVector(MI.getOperand(0), MI.getOperand(1), MI.getOperand(2),
-                         NewMask);
+                         std::move(NewMask));
   };
 
   return true;
+}
+
+static void commuteMask(MutableArrayRef<int> Mask, const unsigned NumElems) {
+  const unsigned MaskSize = Mask.size();
+  for (unsigned I = 0; I < MaskSize; ++I) {
+    int Idx = Mask[I];
+    if (Idx < 0)
+      continue;
+
+    if (Idx < (int)NumElems)
+      Mask[I] = Idx + NumElems;
+    else
+      Mask[I] = Idx - NumElems;
+  }
+}
+
+bool CombinerHelper::matchShuffleDisjointMask(MachineInstr &MI,
+                                              BuildFnTy &MatchInfo) {
+
+  auto &Shuffle = cast<GShuffleVector>(MI);
+  // If any of the two inputs is already undef, don't check the mask again to
+  // prevent infinite loop
+  if (getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, Shuffle.getSrc1Reg(), MRI))
+    return false;
+
+  if (getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, Shuffle.getSrc2Reg(), MRI))
+    return false;
+
+  const LLT DstTy = MRI.getType(Shuffle.getReg(0));
+  const LLT Src1Ty = MRI.getType(Shuffle.getSrc1Reg());
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_SHUFFLE_VECTOR, {DstTy, Src1Ty}}))
+    return false;
+
+  ArrayRef<int> Mask = Shuffle.getMask();
+  const unsigned NumSrcElems = Src1Ty.isVector() ? Src1Ty.getNumElements() : 1;
+
+  bool TouchesSrc1 = false;
+  bool TouchesSrc2 = false;
+  const unsigned NumElems = Mask.size();
+  for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
+    if (Mask[Idx] < 0)
+      continue;
+
+    if (Mask[Idx] < (int)NumSrcElems)
+      TouchesSrc1 = true;
+    else
+      TouchesSrc2 = true;
+  }
+
+  if (TouchesSrc1 == TouchesSrc2)
+    return false;
+
+  Register NewSrc1 = Shuffle.getSrc1Reg();
+  SmallVector<int, 16> NewMask(Mask);
+  if (TouchesSrc2) {
+    NewSrc1 = Shuffle.getSrc2Reg();
+    commuteMask(NewMask, NumSrcElems);
+  }
+
+  MatchInfo = [=, &Shuffle](MachineIRBuilder &B) {
+    auto Undef = B.buildUndef(Src1Ty);
+    B.buildShuffleVector(Shuffle.getReg(0), NewSrc1, Undef, NewMask);
+  };
+
+  return true;
+}
+
+bool CombinerHelper::matchSuboCarryOut(const MachineInstr &MI,
+                                       BuildFnTy &MatchInfo) {
+  const GSubCarryOut *Subo = cast<GSubCarryOut>(&MI);
+
+  Register Dst = Subo->getReg(0);
+  Register LHS = Subo->getLHSReg();
+  Register RHS = Subo->getRHSReg();
+  Register Carry = Subo->getCarryOutReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT CarryTy = MRI.getType(Carry);
+
+  // Check legality before known bits.
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SUB, {DstTy}}) ||
+      !isConstantLegalOrBeforeLegalizer(CarryTy))
+    return false;
+
+  ConstantRange KBLHS =
+      ConstantRange::fromKnownBits(KB->getKnownBits(LHS),
+                                   /* IsSigned=*/Subo->isSigned());
+  ConstantRange KBRHS =
+      ConstantRange::fromKnownBits(KB->getKnownBits(RHS),
+                                   /* IsSigned=*/Subo->isSigned());
+
+  if (Subo->isSigned()) {
+    // G_SSUBO
+    switch (KBLHS.signedSubMayOverflow(KBRHS)) {
+    case ConstantRange::OverflowResult::MayOverflow:
+      return false;
+    case ConstantRange::OverflowResult::NeverOverflows: {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildSub(Dst, LHS, RHS, MachineInstr::MIFlag::NoSWrap);
+        B.buildConstant(Carry, 0);
+      };
+      return true;
+    }
+    case ConstantRange::OverflowResult::AlwaysOverflowsLow:
+    case ConstantRange::OverflowResult::AlwaysOverflowsHigh: {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildSub(Dst, LHS, RHS);
+        B.buildConstant(Carry, getICmpTrueVal(getTargetLowering(),
+                                              /*isVector=*/CarryTy.isVector(),
+                                              /*isFP=*/false));
+      };
+      return true;
+    }
+    }
+    return false;
+  }
+
+  // G_USUBO
+  switch (KBLHS.unsignedSubMayOverflow(KBRHS)) {
+  case ConstantRange::OverflowResult::MayOverflow:
+    return false;
+  case ConstantRange::OverflowResult::NeverOverflows: {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildSub(Dst, LHS, RHS, MachineInstr::MIFlag::NoUWrap);
+      B.buildConstant(Carry, 0);
+    };
+    return true;
+  }
+  case ConstantRange::OverflowResult::AlwaysOverflowsLow:
+  case ConstantRange::OverflowResult::AlwaysOverflowsHigh: {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildSub(Dst, LHS, RHS);
+      B.buildConstant(Carry, getICmpTrueVal(getTargetLowering(),
+                                            /*isVector=*/CarryTy.isVector(),
+                                            /*isFP=*/false));
+    };
+    return true;
+  }
+  }
+
+  return false;
 }

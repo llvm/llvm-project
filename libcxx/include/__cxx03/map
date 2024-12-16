@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_MAP
-#define _LIBCPP_MAP
+#ifndef _LIBCPP___CXX03_MAP
+#define _LIBCPP___CXX03_MAP
 
 /*
 
@@ -2178,4 +2178,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/utility>
 #endif
 
-#endif // _LIBCPP_MAP
+#endif // _LIBCPP___CXX03_MAP

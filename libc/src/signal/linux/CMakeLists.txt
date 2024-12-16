@@ -41,7 +41,7 @@ add_object_library(
     __restore.cpp
   COMPILE_OPTIONS
     -fomit-frame-pointer
-    -O3
+    ${libc_opt_high_flag}
     -Wframe-larger-than=0
     -Wno-attributes
     # asan creates asan.module_ctor which uses stack space, causing warnings.

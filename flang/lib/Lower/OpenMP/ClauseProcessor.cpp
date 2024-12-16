@@ -81,12 +81,8 @@ genAllocateClause(lower::AbstractConverter &converter,
   // Check if allocate clause has allocator specified. If so, add it
   // to list of allocators, otherwise, add default allocator to
   // list of allocators.
-  using SimpleModifier = Allocate::AllocatorSimpleModifier;
   using ComplexModifier = Allocate::AllocatorComplexModifier;
-  if (auto &mod = std::get<std::optional<SimpleModifier>>(clause.t)) {
-    mlir::Value operand = fir::getBase(converter.genExprValue(*mod, stmtCtx));
-    allocatorOperands.append(objects.size(), operand);
-  } else if (auto &mod = std::get<std::optional<ComplexModifier>>(clause.t)) {
+  if (auto &mod = std::get<std::optional<ComplexModifier>>(clause.t)) {
     mlir::Value operand = fir::getBase(converter.genExprValue(mod->v, stmtCtx));
     allocatorOperands.append(objects.size(), operand);
   } else {
@@ -96,6 +92,25 @@ genAllocateClause(lower::AbstractConverter &converter,
   }
 
   genObjectList(objects, converter, allocateOperands);
+}
+
+static mlir::omp::ClauseBindKindAttr
+genBindKindAttr(fir::FirOpBuilder &firOpBuilder,
+                const omp::clause::Bind &clause) {
+  mlir::omp::ClauseBindKind bindKind;
+  switch (clause.v) {
+  case omp::clause::Bind::Binding::Teams:
+    bindKind = mlir::omp::ClauseBindKind::Teams;
+    break;
+  case omp::clause::Bind::Binding::Parallel:
+    bindKind = mlir::omp::ClauseBindKind::Parallel;
+    break;
+  case omp::clause::Bind::Binding::Thread:
+    bindKind = mlir::omp::ClauseBindKind::Thread;
+    break;
+  }
+  return mlir::omp::ClauseBindKindAttr::get(firOpBuilder.getContext(),
+                                            bindKind);
 }
 
 static mlir::omp::ClauseProcBindKindAttr
@@ -139,9 +154,10 @@ genDependKindAttr(lower::AbstractConverter &converter,
     break;
   case omp::clause::DependenceType::Mutexinoutset:
   case omp::clause::DependenceType::Inoutset:
-    TODO(currentLocation, "INOUTSET and MUTEXINOUTSET are not supported yet");
-    break;
   case omp::clause::DependenceType::Depobj:
+    TODO(currentLocation,
+         "INOUTSET, MUTEXINOUTSET and DEPOBJ dependence-types");
+    break;
   case omp::clause::DependenceType::Sink:
   case omp::clause::DependenceType::Source:
     llvm_unreachable("unhandled parser task dependence type");
@@ -203,6 +219,19 @@ static void convertLoopBounds(lower::AbstractConverter &converter,
 //===----------------------------------------------------------------------===//
 // ClauseProcessor unique clauses
 //===----------------------------------------------------------------------===//
+
+bool ClauseProcessor::processBare(mlir::omp::BareClauseOps &result) const {
+  return markClauseOccurrence<omp::clause::OmpxBare>(result.bare);
+}
+
+bool ClauseProcessor::processBind(mlir::omp::BindClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Bind>()) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    result.bindKind = genBindKindAttr(firOpBuilder, *clause);
+    return true;
+  }
+  return false;
+}
 
 bool ClauseProcessor::processCollapse(
     mlir::Location currentLocation, lower::pft::Evaluation &eval,
@@ -428,6 +457,16 @@ bool ClauseProcessor::processPriority(
     mlir::omp::PriorityClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Priority>()) {
     result.priority = fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    return true;
+  }
+  return false;
+}
+
+bool ClauseProcessor::processDetach(mlir::omp::DetachClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Detach>()) {
+    semantics::Symbol *sym = clause->v.sym();
+    mlir::Value symVal = converter.getSymbolAddress(*sym);
+    result.eventHandle = symVal;
     return true;
   }
   return false;
@@ -715,6 +754,7 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
   mlir::func::FuncOp funcOp =
       modBuilder.create<mlir::func::FuncOp>(loc, copyFuncName, funcType);
   funcOp.setVisibility(mlir::SymbolTable::Visibility::Private);
+  fir::factory::setInternalLinkage(funcOp);
   builder.createBlock(&funcOp.getRegion(), funcOp.getRegion().end(), argsTy,
                       {loc, loc});
   builder.setInsertionPointToStart(&funcOp.getRegion().back());
@@ -894,14 +934,15 @@ void ClauseProcessor::processMapObjects(
     lower::StatementContext &stmtCtx, mlir::Location clauseLocation,
     const omp::ObjectList &objects,
     llvm::omp::OpenMPOffloadMappingFlags mapTypeBits,
-    std::map<const semantics::Symbol *,
-             llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
+    std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapVars,
     llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms) const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+
   for (const omp::Object &object : objects) {
     llvm::SmallVector<mlir::Value> bounds;
     std::stringstream asFortran;
+    std::optional<omp::Object> parentObj;
 
     lower::AddrAndBoundsInfo info =
         lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
@@ -910,24 +951,43 @@ void ClauseProcessor::processMapObjects(
             object.ref(), clauseLocation, asFortran, bounds,
             treatIndexAsSection);
 
+    mlir::Value baseOp = info.rawInput;
+    if (object.sym()->owner().IsDerivedType()) {
+      omp::ObjectList objectList = gatherObjectsOf(object, semaCtx);
+      assert(!objectList.empty() &&
+             "could not find parent objects of derived type member");
+      parentObj = objectList[0];
+      parentMemberIndices.emplace(parentObj.value(),
+                                  OmpMapParentAndMemberData{});
+
+      if (isMemberOrParentAllocatableOrPointer(object, semaCtx)) {
+        llvm::SmallVector<int64_t> indices;
+        generateMemberPlacementIndices(object, indices, semaCtx);
+        baseOp = createParentSymAndGenIntermediateMaps(
+            clauseLocation, converter, semaCtx, stmtCtx, objectList, indices,
+            parentMemberIndices[parentObj.value()], asFortran.str(),
+            mapTypeBits);
+      }
+    }
+
     // Explicit map captures are captured ByRef by default,
     // optimisation passes may alter this to ByCopy or other capture
     // types to optimise
-    mlir::Value baseOp = info.rawInput;
     auto location = mlir::NameLoc::get(
         mlir::StringAttr::get(firOpBuilder.getContext(), asFortran.str()),
         baseOp.getLoc());
     mlir::omp::MapInfoOp mapOp = createMapInfoOp(
         firOpBuilder, location, baseOp,
         /*varPtrPtr=*/mlir::Value{}, asFortran.str(), bounds,
-        /*members=*/{}, /*membersIndex=*/mlir::DenseIntElementsAttr{},
+        /*members=*/{}, /*membersIndex=*/mlir::ArrayAttr{},
         static_cast<
             std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
             mapTypeBits),
         mlir::omp::VariableCaptureKind::ByRef, baseOp.getType());
 
-    if (object.sym()->owner().IsDerivedType()) {
-      addChildIndexAndMapToParent(object, parentMemberIndices, mapOp, semaCtx);
+    if (parentObj.has_value()) {
+      parentMemberIndices[parentObj.value()].addChildIndexAndMapToParent(
+          object, mapOp, semaCtx);
     } else {
       mapVars.push_back(mapOp);
       mapSyms.push_back(object.sym());
@@ -945,15 +1005,13 @@ bool ClauseProcessor::processMap(
   llvm::SmallVector<const semantics::Symbol *> localMapSyms;
   llvm::SmallVectorImpl<const semantics::Symbol *> *ptrMapSyms =
       mapSyms ? mapSyms : &localMapSyms;
-  std::map<const semantics::Symbol *,
-           llvm::SmallVector<OmpMapMemberIndicesData>>
-      parentMemberIndices;
+  std::map<Object, OmpMapParentAndMemberData> parentMemberIndices;
 
   auto process = [&](const omp::clause::Map &clause,
                      const parser::CharBlock &source) {
     using Map = omp::clause::Map;
     mlir::Location clauseLocation = converter.genLocation(source);
-    const auto &mapType = std::get<std::optional<Map::MapType>>(clause.t);
+    const auto &[mapType, typeMods, mappers, iterator, objects] = clause.t;
     llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
     // If the map type is specified, then process it else Tofrom is the
@@ -982,13 +1040,11 @@ bool ClauseProcessor::processMap(
       mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE;
     }
 
-    auto &modTypeMods =
-        std::get<std::optional<Map::MapTypeModifiers>>(clause.t);
-    if (modTypeMods) {
-      if (llvm::is_contained(*modTypeMods, Map::MapTypeModifier::Always))
+    if (typeMods) {
+      if (llvm::is_contained(*typeMods, Map::MapTypeModifier::Always))
         mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
       // Diagnose unimplemented map-type-modifiers.
-      if (llvm::any_of(*modTypeMods, [](Map::MapTypeModifier m) {
+      if (llvm::any_of(*typeMods, [](Map::MapTypeModifier m) {
             return m != Map::MapTypeModifier::Always;
           })) {
         TODO(currentLocation, "Map type modifiers (other than 'ALWAYS')"
@@ -996,9 +1052,13 @@ bool ClauseProcessor::processMap(
       }
     }
 
-    if (std::get<std::optional<omp::clause::Iterator>>(clause.t)) {
+    if (iterator) {
       TODO(currentLocation,
            "Support for iterator modifiers is not implemented yet");
+    }
+    if (mappers) {
+      TODO(currentLocation,
+           "Support for mapper modifiers is not implemented yet");
     }
 
     processMapObjects(stmtCtx, clauseLocation,
@@ -1007,17 +1067,15 @@ bool ClauseProcessor::processMap(
   };
 
   bool clauseFound = findRepeatableClause<omp::clause::Map>(process);
-  insertChildMapInfoIntoParent(converter, parentMemberIndices, result.mapVars,
-                               *ptrMapSyms);
+  insertChildMapInfoIntoParent(converter, semaCtx, stmtCtx, parentMemberIndices,
+                               result.mapVars, *ptrMapSyms);
 
   return clauseFound;
 }
 
 bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
                                            mlir::omp::MapClauseOps &result) {
-  std::map<const semantics::Symbol *,
-           llvm::SmallVector<OmpMapMemberIndicesData>>
-      parentMemberIndices;
+  std::map<Object, OmpMapParentAndMemberData> parentMemberIndices;
   llvm::SmallVector<const semantics::Symbol *> mapSymbols;
 
   auto callbackFn = [&](const auto &clause, const parser::CharBlock &source) {
@@ -1044,8 +1102,9 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
   clauseFound =
       findRepeatableClause<omp::clause::From>(callbackFn) || clauseFound;
 
-  insertChildMapInfoIntoParent(converter, parentMemberIndices, result.mapVars,
-                               mapSymbols);
+  insertChildMapInfoIntoParent(converter, semaCtx, stmtCtx, parentMemberIndices,
+                               result.mapVars, mapSymbols);
+
   return clauseFound;
 }
 
@@ -1107,9 +1166,7 @@ bool ClauseProcessor::processEnter(
 bool ClauseProcessor::processUseDeviceAddr(
     lower::StatementContext &stmtCtx, mlir::omp::UseDeviceAddrClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const {
-  std::map<const semantics::Symbol *,
-           llvm::SmallVector<OmpMapMemberIndicesData>>
-      parentMemberIndices;
+  std::map<Object, OmpMapParentAndMemberData> parentMemberIndices;
   bool clauseFound = findRepeatableClause<omp::clause::UseDeviceAddr>(
       [&](const omp::clause::UseDeviceAddr &clause,
           const parser::CharBlock &source) {
@@ -1122,7 +1179,7 @@ bool ClauseProcessor::processUseDeviceAddr(
                           useDeviceSyms);
       });
 
-  insertChildMapInfoIntoParent(converter, parentMemberIndices,
+  insertChildMapInfoIntoParent(converter, semaCtx, stmtCtx, parentMemberIndices,
                                result.useDeviceAddrVars, useDeviceSyms);
   return clauseFound;
 }
@@ -1130,9 +1187,8 @@ bool ClauseProcessor::processUseDeviceAddr(
 bool ClauseProcessor::processUseDevicePtr(
     lower::StatementContext &stmtCtx, mlir::omp::UseDevicePtrClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const {
-  std::map<const semantics::Symbol *,
-           llvm::SmallVector<OmpMapMemberIndicesData>>
-      parentMemberIndices;
+  std::map<Object, OmpMapParentAndMemberData> parentMemberIndices;
+
   bool clauseFound = findRepeatableClause<omp::clause::UseDevicePtr>(
       [&](const omp::clause::UseDevicePtr &clause,
           const parser::CharBlock &source) {
@@ -1145,7 +1201,7 @@ bool ClauseProcessor::processUseDevicePtr(
                           useDeviceSyms);
       });
 
-  insertChildMapInfoIntoParent(converter, parentMemberIndices,
+  insertChildMapInfoIntoParent(converter, semaCtx, stmtCtx, parentMemberIndices,
                                result.useDevicePtrVars, useDeviceSyms);
   return clauseFound;
 }

@@ -496,6 +496,7 @@ AtomicExpandImpl::convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI) {
                                           RMWI->getAlign(), RMWI->getOrdering(),
                                           RMWI->getSyncScopeID());
   NewRMWI->setVolatile(RMWI->isVolatile());
+  copyMetadataForAtomic(*NewRMWI, *RMWI);
   LLVM_DEBUG(dbgs() << "Replaced " << *RMWI << " with " << *NewRMWI << "\n");
 
   Value *NewRVal = RMWI->getType()->isPointerTy()

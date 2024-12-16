@@ -322,7 +322,8 @@ public:
 
     // Create the compiler's actual diagnostics engine.
     sanitizeDiagOpts(ScanInstance.getDiagnosticOpts());
-    ScanInstance.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
+    ScanInstance.createDiagnostics(DriverFileMgr->getVirtualFileSystem(),
+                                   DiagConsumer, /*ShouldOwnClient=*/false);
     if (!ScanInstance.hasDiagnostics())
       return false;
 
@@ -650,7 +651,7 @@ bool DependencyScanningWorker::computeDependencies(
   auto DiagOpts = CreateAndPopulateDiagOpts(FinalCCommandLine);
   sanitizeDiagOpts(*DiagOpts);
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(DiagOpts.release(), &DC,
+      CompilerInstance::createDiagnostics(*FinalFS, DiagOpts.release(), &DC,
                                           /*ShouldOwnClient=*/false);
 
   // Although `Diagnostics` are used only for command-line parsing, the

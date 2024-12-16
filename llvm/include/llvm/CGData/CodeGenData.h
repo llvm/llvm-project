@@ -145,6 +145,9 @@ public:
   const OutlinedHashTree *getOutlinedHashTree() {
     return PublishedHashTree.get();
   }
+  const StableFunctionMap *getStableFunctionMap() {
+    return PublishedStableFunctionMap.get();
+  }
 
   /// Returns true if we should write codegen data.
   bool emitCGData() { return EmitCGData; }
@@ -169,8 +172,16 @@ inline bool hasOutlinedHashTree() {
   return CodeGenData::getInstance().hasOutlinedHashTree();
 }
 
+inline bool hasStableFunctionMap() {
+  return CodeGenData::getInstance().hasStableFunctionMap();
+}
+
 inline const OutlinedHashTree *getOutlinedHashTree() {
   return CodeGenData::getInstance().getOutlinedHashTree();
+}
+
+inline const StableFunctionMap *getStableFunctionMap() {
+  return CodeGenData::getInstance().getStableFunctionMap();
 }
 
 inline bool emitCGData() { return CodeGenData::getInstance().emitCGData(); }

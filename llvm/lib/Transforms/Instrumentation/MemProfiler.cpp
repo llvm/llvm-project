@@ -42,6 +42,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/LongestCommonSequence.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <map>
 #include <set>
@@ -164,6 +165,11 @@ static cl::opt<bool>
                             cl::desc("Print matching stats for each allocation "
                                      "context in this module's profiles"),
                             cl::Hidden, cl::init(false));
+
+static cl::opt<std::string>
+    MemprofRuntimeDefaultOptions("memprof-runtime-default-options",
+                                 cl::desc("The default memprof options"),
+                                 cl::Hidden, cl::init(""));
 
 extern cl::opt<bool> MemProfReportHintedSizes;
 
@@ -546,6 +552,20 @@ void createMemprofHistogramFlagVar(Module &M) {
   appendToCompilerUsed(M, MemprofHistogramFlag);
 }
 
+void createMemprofDefaultOptionsVar(Module &M) {
+  Constant *OptionsConst = ConstantDataArray::getString(
+      M.getContext(), MemprofRuntimeDefaultOptions, /*AddNull=*/true);
+  GlobalVariable *OptionsVar =
+      new GlobalVariable(M, OptionsConst->getType(), /*isConstant=*/true,
+                         GlobalValue::WeakAnyLinkage, OptionsConst,
+                         "__memprof_default_options_str");
+  Triple TT(M.getTargetTriple());
+  if (TT.supportsCOMDAT()) {
+    OptionsVar->setLinkage(GlobalValue::ExternalLinkage);
+    OptionsVar->setComdat(M.getOrInsertComdat(OptionsVar->getName()));
+  }
+}
+
 bool ModuleMemProfiler::instrumentModule(Module &M) {
 
   // Create a module constructor.
@@ -564,6 +584,8 @@ bool ModuleMemProfiler::instrumentModule(Module &M) {
   createProfileFileNameVar(M);
 
   createMemprofHistogramFlagVar(M);
+
+  createMemprofDefaultOptionsVar(M);
 
   return true;
 }
@@ -703,8 +725,7 @@ static uint64_t computeStackId(const memprof::Frame &Frame) {
 
 // Helper to generate a single hash id for a given callstack, used for emitting
 // matching statistics and useful for uniquing such statistics across modules.
-static uint64_t
-computeFullStackId(const std::vector<memprof::Frame> &CallStack) {
+static uint64_t computeFullStackId(ArrayRef<Frame> CallStack) {
   llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::endianness::little>
       HashBuilder;
   for (auto &F : CallStack)
@@ -716,19 +737,22 @@ computeFullStackId(const std::vector<memprof::Frame> &CallStack) {
 }
 
 static AllocationType addCallStack(CallStackTrie &AllocTrie,
-                                   const AllocationInfo *AllocInfo) {
+                                   const AllocationInfo *AllocInfo,
+                                   uint64_t FullStackId) {
   SmallVector<uint64_t> StackIds;
   for (const auto &StackFrame : AllocInfo->CallStack)
     StackIds.push_back(computeStackId(StackFrame));
   auto AllocType = getAllocType(AllocInfo->Info.getTotalLifetimeAccessDensity(),
                                 AllocInfo->Info.getAllocCount(),
                                 AllocInfo->Info.getTotalLifetime());
-  uint64_t TotalSize = 0;
+  std::vector<ContextTotalSize> ContextSizeInfo;
   if (MemProfReportHintedSizes) {
-    TotalSize = AllocInfo->Info.getTotalSize();
+    auto TotalSize = AllocInfo->Info.getTotalSize();
     assert(TotalSize);
+    assert(FullStackId != 0);
+    ContextSizeInfo.push_back({FullStackId, TotalSize});
   }
-  AllocTrie.addCallStack(AllocType, StackIds, TotalSize);
+  AllocTrie.addCallStack(AllocType, StackIds, std::move(ContextSizeInfo));
   return AllocType;
 }
 
@@ -738,9 +762,8 @@ static AllocationType addCallStack(CallStackTrie &AllocTrie,
 // non-zero.
 static bool
 stackFrameIncludesInlinedCallStack(ArrayRef<Frame> ProfileCallStack,
-                                   ArrayRef<uint64_t> InlinedCallStack,
-                                   unsigned StartIndex = 0) {
-  auto StackFrame = ProfileCallStack.begin() + StartIndex;
+                                   ArrayRef<uint64_t> InlinedCallStack) {
+  auto StackFrame = ProfileCallStack.begin();
   auto InlCallStackIter = InlinedCallStack.begin();
   for (; StackFrame != ProfileCallStack.end() &&
          InlCallStackIter != InlinedCallStack.end();
@@ -853,6 +876,37 @@ memprof::extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI) {
   return Calls;
 }
 
+DenseMap<uint64_t, LocToLocMap>
+memprof::computeUndriftMap(Module &M, IndexedInstrProfReader *MemProfReader,
+                           const TargetLibraryInfo &TLI) {
+  DenseMap<uint64_t, LocToLocMap> UndriftMaps;
+
+  DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>> CallsFromProfile =
+      MemProfReader->getMemProfCallerCalleePairs();
+  DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>> CallsFromIR =
+      extractCallsFromIR(M, TLI);
+
+  // Compute an undrift map for each CallerGUID.
+  for (const auto &[CallerGUID, IRAnchors] : CallsFromIR) {
+    auto It = CallsFromProfile.find(CallerGUID);
+    if (It == CallsFromProfile.end())
+      continue;
+    const auto &ProfileAnchors = It->second;
+
+    LocToLocMap Matchings;
+    longestCommonSequence<LineLocation, GlobalValue::GUID>(
+        ProfileAnchors, IRAnchors, std::equal_to<GlobalValue::GUID>(),
+        [&](LineLocation A, LineLocation B) { Matchings.try_emplace(A, B); });
+    bool Inserted = UndriftMaps.try_emplace(CallerGUID, Matchings).second;
+
+    // The insertion must succeed because we visit each GUID exactly once.
+    assert(Inserted);
+    (void)Inserted;
+  }
+
+  return UndriftMaps;
+}
+
 static void
 readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
             const TargetLibraryInfo &TLI,
@@ -913,9 +967,15 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
   // Build maps of the location hash to all profile data with that leaf location
   // (allocation info and the callsites).
   std::map<uint64_t, std::set<const AllocationInfo *>> LocHashToAllocInfo;
-  // For the callsites we need to record the index of the associated frame in
-  // the frame array (see comments below where the map entries are added).
-  std::map<uint64_t, std::set<std::pair<const std::vector<Frame> *, unsigned>>>
+  // A hash function for std::unordered_set<ArrayRef<Frame>> to work.
+  struct CallStackHash {
+    size_t operator()(ArrayRef<Frame> CS) const {
+      return computeFullStackId(CS);
+    }
+  };
+  // For the callsites we need to record slices of the frame array (see comments
+  // below where the map entries are added).
+  std::map<uint64_t, std::unordered_set<ArrayRef<Frame>, CallStackHash>>
       LocHashToCallSites;
   for (auto &AI : MemProfRec->AllocSites) {
     NumOfMemProfAllocContextProfiles++;
@@ -933,7 +993,7 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
     unsigned Idx = 0;
     for (auto &StackFrame : CS) {
       uint64_t StackId = computeStackId(StackFrame);
-      LocHashToCallSites[StackId].insert(std::make_pair(&CS, Idx++));
+      LocHashToCallSites[StackId].insert(ArrayRef<Frame>(CS).drop_front(Idx++));
       ProfileHasColumns |= StackFrame.Column;
       // Once we find this function, we can stop recording.
       if (StackFrame.Function == FuncGUID)
@@ -973,8 +1033,7 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
       // and another callsite).
       std::map<uint64_t, std::set<const AllocationInfo *>>::iterator
           AllocInfoIter;
-      std::map<uint64_t, std::set<std::pair<const std::vector<Frame> *,
-                                            unsigned>>>::iterator CallSitesIter;
+      decltype(LocHashToCallSites)::iterator CallSitesIter;
       for (const DILocation *DIL = I.getDebugLoc(); DIL != nullptr;
            DIL = DIL->getInlinedAt()) {
         // Use C++ linkage name if possible. Need to compile with
@@ -1022,11 +1081,14 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
           if (stackFrameIncludesInlinedCallStack(AllocInfo->CallStack,
                                                  InlinedCallStack)) {
             NumOfMemProfMatchedAllocContexts++;
-            auto AllocType = addCallStack(AllocTrie, AllocInfo);
+            uint64_t FullStackId = 0;
+            if (ClPrintMemProfMatchInfo || MemProfReportHintedSizes)
+              FullStackId = computeFullStackId(AllocInfo->CallStack);
+            auto AllocType = addCallStack(AllocTrie, AllocInfo, FullStackId);
             // Record information about the allocation if match info printing
             // was requested.
             if (ClPrintMemProfMatchInfo) {
-              auto FullStackId = computeFullStackId(AllocInfo->CallStack);
+              assert(FullStackId != 0);
               FullStackIdToAllocMatchInfo[FullStackId] = {
                   AllocInfo->Info.getTotalSize(), AllocType, /*Matched=*/true};
             }
@@ -1062,8 +1124,8 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
       for (auto CallStackIdx : CallSitesIter->second) {
         // If we found and thus matched all frames on the call, create and
         // attach call stack metadata.
-        if (stackFrameIncludesInlinedCallStack(
-                *CallStackIdx.first, InlinedCallStack, CallStackIdx.second)) {
+        if (stackFrameIncludesInlinedCallStack(CallStackIdx,
+                                               InlinedCallStack)) {
           NumOfMemProfMatchedCallSites++;
           addCallsiteMetadata(I, InlinedCallStack, Ctx);
           // Only need to find one with a matching call stack and add a single
@@ -1083,6 +1145,10 @@ MemProfUsePass::MemProfUsePass(std::string MemoryProfileFile,
 }
 
 PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
+  // Return immediately if the module doesn't contain any function.
+  if (M.empty())
+    return PreservedAnalyses::all();
+
   LLVM_DEBUG(dbgs() << "Read in memory profile:");
   auto &Ctx = M.getContext();
   auto ReaderOrErr = IndexedInstrProfReader::create(MemoryProfileFileName, *FS);

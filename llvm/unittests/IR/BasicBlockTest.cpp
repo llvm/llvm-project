@@ -67,8 +67,8 @@ TEST(BasicBlockTest, PhiRange) {
   // Finally, let's iterate them, which is the thing we're trying to test.
   // We'll use this to wire up the rest of the incoming values.
   for (auto &PN : BB->phis()) {
-    PN.addIncoming(UndefValue::get(Int32Ty), BB1.get());
-    PN.addIncoming(UndefValue::get(Int32Ty), BB2.get());
+    PN.addIncoming(PoisonValue::get(Int32Ty), BB1.get());
+    PN.addIncoming(PoisonValue::get(Int32Ty), BB2.get());
   }
 
   // Test that we can use const iterators and generally that the iterators

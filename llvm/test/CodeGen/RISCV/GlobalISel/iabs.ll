@@ -117,8 +117,8 @@ define i64 @abs64(i64 %x) {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    srai a2, a1, 31
 ; RV32I-NEXT:    add a0, a0, a2
-; RV32I-NEXT:    sltu a3, a0, a2
 ; RV32I-NEXT:    add a1, a1, a2
+; RV32I-NEXT:    sltu a3, a0, a2
 ; RV32I-NEXT:    add a1, a1, a3
 ; RV32I-NEXT:    xor a0, a0, a2
 ; RV32I-NEXT:    xor a1, a1, a2
@@ -128,8 +128,8 @@ define i64 @abs64(i64 %x) {
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    srai a2, a1, 31
 ; RV32ZBB-NEXT:    add a0, a0, a2
-; RV32ZBB-NEXT:    sltu a3, a0, a2
 ; RV32ZBB-NEXT:    add a1, a1, a2
+; RV32ZBB-NEXT:    sltu a3, a0, a2
 ; RV32ZBB-NEXT:    add a1, a1, a3
 ; RV32ZBB-NEXT:    xor a0, a0, a2
 ; RV32ZBB-NEXT:    xor a1, a1, a2

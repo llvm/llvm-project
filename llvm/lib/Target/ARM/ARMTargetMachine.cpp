@@ -11,6 +11,7 @@
 
 #include "ARMTargetMachine.h"
 #include "ARM.h"
+#include "ARMLatencyMutations.h"
 #include "ARMMachineFunctionInfo.h"
 #include "ARMMacroFusion.h"
 #include "ARMSubtarget.h"
@@ -219,9 +220,10 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool isLittle)
-    : LLVMTargetMachine(T, computeDataLayout(TT, CPU, Options, isLittle), TT,
-                        CPU, FS, Options, getEffectiveRelocModel(TT, RM),
-                        getEffectiveCodeModel(CM, CodeModel::Small), OL),
+    : CodeGenTargetMachineImpl(T, computeDataLayout(TT, CPU, Options, isLittle),
+                               TT, CPU, FS, Options,
+                               getEffectiveRelocModel(TT, RM),
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TargetABI(computeTargetABI(TT, CPU, Options)),
       TLOF(createTLOF(getTargetTriple())), isLittle(isLittle) {
 
@@ -368,6 +370,8 @@ public:
     const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
     if (ST.hasFusion())
       DAG->addMutation(createARMMacroFusionDAGMutation());
+    if (auto Mutation = createARMLatencyMutations(ST, C->AA))
+      DAG->addMutation(std::move(Mutation));
     return DAG;
   }
 

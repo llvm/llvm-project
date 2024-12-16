@@ -766,10 +766,12 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     MI.setDesc(TII->get(Opc));
     return true;
   }
-  case X86::PTTRANSPOSEDV: {
+  case X86::PTTRANSPOSEDV:
+  case X86::PTCONJTFP16V: {
     for (int i = 2; i > 0; --i)
       MI.removeOperand(i);
-    MI.setDesc(TII->get(X86::TTRANSPOSED));
+    MI.setDesc(TII->get(Opcode == X86::PTTRANSPOSEDV ? X86::TTRANSPOSED
+                                                     : X86::TCONJTFP16));
     return true;
   }
   case X86::PTCMMIMFP16PSV:
@@ -780,6 +782,11 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case X86::PTDPBUUDV:
   case X86::PTDPBF16PSV:
   case X86::PTDPFP16PSV:
+  case X86::PTTDPBF16PSV:
+  case X86::PTTDPFP16PSV:
+  case X86::PTTCMMIMFP16PSV:
+  case X86::PTTCMMRLFP16PSV:
+  case X86::PTCONJTCMMIMFP16PSV:
   case X86::PTMMULTF32PSV:
   case X86::PTTMMULTF32PSV:
   case X86::PTDPBF8PSV:
@@ -799,6 +806,21 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     case X86::PTDPBUUDV:   Opc = X86::TDPBUUD; break;
     case X86::PTDPBF16PSV: Opc = X86::TDPBF16PS; break;
     case X86::PTDPFP16PSV: Opc = X86::TDPFP16PS; break;
+    case X86::PTTDPBF16PSV:
+      Opc = X86::TTDPBF16PS;
+      break;
+    case X86::PTTDPFP16PSV:
+      Opc = X86::TTDPFP16PS;
+      break;
+    case X86::PTTCMMIMFP16PSV:
+      Opc = X86::TTCMMIMFP16PS;
+      break;
+    case X86::PTTCMMRLFP16PSV:
+      Opc = X86::TTCMMRLFP16PS;
+      break;
+    case X86::PTCONJTCMMIMFP16PSV:
+      Opc = X86::TCONJTCMMIMFP16PS;
+      break;
     case X86::PTMMULTF32PSV:
       Opc = X86::TMMULTF32PS;
       break;

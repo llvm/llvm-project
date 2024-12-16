@@ -56,13 +56,13 @@ while.end:
 
 ;; This is an example of a case where the memory states are equivalent solely due to unreachability,
 ;; but the stores are not equal.
-define void @foo(ptr %arg) {
+define void @foo(ptr %arg, i1 %arg2, i1 %arg3) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP:%.*]] = phi ptr [ [[ARG:%.*]], [[BB:%.*]] ], [ null, [[BB2:%.*]] ]
-; CHECK-NEXT:    br i1 undef, label [[BB3:%.*]], label [[BB2]]
+; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB3:%.*]], label [[BB2]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       bb3:
@@ -71,7 +71,7 @@ define void @foo(ptr %arg) {
 ; CHECK:       bb4:
 ; CHECK-NEXT:    br label [[BB6:%.*]]
 ; CHECK:       bb6:
-; CHECK-NEXT:    br i1 undef, label [[BB9:%.*]], label [[BB7:%.*]]
+; CHECK-NEXT:    br i1 [[ARG3:%.*]], label [[BB9:%.*]], label [[BB7:%.*]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    switch i8 0, label [[BB6]] [
 ; CHECK-NEXT:      i8 6, label [[BB8:%.*]]
@@ -88,7 +88,7 @@ bb:
 
 bb1:                                              ; preds = %bb2, %bb
   %tmp = phi ptr [ %arg, %bb ], [ null, %bb2 ]
-  br i1 undef, label %bb3, label %bb2
+  br i1 %arg2, label %bb3, label %bb2
 
 bb2:                                              ; preds = %bb1
   br label %bb1
@@ -102,7 +102,7 @@ bb4:                                              ; preds = %bb8, %bb3
   br label %bb6
 
 bb6:                                              ; preds = %bb7, %bb4
-  br i1 undef, label %bb9, label %bb7
+  br i1 %arg3, label %bb9, label %bb7
 
 bb7:                                              ; preds = %bb6
   switch i8 0, label %bb6 [

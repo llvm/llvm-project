@@ -13,6 +13,7 @@
 
 #include "mlir/Target/LLVM/NVVM/Target.h"
 
+#include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Target/LLVM/NVVM/Utils.h"
@@ -86,7 +87,11 @@ SerializeGPUModuleBase::SerializeGPUModuleBase(
     Operation &module, NVVMTargetAttr target,
     const gpu::TargetOptions &targetOptions)
     : ModuleToObject(module, target.getTriple(), target.getChip(),
-                     target.getFeatures(), target.getO()),
+                     target.getFeatures(), target.getO(),
+                     targetOptions.getInitialLlvmIRCallback(),
+                     targetOptions.getLinkedLlvmIRCallback(),
+                     targetOptions.getOptimizedLlvmIRCallback(),
+                     targetOptions.getISACallback()),
       target(target), toolkitPath(targetOptions.getToolkitPath()),
       fileList(targetOptions.getLinkFiles()) {
 
@@ -469,6 +474,18 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
     }                                                                          \
   } while (false)
 
+#include "nvFatbin.h"
+
+#define RETURN_ON_NVFATBIN_ERROR(expr)                                         \
+  do {                                                                         \
+    auto result = (expr);                                                      \
+    if (result != nvFatbinResult::NVFATBIN_SUCCESS) {                          \
+      emitError(loc) << llvm::Twine(#expr).concat(" failed with error: ")      \
+                     << nvFatbinGetErrorString(result);                        \
+      return std::nullopt;                                                     \
+    }                                                                          \
+  } while (false)
+
 std::optional<SmallVector<char, 0>>
 NVPTXSerializer::compileToBinaryNVPTX(const std::string &ptxCode) {
   Location loc = getOperation().getLoc();
@@ -534,6 +551,32 @@ NVPTXSerializer::compileToBinaryNVPTX(const std::string &ptxCode) {
   });
 #undef DEBUG_TYPE
   RETURN_ON_NVPTXCOMPILER_ERROR(nvPTXCompilerDestroy(&compiler));
+
+  if (targetOptions.getCompilationTarget() == gpu::CompilationTarget::Fatbin) {
+    bool useFatbin32 = llvm::any_of(cmdOpts.second, [](const char *option) {
+      return llvm::StringRef(option) == "-32";
+    });
+
+    const char *cubinOpts[1] = {useFatbin32 ? "-32" : "-64"};
+    nvFatbinHandle handle;
+
+    auto chip = getTarget().getChip();
+    chip.consume_front("sm_");
+
+    RETURN_ON_NVFATBIN_ERROR(nvFatbinCreate(&handle, cubinOpts, 1));
+    RETURN_ON_NVFATBIN_ERROR(nvFatbinAddCubin(
+        handle, binary.data(), binary.size(), chip.data(), nullptr));
+    RETURN_ON_NVFATBIN_ERROR(nvFatbinAddPTX(
+        handle, ptxCode.data(), ptxCode.size(), chip.data(), nullptr, nullptr));
+
+    size_t fatbinSize;
+    RETURN_ON_NVFATBIN_ERROR(nvFatbinSize(handle, &fatbinSize));
+    SmallVector<char, 0> fatbin(fatbinSize, 0);
+    RETURN_ON_NVFATBIN_ERROR(nvFatbinGet(handle, (void *)fatbin.data()));
+    RETURN_ON_NVFATBIN_ERROR(nvFatbinDestroy(&handle));
+    return fatbin;
+  }
+
   return binary;
 }
 #endif // MLIR_ENABLE_NVPTXCOMPILER
@@ -572,6 +615,9 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
     getOperation().emitError() << "Failed translating the module to ISA.";
     return std::nullopt;
   }
+  if (isaCallback)
+    isaCallback(serializedISA.value());
+
 #define DEBUG_TYPE "serialize-to-isa"
   LLVM_DEBUG({
     llvm::dbgs() << "PTX for module: " << getOperation().getNameAttr() << "\n";
@@ -619,9 +665,18 @@ NVVMTargetAttrImpl::createObject(Attribute attribute, Operation *module,
   gpu::CompilationTarget format = options.getCompilationTarget();
   DictionaryAttr objectProps;
   Builder builder(attribute.getContext());
+  SmallVector<NamedAttribute, 2> properties;
   if (format == gpu::CompilationTarget::Assembly)
-    objectProps = builder.getDictionaryAttr(
-        {builder.getNamedAttr("O", builder.getI32IntegerAttr(target.getO()))});
+    properties.push_back(
+        builder.getNamedAttr("O", builder.getI32IntegerAttr(target.getO())));
+
+  if (StringRef section = options.getELFSection(); !section.empty())
+    properties.push_back(builder.getNamedAttr(gpu::elfSectionName,
+                                              builder.getStringAttr(section)));
+
+  if (!properties.empty())
+    objectProps = builder.getDictionaryAttr(properties);
+
   return builder.getAttr<gpu::ObjectAttr>(
       attribute, format,
       builder.getStringAttr(StringRef(object.data(), object.size())),
