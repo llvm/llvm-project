@@ -58339,6 +58339,17 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
         return DAG.getNode(
             InOpcode, DL, VT,
             extractSubVector(InVec.getOperand(0), IdxVal, DAG, DL, SizeInBits));
+      case X86ISD::PSHUFD:
+      case X86ISD::VPERMILPI:
+        if (InVec.getOperand(0).hasOneUse()) {
+          uint64_t M = InVec.getConstantOperandVal(1) & 255;
+          M = VT.getScalarSizeInBits() < 64 ? M : (M >> IdxVal);
+          return DAG.getNode(InOpcode, DL, VT,
+                             extractSubVector(InVec.getOperand(0), IdxVal, DAG,
+                                              DL, SizeInBits),
+                             DAG.getTargetConstant(M, DL, MVT::i8));
+        }
+        break;
       case X86ISD::PCMPEQ:
       case X86ISD::PCMPGT:
       case X86ISD::UNPCKH:

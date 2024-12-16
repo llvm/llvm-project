@@ -12441,6 +12441,12 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     return OpenACCDeleteClause::Create(getContext(), BeginLoc, LParenLoc,
                                        VarList, EndLoc);
   }
+  case OpenACCClauseKind::UseDevice: {
+    SourceLocation LParenLoc = readSourceLocation();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCUseDeviceClause::Create(getContext(), BeginLoc, LParenLoc,
+                                          VarList, EndLoc);
+  }
   case OpenACCClauseKind::DevicePtr: {
     SourceLocation LParenLoc = readSourceLocation();
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
@@ -12583,7 +12589,6 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   }
 
   case OpenACCClauseKind::NoHost:
-  case OpenACCClauseKind::UseDevice:
   case OpenACCClauseKind::Device:
   case OpenACCClauseKind::DeviceResident:
   case OpenACCClauseKind::Host:
