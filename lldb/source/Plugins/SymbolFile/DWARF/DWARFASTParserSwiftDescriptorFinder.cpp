@@ -21,6 +21,7 @@
 #include "DWARFDIE.h"
 
 #include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
+#include "swift/Demangling/ManglingFlavor.h"
 #include "swift/RemoteInspection/TypeLowering.h"
 
 #include "lldb/Utility/LLDBLog.h"
@@ -63,7 +64,9 @@ getTypeAndDie(TypeSystemSwiftTypeRef &ts,
               const swift::reflection::TypeRef *TR) {
   swift::Demangle::Demangler dem;
   swift::Demangle::NodePointer node = TR->getDemangling(dem);
-  auto type = ts.RemangleAsType(dem, node);
+  // TODO: mangling flavor should come from the TypeRef.
+  auto type =
+      ts.RemangleAsType(dem, node, swift::Mangle::ManglingFlavor::Embedded);
   if (!type) {
     if (auto log = GetLog(LLDBLog::Types)) {
       std::stringstream ss;

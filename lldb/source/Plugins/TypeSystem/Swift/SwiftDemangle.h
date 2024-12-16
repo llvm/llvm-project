@@ -15,6 +15,7 @@
 
 #include "swift/Demangling/Demangle.h"
 #include "swift/Demangling/Demangler.h"
+#include "swift/Demangling/ManglingFlavor.h"
 #include "llvm/ADT/ArrayRef.h"
 
 namespace lldb_private {
@@ -94,9 +95,9 @@ mangleType(swift::Demangle::Demangler &dem,
 }
 
 /// Produce a type mangling for a class.
-inline ManglingErrorOr<std::string> mangleClass(swift::Demangle::Demangler &dem,
-                                                llvm::StringRef moduleName,
-                                                llvm::StringRef className) {
+inline ManglingErrorOr<std::string>
+mangleClass(swift::Demangle::Demangler &dem, llvm::StringRef moduleName,
+            llvm::StringRef className, swift::Mangle::ManglingFlavor flavor) {
   auto *classNode = dem.createNode(Node::Kind::Class);
   auto *module =
       dem.createNodeWithAllocatedText(Node::Kind::Module, moduleName);
@@ -104,7 +105,7 @@ inline ManglingErrorOr<std::string> mangleClass(swift::Demangle::Demangler &dem,
       dem.createNodeWithAllocatedText(Node::Kind::Identifier, className);
   classNode->addChild(module, dem);
   classNode->addChild(identifier, dem);
-  return mangleNode(mangleType(dem, classNode));
+  return mangleNode(mangleType(dem, classNode), flavor);
 }
 
 } // namespace swift_demangle

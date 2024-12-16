@@ -36,6 +36,7 @@
 #include "swift/AST/ASTMangler.h"
 #include "swift/AST/ASTWalker.h"
 #include "swift/Demangling/Demangle.h"
+#include "swift/Demangling/ManglingFlavor.h"
 #include "swift/RemoteInspection/ReflectionContext.h"
 #include "swift/RemoteInspection/TypeRefBuilder.h"
 #include "swift/Strings.h"
@@ -318,8 +319,11 @@ public:
     auto *node = dem.demangleSymbol(wrapped);
     if (!node) {
       // Try `mangledName` as plain ObjC class name. Ex: NSObject, NSView, etc.
+      // Since this looking up an ObjC type, the default mangling falvor should
+      // be used.
       auto maybeMangled = swift_demangle::mangleClass(
-          dem, swift::MANGLING_MODULE_OBJC, mangledName);
+          dem, swift::MANGLING_MODULE_OBJC, mangledName,
+          swift::Mangle::ManglingFlavor::Default);
       if (!maybeMangled.isSuccess()) {
         LLDB_LOG(GetLog(LLDBLog::Types),
                  "[LLDBTypeInfoProvider] invalid mangled name: {0}",
@@ -641,7 +645,9 @@ CompilerType GetWeakReferent(TypeSystemSwiftTypeRef &ts, CompilerType type) {
   if (!n || n->getKind() != Node::Kind::SugaredOptional || !n->hasChildren())
     return {};
   n = n->getFirstChild();
-  return ts.RemangleAsType(dem, n);
+  return ts.RemangleAsType(
+      dem, n,
+      SwiftLanguageRuntime::GetManglingFlavor(type.GetMangledTypeName()));
 }
 
 CompilerType GetTypeFromTypeRef(TypeSystemSwiftTypeRef &ts,
@@ -650,7 +656,8 @@ CompilerType GetTypeFromTypeRef(TypeSystemSwiftTypeRef &ts,
     return {};
   swift::Demangle::Demangler dem;
   swift::Demangle::NodePointer node = type_ref->getDemangling(dem);
-  return ts.RemangleAsType(dem, node);
+  // TODO: the mangling flavor should come from the TypeRef.
+  return ts.RemangleAsType(dem, node, ts.GetManglingFlavor());
 }
 
 struct ExistentialSyntheticChild {
@@ -1567,8 +1574,9 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Pack(
 
   swift::Demangle::Demangler dem;
 
-  auto expand_pack_type = [&](ConstString mangled_pack_type,
-                              bool indirect) -> swift::Demangle::NodePointer {
+  auto expand_pack_type = [&](ConstString mangled_pack_type, bool indirect,
+                              swift::Mangle::ManglingFlavor flavor)
+      -> swift::Demangle::NodePointer {
     // Find pack_type in the pack_expansions.
     unsigned i = 0;
     SwiftLanguageRuntime::GenericSignature::PackExpansion *pack_expansion =
@@ -1698,7 +1706,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Pack(
       auto bound_typeref = reflection_ctx->ApplySubstitutions(
           type_ref, substitutions, ts->GetDescriptorFinder());
       swift::Demangle::NodePointer node = bound_typeref->getDemangling(dem);
-      CompilerType type = ts->RemangleAsType(dem, node);
+      CompilerType type = ts->RemangleAsType(dem, node, flavor);
 
       // Add the substituted type to the tuple.
       elements.push_back({{}, type});
@@ -1724,6 +1732,9 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Pack(
   auto node = dem_ctx.demangleSymbolAsNode(
       pack_type.GetMangledTypeName().GetStringRef());
 
+  auto flavor =
+      SwiftLanguageRuntime::GetManglingFlavor(pack_type.GetMangledTypeName());
+
   // Expand all the pack types that appear in the incoming type,
   // either at the root level or as arguments of bound generic types.
   bool indirect = false;
@@ -1739,10 +1750,10 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Pack(
         if (node->getNumChildren() != 1)
           return node;
         node = node->getChild(0);
-        CompilerType pack_type = ts->RemangleAsType(dem, node);
+        CompilerType pack_type = ts->RemangleAsType(dem, node, flavor);
         ConstString mangled_pack_type = pack_type.GetMangledTypeName();
         LLDB_LOG(log, "decoded pack_expansion type: {0}", mangled_pack_type);
-        auto result = expand_pack_type(mangled_pack_type, indirect);
+        auto result = expand_pack_type(mangled_pack_type, indirect, flavor);
         if (!result) {
           LLDB_LOG(log, "failed to expand pack type: {0}", mangled_pack_type);
           return node;
@@ -1750,7 +1761,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Pack(
         return result;
       });
 
-  CompilerType expanded_type = ts->RemangleAsType(dem, transformed);
+  CompilerType expanded_type = ts->RemangleAsType(dem, transformed, flavor);
   pack_type_or_name.SetCompilerType(expanded_type);
 
   AddressType address_type;
@@ -1824,7 +1835,8 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Class(
             // useful to users.
             if (IsPrivateNSClass(node))
               return false;
-            class_type_or_name.SetCompilerType(ts->RemangleAsType(dem, node));
+            class_type_or_name.SetCompilerType(ts->RemangleAsType(
+                dem, node, swift::Mangle::ManglingFlavor::Default));
             found = true;
             return true;
           }
@@ -1854,9 +1866,13 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Class(
                class_type.GetMangledTypeName(), instance_ptr);
     return false;
   }
+
+  auto flavor =
+      SwiftLanguageRuntime::GetManglingFlavor(class_type.GetMangledTypeName());
+
   swift::Demangle::Demangler dem;
   swift::Demangle::NodePointer node = typeref->getDemangling(dem);
-  CompilerType dynamic_type = ts->RemangleAsType(dem, node);
+  CompilerType dynamic_type = ts->RemangleAsType(dem, node, flavor);
   LLDB_LOG(log, "dynamic type of instance_ptr {0:x} is {1}", instance_ptr,
            class_type.GetMangledTypeName());
   class_type_or_name.SetCompilerType(dynamic_type);
@@ -2022,7 +2038,10 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Existential(
     return false;
   swift::Demangle::Demangler dem;
   swift::Demangle::NodePointer node = typeref->getDemangling(dem);
-  class_type_or_name.SetCompilerType(ts->RemangleAsType(dem, node));
+  auto flavor = SwiftLanguageRuntime::GetManglingFlavor(
+      existential_type.GetMangledTypeName());
+
+  class_type_or_name.SetCompilerType(ts->RemangleAsType(dem, node, flavor));
   address.SetRawAddress(out_address.getAddressData());
 
 #ifndef NDEBUG
@@ -2087,7 +2106,10 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ExistentialMetatype(
   meta->addChild(node, dem);
   wrapped->addChild(meta,dem);
 
-  meta_type = tr_ts->RemangleAsType(dem, wrapped);
+  auto flavor =
+      SwiftLanguageRuntime::GetManglingFlavor(meta_type.GetMangledTypeName());
+  meta_type =
+      tss->GetTypeSystemSwiftTypeRef()->RemangleAsType(dem, wrapped, flavor);
   class_type_or_name.SetCompilerType(meta_type);
   address.SetRawAddress(ptr);
   return true;
@@ -2113,7 +2135,9 @@ CompilerType SwiftLanguageRuntimeImpl::GetTypeFromMetadata(TypeSystemSwift &ts,
   using namespace swift::Demangle;
   Demangler dem;
   NodePointer node = type_ref->getDemangling(dem);
-  return tr_ts->RemangleAsType(dem, node);
+  // TODO: the mangling flavor should come from the TypeRef.
+  return ts.GetTypeSystemSwiftTypeRef()->RemangleAsType(
+      dem, node, ts.GetTypeSystemSwiftTypeRef()->GetManglingFlavor());
 }
 
 std::optional<lldb::addr_t>
@@ -2236,7 +2260,10 @@ CompilerType SwiftLanguageRuntimeImpl::BindGenericTypeParameters(
           type_ref, substitutions,
           tr_ts->GetDescriptorFinder());
   NodePointer node = bound_type_ref->getDemangling(dem);
-  return tr_ts->RemangleAsType(dem, node);
+  return ts->GetTypeSystemSwiftTypeRef()->RemangleAsType(
+      dem, node,
+      SwiftLanguageRuntime::GetManglingFlavor(
+          unbound_type.GetMangledTypeName()));
 }
 
 CompilerType
@@ -2278,10 +2305,12 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
       return;
     substitutions.insert({{depth, index}, type_ref});
   });
+  auto flavor =
+      SwiftLanguageRuntime::GetManglingFlavor(mangled_name.GetStringRef());
 
   // Nothing to do if there are no type parameters.
   auto get_canonical = [&]() {
-    auto mangling = mangleNode(canonical);
+    auto mangling = mangleNode(canonical, flavor);
     if (!mangling.isSuccess())
       return CompilerType();
     return ts.GetTypeFromMangledTypename(ConstString(mangling.result()));
@@ -2315,7 +2344,7 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
              "No scratch context available.");
     return ts.GetTypeFromMangledTypename(mangled_name);
   }
-  CompilerType bound_type = scratch_ctx->RemangleAsType(dem, node);
+  CompilerType bound_type = scratch_ctx->RemangleAsType(dem, node, flavor);
   LLDB_LOG(GetLog(LLDBLog::Expressions | LLDBLog::Types), "Bound {0} -> {1}.",
            mangled_name, bound_type.GetMangledTypeName());
   return bound_type;
@@ -2640,6 +2669,13 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ClangType(
 
   std::string remangled;
   {
+    auto type = in_value.GetCompilerType();
+    std::optional<swift::Mangle::ManglingFlavor> mangling_flavor =
+        SwiftLanguageRuntime::GetManglingFlavor(
+            type.GetMangledTypeName().GetStringRef());
+    if (!mangling_flavor)
+      return false;
+
     // Create a mangle tree for Swift.Optional<$module.$class>
     using namespace swift::Demangle;
     NodeFactory factory;
@@ -2668,7 +2704,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ClangType(
         factory);
     cty->addChild(c, factory);
 
-    auto mangling = mangleNode(global);
+    auto mangling = mangleNode(global, *mangling_flavor);
     if (!mangling.isSuccess())
       return false;
     remangled = mangling.result();

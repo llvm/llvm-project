@@ -28,6 +28,7 @@
 
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
 #include "Utility/ARM64_DWARF_Registers.h"
+#include "swift/Demangling/ManglingFlavor.h"
 #include "llvm/ADT/SmallSet.h"
 
 using namespace lldb;
@@ -622,6 +623,7 @@ bool SwiftLanguageRuntime::IsSwiftMangledName(llvm::StringRef name) {
 
 void SwiftLanguageRuntime::GetGenericParameterNamesForFunction(
     const SymbolContext &const_sc, const ExecutionContext *exe_ctx,
+    swift::Mangle::ManglingFlavor flavor,
     llvm::DenseMap<SwiftLanguageRuntime::ArchetypePath, StringRef> &dict) {
   // This terrifying cast avoids having too many differences with llvm.org.
   SymbolContext &sc = const_cast<SymbolContext &>(const_sc);
@@ -681,7 +683,8 @@ void SwiftLanguageRuntime::GetGenericParameterNamesForFunction(
           llvm::dyn_cast_or_null<TypeSystemSwift>(type_system_or_err->get());
       if (!ts)
         break;
-      CompilerType generic_type = ts->CreateGenericTypeParamType(depth, index);
+      CompilerType generic_type =
+          ts->CreateGenericTypeParamType(depth, index, flavor);
       CompilerType bound_type =
           runtime->BindGenericTypeParameters(*frame, generic_type);
       type_name = bound_type.GetDisplayTypeName();
@@ -735,7 +738,9 @@ std::string SwiftLanguageRuntime::DemangleSymbolAsString(
     // Resolve generic parameters in the current function.
     options.GenericParameterName = [&](uint64_t depth, uint64_t index) {
       if (!did_init) {
-        GetGenericParameterNamesForFunction(*sc, exe_ctx, dict);
+        GetGenericParameterNamesForFunction(
+            *sc, exe_ctx, SwiftLanguageRuntime::GetManglingFlavor(symbol),
+            dict);
         did_init = true;
       }
       auto it = dict.find({depth, index});
@@ -1205,6 +1210,7 @@ SwiftLanguageRuntime::GetGenericSignature(StringRef function_name,
   GenericSignature signature;
   unsigned num_generic_params = 0;
 
+  auto flavor = SwiftLanguageRuntime::GetManglingFlavor(function_name);
   // Walk to the function type.
   Context ctx;
   auto *node = SwiftLanguageRuntime::DemangleSymbolAsNode(function_name, ctx);
@@ -1313,10 +1319,10 @@ SwiftLanguageRuntime::GetGenericSignature(StringRef function_name,
 
           // Store the various type packs.
           swift::Demangle::Demangler dem;
-          auto mangling = swift::Demangle::mangleNode(type_node);
+          auto mangling = swift::Demangle::mangleNode(type_node, flavor);
           if (mangling.isSuccess())
             signature.pack_expansions.back().mangled_type =
-                ts.RemangleAsType(dem, type_node).GetMangledTypeName();
+                ts.RemangleAsType(dem, type_node, flavor).GetMangledTypeName();
 
           // Assuming that there are no nested pack_expansions.
           return false;

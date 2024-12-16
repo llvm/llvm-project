@@ -20,6 +20,7 @@
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/lldb-private.h"
+#include "swift/Demangling/ManglingFlavor.h"
 
 #include <optional>
 #include "llvm/ADT/StringSet.h"
@@ -132,6 +133,12 @@ public:
   /// since some day we may want to support more than one swift variant.
   static bool IsSwiftMangledName(llvm::StringRef name);
 
+  static swift::Mangle::ManglingFlavor
+  GetManglingFlavor(llvm::StringRef mangledName) {
+    if (mangledName.starts_with("$e") || mangledName.starts_with("_$e"))
+      return swift::Mangle::ManglingFlavor::Embedded;
+    return swift::Mangle::ManglingFlavor::Default;
+  }
   enum class FuncletComparisonResult {
     NotBothFunclets,
     DifferentAsyncFunctions,
@@ -271,6 +278,7 @@ public:
   /// context.
   static void GetGenericParameterNamesForFunction(
       const SymbolContext &sc, const ExecutionContext *exe_ctx,
+      swift::Mangle::ManglingFlavor flavor,
       llvm::DenseMap<ArchetypePath, llvm::StringRef> &dict);
 
   /// Invoke callback for each DependentGenericParamType.

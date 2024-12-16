@@ -1501,10 +1501,13 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
 
   ConstString mangled_name;
 
-  {
-    swift::Mangle::ASTMangler mangler(true);
+  if (ThreadSafeASTContext ast_ctx = swift_ast_ctx->GetASTContext()) {
+    swift::Mangle::ASTMangler mangler(**ast_ctx, true);
     mangled_name = ConstString(mangler.mangleGlobalVariableFull(var_decl));
   }
+
+  if (mangled_name.IsEmpty())
+    return;
 
   lldb::addr_t symbol_addr;
 
