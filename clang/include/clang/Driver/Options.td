@@ -240,7 +240,8 @@ def m_riscv_Features_Group : OptionGroup<"<riscv features group>">,
 def m_ve_Features_Group : OptionGroup<"<ve features group>">,
                           Group<m_Group>, DocName<"VE">;
 def m_loongarch_Features_Group : OptionGroup<"<loongarch features group>">,
-                                 Group<m_Group>, DocName<"LoongArch">;
+                                 Group<m_Group>, DocName<"LoongArch">,
+                                 Visibility<[ClangOption, CLOption, FlangOption]>;
 
 def m_libc_Group : OptionGroup<"<m libc group>">, Group<m_mips_Features_Group>,
                    Flags<[HelpHidden]>;
@@ -3194,10 +3195,13 @@ defm skip_odr_check_in_gmf : BoolOption<"f", "skip-odr-check-in-gmf",
           "Perform ODR checks for decls in the global module fragment.">>,
   Group<f_Group>;
 
-def modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">,
+def modules_reduced_bmi : Flag<["-"], "fmodules-reduced-bmi">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Generate the reduced BMI">,
   MarshallingInfoFlag<FrontendOpts<"GenReducedBMI">>;
+
+def experimental_modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">, 
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>, Alias<modules_reduced_bmi>;
 
 def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,
   Visibility<[ClangOption, CC1Option, CLOption]>,
@@ -6835,10 +6839,6 @@ def flang_experimental_hlfir : Flag<["-"], "flang-experimental-hlfir">,
 def flang_deprecated_no_hlfir : Flag<["-"], "flang-deprecated-no-hlfir">,
   Flags<[HelpHidden]>, Visibility<[FlangOption, FC1Option]>,
   HelpText<"Do not use HLFIR lowering (deprecated)">;
-
-def flang_experimental_integer_overflow : Flag<["-"], "flang-experimental-integer-overflow">,
-  Flags<[HelpHidden]>, Visibility<[FlangOption, FC1Option]>,
-  HelpText<"Add nsw flag to internal operations such as do-variable increment (experimental)">;
 
 //===----------------------------------------------------------------------===//
 // FLangOption + CoreOption + NoXarchOption

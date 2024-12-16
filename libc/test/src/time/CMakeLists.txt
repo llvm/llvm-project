@@ -71,9 +71,19 @@ add_libc_test(
   SUITE
     libc_time_unittests
   SRCS
-  clock_gettime_test.cpp
+    clock_gettime_test.cpp
   DEPENDS
     libc.src.time.clock_gettime
+)
+
+add_libc_test(
+  clock_getres_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    clock_getres_test.cpp
+  DEPENDS
+    libc.src.time.clock_getres
 )
 
 add_libc_unittest(

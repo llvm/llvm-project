@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_CLAMP_H
-#define _LIBCPP___ALGORITHM_RANGES_CLAMP_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_RANGES_CLAMP_H
+#define _LIBCPP___CXX03___ALGORITHM_RANGES_CLAMP_H
 
 #include <__cxx03/__assert>
 #include <__cxx03/__config>
@@ -63,4 +63,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RANGES_CLAMP_H
+#endif // _LIBCPP___CXX03___ALGORITHM_RANGES_CLAMP_H

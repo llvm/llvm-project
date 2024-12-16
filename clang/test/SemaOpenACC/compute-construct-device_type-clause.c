@@ -34,22 +34,18 @@ void uses() {
 #pragma acc kernels dtype(MACRO)
   while(1);
 
-  // expected-error@+2{{OpenACC 'device_type' clause is not valid on 'enter data' directive}}
-  // expected-warning@+1{{OpenACC construct 'enter data' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device_type' clause is not valid on 'enter data' directive}}
 #pragma acc enter data device_type(I)
-  // expected-error@+2{{OpenACC 'dtype' clause is not valid on 'enter data' directive}}
-  // expected-warning@+1{{OpenACC construct 'enter data' not yet implemented}}
+  // expected-error@+1{{OpenACC 'dtype' clause is not valid on 'enter data' directive}}
 #pragma acc enter data dtype(I)
 
 
   // Only 'async', 'wait', num_gangs', 'num_workers', 'vector_length' allowed after 'device_type'.
 
-  // expected-error@+2{{OpenACC clause 'finalize' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'finalize' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*) finalize
   while(1);
-  // expected-error@+2{{OpenACC clause 'if_present' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'if_present' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*) if_present
   while(1);
   // expected-error@+1{{OpenACC 'seq' clause is not valid on 'kernels' directive}}
@@ -107,8 +103,7 @@ void uses() {
   // expected-note@+1{{previous clause is here}}
 #pragma acc kernels device_type(*) delete(Var)
   while(1);
-  // expected-error@+2{{OpenACC clause 'detach' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'detach' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*) detach(Var)
   while(1);
   // expected-error@+2{{OpenACC clause 'device' may not follow a 'device_type' clause in a 'kernels' construct}}

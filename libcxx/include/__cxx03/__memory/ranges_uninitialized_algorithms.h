@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_RANGES_UNINITIALIZED_ALGORITHMS_H
-#define _LIBCPP___MEMORY_RANGES_UNINITIALIZED_ALGORITHMS_H
+#ifndef _LIBCPP___CXX03___MEMORY_RANGES_UNINITIALIZED_ALGORITHMS_H
+#define _LIBCPP___CXX03___MEMORY_RANGES_UNINITIALIZED_ALGORITHMS_H
 
 #include <__cxx03/__algorithm/in_out_result.h>
 #include <__cxx03/__concepts/constructible.h>
@@ -322,4 +322,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___MEMORY_RANGES_UNINITIALIZED_ALGORITHMS_H
+#endif // _LIBCPP___CXX03___MEMORY_RANGES_UNINITIALIZED_ALGORITHMS_H

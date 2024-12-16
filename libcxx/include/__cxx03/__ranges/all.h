@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_ALL_H
-#define _LIBCPP___RANGES_ALL_H
+#ifndef _LIBCPP___CXX03___RANGES_ALL_H
+#define _LIBCPP___CXX03___RANGES_ALL_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__functional/compose.h>         // TODO(modules): Those should not be required
@@ -75,4 +75,4 @@ using all_t = decltype(views::all(std::declval<_Range>()));
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANGES_ALL_H
+#endif // _LIBCPP___CXX03___RANGES_ALL_H

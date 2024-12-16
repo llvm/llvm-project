@@ -86,9 +86,13 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
   if (Tok.is(tok::kw_if))
     return OpenACCClauseKind::If;
 
-  // 'private' is also a keyword, make sure we pare it correctly.
+  // 'private' is also a keyword, make sure we parse it correctly.
   if (Tok.is(tok::kw_private))
     return OpenACCClauseKind::Private;
+
+  // 'delete' is a keyword, make sure we parse it correctly.
+  if (Tok.is(tok::kw_delete))
+    return OpenACCClauseKind::Delete;
 
   if (!Tok.is(tok::identifier))
     return OpenACCClauseKind::Invalid;
@@ -567,6 +571,8 @@ void SkipUntilEndOfDirective(Parser &P) {
 bool doesDirectiveHaveAssociatedStmt(OpenACCDirectiveKind DirKind) {
   switch (DirKind) {
   default:
+  case OpenACCDirectiveKind::EnterData:
+  case OpenACCDirectiveKind::ExitData:
     return false;
   case OpenACCDirectiveKind::Parallel:
   case OpenACCDirectiveKind::Serial:
@@ -575,6 +581,8 @@ bool doesDirectiveHaveAssociatedStmt(OpenACCDirectiveKind DirKind) {
   case OpenACCDirectiveKind::SerialLoop:
   case OpenACCDirectiveKind::KernelsLoop:
   case OpenACCDirectiveKind::Loop:
+  case OpenACCDirectiveKind::Data:
+  case OpenACCDirectiveKind::HostData:
     return true;
   }
   llvm_unreachable("Unhandled directive->assoc stmt");
@@ -592,6 +600,11 @@ unsigned getOpenACCScopeFlags(OpenACCDirectiveKind DirKind) {
     // so that we can diagnose trying to 'break'/'continue' inside of one.
     return Scope::BreakScope | Scope::ContinueScope |
            Scope::OpenACCComputeConstructScope;
+  case OpenACCDirectiveKind::Data:
+  case OpenACCDirectiveKind::EnterData:
+  case OpenACCDirectiveKind::ExitData:
+  case OpenACCDirectiveKind::HostData:
+    return 0;
   case OpenACCDirectiveKind::Invalid:
     llvm_unreachable("Shouldn't be creating a scope for an invalid construct");
   default:
@@ -986,7 +999,6 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       assert(DirKind == OpenACCDirectiveKind::Update);
       [[fallthrough]];
     case OpenACCClauseKind::Delete:
-    case OpenACCClauseKind::Detach:
     case OpenACCClauseKind::Device:
     case OpenACCClauseKind::DeviceResident:
     case OpenACCClauseKind::Host:
@@ -995,6 +1007,7 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       ParseOpenACCVarList(ClauseKind);
       break;
     case OpenACCClauseKind::Attach:
+    case OpenACCClauseKind::Detach:
     case OpenACCClauseKind::DevicePtr:
       ParsedClause.setVarListDetails(ParseOpenACCVarList(ClauseKind),
                                      /*IsReadOnly=*/false, /*IsZero=*/false);
@@ -1504,10 +1517,10 @@ StmtResult Parser::ParseOpenACCDirectiveStmt() {
     return StmtError();
 
   StmtResult AssocStmt;
-  SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(getActions().OpenACC(),
-                                                DirInfo.DirKind, DirInfo.DirLoc,
-                                                {}, DirInfo.Clauses);
   if (doesDirectiveHaveAssociatedStmt(DirInfo.DirKind)) {
+    SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(
+        getActions().OpenACC(), DirInfo.DirKind, DirInfo.DirLoc, {},
+        DirInfo.Clauses);
     ParsingOpenACCDirectiveRAII DirScope(*this, /*Value=*/false);
     ParseScope ACCScope(this, getOpenACCScopeFlags(DirInfo.DirKind));
 

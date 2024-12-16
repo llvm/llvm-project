@@ -33,7 +33,8 @@ bool OpenACCClauseWithVarList::classof(const OpenACCClause *C) {
          OpenACCFirstPrivateClause::classof(C) ||
          OpenACCDevicePtrClause::classof(C) ||
          OpenACCDevicePtrClause::classof(C) ||
-         OpenACCAttachClause::classof(C) || OpenACCNoCreateClause::classof(C) ||
+         OpenACCDetachClause::classof(C) || OpenACCAttachClause::classof(C) ||
+         OpenACCNoCreateClause::classof(C) ||
          OpenACCPresentClause::classof(C) || OpenACCCopyClause::classof(C) ||
          OpenACCCopyInClause::classof(C) || OpenACCCopyOutClause::classof(C) ||
          OpenACCReductionClause::classof(C) || OpenACCCreateClause::classof(C);
@@ -277,6 +278,16 @@ OpenACCAttachClause *OpenACCAttachClause::Create(const ASTContext &C,
   return new (Mem) OpenACCAttachClause(BeginLoc, LParenLoc, VarList, EndLoc);
 }
 
+OpenACCDetachClause *OpenACCDetachClause::Create(const ASTContext &C,
+                                                 SourceLocation BeginLoc,
+                                                 SourceLocation LParenLoc,
+                                                 ArrayRef<Expr *> VarList,
+                                                 SourceLocation EndLoc) {
+  void *Mem =
+      C.Allocate(OpenACCDetachClause::totalSizeToAlloc<Expr *>(VarList.size()));
+  return new (Mem) OpenACCDetachClause(BeginLoc, LParenLoc, VarList, EndLoc);
+}
+
 OpenACCDevicePtrClause *OpenACCDevicePtrClause::Create(const ASTContext &C,
                                                        SourceLocation BeginLoc,
                                                        SourceLocation LParenLoc,
@@ -444,6 +455,22 @@ OpenACCVectorClause *OpenACCVectorClause::Create(const ASTContext &C,
   return new (Mem) OpenACCVectorClause(BeginLoc, LParenLoc, IntExpr, EndLoc);
 }
 
+OpenACCFinalizeClause *OpenACCFinalizeClause::Create(const ASTContext &C,
+                                                     SourceLocation BeginLoc,
+                                                     SourceLocation EndLoc) {
+  void *Mem =
+      C.Allocate(sizeof(OpenACCFinalizeClause), alignof(OpenACCFinalizeClause));
+  return new (Mem) OpenACCFinalizeClause(BeginLoc, EndLoc);
+}
+
+OpenACCIfPresentClause *OpenACCIfPresentClause::Create(const ASTContext &C,
+                                                       SourceLocation BeginLoc,
+                                                       SourceLocation EndLoc) {
+  void *Mem = C.Allocate(sizeof(OpenACCIfPresentClause),
+                         alignof(OpenACCIfPresentClause));
+  return new (Mem) OpenACCIfPresentClause(BeginLoc, EndLoc);
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenACC clauses printing methods
 //===----------------------------------------------------------------------===//
@@ -525,6 +552,13 @@ void OpenACCClausePrinter::VisitFirstPrivateClause(
 
 void OpenACCClausePrinter::VisitAttachClause(const OpenACCAttachClause &C) {
   OS << "attach(";
+  llvm::interleaveComma(C.getVarList(), OS,
+                        [&](const Expr *E) { printExpr(E); });
+  OS << ")";
+}
+
+void OpenACCClausePrinter::VisitDetachClause(const OpenACCDetachClause &C) {
+  OS << "detach(";
   llvm::interleaveComma(C.getVarList(), OS,
                         [&](const Expr *E) { printExpr(E); });
   OS << ")";
@@ -684,4 +718,13 @@ void OpenACCClausePrinter::VisitVectorClause(const OpenACCVectorClause &C) {
     printExpr(C.getIntExpr());
     OS << ")";
   }
+}
+
+void OpenACCClausePrinter::VisitFinalizeClause(const OpenACCFinalizeClause &C) {
+  OS << "finalize";
+}
+
+void OpenACCClausePrinter::VisitIfPresentClause(
+    const OpenACCIfPresentClause &C) {
+  OS << "if_present";
 }

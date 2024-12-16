@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_PARTITION_H
-#define _LIBCPP___ALGORITHM_RANGES_PARTITION_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_RANGES_PARTITION_H
+#define _LIBCPP___CXX03___ALGORITHM_RANGES_PARTITION_H
 
 #include <__cxx03/__algorithm/iterator_operations.h>
 #include <__cxx03/__algorithm/make_projected.h>
@@ -85,4 +85,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RANGES_PARTITION_H
+#endif // _LIBCPP___CXX03___ALGORITHM_RANGES_PARTITION_H

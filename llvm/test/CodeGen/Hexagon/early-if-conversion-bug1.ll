@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=hexagon -mcpu=hexagonv5 < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=hexagon -mcpu=hexagonv5 < %s | FileCheck %s
 ; we do not want to see a segv.
 ; CHECK-NOT: segmentation
 ; CHECK: call

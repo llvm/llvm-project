@@ -1,5 +1,5 @@
-; RUN: llc -march=bpfel -o - %s | FileCheck %s
-; RUN: llc -march=bpfeb -o - %s | FileCheck %s
+; RUN: llc -mtriple=bpfel -o - %s | FileCheck %s
+; RUN: llc -mtriple=bpfeb -o - %s | FileCheck %s
 ; Source:
 ;   struct t1 {
 ;     int a;

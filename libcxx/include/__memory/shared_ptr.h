@@ -43,6 +43,7 @@
 #include <__type_traits/is_bounded_array.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
+#include <__type_traits/is_function.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_unbounded_array.h>

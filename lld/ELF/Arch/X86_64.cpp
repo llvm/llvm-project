@@ -1083,7 +1083,7 @@ static void relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) {
   if (op != 0xff) {
     // We are relaxing a rip relative to an absolute, so compensate
     // for the old -4 addend.
-    assert(!rel.sym->file || !rel.sym->file->ctx.arg.isPic);
+    assert(!rel.sym->file->ctx.arg.isPic);
     relaxGotNoPic(loc, val + 4, op, modRm,
                   rel.type == R_X86_64_CODE_4_GOTPCRELX);
     return;

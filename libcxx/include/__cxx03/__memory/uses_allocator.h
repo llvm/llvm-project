@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_USES_ALLOCATOR_H
-#define _LIBCPP___MEMORY_USES_ALLOCATOR_H
+#ifndef _LIBCPP___CXX03___MEMORY_USES_ALLOCATOR_H
+#define _LIBCPP___CXX03___MEMORY_USES_ALLOCATOR_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/is_convertible.h>
@@ -49,4 +49,4 @@ inline constexpr bool uses_allocator_v = uses_allocator<_Tp, _Alloc>::value;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_USES_ALLOCATOR_H
+#endif // _LIBCPP___CXX03___MEMORY_USES_ALLOCATOR_H

@@ -4328,8 +4328,8 @@ uint64_t ASTWriter::WriteSpecializationInfoLookupTable(
                                         IsPartial);
 
   uint64_t Offset = Stream.GetCurrentBitNo();
-  RecordData::value_type Record[] = {IsPartial ? DECL_PARTIAL_SPECIALIZATIONS
-                                               : DECL_SPECIALIZATIONS};
+  RecordData::value_type Record[] = {static_cast<RecordData::value_type>(
+      IsPartial ? DECL_PARTIAL_SPECIALIZATIONS : DECL_SPECIALIZATIONS)};
   Stream.EmitRecordWithBlob(IsPartial ? DeclPartialSpecializationsAbbrev
                                       : DeclSpecializationsAbbrev,
                             Record, LookupTable);
@@ -5111,7 +5111,7 @@ ASTWriter::WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
 
   Sema *SemaPtr = Subject.dyn_cast<Sema *>();
   Preprocessor &PPRef =
-      SemaPtr ? SemaPtr->getPreprocessor() : *Subject.get<Preprocessor *>();
+      SemaPtr ? SemaPtr->getPreprocessor() : *cast<Preprocessor *>(Subject);
 
   ASTHasCompilerErrors = PPRef.getDiagnostics().hasUncompilableErrorOccurred();
 
@@ -6065,7 +6065,9 @@ void ASTWriter::WriteSpecializationsUpdates(bool IsPartial) {
                                           LookupTable, IsPartial);
 
     // Write the lookup table
-    RecordData::value_type Record[] = {RecordType, getDeclID(D).getRawValue()};
+    RecordData::value_type Record[] = {
+        static_cast<RecordData::value_type>(RecordType),
+        getDeclID(D).getRawValue()};
     Stream.EmitRecordWithBlob(UpdateSpecializationAbbrev, Record, LookupTable);
   }
 }
@@ -8354,6 +8356,12 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeOpenACCVarList(AC);
     return;
   }
+  case OpenACCClauseKind::Detach: {
+    const auto *DC = cast<OpenACCDetachClause>(C);
+    writeSourceLocation(DC->getLParenLoc());
+    writeOpenACCVarList(DC);
+    return;
+  }
   case OpenACCClauseKind::DevicePtr: {
     const auto *DPC = cast<OpenACCDevicePtrClause>(C);
     writeSourceLocation(DPC->getLParenLoc());
@@ -8449,6 +8457,8 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::Seq:
   case OpenACCClauseKind::Independent:
   case OpenACCClauseKind::Auto:
+  case OpenACCClauseKind::Finalize:
+  case OpenACCClauseKind::IfPresent:
     // Nothing to do here, there is no additional information beyond the
     // begin/end loc and clause kind.
     return;
@@ -8494,12 +8504,9 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     return;
   }
 
-  case OpenACCClauseKind::Finalize:
-  case OpenACCClauseKind::IfPresent:
   case OpenACCClauseKind::NoHost:
   case OpenACCClauseKind::UseDevice:
   case OpenACCClauseKind::Delete:
-  case OpenACCClauseKind::Detach:
   case OpenACCClauseKind::Device:
   case OpenACCClauseKind::DeviceResident:
   case OpenACCClauseKind::Host:

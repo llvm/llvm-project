@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_VIEW_INTERFACE_H
-#define _LIBCPP___RANGES_VIEW_INTERFACE_H
+#ifndef _LIBCPP___CXX03___RANGES_VIEW_INTERFACE_H
+#define _LIBCPP___CXX03___RANGES_VIEW_INTERFACE_H
 
 #include <__cxx03/__assert>
 #include <__cxx03/__concepts/derived_from.h>
@@ -167,4 +167,4 @@ public:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANGES_VIEW_INTERFACE_H
+#endif // _LIBCPP___CXX03___RANGES_VIEW_INTERFACE_H
