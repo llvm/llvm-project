@@ -79,7 +79,7 @@ _start:
 
 #--- err.s
 # RUN: llvm-mc -filetype=obj -triple=aarch64 err.s -o err.o
-# RUN: not ld.lld err.o a.so -pie -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
+# RUN: not ld.lld err.o a.so -pie 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
 # ERR: error: both AUTH and non-AUTH GOT entries for 'bar' requested, but only one type of GOT entry per symbol is supported
 
 .globl _start
