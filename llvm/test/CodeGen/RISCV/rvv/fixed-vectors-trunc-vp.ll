@@ -411,8 +411,7 @@ define <128 x i32> @vtrunc_v128i32_v128i64(<128 x i64> %a, <128 x i1> %m, i32 ze
 ; CHECK-NEXT:    slli a4, a4, 4
 ; CHECK-NEXT:    add a4, sp, a4
 ; CHECK-NEXT:    addi a4, a4, 16
-; CHECK-NEXT:    vl8r.v v16, (a4) # Unknown-size Folded Reload
-; CHECK-NEXT:    vmv4r.v v24, v16
+; CHECK-NEXT:    vl8r.v v24, (a4) # Unknown-size Folded Reload
 ; CHECK-NEXT:    csrr a4, vlenb
 ; CHECK-NEXT:    slli a4, a4, 3
 ; CHECK-NEXT:    add a4, sp, a4
