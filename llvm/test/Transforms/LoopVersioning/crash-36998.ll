@@ -5,8 +5,9 @@
 @b = external global i16, align 1
 @c = external global i16, align 1
 
-define i16 @f2() {
-; CHECK-LABEL: define i16 @f2() {
+define i16 @f2(i16 %a) {
+; CHECK-LABEL: define i16 @f2(
+; CHECK-SAME: i16 [[A:%.*]]) {
 ; CHECK-NEXT:  [[FOR_BODY_LVER_CHECK:.*:]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr @b, getelementptr inbounds nuw (i8, ptr @a, i64 2)
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr @a, getelementptr inbounds nuw (i8, ptr @b, i64 2)
@@ -17,14 +18,14 @@ define i16 @f2() {
 ; CHECK:       [[FOR_BODY_LVER_ORIG]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr @a, align 1
 ; CHECK-NEXT:    store i16 [[TMP0]], ptr @b, align 1
-; CHECK-NEXT:    [[INC_LVER_ORIG:%.*]] = add nsw i16 undef, 1
+; CHECK-NEXT:    [[INC_LVER_ORIG:%.*]] = add nsw i16 [[A]], 1
 ; CHECK-NEXT:    br i1 false, label %[[FOR_BODY_LVER_ORIG]], label %[[FOR_COND_FOR_END_CRIT_EDGE_LOOPEXIT:.*]]
 ; CHECK:       [[FOR_BODY_PH]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr @a, align 1, !alias.scope [[META0:![0-9]+]]
 ; CHECK-NEXT:    store i16 [[TMP1]], ptr @b, align 1, !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
-; CHECK-NEXT:    [[INC:%.*]] = add nsw i16 undef, 1
+; CHECK-NEXT:    [[INC:%.*]] = add nsw i16 [[A]], 1
 ; CHECK-NEXT:    br i1 false, label %[[FOR_BODY]], label %[[FOR_COND_FOR_END_CRIT_EDGE_LOOPEXIT1:.*]]
 ; CHECK:       [[FOR_COND_FOR_END_CRIT_EDGE_LOOPEXIT]]:
 ; CHECK-NEXT:    [[INC_LCSSA_PH:%.*]] = phi i16 [ [[INC_LVER_ORIG]], %[[FOR_BODY_LVER_ORIG]] ]
@@ -46,7 +47,7 @@ entry:
 for.body:                                         ; preds = %for.body, %entry
   %0 = load i16, ptr @a, align 1
   store i16 %0, ptr @b, align 1
-  %inc = add nsw i16 undef, 1
+  %inc = add nsw i16 %a, 1
   br i1 false, label %for.body, label %for.cond.for.end_crit_edge
 
 for.cond.for.end_crit_edge:                       ; preds = %for.body
