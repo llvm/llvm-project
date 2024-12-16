@@ -1,20 +1,17 @@
 Architecture Support
 ====================
 
-The currently continuously tested CPU architures are:
+The currently continuously tested architectures are:
 
-* x86_64
 * aarch64
+* amdgpu
 * arm
+* nvptx
 * riscv32
 * riscv64
+* x86_64
 
-i386 support is in the works.
-
-The currently continuously tested GPU architures are:
-
-* amdgcn-amd-amdhsa
-* nvptx64-nvidia-cuda
+i386 support is [in the works](https://github.com/llvm/llvm-project/issues/93709).
 
 See "`Bringup on a New OS or Architecture <porting.html>`__" for more
 information. Please do first file a bug in
