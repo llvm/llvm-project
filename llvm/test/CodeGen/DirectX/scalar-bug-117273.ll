@@ -2,31 +2,24 @@
 ; RUN: opt -S -passes='dxil-data-scalarization,dxil-flatten-arrays,function(scalarizer<load-store>),dxil-op-lower' -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
 
 
-@_ZL7Palette = internal constant [8 x <3 x float>] [<3 x float> zeroinitializer, <3 x float> splat (float 5.000000e-01), <3 x float> <float 1.000000e+00, float 5.000000e-01, float 5.000000e-01>, <3 x float> <float 5.000000e-01, float 1.000000e+00, float 5.000000e-01>, <3 x float> <float 5.000000e-01, float 5.000000e-01, float 1.000000e+00>, <3 x float> <float 5.000000e-01, float 1.000000e+00, float 1.000000e+00>, <3 x float> <float 1.000000e+00, float 5.000000e-01, float 1.000000e+00>, <3 x float> <float 1.000000e+00, float 1.000000e+00, float 5.000000e-01>], align 16
+@StaticArr = internal constant [8 x <3 x float>] [<3 x float> zeroinitializer, <3 x float> splat (float 5.000000e-01), <3 x float> <float 1.000000e+00, float 5.000000e-01, float 5.000000e-01>, <3 x float> <float 5.000000e-01, float 1.000000e+00, float 5.000000e-01>, <3 x float> <float 5.000000e-01, float 5.000000e-01, float 1.000000e+00>, <3 x float> <float 5.000000e-01, float 1.000000e+00, float 1.000000e+00>, <3 x float> <float 1.000000e+00, float 5.000000e-01, float 1.000000e+00>, <3 x float> <float 1.000000e+00, float 1.000000e+00, float 5.000000e-01>], align 16
 
 ; Function Attrs: alwaysinline convergent mustprogress norecurse nounwind
-define internal void @_Z4mainDv3_j(<3 x i32> noundef %DID) #1 {
-; CHECK-LABEL: define internal void @_Z4mainDv3_j(
-; CHECK-SAME: <3 x i32> noundef [[DID:%.*]]) {
+define internal void @main() #1 {
+; CHECK-LABEL: define internal void @main() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [24 x float], ptr @_ZL7Palette.scalarized.1dim, i32 1
-; CHECK-NEXT:    [[DOTI0:%.*]] = load float, ptr [[TMP0]], align 16
-; CHECK-NEXT:    [[DOTI1:%.*]] = getelementptr float, ptr [[TMP0]], i32 1
-; CHECK-NEXT:    [[DOTI11:%.*]] = load float, ptr [[DOTI1]], align 4
-; CHECK-NEXT:    [[DOTI2:%.*]] = getelementptr float, ptr [[TMP0]], i32 2
-; CHECK-NEXT:    [[DOTI22:%.*]] = load float, ptr [[DOTI2]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [24 x float], ptr @_ZL7Palette.scalarized.1dim, i32 2
-; CHECK-NEXT:    [[DOTI03:%.*]] = load float, ptr [[TMP1]], align 16
-; CHECK-NEXT:    [[DOTI14:%.*]] = getelementptr float, ptr [[TMP1]], i32 1
-; CHECK-NEXT:    [[DOTI15:%.*]] = load float, ptr [[DOTI14]], align 4
-; CHECK-NEXT:    [[DOTI26:%.*]] = getelementptr float, ptr [[TMP1]], i32 2
-; CHECK-NEXT:    [[DOTI27:%.*]] = load float, ptr [[DOTI26]], align 8
+; CHECK-NEXT:    [[DOTI0:%.*]] = load float, ptr getelementptr inbounds ([24 x float], ptr @StaticArr.scalarized.1dim, i32 1), align 16
+; CHECK-NEXT:    [[DOTI1:%.*]] = load float, ptr getelementptr (float, ptr getelementptr inbounds ([24 x float], ptr @StaticArr.scalarized.1dim, i32 1), i32 1), align 4
+; CHECK-NEXT:    [[DOTI2:%.*]] = load float, ptr getelementptr (float, ptr getelementptr inbounds ([24 x float], ptr @StaticArr.scalarized.1dim, i32 1), i32 2), align 8
+; CHECK-NEXT:    [[DOTI01:%.*]] = load float, ptr getelementptr inbounds ([24 x float], ptr @StaticArr.scalarized.1dim, i32 2), align 16
+; CHECK-NEXT:    [[DOTI12:%.*]] = load float, ptr getelementptr (float, ptr getelementptr inbounds ([24 x float], ptr @StaticArr.scalarized.1dim, i32 2), i32 1), align 4
+; CHECK-NEXT:    [[DOTI23:%.*]] = load float, ptr getelementptr (float, ptr getelementptr inbounds ([24 x float], ptr @StaticArr.scalarized.1dim, i32 2), i32 2), align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %arrayidx = getelementptr inbounds [8 x <3 x float>], ptr @_ZL7Palette, i32 0, i32 1
+  %arrayidx = getelementptr inbounds [8 x <3 x float>], ptr @StaticArr, i32 0, i32 1
   %2 = load <3 x float>, ptr %arrayidx, align 16
-  %arrayidx2 = getelementptr inbounds [8 x <3 x float>], ptr @_ZL7Palette, i32 0, i32 2
+  %arrayidx2 = getelementptr inbounds [8 x <3 x float>], ptr @StaticArr, i32 0, i32 2
   %3 = load <3 x float>, ptr %arrayidx2, align 16
   ret void
 }

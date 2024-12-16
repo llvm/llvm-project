@@ -164,11 +164,18 @@ bool DXILFlattenArraysVisitor::visitLoadInst(LoadInst &LI) {
     Value *CurrOpperand = LI.getOperand(I);
     ConstantExpr *CE = dyn_cast<ConstantExpr>(CurrOpperand);
     if (CE && CE->getOpcode() == Instruction::GetElementPtr) {
-      convertUsersOfConstantsToInstructions(CE,
-                                            /*RestrictToFunc=*/nullptr,
-                                            /*RemoveDeadConstants=*/false,
-                                            /*IncludeSelf=*/true);
-      return false;
+      GetElementPtrInst *OldGEP =
+          cast<GetElementPtrInst>(CE->getAsInstruction());
+      OldGEP->insertBefore(&LI);
+
+      IRBuilder<> Builder(&LI);
+      LoadInst *NewLoad =
+          Builder.CreateLoad(LI.getType(), OldGEP, LI.getName());
+      NewLoad->setAlignment(LI.getAlign());
+      LI.replaceAllUsesWith(NewLoad);
+      LI.eraseFromParent();
+      visitGetElementPtrInst(*OldGEP);
+      return true;
     }
   }
   return false;
@@ -180,11 +187,17 @@ bool DXILFlattenArraysVisitor::visitStoreInst(StoreInst &SI) {
     Value *CurrOpperand = SI.getOperand(I);
     ConstantExpr *CE = dyn_cast<ConstantExpr>(CurrOpperand);
     if (CE && CE->getOpcode() == Instruction::GetElementPtr) {
-      convertUsersOfConstantsToInstructions(CE,
-                                            /*RestrictToFunc=*/nullptr,
-                                            /*RemoveDeadConstants=*/false,
-                                            /*IncludeSelf=*/true);
-      return false;
+      GetElementPtrInst *OldGEP =
+          cast<GetElementPtrInst>(CE->getAsInstruction());
+      OldGEP->insertBefore(&SI);
+
+      IRBuilder<> Builder(&SI);
+      StoreInst *NewStore = Builder.CreateStore(SI.getValueOperand(), OldGEP);
+      NewStore->setAlignment(SI.getAlign());
+      SI.replaceAllUsesWith(NewStore);
+      SI.eraseFromParent();
+      visitGetElementPtrInst(*OldGEP);
+      return true;
     }
   }
   return false;
@@ -317,20 +330,20 @@ bool DXILFlattenArraysVisitor::visit(Function &F) {
 static void collectElements(Constant *Init,
                             SmallVectorImpl<Constant *> &Elements) {
   // Base case: If Init is not an array, add it directly to the vector.
-  if (!isa<ArrayType>(Init->getType())) {
+  auto *ArrayTy = dyn_cast<ArrayType>(Init->getType());
+  if (!ArrayTy) {
     Elements.push_back(Init);
     return;
   }
-  auto *LLVMArrayType = dyn_cast<ArrayType>(Init->getType());
+  unsigned ArrSize = ArrayTy->getNumElements();
   if (isa<ConstantAggregateZero>(Init)) {
-    for (unsigned I = 0; I < LLVMArrayType->getNumElements(); ++I)
-      Elements.push_back(
-          Constant::getNullValue(LLVMArrayType->getElementType()));
+    for (unsigned I = 0; I < ArrSize; ++I)
+      Elements.push_back(Constant::getNullValue(ArrayTy->getElementType()));
     return;
   }
   if (isa<UndefValue>(Init)) {
-    for (unsigned I = 0; I < LLVMArrayType->getNumElements(); ++I)
-      Elements.push_back(UndefValue::get(LLVMArrayType->getElementType()));
+    for (unsigned I = 0; I < ArrSize; ++I)
+      Elements.push_back(UndefValue::get(ArrayTy->getElementType()));
     return;
   }
 
