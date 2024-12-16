@@ -234,7 +234,7 @@ Logging the tool init-process:
   // ...
   
   // Finally, take a snapshot of the time now so we know how long it took the
-  // init process to finish
+  // init process to finish.
   auto EndTime = std::chrono::time_point<std::chrono::steady_clock>::now();
   MyTelemetryInfo Entry;
 
