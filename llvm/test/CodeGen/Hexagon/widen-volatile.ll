@@ -1,6 +1,6 @@
 ; Check the volatile load/stores are not widened by HexagonLoadStoreWidening pass
 
-; RUN: llc -march=hexagon -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -verify-machineinstrs < %s | FileCheck %s
 
 target triple = "hexagon"
 

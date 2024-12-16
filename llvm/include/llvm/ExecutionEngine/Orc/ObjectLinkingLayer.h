@@ -39,8 +39,6 @@ class Symbol;
 
 namespace orc {
 
-class ObjectLinkingLayerJITLinkContext;
-
 /// An ObjectLayer implementation built on JITLink.
 ///
 /// Clients can use this class to add relocatable object files to an
@@ -48,7 +46,7 @@ class ObjectLinkingLayerJITLinkContext;
 /// a compiling layer like IRCompileLayer) for the rest of the JIT.
 class ObjectLinkingLayer : public RTTIExtends<ObjectLinkingLayer, ObjectLayer>,
                            private ResourceManager {
-  friend class ObjectLinkingLayerJITLinkContext;
+  class JITLinkCtx;
 
 public:
   static char ID;
