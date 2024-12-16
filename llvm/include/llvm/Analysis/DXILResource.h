@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
@@ -22,7 +23,6 @@ class CallInst;
 class DataLayout;
 class LLVMContext;
 class MDTuple;
-class TargetExtType;
 class Value;
 
 namespace dxil {
