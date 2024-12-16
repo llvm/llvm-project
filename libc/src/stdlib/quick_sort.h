@@ -19,9 +19,38 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-// A simple quicksort implementation using the Hoare partition scheme.
+// Branchless Lomuto partition based on the implementation by Lukas
+// Bergdoll and Orson Peters
+// https://github.com/Voultapher/sort-research-rs/blob/main/writeup/lomcyc_partition/text.md.
+// Simplified to avoid having to stack allocate.
 template <typename A, typename F>
-size_t partition_hoare(const A &array, const void *pivot, const F &is_less) {
+size_t partition_lomuto_branchless(const A &array, const void *pivot,
+                                   const F &is_less) {
+  const size_t array_len = array.len();
+
+  size_t left = 0;
+  size_t right = 0;
+
+  while (right < array_len) {
+    const bool right_is_lt = is_less(array.get(right), pivot);
+    array.swap(left, right);
+    left += static_cast<size_t>(right_is_lt);
+    right += 1;
+  }
+
+  return left;
+}
+
+// Optimized for large types that are expensive to move. Not optimized
+// for integers. It's possible to use a cyclic permutation here for
+// large types as done in ipnsort but the advantages of this are limited
+// as `is_less` is a small wrapper around a call to a function pointer
+// and won't incur much binary-size overhead. The other reason to use
+// cyclic permutation is to have more efficient swapping, but we don't
+// know the element size so this isn't applicable here either.
+template <typename A, typename F>
+size_t partition_hoare_branchy(const A &array, const void *pivot,
+                               const F &is_less) {
   const size_t array_len = array.len();
 
   size_t left = 0;
@@ -55,7 +84,16 @@ size_t partition(const A &array, size_t pivot_index, const F &is_less) {
 
   const A array_without_pivot = array.make_array(1, array.len() - 1);
   const void *pivot = array.get(0);
-  const size_t num_lt = partition_hoare(array_without_pivot, pivot, is_less);
+
+  size_t num_lt;
+  if constexpr (A::has_fixed_size()) {
+    // Branchless Lomuto avoid branch misprediction penalties, but
+    // it also swaps more often which only is faster if the swap a
+    // constant operation.
+    num_lt = partition_lomuto_branchless(array_without_pivot, pivot, is_less);
+  } else {
+    num_lt = partition_hoare_branchy(array_without_pivot, pivot, is_less);
+  }
 
   // Place the pivot between the two partitions.
   array.swap(0, num_lt);

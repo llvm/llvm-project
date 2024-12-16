@@ -18,9 +18,12 @@
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
+
 // Returns the max amount of bytes deemed reasonable - based on the target
-// settings - for use in local stack arrays.
+// properties - for use in local stack arrays.
 constexpr size_t max_stack_array_size() {
+  // Uses target pointer size as heuristic how much memory is available and
+  // unlikely to run into stack overflow and perf problems.
   constexpr size_t ptr_diff_size = sizeof(ptrdiff_t);
 
   if constexpr (ptr_diff_size >= 8) {
@@ -49,6 +52,8 @@ class ArrayGenericSize {
 public:
   ArrayGenericSize(uint8_t *a, size_t s, size_t e) noexcept
       : array_base(a), array_len(s), elem_size(e) {}
+
+  static constexpr bool has_fixed_size() { return false; }
 
   inline void *get(size_t i) const noexcept {
     return reinterpret_cast<void *>(get_internal(i));
@@ -109,6 +114,11 @@ template <size_t ELEM_SIZE> class ArrayFixedSize {
 
 public:
   ArrayFixedSize(uint8_t *a, size_t s) noexcept : array_base(a), array_len(s) {}
+
+  // Beware this function is used a heuristic for cheap to swap types, so
+  // instantiating `ArrayFixedSize` with `ELEM_SIZE > 100` is probably a bad
+  // idea perf wise.
+  static constexpr bool has_fixed_size() { return true; }
 
   inline void *get(size_t i) const noexcept {
     return reinterpret_cast<void *>(get_internal(i));
