@@ -622,7 +622,7 @@ bool TargetTransformInfo::isTargetIntrinsicWithOverloadTypeAtArg(
 
 bool TargetTransformInfo::isTargetIntrinsicWithStructReturnOverloadAtField(
     Intrinsic::ID ID, int RetIdx) const {
-  return TTIImpl->isTargetIntrinsicWithOverloadTypeAtArg(ID, RetIdx);
+  return TTIImpl->isTargetIntrinsicWithStructReturnOverloadAtField(ID, RetIdx);
 }
 
 InstructionCost TargetTransformInfo::getScalarizationOverhead(
