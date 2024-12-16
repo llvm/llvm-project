@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "spirv-isel"
 
@@ -44,6 +45,17 @@ using ExtInstList =
     std::vector<std::pair<SPIRV::InstructionSet::InstructionSet, uint32_t>>;
 
 namespace {
+
+llvm::SPIRV::SelectionControl::SelectionControl
+getSelectionOperandForImm(int Imm) {
+  if (Imm == 2)
+    return SPIRV::SelectionControl::Flatten;
+  if (Imm == 1)
+    return SPIRV::SelectionControl::DontFlatten;
+  if (Imm == 0)
+    return SPIRV::SelectionControl::None;
+  llvm_unreachable("Invalid immediate");
+}
 
 #define GET_GLOBALISEL_PREDICATE_BITSET
 #include "SPIRVGenGlobalISel.inc"
@@ -2786,23 +2798,11 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return MIB.constrainAllUses(TII, TRI, RBI);
   }
   case Intrinsic::spv_selection_merge: {
-
-    int64_t SelectionControl = SPIRV::SelectionControl::None;
-    auto LastOp = I.getOperand(I.getNumOperands() - 1);
-
-    auto BranchHint = LastOp.getImm();
-    if (BranchHint == 2)
-      SelectionControl = SPIRV::SelectionControl::Flatten;
-    else if (BranchHint == 1)
-      SelectionControl = SPIRV::SelectionControl::DontFlatten;
-
     auto MIB =
         BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSelectionMerge));
-    for (unsigned i = 1; i < I.getNumExplicitOperands() - 1; ++i) {
-      assert(I.getOperand(i).isMBB());
-      MIB.addMBB(I.getOperand(i).getMBB());
-    }
-    MIB.addImm(SelectionControl);
+    assert(I.getOperand(1).isMBB());
+    MIB.addMBB(I.getOperand(1).getMBB());
+    MIB.addImm(getSelectionOperandForImm(I.getOperand(2).getImm()));
     return MIB.constrainAllUses(TII, TRI, RBI);
   }
   case Intrinsic::spv_cmpxchg:
