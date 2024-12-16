@@ -1665,11 +1665,16 @@ struct DSEState {
       // original MD. Stop walk.
       // If KillingDef is a CallInst with "initializes" attribute, the reads in
       // the callee would be dominated by initializations, so it should be safe.
+      // Note that in `getInitializesArgMemLoc`, we only check the aliasing
+      // among arguments. If aliasing through global variables, we consider it
+      // as read clobber.
       bool IsKillingDefFromInitAttr = false;
       if (IsInitializesAttrMemLoc) {
-        if (KillingI == UseInst &&
-            KillingUndObj == getUnderlyingObject(MaybeDeadLoc.Ptr))
-          IsKillingDefFromInitAttr = true;
+        if (auto *CB = dyn_cast<CallBase>(UseInst))
+          IsKillingDefFromInitAttr =
+              KillingI == UseInst &&
+              KillingUndObj == getUnderlyingObject(MaybeDeadLoc.Ptr) &&
+              CB->onlyAccessesInaccessibleMemOrArgMem();
       }
 
       if (isReadClobber(MaybeDeadLoc, UseInst) && !IsKillingDefFromInitAttr) {

@@ -2,12 +2,22 @@
 ; RUN: opt < %s -passes=dse -enable-dse-initializes-attr-improvement -S | FileCheck %s
 
 declare void @p1_write_only(ptr nocapture noundef writeonly initializes((0, 2)) dead_on_unwind)
+
 declare void @p1_write_then_read(ptr nocapture noundef initializes((0, 2)) dead_on_unwind)
+  memory(argmem: readwrite, inaccessiblemem: readwrite)
+
 declare void @p1_clobber(ptr nocapture noundef)
+
 declare void @p2_same_range(ptr nocapture noundef initializes((0, 2)) dead_on_unwind, ptr nocapture noundef initializes((0, 2)) dead_on_unwind)
+  memory(argmem: readwrite, inaccessiblemem: readwrite)
+
 declare void @p2_no_init(ptr nocapture noundef initializes((0, 2)) dead_on_unwind, ptr nocapture noundef dead_on_unwind)
+
 declare void @p2_no_dead_on_unwind(ptr nocapture noundef initializes((0, 2)) dead_on_unwind, ptr nocapture noundef initializes((0, 2)))
+  memory(argmem: readwrite, inaccessiblemem: readwrite)
+
 declare void @p2_no_dead_on_unwind_but_nounwind(ptr nocapture noundef initializes((0, 2)) dead_on_unwind, ptr nocapture noundef initializes((0, 2))) nounwind
+  memory(argmem: readwrite, inaccessiblemem: readwrite)
 
 ; Function Attrs: mustprogress nounwind uwtable
 define i16 @p1_write_only_caller() {
@@ -215,8 +225,12 @@ define i16 @p2_no_dead_on_unwind_but_nounwind_alias_caller() {
 }
 
 declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind
+
 declare void @large_p1(ptr nocapture noundef initializes((0, 200))) nounwind
+  memory(argmem: readwrite, inaccessiblemem: readwrite)
+
 declare void @large_p2(ptr nocapture noundef initializes((0, 200)), ptr nocapture noundef initializes((0, 100))) nounwind
+  memory(argmem: readwrite, inaccessiblemem: readwrite)
 
 ; Function Attrs: mustprogress nounwind uwtable
 define i16 @large_p1_caller() {
@@ -296,6 +310,26 @@ define i16 @large_p2_may_or_partial_alias_caller2(ptr %base1, ptr %base2) {
   call void @llvm.memset.p0.i64(ptr %base1, i8 42, i64 300, i1 false)
   call void @large_p2(ptr %base1, ptr %base2)
   %l = load i16, ptr %base1
+  ret i16 %l
+}
+
+@g = global i16 123, align 2
+
+declare void @read_global(ptr nocapture noundef initializes((0, 2)))
+  memory(read, argmem: write, inaccessiblemem: none) nounwind
+
+define i16 @global_var_alias() {
+; CHECK-LABEL: @global_var_alias(
+; CHECK-NEXT:    store i32 0, ptr @g, align 4
+; CHECK-NEXT:    [[G_ADDR:%.*]] = getelementptr i32, ptr @g, i64 1
+; CHECK-NEXT:    call void @read_global(ptr [[G_ADDR]])
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr @g, align 2
+; CHECK-NEXT:    ret i16 [[L]]
+;
+  store i32 0, ptr @g, align 4
+  %g_addr = getelementptr i32, ptr @g, i64 1
+  call void @read_global(ptr %g_addr)
+  %l = load i16, ptr @g
   ret i16 %l
 }
 
