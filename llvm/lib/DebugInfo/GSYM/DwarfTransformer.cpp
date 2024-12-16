@@ -578,8 +578,7 @@ void DwarfTransformer::parseCallSiteInfoFromDwarf(CUInfo &CUI, DWARFDie Die,
     // offset relative to FI's start.
     auto ReturnPC =
         dwarf::toAddress(Child.findRecursively(dwarf::DW_AT_call_return_pc));
-    if (!ReturnPC || *ReturnPC < FI.startAddress() ||
-        *ReturnPC >= FI.endAddress())
+    if (!ReturnPC || !FI.Range.contains(*ReturnPC))
       continue;
 
     CSI.ReturnOffset = *ReturnPC - FI.startAddress();
