@@ -58,6 +58,7 @@ list(APPEND CMAKE_MODULE_PATH
   )
 include(AddFlangRT)
 include(FlangCommon)
+include(HandleCompilerRT)
 
 
 ############################
