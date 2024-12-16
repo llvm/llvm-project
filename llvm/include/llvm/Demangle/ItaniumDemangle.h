@@ -1224,15 +1224,6 @@ public:
   }
 };
 
-class BFloat16Type final : public Node {
-public:
-  BFloat16Type() : Node(KBinaryFPType) {}
-
-  template <typename Fn> void match(Fn F) const { F(); }
-
-  void printLeft(OutputBuffer &OB) const override { OB += "bfloat16_t"; }
-};
-
 enum class TemplateParamKind { Type, NonType, Template };
 
 /// An invented name for a template parameter for which we don't have a
@@ -4344,7 +4335,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
     case 'F': {
       First += 2;
       if (consumeIf("16b"))
-        return make<BFloat16Type>();
+        return make<NameType>("bfloat16_t");
       Node *DimensionNumber = make<NameType>(parseNumber());
       if (!DimensionNumber)
         return nullptr;
