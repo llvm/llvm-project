@@ -41,7 +41,6 @@ def p8700WriteEitherALU : ProcResGroup<[p8700ALQ, p8700IssueAL2]>;
 def p8700GpDiv : ProcResource<1>;
 def p8700GpMul : ProcResource<1>;
 
-let Latency = 1 in {
 def : WriteRes<WriteIALU, [p8700WriteEitherALU]>;
 def : WriteRes<WriteIALU32, [p8700WriteEitherALU]>;
 def : WriteRes<WriteShiftImm, [p8700WriteEitherALU]>;
@@ -52,7 +51,6 @@ def : WriteRes<WriteShiftReg32, [p8700WriteEitherALU]>;
 // Handle zba.
 def : WriteRes<WriteSHXADD, [p8700WriteEitherALU]>;
 def : WriteRes<WriteSHXADD32, [p8700WriteEitherALU]>;
-}
 
 // Handle zbb.
 let Latency = 2 in {
@@ -63,7 +61,6 @@ def : WriteRes<WriteCLZ32, [p8700IssueAL2]>;
 def : WriteRes<WriteCTZ32, [p8700IssueAL2]>;
 def : WriteRes<WriteCPOP32, [p8700IssueAL2]>;
 }
-let Latency = 1 in {
 def : WriteRes<WriteRotateReg, [p8700WriteEitherALU]>;
 def : WriteRes<WriteRotateImm, [p8700WriteEitherALU]>;
 def : WriteRes<WriteRotateReg32, [p8700WriteEitherALU]>;
@@ -71,7 +68,6 @@ def : WriteRes<WriteRotateImm32, [p8700WriteEitherALU]>;
 def : WriteRes<WriteREV8, [p8700WriteEitherALU]>;
 def : WriteRes<WriteORCB, [p8700WriteEitherALU]>;
 def : WriteRes<WriteIMinMax, [p8700WriteEitherALU]>;
-}
 
 let Latency = 0 in {
 def : WriteRes<WriteNop, [p8700WriteEitherALU]>;
@@ -104,10 +100,8 @@ def : WriteRes<WriteAtomicSTW, [p8700IssueLSU]>;
 def : WriteRes<WriteAtomicSTD, [p8700IssueLSU]>;
 }
 
-let Latency = 1 in {
 def : WriteRes<WriteFST32, [p8700IssueLSU]>;
 def : WriteRes<WriteFST64, [p8700IssueLSU]>;
-}
 
 let Latency = 7 in {
 def : WriteRes<WriteFMovI32ToF32, [p8700IssueLSU]>;
@@ -121,7 +115,7 @@ def : WriteRes<WriteIMul, [p8700GpMul]>;
 def : WriteRes<WriteIMul32, [p8700GpMul]>;
 }
 
-let Latency = 8, ReleaseAtCycles = [5] in {
+let Latency = 7, ReleaseAtCycles = [7] in {
 def : WriteRes<WriteIDiv, [p8700GpDiv]>;
 def : WriteRes<WriteIDiv32,  [p8700GpDiv]>;
 }
@@ -132,10 +126,8 @@ def : WriteRes<WriteIRem, []>;
 def : WriteRes<WriteIRem32, []>;
 
 // Handle CTI Pipeline.
-let Latency = 1 in {
 def : WriteRes<WriteJmp, [p8700IssueCTI]>;
 def : WriteRes<WriteJalr, [p8700IssueCTI]>;
-}
 let Latency = 2 in {
 def : WriteRes<WriteJal, [p8700IssueCTI]>;
 def : WriteRes<WriteJalr, [p8700IssueCTI]>;
@@ -145,8 +137,8 @@ def : WriteRes<WriteJalr, [p8700IssueCTI]>;
 def p8700FPQ : ProcResource<3> { let BufferSize = 16; }
 def p8700IssueFPUS : ProcResource<1> { let Super = p8700FPQ; }
 def p8700IssueFPUL : ProcResource<1> { let Super = p8700FPQ; }
-def p8700FpuApu       : ProcResource<1>;
-def p8700FpuLong      : ProcResource<1>;
+def p8700FpuApu    : ProcResource<1>;
+def p8700FpuLong   : ProcResource<1>;
 
 let Latency = 4 in {
 def : WriteRes<WriteFCvtI32ToF32, [p8700IssueFPUL, p8700FpuApu]>;
