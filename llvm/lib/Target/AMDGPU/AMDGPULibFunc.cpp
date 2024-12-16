@@ -957,8 +957,15 @@ static Type* getIntrinsicParamType(
   case AMDGPULibFunc::EVENT:
     T = PointerType::getUnqual(C);
     break;
-  default:
-    llvm_unreachable("Unhandled param type");
+  case AMDGPULibFunc::B8:
+  case AMDGPULibFunc::B16:
+  case AMDGPULibFunc::B32:
+  case AMDGPULibFunc::B64:
+  case AMDGPULibFunc::SIZE_MASK:
+  case AMDGPULibFunc::FLOAT:
+  case AMDGPULibFunc::INT:
+  case AMDGPULibFunc::UINT:
+  case AMDGPULibFunc::DUMMY:
     return nullptr;
   }
   if (P.VectorSize > 1)
@@ -974,8 +981,13 @@ FunctionType *AMDGPUMangledLibFunc::getFunctionType(const Module &M) const {
   std::vector<Type*> Args;
   ParamIterator I(Leads, manglingRules[FuncId]);
   Param P;
-  while ((P=I.getNextParam()).ArgType != 0)
-    Args.push_back(getIntrinsicParamType(C, P, true));
+  while ((P = I.getNextParam()).ArgType != 0) {
+    Type *ParamTy = getIntrinsicParamType(C, P, true);
+    if (!ParamTy)
+      return nullptr;
+
+    Args.push_back(ParamTy);
+  }
 
   return FunctionType::get(
     getIntrinsicParamType(C, getRetType(FuncId, Leads), true),
@@ -1001,10 +1013,15 @@ bool AMDGPULibFunc::isCompatibleSignature(const Module &M,
                                           const FunctionType *CallTy) const {
   const FunctionType *FuncTy = getFunctionType(M);
 
-  // FIXME: UnmangledFuncInfo does not have any type information other than the
-  // number of arguments.
-  if (!FuncTy)
+  if (!FuncTy) {
+    // Give up on mangled functions with unexpected types.
+    if (AMDGPULibFuncBase::isMangled(getId()))
+      return false;
+
+    // FIXME: UnmangledFuncInfo does not have any type information other than
+    // the number of arguments.
     return getNumArgs() == CallTy->getNumParams();
+  }
 
   // Normally the types should exactly match.
   if (FuncTy == CallTy)
