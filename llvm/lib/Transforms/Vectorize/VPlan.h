@@ -1347,14 +1347,6 @@ public:
   LLVM_DUMP_METHOD void dump() const;
 #endif
 
-  /// Return true if this instruction may modify memory.
-  bool mayWriteToMemory() const {
-    // TODO: we can use attributes of the called function to rule out memory
-    //       modifications.
-    return Opcode == Instruction::Store || Opcode == Instruction::Call ||
-           Opcode == Instruction::Invoke || Opcode == SLPStore;
-  }
-
   bool hasResult() const {
     // CallInst may or may not have a result, depending on the called function.
     // Conservatively return calls have results for now.

@@ -67,6 +67,8 @@ bool VPRecipeBase::mayWriteToMemory() const {
     case VPInstruction::PtrAdd:
       return false;
     default:
+      // TODO: for calls, we can use attributes of the called function to rule
+      // out memory modifications.
       return true;
     }
   case VPInterleaveSC:
