@@ -89,22 +89,29 @@ ModuleToObject::loadBitcodeFile(llvm::LLVMContext &context, StringRef path) {
 }
 
 LogicalResult ModuleToObject::loadBitcodeFilesFromList(
-    llvm::LLVMContext &context, ArrayRef<std::string> fileList,
+    llvm::LLVMContext &context, ArrayRef<Attribute> librariesToLink,
     SmallVector<std::unique_ptr<llvm::Module>> &llvmModules,
     bool failureOnError) {
-  for (const std::string &str : fileList) {
-    // Test if the path exists, if it doesn't abort.
-    StringRef pathRef = StringRef(str.data(), str.size());
-    if (!llvm::sys::fs::is_regular_file(pathRef)) {
+  for (Attribute linkLib : librariesToLink) {
+    if (auto filePath = dyn_cast<StringAttr>(linkLib)) {
+      // Test if the path exists, if it doesn't abort.
+      if (!llvm::sys::fs::is_regular_file(filePath.strref())) {
+        getOperation().emitError()
+            << "File path: " << filePath << " does not exist or is not a file.";
+        return failure();
+      }
+      // Load the file or abort on error.
+      if (auto bcFile = loadBitcodeFile(context, filePath))
+        llvmModules.push_back(std::move(bcFile));
+      else if (failureOnError)
+        return failure();
+      continue;
+    }
+    if (failureOnError) {
       getOperation().emitError()
-          << "File path: " << pathRef << " does not exist or is not a file.\n";
+          << "Unknown attribute describing LLVM library to load: " << linkLib;
       return failure();
     }
-    // Load the file or abort on error.
-    if (auto bcFile = loadBitcodeFile(context, pathRef))
-      llvmModules.push_back(std::move(bcFile));
-    else if (failureOnError)
-      return failure();
   }
   return success();
 }
