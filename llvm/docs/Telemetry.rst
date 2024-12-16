@@ -230,7 +230,7 @@ Logging the tool init-process:
   auto Manager = MyManager::createInstance(&MyConfig);
 
   
-  // Any other tool's init code can go here
+  // Any other tool's init code can go here.
   // ...
   
   // Finally, take a snapshot of the time now so we know how long it took the
