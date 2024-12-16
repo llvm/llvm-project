@@ -160,19 +160,9 @@ check_cxx_source_compiles(
   HAVE_DECL_STRERROR_S)
 
 
-# Search for clang_rt.builtins library.
+# Search for clang_rt.builtins library. Need in addition to msvcrt.
 if (WIN32)
-  execute_process(
-      COMMAND "${CMAKE_CXX_COMPILER}" "-print-libgcc-file-name" "-rtlib=compiler-rt"
-      RESULT_VARIABLE CXX_COMPILER_PRINT_LIBGCC_PATH_FAILURE
-      OUTPUT_VARIABLE CXX_COMPILER_PRINT_LIBGCC_PATH_RESULT
-      ERROR_QUIET
-    )
-  if (NOT CXX_COMPILER_PRINT_LIBGCC_PATH_FAILURE AND CXX_COMPILER_PRINT_LIBGCC_PATH_RESULT)
-    string(STRIP "${CXX_COMPILER_PRINT_LIBGCC_PATH_RESULT}" FLANG_RT_LIBCALL)
-  else ()
-    set(FLANG_RT_LIBCALL "")
-  endif ()
+  find_compiler_rt_library(builtins FLANG_RT_BUILTINS_LIBRARY)
 endif ()
 
 
