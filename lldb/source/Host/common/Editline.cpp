@@ -939,8 +939,6 @@ PrintCompletion(FILE *output_file,
   size_t lines_printed = 0;
   size_t results_printed = 0;
   for (const CompletionResult::Completion &c : results) {
-    // It's possible we exceed the max height if the last entry had a
-    // multi-line description.
     if (max_height && lines_printed >= *max_height)
       break;
 
@@ -1002,6 +1000,8 @@ PrintCompletion(FILE *output_file,
     for (llvm::StringRef line : llvm::split(c.GetDescription(), '\n')) {
       if (line.empty())
         break;
+      if (max_height && lines_printed >= *max_height)
+        break;
       if (!first)
         fprintf(output_file, "%*s",
                 static_cast<int>(description_col + separator_length), "");
@@ -1047,11 +1047,8 @@ void Editline::DisplayCompletions(
 
   size_t cur_pos = 0;
   while (cur_pos < results.size()) {
-    size_t remaining = results.size() - cur_pos;
-    size_t next_size = all ? remaining : std::min(page_size, remaining);
-
     cur_pos += PrintCompletion(
-        editline.m_output_file, results.slice(cur_pos, next_size), max_len,
+        editline.m_output_file, results.slice(cur_pos), max_len,
         editline.GetTerminalWidth(),
         all ? std::nullopt : std::optional<size_t>(page_size));
 
