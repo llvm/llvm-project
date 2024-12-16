@@ -853,11 +853,13 @@ LogicalResult PassManager::run(Operation *op) {
            << op->getName() << "' op";
 
   // Register all dialects for the current pipeline.
-  DialectRegistry dependentDialects;
-  getDependentDialects(dependentDialects);
-  context->appendDialectRegistry(dependentDialects);
-  for (StringRef name : dependentDialects.getDialectNames())
-    context->getOrLoadDialect(name);
+  if (loadDialects) {
+    DialectRegistry dependentDialects;
+    getDependentDialects(dependentDialects);
+    context->appendDialectRegistry(dependentDialects);
+    for (StringRef name : dependentDialects.getDialectNames())
+      context->getOrLoadDialect(name);
+  }
 
   // Before running, make sure to finalize the pipeline pass list.
   if (failed(getImpl().finalizePassList(context)))
@@ -891,6 +893,11 @@ LogicalResult PassManager::run(Operation *op) {
   if (passStatisticsMode)
     dumpStatistics();
   return result;
+}
+
+
+void PassManager::setAutomaticDialectLoading(bool shouldLoad) {
+  loadDialects = shouldLoad;
 }
 
 /// Add the provided instrumentation to the pass manager.

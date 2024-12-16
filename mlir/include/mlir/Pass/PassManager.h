@@ -274,6 +274,9 @@ public:
   /// Runs the verifier after each individual pass.
   void enableVerifier(bool enabled = true);
 
+  /// Whether dependent dialects should be automatically loaded.
+  void setAutomaticDialectLoading(bool shouldLoad);
+
   //===--------------------------------------------------------------------===//
   // Instrumentations
   //===--------------------------------------------------------------------===//
@@ -496,6 +499,9 @@ private:
 
   /// A flag that indicates if the IR should be verified in between passes.
   bool verifyPasses : 1;
+
+  /// A flag to disable dependent dialect registration.
+  bool loadDialects : 1;
 };
 
 /// Register a set of useful command-line options that can be used to configure
