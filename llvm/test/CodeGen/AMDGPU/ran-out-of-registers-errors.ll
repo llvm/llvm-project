@@ -12,16 +12,12 @@
 
 
 ; CHECK: error: <unknown>:0:0: ran out of registers during register allocation in function 'ran_out_of_registers_general'
-; BASIC: error: <unknown>:0:0: ran out of registers during register allocation in function 'ran_out_of_registers_general'
-; FAST: error: <unknown>:0:0: ran out of registers during register allocation in function 'ran_out_of_registers_general'
 
 ; DBGINFO-GREEDY: error: {{.*}}:3:1: ran out of registers during register allocation in function 'ran_out_of_registers_general'
 
 ; DBGINFO-BASIC: error: {{.*}}:1:1: ran out of registers during register allocation in function 'ran_out_of_registers_general'
-; DBGINFO-BASIC: error: {{.*}}:3:1: ran out of registers during register allocation in function 'ran_out_of_registers_general'
 
 ; DBGINFO-FAST: error: {{.*}}:3:1: ran out of registers during register allocation in function 'ran_out_of_registers_general'
-; DBGINFO-FAST: error: {{.*}}:1:0: ran out of registers during register allocation in function 'ran_out_of_registers_general'
 define i32 @ran_out_of_registers_general(ptr addrspace(1) %ptr) #0 {
   %ld0 = load volatile i32, ptr addrspace(1) %ptr
   %ld1 = load volatile i32, ptr addrspace(1) %ptr
@@ -49,14 +45,11 @@ define void @ran_out_of_registers_asm_use() #0 {
 ; BASIC: error: inline assembly requires more registers than available at line 23
 
 ; FAST: error: <unknown>:0:0: ran out of registers during register allocation in function '@0'
-; FAST: error: <unknown>:0:0: ran out of registers during register allocation in function '@0'
-
 
 ; DBGINFO-GREEDY: error: inline assembly requires more registers than available at line 23
 ; DBGINFO-BASIC: error: inline assembly requires more registers than available at line 23
 
 ; DBGINFO-FAST: error: {{.*}}:12:1: ran out of registers during register allocation in function '@0'
-; DBGINFO-FAST: error: {{.*}}:9:0: ran out of registers during register allocation in function '@0'
 define i32 @0(ptr addrspace(1) %ptr) #0 {
   %asm = call { i32, i32 } asm sideeffect "; def $0 $1 use $2", "=v,=v,v"(ptr addrspace(1) %ptr), !srcloc !0
   %elt0 = extractvalue { i32, i32 } %asm, 0
