@@ -320,10 +320,7 @@ public:
 
   void print(raw_ostream &os, const OpPrintingFlags &flags = std::nullopt);
   void print(raw_ostream &os, AsmState &state);
-  void dump();
-
-  /// Pretty print for ease of debugging readabilty with unverified IR.
-  void dumpPrettyPrinted();
+  void dump(bool assumeVerified = false);
 
   //===--------------------------------------------------------------------===//
   // Operands

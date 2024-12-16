@@ -3980,13 +3980,11 @@ void Operation::print(raw_ostream &os, AsmState &state) {
   }
 }
 
-void Operation::dump() {
-  print(llvm::errs(), OpPrintingFlags().useLocalScope());
-  llvm::errs() << "\n";
-}
-
-void Operation::dumpPrettyPrinted() {
-  print(llvm::errs(), OpPrintingFlags().useLocalScope().assumeVerified());
+void Operation::dump(bool assumeVerified) {
+  OpPrintingFlags flags;
+  if (assumeVerified)
+    flags.assumeVerified();
+  print(llvm::errs(), flags.useLocalScope());
   llvm::errs() << "\n";
 }
 
