@@ -49,13 +49,13 @@ struct TestContext {
 
 class JsonSerializer : public Serializer {
 public:
-  json::Object *getOutputObject() { return object.get(); }
+  json::Object *getOutputObject() { return Out.get(); }
 
   llvm::Error init() override {
-    if (started)
+    if (Started)
       return createStringError("Serializer already in use");
-    started = true;
-    object = std::make_unique<json::Object>();
+    Started = true;
+    Out = std::make_unique<json::Object>();
     return Error::success();
   }
 
@@ -77,26 +77,26 @@ public:
   void write(StringRef KeyName,
              const std::map<std::string, std::string> &Value) override {
     json::Object Inner;
-    for (auto kv : Value) {
-      Inner.try_emplace(kv.first, kv.second);
+    for (auto KV : Value) {
+      Inner.try_emplace(KV.first, KV.second);
     }
     writeHelper(KeyName, json::Value(std::move(Inner)));
   }
 
   llvm::Error finalize() override {
-    if (!started)
+    if (!Started)
       return createStringError("Serializer not currently in use");
-    started = false;
+    Started = false;
     return Error::success();
   }
 
 private:
   template <typename T> void writeHelper(StringRef Name, T Value) {
     assert(started && "serializer not started");
-    object->try_emplace(Name, Value);
+    Out->try_emplace(Name, Value);
   }
-  bool started = false;
-  std::unique_ptr<json::Object> object;
+  bool Started = false;
+  std::unique_ptr<json::Object> Out;
 };
 
 class StringSerializer : public Serializer {
@@ -104,9 +104,9 @@ public:
   const std::string &getString() { return Buffer; }
 
   llvm::Error init() override {
-    if (started)
+    if (Started)
       return createStringError("Serializer already in use");
-    started = true;
+    Started = true;
     Buffer.clear();
     return Error::success();
   }
@@ -119,7 +119,7 @@ public:
     writeHelper(KeyName, Value);
   }
 
-  void write(StringRef KeyName, size_t Value) override {
+  void write(StringRef KeyName, unsigned long long Value) override {
     writeHelper(KeyName, Value);
   }
   void write(StringRef KeyName, StringRef Value) override {
@@ -129,23 +129,23 @@ public:
   void write(StringRef KeyName,
              const std::map<std::string, std::string> &Value) override {
     std::string Inner;
-    for (auto kv : Value) {
-      writeHelper(StringRef(kv.first), StringRef(kv.second), &Inner);
+    for (auto KV : Value) {
+      writeHelper(StringRef(KV.first), StringRef(KV.second), &Inner);
     }
     writeHelper(KeyName, StringRef(Inner));
   }
 
   llvm::Error finalize() override {
-    if (!started)
+    if (!Started)
       return createStringError("Serializer not currently in use");
-    started = false;
+    Started = false;
     return Error::success();
   }
 
 private:
   template <typename T>
   void writeHelper(StringRef Name, T Value, std::string *Buff) {
-    assert(started && "serializer not started");
+    assert(Started && "serializer not started");
     Buff->append((Name + ":" + llvm::Twine(Value) + "\n").str());
   }
 
@@ -153,7 +153,7 @@ private:
     writeHelper(Name, Value, &Buffer);
   }
 
-  bool started = false;
+  bool Started = false;
   std::string Buffer;
 };
 

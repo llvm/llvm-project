@@ -89,13 +89,13 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
 
   class JsonSerializer : public Serializer {
   public:
-    json::Object *getOutputObject() { return object.get(); }
+    json::Object *getOutputObject() { return Out.get(); }
 
     llvm::Error init() override {
-      if (started)
+      if (Started)
         return createStringError("Serializer already in use");
       started = true;
-      object = std::make_unique<json::Object>();
+      Out = std::make_unique<json::Object>();
       return Error::success();
     }
 
@@ -118,31 +118,31 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
     void write(StringRef KeyName,
                const std::map<std::string, std::string> &Value) override {
       json::Object Inner;
-      for (auto kv : Value) {
-        Inner.try_emplace(kv.first, kv.second);
+      for (auto KV : Value) {
+        Inner.try_emplace(KV.first, KV.second);
       }
       writeHelper(KeyName, json::Value(std::move(Inner)));
     }
 
     Error finalize() override {
-      if (!started)
+      if (!Started)
         return createStringError("Serializer not currently in use");
-      started = false;
+      Started = false;
       return Error::success();
     }
 
   private:
     template <typename T> void writeHelper(StringRef Name, T Value) {
       assert(started && "serializer not started");
-      object->try_emplace(Name, Value);
+      Out->try_emplace(Name, Value);
     }
-    bool started = false;
-    std::unique_ptr<json::Object> object;
+    bool Started = false;
+    std::unique_ptr<json::Object> Out;
   };
        
   class MyManager : public telemery::Manager {
   public:
-  static std::unique_ptr<MyManager> createInstatnce(telemetry::Config* config) {
+  static std::unique_ptr<MyManager> createInstatnce(telemetry::Config *config) {
     // If Telemetry is not enabled, then just return null;
     if (!config->EnableTelemetry) return nullptr;
 
@@ -150,7 +150,7 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
   }
   MyManager() = default;
 
-  Error dispatch(TelemetryInfo* Entry) const override {
+  Error dispatch(TelemetryInfo *Entry) const override {
     Entry->SessionId = SessionId;
     emitToAllDestinations(Entry);
   }
@@ -160,19 +160,19 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
   }
   
   // You can also define additional instrumentation points.
-  void logStartup(TelemetryInfo* Entry) {
+  void logStartup(TelemetryInfo *Entry) {
     // Add some additional data to entry.
     Entry->Msg = "Some message";
     dispatch(Entry);
   }
   
-  void logAdditionalPoint(TelemetryInfo* Entry) {
+  void logAdditionalPoint(TelemetryInfo  Entry) {
     // .... code here
   }
   
   private:
-    void emitToAllDestinations(const TelemetryInfo* Entry) {
-      for (Destination* Dest : Destinations) {
+    void emitToAllDestinations(const TelemetryInfo *Entry) {
+      for (Destination *Dest : Destinations) {
         Dest->receiveEntry(Entry);
       }
     }
@@ -183,31 +183,31 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
 
   class MyDestination : public telemetry::Destination {
   public:
-    Error receiveEntry(const TelemetryInfo* Entry) override {
-      if (Error err = serializer.init()) {
-        return err;
+    Error receiveEntry(const TelemetryInfo *Entry) override {
+      if (Error Err = Serializer.init()) {
+        return Err;
       }
-      Entry->serialize(serializer);
-      if (Error err = serializer.finalize()) {
-        return err;
+      Entry->serialize(Serializer);
+      if (Error Err = Serializer.finalize()) {
+        return Err;
       }
 
-      json::Object copied = *serializer.getOutputObject();
-      // Send the `copied` object to wherever.
+      json::Object Copied = *Serializer.getOutputObject();
+      // Send the `Copied` object to wherever.
       return Error::success();
     }
 
   private:
-    JsonSerializer serializer;
+    JsonSerializer Serializer;
   };
 
   // This defines a custom TelemetryInfo that has an additional Msg field.
   struct MyTelemetryInfo : public telemetry::TelemetryInfo {
     std::string Msg;
     
-    Error serialize(Serializer& serializer) const override {
+    Error serialize(Serializer& Serializer) const override {
       TelemetryInfo::serialize(serializer);
-      serializer.writeString("MyMsg", Msg);
+      Serializer.writeString("MyMsg", Msg);
     }
       
     // Note: implement getKind() and classof() to support dyn_cast operations.
