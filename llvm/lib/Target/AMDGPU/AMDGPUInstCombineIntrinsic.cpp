@@ -1468,8 +1468,8 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
     if (OffsetAdd) {
       // Modify the IR after the previous condition, otherwise inst-combine
       // would never reach a fixed-point due to the CreateAdd
-      auto *Offset = Args[OffsetIdx];
-      auto *OffsetAddVal = ConstantInt::get(Offset->getType(), OffsetAdd);
+      Value *Offset = Args[OffsetIdx];
+      Constant *OffsetAddVal = ConstantInt::get(Offset->getType(), OffsetAdd);
       Args[OffsetIdx] = IC.Builder.CreateAdd(Offset, OffsetAddVal);
     }
   } else {
