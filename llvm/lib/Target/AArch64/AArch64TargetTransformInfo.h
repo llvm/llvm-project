@@ -376,7 +376,7 @@ public:
 
     if (VF.isScalable() && !ST->isSVEorStreamingSVEAvailable())
       return Invalid;
-    if (VF.isFixed() && !ST->isNeonAvailable() && !ST->hasDotProd())
+    if (VF.isFixed() && (!ST->isNeonAvailable() || !ST->hasDotProd()))
       return Invalid;
 
     if (InputEVT == MVT::i8) {
