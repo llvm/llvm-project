@@ -2162,6 +2162,7 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
       FunctionTemplate = Defn->getDescribedFunctionTemplate();
     }
   }
+
   if (FunctionTemplate && !TemplateParams) {
     ArrayRef<TemplateArgument> Innermost = TemplateArgs.getInnermost();
 
