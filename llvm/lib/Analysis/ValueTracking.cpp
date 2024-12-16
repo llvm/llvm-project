@@ -9265,9 +9265,9 @@ isImpliedCondOperands(CmpInst::Predicate Pred, const Value *ALHS,
 static std::optional<bool>
 isImpliedCondMatchingOperands(CmpInst::Predicate LPred,
                               CmpInst::Predicate RPred) {
-  if (CmpInst::isImpliedTrueByMatchingCmp(LPred, RPred))
+  if (ICmpInst::isImpliedTrueByMatchingCmp(LPred, RPred))
     return true;
-  if (CmpInst::isImpliedFalseByMatchingCmp(LPred, RPred))
+  if (ICmpInst::isImpliedFalseByMatchingCmp(LPred, RPred))
     return false;
 
   return std::nullopt;
