@@ -5756,9 +5756,6 @@ SGPR register initial state is defined in
      then       Flat Scratch Init          2      See
                 (enable_sgpr_flat_scratch         :ref:`amdgpu-amdhsa-kernel-prolog-flat-scratch`.
                 _init)
-     then       Preloaded Kernargs         N/A    See
-                (kernarg_preload_spec             :ref:`amdgpu-amdhsa-kernarg-preload`.
-                _length)
      then       Private Segment Size       1      The 32-bit byte size of a
                 (enable_sgpr_private              single work-item's memory
                 _segment_size)                    allocation. This is the
@@ -5779,6 +5776,9 @@ SGPR register initial state is defined in
                                                   may be needed for GFX9-GFX11 which
                                                   changes the meaning of the
                                                   Flat Scratch Init value.
+     then       Preloaded Kernargs         N/A    See
+                (kernarg_preload_spec             :ref:`amdgpu-amdhsa-kernarg-preload`.
+                _length)
      then       Work-Group Id X            1      32-bit work-group id in X
                 (enable_sgpr_workgroup_id         dimension of grid for
                 _X)                               wavefront.

@@ -845,13 +845,14 @@ MemoryBufferRef LinkerDriver::convertResToCOFF(ArrayRef<MemoryBufferRef> mbs,
 
 // Create OptTable
 
-// Create prefix string literals used in Options.td
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
-  static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
-      NAME##_init, std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Options.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+// Create prefix string literals used in Options.td
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Options.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 // Create table mapping all options defined in Options.td
 static constexpr llvm::opt::OptTable::Info infoTable[] = {
@@ -860,7 +861,8 @@ static constexpr llvm::opt::OptTable::Info infoTable[] = {
 #undef OPTION
 };
 
-COFFOptTable::COFFOptTable() : GenericOptTable(infoTable, true) {}
+COFFOptTable::COFFOptTable()
+    : GenericOptTable(OptionStrTable, OptionPrefixesTable, infoTable, true) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.

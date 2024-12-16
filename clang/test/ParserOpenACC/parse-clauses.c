@@ -4,37 +4,20 @@
 
 void func() {
 
-  // expected-warning@+2{{OpenACC clause 'finalize' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'enter data' not yet implemented, pragma ignored}}
-#pragma acc enter data finalize
+#pragma acc exit data finalize
 
-  // expected-warning@+3{{OpenACC clause 'finalize' not yet implemented, clause ignored}}
-  // expected-warning@+2{{OpenACC clause 'finalize' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'enter data' not yet implemented, pragma ignored}}
-#pragma acc enter data finalize finalize
+#pragma acc exit data finalize finalize
 
-  // expected-warning@+3{{OpenACC clause 'finalize' not yet implemented, clause ignored}}
-  // expected-error@+2{{invalid OpenACC clause 'invalid'}}
-  // expected-warning@+1{{OpenACC construct 'enter data' not yet implemented, pragma ignored}}
-#pragma acc enter data finalize invalid
+  // expected-error@+1{{invalid OpenACC clause 'invalid'}}
+#pragma acc exit data finalize invalid
 
-  // expected-warning@+3{{OpenACC clause 'finalize' not yet implemented, clause ignored}}
-  // expected-error@+2{{invalid OpenACC clause 'invalid'}}
-  // expected-warning@+1{{OpenACC construct 'enter data' not yet implemented, pragma ignored}}
-#pragma acc enter data finalize invalid invalid finalize
+  // expected-error@+1{{invalid OpenACC clause 'invalid'}}
+#pragma acc exit data finalize invalid invalid finalize
 
-  // expected-warning@+3{{OpenACC clause 'wait' not yet implemented, clause ignored}}
-  // expected-warning@+2{{OpenACC clause 'finalize' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'enter data' not yet implemented, pragma ignored}}
-#pragma acc enter data wait finalize
+#pragma acc exit data wait finalize
 
-  // expected-warning@+2{{OpenACC clause 'if_present' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'host_data' not yet implemented, pragma ignored}}
 #pragma acc host_data if_present
 
-  // expected-warning@+3{{OpenACC clause 'if_present' not yet implemented, clause ignored}}
-  // expected-warning@+2{{OpenACC clause 'if_present' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'host_data' not yet implemented, pragma ignored}}
 #pragma acc host_data if_present, if_present
 
   // expected-error@+4{{OpenACC clause 'independent' on 'loop' construct conflicts with previous data dependence clause}}
@@ -505,14 +488,13 @@ void VarListClauses() {
 #pragma acc serial attach(IsPointer), self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'detach' not yet implemented, clause ignored}}
-#pragma acc serial detach(s.array[s.value] s.array[s.value :5] ), self
-  for(int i = 0; i < 5;++i) {}
+  // expected-error@+4{{expected ','}}
+  // expected-error@+3{{expected pointer in 'detach' clause, type is 'char'}}
+  // expected-error@+2{{OpenACC sub-array is not allowed here}}
+  // expected-note@+1{{expected variable of pointer type}}
+#pragma acc exit data copyout(s) detach(s.array[s.value] s.array[s.value :5])
 
-  // expected-warning@+1{{OpenACC clause 'detach' not yet implemented, clause ignored}}
-#pragma acc serial detach(s.array[s.value : 5], s.value), self
-  for(int i = 0; i < 5;++i) {}
+#pragma acc exit data copyout(s) detach(IsPointer)
 
   // expected-error@+1{{expected ','}}
 #pragma acc serial private(s.array[s.value] s.array[s.value :5] ), self
@@ -530,20 +512,20 @@ void VarListClauses() {
 
   // expected-error@+2{{expected ','}}
   // expected-warning@+1{{OpenACC clause 'delete' not yet implemented, clause ignored}}
-#pragma acc serial delete(s.array[s.value] s.array[s.value :5] ), self
+#pragma acc exit data delete(s.array[s.value] s.array[s.value :5] ) async
   for(int i = 0; i < 5;++i) {}
 
   // expected-warning@+1{{OpenACC clause 'delete' not yet implemented, clause ignored}}
-#pragma acc serial delete(s.array[s.value : 5], s.value), self
+#pragma acc exit data delete(s.array[s.value : 5], s.value),async
   for(int i = 0; i < 5;++i) {}
 
   // expected-error@+2{{expected ','}}
   // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented, clause ignored}}
-#pragma acc serial use_device(s.array[s.value] s.array[s.value :5] ), self
+#pragma acc exit data use_device(s.array[s.value] s.array[s.value :5] ),async
   for(int i = 0; i < 5;++i) {}
 
   // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented, clause ignored}}
-#pragma acc serial use_device(s.array[s.value : 5], s.value), self
+#pragma acc exit data use_device(s.array[s.value : 5], s.value), async
   for(int i = 0; i < 5;++i) {}
 
   // expected-error@+2{{expected ','}}
