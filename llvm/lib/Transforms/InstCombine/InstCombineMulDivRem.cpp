@@ -583,8 +583,13 @@ Instruction *InstCombinerImpl::foldFPSignBitOps(BinaryOperator &I) {
 
   // fabs(X) * fabs(X) -> X * X
   // fabs(X) / fabs(X) -> X / X
-  if (Op0 == Op1 && match(Op0, m_FAbs(m_Value(X))))
-    return BinaryOperator::CreateWithCopiedFlags(Opcode, X, X, &I);
+  // X must be frozen because we are increasing its number of uses.
+  if (Op0 == Op1 && match(Op0, m_FAbs(m_Value(X)))) {
+    Value *FX = X;
+    if (!isGuaranteedNotToBeUndef(X))
+      FX = Builder.CreateFreeze(X, X->getName() + ".fr");
+    return BinaryOperator::CreateWithCopiedFlags(Opcode, FX, FX, &I);
+  }
 
   // fabs(X) * fabs(Y) --> fabs(X * Y)
   // fabs(X) / fabs(Y) --> fabs(X / Y)
