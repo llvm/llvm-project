@@ -3198,80 +3198,79 @@ bool SPIRVInstructionSelector::selectFirstBitSet64Overflow(
         GR.getOrCreateSPIRVVectorType(OpType, LeftComponentCount, MIRBuilder);
     LeftVecResType =
         GR.getOrCreateSPIRVVectorType(BaseType, LeftComponentCount, MIRBuilder);
-    } else {
-      LeftVecOpType = OpType;
-      LeftVecResType = BaseType;
-    }
+  } else {
+    LeftVecOpType = OpType;
+    LeftVecResType = BaseType;
+  }
 
-    SPIRVType *RightVecOpType =
-        GR.getOrCreateSPIRVVectorType(OpType, RightComponentCount, MIRBuilder);
-    SPIRVType *RightVecResType = GR.getOrCreateSPIRVVectorType(
-        BaseType, RightComponentCount, MIRBuilder);
+  SPIRVType *RightVecOpType =
+      GR.getOrCreateSPIRVVectorType(OpType, RightComponentCount, MIRBuilder);
+  SPIRVType *RightVecResType =
+      GR.getOrCreateSPIRVVectorType(BaseType, RightComponentCount, MIRBuilder);
 
-    Register LeftSideIn =
-        MRI->createVirtualRegister(GR.getRegClass(LeftVecOpType));
-    Register RightSideIn =
-        MRI->createVirtualRegister(GR.getRegClass(RightVecOpType));
+  Register LeftSideIn =
+      MRI->createVirtualRegister(GR.getRegClass(LeftVecOpType));
+  Register RightSideIn =
+      MRI->createVirtualRegister(GR.getRegClass(RightVecOpType));
 
-    bool Result;
+  bool Result;
 
-    // Extract the left half from the SrcReg into LeftSideIn
-    // accounting for the special case when it only has one element
-    if (LeftIsVector) {
-      auto MIB =
-          BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                  TII.get(SPIRV::OpVectorShuffle))
-              .addDef(LeftSideIn)
-              .addUse(GR.getSPIRVTypeID(LeftVecOpType))
-              .addUse(SrcReg)
-              // Per the spec, repeat the vector if only one vec is needed
-              .addUse(SrcReg);
-
-      for (unsigned J = 0; J < LeftComponentCount; J++) {
-        MIB.addImm(J);
-      }
-
-      Result = MIB.constrainAllUses(TII, TRI, RBI);
-    } else {
-      Result =
-          selectOpWithSrcs(LeftSideIn, LeftVecOpType, I, {SrcReg, ConstIntZero},
-                           SPIRV::OpVectorExtractDynamic);
-    }
-
-    // Extract the right half from the SrcReg into RightSideIn.
-    // Right will always be a vector since the only time one element is left is
-    // when Component == 3, and in that case Left is one element.
+  // Extract the left half from the SrcReg into LeftSideIn
+  // accounting for the special case when it only has one element
+  if (LeftIsVector) {
     auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
                        TII.get(SPIRV::OpVectorShuffle))
-                   .addDef(RightSideIn)
-                   .addUse(GR.getSPIRVTypeID(RightVecOpType))
+                   .addDef(LeftSideIn)
+                   .addUse(GR.getSPIRVTypeID(LeftVecOpType))
                    .addUse(SrcReg)
                    // Per the spec, repeat the vector if only one vec is needed
                    .addUse(SrcReg);
 
-    for (unsigned J = LeftComponentCount; J < ComponentCount; J++) {
+    for (unsigned J = 0; J < LeftComponentCount; J++) {
       MIB.addImm(J);
     }
 
-    Result = Result && MIB.constrainAllUses(TII, TRI, RBI);
+    Result = MIB.constrainAllUses(TII, TRI, RBI);
+  } else {
+    Result =
+        selectOpWithSrcs(LeftSideIn, LeftVecOpType, I, {SrcReg, ConstIntZero},
+                         SPIRV::OpVectorExtractDynamic);
+  }
 
-    // Recursively call selectFirstBitSet64 on the 2 halves
-    Register LeftSideOut =
-        MRI->createVirtualRegister(GR.getRegClass(LeftVecResType));
-    Register RightSideOut =
-        MRI->createVirtualRegister(GR.getRegClass(RightVecResType));
-    Result = Result &&
-             selectFirstBitSet64(LeftSideOut, LeftVecResType, I, LeftSideIn,
-                                 BitSetOpcode, SwapPrimarySide);
-    Result = Result &&
-             selectFirstBitSet64(RightSideOut, RightVecResType, I, RightSideIn,
-                                 BitSetOpcode, SwapPrimarySide);
+  // Extract the right half from the SrcReg into RightSideIn.
+  // Right will always be a vector since the only time one element is left is
+  // when Component == 3, and in that case Left is one element.
+  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                     TII.get(SPIRV::OpVectorShuffle))
+                 .addDef(RightSideIn)
+                 .addUse(GR.getSPIRVTypeID(RightVecOpType))
+                 .addUse(SrcReg)
+                 // Per the spec, repeat the vector if only one vec is needed
+                 .addUse(SrcReg);
 
-    // Join the two resulting registers back into the return type
-    // (ie i32x2, i32x2 -> i32x4)
-    return Result &&
-           selectOpWithSrcs(ResVReg, ResType, I, {LeftSideOut, RightSideOut},
-                            SPIRV::OpCompositeConstruct);
+  for (unsigned J = LeftComponentCount; J < ComponentCount; J++) {
+    MIB.addImm(J);
+  }
+
+  Result = Result && MIB.constrainAllUses(TII, TRI, RBI);
+
+  // Recursively call selectFirstBitSet64 on the 2 halves
+  Register LeftSideOut =
+      MRI->createVirtualRegister(GR.getRegClass(LeftVecResType));
+  Register RightSideOut =
+      MRI->createVirtualRegister(GR.getRegClass(RightVecResType));
+  Result =
+      Result && selectFirstBitSet64(LeftSideOut, LeftVecResType, I, LeftSideIn,
+                                    BitSetOpcode, SwapPrimarySide);
+  Result =
+      Result && selectFirstBitSet64(RightSideOut, RightVecResType, I,
+                                    RightSideIn, BitSetOpcode, SwapPrimarySide);
+
+  // Join the two resulting registers back into the return type
+  // (ie i32x2, i32x2 -> i32x4)
+  return Result &&
+         selectOpWithSrcs(ResVReg, ResType, I, {LeftSideOut, RightSideOut},
+                          SPIRV::OpCompositeConstruct);
 }
 
 bool SPIRVInstructionSelector::selectFirstBitSet64(
