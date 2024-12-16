@@ -151,8 +151,8 @@ TEST_F(ExtractVariableTest, Test) {
       // Variable DeclRefExpr
       a = [[b]];
       a = [[xyz()]];
-      // statement expression
-      [[xyz()]];
+      // expression statement of type void
+      [[v()]];
       while (a)
         [[++a]];
       // label statement
@@ -492,6 +492,16 @@ TEST_F(ExtractVariableTest, Test) {
             auto placeholder = [&](){ return a + 1; }(); if ( placeholder  == 4)
               a = a + 1;
           }
+        })cpp"},
+      {R"cpp(
+        int func() { return 0; }
+        int main() {
+          [[func()]];
+        })cpp",
+       R"cpp(
+        int func() { return 0; }
+        int main() {
+          auto placeholder = func();
         })cpp"},
       {R"cpp(
         template <typename T>

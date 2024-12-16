@@ -310,6 +310,7 @@ SECTIONS {
 .byte 0x12, 0x34
 
 .section .b,"aM",@progbits,1
+.p2align 3
 .byte 0x12
 
 # RUN: llvm-mc -n -filetype=obj -triple=x86_64 merge.s -o merge.o
@@ -317,10 +318,11 @@ SECTIONS {
 #--- spill-merge.lds
 ## SHF_MERGE sections are spilled according to the class refs of the first
 ## merged input section (the one giving the resulting section its name).
+## Spills take into account increases in section alignment due to merging.
 MEMORY {
   a : ORIGIN = 0, LENGTH = 1
-  b : ORIGIN = 1, LENGTH = 2
-  c : ORIGIN = 3, LENGTH = 2
+  b : ORIGIN = 1, LENGTH = 16
+  c : ORIGIN = 17, LENGTH = 16
 }
 
 SECTIONS {
@@ -332,12 +334,14 @@ SECTIONS {
 }
 
 # RUN: ld.lld -T spill-merge.lds merge.o -o spill-merge
-# RUN: llvm-readelf -S spill-merge | FileCheck %s --check-prefix=SPILL-MERGE
+# RUN: llvm-readelf -S -x .second spill-merge | FileCheck %s --check-prefix=SPILL-MERGE
 
-# SPILL-MERGE:      Name          Type     Address          Off    Size
+# SPILL-MERGE:      Name    Type     Address          Off    Size
 # SPILL-MERGE:      .first  PROGBITS 0000000000000000 000190 000000
-# SPILL-MERGE-NEXT: .second PROGBITS 0000000000000001 001001 000002
-# SPILL-MERGE-NEXT: .third  PROGBITS 0000000000000003 001003 000000
+# SPILL-MERGE-NEXT: .second PROGBITS 0000000000000008 001008 000009
+# SPILL-MERGE-NEXT: .third  PROGBITS 0000000000000018 001018 000000
+# SPILL-MERGE:      Hex dump of section '.second':
+# SPILL-MERGE-NEXT: 0x00000008 12000000 00000000 34 .
 
 #--- link-order.s
 .section .a,"a",@progbits

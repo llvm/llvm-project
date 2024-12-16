@@ -69,8 +69,8 @@ void GpuModuleToBinaryPass::runOnOperation() {
     return &parentTable.value();
   };
 
-  TargetOptions targetOptions(toolkitPath, linkFiles, cmdOptions, *targetFormat,
-                              lazyTableBuilder);
+  TargetOptions targetOptions(toolkitPath, linkFiles, cmdOptions, elfSection,
+                              *targetFormat, lazyTableBuilder);
   if (failed(transformGpuModulesToBinaries(
           getOperation(), OffloadingLLVMTranslationAttrInterface(nullptr),
           targetOptions)))

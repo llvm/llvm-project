@@ -1326,6 +1326,22 @@ static bool isInSymtab(const MCSymbolWasm &Sym) {
   return true;
 }
 
+static bool isSectionReferenced(MCAssembler &Asm, MCSectionWasm &Section) {
+  StringRef SectionName = Section.getName();
+
+  for (const MCSymbol &S : Asm.symbols()) {
+    const auto &WS = static_cast<const MCSymbolWasm &>(S);
+    if (WS.isData() && WS.isInSection()) {
+      auto &RefSection = static_cast<MCSectionWasm &>(WS.getSection());
+      if (RefSection.getName() == SectionName) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 void WasmObjectWriter::prepareImports(
     SmallVectorImpl<wasm::WasmImport> &Imports, MCAssembler &Asm) {
   // For now, always emit the memory import, since loads and stores are not
@@ -1482,8 +1498,10 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
     LLVM_DEBUG(dbgs() << "Processing Section " << SectionName << "  group "
                       << Section.getGroup() << "\n";);
 
-    // .init_array sections are handled specially elsewhere.
-    if (SectionName.starts_with(".init_array"))
+    // .init_array sections are handled specially elsewhere, include them in
+    // data segments if and only if referenced by a symbol.
+    if (SectionName.starts_with(".init_array") &&
+        !isSectionReferenced(Asm, Section))
       continue;
 
     // Code is handled separately

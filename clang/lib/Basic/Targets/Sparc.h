@@ -48,10 +48,9 @@ public:
 
   bool hasFeature(StringRef Feature) const override;
 
-  std::pair<const char *, ArrayRef<Builtin::Info>>
-  getTargetBuiltinStorage() const override {
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override {
     // FIXME: Implement!
-    return {nullptr, {}};
+    return {};
   }
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::VoidPtrBuiltinVaList;
