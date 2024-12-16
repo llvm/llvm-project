@@ -1628,7 +1628,7 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
 }
 
 /// Try to convert "shuffle (binop), (binop)" into "binop (shuffle), (shuffle)".
-/// TODO: Handle "shuffle (cmp), (cmp)" into "cmp (shuffle), (shuffle)".
+/// Try to convert "shuffle (cmpop), (cmpop)" into "cmpop (shuffle), (shuffle)".
 bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   ArrayRef<int> OldMask;
   Instruction *LHS, *RHS;
@@ -1636,31 +1636,36 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
                            m_OneUse(m_Instruction(RHS)), m_Mask(OldMask))))
     return false;
 
-  BinaryOperator *B0, *B1;
-  if (!match(LHS, m_BinOp(B0)) || !match(RHS, m_BinOp(B1)))
-    return false;
-
-  // Don't introduce poison into div/rem.
-  if (llvm::is_contained(OldMask, PoisonMaskElem) && B0->isIntDivRem())
-    return false;
-
   // TODO: Add support for addlike etc.
-  Instruction::BinaryOps Opcode = B0->getOpcode();
-  if (Opcode != B1->getOpcode())
+  if (LHS->getOpcode() != RHS->getOpcode())
+    return false;
+
+  Value *X, *Y, *Z, *W;
+  bool IsCommutative = false;
+  CmpPredicate Pred = CmpInst::BAD_ICMP_PREDICATE;
+  if (match(LHS, m_BinOp(m_Value(X), m_Value(Y))) &&
+      match(RHS, m_BinOp(m_Value(Z), m_Value(W)))) {
+    auto *BO = cast<BinaryOperator>(LHS);
+    // Don't introduce poison into div/rem.
+    if (llvm::is_contained(OldMask, PoisonMaskElem) && BO->isIntDivRem())
+      return false;
+    IsCommutative = BinaryOperator::isCommutative(BO->getOpcode());
+  } else if (match(LHS, m_Cmp(Pred, m_Value(X), m_Value(Y))) &&
+             match(RHS, m_SpecificCmp(Pred, m_Value(Z), m_Value(W)))) {
+    IsCommutative = cast<CmpInst>(LHS)->isCommutative();
+  } else
     return false;
 
   auto *ShuffleDstTy = dyn_cast<FixedVectorType>(I.getType());
-  auto *BinOpTy = dyn_cast<FixedVectorType>(LHS->getType());
-  if (!ShuffleDstTy || !BinOpTy)
+  auto *BinResTy = dyn_cast<FixedVectorType>(LHS->getType());
+  auto *BinOpTy = dyn_cast<FixedVectorType>(X->getType());
+  if (!ShuffleDstTy || !BinResTy || !BinOpTy || X->getType() != Z->getType())
     return false;
 
   unsigned NumSrcElts = BinOpTy->getNumElements();
 
   // If we have something like "add X, Y" and "add Z, X", swap ops to match.
-  Value *X = LHS->getOperand(0), *Y = LHS->getOperand(1);
-  Value *Z = RHS->getOperand(0), *W = RHS->getOperand(1);
-  if (BinaryOperator::isCommutative(Opcode) && X != Z && Y != W &&
-      (X == W || Y == Z))
+  if (IsCommutative && X != Z && Y != W && (X == W || Y == Z))
     std::swap(X, Y);
 
   auto ConvertToUnary = [NumSrcElts](int &M) {
@@ -1688,13 +1693,22 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   InstructionCost OldCost =
       TTI.getInstructionCost(LHS, CostKind) +
       TTI.getInstructionCost(RHS, CostKind) +
-      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, BinOpTy,
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, BinResTy,
                          OldMask, CostKind, 0, nullptr, {LHS, RHS}, &I);
 
   InstructionCost NewCost =
       TTI.getShuffleCost(SK0, BinOpTy, NewMask0, CostKind, 0, nullptr, {X, Z}) +
-      TTI.getShuffleCost(SK1, BinOpTy, NewMask1, CostKind, 0, nullptr, {Y, W}) +
-      TTI.getArithmeticInstrCost(Opcode, ShuffleDstTy, CostKind);
+      TTI.getShuffleCost(SK1, BinOpTy, NewMask1, CostKind, 0, nullptr, {Y, W});
+
+  if (Pred == CmpInst::BAD_ICMP_PREDICATE) {
+    NewCost +=
+        TTI.getArithmeticInstrCost(LHS->getOpcode(), ShuffleDstTy, CostKind);
+  } else {
+    auto *ShuffleCmpTy =
+        FixedVectorType::get(BinOpTy->getElementType(), ShuffleDstTy);
+    NewCost += TTI.getCmpSelInstrCost(LHS->getOpcode(), ShuffleCmpTy,
+                                      ShuffleDstTy, Pred, CostKind);
+  }
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two binops: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
@@ -1704,7 +1718,10 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
 
   Value *Shuf0 = Builder.CreateShuffleVector(X, Z, NewMask0);
   Value *Shuf1 = Builder.CreateShuffleVector(Y, W, NewMask1);
-  Value *NewBO = Builder.CreateBinOp(Opcode, Shuf0, Shuf1);
+  Value *NewBO = Pred == CmpInst::BAD_ICMP_PREDICATE
+                     ? Builder.CreateBinOp(
+                           cast<BinaryOperator>(LHS)->getOpcode(), Shuf0, Shuf1)
+                     : Builder.CreateCmp(Pred, Shuf0, Shuf1);
 
   // Intersect flags from the old binops.
   if (auto *NewInst = dyn_cast<Instruction>(NewBO)) {

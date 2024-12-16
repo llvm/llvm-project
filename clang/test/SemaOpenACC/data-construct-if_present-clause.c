@@ -13,7 +13,6 @@ void Test() {
   // expected-error@+1{{OpenACC 'if_present' clause is not valid on 'exit data' directive}}
 #pragma acc exit data copyout(I) if_present
   ;
-  // expected-warning@+1{{OpenACC clause 'use_device' not yet implemented}}
 #pragma acc host_data use_device(I) if_present
   ;
 }
