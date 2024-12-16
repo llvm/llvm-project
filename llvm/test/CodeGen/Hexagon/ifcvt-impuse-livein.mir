@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass if-converter %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass if-converter %s -o - | FileCheck %s
 
 # Make sure that the necessary implicit uses are added to predicated
 # instructions.

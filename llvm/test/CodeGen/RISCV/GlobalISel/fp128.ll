@@ -108,12 +108,11 @@ define fp128 @fabs(fp128 %x) {
 define fp128 @fcopysign(fp128 %x, fp128 %y) {
 ; CHECK-LABEL: fcopysign:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, -1
 ; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    slli a2, a2, 63
+; CHECK-NEXT:    srli a3, a3, 63
 ; CHECK-NEXT:    srli a1, a1, 1
-; CHECK-NEXT:    and a2, a3, a2
-; CHECK-NEXT:    or a1, a1, a2
+; CHECK-NEXT:    slli a3, a3, 63
+; CHECK-NEXT:    or a1, a1, a3
 ; CHECK-NEXT:    ret
   %a = call fp128 @llvm.copysign.f128(fp128 %x, fp128 %y)
   ret fp128 %a
@@ -125,8 +124,7 @@ define i1 @fcmp(fp128 %x, fp128 %y) nounwind {
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    call __eqtf2
-; CHECK-NEXT:    slli a0, a0, 32
-; CHECK-NEXT:    srli a0, a0, 32
+; CHECK-NEXT:    sext.w a0, a0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16

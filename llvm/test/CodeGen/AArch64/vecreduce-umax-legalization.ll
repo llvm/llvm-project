@@ -202,8 +202,9 @@ define i1 @test_v4i1(<4 x i1> %a) nounwind {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    shl v0.4h, v0.4h, #15
 ; CHECK-SD-NEXT:    cmlt v0.4h, v0.4h, #0
-; CHECK-SD-NEXT:    fcmp d0, #0.0
-; CHECK-SD-NEXT:    cset w0, ne
+; CHECK-SD-NEXT:    umaxv h0, v0.4h
+; CHECK-SD-NEXT:    fmov w8, s0
+; CHECK-SD-NEXT:    and w0, w8, #0x1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i1:
@@ -279,12 +280,11 @@ define i128 @test_v2i128(<2 x i128> %a) nounwind {
 ;
 ; CHECK-GI-LABEL: test_v2i128:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    cmp x1, x3
-; CHECK-GI-NEXT:    cset w8, hi
 ; CHECK-GI-NEXT:    cmp x0, x2
-; CHECK-GI-NEXT:    cset w9, hi
+; CHECK-GI-NEXT:    cset w8, hi
 ; CHECK-GI-NEXT:    cmp x1, x3
-; CHECK-GI-NEXT:    csel w8, w9, w8, eq
+; CHECK-GI-NEXT:    cset w9, hi
+; CHECK-GI-NEXT:    csel w8, w8, w9, eq
 ; CHECK-GI-NEXT:    tst w8, #0x1
 ; CHECK-GI-NEXT:    csel x0, x0, x2, ne
 ; CHECK-GI-NEXT:    csel x1, x1, x3, ne

@@ -4526,8 +4526,12 @@ default member initializer, the invocation point is the location of the
 constructor or aggregate initialization used to create the object. Otherwise
 the invocation point is the same as the location of the builtin.
 
-When the invocation point of ``__builtin_FUNCTION`` is not a function scope the
+When the invocation point of ``__builtin_FUNCTION`` is not a function scope, the
 empty string is returned.
+
+The builtin ``__builtin_COLUMN`` returns the offset from the start of the line,
+beginning from column 1. `This may differ from other implementations.
+<https://eel.is/c++draft/support.srcloc#tab:support.srcloc.current-row-3-column-2-sentence-2>`_
 
 The builtin ``__builtin_source_location`` returns a pointer to constant static
 data of type ``std::source_location::__impl``. This type must have already been
@@ -5551,7 +5555,7 @@ The ``#pragma clang section`` directive obeys the following rules:
 * Global variables that are initialized to zero will be placed in the named
   bss section, if one is present.
 
-* The ``#pragma clang section`` directive does not does try to infer section-kind
+* The ``#pragma clang section`` directive does not try to infer section-kind
   from the name. For example, naming a section "``.bss.mySec``" does NOT mean
   it will be a bss section name.
 

@@ -115,6 +115,7 @@ private:
   bool foldExtractedCmps(Instruction &I);
   bool foldSingleElementStore(Instruction &I);
   bool scalarizeLoadExtract(Instruction &I);
+  bool foldConcatOfBoolMasks(Instruction &I);
   bool foldPermuteOfBinops(Instruction &I);
   bool foldShuffleOfBinops(Instruction &I);
   bool foldShuffleOfCastops(Instruction &I);
@@ -178,8 +179,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // Match insert into fixed vector of scalar value.
   // TODO: Handle non-zero insert index.
   Value *Scalar;
-  if (!match(&I, m_InsertElt(m_Undef(), m_Value(Scalar), m_ZeroInt())) ||
-      !Scalar->hasOneUse())
+  if (!match(&I,
+             m_InsertElt(m_Poison(), m_OneUse(m_Value(Scalar)), m_ZeroInt())))
     return false;
 
   // Optionally match an extract from another vector.
@@ -596,7 +597,7 @@ bool VectorCombine::foldExtractExtract(Instruction &I) {
     return false;
 
   Instruction *I0, *I1;
-  CmpInst::Predicate Pred = CmpInst::BAD_ICMP_PREDICATE;
+  CmpPredicate Pred = CmpInst::BAD_ICMP_PREDICATE;
   if (!match(&I, m_Cmp(Pred, m_Instruction(I0), m_Instruction(I1))) &&
       !match(&I, m_BinOp(m_Instruction(I0), m_Instruction(I1))))
     return false;
@@ -922,7 +923,7 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
 /// Match a vector binop or compare instruction with at least one inserted
 /// scalar operand and convert to scalar binop/cmp followed by insertelement.
 bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
-  CmpInst::Predicate Pred = CmpInst::BAD_ICMP_PREDICATE;
+  CmpPredicate Pred = CmpInst::BAD_ICMP_PREDICATE;
   Value *Ins0, *Ins1;
   if (!match(&I, m_BinOp(m_Value(Ins0), m_Value(Ins1))) &&
       !match(&I, m_Cmp(Pred, m_Value(Ins0), m_Value(Ins1))))
@@ -1062,9 +1063,11 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
   Value *B0 = I.getOperand(0), *B1 = I.getOperand(1);
   Instruction *I0, *I1;
   Constant *C0, *C1;
-  CmpInst::Predicate P0, P1;
+  CmpPredicate P0, P1;
+  // FIXME: Use CmpPredicate::getMatching here.
   if (!match(B0, m_Cmp(P0, m_Instruction(I0), m_Constant(C0))) ||
-      !match(B1, m_Cmp(P1, m_Instruction(I1), m_Constant(C1))) || P0 != P1)
+      !match(B1, m_Cmp(P1, m_Instruction(I1), m_Constant(C1))) ||
+      P0 != static_cast<CmpInst::Predicate>(P1))
     return false;
 
   // The compare operands must be extracts of the same vector with constant
@@ -1423,6 +1426,113 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
   return true;
 }
 
+/// Try to fold "(or (zext (bitcast X)), (shl (zext (bitcast Y)), C))"
+/// to "(bitcast (concat X, Y))"
+/// where X/Y are bitcasted from i1 mask vectors.
+bool VectorCombine::foldConcatOfBoolMasks(Instruction &I) {
+  Type *Ty = I.getType();
+  if (!Ty->isIntegerTy())
+    return false;
+
+  // TODO: Add big endian test coverage
+  if (DL->isBigEndian())
+    return false;
+
+  // Restrict to disjoint cases so the mask vectors aren't overlapping.
+  Instruction *X, *Y;
+  if (!match(&I, m_DisjointOr(m_Instruction(X), m_Instruction(Y))))
+    return false;
+
+  // Allow both sources to contain shl, to handle more generic pattern:
+  // "(or (shl (zext (bitcast X)), C1), (shl (zext (bitcast Y)), C2))"
+  Value *SrcX;
+  uint64_t ShAmtX = 0;
+  if (!match(X, m_OneUse(m_ZExt(m_OneUse(m_BitCast(m_Value(SrcX)))))) &&
+      !match(X, m_OneUse(
+                    m_Shl(m_OneUse(m_ZExt(m_OneUse(m_BitCast(m_Value(SrcX))))),
+                          m_ConstantInt(ShAmtX)))))
+    return false;
+
+  Value *SrcY;
+  uint64_t ShAmtY = 0;
+  if (!match(Y, m_OneUse(m_ZExt(m_OneUse(m_BitCast(m_Value(SrcY)))))) &&
+      !match(Y, m_OneUse(
+                    m_Shl(m_OneUse(m_ZExt(m_OneUse(m_BitCast(m_Value(SrcY))))),
+                          m_ConstantInt(ShAmtY)))))
+    return false;
+
+  // Canonicalize larger shift to the RHS.
+  if (ShAmtX > ShAmtY) {
+    std::swap(X, Y);
+    std::swap(SrcX, SrcY);
+    std::swap(ShAmtX, ShAmtY);
+  }
+
+  // Ensure both sources are matching vXi1 bool mask types, and that the shift
+  // difference is the mask width so they can be easily concatenated together.
+  uint64_t ShAmtDiff = ShAmtY - ShAmtX;
+  unsigned NumSHL = (ShAmtX > 0) + (ShAmtY > 0);
+  unsigned BitWidth = Ty->getPrimitiveSizeInBits();
+  auto *MaskTy = dyn_cast<FixedVectorType>(SrcX->getType());
+  if (!MaskTy || SrcX->getType() != SrcY->getType() ||
+      !MaskTy->getElementType()->isIntegerTy(1) ||
+      MaskTy->getNumElements() != ShAmtDiff ||
+      MaskTy->getNumElements() > (BitWidth / 2))
+    return false;
+
+  auto *ConcatTy = FixedVectorType::getDoubleElementsVectorType(MaskTy);
+  auto *ConcatIntTy =
+      Type::getIntNTy(Ty->getContext(), ConcatTy->getNumElements());
+  auto *MaskIntTy = Type::getIntNTy(Ty->getContext(), ShAmtDiff);
+
+  SmallVector<int, 32> ConcatMask(ConcatTy->getNumElements());
+  std::iota(ConcatMask.begin(), ConcatMask.end(), 0);
+
+  // TODO: Is it worth supporting multi use cases?
+  InstructionCost OldCost = 0;
+  OldCost += TTI.getArithmeticInstrCost(Instruction::Or, Ty, CostKind);
+  OldCost +=
+      NumSHL * TTI.getArithmeticInstrCost(Instruction::Shl, Ty, CostKind);
+  OldCost += 2 * TTI.getCastInstrCost(Instruction::ZExt, Ty, MaskIntTy,
+                                      TTI::CastContextHint::None, CostKind);
+  OldCost += 2 * TTI.getCastInstrCost(Instruction::BitCast, MaskIntTy, MaskTy,
+                                      TTI::CastContextHint::None, CostKind);
+
+  InstructionCost NewCost = 0;
+  NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, MaskTy,
+                                ConcatMask, CostKind);
+  NewCost += TTI.getCastInstrCost(Instruction::BitCast, ConcatIntTy, ConcatTy,
+                                  TTI::CastContextHint::None, CostKind);
+  if (Ty != ConcatIntTy)
+    NewCost += TTI.getCastInstrCost(Instruction::ZExt, Ty, ConcatIntTy,
+                                    TTI::CastContextHint::None, CostKind);
+  if (ShAmtX > 0)
+    NewCost += TTI.getArithmeticInstrCost(Instruction::Shl, Ty, CostKind);
+
+  if (NewCost > OldCost)
+    return false;
+
+  // Build bool mask concatenation, bitcast back to scalar integer, and perform
+  // any residual zero-extension or shifting.
+  Value *Concat = Builder.CreateShuffleVector(SrcX, SrcY, ConcatMask);
+  Worklist.pushValue(Concat);
+
+  Value *Result = Builder.CreateBitCast(Concat, ConcatIntTy);
+
+  if (Ty != ConcatIntTy) {
+    Worklist.pushValue(Result);
+    Result = Builder.CreateZExt(Result, Ty);
+  }
+
+  if (ShAmtX > 0) {
+    Worklist.pushValue(Result);
+    Result = Builder.CreateShl(Result, ShAmtX);
+  }
+
+  replaceValue(I, *Result);
+  return true;
+}
+
 /// Try to convert "shuffle (binop (shuffle, shuffle)), undef"
 ///           -->  "binop (shuffle), (shuffle)".
 bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
@@ -1518,11 +1628,16 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
 }
 
 /// Try to convert "shuffle (binop), (binop)" into "binop (shuffle), (shuffle)".
+/// TODO: Handle "shuffle (cmp), (cmp)" into "cmp (shuffle), (shuffle)".
 bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
-  BinaryOperator *B0, *B1;
   ArrayRef<int> OldMask;
-  if (!match(&I, m_Shuffle(m_OneUse(m_BinOp(B0)), m_OneUse(m_BinOp(B1)),
-                           m_Mask(OldMask))))
+  Instruction *LHS, *RHS;
+  if (!match(&I, m_Shuffle(m_OneUse(m_Instruction(LHS)),
+                           m_OneUse(m_Instruction(RHS)), m_Mask(OldMask))))
+    return false;
+
+  BinaryOperator *B0, *B1;
+  if (!match(LHS, m_BinOp(B0)) || !match(RHS, m_BinOp(B1)))
     return false;
 
   // Don't introduce poison into div/rem.
@@ -1535,15 +1650,15 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
     return false;
 
   auto *ShuffleDstTy = dyn_cast<FixedVectorType>(I.getType());
-  auto *BinOpTy = dyn_cast<FixedVectorType>(B0->getType());
+  auto *BinOpTy = dyn_cast<FixedVectorType>(LHS->getType());
   if (!ShuffleDstTy || !BinOpTy)
     return false;
 
   unsigned NumSrcElts = BinOpTy->getNumElements();
 
   // If we have something like "add X, Y" and "add Z, X", swap ops to match.
-  Value *X = B0->getOperand(0), *Y = B0->getOperand(1);
-  Value *Z = B1->getOperand(0), *W = B1->getOperand(1);
+  Value *X = LHS->getOperand(0), *Y = LHS->getOperand(1);
+  Value *Z = RHS->getOperand(0), *W = RHS->getOperand(1);
   if (BinaryOperator::isCommutative(Opcode) && X != Z && Y != W &&
       (X == W || Y == Z))
     std::swap(X, Y);
@@ -1571,10 +1686,10 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
 
   // Try to replace a binop with a shuffle if the shuffle is not costly.
   InstructionCost OldCost =
-      TTI.getArithmeticInstrCost(B0->getOpcode(), BinOpTy, CostKind) +
-      TTI.getArithmeticInstrCost(B1->getOpcode(), BinOpTy, CostKind) +
+      TTI.getInstructionCost(LHS, CostKind) +
+      TTI.getInstructionCost(RHS, CostKind) +
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, BinOpTy,
-                         OldMask, CostKind, 0, nullptr, {B0, B1}, &I);
+                         OldMask, CostKind, 0, nullptr, {LHS, RHS}, &I);
 
   InstructionCost NewCost =
       TTI.getShuffleCost(SK0, BinOpTy, NewMask0, CostKind, 0, nullptr, {X, Z}) +
@@ -1593,8 +1708,8 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
 
   // Intersect flags from the old binops.
   if (auto *NewInst = dyn_cast<Instruction>(NewBO)) {
-    NewInst->copyIRFlags(B0);
-    NewInst->andIRFlags(B1);
+    NewInst->copyIRFlags(LHS);
+    NewInst->andIRFlags(RHS);
   }
 
   Worklist.pushValue(Shuf0);
@@ -2848,6 +2963,12 @@ bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
   if (OldCost < NewCost)
     return false;
 
+  // Canonicalize undef param to RHS to help further folds.
+  if (isa<UndefValue>(DstVec) && !isa<UndefValue>(SrcVec)) {
+    ShuffleVectorInst::commuteShuffleMask(Mask, NumElts);
+    std::swap(DstVec, SrcVec);
+  }
+
   Value *Shuf = Builder.CreateShuffleVector(DstVec, SrcVec, Mask);
   replaceValue(I, *Shuf);
 
@@ -2867,6 +2988,7 @@ bool VectorCombine::run() {
   bool MadeChange = false;
   auto FoldInst = [this, &MadeChange](Instruction &I) {
     Builder.SetInsertPoint(&I);
+    bool IsVectorType = isa<VectorType>(I.getType());
     bool IsFixedVectorType = isa<FixedVectorType>(I.getType());
     auto Opcode = I.getOpcode();
 
@@ -2889,7 +3011,7 @@ bool VectorCombine::run() {
 
     // This transform works with scalable and fixed vectors
     // TODO: Identify and allow other scalable transforms
-    if (isa<VectorType>(I.getType())) {
+    if (IsVectorType) {
       MadeChange |= scalarizeBinopOrCmp(I);
       MadeChange |= scalarizeLoadExtract(I);
       MadeChange |= scalarizeVPIntrinsic(I);
@@ -2938,6 +3060,9 @@ bool VectorCombine::run() {
       case Instruction::FCmp:
         MadeChange |= foldExtractExtract(I);
         break;
+      case Instruction::Or:
+        MadeChange |= foldConcatOfBoolMasks(I);
+        [[fallthrough]];
       default:
         if (Instruction::isBinaryOp(Opcode)) {
           MadeChange |= foldExtractExtract(I);
