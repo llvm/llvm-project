@@ -3860,18 +3860,6 @@ def int_aarch64_neon_famin :  AdvSIMD_2VectorArg_Intrinsic;
 // SME FP8 FDOT intrinsics
 let TargetPrefix = "aarch64" in {
 
-class SME2_FP8_FDOT_SINGLE_VG1x2 :
-    DefaultAttrsIntrinsic<[], [llvm_i32_ty,
-                               llvm_nxv16i8_ty, llvm_nxv16i8_ty,
-                               llvm_nxv16i8_ty],
-                          [IntrInaccessibleMemOnly, IntrHasSideEffects]>;
-
-class SME2_FP8_FDOT_SINGLE_VG1x4 :
-    DefaultAttrsIntrinsic<[], [llvm_i32_ty,
-                               llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty,
-                               llvm_nxv16i8_ty],
-                          [IntrInaccessibleMemOnly, IntrHasSideEffects]>;
-
 class SME2_FP8_FDOT_MULTI_VG1x2 :
     DefaultAttrsIntrinsic<[], [llvm_i32_ty,
                                llvm_nxv16i8_ty, llvm_nxv16i8_ty,
@@ -3883,12 +3871,6 @@ class SME2_FP8_FDOT_MULTI_VG1x4 :
                                llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty,
                                llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty],
                           [IntrInaccessibleMemOnly, IntrHasSideEffects]>;
-
-  def int_aarch64_sme_fp8_fdot_single_za16_vg1x2 : SME2_FP8_FDOT_SINGLE_VG1x2;
-  def int_aarch64_sme_fp8_fdot_single_za16_vg1x4 : SME2_FP8_FDOT_SINGLE_VG1x4;
-
-  def int_aarch64_sme_fp8_fdot_single_za32_vg1x2 : SME2_FP8_FDOT_SINGLE_VG1x2;
-  def int_aarch64_sme_fp8_fdot_single_za32_vg1x4 : SME2_FP8_FDOT_SINGLE_VG1x4;
 
   def int_aarch64_sme_fp8_fdot_multi_za16_vg1x2 : SME2_FP8_FDOT_MULTI_VG1x2;
   def int_aarch64_sme_fp8_fdot_multi_za16_vg1x4 : SME2_FP8_FDOT_MULTI_VG1x4;
@@ -4073,6 +4055,12 @@ let TargetPrefix = "aarch64" in {
 
   def int_aarch64_sme_fp8_fdot_lane_za16_vg1x4 : SME_FP8_ZA_LANE_VGx4_Intrinsic;
   def int_aarch64_sme_fp8_fdot_lane_za32_vg1x4 : SME_FP8_ZA_LANE_VGx4_Intrinsic;
+  // Single
+  def int_aarch64_sme_fp8_fdot_single_za16_vg1x2 : SME_FP8_ZA_SINGLE_VGx2_Intrinsic;
+  def int_aarch64_sme_fp8_fdot_single_za32_vg1x2 : SME_FP8_ZA_SINGLE_VGx2_Intrinsic;
+
+  def int_aarch64_sme_fp8_fdot_single_za16_vg1x4 : SME_FP8_ZA_SINGLE_VGx4_Intrinsic;
+  def int_aarch64_sme_fp8_fdot_single_za32_vg1x4 : SME_FP8_ZA_SINGLE_VGx4_Intrinsic;
 
   // FVDOT
   def int_aarch64_sme_fp8_fvdot_lane_za16_vg1x2  : SME_FP8_ZA_LANE_VGx2_Intrinsic;
