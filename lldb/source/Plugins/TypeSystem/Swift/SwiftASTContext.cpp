@@ -2155,10 +2155,11 @@ static std::string GetSDKPathFromDebugInfo(std::string m_description,
   auto [sdk, found_mismatch] = std::move(*sdk_or_err);
 
   if (found_mismatch)
-    HEALTH_LOG_PRINTF("Unsupported mixing of public and internal SDKs in "
-                      "'%s'. Mixed use of SDKs indicates use of different "
-                      "toolchains, which is not supported.",
-                      module.GetFileSpec().GetFilename().GetCString());
+    HEALTH_LOG_PRINTF(
+        "Unsupported mixing of public and internal SDKs in "
+        "'%s'. Mixed use of SDKs indicates use of different "
+        "toolchains, which is not supported.",
+        module.GetFileSpec().GetFilename().AsCString("<unknown module>"));
 
   return GetSDKPath(m_description, std::move(sdk));
 }
@@ -2556,9 +2557,10 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
   swift_ast_sp->InitializeSearchPathOptions(module_search_paths,
                                             framework_search_paths);
   if (!swift_ast_sp->GetClangImporter()) {
-    LOG_PRINTF(GetLog(LLDBLog::Types),
-               "(\"%s\") returning NULL - couldn't create a ClangImporter",
-               module.GetFileSpec().GetFilename().AsCString("<anonymous>"));
+    LOG_PRINTF(
+        GetLog(LLDBLog::Types),
+        "(\"%s\") returning NULL - couldn't create a ClangImporter",
+        module.GetFileSpec().GetFilename().AsCString("<unknown module>"));
     return {};
   }
 
@@ -2606,10 +2608,11 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
     swift_ast_sp->ImportSectionModules(module, module_names);
     if (GetLog(LLDBLog::Types)) {
       std::lock_guard<std::recursive_mutex> locker(g_log_mutex);
-      LOG_PRINTF(GetLog(LLDBLog::Types), "((Module*)%p, \"%s\") = %p",
-                 static_cast<void *>(&module),
-                 module.GetFileSpec().GetFilename().AsCString("<anonymous>"),
-                 static_cast<void *>(swift_ast_sp.get()));
+      LOG_PRINTF(
+          GetLog(LLDBLog::Types), "((Module*)%p, \"%s\") = %p",
+          static_cast<void *>(&module),
+          module.GetFileSpec().GetFilename().AsCString("<unknown module>"),
+          static_cast<void *>(swift_ast_sp.get()));
     }
   }
 
@@ -4507,23 +4510,26 @@ void SwiftASTContext::RegisterSectionModules(
     auto Result = swift::parseASTSection(*loader, section_data_ref, filter);
     if (auto E = Result.takeError()) {
       std::string error = toString(std::move(E));
-      LOG_PRINTF(GetLog(LLDBLog::Types),
-                 "failed to parse AST section %zu/%zu in image \"%s\" "
-                 "(filter=\"%s\"). %s",
-                 n, total, module.GetFileSpec().GetFilename().GetCString(),
-                 filter.str().c_str(), error.c_str());
+      LOG_PRINTF(
+          GetLog(LLDBLog::Types),
+          "failed to parse AST section %zu/%zu in image \"%s\" "
+          "(filter=\"%s\"). %s",
+          n, total,
+          module.GetFileSpec().GetFilename().AsCString("<unknown module>"),
+          filter.str().c_str(), error.c_str());
       return;
     }
 
     // Collect the Swift module names referenced by the AST.
     for (auto module_name : *Result) {
       module_names.push_back(module_name);
-      LOG_PRINTF(GetLog(LLDBLog::Types),
-                 "parsed module \"%s\" from Swift AST section %zu/%zu in "
-                 "image \"%s\" (filter=\"%s\").",
-                 module_name.c_str(), n, total,
-                 module.GetFileSpec().GetFilename().GetCString(),
-                 filter.str().c_str());
+      LOG_PRINTF(
+          GetLog(LLDBLog::Types),
+          "parsed module \"%s\" from Swift AST section %zu/%zu in "
+          "image \"%s\" (filter=\"%s\").",
+          module_name.c_str(), n, total,
+          module.GetFileSpec().GetFilename().AsCString("<unknown module>"),
+          filter.str().c_str());
     }
   };
 
@@ -4562,7 +4568,7 @@ void SwiftASTContext::ImportSectionModules(
   LLDB_SCOPED_TIMER();
 
   Progress progress("Loading Swift module dependencies",
-                    module.GetFileSpec().GetFilename().AsCString(),
+                    module.GetFileSpec().GetFilename().GetString(),
                     module_names.size());
 
   size_t completion = 0;
