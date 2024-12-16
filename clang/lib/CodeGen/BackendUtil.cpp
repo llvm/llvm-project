@@ -738,6 +738,9 @@ static void addSanitizers(const Triple &TargetTriple,
     if (LangOpts.Sanitize.has(SanitizerKind::NumericalStability))
       MPM.addPass(NumericalStabilitySanitizerPass());
 
+    if (LangOpts.Sanitize.has(SanitizerKind::Realtime))
+      MPM.addPass(RealtimeSanitizerPass());
+
     auto ASanPass = [&](SanitizerMask Mask, bool CompileKernel) {
       if (LangOpts.Sanitize.has(Mask)) {
         bool UseGlobalGC = asanUseGlobalsGC(TargetTriple, CodeGenOpts);
@@ -1022,15 +1025,6 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
           [](FunctionPassManager &FPM, OptimizationLevel Level) {
             FPM.addPass(BoundsCheckingPass());
           });
-
-    if (LangOpts.Sanitize.has(SanitizerKind::Realtime)) {
-      PB.registerScalarOptimizerLateEPCallback(
-          [](FunctionPassManager &FPM, OptimizationLevel Level) {
-            RealtimeSanitizerOptions Opts;
-            FPM.addPass(RealtimeSanitizerPass(Opts));
-          });
-      MPM.addPass(ModuleRealtimeSanitizerPass());
-    }
 
     // Don't add sanitizers if we are here from ThinLTO PostLink. That already
     // done on PreLink stage.

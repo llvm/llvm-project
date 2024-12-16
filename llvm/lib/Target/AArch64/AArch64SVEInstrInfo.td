@@ -4396,21 +4396,21 @@ defm FAMIN_ZPZZ : sve_fp_bin_pred_hfd<AArch64famin_p>;
 
 let Predicates = [HasSSVE_FP8FMA] in {
 // FP8 Widening Multiply-Add Long - Indexed Group
-def FMLALB_ZZZI : sve2_fp8_mla_long_by_indexed_elem<0b0, "fmlalb">;
-def FMLALT_ZZZI : sve2_fp8_mla_long_by_indexed_elem<0b1, "fmlalt">;
+defm FMLALB_ZZZI : sve2_fp8_mla_long_by_indexed_elem<0b0, "fmlalb", int_aarch64_sve_fp8_fmlalb_lane>;
+defm FMLALT_ZZZI : sve2_fp8_mla_long_by_indexed_elem<0b1, "fmlalt", int_aarch64_sve_fp8_fmlalt_lane>;
 // FP8 Widening Multiply-Add Long Group
-def FMLALB_ZZZ : sve2_fp8_mla<0b100, ZPR16, "fmlalb">;
-def FMLALT_ZZZ : sve2_fp8_mla<0b101, ZPR16, "fmlalt">;
+defm FMLALB_ZZZ : sve2_fp8_mla<0b100, ZPR16, "fmlalb", nxv8f16, int_aarch64_sve_fp8_fmlalb>;
+defm FMLALT_ZZZ : sve2_fp8_mla<0b101, ZPR16, "fmlalt", nxv8f16, int_aarch64_sve_fp8_fmlalt>;
 // FP8 Widening Multiply-Add Long Long - Indexed Group
-def FMLALLBB_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b00, "fmlallbb">;
-def FMLALLBT_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b01, "fmlallbt">;
-def FMLALLTB_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b10, "fmlalltb">;
-def FMLALLTT_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b11, "fmlalltt">;
+defm FMLALLBB_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b00, "fmlallbb", int_aarch64_sve_fp8_fmlallbb_lane>;
+defm FMLALLBT_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b01, "fmlallbt", int_aarch64_sve_fp8_fmlallbt_lane>;
+defm FMLALLTB_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b10, "fmlalltb", int_aarch64_sve_fp8_fmlalltb_lane>;
+defm FMLALLTT_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b11, "fmlalltt", int_aarch64_sve_fp8_fmlalltt_lane>;
 // FP8 Widening Multiply-Add Long Long Group
-def FMLALLBB_ZZZ : sve2_fp8_mla<0b000, ZPR32, "fmlallbb">;
-def FMLALLBT_ZZZ : sve2_fp8_mla<0b001, ZPR32, "fmlallbt">;
-def FMLALLTB_ZZZ : sve2_fp8_mla<0b010, ZPR32, "fmlalltb">;
-def FMLALLTT_ZZZ : sve2_fp8_mla<0b011, ZPR32, "fmlalltt">;
+defm FMLALLBB_ZZZ : sve2_fp8_mla<0b000, ZPR32, "fmlallbb", nxv4f32, int_aarch64_sve_fp8_fmlallbb>;
+defm FMLALLBT_ZZZ : sve2_fp8_mla<0b001, ZPR32, "fmlallbt", nxv4f32, int_aarch64_sve_fp8_fmlallbt>;
+defm FMLALLTB_ZZZ : sve2_fp8_mla<0b010, ZPR32, "fmlalltb", nxv4f32, int_aarch64_sve_fp8_fmlalltb>;
+defm FMLALLTT_ZZZ : sve2_fp8_mla<0b011, ZPR32, "fmlalltt", nxv4f32, int_aarch64_sve_fp8_fmlalltt>;
 } // End HasSSVE_FP8FMA
 
 let Predicates = [HasSVE2, HasF8F32MM] in {

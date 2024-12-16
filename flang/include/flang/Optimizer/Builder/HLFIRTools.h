@@ -366,6 +366,10 @@ struct LoopNest {
 /// Generate a fir.do_loop nest looping from 1 to extents[i].
 /// \p isUnordered specifies whether the loops in the loop nest
 /// are unordered.
+///
+/// NOTE: genLoopNestWithReductions() should be used in favor
+/// of this method, though, it cannot generate OpenMP workshare
+/// loop constructs currently.
 LoopNest genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
                      mlir::ValueRange extents, bool isUnordered = false,
                      bool emitWorkshareLoop = false);
@@ -375,6 +379,37 @@ inline LoopNest genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
   return genLoopNest(loc, builder, getIndexExtents(loc, builder, shape),
                      isUnordered, emitWorkshareLoop);
 }
+
+/// The type of a callback that generates the body of a reduction
+/// loop nest. It takes a location and a builder, as usual.
+/// In addition, the first set of values are the values of the loops'
+/// induction variables. The second set of values are the values
+/// of the reductions on entry to the innermost loop.
+/// The callback must return the updated values of the reductions.
+using ReductionLoopBodyGenerator = std::function<llvm::SmallVector<mlir::Value>(
+    mlir::Location, fir::FirOpBuilder &, mlir::ValueRange, mlir::ValueRange)>;
+
+/// Generate a loop nest loopong from 1 to \p extents[i] and reducing
+/// a set of values.
+/// \p isUnordered specifies whether the loops in the loop nest
+/// are unordered.
+/// \p reductionInits are the initial values of the reductions
+/// on entry to the outermost loop.
+/// \p genBody callback is repsonsible for generating the code
+/// that updates the reduction values in the innermost loop.
+///
+/// NOTE: the implementation of this function may decide
+/// to perform the reductions on SSA or in memory.
+/// In the latter case, this function is responsible for
+/// allocating/loading/storing the reduction variables,
+/// and making sure they have proper data sharing attributes
+/// in case any parallel constructs are present around the point
+/// of the loop nest insertion, or if the function decides
+/// to use any worksharing loop constructs for the loop nest.
+llvm::SmallVector<mlir::Value> genLoopNestWithReductions(
+    mlir::Location loc, fir::FirOpBuilder &builder, mlir::ValueRange extents,
+    mlir::ValueRange reductionInits, const ReductionLoopBodyGenerator &genBody,
+    bool isUnordered = false);
 
 /// Inline the body of an hlfir.elemental at the current insertion point
 /// given a list of one based indices. This generates the computation

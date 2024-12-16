@@ -1,0 +1,75 @@
+name: Build Windows CI Container
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-ci-container-windows.yml
+      - '.github/workflows/containers/github-action-ci-windows/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-ci-container-windows.yml
+      - '.github/workflows/containers/github-action-ci-windows/**'
+
+jobs:
+  build-ci-container-windows:
+    if: github.repository_owner == 'llvm'
+    runs-on: windows-2019
+    outputs:
+      container-name: ${{ steps.vars.outputs.container-name }}
+      container-name-tag: ${{ steps.vars.outputs.container-name-tag }}
+      container-filename: ${{ steps.vars.outputs.container-filename }}
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/workflows/containers/github-action-ci-windows
+      - name: Write Variables
+        id: vars
+        run: |
+          $tag = [int64](Get-Date -UFormat %s)
+          $container_name="ghcr.io/$env:GITHUB_REPOSITORY_OWNER/ci-windows-2019"
+          echo "container-name=${container_name}" >> $env:GITHUB_OUTPUT
+          echo "container-name-tag=${container_name}:${tag}" >> $env:GITHUB_OUTPUT
+          echo "container-filename=ci-windows-${tag}.tar" >> $env:GITHUB_OUTPUT
+      - name: Build Container
+        working-directory: .github/workflows/containers/github-action-ci-windows
+        run: |
+          docker build -t ${{ steps.vars.outputs.container-name-tag }} .
+      - name: Save container image
+        run: |
+          docker save  ${{ steps.vars.outputs.container-name-tag }} >  ${{ steps.vars.outputs.container-filename }}
+      - name: Upload container image
+        uses: actions/upload-artifact@v4
+        with:
+          name: container
+          path: ${{ steps.vars.outputs.container-filename }}
+          retention-days: 14
+  
+  push-ci-container:
+    if: github.event_name == 'push'
+    needs:
+      - build-ci-container-windows
+    permissions:
+      packages: write
+    runs-on: windows-2019
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Download container
+        uses: actions/download-artifact@v4
+        with:
+          name: container
+      - name: Push Container
+        run: |
+          docker load -i ${{ needs.build-ci-container-windows.outputs.container-filename }}
+          docker tag ${{ needs.build-ci-container-windows.outputs.container-name-tag }} ${{ needs.build-ci-container-windows.outputs.container-name }}:latest
+          docker login -u ${{ github.actor }} -p $env:GITHUB_TOKEN ghcr.io
+          docker push ${{ needs.build-ci-container-windows.outputs.container-name-tag }}
+          docker push ${{ needs.build-ci-container-windows.outputs.container-name }}:latest
