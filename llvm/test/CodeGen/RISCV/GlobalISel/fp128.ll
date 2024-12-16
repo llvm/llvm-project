@@ -124,8 +124,7 @@ define i1 @fcmp(fp128 %x, fp128 %y) nounwind {
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    call __eqtf2
-; CHECK-NEXT:    slli a0, a0, 32
-; CHECK-NEXT:    srli a0, a0, 32
+; CHECK-NEXT:    sext.w a0, a0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16

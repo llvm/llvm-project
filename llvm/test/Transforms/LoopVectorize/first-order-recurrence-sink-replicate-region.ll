@@ -25,7 +25,7 @@ define void @sink_replicate_region_1(i32 %x, ptr %ptr, ptr noalias %dst) optsize
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   FIRST-ORDER-RECURRENCE-PHI ir<%0> = phi ir<0>, ir<%conv>
-; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>, vp<[[VF]]>
+; CHECK-NEXT:   ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:   vp<[[STEPS:%.]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
 ; CHECK-NEXT: Successor(s): pred.load
@@ -135,7 +135,7 @@ define void @sink_replicate_region_2(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   FIRST-ORDER-RECURRENCE-PHI ir<%recur> = phi ir<0>, ir<%recur.next>
-; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>, vp<[[VF]]>
+; CHECK-NEXT:   ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
 ; CHECK-NEXT:   EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%recur>, ir<%recur.next>
 ; CHECK-NEXT:   Successor(s): pred.store
@@ -301,7 +301,7 @@ define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, ptr 
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   FIRST-ORDER-RECURRENCE-PHI ir<%0> = phi ir<0>, ir<%conv>
-; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>, vp<[[VF]]>
+; CHECK-NEXT:   ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
 ; CHECK-NEXT:   REPLICATE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEPS]]>
@@ -419,7 +419,7 @@ define void @sink_replicate_region_after_replicate_region(ptr %ptr, ptr noalias 
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   FIRST-ORDER-RECURRENCE-PHI ir<%recur> = phi ir<0>, ir<%recur.next>
-; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>, vp<[[VF]]>
+; CHECK-NEXT:   ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
 ; CHECK-NEXT:   EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%recur>, ir<%recur.next>
 ; CHECK-NEXT: Successor(s): pred.store
