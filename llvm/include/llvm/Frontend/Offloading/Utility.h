@@ -133,6 +133,11 @@ Error getAMDGPUMetaDataFromImage(MemoryBufferRef MemBuffer,
                                  StringMap<AMDGPUKernelMetaData> &KernelInfoMap,
                                  uint16_t &ELFABIVersion);
 } // namespace amdgpu
+namespace intel {
+/// Containerizes an offloading image into the ELF binary format expected by
+/// the Intel runtime offload plugin.
+void containerizeOpenMPSPIRVImage(object::OffloadBinary::OffloadingImage &Img);
+} // namespace intel
 } // namespace offloading
 } // namespace llvm
 

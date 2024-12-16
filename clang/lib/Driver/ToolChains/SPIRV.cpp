@@ -28,8 +28,11 @@ void SPIRV::constructTranslateCommand(Compilation &C, const Tool &T,
 
   if (Input.getType() == types::TY_PP_Asm)
     CmdArgs.push_back("-to-binary");
+
+  // The text output from spirv-dis is not in the format expected
+  // by llvm-spirv, so use the text output from llvm-spirv.
   if (Output.getType() == types::TY_PP_Asm)
-    CmdArgs.push_back("--spirv-tools-dis");
+    CmdArgs.push_back("--spirv-text");
 
   CmdArgs.append({"-o", Output.getFilename()});
 

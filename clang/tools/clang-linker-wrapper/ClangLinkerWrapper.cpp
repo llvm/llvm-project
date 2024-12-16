@@ -504,14 +504,14 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
         {"-Xlinker",
          Args.MakeArgString("--plugin-opt=" + StringRef(Arg->getValue()))});
 
-  if (!Triple.isNVPTX())
+  if (!Triple.isNVPTX() && !Triple.isSPIRV())
     CmdArgs.push_back("-Wl,--no-undefined");
 
   for (StringRef InputFile : InputFiles)
     CmdArgs.push_back(InputFile);
 
   // If this is CPU offloading we copy the input libraries.
-  if (!Triple.isAMDGPU() && !Triple.isNVPTX()) {
+  if (!Triple.isAMDGPU() && !Triple.isNVPTX() && !Triple.isSPIRV()) {
     CmdArgs.push_back("-Wl,-Bsymbolic");
     CmdArgs.push_back("-shared");
     ArgStringList LinkerArgs;
@@ -595,6 +595,7 @@ Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
   case Triple::aarch64_be:
   case Triple::ppc64:
   case Triple::ppc64le:
+  case Triple::spirv64:
   case Triple::systemz:
     return generic::clang(InputFiles, Args);
   default:
@@ -735,11 +736,15 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
 }
 
 Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
-bundleOpenMP(ArrayRef<OffloadingImage> Images) {
+bundleOpenMP(SmallVectorImpl<OffloadingImage> &Images) {
   SmallVector<std::unique_ptr<MemoryBuffer>> Buffers;
-  for (const OffloadingImage &Image : Images)
+  for (OffloadingImage &Image : Images) {
+    llvm::Triple Triple(Image.StringData.lookup("triple"));
+    if (Triple.isSPIRV() && Triple.getVendor() == llvm::Triple::Intel)
+      offloading::intel::containerizeOpenMPSPIRVImage(Image);
     Buffers.emplace_back(
         MemoryBuffer::getMemBufferCopy(OffloadBinary::write(Image)));
+  }
 
   return std::move(Buffers);
 }
@@ -793,8 +798,8 @@ bundleHIP(ArrayRef<OffloadingImage> Images, const ArgList &Args) {
 /// Transforms the input \p Images into the binary format the runtime expects
 /// for the given \p Kind.
 Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
-bundleLinkedOutput(ArrayRef<OffloadingImage> Images, const ArgList &Args,
-                   OffloadKind Kind) {
+bundleLinkedOutput(SmallVectorImpl<OffloadingImage> &Images,
+                   const ArgList &Args, OffloadKind Kind) {
   llvm::TimeTraceScope TimeScope("Bundle linked output");
   switch (Kind) {
   case OFK_OpenMP:

@@ -43,6 +43,7 @@
 #include "ToolChains/PS4CPU.h"
 #include "ToolChains/RISCVToolchain.h"
 #include "ToolChains/SPIRV.h"
+#include "ToolChains/SPIRVOpenMP.h"
 #include "ToolChains/Solaris.h"
 #include "ToolChains/TCE.h"
 #include "ToolChains/UEFI.h"
@@ -161,6 +162,20 @@ getHIPOffloadTargetTriple(const Driver &D, const ArgList &Args) {
       TT->getOS() == llvm::Triple::AMDHSA)
     return TT;
   if (TT->getArch() == llvm::Triple::spirv64)
+    return TT;
+  D.Diag(diag::err_drv_invalid_or_unsupported_offload_target) << TT->str();
+  return std::nullopt;
+}
+
+static std::optional<llvm::Triple>
+getSPIRVOffloadTargetTriple(const Driver &D, const ArgList &Args) {
+  if (!Args.hasArg(options::OPT_offload_EQ))
+    return llvm::Triple(
+        "spirv64-intel"); // Only vendor "intel" is currently supported.
+  auto TT = getOffloadTargetTriple(D, Args);
+  if (!TT)
+    return std::nullopt;
+  if ((*TT).isSPIRV() && (*TT).getVendor() == llvm::Triple::Intel)
     return TT;
   D.Diag(diag::err_drv_invalid_or_unsupported_offload_target) << TT->str();
   return std::nullopt;
@@ -888,11 +903,12 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
       auto AMDTriple = getHIPOffloadTargetTriple(*this, C.getInputArgs());
       auto NVPTXTriple = getNVIDIAOffloadTargetTriple(*this, C.getInputArgs(),
                                                       HostTC->getTriple());
+      auto SPIRVTriple = getSPIRVOffloadTargetTriple(*this, C.getInputArgs());
 
       // Attempt to deduce the offloading triple from the set of architectures.
-      // We can only correctly deduce NVPTX / AMDGPU triples currently. We need
-      // to temporarily create these toolchains so that we can access tools for
-      // inferring architectures.
+      // We can only correctly deduce NVPTX / AMDGPU / SPIR-V triples currently.
+      // We need to temporarily create these toolchains so that we can access
+      // tools for inferring architectures.
       llvm::DenseSet<StringRef> Archs;
       if (NVPTXTriple) {
         auto TempTC = std::make_unique<toolchains::CudaToolChain>(
@@ -908,7 +924,16 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
                  C, C.getArgs(), Action::OFK_OpenMP, &*TempTC, true))
           Archs.insert(Arch);
       }
-      if (!AMDTriple && !NVPTXTriple) {
+
+      if (SPIRVTriple) {
+        auto TempTC = std::make_unique<toolchains::SPIRVOpenMPToolChain>(
+            *this, *SPIRVTriple, *HostTC, C.getInputArgs());
+        for (StringRef Arch : getOffloadArchs(
+                 C, C.getArgs(), Action::OFK_OpenMP, &*TempTC, true))
+          Archs.insert(Arch);
+      }
+
+      if (!AMDTriple && !NVPTXTriple && !SPIRVTriple) {
         for (StringRef Arch :
              getOffloadArchs(C, C.getArgs(), Action::OFK_OpenMP, nullptr, true))
           Archs.insert(Arch);
@@ -922,6 +947,8 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
                    IsAMDOffloadArch(StringToOffloadArch(
                        getProcessorFromTargetID(*AMDTriple, Arch)))) {
           DerivedArchs[AMDTriple->getTriple()].insert(Arch);
+        } else if (SPIRVTriple && Arch == (*SPIRVTriple).str()) {
+          DerivedArchs[Arch].insert(Arch);
         } else {
           Diag(clang::diag::err_drv_failed_to_deduce_target_from_arch) << Arch;
           return;
@@ -962,7 +989,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
         const ToolChain *TC;
         // Device toolchains have to be selected differently. They pair host
         // and device in their implementation.
-        if (TT.isNVPTX() || TT.isAMDGCN()) {
+        if (TT.isNVPTX() || TT.isAMDGCN() || TT.isSPIRV()) {
           const ToolChain *HostTC =
               C.getSingleOffloadToolChain<Action::OFK_Host>();
           assert(HostTC && "Host toolchain should be always defined.");
@@ -974,6 +1001,9 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
                   *this, TT, *HostTC, C.getInputArgs());
             else if (TT.isAMDGCN())
               DeviceTC = std::make_unique<toolchains::AMDGPUOpenMPToolChain>(
+                  *this, TT, *HostTC, C.getInputArgs());
+            else if (TT.isSPIRV())
+              DeviceTC = std::make_unique<toolchains::SPIRVOpenMPToolChain>(
                   *this, TT, *HostTC, C.getInputArgs());
             else
               assert(DeviceTC && "Device toolchain not defined.");
