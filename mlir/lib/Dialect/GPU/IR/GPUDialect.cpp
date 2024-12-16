@@ -2484,27 +2484,31 @@ KernelMetadataAttr KernelTableAttr::lookup(StringAttr key) const {
 
 TargetOptions::TargetOptions(
     StringRef toolkitPath, ArrayRef<std::string> linkFiles,
-    StringRef cmdOptions, CompilationTarget compilationTarget,
+    StringRef cmdOptions, StringRef elfSection,
+    CompilationTarget compilationTarget,
     function_ref<SymbolTable *()> getSymbolTableCallback,
     function_ref<void(llvm::Module &)> initialLlvmIRCallback,
     function_ref<void(llvm::Module &)> linkedLlvmIRCallback,
     function_ref<void(llvm::Module &)> optimizedLlvmIRCallback,
     function_ref<void(StringRef)> isaCallback)
     : TargetOptions(TypeID::get<TargetOptions>(), toolkitPath, linkFiles,
-                    cmdOptions, compilationTarget, getSymbolTableCallback,
-                    initialLlvmIRCallback, linkedLlvmIRCallback,
-                    optimizedLlvmIRCallback, isaCallback) {}
+                    cmdOptions, elfSection, compilationTarget,
+                    getSymbolTableCallback, initialLlvmIRCallback,
+                    linkedLlvmIRCallback, optimizedLlvmIRCallback,
+                    isaCallback) {}
 
 TargetOptions::TargetOptions(
     TypeID typeID, StringRef toolkitPath, ArrayRef<std::string> linkFiles,
-    StringRef cmdOptions, CompilationTarget compilationTarget,
+    StringRef cmdOptions, StringRef elfSection,
+    CompilationTarget compilationTarget,
     function_ref<SymbolTable *()> getSymbolTableCallback,
     function_ref<void(llvm::Module &)> initialLlvmIRCallback,
     function_ref<void(llvm::Module &)> linkedLlvmIRCallback,
     function_ref<void(llvm::Module &)> optimizedLlvmIRCallback,
     function_ref<void(StringRef)> isaCallback)
     : toolkitPath(toolkitPath.str()), linkFiles(linkFiles),
-      cmdOptions(cmdOptions.str()), compilationTarget(compilationTarget),
+      cmdOptions(cmdOptions.str()), elfSection(elfSection.str()),
+      compilationTarget(compilationTarget),
       getSymbolTableCallback(getSymbolTableCallback),
       initialLlvmIRCallback(initialLlvmIRCallback),
       linkedLlvmIRCallback(linkedLlvmIRCallback),
@@ -2518,6 +2522,8 @@ StringRef TargetOptions::getToolkitPath() const { return toolkitPath; }
 ArrayRef<std::string> TargetOptions::getLinkFiles() const { return linkFiles; }
 
 StringRef TargetOptions::getCmdOptions() const { return cmdOptions; }
+
+StringRef TargetOptions::getELFSection() const { return elfSection; }
 
 SymbolTable *TargetOptions::getSymbolTable() const {
   return getSymbolTableCallback ? getSymbolTableCallback() : nullptr;
