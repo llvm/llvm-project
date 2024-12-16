@@ -3270,7 +3270,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_sincos:
     case Builtin::BI__builtin_sincosf:
     case Builtin::BI__builtin_sincosl:
-      if (!getTarget().getTriple().isAArch64())
+      // Only use the llvm.sincos.* builtin on AArch64 with optimizations.
+      // Currently, getting codegen that is no worse than the direct call
+      // requires using AA during codegen. This is not done at optlevel=none,
+      // and not all targets support this (AArch64 is one of the few known to).
+      if (!getTarget().getTriple().isAArch64() ||
+          CGM.getCodeGenOpts().OptimizationLevel == 0)
         break;
       emitSincosBuiltin(*this, E, Intrinsic::sincos);
       return RValue::get(nullptr);

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple=aarch64-gnu-linux -emit-llvm %s -o - | FileCheck --check-prefix=NO-MATH-ERRNO %s
+// RUN: %clang_cc1 -triple=aarch64-gnu-linux -emit-llvm -O1 %s -o - | FileCheck --check-prefix=NO-MATH-ERRNO %s
 // RUN: %clang_cc1 -triple=aarch64-gnu-linux -emit-llvm -fmath-errno %s -o - | FileCheck --check-prefix=MATH-ERRNO %s
 
 void sincos(double, double*, double*);
@@ -6,7 +6,7 @@ void sincosf(float, float*, float*);
 void sincosl(long double, long double*, long double*);
 
 // NO-MATH-ERRNO-LABEL: @sincos_f32
-//      NO-MATH-ERRNO:    [[SINCOS:%.*]] = call { float, float } @llvm.sincos.f32(float {{.*}})
+//      NO-MATH-ERRNO:    [[SINCOS:%.*]] = tail call { float, float } @llvm.sincos.f32(float {{.*}})
 // NO-MATH-ERRNO-NEXT:    [[SIN:%.*]] = extractvalue { float, float } [[SINCOS]], 0
 // NO-MATH-ERRNO-NEXT:    [[COS:%.*]] = extractvalue { float, float } [[SINCOS]], 1
 // NO-MATH-ERRNO-NEXT:    store float [[SIN]], ptr {{.*}}, align 4, !alias.scope [[SINCOS_ALIAS_SCOPE:![0-9]+]]
@@ -20,7 +20,7 @@ void sincos_f32(float x, float* fp0, float* fp1) {
 }
 
 // NO-MATH-ERRNO-LABEL: @sincos_f64
-//      NO-MATH-ERRNO:    [[SINCOS:%.*]] = call { double, double } @llvm.sincos.f64(double {{.*}})
+//      NO-MATH-ERRNO:    [[SINCOS:%.*]] = tail call { double, double } @llvm.sincos.f64(double {{.*}})
 // NO-MATH-ERRNO-NEXT:    [[SIN:%.*]] = extractvalue { double, double } [[SINCOS]], 0
 // NO-MATH-ERRNO-NEXT:    [[COS:%.*]] = extractvalue { double, double } [[SINCOS]], 1
 // NO-MATH-ERRNO-NEXT:    store double [[SIN]], ptr {{.*}}, align 8, !alias.scope [[SINCOS_ALIAS_SCOPE:![0-9]+]]
@@ -34,7 +34,7 @@ void sincos_f64(double x, double* dp0, double* dp1) {
 }
 
 // NO-MATH-ERRNO-LABEL: @sincos_f128
-//      NO-MATH-ERRNO:    [[SINCOS:%.*]] = call { fp128, fp128 } @llvm.sincos.f128(fp128 {{.*}})
+//      NO-MATH-ERRNO:    [[SINCOS:%.*]] = tail call { fp128, fp128 } @llvm.sincos.f128(fp128 {{.*}})
 // NO-MATH-ERRNO-NEXT:    [[SIN:%.*]] = extractvalue { fp128, fp128 } [[SINCOS]], 0
 // NO-MATH-ERRNO-NEXT:    [[COS:%.*]] = extractvalue { fp128, fp128 } [[SINCOS]], 1
 // NO-MATH-ERRNO-NEXT:    store fp128 [[SIN]], ptr {{.*}}, align 16, !alias.scope [[SINCOS_ALIAS_SCOPE:![0-9]+]]
