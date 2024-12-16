@@ -5,7 +5,7 @@ Development is currently mostly focused on Linux.  MacOS and Windows has
 partial support, but has bitrot and isn't being tested continuously.
 
 LLVM-libc is currently being integrated into Android and Fuchsia operating
-systems via `overlay move <overlay_mode.html>`__.
+systems via `overlay mode <overlay_mode.html>`__.
 
 For Linux, we support kernel versions as listed on
 `kernel.org <https://kernel.org/>`_, including ``longterm`` (not past EOL
