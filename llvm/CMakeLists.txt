@@ -712,10 +712,10 @@ option(LLVM_OPTIMIZE_SANITIZED_BUILDS "Pass -O1 on debug sanitizer builds" ON)
 
 check_c_compiler_flag(-fno-sanitize=function C_SUPPORTS_FNO_SANITIZE_FUNCTION_FLAG)
 check_cxx_compiler_flag(-fno-sanitize=function CXX_SUPPORTS_FNO_SANITIZE_FUNCTION_FLAG)
-if( CMAKE_C_COMPILER_ID MATCHES "Clang" AND C_SUPPORTS_FNO_SANITIZE_FUNCTION_FLAG AND CXX_SUPPORTS_FNO_SANITIZE_FUNCTION_FLAG)
+if( C_SUPPORTS_FNO_SANITIZE_FUNCTION_FLAG AND CXX_SUPPORTS_FNO_SANITIZE_FUNCTION_FLAG )
   set(LLVM_UBSAN_FLAGS_CLANG "-fno-sanitize=function")
 else()
-  # gcc doesn't know about -fsanitize=function
+  # some compiler (for example gcc) doesn't know about -fsanitize=function
   set(LLVM_UBSAN_FLAGS_CLANG)
 endif()
 set(LLVM_UBSAN_FLAGS
