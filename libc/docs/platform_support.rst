@@ -18,3 +18,5 @@ For Windows, we plan to support products within their lifecycle. Please refer to
 LLVM-libc does not guarantee backward compatibility with operating systems that
 have reached their EOL. Compatibility patches for obsolete operating systems
 will not be accepted.
+
+For GPU, reference `our GPU docs <gpu/index.html>`__.
