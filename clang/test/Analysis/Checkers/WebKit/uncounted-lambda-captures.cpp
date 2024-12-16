@@ -1,16 +1,72 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=webkit.UncountedLambdaCapturesChecker -verify %s
 
-struct A {
-  static void b();
+#include "mock-types.h"
+
+namespace WTF {
+
+namespace Detail {
+
+template<typename Out, typename... In>
+class CallableWrapperBase {
+public:
+    virtual ~CallableWrapperBase() { }
+    virtual Out call(In...) = 0;
 };
 
-struct RefCountable {
-  void ref() {}
-  void deref() {}
-  void method();
-  void constMethod() const;
-  int trivial() { return 123; }
-  RefCountable* next();
+template<typename, typename, typename...> class CallableWrapper;
+
+template<typename CallableType, typename Out, typename... In>
+class CallableWrapper : public CallableWrapperBase<Out, In...> {
+public:
+    explicit CallableWrapper(CallableType& callable)
+        : m_callable(callable) { }
+    Out call(In... in) final { return m_callable(in...); }
+
+private:
+    CallableType m_callable;
+};
+
+} // namespace Detail
+
+template<typename> class Function;
+
+template<typename Out, typename... In> Function<Out(In...)> adopt(Detail::CallableWrapperBase<Out, In...>*);
+
+template <typename Out, typename... In>
+class Function<Out(In...)> {
+public:
+    using Impl = Detail::CallableWrapperBase<Out, In...>;
+
+    Function() = default;
+
+    template<typename FunctionType>
+    Function(FunctionType f)
+        : m_callableWrapper(new Detail::CallableWrapper<FunctionType, Out, In...>(f)) { }
+
+    Out operator()(In... in) const { return m_callableWrapper->call(in...); }
+    explicit operator bool() const { return !!m_callableWrapper; }
+
+private:
+    enum AdoptTag { Adopt };
+    Function(Impl* impl, AdoptTag)
+        : m_callableWrapper(impl)
+    {
+    }
+
+    friend Function adopt<Out, In...>(Impl*);
+
+    std::unique_ptr<Impl> m_callableWrapper;
+};
+
+template<typename Out, typename... In> Function<Out(In...)> adopt(Detail::CallableWrapperBase<Out, In...>* impl)
+{
+    return Function<Out(In...)>(impl, Function<Out(In...)>::Adopt);
+}
+
+} // namespace WTF
+
+struct A {
+  static void b();
 };
 
 RefCountable* make_obj();
@@ -184,4 +240,22 @@ void lambda_with_args(RefCountable* obj) {
     obj->method();
   };
   trivial_lambda(1);
+}
+
+void callFunctionOpaque(WTF::Function<void()>&&);
+void callFunction(WTF::Function<void()>&& function) {
+  someFunction();
+  function();
+}
+
+void lambda_converted_to_function(RefCountable* obj)
+{
+  callFunction([&]() {
+    obj->method();
+    // expected-warning@-1{{Implicitly captured raw-pointer 'obj' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+  });
+  callFunctionOpaque([&]() {
+    obj->method();
+    // expected-warning@-1{{Implicitly captured raw-pointer 'obj' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+  });
 }

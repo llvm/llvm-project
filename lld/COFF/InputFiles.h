@@ -62,6 +62,7 @@ class ImportThunkChunk;
 class ImportThunkChunkARM64EC;
 class SectionChunk;
 class Symbol;
+class SymbolTable;
 class Undefined;
 class TpiSource;
 
@@ -99,11 +100,11 @@ public:
   // Returns .drectve section contents if exist.
   StringRef getDirectives() { return directives; }
 
-  COFFLinkerContext &ctx;
+  SymbolTable &symtab;
 
 protected:
-  InputFile(COFFLinkerContext &c, Kind k, MemoryBufferRef m, bool lazy = false)
-      : mb(m), ctx(c), fileKind(k), lazy(lazy) {}
+  InputFile(SymbolTable &s, Kind k, MemoryBufferRef m, bool lazy = false)
+      : mb(m), symtab(s), fileKind(k), lazy(lazy) {}
 
   StringRef directives;
 
@@ -135,8 +136,8 @@ private:
 // .obj or .o file. This may be a member of an archive file.
 class ObjFile : public InputFile {
 public:
-  explicit ObjFile(COFFLinkerContext &ctx, MemoryBufferRef m, bool lazy = false)
-      : InputFile(ctx, ObjectKind, m, lazy) {}
+  explicit ObjFile(COFFLinkerContext &ctx, MemoryBufferRef m,
+                   bool lazy = false);
   static bool classof(const InputFile *f) { return f->kind() == ObjectKind; }
   void parse() override;
   void parseLazy();
@@ -403,8 +404,8 @@ private:
 // .dll file. MinGW only.
 class DLLFile : public InputFile {
 public:
-  explicit DLLFile(COFFLinkerContext &ctx, MemoryBufferRef m)
-      : InputFile(ctx, DLLKind, m) {}
+  explicit DLLFile(SymbolTable &symtab, MemoryBufferRef m)
+      : InputFile(symtab, DLLKind, m) {}
   static bool classof(const InputFile *f) { return f->kind() == DLLKind; }
   void parse() override;
   MachineTypes getMachineType() const override;

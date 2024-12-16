@@ -761,30 +761,16 @@ void BinaryEmitter::emitJumpTables(const BinaryFunction &BF) {
       continue;
     if (opts::PrintJumpTables)
       JT.print(BC.outs());
-    if (opts::JumpTables == JTS_BASIC && BC.HasRelocations) {
+    if (opts::JumpTables == JTS_BASIC) {
       JT.updateOriginal();
     } else {
       MCSection *HotSection, *ColdSection;
-      if (opts::JumpTables == JTS_BASIC) {
-        // In non-relocation mode we have to emit jump tables in local sections.
-        // This way we only overwrite them when the corresponding function is
-        // overwritten.
-        std::string Name = ".local." + JT.Labels[0]->getName().str();
-        std::replace(Name.begin(), Name.end(), '/', '.');
-        BinarySection &Section =
-            BC.registerOrUpdateSection(Name, ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
-        Section.setAnonymous(true);
-        JT.setOutputSection(Section);
-        HotSection = BC.getDataSection(Name);
-        ColdSection = HotSection;
+      if (BF.isSimple()) {
+        HotSection = ReadOnlySection;
+        ColdSection = ReadOnlyColdSection;
       } else {
-        if (BF.isSimple()) {
-          HotSection = ReadOnlySection;
-          ColdSection = ReadOnlyColdSection;
-        } else {
-          HotSection = BF.hasProfile() ? ReadOnlySection : ReadOnlyColdSection;
-          ColdSection = HotSection;
-        }
+        HotSection = BF.hasProfile() ? ReadOnlySection : ReadOnlyColdSection;
+        ColdSection = HotSection;
       }
       emitJumpTable(JT, HotSection, ColdSection);
     }
