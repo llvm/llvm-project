@@ -64,7 +64,6 @@
 #include <iterator>
 #include <optional>
 #include <string>
-#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -167,23 +166,21 @@ static bool Is16bitsType(MVT VT) {
 // things:
 // 1. Determines Whether the vector is something we want to custom lower,
 // std::nullopt is returned if we do not want to custom lower it.
-// 2. If we do want to handle it, returns three parameters:
+// 2. If we do want to handle it, returns two parameters:
 //    - unsigned int NumElts - The number of elements in the final vector
 //    - EVT EltVT - The type of the elements in the final vector
-//    - bool UpsizeElementTypes - Whether or not we are upsizing the elements of
-//    the vector
-static std::optional<std::tuple<unsigned int, EVT, bool>>
-getVectorLoweringShape(EVT ValVT) {
-  if (!ValVT.isVector() || !ValVT.isSimple())
+static std::optional<std::pair<unsigned int, EVT>>
+getVectorLoweringShape(EVT VectorVT) {
+  if (!VectorVT.isVector() || !VectorVT.isSimple())
     return std::nullopt;
 
-  EVT EltVT = ValVT.getVectorElementType();
-  unsigned NumElts = ValVT.getVectorNumElements();
+  EVT EltVT = VectorVT.getVectorElementType();
+  unsigned NumElts = VectorVT.getVectorNumElements();
 
   // We only handle "native" vector sizes for now, e.g. <4 x double> is not
   // legal.  We can (and should) split that into 2 stores of <2 x double> here
   // but I'm leaving that as a TODO for now.
-  switch (ValVT.getSimpleVT().SimpleTy) {
+  switch (VectorVT.getSimpleVT().SimpleTy) {
   default:
     return std::nullopt;
   case MVT::v2i8:
@@ -201,7 +198,7 @@ getVectorLoweringShape(EVT ValVT) {
   case MVT::v4bf16:
   case MVT::v4f32:
     // This is a "native" vector type
-    return std::tuple(NumElts, EltVT, /* UpsizeElementTypes = */ false);
+    return std::pair(NumElts, EltVT);
   case MVT::v8i8:   // <2 x i8x4>
   case MVT::v8f16:  // <4 x f16x2>
   case MVT::v8bf16: // <4 x bf16x2>
@@ -218,12 +215,12 @@ getVectorLoweringShape(EVT ValVT) {
 
     // Number of elements to pack in one word.
     unsigned NPerWord = 32 / EltVT.getSizeInBits();
-    return std::tuple(NumElts / NPerWord,
-                      MVT::getVectorVT(EltVT.getSimpleVT(), NPerWord),
-                      /* UpsizeElementTypes = */ true);
+
+    return std::pair(NumElts / NPerWord,
+                      MVT::getVectorVT(EltVT.getSimpleVT(), NPerWord));
   }
 
-  llvm_unreachable("All cases should return.");
+  llvm_unreachable("All cases in switch should return.");
 };
 
 /// ComputePTXValueVTs - For the given Type \p Ty, returns the set of primitive
@@ -2873,10 +2870,10 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(N);
   EVT ValVT = Val.getValueType();
 
-  auto VectorLoweringParams = getVectorLoweringShape(ValVT);
-  if (!VectorLoweringParams)
+  auto NumEltsAndEltVT = getVectorLoweringShape(ValVT);
+  if (!NumEltsAndEltVT)
     return SDValue();
-  auto [NumElts, EltVT, UpsizeElementTypes] = VectorLoweringParams.value();
+  auto [NumElts, EltVT] = NumEltsAndEltVT.value();
 
   MemSDNode *MemSD = cast<MemSDNode>(N);
   const DataLayout &TD = DAG.getDataLayout();
@@ -2917,7 +2914,10 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
   Ops.push_back(N->getOperand(0));
 
   // Then the split values
-  if (UpsizeElementTypes) {
+  if (ValVT.getVectorNumElements() > NumElts) {
+    // If the number of elements has changed, getVectorLoweringShape has upsized
+    // the element types
+    assert((Isv2x16VT(EltVT) || EltVT == MVT::v4i8) && "Unexpected upsized type.");
     // Combine individual elements into v2[i,f,bf]16/v4i8 subvectors to be
     // stored as b32s
     unsigned NumEltsPerSubVector = EltVT.getVectorNumElements();
@@ -5229,10 +5229,10 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
 
   assert(ResVT.isVector() && "Vector load must have vector type");
 
-  auto VectorLoweringParams = getVectorLoweringShape(ResVT);
-  if (!VectorLoweringParams)
+  auto NumEltsAndEltVT = getVectorLoweringShape(ResVT);
+  if (!NumEltsAndEltVT)
     return;
-  auto [NumElts, EltVT, UpsizeElementTypes] = VectorLoweringParams.value();
+  auto [NumElts, EltVT] = NumEltsAndEltVT.value();
 
   LoadSDNode *LD = cast<LoadSDNode>(N);
 
@@ -5288,7 +5288,11 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
                                           LD->getMemOperand());
 
   SmallVector<SDValue> ScalarRes;
-  if (UpsizeElementTypes) {
+  if (ResVT.getVectorNumElements() > NumElts) {
+    // If the number of elements has changed, getVectorLoweringShape has upsized
+    // the element types
+    assert((Isv2x16VT(EltVT) || EltVT == MVT::v4i8) &&
+           "Unexpected upsized type.");
     // Generate EXTRACT_VECTOR_ELTs to split v2[i,f,bf]16/v4i8 subvectors back
     // into individual elements.
     for (unsigned i = 0; i < NumElts; ++i) {
