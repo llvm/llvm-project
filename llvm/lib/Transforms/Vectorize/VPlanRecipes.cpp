@@ -1754,20 +1754,13 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenIntOrFpInductionRecipe::print(raw_ostream &O, const Twine &Indent,
                                           VPSlotTracker &SlotTracker) const {
-  O << Indent << "WIDEN-INDUCTION";
-  if (getTruncInst()) {
-    O << "\\l\"";
-    O << " +\n" << Indent << "\"  " << VPlanIngredient(IV) << "\\l\"";
-    O << " +\n" << Indent << "\"  ";
-    getVPValue(0)->printAsOperand(O, SlotTracker);
-  } else
-    O << " " << VPlanIngredient(IV);
+  O << Indent;
+  printAsOperand(O, SlotTracker);
+  O << " = WIDEN-INDUCTION  ";
+  printOperands(O, SlotTracker);
 
-  O << ", ";
-  getStepValue()->printAsOperand(O, SlotTracker);
-
-  O << ", ";
-  getVFValue()->printAsOperand(O, SlotTracker);
+  if (auto *TI = getTruncInst())
+    O << " (truncated to " << *TI->getType() << ")";
 }
 #endif
 
