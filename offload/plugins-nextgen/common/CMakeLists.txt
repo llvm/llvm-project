@@ -7,7 +7,7 @@ add_library(PluginCommon OBJECT
   src/RPC.cpp
   src/Utils/ELF.cpp
 )
-add_dependencies(PluginCommon intrinsics_gen LLVMProfileData)
+add_dependencies(PluginCommon intrinsics_gen)
 
 # Only enable JIT for those targets that LLVM can support.
 set(supported_jit_targets AMDGPU NVPTX)
@@ -23,14 +23,15 @@ endif()
 
 # Include the RPC server from the `libc` project if availible.
 include(FindLibcCommonUtils)
+target_link_libraries(PluginCommon PRIVATE llvm-libc-common-utilities)
 if(TARGET llvmlibc_rpc_server AND ${LIBOMPTARGET_GPU_LIBC_SUPPORT})
-	target_link_libraries(PluginCommon PRIVATE llvmlibc_rpc_server llvm-libc-common-utilities)
+	target_link_libraries(PluginCommon PRIVATE llvmlibc_rpc_server)
 	target_compile_definitions(PluginCommon PRIVATE LIBOMPTARGET_RPC_SUPPORT)
 elseif(${LIBOMPTARGET_GPU_LIBC_SUPPORT})
   find_library(llvmlibc_rpc_server NAMES llvmlibc_rpc_server
                PATHS ${LIBOMPTARGET_LLVM_LIBRARY_DIR} NO_DEFAULT_PATH)
   if(llvmlibc_rpc_server)
-    target_link_libraries(PluginCommon PRIVATE ${llvmlibc_rpc_server} llvm-libc-common-utilities)
+    target_link_libraries(PluginCommon PRIVATE ${llvmlibc_rpc_server})
 		target_compile_definitions(PluginCommon PRIVATE LIBOMPTARGET_RPC_SUPPORT)
   endif()
 endif()
@@ -43,7 +44,6 @@ target_compile_definitions(PluginCommon PRIVATE
 
 target_compile_options(PluginCommon PUBLIC ${offload_compile_flags})
 target_link_options(PluginCommon PUBLIC ${offload_link_flags})
-target_link_libraries(PluginCommon PRIVATE LLVMProfileData)
 
 target_include_directories(PluginCommon PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include

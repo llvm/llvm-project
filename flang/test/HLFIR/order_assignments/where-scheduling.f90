@@ -134,7 +134,7 @@ end subroutine
 !CHECK-NEXT: run 1 save    : where/mask
 !CHECK-NEXT: run 2 evaluate: where/region_assign1
 !CHECK-LABEL: ------------ scheduling where in _QPonly_once ------------
-!CHECK-NEXT: unknown effect: %{{[0-9]+}} = llvm.intr.stacksave : !llvm.ptr
+!CHECK-NEXT: unknown effect: %11 = fir.call @_QPcall_me_only_once() fastmath<contract> : () -> !fir.array<10x!fir.logical<4>>
 !CHECK-NEXT: saving eval because write effect prevents re-evaluation
 !CHECK-NEXT: run 1 save  (w): where/mask
 !CHECK-NEXT: run 2 evaluate: where/region_assign1

@@ -10,16 +10,14 @@
 #ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_XCOFF_OBJECTFILEXCOFF_H
 #define LLDB_SOURCE_PLUGINS_OBJECTFILE_XCOFF_OBJECTFILEXCOFF_H
 
-#include <cstdint>
-
-#include <vector>
-
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-private.h"
 #include "llvm/Object/XCOFFObjectFile.h"
+#include <cstdint>
+#include <vector>
 
 /// \class ObjectFileXCOFF
 /// Generic XCOFF object file reader.

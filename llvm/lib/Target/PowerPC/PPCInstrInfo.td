@@ -686,13 +686,15 @@ def addr   : ComplexPattern<iPTR, 1, "SelectAddr",[], []>;
 def iaddroff : ComplexPattern<iPTR, 1, "SelectAddrImmOffs", [], []>;
 
 // Load and Store Instruction Selection addressing modes.
-def DForm  : ComplexPattern<iPTR, 2, "SelectDForm",    [], [SDNPWantParent]>;
-def DSForm : ComplexPattern<iPTR, 2, "SelectDSForm",   [], [SDNPWantParent]>;
-def DQForm : ComplexPattern<iPTR, 2, "SelectDQForm",   [], [SDNPWantParent]>;
-def XForm  : ComplexPattern<iPTR, 2, "SelectXForm",    [], [SDNPWantParent]>;
-def ForceXForm : ComplexPattern<iPTR, 2, "SelectForceXForm", [], [SDNPWantParent]>;
-def PCRelForm : ComplexPattern<iPTR, 2, "SelectPCRelForm", [], [SDNPWantParent]>;
-def PDForm : ComplexPattern<iPTR, 2, "SelectPDForm",   [], [SDNPWantParent]>;
+let WantsParent = true in {
+  def DForm  : ComplexPattern<iPTR, 2, "SelectDForm">;
+  def DSForm : ComplexPattern<iPTR, 2, "SelectDSForm">;
+  def DQForm : ComplexPattern<iPTR, 2, "SelectDQForm">;
+  def XForm  : ComplexPattern<iPTR, 2, "SelectXForm">;
+  def ForceXForm : ComplexPattern<iPTR, 2, "SelectForceXForm">;
+  def PCRelForm : ComplexPattern<iPTR, 2, "SelectPCRelForm">;
+  def PDForm : ComplexPattern<iPTR, 2, "SelectPDForm">;
+}
 
 //===----------------------------------------------------------------------===//
 // PowerPC Instruction Predicate Definitions.

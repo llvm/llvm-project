@@ -4,10 +4,7 @@
 define i1 @lshr_or_ule(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: define i1 @lshr_or_ule(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
-; CHECK-NEXT:    [[OP1:%.*]] = lshr i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[OP2:%.*]] = or i32 [[X]], [[Z]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[OP1]], [[OP2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %op1 = lshr i32 %x, %y
   %op2 = or i32 %x, %z
@@ -18,10 +15,7 @@ define i1 @lshr_or_ule(i32 %x, i32 %y, i32 %z) {
 define i1 @lshr_or_uge_swapped(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: define i1 @lshr_or_uge_swapped(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
-; CHECK-NEXT:    [[OP1:%.*]] = lshr i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[OP2:%.*]] = or i32 [[X]], [[Z]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[OP2]], [[OP1]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %op1 = lshr i32 %x, %y
   %op2 = or i32 %x, %z
@@ -32,10 +26,7 @@ define i1 @lshr_or_uge_swapped(i32 %x, i32 %y, i32 %z) {
 define i1 @lshr_or_ugt(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: define i1 @lshr_or_ugt(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
-; CHECK-NEXT:    [[OP1:%.*]] = lshr i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[OP2:%.*]] = or i32 [[X]], [[Z]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[OP1]], [[OP2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %op1 = lshr i32 %x, %y
   %op2 = or i32 %x, %z
@@ -74,10 +65,7 @@ define i1 @lshr_or_sle_wrong_pred(i32 %x, i32 %y, i32 %z) {
 define i1 @lshr_or_swapped_ule(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: define i1 @lshr_or_swapped_ule(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
-; CHECK-NEXT:    [[OP1:%.*]] = lshr i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[OP2:%.*]] = or i32 [[Z]], [[X]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[OP1]], [[OP2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %op1 = lshr i32 %x, %y
   %op2 = or i32 %z, %x
@@ -102,10 +90,7 @@ define i1 @lshr_or_ule_invalid_swapped(i32 %x, i32 %y, i32 %z) {
 define i1 @and_uadd_sat_ule(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: define i1 @and_uadd_sat_ule(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
-; CHECK-NEXT:    [[OP1:%.*]] = and i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[OP2:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X]], i32 [[Z]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[OP1]], [[OP2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %op1 = and i32 %x, %y
   %op2 = call i32 @llvm.uadd.sat(i32 %x, i32 %z)
@@ -116,10 +101,7 @@ define i1 @and_uadd_sat_ule(i32 %x, i32 %y, i32 %z) {
 define i1 @urem_or_ule(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: define i1 @urem_or_ule(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
-; CHECK-NEXT:    [[OP1:%.*]] = urem i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[OP2:%.*]] = or i32 [[X]], [[Z]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[OP1]], [[OP2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %op1 = urem i32 %x, %y
   %op2 = or i32 %x, %z
@@ -144,10 +126,7 @@ define i1 @urem_or_ule_invalid_swapped(i32 %x, i32 %y, i32 %z) {
 define i1 @udiv_or_ule(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: define i1 @udiv_or_ule(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
-; CHECK-NEXT:    [[OP1:%.*]] = udiv i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[OP2:%.*]] = or i32 [[X]], [[Z]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[OP1]], [[OP2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %op1 = udiv i32 %x, %y
   %op2 = or i32 %x, %z
@@ -172,10 +151,7 @@ define i1 @udiv_or_ule_invalid_swapped(i32 %x, i32 %y, i32 %z) {
 define i1 @usub_sat_uadd_sat_ule(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: define i1 @usub_sat_uadd_sat_ule(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
-; CHECK-NEXT:    [[OP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[OP2:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X]], i32 [[Z]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[OP1]], [[OP2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %op1 = call i32 @llvm.usub.sat(i32 %x, i32 %y)
   %op2 = call i32 @llvm.uadd.sat(i32 %x, i32 %z)

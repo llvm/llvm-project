@@ -83,7 +83,7 @@ INITIALIZE_PASS_BEGIN(LiveIntervalsWrapperPass, "liveintervals",
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_END(LiveIntervalsWrapperPass, "liveintervals",
-                    "Live Interval Analysis", false, false)
+                    "Live Interval Analysis", false, true)
 
 bool LiveIntervalsWrapperPass::runOnMachineFunction(MachineFunction &MF) {
   LIS.Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
@@ -730,7 +730,12 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
     // Find the regunit intervals for the assigned register. They may overlap
     // the virtual register live range, cancelling any kills.
     RU.clear();
-    for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+    LaneBitmask ArtificialLanes;
+    for (MCRegUnitMaskIterator UI(PhysReg, TRI); UI.isValid(); ++UI) {
+      auto [Unit, Bitmask] = *UI;
+      // Record lane mask for all artificial RegUnits for this physreg.
+      if (TRI->isArtificialRegUnit(Unit))
+        ArtificialLanes |= Bitmask;
       const LiveRange &RURange = getRegUnit(Unit);
       if (RURange.empty())
         continue;
@@ -782,7 +787,11 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
         LaneBitmask DefinedLanesMask;
         if (LI.hasSubRanges()) {
           // Compute a mask of lanes that are defined.
-          DefinedLanesMask = LaneBitmask::getNone();
+          // Artificial regunits are not independently allocatable so the
+          // register allocator cannot have used them to represent any other
+          // values. That's why we mark them as 'defined' here, as this
+          // otherwise prevents kill flags from being added.
+          DefinedLanesMask = ArtificialLanes;
           for (const LiveInterval::SubRange &SR : LI.subranges())
             for (const LiveRange::Segment &Segment : SR.segments) {
               if (Segment.start >= RI->end)

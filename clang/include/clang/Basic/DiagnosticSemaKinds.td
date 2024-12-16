@@ -10237,10 +10237,10 @@ def warn_dangling_pointer_assignment : Warning<
    InGroup<DanglingAssignment>;
 def warn_dangling_reference_captured : Warning<
    "object whose reference is captured by '%0' will be destroyed at the end of "
-   "the full-expression">, InGroup<DanglingCapture>, DefaultIgnore;
+   "the full-expression">, InGroup<DanglingCapture>;
 def warn_dangling_reference_captured_by_unknown : Warning<
    "object whose reference is captured will be destroyed at the end of "
-   "the full-expression">, InGroup<DanglingCapture>, DefaultIgnore;
+   "the full-expression">, InGroup<DanglingCapture>;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
@@ -10268,6 +10268,16 @@ def warn_depr_array_comparison : Warning<
   "comparison between two arrays is deprecated; "
   "to compare array addresses, use unary '+' to decay operands to pointers">,
   InGroup<DeprecatedArrayCompare>;
+
+def warn_array_comparison : Warning<
+  "comparison between two arrays compare their addresses and will be deprecated in c++20; "
+  "to compare array addresses, use unary '+' to decay operands to pointers">,
+  InGroup<DiagGroup<"array-compare">>;
+
+def warn_array_comparison_cxx26 : Warning<
+  "comparison between two arrays is ill-formed in C++26; "
+  "to compare array addresses, use unary '+' to decay operands to pointers">,
+  InGroup<DiagGroup<"array-compare-cxx26">>, DefaultError;
 
 def warn_stringcompare : Warning<
   "result of comparison against %select{a string literal|@encode}0 is "
@@ -12706,9 +12716,9 @@ def err_acc_clause_cannot_combine
     : Error<"OpenACC clause '%0' may not appear on the same construct as a "
             "'%1' clause on a '%2' construct">;
 def err_acc_reduction_num_gangs_conflict
-    : Error<
-          "OpenACC 'reduction' clause may not appear on a 'parallel' construct "
-          "with a 'num_gangs' clause with more than 1 argument, have %0">;
+    : Error<"OpenACC '%1' clause %select{|with more than 1 argument }0may not "
+            "appear on a '%2' construct "
+            "with a '%3' clause%select{ with more than 1 argument|}0">;
 def err_acc_reduction_type
     : Error<"OpenACC 'reduction' variable must be of scalar type, sub-array, or a "
             "composite of scalar types;%select{| sub-array base}1 type is %0">;
@@ -12733,48 +12743,50 @@ def err_acc_size_expr_value
           "OpenACC 'tile' clause size expression must be %select{an asterisk "
           "or a constant expression|positive integer value, evaluated to %1}0">;
 def err_acc_invalid_in_loop
-    : Error<"%select{OpenACC '%2' construct|while loop|do loop}0 cannot appear "
-            "in intervening code of a 'loop' with a '%1' clause">;
+    : Error<"%select{OpenACC '%3' construct|while loop|do loop}0 cannot appear "
+            "in intervening code of a '%1' with a '%2' clause">;
 def note_acc_active_clause_here
     : Note<"active '%0' clause defined here">;
 def err_acc_clause_multiple_loops
-    : Error<"more than one for-loop in a loop associated with OpenACC 'loop' "
-            "construct with a '%select{collapse|tile}0' clause">;
+    : Error<"more than one for-loop in a loop associated with OpenACC '%0' "
+            "construct with a '%1' clause">;
 def err_acc_insufficient_loops
     : Error<"'%0' clause specifies a loop count greater than the number "
             "of available loops">;
 def err_acc_intervening_code
     : Error<"inner loops must be tightly nested inside a '%0' clause on "
-            "a 'loop' construct">;
+            "a '%1' construct">;
 def err_acc_gang_multiple_elt
     : Error<"OpenACC 'gang' clause may have at most one %select{unnamed or "
             "'num'|'dim'|'static'}0 argument">;
 def err_acc_int_arg_invalid
-    : Error<"'%1' argument on '%0' clause is not permitted on a%select{n "
-            "orphaned|||}2 'loop' construct %select{|associated with a "
-            "'parallel' compute construct|associated with a 'kernels' compute "
-            "construct|associated with a 'serial' compute construct}2">;
+    : Error<"'%0' argument on '%1' clause is not permitted on a%select{|n "
+            "orphaned}2 '%3' construct%select{| associated with a '%5' compute "
+            "construct}4">;
 def err_acc_gang_dim_value
     : Error<"argument to 'gang' clause dimension must be %select{a constant "
             "expression|1, 2, or 3: evaluated to %1}0">;
 def err_acc_num_arg_conflict
-    : Error<"'num' argument to '%0' clause not allowed on a 'loop' construct "
-            "associated with a 'kernels' construct that has a "
-            "'%select{num_gangs|num_workers|vector_length}1' "
-            "clause">;
+    : Error<"'%0' argument to '%1' clause not allowed on a '%2' "
+            "construct%select{| associated with a '%4' construct}3 that has a "
+            "'%5' clause">;
+def err_acc_num_arg_conflict_reverse
+    : Error<"'%0' clause not allowed on a 'kernels loop' construct that "
+            "has a '%1' clause with a%select{n| 'num'}2 argument">;
 def err_acc_clause_in_clause_region
     : Error<"loop with a '%0' clause may not exist in the region of a '%1' "
-            "clause%select{| on a 'kernels' compute construct}2">;
+            "clause%select{| on a '%3' construct}2">;
 def err_acc_gang_reduction_conflict
     : Error<"%select{OpenACC 'gang' clause with a 'dim' value greater than "
             "1|OpenACC 'reduction' clause}0 cannot "
-            "appear on the same 'loop' construct as a %select{'reduction' "
+            "appear on the same '%1' construct as a %select{'reduction' "
             "clause|'gang' clause with a 'dim' value greater than 1}0">;
 def err_acc_gang_reduction_numgangs_conflict
-    : Error<"OpenACC '%0' clause cannot appear on the same 'loop' construct "
-            "as a '%1' clause inside a compute construct with a "
+    : Error<"OpenACC '%0' clause cannot appear on the same '%2' construct as a "
+            "'%1' clause %select{inside a compute construct with a|and a}3 "
             "'num_gangs' clause with more than one argument">;
-def err_reduction_op_mismatch
+
+    def err_reduction_op_mismatch
     : Error<"OpenACC 'reduction' variable must have the same operator in all "
             "nested constructs (%0 vs %1)">;
 def err_acc_loop_variable_type

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_MATH_H
-#  define _LIBCPP_MATH_H
+#ifndef _LIBCPP___CXX03_MATH_H
+#  define _LIBCPP___CXX03_MATH_H
 
 /*
     math.h synopsis
@@ -503,7 +503,7 @@ using std::__math::trunc;
 
 #  endif // __cplusplus
 
-#else // _LIBCPP_MATH_H
+#else // _LIBCPP___CXX03_MATH_H
 
 // This include lives outside the header guard in order to support an MSVC
 // extension which allows users to do:
@@ -517,4 +517,4 @@ using std::__math::trunc;
 #    include_next <math.h>
 #  endif
 
-#endif // _LIBCPP_MATH_H
+#endif // _LIBCPP___CXX03_MATH_H

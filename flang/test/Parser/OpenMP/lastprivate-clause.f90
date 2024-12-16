@@ -39,7 +39,7 @@ end
 !UNPARSE: SUBROUTINE foo2
 !UNPARSE:  INTEGER x, i
 !UNPARSE:   x=1_4
-!UNPARSE: !$OMP PARALLEL DO  LASTPRIVATE(CONDITIONAL:x)
+!UNPARSE: !$OMP PARALLEL DO  LASTPRIVATE(CONDITIONAL: x)
 !UNPARSE:  DO i=1_4,100_4
 !UNPARSE:    x=x+1_4
 !UNPARSE:  END DO
@@ -49,6 +49,6 @@ end
 !PARSE-TREE:   Name = 'foo2'
 !PARSE-TREE: OmpLoopDirective -> llvm::omp::Directive = parallel do
 !PARSE-TREE: OmpClauseList -> OmpClause -> Lastprivate -> OmpLastprivateClause
-!PARSE-TREE:   LastprivateModifier = Conditional
+!PARSE-TREE:   Modifier -> OmpLastprivateModifier -> Value = Conditional
 !PARSE-TREE:   OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: EndSubroutineStmt

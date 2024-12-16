@@ -78,7 +78,6 @@ namespace opts {
 extern cl::list<std::string> HotTextMoveSections;
 extern cl::opt<bool> Hugify;
 extern cl::opt<bool> Instrument;
-extern cl::opt<JumpTableSupportLevel> JumpTables;
 extern cl::opt<bool> KeepNops;
 extern cl::opt<bool> Lite;
 extern cl::list<std::string> ReorderData;
@@ -356,7 +355,8 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
 
   Relocation::Arch = TheTriple.getArch();
   auto BCOrErr = BinaryContext::createBinaryContext(
-      TheTriple, File->getFileName(), Features.get(), IsPIC,
+      TheTriple, std::make_shared<orc::SymbolStringPool>(), File->getFileName(),
+      Features.get(), IsPIC,
       DWARFContext::create(*File, DWARFContext::ProcessDebugRelocations::Ignore,
                            nullptr, opts::DWPPathName,
                            WithColor::defaultErrorHandler,
@@ -697,6 +697,11 @@ Error RewriteInstance::run() {
 
   if (opts::DiffOnly)
     return Error::success();
+
+  if (opts::BinaryAnalysisMode) {
+    runBinaryAnalyses();
+    return Error::success();
+  }
 
   preregisterSections();
 
@@ -3474,6 +3479,8 @@ void RewriteInstance::runOptimizationPasses() {
   BC->logBOLTErrorsAndQuitOnFatal(BinaryFunctionPassManager::runAllPasses(*BC));
 }
 
+void RewriteInstance::runBinaryAnalyses() {}
+
 void RewriteInstance::preregisterSections() {
   // Preregister sections before emission to set their order in the output.
   const unsigned ROFlags = BinarySection::getFlags(/*IsReadOnly*/ true,
@@ -3839,20 +3846,6 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
     Function.setImageSize(FuncSection->getOutputSize());
     assert(Function.getImageSize() <= Function.getMaxSize() &&
            "Unexpected large function");
-
-    // Map jump tables if updating in-place.
-    if (opts::JumpTables == JTS_BASIC) {
-      for (auto &JTI : Function.JumpTables) {
-        JumpTable *JT = JTI.second;
-        BinarySection &Section = JT->getOutputSection();
-        Section.setOutputAddress(JT->getAddress());
-        Section.setOutputFileOffset(getFileOffsetForAddress(JT->getAddress()));
-        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: mapping JT " << Section.getName()
-                          << " to 0x" << Twine::utohexstr(JT->getAddress())
-                          << '\n');
-        MapSection(Section, JT->getAddress());
-      }
-    }
 
     if (!Function.isSplit())
       continue;
@@ -5636,26 +5629,8 @@ void RewriteInstance::rewriteFile() {
     if (Function->getImageAddress() == 0 || Function->getImageSize() == 0)
       continue;
 
-    if (Function->getImageSize() > Function->getMaxSize()) {
-      assert(!BC->isX86() && "Unexpected large function.");
-      if (opts::Verbosity >= 1)
-        BC->errs() << "BOLT-WARNING: new function size (0x"
-                   << Twine::utohexstr(Function->getImageSize())
-                   << ") is larger than maximum allowed size (0x"
-                   << Twine::utohexstr(Function->getMaxSize())
-                   << ") for function " << *Function << '\n';
-
-      // Remove jump table sections that this function owns in non-reloc mode
-      // because we don't want to write them anymore.
-      if (!BC->HasRelocations && opts::JumpTables == JTS_BASIC) {
-        for (auto &JTI : Function->JumpTables) {
-          JumpTable *JT = JTI.second;
-          BinarySection &Section = JT->getOutputSection();
-          BC->deregisterSection(Section);
-        }
-      }
-      continue;
-    }
+    assert(Function->getImageSize() <= Function->getMaxSize() &&
+           "Unexpected large function");
 
     const auto HasAddress = [](const FunctionFragment &FF) {
       return FF.empty() ||

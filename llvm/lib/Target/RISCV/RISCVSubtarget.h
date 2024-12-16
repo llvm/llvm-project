@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
+#include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
@@ -53,6 +54,22 @@ struct RISCVTuneInfo {
 
   // Tail duplication threshold at -O3.
   unsigned TailDupAggressiveThreshold;
+
+  unsigned MaxStoresPerMemsetOptSize;
+  unsigned MaxStoresPerMemset;
+
+  unsigned MaxGluedStoresPerMemcpy;
+  unsigned MaxStoresPerMemcpyOptSize;
+  unsigned MaxStoresPerMemcpy;
+
+  unsigned MaxStoresPerMemmoveOptSize;
+  unsigned MaxStoresPerMemmove;
+
+  unsigned MaxLoadsPerMemcmpOptSize;
+  unsigned MaxLoadsPerMemcmp;
+
+  // The direction of PostRA scheduling.
+  MISched::Direction PostRASchedDirection;
 };
 
 #define GET_RISCVTuneInfoTable_DECL
@@ -218,10 +235,13 @@ public:
            TargetABI == RISCVABI::ABI_ILP32 ||
            TargetABI == RISCVABI::ABI_ILP32E;
   }
-  bool isRegisterReservedByUser(Register i) const {
+  bool isRegisterReservedByUser(Register i) const override {
     assert(i < RISCV::NUM_TARGET_REGS && "Register out of range");
     return UserReservedRegister[i];
   }
+
+  // XRay support - require D and C extensions.
+  bool isXRaySupported() const override { return hasStdExtD() && hasStdExtC(); }
 
   // Vector codegen related methods.
   bool hasVInstructions() const { return HasStdExtZve32x; }
@@ -325,8 +345,39 @@ public:
     return TuneInfo->TailDupAggressiveThreshold;
   }
 
+  unsigned getMaxStoresPerMemset(bool OptSize) const {
+    return OptSize ? TuneInfo->MaxStoresPerMemsetOptSize
+                   : TuneInfo->MaxStoresPerMemset;
+  }
+
+  unsigned getMaxGluedStoresPerMemcpy() const {
+    return TuneInfo->MaxGluedStoresPerMemcpy;
+  }
+
+  unsigned getMaxStoresPerMemcpy(bool OptSize) const {
+    return OptSize ? TuneInfo->MaxStoresPerMemcpyOptSize
+                   : TuneInfo->MaxStoresPerMemcpy;
+  }
+
+  unsigned getMaxStoresPerMemmove(bool OptSize) const {
+    return OptSize ? TuneInfo->MaxStoresPerMemmoveOptSize
+                   : TuneInfo->MaxStoresPerMemmove;
+  }
+
+  unsigned getMaxLoadsPerMemcmp(bool OptSize) const {
+    return OptSize ? TuneInfo->MaxLoadsPerMemcmpOptSize
+                   : TuneInfo->MaxLoadsPerMemcmp;
+  }
+
+  MISched::Direction getPostRASchedDirection() const {
+    return TuneInfo->PostRASchedDirection;
+  }
+
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
                            unsigned NumRegionInstrs) const override;
+
+  void overridePostRASchedPolicy(MachineSchedPolicy &Policy,
+                                 unsigned NumRegionInstrs) const override;
 };
 } // End llvm namespace
 
