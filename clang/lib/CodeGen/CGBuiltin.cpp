@@ -4860,6 +4860,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // Buffer is a void**.
     Address Buf = EmitPointerWithAlignment(E->getArg(0));
 
+    if (getTarget().getTriple().getArch() == llvm::Triple::systemz) {
+      // On this target, the back end fills in the context buffer completely.
+      // It doesn't really matter if the frontend stores to the buffer before
+      // calling setjmp, the back-end is going to overwrite them anyway.
+      Function *F = CGM.getIntrinsic(Intrinsic::eh_sjlj_setjmp);
+      return RValue::get(Builder.CreateCall(F, Buf.emitRawPointer(*this)));
+    }
+
     // Store the frame pointer to the setjmp buffer.
     Value *FrameAddr = Builder.CreateCall(
         CGM.getIntrinsic(Intrinsic::frameaddress, AllocaInt8PtrTy),
@@ -10711,7 +10719,16 @@ Value *CodeGenFunction::EmitSVEDupX(Value *Scalar, llvm::Type *Ty) {
       cast<llvm::VectorType>(Ty)->getElementCount(), Scalar);
 }
 
-Value *CodeGenFunction::EmitSVEDupX(Value* Scalar) {
+Value *CodeGenFunction::EmitSVEDupX(Value *Scalar) {
+  if (auto *Ty = Scalar->getType(); Ty->isVectorTy()) {
+#ifndef NDEBUG
+    auto *VecTy = cast<llvm::VectorType>(Ty);
+    ElementCount EC = VecTy->getElementCount();
+    assert(EC.isScalar() && VecTy->getElementType() == Int8Ty &&
+           "Only <1 x i8> expected");
+#endif
+    Scalar = Builder.CreateExtractElement(Scalar, uint64_t(0));
+  }
   return EmitSVEDupX(Scalar, getSVEVectorForElementType(Scalar->getType()));
 }
 

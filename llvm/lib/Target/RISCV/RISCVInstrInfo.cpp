@@ -430,7 +430,9 @@ void RISCVInstrInfo::copyPhysRegVector(
     if (UseVMV) {
       const MCInstrDesc &Desc = DefMBBI->getDesc();
       MIB.add(DefMBBI->getOperand(RISCVII::getVLOpNum(Desc)));  // AVL
-      MIB.add(DefMBBI->getOperand(RISCVII::getSEWOpNum(Desc))); // SEW
+      unsigned Log2SEW =
+          DefMBBI->getOperand(RISCVII::getSEWOpNum(Desc)).getImm();
+      MIB.addImm(Log2SEW ? Log2SEW : 3);                        // SEW
       MIB.addImm(0);                                            // tu, mu
       MIB.addReg(RISCV::VL, RegState::Implicit);
       MIB.addReg(RISCV::VTYPE, RegState::Implicit);
@@ -1576,6 +1578,26 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     // No patch bytes means at most a PseudoCall is emitted
     return std::max(NumBytes, 8U);
   }
+  case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
+  case TargetOpcode::PATCHABLE_FUNCTION_EXIT:
+  case TargetOpcode::PATCHABLE_TAIL_CALL: {
+    const MachineFunction &MF = *MI.getParent()->getParent();
+    const Function &F = MF.getFunction();
+    if (Opcode == TargetOpcode::PATCHABLE_FUNCTION_ENTER &&
+        F.hasFnAttribute("patchable-function-entry")) {
+      unsigned Num;
+      if (F.getFnAttribute("patchable-function-entry")
+              .getValueAsString()
+              .getAsInteger(10, Num))
+        return get(Opcode).getSize();
+
+      // Number of C.NOP or NOP
+      return (STI.hasStdExtCOrZca() ? 2 : 4) * Num;
+    }
+    // XRay uses C.JAL + 21 or 33 C.NOP for each sled in RV32 and RV64,
+    // respectively.
+    return STI.is64Bit() ? 68 : 44;
+  }
   default:
     return get(Opcode).getSize();
   }
@@ -2548,7 +2570,10 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           Ok = (Imm & (RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC)) == Imm;
           break;
         case RISCVOp::OPERAND_SEW:
-          Ok = Imm == 0 || (Imm >= 3 && Imm <= 6);
+          Ok = (isUInt<5>(Imm) && RISCVVType::isValidSEW(1 << Imm));
+          break;
+        case RISCVOp::OPERAND_SEW_MASK:
+          Ok = Imm == 0;
           break;
         case RISCVOp::OPERAND_VEC_RM:
           assert(RISCVII::hasRoundModeOp(Desc.TSFlags));
@@ -3168,33 +3193,39 @@ std::string RISCVInstrInfo::createMIROperandComment(
   if (!Op.isImm())
     return std::string();
 
+  const MCInstrDesc &Desc = MI.getDesc();
+  if (OpIdx >= Desc.getNumOperands())
+    return std::string();
+
   std::string Comment;
   raw_string_ostream OS(Comment);
 
-  uint64_t TSFlags = MI.getDesc().TSFlags;
+  const MCOperandInfo &OpInfo = Desc.operands()[OpIdx];
 
   // Print the full VType operand of vsetvli/vsetivli instructions, and the SEW
   // operand of vector codegen pseudos.
-  if ((MI.getOpcode() == RISCV::VSETVLI || MI.getOpcode() == RISCV::VSETIVLI ||
-       MI.getOpcode() == RISCV::PseudoVSETVLI ||
-       MI.getOpcode() == RISCV::PseudoVSETIVLI ||
-       MI.getOpcode() == RISCV::PseudoVSETVLIX0) &&
-      OpIdx == 2) {
-    unsigned Imm = MI.getOperand(OpIdx).getImm();
+  switch (OpInfo.OperandType) {
+  case RISCVOp::OPERAND_VTYPEI10:
+  case RISCVOp::OPERAND_VTYPEI11: {
+    unsigned Imm = Op.getImm();
     RISCVVType::printVType(Imm, OS);
-  } else if (RISCVII::hasSEWOp(TSFlags) &&
-             OpIdx == RISCVII::getSEWOpNum(MI.getDesc())) {
-    unsigned Log2SEW = MI.getOperand(OpIdx).getImm();
+    break;
+  }
+  case RISCVOp::OPERAND_SEW:
+  case RISCVOp::OPERAND_SEW_MASK: {
+    unsigned Log2SEW = Op.getImm();
     unsigned SEW = Log2SEW ? 1 << Log2SEW : 8;
     assert(RISCVVType::isValidSEW(SEW) && "Unexpected SEW");
     OS << "e" << SEW;
-  } else if (RISCVII::hasVecPolicyOp(TSFlags) &&
-             OpIdx == RISCVII::getVecPolicyOpNum(MI.getDesc())) {
-    unsigned Policy = MI.getOperand(OpIdx).getImm();
+    break;
+  }
+  case RISCVOp::OPERAND_VEC_POLICY:
+    unsigned Policy = Op.getImm();
     assert(Policy <= (RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC) &&
            "Invalid Policy Value");
     OS << (Policy & RISCVII::TAIL_AGNOSTIC ? "ta" : "tu") << ", "
        << (Policy & RISCVII::MASK_AGNOSTIC ? "ma" : "mu");
+    break;
   }
 
   return Comment;

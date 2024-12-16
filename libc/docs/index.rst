@@ -2,18 +2,24 @@
 The LLVM C Library
 ==================
 
+.. warning::
+  LLVM-libc is not yet ABI stable; currently only static linking is supported.
+  LLVM-libc developers retain the right to modify the ABI of types used
+  throughout the library. Another libc should be preferred if ABI stability is
+  a requirement.
+
 .. note::
   LLVM-libc is not fully complete right now. Some programs may fail to build due
-  to missing functions (especially C++ ones). If you would like to help us
-  finish LLVM-libc, check out "Contributing to the libc project" in the sidebar
-  or ask on discord.
+  to missing functions. If you would like to help us finish LLVM-libc, check
+  out "`Contributing to the libc project <contributing.html>`__" in the sidebar
+  or ask on `discord <https://discord.com/channels/636084430946959380/636732994891284500>`__.
 
 Introduction
 ============
 
 LLVM-libc aspires to a unique place in the software ecosystem.  The goals are:
 
-- Fully compliant with current C standards (C17 and upcoming C2x) and POSIX.
+- Fully compliant with current C23 and POSIX.1-2024 standards.
 - Easily decomposed and embedded: Supplement or replace system C library
   functionality easily.  This is useful to get consistent math precision across
   systems, or updated memory operations for newer microarchitectures.  These
@@ -27,9 +33,7 @@ LLVM-libc aspires to a unique place in the software ecosystem.  The goals are:
   libc functions.
 - A complete testsuite that tests both the public interface and internal
   algorithms.
-- `Fuzzing`__
-
-.. __: https://github.com/llvm/llvm-project/tree/main/libc/fuzzing
+- `Fuzzing <https://github.com/llvm/llvm-project/tree/main/libc/fuzzing>`__
 
 Platform Support
 ================
@@ -49,13 +53,6 @@ from ``linux-next``.
 
 For Windows, we plan to support products within their lifecycle. Please refer to 
 `Search Product and Services Lifecycle Information <https://learn.microsoft.com/en-us/lifecycle/products/?products=windows>`_ for more information.
-
-ABI Compatibility
-=================
-
-The libc is written to be ABI independent.  Interfaces are generated using
-headergen, so supporting arbitrary ABIs is possible.  In it's initial
-stages there is no ABI stability in any form.
 
 .. toctree::
    :hidden:

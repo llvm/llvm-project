@@ -8,17 +8,16 @@
 
 #include "../assembly.h"
 
+.set FEAT_SVE_BIT, 30
+.set FEAT_SME_BIT, 42
+.set SVCR_PSTATE_SM_BIT, 0
 
 #if !defined(__APPLE__)
-#define TPIDR2_SYMBOL SYMBOL_NAME(__aarch64_has_sme_and_tpidr2_el0)
-#define TPIDR2_SYMBOL_OFFSET :lo12:SYMBOL_NAME(__aarch64_has_sme_and_tpidr2_el0)
 #define CPU_FEATS_SYMBOL SYMBOL_NAME(__aarch64_cpu_features)
 #define CPU_FEATS_SYMBOL_OFFSET :lo12:SYMBOL_NAME(__aarch64_cpu_features)
 #else
 // MachO requires @page/@pageoff directives because the global is defined
 // in a different file. Otherwise this file may fail to build.
-#define TPIDR2_SYMBOL SYMBOL_NAME(__aarch64_has_sme_and_tpidr2_el0)@page
-#define TPIDR2_SYMBOL_OFFSET SYMBOL_NAME(__aarch64_has_sme_and_tpidr2_el0)@pageoff
 #define CPU_FEATS_SYMBOL SYMBOL_NAME(__aarch64_cpu_features)@page
 #define CPU_FEATS_SYMBOL_OFFSET SYMBOL_NAME(__aarch64_cpu_features)@pageoff
 #endif
@@ -61,9 +60,9 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_sme_state)
   mov x0, xzr
   mov x1, xzr
 
-  adrp  x16, TPIDR2_SYMBOL
-  ldrb w16, [x16, TPIDR2_SYMBOL_OFFSET]
-  cbz w16, 1f
+  adrp x16, CPU_FEATS_SYMBOL
+  ldr x16, [x16, CPU_FEATS_SYMBOL_OFFSET]
+  tbz x16, #FEAT_SME_BIT, 1f
 0:
   orr x0, x0, #0xC000000000000000
   mrs x16, SVCR
@@ -114,9 +113,9 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_tpidr2_save)
   BTI_C
   // If the current thread does not have access to TPIDR2_EL0, the subroutine
   // does nothing.
-  adrp  x14, TPIDR2_SYMBOL
-  ldrb w14, [x14, TPIDR2_SYMBOL_OFFSET]
-  cbz w14, 1f
+  adrp x14, CPU_FEATS_SYMBOL
+  ldr x14, [x14, CPU_FEATS_SYMBOL_OFFSET]
+  tbz x14, #FEAT_SME_BIT, 1f
 
   // If TPIDR2_EL0 is null, the subroutine does nothing.
   mrs x16, TPIDR2_EL0
@@ -155,9 +154,9 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_za_disable)
   BTI_C
   // If the current thread does not have access to SME, the subroutine does
   // nothing.
-  adrp  x14, TPIDR2_SYMBOL
-  ldrb w14, [x14, TPIDR2_SYMBOL_OFFSET]
-  cbz w14, 0f
+  adrp x14, CPU_FEATS_SYMBOL
+  ldr x14, [x14, CPU_FEATS_SYMBOL_OFFSET]
+  tbz x14, #FEAT_SME_BIT, 0f
 
   // Otherwise, the subroutine behaves as if it did the following:
   // * Call __arm_tpidr2_save.
@@ -188,39 +187,18 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_get_current_vg)
   .variant_pcs __arm_get_current_vg
   BTI_C
 
-  stp     x29, x30, [sp, #-16]!
-  .cfi_def_cfa_offset 16
-  mov     x29, sp
-  .cfi_def_cfa w29, 16
-  .cfi_offset w30, -8
-  .cfi_offset w29, -16
   adrp    x17, CPU_FEATS_SYMBOL
-  ldr     w17, [x17, CPU_FEATS_SYMBOL_OFFSET]
-  tbnz    w17, #30, 0f
-  adrp    x16, TPIDR2_SYMBOL
-  ldrb    w16, [x16, TPIDR2_SYMBOL_OFFSET]
-  cbz     w16, 1f
+  ldr     x17, [x17, CPU_FEATS_SYMBOL_OFFSET]
+  tbnz    w17, #FEAT_SVE_BIT, 1f
+  tbz     x17, #FEAT_SME_BIT, 2f
 0:
-  mov     x18, x1
-  bl      __arm_sme_state
-  mov     x1, x18
-  and     x17, x17, #0x40000000
-  bfxil   x17, x0, #0, #1
-  cbz     x17, 1f
-  cntd    x0
-  .cfi_def_cfa wsp, 16
-  ldp     x29, x30, [sp], #16
-  .cfi_def_cfa_offset 0
-  .cfi_restore w30
-  .cfi_restore w29
-  ret
+  mrs     x17, SVCR
+  tbz     x17, #SVCR_PSTATE_SM_BIT, 2f
 1:
+  cntd    x0
+  ret
+2:
   mov     x0, xzr
-  .cfi_def_cfa wsp, 16
-  ldp     x29, x30, [sp], #16
-  .cfi_def_cfa_offset 0
-  .cfi_restore w30
-  .cfi_restore w29
   ret
 END_COMPILERRT_OUTLINE_FUNCTION(__arm_get_current_vg)
 

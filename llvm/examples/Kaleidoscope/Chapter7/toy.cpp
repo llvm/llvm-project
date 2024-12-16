@@ -21,7 +21,7 @@
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/Reassociate.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
-#include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Utils/Mem2Reg.h"
 #include <algorithm>
 #include <cassert>
 #include <cctype>
@@ -1142,6 +1142,8 @@ static void InitializeModuleAndManagers() {
   TheSI->registerCallbacks(*ThePIC, TheMAM.get());
 
   // Add transform passes.
+  // Promote allocas to registers.
+  TheFPM->addPass(PromotePass());
   // Do simple "peephole" optimizations and bit-twiddling optzns.
   TheFPM->addPass(InstCombinePass());
   // Reassociate expressions.

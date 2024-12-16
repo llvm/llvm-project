@@ -880,6 +880,16 @@ define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %arg) {
   S2->eraseFromParent();
   auto *DeletedN = DAG.getNodeOrNull(S2);
   EXPECT_TRUE(DeletedN == nullptr);
+
+  // Check the MemDGNode chain.
+  auto *S1MemN = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
+  auto *S3MemN = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
+  EXPECT_EQ(S1MemN->getNextNode(), S3MemN);
+  EXPECT_EQ(S3MemN->getPrevNode(), S1MemN);
+
+  // Check the chain when we erase the top node.
+  S1->eraseFromParent();
+  EXPECT_EQ(S3MemN->getPrevNode(), nullptr);
+
   // TODO: Check the dependencies to/from NewSN after they land.
-  // TODO: Check the MemDGNode chain.
 }

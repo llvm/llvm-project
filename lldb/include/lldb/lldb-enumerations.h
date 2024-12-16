@@ -763,6 +763,8 @@ enum SectionType {
   eSectionTypeDWARFDebugLocListsDwo,
   eSectionTypeDWARFDebugTuIndex,
   eSectionTypeCTF,
+  eSectionTypeLLDBTypeSummaries,
+  eSectionTypeLLDBFormatters,
   eSectionTypeSwiftModules,
 };
 

@@ -166,6 +166,7 @@ class RawPtrRefLocalVarsChecker
     : public Checker<check::ASTDecl<TranslationUnitDecl>> {
   BugType Bug;
   mutable BugReporter *BR;
+  EnsureFunctionAnalysis EFA;
 
 public:
   RawPtrRefLocalVarsChecker(const char *description)
@@ -263,7 +264,7 @@ public:
       if (tryToFindPtrOrigin(
               Value, /*StopAtFirstRefCountedObj=*/false,
               [&](const clang::Expr *InitArgOrigin, bool IsSafe) {
-                if (!InitArgOrigin)
+                if (!InitArgOrigin || IsSafe)
                   return true;
 
                 if (isa<CXXThisExpr>(InitArgOrigin))
@@ -276,6 +277,9 @@ public:
                   return true;
 
                 if (isConstOwnerPtrMemberExpr(InitArgOrigin))
+                  return true;
+
+                if (EFA.isACallToEnsureFn(InitArgOrigin))
                   return true;
 
                 if (auto *Ref = llvm::dyn_cast<DeclRefExpr>(InitArgOrigin)) {

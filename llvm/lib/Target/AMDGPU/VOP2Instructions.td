@@ -1818,10 +1818,8 @@ defm V_CVT_PK_RTZ_F16_F32  : VOP2_Real_FULL_with_name_gfx11_gfx12<0x02f,
   "V_CVT_PKRTZ_F16_F32", "v_cvt_pk_rtz_f16_f32">;
 defm V_PK_FMAC_F16     : VOP2_Real_e32_gfx11_gfx12<0x03c>;
 
-defm V_ADD_F16_t16         : VOP2_Real_FULL_t16_gfx11_gfx12<0x032, "v_add_f16">;
-defm V_ADD_F16_fake16      : VOP2_Real_FULL_t16_gfx11_gfx12<0x032, "v_add_f16">;
-defm V_SUB_F16_t16         : VOP2_Real_FULL_t16_gfx11_gfx12<0x033, "v_sub_f16">;
-defm V_SUB_F16_fake16      : VOP2_Real_FULL_t16_gfx11_gfx12<0x033, "v_sub_f16">;
+defm V_ADD_F16             : VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12<0x032, "v_add_f16">;
+defm V_SUB_F16             : VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12<0x033, "v_sub_f16">;
 defm V_SUBREV_F16_t16      : VOP2_Real_FULL_t16_gfx11_gfx12<0x034, "v_subrev_f16">;
 defm V_SUBREV_F16_fake16   : VOP2_Real_FULL_t16_gfx11_gfx12<0x034, "v_subrev_f16">;
 defm V_MUL_F16_t16         : VOP2_Real_FULL_t16_gfx11_gfx12<0x035, "v_mul_f16">;
