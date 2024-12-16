@@ -47,8 +47,4 @@ define void @test_fvdot32_top_1x4_indexed(i32 %slice.0,
   ret void
 }
 
-declare void @llvm.aarch64.sme.fp8.fvdot.lane.za16.vg1x2(i32, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, i32)
-declare void @llvm.aarch64.sme.fp8.fvdotb.lane.za32.vg1x4(i32, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, i32)
-declare void @llvm.aarch64.sme.fp8.fvdott.lane.za32.vg1x4(i32, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, i32)
-
 attributes #0 = { "target-features" = "+sme-f8f32,+sme-f8f16" }

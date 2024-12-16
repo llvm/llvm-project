@@ -16,65 +16,65 @@
 #define SVE_ACLE_FUNC(A1, A2, A3) A1##A2##A3
 #endif
 
-// CHECK-LABEL: define dso_local void @test_svvdot_lane_za16_f8_vg1x2(
+// CHECK-LABEL: define dso_local void @test_svvdot_lane_za16_mf8_vg1x2(
 // CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 16 x i8> [[ZN_COERCE0:%.*]], <vscale x 16 x i8> [[ZN_COERCE1:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i64 noundef [[FPMR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPMR]])
 // CHECK-NEXT:    tail call void @llvm.aarch64.sme.fp8.fvdot.lane.za16.vg1x2(i32 [[SLICE]], <vscale x 16 x i8> [[ZN_COERCE0]], <vscale x 16 x i8> [[ZN_COERCE1]], <vscale x 16 x i8> [[ZM]], i32 7)
 // CHECK-NEXT:    ret void
 //
-// CPP-CHECK-LABEL: define dso_local void @_Z30test_svvdot_lane_za16_f8_vg1x2j13svmfloat8x2_tu13__SVMfloat8_tm(
+// CPP-CHECK-LABEL: define dso_local void @_Z31test_svvdot_lane_za16_mf8_vg1x2j13svmfloat8x2_tu13__SVMfloat8_tm(
 // CPP-CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 16 x i8> [[ZN_COERCE0:%.*]], <vscale x 16 x i8> [[ZN_COERCE1:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i64 noundef [[FPMR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPMR]])
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.fp8.fvdot.lane.za16.vg1x2(i32 [[SLICE]], <vscale x 16 x i8> [[ZN_COERCE0]], <vscale x 16 x i8> [[ZN_COERCE1]], <vscale x 16 x i8> [[ZM]], i32 7)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svvdot_lane_za16_f8_vg1x2(uint32_t slice, svmfloat8x2_t zn,
+void test_svvdot_lane_za16_mf8_vg1x2(uint32_t slice, svmfloat8x2_t zn,
                                     svmfloat8_t zm,
                                     fpm_t fpmr) __arm_streaming
     __arm_inout("za") {
-  SVE_ACLE_FUNC(svvdot_lane_za16, _f8, _vg1x2)(slice, zn, zm, 7, fpmr);
+  SVE_ACLE_FUNC(svvdot_lane_za16, _mf8, _vg1x2_fpm)(slice, zn, zm, 7, fpmr);
 }
 
-// CHECK-LABEL: define dso_local void @test_svvdotb_lane_za32_f8_vg1x4(
+// CHECK-LABEL: define dso_local void @test_svvdotb_lane_za32_mf8_vg1x4(
 // CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 16 x i8> [[ZN_COERCE0:%.*]], <vscale x 16 x i8> [[ZN_COERCE1:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i64 noundef [[FPMR:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPMR]])
 // CHECK-NEXT:    tail call void @llvm.aarch64.sme.fp8.fvdotb.lane.za32.vg1x4(i32 [[SLICE]], <vscale x 16 x i8> [[ZN_COERCE0]], <vscale x 16 x i8> [[ZN_COERCE1]], <vscale x 16 x i8> [[ZM]], i32 3)
 // CHECK-NEXT:    ret void
 //
-// CPP-CHECK-LABEL: define dso_local void @_Z31test_svvdotb_lane_za32_f8_vg1x4j13svmfloat8x2_tu13__SVMfloat8_tm(
+// CPP-CHECK-LABEL: define dso_local void @_Z32test_svvdotb_lane_za32_mf8_vg1x4j13svmfloat8x2_tu13__SVMfloat8_tm(
 // CPP-CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 16 x i8> [[ZN_COERCE0:%.*]], <vscale x 16 x i8> [[ZN_COERCE1:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i64 noundef [[FPMR:%.*]]) #[[ATTR0]] {
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPMR]])
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.fp8.fvdotb.lane.za32.vg1x4(i32 [[SLICE]], <vscale x 16 x i8> [[ZN_COERCE0]], <vscale x 16 x i8> [[ZN_COERCE1]], <vscale x 16 x i8> [[ZM]], i32 3)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svvdotb_lane_za32_f8_vg1x4(uint32_t slice, svmfloat8x2_t zn,
+void test_svvdotb_lane_za32_mf8_vg1x4(uint32_t slice, svmfloat8x2_t zn,
                                      svmfloat8_t zm,
                                      fpm_t fpmr) __arm_streaming
     __arm_inout("za") {
-  SVE_ACLE_FUNC(svvdotb_lane_za32, _f8, _vg1x4)(slice, zn, zm, 3, fpmr);
+  SVE_ACLE_FUNC(svvdotb_lane_za32, _mf8, _vg1x4_fpm)(slice, zn, zm, 3, fpmr);
 }
 
-// CHECK-LABEL: define dso_local void @test_svvdott_lane_za32_f8_vg1x4(
+// CHECK-LABEL: define dso_local void @test_svvdott_lane_za32_mf8_vg1x4(
 // CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 16 x i8> [[ZN_COERCE0:%.*]], <vscale x 16 x i8> [[ZN_COERCE1:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i64 noundef [[FPMR:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPMR]])
 // CHECK-NEXT:    tail call void @llvm.aarch64.sme.fp8.fvdott.lane.za32.vg1x4(i32 [[SLICE]], <vscale x 16 x i8> [[ZN_COERCE0]], <vscale x 16 x i8> [[ZN_COERCE1]], <vscale x 16 x i8> [[ZM]], i32 3)
 // CHECK-NEXT:    ret void
 //
-// CPP-CHECK-LABEL: define dso_local void @_Z31test_svvdott_lane_za32_f8_vg1x4j13svmfloat8x2_tu13__SVMfloat8_tm(
+// CPP-CHECK-LABEL: define dso_local void @_Z32test_svvdott_lane_za32_mf8_vg1x4j13svmfloat8x2_tu13__SVMfloat8_tm(
 // CPP-CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 16 x i8> [[ZN_COERCE0:%.*]], <vscale x 16 x i8> [[ZN_COERCE1:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i64 noundef [[FPMR:%.*]]) #[[ATTR0]] {
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPMR]])
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.fp8.fvdott.lane.za32.vg1x4(i32 [[SLICE]], <vscale x 16 x i8> [[ZN_COERCE0]], <vscale x 16 x i8> [[ZN_COERCE1]], <vscale x 16 x i8> [[ZM]], i32 3)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svvdott_lane_za32_f8_vg1x4(uint32_t slice, svmfloat8x2_t zn,
+void test_svvdott_lane_za32_mf8_vg1x4(uint32_t slice, svmfloat8x2_t zn,
                                      svmfloat8_t zm,
                                      fpm_t fpmr) __arm_streaming
     __arm_inout("za") {
-  SVE_ACLE_FUNC(svvdott_lane_za32, _f8, _vg1x4)(slice, zn, zm, 3, fpmr);
+  SVE_ACLE_FUNC(svvdott_lane_za32, _mf8, _vg1x4_fpm)(slice, zn, zm, 3, fpmr);
 }

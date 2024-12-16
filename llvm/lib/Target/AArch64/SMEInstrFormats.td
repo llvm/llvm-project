@@ -5885,11 +5885,9 @@ multiclass sme2_fp8_fdot_index_za32_vg1x4<string mnemonic,
 
 multiclass sme2_fp8_fdotv_index_za32_vg1x4<string mnemonic, bit T, SDPatternOperator intrinsic> {
   def NAME : sme2_fp8_multi_vec_array_vg4_index<mnemonic, T>,
-                                            SMEPseudo2Instr<NAME, 1> {
-    let Uses=[FPMR, FPCR];
-  }
+                                            SMEPseudo2Instr<NAME, 1>;
 
   def _PSEUDO : sme2_za_array_2op_multi_index_pseudo<NAME, sme_elm_idx0_7, ZZ_b_mul_r, ZPR4b8, VectorIndexS32b_timm, SMEMatrixArray>;
 
-  def : SME2_ZA_TwoOp_VG2_Multi_Index_Pat<NAME, intrinsic, sme_elm_idx0_7, ZPR4b8, nxv16i8, VectorIndexH32b_timm, tileslice16>;
+  def : SME2_ZA_TwoOp_VG2_Multi_Index_Pat<NAME, intrinsic, sme_elm_idx0_7, ZPR4b8, nxv16i8, VectorIndexS32b_timm, tileslice16>;
 }
