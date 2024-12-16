@@ -1216,6 +1216,28 @@ define amdgpu_ps <2 x i8> @extract_elt0_elt1_s_buffer_load_v4i8(<4 x i32> inreg 
   ret <2 x i8> %shuf
 }
 
+define amdgpu_ps <2 x i8> @extract_elt1_elt2_s_buffer_load_v4i8(<4 x i32> inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt1_elt2_s_buffer_load_v4i8(
+; CHECK-NEXT:    [[DATA:%.*]] = call <4 x i8> @llvm.amdgcn.s.buffer.load.v4i8(<4 x i32> [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0)
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i8> [[DATA]], <4 x i8> poison, <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT:    ret <2 x i8> [[SHUF]]
+;
+  %data = call <4 x i8> @llvm.amdgcn.s.buffer.load.v4i8(<4 x i32> %rsrc, i32 %ofs, i32 0)
+  %shuf = shufflevector <4 x i8> %data, <4 x i8> poison, <2 x i32> <i32 1, i32 2>
+  ret <2 x i8> %shuf
+}
+
+define amdgpu_ps <2 x i8> @extract_elt2_elt3_s_buffer_load_v4i8(<4 x i32> inreg %rsrc, i32 %ofs) #0 {
+; CHECK-LABEL: @extract_elt2_elt3_s_buffer_load_v4i8(
+; CHECK-NEXT:    [[DATA:%.*]] = call <4 x i8> @llvm.amdgcn.s.buffer.load.v4i8(<4 x i32> [[RSRC:%.*]], i32 [[OFS:%.*]], i32 0)
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i8> [[DATA]], <4 x i8> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    ret <2 x i8> [[SHUF]]
+;
+  %data = call <4 x i8> @llvm.amdgcn.s.buffer.load.v4i8(<4 x i32> %rsrc, i32 %ofs, i32 0)
+  %shuf = shufflevector <4 x i8> %data, <4 x i8> poison, <2 x i32> <i32 2, i32 3>
+  ret <2 x i8> %shuf
+}
+
 declare i8 @llvm.amdgcn.s.buffer.load.i8(<4 x i32>, i32, i32) #1
 declare <2 x i8> @llvm.amdgcn.s.buffer.load.v2i8(<4 x i32>, i32, i32) #1
 declare <3 x i8> @llvm.amdgcn.s.buffer.load.v3i8(<4 x i32>, i32, i32) #1
