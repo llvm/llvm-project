@@ -1454,7 +1454,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
       // address is out-of-range (clamped), the operation is not performed
       // for any dwords that are out-of-range.
       //
-      // If we narrow a partially out-of-range <i16x2> load to i16; the i16
+      // If we narrow a partially out-of-range <2 x i16> load to i16; the i16
       // load would read the memory values instead of 0.
       //
       // Orthogonally, due to a HW-bug on gfx12 we should not narrow
