@@ -1905,6 +1905,15 @@ let SubtargetPredicate = Has1024AddressableVGPRs in {
   }
 }
 
+def s_sema_signal_imm : ImmLeaf<
+  i32,
+  [{}],
+  SDNodeXForm<imm, [{
+    unsigned ID = (N->getZExtValue() >> 4) & 255;
+    return CurDAG->getTargetConstant(ID, SDLoc(N), MVT::i16);
+  }]>
+>;
+
 def s_sema_wait_imm : ImmLeaf<
   i32,
   [{}],
@@ -1920,7 +1929,7 @@ let SubtargetPredicate = isGFX13Plus, hasSideEffects = 1 in {
   // S_SET_VGPR_FRAMES does not write to SQ_WAVE_MODE.
   def S_SET_VGPR_FRAMES : SOPP_Pseudo<"s_set_vgpr_frames" , (ins i16imm:$simm16), "$simm16">;
 
-  def S_SEMA_SIGNAL            : SOPP_Pseudo<"s_sema_signal", (ins i16imm:$simm16), "$simm16">;
+  def S_SEMA_SIGNAL            : SOPP_Pseudo<"s_sema_signal", (ins i16imm:$simm16), "$simm16", [(int_amdgcn_s_sema_signal s_sema_signal_imm:$simm16)]>;
   def S_SEMA_WAIT              : SOPP_Pseudo<"s_sema_wait", (ins i16imm:$simm16), "$simm16", [(int_amdgcn_s_sema_wait s_sema_wait_imm:$simm16)]>;
   def S_SEMA_SET_LIMIT         : SOPP_Pseudo<"s_sema_set_limit", (ins i16imm:$simm16), "$simm16">;
   def S_SEMA_SIGNAL_AFTER_VALU : SOPP_Pseudo<"s_sema_signal_after_valu", (ins i16imm:$simm16), "$simm16">;
