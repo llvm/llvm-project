@@ -1709,7 +1709,7 @@ void VPWidenIntOrFpInductionPHIRecipe::execute(VPTransformState &State) {
   Value *Start = State.get(getOperand(0));
   PHINode *Phi = State.Builder.CreatePHI(Start->getType(), 2, "vec.ind");
   Phi->addIncoming(Start, VectorPH);
-  Phi->setDebugLoc(IV->getDebugLoc());
+  Phi->setDebugLoc(getDebugLoc());
   State.set(this, Phi);
 }
 

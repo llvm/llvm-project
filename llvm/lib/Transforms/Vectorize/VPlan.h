@@ -1901,8 +1901,8 @@ class VPWidenIntOrFpInductionPHIRecipe : public VPHeaderPHIRecipe {
   Instruction *IV;
 
 public:
-  VPWidenIntOrFpInductionPHIRecipe(Instruction *IV, VPValue *Start)
-      : VPHeaderPHIRecipe(VPDef::VPWidenIntOrFpInductionPHISC, IV, Start),
+  VPWidenIntOrFpInductionPHIRecipe(Instruction *IV, VPValue *Start, DebugLoc DL)
+      : VPHeaderPHIRecipe(VPDef::VPWidenIntOrFpInductionPHISC, IV, Start, DL),
         IV(IV) {
     assert((isa<PHINode>(IV) || isa<TruncInst>(IV)) &&
            "Expected either an induction phi-node or a truncate of it!");
@@ -1911,7 +1911,8 @@ public:
   ~VPWidenIntOrFpInductionPHIRecipe() override = default;
 
   VPWidenIntOrFpInductionPHIRecipe *clone() override {
-    auto *R = new VPWidenIntOrFpInductionPHIRecipe(IV, getOperand(0));
+    auto *R =
+        new VPWidenIntOrFpInductionPHIRecipe(IV, getOperand(0), getDebugLoc());
     R->addOperand(getBackedgeValue());
     return R;
   }

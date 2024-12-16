@@ -2094,7 +2094,8 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
                               {}, "induction");
 
   // Create the widened phi of the vector IV.
-  auto *WidePHI = new VPWidenIntOrFpInductionPHIRecipe(IV, Init);
+  auto *WidePHI =
+      new VPWidenIntOrFpInductionPHIRecipe(IV, Init, WidenIVR->getDebugLoc());
   WidePHI->insertBefore(WidenIVR);
 
   // Create the backedge value for the vector IV.
@@ -2119,8 +2120,8 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
 
   VPBasicBlock *ExitingBB = Plan->getVectorLoopRegion()->getExitingBasicBlock();
   Builder.setInsertPoint(ExitingBB, ExitingBB->getTerminator()->getIterator());
-  auto *Next = Builder.createNaryOp(AddOp, {Prev, Inc}, FMFs, IV->getDebugLoc(),
-                                    "vec.ind.next");
+  auto *Next = Builder.createNaryOp(AddOp, {Prev, Inc}, FMFs,
+                                    WidenIVR->getDebugLoc(), "vec.ind.next");
 
   WidePHI->addOperand(Next);
 
