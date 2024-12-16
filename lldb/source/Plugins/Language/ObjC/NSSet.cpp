@@ -219,7 +219,7 @@ namespace Foundation1437 {
       return __NSSetMSize_Impl<DataDescriptor_64>(process, valobj_addr, error);
     }
   }
-}
+  } // namespace Foundation1437
 } // namespace formatters
 } // namespace lldb_private
 
