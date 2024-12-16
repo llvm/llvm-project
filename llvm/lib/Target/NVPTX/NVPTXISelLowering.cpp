@@ -100,16 +100,6 @@ static cl::opt<bool> ForceMinByValParamAlign(
              " params of device functions."),
     cl::init(false));
 
-static auto GetUpsizedNumEltsAndEltVT = [](unsigned OldNumElts, EVT OldEltVT) {
-  // Number of elements to pack in one word.
-  unsigned NPerWord = 32 / OldEltVT.getSizeInBits();
-  // Word-sized vector.
-  EVT NewEltVT = MVT::getVectorVT(OldEltVT.getSimpleVT(), NPerWord);
-  // Number of word-sized vectors.
-  unsigned NewNumElts = OldNumElts / NPerWord;
-  return std::pair(NewNumElts, NewEltVT);
-};
-
 int NVPTXTargetLowering::getDivF32Level() const {
   if (UsePrecDivF32.getNumOccurrences() > 0) {
     // If nvptx-prec-div32=N is used on the command-line, always honor it
@@ -171,6 +161,16 @@ static bool Is16bitsType(MVT VT) {
   return (VT.SimpleTy == MVT::f16 || VT.SimpleTy == MVT::bf16 ||
           VT.SimpleTy == MVT::i16);
 }
+
+static auto GetUpsizedNumEltsAndEltVT(unsigned OldNumElts, EVT OldEltVT) {
+  // Number of elements to pack in one word.
+  unsigned NPerWord = 32 / OldEltVT.getSizeInBits();
+  // Word-sized vector.
+  EVT NewEltVT = MVT::getVectorVT(OldEltVT.getSimpleVT(), NPerWord);
+  // Number of word-sized vectors.
+  unsigned NewNumElts = OldNumElts / NPerWord;
+  return std::pair(NewNumElts, NewEltVT);
+};
 
 /// ComputePTXValueVTs - For the given Type \p Ty, returns the set of primitive
 /// EVTs that compose it.  Unlike ComputeValueVTs, this will break apart vectors
@@ -2883,9 +2883,7 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
     unsigned NumElts = ValVT.getVectorNumElements();
 
     if (UpsizeElementTypes) {
-      auto [NewNumElts, NewEltVT] = GetUpsizedNumEltsAndEltVT(NumElts, EltVT);
-      NumElts = NewNumElts;
-      EltVT = NewEltVT;
+      std::tie(NumElts, EltVT) = GetUpsizedNumEltsAndEltVT(NumElts, EltVT);
     }
 
     // Since StoreV2 is a target node, we cannot rely on DAG type legalization.
@@ -5287,9 +5285,7 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
   unsigned NumElts = ResVT.getVectorNumElements();
 
   if (UpsizeElementTypes) {
-    auto [NewNumElts, NewEltVT] = GetUpsizedNumEltsAndEltVT(NumElts, EltVT);
-    NumElts = NewNumElts;
-    EltVT = NewEltVT;
+    std::tie(NumElts, EltVT) = GetUpsizedNumEltsAndEltVT(NumElts, EltVT);
   }
 
   // Since LoadV2 is a target node, we cannot rely on DAG type legalization.
