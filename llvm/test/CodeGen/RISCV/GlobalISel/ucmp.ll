@@ -93,18 +93,16 @@ define i8 @ucmp.8.32(i32 %x, i32 %y) nounwind {
 ;
 ; RV64I-LABEL: ucmp.8.32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    slli a2, a1, 32
-; RV64I-NEXT:    srli a1, a0, 32
-; RV64I-NEXT:    srli a2, a2, 32
-; RV64I-NEXT:    bltu a2, a1, .LBB2_2
+; RV64I-NEXT:    sext.w a2, a0
+; RV64I-NEXT:    sext.w a1, a1
+; RV64I-NEXT:    bltu a1, a2, .LBB2_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    li a0, 0
-; RV64I-NEXT:    bltu a1, a2, .LBB2_3
+; RV64I-NEXT:    bltu a2, a1, .LBB2_3
 ; RV64I-NEXT:    j .LBB2_4
 ; RV64I-NEXT:  .LBB2_2:
 ; RV64I-NEXT:    li a0, 1
-; RV64I-NEXT:    bgeu a1, a2, .LBB2_4
+; RV64I-NEXT:    bgeu a2, a1, .LBB2_4
 ; RV64I-NEXT:  .LBB2_3:
 ; RV64I-NEXT:    li a0, -1
 ; RV64I-NEXT:  .LBB2_4:
@@ -179,18 +177,16 @@ define i32 @ucmp.32.32(i32 %x, i32 %y) nounwind {
 ;
 ; RV64I-LABEL: ucmp.32.32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    slli a2, a1, 32
-; RV64I-NEXT:    srli a1, a0, 32
-; RV64I-NEXT:    srli a2, a2, 32
-; RV64I-NEXT:    bltu a2, a1, .LBB4_2
+; RV64I-NEXT:    sext.w a2, a0
+; RV64I-NEXT:    sext.w a1, a1
+; RV64I-NEXT:    bltu a1, a2, .LBB4_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    li a0, 0
-; RV64I-NEXT:    bltu a1, a2, .LBB4_3
+; RV64I-NEXT:    bltu a2, a1, .LBB4_3
 ; RV64I-NEXT:    j .LBB4_4
 ; RV64I-NEXT:  .LBB4_2:
 ; RV64I-NEXT:    li a0, 1
-; RV64I-NEXT:    bgeu a1, a2, .LBB4_4
+; RV64I-NEXT:    bgeu a2, a1, .LBB4_4
 ; RV64I-NEXT:  .LBB4_3:
 ; RV64I-NEXT:    li a0, -1
 ; RV64I-NEXT:  .LBB4_4:
@@ -218,18 +214,15 @@ define i32 @ucmp.32.32_sext(i32 signext %x, i32 signext %y) nounwind {
 ;
 ; RV64I-LABEL: ucmp.32.32_sext:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    slli a2, a1, 32
-; RV64I-NEXT:    srli a1, a0, 32
-; RV64I-NEXT:    srli a2, a2, 32
-; RV64I-NEXT:    bltu a2, a1, .LBB5_2
+; RV64I-NEXT:    mv a2, a0
+; RV64I-NEXT:    bltu a1, a0, .LBB5_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    li a0, 0
-; RV64I-NEXT:    bltu a1, a2, .LBB5_3
+; RV64I-NEXT:    bltu a2, a1, .LBB5_3
 ; RV64I-NEXT:    j .LBB5_4
 ; RV64I-NEXT:  .LBB5_2:
 ; RV64I-NEXT:    li a0, 1
-; RV64I-NEXT:    bgeu a1, a2, .LBB5_4
+; RV64I-NEXT:    bgeu a2, a1, .LBB5_4
 ; RV64I-NEXT:  .LBB5_3:
 ; RV64I-NEXT:    li a0, -1
 ; RV64I-NEXT:  .LBB5_4:
@@ -257,8 +250,9 @@ define i32 @ucmp.32.32_zext(i32 zeroext %x, i32 zeroext %y) nounwind {
 ;
 ; RV64I-LABEL: ucmp.32.32_zext:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    mv a2, a0
-; RV64I-NEXT:    bltu a1, a0, .LBB6_2
+; RV64I-NEXT:    sext.w a2, a0
+; RV64I-NEXT:    sext.w a1, a1
+; RV64I-NEXT:    bltu a1, a2, .LBB6_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    li a0, 0
 ; RV64I-NEXT:    bltu a2, a1, .LBB6_3
