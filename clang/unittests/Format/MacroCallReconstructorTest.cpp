@@ -217,6 +217,19 @@ TEST_F(MacroCallReconstructorTest, Identifier) {
   EXPECT_THAT(std::move(Unexp).takeResult(), matchesLine(line(U.consume("X"))));
 }
 
+TEST_F(MacroCallReconstructorTest, EmptyExpansion) {
+  auto Macros = createExpander({"A(x)=y"});
+  Expansion Exp(Lex, *Macros);
+  TokenList Call = Exp.expand("A", {""});
+
+  MacroCallReconstructor Unexp(0, Exp.getUnexpanded());
+  Unexp.addLine(line(Exp.getTokens()));
+  EXPECT_TRUE(Unexp.finished());
+  Matcher U(Call, Lex);
+  EXPECT_THAT(std::move(Unexp).takeResult(),
+              matchesLine(line(U.consume("A()"))));
+}
+
 TEST_F(MacroCallReconstructorTest, NestedLineWithinCall) {
   auto Macros = createExpander({"C(a)=class X { a; };"});
   Expansion Exp(Lex, *Macros);
