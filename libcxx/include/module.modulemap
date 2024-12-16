@@ -1603,6 +1603,17 @@ module std [system] {
 
   module new {
     header "new"
+    module align_val_t          { header "__new/align_val_t.h" }
+    module allocate             { header "__new/allocate.h" }
+    module destroying_delete_t  { header "__new/destroying_delete_t.h" }
+    module exceptions           { header "__new/exceptions.h" }
+    module global_new_delete    { header "__new/global_new_delete.h" }
+    module interference_size    { header "__new/interference_size.h" }
+    module launder              { header "__new/launder.h" }
+    module new_handler          { header "__new/new_handler.h" }
+    module nothrow_t            { header "__new/nothrow_t.h" }
+    module placement_new_delete { header "__new/placement_new_delete.h" }
+
     export *
   }
 

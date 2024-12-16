@@ -8,12 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ObjectFileXCOFF.h"
-
-#include <algorithm>
-#include <cassert>
-#include <cstring>
-#include <unordered_map>
-
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -35,6 +29,10 @@
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <algorithm>
+#include <cassert>
+#include <cstring>
+#include <unordered_map>
 
 using namespace llvm;
 using namespace lldb;
@@ -110,10 +108,9 @@ size_t ObjectFileXCOFF::GetModuleSpecifications(
 
 static uint32_t XCOFFHeaderSizeFromMagic(uint32_t magic) {
   switch (magic) {
-    /* TODO: 32bit not supported yet
-    case XCOFF::XCOFF32:
-      return sizeof(struct llvm::object::XCOFFFileHeader32);
-    */
+    // TODO: 32bit not supported yet
+    // case XCOFF::XCOFF32:
+    //  return sizeof(struct llvm::object::XCOFFFileHeader32);
 
   case XCOFF::XCOFF64:
     return sizeof(struct llvm::object::XCOFFFileHeader64);

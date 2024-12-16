@@ -1,6 +1,6 @@
 ; Verifies correctness of load/store of parameters and return values.
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_35 -O0 -verify-machineinstrs | FileCheck -allow-deprecated-dag-overlap %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_35 -O0 -verify-machineinstrs | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_35 -O0 -verify-machineinstrs | FileCheck -allow-deprecated-dag-overlap %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_35 -O0 -verify-machineinstrs | %ptxas-verify %}
 
 %s_i8i16p = type { <{ i16, i8, i16 }>, i64 }
 %s_i8i32p = type { <{ i32, i8, i32 }>, i64 }

@@ -338,6 +338,8 @@ private:
   void collectFreedValues(Operation *root) {
     SmallVector<MemoryEffects::EffectInstance> instances;
     root->walk([&](Operation *child) {
+      if (isa<transform::PatternDescriptorOpInterface>(child))
+        return;
       // TODO: extend this to conservatively handle operations with undeclared
       // side effects as maybe freeing the operands.
       auto iface = cast<MemoryEffectOpInterface>(child);
