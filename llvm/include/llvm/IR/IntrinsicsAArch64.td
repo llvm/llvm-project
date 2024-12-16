@@ -3904,6 +3904,11 @@ class SME2_FP8_FDOT_MULTI_VG1x4 :
   def int_aarch64_sme_fp8_fdot_lane_za32_vg1x2 : SME2_FP8_FDOT_LANE_VG1x2;
   def int_aarch64_sme_fp8_fdot_lane_za32_vg1x4 : SME2_FP8_FDOT_LANE_VG1x4;
 
+  def int_aarch64_sme_fp8_fvdot_lane_za16_vg1x2 : SME2_FP8_FDOT_LANE_VG1x2;
+
+  def int_aarch64_sme_fp8_fvdotb_lane_za32_vg1x4 : SME2_FP8_FDOT_LANE_VG1x2;
+  def int_aarch64_sme_fp8_fvdott_lane_za32_vg1x4 : SME2_FP8_FDOT_LANE_VG1x2;
+
   def int_aarch64_sme_fp8_fdot_single_za16_vg1x2 : SME2_FP8_FDOT_SINGLE_VG1x2;
   def int_aarch64_sme_fp8_fdot_single_za16_vg1x4 : SME2_FP8_FDOT_SINGLE_VG1x4;
 

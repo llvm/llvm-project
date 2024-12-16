@@ -99,8 +99,7 @@ void uses() {
   // expected-note@+1{{previous clause is here}}
 #pragma acc kernels device_type(*) attach(Var)
   while(1);
-  // expected-error@+2{{OpenACC clause 'delete' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'delete' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*) delete(Var)
   while(1);
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'kernels' directive}}
