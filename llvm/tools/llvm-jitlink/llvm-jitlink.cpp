@@ -740,8 +740,7 @@ getTestObjectFileInterface(Session &S, MemoryBufferRef O) {
                !(*SymFlagsOrErr & object::BasicSymbolRef::SF_Global))
       continue;
 
-    auto InternedName = S.ES.intern(*Name);
-    I->SymbolFlags[InternedName] = std::move(*SymFlags);
+    I->SymbolFlags[S.ES.intern(*Name)] = std::move(*SymFlags);
   }
 
   return I;
@@ -1711,8 +1710,8 @@ static Error addAbsoluteSymbols(Session &S,
       return Err;
 
     // Register the absolute symbol with the session symbol infos.
-    S.SymbolInfos[InternedName] = {ArrayRef<char>(), Addr,
-                                   AbsDef.getFlags().getTargetFlags()};
+    S.SymbolInfos[std::move(InternedName)] =
+      {ArrayRef<char>(), Addr, AbsDef.getFlags().getTargetFlags()};
   }
 
   return Error::success();

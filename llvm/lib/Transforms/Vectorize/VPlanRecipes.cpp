@@ -1594,10 +1594,10 @@ InstructionCost VPHeaderPHIRecipe::computeCost(ElementCount VF,
 }
 
 /// This function adds
-/// (StartIdx * Step, (StartIdx + 1) * Step, (StartIdx + 2) * Step, ...)
-/// to each vector element of Val. The sequence starts at StartIndex.
+/// (0 * Step, 1 * Step, 2 * Step, ...)
+/// to each vector element of Val.
 /// \p Opcode is relevant for FP induction variable.
-static Value *getStepVector(Value *Val, Value *StartIdx, Value *Step,
+static Value *getStepVector(Value *Val, Value *Step,
                             Instruction::BinaryOps BinOp, ElementCount VF,
                             IRBuilderBase &Builder) {
   assert(VF.isVector() && "only vector VFs are supported");
@@ -1622,11 +1622,7 @@ static Value *getStepVector(Value *Val, Value *StartIdx, Value *Step,
   }
   Value *InitVec = Builder.CreateStepVector(InitVecValVTy);
 
-  // Splat the StartIdx
-  Value *StartIdxSplat = Builder.CreateVectorSplat(VLen, StartIdx);
-
   if (STy->isIntegerTy()) {
-    InitVec = Builder.CreateAdd(InitVec, StartIdxSplat);
     Step = Builder.CreateVectorSplat(VLen, Step);
     assert(Step->getType() == Val->getType() && "Invalid step vec");
     // FIXME: The newly created binary instructions should contain nsw/nuw
@@ -1639,7 +1635,6 @@ static Value *getStepVector(Value *Val, Value *StartIdx, Value *Step,
   assert((BinOp == Instruction::FAdd || BinOp == Instruction::FSub) &&
          "Binary Opcode should be specified for FP induction");
   InitVec = Builder.CreateUIToFP(InitVec, ValVTy);
-  InitVec = Builder.CreateFAdd(InitVec, StartIdxSplat);
 
   Step = Builder.CreateVectorSplat(VLen, Step);
   Value *MulOp = Builder.CreateFMul(InitVec, Step);
@@ -1690,10 +1685,9 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
     Start = Builder.CreateCast(Instruction::Trunc, Start, TruncType);
   }
 
-  Value *Zero = getSignedIntOrFpConstant(Start->getType(), 0);
   Value *SplatStart = Builder.CreateVectorSplat(State.VF, Start);
-  Value *SteppedStart = getStepVector(
-      SplatStart, Zero, Step, ID.getInductionOpcode(), State.VF, State.Builder);
+  Value *SteppedStart = getStepVector(SplatStart, Step, ID.getInductionOpcode(),
+                                      State.VF, State.Builder);
 
   // We create vector phi nodes for both integer and floating-point induction
   // variables. Here, we determine the kind of arithmetic we will perform.
@@ -1733,14 +1727,14 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
   // factor. The last of those goes into the PHI.
   PHINode *VecInd = PHINode::Create(SteppedStart->getType(), 2, "vec.ind");
   VecInd->insertBefore(State.CFG.PrevBB->getFirstInsertionPt());
-  VecInd->setDebugLoc(EntryVal->getDebugLoc());
+  VecInd->setDebugLoc(getDebugLoc());
   State.set(this, VecInd);
 
   Instruction *LastInduction = cast<Instruction>(
       Builder.CreateBinOp(AddOp, VecInd, SplatVF, "vec.ind.next"));
   if (isa<TruncInst>(EntryVal))
     State.addMetadata(LastInduction, EntryVal);
-  LastInduction->setDebugLoc(EntryVal->getDebugLoc());
+  LastInduction->setDebugLoc(getDebugLoc());
 
   VecInd->addIncoming(SteppedStart, VectorPH);
   // Add induction update using an incorrect block temporarily. The phi node
@@ -1754,20 +1748,13 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenIntOrFpInductionRecipe::print(raw_ostream &O, const Twine &Indent,
                                           VPSlotTracker &SlotTracker) const {
-  O << Indent << "WIDEN-INDUCTION";
-  if (getTruncInst()) {
-    O << "\\l\"";
-    O << " +\n" << Indent << "\"  " << VPlanIngredient(IV) << "\\l\"";
-    O << " +\n" << Indent << "\"  ";
-    getVPValue(0)->printAsOperand(O, SlotTracker);
-  } else
-    O << " " << VPlanIngredient(IV);
+  O << Indent;
+  printAsOperand(O, SlotTracker);
+  O << " = WIDEN-INDUCTION  ";
+  printOperands(O, SlotTracker);
 
-  O << ", ";
-  getStepValue()->printAsOperand(O, SlotTracker);
-
-  O << ", ";
-  getVFValue()->printAsOperand(O, SlotTracker);
+  if (auto *TI = getTruncInst())
+    O << " (truncated to " << *TI->getType() << ")";
 }
 #endif
 
@@ -3182,6 +3169,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
     NewPointerPhi = PHINode::Create(ScStValueType, 2, "pointer.phi",
                                     CanonicalIV->getIterator());
     NewPointerPhi->addIncoming(ScalarStartValue, VectorPH);
+    NewPointerPhi->setDebugLoc(getDebugLoc());
   } else {
     // The recipe has been unrolled. In that case, fetch the single pointer phi
     // shared among all unrolled parts of the recipe.
@@ -3193,7 +3181,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   // A pointer induction, performed by using a gep
   BasicBlock::iterator InductionLoc = State.Builder.GetInsertPoint();
   Value *ScalarStepValue = State.get(getOperand(1), VPLane(0));
-  Type *PhiType = IndDesc.getStep()->getType();
+  Type *PhiType = State.TypeAnalysis.inferScalarType(getOperand(1));
   Value *RuntimeVF = getRuntimeVF(State.Builder, PhiType, State.VF);
   // Add induction update using an incorrect block temporarily. The phi node
   // will be fixed after VPlan execution. Note that at this point the latch
@@ -3245,7 +3233,8 @@ void VPWidenPointerInductionRecipe::print(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = WIDEN-POINTER-INDUCTION ";
   getStartValue()->printAsOperand(O, SlotTracker);
-  O << ", " << *IndDesc.getStep();
+  O << ", ";
+  getOperand(1)->printAsOperand(O, SlotTracker);
   if (getNumOperands() == 4) {
     O << ", ";
     getOperand(2)->printAsOperand(O, SlotTracker);

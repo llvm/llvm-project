@@ -148,19 +148,18 @@ std::atomic<uint64_t> LinkGraphMaterializationUnit::Counter{0};
 namespace llvm {
 namespace orc {
 
-class ObjectLinkingLayerJITLinkContext final : public JITLinkContext {
+class ObjectLinkingLayer::JITLinkCtx final : public JITLinkContext {
 public:
-  ObjectLinkingLayerJITLinkContext(
-      ObjectLinkingLayer &Layer,
-      std::unique_ptr<MaterializationResponsibility> MR,
-      std::unique_ptr<MemoryBuffer> ObjBuffer)
+  JITLinkCtx(ObjectLinkingLayer &Layer,
+             std::unique_ptr<MaterializationResponsibility> MR,
+             std::unique_ptr<MemoryBuffer> ObjBuffer)
       : JITLinkContext(&MR->getTargetJITDylib()), Layer(Layer),
         MR(std::move(MR)), ObjBuffer(std::move(ObjBuffer)) {
     std::lock_guard<std::mutex> Lock(Layer.LayerMutex);
     Plugins = Layer.Plugins;
   }
 
-  ~ObjectLinkingLayerJITLinkContext() {
+  ~JITLinkCtx() {
     // If there is an object buffer return function then use it to
     // return ownership of the buffer.
     if (Layer.ReturnObjectBuffer && ObjBuffer)
@@ -624,8 +623,7 @@ void ObjectLinkingLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
   assert(O && "Object must not be null");
   MemoryBufferRef ObjBuffer = O->getMemBufferRef();
 
-  auto Ctx = std::make_unique<ObjectLinkingLayerJITLinkContext>(
-      *this, std::move(R), std::move(O));
+  auto Ctx = std::make_unique<JITLinkCtx>(*this, std::move(R), std::move(O));
   if (auto G = createLinkGraphFromObject(
           ObjBuffer, getExecutionSession().getSymbolStringPool())) {
     Ctx->notifyMaterializing(**G);
@@ -637,8 +635,7 @@ void ObjectLinkingLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
 
 void ObjectLinkingLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
                               std::unique_ptr<LinkGraph> G) {
-  auto Ctx = std::make_unique<ObjectLinkingLayerJITLinkContext>(
-      *this, std::move(R), nullptr);
+  auto Ctx = std::make_unique<JITLinkCtx>(*this, std::move(R), nullptr);
   Ctx->notifyMaterializing(*G);
   link(std::move(G), std::move(Ctx));
 }

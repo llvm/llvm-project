@@ -403,7 +403,9 @@ public:
         if (isConstantUnsupported(DstTy))
           return false;
         LLVM_DEBUG(dbgs() << ".. Combine G_[SZ]EXT(G_IMPLICIT_DEF): " << MI;);
-        Builder.buildConstant(DstReg, 0);
+        auto Cnst = Builder.buildConstant(DstTy, 0);
+        replaceRegOrBuildCopy(DstReg, Cnst.getReg(0), MRI, Builder, UpdatedDefs,
+                              Observer);
         UpdatedDefs.push_back(DstReg);
       }
 
