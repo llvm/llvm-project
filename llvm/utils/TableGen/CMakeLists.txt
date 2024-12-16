@@ -12,7 +12,10 @@ add_subdirectory(Common)
 # Sources included in both, llvm-min-tblgen and llvm-tblgen, must be included
 # into LLVMTableGenBasic to avoid redundant compilation and problems with build
 # caches.
+# At least one source file must be included directly to avoid CMake problems.
+# E.g. CMake derives which linker to use from the types of sources added.
 add_tablegen(llvm-min-tblgen LLVM_HEADERS
+  llvm-min-tblgen.cpp
   $<TARGET_OBJECTS:obj.LLVMTableGenBasic>
 
   PARTIAL_SOURCES_INTENDED
@@ -48,6 +51,7 @@ add_tablegen(llvm-tblgen LLVM
   GlobalISelEmitter.cpp
   InstrDocsEmitter.cpp
   InstrInfoEmitter.cpp
+  llvm-min-tblgen.cpp
   MacroFusionPredicatorEmitter.cpp
   OptionParserEmitter.cpp
   OptionRSTEmitter.cpp
@@ -65,6 +69,8 @@ add_tablegen(llvm-tblgen LLVM
   X86RecognizableInstr.cpp
   $<TARGET_OBJECTS:obj.LLVMTableGenBasic>
   $<TARGET_OBJECTS:obj.LLVMTableGenCommon>
+
+  PARTIAL_SOURCES_INTENDED
 
   DEPENDS
   intrinsics_gen # via llvm-min-tablegen
