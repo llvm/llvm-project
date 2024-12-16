@@ -425,6 +425,15 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
       return false;
     }
   }
+  case OpenACCClauseKind::Delete: {
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::ExitData:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   case OpenACCClauseKind::Detach: {
     switch (DirectiveKind) {
     case OpenACCDirectiveKind::ExitData:
@@ -1065,6 +1074,17 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDetachClause(
                                      Clause.getLParenLoc(), Clause.getVarList(),
                                      Clause.getEndLoc());
 }
+
+OpenACCClause *SemaOpenACCClauseVisitor::VisitDeleteClause(
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  // ActOnVar ensured that everything is a valid variable reference, so there
+  // really isn't anything to do here. GCC does some duplicate-finding, though
+  // it isn't apparent in the standard where this is justified.
+  return OpenACCDeleteClause::Create(Ctx, Clause.getBeginLoc(),
+                                     Clause.getLParenLoc(), Clause.getVarList(),
+                                     Clause.getEndLoc());
+}
+
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitDevicePtrClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {

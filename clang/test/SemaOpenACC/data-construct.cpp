@@ -73,7 +73,6 @@ void AtLeastOneOf() {
 
   // Exit Data
 #pragma acc exit data copyout(Var)
-  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented}}
 #pragma acc exit data delete(Var)
 #pragma acc exit data detach(VarPtr)
 

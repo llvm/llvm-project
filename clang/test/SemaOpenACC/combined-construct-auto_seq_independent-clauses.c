@@ -69,7 +69,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop auto attach(VarPtr)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented}}
+  // expected-error@+1{{OpenACC 'delete' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop auto delete(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'parallel loop' directive}}
@@ -186,7 +186,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop attach(VarPtr) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented}}
+  // expected-error@+1{{OpenACC 'delete' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop delete(Var) auto
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'parallel loop' directive}}
@@ -304,7 +304,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop independent attach(VarPtr)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented}}
+  // expected-error@+1{{OpenACC 'delete' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop independent delete(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'parallel loop' directive}}
@@ -421,7 +421,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop attach(VarPtr) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented}}
+  // expected-error@+1{{OpenACC 'delete' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop delete(Var) independent
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'parallel loop' directive}}
@@ -547,7 +547,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop seq attach(VarPtr)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented}}
+  // expected-error@+1{{OpenACC 'delete' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop seq delete(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'parallel loop' directive}}
@@ -670,7 +670,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop attach(VarPtr) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented}}
+  // expected-error@+1{{OpenACC 'delete' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop delete(Var) seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'parallel loop' directive}}
