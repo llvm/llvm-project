@@ -30,7 +30,7 @@ private:
   ReportingMode Mode = ReportingMode::Trap;
 
 public:
-  BoundsCheckingPass(ReportingMode Mode) {}
+  BoundsCheckingPass(ReportingMode Mode) : Mode(Mode) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   static bool isRequired() { return true; }
   void printPipeline(raw_ostream &OS,
