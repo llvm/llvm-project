@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/Spiller.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -124,17 +125,20 @@ void RegAllocBase::allocatePhysRegs() {
 
       const TargetRegisterClass *RC = MRI->getRegClass(VirtReg->reg());
       ArrayRef<MCPhysReg> AllocOrder = RegClassInfo.getOrder(RC);
-      if (AllocOrder.empty())
+      if (AllocOrder.empty()) {
         report_fatal_error("no registers from class available to allocate");
-      else if (MI && MI->isInlineAsm()) {
-        MI->emitInlineAsmError(
-            "inline assembly requires more registers than available");
-      } else if (MI) {
-        LLVMContext &Context =
-            MI->getParent()->getParent()->getFunction().getContext();
-        Context.emitError("ran out of registers during register allocation");
       } else {
-        report_fatal_error("ran out of registers during register allocation");
+        if (MI && MI->isInlineAsm()) {
+          MI->emitInlineAsmError(
+              "inline assembly requires more registers than available");
+        } else {
+          const Function &Fn = VRM->getMachineFunction().getFunction();
+          LLVMContext &Context = Fn.getContext();
+          DiagnosticInfoRegAllocFailure DI(
+              "ran out of registers during register allocation", Fn,
+              MI ? MI->getDebugLoc() : DiagnosticLocation());
+          Context.diagnose(DI);
+        }
       }
 
       // Keep going after reporting the error.
