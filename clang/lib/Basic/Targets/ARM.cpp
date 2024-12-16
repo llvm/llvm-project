@@ -1074,26 +1074,81 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 }
 
-static constexpr int NumBuiltins =
-    clang::ARM::LastTSBuiltin - Builtin::FirstTSBuiltin;
+static constexpr int NumBuiltins = ARM::LastTSBuiltin - Builtin::FirstTSBuiltin;
+static constexpr int NumNeonBuiltins =
+    NEON::FirstFp16Builtin - Builtin::FirstTSBuiltin;
+static constexpr int NumFp16Builtins =
+    NEON::FirstTSBuiltin - NEON::FirstFp16Builtin;
+static constexpr int NumMVEBuiltins =
+    ARM::FirstCDEBuiltin - NEON::FirstTSBuiltin;
+static constexpr int NumCDEBuiltins =
+    ARM::FirstARMBuiltin - ARM::FirstCDEBuiltin;
+static constexpr int NumARMBuiltins = ARM::LastTSBuiltin - ARM::FirstARMBuiltin;
+static_assert(NumBuiltins ==
+              (NumNeonBuiltins + NumFp16Builtins + NumMVEBuiltins +
+               NumCDEBuiltins + NumARMBuiltins));
+
+namespace clang {
+namespace NEON {
+#define GET_NEON_BUILTIN_STR_TABLE
+#include "clang/Basic/arm_neon.inc"
+#undef GET_NEON_BUILTIN_STR_TABLE
+
+static constexpr std::array<Builtin::Info, NumNeonBuiltins> BuiltinInfos = {
+#define GET_NEON_BUILTIN_INFOS
+#include "clang/Basic/arm_neon.inc"
+#undef GET_NEON_BUILTIN_INFOS
+};
+
+namespace FP16 {
+#define GET_NEON_BUILTIN_STR_TABLE
+#include "clang/Basic/arm_fp16.inc"
+#undef GET_NEON_BUILTIN_STR_TABLE
+
+static constexpr std::array<Builtin::Info, NumFp16Builtins> BuiltinInfos = {
+#define GET_NEON_BUILTIN_INFOS
+#include "clang/Basic/arm_fp16.inc"
+#undef GET_NEON_BUILTIN_INFOS
+};
+} // namespace FP16
+} // namespace NEON
+} // namespace clang
+
+namespace {
+namespace MVE {
+#define GET_MVE_BUILTIN_STR_TABLE
+#include "clang/Basic/arm_mve_builtins.inc"
+#undef GET_MVE_BUILTIN_STR_TABLE
+
+static constexpr std::array<Builtin::Info, NumMVEBuiltins> BuiltinInfos = {
+#define GET_MVE_BUILTIN_INFOS
+#include "clang/Basic/arm_mve_builtins.inc"
+#undef GET_MVE_BUILTIN_INFOS
+};
+} // namespace MVE
+
+namespace CDE {
+#define GET_CDE_BUILTIN_STR_TABLE
+#include "clang/Basic/arm_cde_builtins.inc"
+#undef GET_CDE_BUILTIN_STR_TABLE
+
+static constexpr std::array<Builtin::Info, NumCDEBuiltins> BuiltinInfos = {
+#define GET_CDE_BUILTIN_INFOS
+#include "clang/Basic/arm_cde_builtins.inc"
+#undef GET_CDE_BUILTIN_INFOS
+};
+} // namespace CDE
+} // namespace
 
 static constexpr llvm::StringTable BuiltinStrings =
     CLANG_BUILTIN_STR_TABLE_START
 #define BUILTIN CLANG_BUILTIN_STR_TABLE
 #define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsNEON.def"
-
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
 #define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsARM.def"
-    ;
+    ; // namespace clang
 
-static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumBuiltins>({
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsNEON.def"
+static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumARMBuiltins>({
 #define BUILTIN CLANG_BUILTIN_ENTRY
 #define LANGBUILTIN CLANG_LANGBUILTIN_ENTRY
 #define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
@@ -1104,7 +1159,14 @@ static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumBuiltins>({
 
 llvm::SmallVector<Builtin::InfosShard>
 ARMTargetInfo::getTargetBuiltins() const {
-  return {{&BuiltinStrings, BuiltinInfos}};
+  return {
+      {&NEON::BuiltinStrings, NEON::BuiltinInfos, "__builtin_neon_"},
+      {&NEON::FP16::BuiltinStrings, NEON::FP16::BuiltinInfos,
+       "__builtin_neon_"},
+      {&MVE::BuiltinStrings, MVE::BuiltinInfos, "__builtin_arm_mve_"},
+      {&CDE::BuiltinStrings, CDE::BuiltinInfos, "__builtin_arm_cde_"},
+      {&BuiltinStrings, BuiltinInfos},
+  };
 }
 
 bool ARMTargetInfo::isCLZForZeroUndef() const { return false; }

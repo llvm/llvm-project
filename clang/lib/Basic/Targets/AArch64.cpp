@@ -26,35 +26,80 @@
 using namespace clang;
 using namespace clang::targets;
 
-static constexpr int NumNEONBuiltins =
-    NEON::FirstTSBuiltin - Builtin::FirstTSBuiltin;
+static constexpr int NumNeonBuiltins =
+    NEON::FirstFp16Builtin - Builtin::FirstTSBuiltin;
+static constexpr int NumFp16Builtins =
+    NEON::FirstTSBuiltin - NEON::FirstFp16Builtin;
 static constexpr int NumSVEBuiltins =
-    SVE::FirstTSBuiltin - NEON::FirstTSBuiltin;
+    SVE::FirstNeonBridgeBuiltin - NEON::FirstTSBuiltin;
+static constexpr int NumSVENeonBridgeBuiltins =
+    SVE::FirstTSBuiltin - SVE::FirstNeonBridgeBuiltin;
 static constexpr int NumSMEBuiltins = SME::FirstTSBuiltin - SVE::FirstTSBuiltin;
 static constexpr int NumAArch64Builtins =
     AArch64::LastTSBuiltin - SME::FirstTSBuiltin;
 static constexpr int NumBuiltins =
     AArch64::LastTSBuiltin - Builtin::FirstTSBuiltin;
-static_assert(NumBuiltins == (NumNEONBuiltins + NumSVEBuiltins +
-                              NumSMEBuiltins + NumAArch64Builtins));
+static_assert(NumBuiltins ==
+              (NumNeonBuiltins + NumFp16Builtins + NumSVEBuiltins +
+               NumSVENeonBridgeBuiltins + NumSMEBuiltins + NumAArch64Builtins));
 
-static constexpr llvm::StringTable BuiltinNEONStrings =
+namespace clang {
+namespace NEON {
+#define GET_NEON_BUILTIN_STR_TABLE
+#include "clang/Basic/arm_neon.inc"
+#undef GET_NEON_BUILTIN_STR_TABLE
+
+static constexpr std::array<Builtin::Info, NumNeonBuiltins> BuiltinInfos = {
+#define GET_NEON_BUILTIN_INFOS
+#include "clang/Basic/arm_neon.inc"
+#undef GET_NEON_BUILTIN_INFOS
+};
+
+namespace FP16 {
+#define GET_NEON_BUILTIN_STR_TABLE
+#include "clang/Basic/arm_fp16.inc"
+#undef GET_NEON_BUILTIN_STR_TABLE
+
+static constexpr std::array<Builtin::Info, NumFp16Builtins> BuiltinInfos = {
+#define GET_NEON_BUILTIN_INFOS
+#include "clang/Basic/arm_fp16.inc"
+#undef GET_NEON_BUILTIN_INFOS
+};
+} // namespace FP16
+} // namespace NEON
+
+namespace SVE {
+#define GET_SVE_BUILTIN_STR_TABLE
+#include "clang/Basic/arm_sve_builtins.inc"
+#undef GET_SVE_BUILTIN_STR_TABLE
+
+static constexpr std::array<Builtin::Info, NumSVEBuiltins> BuiltinInfos = {
+#define GET_SVE_BUILTIN_INFOS
+#include "clang/Basic/arm_sve_builtins.inc"
+#undef GET_SVE_BUILTIN_INFOS
+};
+} // namespace SVE
+
+namespace SME {
+#define GET_SME_BUILTIN_STR_TABLE
+#include "clang/Basic/arm_sme_builtins.inc"
+#undef GET_SME_BUILTIN_STR_TABLE
+
+static constexpr std::array<Builtin::Info, NumSMEBuiltins> BuiltinInfos = {
+#define GET_SME_BUILTIN_INFOS
+#include "clang/Basic/arm_sme_builtins.inc"
+#undef GET_SME_BUILTIN_INFOS
+};
+} // namespace SME
+} // namespace clang
+
+static constexpr llvm::StringTable BuiltinSVENeonBridgeStrings =
     CLANG_BUILTIN_STR_TABLE_START
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
 #define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsNEON.def"
-    ;
-static constexpr llvm::StringTable BuiltinSVEStrings =
-    CLANG_BUILTIN_STR_TABLE_START
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsSVE.def"
-    ;
-static constexpr llvm::StringTable BuiltinSMEStrings =
-    CLANG_BUILTIN_STR_TABLE_START
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsSME.def"
+#define GET_SVE_BUILTINS
+#include "clang/Basic/BuiltinsAArch64NeonSVEBridge.def"
+#undef GET_SVE_BUILTINS
+#undef TARGET_BUILTIN
     ;
 static constexpr llvm::StringTable BuiltinAArch64Strings =
     CLANG_BUILTIN_STR_TABLE_START
@@ -64,21 +109,14 @@ static constexpr llvm::StringTable BuiltinAArch64Strings =
 #include "clang/Basic/BuiltinsAArch64.def"
     ;
 
-static constexpr auto BuiltinNEONInfos = Builtin::MakeInfos<NumNEONBuiltins>({
-#define BUILTIN CLANG_BUILTIN_ENTRY
+static constexpr auto BuiltinSVENeonBridgeInfos =
+    Builtin::MakeInfos<NumSVENeonBridgeBuiltins>({
 #define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsNEON.def"
-});
-static constexpr auto BuiltinSVEInfos = Builtin::MakeInfos<NumSVEBuiltins>({
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsSVE.def"
-});
-static constexpr auto BuiltinSMEInfos = Builtin::MakeInfos<NumSMEBuiltins>({
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsSME.def"
-});
+#define GET_SVE_BUILTINS
+#include "clang/Basic/BuiltinsAArch64NeonSVEBridge.def"
+#undef GET_SVE_BUILTINS
+#undef TARGET_BUILTIN
+    });
 static constexpr auto BuiltinAArch64Infos =
     Builtin::MakeInfos<NumAArch64Builtins>({
 #define BUILTIN CLANG_BUILTIN_ENTRY
@@ -732,9 +770,12 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 llvm::SmallVector<Builtin::InfosShard>
 AArch64TargetInfo::getTargetBuiltins() const {
   return {
-      {&BuiltinNEONStrings, BuiltinNEONInfos},
-      {&BuiltinSVEStrings, BuiltinSVEInfos},
-      {&BuiltinSMEStrings, BuiltinSMEInfos},
+      {&NEON::BuiltinStrings, NEON::BuiltinInfos, "__builtin_neon_"},
+      {&NEON::FP16::BuiltinStrings, NEON::FP16::BuiltinInfos,
+       "__builtin_neon_"},
+      {&SVE::BuiltinStrings, SVE::BuiltinInfos, "__builtin_sve_"},
+      {&BuiltinSVENeonBridgeStrings, BuiltinSVENeonBridgeInfos},
+      {&SME::BuiltinStrings, SME::BuiltinInfos, "__builtin_sme_"},
       {&BuiltinAArch64Strings, BuiltinAArch64Infos},
   };
 }
