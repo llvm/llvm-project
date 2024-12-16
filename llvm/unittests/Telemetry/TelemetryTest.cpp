@@ -92,7 +92,7 @@ public:
 
 private:
   template <typename T> void writeHelper(StringRef Name, T Value) {
-    assert(started && "serializer not started");
+    assert(Started && "serializer not started");
     Out->try_emplace(Name, Value);
   }
   bool Started = false;
@@ -123,7 +123,7 @@ public:
     writeHelper(KeyName, Value);
   }
   void write(StringRef KeyName, StringRef Value) override {
-    assert(started && "serializer not started");
+    writeHelper(KeyName, Value);
   }
 
   void write(StringRef KeyName,
