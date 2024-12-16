@@ -58,16 +58,6 @@ function(_import_private_headers target include_dirs headers)
   target_include_directories(${target} INTERFACE "${LIBCXX_BINARY_DIR}/private-abi-headers/${target}")
 endfunction()
 
-# This function adds linker flags to a <target> appropriate for merging the object
-# files of another static <library> into whoever links against <target>.
-function(_merge_static_library target library)
-  if (APPLE)
-    target_link_options(${target} INTERFACE "-Wl,-force_load" "${library}")
-  else()
-    target_link_options(${target} INTERFACE "-Wl,--whole-archive" "-Wl,-Bstatic" "${library}" "-Wl,-Bdynamic" "-Wl,--no-whole-archive")
-  endif()
-endfunction()
-
 # This function creates a library target for linking against an external ABI library.
 #
 # <target>: The name of the target to create
@@ -96,7 +86,7 @@ function(_import_external_abi_library target name type merged)
 
     add_library(${target} INTERFACE)
     if (${merged})
-      _merge_static_library(${target} "$<TARGET_PROPERTY:${target}-imported,IMPORTED_LOCATION>")
+      target_link_libraries(${target} INTERFACE "$<LINK_LIBRARY:WHOLE_ARCHIVE,${target}-imported>")
     else()
       target_link_libraries(${target} INTERFACE ${target}-imported)
     endif()
@@ -174,9 +164,7 @@ function(setup_abi_library abi_target linked_into input)
         set(merge_target "cxxabi_shared_for_merging")
       endif()
       add_library(${abi_target} INTERFACE)
-      _merge_static_library(${abi_target}
-        "$<TARGET_PROPERTY:${merge_target},LIBRARY_OUTPUT_DIRECTORY>/${CMAKE_STATIC_LIBRARY_PREFIX}$<TARGET_PROPERTY:${merge_target},OUTPUT_NAME>${CMAKE_STATIC_LIBRARY_SUFFIX}")
-      target_link_libraries(${abi_target} INTERFACE cxxabi-headers)
+      target_link_libraries(${abi_target} INTERFACE "$<LINK_LIBRARY:WHOLE_ARCHIVE,${merge_target}>")
       add_dependencies(${abi_target} ${merge_target})
     else()
       string(TOLOWER "${search_type}" type)
