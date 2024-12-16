@@ -2223,7 +2223,8 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(
   }
 
   if (SS.isEmpty()) {
-    if (getLangOpts().ObjC && Tok.is(tok::coloncolon)) {
+    if (getLangOpts().ObjC && !getLangOpts().CPlusPlus &&
+        Tok.is(tok::coloncolon)) {
       // ObjectiveC does not allow :: as as a scope token.
       Diag(ConsumeToken(), diag::err_expected_type);
       return true;
