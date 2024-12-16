@@ -53,9 +53,9 @@ bool ShouldReplaceIntrinsic(bool isNtdllCallee, void *addr, uptr size,
 using namespace __asan;
 
 #if SANITIZER_WINDOWS64
-#define IS_NTDLL_CALLEE __sanitizer::IsNtdllCallee(_ReturnAddress())
+#  define IS_NTDLL_CALLEE __sanitizer::IsNtdllCallee(_ReturnAddress())
 #else
-#define IS_NTDLL_CALLEE false
+#  define IS_NTDLL_CALLEE false
 #endif
 
 // memcpy is called during __asan_init() from the internals of printf(...).
