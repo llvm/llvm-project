@@ -151,8 +151,14 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
     return FoldBitCast(ConstantVector::get(Ops), DestTy, DL);
   }
 
+  // Some of what follows may extend to cover scalable vectors but the current
+  // implementation is fixed length specific.
+  if (!isa<FixedVectorType>(C->getType()))
+    return ConstantExpr::getBitCast(C, DestTy);
+
   // If this is a bitcast from constant vector -> vector, fold it.
-  if (!isa<ConstantDataVector>(C) && !isa<ConstantVector>(C))
+  if (!isa<ConstantDataVector>(C) && !isa<ConstantVector>(C) &&
+      !isa<ConstantInt>(C) && !isa<ConstantFP>(C))
     return ConstantExpr::getBitCast(C, DestTy);
 
   // If the element types match, IR can fold it.
@@ -194,10 +200,9 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
         IntegerType::get(C->getContext(), FPWidth), NumSrcElt);
     // Ask IR to do the conversion now that #elts line up.
     C = ConstantExpr::getBitCast(C, SrcIVTy);
-    // If IR wasn't able to fold it, bail out.
-    if (!isa<ConstantVector>(C) &&  // FIXME: Remove ConstantVector.
-        !isa<ConstantDataVector>(C))
-      return C;
+    assert((isa<ConstantVector>(C) || // FIXME: Remove ConstantVector.
+            isa<ConstantDataVector>(C) || isa<ConstantInt>(C)) &&
+           "Constant folding cannot fail for plain fp->int bitcast!");
   }
 
   // Now we know that the input and output vectors are both integer vectors

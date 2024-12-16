@@ -24,21 +24,24 @@ Types:
 
 */
 
-#include <__config>
+#if 0
+#else // 0
+#  include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
+#  endif
 
 // Note: This include is outside of header guards because we sometimes get included multiple times
 //       with different defines and the underlying <stddef.h> will know how to deal with that.
-#include_next <stddef.h>
+#  include_next <stddef.h>
 
-#ifndef _LIBCPP_STDDEF_H
-#  define _LIBCPP_STDDEF_H
+#  ifndef _LIBCPP_STDDEF_H
+#    define _LIBCPP_STDDEF_H
 
-#  ifdef __cplusplus
+#    ifdef __cplusplus
 typedef decltype(nullptr) nullptr_t;
-#  endif
+#    endif
+#  endif // 0
 
 #endif // _LIBCPP_STDDEF_H

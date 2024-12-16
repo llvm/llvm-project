@@ -168,9 +168,18 @@ public:
     return ST.supportsGetDoorbellID();
   }
 
-  std::pair<unsigned, unsigned> getFlatWorkGroupSizes(const Function &F) {
+  std::optional<std::pair<unsigned, unsigned>>
+  getFlatWorkGroupSizeAttr(const Function &F) const {
+    auto R = AMDGPU::getIntegerPairAttribute(F, "amdgpu-flat-work-group-size");
+    if (!R)
+      return std::nullopt;
+    return std::make_pair(R->first, *(R->second));
+  }
+
+  std::pair<unsigned, unsigned>
+  getDefaultFlatWorkGroupSize(const Function &F) const {
     const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    return ST.getFlatWorkGroupSizes(F);
+    return ST.getDefaultFlatWorkGroupSize(F.getCallingConv());
   }
 
   std::pair<unsigned, unsigned>
@@ -195,6 +204,19 @@ public:
                 std::pair<unsigned, unsigned> FlatWorkGroupSize) {
     const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
     return ST.getWavesPerEU(F, FlatWorkGroupSize);
+  }
+
+  std::optional<std::pair<unsigned, unsigned>>
+  getWavesPerEUAttr(const Function &F) {
+    auto Val = AMDGPU::getIntegerPairAttribute(F, "amdgpu-waves-per-eu",
+                                               /*OnlyFirstRequired=*/true);
+    if (!Val)
+      return std::nullopt;
+    if (!Val->second) {
+      const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+      Val->second = ST.getMaxWavesPerEU();
+    }
+    return std::make_pair(Val->first, *(Val->second));
   }
 
   std::pair<unsigned, unsigned>
@@ -263,6 +285,18 @@ public:
       return true;
 
     return !HasAperture && (Access & ADDR_SPACE_CAST);
+  }
+
+  bool checkConstForAddrSpaceCastFromPrivate(const Constant *C) {
+    SmallPtrSet<const Constant *, 8> Visited;
+    uint8_t Access = getConstantAccess(C, Visited);
+
+    if (Access & ADDR_SPACE_CAST)
+      if (const auto *CE = dyn_cast<ConstantExpr>(C))
+        if (CE->getOperand(0)->getType()->getPointerAddressSpace() ==
+            AMDGPUAS::PRIVATE_ADDRESS)
+          return true;
+    return false;
   }
 
 private:
@@ -529,6 +563,9 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
     if (isAssumed(COMPLETION_ACTION) && funcRetrievesCompletionAction(A, COV))
       removeAssumedBits(COMPLETION_ACTION);
 
+    if (isAssumed(FLAT_SCRATCH_INIT) && needFlatScratchInit(A))
+      removeAssumedBits(FLAT_SCRATCH_INIT);
+
     return getAssumed() != OrigAssumed ? ChangeStatus::CHANGED
                                        : ChangeStatus::UNCHANGED;
   }
@@ -687,6 +724,65 @@ private:
     return !A.checkForAllCallLikeInstructions(DoesNotRetrieve, *this,
                                               UsedAssumedInformation);
   }
+
+  // Returns true if FlatScratchInit is needed, i.e., no-flat-scratch-init is
+  // not to be set.
+  bool needFlatScratchInit(Attributor &A) {
+    assert(isAssumed(FLAT_SCRATCH_INIT)); // only called if the bit is still set
+
+    // Check all AddrSpaceCast instructions. FlatScratchInit is needed if
+    // there is a cast from PRIVATE_ADDRESS.
+    auto AddrSpaceCastNotFromPrivate = [](Instruction &I) {
+      return cast<AddrSpaceCastInst>(I).getSrcAddressSpace() !=
+             AMDGPUAS::PRIVATE_ADDRESS;
+    };
+
+    bool UsedAssumedInformation = false;
+    if (!A.checkForAllInstructions(AddrSpaceCastNotFromPrivate, *this,
+                                   {Instruction::AddrSpaceCast},
+                                   UsedAssumedInformation))
+      return true;
+
+    // Check for addrSpaceCast from PRIVATE_ADDRESS in constant expressions
+    auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
+
+    Function *F = getAssociatedFunction();
+    for (Instruction &I : instructions(F)) {
+      for (const Use &U : I.operands()) {
+        if (const auto *C = dyn_cast<Constant>(U)) {
+          if (InfoCache.checkConstForAddrSpaceCastFromPrivate(C))
+            return true;
+        }
+      }
+    }
+
+    // Finally check callees.
+
+    // This is called on each callee; false means callee shouldn't have
+    // no-flat-scratch-init.
+    auto CheckForNoFlatScratchInit = [&](Instruction &I) {
+      const auto &CB = cast<CallBase>(I);
+      const Function *Callee = CB.getCalledFunction();
+
+      // Callee == 0 for inline asm or indirect call with known callees.
+      // In the latter case, updateImpl() already checked the callees and we
+      // know their FLAT_SCRATCH_INIT bit is set.
+      // If function has indirect call with unknown callees, the bit is
+      // already removed in updateImpl() and execution won't reach here.
+      if (!Callee)
+        return true;
+
+      return Callee->getIntrinsicID() !=
+             Intrinsic::amdgcn_addrspacecast_nonnull;
+    };
+
+    UsedAssumedInformation = false;
+    // If any callee is false (i.e. need FlatScratchInit),
+    // checkForAllCallLikeInstructions returns false, in which case this
+    // function returns true.
+    return !A.checkForAllCallLikeInstructions(CheckForNoFlatScratchInit, *this,
+                                              UsedAssumedInformation);
+  }
 };
 
 AAAMDAttributes &AAAMDAttributes::createForPosition(const IRPosition &IRP,
@@ -738,17 +834,30 @@ struct AAAMDSizeRangeAttribute
     return Change;
   }
 
-  ChangeStatus emitAttributeIfNotDefault(Attributor &A, unsigned Min,
-                                         unsigned Max) {
-    // Don't add the attribute if it's the implied default.
-    if (getAssumed().getLower() == Min && getAssumed().getUpper() - 1 == Max)
+  /// Clamp the assumed range to the default value ([Min, Max]) and emit the
+  /// attribute if it is not same as default.
+  ChangeStatus
+  emitAttributeIfNotDefaultAfterClamp(Attributor &A,
+                                      std::pair<unsigned, unsigned> Default) {
+    auto [Min, Max] = Default;
+    unsigned Lower = getAssumed().getLower().getZExtValue();
+    unsigned Upper = getAssumed().getUpper().getZExtValue();
+
+    // Clamp the range to the default value.
+    if (Lower < Min)
+      Lower = Min;
+    if (Upper > Max + 1)
+      Upper = Max + 1;
+
+    // No manifest if the value is invalid or same as default after clamp.
+    if ((Lower == Min && Upper == Max + 1) || (Upper < Lower))
       return ChangeStatus::UNCHANGED;
 
     Function *F = getAssociatedFunction();
     LLVMContext &Ctx = F->getContext();
     SmallString<10> Buffer;
     raw_svector_ostream OS(Buffer);
-    OS << getAssumed().getLower() << ',' << getAssumed().getUpper() - 1;
+    OS << Lower << ',' << Upper - 1;
     return A.manifestAttrs(getIRPosition(),
                            {Attribute::get(Ctx, AttrName, OS.str())},
                            /*ForceReplace=*/true);
@@ -772,13 +881,33 @@ struct AAAMDFlatWorkGroupSize : public AAAMDSizeRangeAttribute {
   void initialize(Attributor &A) override {
     Function *F = getAssociatedFunction();
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
-    unsigned MinGroupSize, MaxGroupSize;
-    std::tie(MinGroupSize, MaxGroupSize) = InfoCache.getFlatWorkGroupSizes(*F);
-    intersectKnown(
-        ConstantRange(APInt(32, MinGroupSize), APInt(32, MaxGroupSize + 1)));
 
-    if (AMDGPU::isEntryFunctionCC(F->getCallingConv()))
-      indicatePessimisticFixpoint();
+    bool HasAttr = false;
+    auto Range = InfoCache.getDefaultFlatWorkGroupSize(*F);
+    auto MaxRange = InfoCache.getMaximumFlatWorkGroupRange(*F);
+
+    if (auto Attr = InfoCache.getFlatWorkGroupSizeAttr(*F)) {
+      // We only consider an attribute that is not max range because the front
+      // end always emits the attribute, unfortunately, and sometimes it emits
+      // the max range.
+      if (*Attr != MaxRange) {
+        Range = *Attr;
+        HasAttr = true;
+      }
+    }
+
+    // We don't want to directly clamp the state if it's the max range because
+    // that is basically the worst state.
+    if (Range == MaxRange)
+      return;
+
+    auto [Min, Max] = Range;
+    ConstantRange CR(APInt(32, Min), APInt(32, Max + 1));
+    IntegerRangeState IRS(CR);
+    clampStateAndIndicateChange(this->getState(), IRS);
+
+    if (HasAttr || AMDGPU::isEntryFunctionCC(F->getCallingConv()))
+      indicateOptimisticFixpoint();
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
@@ -792,9 +921,8 @@ struct AAAMDFlatWorkGroupSize : public AAAMDSizeRangeAttribute {
   ChangeStatus manifest(Attributor &A) override {
     Function *F = getAssociatedFunction();
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
-    unsigned Min, Max;
-    std::tie(Min, Max) = InfoCache.getMaximumFlatWorkGroupRange(*F);
-    return emitAttributeIfNotDefault(A, Min, Max);
+    return emitAttributeIfNotDefaultAfterClamp(
+        A, InfoCache.getMaximumFlatWorkGroupRange(*F));
   }
 
   /// See AbstractAttribute::getName()
@@ -970,29 +1098,47 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
   AAAMDWavesPerEU(const IRPosition &IRP, Attributor &A)
       : AAAMDSizeRangeAttribute(IRP, A, "amdgpu-waves-per-eu") {}
 
-  bool isValidState() const override {
-    return !Assumed.isEmptySet() && IntegerRangeState::isValidState();
-  }
-
   void initialize(Attributor &A) override {
     Function *F = getAssociatedFunction();
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
 
-    if (const auto *AssumedGroupSize = A.getAAFor<AAAMDFlatWorkGroupSize>(
-            *this, IRPosition::function(*F), DepClassTy::REQUIRED);
-        AssumedGroupSize->isValidState()) {
-
-      unsigned Min, Max;
-      std::tie(Min, Max) = InfoCache.getWavesPerEU(
-          *F, {AssumedGroupSize->getAssumed().getLower().getZExtValue(),
-               AssumedGroupSize->getAssumed().getUpper().getZExtValue() - 1});
-
+    auto TakeRange = [&](std::pair<unsigned, unsigned> R) {
+      auto [Min, Max] = R;
       ConstantRange Range(APInt(32, Min), APInt(32, Max + 1));
-      intersectKnown(Range);
+      IntegerRangeState RangeState(Range);
+      clampStateAndIndicateChange(this->getState(), RangeState);
+      indicateOptimisticFixpoint();
+    };
+
+    std::pair<unsigned, unsigned> MaxWavesPerEURange{
+        1U, InfoCache.getMaxWavesPerEU(*F)};
+
+    // If the attribute exists, we will honor it if it is not the default.
+    if (auto Attr = InfoCache.getWavesPerEUAttr(*F)) {
+      if (*Attr != MaxWavesPerEURange) {
+        TakeRange(*Attr);
+        return;
+      }
     }
 
-    if (AMDGPU::isEntryFunctionCC(F->getCallingConv()))
-      indicatePessimisticFixpoint();
+    // Unlike AAAMDFlatWorkGroupSize, it's getting trickier here. Since the
+    // calculation of waves per EU involves flat work group size, we can't
+    // simply use an assumed flat work group size as a start point, because the
+    // update of flat work group size is in an inverse direction of waves per
+    // EU. However, we can still do something if it is an entry function. Since
+    // an entry function is a terminal node, and flat work group size either
+    // from attribute or default will be used anyway, we can take that value and
+    // calculate the waves per EU based on it. This result can't be updated by
+    // no means, but that could still allow us to propagate it.
+    if (AMDGPU::isEntryFunctionCC(F->getCallingConv())) {
+      std::pair<unsigned, unsigned> FlatWorkGroupSize;
+      if (auto Attr = InfoCache.getFlatWorkGroupSizeAttr(*F))
+        FlatWorkGroupSize = *Attr;
+      else
+        FlatWorkGroupSize = InfoCache.getDefaultFlatWorkGroupSize(*F);
+      TakeRange(InfoCache.getEffectiveWavesPerEU(*F, MaxWavesPerEURange,
+                                                 FlatWorkGroupSize));
+    }
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
@@ -1041,8 +1187,8 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
   ChangeStatus manifest(Attributor &A) override {
     Function *F = getAssociatedFunction();
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
-    unsigned Max = InfoCache.getMaxWavesPerEU(*F);
-    return emitAttributeIfNotDefault(A, 1, Max);
+    return emitAttributeIfNotDefaultAfterClamp(
+        A, {1U, InfoCache.getMaxWavesPerEU(*F)});
   }
 
   /// See AbstractAttribute::getName()
@@ -1211,6 +1357,10 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
   };
 
   Attributor A(Functions, InfoCache, AC);
+
+  LLVM_DEBUG(dbgs() << "[AMDGPUAttributor] Module " << M.getName() << " is "
+                    << (AC.IsClosedWorldModule ? "" : "not ")
+                    << "assumed to be a closed world.\n");
 
   for (auto *F : Functions) {
     A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(*F));

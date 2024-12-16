@@ -1753,6 +1753,10 @@ TEST_F(FormatTestJS, ClassDeclarations) {
                "  x: {y: Z;} = {};\n"
                "  private y: {y: Z;} = {};\n"
                "}");
+  verifyFormat("class Foo {\n"
+               "  private addGrammarCheckOneboxProductInfo(\n"
+               "      productInfo: {[key: string]: string;}) {}\n"
+               "}");
 
   // ':' is not a type declaration here.
   verifyFormat("class X {\n"

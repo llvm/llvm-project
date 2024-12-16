@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -start-after if-converter %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -start-after if-converter %s -o - | FileCheck %s
 
 # Test that we do no generate a .cur, which refers to vector register generated
 # in a previous packet and used in the current packet.

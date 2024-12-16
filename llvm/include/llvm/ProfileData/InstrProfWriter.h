@@ -115,21 +115,6 @@ public:
   void addTemporalProfileTraces(SmallVectorImpl<TemporalProfTraceTy> &SrcTraces,
                                 uint64_t SrcStreamSize);
 
-  /// Add a memprof record for a function identified by its \p Id.
-  void addMemProfRecord(const GlobalValue::GUID Id,
-                        const memprof::IndexedMemProfRecord &Record);
-
-  /// Add a memprof frame identified by the hash of the contents of the frame in
-  /// \p FrameId.
-  bool addMemProfFrame(const memprof::FrameId, const memprof::Frame &F,
-                       function_ref<void(Error)> Warn);
-
-  /// Add a call stack identified by the hash of the contents of the call stack
-  /// in \p CallStack.
-  bool addMemProfCallStack(const memprof::CallStackId CSId,
-                           const llvm::SmallVector<memprof::FrameId> &CallStack,
-                           function_ref<void(Error)> Warn);
-
   /// Add the entire MemProfData \p Incoming to the writer context.
   bool addMemProfData(memprof::IndexedMemProfData Incoming,
                       function_ref<void(Error)> Warn);
@@ -228,6 +213,21 @@ private:
   bool shouldEncodeData(const ProfilingData &PD);
   /// Add \p Trace using reservoir sampling.
   void addTemporalProfileTrace(TemporalProfTraceTy Trace);
+
+  /// Add a memprof record for a function identified by its \p Id.
+  void addMemProfRecord(const GlobalValue::GUID Id,
+                        const memprof::IndexedMemProfRecord &Record);
+
+  /// Add a memprof frame identified by the hash of the contents of the frame in
+  /// \p FrameId.
+  bool addMemProfFrame(const memprof::FrameId, const memprof::Frame &F,
+                       function_ref<void(Error)> Warn);
+
+  /// Add a call stack identified by the hash of the contents of the call stack
+  /// in \p CallStack.
+  bool addMemProfCallStack(const memprof::CallStackId CSId,
+                           const llvm::SmallVector<memprof::FrameId> &CallStack,
+                           function_ref<void(Error)> Warn);
 
   Error writeImpl(ProfOStream &OS);
 

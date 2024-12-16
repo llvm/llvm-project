@@ -1,12 +1,12 @@
 # RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a55  \
 # RUN:  -run-pass=machine-scheduler -debug-only=machine-scheduler -o - %s \
-# RUN:  -misched-topdown=true -sched-print-cycles=true \
+# RUN:  -misched-prera-direction=topdown -sched-print-cycles=true \
 # RUN:  -misched-dump-schedule-trace=true -misched-dump-schedule-trace-col-header-width=21 \
 # RUN:  2>&1 | FileCheck %s --check-prefix=TOP --strict-whitespace
 
 # RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a55  \
 # RUN:  -run-pass=machine-scheduler -debug-only=machine-scheduler -o - %s \
-# RUN:  -misched-bottomup=true -sched-print-cycles=true \
+# RUN:  -misched-prera-direction=bottomup -sched-print-cycles=true \
 # RUN:  -misched-dump-schedule-trace=true -misched-dump-schedule-trace-col-width=4 \
 # RUN:  2>&1 | FileCheck %s --check-prefix=BOTTOM  --strict-whitespace
 

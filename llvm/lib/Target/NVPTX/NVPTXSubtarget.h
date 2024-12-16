@@ -18,7 +18,6 @@
 #include "NVPTXISelLowering.h"
 #include "NVPTXInstrInfo.h"
 #include "NVPTXRegisterInfo.h"
-#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include <string>
@@ -46,7 +45,7 @@ class NVPTXSubtarget : public NVPTXGenSubtargetInfo {
   const NVPTXTargetMachine &TM;
   NVPTXInstrInfo InstrInfo;
   NVPTXTargetLowering TLInfo;
-  SelectionDAGTargetInfo TSInfo;
+  std::unique_ptr<const SelectionDAGTargetInfo> TSInfo;
 
   // NVPTX does not have any call stack frame, but need a NVPTX specific
   // FrameLowering class because TargetFrameLowering is abstract.
@@ -59,6 +58,8 @@ public:
   NVPTXSubtarget(const Triple &TT, const std::string &CPU,
                  const std::string &FS, const NVPTXTargetMachine &TM);
 
+  ~NVPTXSubtarget() override;
+
   const TargetFrameLowering *getFrameLowering() const override {
     return &FrameLowering;
   }
@@ -69,9 +70,8 @@ public:
   const NVPTXTargetLowering *getTargetLowering() const override {
     return &TLInfo;
   }
-  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
-    return &TSInfo;
-  }
+
+  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
 
   bool hasAtomAddF64() const { return SmVersion >= 60; }
   bool hasAtomScope() const { return SmVersion >= 60; }

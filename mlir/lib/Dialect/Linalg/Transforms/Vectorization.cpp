@@ -1115,11 +1115,6 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
   //  b. contiguous loads.
   // Both cases use vector.transfer_read.
 
-  assert(llvm::count_if(resultType.getShape(),
-                        [](uint64_t dim) { return dim != 1; }) &&
-         "Contiguous loads and scalar loads + broadcast only support 1-D "
-         "vectors ATM!");
-
   // Collect indices for `vector.transfer_read`. At this point, the indices will
   // either be scalars or would have been broadcast to vectors matching the
   // result type. For indices that are vectors, there are two options:
