@@ -4,7 +4,7 @@
 
 %struct.vfloat3 = type { float, float, float }
 
-declare hidden %struct.vfloat3 @_Z3mix7vfloat3S_f(float, float, float, float, float, float, float) #1
+declare hidden %struct.vfloat3 @_Z3mix7vfloat3S_f(float, float, float, float, float, float, float)
 
 define %struct.vfloat3 @_Z8test_mix7vfloat3S_f(float %x.coerce0, float %x.coerce1, float %x.coerce2, float %y.coerce0, float %y.coerce1, float %y.coerce2, float %t) {
 ; CHECK-LABEL: define %struct.vfloat3 @_Z8test_mix7vfloat3S_f(
