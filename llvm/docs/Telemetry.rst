@@ -8,10 +8,6 @@ Telemetry framework in LLVM
 .. toctree::
    :hidden:
 
-===========================
-Telemetry framework in LLVM
-===========================
-
 Objective
 =========
 
@@ -112,7 +108,7 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
       writeHelper(KeyName, Value);
     }
 
-    void write(StringRef KeyName, size_t Value) override {
+    void write(StringRef KeyName, unsigned long long Value) override {
       writeHelper(KeyName, Value);
     }
     void write(StringRef KeyName, StringRef Value) override {

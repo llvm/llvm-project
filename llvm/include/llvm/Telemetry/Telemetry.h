@@ -1,4 +1,4 @@
-//===- llvm/Telemetry/Telemetry.h - Telemetry -------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -30,7 +30,7 @@ public:
   virtual Error init() = 0;
   virtual void write(StringRef KeyName, bool Value) = 0;
   virtual void write(StringRef KeyName, int Value) = 0;
-  virtual void write(StringRef KeyName, size_t Value) = 0;
+  virtual void write(StringRef KeyName, unsigned long long Value) = 0;
   virtual void write(StringRef KeyName, StringRef Value) = 0;
   virtual void write(StringRef KeyName,
                      const std::map<std::string, std::string> &Value) = 0;

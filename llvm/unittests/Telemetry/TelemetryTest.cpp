@@ -67,7 +67,7 @@ public:
     writeHelper(KeyName, Value);
   }
 
-  void write(StringRef KeyName, size_t Value) override {
+  void write(StringRef KeyName, unsigned long long Value) override {
     writeHelper(KeyName, Value);
   }
   void write(StringRef KeyName, StringRef Value) override {
