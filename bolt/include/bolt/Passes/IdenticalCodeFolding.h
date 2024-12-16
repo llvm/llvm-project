@@ -54,7 +54,7 @@ private:
     return VTableBitVector.test(Address / 8);
   }
 
-  /// Mark memory address of vtable as used.
+  /// Mark memory address of a vtable as used.
   void setAddressUsedInVTable(uint64_t Address) {
     VTableBitVector.set(Address / 8);
   }
@@ -72,8 +72,8 @@ private:
   /// symbol references that are in vtables.
   void analyzeDataRelocations(BinaryContext &BC);
 
-  /// Process functions that have been disassembled and mark functions unsafe to
-  /// fold that are used in non-control flow instructions.
+  /// Process functions that have been disassembled and mark functions that are
+  /// used in non-control flow instructions as unsafe to fold.
   void analyzeFunctions(BinaryContext &BC);
 };
 

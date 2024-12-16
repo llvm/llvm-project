@@ -385,17 +385,12 @@ void IdenticalCodeFolding::analyzeDataRelocations(BinaryContext &BC) {
     }
     // For dynamic relocations there are two cases:
     // 1: No symbol and only addend.
-    // 2: There is symbol, but it references undefined symbol,
-    // type information, etc. As the result only using addend to lookup BF is a
-    // valid case.
+    // 2: There is a symbol, but it does not references a function in a binary.
     for (const auto &Rel : Sec.dynamicRelocations()) {
       const uint64_t RelAddr = Rel.Offset + Sec.getAddress();
       if (isAddressInVTable(RelAddr))
         continue;
-      if (BinaryFunction *BF =
-              BC.getBinaryFunctionContainingAddress(Rel.Addend,
-                                                    /*CheckPastEnd*/ false,
-                                                    /*UseMaxSize*/ true))
+      if (BinaryFunction *BF = BC.getBinaryFunctionAtAddress(Rel.Addend))
         BF->setHasAddressTaken(true);
     }
   }
@@ -412,10 +407,10 @@ void IdenticalCodeFolding::analyzeFunctions(BinaryContext &BC) {
       [&](const BinaryFunction &BF) -> bool { return !BF.hasCFG(); };
   ParallelUtilities::runOnEachFunction(
       BC, ParallelUtilities::SchedulingPolicy::SP_INST_LINEAR, WorkFun,
-      SkipFunc, "markUnsafe", /*ForceSequential*/ false, 2);
+      SkipFunc, "markUnsafe");
 
   LLVM_DEBUG({
-    for (auto &BFIter : BC.getBinaryFunctions()) {
+    for (const auto &BFIter : BC.getBinaryFunctions()) {
       if (!BFIter.second.hasAddressTaken())
         continue;
       dbgs() << "BOLT-DEBUG: skipping function with reference taken "

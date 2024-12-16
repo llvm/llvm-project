@@ -428,7 +428,7 @@ private:
   /// Function order for streaming into the destination binary.
   uint32_t Index{-1U};
 
-  /// Function is referenced by non-control flow instruction.
+  /// Function is referenced by a non-control flow instruction.
   bool HasAddressTaken{false};
 
   /// Get basic block index assuming it belongs to this function.
@@ -820,10 +820,10 @@ public:
     return nullptr;
   }
 
-  /// Return true if function is referenced in non-control flow instructions.
+  /// Return true if function is referenced in a non-control flow instruction.
   bool hasAddressTaken() const { return HasAddressTaken; }
 
-  /// Set whether function is referenced in non-control flow instructions.
+  /// Set whether function is referenced in a non-control flow instruction.
   void setHasAddressTaken(bool AddressTaken) { HasAddressTaken = AddressTaken; }
 
   /// Returns the raw binary encoding of this function.
