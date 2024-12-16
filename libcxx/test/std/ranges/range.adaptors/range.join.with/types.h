@@ -36,9 +36,9 @@ struct ViewProperties {
 
 template <std::ranges::input_range Data,
           ViewProperties Prop,
-          template <class...> class It,
           template <class...>
-          class ConstIt = It>
+          class It,
+          template <class...> class ConstIt = It>
 class BasicView : public std::ranges::view_base {
   Data data_;
 
