@@ -1518,17 +1518,23 @@ void SSANameState::shadowRegionArgs(Region &region, ValueRange namesToUse) {
   }
 }
 
+namespace {
+/// Try to get value name from value's location, fallback to `name`.
+StringRef maybeGetValueNameFromLoc(Value value, StringRef name) {
+  if (auto maybeNameLoc = value.getLoc()->findInstanceOf<NameLoc>())
+    return maybeNameLoc.getName();
+  return name;
+}
+} // namespace
+
 void SSANameState::numberValuesInRegion(Region &region) {
   auto setBlockArgNameFn = [&](Value arg, StringRef name) {
     assert(!valueIDs.count(arg) && "arg numbered multiple times");
     assert(llvm::cast<BlockArgument>(arg).getOwner()->getParent() == &region &&
            "arg not defined in current region");
-    if (printerFlags.shouldUseNameLocAsPrefix() && isa<NameLoc>(arg.getLoc())) {
-      auto nameLoc = cast<NameLoc>(arg.getLoc());
-      setValueName(arg, nameLoc.getName());
-    } else {
-      setValueName(arg, name);
-    }
+    if (LLVM_UNLIKELY(printerFlags.shouldUseNameLocAsPrefix()))
+      name = maybeGetValueNameFromLoc(arg, name);
+    setValueName(arg, name);
   };
 
   if (!printerFlags.shouldPrintGenericOpForm()) {
@@ -1570,12 +1576,10 @@ void SSANameState::numberValuesInBlock(Block &block) {
       specialNameBuffer.resize(strlen("arg"));
       specialName << nextArgumentID++;
     }
-    if (printerFlags.shouldUseNameLocAsPrefix() && isa<NameLoc>(arg.getLoc())) {
-      auto nameLoc = cast<NameLoc>(arg.getLoc());
-      setValueName(arg, nameLoc.getName());
-    } else {
-      setValueName(arg, specialName.str());
-    }
+    StringRef specialNameStr = specialName.str();
+    if (LLVM_UNLIKELY(printerFlags.shouldUseNameLocAsPrefix()))
+      specialNameStr = maybeGetValueNameFromLoc(arg, specialNameStr);
+    setValueName(arg, specialNameStr);
   }
 
   // Number the operations in this block.
@@ -1589,13 +1593,9 @@ void SSANameState::numberValuesInOp(Operation &op) {
   auto setResultNameFn = [&](Value result, StringRef name) {
     assert(!valueIDs.count(result) && "result numbered multiple times");
     assert(result.getDefiningOp() == &op && "result not defined by 'op'");
-    if (printerFlags.shouldUseNameLocAsPrefix() &&
-        isa<NameLoc>(result.getLoc())) {
-      auto nameLoc = cast<NameLoc>(result.getLoc());
-      setValueName(result, nameLoc.getName());
-    } else {
-      setValueName(result, name);
-    }
+    if (LLVM_UNLIKELY(printerFlags.shouldUseNameLocAsPrefix()))
+      name = maybeGetValueNameFromLoc(result, name);
+    setValueName(result, name);
 
     // Record the result number for groups not anchored at 0.
     if (int resultNo = llvm::cast<OpResult>(result).getResultNumber())
@@ -1636,9 +1636,8 @@ void SSANameState::numberValuesInOp(Operation &op) {
   Value resultBegin = op.getResult(0);
 
   if (printerFlags.shouldUseNameLocAsPrefix() && !valueIDs.count(resultBegin)) {
-    if (isa<NameLoc>(resultBegin.getLoc())) {
-      auto nameLoc = cast<NameLoc>(resultBegin.getLoc());
-      setResultNameFn(resultBegin, nameLoc.getName());
+    if (auto nameLoc = resultBegin.getLoc()->findInstanceOf<NameLoc>()) {
+      setValueName(resultBegin, nameLoc.getName());
     }
   }
 
