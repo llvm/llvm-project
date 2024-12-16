@@ -214,7 +214,6 @@ PreservedAnalyses RAGreedyPass::run(MachineFunction &MF,
   RAGreedy Impl(Opts.Filter);
   RAGreedy::RequiredAnalyses Analyses;
 
-  Analyses.VRM = &MFAM.getResult<VirtRegMapAnalysis>(MF);
   Analyses.LIS = &MFAM.getResult<LiveIntervalsAnalysis>(MF);
   Analyses.LRM = &MFAM.getResult<LiveRegMatrixAnalysis>(MF);
   Analyses.LSS = &MFAM.getResult<LiveStacksAnalysis>(MF);
@@ -230,6 +229,7 @@ PreservedAnalyses RAGreedyPass::run(MachineFunction &MF,
       MFAM.getResult<RegAllocEvictionAdvisorAnalysis>(MF).Provider;
   Analyses.PriorityProvider =
       MFAM.getResult<RegAllocPriorityAdvisorAnalysis>(MF).Provider;
+  Analyses.VRM = &MFAM.getResult<VirtRegMapAnalysis>(MF);
 
   Impl.setAnalyses(Analyses);
   bool Changed = Impl.run(MF);
