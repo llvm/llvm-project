@@ -35,6 +35,7 @@
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_unsigned.h>
+#include <__type_traits/is_convertible.h>
 #include <__type_traits/void_t.h>
 #include <__utility/pair.h>
 #include <__utility/swap.h>
@@ -466,6 +467,16 @@ private:
   friend class __bit_iterator<_Cp, true>;
   template <class _Dp>
   friend struct __bit_array;
+
+  template <class _InIter,
+            class _Sent,
+            class _Dp,
+            __enable_if_t<(__has_forward_iterator_category<_InIter>::value ||
+                           __has_iterator_concept_convertible_to<_InIter, forward_iterator_tag>::value) &&
+                              is_convertible<typename iterator_traits<_InIter>::value_type, bool>::value,
+                          int> >
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 friend pair<_InIter, __bit_iterator<_Dp, false> >
+  __copy_impl::operator()(_InIter __first, _Sent __last, __bit_iterator<_Dp, false> __result) const;
 
   template <bool _FillVal, class _Dp>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 friend void
