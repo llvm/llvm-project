@@ -71,8 +71,8 @@ void GpuModuleToBinaryPass::runOnOperation() {
   SmallVector<Attribute> librariesToLink;
   for (const std::string &path : linkFiles)
     librariesToLink.push_back(StringAttr::get(&getContext(), path));
-  TargetOptions targetOptions(toolkitPath, librariesToLink, cmdOptions, elfSection,
-                              *targetFormat, lazyTableBuilder);
+  TargetOptions targetOptions(toolkitPath, librariesToLink, cmdOptions,
+                              elfSection, *targetFormat, lazyTableBuilder);
   if (failed(transformGpuModulesToBinaries(
           getOperation(), OffloadingLLVMTranslationAttrInterface(nullptr),
           targetOptions)))

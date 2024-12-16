@@ -104,7 +104,8 @@ SerializeGPUModuleBase::SerializeGPUModuleBase(
     toolkitPath = getROCMPath();
 
   // Append the files in the target attribute.
-  librariesToLink.append(target.getLink().begin(), target.getLink().end());
+  if (target.getLink())
+    librariesToLink.append(target.getLink().begin(), target.getLink().end());
 }
 
 void SerializeGPUModuleBase::init() {

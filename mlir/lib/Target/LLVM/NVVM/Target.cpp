@@ -100,7 +100,8 @@ SerializeGPUModuleBase::SerializeGPUModuleBase(
     toolkitPath = getCUDAToolkitPath();
 
   // Append the files in the target attribute.
-  librariesToLink.append(target.getLink().begin(), target.getLink().end());
+  if (target.getLink())
+    librariesToLink.append(target.getLink().begin(), target.getLink().end());
 
   // Append libdevice to the files to be loaded.
   (void)appendStandardLibs();
