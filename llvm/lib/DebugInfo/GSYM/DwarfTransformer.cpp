@@ -576,7 +576,8 @@ void DwarfTransformer::parseCallSiteInfoFromDwarf(CUInfo &CUI, DWARFDie Die,
     CallSiteInfo CSI;
     // DW_AT_call_return_pc: the return PC (address). We'll convert it to
     // offset relative to FI's start.
-    auto ReturnPC = dwarf::toAddress(Child.find(dwarf::DW_AT_call_return_pc));
+    auto ReturnPC =
+        dwarf::toAddress(Child.findRecursively(dwarf::DW_AT_call_return_pc));
     if (!ReturnPC || *ReturnPC < FI.startAddress() ||
         *ReturnPC >= FI.endAddress())
       continue;
@@ -587,9 +588,14 @@ void DwarfTransformer::parseCallSiteInfoFromDwarf(CUInfo &CUI, DWARFDie Die,
     // insert it as a match regex.
     if (DWARFDie OriginDie =
             Child.getAttributeValueAsReferencedDie(dwarf::DW_AT_call_origin)) {
-      if (auto Name = OriginDie.getName(DINameKind::ShortName)) {
-        uint32_t NameOff = Gsym.insertString(Name, /*Copy=*/false);
-        CSI.MatchRegex.push_back(NameOff);
+
+      // Include the full unmangled name if available, otherwise the short name.
+      if (const char *LinkName = OriginDie.getLinkageName()) {
+        uint32_t LinkNameOff = Gsym.insertString(LinkName, /*Copy=*/false);
+        CSI.MatchRegex.push_back(LinkNameOff);
+      } else if (const char *ShortName = OriginDie.getShortName()) {
+        uint32_t ShortNameOff = Gsym.insertString(ShortName, /*Copy=*/false);
+        CSI.MatchRegex.push_back(ShortNameOff);
       }
     }
 
