@@ -438,8 +438,7 @@ void TargetLoweringObjectFileELF::emitPersonalityValue(
 void TargetLoweringObjectFileELF::emitPersonalityValueImpl(
     MCStreamer &Streamer, const DataLayout &DL, const MCSymbol *Sym,
     const MachineModuleInfo *MMI) const {
-  unsigned Size = DL.getPointerSize();
-  Streamer.emitSymbolValue(Sym, Size);
+  Streamer.emitSymbolValue(Sym, DL.getPointerSize());
 }
 
 const MCExpr *TargetLoweringObjectFileELF::getTTypeGlobalReference(
