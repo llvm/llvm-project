@@ -463,6 +463,10 @@ static bool AsanInitInternal() {
   if (SANITIZER_START_BACKGROUND_THREAD_IN_ASAN_INTERNAL)
     MaybeStartBackgroudThread();
 
+#if SANITIZER_WINDOWS64
+  __sanitizer::InitializeNtdllInfo();
+#endif
+
   // On Linux AsanThread::ThreadStart() calls malloc() that's why asan_inited
   // should be set to 1 prior to initializing the threads.
   replace_intrin_cached = flags()->replace_intrin;

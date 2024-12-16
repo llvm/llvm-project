@@ -20,43 +20,88 @@
 #include "asan_stack.h"
 #include "asan_suppressions.h"
 
+#if SANITIZER_WINDOWS64
+#  include "asan_poisoning.h"
+#  include "sanitizer_common/sanitizer_win.h"
+#endif
+
+namespace __asan {
+// On x64, the ShadowExceptionHandler is expected to handle all AVs that happen
+// as a result of uncommitted shadow memory pages. However, in programs that use
+// ntdll (a Windows-specific library that contains some memory intrinsics as
+// well as Windows-specific exception handling mechanisms) as their C Runtime,
+// or in cases where ntdll uses mem* functions inside
+// its exception handling infrastructure, ASAN can end up rethrowing a shadow
+// memory AV until a stack overflow occurs. In other words, ntdll can call back
+// into ASAN for a poisoning check, which creates infinite recursion. To remedy
+// this, we precommit the shadow memory of the address being accessed on x64 for
+// ntdll callees.
+bool ShouldReplaceIntrinsic(bool isNtdllCallee, void *addr, uptr size,
+                            const void *from = nullptr) {
+#if SANITIZER_WINDOWS64
+  if (isNtdllCallee) {
+    CommitShadowMemory(reinterpret_cast<uptr>(addr), size);
+    if (from) {
+      CommitShadowMemory(reinterpret_cast<uptr>(from), size);
+    }
+  }
+#endif
+  return replace_intrin_cached;
+}
+}  // namespace __asan
+
 using namespace __asan;
+
+#if SANITIZER_WINDOWS64
+#define IS_NTDLL_CALLEE __sanitizer::IsNtdllCallee(_ReturnAddress())
+#else
+#define IS_NTDLL_CALLEE false
+#endif
 
 // memcpy is called during __asan_init() from the internals of printf(...).
 // We do not treat memcpy with to==from as a bug.
 // See http://llvm.org/bugs/show_bug.cgi?id=11763.
-#define ASAN_MEMCPY_IMPL(ctx, to, from, size)                 \
-  do {                                                        \
-    if (LIKELY(replace_intrin_cached)) {                      \
-      if (LIKELY(to != from)) {                               \
-        CHECK_RANGES_OVERLAP("memcpy", to, size, from, size); \
-      }                                                       \
-      ASAN_READ_RANGE(ctx, from, size);                       \
-      ASAN_WRITE_RANGE(ctx, to, size);                        \
-    } else if (UNLIKELY(!AsanInited())) {                     \
-      return internal_memcpy(to, from, size);                 \
-    }                                                         \
-    return REAL(memcpy)(to, from, size);                      \
+#define ASAN_MEMCPY_IMPL(ctx, to, from, size)                       \
+  do {                                                              \
+    if (!ShouldReplaceIntrinsic(IS_NTDLL_CALLEE, to, size, from)) { \
+      return REAL(memcpy)(to, from, size);                          \
+    }                                                               \
+    if (LIKELY(replace_intrin_cached)) {                            \
+      if (LIKELY(to != from)) {                                     \
+        CHECK_RANGES_OVERLAP("memcpy", to, size, from, size);       \
+      }                                                             \
+      ASAN_READ_RANGE(ctx, from, size);                             \
+      ASAN_WRITE_RANGE(ctx, to, size);                              \
+    } else if (UNLIKELY(!AsanInited())) {                           \
+      return internal_memcpy(to, from, size);                       \
+    }                                                               \
+    return REAL(memcpy)(to, from, size);                            \
   } while (0)
 
 // memset is called inside Printf.
-#define ASAN_MEMSET_IMPL(ctx, block, c, size) \
-  do {                                        \
-    if (LIKELY(replace_intrin_cached)) {      \
-      ASAN_WRITE_RANGE(ctx, block, size);     \
-    } else if (UNLIKELY(!AsanInited())) {     \
-      return internal_memset(block, c, size); \
-    }                                         \
-    return REAL(memset)(block, c, size);      \
+#define ASAN_MEMSET_IMPL(ctx, block, c, size)                    \
+  do {                                                           \
+    if (!ShouldReplaceIntrinsic(IS_NTDLL_CALLEE, block, size)) { \
+      return REAL(memset)(block, c, size);                       \
+    }                                                            \
+    if (LIKELY(replace_intrin_cached)) {                         \
+      ASAN_WRITE_RANGE(ctx, block, size);                        \
+    } else if (UNLIKELY(!AsanInited())) {                        \
+      return internal_memset(block, c, size);                    \
+    }                                                            \
+    return REAL(memset)(block, c, size);                         \
   } while (0)
 
-#define ASAN_MEMMOVE_IMPL(ctx, to, from, size) \
-  do {                                         \
-    if (LIKELY(replace_intrin_cached)) {       \
-      ASAN_READ_RANGE(ctx, from, size);        \
-      ASAN_WRITE_RANGE(ctx, to, size);         \
-    }                                          \
-    return internal_memmove(to, from, size);   \
+#define ASAN_MEMMOVE_IMPL(ctx, to, from, size)                      \
+  do {                                                              \
+    if (!ShouldReplaceIntrinsic(IS_NTDLL_CALLEE, to, size, from)) { \
+      return internal_memmove(to, from, size);                      \
+    }                                                               \
+    if (LIKELY(replace_intrin_cached)) {                            \
+      ASAN_READ_RANGE(ctx, from, size);                             \
+      ASAN_WRITE_RANGE(ctx, to, size);                              \
+    }                                                               \
+    return internal_memmove(to, from, size);                        \
   } while (0)
 
 void *__asan_memcpy(void *to, const void *from, uptr size) {

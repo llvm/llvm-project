@@ -17,6 +17,25 @@
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_platform.h"
 
+#if SANITIZER_WINDOWS64
+#  include "sanitizer_common/sanitizer_win.h"
+#  include "sanitizer_common/sanitizer_win_defs.h"
+
+// These definitions are duplicated from Window.h in order to avoid conflicts
+// with other types in Windows.h.
+// These functions and types are used to manipulate the shadow memory on
+// x64 Windows.
+typedef unsigned long DWORD;
+typedef void *LPVOID;
+typedef int BOOL;
+
+constexpr DWORD MEM_COMMIT = 0x00001000;
+constexpr DWORD MEM_DECOMMIT = 0x00004000;
+constexpr DWORD PAGE_READWRITE = 0x04;
+
+extern "C" LPVOID WINAPI VirtualAlloc(LPVOID, size_t, DWORD, DWORD);
+#endif
+
 namespace __asan {
 
 // Enable/disable memory poisoning.
@@ -95,4 +114,16 @@ ALWAYS_INLINE void FastPoisonShadowPartialRightRedzone(
 // [MemToShadow(p), MemToShadow(p+size)].
 void FlushUnneededASanShadowMemory(uptr p, uptr size);
 
+// Commits the shadow memory for a range of aligned memory. This only matters
+// on 64-bit Windows where relying on pages to get paged in on access
+// violation is inefficient when we know the memory range ahead of time.
+ALWAYS_INLINE void CommitShadowMemory(uptr aligned_beg, uptr aligned_size) {
+#if SANITIZER_WINDOWS64
+  uptr shadow_beg = MEM_TO_SHADOW(aligned_beg);
+  uptr shadow_end =
+      MEM_TO_SHADOW(aligned_beg + aligned_size - ASAN_SHADOW_GRANULARITY) + 1;
+  ::VirtualAlloc((LPVOID)shadow_beg, (size_t)(shadow_end - shadow_beg),
+                 MEM_COMMIT, PAGE_READWRITE);
+#endif
+}
 }  // namespace __asan

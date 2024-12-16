@@ -19,6 +19,12 @@
 namespace __sanitizer {
 // Check based on flags if we should handle the exception.
 bool IsHandledDeadlyException(DWORD exceptionCode);
+
+// Initializes module information of ntdll for referencing callee addresses
+void InitializeNtdllInfo();
+
+// Returns whether or not the callee address lies within ntdll
+bool IsNtdllCallee(void* calleeAddr);
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_WINDOWS

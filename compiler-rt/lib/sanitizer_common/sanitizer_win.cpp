@@ -1264,6 +1264,18 @@ void LogFullErrorReport(const char *buffer) {
 
 void InitializePlatformCommonFlags(CommonFlags *cf) {}
 
+static MODULEINFO ntdllInfo;
+void InitializeNtdllInfo() {
+  GetModuleInformation(GetCurrentProcess(), GetModuleHandle(L"ntdll.dll"),
+                       &ntdllInfo, sizeof(ntdllInfo));
+}
+
+bool IsNtdllCallee(void *calleeAddr) {
+  return (uptr)ntdllInfo.lpBaseOfDll <= (uptr)calleeAddr &&
+         ((uptr)ntdllInfo.lpBaseOfDll + (uptr)ntdllInfo.SizeOfImage) >=
+             (uptr)calleeAddr;
+}
+
 }  // namespace __sanitizer
 
 #endif  // _WIN32
