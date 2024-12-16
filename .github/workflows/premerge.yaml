@@ -7,13 +7,16 @@ on:
   pull_request:
     paths:
       - .github/workflows/premerge.yaml
+  push:
+    branches:
+      - 'main'
 
 jobs:
   premerge-checks-linux:
     if: github.repository_owner == 'llvm'
     runs-on: llvm-premerge-linux-runners
     concurrency:
-      group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.push.head.sha }}
       cancel-in-progress: true
     container:
       image: ghcr.io/llvm/ci-ubuntu-22.04:latest
