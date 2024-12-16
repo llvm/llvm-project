@@ -18,6 +18,7 @@
 //
 // major     - Major version of extension.
 // minor     - Minor version of extension.
+// desc      - Description of extension.
 // implies   - Extensions or features implied by this extension.
 // fieldname - name of field to create in RISCVSubtarget. By default replaces
 //             uses the record name by replacing Feature with Has.
@@ -30,13 +31,13 @@ class RISCVExtension<int major, int minor, string desc,
                      string fieldname = !subst("Feature", "Has", NAME),
                      string value = "true", bit IsExperimental = false>
     : SubtargetFeature<"", fieldname, value, "", implies> {
-  defvar N = !subst("FeatureVendor", "", !subst("FeatureStdExt", "", NAME));
+  defvar ExtName = !subst("FeatureVendor", "", !subst("FeatureStdExt", "", NAME));
 
   // Name - Name of the extension in lower case.
-  let Name = !if(IsExperimental, "experimental-", "") # !tolower(N);
+  let Name = !if(IsExperimental, "experimental-", "") # !tolower(ExtName);
 
-  // Desc - Description of extension.
-  let Desc = "'" # N # "' (" # desc # ")";
+  // Desc - Description of extension with its name.
+  let Desc = "'" # ExtName # "' (" # desc # ")";
 
   // MajorVersion - The major version for this extension.
   int MajorVersion = major;
