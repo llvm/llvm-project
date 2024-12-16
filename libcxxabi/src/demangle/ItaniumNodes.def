@@ -100,5 +100,6 @@ NODE(ExprRequirement)
 NODE(TypeRequirement)
 NODE(NestedRequirement)
 NODE(ExplicitObjectParameter)
+NODE(BFloat16Type)
 
 #undef NODE
