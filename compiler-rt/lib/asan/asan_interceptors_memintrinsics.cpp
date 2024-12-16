@@ -23,6 +23,9 @@
 #if SANITIZER_WINDOWS64
 #  include "asan_poisoning.h"
 #  include "sanitizer_common/sanitizer_win.h"
+
+extern "C" void WINAPI RestoreLastError(DWORD);
+extern "C" DWORD WINAPI GetLastError();
 #endif
 
 namespace __asan {
@@ -40,10 +43,15 @@ bool ShouldReplaceIntrinsic(bool isNtdllCallee, void *addr, uptr size,
                             const void *from = nullptr) {
 #if SANITIZER_WINDOWS64
   if (isNtdllCallee) {
-    CommitShadowMemory(reinterpret_cast<uptr>(addr), size);
+    const auto lastError = GetLastError();  // Grab last error here to maintain
+                                            // status for after internal calls
+    if (addr) {
+      CommitShadowMemory(reinterpret_cast<uptr>(addr), size);
+    }
     if (from) {
       CommitShadowMemory(reinterpret_cast<uptr>(from), size);
     }
+    RestoreLastError(lastError);
   }
 #endif
   return replace_intrin_cached;
