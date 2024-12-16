@@ -12,6 +12,9 @@
 
 // Subclass of SubtargetFeature to be used when the feature is also a RISC-V
 // extension. Extensions have a version and may be experimental.
+// NOTE: The extension name must start with
+//       - "FeatureStdExt" for standard extensions
+//       - "FeatureVendor" for vendor-specific extensions
 //
 // major     - Major version of extension.
 // minor     - Minor version of extension.
