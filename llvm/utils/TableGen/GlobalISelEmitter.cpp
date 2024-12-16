@@ -441,31 +441,30 @@ private:
   const CodeGenRegisterClass *
   inferSuperRegisterClassForNode(const TypeSetByHwMode &Ty,
                                  const TreePatternNode &SuperRegNode,
-                                 const TreePatternNode &SubRegIdxNode) const;
+                                 const TreePatternNode &SubRegIdxNode);
   const CodeGenSubRegIndex *
-  inferSubRegIndexForNode(const TreePatternNode &SubRegIdxNode) const;
+  inferSubRegIndexForNode(const TreePatternNode &SubRegIdxNode);
 
   /// Infer a CodeGenRegisterClass which suppoorts \p Ty and \p SubRegIdxNode.
   /// Return nullptr if no such class exists.
   const CodeGenRegisterClass *
   inferSuperRegisterClass(const TypeSetByHwMode &Ty,
-                          const TreePatternNode &SubRegIdxNode) const;
+                          const TreePatternNode &SubRegIdxNode);
 
   /// Return the CodeGenRegisterClass associated with \p Leaf if it has one.
-  const CodeGenRegisterClass *
-  getRegClassFromLeaf(const TreePatternNode &Leaf) const;
+  const CodeGenRegisterClass *getRegClassFromLeaf(const TreePatternNode &Leaf);
 
   /// Return a CodeGenRegisterClass for \p N if one can be found. Return
   /// nullptr otherwise.
   const CodeGenRegisterClass *
-  inferRegClassFromPattern(const TreePatternNode &N) const;
+  inferRegClassFromPattern(const TreePatternNode &N);
 
   const CodeGenRegisterClass *
   inferRegClassFromInstructionPattern(const TreePatternNode &N,
-                                      unsigned ResIdx) const;
+                                      unsigned ResIdx);
 
   Error constrainOperands(action_iterator InsertPt, RuleMatcher &M,
-                          unsigned InsnID, const TreePatternNode &Dst) const;
+                          unsigned InsnID, const TreePatternNode &Dst);
 
   /// Return the size of the MemoryVT in this predicate, if possible.
   std::optional<unsigned>
@@ -1720,7 +1719,7 @@ Error GlobalISelEmitter::importImplicitDefRenderers(
 
 Error GlobalISelEmitter::constrainOperands(action_iterator InsertPt,
                                            RuleMatcher &M, unsigned InsnID,
-                                           const TreePatternNode &Dst) const {
+                                           const TreePatternNode &Dst) {
   const Record *DstOp = Dst.getOperator();
   const CodeGenInstruction &DstI = Target.getInstruction(DstOp);
   StringRef DstIName = DstI.TheDef->getName();
@@ -1833,7 +1832,7 @@ Error GlobalISelEmitter::constrainOperands(action_iterator InsertPt,
 }
 
 const CodeGenRegisterClass *
-GlobalISelEmitter::getRegClassFromLeaf(const TreePatternNode &Leaf) const {
+GlobalISelEmitter::getRegClassFromLeaf(const TreePatternNode &Leaf) {
   assert(Leaf.isLeaf() && "Expected leaf?");
   const Record *RCRec = getInitValueAsRegClass(Leaf.getLeafValue());
   if (!RCRec)
@@ -1842,7 +1841,7 @@ GlobalISelEmitter::getRegClassFromLeaf(const TreePatternNode &Leaf) const {
 }
 
 const CodeGenRegisterClass *
-GlobalISelEmitter::inferRegClassFromPattern(const TreePatternNode &N) const {
+GlobalISelEmitter::inferRegClassFromPattern(const TreePatternNode &N) {
   if (N.isLeaf())
     return getRegClassFromLeaf(N);
 
@@ -1866,7 +1865,7 @@ GlobalISelEmitter::inferRegClassFromPattern(const TreePatternNode &N) const {
 
 const CodeGenRegisterClass *
 GlobalISelEmitter::inferRegClassFromInstructionPattern(const TreePatternNode &N,
-                                                       unsigned ResIdx) const {
+                                                       unsigned ResIdx) {
   const CodeGenInstruction &Inst = Target.getInstruction(N.getOperator());
   assert(ResIdx < Inst.Operands.NumDefs &&
          "Can only infer register class for explicit defs");
@@ -1945,7 +1944,7 @@ GlobalISelEmitter::inferRegClassFromInstructionPattern(const TreePatternNode &N,
 }
 
 const CodeGenRegisterClass *GlobalISelEmitter::inferSuperRegisterClass(
-    const TypeSetByHwMode &Ty, const TreePatternNode &SubRegIdxNode) const {
+    const TypeSetByHwMode &Ty, const TreePatternNode &SubRegIdxNode) {
   // We need a ValueTypeByHwMode for getSuperRegForSubReg.
   if (!Ty.isValueTypeByHwMode(false))
     return nullptr;
@@ -1964,7 +1963,7 @@ const CodeGenRegisterClass *GlobalISelEmitter::inferSuperRegisterClass(
 
 const CodeGenRegisterClass *GlobalISelEmitter::inferSuperRegisterClassForNode(
     const TypeSetByHwMode &Ty, const TreePatternNode &SuperRegNode,
-    const TreePatternNode &SubRegIdxNode) const {
+    const TreePatternNode &SubRegIdxNode) {
   // Check if we already have a defined register class for the super register
   // node. If we do, then we should preserve that rather than inferring anything
   // from the subregister index node. We can assume that whoever wrote the
@@ -1977,7 +1976,7 @@ const CodeGenRegisterClass *GlobalISelEmitter::inferSuperRegisterClassForNode(
 }
 
 const CodeGenSubRegIndex *GlobalISelEmitter::inferSubRegIndexForNode(
-    const TreePatternNode &SubRegIdxNode) const {
+    const TreePatternNode &SubRegIdxNode) {
   if (!SubRegIdxNode.isLeaf())
     return nullptr;
 
