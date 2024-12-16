@@ -13,10 +13,8 @@
 // Subclass of SubtargetFeature to be used when the feature is also a RISC-V
 // extension. Extensions have a version and may be experimental.
 //
-// name      - Name of the extension in lower case.
 // major     - Major version of extension.
 // minor     - Minor version of extension.
-// desc      - Description of extension.
 // implies   - Extensions or features implied by this extension.
 // fieldname - name of field to create in RISCVSubtarget. By default replaces
 //             uses the record name by replacing Feature with Has.
@@ -28,14 +26,15 @@ class RISCVExtension<int major, int minor, string desc,
                      list<SubtargetFeature> implies = [],
                      string fieldname = !subst("Feature", "Has", NAME),
                      string value = "true", bit IsExperimental = false>
-    : SubtargetFeature<
-        !if(IsExperimental, "experimental-", "")
-            # !tolower(!subst("FeatureVendor", "",
-                              !subst("FeatureStdExt", "", NAME))),
-        fieldname, value,
-        "'" # !subst("FeatureVendor", "", !subst("FeatureStdExt", "", NAME))
-            # "' (" # desc # ")",
-        implies> {
+    : SubtargetFeature<"", fieldname, value, "", implies> {
+  defvar N = !subst("FeatureVendor", "", !subst("FeatureStdExt", "", NAME));
+
+  // Name - Name of the extension in lower case.
+  let Name = !if(IsExperimental, "experimental-", "") # !tolower(N);
+
+  // Desc - Description of extension.
+  let Desc = "'" # N # "' (" # desc # ")";
+
   // MajorVersion - The major version for this extension.
   int MajorVersion = major;
 
