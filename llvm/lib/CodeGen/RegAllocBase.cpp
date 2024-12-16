@@ -200,10 +200,9 @@ MCPhysReg RegAllocBase::getErrorAssignment(const TargetRegisterClass &RC,
     ArrayRef<MCPhysReg> RawRegs = RC.getRegisters();
 
     if (EmitError) {
-      DiagnosticInfoRegAllocFailure DI(
+      Context.diagnose(DiagnosticInfoRegAllocFailure(
           "no registers from class available to allocate", Fn,
-          CtxMI ? CtxMI->getDebugLoc() : DiagnosticLocation());
-      Context.diagnose(DI);
+          CtxMI ? CtxMI->getDebugLoc() : DiagnosticLocation()));
     }
 
     assert(!RawRegs.empty() && "register classes cannot have no registers");
@@ -215,10 +214,9 @@ MCPhysReg RegAllocBase::getErrorAssignment(const TargetRegisterClass &RC,
       CtxMI->emitInlineAsmError(
           "inline assembly requires more registers than available");
     } else {
-      DiagnosticInfoRegAllocFailure DI(
+      Context.diagnose(DiagnosticInfoRegAllocFailure(
           "ran out of registers during register allocation", Fn,
-          CtxMI ? CtxMI->getDebugLoc() : DiagnosticLocation());
-      Context.diagnose(DI);
+          CtxMI ? CtxMI->getDebugLoc() : DiagnosticLocation()));
     }
   }
 
