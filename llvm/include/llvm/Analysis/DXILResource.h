@@ -407,6 +407,8 @@ public:
   using Result = DXILResourceTypeMap;
 
   DXILResourceTypeMap run(Module &M, ModuleAnalysisManager &AM) {
+    // Running the pass just generates an empty map, which will be filled when
+    // users of the pass query the results.
     return Result();
   }
 };
