@@ -662,6 +662,21 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "'xqcia' is only supported for 'rv32'");
   }
+
+  for (StringRef Input : {"rv64i_xqcicsr0p2"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'xqcicsr' is only supported for 'rv32'");
+  }
+
+  for (StringRef Input : {"rv64i_xqcilsm0p2"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'xqcilsm' is only supported for 'rv32'");
+  }
+
+  for (StringRef Input : {"rv64i_xqcics0p2"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'xqcics' is only supported for 'rv32'");
+  }
 }
 
 TEST(ParseArchString, MissingDepency) {
