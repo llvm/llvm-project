@@ -939,7 +939,9 @@ PrintCompletion(FILE *output_file,
   size_t lines_printed = 0;
   size_t results_printed = 0;
   for (const CompletionResult::Completion &c : results) {
-    if (max_height && lines_printed == *max_height)
+    // It's possible we exceed the max height if the last entry had a
+    // multi-line description.
+    if (max_height && lines_printed >= *max_height)
       break;
 
     results_printed++;
