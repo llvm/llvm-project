@@ -2099,51 +2099,35 @@ public:
   }
 };
 
-/// A recipe for handling phi nodes of integer and floating-point inductions,
-/// producing their vector values.
-class VPWidenIntOrFpInductionRecipe : public VPHeaderPHIRecipe {
-  PHINode *IV;
-  TruncInst *Trunc;
+/// Base class for widened induction (VPWidenIntOrFpInductionRecipe and
+/// VPWidenPointerInductionRecipe), providing shared functionality, including
+/// retrieving the step value, induction descriptor and original phi node.
+class VPWidenInductionRecipe : public VPHeaderPHIRecipe {
   const InductionDescriptor &IndDesc;
 
 public:
-  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
-                                VPValue *VF, const InductionDescriptor &IndDesc,
-                                DebugLoc DL)
-      : VPHeaderPHIRecipe(VPDef::VPWidenIntOrFpInductionSC, IV, Start, DL),
-        IV(IV), Trunc(nullptr), IndDesc(IndDesc) {
+  VPWidenInductionRecipe(unsigned char Kind, PHINode *IV, VPValue *Start,
+                         VPValue *Step, const InductionDescriptor &IndDesc,
+                         DebugLoc DL)
+      : VPHeaderPHIRecipe(Kind, IV, Start, DL), IndDesc(IndDesc) {
     addOperand(Step);
-    addOperand(VF);
   }
 
-  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
-                                VPValue *VF, const InductionDescriptor &IndDesc,
-                                TruncInst *Trunc, DebugLoc DL)
-      : VPHeaderPHIRecipe(VPDef::VPWidenIntOrFpInductionSC, Trunc, Start, DL),
-        IV(IV), Trunc(Trunc), IndDesc(IndDesc) {
-    addOperand(Step);
-    addOperand(VF);
+  static inline bool classof(const VPRecipeBase *R) {
+    return R->getVPDefID() == VPDef::VPWidenIntOrFpInductionSC ||
+           R->getVPDefID() == VPDef::VPWidenPointerInductionSC;
   }
 
-  ~VPWidenIntOrFpInductionRecipe() override = default;
+  virtual void execute(VPTransformState &State) override = 0;
 
-  VPWidenIntOrFpInductionRecipe *clone() override {
-    return new VPWidenIntOrFpInductionRecipe(IV, getStartValue(),
-                                             getStepValue(), getVFValue(),
-                                             IndDesc, Trunc, getDebugLoc());
-  }
+  /// Returns the step value of the induction.
+  VPValue *getStepValue() { return getOperand(1); }
+  const VPValue *getStepValue() const { return getOperand(1); }
 
-  VP_CLASSOF_IMPL(VPDef::VPWidenIntOrFpInductionSC)
+  PHINode *getPHINode() const { return cast<PHINode>(getUnderlyingValue()); }
 
-  /// Generate the vectorized and scalarized versions of the phi node as
-  /// needed by their users.
-  void execute(VPTransformState &State) override;
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
+  /// Returns the induction descriptor for the recipe.
+  const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
 
   VPValue *getBackedgeValue() override {
     // TODO: All operands of base recipe must exist and be at same index in
@@ -2158,10 +2142,51 @@ public:
     llvm_unreachable(
         "VPWidenIntOrFpInductionRecipe generates its own backedge value");
   }
+};
 
-  /// Returns the step value of the induction.
-  VPValue *getStepValue() { return getOperand(1); }
-  const VPValue *getStepValue() const { return getOperand(1); }
+/// A recipe for handling phi nodes of integer and floating-point inductions,
+/// producing their vector values.
+class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe {
+  TruncInst *Trunc;
+
+public:
+  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
+                                VPValue *VF, const InductionDescriptor &IndDesc,
+                                DebugLoc DL)
+      : VPWidenInductionRecipe(VPDef::VPWidenIntOrFpInductionSC, IV, Start,
+                               Step, IndDesc, DL),
+        Trunc(nullptr) {
+    addOperand(VF);
+  }
+
+  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
+                                VPValue *VF, const InductionDescriptor &IndDesc,
+                                TruncInst *Trunc, DebugLoc DL)
+      : VPWidenInductionRecipe(VPDef::VPWidenIntOrFpInductionSC, IV, Start,
+                               Step, IndDesc, DL),
+        Trunc(Trunc) {
+    addOperand(VF);
+  }
+
+  ~VPWidenIntOrFpInductionRecipe() override = default;
+
+  VPWidenIntOrFpInductionRecipe *clone() override {
+    return new VPWidenIntOrFpInductionRecipe(
+        getPHINode(), getStartValue(), getStepValue(), getVFValue(),
+        getInductionDescriptor(), Trunc, getDebugLoc());
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPWidenIntOrFpInductionSC)
+
+  /// Generate the vectorized and scalarized versions of the phi node as
+  /// needed by their users.
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
 
   VPValue *getVFValue() { return getOperand(2); }
   const VPValue *getVFValue() const { return getOperand(2); }
@@ -2177,11 +2202,6 @@ public:
   TruncInst *getTruncInst() { return Trunc; }
   const TruncInst *getTruncInst() const { return Trunc; }
 
-  PHINode *getPHINode() { return IV; }
-
-  /// Returns the induction descriptor for the recipe.
-  const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
-
   /// Returns true if the induction is canonical, i.e. starting at 0 and
   /// incremented by UF * VF (= the original IV is incremented by 1) and has the
   /// same type as the canonical induction.
@@ -2189,7 +2209,7 @@ public:
 
   /// Returns the scalar type of the induction.
   Type *getScalarType() const {
-    return Trunc ? Trunc->getType() : IV->getType();
+    return Trunc ? Trunc->getType() : getPHINode()->getType();
   }
 
   /// Returns the VPValue representing the value of this induction at
@@ -2200,10 +2220,8 @@ public:
   }
 };
 
-class VPWidenPointerInductionRecipe : public VPHeaderPHIRecipe,
+class VPWidenPointerInductionRecipe : public VPWidenInductionRecipe,
                                       public VPUnrollPartAccessor<3> {
-  const InductionDescriptor &IndDesc;
-
   bool IsScalarAfterVectorization;
 
 public:
@@ -2212,19 +2230,16 @@ public:
   VPWidenPointerInductionRecipe(PHINode *Phi, VPValue *Start, VPValue *Step,
                                 const InductionDescriptor &IndDesc,
                                 bool IsScalarAfterVectorization, DebugLoc DL)
-      : VPHeaderPHIRecipe(VPDef::VPWidenPointerInductionSC, Phi, nullptr, DL),
-        IndDesc(IndDesc),
-        IsScalarAfterVectorization(IsScalarAfterVectorization) {
-    addOperand(Start);
-    addOperand(Step);
-  }
+      : VPWidenInductionRecipe(VPDef::VPWidenPointerInductionSC, Phi, Start,
+                               Step, IndDesc, DL),
+        IsScalarAfterVectorization(IsScalarAfterVectorization) {}
 
   ~VPWidenPointerInductionRecipe() override = default;
 
   VPWidenPointerInductionRecipe *clone() override {
     return new VPWidenPointerInductionRecipe(
         cast<PHINode>(getUnderlyingInstr()), getOperand(0), getOperand(1),
-        IndDesc, IsScalarAfterVectorization, getDebugLoc());
+        getInductionDescriptor(), IsScalarAfterVectorization, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenPointerInductionSC)
@@ -2234,9 +2249,6 @@ public:
 
   /// Returns true if only scalar values will be generated.
   bool onlyScalarsGenerated(bool IsScalable);
-
-  /// Returns the induction descriptor for the recipe.
-  const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
 
   /// Returns the VPValue representing the value of this induction at
   /// the first unrolled part, if it exists. Returns itself if unrolling did not
