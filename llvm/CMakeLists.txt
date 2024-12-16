@@ -3,6 +3,8 @@
 cmake_minimum_required(VERSION 3.20.0)
 
 include(CMakeDependentOption)
+include(CheckCCompilerFlag)
+include(CheckCXXCompilerFlag)
 
 set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
@@ -708,7 +710,9 @@ set(LLVM_USE_SANITIZER "" CACHE STRING
   "Define the sanitizer used to build binaries and tests.")
 option(LLVM_OPTIMIZE_SANITIZED_BUILDS "Pass -O1 on debug sanitizer builds" ON)
 
-if( CMAKE_C_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_ID MATCHES "Clang" )
+check_c_compiler_flag(-fno-sanitize=function C_SUPPORTS_FNO_SANITIZE_FUNCTION_FLAG)
+check_cxx_compiler_flag(-fno-sanitize=function CXX_SUPPORTS_FNO_SANITIZE_FUNCTION_FLAG)
+if( CMAKE_C_COMPILER_ID MATCHES "Clang" AND C_SUPPORTS_FNO_SANITIZE_FUNCTION_FLAG AND CXX_SUPPORTS_FNO_SANITIZE_FUNCTION_FLAG)
   set(LLVM_UBSAN_FLAGS_CLANG "-fno-sanitize=function")
 else()
   # gcc doesn't know about -fsanitize=function

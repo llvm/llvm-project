@@ -1064,14 +1064,14 @@ if(LLVM_USE_SANITIZER)
   if (LLVM_USE_SANITIZE_COVERAGE)
     append("-fsanitize=fuzzer-no-link" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   endif()
-  if (LLVM_USE_SANITIZER MATCHES ".*Undefined.*" AND CMAKE_C_COMPILER_ID MATCHES "Clang" AND
-		                                     CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  if (LLVM_USE_SANITIZER MATCHES ".*Undefined.*")
     set(IGNORELIST_FILE "${PROJECT_SOURCE_DIR}/utils/sanitizers/ubsan_ignorelist.txt")
-    if (EXISTS "${IGNORELIST_FILE}")
+    check_c_compiler_flag(-fsanitize-blacklist=${IGNORELIST_FILE} C_SUPPORTS_FSANITIZE_BLACKLIST_FLAG)
+    check_cxx_compiler_flag(-fsanitize-blacklist=${IGNORELIST_FILE} CXX_SUPPORTS_FSANITIZE_BLACKLIST_FLAG)
+    if (EXISTS "${IGNORELIST_FILE}" AND C_SUPPORTS_FSANITIZE_BLACKLIST_FLAG AND CXX_SUPPORTS_FSANITIZE_BLACKLIST_FLAG)
       # Use this option name version since -fsanitize-ignorelist is only
       # accepted with clang 13.0 or newer.
-      append("-fsanitize-blacklist=${IGNORELIST_FILE}"
-             CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+      append("-fsanitize-blacklist=${IGNORELIST_FILE}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
     endif()
   endif()
 endif()
