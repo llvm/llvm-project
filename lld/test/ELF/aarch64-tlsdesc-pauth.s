@@ -94,7 +94,7 @@ local2:
 
 //--- err1.s
 // RUN: llvm-mc -filetype=obj -triple=aarch64-pc-linux -mattr=+pauth err1.s -o err1.o
-// RUN: not ld.lld -shared err1.o -o err1.so 2>&1 | FileCheck --check-prefix=ERR1 --implicit-check-not=error: %s
+// RUN: not ld.lld -shared err1.o 2>&1 | FileCheck --check-prefix=ERR1 --implicit-check-not=error: %s
 // ERR1: error: both AUTH and non-AUTH TLSDESC entries for 'a' requested, but only one type of TLSDESC entry per symbol is supported
         .text
         adrp    x0, :tlsdesc_auth:a
@@ -109,7 +109,7 @@ local2:
 
 //--- err2.s
 // RUN: llvm-mc -filetype=obj -triple=aarch64-pc-linux -mattr=+pauth err2.s -o err2.o
-// RUN: not ld.lld -shared err2.o -o err2.so 2>&1 | FileCheck --check-prefix=ERR2 --implicit-check-not=error: %s
+// RUN: not ld.lld -shared err2.o 2>&1 | FileCheck --check-prefix=ERR2 --implicit-check-not=error: %s
 // ERR2: error: both AUTH and non-AUTH TLSDESC entries for 'a' requested, but only one type of TLSDESC entry per symbol is supported
         .text
         adrp    x0, :tlsdesc:a
@@ -124,7 +124,7 @@ local2:
 
 //--- err3.s
 // RUN: llvm-mc -filetype=obj -triple=aarch64-pc-linux -mattr=+pauth err3.s -o err3.o
-// RUN: not ld.lld -shared err3.o -o err3.so 2>&1 | FileCheck --check-prefix=ERR3 --implicit-check-not=error: %s
+// RUN: not ld.lld -shared err3.o 2>&1 | FileCheck --check-prefix=ERR3 --implicit-check-not=error: %s
 // ERR3: error: both AUTH and non-AUTH TLSDESC entries for 'a' requested, but only one type of TLSDESC entry per symbol is supported
         .text
         adrp    x0, :tlsdesc_auth:a
