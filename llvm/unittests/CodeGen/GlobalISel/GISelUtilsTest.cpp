@@ -33,7 +33,7 @@ static const LLT V4S2 = LLT::fixed_vector(4, S2);
 static const LLT V3S4 = LLT::fixed_vector(3, S4);
 static const LLT V6S4 = LLT::fixed_vector(6, S4);
 
-static const LLT V3S5 = LLT::fixed_vector(2, S5);
+static const LLT V3S5 = LLT::fixed_vector(3, S5);
 
 static const LLT V2S6 = LLT::fixed_vector(2, S6);
 
@@ -339,7 +339,7 @@ TEST(GISelUtilsTest, getLCMType) {
   EXPECT_EQ(V6S4, getLCMType(V3S4, S8));
   EXPECT_EQ(V3S8, getLCMType(S8, V3S4));
 
-  EXPECT_EQ(V6S4, getLCMType(V3S4, V4S8));
+  EXPECT_EQ(V6S4, getLCMType(V3S4, P4));
   EXPECT_EQ(V3P4, getLCMType(P4, V3S4));
 
   EXPECT_EQ(V2S64, getLCMType(V2S64, P0));
