@@ -222,7 +222,7 @@ uint32_t NativeRegisterContextDBReg::SetHardwareWatchpoint(
   addr = adjusted->addr;
 
   // Check if we are setting watchpoint other than read/write/access Also
-  // update watchpoint flag to match AArch64/LoongArch write-read bit
+  // update watchpoint flag to match ARM/AArch64/LoongArch write-read bit
   // configuration.
   switch (watch_flags) {
   case lldb::eWatchpointKindWrite:
@@ -237,7 +237,7 @@ uint32_t NativeRegisterContextDBReg::SetHardwareWatchpoint(
     return LLDB_INVALID_INDEX32;
   }
 
-  control_value = MakeWatchControlValue(size, watch_flags);
+  control_value = MakeWatchControlValue(addr, size, watch_flags);
 
   // Iterate over stored watchpoints and find a free wp_index
   wp_index = LLDB_INVALID_INDEX32;

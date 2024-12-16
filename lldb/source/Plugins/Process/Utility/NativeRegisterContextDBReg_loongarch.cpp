@@ -52,7 +52,8 @@ NativeRegisterContextDBReg_loongarch::MakeBreakControlValue(size_t size) {
 }
 
 uint32_t NativeRegisterContextDBReg_loongarch::MakeWatchControlValue(
-    size_t size, uint32_t watch_flags) {
+    lldb::addr_t addr, size_t size, uint32_t watch_flags) {
+  (void)addr;
   // Encoding hardware watchpoint control value.
   // Size encoded:
   // case 1 : 0b11

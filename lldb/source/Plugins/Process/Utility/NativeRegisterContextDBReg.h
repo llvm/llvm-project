@@ -12,6 +12,7 @@
 #include "Plugins/Process/Utility/NativeRegisterContextRegisterInfo.h"
 
 #include <array>
+#include <optional>
 
 // Common utilities for hardware breakpoints and hardware watchpoints on AArch64
 // and LoongArch.
@@ -76,17 +77,26 @@ protected:
 
   // On AArch64 and Loongarch the hardware breakpoint length size is 4, and the
   // target address must 4-byte alignment.
-  bool ValidateBreakpoint(size_t size, lldb::addr_t addr) {
+  virtual bool ValidateBreakpoint(size_t size, lldb::addr_t addr) {
     return (size == 4) && !(addr & 0x3);
   }
+
   struct WatchpointDetails {
     size_t size;
     lldb::addr_t addr;
   };
   virtual std::optional<WatchpointDetails>
   AdjustWatchpoint(const WatchpointDetails &details) = 0;
+
+  using BreakpointDetails = WatchpointDetails;
+  virtual std::optional<BreakpointDetails>
+  AdjustBreakpoint(const BreakpointDetails &details) {
+    return details;
+  }
+
   virtual uint32_t MakeBreakControlValue(size_t size) = 0;
-  virtual uint32_t MakeWatchControlValue(size_t size, uint32_t watch_flags) = 0;
+  virtual uint32_t MakeWatchControlValue(lldb::addr_t addr, size_t size,
+                                         uint32_t watch_flags) = 0;
   virtual uint32_t GetWatchpointSize(uint32_t wp_index) = 0;
 
   virtual llvm::Error ReadHardwareDebugInfo() = 0;

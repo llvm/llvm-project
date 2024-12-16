@@ -1,4 +1,4 @@
-//===-- NativeRegisterContextDBReg_loongarch.h ------------------*- C++ -*-===//
+//===-- NativeRegisterContextDBReg_arm.h ------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_NativeRegisterContextDBReg_loongarch_h
-#define lldb_NativeRegisterContextDBReg_loongarch_h
+#ifndef lldb_NativeRegisterContextDBReg_arm_h
+#define lldb_NativeRegisterContextDBReg_arm_h
 
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg.h"
 
 namespace lldb_private {
 
-class NativeRegisterContextDBReg_loongarch : public NativeRegisterContextDBReg {
+class NativeRegisterContextDBReg_arm : public NativeRegisterContextDBReg {
 public:
-  NativeRegisterContextDBReg_loongarch()
-      : NativeRegisterContextDBReg(/*enable_bit=*/0x10U) {}
+  NativeRegisterContextDBReg_arm()
+      : NativeRegisterContextDBReg(/*enable_bit=*/0x1U) {}
 
 private:
   uint32_t GetWatchpointSize(uint32_t wp_index) override;
@@ -24,12 +24,23 @@ private:
   std::optional<WatchpointDetails>
   AdjustWatchpoint(const WatchpointDetails &details) override;
 
+  std::optional<BreakpointDetails>
+  AdjustBreakpoint(const BreakpointDetails &details) override;
+
   uint32_t MakeBreakControlValue(size_t size) override;
 
   uint32_t MakeWatchControlValue(lldb::addr_t addr, size_t size,
                                  uint32_t watch_flags) override;
+
+  bool ValidateBreakpoint(size_t size, lldb::addr_t addr) override {
+    // Break on 4 or 2 byte instructions.
+    return size == 4 || size == 2;
+  }
+
+  virtual llvm::Error WriteHardwareDebugReg(DREGType hwbType,
+                                            int hwb_index) = 0;
 };
 
 } // namespace lldb_private
 
-#endif // #ifndef lldb_NativeRegisterContextDBReg_loongarch_h
+#endif // #ifndef lldb_NativeRegisterContextDBReg_arm_h
