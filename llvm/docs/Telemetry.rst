@@ -155,8 +155,8 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
     emitToAllDestinations(Entry);
   }
       
-  void addDestination(std::unique_ptr<Destination> dest) override {
-    destinations.push_back(std::move(dest));
+  void addDestination(std::unique_ptr<Destination> Dest) override {
+    destinations.push_back(std::move(Dest));
   }
   
   // You can also define additional instrumentation points.
