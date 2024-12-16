@@ -70,6 +70,7 @@ include "arm_immcheck_incl.td"
 // x: vector of signed integers
 // u: vector of unsigned integers
 // d: default
+// p: pointer type
 // c: const pointer type
 // P: predicate type
 // s: scalar of element type
