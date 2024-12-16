@@ -20,11 +20,13 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 
@@ -58,6 +60,7 @@ public:
   bool visitAnd(BinaryOperator &BO);
   bool visitIntrinsicInst(IntrinsicInst &I);
   bool expandVPStrideLoad(IntrinsicInst &I);
+  bool visitFCmpInst(FCmpInst &I);
 };
 
 } // end anonymous namespace
@@ -193,6 +196,42 @@ bool RISCVCodeGenPrepare::expandVPStrideLoad(IntrinsicInst &II) {
 
   II.replaceAllUsesWith(Res);
   II.eraseFromParent();
+  return true;
+}
+
+// The 'fcmp uno/ord/oeq/une/ueq/one/ogt/oge/olt/ole x, 0.0' instructions are
+// equivalent to an FP class test. If the fcmp instruction would be custom
+// lowered or lowered to a libcall, use the is.fpclass intrinsic instead, which
+// is lowered by the back-end without a libcall.
+//
+// This basically reverts the transformations of
+// InstCombinerImpl::foldIntrinsicIsFPClass.
+bool RISCVCodeGenPrepare::visitFCmpInst(FCmpInst &Fcmp) {
+  const auto *TLI = ST->getTargetLowering();
+  const EVT VT = TLI->getValueType(*DL, Fcmp.getOperand(0)->getType());
+  const int ISDOpcode = TLI->InstructionOpcodeToISD(Fcmp.getOpcode());
+
+  auto LegalizeTypeAction = TLI->getTypeAction(Fcmp.getContext(), VT);
+  auto OperationAction = TLI->getOperationAction(ISDOpcode, VT);
+  if ((LegalizeTypeAction != TargetLoweringBase::TypeSoftenFloat &&
+       LegalizeTypeAction != TargetLoweringBase::TypeSoftPromoteHalf) ||
+      OperationAction == TargetLowering::Custom)
+    return false;
+
+  auto [ClassVal, ClassTest] =
+      fcmpToClassTest(Fcmp.getPredicate(), *Fcmp.getParent()->getParent(),
+                      Fcmp.getOperand(0), Fcmp.getOperand(1));
+
+  // FIXME: For some conditions (e.g ole, olt, oge, ogt) the output is quite
+  //        verbose compared to the libcall. Should we do the tranformation
+  //        only if we are optimizing for speed?
+  if (!ClassVal)
+    return false;
+
+  IRBuilder<> Builder(&Fcmp);
+  Value *IsFPClass = Builder.createIsFPClass(ClassVal, ClassTest);
+  Fcmp.replaceAllUsesWith(IsFPClass);
+  RecursivelyDeleteTriviallyDeadInstructions(&Fcmp);
   return true;
 }
 
