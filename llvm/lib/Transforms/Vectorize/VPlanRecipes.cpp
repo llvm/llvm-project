@@ -1594,10 +1594,10 @@ InstructionCost VPHeaderPHIRecipe::computeCost(ElementCount VF,
 }
 
 /// This function adds
-/// (StartIdx * Step, (StartIdx + 1) * Step, (StartIdx + 2) * Step, ...)
-/// to each vector element of Val. The sequence starts at StartIndex.
+/// (0 * Step, 1 * Step, 2 * Step, ...)
+/// to each vector element of Val.
 /// \p Opcode is relevant for FP induction variable.
-static Value *getStepVector(Value *Val, Value *StartIdx, Value *Step,
+static Value *getStepVector(Value *Val, Value *Step,
                             Instruction::BinaryOps BinOp, ElementCount VF,
                             IRBuilderBase &Builder) {
   assert(VF.isVector() && "only vector VFs are supported");
@@ -1622,11 +1622,7 @@ static Value *getStepVector(Value *Val, Value *StartIdx, Value *Step,
   }
   Value *InitVec = Builder.CreateStepVector(InitVecValVTy);
 
-  // Splat the StartIdx
-  Value *StartIdxSplat = Builder.CreateVectorSplat(VLen, StartIdx);
-
   if (STy->isIntegerTy()) {
-    InitVec = Builder.CreateAdd(InitVec, StartIdxSplat);
     Step = Builder.CreateVectorSplat(VLen, Step);
     assert(Step->getType() == Val->getType() && "Invalid step vec");
     // FIXME: The newly created binary instructions should contain nsw/nuw
@@ -1639,7 +1635,6 @@ static Value *getStepVector(Value *Val, Value *StartIdx, Value *Step,
   assert((BinOp == Instruction::FAdd || BinOp == Instruction::FSub) &&
          "Binary Opcode should be specified for FP induction");
   InitVec = Builder.CreateUIToFP(InitVec, ValVTy);
-  InitVec = Builder.CreateFAdd(InitVec, StartIdxSplat);
 
   Step = Builder.CreateVectorSplat(VLen, Step);
   Value *MulOp = Builder.CreateFMul(InitVec, Step);
@@ -1690,10 +1685,9 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
     Start = Builder.CreateCast(Instruction::Trunc, Start, TruncType);
   }
 
-  Value *Zero = getSignedIntOrFpConstant(Start->getType(), 0);
   Value *SplatStart = Builder.CreateVectorSplat(State.VF, Start);
-  Value *SteppedStart = getStepVector(
-      SplatStart, Zero, Step, ID.getInductionOpcode(), State.VF, State.Builder);
+  Value *SteppedStart = getStepVector(SplatStart, Step, ID.getInductionOpcode(),
+                                      State.VF, State.Builder);
 
   // We create vector phi nodes for both integer and floating-point induction
   // variables. Here, we determine the kind of arithmetic we will perform.
