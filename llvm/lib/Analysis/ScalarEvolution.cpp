@@ -14973,10 +14973,7 @@ const SCEVAddRecExpr *SCEVWrapPredicate::getExpr() const { return AR; }
 bool SCEVWrapPredicate::implies(const SCEVPredicate *N,
                                 ScalarEvolution &SE) const {
   const auto *Op = dyn_cast<SCEVWrapPredicate>(N);
-  if (!Op)
-    return false;
-
-  if (setFlags(Flags, Op->Flags) != Flags)
+  if (!Op || setFlags(Flags, Op->Flags) != Flags)
     return false;
 
   if (Op->AR == AR)
@@ -14986,36 +14983,27 @@ bool SCEVWrapPredicate::implies(const SCEVPredicate *N,
       Flags != SCEVWrapPredicate::IncrementNUSW)
     return false;
 
-  bool IsNUW = Flags == SCEVWrapPredicate::IncrementNUSW;
   const SCEV *Step = AR->getStepRecurrence(SE);
   const SCEV *OpStep = Op->AR->getStepRecurrence(SE);
+  if (!SE.isKnownPositive(Step) || !SE.isKnownPositive(OpStep))
+    return false;
 
   // If both steps are positive, this implies N, if N's start and step are
   // ULE/SLE (for NSUW/NSSW) than this'.
-  if (SE.isKnownPositive(Step) && SE.isKnownPositive(OpStep)) {
-    const SCEV *OpStart = Op->AR->getStart();
-    const SCEV *Start = AR->getStart();
-    if (SE.getTypeSizeInBits(Step->getType()) >
-        SE.getTypeSizeInBits(OpStep->getType())) {
-      OpStep = SE.getZeroExtendExpr(OpStep, Step->getType());
-    } else {
-      Step = IsNUW ? SE.getNoopOrZeroExtend(Step, OpStep->getType())
-                   : SE.getNoopOrSignExtend(Step, OpStep->getType());
-    }
-    if (SE.getTypeSizeInBits(Start->getType()) >
-        SE.getTypeSizeInBits(OpStart->getType())) {
-      OpStart = IsNUW ? SE.getZeroExtendExpr(OpStart, Start->getType())
-                      : SE.getSignExtendExpr(OpStart, Start->getType());
-    } else {
-      Start = IsNUW ? SE.getNoopOrZeroExtend(Start, OpStart->getType())
-                    : SE.getNoopOrSignExtend(Start, OpStart->getType());
-    }
+  Type *WiderTy = SE.getWiderType(Step->getType(), OpStep->getType());
+  Step = SE.getNoopOrZeroExtend(Step, WiderTy);
+  OpStep = SE.getNoopOrZeroExtend(OpStep, WiderTy);
 
-    CmpInst::Predicate Pred = IsNUW ? CmpInst::ICMP_ULE : CmpInst::ICMP_SLE;
-    return SE.isKnownPredicate(Pred, OpStep, Step) &&
-           SE.isKnownPredicate(Pred, OpStart, Start);
-  }
-  return false;
+  bool IsNUW = Flags == SCEVWrapPredicate::IncrementNUSW;
+  const SCEV *OpStart = Op->AR->getStart();
+  const SCEV *Start = AR->getStart();
+  OpStart = IsNUW ? SE.getNoopOrZeroExtend(OpStart, WiderTy)
+                  : SE.getNoopOrSignExtend(OpStart, WiderTy);
+  Start = IsNUW ? SE.getNoopOrZeroExtend(Start, WiderTy)
+                : SE.getNoopOrSignExtend(Start, WiderTy);
+  CmpInst::Predicate Pred = IsNUW ? CmpInst::ICMP_ULE : CmpInst::ICMP_SLE;
+  return SE.isKnownPredicate(Pred, OpStep, Step) &&
+         SE.isKnownPredicate(Pred, OpStart, Start);
 }
 
 bool SCEVWrapPredicate::isAlwaysTrue() const {
