@@ -1165,22 +1165,27 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   }
 
   {
+    auto *Add = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
+                                          PoisonValue::get(Int32));
     VPValue ChainOp;
     VPValue VecOp;
     VPValue CondOp;
-    VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, &ChainOp, &CondOp,
+    VPReductionRecipe Recipe(RecurrenceDescriptor(), Add, &ChainOp, &CondOp,
                              &VecOp, false);
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
     EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
+    delete Add;
   }
 
   {
+    auto *Add = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
+                                          PoisonValue::get(Int32));
     VPValue ChainOp;
     VPValue VecOp;
     VPValue CondOp;
-    VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, &ChainOp, &CondOp,
+    VPReductionRecipe Recipe(RecurrenceDescriptor(), Add, &ChainOp, &CondOp,
                              &VecOp, false);
     VPValue EVL;
     VPReductionEVLRecipe EVLRecipe(Recipe, EVL, &CondOp);
@@ -1188,6 +1193,7 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     EXPECT_FALSE(EVLRecipe.mayReadFromMemory());
     EXPECT_FALSE(EVLRecipe.mayWriteToMemory());
     EXPECT_FALSE(EVLRecipe.mayReadOrWriteMemory());
+    delete Add;
   }
 
   {
@@ -1540,30 +1546,38 @@ TEST(VPRecipeTest, dumpRecipeUnnamedVPValuesNotInPlanOrBlock) {
 
 TEST(VPRecipeTest, CastVPReductionRecipeToVPUser) {
   LLVMContext C;
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  auto *Add = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
+                                        PoisonValue::get(Int32));
 
   VPValue ChainOp;
   VPValue VecOp;
   VPValue CondOp;
-  VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, &ChainOp, &CondOp,
+  VPReductionRecipe Recipe(RecurrenceDescriptor(), Add, &ChainOp, &CondOp,
                            &VecOp, false);
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
+  delete Add;
 }
 
 TEST(VPRecipeTest, CastVPReductionEVLRecipeToVPUser) {
   LLVMContext C;
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  auto *Add = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
+                                        PoisonValue::get(Int32));
 
   VPValue ChainOp;
   VPValue VecOp;
   VPValue CondOp;
-  VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, &ChainOp, &CondOp,
+  VPReductionRecipe Recipe(RecurrenceDescriptor(), Add, &ChainOp, &CondOp,
                            &VecOp, false);
   VPValue EVL;
   VPReductionEVLRecipe EVLRecipe(Recipe, EVL, &CondOp);
   EXPECT_TRUE(isa<VPUser>(&EVLRecipe));
   VPRecipeBase *BaseR = &EVLRecipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
+  delete Add;
 }
 
 struct VPDoubleValueDef : public VPRecipeBase {
