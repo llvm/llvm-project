@@ -276,7 +276,7 @@ define void @conditional_exit(i32 %0, ptr nocapture readonly %1) local_unnamed_a
 
 ; TEST 6 (positive case)
 ; Call intrinsic function
-; CHECK: Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+; CHECK: Function Attrs: fpoperation nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare float @llvm.floor.f32(float)
 
 define void @call_floor(float %a) #0 {
@@ -1294,7 +1294,7 @@ attributes #1 = { uwtable noinline }
 ; TUNIT: attributes #[[ATTR5]] = { noreturn }
 ; TUNIT: attributes #[[ATTR6]] = { noinline noreturn nounwind uwtable }
 ; TUNIT: attributes #[[ATTR7]] = { noinline nounwind uwtable }
-; TUNIT: attributes #[[ATTR8:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; TUNIT: attributes #[[ATTR8:[0-9]+]] = { fpoperation nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR9:[0-9]+]] = { norecurse willreturn }
 ; TUNIT: attributes #[[ATTR10]] = { mustprogress noinline nounwind willreturn uwtable }
 ; TUNIT: attributes #[[ATTR11:[0-9]+]] = { noinline willreturn uwtable }
@@ -1332,7 +1332,7 @@ attributes #1 = { uwtable noinline }
 ; CGSCC: attributes #[[ATTR5]] = { noreturn }
 ; CGSCC: attributes #[[ATTR6]] = { noinline noreturn nounwind uwtable }
 ; CGSCC: attributes #[[ATTR7]] = { noinline nounwind uwtable }
-; CGSCC: attributes #[[ATTR8:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CGSCC: attributes #[[ATTR8:[0-9]+]] = { fpoperation nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR9:[0-9]+]] = { norecurse willreturn }
 ; CGSCC: attributes #[[ATTR10]] = { mustprogress noinline nounwind willreturn uwtable }
 ; CGSCC: attributes #[[ATTR11:[0-9]+]] = { noinline willreturn uwtable }

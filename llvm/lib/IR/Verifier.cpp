@@ -3799,6 +3799,10 @@ void Verifier::visitCallBase(CallBase &Call) {
             "Value of fpe.round bundle operand is not a correct rounding mode",
             Call);
       FoundFpeRoundBundle = true;
+      Check(!Callee || isa<ConstrainedFPIntrinsic>(Call) ||
+                Callee->hasFnAttribute(Attribute::FPOperation) ||
+                !Callee->isIntrinsic(),
+            "This function call may not have fpe.control bundle", Call);
     } else if (Tag == LLVMContext::OB_fpe_except) {
       Check(!FoundFpeExceptBundle, "Multiple fpe.except operand bundles", Call);
       Check(BU.Inputs.size() == 1,
@@ -3813,6 +3817,10 @@ void Verifier::visitCallBase(CallBase &Call) {
             "behavior",
             Call);
       FoundFpeExceptBundle = true;
+      Check(!Callee || isa<ConstrainedFPIntrinsic>(Call) ||
+                Callee->hasFnAttribute(Attribute::FPOperation) ||
+                !Callee->isIntrinsic(),
+            "This function call may not have fpe.except bundle", Call);
     }
   }
 

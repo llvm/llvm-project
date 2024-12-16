@@ -1964,6 +1964,9 @@ For example:
     This attribute tells the code generator that returns from functions should
     be replaced with jumps to externally-defined architecture-specific symbols.
     For X86, this symbol's identifier is ``__x86_return_thunk``.
+``fpoperation``
+    This attribute applies to built-in functions. It indicates that the function
+    may have :ref:`floating-point operand bundles <ob_fpe>`.
 ``"frame-pointer"``
     This attribute tells the code generator whether the function
     should keep the frame pointer. The code generator may emit the frame pointer

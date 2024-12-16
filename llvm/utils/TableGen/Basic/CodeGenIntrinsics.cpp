@@ -403,6 +403,8 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     hasSideEffects = true;
   else if (R->getName() == "IntrStrictFP")
     isStrictFP = true;
+  else if (R->getName() == "IntrFPOperation")
+    isFPOperation = true;
   else if (R->isSubClassOf("NoCapture")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     addArgAttribute(ArgNo, NoCapture);

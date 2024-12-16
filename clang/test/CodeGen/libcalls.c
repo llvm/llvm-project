@@ -124,4 +124,4 @@ void test_builtins(double d, float f, long double ld) {
 }
 
 // CHECK-YES: attributes [[NUW]] = { nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+x87" }
-// CHECK-NO-DAG: attributes [[NUW_RNI]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+// CHECK-NO-DAG: attributes [[NUW_RNI]] = { fpoperation nocallback nofree nosync nounwind speculatable willreturn memory(none) }

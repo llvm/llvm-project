@@ -61,7 +61,7 @@ define void @libm() {
 ; FIXME: test ALL the intrinsics in this file.
 
 ; rdar://11542750
-; CHECK: declare void @llvm.trap() #1
+; CHECK: declare void @llvm.trap() #2
 declare void @llvm.trap()
 
 define void @trap() {
@@ -70,4 +70,5 @@ define void @trap() {
 }
 
 ; CHECK: attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; CHECK: attributes #1 = { cold noreturn nounwind memory(inaccessiblemem: write) }
+; CHECK: attributes #1 = { fpoperation nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #2 = { cold noreturn nounwind memory(inaccessiblemem: write) }
