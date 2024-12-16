@@ -3077,10 +3077,17 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     if (TypeIdx == 0)
       widenScalarDst(MI, WideTy);
     else {
-      unsigned ExtOpcode = CmpInst::isSigned(static_cast<CmpInst::Predicate>(
-                               MI.getOperand(1).getPredicate()))
-                               ? TargetOpcode::G_SEXT
-                               : TargetOpcode::G_ZEXT;
+      LLT SrcTy = MRI.getType(MI.getOperand(2).getReg());
+      CmpInst::Predicate Pred =
+          static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
+
+      auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
+      unsigned ExtOpcode =
+          (CmpInst::isSigned(Pred) ||
+           TLI.isSExtCheaperThanZExt(getApproximateEVTForLLT(SrcTy, Ctx),
+                                     getApproximateEVTForLLT(WideTy, Ctx)))
+              ? TargetOpcode::G_SEXT
+              : TargetOpcode::G_ZEXT;
       widenScalarSrc(MI, WideTy, 2, ExtOpcode);
       widenScalarSrc(MI, WideTy, 3, ExtOpcode);
     }
