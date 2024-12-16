@@ -402,7 +402,7 @@ bool isNestedPointer(const Type *Ty);
 
 enum FPDecorationId { NONE, RTE, RTZ, RTP, RTN, SAT };
 
-inline FPDecorationId demangledPostfixToDecorationId(const std::string& S) {
+inline FPDecorationId demangledPostfixToDecorationId(const std::string &S) {
   static std::unordered_map<std::string, FPDecorationId> Mapping = {
       {"rte", FPDecorationId::RTE},
       {"rtz", FPDecorationId::RTZ},
