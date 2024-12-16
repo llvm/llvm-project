@@ -1,4 +1,4 @@
-; RUN: llc -march=mips -mattr=+soft-float < %s
+; RUN: llc -mtriple=mips -mattr=+soft-float < %s
 ; PR2667
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:32-i16:16:32-i32:32:32-i64:32:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64"
 	%struct._Bigint = type { ptr, i32, i32, i32, i32, [1 x i32] }

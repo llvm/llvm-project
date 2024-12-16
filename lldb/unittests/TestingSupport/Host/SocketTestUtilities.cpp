@@ -122,10 +122,9 @@ bool lldb_private::HostSupportsLocalhostToIPv4() {
 
   auto addresses = SocketAddress::GetAddressInfo(
       "localhost", nullptr, AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP);
-  return std::find_if(addresses.begin(), addresses.end(),
-                      [](SocketAddress &addr) {
-                        return addr.GetFamily() == AF_INET;
-                      }) != addresses.end();
+  return llvm::any_of(addresses, [](const SocketAddress &addr) {
+    return addr.GetFamily() == AF_INET;
+  });
 }
 
 bool lldb_private::HostSupportsLocalhostToIPv6() {
@@ -134,10 +133,9 @@ bool lldb_private::HostSupportsLocalhostToIPv6() {
 
   auto addresses = SocketAddress::GetAddressInfo(
       "localhost", nullptr, AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP);
-  return std::find_if(addresses.begin(), addresses.end(),
-                      [](SocketAddress &addr) {
-                        return addr.GetFamily() == AF_INET6;
-                      }) != addresses.end();
+  return llvm::any_of(addresses, [](const SocketAddress &addr) {
+    return addr.GetFamily() == AF_INET6;
+  });
 }
 
 llvm::Expected<std::string> lldb_private::GetLocalhostIP() {

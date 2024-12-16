@@ -16,6 +16,9 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: Live-in [[VTC:.*]] = vector-trip-count
 ; CHECK-NEXT: Live-in [[OTC:.*]] = original trip-count
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
@@ -58,6 +61,9 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: Live-in [[VFxUF:.*]] = VF * UF
 ; CHECK-NEXT: Live-in [[VTC:.*]] = vector-trip-count
 ; CHECK-NEXT: Live-in [[OTC:.*]] = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop

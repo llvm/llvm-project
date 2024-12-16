@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_IS_POINTER_IN_RANGE_H
-#define _LIBCPP___UTILITY_IS_POINTER_IN_RANGE_H
+#ifndef _LIBCPP___CXX03___UTILITY_IS_POINTER_IN_RANGE_H
+#define _LIBCPP___CXX03___UTILITY_IS_POINTER_IN_RANGE_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__assert>
@@ -59,4 +59,4 @@ __is_pointer_in_range(const _Tp* __begin, const _Tp* __end, const _Up* __ptr) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_IS_POINTER_IN_RANGE_H
+#endif // _LIBCPP___CXX03___UTILITY_IS_POINTER_IN_RANGE_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_OSTREAM_H
-#define _LIBCPP___FWD_OSTREAM_H
+#ifndef _LIBCPP___CXX03___FWD_OSTREAM_H
+#define _LIBCPP___CXX03___FWD_OSTREAM_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/string.h>
@@ -32,4 +32,4 @@ class _LIBCPP_PREFERRED_NAME(ostream) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERR
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FWD_OSTREAM_H
+#endif // _LIBCPP___CXX03___FWD_OSTREAM_H

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=mips
+; RUN: llc < %s -mtriple=mips
 ; Mips must ignore fastcc
 
 target datalayout =

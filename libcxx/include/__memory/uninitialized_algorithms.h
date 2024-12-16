@@ -15,6 +15,7 @@
 #include <__algorithm/unwrap_iter.h>
 #include <__algorithm/unwrap_range.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/reverse_iterator.h>
 #include <__memory/addressof.h>
