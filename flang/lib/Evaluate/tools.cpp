@@ -1748,7 +1748,7 @@ bool IsSaved(const Symbol &original) {
   } else if (symbol.test(Symbol::Flag::InDataStmt)) {
     return true;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
-      object && object->init()) {
+             object && object->init()) {
     return true;
   } else if (IsProcedurePointer(symbol) && symbol.has<ProcEntityDetails>() &&
       symbol.get<ProcEntityDetails>().init()) {
