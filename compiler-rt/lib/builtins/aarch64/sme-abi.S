@@ -210,14 +210,16 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sme_state_size)
   .variant_pcs __arm_sme_state_size
   BTI_C
 
-  // Test if SME is available and PSTATE = 1.
+  // Test if SME is available and ZA state is 'active'.
   adrp    x16, CPU_FEATS_SYMBOL
   ldr     x16, [x16, CPU_FEATS_SYMBOL_OFFSET]
   tbz     x16, #FEAT_SME_BIT, 0f
   mrs     x16, SVCR
   tbz     x16, #1, 0f
+  mrs     x16, TPIDR2_EL0
+  cbnz    x16, 0f
 
-  // Size = HAS_FEAT_SME2 ? 32 : 96
+  // Size = HAS_FEAT_SME2 ? 96 : 32
   adrp    x16, CPU_FEATS_SYMBOL
   ldr     x16, [x16, CPU_FEATS_SYMBOL_OFFSET]
   tst     x16, #FEAT_SME2_MASK
