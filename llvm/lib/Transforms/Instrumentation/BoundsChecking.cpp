@@ -126,16 +126,18 @@ static void insertBoundsCheck(Value *Or, BuilderTy &IRB, GetTrapBBT GetTrapBB) {
   BasicBlock *Cont = OldBB->splitBasicBlock(SplitI);
   OldBB->getTerminator()->eraseFromParent();
 
+  BasicBlock * TrapBB = GetTrapBB(IRB);
+
   if (C) {
     // If we have a constant zero, unconditionally branch.
     // FIXME: We should really handle this differently to bypass the splitting
     // the block.
-    BranchInst::Create(GetTrapBB(IRB), OldBB);
+    BranchInst::Create(TrapBB, OldBB);
     return;
   }
 
   // Create the conditional branch.
-  BranchInst::Create(GetTrapBB(IRB), Cont, Or, OldBB);
+  BranchInst::Create(TrapBB, Cont, Or, OldBB);
 }
 
 static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
@@ -228,4 +230,27 @@ PreservedAnalyses BoundsCheckingPass::run(Function &F, FunctionAnalysisManager &
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
+}
+
+void BoundsCheckingPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<BoundsCheckingPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  switch (Mode) {
+  case ReportingMode::Trap:
+    OS << "<trap>";
+    break;
+  case ReportingMode::MinRuntime:
+    OS << "<min-rt>";
+    break;
+  case ReportingMode::MinRuntimeAbort:
+    OS << "<min-rt-abort>";
+    break;
+  case ReportingMode::FullRuntime:
+    OS << "<rt>";
+    break;
+  case ReportingMode::FullRuntimeAbort:
+    OS << "<rt-abort>";
+    break;
+  }
 }
